@@ -425,4 +425,181 @@ describe('TranslationService', () => {
       }
     })
   })
+
+  // ============================================
+  // Entity Translation Methods Tests
+  // ============================================
+
+  describe('Entity Translation Methods', () => {
+    describe('getEntityLoader', () => {
+      it('should return null for non-existent theme', () => {
+        const loader = TranslationService.getEntityLoader('nonexistent-theme', 'products', 'en')
+
+        expect(loader).toBeNull()
+      })
+
+      it('should return null for non-existent entity', () => {
+        const loader = TranslationService.getEntityLoader('default', 'nonexistent-entity', 'en')
+
+        expect(loader).toBeNull()
+      })
+
+      it('should return null for non-existent locale', () => {
+        // If entity translations exist, this would return null for invalid locale
+        const loader = TranslationService.getEntityLoader('default', 'products', 'invalid-locale')
+
+        expect(loader).toBeNull()
+      })
+
+      it('should return null for empty strings', () => {
+        expect(TranslationService.getEntityLoader('', 'products', 'en')).toBeNull()
+        expect(TranslationService.getEntityLoader('default', '', 'en')).toBeNull()
+        expect(TranslationService.getEntityLoader('default', 'products', '')).toBeNull()
+      })
+    })
+
+    describe('loadEntity', () => {
+      it('should return empty object for non-existent theme', async () => {
+        const translations = await TranslationService.loadEntity('nonexistent-theme', 'products', 'en')
+
+        expect(translations).toEqual({})
+      })
+
+      it('should return empty object for non-existent entity', async () => {
+        const translations = await TranslationService.loadEntity('default', 'nonexistent-entity', 'en')
+
+        expect(translations).toEqual({})
+      })
+
+      it('should return empty object for non-existent locale', async () => {
+        const translations = await TranslationService.loadEntity('default', 'products', 'invalid-locale')
+
+        expect(translations).toEqual({})
+      })
+
+      it('should return empty object for empty strings', async () => {
+        expect(await TranslationService.loadEntity('', 'products', 'en')).toEqual({})
+        expect(await TranslationService.loadEntity('default', '', 'en')).toEqual({})
+        expect(await TranslationService.loadEntity('default', 'products', '')).toEqual({})
+      })
+    })
+
+    describe('getEntityLocales', () => {
+      it('should return empty array for non-existent theme', () => {
+        const locales = TranslationService.getEntityLocales('nonexistent-theme', 'products')
+
+        expect(Array.isArray(locales)).toBe(true)
+        expect(locales.length).toBe(0)
+      })
+
+      it('should return empty array for non-existent entity', () => {
+        const locales = TranslationService.getEntityLocales('default', 'nonexistent-entity')
+
+        expect(Array.isArray(locales)).toBe(true)
+        expect(locales.length).toBe(0)
+      })
+
+      it('should return empty array for empty strings', () => {
+        expect(TranslationService.getEntityLocales('', 'products')).toEqual([])
+        expect(TranslationService.getEntityLocales('default', '')).toEqual([])
+      })
+    })
+
+    describe('getEntities', () => {
+      it('should return array type', () => {
+        const entities = TranslationService.getEntities('default')
+
+        expect(Array.isArray(entities)).toBe(true)
+      })
+
+      it('should return empty array for non-existent theme', () => {
+        const entities = TranslationService.getEntities('nonexistent-theme')
+
+        expect(Array.isArray(entities)).toBe(true)
+        expect(entities.length).toBe(0)
+      })
+
+      it('should return empty array for empty string', () => {
+        const entities = TranslationService.getEntities('')
+
+        expect(Array.isArray(entities)).toBe(true)
+        expect(entities.length).toBe(0)
+      })
+    })
+
+    describe('hasEntity', () => {
+      it('should return false for non-existent theme', () => {
+        expect(TranslationService.hasEntity('nonexistent-theme', 'products', 'en')).toBe(false)
+      })
+
+      it('should return false for non-existent entity', () => {
+        expect(TranslationService.hasEntity('default', 'nonexistent-entity', 'en')).toBe(false)
+      })
+
+      it('should return false for non-existent locale', () => {
+        expect(TranslationService.hasEntity('default', 'products', 'invalid-locale')).toBe(false)
+      })
+
+      it('should return false for empty strings', () => {
+        expect(TranslationService.hasEntity('', 'products', 'en')).toBe(false)
+        expect(TranslationService.hasEntity('default', '', 'en')).toBe(false)
+        expect(TranslationService.hasEntity('default', 'products', '')).toBe(false)
+      })
+    })
+
+    describe('loadAllEntities', () => {
+      it('should return empty object for non-existent theme', async () => {
+        const allEntities = await TranslationService.loadAllEntities('nonexistent-theme', 'en')
+
+        expect(typeof allEntities).toBe('object')
+        expect(Object.keys(allEntities).length).toBe(0)
+      })
+
+      it('should return object type', async () => {
+        const allEntities = await TranslationService.loadAllEntities('default', 'en')
+
+        expect(typeof allEntities).toBe('object')
+      })
+
+      it('should return empty object for empty strings', async () => {
+        expect(await TranslationService.loadAllEntities('', 'en')).toEqual({})
+        expect(await TranslationService.loadAllEntities('default', '')).toEqual({})
+      })
+    })
+
+    describe('Entity methods cross-consistency', () => {
+      it('should have consistent data between getEntityLoader() and hasEntity()', () => {
+        const testCases = [
+          { theme: 'default', entity: 'products', locale: 'en' },
+          { theme: 'default', entity: 'nonexistent', locale: 'en' },
+          { theme: 'nonexistent', entity: 'products', locale: 'en' }
+        ]
+
+        testCases.forEach(({ theme, entity, locale }) => {
+          const hasTranslation = TranslationService.hasEntity(theme, entity, locale)
+          const loader = TranslationService.getEntityLoader(theme, entity, locale)
+
+          if (hasTranslation) {
+            expect(loader).not.toBeNull()
+            expect(typeof loader).toBe('function')
+          } else {
+            expect(loader).toBeNull()
+          }
+        })
+      })
+
+      it('should have consistent data between getEntities() and getEntityLocales()', () => {
+        const theme = 'default'
+        const entities = TranslationService.getEntities(theme)
+
+        // All entities from getEntities() should have locales
+        entities.forEach(entity => {
+          const locales = TranslationService.getEntityLocales(theme, entity)
+          expect(Array.isArray(locales)).toBe(true)
+          // If entity is returned by getEntities, it should have at least one locale
+          expect(locales.length).toBeGreaterThan(0)
+        })
+      })
+    })
+  })
 })

@@ -21,7 +21,6 @@ export function useEntityTranslation(entityName: string, additionalNamespaces: s
   const validationT = useTranslations('validation')
   const settingsT = useTranslations('settings') 
   const dashboardT = useTranslations('dashboard')
-  const tasksT = useTranslations('tasks')
   const authT = useTranslations('auth')
   const publicT = useTranslations('public')
   const adminT = useTranslations('admin')
@@ -40,9 +39,6 @@ export function useEntityTranslation(entityName: string, additionalNamespaces: s
     if (additionalNamespaces.includes('dashboard')) {
       translations.dashboard = dashboardT
     }
-    if (additionalNamespaces.includes('tasks')) {
-      translations.tasks = tasksT
-    }
     if (additionalNamespaces.includes('auth')) {
       translations.auth = authT
     }
@@ -54,7 +50,7 @@ export function useEntityTranslation(entityName: string, additionalNamespaces: s
     }
     
     return translations
-  }, [additionalNamespaces, validationT, settingsT, dashboardT, tasksT, authT, publicT, adminT])
+  }, [additionalNamespaces, validationT, settingsT, dashboardT, authT, publicT, adminT])
 
   return useMemo(() => ({
     // Entity-specific translations with fallback to common

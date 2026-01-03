@@ -1,42 +1,35 @@
 /**
  * Next-intl Integration for Dynamic Translations
  *
- * Integrates the translation registry with next-intl for dynamic entity translations
+ * Integrates with next-intl using TranslationService for dynamic entity translations
  */
 
-import { translationRegistry, loadTranslationsForLocale } from './registry'
+import { TranslationService } from '../services/translation.service'
+import { loadMergedTranslations } from './registry'
 import { getAllEntityConfigs, ensureInitialized } from '../entities/registry'
 import type { SupportedLocale } from '../entities/types'
 
 /**
  * Load all translations for next-intl configuration
+ * Uses loadMergedTranslations which handles core + theme + entity merge
  */
 export async function loadAllI18nTranslations(locale: SupportedLocale): Promise<Record<string, unknown>> {
   try {
     // Ensure entities are initialized before loading translations
     await ensureEntitiesInitialized()
-    
+
     // Get all enabled entities
-    const entities = getAllEntityConfigs().filter(entity =>
-      entity.enabled
-    )
+    const entities = getAllEntityConfigs().filter(entity => entity.enabled)
 
     console.log(`[i18n-integration] Loading translations for ${entities.length} entities:`, entities.map(e => e.slug))
-    
-    // Load core + entity translations
-    const translations = await loadTranslationsForLocale(locale, entities)
-    
-    return translations
+
+    // Load core + theme + entity translations (merge priority: core < theme < entity)
+    return await loadMergedTranslations(locale)
   } catch (error) {
+    // Single fallback: registry already handles locale chain internally
+    // If it fails completely, gracefully degrade to empty messages
     console.error(`[i18n-integration] Failed to load translations for ${locale}:`, error)
-    
-    // Fallback to core only
-    try {
-      return await translationRegistry.loadCoreTranslations(locale)
-    } catch (fallbackError) {
-      console.error(`[i18n-integration] Critical: Failed to load core translations:`, fallbackError)
-      return {}
-    }
+    return {}
   }
 }
 
@@ -146,58 +139,48 @@ export function getOptimizedNamespaces(pathname: string): {
 
 /**
  * Load optimized translations based on route
+ * Uses TranslationService for registry-based loading
  */
 export async function loadOptimizedTranslations(
   locale: SupportedLocale,
   pathname: string = ''
 ): Promise<Record<string, unknown>> {
   const { core, strategy } = getOptimizedNamespaces(pathname)
-  
+
   try {
-    // Load core translations
-    const coreTranslations = await translationRegistry.loadCoreTranslations(locale)
-    
-    // Filter core translations to only include needed namespaces
-    const optimizedCoreTranslations: Record<string, unknown> = {}
+    // Load all merged translations (core + theme + entities)
+    const allTranslations = await loadMergedTranslations(locale)
+
+    // Filter to only include needed namespaces based on route strategy
+    const optimizedTranslations: Record<string, unknown> = {}
+
+    // Include core namespaces
     for (const namespace of core) {
-      if (coreTranslations[namespace]) {
-        optimizedCoreTranslations[namespace] = coreTranslations[namespace]
+      if (allTranslations[namespace]) {
+        optimizedTranslations[namespace] = allTranslations[namespace]
       }
     }
-    
-    // For dashboard and entity pages, also load entity translations
-    const entityTranslations: Record<string, unknown> = {}
+
+    // For dashboard and entity pages, also include entity translations
     if (strategy === 'DASHBOARD_AUTHENTICATED' || pathname.includes('[entity]')) {
-      try {
-        const entities = getAllEntityConfigs().filter(entity => entity.enabled)
-        for (const entity of entities) {
-          if (entity.i18n) {
-            const namespace = entity.slug
-            const translations = await translationRegistry.loadEntityTranslations(entity, locale)
-            if (Object.keys(translations).length > 0) {
-              entityTranslations[namespace] = translations
-            }
-          }
+      const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME || 'default'
+      const entityTranslations = await TranslationService.loadAllEntities(activeTheme, locale)
+
+      for (const [entityName, translations] of Object.entries(entityTranslations)) {
+        if (Object.keys(translations).length > 0) {
+          optimizedTranslations[entityName] = translations
         }
-      } catch (error) {
-        console.warn(`[i18n-integration] Failed to load entity translations:`, error)
       }
     }
-    
-    console.log(`[i18n-integration] ✅ Loaded optimized translations for ${locale} (${strategy}):`, {
-      core: Object.keys(optimizedCoreTranslations),
-      entities: Object.keys(entityTranslations)
+
+    console.log(`[i18n-integration] Loaded optimized translations for ${locale} (${strategy}):`, {
+      namespaces: Object.keys(optimizedTranslations)
     })
-    
-    return {
-      ...optimizedCoreTranslations,
-      ...entityTranslations
-    }
-    
+
+    return optimizedTranslations
   } catch (error) {
-    console.error(`[i18n-integration] Failed to load optimized translations:`, error)
-    
-    // Fallback to core only
-    return await translationRegistry.loadCoreTranslations(locale)
+    // Single fallback: gracefully degrade to empty messages
+    console.error(`[i18n-integration] Failed to load optimized translations for ${locale}:`, error)
+    return {}
   }
 }

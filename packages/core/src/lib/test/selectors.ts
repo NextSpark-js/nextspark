@@ -36,8 +36,8 @@
  * ```
  */
 
-import { createSelectorHelpers } from './selector-factory.js'
-import { CORE_SELECTORS, type CoreSelectorsType } from './core-selectors.js'
+import { createSelectorHelpers } from './selector-factory'
+import { CORE_SELECTORS, type CoreSelectorsType } from './core-selectors'
 
 // =============================================================================
 // PRE-BOUND EXPORTS (for core components)
@@ -91,7 +91,7 @@ export type SelectorsType = CoreSelectorsType
 /**
  * Re-export Replacements type
  */
-export type { Replacements } from './selector-factory.js'
+export type { Replacements } from './selector-factory'
 
 /**
  * Helper type to extract leaf paths from nested object

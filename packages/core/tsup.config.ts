@@ -52,7 +52,7 @@ export default defineConfig({
 
     // Copy messages/ directory
     await cp(
-      join(process.cwd(), 'messages'),
+      join(process.cwd(), 'src/messages'),
       join(distDir, 'messages'),
       { recursive: true }
     ).catch(() => console.log('No messages directory to copy'))

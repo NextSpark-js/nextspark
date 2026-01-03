@@ -71,6 +71,7 @@
     "**/jest.config.ts",
     "**/cypress/**",
     "**/tests/**",
+    "cypress.config.ts",
     "contents/themes/blog/**",
     "contents/themes/crm/**",
     "contents/themes/productivity/**",

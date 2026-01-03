@@ -1,12 +1,13 @@
 /**
  * Entity Translation Hooks
- * 
+ *
  * React hooks for accessing entity-specific translations
  */
 
 import { useCallback, useEffect, useState } from 'react'
 import { useLocale } from 'next-intl'
-import { translationRegistry } from '../lib/translations/registry'
+import { TranslationService } from '../lib/services/translation.service'
+import { loadMergedTranslations } from '../lib/translations/registry'
 import { useEnabledEntities } from './useEnabledEntities'
 import type { SupportedLocale } from '../lib/entities/types'
 
@@ -31,12 +32,10 @@ export function useEntityTranslations(entityName: string) {
         return
       }
 
-      const entityTranslations = await translationRegistry.getEntityTranslation(
-        entityName, 
-        locale, 
-        entity
-      )
-      
+      // Load entity translations directly from TranslationService
+      const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME || 'default'
+      const entityTranslations = await TranslationService.loadEntity(activeTheme, entityName, locale)
+
       setTranslations(entityTranslations)
     } catch (err) {
       console.error(`Error loading translations for entity ${entityName}:`, err)
@@ -108,12 +107,13 @@ export function useAllEntityTranslations() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const loadAllTranslations = useCallback(async () => {
+  const loadAllTranslationsCallback = useCallback(async () => {
     try {
       setIsLoading(true)
       setError(null)
 
-      const translations = await translationRegistry.loadAllTranslations(locale, entities)
+      // Use loadMergedTranslations which handles core + theme + entity merge
+      const translations = await loadMergedTranslations(locale)
       setAllTranslations(translations)
     } catch (err) {
       console.error('Error loading all entity translations:', err)
@@ -121,18 +121,18 @@ export function useAllEntityTranslations() {
     } finally {
       setIsLoading(false)
     }
-  }, [locale, entities])
+  }, [locale])
 
   useEffect(() => {
     if (!entitiesLoading && entities.length > 0) {
-      loadAllTranslations()
+      loadAllTranslationsCallback()
     }
-  }, [loadAllTranslations, entitiesLoading, entities.length])
+  }, [loadAllTranslationsCallback, entitiesLoading, entities.length])
 
   return {
     translations: allTranslations,
     isLoading: isLoading || entitiesLoading,
     error,
-    reload: loadAllTranslations
+    reload: loadAllTranslationsCallback
   }
 }

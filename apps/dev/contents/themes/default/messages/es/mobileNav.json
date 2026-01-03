@@ -1,0 +1,13 @@
+{
+  "home": "Inicio",
+  "tasks": "Tareas",
+  "create": "Crear",
+  "settings": "Ajustes",
+  "more": "Más",
+  "moreOptions": "Más Opciones",
+  "moreOptionsDescription": "Accede a configuraciones y funciones adicionales",
+  "quickCreateDescription": "Crea un nuevo elemento",
+  "noEntitiesAvailable": "No hay elementos disponibles para crear",
+  "createNew": "Crear nuevo",
+  "greeting": "Hola, {name}"
+}

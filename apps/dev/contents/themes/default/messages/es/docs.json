@@ -1,0 +1,27 @@
+{
+  "title": "Documentación",
+  "description": "Documentación completa para usar nuestra plataforma efectivamente.",
+  "sidebar": {
+    "label": "Navegación de documentación",
+    "open": "Abrir menú de navegación",
+    "close": "Cerrar menú de navegación"
+  },
+  "labels": {
+    "coreDoc": "core"
+  },
+  "categories": {
+    "core": "Core",
+    "theme": "Theme",
+    "plugins": "Plugins"
+  },
+  "breadcrumbs": {
+    "home": "Inicio"
+  },
+  "quickStart": {
+    "title": "Guía de Inicio Rápido",
+    "step1": "Crear Cuenta",
+    "step2": "Configurar Perfil",
+    "step3": "Explorar Dashboard",
+    "step4": "Crear Primera Tarea"
+  }
+}

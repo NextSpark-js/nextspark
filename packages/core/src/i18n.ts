@@ -135,59 +135,24 @@ export default getRequestConfig(async () => {
       console.debug('[i18n] Headers not available, using fallback namespace strategy');
     }
     
-    // Load all messages using the merged translation system with fallback chain
-    let messages: Record<string, unknown> = {};
+    // Load translations using registry-based system with built-in fallback chain
+    // Note: loadMergedTranslations already handles Core -> Theme -> Entity merge
+    // and has internal locale fallback (es-MX -> es -> en)
+    const messages = await loadMergedTranslations(locale as SupportedLocale);
+    console.log(`[i18n] Loaded merged translations for ${locale} with ${Object.keys(messages).length} namespaces`);
 
-    try {
-      // Usar el nuevo sistema de merge con fallback (Core -> Theme)
-      messages = await loadMergedTranslations(locale as SupportedLocale);
-      console.log(`[i18n] ✅ Loaded merged translations for ${locale} with ${Object.keys(messages).length} namespaces`);
-    } catch (importError) {
-      console.warn(`[i18n] Failed to load merged translations for ${locale}:`, importError);
-
-      // Fallback - try to load core English using loadMergedTranslations
-      try {
-        messages = await loadMergedTranslations('en');
-        console.log(`[i18n] ✅ Fallback to English merged translations successful`);
-      } catch (fallbackError) {
-        console.error(`[i18n] Critical error - failed to load any messages:`, fallbackError);
-        messages = {};
-      }
-    }
-    
     return {
       locale,
       messages
     };
   } catch (error) {
-    // Fallback to default locale with merged translations
-    console.warn(`[i18n] ⚠️ Failed to load translations for locale "${locale}", falling back to ${I18N_CONFIG.defaultLocale}`, error);
-
-    try {
-      // Load fallback using merged translations with fallback chain
-      const fallbackMessages = await loadMergedTranslations(I18N_CONFIG.defaultLocale as SupportedLocale);
-      console.log(`[i18n] ✅ Fallback successful - loaded merged message set`);
-      return {
-        locale: I18N_CONFIG.defaultLocale,
-        messages: fallbackMessages
-      };
-    } catch (fallbackError) {
-      console.error('[i18n] ❌ Critical: Failed to load fallback messages:', fallbackError);
-
-      // Final core fallback - use English merged translations
-      try {
-        const coreMessages = await loadMergedTranslations('en');
-        return {
-          locale: I18N_CONFIG.defaultLocale,
-          messages: coreMessages
-        };
-      } catch {
-        return {
-          locale: I18N_CONFIG.defaultLocale,
-          messages: {}
-        };
-      }
-    }
+    // Single fallback: loadMergedTranslations already handles locale chain internally
+    // If it fails completely, gracefully degrade to empty messages
+    console.error(`[i18n] Failed to load translations for ${locale}:`, error);
+    return {
+      locale: I18N_CONFIG.defaultLocale,
+      messages: {}
+    };
   }
 });
 

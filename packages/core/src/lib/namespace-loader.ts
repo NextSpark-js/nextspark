@@ -49,49 +49,47 @@ function getCacheKey(locale: SupportedLocale, namespace: TranslationNamespace): 
 
 /**
  * Load a single namespace with caching
+ * Uses registry-based loading: primary locale -> fallback locale -> empty object
  */
 export async function loadNamespace(
-  locale: SupportedLocale, 
+  locale: SupportedLocale,
   namespace: TranslationNamespace
 ): Promise<NamespaceData> {
   const cacheKey = getCacheKey(locale, namespace)
-  
+
   // Return cached version if available
   if (loadedNamespaces.has(cacheKey)) {
     return loadedNamespaces.get(cacheKey)!
   }
-  
+
+  // Try primary locale
   try {
     const messages = await import(`../messages/${locale}/${namespace}.json`)
     const namespaceData = messages.default
-    
-    // Cache the loaded namespace
     loadedNamespaces.set(cacheKey, namespaceData)
-    
     return namespaceData
-  } catch (error) {
-    console.error(`Failed to load ${namespace} for ${locale}:`, error)
-    
-    // Fallback to default locale
+  } catch {
+    // Primary failed - try fallback locale if different
     const fallbackLocale = I18N_CONFIG.defaultLocale
     if (locale !== fallbackLocale) {
       const fallbackCacheKey = getCacheKey(fallbackLocale, namespace)
-      
-      if (!loadedNamespaces.has(fallbackCacheKey)) {
-        try {
-          const fallbackMessages = await import(`../messages/${fallbackLocale}/${namespace}.json`)
-          const fallbackData = fallbackMessages.default
-          loadedNamespaces.set(fallbackCacheKey, fallbackData)
-          return fallbackData
-        } catch (fallbackError) {
-          console.error(`Failed to load fallback ${namespace}:`, fallbackError)
-          return {} as NamespaceData as NamespaceData
-        }
+
+      // Check cache first for fallback
+      if (loadedNamespaces.has(fallbackCacheKey)) {
+        return loadedNamespaces.get(fallbackCacheKey)!
       }
-      
-      return loadedNamespaces.get(fallbackCacheKey) || ({} as NamespaceData)
+
+      try {
+        const fallbackMessages = await import(`../messages/${fallbackLocale}/${namespace}.json`)
+        const fallbackData = fallbackMessages.default
+        loadedNamespaces.set(fallbackCacheKey, fallbackData)
+        return fallbackData
+      } catch {
+        console.warn(`[namespace-loader] Namespace ${namespace} not available for ${locale} or ${fallbackLocale}`)
+      }
     }
-    
+
+    // Graceful degradation to empty object
     return {} as NamespaceData
   }
 }
@@ -171,25 +169,25 @@ export async function loadPageMessages(
 
 /**
  * Load all namespaces (fallback for backward compatibility)
+ * Uses registry-based loading: primary locale -> fallback locale -> empty object
  */
 async function loadAllNamespaces(locale: SupportedLocale): Promise<NamespacesMap> {
+  // Try primary locale
   try {
     const messages = await import(`../messages/${locale}/index.ts`)
     return messages.default
-  } catch (error) {
-    console.error(`Failed to load all messages for ${locale}:`, error)
-    
-    // Fallback to default locale
+  } catch {
+    // Primary failed - try fallback locale if different
     if (locale !== I18N_CONFIG.defaultLocale) {
       try {
         const fallbackMessages = await import(`../messages/${I18N_CONFIG.defaultLocale}/index.ts`)
         return fallbackMessages.default
-      } catch (fallbackError) {
-        console.error('Failed to load fallback messages:', fallbackError)
-        return {} as NamespacesMap
+      } catch {
+        console.warn(`[namespace-loader] All namespaces not available for ${locale} or ${I18N_CONFIG.defaultLocale}`)
       }
     }
-    
+
+    // Graceful degradation to empty object
     return {} as NamespacesMap
   }
 }

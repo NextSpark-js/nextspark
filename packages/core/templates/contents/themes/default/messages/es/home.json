@@ -1,0 +1,57 @@
+{
+  "hero": {
+    "badge": "Next.js 15 + Better Auth + shadcn/ui",
+    "title": "Modern NextSpark",
+    "description": "Starter listo para producción con autenticación, base de datos y componentes UI hermosos"
+  },
+  "auth": {
+    "authenticated": "Autenticado",
+    "welcomeBack": "Bienvenido de vuelta, {email}",
+    "goToDashboard": "Ir al Dashboard",
+    "getStarted": "Comenzar",
+    "experience": "Experimenta el poder del desarrollo web moderno",
+    "createAccount": "Crear Cuenta",
+    "signIn": "Iniciar Sesión"
+  },
+  "techStack": {
+    "title": "Stack Tecnológico",
+    "description": "Construido con las tecnologías más recientes y potentes",
+    "latest": "Último",
+    "secure": "Seguro",
+    "supabase": "Supabase",
+    "v5": "v5",
+    "components": "Componentes",
+    "validation": "Validación",
+    "styling": "Estilos",
+    "appRouter": "App Router"
+  },
+  "features": {
+    "title": "Características",
+    "description": "Todo lo que necesitas para construir un SaaS moderno",
+    "emailAuth": "Autenticación Email/Contraseña",
+    "googleOAuth": "Google OAuth",
+    "protectedRoutes": "Rutas Protegidas",
+    "emailVerification": "Verificación de Email",
+    "passwordReset": "Restablecimiento de Contraseña",
+    "entityManagement": "Sistema de Entidades",
+    "pluginSystem": "Arquitectura de Plugins",
+    "themeSupport": "Soporte Multi-Tema",
+    "i18nSystem": "Internacionalización",
+    "apiRoutes": "API RESTful",
+    "colorMode": "Modo de Color",
+    "aiIntegration": "Integración IA",
+    "teams": "Equipos",
+    "memberships": "Membresías",
+    "amplitude": "Amplitude Analytics"
+  },
+  "cta": {
+    "readyToStart": "¿Listo para Comenzar?",
+    "description": "Únete a miles de desarrolladores que confían en nuestro boilerplate para construir aplicaciones SaaS increíbles más rápido.",
+    "viewPricing": "Ver Precios",
+    "startFreeTrial": "Comenzar Prueba Gratis"
+  },
+  "footer": {
+    "builtWith": "Construido con componentes shadcn/ui",
+    "readyForProduction": "Listo para despliegue en producción"
+  }
+}

@@ -24,7 +24,7 @@ interface FiltersProps {
 }
 
 export function Filters({ filters, onFiltersChange, registeredActionTypes }: FiltersProps) {
-  const t = useTranslations('dev.scheduledActions')
+  const t = useTranslations('devtools.scheduledActions')
 
   const handleStatusChange = (value: string) => {
     onFiltersChange({

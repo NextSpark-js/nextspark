@@ -246,5 +246,40 @@
       "operations": "Operaciones",
       "other": "Otros"
     }
+  },
+  "scheduledActions": {
+    "title": "Acciones Programadas",
+    "description": "Monitorear y gestionar acciones programadas en segundo plano",
+    "loading": "Cargando acciones programadas...",
+    "empty": "No se encontraron acciones programadas",
+    "emptyDescription": "Las acciones programadas aparecerán aquí cuando se creen",
+    "filters": {
+      "status": "Estado",
+      "allStatuses": "Todos los Estados",
+      "actionType": "Tipo de Acción",
+      "allTypes": "Todos los Tipos",
+      "apply": "Aplicar Filtros",
+      "reset": "Resetear Filtros"
+    },
+    "table": {
+      "type": "Tipo",
+      "status": "Estado",
+      "scheduledAt": "Programado Para",
+      "team": "Equipo",
+      "payload": "Datos",
+      "error": "Error",
+      "noTeam": "Global"
+    },
+    "status": {
+      "pending": "Pendiente",
+      "running": "Ejecutando",
+      "completed": "Completado",
+      "failed": "Fallido"
+    },
+    "pagination": {
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "page": "Página {page} de {total}"
+    }
   }
 }

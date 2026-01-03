@@ -1,4 +1,4 @@
-import { I18N_CONFIG, type SupportedLocale, type TranslationNamespace } from './config'
+import { I18N_CONFIG, type SupportedLocale } from './config'
 
 /**
  * Validates if a locale string is supported
@@ -69,28 +69,3 @@ export function detectMissingTranslations(
   return missing
 }
 
-/**
- * Performance helper for lazy loading specific message namespaces
- */
-export async function loadNamespaceMessages(
-  locale: SupportedLocale,
-  namespace: TranslationNamespace
-) {
-  try {
-    const messages = await import(`../messages/${locale}/${namespace}.json`)
-    return messages.default
-  } catch (error) {
-    console.error(`Failed to load ${namespace} messages for ${locale}:`, error)
-    // Fallback to default locale
-    if (locale !== I18N_CONFIG.defaultLocale) {
-      try {
-        const fallbackMessages = await import(`../messages/${I18N_CONFIG.defaultLocale}/${namespace}.json`)
-        return fallbackMessages.default
-      } catch (fallbackError) {
-        console.error(`Failed to load fallback messages for ${namespace}:`, fallbackError)
-        return {}
-      }
-    }
-    return {}
-  }
-}

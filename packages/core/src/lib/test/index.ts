@@ -28,7 +28,7 @@ export {
   type SelectorObject,
   type SelectorHelpers,
   type EntitySelectorHelpers,
-} from './selector-factory.js'
+} from './selector-factory'
 
 // =============================================================================
 // CORE SELECTORS - Base selector definitions
@@ -36,7 +36,7 @@ export {
 export {
   CORE_SELECTORS,
   type CoreSelectorsType,
-} from './core-selectors.js'
+} from './core-selectors'
 
 // =============================================================================
 // SELECTORS - Pre-bound helpers for core components
@@ -54,7 +54,7 @@ export {
   // Types
   type SelectorsType,
   type SelectorPath,
-} from './selectors.js'
+} from './selectors'
 
 // =============================================================================
 // UTILS - Testing attribute generators and helpers
@@ -75,4 +75,4 @@ export {
   testingPatterns,
   // Keyboard helpers
   keyboardHelpers,
-} from './utils.js'
+} from './utils'

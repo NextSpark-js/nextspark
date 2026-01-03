@@ -25,7 +25,7 @@ interface ActionsTableProps {
 }
 
 export function ActionsTable({ actions }: ActionsTableProps) {
-  const t = useTranslations('dev.scheduledActions')
+  const t = useTranslations('devtools.scheduledActions')
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
 
   const toggleRow = (id: string) => {

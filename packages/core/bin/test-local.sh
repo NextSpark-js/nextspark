@@ -25,7 +25,9 @@ CORE_DIR="$(dirname "$SCRIPT_DIR")"
 REPO_DIR="$(dirname "$(dirname "$CORE_DIR")")"
 PROJECT_DIR="$(dirname "$REPO_DIR")/project"
 TEST_APP_DIR="$PROJECT_DIR/test-app"
-TARBALL_NAME="nextsparkjs-core-0.3.0.tgz"
+# Extract version from package.json dynamically
+PACKAGE_VERSION=$(node -p "require('$CORE_DIR/package.json').version")
+TARBALL_NAME="nextsparkjs-core-${PACKAGE_VERSION}.tgz"
 
 # Colors
 RED='\033[0;31m'

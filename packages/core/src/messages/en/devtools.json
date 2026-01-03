@@ -246,5 +246,40 @@
       "operations": "Operations",
       "other": "Other"
     }
+  },
+  "scheduledActions": {
+    "title": "Scheduled Actions",
+    "description": "Monitor and manage scheduled background actions",
+    "loading": "Loading scheduled actions...",
+    "empty": "No scheduled actions found",
+    "emptyDescription": "Scheduled actions will appear here when they are created",
+    "filters": {
+      "status": "Status",
+      "allStatuses": "All Statuses",
+      "actionType": "Action Type",
+      "allTypes": "All Types",
+      "apply": "Apply Filters",
+      "reset": "Reset Filters"
+    },
+    "table": {
+      "type": "Type",
+      "status": "Status",
+      "scheduledAt": "Scheduled At",
+      "team": "Team",
+      "payload": "Payload",
+      "error": "Error",
+      "noTeam": "Global"
+    },
+    "status": {
+      "pending": "Pending",
+      "running": "Running",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {page} of {total}"
+    }
   }
 }
