@@ -1,0 +1,139 @@
+-- Migration: 001_{{ENTITY_NAME}}_table.sql
+-- Description: {{ENTITY_NAME_PASCAL}} (table, indexes, RLS) - Public Mode
+-- Date: {{DATE}}
+-- Mode: Public Read + Authenticated Write
+
+-- ============================================
+-- TABLE
+-- ============================================
+DROP TABLE IF EXISTS public."{{ENTITY_NAME}}" CASCADE;
+
+CREATE TABLE IF NOT EXISTS public."{{ENTITY_NAME}}" (
+  -- Primary Key
+  id              TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+
+  -- Relational Fields (always after id)
+  "userId"        TEXT NOT NULL REFERENCES public."users"(id) ON DELETE CASCADE,
+
+  -- Entity-specific fields (ADD YOUR FIELDS HERE)
+  -- title         TEXT NOT NULL,
+  -- slug          TEXT NOT NULL UNIQUE,
+  -- content       TEXT,
+  -- excerpt       TEXT,
+
+  -- Publishing control (REQUIRED for public mode)
+  published       BOOLEAN NOT NULL DEFAULT false,
+  "publishedAt"   TIMESTAMPTZ,
+
+  -- System fields (always last)
+  "createdAt"     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "updatedAt"     TIMESTAMPTZ NOT NULL DEFAULT now()
+
+  -- Constraints (ADD YOUR CONSTRAINTS HERE)
+  -- CONSTRAINT {{ENTITY_NAME}}_slug_valid CHECK (slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$')
+);
+
+-- ============================================
+-- COMMENTS
+-- ============================================
+COMMENT ON TABLE  public."{{ENTITY_NAME}}"               IS '{{DESCRIPTION}}';
+COMMENT ON COLUMN public."{{ENTITY_NAME}}"."userId"      IS 'Author/owner of this record';
+COMMENT ON COLUMN public."{{ENTITY_NAME}}".published     IS 'Whether this record is publicly visible';
+COMMENT ON COLUMN public."{{ENTITY_NAME}}"."publishedAt" IS 'When this record was published';
+-- ADD YOUR COLUMN COMMENTS HERE
+
+-- ============================================
+-- TRIGGER updatedAt (uses Better Auth function)
+-- ============================================
+DROP TRIGGER IF EXISTS {{ENTITY_NAME_SINGULAR}}_set_updated_at ON public."{{ENTITY_NAME}}";
+CREATE TRIGGER {{ENTITY_NAME_SINGULAR}}_set_updated_at
+BEFORE UPDATE ON public."{{ENTITY_NAME}}"
+FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- ============================================
+-- INDEXES
+-- ============================================
+CREATE INDEX IF NOT EXISTS idx_{{ENTITY_NAME}}_user_id         ON public."{{ENTITY_NAME}}"("userId");
+CREATE INDEX IF NOT EXISTS idx_{{ENTITY_NAME}}_published       ON public."{{ENTITY_NAME}}"(published) WHERE published = true;
+CREATE INDEX IF NOT EXISTS idx_{{ENTITY_NAME}}_published_at    ON public."{{ENTITY_NAME}}"("publishedAt" DESC) WHERE published = true;
+CREATE INDEX IF NOT EXISTS idx_{{ENTITY_NAME}}_created_at      ON public."{{ENTITY_NAME}}"("createdAt" DESC);
+CREATE INDEX IF NOT EXISTS idx_{{ENTITY_NAME}}_user_created_at ON public."{{ENTITY_NAME}}"("userId", "createdAt" DESC);
+-- ADD YOUR CUSTOM INDEXES HERE
+-- CREATE INDEX IF NOT EXISTS idx_{{ENTITY_NAME}}_slug ON public."{{ENTITY_NAME}}"(slug);
+
+-- ============================================
+-- RLS
+-- ============================================
+ALTER TABLE public."{{ENTITY_NAME}}" ENABLE ROW LEVEL SECURITY;
+
+-- Cleanup existing policies
+DROP POLICY IF EXISTS "{{ENTITY_NAME_PASCAL}} public can select" ON public."{{ENTITY_NAME}}";
+DROP POLICY IF EXISTS "{{ENTITY_NAME_PASCAL}} auth can do all"   ON public."{{ENTITY_NAME}}";
+
+-- ============================
+-- RLS: PUBLIC READ
+-- ============================
+-- Anonymous users can read published content
+CREATE POLICY "{{ENTITY_NAME_PASCAL}} public can select"
+ON public."{{ENTITY_NAME}}"
+FOR SELECT TO anon
+USING (published = true);
+
+-- ============================
+-- RLS: AUTHENTICATED MANAGEMENT
+-- ============================
+-- Authenticated users can manage all records (including unpublished drafts)
+CREATE POLICY "{{ENTITY_NAME_PASCAL}} auth can do all"
+ON public."{{ENTITY_NAME}}"
+FOR ALL TO authenticated
+USING (true)
+WITH CHECK (true);
+
+-- ============================================
+-- ALTERNATIVE: OWNER-ONLY MANAGEMENT
+-- ============================================
+-- Uncomment if only the owner should be able to edit/delete
+-- (and other auth users should only see published)
+
+-- DROP POLICY IF EXISTS "{{ENTITY_NAME_PASCAL}} auth can do all" ON public."{{ENTITY_NAME}}";
+--
+-- -- Authenticated can read published OR their own drafts
+-- CREATE POLICY "{{ENTITY_NAME_PASCAL}} auth can select"
+-- ON public."{{ENTITY_NAME}}"
+-- FOR SELECT TO authenticated
+-- USING (published = true OR "userId" = public.get_auth_user_id());
+--
+-- -- Only owner can insert
+-- CREATE POLICY "{{ENTITY_NAME_PASCAL}} owner can insert"
+-- ON public."{{ENTITY_NAME}}"
+-- FOR INSERT TO authenticated
+-- WITH CHECK ("userId" = public.get_auth_user_id());
+--
+-- -- Only owner can update their own records
+-- CREATE POLICY "{{ENTITY_NAME_PASCAL}} owner can update"
+-- ON public."{{ENTITY_NAME}}"
+-- FOR UPDATE TO authenticated
+-- USING ("userId" = public.get_auth_user_id())
+-- WITH CHECK ("userId" = public.get_auth_user_id());
+--
+-- -- Only owner can delete their own records
+-- CREATE POLICY "{{ENTITY_NAME_PASCAL}} owner can delete"
+-- ON public."{{ENTITY_NAME}}"
+-- FOR DELETE TO authenticated
+-- USING ("userId" = public.get_auth_user_id());
+
+-- ============================================
+-- NOTES
+-- ============================================
+-- Public mode has two layers:
+-- 1. Anonymous (anon): Can only read published = true
+-- 2. Authenticated: Can manage all records (default) or just own (alternative)
+--
+-- Use cases:
+-- - Blog posts, articles
+-- - Product catalogs
+-- - Marketing content
+-- - Public documentation
+--
+-- The "published" field controls public visibility.
+-- Authenticated users can always see drafts (depends on policy choice).

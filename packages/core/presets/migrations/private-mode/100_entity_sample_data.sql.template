@@ -1,0 +1,113 @@
+-- Migration: 100_{{ENTITY_NAME}}_sample_data.sql
+-- Description: Sample data for {{ENTITY_NAME_PASCAL}} - Private Mode
+-- Date: {{DATE}}
+-- Note: Uses numbering 100+ to run after all schema migrations
+
+-- ============================================
+-- SAMPLE DATA: {{ENTITY_NAME_PASCAL}}
+-- ============================================
+-- Uses ON CONFLICT for idempotency (safe to run multiple times)
+-- Each user has their own private records (RLS enforced)
+
+INSERT INTO public."{{ENTITY_NAME}}" (
+  id,
+  "userId",
+  -- ADD YOUR ENTITY FIELDS HERE
+  -- name,
+  -- description,
+  -- status,
+  "createdAt",
+  "updatedAt"
+) VALUES
+  -- Records for owner user (owner@test.com)
+  (
+    '{{ENTITY_NAME_SINGULAR}}-owner-001',
+    '11111111-1111-1111-1111-111111111111',  -- owner@test.com
+    -- 'Owner private record 1',
+    -- 'This record is only visible to the owner',
+    -- 'active',
+    NOW() - INTERVAL '30 days',
+    NOW() - INTERVAL '10 days'
+  ),
+  (
+    '{{ENTITY_NAME_SINGULAR}}-owner-002',
+    '11111111-1111-1111-1111-111111111111',  -- owner@test.com
+    -- 'Owner private record 2',
+    -- 'Another private record for owner',
+    -- 'draft',
+    NOW() - INTERVAL '20 days',
+    NOW() - INTERVAL '5 days'
+  ),
+  -- Records for admin user (admin@test.com)
+  (
+    '{{ENTITY_NAME_SINGULAR}}-admin-001',
+    '22222222-2222-2222-2222-222222222222',  -- admin@test.com
+    -- 'Admin private record 1',
+    -- 'This record is only visible to admin user',
+    -- 'active',
+    NOW() - INTERVAL '25 days',
+    NOW() - INTERVAL '3 days'
+  ),
+  -- Records for member user (member@test.com)
+  (
+    '{{ENTITY_NAME_SINGULAR}}-member-001',
+    '33333333-3333-3333-3333-333333333333',  -- member@test.com
+    -- 'Member private record 1',
+    -- 'This record is only visible to member user',
+    -- 'active',
+    NOW() - INTERVAL '15 days',
+    NOW()
+  )
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================
+-- SAMPLE METADATA (if using metas table)
+-- ============================================
+-- Each user's metas are private to that user
+
+-- INSERT INTO public."{{ENTITY_NAME}}_metas" (
+--   "entityId",
+--   "metaKey",
+--   "metaValue",
+--   "dataType",
+--   "isPublic",
+--   "isSearchable"
+-- ) VALUES
+--   (
+--     '{{ENTITY_NAME_SINGULAR}}-owner-001',
+--     'private_setting',
+--     '"owner private value"',
+--     'string',
+--     false,  -- Private metas should have isPublic = false
+--     false
+--   ),
+--   (
+--     '{{ENTITY_NAME_SINGULAR}}-admin-001',
+--     'private_setting',
+--     '"admin private value"',
+--     'string',
+--     false,
+--     false
+--   )
+-- ON CONFLICT ("entityId", "metaKey") DO NOTHING;
+
+-- ============================================
+-- STANDARD TEST USER IDS REFERENCE
+-- ============================================
+-- Use these IDs to reference test users in your sample data:
+--
+-- owner@test.com   : '11111111-1111-1111-1111-111111111111'
+-- admin@test.com   : '22222222-2222-2222-2222-222222222222'
+-- member@test.com  : '33333333-3333-3333-3333-333333333333'
+-- guest@test.com   : '44444444-4444-4444-4444-444444444444'
+--
+-- Password for all test users: Test1234
+
+-- ============================================
+-- PRIVATE MODE TESTING NOTES
+-- ============================================
+-- When testing RLS for private mode:
+-- 1. Each user should only see their own records
+-- 2. Users cannot access other users' records
+-- 3. Create records for multiple users to verify isolation
+-- 4. Test with different user sessions to confirm RLS works

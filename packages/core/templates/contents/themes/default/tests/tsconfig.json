@@ -1,0 +1,14 @@
+{
+  "extends": "../../../../tsconfig.cypress.json",
+  "compilerOptions": {
+    "baseUrl": "../../../..",
+    "paths": {
+      "@/contents/*": ["./contents/*"],
+      "@/*": ["./*"]
+    }
+  },
+  "include": [
+    "../../../../cypress.d.ts",
+    "cypress/**/*.ts"
+  ]
+}

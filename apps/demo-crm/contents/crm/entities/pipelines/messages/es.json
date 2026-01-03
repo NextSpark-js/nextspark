@@ -1,0 +1,115 @@
+{
+  "entity": {
+    "name": "Pipeline",
+    "plural": "Pipelines",
+    "description": "Gestiona pipelines de ventas y etapas"
+  },
+  "fields": {
+    "name": {
+      "label": "Nombre del Pipeline",
+      "description": "Nombre o título del pipeline",
+      "placeholder": "Ingrese nombre..."
+    },
+    "description": {
+      "label": "Descripción",
+      "description": "Descripción del pipeline",
+      "placeholder": "Ingrese descripción..."
+    },
+    "type": {
+      "label": "Tipo",
+      "description": "Tipo de pipeline",
+      "placeholder": "Seleccionar tipo..."
+    },
+    "isDefault": {
+      "label": "Pipeline por Defecto",
+      "description": "Si es el pipeline por defecto"
+    },
+    "isActive": {
+      "label": "Activo",
+      "description": "Si el pipeline está activo"
+    },
+    "stages": {
+      "label": "Etapas",
+      "description": "Configuración de etapas"
+    },
+    "conversion": {
+      "label": "Tasa de Conversión (%)",
+      "description": "Tasa de conversión general",
+      "placeholder": "0.00"
+    },
+    "averageDealSize": {
+      "label": "Tamaño Promedio de Trato",
+      "description": "Tamaño promedio de trato",
+      "placeholder": "0.00"
+    },
+    "averageCycleTime": {
+      "label": "Tiempo Promedio (días)",
+      "description": "Tiempo promedio para cerrar",
+      "placeholder": "0"
+    },
+    "totalValue": {
+      "label": "Valor Total",
+      "description": "Valor total de oportunidades"
+    },
+    "totalOpportunities": {
+      "label": "Total de Oportunidades",
+      "description": "Número de oportunidades"
+    },
+    "winRate": {
+      "label": "Tasa de Éxito (%)",
+      "description": "Porcentaje de éxito",
+      "placeholder": "0.00"
+    },
+    "createdBy": {
+      "label": "Creado por",
+      "description": "Usuario que creó el pipeline",
+      "placeholder": "Seleccionar usuario..."
+    },
+    "assignedTo": {
+      "label": "Responsable",
+      "description": "Usuario responsable",
+      "placeholder": "Seleccionar usuario..."
+    },
+    "createdAt": {
+      "label": "Creado el",
+      "description": "Cuándo se creó el pipeline"
+    },
+    "updatedAt": {
+      "label": "Actualizado el",
+      "description": "Cuándo se actualizó por última vez"
+    }
+  },
+  "options": {
+    "type": {
+      "sales": "Pipeline de Ventas",
+      "marketing": "Pipeline de Marketing",
+      "support": "Pipeline de Soporte",
+      "project": "Pipeline de Proyectos",
+      "recruitment": "Pipeline de Reclutamiento",
+      "custom": "Pipeline Personalizado"
+    }
+  },
+  "actions": {
+    "create": "Crear Pipeline",
+    "edit": "Editar Pipeline",
+    "delete": "Eliminar Pipeline",
+    "view": "Ver Pipeline",
+    "list": "Listar Pipelines",
+    "duplicate": "Duplicar Pipeline",
+    "activate": "Activar Pipeline",
+    "deactivate": "Desactivar Pipeline",
+    "setDefault": "Establecer por Defecto",
+    "reorder": "Reordenar Etapas"
+  },
+  "messages": {
+    "created": "Pipeline creado exitosamente",
+    "updated": "Pipeline actualizado exitosamente",
+    "deleted": "Pipeline eliminado exitosamente",
+    "activated": "Pipeline activado exitosamente",
+    "deactivated": "Pipeline desactivado exitosamente",
+    "setAsDefault": "Pipeline establecido como predeterminado",
+    "stagesReordered": "Etapas reordenadas exitosamente",
+    "notFound": "Pipeline no encontrado",
+    "error": "Error al procesar el pipeline"
+  }
+}

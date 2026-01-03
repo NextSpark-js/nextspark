@@ -1,0 +1,204 @@
+{
+  "title": "My Tasks",
+  "subtitle": "Organize your work and keep control of your projects.",
+  "description": "Organize your work and keep control of your projects.",
+  "stats": {
+    "active": "Active",
+    "completed": "Completed",
+    "total": "Total Tasks",
+    "totalDescription": "All tasks in the system",
+    "pending": "Pending",
+    "pendingDescription": "Tasks waiting to be completed",
+    "overdue": "Overdue"
+  },
+  "form": {
+    "addTitle": "Add New Task",
+    "addDescription": "Create a new task to keep track of what needs to be done",
+    "titleLabel": "Task title",
+    "titlePlaceholder": "What needs to be done?",
+    "titleDescription": "Enter the title of the new task. This field is required.",
+    "descriptionLabel": "Task description (optional)",
+    "descriptionPlaceholder": "Add a description (optional)",
+    "descriptionHelp": "Optional description to provide more details about the task.",
+    "addButton": "Add Task",
+    "adding": "Adding...",
+    "enterTitle": "Enter a title to enable the create task button",
+    "creating": "Creating task, please wait",
+    "pressToCreate": "Press to create the new task",
+    "addSuccess": "Task added successfully!",
+    "addError": "Failed to add task",
+    "tryAgain": "Please try again later",
+    "taskCreated": "Task \"{title}\" created successfully",
+    "createError": "Error creating task \"{title}\""
+  },
+  "task": {
+    "completed": "completed",
+    "active": "active",
+    "deleteConfirm": "Are you sure you want to delete this task?",
+    "deleteSuccess": "Task deleted successfully",
+    "toggleSuccess": "Task status updated"
+  },
+  "overview": {
+    "title": "Tasks Overview",
+    "label": "Tasks summary",
+    "activeTasks": "{count} active tasks",
+    "completedTasks": "{count} completed tasks",
+    "totalTasks": "{count} total tasks"
+  },
+  "actions": {
+    "completed": "Task completed!",
+    "reactivated": "Task reactivated!",
+    "deleted": "Task deleted",
+    "markCompleted": "completed",
+    "markPending": "pending",
+    "taskStatusChanged": "Task \"{title}\" {action}",
+    "taskDeleted": "Task \"{title}\" deleted",
+    "toggleError": "Error changing status of task \"{title}\"",
+    "deleteError": "Error deleting task",
+    "updateError": "Error updating task"
+  },
+  "status": {
+    "completed": "Completed",
+    "pending": "Pending",
+    "active": "Active",
+    "todo": "To Do",
+    "in-progress": "In Progress",
+    "review": "In Review",
+    "done": "Done",
+    "blocked": "Blocked"
+  },
+  "priority": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "urgent": "Urgent"
+  },
+  "fields": {
+    "status": "Status",
+    "priority": "Priority",
+    "tags": "Tags",
+    "dueDate": "Due Date",
+    "estimatedHours": "Estimated Hours",
+    "tagsPlaceholder": "Add tags...",
+    "dueDatePlaceholder": "Select due date...",
+    "estimatedHoursPlaceholder": "0",
+    "statusDescription": "Current task status",
+    "priorityDescription": "Task priority level",
+    "tagsDescription": "Task tags for categorization",
+    "dueDateDescription": "Task deadline",
+    "estimatedHoursDescription": "Estimated time to complete (in hours)"
+  },
+  "sections": {
+    "activeTasks": "Active Tasks",
+    "completedTasks": "Completed Tasks"
+  },
+  "empty": {
+    "title": "No tasks yet",
+    "description": "Add your first task above to get started!"
+  },
+  "accessibility": {
+    "taskCard": "Task: {title}. {status}. Press Enter to view details.",
+    "completedTaskCard": "Completed task: {title}. Press Enter to view details.",
+    "toggleTask": "Mark task \"{title}\" as {action}",
+    "reactivateTask": "Reactivate completed task \"{title}\"",
+    "deleteTask": "Delete task \"{title}\"",
+    "deleteCompletedTask": "Delete completed task \"{title}\"",
+    "createdDate": "Created on {date}",
+    "completedDate": "Completed on {date}"
+  },
+  "time": {
+    "daysAgo": "{count} day{count, plural, one {} other {s}} ago",
+    "hoursAgo": "{count} hour{count, plural, one {} other {s}} ago",
+    "minutesAgo": "{count} minute{count, plural, one {} other {s}} ago",
+    "justNow": "Just now"
+  },
+  "page": {
+    "statsAriaLabel": "Task statistics",
+    "listTitle": "Tasks List",
+    "listDescription": "Manage your pending tasks and get better organized",
+    "today": "Today"
+  },
+  "list": {
+    "title": "Tasks List",
+    "description": "Manage all your tasks in one place",
+    "allTasks": "All Tasks"
+  },
+  "detail": {
+    "loading": {
+      "message": "Loading task details",
+      "ariaLabel": "Loading task details",
+      "srText": "Loading task details..."
+    },
+    "navigation": {
+      "backToTasks": "Back to Tasks",
+      "backAriaLabel": "Back to task list",
+      "returnNavigation": "Return navigation",
+      "viewAllTasks": "View all tasks",
+      "viewAllDescription": "Navigate back to the complete task list"
+    },
+    "error": {
+      "notFound": "Could not find the requested task. It may have been deleted or you don't have permissions to view it.",
+      "title": "Task not found"
+    },
+    "status": {
+      "completed": "Completed",
+      "pending": "Pending",
+      "active": "In progress",
+      "completedAriaLabel": "Task completed",
+      "pendingAriaLabel": "Task pending"
+    },
+    "priority": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low",
+      "label": "Priority"
+    },
+    "categories": {
+      "design": "Design",
+      "development": "Development",
+      "meetings": "Meetings",
+      "documentation": "Documentation",
+      "testing": "Testing",
+      "general": "General"
+    },
+    "sections": {
+      "description": "Description",
+      "actions": "Actions",
+      "information": "Information",
+      "classification": "Classification",
+      "metadata": "Task metadata"
+    },
+    "actions": {
+      "title": "Actions",
+      "description": "Manage the status and options for this task. Keyboard shortcuts: Cmd+Enter to complete, Cmd+Backspace to delete.",
+      "markPending": "Mark Pending",
+      "markCompleted": "Mark Completed",
+      "delete": "Delete",
+      "markPendingAriaLabel": "Mark task \"{title}\" as pending. Shortcut: Cmd+Enter",
+      "markCompletedAriaLabel": "Mark task \"{title}\" as completed. Shortcut: Cmd+Enter",
+      "deleteAriaLabel": "Permanently delete task \"{title}\". Shortcut: Cmd+Backspace"
+    },
+    "info": {
+      "created": "Created",
+      "lastUpdate": "Last update",
+      "status": "Status",
+      "priority": "Priority", 
+      "category": "Category",
+      "taskId": "Task ID",
+      "noDescription": "No description available for this task.",
+      "inferredInfo": "Automatically inferred information"
+    },
+    "messages": {
+      "taskCompleted": "Task \"{title}\" completed successfully",
+      "taskReactivated": "Task \"{title}\" reactivated successfully",
+      "taskDeleted": "Task \"{title}\" deleted successfully",
+      "toggleError": "Error changing status of task \"{title}\"",
+      "deleteError": "Error deleting task \"{title}\"",
+      "completedToast": "Task completed",
+      "reactivatedToast": "Task reactivated",
+      "deletedToast": "Task deleted",
+      "updateErrorToast": "Error updating task",
+      "deleteErrorToast": "Error deleting task"
+    }
+  }
+}

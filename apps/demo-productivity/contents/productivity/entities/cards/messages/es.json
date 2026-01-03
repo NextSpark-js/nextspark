@@ -1,0 +1,114 @@
+{
+  "title": "Tarjetas",
+  "singular": "Tarjeta",
+  "plural": "Tarjetas",
+  "description": "Tarjetas de tareas para seguir tu trabajo",
+
+  "myCards": "Mis Tarjetas",
+  "allCards": "Todas las Tarjetas",
+  "assignedToMe": "Asignadas a Mí",
+
+  "fields": {
+    "title": {
+      "label": "Título",
+      "placeholder": "Ingresa el título de la tarjeta...",
+      "description": "Título de la tarjeta"
+    },
+    "description": {
+      "label": "Descripción",
+      "placeholder": "Agrega una descripción más detallada...",
+      "description": "Descripción detallada de la tarea"
+    },
+    "position": {
+      "label": "Posición",
+      "description": "Orden de visualización dentro de la lista"
+    },
+    "dueDate": {
+      "label": "Fecha Límite",
+      "placeholder": "Seleccionar fecha límite...",
+      "description": "Cuándo vence esta tarea"
+    },
+    "labels": {
+      "label": "Etiquetas",
+      "placeholder": "Seleccionar etiquetas...",
+      "description": "Tags para categorizar esta tarjeta",
+      "options": {
+        "urgent": "Urgente",
+        "important": "Importante",
+        "bug": "Bug",
+        "feature": "Funcionalidad",
+        "enhancement": "Mejora",
+        "documentation": "Documentación"
+      }
+    },
+    "assigneeId": {
+      "label": "Asignado a",
+      "placeholder": "Asignar a...",
+      "description": "Miembro del equipo asignado a esta tarjeta"
+    },
+    "listId": {
+      "label": "Lista",
+      "placeholder": "Seleccionar lista...",
+      "description": "Lista padre"
+    },
+    "boardId": {
+      "label": "Tablero",
+      "placeholder": "Seleccionar tablero...",
+      "description": "Tablero padre"
+    },
+    "createdAt": {
+      "label": "Creado",
+      "description": "Cuándo se creó la tarjeta"
+    },
+    "updatedAt": {
+      "label": "Actualizado",
+      "description": "Cuándo se modificó por última vez"
+    }
+  },
+
+  "actions": {
+    "create": "Agregar Tarjeta",
+    "edit": "Editar Tarjeta",
+    "delete": "Eliminar Tarjeta",
+    "move": "Mover Tarjeta",
+    "assign": "Asignar",
+    "unassign": "Desasignar",
+    "addLabel": "Agregar Etiqueta",
+    "removeLabel": "Quitar Etiqueta",
+    "setDueDate": "Establecer Fecha Límite",
+    "removeDueDate": "Quitar Fecha Límite"
+  },
+
+  "messages": {
+    "created": "Tarjeta creada exitosamente",
+    "updated": "Tarjeta actualizada exitosamente",
+    "deleted": "Tarjeta eliminada exitosamente",
+    "moved": "Tarjeta movida a {listName}",
+    "assigned": "Tarjeta asignada a {userName}",
+    "unassigned": "Tarjeta desasignada",
+    "confirmDelete": "¿Estás seguro de que quieres eliminar esta tarjeta?"
+  },
+
+  "empty": {
+    "title": "No hay tarjetas en esta lista",
+    "description": "Agrega una tarjeta para comenzar.",
+    "action": "Agregar una tarjeta"
+  },
+
+  "filters": {
+    "all": "Todas las Tarjetas",
+    "assignedToMe": "Asignadas a Mí",
+    "unassigned": "Sin Asignar",
+    "overdue": "Vencidas",
+    "dueThisWeek": "Vencen Esta Semana",
+    "noDueDate": "Sin Fecha Límite"
+  },
+
+  "dueStatus": {
+    "overdue": "Vencida",
+    "dueToday": "Vence Hoy",
+    "dueTomorrow": "Vence Mañana",
+    "dueThisWeek": "Vence Esta Semana"
+  }
+}
+

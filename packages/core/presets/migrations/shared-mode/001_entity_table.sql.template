@@ -1,0 +1,103 @@
+-- Migration: 001_{{ENTITY_NAME}}_table.sql
+-- Description: {{ENTITY_NAME_PASCAL}} (table, indexes, RLS) - Shared Mode
+-- Date: {{DATE}}
+-- Mode: Shared Authenticated (Any authenticated user can access)
+
+-- ============================================
+-- TABLE
+-- ============================================
+DROP TABLE IF EXISTS public."{{ENTITY_NAME}}" CASCADE;
+
+CREATE TABLE IF NOT EXISTS public."{{ENTITY_NAME}}" (
+  -- Primary Key
+  id              TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+
+  -- Relational Fields (always after id)
+  "userId"        TEXT NOT NULL REFERENCES public."users"(id) ON DELETE CASCADE,
+
+  -- Entity-specific fields (ADD YOUR FIELDS HERE)
+  -- name          TEXT NOT NULL,
+  -- description   TEXT,
+  -- status        TEXT DEFAULT 'active',
+
+  -- System fields (always last)
+  "createdAt"     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "updatedAt"     TIMESTAMPTZ NOT NULL DEFAULT now()
+
+  -- Constraints (ADD YOUR CONSTRAINTS HERE)
+  -- CONSTRAINT {{ENTITY_NAME}}_status_check CHECK (status IN ('draft', 'active', 'archived'))
+);
+
+-- ============================================
+-- COMMENTS
+-- ============================================
+COMMENT ON TABLE  public."{{ENTITY_NAME}}"              IS '{{DESCRIPTION}}';
+COMMENT ON COLUMN public."{{ENTITY_NAME}}"."userId"     IS 'User who created this record';
+-- ADD YOUR COLUMN COMMENTS HERE
+
+-- ============================================
+-- TRIGGER updatedAt (uses Better Auth function)
+-- ============================================
+DROP TRIGGER IF EXISTS {{ENTITY_NAME_SINGULAR}}_set_updated_at ON public."{{ENTITY_NAME}}";
+CREATE TRIGGER {{ENTITY_NAME_SINGULAR}}_set_updated_at
+BEFORE UPDATE ON public."{{ENTITY_NAME}}"
+FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- ============================================
+-- INDEXES
+-- ============================================
+CREATE INDEX IF NOT EXISTS idx_{{ENTITY_NAME}}_user_id         ON public."{{ENTITY_NAME}}"("userId");
+CREATE INDEX IF NOT EXISTS idx_{{ENTITY_NAME}}_created_at      ON public."{{ENTITY_NAME}}"("createdAt" DESC);
+CREATE INDEX IF NOT EXISTS idx_{{ENTITY_NAME}}_user_created_at ON public."{{ENTITY_NAME}}"("userId", "createdAt" DESC);
+-- ADD YOUR CUSTOM INDEXES HERE
+
+-- ============================================
+-- RLS
+-- ============================================
+ALTER TABLE public."{{ENTITY_NAME}}" ENABLE ROW LEVEL SECURITY;
+
+-- Cleanup existing policies
+DROP POLICY IF EXISTS "{{ENTITY_NAME_PASCAL}} any auth can do all" ON public."{{ENTITY_NAME}}";
+
+-- ============================
+-- RLS: SHARED AUTHENTICATED
+-- ============================
+-- Any authenticated user can read and modify all records
+-- Useful for collaborative workspaces, shared resources, wikis
+CREATE POLICY "{{ENTITY_NAME_PASCAL}} any auth can do all"
+ON public."{{ENTITY_NAME}}"
+FOR ALL TO authenticated
+USING (true)
+WITH CHECK (true);
+
+-- ============================================
+-- NOTES
+-- ============================================
+-- Shared mode allows any authenticated user to:
+-- - Read all records
+-- - Create new records
+-- - Update any record
+-- - Delete any record
+--
+-- Use this mode for:
+-- - Team collaboration entities
+-- - Shared workspaces
+-- - Internal company resources
+-- - Wiki-like content
+--
+-- If you need more granular control (e.g., only owner can delete),
+-- create separate policies for each operation:
+--
+-- CREATE POLICY "{{ENTITY_NAME_PASCAL}} auth can select"
+-- ON public."{{ENTITY_NAME}}" FOR SELECT TO authenticated USING (true);
+--
+-- CREATE POLICY "{{ENTITY_NAME_PASCAL}} auth can insert"
+-- ON public."{{ENTITY_NAME}}" FOR INSERT TO authenticated WITH CHECK (true);
+--
+-- CREATE POLICY "{{ENTITY_NAME_PASCAL}} owner can update"
+-- ON public."{{ENTITY_NAME}}" FOR UPDATE TO authenticated
+-- USING ("userId" = public.get_auth_user_id());
+--
+-- CREATE POLICY "{{ENTITY_NAME_PASCAL}} owner can delete"
+-- ON public."{{ENTITY_NAME}}" FOR DELETE TO authenticated
+-- USING ("userId" = public.get_auth_user_id());

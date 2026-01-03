@@ -1,0 +1,144 @@
+-- Migration: 100_{{ENTITY_NAME}}_sample_data.sql
+-- Description: Sample data for {{ENTITY_NAME_PASCAL}} - Public Mode
+-- Date: {{DATE}}
+-- Note: Uses numbering 100+ to run after all schema migrations
+
+-- ============================================
+-- SAMPLE DATA: {{ENTITY_NAME_PASCAL}}
+-- ============================================
+-- Uses ON CONFLICT for idempotency (safe to run multiple times)
+-- Mix of published and draft records for testing
+
+INSERT INTO public."{{ENTITY_NAME}}" (
+  id,
+  "userId",
+  -- ADD YOUR ENTITY FIELDS HERE
+  -- title,
+  -- slug,
+  -- content,
+  published,
+  "publishedAt",
+  "createdAt",
+  "updatedAt"
+) VALUES
+  -- Published record 1 (visible to public)
+  (
+    '{{ENTITY_NAME_SINGULAR}}-published-001',
+    '11111111-1111-1111-1111-111111111111',  -- owner@test.com
+    -- 'Published Article 1',
+    -- 'published-article-1',
+    -- 'Content visible to everyone...',
+    true,
+    NOW() - INTERVAL '7 days',
+    NOW() - INTERVAL '14 days',
+    NOW() - INTERVAL '7 days'
+  ),
+  -- Published record 2 (visible to public)
+  (
+    '{{ENTITY_NAME_SINGULAR}}-published-002',
+    '22222222-2222-2222-2222-222222222222',  -- admin@test.com
+    -- 'Published Article 2',
+    -- 'published-article-2',
+    -- 'Another public article...',
+    true,
+    NOW() - INTERVAL '3 days',
+    NOW() - INTERVAL '10 days',
+    NOW() - INTERVAL '3 days'
+  ),
+  -- Draft record (only visible to authenticated users)
+  (
+    '{{ENTITY_NAME_SINGULAR}}-draft-001',
+    '11111111-1111-1111-1111-111111111111',  -- owner@test.com
+    -- 'Draft Article',
+    -- 'draft-article',
+    -- 'Work in progress...',
+    false,
+    NULL,
+    NOW() - INTERVAL '5 days',
+    NOW() - INTERVAL '1 day'
+  ),
+  -- Recently published (visible to public)
+  (
+    '{{ENTITY_NAME_SINGULAR}}-published-003',
+    '33333333-3333-3333-3333-333333333333',  -- member@test.com
+    -- 'Latest Article',
+    -- 'latest-article',
+    -- 'Fresh content...',
+    true,
+    NOW(),
+    NOW() - INTERVAL '2 days',
+    NOW()
+  )
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================
+-- SAMPLE METADATA (if using metas table)
+-- ============================================
+-- Mix of public and private metas
+
+-- INSERT INTO public."{{ENTITY_NAME}}_metas" (
+--   "entityId",
+--   "metaKey",
+--   "metaValue",
+--   "dataType",
+--   "isPublic",
+--   "isSearchable"
+-- ) VALUES
+--   -- Public SEO metadata (visible to anonymous)
+--   (
+--     '{{ENTITY_NAME_SINGULAR}}-published-001',
+--     'seo_title',
+--     '"Published Article 1 - SEO Title"',
+--     'string',
+--     true,   -- Public
+--     true
+--   ),
+--   (
+--     '{{ENTITY_NAME_SINGULAR}}-published-001',
+--     'seo_description',
+--     '"Meta description for search engines"',
+--     'string',
+--     true,   -- Public
+--     true
+--   ),
+--   -- Private admin metadata (only authenticated)
+--   (
+--     '{{ENTITY_NAME_SINGULAR}}-published-001',
+--     'admin_notes',
+--     '"Internal notes not visible to public"',
+--     'string',
+--     false,  -- Private
+--     false
+--   ),
+--   (
+--     '{{ENTITY_NAME_SINGULAR}}-draft-001',
+--     'draft_notes',
+--     '"Notes for this draft"',
+--     'string',
+--     false,  -- Private (draft has no public metas anyway)
+--     false
+--   )
+-- ON CONFLICT ("entityId", "metaKey") DO NOTHING;
+
+-- ============================================
+-- STANDARD TEST USER IDS REFERENCE
+-- ============================================
+-- Use these IDs to reference test users in your sample data:
+--
+-- owner@test.com   : '11111111-1111-1111-1111-111111111111'
+-- admin@test.com   : '22222222-2222-2222-2222-222222222222'
+-- member@test.com  : '33333333-3333-3333-3333-333333333333'
+-- guest@test.com   : '44444444-4444-4444-4444-444444444444'
+--
+-- Password for all test users: Test1234
+
+-- ============================================
+-- PUBLIC MODE TESTING NOTES
+-- ============================================
+-- When testing RLS for public mode:
+-- 1. Anonymous users should only see published = true records
+-- 2. Anonymous users should only see metas with isPublic = true
+-- 3. Authenticated users should see all records (including drafts)
+-- 4. Authenticated users should see all metas
+-- 5. Test both published and draft records
+-- 6. Test with and without authentication

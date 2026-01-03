@@ -1,0 +1,21 @@
+{
+  "name": "nextspark-monorepo",
+  "private": true,
+  "version": "0.3.0",
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "dev": "pnpm --filter @nextsparkjs/dev dev",
+    "build": "pnpm --filter @nextsparkjs/dev build",
+    "build:core": "pnpm --filter @nextsparkjs/core build",
+    "build:cli": "pnpm --filter @nextsparkjs/cli build",
+    "lint": "pnpm --filter @nextsparkjs/dev lint",
+    "clean": "pnpm -r exec rm -rf node_modules dist .next"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}

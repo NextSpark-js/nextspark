@@ -1,0 +1,404 @@
+{
+  "title": "Settings",
+  "description": "Manage your account, security and preferences",
+  "overview": {
+    "title": "Welcome to Settings",
+    "description": "Use the left menu to navigate between different account configuration sections.",
+    "profileDescription": "Manage your personal information, name, email and basic preferences.",
+    "passwordDescription": "Change your current password for a new and more secure one.",
+    "securityDescription": "Configure two-factor authentication and review your active sessions.",
+    "notificationsDescription": "Customize how and when to receive email and push notifications.",
+    "billingDescription": "Manage your subscription, payment methods and invoices.",
+    "api-keysDescription": "Manage API keys for external integration and access control.",
+    "teamsDescription": "Manage your teams, members and invitations.",
+    "plansDescription": "Compare plans and upgrade your subscription."
+  },
+  "navigation": {
+    "ariaLabel": "Settings navigation",
+    "backToDashboard": "Returning to main dashboard",
+    "backButton": "Back to Dashboard",
+    "profile": "Profile",
+    "password": "Password",
+    "security": "Security",
+    "notifications": "Notifications",
+    "billing": "Billing",
+    "api-keys": "API Keys",
+    "teams": "Teams",
+    "plans": "Plans"
+  },
+  "layout": {
+    "title": "Settings",
+    "description": "Manage your account, security and preferences",
+    "sidebarLabel": "Settings menu",
+    "contentLabel": "Settings content"
+  },
+  "profile": {
+    "title": "Personal Information",
+    "description": "Manage your personal information and basic account preferences.",
+    "loading": {
+      "aria": "Loading profile information",
+      "text": "Loading profile information..."
+    },
+    "error": {
+      "message": "Error loading profile information. Please try again."
+    },
+    "success": {
+      "message": "Profile updated successfully!"
+    },
+    "form": {
+      "title": "Personal Data",
+      "description": "Update your name, country, timezone and preferred language",
+      "firstName": "First Name",
+      "firstNamePlaceholder": "Your first name",
+      "lastName": "Last Name",
+      "lastNamePlaceholder": "Your last name",
+      "email": "Email",
+      "emailNote": "Cannot be changed",
+      "authMethod": "Authentication Method",
+      "verificationStatus": "Verification Status",
+      "verified": "Verified",
+      "notVerified": "Not verified",
+      "language": "Language",
+      "languagePlaceholder": "Select your language",
+      "country": "Country",
+      "countryPlaceholder": "Select your country",
+      "timezone": "Timezone",
+      "timezonePlaceholder": "Select your timezone",
+      "memberSince": "Member since",
+      "updateButton": "Update Profile",
+      "updating": "Updating...",
+      "submitHelp": "Save changes to profile",
+      "submitHelpUpdating": "Updating profile information"
+    },
+    "messages": {
+      "updateSuccess": "Profile updated successfully",
+      "updateError": "Error updating profile: {error}",
+      "deleteSuccess": "Account deleted. Signing out...",
+      "deleteError": "Error deleting account: {error}",
+      "updating": "Updating profile...",
+      "deleting": "Deleting account...",
+      "advancedOpen": "Advanced options opened",
+      "advancedClosed": "Advanced options closed"
+    },
+    "advanced": {
+      "title": "Advanced Options",
+      "openLabel": "Open advanced options",
+      "closeLabel": "Close advanced options"
+    },
+    "danger": {
+      "title": "Danger Zone",
+      "warning": "These actions cannot be undone. Proceed with caution.",
+      "deleteButton": "Delete Account",
+      "dialogTitle": "Delete Account",
+      "dialogDescription": "You are about to permanently delete your account and all associated data.",
+      "dialogWarning": "This action is irreversible and cannot be undone.",
+      "dialogDetail": "All your profile information, settings and any other data will be permanently deleted from our servers.",
+      "deleting": "Deleting...",
+      "confirmDelete": "Delete Account"
+    },
+    "actions": {
+      "cancel": "Cancel"
+    }
+  },
+  "password": {
+    "title": "Change Password",
+    "description": "Choose a new secure password for your account.",
+    "loading": {
+      "verifying": "Verifying authentication method..."
+    },
+    "success": {
+      "aria": "Password updated successfully",
+      "title": "Password Updated!",
+      "description": "Your password has been updated successfully."
+    },
+    "form": {
+      "title": "New Password",
+      "description": "Update your password with a new and more secure one.",
+      "currentPassword": "Current Password",
+      "currentPasswordPlaceholder": "Enter your current password",
+      "newPassword": "New Password",
+      "newPasswordPlaceholder": "Create a secure password",
+      "confirmPassword": "Confirm New Password",
+      "confirmPasswordPlaceholder": "Confirm your new password",
+      "revokeOtherSessions": "Sign out from other devices",
+      "updateButton": "Update Password",
+      "updating": "Updating...",
+      "submitHelp": "Submit form to change password",
+      "submitHelpUpdating": "Updating password"
+    },
+    "messages": {
+      "updating": "Updating password...",
+      "updateSuccess": "Password updated successfully",
+      "updateError": "Error updating password",
+      "unexpectedError": "An unexpected error occurred"
+    }
+  },
+  "security": {
+    "title": "Security",
+    "description": "Manage your account security settings.",
+    "main": {
+      "title": "Security Settings",
+      "description": "Manage two-factor authentication and security alerts for your account."
+    },
+    "twoFactor": {
+      "title": "Two-Factor Authentication (2FA)",
+      "description": "Add an extra layer of security to your account",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "enabledStatus": "Your account is protected with 2FA",
+      "disabledStatus": "We recommend enabling 2FA for better security",
+      "active": "Active",
+      "inactive": "Inactive",
+      "ariaEnabled": "Two-factor authentication enabled",
+      "ariaDisabled": "Two-factor authentication disabled",
+      "recommendation": "We recommend enabling two-factor authentication to protect your account.",
+      "configuredMethods": "Configured methods:",
+      "appAuthenticator": "App Authenticator",
+      "appDescription": "Google Authenticator, Authy",
+      "configured": "Configured"
+    },
+    "alerts": {
+      "title": "Security Alerts",
+      "loginTitle": "Login Alerts",
+      "loginDescription": "We'll notify you by email about logins from new devices or locations",
+      "ariaEnabled": "Login alerts enabled",
+      "ariaDisabled": "Login alerts disabled"
+    },
+    "sessions": {
+      "title": "Active Sessions",
+      "description": "Review and manage devices that have access to your account.",
+      "current": "Current session",
+      "terminate": "Terminate",
+      "terminateDialog": {
+        "title": "Terminate Session",
+        "description": "Are you sure you want to terminate this session? The device will need to sign in again.",
+        "cancel": "Cancel",
+        "confirm": "Terminate Session"
+      },
+      "terminateAriaLabel": "Terminate session for {device}",
+      "sessionAriaLabel": "Session {device} - {status}",
+      "currentSession": "Current session",
+      "activeSession": "Active session"
+    },
+    "loginHistory": {
+      "title": "Login History",
+      "description": "Review recent login attempts to your account.",
+      "successful": "Successful login",
+      "failed": "Failed login",
+      "successBadge": "Success",
+      "failBadge": "Failed",
+      "viewComplete": "View Complete History",
+      "attemptAriaLabel": "Login attempt {status} from {location}",
+      "viewHistoryAriaLabel": "View complete login history"
+    },
+    "messages": {
+      "sessionTerminated": "Session terminated successfully",
+      "twoFactorEnabled": "2FA authentication enabled",
+      "twoFactorDisabled": "2FA authentication disabled",
+      "alertsEnabled": "Login alerts enabled",
+      "alertsDisabled": "Login alerts disabled",
+      "saveSuccess": "Settings saved",
+      "saveSuccessDescription": "Your security settings have been saved successfully.",
+      "saveError": "Save error",
+      "saveErrorDescription": "There was a problem saving your settings. Please try again."
+    },
+    "buttons": {
+      "save": "Save Changes",
+      "saving": "Saving..."
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "description": "Manage your email and push notification preferences.",
+    "main": {
+      "title": "Notification Settings",
+      "description": "Manage how and when you receive email and push notifications."
+    },
+    "channels": {
+      "title": "Notification Channels",
+      "push": {
+        "title": "Push Notifications",
+        "description": "Real-time notifications on your device",
+        "enabled": "Enabled",
+        "disabled": "Disabled",
+        "ariaEnabled": "Push notifications enabled",
+        "ariaDisabled": "Push notifications disabled"
+      },
+      "email": {
+        "title": "Email Notifications",
+        "description": "Sent to your primary email address",
+        "alwaysEnabled": "Always enabled"
+      }
+    },
+    "categories": {
+      "security": {
+        "title": "Security & Account",
+        "description": "Important alerts about your account"
+      },
+      "activity": {
+        "title": "Product Activity",
+        "description": "Updates about your activity"
+      },
+      "marketing": {
+        "title": "Marketing & Promotions",
+        "description": "News and special offers"
+      }
+    },
+    "types": {
+      "loginAlerts": {
+        "title": "New sign-ins",
+        "description": "We'll notify you when someone accesses from a new device"
+      },
+      "passwordChanges": {
+        "title": "Password changes",
+        "description": "Confirmation when you change your password"
+      },
+      "suspiciousActivity": {
+        "title": "Suspicious activity",
+        "description": "Alerts about unauthorized access attempts"
+      },
+      "mentions": {
+        "title": "Mentions and comments",
+        "description": "When someone mentions you or comments on your projects"
+      },
+      "projectUpdates": {
+        "title": "Project updates",
+        "description": "Important changes in projects you follow"
+      },
+      "teamInvites": {
+        "title": "Team invitations",
+        "description": "When you're invited to join a team"
+      },
+      "newsletter": {
+        "title": "Weekly newsletter",
+        "description": "Summary of new features and tips"
+      },
+      "promotions": {
+        "title": "Special offers",
+        "description": "Exclusive discounts and promotions"
+      },
+      "featureAnnouncements": {
+        "title": "New features",
+        "description": "Announcements about new product features"
+      }
+    },
+    "labels": {
+      "required": "Required",
+      "email": "Email",
+      "push": "Push",
+      "emailAriaLabel": "Email notifications for {title} {status}",
+      "pushAriaLabel": "Push notifications for {title} {status}",
+      "enabled": "enabled",
+      "disabled": "disabled"
+    },
+    "messages": {
+      "pushEnabled": "Push notifications enabled",
+      "pushDisabled": "Push notifications disabled",
+      "notificationToggled": "{type} notification for {notification} {status}",
+      "saveSuccess": "Settings saved",
+      "saveSuccessDescription": "Your notification preferences have been saved successfully.",
+      "saveError": "Save error",
+      "saveErrorDescription": "There was a problem saving your preferences. Please try again."
+    },
+    "buttons": {
+      "save": "Save Changes",
+      "saving": "Saving..."
+    }
+  },
+  "billing": {
+    "title": "Billing",
+    "description": "Manage your subscription, payment methods and invoices.",
+    "currentPlan": {
+      "title": "Current Plan",
+      "description": "Your current subscription and usage limits",
+      "free": "Free"
+    },
+    "usage": {
+      "tasks": "Monthly tasks",
+      "teamMember": "Team member",
+      "projects": "Projects"
+    },
+    "upgrade": {
+      "title": "Need more features?",
+      "description": "Upgrade to Pro for higher limits and advanced features",
+      "button": "Upgrade Plan",
+      "ready": "Ready for more?",
+      "explore": "Explore our Pro and Enterprise plans",
+      "viewPricing": "View Pricing",
+      "contactSales": "Contact Sales"
+    },
+    "paymentMethod": {
+      "title": "Payment Method",
+      "description": "Manage your payment methods",
+      "noMethod": "No payment method configured",
+      "addCard": "Add a card to upgrade your plan",
+      "addButton": "Add Payment Method"
+    },
+    "billingHistory": {
+      "title": "Billing History",
+      "description": "Your recent invoices and payments",
+      "noInvoices": "No invoices available",
+      "noInvoicesDescription": "Invoices will appear here when you have an active subscription"
+    },
+    "invoices": {
+      "table": {
+        "date": "Date",
+        "amount": "Amount",
+        "invoiceNumber": "Invoice #",
+        "status": "Status",
+        "download": "PDF"
+      },
+      "loading": "Loading invoices...",
+      "loadMore": "View more invoices",
+      "download": {
+        "tooltip": "Download PDF"
+      },
+      "empty": {
+        "title": "No invoices yet",
+        "description": "Invoices will appear here when you have an active subscription"
+      },
+      "status": {
+        "paid": "Paid",
+        "pending": "Pending",
+        "failed": "Failed",
+        "refunded": "Refunded"
+      },
+      "pagination": {
+        "showing": "Showing {start} to {end} of {total} invoices",
+        "previous": "Previous",
+        "next": "Next"
+      }
+    },
+    "features": {
+      "title": "Free Plan Features",
+      "description": "What's included in your current plan",
+      "taskLimit": "Up to 100 tasks per month",
+      "teamMember": "1 team member",
+      "projectLimit": "Up to 5 projects",
+      "basicSupport": "Basic email support",
+      "basicDashboard": "Basic dashboard",
+      "profileManagement": "Profile management"
+    },
+    "messages": {
+      "upgradeRedirect": "Redirecting to plan upgrade page",
+      "addPaymentForm": "Opening form to add payment method"
+    }
+  },
+  "teams": {
+    "title": "Teams",
+    "description": "Manage your teams, members and invitations.",
+    "yourTeam": "Your Team",
+    "yourTeams": "Your Teams",
+    "yourTeamsDescription": "Teams you are a member of. Select one to view its details.",
+    "noTeams": "You don't belong to any team yet.",
+    "manageTeamMembers": "Manage team members and settings."
+  },
+  "plans": {
+    "title": "Pricing Plans",
+    "description": "Choose the plan that best fits your needs"
+  },
+  "pages": {
+    "plans": "Plans",
+    "plansDescription": "Compare plans and upgrade your subscription"
+  }
+}

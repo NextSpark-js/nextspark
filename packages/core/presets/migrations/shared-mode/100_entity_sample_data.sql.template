@@ -1,0 +1,104 @@
+-- Migration: 100_{{ENTITY_NAME}}_sample_data.sql
+-- Description: Sample data for {{ENTITY_NAME_PASCAL}} - Shared Mode
+-- Date: {{DATE}}
+-- Note: Uses numbering 100+ to run after all schema migrations
+
+-- ============================================
+-- SAMPLE DATA: {{ENTITY_NAME_PASCAL}}
+-- ============================================
+-- Uses ON CONFLICT for idempotency (safe to run multiple times)
+-- All authenticated users can access all records
+
+INSERT INTO public."{{ENTITY_NAME}}" (
+  id,
+  "userId",
+  -- ADD YOUR ENTITY FIELDS HERE
+  -- name,
+  -- description,
+  -- status,
+  "createdAt",
+  "updatedAt"
+) VALUES
+  -- Record created by owner (accessible to all auth users)
+  (
+    '{{ENTITY_NAME_SINGULAR}}-sample-001',
+    '11111111-1111-1111-1111-111111111111',  -- owner@test.com
+    -- 'Shared resource 1',
+    -- 'This is accessible to all authenticated users',
+    -- 'active',
+    NOW() - INTERVAL '30 days',
+    NOW() - INTERVAL '10 days'
+  ),
+  -- Record created by admin (accessible to all auth users)
+  (
+    '{{ENTITY_NAME_SINGULAR}}-sample-002',
+    '22222222-2222-2222-2222-222222222222',  -- admin@test.com
+    -- 'Shared resource 2',
+    -- 'Created by admin but accessible to everyone',
+    -- 'active',
+    NOW() - INTERVAL '25 days',
+    NOW() - INTERVAL '5 days'
+  ),
+  -- Record created by member (accessible to all auth users)
+  (
+    '{{ENTITY_NAME_SINGULAR}}-sample-003',
+    '33333333-3333-3333-3333-333333333333',  -- member@test.com
+    -- 'Shared resource 3',
+    -- 'Created by member but accessible to everyone',
+    -- 'draft',
+    NOW() - INTERVAL '20 days',
+    NOW()
+  )
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================
+-- SAMPLE METADATA (if using metas table)
+-- ============================================
+-- All metas are accessible to all authenticated users
+
+-- INSERT INTO public."{{ENTITY_NAME}}_metas" (
+--   "entityId",
+--   "metaKey",
+--   "metaValue",
+--   "dataType",
+--   "isPublic",
+--   "isSearchable"
+-- ) VALUES
+--   (
+--     '{{ENTITY_NAME_SINGULAR}}-sample-001',
+--     'shared_setting',
+--     '"value accessible to all"',
+--     'string',
+--     false,
+--     true
+--   ),
+--   (
+--     '{{ENTITY_NAME_SINGULAR}}-sample-002',
+--     'shared_config',
+--     '{"option1": true, "option2": "shared"}',
+--     'json',
+--     false,
+--     false
+--   )
+-- ON CONFLICT ("entityId", "metaKey") DO NOTHING;
+
+-- ============================================
+-- STANDARD TEST USER IDS REFERENCE
+-- ============================================
+-- Use these IDs to reference test users in your sample data:
+--
+-- owner@test.com   : '11111111-1111-1111-1111-111111111111'
+-- admin@test.com   : '22222222-2222-2222-2222-222222222222'
+-- member@test.com  : '33333333-3333-3333-3333-333333333333'
+-- guest@test.com   : '44444444-4444-4444-4444-444444444444'
+--
+-- Password for all test users: Test1234
+
+-- ============================================
+-- SHARED MODE TESTING NOTES
+-- ============================================
+-- When testing RLS for shared mode:
+-- 1. Any authenticated user should see ALL records
+-- 2. Any authenticated user can create/update/delete ANY record
+-- 3. Create records from different users to verify shared access
+-- 4. Test that anonymous users CANNOT access (only authenticated)

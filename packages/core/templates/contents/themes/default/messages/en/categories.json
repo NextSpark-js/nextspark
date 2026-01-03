@@ -1,0 +1,35 @@
+{
+  "title": "Categories",
+  "description": "Manage post categories",
+  "newCategory": "New Category",
+  "editCategory": "Edit Category",
+  "createDescription": "Create a new category for organizing posts",
+  "editDescription": "Edit category details",
+  "name": "Name",
+  "slug": "Slug",
+  "icon": "Icon",
+  "color": "Color",
+  "actions": "Actions",
+  "loading": "Loading...",
+  "empty": "No categories found",
+  "emptyDescription": "Get started by creating your first category.",
+  "deleteConfirm": "Delete category?",
+  "deleteDescription": "Are you sure you want to delete \"{name}\"? This action cannot be undone.",
+  "saveCategory": "Save Category",
+  "saving": "Saving...",
+  "deleting": "Deleting...",
+  "cancel": "Cancel",
+  "delete": "Delete",
+  "iconHelp": "Lucide icon name (e.g., cpu, book-open)",
+  "createSuccess": "Category created successfully",
+  "updateSuccess": "Category updated successfully",
+  "deleteSuccess": "Category deleted successfully",
+  "placeholders": {
+    "name": "Technology",
+    "slug": "technology",
+    "description": "Posts about technology and software development"
+  },
+  "errors": {
+    "nameRequired": "Name is required"
+  }
+}

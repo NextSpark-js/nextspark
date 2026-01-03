@@ -1,0 +1,97 @@
+# {{PLUGIN_DISPLAY_NAME}}
+
+{{PLUGIN_DESCRIPTION}}
+
+## Installation
+
+This plugin is automatically registered when placed in `contents/plugins/{{PLUGIN_SLUG}}/`.
+
+## Configuration
+
+### Environment Variables
+
+Copy `.env.example` to `.env` and configure:
+
+```bash
+# Required
+{{PLUGIN_ENV_PREFIX}}_API_KEY=your-api-key
+
+# Optional
+{{PLUGIN_ENV_PREFIX}}_DEBUG=false
+```
+
+## Usage
+
+### In Server Components
+
+```typescript
+import { usePlugin } from '@/core/lib/registries/plugin-registry'
+
+const { exampleFunction } = usePlugin('{{PLUGIN_SLUG}}')
+const result = await exampleFunction()
+```
+
+### In API Routes
+
+```typescript
+import { usePlugin } from '@/core/lib/registries/plugin-registry'
+
+export async function POST(request: NextRequest) {
+  const { exampleFunction } = usePlugin('{{PLUGIN_SLUG}}')
+  const result = await exampleFunction()
+  return NextResponse.json(result)
+}
+```
+
+### In Client Components
+
+```typescript
+'use client'
+import { use{{PLUGIN_VAR_NAME}} } from '@/contents/plugins/{{PLUGIN_SLUG}}/hooks/use{{PLUGIN_VAR_NAME}}'
+
+function MyComponent() {
+  const { data, isLoading } = use{{PLUGIN_VAR_NAME}}()
+  // ...
+}
+```
+
+## API Reference
+
+### `exampleFunction()`
+
+Example function description.
+
+**Parameters:**
+- `param1` (string): Description
+
+**Returns:**
+- `Promise<Result>`: Description
+
+## File Structure
+
+```
+{{PLUGIN_SLUG}}/
+├── plugin.config.ts      # Plugin configuration
+├── README.md             # This file
+├── .env.example          # Environment variables template
+├── api/                  # API endpoints
+│   └── example/route.ts
+├── lib/                  # Core logic
+│   ├── core.ts
+│   └── types.ts
+├── components/           # React components
+│   └── ExampleWidget.tsx
+├── hooks/                # Custom React hooks
+│   └── use{{PLUGIN_VAR_NAME}}.ts
+├── entities/             # Plugin entities (optional)
+├── migrations/           # Database migrations (optional)
+├── messages/             # i18n translations
+│   ├── en.json
+│   └── es.json
+└── tests/                # Plugin tests
+    └── plugin.test.ts
+```
+
+## License
+
+MIT

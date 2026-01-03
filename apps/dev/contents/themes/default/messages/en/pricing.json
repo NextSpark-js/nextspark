@@ -1,0 +1,102 @@
+{
+  "hero": {
+    "badge": "Pricing",
+    "title": "Plans for every",
+    "titleAccent": "team",
+    "description": "Start free and scale as your team grows. All plans include our core features."
+  },
+  "plans": {
+    "free": {
+      "name": "Free",
+      "description": "Perfect for getting started",
+      "price": "0",
+      "period": "forever",
+      "cta": "Get Started Free",
+      "features": {
+        "users": "1 User",
+        "projects": "5 Projects",
+        "storage": "1GB Storage",
+        "support": "Basic Support",
+        "api": "API Access",
+        "analytics": "Advanced Analytics",
+        "prioritySupport": "Priority Support",
+        "integrations": "Custom Integrations"
+      }
+    },
+    "pro": {
+      "name": "Pro",
+      "description": "Best for growing teams",
+      "price": "29",
+      "period": "month",
+      "badge": "Most Popular",
+      "cta": "Start Pro Trial",
+      "features": {
+        "users": "10 Users",
+        "projects": "Unlimited Projects",
+        "storage": "100GB Storage",
+        "support": "Priority Support",
+        "api": "API Access",
+        "analytics": "Advanced Analytics",
+        "integrations": "Custom Integrations",
+        "manager": "Dedicated Manager"
+      }
+    },
+    "enterprise": {
+      "name": "Enterprise",
+      "description": "For large organizations",
+      "price": "99",
+      "period": "month",
+      "cta": "Contact Sales",
+      "features": {
+        "users": "Unlimited Users",
+        "projects": "Unlimited Projects",
+        "storage": "1TB Storage",
+        "support": "Dedicated Support",
+        "api": "API Access",
+        "analytics": "Advanced Analytics",
+        "integrations": "Custom Integrations",
+        "manager": "Dedicated Manager"
+      }
+    }
+  },
+  "comparison": {
+    "title": "Detailed Comparison",
+    "description": "See all features included in each plan to make the best decision.",
+    "collaboration": {
+      "title": "Collaboration",
+      "description": "Tools to work efficiently as a team with granular permissions."
+    },
+    "storage": {
+      "title": "Storage",
+      "description": "Secure and scalable storage for all your projects and files."
+    },
+    "security": {
+      "title": "Security",
+      "description": "End-to-end encryption and compliance with security standards."
+    },
+    "support": {
+      "title": "Support",
+      "description": "Specialized technical support to resolve any questions or issues."
+    }
+  },
+  "faq": {
+    "title": "Frequently Asked Questions",
+    "description": "We resolve the most common questions about our plans and pricing.",
+    "questions": {
+      "changePlan": "Can I change plans at any time?",
+      "changePlanAnswer": "Yes, you can change your plan at any time from your dashboard. Changes apply immediately.",
+      "setupCost": "Are there any setup costs?",
+      "setupCostAnswer": "No, all our plans include free setup and support during implementation.",
+      "paymentMethods": "What payment methods do you accept?",
+      "paymentMethodsAnswer": "We accept all major credit cards, PayPal and bank transfers for Enterprise plans.",
+      "annualDiscount": "Are there discounts for annual payment?",
+      "annualDiscountAnswer": "Yes, we offer 2 free months when paying annually on Pro and Enterprise plans."
+    }
+  },
+  "cta": {
+    "title": "Ready to get started?",
+    "description": "Join thousands of teams that already trust our platform for their projects.",
+    "startFree": "Start Free",
+    "contactSales": "Contact Sales"
+  }
+}

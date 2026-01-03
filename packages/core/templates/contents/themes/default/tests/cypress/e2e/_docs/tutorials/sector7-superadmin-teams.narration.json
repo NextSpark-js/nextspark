@@ -1,0 +1,155 @@
+{
+  "title": "Sector 7 - SuperAdmin Teams View",
+  "description": "Tutorial que muestra cómo un super administrador puede acceder a Sector 7 y visualizar todos los equipos del sistema.",
+  "language": "es",
+  "estimatedDuration": "1-1:30 minutos",
+  "targetAudience": "Usuarios finales con rol superadmin",
+  "chapters": [
+    {
+      "id": "intro",
+      "title": "Introducción",
+      "narrations": [
+        {
+          "step": 1,
+          "text": "Bienvenido a Sector 7, el área exclusiva para super administradores.",
+          "action": "none",
+          "estimatedSeconds": 4
+        },
+        {
+          "step": 2,
+          "text": "Hoy veremos cómo acceder y visualizar todos los equipos del sistema.",
+          "action": "none",
+          "estimatedSeconds": 4
+        }
+      ]
+    },
+    {
+      "id": "login",
+      "title": "Login como SuperAdmin",
+      "narrations": [
+        {
+          "step": 3,
+          "text": "Iniciamos sesión con las credenciales de superadmin.",
+          "action": "visit-login",
+          "estimatedSeconds": 3
+        },
+        {
+          "step": 4,
+          "text": "Usamos el email del superadmin de prueba.",
+          "action": "fill-email",
+          "estimatedSeconds": 4
+        },
+        {
+          "step": 5,
+          "text": "Ingresamos la contraseña y enviamos.",
+          "action": "fill-password-submit",
+          "estimatedSeconds": 5
+        },
+        {
+          "step": 6,
+          "text": "Acceso concedido. Observa el icono de Sector 7 en la barra superior.",
+          "action": "highlight-sector7-icon",
+          "estimatedSeconds": 5
+        }
+      ]
+    },
+    {
+      "id": "navigation",
+      "title": "Navegación a Sector 7",
+      "narrations": [
+        {
+          "step": 7,
+          "text": "Hacemos clic para ingresar al área restringida.",
+          "action": "click-sector7",
+          "estimatedSeconds": 3
+        },
+        {
+          "step": 8,
+          "text": "Este es el panel de control del super administrador.",
+          "action": "show-dashboard",
+          "estimatedSeconds": 5
+        },
+        {
+          "step": 9,
+          "text": "En el menú lateral vemos las opciones disponibles.",
+          "action": "highlight-teams-nav",
+          "estimatedSeconds": 4
+        }
+      ]
+    },
+    {
+      "id": "teams-view",
+      "title": "Visualización de Teams",
+      "narrations": [
+        {
+          "step": 10,
+          "text": "Navegamos a la sección de Equipos.",
+          "action": "click-teams-nav",
+          "estimatedSeconds": 3
+        },
+        {
+          "step": 11,
+          "text": "Aquí vemos todos los equipos del sistema con estadísticas.",
+          "action": "show-stats",
+          "estimatedSeconds": 5
+        },
+        {
+          "step": 12,
+          "text": "La pestaña Work Teams muestra equipos colaborativos.",
+          "action": "highlight-work-tab",
+          "estimatedSeconds": 4
+        },
+        {
+          "step": 13,
+          "text": "También podemos ver los equipos personales de cada usuario.",
+          "action": "click-personal-tab",
+          "estimatedSeconds": 5
+        },
+        {
+          "step": 14,
+          "text": "El buscador permite filtrar equipos por nombre o email del propietario.",
+          "action": "highlight-search",
+          "estimatedSeconds": 4
+        }
+      ]
+    },
+    {
+      "id": "conclusion",
+      "title": "Conclusión",
+      "narrations": [
+        {
+          "step": 15,
+          "text": "Así funciona Sector 7: acceso exclusivo a la gestión global del sistema.",
+          "action": "none",
+          "estimatedSeconds": 5
+        },
+        {
+          "step": 16,
+          "text": "Gracias por ver este tutorial.",
+          "action": "none",
+          "estimatedSeconds": 3
+        }
+      ]
+    }
+  ],
+  "totalSteps": 16,
+  "technicalNotes": {
+    "users": {
+      "superadmin": "superadmin@cypress.com",
+      "password": "Pandora1234"
+    },
+    "routes": [
+      "/login",
+      "/dashboard",
+      "/sector7",
+      "/sector7/teams"
+    ],
+    "selectors": {
+      "topnavSector7": "[data-cy='topnav-sector7']",
+      "sector7NavTeams": "[data-cy='sector7-nav-teams']",
+      "teamsSearchInput": "[data-cy='teams-search-input']",
+      "workTeamsTab": "[value='work']",
+      "personalTeamsTab": "[value='personal']"
+    }
+  }
+}

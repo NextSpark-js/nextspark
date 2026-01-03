@@ -1,0 +1,85 @@
+/**
+ * {{PLUGIN_DISPLAY_NAME}} Plugin Tests
+ *
+ * Unit tests for the plugin functionality.
+ */
+
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { exampleFunction, validateConfig, DEFAULTS } from '../lib/core'
+import type { {{PLUGIN_VAR_NAME}}Config } from '../lib/types'
+
+describe('{{PLUGIN_DISPLAY_NAME}} Plugin', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  describe('exampleFunction', () => {
+    it('should return success result with input', async () => {
+      const result = await exampleFunction('test input')
+
+      expect(result).toMatchObject({
+        success: true,
+        message: expect.stringContaining('test input'),
+      })
+      expect(result.timestamp).toBeDefined()
+    })
+
+    it('should return success result without input', async () => {
+      const result = await exampleFunction()
+
+      expect(result).toMatchObject({
+        success: true,
+        message: expect.stringContaining('no input'),
+      })
+    })
+  })
+
+  describe('validateConfig', () => {
+    it('should return true for valid config', () => {
+      const config: Partial<{{PLUGIN_VAR_NAME}}Config> = {
+        apiKey: 'test-key',
+        debug: false,
+      }
+
+      expect(validateConfig(config)).toBe(true)
+    })
+
+    it('should throw error for null config', () => {
+      expect(() => validateConfig(null as any)).toThrow(
+        '[{{PLUGIN_SLUG}}] Configuration is required'
+      )
+    })
+  })
+
+  describe('DEFAULTS', () => {
+    it('should have expected default values', () => {
+      expect(DEFAULTS).toEqual({
+        timeout: 30000,
+        retries: 3,
+        debug: false,
+      })
+    })
+  })
+})
+
+describe('{{PLUGIN_DISPLAY_NAME}} Widget', () => {
+  // Component tests would go here
+  // Using @testing-library/react
+
+  it.todo('should render widget with title')
+  it.todo('should show loading state during execution')
+  it.todo('should display result after successful execution')
+  it.todo('should display error message on failure')
+  it.todo('should reset state when reset button clicked')
+})
+
+describe('use{{PLUGIN_VAR_NAME}} Hook', () => {
+  // Hook tests would go here
+  // Using @testing-library/react-hooks
+
+  it.todo('should initialize with default state')
+  it.todo('should set loading state during execution')
+  it.todo('should update data on successful execution')
+  it.todo('should set error on failed execution')
+  it.todo('should reset state when reset called')
+})

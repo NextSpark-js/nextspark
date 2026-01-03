@@ -1,0 +1,49 @@
+/**
+ * {{PLUGIN_DISPLAY_NAME}} Plugin Configuration
+ *
+ * {{PLUGIN_DESCRIPTION}}
+ *
+ * @version {{PLUGIN_VERSION}}
+ * @author {{PLUGIN_AUTHOR}}
+ */
+
+import type { PluginConfig } from '@/core/types/plugin'
+
+// Import your core utilities
+import { exampleFunction } from './lib/core'
+
+/**
+ * {{PLUGIN_DISPLAY_NAME}} plugin configuration
+ */
+export const {{PLUGIN_VAR_NAME}}PluginConfig: PluginConfig = {
+  name: '{{PLUGIN_SLUG}}',
+  displayName: '{{PLUGIN_DISPLAY_NAME}}',
+  version: '{{PLUGIN_VERSION}}',
+  description: '{{PLUGIN_DESCRIPTION}}',
+  enabled: true,
+  dependencies: [],
+
+  // Core API - functions exposed by this plugin
+  api: {
+    exampleFunction,
+    // Add more exported functions here
+  },
+
+  // Plugin lifecycle hooks
+  hooks: {
+    onLoad: async () => {
+      console.log('[{{PLUGIN_DISPLAY_NAME}}] Plugin loaded')
+    },
+    onActivate: async () => {
+      console.log('[{{PLUGIN_DISPLAY_NAME}}] Plugin activated')
+    },
+    onDeactivate: async () => {
+      console.log('[{{PLUGIN_DISPLAY_NAME}}] Plugin deactivated')
+    },
+    onUnload: async () => {
+      console.log('[{{PLUGIN_DISPLAY_NAME}}] Plugin unloaded')
+    },
+  },
+}
+
+export default {{PLUGIN_VAR_NAME}}PluginConfig

@@ -1,0 +1,113 @@
+{
+  "common": {
+    "blog": {
+      "viewBlog": "View Blog",
+      "export": "Export Posts"
+    }
+  },
+  "blog": {
+    "title": "Blog Platform",
+    "description": "Thoughts, stories, and ideas from our community of writers",
+    "viewBlog": "View Blog",
+    "writtenBy": "Written by",
+    "publishedOn": "Published on",
+    "readMore": "Read more",
+    "backToHome": "Back to Home",
+    "backToPosts": "Back to Posts",
+    "noPosts": "No posts yet",
+    "noPostsDescription": "Check back soon for new content.",
+
+    "publicFeed": {
+      "title": "Latest Stories",
+      "subtitle": "Thoughts, stories, and ideas from our community of writers",
+      "recentPosts": "Recent Posts",
+      "loadMore": "Load More",
+      "noResults": "No posts found",
+      "filterByCategory": "Filter by Category"
+    },
+
+    "newsletter": {
+      "title": "Stay in the loop",
+      "description": "Subscribe to get notified when new articles are published. No spam, unsubscribe anytime.",
+      "placeholder": "your@email.com",
+      "subscribe": "Subscribe"
+    },
+
+    "author": {
+      "profileTitle": "{name}'s Profile",
+      "postsCount": "{count} published posts",
+      "postsCountSingular": "{count} published post",
+      "viewAllPosts": "View all posts",
+      "followOn": "Follow on {platform}",
+      "visitWebsite": "Visit website",
+      "moreFrom": "More from {name}",
+      "notFound": "Author not found",
+      "notFoundDescription": "The author you are looking for does not exist."
+    },
+
+    "category": {
+      "title": "Posts in {category}",
+      "noResults": "No posts in this category yet"
+    },
+
+    "dashboard": {
+      "myPosts": "My Posts",
+      "newPost": "New Post",
+      "editProfile": "Edit Profile",
+      "publishPost": "Publish",
+      "unpublishPost": "Unpublish",
+      "confirmPublish": "Are you sure you want to publish this post?",
+      "confirmUnpublish": "Are you sure you want to unpublish this post?",
+      "statusDraft": "Draft",
+      "statusPublished": "Published"
+    },
+
+    "profile": {
+      "username": "Username",
+      "usernameHint": "This will be your public profile URL: /author/{username}",
+      "bio": "Bio",
+      "bioPlaceholder": "Tell readers about yourself...",
+      "socialLinks": "Social Links",
+      "twitter": "Twitter/X Profile",
+      "linkedin": "LinkedIn Profile",
+      "website": "Personal Website",
+      "saveProfile": "Save Profile",
+      "profileUpdated": "Profile updated successfully"
+    },
+
+    "export": "Export Posts",
+    "import": "Import Posts",
+    "exportDescription": "Download all your posts as a JSON file",
+    "importDescription": "Upload a JSON file to import posts",
+    "exportSuccess": "Posts exported successfully",
+    "importSuccess": "Posts imported successfully",
+    "importError": "Failed to import posts",
+
+    "quickActions": {
+      "writePost": "Write a new post"
+    },
+
+    "categories": {
+      "all": "All Categories",
+      "uncategorized": "Uncategorized"
+    },
+
+    "search": {
+      "placeholder": "Search posts...",
+      "noResults": "No posts found",
+      "resultsFor": "Results for"
+    },
+
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page"
+    },
+
+    "meta": {
+      "minRead": "min read",
+      "draft": "Draft",
+      "scheduled": "Scheduled for"
+    }
+  }
+}

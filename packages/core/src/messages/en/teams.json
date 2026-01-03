@@ -1,0 +1,140 @@
+{
+  "title": "Teams",
+  "description": "Manage your teams and collaboration",
+
+  "types": {
+    "personal": "Personal",
+    "work": "Work Team"
+  },
+
+  "roles": {
+    "owner": "Owner",
+    "admin": "Admin",
+    "member": "Member",
+    "viewer": "Viewer"
+  },
+
+  "roleDescriptions": {
+    "owner": "Full control over the team, including deletion and billing",
+    "admin": "Can manage members, settings, and most team operations",
+    "member": "Can view team content and collaborate with other members",
+    "viewer": "Read-only access to team content"
+  },
+
+  "actions": {
+    "create": "Create Team",
+    "edit": "Edit Team",
+    "delete": "Delete Team",
+    "leave": "Leave Team",
+    "switch": "Switch Team",
+    "manage": "Manage Team",
+    "invite": "Invite Member",
+    "removeMember": "Remove Member",
+    "changeRole": "Change Role"
+  },
+
+  "switcher": {
+    "switchTeam": "Switch Team",
+    "switchingTo": "Switching to",
+    "switchComplete": "Switch Complete",
+    "loadingTeamData": "Loading team data...",
+    "ready": "Ready!",
+    "personal": "Personal",
+    "workTeam": "Work Team",
+    "manageTeams": "Manage Teams",
+    "active": "Active",
+    "team": "Team"
+  },
+
+  "createTeam": {
+    "title": "Create New Team",
+    "description": "Create a new team to collaborate with others",
+    "nameLabel": "Team Name",
+    "namePlaceholder": "Enter team name",
+    "slugLabel": "Team URL",
+    "slugPlaceholder": "team-url",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Describe what this team is for",
+    "success": "Team created successfully",
+    "error": "Failed to create team"
+  },
+
+  "editTeam": {
+    "title": "Edit Team",
+    "success": "Team updated successfully",
+    "error": "Failed to update team"
+  },
+
+  "deleteTeam": {
+    "title": "Delete Team",
+    "description": "Are you sure you want to delete this team? This action cannot be undone.",
+    "confirmButton": "Delete Team",
+    "success": "Team deleted successfully",
+    "error": "Failed to delete team"
+  },
+
+  "members": {
+    "title": "Team Members",
+    "description": "Manage who has access to this team",
+    "empty": "No members yet",
+    "you": "(You)",
+    "joined": "Joined {date}"
+  },
+
+  "invitations": {
+    "title": "Pending Invitations",
+    "description": "Invitations waiting for response",
+    "empty": "No pending invitations",
+    "sent": "Sent {date}",
+    "expires": "Expires {date}",
+    "resend": "Resend",
+    "cancel": "Cancel Invitation",
+    "cancelSuccess": "Invitation cancelled",
+    "cancelError": "Failed to cancel invitation"
+  },
+
+  "invite": {
+    "title": "Invite Team Member",
+    "description": "Invite someone to join this team",
+    "emailLabel": "Email Address",
+    "emailPlaceholder": "colleague@example.com",
+    "roleLabel": "Role",
+    "rolePlaceholder": "Select a role",
+    "sendButton": "Send Invitation",
+    "success": "Invitation sent successfully",
+    "error": "Failed to send invitation"
+  },
+
+  "acceptInvite": {
+    "title": "Team Invitation",
+    "description": "You've been invited to join",
+    "accept": "Accept Invitation",
+    "decline": "Decline",
+    "expired": "This invitation has expired",
+    "invalid": "This invitation is no longer valid",
+    "success": "You've joined the team!",
+    "error": "Failed to accept invitation"
+  },
+
+  "settings": {
+    "title": "Team Settings",
+    "general": "General",
+    "members": "Members",
+    "billing": "Billing",
+    "danger": "Danger Zone"
+  },
+
+  "errors": {
+    "notFound": "Team not found",
+    "notMember": "You are not a member of this team",
+    "permissionDenied": "You don't have permission to perform this action",
+    "cannotDeletePersonal": "Cannot delete personal team",
+    "cannotLeaveOwner": "Team owners cannot leave. Transfer ownership first.",
+    "lastAdmin": "Cannot remove the last admin from the team"
+  },
+
+  "empty": {
+    "title": "No teams yet",
+    "description": "Create your first team to start collaborating"
+  }
+}

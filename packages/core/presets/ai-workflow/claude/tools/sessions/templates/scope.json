@@ -1,0 +1,56 @@
+{
+  "$schema": "Session Scope Configuration - Defines what areas agents can modify",
+  "definedBy": "product-manager",
+  "date": "YYYY-MM-DD",
+  "scope": {
+    "core": false,
+    "theme": "theme-name",
+    "plugins": false
+  },
+  "exceptions": [],
+  "_docs": {
+    "core": "boolean - If true, agents can modify core/ directory, app/ directory, scripts/, migrations/",
+    "theme": "string|false - Theme name that agents can modify (e.g., 'default', 'crm'). Set to false to disallow theme modifications.",
+    "plugins": "array|false - Array of plugin names agents can modify (e.g., ['analytics', 'payment']). Set to false to disallow plugin modifications.",
+    "exceptions": "array - Array of specific file paths that are allowed/disallowed regardless of scope rules"
+  },
+  "_examples": {
+    "feature_in_existing_theme": {
+      "core": false,
+      "theme": "default",
+      "plugins": false
+    },
+    "new_plugin_development": {
+      "core": false,
+      "theme": "plugin-sandbox",
+      "plugins": ["my-new-plugin"]
+    },
+    "core_framework_change": {
+      "core": true,
+      "theme": false,
+      "plugins": false
+    },
+    "full_access": {
+      "core": true,
+      "theme": "default",
+      "plugins": ["analytics", "payment"]
+    }
+  },
+  "_path_mapping": {
+    "core_paths": [
+      "core/**/*",
+      "app/**/*",
+      "scripts/**/*",
+      "migrations/**/*"
+    ],
+    "theme_paths": [
+      "contents/themes/{theme}/**/*"
+    ],
+    "plugin_paths": [
+      "contents/plugins/{plugin}/**/*"
+    ],
+    "always_allowed": [
+      ".claude/sessions/**/*"
+    ]
+  }
+}

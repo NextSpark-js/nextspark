@@ -1,0 +1,560 @@
+/**
+ * Productivity Theme - Global Styles
+ *
+ * Clean, modern design focused on productivity.
+ * Blue-tinted palette with clear visual hierarchy.
+ */
+
+/* ============================================================================
+   Base Theme Variables - Blue Color Scheme
+   ============================================================================ */
+
+:root {
+  /* Base colors - Blue theme */
+  --background: oklch(1.0000 0 0);
+  --foreground: oklch(0.1884 0.0128 248.5103);
+  --card: oklch(0.9784 0.0011 197.1387);
+  --card-foreground: oklch(0.1884 0.0128 248.5103);
+  --popover: oklch(1.0000 0 0);
+  --popover-foreground: oklch(0.1884 0.0128 248.5103);
+  --primary: oklch(0.6723 0.1606 244.9955);
+  --primary-foreground: oklch(1.0000 0 0);
+  --secondary: oklch(0.1884 0.0128 248.5103);
+  --secondary-foreground: oklch(1.0000 0 0);
+  --muted: oklch(0.9222 0.0013 286.3737);
+  --muted-foreground: oklch(0.1884 0.0128 248.5103);
+  --accent: oklch(0.9392 0.0166 250.8453);
+  --accent-foreground: oklch(0.6723 0.1606 244.9955);
+  --destructive: oklch(0.6188 0.2376 25.7658);
+  --destructive-foreground: oklch(1.0000 0 0);
+  --border: oklch(0.9317 0.0118 231.6594);
+  --input: oklch(0.9809 0.0025 228.7836);
+  --ring: oklch(0.6818 0.1584 243.3540);
+
+  /* Chart colors */
+  --chart-1: oklch(0.6723 0.1606 244.9955);
+  --chart-2: oklch(0.6907 0.1554 160.3454);
+  --chart-3: oklch(0.8214 0.1600 82.5337);
+  --chart-4: oklch(0.7064 0.1822 151.7125);
+  --chart-5: oklch(0.5919 0.2186 10.5826);
+
+  /* Sidebar colors */
+  --sidebar: oklch(0.9784 0.0011 197.1387);
+  --sidebar-foreground: oklch(0.1884 0.0128 248.5103);
+  --sidebar-primary: oklch(0.6723 0.1606 244.9955);
+  --sidebar-primary-foreground: oklch(1.0000 0 0);
+  --sidebar-accent: oklch(0.9392 0.0166 250.8453);
+  --sidebar-accent-foreground: oklch(0.6723 0.1606 244.9955);
+  --sidebar-border: oklch(0.9271 0.0101 238.5177);
+  --sidebar-ring: oklch(0.6818 0.1584 243.3540);
+
+  /* Typography */
+  --font-sans: Open Sans, sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: Menlo, monospace;
+
+  /* Border radius */
+  --radius: 1.3rem;
+
+  /* Shadows - Flat style */
+  --shadow-x: 0px;
+  --shadow-y: 2px;
+  --shadow-blur: 0px;
+  --shadow-spread: 0px;
+  --shadow-opacity: 0;
+  --shadow-color: rgba(29,161,242,0.15);
+  --shadow-2xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00);
+  --shadow-xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00);
+  --shadow-sm: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
+  --shadow: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
+  --shadow-md: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 2px 4px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
+  --shadow-lg: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 4px 6px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
+  --shadow-xl: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 8px 10px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
+  --shadow-2xl: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+
+  /* Board colors */
+  --board-blue: oklch(0.55 0.2 250);
+  --board-green: oklch(0.55 0.18 150);
+  --board-purple: oklch(0.5 0.2 300);
+  --board-orange: oklch(0.65 0.18 50);
+  --board-red: oklch(0.55 0.22 25);
+  --board-pink: oklch(0.6 0.18 350);
+  --board-gray: oklch(0.5 0.02 260);
+
+  /* Label colors */
+  --label-urgent: oklch(0.55 0.22 25);
+  --label-important: oklch(0.65 0.18 50);
+  --label-bug: oklch(0.55 0.22 25);
+  --label-feature: oklch(0.55 0.2 250);
+  --label-enhancement: oklch(0.55 0.18 150);
+  --label-documentation: oklch(0.5 0.2 300);
+
+  /* Card shadows for drag states */
+  --card-shadow-idle: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+  --card-shadow-hover: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  --card-shadow-dragging: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+  /* List dimensions */
+  --list-width: 280px;
+  --list-max-height: calc(100vh - 200px);
+
+  /* Card dimensions */
+  --card-min-height: 60px;
+  --card-padding: 0.75rem;
+
+  /* Animation */
+  --transition-fast: 100ms ease;
+  --transition-normal: 200ms ease;
+  --transition-slow: 300ms ease;
+}
+
+/* Dark mode */
+.dark {
+  /* Base colors - Blue theme dark mode */
+  --background: oklch(0 0 0);
+  --foreground: oklch(0.9328 0.0025 228.7857);
+  --card: oklch(0.2097 0.0080 274.5332);
+  --card-foreground: oklch(0.8853 0 0);
+  --popover: oklch(0 0 0);
+  --popover-foreground: oklch(0.9328 0.0025 228.7857);
+  --primary: oklch(0.6692 0.1607 245.0110);
+  --primary-foreground: oklch(1.0000 0 0);
+  --secondary: oklch(0.9622 0.0035 219.5331);
+  --secondary-foreground: oklch(0.1884 0.0128 248.5103);
+  --muted: oklch(0.2090 0 0);
+  --muted-foreground: oklch(0.5637 0.0078 247.9662);
+  --accent: oklch(0.1928 0.0331 242.5459);
+  --accent-foreground: oklch(0.6692 0.1607 245.0110);
+  --destructive: oklch(0.6188 0.2376 25.7658);
+  --destructive-foreground: oklch(1.0000 0 0);
+  --border: oklch(0.2674 0.0047 248.0045);
+  --input: oklch(0.3020 0.0288 244.8244);
+  --ring: oklch(0.6818 0.1584 243.3540);
+
+  /* Chart colors */
+  --chart-1: oklch(0.6723 0.1606 244.9955);
+  --chart-2: oklch(0.6907 0.1554 160.3454);
+  --chart-3: oklch(0.8214 0.1600 82.5337);
+  --chart-4: oklch(0.7064 0.1822 151.7125);
+  --chart-5: oklch(0.5919 0.2186 10.5826);
+
+  /* Sidebar colors */
+  --sidebar: oklch(0.2097 0.0080 274.5332);
+  --sidebar-foreground: oklch(0.8853 0 0);
+  --sidebar-primary: oklch(0.6818 0.1584 243.3540);
+  --sidebar-primary-foreground: oklch(1.0000 0 0);
+  --sidebar-accent: oklch(0.1928 0.0331 242.5459);
+  --sidebar-accent-foreground: oklch(0.6692 0.1607 245.0110);
+  --sidebar-border: oklch(0.3795 0.0220 240.5943);
+  --sidebar-ring: oklch(0.6818 0.1584 243.3540);
+
+  /* Typography - same as light */
+  --font-sans: Open Sans, sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: Menlo, monospace;
+
+  /* Border radius - same as light */
+  --radius: 1.3rem;
+
+  /* Shadows - Flat style dark mode */
+  --shadow-x: 0px;
+  --shadow-y: 2px;
+  --shadow-blur: 0px;
+  --shadow-spread: 0px;
+  --shadow-opacity: 0;
+  --shadow-color: rgba(29,161,242,0.25);
+  --shadow-2xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00);
+  --shadow-xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00);
+  --shadow-sm: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
+  --shadow: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
+  --shadow-md: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 2px 4px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
+  --shadow-lg: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 4px 6px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
+  --shadow-xl: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 8px 10px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
+  --shadow-2xl: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00);
+
+  /* Board colors - dark mode */
+  --board-blue: oklch(0.45 0.18 250);
+  --board-green: oklch(0.45 0.16 150);
+  --board-purple: oklch(0.4 0.18 300);
+  --board-orange: oklch(0.55 0.16 50);
+  --board-red: oklch(0.45 0.2 25);
+  --board-pink: oklch(0.5 0.16 350);
+  --board-gray: oklch(0.4 0.02 260);
+
+  --card-shadow-idle: 0 1px 3px 0 rgb(0 0 0 / 0.3);
+  --card-shadow-hover: 0 4px 6px -1px rgb(0 0 0 / 0.3);
+  --card-shadow-dragging: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+}
+
+/* ============================================================================
+   Tailwind v4 Theme Integration
+   ============================================================================ */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-serif: var(--font-serif);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --shadow-2xs: var(--shadow-2xs);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow: var(--shadow);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-2xl: var(--shadow-2xl);
+}
+
+/* ============================================================================
+   Base Styles
+   ============================================================================ */
+
+body {
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+/* Focus visible for keyboard navigation */
+*:focus-visible {
+  outline: 2px solid var(--board-blue);
+  outline-offset: 2px;
+}
+
+/* ============================================================================
+   Typography
+   ============================================================================ */
+
+.productivity-heading {
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.productivity-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+/* ============================================================================
+   Board Layout
+   ============================================================================ */
+
+.board-container {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  padding: 1rem;
+  min-height: calc(100vh - 120px);
+}
+
+.board-header {
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+/* ============================================================================
+   List Styles
+   ============================================================================ */
+
+.list-column {
+  width: var(--list-width);
+  flex-shrink: 0;
+  background: hsl(var(--muted) / 0.5);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  max-height: var(--list-max-height);
+}
+
+.list-header {
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid hsl(var(--border) / 0.5);
+}
+
+.list-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.list-footer {
+  padding: 0.5rem;
+  border-top: 1px solid hsl(var(--border) / 0.5);
+}
+
+/* ============================================================================
+   Card Styles
+   ============================================================================ */
+
+.card-item {
+  background: hsl(var(--card));
+  border-radius: var(--radius-sm);
+  padding: var(--card-padding);
+  min-height: var(--card-min-height);
+  box-shadow: var(--card-shadow-idle);
+  cursor: pointer;
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.card-item:hover {
+  box-shadow: var(--card-shadow-hover);
+}
+
+.card-item.dragging {
+  box-shadow: var(--card-shadow-dragging);
+  transform: rotate(3deg);
+  opacity: 0.9;
+}
+
+.card-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: hsl(var(--foreground));
+}
+
+.card-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ============================================================================
+   Label Badges
+   ============================================================================ */
+
+.label-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.675rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.label-urgent {
+  background: var(--label-urgent);
+  color: white;
+}
+
+.label-important {
+  background: var(--label-important);
+  color: white;
+}
+
+.label-bug {
+  background: var(--label-bug);
+  color: white;
+}
+
+.label-feature {
+  background: var(--label-feature);
+  color: white;
+}
+
+.label-enhancement {
+  background: var(--label-enhancement);
+  color: white;
+}
+
+.label-documentation {
+  background: var(--label-documentation);
+  color: white;
+}
+
+/* ============================================================================
+   Due Date Indicators
+   ============================================================================ */
+
+.due-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.due-date.overdue {
+  color: var(--label-urgent);
+}
+
+.due-date.due-soon {
+  color: var(--label-important);
+}
+
+/* ============================================================================
+   Avatar Stack
+   ============================================================================ */
+
+.avatar-stack {
+  display: flex;
+  flex-direction: row-reverse;
+}
+
+.avatar-stack > * {
+  margin-left: -0.5rem;
+  border: 2px solid hsl(var(--background));
+  border-radius: 9999px;
+}
+
+.avatar-stack > *:last-child {
+  margin-left: 0;
+}
+
+/* ============================================================================
+   Board Color Backgrounds
+   ============================================================================ */
+
+.board-bg-blue { background: var(--board-blue); }
+.board-bg-green { background: var(--board-green); }
+.board-bg-purple { background: var(--board-purple); }
+.board-bg-orange { background: var(--board-orange); }
+.board-bg-red { background: var(--board-red); }
+.board-bg-pink { background: var(--board-pink); }
+.board-bg-gray { background: var(--board-gray); }
+
+/* ============================================================================
+   Animations
+   ============================================================================ */
+
+@keyframes card-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card-item {
+  animation: card-appear var(--transition-normal);
+}
+
+@keyframes pulse-border {
+  0%, 100% {
+    border-color: hsl(var(--primary) / 0.5);
+  }
+  50% {
+    border-color: hsl(var(--primary));
+  }
+}
+
+.drop-zone-active {
+  border: 2px dashed hsl(var(--primary));
+  animation: pulse-border 1s ease-in-out infinite;
+}
+
+/* ============================================================================
+   Scrollbar Styling
+   ============================================================================ */
+
+.list-content::-webkit-scrollbar,
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.list-content::-webkit-scrollbar-track,
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.list-content::-webkit-scrollbar-thumb,
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--muted-foreground);
+  opacity: 0.3;
+  border-radius: 3px;
+}
+
+.list-content::-webkit-scrollbar-thumb:hover,
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  opacity: 0.5;
+}
+
+/* Hide scrollbar by default, show on hover */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.custom-scrollbar:hover {
+  scrollbar-color: var(--muted-foreground) transparent;
+}
+
+/* ============================================================================
+   Responsive Adjustments
+   ============================================================================ */
+
+@media (max-width: 768px) {
+  :root {
+    --list-width: 260px;
+  }
+
+  .board-container {
+    padding: 0.5rem;
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --list-width: 240px;
+  }
+}
+

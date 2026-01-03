@@ -1,0 +1,110 @@
+-- Migration: 002_{{ENTITY_NAME}}_metas.sql
+-- Description: {{ENTITY_NAME_PASCAL}} metadata (table, indexes, RLS) - Public Mode
+-- Date: {{DATE}}
+-- Mode: Public Read + Authenticated Write (for metas marked as public)
+
+-- ============================================
+-- TABLE
+-- ============================================
+-- No DROP needed - removed automatically by parent table CASCADE
+CREATE TABLE IF NOT EXISTS public."{{ENTITY_NAME}}_metas" (
+  -- Primary Key
+  id              TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+
+  -- Parent Reference (ALWAYS use "entityId", not entity-specific names)
+  "entityId"      TEXT NOT NULL REFERENCES public."{{ENTITY_NAME}}"(id) ON DELETE CASCADE,
+
+  -- Meta Fields (standard structure - do not modify)
+  "metaKey"       TEXT NOT NULL,
+  "metaValue"     JSONB NOT NULL DEFAULT '{}'::jsonb,
+  "dataType"      TEXT DEFAULT 'json',
+  "isPublic"      BOOLEAN NOT NULL DEFAULT false,
+  "isSearchable"  BOOLEAN NOT NULL DEFAULT false,
+
+  -- System fields
+  "createdAt"     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "updatedAt"     TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+  -- Unique constraint (one key per entity)
+  CONSTRAINT {{ENTITY_NAME}}_metas_unique_key UNIQUE ("entityId", "metaKey")
+);
+
+-- ============================================
+-- COMMENTS
+-- ============================================
+COMMENT ON TABLE  public."{{ENTITY_NAME}}_metas"                IS 'Key-value metadata for {{ENTITY_NAME}}';
+COMMENT ON COLUMN public."{{ENTITY_NAME}}_metas"."entityId"     IS 'Reference to parent {{ENTITY_NAME_SINGULAR}} (generic entityId)';
+COMMENT ON COLUMN public."{{ENTITY_NAME}}_metas"."metaKey"      IS 'Metadata key identifier';
+COMMENT ON COLUMN public."{{ENTITY_NAME}}_metas"."metaValue"    IS 'Metadata value in JSONB format';
+COMMENT ON COLUMN public."{{ENTITY_NAME}}_metas"."dataType"     IS 'Type hint for the value: json, string, number, boolean';
+COMMENT ON COLUMN public."{{ENTITY_NAME}}_metas"."isPublic"     IS 'Whether this metadata is publicly readable (for public entities)';
+COMMENT ON COLUMN public."{{ENTITY_NAME}}_metas"."isSearchable" IS 'Whether this metadata is searchable';
+
+-- ============================================
+-- TRIGGER updatedAt (uses Better Auth function)
+-- ============================================
+DROP TRIGGER IF EXISTS {{ENTITY_NAME}}_metas_set_updated_at ON public."{{ENTITY_NAME}}_metas";
+CREATE TRIGGER {{ENTITY_NAME}}_metas_set_updated_at
+BEFORE UPDATE ON public."{{ENTITY_NAME}}_metas"
+FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- ============================================
+-- INDEXES
+-- ============================================
+CREATE INDEX IF NOT EXISTS idx_{{ENTITY_NAME}}_metas_entity_id      ON public."{{ENTITY_NAME}}_metas"("entityId");
+CREATE INDEX IF NOT EXISTS idx_{{ENTITY_NAME}}_metas_key            ON public."{{ENTITY_NAME}}_metas"("metaKey");
+CREATE INDEX IF NOT EXISTS idx_{{ENTITY_NAME}}_metas_composite      ON public."{{ENTITY_NAME}}_metas"("entityId", "metaKey", "isPublic");
+CREATE INDEX IF NOT EXISTS idx_{{ENTITY_NAME}}_metas_is_public      ON public."{{ENTITY_NAME}}_metas"("isPublic") WHERE "isPublic" = true;
+CREATE INDEX IF NOT EXISTS idx_{{ENTITY_NAME}}_metas_is_searchable  ON public."{{ENTITY_NAME}}_metas"("isSearchable") WHERE "isSearchable" = true;
+CREATE INDEX IF NOT EXISTS idx_{{ENTITY_NAME}}_metas_searchable_key ON public."{{ENTITY_NAME}}_metas"("metaKey") WHERE "isSearchable" = true;
+CREATE INDEX IF NOT EXISTS idx_{{ENTITY_NAME}}_metas_value_gin      ON public."{{ENTITY_NAME}}_metas" USING GIN ("metaValue");
+CREATE INDEX IF NOT EXISTS idx_{{ENTITY_NAME}}_metas_value_ops      ON public."{{ENTITY_NAME}}_metas" USING GIN ("metaValue" jsonb_path_ops);
+
+-- ============================================
+-- RLS
+-- ============================================
+ALTER TABLE public."{{ENTITY_NAME}}_metas" ENABLE ROW LEVEL SECURITY;
+
+-- Cleanup existing policies
+DROP POLICY IF EXISTS "{{ENTITY_NAME_PASCAL}} metas public can read" ON public."{{ENTITY_NAME}}_metas";
+DROP POLICY IF EXISTS "{{ENTITY_NAME_PASCAL}} metas auth can do all" ON public."{{ENTITY_NAME}}_metas";
+
+-- ============================
+-- RLS: PUBLIC READ FOR PUBLIC METAS
+-- ============================
+-- Anonymous can read metas marked as public for published parent entities
+CREATE POLICY "{{ENTITY_NAME_PASCAL}} metas public can read"
+ON public."{{ENTITY_NAME}}_metas"
+FOR SELECT TO anon
+USING (
+  "isPublic" = true
+  AND EXISTS (
+    SELECT 1 FROM public."{{ENTITY_NAME}}" e
+    WHERE e.id = "entityId"
+      AND e.published = true
+  )
+);
+
+-- ============================
+-- RLS: AUTHENTICATED MANAGEMENT
+-- ============================
+-- Authenticated users can manage all metas
+CREATE POLICY "{{ENTITY_NAME_PASCAL}} metas auth can do all"
+ON public."{{ENTITY_NAME}}_metas"
+FOR ALL TO authenticated
+USING (true)
+WITH CHECK (true);
+
+-- ============================================
+-- NOTES
+-- ============================================
+-- For public entities, metas have two visibility controls:
+-- 1. Parent entity must be published
+-- 2. Meta must have isPublic = true
+--
+-- This allows:
+-- - SEO metadata (public): seo_title, seo_description
+-- - Private metadata: internal_notes, admin_comments
+--
+-- Authenticated users can always see all metas (default policy).
+-- Customize if you need owner-only meta management.

@@ -1,0 +1,23 @@
+{
+  "product": "Product",
+  "features": "Features",
+  "pricing": "Pricing",
+  "support": "Support",
+  "docs": "Docs",
+  "company": "Company",
+  "about": "About",
+  "blog": "Blog",
+  "careers": "Careers",
+  "contact": "Contact",
+  "legal": "Legal",
+  "privacy": "Privacy",
+  "terms": "Terms",
+  "cookies": "Cookies",
+  "gdpr": "GDPR",
+  "resources": "Resources",
+  "helpCenter": "Help Center",
+  "apiDocs": "API Docs",
+  "status": "Status",
+  "changelog": "Changelog",
+  "copyright": "All rights reserved"
+}

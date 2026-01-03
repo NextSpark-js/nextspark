@@ -1,0 +1,102 @@
+/**
+ * {{PLUGIN_DISPLAY_NAME}} - React Hook
+ *
+ * Custom hook for using the plugin in client components.
+ */
+
+'use client'
+
+import { useState, useCallback } from 'react'
+import type {
+  {{PLUGIN_VAR_NAME}}Result,
+  {{PLUGIN_VAR_NAME}}Error,
+  Use{{PLUGIN_VAR_NAME}}Return,
+} from '../lib/types'
+
+/**
+ * Hook for using {{PLUGIN_DISPLAY_NAME}} plugin functionality.
+ *
+ * @example
+ * ```tsx
+ * function MyComponent() {
+ *   const { data, isLoading, execute } = use{{PLUGIN_VAR_NAME}}()
+ *
+ *   const handleClick = async () => {
+ *     const result = await execute('my input')
+ *     console.log(result)
+ *   }
+ *
+ *   return (
+ *     <button onClick={handleClick} disabled={isLoading}>
+ *       {isLoading ? 'Loading...' : 'Execute'}
+ *     </button>
+ *   )
+ * }
+ * ```
+ */
+export function use{{PLUGIN_VAR_NAME}}(): Use{{PLUGIN_VAR_NAME}}Return {
+  const [data, setData] = useState<{{PLUGIN_VAR_NAME}}Result | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<{{PLUGIN_VAR_NAME}}Error | null>(null)
+
+  /**
+   * Execute the plugin function
+   */
+  const execute = useCallback(async (input?: string): Promise<{{PLUGIN_VAR_NAME}}Result> => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const response = await fetch('/api/v1/plugin/{{PLUGIN_SLUG}}/example', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ input: input || '' }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Request failed')
+      }
+
+      const result = await response.json()
+      const pluginResult: {{PLUGIN_VAR_NAME}}Result = result.data || {
+        success: true,
+        message: 'Operation completed',
+        timestamp: new Date().toISOString(),
+      }
+
+      setData(pluginResult)
+      return pluginResult
+    } catch (err) {
+      const pluginError: {{PLUGIN_VAR_NAME}}Error = {
+        code: 'EXECUTION_ERROR',
+        message: err instanceof Error ? err.message : 'Unknown error occurred',
+      }
+      setError(pluginError)
+      throw err
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  /**
+   * Reset the hook state
+   */
+  const reset = useCallback(() => {
+    setData(null)
+    setError(null)
+    setIsLoading(false)
+  }, [])
+
+  return {
+    data,
+    isLoading,
+    error,
+    execute,
+    reset,
+  }
+}
+
+export default use{{PLUGIN_VAR_NAME}}

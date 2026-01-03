@@ -1,0 +1,135 @@
+{
+  "entity": {
+    "name": "Product",
+    "plural": "Products",
+    "description": "Manage products and services"
+  },
+  "fields": {
+    "name": {
+      "label": "Product Name",
+      "description": "Product or service name",
+      "placeholder": "Enter product name..."
+    },
+    "sku": {
+      "label": "SKU",
+      "description": "Stock keeping unit identifier",
+      "placeholder": "Enter SKU..."
+    },
+    "description": {
+      "label": "Description",
+      "description": "Product description",
+      "placeholder": "Enter description..."
+    },
+    "category": {
+      "label": "Category",
+      "description": "Product category",
+      "placeholder": "Enter category..."
+    },
+    "type": {
+      "label": "Product Type",
+      "description": "Type of product or service",
+      "placeholder": "Select type..."
+    },
+    "status": {
+      "label": "Status",
+      "description": "Product status",
+      "placeholder": "Select status..."
+    },
+    "price": {
+      "label": "Unit Price",
+      "description": "Price per unit",
+      "placeholder": "0.00"
+    },
+    "cost": {
+      "label": "Unit Cost",
+      "description": "Cost per unit",
+      "placeholder": "0.00"
+    },
+    "currency": {
+      "label": "Currency",
+      "description": "Currency code",
+      "placeholder": "Select currency..."
+    },
+    "stockQuantity": {
+      "label": "Stock Quantity",
+      "description": "Available stock quantity",
+      "placeholder": "0"
+    },
+    "minStockLevel": {
+      "label": "Minimum Stock Level",
+      "description": "Minimum stock level threshold",
+      "placeholder": "0"
+    },
+    "features": {
+      "label": "Features",
+      "description": "Product features list"
+    },
+    "specifications": {
+      "label": "Specifications",
+      "description": "Technical specifications"
+    },
+    "images": {
+      "label": "Images",
+      "description": "Product images"
+    },
+    "isActive": {
+      "label": "Active",
+      "description": "Whether product is active"
+    },
+    "weight": {
+      "label": "Weight",
+      "description": "Product weight",
+      "placeholder": "0.00"
+    },
+    "dimensions": {
+      "label": "Dimensions",
+      "description": "Product dimensions",
+      "placeholder": "L x W x H"
+    },
+    "vendor": {
+      "label": "Vendor",
+      "description": "Product vendor or supplier",
+      "placeholder": "Enter vendor..."
+    }
+  },
+  "options": {
+    "type": {
+      "physical": "Physical Product",
+      "digital": "Digital Product",
+      "service": "Service",
+      "subscription": "Subscription",
+      "bundle": "Product Bundle",
+      "variant": "Product Variant"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "discontinued": "Discontinued",
+      "out_of_stock": "Out of Stock",
+      "coming_soon": "Coming Soon"
+    }
+  },
+  "actions": {
+    "create": "Create Product",
+    "edit": "Edit Product",
+    "delete": "Delete Product",
+    "view": "View Product",
+    "list": "List Products",
+    "duplicate": "Duplicate Product",
+    "activate": "Activate Product",
+    "deactivate": "Deactivate Product",
+    "restock": "Restock Product"
+  },
+  "messages": {
+    "created": "Product created successfully",
+    "updated": "Product updated successfully",
+    "deleted": "Product deleted successfully",
+    "activated": "Product activated successfully",
+    "deactivated": "Product deactivated successfully",
+    "restocked": "Product restocked successfully",
+    "lowStock": "Product stock is running low",
+    "outOfStock": "Product is out of stock",
+    "notFound": "Product not found",
+    "error": "An error occurred while processing the product"
+  }
+}

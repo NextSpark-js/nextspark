@@ -1,0 +1,140 @@
+-- Migration: 100_{{ENTITY_NAME}}_sample_data.sql
+-- Description: Sample data for {{ENTITY_NAME_PASCAL}} - Team Mode
+-- Date: {{DATE}}
+-- Note: Uses numbering 100+ to run after all schema migrations
+
+-- ============================================
+-- SAMPLE DATA: {{ENTITY_NAME_PASCAL}}
+-- ============================================
+-- Uses ON CONFLICT for idempotency (safe to run multiple times)
+-- Uses standard test user IDs and team IDs from test_users migration
+
+INSERT INTO public."{{ENTITY_NAME}}" (
+  id,
+  "userId",
+  "teamId",
+  -- ADD YOUR ENTITY FIELDS HERE
+  -- name,
+  -- description,
+  -- status,
+  "createdAt",
+  "updatedAt"
+) VALUES
+  -- Record 1: Created by owner user
+  (
+    '{{ENTITY_NAME_SINGULAR}}-sample-001',
+    '11111111-1111-1111-1111-111111111111',  -- owner@test.com
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',  -- test-team
+    -- 'Sample {{ENTITY_NAME_SINGULAR}} 1',
+    -- 'Description for sample 1',
+    -- 'active',
+    NOW() - INTERVAL '30 days',
+    NOW() - INTERVAL '10 days'
+  ),
+  -- Record 2: Created by admin user
+  (
+    '{{ENTITY_NAME_SINGULAR}}-sample-002',
+    '22222222-2222-2222-2222-222222222222',  -- admin@test.com
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',  -- test-team
+    -- 'Sample {{ENTITY_NAME_SINGULAR}} 2',
+    -- 'Description for sample 2',
+    -- 'active',
+    NOW() - INTERVAL '25 days',
+    NOW() - INTERVAL '5 days'
+  ),
+  -- Record 3: Created by member user
+  (
+    '{{ENTITY_NAME_SINGULAR}}-sample-003',
+    '33333333-3333-3333-3333-333333333333',  -- member@test.com
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',  -- test-team
+    -- 'Sample {{ENTITY_NAME_SINGULAR}} 3',
+    -- 'Description for sample 3',
+    -- 'draft',
+    NOW() - INTERVAL '20 days',
+    NOW()
+  )
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================
+-- SAMPLE METADATA (if using metas table)
+-- ============================================
+-- Uncomment and customize if your entity has a metas table
+
+-- INSERT INTO public."{{ENTITY_NAME}}_metas" (
+--   "entityId",
+--   "metaKey",
+--   "metaValue",
+--   "dataType",
+--   "isPublic",
+--   "isSearchable"
+-- ) VALUES
+--   (
+--     '{{ENTITY_NAME_SINGULAR}}-sample-001',
+--     'custom_field_1',
+--     '"Custom value for record 1"',
+--     'string',
+--     true,
+--     true
+--   ),
+--   (
+--     '{{ENTITY_NAME_SINGULAR}}-sample-001',
+--     'settings',
+--     '{"option1": true, "option2": "value"}',
+--     'json',
+--     false,
+--     false
+--   ),
+--   (
+--     '{{ENTITY_NAME_SINGULAR}}-sample-002',
+--     'custom_field_1',
+--     '"Custom value for record 2"',
+--     'string',
+--     true,
+--     true
+--   )
+-- ON CONFLICT ("entityId", "metaKey") DO NOTHING;
+
+-- ============================================
+-- SAMPLE CHILD DATA (if using child tables)
+-- ============================================
+-- Uncomment and customize if your entity has child tables
+
+-- INSERT INTO public."{{ENTITY_NAME}}_items" (
+--   id,
+--   "parentId",
+--   -- child fields
+--   "createdAt",
+--   "updatedAt"
+-- ) VALUES
+--   (
+--     '{{ENTITY_NAME_SINGULAR}}-item-001',
+--     '{{ENTITY_NAME_SINGULAR}}-sample-001',
+--     -- child field values
+--     NOW() - INTERVAL '30 days',
+--     NOW() - INTERVAL '10 days'
+--   )
+-- ON CONFLICT (id) DO NOTHING;
+
+-- ============================================
+-- STANDARD TEST USER IDS REFERENCE
+-- ============================================
+-- Use these IDs to reference test users in your sample data:
+--
+-- owner@test.com   : '11111111-1111-1111-1111-111111111111'
+-- admin@test.com   : '22222222-2222-2222-2222-222222222222'
+-- member@test.com  : '33333333-3333-3333-3333-333333333333'
+-- guest@test.com   : '44444444-4444-4444-4444-444444444444'
+-- test-team        : 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+--
+-- Password for all test users: Test1234
+
+-- ============================================
+-- SAMPLE DATA BEST PRACTICES
+-- ============================================
+-- 1. Use deterministic IDs for reproducible tests
+-- 2. Create 20+ records for realistic testing
+-- 3. Include variety in field values
+-- 4. Use realistic timestamps with INTERVAL
+-- 5. Reference existing test users and teams
+-- 6. Always use ON CONFLICT for idempotency
+-- 7. Include records from different users for RLS testing

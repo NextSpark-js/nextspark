@@ -1,0 +1,113 @@
+{
+  "common": {
+    "blog": {
+      "viewBlog": "Ver Blog",
+      "export": "Exportar Posts"
+    }
+  },
+  "blog": {
+    "title": "Plataforma de Blog",
+    "description": "Pensamientos, historias e ideas de nuestra comunidad de escritores",
+    "viewBlog": "Ver Blog",
+    "writtenBy": "Escrito por",
+    "publishedOn": "Publicado el",
+    "readMore": "Leer más",
+    "backToHome": "Volver al Inicio",
+    "backToPosts": "Volver a Posts",
+    "noPosts": "Aún no hay posts",
+    "noPostsDescription": "Vuelve pronto para ver nuevo contenido.",
+
+    "publicFeed": {
+      "title": "Últimas Historias",
+      "subtitle": "Pensamientos, historias e ideas de nuestra comunidad de escritores",
+      "recentPosts": "Posts Recientes",
+      "loadMore": "Cargar Más",
+      "noResults": "No se encontraron posts",
+      "filterByCategory": "Filtrar por Categoría"
+    },
+
+    "newsletter": {
+      "title": "Mantente informado",
+      "description": "Suscríbete para recibir notificaciones cuando se publiquen nuevos artículos. Sin spam, cancela cuando quieras.",
+      "placeholder": "tu@email.com",
+      "subscribe": "Suscribirse"
+    },
+
+    "author": {
+      "profileTitle": "Perfil de {name}",
+      "postsCount": "{count} posts publicados",
+      "postsCountSingular": "{count} post publicado",
+      "viewAllPosts": "Ver todos los posts",
+      "followOn": "Seguir en {platform}",
+      "visitWebsite": "Visitar sitio web",
+      "moreFrom": "Más de {name}",
+      "notFound": "Autor no encontrado",
+      "notFoundDescription": "El autor que buscas no existe."
+    },
+
+    "category": {
+      "title": "Posts en {category}",
+      "noResults": "Aún no hay posts en esta categoría"
+    },
+
+    "dashboard": {
+      "myPosts": "Mis Posts",
+      "newPost": "Nuevo Post",
+      "editProfile": "Editar Perfil",
+      "publishPost": "Publicar",
+      "unpublishPost": "Despublicar",
+      "confirmPublish": "¿Estás seguro de que quieres publicar este post?",
+      "confirmUnpublish": "¿Estás seguro de que quieres despublicar este post?",
+      "statusDraft": "Borrador",
+      "statusPublished": "Publicado"
+    },
+
+    "profile": {
+      "username": "Nombre de usuario",
+      "usernameHint": "Esta será tu URL de perfil público: /author/{username}",
+      "bio": "Biografía",
+      "bioPlaceholder": "Cuéntale a los lectores sobre ti...",
+      "socialLinks": "Enlaces Sociales",
+      "twitter": "Perfil de Twitter/X",
+      "linkedin": "Perfil de LinkedIn",
+      "website": "Sitio Web Personal",
+      "saveProfile": "Guardar Perfil",
+      "profileUpdated": "Perfil actualizado exitosamente"
+    },
+
+    "export": "Exportar Posts",
+    "import": "Importar Posts",
+    "exportDescription": "Descarga todos tus posts como archivo JSON",
+    "importDescription": "Sube un archivo JSON para importar posts",
+    "exportSuccess": "Posts exportados exitosamente",
+    "importSuccess": "Posts importados exitosamente",
+    "importError": "Error al importar posts",
+
+    "quickActions": {
+      "writePost": "Escribir un nuevo post"
+    },
+
+    "categories": {
+      "all": "Todas las Categorías",
+      "uncategorized": "Sin categoría"
+    },
+
+    "search": {
+      "placeholder": "Buscar posts...",
+      "noResults": "No se encontraron posts",
+      "resultsFor": "Resultados para"
+    },
+
+    "pagination": {
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "page": "Página"
+    },
+
+    "meta": {
+      "minRead": "min de lectura",
+      "draft": "Borrador",
+      "scheduled": "Programado para"
+    }
+  }
+}

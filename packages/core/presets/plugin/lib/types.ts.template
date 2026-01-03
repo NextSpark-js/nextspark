@@ -1,0 +1,105 @@
+/**
+ * {{PLUGIN_DISPLAY_NAME}} - TypeScript Types
+ *
+ * Type definitions for the plugin.
+ */
+
+/**
+ * Plugin configuration options
+ */
+export interface {{PLUGIN_VAR_NAME}}Config {
+  /**
+   * API key for external service (if applicable)
+   */
+  apiKey?: string
+
+  /**
+   * Enable debug mode
+   */
+  debug?: boolean
+
+  /**
+   * Request timeout in milliseconds
+   */
+  timeout?: number
+}
+
+/**
+ * Result from plugin operations
+ */
+export interface {{PLUGIN_VAR_NAME}}Result {
+  /**
+   * Whether the operation was successful
+   */
+  success: boolean
+
+  /**
+   * Result message or description
+   */
+  message: string
+
+  /**
+   * Timestamp of the operation
+   */
+  timestamp: string
+
+  /**
+   * Additional data (optional)
+   */
+  data?: unknown
+}
+
+/**
+ * Error from plugin operations
+ */
+export interface {{PLUGIN_VAR_NAME}}Error {
+  /**
+   * Error code
+   */
+  code: string
+
+  /**
+   * Error message
+   */
+  message: string
+
+  /**
+   * Additional error details
+   */
+  details?: Record<string, unknown>
+}
+
+/**
+ * Plugin status
+ */
+export type {{PLUGIN_VAR_NAME}}Status = 'active' | 'inactive' | 'error'
+
+/**
+ * Hook return type for use{{PLUGIN_VAR_NAME}}
+ */
+export interface Use{{PLUGIN_VAR_NAME}}Return {
+  /**
+   * Plugin data
+   */
+  data: {{PLUGIN_VAR_NAME}}Result | null
+
+  /**
+   * Loading state
+   */
+  isLoading: boolean
+
+  /**
+   * Error state
+   */
+  error: {{PLUGIN_VAR_NAME}}Error | null
+
+  /**
+   * Execute plugin function
+   */
+  execute: (input?: string) => Promise<{{PLUGIN_VAR_NAME}}Result>
+
+  /**
+   * Reset state
+   */
+  reset: () => void
+}

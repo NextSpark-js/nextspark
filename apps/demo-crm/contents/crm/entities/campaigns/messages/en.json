@@ -1,0 +1,145 @@
+{
+  "entity": {
+    "name": "Campaign",
+    "plural": "Campaigns",
+    "description": "Manage marketing campaigns and outreach"
+  },
+  "fields": {
+    "name": {
+      "label": "Campaign Name",
+      "description": "Campaign name or title",
+      "placeholder": "Enter campaign name..."
+    },
+    "type": {
+      "label": "Campaign Type",
+      "description": "Type of marketing campaign",
+      "placeholder": "Select type..."
+    },
+    "status": {
+      "label": "Status",
+      "description": "Current campaign status",
+      "placeholder": "Select status..."
+    },
+    "channel": {
+      "label": "Channel",
+      "description": "Marketing channel used",
+      "placeholder": "Select channel..."
+    },
+    "budget": {
+      "label": "Budget",
+      "description": "Campaign budget amount",
+      "placeholder": "0.00"
+    },
+    "spend": {
+      "label": "Amount Spent",
+      "description": "Amount already spent",
+      "placeholder": "0.00"
+    },
+    "targetAudience": {
+      "label": "Target Audience",
+      "description": "Target audience description",
+      "placeholder": "Enter target audience..."
+    },
+    "startDate": {
+      "label": "Start Date",
+      "description": "Campaign start date",
+      "placeholder": "Select date..."
+    },
+    "endDate": {
+      "label": "End Date",
+      "description": "Campaign end date",
+      "placeholder": "Select date..."
+    },
+    "impressions": {
+      "label": "Impressions",
+      "description": "Number of impressions",
+      "placeholder": "0"
+    },
+    "clicks": {
+      "label": "Clicks",
+      "description": "Number of clicks",
+      "placeholder": "0"
+    },
+    "conversions": {
+      "label": "Conversions",
+      "description": "Number of conversions",
+      "placeholder": "0"
+    },
+    "ctr": {
+      "label": "CTR (%)",
+      "description": "Click-through rate percentage",
+      "placeholder": "0.00"
+    },
+    "conversionRate": {
+      "label": "Conversion Rate (%)",
+      "description": "Conversion rate percentage",
+      "placeholder": "0.00"
+    },
+    "roi": {
+      "label": "ROI (%)",
+      "description": "Return on investment percentage",
+      "placeholder": "0.00"
+    },
+    "assignedTo": {
+      "label": "Campaign Manager",
+      "description": "User managing this campaign",
+      "placeholder": "Select user..."
+    }
+  },
+  "options": {
+    "type": {
+      "email": "Email Marketing",
+      "social": "Social Media",
+      "ppc": "Pay-Per-Click",
+      "content": "Content Marketing",
+      "webinar": "Webinar",
+      "event": "Event",
+      "referral": "Referral",
+      "affiliate": "Affiliate",
+      "retargeting": "Retargeting"
+    },
+    "status": {
+      "draft": "Draft",
+      "scheduled": "Scheduled",
+      "active": "Active",
+      "paused": "Paused",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "channel": {
+      "email": "Email",
+      "facebook": "Facebook",
+      "instagram": "Instagram",
+      "linkedin": "LinkedIn",
+      "twitter": "Twitter",
+      "google_ads": "Google Ads",
+      "youtube": "YouTube",
+      "tiktok": "TikTok",
+      "website": "Website",
+      "blog": "Blog",
+      "seo": "SEO",
+      "other": "Other"
+    }
+  },
+  "actions": {
+    "create": "Create Campaign",
+    "edit": "Edit Campaign",
+    "delete": "Delete Campaign",
+    "view": "View Campaign",
+    "list": "List Campaigns",
+    "launch": "Launch Campaign",
+    "pause": "Pause Campaign",
+    "resume": "Resume Campaign",
+    "duplicate": "Duplicate Campaign"
+  },
+  "messages": {
+    "created": "Campaign created successfully",
+    "updated": "Campaign updated successfully",
+    "deleted": "Campaign deleted successfully",
+    "launched": "Campaign launched successfully",
+    "paused": "Campaign paused successfully",
+    "resumed": "Campaign resumed successfully",
+    "notFound": "Campaign not found",
+    "error": "An error occurred while processing the campaign"
+  }
+}

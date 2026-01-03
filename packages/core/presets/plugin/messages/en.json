@@ -1,0 +1,37 @@
+{
+  "{{PLUGIN_SLUG}}": {
+    "title": "{{PLUGIN_DISPLAY_NAME}}",
+    "description": "{{PLUGIN_DESCRIPTION}}",
+    "widget": {
+      "title": "{{PLUGIN_DISPLAY_NAME}} Widget",
+      "description": "Example widget demonstrating plugin functionality.",
+      "input": {
+        "placeholder": "Enter input...",
+        "label": "Input"
+      },
+      "buttons": {
+        "submit": "Submit",
+        "reset": "Reset",
+        "processing": "Processing..."
+      },
+      "result": {
+        "title": "Result",
+        "timestamp": "Timestamp"
+      },
+      "errors": {
+        "required": "Input is required",
+        "failed": "Operation failed"
+      }
+    },
+    "errors": {
+      "unauthorized": "You are not authorized to use this plugin",
+      "notFound": "Plugin resource not found",
+      "serverError": "An unexpected error occurred"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "error": "Error"
+    }
+  }
+}

@@ -1,0 +1,73 @@
+-- Migration: 001_example_schema.sql
+-- Description: Example table structure for {{THEME_DISPLAY_NAME}} theme
+-- Date: {{CURRENT_DATE}}
+--
+-- This is a template migration. Rename and customize for your entities.
+-- Delete this file if not needed.
+
+-- ============================================
+-- EXAMPLE TABLE (rename to your entity)
+-- ============================================
+-- DROP TABLE IF EXISTS public."example_items" CASCADE;
+--
+-- CREATE TABLE IF NOT EXISTS public."example_items" (
+--   -- Primary Key
+--   id           TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+--
+--   -- Relational Fields (required for team isolation)
+--   "userId"     TEXT NOT NULL REFERENCES public."users"(id) ON DELETE CASCADE,
+--   "teamId"     TEXT NOT NULL REFERENCES public."teams"(id) ON DELETE CASCADE,
+--
+--   -- Entity-specific fields
+--   title        TEXT NOT NULL,
+--   description  TEXT,
+--   status       TEXT NOT NULL DEFAULT 'active',
+--
+--   -- System fields
+--   "createdAt"  TIMESTAMPTZ NOT NULL DEFAULT now(),
+--   "updatedAt"  TIMESTAMPTZ NOT NULL DEFAULT now(),
+--
+--   -- Constraints
+--   CONSTRAINT example_items_status_check CHECK (status IN ('active', 'inactive', 'archived'))
+-- );
+--
+-- COMMENT ON TABLE  public."example_items"          IS 'Example items for {{THEME_DISPLAY_NAME}} theme';
+-- COMMENT ON COLUMN public."example_items"."userId" IS 'Owner user id';
+-- COMMENT ON COLUMN public."example_items"."teamId" IS 'Team context for isolation';
+--
+-- -- ============================================
+-- -- TRIGGER updatedAt
+-- -- ============================================
+-- DROP TRIGGER IF EXISTS example_items_set_updated_at ON public."example_items";
+-- CREATE TRIGGER example_items_set_updated_at
+-- BEFORE UPDATE ON public."example_items"
+-- FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+--
+-- -- ============================================
+-- -- INDEXES
+-- -- ============================================
+-- CREATE INDEX IF NOT EXISTS idx_example_items_user_id   ON public."example_items"("userId");
+-- CREATE INDEX IF NOT EXISTS idx_example_items_team_id   ON public."example_items"("teamId");
+-- CREATE INDEX IF NOT EXISTS idx_example_items_status    ON public."example_items"(status);
+--
+-- -- ============================================
+-- -- RLS (Row Level Security)
+-- -- ============================================
+-- ALTER TABLE public."example_items" ENABLE ROW LEVEL SECURITY;
+--
+-- CREATE POLICY "Example items team can do all"
+-- ON public."example_items"
+-- FOR ALL TO authenticated
+-- USING (
+--   public.is_superadmin()
+--   OR
+--   "teamId" = ANY(public.get_user_team_ids())
+-- )
+-- WITH CHECK (
+--   public.is_superadmin()
+--   OR
+--   "teamId" = ANY(public.get_user_team_ids())
+-- );
+
+-- This is a placeholder. Uncomment and customize the above, or delete this file.
+SELECT 'Theme migrations placeholder - customize or delete' AS message;

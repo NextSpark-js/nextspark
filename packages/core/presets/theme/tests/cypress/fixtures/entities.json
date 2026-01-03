@@ -1,0 +1,21 @@
+{
+  "entities": {
+    "tasks": {
+      "slug": "tasks",
+      "singular": "task",
+      "plural": "Tasks",
+      "tableName": "tasks",
+      "fields": [
+        "title",
+        "description",
+        "status",
+        "priority"
+      ],
+      "filters": [
+        "status",
+        "priority"
+      ]
+    }
+  },
+  "theme": "default"
+}

@@ -1,0 +1,87 @@
+-- Migration: 001_{{ENTITY_NAME}}_table.sql
+-- Description: {{ENTITY_NAME_PASCAL}} (table, indexes, RLS) - Team Mode
+-- Date: {{DATE}}
+-- Mode: Team Isolation
+
+-- ============================================
+-- TABLE
+-- ============================================
+DROP TABLE IF EXISTS public."{{ENTITY_NAME}}" CASCADE;
+
+CREATE TABLE IF NOT EXISTS public."{{ENTITY_NAME}}" (
+  -- Primary Key
+  id              TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+
+  -- Relational Fields (always after id)
+  "userId"        TEXT NOT NULL REFERENCES public."users"(id) ON DELETE CASCADE,
+  "teamId"        TEXT NOT NULL REFERENCES public."teams"(id) ON DELETE CASCADE,
+
+  -- Entity-specific fields (ADD YOUR FIELDS HERE)
+  -- name          TEXT NOT NULL,
+  -- description   TEXT,
+  -- status        TEXT DEFAULT 'active',
+
+  -- System fields (always last)
+  "createdAt"     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "updatedAt"     TIMESTAMPTZ NOT NULL DEFAULT now()
+
+  -- Constraints (ADD YOUR CONSTRAINTS HERE)
+  -- CONSTRAINT {{ENTITY_NAME}}_status_check CHECK (status IN ('draft', 'active', 'archived'))
+);
+
+-- ============================================
+-- COMMENTS
+-- ============================================
+COMMENT ON TABLE  public."{{ENTITY_NAME}}"              IS '{{DESCRIPTION}}';
+COMMENT ON COLUMN public."{{ENTITY_NAME}}"."userId"     IS 'User who created this record';
+COMMENT ON COLUMN public."{{ENTITY_NAME}}"."teamId"     IS 'Team context for isolation';
+-- ADD YOUR COLUMN COMMENTS HERE
+
+-- ============================================
+-- TRIGGER updatedAt (uses Better Auth function)
+-- ============================================
+DROP TRIGGER IF EXISTS {{ENTITY_NAME_SINGULAR}}_set_updated_at ON public."{{ENTITY_NAME}}";
+CREATE TRIGGER {{ENTITY_NAME_SINGULAR}}_set_updated_at
+BEFORE UPDATE ON public."{{ENTITY_NAME}}"
+FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- ============================================
+-- INDEXES
+-- ============================================
+CREATE INDEX IF NOT EXISTS idx_{{ENTITY_NAME}}_user_id         ON public."{{ENTITY_NAME}}"("userId");
+CREATE INDEX IF NOT EXISTS idx_{{ENTITY_NAME}}_team_id         ON public."{{ENTITY_NAME}}"("teamId");
+CREATE INDEX IF NOT EXISTS idx_{{ENTITY_NAME}}_user_team       ON public."{{ENTITY_NAME}}"("userId", "teamId");
+CREATE INDEX IF NOT EXISTS idx_{{ENTITY_NAME}}_created_at      ON public."{{ENTITY_NAME}}"("createdAt" DESC);
+CREATE INDEX IF NOT EXISTS idx_{{ENTITY_NAME}}_team_created    ON public."{{ENTITY_NAME}}"("teamId", "createdAt" DESC);
+-- ADD YOUR CUSTOM INDEXES HERE
+
+-- ============================================
+-- RLS
+-- ============================================
+ALTER TABLE public."{{ENTITY_NAME}}" ENABLE ROW LEVEL SECURITY;
+
+-- Cleanup existing policies
+DROP POLICY IF EXISTS "{{ENTITY_NAME_PASCAL}} team can do all"  ON public."{{ENTITY_NAME}}";
+DROP POLICY IF EXISTS "{{ENTITY_NAME_PASCAL}} owner can do all" ON public."{{ENTITY_NAME}}";
+
+-- ============================
+-- RLS: TEAM ISOLATION
+-- ============================
+-- Team members can access all records within their team
+-- User-level isolation (access.shared) is handled at application level
+-- This allows changing behavior via config without modifying RLS
+CREATE POLICY "{{ENTITY_NAME_PASCAL}} team can do all"
+ON public."{{ENTITY_NAME}}"
+FOR ALL TO authenticated
+USING (
+  -- Superadmin bypass
+  public.is_superadmin()
+  OR
+  -- Team isolation: user must be member of the team
+  "teamId" = ANY(public.get_user_team_ids())
+)
+WITH CHECK (
+  public.is_superadmin()
+  OR
+  "teamId" = ANY(public.get_user_team_ids())
+);

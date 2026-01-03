@@ -1,0 +1,55 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+.next/
+out/
+build/
+
+# Package tarballs
+*.tgz
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/
+.nyc_output/
+cypress/videos/
+cypress/screenshots/
+allure-results/
+allure-report/
+
+# Turbo
+.turbo/
+
+# Cache
+.cache/
+.eslintcache
+.prettiercache
+
+# Misc
+*.local
+.nextspark/
+
+# Lock files (keep pnpm-lock.yaml)
+package-lock.json
+yarn.lock

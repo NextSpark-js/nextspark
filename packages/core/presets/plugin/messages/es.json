@@ -1,0 +1,37 @@
+{
+  "{{PLUGIN_SLUG}}": {
+    "title": "{{PLUGIN_DISPLAY_NAME}}",
+    "description": "{{PLUGIN_DESCRIPTION}}",
+    "widget": {
+      "title": "Widget de {{PLUGIN_DISPLAY_NAME}}",
+      "description": "Widget de ejemplo que demuestra la funcionalidad del plugin.",
+      "input": {
+        "placeholder": "Ingrese entrada...",
+        "label": "Entrada"
+      },
+      "buttons": {
+        "submit": "Enviar",
+        "reset": "Reiniciar",
+        "processing": "Procesando..."
+      },
+      "result": {
+        "title": "Resultado",
+        "timestamp": "Marca de tiempo"
+      },
+      "errors": {
+        "required": "La entrada es requerida",
+        "failed": "La operacion fallo"
+      }
+    },
+    "errors": {
+      "unauthorized": "No estas autorizado para usar este plugin",
+      "notFound": "Recurso del plugin no encontrado",
+      "serverError": "Ocurrio un error inesperado"
+    },
+    "status": {
+      "active": "Activo",
+      "inactive": "Inactivo",
+      "error": "Error"
+    }
+  }
+}

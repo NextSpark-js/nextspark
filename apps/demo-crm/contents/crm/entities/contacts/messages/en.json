@@ -1,0 +1,117 @@
+{
+  "entity": {
+    "name": "Contact",
+    "plural": "Contacts",
+    "description": "Manage contact persons in companies"
+  },
+  "fields": {
+    "firstName": {
+      "label": "First Name",
+      "description": "Contact first name",
+      "placeholder": "Enter first name..."
+    },
+    "lastName": {
+      "label": "Last Name",
+      "description": "Contact last name",
+      "placeholder": "Enter last name..."
+    },
+    "email": {
+      "label": "Email",
+      "description": "Contact email address",
+      "placeholder": "Enter email address..."
+    },
+    "phone": {
+      "label": "Phone",
+      "description": "Office phone number",
+      "placeholder": "Enter phone number..."
+    },
+    "mobile": {
+      "label": "Mobile",
+      "description": "Mobile phone number",
+      "placeholder": "Enter mobile number..."
+    },
+    "companyId": {
+      "label": "Company",
+      "description": "Associated company",
+      "placeholder": "Select company..."
+    },
+    "position": {
+      "label": "Position",
+      "description": "Job position or title",
+      "placeholder": "Enter position..."
+    },
+    "department": {
+      "label": "Department",
+      "description": "Department in company",
+      "placeholder": "Enter department..."
+    },
+    "isPrimary": {
+      "label": "Primary Contact",
+      "description": "Is primary contact for company"
+    },
+    "birthDate": {
+      "label": "Birth Date",
+      "description": "Contact birth date",
+      "placeholder": "Select date..."
+    },
+    "linkedin": {
+      "label": "LinkedIn",
+      "description": "LinkedIn profile URL",
+      "placeholder": "https://linkedin.com/in/..."
+    },
+    "twitter": {
+      "label": "Twitter",
+      "description": "Twitter/X handle",
+      "placeholder": "@username"
+    },
+    "preferredChannel": {
+      "label": "Preferred Channel",
+      "description": "Preferred communication channel",
+      "placeholder": "Select channel..."
+    },
+    "timezone": {
+      "label": "Timezone",
+      "description": "Contact timezone",
+      "placeholder": "UTC"
+    },
+    "lastContactedAt": {
+      "label": "Last Contacted",
+      "description": "Last time this contact was reached"
+    },
+    "createdAt": {
+      "label": "Created At",
+      "description": "When the contact was created"
+    },
+    "updatedAt": {
+      "label": "Updated At",
+      "description": "When the contact was last updated"
+    }
+  },
+  "options": {
+    "preferredChannel": {
+      "email": "Email",
+      "phone": "Phone",
+      "whatsapp": "WhatsApp",
+      "linkedin": "LinkedIn",
+      "slack": "Slack",
+      "other": "Other"
+    }
+  },
+  "actions": {
+    "create": "Create Contact",
+    "edit": "Edit Contact",
+    "delete": "Delete Contact",
+    "view": "View Contact",
+    "list": "List Contacts",
+    "search": "Search Contacts",
+    "export": "Export Contacts",
+    "import": "Import Contacts"
+  },
+  "messages": {
+    "created": "Contact created successfully",
+    "updated": "Contact updated successfully",
+    "deleted": "Contact deleted successfully",
+    "notFound": "Contact not found",
+    "error": "An error occurred while processing the contact"
+  }
+}

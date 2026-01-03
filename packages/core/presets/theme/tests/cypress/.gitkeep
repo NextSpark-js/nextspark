@@ -1,0 +1,10 @@
+# Cypress Tests Directory
+#
+# Structure your tests as:
+# tests/
+# └── cypress/
+#     ├── e2e/
+#     │   ├── api/        # API tests
+#     │   └── ui/         # UI tests
+#     ├── fixtures/       # Test data
+#     └── src/            # Page Object Models

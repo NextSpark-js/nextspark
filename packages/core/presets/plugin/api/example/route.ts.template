@@ -1,0 +1,94 @@
+/**
+ * {{PLUGIN_DISPLAY_NAME}} - Example API Endpoint
+ *
+ * This is an example API endpoint for the plugin.
+ * Replace with your actual implementation.
+ *
+ * @route POST /api/v1/plugin/{{PLUGIN_SLUG}}/example
+ */
+
+import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+import { getAuthContext } from '@/core/lib/api/auth'
+import { usePlugin } from '@/core/lib/registries/plugin-registry'
+
+// Request validation schema
+const RequestSchema = z.object({
+  input: z.string().min(1, 'Input is required'),
+})
+
+/**
+ * POST /api/v1/plugin/{{PLUGIN_SLUG}}/example
+ *
+ * Example endpoint that demonstrates plugin API pattern.
+ */
+export async function POST(request: NextRequest) {
+  try {
+    // 1. Authenticate request (dual auth: session + API key)
+    const auth = await getAuthContext(request)
+    if (!auth) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    // 2. Parse and validate request body
+    const body = await request.json()
+    const validationResult = RequestSchema.safeParse(body)
+
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: validationResult.error.errors },
+        { status: 400 }
+      )
+    }
+
+    const { input } = validationResult.data
+
+    // 3. Use plugin functions
+    const { exampleFunction } = usePlugin('{{PLUGIN_SLUG}}')
+    const result = await exampleFunction(input)
+
+    // 4. Return success response
+    return NextResponse.json({
+      success: true,
+      data: result,
+    })
+  } catch (error) {
+    console.error('[{{PLUGIN_SLUG}}] API error:', error)
+
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+/**
+ * GET /api/v1/plugin/{{PLUGIN_SLUG}}/example
+ *
+ * Returns plugin status/info.
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const auth = await getAuthContext(request)
+    if (!auth) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    return NextResponse.json({
+      plugin: '{{PLUGIN_SLUG}}',
+      version: '{{PLUGIN_VERSION}}',
+      status: 'active',
+    })
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}

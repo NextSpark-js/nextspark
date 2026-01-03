@@ -1,0 +1,204 @@
+/// <reference types="cypress" />
+
+/**
+ * {{ENTITY_PLURAL}} CRUD - Owner Role (Full Access)
+ *
+ * Generated: {{TIMESTAMP}}
+ * Session: {{SESSION_NAME}}
+ *
+ * UAT tests for {{ENTITY_PLURAL}} entity with Owner role permissions.
+ * Owner has full CRUD access to the entity.
+ */
+
+import * as allure from 'allure-cypress'
+
+import { {{ENTITY_PASCAL}}POM } from '../../src/components/{{ENTITY_PASCAL}}POM'
+import { loginAsOwner } from '../../src/session-helpers'
+
+describe('{{ENTITY_PLURAL}} CRUD - Owner Role (Full Access)', {
+  tags: ['@uat', '@feat-{{ENTITY_SLUG}}', '@crud', '@role-owner', '@regression', '@scope-{{SESSION_NAME}}']
+}, () => {
+  const pom = {{ENTITY_PASCAL}}POM.create()
+
+  beforeEach(() => {
+    allure.epic('UAT')
+    allure.feature('{{ENTITY_PLURAL}}')
+    allure.story('Owner Permissions')
+    pom.setupApiIntercepts()
+    loginAsOwner()
+    pom.visitList()
+    pom.api.waitForList()
+    pom.waitForList()
+  })
+
+  describe('CREATE - Owner can create {{ENTITY_PLURAL}}', { tags: '@smoke' }, () => {
+    it('OWNER_{{ENTITY_SLUG_UPPER}}_CREATE_001: should create new {{ENTITY_SINGULAR}} successfully', { tags: '@smoke' }, () => {
+      allure.severity('critical')
+
+      // TODO: Customize with entity-specific identifier field
+      const entityName = `Owner {{ENTITY_PASCAL}} ${Date.now()}`
+
+      // Click create button
+      pom.clickAdd()
+
+      // Validate form is visible
+      pom.waitForForm()
+
+      // TODO: Fill required fields based on entity schema
+      // pom.fillTextField('name', entityName)
+
+      // Submit form
+      pom.submitForm()
+
+      // Wait for API response
+      pom.api.waitForCreate()
+
+      // Validate redirect to list
+      cy.url().should('include', `/dashboard/${pom.entitySlug}`)
+
+      // Validate entity appears in list
+      pom.assert{{ENTITY_PASCAL}}InList(entityName)
+
+      cy.log('✅ Owner created {{ENTITY_SINGULAR}} successfully')
+    })
+
+    it('OWNER_{{ENTITY_SLUG_UPPER}}_CREATE_002: should create {{ENTITY_SINGULAR}} with all fields', () => {
+      // TODO: Customize with entity-specific fields
+      const entityName = `Full {{ENTITY_PASCAL}} ${Date.now()}`
+
+      // Click create button
+      pom.clickAdd()
+
+      // Validate form is visible
+      pom.waitForForm()
+
+      // TODO: Fill all fields based on entity schema
+      // pom.fillTextField('name', entityName)
+      // pom.fillTextarea('description', 'Description text')
+      // pom.selectOption('status', 'active')
+
+      // Submit form
+      pom.submitForm()
+
+      // Wait for API response
+      pom.api.waitForCreate()
+
+      // Validate entity appears in list
+      cy.url().should('include', `/dashboard/${pom.entitySlug}`)
+      pom.assert{{ENTITY_PASCAL}}InList(entityName)
+
+      cy.log('✅ Owner created full {{ENTITY_SINGULAR}} successfully')
+    })
+  })
+
+  describe('READ - Owner can read {{ENTITY_PLURAL}}', { tags: '@smoke' }, () => {
+    it('OWNER_{{ENTITY_SLUG_UPPER}}_READ_001: should view {{ENTITY_SINGULAR}} list', { tags: '@smoke' }, () => {
+      allure.severity('critical')
+      // Validate list is visible
+      pom.assertTableVisible()
+
+      cy.log('✅ Owner can view {{ENTITY_SINGULAR}} list')
+    })
+
+    it('OWNER_{{ENTITY_SLUG_UPPER}}_READ_002: should view {{ENTITY_SINGULAR}} details', () => {
+      // Check if there are entities to view
+      cy.get('body').then($body => {
+        if ($body.find(pom.selectors.rowGeneric).length > 0) {
+          // Click the first row (navigation via onClick)
+          cy.get(pom.selectors.rowGeneric).first().click()
+
+          // Should navigate to detail page
+          cy.url().should('match', new RegExp(`/dashboard/${pom.entitySlug}/[a-z0-9-]+`))
+
+          cy.log('✅ Owner can view {{ENTITY_SINGULAR}} details')
+        } else {
+          cy.log('⚠️ No {{ENTITY_PLURAL}} available to view details')
+        }
+      })
+    })
+  })
+
+  describe('UPDATE - Owner can update {{ENTITY_PLURAL}}', () => {
+    it('OWNER_{{ENTITY_SLUG_UPPER}}_UPDATE_001: should edit {{ENTITY_SINGULAR}} successfully', () => {
+      // Check if there are entities to edit
+      cy.get('body').then($body => {
+        if ($body.find(pom.selectors.rowActionEditGeneric).length > 0) {
+          // Click edit button on first entity
+          cy.get(pom.selectors.rowActionEditGeneric).first().click()
+
+          // Validate form is visible
+          pom.waitForForm()
+
+          // TODO: Update entity-specific fields
+          const updatedName = `Updated {{ENTITY_PASCAL}} ${Date.now()}`
+          // pom.fillTextField('name', updatedName)
+
+          // Submit form
+          pom.submitForm()
+
+          // Wait for API response
+          pom.api.waitForUpdate()
+
+          // Validate update
+          cy.url().should('include', `/dashboard/${pom.entitySlug}`)
+          // pom.assert{{ENTITY_PASCAL}}InList(updatedName)
+
+          cy.log('✅ Owner updated {{ENTITY_SINGULAR}} successfully')
+        } else {
+          cy.log('⚠️ No {{ENTITY_PLURAL}} available to edit')
+        }
+      })
+    })
+  })
+
+  describe('DELETE - Owner can delete {{ENTITY_PLURAL}}', () => {
+    it('OWNER_{{ENTITY_SLUG_UPPER}}_DELETE_001: should delete {{ENTITY_SINGULAR}} successfully', () => {
+      // First, create an entity to delete
+      // TODO: Customize with entity-specific identifier
+      const entityName = `Delete Test ${Date.now()}`
+
+      pom.clickAdd()
+      pom.waitForForm()
+      // TODO: Fill required fields
+      // pom.fillTextField('name', entityName)
+      pom.submitForm()
+      pom.api.waitForCreate()
+
+      // Navigate back to list and wait for it to load
+      pom.visitList()
+      pom.waitForList()
+
+      // Wait for entity to appear in the list
+      pom.assert{{ENTITY_PASCAL}}InList(entityName)
+
+      // Delete the entity
+      // Two-step delete: EntityDetailHeader AlertDialog -> EntityDetailWrapper Dialog
+      pom.clickRowByText(entityName)
+      pom.waitForDetail()
+
+      // Step 1: Click delete button to open EntityDetailHeader's AlertDialog
+      pom.clickDelete()
+
+      // Step 2: Click confirm in EntityDetailHeader's AlertDialog
+      cy.get(pom.selectors.deleteConfirm).should('be.visible').click()
+
+      // Step 3: Click confirm in EntityDetailWrapper's Dialog to actually delete
+      cy.get(pom.selectors.parentDeleteConfirm).should('be.visible').click()
+
+      // Wait for delete API response
+      pom.api.waitForDelete()
+
+      // Navigate to list and verify deletion
+      pom.visitList()
+      pom.api.waitForList()
+      pom.waitForList()
+      pom.assert{{ENTITY_PASCAL}}NotInList(entityName)
+
+      cy.log('✅ Owner deleted {{ENTITY_SINGULAR}} successfully')
+    })
+  })
+
+  after(() => {
+    cy.log('✅ {{ENTITY_PLURAL}} CRUD tests completed')
+  })
+})

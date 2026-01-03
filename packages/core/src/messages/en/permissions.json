@@ -1,0 +1,27 @@
+{
+  "title": "Team Permissions",
+  "description": "View and manage what each team role can do",
+  "rolesOverview": "Role Overview",
+  "rolesOverviewDescription": "Each team member has a role that determines what they can access and do",
+  "allPermissions": "All Permissions",
+  "permission": "Permission",
+  "dangerousAction": "This is a potentially dangerous action",
+  "roles": {
+    "owner": {
+      "title": "Owner",
+      "description": "Full access to all team features and settings"
+    },
+    "admin": {
+      "title": "Admin",
+      "description": "Can manage team members and most settings"
+    },
+    "member": {
+      "title": "Member",
+      "description": "Can create and edit content, limited settings access"
+    },
+    "viewer": {
+      "title": "Viewer",
+      "description": "Read-only access to team content"
+    }
+  }
+}

@@ -1,0 +1,123 @@
+{
+  "entity": {
+    "name": "Activity",
+    "plural": "Activities",
+    "description": "Track interactions and communications"
+  },
+  "fields": {
+    "entityType": {
+      "label": "Related Entity Type",
+      "description": "Type of entity this activity is related to",
+      "placeholder": "Select entity type..."
+    },
+    "entityId": {
+      "label": "Related Entity",
+      "description": "Entity this activity is related to",
+      "placeholder": "Select entity..."
+    },
+    "type": {
+      "label": "Activity Type",
+      "description": "Type of activity",
+      "placeholder": "Select type..."
+    },
+    "subject": {
+      "label": "Subject",
+      "description": "Activity subject or title",
+      "placeholder": "Enter subject..."
+    },
+    "description": {
+      "label": "Description",
+      "description": "Detailed activity description",
+      "placeholder": "Enter description..."
+    },
+    "status": {
+      "label": "Status",
+      "description": "Current activity status",
+      "placeholder": "Select status..."
+    },
+    "priority": {
+      "label": "Priority",
+      "description": "Activity priority level",
+      "placeholder": "Select priority..."
+    },
+    "dueDate": {
+      "label": "Due Date",
+      "description": "When the activity is due",
+      "placeholder": "Select date..."
+    },
+    "completedAt": {
+      "label": "Completed At",
+      "description": "When the activity was completed"
+    },
+    "duration": {
+      "label": "Duration (minutes)",
+      "description": "Activity duration in minutes",
+      "placeholder": "0"
+    },
+    "outcome": {
+      "label": "Outcome",
+      "description": "Activity outcome or result",
+      "placeholder": "Select outcome..."
+    },
+    "assignedTo": {
+      "label": "Assigned To",
+      "description": "User assigned to this activity",
+      "placeholder": "Select user..."
+    }
+  },
+  "options": {
+    "entityType": {
+      "lead": "Lead",
+      "contact": "Contact",
+      "company": "Company",
+      "opportunity": "Opportunity"
+    },
+    "type": {
+      "call": "Phone Call",
+      "email": "Email",
+      "meeting": "Meeting",
+      "task": "Task",
+      "note": "Note",
+      "demo": "Demo",
+      "proposal": "Proposal",
+      "follow_up": "Follow Up"
+    },
+    "status": {
+      "pending": "Pending",
+      "in_progress": "In Progress",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "deferred": "Deferred"
+    },
+    "priority": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "urgent": "Urgent"
+    },
+    "outcome": {
+      "successful": "Successful",
+      "partially_successful": "Partially Successful",
+      "unsuccessful": "Unsuccessful",
+      "no_response": "No Response",
+      "reschedule": "Reschedule Required"
+    }
+  },
+  "actions": {
+    "create": "Create Activity",
+    "edit": "Edit Activity",
+    "delete": "Delete Activity",
+    "view": "View Activity",
+    "list": "List Activities",
+    "complete": "Mark Complete",
+    "schedule": "Schedule Activity"
+  },
+  "messages": {
+    "created": "Activity created successfully",
+    "updated": "Activity updated successfully",
+    "deleted": "Activity deleted successfully",
+    "completed": "Activity marked as completed",
+    "notFound": "Activity not found",
+    "error": "An error occurred while processing the activity"
+  }
+}

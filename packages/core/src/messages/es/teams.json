@@ -1,0 +1,140 @@
+{
+  "title": "Equipos",
+  "description": "Administra tus equipos y colaboraciones",
+
+  "types": {
+    "personal": "Personal",
+    "work": "Equipo de Trabajo"
+  },
+
+  "roles": {
+    "owner": "Propietario",
+    "admin": "Administrador",
+    "member": "Miembro",
+    "viewer": "Visor"
+  },
+
+  "roleDescriptions": {
+    "owner": "Control total del equipo, incluyendo eliminacion y facturacion",
+    "admin": "Puede gestionar miembros, configuracion y la mayoria de operaciones",
+    "member": "Puede ver el contenido del equipo y colaborar con otros miembros",
+    "viewer": "Acceso de solo lectura al contenido del equipo"
+  },
+
+  "actions": {
+    "create": "Crear Equipo",
+    "edit": "Editar Equipo",
+    "delete": "Eliminar Equipo",
+    "leave": "Abandonar Equipo",
+    "switch": "Cambiar Equipo",
+    "manage": "Gestionar Equipo",
+    "invite": "Invitar Miembro",
+    "removeMember": "Eliminar Miembro",
+    "changeRole": "Cambiar Rol"
+  },
+
+  "switcher": {
+    "switchTeam": "Cambiar Equipo",
+    "switchingTo": "Cambiando a",
+    "switchComplete": "Cambio Completado",
+    "loadingTeamData": "Cargando datos del equipo...",
+    "ready": "¡Listo!",
+    "personal": "Personal",
+    "workTeam": "Equipo de Trabajo",
+    "manageTeams": "Gestionar Equipos",
+    "active": "Activo",
+    "team": "Equipo"
+  },
+
+  "createTeam": {
+    "title": "Crear Nuevo Equipo",
+    "description": "Crea un nuevo equipo para colaborar con otros",
+    "nameLabel": "Nombre del Equipo",
+    "namePlaceholder": "Ingresa el nombre del equipo",
+    "slugLabel": "URL del Equipo",
+    "slugPlaceholder": "url-del-equipo",
+    "descriptionLabel": "Descripcion",
+    "descriptionPlaceholder": "Describe para que es este equipo",
+    "success": "Equipo creado exitosamente",
+    "error": "Error al crear el equipo"
+  },
+
+  "editTeam": {
+    "title": "Editar Equipo",
+    "success": "Equipo actualizado exitosamente",
+    "error": "Error al actualizar el equipo"
+  },
+
+  "deleteTeam": {
+    "title": "Eliminar Equipo",
+    "description": "Estas seguro de que deseas eliminar este equipo? Esta accion no se puede deshacer.",
+    "confirmButton": "Eliminar Equipo",
+    "success": "Equipo eliminado exitosamente",
+    "error": "Error al eliminar el equipo"
+  },
+
+  "members": {
+    "title": "Miembros del Equipo",
+    "description": "Gestiona quien tiene acceso a este equipo",
+    "empty": "Sin miembros aun",
+    "you": "(Tu)",
+    "joined": "Se unio {date}"
+  },
+
+  "invitations": {
+    "title": "Invitaciones Pendientes",
+    "description": "Invitaciones esperando respuesta",
+    "empty": "Sin invitaciones pendientes",
+    "sent": "Enviada {date}",
+    "expires": "Expira {date}",
+    "resend": "Reenviar",
+    "cancel": "Cancelar Invitacion",
+    "cancelSuccess": "Invitacion cancelada",
+    "cancelError": "Error al cancelar la invitacion"
+  },
+
+  "invite": {
+    "title": "Invitar Miembro",
+    "description": "Invita a alguien a unirse a este equipo",
+    "emailLabel": "Correo Electronico",
+    "emailPlaceholder": "colega@ejemplo.com",
+    "roleLabel": "Rol",
+    "rolePlaceholder": "Selecciona un rol",
+    "sendButton": "Enviar Invitacion",
+    "success": "Invitacion enviada exitosamente",
+    "error": "Error al enviar la invitacion"
+  },
+
+  "acceptInvite": {
+    "title": "Invitacion al Equipo",
+    "description": "Has sido invitado a unirte a",
+    "accept": "Aceptar Invitacion",
+    "decline": "Rechazar",
+    "expired": "Esta invitacion ha expirado",
+    "invalid": "Esta invitacion ya no es valida",
+    "success": "Te has unido al equipo!",
+    "error": "Error al aceptar la invitacion"
+  },
+
+  "settings": {
+    "title": "Configuracion del Equipo",
+    "general": "General",
+    "members": "Miembros",
+    "billing": "Facturacion",
+    "danger": "Zona de Peligro"
+  },
+
+  "errors": {
+    "notFound": "Equipo no encontrado",
+    "notMember": "No eres miembro de este equipo",
+    "permissionDenied": "No tienes permiso para realizar esta accion",
+    "cannotDeletePersonal": "No se puede eliminar el equipo personal",
+    "cannotLeaveOwner": "Los propietarios no pueden abandonar. Transfiere la propiedad primero.",
+    "lastAdmin": "No se puede eliminar al ultimo administrador del equipo"
+  },
+
+  "empty": {
+    "title": "Sin equipos aun",
+    "description": "Crea tu primer equipo para comenzar a colaborar"
+  }
+}

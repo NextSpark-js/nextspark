@@ -1,0 +1,101 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "{{CURRENT_DATE}}",
+  "features": {
+    "authentication": {
+      "id": "authentication",
+      "name": "Authentication",
+      "description": "User identity and access management",
+      "status": "stable",
+      "testTags": ["@feat-auth"],
+      "components": {
+        "email": {
+          "name": "Email Authentication",
+          "description": "Registration and login with email/password",
+          "testTags": ["@feat-auth", "@crud"],
+          "routes": ["/login", "/register", "/forgot-password", "/reset-password"]
+        },
+        "oauth-google": {
+          "name": "Google OAuth",
+          "description": "Social login with Google account",
+          "testTags": ["@feat-auth"],
+          "routes": ["/login"]
+        }
+      }
+    },
+    "teams": {
+      "id": "teams-management",
+      "name": "Teams & Permissions",
+      "description": "Multi-tenant team management and RBAC",
+      "status": "stable",
+      "testTags": ["@feat-teams"],
+      "components": {
+        "management": {
+          "name": "Team Management",
+          "description": "Create, edit, and manage teams",
+          "testTags": ["@feat-teams", "@crud"],
+          "routes": ["/dashboard/settings/team"]
+        },
+        "invitations": {
+          "name": "Invitations",
+          "description": "Invite users to join a team",
+          "testTags": ["@feat-teams", "@workflow"],
+          "routes": ["/dashboard/settings/team/members", "/accept-invitation"]
+        },
+        "roles": {
+          "name": "Role-Based Permissions",
+          "description": "Assign roles (owner, admin, member, viewer)",
+          "testTags": ["@feat-teams", "@feat-permissions", "@security"],
+          "routes": ["/dashboard/settings/team/members"]
+        }
+      }
+    },
+    "settings": {
+      "id": "settings",
+      "name": "Settings",
+      "description": "User and team configuration",
+      "status": "stable",
+      "testTags": [],
+      "components": {
+        "profile": {
+          "name": "User Profile",
+          "description": "Edit personal information and preferences",
+          "testTags": ["@feat-users", "@crud"],
+          "routes": ["/dashboard/settings/profile"]
+        },
+        "api-keys": {
+          "name": "API Keys",
+          "description": "Generate and manage API keys for programmatic access",
+          "testTags": ["@feat-api-keys", "@crud", "@security"],
+          "routes": ["/dashboard/settings/api-keys"]
+        }
+      }
+    }
+  },
+  "flows": {
+    "onboarding": {
+      "id": "user-onboarding",
+      "name": "User Onboarding",
+      "description": "Complete flow from registration to first action",
+      "testTags": ["@flow-onboarding", "@smoke"],
+      "steps": [
+        "Register with email or Google",
+        "Verify email (if email registration)",
+        "Create or join a team",
+        "Explore dashboard"
+      ],
+      "features": [
+        "authentication.email",
+        "authentication.oauth-google",
+        "teams.management"
+      ]
+    }
+  },
+  "statusDefinitions": {
+    "stable": "Production-ready, fully tested",
+    "beta": "Feature complete, in testing",
+    "in-development": "Currently being implemented",
+    "planned": "Scheduled for future development",
+    "deprecated": "Being phased out"
+  }
+}

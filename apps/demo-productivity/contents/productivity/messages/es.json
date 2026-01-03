@@ -1,0 +1,79 @@
+{
+  "productivity": {
+    "name": "Productivity",
+    "description": "Una app colaborativa de gestión de tareas",
+    "tagline": "Organiza tu trabajo, en equipo",
+
+    "navigation": {
+      "boards": "Tableros",
+      "myCards": "Mis Tarjetas",
+      "calendar": "Calendario",
+      "team": "Equipo"
+    },
+
+    "quickActions": {
+      "createBoard": "Crear Tablero",
+      "createCard": "Agregar Tarjeta"
+    },
+
+    "dashboard": {
+      "welcome": "¡Bienvenido de nuevo!",
+      "welcomeWithName": "¡Bienvenido de nuevo, {name}!",
+      "overview": "Tu Resumen",
+      "recentBoards": "Tableros Recientes",
+      "upcomingDeadlines": "Próximas Fechas Límite",
+      "assignedToYou": "Asignadas a Ti",
+      "teamActivity": "Actividad del Equipo"
+    },
+
+    "stats": {
+      "totalBoards": "Total de Tableros",
+      "totalCards": "Total de Tarjetas",
+      "cardsCompleted": "Tarjetas Completadas",
+      "cardsDueThisWeek": "Vencen Esta Semana"
+    },
+
+    "empty": {
+      "noBoards": {
+        "title": "Aún no hay tableros",
+        "description": "Crea tu primer tablero para comenzar a organizar tu trabajo.",
+        "action": "Crear tu primer tablero"
+      },
+      "noAssignedCards": {
+        "title": "Sin tarjetas asignadas",
+        "description": "Las tarjetas asignadas a ti aparecerán aquí."
+      },
+      "noDeadlines": {
+        "title": "Sin fechas límite próximas",
+        "description": "Las tarjetas con fechas de vencimiento aparecerán aquí."
+      }
+    },
+
+    "collaboration": {
+      "invite": "Invitar Miembro del Equipo",
+      "inviteDescription": "Invita a alguien a colaborar en tus tableros",
+      "teamMembers": "Miembros del Equipo",
+      "roles": {
+        "owner": "Propietario",
+        "member": "Miembro",
+        "viewer": "Visor"
+      },
+      "roleDescriptions": {
+        "owner": "Acceso completo a todos los tableros, listas y tarjetas. Puede invitar miembros.",
+        "member": "Puede crear y editar listas y tarjetas. No puede eliminar tableros.",
+        "viewer": "Acceso de solo lectura a todos los tableros, listas y tarjetas."
+      }
+    },
+
+    "shortcuts": {
+      "title": "Atajos de Teclado",
+      "newCard": "Nueva Tarjeta",
+      "newBoard": "Nuevo Tablero",
+      "search": "Buscar",
+      "toggleSidebar": "Alternar Barra Lateral",
+      "nextList": "Lista Siguiente",
+      "previousList": "Lista Anterior"
+    }
+  }
+}
+

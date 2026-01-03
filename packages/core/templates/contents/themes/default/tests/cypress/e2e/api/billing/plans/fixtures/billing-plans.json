@@ -1,0 +1,163 @@
+{
+  "$schema": "./billing-plans.schema.json",
+  "_description": "Test data for billing plan tests - matches billing.config.ts",
+
+  "plans": {
+    "free": {
+      "slug": "free",
+      "name": "Free",
+      "priceMonthly": 0,
+      "priceYearly": 0,
+      "features": ["basic_analytics"],
+      "limits": {
+        "team_members": 3,
+        "tasks": 50,
+        "customers": 25,
+        "api_calls": 1000,
+        "storage_gb": 1,
+        "file_uploads": 100,
+        "webhooks_count": 0
+      }
+    },
+    "starter": {
+      "slug": "starter",
+      "name": "Starter",
+      "priceMonthly": 1500,
+      "priceYearly": 14400,
+      "features": ["basic_analytics", "advanced_analytics", "api_access", "guest_access"],
+      "limits": {
+        "team_members": 5,
+        "tasks": 200,
+        "customers": 100,
+        "api_calls": 10000,
+        "storage_gb": 10,
+        "file_uploads": 500,
+        "webhooks_count": 3
+      }
+    },
+    "pro": {
+      "slug": "pro",
+      "name": "Pro",
+      "priceMonthly": 2900,
+      "priceYearly": 29000,
+      "features": [
+        "basic_analytics",
+        "advanced_analytics",
+        "realtime_analytics",
+        "api_access",
+        "webhooks",
+        "custom_branding",
+        "guest_access",
+        "priority_support",
+        "task_automation"
+      ],
+      "limits": {
+        "team_members": 15,
+        "tasks": 1000,
+        "customers": 500,
+        "api_calls": 100000,
+        "storage_gb": 50,
+        "file_uploads": 2000,
+        "webhooks_count": 10
+      }
+    },
+    "business": {
+      "slug": "business",
+      "name": "Business",
+      "priceMonthly": 7900,
+      "priceYearly": 79000,
+      "features": [
+        "basic_analytics",
+        "advanced_analytics",
+        "realtime_analytics",
+        "api_access",
+        "webhooks",
+        "custom_branding",
+        "sso",
+        "audit_logs",
+        "guest_access",
+        "priority_support",
+        "task_automation",
+        "customer_import",
+        "recurring_tasks"
+      ],
+      "limits": {
+        "team_members": 50,
+        "tasks": 5000,
+        "customers": 2000,
+        "api_calls": 500000,
+        "storage_gb": 200,
+        "file_uploads": 10000,
+        "webhooks_count": 50
+      }
+    },
+    "enterprise": {
+      "slug": "enterprise",
+      "name": "Enterprise",
+      "features": ["*"],
+      "limits": {
+        "team_members": -1,
+        "tasks": -1,
+        "customers": -1,
+        "api_calls": -1,
+        "storage_gb": -1,
+        "file_uploads": -1,
+        "webhooks_count": -1
+      }
+    }
+  },
+
+  "actionMappings": {
+    "features": {
+      "analytics.view_advanced": "advanced_analytics",
+      "analytics.view_realtime": "realtime_analytics",
+      "api.generate_key": "api_access",
+      "webhooks.create": "webhooks",
+      "branding.customize": "custom_branding",
+      "branding.white_label": "white_label",
+      "auth.configure_sso": "sso",
+      "security.view_audit_logs": "audit_logs",
+      "support.priority_access": "priority_support",
+      "support.dedicated_channel": "dedicated_support",
+      "team.invite_guest": "guest_access",
+      "tasks.automate": "task_automation",
+      "tasks.create_recurring": "recurring_tasks",
+      "customers.bulk_import": "customer_import"
+    },
+    "limits": {
+      "team.members.invite": "team_members",
+      "tasks.create": "tasks",
+      "customers.create": "customers",
+      "api.call": "api_calls",
+      "files.upload": "storage_gb",
+      "files.upload_count": "file_uploads",
+      "webhooks.create": "webhooks_count"
+    }
+  },
+
+  "testTeams": {
+    "free": {
+      "teamId": "team-personal-carlos-001",
+      "subscriptionId": "sub-personal-carlos-001",
+      "description": "Carlos personal team with Free plan"
+    },
+    "pro": {
+      "teamId": "team-tmt-001",
+      "subscriptionId": "sub-tmt-001",
+      "description": "TMT Core team with Pro plan"
+    },
+    "enterprise": {
+      "teamId": "team-ironvale-002",
+      "subscriptionId": "sub-ironvale-001",
+      "description": "Ironvale Global with Enterprise plan"
+    }
+  },
+
+  "testCredentials": {
+    "superadmin": {
+      "apiKey": "test_api_key_for_testing_purposes_only_not_a_real_secret_key_abc123",
+      "userId": "test-superadmin-001",
+      "teamId": "team-tmt-001"
+    }
+  }
+}

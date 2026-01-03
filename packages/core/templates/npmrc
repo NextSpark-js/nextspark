@@ -1,0 +1,3 @@
+# Hoist @nextsparkjs/core dependencies so they're accessible from the project
+# This is required for pnpm to make peer dependencies available
+public-hoist-pattern[]=*

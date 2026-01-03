@@ -1,0 +1,115 @@
+/**
+ * {{PLUGIN_DISPLAY_NAME}} - Example Widget Component
+ *
+ * A client-side component that demonstrates plugin UI patterns.
+ */
+
+'use client'
+
+import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Loader2 } from 'lucide-react'
+import { use{{PLUGIN_VAR_NAME}} } from '../hooks/use{{PLUGIN_VAR_NAME}}'
+
+interface {{PLUGIN_VAR_NAME}}WidgetProps {
+  /**
+   * Widget title
+   */
+  title?: string
+
+  /**
+   * Optional class name for styling
+   */
+  className?: string
+}
+
+/**
+ * Example widget component for {{PLUGIN_DISPLAY_NAME}} plugin.
+ *
+ * @example
+ * ```tsx
+ * <{{PLUGIN_VAR_NAME}}Widget title="My Widget" />
+ * ```
+ */
+export function {{PLUGIN_VAR_NAME}}Widget({
+  title = '{{PLUGIN_DISPLAY_NAME}}',
+  className,
+}: {{PLUGIN_VAR_NAME}}WidgetProps) {
+  const [input, setInput] = useState('')
+  const { data, isLoading, error, execute, reset } = use{{PLUGIN_VAR_NAME}}()
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await execute(input)
+  }
+
+  return (
+    <Card className={className} data-cy="{{PLUGIN_SLUG}}-widget">
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>
+          Example widget demonstrating plugin functionality.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Enter input..."
+            disabled={isLoading}
+            data-cy="{{PLUGIN_SLUG}}-input"
+          />
+
+          <div className="flex gap-2">
+            <Button
+              type="submit"
+              disabled={isLoading}
+              data-cy="{{PLUGIN_SLUG}}-submit-btn"
+            >
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isLoading ? 'Processing...' : 'Submit'}
+            </Button>
+
+            {data && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={reset}
+                data-cy="{{PLUGIN_SLUG}}-reset-btn"
+              >
+                Reset
+              </Button>
+            )}
+          </div>
+        </form>
+
+        {error && (
+          <div
+            className="mt-4 p-3 bg-destructive/10 text-destructive rounded-md"
+            data-cy="{{PLUGIN_SLUG}}-error"
+          >
+            {error.message}
+          </div>
+        )}
+
+        {data && (
+          <div
+            className="mt-4 p-3 bg-muted rounded-md"
+            data-cy="{{PLUGIN_SLUG}}-result"
+          >
+            <p className="font-medium">Result:</p>
+            <p className="text-sm text-muted-foreground">{data.message}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {data.timestamp}
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+export default {{PLUGIN_VAR_NAME}}Widget

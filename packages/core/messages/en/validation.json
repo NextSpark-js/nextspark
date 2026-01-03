@@ -1,0 +1,48 @@
+{
+  "email": {
+    "required": "Email is required",
+    "invalid": "Please enter a valid email address"
+  },
+  "password": {
+    "required": "Password is required",
+    "currentRequired": "Current password is required",
+    "min": "Password must be at least 8 characters",
+    "minLength": "Password must be at least {min} characters",
+    "uppercase": "Must contain at least one uppercase letter",
+    "lowercase": "Must contain at least one lowercase letter",
+    "number": "Must contain at least one number",
+    "match": "Passwords do not match",
+    "different": "New password must be different from current password"
+  },
+  "firstName": {
+    "required": "First name is required",
+    "min": "First name must be at least 2 characters",
+    "minLength": "First name must be at least {min} characters"
+  },
+  "lastName": {
+    "required": "Last name is required",
+    "min": "Last name must be at least 2 characters",
+    "minLength": "Last name must be at least {min} characters"
+  },
+  "country": {
+    "required": "Please select a country"
+  },
+  "timezone": {
+    "required": "Please select a timezone"
+  },
+  "language": {
+    "required": "Please select a language"
+  },
+  "taskTitle": {
+    "required": "Task title is required",
+    "min": "Title must be at least 1 character",
+    "max": "Title cannot exceed 200 characters",
+    "minLength": "Task title must be at least {min} characters"
+  },
+  "taskDescription": {
+    "max": "Description cannot exceed 500 characters"
+  },
+  "terms": {
+    "required": "Please agree to the terms and conditions"
+  }
+}

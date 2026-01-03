@@ -1,0 +1,136 @@
+name: Cypress Regression Tests
+
+on:
+  schedule:
+    # Run at 2 AM UTC daily
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      theme:
+        description: 'Theme to test'
+        required: false
+        default: 'default'
+
+env:
+  NEXT_PUBLIC_ACTIVE_THEME: ${{ inputs.theme || vars.ACTIVE_THEME || 'default' }}
+
+jobs:
+  regression-tests:
+    name: Full Regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup database
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test
+        run: pnpm db:migrate
+
+      - name: Seed test data
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test
+        run: pnpm db:seed || echo "No seed script found, skipping..."
+
+      - name: Build application
+        run: pnpm build
+
+      - name: Run Regression Tests
+        uses: cypress-io/github-action@v6
+        with:
+          start: pnpm start
+          wait-on: 'http://localhost:5173'
+          wait-on-timeout: 120
+          config-file: contents/themes/${{ env.NEXT_PUBLIC_ACTIVE_THEME }}/tests/cypress.config.ts
+          env: grepTags=@regression
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test
+
+      - name: Generate Allure Report
+        if: always()
+        run: |
+          npx allure generate \
+            contents/themes/${{ env.NEXT_PUBLIC_ACTIVE_THEME }}/tests/cypress/allure-results \
+            -o contents/themes/${{ env.NEXT_PUBLIC_ACTIVE_THEME }}/tests/cypress/allure-report \
+            --clean
+
+      - name: Upload Allure Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allure-report
+          path: contents/themes/${{ env.NEXT_PUBLIC_ACTIVE_THEME }}/tests/cypress/allure-report
+          retention-days: 14
+
+      - name: Upload screenshots on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: cypress-screenshots
+          path: contents/themes/${{ env.NEXT_PUBLIC_ACTIVE_THEME }}/tests/cypress/screenshots
+          retention-days: 7
+
+      - name: Upload videos
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cypress-videos
+          path: contents/themes/${{ env.NEXT_PUBLIC_ACTIVE_THEME }}/tests/cypress/videos
+          retention-days: 7
+
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const date = new Date().toISOString().split('T')[0]
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Nightly Regression Failed - ${date}`,
+              body: `## Regression Test Failure\n\n**Date:** ${date}\n**Theme:** ${{ env.NEXT_PUBLIC_ACTIVE_THEME }}\n**Workflow:** [${context.runId}](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})\n\nPlease investigate the test failures.`,
+              labels: ['bug', 'regression', 'automated']
+            })

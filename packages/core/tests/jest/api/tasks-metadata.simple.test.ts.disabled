@@ -1,0 +1,988 @@
+/**
+ * Tasks API with Metadata Integration Tests
+ * Testing metadata functionality with customFields and labels
+ */
+
+import { NextRequest } from 'next/server';
+
+// Mock environment variables
+process.env.NEXT_PUBLIC_BASE_URL = 'http://localhost:3000';
+process.env.API_RATE_LIMIT_REQUESTS = '100';
+process.env.API_RATE_LIMIT_WINDOW = '900000';
+
+// Mock the database functions
+jest.mock('@/core/lib/db', () => ({
+  queryWithRLS: jest.fn(),
+  mutateWithRLS: jest.fn(),
+  query: jest.fn()
+}));
+
+// Mock auth functions
+jest.mock('@/core/lib/api/auth', () => ({
+  validateApiKey: jest.fn(),
+  handleCorsPreflightRequest: jest.fn()
+}));
+
+// Mock MetaService
+jest.mock('@/core/lib/services/meta.service');
+
+import { GET, POST } from '@/app/api/v1/tasks/route';
+import { GET as GET_BY_ID, PATCH } from '@/app/api/v1/tasks/[id]/route';
+import { validateApiKey } from '@/core/lib/api/auth';
+import { queryWithRLS, mutateWithRLS } from '@/core/lib/db';
+import { MetaService } from '@/core/lib/services/meta.service';
+
+const mockValidateApiKey = validateApiKey as jest.MockedFunction<typeof validateApiKey>;
+const mockQueryWithRLS = queryWithRLS as jest.MockedFunction<typeof queryWithRLS>;
+const mockMutateWithRLS = mutateWithRLS as jest.MockedFunction<typeof mutateWithRLS>;
+const mockMetaService = MetaService as jest.Mocked<typeof MetaService>;
+
+describe('Tasks API with Metadata Tests', () => {
+  const validApiKey = 'testkey_validkey123';
+  const mockUserId = 'user-123';
+  const mockTaskId = 'task-456';
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    
+    // Mock successful API key validation
+    mockValidateApiKey.mockResolvedValue({
+      isValid: true,
+      keyData: {
+        id: 'api-key-id',
+        name: 'Test Key',
+        scopes: ['tasks:read', 'tasks:write'],
+        userId: mockUserId,
+        isActive: true,
+        usageCount: 0,
+        lastUsed: null,
+        expiresAt: null,
+        createdAt: '2023-01-01T00:00:00Z',
+        updatedAt: '2023-01-01T00:00:00Z'
+      },
+      rateLimitStatus: {
+        limit: 100,
+        remaining: 99,
+        reset: Date.now() + 900000
+      }
+    });
+
+    // Mock MetaService methods
+    mockMetaService.getEntityMetadata = jest.fn();
+    mockMetaService.setEntityMetadata = jest.fn();
+    mockMetaService.mergeEntityMetadata = jest.fn();
+    
+    // Default mock implementation para queryWithRLS que maneja JOINs automáticamente
+    mockQueryWithRLS.mockImplementation(async (query: string, params: unknown[]) => {
+      // Si es una query con JOIN (para obtener datos completos de task + user)
+      if (query.includes('JOIN "user"') && query.includes('task')) {
+        return [{
+          id: mockTaskId,
+          title: 'Mock Task',
+          description: 'Mock description',
+          completed: false,
+          createdAt: '2023-01-01T00:00:00Z',
+          updatedAt: '2023-01-01T00:00:00Z',
+          user_id: mockUserId,
+          user_email: 'test@example.com',
+          user_firstName: 'Test',
+          user_lastName: 'User'
+        }];
+      }
+      
+      // Si es una query de conteo
+      if (query.includes('COUNT(*)')) {
+        return [{ count: '1' }];
+      }
+      
+      // Para cualquier otra query, devolver array vacío
+      return [];
+    });
+    
+    // Default mock implementation para mutateWithRLS
+    mockMutateWithRLS.mockImplementation(async (query: string, params: unknown[]) => {
+      // Para INSERT queries
+      if (query.includes('INSERT INTO "task"')) {
+        return {
+          rows: [{
+            id: mockTaskId,
+            title: 'Mock Task',
+            description: 'Mock description',
+            completed: false,
+            userId: mockUserId,
+            createdAt: '2023-01-01T00:00:00Z',
+            updatedAt: '2023-01-01T00:00:00Z'
+          }]
+        };
+      }
+      
+      // Para UPDATE queries
+      if (query.includes('UPDATE "task"')) {
+        return {
+          rows: [{
+            id: mockTaskId,
+            title: 'Updated Task',
+            description: 'Updated description',
+            completed: true,
+            userId: mockUserId,
+            createdAt: '2023-01-01T00:00:00Z',
+            updatedAt: '2023-01-02T00:00:00Z'
+          }]
+        };
+      }
+      
+      // Para DELETE queries
+      if (query.includes('DELETE')) {
+        return { rows: [{ id: mockTaskId }] };
+      }
+      
+      return { rows: [] };
+    });
+  });
+
+  describe('POST /api/v1/tasks - Create with Metadata', () => {
+    test('should create task without metadata', async () => {
+      const newTask = {
+        id: mockTaskId,
+        title: 'Task Without Meta',
+        description: 'Simple task',
+        completed: false,
+        userId: mockUserId,
+        createdAt: '2023-01-01T00:00:00Z',
+        updatedAt: '2023-01-01T00:00:00Z'
+      };
+
+      // Los mocks automáticos se encargan de esto
+
+      const requestBody = {
+        title: 'Task Without Meta',
+        description: 'Simple task'
+      };
+
+      const request = new NextRequest('http://localhost:3000/api/v1/tasks', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${validApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      const response = await POST(request);
+      const responseData = await response.json();
+
+      expect(response.status).toBe(201);
+      expect(responseData.success).toBe(true);
+      expect(responseData.data).not.toHaveProperty('metas');
+      expect(responseData.data).toHaveProperty('user');
+      expect(responseData.data.user.id).toBe(mockUserId);
+      expect(mockMetaService.setEntityMetadata).not.toHaveBeenCalled();
+    });
+
+    test('should create task with customFields metadata', async () => {
+      const newTask = {
+        id: mockTaskId,
+        title: 'Task With CustomFields',
+        description: 'Task with custom fields',
+        completed: false,
+        userId: mockUserId,
+        createdAt: '2023-01-01T00:00:00Z',
+        updatedAt: '2023-01-01T00:00:00Z'
+      };
+
+      const mockMetadata = {
+        customFields: {
+          priority: 'high',
+          department: 'engineering',
+          estimatedHours: 8
+        }
+      };
+
+      // Los mocks automáticos se encargan de la DB
+      mockMetaService.setEntityMetadata.mockResolvedValueOnce(undefined);
+      mockMetaService.getEntityMetadata.mockResolvedValueOnce(mockMetadata);
+
+      const requestBody = {
+        title: 'Task With CustomFields',
+        description: 'Task with custom fields',
+        metas: {
+          customFields: {
+            priority: 'high',
+            department: 'engineering',
+            estimatedHours: 8
+          }
+        }
+      };
+
+      const request = new NextRequest('http://localhost:3000/api/v1/tasks', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${validApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      const response = await POST(request);
+      const responseData = await response.json();
+
+      expect(response.status).toBe(201);
+      expect(responseData.success).toBe(true);
+      expect(responseData.data).toHaveProperty('metas');
+      expect(responseData.data.metas).toHaveProperty('customFields');
+      expect(responseData.data.metas.customFields.priority).toBe('high');
+      expect(mockMetaService.setEntityMetadata).toHaveBeenCalledWith(
+        'task_metas',
+        mockTaskId,
+        { customFields: { priority: 'high', department: 'engineering', estimatedHours: 8 } },
+        mockUserId
+      );
+    });
+
+    test('should create task with multiple metadata groups', async () => {
+      const newTask = {
+        id: mockTaskId,
+        title: 'Task With Multiple Metas',
+        description: 'Task with custom fields and labels',
+        completed: false,
+        userId: mockUserId,
+        createdAt: '2023-01-01T00:00:00Z',
+        updatedAt: '2023-01-01T00:00:00Z'
+      };
+
+      const mockMetadata = {
+        customFields: {
+          priority: 'critical',
+          assignee: 'john.doe'
+        },
+        labels: {
+          category: 'bug',
+          sprint: 'v2.1',
+          environment: 'production'
+        }
+      };
+
+      mockMutateWithRLS.mockResolvedValueOnce({ rows: [newTask] });
+      mockMetaService.setEntityMetadata.mockResolvedValueOnce(undefined);
+      mockMetaService.getEntityMetadata.mockResolvedValueOnce(mockMetadata);
+
+      const requestBody = {
+        title: 'Task With Multiple Metas',
+        description: 'Task with custom fields and labels',
+        metas: mockMetadata
+      };
+
+      const request = new NextRequest('http://localhost:3000/api/v1/tasks', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${validApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      const response = await POST(request);
+      const responseData = await response.json();
+
+      expect(response.status).toBe(201);
+      expect(responseData.data).toHaveProperty('metas');
+      expect(responseData.data.metas).toHaveProperty('customFields');
+      expect(responseData.data.metas).toHaveProperty('labels');
+      expect(responseData.data.metas.customFields.priority).toBe('critical');
+      expect(responseData.data.metas.labels.category).toBe('bug');
+    });
+
+    test('should reject invalid metas structure', async () => {
+      const requestBody = {
+        title: 'Task With Invalid Meta',
+        description: 'Task with invalid metadata',
+        metas: 'invalid_string'
+      };
+
+      const request = new NextRequest('http://localhost:3000/api/v1/tasks', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${validApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      const response = await POST(request);
+      const responseData = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(responseData.success).toBe(false);
+      expect(responseData.code).toBe('VALIDATION_ERROR');
+    });
+  });
+
+  describe('GET /api/v1/tasks - List with Metadata Query Params', () => {
+    test('should list tasks without metas parameter', async () => {
+      const mockTasks = [
+        {
+          id: 'task-1',
+          title: 'Task 1',
+          description: 'First task',
+          completed: false,
+          userId: mockUserId,
+          createdAt: '2023-01-01T00:00:00Z',
+          updatedAt: '2023-01-01T00:00:00Z'
+        }
+      ];
+
+      mockQueryWithRLS.mockResolvedValueOnce([{ count: '1' }]);
+      mockQueryWithRLS.mockResolvedValueOnce(mockTasks);
+
+      const url = new URL('http://localhost:3000/api/v1/tasks');
+      const request = new NextRequest(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${validApiKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const response = await GET(request);
+      const responseData = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(responseData.data[0]).not.toHaveProperty('metas');
+      expect(mockMetaService.getEntityMetadata).not.toHaveBeenCalled();
+    });
+
+    test('should list tasks with metas=all', async () => {
+      const mockTasks = [
+        {
+          id: 'task-1',
+          title: 'Task 1',
+          description: 'First task',
+          completed: false,
+          userId: mockUserId,
+          createdAt: '2023-01-01T00:00:00Z',
+          updatedAt: '2023-01-01T00:00:00Z'
+        }
+      ];
+
+      const mockMetadata = {
+        customFields: {
+          priority: 'medium',
+          estimatedHours: 4
+        },
+        labels: {
+          category: 'feature',
+          status: 'active'
+        }
+      };
+
+      mockQueryWithRLS.mockResolvedValueOnce([{ count: '1' }]);
+      mockQueryWithRLS.mockResolvedValueOnce(mockTasks);
+      mockMetaService.getEntityMetadata.mockResolvedValueOnce(mockMetadata);
+
+      const url = new URL('http://localhost:3000/api/v1/tasks?metas=all');
+      const request = new NextRequest(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${validApiKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const response = await GET(request);
+      const responseData = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(responseData.data[0]).toHaveProperty('metas');
+      expect(responseData.data[0].metas).toHaveProperty('customFields');
+      expect(responseData.data[0].metas).toHaveProperty('labels');
+    });
+
+    test('should list tasks with specific metas keys', async () => {
+      const mockTasks = [
+        {
+          id: 'task-1',
+          title: 'Task 1',
+          description: 'First task',
+          completed: false,
+          userId: mockUserId,
+          createdAt: '2023-01-01T00:00:00Z',
+          updatedAt: '2023-01-01T00:00:00Z'
+        }
+      ];
+
+      const mockMetadata = {
+        customFields: {
+          priority: 'high',
+          department: 'engineering'
+        }
+      };
+
+      mockQueryWithRLS.mockResolvedValueOnce([{ count: '1' }]);
+      mockQueryWithRLS.mockResolvedValueOnce(mockTasks);
+      mockMetaService.getEntityMetadata.mockResolvedValueOnce(mockMetadata);
+
+      const url = new URL('http://localhost:3000/api/v1/tasks?metas=customFields');
+      const request = new NextRequest(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${validApiKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const response = await GET(request);
+      const responseData = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(responseData.data[0]).toHaveProperty('metas');
+      expect(responseData.data[0].metas).toHaveProperty('customFields');
+      expect(responseData.data[0].metas).not.toHaveProperty('labels');
+    });
+  });
+
+  describe('GET /api/v1/tasks/{id} - Get by ID with Metadata', () => {
+    test('should get task without metas parameter', async () => {
+      const mockTask = {
+        id: mockTaskId,
+        title: 'Specific Task',
+        description: 'Task retrieved by ID',
+        completed: false,
+        userId: mockUserId,
+        createdAt: '2023-01-01T00:00:00Z',
+        updatedAt: '2023-01-01T00:00:00Z'
+      };
+
+      mockQueryWithRLS.mockResolvedValueOnce([mockTask]);
+
+      const request = new NextRequest(`http://localhost:3000/api/v1/tasks/${mockTaskId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${validApiKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const response = await GET_BY_ID(request, { params: { id: mockTaskId } });
+      const responseData = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(responseData.data).not.toHaveProperty('metas');
+      expect(mockMetaService.getEntityMetadata).not.toHaveBeenCalled();
+    });
+
+    test('should get task with metas=all', async () => {
+      const mockTask = {
+        id: mockTaskId,
+        title: 'Task With All Metas',
+        description: 'Task with all metadata',
+        completed: false,
+        userId: mockUserId,
+        createdAt: '2023-01-01T00:00:00Z',
+        updatedAt: '2023-01-01T00:00:00Z'
+      };
+
+      const mockMetadata = {
+        customFields: {
+          priority: 'critical',
+          estimatedHours: 16
+        },
+        labels: {
+          category: 'bug',
+          environment: 'production',
+          severity: 'high'
+        }
+      };
+
+      mockQueryWithRLS.mockResolvedValueOnce([mockTask]);
+      mockMetaService.getEntityMetadata.mockResolvedValueOnce(mockMetadata);
+
+      const url = new URL(`http://localhost:3000/api/v1/tasks/${mockTaskId}?metas=all`);
+      const request = new NextRequest(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${validApiKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const response = await GET_BY_ID(request, { params: { id: mockTaskId } });
+      const responseData = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(responseData.data).toHaveProperty('metas');
+      expect(responseData.data.metas).toHaveProperty('customFields');
+      expect(responseData.data.metas).toHaveProperty('labels');
+      expect(responseData.data.metas.customFields.priority).toBe('critical');
+      expect(responseData.data.metas.labels.category).toBe('bug');
+    });
+
+    test('should get task with specific metas keys', async () => {
+      const mockTask = {
+        id: mockTaskId,
+        title: 'Task With Specific Metas',
+        description: 'Task with specific metadata',
+        completed: false,
+        userId: mockUserId,
+        createdAt: '2023-01-01T00:00:00Z',
+        updatedAt: '2023-01-01T00:00:00Z'
+      };
+
+      const mockMetadata = {
+        labels: {
+          milestone: 'v2.0',
+          platform: 'web'
+        }
+      };
+
+      mockQueryWithRLS.mockResolvedValueOnce([mockTask]);
+      mockMetaService.getEntityMetadata.mockResolvedValueOnce(mockMetadata);
+
+      const url = new URL(`http://localhost:3000/api/v1/tasks/${mockTaskId}?metas=labels`);
+      const request = new NextRequest(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${validApiKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const response = await GET_BY_ID(request, { params: { id: mockTaskId } });
+      const responseData = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(responseData.data).toHaveProperty('metas');
+      expect(responseData.data.metas).toHaveProperty('labels');
+      expect(responseData.data.metas).not.toHaveProperty('customFields');
+      expect(responseData.data.metas.labels.milestone).toBe('v2.0');
+    });
+  });
+
+  describe('PATCH /api/v1/tasks/{id} - Update with Metadata', () => {
+    test('should update task without metas', async () => {
+      const originalTask = {
+        id: mockTaskId,
+        title: 'Original Title',
+        description: 'Original description',
+        completed: false,
+        userId: mockUserId,
+        createdAt: '2023-01-01T00:00:00Z',
+        updatedAt: '2023-01-01T00:00:00Z'
+      };
+
+      const updatedTask = {
+        ...originalTask,
+        title: 'Updated Title',
+        updatedAt: '2023-01-02T00:00:00Z'
+      };
+
+      mockQueryWithRLS.mockResolvedValueOnce([originalTask]);
+      mockMutateWithRLS.mockResolvedValueOnce([updatedTask]);
+
+      const requestBody = {
+        title: 'Updated Title'
+      };
+
+      const request = new NextRequest(`http://localhost:3000/api/v1/tasks/${mockTaskId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${validApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      const response = await PATCH(request, { params: { id: mockTaskId } });
+      const responseData = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(responseData.data.title).toBe('Updated Title');
+      expect(responseData.data).not.toHaveProperty('metas');
+      expect(mockMetaService.mergeEntityMetadata).not.toHaveBeenCalled();
+    });
+
+    test('should update task with metas and return all metadata', async () => {
+      const originalTask = {
+        id: mockTaskId,
+        title: 'Original Title',
+        description: 'Original description',
+        completed: false,
+        userId: mockUserId,
+        createdAt: '2023-01-01T00:00:00Z',
+        updatedAt: '2023-01-01T00:00:00Z'
+      };
+
+      const updatedTask = {
+        ...originalTask,
+        title: 'Updated With Meta',
+        updatedAt: '2023-01-02T00:00:00Z'
+      };
+
+      const existingMetadata = {
+        customFields: {
+          priority: 'medium',
+          department: 'engineering'
+        },
+        labels: {
+          category: 'feature',
+          environment: 'staging'
+        }
+      };
+
+      const updatedMetadata = {
+        customFields: {
+          priority: 'high',
+          department: 'engineering',
+          assignee: 'jane.doe'
+        },
+        labels: {
+          category: 'feature',
+          environment: 'staging'
+        }
+      };
+
+      mockQueryWithRLS.mockResolvedValueOnce([originalTask]);
+      mockMutateWithRLS.mockResolvedValueOnce([updatedTask]);
+      mockMetaService.mergeEntityMetadata.mockResolvedValueOnce(undefined);
+      mockMetaService.getEntityMetadata.mockResolvedValueOnce(updatedMetadata);
+
+      const requestBody = {
+        title: 'Updated With Meta',
+        metas: {
+          customFields: {
+            priority: 'high',
+            assignee: 'jane.doe'
+          }
+        }
+      };
+
+      const request = new NextRequest(`http://localhost:3000/api/v1/tasks/${mockTaskId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${validApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      const response = await PATCH(request, { params: { id: mockTaskId } });
+      const responseData = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(responseData.data).toHaveProperty('metas');
+      expect(responseData.data.metas.customFields.priority).toBe('high');
+      expect(responseData.data.metas.customFields.assignee).toBe('jane.doe');
+      expect(mockMetaService.mergeEntityMetadata).toHaveBeenCalledWith(
+        'task_metas',
+        mockTaskId,
+        { customFields: { priority: 'high', assignee: 'jane.doe' } },
+        mockUserId
+      );
+    });
+
+    test('should update only metas (no task fields)', async () => {
+      const originalTask = {
+        id: mockTaskId,
+        title: 'Original Title',
+        description: 'Original description',
+        completed: false,
+        userId: mockUserId,
+        createdAt: '2023-01-01T00:00:00Z',
+        updatedAt: '2023-01-01T00:00:00Z'
+      };
+
+      const updatedMetadata = {
+        labels: {
+          status: 'in-progress',
+          reviewer: 'admin'
+        }
+      };
+
+      mockQueryWithRLS.mockResolvedValueOnce([originalTask]);
+      mockMutateWithRLS.mockResolvedValueOnce([originalTask]); // No task field changes
+      mockMetaService.mergeEntityMetadata.mockResolvedValueOnce(undefined);
+      mockMetaService.getEntityMetadata.mockResolvedValueOnce(updatedMetadata);
+
+      const requestBody = {
+        metas: {
+          labels: {
+            status: 'in-progress',
+            reviewer: 'admin'
+          }
+        }
+      };
+
+      const request = new NextRequest(`http://localhost:3000/api/v1/tasks/${mockTaskId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${validApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      const response = await PATCH(request, { params: { id: mockTaskId } });
+      const responseData = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(responseData.data).toHaveProperty('metas');
+      expect(responseData.data.metas.labels.status).toBe('in-progress');
+      expect(responseData.data.metas.labels.reviewer).toBe('admin');
+    });
+
+    test('should handle non-recursive merge behavior', async () => {
+      const originalTask = {
+        id: mockTaskId,
+        title: 'Task for Merge Test',
+        description: 'Testing merge behavior',
+        completed: false,
+        userId: mockUserId,
+        createdAt: '2023-01-01T00:00:00Z',
+        updatedAt: '2023-01-01T00:00:00Z'
+      };
+
+      const mockMetadata = {
+        customFields: {
+          nestedObject: {
+            newValue: 'updated'
+          }
+        }
+      };
+
+      mockQueryWithRLS.mockResolvedValueOnce([originalTask]);
+      mockMutateWithRLS.mockResolvedValueOnce([originalTask]);
+      mockMetaService.mergeEntityMetadata.mockResolvedValueOnce(undefined);
+      mockMetaService.getEntityMetadata.mockResolvedValueOnce(mockMetadata);
+
+      const requestBody = {
+        metas: {
+          customFields: {
+            nestedObject: {
+              newValue: 'updated'
+            }
+          }
+        }
+      };
+
+      const request = new NextRequest(`http://localhost:3000/api/v1/tasks/${mockTaskId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${validApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      const response = await PATCH(request, { params: { id: mockTaskId } });
+      const responseData = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(responseData.data.metas.customFields.nestedObject).toEqual({
+        newValue: 'updated'
+      });
+    });
+
+    test('should create new metaKey (upsert behavior)', async () => {
+      const originalTask = {
+        id: mockTaskId,
+        title: 'Task for Upsert Test',
+        description: 'Testing upsert behavior',
+        completed: false,
+        userId: mockUserId,
+        createdAt: '2023-01-01T00:00:00Z',
+        updatedAt: '2023-01-01T00:00:00Z'
+      };
+
+      const mockMetadata = {
+        workflow: {
+          stage: 'review',
+          approver: 'manager'
+        }
+      };
+
+      mockQueryWithRLS.mockResolvedValueOnce([originalTask]);
+      mockMutateWithRLS.mockResolvedValueOnce([originalTask]);
+      mockMetaService.mergeEntityMetadata.mockResolvedValueOnce(undefined);
+      mockMetaService.getEntityMetadata.mockResolvedValueOnce(mockMetadata);
+
+      const requestBody = {
+        metas: {
+          workflow: {
+            stage: 'review',
+            approver: 'manager'
+          }
+        }
+      };
+
+      const request = new NextRequest(`http://localhost:3000/api/v1/tasks/${mockTaskId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${validApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      const response = await PATCH(request, { params: { id: mockTaskId } });
+      const responseData = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(responseData.data).toHaveProperty('metas');
+      expect(responseData.data.metas).toHaveProperty('workflow');
+      expect(responseData.data.metas.workflow.stage).toBe('review');
+    });
+  });
+
+  describe('Complex Metadata Scenarios', () => {
+    test('should handle complex nested metadata structure', async () => {
+      const complexMetadata = {
+        customFields: {
+          project: {
+            name: 'Alpha',
+            version: '2.0',
+            team: {
+              lead: 'alice',
+              members: ['bob', 'charlie']
+            }
+          },
+          estimations: {
+            hours: 24,
+            complexity: 'high',
+            risks: ['dependencies', 'timeline']
+          }
+        },
+        labels: {
+          tags: ['critical', 'feature'],
+          categories: {
+            primary: 'backend',
+            secondary: 'api'
+          }
+        }
+      };
+
+      const newTask = {
+        id: mockTaskId,
+        title: 'Complex Metadata Task',
+        description: 'Task with complex nested metadata',
+        completed: false,
+        userId: mockUserId,
+        createdAt: '2023-01-01T00:00:00Z',
+        updatedAt: '2023-01-01T00:00:00Z'
+      };
+
+      mockMutateWithRLS.mockResolvedValueOnce({ rows: [newTask] });
+      mockMetaService.setEntityMetadata.mockResolvedValueOnce(undefined);
+      mockMetaService.getEntityMetadata.mockResolvedValueOnce(complexMetadata);
+
+      const requestBody = {
+        title: 'Complex Metadata Task',
+        description: 'Task with complex nested metadata',
+        metas: complexMetadata
+      };
+
+      const request = new NextRequest('http://localhost:3000/api/v1/tasks', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${validApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      const response = await POST(request);
+      const responseData = await response.json();
+
+      expect(response.status).toBe(201);
+      expect(responseData.data.metas.customFields.project.name).toBe('Alpha');
+      expect(responseData.data.metas.customFields.project.team.lead).toBe('alice');
+      expect(responseData.data.metas.labels.tags).toContain('critical');
+      expect(responseData.data.metas.labels.categories.primary).toBe('backend');
+    });
+
+    test('should handle empty metas object in update', async () => {
+      const originalTask = {
+        id: mockTaskId,
+        title: 'Task for Empty Meta Test',
+        description: 'Testing empty metas',
+        completed: false,
+        userId: mockUserId,
+        createdAt: '2023-01-01T00:00:00Z',
+        updatedAt: '2023-01-01T00:00:00Z'
+      };
+
+      const existingMetadata = {
+        customFields: {
+          existingField: 'value'
+        }
+      };
+
+      mockQueryWithRLS.mockResolvedValueOnce([originalTask]);
+      mockMutateWithRLS.mockResolvedValueOnce([originalTask]);
+      mockMetaService.getEntityMetadata.mockResolvedValueOnce(existingMetadata);
+
+      const requestBody = {
+        metas: {}
+      };
+
+      const request = new NextRequest(`http://localhost:3000/api/v1/tasks/${mockTaskId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${validApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      const response = await PATCH(request, { params: { id: mockTaskId } });
+      const responseData = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(responseData.data).toHaveProperty('metas');
+      expect(responseData.data.metas.customFields.existingField).toBe('value');
+    });
+
+    test('should update task for first time with metadata', async () => {
+      const originalTask = {
+        id: mockTaskId,
+        title: 'Task Without Prior Meta',
+        description: 'Task getting first metadata',
+        completed: false,
+        userId: mockUserId,
+        createdAt: '2023-01-01T00:00:00Z',
+        updatedAt: '2023-01-01T00:00:00Z'
+      };
+
+      const firstMetadata = {
+        customFields: {
+          priority: 'medium',
+          department: 'support'
+        }
+      };
+
+      mockQueryWithRLS.mockResolvedValueOnce([originalTask]);
+      mockMutateWithRLS.mockResolvedValueOnce([originalTask]);
+      mockMetaService.mergeEntityMetadata.mockResolvedValueOnce(undefined);
+      mockMetaService.getEntityMetadata.mockResolvedValueOnce(firstMetadata);
+
+      const requestBody = {
+        metas: firstMetadata
+      };
+
+      const request = new NextRequest(`http://localhost:3000/api/v1/tasks/${mockTaskId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${validApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      const response = await PATCH(request, { params: { id: mockTaskId } });
+      const responseData = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(responseData.data).toHaveProperty('metas');
+      expect(responseData.data.metas.customFields.priority).toBe('medium');
+      expect(responseData.data.metas.customFields.department).toBe('support');
+    });
+  });
+});

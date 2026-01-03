@@ -1,0 +1,74 @@
+{
+  "title": "AI Observability",
+  "description": "Monitor LangChain agent invocations and traces",
+  "loading": "Loading traces...",
+  "error": "Error loading traces",
+  "disabled": "Observability is disabled in configuration",
+  "loadMore": "Load more",
+  "loadingMore": "Loading...",
+  "reload": "Reload",
+  "reloading": "Reloading...",
+  "period": {
+    "1h": "Last hour",
+    "24h": "Last 24 hours",
+    "7d": "Last 7 days",
+    "30d": "Last 30 days"
+  },
+  "status": {
+    "running": "Running",
+    "success": "Success",
+    "error": "Error"
+  },
+  "filters": {
+    "status": "Status",
+    "agent": "Agent",
+    "period": "Period",
+    "allStatus": "All statuses",
+    "allAgents": "All agents",
+    "searchPlaceholder": "Search by trace ID or input..."
+  },
+  "table": {
+    "traceId": "Trace ID",
+    "input": "Message",
+    "agent": "Agent",
+    "status": "Status",
+    "duration": "Duration",
+    "tokens": "Tokens",
+    "startedAt": "Started At",
+    "empty": "No traces found for the selected period and filters"
+  },
+  "detail": {
+    "title": "Trace Detail",
+    "back": "Back to traces",
+    "agent": "Agent",
+    "model": "Model",
+    "duration": "Duration",
+    "tokens": "Tokens",
+    "calls": "Calls",
+    "tools": "tools",
+    "input": "Input",
+    "output": "Output",
+    "error": "Error",
+    "stackTrace": "Stack Trace",
+    "spans": "Execution Spans",
+    "childTraces": "Sub-Agent Traces",
+    "noSpans": "No spans recorded for this trace",
+    "showDetails": "Show details",
+    "hideDetails": "Hide details",
+    "toolInput": "Tool Input",
+    "toolOutput": "Tool Output",
+    "hiddenSpans": "{count} internal chains hidden",
+    "showInternalChains": "Show all",
+    "hideInternalChains": "Hide internal"
+  },
+  "flow": {
+    "title": "Conversation Flow",
+    "userMessage": "User",
+    "assistantResponse": "Assistant",
+    "toolCall": "Tool Call",
+    "toolResult": "Tool Result",
+    "noSteps": "No execution steps recorded",
+    "showFull": "Show full",
+    "collapse": "Collapse"
+  }
+}

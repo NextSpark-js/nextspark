@@ -1,0 +1,80 @@
+{
+  "title": "Tableros",
+  "singular": "Tablero",
+  "plural": "Tableros",
+  "description": "Organiza tu trabajo en tableros",
+
+  "fields": {
+    "name": {
+      "label": "Nombre",
+      "placeholder": "Ingresa el nombre del tablero...",
+      "description": "Nombre del tablero"
+    },
+    "description": {
+      "label": "Descripción",
+      "placeholder": "Describe para qué es este tablero...",
+      "description": "Descripción opcional del tablero"
+    },
+    "color": {
+      "label": "Color",
+      "placeholder": "Seleccionar color...",
+      "description": "Color de fondo del tablero",
+      "options": {
+        "blue": "Azul",
+        "green": "Verde",
+        "purple": "Morado",
+        "orange": "Naranja",
+        "red": "Rojo",
+        "pink": "Rosa",
+        "gray": "Gris"
+      }
+    },
+    "archived": {
+      "label": "Archivado",
+      "description": "Archivar este tablero"
+    },
+    "position": {
+      "label": "Posición",
+      "description": "Orden de visualización"
+    },
+    "createdAt": {
+      "label": "Creado",
+      "description": "Cuándo se creó el tablero"
+    },
+    "updatedAt": {
+      "label": "Actualizado",
+      "description": "Cuándo se modificó por última vez"
+    }
+  },
+
+  "actions": {
+    "create": "Nuevo Tablero",
+    "edit": "Editar Tablero",
+    "delete": "Eliminar Tablero",
+    "archive": "Archivar Tablero",
+    "unarchive": "Desarchivar Tablero",
+    "duplicate": "Duplicar Tablero"
+  },
+
+  "messages": {
+    "created": "Tablero creado exitosamente",
+    "updated": "Tablero actualizado exitosamente",
+    "deleted": "Tablero eliminado exitosamente",
+    "archived": "Tablero archivado",
+    "unarchived": "Tablero desarchivado",
+    "confirmDelete": "¿Estás seguro de que quieres eliminar este tablero? Todas las listas y tarjetas serán eliminadas permanentemente."
+  },
+
+  "empty": {
+    "title": "Aún no hay tableros",
+    "description": "Crea tu primer tablero para comenzar a organizar tu trabajo.",
+    "action": "Crear tu primer tablero"
+  },
+
+  "filters": {
+    "all": "Todos los Tableros",
+    "active": "Activos",
+    "archived": "Archivados"
+  }
+}
+

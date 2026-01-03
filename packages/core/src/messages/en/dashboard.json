@@ -1,0 +1,41 @@
+{
+  "title": "Dashboard",
+  "welcome": "Welcome back, {name}",
+  "stats": {
+    "accountStatus": "Account Status",
+    "plan": "Plan",
+    "teamMembers": "Team Members",
+    "usage": "Usage",
+    "active": "Active",
+    "free": "Free"
+  },
+  "quickActions": {
+    "title": "Quick Actions",
+    "description": "Quickly access the most used functions",
+    "myTasks": "My Tasks",
+    "myTasksDescription": "Manage pending items",
+    "myProfile": "My Profile", 
+    "myProfileDescription": "Personal information",
+    "settings": "Settings",
+    "settingsDescription": "Account settings",
+    "billing": "Billing",
+    "billingDescription": "Plan and payments",
+    "createTask": "Create Task",
+    "viewTasks": "View Tasks",
+    "updateProfile": "Update Profile",
+    "manageSettings": "Manage Settings"
+  },
+  "activity": {
+    "title": "Recent Activity",
+    "description": "Your recent actions and events",
+    "signedIn": "Signed in to dashboard",
+    "justNow": "Just now",
+    "accountCreated": "Account created"
+  },
+  "badges": {
+    "verified": "verified",
+    "basic": "basic",
+    "solo": "solo",
+    "low": "low"
+  }
+}

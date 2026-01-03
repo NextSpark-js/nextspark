@@ -1,0 +1,13 @@
+{
+  "home": "Home",
+  "tasks": "Tasks",
+  "create": "Create",
+  "settings": "Settings",
+  "more": "More",
+  "moreOptions": "More Options",
+  "moreOptionsDescription": "Access additional settings and features",
+  "quickCreateDescription": "Create a new item",
+  "noEntitiesAvailable": "No items available to create",
+  "createNew": "Create new",
+  "greeting": "Hi, {name}"
+}

@@ -1,0 +1,67 @@
+/**
+ * {{PLUGIN_DISPLAY_NAME}} - Core Utilities
+ *
+ * Main plugin logic and utilities.
+ * These functions are exported via plugin.config.ts
+ */
+
+import type { {{PLUGIN_VAR_NAME}}Config, {{PLUGIN_VAR_NAME}}Result } from './types'
+
+/**
+ * Example function that demonstrates plugin functionality.
+ *
+ * @param input - Input string to process
+ * @returns Processed result
+ *
+ * @example
+ * ```typescript
+ * const { exampleFunction } = usePlugin('{{PLUGIN_SLUG}}')
+ * const result = await exampleFunction('hello')
+ * ```
+ */
+export async function exampleFunction(input?: string): Promise<{{PLUGIN_VAR_NAME}}Result> {
+  // TODO: Implement your plugin logic here
+
+  return {
+    success: true,
+    message: `Processed: ${input || 'no input'}`,
+    timestamp: new Date().toISOString(),
+  }
+}
+
+/**
+ * Validate plugin configuration.
+ *
+ * @param config - Configuration to validate
+ * @returns True if valid, throws error otherwise
+ */
+export function validateConfig(config: Partial<{{PLUGIN_VAR_NAME}}Config>): boolean {
+  // TODO: Add validation logic
+
+  if (!config) {
+    throw new Error('[{{PLUGIN_SLUG}}] Configuration is required')
+  }
+
+  return true
+}
+
+/**
+ * Initialize plugin with configuration.
+ *
+ * @param config - Plugin configuration
+ */
+export async function initialize(config: {{PLUGIN_VAR_NAME}}Config): Promise<void> {
+  validateConfig(config)
+
+  // TODO: Add initialization logic
+  console.log('[{{PLUGIN_SLUG}}] Initialized with config:', config)
+}
+
+/**
+ * Plugin constants and defaults
+ */
+export const DEFAULTS = {
+  timeout: 30000,
+  retries: 3,
+  debug: false,
+} as const

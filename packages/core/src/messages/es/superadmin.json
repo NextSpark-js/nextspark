@@ -1,0 +1,194 @@
+{
+  "navigation": {
+    "dashboard": "Dashboard",
+    "users": "Usuarios",
+    "style": "Galería de Estilos",
+    "analytics": "Analíticas",
+    "config": "Configuración del Sistema",
+    "exitSector7": "Salir de Sector7",
+    "returnToDashboard": "Volver al dashboard"
+  },
+  "dashboard": {
+    "title": "Sector7",
+    "subtitle": "Panel de Control de Super Administrador",
+    "restrictedAccess": "Área de Acceso Restringido - Solo Superadmin",
+    "systemStatus": "Estado del Sistema",
+    "systemVersion": "Versión de la Plataforma",
+    "securityLevel": "Nivel de Seguridad",
+    "quickActions": {
+      "userManagement": {
+        "title": "Gestión de Usuarios",
+        "description": "Ver y gestionar todos los usuarios y superadministradores"
+      },
+      "styleGallery": {
+        "title": "Galería de Estilos",
+        "description": "Previsualizar componentes y elementos del sistema de diseño"
+      },
+      "analytics": {
+        "title": "Analíticas",
+        "description": "Estadísticas de la plataforma y métricas de uso"
+      },
+      "systemConfig": {
+        "title": "Configuración del Sistema",
+        "description": "Configuraciones y ajustes de la aplicación"
+      }
+    },
+    "status": {
+      "online": "En línea",
+      "active": "Activo",
+      "version": "v1.0.0"
+    }
+  },
+  "users": {
+    "title": "Gestión de Usuarios",
+    "subtitle": "Gestionar todos los usuarios y superadministradores",
+    "regularUsers": "Usuarios Regulares",
+    "superadmins": "Superadmins",
+    "totalUsers": "Total de Usuarios",
+    "allRegisteredUsers": "Todos los usuarios registrados",
+    "membersCollaboratorsAdmins": "Miembros, colaboradores, administradores",
+    "systemAdministrators": "Administradores del sistema",
+    "roleDistribution": "Distribución de Roles",
+    "roles": "roles",
+    "refresh": "Actualizar",
+    "lastUpdated": "Última actualización",
+    "requestedBy": "Solicitado por",
+    "source": "Fuente",
+    "table": {
+      "user": "Usuario",
+      "email": "Email",
+      "role": "Rol",
+      "status": "Estado",
+      "joined": "Se unió",
+      "since": "Desde",
+      "actions": "Acciones",
+      "administrator": "Administrador",
+      "verified": "Verificado",
+      "pending": "Pendiente",
+      "unverified": "Sin verificar",
+      "noUsers": "No se encontraron usuarios",
+      "noUsersDescription": "Aún no hay usuarios regulares en el sistema.",
+      "noSuperadmins": "No se encontraron superadmins",
+      "noSuperadminsDescription": "Esto es inusual - debería haber al menos un superadmin.",
+      "you": "Tú"
+    },
+    "actions": {
+      "openMenu": "Abrir menú",
+      "viewProfile": "Ver Perfil",
+      "editRole": "Editar Rol",
+      "sendEmail": "Enviar Email",
+      "sendMessage": "Enviar Mensaje",
+      "suspendUser": "Suspender Usuario",
+      "adminSettings": "Configuraciones de Admin",
+      "revokeAdmin": "Revocar Admin"
+    },
+    "descriptions": {
+      "regularUsersDescription": "Todos los usuarios excluyendo superadministradores. Incluye miembros, colaboradores y administradores.",
+      "superadminsDescription": "Usuarios con acceso completo al sistema y privilegios administrativos. Manejar con extrema precaución."
+    },
+    "security": {
+      "notice": "Aviso de Seguridad:",
+      "superadminWarning": "El acceso de superadmin otorga control total del sistema. Manejar con extrema precaución."
+    }
+  },
+  "style": {
+    "title": "Galería de Estilos",
+    "subtitle": "Vitrina del sistema de diseño y biblioteca de componentes",
+    "exportTokens": "Exportar Tokens",
+    "stats": {
+      "components": "Componentes",
+      "availableComponents": "Componentes UI disponibles",
+      "colorTokens": "Tokens de Color",
+      "themeColorVariables": "Variables de color del tema",
+      "themes": "Temas",
+      "lightDarkModes": "Modos claro y oscuro",
+      "documentation": "Documentación",
+      "componentCoverage": "Cobertura de componentes"
+    },
+    "tabs": {
+      "components": "Componentes",
+      "theme": "Tema y Colores",
+      "guidelines": "Guías"
+    },
+    "componentLibrary": {
+      "title": "Biblioteca de Componentes",
+      "description": "Vitrina completa de todos los componentes UI disponibles con diferentes estados y variaciones"
+    },
+    "themeSystem": {
+      "title": "Sistema de Temas",
+      "description": "Tokens de color, tipografía y variables del sistema de diseño para temas claro y oscuro"
+    },
+    "designPrinciples": {
+      "title": "Principios de Diseño",
+      "description": "Principios fundamentales que guían nuestro sistema de diseño",
+      "consistency": {
+        "title": "Consistencia",
+        "description": "Mantener consistencia visual y funcional en todos los componentes"
+      },
+      "accessibility": {
+        "title": "Accesibilidad",
+        "description": "Asegurar que todos los componentes cumplan con los estándares WCAG 2.1 AA"
+      },
+      "scalability": {
+        "title": "Escalabilidad",
+        "description": "Diseñar componentes que funcionen en diferentes escalas y contextos"
+      },
+      "performance": {
+        "title": "Rendimiento",
+        "description": "Optimizar para carga rápida e interacciones fluidas"
+      }
+    },
+    "usageGuidelines": {
+      "title": "Guías de Uso",
+      "description": "Cómo usar efectivamente este sistema de diseño",
+      "colorUsage": {
+        "title": "Uso de Colores",
+        "description": "Usar nombres semánticos de colores (primary, secondary, destructive) en lugar de colores específicos"
+      },
+      "typographyScale": {
+        "title": "Escala Tipográfica",
+        "description": "Seguir la escala tipográfica establecida para jerarquía consistente"
+      },
+      "spacingSystem": {
+        "title": "Sistema de Espaciado",
+        "description": "Usar el sistema de grilla de 8px para espaciado y alineación consistente"
+      },
+      "componentComposition": {
+        "title": "Composición de Componentes",
+        "description": "Combinar componentes base para crear interfaces complejas"
+      }
+    },
+    "technicalSpecs": {
+      "title": "Especificaciones Técnicas",
+      "description": "Detalles de implementación y requisitos",
+      "framework": "Framework",
+      "styling": "Estilos",
+      "components": "Componentes",
+      "icons": "Iconos",
+      "themeSystem": "Sistema de Temas",
+      "buildTool": "Herramienta de Build"
+    },
+    "resources": {
+      "title": "Recursos y Enlaces",
+      "description": "Recursos adicionales y documentación"
+    }
+  },
+  "errors": {
+    "accessDenied": "Acceso Denegado",
+    "superadminRequired": "Necesitas privilegios de superadmin para acceder a esta área.",
+    "restrictedArea": "Esta sección está restringida solo a administradores del sistema. Si crees que esto es un error, por favor contacta soporte.",
+    "sessionNotFound": "Sesión no encontrada. Por favor inicia sesión nuevamente.",
+    "goBack": "Volver",
+    "dashboard": "Dashboard",
+    "errorLoadingUsers": "Error Cargando Usuarios",
+    "failedToLoadUserData": "Falló al cargar datos de usuarios",
+    "retry": "Reintentar"
+  },
+  "common": {
+    "backToSector7": "Volver a Sector7",
+    "comingSoon": "Próximamente",
+    "soon": "Pronto",
+    "loading": "Cargando...",
+    "error": "Error"
+  }
+}

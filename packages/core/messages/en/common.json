@@ -1,0 +1,172 @@
+{
+  "navigation": {
+    "dashboard": "Dashboard",
+    "settings": "Settings",
+    "profile": "Profile",
+    "password": "Password",
+    "security": "Security",
+    "notifications": "Notifications",
+    "apiKeys": "API Keys",
+    "billing": "Billing",
+    "help": "Help & Support",
+    "team": "Team",
+    "admin": "Administration",
+    "learn": "Learn",
+    "teach": "Teach",
+    "myCourses": "My Courses",
+    "catalog": "Catalog",
+    "courses": "Courses",
+    "lessons": "Lessons",
+    "analytics": "Analytics",
+    "enrollments": "Enrollments",
+    "students": "Students"
+  },
+  "mobileNav": {
+    "greeting": "Hi, {name}",
+    "home": "Home",
+    "tasks": "Tasks",
+    "create": "Create",
+    "settings": "Settings",
+    "more": "More",
+    "moreOptions": "More Options",
+    "moreOptionsDescription": "Access additional settings and features",
+    "quickCreateDescription": "Create a new item",
+    "noEntitiesAvailable": "No items available to create",
+    "createNew": "Create new"
+  },
+  "buttons": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "update": "Update",
+    "submit": "Submit",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "continue": "Continue",
+    "finish": "Finish",
+    "signIn": "Sign in",
+    "signUp": "Sign up",
+    "signOut": "Sign out",
+    "signingOut": "Signing out..."
+  },
+  "status": {
+    "loading": "Loading...",
+    "success": "Success",
+    "error": "Error",
+    "warning": "Warning",
+    "info": "Information"
+  },
+  "actions": {
+    "create": "Create",
+    "read": "View",
+    "update": "Update",
+    "delete": "Delete"
+  },
+  "common": {
+    "yes": "Yes",
+    "no": "No",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "active": "Active",
+    "inactive": "Inactive",
+    "on": "On",
+    "off": "Off"
+  },
+  "theme": {
+    "selector": "Theme selector",
+    "current": "current theme",
+    "change": "Change theme",
+    "loading": "Loading theme selector",
+    "changed": "Theme changed to",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System",
+    "changeToLight": "Change to light theme",
+    "changeToDark": "Change to dark theme",
+    "changeToSystem": "Change to system theme"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "unread": "unread",
+    "new": "new",
+    "markAllAsRead": "Mark all notifications as read",
+    "markAll": "Mark all",
+    "empty": "You have no notifications",
+    "configure": "Configure notifications"
+  },
+  "search": {
+    "placeholder": "Search pages, settings...",
+    "label": "Search pages and settings",
+    "clear": "Clear search",
+    "results": "Search results",
+    "searching": "Searching...",
+    "noResults": "No results found for \"{query}\"",
+    "tryDifferent": "Try different keywords"
+  },
+  "userRoles": {
+    "member": "Member",
+    "colaborator": "Colaborator",
+    "admin": "Administrator",
+    "superadmin": "Super Administrator"
+  },
+  "accessibility": {
+    "navigation": {
+      "main": "Main navigation",
+      "search": "Search",
+      "mobileActions": "Mobile actions",
+      "closeMenu": "Close menu",
+      "openMenu": "Open menu",
+      "mobileMenu": "Mobile menu",
+      "mainMobile": "Main mobile navigation",
+      "settings": "Settings navigation",
+      "dashboard": "Dashboard navigation"
+    },
+    "brand": {
+      "goToHome": "Go to home"
+    },
+    "user": {
+      "loading": "Loading user",
+      "menu": "User menu for {name}",
+      "avatar": "Avatar for {name}",
+      "info": "User information",
+      "defaultName": "User",
+      "goToProfile": "Go to profile",
+      "goToSettings": "Go to settings",
+      "signOut": "Sign out",
+      "signIn": "Sign in",
+      "signUp": "Sign up"
+    },
+    "actions": {
+      "goToDashboard": "Go to dashboard",
+      "goToProfile": "Go to profile",
+      "goToSettings": "Go to settings"
+    },
+    "loading": "Loading",
+    "groups": {
+      "collapse": "Collapse group",
+      "expand": "Expand group",
+      "delete": "Delete group"
+    },
+    "media": {
+      "articleCover": "Article cover",
+      "postMedia": "Post media",
+      "postMediaNumber": "Post media {number}",
+      "story": "Story",
+      "post": "Post",
+      "tweetMedia": "Tweet media",
+      "uploaded": "Uploaded file"
+    },
+    "taskCard": "Task card: {title}. Status: {status}",
+    "toggleTask": "Mark task '{title}' as {action}",
+    "createdDate": "Created on {date}",
+    "deleteTask": "Delete task: {title}",
+    "completedTaskCard": "Completed task: {title}",
+    "reactivateTask": "Reactivate task: {title}",
+    "completedDate": "Completed on {date}",
+    "deleteCompletedTask": "Delete completed task: {title}"
+  }
+}

@@ -1,0 +1,7 @@
+node_modules/
+.next/
+.nextspark/
+.env
+.env.local
+*.log
+scripts/

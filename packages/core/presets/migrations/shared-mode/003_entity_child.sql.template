@@ -1,0 +1,79 @@
+-- Migration: 003_{{PARENT_ENTITY}}_{{ENTITY_NAME}}.sql
+-- Description: {{PARENT_ENTITY_PASCAL}} {{ENTITY_NAME_PASCAL}} (child table, indexes, RLS) - Shared Mode
+-- Date: {{DATE}}
+-- Mode: Shared Authenticated (Any authenticated user can access)
+
+-- ============================================
+-- TABLE
+-- ============================================
+-- No DROP needed for child tables - removed automatically by parent CASCADE
+CREATE TABLE IF NOT EXISTS public."{{PARENT_ENTITY}}_{{ENTITY_NAME}}" (
+  -- Primary Key
+  id              TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+
+  -- Parent Reference (ALWAYS use "parentId", not entity-specific names)
+  "parentId"      TEXT NOT NULL REFERENCES public."{{PARENT_ENTITY}}"(id) ON DELETE CASCADE,
+
+  -- Child-specific fields (ADD YOUR FIELDS HERE)
+  -- NO userId - security inherited via parent
+  -- name          TEXT NOT NULL,
+  -- description   TEXT,
+  -- quantity      INTEGER DEFAULT 1,
+  -- sortOrder     INTEGER DEFAULT 0,
+
+  -- System fields (always last)
+  "createdAt"     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "updatedAt"     TIMESTAMPTZ NOT NULL DEFAULT now()
+
+  -- Constraints (ADD YOUR CONSTRAINTS HERE)
+  -- CONSTRAINT {{PARENT_ENTITY}}_{{ENTITY_NAME}}_quantity_positive CHECK (quantity > 0)
+);
+
+-- ============================================
+-- COMMENTS
+-- ============================================
+COMMENT ON TABLE  public."{{PARENT_ENTITY}}_{{ENTITY_NAME}}"             IS '{{DESCRIPTION}}';
+COMMENT ON COLUMN public."{{PARENT_ENTITY}}_{{ENTITY_NAME}}"."parentId"  IS 'Reference to parent {{PARENT_ENTITY_SINGULAR}}';
+-- ADD YOUR COLUMN COMMENTS HERE
+
+-- ============================================
+-- TRIGGER updatedAt (uses Better Auth function)
+-- ============================================
+DROP TRIGGER IF EXISTS {{PARENT_ENTITY}}_{{ENTITY_NAME}}_set_updated_at ON public."{{PARENT_ENTITY}}_{{ENTITY_NAME}}";
+CREATE TRIGGER {{PARENT_ENTITY}}_{{ENTITY_NAME}}_set_updated_at
+BEFORE UPDATE ON public."{{PARENT_ENTITY}}_{{ENTITY_NAME}}"
+FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- ============================================
+-- INDEXES
+-- ============================================
+CREATE INDEX IF NOT EXISTS idx_{{PARENT_ENTITY}}_{{ENTITY_NAME}}_parent_id   ON public."{{PARENT_ENTITY}}_{{ENTITY_NAME}}"("parentId");
+CREATE INDEX IF NOT EXISTS idx_{{PARENT_ENTITY}}_{{ENTITY_NAME}}_created_at  ON public."{{PARENT_ENTITY}}_{{ENTITY_NAME}}"("createdAt" DESC);
+-- ADD YOUR CUSTOM INDEXES HERE
+
+-- ============================================
+-- RLS
+-- ============================================
+ALTER TABLE public."{{PARENT_ENTITY}}_{{ENTITY_NAME}}" ENABLE ROW LEVEL SECURITY;
+
+-- Cleanup existing policies
+DROP POLICY IF EXISTS "{{PARENT_ENTITY_PASCAL}} {{ENTITY_NAME}} any auth can do all" ON public."{{PARENT_ENTITY}}_{{ENTITY_NAME}}";
+
+-- ============================
+-- RLS: SHARED AUTHENTICATED
+-- ============================
+-- Any authenticated user can access all child records
+CREATE POLICY "{{PARENT_ENTITY_PASCAL}} {{ENTITY_NAME}} any auth can do all"
+ON public."{{PARENT_ENTITY}}_{{ENTITY_NAME}}"
+FOR ALL TO authenticated
+USING (true)
+WITH CHECK (true);
+
+-- ============================================
+-- IMPORTANT NOTES
+-- ============================================
+-- 1. Child entities DO NOT have direct userId - security is inherited
+-- 2. Use "parentId" (not entity-specific names like "orderId")
+-- 3. No business logic triggers - only updatedAt
+-- 4. Keep structure simple - complex logic belongs in application layer
+-- 5. Child entities typically don't need metas tables

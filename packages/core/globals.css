@@ -1,0 +1,305 @@
+@import "tailwindcss";
+
+/* =============================================
+   CORE - NEW YORK THEME BASE (HSL)
+   This is the default neutral theme from shadcn/ui
+   ============================================= */
+
+:root {
+  /* Background & Foreground */
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(240 10% 3.9%);
+
+  /* Card */
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(240 10% 3.9%);
+
+  /* Popover */
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(240 10% 3.9%);
+
+  /* Primary */
+  --primary: hsl(240 5.9% 10%);
+  --primary-foreground: hsl(0 0% 98%);
+
+  /* Secondary */
+  --secondary: hsl(240 4.8% 95.9%);
+  --secondary-foreground: hsl(240 5.9% 10%);
+
+  /* Muted */
+  --muted: hsl(240 4.8% 95.9%);
+  --muted-foreground: hsl(240 3.8% 46.1%);
+
+  /* Accent */
+  --accent: hsl(240 4.8% 95.9%);
+  --accent-foreground: hsl(240 5.9% 10%);
+
+  /* Destructive */
+  --destructive: hsl(0 84.2% 60.2%);
+  --destructive-foreground: hsl(0 0% 98%);
+
+  /* Border, Input, Ring */
+  --border: hsl(240 5.9% 90%);
+  --input: hsl(240 5.9% 90%);
+  --ring: hsl(240 5.9% 10%);
+
+  /* Chart Colors */
+  --chart-1: hsl(12 76% 61%);
+  --chart-2: hsl(173 58% 39%);
+  --chart-3: hsl(197 37% 24%);
+  --chart-4: hsl(43 74% 66%);
+  --chart-5: hsl(27 87% 67%);
+
+  /* Sidebar */
+  --sidebar-background: hsl(0 0% 98%);
+  --sidebar-foreground: hsl(240 5.3% 26.1%);
+  --sidebar-primary: hsl(240 5.9% 10%);
+  --sidebar-primary-foreground: hsl(0 0% 98%);
+  --sidebar-accent: hsl(240 4.8% 95.9%);
+  --sidebar-accent-foreground: hsl(240 5.9% 10%);
+  --sidebar-border: hsl(240 5.9% 90%);
+  --sidebar-ring: hsl(240 5.9% 10%);
+
+  /* Radius */
+  --radius: 0.5rem;
+}
+
+.dark {
+  /* Background & Foreground */
+  --background: hsl(240 10% 3.9%);
+  --foreground: hsl(0 0% 98%);
+
+  /* Card */
+  --card: hsl(240 10% 3.9%);
+  --card-foreground: hsl(0 0% 98%);
+
+  /* Popover */
+  --popover: hsl(240 10% 3.9%);
+  --popover-foreground: hsl(0 0% 98%);
+
+  /* Primary */
+  --primary: hsl(0 0% 98%);
+  --primary-foreground: hsl(240 5.9% 10%);
+
+  /* Secondary */
+  --secondary: hsl(240 3.7% 15.9%);
+  --secondary-foreground: hsl(0 0% 98%);
+
+  /* Muted */
+  --muted: hsl(240 3.7% 15.9%);
+  --muted-foreground: hsl(240 5% 64.9%);
+
+  /* Accent */
+  --accent: hsl(240 3.7% 15.9%);
+  --accent-foreground: hsl(0 0% 98%);
+
+  /* Destructive */
+  --destructive: hsl(0 62.8% 30.6%);
+  --destructive-foreground: hsl(0 0% 98%);
+
+  /* Border, Input, Ring */
+  --border: hsl(240 3.7% 15.9%);
+  --input: hsl(240 3.7% 15.9%);
+  --ring: hsl(240 4.9% 83.9%);
+
+  /* Chart Colors */
+  --chart-1: hsl(220 70% 50%);
+  --chart-2: hsl(160 60% 45%);
+  --chart-3: hsl(30 80% 55%);
+  --chart-4: hsl(280 65% 60%);
+  --chart-5: hsl(340 75% 55%);
+
+  /* Sidebar */
+  --sidebar-background: hsl(240 5.9% 10%);
+  --sidebar-foreground: hsl(240 4.8% 95.9%);
+  --sidebar-primary: hsl(0 0% 98%);
+  --sidebar-primary-foreground: hsl(240 5.9% 10%);
+  --sidebar-accent: hsl(240 3.7% 15.9%);
+  --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
+  --sidebar-border: hsl(240 3.7% 15.9%);
+  --sidebar-ring: hsl(240 4.8% 95.9%);
+}
+
+/* Tailwind v4 Theme Mapping
+ *
+ * NOTE: This @theme block uses var() directly WITHOUT hsl() wrapper.
+ * This allows themes to use either HSL or OKLCH color formats.
+ *
+ * - Core defaults use HSL format stored as complete values
+ * - Custom themes may use OKLCH format
+ * - Both work because var() is used directly without color function wrapper
+ */
+@theme {
+  /* Map CSS variables to Tailwind utilities - NO hsl() wrapper */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Chart colors */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Sidebar colors */
+  --color-sidebar: var(--sidebar-background);
+  --color-sidebar-background: var(--sidebar-background);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* Base Styles */
+* {
+  border-color: var(--border);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+/* Keyframes */
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+@keyframes wiggle {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-15deg);
+  }
+  75% {
+    transform: rotate(15deg);
+  }
+}
+
+/* =============================================
+   DOCUMENTATION - MARKDOWN STYLES
+   Styles for rendered markdown content in docs pages
+   ============================================= */
+
+.docs-content {
+  @apply space-y-4;
+}
+
+.docs-content h2 {
+  @apply text-2xl font-bold mt-8 mb-4 border-b pb-2 border-border;
+}
+
+.docs-content h3 {
+  @apply text-xl font-semibold mt-6 mb-3;
+}
+
+.docs-content h4 {
+  @apply text-lg font-semibold mt-4 mb-2;
+}
+
+.docs-content p {
+  @apply leading-7 text-foreground;
+}
+
+.docs-content code {
+  @apply bg-muted px-1.5 py-0.5 rounded text-sm font-mono text-foreground;
+}
+
+.docs-content pre {
+  @apply bg-muted p-4 rounded-lg overflow-x-auto my-4 border border-border;
+}
+
+.docs-content pre code {
+  @apply bg-transparent p-0;
+}
+
+.docs-content ul {
+  @apply list-disc list-inside space-y-2 text-foreground;
+}
+
+.docs-content ol {
+  @apply list-decimal list-inside space-y-2 text-foreground;
+}
+
+.docs-content li {
+  @apply leading-7;
+}
+
+.docs-content a {
+  @apply text-primary underline-offset-4 hover:underline transition-colors;
+}
+
+.docs-content blockquote {
+  @apply border-l-4 border-primary pl-4 italic text-muted-foreground my-4;
+}
+
+.docs-content table {
+  @apply w-full border-collapse my-4;
+}
+
+.docs-content thead {
+  @apply border-b-2 border-border;
+}
+
+.docs-content th {
+  @apply text-left p-2 font-semibold bg-muted;
+}
+
+.docs-content td {
+  @apply p-2 border-b border-border;
+}
+
+.docs-content img {
+  @apply rounded-lg my-4 max-w-full h-auto;
+}
+
+.docs-content hr {
+  @apply my-8 border-border;
+}
+
+/* =============================================
+   THEME SYSTEM - BUILD-TIME LOADING
+   Custom theme CSS is automatically injected based on activeTheme config
+   ============================================= */
+
+/*
+ * NOTE: To change theme, modify activeTheme in contents/themes/theme.config.ts
+ * and run: npm run theme:build
+ *
+ * CSS from custom themes is injected at build-time for optimal performance
+ */ 

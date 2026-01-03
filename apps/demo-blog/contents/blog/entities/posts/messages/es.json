@@ -1,0 +1,100 @@
+{
+  "title": "Posts",
+  "singular": "Post",
+  "plural": "Posts",
+  "description": "Gestiona tus posts del blog",
+
+  "fields": {
+    "title": {
+      "label": "Título",
+      "placeholder": "Escribe un título atractivo...",
+      "description": "El título de tu post"
+    },
+    "slug": {
+      "label": "Slug",
+      "placeholder": "mi-post-del-blog",
+      "description": "Versión amigable para URL del título"
+    },
+    "excerpt": {
+      "label": "Extracto",
+      "placeholder": "Escribe un breve resumen de tu post...",
+      "description": "Un resumen corto que se muestra en los listados"
+    },
+    "content": {
+      "label": "Contenido",
+      "placeholder": "Comienza a escribir tu post...",
+      "description": "El contenido principal de tu post"
+    },
+    "featuredImage": {
+      "label": "Imagen Destacada",
+      "placeholder": "Sube una imagen...",
+      "description": "Imagen principal que se muestra con el post"
+    },
+    "category": {
+      "label": "Categoría",
+      "placeholder": "ej., Tecnología, Viajes, Comida",
+      "description": "Categoría principal del post"
+    },
+    "tags": {
+      "label": "Etiquetas",
+      "placeholder": "Agregar etiquetas...",
+      "description": "Palabras clave para ayudar a encontrar este post"
+    },
+    "status": {
+      "label": "Estado",
+      "placeholder": "Seleccionar estado...",
+      "description": "Estado de publicación",
+      "options": {
+        "draft": "Borrador",
+        "published": "Publicado",
+        "scheduled": "Programado"
+      }
+    },
+    "publishedAt": {
+      "label": "Fecha de Publicación",
+      "placeholder": "Seleccionar fecha...",
+      "description": "Cuándo se publicó/publicará el post"
+    },
+    "createdAt": {
+      "label": "Creado",
+      "description": "Cuándo se creó el post"
+    },
+    "updatedAt": {
+      "label": "Actualizado",
+      "description": "Cuándo se modificó por última vez"
+    }
+  },
+
+  "actions": {
+    "create": "Nuevo Post",
+    "edit": "Editar Post",
+    "delete": "Eliminar Post",
+    "publish": "Publicar",
+    "unpublish": "Despublicar",
+    "saveDraft": "Guardar Borrador",
+    "preview": "Vista Previa"
+  },
+
+  "messages": {
+    "created": "Post creado exitosamente",
+    "updated": "Post actualizado exitosamente",
+    "deleted": "Post eliminado exitosamente",
+    "published": "Post publicado exitosamente",
+    "unpublished": "Post despublicado",
+    "confirmDelete": "¿Estás seguro de que quieres eliminar este post? Esta acción no se puede deshacer."
+  },
+
+  "empty": {
+    "title": "Aún no hay posts",
+    "description": "Comienza escribiendo tu primer post del blog.",
+    "action": "Escribe tu primer post"
+  },
+
+  "filters": {
+    "all": "Todos los Posts",
+    "published": "Publicados",
+    "draft": "Borradores",
+    "scheduled": "Programados"
+  }
+}
+

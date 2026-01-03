@@ -1,0 +1,18 @@
+# Plugin Entities
+
+This directory is for plugin-specific entities.
+
+If your plugin requires database entities, create them here following
+the standard entity structure:
+
+```
+entities/
+└── my-entity/
+    ├── my-entity.config.ts
+    ├── my-entity.fields.ts
+    └── messages/
+        ├── en.json
+        └── es.json
+```
+
+See core/docs/04-entities/ for entity documentation.
