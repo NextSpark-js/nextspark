@@ -1,0 +1,52 @@
+{
+  "actions": {
+    "create": "Criar {entity}",
+    "edit": "Editar {entity}",
+    "delete": "Excluir {entity}",
+    "view": "Ver {entity}",
+    "duplicate": "Duplicar",
+    "archive": "Arquivar",
+    "restore": "Restaurar",
+    "save": "Salvar {entity}",
+    "update": "Atualizar {entity}"
+  },
+  "fields": {
+    "title": "Titulo",
+    "name": "Nome",
+    "slug": "Slug",
+    "status": "Status",
+    "description": "Descricao",
+    "createdAt": "Criado",
+    "updatedAt": "Atualizado",
+    "id": "ID"
+  },
+  "messages": {
+    "created": "{entity} criado com sucesso",
+    "updated": "{entity} atualizado com sucesso",
+    "deleted": "{entity} excluido com sucesso",
+    "archived": "{entity} arquivado com sucesso",
+    "restored": "{entity} restaurado com sucesso",
+    "duplicated": "{entity} duplicado com sucesso",
+    "confirmDelete": "Tem certeza que deseja excluir este {entity}?",
+    "confirmArchive": "Tem certeza que deseja arquivar este {entity}?",
+    "deleteWarning": "Esta acao nao pode ser desfeita.",
+    "notFound": "{entity} nao encontrado",
+    "loadError": "Erro ao carregar {entity}"
+  },
+  "list": {
+    "empty": "Nenhum {entities} encontrado",
+    "emptyFiltered": "Nenhum {entities} corresponde aos filtros",
+    "loading": "Carregando...",
+    "search": "Buscar...",
+    "searchPlaceholder": "Buscar {entities}...",
+    "noResults": "Nenhum resultado encontrado",
+    "showing": "Mostrando {count} de {total} {entities}",
+    "selected": "{count} selecionados"
+  },
+  "detail": {
+    "back": "Voltar para {entities}",
+    "createdAt": "Criado {date}",
+    "updatedAt": "Atualizado {date}",
+    "idCopied": "ID copiado para area de transferencia"
+  }
+}

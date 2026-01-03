@@ -1,0 +1,140 @@
+{
+  "title": "Team",
+  "description": "Gestisci i tuoi team e collaborazioni",
+
+  "types": {
+    "personal": "Personale",
+    "work": "Team di Lavoro"
+  },
+
+  "roles": {
+    "owner": "Proprietario",
+    "admin": "Amministratore",
+    "member": "Membro",
+    "viewer": "Visualizzatore"
+  },
+
+  "roleDescriptions": {
+    "owner": "Controllo totale del team, inclusa eliminazione e fatturazione",
+    "admin": "Puo gestire membri, impostazioni e la maggior parte delle operazioni",
+    "member": "Puo visualizzare il contenuto del team e collaborare con altri membri",
+    "viewer": "Accesso in sola lettura al contenuto del team"
+  },
+
+  "actions": {
+    "create": "Crea Team",
+    "edit": "Modifica Team",
+    "delete": "Elimina Team",
+    "leave": "Abbandona Team",
+    "switch": "Cambia Team",
+    "manage": "Gestisci Team",
+    "invite": "Invita Membro",
+    "removeMember": "Rimuovi Membro",
+    "changeRole": "Cambia Ruolo"
+  },
+
+  "switcher": {
+    "switchTeam": "Cambia Team",
+    "switchingTo": "Passaggio a",
+    "switchComplete": "Cambio Completato",
+    "loadingTeamData": "Caricamento dati del team...",
+    "ready": "Pronto!",
+    "personal": "Personale",
+    "workTeam": "Team di Lavoro",
+    "manageTeams": "Gestisci Team",
+    "active": "Attivo",
+    "team": "Team"
+  },
+
+  "createTeam": {
+    "title": "Crea Nuovo Team",
+    "description": "Crea un nuovo team per collaborare con altri",
+    "nameLabel": "Nome del Team",
+    "namePlaceholder": "Inserisci il nome del team",
+    "slugLabel": "URL del Team",
+    "slugPlaceholder": "url-del-team",
+    "descriptionLabel": "Descrizione",
+    "descriptionPlaceholder": "Descrivi a cosa serve questo team",
+    "success": "Team creato con successo",
+    "error": "Errore nella creazione del team"
+  },
+
+  "editTeam": {
+    "title": "Modifica Team",
+    "success": "Team aggiornato con successo",
+    "error": "Errore nell'aggiornamento del team"
+  },
+
+  "deleteTeam": {
+    "title": "Elimina Team",
+    "description": "Sei sicuro di voler eliminare questo team? Questa azione non puo essere annullata.",
+    "confirmButton": "Elimina Team",
+    "success": "Team eliminato con successo",
+    "error": "Errore nell'eliminazione del team"
+  },
+
+  "members": {
+    "title": "Membri del Team",
+    "description": "Gestisci chi ha accesso a questo team",
+    "empty": "Nessun membro ancora",
+    "you": "(Tu)",
+    "joined": "Iscritto {date}"
+  },
+
+  "invitations": {
+    "title": "Inviti in Sospeso",
+    "description": "Inviti in attesa di risposta",
+    "empty": "Nessun invito in sospeso",
+    "sent": "Inviato {date}",
+    "expires": "Scade {date}",
+    "resend": "Reinvia",
+    "cancel": "Annulla Invito",
+    "cancelSuccess": "Invito annullato",
+    "cancelError": "Errore nell'annullamento dell'invito"
+  },
+
+  "invite": {
+    "title": "Invita Membro",
+    "description": "Invita qualcuno a unirsi a questo team",
+    "emailLabel": "Email",
+    "emailPlaceholder": "collega@esempio.com",
+    "roleLabel": "Ruolo",
+    "rolePlaceholder": "Seleziona un ruolo",
+    "sendButton": "Invia Invito",
+    "success": "Invito inviato con successo",
+    "error": "Errore nell'invio dell'invito"
+  },
+
+  "acceptInvite": {
+    "title": "Invito al Team",
+    "description": "Sei stato invitato a unirti a",
+    "accept": "Accetta Invito",
+    "decline": "Rifiuta",
+    "expired": "Questo invito e scaduto",
+    "invalid": "Questo invito non e piu valido",
+    "success": "Ti sei unito al team!",
+    "error": "Errore nell'accettazione dell'invito"
+  },
+
+  "settings": {
+    "title": "Impostazioni Team",
+    "general": "Generale",
+    "members": "Membri",
+    "billing": "Fatturazione",
+    "danger": "Zona Pericolosa"
+  },
+
+  "errors": {
+    "notFound": "Team non trovato",
+    "notMember": "Non sei membro di questo team",
+    "permissionDenied": "Non hai il permesso per eseguire questa azione",
+    "cannotDeletePersonal": "Impossibile eliminare il team personale",
+    "cannotLeaveOwner": "I proprietari non possono abbandonare. Trasferisci prima la proprieta.",
+    "lastAdmin": "Impossibile rimuovere l'ultimo amministratore del team"
+  },
+
+  "empty": {
+    "title": "Nessun team ancora",
+    "description": "Crea il tuo primo team per iniziare a collaborare"
+  }
+}

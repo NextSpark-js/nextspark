@@ -1,0 +1,13 @@
+{
+  "home": "Accueil",
+  "tasks": "Tâches",
+  "create": "Créer",
+  "settings": "Paramètres",
+  "more": "Plus",
+  "moreOptions": "Plus d'options",
+  "moreOptionsDescription": "Accéder à des paramètres et fonctionnalités supplémentaires",
+  "quickCreateDescription": "Créer un nouvel élément",
+  "noEntitiesAvailable": "Aucun élément disponible à créer",
+  "createNew": "Créer nouveau",
+  "greeting": "Bonjour, {name}"
+}

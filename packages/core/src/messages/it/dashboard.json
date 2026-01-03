@@ -1,0 +1,41 @@
+{
+  "title": "Dashboard",
+  "welcome": "Bentornato, {name}",
+  "stats": {
+    "accountStatus": "Stato Account",
+    "plan": "Piano",
+    "teamMembers": "Membri del Team",
+    "usage": "Utilizzo",
+    "active": "Attivo",
+    "free": "Gratuito"
+  },
+  "quickActions": {
+    "title": "Azioni Rapide",
+    "description": "Accedi rapidamente alle funzionalita piu utilizzate",
+    "myTasks": "I Miei Task",
+    "myTasksDescription": "Gestisci le attivita",
+    "myProfile": "Il Mio Profilo",
+    "myProfileDescription": "Informazioni personali",
+    "settings": "Impostazioni",
+    "settingsDescription": "Impostazioni account",
+    "billing": "Fatturazione",
+    "billingDescription": "Piano e pagamenti",
+    "createTask": "Crea Task",
+    "viewTasks": "Visualizza Task",
+    "updateProfile": "Aggiorna Profilo",
+    "manageSettings": "Gestisci Impostazioni"
+  },
+  "activity": {
+    "title": "Attivita Recente",
+    "description": "Le tue azioni ed eventi recenti",
+    "signedIn": "Accesso alla dashboard",
+    "justNow": "Proprio ora",
+    "accountCreated": "Account creato"
+  },
+  "badges": {
+    "verified": "verificato",
+    "basic": "base",
+    "solo": "individuale",
+    "low": "basso"
+  }
+}

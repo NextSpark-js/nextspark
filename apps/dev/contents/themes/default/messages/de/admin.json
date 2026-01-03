@@ -1,0 +1,219 @@
+{
+  "pages": {
+    "title": "Seiten",
+    "description": "Verwalten Sie Ihre dynamischen Seiten",
+    "loading": "Seiten werden geladen...",
+    "empty": "Keine Seiten gefunden. Erstellen Sie Ihre erste Seite, um zu beginnen.",
+    "search": {
+      "placeholder": "Seiten suchen..."
+    },
+    "filters": {
+      "locale": "Sprache",
+      "allLocales": "Alle Sprachen",
+      "status": "Status",
+      "allStatuses": "Alle Status",
+      "published": "Veroeffentlicht",
+      "draft": "Entwurf"
+    },
+    "table": {
+      "title": "Titel",
+      "slug": "Slug",
+      "locale": "Sprache",
+      "status": "Status",
+      "updated": "Zuletzt aktualisiert"
+    },
+    "status": {
+      "published": "Veroeffentlicht",
+      "draft": "Entwurf",
+      "unsaved": "Ungespeicherte Aenderungen"
+    },
+    "actions": {
+      "create": "Seite erstellen",
+      "edit": "Bearbeiten",
+      "view": "Ansehen",
+      "delete": "Loeschen",
+      "save": "Speichern",
+      "saving": "Speichern...",
+      "publish": "Veroeffentlichen",
+      "preview": "Vorschau"
+    },
+    "new": {
+      "title": "Neue Seite erstellen",
+      "description": "Erstellen Sie eine neue dynamische Seite fuer Ihre Website",
+      "back": "Zurueck zu Seiten",
+      "success": "Seite erfolgreich erstellt",
+      "form": {
+        "title": "Seitendetails",
+        "description": "Geben Sie die grundlegenden Informationen Ihrer Seite ein",
+        "fields": {
+          "title": "Seitentitel",
+          "slug": "URL-Slug",
+          "locale": "Sprache"
+        },
+        "placeholders": {
+          "title": "Ueber uns",
+          "slug": "ueber-uns"
+        },
+        "hints": {
+          "slug": "URL-freundliche Version des Titels (Kleinbuchstaben, keine Leerzeichen)"
+        },
+        "actions": {
+          "cancel": "Abbrechen",
+          "create": "Seite erstellen",
+          "creating": "Erstellen..."
+        }
+      }
+    },
+    "edit": {
+      "title": "Seite bearbeiten",
+      "loading": "Seite wird geladen...",
+      "back": "Zurueck zu Seiten",
+      "fields": {
+        "title": "Titel",
+        "slug": "Slug"
+      },
+      "placeholders": {
+        "title": "Seitentitel",
+        "slug": "seiten-slug"
+      },
+      "status": {
+        "published": "Veroeffentlicht",
+        "unsaved": "Ungespeicherte Aenderungen"
+      },
+      "actions": {
+        "save": "Speichern",
+        "saving": "Speichern...",
+        "publish": "Veroeffentlichen",
+        "preview": "Vorschau",
+        "viewPage": "Ansehen"
+      },
+      "viewMode": {
+        "layout": "Layout",
+        "preview": "Vorschau"
+      },
+      "messages": {
+        "saved": "Seite erfolgreich gespeichert"
+      }
+    },
+    "settings": {
+      "title": "Seiteneinstellungen",
+      "seo": {
+        "title": "SEO-Einstellungen",
+        "metaTitle": "Meta-Titel",
+        "metaTitlePlaceholder": "Geben Sie den Titel fuer Suchmaschinen ein",
+        "metaTitleHint": "Empfohlen: 50-60 Zeichen",
+        "metaDescription": "Meta-Beschreibung",
+        "metaDescriptionPlaceholder": "Geben Sie eine kurze Beschreibung fuer Suchmaschinen ein",
+        "characters": "Zeichen",
+        "metaKeywords": "Schluesselwoerter",
+        "metaKeywordsPlaceholder": "wort1, wort2, wort3",
+        "metaKeywordsHint": "Durch Komma getrennte Schluesselwoerter",
+        "ogImage": "Social-Media-Bild (OG Image)",
+        "ogImagePlaceholder": "https://beispiel.de/bild.jpg",
+        "ogImageHint": "Bild, das beim Teilen in sozialen Netzwerken angezeigt wird"
+      },
+      "customFields": {
+        "title": "Benutzerdefinierte Felder",
+        "empty": "Keine benutzerdefinierten Felder hinzugefuegt",
+        "keyPlaceholder": "Feldschluessel",
+        "valuePlaceholder": "Feldwert",
+        "add": "Feld hinzufuegen"
+      }
+    }
+  },
+  "blockEditor": {
+    "picker": {
+      "title": "Block-Bibliothek",
+      "description": "Bloecke ziehen oder klicken zum Hinzufuegen",
+      "empty": "Keine Bloecke gefunden",
+      "search": {
+        "placeholder": "Bloecke suchen..."
+      },
+      "categories": {
+        "all": "Alle"
+      }
+    },
+    "canvas": {
+      "empty": {
+        "message": "Noch keine Bloecke hinzugefuegt",
+        "hint": "Ziehen Sie Bloecke aus der Bibliothek, um Ihre Seite zu erstellen"
+      }
+    },
+    "block": {
+      "error": {
+        "notFound": "Block '{slug}' nicht gefunden"
+      }
+    },
+    "settings": {
+      "empty": {
+        "message": "Kein Block ausgewaehlt",
+        "hint": "Waehlen Sie einen Block auf der Arbeitsflaeche aus, um seine Einstellungen zu bearbeiten"
+      },
+      "error": {
+        "notFound": "Block-Einstellungen nicht gefunden"
+      },
+      "noFields": "Dieser Block hat keine konfigurierbaren Felder",
+      "actions": {
+        "reset": "Zuruecksetzen",
+        "remove": "Entfernen"
+      },
+      "tabs": {
+        "content": "Inhalt",
+        "design": "Design",
+        "advanced": "Erweitert",
+        "noContentFields": "Keine Inhaltsfelder verfuegbar",
+        "noDesignFields": "Keine Designfelder verfuegbar",
+        "noAdvancedFields": "Keine erweiterten Felder verfuegbar"
+      }
+    },
+    "form": {
+      "selectPlaceholder": "Option auswaehlen",
+      "emptyArray": "Keine Elemente hinzugefuegt",
+      "itemNumber": "Element {number}",
+      "addItem": "Element hinzufuegen",
+      "itemCount": "{current} von {max} Elementen"
+    }
+  },
+  "builder": {
+    "back": "Zurueck",
+    "loading": "Laden...",
+    "fields": {
+      "title": "Titel",
+      "slug": "Slug"
+    },
+    "placeholders": {
+      "title": "Titel eingeben...",
+      "slug": "url-slug",
+      "excerpt": "Kurze Beschreibung...",
+      "imageUrl": "https://beispiel.de/bild.jpg"
+    },
+    "status": {
+      "published": "Veroeffentlicht",
+      "draft": "Entwurf",
+      "scheduled": "Geplant",
+      "archived": "Archiviert",
+      "unsaved": "Ungespeicherte Aenderungen"
+    },
+    "actions": {
+      "save": "Speichern",
+      "saving": "Speichern...",
+      "viewPage": "Ansehen"
+    },
+    "viewMode": {
+      "layout": "Layout",
+      "preview": "Vorschau"
+    },
+    "sidebar": {
+      "blocks": "Bloecke",
+      "fields": "Felder",
+      "fieldsTitle": "Entitaetsfelder",
+      "fieldsDescription": "Zusaetzliche Eigenschaften konfigurieren",
+      "noFields": "Keine zusaetzlichen Felder verfuegbar",
+      "noCategories": "Keine Kategorien verfuegbar"
+    },
+    "messages": {
+      "saved": "Erfolgreich gespeichert",
+      "created": "Erfolgreich erstellt"
+    }
+  }
+}

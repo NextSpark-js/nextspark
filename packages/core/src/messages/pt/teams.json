@@ -1,0 +1,140 @@
+{
+  "title": "Equipes",
+  "description": "Gerencie suas equipes e colaboracoes",
+
+  "types": {
+    "personal": "Pessoal",
+    "work": "Equipe de Trabalho"
+  },
+
+  "roles": {
+    "owner": "Proprietario",
+    "admin": "Administrador",
+    "member": "Membro",
+    "viewer": "Visualizador"
+  },
+
+  "roleDescriptions": {
+    "owner": "Controle total da equipe, incluindo exclusao e faturamento",
+    "admin": "Pode gerenciar membros, configuracao e a maioria das operacoes",
+    "member": "Pode ver o conteudo da equipe e colaborar com outros membros",
+    "viewer": "Acesso somente leitura ao conteudo da equipe"
+  },
+
+  "actions": {
+    "create": "Criar Equipe",
+    "edit": "Editar Equipe",
+    "delete": "Excluir Equipe",
+    "leave": "Sair da Equipe",
+    "switch": "Trocar Equipe",
+    "manage": "Gerenciar Equipe",
+    "invite": "Convidar Membro",
+    "removeMember": "Remover Membro",
+    "changeRole": "Alterar Funcao"
+  },
+
+  "switcher": {
+    "switchTeam": "Trocar Equipe",
+    "switchingTo": "Trocando para",
+    "switchComplete": "Troca Concluida",
+    "loadingTeamData": "Carregando dados da equipe...",
+    "ready": "Pronto!",
+    "personal": "Pessoal",
+    "workTeam": "Equipe de Trabalho",
+    "manageTeams": "Gerenciar Equipes",
+    "active": "Ativo",
+    "team": "Equipe"
+  },
+
+  "createTeam": {
+    "title": "Criar Nova Equipe",
+    "description": "Crie uma nova equipe para colaborar com outros",
+    "nameLabel": "Nome da Equipe",
+    "namePlaceholder": "Digite o nome da equipe",
+    "slugLabel": "URL da Equipe",
+    "slugPlaceholder": "url-da-equipe",
+    "descriptionLabel": "Descricao",
+    "descriptionPlaceholder": "Descreva para que e esta equipe",
+    "success": "Equipe criada com sucesso",
+    "error": "Erro ao criar a equipe"
+  },
+
+  "editTeam": {
+    "title": "Editar Equipe",
+    "success": "Equipe atualizada com sucesso",
+    "error": "Erro ao atualizar a equipe"
+  },
+
+  "deleteTeam": {
+    "title": "Excluir Equipe",
+    "description": "Tem certeza que deseja excluir esta equipe? Esta acao nao pode ser desfeita.",
+    "confirmButton": "Excluir Equipe",
+    "success": "Equipe excluida com sucesso",
+    "error": "Erro ao excluir a equipe"
+  },
+
+  "members": {
+    "title": "Membros da Equipe",
+    "description": "Gerencie quem tem acesso a esta equipe",
+    "empty": "Sem membros ainda",
+    "you": "(Voce)",
+    "joined": "Entrou {date}"
+  },
+
+  "invitations": {
+    "title": "Convites Pendentes",
+    "description": "Convites aguardando resposta",
+    "empty": "Sem convites pendentes",
+    "sent": "Enviado {date}",
+    "expires": "Expira {date}",
+    "resend": "Reenviar",
+    "cancel": "Cancelar Convite",
+    "cancelSuccess": "Convite cancelado",
+    "cancelError": "Erro ao cancelar o convite"
+  },
+
+  "invite": {
+    "title": "Convidar Membro",
+    "description": "Convide alguem para participar desta equipe",
+    "emailLabel": "Email",
+    "emailPlaceholder": "colega@exemplo.com",
+    "roleLabel": "Funcao",
+    "rolePlaceholder": "Selecione uma funcao",
+    "sendButton": "Enviar Convite",
+    "success": "Convite enviado com sucesso",
+    "error": "Erro ao enviar o convite"
+  },
+
+  "acceptInvite": {
+    "title": "Convite para Equipe",
+    "description": "Voce foi convidado a participar de",
+    "accept": "Aceitar Convite",
+    "decline": "Recusar",
+    "expired": "Este convite expirou",
+    "invalid": "Este convite nao e mais valido",
+    "success": "Voce entrou na equipe!",
+    "error": "Erro ao aceitar o convite"
+  },
+
+  "settings": {
+    "title": "Configuracoes da Equipe",
+    "general": "Geral",
+    "members": "Membros",
+    "billing": "Faturamento",
+    "danger": "Zona de Perigo"
+  },
+
+  "errors": {
+    "notFound": "Equipe nao encontrada",
+    "notMember": "Voce nao e membro desta equipe",
+    "permissionDenied": "Voce nao tem permissao para realizar esta acao",
+    "cannotDeletePersonal": "Nao e possivel excluir a equipe pessoal",
+    "cannotLeaveOwner": "Proprietarios nao podem sair. Transfira a propriedade primeiro.",
+    "lastAdmin": "Nao e possivel remover o ultimo administrador da equipe"
+  },
+
+  "empty": {
+    "title": "Sem equipes ainda",
+    "description": "Crie sua primeira equipe para comecar a colaborar"
+  }
+}

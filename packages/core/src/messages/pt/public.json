@@ -1,0 +1,14 @@
+{
+  "navigation": {
+    "home": "Inicio",
+    "features": "Recursos",
+    "pricing": "Precos",
+    "docs": "Documentacao",
+    "support": "Suporte"
+  },
+  "cta": {
+    "getStarted": "Comecar",
+    "learnMore": "Saiba mais",
+    "contactUs": "Fale Conosco"
+  }
+}

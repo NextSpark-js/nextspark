@@ -1,0 +1,172 @@
+{
+  "navigation": {
+    "dashboard": "Dashboard",
+    "settings": "Impostazioni",
+    "profile": "Profilo",
+    "password": "Password",
+    "security": "Sicurezza",
+    "notifications": "Notifiche",
+    "apiKeys": "Chiavi API",
+    "billing": "Fatturazione",
+    "help": "Aiuto e Supporto",
+    "team": "Team",
+    "admin": "Amministrazione",
+    "learn": "Impara",
+    "teach": "Insegna",
+    "myCourses": "I Miei Corsi",
+    "catalog": "Catalogo",
+    "courses": "Corsi",
+    "lessons": "Lezioni",
+    "analytics": "Analisi",
+    "enrollments": "Iscrizioni",
+    "students": "Studenti"
+  },
+  "mobileNav": {
+    "greeting": "Ciao, {name}",
+    "home": "Home",
+    "tasks": "Task",
+    "create": "Crea",
+    "settings": "Impostazioni",
+    "more": "Altro",
+    "moreOptions": "Altre Opzioni",
+    "moreOptionsDescription": "Accedi a impostazioni e funzionalita aggiuntive",
+    "quickCreateDescription": "Crea un nuovo elemento",
+    "noEntitiesAvailable": "Nessun elemento disponibile da creare",
+    "createNew": "Crea nuovo"
+  },
+  "buttons": {
+    "save": "Salva",
+    "cancel": "Annulla",
+    "delete": "Elimina",
+    "edit": "Modifica",
+    "add": "Aggiungi",
+    "update": "Aggiorna",
+    "submit": "Invia",
+    "close": "Chiudi",
+    "back": "Indietro",
+    "next": "Avanti",
+    "previous": "Precedente",
+    "continue": "Continua",
+    "finish": "Fine",
+    "signIn": "Accedi",
+    "signUp": "Registrati",
+    "signOut": "Esci",
+    "signingOut": "Disconnessione..."
+  },
+  "status": {
+    "loading": "Caricamento...",
+    "success": "Successo",
+    "error": "Errore",
+    "warning": "Avviso",
+    "info": "Informazione"
+  },
+  "actions": {
+    "create": "Crea",
+    "read": "Visualizza",
+    "update": "Aggiorna",
+    "delete": "Elimina"
+  },
+  "common": {
+    "yes": "Si",
+    "no": "No",
+    "enabled": "Abilitato",
+    "disabled": "Disabilitato",
+    "active": "Attivo",
+    "inactive": "Inattivo",
+    "on": "Attivato",
+    "off": "Disattivato"
+  },
+  "theme": {
+    "selector": "Selettore tema",
+    "current": "tema attuale",
+    "change": "Cambia tema",
+    "loading": "Caricamento selettore tema",
+    "changed": "Tema cambiato in",
+    "light": "Chiaro",
+    "dark": "Scuro",
+    "system": "Sistema",
+    "changeToLight": "Cambia a tema chiaro",
+    "changeToDark": "Cambia a tema scuro",
+    "changeToSystem": "Cambia a tema di sistema"
+  },
+  "notifications": {
+    "title": "Notifiche",
+    "unread": "non lette",
+    "new": "nuova",
+    "markAllAsRead": "Segna tutte le notifiche come lette",
+    "markAll": "Segna tutte",
+    "empty": "Non hai notifiche",
+    "configure": "Configura notifiche"
+  },
+  "search": {
+    "placeholder": "Cerca pagine, impostazioni...",
+    "label": "Cerca pagine e impostazioni",
+    "clear": "Cancella ricerca",
+    "results": "Risultati di ricerca",
+    "searching": "Ricerca in corso...",
+    "noResults": "Nessun risultato trovato per \"{query}\"",
+    "tryDifferent": "Prova con altre parole chiave"
+  },
+  "userRoles": {
+    "member": "Membro",
+    "colaborator": "Collaboratore",
+    "admin": "Amministratore",
+    "superadmin": "Super Amministratore"
+  },
+  "accessibility": {
+    "navigation": {
+      "main": "Navigazione principale",
+      "search": "Cerca",
+      "mobileActions": "Azioni mobile",
+      "closeMenu": "Chiudi menu",
+      "openMenu": "Apri menu",
+      "mobileMenu": "Menu mobile",
+      "mainMobile": "Navigazione principale mobile",
+      "settings": "Navigazione impostazioni",
+      "dashboard": "Navigazione dashboard"
+    },
+    "brand": {
+      "goToHome": "Vai alla home"
+    },
+    "user": {
+      "loading": "Caricamento utente",
+      "menu": "Menu utente per {name}",
+      "avatar": "Avatar di {name}",
+      "info": "Informazioni utente",
+      "defaultName": "Utente",
+      "goToProfile": "Vai al profilo",
+      "goToSettings": "Vai alle impostazioni",
+      "signOut": "Esci",
+      "signIn": "Accedi",
+      "signUp": "Registrati"
+    },
+    "actions": {
+      "goToDashboard": "Vai alla dashboard",
+      "goToProfile": "Vai al profilo",
+      "goToSettings": "Vai alle impostazioni"
+    },
+    "loading": "Caricamento",
+    "groups": {
+      "collapse": "Comprimi gruppo",
+      "expand": "Espandi gruppo",
+      "delete": "Elimina gruppo"
+    },
+    "media": {
+      "articleCover": "Copertina dell'articolo",
+      "postMedia": "Media del post",
+      "postMediaNumber": "Media del post {number}",
+      "story": "Storia",
+      "post": "Post",
+      "tweetMedia": "Media del tweet",
+      "uploaded": "File caricato"
+    },
+    "taskCard": "Scheda task: {title}. Stato: {status}",
+    "toggleTask": "Segna task '{title}' come {action}",
+    "createdDate": "Creato il {date}",
+    "deleteTask": "Elimina task: {title}",
+    "completedTaskCard": "Task completato: {title}",
+    "reactivateTask": "Riattiva task: {title}",
+    "completedDate": "Completato il {date}",
+    "deleteCompletedTask": "Elimina task completato: {title}"
+  }
+}

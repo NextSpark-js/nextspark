@@ -1,0 +1,35 @@
+{
+  "title": "Catégories",
+  "description": "Gérer les catégories d'articles",
+  "newCategory": "Nouvelle catégorie",
+  "editCategory": "Modifier la catégorie",
+  "createDescription": "Créer une nouvelle catégorie pour organiser les articles",
+  "editDescription": "Modifier les détails de la catégorie",
+  "name": "Nom",
+  "slug": "Identifiant",
+  "icon": "Icône",
+  "color": "Couleur",
+  "actions": "Actions",
+  "loading": "Chargement...",
+  "empty": "Aucune catégorie trouvée",
+  "emptyDescription": "Commencez par créer votre première catégorie.",
+  "deleteConfirm": "Supprimer la catégorie ?",
+  "deleteDescription": "Êtes-vous sûr de vouloir supprimer \"{name}\" ? Cette action ne peut pas être annulée.",
+  "saveCategory": "Enregistrer la catégorie",
+  "saving": "Enregistrement...",
+  "deleting": "Suppression...",
+  "cancel": "Annuler",
+  "delete": "Supprimer",
+  "iconHelp": "Nom d'icône Lucide (ex : cpu, book-open)",
+  "createSuccess": "Catégorie créée avec succès",
+  "updateSuccess": "Catégorie mise à jour avec succès",
+  "deleteSuccess": "Catégorie supprimée avec succès",
+  "placeholders": {
+    "name": "Technologie",
+    "slug": "technologie",
+    "description": "Articles sur la technologie et le développement logiciel"
+  },
+  "errors": {
+    "nameRequired": "Le nom est requis"
+  }
+}

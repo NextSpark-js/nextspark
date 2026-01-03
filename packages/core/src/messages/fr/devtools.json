@@ -1,0 +1,285 @@
+{
+  "title": "DevTools",
+  "subtitle": "Outils de developpement",
+  "nav": {
+    "home": "Panneau",
+    "homeDescription": "Resume et liens rapides de DevTools",
+    "styleGallery": "Galerie de styles",
+    "styleGalleryDescription": "Reference des composants et styles",
+    "testCases": "Cas de test",
+    "testCasesDescription": "Scenarios de test de developpement",
+    "features": "Fonctionnalites",
+    "featuresDescription": "Registre des fonctionnalites et couverture de tests",
+    "flows": "Flux",
+    "flowsDescription": "Flux utilisateur",
+    "blocks": "Blocs",
+    "blocksDescription": "Registre des blocs du constructeur de pages",
+    "tags": "Etiquettes",
+    "tagsDescription": "Vue d'ensemble et filtrage des etiquettes de test",
+    "config": "Visualiseur de config",
+    "configDescription": "Configuration du theme et des entites",
+    "api": "Explorateur API",
+    "apiDescription": "Parcourir tous les endpoints API",
+    "expandSidebar": "Etendre la barre laterale",
+    "collapseSidebar": "Reduire la barre laterale"
+  },
+  "exitToDashboard": "Quitter DevTools",
+  "exitToDashboardDescription": "Retourner au panneau principal",
+  "returnToDashboard": "Retour au panneau",
+  "goToSuperadmin": "Panneau Super Admin",
+  "goToSuperadminDescription": "Aller a la zone super administrateur",
+  "superAdminArea": "Zone super administrateur",
+  "restrictedArea": "Zone developpeur",
+  "developerAccessOnly": "Acces developpeur uniquement",
+  "config": {
+    "error": "Erreur lors du chargement de la configuration",
+    "tabs": {
+      "theme": "Config du theme",
+      "entities": "Entites"
+    },
+    "themeTitle": "Configuration du theme",
+    "themeDescription": "Configuration active du theme et surcharges",
+    "entitiesTitle": "Registre des entites",
+    "entitiesDescription": "{count} entites enregistrees",
+    "copied": "Copie !",
+    "copy": "Copier"
+  },
+  "tests": {
+    "searchPlaceholder": "Rechercher des tests...",
+    "collapseAll": "Tout reduire",
+    "expandAll": "Tout etendre",
+    "noMatchingTests": "Aucun test ne correspond a votre recherche",
+    "noTests": "Aucun test disponible",
+    "fileTree": "Fichiers de test",
+    "fileTreeDescription": "Parcourir la documentation des tests",
+    "fileNotFound": "Fichier non trouve",
+    "fileNotFoundDescription": "Le fichier '{path}' n'existe pas",
+    "backToList": "Retour a la liste",
+    "selectFile": "Selectionnez un fichier",
+    "selectFileDescription": "Choisissez un fichier de test de l'arborescence pour voir son contenu",
+    "error": "Erreur lors du chargement du fichier"
+  },
+  "api": {
+    "title": "Explorateur API",
+    "endpointsAvailable": "endpoints disponibles",
+    "endpointsInCategory": "endpoints dans cette categorie",
+    "noRoutesInCategory": "Aucune route dans cette categorie",
+    "noRoutesMessage": "Aucune route personnalisee n'a ete enregistree pour cette categorie.",
+    "generatedAt": "Registre genere le"
+  },
+  "apiTester": {
+    "backToList": "Retour aux endpoints",
+    "method": "Methode HTTP",
+    "urlPreview": "Apercu de l'URL",
+    "pathParams": "Parametres de chemin",
+    "queryParams": "Parametres de requete",
+    "headers": "En-tetes personnalises",
+    "headersInfo": "Content-Type est defini automatiquement. Ajoutez des en-tetes personnalises ci-dessous.",
+    "authentication": "Authentification",
+    "requestBody": "Corps de la requete (JSON)",
+    "sendRequest": "Envoyer la requete",
+    "sending": "Envoi...",
+    "cancel": "Annuler",
+    "response": "Reponse",
+    "responseBody": "Corps",
+    "responseHeaders": "En-tetes",
+    "noResponse": "Envoyez une requete pour voir la reponse",
+    "auth": {
+      "useSession": "Utiliser la session actuelle",
+      "useApiKey": "Utiliser une cle API",
+      "apiKeyPlaceholder": "Entrez votre cle API...",
+      "adminBypass": "Acces inter-equipes",
+      "adminBypassTooltip": "Activer pour acceder aux donnees de n'importe quelle equipe. Necessite l'appartenance a l'equipe NextSpark."
+    },
+    "editor": {
+      "keyPlaceholder": "Cle",
+      "valuePlaceholder": "Valeur",
+      "addButton": "Ajouter"
+    },
+    "pathParam": {
+      "required": "requis",
+      "enterPlaceholder": "Entrez {name}..."
+    },
+    "responseStates": {
+      "idle": "Envoyez une requete pour voir la reponse",
+      "loading": "Envoi de la requete...",
+      "error": "Une erreur s'est produite"
+    }
+  },
+  "features": {
+    "title": "Registre des fonctionnalites",
+    "description": "Registre des fonctionnalites avec informations de couverture de tests",
+    "search": "Rechercher des fonctionnalites...",
+    "tests": "tests",
+    "covered": "Couvert",
+    "uncovered": "Sans tests",
+    "showing": "Affichage de {count} sur {total} fonctionnalites",
+    "noResults": "Aucune fonctionnalite trouvee",
+    "noResultsHint": "Essayez d'ajuster les filtres ou la recherche",
+    "stats": {
+      "total": "Total fonctionnalites",
+      "covered": "Avec tests",
+      "uncovered": "Sans tests",
+      "coverage": "Couverture"
+    },
+    "filters": {
+      "all": "Tous",
+      "allCoverage": "Tous",
+      "covered": "Couverts",
+      "uncovered": "Non couverts"
+    },
+    "categories": {
+      "core": "Core",
+      "entities": "Entites",
+      "content": "Contenu",
+      "settings": "Parametres",
+      "admin": "Admin"
+    }
+  },
+  "flows": {
+    "title": "Registre des flux",
+    "description": "Flux utilisateur avec couverture de tests",
+    "search": "Rechercher des flux...",
+    "tests": "tests",
+    "covered": "Couvert",
+    "uncovered": "Sans tests",
+    "showing": "Affichage de {count} sur {total} flux",
+    "noResults": "Aucun flux trouve",
+    "noResultsHint": "Essayez d'ajuster les filtres ou la recherche",
+    "criticalPath": "Chemin critique",
+    "stats": {
+      "total": "Total flux",
+      "covered": "Avec tests",
+      "uncovered": "Sans tests",
+      "critical": "Chemins critiques"
+    },
+    "filters": {
+      "all": "Tous",
+      "allCoverage": "Tous",
+      "covered": "Couverts",
+      "uncovered": "Non couverts"
+    },
+    "categories": {
+      "acquisition": "Acquisition",
+      "navigation": "Navigation",
+      "content": "Contenu",
+      "settings": "Parametres",
+      "admin": "Admin"
+    }
+  },
+  "blocks": {
+    "title": "Registre des blocs",
+    "description": "Blocs du constructeur de pages avec definitions de champs",
+    "search": "Rechercher des blocs...",
+    "tests": "tests",
+    "fields": "champs",
+    "examples": "exemples",
+    "covered": "Avec tests",
+    "uncovered": "Sans tests",
+    "showing": "Affichage de {count} sur {total} blocs",
+    "noResults": "Aucun bloc trouve",
+    "noResultsHint": "Essayez d'ajuster les filtres ou la recherche",
+    "viewDetails": "Voir les details",
+    "stats": {
+      "total": "Total blocs",
+      "covered": "Avec tests",
+      "uncovered": "Sans tests"
+    },
+    "filters": {
+      "all": "Tous",
+      "allCoverage": "Tous",
+      "covered": "Couverts",
+      "uncovered": "Non couverts"
+    },
+    "categories": {
+      "hero": "Hero",
+      "content": "Contenu",
+      "media": "Media",
+      "cta": "CTA",
+      "layout": "Mise en page"
+    },
+    "scopes": {
+      "pages": "Pages",
+      "posts": "Publications"
+    },
+    "detail": {
+      "back": "Retour aux blocs",
+      "overview": "General",
+      "fieldsTab": "Champs",
+      "preview": "Apercu",
+      "livePreview": "Apercu en direct",
+      "previewDescription": "Ce bloc est rendu avec du contenu d'exemple pour montrer a quoi il ressemblera sur votre site.",
+      "exampleProps": "Props d'exemple",
+      "examplePropsDescription": "Les props utilises pour rendre l'apercu. Copiez ce JSON comme point de depart.",
+      "scope": "Portee",
+      "category": "Categorie",
+      "testCoverage": "Couverture de tests",
+      "fieldName": "Nom du champ",
+      "fieldType": "Type",
+      "required": "Requis",
+      "default": "Defaut",
+      "placeholder": "Placeholder",
+      "options": "Options",
+      "yes": "Oui",
+      "no": "Non"
+    }
+  },
+  "tags": {
+    "title": "Vue des etiquettes",
+    "description": "Toutes les etiquettes de test organisees par categorie",
+    "search": "Rechercher des etiquettes ou fichiers de test...",
+    "totalTags": "Total etiquettes",
+    "testFiles": "Fichiers de test",
+    "showing": "Affichage de {count} etiquettes",
+    "noResults": "Aucune etiquette trouvee",
+    "noResultsHint": "Essayez d'ajuster votre recherche",
+    "copyHint": "Cliquez pour copier la commande grep",
+    "expandHint": "Cliquez pour voir les fichiers de test",
+    "copied": "Copie !",
+    "categories": {
+      "layers": "Couches",
+      "priorities": "Priorites",
+      "features": "Fonctionnalites",
+      "flows": "Flux",
+      "blocks": "Blocs",
+      "roles": "Roles",
+      "operations": "Operations",
+      "other": "Autres"
+    }
+  },
+  "scheduledActions": {
+    "title": "Actions programmees",
+    "description": "Surveiller et gerer les actions programmees en arriere-plan",
+    "loading": "Chargement des actions programmees...",
+    "empty": "Aucune action programmee trouvee",
+    "emptyDescription": "Les actions programmees apparaitront ici lorsqu'elles seront creees",
+    "filters": {
+      "status": "Statut",
+      "allStatuses": "Tous les statuts",
+      "actionType": "Type d'action",
+      "allTypes": "Tous les types",
+      "apply": "Appliquer les filtres",
+      "reset": "Reinitialiser les filtres"
+    },
+    "table": {
+      "type": "Type",
+      "status": "Statut",
+      "scheduledAt": "Programme pour",
+      "team": "Equipe",
+      "payload": "Donnees",
+      "error": "Erreur",
+      "noTeam": "Global"
+    },
+    "status": {
+      "pending": "En attente",
+      "running": "En cours",
+      "completed": "Termine",
+      "failed": "Echoue"
+    },
+    "pagination": {
+      "previous": "Precedent",
+      "next": "Suivant",
+      "page": "Page {page} sur {total}"
+    }
+  }
+}

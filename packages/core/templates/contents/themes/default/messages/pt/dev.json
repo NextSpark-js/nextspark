@@ -1,0 +1,106 @@
+{
+  "title": "DevTools",
+  "subtitle": "Ferramentas de Desenvolvimento & Documentação",
+  "restrictedArea": "Área Restrita",
+  "developerAccessOnly": "Acesso Apenas para Desenvolvedores",
+  "exitToDashboard": "Sair para o Dashboard",
+  "exitToDashboardDescription": "Retornar ao dashboard principal",
+  "returnToDashboard": "Retornar ao dashboard",
+  "goToSector7": "Ir para Sector7",
+  "goToSector7Description": "Acessar área administrativa Sector7",
+  "superAdminArea": "Área de Super Administrador",
+  "nav": {
+    "home": "Início",
+    "homeDescription": "Dashboard do desenvolvedor",
+    "styleGallery": "Galeria de Estilos",
+    "styleGalleryDescription": "Showcase de componentes",
+    "testCases": "Casos de Teste",
+    "testCasesDescription": "Documentação de testes",
+    "config": "Configuração",
+    "configDescription": "Configuração do sistema",
+    "expandSidebar": "Expandir barra lateral",
+    "collapseSidebar": "Recolher barra lateral"
+  },
+  "home": {
+    "welcome": "Bem-vindo ao DevTools",
+    "welcomeDescription": "Seu hub central para ferramentas de desenvolvimento e documentação",
+    "intro": "Esta área fornece acesso aos componentes do design system, documentação de casos de teste e configuração do sistema. Use a navegação para explorar diferentes seções.",
+    "systemInfo": "Informações do Sistema",
+    "systemInfoDescription": "Seu nível de acesso e privilégios",
+    "accessLevel": "Nível de Acesso",
+    "hierarchy": "Nível de Hierarquia"
+  },
+  "style": {
+    "title": "Galeria de Estilos",
+    "description": "Componentes do design system e temas"
+  },
+  "tests": {
+    "title": "Casos de Teste",
+    "description": "Navegue pela documentação de testes",
+    "fileTree": "Arquivos de Teste",
+    "fileTreeDescription": "Navegue pela documentação de testes",
+    "noTests": "Nenhum arquivo de teste encontrado",
+    "selectFile": "Selecione um arquivo para visualizar",
+    "selectFileDescription": "Escolha um arquivo de teste da árvore para ver seu conteúdo",
+    "error": "Falha ao carregar arquivo",
+    "loading": "Carregando...",
+    "fileNotFound": "Arquivo Não Encontrado",
+    "fileNotFoundDescription": "O arquivo de teste \"{path}\" não pôde ser encontrado.",
+    "backToList": "Voltar para Lista de Testes",
+    "searchPlaceholder": "Buscar testes...",
+    "expandAll": "Expandir Tudo",
+    "collapseAll": "Recolher Tudo",
+    "noMatchingTests": "Nenhum teste corresponde à sua busca",
+    "copyScenario": "Copiar cenário"
+  },
+  "config": {
+    "title": "Visualizador de Configuração",
+    "description": "Visualizar configuração atual do sistema",
+    "themeTitle": "Configuração do Tema",
+    "themeDescription": "Configurações e metadados do tema atual",
+    "entitiesTitle": "Registro de Entidades",
+    "entitiesDescription": "{count} entidades registradas",
+    "copy": "Copiar",
+    "copied": "Copiado!",
+    "error": "Falha ao carregar configuração",
+    "tabs": {
+      "theme": "Config do Tema",
+      "entities": "Entidades"
+    }
+  },
+  "scheduledActions": {
+    "title": "Ações Agendadas",
+    "description": "Monitore e gerencie ações agendadas em segundo plano",
+    "loading": "Carregando ações agendadas...",
+    "empty": "Nenhuma ação agendada encontrada",
+    "emptyDescription": "Ações agendadas aparecerão aqui quando forem criadas",
+    "filters": {
+      "status": "Status",
+      "allStatuses": "Todos os Status",
+      "actionType": "Tipo de Ação",
+      "allTypes": "Todos os Tipos",
+      "apply": "Aplicar Filtros",
+      "reset": "Resetar Filtros"
+    },
+    "table": {
+      "type": "Tipo",
+      "status": "Status",
+      "scheduledAt": "Agendado Em",
+      "team": "Equipe",
+      "payload": "Payload",
+      "error": "Erro",
+      "noTeam": "Global"
+    },
+    "status": {
+      "pending": "Pendente",
+      "running": "Em Execução",
+      "completed": "Concluído",
+      "failed": "Falhou"
+    },
+    "pagination": {
+      "previous": "Anterior",
+      "next": "Próximo",
+      "page": "Página {page} de {total}"
+    }
+  }
+}

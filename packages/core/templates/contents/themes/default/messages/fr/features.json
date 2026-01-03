@@ -1,0 +1,119 @@
+{
+  "analytics": {
+    "title": "Analytique avancée",
+    "benefit1": "Métriques du tableau de bord en temps réel",
+    "benefit2": "Constructeur de rapports personnalisés",
+    "benefit3": "Export en PDF/CSV"
+  },
+  "webhooks": {
+    "title": "Webhooks",
+    "benefit1": "Callbacks HTTP pour les événements",
+    "benefit2": "Modèles de charge utile personnalisés",
+    "benefit3": "Logique de réessai et journalisation"
+  },
+  "automation": {
+    "title": "Automatisation des tâches",
+    "benefit1": "Création automatique de tâches",
+    "benefit2": "Actions programmées",
+    "benefit3": "Déclencheurs de flux de travail"
+  },
+  "hero": {
+    "badge": "Aperçu des fonctionnalités",
+    "title": "Tout ce dont vous avez besoin pour créer des applications modernes",
+    "description": "Notre plateforme fournit un ensemble complet de fonctionnalités conçues pour accélérer votre processus de développement tout en maintenant la sécurité et l'évolutivité."
+  },
+  "highlights": {
+    "productionReady": {
+      "title": "Prêt pour la production",
+      "description": "Architecture éprouvée prête pour le déploiement"
+    },
+    "developerExperience": {
+      "title": "Expérience développeur",
+      "description": "Rechargement à chaud, TypeScript et outillage moderne"
+    },
+    "scalable": {
+      "title": "Évolutif",
+      "description": "Conçu pour grandir avec les besoins de votre application"
+    },
+    "secure": {
+      "title": "Sécurisé",
+      "description": "Sécurité de niveau entreprise par défaut"
+    }
+  },
+  "categories": {
+    "authSecurity": {
+      "title": "Authentification et sécurité",
+      "features": {
+        "betterAuth": {
+          "name": "Intégration Better Auth",
+          "description": "Authentification moderne et sécurisée avec gestion de session intégrée"
+        },
+        "multiOAuth": {
+          "name": "OAuth multi-fournisseurs",
+          "description": "Support pour Google, GitHub et autres fournisseurs OAuth"
+        },
+        "twoFactor": {
+          "name": "Authentification à deux facteurs",
+          "description": "Sécurité renforcée avec vérification TOTP et SMS"
+        }
+      }
+    },
+    "userExperience": {
+      "title": "Expérience utilisateur",
+      "features": {
+        "darkLight": {
+          "name": "Mode sombre/clair",
+          "description": "Changement de thème fluide avec détection de préférence système"
+        },
+        "mobileResponsive": {
+          "name": "Responsive mobile",
+          "description": "Expérience optimisée sur tous les appareils et tailles d'écran"
+        },
+        "realTimeNotifications": {
+          "name": "Notifications en temps réel",
+          "description": "Mises à jour et alertes instantanées pour les événements importants"
+        }
+      }
+    },
+    "development": {
+      "title": "Développement",
+      "features": {
+        "typescriptReady": {
+          "name": "Prêt pour TypeScript",
+          "description": "Support complet de TypeScript avec typage sécurisé partout"
+        },
+        "modernStack": {
+          "name": "Stack moderne",
+          "description": "Next.js 15, React 19 et les dernières technologies web"
+        },
+        "componentLibrary": {
+          "name": "Bibliothèque de composants",
+          "description": "Composants beaux et accessibles avec shadcn/ui"
+        }
+      }
+    },
+    "dataPerformance": {
+      "title": "Données et performances",
+      "features": {
+        "postgresql": {
+          "name": "Base de données PostgreSQL",
+          "description": "Base de données robuste et évolutive avec intégration Supabase"
+        },
+        "tanstackQuery": {
+          "name": "TanStack Query",
+          "description": "Récupération, mise en cache et synchronisation de données puissantes"
+        },
+        "edgeRuntime": {
+          "name": "Edge Runtime",
+          "description": "Réponses API rapides et distribuées mondialement"
+        }
+      }
+    }
+  },
+  "cta": {
+    "title": "Prêt à commencer ?",
+    "description": "Rejoignez des milliers de développeurs qui créent des applications incroyables avec notre plateforme.",
+    "getStarted": "Commencer gratuitement",
+    "viewDocs": "Voir la documentation"
+  }
+}

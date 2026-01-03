@@ -1,0 +1,74 @@
+{
+  "title": "KI-Beobachtbarkeit",
+  "description": "LangChain-Agentenaufrufe und -Traces überwachen",
+  "loading": "Traces werden geladen...",
+  "error": "Fehler beim Laden der Traces",
+  "disabled": "Beobachtbarkeit ist in der Konfiguration deaktiviert",
+  "loadMore": "Mehr laden",
+  "loadingMore": "Wird geladen...",
+  "reload": "Neu laden",
+  "reloading": "Wird neu geladen...",
+  "period": {
+    "1h": "Letzte Stunde",
+    "24h": "Letzte 24 Stunden",
+    "7d": "Letzte 7 Tage",
+    "30d": "Letzte 30 Tage"
+  },
+  "status": {
+    "running": "Läuft",
+    "success": "Erfolgreich",
+    "error": "Fehler"
+  },
+  "filters": {
+    "status": "Status",
+    "agent": "Agent",
+    "period": "Zeitraum",
+    "allStatus": "Alle Status",
+    "allAgents": "Alle Agenten",
+    "searchPlaceholder": "Nach Trace-ID oder Eingabe suchen..."
+  },
+  "table": {
+    "traceId": "Trace-ID",
+    "input": "Nachricht",
+    "agent": "Agent",
+    "status": "Status",
+    "duration": "Dauer",
+    "tokens": "Tokens",
+    "startedAt": "Gestartet am",
+    "empty": "Keine Traces für den ausgewählten Zeitraum und Filter gefunden"
+  },
+  "detail": {
+    "title": "Trace-Details",
+    "back": "Zurück zu Traces",
+    "agent": "Agent",
+    "model": "Modell",
+    "duration": "Dauer",
+    "tokens": "Tokens",
+    "calls": "Aufrufe",
+    "tools": "Werkzeuge",
+    "input": "Eingabe",
+    "output": "Ausgabe",
+    "error": "Fehler",
+    "stackTrace": "Stack-Trace",
+    "spans": "Ausführungsspannen",
+    "childTraces": "Unter-Agenten-Traces",
+    "noSpans": "Keine Spannen für diesen Trace aufgezeichnet",
+    "showDetails": "Details anzeigen",
+    "hideDetails": "Details ausblenden",
+    "toolInput": "Werkzeug-Eingabe",
+    "toolOutput": "Werkzeug-Ausgabe",
+    "hiddenSpans": "{count} interne Ketten ausgeblendet",
+    "showInternalChains": "Alle anzeigen",
+    "hideInternalChains": "Interne ausblenden"
+  },
+  "flow": {
+    "title": "Gesprächsfluss",
+    "userMessage": "Benutzer",
+    "assistantResponse": "Assistent",
+    "toolCall": "Werkzeugaufruf",
+    "toolResult": "Werkzeugergebnis",
+    "noSteps": "Keine Ausführungsschritte aufgezeichnet",
+    "showFull": "Vollständig anzeigen",
+    "collapse": "Einklappen"
+  }
+}

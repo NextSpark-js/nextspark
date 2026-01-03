@@ -1,0 +1,48 @@
+{
+  "email": {
+    "required": "L'email e obbligatoria",
+    "invalid": "Per favore inserisci un'email valida"
+  },
+  "password": {
+    "required": "La password e obbligatoria",
+    "currentRequired": "La password attuale e obbligatoria",
+    "min": "La password deve avere almeno 8 caratteri",
+    "minLength": "La password deve avere almeno {min} caratteri",
+    "uppercase": "Deve contenere almeno una lettera maiuscola",
+    "lowercase": "Deve contenere almeno una lettera minuscola",
+    "number": "Deve contenere almeno un numero",
+    "match": "Le password non corrispondono",
+    "different": "La nuova password deve essere diversa da quella attuale"
+  },
+  "firstName": {
+    "required": "Il nome e obbligatorio",
+    "min": "Il nome deve avere almeno 2 caratteri",
+    "minLength": "Il nome deve avere almeno {min} caratteri"
+  },
+  "lastName": {
+    "required": "Il cognome e obbligatorio",
+    "min": "Il cognome deve avere almeno 2 caratteri",
+    "minLength": "Il cognome deve avere almeno {min} caratteri"
+  },
+  "country": {
+    "required": "Per favore seleziona un paese"
+  },
+  "timezone": {
+    "required": "Per favore seleziona un fuso orario"
+  },
+  "language": {
+    "required": "Per favore seleziona una lingua"
+  },
+  "taskTitle": {
+    "required": "Il titolo del task e obbligatorio",
+    "min": "Il titolo deve avere almeno 1 carattere",
+    "max": "Il titolo non puo superare 200 caratteri",
+    "minLength": "Il titolo del task deve avere almeno {min} caratteri"
+  },
+  "taskDescription": {
+    "max": "La descrizione non puo superare 500 caratteri"
+  },
+  "terms": {
+    "required": "Devi accettare i termini e le condizioni"
+  }
+}

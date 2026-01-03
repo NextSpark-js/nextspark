@@ -1,0 +1,404 @@
+{
+  "title": "Parametres",
+  "description": "Gerez votre compte, securite et preferences",
+  "overview": {
+    "title": "Bienvenue dans les parametres",
+    "description": "Utilisez le menu de gauche pour naviguer entre les differentes sections de configuration de votre compte.",
+    "profileDescription": "Gerez vos informations personnelles, nom, email et preferences de base.",
+    "passwordDescription": "Changez votre mot de passe actuel pour un nouveau plus securise.",
+    "securityDescription": "Configurez l'authentification a deux facteurs et verifiez vos sessions actives.",
+    "notificationsDescription": "Personnalisez comment et quand recevoir des notifications par email et push.",
+    "billingDescription": "Gerez votre abonnement, methodes de paiement et factures.",
+    "api-keysDescription": "Gerez les cles API pour l'integration externe et le controle d'acces.",
+    "teamsDescription": "Gerez vos equipes, membres et invitations.",
+    "plansDescription": "Comparez les plans et mettez a niveau votre abonnement."
+  },
+  "navigation": {
+    "ariaLabel": "Navigation des parametres",
+    "backToDashboard": "Retour au tableau de bord principal",
+    "backButton": "Retour au tableau de bord",
+    "profile": "Profil",
+    "password": "Mot de passe",
+    "security": "Securite",
+    "notifications": "Notifications",
+    "billing": "Facturation",
+    "api-keys": "Cles API",
+    "teams": "Equipes",
+    "plans": "Plans"
+  },
+  "layout": {
+    "title": "Parametres",
+    "description": "Gerez votre compte, securite et preferences",
+    "sidebarLabel": "Menu des parametres",
+    "contentLabel": "Contenu des parametres"
+  },
+  "profile": {
+    "title": "Informations personnelles",
+    "description": "Gerez vos informations personnelles et preferences de base de votre compte.",
+    "loading": {
+      "aria": "Chargement des informations du profil",
+      "text": "Chargement des informations du profil..."
+    },
+    "error": {
+      "message": "Erreur lors du chargement des informations du profil. Veuillez reessayer."
+    },
+    "success": {
+      "message": "Profil mis a jour avec succes !"
+    },
+    "form": {
+      "title": "Donnees personnelles",
+      "description": "Mettez a jour votre nom, pays, fuseau horaire et langue preferee",
+      "firstName": "Prenom",
+      "firstNamePlaceholder": "Votre prenom",
+      "lastName": "Nom",
+      "lastNamePlaceholder": "Votre nom",
+      "email": "Email",
+      "emailNote": "Ne peut pas etre modifie",
+      "authMethod": "Methode d'authentification",
+      "verificationStatus": "Statut de verification",
+      "verified": "Verifie",
+      "notVerified": "Non verifie",
+      "language": "Langue",
+      "languagePlaceholder": "Selectionnez votre langue",
+      "country": "Pays",
+      "countryPlaceholder": "Selectionnez votre pays",
+      "timezone": "Fuseau horaire",
+      "timezonePlaceholder": "Selectionnez votre fuseau horaire",
+      "memberSince": "Membre depuis",
+      "updateButton": "Mettre a jour le profil",
+      "updating": "Mise a jour...",
+      "submitHelp": "Enregistrer les modifications du profil",
+      "submitHelpUpdating": "Mise a jour des informations du profil"
+    },
+    "messages": {
+      "updateSuccess": "Profil mis a jour correctement",
+      "updateError": "Erreur lors de la mise a jour du profil : {error}",
+      "deleteSuccess": "Compte supprime. Deconnexion...",
+      "deleteError": "Erreur lors de la suppression du compte : {error}",
+      "updating": "Mise a jour du profil...",
+      "deleting": "Suppression du compte...",
+      "advancedOpen": "Options avancees ouvertes",
+      "advancedClosed": "Options avancees fermees"
+    },
+    "advanced": {
+      "title": "Options avancees",
+      "openLabel": "Ouvrir les options avancees",
+      "closeLabel": "Fermer les options avancees"
+    },
+    "danger": {
+      "title": "Zone de danger",
+      "warning": "Ces actions ne peuvent pas etre annulees. Procedez avec prudence.",
+      "deleteButton": "Supprimer le compte",
+      "dialogTitle": "Supprimer le compte",
+      "dialogDescription": "Vous etes sur le point de supprimer definitivement votre compte et toutes les donnees associees.",
+      "dialogWarning": "Cette action est irreversible et ne peut pas etre annulee.",
+      "dialogDetail": "Toutes vos informations de profil, parametres et autres donnees seront definitivement supprimees de nos serveurs.",
+      "deleting": "Suppression...",
+      "confirmDelete": "Supprimer le compte"
+    },
+    "actions": {
+      "cancel": "Annuler"
+    }
+  },
+  "password": {
+    "title": "Changer le mot de passe",
+    "description": "Choisissez un nouveau mot de passe securise pour votre compte.",
+    "loading": {
+      "verifying": "Verification de la methode d'authentification..."
+    },
+    "success": {
+      "aria": "Mot de passe mis a jour avec succes",
+      "title": "Mot de passe mis a jour !",
+      "description": "Votre mot de passe a ete mis a jour avec succes."
+    },
+    "form": {
+      "title": "Nouveau mot de passe",
+      "description": "Mettez a jour votre mot de passe pour un nouveau plus securise.",
+      "currentPassword": "Mot de passe actuel",
+      "currentPasswordPlaceholder": "Entrez votre mot de passe actuel",
+      "newPassword": "Nouveau mot de passe",
+      "newPasswordPlaceholder": "Creez un mot de passe securise",
+      "confirmPassword": "Confirmer le nouveau mot de passe",
+      "confirmPasswordPlaceholder": "Confirmez votre nouveau mot de passe",
+      "revokeOtherSessions": "Se deconnecter des autres appareils",
+      "updateButton": "Mettre a jour le mot de passe",
+      "updating": "Mise a jour...",
+      "submitHelp": "Soumettre le formulaire pour changer le mot de passe",
+      "submitHelpUpdating": "Mise a jour du mot de passe"
+    },
+    "messages": {
+      "updating": "Mise a jour du mot de passe...",
+      "updateSuccess": "Mot de passe mis a jour avec succes",
+      "updateError": "Erreur lors de la mise a jour du mot de passe",
+      "unexpectedError": "Une erreur inattendue s'est produite"
+    }
+  },
+  "security": {
+    "title": "Securite",
+    "description": "Gerez les parametres de securite de votre compte.",
+    "main": {
+      "title": "Parametres de securite",
+      "description": "Gerez l'authentification a deux facteurs et les alertes de securite de votre compte."
+    },
+    "twoFactor": {
+      "title": "Authentification a deux facteurs (2FA)",
+      "description": "Ajoutez une couche supplementaire de securite a votre compte",
+      "enabled": "Active",
+      "disabled": "Desactive",
+      "enabledStatus": "Votre compte est protege par 2FA",
+      "disabledStatus": "Nous recommandons d'activer 2FA pour plus de securite",
+      "active": "Actif",
+      "inactive": "Inactif",
+      "ariaEnabled": "Authentification a deux facteurs activee",
+      "ariaDisabled": "Authentification a deux facteurs desactivee",
+      "recommendation": "Nous vous recommandons d'activer l'authentification a deux facteurs pour proteger votre compte.",
+      "configuredMethods": "Methodes configurees :",
+      "appAuthenticator": "Application Authenticator",
+      "appDescription": "Google Authenticator, Authy",
+      "configured": "Configure"
+    },
+    "alerts": {
+      "title": "Alertes de securite",
+      "loginTitle": "Alertes de connexion",
+      "loginDescription": "Nous vous notifierons par email des connexions depuis de nouveaux appareils ou emplacements",
+      "ariaEnabled": "Alertes de connexion activees",
+      "ariaDisabled": "Alertes de connexion desactivees"
+    },
+    "sessions": {
+      "title": "Sessions actives",
+      "description": "Verifiez et gerez les appareils qui ont acces a votre compte.",
+      "current": "Session actuelle",
+      "terminate": "Terminer",
+      "terminateDialog": {
+        "title": "Terminer la session",
+        "description": "Etes-vous sur de vouloir terminer cette session ? L'appareil devra se reconnecter.",
+        "cancel": "Annuler",
+        "confirm": "Terminer la session"
+      },
+      "terminateAriaLabel": "Terminer la session pour {device}",
+      "sessionAriaLabel": "Session {device} - {status}",
+      "currentSession": "Session actuelle",
+      "activeSession": "Session active"
+    },
+    "loginHistory": {
+      "title": "Historique des connexions",
+      "description": "Verifiez les dernieres tentatives de connexion a votre compte.",
+      "successful": "Connexion reussie",
+      "failed": "Connexion echouee",
+      "successBadge": "Reussi",
+      "failBadge": "Echoue",
+      "viewComplete": "Voir l'historique complet",
+      "attemptAriaLabel": "Tentative de connexion {status} depuis {location}",
+      "viewHistoryAriaLabel": "Voir l'historique complet des connexions"
+    },
+    "messages": {
+      "sessionTerminated": "Session terminee correctement",
+      "twoFactorEnabled": "Authentification 2FA activee",
+      "twoFactorDisabled": "Authentification 2FA desactivee",
+      "alertsEnabled": "Alertes de connexion activees",
+      "alertsDisabled": "Alertes de connexion desactivees",
+      "saveSuccess": "Configuration enregistree",
+      "saveSuccessDescription": "Vos parametres de securite ont ete enregistres correctement.",
+      "saveError": "Erreur d'enregistrement",
+      "saveErrorDescription": "Un probleme est survenu lors de l'enregistrement de vos parametres. Veuillez reessayer."
+    },
+    "buttons": {
+      "save": "Enregistrer les modifications",
+      "saving": "Enregistrement..."
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "description": "Gerez vos preferences de notifications par email et push.",
+    "main": {
+      "title": "Parametres de notifications",
+      "description": "Gerez comment et quand vous recevez des notifications par email et push."
+    },
+    "channels": {
+      "title": "Canaux de notification",
+      "push": {
+        "title": "Notifications push",
+        "description": "Notifications en temps reel sur votre appareil",
+        "enabled": "Activees",
+        "disabled": "Desactivees",
+        "ariaEnabled": "Notifications push activees",
+        "ariaDisabled": "Notifications push desactivees"
+      },
+      "email": {
+        "title": "Notifications par email",
+        "description": "Envoyees a votre adresse email principale",
+        "alwaysEnabled": "Toujours activees"
+      }
+    },
+    "categories": {
+      "security": {
+        "title": "Securite et compte",
+        "description": "Alertes importantes sur votre compte"
+      },
+      "activity": {
+        "title": "Activite du produit",
+        "description": "Mises a jour sur votre activite"
+      },
+      "marketing": {
+        "title": "Marketing et promotions",
+        "description": "Actualites et offres speciales"
+      }
+    },
+    "types": {
+      "loginAlerts": {
+        "title": "Nouvelles connexions",
+        "description": "Nous vous avertissons quand quelqu'un se connecte depuis un nouvel appareil"
+      },
+      "passwordChanges": {
+        "title": "Changements de mot de passe",
+        "description": "Confirmation quand vous changez votre mot de passe"
+      },
+      "suspiciousActivity": {
+        "title": "Activite suspecte",
+        "description": "Alertes sur les tentatives d'acces non autorisees"
+      },
+      "mentions": {
+        "title": "Mentions et commentaires",
+        "description": "Quand quelqu'un vous mentionne ou commente vos projets"
+      },
+      "projectUpdates": {
+        "title": "Mises a jour de projets",
+        "description": "Changements importants dans les projets que vous suivez"
+      },
+      "teamInvites": {
+        "title": "Invitations aux equipes",
+        "description": "Quand vous etes invite a rejoindre une equipe"
+      },
+      "newsletter": {
+        "title": "Newsletter hebdomadaire",
+        "description": "Resume des nouvelles fonctionnalites et conseils"
+      },
+      "promotions": {
+        "title": "Offres speciales",
+        "description": "Reductions et promotions exclusives"
+      },
+      "featureAnnouncements": {
+        "title": "Nouvelles fonctionnalites",
+        "description": "Annonces sur les nouvelles caracteristiques du produit"
+      }
+    },
+    "labels": {
+      "required": "Requise",
+      "email": "Email",
+      "push": "Push",
+      "emailAriaLabel": "Notifications par email pour {title} {status}",
+      "pushAriaLabel": "Notifications push pour {title} {status}",
+      "enabled": "activees",
+      "disabled": "desactivees"
+    },
+    "messages": {
+      "pushEnabled": "Notifications push activees",
+      "pushDisabled": "Notifications push desactivees",
+      "notificationToggled": "Notification {type} de {notification} {status}",
+      "saveSuccess": "Configuration enregistree",
+      "saveSuccessDescription": "Vos preferences de notifications ont ete enregistrees correctement.",
+      "saveError": "Erreur d'enregistrement",
+      "saveErrorDescription": "Un probleme est survenu lors de l'enregistrement de vos preferences. Veuillez reessayer."
+    },
+    "buttons": {
+      "save": "Enregistrer les modifications",
+      "saving": "Enregistrement..."
+    }
+  },
+  "billing": {
+    "title": "Facturation",
+    "description": "Gerez votre abonnement, methodes de paiement et factures.",
+    "currentPlan": {
+      "title": "Plan actuel",
+      "description": "Votre abonnement actuel et limites d'utilisation",
+      "free": "Gratuit"
+    },
+    "usage": {
+      "tasks": "Taches mensuelles",
+      "teamMember": "Membre de l'equipe",
+      "projects": "Projets"
+    },
+    "upgrade": {
+      "title": "Besoin de plus de fonctionnalites ?",
+      "description": "Passez a Pro pour obtenir des limites plus elevees et des fonctionnalites avancees",
+      "button": "Mettre a niveau le plan",
+      "ready": "Pret pour plus ?",
+      "explore": "Explorez nos plans Pro et Enterprise",
+      "viewPricing": "Voir les tarifs",
+      "contactSales": "Contacter les ventes"
+    },
+    "paymentMethod": {
+      "title": "Methode de paiement",
+      "description": "Gerez vos methodes de paiement",
+      "noMethod": "Aucune methode de paiement configuree",
+      "addCard": "Ajoutez une carte pour mettre a niveau votre plan",
+      "addButton": "Ajouter une methode de paiement"
+    },
+    "billingHistory": {
+      "title": "Historique de facturation",
+      "description": "Vos factures et paiements recents",
+      "noInvoices": "Aucune facture disponible",
+      "noInvoicesDescription": "Les factures apparaitront ici quand vous aurez un abonnement actif"
+    },
+    "invoices": {
+      "table": {
+        "date": "Date",
+        "amount": "Montant",
+        "invoiceNumber": "Facture #",
+        "status": "Statut",
+        "download": "PDF"
+      },
+      "loading": "Chargement des factures...",
+      "loadMore": "Voir plus de factures",
+      "download": {
+        "tooltip": "Telecharger PDF"
+      },
+      "empty": {
+        "title": "Aucune facture pour le moment",
+        "description": "Les factures apparaitront ici quand vous aurez un abonnement actif"
+      },
+      "status": {
+        "paid": "Payee",
+        "pending": "En attente",
+        "failed": "Echouee",
+        "refunded": "Remboursee"
+      },
+      "pagination": {
+        "showing": "Affichage de {start} a {end} sur {total} factures",
+        "previous": "Precedent",
+        "next": "Suivant"
+      }
+    },
+    "features": {
+      "title": "Fonctionnalites du plan gratuit",
+      "description": "Ce que comprend votre plan actuel",
+      "taskLimit": "Jusqu'a 100 taches par mois",
+      "teamMember": "1 membre de l'equipe",
+      "projectLimit": "Jusqu'a 5 projets",
+      "basicSupport": "Support de base par email",
+      "basicDashboard": "Tableau de bord de base",
+      "profileManagement": "Gestion du profil"
+    },
+    "messages": {
+      "upgradeRedirect": "Redirection vers la page de mise a niveau du plan",
+      "addPaymentForm": "Ouverture du formulaire pour ajouter une methode de paiement"
+    }
+  },
+  "teams": {
+    "title": "Equipes",
+    "description": "Gerez vos equipes, membres et invitations.",
+    "yourTeam": "Votre equipe",
+    "yourTeams": "Vos equipes",
+    "yourTeamsDescription": "Equipes dont vous etes membre. Selectionnez-en une pour voir ses details.",
+    "noTeams": "Vous n'appartenez a aucune equipe pour le moment.",
+    "manageTeamMembers": "Gerez les membres et la configuration de l'equipe."
+  },
+  "plans": {
+    "title": "Plans tarifaires",
+    "description": "Choisissez le plan qui correspond le mieux a vos besoins"
+  },
+  "pages": {
+    "plans": "Plans",
+    "plansDescription": "Comparez les plans et mettez a niveau votre abonnement"
+  }
+}

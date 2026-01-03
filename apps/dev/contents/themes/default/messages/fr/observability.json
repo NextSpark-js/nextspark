@@ -1,0 +1,74 @@
+{
+  "title": "Observabilite IA",
+  "description": "Surveillez les invocations d'agents LangChain et les traces",
+  "loading": "Chargement des traces...",
+  "error": "Erreur lors du chargement des traces",
+  "disabled": "L'observabilite est desactivee dans la configuration",
+  "loadMore": "Charger plus",
+  "loadingMore": "Chargement...",
+  "reload": "Recharger",
+  "reloading": "Rechargement...",
+  "period": {
+    "1h": "Derniere heure",
+    "24h": "Dernieres 24 heures",
+    "7d": "7 derniers jours",
+    "30d": "30 derniers jours"
+  },
+  "status": {
+    "running": "En cours",
+    "success": "Succes",
+    "error": "Erreur"
+  },
+  "filters": {
+    "status": "Statut",
+    "agent": "Agent",
+    "period": "Periode",
+    "allStatus": "Tous les statuts",
+    "allAgents": "Tous les agents",
+    "searchPlaceholder": "Rechercher par ID de trace ou entree..."
+  },
+  "table": {
+    "traceId": "ID de trace",
+    "input": "Message",
+    "agent": "Agent",
+    "status": "Statut",
+    "duration": "Duree",
+    "tokens": "Tokens",
+    "startedAt": "Demarre",
+    "empty": "Aucune trace trouvee pour la periode et les filtres selectionnes"
+  },
+  "detail": {
+    "title": "Detail de la trace",
+    "back": "Retour aux traces",
+    "agent": "Agent",
+    "model": "Modele",
+    "duration": "Duree",
+    "tokens": "Tokens",
+    "calls": "Appels",
+    "tools": "outils",
+    "input": "Entree",
+    "output": "Sortie",
+    "error": "Erreur",
+    "stackTrace": "Stack Trace",
+    "spans": "Spans d'execution",
+    "childTraces": "Traces de sous-agents",
+    "noSpans": "Aucun span enregistre pour cette trace",
+    "showDetails": "Afficher les details",
+    "hideDetails": "Masquer les details",
+    "toolInput": "Entree de l'outil",
+    "toolOutput": "Sortie de l'outil",
+    "hiddenSpans": "{count} chains internes masques",
+    "showInternalChains": "Afficher tout",
+    "hideInternalChains": "Masquer les internes"
+  },
+  "flow": {
+    "title": "Flux de conversation",
+    "userMessage": "Utilisateur",
+    "assistantResponse": "Assistant",
+    "toolCall": "Appel d'outil",
+    "toolResult": "Resultat de l'outil",
+    "noSteps": "Aucune etape d'execution enregistree",
+    "showFull": "Voir complet",
+    "collapse": "Reduire"
+  }
+}

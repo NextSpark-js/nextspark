@@ -1,0 +1,57 @@
+{
+  "hero": {
+    "badge": "Next.js 15 + Better Auth + shadcn/ui",
+    "title": "NextSpark Moderno",
+    "description": "Starter pronto para produção com autenticação, banco de dados e componentes UI bonitos"
+  },
+  "auth": {
+    "authenticated": "Autenticado",
+    "welcomeBack": "Bem-vindo de volta, {email}",
+    "goToDashboard": "Ir para o Dashboard",
+    "getStarted": "Começar",
+    "experience": "Experimente o poder do desenvolvimento web moderno",
+    "createAccount": "Criar Conta",
+    "signIn": "Entrar"
+  },
+  "techStack": {
+    "title": "Stack Tecnológico",
+    "description": "Construído com as tecnologias mais recentes e poderosas",
+    "latest": "Mais Recente",
+    "secure": "Seguro",
+    "supabase": "Supabase",
+    "v5": "v5",
+    "components": "Componentes",
+    "validation": "Validação",
+    "styling": "Estilização",
+    "appRouter": "App Router"
+  },
+  "features": {
+    "title": "Recursos",
+    "description": "Tudo que você precisa para construir um SaaS moderno",
+    "emailAuth": "Autenticação Email/Senha",
+    "googleOAuth": "Google OAuth",
+    "protectedRoutes": "Rotas Protegidas",
+    "emailVerification": "Verificação de Email",
+    "passwordReset": "Redefinição de Senha",
+    "entityManagement": "Sistema de Entidades",
+    "pluginSystem": "Arquitetura de Plugins",
+    "themeSupport": "Suporte Multi-Tema",
+    "i18nSystem": "Internacionalização",
+    "apiRoutes": "API RESTful",
+    "colorMode": "Modo de Cor",
+    "aiIntegration": "Integração de IA",
+    "teams": "Equipes",
+    "memberships": "Membros",
+    "amplitude": "Amplitude Analytics"
+  },
+  "cta": {
+    "readyToStart": "Pronto para Começar?",
+    "description": "Junte-se a milhares de desenvolvedores que confiam em nosso boilerplate para construir aplicações SaaS incríveis mais rápido.",
+    "viewPricing": "Ver Preços",
+    "startFreeTrial": "Iniciar Teste Grátis"
+  },
+  "footer": {
+    "builtWith": "Construído com componentes shadcn/ui",
+    "readyForProduction": "Pronto para implantação em produção"
+  }
+}

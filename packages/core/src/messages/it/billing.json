@@ -1,0 +1,167 @@
+{
+  "title": "Fatturazione",
+  "description": "Gestisci il tuo abbonamento e la fatturazione",
+  "currentPlan": "Piano Attuale",
+  "selectPlan": "Seleziona Piano",
+  "contactSales": "Contatta Vendite",
+  "contactUs": "Contattaci",
+  "unlimited": "Illimitato",
+  "upgrade": "Aggiorna",
+  "downgrade": "Declassa",
+  "cancelSubscription": "Annulla Abbonamento",
+  "upgradeDescription": "Scegli il piano che meglio si adatta alle tue esigenze",
+  "monthly": "Mensile",
+  "yearly": "Annuale",
+  "perMonth": "/mese",
+  "perYear": "/anno",
+  "savePercent": "Risparmia {percent}%",
+
+  "plans": {
+    "free": {
+      "name": "Gratuito",
+      "description": "Inizia con le funzionalita di base"
+    },
+    "starter": {
+      "name": "Starter",
+      "description": "Per piccoli team che stanno iniziando"
+    },
+    "pro": {
+      "name": "Pro",
+      "description": "Per team e aziende in crescita"
+    },
+    "business": {
+      "name": "Business",
+      "description": "Per grandi organizzazioni con esigenze avanzate"
+    },
+    "enterprise": {
+      "name": "Enterprise",
+      "description": "Soluzioni personalizzate per grandi organizzazioni"
+    }
+  },
+
+  "features": {
+    "title": "Funzionalita",
+    "basic_analytics": "Analisi Base",
+    "basic_analytics_description": "Visualizza statistiche e report di utilizzo base",
+    "advanced_analytics": "Analisi Avanzate",
+    "advanced_analytics_description": "Informazioni dettagliate con report personalizzati ed esportazione dati",
+    "realtime_analytics": "Analisi in Tempo Reale",
+    "realtime_analytics_description": "Dashboard live con aggiornamenti dati in tempo reale",
+    "api_access": "Accesso API",
+    "api_access_description": "Accesso completo all'API REST per integrazioni",
+    "webhooks": "Webhooks",
+    "webhooks_description": "Ricevi notifiche di eventi in tempo reale via HTTP",
+    "custom_branding": "Branding Personalizzato",
+    "custom_branding_description": "Aggiungi il tuo logo e i colori del brand",
+    "white_label": "White Label",
+    "white_label_description": "Rimuovi tutto il branding per un'esperienza completamente personalizzata",
+    "sso": "Single Sign-On (SSO)",
+    "sso_description": "SSO enterprise con supporto SAML/OIDC",
+    "audit_logs": "Log di Audit",
+    "audit_logs_description": "Traccia tutte le azioni degli utenti e le modifiche per la conformita",
+    "priority_support": "Supporto Prioritario",
+    "priority_support_description": "Supporto prioritario 24/7 con tempi di risposta piu rapidi",
+    "dedicated_support": "Supporto Dedicato",
+    "dedicated_support_description": "Account manager dedicato e canale di supporto esclusivo",
+    "guest_access": "Accesso Ospiti",
+    "guest_access_description": "Invita collaboratori esterni con accesso limitato",
+    "custom_domain": "Dominio Personalizzato",
+    "custom_domain_description": "Usa il tuo dominio",
+    "advanced_seo": "SEO Avanzato",
+    "advanced_seo_description": "Strumenti SEO avanzati e ottimizzazione",
+    "pipeline_automation": "Automazione Pipeline",
+    "pipeline_automation_description": "Automatizza la tua pipeline di vendita con regole e trigger",
+    "email_templates": "Template Email",
+    "email_templates_description": "Usa template email predefiniti per l'outreach",
+    "gantt_view": "Vista Gantt",
+    "gantt_view_description": "Visualizza i progetti con diagrammi di Gantt",
+    "time_tracking": "Tracciamento Tempo",
+    "time_tracking_description": "Registra il tempo dedicato a task e progetti",
+    "task_automation": "Automazione Task",
+    "task_automation_description": "Automatizza assegnazioni, cambi di stato e notifiche dei task",
+    "customer_import": "Importazione Clienti",
+    "customer_import_description": "Importazione massiva di clienti da CSV o fonti esterne",
+    "recurring_tasks": "Task Ricorrenti",
+    "recurring_tasks_description": "Crea task che si ripetono secondo un calendario"
+  },
+
+  "limits": {
+    "title": "Limiti",
+    "team_members": "Membri del Team",
+    "tasks": "Task",
+    "customers": "Clienti",
+    "api_calls": "Chiamate API / mese",
+    "storage": "Archiviazione",
+    "storage_gb": "Archiviazione (GB)",
+    "file_uploads": "Caricamenti File / mese",
+    "webhooks_count": "Webhooks",
+    "posts": "Post",
+    "monthly_views": "Visualizzazioni Mensili",
+    "authors": "Autori",
+    "contacts": "Contatti",
+    "deals": "Affari",
+    "pipelines": "Pipeline",
+    "workspaces": "Workspace"
+  },
+
+  "usage": {
+    "title": "Utilizzo",
+    "current": "Utilizzo Attuale",
+    "remaining": "Rimanente",
+    "usedOf": "{current} di {max}",
+    "unlimited": "Illimitato",
+    "percentUsed": "{percent}% utilizzato",
+    "noLimits": "Nessun limite di utilizzo configurato"
+  },
+
+  "errors": {
+    "quotaExceeded": "Hai raggiunto il limite del tuo piano per {limit}",
+    "featureNotAvailable": "Questa funzionalita non e disponibile nel tuo piano attuale",
+    "upgradeRequired": "Per favore aggiorna il tuo piano per accedere a questa funzionalita"
+  },
+
+  "downgrade": {
+    "title": "Avviso Limite Risorse",
+    "description": "Le tue risorse attuali superano i limiti del nuovo piano",
+    "resource_over": "{resource}: {current} / {limit}",
+    "policy": "Le risorse esistenti rimarranno accessibili. Non potrai crearne di nuove finche non sarai sotto il limite.",
+    "confirm": "Procedi con il Declassamento",
+    "cancel": "Annulla"
+  },
+
+  "portal": {
+    "manage": "Gestisci Fatturazione",
+    "loading": "Apertura portale fatturazione...",
+    "error": "Errore nell'apertura del portale fatturazione"
+  },
+
+  "subscription": {
+    "active": "Attivo",
+    "trialing": "Prova",
+    "past_due": "Pagamento in Sospeso",
+    "canceled": "Annullato",
+    "expired": "Scaduto",
+    "trialEnds": "La prova termina {date}",
+    "renewsOn": "Si rinnova il {date}",
+    "cancelsOn": "Si annulla il {date}"
+  },
+
+  "invoices": {
+    "title": "Fatture",
+    "description": "Visualizza e scarica le tue fatture",
+    "date": "Data",
+    "amount": "Importo",
+    "status": "Stato",
+    "download": "Scarica",
+    "noInvoices": "Nessuna fattura ancora",
+    "paid": "Pagata",
+    "pending": "In Sospeso",
+    "failed": "Fallita"
+  },
+
+  "placeholder": {
+    "notReal": "Questo e un placeholder - non e ancora una funzionalita reale",
+    "description": "Questa funzionalita arrivera presto. Aggiorna il tuo piano per ricevere una notifica quando sara disponibile.",
+    "benefits": "Cosa otterrai:"
+  }
+}

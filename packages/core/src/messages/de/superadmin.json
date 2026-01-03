@@ -1,0 +1,194 @@
+{
+  "navigation": {
+    "dashboard": "Dashboard",
+    "users": "Benutzer",
+    "style": "Stil-Galerie",
+    "analytics": "Analysen",
+    "config": "Systemkonfiguration",
+    "exitSector7": "Sector7 verlassen",
+    "returnToDashboard": "Zurueck zum Dashboard"
+  },
+  "dashboard": {
+    "title": "Sector7",
+    "subtitle": "Super-Administrator-Kontrollzentrum",
+    "restrictedAccess": "Zugangsbeschraenkter Bereich - Nur fuer Superadmin",
+    "systemStatus": "Systemstatus",
+    "systemVersion": "Plattformversion",
+    "securityLevel": "Sicherheitsstufe",
+    "quickActions": {
+      "userManagement": {
+        "title": "Benutzerverwaltung",
+        "description": "Alle Benutzer und Superadministratoren anzeigen und verwalten"
+      },
+      "styleGallery": {
+        "title": "Stil-Galerie",
+        "description": "Komponenten und Designsystem-Elemente in der Vorschau anzeigen"
+      },
+      "analytics": {
+        "title": "Analysen",
+        "description": "Plattformstatistiken und Nutzungsmetriken"
+      },
+      "systemConfig": {
+        "title": "Systemkonfiguration",
+        "description": "Anwendungskonfigurationen und Einstellungen"
+      }
+    },
+    "status": {
+      "online": "Online",
+      "active": "Aktiv",
+      "version": "v1.0.0"
+    }
+  },
+  "users": {
+    "title": "Benutzerverwaltung",
+    "subtitle": "Alle Benutzer und Superadministratoren verwalten",
+    "regularUsers": "Regulaere Benutzer",
+    "superadmins": "Superadmins",
+    "totalUsers": "Benutzer gesamt",
+    "allRegisteredUsers": "Alle registrierten Benutzer",
+    "membersCollaboratorsAdmins": "Mitglieder, Mitarbeiter, Administratoren",
+    "systemAdministrators": "Systemadministratoren",
+    "roleDistribution": "Rollenverteilung",
+    "roles": "Rollen",
+    "refresh": "Aktualisieren",
+    "lastUpdated": "Zuletzt aktualisiert",
+    "requestedBy": "Angefordert von",
+    "source": "Quelle",
+    "table": {
+      "user": "Benutzer",
+      "email": "E-Mail",
+      "role": "Rolle",
+      "status": "Status",
+      "joined": "Beigetreten",
+      "since": "Seit",
+      "actions": "Aktionen",
+      "administrator": "Administrator",
+      "verified": "Verifiziert",
+      "pending": "Ausstehend",
+      "unverified": "Nicht verifiziert",
+      "noUsers": "Keine Benutzer gefunden",
+      "noUsersDescription": "Es gibt noch keine regulaeren Benutzer im System.",
+      "noSuperadmins": "Keine Superadmins gefunden",
+      "noSuperadminsDescription": "Das ist ungewoehnlich - es sollte mindestens einen Superadmin geben.",
+      "you": "Sie"
+    },
+    "actions": {
+      "openMenu": "Menue oeffnen",
+      "viewProfile": "Profil anzeigen",
+      "editRole": "Rolle bearbeiten",
+      "sendEmail": "E-Mail senden",
+      "sendMessage": "Nachricht senden",
+      "suspendUser": "Benutzer sperren",
+      "adminSettings": "Admin-Einstellungen",
+      "revokeAdmin": "Admin widerrufen"
+    },
+    "descriptions": {
+      "regularUsersDescription": "Alle Benutzer ausser Superadministratoren. Beinhaltet Mitglieder, Mitarbeiter und Administratoren.",
+      "superadminsDescription": "Benutzer mit vollstaendigem Systemzugriff und Administratorrechten. Mit aeusserster Vorsicht behandeln."
+    },
+    "security": {
+      "notice": "Sicherheitshinweis:",
+      "superadminWarning": "Superadmin-Zugriff gewaehrt vollstaendige Systemkontrolle. Mit aeusserster Vorsicht behandeln."
+    }
+  },
+  "style": {
+    "title": "Stil-Galerie",
+    "subtitle": "Designsystem-Schaufenster und Komponentenbibliothek",
+    "exportTokens": "Tokens exportieren",
+    "stats": {
+      "components": "Komponenten",
+      "availableComponents": "Verfuegbare UI-Komponenten",
+      "colorTokens": "Farb-Tokens",
+      "themeColorVariables": "Theme-Farbvariablen",
+      "themes": "Themes",
+      "lightDarkModes": "Hell- und Dunkelmodus",
+      "documentation": "Dokumentation",
+      "componentCoverage": "Komponentenabdeckung"
+    },
+    "tabs": {
+      "components": "Komponenten",
+      "theme": "Theme und Farben",
+      "guidelines": "Richtlinien"
+    },
+    "componentLibrary": {
+      "title": "Komponentenbibliothek",
+      "description": "Vollstaendige Uebersicht aller verfuegbaren UI-Komponenten mit verschiedenen Zustaenden und Variationen"
+    },
+    "themeSystem": {
+      "title": "Theme-System",
+      "description": "Farb-Tokens, Typografie und Designsystem-Variablen fuer helle und dunkle Themes"
+    },
+    "designPrinciples": {
+      "title": "Design-Prinzipien",
+      "description": "Grundlegende Prinzipien, die unser Designsystem leiten",
+      "consistency": {
+        "title": "Konsistenz",
+        "description": "Visuelle und funktionale Konsistenz ueber alle Komponenten hinweg beibehalten"
+      },
+      "accessibility": {
+        "title": "Barrierefreiheit",
+        "description": "Sicherstellen, dass alle Komponenten die WCAG 2.1 AA-Standards erfuellen"
+      },
+      "scalability": {
+        "title": "Skalierbarkeit",
+        "description": "Komponenten entwerfen, die in verschiedenen Masstaden und Kontexten funktionieren"
+      },
+      "performance": {
+        "title": "Leistung",
+        "description": "Fuer schnelles Laden und fluessige Interaktionen optimieren"
+      }
+    },
+    "usageGuidelines": {
+      "title": "Nutzungsrichtlinien",
+      "description": "Wie Sie dieses Designsystem effektiv nutzen",
+      "colorUsage": {
+        "title": "Farbverwendung",
+        "description": "Semantische Farbnamen (primary, secondary, destructive) anstelle spezifischer Farben verwenden"
+      },
+      "typographyScale": {
+        "title": "Typografie-Skala",
+        "description": "Der etablierten Typografie-Skala fuer konsistente Hierarchie folgen"
+      },
+      "spacingSystem": {
+        "title": "Abstandssystem",
+        "description": "Das 8px-Rastersystem fuer konsistenten Abstand und Ausrichtung verwenden"
+      },
+      "componentComposition": {
+        "title": "Komponentenkomposition",
+        "description": "Basiskomponenten kombinieren, um komplexe Oberflaechen zu erstellen"
+      }
+    },
+    "technicalSpecs": {
+      "title": "Technische Spezifikationen",
+      "description": "Implementierungsdetails und Anforderungen",
+      "framework": "Framework",
+      "styling": "Styling",
+      "components": "Komponenten",
+      "icons": "Icons",
+      "themeSystem": "Theme-System",
+      "buildTool": "Build-Tool"
+    },
+    "resources": {
+      "title": "Ressourcen und Links",
+      "description": "Zusaetzliche Ressourcen und Dokumentation"
+    }
+  },
+  "errors": {
+    "accessDenied": "Zugriff verweigert",
+    "superadminRequired": "Sie benoetigen Superadmin-Rechte, um auf diesen Bereich zuzugreifen.",
+    "restrictedArea": "Dieser Bereich ist nur fuer Systemadministratoren zugaenglich. Wenn Sie glauben, dass dies ein Fehler ist, kontaktieren Sie bitte den Support.",
+    "sessionNotFound": "Sitzung nicht gefunden. Bitte melden Sie sich erneut an.",
+    "goBack": "Zurueck",
+    "dashboard": "Dashboard",
+    "errorLoadingUsers": "Fehler beim Laden der Benutzer",
+    "failedToLoadUserData": "Benutzerdaten konnten nicht geladen werden",
+    "retry": "Erneut versuchen"
+  },
+  "common": {
+    "backToSector7": "Zurueck zu Sector7",
+    "comingSoon": "Demnachst verfuegbar",
+    "soon": "Bald",
+    "loading": "Laden...",
+    "error": "Fehler"
+  }
+}

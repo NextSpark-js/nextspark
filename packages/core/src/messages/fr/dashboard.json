@@ -1,0 +1,41 @@
+{
+  "title": "Tableau de bord",
+  "welcome": "Bon retour, {name}",
+  "stats": {
+    "accountStatus": "Statut du compte",
+    "plan": "Plan",
+    "teamMembers": "Membres de l'equipe",
+    "usage": "Utilisation",
+    "active": "Actif",
+    "free": "Gratuit"
+  },
+  "quickActions": {
+    "title": "Actions rapides",
+    "description": "Accedez rapidement aux fonctionnalites les plus utilisees",
+    "myTasks": "Mes taches",
+    "myTasksDescription": "Gerer les taches en attente",
+    "myProfile": "Mon profil",
+    "myProfileDescription": "Informations personnelles",
+    "settings": "Parametres",
+    "settingsDescription": "Parametres du compte",
+    "billing": "Facturation",
+    "billingDescription": "Plan et paiements",
+    "createTask": "Creer une tache",
+    "viewTasks": "Voir les taches",
+    "updateProfile": "Mettre a jour le profil",
+    "manageSettings": "Gerer les parametres"
+  },
+  "activity": {
+    "title": "Activite recente",
+    "description": "Vos actions et evenements recents",
+    "signedIn": "Connexion au tableau de bord",
+    "justNow": "A l'instant",
+    "accountCreated": "Compte cree"
+  },
+  "badges": {
+    "verified": "verifie",
+    "basic": "basique",
+    "solo": "individuel",
+    "low": "faible"
+  }
+}

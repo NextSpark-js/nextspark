@@ -1,0 +1,172 @@
+{
+  "navigation": {
+    "dashboard": "Dashboard",
+    "settings": "Einstellungen",
+    "profile": "Profil",
+    "password": "Passwort",
+    "security": "Sicherheit",
+    "notifications": "Benachrichtigungen",
+    "apiKeys": "API-Schluessel",
+    "billing": "Abrechnung",
+    "help": "Hilfe & Support",
+    "team": "Team",
+    "admin": "Administration",
+    "learn": "Lernen",
+    "teach": "Unterrichten",
+    "myCourses": "Meine Kurse",
+    "catalog": "Katalog",
+    "courses": "Kurse",
+    "lessons": "Lektionen",
+    "analytics": "Analysen",
+    "enrollments": "Einschreibungen",
+    "students": "Studenten"
+  },
+  "mobileNav": {
+    "greeting": "Hallo, {name}",
+    "home": "Startseite",
+    "tasks": "Aufgaben",
+    "create": "Erstellen",
+    "settings": "Einstellungen",
+    "more": "Mehr",
+    "moreOptions": "Weitere Optionen",
+    "moreOptionsDescription": "Zugriff auf Einstellungen und zusaetzliche Funktionen",
+    "quickCreateDescription": "Neues Element erstellen",
+    "noEntitiesAvailable": "Keine Elemente zum Erstellen verfuegbar",
+    "createNew": "Neu erstellen"
+  },
+  "buttons": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Loeschen",
+    "edit": "Bearbeiten",
+    "add": "Hinzufuegen",
+    "update": "Aktualisieren",
+    "submit": "Absenden",
+    "close": "Schliessen",
+    "back": "Zurueck",
+    "next": "Weiter",
+    "previous": "Zurueck",
+    "continue": "Fortfahren",
+    "finish": "Abschliessen",
+    "signIn": "Anmelden",
+    "signUp": "Registrieren",
+    "signOut": "Abmelden",
+    "signingOut": "Abmelden..."
+  },
+  "status": {
+    "loading": "Laden...",
+    "success": "Erfolg",
+    "error": "Fehler",
+    "warning": "Warnung",
+    "info": "Information"
+  },
+  "actions": {
+    "create": "Erstellen",
+    "read": "Anzeigen",
+    "update": "Aktualisieren",
+    "delete": "Loeschen"
+  },
+  "common": {
+    "yes": "Ja",
+    "no": "Nein",
+    "enabled": "Aktiviert",
+    "disabled": "Deaktiviert",
+    "active": "Aktiv",
+    "inactive": "Inaktiv",
+    "on": "An",
+    "off": "Aus"
+  },
+  "theme": {
+    "selector": "Theme-Auswahl",
+    "current": "aktuelles Theme",
+    "change": "Theme wechseln",
+    "loading": "Theme-Auswahl wird geladen",
+    "changed": "Theme geaendert zu",
+    "light": "Hell",
+    "dark": "Dunkel",
+    "system": "System",
+    "changeToLight": "Zu hellem Theme wechseln",
+    "changeToDark": "Zu dunklem Theme wechseln",
+    "changeToSystem": "Zu System-Theme wechseln"
+  },
+  "notifications": {
+    "title": "Benachrichtigungen",
+    "unread": "ungelesen",
+    "new": "neu",
+    "markAllAsRead": "Alle Benachrichtigungen als gelesen markieren",
+    "markAll": "Alle markieren",
+    "empty": "Sie haben keine Benachrichtigungen",
+    "configure": "Benachrichtigungen konfigurieren"
+  },
+  "search": {
+    "placeholder": "Seiten, Einstellungen suchen...",
+    "label": "Seiten und Einstellungen suchen",
+    "clear": "Suche loeschen",
+    "results": "Suchergebnisse",
+    "searching": "Suche...",
+    "noResults": "Keine Ergebnisse gefunden fuer \"{query}\"",
+    "tryDifferent": "Versuchen Sie andere Suchbegriffe"
+  },
+  "userRoles": {
+    "member": "Mitglied",
+    "colaborator": "Mitarbeiter",
+    "admin": "Administrator",
+    "superadmin": "Super-Administrator"
+  },
+  "accessibility": {
+    "navigation": {
+      "main": "Hauptnavigation",
+      "search": "Suchen",
+      "mobileActions": "Mobile Aktionen",
+      "closeMenu": "Menue schliessen",
+      "openMenu": "Menue oeffnen",
+      "mobileMenu": "Mobiles Menue",
+      "mainMobile": "Mobile Hauptnavigation",
+      "settings": "Einstellungsnavigation",
+      "dashboard": "Dashboard-Navigation"
+    },
+    "brand": {
+      "goToHome": "Zur Startseite gehen"
+    },
+    "user": {
+      "loading": "Benutzer wird geladen",
+      "menu": "Benutzermenue fuer {name}",
+      "avatar": "Avatar von {name}",
+      "info": "Benutzerinformationen",
+      "defaultName": "Benutzer",
+      "goToProfile": "Zum Profil gehen",
+      "goToSettings": "Zu Einstellungen gehen",
+      "signOut": "Abmelden",
+      "signIn": "Anmelden",
+      "signUp": "Registrieren"
+    },
+    "actions": {
+      "goToDashboard": "Zum Dashboard gehen",
+      "goToProfile": "Zum Profil gehen",
+      "goToSettings": "Zu Einstellungen gehen"
+    },
+    "loading": "Laden",
+    "groups": {
+      "collapse": "Gruppe einklappen",
+      "expand": "Gruppe ausklappen",
+      "delete": "Gruppe loeschen"
+    },
+    "media": {
+      "articleCover": "Artikeltitelbild",
+      "postMedia": "Beitragsmedien",
+      "postMediaNumber": "Beitragsmedien {number}",
+      "story": "Story",
+      "post": "Beitrag",
+      "tweetMedia": "Tweet-Medien",
+      "uploaded": "Hochgeladene Datei"
+    },
+    "taskCard": "Aufgabenkarte: {title}. Status: {status}",
+    "toggleTask": "Aufgabe '{title}' als {action} markieren",
+    "createdDate": "Erstellt am {date}",
+    "deleteTask": "Aufgabe loeschen: {title}",
+    "completedTaskCard": "Erledigte Aufgabe: {title}",
+    "reactivateTask": "Aufgabe reaktivieren: {title}",
+    "completedDate": "Erledigt am {date}",
+    "deleteCompletedTask": "Erledigte Aufgabe loeschen: {title}"
+  }
+}

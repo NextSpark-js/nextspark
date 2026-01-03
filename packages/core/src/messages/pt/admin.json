@@ -1,0 +1,219 @@
+{
+  "pages": {
+    "title": "Paginas",
+    "description": "Gerencie suas paginas dinamicas",
+    "loading": "Carregando paginas...",
+    "empty": "Nenhuma pagina encontrada. Crie sua primeira pagina para comecar.",
+    "search": {
+      "placeholder": "Buscar paginas..."
+    },
+    "filters": {
+      "locale": "Idioma",
+      "allLocales": "Todos os idiomas",
+      "status": "Status",
+      "allStatuses": "Todos os status",
+      "published": "Publicado",
+      "draft": "Rascunho"
+    },
+    "table": {
+      "title": "Titulo",
+      "slug": "Slug",
+      "locale": "Idioma",
+      "status": "Status",
+      "updated": "Ultima Atualizacao"
+    },
+    "status": {
+      "published": "Publicado",
+      "draft": "Rascunho",
+      "unsaved": "Alteracoes nao salvas"
+    },
+    "actions": {
+      "create": "Criar Pagina",
+      "edit": "Editar",
+      "view": "Ver",
+      "delete": "Excluir",
+      "save": "Salvar",
+      "saving": "Salvando...",
+      "publish": "Publicar",
+      "preview": "Visualizar"
+    },
+    "new": {
+      "title": "Criar Nova Pagina",
+      "description": "Crie uma nova pagina dinamica para seu site",
+      "back": "Voltar para Paginas",
+      "success": "Pagina criada com sucesso",
+      "form": {
+        "title": "Detalhes da Pagina",
+        "description": "Insira as informacoes basicas da sua pagina",
+        "fields": {
+          "title": "Titulo da Pagina",
+          "slug": "Slug da URL",
+          "locale": "Idioma"
+        },
+        "placeholders": {
+          "title": "Sobre Nos",
+          "slug": "sobre-nos"
+        },
+        "hints": {
+          "slug": "Versao amigavel para URL do titulo (minusculas, sem espacos)"
+        },
+        "actions": {
+          "cancel": "Cancelar",
+          "create": "Criar Pagina",
+          "creating": "Criando..."
+        }
+      }
+    },
+    "edit": {
+      "title": "Editar Pagina",
+      "loading": "Carregando pagina...",
+      "back": "Voltar para Paginas",
+      "fields": {
+        "title": "Titulo",
+        "slug": "Slug"
+      },
+      "placeholders": {
+        "title": "Titulo da pagina",
+        "slug": "slug-da-pagina"
+      },
+      "status": {
+        "published": "Publicado",
+        "unsaved": "Alteracoes nao salvas"
+      },
+      "actions": {
+        "save": "Salvar",
+        "saving": "Salvando...",
+        "publish": "Publicar",
+        "preview": "Visualizar",
+        "viewPage": "Ver"
+      },
+      "viewMode": {
+        "layout": "Layout",
+        "preview": "Preview"
+      },
+      "messages": {
+        "saved": "Pagina salva com sucesso"
+      }
+    },
+    "settings": {
+      "title": "Configuracao da Pagina",
+      "seo": {
+        "title": "Configuracao SEO",
+        "metaTitle": "Meta Titulo",
+        "metaTitlePlaceholder": "Insira o titulo para mecanismos de busca",
+        "metaTitleHint": "Recomendado: 50-60 caracteres",
+        "metaDescription": "Meta Descricao",
+        "metaDescriptionPlaceholder": "Insira uma breve descricao para mecanismos de busca",
+        "characters": "caracteres",
+        "metaKeywords": "Palavras-chave",
+        "metaKeywordsPlaceholder": "palavra1, palavra2, palavra3",
+        "metaKeywordsHint": "Palavras-chave separadas por virgula",
+        "ogImage": "Imagem Social (OG Image)",
+        "ogImagePlaceholder": "https://exemplo.com/imagem.jpg",
+        "ogImageHint": "Imagem exibida ao compartilhar em redes sociais"
+      },
+      "customFields": {
+        "title": "Campos Personalizados",
+        "empty": "Nenhum campo personalizado adicionado",
+        "keyPlaceholder": "Chave do campo",
+        "valuePlaceholder": "Valor do campo",
+        "add": "Adicionar Campo"
+      }
+    }
+  },
+  "blockEditor": {
+    "picker": {
+      "title": "Biblioteca de Blocos",
+      "description": "Arraste blocos ou clique para adicionar",
+      "empty": "Nenhum bloco encontrado",
+      "search": {
+        "placeholder": "Buscar blocos..."
+      },
+      "categories": {
+        "all": "Todos"
+      }
+    },
+    "canvas": {
+      "empty": {
+        "message": "Nenhum bloco adicionado ainda",
+        "hint": "Arraste blocos da biblioteca para comecar a construir sua pagina"
+      }
+    },
+    "block": {
+      "error": {
+        "notFound": "Bloco '{slug}' nao encontrado"
+      }
+    },
+    "settings": {
+      "empty": {
+        "message": "Nenhum bloco selecionado",
+        "hint": "Selecione um bloco do canvas para editar sua configuracao"
+      },
+      "error": {
+        "notFound": "Configuracao do bloco nao encontrada"
+      },
+      "noFields": "Este bloco nao tem campos configuraveis",
+      "actions": {
+        "reset": "Redefinir",
+        "remove": "Remover"
+      },
+      "tabs": {
+        "content": "Conteudo",
+        "design": "Design",
+        "advanced": "Avancado",
+        "noContentFields": "Nenhum campo de conteudo disponivel",
+        "noDesignFields": "Nenhum campo de design disponivel",
+        "noAdvancedFields": "Nenhum campo avancado disponivel"
+      }
+    },
+    "form": {
+      "selectPlaceholder": "Selecione uma opcao",
+      "emptyArray": "Nenhum elemento adicionado",
+      "itemNumber": "Elemento {number}",
+      "addItem": "Adicionar elemento",
+      "itemCount": "{current} de {max} elementos"
+    }
+  },
+  "builder": {
+    "back": "Voltar",
+    "loading": "Carregando...",
+    "fields": {
+      "title": "Titulo",
+      "slug": "Slug"
+    },
+    "placeholders": {
+      "title": "Insira o titulo...",
+      "slug": "url-slug",
+      "excerpt": "Breve descricao...",
+      "imageUrl": "https://exemplo.com/imagem.jpg"
+    },
+    "status": {
+      "published": "Publicado",
+      "draft": "Rascunho",
+      "scheduled": "Agendado",
+      "archived": "Arquivado",
+      "unsaved": "Alteracoes nao salvas"
+    },
+    "actions": {
+      "save": "Salvar",
+      "saving": "Salvando...",
+      "viewPage": "Ver"
+    },
+    "viewMode": {
+      "layout": "Layout",
+      "preview": "Visualizacao"
+    },
+    "sidebar": {
+      "blocks": "Blocos",
+      "fields": "Campos",
+      "fieldsTitle": "Campos da Entidade",
+      "fieldsDescription": "Configure propriedades adicionais",
+      "noFields": "Nenhum campo adicional disponivel",
+      "noCategories": "Nenhuma categoria disponivel"
+    },
+    "messages": {
+      "saved": "Salvo com sucesso",
+      "created": "Criado com sucesso"
+    }
+  }
+}

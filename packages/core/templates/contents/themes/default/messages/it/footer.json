@@ -1,0 +1,22 @@
+{
+  "product": "Prodotto",
+  "company": "Azienda",
+  "legal": "Legale",
+  "resources": "Risorse",
+  "features": "Funzionalità",
+  "pricing": "Prezzi",
+  "support": "Supporto",
+  "docs": "Documentazione",
+  "about": "Chi Siamo",
+  "blog": "Blog",
+  "careers": "Carriere",
+  "contact": "Contatti",
+  "privacy": "Informativa Privacy",
+  "terms": "Termini di Servizio",
+  "cookies": "Politica Cookie",
+  "gdpr": "GDPR",
+  "helpCenter": "Centro Assistenza",
+  "apiDocs": "Documentazione API",
+  "status": "Stato",
+  "changelog": "Changelog"
+}

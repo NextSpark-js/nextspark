@@ -1,0 +1,35 @@
+{
+  "title": "Kategorien",
+  "description": "Beitragskategorien verwalten",
+  "newCategory": "Neue Kategorie",
+  "editCategory": "Kategorie bearbeiten",
+  "createDescription": "Erstellen Sie eine neue Kategorie zur Organisation von Beiträgen",
+  "editDescription": "Kategoriedetails bearbeiten",
+  "name": "Name",
+  "slug": "Slug",
+  "icon": "Symbol",
+  "color": "Farbe",
+  "actions": "Aktionen",
+  "loading": "Wird geladen...",
+  "empty": "Keine Kategorien gefunden",
+  "emptyDescription": "Beginnen Sie mit der Erstellung Ihrer ersten Kategorie.",
+  "deleteConfirm": "Kategorie löschen?",
+  "deleteDescription": "Möchten Sie wirklich \"{name}\" löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+  "saveCategory": "Kategorie speichern",
+  "saving": "Wird gespeichert...",
+  "deleting": "Wird gelöscht...",
+  "cancel": "Abbrechen",
+  "delete": "Löschen",
+  "iconHelp": "Lucide-Symbolname (z.B. cpu, book-open)",
+  "createSuccess": "Kategorie erfolgreich erstellt",
+  "updateSuccess": "Kategorie erfolgreich aktualisiert",
+  "deleteSuccess": "Kategorie erfolgreich gelöscht",
+  "placeholders": {
+    "name": "Technologie",
+    "slug": "technologie",
+    "description": "Beiträge über Technologie und Softwareentwicklung"
+  },
+  "errors": {
+    "nameRequired": "Name ist erforderlich"
+  }
+}

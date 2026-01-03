@@ -1,0 +1,52 @@
+{
+  "actions": {
+    "create": "Crea {entity}",
+    "edit": "Modifica {entity}",
+    "delete": "Elimina {entity}",
+    "view": "Visualizza {entity}",
+    "duplicate": "Duplica",
+    "archive": "Archivia",
+    "restore": "Ripristina",
+    "save": "Salva {entity}",
+    "update": "Aggiorna {entity}"
+  },
+  "fields": {
+    "title": "Titolo",
+    "name": "Nome",
+    "slug": "Slug",
+    "status": "Stato",
+    "description": "Descrizione",
+    "createdAt": "Creato",
+    "updatedAt": "Aggiornato",
+    "id": "ID"
+  },
+  "messages": {
+    "created": "{entity} creato con successo",
+    "updated": "{entity} aggiornato con successo",
+    "deleted": "{entity} eliminato con successo",
+    "archived": "{entity} archiviato con successo",
+    "restored": "{entity} ripristinato con successo",
+    "duplicated": "{entity} duplicato con successo",
+    "confirmDelete": "Sei sicuro di voler eliminare questo {entity}?",
+    "confirmArchive": "Sei sicuro di voler archiviare questo {entity}?",
+    "deleteWarning": "Questa azione non puo essere annullata.",
+    "notFound": "{entity} non trovato",
+    "loadError": "Errore nel caricamento di {entity}"
+  },
+  "list": {
+    "empty": "Nessun {entities} trovato",
+    "emptyFiltered": "Nessun {entities} corrisponde ai filtri",
+    "loading": "Caricamento...",
+    "search": "Cerca...",
+    "searchPlaceholder": "Cerca {entities}...",
+    "noResults": "Nessun risultato trovato",
+    "showing": "Mostrando {count} di {total} {entities}",
+    "selected": "{count} selezionati"
+  },
+  "detail": {
+    "back": "Torna a {entities}",
+    "createdAt": "Creato {date}",
+    "updatedAt": "Aggiornato {date}",
+    "idCopied": "ID copiato negli appunti"
+  }
+}

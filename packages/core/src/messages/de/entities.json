@@ -1,0 +1,52 @@
+{
+  "actions": {
+    "create": "{entity} erstellen",
+    "edit": "{entity} bearbeiten",
+    "delete": "{entity} loeschen",
+    "view": "{entity} anzeigen",
+    "duplicate": "Duplizieren",
+    "archive": "Archivieren",
+    "restore": "Wiederherstellen",
+    "save": "{entity} speichern",
+    "update": "{entity} aktualisieren"
+  },
+  "fields": {
+    "title": "Titel",
+    "name": "Name",
+    "slug": "Slug",
+    "status": "Status",
+    "description": "Beschreibung",
+    "createdAt": "Erstellt",
+    "updatedAt": "Aktualisiert",
+    "id": "ID"
+  },
+  "messages": {
+    "created": "{entity} erfolgreich erstellt",
+    "updated": "{entity} erfolgreich aktualisiert",
+    "deleted": "{entity} erfolgreich geloescht",
+    "archived": "{entity} erfolgreich archiviert",
+    "restored": "{entity} erfolgreich wiederhergestellt",
+    "duplicated": "{entity} erfolgreich dupliziert",
+    "confirmDelete": "Sind Sie sicher, dass Sie dieses {entity} loeschen moechten?",
+    "confirmArchive": "Sind Sie sicher, dass Sie dieses {entity} archivieren moechten?",
+    "deleteWarning": "Diese Aktion kann nicht rueckgaengig gemacht werden.",
+    "notFound": "{entity} nicht gefunden",
+    "loadError": "Fehler beim Laden von {entity}"
+  },
+  "list": {
+    "empty": "Keine {entities} gefunden",
+    "emptyFiltered": "Keine {entities} entsprechen den Filtern",
+    "loading": "Laden...",
+    "search": "Suchen...",
+    "searchPlaceholder": "{entities} suchen...",
+    "noResults": "Keine Ergebnisse gefunden",
+    "showing": "Zeige {count} von {total} {entities}",
+    "selected": "{count} ausgewaehlt"
+  },
+  "detail": {
+    "back": "Zurueck zu {entities}",
+    "createdAt": "Erstellt {date}",
+    "updatedAt": "Aktualisiert {date}",
+    "idCopied": "ID in Zwischenablage kopiert"
+  }
+}

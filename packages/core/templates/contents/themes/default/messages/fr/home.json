@@ -1,0 +1,57 @@
+{
+  "hero": {
+    "badge": "Next.js 15 + Better Auth + shadcn/ui",
+    "title": "NextSpark moderne",
+    "description": "Starter prêt pour la production avec authentification, base de données et composants UI magnifiques"
+  },
+  "auth": {
+    "authenticated": "Authentifié",
+    "welcomeBack": "Bienvenue, {email}",
+    "goToDashboard": "Aller au tableau de bord",
+    "getStarted": "Commencer",
+    "experience": "Découvrez la puissance du développement web moderne",
+    "createAccount": "Créer un compte",
+    "signIn": "Se connecter"
+  },
+  "techStack": {
+    "title": "Stack technique",
+    "description": "Construit avec les technologies les plus récentes et les plus puissantes",
+    "latest": "Dernière version",
+    "secure": "Sécurisé",
+    "supabase": "Supabase",
+    "v5": "v5",
+    "components": "Composants",
+    "validation": "Validation",
+    "styling": "Styles",
+    "appRouter": "App Router"
+  },
+  "features": {
+    "title": "Fonctionnalités",
+    "description": "Tout ce dont vous avez besoin pour créer un SaaS moderne",
+    "emailAuth": "Authentification email/mot de passe",
+    "googleOAuth": "OAuth Google",
+    "protectedRoutes": "Routes protégées",
+    "emailVerification": "Vérification email",
+    "passwordReset": "Réinitialisation mot de passe",
+    "entityManagement": "Système d'entités",
+    "pluginSystem": "Architecture de plugins",
+    "themeSupport": "Support multi-thèmes",
+    "i18nSystem": "Internationalisation",
+    "apiRoutes": "API RESTful",
+    "colorMode": "Mode couleur",
+    "aiIntegration": "Intégration IA",
+    "teams": "Équipes",
+    "memberships": "Adhésions",
+    "amplitude": "Analytique Amplitude"
+  },
+  "cta": {
+    "readyToStart": "Prêt à commencer ?",
+    "description": "Rejoignez des milliers de développeurs qui font confiance à notre boilerplate pour créer des applications SaaS incroyables plus rapidement.",
+    "viewPricing": "Voir les tarifs",
+    "startFreeTrial": "Démarrer l'essai gratuit"
+  },
+  "footer": {
+    "builtWith": "Construit avec les composants shadcn/ui",
+    "readyForProduction": "Prêt pour le déploiement en production"
+  }
+}

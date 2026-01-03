@@ -1,0 +1,16 @@
+{
+  "userRoles": {
+    "member": "Membro",
+    "superadmin": "Super Admin",
+    "developer": "Desenvolvedor"
+  },
+  "teamRoles": {
+    "owner": "Proprietario",
+    "admin": "Administrador",
+    "member": "Membro",
+    "viewer": "Visualizador",
+    "editor": "Editor"
+  },
+  "comingSoon": "Em Breve",
+  "soon": "Em breve"
+}

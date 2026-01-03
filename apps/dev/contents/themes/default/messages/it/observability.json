@@ -1,0 +1,74 @@
+{
+  "title": "Osservabilita IA",
+  "description": "Monitora invocazioni agenti LangChain e tracce",
+  "loading": "Caricamento tracce...",
+  "error": "Errore nel caricamento delle tracce",
+  "disabled": "L'osservabilita e disabilitata nella configurazione",
+  "loadMore": "Carica altro",
+  "loadingMore": "Caricamento...",
+  "reload": "Ricarica",
+  "reloading": "Ricaricamento...",
+  "period": {
+    "1h": "Ultima ora",
+    "24h": "Ultime 24 ore",
+    "7d": "Ultimi 7 giorni",
+    "30d": "Ultimi 30 giorni"
+  },
+  "status": {
+    "running": "In esecuzione",
+    "success": "Successo",
+    "error": "Errore"
+  },
+  "filters": {
+    "status": "Stato",
+    "agent": "Agente",
+    "period": "Periodo",
+    "allStatus": "Tutti gli stati",
+    "allAgents": "Tutti gli agenti",
+    "searchPlaceholder": "Cerca per ID traccia o input..."
+  },
+  "table": {
+    "traceId": "ID Traccia",
+    "input": "Messaggio",
+    "agent": "Agente",
+    "status": "Stato",
+    "duration": "Durata",
+    "tokens": "Token",
+    "startedAt": "Avviato",
+    "empty": "Nessuna traccia trovata per il periodo e i filtri selezionati"
+  },
+  "detail": {
+    "title": "Dettaglio Traccia",
+    "back": "Torna alle tracce",
+    "agent": "Agente",
+    "model": "Modello",
+    "duration": "Durata",
+    "tokens": "Token",
+    "calls": "Chiamate",
+    "tools": "strumenti",
+    "input": "Input",
+    "output": "Output",
+    "error": "Errore",
+    "stackTrace": "Stack Trace",
+    "spans": "Span di Esecuzione",
+    "childTraces": "Tracce Sub-Agenti",
+    "noSpans": "Nessuno span registrato per questa traccia",
+    "showDetails": "Mostra dettagli",
+    "hideDetails": "Nascondi dettagli",
+    "toolInput": "Input Strumento",
+    "toolOutput": "Output Strumento",
+    "hiddenSpans": "{count} chain interni nascosti",
+    "showInternalChains": "Mostra tutti",
+    "hideInternalChains": "Nascondi interni"
+  },
+  "flow": {
+    "title": "Flusso Conversazione",
+    "userMessage": "Utente",
+    "assistantResponse": "Assistente",
+    "toolCall": "Chiamata Strumento",
+    "toolResult": "Risultato Strumento",
+    "noSteps": "Nessun passo di esecuzione registrato",
+    "showFull": "Vedi completo",
+    "collapse": "Comprimi"
+  }
+}

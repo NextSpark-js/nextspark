@@ -1,0 +1,167 @@
+{
+  "title": "Facturation",
+  "description": "Gerez votre abonnement et votre facturation",
+  "currentPlan": "Plan actuel",
+  "selectPlan": "Selectionner un plan",
+  "contactSales": "Contacter les ventes",
+  "contactUs": "Nous contacter",
+  "unlimited": "Illimite",
+  "upgrade": "Mettre a niveau",
+  "downgrade": "Reduire",
+  "cancelSubscription": "Annuler l'abonnement",
+  "upgradeDescription": "Choisissez le plan qui correspond le mieux a vos besoins",
+  "monthly": "Mensuel",
+  "yearly": "Annuel",
+  "perMonth": "/mois",
+  "perYear": "/an",
+  "savePercent": "Economisez {percent}%",
+
+  "plans": {
+    "free": {
+      "name": "Gratuit",
+      "description": "Commencez avec les fonctionnalites de base"
+    },
+    "starter": {
+      "name": "Starter",
+      "description": "Pour les petites equipes qui debutent"
+    },
+    "pro": {
+      "name": "Pro",
+      "description": "Pour les equipes et entreprises en croissance"
+    },
+    "business": {
+      "name": "Business",
+      "description": "Pour les grandes organisations avec des besoins avances"
+    },
+    "enterprise": {
+      "name": "Entreprise",
+      "description": "Solutions personnalisees pour les grandes organisations"
+    }
+  },
+
+  "features": {
+    "title": "Fonctionnalites",
+    "basic_analytics": "Analytiques de base",
+    "basic_analytics_description": "Voir les statistiques et rapports d'utilisation de base",
+    "advanced_analytics": "Analytiques avancees",
+    "advanced_analytics_description": "Informations detaillees avec rapports personnalises et export de donnees",
+    "realtime_analytics": "Analytiques en temps reel",
+    "realtime_analytics_description": "Tableaux de bord en direct avec mises a jour des donnees en temps reel",
+    "api_access": "Acces API",
+    "api_access_description": "Acces complet a l'API REST pour les integrations",
+    "webhooks": "Webhooks",
+    "webhooks_description": "Recevez des notifications d'evenements en temps reel via HTTP",
+    "custom_branding": "Marque personnalisee",
+    "custom_branding_description": "Ajoutez votre propre logo et couleurs de marque",
+    "white_label": "Marque blanche",
+    "white_label_description": "Supprimez toute la marque pour une experience entierement personnalisee",
+    "sso": "Authentification unique (SSO)",
+    "sso_description": "SSO entreprise avec support SAML/OIDC",
+    "audit_logs": "Journaux d'audit",
+    "audit_logs_description": "Suivez toutes les actions des utilisateurs et les modifications pour la conformite",
+    "priority_support": "Support prioritaire",
+    "priority_support_description": "Support prioritaire 24/7 avec des temps de reponse plus rapides",
+    "dedicated_support": "Support dedie",
+    "dedicated_support_description": "Gestionnaire de compte dedie et canal de support exclusif",
+    "guest_access": "Acces invite",
+    "guest_access_description": "Invitez des collaborateurs externes avec un acces limite",
+    "custom_domain": "Domaine personnalise",
+    "custom_domain_description": "Utilisez votre propre domaine",
+    "advanced_seo": "SEO avance",
+    "advanced_seo_description": "Outils avances de SEO et d'optimisation",
+    "pipeline_automation": "Automatisation du pipeline",
+    "pipeline_automation_description": "Automatisez votre pipeline de vente avec des regles et des declencheurs",
+    "email_templates": "Modeles d'email",
+    "email_templates_description": "Utilisez des modeles d'email pre-concus pour la prospection",
+    "gantt_view": "Vue Gantt",
+    "gantt_view_description": "Visualisez les projets avec des diagrammes de Gantt",
+    "time_tracking": "Suivi du temps",
+    "time_tracking_description": "Enregistrez le temps passe sur les taches et les projets",
+    "task_automation": "Automatisation des taches",
+    "task_automation_description": "Automatisez les affectations, les changements de statut et les notifications de taches",
+    "customer_import": "Import de clients",
+    "customer_import_description": "Import en masse de clients depuis CSV ou sources externes",
+    "recurring_tasks": "Taches recurrentes",
+    "recurring_tasks_description": "Creez des taches qui se repetent selon un calendrier"
+  },
+
+  "limits": {
+    "title": "Limites",
+    "team_members": "Membres de l'equipe",
+    "tasks": "Taches",
+    "customers": "Clients",
+    "api_calls": "Appels API / mois",
+    "storage": "Stockage",
+    "storage_gb": "Stockage (Go)",
+    "file_uploads": "Telechargements de fichiers / mois",
+    "webhooks_count": "Webhooks",
+    "posts": "Publications",
+    "monthly_views": "Vues mensuelles",
+    "authors": "Auteurs",
+    "contacts": "Contacts",
+    "deals": "Affaires",
+    "pipelines": "Pipelines",
+    "workspaces": "Espaces de travail"
+  },
+
+  "usage": {
+    "title": "Utilisation",
+    "current": "Utilisation actuelle",
+    "remaining": "Restant",
+    "usedOf": "{current} sur {max}",
+    "unlimited": "Illimite",
+    "percentUsed": "{percent}% utilise",
+    "noLimits": "Aucune limite d'utilisation configuree"
+  },
+
+  "errors": {
+    "quotaExceeded": "Vous avez atteint la limite de votre plan pour {limit}",
+    "featureNotAvailable": "Cette fonctionnalite n'est pas disponible dans votre plan actuel",
+    "upgradeRequired": "Veuillez mettre a niveau votre plan pour acceder a cette fonctionnalite"
+  },
+
+  "downgrade": {
+    "title": "Avertissement de limite de ressources",
+    "description": "Vos ressources actuelles depassent les limites du nouveau plan",
+    "resource_over": "{resource} : {current} / {limit}",
+    "policy": "Les ressources existantes resteront accessibles. Vous ne pourrez pas en creer de nouvelles tant que vous serez au-dessus de la limite.",
+    "confirm": "Proceder a la reduction",
+    "cancel": "Annuler"
+  },
+
+  "portal": {
+    "manage": "Gerer la facturation",
+    "loading": "Ouverture du portail de facturation...",
+    "error": "Erreur lors de l'ouverture du portail de facturation"
+  },
+
+  "subscription": {
+    "active": "Active",
+    "trialing": "Essai",
+    "past_due": "Paiement en retard",
+    "canceled": "Annulee",
+    "expired": "Expiree",
+    "trialEnds": "L'essai se termine le {date}",
+    "renewsOn": "Se renouvelle le {date}",
+    "cancelsOn": "S'annule le {date}"
+  },
+
+  "invoices": {
+    "title": "Factures",
+    "description": "Voir et telecharger vos factures",
+    "date": "Date",
+    "amount": "Montant",
+    "status": "Statut",
+    "download": "Telecharger",
+    "noInvoices": "Aucune facture pour le moment",
+    "paid": "Payee",
+    "pending": "En attente",
+    "failed": "Echouee"
+  },
+
+  "placeholder": {
+    "notReal": "Ceci est un espace reserve - ce n'est pas encore une fonctionnalite reelle",
+    "description": "Cette fonctionnalite arrivera bientot. Mettez a niveau votre plan pour etre notifie quand elle sera disponible.",
+    "benefits": "Ce que vous obtiendrez :"
+  }
+}

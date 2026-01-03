@@ -1,0 +1,66 @@
+{
+  "entity": {
+    "name": "Cliente",
+    "plural": "Clienti",
+    "description": "Gestisci i tuoi clienti e le loro informazioni"
+  },
+  "fields": {
+    "office": {
+      "label": "Ufficio",
+      "description": "Ufficio o filiale del cliente",
+      "placeholder": "Inserisci ufficio..."
+    },
+    "number": {
+      "label": "Numero Cliente",
+      "description": "Identificativo unico del cliente",
+      "placeholder": "Inserisci numero cliente..."
+    },
+    "name": {
+      "label": "Nome",
+      "description": "Nome del cliente",
+      "placeholder": "Inserisci nome cliente..."
+    },
+    "phone": {
+      "label": "Telefono",
+      "description": "Numero di telefono del cliente",
+      "placeholder": "Inserisci numero di telefono..."
+    },
+    "salesRep": {
+      "label": "Rappresentante Vendite",
+      "description": "Rappresentante vendite assegnato",
+      "placeholder": "Inserisci rappresentante vendite..."
+    },
+    "visitDays": {
+      "label": "Giorni di Visita",
+      "description": "Giorni di visita programmati",
+      "placeholder": "Inserisci giorni di visita..."
+    },
+    "contactDays": {
+      "label": "Giorni di Contatto",
+      "description": "Giorni di contatto preferiti",
+      "placeholder": "Inserisci giorni di contatto..."
+    },
+    "image": {
+      "label": "Immagine",
+      "description": "Logo o URL immagine del cliente",
+      "placeholder": "Inserisci URL immagine..."
+    }
+  },
+  "actions": {
+    "create": "Crea Cliente",
+    "edit": "Modifica Cliente",
+    "delete": "Elimina Cliente",
+    "view": "Visualizza Cliente",
+    "list": "Elenca Clienti",
+    "search": "Cerca Clienti",
+    "export": "Esporta Clienti",
+    "import": "Importa Clienti"
+  },
+  "messages": {
+    "created": "Cliente creato con successo",
+    "updated": "Cliente aggiornato con successo",
+    "deleted": "Cliente eliminato con successo",
+    "notFound": "Cliente non trovato",
+    "error": "Si è verificato un errore durante l'elaborazione del cliente"
+  }
+}

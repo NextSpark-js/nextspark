@@ -1,0 +1,27 @@
+{
+  "title": "Dokumentation",
+  "description": "Vollständige Dokumentation zur effektiven Nutzung unserer Plattform.",
+  "sidebar": {
+    "label": "Dokumentationsnavigation",
+    "open": "Navigationsmenü öffnen",
+    "close": "Navigationsmenü schließen"
+  },
+  "labels": {
+    "coreDoc": "Kern"
+  },
+  "categories": {
+    "core": "Kern",
+    "theme": "Theme",
+    "plugins": "Plugins"
+  },
+  "breadcrumbs": {
+    "home": "Startseite"
+  },
+  "quickStart": {
+    "title": "Schnellstart-Anleitung",
+    "step1": "Konto erstellen",
+    "step2": "Profil konfigurieren",
+    "step3": "Dashboard erkunden",
+    "step4": "Erste Aufgabe erstellen"
+  }
+}

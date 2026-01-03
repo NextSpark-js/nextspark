@@ -1,0 +1,404 @@
+{
+  "title": "Einstellungen",
+  "description": "Verwalten Sie Ihr Konto, Sicherheit und Praeferenzen",
+  "overview": {
+    "title": "Willkommen bei Einstellungen",
+    "description": "Verwenden Sie das Menue links, um zwischen den verschiedenen Einstellungsbereichen Ihres Kontos zu navigieren.",
+    "profileDescription": "Verwalten Sie Ihre persoenlichen Informationen, Name, E-Mail und grundlegende Praeferenzen.",
+    "passwordDescription": "Aendern Sie Ihr aktuelles Passwort in ein neues und sichereres.",
+    "securityDescription": "Konfigurieren Sie die Zwei-Faktor-Authentifizierung und ueberpruefen Sie Ihre aktiven Sitzungen.",
+    "notificationsDescription": "Passen Sie an, wie und wann Sie E-Mail- und Push-Benachrichtigungen erhalten.",
+    "billingDescription": "Verwalten Sie Ihr Abonnement, Zahlungsmethoden und Rechnungen.",
+    "api-keysDescription": "Verwalten Sie API-Schluessel fuer externe Integration und Zugriffskontrolle.",
+    "teamsDescription": "Verwalten Sie Ihre Teams, Mitglieder und Einladungen.",
+    "plansDescription": "Vergleichen Sie Tarife und fuehren Sie ein Upgrade Ihres Abonnements durch."
+  },
+  "navigation": {
+    "ariaLabel": "Einstellungsnavigation",
+    "backToDashboard": "Zurueck zum Dashboard",
+    "backButton": "Zurueck zum Dashboard",
+    "profile": "Profil",
+    "password": "Passwort",
+    "security": "Sicherheit",
+    "notifications": "Benachrichtigungen",
+    "billing": "Abrechnung",
+    "api-keys": "API-Schluessel",
+    "teams": "Teams",
+    "plans": "Tarife"
+  },
+  "layout": {
+    "title": "Einstellungen",
+    "description": "Verwalten Sie Ihr Konto, Sicherheit und Praeferenzen",
+    "sidebarLabel": "Einstellungsmenue",
+    "contentLabel": "Einstellungsinhalt"
+  },
+  "profile": {
+    "title": "Persoenliche Informationen",
+    "description": "Verwalten Sie Ihre persoenlichen Informationen und grundlegenden Kontopraeferenzen.",
+    "loading": {
+      "aria": "Profilinformationen werden geladen",
+      "text": "Profilinformationen werden geladen..."
+    },
+    "error": {
+      "message": "Fehler beim Laden der Profilinformationen. Bitte versuchen Sie es erneut."
+    },
+    "success": {
+      "message": "Profil erfolgreich aktualisiert!"
+    },
+    "form": {
+      "title": "Persoenliche Daten",
+      "description": "Aktualisieren Sie Ihren Namen, Land, Zeitzone und bevorzugte Sprache",
+      "firstName": "Vorname",
+      "firstNamePlaceholder": "Ihr Vorname",
+      "lastName": "Nachname",
+      "lastNamePlaceholder": "Ihr Nachname",
+      "email": "E-Mail",
+      "emailNote": "Kann nicht geaendert werden",
+      "authMethod": "Authentifizierungsmethode",
+      "verificationStatus": "Verifizierungsstatus",
+      "verified": "Verifiziert",
+      "notVerified": "Nicht verifiziert",
+      "language": "Sprache",
+      "languagePlaceholder": "Sprache auswaehlen",
+      "country": "Land",
+      "countryPlaceholder": "Land auswaehlen",
+      "timezone": "Zeitzone",
+      "timezonePlaceholder": "Zeitzone auswaehlen",
+      "memberSince": "Mitglied seit",
+      "updateButton": "Profil aktualisieren",
+      "updating": "Aktualisieren...",
+      "submitHelp": "Profilaenderungen speichern",
+      "submitHelpUpdating": "Profilinformationen werden aktualisiert"
+    },
+    "messages": {
+      "updateSuccess": "Profil erfolgreich aktualisiert",
+      "updateError": "Fehler beim Aktualisieren des Profils: {error}",
+      "deleteSuccess": "Konto geloescht. Abmeldung...",
+      "deleteError": "Fehler beim Loeschen des Kontos: {error}",
+      "updating": "Profil wird aktualisiert...",
+      "deleting": "Konto wird geloescht...",
+      "advancedOpen": "Erweiterte Optionen geoeffnet",
+      "advancedClosed": "Erweiterte Optionen geschlossen"
+    },
+    "advanced": {
+      "title": "Erweiterte Optionen",
+      "openLabel": "Erweiterte Optionen oeffnen",
+      "closeLabel": "Erweiterte Optionen schliessen"
+    },
+    "danger": {
+      "title": "Gefahrenzone",
+      "warning": "Diese Aktionen koennen nicht rueckgaengig gemacht werden. Gehen Sie mit Vorsicht vor.",
+      "deleteButton": "Konto loeschen",
+      "dialogTitle": "Konto loeschen",
+      "dialogDescription": "Sie sind dabei, Ihr Konto und alle zugehoerigen Daten dauerhaft zu loeschen.",
+      "dialogWarning": "Diese Aktion ist unwiderruflich und kann nicht rueckgaengig gemacht werden.",
+      "dialogDetail": "Alle Ihre Profilinformationen, Einstellungen und anderen Daten werden dauerhaft von unseren Servern geloescht.",
+      "deleting": "Loeschen...",
+      "confirmDelete": "Konto loeschen"
+    },
+    "actions": {
+      "cancel": "Abbrechen"
+    }
+  },
+  "password": {
+    "title": "Passwort aendern",
+    "description": "Waehlen Sie ein neues sicheres Passwort fuer Ihr Konto.",
+    "loading": {
+      "verifying": "Authentifizierungsmethode wird ueberprueft..."
+    },
+    "success": {
+      "aria": "Passwort erfolgreich aktualisiert",
+      "title": "Passwort aktualisiert!",
+      "description": "Ihr Passwort wurde erfolgreich aktualisiert."
+    },
+    "form": {
+      "title": "Neues Passwort",
+      "description": "Aktualisieren Sie Ihr Passwort auf ein neues und sichereres.",
+      "currentPassword": "Aktuelles Passwort",
+      "currentPasswordPlaceholder": "Geben Sie Ihr aktuelles Passwort ein",
+      "newPassword": "Neues Passwort",
+      "newPasswordPlaceholder": "Erstellen Sie ein sicheres Passwort",
+      "confirmPassword": "Neues Passwort bestaetigen",
+      "confirmPasswordPlaceholder": "Bestaetigen Sie Ihr neues Passwort",
+      "revokeOtherSessions": "Von anderen Geraeten abmelden",
+      "updateButton": "Passwort aktualisieren",
+      "updating": "Aktualisieren...",
+      "submitHelp": "Formular zum Aendern des Passworts absenden",
+      "submitHelpUpdating": "Passwort wird aktualisiert"
+    },
+    "messages": {
+      "updating": "Passwort wird aktualisiert...",
+      "updateSuccess": "Passwort erfolgreich aktualisiert",
+      "updateError": "Fehler beim Aktualisieren des Passworts",
+      "unexpectedError": "Ein unerwarteter Fehler ist aufgetreten"
+    }
+  },
+  "security": {
+    "title": "Sicherheit",
+    "description": "Verwalten Sie die Sicherheitseinstellungen Ihres Kontos.",
+    "main": {
+      "title": "Sicherheitseinstellungen",
+      "description": "Verwalten Sie die Zwei-Faktor-Authentifizierung und Sicherheitswarnungen Ihres Kontos."
+    },
+    "twoFactor": {
+      "title": "Zwei-Faktor-Authentifizierung (2FA)",
+      "description": "Fuegen Sie Ihrem Konto eine zusaetzliche Sicherheitsebene hinzu",
+      "enabled": "Aktiviert",
+      "disabled": "Deaktiviert",
+      "enabledStatus": "Ihr Konto ist mit 2FA geschuetzt",
+      "disabledStatus": "Wir empfehlen, 2FA fuer mehr Sicherheit zu aktivieren",
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "ariaEnabled": "Zwei-Faktor-Authentifizierung aktiviert",
+      "ariaDisabled": "Zwei-Faktor-Authentifizierung deaktiviert",
+      "recommendation": "Wir empfehlen, die Zwei-Faktor-Authentifizierung zu aktivieren, um Ihr Konto zu schuetzen.",
+      "configuredMethods": "Konfigurierte Methoden:",
+      "appAuthenticator": "App Authenticator",
+      "appDescription": "Google Authenticator, Authy",
+      "configured": "Konfiguriert"
+    },
+    "alerts": {
+      "title": "Sicherheitswarnungen",
+      "loginTitle": "Anmeldewarnungen",
+      "loginDescription": "Wir benachrichtigen Sie per E-Mail ueber Anmeldungen von neuen Geraeten oder Standorten",
+      "ariaEnabled": "Anmeldewarnungen aktiviert",
+      "ariaDisabled": "Anmeldewarnungen deaktiviert"
+    },
+    "sessions": {
+      "title": "Aktive Sitzungen",
+      "description": "Ueberpruefen und verwalten Sie die Geraete, die Zugriff auf Ihr Konto haben.",
+      "current": "Aktuelle Sitzung",
+      "terminate": "Beenden",
+      "terminateDialog": {
+        "title": "Sitzung beenden",
+        "description": "Sind Sie sicher, dass Sie diese Sitzung beenden moechten? Das Geraet muss sich erneut anmelden.",
+        "cancel": "Abbrechen",
+        "confirm": "Sitzung beenden"
+      },
+      "terminateAriaLabel": "Sitzung fuer {device} beenden",
+      "sessionAriaLabel": "Sitzung {device} - {status}",
+      "currentSession": "Aktuelle Sitzung",
+      "activeSession": "Aktive Sitzung"
+    },
+    "loginHistory": {
+      "title": "Anmeldeverlauf",
+      "description": "Ueberpruefen Sie die letzten Anmeldeversuche bei Ihrem Konto.",
+      "successful": "Anmeldung erfolgreich",
+      "failed": "Anmeldung fehlgeschlagen",
+      "successBadge": "Erfolgreich",
+      "failBadge": "Fehlgeschlagen",
+      "viewComplete": "Vollstaendigen Verlauf anzeigen",
+      "attemptAriaLabel": "Anmeldeversuch {status} von {location}",
+      "viewHistoryAriaLabel": "Vollstaendigen Anmeldeverlauf anzeigen"
+    },
+    "messages": {
+      "sessionTerminated": "Sitzung erfolgreich beendet",
+      "twoFactorEnabled": "2FA-Authentifizierung aktiviert",
+      "twoFactorDisabled": "2FA-Authentifizierung deaktiviert",
+      "alertsEnabled": "Anmeldewarnungen aktiviert",
+      "alertsDisabled": "Anmeldewarnungen deaktiviert",
+      "saveSuccess": "Einstellungen gespeichert",
+      "saveSuccessDescription": "Ihre Sicherheitseinstellungen wurden erfolgreich gespeichert.",
+      "saveError": "Fehler beim Speichern",
+      "saveErrorDescription": "Beim Speichern Ihrer Einstellungen ist ein Problem aufgetreten. Bitte versuchen Sie es erneut."
+    },
+    "buttons": {
+      "save": "Aenderungen speichern",
+      "saving": "Speichern..."
+    }
+  },
+  "notifications": {
+    "title": "Benachrichtigungen",
+    "description": "Verwalten Sie Ihre E-Mail- und Push-Benachrichtigungspraeferenzen.",
+    "main": {
+      "title": "Benachrichtigungseinstellungen",
+      "description": "Verwalten Sie, wie und wann Sie E-Mail- und Push-Benachrichtigungen erhalten."
+    },
+    "channels": {
+      "title": "Benachrichtigungskanaele",
+      "push": {
+        "title": "Push-Benachrichtigungen",
+        "description": "Echtzeit-Benachrichtigungen auf Ihrem Geraet",
+        "enabled": "Aktiviert",
+        "disabled": "Deaktiviert",
+        "ariaEnabled": "Push-Benachrichtigungen aktiviert",
+        "ariaDisabled": "Push-Benachrichtigungen deaktiviert"
+      },
+      "email": {
+        "title": "E-Mail-Benachrichtigungen",
+        "description": "An Ihre primaere E-Mail-Adresse gesendet",
+        "alwaysEnabled": "Immer aktiviert"
+      }
+    },
+    "categories": {
+      "security": {
+        "title": "Sicherheit und Konto",
+        "description": "Wichtige Warnungen zu Ihrem Konto"
+      },
+      "activity": {
+        "title": "Produktaktivitaet",
+        "description": "Updates zu Ihrer Aktivitaet"
+      },
+      "marketing": {
+        "title": "Marketing und Aktionen",
+        "description": "Neuigkeiten und Sonderangebote"
+      }
+    },
+    "types": {
+      "loginAlerts": {
+        "title": "Neue Anmeldungen",
+        "description": "Wir benachrichtigen Sie, wenn jemand von einem neuen Geraet zugreift"
+      },
+      "passwordChanges": {
+        "title": "Passwortaenderungen",
+        "description": "Bestaetigung, wenn Sie Ihr Passwort aendern"
+      },
+      "suspiciousActivity": {
+        "title": "Verdaechtige Aktivitaet",
+        "description": "Warnungen bei unbefugten Zugriffsversuchen"
+      },
+      "mentions": {
+        "title": "Erwaechnungen und Kommentare",
+        "description": "Wenn jemand Sie erwaehnt oder Ihre Projekte kommentiert"
+      },
+      "projectUpdates": {
+        "title": "Projektaktualisierungen",
+        "description": "Wichtige Aenderungen in Projekten, denen Sie folgen"
+      },
+      "teamInvites": {
+        "title": "Teameinladungen",
+        "description": "Wenn Sie eingeladen werden, einem Team beizutreten"
+      },
+      "newsletter": {
+        "title": "Woechentlicher Newsletter",
+        "description": "Zusammenfassung neuer Funktionen und Tipps"
+      },
+      "promotions": {
+        "title": "Sonderangebote",
+        "description": "Exklusive Rabatte und Aktionen"
+      },
+      "featureAnnouncements": {
+        "title": "Neue Funktionen",
+        "description": "Ankuendigungen ueber neue Produktfunktionen"
+      }
+    },
+    "labels": {
+      "required": "Erforderlich",
+      "email": "E-Mail",
+      "push": "Push",
+      "emailAriaLabel": "E-Mail-Benachrichtigungen fuer {title} {status}",
+      "pushAriaLabel": "Push-Benachrichtigungen fuer {title} {status}",
+      "enabled": "aktiviert",
+      "disabled": "deaktiviert"
+    },
+    "messages": {
+      "pushEnabled": "Push-Benachrichtigungen aktiviert",
+      "pushDisabled": "Push-Benachrichtigungen deaktiviert",
+      "notificationToggled": "{type}-Benachrichtigung fuer {notification} {status}",
+      "saveSuccess": "Einstellungen gespeichert",
+      "saveSuccessDescription": "Ihre Benachrichtigungspraeferenzen wurden erfolgreich gespeichert.",
+      "saveError": "Fehler beim Speichern",
+      "saveErrorDescription": "Beim Speichern Ihrer Praeferenzen ist ein Problem aufgetreten. Bitte versuchen Sie es erneut."
+    },
+    "buttons": {
+      "save": "Aenderungen speichern",
+      "saving": "Speichern..."
+    }
+  },
+  "billing": {
+    "title": "Abrechnung",
+    "description": "Verwalten Sie Ihr Abonnement, Zahlungsmethoden und Rechnungen.",
+    "currentPlan": {
+      "title": "Aktueller Tarif",
+      "description": "Ihr aktuelles Abonnement und Nutzungslimits",
+      "free": "Kostenlos"
+    },
+    "usage": {
+      "tasks": "Monatliche Aufgaben",
+      "teamMember": "Teammitglied",
+      "projects": "Projekte"
+    },
+    "upgrade": {
+      "title": "Benoetigen Sie mehr Funktionen?",
+      "description": "Upgraden Sie auf Pro fuer hoehere Limits und erweiterte Funktionen",
+      "button": "Tarif upgraden",
+      "ready": "Bereit fuer mehr?",
+      "explore": "Entdecken Sie unsere Pro- und Enterprise-Tarife",
+      "viewPricing": "Preise anzeigen",
+      "contactSales": "Vertrieb kontaktieren"
+    },
+    "paymentMethod": {
+      "title": "Zahlungsmethode",
+      "description": "Verwalten Sie Ihre Zahlungsmethoden",
+      "noMethod": "Keine Zahlungsmethode konfiguriert",
+      "addCard": "Fuegen Sie eine Karte hinzu, um Ihren Tarif zu upgraden",
+      "addButton": "Zahlungsmethode hinzufuegen"
+    },
+    "billingHistory": {
+      "title": "Abrechnungsverlauf",
+      "description": "Ihre letzten Rechnungen und Zahlungen",
+      "noInvoices": "Keine Rechnungen verfuegbar",
+      "noInvoicesDescription": "Rechnungen werden hier angezeigt, wenn Sie ein aktives Abonnement haben"
+    },
+    "invoices": {
+      "table": {
+        "date": "Datum",
+        "amount": "Betrag",
+        "invoiceNumber": "Rechnung #",
+        "status": "Status",
+        "download": "PDF"
+      },
+      "loading": "Rechnungen werden geladen...",
+      "loadMore": "Weitere Rechnungen anzeigen",
+      "download": {
+        "tooltip": "PDF herunterladen"
+      },
+      "empty": {
+        "title": "Noch keine Rechnungen",
+        "description": "Rechnungen werden hier angezeigt, wenn Sie ein aktives Abonnement haben"
+      },
+      "status": {
+        "paid": "Bezahlt",
+        "pending": "Ausstehend",
+        "failed": "Fehlgeschlagen",
+        "refunded": "Erstattet"
+      },
+      "pagination": {
+        "showing": "Zeige {start} bis {end} von {total} Rechnungen",
+        "previous": "Zurueck",
+        "next": "Weiter"
+      }
+    },
+    "features": {
+      "title": "Funktionen des kostenlosen Tarifs",
+      "description": "Was Ihr aktueller Tarif beinhaltet",
+      "taskLimit": "Bis zu 100 Aufgaben pro Monat",
+      "teamMember": "1 Teammitglied",
+      "projectLimit": "Bis zu 5 Projekte",
+      "basicSupport": "Basis-E-Mail-Support",
+      "basicDashboard": "Basis-Dashboard",
+      "profileManagement": "Profilverwaltung"
+    },
+    "messages": {
+      "upgradeRedirect": "Weiterleitung zur Tarif-Upgrade-Seite",
+      "addPaymentForm": "Formular zum Hinzufuegen einer Zahlungsmethode wird geoeffnet"
+    }
+  },
+  "teams": {
+    "title": "Teams",
+    "description": "Verwalten Sie Ihre Teams, Mitglieder und Einladungen.",
+    "yourTeam": "Ihr Team",
+    "yourTeams": "Ihre Teams",
+    "yourTeamsDescription": "Teams, in denen Sie Mitglied sind. Waehlen Sie eines aus, um die Details anzuzeigen.",
+    "noTeams": "Sie gehoeren noch keinem Team an.",
+    "manageTeamMembers": "Verwalten Sie die Mitglieder und Einstellungen des Teams."
+  },
+  "plans": {
+    "title": "Preistarife",
+    "description": "Waehlen Sie den Tarif, der am besten zu Ihren Beduerfnissen passt"
+  },
+  "pages": {
+    "plans": "Tarife",
+    "plansDescription": "Vergleichen Sie Tarife und fuehren Sie ein Upgrade Ihres Abonnements durch"
+  }
+}

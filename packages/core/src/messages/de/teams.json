@@ -1,0 +1,140 @@
+{
+  "title": "Teams",
+  "description": "Verwalten Sie Ihre Teams und Zusammenarbeiten",
+
+  "types": {
+    "personal": "Persoenlich",
+    "work": "Arbeitsteam"
+  },
+
+  "roles": {
+    "owner": "Eigentuemer",
+    "admin": "Administrator",
+    "member": "Mitglied",
+    "viewer": "Betrachter"
+  },
+
+  "roleDescriptions": {
+    "owner": "Vollstaendige Kontrolle ueber das Team, einschliesslich Loeschung und Abrechnung",
+    "admin": "Kann Mitglieder, Einstellungen und die meisten Operationen verwalten",
+    "member": "Kann Teaminhalte einsehen und mit anderen Mitgliedern zusammenarbeiten",
+    "viewer": "Nur Lesezugriff auf Teaminhalte"
+  },
+
+  "actions": {
+    "create": "Team erstellen",
+    "edit": "Team bearbeiten",
+    "delete": "Team loeschen",
+    "leave": "Team verlassen",
+    "switch": "Team wechseln",
+    "manage": "Team verwalten",
+    "invite": "Mitglied einladen",
+    "removeMember": "Mitglied entfernen",
+    "changeRole": "Rolle aendern"
+  },
+
+  "switcher": {
+    "switchTeam": "Team wechseln",
+    "switchingTo": "Wechseln zu",
+    "switchComplete": "Wechsel abgeschlossen",
+    "loadingTeamData": "Teamdaten werden geladen...",
+    "ready": "Bereit!",
+    "personal": "Persoenlich",
+    "workTeam": "Arbeitsteam",
+    "manageTeams": "Teams verwalten",
+    "active": "Aktiv",
+    "team": "Team"
+  },
+
+  "createTeam": {
+    "title": "Neues Team erstellen",
+    "description": "Erstellen Sie ein neues Team zur Zusammenarbeit mit anderen",
+    "nameLabel": "Teamname",
+    "namePlaceholder": "Teamnamen eingeben",
+    "slugLabel": "Team-URL",
+    "slugPlaceholder": "team-url",
+    "descriptionLabel": "Beschreibung",
+    "descriptionPlaceholder": "Beschreiben Sie, wofuer dieses Team ist",
+    "success": "Team erfolgreich erstellt",
+    "error": "Fehler beim Erstellen des Teams"
+  },
+
+  "editTeam": {
+    "title": "Team bearbeiten",
+    "success": "Team erfolgreich aktualisiert",
+    "error": "Fehler beim Aktualisieren des Teams"
+  },
+
+  "deleteTeam": {
+    "title": "Team loeschen",
+    "description": "Sind Sie sicher, dass Sie dieses Team loeschen moechten? Diese Aktion kann nicht rueckgaengig gemacht werden.",
+    "confirmButton": "Team loeschen",
+    "success": "Team erfolgreich geloescht",
+    "error": "Fehler beim Loeschen des Teams"
+  },
+
+  "members": {
+    "title": "Teammitglieder",
+    "description": "Verwalten Sie, wer Zugriff auf dieses Team hat",
+    "empty": "Noch keine Mitglieder",
+    "you": "(Sie)",
+    "joined": "Beigetreten {date}"
+  },
+
+  "invitations": {
+    "title": "Ausstehende Einladungen",
+    "description": "Einladungen, die auf Antwort warten",
+    "empty": "Keine ausstehenden Einladungen",
+    "sent": "Gesendet {date}",
+    "expires": "Laeuft ab {date}",
+    "resend": "Erneut senden",
+    "cancel": "Einladung abbrechen",
+    "cancelSuccess": "Einladung abgebrochen",
+    "cancelError": "Fehler beim Abbrechen der Einladung"
+  },
+
+  "invite": {
+    "title": "Mitglied einladen",
+    "description": "Laden Sie jemanden ein, diesem Team beizutreten",
+    "emailLabel": "E-Mail-Adresse",
+    "emailPlaceholder": "kollege@beispiel.de",
+    "roleLabel": "Rolle",
+    "rolePlaceholder": "Rolle auswaehlen",
+    "sendButton": "Einladung senden",
+    "success": "Einladung erfolgreich gesendet",
+    "error": "Fehler beim Senden der Einladung"
+  },
+
+  "acceptInvite": {
+    "title": "Teameinladung",
+    "description": "Sie wurden eingeladen, beizutreten",
+    "accept": "Einladung annehmen",
+    "decline": "Ablehnen",
+    "expired": "Diese Einladung ist abgelaufen",
+    "invalid": "Diese Einladung ist nicht mehr gueltig",
+    "success": "Sie sind dem Team beigetreten!",
+    "error": "Fehler beim Annehmen der Einladung"
+  },
+
+  "settings": {
+    "title": "Teameinstellungen",
+    "general": "Allgemein",
+    "members": "Mitglieder",
+    "billing": "Abrechnung",
+    "danger": "Gefahrenzone"
+  },
+
+  "errors": {
+    "notFound": "Team nicht gefunden",
+    "notMember": "Sie sind kein Mitglied dieses Teams",
+    "permissionDenied": "Sie haben keine Berechtigung fuer diese Aktion",
+    "cannotDeletePersonal": "Persoenliches Team kann nicht geloescht werden",
+    "cannotLeaveOwner": "Eigentuemer koennen nicht gehen. Uebertragen Sie zuerst das Eigentum.",
+    "lastAdmin": "Letzter Administrator des Teams kann nicht entfernt werden"
+  },
+
+  "empty": {
+    "title": "Noch keine Teams",
+    "description": "Erstellen Sie Ihr erstes Team, um mit der Zusammenarbeit zu beginnen"
+  }
+}

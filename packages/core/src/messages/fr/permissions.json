@@ -1,0 +1,27 @@
+{
+  "title": "Permissions de l'equipe",
+  "description": "Voir et gerer ce que chaque role de l'equipe peut faire",
+  "rolesOverview": "Apercu des roles",
+  "rolesOverviewDescription": "Chaque membre de l'equipe a un role qui determine ce a quoi il peut acceder et ce qu'il peut faire",
+  "allPermissions": "Toutes les permissions",
+  "permission": "Permission",
+  "dangerousAction": "Ceci est une action potentiellement dangereuse",
+  "roles": {
+    "owner": {
+      "title": "Proprietaire",
+      "description": "Acces complet a toutes les fonctionnalites et parametres de l'equipe"
+    },
+    "admin": {
+      "title": "Administrateur",
+      "description": "Peut gerer les membres de l'equipe et la plupart des parametres"
+    },
+    "member": {
+      "title": "Membre",
+      "description": "Peut creer et modifier du contenu, acces limite aux parametres"
+    },
+    "viewer": {
+      "title": "Lecteur",
+      "description": "Acces en lecture seule au contenu de l'equipe"
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "title": "Documentacao",
+  "description": "Aprenda a usar nossa plataforma",
+  "search": "Buscar na documentacao...",
+  "categories": {
+    "getting-started": "Primeiros Passos",
+    "guides": "Guias",
+    "api": "Referencia API",
+    "plugins": "Plugins",
+    "core": "Core",
+    "theme": "Tema"
+  },
+  "breadcrumbs": {
+    "home": "Inicio"
+  },
+  "sidebar": {
+    "open": "Abrir menu lateral",
+    "label": "Navegacao da documentacao"
+  },
+  "notFound": {
+    "title": "Pagina Nao Encontrada",
+    "description": "A pagina de documentacao que voce procura nao existe."
+  }
+}

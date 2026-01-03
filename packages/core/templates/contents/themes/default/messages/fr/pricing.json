@@ -1,0 +1,102 @@
+{
+  "hero": {
+    "badge": "Tarification",
+    "title": "Des plans pour chaque",
+    "titleAccent": "équipe",
+    "description": "Commencez gratuitement et évoluez à mesure que votre équipe grandit. Tous les plans incluent nos fonctionnalités principales."
+  },
+  "plans": {
+    "free": {
+      "name": "Gratuit",
+      "description": "Parfait pour commencer",
+      "price": "0",
+      "period": "pour toujours",
+      "cta": "Commencer gratuitement",
+      "features": {
+        "users": "1 utilisateur",
+        "projects": "5 projets",
+        "storage": "1 Go de stockage",
+        "support": "Support de base",
+        "api": "Accès API",
+        "analytics": "Analytique avancée",
+        "prioritySupport": "Support prioritaire",
+        "integrations": "Intégrations personnalisées"
+      }
+    },
+    "pro": {
+      "name": "Pro",
+      "description": "Idéal pour les équipes en croissance",
+      "price": "29",
+      "period": "mois",
+      "badge": "Le plus populaire",
+      "cta": "Démarrer l'essai Pro",
+      "features": {
+        "users": "10 utilisateurs",
+        "projects": "Projets illimités",
+        "storage": "100 Go de stockage",
+        "support": "Support prioritaire",
+        "api": "Accès API",
+        "analytics": "Analytique avancée",
+        "integrations": "Intégrations personnalisées",
+        "manager": "Gestionnaire dédié"
+      }
+    },
+    "enterprise": {
+      "name": "Entreprise",
+      "description": "Pour les grandes organisations",
+      "price": "99",
+      "period": "mois",
+      "cta": "Contacter les ventes",
+      "features": {
+        "users": "Utilisateurs illimités",
+        "projects": "Projets illimités",
+        "storage": "1 To de stockage",
+        "support": "Support dédié",
+        "api": "Accès API",
+        "analytics": "Analytique avancée",
+        "integrations": "Intégrations personnalisées",
+        "manager": "Gestionnaire dédié"
+      }
+    }
+  },
+  "comparison": {
+    "title": "Comparaison détaillée",
+    "description": "Voir toutes les fonctionnalités incluses dans chaque plan pour prendre la meilleure décision.",
+    "collaboration": {
+      "title": "Collaboration",
+      "description": "Outils pour travailler efficacement en équipe avec des permissions granulaires."
+    },
+    "storage": {
+      "title": "Stockage",
+      "description": "Stockage sécurisé et évolutif pour tous vos projets et fichiers."
+    },
+    "security": {
+      "title": "Sécurité",
+      "description": "Chiffrement de bout en bout et conformité aux normes de sécurité."
+    },
+    "support": {
+      "title": "Support",
+      "description": "Support technique spécialisé pour résoudre toutes vos questions ou problèmes."
+    }
+  },
+  "faq": {
+    "title": "Questions fréquemment posées",
+    "description": "Nous répondons aux questions les plus courantes sur nos plans et tarifs.",
+    "questions": {
+      "changePlan": "Puis-je changer de plan à tout moment ?",
+      "changePlanAnswer": "Oui, vous pouvez changer de plan à tout moment depuis votre tableau de bord. Les changements s'appliquent immédiatement.",
+      "setupCost": "Y a-t-il des frais de configuration ?",
+      "setupCostAnswer": "Non, tous nos plans incluent une configuration gratuite et un support pendant la mise en œuvre.",
+      "paymentMethods": "Quels modes de paiement acceptez-vous ?",
+      "paymentMethodsAnswer": "Nous acceptons toutes les principales cartes de crédit, PayPal et les virements bancaires pour les plans Entreprise.",
+      "annualDiscount": "Y a-t-il des réductions pour le paiement annuel ?",
+      "annualDiscountAnswer": "Oui, nous offrons 2 mois gratuits lors du paiement annuel sur les plans Pro et Entreprise."
+    }
+  },
+  "cta": {
+    "title": "Prêt à commencer ?",
+    "description": "Rejoignez des milliers d'équipes qui font déjà confiance à notre plateforme pour leurs projets.",
+    "startFree": "Commencer gratuitement",
+    "contactSales": "Contacter les ventes"
+  }
+}

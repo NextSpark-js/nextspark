@@ -1,0 +1,41 @@
+{
+  "title": "Painel",
+  "welcome": "Bem-vindo de volta, {name}",
+  "stats": {
+    "accountStatus": "Status da Conta",
+    "plan": "Plano",
+    "teamMembers": "Membros da Equipe",
+    "usage": "Uso",
+    "active": "Ativo",
+    "free": "Gratuito"
+  },
+  "quickActions": {
+    "title": "Acoes Rapidas",
+    "description": "Acesse rapidamente os recursos mais utilizados",
+    "myTasks": "Minhas Tarefas",
+    "myTasksDescription": "Gerenciar pendencias",
+    "myProfile": "Meu Perfil",
+    "myProfileDescription": "Informacao pessoal",
+    "settings": "Configuracoes",
+    "settingsDescription": "Ajustes da conta",
+    "billing": "Faturamento",
+    "billingDescription": "Plano e pagamentos",
+    "createTask": "Criar Tarefa",
+    "viewTasks": "Ver Tarefas",
+    "updateProfile": "Atualizar Perfil",
+    "manageSettings": "Gerenciar Configuracoes"
+  },
+  "activity": {
+    "title": "Atividade Recente",
+    "description": "Suas acoes e eventos recentes",
+    "signedIn": "Login no painel",
+    "justNow": "Agora mesmo",
+    "accountCreated": "Conta criada"
+  },
+  "badges": {
+    "verified": "verificado",
+    "basic": "basico",
+    "solo": "individual",
+    "low": "baixo"
+  }
+}

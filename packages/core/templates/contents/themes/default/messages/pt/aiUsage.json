@@ -1,0 +1,36 @@
+{
+  "title": "Uso de IA",
+  "description": "Monitore seu uso de tokens de IA e custos",
+  "loading": "Carregando dados de uso...",
+  "error": "Erro ao carregar dados de uso",
+  "period": {
+    "today": "Hoje",
+    "7d": "7 dias",
+    "30d": "30 dias",
+    "all": "Todo o período"
+  },
+  "stats": {
+    "totalTokens": {
+      "title": "Total de Tokens",
+      "input": "entrada",
+      "output": "saída"
+    },
+    "estimatedCost": {
+      "title": "Custo Estimado",
+      "currency": "USD"
+    },
+    "requests": {
+      "title": "Requisições",
+      "description": "Total de requisições de IA"
+    }
+  },
+  "usageByModel": {
+    "title": "Uso por Modelo",
+    "tokens": "tokens"
+  },
+  "dailyUsage": {
+    "title": "Uso Diário",
+    "noData": "Nenhum dado de uso para este período",
+    "tokens": "tokens"
+  }
+}

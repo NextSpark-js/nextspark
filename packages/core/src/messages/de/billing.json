@@ -1,0 +1,167 @@
+{
+  "title": "Abrechnung",
+  "description": "Verwalten Sie Ihr Abonnement und Ihre Rechnungen",
+  "currentPlan": "Aktueller Tarif",
+  "selectPlan": "Tarif auswaehlen",
+  "contactSales": "Vertrieb kontaktieren",
+  "contactUs": "Kontaktieren Sie uns",
+  "unlimited": "Unbegrenzt",
+  "upgrade": "Upgrade",
+  "downgrade": "Downgrade",
+  "cancelSubscription": "Abonnement kuendigen",
+  "upgradeDescription": "Waehlen Sie den Tarif, der am besten zu Ihren Beduerfnissen passt",
+  "monthly": "Monatlich",
+  "yearly": "Jaehrlich",
+  "perMonth": "/Monat",
+  "perYear": "/Jahr",
+  "savePercent": "{percent}% sparen",
+
+  "plans": {
+    "free": {
+      "name": "Kostenlos",
+      "description": "Beginnen Sie mit grundlegenden Funktionen"
+    },
+    "starter": {
+      "name": "Starter",
+      "description": "Fuer kleine Teams, die gerade anfangen"
+    },
+    "pro": {
+      "name": "Pro",
+      "description": "Fuer wachsende Teams und Unternehmen"
+    },
+    "business": {
+      "name": "Business",
+      "description": "Fuer grosse Organisationen mit erweiterten Anforderungen"
+    },
+    "enterprise": {
+      "name": "Enterprise",
+      "description": "Massgeschneiderte Loesungen fuer Grossunternehmen"
+    }
+  },
+
+  "features": {
+    "title": "Funktionen",
+    "basic_analytics": "Basis-Analysen",
+    "basic_analytics_description": "Grundlegende Nutzungsstatistiken und Berichte anzeigen",
+    "advanced_analytics": "Erweiterte Analysen",
+    "advanced_analytics_description": "Detaillierte Einblicke mit benutzerdefinierten Berichten und Datenexport",
+    "realtime_analytics": "Echtzeit-Analysen",
+    "realtime_analytics_description": "Live-Dashboards mit Echtzeit-Datenaktualisierungen",
+    "api_access": "API-Zugang",
+    "api_access_description": "Vollstaendiger Zugang zur REST-API fuer Integrationen",
+    "webhooks": "Webhooks",
+    "webhooks_description": "Echtzeit-Ereignisbenachrichtigungen per HTTP erhalten",
+    "custom_branding": "Eigenes Branding",
+    "custom_branding_description": "Fuegen Sie Ihr eigenes Logo und Markenfarben hinzu",
+    "white_label": "White Label",
+    "white_label_description": "Entfernen Sie alle Markenkennzeichnungen fuer ein vollstaendig angepasstes Erlebnis",
+    "sso": "Single Sign-On (SSO)",
+    "sso_description": "Enterprise-SSO mit SAML/OIDC-Unterstuetzung",
+    "audit_logs": "Audit-Protokolle",
+    "audit_logs_description": "Verfolgen Sie alle Benutzeraktionen und Aenderungen fuer Compliance",
+    "priority_support": "Prioritaets-Support",
+    "priority_support_description": "24/7 Prioritaets-Support mit schnelleren Reaktionszeiten",
+    "dedicated_support": "Dedizierter Support",
+    "dedicated_support_description": "Dedizierter Account-Manager und exklusiver Support-Kanal",
+    "guest_access": "Gastzugang",
+    "guest_access_description": "Laden Sie externe Mitarbeiter mit eingeschraenktem Zugang ein",
+    "custom_domain": "Eigene Domain",
+    "custom_domain_description": "Verwenden Sie Ihre eigene Domain",
+    "advanced_seo": "Erweitertes SEO",
+    "advanced_seo_description": "Erweiterte SEO-Tools und Optimierung",
+    "pipeline_automation": "Pipeline-Automatisierung",
+    "pipeline_automation_description": "Automatisieren Sie Ihre Vertriebspipeline mit Regeln und Triggern",
+    "email_templates": "E-Mail-Vorlagen",
+    "email_templates_description": "Verwenden Sie vorgefertigte E-Mail-Vorlagen fuer Outreach",
+    "gantt_view": "Gantt-Ansicht",
+    "gantt_view_description": "Visualisieren Sie Projekte mit Gantt-Diagrammen",
+    "time_tracking": "Zeiterfassung",
+    "time_tracking_description": "Erfassen Sie die fuer Aufgaben und Projekte aufgewendete Zeit",
+    "task_automation": "Aufgabenautomatisierung",
+    "task_automation_description": "Automatisieren Sie Aufgabenzuweisungen, Statusaenderungen und Benachrichtigungen",
+    "customer_import": "Kundenimport",
+    "customer_import_description": "Massenimport von Kunden aus CSV oder externen Quellen",
+    "recurring_tasks": "Wiederkehrende Aufgaben",
+    "recurring_tasks_description": "Erstellen Sie Aufgaben, die nach einem Zeitplan wiederholt werden"
+  },
+
+  "limits": {
+    "title": "Limits",
+    "team_members": "Teammitglieder",
+    "tasks": "Aufgaben",
+    "customers": "Kunden",
+    "api_calls": "API-Aufrufe / Monat",
+    "storage": "Speicher",
+    "storage_gb": "Speicher (GB)",
+    "file_uploads": "Datei-Uploads / Monat",
+    "webhooks_count": "Webhooks",
+    "posts": "Beitraege",
+    "monthly_views": "Monatliche Aufrufe",
+    "authors": "Autoren",
+    "contacts": "Kontakte",
+    "deals": "Deals",
+    "pipelines": "Pipelines",
+    "workspaces": "Arbeitsbereiche"
+  },
+
+  "usage": {
+    "title": "Nutzung",
+    "current": "Aktuelle Nutzung",
+    "remaining": "Verbleibend",
+    "usedOf": "{current} von {max}",
+    "unlimited": "Unbegrenzt",
+    "percentUsed": "{percent}% verwendet",
+    "noLimits": "Keine Nutzungslimits konfiguriert"
+  },
+
+  "errors": {
+    "quotaExceeded": "Sie haben das Limit Ihres Tarifs fuer {limit} erreicht",
+    "featureNotAvailable": "Diese Funktion ist in Ihrem aktuellen Tarif nicht verfuegbar",
+    "upgradeRequired": "Bitte fuehren Sie ein Upgrade durch, um auf diese Funktion zuzugreifen"
+  },
+
+  "downgrade": {
+    "title": "Ressourcenlimit-Warnung",
+    "description": "Ihre aktuellen Ressourcen ueberschreiten die Limits des neuen Tarifs",
+    "resource_over": "{resource}: {current} / {limit}",
+    "policy": "Vorhandene Ressourcen bleiben zugaenglich. Sie koennen keine neuen erstellen, bis Sie unter dem Limit sind.",
+    "confirm": "Mit Downgrade fortfahren",
+    "cancel": "Abbrechen"
+  },
+
+  "portal": {
+    "manage": "Abrechnung verwalten",
+    "loading": "Abrechnungsportal wird geoeffnet...",
+    "error": "Fehler beim Oeffnen des Abrechnungsportals"
+  },
+
+  "subscription": {
+    "active": "Aktiv",
+    "trialing": "Testphase",
+    "past_due": "Zahlung ueberfaellig",
+    "canceled": "Gekuendigt",
+    "expired": "Abgelaufen",
+    "trialEnds": "Testphase endet {date}",
+    "renewsOn": "Verlaengert sich am {date}",
+    "cancelsOn": "Wird gekuendigt am {date}"
+  },
+
+  "invoices": {
+    "title": "Rechnungen",
+    "description": "Ihre Rechnungen anzeigen und herunterladen",
+    "date": "Datum",
+    "amount": "Betrag",
+    "status": "Status",
+    "download": "Herunterladen",
+    "noInvoices": "Noch keine Rechnungen",
+    "paid": "Bezahlt",
+    "pending": "Ausstehend",
+    "failed": "Fehlgeschlagen"
+  },
+
+  "placeholder": {
+    "notReal": "Dies ist ein Platzhalter - noch keine echte Funktion",
+    "description": "Diese Funktion kommt bald. Fuehren Sie ein Upgrade durch, um benachrichtigt zu werden, wenn sie verfuegbar ist.",
+    "benefits": "Was Sie erhalten:"
+  }
+}

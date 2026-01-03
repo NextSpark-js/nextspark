@@ -1,0 +1,285 @@
+{
+  "title": "DevTools",
+  "subtitle": "Strumenti di Sviluppo",
+  "nav": {
+    "home": "Pannello",
+    "homeDescription": "Riepilogo e link rapidi DevTools",
+    "styleGallery": "Galleria Stili",
+    "styleGalleryDescription": "Riferimento componenti e stili",
+    "testCases": "Casi di Test",
+    "testCasesDescription": "Scenari di test di sviluppo",
+    "features": "Funzionalita",
+    "featuresDescription": "Registro funzionalita e copertura test",
+    "flows": "Flussi",
+    "flowsDescription": "Flussi utente",
+    "blocks": "Blocchi",
+    "blocksDescription": "Registro blocchi del page builder",
+    "tags": "Tag",
+    "tagsDescription": "Panoramica e filtraggio tag di test",
+    "config": "Visualizzatore Config",
+    "configDescription": "Configurazione tema ed entita",
+    "api": "Esploratore API",
+    "apiDescription": "Naviga tutti gli endpoint API",
+    "expandSidebar": "Espandi barra laterale",
+    "collapseSidebar": "Comprimi barra laterale"
+  },
+  "exitToDashboard": "Esci da DevTools",
+  "exitToDashboardDescription": "Torna al pannello principale",
+  "returnToDashboard": "Torna al pannello",
+  "goToSuperadmin": "Pannello Super Admin",
+  "goToSuperadminDescription": "Vai all'area super amministratore",
+  "superAdminArea": "Area super amministratore",
+  "restrictedArea": "Area Sviluppatore",
+  "developerAccessOnly": "Solo accesso sviluppatore",
+  "config": {
+    "error": "Errore caricamento configurazione",
+    "tabs": {
+      "theme": "Config Tema",
+      "entities": "Entita"
+    },
+    "themeTitle": "Configurazione del Tema",
+    "themeDescription": "Configurazione attiva del tema e override",
+    "entitiesTitle": "Registro Entita",
+    "entitiesDescription": "{count} entita registrate",
+    "copied": "Copiato!",
+    "copy": "Copia"
+  },
+  "tests": {
+    "searchPlaceholder": "Cerca test...",
+    "collapseAll": "Comprimi tutti",
+    "expandAll": "Espandi tutti",
+    "noMatchingTests": "Nessun test corrisponde alla tua ricerca",
+    "noTests": "Nessun test disponibile",
+    "fileTree": "File di Test",
+    "fileTreeDescription": "Naviga documentazione test",
+    "fileNotFound": "File Non Trovato",
+    "fileNotFoundDescription": "Il file '{path}' non esiste",
+    "backToList": "Torna alla lista",
+    "selectFile": "Seleziona un file",
+    "selectFileDescription": "Scegli un file di test dall'albero per visualizzarne il contenuto",
+    "error": "Errore caricamento file"
+  },
+  "api": {
+    "title": "Esploratore API",
+    "endpointsAvailable": "endpoint disponibili",
+    "endpointsInCategory": "endpoint in questa categoria",
+    "noRoutesInCategory": "Nessuna route in questa categoria",
+    "noRoutesMessage": "Non sono state registrate route personalizzate per questa categoria.",
+    "generatedAt": "Registro generato il"
+  },
+  "apiTester": {
+    "backToList": "Torna agli Endpoint",
+    "method": "Metodo HTTP",
+    "urlPreview": "Anteprima URL",
+    "pathParams": "Parametri Path",
+    "queryParams": "Parametri Query",
+    "headers": "Header Personalizzati",
+    "headersInfo": "Content-Type viene impostato automaticamente. Aggiungi header personalizzati sotto.",
+    "authentication": "Autenticazione",
+    "requestBody": "Corpo della Request (JSON)",
+    "sendRequest": "Invia Request",
+    "sending": "Invio...",
+    "cancel": "Annulla",
+    "response": "Risposta",
+    "responseBody": "Corpo",
+    "responseHeaders": "Header",
+    "noResponse": "Invia una request per vedere la risposta",
+    "auth": {
+      "useSession": "Usa sessione attuale",
+      "useApiKey": "Usa API key",
+      "apiKeyPlaceholder": "Inserisci la tua API key...",
+      "adminBypass": "Accesso cross-team",
+      "adminBypassTooltip": "Abilita per accedere ai dati di qualsiasi team. Richiede appartenenza al NextSpark Team."
+    },
+    "editor": {
+      "keyPlaceholder": "Chiave",
+      "valuePlaceholder": "Valore",
+      "addButton": "Aggiungi"
+    },
+    "pathParam": {
+      "required": "obbligatorio",
+      "enterPlaceholder": "Inserisci {name}..."
+    },
+    "responseStates": {
+      "idle": "Invia una request per vedere la risposta",
+      "loading": "Invio request...",
+      "error": "Si e verificato un errore"
+    }
+  },
+  "features": {
+    "title": "Registro Funzionalita",
+    "description": "Registro funzionalita con informazioni sulla copertura dei test",
+    "search": "Cerca funzionalita...",
+    "tests": "test",
+    "covered": "Coperto",
+    "uncovered": "Senza test",
+    "showing": "Mostrando {count} di {total} funzionalita",
+    "noResults": "Nessuna funzionalita trovata",
+    "noResultsHint": "Prova a modificare i filtri o la ricerca",
+    "stats": {
+      "total": "Totale Funzionalita",
+      "covered": "Con Test",
+      "uncovered": "Senza Test",
+      "coverage": "Copertura"
+    },
+    "filters": {
+      "all": "Tutti",
+      "allCoverage": "Tutti",
+      "covered": "Coperti",
+      "uncovered": "Non coperti"
+    },
+    "categories": {
+      "core": "Core",
+      "entities": "Entita",
+      "content": "Contenuto",
+      "settings": "Impostazioni",
+      "admin": "Admin"
+    }
+  },
+  "flows": {
+    "title": "Registro Flussi",
+    "description": "Flussi utente con copertura test",
+    "search": "Cerca flussi...",
+    "tests": "test",
+    "covered": "Coperto",
+    "uncovered": "Senza test",
+    "showing": "Mostrando {count} di {total} flussi",
+    "noResults": "Nessun flusso trovato",
+    "noResultsHint": "Prova a modificare i filtri o la ricerca",
+    "criticalPath": "Percorso Critico",
+    "stats": {
+      "total": "Totale Flussi",
+      "covered": "Con Test",
+      "uncovered": "Senza Test",
+      "critical": "Percorsi Critici"
+    },
+    "filters": {
+      "all": "Tutti",
+      "allCoverage": "Tutti",
+      "covered": "Coperti",
+      "uncovered": "Non coperti"
+    },
+    "categories": {
+      "acquisition": "Acquisizione",
+      "navigation": "Navigazione",
+      "content": "Contenuto",
+      "settings": "Impostazioni",
+      "admin": "Admin"
+    }
+  },
+  "blocks": {
+    "title": "Registro Blocchi",
+    "description": "Blocchi del page builder con definizioni dei campi",
+    "search": "Cerca blocchi...",
+    "tests": "test",
+    "fields": "campi",
+    "examples": "esempi",
+    "covered": "Con test",
+    "uncovered": "Senza test",
+    "showing": "Mostrando {count} di {total} blocchi",
+    "noResults": "Nessun blocco trovato",
+    "noResultsHint": "Prova a modificare i filtri o la ricerca",
+    "viewDetails": "Vedi dettagli",
+    "stats": {
+      "total": "Totale Blocchi",
+      "covered": "Con Test",
+      "uncovered": "Senza Test"
+    },
+    "filters": {
+      "all": "Tutti",
+      "allCoverage": "Tutti",
+      "covered": "Coperti",
+      "uncovered": "Non coperti"
+    },
+    "categories": {
+      "hero": "Hero",
+      "content": "Contenuto",
+      "media": "Media",
+      "cta": "CTA",
+      "layout": "Layout"
+    },
+    "scopes": {
+      "pages": "Pagine",
+      "posts": "Post"
+    },
+    "detail": {
+      "back": "Torna ai blocchi",
+      "overview": "Generale",
+      "fieldsTab": "Campi",
+      "preview": "Anteprima",
+      "livePreview": "Anteprima Live",
+      "previewDescription": "Questo blocco viene renderizzato con contenuto di esempio per mostrare come apparira sul tuo sito.",
+      "exampleProps": "Props di Esempio",
+      "examplePropsDescription": "Le props usate per renderizzare l'anteprima. Copia questo JSON come punto di partenza.",
+      "scope": "Ambito",
+      "category": "Categoria",
+      "testCoverage": "Copertura Test",
+      "fieldName": "Nome Campo",
+      "fieldType": "Tipo",
+      "required": "Obbligatorio",
+      "default": "Default",
+      "placeholder": "Placeholder",
+      "options": "Opzioni",
+      "yes": "Si",
+      "no": "No"
+    }
+  },
+  "tags": {
+    "title": "Vista Tag",
+    "description": "Tutti i tag di test organizzati per categoria",
+    "search": "Cerca tag o file di test...",
+    "totalTags": "Totale Tag",
+    "testFiles": "File di Test",
+    "showing": "Mostrando {count} tag",
+    "noResults": "Nessun tag trovato",
+    "noResultsHint": "Prova a modificare la ricerca",
+    "copyHint": "Clicca per copiare comando grep",
+    "expandHint": "Clicca per vedere i file di test",
+    "copied": "Copiato!",
+    "categories": {
+      "layers": "Livelli",
+      "priorities": "Priorita",
+      "features": "Funzionalita",
+      "flows": "Flussi",
+      "blocks": "Blocchi",
+      "roles": "Ruoli",
+      "operations": "Operazioni",
+      "other": "Altri"
+    }
+  },
+  "scheduledActions": {
+    "title": "Azioni Programmate",
+    "description": "Monitora e gestisci le azioni programmate in background",
+    "loading": "Caricamento azioni programmate...",
+    "empty": "Nessuna azione programmata trovata",
+    "emptyDescription": "Le azioni programmate appariranno qui quando verranno create",
+    "filters": {
+      "status": "Stato",
+      "allStatuses": "Tutti gli Stati",
+      "actionType": "Tipo Azione",
+      "allTypes": "Tutti i Tipi",
+      "apply": "Applica Filtri",
+      "reset": "Reimposta Filtri"
+    },
+    "table": {
+      "type": "Tipo",
+      "status": "Stato",
+      "scheduledAt": "Programmato Per",
+      "team": "Team",
+      "payload": "Dati",
+      "error": "Errore",
+      "noTeam": "Globale"
+    },
+    "status": {
+      "pending": "In Attesa",
+      "running": "In Esecuzione",
+      "completed": "Completato",
+      "failed": "Fallito"
+    },
+    "pagination": {
+      "previous": "Precedente",
+      "next": "Successivo",
+      "page": "Pagina {page} di {total}"
+    }
+  }
+}

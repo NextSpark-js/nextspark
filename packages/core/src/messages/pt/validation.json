@@ -1,0 +1,48 @@
+{
+  "email": {
+    "required": "O email e obrigatorio",
+    "invalid": "Por favor insira um email valido"
+  },
+  "password": {
+    "required": "A senha e obrigatoria",
+    "currentRequired": "A senha atual e obrigatoria",
+    "min": "A senha deve ter pelo menos 8 caracteres",
+    "minLength": "A senha deve ter pelo menos {min} caracteres",
+    "uppercase": "Deve conter pelo menos uma letra maiuscula",
+    "lowercase": "Deve conter pelo menos uma letra minuscula",
+    "number": "Deve conter pelo menos um numero",
+    "match": "As senhas nao coincidem",
+    "different": "A nova senha deve ser diferente da atual"
+  },
+  "firstName": {
+    "required": "O nome e obrigatorio",
+    "min": "O nome deve ter pelo menos 2 caracteres",
+    "minLength": "O nome deve ter pelo menos {min} caracteres"
+  },
+  "lastName": {
+    "required": "O sobrenome e obrigatorio",
+    "min": "O sobrenome deve ter pelo menos 2 caracteres",
+    "minLength": "O sobrenome deve ter pelo menos {min} caracteres"
+  },
+  "country": {
+    "required": "Por favor selecione um pais"
+  },
+  "timezone": {
+    "required": "Por favor selecione um fuso horario"
+  },
+  "language": {
+    "required": "Por favor selecione um idioma"
+  },
+  "taskTitle": {
+    "required": "O titulo da tarefa e obrigatorio",
+    "min": "O titulo deve ter pelo menos 1 caractere",
+    "max": "O titulo nao pode exceder 200 caracteres",
+    "minLength": "O titulo da tarefa deve ter pelo menos {min} caracteres"
+  },
+  "taskDescription": {
+    "max": "A descricao nao pode exceder 500 caracteres"
+  },
+  "terms": {
+    "required": "Voce deve aceitar os termos e condicoes"
+  }
+}

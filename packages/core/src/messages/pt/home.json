@@ -1,0 +1,13 @@
+{
+  "title": "Bem-vindo",
+  "description": "Sua plataforma tudo em um",
+  "hero": {
+    "title": "Construa mais rapido com nossa plataforma",
+    "subtitle": "Tudo o que voce precisa para criar aplicacoes incriveis",
+    "cta": "Comecar"
+  },
+  "features": {
+    "title": "Recursos",
+    "subtitle": "Tudo o que voce precisa"
+  }
+}

@@ -1,0 +1,194 @@
+{
+  "navigation": {
+    "dashboard": "Dashboard",
+    "users": "Utenti",
+    "style": "Galleria Stili",
+    "analytics": "Analisi",
+    "config": "Configurazione Sistema",
+    "exitSector7": "Esci da Sector7",
+    "returnToDashboard": "Torna alla dashboard"
+  },
+  "dashboard": {
+    "title": "Sector7",
+    "subtitle": "Pannello di Controllo Super Amministratore",
+    "restrictedAccess": "Area ad Accesso Limitato - Solo Superadmin",
+    "systemStatus": "Stato del Sistema",
+    "systemVersion": "Versione della Piattaforma",
+    "securityLevel": "Livello di Sicurezza",
+    "quickActions": {
+      "userManagement": {
+        "title": "Gestione Utenti",
+        "description": "Visualizza e gestisci tutti gli utenti e superamministratori"
+      },
+      "styleGallery": {
+        "title": "Galleria Stili",
+        "description": "Anteprima componenti ed elementi del sistema di design"
+      },
+      "analytics": {
+        "title": "Analisi",
+        "description": "Statistiche della piattaforma e metriche di utilizzo"
+      },
+      "systemConfig": {
+        "title": "Configurazione Sistema",
+        "description": "Configurazioni e impostazioni dell'applicazione"
+      }
+    },
+    "status": {
+      "online": "Online",
+      "active": "Attivo",
+      "version": "v1.0.0"
+    }
+  },
+  "users": {
+    "title": "Gestione Utenti",
+    "subtitle": "Gestisci tutti gli utenti e superamministratori",
+    "regularUsers": "Utenti Regolari",
+    "superadmins": "Superadmin",
+    "totalUsers": "Totale Utenti",
+    "allRegisteredUsers": "Tutti gli utenti registrati",
+    "membersCollaboratorsAdmins": "Membri, collaboratori, amministratori",
+    "systemAdministrators": "Amministratori di sistema",
+    "roleDistribution": "Distribuzione Ruoli",
+    "roles": "ruoli",
+    "refresh": "Aggiorna",
+    "lastUpdated": "Ultimo aggiornamento",
+    "requestedBy": "Richiesto da",
+    "source": "Fonte",
+    "table": {
+      "user": "Utente",
+      "email": "Email",
+      "role": "Ruolo",
+      "status": "Stato",
+      "joined": "Iscritto",
+      "since": "Dal",
+      "actions": "Azioni",
+      "administrator": "Amministratore",
+      "verified": "Verificato",
+      "pending": "In Attesa",
+      "unverified": "Non verificato",
+      "noUsers": "Nessun utente trovato",
+      "noUsersDescription": "Non ci sono ancora utenti regolari nel sistema.",
+      "noSuperadmins": "Nessun superadmin trovato",
+      "noSuperadminsDescription": "Questo e insolito - dovrebbe esserci almeno un superadmin.",
+      "you": "Tu"
+    },
+    "actions": {
+      "openMenu": "Apri menu",
+      "viewProfile": "Visualizza Profilo",
+      "editRole": "Modifica Ruolo",
+      "sendEmail": "Invia Email",
+      "sendMessage": "Invia Messaggio",
+      "suspendUser": "Sospendi Utente",
+      "adminSettings": "Impostazioni Admin",
+      "revokeAdmin": "Revoca Admin"
+    },
+    "descriptions": {
+      "regularUsersDescription": "Tutti gli utenti esclusi i superamministratori. Include membri, collaboratori e amministratori.",
+      "superadminsDescription": "Utenti con accesso completo al sistema e privilegi amministrativi. Gestire con estrema cautela."
+    },
+    "security": {
+      "notice": "Avviso di Sicurezza:",
+      "superadminWarning": "L'accesso superadmin garantisce il controllo totale del sistema. Gestire con estrema cautela."
+    }
+  },
+  "style": {
+    "title": "Galleria Stili",
+    "subtitle": "Vetrina del sistema di design e libreria componenti",
+    "exportTokens": "Esporta Token",
+    "stats": {
+      "components": "Componenti",
+      "availableComponents": "Componenti UI disponibili",
+      "colorTokens": "Token Colore",
+      "themeColorVariables": "Variabili colore del tema",
+      "themes": "Temi",
+      "lightDarkModes": "Modalita chiara e scura",
+      "documentation": "Documentazione",
+      "componentCoverage": "Copertura componenti"
+    },
+    "tabs": {
+      "components": "Componenti",
+      "theme": "Tema e Colori",
+      "guidelines": "Linee Guida"
+    },
+    "componentLibrary": {
+      "title": "Libreria Componenti",
+      "description": "Vetrina completa di tutti i componenti UI disponibili con diversi stati e variazioni"
+    },
+    "themeSystem": {
+      "title": "Sistema Temi",
+      "description": "Token colore, tipografia e variabili del sistema di design per temi chiaro e scuro"
+    },
+    "designPrinciples": {
+      "title": "Principi di Design",
+      "description": "Principi fondamentali che guidano il nostro sistema di design",
+      "consistency": {
+        "title": "Coerenza",
+        "description": "Mantenere coerenza visiva e funzionale in tutti i componenti"
+      },
+      "accessibility": {
+        "title": "Accessibilita",
+        "description": "Assicurare che tutti i componenti rispettino gli standard WCAG 2.1 AA"
+      },
+      "scalability": {
+        "title": "Scalabilita",
+        "description": "Progettare componenti che funzionino a diverse scale e contesti"
+      },
+      "performance": {
+        "title": "Prestazioni",
+        "description": "Ottimizzare per caricamento veloce e interazioni fluide"
+      }
+    },
+    "usageGuidelines": {
+      "title": "Linee Guida di Utilizzo",
+      "description": "Come usare efficacemente questo sistema di design",
+      "colorUsage": {
+        "title": "Uso dei Colori",
+        "description": "Usare nomi semantici dei colori (primary, secondary, destructive) invece di colori specifici"
+      },
+      "typographyScale": {
+        "title": "Scala Tipografica",
+        "description": "Seguire la scala tipografica stabilita per una gerarchia coerente"
+      },
+      "spacingSystem": {
+        "title": "Sistema di Spaziatura",
+        "description": "Usare il sistema di griglia 8px per spaziatura e allineamento coerente"
+      },
+      "componentComposition": {
+        "title": "Composizione Componenti",
+        "description": "Combinare componenti base per creare interfacce complesse"
+      }
+    },
+    "technicalSpecs": {
+      "title": "Specifiche Tecniche",
+      "description": "Dettagli di implementazione e requisiti",
+      "framework": "Framework",
+      "styling": "Stili",
+      "components": "Componenti",
+      "icons": "Icone",
+      "themeSystem": "Sistema Temi",
+      "buildTool": "Strumento di Build"
+    },
+    "resources": {
+      "title": "Risorse e Link",
+      "description": "Risorse aggiuntive e documentazione"
+    }
+  },
+  "errors": {
+    "accessDenied": "Accesso Negato",
+    "superadminRequired": "Hai bisogno dei privilegi di superadmin per accedere a questa area.",
+    "restrictedArea": "Questa sezione e riservata solo agli amministratori di sistema. Se ritieni sia un errore, contatta il supporto.",
+    "sessionNotFound": "Sessione non trovata. Per favore accedi nuovamente.",
+    "goBack": "Torna Indietro",
+    "dashboard": "Dashboard",
+    "errorLoadingUsers": "Errore Caricamento Utenti",
+    "failedToLoadUserData": "Impossibile caricare i dati degli utenti",
+    "retry": "Riprova"
+  },
+  "common": {
+    "backToSector7": "Torna a Sector7",
+    "comingSoon": "Prossimamente",
+    "soon": "Presto",
+    "loading": "Caricamento...",
+    "error": "Errore"
+  }
+}

@@ -1,0 +1,194 @@
+{
+  "navigation": {
+    "dashboard": "Painel",
+    "users": "Usuarios",
+    "style": "Galeria de Estilos",
+    "analytics": "Analytics",
+    "config": "Configuracao do Sistema",
+    "exitSector7": "Sair do Sector7",
+    "returnToDashboard": "Voltar ao painel"
+  },
+  "dashboard": {
+    "title": "Sector7",
+    "subtitle": "Painel de Controle de Super Administrador",
+    "restrictedAccess": "Area de Acesso Restrito - Apenas Superadmin",
+    "systemStatus": "Status do Sistema",
+    "systemVersion": "Versao da Plataforma",
+    "securityLevel": "Nivel de Seguranca",
+    "quickActions": {
+      "userManagement": {
+        "title": "Gerenciamento de Usuarios",
+        "description": "Ver e gerenciar todos os usuarios e superadministradores"
+      },
+      "styleGallery": {
+        "title": "Galeria de Estilos",
+        "description": "Visualizar componentes e elementos do sistema de design"
+      },
+      "analytics": {
+        "title": "Analytics",
+        "description": "Estatisticas da plataforma e metricas de uso"
+      },
+      "systemConfig": {
+        "title": "Configuracao do Sistema",
+        "description": "Configuracoes e ajustes da aplicacao"
+      }
+    },
+    "status": {
+      "online": "Online",
+      "active": "Ativo",
+      "version": "v1.0.0"
+    }
+  },
+  "users": {
+    "title": "Gerenciamento de Usuarios",
+    "subtitle": "Gerenciar todos os usuarios e superadministradores",
+    "regularUsers": "Usuarios Regulares",
+    "superadmins": "Superadmins",
+    "totalUsers": "Total de Usuarios",
+    "allRegisteredUsers": "Todos os usuarios registrados",
+    "membersCollaboratorsAdmins": "Membros, colaboradores, administradores",
+    "systemAdministrators": "Administradores do sistema",
+    "roleDistribution": "Distribuicao de Funcoes",
+    "roles": "funcoes",
+    "refresh": "Atualizar",
+    "lastUpdated": "Ultima atualizacao",
+    "requestedBy": "Solicitado por",
+    "source": "Fonte",
+    "table": {
+      "user": "Usuario",
+      "email": "Email",
+      "role": "Funcao",
+      "status": "Status",
+      "joined": "Entrou",
+      "since": "Desde",
+      "actions": "Acoes",
+      "administrator": "Administrador",
+      "verified": "Verificado",
+      "pending": "Pendente",
+      "unverified": "Nao verificado",
+      "noUsers": "Nenhum usuario encontrado",
+      "noUsersDescription": "Ainda nao ha usuarios regulares no sistema.",
+      "noSuperadmins": "Nenhum superadmin encontrado",
+      "noSuperadminsDescription": "Isso e incomum - deveria haver pelo menos um superadmin.",
+      "you": "Voce"
+    },
+    "actions": {
+      "openMenu": "Abrir menu",
+      "viewProfile": "Ver Perfil",
+      "editRole": "Editar Funcao",
+      "sendEmail": "Enviar Email",
+      "sendMessage": "Enviar Mensagem",
+      "suspendUser": "Suspender Usuario",
+      "adminSettings": "Configuracoes de Admin",
+      "revokeAdmin": "Revogar Admin"
+    },
+    "descriptions": {
+      "regularUsersDescription": "Todos os usuarios excluindo superadministradores. Inclui membros, colaboradores e administradores.",
+      "superadminsDescription": "Usuarios com acesso completo ao sistema e privilegios administrativos. Manuseie com extrema cautela."
+    },
+    "security": {
+      "notice": "Aviso de Seguranca:",
+      "superadminWarning": "O acesso de superadmin concede controle total do sistema. Manuseie com extrema cautela."
+    }
+  },
+  "style": {
+    "title": "Galeria de Estilos",
+    "subtitle": "Vitrine do sistema de design e biblioteca de componentes",
+    "exportTokens": "Exportar Tokens",
+    "stats": {
+      "components": "Componentes",
+      "availableComponents": "Componentes UI disponiveis",
+      "colorTokens": "Tokens de Cor",
+      "themeColorVariables": "Variaveis de cor do tema",
+      "themes": "Temas",
+      "lightDarkModes": "Modos claro e escuro",
+      "documentation": "Documentacao",
+      "componentCoverage": "Cobertura de componentes"
+    },
+    "tabs": {
+      "components": "Componentes",
+      "theme": "Tema e Cores",
+      "guidelines": "Diretrizes"
+    },
+    "componentLibrary": {
+      "title": "Biblioteca de Componentes",
+      "description": "Vitrine completa de todos os componentes UI disponiveis com diferentes estados e variacoes"
+    },
+    "themeSystem": {
+      "title": "Sistema de Temas",
+      "description": "Tokens de cor, tipografia e variaveis do sistema de design para temas claro e escuro"
+    },
+    "designPrinciples": {
+      "title": "Principios de Design",
+      "description": "Principios fundamentais que guiam nosso sistema de design",
+      "consistency": {
+        "title": "Consistencia",
+        "description": "Manter consistencia visual e funcional em todos os componentes"
+      },
+      "accessibility": {
+        "title": "Acessibilidade",
+        "description": "Garantir que todos os componentes cumpram os padroes WCAG 2.1 AA"
+      },
+      "scalability": {
+        "title": "Escalabilidade",
+        "description": "Projetar componentes que funcionem em diferentes escalas e contextos"
+      },
+      "performance": {
+        "title": "Desempenho",
+        "description": "Otimizar para carregamento rapido e interacoes fluidas"
+      }
+    },
+    "usageGuidelines": {
+      "title": "Diretrizes de Uso",
+      "description": "Como usar efetivamente este sistema de design",
+      "colorUsage": {
+        "title": "Uso de Cores",
+        "description": "Usar nomes semanticos de cores (primary, secondary, destructive) em vez de cores especificas"
+      },
+      "typographyScale": {
+        "title": "Escala Tipografica",
+        "description": "Seguir a escala tipografica estabelecida para hierarquia consistente"
+      },
+      "spacingSystem": {
+        "title": "Sistema de Espacamento",
+        "description": "Usar o sistema de grade de 8px para espacamento e alinhamento consistente"
+      },
+      "componentComposition": {
+        "title": "Composicao de Componentes",
+        "description": "Combinar componentes base para criar interfaces complexas"
+      }
+    },
+    "technicalSpecs": {
+      "title": "Especificacoes Tecnicas",
+      "description": "Detalhes de implementacao e requisitos",
+      "framework": "Framework",
+      "styling": "Estilos",
+      "components": "Componentes",
+      "icons": "Icones",
+      "themeSystem": "Sistema de Temas",
+      "buildTool": "Ferramenta de Build"
+    },
+    "resources": {
+      "title": "Recursos e Links",
+      "description": "Recursos adicionais e documentacao"
+    }
+  },
+  "errors": {
+    "accessDenied": "Acesso Negado",
+    "superadminRequired": "Voce precisa de privilegios de superadmin para acessar esta area.",
+    "restrictedArea": "Esta secao e restrita apenas a administradores do sistema. Se voce acredita que isso e um erro, por favor contate o suporte.",
+    "sessionNotFound": "Sessao nao encontrada. Por favor faca login novamente.",
+    "goBack": "Voltar",
+    "dashboard": "Painel",
+    "errorLoadingUsers": "Erro ao Carregar Usuarios",
+    "failedToLoadUserData": "Falha ao carregar dados de usuarios",
+    "retry": "Tentar Novamente"
+  },
+  "common": {
+    "backToSector7": "Voltar ao Sector7",
+    "comingSoon": "Em Breve",
+    "soon": "Em breve",
+    "loading": "Carregando...",
+    "error": "Erro"
+  }
+}

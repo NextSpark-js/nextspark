@@ -1,0 +1,102 @@
+{
+  "hero": {
+    "badge": "Preise",
+    "title": "Pläne für jedes",
+    "titleAccent": "Team",
+    "description": "Starten Sie kostenlos und skalieren Sie, während Ihr Team wächst. Alle Pläne beinhalten unsere Kernfunktionen."
+  },
+  "plans": {
+    "free": {
+      "name": "Kostenlos",
+      "description": "Perfekt für den Einstieg",
+      "price": "0",
+      "period": "für immer",
+      "cta": "Kostenlos starten",
+      "features": {
+        "users": "1 Benutzer",
+        "projects": "5 Projekte",
+        "storage": "1 GB Speicher",
+        "support": "Basis-Support",
+        "api": "API-Zugriff",
+        "analytics": "Erweiterte Analysen",
+        "prioritySupport": "Prioritäts-Support",
+        "integrations": "Benutzerdefinierte Integrationen"
+      }
+    },
+    "pro": {
+      "name": "Pro",
+      "description": "Beste Wahl für wachsende Teams",
+      "price": "29",
+      "period": "Monat",
+      "badge": "Am beliebtesten",
+      "cta": "Pro-Testversion starten",
+      "features": {
+        "users": "10 Benutzer",
+        "projects": "Unbegrenzte Projekte",
+        "storage": "100 GB Speicher",
+        "support": "Prioritäts-Support",
+        "api": "API-Zugriff",
+        "analytics": "Erweiterte Analysen",
+        "integrations": "Benutzerdefinierte Integrationen",
+        "manager": "Dedizierter Manager"
+      }
+    },
+    "enterprise": {
+      "name": "Enterprise",
+      "description": "Für große Organisationen",
+      "price": "99",
+      "period": "Monat",
+      "cta": "Vertrieb kontaktieren",
+      "features": {
+        "users": "Unbegrenzte Benutzer",
+        "projects": "Unbegrenzte Projekte",
+        "storage": "1 TB Speicher",
+        "support": "Dedizierter Support",
+        "api": "API-Zugriff",
+        "analytics": "Erweiterte Analysen",
+        "integrations": "Benutzerdefinierte Integrationen",
+        "manager": "Dedizierter Manager"
+      }
+    }
+  },
+  "comparison": {
+    "title": "Detaillierter Vergleich",
+    "description": "Sehen Sie alle in jedem Plan enthaltenen Funktionen, um die beste Entscheidung zu treffen.",
+    "collaboration": {
+      "title": "Zusammenarbeit",
+      "description": "Werkzeuge für effiziente Teamarbeit mit detaillierten Berechtigungen."
+    },
+    "storage": {
+      "title": "Speicher",
+      "description": "Sicherer und skalierbarer Speicher für alle Ihre Projekte und Dateien."
+    },
+    "security": {
+      "title": "Sicherheit",
+      "description": "Ende-zu-Ende-Verschlüsselung und Einhaltung von Sicherheitsstandards."
+    },
+    "support": {
+      "title": "Support",
+      "description": "Spezialisierter technischer Support zur Lösung aller Fragen oder Probleme."
+    }
+  },
+  "faq": {
+    "title": "Häufig gestellte Fragen",
+    "description": "Wir beantworten die häufigsten Fragen zu unseren Plänen und Preisen.",
+    "questions": {
+      "changePlan": "Kann ich jederzeit den Plan wechseln?",
+      "changePlanAnswer": "Ja, Sie können jederzeit Ihren Plan über Ihr Dashboard wechseln. Änderungen gelten sofort.",
+      "setupCost": "Gibt es Einrichtungskosten?",
+      "setupCostAnswer": "Nein, alle unsere Pläne beinhalten kostenlose Einrichtung und Support während der Implementierung.",
+      "paymentMethods": "Welche Zahlungsmethoden akzeptieren Sie?",
+      "paymentMethodsAnswer": "Wir akzeptieren alle gängigen Kreditkarten, PayPal und Banküberweisungen für Enterprise-Pläne.",
+      "annualDiscount": "Gibt es Rabatte für jährliche Zahlung?",
+      "annualDiscountAnswer": "Ja, wir bieten 2 kostenlose Monate bei jährlicher Zahlung für Pro- und Enterprise-Pläne."
+    }
+  },
+  "cta": {
+    "title": "Bereit loszulegen?",
+    "description": "Schließen Sie sich Tausenden von Teams an, die bereits unserer Plattform für ihre Projekte vertrauen.",
+    "startFree": "Kostenlos starten",
+    "contactSales": "Vertrieb kontaktieren"
+  }
+}

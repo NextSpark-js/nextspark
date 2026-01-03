@@ -1,0 +1,140 @@
+{
+  "title": "Equipes",
+  "description": "Gerez vos equipes et collaborations",
+
+  "types": {
+    "personal": "Personnel",
+    "work": "Equipe de travail"
+  },
+
+  "roles": {
+    "owner": "Proprietaire",
+    "admin": "Administrateur",
+    "member": "Membre",
+    "viewer": "Lecteur"
+  },
+
+  "roleDescriptions": {
+    "owner": "Controle total de l'equipe, y compris la suppression et la facturation",
+    "admin": "Peut gerer les membres, la configuration et la plupart des operations",
+    "member": "Peut voir le contenu de l'equipe et collaborer avec d'autres membres",
+    "viewer": "Acces en lecture seule au contenu de l'equipe"
+  },
+
+  "actions": {
+    "create": "Creer une equipe",
+    "edit": "Modifier l'equipe",
+    "delete": "Supprimer l'equipe",
+    "leave": "Quitter l'equipe",
+    "switch": "Changer d'equipe",
+    "manage": "Gerer l'equipe",
+    "invite": "Inviter un membre",
+    "removeMember": "Supprimer le membre",
+    "changeRole": "Changer le role"
+  },
+
+  "switcher": {
+    "switchTeam": "Changer d'equipe",
+    "switchingTo": "Changement vers",
+    "switchComplete": "Changement termine",
+    "loadingTeamData": "Chargement des donnees de l'equipe...",
+    "ready": "Pret !",
+    "personal": "Personnel",
+    "workTeam": "Equipe de travail",
+    "manageTeams": "Gerer les equipes",
+    "active": "Actif",
+    "team": "Equipe"
+  },
+
+  "createTeam": {
+    "title": "Creer une nouvelle equipe",
+    "description": "Creez une nouvelle equipe pour collaborer avec d'autres",
+    "nameLabel": "Nom de l'equipe",
+    "namePlaceholder": "Entrez le nom de l'equipe",
+    "slugLabel": "URL de l'equipe",
+    "slugPlaceholder": "url-de-l-equipe",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Decrivez a quoi sert cette equipe",
+    "success": "Equipe creee avec succes",
+    "error": "Erreur lors de la creation de l'equipe"
+  },
+
+  "editTeam": {
+    "title": "Modifier l'equipe",
+    "success": "Equipe mise a jour avec succes",
+    "error": "Erreur lors de la mise a jour de l'equipe"
+  },
+
+  "deleteTeam": {
+    "title": "Supprimer l'equipe",
+    "description": "Etes-vous sur de vouloir supprimer cette equipe ? Cette action ne peut pas etre annulee.",
+    "confirmButton": "Supprimer l'equipe",
+    "success": "Equipe supprimee avec succes",
+    "error": "Erreur lors de la suppression de l'equipe"
+  },
+
+  "members": {
+    "title": "Membres de l'equipe",
+    "description": "Gerez qui a acces a cette equipe",
+    "empty": "Aucun membre pour le moment",
+    "you": "(Vous)",
+    "joined": "A rejoint le {date}"
+  },
+
+  "invitations": {
+    "title": "Invitations en attente",
+    "description": "Invitations en attente de reponse",
+    "empty": "Aucune invitation en attente",
+    "sent": "Envoyee le {date}",
+    "expires": "Expire le {date}",
+    "resend": "Renvoyer",
+    "cancel": "Annuler l'invitation",
+    "cancelSuccess": "Invitation annulee",
+    "cancelError": "Erreur lors de l'annulation de l'invitation"
+  },
+
+  "invite": {
+    "title": "Inviter un membre",
+    "description": "Invitez quelqu'un a rejoindre cette equipe",
+    "emailLabel": "Adresse email",
+    "emailPlaceholder": "collegue@exemple.com",
+    "roleLabel": "Role",
+    "rolePlaceholder": "Selectionnez un role",
+    "sendButton": "Envoyer l'invitation",
+    "success": "Invitation envoyee avec succes",
+    "error": "Erreur lors de l'envoi de l'invitation"
+  },
+
+  "acceptInvite": {
+    "title": "Invitation a l'equipe",
+    "description": "Vous avez ete invite a rejoindre",
+    "accept": "Accepter l'invitation",
+    "decline": "Refuser",
+    "expired": "Cette invitation a expire",
+    "invalid": "Cette invitation n'est plus valide",
+    "success": "Vous avez rejoint l'equipe !",
+    "error": "Erreur lors de l'acceptation de l'invitation"
+  },
+
+  "settings": {
+    "title": "Parametres de l'equipe",
+    "general": "General",
+    "members": "Membres",
+    "billing": "Facturation",
+    "danger": "Zone de danger"
+  },
+
+  "errors": {
+    "notFound": "Equipe non trouvee",
+    "notMember": "Vous n'etes pas membre de cette equipe",
+    "permissionDenied": "Vous n'avez pas la permission d'effectuer cette action",
+    "cannotDeletePersonal": "Impossible de supprimer l'equipe personnelle",
+    "cannotLeaveOwner": "Les proprietaires ne peuvent pas partir. Transferez d'abord la propriete.",
+    "lastAdmin": "Impossible de supprimer le dernier administrateur de l'equipe"
+  },
+
+  "empty": {
+    "title": "Aucune equipe pour le moment",
+    "description": "Creez votre premiere equipe pour commencer a collaborer"
+  }
+}

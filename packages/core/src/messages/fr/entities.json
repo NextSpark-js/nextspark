@@ -1,0 +1,52 @@
+{
+  "actions": {
+    "create": "Creer {entity}",
+    "edit": "Modifier {entity}",
+    "delete": "Supprimer {entity}",
+    "view": "Voir {entity}",
+    "duplicate": "Dupliquer",
+    "archive": "Archiver",
+    "restore": "Restaurer",
+    "save": "Enregistrer {entity}",
+    "update": "Mettre a jour {entity}"
+  },
+  "fields": {
+    "title": "Titre",
+    "name": "Nom",
+    "slug": "Slug",
+    "status": "Statut",
+    "description": "Description",
+    "createdAt": "Cree",
+    "updatedAt": "Mis a jour",
+    "id": "ID"
+  },
+  "messages": {
+    "created": "{entity} cree avec succes",
+    "updated": "{entity} mis a jour avec succes",
+    "deleted": "{entity} supprime avec succes",
+    "archived": "{entity} archive avec succes",
+    "restored": "{entity} restaure avec succes",
+    "duplicated": "{entity} duplique avec succes",
+    "confirmDelete": "Etes-vous sur de vouloir supprimer ce {entity} ?",
+    "confirmArchive": "Etes-vous sur de vouloir archiver ce {entity} ?",
+    "deleteWarning": "Cette action ne peut pas etre annulee.",
+    "notFound": "{entity} non trouve",
+    "loadError": "Erreur lors du chargement de {entity}"
+  },
+  "list": {
+    "empty": "Aucun {entities} trouve",
+    "emptyFiltered": "Aucun {entities} ne correspond aux filtres",
+    "loading": "Chargement...",
+    "search": "Rechercher...",
+    "searchPlaceholder": "Rechercher {entities}...",
+    "noResults": "Aucun resultat trouve",
+    "showing": "Affichage de {count} sur {total} {entities}",
+    "selected": "{count} selectionnes"
+  },
+  "detail": {
+    "back": "Retour a {entities}",
+    "createdAt": "Cree le {date}",
+    "updatedAt": "Mis a jour le {date}",
+    "idCopied": "ID copie dans le presse-papiers"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "navigation": {
+    "home": "Home",
+    "features": "Funzionalita",
+    "pricing": "Prezzi",
+    "docs": "Documentazione",
+    "support": "Supporto"
+  },
+  "cta": {
+    "getStarted": "Inizia",
+    "learnMore": "Scopri di piu",
+    "contactUs": "Contattaci"
+  }
+}

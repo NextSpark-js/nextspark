@@ -1,0 +1,27 @@
+{
+  "title": "Permissoes da Equipe",
+  "description": "Veja e gerencie o que cada funcao da equipe pode fazer",
+  "rolesOverview": "Visao Geral das Funcoes",
+  "rolesOverviewDescription": "Cada membro da equipe tem uma funcao que determina o que pode acessar e fazer",
+  "allPermissions": "Todas as Permissoes",
+  "permission": "Permissao",
+  "dangerousAction": "Esta e uma acao potencialmente perigosa",
+  "roles": {
+    "owner": {
+      "title": "Proprietario",
+      "description": "Acesso completo a todos os recursos e configuracoes da equipe"
+    },
+    "admin": {
+      "title": "Administrador",
+      "description": "Pode gerenciar membros da equipe e a maioria das configuracoes"
+    },
+    "member": {
+      "title": "Membro",
+      "description": "Pode criar e editar conteudo, acesso limitado a configuracoes"
+    },
+    "viewer": {
+      "title": "Visualizador",
+      "description": "Acesso somente leitura ao conteudo da equipe"
+    }
+  }
+}

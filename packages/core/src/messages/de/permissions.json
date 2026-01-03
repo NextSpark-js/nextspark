@@ -1,0 +1,27 @@
+{
+  "title": "Team-Berechtigungen",
+  "description": "Sehen und verwalten Sie, was jede Teamrolle tun kann",
+  "rolesOverview": "Rollenuebersicht",
+  "rolesOverviewDescription": "Jedes Teammitglied hat eine Rolle, die bestimmt, worauf es zugreifen und was es tun kann",
+  "allPermissions": "Alle Berechtigungen",
+  "permission": "Berechtigung",
+  "dangerousAction": "Dies ist eine potenziell gefaehrliche Aktion",
+  "roles": {
+    "owner": {
+      "title": "Eigentuemer",
+      "description": "Vollstaendiger Zugriff auf alle Teamfunktionen und -einstellungen"
+    },
+    "admin": {
+      "title": "Administrator",
+      "description": "Kann Teammitglieder und die meisten Einstellungen verwalten"
+    },
+    "member": {
+      "title": "Mitglied",
+      "description": "Kann Inhalte erstellen und bearbeiten, eingeschraenkter Zugriff auf Einstellungen"
+    },
+    "viewer": {
+      "title": "Betrachter",
+      "description": "Nur Lesezugriff auf Teaminhalte"
+    }
+  }
+}

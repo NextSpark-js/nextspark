@@ -1,0 +1,24 @@
+{
+  "title": "Dokumentation",
+  "description": "Lernen Sie, unsere Plattform zu nutzen",
+  "search": "In Dokumentation suchen...",
+  "categories": {
+    "getting-started": "Erste Schritte",
+    "guides": "Anleitungen",
+    "api": "API-Referenz",
+    "plugins": "Plugins",
+    "core": "Core",
+    "theme": "Theme"
+  },
+  "breadcrumbs": {
+    "home": "Startseite"
+  },
+  "sidebar": {
+    "open": "Seitenmenue oeffnen",
+    "label": "Dokumentationsnavigation"
+  },
+  "notFound": {
+    "title": "Seite nicht gefunden",
+    "description": "Die gesuchte Dokumentationsseite existiert nicht."
+  }
+}

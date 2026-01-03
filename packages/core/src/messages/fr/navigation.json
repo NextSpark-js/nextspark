@@ -1,0 +1,11 @@
+{
+  "home": "Accueil",
+  "docs": "Documentation",
+  "dashboard": "Tableau de bord",
+  "login": "Connexion",
+  "signup": "Inscription",
+  "logout": "Deconnexion",
+  "features": "Fonctionnalites",
+  "pricing": "Tarifs",
+  "support": "Support"
+}

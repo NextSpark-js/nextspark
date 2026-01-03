@@ -1,0 +1,285 @@
+{
+  "title": "DevTools",
+  "subtitle": "Entwicklungswerkzeuge",
+  "nav": {
+    "home": "Uebersicht",
+    "homeDescription": "DevTools-Uebersicht und Schnelllinks",
+    "styleGallery": "Stil-Galerie",
+    "styleGalleryDescription": "Komponenten- und Stilreferenz",
+    "testCases": "Testfaelle",
+    "testCasesDescription": "Entwicklungstestszenarien",
+    "features": "Funktionen",
+    "featuresDescription": "Funktionsregister und Testabdeckung",
+    "flows": "Ablaeufe",
+    "flowsDescription": "Benutzerablaeufe",
+    "blocks": "Bloecke",
+    "blocksDescription": "Page-Builder-Blockregister",
+    "tags": "Tags",
+    "tagsDescription": "Test-Tag-Uebersicht und Filterung",
+    "config": "Konfigurationsanzeige",
+    "configDescription": "Theme- und Entitaetskonfiguration",
+    "api": "API-Explorer",
+    "apiDescription": "Alle API-Endpunkte durchsuchen",
+    "expandSidebar": "Seitenleiste erweitern",
+    "collapseSidebar": "Seitenleiste einklappen"
+  },
+  "exitToDashboard": "DevTools verlassen",
+  "exitToDashboardDescription": "Zurueck zur Hauptuebersicht",
+  "returnToDashboard": "Zurueck zur Uebersicht",
+  "goToSuperadmin": "Super-Admin-Bereich",
+  "goToSuperadminDescription": "Zum Super-Administrator-Bereich gehen",
+  "superAdminArea": "Super-Administrator-Bereich",
+  "restrictedArea": "Entwicklerbereich",
+  "developerAccessOnly": "Nur Entwicklerzugang",
+  "config": {
+    "error": "Fehler beim Laden der Konfiguration",
+    "tabs": {
+      "theme": "Theme-Konfiguration",
+      "entities": "Entitaeten"
+    },
+    "themeTitle": "Theme-Konfiguration",
+    "themeDescription": "Aktive Theme-Konfiguration und Ueberschreibungen",
+    "entitiesTitle": "Entitaetsregister",
+    "entitiesDescription": "{count} registrierte Entitaeten",
+    "copied": "Kopiert!",
+    "copy": "Kopieren"
+  },
+  "tests": {
+    "searchPlaceholder": "Tests suchen...",
+    "collapseAll": "Alle einklappen",
+    "expandAll": "Alle ausklappen",
+    "noMatchingTests": "Kein Test entspricht Ihrer Suche",
+    "noTests": "Keine Tests verfuegbar",
+    "fileTree": "Testdateien",
+    "fileTreeDescription": "Testdokumentation durchsuchen",
+    "fileNotFound": "Datei nicht gefunden",
+    "fileNotFoundDescription": "Die Datei '{path}' existiert nicht",
+    "backToList": "Zurueck zur Liste",
+    "selectFile": "Datei auswaehlen",
+    "selectFileDescription": "Waehlen Sie eine Testdatei aus dem Baum, um den Inhalt anzuzeigen",
+    "error": "Fehler beim Laden der Datei"
+  },
+  "api": {
+    "title": "API-Explorer",
+    "endpointsAvailable": "verfuegbare Endpunkte",
+    "endpointsInCategory": "Endpunkte in dieser Kategorie",
+    "noRoutesInCategory": "Keine Routen in dieser Kategorie",
+    "noRoutesMessage": "Fuer diese Kategorie wurden keine benutzerdefinierten Routen registriert.",
+    "generatedAt": "Register erstellt am"
+  },
+  "apiTester": {
+    "backToList": "Zurueck zu Endpunkten",
+    "method": "HTTP-Methode",
+    "urlPreview": "URL-Vorschau",
+    "pathParams": "Pfadparameter",
+    "queryParams": "Query-Parameter",
+    "headers": "Benutzerdefinierte Header",
+    "headersInfo": "Content-Type wird automatisch gesetzt. Fuegen Sie unten benutzerdefinierte Header hinzu.",
+    "authentication": "Authentifizierung",
+    "requestBody": "Request-Body (JSON)",
+    "sendRequest": "Request senden",
+    "sending": "Senden...",
+    "cancel": "Abbrechen",
+    "response": "Antwort",
+    "responseBody": "Body",
+    "responseHeaders": "Header",
+    "noResponse": "Senden Sie einen Request, um die Antwort zu sehen",
+    "auth": {
+      "useSession": "Aktuelle Sitzung verwenden",
+      "useApiKey": "API-Schluessel verwenden",
+      "apiKeyPlaceholder": "Geben Sie Ihren API-Schluessel ein...",
+      "adminBypass": "Team-uebergreifender Zugriff",
+      "adminBypassTooltip": "Aktivieren Sie den Zugriff auf Daten aller Teams. Erfordert NextSpark-Team-Mitgliedschaft."
+    },
+    "editor": {
+      "keyPlaceholder": "Schluessel",
+      "valuePlaceholder": "Wert",
+      "addButton": "Hinzufuegen"
+    },
+    "pathParam": {
+      "required": "erforderlich",
+      "enterPlaceholder": "{name} eingeben..."
+    },
+    "responseStates": {
+      "idle": "Senden Sie einen Request, um die Antwort zu sehen",
+      "loading": "Request wird gesendet...",
+      "error": "Ein Fehler ist aufgetreten"
+    }
+  },
+  "features": {
+    "title": "Funktionsregister",
+    "description": "Funktionsregister mit Testabdeckungsinformationen",
+    "search": "Funktionen suchen...",
+    "tests": "Tests",
+    "covered": "Abgedeckt",
+    "uncovered": "Ohne Tests",
+    "showing": "Zeige {count} von {total} Funktionen",
+    "noResults": "Keine Funktionen gefunden",
+    "noResultsHint": "Versuchen Sie, die Filter oder die Suche anzupassen",
+    "stats": {
+      "total": "Funktionen gesamt",
+      "covered": "Mit Tests",
+      "uncovered": "Ohne Tests",
+      "coverage": "Abdeckung"
+    },
+    "filters": {
+      "all": "Alle",
+      "allCoverage": "Alle",
+      "covered": "Abgedeckt",
+      "uncovered": "Nicht abgedeckt"
+    },
+    "categories": {
+      "core": "Core",
+      "entities": "Entitaeten",
+      "content": "Inhalt",
+      "settings": "Einstellungen",
+      "admin": "Admin"
+    }
+  },
+  "flows": {
+    "title": "Ablaufregister",
+    "description": "Benutzerablaeufe mit Testabdeckung",
+    "search": "Ablaeufe suchen...",
+    "tests": "Tests",
+    "covered": "Abgedeckt",
+    "uncovered": "Ohne Tests",
+    "showing": "Zeige {count} von {total} Ablaeufen",
+    "noResults": "Keine Ablaeufe gefunden",
+    "noResultsHint": "Versuchen Sie, die Filter oder die Suche anzupassen",
+    "criticalPath": "Kritischer Pfad",
+    "stats": {
+      "total": "Ablaeufe gesamt",
+      "covered": "Mit Tests",
+      "uncovered": "Ohne Tests",
+      "critical": "Kritische Pfade"
+    },
+    "filters": {
+      "all": "Alle",
+      "allCoverage": "Alle",
+      "covered": "Abgedeckt",
+      "uncovered": "Nicht abgedeckt"
+    },
+    "categories": {
+      "acquisition": "Akquise",
+      "navigation": "Navigation",
+      "content": "Inhalt",
+      "settings": "Einstellungen",
+      "admin": "Admin"
+    }
+  },
+  "blocks": {
+    "title": "Blockregister",
+    "description": "Page-Builder-Bloecke mit Felddefinitionen",
+    "search": "Bloecke suchen...",
+    "tests": "Tests",
+    "fields": "Felder",
+    "examples": "Beispiele",
+    "covered": "Mit Tests",
+    "uncovered": "Ohne Tests",
+    "showing": "Zeige {count} von {total} Bloecken",
+    "noResults": "Keine Bloecke gefunden",
+    "noResultsHint": "Versuchen Sie, die Filter oder die Suche anzupassen",
+    "viewDetails": "Details anzeigen",
+    "stats": {
+      "total": "Bloecke gesamt",
+      "covered": "Mit Tests",
+      "uncovered": "Ohne Tests"
+    },
+    "filters": {
+      "all": "Alle",
+      "allCoverage": "Alle",
+      "covered": "Abgedeckt",
+      "uncovered": "Nicht abgedeckt"
+    },
+    "categories": {
+      "hero": "Hero",
+      "content": "Inhalt",
+      "media": "Medien",
+      "cta": "CTA",
+      "layout": "Layout"
+    },
+    "scopes": {
+      "pages": "Seiten",
+      "posts": "Beitraege"
+    },
+    "detail": {
+      "back": "Zurueck zu Bloecken",
+      "overview": "Uebersicht",
+      "fieldsTab": "Felder",
+      "preview": "Vorschau",
+      "livePreview": "Live-Vorschau",
+      "previewDescription": "Dieser Block wird mit Beispielinhalten gerendert, um zu zeigen, wie er auf Ihrer Website aussehen wird.",
+      "exampleProps": "Beispiel-Props",
+      "examplePropsDescription": "Die Props, die zum Rendern der Vorschau verwendet werden. Kopieren Sie dieses JSON als Ausgangspunkt.",
+      "scope": "Bereich",
+      "category": "Kategorie",
+      "testCoverage": "Testabdeckung",
+      "fieldName": "Feldname",
+      "fieldType": "Typ",
+      "required": "Erforderlich",
+      "default": "Standard",
+      "placeholder": "Platzhalter",
+      "options": "Optionen",
+      "yes": "Ja",
+      "no": "Nein"
+    }
+  },
+  "tags": {
+    "title": "Tag-Ansicht",
+    "description": "Alle Test-Tags nach Kategorie organisiert",
+    "search": "Tags oder Testdateien suchen...",
+    "totalTags": "Tags gesamt",
+    "testFiles": "Testdateien",
+    "showing": "Zeige {count} Tags",
+    "noResults": "Keine Tags gefunden",
+    "noResultsHint": "Versuchen Sie, Ihre Suche anzupassen",
+    "copyHint": "Klicken zum Kopieren des grep-Befehls",
+    "expandHint": "Klicken zum Anzeigen der Testdateien",
+    "copied": "Kopiert!",
+    "categories": {
+      "layers": "Schichten",
+      "priorities": "Prioritaeten",
+      "features": "Funktionen",
+      "flows": "Ablaeufe",
+      "blocks": "Bloecke",
+      "roles": "Rollen",
+      "operations": "Operationen",
+      "other": "Andere"
+    }
+  },
+  "scheduledActions": {
+    "title": "Geplante Aktionen",
+    "description": "Geplante Hintergrundaktionen ueberwachen und verwalten",
+    "loading": "Geplante Aktionen werden geladen...",
+    "empty": "Keine geplanten Aktionen gefunden",
+    "emptyDescription": "Geplante Aktionen werden hier angezeigt, wenn sie erstellt werden",
+    "filters": {
+      "status": "Status",
+      "allStatuses": "Alle Status",
+      "actionType": "Aktionstyp",
+      "allTypes": "Alle Typen",
+      "apply": "Filter anwenden",
+      "reset": "Filter zuruecksetzen"
+    },
+    "table": {
+      "type": "Typ",
+      "status": "Status",
+      "scheduledAt": "Geplant fuer",
+      "team": "Team",
+      "payload": "Daten",
+      "error": "Fehler",
+      "noTeam": "Global"
+    },
+    "status": {
+      "pending": "Ausstehend",
+      "running": "Wird ausgefuehrt",
+      "completed": "Abgeschlossen",
+      "failed": "Fehlgeschlagen"
+    },
+    "pagination": {
+      "previous": "Zurueck",
+      "next": "Weiter",
+      "page": "Seite {page} von {total}"
+    }
+  }
+}

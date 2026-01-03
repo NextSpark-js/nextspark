@@ -1,0 +1,66 @@
+{
+  "entity": {
+    "name": "Cliente",
+    "plural": "Clientes",
+    "description": "Gerencie seus clientes e suas informações"
+  },
+  "fields": {
+    "office": {
+      "label": "Escritório",
+      "description": "Escritório ou filial do cliente",
+      "placeholder": "Digite o escritório..."
+    },
+    "number": {
+      "label": "Número do Cliente",
+      "description": "Identificador único do cliente",
+      "placeholder": "Digite o número do cliente..."
+    },
+    "name": {
+      "label": "Nome",
+      "description": "Nome do cliente",
+      "placeholder": "Digite o nome do cliente..."
+    },
+    "phone": {
+      "label": "Telefone",
+      "description": "Número de telefone do cliente",
+      "placeholder": "Digite o número de telefone..."
+    },
+    "salesRep": {
+      "label": "Representante de Vendas",
+      "description": "Representante de vendas atribuído",
+      "placeholder": "Digite o representante de vendas..."
+    },
+    "visitDays": {
+      "label": "Dias de Visita",
+      "description": "Dias de visita agendados",
+      "placeholder": "Digite os dias de visita..."
+    },
+    "contactDays": {
+      "label": "Dias de Contato",
+      "description": "Dias preferidos de contato",
+      "placeholder": "Digite os dias de contato..."
+    },
+    "image": {
+      "label": "Imagem",
+      "description": "Logo ou URL da imagem do cliente",
+      "placeholder": "Digite a URL da imagem..."
+    }
+  },
+  "actions": {
+    "create": "Criar Cliente",
+    "edit": "Editar Cliente",
+    "delete": "Excluir Cliente",
+    "view": "Visualizar Cliente",
+    "list": "Listar Clientes",
+    "search": "Buscar Clientes",
+    "export": "Exportar Clientes",
+    "import": "Importar Clientes"
+  },
+  "messages": {
+    "created": "Cliente criado com sucesso",
+    "updated": "Cliente atualizado com sucesso",
+    "deleted": "Cliente excluído com sucesso",
+    "notFound": "Cliente não encontrado",
+    "error": "Ocorreu um erro ao processar o cliente"
+  }
+}
