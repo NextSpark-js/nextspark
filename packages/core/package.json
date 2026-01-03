@@ -1,6 +1,6 @@
 {
   "name": "@nextsparkjs/core",
-  "version": "0.3.0",
+  "version": "0.1.0-beta.1",
   "description": "NextSpark - The complete SaaS framework for Next.js",
   "type": "module",
   "main": "./dist/index.js",

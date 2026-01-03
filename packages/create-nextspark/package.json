@@ -1,6 +1,6 @@
 {
-  "name": "create-nextspark-app",
-  "version": "0.1.0",
+  "name": "@nextsparkjs/create-app",
+  "version": "0.1.0-beta.1",
   "description": "Create a new NextSpark SaaS project",
   "type": "module",
   "bin": {
@@ -23,5 +23,22 @@
     "typescript": "^5.0.0",
     "@types/node": "^20.0.0",
     "@types/prompts": "^2.4.0"
+  },
+  "keywords": [
+    "nextspark",
+    "create-app",
+    "nextjs",
+    "saas",
+    "boilerplate",
+    "starter"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NextSpark-js/nextspark.git",
+    "directory": "packages/create-nextspark"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

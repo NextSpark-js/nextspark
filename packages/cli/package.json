@@ -1,6 +1,6 @@
 {
   "name": "@nextsparkjs/cli",
-  "version": "0.3.0",
+  "version": "0.1.0-beta.1",
   "description": "CLI for NextSpark - wrap core scripts with a professional interface",
   "type": "module",
   "bin": {
@@ -28,7 +28,7 @@
     "@types/node": "^20.0.0"
   },
   "peerDependencies": {
-    "@nextsparkjs/core": ">=0.3.0"
+    "@nextsparkjs/core": ">=0.1.0-beta.1"
   },
   "keywords": [
     "nextspark",
@@ -40,7 +40,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/nextsparkjs/nextspark.git",
+    "url": "https://github.com/NextSpark-js/nextspark.git",
     "directory": "packages/cli"
   },
   "engines": {
