@@ -16,18 +16,42 @@ const DASHBOARD_FEATURE_OPTIONS = [
     name: 'Global Search',
     value: 'search',
     description: 'Search across your application from the dashboard',
-    checked: true,
+    checked: false,
   },
   {
     name: 'Notifications',
     value: 'notifications',
     description: 'In-app notification system with bell icon',
-    checked: true,
+    checked: false,
   },
   {
     name: 'Theme Toggle',
     value: 'themeToggle',
     description: 'Allow users to switch between light and dark themes',
+    checked: true,
+  },
+  {
+    name: 'Support/Help Menu',
+    value: 'support',
+    description: 'Help dropdown with documentation and support links',
+    checked: true,
+  },
+  {
+    name: 'Quick Create',
+    value: 'quickCreate',
+    description: 'Quick create button for creating new entities',
+    checked: true,
+  },
+  {
+    name: 'Superadmin Access',
+    value: 'superadminAccess',
+    description: 'Button to access superadmin area (only visible to superadmins)',
+    checked: true,
+  },
+  {
+    name: 'DevTools Access',
+    value: 'devtoolsAccess',
+    description: 'Button to access developer tools (only visible to developers)',
     checked: true,
   },
 ]
@@ -37,9 +61,13 @@ const DASHBOARD_FEATURE_OPTIONS = [
  */
 export function getDefaultDashboardConfig(): DashboardConfig {
   return {
-    search: true,
-    notifications: true,
+    search: false,
+    notifications: false,
     themeToggle: true,
+    support: true,
+    quickCreate: true,
+    superadminAccess: true,
+    devtoolsAccess: true,
     sidebarCollapsed: false,
   }
 }
@@ -78,12 +106,12 @@ export async function promptDashboardConfig(
     search: selectedFeatures.includes('search'),
     notifications: selectedFeatures.includes('notifications'),
     themeToggle: selectedFeatures.includes('themeToggle'),
+    support: selectedFeatures.includes('support'),
+    quickCreate: selectedFeatures.includes('quickCreate'),
+    superadminAccess: selectedFeatures.includes('superadminAccess'),
+    devtoolsAccess: selectedFeatures.includes('devtoolsAccess'),
     sidebarCollapsed,
   }
-
-  // Show info about more options
-  console.log('')
-  showInfo('More options available in dashboard.config.ts: support, superadmin access, devtools, quick create')
 
   return { dashboard }
 }

@@ -1,0 +1,41 @@
+{
+  "entity": {
+    "singular": "Page",
+    "plural": "Pages"
+  },
+  "fields": {
+    "title": {
+      "label": "Title",
+      "placeholder": "Enter page title...",
+      "description": "Page title displayed in browser and navigation"
+    },
+    "slug": {
+      "label": "Slug",
+      "placeholder": "page-slug",
+      "description": "URL-friendly identifier (e.g., 'about' for /about)"
+    },
+    "status": {
+      "label": "Status",
+      "description": "Publication status",
+      "options": {
+        "draft": "Draft",
+        "published": "Published",
+        "scheduled": "Scheduled",
+        "archived": "Archived"
+      }
+    }
+  },
+  "actions": {
+    "create": "Create Page",
+    "edit": "Edit Page",
+    "delete": "Delete Page",
+    "publish": "Publish",
+    "unpublish": "Unpublish"
+  },
+  "messages": {
+    "created": "Page created successfully",
+    "updated": "Page updated successfully",
+    "deleted": "Page deleted successfully",
+    "published": "Page published successfully"
+  }
+}

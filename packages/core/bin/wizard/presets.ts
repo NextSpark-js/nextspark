@@ -11,6 +11,7 @@ import type {
   TeamMode,
   BillingModel,
   FeatureFlags,
+  ContentFeaturesConfig,
   AuthConfig,
   DashboardConfig,
   DevConfig,
@@ -28,6 +29,7 @@ export interface PresetConfig {
   billingModel: BillingModel
   currency: string
   features: FeatureFlags
+  contentFeatures: ContentFeaturesConfig
   auth: AuthConfig
   dashboard: DashboardConfig
   dev: DevConfig
@@ -53,6 +55,10 @@ const SAAS_PRESET: PresetConfig = {
     api: true,
     docs: false,
   },
+  contentFeatures: {
+    pages: false,
+    blog: false,
+  },
   auth: {
     emailPassword: true,
     googleOAuth: true,
@@ -62,6 +68,10 @@ const SAAS_PRESET: PresetConfig = {
     search: true,
     notifications: true,
     themeToggle: true,
+    support: true,
+    quickCreate: true,
+    superadminAccess: true,
+    devtoolsAccess: true,
     sidebarCollapsed: false,
   },
   dev: {
@@ -90,6 +100,10 @@ const BLOG_PRESET: PresetConfig = {
     api: false,
     docs: true,
   },
+  contentFeatures: {
+    pages: false,
+    blog: true,
+  },
   auth: {
     emailPassword: true,
     googleOAuth: false,
@@ -99,6 +113,10 @@ const BLOG_PRESET: PresetConfig = {
     search: false,
     notifications: false,
     themeToggle: true,
+    support: true,
+    quickCreate: false,
+    superadminAccess: true,
+    devtoolsAccess: true,
     sidebarCollapsed: false,
   },
   dev: {
@@ -127,6 +145,10 @@ const CRM_PRESET: PresetConfig = {
     api: true,
     docs: false,
   },
+  contentFeatures: {
+    pages: true,
+    blog: false,
+  },
   auth: {
     emailPassword: true,
     googleOAuth: true,
@@ -136,6 +158,10 @@ const CRM_PRESET: PresetConfig = {
     search: true,
     notifications: true,
     themeToggle: true,
+    support: true,
+    quickCreate: true,
+    superadminAccess: true,
+    devtoolsAccess: true,
     sidebarCollapsed: false,
   },
   dev: {
@@ -221,6 +247,10 @@ export function getDefaultConfig(): PresetConfig {
       api: true,
       docs: false,
     },
+    contentFeatures: {
+      pages: false,
+      blog: false,
+    },
     auth: {
       emailPassword: true,
       googleOAuth: false,
@@ -230,6 +260,10 @@ export function getDefaultConfig(): PresetConfig {
       search: true,
       notifications: true,
       themeToggle: true,
+      support: true,
+      quickCreate: true,
+      superadminAccess: true,
+      devtoolsAccess: true,
       sidebarCollapsed: false,
     },
     dev: {

@@ -89,9 +89,33 @@ export async function updateDashboardUIConfig(config: WizardConfig): Promise<voi
     `$1${config.dashboard.themeToggle}`
   )
 
+  // Update support enabled
+  content = content.replace(
+    /(support:\s*{[^}]*enabled:\s*)(?:true|false)/gs,
+    `$1${config.dashboard.support}`
+  )
+
+  // Update quickCreate enabled
+  content = content.replace(
+    /(quickCreate:\s*{[^}]*enabled:\s*)(?:true|false)/gs,
+    `$1${config.dashboard.quickCreate}`
+  )
+
+  // Update adminAccess enabled (mapped from wizard's superadminAccess)
+  content = content.replace(
+    /(adminAccess:\s*{[^}]*enabled:\s*)(?:true|false)/gs,
+    `$1${config.dashboard.superadminAccess}`
+  )
+
+  // Update devtoolsAccess enabled
+  content = content.replace(
+    /(devtoolsAccess:\s*{[^}]*enabled:\s*)(?:true|false)/gs,
+    `$1${config.dashboard.devtoolsAccess}`
+  )
+
   // Update sidebar collapsed default
   content = content.replace(
-    /(sidebarCollapsed:\s*)(?:true|false)/g,
+    /(defaultCollapsed:\s*)(?:true|false)/g,
     `$1${config.dashboard.sidebarCollapsed}`
   )
 

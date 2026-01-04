@@ -27,6 +27,7 @@ import {
   updateDevToolsConfig,
 } from './config-generator.js'
 import { processI18n } from './messages-generator.js'
+import { copyContentFeatures } from './content-features-generator.js'
 // New DX improvement generators
 import { installDemoTheme } from './demo-installer.js'
 import { setupEnvironment } from './env-setup.js'
@@ -51,6 +52,7 @@ export {
   updateAuthConfig,
   updateDashboardUIConfig,
   updateDevToolsConfig,
+  copyContentFeatures,
   // New DX generators
   installDemoTheme,
   setupEnvironment,
@@ -97,16 +99,42 @@ async function copyProjectFiles(): Promise<void> {
 }
 
 /**
- * Update package.json with required scripts and dependencies
+ * Update or create package.json with required scripts and dependencies
  */
 async function updatePackageJson(config: WizardConfig): Promise<void> {
   const packageJsonPath = path.resolve(process.cwd(), 'package.json')
 
-  if (!await fs.pathExists(packageJsonPath)) {
-    throw new Error('No package.json found. Please run this command in a Node.js project.')
+  // Create package.json if it doesn't exist
+  let packageJson: {
+    name?: string
+    version?: string
+    private?: boolean
+    scripts?: Record<string, string>
+    dependencies?: Record<string, string>
+    devDependencies?: Record<string, string>
   }
-
-  const packageJson = await fs.readJson(packageJsonPath)
+  if (!await fs.pathExists(packageJsonPath)) {
+    packageJson = {
+      name: config.projectSlug,
+      version: '0.1.0',
+      private: true,
+      scripts: {},
+      dependencies: {
+        '@nextsparkjs/core': 'latest',
+        'next': '^15.0.0',
+        'react': '^19.0.0',
+        'react-dom': '^19.0.0',
+      },
+      devDependencies: {
+        'typescript': '^5.0.0',
+        '@types/node': '^22.0.0',
+        '@types/react': '^19.0.0',
+        '@types/react-dom': '^19.0.0',
+      },
+    }
+  } else {
+    packageJson = await fs.readJson(packageJsonPath)
+  }
 
   // Ensure scripts object exists
   packageJson.scripts = packageJson.scripts || {}
@@ -206,29 +234,32 @@ export async function generateProject(config: WizardConfig): Promise<void> {
   // 2. Copy and rename starter theme
   await copyStarterTheme(config)
 
-  // 3. Update theme configuration files
+  // 3. Copy optional content features (pages entity, blog entity + block)
+  await copyContentFeatures(config)
+
+  // 4. Update theme configuration files
   await updateThemeConfig(config)
   await updateDevConfig(config)
   await updateAppConfig(config)
   await updateBillingConfig(config)
   await updateRolesConfig(config)
 
-  // 4. Update migrations
+  // 5. Update migrations
   await updateMigrations(config)
 
-  // 5. Update additional configs
+  // 6. Update additional configs
   await updatePermissionsConfig(config)
   await updateDashboardConfig(config)
 
-  // 6. Update Phase 3 configs (auth, dashboard UI, dev tools)
+  // 7. Update Phase 3 configs (auth, dashboard UI, dev tools)
   await updateAuthConfig(config)
   await updateDashboardUIConfig(config)
   await updateDevToolsConfig(config)
 
-  // 7. Process i18n files
+  // 8. Process i18n files
   await processI18n(config)
 
-  // 8. Update project files
+  // 9. Update project files
   await updatePackageJson(config)
   await updateGitignore(config)
   await generateEnvExample(config)

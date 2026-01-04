@@ -36,7 +36,7 @@ export interface FeatureFlags {
 }
 
 /**
- * Authentication configuration (Step 6)
+ * Authentication configuration (Step 7)
  * Note: Only email/password and Google OAuth are currently supported
  */
 export interface AuthConfig {
@@ -46,17 +46,30 @@ export interface AuthConfig {
 }
 
 /**
- * Dashboard configuration (Step 7)
+ * Dashboard configuration (Step 8)
  */
 export interface DashboardConfig {
   search: boolean
   notifications: boolean
   themeToggle: boolean
+  support: boolean
+  quickCreate: boolean
+  superadminAccess: boolean
+  devtoolsAccess: boolean
   sidebarCollapsed: boolean
 }
 
 /**
- * Development tools configuration (Step 8)
+ * Content features configuration (Step 6)
+ * Optional content types: Pages with Page Builder and Blog
+ */
+export interface ContentFeaturesConfig {
+  pages: boolean  // Enable pages with page builder
+  blog: boolean   // Enable blog with posts
+}
+
+/**
+ * Development tools configuration (Step 9)
  */
 export interface DevConfig {
   devKeyring: boolean
@@ -95,13 +108,16 @@ export interface WizardConfig {
   // Step 5: Features
   features: FeatureFlags
 
-  // Step 6: Authentication
+  // Step 6: Content Features
+  contentFeatures: ContentFeaturesConfig
+
+  // Step 7: Authentication
   auth: AuthConfig
 
-  // Step 7: Dashboard
+  // Step 8: Dashboard
   dashboard: DashboardConfig
 
-  // Step 8: Dev Tools
+  // Step 9: Dev Tools
   dev: DevConfig
 }
 

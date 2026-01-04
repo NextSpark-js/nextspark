@@ -23,6 +23,7 @@ import type { WizardConfig } from './wizard/types.js'
 import { PRESETS, getPreset, applyPreset } from './wizard/presets.js'
 import {
   copyStarterTheme,
+  copyContentFeatures,
   updateThemeConfig,
   updateDevConfig,
   updateAppConfig,
@@ -88,8 +89,9 @@ const TEST_SCENARIOS: { name: string; config: WizardConfig }[] = [
       billingModel: 'paid',
       currency: 'eur',
       features: { analytics: true, teams: true, billing: true, api: true, docs: false },
+      contentFeatures: { pages: true, blog: true },
       auth: { emailPassword: true, googleOAuth: true, emailVerification: true },
-      dashboard: { search: true, notifications: true, themeToggle: true, sidebarCollapsed: false },
+      dashboard: { search: true, notifications: true, themeToggle: true, support: true, quickCreate: true, superadminAccess: true, devtoolsAccess: true, sidebarCollapsed: false },
       dev: { devKeyring: true, debugMode: true },
     },
   },
@@ -106,8 +108,9 @@ const TEST_SCENARIOS: { name: string; config: WizardConfig }[] = [
       billingModel: 'free',
       currency: 'usd',
       features: { analytics: false, teams: false, billing: false, api: false, docs: false },
+      contentFeatures: { pages: false, blog: false },
       auth: { emailPassword: true, googleOAuth: false, emailVerification: false },
-      dashboard: { search: false, notifications: false, themeToggle: true, sidebarCollapsed: true },
+      dashboard: { search: false, notifications: false, themeToggle: true, support: true, quickCreate: false, superadminAccess: true, devtoolsAccess: true, sidebarCollapsed: true },
       dev: { devKeyring: true, debugMode: false },
     },
   },
@@ -266,6 +269,9 @@ async function runScenario(scenario: { name: string; config: WizardConfig }, tes
 
     await copyStarterTheme(scenario.config)
     logSuccess('copyStarterTheme')
+
+    await copyContentFeatures(scenario.config)
+    logSuccess('copyContentFeatures')
 
     await updateThemeConfig(scenario.config)
     logSuccess('updateThemeConfig')
@@ -729,6 +735,7 @@ async function runFullFeatureScenario(
   const originalCwd = process.cwd()
   process.chdir(testDir)
   await copyStarterTheme(scenario.config)
+  await copyContentFeatures(scenario.config)
   await updateThemeConfig(scenario.config)
   await updateDevConfig(scenario.config)
   await updateAppConfig(scenario.config)
