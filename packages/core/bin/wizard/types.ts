@@ -1,0 +1,136 @@
+/**
+ * NextSpark Wizard Types
+ *
+ * Shared type definitions for the wizard prompts and generators.
+ */
+
+/**
+ * Team mode options for the project
+ */
+export type TeamMode = 'multi-tenant' | 'single-tenant' | 'single-user'
+
+/**
+ * Billing model options
+ */
+export type BillingModel = 'free' | 'freemium' | 'subscription' | 'one-time'
+
+/**
+ * CLI execution modes
+ */
+export type WizardMode = 'interactive' | 'quick' | 'expert'
+
+/**
+ * Available presets
+ */
+export type PresetName = 'saas' | 'blog' | 'crm'
+
+/**
+ * Available feature flags
+ */
+export interface FeatureFlags {
+  analytics: boolean
+  teams: boolean
+  billing: boolean
+  api: boolean
+  docs: boolean
+}
+
+/**
+ * Authentication configuration (Step 6)
+ */
+export interface AuthConfig {
+  emailPassword: boolean
+  magicLink: boolean
+  googleOAuth: boolean
+  githubOAuth: boolean
+  emailVerification: boolean
+  twoFactor: boolean
+}
+
+/**
+ * Dashboard configuration (Step 7)
+ */
+export interface DashboardConfig {
+  search: boolean
+  notifications: boolean
+  themeToggle: boolean
+  sidebarCollapsed: boolean
+}
+
+/**
+ * Development tools configuration (Step 8)
+ */
+export interface DevConfig {
+  devKeyring: boolean
+  debugMode: boolean
+}
+
+/**
+ * CLI options parsed from command line arguments
+ */
+export interface CLIOptions {
+  mode: WizardMode
+  preset?: PresetName
+}
+
+/**
+ * Complete wizard configuration collected from all prompts
+ */
+export interface WizardConfig {
+  // Step 1: Project Info
+  projectName: string
+  projectSlug: string
+  projectDescription: string
+
+  // Step 2: Team Configuration
+  teamMode: TeamMode
+  teamRoles: string[]
+
+  // Step 3: Internationalization
+  defaultLocale: string
+  supportedLocales: string[]
+
+  // Step 4: Billing Configuration
+  billingModel: BillingModel
+  currency: string
+
+  // Step 5: Features
+  features: FeatureFlags
+
+  // Step 6: Authentication
+  auth: AuthConfig
+
+  // Step 7: Dashboard
+  dashboard: DashboardConfig
+
+  // Step 8: Dev Tools
+  dev: DevConfig
+}
+
+/**
+ * Supported locales with their display names
+ */
+export const AVAILABLE_LOCALES: Record<string, string> = {
+  en: 'English',
+  es: 'Spanish',
+  fr: 'French',
+  de: 'German',
+  it: 'Italian',
+  pt: 'Portuguese',
+}
+
+/**
+ * Default roles available in the system
+ */
+export const DEFAULT_ROLES = ['owner', 'admin', 'member', 'viewer']
+
+/**
+ * Currency options
+ */
+export const CURRENCIES = [
+  { value: 'usd', label: 'USD - US Dollar' },
+  { value: 'eur', label: 'EUR - Euro' },
+  { value: 'gbp', label: 'GBP - British Pound' },
+  { value: 'cad', label: 'CAD - Canadian Dollar' },
+  { value: 'aud', label: 'AUD - Australian Dollar' },
+]
