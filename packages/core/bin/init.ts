@@ -13,10 +13,12 @@
  *   npx nextspark init --preset=blog    # Use blog preset
  *   npx nextspark init --preset=crm     # Use CRM preset
  *   npx nextspark init --help       # Show help
+ *   npx nextspark doctor            # Run health check
  */
 
 import chalk from 'chalk'
 import { runWizard } from './wizard/index.js'
+import { runDoctorCommand } from './doctor/index.js'
 import type { CLIOptions, WizardMode, PresetName } from './wizard/types.js'
 import { isValidPreset, getAvailablePresets, PRESET_DESCRIPTIONS } from './wizard/presets.js'
 
@@ -89,12 +91,22 @@ function parseArgs(): CLIOptions | null {
   return { mode, preset }
 }
 
-// Parse arguments and run wizard
-const options = parseArgs()
+// Check for doctor command first
+const command = process.argv[2]
 
-if (options) {
-  runWizard(options).catch((error: Error) => {
+if (command === 'doctor') {
+  runDoctorCommand().catch((error: Error) => {
     console.error('An unexpected error occurred:', error.message)
     process.exit(1)
   })
+} else {
+  // Parse arguments and run wizard
+  const options = parseArgs()
+
+  if (options) {
+    runWizard(options).catch((error: Error) => {
+      console.error('An unexpected error occurred:', error.message)
+      process.exit(1)
+    })
+  }
 }

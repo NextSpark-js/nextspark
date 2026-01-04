@@ -26,6 +26,10 @@ import {
   updateDevToolsConfig,
 } from './config-generator.js'
 import { processI18n } from './messages-generator.js'
+// New DX improvement generators
+import { installDemoTheme } from './demo-installer.js'
+import { setupEnvironment } from './env-setup.js'
+import { setupGit } from './git-init.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -45,6 +49,10 @@ export {
   updateAuthConfig,
   updateDashboardUIConfig,
   updateDevToolsConfig,
+  // New DX generators
+  installDemoTheme,
+  setupEnvironment,
+  setupGit,
 }
 
 /**

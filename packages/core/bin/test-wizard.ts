@@ -4,10 +4,20 @@
  *
  * Tests the wizard generators with different configurations
  * without requiring interactive input.
+ *
+ * Test Categories:
+ * 1. Core Generation Tests (existing)
+ * 2. Demo Theme Installation Tests
+ * 3. Preview Generation Tests
+ * 4. Post-Generation Validation Tests
+ * 5. Environment Setup Tests
+ * 6. Git Integration Tests
+ * 7. Health Check (Doctor) Tests
  */
 
 import fs from 'fs-extra'
 import path from 'path'
+import { execSync } from 'child_process'
 import { fileURLToPath } from 'url'
 import type { WizardConfig } from './wizard/types.js'
 import { PRESETS, getPreset, applyPreset } from './wizard/presets.js'
@@ -28,6 +38,18 @@ import {
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
+
+// =============================================================================
+// FEATURE FLAGS - Enable as features are implemented
+// =============================================================================
+const FEATURES = {
+  DEMO_THEME: true,       // Stream 1: Demo theme installation
+  PREVIEW: true,          // Stream 2: Interactive preview
+  VALIDATION: true,       // Stream 3: Post-generation validation
+  ENV_SETUP: true,        // Stream 4: Environment setup
+  GIT_INIT: true,         // Stream 5: Git integration
+  DOCTOR: true,           // Stream 6: Health check command
+}
 
 // Test configurations
 const TEST_SCENARIOS: { name: string; config: WizardConfig }[] = [
@@ -307,16 +329,398 @@ async function runScenario(scenario: { name: string; config: WizardConfig }, tes
   }
 }
 
+// =============================================================================
+// NEW FEATURE TESTS
+// =============================================================================
+
+/**
+ * Test Demo Theme Installation
+ */
+async function testDemoThemeInstallation(testDir: string): Promise<TestResult> {
+  const result: TestResult = {
+    scenario: 'demo-theme-installation',
+    passed: true,
+    errors: [],
+    checks: [],
+  }
+
+  if (!FEATURES.DEMO_THEME) {
+    result.checks.push({ name: 'Demo theme feature (SKIPPED - not implemented)', passed: true })
+    return result
+  }
+
+  try {
+    // Dynamic import to avoid errors if module doesn't exist
+    const { installDemoTheme } = await import('./wizard/generators/demo-installer.js')
+
+    await fs.ensureDir(path.join(testDir, 'contents', 'themes'))
+    const originalCwd = process.cwd()
+    process.chdir(testDir)
+
+    await installDemoTheme()
+
+    // Verify default theme was copied
+    const defaultThemePath = path.join(testDir, 'contents', 'themes', 'default')
+    const exists = await fs.pathExists(defaultThemePath)
+    result.checks.push({ name: 'Default theme directory exists', passed: exists })
+
+    // Verify theme.config.ts has langchain enabled
+    const themeConfigPath = path.join(defaultThemePath, 'config', 'theme.config.ts')
+    if (await fs.pathExists(themeConfigPath)) {
+      const content = await fs.readFile(themeConfigPath, 'utf-8')
+      const hasLangchain = content.includes('langchain')
+      result.checks.push({ name: 'LangChain plugin enabled', passed: hasLangchain })
+      if (!hasLangchain) {
+        result.passed = false
+        result.errors.push('LangChain plugin not enabled in demo theme')
+      }
+    }
+
+    process.chdir(originalCwd)
+  } catch (error) {
+    result.passed = false
+    result.errors.push(`Demo theme test failed: ${(error as Error).message}`)
+  }
+
+  return result
+}
+
+/**
+ * Test Interactive Preview
+ */
+async function testPreviewGeneration(config: WizardConfig): Promise<TestResult> {
+  const result: TestResult = {
+    scenario: 'preview-generation',
+    passed: true,
+    errors: [],
+    checks: [],
+  }
+
+  if (!FEATURES.PREVIEW) {
+    result.checks.push({ name: 'Preview feature (SKIPPED - not implemented)', passed: true })
+    return result
+  }
+
+  try {
+    const { getFileTree, showConfigPreview } = await import('./wizard/preview.js')
+
+    // Test file tree generation
+    const fileTree = getFileTree(config)
+    result.checks.push({ name: 'File tree generated', passed: Array.isArray(fileTree) })
+    result.checks.push({ name: 'File tree not empty', passed: fileTree.length > 0 })
+
+    // Verify language folders match config
+    const langFolders = fileTree.filter(f => f.includes('messages/'))
+    for (const locale of config.supportedLocales) {
+      const hasLocale = langFolders.some(f => f.includes(`messages/${locale}`))
+      result.checks.push({ name: `Preview includes messages/${locale}`, passed: hasLocale })
+      if (!hasLocale) {
+        result.passed = false
+        result.errors.push(`Preview missing locale: ${locale}`)
+      }
+    }
+  } catch (error) {
+    result.passed = false
+    result.errors.push(`Preview test failed: ${(error as Error).message}`)
+  }
+
+  return result
+}
+
+/**
+ * Test Post-Generation Validation
+ */
+async function testValidation(themePath: string, config: WizardConfig): Promise<TestResult> {
+  const result: TestResult = {
+    scenario: 'post-generation-validation',
+    passed: true,
+    errors: [],
+    checks: [],
+  }
+
+  if (!FEATURES.VALIDATION) {
+    result.checks.push({ name: 'Validation feature (SKIPPED - not implemented)', passed: true })
+    return result
+  }
+
+  try {
+    const { validateGeneratedTheme } = await import('./wizard/validators/index.js')
+
+    const validationResult = await validateGeneratedTheme(themePath, config)
+
+    result.checks.push({ name: 'Validation completed', passed: true })
+    result.checks.push({ name: 'Theme is valid', passed: validationResult.valid })
+
+    if (!validationResult.valid) {
+      result.passed = false
+      for (const error of validationResult.errors) {
+        result.errors.push(`Validation error: ${error.message}`)
+      }
+    }
+
+    // Check for warnings
+    if (validationResult.warnings.length > 0) {
+      result.checks.push({
+        name: `Warnings: ${validationResult.warnings.length}`,
+        passed: true // Warnings don't fail the test
+      })
+    }
+  } catch (error) {
+    result.passed = false
+    result.errors.push(`Validation test failed: ${(error as Error).message}`)
+  }
+
+  return result
+}
+
+/**
+ * Test Environment Setup
+ */
+async function testEnvSetup(testDir: string, config: WizardConfig): Promise<TestResult> {
+  const result: TestResult = {
+    scenario: 'environment-setup',
+    passed: true,
+    errors: [],
+    checks: [],
+  }
+
+  if (!FEATURES.ENV_SETUP) {
+    result.checks.push({ name: 'Env setup feature (SKIPPED - not implemented)', passed: true })
+    return result
+  }
+
+  try {
+    const { setupEnvironment } = await import('./wizard/generators/env-setup.js')
+
+    // Create .env.example first
+    const envExamplePath = path.join(testDir, '.env.example')
+    await fs.writeFile(envExamplePath, `
+DATABASE_URL=
+BETTER_AUTH_SECRET=
+NEXT_PUBLIC_ACTIVE_THEME=
+`)
+
+    await setupEnvironment(testDir, {
+      setupEnv: true,
+      generateSecrets: true,
+      databaseUrl: 'postgresql://test:test@localhost:5432/test'
+    }, config)
+
+    // Verify .env was created
+    const envPath = path.join(testDir, '.env')
+    const envExists = await fs.pathExists(envPath)
+    result.checks.push({ name: '.env file created', passed: envExists })
+
+    if (envExists) {
+      const envContent = await fs.readFile(envPath, 'utf-8')
+
+      // Check secrets were generated
+      const hasAuthSecret = envContent.includes('BETTER_AUTH_SECRET=') &&
+        !envContent.includes('BETTER_AUTH_SECRET=\n')
+      result.checks.push({ name: 'AUTH_SECRET generated', passed: hasAuthSecret })
+
+      // Check theme is set
+      const hasTheme = envContent.includes(`NEXT_PUBLIC_ACTIVE_THEME=${config.projectSlug}`)
+      result.checks.push({ name: 'ACTIVE_THEME set correctly', passed: hasTheme })
+
+      // Check database URL
+      const hasDbUrl = envContent.includes('DATABASE_URL=postgresql')
+      result.checks.push({ name: 'DATABASE_URL configured', passed: hasDbUrl })
+    }
+  } catch (error) {
+    result.passed = false
+    result.errors.push(`Env setup test failed: ${(error as Error).message}`)
+  }
+
+  return result
+}
+
+/**
+ * Test Git Integration
+ */
+async function testGitIntegration(testDir: string, config: WizardConfig): Promise<TestResult> {
+  const result: TestResult = {
+    scenario: 'git-integration',
+    passed: true,
+    errors: [],
+    checks: [],
+  }
+
+  if (!FEATURES.GIT_INIT) {
+    result.checks.push({ name: 'Git integration feature (SKIPPED - not implemented)', passed: true })
+    return result
+  }
+
+  try {
+    const { setupGit } = await import('./wizard/generators/git-init.js')
+
+    await setupGit(testDir, {
+      initGit: true,
+      createCommit: true,
+      commitMessage: 'Initial commit from test'
+    }, config)
+
+    // Verify .git directory exists
+    const gitDirExists = await fs.pathExists(path.join(testDir, '.git'))
+    result.checks.push({ name: '.git directory created', passed: gitDirExists })
+
+    // Verify .gitignore exists
+    const gitignoreExists = await fs.pathExists(path.join(testDir, '.gitignore'))
+    result.checks.push({ name: '.gitignore created', passed: gitignoreExists })
+
+    // Verify commit was created
+    if (gitDirExists) {
+      try {
+        const log = execSync('git log --oneline -1', { cwd: testDir, encoding: 'utf-8' })
+        const hasCommit = log.includes('Initial commit')
+        result.checks.push({ name: 'Initial commit created', passed: hasCommit })
+      } catch {
+        result.checks.push({ name: 'Initial commit created', passed: false })
+        result.errors.push('Failed to verify git commit')
+      }
+    }
+  } catch (error) {
+    result.passed = false
+    result.errors.push(`Git integration test failed: ${(error as Error).message}`)
+  }
+
+  return result
+}
+
+/**
+ * Test Health Check (Doctor) Command
+ */
+async function testDoctorCommand(testDir: string): Promise<TestResult> {
+  const result: TestResult = {
+    scenario: 'doctor-command',
+    passed: true,
+    errors: [],
+    checks: [],
+  }
+
+  if (!FEATURES.DOCTOR) {
+    result.checks.push({ name: 'Doctor feature (SKIPPED - not implemented)', passed: true })
+    return result
+  }
+
+  try {
+    const { runHealthCheck } = await import('./doctor/index.js')
+
+    const healthResults = await runHealthCheck()
+
+    result.checks.push({ name: 'Health check completed', passed: true })
+    result.checks.push({ name: 'Returns array of results', passed: Array.isArray(healthResults) })
+
+    // Count results by status
+    const passed = healthResults.filter(r => r.status === 'pass').length
+    const warnings = healthResults.filter(r => r.status === 'warn').length
+    const failed = healthResults.filter(r => r.status === 'fail').length
+
+    result.checks.push({ name: `Checks passed: ${passed}`, passed: true })
+    result.checks.push({ name: `Checks warned: ${warnings}`, passed: true })
+    result.checks.push({ name: `Checks failed: ${failed}`, passed: failed === 0 })
+
+    if (failed > 0) {
+      result.passed = false
+      for (const check of healthResults.filter(r => r.status === 'fail')) {
+        result.errors.push(`Health check failed: ${check.name} - ${check.message}`)
+      }
+    }
+  } catch (error) {
+    result.passed = false
+    result.errors.push(`Doctor test failed: ${(error as Error).message}`)
+  }
+
+  return result
+}
+
+/**
+ * Run combined scenario with all features
+ */
+async function runFullFeatureScenario(
+  scenario: { name: string; config: WizardConfig },
+  testBaseDir: string
+): Promise<TestResult[]> {
+  const results: TestResult[] = []
+  const testDir = path.join(testBaseDir, `${scenario.name}-full-features`)
+
+  logSection(`Testing Full Features: ${scenario.name}`)
+
+  // Create test directory
+  await fs.ensureDir(path.join(testDir, 'contents', 'themes'))
+
+  // 1. Test demo theme first (if enabled)
+  const demoResult = await testDemoThemeInstallation(testDir)
+  results.push(demoResult)
+
+  // 2. Test preview
+  const previewResult = await testPreviewGeneration(scenario.config)
+  results.push(previewResult)
+
+  // 3. Run core generation
+  const originalCwd = process.cwd()
+  process.chdir(testDir)
+  await copyStarterTheme(scenario.config)
+  await updateThemeConfig(scenario.config)
+  await updateDevConfig(scenario.config)
+  await updateAppConfig(scenario.config)
+  await updateBillingConfig(scenario.config)
+  await updateMigrations(scenario.config)
+  await updatePermissionsConfig(scenario.config)
+  await updateDashboardConfig(scenario.config)
+  await updateAuthConfig(scenario.config)
+  await updateDashboardUIConfig(scenario.config)
+  await updateDevToolsConfig(scenario.config)
+  await processI18n(scenario.config)
+  process.chdir(originalCwd)
+
+  const themePath = path.join(testDir, 'contents', 'themes', scenario.config.projectSlug)
+
+  // 4. Test validation
+  const validationResult = await testValidation(themePath, scenario.config)
+  results.push(validationResult)
+
+  // 5. Test env setup
+  const envResult = await testEnvSetup(testDir, scenario.config)
+  results.push(envResult)
+
+  // 6. Test git integration
+  const gitResult = await testGitIntegration(testDir, scenario.config)
+  results.push(gitResult)
+
+  // 7. Test doctor
+  const doctorResult = await testDoctorCommand(testDir)
+  results.push(doctorResult)
+
+  return results
+}
+
+// =============================================================================
+// MAIN FUNCTION
+// =============================================================================
+
 async function main() {
   console.log('')
   console.log(`${CYAN}╔═══════════════════════════════════════════════════════════════╗${NC}`)
   console.log(`${CYAN}║         NextSpark Wizard Automated Test Suite                 ║${NC}`)
+  console.log(`${CYAN}║                    Extended Edition v2.0                      ║${NC}`)
   console.log(`${CYAN}╚═══════════════════════════════════════════════════════════════╝${NC}`)
   console.log('')
+
+  // Show feature flags
+  logSection('FEATURE FLAGS')
+  for (const [feature, enabled] of Object.entries(FEATURES)) {
+    if (enabled) {
+      logSuccess(`${feature}: ENABLED`)
+    } else {
+      logInfo(`${feature}: disabled`)
+    }
+  }
 
   const testBaseDir = '/tmp/nextspark-wizard-tests'
 
   // Clean previous tests
+  log('')
   log(`Cleaning previous tests at ${testBaseDir}...`)
   await fs.remove(testBaseDir)
   await fs.ensureDir(testBaseDir)
@@ -324,21 +728,49 @@ async function main() {
 
   const results: TestResult[] = []
 
-  // Run all scenarios
+  // ==========================================================================
+  // PART 1: Core Generation Tests (existing scenarios)
+  // ==========================================================================
+  logSection('PART 1: CORE GENERATION TESTS')
+
   for (const scenario of TEST_SCENARIOS) {
     const result = await runScenario(scenario, testBaseDir)
     results.push(result)
   }
 
-  // Print summary
+  // ==========================================================================
+  // PART 2: New Feature Tests
+  // ==========================================================================
+  logSection('PART 2: NEW FEATURE TESTS')
+
+  // Run full feature tests on select scenarios
+  const fullFeatureScenarios = [
+    TEST_SCENARIOS[0], // saas-preset
+    TEST_SCENARIOS[3], // multi-language
+  ]
+
+  for (const scenario of fullFeatureScenarios) {
+    const featureResults = await runFullFeatureScenario(scenario, testBaseDir)
+    results.push(...featureResults)
+  }
+
+  // ==========================================================================
+  // SUMMARY
+  // ==========================================================================
   logSection('TEST SUMMARY')
 
   let allPassed = true
+  let totalChecks = 0
+  let passedChecks = 0
+
   for (const result of results) {
     const status = result.passed ? `${GREEN}PASS${NC}` : `${RED}FAIL${NC}`
     const checkCount = result.checks.filter(c => c.passed).length
-    const totalChecks = result.checks.length
-    console.log(`  ${status} ${result.scenario} (${checkCount}/${totalChecks} checks)`)
+    const total = result.checks.length
+    totalChecks += total
+    passedChecks += checkCount
+
+    console.log(`  ${status} ${result.scenario} (${checkCount}/${total} checks)`)
 
     if (!result.passed) {
       allPassed = false
@@ -349,6 +781,9 @@ async function main() {
   }
 
   console.log('')
+  console.log(`  ${CYAN}Total: ${passedChecks}/${totalChecks} checks passed${NC}`)
+  console.log('')
+
   if (allPassed) {
     console.log(`${GREEN}╔═══════════════════════════════════════════════════════════════╗${NC}`)
     console.log(`${GREEN}║                    ALL TESTS PASSED! ✓                        ║${NC}`)

@@ -14,6 +14,10 @@ import { promptFeaturesConfig } from './features-config.js'
 import { promptAuthConfig, getDefaultAuthConfig } from './auth-config.js'
 import { promptDashboardConfig, getDefaultDashboardConfig } from './dashboard-config.js'
 import { promptDevConfig, getDefaultDevConfig } from './dev-config.js'
+// New DX improvement prompts
+import { promptDemoInstall } from './demo-install.js'
+import { promptEnvSetup, getDefaultEnvSetupAnswers, type EnvSetupAnswers } from './env-config.js'
+import { promptGitSetup, getDefaultGitSetupAnswers, type GitSetupAnswers } from './git-config.js'
 
 export {
   promptProjectInfo,
@@ -24,7 +28,15 @@ export {
   promptAuthConfig,
   promptDashboardConfig,
   promptDevConfig,
+  // New DX prompts
+  promptDemoInstall,
+  promptEnvSetup,
+  getDefaultEnvSetupAnswers,
+  promptGitSetup,
+  getDefaultGitSetupAnswers,
 }
+
+export type { EnvSetupAnswers, GitSetupAnswers }
 
 /**
  * Run all prompts in sequence (interactive mode - 8 steps)
