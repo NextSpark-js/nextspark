@@ -1,0 +1,20 @@
+{
+  "{{PLUGIN_SLUG}}": {
+    "title": "{{PLUGIN_DISPLAY_NAME}}",
+    "description": "{{PLUGIN_DESCRIPTION}}",
+    "widget": {
+      "title": "Widget {{PLUGIN_DISPLAY_NAME}}",
+      "description": "Mostra le informazioni di {{PLUGIN_DISPLAY_NAME}}"
+    },
+    "errors": {
+      "notFound": "{{PLUGIN_DISPLAY_NAME}} non trovato",
+      "unauthorized": "Non autorizzato ad accedere a {{PLUGIN_DISPLAY_NAME}}",
+      "serverError": "Errore del server durante il caricamento di {{PLUGIN_DISPLAY_NAME}}"
+    },
+    "status": {
+      "active": "Attivo",
+      "inactive": "Inattivo",
+      "error": "Errore"
+    }
+  }
+}

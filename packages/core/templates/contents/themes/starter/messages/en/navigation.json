@@ -1,0 +1,16 @@
+{
+  "dashboard": "Dashboard",
+  "home": "Home",
+  "tasks": "Tasks",
+  "analytics": "Analytics",
+  "settings": "Settings",
+  "profile": "Profile",
+  "team": "Team",
+  "billing": "Billing",
+  "help": "Help",
+  "logout": "Logout",
+  "notifications": "Notifications",
+  "search": "Search",
+  "quickCreate": "Quick Create",
+  "viewAll": "View All"
+}

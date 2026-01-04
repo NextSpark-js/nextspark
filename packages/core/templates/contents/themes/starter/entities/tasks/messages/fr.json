@@ -1,0 +1,263 @@
+{
+  "entity": {
+    "name": "Tâche",
+    "namePlural": "Tâches",
+    "description": "Gérez vos tâches et éléments à faire"
+  },
+  "title": "Mes tâches",
+  "subtitle": "Organisez votre travail et gardez le contrôle de vos projets.",
+  "description": "Organisez votre travail et gardez le contrôle de vos projets.",
+  "fields": {
+    "title": {
+      "label": "Titre",
+      "placeholder": "Entrez le titre de la tâche...",
+      "description": "Le titre de la tâche"
+    },
+    "description": {
+      "label": "Description",
+      "placeholder": "Ajoutez des détails sur cette tâche...",
+      "description": "Description détaillée de la tâche"
+    },
+    "status": {
+      "label": "Statut",
+      "placeholder": "Sélectionnez le statut...",
+      "description": "Statut actuel de la tâche"
+    },
+    "priority": {
+      "label": "Priorité",
+      "placeholder": "Sélectionnez la priorité...",
+      "description": "Niveau de priorité de la tâche"
+    },
+    "dueDate": {
+      "label": "Date d'échéance",
+      "placeholder": "Sélectionnez la date...",
+      "description": "Date limite de la tâche"
+    },
+    "estimatedHours": {
+      "label": "Heures estimées",
+      "placeholder": "0",
+      "description": "Temps estimé pour compléter en heures"
+    },
+    "tags": {
+      "label": "Étiquettes",
+      "placeholder": "Ajouter des étiquettes...",
+      "description": "Étiquettes pour la catégorisation"
+    }
+  },
+  "status": {
+    "todo": "À faire",
+    "in-progress": "En cours",
+    "review": "En révision",
+    "done": "Terminée",
+    "blocked": "Bloquée",
+    "completed": "Terminée",
+    "pending": "En attente",
+    "active": "Active"
+  },
+  "priority": {
+    "low": "Basse",
+    "medium": "Moyenne",
+    "high": "Haute",
+    "urgent": "Urgente"
+  },
+  "actions": {
+    "create": "Créer une tâche",
+    "edit": "Modifier la tâche",
+    "delete": "Supprimer la tâche",
+    "duplicate": "Dupliquer la tâche",
+    "markComplete": "Marquer comme terminée",
+    "markIncomplete": "Marquer comme non terminée",
+    "archive": "Archiver la tâche",
+    "completed": "Tâche terminée !",
+    "reactivated": "Tâche réactivée !",
+    "deleted": "Tâche supprimée",
+    "markCompleted": "terminée",
+    "markPending": "en attente",
+    "taskStatusChanged": "Tâche \"{title}\" {action}",
+    "taskDeleted": "Tâche \"{title}\" supprimée",
+    "toggleError": "Erreur lors du changement de statut de la tâche \"{title}\"",
+    "deleteError": "Erreur lors de la suppression de la tâche",
+    "updateError": "Erreur lors de la mise à jour de la tâche"
+  },
+  "messages": {
+    "created": "Tâche créée avec succès",
+    "updated": "Tâche mise à jour avec succès",
+    "deleted": "Tâche supprimée avec succès",
+    "duplicated": "Tâche dupliquée avec succès",
+    "completed": "Tâche marquée comme terminée",
+    "confirmDelete": "Êtes-vous sûr de vouloir supprimer cette tâche ?",
+    "noTasks": "Aucune tâche trouvée",
+    "createFirst": "Créez votre première tâche pour commencer"
+  },
+  "filters": {
+    "all": "Toutes les tâches",
+    "active": "Actives",
+    "completed": "Terminées",
+    "overdue": "En retard",
+    "dueToday": "Échéance aujourd'hui",
+    "dueThisWeek": "Échéance cette semaine"
+  },
+  "sorting": {
+    "newest": "Plus récentes d'abord",
+    "oldest": "Plus anciennes d'abord",
+    "priority": "Par priorité",
+    "dueDate": "Par date d'échéance",
+    "alphabetical": "Alphabétique"
+  },
+  "stats": {
+    "active": "Actives",
+    "completed": "Terminées",
+    "total": "Total des tâches",
+    "totalDescription": "Toutes les tâches du système",
+    "pending": "En attente",
+    "pendingDescription": "Tâches en attente de complétion",
+    "overdue": "En retard"
+  },
+  "form": {
+    "addTitle": "Ajouter une nouvelle tâche",
+    "addDescription": "Créez une nouvelle tâche pour suivre ce qui doit être fait",
+    "titleLabel": "Titre de la tâche",
+    "titlePlaceholder": "Que devez-vous faire ?",
+    "titleDescription": "Entrez le titre de la nouvelle tâche. Ce champ est obligatoire.",
+    "descriptionLabel": "Description de la tâche (optionnel)",
+    "descriptionPlaceholder": "Ajoutez une description (optionnel)",
+    "descriptionHelp": "Description optionnelle pour fournir plus de détails sur la tâche.",
+    "addButton": "Ajouter la tâche",
+    "adding": "Ajout en cours...",
+    "enterTitle": "Entrez un titre pour activer le bouton de création",
+    "creating": "Création de la tâche, veuillez patienter",
+    "pressToCreate": "Appuyez pour créer la nouvelle tâche",
+    "addSuccess": "Tâche ajoutée avec succès !",
+    "addError": "Échec de l'ajout de la tâche",
+    "tryAgain": "Veuillez réessayer plus tard",
+    "taskCreated": "Tâche \"{title}\" créée avec succès",
+    "createError": "Erreur lors de la création de la tâche \"{title}\""
+  },
+  "task": {
+    "completed": "terminée",
+    "active": "active",
+    "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cette tâche ?",
+    "deleteSuccess": "Tâche supprimée avec succès",
+    "toggleSuccess": "Statut de la tâche mis à jour"
+  },
+  "overview": {
+    "title": "Aperçu des tâches",
+    "label": "Résumé des tâches",
+    "activeTasks": "{count} tâches actives",
+    "completedTasks": "{count} tâches terminées",
+    "totalTasks": "{count} tâches au total"
+  },
+  "sections": {
+    "activeTasks": "Tâches actives",
+    "completedTasks": "Tâches terminées"
+  },
+  "empty": {
+    "title": "Pas encore de tâches",
+    "description": "Ajoutez votre première tâche ci-dessus pour commencer !"
+  },
+  "accessibility": {
+    "taskCard": "Tâche : {title}. {status}. Appuyez sur Entrée pour voir les détails.",
+    "completedTaskCard": "Tâche terminée : {title}. Appuyez sur Entrée pour voir les détails.",
+    "toggleTask": "Marquer la tâche \"{title}\" comme {action}",
+    "reactivateTask": "Réactiver la tâche terminée \"{title}\"",
+    "deleteTask": "Supprimer la tâche \"{title}\"",
+    "deleteCompletedTask": "Supprimer la tâche terminée \"{title}\"",
+    "createdDate": "Créée le {date}",
+    "completedDate": "Terminée le {date}"
+  },
+  "time": {
+    "daysAgo": "il y a {count} jour{count, plural, one {} other {s}}",
+    "hoursAgo": "il y a {count} heure{count, plural, one {} other {s}}",
+    "minutesAgo": "il y a {count} minute{count, plural, one {} other {s}}",
+    "justNow": "À l'instant"
+  },
+  "page": {
+    "statsAriaLabel": "Statistiques des tâches",
+    "listTitle": "Liste des tâches",
+    "listDescription": "Gérez vos tâches en attente et organisez-vous mieux",
+    "today": "Aujourd'hui"
+  },
+  "list": {
+    "title": "Liste des tâches",
+    "description": "Gérez toutes vos tâches en un seul endroit",
+    "allTasks": "Toutes les tâches"
+  },
+  "detail": {
+    "loading": {
+      "message": "Chargement des détails de la tâche",
+      "ariaLabel": "Chargement des détails de la tâche",
+      "srText": "Chargement des détails de la tâche..."
+    },
+    "navigation": {
+      "backToTasks": "Retour aux tâches",
+      "backAriaLabel": "Retour à la liste des tâches",
+      "returnNavigation": "Navigation de retour",
+      "viewAllTasks": "Voir toutes les tâches",
+      "viewAllDescription": "Retourner à la liste complète des tâches"
+    },
+    "error": {
+      "notFound": "Impossible de trouver la tâche demandée. Elle a peut-être été supprimée ou vous n'avez pas les permissions pour la voir.",
+      "title": "Tâche non trouvée"
+    },
+    "status": {
+      "completed": "Terminée",
+      "pending": "En attente",
+      "active": "En cours",
+      "completedAriaLabel": "Tâche terminée",
+      "pendingAriaLabel": "Tâche en attente"
+    },
+    "priority": {
+      "high": "Haute",
+      "medium": "Moyenne",
+      "low": "Basse",
+      "label": "Priorité"
+    },
+    "categories": {
+      "design": "Design",
+      "development": "Développement",
+      "meetings": "Réunions",
+      "documentation": "Documentation",
+      "testing": "Tests",
+      "general": "Général"
+    },
+    "sections": {
+      "description": "Description",
+      "actions": "Actions",
+      "information": "Information",
+      "classification": "Classification",
+      "metadata": "Métadonnées de la tâche"
+    },
+    "actions": {
+      "title": "Actions",
+      "description": "Gérez le statut et les options de cette tâche. Raccourcis clavier : Cmd+Entrée pour terminer, Cmd+Retour arrière pour supprimer.",
+      "markPending": "Marquer en attente",
+      "markCompleted": "Marquer terminée",
+      "delete": "Supprimer",
+      "markPendingAriaLabel": "Marquer la tâche \"{title}\" comme en attente. Raccourci : Cmd+Entrée",
+      "markCompletedAriaLabel": "Marquer la tâche \"{title}\" comme terminée. Raccourci : Cmd+Entrée",
+      "deleteAriaLabel": "Supprimer définitivement la tâche \"{title}\". Raccourci : Cmd+Retour arrière"
+    },
+    "info": {
+      "created": "Créée",
+      "lastUpdate": "Dernière mise à jour",
+      "status": "Statut",
+      "priority": "Priorité",
+      "category": "Catégorie",
+      "taskId": "ID de la tâche",
+      "noDescription": "Aucune description disponible pour cette tâche.",
+      "inferredInfo": "Information déduite automatiquement"
+    },
+    "messages": {
+      "taskCompleted": "Tâche \"{title}\" terminée avec succès",
+      "taskReactivated": "Tâche \"{title}\" réactivée avec succès",
+      "taskDeleted": "Tâche \"{title}\" supprimée avec succès",
+      "toggleError": "Erreur lors du changement de statut de la tâche \"{title}\"",
+      "deleteError": "Erreur lors de la suppression de la tâche \"{title}\"",
+      "completedToast": "Tâche terminée",
+      "reactivatedToast": "Tâche réactivée",
+      "deletedToast": "Tâche supprimée",
+      "updateErrorToast": "Erreur lors de la mise à jour de la tâche",
+      "deleteErrorToast": "Erreur lors de la suppression de la tâche"
+    }
+  }
+}

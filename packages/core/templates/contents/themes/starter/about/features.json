@@ -1,0 +1,28 @@
+{
+  "features": [
+    {
+      "id": "tasks",
+      "title": "Task Management",
+      "description": "Complete task management with status tracking, priorities, and due dates",
+      "icon": "CheckSquare"
+    },
+    {
+      "id": "analytics",
+      "title": "Analytics Dashboard",
+      "description": "Visual analytics to track team productivity and task completion",
+      "icon": "BarChart3"
+    },
+    {
+      "id": "teams",
+      "title": "Team Collaboration",
+      "description": "Multi-tenant support with role-based access control",
+      "icon": "Users"
+    },
+    {
+      "id": "i18n",
+      "title": "Multi-language",
+      "description": "Built-in support for 6 languages with easy extensibility",
+      "icon": "Globe"
+    }
+  ]
+}

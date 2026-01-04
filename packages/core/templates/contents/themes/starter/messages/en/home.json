@@ -1,0 +1,30 @@
+{
+  "hero": {
+    "title": "Welcome to Starter",
+    "subtitle": "A minimal NextSpark theme to kickstart your project",
+    "cta": "Get Started"
+  },
+  "features": {
+    "title": "Features",
+    "subtitle": "Everything you need to build your application",
+    "items": {
+      "tasks": {
+        "title": "Task Management",
+        "description": "Organize and track your tasks efficiently"
+      },
+      "analytics": {
+        "title": "Analytics Dashboard",
+        "description": "Monitor your team's productivity"
+      },
+      "teams": {
+        "title": "Team Collaboration",
+        "description": "Work together seamlessly"
+      }
+    }
+  },
+  "cta": {
+    "title": "Ready to get started?",
+    "subtitle": "Create your first task and start tracking your progress",
+    "button": "Create Task"
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "title": "Analytics",
+  "description": "Track your team's productivity and task completion",
+  "stats": {
+    "totalTasks": "Total Tasks",
+    "completedToday": "Completed Today",
+    "overdue": "Overdue",
+    "avgCompletionTime": "Avg. Completion Time"
+  },
+  "chart": {
+    "title": "Weekly Progress",
+    "completed": "Completed",
+    "created": "Created",
+    "note": "Task activity from the past 7 days"
+  },
+  "charts": {
+    "weeklyProgress": "Weekly Progress",
+    "tasksByStatus": "Tasks by Status",
+    "tasksByPriority": "Tasks by Priority",
+    "completionRate": "Completion Rate"
+  },
+  "activity": {
+    "title": "Recent Activity",
+    "empty": "No recent activity",
+    "actions": {
+      "created": "created",
+      "completed": "completed",
+      "updated": "updated",
+      "deleted": "deleted"
+    }
+  },
+  "timeRanges": {
+    "today": "Today",
+    "thisWeek": "This Week",
+    "thisMonth": "This Month",
+    "last30Days": "Last 30 Days",
+    "custom": "Custom Range"
+  }
+}

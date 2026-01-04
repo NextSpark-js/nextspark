@@ -1,0 +1,96 @@
+{
+  "teams": {
+    "roles": {
+      "editor": "Éditeur"
+    },
+    "roleDescriptions": {
+      "editor": "Peut modifier le contenu mais a des capacités limitées de gestion d'équipe"
+    }
+  },
+  "navigation": {
+    "features": "Fonctionnalités",
+    "pricing": "Tarifs",
+    "support": "Support",
+    "docs": "Documentation",
+    "dashboard": "Tableau de bord"
+  },
+  "mobileNav": {
+    "home": "Accueil",
+    "create": "Créer",
+    "settings": "Paramètres",
+    "more": "Plus",
+    "moreOptions": "Plus d'options",
+    "moreOptionsDescription": "Accéder aux paramètres et fonctionnalités supplémentaires",
+    "quickCreateDescription": "Créer un nouvel élément",
+    "noEntitiesAvailable": "Aucun élément disponible à créer",
+    "createNew": "Créer nouveau",
+    "greeting": "Bonjour, {name}"
+  },
+  "buttons": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "add": "Ajouter",
+    "update": "Mettre à jour",
+    "submit": "Envoyer",
+    "close": "Fermer",
+    "back": "Retour",
+    "next": "Suivant",
+    "previous": "Précédent",
+    "continue": "Continuer",
+    "finish": "Terminer",
+    "signIn": "Se connecter",
+    "signUp": "S'inscrire",
+    "signOut": "Se déconnecter",
+    "signingOut": "Déconnexion en cours..."
+  },
+  "home": {
+    "hero": {
+      "badge": "{{THEME_DISPLAY_NAME}}",
+      "title": "Bienvenue sur {{THEME_DISPLAY_NAME}}",
+      "description": "Commencez avec votre nouveau thème"
+    },
+    "auth": {
+      "authenticated": "Authentifié",
+      "welcomeBack": "Bon retour, {email}",
+      "goToDashboard": "Aller au tableau de bord",
+      "getStarted": "Commencer",
+      "createAccount": "Créer un compte",
+      "signIn": "Se connecter"
+    },
+    "cta": {
+      "readyToStart": "Prêt à commencer ?",
+      "description": "Commencez à créer des choses incroyables dès aujourd'hui.",
+      "viewPricing": "Voir les tarifs",
+      "startFreeTrial": "Démarrer l'essai gratuit"
+    }
+  },
+  "docs": {
+    "title": "Documentation",
+    "description": "Apprenez à utiliser {{THEME_DISPLAY_NAME}}",
+    "sidebar": {
+      "label": "Navigation de la documentation",
+      "open": "Ouvrir le menu de navigation",
+      "close": "Fermer le menu de navigation"
+    },
+    "categories": {
+      "core": "Core",
+      "theme": "Thème",
+      "plugins": "Plugins"
+    }
+  },
+  "footer": {
+    "product": "Produit",
+    "company": "Entreprise",
+    "legal": "Mentions légales",
+    "resources": "Ressources",
+    "features": "Fonctionnalités",
+    "pricing": "Tarifs",
+    "support": "Support",
+    "docs": "Documentation",
+    "about": "À propos",
+    "privacy": "Politique de confidentialité",
+    "terms": "Conditions d'utilisation"
+  }
+}

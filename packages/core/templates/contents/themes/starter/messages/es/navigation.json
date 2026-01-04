@@ -1,0 +1,16 @@
+{
+  "dashboard": "Panel",
+  "home": "Inicio",
+  "tasks": "Tareas",
+  "analytics": "Analíticas",
+  "settings": "Configuración",
+  "profile": "Perfil",
+  "team": "Equipo",
+  "billing": "Facturación",
+  "help": "Ayuda",
+  "logout": "Cerrar sesión",
+  "notifications": "Notificaciones",
+  "search": "Buscar",
+  "quickCreate": "Crear rápido",
+  "viewAll": "Ver todo"
+}

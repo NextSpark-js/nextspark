@@ -1,0 +1,263 @@
+{
+  "entity": {
+    "name": "Aufgabe",
+    "namePlural": "Aufgaben",
+    "description": "Verwalten Sie Ihre Aufgaben und To-Do-Elemente"
+  },
+  "title": "Meine Aufgaben",
+  "subtitle": "Organisieren Sie Ihre Arbeit und behalten Sie die Kontrolle über Ihre Projekte.",
+  "description": "Organisieren Sie Ihre Arbeit und behalten Sie die Kontrolle über Ihre Projekte.",
+  "fields": {
+    "title": {
+      "label": "Titel",
+      "placeholder": "Aufgabentitel eingeben...",
+      "description": "Der Titel der Aufgabe"
+    },
+    "description": {
+      "label": "Beschreibung",
+      "placeholder": "Details zu dieser Aufgabe hinzufügen...",
+      "description": "Detaillierte Beschreibung der Aufgabe"
+    },
+    "status": {
+      "label": "Status",
+      "placeholder": "Status auswählen...",
+      "description": "Aktueller Status der Aufgabe"
+    },
+    "priority": {
+      "label": "Priorität",
+      "placeholder": "Priorität auswählen...",
+      "description": "Prioritätsstufe der Aufgabe"
+    },
+    "dueDate": {
+      "label": "Fälligkeitsdatum",
+      "placeholder": "Datum auswählen...",
+      "description": "Wann die Aufgabe fällig ist"
+    },
+    "estimatedHours": {
+      "label": "Geschätzte Stunden",
+      "placeholder": "0",
+      "description": "Geschätzte Zeit zur Fertigstellung in Stunden"
+    },
+    "tags": {
+      "label": "Tags",
+      "placeholder": "Tags hinzufügen...",
+      "description": "Tags zur Kategorisierung"
+    }
+  },
+  "status": {
+    "todo": "Zu erledigen",
+    "in-progress": "In Bearbeitung",
+    "review": "In Überprüfung",
+    "done": "Erledigt",
+    "blocked": "Blockiert",
+    "completed": "Abgeschlossen",
+    "pending": "Ausstehend",
+    "active": "Aktiv"
+  },
+  "priority": {
+    "low": "Niedrig",
+    "medium": "Mittel",
+    "high": "Hoch",
+    "urgent": "Dringend"
+  },
+  "actions": {
+    "create": "Aufgabe erstellen",
+    "edit": "Aufgabe bearbeiten",
+    "delete": "Aufgabe löschen",
+    "duplicate": "Aufgabe duplizieren",
+    "markComplete": "Als erledigt markieren",
+    "markIncomplete": "Als unerledigt markieren",
+    "archive": "Aufgabe archivieren",
+    "completed": "Aufgabe erledigt!",
+    "reactivated": "Aufgabe reaktiviert!",
+    "deleted": "Aufgabe gelöscht",
+    "markCompleted": "erledigt",
+    "markPending": "ausstehend",
+    "taskStatusChanged": "Aufgabe \"{title}\" {action}",
+    "taskDeleted": "Aufgabe \"{title}\" gelöscht",
+    "toggleError": "Fehler beim Ändern des Status der Aufgabe \"{title}\"",
+    "deleteError": "Fehler beim Löschen der Aufgabe",
+    "updateError": "Fehler beim Aktualisieren der Aufgabe"
+  },
+  "messages": {
+    "created": "Aufgabe erfolgreich erstellt",
+    "updated": "Aufgabe erfolgreich aktualisiert",
+    "deleted": "Aufgabe erfolgreich gelöscht",
+    "duplicated": "Aufgabe erfolgreich dupliziert",
+    "completed": "Aufgabe als erledigt markiert",
+    "confirmDelete": "Sind Sie sicher, dass Sie diese Aufgabe löschen möchten?",
+    "noTasks": "Keine Aufgaben gefunden",
+    "createFirst": "Erstellen Sie Ihre erste Aufgabe, um zu beginnen"
+  },
+  "filters": {
+    "all": "Alle Aufgaben",
+    "active": "Aktiv",
+    "completed": "Abgeschlossen",
+    "overdue": "Überfällig",
+    "dueToday": "Heute fällig",
+    "dueThisWeek": "Diese Woche fällig"
+  },
+  "sorting": {
+    "newest": "Neueste zuerst",
+    "oldest": "Älteste zuerst",
+    "priority": "Nach Priorität",
+    "dueDate": "Nach Fälligkeitsdatum",
+    "alphabetical": "Alphabetisch"
+  },
+  "stats": {
+    "active": "Aktiv",
+    "completed": "Abgeschlossen",
+    "total": "Aufgaben gesamt",
+    "totalDescription": "Alle Aufgaben im System",
+    "pending": "Ausstehend",
+    "pendingDescription": "Aufgaben, die auf Erledigung warten",
+    "overdue": "Überfällig"
+  },
+  "form": {
+    "addTitle": "Neue Aufgabe hinzufügen",
+    "addDescription": "Erstellen Sie eine neue Aufgabe, um zu verfolgen, was erledigt werden muss",
+    "titleLabel": "Aufgabentitel",
+    "titlePlaceholder": "Was muss erledigt werden?",
+    "titleDescription": "Geben Sie den Titel der neuen Aufgabe ein. Dieses Feld ist erforderlich.",
+    "descriptionLabel": "Aufgabenbeschreibung (optional)",
+    "descriptionPlaceholder": "Beschreibung hinzufügen (optional)",
+    "descriptionHelp": "Optionale Beschreibung für weitere Details zur Aufgabe.",
+    "addButton": "Aufgabe hinzufügen",
+    "adding": "Wird hinzugefügt...",
+    "enterTitle": "Geben Sie einen Titel ein, um die Schaltfläche zu aktivieren",
+    "creating": "Aufgabe wird erstellt, bitte warten",
+    "pressToCreate": "Drücken Sie, um die neue Aufgabe zu erstellen",
+    "addSuccess": "Aufgabe erfolgreich hinzugefügt!",
+    "addError": "Aufgabe konnte nicht hinzugefügt werden",
+    "tryAgain": "Bitte versuchen Sie es später erneut",
+    "taskCreated": "Aufgabe \"{title}\" erfolgreich erstellt",
+    "createError": "Fehler beim Erstellen der Aufgabe \"{title}\""
+  },
+  "task": {
+    "completed": "erledigt",
+    "active": "aktiv",
+    "deleteConfirm": "Sind Sie sicher, dass Sie diese Aufgabe löschen möchten?",
+    "deleteSuccess": "Aufgabe erfolgreich gelöscht",
+    "toggleSuccess": "Aufgabenstatus aktualisiert"
+  },
+  "overview": {
+    "title": "Aufgabenübersicht",
+    "label": "Aufgabenzusammenfassung",
+    "activeTasks": "{count} aktive Aufgaben",
+    "completedTasks": "{count} erledigte Aufgaben",
+    "totalTasks": "{count} Aufgaben insgesamt"
+  },
+  "sections": {
+    "activeTasks": "Aktive Aufgaben",
+    "completedTasks": "Erledigte Aufgaben"
+  },
+  "empty": {
+    "title": "Noch keine Aufgaben",
+    "description": "Fügen Sie oben Ihre erste Aufgabe hinzu, um zu beginnen!"
+  },
+  "accessibility": {
+    "taskCard": "Aufgabe: {title}. {status}. Drücken Sie Enter für Details.",
+    "completedTaskCard": "Erledigte Aufgabe: {title}. Drücken Sie Enter für Details.",
+    "toggleTask": "Aufgabe \"{title}\" als {action} markieren",
+    "reactivateTask": "Erledigte Aufgabe \"{title}\" reaktivieren",
+    "deleteTask": "Aufgabe \"{title}\" löschen",
+    "deleteCompletedTask": "Erledigte Aufgabe \"{title}\" löschen",
+    "createdDate": "Erstellt am {date}",
+    "completedDate": "Abgeschlossen am {date}"
+  },
+  "time": {
+    "daysAgo": "vor {count} Tag{count, plural, one {} other {en}}",
+    "hoursAgo": "vor {count} Stunde{count, plural, one {} other {n}}",
+    "minutesAgo": "vor {count} Minute{count, plural, one {} other {n}}",
+    "justNow": "Gerade eben"
+  },
+  "page": {
+    "statsAriaLabel": "Aufgabenstatistiken",
+    "listTitle": "Aufgabenliste",
+    "listDescription": "Verwalten Sie Ihre ausstehenden Aufgaben und organisieren Sie sich besser",
+    "today": "Heute"
+  },
+  "list": {
+    "title": "Aufgabenliste",
+    "description": "Verwalten Sie alle Ihre Aufgaben an einem Ort",
+    "allTasks": "Alle Aufgaben"
+  },
+  "detail": {
+    "loading": {
+      "message": "Aufgabendetails werden geladen",
+      "ariaLabel": "Aufgabendetails werden geladen",
+      "srText": "Aufgabendetails werden geladen..."
+    },
+    "navigation": {
+      "backToTasks": "Zurück zu Aufgaben",
+      "backAriaLabel": "Zurück zur Aufgabenliste",
+      "returnNavigation": "Rückwärtsnavigation",
+      "viewAllTasks": "Alle Aufgaben anzeigen",
+      "viewAllDescription": "Zurück zur vollständigen Aufgabenliste"
+    },
+    "error": {
+      "notFound": "Die angeforderte Aufgabe konnte nicht gefunden werden. Sie wurde möglicherweise gelöscht oder Sie haben keine Berechtigung, sie anzuzeigen.",
+      "title": "Aufgabe nicht gefunden"
+    },
+    "status": {
+      "completed": "Abgeschlossen",
+      "pending": "Ausstehend",
+      "active": "In Bearbeitung",
+      "completedAriaLabel": "Aufgabe abgeschlossen",
+      "pendingAriaLabel": "Aufgabe ausstehend"
+    },
+    "priority": {
+      "high": "Hoch",
+      "medium": "Mittel",
+      "low": "Niedrig",
+      "label": "Priorität"
+    },
+    "categories": {
+      "design": "Design",
+      "development": "Entwicklung",
+      "meetings": "Meetings",
+      "documentation": "Dokumentation",
+      "testing": "Testen",
+      "general": "Allgemein"
+    },
+    "sections": {
+      "description": "Beschreibung",
+      "actions": "Aktionen",
+      "information": "Information",
+      "classification": "Klassifizierung",
+      "metadata": "Aufgaben-Metadaten"
+    },
+    "actions": {
+      "title": "Aktionen",
+      "description": "Verwalten Sie den Status und die Optionen dieser Aufgabe. Tastenkombinationen: Cmd+Enter zum Abschließen, Cmd+Backspace zum Löschen.",
+      "markPending": "Als ausstehend markieren",
+      "markCompleted": "Als erledigt markieren",
+      "delete": "Löschen",
+      "markPendingAriaLabel": "Aufgabe \"{title}\" als ausstehend markieren. Tastenkombination: Cmd+Enter",
+      "markCompletedAriaLabel": "Aufgabe \"{title}\" als erledigt markieren. Tastenkombination: Cmd+Enter",
+      "deleteAriaLabel": "Aufgabe \"{title}\" endgültig löschen. Tastenkombination: Cmd+Backspace"
+    },
+    "info": {
+      "created": "Erstellt",
+      "lastUpdate": "Letzte Aktualisierung",
+      "status": "Status",
+      "priority": "Priorität",
+      "category": "Kategorie",
+      "taskId": "Aufgaben-ID",
+      "noDescription": "Keine Beschreibung für diese Aufgabe verfügbar.",
+      "inferredInfo": "Automatisch abgeleitete Information"
+    },
+    "messages": {
+      "taskCompleted": "Aufgabe \"{title}\" erfolgreich abgeschlossen",
+      "taskReactivated": "Aufgabe \"{title}\" erfolgreich reaktiviert",
+      "taskDeleted": "Aufgabe \"{title}\" erfolgreich gelöscht",
+      "toggleError": "Fehler beim Ändern des Status der Aufgabe \"{title}\"",
+      "deleteError": "Fehler beim Löschen der Aufgabe \"{title}\"",
+      "completedToast": "Aufgabe abgeschlossen",
+      "reactivatedToast": "Aufgabe reaktiviert",
+      "deletedToast": "Aufgabe gelöscht",
+      "updateErrorToast": "Fehler beim Aktualisieren der Aufgabe",
+      "deleteErrorToast": "Fehler beim Löschen der Aufgabe"
+    }
+  }
+}

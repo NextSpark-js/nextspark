@@ -1,0 +1,20 @@
+/* Starter Theme Global Styles */
+
+/* Import base styles from core */
+@import '@nextsparkjs/core/styles/globals.css';
+
+/* Theme-specific CSS variables */
+:root {
+  /* Custom spacing */
+  --spacing-xs: 0.125rem;
+  --spacing-sm: 0.25rem;
+  --spacing-md: 0.5rem;
+  --spacing-lg: 1rem;
+  --spacing-xl: 1.5rem;
+  --spacing-2xl: 2rem;
+}
+
+/* Dark mode overrides if needed */
+.dark {
+  /* Custom dark mode variables */
+}

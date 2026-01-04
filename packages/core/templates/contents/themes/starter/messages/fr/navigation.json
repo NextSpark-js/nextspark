@@ -1,0 +1,16 @@
+{
+  "dashboard": "Tableau de bord",
+  "home": "Accueil",
+  "tasks": "Tâches",
+  "analytics": "Analytique",
+  "settings": "Paramètres",
+  "profile": "Profil",
+  "team": "Équipe",
+  "billing": "Facturation",
+  "help": "Aide",
+  "logout": "Déconnexion",
+  "notifications": "Notifications",
+  "search": "Rechercher",
+  "quickCreate": "Création rapide",
+  "viewAll": "Voir tout"
+}

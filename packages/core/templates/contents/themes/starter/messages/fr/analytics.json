@@ -1,0 +1,39 @@
+{
+  "title": "Analytique",
+  "description": "Suivez la productivité et l'achèvement des tâches de votre équipe",
+  "stats": {
+    "totalTasks": "Total des Tâches",
+    "completedToday": "Complétées Aujourd'hui",
+    "overdue": "En Retard",
+    "avgCompletionTime": "Temps Moyen d'Achèvement"
+  },
+  "chart": {
+    "title": "Progression Hebdomadaire",
+    "completed": "Complétées",
+    "created": "Créées",
+    "note": "Activité des tâches des 7 derniers jours"
+  },
+  "charts": {
+    "weeklyProgress": "Progression Hebdomadaire",
+    "tasksByStatus": "Tâches par Statut",
+    "tasksByPriority": "Tâches par Priorité",
+    "completionRate": "Taux d'Achèvement"
+  },
+  "activity": {
+    "title": "Activité Récente",
+    "empty": "Aucune activité récente",
+    "actions": {
+      "created": "a créé",
+      "completed": "a complété",
+      "updated": "a mis à jour",
+      "deleted": "a supprimé"
+    }
+  },
+  "timeRanges": {
+    "today": "Aujourd'hui",
+    "thisWeek": "Cette Semaine",
+    "thisMonth": "Ce Mois",
+    "last30Days": "30 Derniers Jours",
+    "custom": "Plage Personnalisée"
+  }
+}

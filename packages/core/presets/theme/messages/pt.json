@@ -1,0 +1,96 @@
+{
+  "teams": {
+    "roles": {
+      "editor": "Editor"
+    },
+    "roleDescriptions": {
+      "editor": "Pode editar conteúdo, mas tem capacidades limitadas de gestão de equipe"
+    }
+  },
+  "navigation": {
+    "features": "Recursos",
+    "pricing": "Preços",
+    "support": "Suporte",
+    "docs": "Documentação",
+    "dashboard": "Painel"
+  },
+  "mobileNav": {
+    "home": "Início",
+    "create": "Criar",
+    "settings": "Configurações",
+    "more": "Mais",
+    "moreOptions": "Mais Opções",
+    "moreOptionsDescription": "Acessar configurações e recursos adicionais",
+    "quickCreateDescription": "Criar um novo item",
+    "noEntitiesAvailable": "Nenhum item disponível para criar",
+    "createNew": "Criar novo",
+    "greeting": "Olá, {name}"
+  },
+  "buttons": {
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "add": "Adicionar",
+    "update": "Atualizar",
+    "submit": "Enviar",
+    "close": "Fechar",
+    "back": "Voltar",
+    "next": "Próximo",
+    "previous": "Anterior",
+    "continue": "Continuar",
+    "finish": "Finalizar",
+    "signIn": "Entrar",
+    "signUp": "Cadastrar",
+    "signOut": "Sair",
+    "signingOut": "Saindo..."
+  },
+  "home": {
+    "hero": {
+      "badge": "{{THEME_DISPLAY_NAME}}",
+      "title": "Bem-vindo ao {{THEME_DISPLAY_NAME}}",
+      "description": "Comece com seu novo tema"
+    },
+    "auth": {
+      "authenticated": "Autenticado",
+      "welcomeBack": "Bem-vindo de volta, {email}",
+      "goToDashboard": "Ir para o Painel",
+      "getStarted": "Começar",
+      "createAccount": "Criar Conta",
+      "signIn": "Entrar"
+    },
+    "cta": {
+      "readyToStart": "Pronto para começar?",
+      "description": "Comece a construir coisas incríveis hoje.",
+      "viewPricing": "Ver Preços",
+      "startFreeTrial": "Iniciar Teste Gratuito"
+    }
+  },
+  "docs": {
+    "title": "Documentação",
+    "description": "Aprenda a usar o {{THEME_DISPLAY_NAME}}",
+    "sidebar": {
+      "label": "Navegação da documentação",
+      "open": "Abrir menu de navegação",
+      "close": "Fechar menu de navegação"
+    },
+    "categories": {
+      "core": "Core",
+      "theme": "Tema",
+      "plugins": "Plugins"
+    }
+  },
+  "footer": {
+    "product": "Produto",
+    "company": "Empresa",
+    "legal": "Legal",
+    "resources": "Recursos",
+    "features": "Recursos",
+    "pricing": "Preços",
+    "support": "Suporte",
+    "docs": "Documentação",
+    "about": "Sobre",
+    "privacy": "Política de Privacidade",
+    "terms": "Termos de Serviço"
+  }
+}

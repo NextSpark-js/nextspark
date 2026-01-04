@@ -1,0 +1,263 @@
+{
+  "entity": {
+    "name": "Tarefa",
+    "namePlural": "Tarefas",
+    "description": "Gerencie suas tarefas e itens a fazer"
+  },
+  "title": "Minhas Tarefas",
+  "subtitle": "Organize seu trabalho e mantenha o controle dos seus projetos.",
+  "description": "Organize seu trabalho e mantenha o controle dos seus projetos.",
+  "fields": {
+    "title": {
+      "label": "Título",
+      "placeholder": "Digite o título da tarefa...",
+      "description": "O título da tarefa"
+    },
+    "description": {
+      "label": "Descrição",
+      "placeholder": "Adicione detalhes sobre esta tarefa...",
+      "description": "Descrição detalhada da tarefa"
+    },
+    "status": {
+      "label": "Status",
+      "placeholder": "Selecione o status...",
+      "description": "Status atual da tarefa"
+    },
+    "priority": {
+      "label": "Prioridade",
+      "placeholder": "Selecione a prioridade...",
+      "description": "Nível de prioridade da tarefa"
+    },
+    "dueDate": {
+      "label": "Data de vencimento",
+      "placeholder": "Selecione a data...",
+      "description": "Quando a tarefa vence"
+    },
+    "estimatedHours": {
+      "label": "Horas estimadas",
+      "placeholder": "0",
+      "description": "Tempo estimado para concluir em horas"
+    },
+    "tags": {
+      "label": "Tags",
+      "placeholder": "Adicionar tags...",
+      "description": "Tags para categorização"
+    }
+  },
+  "status": {
+    "todo": "A fazer",
+    "in-progress": "Em andamento",
+    "review": "Em revisão",
+    "done": "Concluída",
+    "blocked": "Bloqueada",
+    "completed": "Concluída",
+    "pending": "Pendente",
+    "active": "Ativa"
+  },
+  "priority": {
+    "low": "Baixa",
+    "medium": "Média",
+    "high": "Alta",
+    "urgent": "Urgente"
+  },
+  "actions": {
+    "create": "Criar tarefa",
+    "edit": "Editar tarefa",
+    "delete": "Excluir tarefa",
+    "duplicate": "Duplicar tarefa",
+    "markComplete": "Marcar como concluída",
+    "markIncomplete": "Marcar como incompleta",
+    "archive": "Arquivar tarefa",
+    "completed": "Tarefa concluída!",
+    "reactivated": "Tarefa reativada!",
+    "deleted": "Tarefa excluída",
+    "markCompleted": "concluída",
+    "markPending": "pendente",
+    "taskStatusChanged": "Tarefa \"{title}\" {action}",
+    "taskDeleted": "Tarefa \"{title}\" excluída",
+    "toggleError": "Erro ao alterar o status da tarefa \"{title}\"",
+    "deleteError": "Erro ao excluir tarefa",
+    "updateError": "Erro ao atualizar tarefa"
+  },
+  "messages": {
+    "created": "Tarefa criada com sucesso",
+    "updated": "Tarefa atualizada com sucesso",
+    "deleted": "Tarefa excluída com sucesso",
+    "duplicated": "Tarefa duplicada com sucesso",
+    "completed": "Tarefa marcada como concluída",
+    "confirmDelete": "Tem certeza de que deseja excluir esta tarefa?",
+    "noTasks": "Nenhuma tarefa encontrada",
+    "createFirst": "Crie sua primeira tarefa para começar"
+  },
+  "filters": {
+    "all": "Todas as tarefas",
+    "active": "Ativas",
+    "completed": "Concluídas",
+    "overdue": "Atrasadas",
+    "dueToday": "Vencem hoje",
+    "dueThisWeek": "Vencem esta semana"
+  },
+  "sorting": {
+    "newest": "Mais recentes primeiro",
+    "oldest": "Mais antigas primeiro",
+    "priority": "Por prioridade",
+    "dueDate": "Por data de vencimento",
+    "alphabetical": "Alfabético"
+  },
+  "stats": {
+    "active": "Ativas",
+    "completed": "Concluídas",
+    "total": "Total de tarefas",
+    "totalDescription": "Todas as tarefas no sistema",
+    "pending": "Pendentes",
+    "pendingDescription": "Tarefas aguardando conclusão",
+    "overdue": "Atrasadas"
+  },
+  "form": {
+    "addTitle": "Adicionar nova tarefa",
+    "addDescription": "Crie uma nova tarefa para acompanhar o que precisa ser feito",
+    "titleLabel": "Título da tarefa",
+    "titlePlaceholder": "O que precisa ser feito?",
+    "titleDescription": "Digite o título da nova tarefa. Este campo é obrigatório.",
+    "descriptionLabel": "Descrição da tarefa (opcional)",
+    "descriptionPlaceholder": "Adicione uma descrição (opcional)",
+    "descriptionHelp": "Descrição opcional para fornecer mais detalhes sobre a tarefa.",
+    "addButton": "Adicionar tarefa",
+    "adding": "Adicionando...",
+    "enterTitle": "Digite um título para habilitar o botão de criar",
+    "creating": "Criando tarefa, por favor aguarde",
+    "pressToCreate": "Pressione para criar a nova tarefa",
+    "addSuccess": "Tarefa adicionada com sucesso!",
+    "addError": "Falha ao adicionar tarefa",
+    "tryAgain": "Por favor, tente novamente mais tarde",
+    "taskCreated": "Tarefa \"{title}\" criada com sucesso",
+    "createError": "Erro ao criar a tarefa \"{title}\""
+  },
+  "task": {
+    "completed": "concluída",
+    "active": "ativa",
+    "deleteConfirm": "Tem certeza de que deseja excluir esta tarefa?",
+    "deleteSuccess": "Tarefa excluída com sucesso",
+    "toggleSuccess": "Status da tarefa atualizado"
+  },
+  "overview": {
+    "title": "Visão geral das tarefas",
+    "label": "Resumo das tarefas",
+    "activeTasks": "{count} tarefas ativas",
+    "completedTasks": "{count} tarefas concluídas",
+    "totalTasks": "{count} tarefas no total"
+  },
+  "sections": {
+    "activeTasks": "Tarefas ativas",
+    "completedTasks": "Tarefas concluídas"
+  },
+  "empty": {
+    "title": "Nenhuma tarefa ainda",
+    "description": "Adicione sua primeira tarefa acima para começar!"
+  },
+  "accessibility": {
+    "taskCard": "Tarefa: {title}. {status}. Pressione Enter para ver detalhes.",
+    "completedTaskCard": "Tarefa concluída: {title}. Pressione Enter para ver detalhes.",
+    "toggleTask": "Marcar tarefa \"{title}\" como {action}",
+    "reactivateTask": "Reativar tarefa concluída \"{title}\"",
+    "deleteTask": "Excluir tarefa \"{title}\"",
+    "deleteCompletedTask": "Excluir tarefa concluída \"{title}\"",
+    "createdDate": "Criada em {date}",
+    "completedDate": "Concluída em {date}"
+  },
+  "time": {
+    "daysAgo": "há {count} dia{count, plural, one {} other {s}}",
+    "hoursAgo": "há {count} hora{count, plural, one {} other {s}}",
+    "minutesAgo": "há {count} minuto{count, plural, one {} other {s}}",
+    "justNow": "Agora mesmo"
+  },
+  "page": {
+    "statsAriaLabel": "Estatísticas de tarefas",
+    "listTitle": "Lista de tarefas",
+    "listDescription": "Gerencie suas tarefas pendentes e organize-se melhor",
+    "today": "Hoje"
+  },
+  "list": {
+    "title": "Lista de tarefas",
+    "description": "Gerencie todas as suas tarefas em um só lugar",
+    "allTasks": "Todas as tarefas"
+  },
+  "detail": {
+    "loading": {
+      "message": "Carregando detalhes da tarefa",
+      "ariaLabel": "Carregando detalhes da tarefa",
+      "srText": "Carregando detalhes da tarefa..."
+    },
+    "navigation": {
+      "backToTasks": "Voltar às tarefas",
+      "backAriaLabel": "Voltar à lista de tarefas",
+      "returnNavigation": "Navegação de retorno",
+      "viewAllTasks": "Ver todas as tarefas",
+      "viewAllDescription": "Voltar à lista completa de tarefas"
+    },
+    "error": {
+      "notFound": "Não foi possível encontrar a tarefa solicitada. Ela pode ter sido excluída ou você não tem permissão para visualizá-la.",
+      "title": "Tarefa não encontrada"
+    },
+    "status": {
+      "completed": "Concluída",
+      "pending": "Pendente",
+      "active": "Em andamento",
+      "completedAriaLabel": "Tarefa concluída",
+      "pendingAriaLabel": "Tarefa pendente"
+    },
+    "priority": {
+      "high": "Alta",
+      "medium": "Média",
+      "low": "Baixa",
+      "label": "Prioridade"
+    },
+    "categories": {
+      "design": "Design",
+      "development": "Desenvolvimento",
+      "meetings": "Reuniões",
+      "documentation": "Documentação",
+      "testing": "Testes",
+      "general": "Geral"
+    },
+    "sections": {
+      "description": "Descrição",
+      "actions": "Ações",
+      "information": "Informações",
+      "classification": "Classificação",
+      "metadata": "Metadados da tarefa"
+    },
+    "actions": {
+      "title": "Ações",
+      "description": "Gerencie o status e as opções desta tarefa. Atalhos de teclado: Cmd+Enter para concluir, Cmd+Backspace para excluir.",
+      "markPending": "Marcar pendente",
+      "markCompleted": "Marcar concluída",
+      "delete": "Excluir",
+      "markPendingAriaLabel": "Marcar tarefa \"{title}\" como pendente. Atalho: Cmd+Enter",
+      "markCompletedAriaLabel": "Marcar tarefa \"{title}\" como concluída. Atalho: Cmd+Enter",
+      "deleteAriaLabel": "Excluir permanentemente a tarefa \"{title}\". Atalho: Cmd+Backspace"
+    },
+    "info": {
+      "created": "Criada",
+      "lastUpdate": "Última atualização",
+      "status": "Status",
+      "priority": "Prioridade",
+      "category": "Categoria",
+      "taskId": "ID da tarefa",
+      "noDescription": "Nenhuma descrição disponível para esta tarefa.",
+      "inferredInfo": "Informação inferida automaticamente"
+    },
+    "messages": {
+      "taskCompleted": "Tarefa \"{title}\" concluída com sucesso",
+      "taskReactivated": "Tarefa \"{title}\" reativada com sucesso",
+      "taskDeleted": "Tarefa \"{title}\" excluída com sucesso",
+      "toggleError": "Erro ao alterar o status da tarefa \"{title}\"",
+      "deleteError": "Erro ao excluir a tarefa \"{title}\"",
+      "completedToast": "Tarefa concluída",
+      "reactivatedToast": "Tarefa reativada",
+      "deletedToast": "Tarefa excluída",
+      "updateErrorToast": "Erro ao atualizar tarefa",
+      "deleteErrorToast": "Erro ao excluir tarefa"
+    }
+  }
+}

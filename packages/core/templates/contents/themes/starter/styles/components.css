@@ -1,0 +1,16 @@
+/* Starter Theme Component Styles */
+
+/* Hero block styles */
+.hero-section {
+  @apply relative min-h-[60vh] flex items-center justify-center;
+}
+
+/* Stats card styles */
+.stats-card {
+  @apply transition-shadow hover:shadow-md;
+}
+
+/* Analytics chart container */
+.chart-container {
+  @apply w-full h-[300px];
+}

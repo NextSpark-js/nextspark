@@ -1,0 +1,39 @@
+{
+  "title": "Analysen",
+  "description": "Verfolgen Sie die Produktivität und Aufgabenerfüllung Ihres Teams",
+  "stats": {
+    "totalTasks": "Aufgaben Gesamt",
+    "completedToday": "Heute Abgeschlossen",
+    "overdue": "Überfällig",
+    "avgCompletionTime": "Durchschn. Bearbeitungszeit"
+  },
+  "chart": {
+    "title": "Wöchentlicher Fortschritt",
+    "completed": "Abgeschlossen",
+    "created": "Erstellt",
+    "note": "Aufgabenaktivität der letzten 7 Tage"
+  },
+  "charts": {
+    "weeklyProgress": "Wöchentlicher Fortschritt",
+    "tasksByStatus": "Aufgaben nach Status",
+    "tasksByPriority": "Aufgaben nach Priorität",
+    "completionRate": "Abschlussrate"
+  },
+  "activity": {
+    "title": "Letzte Aktivität",
+    "empty": "Keine aktuelle Aktivität",
+    "actions": {
+      "created": "hat erstellt",
+      "completed": "hat abgeschlossen",
+      "updated": "hat aktualisiert",
+      "deleted": "hat gelöscht"
+    }
+  },
+  "timeRanges": {
+    "today": "Heute",
+    "thisWeek": "Diese Woche",
+    "thisMonth": "Dieser Monat",
+    "last30Days": "Letzte 30 Tage",
+    "custom": "Benutzerdefiniert"
+  }
+}

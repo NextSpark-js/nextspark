@@ -38,7 +38,7 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
      * Supported locales for your project
      * Add/remove locales as needed
      */
-    supportedLocales: ['en', 'es'],
+    supportedLocales: ['en', 'es', 'fr', 'de', 'it', 'pt'],
 
     /**
      * Default fallback locale

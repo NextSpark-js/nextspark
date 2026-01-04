@@ -1,0 +1,30 @@
+{
+  "hero": {
+    "title": "Bem-vindo ao Starter",
+    "subtitle": "Um tema NextSpark minimalista para iniciar seu projeto",
+    "cta": "Começar"
+  },
+  "features": {
+    "title": "Funcionalidades",
+    "subtitle": "Tudo o que você precisa para construir sua aplicação",
+    "items": {
+      "tasks": {
+        "title": "Gestão de Tarefas",
+        "description": "Organize e acompanhe suas tarefas com eficiência"
+      },
+      "analytics": {
+        "title": "Painel de Análises",
+        "description": "Monitore a produtividade da sua equipe"
+      },
+      "teams": {
+        "title": "Colaboração em Equipe",
+        "description": "Trabalhe em conjunto sem problemas"
+      }
+    }
+  },
+  "cta": {
+    "title": "Pronto para começar?",
+    "subtitle": "Crie sua primeira tarefa e comece a acompanhar seu progresso",
+    "button": "Criar Tarefa"
+  }
+}

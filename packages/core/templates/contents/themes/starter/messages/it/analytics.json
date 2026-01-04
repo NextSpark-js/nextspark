@@ -1,0 +1,39 @@
+{
+  "title": "Analisi",
+  "description": "Monitora la produttività e il completamento delle attività del tuo team",
+  "stats": {
+    "totalTasks": "Attività Totali",
+    "completedToday": "Completate Oggi",
+    "overdue": "In Ritardo",
+    "avgCompletionTime": "Tempo Medio di Completamento"
+  },
+  "chart": {
+    "title": "Progresso Settimanale",
+    "completed": "Completate",
+    "created": "Create",
+    "note": "Attività delle ultime 7 giorni"
+  },
+  "charts": {
+    "weeklyProgress": "Progresso Settimanale",
+    "tasksByStatus": "Attività per Stato",
+    "tasksByPriority": "Attività per Priorità",
+    "completionRate": "Tasso di Completamento"
+  },
+  "activity": {
+    "title": "Attività Recente",
+    "empty": "Nessuna attività recente",
+    "actions": {
+      "created": "ha creato",
+      "completed": "ha completato",
+      "updated": "ha aggiornato",
+      "deleted": "ha eliminato"
+    }
+  },
+  "timeRanges": {
+    "today": "Oggi",
+    "thisWeek": "Questa Settimana",
+    "thisMonth": "Questo Mese",
+    "last30Days": "Ultimi 30 Giorni",
+    "custom": "Intervallo Personalizzato"
+  }
+}

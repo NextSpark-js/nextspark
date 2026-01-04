@@ -1,0 +1,63 @@
+{
+  "entities": {
+    "tasks": {
+      "slug": "tasks",
+      "singular": "task",
+      "plural": "Tasks",
+      "tableName": "tasks",
+      "fields": [
+        "title",
+        "description",
+        "status",
+        "priority"
+      ],
+      "filters": [
+        "status",
+        "priority"
+      ]
+    }
+  },
+  "tasks": {
+    "testTask": {
+      "title": "Test Task",
+      "description": "A task for testing",
+      "status": "todo",
+      "priority": "medium"
+    },
+    "highPriorityTask": {
+      "title": "High Priority Task",
+      "description": "An urgent task",
+      "status": "todo",
+      "priority": "high"
+    },
+    "completedTask": {
+      "title": "Completed Task",
+      "description": "A finished task",
+      "status": "done",
+      "priority": "low"
+    }
+  },
+  "users": {
+    "owner": {
+      "email": "owner@starter.dev",
+      "password": "Test1234",
+      "role": "owner"
+    },
+    "admin": {
+      "email": "admin@starter.dev",
+      "password": "Test1234",
+      "role": "admin"
+    },
+    "member": {
+      "email": "member@starter.dev",
+      "password": "Test1234",
+      "role": "member"
+    },
+    "viewer": {
+      "email": "viewer@starter.dev",
+      "password": "Test1234",
+      "role": "viewer"
+    }
+  },
+  "theme": "starter"
+}

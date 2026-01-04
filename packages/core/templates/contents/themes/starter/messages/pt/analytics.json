@@ -1,0 +1,39 @@
+{
+  "title": "Análises",
+  "description": "Acompanhe a produtividade e conclusão de tarefas da sua equipe",
+  "stats": {
+    "totalTasks": "Total de Tarefas",
+    "completedToday": "Concluídas Hoje",
+    "overdue": "Atrasadas",
+    "avgCompletionTime": "Tempo Médio de Conclusão"
+  },
+  "chart": {
+    "title": "Progresso Semanal",
+    "completed": "Concluídas",
+    "created": "Criadas",
+    "note": "Atividade de tarefas dos últimos 7 dias"
+  },
+  "charts": {
+    "weeklyProgress": "Progresso Semanal",
+    "tasksByStatus": "Tarefas por Status",
+    "tasksByPriority": "Tarefas por Prioridade",
+    "completionRate": "Taxa de Conclusão"
+  },
+  "activity": {
+    "title": "Atividade Recente",
+    "empty": "Nenhuma atividade recente",
+    "actions": {
+      "created": "criou",
+      "completed": "concluiu",
+      "updated": "atualizou",
+      "deleted": "excluiu"
+    }
+  },
+  "timeRanges": {
+    "today": "Hoje",
+    "thisWeek": "Esta Semana",
+    "thisMonth": "Este Mês",
+    "last30Days": "Últimos 30 Dias",
+    "custom": "Período Personalizado"
+  }
+}
