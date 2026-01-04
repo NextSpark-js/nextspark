@@ -14,6 +14,10 @@ import { generateProject } from './generators/index.js'
 import { getPreset, applyPreset, PRESET_DESCRIPTIONS } from './presets.js'
 import type { WizardConfig, CLIOptions } from './types.js'
 import { promptProjectInfo } from './prompts/project-info.js'
+// DX Improvements
+import { promptDemoInstall } from './prompts/demo-install.js'
+import { installDemoTheme } from './generators/demo-installer.js'
+import { showConfigPreview } from './preview.js'
 
 /**
  * Run the complete wizard with mode support
@@ -26,6 +30,19 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
   showModeIndicator(options)
 
   try {
+    // Demo Theme Installation (optional, before wizard)
+    if (!options.preset && options.mode !== 'quick') {
+      const wantsDemo = await promptDemoInstall()
+      if (wantsDemo) {
+        const installed = await installDemoTheme()
+        if (installed) {
+          console.log('')
+          showInfo('Demo theme installed. Now let\'s configure your custom project.')
+          console.log('')
+        }
+      }
+    }
+
     let config: WizardConfig
 
     if (options.preset) {
@@ -49,6 +66,9 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
 
     // Show summary before generating
     showConfigSummary(config)
+
+    // Show interactive preview of files to be created
+    showConfigPreview(config)
 
     // Ask for confirmation before proceeding
     console.log('')
@@ -195,11 +215,8 @@ function showConfigSummary(config: WizardConfig): void {
 function formatAuthMethod(method: string): string {
   const mapping: Record<string, string> = {
     emailPassword: 'Email/Password',
-    magicLink: 'Magic Link',
     googleOAuth: 'Google',
-    githubOAuth: 'GitHub',
     emailVerification: 'Email Verification',
-    twoFactor: '2FA',
   }
   return mapping[method] || method
 }

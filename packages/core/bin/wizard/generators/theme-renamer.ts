@@ -171,7 +171,29 @@ export async function updateAppConfig(config: WizardConfig): Promise<void> {
 }
 
 /**
- * Update billing.config.ts with billing settings
+ * Update app.config.ts with selected team roles
+ */
+export async function updateRolesConfig(config: WizardConfig): Promise<void> {
+  const appConfigPath = path.join(getTargetThemesDir(), config.projectSlug, 'config', 'app.config.ts')
+
+  if (!await fs.pathExists(appConfigPath)) {
+    return
+  }
+
+  let content = await fs.readFile(appConfigPath, 'utf-8')
+
+  // Update availableTeamRoles if it exists
+  const rolesArray = config.teamRoles.map(r => `'${r}'`).join(', ')
+  content = content.replace(
+    /availableTeamRoles:\s*\[.*?\]/g,
+    `availableTeamRoles: [${rolesArray}]`
+  )
+
+  await fs.writeFile(appConfigPath, content, 'utf-8')
+}
+
+/**
+ * Update billing.config.ts with billing settings and generate plans
  */
 export async function updateBillingConfig(config: WizardConfig): Promise<void> {
   const billingConfigPath = path.join(getTargetThemesDir(), config.projectSlug, 'config', 'billing.config.ts')
@@ -189,7 +211,168 @@ export async function updateBillingConfig(config: WizardConfig): Promise<void> {
     `currency: '${config.currency}'`
   )
 
+  // Generate plans based on billing model
+  const plansContent = generateBillingPlans(config.billingModel, config.currency)
+
+  // Replace the plans array
+  content = content.replace(
+    /plans:\s*\[[\s\S]*?\],\s*\n\s*\/\/ ===+\s*\n\s*\/\/ ACTION MAPPINGS/,
+    `plans: ${plansContent},
+
+  // ===========================================
+  // ACTION MAPPINGS`
+  )
+
   await fs.writeFile(billingConfigPath, content, 'utf-8')
+}
+
+/**
+ * Generate billing plans based on the selected billing model
+ */
+function generateBillingPlans(billingModel: string, currency: string): string {
+  if (billingModel === 'free') {
+    return '[]'
+  }
+
+  const currencySymbol = currency === 'eur' ? '€' : currency === 'gbp' ? '£' : '$'
+
+  if (billingModel === 'freemium') {
+    // Free + Pro plans
+    return `[
+    // Free Plan
+    {
+      slug: 'free',
+      name: 'billing.plans.free.name',
+      description: 'billing.plans.free.description',
+      type: 'free',
+      visibility: 'public',
+      price: { monthly: 0, yearly: 0 },
+      trialDays: 0,
+      features: ['basic_analytics'],
+      limits: {
+        team_members: 3,
+        tasks: 50,
+        api_calls: 1000,
+        storage_gb: 1,
+      },
+      stripePriceIdMonthly: null,
+      stripePriceIdYearly: null,
+    },
+    // Pro Plan - ${currencySymbol}29/month
+    {
+      slug: 'pro',
+      name: 'billing.plans.pro.name',
+      description: 'billing.plans.pro.description',
+      type: 'paid',
+      visibility: 'public',
+      price: {
+        monthly: 2900,  // ${currencySymbol}29.00
+        yearly: 29000,  // ${currencySymbol}290.00 (16% savings)
+      },
+      trialDays: 14,
+      features: [
+        'basic_analytics',
+        'advanced_analytics',
+        'api_access',
+        'priority_support',
+      ],
+      limits: {
+        team_members: 15,
+        tasks: 1000,
+        api_calls: 100000,
+        storage_gb: 50,
+      },
+      stripePriceIdMonthly: 'price_pro_monthly',
+      stripePriceIdYearly: 'price_pro_yearly',
+    },
+  ]`
+  }
+
+  // paid model: Starter + Pro + Business
+  return `[
+    // Starter Plan - ${currencySymbol}15/month
+    {
+      slug: 'starter',
+      name: 'billing.plans.starter.name',
+      description: 'billing.plans.starter.description',
+      type: 'paid',
+      visibility: 'public',
+      price: {
+        monthly: 1500,  // ${currencySymbol}15.00
+        yearly: 14400,  // ${currencySymbol}144.00 (20% savings)
+      },
+      trialDays: 7,
+      features: [
+        'basic_analytics',
+        'api_access',
+      ],
+      limits: {
+        team_members: 5,
+        tasks: 200,
+        api_calls: 10000,
+        storage_gb: 10,
+      },
+      stripePriceIdMonthly: 'price_starter_monthly',
+      stripePriceIdYearly: 'price_starter_yearly',
+    },
+    // Pro Plan - ${currencySymbol}29/month
+    {
+      slug: 'pro',
+      name: 'billing.plans.pro.name',
+      description: 'billing.plans.pro.description',
+      type: 'paid',
+      visibility: 'public',
+      price: {
+        monthly: 2900,  // ${currencySymbol}29.00
+        yearly: 29000,  // ${currencySymbol}290.00 (16% savings)
+      },
+      trialDays: 14,
+      features: [
+        'basic_analytics',
+        'advanced_analytics',
+        'api_access',
+        'priority_support',
+      ],
+      limits: {
+        team_members: 15,
+        tasks: 1000,
+        api_calls: 100000,
+        storage_gb: 50,
+      },
+      stripePriceIdMonthly: 'price_pro_monthly',
+      stripePriceIdYearly: 'price_pro_yearly',
+    },
+    // Business Plan - ${currencySymbol}79/month
+    {
+      slug: 'business',
+      name: 'billing.plans.business.name',
+      description: 'billing.plans.business.description',
+      type: 'paid',
+      visibility: 'public',
+      price: {
+        monthly: 7900,  // ${currencySymbol}79.00
+        yearly: 79000,  // ${currencySymbol}790.00 (16% savings)
+      },
+      trialDays: 14,
+      features: [
+        'basic_analytics',
+        'advanced_analytics',
+        'api_access',
+        'sso',
+        'audit_logs',
+        'priority_support',
+        'dedicated_support',
+      ],
+      limits: {
+        team_members: 50,
+        tasks: 5000,
+        api_calls: 500000,
+        storage_gb: 200,
+      },
+      stripePriceIdMonthly: 'price_business_monthly',
+      stripePriceIdYearly: 'price_business_yearly',
+    },
+  ]`
 }
 
 /**

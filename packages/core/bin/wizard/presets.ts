@@ -37,7 +37,7 @@ export interface PresetConfig {
  * SaaS Preset
  *
  * Multi-tenant SaaS application with freemium billing,
- * team management, and full authentication options.
+ * team management, and authentication options.
  */
 const SAAS_PRESET: PresetConfig = {
   teamMode: 'multi-tenant',
@@ -55,11 +55,8 @@ const SAAS_PRESET: PresetConfig = {
   },
   auth: {
     emailPassword: true,
-    magicLink: true,
     googleOAuth: true,
-    githubOAuth: false,
     emailVerification: true,
-    twoFactor: false,
   },
   dashboard: {
     search: true,
@@ -95,11 +92,8 @@ const BLOG_PRESET: PresetConfig = {
   },
   auth: {
     emailPassword: true,
-    magicLink: false,
     googleOAuth: false,
-    githubOAuth: false,
     emailVerification: false,
-    twoFactor: false,
   },
   dashboard: {
     search: false,
@@ -116,7 +110,7 @@ const BLOG_PRESET: PresetConfig = {
 /**
  * CRM Preset
  *
- * Single-tenant CRM or internal tool with subscription billing,
+ * Single-tenant CRM or internal tool with paid subscription,
  * team roles, and full dashboard features.
  */
 const CRM_PRESET: PresetConfig = {
@@ -124,7 +118,7 @@ const CRM_PRESET: PresetConfig = {
   teamRoles: ['owner', 'admin', 'member'],
   defaultLocale: 'en',
   supportedLocales: ['en'],
-  billingModel: 'subscription',
+  billingModel: 'paid',
   currency: 'usd',
   features: {
     analytics: true,
@@ -135,11 +129,8 @@ const CRM_PRESET: PresetConfig = {
   },
   auth: {
     emailPassword: true,
-    magicLink: false,
     googleOAuth: true,
-    githubOAuth: false,
     emailVerification: true,
-    twoFactor: true,
   },
   dashboard: {
     search: true,
@@ -168,7 +159,7 @@ export const PRESETS: Record<PresetName, PresetConfig> = {
 export const PRESET_DESCRIPTIONS: Record<PresetName, string> = {
   saas: 'Multi-tenant SaaS with freemium billing and team management',
   blog: 'Single-user blog or content site with minimal features',
-  crm: 'Single-tenant CRM or internal tool with subscription billing',
+  crm: 'Single-tenant CRM or internal tool with paid subscription',
 }
 
 /**
@@ -232,11 +223,8 @@ export function getDefaultConfig(): PresetConfig {
     },
     auth: {
       emailPassword: true,
-      magicLink: false,
       googleOAuth: false,
-      githubOAuth: false,
       emailVerification: true,
-      twoFactor: false,
     },
     dashboard: {
       search: true,

@@ -171,7 +171,6 @@ export const DEFAULT_DASHBOARD_CONFIG = {
         icon: 'shield',
         order: 2,
         features: {
-          twoFactorAuth: true,
           sessionManagement: true,
           loginHistory: true,
           securityQuestions: false,

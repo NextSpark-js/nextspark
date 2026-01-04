@@ -21,17 +21,12 @@ const BILLING_MODEL_OPTIONS = [
   {
     name: 'Freemium (Free + Paid tiers)',
     value: 'freemium' as BillingModel,
-    description: 'Basic features free, premium features require payment.',
+    description: 'Free tier with optional paid upgrades (Free + Pro plans).',
   },
   {
-    name: 'Subscription (Recurring payments)',
-    value: 'subscription' as BillingModel,
-    description: 'Monthly or yearly subscription plans.',
-  },
-  {
-    name: 'One-time (Single purchase)',
-    value: 'one-time' as BillingModel,
-    description: 'Users pay once for lifetime access.',
+    name: 'Paid (Subscription required)',
+    value: 'paid' as BillingModel,
+    description: 'Subscription-based access with optional trial period.',
   },
 ]
 
@@ -68,6 +63,10 @@ export async function promptBillingConfig(): Promise<Pick<WizardConfig, 'billing
       default: 'usd',
     })
   }
+
+  // Show info about customizing plans
+  console.log('')
+  showInfo('You can customize plans and pricing in billing.config.ts')
 
   return {
     billingModel,

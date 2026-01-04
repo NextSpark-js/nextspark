@@ -75,6 +75,10 @@ export async function promptTeamConfig(): Promise<Pick<WizardConfig, 'teamMode' 
       teamRoles = ['owner', ...teamRoles]
       showInfo('Owner role is required and has been added automatically.')
     }
+
+    // Show info about custom roles
+    console.log('')
+    showInfo('You can add custom roles later by editing app.config.ts')
   }
 
   return {

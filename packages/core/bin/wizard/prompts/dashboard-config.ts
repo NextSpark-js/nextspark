@@ -81,5 +81,9 @@ export async function promptDashboardConfig(
     sidebarCollapsed,
   }
 
+  // Show info about more options
+  console.log('')
+  showInfo('More options available in dashboard.config.ts: support, superadmin access, devtools, quick create')
+
   return { dashboard }
 }

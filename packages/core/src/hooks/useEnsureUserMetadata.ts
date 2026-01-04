@@ -37,7 +37,6 @@ export function useEnsureUserMetadata() {
                     sidebarCollapsed: false
                   },
                   securityPreferences: {
-                    twoFactorEnabled: false,
                     loginAlertsEnabled: true
                   },
                   notificationsPreferences: {

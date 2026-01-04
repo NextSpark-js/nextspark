@@ -28,6 +28,7 @@ import {
   updateAppConfig,
   updateBillingConfig,
   updateMigrations,
+  updateRolesConfig,
   updatePermissionsConfig,
   updateDashboardConfig,
   processI18n,
@@ -84,10 +85,10 @@ const TEST_SCENARIOS: { name: string; config: WizardConfig }[] = [
       teamRoles: ['owner', 'admin', 'member'],
       defaultLocale: 'es',
       supportedLocales: ['en', 'es', 'fr', 'de'],
-      billingModel: 'subscription',
+      billingModel: 'paid',
       currency: 'eur',
       features: { analytics: true, teams: true, billing: true, api: true, docs: false },
-      auth: { emailPassword: true, magicLink: true, googleOAuth: true, githubOAuth: true, emailVerification: true, twoFactor: true },
+      auth: { emailPassword: true, googleOAuth: true, emailVerification: true },
       dashboard: { search: true, notifications: true, themeToggle: true, sidebarCollapsed: false },
       dev: { devKeyring: true, debugMode: true },
     },
@@ -105,7 +106,7 @@ const TEST_SCENARIOS: { name: string; config: WizardConfig }[] = [
       billingModel: 'free',
       currency: 'usd',
       features: { analytics: false, teams: false, billing: false, api: false, docs: false },
-      auth: { emailPassword: true, magicLink: false, googleOAuth: false, githubOAuth: false, emailVerification: false, twoFactor: false },
+      auth: { emailPassword: true, googleOAuth: false, emailVerification: false },
       dashboard: { search: false, notifications: false, themeToggle: true, sidebarCollapsed: true },
       dev: { devKeyring: true, debugMode: false },
     },
@@ -278,6 +279,9 @@ async function runScenario(scenario: { name: string; config: WizardConfig }, tes
     await updateBillingConfig(scenario.config)
     logSuccess('updateBillingConfig')
 
+    await updateRolesConfig(scenario.config)
+    logSuccess('updateRolesConfig')
+
     await updateMigrations(scenario.config)
     logSuccess('updateMigrations')
 
@@ -429,6 +433,9 @@ async function testPreviewGeneration(config: WizardConfig): Promise<TestResult> 
 
 /**
  * Test Post-Generation Validation
+ *
+ * This test copies the generated theme to the actual repo, builds registries,
+ * and then runs TypeScript validation in the full project context.
  */
 async function testValidation(themePath: string, config: WizardConfig): Promise<TestResult> {
   const result: TestResult = {
@@ -443,18 +450,69 @@ async function testValidation(themePath: string, config: WizardConfig): Promise<
     return result
   }
 
+  // Get the actual repo's themes directory (relative to this script location)
+  const repoRoot = path.resolve(__dirname, '../../../..')
+  const repoThemesDir = path.join(repoRoot, 'contents', 'themes')
+  const testThemePath = path.join(repoThemesDir, config.projectSlug)
+
   try {
+    // 1. Copy generated theme to the actual repo
+    log(`  Copying theme to repo for validation...`)
+    await fs.ensureDir(repoThemesDir)
+
+    // Remove if exists from previous run
+    if (await fs.pathExists(testThemePath)) {
+      await fs.remove(testThemePath)
+    }
+
+    await fs.copy(themePath, testThemePath)
+    result.checks.push({ name: 'Theme copied to repo', passed: true })
+
+    // 2. Build registries with the test theme
+    log(`  Building registries for ${config.projectSlug}...`)
+    try {
+      execSync(`NEXT_PUBLIC_ACTIVE_THEME=${config.projectSlug} node packages/core/scripts/build/registry.mjs`, {
+        cwd: repoRoot,
+        stdio: 'pipe',
+        timeout: 60000,
+      })
+      result.checks.push({ name: 'Registries built successfully', passed: true })
+    } catch (buildError) {
+      const error = buildError as { stderr?: Buffer; stdout?: Buffer }
+      const stderr = error.stderr?.toString() || ''
+      const stdout = error.stdout?.toString() || ''
+      result.checks.push({ name: 'Registries built successfully', passed: false })
+      result.passed = false
+      result.errors.push(`Registry build failed: ${stderr || stdout}`)
+      // Clean up and return early
+      await fs.remove(testThemePath)
+      return result
+    }
+
+    // 3. Run TypeScript validation
+    log(`  Running TypeScript validation...`)
     const { validateGeneratedTheme } = await import('./wizard/validators/index.js')
 
-    const validationResult = await validateGeneratedTheme(themePath, config)
+    // Change to repo root for validation
+    const originalCwd = process.cwd()
+    process.chdir(repoRoot)
 
-    result.checks.push({ name: 'Validation completed', passed: true })
-    result.checks.push({ name: 'Theme is valid', passed: validationResult.valid })
+    const validationResult = await validateGeneratedTheme(testThemePath, config)
+
+    process.chdir(originalCwd)
+
+    result.checks.push({ name: 'TypeScript validation completed', passed: true })
+    result.checks.push({ name: 'Theme compiles without errors', passed: validationResult.valid })
 
     if (!validationResult.valid) {
       result.passed = false
-      for (const error of validationResult.errors) {
-        result.errors.push(`Validation error: ${error.message}`)
+      // Limit errors to first 10 for readability
+      const errorsToShow = validationResult.errors.slice(0, 10)
+      for (const error of errorsToShow) {
+        result.errors.push(`TS Error: ${error.message}`)
+      }
+      if (validationResult.errors.length > 10) {
+        result.errors.push(`... and ${validationResult.errors.length - 10} more errors`)
       }
     }
 
@@ -468,6 +526,16 @@ async function testValidation(themePath: string, config: WizardConfig): Promise<
   } catch (error) {
     result.passed = false
     result.errors.push(`Validation test failed: ${(error as Error).message}`)
+  } finally {
+    // 4. Clean up - remove test theme from repo
+    log(`  Cleaning up test theme...`)
+    try {
+      if (await fs.pathExists(testThemePath)) {
+        await fs.remove(testThemePath)
+      }
+    } catch {
+      // Ignore cleanup errors
+    }
   }
 
   return result
@@ -665,6 +733,7 @@ async function runFullFeatureScenario(
   await updateDevConfig(scenario.config)
   await updateAppConfig(scenario.config)
   await updateBillingConfig(scenario.config)
+  await updateRolesConfig(scenario.config)
   await updateMigrations(scenario.config)
   await updatePermissionsConfig(scenario.config)
   await updateDashboardConfig(scenario.config)

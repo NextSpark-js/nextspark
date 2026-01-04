@@ -32,6 +32,12 @@ export const APP_CONFIG_OVERRIDES = {
    */
   teams: {
     mode: 'multi-tenant' as const,
+    /**
+     * Available team roles for this theme
+     * Core roles: owner, admin, member, viewer
+     * Custom roles can be added here and configured in permissions.config.ts
+     */
+    availableTeamRoles: ['owner', 'admin', 'member', 'viewer'],
     options: {
       maxMembersPerTeam: 50,
       allowLeaveTeam: true,

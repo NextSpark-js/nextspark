@@ -112,36 +112,51 @@ export async function validateRequiredFiles(
     }
   }
 
-  // Validate messages directory has locale files
+  // Validate messages directory has locale files or directories
   const messagesDir = path.join(themePath, 'messages')
   if (await fs.pathExists(messagesDir)) {
-    const localeFiles = await fs.readdir(messagesDir)
-    const localeJsonFiles = localeFiles.filter(f => f.endsWith('.json'))
+    const items = await fs.readdir(messagesDir)
 
-    if (localeJsonFiles.length === 0) {
+    // Check for namespace directories (messages/en/, messages/es/, etc.)
+    const localeDirs: string[] = []
+    const localeJsonFiles: string[] = []
+
+    for (const item of items) {
+      const itemPath = path.join(messagesDir, item)
+      const stat = await fs.stat(itemPath)
+      if (stat.isDirectory() && !item.startsWith('.')) {
+        localeDirs.push(item)
+      } else if (item.endsWith('.json')) {
+        localeJsonFiles.push(item.replace('.json', ''))
+      }
+    }
+
+    // Determine structure: namespace directories vs flat files
+    const usingNamespaceDirs = localeDirs.length > 0 && localeDirs.some(d => config.supportedLocales.includes(d))
+    const availableLocales = usingNamespaceDirs ? localeDirs : localeJsonFiles
+
+    if (availableLocales.length === 0) {
       errors.push({
         type: 'files',
-        message: 'No locale files found in messages/ directory',
+        message: 'No locale files or directories found in messages/',
         file: 'messages/',
       })
     } else {
       // Check that default locale exists
-      const defaultLocaleFile = `${config.defaultLocale}.json`
-      if (!localeJsonFiles.includes(defaultLocaleFile)) {
+      if (!availableLocales.includes(config.defaultLocale)) {
         errors.push({
           type: 'files',
-          message: `Default locale file missing: messages/${defaultLocaleFile}`,
-          file: `messages/${defaultLocaleFile}`,
+          message: `Default locale missing: messages/${config.defaultLocale}${usingNamespaceDirs ? '/' : '.json'}`,
+          file: `messages/${config.defaultLocale}${usingNamespaceDirs ? '/' : '.json'}`,
         })
       }
 
       // Check all supported locales
       for (const locale of config.supportedLocales) {
-        const localeFile = `${locale}.json`
-        if (!localeJsonFiles.includes(localeFile)) {
+        if (!availableLocales.includes(locale)) {
           warnings.push({
             type: 'files',
-            message: `Locale file missing for supported locale: messages/${localeFile}`,
+            message: `Locale missing for supported locale: messages/${locale}${usingNamespaceDirs ? '/' : '.json'}`,
           })
         }
       }

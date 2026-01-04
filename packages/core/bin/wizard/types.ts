@@ -12,7 +12,7 @@ export type TeamMode = 'multi-tenant' | 'single-tenant' | 'single-user'
 /**
  * Billing model options
  */
-export type BillingModel = 'free' | 'freemium' | 'subscription' | 'one-time'
+export type BillingModel = 'free' | 'freemium' | 'paid'
 
 /**
  * CLI execution modes
@@ -37,14 +37,12 @@ export interface FeatureFlags {
 
 /**
  * Authentication configuration (Step 6)
+ * Note: Only email/password and Google OAuth are currently supported
  */
 export interface AuthConfig {
   emailPassword: boolean
-  magicLink: boolean
   googleOAuth: boolean
-  githubOAuth: boolean
   emailVerification: boolean
-  twoFactor: boolean
 }
 
 /**

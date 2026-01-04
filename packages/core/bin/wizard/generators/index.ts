@@ -15,6 +15,7 @@ import {
   updateAppConfig,
   updateBillingConfig,
   updateMigrations,
+  updateRolesConfig,
 } from './theme-renamer.js'
 import {
   updatePermissionsConfig,
@@ -41,6 +42,7 @@ export {
   updateAppConfig,
   updateBillingConfig,
   updateMigrations,
+  updateRolesConfig,
   updatePermissionsConfig,
   updateDashboardConfig,
   generateEnvExample,
@@ -209,6 +211,7 @@ export async function generateProject(config: WizardConfig): Promise<void> {
   await updateDevConfig(config)
   await updateAppConfig(config)
   await updateBillingConfig(config)
+  await updateRolesConfig(config)
 
   // 4. Update migrations
   await updateMigrations(config)

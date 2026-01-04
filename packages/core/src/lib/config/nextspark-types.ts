@@ -30,7 +30,7 @@ export interface NextSparkConfig {
 
   /** Auth configuration */
   auth?: {
-    providers: ('email' | 'google' | 'github')[]
+    providers: ('email' | 'google')[]
     requireEmailVerification?: boolean
   }
 

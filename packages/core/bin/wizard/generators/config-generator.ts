@@ -17,6 +17,7 @@ function getTargetThemesDir(): string {
 
 /**
  * Update authentication config based on wizard responses
+ * Note: Only email/password and Google OAuth are currently supported
  */
 export async function updateAuthConfig(config: WizardConfig): Promise<void> {
   const authConfigPath = path.join(
@@ -38,34 +39,16 @@ export async function updateAuthConfig(config: WizardConfig): Promise<void> {
     `$1${config.auth.emailPassword}`
   )
 
-  // Update magic link enabled
-  content = content.replace(
-    /(magicLink:\s*{[^}]*enabled:\s*)(?:true|false)/gs,
-    `$1${config.auth.magicLink}`
-  )
-
   // Update Google OAuth enabled
   content = content.replace(
     /(google:\s*{[^}]*enabled:\s*)(?:true|false)/gs,
     `$1${config.auth.googleOAuth}`
   )
 
-  // Update GitHub OAuth enabled
-  content = content.replace(
-    /(github:\s*{[^}]*enabled:\s*)(?:true|false)/gs,
-    `$1${config.auth.githubOAuth}`
-  )
-
   // Update email verification
   content = content.replace(
     /(emailVerification:\s*)(?:true|false)/g,
     `$1${config.auth.emailVerification}`
-  )
-
-  // Update two-factor authentication
-  content = content.replace(
-    /(twoFactor:\s*{[^}]*enabled:\s*)(?:true|false)/gs,
-    `$1${config.auth.twoFactor}`
   )
 
   await fs.writeFile(authConfigPath, content, 'utf-8')
@@ -249,29 +232,19 @@ export async function generateEnvExample(config: WizardConfig): Promise<void> {
 
   // Build OAuth section based on enabled providers
   let oauthSection = ''
-  if (config.auth.googleOAuth || config.auth.githubOAuth) {
+  if (config.auth.googleOAuth) {
     oauthSection = `# =============================================================================
 # OAUTH PROVIDERS
 # =============================================================================
-`
-    if (config.auth.googleOAuth) {
-      oauthSection += `GOOGLE_CLIENT_ID="your-google-client-id"
+GOOGLE_CLIENT_ID="your-google-client-id"
 GOOGLE_CLIENT_SECRET="your-google-client-secret"
 `
-    }
-    if (config.auth.githubOAuth) {
-      oauthSection += `GITHUB_CLIENT_ID="your-github-client-id"
-GITHUB_CLIENT_SECRET="your-github-client-secret"
-`
-    }
   } else {
     oauthSection = `# =============================================================================
 # OAUTH (Optional - enable in auth.config.ts)
 # =============================================================================
 # GOOGLE_CLIENT_ID=""
 # GOOGLE_CLIENT_SECRET=""
-# GITHUB_CLIENT_ID=""
-# GITHUB_CLIENT_SECRET=""
 `
   }
 
