@@ -9,7 +9,11 @@
     "build:core": "pnpm --filter @nextsparkjs/core build",
     "build:cli": "pnpm --filter @nextsparkjs/cli build",
     "lint": "pnpm --filter @nextsparkjs/dev lint",
-    "clean": "pnpm -r exec rm -rf node_modules dist .next"
+    "clean": "pnpm -r exec rm -rf node_modules dist .next",
+    "test:local": "./scripts/tests/local/setup.sh",
+    "test:local:run": "./scripts/tests/local/run.sh --all",
+    "repackage": "./scripts/utils/repackage.sh --all --clean",
+    "publish:npm": "./scripts/utils/publish.sh ./.packages"
   },
   "devDependencies": {
     "typescript": "^5.0.0"
