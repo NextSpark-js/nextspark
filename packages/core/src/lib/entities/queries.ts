@@ -188,9 +188,10 @@ export function getEntityOwner(entityName: string): EntityOwner | null {
 /**
  * Get entity by slug
  */
-export function getEntityBySlug(slug: string): EntityConfig | ChildEntityDefinition | undefined {
-  return Object.values(getRegistry())
-    .find(entry => entry.config.slug === slug)?.config
+export function getEntityBySlug(slug: string): EntityConfig | undefined {
+  const entry = Object.values(getRegistry())
+    .find(entry => 'slug' in entry.config && entry.config.slug === slug)
+  return entry?.config as EntityConfig | undefined
 }
 
 /**

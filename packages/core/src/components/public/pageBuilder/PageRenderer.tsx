@@ -1,6 +1,15 @@
+/**
+ * PageRenderer Component
+ *
+ * Renders pages from the Page Builder by iterating over blocks
+ * and dynamically loading block components from the registry.
+ *
+ * @module core/components/public/pageBuilder
+ */
+
 import { Suspense } from 'react'
-import type { BlockInstance } from '@nextsparkjs/core/types/blocks'
-import { getBlockComponent, normalizeBlockProps } from '@nextsparkjs/core/lib/blocks/loader'
+import type { BlockInstance } from '../../../types/blocks'
+import { getBlockComponent, normalizeBlockProps } from '../../../lib/blocks/loader'
 
 // Loading skeleton for blocks
 function BlockSkeleton() {
@@ -50,7 +59,7 @@ function BlockRenderer({ block }: { block: BlockInstance }) {
   )
 }
 
-interface PageRendererProps {
+export interface PageRendererProps {
   page: {
     id: string
     title: string

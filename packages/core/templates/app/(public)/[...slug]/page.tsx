@@ -15,7 +15,7 @@
 
 import { notFound } from 'next/navigation'
 import { query } from '@nextsparkjs/core/lib/db'
-import { PageRenderer } from '@/app/components/page-renderer'
+import { PageRenderer } from '@nextsparkjs/core/components/public/pageBuilder'
 import {
   matchPathToEntity,
   getEntityBasePath,

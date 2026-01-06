@@ -12,8 +12,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { EntityDetail, CustomSectionConfig } from '../EntityDetail'
 import { Alert, AlertDescription } from '../../ui/alert'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../ui/dialog'
-import { Button } from '../../ui/button'
+// Dialog removed - EntityDetailHeader already has AlertDialog for delete confirmation
+// Button import removed - not needed after Dialog removal
 import { SkeletonEntityDetail } from '../../ui/skeleton-detail'
 import { useEntityConfig } from '../../../hooks/useEntityConfig'
 import { useRouter } from 'next/navigation'
@@ -58,9 +58,6 @@ export function EntityDetailWrapper({
   // Use child entity names passed as props from the server component
   const hasChildEntities = childEntityNames.length > 0
 
-  // Parent delete confirmation state
-  const [parentDeleteConfirmation, setParentDeleteConfirmation] = useState(false)
-  const [isDeletingParent, setIsDeletingParent] = useState(false)
 
   // Generate custom sections based on entity type (must be before any early returns)
   const customSections: CustomSectionConfig[] = useMemo(() => {
@@ -228,33 +225,19 @@ export function EntityDetailWrapper({
     router.push(`/dashboard/${entityConfig?.slug}/${id}/edit`)
   }, [router, entityConfig, id])
 
+  // Delete handler - called after user confirms in EntityDetailHeader's AlertDialog
   const handleDelete = useCallback(async () => {
-    setParentDeleteConfirmation(true)
-    // Return a promise that doesn't resolve to keep the button in loading state
-    // The actual deletion happens in handleConfirmParentDelete
-    return new Promise<void>(() => {})
-  }, [])
-
-  const handleConfirmParentDelete = useCallback(async () => {
-    setParentDeleteConfirmation(false)
-    setIsDeletingParent(true)
-    
     try {
       await deleteEntityData(entityType, id)
-      
+
       // Navigate back to list
       router.push(`/dashboard/${entityConfig?.slug || entityType}`)
     } catch (error) {
       console.error('Error deleting entity:', error)
       onError?.(error instanceof Error ? error : new Error('Error deleting entity'))
-    } finally {
-      setIsDeletingParent(false)
+      throw error // Re-throw to let EntityDetail handle loading state
     }
   }, [entityType, id, router, entityConfig, onError])
-
-  const handleCancelParentDelete = useCallback(() => {
-    setParentDeleteConfirmation(false)
-  }, [])
 
   // Refresh function - declared early to be used by other callbacks
   const handleRefresh = useCallback(async () => {
@@ -468,56 +451,23 @@ export function EntityDetailWrapper({
   }
 
   return (
-    <>
-      <EntityDetail
-        entityConfig={entityConfig}
-        data={data}
-        childData={childData}
-        childEntityNames={childEntityNames}
-        isLoading={isLoadingData}
-        error={dataError}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onChildAdd={handleChildAdd}
-        onChildEdit={handleChildEdit}
-        onChildDelete={handleChildDelete}
-        onRefresh={handleRefresh}
-        enableActions={true}
-        className={className}
-        customFormComponents={customFormComponents}
-        customSections={customSections}
-      />
-
-      {/* Parent Delete Confirmation Dialog */}
-      <Dialog open={parentDeleteConfirmation} onOpenChange={(open) => !open && handleCancelParentDelete()}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirmar Eliminación</DialogTitle>
-            <DialogDescription>
-              ¿Estás seguro de que quieres eliminar este {entityConfig?.names.singular.toLowerCase()}? Esta acción eliminará permanentemente toda la información y no se puede deshacer.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={handleCancelParentDelete}
-              disabled={isDeletingParent}
-              data-cy="cancel-delete"
-            >
-              Cancelar
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmParentDelete}
-              disabled={isDeletingParent}
-              data-cy="confirm-delete"
-            >
-              {isDeletingParent ? 'Eliminando...' : 'Eliminar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+    <EntityDetail
+      entityConfig={entityConfig}
+      data={data}
+      childData={childData}
+      childEntityNames={childEntityNames}
+      isLoading={isLoadingData}
+      error={dataError}
+      onEdit={handleEdit}
+      onDelete={handleDelete}
+      onChildAdd={handleChildAdd}
+      onChildEdit={handleChildEdit}
+      onChildDelete={handleChildDelete}
+      onRefresh={handleRefresh}
+      enableActions={true}
+      className={className}
+      customFormComponents={customFormComponents}
+      customSections={customSections}
+    />
   )
 }
