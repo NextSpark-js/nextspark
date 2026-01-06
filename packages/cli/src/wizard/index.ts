@@ -159,6 +159,23 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
       await installThemeAndPlugins(selectedTheme, selectedPlugins)
     }
 
+    // Install all dependencies
+    const installSpinner = ora({
+      text: 'Installing dependencies...',
+      prefixText: '  ',
+    }).start()
+
+    try {
+      execSync('pnpm install', {
+        cwd: process.cwd(),
+        stdio: 'pipe',
+      })
+      installSpinner.succeed('Dependencies installed!')
+    } catch (error) {
+      installSpinner.fail('Failed to install dependencies')
+      console.log(chalk.yellow('  Run "pnpm install" manually to install dependencies'))
+    }
+
     // Show next steps
     showNextSteps(config, selectedTheme)
   } catch (error) {
@@ -325,42 +342,44 @@ function formatDevTool(tool: string): string {
 function showNextSteps(config: WizardConfig, referenceTheme: ThemeChoice = null): void {
   console.log('')
   console.log(chalk.cyan('  ' + '='.repeat(60)))
-  console.log(chalk.bold.green('  ✨ NextSpark project created successfully!'))
+  console.log(chalk.bold.green('  ✨ NextSpark project ready!'))
   console.log(chalk.cyan('  ' + '='.repeat(60)))
   console.log('')
 
   console.log(chalk.bold.white('  Next steps:'))
   console.log('')
 
-  console.log(chalk.white('  1. Install dependencies:'))
-  console.log(chalk.cyan('     pnpm install'))
+  // Step 1: Configure .env (already created, just edit values)
+  console.log(chalk.white('  1. Configure your .env file:'))
+  console.log(chalk.gray('     Edit these values in .env:'))
+  console.log('')
+  console.log(chalk.yellow('     DATABASE_URL'))
+  console.log(chalk.gray('     PostgreSQL connection string'))
+  console.log(chalk.dim('     Example: postgresql://user:pass@localhost:5432/mydb'))
+  console.log('')
+  console.log(chalk.yellow('     BETTER_AUTH_SECRET'))
+  console.log(chalk.gray('     Generate with:'))
+  console.log(chalk.cyan('     openssl rand -base64 32'))
   console.log('')
 
-  console.log(chalk.white('  2. Set up your environment:'))
-  console.log(chalk.gray('     Copy .env.example to .env and configure:'))
-  console.log(chalk.yellow('     - DATABASE_URL'))
-  console.log(chalk.yellow('     - BETTER_AUTH_SECRET'))
-  console.log(chalk.yellow(`     - NEXT_PUBLIC_ACTIVE_THEME=${config.projectSlug}`))
-  console.log('')
-
-  console.log(chalk.white('  3. Generate registries:'))
-  console.log(chalk.cyan('     pnpm build:registries'))
-  console.log('')
-
-  console.log(chalk.white('  4. Run database migrations:'))
+  // Step 2: Run migrations
+  console.log(chalk.white('  2. Run database migrations:'))
   console.log(chalk.cyan('     pnpm db:migrate'))
   console.log('')
 
-  console.log(chalk.white('  5. Start the development server:'))
+  // Step 3: Start dev server
+  console.log(chalk.white('  3. Start the development server:'))
   console.log(chalk.cyan('     pnpm dev'))
   console.log('')
 
+  // Footer info
   console.log(chalk.gray('  ' + '-'.repeat(60)))
-  console.log(chalk.gray(`  Your theme: ${chalk.white(`contents/themes/${config.projectSlug}/`)}`))
+  console.log(chalk.gray(`  Theme: ${chalk.white(`contents/themes/${config.projectSlug}/`)}`))
+  console.log(chalk.gray(`  Active theme: ${chalk.green(`NEXT_PUBLIC_ACTIVE_THEME=${config.projectSlug}`)}`))
   if (referenceTheme) {
-    console.log(chalk.gray(`  Reference theme: ${chalk.white(`contents/themes/${referenceTheme}/`)}`))
+    console.log(chalk.gray(`  Reference: ${chalk.white(`contents/themes/${referenceTheme}/`)}`))
   }
-  console.log(chalk.gray('  Documentation: https://nextspark.dev/docs'))
+  console.log(chalk.gray('  Docs: https://nextspark.dev/docs'))
   console.log('')
 }
 

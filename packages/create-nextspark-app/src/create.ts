@@ -99,20 +99,7 @@ export async function createProject(options: ProjectOptions): Promise<void> {
     throw new Error(`Wizard failed with exit code ${result.status}`)
   }
 
-  // Install all dependencies added by wizard
-  const installSpinner = ora('  Installing dependencies...').start()
-  try {
-    execSync('pnpm install', {
-      cwd: projectPath,
-      stdio: 'pipe',
-    })
-    installSpinner.succeed('  Dependencies installed')
-  } catch (error) {
-    installSpinner.fail('  Failed to install dependencies')
-    throw error
-  }
-
-  // Note: Wizard already shows detailed next steps, so we just add the cd command
+  // Note: Wizard handles pnpm install and shows detailed next steps
   console.log()
   console.log(chalk.gray(`  To start developing:`))
   console.log()

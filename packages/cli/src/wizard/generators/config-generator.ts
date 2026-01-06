@@ -339,3 +339,17 @@ export async function updateReadme(config: WizardConfig): Promise<void> {
 
   await fs.writeFile(readmePath, content, 'utf-8')
 }
+
+/**
+ * Copy .env.example to .env for immediate use
+ * This allows the project to compile out-of-the-box
+ */
+export async function copyEnvExampleToEnv(): Promise<void> {
+  const projectRoot = process.cwd()
+  const envExamplePath = path.resolve(projectRoot, '.env.example')
+  const envPath = path.resolve(projectRoot, '.env')
+
+  if (await fs.pathExists(envExamplePath) && !await fs.pathExists(envPath)) {
+    await fs.copy(envExamplePath, envPath)
+  }
+}
