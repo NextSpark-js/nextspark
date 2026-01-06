@@ -79,21 +79,22 @@ Based on user selection, execute the appropriate command:
 # First, identify modified packages
 MODIFIED=$(git diff --name-only $(git describe --tags --abbrev=0 2>/dev/null || echo "HEAD~10") HEAD -- packages/ themes/ plugins/ | cut -d'/' -f1-2 | sort -u)
 
-# Then package each
-./scripts/repackage-all.sh
+# Then package each modified package
+for pkg in $MODIFIED; do
+  ./scripts/utils/repackage.sh --package "$(basename $pkg)"
+done
 ```
 
 **Option 2 - Package All:**
 ```bash
-./scripts/repackage-all.sh
+./scripts/utils/repackage.sh --all --clean
 ```
 
 **Option 3 - Package Specific:**
 ```bash
-# User specifies which packages
-cd packages/core && pnpm pack
-# Move to output directory
-mv *.tgz /tmp/nextspark-release/
+# Package specific package(s)
+./scripts/utils/repackage.sh --package core
+./scripts/utils/repackage.sh --package cli --package core
 ```
 
 ### Step 5: Show Results

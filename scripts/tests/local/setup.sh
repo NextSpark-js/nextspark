@@ -122,7 +122,7 @@ done
 # -----------------------------------------------------------------------------
 print_header
 
-# Determine packages path (repackage-all.sh puts files in test-distribution)
+# Determine packages path (repackage.sh puts files in test-distribution by default)
 PACKAGES_PATH="$(dirname "$REPO_ROOT")/test-distribution"
 
 echo "Configuration:"

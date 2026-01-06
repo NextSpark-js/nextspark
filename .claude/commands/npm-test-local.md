@@ -32,8 +32,8 @@ done
 # Check if test project exists
 echo ""
 echo "=== Existing Test Projects ==="
-ls -la ../test-distribution/package.json 2>/dev/null && echo "Test project exists in ../test-distribution/" || echo "No test project found"
-ls -la /tmp/nextspark-test/package.json 2>/dev/null && echo "Test project exists in /tmp/nextspark-test/" || echo "No test project in /tmp/nextspark-test/"
+ls -la ../projects/test-local-packages/package.json 2>/dev/null && echo "Test project exists in ../projects/test-local-packages/" || echo "No local test project found"
+ls -la ../projects/test-npm-packages/package.json 2>/dev/null && echo "NPM test project exists in ../projects/test-npm-packages/" || echo "No npm test project found"
 
 # Check source versions for comparison
 echo ""
@@ -64,9 +64,8 @@ echo "CLI: $(node -p "require('./packages/cli/package.json').version")"
 
 | Location | Description |
 |----------|-------------|
-| `../test-distribution/` | Sibling to repo (recommended) |
-| `/tmp/nextspark-test/` | Temporary directory |
-| Custom path | User-specified location |
+| `../projects/test-local-packages/` | Local .tgz testing (setup.sh default) |
+| `../projects/test-npm-packages/` | NPM published packages testing |
 
 ### Step 3: Wait for Confirmation
 
@@ -80,69 +79,54 @@ Ask the user:
 
 ### Step 4: Execute Test Setup
 
-**Option 1: Create New Test Project**
+**Option 1: Create New Test Project (Recommended)**
+
+Use the setup script which handles everything automatically:
 
 ```bash
-# Set variables
-TEST_DIR="../test-distribution"
-PACKAGES_DIR="/tmp/nextspark-release"
+# Full setup (repackages + creates project)
+./scripts/tests/local/setup.sh --clean
 
-# Create test directory
-mkdir -p "$TEST_DIR"
-cd "$TEST_DIR"
+# Or skip repackaging if .tgz files are up to date
+./scripts/tests/local/setup.sh --skip-repackage --clean
 
-# Copy all .tgz files
-cp "$PACKAGES_DIR"/*.tgz .
-
-# Run the CLI wizard to create project
-npx ./create-nextspark-app-*.tgz init
-
-# After wizard completes, run force-local-packages script
-cd /path/to/repo
-./scripts/force-local-packages.sh
-
-# Install dependencies
-cd "$TEST_DIR"
-pnpm install
+# Use a different preset/theme
+./scripts/tests/local/setup.sh --preset blog --theme productivity --clean
 ```
+
+The setup script:
+1. Runs `repackage.sh --all` to create .tgz files
+2. Creates project directory in `../projects/test-local-packages/`
+3. Copies .tgz files and sets up `file:` references in package.json
+4. Installs all packages from local .tgz files
+5. Runs the wizard with the LOCAL CLI (with new flags for automation)
+6. Creates .env with required variables
+7. Builds the project
 
 **Option 2: Update Existing Test Project**
 
 ```bash
-TEST_DIR="../test-distribution"
-PACKAGES_DIR="/tmp/nextspark-release"
+# Repackage first
+./scripts/utils/repackage.sh --all --clean
 
-cd "$TEST_DIR"
-
-# Remove old packages
-rm -f *.tgz
-
-# Copy new packages
-cp "$PACKAGES_DIR"/*.tgz .
-
-# Update package.json references
-cd /path/to/repo
-./scripts/force-local-packages.sh
-
-# Reinstall
-cd "$TEST_DIR"
-rm -rf node_modules pnpm-lock.yaml
-pnpm install
+# Then run setup with --clean to replace the project
+./scripts/tests/local/setup.sh --skip-repackage --clean
 ```
 
 **Option 3: Test CLI Only**
 
 ```bash
-PACKAGES_DIR="/tmp/nextspark-release"
+# Ensure packages are in test-distribution
+./scripts/utils/repackage.sh --all
 
 # Test CLI help
-npx "$PACKAGES_DIR"/nextsparkjs-cli-*.tgz --help
+npx ../test-distribution/nextsparkjs-cli-*.tgz --help
 
 # Test CLI version
-npx "$PACKAGES_DIR"/nextsparkjs-cli-*.tgz --version
+npx ../test-distribution/nextsparkjs-cli-*.tgz --version
 
-# Test init command (dry run)
-npx "$PACKAGES_DIR"/create-nextspark-app-*.tgz init --help
+# Test init command help
+npx ../test-distribution/create-nextspark-app-*.tgz --help
 ```
 
 ### Step 5: Show Available Test Commands
@@ -152,7 +136,7 @@ After setup, present available commands:
 **Build and Development:**
 
 ```bash
-cd ../test-distribution
+cd ../projects/test-local-packages
 
 # Development server
 pnpm dev
@@ -208,9 +192,9 @@ If no .tgz files are found:
 
 If test project exists:
 
-> "A test project already exists at `../test-distribution/`. Options:"
-> "1. Update packages in existing project (preserves your test content)"
-> "2. Delete and create fresh project"
+> "A test project already exists at `../projects/test-local-packages/`. Options:"
+> "1. Run setup with `--clean` flag to replace it"
+> "2. Keep existing project and test manually"
 
 ### Scenario C: Package Version Mismatch
 
