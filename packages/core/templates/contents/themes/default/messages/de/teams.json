@@ -1,8 +1,0 @@
-{
-  "roles": {
-    "editor": "Bearbeiter"
-  },
-  "roleDescriptions": {
-    "editor": "Kann Inhalte bearbeiten, hat aber eingeschränkte Team-Verwaltungsfunktionen"
-  }
-}

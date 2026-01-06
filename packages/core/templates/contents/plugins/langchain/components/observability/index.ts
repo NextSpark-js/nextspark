@@ -1,7 +1,0 @@
-export { ObservabilityDashboard } from './ObservabilityDashboard'
-export { TracesTable } from './TracesTable'
-export { TraceDetail } from './TraceDetail'
-export { SpansList } from './SpansList'
-export { FiltersPanel } from './FiltersPanel'
-export { TraceStatusBadge } from './TraceStatusBadge'
-export { DisabledMessage } from './DisabledMessage'

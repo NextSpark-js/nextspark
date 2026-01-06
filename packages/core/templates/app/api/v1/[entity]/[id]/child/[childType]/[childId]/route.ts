@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { queryWithRLS } from '@nextsparkjs/core/lib/db'
 import { resolveEntityFromUrl } from '@nextsparkjs/core/lib/api/entity/resolver'
-import { getChildEntities, getEntity, type EntityName } from '@nextsparkjs/core/lib/entities/queries'
+import { getChildEntities, getEntity } from '@nextsparkjs/core/lib/entities/queries'
 
 interface RouteParams {
   entity: string
@@ -35,7 +35,7 @@ export async function PUT(
     }
 
     // Get child entities for this parent entity from registry
-    const childEntities = getChildEntities(resolution.entityName as EntityName)
+    const childEntities = getChildEntities(resolution.entityName)
     const childEntity = childEntities.find(child => child.name === childType)
 
     if (!childEntity) {
@@ -46,7 +46,7 @@ export async function PUT(
     }
 
     // Get child entity configuration from registry
-    const childConfig = getEntity(childType as EntityName)
+    const childConfig = getEntity(childType)
     if (!childConfig) {
       return NextResponse.json(
         { error: `Child entity configuration "${childType}" not found` },
@@ -158,7 +158,7 @@ export async function DELETE(
     }
 
     // Get child entities for this parent entity from registry
-    const childEntities = getChildEntities(resolution.entityName as EntityName)
+    const childEntities = getChildEntities(resolution.entityName)
     const childEntity = childEntities.find(child => child.name === childType)
 
     if (!childEntity) {

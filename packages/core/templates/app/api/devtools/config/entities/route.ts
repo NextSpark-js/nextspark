@@ -1,6 +1,12 @@
-import { auth } from "@nextsparkjs/core/lib/auth";
+import { getTypedSession } from "@nextsparkjs/core/lib/auth";
 import { NextResponse } from "next/server";
-import { ENTITY_REGISTRY } from "@nextsparkjs/registries/entity-registry";
+import { getEntityRegistry } from "@nextsparkjs/core/lib/entities/queries";
+import type { EntityConfig, ChildEntityDefinition } from "@nextsparkjs/core/lib/entities/types";
+
+// Type guard to check if entity is a full EntityConfig
+function isEntityConfig(entity: EntityConfig | ChildEntityDefinition): entity is EntityConfig {
+  return 'slug' in entity
+}
 
 /**
  * Entity information structure
@@ -39,7 +45,7 @@ interface EntityInfo {
 export async function GET(request: Request) {
   try {
     // Verify developer role
-    const session = await auth.api.getSession({ headers: request.headers });
+    const session = await getTypedSession(request.headers);
 
     if (!session?.user || session.user.role !== "developer") {
       return NextResponse.json(
@@ -53,9 +59,11 @@ export async function GET(request: Request) {
 
     // Build entity info array
     const entities: EntityInfo[] = [];
+    const registry = getEntityRegistry();
 
-    for (const [, entry] of Object.entries(ENTITY_REGISTRY)) {
+    for (const [, entry] of Object.entries(registry)) {
       const config = entry.config;
+      if (!isEntityConfig(config)) continue;
 
       entities.push({
         slug: config.slug,

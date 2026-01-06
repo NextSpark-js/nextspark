@@ -7,7 +7,7 @@
  * - App (Endpoints): User isolation based on access.shared config
  */
 
-import { ENTITY_REGISTRY } from './queries'
+import { getEntityRegistry } from './queries'
 
 /**
  * Determines if an entity should filter by userId at the app level
@@ -33,7 +33,8 @@ import { ENTITY_REGISTRY } from './queries'
  * ```
  */
 export function shouldFilterByUserId(entityName: string): boolean {
-  const entityConfig = ENTITY_REGISTRY[entityName as keyof typeof ENTITY_REGISTRY]
+  const registry = getEntityRegistry()
+  const entityConfig = registry[entityName]
 
   // If access.shared is explicitly false, filter by userId
   // Default (undefined or true) means shared within team

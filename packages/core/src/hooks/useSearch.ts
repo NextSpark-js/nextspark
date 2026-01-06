@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from './useAuth'
-import { ENTITY_REGISTRY, type EntityRegistryEntry } from '../lib/entities/queries'
+import { getEntityRegistry, type EntityRegistryEntry } from '../lib/entities/queries'
 import type { EntityConfig } from '../lib/entities/types'
 import type { SearchResultType } from '@nextsparkjs/registries/entity-types'
 import { SEARCH_TYPE_PRIORITIES } from '@nextsparkjs/registries/entity-types'
@@ -22,7 +22,8 @@ export interface SearchResult {
 
 // Función para filtrar entidades searchables del registro
 const getSearchableEntities = (): EntityRegistryEntry[] => {
-  return Object.values(ENTITY_REGISTRY).filter(entry => {
+  const registry = getEntityRegistry()
+  return Object.values(registry).filter(entry => {
     const config = entry.config as EntityConfig
     return config.ui?.features?.searchable === true
   }) as EntityRegistryEntry[]

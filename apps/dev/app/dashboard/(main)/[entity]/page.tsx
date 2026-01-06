@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { getEntity, ENTITY_REGISTRY, type EntityName } from '@nextsparkjs/core/lib/entities/queries'
+import { getEntity, getEntityRegistry } from '@nextsparkjs/core/lib/entities/queries'
 import { EntityListWrapper } from '@nextsparkjs/core/components/entities/wrappers/EntityListWrapper'
 import type { Metadata } from 'next'
 import { getTemplateOrDefault } from '@nextsparkjs/core/lib/template-resolver'
@@ -20,11 +20,12 @@ async function EntityListPage({ params }: PageProps) {
   const entitySlug = resolvedParams.entity
 
   // Verificar que la entidad existe usando el nuevo registry
-  if (!(entitySlug in ENTITY_REGISTRY)) {
+  const registry = getEntityRegistry()
+  if (!(entitySlug in registry)) {
     notFound()
   }
 
-  const entityConfig = getEntity(entitySlug as EntityName)
+  const entityConfig = getEntity(entitySlug)
   if (!entityConfig || !isEntityConfig(entityConfig)) {
     notFound()
   }
@@ -61,13 +62,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const resolvedParams = await params
   const entitySlug = resolvedParams.entity
 
-  if (!(entitySlug in ENTITY_REGISTRY)) {
+  const registry = getEntityRegistry()
+  if (!(entitySlug in registry)) {
     return {
       title: 'Not Found - Dashboard'
     }
   }
 
-  const entityConfig = getEntity(entitySlug as EntityName)
+  const entityConfig = getEntity(entitySlug)
   if (!entityConfig || !isEntityConfig(entityConfig)) {
     return {
       title: 'Not Found - Dashboard'

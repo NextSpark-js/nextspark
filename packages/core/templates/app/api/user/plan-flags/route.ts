@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@nextsparkjs/core/lib/auth'
+import { getTypedSession } from '@nextsparkjs/core/lib/auth'
 import { getUserPlanAndFlags, updateUserPlan, updateUserFlags } from '@nextsparkjs/core/lib/user-data'
 import { z } from 'zod'
 import type { UserRole } from '@nextsparkjs/core/types/user.types'
@@ -29,9 +29,7 @@ const planFlagsUpdateSchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     // Get session
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
+    const session = await getTypedSession(request.headers)
 
     if (!session) {
       return NextResponse.json(
@@ -93,9 +91,7 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     // Get session
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
+    const session = await getTypedSession(request.headers)
 
     if (!session) {
       return NextResponse.json(
@@ -189,9 +185,7 @@ export async function PATCH(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Get session
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
+    const session = await getTypedSession(request.headers)
 
     if (!session) {
       return NextResponse.json(

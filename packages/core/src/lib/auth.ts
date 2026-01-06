@@ -2,7 +2,7 @@ import { betterAuth } from "better-auth";
 import { Pool } from "pg";
 import { nextCookies } from "better-auth/next-js";
 import { EmailFactory, emailTemplates } from './email';
-import { I18N_CONFIG, USER_ROLES_CONFIG, TEAMS_CONFIG } from './config';
+import { I18N_CONFIG, USER_ROLES_CONFIG, TEAMS_CONFIG, type UserRole } from './config';
 import { getUserFlags } from './services/user-flags.service';
 // Direct import to avoid circular dependency: auth -> services/index -> middleware.service -> auth
 import { TeamService } from './services/team.service';
@@ -303,5 +303,43 @@ export type SessionUser = typeof auth.$Infer.Session.user & {
   country?: string;
   timezone?: string;
   language?: string;
+  role?: UserRole;
   flags?: import('./entities/types').UserFlag[];
 };
+
+/**
+ * Typed session with extended user properties
+ * Use this type when working with sessions that include additionalFields
+ */
+export interface TypedSession {
+  session: Session['session'];
+  user: SessionUser;
+}
+
+/**
+ * Get session with properly typed user object
+ *
+ * Better-auth's getSession doesn't infer additionalFields types correctly.
+ * This helper wraps the call and provides the correct TypeScript types.
+ *
+ * @param headers - Request headers containing session cookie
+ * @returns Typed session or null if not authenticated
+ *
+ * @example
+ * ```ts
+ * const session = await getTypedSession(request.headers);
+ * if (session?.user.role === 'admin') {
+ *   // TypeScript knows about role
+ * }
+ * ```
+ */
+export async function getTypedSession(
+  headers: Headers
+): Promise<TypedSession | null> {
+  const session = await auth.api.getSession({ headers });
+  if (!session) return null;
+
+  // Cast to typed session - the data is there at runtime,
+  // better-auth just doesn't infer the types correctly
+  return session as unknown as TypedSession;
+}

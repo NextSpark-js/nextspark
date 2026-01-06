@@ -1,7 +1,38 @@
 import { spawn } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import chalk from 'chalk';
 import ora from 'ora';
 import { getCoreDir, getProjectRoot } from '../utils/paths.js';
+
+/**
+ * Load environment variables from project root .env file
+ */
+function loadProjectEnv(projectRoot: string): Record<string, string> {
+  const envPath = join(projectRoot, '.env');
+  const envVars: Record<string, string> = {};
+
+  if (existsSync(envPath)) {
+    const content = readFileSync(envPath, 'utf-8');
+    for (const line of content.split('\n')) {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#')) {
+        const [key, ...valueParts] = trimmed.split('=');
+        if (key && valueParts.length > 0) {
+          let value = valueParts.join('=');
+          // Remove surrounding quotes
+          if ((value.startsWith('"') && value.endsWith('"')) ||
+              (value.startsWith("'") && value.endsWith("'"))) {
+            value = value.slice(1, -1);
+          }
+          envVars[key] = value;
+        }
+      }
+    }
+  }
+
+  return envVars;
+}
 
 interface BuildOptions {
   registry: boolean;
@@ -16,15 +47,19 @@ export async function buildCommand(options: BuildOptions): Promise<void> {
 
     spinner.succeed('Core package found');
 
+    // Load project .env file
+    const projectEnv = loadProjectEnv(projectRoot);
+
     // Step 1: Generate registries if enabled
     if (options.registry) {
       spinner.start('Generating registries...');
 
       await new Promise<void>((resolve, reject) => {
-        const registryProcess = spawn('node', ['scripts/registry-build.js'], {
+        const registryProcess = spawn('node', ['scripts/build/registry.mjs'], {
           cwd: coreDir,
           stdio: 'pipe',
           env: {
+            ...projectEnv,
             ...process.env,
             NEXTSPARK_PROJECT_ROOT: projectRoot,
           },
@@ -57,6 +92,7 @@ export async function buildCommand(options: BuildOptions): Promise<void> {
       cwd: projectRoot,
       stdio: 'inherit',
       env: {
+        ...projectEnv,
         ...process.env,
         NEXTSPARK_CORE_DIR: coreDir,
         NODE_ENV: 'production',

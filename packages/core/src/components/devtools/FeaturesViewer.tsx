@@ -19,6 +19,7 @@ const CATEGORY_COLORS: Record<FeatureEntry["category"], string> = {
   content: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300",
   settings: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300",
   admin: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
+  public: "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-300",
 };
 
 /**

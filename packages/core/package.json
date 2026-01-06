@@ -1,6 +1,6 @@
 {
   "name": "@nextsparkjs/core",
-  "version": "0.1.0-beta.1",
+  "version": "0.1.0-beta.4",
   "description": "NextSpark - The complete SaaS framework for Next.js",
   "license": "MIT",
   "author": "NextSpark <hello@nextspark.dev>",
@@ -43,6 +43,10 @@
     "./i18n": {
       "types": "./dist/i18n.d.ts",
       "import": "./dist/i18n.js"
+    },
+    "./config/protected-paths": {
+      "types": "./dist/config/protected-paths.d.ts",
+      "import": "./dist/config/protected-paths.js"
     },
     "./globals.css": "./globals.css",
     "./theme-styles.css": "./theme-styles.css",
@@ -206,21 +210,16 @@
     "tests/cypress/support",
     "tests/jest/setup.ts",
     "tests/jest/__mocks__",
-    "bin/dist",
     "globals.css",
     "theme-styles.css",
     "README.md",
     "scripts"
   ],
-  "bin": {
-    "nextspark": "./bin/dist/init.js"
-  },
   "scripts": {
-    "build": "tsup && pnpm build:dts && pnpm build:ui-css && pnpm build:cli",
+    "build": "tsup && pnpm build:dts && pnpm build:ui-css",
     "build:js": "tsup",
     "build:dts": "tsc -p tsconfig.dts.json || echo '⚠️  DTS generation completed with some type errors (partial coverage)'",
     "build:ui-css": "node scripts/build/build-ui-css.mjs",
-    "build:cli": "tsc -p bin/tsconfig.json",
     "dev": "tsup --watch",
     "test": "jest",
     "test:watch": "jest --watch",

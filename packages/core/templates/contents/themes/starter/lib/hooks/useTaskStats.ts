@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useTeamContext } from '@nextsparkjs/core/hooks/useTeamContext'
+import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
 import { calculateTaskStats, type TaskStats } from '../utils'
 
 interface Task {

@@ -7,13 +7,16 @@ import { buildCommand } from './commands/build.js';
 import { generateCommand } from './commands/generate.js';
 import { registryBuildCommand, registryWatchCommand } from './commands/registry.js';
 import { initCommand } from './commands/init.js';
+import { addPluginCommand } from './commands/add-plugin.js';
+import { addThemeCommand } from './commands/add-theme.js';
+import { doctorCommand } from './commands/doctor.js';
 
 const program = new Command();
 
 program
   .name('nextspark')
   .description('NextSpark CLI - Professional SaaS Boilerplate')
-  .version('0.3.0');
+  .version('0.1.0-beta.4');
 
 // Dev command
 program
@@ -66,9 +69,45 @@ program
 // Init command
 program
   .command('init')
-  .description('Initialize NextSpark in current project')
+  .description('Initialize NextSpark project')
   .option('-f, --force', 'Overwrite existing configuration')
+  .option('--wizard', 'Run full project wizard')
+  .option('--quick', 'Quick wizard mode (essential steps only)')
+  .option('--expert', 'Expert wizard mode (all options)')
+  .option('--preset <name>', 'Use preset configuration (saas, blog, crm)')
+  .option('--theme <name>', 'Pre-select theme (default, blog, crm, productivity, none)')
+  .option('--plugins <list>', 'Pre-select plugins (comma-separated)')
+  .option('-y, --yes', 'Skip confirmations')
+  .option('--registries-only', 'Only create registries (no wizard)')
   .action(initCommand);
+
+// Add plugin command
+program
+  .command('add:plugin <package>')
+  .description('Add a plugin to your project')
+  .option('-v, --version <version>', 'Specific version to install')
+  .option('-f, --force', 'Overwrite if already exists')
+  .option('--skip-postinstall', 'Skip postinstall hooks')
+  .option('--no-deps', 'Skip installing dependencies')
+  .option('--dry-run', 'Show what would be done without making changes')
+  .action(addPluginCommand);
+
+// Add theme command
+program
+  .command('add:theme <package>')
+  .description('Add a theme to your project')
+  .option('-v, --version <version>', 'Specific version to install')
+  .option('-f, --force', 'Overwrite if already exists')
+  .option('--skip-postinstall', 'Skip postinstall hooks')
+  .option('--no-deps', 'Skip installing dependencies')
+  .option('--dry-run', 'Show what would be done without making changes')
+  .action(addThemeCommand);
+
+// Doctor command (health check)
+program
+  .command('doctor')
+  .description('Run health check on NextSpark project')
+  .action(doctorCommand);
 
 // Error handling
 program.showHelpAfterError();

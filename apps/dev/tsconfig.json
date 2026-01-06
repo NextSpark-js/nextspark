@@ -24,30 +24,34 @@
     ],
     "baseUrl": ".",
     "paths": {
-      "@nextsparkjs/core": [
-        "../../packages/core/src/index.ts"
-      ],
-      "@nextsparkjs/core/*": [
-        "../../packages/core/src/*"
-      ],
-      "@nextsparkjs/registries": [
-        "./.nextspark/registries/index.ts"
-      ],
-      "@nextsparkjs/registries/*": [
-        "./.nextspark/registries/*"
-      ],
-      "@/contents/*": [
-        "./contents/*"
-      ],
-      "@/themes/*": [
-        "./contents/themes/*"
-      ],
-      "@/plugins/*": [
-        "./contents/plugins/*"
-      ],
-      "@/*": [
-        "./*"
-      ]
+      "@nextsparkjs/core": ["../../packages/core/src/index.ts"],
+      "@nextsparkjs/core/*": ["../../packages/core/src/*"],
+
+      "@nextsparkjs/plugin-ai": ["../../plugins/ai/index.ts"],
+      "@nextsparkjs/plugin-ai/*": ["../../plugins/ai/*"],
+      "@nextsparkjs/plugin-langchain": ["../../plugins/langchain/index.ts"],
+      "@nextsparkjs/plugin-langchain/*": ["../../plugins/langchain/*"],
+      "@nextsparkjs/plugin-amplitude": ["../../plugins/amplitude/index.ts"],
+      "@nextsparkjs/plugin-amplitude/*": ["../../plugins/amplitude/*"],
+      "@nextsparkjs/plugin-social-media-publisher": ["../../plugins/social-media-publisher/index.ts"],
+      "@nextsparkjs/plugin-social-media-publisher/*": ["../../plugins/social-media-publisher/*"],
+
+      "@nextsparkjs/theme-default": ["../../themes/default/index.ts"],
+      "@nextsparkjs/theme-default/*": ["../../themes/default/*"],
+      "@nextsparkjs/theme-blog": ["../../themes/blog/index.ts"],
+      "@nextsparkjs/theme-blog/*": ["../../themes/blog/*"],
+      "@nextsparkjs/theme-crm": ["../../themes/crm/index.ts"],
+      "@nextsparkjs/theme-crm/*": ["../../themes/crm/*"],
+      "@nextsparkjs/theme-productivity": ["../../themes/productivity/index.ts"],
+      "@nextsparkjs/theme-productivity/*": ["../../themes/productivity/*"],
+
+      "@nextsparkjs/registries": ["./.nextspark/registries/index.ts"],
+      "@nextsparkjs/registries/*": ["./.nextspark/registries/*"],
+
+      "@/contents/*": ["./contents/*"],
+      "@/themes/*": ["./contents/themes/*"],
+      "@/plugins/*": ["./contents/plugins/*"],
+      "@/*": ["./*"]
     }
   },
   "include": [

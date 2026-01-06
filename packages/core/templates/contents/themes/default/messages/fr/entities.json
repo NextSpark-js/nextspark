@@ -1,7 +1,0 @@
-{
-  "actions": {
-    "create": "Créer {entity}",
-    "edit": "Modifier {entity}",
-    "view": "Voir {entity}"
-  }
-}

@@ -1,4 +1,4 @@
-import { auth } from "@nextsparkjs/core/lib/auth";
+import { getTypedSession } from "@nextsparkjs/core/lib/auth";
 import { NextResponse } from "next/server";
 import { ThemeService } from "@nextsparkjs/core/lib/services/theme.service";
 
@@ -11,7 +11,7 @@ import { ThemeService } from "@nextsparkjs/core/lib/services/theme.service";
 export async function GET(request: Request) {
   try {
     // Verify developer role
-    const session = await auth.api.getSession({ headers: request.headers });
+    const session = await getTypedSession(request.headers);
 
     if (!session?.user || session.user.role !== "developer") {
       return NextResponse.json(

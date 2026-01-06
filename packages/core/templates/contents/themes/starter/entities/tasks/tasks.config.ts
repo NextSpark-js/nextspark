@@ -100,21 +100,6 @@ export const taskEntityConfig: EntityConfig = {
   },
 
   // ==========================================
-  // 5. INTERNATIONALIZATION
-  // ==========================================
-  i18n: {
-    fallbackLocale: 'en',
-    loaders: {
-      en: () => import('./messages/en.json'),
-      es: () => import('./messages/es.json'),
-      fr: () => import('./messages/fr.json'),
-      it: () => import('./messages/it.json'),
-      de: () => import('./messages/de.json'),
-      pt: () => import('./messages/pt.json'),
-    },
-  },
-
-  // ==========================================
   // FIELDS (imported from separate file)
   // ==========================================
   fields: taskFields,

@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from '../ui/alert'
 import { AlertCircle, Loader2 } from 'lucide-react'
 import type { EntityConfig } from '../../lib/entities/types'
 import type { Permission } from '../../lib/permissions/types'
-import { getEntity, ENTITY_REGISTRY } from '../../lib/entities/queries'
+import { getEntity, getEntityRegistry, getEntityMetadata } from '../../lib/entities/queries'
 import { EntityFieldRenderer } from './EntityFieldRenderer'
 import { EntityChildManager } from './EntityChildManager'
 import { EntityDetailHeader } from './EntityDetailHeader'
@@ -268,8 +268,8 @@ export function EntityDetail({
         {/* Child Entities Sections */}
         {childEntities.map((childName) => {
           // Get child entity configuration from registry
-          const childEntityConfig = getEntity(childName as keyof typeof ENTITY_REGISTRY)
-          const childRegistryEntry = ENTITY_REGISTRY[childName as keyof typeof ENTITY_REGISTRY]
+          const childEntityConfig = getEntity(childName)
+          const childRegistryEntry = getEntityMetadata(childName)
 
           if (!childEntityConfig || !childRegistryEntry) {
             console.warn(`Child entity "${childName}" not found in registry`)

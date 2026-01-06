@@ -1,8 +1,0 @@
-{
-  "roles": {
-    "editor": "Editor"
-  },
-  "roleDescriptions": {
-    "editor": "Pode editar conteúdo mas tem capacidades limitadas de gerenciamento de equipe"
-  }
-}

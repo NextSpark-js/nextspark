@@ -78,3 +78,30 @@ export interface ComponentOverride {
   priority?: number
   [key: string]: any
 }
+
+/**
+ * Template override configuration
+ * Used in auto-generated template registries
+ */
+export interface TemplateOverride {
+  name: string
+  themeName: string
+  templateType: string
+  fileName: string
+  relativePath: string
+  appPath: string
+  templatePath: string
+  priority: number
+  metadata?: any
+}
+
+/**
+ * Template registry entry
+ * Used in auto-generated template registries
+ */
+export interface TemplateRegistryEntry {
+  appPath: string
+  component: any
+  template: TemplateOverride
+  alternatives: TemplateOverride[]
+}

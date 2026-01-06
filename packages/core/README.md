@@ -14,10 +14,15 @@ pnpm add @nextsparkjs/core
 
 ```bash
 # Create a new NextSpark project
-npx @nextsparkjs/create-app my-app
+npx create-nextspark-app my-app
 cd my-app
-pnpm install
 pnpm dev
+```
+
+Or initialize in an existing project:
+
+```bash
+npx nextspark init
 ```
 
 ## Features
@@ -28,6 +33,7 @@ pnpm dev
 - **Database** - PostgreSQL with migrations and type-safe queries
 - **UI Components** - 50+ components based on shadcn/ui
 - **Entities** - Dynamic CRUD with automatic API generation
+- **Page Builder** - Block-based page builder with drag and drop
 - **Themes** - Multiple theme support with easy customization
 - **Plugins** - Extensible plugin system
 - **i18n** - Full internationalization with next-intl

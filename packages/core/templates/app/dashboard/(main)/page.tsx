@@ -78,7 +78,7 @@ function DefaultDashboardPage() {
         <div className="mb-8" data-cy="dashboard-welcome">
           <h1 className="text-3xl font-bold">{t('title')}</h1>
           <p className="text-muted-foreground mt-1">
-            {t('welcome', { name: user.firstName || user.email })}
+            {t('welcome', { name: user?.firstName || user?.email || '' })}
           </p>
         </div>
 

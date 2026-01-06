@@ -1,8 +1,6 @@
 import { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
-import { StatsCard } from './components/StatsCard'
-import { TasksChart } from './components/TasksChart'
-import { RecentActivity } from './components/RecentActivity'
+import { StatsCard, TasksChart, RecentActivity } from '../../../components/analytics'
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('analytics')

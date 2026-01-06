@@ -238,7 +238,7 @@ export interface EntityConfig {
   // ==========================================
   // 5. INTERNATIONALIZATION
   // ==========================================
-  i18n: {
+  i18n?: {
     /** Default fallback locale */
     fallbackLocale: SupportedLocale
     /** Translation loaders for each supported locale */

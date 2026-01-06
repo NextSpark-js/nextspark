@@ -37,7 +37,7 @@
 
 import React from 'react'
 import { TemplateService } from './services/template.service'
-import type { TemplateOverride } from '@nextsparkjs/registries/template-registry'
+import type { TemplateOverride } from '../types/theme'
 import {
   canOverrideComponent,
   canOverrideMetadata,

@@ -1,7 +1,7 @@
 {
   "name": "@nextsparkjs/cli",
-  "version": "0.1.0-beta.1",
-  "description": "CLI for NextSpark - wrap core scripts with a professional interface",
+  "version": "0.1.0-beta.4",
+  "description": "NextSpark CLI - Complete development toolkit",
   "type": "module",
   "bin": {
     "nextspark": "./bin/nextspark.js"
@@ -17,18 +17,21 @@
     "dev": "tsup src/cli.ts --format esm --watch"
   },
   "dependencies": {
+    "@inquirer/prompts": "^7.2.0",
+    "@nextsparkjs/core": ">=0.1.0-beta.1",
     "commander": "^12.0.0",
     "chalk": "^5.3.0",
-    "ora": "^8.0.0"
+    "fs-extra": "^11.2.0",
+    "ora": "^8.0.0",
+    "tar": "^7.0.0"
   },
   "devDependencies": {
     "@nextsparkjs/core": "workspace:*",
+    "@types/fs-extra": "^11.0.4",
+    "@types/tar": "^6.1.0",
     "tsup": "^8.0.0",
     "typescript": "^5.0.0",
     "@types/node": "^20.0.0"
-  },
-  "peerDependencies": {
-    "@nextsparkjs/core": ">=0.1.0-beta.1"
   },
   "keywords": [
     "nextspark",
