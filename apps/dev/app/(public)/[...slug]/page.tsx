@@ -15,12 +15,12 @@
 
 import { notFound } from 'next/navigation'
 import { query } from '@nextsparkjs/core/lib/db'
-import { PageRenderer } from '@/app/components/page-renderer'
+import { PageRenderer } from '@nextsparkjs/core/components/public/pageBuilder'
 import {
   matchPathToEntity,
   getEntityBasePath,
 } from '@nextsparkjs/core/lib/entities/schema-generator'
-import { ENTITY_REGISTRY } from '@nextsparkjs/core/lib/entities/queries'
+import { getEntityRegistry } from '@nextsparkjs/core/lib/entities/queries'
 import { TemplateService } from '@nextsparkjs/core/lib/services/template.service'
 import { resolvePublicEntityFromUrl } from '@nextsparkjs/core/lib/api/entity/public-resolver'
 import { PublicEntityGrid } from '@nextsparkjs/core/components/public/entities/PublicEntityGrid'
@@ -28,11 +28,12 @@ import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 import type { Metadata } from 'next'
 
 /**
- * Convert ENTITY_REGISTRY to format expected by matchPathToEntity
+ * Convert entity registry to format expected by matchPathToEntity
  */
 function getEntityConfigs(): Record<string, EntityConfig> {
+  const registry = getEntityRegistry()
   const configs: Record<string, EntityConfig> = {}
-  for (const [key, entry] of Object.entries(ENTITY_REGISTRY)) {
+  for (const [key, entry] of Object.entries(registry)) {
     configs[key] = entry.config as EntityConfig
   }
   return configs

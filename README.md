@@ -129,6 +129,9 @@ cd nextspark
 # Install dependencies
 pnpm install
 
+# Setup Claude Code (optional, for AI-assisted development)
+./repo/scripts/setup-claude.sh
+
 # Build core package
 pnpm --filter @nextsparkjs/core build
 

@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { queryWithRLS } from '@nextsparkjs/core/lib/db'
 import { resolveEntityFromUrl } from '@nextsparkjs/core/lib/api/entity/resolver'
-import { getChildEntities, getEntity, type EntityName } from '@nextsparkjs/core/lib/entities/queries'
+import { getChildEntities, getEntity } from '@nextsparkjs/core/lib/entities/queries'
 
 
 interface RouteParams {
@@ -34,7 +34,7 @@ export async function GET(
     }
 
     // Check if child entity exists using the new registry system
-    const childEntities = getChildEntities(resolution.entityName as EntityName)
+    const childEntities = getChildEntities(resolution.entityName as string)
     const childEntity = childEntities.find(child => child.name === childType)
 
     if (!childEntity) {
@@ -45,7 +45,7 @@ export async function GET(
     }
 
     // Get child config from registry
-    const childConfig = getEntity(childType as EntityName)
+    const childConfig = getEntity(childType as string)
     if (!childConfig) {
       return NextResponse.json(
         { error: `Child entity configuration "${childType}" not found` },
@@ -103,7 +103,7 @@ export async function POST(
     }
 
     // Check if child entity exists using the new registry system
-    const childEntities = getChildEntities(resolution.entityName as EntityName)
+    const childEntities = getChildEntities(resolution.entityName as string)
     const childEntity = childEntities.find(child => child.name === childType)
     console.log(`[ChildAPI] Found child entities for ${entity}:`, childEntities.map(c => c.name))
     console.log(`[ChildAPI] Looking for childType:`, childType)
@@ -117,7 +117,7 @@ export async function POST(
     }
 
     // Get child config from registry
-    const childConfig = getEntity(childType as EntityName)
+    const childConfig = getEntity(childType as string)
     console.log(`[ChildAPI] Child config for ${childType}:`, childConfig)
     if (!childConfig) {
       return NextResponse.json(

@@ -154,6 +154,14 @@
       "types": "./dist/components/public/entities/index.d.ts",
       "import": "./dist/components/public/entities/index.js"
     },
+    "./components/public/pageBuilder": {
+      "types": "./dist/components/public/pageBuilder/index.d.ts",
+      "import": "./dist/components/public/pageBuilder/index.js"
+    },
+    "./components/public": {
+      "types": "./dist/components/public/index.d.ts",
+      "import": "./dist/components/public/index.js"
+    },
     "./components/superadmin/filters": {
       "types": "./dist/components/superadmin/filters/index.d.ts",
       "import": "./dist/components/superadmin/filters/index.js"

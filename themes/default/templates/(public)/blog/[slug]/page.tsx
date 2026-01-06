@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { PageRenderer } from '@/app/components/page-renderer'
+import { PageRenderer } from '@nextsparkjs/core/components/public/pageBuilder'
 import { PostHeader } from '@/themes/default/entities/posts/components/post-header'
 import { PostsService } from '@/themes/default/entities/posts/posts.service'
 import type { Metadata } from 'next'

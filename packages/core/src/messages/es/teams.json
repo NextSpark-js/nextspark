@@ -2,6 +2,20 @@
   "title": "Equipos",
   "description": "Administra tus equipos y colaboraciones",
 
+  "entity": {
+    "description": "Gestiona tus equipos, miembros e invitaciones",
+    "plural": "Equipos"
+  },
+
+  "fields": {
+    "name": "Nombre",
+    "slug": "URL",
+    "description": "Descripción",
+    "email": "Correo electrónico",
+    "role": "Rol",
+    "joinedAt": "Fecha de ingreso"
+  },
+
   "types": {
     "personal": "Personal",
     "work": "Equipo de Trabajo"
@@ -30,7 +44,9 @@
     "manage": "Gestionar Equipo",
     "invite": "Invitar Miembro",
     "removeMember": "Eliminar Miembro",
-    "changeRole": "Cambiar Rol"
+    "changeRole": "Cambiar Rol",
+    "makeRole": "Hacer {role}",
+    "cancel": "Cancelar"
   },
 
   "switcher": {
@@ -84,11 +100,17 @@
   "invitations": {
     "title": "Invitaciones Pendientes",
     "description": "Invitaciones esperando respuesta",
+    "pending": "Pendiente",
     "empty": "Sin invitaciones pendientes",
     "sent": "Enviada {date}",
     "expires": "Expira {date}",
+    "expiresAt": "Expira",
+    "invitedBy": "Invitado por",
     "resend": "Reenviar",
     "cancel": "Cancelar Invitacion",
+    "cancelTitle": "Cancelar Invitacion",
+    "cancelDescription": "¿Estas seguro de que deseas cancelar esta invitacion?",
+    "cancelConfirm": "Si, Cancelar",
     "cancelSuccess": "Invitacion cancelada",
     "cancelError": "Error al cancelar la invitacion"
   },
@@ -122,6 +144,10 @@
     "members": "Miembros",
     "billing": "Facturacion",
     "danger": "Zona de Peligro"
+  },
+
+  "messages": {
+    "loading": "Cargando..."
   },
 
   "errors": {

@@ -53,3 +53,6 @@ allure-report/
 # Lock files (keep pnpm-lock.yaml)
 package-lock.json
 yarn.lock
+
+# Claude Code
+.claude/sessions/
