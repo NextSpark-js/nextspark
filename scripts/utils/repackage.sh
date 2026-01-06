@@ -13,7 +13,7 @@
 #   --all              Package all packages (core, cli, create-app, themes, plugins)
 #   --package <name>   Package a specific package (can be used multiple times)
 #                      Valid names: core, cli, create-app, theme-*, plugin-*
-#   --output <path>    Output directory for .tgz files (default: ./dist)
+#   --output <path>    Output directory for .tgz files (default: ./.packages)
 #   --skip-build       Skip building packages before packing
 #   --clean            Clean output directory before packing
 #   --help             Show this help message
@@ -56,7 +56,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # Default options
-OUTPUT_DIR="$REPO_ROOT/dist"
+OUTPUT_DIR="$REPO_ROOT/.packages"
 SKIP_BUILD=false
 CLEAN=false
 PACK_ALL=false
@@ -103,7 +103,7 @@ while [[ $# -gt 0 ]]; do
             echo "Options:"
             echo "  --all              Package all packages"
             echo "  --package <name>   Package a specific package (can be repeated)"
-            echo "  --output <path>    Output directory (default: ./dist)"
+            echo "  --output <path>    Output directory (default: ./.packages)"
             echo "  --skip-build       Skip building before packing"
             echo "  --clean            Clean output directory first"
             echo ""

@@ -22,7 +22,7 @@ git status --porcelain
 git diff --name-only $(git describe --tags --abbrev=0 2>/dev/null || echo "HEAD~10") HEAD -- packages/ themes/ plugins/
 
 # Check existing packaged files
-ls -la /tmp/nextspark-release/*.tgz 2>/dev/null || echo "No packages found in /tmp/nextspark-release/"
+ls -la ./.packages/*.tgz 2>/dev/null || echo "No packages found in ./.packages/"
 
 # Get current core version
 node -p "require('./packages/core/package.json').version"
@@ -54,19 +54,14 @@ Based on the context analysis, present a summary table:
 | 2. Package all | Rebuild all packages | After version bump or clean release |
 | 3. Package specific | Choose specific packages | Testing specific package |
 
-**Output Directory Options:**
-
-| Location | Use Case |
-|----------|----------|
-| `/tmp/nextspark-release/` | Default, temporary storage |
-| `../test-distribution/` | Local testing with wizard |
+**Output Directory:** `./.packages/` (default, used by publish.sh)
 
 ### Step 3: Wait for Confirmation
 
 **STOP HERE AND WAIT.**
 
 Ask the user:
-> "Which option would you like? (1/2/3) And which output directory?"
+> "Which option would you like? (1/2/3)"
 
 **DO NOT proceed until the user explicitly confirms.**
 
@@ -104,19 +99,19 @@ After execution, display:
 ```bash
 # List generated packages
 echo "Generated packages:"
-ls -la /tmp/nextspark-release/*.tgz
+ls -la ./.packages/*.tgz
 
 # Show package sizes
 echo ""
 echo "Package sizes:"
-du -h /tmp/nextspark-release/*.tgz
+du -h ./.packages/*.tgz
 ```
 
 **Summary Table:**
 
 | Package | Version | Size | Location |
 |---------|---------|------|----------|
-| @nextsparkjs/core | x.x.x | XXkb | /tmp/nextspark-release/nextsparkjs-core-x.x.x.tgz |
+| @nextsparkjs/core | x.x.x | XXkb | ./.packages/nextsparkjs-core-x.x.x.tgz |
 | ... | ... | ... | ... |
 
 ### Step 6: Next Steps
@@ -125,9 +120,9 @@ Present the logical next steps:
 
 | Next Step | Command | Description |
 |-----------|---------|-------------|
-| Test locally | `/npm:test-local` | Test packages before publishing |
-| Publish to npm | `/npm:publish` | Publish to npm registry |
-| Increment version | `/npm:version` | If you need to bump versions first |
+| Test locally | `/npm-test-local` | Test packages before publishing |
+| Publish to npm | `/npm-publish` | Publish to npm registry |
+| Increment version | `/npm-version` | If you need to bump versions first |
 
 ---
 
@@ -135,7 +130,7 @@ Present the logical next steps:
 
 ### Scenario A: No Existing Packages
 
-If `/tmp/nextspark-release/` is empty or doesn't exist:
+If `./.packages/` is empty or doesn't exist:
 
 > "No existing packages found. I recommend Option 2 (Package all) to create a complete set of distributable packages."
 

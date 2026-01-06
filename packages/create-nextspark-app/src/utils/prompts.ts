@@ -40,27 +40,6 @@ export async function getProjectOptions(
     projectName = response.projectName as string
   }
 
-  // Confirm project creation
-  if (!skipPrompts) {
-    const confirmResponse = await prompts(
-      {
-        type: 'confirm',
-        name: 'confirm',
-        message: `Create project "${projectName}" in current directory?`,
-        initial: true,
-      },
-      {
-        onCancel: () => {
-          throw new Error('PROMPT_CANCELLED')
-        },
-      }
-    )
-
-    if (!confirmResponse.confirm) {
-      throw new Error('PROMPT_CANCELLED')
-    }
-  }
-
   return {
     projectName,
     projectPath: path.resolve(process.cwd(), projectName),

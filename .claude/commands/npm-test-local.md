@@ -15,27 +15,10 @@ You are an assistant for testing NextSpark packages locally before publishing to
 Execute these commands to understand the current state:
 
 ```bash
-# Check for packaged files
-echo "=== Available .tgz Packages ==="
-ls -la /tmp/nextspark-release/*.tgz 2>/dev/null || echo "No packages in /tmp/nextspark-release/"
-ls -la ../test-distribution/*.tgz 2>/dev/null || echo "No packages in ../test-distribution/"
+# Check for existing test project
+ls -la ../projects/test-local-packages/package.json 2>/dev/null && echo "Test project exists" || echo "No test project found"
 
-# Check package versions
-echo ""
-echo "=== Package Versions in .tgz files ==="
-for tgz in /tmp/nextspark-release/*.tgz; do
-  if [ -f "$tgz" ]; then
-    echo "$(basename $tgz)"
-  fi
-done
-
-# Check if test project exists
-echo ""
-echo "=== Existing Test Projects ==="
-ls -la ../projects/test-local-packages/package.json 2>/dev/null && echo "Test project exists in ../projects/test-local-packages/" || echo "No local test project found"
-ls -la ../projects/test-npm-packages/package.json 2>/dev/null && echo "NPM test project exists in ../projects/test-npm-packages/" || echo "No npm test project found"
-
-# Check source versions for comparison
+# Check source versions
 echo ""
 echo "=== Source Versions ==="
 echo "Core: $(node -p "require('./packages/core/package.json').version")"
@@ -44,89 +27,61 @@ echo "CLI: $(node -p "require('./packages/cli/package.json').version")"
 
 ### Step 2: Analyze and Present Options
 
-**Package Status:**
-
-| Package | .tgz File | Version | Status |
-|---------|-----------|---------|--------|
-| @nextsparkjs/core | nextsparkjs-core-0.1.0-beta.3.tgz | 0.1.0-beta.3 | Available |
-| @nextsparkjs/cli | nextsparkjs-cli-0.1.0-beta.3.tgz | 0.1.0-beta.3 | Available |
-| create-nextspark-app | create-nextspark-app-0.1.0-beta.3.tgz | 0.1.0-beta.3 | Available |
-
 **Test Options:**
 
 | Option | Description | Use Case |
 |--------|-------------|----------|
-| 1. Create new test project | Initialize fresh NextSpark app with local packages | Clean testing |
-| 2. Update existing test project | Update packages in existing test project | Iterative testing |
-| 3. Test CLI only | Test CLI commands without full project | Quick CLI verification |
+| 1. Full setup | Build, package, and create test project | Clean testing (recommended) |
+| 2. Quick run | Just run tests on existing project | Iterative testing |
 
-**Test Project Location:**
-
-| Location | Description |
-|----------|-------------|
-| `../projects/test-local-packages/` | Local .tgz testing (setup.sh default) |
-| `../projects/test-npm-packages/` | NPM published packages testing |
+**Presets Available:**
+- `saas` (default) - Full SaaS application
+- `blog` - Blog/content site
+- `crm` - CRM application
 
 ### Step 3: Wait for Confirmation
 
 **STOP HERE AND WAIT.**
 
 Ask the user:
-> "Which test option would you like? (1-3)"
-> "Where should the test project be created?"
+> "Would you like to run the full setup (1) or quick test on existing project (2)?"
+> "Which preset? (saas/blog/crm)"
 
 **DO NOT proceed until the user explicitly confirms.**
 
 ### Step 4: Execute Test Setup
 
-**Option 1: Create New Test Project (Recommended)**
-
-Use the setup script which handles everything automatically:
+**Option 1: Full Setup (Recommended)**
 
 ```bash
-# Full setup (repackages + creates project)
-./scripts/tests/local/setup.sh --clean
+# Single command handles everything:
+# - Cleans existing project
+# - Builds and packages all packages
+# - Creates test project with local .tgz references
+# - Runs wizard with local CLI
+# - Creates .env
+# - Builds project
 
-# Or skip repackaging if .tgz files are up to date
-./scripts/tests/local/setup.sh --skip-repackage --clean
-
-# Use a different preset/theme
-./scripts/tests/local/setup.sh --preset blog --theme productivity --clean
+./scripts/tests/local/setup.sh --preset saas --theme default
 ```
 
-The setup script:
-1. Runs `repackage.sh --all` to create .tgz files
-2. Creates project directory in `../projects/test-local-packages/`
-3. Copies .tgz files and sets up `file:` references in package.json
-4. Installs all packages from local .tgz files
-5. Runs the wizard with the LOCAL CLI (with new flags for automation)
-6. Creates .env with required variables
-7. Builds the project
+The setup script will:
+1. Remove existing test project (if any)
+2. Create `../projects/test-local-packages/.packages/`
+3. Run `repackage.sh --all` directly to `.packages/`
+4. Create `package.json` with `file:` references
+5. Install dependencies with pnpm
+6. Run wizard with local CLI (`--name`, `--slug`, `--yes` flags)
+7. Create `.env` with required variables
+8. Build the project
 
-**Option 2: Update Existing Test Project**
-
-```bash
-# Repackage first
-./scripts/utils/repackage.sh --all --clean
-
-# Then run setup with --clean to replace the project
-./scripts/tests/local/setup.sh --skip-repackage --clean
-```
-
-**Option 3: Test CLI Only**
+**Option 2: Quick Test (existing project)**
 
 ```bash
-# Ensure packages are in test-distribution
-./scripts/utils/repackage.sh --all
-
-# Test CLI help
-npx ../test-distribution/nextsparkjs-cli-*.tgz --help
-
-# Test CLI version
-npx ../test-distribution/nextsparkjs-cli-*.tgz --version
-
-# Test init command help
-npx ../test-distribution/create-nextspark-app-*.tgz --help
+cd ../projects/test-local-packages
+pnpm dev   # Start dev server
+pnpm build # Or rebuild
+pnpm test  # Run tests
 ```
 
 ### Step 5: Show Available Test Commands
@@ -168,60 +123,50 @@ pnpm test
 | Dev server starts | `pnpm dev` | Server on localhost:3000 |
 | Build succeeds | `pnpm build` | No errors |
 | Pages load | Visit localhost:3000 | Content renders |
-| CLI works | `npx @nextsparkjs/cli --help` | Help displayed |
+| CLI works | `npx nextspark --help` | Help displayed |
 
 ### Step 6: Next Steps
 
 | Status | Next Step | Command |
 |--------|-----------|---------|
-| Tests pass | Publish to npm | `/npm:publish` |
-| Issues found | Debug and repackage | `/npm:repackage` |
-| Version needs bump | Increment version | `/npm:version` |
+| Tests pass | Publish to npm | `/npm-publish` |
+| Issues found | Fix code and re-run setup | `./scripts/tests/local/setup.sh` |
+| Version needs bump | Increment version | `/npm-version` |
 
 ---
 
 ## Scenarios
 
-### Scenario A: No Packages Available
+### Scenario A: No Test Project Exists
 
-If no .tgz files are found:
+> "No test project found. Running full setup to create one."
 
-> "Error: No packaged files found. Run `/npm:repackage` first to create packages for testing."
+Then execute:
+```bash
+./scripts/tests/local/setup.sh
+```
 
 ### Scenario B: Test Project Already Exists
 
-If test project exists:
+> "Test project exists at `../projects/test-local-packages/`. Options:"
+> "1. Run full setup (will replace existing project)"
+> "2. Quick test on existing project"
 
-> "A test project already exists at `../projects/test-local-packages/`. Options:"
-> "1. Run setup with `--clean` flag to replace it"
-> "2. Keep existing project and test manually"
+### Scenario C: Build Fails
 
-### Scenario C: Package Version Mismatch
+If the setup script fails during build:
 
-If .tgz versions don't match source:
-
-> "Warning: Package versions don't match source code:"
-
-| Package | .tgz | Source |
-|---------|------|--------|
-| core | 0.1.0-beta.2 | 0.1.0-beta.3 |
-
-> "Consider running `/npm:repackage` to get latest versions."
-
-### Scenario D: Missing CLI Package
-
-If CLI .tgz is missing:
-
-> "Warning: CLI package not found. The wizard requires the CLI package."
-> "Run `/npm:repackage` to generate all packages."
+> "Build failed. Check the error above. Common issues:"
+> "- Missing environment variables"
+> "- TypeScript errors in packages"
+> "- Missing dependencies"
 
 ---
 
 ## Important Rules
 
-1. **NEVER** delete existing test projects without explicit user confirmation
-2. **ALWAYS** check for existing packages before attempting setup
-3. **ALWAYS** show what commands will be run before executing
-4. **ALWAYS** provide verification commands after setup
-5. **ALWAYS** show next steps based on test results
-6. **ALWAYS** preserve user content in existing test projects when updating
+1. **NEVER** skip confirmation before running setup
+2. **ALWAYS** check for existing projects before running
+3. **ALWAYS** provide verification commands after setup
+4. **ALWAYS** show next steps based on test results
+5. The setup script always cleans and rebuilds - there's no "update" mode

@@ -30,13 +30,10 @@ scripts/
 Para probar cambios locales antes de publicar:
 
 ```bash
-# 1. Empaquetar todos los paquetes (con build)
-./scripts/utils/repackage.sh --all --clean
+# Un solo comando: empaqueta y crea proyecto de test
+./scripts/tests/local/setup.sh
 
-# 2. Crear proyecto de test con paquetes locales
-./scripts/tests/local/setup.sh --clean
-
-# 3. Ejecutar tests
+# Ejecutar tests
 ./scripts/tests/local/run.sh --all
 ```
 
@@ -48,18 +45,18 @@ Flujo completo para publicar a npm:
 # 1. Incrementar versión (ej: patch, minor, major, beta)
 ./scripts/utils/increment-version.sh patch
 
-# 2. Empaquetar todos los paquetes
-./scripts/utils/repackage.sh --all --clean
-
-# 3. Test local antes de publicar
-./scripts/tests/local/setup.sh --skip-repackage --clean
+# 2. Test local antes de publicar
+./scripts/tests/local/setup.sh
 ./scripts/tests/local/run.sh --all
 
+# 3. Empaquetar para publicación
+./scripts/utils/repackage.sh --all --clean
+
 # 4. Publicar a npm (requiere login previo)
-./scripts/utils/publish.sh ./dist --tag latest
+./scripts/utils/publish.sh ./.packages --tag latest
 
 # 5. Verificar publicación con paquetes de npm
-./scripts/tests/npm/setup.sh --clean
+./scripts/tests/npm/setup.sh
 ./scripts/tests/npm/run.sh --all
 ```
 
@@ -69,9 +66,12 @@ Flujo completo para publicar a npm:
 # Incrementar a beta (0.1.0 → 0.1.1-beta.0)
 ./scripts/utils/increment-version.sh beta
 
+# Test local
+./scripts/tests/local/setup.sh
+
 # Empaquetar y publicar con tag beta
 ./scripts/utils/repackage.sh --all --clean
-./scripts/utils/publish.sh ./dist --tag beta
+./scripts/utils/publish.sh ./.packages --tag beta
 ```
 
 ---
@@ -118,7 +118,7 @@ Crea archivos `.tgz` para distribución.
 # Opciones:
 #   --all              Empaquetar todos los paquetes
 #   --package <name>   Empaquetar paquete específico (repetible)
-#   --output <path>    Directorio de salida (default: ./dist)
+#   --output <path>    Directorio de salida (default: ./.packages)
 #   --skip-build       Saltar build (usar código existente)
 #   --clean            Limpiar directorio de salida primero
 
@@ -126,7 +126,7 @@ Crea archivos `.tgz` para distribución.
 #   core, cli, create-app, theme-*, plugin-*
 
 # Ejemplos:
-./scripts/utils/repackage.sh --all                    # Todo
+./scripts/utils/repackage.sh --all                    # Todo a ./.packages/
 ./scripts/utils/repackage.sh --all --skip-build       # Sin rebuild
 ./scripts/utils/repackage.sh --package core           # Solo core
 ./scripts/utils/repackage.sh --package core --package cli  # Core y CLI
@@ -159,11 +159,10 @@ Publica paquetes `.tgz` a npm.
 # Tags comunes: latest, beta, alpha, next, rc
 
 # Ejemplos:
-./scripts/utils/publish.sh ./dist                     # Publicar como latest
-./scripts/utils/publish.sh ./dist --tag beta          # Publicar como beta
-./scripts/utils/publish.sh ./dist --dry-run           # Test sin publicar
-./scripts/utils/publish.sh ./dist --otp 123456        # Con código 2FA
-./scripts/utils/publish.sh ./dist --registry http://localhost:4873  # Verdaccio
+./scripts/utils/publish.sh ./.packages                 # Publicar como latest
+./scripts/utils/publish.sh ./.packages --tag beta      # Publicar como beta
+./scripts/utils/publish.sh ./.packages --dry-run       # Test sin publicar
+./scripts/utils/publish.sh ./.packages --otp 123456    # Con código 2FA
 ```
 
 **Requisitos:**
@@ -182,24 +181,22 @@ Crea un proyecto de test usando paquetes locales `.tgz`.
 ./scripts/tests/local/setup.sh [options]
 
 # Opciones:
-#   --skip-repackage    Usar .tgz existentes (no rebuild)
 #   --preset <name>     Preset a usar (default: saas)
 #   --theme <name>      Theme a usar (default: default)
-#   --clean             Eliminar proyecto existente primero
 
 # Ejemplos:
 ./scripts/tests/local/setup.sh                        # Setup completo
-./scripts/tests/local/setup.sh --skip-repackage       # Sin rebuild
-./scripts/tests/local/setup.sh --preset blog --clean  # Blog preset, limpio
+./scripts/tests/local/setup.sh --preset blog          # Blog preset
+./scripts/tests/local/setup.sh --preset saas --theme productivity
 ```
 
 **Ubicación del proyecto:** `../projects/test-local-packages/`
 
 **Flujo interno:**
-1. Ejecuta `utils/repackage.sh --all` (si no `--skip-repackage`)
-2. Crea directorio del proyecto
-3. Copia `.tgz` a `.packages/`
-4. Crea `package.json` con referencias `file:./packages/*.tgz`
+1. Limpia proyecto existente (si existe)
+2. Crea directorio con `.packages/`
+3. Ejecuta `repackage.sh --all` directamente a `.packages/`
+4. Crea `package.json` con referencias `file:./.packages/*.tgz`
 5. Instala con pnpm (usa paquetes locales)
 6. Ejecuta wizard CLI local con flags `--name`, `--slug`, `--description`
 7. Crea `.env` con variables necesarias
@@ -239,13 +236,12 @@ Crea un proyecto de test usando paquetes publicados en npm.
 #   --version <ver>   Versión a usar (default: latest)
 #   --preset <name>   Preset a usar (default: saas)
 #   --theme <name>    Theme a usar (default: default)
-#   --clean           Eliminar proyecto existente primero
 
 # Ejemplos:
 ./scripts/tests/npm/setup.sh                          # Última versión
 ./scripts/tests/npm/setup.sh --version 1.0.0          # Versión específica
 ./scripts/tests/npm/setup.sh --version beta           # Última beta
-./scripts/tests/npm/setup.sh --preset blog --clean    # Blog, limpio
+./scripts/tests/npm/setup.sh --preset blog            # Blog preset
 ```
 
 **Ubicación del proyecto:** `../projects/test-npm-packages/`
@@ -270,11 +266,11 @@ Los scripts tienen comandos Claude Code equivalentes en `.claude/commands/`:
 
 | Script | Comando Claude |
 |--------|----------------|
-| `increment-version.sh` | `/npm:version` |
-| `repackage.sh` | `/npm:repackage` |
-| `publish.sh` | `/npm:publish` |
-| `tests/local/*` | `/npm:test-local` |
-| `tests/npm/*` | `/npm:test-npm` |
+| `increment-version.sh` | `/npm-version` |
+| `repackage.sh` | `/npm-repackage` |
+| `publish.sh` | `/npm-publish` |
+| `tests/local/*` | `/npm-test-local` |
+| `tests/npm/*` | `/npm-test-npm` |
 
 ---
 

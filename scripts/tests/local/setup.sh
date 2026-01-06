@@ -12,16 +12,14 @@
 #   ./setup.sh [OPTIONS]
 #
 # Options:
-#   --skip-repackage    Skip running repackage.sh (use existing .tgz files)
 #   --preset <name>     Preset to use (default: saas)
 #   --theme <name>      Theme to use (default: default)
-#   --clean             Remove existing test project before creating
 #   --help              Show this help message
 #
 # Examples:
 #   ./setup.sh                          # Full setup with defaults
-#   ./setup.sh --skip-repackage         # Use existing packages
-#   ./setup.sh --preset blog --clean    # Clean install with blog preset
+#   ./setup.sh --preset blog            # Use blog preset
+#   ./setup.sh --preset saas --theme productivity
 # =============================================================================
 
 set -e
@@ -48,10 +46,8 @@ PROJECT_PATH="$PROJECTS_DIR/$PROJECT_NAME"
 # -----------------------------------------------------------------------------
 # Default values
 # -----------------------------------------------------------------------------
-SKIP_REPACKAGE=false
 PRESET="saas"
 THEME="default"
-CLEAN=false
 
 # -----------------------------------------------------------------------------
 # Functions
@@ -81,7 +77,7 @@ print_error() {
 }
 
 show_help() {
-  head -n 25 "$0" | tail -n 23 | sed 's/^# //' | sed 's/^#//'
+  head -n 21 "$0" | tail -n 19 | sed 's/^# //' | sed 's/^#//'
   exit 0
 }
 
@@ -90,10 +86,6 @@ show_help() {
 # -----------------------------------------------------------------------------
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --skip-repackage)
-      SKIP_REPACKAGE=true
-      shift
-      ;;
     --preset)
       PRESET="$2"
       shift 2
@@ -101,10 +93,6 @@ while [[ $# -gt 0 ]]; do
     --theme)
       THEME="$2"
       shift 2
-      ;;
-    --clean)
-      CLEAN=true
-      shift
       ;;
     --help|-h)
       show_help
@@ -122,92 +110,64 @@ done
 # -----------------------------------------------------------------------------
 print_header
 
-# Determine packages path (repackage.sh puts files in test-distribution by default)
-PACKAGES_PATH="$(dirname "$REPO_ROOT")/test-distribution"
-
 echo "Configuration:"
 echo "  Repo root:      $REPO_ROOT"
 echo "  Projects dir:   $PROJECTS_DIR"
 echo "  Project path:   $PROJECT_PATH"
-echo "  Packages path:  $PACKAGES_PATH"
 echo "  Preset:         $PRESET"
 echo "  Theme:          $THEME"
-echo "  Skip repackage: $SKIP_REPACKAGE"
-echo "  Clean install:  $CLEAN"
 echo ""
 
-# Step 1: Clean existing project if requested
-if [ "$CLEAN" = true ] && [ -d "$PROJECT_PATH" ]; then
-  print_step "1" "Cleaning existing test project..."
+# Step 1: Clean existing project (always)
+print_step "1" "Cleaning existing test project..."
+if [ -d "$PROJECT_PATH" ]; then
   rm -rf "$PROJECT_PATH"
   print_success "Removed $PROJECT_PATH"
 else
-  print_step "1" "Clean step skipped (no --clean flag or project doesn't exist)"
+  print_success "No existing project to remove"
 fi
 
-# Step 2: Run repackage.sh unless skipped
-if [ "$SKIP_REPACKAGE" = false ]; then
-  print_step "2" "Running repackage.sh --all..."
+# Step 2: Create project directory with .packages
+print_step "2" "Creating project directory..."
+mkdir -p "$PROJECT_PATH/.packages"
+print_success "Created $PROJECT_PATH/.packages/"
 
-  if [ ! -f "$REPO_ROOT/scripts/utils/repackage.sh" ]; then
-    print_error "repackage.sh not found at $REPO_ROOT/scripts/utils/repackage.sh"
-    exit 1
-  fi
+# Step 3: Run repackage.sh directly to project's .packages folder
+print_step "3" "Building and packaging all packages..."
 
-  # Run repackage with output to test-distribution
-  bash "$REPO_ROOT/scripts/utils/repackage.sh" --all --clean --output "$PACKAGES_PATH"
-  print_success "Packages created in $PACKAGES_PATH"
-else
-  print_step "2" "Repackage step skipped (--skip-repackage flag)"
-fi
-
-# Step 3: Verify packages exist
-print_step "3" "Verifying package files..."
-
-if [ ! -d "$PACKAGES_PATH" ]; then
-  print_error "Packages directory not found: $PACKAGES_PATH"
-  print_error "Run without --skip-repackage or run: ./scripts/utils/repackage.sh --all --output $PACKAGES_PATH"
+if [ ! -f "$REPO_ROOT/scripts/utils/repackage.sh" ]; then
+  print_error "repackage.sh not found at $REPO_ROOT/scripts/utils/repackage.sh"
   exit 1
 fi
 
-CORE_TGZ=$(ls -1 "$PACKAGES_PATH"/nextsparkjs-core-*.tgz 2>/dev/null | head -1)
+# Run repackage with output directly to project's .packages folder
+bash "$REPO_ROOT/scripts/utils/repackage.sh" --all --clean --output "$PROJECT_PATH/.packages"
+print_success "Packages created in $PROJECT_PATH/.packages/"
+
+# Step 4: Verify packages exist
+print_step "4" "Verifying package files..."
+
+CORE_TGZ=$(ls -1 "$PROJECT_PATH/.packages"/nextsparkjs-core-*.tgz 2>/dev/null | head -1)
 if [ -z "$CORE_TGZ" ]; then
-  print_error "Core package .tgz not found in $PACKAGES_PATH"
+  print_error "Core package .tgz not found"
   exit 1
 fi
 print_success "Found: $(basename "$CORE_TGZ")"
 
-CLI_TGZ=$(ls -1 "$PACKAGES_PATH"/nextsparkjs-cli-*.tgz 2>/dev/null | head -1)
+CLI_TGZ=$(ls -1 "$PROJECT_PATH/.packages"/nextsparkjs-cli-*.tgz 2>/dev/null | head -1)
 if [ -z "$CLI_TGZ" ]; then
-  print_error "CLI package .tgz not found in $PACKAGES_PATH"
+  print_error "CLI package .tgz not found"
   exit 1
 fi
 print_success "Found: $(basename "$CLI_TGZ")"
 
 # Count themes and plugins
-THEME_COUNT=$(ls -1 "$PACKAGES_PATH"/nextsparkjs-theme-*.tgz 2>/dev/null | wc -l | tr -d ' ')
-PLUGIN_COUNT=$(ls -1 "$PACKAGES_PATH"/nextsparkjs-plugin-*.tgz 2>/dev/null | wc -l | tr -d ' ')
+THEME_COUNT=$(ls -1 "$PROJECT_PATH/.packages"/nextsparkjs-theme-*.tgz 2>/dev/null | wc -l | tr -d ' ')
+PLUGIN_COUNT=$(ls -1 "$PROJECT_PATH/.packages"/nextsparkjs-plugin-*.tgz 2>/dev/null | wc -l | tr -d ' ')
 print_success "Found: $THEME_COUNT themes, $PLUGIN_COUNT plugins"
 
-# Step 4: Create project directory
-print_step "4" "Creating project directory..."
-if [ -d "$PROJECT_PATH" ]; then
-  print_warning "Project already exists at $PROJECT_PATH"
-  print_warning "Use --clean to remove it first, or manually delete it"
-  exit 1
-fi
-
-mkdir -p "$PROJECT_PATH"
-print_success "Created $PROJECT_PATH"
-
-# Step 5: Copy .tgz packages to project FIRST (before any npm install)
-print_step "5" "Copying local packages to project..."
-mkdir -p "$PROJECT_PATH/.packages"
-cp "$PACKAGES_PATH"/*.tgz "$PROJECT_PATH/.packages/"
-print_success "Copied all .tgz files to $PROJECT_PATH/.packages/"
-
-# Step 6: Create initial package.json with LOCAL package references
-print_step "6" "Creating package.json with local package references..."
+# Step 5: Create package.json with LOCAL package references
+print_step "5" "Creating package.json with local package references..."
 cd "$PROJECT_PATH"
 
 # Determine theme package name
@@ -282,13 +242,13 @@ console.log('  - $THEME_PKG_NAME: file:./.packages/...');
 "
 print_success "package.json created with local package references"
 
-# Step 7: Install dependencies (now uses LOCAL packages)
-print_step "7" "Installing dependencies with pnpm (using LOCAL packages)..."
+# Step 6: Install dependencies (now uses LOCAL packages)
+print_step "6" "Installing dependencies with pnpm (using LOCAL packages)..."
 pnpm install
 print_success "Dependencies installed from local .tgz files"
 
-# Step 8: Run the wizard using LOCAL CLI
-print_step "8" "Running NextSpark wizard (using LOCAL CLI)..."
+# Step 7: Run the wizard using LOCAL CLI
+print_step "7" "Running NextSpark wizard (using LOCAL CLI)..."
 echo ""
 
 # The CLI is now installed from local .tgz, so it has all our new flags
@@ -302,8 +262,8 @@ npx nextspark init \
 
 print_success "Wizard completed successfully"
 
-# Step 9: Create .env file with required variables
-print_step "9" "Creating .env file..."
+# Step 8: Create .env file with required variables
+print_step "8" "Creating .env file..."
 # Use the project slug from wizard (test-local) as the theme name
 cat > .env << EOF
 # Environment variables for local package testing
@@ -332,13 +292,13 @@ NODE_ENV=development
 EOF
 print_success ".env file created with NEXT_PUBLIC_ACTIVE_THEME=test-local"
 
-# Step 10: Re-install to pick up any new dependencies from wizard
-print_step "10" "Re-installing dependencies after wizard..."
+# Step 9: Re-install to pick up any new dependencies from wizard
+print_step "9" "Re-installing dependencies after wizard..."
 pnpm install --force
 print_success "Dependencies updated"
 
-# Step 11: Build the project
-print_step "11" "Building the project..."
+# Step 10: Build the project
+print_step "10" "Building the project..."
 pnpm build
 print_success "Project built successfully"
 
