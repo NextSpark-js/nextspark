@@ -132,16 +132,16 @@ print_step "2" "Creating project directory..."
 mkdir -p "$PROJECT_PATH/.packages"
 print_success "Created $PROJECT_PATH/.packages/"
 
-# Step 3: Run repackage.sh directly to project's .packages folder
+# Step 3: Run pack.sh directly to project's .packages folder
 print_step "3" "Building and packaging all packages..."
 
-if [ ! -f "$REPO_ROOT/scripts/utils/repackage.sh" ]; then
-  print_error "repackage.sh not found at $REPO_ROOT/scripts/utils/repackage.sh"
+if [ ! -f "$REPO_ROOT/scripts/packages/pack.sh" ]; then
+  print_error "pack.sh not found at $REPO_ROOT/scripts/packages/pack.sh"
   exit 1
 fi
 
-# Run repackage with output directly to project's .packages folder
-bash "$REPO_ROOT/scripts/utils/repackage.sh" --all --clean --output "$PROJECT_PATH/.packages"
+# Run pack with output directly to project's .packages folder
+bash "$REPO_ROOT/scripts/packages/pack.sh" --all --clean --output "$PROJECT_PATH/.packages"
 print_success "Packages created in $PROJECT_PATH/.packages/"
 
 # Step 4: Verify packages exist
@@ -320,8 +320,5 @@ echo ""
 echo "Next steps:"
 echo "  cd $PROJECT_PATH"
 echo "  pnpm dev              # Start development server"
-echo "  pnpm test             # Run tests"
-echo ""
-echo "Or run the test script:"
-echo "  ./scripts/tests/local/run.sh --all"
+echo "  pnpm build            # Build for production"
 echo ""

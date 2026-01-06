@@ -76,20 +76,20 @@ MODIFIED=$(git diff --name-only $(git describe --tags --abbrev=0 2>/dev/null || 
 
 # Then package each modified package
 for pkg in $MODIFIED; do
-  ./scripts/utils/repackage.sh --package "$(basename $pkg)"
+  ./scripts/packages/pack.sh --package "$(basename $pkg)"
 done
 ```
 
 **Option 2 - Package All:**
 ```bash
-./scripts/utils/repackage.sh --all --clean
+./scripts/packages/pack.sh --all --clean
 ```
 
 **Option 3 - Package Specific:**
 ```bash
 # Package specific package(s)
-./scripts/utils/repackage.sh --package core
-./scripts/utils/repackage.sh --package cli --package core
+./scripts/packages/pack.sh --package core
+./scripts/packages/pack.sh --package cli --package core
 ```
 
 ### Step 5: Show Results

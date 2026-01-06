@@ -46,16 +46,16 @@ export async function createProject(options: ProjectOptions): Promise<void> {
   await fs.writeJson(path.join(projectPath, 'package.json'), packageJson, { spaces: 2 })
   pkgSpinner.succeed('  package.json created')
 
-  // Step 3: Install @nextsparkjs/cli (includes core as dependency)
-  const cliSpinner = ora('  Installing @nextsparkjs/cli...').start()
+  // Step 3: Install @nextsparkjs/core and @nextsparkjs/cli
+  const cliSpinner = ora('  Installing @nextsparkjs/core and @nextsparkjs/cli...').start()
   try {
-    execSync('pnpm add @nextsparkjs/cli', {
+    execSync('pnpm add @nextsparkjs/core @nextsparkjs/cli', {
       cwd: projectPath,
       stdio: 'pipe',
     })
-    cliSpinner.succeed('  @nextsparkjs/cli installed')
+    cliSpinner.succeed('  @nextsparkjs/core and @nextsparkjs/cli installed')
   } catch (error) {
-    cliSpinner.fail('  Failed to install @nextsparkjs/cli')
+    cliSpinner.fail('  Failed to install @nextsparkjs/core and @nextsparkjs/cli')
     throw error
   }
 

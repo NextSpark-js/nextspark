@@ -10,10 +10,12 @@
     "build:cli": "pnpm --filter @nextsparkjs/cli build",
     "lint": "pnpm --filter @nextsparkjs/dev lint",
     "clean": "pnpm -r exec rm -rf node_modules dist .next",
-    "test:local": "./scripts/tests/local/setup.sh",
-    "test:local:run": "./scripts/tests/local/run.sh --all",
-    "repackage": "./scripts/utils/repackage.sh --all --clean",
-    "publish:npm": "./scripts/utils/publish.sh ./.packages"
+    "setup:local": "./scripts/setup/local.sh",
+    "setup:npm": "./scripts/setup/npm.sh",
+    "setup:claude": "./scripts/setup/claude.sh",
+    "pkg:version": "./scripts/packages/version.sh",
+    "pkg:pack": "./scripts/packages/pack.sh --all --clean",
+    "pkg:publish": "./scripts/packages/publish.sh ./.packages"
   },
   "devDependencies": {
     "typescript": "^5.0.0"

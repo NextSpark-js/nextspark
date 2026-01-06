@@ -62,7 +62,7 @@ Ask the user:
 # - Creates .env
 # - Builds project
 
-./scripts/tests/local/setup.sh --preset saas --theme default
+./scripts/setup/local.sh --preset saas --theme default
 ```
 
 The setup script will:
@@ -130,7 +130,7 @@ pnpm test
 | Status | Next Step | Command |
 |--------|-----------|---------|
 | Tests pass | Publish to npm | `/npm-publish` |
-| Issues found | Fix code and re-run setup | `./scripts/tests/local/setup.sh` |
+| Issues found | Fix code and re-run setup | `./scripts/setup/local.sh` |
 | Version needs bump | Increment version | `/npm-version` |
 
 ---
@@ -143,7 +143,7 @@ pnpm test
 
 Then execute:
 ```bash
-./scripts/tests/local/setup.sh
+./scripts/setup/local.sh
 ```
 
 ### Scenario B: Test Project Already Exists

@@ -6,19 +6,29 @@ Scripts para gestionar el ciclo de vida de los paquetes NPM de NextSpark.
 
 ```
 scripts/
-├── setup-claude.sh           # Configurar Claude Code (symlinks)
-├── utils/                    # Utilidades para gestión de paquetes
-│   ├── increment-version.sh  # Incrementar versiones
-│   ├── repackage.sh          # Crear archivos .tgz
-│   └── publish.sh            # Publicar a npm
-├── tests/                    # Scripts de testing
-│   ├── local/                # Test con paquetes locales (.tgz)
-│   │   ├── setup.sh          # Crear proyecto de test
-│   │   └── run.sh            # Ejecutar tests
-│   └── npm/                  # Test con paquetes de npm
-│       ├── setup.sh          # Crear proyecto de test
-│       └── run.sh            # Ejecutar tests
-└── README.md                 # Esta documentación
+├── setup/
+│   ├── local.sh      # Crear proyecto test con .tgz locales
+│   ├── npm.sh        # Crear proyecto test con paquetes npm
+│   └── claude.sh     # Configurar Claude Code symlinks
+├── packages/
+│   ├── version.sh    # Incrementar versiones
+│   ├── pack.sh       # Crear .tgz
+│   └── publish.sh    # Publicar a npm
+└── README.md
+```
+
+---
+
+## Comandos pnpm
+
+```bash
+pnpm setup:local      # Crear proyecto test con paquetes locales
+pnpm setup:npm        # Crear proyecto test con paquetes npm
+pnpm setup:claude     # Configurar Claude Code
+
+pnpm pkg:version      # Incrementar versiones
+pnpm pkg:pack         # Empaquetar todo a .packages/
+pnpm pkg:publish      # Publicar a npm
 ```
 
 ---
@@ -30,321 +40,174 @@ scripts/
 Para probar cambios locales antes de publicar:
 
 ```bash
-# Un solo comando: empaqueta y crea proyecto de test
-./scripts/tests/local/setup.sh
-
-# Ejecutar tests
-./scripts/tests/local/run.sh --all
+pnpm setup:local                    # Empaqueta y crea proyecto test
+# o con opciones:
+pnpm setup:local -- --preset blog   # Usar preset blog
 ```
 
 ### 2. Publicar Nueva Versión
 
-Flujo completo para publicar a npm:
-
 ```bash
-# 1. Incrementar versión (ej: patch, minor, major, beta)
-./scripts/utils/increment-version.sh patch
+# 1. Incrementar versión
+pnpm pkg:version -- patch           # o minor, major, beta
 
-# 2. Test local antes de publicar
-./scripts/tests/local/setup.sh
-./scripts/tests/local/run.sh --all
+# 2. Test local
+pnpm setup:local
 
-# 3. Empaquetar para publicación
-./scripts/utils/repackage.sh --all --clean
-
-# 4. Publicar a npm (requiere login previo)
-./scripts/utils/publish.sh ./.packages --tag latest
-
-# 5. Verificar publicación con paquetes de npm
-./scripts/tests/npm/setup.sh
-./scripts/tests/npm/run.sh --all
+# 3. Empaquetar y publicar
+pnpm pkg:pack
+pnpm pkg:publish -- --tag latest
 ```
 
-### 3. Publicar Versión Beta/Alpha
+### 3. Publicar Versión Beta
 
 ```bash
-# Incrementar a beta (0.1.0 → 0.1.1-beta.0)
-./scripts/utils/increment-version.sh beta
-
-# Test local
-./scripts/tests/local/setup.sh
-
-# Empaquetar y publicar con tag beta
-./scripts/utils/repackage.sh --all --clean
-./scripts/utils/publish.sh ./.packages --tag beta
+pnpm pkg:version -- beta
+pnpm setup:local
+pnpm pkg:pack
+pnpm pkg:publish -- --tag beta
 ```
 
 ---
 
-## Scripts de Utilidades (`utils/`)
+## Scripts de Setup (`setup/`)
 
-### `increment-version.sh`
+### `local.sh`
 
-Incrementa la versión de todos los paquetes del monorepo.
+Crea proyecto test con paquetes locales `.tgz`.
 
 ```bash
-./scripts/utils/increment-version.sh <type> [--yes]
-
-# Tipos disponibles:
-#   major    1.0.0 → 2.0.0
-#   minor    1.0.0 → 1.1.0
-#   patch    1.0.0 → 1.0.1
-#   alpha    1.0.0 → 1.0.1-alpha.0
-#   beta     1.0.0 → 1.0.1-beta.0
-#   rc       1.0.0 → 1.0.1-rc.0
+./scripts/setup/local.sh [--preset <name>] [--theme <name>]
 
 # Ejemplos:
-./scripts/utils/increment-version.sh patch           # Interactivo
-./scripts/utils/increment-version.sh minor --yes    # Sin confirmación
-./scripts/utils/increment-version.sh beta           # Nueva versión beta
+./scripts/setup/local.sh                          # Defaults
+./scripts/setup/local.sh --preset blog            # Blog preset
+./scripts/setup/local.sh --preset saas --theme productivity
 ```
 
-**Paquetes actualizados:**
-- `packages/core`
-- `packages/cli`
-- `packages/create-nextspark-app`
-- `themes/*`
-- `plugins/*`
+**Ubicación:** `../projects/test-local-packages/`
+
+**Flujo interno:**
+1. Limpia proyecto existente
+2. Crea `.packages/`
+3. Ejecuta `pack.sh --all` directo a `.packages/`
+4. Crea `package.json` con `file:` references
+5. Instala con pnpm
+6. Ejecuta wizard CLI con flags `--name`, `--slug`, `--yes`
+7. Crea `.env`
+8. Build del proyecto
 
 ---
 
-### `repackage.sh`
+### `npm.sh`
+
+Crea proyecto test con paquetes publicados en npm.
+
+```bash
+./scripts/setup/npm.sh [--version <ver>] [--preset <name>] [--theme <name>]
+
+# Ejemplos:
+./scripts/setup/npm.sh                    # Última versión
+./scripts/setup/npm.sh --version 1.0.0    # Versión específica
+./scripts/setup/npm.sh --version beta     # Última beta
+```
+
+**Ubicación:** `../projects/test-npm-packages/`
+
+---
+
+### `claude.sh`
+
+Configura Claude Code creando symlinks.
+
+```bash
+./scripts/setup/claude.sh
+```
+
+**¿Por qué es necesario?**
+- Claude Code lee configuración desde `.claude/` en root
+- El repo está en `/repo/`, configuración vive en `repo/.claude/`
+- Este script crea symlinks para que Claude encuentre la configuración
+
+---
+
+## Scripts de Packages (`packages/`)
+
+### `version.sh`
+
+Incrementa versión de todos los paquetes.
+
+```bash
+./scripts/packages/version.sh <type> [--yes]
+
+# Tipos: major, minor, patch, alpha, beta, rc
+
+# Ejemplos:
+./scripts/packages/version.sh patch           # Interactivo
+./scripts/packages/version.sh minor --yes     # Sin confirmación
+./scripts/packages/version.sh beta            # Nueva beta
+```
+
+---
+
+### `pack.sh`
 
 Crea archivos `.tgz` para distribución.
 
 ```bash
-./scripts/utils/repackage.sh [options]
+./scripts/packages/pack.sh [options]
 
 # Opciones:
-#   --all              Empaquetar todos los paquetes
-#   --package <name>   Empaquetar paquete específico (repetible)
-#   --output <path>    Directorio de salida (default: ./.packages)
-#   --skip-build       Saltar build (usar código existente)
-#   --clean            Limpiar directorio de salida primero
-
-# Nombres de paquetes válidos:
-#   core, cli, create-app, theme-*, plugin-*
+#   --all              Empaquetar todos
+#   --package <name>   Paquete específico (repetible)
+#   --output <path>    Directorio salida (default: ./.packages)
+#   --skip-build       Saltar build
+#   --clean            Limpiar salida primero
 
 # Ejemplos:
-./scripts/utils/repackage.sh --all                    # Todo a ./.packages/
-./scripts/utils/repackage.sh --all --skip-build       # Sin rebuild
-./scripts/utils/repackage.sh --package core           # Solo core
-./scripts/utils/repackage.sh --package core --package cli  # Core y CLI
-./scripts/utils/repackage.sh --all --output /tmp/dist     # Output custom
+./scripts/packages/pack.sh --all                    # Todo
+./scripts/packages/pack.sh --all --skip-build       # Sin rebuild
+./scripts/packages/pack.sh --package core           # Solo core
 ```
-
-**Orden de empaquetado** (respeta dependencias):
-1. `@nextsparkjs/core`
-2. `@nextsparkjs/cli`
-3. `create-nextspark-app`
-4. Themes (`@nextsparkjs/theme-*`)
-5. Plugins (`@nextsparkjs/plugin-*`)
 
 ---
 
 ### `publish.sh`
 
-Publica paquetes `.tgz` a npm.
+Publica `.tgz` a npm.
 
 ```bash
-./scripts/utils/publish.sh <packages-dir> [options]
+./scripts/packages/publish.sh <dir> [options]
 
 # Opciones:
-#   --tag <tag>       Tag de distribución (default: latest)
-#   --dry-run         Simular sin publicar
-#   --otp <code>      Código 2FA de npm
-#   --no-cleanup      No borrar .tgz después de publicar
-#   --registry <url>  Registry personalizado
-
-# Tags comunes: latest, beta, alpha, next, rc
+#   --tag <tag>       Tag (default: latest)
+#   --dry-run         Simular
+#   --otp <code>      Código 2FA
 
 # Ejemplos:
-./scripts/utils/publish.sh ./.packages                 # Publicar como latest
-./scripts/utils/publish.sh ./.packages --tag beta      # Publicar como beta
-./scripts/utils/publish.sh ./.packages --dry-run       # Test sin publicar
-./scripts/utils/publish.sh ./.packages --otp 123456    # Con código 2FA
+./scripts/packages/publish.sh ./.packages                 # Latest
+./scripts/packages/publish.sh ./.packages --tag beta      # Beta
+./scripts/packages/publish.sh ./.packages --dry-run       # Test
 ```
 
-**Requisitos:**
-- `npm login` previo
-- Para scoped packages: `npm login --scope=@nextsparkjs`
-
----
-
-## Scripts de Testing (`tests/`)
-
-### `local/setup.sh`
-
-Crea un proyecto de test usando paquetes locales `.tgz`.
-
-```bash
-./scripts/tests/local/setup.sh [options]
-
-# Opciones:
-#   --preset <name>     Preset a usar (default: saas)
-#   --theme <name>      Theme a usar (default: default)
-
-# Ejemplos:
-./scripts/tests/local/setup.sh                        # Setup completo
-./scripts/tests/local/setup.sh --preset blog          # Blog preset
-./scripts/tests/local/setup.sh --preset saas --theme productivity
-```
-
-**Ubicación del proyecto:** `../projects/test-local-packages/`
-
-**Flujo interno:**
-1. Limpia proyecto existente (si existe)
-2. Crea directorio con `.packages/`
-3. Ejecuta `repackage.sh --all` directamente a `.packages/`
-4. Crea `package.json` con referencias `file:./.packages/*.tgz`
-5. Instala con pnpm (usa paquetes locales)
-6. Ejecuta wizard CLI local con flags `--name`, `--slug`, `--description`
-7. Crea `.env` con variables necesarias
-8. Build del proyecto
-
----
-
-### `local/run.sh`
-
-Ejecuta tests en el proyecto local.
-
-```bash
-./scripts/tests/local/run.sh [options]
-
-# Opciones:
-#   --unit    Ejecutar tests unitarios (Jest)
-#   --e2e     Ejecutar tests E2E (Cypress)
-#   --all     Ejecutar todos los tests
-#   --build   Rebuild antes de tests
-
-# Ejemplos:
-./scripts/tests/local/run.sh --all
-./scripts/tests/local/run.sh --unit
-./scripts/tests/local/run.sh --e2e --build
-```
-
----
-
-### `npm/setup.sh`
-
-Crea un proyecto de test usando paquetes publicados en npm.
-
-```bash
-./scripts/tests/npm/setup.sh [options]
-
-# Opciones:
-#   --version <ver>   Versión a usar (default: latest)
-#   --preset <name>   Preset a usar (default: saas)
-#   --theme <name>    Theme a usar (default: default)
-
-# Ejemplos:
-./scripts/tests/npm/setup.sh                          # Última versión
-./scripts/tests/npm/setup.sh --version 1.0.0          # Versión específica
-./scripts/tests/npm/setup.sh --version beta           # Última beta
-./scripts/tests/npm/setup.sh --preset blog            # Blog preset
-```
-
-**Ubicación del proyecto:** `../projects/test-npm-packages/`
-
----
-
-### `npm/run.sh`
-
-Ejecuta tests en el proyecto npm.
-
-```bash
-./scripts/tests/npm/run.sh [options]
-
-# Opciones: igual que local/run.sh
-```
-
----
-
-## Comandos Claude Code
-
-Los scripts tienen comandos Claude Code equivalentes en `.claude/commands/`:
-
-| Script | Comando Claude |
-|--------|----------------|
-| `increment-version.sh` | `/npm-version` |
-| `repackage.sh` | `/npm-repackage` |
-| `publish.sh` | `/npm-publish` |
-| `tests/local/*` | `/npm-test-local` |
-| `tests/npm/*` | `/npm-test-npm` |
-
----
-
-## Setup Script
-
-### `setup-claude.sh`
-
-Configura Claude Code creando symlinks desde el directorio root `.claude/` hacia `repo/.claude/`.
-
-**¿Por qué es necesario?**
-- Claude Code lee la configuración desde `.claude/` en el root del proyecto
-- El repositorio git está en `/repo/`, por lo que la configuración real vive en `repo/.claude/`
-- Este script crea symlinks para que Claude Code encuentre la configuración
-
-```bash
-./repo/scripts/utils/setup-claude.sh
-
-# Salida:
-# Setting up Claude Code configuration...
-# Project root: /path/to/nextspark
-#   Linked: README.md
-#   Linked: agents
-#   Linked: commands
-#   Linked: config
-#   Linked: sessions
-#   Linked: settings.local.json
-#   Linked: skills
-#   Linked: tools
-```
-
-**Cuándo ejecutarlo:**
-- Después de clonar el repositorio
-- Después de un `git clean` o reset del directorio root
-- El script es idempotente (puede ejecutarse múltiples veces)
-
-**Estructura resultante:**
-```
-nextspark/
-├── .claude/                    # Symlinks (creados por setup-claude.sh)
-│   ├── commands → ../repo/.claude/commands
-│   ├── skills → ../repo/.claude/skills
-│   └── ...
-└── repo/
-    └── .claude/                # Archivos reales (versionados en git)
-        ├── commands/
-        ├── skills/
-        └── ...
-```
+**Requisitos:** `npm login` y `npm login --scope=@nextsparkjs`
 
 ---
 
 ## Troubleshooting
 
 ### Error: "Email provider API key is required"
-
-Configura `EMAIL_PROVIDER=console` en `.env` del proyecto de test.
+```bash
+EMAIL_PROVIDER=console  # En .env
+```
 
 ### Error: "NEXT_PUBLIC_ACTIVE_THEME is not set"
-
-El setup.sh crea automáticamente el `.env`. Si falla, asegúrate de tener:
-```env
-NEXT_PUBLIC_ACTIVE_THEME=<slug-del-proyecto>
+```bash
+NEXT_PUBLIC_ACTIVE_THEME=<slug>  # En .env
 ```
 
 ### Error: "npm login required"
-
 ```bash
 npm login
-npm login --scope=@nextsparkjs  # Para paquetes scoped
-```
-
-### pnpm install falla con "permission denied"
-
-Los scripts usan `file:` references que requieren acceso de lectura a los `.tgz`.
-```bash
-chmod 644 .packages/*.tgz
+npm login --scope=@nextsparkjs
 ```
