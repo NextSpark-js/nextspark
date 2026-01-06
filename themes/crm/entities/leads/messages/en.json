@@ -1,0 +1,132 @@
+{
+  "entity": {
+    "name": "Lead",
+    "plural": "Leads",
+    "description": "Manage potential prospects and business opportunities"
+  },
+  "fields": {
+    "companyName": {
+      "label": "Company Name",
+      "description": "Name of the prospect company",
+      "placeholder": "Enter company name..."
+    },
+    "contactName": {
+      "label": "Contact Name",
+      "description": "Name of the contact person",
+      "placeholder": "Enter contact name..."
+    },
+    "email": {
+      "label": "Email",
+      "description": "Email address",
+      "placeholder": "Enter email address..."
+    },
+    "phone": {
+      "label": "Phone",
+      "description": "Phone number",
+      "placeholder": "Enter phone number..."
+    },
+    "website": {
+      "label": "Website",
+      "description": "Company website",
+      "placeholder": "https://example.com"
+    },
+    "source": {
+      "label": "Lead Source",
+      "description": "How this lead was acquired",
+      "placeholder": "Select source..."
+    },
+    "status": {
+      "label": "Status",
+      "description": "Current lead status",
+      "placeholder": "Select status..."
+    },
+    "score": {
+      "label": "Lead Score",
+      "description": "Lead score from 0 to 100",
+      "placeholder": "0"
+    },
+    "industry": {
+      "label": "Industry",
+      "description": "Industry sector",
+      "placeholder": "Enter industry..."
+    },
+    "companySize": {
+      "label": "Company Size",
+      "description": "Number of employees",
+      "placeholder": "Select company size..."
+    },
+    "budget": {
+      "label": "Estimated Budget",
+      "description": "Estimated budget amount",
+      "placeholder": "0.00"
+    },
+    "assignedTo": {
+      "label": "Assigned To",
+      "description": "Sales rep assigned to this lead",
+      "placeholder": "Select user..."
+    },
+    "notes": {
+      "label": "Notes",
+      "description": "Internal notes about the lead",
+      "placeholder": "Enter notes..."
+    },
+    "createdAt": {
+      "label": "Created At",
+      "description": "When the lead was created"
+    },
+    "updatedAt": {
+      "label": "Updated At",
+      "description": "When the lead was last updated"
+    }
+  },
+  "options": {
+    "source": {
+      "web": "Website",
+      "referral": "Referral",
+      "cold_call": "Cold Call",
+      "trade_show": "Trade Show",
+      "social_media": "Social Media",
+      "email": "Email",
+      "advertising": "Advertising",
+      "partner": "Partner",
+      "other": "Other"
+    },
+    "status": {
+      "new": "New",
+      "contacted": "Contacted",
+      "qualified": "Qualified",
+      "proposal": "Proposal",
+      "negotiation": "Negotiation",
+      "converted": "Converted",
+      "lost": "Lost"
+    },
+    "companySize": {
+      "1-10": "1-10 employees",
+      "11-50": "11-50 employees",
+      "51-200": "51-200 employees",
+      "201-500": "201-500 employees",
+      "500+": "500+ employees"
+    }
+  },
+  "actions": {
+    "create": "Create Lead",
+    "edit": "Edit Lead",
+    "delete": "Delete Lead",
+    "view": "View Lead",
+    "list": "List Leads",
+    "search": "Search Leads",
+    "export": "Export Leads",
+    "import": "Import Leads",
+    "convert": "Convert Lead",
+    "assign": "Assign Lead"
+  },
+  "messages": {
+    "created": "Lead created successfully",
+    "updated": "Lead updated successfully",
+    "deleted": "Lead deleted successfully",
+    "converted": "Lead converted successfully",
+    "assigned": "Lead assigned successfully",
+    "notFound": "Lead not found",
+    "error": "An error occurred while processing the lead"
+  }
+}

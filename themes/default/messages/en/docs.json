@@ -1,0 +1,27 @@
+{
+  "title": "Documentation",
+  "description": "Complete documentation for using our platform effectively.",
+  "sidebar": {
+    "label": "Documentation navigation",
+    "open": "Open navigation menu",
+    "close": "Close navigation menu"
+  },
+  "labels": {
+    "coreDoc": "core"
+  },
+  "categories": {
+    "core": "Core",
+    "theme": "Theme",
+    "plugins": "Plugins"
+  },
+  "breadcrumbs": {
+    "home": "Home"
+  },
+  "quickStart": {
+    "title": "Quick Start Guide",
+    "step1": "Create Account",
+    "step2": "Configure Profile",
+    "step3": "Explore Dashboard",
+    "step4": "Create First Task"
+  }
+}

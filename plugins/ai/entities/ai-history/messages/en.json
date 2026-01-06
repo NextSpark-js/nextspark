@@ -1,0 +1,56 @@
+{
+  "entity": {
+    "name": "AI History",
+    "namePlural": "AI History",
+    "description": "Generic audit trail for AI interactions with cost and performance metrics"
+  },
+  "fields": {
+    "userId": "User ID",
+    "relatedEntityType": "Related Entity Type",
+    "relatedEntityId": "Related Entity ID",
+    "operation": "Operation",
+    "model": "AI Model",
+    "provider": "Provider",
+    "status": "Status",
+    "tokensUsed": "Tokens Used",
+    "creditsUsed": "Credits Used",
+    "estimatedCost": "Estimated Cost ($)",
+    "balanceAfter": "Balance After",
+    "errorMessage": "Error Message",
+    "createdAt": "Created At",
+    "completedAt": "Completed At"
+  },
+  "operations": {
+    "generate": "Generate",
+    "refine": "Refine",
+    "analyze": "Analyze",
+    "chat": "Chat",
+    "completion": "Completion",
+    "other": "Other"
+  },
+  "providers": {
+    "anthropic": "Anthropic",
+    "openai": "OpenAI",
+    "google": "Google",
+    "azure": "Azure",
+    "other": "Other"
+  },
+  "actions": {
+    "create": "Create History Entry",
+    "edit": "Edit History Entry",
+    "delete": "Delete History Entry",
+    "view": "View History Entry"
+  },
+  "messages": {
+    "created": "History entry created successfully",
+    "updated": "History entry updated successfully",
+    "deleted": "History entry deleted successfully",
+    "error": "An error occurred"
+  },
+  "status": {
+    "pending": "Pending",
+    "processing": "Processing",
+    "completed": "Completed",
+    "failed": "Failed"
+  }
+}

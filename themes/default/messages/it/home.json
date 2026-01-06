@@ -1,0 +1,57 @@
+{
+  "hero": {
+    "badge": "Next.js 15 + Better Auth + shadcn/ui",
+    "title": "Modern NextSpark",
+    "description": "Starter pronto per la produzione con autenticazione, database e bellissimi componenti UI"
+  },
+  "auth": {
+    "authenticated": "Autenticato",
+    "welcomeBack": "Bentornato, {email}",
+    "goToDashboard": "Vai alla Dashboard",
+    "getStarted": "Inizia",
+    "experience": "Sperimenta la potenza dello sviluppo web moderno",
+    "createAccount": "Crea Account",
+    "signIn": "Accedi"
+  },
+  "techStack": {
+    "title": "Stack Tecnologico",
+    "description": "Costruito con le tecnologie piu recenti e potenti",
+    "latest": "Ultimo",
+    "secure": "Sicuro",
+    "supabase": "Supabase",
+    "v5": "v5",
+    "components": "Componenti",
+    "validation": "Validazione",
+    "styling": "Stili",
+    "appRouter": "App Router"
+  },
+  "features": {
+    "title": "Funzionalita",
+    "description": "Tutto cio di cui hai bisogno per costruire un SaaS moderno",
+    "emailAuth": "Autenticazione Email/Password",
+    "googleOAuth": "Google OAuth",
+    "protectedRoutes": "Route Protette",
+    "emailVerification": "Verifica Email",
+    "passwordReset": "Reset Password",
+    "entityManagement": "Sistema Entita",
+    "pluginSystem": "Architettura Plugin",
+    "themeSupport": "Supporto Multi-Tema",
+    "i18nSystem": "Internazionalizzazione",
+    "apiRoutes": "API RESTful",
+    "colorMode": "Modalita Colore",
+    "aiIntegration": "Integrazione IA",
+    "teams": "Team",
+    "memberships": "Abbonamenti",
+    "amplitude": "Amplitude Analytics"
+  },
+  "cta": {
+    "readyToStart": "Pronto per Iniziare?",
+    "description": "Unisciti a migliaia di sviluppatori che si affidano al nostro boilerplate per costruire incredibili applicazioni SaaS piu velocemente.",
+    "viewPricing": "Vedi Prezzi",
+    "startFreeTrial": "Inizia Prova Gratuita"
+  },
+  "footer": {
+    "builtWith": "Costruito con componenti shadcn/ui",
+    "readyForProduction": "Pronto per il deployment in produzione"
+  }
+}

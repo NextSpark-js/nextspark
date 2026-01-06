@@ -1,0 +1,79 @@
+{
+  "productivity": {
+    "name": "Productivity",
+    "description": "A collaborative task management app",
+    "tagline": "Organize your work, together",
+
+    "navigation": {
+      "boards": "Boards",
+      "myCards": "My Cards",
+      "calendar": "Calendar",
+      "team": "Team"
+    },
+
+    "quickActions": {
+      "createBoard": "Create Board",
+      "createCard": "Add Card"
+    },
+
+    "dashboard": {
+      "welcome": "Welcome back!",
+      "welcomeWithName": "Welcome back, {name}!",
+      "overview": "Your Overview",
+      "recentBoards": "Recent Boards",
+      "upcomingDeadlines": "Upcoming Deadlines",
+      "assignedToYou": "Assigned to You",
+      "teamActivity": "Team Activity"
+    },
+
+    "stats": {
+      "totalBoards": "Total Boards",
+      "totalCards": "Total Cards",
+      "cardsCompleted": "Cards Completed",
+      "cardsDueThisWeek": "Due This Week"
+    },
+
+    "empty": {
+      "noBoards": {
+        "title": "No boards yet",
+        "description": "Create your first board to start organizing your work.",
+        "action": "Create your first board"
+      },
+      "noAssignedCards": {
+        "title": "No cards assigned",
+        "description": "Cards assigned to you will appear here."
+      },
+      "noDeadlines": {
+        "title": "No upcoming deadlines",
+        "description": "Cards with due dates will appear here."
+      }
+    },
+
+    "collaboration": {
+      "invite": "Invite Team Member",
+      "inviteDescription": "Invite someone to collaborate on your boards",
+      "teamMembers": "Team Members",
+      "roles": {
+        "owner": "Owner",
+        "member": "Member",
+        "viewer": "Viewer"
+      },
+      "roleDescriptions": {
+        "owner": "Full access to all boards, lists, and cards. Can invite members.",
+        "member": "Can create and edit lists and cards. Cannot delete boards.",
+        "viewer": "Read-only access to all boards, lists, and cards."
+      }
+    },
+
+    "shortcuts": {
+      "title": "Keyboard Shortcuts",
+      "newCard": "New Card",
+      "newBoard": "New Board",
+      "search": "Search",
+      "toggleSidebar": "Toggle Sidebar",
+      "nextList": "Next List",
+      "previousList": "Previous List"
+    }
+  }
+}
+

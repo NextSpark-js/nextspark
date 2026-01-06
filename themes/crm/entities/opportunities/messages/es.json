@@ -1,0 +1,107 @@
+{
+  "entity": {
+    "name": "Oportunidad",
+    "plural": "Oportunidades",
+    "description": "Gestiona oportunidades de venta"
+  },
+  "fields": {
+    "name": {
+      "label": "Nombre",
+      "description": "Nombre de la oportunidad",
+      "placeholder": "Ingrese nombre..."
+    },
+    "companyId": {
+      "label": "Empresa",
+      "description": "Empresa asociada",
+      "placeholder": "Seleccionar empresa..."
+    },
+    "contactId": {
+      "label": "Contacto Principal",
+      "description": "Contacto principal",
+      "placeholder": "Seleccionar contacto..."
+    },
+    "pipelineId": {
+      "label": "Pipeline",
+      "description": "Pipeline de ventas",
+      "placeholder": "Seleccionar pipeline..."
+    },
+    "stageId": {
+      "label": "Etapa",
+      "description": "Etapa actual",
+      "placeholder": "ID de etapa..."
+    },
+    "amount": {
+      "label": "Monto",
+      "description": "Valor del trato",
+      "placeholder": "0.00"
+    },
+    "currency": {
+      "label": "Moneda",
+      "description": "Código de moneda",
+      "placeholder": "Seleccionar moneda..."
+    },
+    "probability": {
+      "label": "Probabilidad (%)",
+      "description": "Probabilidad de ganar",
+      "placeholder": "0"
+    },
+    "expectedRevenue": {
+      "label": "Ingresos Esperados",
+      "description": "Ingresos esperados calculados"
+    },
+    "closeDate": {
+      "label": "Fecha de Cierre",
+      "description": "Fecha esperada de cierre",
+      "placeholder": "Seleccionar fecha..."
+    },
+    "type": {
+      "label": "Tipo",
+      "description": "Tipo de oportunidad",
+      "placeholder": "Seleccionar tipo..."
+    },
+    "source": {
+      "label": "Fuente",
+      "description": "Fuente de la oportunidad",
+      "placeholder": "Seleccionar fuente..."
+    },
+    "status": {
+      "label": "Estado",
+      "description": "Estado actual",
+      "placeholder": "Seleccionar estado..."
+    },
+    "assignedTo": {
+      "label": "Asignado a",
+      "description": "Representante de ventas",
+      "placeholder": "Seleccionar usuario..."
+    }
+  },
+  "options": {
+    "type": {
+      "new_business": "Nuevo Negocio",
+      "existing_business": "Negocio Existente",
+      "renewal": "Renovación",
+      "upgrade": "Actualización",
+      "downgrade": "Reducción"
+    },
+    "status": {
+      "open": "Abierta",
+      "won": "Ganada",
+      "lost": "Perdida",
+      "abandoned": "Abandonada"
+    }
+  },
+  "actions": {
+    "create": "Crear Oportunidad",
+    "edit": "Editar Oportunidad",
+    "delete": "Eliminar Oportunidad",
+    "view": "Ver Oportunidad",
+    "list": "Listar Oportunidades"
+  },
+  "messages": {
+    "created": "Oportunidad creada exitosamente",
+    "updated": "Oportunidad actualizada exitosamente",
+    "deleted": "Oportunidad eliminada exitosamente",
+    "notFound": "Oportunidad no encontrada",
+    "error": "Error al procesar la oportunidad"
+  }
+}

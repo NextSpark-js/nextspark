@@ -1,0 +1,22 @@
+{
+  "name": "@nextsparkjs/theme-default",
+  "version": "0.1.0-beta.1",
+  "private": false,
+  "type": "module",
+  "main": "./config/theme.config.ts",
+  "requiredPlugins": [
+    "@nextsparkjs/plugin-langchain"
+  ],
+  "dependencies": {},
+  "peerDependencies": {
+    "@nextsparkjs/core": "workspace:*",
+    "@tanstack/react-query": "^5.0.0",
+    "lucide-react": "^0.539.0",
+    "next": "^15.0.0",
+    "next-intl": "^4.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-markdown": "^10.1.0",
+    "zod": "^4.0.0"
+  }
+}

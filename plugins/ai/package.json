@@ -1,0 +1,23 @@
+{
+  "name": "@nextsparkjs/plugin-ai",
+  "version": "0.1.0-beta.1",
+  "private": false,
+  "main": "./plugin.config.ts",
+  "requiredPlugins": [],
+  "dependencies": {
+    "@ai-sdk/anthropic": "^2.0.17",
+    "@ai-sdk/openai": "^2.0.32",
+    "@ai-sdk/openai-compatible": "^1.0.18",
+    "ai": "^5.0.46",
+    "ollama-ai-provider": "^1.2.0"
+  },
+  "peerDependencies": {
+    "@nextsparkjs/core": "workspace:*",
+    "@tanstack/react-query": "^5.0.0",
+    "lucide-react": "^0.539.0",
+    "next": "^15.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zod": "^4.0.0"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "save": "Speichern",
+  "cancel": "Abbrechen",
+  "delete": "Loeschen",
+  "edit": "Bearbeiten",
+  "add": "Hinzufuegen",
+  "update": "Aktualisieren",
+  "submit": "Absenden",
+  "close": "Schliessen",
+  "back": "Zurueck",
+  "next": "Weiter",
+  "previous": "Zurueck",
+  "continue": "Fortfahren",
+  "finish": "Abschliessen",
+  "signIn": "Anmelden",
+  "signUp": "Registrieren",
+  "signOut": "Abmelden",
+  "signingOut": "Abmelden..."
+}

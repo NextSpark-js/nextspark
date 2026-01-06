@@ -1,0 +1,56 @@
+{
+  "entity": {
+    "name": "Historial IA",
+    "namePlural": "Historial IA",
+    "description": "Auditoría genérica de interacciones con IA y métricas de costos"
+  },
+  "fields": {
+    "userId": "ID de Usuario",
+    "relatedEntityType": "Tipo de Entidad Relacionada",
+    "relatedEntityId": "ID de Entidad Relacionada",
+    "operation": "Operación",
+    "model": "Modelo IA",
+    "provider": "Proveedor",
+    "status": "Estado",
+    "tokensUsed": "Tokens Usados",
+    "creditsUsed": "Créditos Usados",
+    "estimatedCost": "Costo Estimado ($)",
+    "balanceAfter": "Balance Después",
+    "errorMessage": "Mensaje de Error",
+    "createdAt": "Creado el",
+    "completedAt": "Completado el"
+  },
+  "operations": {
+    "generate": "Generar",
+    "refine": "Refinar",
+    "analyze": "Analizar",
+    "chat": "Chat",
+    "completion": "Completado",
+    "other": "Otro"
+  },
+  "providers": {
+    "anthropic": "Anthropic",
+    "openai": "OpenAI",
+    "google": "Google",
+    "azure": "Azure",
+    "other": "Otro"
+  },
+  "actions": {
+    "create": "Crear Entrada de Historial",
+    "edit": "Editar Entrada de Historial",
+    "delete": "Eliminar Entrada de Historial",
+    "view": "Ver Entrada de Historial"
+  },
+  "messages": {
+    "created": "Entrada de historial creada exitosamente",
+    "updated": "Entrada de historial actualizada exitosamente",
+    "deleted": "Entrada de historial eliminada exitosamente",
+    "error": "Ocurrió un error"
+  },
+  "status": {
+    "pending": "Pendiente",
+    "processing": "Procesando",
+    "completed": "Completado",
+    "failed": "Fallido"
+  }
+}

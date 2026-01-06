@@ -1,0 +1,204 @@
+{
+  "title": "Mis Tareas",
+  "subtitle": "Organiza tu trabajo y mantén el control de tus proyectos.",
+  "description": "Organiza tu trabajo y mantén el control de tus proyectos.",
+  "stats": {
+    "active": "Activas",
+    "completed": "Completadas",
+    "total": "Total de Tareas",
+    "totalDescription": "Todas las tareas del sistema",
+    "pending": "Pendientes",
+    "pendingDescription": "Tareas esperando ser completadas",
+    "overdue": "Vencidas"
+  },
+  "form": {
+    "addTitle": "Agregar Nueva Tarea",
+    "addDescription": "Crea una nueva tarea para mantener el control de lo que necesitas hacer",
+    "titleLabel": "Título de la tarea",
+    "titlePlaceholder": "¿Qué necesitas hacer?",
+    "titleDescription": "Ingresa el título de la nueva tarea. Este campo es obligatorio.",
+    "descriptionLabel": "Descripción de la tarea (opcional)",
+    "descriptionPlaceholder": "Agrega una descripción (opcional)",
+    "descriptionHelp": "Descripción opcional para proporcionar más detalles sobre la tarea.",
+    "addButton": "Agregar Tarea",
+    "adding": "Agregando...",
+    "enterTitle": "Ingresa un título para habilitar el botón de crear tarea",
+    "creating": "Creando tarea, por favor espera",
+    "pressToCreate": "Presiona para crear la nueva tarea",
+    "addSuccess": "¡Tarea agregada exitosamente!",
+    "addError": "Error al agregar tarea",
+    "tryAgain": "Por favor intenta de nuevo más tarde",
+    "taskCreated": "Tarea \"{title}\" creada correctamente",
+    "createError": "Error al crear la tarea \"{title}\""
+  },
+  "task": {
+    "completed": "completada",
+    "active": "activa",
+    "deleteConfirm": "¿Estás seguro de que quieres eliminar esta tarea?",
+    "deleteSuccess": "Tarea eliminada exitosamente",
+    "toggleSuccess": "Estado de tarea actualizado"
+  },
+  "overview": {
+    "title": "Resumen de Tareas",
+    "label": "Resumen de tareas",
+    "activeTasks": "{count} tareas activas",
+    "completedTasks": "{count} tareas completadas",
+    "totalTasks": "{count} tareas en total"
+  },
+  "actions": {
+    "completed": "¡Tarea completada!",
+    "reactivated": "¡Tarea reactivada!",
+    "deleted": "Tarea eliminada",
+    "markCompleted": "completada",
+    "markPending": "pendiente",
+    "taskStatusChanged": "Tarea \"{title}\" {action}",
+    "taskDeleted": "Tarea \"{title}\" eliminada",
+    "toggleError": "Error al cambiar el estado de la tarea \"{title}\"",
+    "deleteError": "Error al eliminar tarea",
+    "updateError": "Error al actualizar tarea"
+  },
+  "status": {
+    "completed": "Completada",
+    "pending": "Pendiente",
+    "active": "Activa",
+    "todo": "Por Hacer",
+    "in-progress": "En Progreso",
+    "review": "En Revisión",
+    "done": "Completada",
+    "blocked": "Bloqueada"
+  },
+  "priority": {
+    "low": "Baja",
+    "medium": "Media",
+    "high": "Alta",
+    "urgent": "Urgente"
+  },
+  "fields": {
+    "status": "Estado",
+    "priority": "Prioridad",
+    "tags": "Etiquetas",
+    "dueDate": "Fecha Límite",
+    "estimatedHours": "Horas Estimadas",
+    "tagsPlaceholder": "Agregar etiquetas...",
+    "dueDatePlaceholder": "Seleccionar fecha límite...",
+    "estimatedHoursPlaceholder": "0",
+    "statusDescription": "Estado actual de la tarea",
+    "priorityDescription": "Nivel de prioridad de la tarea",
+    "tagsDescription": "Etiquetas para categorizar la tarea",
+    "dueDateDescription": "Fecha límite de la tarea",
+    "estimatedHoursDescription": "Tiempo estimado para completar (en horas)"
+  },
+  "sections": {
+    "activeTasks": "Tareas Activas",
+    "completedTasks": "Tareas Completadas"
+  },
+  "empty": {
+    "title": "Aún no tienes tareas",
+    "description": "¡Agrega tu primera tarea arriba para empezar!"
+  },
+  "accessibility": {
+    "taskCard": "Tarea: {title}. {status}. Presiona Enter para ver detalles.",
+    "completedTaskCard": "Tarea completada: {title}. Presiona Enter para ver detalles.",
+    "toggleTask": "Marcar tarea \"{title}\" como {action}",
+    "reactivateTask": "Reactivar tarea completada \"{title}\"",
+    "deleteTask": "Eliminar tarea \"{title}\"",
+    "deleteCompletedTask": "Eliminar tarea completada \"{title}\"",
+    "createdDate": "Creada el {date}",
+    "completedDate": "Completada el {date}"
+  },
+  "time": {
+    "daysAgo": "hace {count} día{count, plural, one {} other {s}}",
+    "hoursAgo": "hace {count} hora{count, plural, one {} other {s}}",
+    "minutesAgo": "hace {count} minuto{count, plural, one {} other {s}}",
+    "justNow": "hace un momento"
+  },
+  "page": {
+    "statsAriaLabel": "Estadísticas de tareas",
+    "listTitle": "Lista de Tareas",
+    "listDescription": "Gestiona tus tareas pendientes y organizate mejor",
+    "today": "Hoy"
+  },
+  "list": {
+    "title": "Lista de Tareas",
+    "description": "Gestiona todas tus tareas en un solo lugar",
+    "allTasks": "Todas las Tareas"
+  },
+  "detail": {
+    "loading": {
+      "message": "Cargando detalles de la tarea",
+      "ariaLabel": "Cargando detalles de la tarea",
+      "srText": "Cargando detalles de la tarea..."
+    },
+    "navigation": {
+      "backToTasks": "Volver a Tareas",
+      "backAriaLabel": "Volver a la lista de tareas",
+      "returnNavigation": "Navegación de retorno",
+      "viewAllTasks": "Ver todas las tareas",
+      "viewAllDescription": "Navegar de vuelta a la lista completa de tareas"
+    },
+    "error": {
+      "notFound": "No se pudo encontrar la tarea solicitada. Es posible que haya sido eliminada o no tengas permisos para verla.",
+      "title": "Tarea no encontrada"
+    },
+    "status": {
+      "completed": "Completada",
+      "pending": "Pendiente",
+      "active": "En progreso",
+      "completedAriaLabel": "Tarea completada",
+      "pendingAriaLabel": "Tarea pendiente"
+    },
+    "priority": {
+      "high": "Alta",
+      "medium": "Media", 
+      "low": "Baja",
+      "label": "Prioridad"
+    },
+    "categories": {
+      "design": "Diseño",
+      "development": "Desarrollo",
+      "meetings": "Reuniones",
+      "documentation": "Documentación",
+      "testing": "Testing",
+      "general": "General"
+    },
+    "sections": {
+      "description": "Descripción",
+      "actions": "Acciones",
+      "information": "Información",
+      "classification": "Clasificación",
+      "metadata": "Metadatos de la tarea"
+    },
+    "actions": {
+      "title": "Acciones",
+      "description": "Gestiona el estado y opciones de esta tarea. Atajos de teclado: Cmd+Enter para completar, Cmd+Backspace para eliminar.",
+      "markPending": "Marcar Pendiente",
+      "markCompleted": "Marcar Completada",
+      "delete": "Eliminar",
+      "markPendingAriaLabel": "Marcar tarea \"{title}\" como pendiente. Atajo: Cmd+Enter",
+      "markCompletedAriaLabel": "Marcar tarea \"{title}\" como completada. Atajo: Cmd+Enter",
+      "deleteAriaLabel": "Eliminar permanentemente la tarea \"{title}\" Atajo: Cmd+Backspace"
+    },
+    "info": {
+      "created": "Creada",
+      "lastUpdate": "Última actualización",
+      "status": "Estado",
+      "priority": "Prioridad",
+      "category": "Categoría",
+      "taskId": "ID de la tarea",
+      "noDescription": "No hay descripción disponible para esta tarea.",
+      "inferredInfo": "Información inferida automáticamente"
+    },
+    "messages": {
+      "taskCompleted": "Tarea \"{title}\" completada correctamente",
+      "taskReactivated": "Tarea \"{title}\" reactivada correctamente", 
+      "taskDeleted": "Tarea \"{title}\" eliminada correctamente",
+      "toggleError": "Error al cambiar el estado de la tarea \"{title}\"",
+      "deleteError": "Error al eliminar la tarea \"{title}\"",
+      "completedToast": "Tarea completada",
+      "reactivatedToast": "Tarea reactivada",
+      "deletedToast": "Tarea eliminada",
+      "updateErrorToast": "Error al actualizar la tarea",
+      "deleteErrorToast": "Error al eliminar la tarea"
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "home": "Inicio",
+  "tasks": "Tarefas",
+  "create": "Criar",
+  "settings": "Ajustes",
+  "more": "Mais",
+  "moreOptions": "Mais Opcoes",
+  "moreOptionsDescription": "Acesse configuracoes e recursos adicionais",
+  "quickCreateDescription": "Crie um novo item",
+  "noEntitiesAvailable": "Nenhum item disponivel para criar",
+  "createNew": "Criar novo",
+  "greeting": "Ola, {name}"
+}

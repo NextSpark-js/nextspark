@@ -1,0 +1,115 @@
+{
+  "entity": {
+    "name": "Pipeline",
+    "plural": "Pipelines",
+    "description": "Manage sales pipelines and stages"
+  },
+  "fields": {
+    "name": {
+      "label": "Pipeline Name",
+      "description": "Pipeline name or title",
+      "placeholder": "Enter pipeline name..."
+    },
+    "description": {
+      "label": "Description",
+      "description": "Pipeline description",
+      "placeholder": "Enter description..."
+    },
+    "type": {
+      "label": "Pipeline Type",
+      "description": "Type of pipeline",
+      "placeholder": "Select type..."
+    },
+    "isDefault": {
+      "label": "Default Pipeline",
+      "description": "Whether this is the default pipeline"
+    },
+    "isActive": {
+      "label": "Active",
+      "description": "Whether pipeline is active"
+    },
+    "stages": {
+      "label": "Stages",
+      "description": "Pipeline stages configuration"
+    },
+    "conversion": {
+      "label": "Conversion Rate (%)",
+      "description": "Overall conversion rate",
+      "placeholder": "0.00"
+    },
+    "averageDealSize": {
+      "label": "Average Deal Size",
+      "description": "Average deal size in pipeline",
+      "placeholder": "0.00"
+    },
+    "averageCycleTime": {
+      "label": "Average Cycle Time (days)",
+      "description": "Average time to close deals",
+      "placeholder": "0"
+    },
+    "totalValue": {
+      "label": "Total Pipeline Value",
+      "description": "Total value of opportunities"
+    },
+    "totalOpportunities": {
+      "label": "Total Opportunities",
+      "description": "Number of opportunities in pipeline"
+    },
+    "winRate": {
+      "label": "Win Rate (%)",
+      "description": "Pipeline win rate percentage",
+      "placeholder": "0.00"
+    },
+    "createdBy": {
+      "label": "Created By",
+      "description": "User who created the pipeline",
+      "placeholder": "Select user..."
+    },
+    "assignedTo": {
+      "label": "Pipeline Owner",
+      "description": "User managing this pipeline",
+      "placeholder": "Select user..."
+    },
+    "createdAt": {
+      "label": "Created At",
+      "description": "When the pipeline was created"
+    },
+    "updatedAt": {
+      "label": "Updated At",
+      "description": "When the pipeline was last updated"
+    }
+  },
+  "options": {
+    "type": {
+      "sales": "Sales Pipeline",
+      "marketing": "Marketing Pipeline",
+      "support": "Support Pipeline",
+      "project": "Project Pipeline",
+      "recruitment": "Recruitment Pipeline",
+      "custom": "Custom Pipeline"
+    }
+  },
+  "actions": {
+    "create": "Create Pipeline",
+    "edit": "Edit Pipeline",
+    "delete": "Delete Pipeline",
+    "view": "View Pipeline",
+    "list": "List Pipelines",
+    "duplicate": "Duplicate Pipeline",
+    "activate": "Activate Pipeline",
+    "deactivate": "Deactivate Pipeline",
+    "setDefault": "Set as Default",
+    "reorder": "Reorder Stages"
+  },
+  "messages": {
+    "created": "Pipeline created successfully",
+    "updated": "Pipeline updated successfully",
+    "deleted": "Pipeline deleted successfully",
+    "activated": "Pipeline activated successfully",
+    "deactivated": "Pipeline deactivated successfully",
+    "setAsDefault": "Pipeline set as default successfully",
+    "stagesReordered": "Pipeline stages reordered successfully",
+    "notFound": "Pipeline not found",
+    "error": "An error occurred while processing the pipeline"
+  }
+}

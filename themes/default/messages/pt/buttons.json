@@ -1,0 +1,19 @@
+{
+  "save": "Salvar",
+  "cancel": "Cancelar",
+  "delete": "Excluir",
+  "edit": "Editar",
+  "add": "Adicionar",
+  "update": "Atualizar",
+  "submit": "Enviar",
+  "close": "Fechar",
+  "back": "Voltar",
+  "next": "Proximo",
+  "previous": "Anterior",
+  "continue": "Continuar",
+  "finish": "Finalizar",
+  "signIn": "Entrar",
+  "signUp": "Cadastrar-se",
+  "signOut": "Sair",
+  "signingOut": "Saindo..."
+}

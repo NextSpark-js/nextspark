@@ -1,0 +1,28 @@
+{
+  "name": "@nextsparkjs/plugin-langchain",
+  "version": "0.1.0-beta.1",
+  "private": false,
+  "main": "./plugin.config.ts",
+  "requiredPlugins": [],
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.36.0",
+    "@langchain/anthropic": "^0.3.0",
+    "@langchain/community": "^0.3.0",
+    "@langchain/core": "^0.3.0",
+    "@langchain/langgraph": "^0.2.0",
+    "@langchain/ollama": "^0.1.0",
+    "@langchain/openai": "^0.3.0",
+    "handlebars": "^4.7.8",
+    "langchain": "^0.3.0"
+  },
+  "peerDependencies": {
+    "@nextsparkjs/core": "workspace:*",
+    "@tanstack/react-query": "^5.0.0",
+    "lucide-react": "^0.539.0",
+    "next": "^15.0.0",
+    "next-intl": "^4.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zod": "^4.0.0"
+  }
+}

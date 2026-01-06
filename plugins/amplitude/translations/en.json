@@ -1,0 +1,45 @@
+{
+  "plugin": {
+    "name": "Amplitude Analytics",
+    "description": "Advanced user analytics and behavioral tracking plugin for SaaS applications."
+  },
+  "consent": {
+    "title": "Privacy Preferences",
+    "description": "We use cookies and other tracking technologies to improve your experience. Please review your preferences.",
+    "category": {
+      "analytics": "Analytics (collects anonymous usage data)",
+      "sessionReplay": "Session Replay (records user sessions for debugging)",
+      "experiments": "A/B Testing (participate in experiments)",
+      "performance": "Performance Monitoring (collects app performance metrics)"
+    },
+    "acceptAll": "Accept All",
+    "rejectAll": "Reject All",
+    "savePreferences": "Save Preferences",
+    "managePreferences": "Manage Privacy Preferences"
+  },
+  "dashboard": {
+    "title": "Amplitude Analytics Dashboard",
+    "description": "Overview of collected analytics data and plugin performance.",
+    "loading": "Loading analytics data...",
+    "error": "Error loading dashboard: {{error}}",
+    "notInitialized": "Amplitude plugin not initialized. Check configuration.",
+    "performanceMetrics": "Performance Metrics"
+  },
+  "experiments": {
+    "variant": "Variant: {{variantName}}",
+    "loading": "Loading experiment..."
+  },
+  "sessionReplay": {
+    "enabled": "Session Replay is enabled.",
+    "disabled": "Session Replay is disabled due to consent or configuration."
+  },
+  "errors": {
+    "apiKeyMissing": "Amplitude API Key is missing or invalid.",
+    "notInitialized": "Amplitude SDK is not initialized.",
+    "offline": "You are offline. Events will be queued.",
+    "trackFailed": "Failed to track event: {{eventType}}",
+    "identifyFailed": "Failed to identify user: {{userId}}",
+    "setUserPropertiesFailed": "Failed to set user properties."
+  }
+}
+

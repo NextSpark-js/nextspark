@@ -1,0 +1,17 @@
+# Tests (not needed in npm package)
+tests/
+*.test.ts
+*.spec.ts
+
+# Development files
+node_modules/
+.turbo/
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,114 @@
+{
+  "entity": {
+    "name": "Note",
+    "plural": "Notes",
+    "description": "Manage notes and documentation"
+  },
+  "fields": {
+    "entityType": {
+      "label": "Related Entity Type",
+      "description": "Type of entity this note is related to",
+      "placeholder": "Select entity type..."
+    },
+    "entityId": {
+      "label": "Related Entity",
+      "description": "Entity this note is related to",
+      "placeholder": "Select entity..."
+    },
+    "title": {
+      "label": "Title",
+      "description": "Note title or subject",
+      "placeholder": "Enter title..."
+    },
+    "content": {
+      "label": "Content",
+      "description": "Note content",
+      "placeholder": "Enter note content..."
+    },
+    "type": {
+      "label": "Note Type",
+      "description": "Type or category of note",
+      "placeholder": "Select type..."
+    },
+    "isPrivate": {
+      "label": "Private Note",
+      "description": "Whether this note is private"
+    },
+    "isPinned": {
+      "label": "Pinned",
+      "description": "Whether this note is pinned"
+    },
+    "tags": {
+      "label": "Tags",
+      "description": "Note tags for categorization",
+      "placeholder": "Enter tags..."
+    },
+    "attachments": {
+      "label": "Attachments",
+      "description": "File attachments"
+    },
+    "reminderDate": {
+      "label": "Reminder Date",
+      "description": "When to be reminded about this note",
+      "placeholder": "Select date..."
+    },
+    "sharedWith": {
+      "label": "Shared With",
+      "description": "Users this note is shared with",
+      "placeholder": "Select users..."
+    },
+    "createdAt": {
+      "label": "Created At",
+      "description": "When the note was created"
+    },
+    "updatedAt": {
+      "label": "Updated At",
+      "description": "When the note was last updated"
+    }
+  },
+  "options": {
+    "entityType": {
+      "lead": "Lead",
+      "contact": "Contact",
+      "company": "Company",
+      "opportunity": "Opportunity",
+      "activity": "Activity",
+      "campaign": "Campaign",
+      "product": "Product"
+    },
+    "type": {
+      "general": "General",
+      "meeting": "Meeting Notes",
+      "call": "Call Notes",
+      "email": "Email Notes",
+      "research": "Research",
+      "todo": "To-Do",
+      "idea": "Idea",
+      "feedback": "Feedback",
+      "issue": "Issue",
+      "solution": "Solution"
+    }
+  },
+  "actions": {
+    "create": "Create Note",
+    "edit": "Edit Note",
+    "delete": "Delete Note",
+    "view": "View Note",
+    "list": "List Notes",
+    "pin": "Pin Note",
+    "unpin": "Unpin Note",
+    "share": "Share Note",
+    "duplicate": "Duplicate Note",
+    "export": "Export Note"
+  },
+  "messages": {
+    "created": "Note created successfully",
+    "updated": "Note updated successfully",
+    "deleted": "Note deleted successfully",
+    "pinned": "Note pinned successfully",
+    "unpinned": "Note unpinned successfully",
+    "shared": "Note shared successfully",
+    "notFound": "Note not found",
+    "error": "An error occurred while processing the note"
+  }
+}

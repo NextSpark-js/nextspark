@@ -1,0 +1,36 @@
+{
+  "title": "AI Usage",
+  "description": "Monitor your AI token usage and costs",
+  "loading": "Loading usage data...",
+  "error": "Error loading usage data",
+  "period": {
+    "today": "Today",
+    "7d": "7 days",
+    "30d": "30 days",
+    "all": "All time"
+  },
+  "stats": {
+    "totalTokens": {
+      "title": "Total Tokens",
+      "input": "input",
+      "output": "output"
+    },
+    "estimatedCost": {
+      "title": "Estimated Cost",
+      "currency": "USD"
+    },
+    "requests": {
+      "title": "Requests",
+      "description": "Total AI requests"
+    }
+  },
+  "usageByModel": {
+    "title": "Usage by Model",
+    "tokens": "tokens"
+  },
+  "dailyUsage": {
+    "title": "Daily Usage",
+    "noData": "No usage data for this period",
+    "tokens": "tokens"
+  }
+}

@@ -1,0 +1,145 @@
+{
+  "entity": {
+    "name": "Campaña",
+    "plural": "Campañas",
+    "description": "Gestiona campañas de marketing y promoción"
+  },
+  "fields": {
+    "name": {
+      "label": "Nombre de Campaña",
+      "description": "Nombre o título de la campaña",
+      "placeholder": "Ingrese nombre..."
+    },
+    "type": {
+      "label": "Tipo",
+      "description": "Tipo de campaña de marketing",
+      "placeholder": "Seleccionar tipo..."
+    },
+    "status": {
+      "label": "Estado",
+      "description": "Estado actual de la campaña",
+      "placeholder": "Seleccionar estado..."
+    },
+    "channel": {
+      "label": "Canal",
+      "description": "Canal de marketing utilizado",
+      "placeholder": "Seleccionar canal..."
+    },
+    "budget": {
+      "label": "Presupuesto",
+      "description": "Presupuesto de la campaña",
+      "placeholder": "0.00"
+    },
+    "spend": {
+      "label": "Gastado",
+      "description": "Cantidad ya gastada",
+      "placeholder": "0.00"
+    },
+    "targetAudience": {
+      "label": "Audiencia Objetivo",
+      "description": "Descripción de la audiencia",
+      "placeholder": "Ingrese audiencia objetivo..."
+    },
+    "startDate": {
+      "label": "Fecha de Inicio",
+      "description": "Fecha de inicio",
+      "placeholder": "Seleccionar fecha..."
+    },
+    "endDate": {
+      "label": "Fecha de Fin",
+      "description": "Fecha de finalización",
+      "placeholder": "Seleccionar fecha..."
+    },
+    "impressions": {
+      "label": "Impresiones",
+      "description": "Número de impresiones",
+      "placeholder": "0"
+    },
+    "clicks": {
+      "label": "Clics",
+      "description": "Número de clics",
+      "placeholder": "0"
+    },
+    "conversions": {
+      "label": "Conversiones",
+      "description": "Número de conversiones",
+      "placeholder": "0"
+    },
+    "ctr": {
+      "label": "CTR (%)",
+      "description": "Porcentaje de clics",
+      "placeholder": "0.00"
+    },
+    "conversionRate": {
+      "label": "Tasa de Conversión (%)",
+      "description": "Porcentaje de conversiones",
+      "placeholder": "0.00"
+    },
+    "roi": {
+      "label": "ROI (%)",
+      "description": "Retorno de inversión",
+      "placeholder": "0.00"
+    },
+    "assignedTo": {
+      "label": "Responsable",
+      "description": "Usuario responsable",
+      "placeholder": "Seleccionar usuario..."
+    }
+  },
+  "options": {
+    "type": {
+      "email": "Email Marketing",
+      "social": "Redes Sociales",
+      "ppc": "Pago por Clic",
+      "content": "Marketing de Contenido",
+      "webinar": "Webinar",
+      "event": "Evento",
+      "referral": "Referidos",
+      "affiliate": "Afiliados",
+      "retargeting": "Retargeting"
+    },
+    "status": {
+      "draft": "Borrador",
+      "scheduled": "Programada",
+      "active": "Activa",
+      "paused": "Pausada",
+      "completed": "Completada",
+      "cancelled": "Cancelada"
+    },
+    "channel": {
+      "email": "Email",
+      "facebook": "Facebook",
+      "instagram": "Instagram",
+      "linkedin": "LinkedIn",
+      "twitter": "Twitter",
+      "google_ads": "Google Ads",
+      "youtube": "YouTube",
+      "tiktok": "TikTok",
+      "website": "Sitio Web",
+      "blog": "Blog",
+      "seo": "SEO",
+      "other": "Otro"
+    }
+  },
+  "actions": {
+    "create": "Crear Campaña",
+    "edit": "Editar Campaña",
+    "delete": "Eliminar Campaña",
+    "view": "Ver Campaña",
+    "list": "Listar Campañas",
+    "launch": "Lanzar Campaña",
+    "pause": "Pausar Campaña",
+    "resume": "Reanudar Campaña",
+    "duplicate": "Duplicar Campaña"
+  },
+  "messages": {
+    "created": "Campaña creada exitosamente",
+    "updated": "Campaña actualizada exitosamente",
+    "deleted": "Campaña eliminada exitosamente",
+    "launched": "Campaña lanzada exitosamente",
+    "paused": "Campaña pausada exitosamente",
+    "resumed": "Campaña reanudada exitosamente",
+    "notFound": "Campaña no encontrada",
+    "error": "Error al procesar la campaña"
+  }
+}

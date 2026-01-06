@@ -1,0 +1,55 @@
+{
+  "entity": {
+    "singular": "Post",
+    "plural": "Posts"
+  },
+  "fields": {
+    "title": {
+      "label": "Title",
+      "placeholder": "Enter post title...",
+      "description": "Post title"
+    },
+    "slug": {
+      "label": "Slug",
+      "placeholder": "post-slug",
+      "description": "URL-friendly identifier"
+    },
+    "status": {
+      "label": "Status",
+      "description": "Publication status",
+      "options": {
+        "draft": "Draft",
+        "published": "Published",
+        "scheduled": "Scheduled",
+        "archived": "Archived"
+      }
+    },
+    "excerpt": {
+      "label": "Excerpt",
+      "placeholder": "Brief description...",
+      "description": "Short summary shown in listings"
+    },
+    "featuredImage": {
+      "label": "Featured Image",
+      "description": "Main image for the post"
+    },
+    "categories": {
+      "label": "Categories",
+      "placeholder": "Select categories...",
+      "description": "Post categories"
+    }
+  },
+  "actions": {
+    "create": "Create Post",
+    "edit": "Edit Post",
+    "delete": "Delete Post",
+    "publish": "Publish",
+    "unpublish": "Unpublish"
+  },
+  "messages": {
+    "created": "Post created successfully",
+    "updated": "Post updated successfully",
+    "deleted": "Post deleted successfully",
+    "published": "Post published successfully"
+  }
+}

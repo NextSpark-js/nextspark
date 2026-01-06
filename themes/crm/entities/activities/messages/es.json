@@ -1,0 +1,123 @@
+{
+  "entity": {
+    "name": "Actividad",
+    "plural": "Actividades",
+    "description": "Rastrea interacciones y comunicaciones"
+  },
+  "fields": {
+    "entityType": {
+      "label": "Tipo de Entidad",
+      "description": "Tipo de entidad relacionada",
+      "placeholder": "Seleccionar tipo..."
+    },
+    "entityId": {
+      "label": "Entidad Relacionada",
+      "description": "Entidad relacionada",
+      "placeholder": "Seleccionar entidad..."
+    },
+    "type": {
+      "label": "Tipo",
+      "description": "Tipo de actividad",
+      "placeholder": "Seleccionar tipo..."
+    },
+    "subject": {
+      "label": "Asunto",
+      "description": "Asunto o título",
+      "placeholder": "Ingrese asunto..."
+    },
+    "description": {
+      "label": "Descripción",
+      "description": "Descripción detallada",
+      "placeholder": "Ingrese descripción..."
+    },
+    "status": {
+      "label": "Estado",
+      "description": "Estado actual",
+      "placeholder": "Seleccionar estado..."
+    },
+    "priority": {
+      "label": "Prioridad",
+      "description": "Nivel de prioridad",
+      "placeholder": "Seleccionar prioridad..."
+    },
+    "dueDate": {
+      "label": "Fecha Límite",
+      "description": "Cuándo vence la actividad",
+      "placeholder": "Seleccionar fecha..."
+    },
+    "completedAt": {
+      "label": "Completada el",
+      "description": "Cuándo se completó"
+    },
+    "duration": {
+      "label": "Duración (minutos)",
+      "description": "Duración en minutos",
+      "placeholder": "0"
+    },
+    "outcome": {
+      "label": "Resultado",
+      "description": "Resultado de la actividad",
+      "placeholder": "Seleccionar resultado..."
+    },
+    "assignedTo": {
+      "label": "Asignado a",
+      "description": "Usuario asignado",
+      "placeholder": "Seleccionar usuario..."
+    }
+  },
+  "options": {
+    "entityType": {
+      "lead": "Lead",
+      "contact": "Contacto",
+      "company": "Empresa",
+      "opportunity": "Oportunidad"
+    },
+    "type": {
+      "call": "Llamada",
+      "email": "Email",
+      "meeting": "Reunión",
+      "task": "Tarea",
+      "note": "Nota",
+      "demo": "Demo",
+      "proposal": "Propuesta",
+      "follow_up": "Seguimiento"
+    },
+    "status": {
+      "pending": "Pendiente",
+      "in_progress": "En Progreso",
+      "completed": "Completada",
+      "cancelled": "Cancelada",
+      "deferred": "Diferida"
+    },
+    "priority": {
+      "low": "Baja",
+      "medium": "Media",
+      "high": "Alta",
+      "urgent": "Urgente"
+    },
+    "outcome": {
+      "successful": "Exitosa",
+      "partially_successful": "Parcialmente Exitosa",
+      "unsuccessful": "No Exitosa",
+      "no_response": "Sin Respuesta",
+      "reschedule": "Reprogramar"
+    }
+  },
+  "actions": {
+    "create": "Crear Actividad",
+    "edit": "Editar Actividad",
+    "delete": "Eliminar Actividad",
+    "view": "Ver Actividad",
+    "list": "Listar Actividades",
+    "complete": "Marcar Completa",
+    "schedule": "Programar Actividad"
+  },
+  "messages": {
+    "created": "Actividad creada exitosamente",
+    "updated": "Actividad actualizada exitosamente",
+    "deleted": "Actividad eliminada exitosamente",
+    "completed": "Actividad marcada como completada",
+    "notFound": "Actividad no encontrada",
+    "error": "Error al procesar la actividad"
+  }
+}

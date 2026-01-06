@@ -1,0 +1,102 @@
+{
+  "hero": {
+    "badge": "Precos",
+    "title": "Planos para cada",
+    "titleAccent": "equipe",
+    "description": "Comece gratis e escale quando sua equipe crescer. Todos os planos incluem nossos recursos principais."
+  },
+  "plans": {
+    "free": {
+      "name": "Gratuito",
+      "description": "Perfeito para comecar",
+      "price": "0",
+      "period": "para sempre",
+      "cta": "Comecar Gratis",
+      "features": {
+        "users": "1 Usuario",
+        "projects": "5 Projetos",
+        "storage": "1GB Armazenamento",
+        "support": "Suporte Basico",
+        "api": "Acesso API",
+        "analytics": "Analytics Avancado",
+        "prioritySupport": "Suporte Prioritario",
+        "integrations": "Integracoes Personalizadas"
+      }
+    },
+    "pro": {
+      "name": "Pro",
+      "description": "Melhor para equipes em crescimento",
+      "price": "29",
+      "period": "mes",
+      "badge": "Mais Popular",
+      "cta": "Comecar Teste Pro",
+      "features": {
+        "users": "10 Usuarios",
+        "projects": "Projetos Ilimitados",
+        "storage": "100GB Armazenamento",
+        "support": "Suporte Prioritario",
+        "api": "Acesso API",
+        "analytics": "Analytics Avancado",
+        "integrations": "Integracoes Personalizadas",
+        "manager": "Gerente Dedicado"
+      }
+    },
+    "enterprise": {
+      "name": "Enterprise",
+      "description": "Para organizacoes grandes",
+      "price": "99",
+      "period": "mes",
+      "cta": "Contatar Vendas",
+      "features": {
+        "users": "Usuarios Ilimitados",
+        "projects": "Projetos Ilimitados",
+        "storage": "1TB Armazenamento",
+        "support": "Suporte Dedicado",
+        "api": "Acesso API",
+        "analytics": "Analytics Avancado",
+        "integrations": "Integracoes Personalizadas",
+        "manager": "Gerente Dedicado"
+      }
+    }
+  },
+  "comparison": {
+    "title": "Comparacao Detalhada",
+    "description": "Veja todos os recursos incluidos em cada plano para tomar a melhor decisao.",
+    "collaboration": {
+      "title": "Colaboracao",
+      "description": "Ferramentas para trabalhar em equipe de forma eficiente com permissoes granulares."
+    },
+    "storage": {
+      "title": "Armazenamento",
+      "description": "Armazenamento seguro e escalavel para todos os seus projetos e arquivos."
+    },
+    "security": {
+      "title": "Seguranca",
+      "description": "Criptografia de ponta a ponta e conformidade com padroes de seguranca."
+    },
+    "support": {
+      "title": "Suporte",
+      "description": "Suporte tecnico especializado para resolver qualquer duvida ou problema."
+    }
+  },
+  "faq": {
+    "title": "Perguntas Frequentes",
+    "description": "Respondemos as duvidas mais comuns sobre nossos planos e precos.",
+    "questions": {
+      "changePlan": "Posso mudar de plano a qualquer momento?",
+      "changePlanAnswer": "Sim, voce pode mudar seu plano a qualquer momento pelo seu painel. As mudancas sao aplicadas imediatamente.",
+      "setupCost": "Ha algum custo de configuracao?",
+      "setupCostAnswer": "Nao, todos os nossos planos incluem configuracao gratuita e suporte durante a implementacao.",
+      "paymentMethods": "Quais metodos de pagamento voces aceitam?",
+      "paymentMethodsAnswer": "Aceitamos todos os principais cartoes de credito, PayPal e transferencias bancarias para planos Enterprise.",
+      "annualDiscount": "Ha descontos para pagamento anual?",
+      "annualDiscountAnswer": "Sim, oferecemos 2 meses gratis ao pagar anualmente nos planos Pro e Enterprise."
+    }
+  },
+  "cta": {
+    "title": "Pronto para comecar?",
+    "description": "Junte-se a milhares de equipes que ja confiam em nossa plataforma para seus projetos.",
+    "startFree": "Comecar Gratis",
+    "contactSales": "Contatar Vendas"
+  }
+}
