@@ -1,0 +1,18 @@
+{
+  "home": {
+    "hero": {
+      "title": "Willkommen in Ihrer App",
+      "description": "Eine moderne SaaS-Anwendung gebaut mit NextSpark",
+      "cta": "Loslegen"
+    },
+    "features": {
+      "title": "Funktionen",
+      "subtitle": "Alles was Sie brauchen um Ihr SaaS zu bauen"
+    }
+  },
+  "footer": {
+    "copyright": "Alle Rechte vorbehalten.",
+    "privacyPolicy": "Datenschutzrichtlinie",
+    "termsOfService": "Nutzungsbedingungen"
+  }
+}

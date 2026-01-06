@@ -1,0 +1,18 @@
+{
+  "home": {
+    "hero": {
+      "title": "Welcome to Your App",
+      "description": "A modern SaaS application built with NextSpark",
+      "cta": "Get Started"
+    },
+    "features": {
+      "title": "Features",
+      "subtitle": "Everything you need to build your SaaS"
+    }
+  },
+  "footer": {
+    "copyright": "All rights reserved.",
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service"
+  }
+}
