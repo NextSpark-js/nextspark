@@ -1,15 +1,15 @@
 #!/bin/bash
-# setup-claude.sh
+# claude.sh
 # Creates symlinks from root .claude/ to repo/.claude/ for Claude Code configuration
 #
 # Run this script after cloning the repository to set up Claude Code configuration.
-# Usage: ./repo/scripts/setup-claude.sh
+# Usage: ./scripts/setup/claude.sh or pnpm setup:claude
 
 set -e
 
-# Get the project root (two levels up from this script)
+# Get the project root (three levels up from this script: setup -> scripts -> repo)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
 CLAUDE_ROOT="$PROJECT_ROOT/.claude"
 CLAUDE_REPO="$PROJECT_ROOT/repo/.claude"
