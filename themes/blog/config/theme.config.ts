@@ -14,16 +14,6 @@ export const blogThemeConfig: ThemeConfig = {
   description: 'A multi-author blog platform with single-user mode',
   author: 'NextSpark Team',
 
-  // Teams configuration for multi-author platform with single-user mode
-  teams: {
-    mode: 'single-user',
-    options: {
-      maxTeamsPerUser: 1,
-      maxMembersPerTeam: 1,
-      allowLeaveAllTeams: false
-    }
-  },
-
   plugins: [],
 
   // Styles configuration
@@ -107,7 +97,7 @@ export const blogThemeConfig: ThemeConfig = {
     },
 
     // Warm shadows
-    breakpoints: {
+    shadows: {
       'shadow-2xs': '0px 2px 3px 0px hsl(28 18% 25% / 0.09)',
       'shadow-xs': '0px 2px 3px 0px hsl(28 18% 25% / 0.09)',
       'shadow-sm': '0px 2px 3px 0px hsl(28 18% 25% / 0.18), 0px 1px 2px -1px hsl(28 18% 25% / 0.18)',

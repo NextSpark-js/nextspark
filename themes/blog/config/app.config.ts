@@ -35,36 +35,9 @@ export const APP_CONFIG_OVERRIDES = {
   },
 
   // =============================================================================
-  // TOPBAR CONFIGURATION
-  // =============================================================================
-  topbar: {
-    features: {
-      quickCreate: true,
-      search: false, // No search in MVP
-      notifications: false,
-      help: false,
-      theme: true,
-      sector7: false,
-      userMenu: true,
-    },
-  },
-
-  // =============================================================================
-  // SETTINGS PAGES CONFIGURATION
-  // =============================================================================
-  settings: {
-    pages: {
-      profile: { enabled: true, order: 1 },
-      billing: { enabled: true, order: 2 }, // Billing enabled for Pro/Enterprise plans
-      apiKeys: { enabled: false },
-      password: { enabled: true, order: 3 },
-      teams: { enabled: false }, // Hidden in single-user mode
-    },
-  },
-
-  // =============================================================================
   // INTERNATIONALIZATION
   // =============================================================================
+  // Note: topbar and settings configuration is defined in dashboard.config.ts
   i18n: {
     supportedLocales: ['en', 'es'],
     defaultLocale: 'en' as const,
