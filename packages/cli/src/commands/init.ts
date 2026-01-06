@@ -15,6 +15,9 @@ interface InitOptions {
   plugins?: string;
   yes?: boolean;
   registriesOnly?: boolean;
+  name?: string;
+  slug?: string;
+  description?: string;
 }
 
 /**
@@ -209,6 +212,9 @@ export async function initCommand(options: InitOptions): Promise<void> {
     theme: options.theme as ThemeOption | undefined,
     plugins: parsePlugins(options.plugins),
     yes: options.yes,
+    name: options.name,
+    slug: options.slug,
+    description: options.description,
   };
 
   await runWizard(wizardOptions);

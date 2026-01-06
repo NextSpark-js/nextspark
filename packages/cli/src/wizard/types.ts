@@ -96,6 +96,10 @@ export interface CLIOptions {
   theme?: ThemeOption
   plugins?: PluginOption[]
   yes?: boolean // Skip confirmations for automation
+  // Project info for non-interactive mode
+  name?: string
+  slug?: string
+  description?: string
 }
 
 /**

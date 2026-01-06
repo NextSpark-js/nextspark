@@ -79,6 +79,9 @@ program
   .option('--plugins <list>', 'Pre-select plugins (comma-separated)')
   .option('-y, --yes', 'Skip confirmations')
   .option('--registries-only', 'Only create registries (no wizard)')
+  .option('--name <name>', 'Project name (non-interactive mode)')
+  .option('--slug <slug>', 'Project slug (non-interactive mode)')
+  .option('--description <desc>', 'Project description (non-interactive mode)')
   .action(initCommand);
 
 // Add plugin command

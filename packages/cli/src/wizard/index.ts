@@ -23,6 +23,30 @@ import { installThemeAndPlugins } from './generators/theme-plugins-installer.js'
 import { showConfigPreview } from './preview.js'
 
 /**
+ * Project info type for non-interactive mode
+ */
+interface ProjectInfo {
+  projectName: string
+  projectSlug: string
+  projectDescription: string
+}
+
+/**
+ * Get project info from CLI options for non-interactive mode
+ * Returns null if any required field is missing
+ */
+function getProjectInfoFromOptions(options: CLIOptions): ProjectInfo | null {
+  if (options.name && options.slug && options.description) {
+    return {
+      projectName: options.name,
+      projectSlug: options.slug,
+      projectDescription: options.description,
+    }
+  }
+  return null
+}
+
+/**
  * Run the complete wizard with mode support
  */
 export async function runWizard(options: CLIOptions = { mode: 'interactive' }): Promise<void> {
@@ -66,7 +90,7 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
 
     if (options.preset) {
       // Preset mode: get project info then apply preset
-      config = await runPresetMode(options.preset)
+      config = await runPresetMode(options.preset, options)
     } else {
       // Run prompts based on mode
       switch (options.mode) {
@@ -89,17 +113,19 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
     // Show interactive preview of files to be created
     showConfigPreview(config)
 
-    // Ask for confirmation before proceeding
-    console.log('')
-    const proceed = await confirm({
-      message: 'Proceed with project generation?',
-      default: true,
-    })
-
-    if (!proceed) {
+    // Ask for confirmation before proceeding (skip with --yes flag)
+    if (!options.yes) {
       console.log('')
-      showInfo('Project generation cancelled. No changes were made.')
-      process.exit(0)
+      const proceed = await confirm({
+        message: 'Proceed with project generation?',
+        default: true,
+      })
+
+      if (!proceed) {
+        console.log('')
+        showInfo('Project generation cancelled. No changes were made.')
+        process.exit(0)
+      }
     }
 
     // Copy .npmrc first (required for pnpm hoist pattern consistency)
@@ -166,18 +192,31 @@ function showModeIndicator(options: CLIOptions): void {
 
 /**
  * Run preset mode: only project info, then apply preset defaults
+ * Supports non-interactive mode when CLI options provide all project info
  */
-async function runPresetMode(presetName: CLIOptions['preset']): Promise<WizardConfig> {
+async function runPresetMode(presetName: CLIOptions['preset'], options: CLIOptions): Promise<WizardConfig> {
   if (!presetName) {
     throw new Error('Preset name is required for preset mode')
   }
 
-  showSection('Project Information', 1, 1)
-  showInfo('Using preset defaults. Only project information is required.')
-  console.log('')
+  // Check for non-interactive mode
+  const projectInfoFromOptions = getProjectInfoFromOptions(options)
 
-  // Get project info from user
-  const projectInfo = await promptProjectInfo()
+  let projectInfo: ProjectInfo
+
+  if (projectInfoFromOptions) {
+    // Non-interactive mode: use CLI options
+    projectInfo = projectInfoFromOptions
+    showInfo(`Project: ${projectInfo.projectName} (${projectInfo.projectSlug})`)
+  } else {
+    // Interactive mode: prompt for project info
+    showSection('Project Information', 1, 1)
+    showInfo('Using preset defaults. Only project information is required.')
+    console.log('')
+
+    // Get project info from user
+    projectInfo = await promptProjectInfo()
+  }
 
   // Apply preset to project info
   const config = applyPreset(projectInfo, presetName)

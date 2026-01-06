@@ -18,8 +18,11 @@ export class EmailFactory {
   private static instance: EmailProvider | null = null;
 
   static create(options: EmailFactoryOptions = {}): EmailProvider {
-    const { 
-      provider = 'auto',
+    // Read provider from environment if not specified in options
+    const envProvider = process.env.EMAIL_PROVIDER as EmailProviderType | undefined;
+
+    const {
+      provider = envProvider || 'auto',
       resendApiKey = process.env.RESEND_API_KEY,
       defaultFrom,
       consoleOptions

@@ -2,12 +2,18 @@ import path from 'node:path'
 import fs from 'fs-extra'
 import chalk from 'chalk'
 import ora from 'ora'
-import { execSync } from 'node:child_process'
+import { execSync, spawnSync } from 'node:child_process'
 
 export interface ProjectOptions {
   projectName: string
   projectPath: string
   preset?: string
+  name?: string
+  slug?: string
+  description?: string
+  theme?: string
+  plugins?: string
+  yes?: boolean
 }
 
 export async function createProject(options: ProjectOptions): Promise<void> {
@@ -58,11 +64,40 @@ export async function createProject(options: ProjectOptions): Promise<void> {
   console.log(chalk.blue('  Starting NextSpark wizard...'))
   console.log()
 
-  const presetArg = preset ? ` --preset=${preset}` : ''
-  execSync(`npx nextspark init${presetArg}`, {
+  // Build init command with all flags
+  // Use array format for proper handling of values with spaces
+  const initArgs: string[] = ['nextspark', 'init']
+  if (preset) {
+    initArgs.push('--preset', preset)
+  }
+  if (options.name) {
+    initArgs.push('--name', options.name)
+  }
+  if (options.slug) {
+    initArgs.push('--slug', options.slug)
+  }
+  if (options.description) {
+    initArgs.push('--description', options.description)
+  }
+  if (options.theme) {
+    initArgs.push('--theme', options.theme)
+  }
+  if (options.plugins) {
+    initArgs.push('--plugins', options.plugins)
+  }
+  if (options.yes) {
+    initArgs.push('--yes')
+  }
+
+  // Use spawnSync to properly handle arguments with spaces
+  const result = spawnSync('npx', initArgs, {
     cwd: projectPath,
     stdio: 'inherit', // Interactive mode
   })
+
+  if (result.status !== 0) {
+    throw new Error(`Wizard failed with exit code ${result.status}`)
+  }
 
   // Install all dependencies added by wizard
   const installSpinner = ora('  Installing dependencies...').start()
