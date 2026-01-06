@@ -47,18 +47,13 @@ const themeConfig = THEME_REGISTRY[activeTheme as keyof typeof THEME_REGISTRY]
 const customSidebarSections: CustomSidebarSection[] = themeConfig?.appConfig?.customSidebarSections || []
 
 // Core navigation items that are always present (static)
+// Note: Entity-based items (like "pages") are handled dynamically via entityItems
 const coreItems: NavigationItem[] = [
   {
     name: 'dashboard',
     href: '/dashboard',
     icon: Home,
     descriptionKey: 'dashboard'
-  },
-  {
-    name: 'pages',
-    href: '/dashboard/pages',
-    icon: FileText,
-    descriptionKey: 'pages'
   },
 ]
 
