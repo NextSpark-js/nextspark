@@ -1,0 +1,40 @@
+{
+  "project": {
+    "name": "Saas Boilerplate",
+    "isCore": true
+  },
+  "testing": {
+    "superadmin": {
+      "email": "superadmin@cypress.com",
+      "password": "Pandora1234"
+    },
+    "apiKey": "sk_test_62fc9942407698cbe1d637c2ea91b5cf3e3e50b9052c432087a7f06f14173f62"
+  },
+  "tools": {
+    "clickup": {
+      "apiToken": "CLICKUP_API_TOKEN",
+      "workspaceId": "90132320273",
+      "space": {
+        "name": "CLICKUP_SPACE_NAME",
+        "id": "90139892186"
+      },
+      "defaultList": {
+        "name": "CLICKUP_DEFAULT_LIST_NAME",
+        "id": "901318980252"
+      },
+      "user": {
+        "name": "Pablo Capello",
+        "id": "3020828"
+      },
+      "notificationsChannel": {
+        "name": "CLICKUP_NOTIF_CHANNEL_NAME",
+        "id": "CLICKUP_NOTIF_CHANNEL_ID"
+      },
+      "_docs": {
+        "mcp": ".claude/tools/clickup/mcp.md",
+        "api": ".claude/tools/clickup/api.md",
+        "taskTemplate": ".claude/tools/clickup/templates/task.md"
+      }
+    }
+  }
+}
