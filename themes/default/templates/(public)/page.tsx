@@ -69,7 +69,7 @@ function Home() {
                       <span className="text-sm font-medium">{t('auth.authenticated')}</span>
                     </div>
                     <p className="text-lg">
-                      {t('auth.welcomeBack', { email: user.email })}
+                      {t('auth.welcomeBack', { email: user.email || '' })}
                     </p>
                     <Link href="/dashboard">
                       <Button size="lg" className="gap-2">
