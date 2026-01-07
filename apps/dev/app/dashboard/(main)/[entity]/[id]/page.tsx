@@ -1,9 +1,14 @@
 import { notFound, redirect } from 'next/navigation'
-import { getEntity, getEntityRegistry, getChildEntities } from '@nextsparkjs/core/lib/entities/queries'
+import { getEntity, getEntityRegistry, getChildEntities, setEntityRegistry } from '@nextsparkjs/core/lib/entities/queries'
 import { EntityDetailWrapper } from '@nextsparkjs/core/components/entities/wrappers/EntityDetailWrapper'
 import type { Metadata } from 'next'
 import { TemplateService } from '@nextsparkjs/core/lib/services/template.service'
 import type { EntityConfig, ChildEntityDefinition } from '@nextsparkjs/core/lib/entities/types'
+// Import registry directly - webpack resolves @nextsparkjs/registries alias at compile time
+import { ENTITY_REGISTRY, ENTITY_METADATA } from '@nextsparkjs/registries/entity-registry'
+
+// Initialize registry at module load time (before any component renders)
+setEntityRegistry(ENTITY_REGISTRY, ENTITY_METADATA)
 
 // Type guard to check if entity is a full EntityConfig
 function isEntityConfig(entity: EntityConfig | ChildEntityDefinition): entity is EntityConfig {
