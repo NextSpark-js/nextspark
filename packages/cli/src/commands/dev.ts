@@ -22,9 +22,11 @@ export async function devCommand(options: DevOptions): Promise<void> {
 
     // Start registry watcher if enabled
     if (options.registry) {
-      console.log(chalk.blue('\n[Registry] Starting registry watcher...'));
+      console.log(chalk.blue('\n[Registry] Starting registry builder with watch mode...'));
 
-      const registryProcess = spawn('node', ['scripts/registry-watch.js'], {
+      // Use the unified registry builder with watch mode
+      // It loads .env internally via dotenv, so NEXT_PUBLIC_ACTIVE_THEME is available
+      const registryProcess = spawn('node', ['scripts/build/registry.mjs', '--watch'], {
         cwd: coreDir,
         stdio: 'inherit',
         env: {

@@ -30,42 +30,23 @@ export const DEV_CONFIG_OVERRIDES: DevConfig = {
     enabled: true,
     users: [
       // ========================================
-      // STARTER THEME TEST USERS
+      // STARTER THEME - INITIAL USERS ONLY
+      // These are the only users that exist after init.
+      // Additional users are created via sample data migrations.
       // ========================================
       {
         id: 'superadmin',
-        email: 'superadmin@starter.dev',
+        email: 'superadmin@nextspark.dev',
         name: 'Super Admin',
-        password: 'Test1234',
-        teamRoles: 'Starter Team (owner) - SUPERADMIN ROLE',
+        password: 'Pandora1234',
+        teamRoles: 'Initial Team (owner) - SUPERADMIN ROLE',
       },
       {
         id: 'developer',
-        email: 'developer@starter.dev',
+        email: 'developer@nextspark.dev',
         name: 'Developer',
-        password: 'Test1234',
-        teamRoles: 'Starter Team (admin) - DEVELOPER ROLE',
-      },
-      {
-        id: 'owner',
-        email: 'owner@starter.dev',
-        name: 'Team Owner',
-        password: 'Test1234',
-        teamRoles: 'Starter Team (owner)',
-      },
-      {
-        id: 'admin',
-        email: 'admin@starter.dev',
-        name: 'Team Admin',
-        password: 'Test1234',
-        teamRoles: 'Starter Team (admin)',
-      },
-      {
-        id: 'member',
-        email: 'member@starter.dev',
-        name: 'Team Member',
-        password: 'Test1234',
-        teamRoles: 'Starter Team (member)',
+        password: 'Pandora1234',
+        teamRoles: 'Initial Team (admin) - DEVELOPER ROLE',
       },
     ],
   },

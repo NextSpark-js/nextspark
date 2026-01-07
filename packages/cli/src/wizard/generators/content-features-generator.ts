@@ -2,8 +2,9 @@
  * Content Features Generator
  *
  * Copies optional entities and blocks based on content feature selections:
- * - Pages: Copies pages entity (hero block already in starter)
+ * - Pages: Copies pages entity + hero block
  * - Blog: Copies posts entity + post-content block
+ * - Neither: No entities or blocks are copied
  */
 
 import fs from 'fs-extra'
@@ -57,23 +58,31 @@ function getTargetThemeDir(projectSlug: string): string {
 }
 
 /**
- * Copy pages feature (entity only, hero block already in starter)
+ * Copy pages feature (pages entity + hero block)
  */
 async function copyPagesFeature(config: WizardConfig): Promise<void> {
   const featuresDir = getFeaturesDir()
   const targetThemeDir = getTargetThemeDir(config.projectSlug)
 
+  // Copy pages entity
   const sourcePagesEntity = path.join(featuresDir, 'pages', 'entities', 'pages')
   const targetEntitiesDir = path.join(targetThemeDir, 'entities', 'pages')
 
-  // Check if source exists
-  if (!await fs.pathExists(sourcePagesEntity)) {
+  if (await fs.pathExists(sourcePagesEntity)) {
+    await fs.copy(sourcePagesEntity, targetEntitiesDir)
+  } else {
     console.warn(`Warning: Pages entity not found at: ${sourcePagesEntity}`)
-    return
   }
 
-  // Copy pages entity
-  await fs.copy(sourcePagesEntity, targetEntitiesDir)
+  // Copy hero block
+  const sourceHeroBlock = path.join(featuresDir, 'pages', 'blocks', 'hero')
+  const targetHeroBlock = path.join(targetThemeDir, 'blocks', 'hero')
+
+  if (await fs.pathExists(sourceHeroBlock)) {
+    await fs.copy(sourceHeroBlock, targetHeroBlock)
+  } else {
+    console.warn(`Warning: Hero block not found at: ${sourceHeroBlock}`)
+  }
 }
 
 /**
@@ -108,10 +117,10 @@ async function copyBlogFeature(config: WizardConfig): Promise<void> {
  * Copy content features based on wizard configuration
  *
  * Combinations:
- * - Neither: No additional entities/blocks copied
- * - Pages only: pages entity copied (hero already in starter)
+ * - Neither: No entities or blocks copied
+ * - Pages only: pages entity + hero block copied
  * - Blog only: posts entity + post-content block copied
- * - Both: pages entity + posts entity + post-content block copied
+ * - Both: pages entity + hero block + posts entity + post-content block copied
  */
 export async function copyContentFeatures(config: WizardConfig): Promise<void> {
   // Skip if no content features are enabled

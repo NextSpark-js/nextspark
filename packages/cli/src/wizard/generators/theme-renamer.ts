@@ -119,7 +119,11 @@ export async function updateThemeConfig(config: WizardConfig): Promise<void> {
 }
 
 /**
- * Update dev.config.ts with new email domain
+ * Update dev.config.ts comments only
+ *
+ * NOTE: The dev keyring users (superadmin, developer) are created by core migrations
+ * with fixed credentials (@nextspark.dev, Pandora1234). These should NOT be modified
+ * as they are the only users that exist at init time.
  */
 export async function updateDevConfig(config: WizardConfig): Promise<void> {
   const devConfigPath = path.join(getTargetThemesDir(), config.projectSlug, 'config', 'dev.config.ts')
@@ -131,13 +135,10 @@ export async function updateDevConfig(config: WizardConfig): Promise<void> {
 
   let content = await fs.readFile(devConfigPath, 'utf-8')
 
-  // Replace @starter.dev with @{slug}.dev
-  content = content.replace(/@starter\.dev/g, `@${config.projectSlug}.dev`)
-
-  // Update comments referencing "Starter"
+  // Only update comments - DO NOT modify user emails/passwords
+  // The initial users (superadmin, developer) come from core with fixed credentials
   content = content.replace(/STARTER THEME/g, `${config.projectName.toUpperCase()}`)
   content = content.replace(/Starter Theme/g, config.projectName)
-  content = content.replace(/Starter Team/g, `${config.projectName} Team`)
 
   await fs.writeFile(devConfigPath, content, 'utf-8')
 }

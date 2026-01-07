@@ -166,7 +166,7 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
     }).start()
 
     try {
-      execSync('pnpm install', {
+      execSync('pnpm install --force', {
         cwd: process.cwd(),
         stdio: 'pipe',
       })
@@ -174,6 +174,29 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
     } catch (error) {
       installSpinner.fail('Failed to install dependencies')
       console.log(chalk.yellow('  Run "pnpm install" manually to install dependencies'))
+    }
+
+    // Build registries using the core's registry builder
+    const registrySpinner = ora({
+      text: 'Building registries...',
+      prefixText: '  ',
+    }).start()
+
+    try {
+      const projectRoot = process.cwd()
+      const registryScript = join(projectRoot, 'node_modules/@nextsparkjs/core/scripts/build/registry.mjs')
+      execSync(`node "${registryScript}" --build`, {
+        cwd: projectRoot,
+        stdio: 'pipe',
+        env: {
+          ...process.env,
+          NEXTSPARK_PROJECT_ROOT: projectRoot,
+        },
+      })
+      registrySpinner.succeed('Registries built!')
+    } catch (error) {
+      registrySpinner.fail('Failed to build registries')
+      console.log(chalk.yellow('  Registries will be built automatically when you run "pnpm dev"'))
     }
 
     // Show next steps
