@@ -27,17 +27,32 @@ import type {
   EntityConfigValidation,
 } from './types'
 import type { UserRole } from '../../types/user.types'
-import { getRegisteredEntities } from './queries'
+import {
+  getEntityBySlug,
+  getRegisteredEntities,
+  addEntityToRegistry,
+  removeEntityFromRegistry,
+  clearEntityRegistry,
+  isRegistryInitialized,
+  type EntityRegistryEntry,
+} from './queries'
 
 /**
  * EntityRegistry - Central management system for all entities
+ *
+ * ARCHITECTURE: This class is now a FACADE that delegates to the singleton
+ * in queries.ts. There is NO internal Map - all data comes from the shared
+ * singleton which is populated by the layout via setEntityRegistry().
+ *
+ * This unification ensures:
+ * - API handlers see the same entities as client components
+ * - Works in both monorepo and npm modes
+ * - No require() calls that fail in pre-compiled npm packages
  */
 export class EntityRegistry {
-  private entities: Map<string, EntityConfig> = new Map()
-  private initialized = false
-
   /**
    * Register a new entity configuration
+   * Adds to the singleton in queries.ts
    */
   register(config: EntityConfig): void {
     const validation = this.validateConfiguration(config)
@@ -45,7 +60,17 @@ export class EntityRegistry {
       throw new Error(`Invalid entity configuration for "${config.slug}": ${validation.errors.join(', ')}`)
     }
 
-    this.entities.set(config.slug, config)
+    // Add to singleton registry
+    const entry: EntityRegistryEntry = {
+      name: config.slug,
+      config,
+      parent: null,
+      children: config.childEntities ? Object.keys(config.childEntities) : [],
+      depth: 0,
+      tableName: config.tableName || config.slug,
+      routePrefix: config.slug,
+    }
+    addEntityToRegistry(entry)
 
     // Log warnings if any
     if (validation.warnings.length > 0) {
@@ -54,24 +79,28 @@ export class EntityRegistry {
   }
 
   /**
-   * Get entity configuration by slug (updated for new structure)
+   * Get entity configuration by slug
+   * Delegates to singleton in queries.ts
    */
   get(slug: string): EntityConfig | undefined {
-    return this.entities.get(slug)
+    return getEntityBySlug(slug)
   }
 
   /**
-   * Get entity configuration by slug
+   * Get entity configuration by slug (alias for get)
    */
   getBySlug(slug: string): EntityConfig | undefined {
-    return this.entities.get(slug)
+    return getEntityBySlug(slug)
   }
 
   /**
    * Get all registered entities
+   * Delegates to singleton in queries.ts
    */
   getAll(): EntityConfig[] {
-    return Array.from(this.entities.values())
+    const entities = getRegisteredEntities()
+    // Filter to only return EntityConfig (not ChildEntityDefinition)
+    return entities.filter((e): e is EntityConfig => 'slug' in e && 'enabled' in e)
   }
 
   /**
@@ -330,53 +359,23 @@ export class EntityRegistry {
 
   /**
    * Initialize registry
-   * CLIENT-SAFE: Skips on client, loads from registries on server
+   *
+   * ARCHITECTURE: This is now a NO-OP for backwards compatibility.
+   * The singleton in queries.ts is populated by:
+   * - Server: The layout imports registry and calls setEntityRegistry()
+   * - Client: DashboardShell calls setServerEntities() during hydration
+   *
+   * The EntityRegistry class is a facade - it doesn't need initialization.
    */
   async initialize(): Promise<void> {
-    if (this.initialized) return
-
-    // Client-side: registry starts empty, entities loaded on-demand or pre-registered
-    if (typeof window !== 'undefined') {
-      console.log('[EntityRegistry] Client-side: registry ready for manual registration')
-      this.initialized = true
-      return
+    // No-op - the singleton is already populated by the layout
+    // This method exists for backwards compatibility
+    const count = this.getAll().length
+    if (count > 0) {
+      console.log(`[EntityRegistry] Already initialized with ${count} entities from singleton`)
+    } else {
+      console.log('[EntityRegistry] Singleton empty - will be populated by layout import')
     }
-
-    // Server-side: load from build-time registries (static import, zero dynamic imports)
-    try {
-      // Load from registries - server-only (synchronous with static import)
-      this.loadFromRegistriesServer()
-      this.initialized = true
-      console.log('[EntityRegistry] Server: initialized from build-time registries')
-    } catch (error) {
-      console.error('[EntityRegistry] Error initializing from registries:', error)
-      this.initialized = true
-    }
-  }
-
-  /**
-   * Server-only registry loading
-   * Loads from build-time registries (ENTITY_REGISTRY with static imports)
-   * PERFORMANCE: Zero runtime I/O, ~17,255x faster than old dynamic system
-   *
-   * Note: Uses static import (zero dynamic imports policy)
-   */
-  private loadFromRegistriesServer(): void {
-    // Register all entities from the build-time registry (static import at top of file)
-    const entities = getRegisteredEntities()
-    console.log('[EntityRegistry] Loading entities from build-time registry:', entities.length)
-    entities.forEach((config, index) => {
-      const name = 'slug' in config ? config.slug : `entity-${index}`
-      console.log(`[EntityRegistry] Loading entity ${index + 1}/${entities.length}: ${name}`)
-      try {
-        this.register(config as EntityConfig)
-        console.log(`[EntityRegistry] ✅ Successfully registered: ${name}`)
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error)
-        console.error(`[EntityRegistry] ❌ Failed to register ${name}:`, errorMessage)
-      }
-    })
-    console.log('[EntityRegistry] Finished loading entities. Total registered:', this.entities.size)
   }
 
   /**
@@ -401,9 +400,10 @@ export class EntityRegistry {
 
   /**
    * Update an existing entity configuration
+   * Delegates to singleton in queries.ts
    */
   updateEntity(slug: string, updates: Partial<EntityConfig>): void {
-    const existing = this.entities.get(slug)
+    const existing = this.get(slug)
     if (!existing) {
       throw new Error(`Entity "${slug}" not found`)
     }
@@ -415,7 +415,8 @@ export class EntityRegistry {
       throw new Error(`Invalid entity update for "${slug}": ${validation.errors.join(', ')}`)
     }
 
-    this.entities.set(slug, updated)
+    // Re-register to update in singleton
+    this.register(updated)
 
     if (validation.warnings.length > 0) {
       console.warn(`Entity "${slug}" update warnings:`, validation.warnings)
@@ -424,12 +425,12 @@ export class EntityRegistry {
 
   /**
    * Remove an entity from the registry
+   * Delegates to singleton in queries.ts
    */
   removeEntity(slug: string): void {
-    if (!this.entities.has(slug)) {
+    if (!removeEntityFromRegistry(slug)) {
       throw new Error(`Entity "${slug}" not found`)
     }
-    this.entities.delete(slug)
   }
 
   /**
@@ -448,9 +449,10 @@ export class EntityRegistry {
 
   /**
    * Check if registry is initialized
+   * Delegates to singleton in queries.ts
    */
   isInitialized(): boolean {
-    return this.initialized
+    return isRegistryInitialized()
   }
 
   /**
@@ -462,10 +464,10 @@ export class EntityRegistry {
 
   /**
    * Clear all registered entities (mainly for testing)
+   * Delegates to singleton in queries.ts
    */
   clear(): void {
-    this.entities.clear()
-    this.initialized = false
+    clearEntityRegistry()
   }
 }
 
@@ -520,7 +522,7 @@ export function getRegistryStats() {
   return {
     totalEntities: entityRegistry.getAll().length,
     enabledEntities: entityRegistry.getEnabled().length,
-    initialized: entityRegistry['initialized'],
-    source: 'build-time registries (THEME_REGISTRY + PLUGIN_REGISTRY)'
+    initialized: entityRegistry.isInitialized(),
+    source: 'singleton (queries.ts)'
   }
 }

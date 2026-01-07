@@ -1,15 +1,13 @@
 import { DashboardShell } from '@nextsparkjs/core/components/dashboard/layouts/DashboardShell'
-import { getRegisteredEntities } from '@nextsparkjs/core/lib/entities/queries'
 import { serializeEntityConfig, type SerializableEntityConfig } from '@nextsparkjs/core/lib/entities/serialization'
+import { setEntityRegistry } from '@nextsparkjs/core/lib/entities/queries'
 import { getTemplateOrDefault } from '@nextsparkjs/core/lib/template-resolver'
-import { TemplateService } from '@nextsparkjs/core/lib/services/template.service'
 import type { EntityConfig, ChildEntityDefinition } from '@nextsparkjs/core/lib/entities/types'
+// Import registry directly - webpack resolves @nextsparkjs/registries alias at compile time
+import { ENTITY_REGISTRY, ENTITY_METADATA } from '@nextsparkjs/registries/entity-registry'
 
-// Debug: Check template override status at module load
-const LAYOUT_PATH = 'app/dashboard/(main)/layout.tsx'
-console.log('[MainLayout] Checking template override for:', LAYOUT_PATH)
-console.log('[MainLayout] hasTemplateOverride:', TemplateService.hasOverride(LAYOUT_PATH))
-console.log('[MainLayout] templateEntry:', TemplateService.getEntry(LAYOUT_PATH)?.template?.themeName)
+// Register entities globally so other parts of the app can access them via getRegisteredEntities()
+setEntityRegistry(ENTITY_REGISTRY, ENTITY_METADATA)
 
 // Type guard to check if entity is a full EntityConfig
 function isEntityConfig(entity: EntityConfig | ChildEntityDefinition): entity is EntityConfig {
@@ -23,10 +21,14 @@ function DefaultMainDashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const allEntities = getRegisteredEntities()
+  // Get entities directly from the imported registry
+  const allEntities = Object.values(ENTITY_REGISTRY).map(entry => entry.config)
   // Filter to only include full EntityConfig (not child entities)
   const entities = allEntities.filter(isEntityConfig)
   const serializedEntities: SerializableEntityConfig[] = entities.map(serializeEntityConfig)
+
+  // DEBUG: Log entity data
+  console.log('[MainLayout] Entities count:', entities.length)
 
   return (
     <DashboardShell entities={serializedEntities}>

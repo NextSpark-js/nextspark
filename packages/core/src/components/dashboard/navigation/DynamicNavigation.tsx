@@ -156,11 +156,26 @@ export function DynamicNavigation({
   // Check if theme has custom sidebar sections
   const hasCustomSections = customSidebarSections.length > 0
 
+  // DEBUG: Log incoming entities
+  console.log('[DynamicNavigation] entities count:', entities?.length)
+  if (entities?.length > 0) {
+    console.log('[DynamicNavigation] First entity:', {
+      slug: entities[0].slug,
+      enabled: entities[0].enabled,
+      hasUi: !!(entities[0] as any).ui,
+      ui: (entities[0] as any).ui,
+      showInMenu: (entities[0] as any).ui?.dashboard?.showInMenu
+    })
+  }
+
   // Fallback: Use entities if no custom sections defined
   const enabledEntities = useMemo(() =>
     entities.filter(entity => entity?.enabled && entity?.ui?.dashboard?.showInMenu),
     [entities]
   )
+
+  // DEBUG: Log filtered entities
+  console.log('[DynamicNavigation] enabledEntities count:', enabledEntities?.length)
 
   const entityItems: NavigationItem[] = useMemo(() =>
     enabledEntities.map(entity => {

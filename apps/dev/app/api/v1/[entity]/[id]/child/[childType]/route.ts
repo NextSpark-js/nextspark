@@ -4,10 +4,18 @@
  * POST /api/v1/[entity]/[id]/child/[childType]
  */
 
+// CRITICAL: Initialize entity registry for API routes
+// This import is processed by webpack which resolves the @nextsparkjs alias
+// The setEntityRegistry call happens at module load time
+import { setEntityRegistry, isRegistryInitialized, getChildEntities, getEntity } from '@nextsparkjs/core/lib/entities/queries'
+import { ENTITY_REGISTRY, ENTITY_METADATA } from '@nextsparkjs/registries/entity-registry'
+if (!isRegistryInitialized()) {
+  setEntityRegistry(ENTITY_REGISTRY, ENTITY_METADATA)
+}
+
 import { NextRequest, NextResponse } from 'next/server'
 import { queryWithRLS } from '@nextsparkjs/core/lib/db'
 import { resolveEntityFromUrl } from '@nextsparkjs/core/lib/api/entity/resolver'
-import { getChildEntities, getEntity } from '@nextsparkjs/core/lib/entities/queries'
 
 
 interface RouteParams {

@@ -7,13 +7,14 @@ Scripts para gestionar el ciclo de vida de los paquetes NPM de NextSpark.
 ```
 scripts/
 ├── setup/
-│   ├── local.sh      # Crear proyecto test con .tgz locales
-│   ├── npm.sh        # Crear proyecto test con paquetes npm
-│   └── claude.sh     # Configurar Claude Code symlinks
+│   ├── local.sh        # Crear proyecto test NUEVO con .tgz locales
+│   ├── npm.sh          # Crear proyecto test NUEVO con paquetes npm
+│   ├── update-local.sh # Actualizar proyecto EXISTENTE con .tgz locales
+│   └── claude.sh       # Configurar Claude Code symlinks
 ├── packages/
-│   ├── version.sh    # Incrementar versiones
-│   ├── pack.sh       # Crear .tgz
-│   └── publish.sh    # Publicar a npm
+│   ├── version.sh      # Incrementar versiones
+│   ├── pack.sh         # Crear .tgz
+│   └── publish.sh      # Publicar a npm
 └── README.md
 ```
 
@@ -22,50 +23,94 @@ scripts/
 ## Comandos pnpm
 
 ```bash
-pnpm setup:local      # Crear proyecto test con paquetes locales
-pnpm setup:npm        # Crear proyecto test con paquetes npm
-pnpm setup:claude     # Configurar Claude Code
+pnpm setup:local         # Crear proyecto test NUEVO con paquetes locales
+pnpm setup:npm           # Crear proyecto test NUEVO con paquetes npm
+pnpm setup:update-local  # Actualizar proyecto EXISTENTE (my-app) con paquetes locales
+pnpm setup:claude        # Configurar Claude Code
 
-pnpm pkg:version      # Incrementar versiones
-pnpm pkg:pack         # Empaquetar todo a .packages/
-pnpm pkg:publish      # Publicar a npm
+pnpm pkg:version         # Incrementar versiones
+pnpm pkg:pack            # Empaquetar todo a .packages/
+pnpm pkg:publish         # Publicar a npm
 ```
 
 ---
 
 ## Flujos de Uso
 
-### 1. Desarrollo Local (Iteración Rápida)
+### 1. Flujo de Desarrollo Dual-Mode (Recomendado)
 
-Para probar cambios locales antes de publicar:
+Este es el flujo estándar para desarrollar y probar cambios en modo monorepo Y npm:
 
 ```bash
-pnpm setup:local                    # Empaqueta y crea proyecto test
+# === PASO 1: Desarrollar en monorepo ===
+cd repo
+# Hacer cambios en packages/core, packages/cli, themes/, plugins/
+pnpm dev                            # Probar en puerto 5173
+
+# === PASO 2: Probar en proyecto npm existente (my-app) ===
+pnpm setup:update-local             # Reempaqueta TODO y actualiza my-app
+cd ../projects/my-app
+pnpm dev                            # Probar en puerto 3000
+
+# === PASO 3: Si funciona, publicar ===
+cd ../repo
+pnpm pkg:version -- patch           # Subir versión
+pnpm pkg:pack
+pnpm pkg:publish -- --tag latest
+git add . && git commit -m "..."
+```
+
+**Puertos:**
+- Monorepo (`/repo`): puerto 5173
+- npm mode (`/projects/my-app`): puerto 3000
+
+### 2. Crear Proyecto Test Nuevo (desde cero)
+
+Para probar el wizard y setup completo:
+
+```bash
+pnpm setup:local                    # Crea proyecto en ../projects/test-local-packages
 # o con opciones:
 pnpm setup:local -- --preset blog   # Usar preset blog
 ```
 
-### 2. Publicar Nueva Versión
+### 3. Publicar Nueva Versión
 
 ```bash
 # 1. Incrementar versión
 pnpm pkg:version -- patch           # o minor, major, beta
 
-# 2. Test local
-pnpm setup:local
+# 2. Test en ambos modos
+pnpm dev                            # Test monorepo
+pnpm setup:update-local             # Actualiza my-app
+cd ../projects/my-app && pnpm dev   # Test npm mode
 
 # 3. Empaquetar y publicar
+cd ../repo
 pnpm pkg:pack
 pnpm pkg:publish -- --tag latest
 ```
 
-### 3. Publicar Versión Beta
+### 4. Publicar Versión Beta
 
 ```bash
 pnpm pkg:version -- beta
-pnpm setup:local
+pnpm setup:update-local             # Test en my-app
 pnpm pkg:pack
 pnpm pkg:publish -- --tag beta
+```
+
+### 5. Reset Total de my-app (desde npm publicado)
+
+Cuando hay cambios en CLI/wizard o después de varios releases:
+
+```bash
+cd ../projects
+rm -rf my-app
+npx --yes create-nextspark-app@latest my-app
+cd my-app
+pnpm nextspark add:theme @nextsparkjs/theme-default
+pnpm dev
 ```
 
 ---
@@ -99,9 +144,41 @@ Crea proyecto test con paquetes locales `.tgz`.
 
 ---
 
+### `update-local.sh`
+
+Actualiza un proyecto EXISTENTE con paquetes locales `.tgz`. A diferencia de `local.sh` que crea un proyecto nuevo, este script actualiza un proyecto ya inicializado (ej: `my-app` creado con npm).
+
+```bash
+./scripts/setup/update-local.sh [options]
+
+# Opciones:
+#   --target <path>    Directorio del proyecto (default: ../projects/my-app)
+#   --skip-build       Saltar build de paquetes
+#   --skip-install     Saltar pnpm install después de actualizar
+
+# Ejemplos:
+./scripts/setup/update-local.sh                     # Actualiza my-app
+./scripts/setup/update-local.sh --skip-build        # Solo reempaquetar sin rebuild
+./scripts/setup/update-local.sh --target ../projects/other-app
+```
+
+**Flujo interno:**
+1. Ejecuta `pack.sh --all` para construir y empaquetar todo
+2. Copia `.tgz` a `target/.packages/`
+3. Actualiza `package.json` con referencias `file:`
+4. Limpia `.next` cache
+5. Ejecuta `pnpm install --force`
+
+**Caso de uso principal:**
+- Desarrollar en monorepo (puerto 5173)
+- Ejecutar `pnpm setup:update-local`
+- Probar en my-app (puerto 3000)
+
+---
+
 ### `npm.sh`
 
-Crea proyecto test con paquetes publicados en npm.
+Crea proyecto test NUEVO con paquetes publicados en npm.
 
 ```bash
 ./scripts/setup/npm.sh [--version <ver>] [--preset <name>] [--theme <name>]

@@ -55,21 +55,69 @@ let _cachedRegistry: Record<string, EntityRegistryEntry> | null = null
 let _cachedMetadata: EntityRegistryMetadata | null = null
 
 /**
- * Load the entity registry dynamically
- * This allows the core package to work with the project-generated registry
+ * Register the entity registry from the project
+ * This should be called by the dashboard layout which imports the registry directly
+ * (webpack resolves the @nextsparkjs/registries alias at compile time)
+ */
+export function setEntityRegistry(
+  registry: Record<string, EntityRegistryEntry>,
+  metadata?: EntityRegistryMetadata
+): void {
+  _cachedRegistry = registry
+  _cachedMetadata = metadata || null
+
+  const entityCount = Object.keys(registry || {}).length
+  console.log(`[EntityQueries] Registry set with ${entityCount} entities`)
+}
+
+/**
+ * Add a single entity to the registry
+ * Used by EntityRegistry.register() for programmatic registration
+ */
+export function addEntityToRegistry(entry: EntityRegistryEntry): void {
+  if (!_cachedRegistry) {
+    _cachedRegistry = {}
+  }
+  _cachedRegistry[entry.name] = entry
+}
+
+/**
+ * Remove an entity from the registry
+ */
+export function removeEntityFromRegistry(name: string): boolean {
+  if (!_cachedRegistry || !_cachedRegistry[name]) {
+    return false
+  }
+  delete _cachedRegistry[name]
+  return true
+}
+
+/**
+ * Clear the registry (for testing)
+ */
+export function clearEntityRegistry(): void {
+  _cachedRegistry = null
+  _cachedMetadata = null
+}
+
+/**
+ * Check if registry is initialized
+ */
+export function isRegistryInitialized(): boolean {
+  return _cachedRegistry !== null && Object.keys(_cachedRegistry).length > 0
+}
+
+/**
+ * Get the entity registry
+ * Returns cached registry or empty object if not yet registered
  */
 function getRegistry(): Record<string, EntityRegistryEntry> {
   if (_cachedRegistry) return _cachedRegistry
 
-  try {
-    const registry = require('@nextsparkjs/registries/entity-registry')
-    _cachedRegistry = registry.ENTITY_REGISTRY
-    _cachedMetadata = registry.ENTITY_METADATA
-    return _cachedRegistry!
-  } catch (error) {
-    console.warn('[EntityQueries] Registry not available yet (run registry:build first)')
-    return {}
-  }
+  // Registry not yet set - this is expected on first load
+  // The layout will call setEntityRegistry() with the imported registry
+  console.log('[EntityQueries] Registry not yet initialized (will be set by layout)')
+  return {}
 }
 
 /**

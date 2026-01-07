@@ -1,6 +1,6 @@
 # Claude Code Skills
 
-This directory contains 30 skills that provide Claude Code with specialized knowledge about this codebase.
+This directory contains 31 skills that provide Claude Code with specialized knowledge about this codebase.
 
 ## Skills Overview
 
@@ -22,24 +22,25 @@ This directory contains 30 skills that provide Claude Code with specialized know
 | 14 | [i18n-nextintl](./i18n-nextintl/) | next-intl internationalization patterns | `add-translation.py`, `extract-hardcoded.py`, `validate-translations.py` |
 | 15 | [jest-unit](./jest-unit/) | Jest unit testing patterns | - |
 | 16 | [nextjs-api-development](./nextjs-api-development/) | Next.js API routes and dual auth | `generate-crud-tests.py`, `scaffold-endpoint.py`, `validate-api.py` |
-| 17 | [page-builder-blocks](./page-builder-blocks/) | Page builder block development | `scaffold-block.py` |
-| 18 | [permissions-system](./permissions-system/) | RBAC + Features + Quotas permission model | - |
-| 19 | [plugins](./plugins/) | Plugin development and lifecycle hooks | `scaffold-plugin.py` |
-| 20 | [pom-patterns](./pom-patterns/) | Page Object Model testing patterns | `generate-pom.py` |
-| 21 | [react-patterns](./react-patterns/) | React patterns and TanStack Query | - |
-| 22 | [registry-system](./registry-system/) | Auto-generated registries system | - |
-| 23 | [scheduled-actions](./scheduled-actions/) | Background task processing, webhooks, cron | - |
-| 24 | [scope-enforcement](./scope-enforcement/) | Session scope validation (core/theme/plugins) | `validate-scope.py` |
-| 25 | [service-layer](./service-layer/) | Service layer architecture patterns | - |
-| 26 | [session-management](./session-management/) | Claude Code session files and workflow | `create-session.py` |
-| 27 | [shadcn-components](./shadcn-components/) | shadcn/ui component patterns | - |
-| 28 | [tailwind-theming](./tailwind-theming/) | Tailwind CSS v4 theming system | - |
-| 29 | [tanstack-query](./tanstack-query/) | TanStack Query data fetching | - |
-| 30 | [zod-validation](./zod-validation/) | Zod schema validation patterns | - |
+| 17 | [npm-development-workflow](./npm-development-workflow/) | **CRITICAL:** Dual-mode testing workflow (monorepo + npm) [NEW] | - |
+| 18 | [page-builder-blocks](./page-builder-blocks/) | Page builder block development | `scaffold-block.py` |
+| 19 | [permissions-system](./permissions-system/) | RBAC + Features + Quotas permission model | - |
+| 20 | [plugins](./plugins/) | Plugin development and lifecycle hooks | `scaffold-plugin.py` |
+| 21 | [pom-patterns](./pom-patterns/) | Page Object Model testing patterns | `generate-pom.py` |
+| 22 | [react-patterns](./react-patterns/) | React patterns and TanStack Query | - |
+| 23 | [registry-system](./registry-system/) | Auto-generated registries system | - |
+| 24 | [scheduled-actions](./scheduled-actions/) | Background task processing, webhooks, cron | - |
+| 25 | [scope-enforcement](./scope-enforcement/) | Session scope validation (core/theme/plugins) | `validate-scope.py` |
+| 26 | [service-layer](./service-layer/) | Service layer architecture patterns | - |
+| 27 | [session-management](./session-management/) | Claude Code session files and workflow | `create-session.py` |
+| 28 | [shadcn-components](./shadcn-components/) | shadcn/ui component patterns | - |
+| 29 | [tailwind-theming](./tailwind-theming/) | Tailwind CSS v4 theming system | - |
+| 30 | [tanstack-query](./tanstack-query/) | TanStack Query data fetching | - |
+| 31 | [zod-validation](./zod-validation/) | Zod schema validation patterns | - |
 
 ## Statistics
 
-- **Total Skills:** 30
+- **Total Skills:** 31
 - **Skills with Scripts:** 13
 - **Total Scripts:** 25
 
@@ -122,8 +123,10 @@ version: 1.0.0
 
 ### Architecture (CRITICAL)
 - `core-theme-responsibilities` - **Core/Theme/Plugin responsibilities** [NEW v4.3]
+- `npm-development-workflow` - **Dual-mode testing workflow (monorepo + npm)** [NEW]
 - `registry-system` - Auto-registries (data-only)
 - `scope-enforcement` - Scope validation
+- `monorepo-architecture` - Package structure and dependencies
 
 ### Infrastructure
 - `plugins` - Plugin development

@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 
+import { config } from 'dotenv';
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { devCommand } from './commands/dev.js';
+
+// Load .env from project root
+config();
 import { buildCommand } from './commands/build.js';
 import { generateCommand } from './commands/generate.js';
 import { registryBuildCommand, registryWatchCommand } from './commands/registry.js';
@@ -22,7 +26,7 @@ program
 program
   .command('dev')
   .description('Start development server with registry watcher')
-  .option('-p, --port <port>', 'Port to run the dev server on', '3000')
+  .option('-p, --port <port>', 'Port to run the dev server on', process.env.PORT || '3000')
   .option('--no-registry', 'Disable registry watcher')
   .action(devCommand);
 

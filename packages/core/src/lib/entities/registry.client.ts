@@ -67,38 +67,18 @@ export function setServerEntities(entities: EntityConfig[]): void {
 
 /**
  * Client-safe function to get all entity configurations
- * Uses build-time registry with serializable data only
+ * Returns entities from the client registry (populated by DashboardShell)
  */
 export function getAllEntityConfigs(): EntityConfig[] {
-  // If client registry is populated, use it (for backwards compatibility)
   const clientEntities = clientEntityRegistry.getAll()
-  if (clientEntities.length > 0) {
-    return clientEntities
+
+  if (clientEntities.length === 0) {
+    // Registry not yet hydrated - this is normal during initial render
+    // DashboardShell will call setServerEntities() to populate it
+    console.log('[EntityRegistry] Client registry empty - waiting for hydration from DashboardShell')
   }
 
-  // Otherwise, use build-time registry (stripping non-serializable data)
-  try {
-    const { ENTITY_REGISTRY } = require('@nextsparkjs/registries/entity-registry')
-    // Import fallback icon dynamically
-    const { Package } = require('lucide-react')
-
-    return Object.values(ENTITY_REGISTRY).map((entry: any) => {
-      const config = entry.config
-
-      // Create serializable config (exclude functions like translation loaders)
-      return {
-        ...config,
-        icon: config.icon || Package, // Use fallback icon if original is missing
-        i18n: config.i18n ? {
-          ...config.i18n,
-          loaders: {} // Remove loader functions (functions can't be serialized to client)
-        } : undefined
-      }
-    }).filter((config: any) => config.slug) // Only full EntityConfig (not ChildEntityDefinition)
-  } catch (error) {
-    console.error('[EntityRegistry] Failed to load from build-time registry:', error)
-    return []
-  }
+  return clientEntities
 }
 
 /**

@@ -6,15 +6,28 @@ import { MobileTopBar } from '../mobile/MobileTopBar'
 import { MobileBottomNav } from '../mobile/MobileBottomNav'
 import { SidebarProvider, useSidebar } from '../../../contexts/sidebar-context'
 import { cn } from '../../../lib/utils'
-import type { SerializableEntityConfig } from '../../../lib/entities/serialization'
+import { deserializeEntityConfig, type SerializableEntityConfig } from '../../../lib/entities/serialization'
+import { setServerEntities } from '../../../lib/entities/registry.client'
 
 interface DashboardShellProps {
   children: React.ReactNode
   entities: SerializableEntityConfig[]
 }
 
+// Module-level flag to track hydration (survives re-renders)
+let clientHydrated = false
+
 function DashboardShellContent({ children, entities }: DashboardShellProps) {
   const { isCollapsed } = useSidebar()
+
+  // CRITICAL: Hydrate synchronously during render, BEFORE children mount
+  // This ensures hooks in child components (like useEntityConfig) see populated registry
+  // Using useEffect would be too late - it runs AFTER first render
+  if (!clientHydrated && entities.length > 0) {
+    const deserializedEntities = entities.map(deserializeEntityConfig)
+    setServerEntities(deserializedEntities)
+    clientHydrated = true
+  }
 
   return (
     <div className="min-h-screen">

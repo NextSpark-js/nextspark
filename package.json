@@ -12,12 +12,14 @@
     "clean": "pnpm -r exec rm -rf node_modules dist .next",
     "setup:local": "./scripts/setup/local.sh",
     "setup:npm": "./scripts/setup/npm.sh",
+    "setup:update-local": "./scripts/setup/update-local.sh",
     "setup:claude": "./scripts/setup/claude.sh",
     "pkg:version": "./scripts/packages/version.sh",
     "pkg:pack": "./scripts/packages/pack.sh --all --clean",
     "pkg:publish": "./scripts/packages/publish.sh ./.packages"
   },
   "devDependencies": {
+    "dotenv-cli": "^11.0.0",
     "typescript": "^5.0.0"
   },
   "engines": {
