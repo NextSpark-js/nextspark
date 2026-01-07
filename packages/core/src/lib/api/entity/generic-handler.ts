@@ -652,8 +652,10 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
           ? `WHERE ${whereConditions.join(' AND ')}`
           : ''
 
+      // Use COUNT(*) OVER() window function to get total count in single query
+      // This eliminates a separate COUNT query, saving ~230ms per request
       query = `
-        SELECT ${fields}
+        SELECT ${fields}, COUNT(*) OVER() as total_count
         FROM "${tableName}" t
         ${whereClause}
         ORDER BY t."createdAt" DESC
@@ -662,128 +664,17 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
       queryParams.push(pagination.limit, pagination.offset)
     }
 
-    const data = await queryWithRLS(query, queryParams, userId)
+    const rawData = await queryWithRLS(query, queryParams, userId)
 
-    // Get total count (must include same filters) - combine both logics
-    let totalResult: { count: number }[]
-    const countWhereConditions: string[] = []
-    const countParams: unknown[] = []
-    let countParamIndex = 1
+    // Extract total count from first row (window function includes it in every row)
+    // If no results, total is 0
+    const total = rawData.length > 0 ? Number((rawData[0] as Record<string, unknown>).total_count) || 0 : 0
 
-    // Add team filter to count query (Phase 2 - Team Isolation)
-    // Skip for public entities requesting published content (allows cross-team public access)
-    if (teamId && !skipUserFilter) {
-      countWhereConditions.push(`"teamId" = $${countParamIndex++}`)
-      countParams.push(teamId)
-    }
-
-    // Add user filter if authenticated AND not shared (secondary filter)
-    // Exception: For public entities with status=published filter, allow cross-user access
-    if (userId && !entityConfig.access?.shared && !skipUserFilter) {
-      // CASE 1: Private data - count user's records within team
-      countWhereConditions.push(`"userId" = $${countParamIndex++}`)
-      countParams.push(userId)
-    }
-    // else: CASE 2/3 - Public or shared, count all team records
-
-    // Add search filter to count query (same as main query)
-    if (searchParam && searchParam.trim() !== '') {
-      const searchTerm = searchParam.trim()
-      const hasName = entityConfig.fields.some((f: EntityField) => f.name === 'name')
-      const hasTitle = entityConfig.fields.some((f: EntityField) => f.name === 'title')
-      const hasSlug = entityConfig.fields.some((f: EntityField) => f.name === 'slug')
-      const hasContent = entityConfig.fields.some((f: EntityField) => f.name === 'content')
-
-      if (hasName || hasTitle || hasSlug || hasContent) {
-        const searchConditions: string[] = []
-        if (hasName) {
-          searchConditions.push(`name ILIKE $${countParamIndex}`)
-        }
-        if (hasTitle) {
-          searchConditions.push(`title ILIKE $${countParamIndex}`)
-        }
-        if (hasSlug) {
-          searchConditions.push(`slug ILIKE $${countParamIndex}`)
-        }
-        if (hasContent) {
-          searchConditions.push(`content ILIKE $${countParamIndex}`)
-        }
-        countWhereConditions.push(`(${searchConditions.join(' OR ')})`)
-        countParams.push(`%${searchTerm}%`)
-        countParamIndex++
-      }
-    }
-
-    // Add date range filters to count query (same as main query)
-    if (dateFieldName && (fromDate || toDate)) {
-      const field = entityConfig.fields.find((f: EntityField) => f.name === dateFieldName)
-
-      // Validate field exists and is a date/datetime type
-      if (field && (field.type === 'datetime' || field.type === 'date')) {
-        if (fromDate) {
-          countWhereConditions.push(`"${dateFieldName}" >= $${countParamIndex++}`)
-          countParams.push(fromDate)
-        }
-        if (toDate) {
-          countWhereConditions.push(`"${dateFieldName}" <= $${countParamIndex++}`)
-          countParams.push(toDate)
-        }
-      }
-    }
-
-    // Add same custom filters to count query
-    Object.entries(customFilters).forEach(([key, values]) => {
-      const field = entityConfig.fields.find((f: EntityField) => f.name === key)
-      if (field && values.length > 0) {
-        const columnName = `"${key}"`
-
-        // Special handling for JSONB array fields (e.g., socialPlatformId)
-        if (field.type === 'relation-multi' || key === 'socialPlatformId') {
-          // Multiple values = OR logic: platform = A OR platform = B
-          const orConditions = values.map(() => {
-            const condition = `${columnName}::jsonb @> $${countParamIndex++}::jsonb`
-            return condition
-          })
-          values.forEach(value => {
-            countParams.push(JSON.stringify([value]))
-          })
-          countWhereConditions.push(`(${orConditions.join(' OR ')})`)
-        } else {
-          // Multiple values = OR logic: field = A OR field = B
-          const orConditions = values.map(() => {
-            const condition = `${columnName} = $${countParamIndex++}`
-            return condition
-          })
-          values.forEach(value => {
-            countParams.push(value)
-          })
-          countWhereConditions.push(`(${orConditions.join(' OR ')})`)
-        }
-      }
+    // Remove total_count from data (it was only needed for pagination)
+    const data = rawData.map((row: Record<string, unknown>) => {
+      const { total_count, ...rest } = row as Record<string, unknown>
+      return rest
     })
-
-    // Add taxonomy filter to count query (same as main query)
-    if (taxonomyFilter?.taxonomyId) {
-      countWhereConditions.push(`EXISTS (
-        SELECT 1 FROM entity_taxonomy_relations etr
-        WHERE etr."entityId" = id::text
-          AND etr."entityType" = '${entityConfig.slug}'
-          AND etr."taxonomyId" = $${countParamIndex++}
-      )`)
-      countParams.push(taxonomyFilter.taxonomyId)
-    }
-
-    const countWhereClause = countWhereConditions.length > 0
-        ? `WHERE ${countWhereConditions.join(' AND ')}`
-        : ''
-
-    totalResult = await queryWithRLS<{ count: number }>(
-        `SELECT COUNT(*) as count FROM "${tableName}" ${countWhereClause}`,
-        countParams,
-        userId
-    )
-
-    const total = totalResult[0]?.count || 0
     const paginationMeta = createPaginationMeta(pagination.page, pagination.limit, total)
 
     // Handle metadata inclusion (only for authenticated users)
