@@ -7,7 +7,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { queryWithRLS } from '@nextsparkjs/core/lib/db'
 import { resolveEntityFromUrl } from '@nextsparkjs/core/lib/api/entity/resolver'
-import { getChildEntities, getEntity } from '@nextsparkjs/core/lib/entities/queries'
+import { getChildEntities, getEntity, setEntityRegistry } from '@nextsparkjs/core/lib/entities/queries'
+// Import registry directly - webpack resolves @nextsparkjs/registries alias at compile time
+import { ENTITY_REGISTRY, ENTITY_METADATA } from '@nextsparkjs/registries/entity-registry'
+
+// Initialize registry at module load time (before any handler runs)
+setEntityRegistry(ENTITY_REGISTRY, ENTITY_METADATA)
 
 
 interface RouteParams {
