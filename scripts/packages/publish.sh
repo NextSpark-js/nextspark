@@ -294,7 +294,11 @@ publish_package() {
 
 # Get ordered list of packages
 echo -e "${CYAN}Packages to publish (in order):${NC}"
-mapfile -t ORDERED_PACKAGES < <(get_ordered_packages "$PACKAGES_DIR")
+# Use while loop instead of mapfile for bash 3.2 compatibility (macOS)
+ORDERED_PACKAGES=()
+while IFS= read -r line; do
+    [[ -n "$line" ]] && ORDERED_PACKAGES+=("$line")
+done < <(get_ordered_packages "$PACKAGES_DIR")
 
 for tgz in "${ORDERED_PACKAGES[@]}"; do
     echo "  - $(basename "$tgz")"
