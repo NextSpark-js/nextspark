@@ -24,25 +24,44 @@ export interface EntityRegistryEntry {
   children: string[]
   depth: number
   tableName: string
-  routePrefix: string
+  routePrefix?: string
   pluginContext?: {
     pluginName: string
-    pluginDir: string
-  }
+    pluginDir?: string
+  } | null
   themeContext?: {
     themeName: string
-    themeDir: string
-  }
+    themeDir?: string
+  } | null
   schema?: any
   relations?: any
+  // Additional properties from generated registry
+  relativePath?: string
+  hasComponents?: boolean
+  hasHooks?: boolean
+  hasMigrations?: boolean
+  hasMessages?: boolean
+  hasAssets?: boolean
+  messagesPath?: string
+  isCore?: boolean
+  source?: 'core' | 'theme' | 'plugin'
 }
 
 export interface EntityRegistryMetadata {
   totalEntities: number
-  rootEntities: number
+  rootEntities?: number
   maxDepth: number
   generatedAt: string
-  entityNames: string[]
+  entityNames?: string[]
+  entities?: string[]
+  // Additional generated metadata
+  pluginEntities?: number
+  themeEntities?: number
+  entitiesWithComponents?: number
+  entitiesWithHooks?: number
+  entitiesWithMigrations?: number
+  entitiesWithMessages?: number
+  entitiesWithAssets?: number
 }
 
 export interface EntityOwner {

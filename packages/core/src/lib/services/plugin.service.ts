@@ -32,6 +32,19 @@ import {
 } from '@nextsparkjs/registries/plugin-registry'
 import type { PluginConfig } from '../../types/plugin'
 
+// Debug flag - only log if explicitly enabled
+const DEBUG_PLUGINS = process.env.NEXTSPARK_DEBUG_PLUGINS === 'true'
+
+// =============================================================================
+// GLOBAL CACHE - Prevents re-initialization on each module evaluation
+// =============================================================================
+
+interface PluginInitCache {
+  __nextspark_plugins_initialized?: boolean
+}
+
+const globalCache = globalThis as unknown as PluginInitCache
+
 // Re-export types for convenience
 export type { PluginRegistryEntry, RouteFileEndpoint, PluginEntity, PluginName, PluginConfig }
 
@@ -419,6 +432,7 @@ export class PluginService {
    *
    * Server-side only. Executes async onLoad hooks for all plugins.
    * Continues with other plugins if one fails.
+   * Uses globalThis cache to prevent re-initialization.
    *
    * @returns Promise that resolves when all plugins are initialized
    *
@@ -433,26 +447,48 @@ export class PluginService {
       return // Only run on server side
     }
 
-    console.log('[Plugin Registry] Initializing plugin system...')
+    // Check if already initialized
+    if (globalCache.__nextspark_plugins_initialized) {
+      if (DEBUG_PLUGINS) {
+        console.log('[Plugin Registry] Already initialized, skipping')
+      }
+      return
+    }
+
+    if (DEBUG_PLUGINS) {
+      console.log('[Plugin Registry] Initializing plugin system...')
+    }
 
     const pluginEntries: any = Object.values(PLUGIN_REGISTRY)
-    console.log(`[Plugin Registry] Found ${pluginEntries.length} plugins to initialize`)
+
+    if (DEBUG_PLUGINS) {
+      console.log(`[Plugin Registry] Found ${pluginEntries.length} plugins to initialize`)
+    }
 
     for (const pluginEntry of pluginEntries) {
       try {
         const plugin = pluginEntry.config
         if (plugin.hooks?.onLoad) {
-          console.log(`[Plugin Registry] Loading plugin: ${plugin.name}`)
+          if (DEBUG_PLUGINS) {
+            console.log(`[Plugin Registry] Loading plugin: ${plugin.name}`)
+          }
           await plugin.hooks.onLoad()
-          console.log(`[Plugin Registry] ✅ Plugin ${plugin.name} loaded successfully`)
+          if (DEBUG_PLUGINS) {
+            console.log(`[Plugin Registry] Plugin ${plugin.name} loaded successfully`)
+          }
         }
       } catch (error) {
-        console.error(`[Plugin Registry] ❌ Error loading plugin ${pluginEntry.name}:`, error)
+        console.error(`[Plugin Registry] Error loading plugin ${pluginEntry.name}:`, error)
         // Continue with other plugins even if one fails
       }
     }
 
-    console.log('[Plugin Registry] ✅ Plugin system initialized successfully')
+    // Mark as initialized
+    globalCache.__nextspark_plugins_initialized = true
+
+    if (DEBUG_PLUGINS) {
+      console.log('[Plugin Registry] Plugin system initialized successfully')
+    }
   }
 
   // ============================================================================
@@ -562,16 +598,20 @@ export function usePlugin(pluginName: string): PluginAPI {
   const plugin = (PLUGIN_REGISTRY as any)[pluginName]
 
   if (!plugin) {
-    console.warn(`[Plugin Registry] Plugin '${pluginName}' not found`)
+    if (DEBUG_PLUGINS) {
+      console.warn(`[Plugin Registry] Plugin '${pluginName}' not found`)
+    }
     return createPluginStubs(pluginName, 'NOT_FOUND')
   }
 
   // No API is normal for many plugins (config, styles, components-only)
   if (!plugin.config?.api) {
     // Only log in debug, no warning - this is normal behavior
-    console.debug(
-      `[Plugin Registry] Plugin '${pluginName}' has no API (normal for config/style/component plugins)`
-    )
+    if (DEBUG_PLUGINS) {
+      console.debug(
+        `[Plugin Registry] Plugin '${pluginName}' has no API (normal for config/style/component plugins)`
+      )
+    }
 
     // Return empty object with status helpers, without stub functions with errors
     return {
@@ -654,7 +694,9 @@ function createPluginStubs(pluginName: string, reason: 'NOT_FOUND' | 'NO_API'): 
 
   commonFunctions.forEach((funcName) => {
     stubs[funcName] = async (...args: any[]) => {
-      console.warn(`[Plugin '${pluginName}'] ${message}`)
+      if (DEBUG_PLUGINS) {
+        console.warn(`[Plugin '${pluginName}'] ${message}`)
+      }
 
       // Return user-friendly error instead of throwing
       return {

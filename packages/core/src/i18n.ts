@@ -5,6 +5,9 @@ import { loadMergedTranslations } from './lib/translations/registry';
 import { getUserLocale } from './lib/locale';
 import type { SupportedLocale } from './lib/entities/types';
 
+// Debug flag - only log if explicitly enabled
+const DEBUG_I18N = process.env.NEXTSPARK_DEBUG_I18N === 'true';
+
 // Configuración de grupos de namespaces optimizada por contexto de usuario
 // Estrategia: carga inteligente según el estado y navegación del usuario
 const NAMESPACE_GROUPS = {
@@ -23,67 +26,74 @@ const NAMESPACE_GROUPS = {
 
 // Estrategia de namespaces optimizada por contexto de usuario
 function getPageNamespaces(pathname: string): string[] {
-  console.log(`[i18n] 🔍 Analyzing pathname: "${pathname}"`);
+  if (DEBUG_I18N) {
+    console.log(`[i18n] Analyzing pathname: "${pathname}"`);
+  }
 
   // Strategy 1: Dashboard pages - usuario autenticado
   if (pathname.startsWith('/dashboard')) {
-    console.log(`[i18n] 📱 Dashboard detected → Loading authenticated user namespaces`);
+    if (DEBUG_I18N) {
+      console.log(`[i18n] Dashboard detected → Loading authenticated user namespaces`);
+    }
     return NAMESPACE_GROUPS.DASHBOARD_AUTHENTICATED;
   }
-  
+
   // Strategy 2: Auth pages específicas (solo auth, sin public para optimizar)
-  const isAuthPage = pathname.startsWith('/auth') || 
-                     pathname === '/login' || 
+  const isAuthPage = pathname.startsWith('/auth') ||
+                     pathname === '/login' ||
                      pathname === '/signup' ||
-                     pathname === '/forgot-password' || 
-                     pathname === '/reset-password' || 
+                     pathname === '/forgot-password' ||
+                     pathname === '/reset-password' ||
                      pathname === '/verify-email' ||
                      pathname.includes('login') ||
                      pathname.includes('signup') ||
                      pathname.includes('auth');
-  
+
   if (isAuthPage) {
-    console.log(`[i18n] 🔐 Auth page detected → Loading auth-only namespaces`);
+    if (DEBUG_I18N) {
+      console.log(`[i18n] Auth page detected → Loading auth-only namespaces`);
+    }
     return NAMESPACE_GROUPS.AUTH_ONLY;
   }
-  
+
   // Strategy 3: Páginas públicas (incluye auth para botones login/signup)
-  if (pathname === '/' || pathname.startsWith('/pricing') || pathname.startsWith('/docs') || 
+  if (pathname === '/' || pathname.startsWith('/pricing') || pathname.startsWith('/docs') ||
       pathname.startsWith('/support') || pathname.startsWith('/features')) {
-    console.log(`[i18n] 🌐 Public page detected → Loading public + auth namespaces`);
+    if (DEBUG_I18N) {
+      console.log(`[i18n] Public page detected → Loading public + auth namespaces`);
+    }
     return NAMESPACE_GROUPS.PUBLIC_INITIAL;
   }
-  
+
   // Strategy 4: Pathname vacío - estrategia inteligente según contexto
   if (!pathname || pathname === '') {
-    console.log(`[i18n] ❓ Empty pathname → Using context-aware fallback`);
-    
+    if (DEBUG_I18N) {
+      console.log(`[i18n] Empty pathname → Using context-aware fallback`);
+    }
+
     // Intentar inferir desde window.location (cliente)
     if (typeof window !== 'undefined') {
       const currentPath = window.location.pathname;
-      console.log(`[i18n] 🌐 Client-side pathname detected: "${currentPath}"`);
-      
+      if (DEBUG_I18N) {
+        console.log(`[i18n] Client-side pathname detected: "${currentPath}"`);
+      }
+
       if (currentPath.startsWith('/dashboard')) {
-        console.log(`[i18n] 📱 Client-side dashboard detected`);
         return NAMESPACE_GROUPS.DASHBOARD_AUTHENTICATED;
       }
       if (currentPath.includes('login') || currentPath.includes('signup') || currentPath.includes('auth')) {
-        console.log(`[i18n] 🔐 Client-side auth detected`);
         return NAMESPACE_GROUPS.AUTH_ONLY;
       }
       if (currentPath === '/' || currentPath.startsWith('/pricing') || currentPath.startsWith('/features')) {
-        console.log(`[i18n] 🌐 Client-side public detected`);
         return NAMESPACE_GROUPS.PUBLIC_INITIAL;
       }
     }
-    
+
     // Para server-side, defaultear a público (más común en primera carga)
-    console.log(`[i18n] 🔄 Server-side empty pathname → Loading public as default`);
     return NAMESPACE_GROUPS.PUBLIC_INITIAL;
   }
-  
+
   // Strategy 5: Rutas desconocidas - cargar públicas por defecto
-  console.log(`[i18n] 🔄 Unknown route → Loading public as fallback`);
   return NAMESPACE_GROUPS.PUBLIC_INITIAL;
 }
 
@@ -100,23 +110,22 @@ async function getServerLocale() {
 export default getRequestConfig(async () => {
   // Safe locale detection que no rompe en el cliente
   let locale: string;
-  
+
   try {
     // Intentar obtener locale del servidor
     locale = await getServerLocale();
   } catch {
     // Fallback para contextos de cliente
-    console.debug('[i18n] Using fallback locale (client context)');
     locale = I18N_CONFIG.defaultLocale;
   }
-  
+
   try {
     // Get current pathname for optimized loading
     let pathname = '';
     try {
       const headersList = await headers();
       pathname = headersList.get('x-pathname') || headersList.get('x-url') || '';
-      
+
       // If still empty, try to extract from referrer or other headers
       if (!pathname) {
         const referer = headersList.get('referer') || '';
@@ -124,7 +133,9 @@ export default getRequestConfig(async () => {
           try {
             const url = new URL(referer);
             pathname = url.pathname;
-            console.log(`[i18n] 🔄 Extracted pathname from referer: "${pathname}"`);
+            if (DEBUG_I18N) {
+              console.log(`[i18n] Extracted pathname from referer: "${pathname}"`);
+            }
           } catch {
             // Ignore URL parsing errors
           }
@@ -132,14 +143,16 @@ export default getRequestConfig(async () => {
       }
     } catch {
       // Headers might not be available in all contexts, fallback gracefully
-      console.debug('[i18n] Headers not available, using fallback namespace strategy');
     }
-    
+
     // Load translations using registry-based system with built-in fallback chain
     // Note: loadMergedTranslations already handles Core -> Theme -> Entity merge
     // and has internal locale fallback (es-MX -> es -> en)
     const messages = await loadMergedTranslations(locale as SupportedLocale);
-    console.log(`[i18n] Loaded merged translations for ${locale} with ${Object.keys(messages).length} namespaces`);
+
+    if (DEBUG_I18N) {
+      console.log(`[i18n] Loaded merged translations for ${locale} with ${Object.keys(messages).length} namespaces`);
+    }
 
     return {
       locale,

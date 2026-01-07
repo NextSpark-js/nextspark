@@ -29,6 +29,21 @@ import {
 // import { safeValidateDashboardConfig } from './dashboard-schema' // Not used for now
 
 // =============================================================================
+// GLOBAL CACHE - Prevents re-execution on each module import
+// =============================================================================
+
+// Debug flag - only log if explicitly enabled
+const DEBUG_CONFIG = process.env.NEXTSPARK_DEBUG_CONFIG === 'true'
+
+interface NextSparkConfigCache {
+  __nextspark_app_config?: ReturnType<typeof loadAppConfigInternal>
+  __nextspark_dashboard_config?: ReturnType<typeof loadDashboardConfigInternal>
+  __nextspark_dev_config?: ReturnType<typeof loadDevConfigInternal>
+}
+
+const globalCache = globalThis as unknown as NextSparkConfigCache
+
+// =============================================================================
 // APP CONFIG MERGE LOGIC
 // =============================================================================
 
@@ -36,16 +51,16 @@ import {
  * Merge default app config with theme-specific config
  * Uses build-time registry for zero I/O operations
  */
-function loadAppConfig() {
+function loadAppConfigInternal() {
   const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME
 
-  if (process.env.NODE_ENV === 'development') {
+  if (DEBUG_CONFIG) {
     console.log('[config-sync] Loading app config for theme:', activeTheme)
   }
 
   // If no theme is active, return default config
   if (!activeTheme) {
-    if (process.env.NODE_ENV === 'development') {
+    if (DEBUG_CONFIG) {
       console.log('[config-sync] No active theme, using default app config')
     }
     return DEFAULT_APP_CONFIG
@@ -56,13 +71,13 @@ function loadAppConfig() {
 
   // If theme has no app config overrides, return default
   if (!themeConfigOverrides) {
-    if (process.env.NODE_ENV === 'development') {
+    if (DEBUG_CONFIG) {
       console.log('[config-sync] Theme has no app config overrides, using default')
     }
     return DEFAULT_APP_CONFIG
   }
 
-  if (process.env.NODE_ENV === 'development') {
+  if (DEBUG_CONFIG) {
     console.log('[config-sync] Theme app config overrides loaded from registry')
   }
 
@@ -92,11 +107,22 @@ function loadAppConfig() {
     }
   }
 
-  if (process.env.NODE_ENV === 'development') {
+  if (DEBUG_CONFIG) {
     console.log('[config-sync] App config merged successfully')
   }
 
   return mergedConfig
+}
+
+/**
+ * Get app config with caching - prevents re-execution on each module import
+ */
+function loadAppConfig() {
+  if (globalCache.__nextspark_app_config) {
+    return globalCache.__nextspark_app_config
+  }
+  globalCache.__nextspark_app_config = loadAppConfigInternal()
+  return globalCache.__nextspark_app_config
 }
 
 // =============================================================================
@@ -106,16 +132,16 @@ function loadAppConfig() {
 /**
  * Merge default dashboard config with theme-specific config
  */
-function loadDashboardConfig() {
+function loadDashboardConfigInternal() {
   const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME
 
-  if (process.env.NODE_ENV === 'development') {
+  if (DEBUG_CONFIG) {
     console.log('[config-sync] activeTheme:', activeTheme)
   }
 
   // If no theme is active, return default config
   if (!activeTheme) {
-    if (process.env.NODE_ENV === 'development') {
+    if (DEBUG_CONFIG) {
       console.log('[config-sync] No active theme, using default config')
     }
     return DEFAULT_DASHBOARD_CONFIG
@@ -126,29 +152,21 @@ function loadDashboardConfig() {
 
   // If theme has no dashboard config, return default
   if (!themeConfig) {
-    if (process.env.NODE_ENV === 'development') {
+    if (DEBUG_CONFIG) {
       console.log('[config-sync] Theme has no dashboard config, using default')
     }
     return DEFAULT_DASHBOARD_CONFIG
   }
 
   // Validate theme config in development (skip validation for now due to function properties)
-  // TODO: Implement proper validation that handles functions and recursive references
-  if (process.env.NODE_ENV === 'development') {
-    // const validation = safeValidateDashboardConfig(themeConfig)
-    // if (!validation.success) {
-    //   console.error('[config-sync] Theme dashboard config validation failed:')
-    //   console.error(validation.error.format())
-    //   console.warn('[config-sync] Using default config due to validation errors')
-    //   return DEFAULT_DASHBOARD_CONFIG
-    // }
+  if (DEBUG_CONFIG) {
     console.log('[config-sync] Theme config loaded (validation skipped)')
   }
 
   // Merge theme config over default config
   const mergedConfig = mergeConfigs(DEFAULT_DASHBOARD_CONFIG, themeConfig)
 
-  if (process.env.NODE_ENV === 'development') {
+  if (DEBUG_CONFIG) {
     console.log('[config-sync] Config merged successfully')
     console.log('[config-sync] Merged config has helper functions:', {
       isSettingsPageEnabled: typeof mergedConfig.isSettingsPageEnabled === 'function',
@@ -160,6 +178,17 @@ function loadDashboardConfig() {
   return mergedConfig
 }
 
+/**
+ * Get dashboard config with caching
+ */
+function loadDashboardConfig() {
+  if (globalCache.__nextspark_dashboard_config) {
+    return globalCache.__nextspark_dashboard_config
+  }
+  globalCache.__nextspark_dashboard_config = loadDashboardConfigInternal()
+  return globalCache.__nextspark_dashboard_config
+}
+
 // =============================================================================
 // DEV CONFIG LOADING (Development-only settings)
 // =============================================================================
@@ -168,7 +197,7 @@ function loadDashboardConfig() {
  * Load development-only configuration from theme's dev.config.ts
  * Contains settings like DevKeyring that should never affect production
  */
-function loadDevConfig() {
+function loadDevConfigInternal() {
   const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME
 
   // If no theme is active, return null
@@ -179,11 +208,23 @@ function loadDevConfig() {
   // Load theme-specific dev config from build-time registry
   const devConfig = ThemeService.getDevConfig(activeTheme)
 
-  if (process.env.NODE_ENV === 'development' && devConfig) {
+  if (DEBUG_CONFIG && devConfig) {
     console.log('[config-sync] Dev config loaded for theme:', activeTheme)
   }
 
   return devConfig
+}
+
+/**
+ * Get dev config with caching
+ */
+function loadDevConfig() {
+  // Check for explicit undefined to allow null values in cache
+  if (globalCache.__nextspark_dev_config !== undefined) {
+    return globalCache.__nextspark_dev_config
+  }
+  globalCache.__nextspark_dev_config = loadDevConfigInternal()
+  return globalCache.__nextspark_dev_config
 }
 
 // Load and export merged configs

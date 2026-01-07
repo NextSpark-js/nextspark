@@ -8,6 +8,26 @@
 import type { SupportedLocale } from '../entities/types'
 import { TranslationService } from '../services/translation.service'
 
+// Debug flag - only log if explicitly enabled
+const DEBUG_I18N = process.env.NEXTSPARK_DEBUG_I18N === 'true'
+
+// =============================================================================
+// GLOBAL CACHE - Prevents re-loading translations on each request
+// =============================================================================
+
+interface TranslationCache {
+  __nextspark_translations_cache?: Map<string, Record<string, unknown>>
+}
+
+const globalCache = globalThis as unknown as TranslationCache
+
+function getTranslationCache(): Map<string, Record<string, unknown>> {
+  if (!globalCache.__nextspark_translations_cache) {
+    globalCache.__nextspark_translations_cache = new Map()
+  }
+  return globalCache.__nextspark_translations_cache
+}
+
 /**
  * Deep merge with key preservation
  * Priority: Core < Theme < Entity (later wins)
@@ -136,7 +156,9 @@ async function loadEntityTranslationsFromRegistry(
     const entityTranslations = await TranslationService.loadAllEntities(activeTheme, locale)
     return entityTranslations
   } catch (error) {
-    console.warn(`[translations] Failed to load entity translations for ${locale}:`, error)
+    if (DEBUG_I18N) {
+      console.warn(`[translations] Failed to load entity translations for ${locale}:`, error)
+    }
     return {}
   }
 }
@@ -149,10 +171,29 @@ async function loadEntityTranslationsFromRegistry(
  * 1. Core translations provide the base
  * 2. Theme translations can override/extend core
  * 3. Entity translations can override/extend both (highest priority)
+ *
+ * Uses globalThis cache to prevent re-loading on each request
  */
 export async function loadMergedTranslations(
   locale: SupportedLocale
 ): Promise<Record<string, unknown>> {
+  // Generate cache key based on locale and theme
+  const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME || 'default'
+  const cacheKey = `${locale}-${activeTheme}`
+
+  // Check cache first
+  const cache = getTranslationCache()
+  if (cache.has(cacheKey)) {
+    if (DEBUG_I18N) {
+      console.log(`[i18n] Cache hit for ${cacheKey}`)
+    }
+    return cache.get(cacheKey)!
+  }
+
+  if (DEBUG_I18N) {
+    console.log(`[i18n] Loading translations for ${cacheKey}`)
+  }
+
   const fallbackChain = getLocaleFallbackChain(locale)
   let mergedMessages: Record<string, unknown> = {}
 
@@ -171,7 +212,9 @@ export async function loadMergedTranslations(
     const themeMessages = await loadThemeTranslations(locale)
     mergedMessages = deepMergeMessages(mergedMessages, themeMessages)
   } catch {
-    console.warn(`[translations] No theme messages for ${locale}`)
+    if (DEBUG_I18N) {
+      console.warn(`[translations] No theme messages for ${locale}`)
+    }
   }
 
   // 3. Cargar entity messages (wins over theme and core)
@@ -183,6 +226,13 @@ export async function loadMergedTranslations(
     }
   } catch {
     // No entity messages, ok
+  }
+
+  // Store in cache
+  cache.set(cacheKey, mergedMessages)
+
+  if (DEBUG_I18N) {
+    console.log(`[i18n] Cached translations for ${cacheKey} with ${Object.keys(mergedMessages).length} namespaces`)
   }
 
   return mergedMessages
