@@ -113,6 +113,7 @@ async function copyProjectFiles(): Promise<void> {
     { src: 'cypress.d.ts', dest: 'cypress.d.ts', force: false },
     { src: 'eslint.config.mjs', dest: 'eslint.config.mjs', force: false },
     { src: 'scripts/cy-tags.cjs', dest: 'scripts/cy-tags.cjs', force: false },
+    { src: 'scripts/cy-run-prod.cjs', dest: 'scripts/cy-run-prod.cjs', force: false },
   ]
 
   for (const item of itemsToCopy) {
@@ -171,6 +172,7 @@ async function updatePackageJson(config: WizardConfig): Promise<void> {
     'cy:open': `cypress open --config-file contents/themes/${config.projectSlug}/tests/cypress.config.ts`,
     'cy:run': `cypress run --config-file contents/themes/${config.projectSlug}/tests/cypress.config.ts`,
     'cy:tags': 'node scripts/cy-tags.cjs',
+    'cy:run:prod': 'node scripts/cy-run-prod.cjs',
     'allure:generate': `allure generate contents/themes/${config.projectSlug}/tests/cypress/allure-results --clean -o contents/themes/${config.projectSlug}/tests/cypress/allure-report`,
     'allure:open': `allure open contents/themes/${config.projectSlug}/tests/cypress/allure-report`,
   }
