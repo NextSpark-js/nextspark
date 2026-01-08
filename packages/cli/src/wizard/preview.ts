@@ -69,7 +69,7 @@ export function getFileTree(config: WizardConfig): string[] {
 
   // Test files
   files.push(`${themeDir}/tests/cypress.config.ts`)
-  files.push(`${themeDir}/tests/jest/jest.config.ts`)
+  files.push(`${themeDir}/tests/jest/jest.config.cjs`)
   files.push(`${themeDir}/tests/cypress/e2e/auth.cy.ts`)
   files.push(`${themeDir}/tests/cypress/e2e/dashboard.cy.ts`)
   files.push(`${themeDir}/tests/jest/components/hero.test.tsx`)

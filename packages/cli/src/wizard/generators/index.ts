@@ -16,6 +16,7 @@ import {
   updateBillingConfig,
   updateMigrations,
   updateRolesConfig,
+  updateTestFiles,
 } from './theme-renamer.js'
 import {
   updatePermissionsConfig,
@@ -46,6 +47,7 @@ export {
   updateBillingConfig,
   updateMigrations,
   updateRolesConfig,
+  updateTestFiles,
   updatePermissionsConfig,
   updateDashboardConfig,
   generateEnvExample,
@@ -164,7 +166,7 @@ async function updatePackageJson(config: WizardConfig): Promise<void> {
     'build:registries': 'nextspark registry:build',
     'db:migrate': 'nextspark db:migrate',
     'db:seed': 'nextspark db:seed',
-    'test:theme': `jest --config contents/themes/${config.projectSlug}/tests/jest/jest.config.ts`,
+    'test:theme': `jest --config contents/themes/${config.projectSlug}/tests/jest/jest.config.cjs`,
     'cy:open': `cypress open --config-file contents/themes/${config.projectSlug}/tests/cypress.config.ts`,
     'cy:run': `cypress run --config-file contents/themes/${config.projectSlug}/tests/cypress.config.ts`,
     'allure:generate': `allure generate contents/themes/${config.projectSlug}/tests/cypress/allure-results --clean -o contents/themes/${config.projectSlug}/tests/cypress/allure-report`,
@@ -324,25 +326,28 @@ export async function generateProject(config: WizardConfig): Promise<void> {
   // 5. Update migrations
   await updateMigrations(config)
 
-  // 6. Update additional configs
+  // 6. Update test files (replace starter path with project slug)
+  await updateTestFiles(config)
+
+  // 7. Update additional configs
   await updatePermissionsConfig(config)
   await updateDashboardConfig(config)
 
-  // 7. Update Phase 3 configs (auth, dashboard UI, dev tools)
+  // 8. Update Phase 3 configs (auth, dashboard UI, dev tools)
   await updateAuthConfig(config)
   await updateDashboardUIConfig(config)
   await updateDevToolsConfig(config)
 
-  // 8. Process i18n files
+  // 9. Process i18n files
   await processI18n(config)
 
-  // 9. Update project files
+  // 10. Update project files
   await updatePackageJson(config)
   await updateGitignore(config)
   await generateEnvExample(config)
   await updateReadme(config)
 
-  // 10. Setup environment for immediate use
+  // 11. Setup environment for immediate use
   await copyEnvExampleToEnv()
   // Note: Registries are built after pnpm install in wizard/index.ts
 }

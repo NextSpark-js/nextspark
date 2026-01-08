@@ -423,6 +423,46 @@ export async function updateMigrations(config: WizardConfig): Promise<void> {
 }
 
 /**
+ * Update test files with new theme name
+ * Replace @/contents/themes/starter/ with @/contents/themes/{projectSlug}/
+ */
+export async function updateTestFiles(config: WizardConfig): Promise<void> {
+  const testsDir = path.join(getTargetThemesDir(), config.projectSlug, 'tests')
+
+  if (!await fs.pathExists(testsDir)) {
+    return
+  }
+
+  // Find all .ts and .tsx files in tests directory recursively
+  const processDir = async (dir: string) => {
+    const items = await fs.readdir(dir)
+
+    for (const item of items) {
+      const itemPath = path.join(dir, item)
+      const stat = await fs.stat(itemPath)
+
+      if (stat.isDirectory()) {
+        await processDir(itemPath)
+      } else if (item.endsWith('.ts') || item.endsWith('.tsx')) {
+        let content = await fs.readFile(itemPath, 'utf-8')
+
+        // Replace theme path references
+        const hasChanges = content.includes('@/contents/themes/starter/')
+        if (hasChanges) {
+          content = content.replace(
+            /@\/contents\/themes\/starter\//g,
+            `@/contents/themes/${config.projectSlug}/`
+          )
+          await fs.writeFile(itemPath, content, 'utf-8')
+        }
+      }
+    }
+  }
+
+  await processDir(testsDir)
+}
+
+/**
  * Convert string to camelCase
  */
 function toCamelCase(str: string): string {
