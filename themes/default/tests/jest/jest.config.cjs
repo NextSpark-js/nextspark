@@ -27,6 +27,10 @@ const projectRoot = isNpmMode ? npmModeRoot : monorepoAppRoot
 // Module name mapper based on mode
 const moduleNameMapper = isNpmMode
   ? {
+      // NPM mode: Mock core UI components (ESM can't be transformed by Jest)
+      '^@nextsparkjs/core/components/ui/badge$': path.join(themeTestsRoot, '__mocks__/@nextsparkjs/core/components/ui/badge.js'),
+      // NPM mode: Mock core lib modules that are ESM
+      '^@nextsparkjs/core/lib/db$': path.join(themeTestsRoot, '__mocks__/@nextsparkjs/core/lib/db.js'),
       // NPM mode: explicitly resolve @nextsparkjs/core subpaths to dist directory
       // Jest doesn't respect package.json exports, so we map directly to dist files
       '^@nextsparkjs/core/lib/(.*)$': '<rootDir>/node_modules/@nextsparkjs/core/dist/lib/$1',
@@ -34,6 +38,7 @@ const moduleNameMapper = isNpmMode
       '^@nextsparkjs/core/components/(.*)$': '<rootDir>/node_modules/@nextsparkjs/core/dist/components/$1',
       '^@nextsparkjs/core/(.*)$': '<rootDir>/node_modules/@nextsparkjs/core/dist/$1',
       '^@nextsparkjs/core$': '<rootDir>/node_modules/@nextsparkjs/core/dist/index.js',
+      '^@nextsparkjs/registries/(.*)$': path.join(themeTestsRoot, '__mocks__/@nextsparkjs/registries/$1'),
       '^@/contents/(.*)$': '<rootDir>/contents/$1',
       '^@/entities/(.*)$': '<rootDir>/contents/entities/$1',
       '^@/plugins/(.*)$': '<rootDir>/contents/plugins/$1',
@@ -41,6 +46,7 @@ const moduleNameMapper = isNpmMode
       '^@/(.*)$': '<rootDir>/$1',
       // Mocks from theme-local folder
       'next/server': path.join(themeTestsRoot, '__mocks__/next-server.js'),
+      'next/image': path.join(themeTestsRoot, '__mocks__/next/image.js'),
       '^jose$': path.join(themeTestsRoot, '__mocks__/jose.js'),
       '^jose/(.*)$': path.join(themeTestsRoot, '__mocks__/jose.js'),
     }
@@ -48,6 +54,7 @@ const moduleNameMapper = isNpmMode
       // Monorepo mode: resolve from packages/core/src (rootDir is apps/dev)
       '^@nextsparkjs/core/(.*)$': '<rootDir>/../../packages/core/src/$1',
       '^@nextsparkjs/core$': '<rootDir>/../../packages/core/src',
+      '^@nextsparkjs/registries/(.*)$': '<rootDir>/../../packages/core/tests/jest/__mocks__/@nextsparkjs/registries/$1',
       '^@/contents/(.*)$': '<rootDir>/contents/$1',
       '^@/entities/(.*)$': '<rootDir>/contents/entities/$1',
       '^@/plugins/(.*)$': '<rootDir>/contents/plugins/$1',
@@ -100,7 +107,7 @@ module.exports = {
   // Transform configuration
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', {
-      tsconfig: path.join(projectRoot, 'tsconfig.json'),
+      tsconfig: path.join(themeTestsRoot, 'tsconfig.jest.json'),
     }],
   },
 

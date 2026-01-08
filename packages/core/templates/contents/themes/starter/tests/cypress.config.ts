@@ -1,13 +1,18 @@
 /**
  * Cypress Configuration for Starter Theme
  *
- * This config is theme-specific and used by scripts/cy.mjs.
- * Run with: NEXT_PUBLIC_ACTIVE_THEME=starter pnpm cy:open
+ * This config is self-contained for npm projects created with `nextspark init`.
+ * Run with: pnpm cy:open
  */
 
 import { defineConfig } from 'cypress'
 import path from 'path'
 import fs from 'fs'
+import { fileURLToPath } from 'url'
+
+// ESM-compatible __dirname
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 // Paths relative to this config file
 const themeRoot = path.resolve(__dirname, '..')
@@ -18,24 +23,21 @@ const narrationsOutputDir = path.join(__dirname, 'cypress/videos/narrations')
 import dotenv from 'dotenv'
 dotenv.config({ path: path.join(projectRoot, '.env') })
 
-// Server port (from .env or default 5173)
-const port = process.env.PORT || 5173
+// Server port (from .env or default 3000)
+const port = process.env.PORT || 3000
 
 export default defineConfig({
   e2e: {
     // Base URL for the application
     baseUrl: `http://localhost:${port}`,
 
-    // Spec patterns: core tests + theme tests
+    // Spec patterns: theme tests only
     specPattern: [
-      // Core tests (always included)
-      path.join(projectRoot, 'core/tests/cypress/e2e/core/**/*.cy.{js,ts}'),
-      // Theme-specific tests
       path.join(__dirname, 'cypress/e2e/**/*.cy.{js,ts}'),
     ],
 
-    // Support file (shared across themes)
-    supportFile: path.join(projectRoot, 'core/tests/cypress/support/e2e.ts'),
+    // Support file (theme-local)
+    supportFile: path.join(__dirname, 'cypress/support/e2e.ts'),
 
     // Fixtures folder (theme-specific)
     fixturesFolder: path.join(__dirname, 'cypress/fixtures'),
@@ -96,15 +98,16 @@ export default defineConfig({
       grepOmitFiltered: true,
     },
 
-    setupNodeEvents(on, config) {
+    async setupNodeEvents(on, config) {
       // Allure plugin setup (allure-cypress)
-      const { allureCypress } = require('allure-cypress/reporter')
+      const { allureCypress } = await import('allure-cypress/reporter')
       allureCypress(on, config, {
         resultsDir: path.join(__dirname, 'cypress/allure-results'),
       })
 
       // @cypress/grep plugin for test filtering by tags
-      require('@cypress/grep/src/plugin')(config)
+      const grepPlugin = await import('@cypress/grep/src/plugin.js')
+      ;(grepPlugin.default || grepPlugin)(config)
 
       // Documentation video tasks
       on('task', {
@@ -127,7 +130,7 @@ export default defineConfig({
           const filepath = path.join(narrationsOutputDir, filename)
 
           fs.writeFileSync(filepath, JSON.stringify(narrations, null, 2))
-          console.log(`Narrations saved to: ${filepath}`)
+          console.log(`📝 Narrations saved to: ${filepath}`)
 
           return null
         },
@@ -136,7 +139,7 @@ export default defineConfig({
          * Add narration entry (called per narration)
          */
         addNarration(narration: unknown) {
-          console.log('Narration:', narration)
+          console.log('🎙️ Narration:', narration)
           return null
         },
       })

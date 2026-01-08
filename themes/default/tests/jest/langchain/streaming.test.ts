@@ -127,7 +127,8 @@ describe('Streaming Service', () => {
         const chunk: StreamChunk = { type: 'token', content: 'test' }
         const result = encoder.encode(chunk)
 
-        expect(result).toBeInstanceOf(Uint8Array)
+        // Use constructor name check to avoid jsdom cross-realm issues
+        expect(result.constructor.name).toBe('Uint8Array')
       })
     })
 
@@ -142,7 +143,8 @@ describe('Streaming Service', () => {
       it('should return Uint8Array', () => {
         const result = encoder.encodeDone()
 
-        expect(result).toBeInstanceOf(Uint8Array)
+        // Use constructor name check to avoid jsdom cross-realm issues
+        expect(result.constructor.name).toBe('Uint8Array')
       })
     })
   })
@@ -360,7 +362,8 @@ describe('Streaming Service', () => {
 
       expect(results).toHaveLength(100)
       results.forEach(result => {
-        expect(result).toBeInstanceOf(Uint8Array)
+        // Use constructor name check to avoid jsdom cross-realm issues
+        expect(result.constructor.name).toBe('Uint8Array')
       })
     })
   })

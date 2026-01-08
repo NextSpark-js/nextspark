@@ -1,7 +1,10 @@
-# Tests (not needed in npm package)
-tests/
-*.test.ts
-*.spec.ts
+# Test artifacts only (tests/ folder IS published for theme testing)
+tests/cypress/screenshots/
+tests/cypress/videos/
+tests/cypress/downloads/
+tests/cypress/allure-results/
+tests/cypress/allure-report/
+tests/jest/coverage/
 
 # Development files
 node_modules/

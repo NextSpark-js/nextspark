@@ -671,8 +671,8 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
     const total = rawData.length > 0 ? Number((rawData[0] as Record<string, unknown>).total_count) || 0 : 0
 
     // Remove total_count from data (it was only needed for pagination)
-    const data = rawData.map((row: Record<string, unknown>) => {
-      const { total_count, ...rest } = row as Record<string, unknown>
+    const data = (rawData as Record<string, unknown>[]).map((row) => {
+      const { total_count, ...rest } = row
       return rest
     })
     const paginationMeta = createPaginationMeta(pagination.page, pagination.limit, total)

@@ -183,7 +183,14 @@ describe('EntityRegistry', () => {
 
   beforeEach(() => {
     registry = new EntityRegistry()
+    // Clear singleton to ensure test isolation
+    registry.clear()
     registry.initialize()
+  })
+
+  afterEach(() => {
+    // Clean up after each test
+    registry.clear()
   })
 
   describe('Basic Registry Operations', () => {

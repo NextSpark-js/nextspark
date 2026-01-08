@@ -1,34 +1,27 @@
 import { defineConfig } from 'cypress'
-import { existsSync } from 'fs'
-import { resolve } from 'path'
 
-// Detectar si estamos en monorepo o en proyecto que instalo via npm
-const isMonorepo = existsSync(resolve(__dirname, '../../packages/core/package.json'))
-
-// Paths a los tests del core segun el contexto
-const coreTestsPath = isMonorepo
-  ? '../../packages/core/tests/cypress/e2e/**/*.cy.ts'
-  : 'node_modules/@nextsparkjs/core/tests/cypress/e2e/**/*.cy.ts'
+// Use active theme's tests (from themes/default or environment variable)
+const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME || 'default'
+const themeTestsPath = `../../themes/${activeTheme}/tests/cypress/e2e/**/*.cy.ts`
 
 export default defineConfig({
   e2e: {
     baseUrl: 'http://localhost:3000',
 
-    // Incluir tests del core Y tests del proyecto
+    // Tests from the active theme
     specPattern: [
-      coreTestsPath,
-      'tests/cypress/e2e/**/*.cy.ts',
+      themeTestsPath,
     ],
 
-    // Support file del proyecto (que importa el del core)
-    supportFile: 'tests/cypress/support/e2e.ts',
+    // Support file from the active theme
+    supportFile: `../../themes/${activeTheme}/tests/cypress/support/e2e.ts`,
 
-    // Fixtures del proyecto
-    fixturesFolder: 'tests/cypress/fixtures',
+    // Fixtures from the active theme
+    fixturesFolder: `../../themes/${activeTheme}/tests/cypress/fixtures`,
 
-    // Output folders
-    videosFolder: 'tests/cypress/videos',
-    screenshotsFolder: 'tests/cypress/screenshots',
+    // Output folders (keep in apps/dev for easy access)
+    videosFolder: 'cypress/videos',
+    screenshotsFolder: 'cypress/screenshots',
 
     // Configuracion adicional
     viewportWidth: 1280,
@@ -46,12 +39,12 @@ export default defineConfig({
     experimentalRunAllSpecs: true,
   },
 
-  // Configuracion de componentes (opcional)
+  // Component testing (optional - uses theme's component tests if available)
   component: {
     devServer: {
       framework: 'next',
       bundler: 'webpack',
     },
-    specPattern: 'tests/cypress/component/**/*.cy.tsx',
+    specPattern: `../../themes/${activeTheme}/tests/cypress/component/**/*.cy.tsx`,
   },
 })

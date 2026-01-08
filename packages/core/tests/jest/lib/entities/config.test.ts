@@ -90,6 +90,8 @@ describe('EntityRegistry', () => {
 
   beforeEach(() => {
     configManager = new EntityRegistry()
+    // Clear singleton to ensure test isolation
+    configManager.reset()
   })
 
   afterEach(() => {
@@ -97,19 +99,22 @@ describe('EntityRegistry', () => {
   })
 
   describe('Initialization', () => {
-    test('should initialize successfully', async () => {
+    test('should report uninitialized when empty', () => {
+      // Registry is considered initialized when it has entities
+      expect(configManager.isInitialized()).toBe(false)
+    })
+
+    test('should report initialized after registering entities', () => {
       expect(configManager.isInitialized()).toBe(false)
 
-      await configManager.initialize()
+      // Register an entity - this is what makes the registry "initialized"
+      configManager.register(mockEntityConfig)
 
       expect(configManager.isInitialized()).toBe(true)
     })
 
-    test('should not initialize twice', async () => {
-      await configManager.initialize()
-      expect(configManager.isInitialized()).toBe(true)
-
-      // Second initialization should not throw or cause issues
+    test('should call initialize without throwing', async () => {
+      // initialize() is a no-op for backwards compatibility
       await expect(configManager.initialize()).resolves.not.toThrow()
     })
   })
