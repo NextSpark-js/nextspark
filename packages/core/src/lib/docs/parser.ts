@@ -39,7 +39,7 @@ export interface DocPage {
   content: string
   metadata: DocMetadata
   path: string
-  source: 'core' | 'theme'
+  source: 'public' | 'superadmin'
 }
 
 /**

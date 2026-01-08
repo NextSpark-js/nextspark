@@ -123,13 +123,13 @@ export interface SettingsConfig {
 /**
  * Documentation Category Configuration
  *
- * Configuration for a single documentation category level (core, theme, or plugins).
+ * Configuration for a single documentation category level (public or superadmin).
  */
 export interface DocsCategoryConfig {
     /** Enable/disable this documentation level in the sidebar */
     enabled: boolean;
     /** Whether this category should be expanded by default on page load */
-    open: boolean;
+    open?: boolean;
     /** Custom label displayed in the sidebar for this category */
     label: string;
 }
@@ -138,31 +138,26 @@ export interface DocsCategoryConfig {
  *
  * Controls documentation system behavior including visibility,
  * search functionality, and category-specific settings.
+ *
+ * Structure:
+ * - public: User-facing documentation at /docs
+ * - superadmin: Admin documentation at /superadmin/docs
+ *
+ * NOTE: Plugin docs are NOT in the registry - they are for developer reference only (IDE/LLM).
  */
 export interface DocsConfig {
     /** Enable/disable the entire documentation system */
     enabled: boolean;
-    /** Make documentation publicly accessible (no auth required) */
-    public: boolean;
+    /** Make public documentation accessible without authentication */
+    publicAccess?: boolean;
     /** Enable search functionality in the sidebar */
     searchEnabled: boolean;
     /** Show breadcrumbs navigation in documentation pages */
     breadcrumbs: boolean;
-    /** Theme documentation configuration */
-    theme?: DocsCategoryConfig;
-    /** Plugins documentation configuration */
-    plugins?: DocsCategoryConfig;
-    /** Core documentation configuration */
-    core?: DocsCategoryConfig;
-    /**
-     * Additional environment check for plugin docs in production
-     * Plugin docs will only show if BOTH conditions are met:
-     * 1. plugins.enabled is true
-     * 2. Either in development OR showPluginsDocsInProd is true
-     *
-     * @deprecated Prefer using plugins.enabled for simpler control
-     */
-    showPluginsDocsInProd?: boolean;
+    /** Public documentation configuration (for /docs routes) */
+    public?: DocsCategoryConfig;
+    /** Superadmin documentation configuration (for /superadmin/docs routes) */
+    superadmin?: DocsCategoryConfig;
 }
 /**
  * DevKeyring User Configuration
