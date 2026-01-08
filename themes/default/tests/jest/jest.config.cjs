@@ -105,9 +105,25 @@ module.exports = {
   setupFilesAfterEnv,
 
   // Transform configuration
+  // In npm mode, use project's tsconfig with jsx override
+  // In monorepo, use the local tsconfig.jest.json
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', {
-      tsconfig: path.join(themeTestsRoot, 'tsconfig.jest.json'),
+      tsconfig: isNpmMode
+        ? {
+            jsx: 'react-jsx',
+            esModuleInterop: true,
+            allowSyntheticDefaultImports: true,
+            module: 'ESNext',
+            moduleResolution: 'bundler',
+            strict: true,
+            baseUrl: projectRoot,
+            paths: {
+              '@/*': ['./*'],
+              '@/contents/*': ['./contents/*'],
+            },
+          }
+        : path.join(themeTestsRoot, 'tsconfig.jest.json'),
     }],
   },
 
