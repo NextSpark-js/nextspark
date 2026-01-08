@@ -1,7 +1,53 @@
 import { defineConfig } from 'tsup'
-import { cp } from 'fs/promises'
+import { cp, readFile, writeFile, readdir, stat } from 'fs/promises'
 import { join, resolve } from 'path'
 import { glob } from 'glob'
+
+/**
+ * Fix ESM imports by adding .js extensions to relative imports
+ * Required because bundle: false doesn't add extensions, but ESM requires them
+ */
+async function fixEsmImports(dir: string): Promise<void> {
+  const entries = await readdir(dir)
+
+  for (const entry of entries) {
+    const fullPath = join(dir, entry)
+    const stats = await stat(fullPath)
+
+    if (stats.isDirectory()) {
+      await fixEsmImports(fullPath)
+    } else if (entry.endsWith('.js')) {
+      let content = await readFile(fullPath, 'utf-8')
+
+      // Fix relative imports: from "./foo" or from '../foo' -> add .js
+      // Match: from "./path" or from '../path' (without extension)
+      // Don't match: from "./path.js" or from "package"
+      content = content.replace(
+        /(from\s+['"])(\.\.?\/[^'"]+?)(['"])/g,
+        (match, prefix, path, suffix) => {
+          // Skip if already has extension
+          if (path.endsWith('.js') || path.endsWith('.json') || path.endsWith('.css')) {
+            return match
+          }
+          return `${prefix}${path}.js${suffix}`
+        }
+      )
+
+      // Also fix dynamic imports: import("./foo") -> import("./foo.js")
+      content = content.replace(
+        /(import\s*\(\s*['"])(\.\.?\/[^'"]+?)(['"]\s*\))/g,
+        (match, prefix, path, suffix) => {
+          if (path.endsWith('.js') || path.endsWith('.json') || path.endsWith('.css')) {
+            return match
+          }
+          return `${prefix}${path}.js${suffix}`
+        }
+      )
+
+      await writeFile(fullPath, content)
+    }
+  }
+}
 
 export default defineConfig({
   // Use glob to get all source files - preserves module structure
@@ -46,9 +92,14 @@ export default defineConfig({
     options.jsxImportSource = 'react'
   },
 
-  // Copy non-compiled assets after build
+  // Copy non-compiled assets after build and fix ESM imports
   async onSuccess() {
     const distDir = join(process.cwd(), 'dist')
+
+    // Fix ESM imports by adding .js extensions
+    console.log('🔧 Fixing ESM imports...')
+    await fixEsmImports(distDir)
+    console.log('✅ ESM imports fixed')
 
     // Copy messages/ directory
     await cp(
