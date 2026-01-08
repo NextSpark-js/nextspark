@@ -9,7 +9,7 @@
   ],
   "dependencies": {},
   "peerDependencies": {
-    "@nextsparkjs/core": "0.1.0-beta.24",
+    "@nextsparkjs/core": "workspace:*",
     "@tanstack/react-query": "^5.0.0",
     "lucide-react": "^0.539.0",
     "next": "^15.0.0",
