@@ -1,11 +1,15 @@
 import { defineConfig } from 'tsup'
 import { cp, readFile, writeFile, readdir, stat } from 'fs/promises'
-import { join, resolve } from 'path'
+import { join, resolve, dirname } from 'path'
 import { glob } from 'glob'
+import { existsSync } from 'fs'
 
 /**
  * Fix ESM imports by adding .js extensions to relative imports
  * Required because bundle: false doesn't add extensions, but ESM requires them
+ *
+ * If the import points to a directory (with index.js), appends /index.js
+ * If the import points to a file, appends .js
  */
 async function fixEsmImports(dir: string): Promise<void> {
   const entries = await readdir(dir)
@@ -18,8 +22,9 @@ async function fixEsmImports(dir: string): Promise<void> {
       await fixEsmImports(fullPath)
     } else if (entry.endsWith('.js')) {
       let content = await readFile(fullPath, 'utf-8')
+      const fileDir = dirname(fullPath)
 
-      // Fix relative imports: from "./foo" or from '../foo' -> add .js
+      // Fix relative imports: from "./foo" or from '../foo' -> add .js or /index.js
       // Match: from "./path" or from '../path' (without extension)
       // Don't match: from "./path.js" or from "package"
       content = content.replace(
@@ -29,6 +34,16 @@ async function fixEsmImports(dir: string): Promise<void> {
           if (path.endsWith('.js') || path.endsWith('.json') || path.endsWith('.css')) {
             return match
           }
+
+          // Resolve the path to check if it's a directory
+          const resolvedPath = resolve(fileDir, path)
+
+          // Check if it's a directory with index.js
+          if (existsSync(resolvedPath) && existsSync(join(resolvedPath, 'index.js'))) {
+            return `${prefix}${path}/index.js${suffix}`
+          }
+
+          // Otherwise append .js
           return `${prefix}${path}.js${suffix}`
         }
       )
@@ -40,6 +55,15 @@ async function fixEsmImports(dir: string): Promise<void> {
           if (path.endsWith('.js') || path.endsWith('.json') || path.endsWith('.css')) {
             return match
           }
+
+          // Resolve the path to check if it's a directory
+          const resolvedPath = resolve(fileDir, path)
+
+          // Check if it's a directory with index.js
+          if (existsSync(resolvedPath) && existsSync(join(resolvedPath, 'index.js'))) {
+            return `${prefix}${path}/index.js${suffix}`
+          }
+
           return `${prefix}${path}.js${suffix}`
         }
       )

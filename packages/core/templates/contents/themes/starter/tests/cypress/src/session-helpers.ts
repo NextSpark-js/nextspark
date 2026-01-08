@@ -11,17 +11,18 @@
 
 /**
  * Theme Test Users
- * These emails should match the seeded users for the starter theme
+ * Using developer@nextspark.dev which comes pre-installed from core
+ * and has full platform access (superadmin + developer role)
  */
 export const THEME_USERS = {
-  OWNER: 'owner@starter.dev',
-  ADMIN: 'admin@starter.dev',
-  MEMBER: 'member@starter.dev',
-  VIEWER: 'viewer@starter.dev',
+  OWNER: 'developer@nextspark.dev',
+  ADMIN: 'developer@nextspark.dev',
+  MEMBER: 'developer@nextspark.dev',
+  VIEWER: 'developer@nextspark.dev',
 } as const
 
-// Common password for all test users
-const TEST_PASSWORD = 'Test1234'
+// Common password for all test users (developer@nextspark.dev)
+const TEST_PASSWORD = 'Pandora1234'
 
 // Extended timeout for dev server compilation
 const API_TIMEOUT = 30000
