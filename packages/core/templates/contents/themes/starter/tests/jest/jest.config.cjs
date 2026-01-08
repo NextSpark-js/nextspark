@@ -61,9 +61,10 @@ module.exports = {
   ],
 
   // Transform configuration
+  // Use tsconfig.jest.json for JSX support (jsx: "react-jsx" instead of "preserve")
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', {
-      tsconfig: path.join(projectRoot, 'tsconfig.json'),
+      tsconfig: path.join(themeTestsRoot, 'tsconfig.jest.json'),
     }],
   },
 
