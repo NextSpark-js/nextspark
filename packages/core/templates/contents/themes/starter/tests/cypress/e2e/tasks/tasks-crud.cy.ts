@@ -10,7 +10,7 @@
  * - Filtering and searching tasks
  * - Using POM pattern for maintainability
  *
- * Run with: npx cypress run --spec "**/tasks-crud.cy.ts"
+ * Run with: npx cypress run --spec "**\/tasks-crud.cy.ts"
  */
 
 import { TasksPOM, type TaskFormData } from './TasksPOM'
