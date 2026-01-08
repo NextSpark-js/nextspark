@@ -1,3 +1,8 @@
+---
+title: User Management
+description: Managing users, teams, and roles in your NextSpark application.
+---
+
 # User Management
 
 This guide covers managing users and teams in your NextSpark application.

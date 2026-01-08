@@ -1,3 +1,8 @@
+---
+title: AI Assistant Overview
+description: Learn about the AI-powered assistant features and multi-agent architecture.
+---
+
 # AI Assistant - Overview
 
 This theme includes an AI-powered assistant that helps users manage tasks, customers, and pages through natural language.

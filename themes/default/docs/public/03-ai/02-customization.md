@@ -1,3 +1,8 @@
+---
+title: AI Customization
+description: Guide to customizing and extending the AI assistant with custom tools and handlers.
+---
+
 # AI Assistant - Customization
 
 This guide covers how to customize and extend the AI assistant for your specific needs.

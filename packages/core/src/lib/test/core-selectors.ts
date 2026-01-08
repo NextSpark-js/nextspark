@@ -660,7 +660,10 @@ export const CORE_SELECTORS = {
       users: 'superadmin-nav-users',
       teams: 'superadmin-nav-teams',
       teamRoles: 'superadmin-nav-team-roles',
+      docs: 'superadmin-nav-docs',
       subscriptions: 'superadmin-nav-subscriptions',
+      analytics: 'superadmin-nav-analytics',
+      config: 'superadmin-nav-config',
       exitToDashboard: 'superadmin-sidebar-exit-to-dashboard',
     },
     dashboard: {

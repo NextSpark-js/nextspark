@@ -1,3 +1,8 @@
+---
+title: Customization
+description: Learn how to customize colors, typography, components, and functionality in the default theme.
+---
+
 # Theme Customization
 
 ## Introduction

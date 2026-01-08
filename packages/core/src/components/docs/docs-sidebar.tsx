@@ -90,8 +90,8 @@ export function DocsSidebar({ sections }: DocsSidebarProps) {
     }
   }
 
-  // Filter to only public docs and apply search
-  const publicSections = filterSections(sections.filter(s => s.source === 'public'))
+  // Apply search filter to sections (already filtered to public by caller)
+  const publicSections = filterSections(sections)
 
   // Check visibility
   if (!publicConfig.enabled) {

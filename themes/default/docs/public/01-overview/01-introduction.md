@@ -1,3 +1,8 @@
+---
+title: Introduction
+description: Overview of the Default Theme and its key features for NextSpark applications.
+---
+
 # Default Theme Introduction
 
 ## Overview

@@ -2,75 +2,66 @@
 
 ## Introduction
 
-The documentation system renders markdown content as server-side HTML accessible via public `/docs` routes. This document explains the rendering pipeline, URL structure, components, and styling applied to documentation pages.
+The documentation system renders markdown content as server-side HTML accessible via public `/docs` routes and admin `/superadmin/docs` routes. This document explains the rendering pipeline, URL structure, components, and styling applied to documentation pages.
 
 ## URL Structure
 
 ### Route Patterns
 
-**Core Documentation:**
+**Public Documentation:**
 ```text
-/docs/core/{section}/{page}
+/docs/{section}/{page}
 
 Examples:
-/docs/core/fundamentals/project-overview
-/docs/core/registry-system/introduction
-/docs/core/documentation-system/architecture
+/docs/getting-started/introduction
+/docs/features/overview
+/docs/customization/styling-guide
 ```
 
-**Theme Documentation:**
+**Superadmin Documentation:**
 ```text
-/docs/theme/{section}/{page}
+/superadmin/docs/{section}/{page}
 
 Examples:
-/docs/theme/customization/styling-guide
-/docs/theme/features/custom-components
-```
-
-**Plugin Documentation:**
-```text
-/docs/plugins/{plugin}/{section}/{page}
-
-Examples:
-/docs/plugins/ai/features/chat-interface
-/docs/plugins/analytics/setup/configuration
+/superadmin/docs/setup/configuration
+/superadmin/docs/setup/deployment
+/superadmin/docs/management/users
 ```
 
 ### Documentation Home
 
 ```text
-/docs → Documentation landing page
+/docs                → Public documentation landing page
+/superadmin/docs     → Admin documentation landing page
 ```
 
 ## Route Handlers
 
-### Core and Theme Pages
+### Public Documentation Pages
 
-**Location:** `app/(public)/docs/[category]/[section]/[page]/page.tsx`
+**Location:** `app/(public)/docs/[section]/[page]/page.tsx`
 
 **Dynamic Segments:**
-- `[category]` - `core` or `theme`
-- `[section]` - Section slug (e.g., `fundamentals`)
-- `[page]` - Page slug (e.g., `project-overview`)
+- `[section]` - Section slug (e.g., `getting-started`)
+- `[page]` - Page slug (e.g., `introduction`)
 
 **Rendering Flow:**
 ```typescript
 export default async function DocsPage({ params }: DocsPageProps) {
-  const { category, section: sectionSlug, page: pageSlug } = await params
-  
-  // 1. Lookup section in registry
-  const registry = category === 'core' ? DOCS_REGISTRY.core : DOCS_REGISTRY.theme
-  const section = registry.find(s => s.slug === sectionSlug)
+  const { section: sectionSlug, page: pageSlug } = await params
+
+  // 1. Lookup section in public registry
+  const section = DOCS_REGISTRY.public.find(s => s.slug === sectionSlug)
   if (!section) notFound()
-  
+
   // 2. Lookup page in section
   const page = section.pages.find(p => p.slug === pageSlug)
   if (!page) notFound()
-  
+
   // 3. Parse markdown file
   const filePath = path.join(process.cwd(), page.path)
   const { metadata, html } = await parseMarkdownFile(filePath)
-  
+
   // 4. Render components
   return (
     <div className="max-w-4xl">
@@ -84,19 +75,19 @@ export default async function DocsPage({ params }: DocsPageProps) {
 }
 ```
 
-### Plugin Pages
+### Superadmin Documentation Pages
 
-**Location:** `app/(public)/docs/plugins/[plugin]/[section]/[page]/page.tsx`
+**Location:** `app/superadmin/docs/[section]/[page]/page.tsx`
 
 **Dynamic Segments:**
-- `[plugin]` - Plugin name (e.g., `ai`, `analytics`)
-- `[section]` - Section slug
-- `[page]` - Page slug
+- `[section]` - Section slug (e.g., `setup`)
+- `[page]` - Page slug (e.g., `configuration`)
 
-**Differences from Core/Theme:**
-- Filters `DOCS_REGISTRY.plugins` by plugin name
-- Adds plugin badge to page header
-- Custom breadcrumb structure with plugin context
+**Differences from Public:**
+- Uses `DOCS_REGISTRY.superadmin` instead of `DOCS_REGISTRY.public`
+- Uses `SuperadminDocsSidebar` component
+- Admin-only access with `robots: 'noindex, nofollow'`
+- Red/shield theming consistent with superadmin area
 
 ## Markdown Processing
 
@@ -107,7 +98,8 @@ export default async function DocsPage({ params }: DocsPageProps) {
 **Dependencies:**
 - **gray-matter** - Frontmatter extraction
 - **remark** - Markdown AST processing
-- **remark-html** - HTML serialization
+- **remark-gfm** - GitHub Flavored Markdown
+- **rehype-shiki** - Syntax highlighting
 
 ### Parsing Pipeline
 
@@ -119,15 +111,18 @@ export async function parseMarkdownFile(filePath: string): Promise<{
 }> {
   // 1. Read file
   const fileContent = fs.readFileSync(filePath, 'utf-8')
-  
+
   // 2. Parse frontmatter
   const { data, content } = matter(fileContent)
-  
-  // 3. Convert markdown to HTML
+
+  // 3. Convert markdown to HTML with syntax highlighting
   const processedContent = await remark()
-    .use(html, { sanitize: false })  // Allow HTML in markdown
+    .use(remarkGfm)
+    .use(remarkRehype, { allowDangerousHtml: true })
+    .use(rehypeShiki, { theme: 'github-dark' })
+    .use(rehypeStringify, { allowDangerousHtml: true })
     .process(content)
-  
+
   return {
     metadata: data as DocMetadata,
     content,
@@ -153,27 +148,6 @@ description: SEO-friendly description
 - `title` - Overrides auto-generated title
 - `description` - Page description for SEO
 
-### HTML Output
-
-Markdown is converted to semantic HTML:
-
-```markdown
-## Section Heading
-This is a paragraph with **bold** and *italic* text.
-
-```typescript
-const example = 'code block'
-```
-```
-
-**Becomes:**
-
-```html
-<h2>Section Heading</h2>
-<p>This is a paragraph with <strong>bold</strong> and <em>italic</em> text.</p>
-<pre><code class="language-typescript">const example = 'code block'</code></pre>
-```
-
 ## Rendering Components
 
 ### DocsLayout
@@ -188,42 +162,30 @@ const example = 'code block'
 - Menu toggle button
 - Backdrop overlay for mobile
 
-**Usage:**
-```typescript
-<DocsLayout>
-  <DocsSidebar sections={DOCS_REGISTRY.all} />
-  <main>{children}</main>
-</DocsLayout>
-```
-
-### DocsSidebar
+### DocsSidebar (Public)
 
 **File:** `core/components/docs/docs-sidebar.tsx`
 
-**Purpose:** Hierarchical navigation tree
+**Purpose:** Hierarchical navigation tree for public docs
 
 **Features:**
-- Collapsible sections and categories
+- Collapsible sections
 - Active page highlighting
-- Category grouping (Core, Theme, Plugins)
-- Plugin-specific subsections
+- Search functionality
 - Keyboard navigation support
+- Uses `DOCS_REGISTRY.public`
 
-**Structure:**
-```typescript
-<nav>
-  <Category name="Core">
-    <Section name="Fundamentals" expanded>
-      <Page href="/docs/core/fundamentals/overview" active>
-        Overview
-      </Page>
-      <Page href="/docs/core/fundamentals/architecture">
-        Architecture
-      </Page>
-    </Section>
-  </Category>
-</nav>
-```
+### SuperadminDocsSidebar
+
+**File:** `core/components/docs/superadmin-docs-sidebar.tsx`
+
+**Purpose:** Navigation tree for admin docs
+
+**Features:**
+- Red/shield theming
+- Collapsible sections
+- Active page highlighting
+- Uses `DOCS_REGISTRY.superadmin`
 
 ### DocsContent
 
@@ -231,7 +193,6 @@ const example = 'code block'
 
 **Purpose:** Renders parsed HTML with styling
 
-**Implementation:**
 ```typescript
 export function DocsContent({ html }: DocsContentProps) {
   return (
@@ -244,33 +205,20 @@ export function DocsContent({ html }: DocsContentProps) {
 }
 ```
 
-**Applied Styles:**
-- Tailwind Typography (`prose` classes)
-- Syntax highlighting for code blocks
-- Responsive typography
-- Dark mode support
-
 ### DocsBreadcrumbs
 
 **File:** `core/components/docs/docs-breadcrumbs.tsx`
 
 **Purpose:** Navigation trail for deep pages
 
-**Example Output:**
+**Public Example:**
 ```text
-Documentation > Core > Registry System > Introduction
+Documentation > Getting Started > Introduction
 ```
 
-**Usage:**
-```typescript
-<DocsBreadcrumbs
-  items={[
-    { label: 'Documentation', href: '/docs' },
-    { label: 'Core', href: '/docs/core' },
-    { label: 'Registry System', href: '/docs/core/registry-system' },
-    { label: 'Introduction' }  // No href = current page
-  ]}
-/>
+**Admin Example:**
+```text
+Super Admin > Documentation > Setup > Configuration
 ```
 
 ## Styling System
@@ -291,83 +239,14 @@ Documentation content uses Tailwind's typography plugin:
 - `dark:prose-invert` - Dark mode adaptation
 - `max-w-none` - Remove max-width constraint
 
-### Typography Enhancements
-
-**Headings:**
-- H1: 2.25em, bold, margin-top 0
-- H2: 1.875em, bold, margin-top 2em
-- H3: 1.5em, semibold, margin-top 1.6em
-- H4: 1.25em, semibold, margin-top 1.5em
-
-**Code:**
-- Inline: Gray background, rounded, padding
-- Blocks: Dark background, syntax highlighting, line numbers
-
-**Links:**
-- Blue color, underline on hover
-- External links: Icon indicator
-
-### Dark Mode Support
-
-Automatic dark mode via `dark:` variants:
-
-```css
-/* Light mode */
-.prose { color: theme('colors.slate.700'); }
-.prose code { background: theme('colors.slate.100'); }
-
-/* Dark mode */
-.dark .prose-invert { color: theme('colors.slate.300'); }
-.dark .prose-invert code { background: theme('colors.slate.800'); }
-```
-
 ### Code Syntax Highlighting
 
-Code blocks receive language-specific classes:
+Code blocks receive Shiki-based syntax highlighting with the `github-dark` theme:
 
 ```html
 <pre><code class="language-typescript">
   export interface Config { ... }
 </code></pre>
-```
-
-CSS provides syntax highlighting via class selectors.
-
-## Responsive Design
-
-### Breakpoints
-
-**Mobile (< 1024px):**
-- Sidebar: Overlay with toggle button
-- Content: Full width
-- Navigation: Hamburger menu
-
-**Desktop (≥ 1024px):**
-- Sidebar: Fixed, always visible
-- Content: Offset by sidebar width
-- Navigation: Always expanded
-
-### Mobile Optimizations
-
-```typescript
-// Mobile menu toggle
-<Button
-  variant="ghost"
-  size="icon"
-  onClick={() => setSidebarOpen(!sidebarOpen)}
-  className="lg:hidden"
->
-  <Menu className="h-5 w-5" />
-</Button>
-
-// Sidebar with mobile overlay
-<aside className={cn(
-  "fixed lg:sticky",
-  "lg:translate-x-0",
-  sidebarOpen ? "translate-x-0" : "-translate-x-full"
-)}>
-  {/* Sidebar content */}
-</aside>
 ```
 
 ## Server-Side Rendering
@@ -381,17 +260,17 @@ CSS provides syntax highlighting via class selectors.
 export default async function DocsPage({ params }: DocsPageProps) {
   // Markdown parsed on server
   const { metadata, html } = await parseMarkdownFile(filePath)
-  
+
   // HTML rendered on server
   return <article dangerouslySetInnerHTML={{ __html: html }} />
 }
 ```
 
 **Benefits:**
-- ✅ Instant initial page load
-- ✅ SEO-friendly HTML
-- ✅ No client-side markdown parsing
-- ✅ Reduced JavaScript bundle
+- Instant initial page load
+- SEO-friendly HTML
+- No client-side markdown parsing
+- Reduced JavaScript bundle
 
 ### Metadata Generation
 
@@ -400,15 +279,11 @@ Each page generates SEO metadata:
 ```typescript
 export async function generateMetadata({ params }: DocsPageProps): Promise<Metadata> {
   const { metadata } = await parseMarkdownFile(filePath)
-  
+
   return {
     title: metadata.title,
     description: metadata.description,
-    openGraph: {
-      title: metadata.title,
-      description: metadata.description,
-      type: 'article'
-    }
+    // Superadmin docs also include: robots: 'noindex, nofollow'
   }
 }
 ```
@@ -432,13 +307,7 @@ export async function generateMetadata({ params }: DocsPageProps): Promise<Metad
 **Initial Load:**
 - HTML: Pre-rendered (instant)
 - JavaScript: Minimal hydration (~50KB)
-- Fonts: Preloaded
 - **FCP:** <300ms
-
-**Navigation:**
-- Client-side routing: ~50ms
-- No markdown parsing
-- Instant transitions
 
 ## Accessibility
 
@@ -472,10 +341,9 @@ Navigation includes descriptive labels:
 Full keyboard support:
 - **Tab:** Navigate links and buttons
 - **Enter/Space:** Toggle sections
-- **Arrow Keys:** Navigate within sections
 
 ## Next Steps
 
-- **[Extending Documentation](./07-extending-overriding.md)** - Adding theme/plugin docs
+- **[Extending Documentation](./07-extending-overriding.md)** - Adding theme docs
 - **[Writing Documentation](./04-writing-documentation.md)** - Authoring guidelines
 - **[Architecture](./02-architecture.md)** - Complete system overview

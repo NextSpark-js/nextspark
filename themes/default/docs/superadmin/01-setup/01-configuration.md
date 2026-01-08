@@ -1,3 +1,8 @@
+---
+title: Configuration
+description: Environment variables and configuration options for NextSpark applications.
+---
+
 # Configuration Guide
 
 This guide covers the configuration options available to administrators for setting up and customizing your NextSpark application.

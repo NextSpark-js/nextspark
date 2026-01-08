@@ -1,7 +1,11 @@
 {
   "title": "Documentación",
   "description": "Aprende a usar nuestra plataforma",
-  "search": "Buscar en documentación...",
+  "search": {
+    "placeholder": "Buscar en documentación...",
+    "clear": "Limpiar búsqueda",
+    "noResults": "No se encontraron resultados para \"{query}\""
+  },
   "categories": {
     "getting-started": "Primeros Pasos",
     "guides": "Guías",

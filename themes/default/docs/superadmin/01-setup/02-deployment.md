@@ -1,3 +1,8 @@
+---
+title: Deployment
+description: Guide to deploying NextSpark applications to Vercel, Docker, and other platforms.
+---
+
 # Deployment Guide
 
 This guide covers deploying your NextSpark application to production environments.

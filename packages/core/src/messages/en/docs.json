@@ -1,7 +1,11 @@
 {
   "title": "Documentation",
   "description": "Learn how to use our platform",
-  "search": "Search documentation...",
+  "search": {
+    "placeholder": "Search documentation...",
+    "clear": "Clear search",
+    "noResults": "No results found for \"{query}\""
+  },
   "categories": {
     "getting-started": "Getting Started",
     "guides": "Guides",

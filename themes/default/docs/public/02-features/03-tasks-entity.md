@@ -1,3 +1,8 @@
+---
+title: Tasks Entity
+description: Complete guide to the Tasks entity implementation with CRUD operations, metadata, and API access.
+---
+
 # Tasks Entity
 
 ## Introduction

@@ -26,6 +26,16 @@ export { ScopeService } from './scope.service'
 export { RouteHandlerService } from './route-handler.service'
 export { PluginService, usePlugin } from './plugin.service'
 export { ApiRoutesService } from './api-routes.service'
+export {
+  DocsService,
+  getDocsRegistry,
+  getAllDocs,
+  getPublicDocs,
+  getSuperadminDocs,
+  findDocsSection,
+  findDocsPage,
+  searchDocs,
+} from './docs.service'
 
 // Export types
 export type { UpdateUserPayload } from './user.service'
