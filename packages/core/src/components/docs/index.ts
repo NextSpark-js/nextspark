@@ -9,6 +9,7 @@ export { DocsLayout } from './docs-layout'
 
 // Navigation
 export { DocsSidebar } from './docs-sidebar'
+export { SuperadminDocsSidebar } from './superadmin-docs-sidebar'
 export { DocsBreadcrumbs } from './docs-breadcrumbs'
 
 // Content

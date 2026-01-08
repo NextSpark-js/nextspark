@@ -112,6 +112,7 @@ async function copyProjectFiles(): Promise<void> {
     { src: 'tsconfig.cypress.json', dest: 'tsconfig.cypress.json', force: false },
     { src: 'cypress.d.ts', dest: 'cypress.d.ts', force: false },
     { src: 'eslint.config.mjs', dest: 'eslint.config.mjs', force: false },
+    { src: 'scripts/cy-tags.cjs', dest: 'scripts/cy-tags.cjs', force: false },
   ]
 
   for (const item of itemsToCopy) {
@@ -167,8 +168,10 @@ async function updatePackageJson(config: WizardConfig): Promise<void> {
     'db:migrate': 'nextspark db:migrate',
     'db:seed': 'nextspark db:seed',
     'test:theme': `jest --config contents/themes/${config.projectSlug}/tests/jest/jest.config.cjs`,
+    'test:e2e': `cypress run --config-file contents/themes/${config.projectSlug}/tests/cypress.config.ts`,
     'cy:open': `cypress open --config-file contents/themes/${config.projectSlug}/tests/cypress.config.ts`,
     'cy:run': `cypress run --config-file contents/themes/${config.projectSlug}/tests/cypress.config.ts`,
+    'cy:tags': 'node scripts/cy-tags.cjs',
     'allure:generate': `allure generate contents/themes/${config.projectSlug}/tests/cypress/allure-results --clean -o contents/themes/${config.projectSlug}/tests/cypress/allure-report`,
     'allure:open': `allure open contents/themes/${config.projectSlug}/tests/cypress/allure-report`,
   }

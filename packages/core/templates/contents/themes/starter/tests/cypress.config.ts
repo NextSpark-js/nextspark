@@ -2,17 +2,17 @@
  * Cypress Configuration for Starter Theme
  *
  * This config is self-contained for npm projects created with `nextspark init`.
- * Run with: pnpm cy:open
+ * Run with: pnpm cy:open or pnpm cy:run
+ *
+ * Filter by tags: pnpm cy:tags "@smoke" or pnpm cy:run --env grepTags="@smoke"
  */
 
 import { defineConfig } from 'cypress'
 import path from 'path'
 import fs from 'fs'
-import { fileURLToPath } from 'url'
 
-// ESM-compatible __dirname
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+// __dirname is available because ts-node processes this file as CommonJS
+// (Next.js projects don't use "type": "module" in package.json)
 
 // Paths relative to this config file
 const themeRoot = path.resolve(__dirname, '..')

@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CreditCard,
+  FileText,
 } from "lucide-react";
 import { cn } from '../../../lib/utils';
 import { Button } from '../../ui/button';
@@ -25,7 +26,7 @@ interface SidebarItem {
   icon: React.ComponentType<{ className?: string }>;
   description?: string;
   disabled?: boolean;
-  selectorKey?: 'dashboard' | 'users' | 'teams' | 'teamRoles' | 'subscriptions' | 'analytics' | 'config';
+  selectorKey?: 'dashboard' | 'users' | 'teams' | 'teamRoles' | 'docs' | 'subscriptions' | 'analytics' | 'config';
 }
 
 /**
@@ -66,6 +67,13 @@ export function SuperadminSidebar() {
       icon: Shield,
       description: "View roles & permissions matrix",
       selectorKey: "teamRoles"
+    },
+    {
+      title: "Documentation",
+      href: "/superadmin/docs",
+      icon: FileText,
+      description: "Admin guides and references",
+      selectorKey: "docs"
     },
     {
       title: "Subscriptions",

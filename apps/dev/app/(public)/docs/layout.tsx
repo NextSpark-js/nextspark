@@ -8,7 +8,8 @@ export default function DocsLayoutPage({
 }: {
   children: React.ReactNode
 }) {
-  const sections = DOCS_REGISTRY.all
+  // Only show public docs in this layout
+  const sections = DOCS_REGISTRY.public
 
   return (
     <DocsLayout>

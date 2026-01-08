@@ -98,25 +98,28 @@ export const APP_CONFIG_OVERRIDES = {
   // =============================================================================
   // DOCUMENTATION
   // =============================================================================
+  /**
+   * Documentation system configuration
+   *
+   * Structure:
+   * - public: User-facing documentation at /docs
+   * - superadmin: Admin documentation at /superadmin/docs
+   *
+   * NOTE: Plugin docs are NOT in the registry - they are for developer reference only (IDE/LLM).
+   */
   docs: {
     enabled: true,
-    public: true,
+    publicAccess: true,
     searchEnabled: true,
     breadcrumbs: true,
-    theme: {
+    public: {
       enabled: true,
       open: true,
-      label: 'Starter',
+      label: 'Documentation',
     },
-    plugins: {
+    superadmin: {
       enabled: true,
-      open: false,
-      label: 'Plugins',
-    },
-    core: {
-      enabled: true,
-      open: true,
-      label: 'Core',
+      label: 'Admin Docs',
     },
   },
 

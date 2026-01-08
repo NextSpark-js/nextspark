@@ -9,7 +9,6 @@ import type { Metadata } from 'next'
 
 interface DocsPageProps {
   params: Promise<{
-    category: string
     section: string
     page: string
   }>
@@ -18,59 +17,29 @@ interface DocsPageProps {
 export async function generateStaticParams() {
   const params = []
 
-  // Generate params for core docs
-  for (const section of DOCS_REGISTRY.core) {
+  // Generate params for public docs only
+  for (const section of DOCS_REGISTRY.public) {
     for (const page of section.pages) {
       params.push({
-        category: 'core',
         section: section.slug,
         page: page.slug
       })
     }
   }
-
-  // Generate params for theme docs
-  for (const section of DOCS_REGISTRY.theme) {
-    for (const page of section.pages) {
-      params.push({
-        category: 'theme',
-        section: section.slug,
-        page: page.slug
-      })
-    }
-  }
-
-  // Future: Plugin docs
-  // for (const section of DOCS_REGISTRY.plugins || []) {
-  //   for (const page of section.pages) {
-  //     params.push({
-  //       category: 'plugins',
-  //       section: section.slug,
-  //       page: page.slug
-  //     })
-  //   }
-  // }
 
   return params
 }
 
 export async function generateMetadata({ params }: DocsPageProps): Promise<Metadata> {
   const resolvedParams = await params
-  const { category, section: sectionSlug, page: pageSlug } = resolvedParams
+  const { section: sectionSlug, page: pageSlug } = resolvedParams
 
-  // Get correct registry based on category
-  const registry = category === 'core' ? DOCS_REGISTRY.core :
-                   category === 'theme' ? DOCS_REGISTRY.theme :
-                   []
-
-  // Find section and page
-  const section = registry.find(s => s.slug === sectionSlug)
+  const section = DOCS_REGISTRY.public.find(s => s.slug === sectionSlug)
   if (!section) return { title: 'Page Not Found' }
 
   const page = section.pages.find(p => p.slug === pageSlug)
   if (!page) return { title: 'Page Not Found' }
 
-  // Parse markdown to get metadata
   const filePath = path.join(process.cwd(), page.path)
   const { metadata } = await parseMarkdownFile(filePath)
 
@@ -82,16 +51,11 @@ export async function generateMetadata({ params }: DocsPageProps): Promise<Metad
 
 export default async function DocsPage({ params }: DocsPageProps) {
   const resolvedParams = await params
-  const { category, section: sectionSlug, page: pageSlug } = resolvedParams
+  const { section: sectionSlug, page: pageSlug } = resolvedParams
   const t = await getTranslations('docs')
 
-  // Get correct registry based on category
-  const registry = category === 'core' ? DOCS_REGISTRY.core :
-                   category === 'theme' ? DOCS_REGISTRY.theme :
-                   []
-
-  // Find section in registry
-  const section = registry.find(s => s.slug === sectionSlug)
+  // Find section in public docs
+  const section = DOCS_REGISTRY.public.find(s => s.slug === sectionSlug)
   if (!section) notFound()
 
   // Find page in section
@@ -102,20 +66,11 @@ export default async function DocsPage({ params }: DocsPageProps) {
   const filePath = path.join(process.cwd(), page.path)
   const { metadata, html } = await parseMarkdownFile(filePath)
 
-  // Get category label for breadcrumbs
-  const categoryLabels: Record<string, string> = {
-    core: t('categories.core'),
-    theme: t('categories.theme'),
-    plugins: t('categories.plugins')
-  }
-  const categoryLabel = categoryLabels[category] || category
-
   return (
     <div className="max-w-4xl" data-cy="docs-page">
       <DocsBreadcrumbs
         items={[
           { label: t('breadcrumbs.home'), href: '/docs' },
-          { label: categoryLabel, href: `/docs/${category}` },
           { label: section.title },
           { label: metadata.title }
         ]}

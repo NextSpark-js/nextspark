@@ -91,78 +91,51 @@ export const APP_CONFIG_OVERRIDES = {
   // =============================================================================
   // DOCUMENTATION CONFIGURATION
   // =============================================================================
+  /**
+   * Documentation system configuration
+   *
+   * Structure:
+   * - public: User-facing documentation at /docs
+   * - superadmin: Admin documentation at /superadmin/docs
+   *
+   * NOTE: Plugin docs are NOT in the registry - they are for developer reference only (IDE/LLM).
+   */
   docs: {
-    /**
-     * Enable/disable documentation system
-     */
+    /** Enable/disable documentation system */
     enabled: true,
 
-    /**
-     * Public access to documentation
-     * - true: Documentation accessible without authentication
-     * - false: Requires user to be logged in
-     */
-    public: true,
+    /** Make public documentation accessible without authentication */
+    publicAccess: true,
 
-    /**
-     * Enable search functionality in documentation
-     */
+    /** Enable search functionality in documentation */
     searchEnabled: true,
 
-    /**
-     * Show breadcrumbs in documentation pages
-     */
+    /** Show breadcrumbs in documentation pages */
     breadcrumbs: true,
 
     /**
-     * Theme Documentation Configuration
-     * Controls how theme-level documentation appears in the sidebar
+     * Public Documentation Configuration
+     * Controls public-facing documentation at /docs routes
      */
-    theme: {
-      /** Show/hide theme documentation category */
+    public: {
+      /** Show/hide public documentation */
       enabled: true,
-      /** Expand theme category by default on page load */
+      /** Expand sections by default on page load */
       open: true,
-      /** Custom label displayed in sidebar for theme category */
-      label: "Default Theme",
+      /** Custom label displayed in sidebar */
+      label: "Documentation",
     },
 
     /**
-     * Plugins Documentation Configuration
-     * Controls how plugin documentation appears in the sidebar
+     * Superadmin Documentation Configuration
+     * Controls admin documentation at /superadmin/docs routes
      */
-    plugins: {
-      /** Show/hide plugin documentation category */
+    superadmin: {
+      /** Show/hide superadmin documentation */
       enabled: true,
-      /** Expand plugins category by default on page load */
-      open: false,
-      /** Custom label displayed in sidebar for plugins category */
-      label: "Plugins",
+      /** Custom label displayed in sidebar */
+      label: "Admin Docs",
     },
-
-    /**
-     * Core Documentation Configuration
-     * Controls how core framework documentation appears in the sidebar
-     */
-    core: {
-      /** Show/hide core documentation category */
-      enabled: true,
-      /** Expand core category by default on page load */
-      open: true,
-      /** Custom label displayed in sidebar for core category */
-      label: "Core",
-    },
-
-    /**
-     * Additional environment-based check for plugin docs in production
-     * Plugin docs will only show if BOTH conditions are met:
-     * 1. plugins.enabled is true
-     * 2. Either in development OR showPluginsDocsInProd is true
-     *
-     * @deprecated Prefer using plugins.enabled for simpler control
-     * By default plugins documentation is not available in prod environments
-     */
-    showPluginsDocsInProd: false,
   },
 
   // =============================================================================
