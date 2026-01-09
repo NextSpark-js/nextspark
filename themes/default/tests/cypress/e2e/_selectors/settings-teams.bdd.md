@@ -17,7 +17,7 @@ coverage: 2
 - **Type:** Selector Validation
 - **Tags:** settings, teams, management
 - **Grep:** `@ui-selectors` `@SEL_STMS_001`
-- **Status:** Active (4 passing, 3 skipped)
+- **Status:** Active (6 passing, 0 skipped)
 
 ```gherkin:en
 Scenario: Teams settings page has required selectors
@@ -27,7 +27,10 @@ And I navigate to the teams settings page
 Then I should find the teams main container
 And I should find the teams header
 And I should find the teams list
+And I should find at least one team item in the list
 And I should find the create team button
+When I click on a team item
+Then I should find the team details section
 ```
 
 ```gherkin:es
@@ -38,23 +41,19 @@ And navego a la pagina de settings de teams
 Then deberia encontrar el contenedor principal de teams
 And deberia encontrar el header de teams
 And deberia encontrar la lista de teams
+And deberia encontrar al menos un item de equipo en la lista
 And deberia encontrar el boton de crear equipo
+When hago click en un item de equipo
+Then deberia encontrar la seccion de detalles del equipo
 ```
 
 ### Expected Results
 - `teams-settings-main` selector exists ✅
 - `teams-settings-header` selector exists ✅
-- `teams-settings-loading` selector - **SKIPPED: Only visible during loading**
-- `teams-settings-single-user` selector - **SKIPPED: Only visible for users without teams**
 - `teams-settings-teams-list` selector exists ✅
-- `teams-settings-team-details` selector - **SKIPPED: Only visible when team is selected**
+- `team-item-{id}` selector exists for team items ✅
+- `teams-settings-team-details` selector exists when team selected ✅
 - `create-team-button` selector exists ✅
-
-### Notes
-**Skipped Tests (3):**
-1. `teams-settings-loading` - Loading skeleton only visible during initial load
-2. `teams-settings-single-user` - Only appears for users not in any team
-3. `teams-settings-team-details` - Only appears when a team is selected
 
 ---
 
@@ -112,7 +111,7 @@ This test documents the selectors for cross-reference with teams.cy.ts.
 
 | Component | File | Selectors |
 |-----------|------|-----------|
-| TeamsSettings | `packages/core/src/components/settings/TeamsSettings.tsx` | teams-settings-main, teams-settings-header, teams-settings-loading, teams-settings-single-user, teams-settings-teams-list, teams-settings-team-details |
+| TeamsSettings | `packages/core/templates/app/dashboard/settings/teams/page.tsx` | teams-settings-main, teams-settings-header, teams-settings-teams-list, teams-settings-team-details, team-item-{id} |
 | CreateTeamDialog | `packages/core/src/components/teams/CreateTeamDialog.tsx` | create-team-dialog, cancel-create-team, submit-create-team |
 
 ## Related POMs
@@ -121,3 +120,11 @@ This test documents the selectors for cross-reference with teams.cy.ts.
 |-----|------|-------|
 | SettingsPOM | `themes/default/tests/cypress/src/features/SettingsPOM.ts` | Teams settings page selectors |
 | TeamSwitcherPOM | `themes/default/tests/cypress/src/components/TeamSwitcherPOM.ts` | Create team dialog selectors |
+
+## Test Summary
+
+| Test ID | Description | Status | Tests |
+|---------|-------------|--------|-------|
+| SEL_STMS_001 | Teams Page Selectors | Active | 6 |
+| SEL_STMS_002 | Create Team Dialog Documentation | Active | 1 |
+| **Total** | | **All Active** | **7** |

@@ -45,22 +45,18 @@ describe('Settings Teams Selectors Validation', { tags: ['@ui-selectors', '@sett
       cy.get('[data-cy="teams-settings-header"]', { timeout: 15000 }).should('exist')
     })
 
-    // Note: Loading skeleton appears briefly during initial load
-    it.skip('should find loading skeleton (only visible during loading)', () => {
-      cy.get('[data-cy="teams-settings-loading"]').should('exist')
-    })
-
-    // Note: Single user message only appears for users not in any team
-    it.skip('should find single user message (only for users without teams)', () => {
-      cy.get('[data-cy="teams-settings-single-user"]').should('exist')
-    })
-
     it('should find teams list', () => {
       cy.get('[data-cy="teams-settings-teams-list"]', { timeout: 15000 }).should('exist')
     })
 
-    // Note: Team details only appears when a team is selected
-    it.skip('should find team details section (only when team is selected)', () => {
+    it('should find team item in list', () => {
+      cy.get('[data-cy^="team-item-"]', { timeout: 15000 }).should('have.length.at.least', 1)
+    })
+
+    it('should find team details section when team is selected', () => {
+      // Click on first team to select it
+      cy.get('[data-cy^="team-item-"]').first().click()
+      // Team details should appear
       cy.get('[data-cy="teams-settings-team-details"]', { timeout: 15000 }).should('exist')
     })
 

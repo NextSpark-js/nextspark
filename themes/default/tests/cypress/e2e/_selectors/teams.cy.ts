@@ -16,18 +16,18 @@
  *
  * Test IDs:
  * - SEL_TEAM_001: Team Switcher Selectors
- * - SEL_TEAM_002: Team Switch Modal Selectors (skipped - requires multiple teams)
  * - SEL_TEAM_003: Create Team Dialog Documentation
  * - SEL_TEAM_004: Dashboard Sidebar Selectors
- * - SEL_TEAM_005: Mobile Team Switcher Selectors (skipped - mobile viewport only)
  * - SEL_TEAM_006: Team Members Documentation
+ * - SEL_TEAM_007: Multi-Team Switch Modal (Carlos Mendoza - multiple teams)
+ * - SEL_TEAM_008: Mobile Team Switcher (iphone-x viewport)
  *
  * NOTE: Some selectors require specific states (dialog open, team selected).
  * Many selectors from CORE_SELECTORS are dynamically scoped.
  */
 
 import { TeamSwitcherPOM } from '../../src/components/TeamSwitcherPOM'
-import { loginAsDefaultDeveloper } from '../../src/session-helpers'
+import { loginAsDefaultDeveloper, loginAsDefaultOwner } from '../../src/session-helpers'
 
 describe('Teams Selectors Validation', { tags: ['@ui-selectors', '@teams'] }, () => {
   const teamSwitcher = TeamSwitcherPOM.create()
@@ -76,17 +76,6 @@ describe('Teams Selectors Validation', { tags: ['@ui-selectors', '@teams'] }, ()
   })
 
   // ============================================
-  // SEL_TEAM_002: TEAM SWITCH MODAL SELECTORS
-  // ============================================
-  describe('SEL_TEAM_002: Team Switch Modal Selectors', { tags: '@SEL_TEAM_002' }, () => {
-    // Note: Switch modal only appears when switching to a different team
-    // This test validates the selector exists by attempting a switch
-    it.skip('should find switch modal during team change (requires multiple teams)', () => {
-      cy.get(teamSwitcher.selectors.switchModal).should('exist')
-    })
-  })
-
-  // ============================================
   // SEL_TEAM_003: CREATE TEAM DIALOG DOCUMENTATION
   // NOTE: Create Team Dialog is opened from settings/teams page
   // Those selectors are tested in settings-teams.cy.ts
@@ -119,25 +108,6 @@ describe('Teams Selectors Validation', { tags: ['@ui-selectors', '@teams'] }, ()
   })
 
   // ============================================
-  // SEL_TEAM_005: MOBILE TEAM SWITCHER SELECTORS
-  // Skipped: Mobile selectors only visible on small viewports
-  // ============================================
-  describe('SEL_TEAM_005: Mobile Team Switcher Selectors', { tags: '@SEL_TEAM_005' }, () => {
-    // Note: Mobile selectors only visible on small viewports
-    it.skip('should find mobile more button (mobile viewport only)', () => {
-      cy.get(teamSwitcher.selectors.mobileMoreButton).should('exist')
-    })
-
-    it.skip('should find mobile more sheet (mobile viewport only)', () => {
-      cy.get(teamSwitcher.selectors.mobileMoreSheet).should('exist')
-    })
-
-    it.skip('should find mobile team switcher (mobile viewport only)', () => {
-      cy.get(teamSwitcher.selectors.mobileTeamSwitcher).should('exist')
-    })
-  })
-
-  // ============================================
   // SEL_TEAM_006: TEAM MEMBERS DOCUMENTATION
   // These are tested in settings-teams.cy.ts
   // ============================================
@@ -146,6 +116,80 @@ describe('Teams Selectors Validation', { tags: ['@ui-selectors', '@teams'] }, ()
       cy.log('Team members selectors are tested in settings-teams.cy.ts')
       cy.log('Path: /dashboard/settings/teams')
       cy.wrap(true).should('be.true')
+    })
+  })
+})
+
+// ============================================
+// MULTI-TEAM USER TESTS (Carlos Mendoza - Owner)
+// Uses a separate session with multiple teams
+// ============================================
+describe('Teams Selectors - Multi-Team User', { tags: ['@ui-selectors', '@teams', '@multi-team'] }, () => {
+  const teamSwitcher = TeamSwitcherPOM.create()
+
+  beforeEach(() => {
+    loginAsDefaultOwner()
+    cy.visit('/dashboard', { timeout: 60000, failOnStatusCode: false })
+    cy.url().should('include', '/dashboard')
+  })
+
+  // ============================================
+  // SEL_TEAM_007: TEAM SWITCH MODAL (Multi-Team)
+  // Carlos Mendoza has multiple teams to test switching
+  // ============================================
+  describe('SEL_TEAM_007: Team Switch Modal', { tags: '@SEL_TEAM_007' }, () => {
+    beforeEach(() => {
+      teamSwitcher.ensureSidebarExpanded()
+    })
+
+    it('should find multiple team options in dropdown', () => {
+      teamSwitcher.open()
+      cy.get(teamSwitcher.selectors.teamOption).should('have.length.at.least', 2)
+    })
+
+    it('should find switch modal when changing teams', () => {
+      teamSwitcher.open()
+      // Get the second team option (different from current)
+      cy.get(teamSwitcher.selectors.teamOption).eq(1).click()
+      // Switch modal should appear during team change
+      cy.get(teamSwitcher.selectors.switchModal, { timeout: 10000 }).should('exist')
+    })
+  })
+})
+
+// ============================================
+// MOBILE VIEWPORT TESTS
+// Uses mobile viewport to test responsive selectors
+// ============================================
+describe('Teams Selectors - Mobile Viewport', { tags: ['@ui-selectors', '@teams', '@mobile'] }, () => {
+  const teamSwitcher = TeamSwitcherPOM.create()
+
+  beforeEach(() => {
+    // Set mobile viewport BEFORE login/visit
+    cy.viewport('iphone-x')
+    loginAsDefaultDeveloper()
+    cy.visit('/dashboard', { timeout: 60000, failOnStatusCode: false })
+    cy.url().should('include', '/dashboard')
+  })
+
+  // ============================================
+  // SEL_TEAM_008: MOBILE TEAM SWITCHER SELECTORS
+  // Tests mobile-specific UI elements
+  // ============================================
+  describe('SEL_TEAM_008: Mobile Team Switcher', { tags: '@SEL_TEAM_008' }, () => {
+    it('should find mobile more button', () => {
+      cy.get(teamSwitcher.selectors.mobileMoreButton).should('exist')
+    })
+
+    it('should find mobile more sheet when opened', () => {
+      cy.get(teamSwitcher.selectors.mobileMoreButton).click()
+      cy.get(teamSwitcher.selectors.mobileMoreSheet).should('be.visible')
+    })
+
+    it('should find mobile team switcher in sheet', () => {
+      cy.get(teamSwitcher.selectors.mobileMoreButton).click()
+      cy.get(teamSwitcher.selectors.mobileMoreSheet).should('be.visible')
+      cy.get(teamSwitcher.selectors.mobileTeamSwitcher).should('exist')
     })
   })
 })
