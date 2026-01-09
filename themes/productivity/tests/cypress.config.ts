@@ -6,10 +6,13 @@
  */
 
 import { defineConfig } from 'cypress'
+import { fileURLToPath } from 'url'
 import path from 'path'
 import fs from 'fs'
 
-// __dirname works natively with CommonJS module resolution (tsconfig.cypress.json)
+// ESM-compatible __dirname
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 // Paths relative to this config file
 const themeRoot = path.resolve(__dirname, '..')

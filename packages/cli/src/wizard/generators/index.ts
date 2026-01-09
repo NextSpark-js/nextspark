@@ -167,7 +167,7 @@ async function updatePackageJson(config: WizardConfig): Promise<void> {
     'build:registries': 'nextspark registry:build',
     'db:migrate': 'nextspark db:migrate',
     'db:seed': 'nextspark db:seed',
-    'test': `jest --config contents/themes/${config.projectSlug}/tests/jest/jest.config.cjs`,
+    'test': 'node node_modules/@nextsparkjs/core/scripts/test/jest-theme.mjs',
     'cy:open': 'node node_modules/@nextsparkjs/core/scripts/test/cy.mjs open',
     'cy:run': 'node node_modules/@nextsparkjs/core/scripts/test/cy.mjs run',
     'cy:tags': 'node node_modules/@nextsparkjs/core/scripts/test/cy.mjs tags',
@@ -188,8 +188,8 @@ async function updatePackageJson(config: WizardConfig): Promise<void> {
   // Core dependencies (required for Next.js + NextSpark)
   const depsToAdd: Record<string, string> = {
     // NextSpark
-    '@nextsparkjs/core': '^0.1.0-beta.4',
-    '@nextsparkjs/cli': '^0.1.0-beta.4',
+    '@nextsparkjs/core': 'latest',
+    '@nextsparkjs/cli': 'latest',
     // Next.js + React
     'next': '^15.1.0',
     'react': '^19.0.0',
@@ -262,7 +262,7 @@ async function updatePackageJson(config: WizardConfig): Promise<void> {
     'allure-cypress': '^3.0.0',
     'allure-commandline': '^2.27.0',
     // NextSpark Testing
-    '@nextsparkjs/testing': '^0.1.0-beta.39',
+    '@nextsparkjs/testing': 'latest',
   }
 
   for (const [name, version] of Object.entries(devDepsToAdd)) {

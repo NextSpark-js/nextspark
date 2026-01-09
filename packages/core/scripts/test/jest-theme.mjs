@@ -47,12 +47,16 @@ console.log(`Config: ${configPath}\n`)
 const cliArgs = process.argv.slice(2)
 const args = ['--config', absoluteConfigPath, ...cliArgs]
 
-// Run jest from packages/core where it's installed
-const coreDir = resolve(process.cwd(), 'packages/core')
+// Determine working directory
+// In monorepo: run from packages/core where jest is installed
+// In npm mode: run from project root
+const cwd = isMonorepo
+  ? resolve(process.cwd(), 'packages/core')
+  : process.cwd()
 
 const child = spawn('npx', ['jest', ...args], {
   stdio: 'inherit',
-  cwd: coreDir,
+  cwd,
   shell: process.platform === 'win32' // Only use shell on Windows
 })
 

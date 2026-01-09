@@ -22,7 +22,7 @@
  * })
  */
 
-import { DashboardEntityPOM } from '../../src/core/DashboardEntityPOM'
+import { DashboardEntityPOM } from '../core/DashboardEntityPOM'
 import entitiesConfig from '../../fixtures/entities.json'
 
 export interface TaskFormData {

@@ -155,6 +155,42 @@ export class TasksPOM extends DashboardEntityPOM {
   }
 
   // ============================================
+  // FILTER METHODS
+  // ============================================
+
+  /**
+   * Filter tasks by status
+   */
+  filterByStatus(status: string) {
+    this.selectFilter('status', status)
+    return this
+  }
+
+  /**
+   * Filter tasks by priority
+   */
+  filterByPriority(priority: string) {
+    this.selectFilter('priority', priority)
+    return this
+  }
+
+  /**
+   * Clear status filter
+   */
+  clearStatusFilter() {
+    this.clearFilter('status')
+    return this
+  }
+
+  /**
+   * Clear priority filter
+   */
+  clearPriorityFilter() {
+    this.clearFilter('priority')
+    return this
+  }
+
+  // ============================================
   // ENTITY-SPECIFIC ASSERTIONS
   // ============================================
 
@@ -170,6 +206,40 @@ export class TasksPOM extends DashboardEntityPOM {
    */
   assertTaskNotInList(title: string) {
     return this.assertNotInList(title)
+  }
+
+  /**
+   * Assert task has specific status in list
+   */
+  assertTaskStatus(title: string, status: string) {
+    cy.contains(this.selectors.rowGeneric, title)
+      .should('contain.text', status)
+    return this
+  }
+
+  /**
+   * Assert task has specific priority in list
+   */
+  assertTaskPriority(title: string, priority: string) {
+    cy.contains(this.selectors.rowGeneric, title)
+      .should('contain.text', priority)
+    return this
+  }
+
+  /**
+   * Assert task count in list
+   */
+  assertTaskCount(count: number) {
+    cy.get(this.selectors.rowGeneric).should('have.length', count)
+    return this
+  }
+
+  /**
+   * Assert no tasks in list
+   */
+  assertNoTasks() {
+    cy.get(this.selectors.rowGeneric).should('not.exist')
+    return this
   }
 }
 

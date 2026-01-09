@@ -10,13 +10,21 @@
  * - Filtering and searching tasks
  * - Using POM pattern for maintainability
  *
+ * Test IDs:
+ * - TASKS_CRUD_001: Create Task
+ * - TASKS_CRUD_002: Read/View Task
+ * - TASKS_CRUD_003: Update Task
+ * - TASKS_CRUD_004: Delete Task
+ * - TASKS_CRUD_005: Filter Tasks
+ * - TASKS_CRUD_006: Search Tasks
+ *
  * Run with: npx cypress run --spec "**\/tasks-crud.cy.ts"
  */
 
-import { TasksPOM, type TaskFormData } from './TasksPOM'
+import { TasksPOM, type TaskFormData } from '../../../../src/entities/TasksPOM'
 const TaskAPIController = require('../../../api/entities/tasks/TaskAPIController')
 
-describe('Tasks CRUD', () => {
+describe('Tasks CRUD', { tags: ['@uat', '@tasks', '@crud'] }, () => {
   const tasks = new TasksPOM()
   let createdTaskIds: string[] = []
 
@@ -51,9 +59,9 @@ describe('Tasks CRUD', () => {
   })
 
   // ============================================================
-  // CREATE
+  // TASKS_CRUD_001: CREATE
   // ============================================================
-  describe('Create Task', () => {
+  describe('TASKS_CRUD_001: Create Task', { tags: '@TASKS_CRUD_001' }, () => {
     it('should create a new task with minimal data', () => {
       const taskData: TaskFormData = {
         title: `Test Task ${Date.now()}`
@@ -102,9 +110,9 @@ describe('Tasks CRUD', () => {
   })
 
   // ============================================================
-  // READ
+  // TASKS_CRUD_002: READ
   // ============================================================
-  describe('Read/View Task', () => {
+  describe('TASKS_CRUD_002: Read/View Task', { tags: '@TASKS_CRUD_002' }, () => {
     let testTaskId: string
 
     beforeEach(() => {
@@ -153,9 +161,9 @@ describe('Tasks CRUD', () => {
   })
 
   // ============================================================
-  // UPDATE
+  // TASKS_CRUD_003: UPDATE
   // ============================================================
-  describe('Update Task', () => {
+  describe('TASKS_CRUD_003: Update Task', { tags: '@TASKS_CRUD_003' }, () => {
     let testTaskId: string
     let originalTitle: string
 
@@ -225,9 +233,9 @@ describe('Tasks CRUD', () => {
   })
 
   // ============================================================
-  // DELETE
+  // TASKS_CRUD_004: DELETE
   // ============================================================
-  describe('Delete Task', () => {
+  describe('TASKS_CRUD_004: Delete Task', { tags: '@TASKS_CRUD_004' }, () => {
     let testTaskId: string
     let taskTitle: string
 
@@ -284,9 +292,9 @@ describe('Tasks CRUD', () => {
   })
 
   // ============================================================
-  // FILTER
+  // TASKS_CRUD_005: FILTER
   // ============================================================
-  describe('Filter Tasks', () => {
+  describe('TASKS_CRUD_005: Filter Tasks', { tags: '@TASKS_CRUD_005' }, () => {
     beforeEach(() => {
       // Create tasks with different statuses
       const statuses = ['todo', 'in-progress', 'done']
@@ -350,9 +358,9 @@ describe('Tasks CRUD', () => {
   })
 
   // ============================================================
-  // SEARCH
+  // TASKS_CRUD_006: SEARCH
   // ============================================================
-  describe('Search Tasks', () => {
+  describe('TASKS_CRUD_006: Search Tasks', { tags: '@TASKS_CRUD_006' }, () => {
     const searchTerm = `Searchable${Date.now()}`
 
     beforeEach(() => {
