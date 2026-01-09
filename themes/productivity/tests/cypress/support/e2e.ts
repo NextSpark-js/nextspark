@@ -12,7 +12,8 @@
 import '@testing-library/cypress/add-commands'
 
 // Import @cypress/grep for test filtering by tags
-import registerCypressGrep from '@cypress/grep'
+// v5.x uses named export { register }
+import { register as registerCypressGrep } from '@cypress/grep'
 registerCypressGrep()
 
 // Doc commands are optional (require cypress-slow-down)

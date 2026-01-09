@@ -118,8 +118,9 @@ export default defineConfig({
       })
 
       // @cypress/grep plugin for test filtering by tags
-      const grepPlugin = await import('@cypress/grep/src/plugin.js')
-      ;(grepPlugin.default || grepPlugin)(config)
+      // v5.x uses named export { plugin } from '@cypress/grep/plugin'
+      const { plugin: grepPlugin } = await import('@cypress/grep/plugin')
+      grepPlugin(config)
 
       // Documentation video tasks
       on('task', {

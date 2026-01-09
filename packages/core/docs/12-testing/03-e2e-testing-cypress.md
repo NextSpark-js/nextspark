@@ -95,8 +95,9 @@ export default defineConfig({
     },
 
     setupNodeEvents(on, config) {
-      // Grep plugin
-      require('@cypress/grep/src/plugin')(config)
+      // Grep plugin (v5.x)
+      const { plugin: grepPlugin } = require('@cypress/grep/plugin')
+      grepPlugin(config)
 
       // Allure plugin
       const { allureCypress } = require('allure-cypress/reporter')

@@ -257,7 +257,7 @@ async function updatePackageJson(config: WizardConfig): Promise<void> {
     'cypress': '^14.0.0',
     '@testing-library/cypress': '^10.0.2',
     '@cypress/webpack-preprocessor': '^6.0.2',
-    '@cypress/grep': '^4.1.0',
+    '@cypress/grep': '^5.0.1',
     'ts-loader': '^9.5.1',
     'webpack': '^5.97.0',
     'allure-cypress': '^3.0.0',

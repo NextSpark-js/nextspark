@@ -114,7 +114,9 @@ export default defineConfig({
       })
 
       // @cypress/grep plugin for test filtering by tags
-      require('@cypress/grep/src/plugin')(config)
+      // v5.x uses named export { plugin } from '@cypress/grep/plugin'
+      const { plugin: grepPlugin } = require('@cypress/grep/plugin')
+      grepPlugin(config)
 
       // Documentation video tasks
       on('task', {
