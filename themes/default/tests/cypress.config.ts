@@ -10,9 +10,11 @@
 import { defineConfig } from 'cypress'
 import path from 'path'
 import fs from 'fs'
+import { fileURLToPath } from 'url'
 
-// __dirname is available because ts-node processes this file as CommonJS
-// (Next.js projects don't use "type": "module" in package.json)
+// ESM/CJS compatibility: Create __dirname for ES modules
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 // Paths relative to this config file
 const themeRoot = path.resolve(__dirname, '..')
