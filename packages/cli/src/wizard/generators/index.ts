@@ -253,7 +253,7 @@ async function updatePackageJson(config: WizardConfig): Promise<void> {
     '@testing-library/react': '^16.3.0',
     'jest-environment-jsdom': '^29.7.0',
     // Cypress
-    'cypress': '^14.0.0',
+    'cypress': '^15.8.2',
     '@testing-library/cypress': '^10.0.2',
     '@cypress/webpack-preprocessor': '^6.0.2',
     '@cypress/grep': '^5.0.1',
