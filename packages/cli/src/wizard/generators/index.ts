@@ -261,6 +261,8 @@ async function updatePackageJson(config: WizardConfig): Promise<void> {
     'webpack': '^5.97.0',
     'allure-cypress': '^3.0.0',
     'allure-commandline': '^2.27.0',
+    // NextSpark Testing
+    '@nextsparkjs/testing': '^0.1.0-beta.39',
   }
 
   for (const [name, version] of Object.entries(devDepsToAdd)) {
