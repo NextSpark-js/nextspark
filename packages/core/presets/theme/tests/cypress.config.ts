@@ -8,11 +8,8 @@
 import { defineConfig } from 'cypress'
 import path from 'path'
 import fs from 'fs'
-import { fileURLToPath } from 'url'
 
-// ESM/CJS compatibility: Create __dirname for ES modules
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+// __dirname works natively with CommonJS module resolution (tsconfig.cypress.json)
 
 // Paths relative to this config file
 const themeRoot = path.resolve(__dirname, '..')
