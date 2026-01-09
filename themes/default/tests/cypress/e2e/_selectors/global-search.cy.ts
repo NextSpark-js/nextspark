@@ -14,13 +14,18 @@
  * - Open search modal
  * - Assert elements exist in DOM (no actual search)
  *
+ * Test IDs:
+ * - SEL_GSRCH_001: Search Trigger
+ * - SEL_GSRCH_002: Search Modal (when open)
+ * - SEL_GSRCH_003: Search Modal (opened via click)
+ *
  * NOTE: Search modal must be opened via keyboard shortcut or trigger button.
  */
 
 import { cySelector } from '../../src/selectors'
-import { loginAsDefaultOwner } from '../../src/session-helpers'
+import { loginAsDefaultDeveloper } from '../../src/session-helpers'
 
-describe('Global Search Selectors Validation', { tags: ['@ui-selectors'] }, () => {
+describe('Global Search Selectors Validation', { tags: ['@ui-selectors', '@search'] }, () => {
   // Define selectors locally since globalSearch might not be in selectors.ts
   const selectors = {
     modal: cySelector('globalSearch.modal'),
@@ -31,25 +36,25 @@ describe('Global Search Selectors Validation', { tags: ['@ui-selectors'] }, () =
   }
 
   beforeEach(() => {
-    loginAsDefaultOwner()
+    loginAsDefaultDeveloper()
     cy.visit('/dashboard', { timeout: 60000, failOnStatusCode: false })
     cy.url().should('include', '/dashboard')
   })
 
   // ============================================
-  // SEARCH TRIGGER (1 selector)
+  // SEL_GSRCH_001: SEARCH TRIGGER (1 selector)
   // ============================================
-  describe('Search Trigger', () => {
+  describe('SEL_GSRCH_001: Search Trigger', { tags: '@SEL_GSRCH_001' }, () => {
     it.skip('should find search trigger button (selector not implemented)', () => {
       cy.get(selectors.trigger).should('exist')
     })
   })
 
   // ============================================
-  // SEARCH MODAL (4 selectors)
+  // SEL_GSRCH_002: SEARCH MODAL (4 selectors)
   // These require the modal to be open
   // ============================================
-  describe('Search Modal (when open)', () => {
+  describe('SEL_GSRCH_002: Search Modal (when open)', { tags: '@SEL_GSRCH_002' }, () => {
     beforeEach(() => {
       // Try to open search modal via keyboard shortcut (Cmd+K or Ctrl+K)
       cy.get('body').type('{meta}k')
@@ -75,9 +80,9 @@ describe('Global Search Selectors Validation', { tags: ['@ui-selectors'] }, () =
   })
 
   // ============================================
-  // ALTERNATIVE: Open via click
+  // SEL_GSRCH_003: SEARCH MODAL VIA CLICK
   // ============================================
-  describe('Search Modal (opened via click)', () => {
+  describe('SEL_GSRCH_003: Search Modal (opened via click)', { tags: '@SEL_GSRCH_003' }, () => {
     it.skip('should open search modal when clicking trigger (trigger selector not implemented)', () => {
       cy.get(selectors.trigger).click()
       cy.wait(500)

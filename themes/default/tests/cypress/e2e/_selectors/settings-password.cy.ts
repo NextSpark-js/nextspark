@@ -14,27 +14,30 @@
  * - Assert elements exist in DOM (no form submissions)
  * - Fast execution (< 30 seconds per describe block)
  *
- * NOTE: Password page only visible for users with password auth (not Google OAuth)
+ * Test IDs:
+ * - SEL_PASS_001: Password Page Selectors
+ *
+ * NOTE: Password page only visible for users with password auth (not Google OAuth).
  * Some selectors from CORE_SELECTORS have naming mismatches with implementation.
  */
 
 import { SettingsPOM } from '../../src/features/SettingsPOM'
-import { loginAsDefaultOwner } from '../../src/session-helpers'
+import { loginAsDefaultDeveloper } from '../../src/session-helpers'
 
-describe('Settings Password Selectors Validation', { tags: ['@ui-selectors'] }, () => {
+describe('Settings Password Selectors Validation', { tags: ['@ui-selectors', '@settings'] }, () => {
   const settings = SettingsPOM.create()
 
   beforeEach(() => {
-    loginAsDefaultOwner()
+    loginAsDefaultDeveloper()
     settings.visitPassword()
     // Wait for password page to load
     cy.get(settings.selectors.passwordForm, { timeout: 15000 }).should('be.visible')
   })
 
   // ============================================
-  // PASSWORD SELECTORS (7 selectors in CORE_SELECTORS)
+  // SEL_PASS_001: PASSWORD PAGE SELECTORS
   // ============================================
-  describe('Password Page Selectors', () => {
+  describe('SEL_PASS_001: Password Page Selectors', { tags: '@SEL_PASS_001' }, () => {
     // NOTE: CORE_SELECTORS defines 'settings-password' but component uses 'password-main'
     it.skip('should find password container (selector mismatch: CORE uses settings-password, component uses password-main)', () => {
       cy.get(settings.selectors.passwordContainer).should('exist')

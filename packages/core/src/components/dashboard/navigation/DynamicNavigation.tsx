@@ -276,6 +276,10 @@ function NavigationLink({
 
   // Generate data-cy id based on the item name (slug-ified)
   const cySlug = item.name.toLowerCase().replace(/\s+/g, '-')
+  // Dashboard link uses a different selector than entity links
+  const dataCyId = cySlug === 'dashboard'
+    ? createCyId('nav', 'link-dashboard')
+    : createCyId('nav', `link-entity-${cySlug}`)
 
   return (
     <Link
@@ -289,7 +293,7 @@ function NavigationLink({
         isMobile && "w-full"
       )}
       aria-current={isActive ? 'page' : undefined}
-      data-cy={createCyId('nav', `link-entity-${cySlug}`)}
+      data-cy={dataCyId}
     >
       <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
       <span className="truncate">{label}</span>

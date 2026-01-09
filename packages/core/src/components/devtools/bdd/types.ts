@@ -13,11 +13,19 @@ export interface BDDFeature {
   coverage?: number;
 }
 
+export type TestStatus = 'passing' | 'failing' | 'skipped' | 'pending' | 'active';
+
 export interface BDDTestMetadata {
   priority?: 'high' | 'medium' | 'low';
-  type?: 'smoke' | 'regression' | 'integration' | 'e2e';
+  type?: 'smoke' | 'regression' | 'integration' | 'e2e' | 'selector';
   tags?: string[];
   automated?: boolean;
+  /** Test execution status */
+  status?: TestStatus;
+  /** Reason for status (e.g., "requires OWNER permission") */
+  statusReason?: string;
+  /** Grep tags for Cypress filtering (e.g., ["@ui-selectors", "@SEL_BILL_001"]) */
+  grepTags?: string[];
 }
 
 export type BDDLanguage = 'en' | 'es';

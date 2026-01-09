@@ -16,9 +16,17 @@
     "setup:claude": "./scripts/setup/claude.sh",
     "pkg:version": "./scripts/packages/version.sh",
     "pkg:pack": "./scripts/packages/pack.sh --all --clean",
-    "pkg:publish": "./scripts/packages/publish.sh ./.packages"
+    "pkg:publish": "./scripts/packages/publish.sh ./.packages",
+    "cy:open": "node packages/core/scripts/test/cy.mjs open",
+    "cy:run": "node packages/core/scripts/test/cy.mjs run",
+    "cy:tags": "node packages/core/scripts/test/cy.mjs tags"
   },
   "devDependencies": {
+    "@cypress/grep": "^4.1.0",
+    "@testing-library/cypress": "^10.1.0",
+    "allure-cypress": "^3.0.0",
+    "cypress": "^15.8.2",
+    "dotenv": "^16.4.5",
     "dotenv-cli": "^11.0.0",
     "typescript": "^5.0.0"
   },

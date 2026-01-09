@@ -220,7 +220,7 @@ export function LoginForm() {
         <CardContent>
           {/* Team Invitation Banner */}
           {fromInvite && (
-            <Alert className="mb-4" data-cy="login-invite-banner">
+            <Alert className="mb-4" data-cy={sel('auth.login.inviteBanner')}>
               <Users className="h-4 w-4" />
               <AlertDescription>
                 {t('login.inviteBanner')}

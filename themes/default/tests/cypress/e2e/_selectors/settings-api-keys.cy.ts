@@ -14,27 +14,40 @@
  * - Assert elements exist in DOM (no form submissions)
  * - Fast execution (< 30 seconds per describe block)
  *
+ * Test IDs:
+ * - SEL_API_001: API Keys Page Structure
+ * - SEL_API_002: Empty State / Skeleton Selectors
+ * - SEL_API_003: Create Dialog Selectors
+ * - SEL_API_004: API Key Row Dynamic Selectors
+ * - SEL_API_005: Details Dialog Selectors
+ * - SEL_API_006: Revoke/New Key Selectors
+ *
  * NOTE: API Keys page requires 'api-keys' permission (colaborator role minimum).
  * Many selectors are dynamic with {id} placeholders.
+ *
+ * SELECTOR MISMATCHES:
+ * - CORE_SELECTORS uses 'api-keys-create-dialog' but component uses 'api-keys-dialog'
+ * - CORE_SELECTORS uses 'api-key-name' but component uses 'api-keys-dialog-name'
+ * Tests use direct selectors based on actual implementation where mismatches exist.
  */
 
 import { SettingsPOM } from '../../src/features/SettingsPOM'
-import { loginAsDefaultOwner } from '../../src/session-helpers'
+import { loginAsDefaultDeveloper } from '../../src/session-helpers'
 
-describe('Settings API Keys Selectors Validation', { tags: ['@ui-selectors'] }, () => {
+describe('Settings API Keys Selectors Validation', { tags: ['@ui-selectors', '@settings'] }, () => {
   const settings = SettingsPOM.create()
 
   beforeEach(() => {
-    loginAsDefaultOwner()
+    loginAsDefaultDeveloper()
     settings.visitApiKeys()
     // Wait for API keys page to load
     cy.get(settings.selectors.apiKeysPage, { timeout: 15000 }).should('exist')
   })
 
   // ============================================
-  // API KEYS PAGE STRUCTURE (5 selectors)
+  // SEL_API_001: API KEYS PAGE STRUCTURE
   // ============================================
-  describe('API Keys Page Structure', () => {
+  describe('SEL_API_001: API Keys Page Structure', { tags: '@SEL_API_001' }, () => {
     it('should find api keys page container', () => {
       cy.get(settings.selectors.apiKeysPage).should('exist')
     })
@@ -58,9 +71,9 @@ describe('Settings API Keys Selectors Validation', { tags: ['@ui-selectors'] }, 
   })
 
   // ============================================
-  // EMPTY STATE / SKELETON (3 selectors)
+  // SEL_API_002: EMPTY STATE / SKELETON
   // ============================================
-  describe('Empty State Selectors', () => {
+  describe('SEL_API_002: Empty State / Skeleton Selectors', { tags: '@SEL_API_002' }, () => {
     // Note: Skeleton only visible during loading
     it.skip('should find skeleton (only visible during loading)', () => {
       cy.get(settings.selectors.apiKeysSkeleton).should('exist')
@@ -77,11 +90,10 @@ describe('Settings API Keys Selectors Validation', { tags: ['@ui-selectors'] }, 
   })
 
   // ============================================
-  // CREATE DIALOG SELECTORS (4 selectors)
-  // NOTE: CORE_SELECTORS uses 'api-keys-create-dialog' but component uses 'api-keys-dialog'
-  // Tests use direct selectors based on actual implementation
+  // SEL_API_003: CREATE DIALOG SELECTORS
+  // NOTE: Component uses different selectors than CORE_SELECTORS
   // ============================================
-  describe('Create Dialog Selectors', () => {
+  describe('SEL_API_003: Create Dialog Selectors', { tags: '@SEL_API_003' }, () => {
     beforeEach(() => {
       cy.get(settings.selectors.apiKeysCreate).click()
       // Component uses 'api-keys-dialog' not 'api-keys-create-dialog'
@@ -109,9 +121,9 @@ describe('Settings API Keys Selectors Validation', { tags: ['@ui-selectors'] }, 
   })
 
   // ============================================
-  // API KEY ROW SELECTORS (Dynamic with {id})
+  // SEL_API_004: API KEY ROW DYNAMIC SELECTORS
   // ============================================
-  describe('API Key Row Dynamic Selectors', () => {
+  describe('SEL_API_004: API Key Row Dynamic Selectors', { tags: '@SEL_API_004' }, () => {
     it('should find api key rows if any exist', () => {
       cy.get('body').then(($body) => {
         const hasRows = $body.find(settings.selectors.apiKeyRowGeneric).length > 0
@@ -133,10 +145,10 @@ describe('Settings API Keys Selectors Validation', { tags: ['@ui-selectors'] }, 
   })
 
   // ============================================
-  // DETAILS DIALOG SELECTORS (14 selectors) - SKIP
+  // SEL_API_005: DETAILS DIALOG SELECTORS
   // Require clicking on an existing API key
   // ============================================
-  describe('Details Dialog Selectors', () => {
+  describe('SEL_API_005: Details Dialog Selectors', { tags: '@SEL_API_005' }, () => {
     it.skip('should find details dialog (requires existing API key)', () => {
       cy.get(settings.selectors.apiKeysDetailsDialog).should('exist')
     })
@@ -195,9 +207,9 @@ describe('Settings API Keys Selectors Validation', { tags: ['@ui-selectors'] }, 
   })
 
   // ============================================
-  // REVOKE DIALOG SELECTORS (3 selectors) - SKIP
+  // SEL_API_006: REVOKE / NEW KEY DISPLAY SELECTORS
   // ============================================
-  describe('Revoke Dialog Selectors', () => {
+  describe('SEL_API_006: Revoke / New Key Selectors', { tags: '@SEL_API_006' }, () => {
     it.skip('should find revoke dialog (requires clicking revoke)', () => {
       cy.get(settings.selectors.apiKeyRevokeDialog).should('exist')
     })
@@ -206,13 +218,6 @@ describe('Settings API Keys Selectors Validation', { tags: ['@ui-selectors'] }, 
       cy.get(settings.selectors.apiKeyRevokeConfirm).should('exist')
     })
 
-    // Note: Cancel is in dialog footer, not specific selector
-  })
-
-  // ============================================
-  // NEW KEY DISPLAY SELECTORS (3 selectors) - SKIP
-  // ============================================
-  describe('New Key Display Selectors', () => {
     it.skip('should find new key display (after creating key)', () => {
       cy.get(settings.selectors.apiKeyNewDisplay).should('exist')
     })

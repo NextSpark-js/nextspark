@@ -6,11 +6,13 @@
  * Uses NEXT_PUBLIC_ACTIVE_THEME to determine which theme's cypress.config.ts to use.
  *
  * Usage:
- *   pnpm cy:open  - Open Cypress UI
- *   pnpm cy:run   - Run tests headless
+ *   pnpm cy:open           - Open Cypress UI
+ *   pnpm cy:run            - Run tests headless
+ *   pnpm cy:tags "@smoke"  - Run tests filtered by tag
  *
- * The script looks for cypress.config.ts at:
- *   contents/themes/{ACTIVE_THEME}/tests/cypress.config.ts
+ * Supports both:
+ *   - Monorepo mode: themes/{ACTIVE_THEME}/tests/cypress.config.ts
+ *   - NPM mode: contents/themes/{ACTIVE_THEME}/tests/cypress.config.ts
  */
 
 import { spawn, execSync } from 'child_process'
@@ -19,8 +21,29 @@ import { resolve } from 'path'
 import 'dotenv/config'
 
 const theme = process.env.NEXT_PUBLIC_ACTIVE_THEME || 'default'
-const cmd = process.argv[2] || 'open'
+let cmd = process.argv[2] || 'open'
 const port = process.env.PORT || 5173
+
+// Handle 'tags' command - convert to 'run' with grepTags env
+let extraArgs = []
+if (cmd === 'tags') {
+  const tag = process.argv[3]
+  if (!tag) {
+    console.error('\x1b[31mError: Tag argument required\x1b[0m')
+    console.error('Usage: pnpm cy:tags "@smoke"')
+    process.exit(1)
+  }
+  cmd = 'run'
+  extraArgs = ['--env', `grepTags=${tag}`]
+  // Shift remaining args
+  process.argv.splice(3, 1)
+}
+
+// Detect monorepo vs NPM mode
+const monorepoPath = `themes/${theme}/tests/cypress.config.ts`
+const npmPath = `contents/themes/${theme}/tests/cypress.config.ts`
+const isMonorepo = existsSync(resolve(process.cwd(), monorepoPath))
+const isNpmMode = existsSync(resolve(process.cwd(), npmPath))
 
 // Handle 'e2e' command - full test suite with server
 if (cmd === 'e2e') {
@@ -41,9 +64,11 @@ if (cmd === 'e2e') {
   process.exit(0)
 }
 
-const configPath = `contents/themes/${theme}/tests/cypress.config.ts`
+// Determine config path based on mode
+const configPath = isMonorepo ? monorepoPath : npmPath
 const absoluteConfigPath = resolve(process.cwd(), configPath)
-const allureResultsPath = resolve(process.cwd(), `contents/themes/${theme}/tests/cypress/allure-results`)
+const themesBase = isMonorepo ? 'themes' : 'contents/themes'
+const allureResultsPath = resolve(process.cwd(), `${themesBase}/${theme}/tests/cypress/allure-results`)
 
 // Validate config file exists
 if (!existsSync(absoluteConfigPath)) {
@@ -63,7 +88,7 @@ console.log(`\x1b[36mRunning Cypress for theme: ${theme}\x1b[0m`)
 console.log(`Config: ${configPath}\n`)
 
 // Build args array - include any additional CLI args passed
-const args = ['cypress', cmd, '--config-file', configPath, ...process.argv.slice(3)]
+const args = ['cypress', cmd, '--config-file', configPath, ...extraArgs, ...process.argv.slice(3)]
 
 const child = spawn('npx', args, {
   stdio: 'inherit',

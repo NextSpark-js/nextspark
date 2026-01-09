@@ -1,7 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy, ChevronDown, Tag, Zap, TestTube2 } from "lucide-react";
+import {
+  Check,
+  Copy,
+  ChevronDown,
+  Tag,
+  Zap,
+  TestTube2,
+  Terminal,
+  CheckCircle2,
+  XCircle,
+  SkipForward,
+  Clock,
+  PlayCircle,
+  AlertTriangle
+} from "lucide-react";
 import { cn } from '../../../lib/utils';
 import { Button } from '../../ui/button';
 import { Badge } from '../../ui/badge';
@@ -11,7 +25,7 @@ import {
   CollapsibleTrigger,
 } from '../../ui/collapsible';
 import { GherkinHighlighter } from "./GherkinHighlighter";
-import type { BDDTestCase, BDDLanguage } from "./types";
+import type { BDDTestCase, BDDLanguage, TestStatus } from "./types";
 
 interface BDDTestCardProps {
   test: BDDTestCase;
@@ -71,6 +85,47 @@ export function BDDTestCard({ test, index, isOpen, onToggle, language }: BDDTest
     }
   };
 
+  const getStatusColor = (status?: TestStatus) => {
+    switch (status) {
+      case 'passing':
+        return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+      case 'failing':
+        return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+      case 'skipped':
+        return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
+      case 'pending':
+        return 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
+      case 'active':
+        return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+      default:
+        return 'bg-slate-100 text-slate-600 dark:bg-slate-800';
+    }
+  };
+
+  const getStatusIcon = (status?: TestStatus) => {
+    switch (status) {
+      case 'passing':
+        return <CheckCircle2 className="h-3 w-3" />;
+      case 'failing':
+        return <XCircle className="h-3 w-3" />;
+      case 'skipped':
+        return <SkipForward className="h-3 w-3" />;
+      case 'pending':
+        return <Clock className="h-3 w-3" />;
+      case 'active':
+        return <PlayCircle className="h-3 w-3" />;
+      default:
+        return null;
+    }
+  };
+
+  const copyGrepCommand = async (tag: string) => {
+    const command = `pnpm cy:tags "${tag}"`;
+    await navigator.clipboard.writeText(command);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <Collapsible open={isOpen} onOpenChange={onToggle}>
       <div
@@ -119,6 +174,12 @@ export function BDDTestCard({ test, index, isOpen, onToggle, language }: BDDTest
                   {test.metadata.priority}
                 </Badge>
               )}
+              {test.metadata.status && (
+                <Badge className={cn("text-xs gap-1", getStatusColor(test.metadata.status))}>
+                  {getStatusIcon(test.metadata.status)}
+                  {test.metadata.status}
+                </Badge>
+              )}
             </div>
           </button>
         </CollapsibleTrigger>
@@ -134,6 +195,31 @@ export function BDDTestCard({ test, index, isOpen, onToggle, language }: BDDTest
                     {tag}
                   </Badge>
                 ))}
+              </div>
+            )}
+
+            {/* Grep Tags */}
+            {test.metadata.grepTags && test.metadata.grepTags.length > 0 && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <Terminal className="h-3 w-3 text-emerald-500" />
+                {test.metadata.grepTags.map((tag) => (
+                  <Badge
+                    key={tag}
+                    className="text-xs bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 cursor-pointer hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors"
+                    onClick={() => copyGrepCommand(tag)}
+                    title={`Click to copy: pnpm cy:tags "${tag}"`}
+                  >
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            )}
+
+            {/* Status Reason */}
+            {test.metadata.statusReason && (
+              <div className="flex items-start gap-2 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-md px-3 py-2">
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                <span>{test.metadata.statusReason}</span>
               </div>
             )}
 

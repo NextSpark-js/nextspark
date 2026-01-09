@@ -21,6 +21,17 @@ dotenv.config({ path: path.join(projectRoot, '.env') })
 // Server port (from .env or default 5173)
 const port = process.env.PORT || 5173
 
+// Extract CYPRESS_ prefixed variables from process.env
+// Cypress auto-strips the CYPRESS_ prefix when accessing via Cypress.env()
+const cypressEnvVars: Record<string, string> = {}
+Object.entries(process.env).forEach(([key, value]) => {
+  if (key.startsWith('CYPRESS_') && value) {
+    // Remove CYPRESS_ prefix for Cypress.env() access
+    const cypressKey = key.replace('CYPRESS_', '')
+    cypressEnvVars[cypressKey] = value
+  }
+})
+
 export default defineConfig({
   e2e: {
     // Base URL for the application
@@ -73,13 +84,12 @@ export default defineConfig({
 
     // Environment variables
     env: {
+      // Spread CYPRESS_ prefixed vars from .env (e.g., CYPRESS_DEVELOPER_EMAIL -> DEVELOPER_EMAIL)
+      ...cypressEnvVars,
+
       // Theme info
       ACTIVE_THEME: '{{THEME_SLUG}}',
       THEME_PATH: themeRoot,
-
-      // Test user credentials (update with your test users)
-      TEST_USER_EMAIL: 'user@example.com',
-      TEST_USER_PASSWORD: 'Testing1234',
 
       // Feature flags
       ENABLE_ALLURE: true,

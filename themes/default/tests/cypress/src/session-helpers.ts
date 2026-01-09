@@ -20,34 +20,52 @@
 import { DevKeyringPOM as DevKeyring } from './components/DevKeyringPOM'
 
 /**
+ * Environment-based Test Credentials
+ *
+ * These can be overridden via Cypress env variables (cypress.config.ts or CLI):
+ * - CYPRESS_DEVELOPER_EMAIL / CYPRESS_DEVELOPER_PASSWORD - Developer user
+ * - CYPRESS_SUPERADMIN_EMAIL / CYPRESS_SUPERADMIN_PASSWORD - Superadmin user
+ * - CYPRESS_OWNER_EMAIL, CYPRESS_ADMIN_EMAIL, etc. - Demo theme users
+ *
+ * Fallback values are the default users from core and theme sample data.
+ */
+
+// Core system user credentials (configurable via env)
+const DEVELOPER_EMAIL = Cypress.env('DEVELOPER_EMAIL') || 'developer@nextspark.dev'
+const DEVELOPER_PASSWORD = Cypress.env('DEVELOPER_PASSWORD') || 'Pandora1234'
+const SUPERADMIN_PASSWORD = Cypress.env('SUPERADMIN_PASSWORD') || 'Pandora1234'
+
+// Demo user password (configurable via env)
+const TEST_PASSWORD = Cypress.env('TEST_PASSWORD') || 'Test1234'
+
+/**
  * Default Theme Test Users
  * Teams: Everpoint Labs, Ironvale Global, Riverstone Ventures
+ *
+ * Note: These are fallback demo users. For selector tests, use CORE_USER (developer).
  */
 export const DEFAULT_THEME_USERS = {
-  OWNER: 'carlos.mendoza@nextspark.dev',      // Everpoint Labs (owner), Riverstone (member)
-  ADMIN: 'james.wilson@nextspark.dev',        // Everpoint Labs (admin)
-  MEMBER: 'emily.johnson@nextspark.dev',      // Everpoint (member), Riverstone (admin)
-  EDITOR: 'diego.ramirez@nextspark.dev',      // Everpoint Labs (editor) - custom role
-  VIEWER: 'sarah.davis@nextspark.dev',        // Ironvale Global (viewer)
+  OWNER: Cypress.env('OWNER_EMAIL') || 'carlos.mendoza@nextspark.dev',
+  ADMIN: Cypress.env('ADMIN_EMAIL') || 'james.wilson@nextspark.dev',
+  MEMBER: Cypress.env('MEMBER_EMAIL') || 'emily.johnson@nextspark.dev',
+  EDITOR: Cypress.env('EDITOR_EMAIL') || 'diego.ramirez@nextspark.dev',
+  VIEWER: Cypress.env('VIEWER_EMAIL') || 'sarah.davis@nextspark.dev',
 } as const
 
 /**
  * Core System Users (from core/migrations/090_sample_data.sql)
  * These users have special global roles, not team-based roles
+ *
+ * IMPORTANT: DEVELOPER is the recommended user for most tests.
+ * Configurable via CYPRESS_DEVELOPER_EMAIL env variable.
  */
 export const CORE_USERS = {
-  SUPERADMIN: 'superadmin@nextspark.dev',     // Global superadmin role - Admin access
-  DEVELOPER: 'developer@nextspark.dev',       // Global developer role - Dev Zone access
+  SUPERADMIN: Cypress.env('SUPERADMIN_EMAIL') || 'superadmin@nextspark.dev',
+  DEVELOPER: DEVELOPER_EMAIL,
 } as const
 
-// Common password for demo users (team-based)
-const TEST_PASSWORD = 'Test1234'
-
-// Password for core system users (superadmin/developer)
-const CORE_PASSWORD = 'Pandora1234'
-
-// Extended timeout for dev server compilation
-const API_TIMEOUT = 30000
+// Extended timeout for dev server compilation (60s for slow cold starts)
+const API_TIMEOUT = 60000
 
 /**
  * Sets up team context after login (requires page to be loaded for localStorage access)
@@ -290,7 +308,7 @@ export function loginAsDefaultEditor() {
  */
 export function loginAsDefaultSuperadmin() {
   cy.session('default-superadmin-session', () => {
-    apiLogin(CORE_USERS.SUPERADMIN, CORE_PASSWORD).then((apiLoginSucceeded) => {
+    apiLogin(CORE_USERS.SUPERADMIN, SUPERADMIN_PASSWORD).then((apiLoginSucceeded) => {
       if (apiLoginSucceeded) {
         cy.visit('/superadmin', { timeout: 60000 })
       }
@@ -320,7 +338,7 @@ export function loginAsDefaultSuperadmin() {
  */
 export function loginAsDefaultDeveloper() {
   cy.session('default-developer-session', () => {
-    apiLogin(CORE_USERS.DEVELOPER, CORE_PASSWORD).then((apiLoginSucceeded) => {
+    apiLogin(CORE_USERS.DEVELOPER, DEVELOPER_PASSWORD).then((apiLoginSucceeded) => {
       if (apiLoginSucceeded) {
         cy.visit('/devtools', { timeout: 60000 })
       }

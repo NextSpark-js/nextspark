@@ -8,27 +8,44 @@
  * This is required because all entity API calls include x-team-id header
  * which is read from localStorage.activeTeamId.
  *
- * CUSTOMIZE: Update the THEME_USERS object with your theme's test users.
+ * CONFIGURATION: Credentials can be customized via Cypress env variables:
+ * - CYPRESS_DEVELOPER_EMAIL: Override developer user email
+ * - CYPRESS_DEVELOPER_PASSWORD: Override developer user password
+ * - CYPRESS_OWNER_EMAIL, CYPRESS_ADMIN_EMAIL, etc.: Override specific roles
+ *
+ * Set these in cypress.config.ts env section or via CLI:
+ *   pnpm cy:open --env DEVELOPER_EMAIL=myuser@example.com,DEVELOPER_PASSWORD=MyPass123
  */
 
 // import { DevKeyringPOM as DevKeyring } from './components/DevKeyringPOM'
 
 /**
+ * Environment-based Test Credentials
+ * Fallback values use developer@nextspark.dev (pre-installed from core)
+ */
+const DEVELOPER_EMAIL = Cypress.env('DEVELOPER_EMAIL') || 'developer@nextspark.dev'
+const DEVELOPER_PASSWORD = Cypress.env('DEVELOPER_PASSWORD') || 'Pandora1234'
+
+/**
  * Theme Test Users
- * CUSTOMIZE: Update with your theme's test user emails
+ * CUSTOMIZE: Update with your theme's test user emails or use env variables
+ *
+ * Default: All roles use developer@nextspark.dev for simplicity.
+ * For role-specific testing, override via env variables:
+ *   CYPRESS_OWNER_EMAIL, CYPRESS_ADMIN_EMAIL, etc.
  */
 export const THEME_USERS = {
-  OWNER: 'owner@example.com',
-  ADMIN: 'admin@example.com',
-  MEMBER: 'member@example.com',
-  VIEWER: 'viewer@example.com',
+  OWNER: Cypress.env('OWNER_EMAIL') || DEVELOPER_EMAIL,
+  ADMIN: Cypress.env('ADMIN_EMAIL') || DEVELOPER_EMAIL,
+  MEMBER: Cypress.env('MEMBER_EMAIL') || DEVELOPER_EMAIL,
+  VIEWER: Cypress.env('VIEWER_EMAIL') || DEVELOPER_EMAIL,
 } as const
 
-// Common password for all test users
-const TEST_PASSWORD = 'Test1234'
+// Common password for all test users (configurable via env)
+const TEST_PASSWORD = DEVELOPER_PASSWORD
 
-// Extended timeout for dev server compilation
-const API_TIMEOUT = 30000
+// Extended timeout for dev server compilation (60s for slow cold starts)
+const API_TIMEOUT = 60000
 
 /**
  * Sets up team context after login (requires page to be loaded for localStorage access)

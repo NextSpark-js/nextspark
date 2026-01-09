@@ -14,22 +14,39 @@
  * Scope:
  * - Only login and navigate
  * - Assert elements exist in DOM (no full CRUD operations)
+ *
+ * Test IDs:
+ * - SEL_PGED_001: Pages List Page Selectors
+ * - SEL_PGED_002: Block Editor Core Selectors
+ * - SEL_PGED_003: Page Settings Selectors
+ * - SEL_PGED_004: Block Picker Selectors
+ * - SEL_PGED_005: Block Canvas and Settings
+ * - SEL_PGED_006: Edit Existing Page
  */
 
 import { PageBuilderPOM } from '../../src/features/PageBuilderPOM'
 import { PagesPOM } from '../../src/entities/PagesPOM'
-import { loginAsDefaultOwner } from '../../src/session-helpers'
+import { loginAsDefaultDeveloper } from '../../src/session-helpers'
 
-describe('Pages Block Editor Selectors Validation', { tags: ['@ui-selectors'] }, ()
-    => {
+// Team ID for developer's team (NextSpark Team)
+const DEVELOPER_TEAM_ID = 'team-nextspark-001'
+
+describe('Pages Block Editor Selectors Validation', { tags: ['@ui-selectors', '@pages', '@editor'] }, () => {
   const pageBuilder = PageBuilderPOM.create()
   const pages = PagesPOM.create()
 
   beforeEach(() => {
-    loginAsDefaultOwner()
+    loginAsDefaultDeveloper()
+    // Set team context for entity API calls (pages is team-based)
+    cy.window().then((win) => {
+      win.localStorage.setItem('activeTeamId', DEVELOPER_TEAM_ID)
+    })
   })
 
-  describe('Pages List Page Selectors (Entity POM)', () => {
+  // ============================================
+  // SEL_PGED_001: PAGES LIST PAGE SELECTORS
+  // ============================================
+  describe('SEL_PGED_001: Pages List Page Selectors', { tags: '@SEL_PGED_001' }, () => {
     beforeEach(() => {
       pages.visitList()
       pages.waitForList()
@@ -48,7 +65,10 @@ describe('Pages Block Editor Selectors Validation', { tags: ['@ui-selectors'] },
     })
   })
 
-  describe('Block Editor Core Selectors (Pages)', () => {
+  // ============================================
+  // SEL_PGED_002: BLOCK EDITOR CORE SELECTORS
+  // ============================================
+  describe('SEL_PGED_002: Block Editor Core Selectors', { tags: '@SEL_PGED_002' }, () => {
     beforeEach(() => {
       pageBuilder.visitCreate()
       pageBuilder.waitForEditor()
@@ -71,7 +91,10 @@ describe('Pages Block Editor Selectors Validation', { tags: ['@ui-selectors'] },
     })
   })
 
-  describe('Page Settings Selectors (Pages-specific)', () => {
+  // ============================================
+  // SEL_PGED_003: PAGE SETTINGS SELECTORS
+  // ============================================
+  describe('SEL_PGED_003: Page Settings Selectors', { tags: '@SEL_PGED_003' }, () => {
     beforeEach(() => {
       // Navigate to edit an existing page to see page settings and SEO
       pages.visitList()
@@ -115,7 +138,10 @@ describe('Pages Block Editor Selectors Validation', { tags: ['@ui-selectors'] },
     })
   })
 
-  describe('Block Picker Selectors (Pages)', () => {
+  // ============================================
+  // SEL_PGED_004: BLOCK PICKER SELECTORS
+  // ============================================
+  describe('SEL_PGED_004: Block Picker Selectors', { tags: '@SEL_PGED_004' }, () => {
     beforeEach(() => {
       pageBuilder.visitCreate()
       pageBuilder.waitForEditor()
@@ -131,7 +157,10 @@ describe('Pages Block Editor Selectors Validation', { tags: ['@ui-selectors'] },
     })
   })
 
-  describe('Block Canvas and Settings (Pages)', () => {
+  // ============================================
+  // SEL_PGED_005: BLOCK CANVAS AND SETTINGS
+  // ============================================
+  describe('SEL_PGED_005: Block Canvas and Settings', { tags: '@SEL_PGED_005' }, () => {
     beforeEach(() => {
       pageBuilder.visitCreate()
       pageBuilder.waitForEditor()
@@ -153,7 +182,10 @@ describe('Pages Block Editor Selectors Validation', { tags: ['@ui-selectors'] },
     })
   })
 
-  describe('Edit Existing Page Selectors', () => {
+  // ============================================
+  // SEL_PGED_006: EDIT EXISTING PAGE
+  // ============================================
+  describe('SEL_PGED_006: Edit Existing Page', { tags: '@SEL_PGED_006' }, () => {
     it('should find editor elements when editing an existing page', () => {
       // Get a page ID from the list
       pages.visitList()

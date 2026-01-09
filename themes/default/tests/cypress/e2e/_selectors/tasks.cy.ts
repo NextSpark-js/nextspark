@@ -17,14 +17,15 @@
 import { TasksPOM } from '../../src/entities/TasksPOM'
 import { loginAsDefaultOwner } from '../../src/session-helpers'
 
-describe('Tasks Entity Selectors Validation', { tags: ['@ui-selectors'] }, () => {
+describe('Tasks Entity Selectors Validation', { tags: ['@ui-selectors', '@tasks'] }, () => {
   const tasks = TasksPOM.create()
 
   beforeEach(() => {
+    // Login as Carlos Mendoza (owner) - has proper team context via setupTeamContext()
     loginAsDefaultOwner()
   })
 
-  describe('List Page Selectors', () => {
+  describe('SEL_TASK_001: List Page Selectors', { tags: '@SEL_TASK_001' }, () => {
     beforeEach(() => {
       tasks.visitList()
       tasks.waitForList()
@@ -78,7 +79,7 @@ describe('Tasks Entity Selectors Validation', { tags: ['@ui-selectors'] }, () =>
     })
   })
 
-  describe('Filter Selectors', () => {
+  describe('SEL_TASK_002: Filter Selectors', { tags: '@SEL_TASK_002' }, () => {
     beforeEach(() => {
       tasks.visitList()
       tasks.waitForList()
@@ -98,7 +99,7 @@ describe('Tasks Entity Selectors Validation', { tags: ['@ui-selectors'] }, () =>
     })
   })
 
-  describe('Row Dynamic Selectors', () => {
+  describe('SEL_TASK_003: Row Dynamic Selectors', { tags: '@SEL_TASK_003' }, () => {
     beforeEach(() => {
       tasks.visitList()
       tasks.waitForList()
@@ -122,7 +123,7 @@ describe('Tasks Entity Selectors Validation', { tags: ['@ui-selectors'] }, () =>
     })
   })
 
-  describe('Create Page Selectors', () => {
+  describe('SEL_TASK_004: Create Page Selectors', { tags: '@SEL_TASK_004' }, () => {
     beforeEach(() => {
       tasks.visitCreate()
       tasks.waitForForm()
@@ -161,7 +162,7 @@ describe('Tasks Entity Selectors Validation', { tags: ['@ui-selectors'] }, () =>
     })
   })
 
-  describe('Detail Page Selectors', () => {
+  describe('SEL_TASK_005: Detail Page Selectors', { tags: '@SEL_TASK_005' }, () => {
     it('should find detail page elements after navigating to a task', () => {
       // First get a task ID from the list
       tasks.visitList()
@@ -186,7 +187,7 @@ describe('Tasks Entity Selectors Validation', { tags: ['@ui-selectors'] }, () =>
     })
   })
 
-  describe('Bulk Actions Selectors', () => {
+  describe('SEL_TASK_006: Bulk Actions Selectors', { tags: '@SEL_TASK_006' }, () => {
     beforeEach(() => {
       tasks.visitList()
       tasks.waitForList()
@@ -211,7 +212,7 @@ describe('Tasks Entity Selectors Validation', { tags: ['@ui-selectors'] }, () =>
     })
   })
 
-  describe('Delete Dialog Selectors', () => {
+  describe('SEL_TASK_007: Delete Dialog Selectors', { tags: '@SEL_TASK_007' }, () => {
     it('should find delete dialog elements', () => {
       // Navigate to a task detail
       tasks.visitList()

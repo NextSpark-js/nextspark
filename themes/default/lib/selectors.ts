@@ -134,11 +134,15 @@ export const DEVTOOLS_SELECTORS = {
 
 /**
  * Complete theme selectors merging core and blocks.
+ * NOTE: devtools must be MERGED (not replaced) to keep CORE_SELECTORS.devtools
  */
 export const THEME_SELECTORS = {
   ...CORE_SELECTORS,
   blocks: BLOCK_SELECTORS,
-  devtools: DEVTOOLS_SELECTORS,
+  devtools: {
+    ...CORE_SELECTORS.devtools,
+    ...DEVTOOLS_SELECTORS,
+  },
 } as const
 
 // =============================================================================

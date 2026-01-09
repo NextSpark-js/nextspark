@@ -341,7 +341,7 @@ export function SignupForm() {
         <CardContent>
           {/* Team Invitation Banner */}
           {fromInvite && (
-            <Alert className="mb-4" data-cy="signup-invite-banner">
+            <Alert className="mb-4" data-cy={sel('auth.signup.inviteBanner')}>
               <Users className="h-4 w-4" />
               <AlertDescription>
                 {t('signup.inviteBanner')}
@@ -451,7 +451,7 @@ export function SignupForm() {
           </div>
 
           {error && (
-            <Alert variant="destructive">
+            <Alert variant="destructive" data-cy={sel('auth.signup.error')}>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>{error}</AlertDescription>
             </Alert>
@@ -509,6 +509,7 @@ export function SignupForm() {
           onClick={handleGoogleSignUp}
           disabled={!!loadingProvider}
           className="w-full"
+          data-cy={sel('auth.signup.googleButton')}
         >
           {loadingProvider === 'google' ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />

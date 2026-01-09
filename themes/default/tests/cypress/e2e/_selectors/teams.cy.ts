@@ -14,26 +14,34 @@
  * - Assert elements exist in DOM (no form submissions)
  * - Fast execution (< 30 seconds per describe block)
  *
+ * Test IDs:
+ * - SEL_TEAM_001: Team Switcher Selectors
+ * - SEL_TEAM_002: Team Switch Modal Selectors (skipped - requires multiple teams)
+ * - SEL_TEAM_003: Create Team Dialog Documentation
+ * - SEL_TEAM_004: Dashboard Sidebar Selectors
+ * - SEL_TEAM_005: Mobile Team Switcher Selectors (skipped - mobile viewport only)
+ * - SEL_TEAM_006: Team Members Documentation
+ *
  * NOTE: Some selectors require specific states (dialog open, team selected).
  * Many selectors from CORE_SELECTORS are dynamically scoped.
  */
 
 import { TeamSwitcherPOM } from '../../src/components/TeamSwitcherPOM'
-import { loginAsDefaultOwner } from '../../src/session-helpers'
+import { loginAsDefaultDeveloper } from '../../src/session-helpers'
 
-describe('Teams Selectors Validation', { tags: ['@ui-selectors'] }, () => {
+describe('Teams Selectors Validation', { tags: ['@ui-selectors', '@teams'] }, () => {
   const teamSwitcher = TeamSwitcherPOM.create()
 
   beforeEach(() => {
-    loginAsDefaultOwner()
+    loginAsDefaultDeveloper()
     cy.visit('/dashboard', { timeout: 60000, failOnStatusCode: false })
     cy.url().should('include', '/dashboard')
   })
 
   // ============================================
-  // TEAM SWITCHER SELECTORS (6 selectors)
+  // SEL_TEAM_001: TEAM SWITCHER SELECTORS
   // ============================================
-  describe('Team Switcher Selectors', () => {
+  describe('SEL_TEAM_001: Team Switcher Selectors', { tags: '@SEL_TEAM_001' }, () => {
     beforeEach(() => {
       teamSwitcher.ensureSidebarExpanded()
     })
@@ -68,9 +76,9 @@ describe('Teams Selectors Validation', { tags: ['@ui-selectors'] }, () => {
   })
 
   // ============================================
-  // TEAM SWITCH MODAL SELECTORS (1 selector)
+  // SEL_TEAM_002: TEAM SWITCH MODAL SELECTORS
   // ============================================
-  describe('Team Switch Modal Selectors', () => {
+  describe('SEL_TEAM_002: Team Switch Modal Selectors', { tags: '@SEL_TEAM_002' }, () => {
     // Note: Switch modal only appears when switching to a different team
     // This test validates the selector exists by attempting a switch
     it.skip('should find switch modal during team change (requires multiple teams)', () => {
@@ -79,11 +87,11 @@ describe('Teams Selectors Validation', { tags: ['@ui-selectors'] }, () => {
   })
 
   // ============================================
-  // CREATE TEAM DIALOG SELECTORS (7 selectors)
+  // SEL_TEAM_003: CREATE TEAM DIALOG DOCUMENTATION
   // NOTE: Create Team Dialog is opened from settings/teams page
   // Those selectors are tested in settings-teams.cy.ts
   // ============================================
-  describe('Create Team Dialog Selectors', () => {
+  describe('SEL_TEAM_003: Create Team Dialog Documentation', { tags: '@SEL_TEAM_003' }, () => {
     it('should document that Create Team Dialog is in settings', () => {
       cy.log('Create Team Dialog selectors:')
       cy.log('- create-team-dialog')
@@ -98,9 +106,9 @@ describe('Teams Selectors Validation', { tags: ['@ui-selectors'] }, () => {
   })
 
   // ============================================
-  // SIDEBAR SELECTORS (2 selectors)
+  // SEL_TEAM_004: DASHBOARD SIDEBAR SELECTORS
   // ============================================
-  describe('Dashboard Sidebar Selectors', () => {
+  describe('SEL_TEAM_004: Dashboard Sidebar Selectors', { tags: '@SEL_TEAM_004' }, () => {
     it('should find sidebar main container', () => {
       cy.get(teamSwitcher.selectors.sidebar).should('exist')
     })
@@ -111,9 +119,10 @@ describe('Teams Selectors Validation', { tags: ['@ui-selectors'] }, () => {
   })
 
   // ============================================
-  // MOBILE SELECTORS (3 selectors) - SKIP for desktop
+  // SEL_TEAM_005: MOBILE TEAM SWITCHER SELECTORS
+  // Skipped: Mobile selectors only visible on small viewports
   // ============================================
-  describe('Mobile Team Switcher Selectors', () => {
+  describe('SEL_TEAM_005: Mobile Team Switcher Selectors', { tags: '@SEL_TEAM_005' }, () => {
     // Note: Mobile selectors only visible on small viewports
     it.skip('should find mobile more button (mobile viewport only)', () => {
       cy.get(teamSwitcher.selectors.mobileMoreButton).should('exist')
@@ -129,10 +138,10 @@ describe('Teams Selectors Validation', { tags: ['@ui-selectors'] }, () => {
   })
 
   // ============================================
-  // TEAM MEMBERS SELECTORS (Section at settings)
+  // SEL_TEAM_006: TEAM MEMBERS DOCUMENTATION
   // These are tested in settings-teams.cy.ts
   // ============================================
-  describe('Team Members Selectors', () => {
+  describe('SEL_TEAM_006: Team Members Documentation', { tags: '@SEL_TEAM_006' }, () => {
     it('should document team members are in settings', () => {
       cy.log('Team members selectors are tested in settings-teams.cy.ts')
       cy.log('Path: /dashboard/settings/teams')

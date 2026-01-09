@@ -14,33 +14,35 @@
  * - Assert elements exist in DOM (no form submissions)
  * - Fast execution (< 30 seconds per describe block)
  *
- * NOTE: Some selectors require specific states (user menu open, specific roles).
- * signin/signup selectors only visible when NOT logged in.
+ * Test IDs:
+ * - SEL_TNAV_001: Topnav Structure (3 selectors)
+ * - SEL_TNAV_002: Topnav Actions (4 selectors)
+ * - SEL_TNAV_003: Topnav Admin Links (2 selectors - developer has access)
+ * - SEL_TNAV_004: User Menu (5 selectors)
+ * - SEL_TNAV_006: Loading State (1 skipped - transient state)
+ *
+ * NOTE: Public navbar tests (logo, signin, signup) are in public.cy.ts
  */
 
 import { DashboardPOM } from '../../src/features/DashboardPOM'
-import { loginAsDefaultOwner } from '../../src/session-helpers'
+import { loginAsDefaultDeveloper } from '../../src/session-helpers'
 
-describe('Dashboard Topnav Selectors Validation', { tags: ['@ui-selectors'] }, () => {
+describe('Dashboard Topnav Selectors Validation', { tags: ['@ui-selectors', '@topnav'] }, () => {
   const dashboard = DashboardPOM.create()
 
   beforeEach(() => {
-    loginAsDefaultOwner()
+    loginAsDefaultDeveloper()
     cy.visit('/dashboard', { timeout: 60000, failOnStatusCode: false })
     cy.url().should('include', '/dashboard')
   })
 
   // ============================================
-  // TOPNAV STRUCTURE (4 selectors)
+  // SEL_TNAV_001: TOPNAV STRUCTURE (3 selectors)
+  // NOTE: Logo test moved to public.cy.ts (only visible when not logged in)
   // ============================================
-  describe('Topnav Structure', () => {
+  describe('SEL_TNAV_001: Topnav Structure', { tags: '@SEL_TNAV_001' }, () => {
     it('should find topnav header', () => {
       cy.get(dashboard.selectors.topnavHeader).should('exist')
-    })
-
-    // NOTE: Logo only visible when NOT logged in
-    it.skip('should find topnav logo (only visible when not logged in)', () => {
-      cy.get(dashboard.selectors.topnavLogo).should('exist')
     })
 
     it('should find topnav actions container', () => {
@@ -53,9 +55,9 @@ describe('Dashboard Topnav Selectors Validation', { tags: ['@ui-selectors'] }, (
   })
 
   // ============================================
-  // TOPNAV ACTIONS (4 selectors)
+  // SEL_TNAV_002: TOPNAV ACTIONS (4 selectors)
   // ============================================
-  describe('Topnav Actions', () => {
+  describe('SEL_TNAV_002: Topnav Actions', { tags: '@SEL_TNAV_002' }, () => {
     it('should find sidebar toggle button', () => {
       cy.get(dashboard.selectors.topnavSidebarToggle).should('exist')
     })
@@ -74,26 +76,25 @@ describe('Dashboard Topnav Selectors Validation', { tags: ['@ui-selectors'] }, (
   })
 
   // ============================================
-  // TOPNAV ADMIN LINKS (2 selectors)
-  // NOTE: Requires superadmin (sector7) or developer role (devzone)
-  // Default owner does NOT have these roles
+  // SEL_TNAV_003: TOPNAV ADMIN LINKS (2 selectors)
+  // NOTE: Developer user has access (showToDevelopers: true by default)
   // ============================================
-  describe('Topnav Admin Links', () => {
-    it.skip('should find sector7 link (requires superadmin or developer with sector7 enabled)', () => {
-      // Requires: sector7Config?.enabled && (isSuperAdmin || (isDeveloper && sector7Config?.showToDevelopers))
+  describe('SEL_TNAV_003: Topnav Admin Links', { tags: '@SEL_TNAV_003' }, () => {
+    it('should find superadmin link (developer sees with showToDevelopers)', () => {
+      // Config: superadminAccess.enabled && (isSuperAdmin || (isDeveloper && showToDevelopers))
       cy.get(dashboard.selectors.topnavSuperadmin).should('exist')
     })
 
-    it.skip('should find devzone link (requires developer role)', () => {
-      // Requires: devZoneConfig?.enabled && isDeveloper
-      cy.get(dashboard.selectors.topnavDevzone).should('exist')
+    it('should find devtools link (developer role)', () => {
+      // Config: devtoolsAccess.enabled && isDeveloper
+      cy.get(dashboard.selectors.topnavDevtools).should('exist')
     })
   })
 
   // ============================================
-  // USER MENU (4+ selectors)
+  // SEL_TNAV_004: USER MENU (4+ selectors)
   // ============================================
-  describe('User Menu', () => {
+  describe('SEL_TNAV_004: User Menu', { tags: '@SEL_TNAV_004' }, () => {
     it('should find user menu trigger', () => {
       cy.get(dashboard.selectors.topnavUserMenuTrigger).should('exist')
     })
@@ -121,24 +122,10 @@ describe('Dashboard Topnav Selectors Validation', { tags: ['@ui-selectors'] }, (
   })
 
   // ============================================
-  // PUBLIC NAVBAR SELECTORS (2 selectors)
-  // NOTE: Only visible when NOT logged in - skip for logged-in tests
+  // SEL_TNAV_006: LOADING STATE SELECTOR (1 selector)
+  // NOTE: Only visible during auth loading - transient state
   // ============================================
-  describe('Public Navbar Selectors', () => {
-    it.skip('should find signin button (only visible when not logged in)', () => {
-      cy.get(dashboard.selectors.topnavSignin).should('exist')
-    })
-
-    it.skip('should find signup button (only visible when not logged in)', () => {
-      cy.get(dashboard.selectors.topnavSignup).should('exist')
-    })
-  })
-
-  // ============================================
-  // LOADING STATE SELECTOR (1 selector)
-  // NOTE: Only visible during auth loading
-  // ============================================
-  describe('Loading State Selectors', () => {
+  describe('SEL_TNAV_006: Loading State', { tags: '@SEL_TNAV_006' }, () => {
     it.skip('should find user loading state (only visible during auth loading)', () => {
       cy.get(dashboard.selectors.topnavUserLoading).should('exist')
     })

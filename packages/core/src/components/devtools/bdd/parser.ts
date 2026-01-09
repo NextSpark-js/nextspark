@@ -5,7 +5,7 @@
  * Supports both the new simplified format and legacy HTML table format.
  */
 
-import type { BDDDocument, BDDFeature, BDDTestCase, BDDTestMetadata, BDDScenarios } from './types';
+import type { BDDDocument, BDDFeature, BDDTestCase, BDDTestMetadata, BDDScenarios, TestStatus } from './types';
 
 /**
  * Parse YAML frontmatter from markdown
@@ -76,9 +76,15 @@ function parseTestMetadata(section: string): BDDTestMetadata {
     metadata.priority = priorityMatch[1].toLowerCase() as BDDTestMetadata['priority'];
   }
 
-  const typeMatch = section.match(/\*\*Type:\*\*\s*(\w+)/i);
+  const typeMatch = section.match(/\*\*Type:\*\*\s*(.+?)(?:\n|$)/i);
   if (typeMatch) {
-    metadata.type = typeMatch[1].toLowerCase() as BDDTestMetadata['type'];
+    // Normalize type: "Selector Validation" -> "selector"
+    const rawType = typeMatch[1].trim().toLowerCase();
+    if (rawType.includes('selector')) {
+      metadata.type = 'selector';
+    } else {
+      metadata.type = rawType.split(/\s+/)[0] as BDDTestMetadata['type'];
+    }
   }
 
   const tagsMatch = section.match(/\*\*Tags:\*\*\s*(.+)/i);
@@ -88,6 +94,40 @@ function parseTestMetadata(section: string): BDDTestMetadata {
 
   const automatedMatch = section.match(/\*\*Automated:\*\*\s*(yes|true)/i);
   metadata.automated = !!automatedMatch;
+
+  // Extract Status (e.g., "**Status:** Skipped - requires OWNER permission")
+  const statusMatch = section.match(/\*\*Status:\*\*\s*(\w+)(?:\s*[-–]\s*(.+))?/i);
+  if (statusMatch) {
+    const [, status, reason] = statusMatch;
+    const normalizedStatus = status.toLowerCase();
+    // Map common status values
+    if (normalizedStatus === 'skip' || normalizedStatus === 'skipped') {
+      metadata.status = 'skipped';
+    } else if (normalizedStatus === 'pass' || normalizedStatus === 'passing' || normalizedStatus === 'passed') {
+      metadata.status = 'passing';
+    } else if (normalizedStatus === 'fail' || normalizedStatus === 'failing' || normalizedStatus === 'failed') {
+      metadata.status = 'failing';
+    } else if (normalizedStatus === 'pending' || normalizedStatus === 'todo') {
+      metadata.status = 'pending';
+    } else if (normalizedStatus === 'active') {
+      metadata.status = 'active';
+    } else {
+      metadata.status = normalizedStatus as TestStatus;
+    }
+    if (reason) {
+      metadata.statusReason = reason.trim();
+    }
+  }
+
+  // Extract Grep tags (e.g., "**Grep:** `@ui-selectors` `@SEL_BILL_001`")
+  const grepMatch = section.match(/\*\*Grep:\*\*\s*(.+)/i);
+  if (grepMatch) {
+    // Parse: `@tag1` `@tag2` or @tag1 @tag2 or @tag1, @tag2
+    const grepTags = grepMatch[1].match(/@[\w-]+/g);
+    if (grepTags && grepTags.length > 0) {
+      metadata.grepTags = grepTags;
+    }
+  }
 
   return metadata;
 }

@@ -14,13 +14,20 @@
  * - Assert elements exist in DOM (no form submissions)
  * - Fast execution (< 30 seconds per describe block)
  *
+ * Test IDs:
+ * - SEL_DEVT_001: Navigation Structure
+ * - SEL_DEVT_002: Home Page
+ * - SEL_DEVT_003: Style Gallery Page
+ * - SEL_DEVT_004: Config Viewer Page
+ * - SEL_DEVT_005: Test Cases Page
+ *
  * IMPORTANT: DevTools is only accessible to users with 'developer' app role.
  */
 
 import { DevtoolsPOM } from '../../src/features/DevtoolsPOM'
 import { loginAsDefaultDeveloper } from '../../src/session-helpers'
 
-describe('DevTools Selectors Validation', { tags: ['@ui-selectors'] }, () => {
+describe('DevTools Selectors Validation', { tags: ['@ui-selectors', '@devtools'] }, () => {
   const dev = DevtoolsPOM.create()
 
   beforeEach(() => {
@@ -28,9 +35,9 @@ describe('DevTools Selectors Validation', { tags: ['@ui-selectors'] }, () => {
   })
 
   // ============================================
-  // NAVIGATION STRUCTURE (8 selectors)
+  // SEL_DEVT_001: NAVIGATION STRUCTURE (8 selectors)
   // ============================================
-  describe('Navigation Structure', () => {
+  describe('SEL_DEVT_001: Navigation Structure', { tags: '@SEL_DEVT_001' }, () => {
     beforeEach(() => {
       cy.visit('/devtools', { timeout: 60000, failOnStatusCode: false })
       cy.url().should('include', '/devtools')
@@ -70,9 +77,9 @@ describe('DevTools Selectors Validation', { tags: ['@ui-selectors'] }, () => {
   })
 
   // ============================================
-  // HOME PAGE (4 selectors)
+  // SEL_DEVT_002: HOME PAGE (4 selectors)
   // ============================================
-  describe('Home Page', () => {
+  describe('SEL_DEVT_002: Home Page', { tags: '@SEL_DEVT_002' }, () => {
     beforeEach(() => {
       cy.visit('/devtools', { timeout: 60000, failOnStatusCode: false })
       cy.url().should('include', '/devtools')
@@ -96,9 +103,9 @@ describe('DevTools Selectors Validation', { tags: ['@ui-selectors'] }, () => {
   })
 
   // ============================================
-  // STYLE GALLERY PAGE (8 selectors)
+  // SEL_DEVT_003: STYLE GALLERY PAGE (8 selectors)
   // ============================================
-  describe('Style Gallery Page', () => {
+  describe('SEL_DEVT_003: Style Gallery Page', { tags: '@SEL_DEVT_003' }, () => {
     beforeEach(() => {
       cy.visit('/devtools/style', { timeout: 60000, failOnStatusCode: false })
       cy.url().should('include', '/devtools/style')
@@ -140,9 +147,9 @@ describe('DevTools Selectors Validation', { tags: ['@ui-selectors'] }, () => {
   })
 
   // ============================================
-  // CONFIG VIEWER PAGE (8 selectors)
+  // SEL_DEVT_004: CONFIG VIEWER PAGE (8 selectors)
   // ============================================
-  describe('Config Viewer Page', () => {
+  describe('SEL_DEVT_004: Config Viewer Page', { tags: '@SEL_DEVT_004' }, () => {
     beforeEach(() => {
       cy.visit('/devtools/config', { timeout: 60000, failOnStatusCode: false })
       cy.url().should('include', '/devtools/config')
@@ -186,10 +193,10 @@ describe('DevTools Selectors Validation', { tags: ['@ui-selectors'] }, () => {
   })
 
   // ============================================
-  // TEST CASES PAGE (3 selectors)
-  // NOTE: Conditional states (loading, empty, error) removed - not testable in selector validation
+  // SEL_DEVT_005: TEST CASES PAGE (3 selectors)
+  // NOTE: Tests page components may not implement all data-cy selectors
   // ============================================
-  describe('Test Cases Page', () => {
+  describe('SEL_DEVT_005: Test Cases Page', { tags: '@SEL_DEVT_005' }, () => {
     beforeEach(() => {
       cy.visit('/devtools/tests', { timeout: 60000, failOnStatusCode: false })
       cy.url().should('include', '/devtools/tests')
@@ -205,6 +212,62 @@ describe('DevTools Selectors Validation', { tags: ['@ui-selectors'] }, () => {
 
     it('should find tests tree', () => {
       cy.get(dev.selectors.testsTree).should('exist')
+    })
+  })
+
+  // ============================================
+  // SEL_DEVT_006: TEST COVERAGE DASHBOARD (9 selectors)
+  // ============================================
+  describe('SEL_DEVT_006: Test Coverage Dashboard', { tags: '@SEL_DEVT_006' }, () => {
+    beforeEach(() => {
+      cy.visit('/devtools/tests', { timeout: 60000, failOnStatusCode: false })
+      cy.url().should('include', '/devtools/tests')
+    })
+
+    it('should find dashboard container (no file selected)', () => {
+      cy.get(dev.selectors.testsDashboard).should('exist')
+    })
+
+    it('should find dashboard stats container', () => {
+      cy.get(dev.selectors.testsDashboardStats).should('exist')
+    })
+
+    it('should find features stat card', () => {
+      cy.get(dev.selectors.testsDashboardStatFeatures).should('exist')
+    })
+
+    it('should find flows stat card', () => {
+      cy.get(dev.selectors.testsDashboardStatFlows).should('exist')
+    })
+
+    it('should find files stat card', () => {
+      cy.get(dev.selectors.testsDashboardStatFiles).should('exist')
+    })
+
+    it('should find tags stat card', () => {
+      cy.get(dev.selectors.testsDashboardStatTags).should('exist')
+    })
+
+    it('should find coverage gaps container', () => {
+      cy.get(dev.selectors.testsDashboardGaps).should('exist')
+    })
+
+    it('should find dashboard button when file selected', () => {
+      // First expand a folder to reveal files
+      cy.get(dev.selectors.testsTree).find('[data-cy*="folder"]').first().click()
+      // Then select a file
+      cy.get(dev.selectors.testsTree).find('[data-cy*="file"]').first().click()
+      cy.get(dev.selectors.testsDashboardButton).should('exist')
+    })
+
+    it('should return to dashboard when button clicked', () => {
+      // Expand folder and select a file
+      cy.get(dev.selectors.testsTree).find('[data-cy*="folder"]').first().click()
+      cy.get(dev.selectors.testsTree).find('[data-cy*="file"]').first().click()
+      // Click dashboard button
+      cy.get(dev.selectors.testsDashboardButton).click()
+      // Dashboard should be visible again
+      cy.get(dev.selectors.testsDashboard).should('exist')
     })
   })
 })

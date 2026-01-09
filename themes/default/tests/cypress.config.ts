@@ -16,18 +16,37 @@ import fs from 'fs'
 
 // Paths relative to this config file
 const themeRoot = path.resolve(__dirname, '..')
-const projectRoot = path.resolve(__dirname, '../../../..')
 const narrationsOutputDir = path.join(__dirname, 'cypress/videos/narrations')
 
-// Detect if running in npm mode (no packages/core folder) vs monorepo
-const isNpmMode = !fs.existsSync(path.join(projectRoot, 'packages/core'))
+// Detect if running in npm mode vs monorepo
+// In monorepo: themes/default/tests -> 3 levels up to repo root
+// In npm mode: contents/themes/default/tests -> 4 levels up to project root
+const monorepoRoot = path.resolve(__dirname, '../../..')
+const npmRoot = path.resolve(__dirname, '../../../..')
+const isNpmMode = !fs.existsSync(path.join(monorepoRoot, 'packages/core'))
+const projectRoot = isNpmMode ? npmRoot : monorepoRoot
 
 // Load environment variables
+// In monorepo: apps/dev/.env | In npm mode: .env at project root
 import dotenv from 'dotenv'
-dotenv.config({ path: path.join(projectRoot, '.env') })
+const envPath = isNpmMode
+  ? path.join(projectRoot, '.env')
+  : path.join(projectRoot, 'apps/dev/.env')
+dotenv.config({ path: envPath })
 
 // Server port (from .env or default 3000)
 const port = process.env.PORT || 3000
+
+// Extract CYPRESS_ prefixed variables from process.env
+// Cypress auto-strips the CYPRESS_ prefix when accessing via Cypress.env()
+const cypressEnvVars: Record<string, string> = {}
+Object.entries(process.env).forEach(([key, value]) => {
+  if (key.startsWith('CYPRESS_') && value) {
+    // Remove CYPRESS_ prefix for Cypress.env() access
+    const cypressKey = key.replace('CYPRESS_', '')
+    cypressEnvVars[cypressKey] = value
+  }
+})
 
 export default defineConfig({
   e2e: {
@@ -87,13 +106,12 @@ export default defineConfig({
 
     // Environment variables
     env: {
+      // Spread CYPRESS_ prefixed vars from .env (e.g., CYPRESS_DEVELOPER_EMAIL -> DEVELOPER_EMAIL)
+      ...cypressEnvVars,
+
       // Theme info
       ACTIVE_THEME: 'default',
       THEME_PATH: themeRoot,
-
-      // Test user credentials
-      TEST_USER_EMAIL: 'user@example.com',
-      TEST_USER_PASSWORD: 'Testing1234',
 
       // Feature flags
       ENABLE_ALLURE: true,

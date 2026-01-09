@@ -13,20 +13,28 @@
  * - Navigate to auth pages (NO login required - public pages)
  * - Assert elements exist in DOM (no form submissions)
  * - Fast execution (< 30 seconds per describe block)
+ *
+ * Test IDs:
+ * - SEL_AUTH_001: Login Card Structure
+ * - SEL_AUTH_002: Login Form Inputs
+ * - SEL_AUTH_003: Signup Form
+ * - SEL_AUTH_004: Forgot Password
+ * - SEL_AUTH_005: DevKeyring
+ * - SEL_AUTH_006: Reset Password (skipped - requires token)
+ * - SEL_AUTH_007: Verify Email (skipped - requires state)
  */
 
 import { AuthPOM } from '../../src/core/AuthPOM'
 
-describe('Auth Selectors Validation', { tags: ['@ui-selectors'] }, () => {
+describe('Auth Selectors Validation', { tags: ['@ui-selectors', '@auth'] }, () => {
   const auth = AuthPOM.create()
 
   // ============================================
-  // LOGIN PAGE SELECTORS (18 selectors)
+  // SEL_AUTH_001: LOGIN CARD STRUCTURE
   // ============================================
-  describe('Login Page Selectors - Card & Structure', () => {
+  describe('SEL_AUTH_001: Login Card Structure', { tags: '@SEL_AUTH_001' }, () => {
     beforeEach(() => {
       auth.visitLogin()
-      // Wait for card to be visible (form may not be visible by default)
       cy.get(auth.selectors.loginCard, { timeout: 10000 }).should('be.visible')
     })
 
@@ -54,16 +62,17 @@ describe('Auth Selectors Validation', { tags: ['@ui-selectors'] }, () => {
       cy.get(auth.selectors.loginShowEmail).should('exist')
     })
 
-    // Note: Invite banner only shows when invited
     it.skip('should find invite banner (requires invite token)', () => {
       cy.get(auth.selectors.loginInviteBanner).should('exist')
     })
   })
 
-  describe('Login Page Selectors - Email Form', () => {
+  // ============================================
+  // SEL_AUTH_002: LOGIN FORM INPUTS
+  // ============================================
+  describe('SEL_AUTH_002: Login Form Inputs', { tags: '@SEL_AUTH_002' }, () => {
     beforeEach(() => {
       auth.visitLogin()
-      // Wait for card and click show email to reveal form
       cy.get(auth.selectors.loginCard, { timeout: 10000 }).should('be.visible')
       cy.get(auth.selectors.loginShowEmail).click()
       cy.get(auth.selectors.loginForm, { timeout: 5000 }).should('be.visible')
@@ -101,7 +110,6 @@ describe('Auth Selectors Validation', { tags: ['@ui-selectors'] }, () => {
       cy.get(auth.selectors.loginRememberCheckbox).should('exist')
     })
 
-    // Note: Error selectors only appear when there's an error
     it('should find email error when validation fails', () => {
       cy.get(auth.selectors.loginSubmit).click()
       cy.get(auth.selectors.loginEmailError).should('exist')
@@ -122,9 +130,9 @@ describe('Auth Selectors Validation', { tags: ['@ui-selectors'] }, () => {
   })
 
   // ============================================
-  // SIGNUP PAGE SELECTORS (11 selectors)
+  // SEL_AUTH_003: SIGNUP FORM
   // ============================================
-  describe('Signup Page Selectors', () => {
+  describe('SEL_AUTH_003: Signup Form', { tags: '@SEL_AUTH_003' }, () => {
     beforeEach(() => {
       auth.visitSignup()
       auth.waitForSignupForm()
@@ -158,8 +166,7 @@ describe('Auth Selectors Validation', { tags: ['@ui-selectors'] }, () => {
       cy.get(auth.selectors.signupSubmit).should('exist')
     })
 
-    // Note: Google signup button not implemented in current SignupForm
-    it.skip('should find Google signup button (not implemented)', () => {
+    it('should find Google signup button', () => {
       cy.get(auth.selectors.signupGoogle).should('exist')
     })
 
@@ -167,21 +174,28 @@ describe('Auth Selectors Validation', { tags: ['@ui-selectors'] }, () => {
       cy.get(auth.selectors.signupLoginLink).should('exist')
     })
 
-    // Note: Invite banner only shows when invited
     it.skip('should find invite banner (requires invite token)', () => {
       cy.get(auth.selectors.signupInviteBanner).should('exist')
     })
 
-    // Note: Error message selector not implemented in current SignupForm
-    it.skip('should find error message (selector not implemented)', () => {
-      cy.get(auth.selectors.signupError).should('exist')
+    it('should find error message when email already exists', () => {
+      const existingEmail = Cypress.env('DEVELOPER_EMAIL') || 'developer@nextspark.dev'
+
+      cy.get(auth.selectors.signupFirstName).type('Test')
+      cy.get(auth.selectors.signupLastName).type('User')
+      cy.get(auth.selectors.signupEmail).type(existingEmail)
+      cy.get(auth.selectors.signupPassword).type('Test1234!')
+      cy.get(auth.selectors.signupConfirmPassword).type('Test1234!')
+      cy.get('[data-cy="signup-terms-checkbox"]').click()
+      cy.get(auth.selectors.signupSubmit).click()
+      cy.get(auth.selectors.signupError, { timeout: 10000 }).should('exist')
     })
   })
 
   // ============================================
-  // FORGOT PASSWORD SELECTORS (8 selectors)
+  // SEL_AUTH_004: FORGOT PASSWORD
   // ============================================
-  describe('Forgot Password Selectors', () => {
+  describe('SEL_AUTH_004: Forgot Password', { tags: '@SEL_AUTH_004' }, () => {
     beforeEach(() => {
       auth.visitForgotPassword()
       cy.get(auth.selectors.forgotPasswordForm, { timeout: 10000 }).should('be.visible')
@@ -203,34 +217,29 @@ describe('Auth Selectors Validation', { tags: ['@ui-selectors'] }, () => {
       cy.get(auth.selectors.forgotPasswordBack).should('exist')
     })
 
-    // Note: Success message only appears after successful submission
     it.skip('should find success message (requires successful submission)', () => {
       cy.get(auth.selectors.forgotPasswordSuccess).should('exist')
     })
 
-    // Note: Success back link only appears in success state
     it.skip('should find success back link (requires success state)', () => {
       cy.get(auth.selectors.forgotPasswordSuccessBack).should('exist')
     })
 
-    // Note: Retry button only appears in success state
     it.skip('should find retry button (requires success state)', () => {
       cy.get(auth.selectors.forgotPasswordRetry).should('exist')
     })
 
-    // Note: Error only appears on server error response
     it.skip('should find error message (requires server error)', () => {
       cy.get(auth.selectors.forgotPasswordError).should('exist')
     })
   })
 
   // ============================================
-  // DEV KEYRING SELECTORS (4 selectors)
+  // SEL_AUTH_005: DEVKEYRING
   // ============================================
-  describe('DevKeyring Selectors', () => {
+  describe('SEL_AUTH_005: DevKeyring', { tags: '@SEL_AUTH_005' }, () => {
     beforeEach(() => {
       auth.visitLogin()
-      // Wait for login card (not form - form may not be visible by default)
       cy.get(auth.selectors.loginCard, { timeout: 10000 }).should('be.visible')
     })
 
@@ -249,19 +258,15 @@ describe('Auth Selectors Validation', { tags: ['@ui-selectors'] }, () => {
 
     it('should find devkeyring user options', () => {
       auth.openDevKeyring()
-      // Test first user option (index 0)
       cy.get(auth.selectors.devKeyringUser(0)).should('exist')
     })
   })
 
   // ============================================
-  // RESET PASSWORD SELECTORS (5 selectors) - SKIP
-  // Requires valid token from email
+  // SEL_AUTH_006: RESET PASSWORD (skipped - requires token)
   // ============================================
-  describe('Reset Password Selectors', () => {
+  describe('SEL_AUTH_006: Reset Password', { tags: '@SEL_AUTH_006' }, () => {
     it.skip('should find reset password form (requires valid token)', () => {
-      // These tests are skipped because they require a valid reset token
-      // To test: auth.visitResetPassword('valid-token')
       cy.get(auth.selectors.resetPasswordForm).should('exist')
     })
 
@@ -283,10 +288,9 @@ describe('Auth Selectors Validation', { tags: ['@ui-selectors'] }, () => {
   })
 
   // ============================================
-  // VERIFY EMAIL SELECTORS (4 selectors) - SKIP
-  // Requires pending verification state
+  // SEL_AUTH_007: VERIFY EMAIL (skipped - requires state)
   // ============================================
-  describe('Verify Email Selectors', () => {
+  describe('SEL_AUTH_007: Verify Email', { tags: '@SEL_AUTH_007' }, () => {
     it.skip('should find verify email container (requires pending verification)', () => {
       cy.get(auth.selectors.verifyEmailContainer).should('exist')
     })

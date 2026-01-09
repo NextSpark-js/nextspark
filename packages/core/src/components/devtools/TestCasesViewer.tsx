@@ -4,7 +4,9 @@ import { useState, useEffect, useMemo } from "react";
 import { FileTree, FileTreeNode } from "./FileTree";
 import { MarkdownViewer } from "./MarkdownViewer";
 import { BDDTestViewer } from "./bdd";
+import { TestCoverageDashboard } from "./TestCoverageDashboard";
 import { cn } from '../../lib/utils';
+import { sel } from '../../lib/test';
 import {
   Card,
   CardContent,
@@ -13,7 +15,7 @@ import {
   CardTitle,
 } from '../ui/card';
 import { Button } from '../ui/button';
-import { Loader2, FileText, AlertCircle, ArrowLeft } from "lucide-react";
+import { Loader2, FileText, AlertCircle, ArrowLeft, LayoutDashboard } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useTreeNavigation } from '../../hooks/useTreeNavigation';
 
@@ -156,6 +158,19 @@ export function TestCasesViewer({ initialPath }: TestCasesViewerProps) {
             <CardDescription>{t("fileTreeDescription")}</CardDescription>
           </CardHeader>
           <CardContent className="overflow-y-auto h-[calc(100%-5rem)]" data-cy="devtools-tests-tree">
+            {/* Dashboard button - visible when a file is selected */}
+            {selectedPath && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearSelection}
+                className="w-full justify-start gap-2 mb-4"
+                data-cy={sel('devtools.tests.dashboardButton')}
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                {t("dashboard.backToDashboard")}
+              </Button>
+            )}
             {tree.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-sm text-muted-foreground">{t("noTests")}</p>
@@ -206,20 +221,9 @@ export function TestCasesViewer({ initialPath }: TestCasesViewerProps) {
               </div>
             )}
 
-            {/* Empty State (no selection) */}
+            {/* Dashboard (no selection) */}
             {!selectedPath && !pathNotFound && (
-              <div
-                className="flex flex-col items-center justify-center h-full text-center"
-                data-cy="devtools-tests-empty-state"
-              >
-                <FileText className="h-16 w-16 text-muted-foreground/50 mb-4" />
-                <p className="text-lg font-medium text-muted-foreground">
-                  {t("selectFile")}
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  {t("selectFileDescription")}
-                </p>
-              </div>
+              <TestCoverageDashboard />
             )}
 
             {/* Loading State */}

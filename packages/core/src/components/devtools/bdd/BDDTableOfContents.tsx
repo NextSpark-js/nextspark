@@ -1,7 +1,14 @@
 "use client";
 
+import {
+  CheckCircle2,
+  XCircle,
+  SkipForward,
+  Clock,
+  PlayCircle,
+} from "lucide-react";
 import { cn } from '../../../lib/utils';
-import type { BDDTestCase } from "./types";
+import type { BDDTestCase, TestStatus } from "./types";
 
 interface BDDTableOfContentsProps {
   tests: BDDTestCase[];
@@ -32,6 +39,24 @@ export function BDDTableOfContents({
     }
   };
 
+  const getStatusIcon = (status?: TestStatus) => {
+    const iconClass = "h-3.5 w-3.5 shrink-0";
+    switch (status) {
+      case 'passing':
+        return <CheckCircle2 className={cn(iconClass, "text-green-500")} />;
+      case 'failing':
+        return <XCircle className={cn(iconClass, "text-red-500")} />;
+      case 'skipped':
+        return <SkipForward className={cn(iconClass, "text-amber-500")} />;
+      case 'pending':
+        return <Clock className={cn(iconClass, "text-slate-400")} />;
+      case 'active':
+        return <PlayCircle className={cn(iconClass, "text-blue-500")} />;
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="space-y-2" data-cy="bdd-toc">
       <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide px-2">
@@ -52,12 +77,17 @@ export function BDDTableOfContents({
             )}
             data-cy={`bdd-toc-item-${test.id}`}
           >
-            <span
-              className={cn(
-                "w-2 h-2 rounded-full shrink-0",
-                getPriorityDot(test.metadata.priority)
-              )}
-            />
+            {/* Show status icon if available, otherwise show priority dot */}
+            {test.metadata.status ? (
+              getStatusIcon(test.metadata.status)
+            ) : (
+              <span
+                className={cn(
+                  "w-2 h-2 rounded-full shrink-0",
+                  getPriorityDot(test.metadata.priority)
+                )}
+              />
+            )}
             <span className="font-mono text-xs text-muted-foreground shrink-0">
               {String(index + 1).padStart(2, '0')}
             </span>

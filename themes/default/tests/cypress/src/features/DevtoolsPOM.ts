@@ -38,7 +38,7 @@ export class DevtoolsPOM extends BasePOM {
 
       // Exit navigation
       exitToDashboard: cySelector('devtools.navigation.exitToDashboard'),
-      goToAdmin: cySelector('devtools.navigation.goToAdmin'),
+      goToAdmin: cySelector('devtools.navigation.goToSuperadmin'),
 
       // Home Page
       homePage: cySelector('devtools.home.page'),
@@ -84,6 +84,17 @@ export class DevtoolsPOM extends BasePOM {
       // Additional tests selectors
       testsNotFound: cySelector('devtools.tests.notFound'),
       testsBackToList: cySelector('devtools.tests.backToList'),
+
+      // Test Coverage Dashboard (new)
+      testsDashboard: cySelector('devtools.tests.dashboard'),
+      testsDashboardButton: cySelector('devtools.tests.dashboardButton'),
+      testsDashboardStats: cySelector('devtools.tests.dashboardStats'),
+      testsDashboardStatFeatures: cySelector('devtools.tests.dashboardStatFeatures'),
+      testsDashboardStatFlows: cySelector('devtools.tests.dashboardStatFlows'),
+      testsDashboardStatFiles: cySelector('devtools.tests.dashboardStatFiles'),
+      testsDashboardStatTags: cySelector('devtools.tests.dashboardStatTags'),
+      testsDashboardGaps: cySelector('devtools.tests.dashboardGaps'),
+      testsDashboardGapItem: (slug: string) => cySelector('devtools.tests.dashboardGapItem', { slug }),
 
       // Sidebar
       sidebar: cySelector('devtools.navigation.sidebar'),

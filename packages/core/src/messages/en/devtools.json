@@ -57,7 +57,28 @@
     "backToList": "Back to list",
     "selectFile": "Select a file",
     "selectFileDescription": "Choose a test file from the tree to view its content",
-    "error": "Error loading file"
+    "error": "Error loading file",
+    "dashboard": {
+      "title": "Test Coverage Dashboard",
+      "features": "Features",
+      "flows": "Flows",
+      "testFiles": "Test Files",
+      "tags": "Tags",
+      "coverage": "Coverage",
+      "gaps": "Coverage Gaps",
+      "noGaps": "All features and flows have tests!",
+      "criticalPath": "Critical Path",
+      "backToDashboard": "Dashboard",
+      "withTests": "with tests",
+      "withoutTests": "without tests",
+      "categories": {
+        "core": "Core",
+        "entities": "Entities",
+        "content": "Content",
+        "settings": "Settings",
+        "admin": "Admin"
+      }
+    }
   },
   "api": {
     "title": "API Explorer",

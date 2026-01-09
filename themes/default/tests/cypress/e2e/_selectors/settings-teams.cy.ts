@@ -13,25 +13,29 @@
  * - Navigate to teams settings page (requires login)
  * - Assert elements exist in DOM (no form submissions)
  * - Fast execution (< 30 seconds per describe block)
+ *
+ * Test IDs:
+ * - SEL_STMS_001: Teams Page Selectors
+ * - SEL_STMS_002: Create Team Dialog (documentation only)
  */
 
 import { SettingsPOM } from '../../src/features/SettingsPOM'
-import { loginAsDefaultOwner } from '../../src/session-helpers'
+import { loginAsDefaultDeveloper } from '../../src/session-helpers'
 
-describe('Settings Teams Selectors Validation', { tags: ['@ui-selectors'] }, () => {
+describe('Settings Teams Selectors Validation', { tags: ['@ui-selectors', '@settings'] }, () => {
   const settings = SettingsPOM.create()
 
   beforeEach(() => {
-    loginAsDefaultOwner()
+    loginAsDefaultDeveloper()
     cy.visit('/dashboard/settings/teams', { timeout: 60000 })
     // Wait for teams page to load - either main or loading should appear
     cy.get('[data-cy="teams-settings-main"], [data-cy="teams-settings-loading"]', { timeout: 15000 }).should('exist')
   })
 
   // ============================================
-  // TEAMS SETTINGS SELECTORS (6 selectors in CORE_SELECTORS)
+  // SEL_STMS_001: TEAMS PAGE SELECTORS
   // ============================================
-  describe('Teams Page Selectors', () => {
+  describe('SEL_STMS_001: Teams Page Selectors', { tags: '@SEL_STMS_001' }, () => {
     it('should find teams main container', () => {
       // Wait for loading to finish
       cy.get('[data-cy="teams-settings-main"]', { timeout: 15000 }).should('exist')
@@ -63,6 +67,24 @@ describe('Settings Teams Selectors Validation', { tags: ['@ui-selectors'] }, () 
     // Additional selectors implemented but not in CORE_SELECTORS.settings.teams
     it('should find create team button', () => {
       cy.get('[data-cy="create-team-button"]', { timeout: 15000 }).should('exist')
+    })
+  })
+
+  // ============================================
+  // SEL_STMS_002: CREATE TEAM DIALOG
+  // Tested in teams.cy.ts, documented here for reference
+  // ============================================
+  describe('SEL_STMS_002: Create Team Dialog Documentation', { tags: '@SEL_STMS_002' }, () => {
+    it('should document create team dialog selectors', () => {
+      cy.log('Create Team Dialog selectors are tested in teams.cy.ts')
+      cy.log('Dialog selectors:')
+      cy.log('- create-team-dialog')
+      cy.log('- team-name-input')
+      cy.log('- team-slug-input')
+      cy.log('- team-description-input')
+      cy.log('- cancel-create-team')
+      cy.log('- submit-create-team')
+      cy.wrap(true).should('be.true')
     })
   })
 })

@@ -14,35 +14,38 @@
  * - Assert elements exist in DOM (no form submissions)
  * - Fast execution (< 30 seconds per describe block)
  *
+ * Test IDs:
+ * - SEL_BILL_001: Billing Page Selectors (mostly skipped - requires admin role)
+ *
  * IMPORTANT: Billing page requires 'settings.billing' permission (admin role).
  * Users without this permission are redirected to /dashboard/settings.
  * Many billing selectors from CORE_SELECTORS are not yet implemented.
  */
 
 import { SettingsPOM } from '../../src/features/SettingsPOM'
-import { loginAsDefaultOwner } from '../../src/session-helpers'
+import { loginAsDefaultDeveloper } from '../../src/session-helpers'
 
-describe('Settings Billing Selectors Validation', { tags: ['@ui-selectors'] }, () => {
+describe('Settings Billing Selectors Validation', { tags: ['@ui-selectors', '@settings'] }, () => {
   const settings = SettingsPOM.create()
 
   // ============================================
-  // BILLING SELECTORS (19 selectors in CORE_SELECTORS)
+  // SEL_BILL_001: BILLING PAGE SELECTORS
   // Requires admin role permission 'settings.billing'
   // All tests skipped - billing page requires special permissions
   // ============================================
-  describe('Billing Page Selectors', () => {
+  describe('SEL_BILL_001: Billing Page Selectors', { tags: '@SEL_BILL_001' }, () => {
     // NOTE: Billing page requires 'settings.billing' permission (admin role)
     // The default owner may not have this permission, causing redirects
     // All tests are skipped until proper admin login is available
 
     it.skip('should find billing main (requires admin permission)', () => {
-      loginAsDefaultOwner()
+      loginAsDefaultDeveloper()
       settings.visitBilling()
       cy.get(settings.selectors.billingMain).should('exist')
     })
 
     it.skip('should find billing header (requires admin permission)', () => {
-      loginAsDefaultOwner()
+      loginAsDefaultDeveloper()
       settings.visitBilling()
       cy.get(settings.selectors.billingHeader).should('exist')
     })

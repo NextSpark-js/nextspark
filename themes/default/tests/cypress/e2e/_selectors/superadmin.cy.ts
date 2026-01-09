@@ -14,19 +14,27 @@
  * - Assert elements exist in DOM (no form submissions)
  * - Fast execution (< 30 seconds per describe block)
  *
+ * Test IDs:
+ * - SEL_SADM_001: Superadmin Dashboard Selectors
+ * - SEL_SADM_002: Superadmin Navigation Selectors
+ * - SEL_SADM_003: Superadmin Users Page Selectors
+ * - SEL_SADM_004: Superadmin Teams Page Selectors
+ * - SEL_SADM_005: Superadmin Subscriptions Page Selectors
+ * - SEL_SADM_006: Dynamic Selectors (Pattern Validation)
+ *
  * NOTE: Requires superadmin role to access /superadmin/* pages.
  */
 
 import { SuperadminPOM } from '../../src/features/SuperadminPOM'
 import { loginAsDefaultSuperadmin } from '../../src/session-helpers'
 
-describe('Superadmin Selectors Validation', { tags: ['@ui-selectors'] }, () => {
+describe('Superadmin Selectors Validation', { tags: ['@ui-selectors', '@superadmin'] }, () => {
   const superadmin = SuperadminPOM.create()
 
   // ============================================
-  // SUPERADMIN DASHBOARD (2 selectors)
+  // SEL_SADM_001: SUPERADMIN DASHBOARD
   // ============================================
-  describe('Superadmin Dashboard', () => {
+  describe('SEL_SADM_001: Superadmin Dashboard', { tags: '@SEL_SADM_001' }, () => {
     beforeEach(() => {
       loginAsDefaultSuperadmin()
       cy.visit('/superadmin', { timeout: 60000, failOnStatusCode: false })
@@ -43,9 +51,9 @@ describe('Superadmin Selectors Validation', { tags: ['@ui-selectors'] }, () => {
   })
 
   // ============================================
-  // SUPERADMIN NAVIGATION (6 selectors)
+  // SEL_SADM_002: SUPERADMIN NAVIGATION
   // ============================================
-  describe('Superadmin Navigation', () => {
+  describe('SEL_SADM_002: Superadmin Navigation', { tags: '@SEL_SADM_002' }, () => {
     beforeEach(() => {
       loginAsDefaultSuperadmin()
       cy.visit('/superadmin', { timeout: 60000, failOnStatusCode: false })
@@ -78,9 +86,9 @@ describe('Superadmin Selectors Validation', { tags: ['@ui-selectors'] }, () => {
   })
 
   // ============================================
-  // SUPERADMIN USERS PAGE (3 selectors)
+  // SEL_SADM_003: SUPERADMIN USERS PAGE
   // ============================================
-  describe('Superadmin Users Page', () => {
+  describe('SEL_SADM_003: Superadmin Users Page', { tags: '@SEL_SADM_003' }, () => {
     beforeEach(() => {
       loginAsDefaultSuperadmin()
       cy.visit('/superadmin/users', { timeout: 60000, failOnStatusCode: false })
@@ -101,9 +109,9 @@ describe('Superadmin Selectors Validation', { tags: ['@ui-selectors'] }, () => {
   })
 
   // ============================================
-  // SUPERADMIN TEAMS PAGE (4 selectors)
+  // SEL_SADM_004: SUPERADMIN TEAMS PAGE
   // ============================================
-  describe('Superadmin Teams Page', () => {
+  describe('SEL_SADM_004: Superadmin Teams Page', { tags: '@SEL_SADM_004' }, () => {
     beforeEach(() => {
       loginAsDefaultSuperadmin()
       cy.visit('/superadmin/teams', { timeout: 60000, failOnStatusCode: false })
@@ -124,9 +132,9 @@ describe('Superadmin Selectors Validation', { tags: ['@ui-selectors'] }, () => {
   })
 
   // ============================================
-  // SUPERADMIN SUBSCRIPTIONS PAGE (4 selectors)
+  // SEL_SADM_005: SUPERADMIN SUBSCRIPTIONS PAGE
   // ============================================
-  describe('Superadmin Subscriptions Page', () => {
+  describe('SEL_SADM_005: Superadmin Subscriptions Page', { tags: '@SEL_SADM_005' }, () => {
     beforeEach(() => {
       loginAsDefaultSuperadmin()
       cy.visit('/superadmin/subscriptions', { timeout: 60000, failOnStatusCode: false })
@@ -151,10 +159,10 @@ describe('Superadmin Selectors Validation', { tags: ['@ui-selectors'] }, () => {
   })
 
   // ============================================
-  // DYNAMIC SELECTORS (require specific data)
+  // SEL_SADM_006: DYNAMIC SELECTORS (PATTERN VALIDATION)
   // These test the selector pattern, not actual elements
   // ============================================
-  describe('Dynamic Selectors (Pattern Validation)', () => {
+  describe('SEL_SADM_006: Dynamic Selectors (Pattern Validation)', { tags: '@SEL_SADM_006' }, () => {
     beforeEach(() => {
       loginAsDefaultSuperadmin()
       cy.visit('/superadmin/users', { timeout: 60000, failOnStatusCode: false })

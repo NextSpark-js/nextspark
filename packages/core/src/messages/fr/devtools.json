@@ -57,7 +57,28 @@
     "backToList": "Retour a la liste",
     "selectFile": "Selectionnez un fichier",
     "selectFileDescription": "Choisissez un fichier de test de l'arborescence pour voir son contenu",
-    "error": "Erreur lors du chargement du fichier"
+    "error": "Erreur lors du chargement du fichier",
+    "dashboard": {
+      "title": "Tableau de Bord Couverture Tests",
+      "features": "Fonctionnalites",
+      "flows": "Flux",
+      "testFiles": "Fichiers de Test",
+      "tags": "Tags",
+      "coverage": "Couverture",
+      "gaps": "Lacunes de Couverture",
+      "noGaps": "Toutes les fonctionnalites et flux ont des tests!",
+      "criticalPath": "Chemin Critique",
+      "backToDashboard": "Tableau de Bord",
+      "withTests": "avec tests",
+      "withoutTests": "sans tests",
+      "categories": {
+        "core": "Core",
+        "entities": "Entites",
+        "content": "Contenu",
+        "settings": "Parametres",
+        "admin": "Admin"
+      }
+    }
   },
   "api": {
     "title": "Explorateur API",

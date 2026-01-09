@@ -6,8 +6,7 @@ import '@testing-library/cypress/add-commands'
 import './allure'
 
 // Import @cypress/grep for test filtering by tags
-import registerCypressGrep from '@cypress/grep'
-registerCypressGrep()
+import '@cypress/grep'
 
 // Configuracion global de error handling
 Cypress.on('uncaught:exception', (err) => {

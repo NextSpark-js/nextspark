@@ -57,7 +57,28 @@
     "backToList": "Zurueck zur Liste",
     "selectFile": "Datei auswaehlen",
     "selectFileDescription": "Waehlen Sie eine Testdatei aus dem Baum, um den Inhalt anzuzeigen",
-    "error": "Fehler beim Laden der Datei"
+    "error": "Fehler beim Laden der Datei",
+    "dashboard": {
+      "title": "Test-Abdeckungs-Dashboard",
+      "features": "Features",
+      "flows": "Ablaeufe",
+      "testFiles": "Testdateien",
+      "tags": "Tags",
+      "coverage": "Abdeckung",
+      "gaps": "Abdeckungsluecken",
+      "noGaps": "Alle Features und Ablaeufe haben Tests!",
+      "criticalPath": "Kritischer Pfad",
+      "backToDashboard": "Dashboard",
+      "withTests": "mit Tests",
+      "withoutTests": "ohne Tests",
+      "categories": {
+        "core": "Kern",
+        "entities": "Entitaeten",
+        "content": "Inhalt",
+        "settings": "Einstellungen",
+        "admin": "Admin"
+      }
+    }
   },
   "api": {
     "title": "API-Explorer",

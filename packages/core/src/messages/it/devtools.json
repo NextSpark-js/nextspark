@@ -57,7 +57,28 @@
     "backToList": "Torna alla lista",
     "selectFile": "Seleziona un file",
     "selectFileDescription": "Scegli un file di test dall'albero per visualizzarne il contenuto",
-    "error": "Errore caricamento file"
+    "error": "Errore caricamento file",
+    "dashboard": {
+      "title": "Dashboard Copertura Test",
+      "features": "Funzionalita",
+      "flows": "Flussi",
+      "testFiles": "File di Test",
+      "tags": "Tag",
+      "coverage": "Copertura",
+      "gaps": "Lacune di Copertura",
+      "noGaps": "Tutte le funzionalita e i flussi hanno test!",
+      "criticalPath": "Percorso Critico",
+      "backToDashboard": "Dashboard",
+      "withTests": "con test",
+      "withoutTests": "senza test",
+      "categories": {
+        "core": "Core",
+        "entities": "Entita",
+        "content": "Contenuto",
+        "settings": "Impostazioni",
+        "admin": "Admin"
+      }
+    }
   },
   "api": {
     "title": "Esploratore API",

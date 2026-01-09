@@ -256,11 +256,11 @@ describe('Tasks Entity Selectors Validation', { tags: ['@ui-selectors'] }, () =>
     })
 
     it('should find detail container', () => {
-      cy.get(tasks.selectors.detailContainer).should('exist')
+      cy.get(tasks.selectors.detail).should('exist')
     })
 
-    it('should find detail header', () => {
-      cy.get(tasks.selectors.detailHeader).should('exist')
+    it('should find view header', () => {
+      cy.get(tasks.selectors.viewHeader).should('exist')
     })
 
     it('should find edit button', () => {

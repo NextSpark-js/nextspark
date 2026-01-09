@@ -13,22 +13,26 @@
  * - Navigate to settings pages (requires login)
  * - Assert elements exist in DOM (no form submissions)
  * - Fast execution (< 30 seconds per describe block)
+ *
+ * Test IDs:
+ * - SEL_LAY_001: Layout Selectors
+ * - SEL_LAY_002: Sidebar Selectors
  */
 
 import { SettingsPOM } from '../../src/features/SettingsPOM'
-import { loginAsDefaultOwner } from '../../src/session-helpers'
+import { loginAsDefaultDeveloper } from '../../src/session-helpers'
 
-describe('Settings Layout Selectors Validation', { tags: ['@ui-selectors'] }, () => {
+describe('Settings Layout Selectors Validation', { tags: ['@ui-selectors', '@settings'] }, () => {
   const settings = SettingsPOM.create()
 
   beforeEach(() => {
-    loginAsDefaultOwner()
+    loginAsDefaultDeveloper()
   })
 
   // ============================================
-  // LAYOUT SELECTORS (7 selectors)
+  // SEL_LAY_001: LAYOUT SELECTORS
   // ============================================
-  describe('Layout Selectors', () => {
+  describe('SEL_LAY_001: Layout Selectors', { tags: '@SEL_LAY_001' }, () => {
     beforeEach(() => {
       settings.visitSettings()
       settings.waitForSettings()
@@ -64,9 +68,9 @@ describe('Settings Layout Selectors Validation', { tags: ['@ui-selectors'] }, ()
   })
 
   // ============================================
-  // SIDEBAR SELECTORS (4 selectors)
+  // SEL_LAY_002: SIDEBAR SELECTORS
   // ============================================
-  describe('Sidebar Selectors', () => {
+  describe('SEL_LAY_002: Sidebar Selectors', { tags: '@SEL_LAY_002' }, () => {
     beforeEach(() => {
       settings.visitSettings()
       settings.waitForSettings()

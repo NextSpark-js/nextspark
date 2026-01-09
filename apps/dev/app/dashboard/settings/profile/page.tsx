@@ -263,10 +263,10 @@ function ProfilePage() {
         {statusMessage}
       </div>
 
-      <div 
+      <div
         className="max-w-4xl space-y-6"
         {...createTestId('profile', 'container') && { 'data-testid': createTestId('profile', 'container') }}
-        {...createCyId('profile', 'main') && { 'data-cy': createCyId('profile', 'main') }}
+        data-cy="settings-profile"
       >
         {/* Header */}
         <header 
@@ -354,6 +354,7 @@ function ProfilePage() {
                   <Label htmlFor="firstName">{t('profile.form.firstName')}</Label>
                   <Input
                     id="firstName"
+                    data-cy="profile-first-name"
                     {...register('firstName')}
                     placeholder={t('profile.form.firstNamePlaceholder')}
                   />
@@ -366,6 +367,7 @@ function ProfilePage() {
                   <Label htmlFor="lastName">{t('profile.form.lastName')}</Label>
                   <Input
                     id="lastName"
+                    data-cy="profile-last-name"
                     {...register('lastName')}
                     placeholder={t('profile.form.lastNamePlaceholder')}
                   />
@@ -382,6 +384,7 @@ function ProfilePage() {
                   <div className="relative">
                     <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
+                      data-cy="profile-email"
                       value={profile?.email || ''}
                       disabled
                       className="pl-10 bg-muted"

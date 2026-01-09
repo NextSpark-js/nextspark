@@ -14,33 +14,31 @@
  * - Assert elements exist in DOM (no form submissions)
  * - Fast execution (< 30 seconds per describe block)
  *
- * NOTE: Some selectors from CORE_SELECTORS are NOT implemented in the component:
- * - settings-profile (component uses profile-main)
- * - profile-avatar, profile-avatar-upload (not in current implementation)
- * - profile-first-name, profile-last-name, profile-email (native inputs, no data-cy)
- * These are documented for future implementation.
+ * Test IDs:
+ * - SEL_PROF_001: Profile Page Selectors
+ *
+ * NOTE: Only 2 selectors are NOT implemented (feature doesn't exist):
+ * - profile-avatar, profile-avatar-upload (avatar feature not in current implementation)
  */
 
 import { SettingsPOM } from '../../src/features/SettingsPOM'
-import { loginAsDefaultOwner } from '../../src/session-helpers'
+import { loginAsDefaultDeveloper } from '../../src/session-helpers'
 
-describe('Settings Profile Selectors Validation', { tags: ['@ui-selectors'] }, () => {
+describe('Settings Profile Selectors Validation', { tags: ['@ui-selectors', '@settings'] }, () => {
   const settings = SettingsPOM.create()
 
   beforeEach(() => {
-    loginAsDefaultOwner()
+    loginAsDefaultDeveloper()
     settings.visitProfile()
     // Wait for profile page to load - use profile form as indicator
     cy.get(settings.selectors.profileForm, { timeout: 15000 }).should('be.visible')
   })
 
   // ============================================
-  // PROFILE SELECTORS (9 selectors in CORE_SELECTORS)
-  // Currently only 3 are implemented in component
+  // SEL_PROF_001: PROFILE PAGE SELECTORS
   // ============================================
-  describe('Profile Page Selectors', () => {
-    // NOTE: CORE_SELECTORS defines 'settings-profile' but component uses 'profile-main'
-    it.skip('should find profile container (selector mismatch: CORE uses settings-profile, component uses profile-main)', () => {
+  describe('SEL_PROF_001: Profile Page Selectors', { tags: '@SEL_PROF_001' }, () => {
+    it('should find profile container', () => {
       cy.get(settings.selectors.profileContainer).should('exist')
     })
 
@@ -57,16 +55,15 @@ describe('Settings Profile Selectors Validation', { tags: ['@ui-selectors'] }, (
       cy.get(settings.selectors.profileAvatarUpload).should('exist')
     })
 
-    // NOTE: Native inputs don't have data-cy selectors
-    it.skip('should find first name input (native input, no data-cy)', () => {
+    it('should find first name input', () => {
       cy.get(settings.selectors.profileFirstName).should('exist')
     })
 
-    it.skip('should find last name input (native input, no data-cy)', () => {
+    it('should find last name input', () => {
       cy.get(settings.selectors.profileLastName).should('exist')
     })
 
-    it.skip('should find email input (native input, no data-cy)', () => {
+    it('should find email input', () => {
       cy.get(settings.selectors.profileEmail).should('exist')
     })
 

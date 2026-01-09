@@ -78,6 +78,9 @@ export const CORE_SELECTORS = {
       confirmPassword: 'reset-password-confirm',
       submitButton: 'reset-password-submit',
       error: 'reset-password-error',
+      success: 'reset-password-success',
+      loginLink: 'reset-password-login-link',
+      backToLogin: 'reset-password-back',
     },
     verifyEmail: {
       container: 'verify-email-container',
@@ -802,6 +805,16 @@ export const CORE_SELECTORS = {
       emptyState: 'devtools-tests-empty-state',
       fileLoading: 'devtools-tests-file-loading',
       error: 'devtools-tests-error',
+      // Dashboard
+      dashboard: 'devtools-tests-dashboard',
+      dashboardButton: 'devtools-tests-dashboard-button',
+      dashboardStats: 'devtools-tests-dashboard-stats',
+      dashboardStatFeatures: 'devtools-tests-dashboard-stat-features',
+      dashboardStatFlows: 'devtools-tests-dashboard-stat-flows',
+      dashboardStatFiles: 'devtools-tests-dashboard-stat-files',
+      dashboardStatTags: 'devtools-tests-dashboard-stat-tags',
+      dashboardGaps: 'devtools-tests-dashboard-gaps',
+      dashboardGapItem: 'devtools-tests-dashboard-gap-{slug}',
     },
     features: {
       page: 'devtools-features-page',
