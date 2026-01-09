@@ -2,7 +2,7 @@ import { KeyboardEvent } from 'react'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { Textarea } from '@nextsparkjs/core/components/ui/textarea'
 import { Send } from 'lucide-react'
-import { createCyId } from '@nextsparkjs/core/lib/testing-utils'
+import { createCyId } from '@nextsparkjs/testing/utils'
 
 interface MessageInputProps {
     value: string

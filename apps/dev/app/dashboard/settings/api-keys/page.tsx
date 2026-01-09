@@ -35,7 +35,7 @@ import { CreateApiKeyDialog } from '@nextsparkjs/core/components/api/keys/Create
 import { ApiKeyDisplay } from '@nextsparkjs/core/components/api/keys/ApiKeyDisplay';
 import { toast } from 'sonner';
 import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
-import { sel, createCyId } from '@nextsparkjs/core/lib/test'
+import { sel, createCyId } from '@nextsparkjs/testing'
 
 interface ApiKey {
   id: string;

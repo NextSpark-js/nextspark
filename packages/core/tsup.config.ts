@@ -83,6 +83,8 @@ export default defineConfig({
       '**/*.spec.tsx',
       // Exclude files with duplicate names (prefer .tsx)
       'src/lib/user-data-client.ts',
+      // Jest test helpers (not needed at runtime)
+      'src/testing/**',
     ],
   }),
 

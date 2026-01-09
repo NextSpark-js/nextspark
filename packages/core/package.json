@@ -1,6 +1,6 @@
 {
   "name": "@nextsparkjs/core",
-  "version": "0.1.0-beta.38",
+  "version": "0.1.0-beta.39",
   "description": "NextSpark - The complete SaaS framework for Next.js",
   "license": "MIT",
   "author": "NextSpark <hello@nextspark.dev>",
@@ -89,10 +89,6 @@
     "./lib/oauth": {
       "types": "./dist/lib/oauth/index.d.ts",
       "import": "./dist/lib/oauth/index.js"
-    },
-    "./lib/test": {
-      "types": "./dist/lib/test/index.d.ts",
-      "import": "./dist/lib/test/index.js"
     },
     "./lib/scheduled-actions": {
       "types": "./dist/lib/scheduled-actions/index.d.ts",
@@ -204,10 +200,6 @@
     "./migrations/*": "./dist/migrations/*",
     "./config/*": "./dist/config/*",
     "./scripts/*": "./scripts/*",
-    "./testing": {
-      "types": "./dist/testing/index.d.ts",
-      "import": "./dist/testing/index.js"
-    },
     "./cypress-support": "./tests/cypress/support/index.ts",
     "./jest-setup": "./tests/jest/setup.ts"
   },

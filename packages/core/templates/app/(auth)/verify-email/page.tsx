@@ -6,7 +6,7 @@ import { Suspense, useEffect, useState } from "react";
 import { Button } from '@nextsparkjs/core/components/ui/button';
 import { Alert, AlertDescription } from '@nextsparkjs/core/components/ui/alert';
 import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
-import { createCyId } from '@nextsparkjs/core/lib/test'
+import { createCyId } from '@nextsparkjs/testing'
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();

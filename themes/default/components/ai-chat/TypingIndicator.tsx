@@ -1,4 +1,4 @@
-import { createCyId } from '@nextsparkjs/core/lib/testing-utils'
+import { createCyId } from '@nextsparkjs/testing/utils'
 
 export function TypingIndicator() {
     return (

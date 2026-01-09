@@ -10,7 +10,7 @@
 
 import * as allure from 'allure-cypress'
 
-const TaskAPIController = require('../../../src/controllers/TaskAPIController.js')
+const TaskAPIController = require('../../../../src/controllers/TaskAPIController.js')
 
 describe('Tasks API - Metadata Operations', {
   tags: ['@api', '@feat-tasks', '@metas', '@regression']

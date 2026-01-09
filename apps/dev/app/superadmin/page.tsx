@@ -3,7 +3,7 @@ import { Button } from "@nextsparkjs/core/components/ui/button";
 import { Users, BarChart3, Settings, Shield } from "lucide-react";
 import Link from "next/link";
 import { getTemplateOrDefault } from '@nextsparkjs/core/lib/template-resolver'
-import { sel } from "@nextsparkjs/core/lib/test"
+import { sel } from "@nextsparkjs/testing"
 
 /**
  * Superadmin Dashboard

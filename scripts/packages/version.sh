@@ -179,7 +179,7 @@ echo ""
 PACKAGES=()
 
 # Core packages
-for pkg in core cli create-nextspark-app; do
+for pkg in core testing cli create-nextspark-app; do
     pkg_path="$REPO_ROOT/packages/$pkg"
     if [ -d "$pkg_path" ] && [ -f "$pkg_path/package.json" ]; then
         PACKAGES+=("$pkg_path")

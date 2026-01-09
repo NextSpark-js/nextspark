@@ -9,9 +9,9 @@
  * Theme Mode: single-user (isolated blogs, no team collaboration)
  */
 
-import { EntityList } from '../../../../../../../test/cypress/src/classes/components/entities/EntityList.js'
-import { EntityForm } from '../../../../src/classes/components/entities/EntityForm.js'
-import { loginAsBlogAuthor } from '../../../src/session-helpers'
+import { EntityList } from '../../src/components/EntityList'
+import { EntityForm } from '../../src/components/EntityForm'
+import { loginAsBlogAuthor } from '../../src/session-helpers'
 
 describe('Categories CRUD - Blog Author (Full Access)', () => {
   const categoryList = new EntityList('categories')

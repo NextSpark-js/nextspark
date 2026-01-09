@@ -16,7 +16,7 @@ import {
   Save,
   Loader2
 } from 'lucide-react'
-import { createTestId, createCyId } from '@nextsparkjs/core/lib/test'
+import { createTestId, createCyId } from '@nextsparkjs/testing'
 import { useTranslations } from 'next-intl'
 import { useUserWithMetaSettings } from '@nextsparkjs/core/hooks/useUserSettings'
 import { NotificationsPageSkeleton } from '@nextsparkjs/core/components/settings/SettingsPageSkeleton'

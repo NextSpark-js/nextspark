@@ -19,7 +19,9 @@
     "pkg:publish": "./scripts/packages/publish.sh ./.packages",
     "cy:open": "node packages/core/scripts/test/cy.mjs open",
     "cy:run": "node packages/core/scripts/test/cy.mjs run",
-    "cy:tags": "node packages/core/scripts/test/cy.mjs tags"
+    "cy:tags": "node packages/core/scripts/test/cy.mjs tags",
+    "test:core": "pnpm --filter @nextsparkjs/core test",
+    "test:theme": "node packages/core/scripts/test/jest-theme.mjs"
   },
   "devDependencies": {
     "@cypress/grep": "^5.0.1",

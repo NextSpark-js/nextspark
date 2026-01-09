@@ -29,17 +29,18 @@
 #   ./repackage.sh --package plugin-ai             # Package a specific plugin
 #
 # PACKAGE NAMES:
-#   Core packages: core, cli, create-app
+#   Core packages: core, testing, cli, create-app
 #   Themes:        theme-default, theme-blog, theme-crm, theme-productivity, etc.
 #   Plugins:       plugin-ai, plugin-amplitude, plugin-langchain, plugin-social-media-publisher, etc.
 #
 # BUILD ORDER:
 #   When building, packages are built in dependency order:
 #   1. core (other packages depend on this)
-#   2. cli
-#   3. create-app
-#   4. themes
-#   5. plugins
+#   2. testing (themes depend on this for selectors)
+#   3. cli
+#   4. create-app
+#   5. themes
+#   6. plugins
 #
 
 set -e
@@ -107,7 +108,7 @@ while [[ $# -gt 0 ]]; do
             echo "  --skip-build       Skip building before packing"
             echo "  --clean            Clean output directory first"
             echo ""
-            echo "Package names: core, cli, create-app, theme-*, plugin-*"
+            echo "Package names: core, testing, cli, create-app, theme-*, plugin-*"
             echo ""
             echo "Examples:"
             echo "  $0 --all"
@@ -142,6 +143,9 @@ resolve_package_path() {
     case "$name" in
         core)
             echo "$REPO_ROOT/packages/core"
+            ;;
+        testing)
+            echo "$REPO_ROOT/packages/testing"
             ;;
         cli)
             echo "$REPO_ROOT/packages/cli"
@@ -228,6 +232,7 @@ declare -a FINAL_PACKAGES=()
 if [ "$PACK_ALL" = true ]; then
     # Add core packages in order
     FINAL_PACKAGES+=("$REPO_ROOT/packages/core")
+    FINAL_PACKAGES+=("$REPO_ROOT/packages/testing")
     FINAL_PACKAGES+=("$REPO_ROOT/packages/cli")
     FINAL_PACKAGES+=("$REPO_ROOT/packages/create-nextspark-app")
 

@@ -239,6 +239,27 @@ export class EntityForm {
     return this
   }
 
+  /**
+   * Fill a field (auto-detects input or textarea)
+   * Alias for typeInField that also handles textareas
+   */
+  fillField(fieldName: string, value: string) {
+    cy.get(this.selectors.field(fieldName)).then($field => {
+      const $input = $field.find('input')
+      const $textarea = $field.find('textarea')
+
+      if ($input.length > 0) {
+        cy.wrap($input).clear().type(value)
+      } else if ($textarea.length > 0) {
+        cy.wrap($textarea).clear().type(value)
+      } else {
+        // Fallback to trying input selector directly
+        cy.get(this.selectors.fieldInput(fieldName)).clear().type(value)
+      }
+    })
+    return this
+  }
+
   // ============================================
   // FORM SUBMISSION METHODS
   // ============================================

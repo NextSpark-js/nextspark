@@ -9,7 +9,7 @@
 
 import * as allure from 'allure-cypress'
 
-const UsersAPIController = require('../../../src/controllers/UsersAPIController.js')
+const UsersAPIController = require('../../../../src/controllers/UsersAPIController.js')
 
 describe('Users API - CRUD Operations', {
   tags: ['@api', '@feat-users', '@crud', '@regression']

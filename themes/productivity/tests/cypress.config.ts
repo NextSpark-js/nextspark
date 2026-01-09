@@ -16,9 +16,6 @@ const themeRoot = path.resolve(__dirname, '..')
 const projectRoot = path.resolve(__dirname, '../../../..')
 const narrationsOutputDir = path.join(__dirname, 'cypress/videos/narrations')
 
-// Detect if running in npm mode (no packages/core folder) vs monorepo
-const isNpmMode = !fs.existsSync(path.join(projectRoot, 'packages/core'))
-
 // Load environment variables
 import dotenv from 'dotenv'
 dotenv.config({ path: path.join(projectRoot, '.env') })
@@ -31,22 +28,13 @@ export default defineConfig({
     // Base URL for the application
     baseUrl: `http://localhost:${port}`,
 
-    // Spec patterns: theme tests (core tests only in monorepo)
-    specPattern: isNpmMode
-      ? [
-          // npm mode: only theme tests
-          path.join(__dirname, 'cypress/e2e/**/*.cy.{js,ts}'),
-        ]
-      : [
-          // Monorepo: core tests + theme tests
-          path.join(projectRoot, 'packages/core/tests/cypress/e2e/core/**/*.cy.{js,ts}'),
-          path.join(__dirname, 'cypress/e2e/**/*.cy.{js,ts}'),
-        ],
+    // Spec patterns: theme tests only
+    specPattern: [
+      path.join(__dirname, 'cypress/e2e/**/*.cy.{js,ts}'),
+    ],
 
-    // Support file (theme-local in npm mode, core in monorepo)
-    supportFile: isNpmMode
-      ? path.join(__dirname, 'cypress/support/e2e.ts')
-      : path.join(projectRoot, 'packages/core/tests/cypress/support/e2e.ts'),
+    // Support file (always theme-local)
+    supportFile: path.join(__dirname, 'cypress/support/e2e.ts'),
 
     // Fixtures folder (theme-specific)
     fixturesFolder: path.join(__dirname, 'cypress/fixtures'),

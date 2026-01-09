@@ -12,7 +12,7 @@
 
 import * as allure from 'allure-cypress'
 
-const ApiKeysAPIController = require('../../../src/controllers/ApiKeysAPIController.js')
+const ApiKeysAPIController = require('../../../../src/controllers/ApiKeysAPIController.js')
 
 describe('API Keys API - CRUD Operations', {
   tags: ['@api', '@feat-api-keys', '@crud', '@security', '@regression']

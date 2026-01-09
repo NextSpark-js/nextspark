@@ -9,7 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from '@nextsparkjs/core/component
 import { Loader2, CheckCircle, XCircle, Users, LogIn, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
-import { createCyId } from '@nextsparkjs/core/lib/test'
+import { createCyId } from '@nextsparkjs/testing'
 
 type InvitationStatus = 'loading' | 'valid' | 'accepting' | 'accepted' | 'error' | 'expired' | 'not_found' | 'email_mismatch' | 'already_member' | 'requires_auth'
 

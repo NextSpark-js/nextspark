@@ -6,7 +6,7 @@
  * - API Key with appropriate scopes (or superadmin with *)
  * - x-team-id header for team context
  */
-const BaseAPIController = require('../../../src/controllers/BaseAPIController')
+const BaseAPIController = require('../../../../src/controllers/BaseAPIController')
 
 class BillingAPIController extends BaseAPIController {
   /**

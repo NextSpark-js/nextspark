@@ -1,25 +1,20 @@
 /**
- * Test Utilities Index
+ * Core Testing Utilities - RUNTIME
  *
- * Centralized exports for all testing-related utilities.
+ * These utilities are used by core components at runtime for:
+ * - data-cy attributes
+ * - Accessibility attributes
+ * - Testing props
  *
- * @example Component usage:
- * ```typescript
- * import { sel, cySelector, createTestId } from './'
- * ```
- *
- * @example Theme extension:
- * ```typescript
- * import { createSelectorHelpers, CORE_SELECTORS } from './'
- *
- * const THEME_SELECTORS = { ...CORE_SELECTORS, myFeature: { ... } }
- * export const { sel, cySelector } = createSelectorHelpers(THEME_SELECTORS)
- * ```
+ * For Cypress tests in npm mode, use @nextsparkjs/testing
  */
 
-// =============================================================================
-// SELECTOR FACTORY - For theme extension
-// =============================================================================
+// Selector exports
+export {
+  CORE_SELECTORS,
+  type CoreSelectorsType,
+} from './core-selectors'
+
 export {
   createSelectorHelpers,
   getNestedValue,
@@ -30,49 +25,30 @@ export {
   type EntitySelectorHelpers,
 } from './selector-factory'
 
-// =============================================================================
-// CORE SELECTORS - Base selector definitions
-// =============================================================================
 export {
-  CORE_SELECTORS,
-  type CoreSelectorsType,
-} from './core-selectors'
-
-// =============================================================================
-// SELECTORS - Pre-bound helpers for core components
-// =============================================================================
-export {
-  // Main selector object
   SELECTORS,
-  // Core functions
   sel,
-  s, // alias for sel
+  s,
   selDev,
   cySelector,
-  // Entity helpers
   entitySelectors,
-  // Types
   type SelectorsType,
   type SelectorPath,
 } from './selectors'
 
-// =============================================================================
-// UTILS - Testing attribute generators and helpers
-// =============================================================================
+// Utility exports
 export {
-  // ID generators
+  type TestIdPattern,
+  type CypressIdPattern,
   createTestId,
   createCyId,
   createStateAttr,
   createPriorityAttr,
   createTestingProps,
   createAriaLabel,
-  // Entity testing helpers
+  testingPatterns,
+  keyboardHelpers,
   createEntityCyId,
   createEntityTestingHelper,
   type EntityTestingHelper,
-  // Pre-built patterns
-  testingPatterns,
-  // Keyboard helpers
-  keyboardHelpers,
 } from './utils'

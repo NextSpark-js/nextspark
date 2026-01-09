@@ -27,7 +27,7 @@ import {
   SearchInput,
   PaginationControls,
 } from "@nextsparkjs/core/components/superadmin/filters";
-import { sel } from "@nextsparkjs/core/lib/test";
+import { sel } from "@nextsparkjs/testing";
 
 interface TeamOwner {
   id: string;

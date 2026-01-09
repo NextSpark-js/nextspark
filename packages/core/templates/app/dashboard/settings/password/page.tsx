@@ -19,7 +19,7 @@ import { PasswordInput } from "@nextsparkjs/core/components/ui/password-input";
 import { Alert, AlertDescription } from "@nextsparkjs/core/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@nextsparkjs/core/components/ui/card";
 import { Checkbox } from "@nextsparkjs/core/components/ui/checkbox";
-import { createTestId, createCyId } from '@nextsparkjs/core/lib/test';
+import { createTestId, createCyId } from '@nextsparkjs/testing';
 import { useTranslations } from 'next-intl';
 import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
 

@@ -10,7 +10,7 @@
 
 import * as allure from 'allure-cypress'
 
-const UsersAPIController = require('../../../src/controllers/UsersAPIController.js')
+const UsersAPIController = require('../../../../src/controllers/UsersAPIController.js')
 
 describe('Users API - Metadata Tests', {
   tags: ['@api', '@feat-users', '@metas', '@regression']

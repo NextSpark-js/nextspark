@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertCircle, ArrowLeft, CheckCircle, Loader2, Mail } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useCallback } from 'react';
-import { sel } from '@nextsparkjs/core/lib/test';
+import { sel } from '@nextsparkjs/testing';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { Button } from '@nextsparkjs/core/components/ui/button';

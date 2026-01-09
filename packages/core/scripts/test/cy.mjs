@@ -6,9 +6,16 @@
  * Uses NEXT_PUBLIC_ACTIVE_THEME to determine which theme's cypress.config.ts to use.
  *
  * Usage:
- *   pnpm cy:open           - Open Cypress UI
- *   pnpm cy:run            - Run tests headless
- *   pnpm cy:tags "@smoke"  - Run tests filtered by tag
+ *   pnpm cy:open                              - Open Cypress UI
+ *   pnpm cy:run                               - Run tests headless
+ *   pnpm cy:run --spec "auth/login.cy.ts"     - Run specific spec (auto-resolves path)
+ *   pnpm cy:run --spec "/auth/login.cy.ts"    - Same with leading slash
+ *   pnpm cy:tags "@smoke"                     - Run tests filtered by tag
+ *
+ * Spec Path Resolution:
+ *   The --spec argument is automatically resolved to the active theme's test directory.
+ *   Instead of: --spec "themes/default/tests/cypress/e2e/auth/login.cy.ts"
+ *   Just use:   --spec "auth/login.cy.ts"
  *
  * Supports both:
  *   - Monorepo mode: themes/{ACTIVE_THEME}/tests/cypress.config.ts
@@ -70,6 +77,62 @@ const absoluteConfigPath = resolve(process.cwd(), configPath)
 const themesBase = isMonorepo ? 'themes' : 'contents/themes'
 const allureResultsPath = resolve(process.cwd(), `${themesBase}/${theme}/tests/cypress/allure-results`)
 
+// ============================================================================
+// SPEC PATH RESOLUTION
+// ============================================================================
+// Automatically resolve short spec paths to full theme paths
+// Example: "auth/login.cy.ts" -> "themes/default/tests/cypress/e2e/auth/login.cy.ts"
+
+/**
+ * Resolve a spec path to the full theme path
+ * @param {string} specPath - The spec path from --spec argument
+ * @returns {string} - The resolved full path
+ */
+function resolveSpecPath(specPath) {
+  // If path already contains the theme base, return as-is
+  if (specPath.includes(`${themesBase}/${theme}/tests/cypress/e2e/`)) {
+    return specPath
+  }
+
+  // If path starts with full theme path pattern, return as-is
+  if (specPath.startsWith('themes/') || specPath.startsWith('contents/themes/')) {
+    return specPath
+  }
+
+  // Remove leading slash if present
+  const cleanPath = specPath.startsWith('/') ? specPath.slice(1) : specPath
+
+  // Build the full path
+  const fullPath = `${themesBase}/${theme}/tests/cypress/e2e/${cleanPath}`
+
+  return fullPath
+}
+
+/**
+ * Process CLI args and resolve any --spec paths
+ * @param {string[]} args - Original CLI arguments
+ * @returns {string[]} - Processed arguments with resolved spec paths
+ */
+function processSpecArgs(args) {
+  const processed = [...args]
+
+  for (let i = 0; i < processed.length; i++) {
+    if (processed[i] === '--spec' && processed[i + 1]) {
+      const originalSpec = processed[i + 1]
+      const resolvedSpec = resolveSpecPath(originalSpec)
+
+      if (originalSpec !== resolvedSpec) {
+        console.log(`\x1b[33m📂 Spec path resolved:\x1b[0m`)
+        console.log(`   ${originalSpec} → ${resolvedSpec}\n`)
+      }
+
+      processed[i + 1] = resolvedSpec
+    }
+  }
+
+  return processed
+}
+
 // Validate config file exists
 if (!existsSync(absoluteConfigPath)) {
   console.error(`\x1b[31mError: Cypress config not found for theme "${theme}"\x1b[0m`)
@@ -88,7 +151,9 @@ console.log(`\x1b[36mRunning Cypress for theme: ${theme}\x1b[0m`)
 console.log(`Config: ${configPath}\n`)
 
 // Build args array - include any additional CLI args passed
-const args = ['cypress', cmd, '--config-file', configPath, ...extraArgs, ...process.argv.slice(3)]
+// Process spec paths to resolve short paths to full theme paths
+const cliArgs = processSpecArgs([...extraArgs, ...process.argv.slice(3)])
+const args = ['cypress', cmd, '--config-file', configPath, ...cliArgs]
 
 const child = spawn('npx', args, {
   stdio: 'inherit',

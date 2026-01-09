@@ -9,7 +9,7 @@ import { MobileTopBar } from '@nextsparkjs/core/components/dashboard/mobile/Mobi
 import { MobileBottomNav } from '@nextsparkjs/core/components/dashboard/mobile/MobileBottomNav'
 import { ArrowLeft } from 'lucide-react'
 import { useState, useCallback, useEffect } from 'react'
-import { createTestId, createCyId } from '@nextsparkjs/core/lib/test'
+import { createTestId, createCyId } from '@nextsparkjs/testing'
 import { useTranslations } from 'next-intl'
 import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
 import { isSettingsPageEnabled } from '@nextsparkjs/core/lib/config/config-sync'

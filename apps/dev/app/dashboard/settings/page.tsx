@@ -1,6 +1,6 @@
 'use client'
 
-import { createTestId, createCyId } from '@nextsparkjs/core/lib/test'
+import { createTestId, createCyId } from '@nextsparkjs/testing'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useMemo } from 'react'

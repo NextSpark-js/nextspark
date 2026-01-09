@@ -142,7 +142,7 @@ To enable pending tests, add these attributes:
 
 ## POM Class
 
-**Path:** `test/cypress/src/classes/components/teams/TeamSwitcher.js`
+**Path:** `cypress/src/components/TeamSwitcher.ts`
 
 ### Key Methods
 
@@ -195,4 +195,4 @@ Tests use `cy.session()` for performance:
 
 - `core/components/teams/TeamSwitcherCompact.tsx` - Main component
 - `core/components/teams/TeamSwitchModal.tsx` - Transition modal
-- `test/cypress/src/classes/components/teams/TeamSwitcher.js` - POM class
+- `cypress/src/components/TeamSwitcher.ts` - POM class

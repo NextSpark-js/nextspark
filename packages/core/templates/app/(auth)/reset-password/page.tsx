@@ -19,7 +19,7 @@ import { PasswordInput } from "@nextsparkjs/core/components/ui/password-input";
 import { Alert, AlertDescription } from "@nextsparkjs/core/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@nextsparkjs/core/components/ui/card";
 import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
-import { sel } from '@nextsparkjs/core/lib/test'
+import { sel } from '@nextsparkjs/testing'
 
 function ResetPasswordContent() {
   const searchParams = useSearchParams();

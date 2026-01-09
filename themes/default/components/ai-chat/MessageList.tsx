@@ -3,7 +3,7 @@ import { ScrollArea } from '@nextsparkjs/core/components/ui/scroll-area'
 import { Message as MessageType } from '../../lib/hooks/useAiChat'
 import { Message } from './Message'
 import { TypingIndicator } from './TypingIndicator'
-import { createCyId } from '@nextsparkjs/core/lib/testing-utils'
+import { createCyId } from '@nextsparkjs/testing/utils'
 
 interface MessageListProps {
     messages: MessageType[]

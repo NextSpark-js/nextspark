@@ -9,8 +9,7 @@
  * - Cypress tests (via tests/cypress/src/selectors.ts)
  */
 
-import { createSelectorHelpers } from '@nextsparkjs/core/lib/test/selector-factory'
-import { CORE_SELECTORS } from '@nextsparkjs/core/lib/test/core-selectors'
+import { createSelectorHelpers, CORE_SELECTORS } from '@nextsparkjs/testing/selectors'
 
 // =============================================================================
 // BLOCK SELECTORS
@@ -329,5 +328,5 @@ export type ThemeSelectorsType = typeof THEME_SELECTORS
 export type BlockSelectorsType = typeof BLOCK_SELECTORS
 export type EntitySelectorsType = typeof ENTITY_SELECTORS
 export type CRMSelectorsType = typeof CRM_SELECTORS
-export type { Replacements } from '@nextsparkjs/core/lib/test/selector-factory'
+export type { Replacements } from '@nextsparkjs/testing/selectors'
 export { CORE_SELECTORS }

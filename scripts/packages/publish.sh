@@ -201,6 +201,7 @@ echo ""
 # Define publish order for correct dependency resolution
 PUBLISH_ORDER=(
     "nextsparkjs-core-"
+    "nextsparkjs-testing-"
     "nextsparkjs-cli-"
     "create-nextspark-app-"
 )

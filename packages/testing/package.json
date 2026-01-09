@@ -1,0 +1,77 @@
+{
+  "name": "@nextsparkjs/testing",
+  "version": "0.1.0-beta.39",
+  "description": "Testing utilities for NextSpark applications - Selectors, POMs, and Cypress helpers",
+  "license": "MIT",
+  "author": "NextSpark <hello@nextspark.dev>",
+  "homepage": "https://nextspark.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NextSpark-js/nextspark.git",
+    "directory": "packages/testing"
+  },
+  "keywords": [
+    "nextjs",
+    "testing",
+    "cypress",
+    "selectors",
+    "e2e",
+    "pom",
+    "page-object-model"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./selectors": {
+      "types": "./dist/selectors/index.d.ts",
+      "import": "./dist/selectors/index.js",
+      "default": "./dist/selectors/index.js"
+    },
+    "./utils": {
+      "types": "./dist/utils/index.d.ts",
+      "import": "./dist/utils/index.js",
+      "default": "./dist/utils/index.js"
+    },
+    "./pom": {
+      "types": "./dist/pom/index.d.ts",
+      "import": "./dist/pom/index.js",
+      "default": "./dist/pom/index.js"
+    },
+    "./helpers": {
+      "types": "./dist/helpers/index.d.ts",
+      "import": "./dist/helpers/index.js",
+      "default": "./dist/helpers/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist"
+  },
+  "peerDependencies": {
+    "cypress": ">=13.0.0"
+  },
+  "peerDependenciesMeta": {
+    "cypress": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "cypress": "^14.0.0",
+    "tsup": "^8.5.1",
+    "typescript": "^5"
+  }
+}

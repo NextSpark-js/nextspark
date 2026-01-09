@@ -61,7 +61,7 @@ import {
 } from 'lucide-react'
 import { profileSchema, ProfileFormData } from '@nextsparkjs/core/lib/validation'
 import { countries, timezones } from '@nextsparkjs/core/lib/countries-timezones'
-import { createTestId, createCyId } from '@nextsparkjs/core/lib/test'
+import { createTestId, createCyId } from '@nextsparkjs/testing'
 import { useTranslations } from 'next-intl'
 import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
 

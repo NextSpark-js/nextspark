@@ -13,7 +13,7 @@ import { useTeamsConfig } from '@nextsparkjs/core/hooks/useTeamsConfig'
 import { TeamMembersList } from '@nextsparkjs/core/components/teams/TeamMembersList'
 import { TeamPendingInvitations } from '@nextsparkjs/core/components/teams/TeamPendingInvitations'
 import { CreateTeamDialog } from '@nextsparkjs/core/components/teams/CreateTeamDialog'
-import { createTestId, createCyId } from '@nextsparkjs/core/lib/test'
+import { createTestId, createCyId } from '@nextsparkjs/testing'
 import { TeamRole } from '@nextsparkjs/core/lib/teams/types'
 import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
 

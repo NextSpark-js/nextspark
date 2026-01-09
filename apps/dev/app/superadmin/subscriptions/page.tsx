@@ -3,7 +3,7 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useState } from "react";
 import { format } from "date-fns";
-import { sel } from "@nextsparkjs/core/lib/test";
+import { sel } from "@nextsparkjs/testing";
 import {
   Card,
   CardContent,

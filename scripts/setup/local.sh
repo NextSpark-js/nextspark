@@ -38,7 +38,7 @@ NC='\033[0m' # No Color
 # Path definitions
 # -----------------------------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 PROJECTS_DIR="$(dirname "$REPO_ROOT")/projects"
 PROJECT_NAME="test-local-packages"
 PROJECT_PATH="$PROJECTS_DIR/$PROJECT_NAME"
@@ -228,6 +228,7 @@ const pkg = {
     'react-dom': '^19.0.0'
   },
   devDependencies: {
+    '@nextsparkjs/testing': packageMap['@nextsparkjs/testing'],
     'typescript': '^5.6.3',
     '@types/node': '^22.9.0',
     '@types/react': '^19.0.0'

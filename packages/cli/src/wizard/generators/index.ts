@@ -112,7 +112,6 @@ async function copyProjectFiles(): Promise<void> {
     { src: 'tsconfig.cypress.json', dest: 'tsconfig.cypress.json', force: false },
     { src: 'cypress.d.ts', dest: 'cypress.d.ts', force: false },
     { src: 'eslint.config.mjs', dest: 'eslint.config.mjs', force: false },
-    { src: 'scripts/cy-tags.cjs', dest: 'scripts/cy-tags.cjs', force: false },
     { src: 'scripts/cy-run-prod.cjs', dest: 'scripts/cy-run-prod.cjs', force: false },
   ]
 
@@ -169,9 +168,9 @@ async function updatePackageJson(config: WizardConfig): Promise<void> {
     'db:migrate': 'nextspark db:migrate',
     'db:seed': 'nextspark db:seed',
     'test': `jest --config contents/themes/${config.projectSlug}/tests/jest/jest.config.cjs`,
-    'cy:open': `cypress open --config-file contents/themes/${config.projectSlug}/tests/cypress.config.ts`,
-    'cy:run': `cypress run --config-file contents/themes/${config.projectSlug}/tests/cypress.config.ts`,
-    'cy:tags': 'node scripts/cy-tags.cjs',
+    'cy:open': 'node node_modules/@nextsparkjs/core/scripts/test/cy.mjs open',
+    'cy:run': 'node node_modules/@nextsparkjs/core/scripts/test/cy.mjs run',
+    'cy:tags': 'node node_modules/@nextsparkjs/core/scripts/test/cy.mjs tags',
     'cy:run:prod': 'node scripts/cy-run-prod.cjs',
     'allure:generate': `allure generate contents/themes/${config.projectSlug}/tests/cypress/allure-results --clean -o contents/themes/${config.projectSlug}/tests/cypress/allure-report`,
     'allure:open': `allure open contents/themes/${config.projectSlug}/tests/cypress/allure-report`,

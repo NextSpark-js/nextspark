@@ -1,170 +1,20 @@
 /**
- * ApiInterceptor - Helper for deterministic waits in Cypress
+ * ApiInterceptor - Re-export from @nextsparkjs/testing
  *
- * Replaces unreliable cy.wait(ms) with cy.intercept() based waits
- * that wait for actual API responses.
+ * The ApiInterceptor class is provided by @nextsparkjs/testing.
+ * This file exists for backward compatibility and to allow
+ * theme-specific extensions if needed.
  *
- * Basic usage:
- *   const api = new ApiInterceptor('tasks')
- *   api.setupCrudIntercepts()
- *   cy.visit('/dashboard/tasks')
- *   api.waitForList()
+ * @example Basic usage:
+ * ```ts
+ * import { ApiInterceptor } from '../helpers/ApiInterceptor'
  *
- * Usage with custom path:
- *   const api = new ApiInterceptor({
- *     slug: 'categories',
- *     customPath: '/api/v1/post-categories'
- *   })
+ * const api = new ApiInterceptor('tasks')
+ * api.setupCrudIntercepts()
+ * cy.visit('/dashboard/tasks')
+ * api.waitForList()
+ * ```
  */
 
-export interface ApiInterceptorConfig {
-  /** Entity slug - used to generate aliases */
-  slug: string
-  /** Custom API path (e.g., '/api/v1/post-categories') */
-  customPath?: string
-}
-
-export class ApiInterceptor {
-  private slug: string
-  private endpoint: string
-
-  constructor(slugOrConfig: string | ApiInterceptorConfig) {
-    if (typeof slugOrConfig === 'string') {
-      this.slug = slugOrConfig
-      this.endpoint = `/api/v1/${slugOrConfig}`
-    } else {
-      this.slug = slugOrConfig.slug
-      this.endpoint = slugOrConfig.customPath || `/api/v1/${slugOrConfig.slug}`
-    }
-  }
-
-  // ============================================
-  // ACCESSORS
-  // ============================================
-
-  /** Get the API endpoint path */
-  get path(): string {
-    return this.endpoint
-  }
-
-  /** Get the entity slug */
-  get entitySlug(): string {
-    return this.slug
-  }
-
-  /** Get alias names for all operations */
-  get aliases() {
-    return {
-      list: `${this.slug}List`,
-      create: `${this.slug}Create`,
-      update: `${this.slug}Update`,
-      delete: `${this.slug}Delete`
-    }
-  }
-
-  // ============================================
-  // INTERCEPT SETUP
-  // ============================================
-
-  /**
-   * Setup intercepts for all CRUD operations
-   * Call this BEFORE navigation in beforeEach or at test start
-   */
-  setupCrudIntercepts(): this {
-    cy.intercept('GET', `${this.endpoint}*`).as(this.aliases.list)
-    cy.intercept('POST', this.endpoint).as(this.aliases.create)
-    cy.intercept('PATCH', `${this.endpoint}/*`).as(this.aliases.update)
-    cy.intercept('DELETE', `${this.endpoint}/*`).as(this.aliases.delete)
-    return this
-  }
-
-  /**
-   * Setup only list + create intercepts
-   * Useful for list pages with inline create
-   */
-  setupListIntercepts(): this {
-    cy.intercept('GET', `${this.endpoint}*`).as(this.aliases.list)
-    cy.intercept('POST', this.endpoint).as(this.aliases.create)
-    return this
-  }
-
-  // ============================================
-  // WAIT METHODS
-  // ============================================
-
-  /**
-   * Wait for list response (GET)
-   * Use after navigation or after mutations to wait for refresh
-   */
-  waitForList(timeout = 10000): Cypress.Chainable {
-    return cy.wait(`@${this.aliases.list}`, { timeout })
-  }
-
-  /**
-   * Wait for create response (POST) and validate success status
-   */
-  waitForCreate(timeout = 10000): Cypress.Chainable {
-    return cy.wait(`@${this.aliases.create}`, { timeout })
-      .its('response.statusCode')
-      .should('be.oneOf', [200, 201])
-  }
-
-  /**
-   * Wait for update response (PATCH) and validate success status
-   */
-  waitForUpdate(timeout = 10000): Cypress.Chainable {
-    return cy.wait(`@${this.aliases.update}`, { timeout })
-      .its('response.statusCode')
-      .should('be.oneOf', [200, 201])
-  }
-
-  /**
-   * Wait for delete response (DELETE) and validate success status
-   */
-  waitForDelete(timeout = 10000): Cypress.Chainable {
-    return cy.wait(`@${this.aliases.delete}`, { timeout })
-      .its('response.statusCode')
-      .should('be.oneOf', [200, 204])
-  }
-
-  // ============================================
-  // CONVENIENCE METHODS
-  // ============================================
-
-  /**
-   * Wait for list refresh (alias for waitForList)
-   * Semantic name for use after create/update/delete
-   */
-  waitForRefresh(timeout = 10000): Cypress.Chainable {
-    return this.waitForList(timeout)
-  }
-
-  /**
-   * Wait for create + list refresh
-   * Common pattern: create entity, wait for success, wait for list to refresh
-   */
-  waitForCreateAndRefresh(timeout = 10000): Cypress.Chainable {
-    this.waitForCreate(timeout)
-    return this.waitForList(timeout)
-  }
-
-  /**
-   * Wait for update + list refresh
-   * Common pattern: update entity, wait for success, wait for list to refresh
-   */
-  waitForUpdateAndRefresh(timeout = 10000): Cypress.Chainable {
-    this.waitForUpdate(timeout)
-    return this.waitForList(timeout)
-  }
-
-  /**
-   * Wait for delete + list refresh
-   * Common pattern: delete entity, wait for success, wait for list to refresh
-   */
-  waitForDeleteAndRefresh(timeout = 10000): Cypress.Chainable {
-    this.waitForDelete(timeout)
-    return this.waitForList(timeout)
-  }
-}
-
-export default ApiInterceptor
+// Re-export from testing package
+export { ApiInterceptor, type ApiInterceptorConfig } from '@nextsparkjs/testing/helpers'

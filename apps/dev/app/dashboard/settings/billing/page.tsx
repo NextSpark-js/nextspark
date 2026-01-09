@@ -14,7 +14,7 @@ import {
   Check,
   Crown
 } from 'lucide-react'
-import { createTestId, createCyId } from '@nextsparkjs/core/lib/test'
+import { createTestId, createCyId } from '@nextsparkjs/testing'
 import { useTranslations } from 'next-intl'
 import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
 import { useInvoices } from '@nextsparkjs/core/hooks/useInvoices'

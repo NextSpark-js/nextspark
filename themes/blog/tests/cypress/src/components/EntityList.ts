@@ -335,6 +335,24 @@ export class EntityList {
   }
 
   // ============================================
+  // ALIASES FOR COMPATIBILITY
+  // ============================================
+
+  /**
+   * Alias for validateTableVisible
+   */
+  validateListVisible() {
+    return this.validateTableVisible()
+  }
+
+  /**
+   * Alias for clickCreate
+   */
+  clickAdd() {
+    return this.clickCreate()
+  }
+
+  // ============================================
   // WAIT METHODS
   // ============================================
 

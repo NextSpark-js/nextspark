@@ -1,6 +1,6 @@
 {
   "name": "@nextsparkjs/theme-blog",
-  "version": "0.1.0-beta.38",
+  "version": "0.1.0-beta.39",
   "private": false,
   "type": "module",
   "main": "./config/theme.config.ts",
@@ -8,6 +8,7 @@
   "dependencies": {},
   "peerDependencies": {
     "@nextsparkjs/core": "workspace:*",
+    "@nextsparkjs/testing": "workspace:*",
     "lucide-react": "^0.539.0",
     "next": "^15.0.0",
     "next-intl": "^4.0.0",
