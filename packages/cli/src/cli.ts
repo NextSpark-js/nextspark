@@ -14,6 +14,7 @@ import { initCommand } from './commands/init.js';
 import { addPluginCommand } from './commands/add-plugin.js';
 import { addThemeCommand } from './commands/add-theme.js';
 import { doctorCommand } from './commands/doctor.js';
+import { dbMigrateCommand, dbSeedCommand } from './commands/db.js';
 
 const program = new Command();
 
@@ -115,6 +116,32 @@ program
   .command('doctor')
   .description('Run health check on NextSpark project')
   .action(doctorCommand);
+
+// Database commands
+const db = program
+  .command('db')
+  .description('Database management commands');
+
+db
+  .command('migrate')
+  .description('Run database migrations')
+  .action(dbMigrateCommand);
+
+db
+  .command('seed')
+  .description('Seed database with sample data')
+  .action(dbSeedCommand);
+
+// Shorthand aliases for database commands
+program
+  .command('db:migrate')
+  .description('Run database migrations (alias)')
+  .action(dbMigrateCommand);
+
+program
+  .command('db:seed')
+  .description('Seed database with sample data (alias)')
+  .action(dbSeedCommand);
 
 // Error handling
 program.showHelpAfterError();
