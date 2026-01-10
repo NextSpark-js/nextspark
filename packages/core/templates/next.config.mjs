@@ -11,6 +11,7 @@ const withNextIntl = createNextIntlPlugin('./i18n.ts');
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ['@nextsparkjs/core'],
+  serverExternalPackages: ['handlebars'],
   experimental: {
     externalDir: true,
   },

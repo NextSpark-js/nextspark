@@ -25,24 +25,39 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 /**
- * Detect project root by searching for package.json with workspaces
+ * Detect project root by searching for nextspark.config.ts or apps/dev
+ * Excludes node_modules paths to avoid finding pnpm internal workspaces
  */
 function detectProjectRoot() {
+  // Check for explicit project root from CLI
+  if (process.env.NEXTSPARK_PROJECT_ROOT) {
+    return process.env.NEXTSPARK_PROJECT_ROOT
+  }
+
   let dir = process.cwd()
   const maxDepth = 10
   let depth = 0
 
+  // Search upward for nextspark.config.ts (NPM mode) or apps/dev (monorepo)
   while (dir !== '/' && depth < maxDepth) {
-    const pkgPath = path.join(dir, 'package.json')
-    if (existsSync(pkgPath)) {
-      try {
-        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'))
-        if (pkg.workspaces || existsSync(path.join(dir, 'pnpm-workspace.yaml'))) {
-          return dir
-        }
-      } catch (error) {
-        // Continue searching
-      }
+    // Skip if we're inside node_modules
+    if (dir.includes('node_modules')) {
+      dir = path.dirname(dir)
+      depth++
+      continue
+    }
+
+    // Primary: nextspark.config.ts (NPM mode projects)
+    if (existsSync(path.join(dir, 'nextspark.config.ts'))) {
+      return dir
+    }
+    // Secondary: monorepo with apps/dev (development mode)
+    if (existsSync(path.join(dir, 'apps/dev'))) {
+      return path.join(dir, 'apps/dev')
+    }
+    // Tertiary: pnpm-workspace.yaml at root (monorepo without apps/dev)
+    if (existsSync(path.join(dir, 'pnpm-workspace.yaml'))) {
+      return dir
     }
     dir = path.dirname(dir)
     depth++
