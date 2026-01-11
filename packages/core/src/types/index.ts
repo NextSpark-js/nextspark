@@ -99,6 +99,18 @@ export type {
   DocsRegistryStructure
 } from './docs'
 
+// API Presets types (for DevTools)
+export type {
+  PresetSessionConfig,
+  ApiPreset,
+  ApiEndpointPresets,
+  ApiPresetsRegistryStructure,
+  ApiDocEntry,
+  ApiDocsRegistryStructure
+} from './api-presets'
+
+export { defineApiEndpoint } from './api-presets'
+
 // Future type exports can be added here:
 // export type { SearchResult, SearchOptions } from './search.types'
 // export type { Notification } from './notification.types'

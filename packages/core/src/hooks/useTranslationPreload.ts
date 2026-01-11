@@ -10,7 +10,7 @@ interface WindowWithIdleCallback extends Window {
 
 // Define namespaces localmente para evitar importaciones problemáticas
 // Actualizados para la nueva estrategia optimizada
-const DASHBOARD_NAMESPACES = ['common', 'dashboard', 'settings', 'public', 'teams'];
+const DASHBOARD_NAMESPACES = ['common', 'dashboard', 'settings', 'public', 'teams', 'admin'];
 const AUTH_NAMESPACES = ['common', 'auth', 'validation'];
 const PUBLIC_NAMESPACES = ['common', 'public', 'auth'];
 

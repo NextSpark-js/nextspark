@@ -83,7 +83,7 @@ export function getOptimizedNamespaces(pathname: string): {
     if (pathname.startsWith('/dashboard')) {
       console.log(`[i18n-integration] 📱 Dashboard detected → Loading authenticated user namespaces`)
       return {
-        core: ['common', 'dashboard', 'settings', 'public', 'validation', 'teams'],
+        core: ['common', 'dashboard', 'settings', 'public', 'validation', 'teams', 'admin'],
         entities: [], // Entities will be loaded dynamically
         strategy: 'DASHBOARD_AUTHENTICATED'
       }

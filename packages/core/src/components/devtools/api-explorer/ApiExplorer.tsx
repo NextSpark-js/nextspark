@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Code, Menu, X } from 'lucide-react'
 import { Button } from '../../ui/button'
 import { cn } from '../../../lib/utils'
@@ -15,6 +15,9 @@ import { useApiExplorerNavigation } from '../../../hooks/useApiExplorerNavigatio
 import { extractPathParams, buildUrl } from '../api-tester/utils/url-builder'
 import type { ApiRouteEntry, RouteCategory } from '../../../lib/services/api-routes.service'
 import type { HttpMethod, AuthType, KeyValuePair, PathParam } from '../api-tester/types'
+import type { ApiPreset } from '../../../types/api-presets'
+import { ApiPresetsService } from '../../../lib/services/api-presets.service'
+import { ApiDocsService } from '../../../lib/services/api-docs.service'
 
 interface SelectedEndpoint {
   path: string
@@ -39,6 +42,16 @@ function findRouteByPath(
   return null
 }
 
+/** Create empty key-value rows for query params and headers */
+function createEmptyRows(count = 2): KeyValuePair[] {
+  return Array.from({ length: count }, () => ({
+    id: crypto.randomUUID(),
+    key: '',
+    value: '',
+    enabled: true,
+  }))
+}
+
 export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
   // Sidebar state
   const [isCollapsed, setIsCollapsed] = useState(false)
@@ -50,8 +63,8 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
   // Request form state
   const [method, setMethod] = useState<HttpMethod>('GET')
   const [pathParams, setPathParams] = useState<PathParam[]>([])
-  const [queryParams, setQueryParams] = useState<KeyValuePair[]>([])
-  const [headers, setHeaders] = useState<KeyValuePair[]>([])
+  const [queryParams, setQueryParams] = useState<KeyValuePair[]>(() => createEmptyRows())
+  const [headers, setHeaders] = useState<KeyValuePair[]>(() => createEmptyRows())
   const [authType, setAuthType] = useState<AuthType>('session')
   const [apiKey, setApiKey] = useState('')
   const [bypassMode, setBypassMode] = useState(false)
@@ -62,6 +75,22 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
     return null
   })
   const [body, setBody] = useState('')
+
+  // Track which tabs were modified by a preset (for visual indicator)
+  const [tabsModifiedByPreset, setTabsModifiedByPreset] = useState<Set<'params' | 'headers' | 'body'>>(
+    () => new Set()
+  )
+
+  // Get presets and docs for selected endpoint
+  const endpointPresets = useMemo(() => {
+    if (!selectedEndpoint) return null
+    return ApiPresetsService.getByEndpoint(selectedEndpoint.path) ?? null
+  }, [selectedEndpoint?.path])
+
+  const endpointDoc = useMemo(() => {
+    if (!selectedEndpoint) return null
+    return ApiDocsService.getByEndpoint(selectedEndpoint.path) ?? null
+  }, [selectedEndpoint?.path])
 
   // Track if we've initialized from URL/initialEndpoint
   const hasInitialized = useRef(false)
@@ -86,9 +115,10 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
       setSelectedEndpoint({ path, method: selectedMethod, route })
       setMethod(selectedMethod)
       setPathParams(extractPathParams(path))
-      setQueryParams([])
-      setHeaders([])
+      setQueryParams(createEmptyRows())
+      setHeaders(createEmptyRows())
       setBody('')
+      setTabsModifiedByPreset(new Set()) // Clear preset indicators
 
       // Close mobile sidebar after selection
       setMobileOpen(false)
@@ -136,6 +166,79 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
     })
   }, [selectedEndpoint, pathParams, queryParams, headers, method, body, authType, apiKey, bypassMode, selectedTeamId, execute])
 
+  // Handle applying a preset
+  const handleApplyPreset = useCallback((preset: ApiPreset) => {
+    // Track which tabs will be modified
+    const modifiedTabs = new Set<'params' | 'headers' | 'body'>()
+
+    // Apply method
+    if (preset.method) {
+      setMethod(preset.method)
+    }
+
+    // Apply path params
+    if (preset.pathParams && Object.keys(preset.pathParams).length > 0) {
+      setPathParams((prev) =>
+        prev.map((p) => ({
+          ...p,
+          value: preset.pathParams?.[p.name] ?? p.value,
+        }))
+      )
+      modifiedTabs.add('params')
+    }
+
+    // Apply query params
+    if (preset.params && Object.keys(preset.params).length > 0) {
+      const newParams = Object.entries(preset.params).map(([key, value], idx) => ({
+        id: `preset-${idx}-${crypto.randomUUID()}`,
+        key,
+        value: String(value),
+        enabled: true,
+      }))
+      setQueryParams(newParams)
+      modifiedTabs.add('params')
+    }
+
+    // Apply headers
+    if (preset.headers && Object.keys(preset.headers).length > 0) {
+      const newHeaders = Object.entries(preset.headers).map(([key, value], idx) => ({
+        id: `preset-header-${idx}-${crypto.randomUUID()}`,
+        key,
+        value,
+        enabled: true,
+      }))
+      setHeaders(newHeaders)
+      modifiedTabs.add('headers')
+    }
+
+    // Apply body
+    if (preset.payload && Object.keys(preset.payload).length > 0) {
+      setBody(JSON.stringify(preset.payload, null, 2))
+      modifiedTabs.add('body')
+    }
+
+    // Apply session config
+    if (preset.sessionConfig) {
+      if (preset.sessionConfig.crossTeam !== undefined) {
+        setBypassMode(preset.sessionConfig.crossTeam)
+      }
+      if (preset.sessionConfig.teamId) {
+        // Handle placeholder replacement
+        let teamId = preset.sessionConfig.teamId
+        if (teamId === '{{FIRST_TEAM_ID}}' && typeof window !== 'undefined') {
+          teamId = localStorage.getItem('firstTeamId') || localStorage.getItem('activeTeamId') || ''
+        }
+        setSelectedTeamId(teamId)
+      }
+      if (preset.sessionConfig.authType) {
+        setAuthType(preset.sessionConfig.authType)
+      }
+    }
+
+    // Update the modified tabs indicator
+    setTabsModifiedByPreset(modifiedTabs)
+  }, [])
+
   // Sync state from URL changes (browser back/forward)
   useEffect(() => {
     if (urlPath && urlMethod) {
@@ -145,9 +248,10 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
         setSelectedEndpoint({ path: urlPath, method: urlMethod, route })
         setMethod(urlMethod)
         setPathParams(extractPathParams(urlPath))
-        setQueryParams([])
-        setHeaders([])
+        setQueryParams(createEmptyRows())
+        setHeaders(createEmptyRows())
         setBody('')
+        setTabsModifiedByPreset(new Set()) // Clear preset indicators
       }
     }
   }, [urlPath, urlMethod, routes, selectedEndpoint])
@@ -284,6 +388,17 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
                 onBodyChange={setBody}
                 onSend={handleSend}
                 onCancel={cancel}
+                endpointPresets={endpointPresets}
+                endpointDoc={endpointDoc}
+                onApplyPreset={handleApplyPreset}
+                tabsModifiedByPreset={tabsModifiedByPreset}
+                onClearPresetIndicator={(tab) => {
+                  setTabsModifiedByPreset((prev) => {
+                    const next = new Set(prev)
+                    next.delete(tab)
+                    return next
+                  })
+                }}
               />
             </div>
 

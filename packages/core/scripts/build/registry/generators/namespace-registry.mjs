@@ -15,7 +15,7 @@
  */
 export function generateNamespaceRegistry(entities, config) {
   // Core namespaces (always available)
-  const coreNamespaces = ['common', 'dashboard', 'settings', 'auth', 'public', 'validation', 'superadmin']
+  const coreNamespaces = ['common', 'dashboard', 'settings', 'auth', 'public', 'validation', 'superadmin', 'admin', 'teams']
 
   // Entity namespaces (generated from entities)
   const entityNamespaces = entities
@@ -25,7 +25,7 @@ export function generateNamespaceRegistry(entities, config) {
   // Route-based namespace mappings
   const routeNamespaces = {
     'DASHBOARD_AUTHENTICATED': {
-      core: ['common', 'dashboard', 'settings', 'public', 'validation'],
+      core: ['common', 'dashboard', 'settings', 'public', 'validation', 'teams', 'admin'],
       entities: entityNamespaces,
       strategy: 'DASHBOARD_AUTHENTICATED'
     },

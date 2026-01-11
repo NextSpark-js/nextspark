@@ -14,7 +14,7 @@
 
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
-import { existsSync } from 'fs'
+import { existsSync, lstatSync } from 'fs'
 import dotenv from 'dotenv'
 import { loadNextSparkConfigSync } from '../config-loader.mjs'
 
@@ -86,12 +86,24 @@ export function detectProjectRoot() {
 }
 
 /**
- * Check if NextSpark is installed as a package
+ * Check if NextSpark is installed as a package (not a symlink from monorepo)
  * @param {string} root - Project root path
- * @returns {boolean} True if installed as npm package
+ * @returns {boolean} True if installed as npm package (not a symlink)
  */
 export function isInstalledAsPackage(root) {
-  return existsSync(join(root, 'node_modules/@nextsparkjs/core'))
+  const corePath = join(root, 'node_modules/@nextsparkjs/core')
+  if (!existsSync(corePath)) {
+    return false
+  }
+
+  // In monorepo mode with pnpm workspaces, packages are symlinked
+  // A real npm installation is not a symlink
+  try {
+    const stat = lstatSync(corePath)
+    return !stat.isSymbolicLink()
+  } catch {
+    return false
+  }
 }
 
 /**
@@ -111,9 +123,11 @@ export function getConfig(projectRoot = null) {
   const isMonorepoMode = !isNpmMode && monorepoRoot !== null
 
   // Determine paths based on mode
+  // In monorepo mode, core is at monorepoRoot/packages/core
+  // In npm mode, core is at projectRoot/node_modules/@nextsparkjs/core
   const coreDir = isNpmMode
     ? join(root, 'node_modules/@nextsparkjs/core')
-    : join(root, 'packages/core')
+    : join(isMonorepoMode ? monorepoRoot : root, 'packages/core')
 
   // ALWAYS generate in .nextspark/registries/ of the project
   // This unifies npm mode and monorepo mode to use the same location

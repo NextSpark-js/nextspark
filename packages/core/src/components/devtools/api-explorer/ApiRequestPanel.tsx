@@ -18,6 +18,9 @@ import { PayloadEditor } from '../api-tester/PayloadEditor'
 import { buildUrl, validatePathParams, validateJsonBody } from '../api-tester/utils/url-builder'
 import type { HttpMethod, AuthType, KeyValuePair, PathParam, RequestStatus } from '../api-tester/types'
 import type { ApiRouteEntry } from '../../../lib/services/api-routes.service'
+import type { ApiEndpointPresets, ApiPreset } from '../../../types/api-presets'
+import { PresetsTab } from './PresetsTab'
+import { ApiDocsModal } from './ApiDocsModal'
 
 const methodColors: Record<string, string> = {
   GET: 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
@@ -52,6 +55,13 @@ interface ApiRequestPanelProps {
   onBodyChange: (body: string) => void
   onSend: () => void
   onCancel: () => void
+  // Presets & Docs
+  endpointPresets?: ApiEndpointPresets | null
+  endpointDoc?: { path: string; title: string } | null
+  onApplyPreset?: (preset: ApiPreset) => void
+  // Preset modification indicators
+  tabsModifiedByPreset?: Set<'params' | 'headers' | 'body'>
+  onClearPresetIndicator?: (tab: 'params' | 'headers' | 'body') => void
 }
 
 export function ApiRequestPanel({
@@ -78,6 +88,11 @@ export function ApiRequestPanel({
   onBodyChange,
   onSend,
   onCancel,
+  endpointPresets,
+  endpointDoc,
+  onApplyPreset,
+  tabsModifiedByPreset,
+  onClearPresetIndicator,
 }: ApiRequestPanelProps) {
   const t = useTranslations('devtools.apiTester')
 
@@ -96,6 +111,27 @@ export function ApiRequestPanel({
 
   const showPayloadEditor = ['POST', 'PATCH', 'PUT'].includes(method)
 
+  // Handlers that clear preset indicators when user modifies manually
+  const handlePathParamsChange = (params: PathParam[]) => {
+    onPathParamsChange(params)
+    onClearPresetIndicator?.('params')
+  }
+
+  const handleQueryParamsChange = (params: KeyValuePair[]) => {
+    onQueryParamsChange(params)
+    onClearPresetIndicator?.('params')
+  }
+
+  const handleHeadersChange = (newHeaders: KeyValuePair[]) => {
+    onHeadersChange(newHeaders)
+    onClearPresetIndicator?.('headers')
+  }
+
+  const handleBodyChange = (newBody: string) => {
+    onBodyChange(newBody)
+    onClearPresetIndicator?.('body')
+  }
+
   return (
     <div className="flex flex-col h-full" data-cy={sel('devtools.apiExplorer.request.panel')}>
       {/* Header: Method + URL */}
@@ -113,6 +149,11 @@ export function ApiRequestPanel({
             <Badge variant="secondary" className="text-xs shrink-0">
               {route.source}
             </Badge>
+          )}
+
+          {/* Docs Button */}
+          {endpointDoc && (
+            <ApiDocsModal docPath={endpointDoc.path} title={endpointDoc.title} />
           )}
 
           {/* Send Button */}
@@ -172,6 +213,9 @@ export function ApiRequestPanel({
                 className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-3 pb-2"
                 data-cy={sel('devtools.apiExplorer.request.tabParams')}
               >
+                {tabsModifiedByPreset?.has('params') && (
+                  <span className="w-2 h-2 rounded-full bg-primary mr-1.5" title="Modified by preset" />
+                )}
                 Params
                 {(pathParams.length > 0 || queryParams.length > 0) && (
                   <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5">
@@ -184,6 +228,9 @@ export function ApiRequestPanel({
                 className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-3 pb-2"
                 data-cy={sel('devtools.apiExplorer.request.tabHeaders')}
               >
+                {tabsModifiedByPreset?.has('headers') && (
+                  <span className="w-2 h-2 rounded-full bg-primary mr-1.5" title="Modified by preset" />
+                )}
                 Headers
                 {headers.length > 0 && (
                   <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5">
@@ -197,7 +244,22 @@ export function ApiRequestPanel({
                   className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-3 pb-2"
                   data-cy={sel('devtools.apiExplorer.request.tabBody')}
                 >
+                  {tabsModifiedByPreset?.has('body') && (
+                    <span className="w-2 h-2 rounded-full bg-primary mr-1.5" title="Modified by preset" />
+                  )}
                   Body
+                </TabsTrigger>
+              )}
+              {endpointPresets && endpointPresets.presets.length > 0 && (
+                <TabsTrigger
+                  value="presets"
+                  className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-3 pb-2"
+                  data-cy={sel('devtools.apiExplorer.request.tabPresets')}
+                >
+                  Presets
+                  <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5">
+                    {endpointPresets.presets.length}
+                  </Badge>
                 </TabsTrigger>
               )}
             </TabsList>
@@ -208,14 +270,14 @@ export function ApiRequestPanel({
               {pathParams.length > 0 && (
                 <div>
                   <h4 className="text-sm font-medium mb-2">Path Parameters</h4>
-                  <PathParamsEditor params={pathParams} onChange={onPathParamsChange} />
+                  <PathParamsEditor params={pathParams} onChange={handlePathParamsChange} />
                 </div>
               )}
               <div>
                 <h4 className="text-sm font-medium mb-2">Query Parameters</h4>
                 <KeyValueEditor
                   items={queryParams}
-                  onChange={onQueryParamsChange}
+                  onChange={handleQueryParamsChange}
                   dataCyPrefix="api-request-query"
                 />
               </div>
@@ -227,14 +289,24 @@ export function ApiRequestPanel({
               </p>
               <KeyValueEditor
                 items={headers}
-                onChange={onHeadersChange}
+                onChange={handleHeadersChange}
                 dataCyPrefix="api-request-headers"
               />
             </TabsContent>
 
             {showPayloadEditor && (
               <TabsContent value="body" className="m-0 p-4">
-                <PayloadEditor value={body} onChange={onBodyChange} />
+                <PayloadEditor value={body} onChange={handleBodyChange} />
+              </TabsContent>
+            )}
+
+            {endpointPresets && endpointPresets.presets.length > 0 && onApplyPreset && (
+              <TabsContent value="presets" className="m-0">
+                <PresetsTab
+                  endpointPresets={endpointPresets}
+                  currentMethod={method}
+                  onApplyPreset={onApplyPreset}
+                />
               </TabsContent>
             )}
           </ScrollArea>
