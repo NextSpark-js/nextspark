@@ -339,6 +339,29 @@ export const CORE_SELECTORS = {
       cancel: 'cancel-create-team',
       submit: 'submit-create-team',
     },
+    edit: {
+      // Name field - inline (v1.1)
+      name: {
+        value: 'team-edit-name-value',
+        editIcon: 'team-edit-name-edit-icon',
+        input: 'team-edit-name-input',
+        saveIcon: 'team-edit-name-save-icon',
+        cancelIcon: 'team-edit-name-cancel-icon',
+        error: 'team-edit-name-error',
+      },
+      // Description field - inline (v1.1)
+      description: {
+        value: 'team-edit-description-value',
+        editIcon: 'team-edit-description-edit-icon',
+        textarea: 'team-edit-description-textarea',
+        saveIcon: 'team-edit-description-save-icon',
+        cancelIcon: 'team-edit-description-cancel-icon',
+        error: 'team-edit-description-error',
+      },
+      // Shared feedback
+      success: 'team-edit-success',
+      error: 'team-edit-error',
+    },
     members: {
       section: 'team-members-section',
       row: 'member-row-{id}',

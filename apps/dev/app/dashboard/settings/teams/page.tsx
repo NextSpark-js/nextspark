@@ -13,7 +13,9 @@ import { useTeamsConfig } from '@nextsparkjs/core/hooks/useTeamsConfig'
 import { TeamMembersList } from '@nextsparkjs/core/components/teams/TeamMembersList'
 import { TeamPendingInvitations } from '@nextsparkjs/core/components/teams/TeamPendingInvitations'
 import { CreateTeamDialog } from '@nextsparkjs/core/components/teams/CreateTeamDialog'
-import { createTestId, createCyId } from '@nextsparkjs/testing'
+import { InlineEditableField } from '@nextsparkjs/core/components/teams/InlineEditableField'
+import { createTestId } from '@nextsparkjs/testing'
+import { sel } from '@nextsparkjs/core/lib/test'
 import { TeamRole } from '@nextsparkjs/core/lib/teams/types'
 import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
 
@@ -61,7 +63,7 @@ function TeamsSettingsPage() {
         role="status"
         aria-label={tTeams('messages.loading')}
         {...createTestId('teams-settings', 'loading') && { 'data-testid': createTestId('teams-settings', 'loading') }}
-        {...createCyId('teams-settings', 'loading') && { 'data-cy': createCyId('teams-settings', 'loading') }}
+        data-cy={sel('settings.teams.loading')}
       >
         <div className="text-sm text-muted-foreground">
           {tTeams('messages.loading')}
@@ -75,12 +77,12 @@ function TeamsSettingsPage() {
       <div
         className="max-w-4xl space-y-6"
         {...createTestId('teams-settings', 'container') && { 'data-testid': createTestId('teams-settings', 'container') }}
-        {...createCyId('teams-settings', 'main') && { 'data-cy': createCyId('teams-settings', 'main') }}
+        data-cy={sel('settings.teams.main')}
       >
         {/* Header */}
         <header
           {...createTestId('teams-settings', 'header') && { 'data-testid': createTestId('teams-settings', 'header') }}
-          {...createCyId('teams-settings', 'header') && { 'data-cy': createCyId('teams-settings', 'header') }}
+          data-cy={sel('settings.teams.header')}
         >
           <h1
             className="text-2xl font-bold"
@@ -101,7 +103,7 @@ function TeamsSettingsPage() {
         {isSingleUserMode && currentTeam && (
           <Card
             {...createTestId('teams-settings', 'single-user-card') && { 'data-testid': createTestId('teams-settings', 'single-user-card') }}
-            {...createCyId('teams-settings', 'single-user') && { 'data-cy': createCyId('teams-settings', 'single-user') }}
+            data-cy={sel('settings.teams.singleUser')}
           >
             <CardHeader>
               <div className="flex items-center gap-2">
@@ -133,7 +135,7 @@ function TeamsSettingsPage() {
         {!isSingleUserMode && (
         <Card
           {...createTestId('teams-settings', 'list-card') && { 'data-testid': createTestId('teams-settings', 'list-card') }}
-          {...createCyId('teams-settings', 'teams-list') && { 'data-cy': createCyId('teams-settings', 'teams-list') }}
+          data-cy={sel('settings.teams.teamsList')}
         >
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -215,15 +217,30 @@ function TeamsSettingsPage() {
         {!isSingleUserMode && selectedMembership && (
           <Card
             {...createTestId('teams-settings', 'team-details') && { 'data-testid': createTestId('teams-settings', 'team-details') }}
-            {...createCyId('teams-settings', 'team-details') && { 'data-cy': createCyId('teams-settings', 'team-details') }}
+            data-cy={sel('settings.teams.teamDetails')}
           >
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Settings className="h-5 w-5" aria-hidden="true" />
-                <CardTitle>{selectedMembership.team.name}</CardTitle>
+                <CardTitle className="flex-1">
+                  <InlineEditableField
+                    value={selectedMembership.team.name}
+                    fieldType="name"
+                    teamId={selectedMembership.team.id}
+                    placeholder={tTeams('createTeam.namePlaceholder')}
+                    disabled={selectedMembership.role !== 'owner'}
+                  />
+                </CardTitle>
               </div>
-              <CardDescription>
-                {selectedMembership.team.description || t('teams.manageTeamMembers')}
+              <CardDescription className="mt-2">
+                <InlineEditableField
+                  value={selectedMembership.team.description}
+                  fieldType="description"
+                  teamId={selectedMembership.team.id}
+                  placeholder={tTeams('createTeam.descriptionPlaceholder')}
+                  multiline={true}
+                  disabled={selectedMembership.role !== 'owner'}
+                />
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">

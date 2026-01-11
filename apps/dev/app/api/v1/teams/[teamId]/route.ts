@@ -135,6 +135,22 @@ export const PATCH = withApiLogging(
       const body = await req.json()
       const validatedData = updateTeamSchema.parse(body)
 
+      // Owner-only restriction for name/description updates
+      if (validatedData.name !== undefined || validatedData.description !== undefined) {
+        // Fetch team to verify ownership
+        const team = await TeamService.getById(teamId, authResult.user!.id)
+
+        if (!team || team.ownerId !== authResult.user!.id) {
+          const response = createApiError(
+            'Only team creators can edit team name and description',
+            403,
+            null,
+            'OWNER_ONLY'
+          )
+          return addCorsHeaders(response)
+        }
+      }
+
       // Check if slug is being changed and if it's available
       if (validatedData.slug) {
         const slugAvailable = await TeamService.isSlugAvailable(validatedData.slug, teamId)

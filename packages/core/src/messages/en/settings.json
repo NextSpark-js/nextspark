@@ -390,6 +390,7 @@
     "yourTeam": "Your Team",
     "yourTeams": "Your Teams",
     "yourTeamsDescription": "Teams you are a member of. Select one to view its details.",
+    "singleUserDescription": "Your personal workspace.",
     "noTeams": "You don't belong to any team yet.",
     "manageTeamMembers": "Manage team members and settings."
   },

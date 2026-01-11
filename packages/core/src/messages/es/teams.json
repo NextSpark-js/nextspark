@@ -37,6 +37,7 @@
 
   "actions": {
     "create": "Crear Equipo",
+    "creating": "Creando...",
     "edit": "Editar Equipo",
     "delete": "Eliminar Equipo",
     "leave": "Abandonar Equipo",
@@ -78,7 +79,22 @@
   "editTeam": {
     "title": "Editar Equipo",
     "success": "Equipo actualizado exitosamente",
-    "error": "Error al actualizar el equipo"
+    "error": "Error al actualizar el equipo",
+    "saving": "Guardando...",
+    "editName": "Editar nombre del equipo",
+    "editDescription": "Editar descripción",
+    "saveName": "Guardar nombre",
+    "saveDescription": "Guardar descripción",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "editField": "Editar {field}",
+    "noValue": "No definido"
+  },
+
+  "validation": {
+    "nameRequired": "El nombre del equipo es requerido",
+    "nameMinLength": "El nombre debe tener al menos 2 caracteres",
+    "nameMaxLength": "El nombre debe tener como máximo 100 caracteres"
   },
 
   "deleteTeam": {
@@ -147,7 +163,8 @@
   },
 
   "messages": {
-    "loading": "Cargando..."
+    "created": "Equipo creado exitosamente",
+    "loading": "Cargando equipos..."
   },
 
   "errors": {
@@ -156,7 +173,8 @@
     "permissionDenied": "No tienes permiso para realizar esta accion",
     "cannotDeletePersonal": "No se puede eliminar el equipo personal",
     "cannotLeaveOwner": "Los propietarios no pueden abandonar. Transfiere la propiedad primero.",
-    "lastAdmin": "No se puede eliminar al ultimo administrador del equipo"
+    "lastAdmin": "No se puede eliminar al ultimo administrador del equipo",
+    "ownerOnlyEdit": "Solo los creadores del equipo pueden editar el nombre y descripcion"
   },
 
   "empty": {

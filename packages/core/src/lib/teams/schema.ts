@@ -69,6 +69,18 @@ export const updateTeamSchema = z.object({
   settings: z.record(z.string(), z.unknown()).optional(),
 })
 
+/**
+ * Schema for owner-only team updates (name/description)
+ * Only team creators (ownerId === userId) can update these fields
+ */
+export const ownerUpdateTeamSchema = z.object({
+  name: z.string()
+    .min(1, 'Team name is required')
+    .min(2, 'Name must be at least 2 characters')
+    .max(100, 'Name must be at most 100 characters'),
+  description: z.string().nullable().optional(),
+})
+
 export const inviteMemberSchema = z.object({
   email: z.string().email('Invalid email address'),
   role: z.enum(['admin', 'member', 'viewer'], {
@@ -111,6 +123,7 @@ export type TeamMemberSchema = z.infer<typeof teamMemberSchema>
 export type TeamInvitationSchema = z.infer<typeof teamInvitationSchema>
 export type CreateTeamSchema = z.infer<typeof createTeamSchema>
 export type UpdateTeamSchema = z.infer<typeof updateTeamSchema>
+export type OwnerUpdateTeamSchema = z.infer<typeof ownerUpdateTeamSchema>
 export type InviteMemberSchema = z.infer<typeof inviteMemberSchema>
 export type UpdateMemberRoleSchema = z.infer<typeof updateMemberRoleSchema>
 export type TeamListQuerySchema = z.infer<typeof teamListQuerySchema>
