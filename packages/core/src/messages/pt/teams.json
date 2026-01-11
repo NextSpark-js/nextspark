@@ -2,6 +2,20 @@
   "title": "Equipes",
   "description": "Gerencie suas equipes e colaboracoes",
 
+  "entity": {
+    "description": "Gerencie suas equipes, membros e convites",
+    "plural": "Equipes"
+  },
+
+  "fields": {
+    "name": "Nome",
+    "slug": "URL",
+    "description": "Descricao",
+    "email": "Email",
+    "role": "Funcao",
+    "joinedAt": "Data de entrada"
+  },
+
   "types": {
     "personal": "Pessoal",
     "work": "Equipe de Trabalho"
@@ -30,7 +44,9 @@
     "manage": "Gerenciar Equipe",
     "invite": "Convidar Membro",
     "removeMember": "Remover Membro",
-    "changeRole": "Alterar Funcao"
+    "changeRole": "Alterar Funcao",
+    "makeRole": "Tornar {role}",
+    "cancel": "Cancelar"
   },
 
   "switcher": {
@@ -84,11 +100,17 @@
   "invitations": {
     "title": "Convites Pendentes",
     "description": "Convites aguardando resposta",
+    "pending": "Pendente",
     "empty": "Sem convites pendentes",
     "sent": "Enviado {date}",
     "expires": "Expira {date}",
+    "expiresAt": "Expira",
+    "invitedBy": "Convidado por",
     "resend": "Reenviar",
     "cancel": "Cancelar Convite",
+    "cancelTitle": "Cancelar Convite",
+    "cancelDescription": "Tem certeza que deseja cancelar este convite?",
+    "cancelConfirm": "Sim, Cancelar",
     "cancelSuccess": "Convite cancelado",
     "cancelError": "Erro ao cancelar o convite"
   },
@@ -122,6 +144,10 @@
     "members": "Membros",
     "billing": "Faturamento",
     "danger": "Zona de Perigo"
+  },
+
+  "messages": {
+    "loading": "Carregando..."
   },
 
   "errors": {

@@ -2,6 +2,20 @@
   "title": "Equipes",
   "description": "Gerez vos equipes et collaborations",
 
+  "entity": {
+    "description": "Gerez vos equipes, membres et invitations",
+    "plural": "Equipes"
+  },
+
+  "fields": {
+    "name": "Nom",
+    "slug": "URL",
+    "description": "Description",
+    "email": "Email",
+    "role": "Role",
+    "joinedAt": "Date d'adhesion"
+  },
+
   "types": {
     "personal": "Personnel",
     "work": "Equipe de travail"
@@ -30,7 +44,9 @@
     "manage": "Gerer l'equipe",
     "invite": "Inviter un membre",
     "removeMember": "Supprimer le membre",
-    "changeRole": "Changer le role"
+    "changeRole": "Changer le role",
+    "makeRole": "Faire {role}",
+    "cancel": "Annuler"
   },
 
   "switcher": {
@@ -84,11 +100,17 @@
   "invitations": {
     "title": "Invitations en attente",
     "description": "Invitations en attente de reponse",
+    "pending": "En attente",
     "empty": "Aucune invitation en attente",
     "sent": "Envoyee le {date}",
     "expires": "Expire le {date}",
+    "expiresAt": "Expire",
+    "invitedBy": "Invite par",
     "resend": "Renvoyer",
     "cancel": "Annuler l'invitation",
+    "cancelTitle": "Annuler l'invitation",
+    "cancelDescription": "Etes-vous sur de vouloir annuler cette invitation ?",
+    "cancelConfirm": "Oui, Annuler",
     "cancelSuccess": "Invitation annulee",
     "cancelError": "Erreur lors de l'annulation de l'invitation"
   },
@@ -122,6 +144,10 @@
     "members": "Membres",
     "billing": "Facturation",
     "danger": "Zone de danger"
+  },
+
+  "messages": {
+    "loading": "Chargement..."
   },
 
   "errors": {

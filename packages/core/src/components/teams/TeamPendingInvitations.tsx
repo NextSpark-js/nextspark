@@ -103,12 +103,10 @@ export function TeamPendingInvitations({ teamId }: TeamPendingInvitationsProps) 
     }
   })
 
+  // Don't show loading state - TeamMembersList already shows one
+  // and both load at the same time
   if (isLoading) {
-    return (
-      <div className="text-sm text-muted-foreground py-4">
-        {t('messages.loading')}
-      </div>
-    )
+    return null
   }
 
   if (invitations.length === 0) {

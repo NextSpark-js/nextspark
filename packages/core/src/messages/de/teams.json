@@ -2,6 +2,20 @@
   "title": "Teams",
   "description": "Verwalten Sie Ihre Teams und Zusammenarbeiten",
 
+  "entity": {
+    "description": "Verwalten Sie Ihre Teams, Mitglieder und Einladungen",
+    "plural": "Teams"
+  },
+
+  "fields": {
+    "name": "Name",
+    "slug": "URL",
+    "description": "Beschreibung",
+    "email": "E-Mail",
+    "role": "Rolle",
+    "joinedAt": "Beitrittsdatum"
+  },
+
   "types": {
     "personal": "Persoenlich",
     "work": "Arbeitsteam"
@@ -30,7 +44,9 @@
     "manage": "Team verwalten",
     "invite": "Mitglied einladen",
     "removeMember": "Mitglied entfernen",
-    "changeRole": "Rolle aendern"
+    "changeRole": "Rolle aendern",
+    "makeRole": "Zu {role} machen",
+    "cancel": "Abbrechen"
   },
 
   "switcher": {
@@ -84,11 +100,17 @@
   "invitations": {
     "title": "Ausstehende Einladungen",
     "description": "Einladungen, die auf Antwort warten",
+    "pending": "Ausstehend",
     "empty": "Keine ausstehenden Einladungen",
     "sent": "Gesendet {date}",
     "expires": "Laeuft ab {date}",
+    "expiresAt": "Laeuft ab",
+    "invitedBy": "Eingeladen von",
     "resend": "Erneut senden",
     "cancel": "Einladung abbrechen",
+    "cancelTitle": "Einladung abbrechen",
+    "cancelDescription": "Sind Sie sicher, dass Sie diese Einladung abbrechen moechten?",
+    "cancelConfirm": "Ja, Abbrechen",
     "cancelSuccess": "Einladung abgebrochen",
     "cancelError": "Fehler beim Abbrechen der Einladung"
   },
@@ -122,6 +144,10 @@
     "members": "Mitglieder",
     "billing": "Abrechnung",
     "danger": "Gefahrenzone"
+  },
+
+  "messages": {
+    "loading": "Laden..."
   },
 
   "errors": {
