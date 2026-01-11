@@ -1,6 +1,7 @@
 // Hooks index
 // Re-exports all custom React hooks
 
+export * from './useApiExplorerNavigation'
 export * from './useAuth'
 export * from './useAuthMethodDetector'
 export * from './useContentTranslation'

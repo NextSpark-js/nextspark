@@ -1,43 +1,47 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Team, CreateTeamRequest } from '../lib/teams/types'
+import { TeamsAPI } from '../lib/teams/teams.api'
+import { teamsKeys } from '../lib/teams/teams.keys'
+import type { CreateTeamRequest } from '../lib/teams/types'
 
 /**
- * Hook to manage teams list and creation
+ * Hook to manage current user's teams (for team switchers, settings, etc.)
+ *
+ * This is a backward-compatible wrapper around the new team hooks architecture.
+ * For new code, prefer using the specialized hooks from '@nextsparkjs/core/hooks/teams':
+ *
+ * - useUserTeams: For current user's teams (same as this hook)
+ * - useAdminTeams: For admin team management with pagination
+ * - useTeamSearch: For searchable team dropdowns
+ *
+ * @example
+ * ```tsx
+ * // In team switcher
+ * const { teams, isLoading, createTeam } = useTeams()
+ *
+ * // Preferred import for new code:
+ * import { useUserTeams } from '@nextsparkjs/core/hooks/teams'
+ * ```
  */
 export function useTeams() {
   const queryClient = useQueryClient()
 
   const { data: teams = [], isLoading, error } = useQuery({
-    queryKey: ['teams'],
-    queryFn: async () => {
-      const response = await fetch('/api/v1/teams')
-      if (!response.ok) throw new Error('Failed to fetch teams')
-      const data = await response.json()
-      return data.teams || []
-    },
-    staleTime: 5 * 60 * 1000 // 5 minutes
+    queryKey: teamsKeys.user(),
+    queryFn: TeamsAPI.getUserTeams,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   })
 
   const createTeamMutation = useMutation({
     mutationFn: async (teamData: CreateTeamRequest) => {
-      const response = await fetch('/api/v1/teams', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(teamData)
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to create team')
-      }
-
-      return response.json()
+      return TeamsAPI.createTeam(teamData)
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['teams'] })
-    }
+      // Invalidate both user and admin team lists
+      queryClient.invalidateQueries({ queryKey: teamsKeys.user() })
+      queryClient.invalidateQueries({ queryKey: teamsKeys.admin() })
+    },
   })
 
   return {
@@ -46,6 +50,6 @@ export function useTeams() {
     error,
     createTeam: createTeamMutation.mutate,
     createTeamAsync: createTeamMutation.mutateAsync,
-    isCreating: createTeamMutation.isPending
+    isCreating: createTeamMutation.isPending,
   }
 }

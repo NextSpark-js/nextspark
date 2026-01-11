@@ -178,3 +178,59 @@ export interface MemberListResponse {
 export interface InvitationListResponse {
   invitations: (TeamInvitation & { team?: Team })[]
 }
+
+// =============================================================================
+// ADMIN API TYPES (for superadmin endpoints)
+// =============================================================================
+
+/**
+ * Team with owner information (admin view)
+ * Used in superadmin endpoints and admin hooks
+ */
+export interface TeamWithOwner {
+  id: string
+  name: string
+  owner: {
+    id: string
+    name: string
+    email: string
+  }
+  memberCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+/**
+ * Admin teams list response
+ * Response format from /api/superadmin/teams
+ */
+export interface AdminTeamsResponse {
+  teams: TeamWithOwner[]
+  counts: {
+    total: number
+    user: number
+    system: number
+  }
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+    hasMore: boolean
+  }
+  metadata?: {
+    requestedBy: string
+    requestedAt: string
+    source: string
+  }
+}
+
+/**
+ * Parameters for admin teams query
+ */
+export interface AdminTeamsParams {
+  search?: string
+  type?: 'user' | 'system'
+  page?: number
+  limit?: number
+}
