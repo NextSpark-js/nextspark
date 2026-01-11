@@ -118,3 +118,10 @@ Posts support the following taxonomies:
 | 403 | Forbidden - Insufficient permissions |
 | 404 | Not Found - Post doesn't exist |
 | 422 | Validation Error - Invalid data |
+
+## Related APIs
+
+- **[Dynamic Entity API](/api/v1/{entity})** - Generic entity operations documentation
+- **[Post Categories](/api/v1/post-categories)** - Manage blog post categories
+- **[Blocks](/api/v1/blocks)** - Available page builder blocks
+- **[Media](/api/v1/media)** - Upload featured images

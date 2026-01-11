@@ -175,3 +175,10 @@ x-api-key: sk_live_xxx
 ```
 
 See the API Keys documentation for more information.
+
+## Related APIs
+
+- **[API Keys](/api/v1/api-keys)** - Create and manage API keys for server-to-server auth
+- **[Teams](/api/v1/teams)** - Team management and invitation acceptance
+- **[Team Invitations](/api/v1/team-invitations)** - Manage team invitations
+- **[Users](/api/v1/users)** - User profile management after authentication

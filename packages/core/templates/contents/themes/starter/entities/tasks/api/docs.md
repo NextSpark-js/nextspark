@@ -124,3 +124,9 @@ Tasks support the metadata system. Use the metadata endpoints to store additiona
 | 403 | Forbidden - Insufficient permissions |
 | 404 | Not Found - Task doesn't exist |
 | 422 | Validation Error - Invalid data |
+
+## Related APIs
+
+- **[Dynamic Entity API](/api/v1/{entity})** - Generic entity operations documentation
+- **[Teams](/api/v1/teams)** - Tasks are team-scoped
+- **[Media](/api/v1/media)** - Upload attachments for tasks

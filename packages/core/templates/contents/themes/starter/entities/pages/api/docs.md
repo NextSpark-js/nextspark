@@ -112,3 +112,9 @@ Delete a page record.
 | 403 | Forbidden - Insufficient permissions |
 | 404 | Not Found - Page doesn't exist |
 | 422 | Validation Error - Invalid data |
+
+## Related APIs
+
+- **[Dynamic Entity API](/api/v1/{entity})** - Generic entity operations documentation
+- **[Blocks](/api/v1/blocks)** - Available page builder blocks
+- **[Media](/api/v1/media)** - Upload images for pages

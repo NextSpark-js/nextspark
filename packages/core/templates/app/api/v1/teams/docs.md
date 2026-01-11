@@ -310,3 +310,11 @@ Switch the user's active team context. Sets a cookie for server-side access.
 | 409 | ALREADY_MEMBER | User is already a team member |
 | 409 | INVITATION_EXISTS | Pending invitation already exists |
 | 409 | SLUG_EXISTS | Team slug already taken |
+
+## Related APIs
+
+- **[Users](/api/v1/users)** - User profiles and team membership
+- **[Team Invitations](/api/v1/team-invitations)** - Manage pending invitations
+- **[Billing](/api/v1/billing)** - Subscription management and checkout
+- **[API Keys](/api/v1/api-keys)** - Team-scoped API keys
+- **[Dynamic Entities](/api/v1/{entity})** - Team-scoped entity data

@@ -92,3 +92,10 @@ curl -H "x-api-key: nsk_prod_abc123xyz..." \
 | 401 | Unauthorized - Session required |
 | 403 | Forbidden - Insufficient permissions |
 | 404 | Not Found - API key doesn't exist |
+
+## Related APIs
+
+- **[Auth](/api/v1/auth)** - Session-based authentication for browser requests
+- **[Teams](/api/v1/teams)** - API keys are scoped to teams
+- **[Dynamic Entities](/api/v1/{entity})** - Use API keys to access entity CRUD endpoints
+- **[Media](/api/v1/media)** - API keys support `media:read` and `media:write` scopes

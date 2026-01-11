@@ -200,3 +200,10 @@ In development, Stripe test mode is used. Test card numbers:
 - Success: `4242 4242 4242 4242`
 - Decline: `4000 0000 0000 0002`
 - 3D Secure: `4000 0025 0000 3155`
+
+## Related APIs
+
+- **[Teams](/api/v1/teams)** - Team subscription and usage endpoints
+- **[Teams Subscription](/api/v1/teams/{teamId}/subscription)** - View team's current subscription
+- **[Teams Usage](/api/v1/teams/{teamId}/usage/{limit})** - Check quota usage
+- **[Teams Invoices](/api/v1/teams/{teamId}/invoices)** - View billing invoices

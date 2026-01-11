@@ -84,3 +84,10 @@ Team-level roles determine permissions:
 | 403 | Forbidden - Insufficient permissions |
 | 404 | Not Found - User doesn't exist |
 | 422 | Validation Error - Invalid data |
+
+## Related APIs
+
+- **[Auth](/api/v1/auth)** - Authentication and session management
+- **[Teams](/api/v1/teams)** - Team membership and roles
+- **[Team Invitations](/api/v1/team-invitations)** - Invite users to teams
+- **[API Keys](/api/v1/api-keys)** - Manage programmatic access
