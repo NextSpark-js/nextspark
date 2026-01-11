@@ -339,6 +339,19 @@ export const CORE_SELECTORS = {
       cancel: 'cancel-create-team',
       submit: 'submit-create-team',
     },
+    /**
+     * Inline editing for team name and description
+     *
+     * Note on selector structure: The name and description fields have separate
+     * selector definitions rather than using a dynamic pattern. This is an intentional
+     * design decision because:
+     * 1. There are only 2 fields (name and description), making duplication minimal
+     * 2. Each field has different input types (Input vs Textarea) with distinct selectors
+     * 3. Explicit definitions provide better clarity and type safety
+     * 4. The small duplication cost is outweighed by improved readability
+     *
+     * Decision documented in PR #1 code review (Issue #9).
+     */
     edit: {
       // Name field - inline (v1.1)
       name: {

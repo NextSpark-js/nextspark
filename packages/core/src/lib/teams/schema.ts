@@ -18,6 +18,11 @@ export const teamSchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name must be at most 100 characters'),
   slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must contain only lowercase letters, numbers, and hyphens'),
+  /**
+   * Description field has no max length limit (TEXT type in database)
+   * Database migration 007_teams_table.sql defines this as TEXT without constraints
+   * If max length is desired, it should be a business decision
+   */
   description: z.string().nullable().optional(),
   ownerId: z.string(),
   avatarUrl: z.string().url().nullable().optional(),
@@ -61,6 +66,14 @@ export const createTeamSchema = z.object({
   description: z.string().optional(),
 })
 
+/**
+ * Schema for general team updates by admins
+ * Does NOT include name/description (owner-only fields)
+ * Used when: Admin updates avatarUrl, settings, slug
+ *
+ * @note This schema still includes name/description for backward compatibility,
+ * but they should only be validated using ownerUpdateTeamSchema after owner verification
+ */
 export const updateTeamSchema = z.object({
   name: z.string().min(2).max(100).optional(),
   slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).optional(),
@@ -72,12 +85,17 @@ export const updateTeamSchema = z.object({
 /**
  * Schema for owner-only team updates (name/description)
  * Only team creators (ownerId === userId) can update these fields
+ * Used when: Owner updates team name or description
+ *
+ * @security This schema is only used after owner verification
+ * @note Fields are optional to allow partial updates (e.g., only description)
  */
 export const ownerUpdateTeamSchema = z.object({
   name: z.string()
     .min(1, 'Team name is required')
     .min(2, 'Name must be at least 2 characters')
-    .max(100, 'Name must be at most 100 characters'),
+    .max(100, 'Name must be at most 100 characters')
+    .optional(),
   description: z.string().nullable().optional(),
 })
 

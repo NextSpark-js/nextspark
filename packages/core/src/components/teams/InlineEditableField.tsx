@@ -38,16 +38,20 @@ export function InlineEditableField({
   const [editValue, setEditValue] = useState(value || '')
   const [validationError, setValidationError] = useState<string | null>(null)
   const [showSuccess, setShowSuccess] = useState(false)
-  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const updateMutation = useTeamUpdate(teamId)
 
   // Focus input when entering edit mode
   useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus()
-      inputRef.current.select()
+    if (isEditing) {
+      const elementToFocus = multiline ? textareaRef.current : inputRef.current
+      if (elementToFocus) {
+        elementToFocus.focus()
+        elementToFocus.select()
+      }
     }
-  }, [isEditing])
+  }, [isEditing, multiline])
 
   // Reset edit value when external value changes
   useEffect(() => {
@@ -72,7 +76,7 @@ export function InlineEditableField({
     // Validate name field
     if (fieldType === 'name') {
       if (!editValue.trim()) {
-        setValidationError(t('errors.nameRequired', { defaultValue: 'Team name is required' }))
+        setValidationError(t('validation.nameRequired', { defaultValue: 'Team name is required' }))
         return
       }
       if (editValue.trim().length < 2) {
@@ -198,8 +202,10 @@ export function InlineEditableField({
           <Alert
             className="bg-green-50 text-green-900 border-green-200"
             data-cy={sel('teams.edit.success')}
+            role="status"
+            aria-live="polite"
           >
-            <CheckCircle2 className="h-4 w-4 text-green-600" />
+            <CheckCircle2 className="h-4 w-4 text-green-600" aria-hidden="true" />
             <AlertDescription>{t('editTeam.success')}</AlertDescription>
           </Alert>
         )}
@@ -208,25 +214,40 @@ export function InlineEditableField({
   }
 
   // Edit mode
-  const InputComponent = multiline ? Textarea : Input
-
   return (
     <div className={cn('space-y-2', className)}>
       <div className="flex items-start gap-2">
-        <InputComponent
-          ref={inputRef as any}
-          value={editValue}
-          onChange={(e) => setEditValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          disabled={isPending}
-          className={cn('flex-1', multiline && 'min-h-[60px]')}
-          data-cy={sel(selectors.input)}
-          aria-invalid={!!validationError}
-          aria-describedby={
-            validationError ? `${fieldType}-error` : undefined
-          }
-        />
+        {multiline ? (
+          <Textarea
+            ref={textareaRef}
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder}
+            disabled={isPending}
+            className="flex-1 min-h-[60px]"
+            data-cy={sel(selectors.input)}
+            aria-invalid={!!(validationError || updateMutation.error)}
+            aria-describedby={
+              validationError || updateMutation.error ? `${fieldType}-error` : undefined
+            }
+          />
+        ) : (
+          <Input
+            ref={inputRef}
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder}
+            disabled={isPending}
+            className="flex-1"
+            data-cy={sel(selectors.input)}
+            aria-invalid={!!(validationError || updateMutation.error)}
+            aria-describedby={
+              validationError || updateMutation.error ? `${fieldType}-error` : undefined
+            }
+          />
+        )}
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
@@ -257,16 +278,20 @@ export function InlineEditableField({
         </div>
       </div>
 
-      {/* Validation error */}
-      {validationError && (
-        <Alert variant="destructive" data-cy={sel('teams.edit.error')}>
-          <AlertCircle className="h-4 w-4" />
+      {/* Validation error or mutation error */}
+      {(validationError || updateMutation.error) && (
+        <Alert
+          variant="destructive"
+          data-cy={sel('teams.edit.error')}
+          role="alert"
+          aria-live="assertive"
+        >
+          <AlertCircle className="h-4 w-4" aria-hidden="true" />
           <AlertDescription
             id={`${fieldType}-error`}
-            role="alert"
             data-cy={sel(selectors.error)}
           >
-            {validationError}
+            {validationError || updateMutation.error?.message || t('editTeam.error')}
           </AlertDescription>
         </Alert>
       )}

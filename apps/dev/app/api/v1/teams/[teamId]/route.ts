@@ -8,7 +8,7 @@ import {
   addCorsHeaders,
 } from '@nextsparkjs/core/lib/api/helpers'
 import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
-import { updateTeamSchema } from '@nextsparkjs/core/lib/teams/schema'
+import { updateTeamSchema, ownerUpdateTeamSchema } from '@nextsparkjs/core/lib/teams/schema'
 import { TeamService, MembershipService } from '@nextsparkjs/core/lib/services'
 import type { Team, TeamRole } from '@nextsparkjs/core/lib/teams/types'
 
@@ -115,29 +115,18 @@ export const PATCH = withApiLogging(
         return addCorsHeaders(response)
       }
 
-      // Check if user has permission to edit team using MembershipService
-      const membership = await MembershipService.get(authResult.user!.id, teamId)
-      const actionResult = membership.canPerformAction('teams.update')
-
-      if (!actionResult.allowed) {
-        const response = NextResponse.json(
-          {
-            success: false,
-            error: actionResult.message,
-            reason: actionResult.reason,
-            meta: actionResult.meta,
-          },
-          { status: 403 }
-        )
-        return addCorsHeaders(response)
-      }
-
       const body = await req.json()
-      const validatedData = updateTeamSchema.parse(body)
 
-      // Owner-only restriction for name/description updates
-      if (validatedData.name !== undefined || validatedData.description !== undefined) {
-        // Fetch team to verify ownership
+      // FIX #2: Check owner-only requirement FIRST for name/description fields
+      // This provides clearer error messages to users
+      // Issue: https://github.com/NextSpark-js/nextspark/pull/1 (Issue #2)
+      // FIX #1: Use 'in' operator to check property existence (not value truthiness)
+      // This prevents type coercion bypass with falsy values (empty string, null, 0, false)
+      // Issue: https://github.com/NextSpark-js/nextspark/pull/1 (Issue #1)
+      const isOwnerOnlyUpdate = 'name' in body || 'description' in body
+
+      if (isOwnerOnlyUpdate) {
+        // Fetch team to verify ownership BEFORE other checks
         const team = await TeamService.getById(teamId, authResult.user!.id)
 
         if (!team || team.ownerId !== authResult.user!.id) {
@@ -149,10 +138,37 @@ export const PATCH = withApiLogging(
           )
           return addCorsHeaders(response)
         }
+
+        // FIX #3: Use ownerUpdateTeamSchema for stricter validation of owner-only fields
+        // Issue: https://github.com/NextSpark-js/nextspark/pull/1 (Issue #3)
+        const validatedData = ownerUpdateTeamSchema.parse(body)
+
+        // Proceed with owner update (skip general permission check)
+      } else {
+        // Check general teams.update permission for non-owner-only fields
+        const membership = await MembershipService.get(authResult.user!.id, teamId)
+        const actionResult = membership.canPerformAction('teams.update')
+
+        if (!actionResult.allowed) {
+          const response = NextResponse.json(
+            {
+              success: false,
+              error: actionResult.message,
+              reason: actionResult.reason,
+              meta: actionResult.meta,
+            },
+            { status: 403 }
+          )
+          return addCorsHeaders(response)
+        }
       }
 
+      // Validate with appropriate schema based on update type
+      const schema = isOwnerOnlyUpdate ? ownerUpdateTeamSchema : updateTeamSchema
+      const validatedData = schema.parse(body) as Record<string, unknown>
+
       // Check if slug is being changed and if it's available
-      if (validatedData.slug) {
+      if ('slug' in validatedData && typeof validatedData.slug === 'string') {
         const slugAvailable = await TeamService.isSlugAvailable(validatedData.slug, teamId)
         if (!slugAvailable) {
           const response = createApiError('Team slug already exists', 409, null, 'SLUG_EXISTS')
@@ -165,27 +181,27 @@ export const PATCH = withApiLogging(
       const values = []
       let paramCount = 1
 
-      if (validatedData.name !== undefined) {
+      if ('name' in validatedData && validatedData.name !== undefined) {
         updates.push(`name = $${paramCount++}`)
         values.push(validatedData.name)
       }
 
-      if (validatedData.slug !== undefined) {
+      if ('slug' in validatedData && validatedData.slug !== undefined) {
         updates.push(`slug = $${paramCount++}`)
         values.push(validatedData.slug)
       }
 
-      if (validatedData.description !== undefined) {
+      if ('description' in validatedData && validatedData.description !== undefined) {
         updates.push(`description = $${paramCount++}`)
         values.push(validatedData.description)
       }
 
-      if (validatedData.avatarUrl !== undefined) {
+      if ('avatarUrl' in validatedData && validatedData.avatarUrl !== undefined) {
         updates.push(`"avatarUrl" = $${paramCount++}`)
         values.push(validatedData.avatarUrl)
       }
 
-      if (validatedData.settings !== undefined) {
+      if ('settings' in validatedData && validatedData.settings !== undefined) {
         updates.push(`settings = $${paramCount++}`)
         values.push(JSON.stringify(validatedData.settings))
       }

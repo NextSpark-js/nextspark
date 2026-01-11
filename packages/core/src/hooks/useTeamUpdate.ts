@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTeamContext } from '../contexts/TeamContext'
 
 interface TeamUpdatePayload {
-  name: string
+  name?: string
   description?: string | null
 }
 
