@@ -1,9 +1,12 @@
 'use client'
 
-import { Suspense, useMemo } from 'react'
+import { Suspense, useMemo, useState } from 'react'
 import { ChevronUp, ChevronDown } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Button } from '../../ui/button'
 import { cn } from '../../../lib/utils'
+import { sel } from '../../../lib/test'
+import { FloatingBlockToolbar } from './floating-block-toolbar'
 import type { BlockInstance } from '../../../types/blocks'
 import { getBlockComponent, normalizeBlockProps } from '../../../lib/blocks/loader'
 
@@ -26,6 +29,8 @@ interface BlockPreviewCanvasProps {
   onSelectBlock: (id: string) => void
   onMoveUp?: (id: string) => void
   onMoveDown?: (id: string) => void
+  onDuplicate?: (id: string) => void
+  onRemove?: (id: string) => void
 }
 
 export function BlockPreviewCanvas({
@@ -34,33 +39,43 @@ export function BlockPreviewCanvas({
   onSelectBlock,
   onMoveUp,
   onMoveDown,
+  onDuplicate,
+  onRemove,
 }: BlockPreviewCanvasProps) {
+  const t = useTranslations('admin.builder')
+  const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null)
+
   if (blocks.length === 0) {
     return (
       <div
         className="flex items-center justify-center min-h-[400px] rounded-lg border-2 border-dashed border-border bg-muted/10"
-        data-cy="block-preview-canvas-empty"
+        data-cy={sel('blockEditor.previewCanvas.empty')}
       >
         <div className="text-center">
-          <p className="text-muted-foreground mb-2">No blocks yet</p>
-          <p className="text-sm text-muted-foreground">Add blocks from the left sidebar</p>
+          <p className="text-muted-foreground mb-2">{t('canvas.empty.title')}</p>
+          <p className="text-sm text-muted-foreground">{t('canvas.empty.subtitle')}</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-0" data-cy="block-preview-canvas">
+    <div className="space-y-0" data-cy={sel('blockEditor.previewCanvas.container')}>
       {blocks.map((block, index) => (
         <SelectableBlockPreview
           key={block.id}
           block={block}
           isSelected={selectedBlockId === block.id}
+          isHovered={hoveredBlockId === block.id}
           onSelect={() => onSelectBlock(block.id)}
+          onHover={() => setHoveredBlockId(block.id)}
+          onLeave={() => setHoveredBlockId(null)}
           isFirst={index === 0}
           isLast={index === blocks.length - 1}
           onMoveUp={onMoveUp ? () => onMoveUp(block.id) : undefined}
           onMoveDown={onMoveDown ? () => onMoveDown(block.id) : undefined}
+          onDuplicate={onDuplicate ? () => onDuplicate(block.id) : undefined}
+          onRemove={onRemove ? () => onRemove(block.id) : undefined}
         />
       ))}
     </div>
@@ -70,22 +85,33 @@ export function BlockPreviewCanvas({
 interface SelectableBlockPreviewProps {
   block: BlockInstance
   isSelected: boolean
+  isHovered: boolean
   onSelect: () => void
+  onHover: () => void
+  onLeave: () => void
   isFirst?: boolean
   isLast?: boolean
   onMoveUp?: () => void
   onMoveDown?: () => void
+  onDuplicate?: () => void
+  onRemove?: () => void
 }
 
 function SelectableBlockPreview({
   block,
   isSelected,
+  isHovered,
   onSelect,
+  onHover,
+  onLeave,
   isFirst = false,
   isLast = false,
   onMoveUp,
   onMoveDown,
+  onDuplicate,
+  onRemove,
 }: SelectableBlockPreviewProps) {
+  const t = useTranslations('admin.builder')
   const BlockComponent = getBlockComponent(block.blockSlug)
 
   // Memoize normalized props to prevent unnecessary recalculations
@@ -102,7 +128,7 @@ function SelectableBlockPreview({
       >
         <div className="max-w-7xl mx-auto text-center">
           <p className="text-destructive">
-            Block not found: <code className="font-mono">{block.blockSlug}</code>
+            {t('canvas.error.blockNotFound')}: <code className="font-mono">{block.blockSlug}</code>
           </p>
         </div>
       </div>
@@ -123,23 +149,40 @@ function SelectableBlockPreview({
     <div
       className={cn(
         'relative cursor-pointer transition-all group',
-        'hover:ring-2 hover:ring-primary/50 hover:ring-offset-2',
-        isSelected && 'ring-2 ring-primary ring-offset-2'
+        'border-2 border-transparent',
+        'hover:border-primary/50',
+        isSelected && 'border-primary'
       )}
       onClick={onSelect}
-      data-cy={`preview-block-${block.id}`}
+      onMouseEnter={onHover}
+      onMouseLeave={onLeave}
+      data-cy={sel('blockEditor.previewCanvas.block', { id: block.id })}
     >
-      {/* Selection indicator label */}
+      {/* Floating Toolbar - visible on hover or selection */}
+      {(onDuplicate && onRemove) && (
+        <FloatingBlockToolbar
+          blockId={block.id}
+          blockSlug={block.blockSlug}
+          isVisible={isHovered || isSelected}
+          onDuplicate={onDuplicate}
+          onRemove={onRemove}
+        />
+      )}
+
+      {/* Editing Badge - visible only when selected */}
       {isSelected && (
-        <div className="absolute top-2 left-2 z-20 bg-primary text-primary-foreground text-xs px-2 py-1 rounded shadow-md">
-          Editing
+        <div
+          className="absolute top-2 right-2 z-20 bg-primary text-primary-foreground text-xs px-2 py-1 rounded shadow-md"
+          data-cy={sel('blockEditor.previewCanvas.editingBadge', { id: block.id })}
+        >
+          {t('canvas.editingBadge')}
         </div>
       )}
 
-      {/* Reorder controls - visible on hover or when selected */}
+      {/* Legacy Reorder controls - visible on hover or when selected (kept for backward compatibility) */}
       {(onMoveUp || onMoveDown) && (
         <div className={cn(
-          'absolute top-2 right-2 z-20 flex gap-1 transition-opacity',
+          'absolute top-2 left-2 z-20 flex gap-1 transition-opacity',
           'opacity-0 group-hover:opacity-100',
           isSelected && 'opacity-100'
         )}>
@@ -149,7 +192,7 @@ function SelectableBlockPreview({
             className="h-7 w-7 shadow-md"
             onClick={handleMoveUp}
             disabled={isFirst}
-            data-cy={`preview-block-${block.id}-move-up`}
+            data-cy={sel('blockEditor.previewCanvas.moveUp', { id: block.id })}
           >
             <ChevronUp className="h-4 w-4" />
           </Button>
@@ -159,7 +202,7 @@ function SelectableBlockPreview({
             className="h-7 w-7 shadow-md"
             onClick={handleMoveDown}
             disabled={isLast}
-            data-cy={`preview-block-${block.id}-move-down`}
+            data-cy={sel('blockEditor.previewCanvas.moveDown', { id: block.id })}
           >
             <ChevronDown className="h-4 w-4" />
           </Button>

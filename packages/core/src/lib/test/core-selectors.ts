@@ -374,9 +374,46 @@ export const CORE_SELECTORS = {
     leftSidebarToggle: 'left-sidebar-toggle',
     viewModeToggle: 'view-mode-toggle',
 
+    // === NEW: Builder Header ===
+    header: {
+      container: 'builder-header',
+      backButton: 'builder-back-btn',
+      titleWrapper: 'builder-title-wrapper',
+      titleInput: 'builder-title-input',
+      slugWrapper: 'builder-slug-wrapper',
+      slugPrefix: 'builder-slug-prefix',
+      slugInput: 'builder-slug-input',
+      externalLink: 'builder-external-link',
+      viewModeToggle: 'builder-view-toggle',
+      viewModeEditor: 'builder-view-editor',
+      viewModePreview: 'builder-view-preview',
+      statusWrapper: 'builder-status-wrapper',
+      statusDot: 'builder-status-dot',
+      statusLabel: 'builder-status-label',
+      saveDraftBtn: 'builder-save-draft-btn',
+      publishBtn: 'builder-publish-btn',
+      settingsBtn: 'builder-settings-btn',
+    },
+
     blockPicker: {
       container: 'block-picker',
+      tabBlocks: 'block-picker-tab-blocks',
+      tabConfig: 'block-picker-tab-config',
+      tabIndicator: 'block-picker-tab-indicator',
+      searchWrapper: 'block-picker-search-wrapper',
       searchInput: 'block-search-input',
+      searchIcon: 'block-picker-search-icon',
+      categoryChips: 'block-picker-category-chips',
+      categoryChip: 'block-picker-category-{category}',
+      categoryChipActive: 'block-picker-category-active',
+      blockList: 'block-picker-list',
+      blockCard: 'block-picker-card-{slug}',
+      blockIcon: 'block-picker-icon-{slug}',
+      blockName: 'block-picker-name-{slug}',
+      blockDescription: 'block-picker-desc-{slug}',
+      blockCategory: 'block-picker-cat-{slug}',
+      blockAddBtn: 'block-picker-add-{slug}',
+      // Legacy selectors for backward compatibility
       categoryAll: 'category-all',
       category: 'category-{category}',
       blockItem: 'block-item-{slug}',
@@ -389,16 +426,41 @@ export const CORE_SELECTORS = {
     },
 
     previewCanvas: {
-      container: 'block-preview-canvas',
-      empty: 'block-preview-canvas-empty',
+      container: 'preview-canvas',
+      canvasWrapper: 'preview-canvas-wrapper',
+      canvasContent: 'preview-canvas-content',
+      empty: 'preview-canvas-empty',
       block: 'preview-block-{id}',
+      blockWrapper: 'preview-block-wrapper-{id}',
+      blockSelected: 'preview-block-selected',
+      editingBadge: 'preview-editing-badge-{id}',
+      // Legacy selectors for backward compatibility
       moveUp: 'preview-block-{id}-move-up',
       moveDown: 'preview-block-{id}-move-down',
     },
 
+    // === NEW: Floating Block Toolbar ===
+    floatingToolbar: {
+      container: 'floating-toolbar-{id}',
+      dragHandle: 'floating-toolbar-drag-{id}',
+      blockName: 'floating-toolbar-name-{id}',
+      divider: 'floating-toolbar-divider-{id}',
+      duplicateBtn: 'floating-toolbar-duplicate-{id}',
+      deleteBtn: 'floating-toolbar-delete-{id}',
+    },
+
     sortableBlock: {
       container: 'sortable-block-{id}',
-      dragHandle: 'drag-handle-{id}',
+      card: 'sortable-block-card-{id}',
+      dragHandle: 'sortable-block-drag-{id}',
+      info: 'sortable-block-info-{id}',
+      name: 'sortable-block-name-{id}',
+      category: 'sortable-block-category-{id}',
+      propsPreview: 'sortable-block-props-{id}',
+      actions: 'sortable-block-actions-{id}',
+      duplicateBtn: 'sortable-block-duplicate-{id}',
+      removeBtn: 'sortable-block-remove-{id}',
+      // Legacy selectors for backward compatibility
       duplicate: 'duplicate-block-{id}',
       remove: 'remove-block-{id}',
       error: 'block-error-{id}',
@@ -406,13 +468,23 @@ export const CORE_SELECTORS = {
 
     settingsPanel: {
       container: 'block-settings-panel',
+      header: 'settings-panel-header',
+      title: 'settings-panel-title',
+      closeBtn: 'settings-panel-close',
+      blockName: 'settings-panel-block-name',
+      blockIdentifier: 'settings-panel-block-id',
+      tabs: 'settings-panel-tabs',
+      tabContent: 'settings-panel-tab-content',
+      tabDesign: 'settings-panel-tab-design',
+      tabAdvanced: 'settings-panel-tab-advanced',
+      tabIndicator: 'settings-panel-tab-indicator',
       empty: 'settings-panel-empty',
       error: 'settings-panel-error',
+      resetBtn: 'settings-panel-reset',
+      removeBtn: 'settings-panel-remove',
+      // Legacy selectors for backward compatibility
       resetProps: 'reset-block-props',
       removeBlock: 'remove-block-settings',
-      tabContent: 'tab-content',
-      tabDesign: 'tab-design',
-      tabAdvanced: 'tab-advanced',
     },
 
     pageSettings: {
@@ -912,6 +984,8 @@ export const CORE_SELECTORS = {
         prefix: 'api-explorer-prefix-{category}-{prefix}',
         endpoint: 'api-explorer-endpoint-{method}-{path}',
       },
+      // Docs button
+      docsBtn: 'api-explorer-docs-btn',
       // Request panel
       request: {
         panel: 'api-request-panel',
@@ -919,6 +993,7 @@ export const CORE_SELECTORS = {
         cancelBtn: 'api-request-cancel-btn',
         tabParams: 'api-request-tab-params',
         tabHeaders: 'api-request-tab-headers',
+        tabPresets: 'api-request-tab-presets',
         tabBody: 'api-request-tab-body',
         queryKey: 'api-request-query-key-{index}',
         queryValue: 'api-request-query-value-{index}',
@@ -964,6 +1039,14 @@ export const CORE_SELECTORS = {
         search: 'team-selector-search',
         crossTeam: 'team-selector-cross-team',
         bypassOption: 'team-selector-option-{id}',
+      },
+      // Presets tab
+      presets: {
+        tab: 'api-presets-tab',
+        empty: 'api-presets-empty',
+        card: 'api-presets-card-{id}',
+        viewBtn: 'api-presets-view-{id}',
+        applyBtn: 'api-presets-apply-{id}',
       },
     },
   },

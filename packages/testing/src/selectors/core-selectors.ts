@@ -406,6 +406,11 @@ export const CORE_SELECTORS = {
 
     settingsPanel: {
       container: 'block-settings-panel',
+      title: 'settings-panel-title',
+      header: 'settings-panel-header',
+      closeBtn: 'settings-panel-close',
+      blockName: 'settings-panel-block-name',
+      blockIdentifier: 'settings-panel-block-id',
       empty: 'settings-panel-empty',
       error: 'settings-panel-error',
       resetProps: 'reset-block-props',

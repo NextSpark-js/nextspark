@@ -11,9 +11,10 @@ import { Input } from '../../ui/input'
 import { Label } from '../../ui/label'
 import { Separator } from '../../ui/separator'
 import { Badge } from '../../ui/badge'
-import { ArrowLeft, Save, ExternalLink, LayoutGrid, FileText } from 'lucide-react'
+import { ArrowLeft, Save, ExternalLink, LayoutGrid, FileText, Eye, PenTool, Settings } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { sel } from '../../../lib/test'
 import { BlockPicker } from './block-picker'
 import { BlockCanvas } from './block-canvas'
 import { BlockPreviewCanvas } from './block-preview-canvas'
@@ -210,6 +211,30 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
     saveMutation.mutate(data)
   }, [title, slug, blocks, status, pageSettings, entityFields, saveMutation])
 
+  const handleSaveDraft = useCallback(() => {
+    const data: Record<string, unknown> = {
+      title,
+      slug,
+      blocks,
+      status: 'draft',
+      settings: pageSettings,
+      ...entityFields,
+    }
+    saveMutation.mutate(data)
+  }, [title, slug, blocks, pageSettings, entityFields, saveMutation])
+
+  const handlePublish = useCallback(() => {
+    const data: Record<string, unknown> = {
+      title,
+      slug,
+      blocks,
+      status: 'published',
+      settings: pageSettings,
+      ...entityFields,
+    }
+    saveMutation.mutate(data)
+  }, [title, slug, blocks, pageSettings, entityFields, saveMutation])
+
   // Block operations
   const handleAddBlock = useCallback((blockSlug: string) => {
     const newBlock: BlockInstance = {
@@ -340,148 +365,175 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
     <div className={cn(
       "fixed inset-0 pt-14 pb-20 lg:top-16 lg:pt-0 lg:pb-0 flex flex-col bg-background z-20 transition-all duration-300",
       isCollapsed ? "lg:left-16" : "lg:left-64"
-    )} data-cy="builder-editor">
-      {/* Top Bar */}
-      <div className="shrink-0 border-b bg-background p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" asChild>
+    )} data-cy={sel('blockEditor.container')}>
+      {/* Top Bar - Redesigned Header */}
+      <header
+        className="shrink-0 border-b bg-background h-16 shadow-sm"
+        data-cy={sel('blockEditor.header.container')}
+      >
+        <div className="h-full flex items-center justify-between px-4">
+          {/* Left: Navigation & Title/Slug */}
+          <div className="flex items-center gap-4 flex-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              asChild
+              data-cy={sel('blockEditor.header.backButton')}
+            >
               <Link href={`/dashboard/${entitySlug}`}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                {t('back')}
+                <ArrowLeft className="h-4 w-4" />
               </Link>
             </Button>
 
-            <Separator orientation="vertical" className="h-6" />
+            <Separator orientation="vertical" className="h-8" />
 
-            {/* Left Sidebar Toggle */}
-            <div data-cy="left-sidebar-toggle">
-              <ButtonGroup
-                options={leftSidebarOptions}
-                value={leftSidebarMode === 'none' ? undefined : leftSidebarMode}
-                onChange={handleLeftSidebarToggle}
-                size="sm"
+            {/* Inline Title/Slug Editing */}
+            <div className="flex flex-col justify-center" data-cy={sel('blockEditor.header.titleWrapper')}>
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="h-8 w-64 text-lg font-semibold bg-transparent border-transparent hover:border-border hover:bg-muted/50 focus:border-primary focus:bg-background transition-all"
+                placeholder={t('placeholders.title')}
+                data-cy={sel('blockEditor.header.titleInput')}
               />
-            </div>
-
-            <Separator orientation="vertical" className="h-6" />
-
-            <div className="flex items-center gap-4">
-              <div>
-                <Label htmlFor="entity-title" className="text-xs text-muted-foreground">
-                  {t('fields.title')}
-                </Label>
+              <div
+                className="flex items-center gap-1 text-xs text-muted-foreground px-2"
+                data-cy={sel('blockEditor.header.slugWrapper')}
+              >
+                <span className="opacity-60" data-cy={sel('blockEditor.header.slugPrefix')}>/</span>
                 <Input
-                  id="entity-title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="h-8 w-64"
-                  placeholder={t('placeholders.title')}
-                  data-cy="editor-title-input"
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value)}
+                  className="h-6 w-32 text-xs bg-transparent border-transparent hover:border-border hover:bg-muted/50 focus:border-primary focus:bg-background transition-all px-1"
+                  placeholder={t('placeholders.slug')}
+                  data-cy={sel('blockEditor.header.slugInput')}
                 />
+                {publicUrl && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-4 w-4 p-0"
+                    asChild
+                    data-cy={sel('blockEditor.header.externalLink')}
+                  >
+                    <Link href={publicUrl} target="_blank">
+                      <ExternalLink className="h-3 w-3" />
+                    </Link>
+                  </Button>
+                )}
               </div>
-
-              <div>
-                <Label htmlFor="entity-slug" className="text-xs text-muted-foreground">
-                  {t('fields.slug')}
-                </Label>
-                <div className="flex items-center gap-1">
-                  <span className="text-sm text-muted-foreground">/</span>
-                  <Input
-                    id="entity-slug"
-                    value={slug}
-                    onChange={(e) => setSlug(e.target.value)}
-                    className="h-8 w-48 font-mono text-sm"
-                    placeholder={t('placeholders.slug')}
-                    data-cy="editor-slug-input"
-                  />
-                </div>
-              </div>
-
-              {publicUrl && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  asChild
-                  className="h-6 px-2"
-                >
-                  <Link href={publicUrl} target="_blank">
-                    <ExternalLink className="h-3.5 w-3.5 mr-1" />
-                    {t('actions.viewPage')}
-                  </Link>
-                </Button>
-              )}
-
-              {hasUnsavedChanges && (
-                <Badge variant="secondary">{t('status.unsaved')}</Badge>
-              )}
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* View Mode Toggle */}
-            <div data-cy="view-mode-toggle">
-              <ButtonGroup
-                options={[
-                  { value: 'layout', label: t('viewMode.layout'), dataCy: 'mode-layout' },
-                  { value: 'preview', label: t('viewMode.preview'), dataCy: 'mode-preview' },
-                ]}
-                value={viewMode}
-                onChange={(value) => setViewMode(value as ViewMode)}
-                size="sm"
+          {/* Center: View Mode Toggle */}
+          <div
+            className="bg-muted p-1 rounded-lg flex items-center text-sm font-medium"
+            data-cy={sel('blockEditor.header.viewModeToggle')}
+          >
+            <button
+              className={cn(
+                'px-3 py-1.5 rounded-md transition-all flex items-center gap-2',
+                viewMode === 'layout'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10'
+              )}
+              onClick={() => setViewMode('layout')}
+              data-cy={sel('blockEditor.header.viewModeEditor')}
+            >
+              <PenTool className="h-3.5 w-3.5" />
+              <span>{t('viewMode.layout')}</span>
+            </button>
+            <button
+              className={cn(
+                'px-3 py-1.5 rounded-md transition-all flex items-center gap-2',
+                viewMode === 'preview'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10'
+              )}
+              onClick={() => setViewMode('preview')}
+              data-cy={sel('blockEditor.header.viewModePreview')}
+            >
+              <Eye className="h-3.5 w-3.5" />
+              <span>{t('viewMode.preview')}</span>
+            </button>
+          </div>
+
+          {/* Right: Status & Actions */}
+          <div className="flex items-center gap-3 flex-1 justify-end">
+            {/* Status Indicator */}
+            <div
+              className="flex items-center gap-2 mr-2"
+              data-cy={sel('blockEditor.header.statusWrapper')}
+            >
+              <span
+                className={cn(
+                  'w-2 h-2 rounded-full',
+                  status === 'published' && 'bg-green-500',
+                  status === 'draft' && 'bg-gray-400',
+                  status === 'scheduled' && 'bg-blue-500',
+                  status === 'archived' && 'bg-red-500'
+                )}
+                data-cy={sel('blockEditor.header.statusDot')}
               />
+              <span
+                className="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+                data-cy={sel('blockEditor.header.statusLabel')}
+              >
+                {statusOptions.find(o => o.value === status)?.label || status}
+              </span>
             </div>
 
-            <Separator orientation="vertical" className="h-6" />
-
-            {/* Status Selector */}
-            <StatusSelector
-              value={status}
-              onChange={setStatus}
+            {/* Save Draft Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSaveDraft}
               disabled={saveMutation.isPending}
-              options={statusOptions}
-            />
-
-            {/* Status Badge */}
-            <Badge
-              variant={status === 'published' ? 'default' : 'secondary'}
-              className={status === 'published' ? 'bg-success text-success-foreground' : ''}
-              data-cy="status-badge"
+              data-cy={sel('blockEditor.header.saveDraftBtn')}
             >
-              {statusOptions.find(o => o.value === status)?.label || status}
-            </Badge>
+              {t('header.actions.saveDraft')}
+            </Button>
 
-            {/* Save Button */}
+            {/* Publish/Update Button */}
             <Button
               size="sm"
-              onClick={handleSave}
-              disabled={!hasUnsavedChanges || saveMutation.isPending}
-              data-cy="save-btn"
+              onClick={status === 'published' ? handleSave : handlePublish}
+              disabled={saveMutation.isPending}
+              data-cy={sel('blockEditor.header.publishBtn')}
             >
-              <Save className="h-4 w-4 mr-2" />
-              {saveMutation.isPending ? t('actions.saving') : t('actions.save')}
+              <span>{status === 'published' ? t('header.actions.update') : t('header.actions.publish')}</span>
+              <Save className="h-4 w-4 ml-2" />
+            </Button>
+
+            <Separator orientation="vertical" className="h-8" />
+
+            {/* Settings Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              data-cy={sel('blockEditor.header.settingsBtn')}
+            >
+              <Settings className="h-4 w-4" />
             </Button>
           </div>
         </div>
-      </div>
+      </header>
 
       {/* Main Layout */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Sidebar */}
-        {leftSidebarMode !== 'none' && (
-          <div className="w-80 border-r overflow-hidden shrink-0">
-            {leftSidebarMode === 'blocks' && (
-              <BlockPicker blocks={availableBlocks} onAddBlock={handleAddBlock} />
-            )}
-            {leftSidebarMode === 'fields' && showFieldsOption && (
-              <EntityFieldsSidebar
-                entityConfig={entityConfig}
-                fields={entityFields}
-                onChange={handleEntityFieldChange}
-              />
-            )}
-          </div>
-        )}
+        {/* Left Sidebar - Always visible with tabs inside */}
+        <div className="w-80 border-r overflow-hidden shrink-0 shadow-sm">
+          <BlockPicker
+            blocks={availableBlocks}
+            onAddBlock={handleAddBlock}
+            entityConfig={entityConfig}
+            entityFields={entityFields}
+            onEntityFieldChange={handleEntityFieldChange}
+            showFieldsTab={!!showFieldsOption}
+          />
+        </div>
 
         {/* Center - Block Canvas / Preview */}
         <div className="flex-1 overflow-y-auto bg-gray-100">
@@ -516,13 +568,15 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
                 onSelectBlock={setSelectedBlockId}
                 onMoveUp={handleMoveBlockUp}
                 onMoveDown={handleMoveBlockDown}
+                onDuplicate={handleDuplicateBlock}
+                onRemove={handleRemoveBlock}
               />
             </div>
           )}
         </div>
 
         {/* Right Sidebar - Block Settings */}
-        <div className="w-96 border-l overflow-hidden">
+        <div className="w-96 border-l overflow-hidden shadow-sm">
           <BlockSettingsPanel
             block={selectedBlock}
             onUpdateProps={(props) => {
@@ -535,6 +589,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
                 handleRemoveBlock(selectedBlockId)
               }
             }}
+            onClose={() => setSelectedBlockId(null)}
           />
         </div>
       </div>

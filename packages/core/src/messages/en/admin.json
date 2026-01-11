@@ -203,13 +203,66 @@
       "layout": "Layout",
       "preview": "Preview"
     },
+    "header": {
+      "actions": {
+        "saveDraft": "Save Draft",
+        "publish": "Publish",
+        "update": "Update"
+      }
+    },
     "sidebar": {
       "blocks": "Blocks",
       "fields": "Fields",
       "fieldsTitle": "Entity Fields",
       "fieldsDescription": "Configure additional properties",
       "noFields": "No additional fields available",
-      "noCategories": "No categories available"
+      "noCategories": "No categories available",
+      "tabs": {
+        "blocks": "Blocks",
+        "config": "Configuration"
+      },
+      "search": {
+        "placeholder": "Search blocks..."
+      },
+      "categories": {
+        "all": "All"
+      },
+      "addBlock": "Add block",
+      "empty": "No blocks found"
+    },
+    "canvas": {
+      "empty": {
+        "title": "No blocks yet",
+        "subtitle": "Add blocks from the left sidebar"
+      },
+      "editingBadge": "Editing",
+      "error": {
+        "blockNotFound": "Block not found"
+      }
+    },
+    "floatingToolbar": {
+      "drag": "Drag to reorder",
+      "duplicate": "Duplicate block",
+      "delete": "Delete block"
+    },
+    "settingsPanel": {
+      "title": "Block Properties",
+      "empty": {
+        "message": "No block selected",
+        "hint": "Select a block from the canvas to edit its settings"
+      },
+      "error": {
+        "notFound": "Block configuration not found"
+      },
+      "actions": {
+        "reset": "Reset",
+        "remove": "Remove"
+      },
+      "tabs": {
+        "content": "Content",
+        "design": "Design",
+        "advanced": "Advanced"
+      }
     },
     "messages": {
       "saved": "Saved successfully",

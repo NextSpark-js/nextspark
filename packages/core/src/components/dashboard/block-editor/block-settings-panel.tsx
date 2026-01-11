@@ -1,12 +1,13 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Button } from '../../ui/button'
 import { Card, CardContent } from '../../ui/card'
 import { Badge } from '../../ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs'
-import { Trash2, RotateCcw, FileText, Palette, Settings2 } from 'lucide-react'
+import { Trash2, RotateCcw, FileText, Palette, Settings2, X, SlidersHorizontal, Layers } from 'lucide-react'
+import { cn } from '../../../lib/utils'
+import { sel } from '../../../lib/test'
 import { DynamicForm } from './dynamic-form'
 import type { BlockInstance, FieldDefinition, FieldTab } from '../../../types/blocks'
 import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry'
@@ -15,6 +16,7 @@ interface BlockSettingsPanelProps {
   block: BlockInstance | undefined
   onUpdateProps: (props: Record<string, unknown>) => void
   onRemove: () => void
+  onClose?: () => void
 }
 
 /**
@@ -35,12 +37,16 @@ function groupFieldsByTab(fields: FieldDefinition[]): Record<FieldTab, FieldDefi
   return grouped
 }
 
+type SettingsTab = 'content' | 'design' | 'advanced'
+
 export function BlockSettingsPanel({
   block,
   onUpdateProps,
   onRemove,
+  onClose,
 }: BlockSettingsPanelProps) {
-  const t = useTranslations('admin.blockEditor.settings')
+  const t = useTranslations('admin.builder.settingsPanel')
+  const [activeTab, setActiveTab] = useState<SettingsTab>('content')
 
   // Memoize grouped fields
   const groupedFields = useMemo(() => {
@@ -52,7 +58,7 @@ export function BlockSettingsPanel({
 
   if (!block) {
     return (
-      <div className="flex h-full items-center justify-center p-8 bg-muted/10" data-cy="settings-panel-empty">
+      <div className="flex h-full items-center justify-center p-8 bg-muted/10" data-cy={sel('blockEditor.settingsPanel.empty')}>
         <div className="text-center">
           <p className="text-muted-foreground">{t('empty.message')}</p>
           <p className="text-sm text-muted-foreground mt-1">{t('empty.hint')}</p>
@@ -65,7 +71,7 @@ export function BlockSettingsPanel({
 
   if (!blockConfig) {
     return (
-      <div className="p-4" data-cy="settings-panel-error">
+      <div className="p-4" data-cy={sel('blockEditor.settingsPanel.error')}>
         <Card className="border-destructive">
           <CardContent className="p-4">
             <p className="text-destructive text-sm">
@@ -88,82 +94,113 @@ export function BlockSettingsPanel({
   const hasAnyFields = hasContentFields || hasDesignFields || hasAdvancedFields
 
   return (
-    <div className="flex h-full flex-col bg-card" data-cy="block-settings-panel">
-      {/* Header */}
-      <div className="border-b p-4">
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-foreground truncate">{blockConfig.name}</h3>
-            <p className="text-xs text-muted-foreground mt-1">{blockConfig.description}</p>
+    <div className="flex h-full flex-col bg-card" data-cy={sel('blockEditor.settingsPanel.container')}>
+      {/* Header - Panel Title */}
+      <div className="border-b p-4" data-cy={sel('blockEditor.settingsPanel.header')}>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal className="h-5 w-5 text-primary" />
+            <h3
+              className="text-lg font-semibold text-foreground"
+              data-cy={sel('blockEditor.settingsPanel.title')}
+            >
+              {t('title')}
+            </h3>
           </div>
-          <Badge variant="outline" className="capitalize">
-            {blockConfig.category}
-          </Badge>
+          {onClose && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={onClose}
+              data-cy={sel('blockEditor.settingsPanel.closeBtn')}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
 
-        <div className="flex gap-2 mt-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleReset}
-            className="flex-1"
-            data-cy="reset-block-props"
+        {/* Block Name */}
+        <div
+          className="flex items-center gap-2 bg-muted/50 px-3 py-2 rounded-md"
+          data-cy={sel('blockEditor.settingsPanel.blockIdentifier')}
+        >
+          <Layers className="h-4 w-4 text-muted-foreground" />
+          <span
+            className="text-sm text-foreground"
+            data-cy={sel('blockEditor.settingsPanel.blockName')}
           >
-            <RotateCcw className="h-4 w-4 mr-2" />
-            {t('actions.reset')}
-          </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={onRemove}
-            data-cy="remove-block-settings"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            {t('actions.remove')}
-          </Button>
+            {blockConfig.name}
+          </span>
         </div>
       </div>
 
       {/* Tabbed Content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden flex flex-col">
         {hasAnyFields ? (
-          <Tabs defaultValue="content" className="h-full flex flex-col">
-            <div className="border-b px-4 pt-2">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger
-                  value="content"
-                  className="flex items-center gap-1.5"
-                  disabled={!hasContentFields}
-                  data-cy="tab-content"
-                >
-                  <FileText className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">{t('tabs.content')}</span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="design"
-                  className="flex items-center gap-1.5"
-                  disabled={!hasDesignFields}
-                  data-cy="tab-design"
-                >
-                  <Palette className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">{t('tabs.design')}</span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="advanced"
-                  className="flex items-center gap-1.5"
-                  disabled={!hasAdvancedFields}
-                  data-cy="tab-advanced"
-                >
-                  <Settings2 className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">{t('tabs.advanced')}</span>
-                </TabsTrigger>
-              </TabsList>
+          <>
+            {/* Custom Tabs with Underline Style */}
+            <div className="flex border-b border-border" data-cy={sel('blockEditor.settingsPanel.tabs')}>
+              <button
+                className={cn(
+                  'flex-1 py-3 text-sm font-medium transition-all relative flex items-center justify-center gap-1.5',
+                  activeTab === 'content'
+                    ? 'text-primary bg-primary/5'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                  !hasContentFields && 'opacity-50 cursor-not-allowed'
+                )}
+                onClick={() => hasContentFields && setActiveTab('content')}
+                disabled={!hasContentFields}
+                data-cy={sel('blockEditor.settingsPanel.tabContent')}
+              >
+                <FileText className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">{t('tabs.content')}</span>
+                {activeTab === 'content' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                )}
+              </button>
+              <button
+                className={cn(
+                  'flex-1 py-3 text-sm font-medium transition-all relative flex items-center justify-center gap-1.5',
+                  activeTab === 'design'
+                    ? 'text-primary bg-primary/5'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                  !hasDesignFields && 'opacity-50 cursor-not-allowed'
+                )}
+                onClick={() => hasDesignFields && setActiveTab('design')}
+                disabled={!hasDesignFields}
+                data-cy={sel('blockEditor.settingsPanel.tabDesign')}
+              >
+                <Palette className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">{t('tabs.design')}</span>
+                {activeTab === 'design' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                )}
+              </button>
+              <button
+                className={cn(
+                  'flex-1 py-3 text-sm font-medium transition-all relative flex items-center justify-center gap-1.5',
+                  activeTab === 'advanced'
+                    ? 'text-primary bg-primary/5'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                  !hasAdvancedFields && 'opacity-50 cursor-not-allowed'
+                )}
+                onClick={() => hasAdvancedFields && setActiveTab('advanced')}
+                disabled={!hasAdvancedFields}
+                data-cy={sel('blockEditor.settingsPanel.tabAdvanced')}
+              >
+                <Settings2 className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">{t('tabs.advanced')}</span>
+                {activeTab === 'advanced' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                )}
+              </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto">
-              {/* Content Tab */}
-              <TabsContent value="content" className="p-4 m-0 h-full">
-                {hasContentFields ? (
+            {/* Tab Content */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {activeTab === 'content' && (
+                hasContentFields ? (
                   <DynamicForm
                     fieldDefinitions={groupedFields!.content}
                     values={block.props}
@@ -171,12 +208,11 @@ export function BlockSettingsPanel({
                   />
                 ) : (
                   <EmptyTabMessage message={t('tabs.noContentFields')} />
-                )}
-              </TabsContent>
+                )
+              )}
 
-              {/* Design Tab */}
-              <TabsContent value="design" className="p-4 m-0 h-full">
-                {hasDesignFields ? (
+              {activeTab === 'design' && (
+                hasDesignFields ? (
                   <DynamicForm
                     fieldDefinitions={groupedFields!.design}
                     values={block.props}
@@ -184,12 +220,11 @@ export function BlockSettingsPanel({
                   />
                 ) : (
                   <EmptyTabMessage message={t('tabs.noDesignFields')} />
-                )}
-              </TabsContent>
+                )
+              )}
 
-              {/* Advanced Tab */}
-              <TabsContent value="advanced" className="p-4 m-0 h-full">
-                {hasAdvancedFields ? (
+              {activeTab === 'advanced' && (
+                hasAdvancedFields ? (
                   <DynamicForm
                     fieldDefinitions={groupedFields!.advanced}
                     values={block.props}
@@ -197,10 +232,10 @@ export function BlockSettingsPanel({
                   />
                 ) : (
                   <EmptyTabMessage message={t('tabs.noAdvancedFields')} />
-                )}
-              </TabsContent>
+                )
+              )}
             </div>
-          </Tabs>
+          </>
         ) : (
           <div className="p-4">
             <div className="text-center py-8 text-muted-foreground">
