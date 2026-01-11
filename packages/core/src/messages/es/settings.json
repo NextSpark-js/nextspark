@@ -390,6 +390,7 @@
     "yourTeam": "Tu Equipo",
     "yourTeams": "Tus Equipos",
     "yourTeamsDescription": "Equipos de los que eres miembro. Selecciona uno para ver sus detalles.",
+    "singleUserDescription": "Tu espacio de trabajo personal.",
     "noTeams": "No perteneces a ningún equipo todavía.",
     "manageTeamMembers": "Gestiona los miembros y configuración del equipo."
   },

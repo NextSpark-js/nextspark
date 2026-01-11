@@ -35,8 +35,14 @@
     "viewer": "Read-only access to team content"
   },
 
+  "entity": {
+    "description": "Manage your teams, members and invitations",
+    "plural": "Teams"
+  },
+
   "actions": {
     "create": "Create Team",
+    "creating": "Creating...",
     "edit": "Edit Team",
     "delete": "Delete Team",
     "leave": "Leave Team",
@@ -78,7 +84,22 @@
   "editTeam": {
     "title": "Edit Team",
     "success": "Team updated successfully",
-    "error": "Failed to update team"
+    "error": "Failed to update team",
+    "saving": "Saving...",
+    "editName": "Edit team name",
+    "editDescription": "Edit description",
+    "saveName": "Save name",
+    "saveDescription": "Save description",
+    "save": "Save",
+    "cancel": "Cancel",
+    "editField": "Edit {field}",
+    "noValue": "Not set"
+  },
+
+  "validation": {
+    "nameRequired": "Team name is required",
+    "nameMinLength": "Name must be at least 2 characters",
+    "nameMaxLength": "Name must be at most 100 characters"
   },
 
   "deleteTeam": {
@@ -156,11 +177,26 @@
     "permissionDenied": "You don't have permission to perform this action",
     "cannotDeletePersonal": "Cannot delete personal team",
     "cannotLeaveOwner": "Team owners cannot leave. Transfer ownership first.",
-    "lastAdmin": "Cannot remove the last admin from the team"
+    "lastAdmin": "Cannot remove the last admin from the team",
+    "ownerOnlyEdit": "Only team owners can edit team name and description"
   },
 
   "empty": {
     "title": "No teams yet",
     "description": "Create your first team to start collaborating"
+  },
+
+  "fields": {
+    "name": "Team Name",
+    "slug": "Team Slug",
+    "description": "Description (optional)",
+    "email": "Email Address",
+    "role": "Your Role",
+    "joinedAt": "Joined Date"
+  },
+
+  "messages": {
+    "created": "Team created successfully",
+    "loading": "Loading teams..."
   }
 }
