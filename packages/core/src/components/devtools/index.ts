@@ -23,3 +23,6 @@ export * from './bdd'
 
 // API Tester
 export { ApiTester } from './api-tester'
+
+// API Explorer (Postman-like)
+export * from './api-explorer'

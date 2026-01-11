@@ -897,6 +897,75 @@ export const CORE_SELECTORS = {
       paginationNext: 'scheduled-actions-pagination-next',
       emptyState: 'scheduled-actions-empty-state',
     },
+    apiExplorer: {
+      // Main container
+      container: 'api-explorer',
+      mobileToggle: 'api-explorer-mobile-toggle',
+      // Sidebar
+      sidebar: {
+        container: 'api-explorer-sidebar',
+        collapsed: 'api-explorer-sidebar-collapsed',
+        expand: 'api-explorer-sidebar-expand',
+        collapse: 'api-explorer-sidebar-collapse',
+        search: 'api-explorer-search',
+        category: 'api-explorer-category-{category}',
+        prefix: 'api-explorer-prefix-{category}-{prefix}',
+        endpoint: 'api-explorer-endpoint-{method}-{path}',
+      },
+      // Request panel
+      request: {
+        panel: 'api-request-panel',
+        sendBtn: 'api-request-send-btn',
+        cancelBtn: 'api-request-cancel-btn',
+        tabParams: 'api-request-tab-params',
+        tabHeaders: 'api-request-tab-headers',
+        tabBody: 'api-request-tab-body',
+        queryKey: 'api-request-query-key-{index}',
+        queryValue: 'api-request-query-value-{index}',
+        queryEnabled: 'api-request-query-enabled-{index}',
+        queryRemove: 'api-request-query-remove-{index}',
+        queryAdd: 'api-request-query-add',
+        headerKey: 'api-request-header-key-{index}',
+        headerValue: 'api-request-header-value-{index}',
+        headerEnabled: 'api-request-header-enabled-{index}',
+        headerRemove: 'api-request-header-remove-{index}',
+        headerAdd: 'api-request-header-add',
+      },
+      // Response panel
+      response: {
+        panel: 'api-response-panel',
+        panelIdle: 'api-response-panel-idle',
+        panelLoading: 'api-response-panel-loading',
+        panelError: 'api-response-panel-error',
+        status: 'api-response-status',
+        time: 'api-response-time',
+        tabBody: 'api-response-tab-body',
+        tabHeaders: 'api-response-tab-headers',
+        body: 'api-response-body',
+        headers: 'api-response-headers',
+      },
+      // Auth selector
+      auth: {
+        container: 'api-tester-auth',
+        typeGroup: 'api-tester-auth-type',
+        sessionOption: 'api-tester-auth-session',
+        apiKeyOption: 'api-tester-auth-apikey',
+        apiKeyInput: 'api-tester-apikey-input',
+        bypassToggle: 'api-tester-bypass-toggle',
+      },
+      // Team selector
+      team: {
+        container: 'team-selector-container',
+        trigger: 'team-selector',
+        loading: 'team-selector-loading',
+        error: 'team-selector-error',
+        option: 'team-selector-option-{slug}',
+        bypassTrigger: 'team-selector-bypass',
+        search: 'team-selector-search',
+        crossTeam: 'team-selector-cross-team',
+        bypassOption: 'team-selector-option-{id}',
+      },
+    },
   },
 
   // ===========================================================================

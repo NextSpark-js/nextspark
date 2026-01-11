@@ -1,39 +1,26 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Textarea } from '../../ui/textarea'
-import { Alert, AlertDescription } from '../../ui/alert'
-import { AlertCircle } from 'lucide-react'
-import { validateJsonBody } from './utils/url-builder'
+import { JsonEditor } from '../api-explorer/JsonEditor'
 
 interface PayloadEditorProps {
   value: string
   onChange: (value: string) => void
 }
 
+/**
+ * Payload Editor for API request bodies
+ *
+ * Uses JsonEditor for a single editable JSON field with:
+ * - Syntax highlighting
+ * - Auto-format/prettify
+ * - Copy to clipboard
+ * - Fold/expand via gutter
+ * - Invalid JSON indicator
+ */
 export function PayloadEditor({ value, onChange }: PayloadEditorProps) {
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    const validationError = validateJsonBody(value)
-    setError(validationError)
-  }, [value])
-
   return (
-    <div className="space-y-2" data-cy="api-tester-payload">
-      <Textarea
-        placeholder='{"key": "value"}'
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="font-mono min-h-[150px] text-sm"
-        data-cy="api-tester-payload-textarea"
-      />
-      {error && (
-        <Alert variant="destructive" data-cy="api-tester-payload-error">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+    <div data-cy="api-tester-payload">
+      <JsonEditor value={value} onChange={onChange} minHeight="400px" />
     </div>
   )
 }
