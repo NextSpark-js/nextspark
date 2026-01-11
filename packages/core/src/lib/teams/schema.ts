@@ -67,24 +67,8 @@ export const createTeamSchema = z.object({
 })
 
 /**
- * Schema for general team updates by admins
- * Does NOT include name/description (owner-only fields)
- * Used when: Admin updates avatarUrl, settings, slug
- *
- * @note This schema still includes name/description for backward compatibility,
- * but they should only be validated using ownerUpdateTeamSchema after owner verification
- */
-export const updateTeamSchema = z.object({
-  name: z.string().min(2).max(100).optional(),
-  slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).optional(),
-  description: z.string().nullable().optional(),
-  avatarUrl: z.string().url().nullable().optional(),
-  settings: z.record(z.string(), z.unknown()).optional(),
-})
-
-/**
  * Schema for owner-only team updates (name/description)
- * Only team creators (ownerId === userId) can update these fields
+ * Only team owners (ownerId === userId) can update these fields
  * Used when: Owner updates team name or description
  *
  * @security This schema is only used after owner verification
@@ -98,6 +82,30 @@ export const ownerUpdateTeamSchema = z.object({
     .optional(),
   description: z.string().nullable().optional(),
 })
+
+/**
+ * Schema for admin team updates (non-owner-only fields)
+ * Admins can update: slug, avatarUrl, settings
+ * Does NOT include name/description (those are owner-only)
+ * Used when: Admin (non-owner) updates team metadata
+ *
+ * @security This schema explicitly excludes owner-only fields (name, description)
+ */
+export const adminUpdateTeamSchema = z.object({
+  slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).optional(),
+  avatarUrl: z.string().url().nullable().optional(),
+  settings: z.record(z.string(), z.unknown()).optional(),
+})
+
+/**
+ * Schema for general team updates (combined owner + admin permissions)
+ * This is a merge of ownerUpdateTeamSchema and adminUpdateTeamSchema
+ * Used for: API consumers that need a unified schema
+ *
+ * @note For internal use, prefer ownerUpdateTeamSchema or adminUpdateTeamSchema
+ * based on the user's role and the fields being updated
+ */
+export const updateTeamSchema = ownerUpdateTeamSchema.merge(adminUpdateTeamSchema)
 
 export const inviteMemberSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -142,6 +150,7 @@ export type TeamInvitationSchema = z.infer<typeof teamInvitationSchema>
 export type CreateTeamSchema = z.infer<typeof createTeamSchema>
 export type UpdateTeamSchema = z.infer<typeof updateTeamSchema>
 export type OwnerUpdateTeamSchema = z.infer<typeof ownerUpdateTeamSchema>
+export type AdminUpdateTeamSchema = z.infer<typeof adminUpdateTeamSchema>
 export type InviteMemberSchema = z.infer<typeof inviteMemberSchema>
 export type UpdateMemberRoleSchema = z.infer<typeof updateMemberRoleSchema>
 export type TeamListQuerySchema = z.infer<typeof teamListQuerySchema>

@@ -154,7 +154,7 @@
     "cannotDeletePersonal": "Cannot delete personal team",
     "cannotLeaveOwner": "Team owners cannot leave. Transfer ownership first.",
     "lastAdmin": "Cannot remove the last admin from the team",
-    "ownerOnlyEdit": "Only team creators can edit team name and description"
+    "ownerOnlyEdit": "Only team owners can edit team name and description"
   },
 
   "empty": {

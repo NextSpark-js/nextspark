@@ -361,6 +361,7 @@ export const CORE_SELECTORS = {
         saveIcon: 'team-edit-name-save-icon',
         cancelIcon: 'team-edit-name-cancel-icon',
         error: 'team-edit-name-error',
+        success: 'team-edit-name-success',
       },
       // Description field - inline (v1.1)
       description: {
@@ -370,8 +371,9 @@ export const CORE_SELECTORS = {
         saveIcon: 'team-edit-description-save-icon',
         cancelIcon: 'team-edit-description-cancel-icon',
         error: 'team-edit-description-error',
+        success: 'team-edit-description-success',
       },
-      // Shared feedback
+      // Shared feedback (deprecated - use field-specific selectors)
       success: 'team-edit-success',
       error: 'team-edit-error',
     },

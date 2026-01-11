@@ -165,6 +165,10 @@ export function InlineEditableField({
       fieldType === 'name'
         ? 'teams.edit.name.error'
         : 'teams.edit.description.error',
+    success:
+      fieldType === 'name'
+        ? 'teams.edit.name.success'
+        : 'teams.edit.description.success',
   }
 
   // Display mode
@@ -201,7 +205,7 @@ export function InlineEditableField({
         {showSuccess && (
           <Alert
             className="bg-green-50 text-green-900 border-green-200"
-            data-cy={sel('teams.edit.success')}
+            data-cy={sel(selectors.success)}
             role="status"
             aria-live="polite"
           >

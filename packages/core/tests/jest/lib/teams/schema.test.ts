@@ -16,6 +16,7 @@ import {
   createTeamSchema,
   updateTeamSchema,
   ownerUpdateTeamSchema,
+  adminUpdateTeamSchema,
   teamRoleSchema,
   invitationStatusSchema,
   teamMemberSchema,
@@ -259,7 +260,276 @@ describe('Teams Validation Schemas', () => {
     })
   })
 
-  describe('updateTeamSchema (GENERAL UPDATES)', () => {
+  describe('adminUpdateTeamSchema (ADMIN UPDATES - NON-OWNER)', () => {
+    describe('security constraints', () => {
+      it('rejects name field (owner-only)', () => {
+        const result = adminUpdateTeamSchema.safeParse({
+          name: 'New Team Name',
+        })
+        expect(result.success).toBe(true)
+        if (result.success) {
+          // Zod strips unknown keys by default, name should not be in result
+          expect(result.data).not.toHaveProperty('name')
+        }
+      })
+
+      it('rejects description field (owner-only)', () => {
+        const result = adminUpdateTeamSchema.safeParse({
+          description: 'New Description',
+        })
+        expect(result.success).toBe(true)
+        if (result.success) {
+          // Zod strips unknown keys by default, description should not be in result
+          expect(result.data).not.toHaveProperty('description')
+        }
+      })
+
+      it('rejects name and description together (owner-only)', () => {
+        const result = adminUpdateTeamSchema.safeParse({
+          name: 'Team Name',
+          description: 'Description',
+        })
+        expect(result.success).toBe(true)
+        if (result.success) {
+          expect(result.data).not.toHaveProperty('name')
+          expect(result.data).not.toHaveProperty('description')
+        }
+      })
+    })
+
+    describe('slug field validation', () => {
+      it('accepts valid slug', () => {
+        const result = adminUpdateTeamSchema.safeParse({
+          slug: 'valid-team-slug',
+        })
+        expect(result.success).toBe(true)
+        if (result.success) {
+          expect(result.data.slug).toBe('valid-team-slug')
+        }
+      })
+
+      it('accepts slug with numbers', () => {
+        const result = adminUpdateTeamSchema.safeParse({
+          slug: 'team-123',
+        })
+        expect(result.success).toBe(true)
+      })
+
+      it('rejects slug with uppercase', () => {
+        const result = adminUpdateTeamSchema.safeParse({
+          slug: 'Team-Slug',
+        })
+        expect(result.success).toBe(false)
+      })
+
+      it('rejects slug with spaces', () => {
+        const result = adminUpdateTeamSchema.safeParse({
+          slug: 'team slug',
+        })
+        expect(result.success).toBe(false)
+      })
+
+      it('rejects slug starting with hyphen', () => {
+        const result = adminUpdateTeamSchema.safeParse({
+          slug: '-team',
+        })
+        expect(result.success).toBe(false)
+      })
+
+      it('rejects slug ending with hyphen', () => {
+        const result = adminUpdateTeamSchema.safeParse({
+          slug: 'team-',
+        })
+        expect(result.success).toBe(false)
+      })
+    })
+
+    describe('avatarUrl field validation', () => {
+      it('accepts valid HTTPS URL', () => {
+        const result = adminUpdateTeamSchema.safeParse({
+          avatarUrl: 'https://example.com/avatar.png',
+        })
+        expect(result.success).toBe(true)
+        if (result.success) {
+          expect(result.data.avatarUrl).toBe('https://example.com/avatar.png')
+        }
+      })
+
+      it('accepts valid HTTP URL', () => {
+        const result = adminUpdateTeamSchema.safeParse({
+          avatarUrl: 'http://example.com/avatar.png',
+        })
+        expect(result.success).toBe(true)
+      })
+
+      it('accepts null avatarUrl', () => {
+        const result = adminUpdateTeamSchema.safeParse({
+          avatarUrl: null,
+        })
+        expect(result.success).toBe(true)
+        if (result.success) {
+          expect(result.data.avatarUrl).toBeNull()
+        }
+      })
+
+      it('rejects invalid URL', () => {
+        const result = adminUpdateTeamSchema.safeParse({
+          avatarUrl: 'not-a-url',
+        })
+        expect(result.success).toBe(false)
+      })
+
+      it('rejects relative URL', () => {
+        const result = adminUpdateTeamSchema.safeParse({
+          avatarUrl: '/avatar.png',
+        })
+        expect(result.success).toBe(false)
+      })
+    })
+
+    describe('settings field validation', () => {
+      it('accepts valid settings object', () => {
+        const result = adminUpdateTeamSchema.safeParse({
+          settings: { theme: 'dark', language: 'en' },
+        })
+        expect(result.success).toBe(true)
+        if (result.success) {
+          expect(result.data.settings).toEqual({ theme: 'dark', language: 'en' })
+        }
+      })
+
+      it('accepts empty settings object', () => {
+        const result = adminUpdateTeamSchema.safeParse({
+          settings: {},
+        })
+        expect(result.success).toBe(true)
+      })
+
+      it('accepts nested settings', () => {
+        const result = adminUpdateTeamSchema.safeParse({
+          settings: {
+            theme: 'dark',
+            preferences: {
+              notifications: true,
+              emails: false,
+            },
+          },
+        })
+        expect(result.success).toBe(true)
+      })
+
+      it('accepts various value types in settings', () => {
+        const result = adminUpdateTeamSchema.safeParse({
+          settings: {
+            stringValue: 'text',
+            numberValue: 42,
+            booleanValue: true,
+            nullValue: null,
+            arrayValue: [1, 2, 3],
+          },
+        })
+        expect(result.success).toBe(true)
+      })
+    })
+
+    describe('partial updates', () => {
+      it('allows updating only slug', () => {
+        const result = adminUpdateTeamSchema.safeParse({
+          slug: 'new-slug',
+        })
+        expect(result.success).toBe(true)
+        if (result.success) {
+          expect(result.data.slug).toBe('new-slug')
+          expect(result.data.avatarUrl).toBeUndefined()
+          expect(result.data.settings).toBeUndefined()
+        }
+      })
+
+      it('allows updating only avatarUrl', () => {
+        const result = adminUpdateTeamSchema.safeParse({
+          avatarUrl: 'https://example.com/avatar.png',
+        })
+        expect(result.success).toBe(true)
+        if (result.success) {
+          expect(result.data.avatarUrl).toBe('https://example.com/avatar.png')
+          expect(result.data.slug).toBeUndefined()
+        }
+      })
+
+      it('allows updating only settings', () => {
+        const result = adminUpdateTeamSchema.safeParse({
+          settings: { key: 'value' },
+        })
+        expect(result.success).toBe(true)
+        if (result.success) {
+          expect(result.data.settings).toEqual({ key: 'value' })
+          expect(result.data.slug).toBeUndefined()
+        }
+      })
+
+      it('allows updating multiple fields', () => {
+        const result = adminUpdateTeamSchema.safeParse({
+          slug: 'new-slug',
+          avatarUrl: 'https://example.com/avatar.png',
+          settings: { theme: 'dark' },
+        })
+        expect(result.success).toBe(true)
+      })
+
+      it('allows empty object', () => {
+        const result = adminUpdateTeamSchema.safeParse({})
+        expect(result.success).toBe(true)
+      })
+    })
+  })
+
+  describe('updateTeamSchema (GENERAL UPDATES - MERGED SCHEMA)', () => {
+    describe('schema composition', () => {
+      it('accepts all fields from ownerUpdateTeamSchema', () => {
+        const result = updateTeamSchema.safeParse({
+          name: 'Team Name',
+          description: 'Team Description',
+        })
+        expect(result.success).toBe(true)
+        if (result.success) {
+          expect(result.data.name).toBe('Team Name')
+          expect(result.data.description).toBe('Team Description')
+        }
+      })
+
+      it('accepts all fields from adminUpdateTeamSchema', () => {
+        const result = updateTeamSchema.safeParse({
+          slug: 'team-slug',
+          avatarUrl: 'https://example.com/avatar.png',
+          settings: { theme: 'dark' },
+        })
+        expect(result.success).toBe(true)
+        if (result.success) {
+          expect(result.data.slug).toBe('team-slug')
+          expect(result.data.avatarUrl).toBe('https://example.com/avatar.png')
+          expect(result.data.settings).toEqual({ theme: 'dark' })
+        }
+      })
+
+      it('accepts fields from both schemas (merged)', () => {
+        const result = updateTeamSchema.safeParse({
+          name: 'Team Name',
+          description: 'Description',
+          slug: 'team-slug',
+          avatarUrl: 'https://example.com/avatar.png',
+          settings: { key: 'value' },
+        })
+        expect(result.success).toBe(true)
+        if (result.success) {
+          expect(result.data).toHaveProperty('name')
+          expect(result.data).toHaveProperty('description')
+          expect(result.data).toHaveProperty('slug')
+          expect(result.data).toHaveProperty('avatarUrl')
+          expect(result.data).toHaveProperty('settings')
+        }
+      })
+    })
+
     describe('name field validation', () => {
       it('accepts valid name', () => {
         const result = updateTeamSchema.safeParse({

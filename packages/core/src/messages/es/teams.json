@@ -174,7 +174,7 @@
     "cannotDeletePersonal": "No se puede eliminar el equipo personal",
     "cannotLeaveOwner": "Los propietarios no pueden abandonar. Transfiere la propiedad primero.",
     "lastAdmin": "No se puede eliminar al ultimo administrador del equipo",
-    "ownerOnlyEdit": "Solo los creadores del equipo pueden editar el nombre y descripcion"
+    "ownerOnlyEdit": "Solo los propietarios del equipo pueden editar el nombre y descripcion"
   },
 
   "empty": {

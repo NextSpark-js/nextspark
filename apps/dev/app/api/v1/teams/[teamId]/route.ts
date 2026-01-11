@@ -8,7 +8,7 @@ import {
   addCorsHeaders,
 } from '@nextsparkjs/core/lib/api/helpers'
 import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
-import { updateTeamSchema, ownerUpdateTeamSchema } from '@nextsparkjs/core/lib/teams/schema'
+import { ownerUpdateTeamSchema, adminUpdateTeamSchema } from '@nextsparkjs/core/lib/teams/schema'
 import { TeamService, MembershipService } from '@nextsparkjs/core/lib/services'
 import type { Team, TeamRole } from '@nextsparkjs/core/lib/teams/types'
 
@@ -131,17 +131,13 @@ export const PATCH = withApiLogging(
 
         if (!team || team.ownerId !== authResult.user!.id) {
           const response = createApiError(
-            'Only team creators can edit team name and description',
+            'Only team owners can edit team name and description',
             403,
             null,
             'OWNER_ONLY'
           )
           return addCorsHeaders(response)
         }
-
-        // FIX #3: Use ownerUpdateTeamSchema for stricter validation of owner-only fields
-        // Issue: https://github.com/NextSpark-js/nextspark/pull/1 (Issue #3)
-        const validatedData = ownerUpdateTeamSchema.parse(body)
 
         // Proceed with owner update (skip general permission check)
       } else {
@@ -164,7 +160,7 @@ export const PATCH = withApiLogging(
       }
 
       // Validate with appropriate schema based on update type
-      const schema = isOwnerOnlyUpdate ? ownerUpdateTeamSchema : updateTeamSchema
+      const schema = isOwnerOnlyUpdate ? ownerUpdateTeamSchema : adminUpdateTeamSchema
       const validatedData = schema.parse(body) as Record<string, unknown>
 
       // Check if slug is being changed and if it's available
