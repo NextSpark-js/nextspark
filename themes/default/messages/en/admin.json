@@ -214,6 +214,51 @@
     "messages": {
       "saved": "Saved successfully",
       "created": "Created successfully"
+    },
+    "header": {
+      "actions": {
+        "saveDraft": "Save Draft",
+        "publish": "Publish",
+        "update": "Update"
+      }
+    },
+    "canvas": {
+      "empty": {
+        "title": "No blocks yet",
+        "subtitle": "Add blocks from the left sidebar"
+      },
+      "editingBadge": "Editing",
+      "error": {
+        "blockNotFound": "Block not found"
+      }
+    },
+    "floatingToolbar": {
+      "drag": "Drag to reorder",
+      "duplicate": "Duplicate block",
+      "delete": "Delete block"
+    },
+    "settingsPanel": {
+      "title": "Block Properties",
+      "empty": {
+        "message": "No block selected",
+        "hint": "Select a block from the canvas to edit its settings"
+      },
+      "error": {
+        "notFound": "Block configuration not found"
+      },
+      "actions": {
+        "reset": "Reset",
+        "remove": "Remove"
+      },
+      "tabs": {
+        "content": "Content",
+        "design": "Design",
+        "advanced": "Advanced",
+        "noContentFields": "No content fields",
+        "noDesignFields": "No design fields",
+        "noAdvancedFields": "No advanced fields"
+      },
+      "noFields": "This block has no configurable fields"
     }
   }
 }
