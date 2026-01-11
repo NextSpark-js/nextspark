@@ -108,19 +108,49 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 
--- Check if current user is superadmin
--- Returns true if the authenticated user has 'superadmin' role
--- Used for RLS policies to grant superadmins full access
-CREATE OR REPLACE FUNCTION public.is_superadmin()
+-- Check if current user can bypass RLS (Row Level Security)
+-- Returns true if user is superadmin OR developer in System Admin Team
+-- Used for RLS policies to grant elevated users full cross-team access
+-- Matches app-level bypass logic in dual-auth.ts
+CREATE OR REPLACE FUNCTION public.can_bypass_rls()
 RETURNS BOOLEAN AS $$
 DECLARE
+  current_user_id TEXT;
   user_role TEXT;
+  is_system_admin_member BOOLEAN;
 BEGIN
+  current_user_id := public.get_auth_user_id();
+
+  -- Get user role
   SELECT role INTO user_role
   FROM public."users"
-  WHERE id = public.get_auth_user_id();
+  WHERE id = current_user_id;
 
-  RETURN user_role = 'superadmin';
+  -- Superadmin always bypasses
+  IF user_role = 'superadmin' THEN
+    RETURN TRUE;
+  END IF;
+
+  -- Developer can bypass if member of System Admin Team (team-nextspark-001)
+  IF user_role = 'developer' THEN
+    SELECT EXISTS(
+      SELECT 1 FROM public."team_members"
+      WHERE "userId" = current_user_id
+        AND "teamId" = 'team-nextspark-001'
+    ) INTO is_system_admin_member;
+
+    RETURN is_system_admin_member;
+  END IF;
+
+  RETURN FALSE;
+END;
+$$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
+
+-- Alias for backward compatibility (deprecated, use can_bypass_rls)
+CREATE OR REPLACE FUNCTION public.is_superadmin()
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN public.can_bypass_rls();
 END;
 $$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 
