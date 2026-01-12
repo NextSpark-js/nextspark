@@ -11,7 +11,7 @@ type UserContext = 'public' | 'auth' | 'dashboard';
 const CONTEXT_NAMESPACES = {
   public: ['common', 'public', 'auth'],
   auth: ['common', 'auth', 'validation'],
-  dashboard: ['common', 'dashboard', 'settings', 'public', 'teams']
+  dashboard: ['common', 'dashboard', 'settings', 'public', 'teams', 'admin']
 } as const;
 
 /**

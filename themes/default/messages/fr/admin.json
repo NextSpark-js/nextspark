@@ -214,6 +214,51 @@
     "messages": {
       "saved": "Enregistre avec succes",
       "created": "Cree avec succes"
+    },
+    "header": {
+      "actions": {
+        "saveDraft": "Sauvegarder Brouillon",
+        "publish": "Publier",
+        "update": "Mettre à jour"
+      }
+    },
+    "canvas": {
+      "empty": {
+        "title": "Pas encore de blocs",
+        "subtitle": "Ajoutez des blocs depuis la barre laterale"
+      },
+      "editingBadge": "Edition",
+      "error": {
+        "blockNotFound": "Bloc non trouve"
+      }
+    },
+    "floatingToolbar": {
+      "drag": "Glissez pour reordonner",
+      "duplicate": "Dupliquer le bloc",
+      "delete": "Supprimer le bloc"
+    },
+    "settingsPanel": {
+      "title": "Proprietes du Bloc",
+      "empty": {
+        "message": "Aucun bloc selectionne",
+        "hint": "Selectionnez un bloc du canvas pour modifier ses parametres"
+      },
+      "error": {
+        "notFound": "Configuration du bloc non trouvee"
+      },
+      "actions": {
+        "reset": "Reinitialiser",
+        "remove": "Supprimer"
+      },
+      "tabs": {
+        "content": "Contenu",
+        "design": "Design",
+        "advanced": "Avance",
+        "noContentFields": "Pas de champs de contenu",
+        "noDesignFields": "Pas de champs de design",
+        "noAdvancedFields": "Pas de champs avances"
+      },
+      "noFields": "Ce bloc n'a pas de champs configurables"
     }
   }
 }

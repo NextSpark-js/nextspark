@@ -203,13 +203,66 @@
       "layout": "Diseno",
       "preview": "Vista previa"
     },
+    "header": {
+      "actions": {
+        "saveDraft": "Guardar Borrador",
+        "publish": "Publicar",
+        "update": "Actualizar"
+      }
+    },
     "sidebar": {
       "blocks": "Bloques",
       "fields": "Campos",
       "fieldsTitle": "Campos de Entidad",
       "fieldsDescription": "Configura propiedades adicionales",
       "noFields": "No hay campos adicionales disponibles",
-      "noCategories": "No hay categorias disponibles"
+      "noCategories": "No hay categorias disponibles",
+      "tabs": {
+        "blocks": "Bloques",
+        "config": "Configuracion"
+      },
+      "search": {
+        "placeholder": "Buscar bloques..."
+      },
+      "categories": {
+        "all": "Todos"
+      },
+      "addBlock": "Agregar bloque",
+      "empty": "No se encontraron bloques"
+    },
+    "canvas": {
+      "empty": {
+        "title": "Aun no hay bloques",
+        "subtitle": "Agrega bloques desde la barra lateral izquierda"
+      },
+      "editingBadge": "Editando",
+      "error": {
+        "blockNotFound": "Bloque no encontrado"
+      }
+    },
+    "floatingToolbar": {
+      "drag": "Arrastra para reordenar",
+      "duplicate": "Duplicar bloque",
+      "delete": "Eliminar bloque"
+    },
+    "settingsPanel": {
+      "title": "Propiedades del Bloque",
+      "empty": {
+        "message": "Ningun bloque seleccionado",
+        "hint": "Selecciona un bloque del canvas para editar su configuracion"
+      },
+      "error": {
+        "notFound": "Configuracion del bloque no encontrada"
+      },
+      "actions": {
+        "reset": "Restablecer",
+        "remove": "Eliminar"
+      },
+      "tabs": {
+        "content": "Contenido",
+        "design": "Diseño",
+        "advanced": "Avanzado"
+      }
     },
     "messages": {
       "saved": "Guardado exitosamente",

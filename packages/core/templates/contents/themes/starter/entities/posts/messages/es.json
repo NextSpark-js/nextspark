@@ -1,0 +1,55 @@
+{
+  "entity": {
+    "singular": "Publicacion",
+    "plural": "Publicaciones"
+  },
+  "fields": {
+    "title": {
+      "label": "Titulo",
+      "placeholder": "Ingresa el titulo...",
+      "description": "Titulo de la publicacion"
+    },
+    "slug": {
+      "label": "Slug",
+      "placeholder": "slug-publicacion",
+      "description": "Identificador amigable para URL"
+    },
+    "status": {
+      "label": "Estado",
+      "description": "Estado de publicacion",
+      "options": {
+        "draft": "Borrador",
+        "published": "Publicado",
+        "scheduled": "Programado",
+        "archived": "Archivado"
+      }
+    },
+    "excerpt": {
+      "label": "Extracto",
+      "placeholder": "Breve descripcion...",
+      "description": "Resumen corto mostrado en listados"
+    },
+    "featuredImage": {
+      "label": "Imagen Destacada",
+      "description": "Imagen principal de la publicacion"
+    },
+    "categories": {
+      "label": "Categorias",
+      "placeholder": "Selecciona categorias...",
+      "description": "Categorias de la publicacion"
+    }
+  },
+  "actions": {
+    "create": "Crear Publicacion",
+    "edit": "Editar Publicacion",
+    "delete": "Eliminar Publicacion",
+    "publish": "Publicar",
+    "unpublish": "Despublicar"
+  },
+  "messages": {
+    "created": "Publicacion creada exitosamente",
+    "updated": "Publicacion actualizada exitosamente",
+    "deleted": "Publicacion eliminada exitosamente",
+    "published": "Publicacion publicada exitosamente"
+  }
+}

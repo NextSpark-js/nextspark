@@ -214,6 +214,51 @@
     "messages": {
       "saved": "Guardado exitosamente",
       "created": "Creado exitosamente"
+    },
+    "header": {
+      "actions": {
+        "saveDraft": "Guardar Borrador",
+        "publish": "Publicar",
+        "update": "Actualizar"
+      }
+    },
+    "canvas": {
+      "empty": {
+        "title": "Aún no hay bloques",
+        "subtitle": "Agrega bloques desde la barra lateral izquierda"
+      },
+      "editingBadge": "Editando",
+      "error": {
+        "blockNotFound": "Bloque no encontrado"
+      }
+    },
+    "floatingToolbar": {
+      "drag": "Arrastra para reordenar",
+      "duplicate": "Duplicar bloque",
+      "delete": "Eliminar bloque"
+    },
+    "settingsPanel": {
+      "title": "Propiedades del Bloque",
+      "empty": {
+        "message": "Ningún bloque seleccionado",
+        "hint": "Selecciona un bloque del canvas para editar su configuración"
+      },
+      "error": {
+        "notFound": "Configuración del bloque no encontrada"
+      },
+      "actions": {
+        "reset": "Restablecer",
+        "remove": "Eliminar"
+      },
+      "tabs": {
+        "content": "Contenido",
+        "design": "Diseño",
+        "advanced": "Avanzado",
+        "noContentFields": "Sin campos de contenido",
+        "noDesignFields": "Sin campos de diseño",
+        "noAdvancedFields": "Sin campos avanzados"
+      },
+      "noFields": "Este bloque no tiene campos configurables"
     }
   }
 }

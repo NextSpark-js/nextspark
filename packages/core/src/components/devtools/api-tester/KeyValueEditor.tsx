@@ -76,16 +76,17 @@ export function KeyValueEditor({
           </Button>
         </div>
       ))}
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={addItem}
-        className="w-full"
-        data-cy={`${dataCyPrefix}-add-btn`}
-      >
-        <Plus className="h-4 w-4 mr-2" />
-        {t('addButton')}
-      </Button>
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={addItem}
+          data-cy={`${dataCyPrefix}-add-btn`}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          {t('addButton')}
+        </Button>
+      </div>
     </div>
   )
 }

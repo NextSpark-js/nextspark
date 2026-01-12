@@ -214,6 +214,51 @@
     "messages": {
       "saved": "Erfolgreich gespeichert",
       "created": "Erfolgreich erstellt"
+    },
+    "header": {
+      "actions": {
+        "saveDraft": "Entwurf Speichern",
+        "publish": "Veröffentlichen",
+        "update": "Aktualisieren"
+      }
+    },
+    "canvas": {
+      "empty": {
+        "title": "Noch keine Blöcke",
+        "subtitle": "Fügen Sie Blöcke aus der Seitenleiste hinzu"
+      },
+      "editingBadge": "Bearbeiten",
+      "error": {
+        "blockNotFound": "Block nicht gefunden"
+      }
+    },
+    "floatingToolbar": {
+      "drag": "Ziehen zum Neuordnen",
+      "duplicate": "Block duplizieren",
+      "delete": "Block löschen"
+    },
+    "settingsPanel": {
+      "title": "Block-Eigenschaften",
+      "empty": {
+        "message": "Kein Block ausgewählt",
+        "hint": "Wählen Sie einen Block aus dem Canvas, um seine Einstellungen zu bearbeiten"
+      },
+      "error": {
+        "notFound": "Block-Konfiguration nicht gefunden"
+      },
+      "actions": {
+        "reset": "Zurücksetzen",
+        "remove": "Entfernen"
+      },
+      "tabs": {
+        "content": "Inhalt",
+        "design": "Design",
+        "advanced": "Erweitert",
+        "noContentFields": "Keine Inhaltsfelder",
+        "noDesignFields": "Keine Designfelder",
+        "noAdvancedFields": "Keine erweiterten Felder"
+      },
+      "noFields": "Dieser Block hat keine konfigurierbaren Felder"
     }
   }
 }

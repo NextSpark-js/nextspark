@@ -2,6 +2,20 @@
   "title": "Teams",
   "description": "Manage your teams and collaboration",
 
+  "entity": {
+    "description": "Manage your teams, members and invitations",
+    "plural": "Teams"
+  },
+
+  "fields": {
+    "name": "Name",
+    "slug": "URL",
+    "description": "Description",
+    "email": "Email",
+    "role": "Role",
+    "joinedAt": "Joined date"
+  },
+
   "types": {
     "personal": "Personal",
     "work": "Work Team"
@@ -107,11 +121,17 @@
   "invitations": {
     "title": "Pending Invitations",
     "description": "Invitations waiting for response",
+    "pending": "Pending",
     "empty": "No pending invitations",
     "sent": "Sent {date}",
     "expires": "Expires {date}",
+    "expiresAt": "Expires",
+    "invitedBy": "Invited by",
     "resend": "Resend",
     "cancel": "Cancel Invitation",
+    "cancelTitle": "Cancel Invitation",
+    "cancelDescription": "Are you sure you want to cancel this invitation?",
+    "cancelConfirm": "Yes, Cancel",
     "cancelSuccess": "Invitation cancelled",
     "cancelError": "Failed to cancel invitation"
   },
@@ -145,6 +165,10 @@
     "members": "Members",
     "billing": "Billing",
     "danger": "Danger Zone"
+  },
+
+  "messages": {
+    "loading": "Loading..."
   },
 
   "errors": {

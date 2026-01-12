@@ -1,18 +1,19 @@
 # Claude Code Skills
 
-This directory contains 31 skills that provide Claude Code with specialized knowledge about this codebase.
+This directory contains 32 skills that provide Claude Code with specialized knowledge about this codebase.
 
 ## Skills Overview
 
 | # | Skill | Description | Scripts |
 |---|-------|-------------|---------|
 | 1 | [accessibility](./accessibility/) | Accessibility patterns and WCAG 2.1 AA compliance | - |
-| 2 | [better-auth](./better-auth/) | Better Auth integration: session, OAuth, API keys | - |
-| 3 | [billing-subscriptions](./billing-subscriptions/) | Stripe billing, subscriptions, usage tracking | - |
-| 4 | [create-plugin](./create-plugin/) | Guide for creating new plugins from preset [NEW v4.3] | - |
-| 5 | [create-theme](./create-theme/) | Guide for creating new themes from preset [NEW v4.3] | - |
-| 6 | [core-theme-responsibilities](./core-theme-responsibilities/) | **CRITICAL:** Core/Theme/Plugin responsibility assignment [NEW v4.3] | - |
-| 7 | [cypress-api](./cypress-api/) | Cypress API testing patterns and generators | `generate-api-controller.py`, `generate-api-test.py` |
+| 2 | [api-bypass-layers](./api-bypass-layers/) | Multi-layer security architecture for admin bypass [NEW] | - |
+| 3 | [better-auth](./better-auth/) | Better Auth integration: session, OAuth, API keys | - |
+| 4 | [billing-subscriptions](./billing-subscriptions/) | Stripe billing, subscriptions, usage tracking | - |
+| 5 | [create-plugin](./create-plugin/) | Guide for creating new plugins from preset [NEW v4.3] | - |
+| 6 | [create-theme](./create-theme/) | Guide for creating new themes from preset [NEW v4.3] | - |
+| 7 | [core-theme-responsibilities](./core-theme-responsibilities/) | **CRITICAL:** Core/Theme/Plugin responsibility assignment [NEW v4.3] | - |
+| 8 | [cypress-api](./cypress-api/) | Cypress API testing patterns and generators | `generate-api-controller.py`, `generate-api-test.py` |
 | 8 | [cypress-e2e](./cypress-e2e/) | Cypress E2E testing patterns | `extract-selectors.py`, `generate-uat-test.py` |
 | 9 | [cypress-selectors](./cypress-selectors/) | data-cy selector conventions and validation | `extract-missing.py`, `generate-block-selectors.py`, `validate-selectors.py` |
 | 10 | [database-migrations](./database-migrations/) | PostgreSQL migration patterns | `generate-sample-data.py`, `validate-migration.py` |
@@ -40,7 +41,7 @@ This directory contains 31 skills that provide Claude Code with specialized know
 
 ## Statistics
 
-- **Total Skills:** 31
+- **Total Skills:** 32
 - **Skills with Scripts:** 13
 - **Total Scripts:** 25
 
@@ -117,6 +118,7 @@ version: 1.0.0
 - `jest-unit` - Unit tests
 
 ### Authentication & Authorization
+- `api-bypass-layers` - **Multi-layer security for admin bypass** [NEW]
 - `better-auth` - Authentication
 - `permissions-system` - RBAC permissions
 - `billing-subscriptions` - Subscriptions

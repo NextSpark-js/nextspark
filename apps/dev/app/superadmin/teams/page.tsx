@@ -1,6 +1,5 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   Card,
@@ -28,42 +27,7 @@ import {
   PaginationControls,
 } from "@nextsparkjs/core/components/superadmin/filters";
 import { sel } from "@nextsparkjs/testing";
-
-interface TeamOwner {
-  id: string;
-  name: string;
-  email: string;
-}
-
-interface Team {
-  id: string;
-  name: string;
-  owner: TeamOwner;
-  memberCount: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface TeamsData {
-  teams: Team[];
-  counts: {
-    total: number;
-    user: number;
-    system: number;
-  };
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-    hasMore: boolean;
-  };
-  metadata: {
-    requestedBy: string;
-    requestedAt: string;
-    source: string;
-  };
-}
+import { useAdminTeams } from "@nextsparkjs/core/hooks/teams";
 
 /**
  * Teams Management Page
@@ -76,16 +40,6 @@ function TeamsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
-
-  // Build query params
-  const getQueryParams = () => {
-    const params = new URLSearchParams();
-    if (searchQuery) params.set("search", searchQuery);
-    params.set("type", activeTab);
-    params.set("page", String(page));
-    params.set("limit", String(limit));
-    return params.toString();
-  };
 
   // Handle tab change - reset page
   const handleTabChange = (tab: string) => {
@@ -105,24 +59,21 @@ function TeamsPage() {
     setPage(1);
   };
 
-  // Fetch teams data from API
-  const { data: teamsData, isLoading, error, refetch } = useQuery<TeamsData>({
-    queryKey: ["superadmin-teams", activeTab, searchQuery, page, limit],
-    queryFn: async () => {
-      const queryString = getQueryParams();
-      const url = `/api/superadmin/teams${queryString ? `?${queryString}` : ""}`;
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error("Failed to fetch teams data");
-      }
-      return response.json();
-    },
-    retry: 2,
-    staleTime: 30000,
+  // Fetch teams data using the shared hook
+  const {
+    teams: filteredTeams,
+    counts,
+    pagination,
+    metadata,
+    isLoading,
+    error,
+    refetch,
+  } = useAdminTeams({
+    search: searchQuery || undefined,
+    type: activeTab,
+    page,
+    limit,
   });
-
-  // Filter teams by active tab
-  const filteredTeams = teamsData?.teams || [];
 
   // Loading state
   if (isLoading) {
@@ -225,7 +176,7 @@ function TeamsPage() {
             <Users2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{teamsData?.counts.total || 0}</div>
+            <div className="text-2xl font-bold">{counts?.total || 0}</div>
             <p className="text-xs text-muted-foreground">All registered teams</p>
           </CardContent>
         </Card>
@@ -264,11 +215,11 @@ function TeamsPage() {
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="user" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
-            User Teams ({teamsData?.counts.user || 0})
+            User Teams ({counts?.user || 0})
           </TabsTrigger>
           <TabsTrigger value="system" className="flex items-center gap-2">
             <Shield className="h-4 w-4" />
-            System Admin ({teamsData?.counts.system || 0})
+            System Admin ({counts?.system || 0})
           </TabsTrigger>
         </TabsList>
 
@@ -285,12 +236,12 @@ function TeamsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <TeamsTable teams={filteredTeams} isLoading={isLoading} />
-              {teamsData?.pagination && (
+              {pagination && (
                 <PaginationControls
-                  page={teamsData.pagination.page}
-                  totalPages={teamsData.pagination.totalPages}
-                  total={teamsData.pagination.total}
-                  limit={teamsData.pagination.limit}
+                  page={pagination.page}
+                  totalPages={pagination.totalPages}
+                  total={pagination.total}
+                  limit={pagination.limit}
                   onPageChange={setPage}
                   onLimitChange={handleLimitChange}
                 />
@@ -312,12 +263,12 @@ function TeamsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <TeamsTable teams={filteredTeams} isLoading={isLoading} />
-              {teamsData?.pagination && (
+              {pagination && (
                 <PaginationControls
-                  page={teamsData.pagination.page}
-                  totalPages={teamsData.pagination.totalPages}
-                  total={teamsData.pagination.total}
-                  limit={teamsData.pagination.limit}
+                  page={pagination.page}
+                  totalPages={pagination.totalPages}
+                  total={pagination.total}
+                  limit={pagination.limit}
                   onPageChange={setPage}
                   onLimitChange={handleLimitChange}
                 />
@@ -328,16 +279,16 @@ function TeamsPage() {
       </Tabs>
 
       {/* Metadata Footer */}
-      {teamsData?.metadata && (
+      {metadata && (
         <Card className="bg-muted/30">
           <CardContent className="pt-4">
             <div className="text-xs text-muted-foreground space-y-1">
               <p>
                 Last updated:{" "}
-                {new Date(teamsData.metadata.requestedAt).toLocaleString()}
+                {new Date(metadata.requestedAt).toLocaleString()}
               </p>
-              <p>Requested by: {teamsData.metadata.requestedBy}</p>
-              <p>Source: {teamsData.metadata.source}</p>
+              <p>Requested by: {metadata.requestedBy}</p>
+              <p>Source: {metadata.source}</p>
             </div>
           </CardContent>
         </Card>

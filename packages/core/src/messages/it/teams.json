@@ -2,6 +2,20 @@
   "title": "Team",
   "description": "Gestisci i tuoi team e collaborazioni",
 
+  "entity": {
+    "description": "Gestisci i tuoi team, membri e inviti",
+    "plural": "Team"
+  },
+
+  "fields": {
+    "name": "Nome",
+    "slug": "URL",
+    "description": "Descrizione",
+    "email": "Email",
+    "role": "Ruolo",
+    "joinedAt": "Data iscrizione"
+  },
+
   "types": {
     "personal": "Personale",
     "work": "Team di Lavoro"
@@ -107,11 +121,17 @@
   "invitations": {
     "title": "Inviti in Sospeso",
     "description": "Inviti in attesa di risposta",
+    "pending": "In sospeso",
     "empty": "Nessun invito in sospeso",
     "sent": "Inviato {date}",
     "expires": "Scade {date}",
+    "expiresAt": "Scade",
+    "invitedBy": "Invitato da",
     "resend": "Reinvia",
     "cancel": "Annulla Invito",
+    "cancelTitle": "Annulla Invito",
+    "cancelDescription": "Sei sicuro di voler annullare questo invito?",
+    "cancelConfirm": "Si, Annulla",
     "cancelSuccess": "Invito annullato",
     "cancelError": "Errore nell'annullamento dell'invito"
   },
@@ -145,6 +165,10 @@
     "members": "Membri",
     "billing": "Fatturazione",
     "danger": "Zona Pericolosa"
+  },
+
+  "messages": {
+    "loading": "Caricamento..."
   },
 
   "errors": {

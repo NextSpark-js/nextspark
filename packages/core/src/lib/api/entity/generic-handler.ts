@@ -255,17 +255,20 @@ async function validateTeamMembership(userId: string, teamId: string): Promise<b
 
 /**
  * Validate team context with admin bypass support
- * Returns { valid: true, teamId } or { valid: false, error: NextResponse }
+ * Returns { valid: true, teamId, isBypass } or { valid: false, error: NextResponse }
  *
  * Admin bypass allows:
- * - If teamId provided: filter by that team (no membership check)
- * - If teamId not provided: cross-team access (all teams)
+ * - If teamId provided: filter by that team (no membership check, skip userId filter)
+ * - If teamId not provided: cross-team access (all teams, skip userId filter)
+ *
+ * The isBypass flag is used to skip userId filter in query building,
+ * enabling admins to see all records regardless of ownership.
  */
 async function validateTeamContextWithBypass(
   request: NextRequest,
   authResult: DualAuthResult,
   userId: string
-): Promise<{ valid: true; teamId: string | null } | { valid: false; error: NextResponse }> {
+): Promise<{ valid: true; teamId: string | null; isBypass: boolean } | { valid: false; error: NextResponse }> {
   const teamId = getTeamIdFromRequest(request)
 
   // Check if user can bypass team validation
@@ -275,8 +278,9 @@ async function validateTeamContextWithBypass(
     // Admin bypass: teamId is optional
     // - If provided: filter by that team (no membership check)
     // - If not provided: cross-team access (all teams)
+    // isBypass = true means skip userId filter too (see all records)
     console.log('[GenericHandler] Admin bypass active:', { userId, teamId: teamId || 'cross-team' })
-    return { valid: true, teamId }
+    return { valid: true, teamId, isBypass: true }
   }
 
   // Normal flow: require teamId and membership
@@ -301,7 +305,7 @@ async function validateTeamContextWithBypass(
     return { valid: false, error: await addCorsHeaders(response) }
   }
 
-  return { valid: true, teamId }
+  return { valid: true, teamId, isBypass: false }
 }
 
 /**
@@ -327,6 +331,7 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
     const authResult = await authenticateRequest(request)
     let userId: string | null = null
     let teamId: string | null = null
+    let isBypass = false  // Track if admin bypass is active (skip userId filter)
 
     // For public entities, allow read access without authentication
     if (!authResult.success && resolution.entityConfig.access?.public) {
@@ -357,6 +362,7 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
         return teamValidation.error
       }
       teamId = teamValidation.teamId
+      isBypass = teamValidation.isBypass
     }
 
     // Parse request parameters
@@ -499,7 +505,8 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
 
       // Add user filter if authenticated and not shared (CASE 1 only)
       // Skip for public entities requesting published content (e.g., viewing blog posts)
-      if (userId && !entityConfig.access?.shared && !skipUserFilter) {
+      // Skip when admin bypass is active (allows cross-team/cross-user access)
+      if (userId && !entityConfig.access?.shared && !skipUserFilter && !isBypass) {
         query += ` AND t."userId" = $${paramIndex++}`
         queryParams.push(userId)
       }
@@ -527,7 +534,8 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
 
       // Add user filter if authenticated and not shared (CASE 1 only)
       // Skip for public entities requesting published content (e.g., viewing blog posts)
-      if (userId && !entityConfig.access?.shared && !skipUserFilter) {
+      // Skip when admin bypass is active (allows cross-team/cross-user access)
+      if (userId && !entityConfig.access?.shared && !skipUserFilter && !isBypass) {
         query += ` AND t."userId" = $${paramIndex++}`
         queryParams.push(userId)
       }
@@ -551,12 +559,14 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
       // Add user filter if authenticated AND not shared (secondary filter)
       // Exception: For public entities with status=published filter, allow cross-user access
       // This enables blog-style public viewing where anyone can read published posts
-      if (userId && !entityConfig.access?.shared && !skipUserFilter) {
+      // Skip when admin bypass is active (allows cross-team/cross-user access)
+      if (userId && !entityConfig.access?.shared && !skipUserFilter && !isBypass) {
         // CASE 1: Private data - filter by user within team
         whereConditions.push(`t."userId" = $${paramIndex++}`)
         queryParams.push(userId)
       }
       // else: CASE 2/3 - Public or shared, no user filter (but still team-filtered)
+      // else: CASE 4 - Admin bypass active, no user filter (see all records)
 
       // Add search filter (searches in name, title, slug, and content fields)
       if (searchParam && searchParam.trim() !== '') {
@@ -1045,6 +1055,7 @@ export async function handleGenericRead(request: NextRequest, { params }: { para
     const authResult = await authenticateRequest(request)
     let userId: string | null = null
     let teamId: string | null = null
+    let isBypass = false  // Track if admin bypass is active (skip userId filter)
 
     // For public entities, allow read access without authentication
     if (!authResult.success && resolution.entityConfig.access?.public) {
@@ -1075,6 +1086,7 @@ export async function handleGenericRead(request: NextRequest, { params }: { para
         return teamValidation.error
       }
       teamId = teamValidation.teamId
+      isBypass = teamValidation.isBypass
     }
 
     // Build dynamic query (include all fields for read operations)
@@ -1122,7 +1134,8 @@ export async function handleGenericRead(request: NextRequest, { params }: { para
     }
 
     // Add user filter if authenticated AND not shared (CASE 1)
-    if (userId && !entityConfig.access?.shared) {
+    // Skip when admin bypass is active (allows cross-team/cross-user access)
+    if (userId && !entityConfig.access?.shared && !isBypass) {
       query += ` AND t."userId" = $${paramIndex++}`
       queryParams.push(userId)
     }

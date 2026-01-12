@@ -33,6 +33,12 @@ export function ApiTester({ route, basePath }: ApiTesterProps) {
   const [apiKey, setApiKey] = useState('')
   const [body, setBody] = useState('')
   const [bypassMode, setBypassMode] = useState(false)
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('activeTeamId')
+    }
+    return null
+  })
 
   // Hook de request
   const { status, response, error, execute, cancel } = useApiRequest()
@@ -60,17 +66,14 @@ export function ApiTester({ route, basePath }: ApiTesterProps) {
 
     const customHeaders: Record<string, string> = {}
 
-    // Auto-inject x-team-id from active team context (unless bypass mode without team)
-    if (typeof window !== 'undefined' && !bypassMode) {
-      const activeTeamId = localStorage.getItem('activeTeamId')
-      if (activeTeamId) {
-        customHeaders['x-team-id'] = activeTeamId
-      }
-    }
-
     // Auto-inject x-admin-bypass header if bypass mode is enabled
     if (bypassMode) {
       customHeaders['x-admin-bypass'] = 'confirm-cross-team-access'
+    }
+
+    // Auto-inject x-team-id from selected team (required in normal mode, optional in bypass mode)
+    if (selectedTeamId) {
+      customHeaders['x-team-id'] = selectedTeamId
     }
 
     // User-defined headers can override the auto-injected ones
@@ -88,7 +91,7 @@ export function ApiTester({ route, basePath }: ApiTesterProps) {
       authType,
       apiKey: authType === 'apiKey' ? apiKey : undefined,
     })
-  }, [basePath, pathParams, queryParams, headers, method, body, authType, apiKey, bypassMode, showPayloadEditor, execute])
+  }, [basePath, pathParams, queryParams, headers, method, body, authType, apiKey, bypassMode, selectedTeamId, showPayloadEditor, execute])
 
   return (
     <div className="space-y-6" data-cy="api-tester">
@@ -240,9 +243,11 @@ export function ApiTester({ route, basePath }: ApiTesterProps) {
                 authType={authType}
                 apiKey={apiKey}
                 bypassMode={bypassMode}
+                selectedTeamId={selectedTeamId}
                 onAuthTypeChange={setAuthType}
                 onApiKeyChange={setApiKey}
                 onBypassModeChange={setBypassMode}
+                onTeamChange={setSelectedTeamId}
               />
             </CardContent>
           </CollapsibleContent>

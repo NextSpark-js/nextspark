@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { MoreHorizontal, Crown, Shield, Eye, UserMinus } from 'lucide-react'
+import { MoreHorizontal, Crown, Shield, Eye, UserMinus, Loader2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { formatDistanceToNow } from 'date-fns'
 import {
@@ -72,7 +72,8 @@ export function TeamMembersList({ teamId: propTeamId, readOnly = false }: TeamMe
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-8">
+      <div className="flex flex-col items-center justify-center p-8 gap-3">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         <div className="text-sm text-muted-foreground">
           {t('messages.loading')}
         </div>

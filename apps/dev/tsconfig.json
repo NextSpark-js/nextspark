@@ -48,6 +48,7 @@
       "@nextsparkjs/registries": ["./.nextspark/registries/index.ts"],
       "@nextsparkjs/registries/*": ["./.nextspark/registries/*"],
 
+      "@/core/*": ["../../packages/core/src/*"],
       "@/contents/*": ["./contents/*"],
       "@/themes/*": ["./contents/themes/*"],
       "@/plugins/*": ["./contents/plugins/*"],

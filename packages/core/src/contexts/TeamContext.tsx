@@ -114,10 +114,12 @@ export function TeamProvider({ children }: { children: ReactNode }) {
       window.dispatchEvent(new CustomEvent('team-switched', { detail: { teamId: targetTeam?.id } }))
     }
 
-    // Refresh Server Components to pick up new team context
-    // Combined with queryClient.clear(), this ensures all data is fresh
-    router.refresh()
-  }, [queryClient, targetTeam, router])
+    // Hard reload to ensure all components (Server + Client) get fresh data
+    // router.refresh() alone doesn't re-fetch client-side React Query data
+    if (typeof window !== 'undefined') {
+      window.location.reload()
+    }
+  }, [queryClient, targetTeam])
 
   // Switch to a different team
   const switchTeam = useCallback(async (teamId: string) => {

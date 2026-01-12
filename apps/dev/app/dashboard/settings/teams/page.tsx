@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Users, Plus, Settings, ChevronRight, Crown, Shield, Eye } from 'lucide-react'
+import { Users, Plus, Settings, ChevronRight, Crown, Shield, Eye, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@nextsparkjs/core/components/ui/card'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { Badge } from '@nextsparkjs/core/components/ui/badge'
@@ -59,12 +59,13 @@ function TeamsSettingsPage() {
   if (isLoading) {
     return (
       <div
-        className="flex items-center justify-center py-12"
+        className="flex flex-col items-center justify-center py-12 gap-3"
         role="status"
         aria-label={tTeams('messages.loading')}
         {...createTestId('teams-settings', 'loading') && { 'data-testid': createTestId('teams-settings', 'loading') }}
         data-cy={sel('settings.teams.loading')}
       >
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         <div className="text-sm text-muted-foreground">
           {tTeams('messages.loading')}
         </div>
