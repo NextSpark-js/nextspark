@@ -37,7 +37,7 @@ import {
   PaginationControls,
   FilterDropdown,
 } from "@nextsparkjs/core/components/superadmin/filters";
-import { sel } from "@nextsparkjs/testing";
+import { sel } from "@nextsparkjs/core/selectors";
 
 interface UsersData {
   regularUsers: User[];

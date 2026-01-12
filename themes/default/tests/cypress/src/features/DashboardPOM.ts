@@ -34,71 +34,92 @@ export class DashboardPOM extends BasePOM {
 
   get selectors() {
     return {
+      // Main container
+      container: cySelector('dashboard.container'),
+
       // Navigation
-      navMain: cySelector('dashboard.navigation.main'),
+      navContainer: cySelector('dashboard.navigation.container'),
       navDashboard: cySelector('dashboard.navigation.dashboardLink'),
       navEntity: (slug: string) => cySelector('dashboard.navigation.entityLink', { slug }),
       navSection: (id: string) => cySelector('dashboard.navigation.section', { id }),
       navSectionLabel: (id: string) => cySelector('dashboard.navigation.sectionLabel', { id }),
       navSectionItem: (sectionId: string, itemId: string) => cySelector('dashboard.navigation.sectionItem', { sectionId, itemId }),
 
-      // Shell
-      shellContainer: cySelector('dashboard.shell.container'),
-      sidebarToggle: cySelector('dashboard.shell.sidebarToggle'),
-      quickCreateButton: cySelector('dashboard.shell.quickCreateButton'),
-      quickCreateDropdown: cySelector('dashboard.shell.quickCreateDropdown'),
-      quickCreateLink: (slug: string) => cySelector('dashboard.shell.quickCreateLink', { slug }),
-
       // Topnav
+      topnavContainer: cySelector('dashboard.topnav.container'),
       topnavSidebarToggle: cySelector('dashboard.topnav.sidebarToggle'),
-      topnavHeader: cySelector('dashboard.topnav.header'),
       topnavLogo: cySelector('dashboard.topnav.logo'),
-      topnavSearchSection: cySelector('dashboard.topnav.searchSection'),
+      topnavSearchContainer: cySelector('dashboard.topnav.search.container'),
       topnavActions: cySelector('dashboard.topnav.actions'),
-      topnavNotifications: cySelector('dashboard.topnav.notifications'),
+      topnavNotificationsTrigger: cySelector('dashboard.topnav.notifications.trigger'),
+      topnavQuickCreateTrigger: cySelector('dashboard.topnav.quickCreate.trigger'),
+      topnavQuickCreateContent: cySelector('dashboard.topnav.quickCreate.content'),
+      topnavQuickCreateLink: (slug: string) => cySelector('dashboard.topnav.quickCreate.link', { slug }),
+      topnavUserMenuTrigger: cySelector('dashboard.topnav.userMenu.trigger'),
+      topnavUserMenuContent: cySelector('dashboard.topnav.userMenu.content'),
+      topnavUserMenuItem: (icon: string) => cySelector('dashboard.topnav.userMenu.item', { icon }),
+      topnavUserMenuAction: (action: string) => cySelector('dashboard.topnav.userMenu.action', { action }),
       topnavHelp: cySelector('dashboard.topnav.help'),
       topnavThemeToggle: cySelector('dashboard.topnav.themeToggle'),
       topnavSuperadmin: cySelector('dashboard.topnav.superadmin'),
       topnavDevtools: cySelector('dashboard.topnav.devtools'),
-      topnavUserMenuTrigger: cySelector('dashboard.topnav.userMenuTrigger'),
-      topnavUserMenu: cySelector('dashboard.topnav.userMenu'),
-      topnavMenuItem: (icon: string) => cySelector('dashboard.topnav.menuItem', { icon }),
-      topnavMenuAction: (action: string) => cySelector('dashboard.topnav.menuAction', { action }),
       topnavUserLoading: cySelector('dashboard.topnav.userLoading'),
       topnavSignin: cySelector('dashboard.topnav.signin'),
       topnavSignup: cySelector('dashboard.topnav.signup'),
+      // Topnav mobile menu
+      topnavMobileMenuToggle: cySelector('dashboard.topnav.mobileMenu.toggle'),
+      topnavMobileMenuContainer: cySelector('dashboard.topnav.mobileMenu.container'),
+      topnavMobileMenuActions: cySelector('dashboard.topnav.mobileMenu.actions'),
+      topnavMobileMenuUserInfo: cySelector('dashboard.topnav.mobileMenu.userInfo'),
+      topnavMobileMenuLinkProfile: cySelector('dashboard.topnav.mobileMenu.linkProfile'),
+      topnavMobileMenuLinkSettings: cySelector('dashboard.topnav.mobileMenu.linkSettings'),
+      topnavMobileMenuLinkBilling: cySelector('dashboard.topnav.mobileMenu.linkBilling'),
+      topnavMobileMenuSignout: cySelector('dashboard.topnav.mobileMenu.signout'),
+      topnavMobileMenuSuperadmin: cySelector('dashboard.topnav.mobileMenu.superadmin'),
+      topnavMobileMenuDevtools: cySelector('dashboard.topnav.mobileMenu.devtools'),
 
       // Sidebar
-      sidebarMain: cySelector('dashboard.sidebar.main'),
+      sidebarContainer: cySelector('dashboard.sidebar.container'),
       sidebarHeader: cySelector('dashboard.sidebar.header'),
+      sidebarLogo: cySelector('dashboard.sidebar.logo'),
       sidebarContent: cySelector('dashboard.sidebar.content'),
       sidebarFooter: cySelector('dashboard.sidebar.footer'),
 
       // Mobile Topbar
-      mobileTopbarHeader: cySelector('dashboard.mobile.topbar.header'),
+      mobileTopbarContainer: cySelector('dashboard.mobile.topbar.container'),
       mobileTopbarUserProfile: cySelector('dashboard.mobile.topbar.userProfile'),
       mobileTopbarNotifications: cySelector('dashboard.mobile.topbar.notifications'),
       mobileTopbarThemeToggle: cySelector('dashboard.mobile.topbar.themeToggle'),
 
       // Mobile Bottom Nav
-      mobileBottomNav: cySelector('dashboard.mobile.bottomNav.nav'),
+      mobileBottomNavContainer: cySelector('dashboard.mobile.bottomNav.container'),
       mobileBottomNavItem: (id: string) => cySelector('dashboard.mobile.bottomNav.item', { id }),
 
       // Mobile More Sheet
-      mobileMoreSheetContent: cySelector('dashboard.mobile.moreSheet.content'),
+      mobileMoreSheetContainer: cySelector('dashboard.mobile.moreSheet.container'),
       mobileMoreSheetItem: (id: string) => cySelector('dashboard.mobile.moreSheet.item', { id }),
-      mobileMoreSheetAdmin: cySelector('dashboard.mobile.moreSheet.adminLink'),
+      mobileMoreSheetSuperadminLink: cySelector('dashboard.mobile.moreSheet.superadminLink'),
       mobileMoreSheetTeamSwitcher: cySelector('dashboard.mobile.moreSheet.teamSwitcher'),
-      mobileMoreSheetSignout: cySelector('dashboard.mobile.moreSheet.signoutButton'),
+      mobileMoreSheetSignoutButton: cySelector('dashboard.mobile.moreSheet.signoutButton'),
 
-      // Mobile Quick Create
-      mobileQuickCreateContent: cySelector('dashboard.mobile.quickCreateSheet.content'),
-      mobileQuickCreateItem: (slug: string) => cySelector('dashboard.mobile.quickCreateSheet.item', { slug }),
+      // Mobile Quick Create Sheet
+      mobileQuickCreateSheetContainer: cySelector('dashboard.mobile.quickCreateSheet.container'),
+      mobileQuickCreateSheetItem: (slug: string) => cySelector('dashboard.mobile.quickCreateSheet.item', { slug }),
 
       // Entity table (for verifying entity pages)
       entityPage: (slug: string) => cySelector('entities.page.container', { slug }),
       entityTable: (slug: string) => cySelector('entities.table.container', { slug }),
       entityAddButton: (slug: string) => cySelector('entities.table.addButton', { slug }),
+
+      // Legacy aliases (for backward compatibility during transition)
+      /** @deprecated Use navContainer instead */
+      navMain: cySelector('dashboard.navigation.container'),
+      /** @deprecated Use topnavQuickCreateTrigger instead */
+      quickCreateButton: cySelector('dashboard.topnav.quickCreate.trigger'),
+      /** @deprecated Use topnavQuickCreateContent instead */
+      quickCreateDropdown: cySelector('dashboard.topnav.quickCreate.content'),
+      /** @deprecated Use topnavQuickCreateLink instead */
+      quickCreateLink: (slug: string) => cySelector('dashboard.topnav.quickCreate.link', { slug }),
     }
   }
 
@@ -146,7 +167,7 @@ export class DashboardPOM extends BasePOM {
    * Open quick create dropdown
    */
   openQuickCreate() {
-    cy.get(this.selectors.quickCreateButton).click()
+    cy.get(this.selectors.topnavQuickCreateTrigger).click()
     return this
   }
 
@@ -155,7 +176,7 @@ export class DashboardPOM extends BasePOM {
    */
   quickCreate(slug: string) {
     this.openQuickCreate()
-    cy.get(this.selectors.quickCreateLink(slug)).click()
+    cy.get(this.selectors.topnavQuickCreateLink(slug)).click()
     return this
   }
 
@@ -215,7 +236,7 @@ export class DashboardPOM extends BasePOM {
    * Assert quick create button is visible
    */
   assertQuickCreateVisible() {
-    cy.get(this.selectors.quickCreateButton).should('be.visible')
+    cy.get(this.selectors.topnavQuickCreateTrigger).should('be.visible')
     return this
   }
 
@@ -228,7 +249,7 @@ export class DashboardPOM extends BasePOM {
    */
   waitForDashboard() {
     cy.url().should('include', '/dashboard')
-    cy.get(this.selectors.navMain, { timeout: 15000 }).should('be.visible')
+    cy.get(this.selectors.navContainer, { timeout: 15000 }).should('be.visible')
     return this
   }
 

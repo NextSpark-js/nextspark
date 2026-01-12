@@ -99,33 +99,68 @@ export abstract class DashboardEntityPOMCore extends BasePOMCore {
     return {
       // Page
       page: this.cySelector('entities.page.container', { slug }),
-      pageTitle: this.cySelector('entities.page.title', { slug }),
 
-      // Table
-      tableContainer: this.cySelector('entities.table.container', { slug }),
-      table: this.cySelector('entities.table.element', { slug }),
-      addButton: this.cySelector('entities.table.addButton', { slug }),
-      search: this.cySelector('entities.table.search', { slug }),
-      searchContainer: this.cySelector('entities.table.search', { slug }),
-      searchClear: this.cySelector('entities.search.clear', { slug }),
-      selectAll: this.cySelector('entities.table.selectAll', { slug }),
-      selectionCount: this.cySelector('entities.table.selectionCount', { slug }),
-      row: (id: string) => this.cySelector('entities.table.row', { slug, id }),
-      rowSelect: (id: string) => this.cySelector('entities.table.rowSelect', { slug, id }),
-      rowMenu: (id: string) => this.cySelector('entities.table.rowMenu', { slug, id }),
-      rowAction: (action: string, id: string) => this.cySelector('entities.table.rowAction', { slug, action, id }),
-      cell: (field: string, id: string) => this.cySelector('entities.table.cell', { slug, field, id }),
+      // List - Table
+      tableContainer: this.cySelector('entities.list.table.container', { slug }),
+      table: this.cySelector('entities.list.table.element', { slug }),
+      addButton: this.cySelector('entities.list.addButton', { slug }),
+      selectAll: this.cySelector('entities.list.table.selectAll', { slug }),
+      selectionCount: this.cySelector('entities.list.selectionCount', { slug }),
+      row: (id: string) => this.cySelector('entities.list.table.row.element', { slug, id }),
+      rowSelect: (id: string) => this.cySelector('entities.list.table.row.checkbox', { slug, id }),
+      rowMenu: (id: string) => this.cySelector('entities.list.table.row.menu', { slug, id }),
+      rowAction: (action: string, id: string) => this.cySelector('entities.list.table.row.action', { slug, action, id }),
+      cell: (name: string, id: string) => this.cySelector('entities.list.table.cell.element', { slug, name, id }),
       rowGeneric: `[data-cy^="${slug}-row-"]`,
 
-      // Pagination
-      pagination: this.cySelector('entities.pagination.container', { slug }),
-      pageSize: this.cySelector('entities.pagination.pageSize', { slug }),
-      pageSizeOption: (size: string) => this.cySelector('entities.pagination.pageSizeOption', { slug, size }),
-      pageInfo: this.cySelector('entities.pagination.pageInfo', { slug }),
-      pageFirst: this.cySelector('entities.pagination.first', { slug }),
-      pagePrev: this.cySelector('entities.pagination.prev', { slug }),
-      pageNext: this.cySelector('entities.pagination.next', { slug }),
-      pageLast: this.cySelector('entities.pagination.last', { slug }),
+      // List - Search
+      search: this.cySelector('entities.list.search.input', { slug }),
+      searchContainer: this.cySelector('entities.list.search.container', { slug }),
+      searchClear: this.cySelector('entities.list.search.clear', { slug }),
+
+      // List - Pagination
+      pagination: this.cySelector('entities.list.pagination.container', { slug }),
+      pageSize: this.cySelector('entities.list.pagination.pageSize', { slug }),
+      pageSizeOption: (size: string) => this.cySelector('entities.list.pagination.pageSizeOption', { slug, size }),
+      pageInfo: this.cySelector('entities.list.pagination.info', { slug }),
+      pageFirst: this.cySelector('entities.list.pagination.first', { slug }),
+      pagePrev: this.cySelector('entities.list.pagination.prev', { slug }),
+      pageNext: this.cySelector('entities.list.pagination.next', { slug }),
+      pageLast: this.cySelector('entities.list.pagination.last', { slug }),
+
+      // List - Filters
+      filter: (field: string) => this.cySelector('entities.list.filters.container', { slug, field }),
+      filterTrigger: (field: string) => this.cySelector('entities.list.filters.trigger', { slug, field }),
+      filterContent: (field: string) => this.cySelector('entities.list.filters.content', { slug, field }),
+      filterOption: (field: string, value: string) => this.cySelector('entities.list.filters.option', { slug, field, value }),
+      filterBadge: (field: string, value: string) => this.cySelector('entities.list.filters.badge', { slug, field, value }),
+      filterRemoveBadge: (field: string, value: string) => this.cySelector('entities.list.filters.removeBadge', { slug, field, value }),
+      filterClearAll: (field: string) => this.cySelector('entities.list.filters.clearAll', { slug, field }),
+
+      // List - Bulk actions
+      bulkBar: this.cySelector('entities.list.bulk.bar', { slug }),
+      bulkCount: this.cySelector('entities.list.bulk.count', { slug }),
+      bulkSelectAll: this.cySelector('entities.list.bulk.selectAll', { slug }),
+      bulkStatus: this.cySelector('entities.list.bulk.statusButton', { slug }),
+      bulkDelete: this.cySelector('entities.list.bulk.deleteButton', { slug }),
+      bulkClear: this.cySelector('entities.list.bulk.clearButton', { slug }),
+
+      // List - Bulk status dialog
+      bulkStatusDialog: this.cySelector('entities.list.bulk.statusDialog', { slug }),
+      bulkStatusSelect: this.cySelector('entities.list.bulk.statusSelect', { slug }),
+      bulkStatusOption: (value: string) => this.cySelector('entities.list.bulk.statusOption', { slug, value }),
+      bulkStatusCancel: this.cySelector('entities.list.bulk.statusCancel', { slug }),
+      bulkStatusConfirm: this.cySelector('entities.list.bulk.statusConfirm', { slug }),
+
+      // List - Bulk delete dialog
+      bulkDeleteDialog: this.cySelector('entities.list.bulk.deleteDialog', { slug }),
+      bulkDeleteCancel: this.cySelector('entities.list.bulk.deleteCancel', { slug }),
+      bulkDeleteConfirm: this.cySelector('entities.list.bulk.deleteConfirm', { slug }),
+
+      // List - Confirm dialogs (for row actions)
+      confirmDialog: this.cySelector('entities.list.confirm.dialog', { slug }),
+      confirmCancel: this.cySelector('entities.list.confirm.cancel', { slug }),
+      confirmAction: this.cySelector('entities.list.confirm.action', { slug }),
 
       // Header (detail pages) - modes: view, edit, create
       viewHeader: this.cySelector('entities.header.container', { slug, mode: 'view' }),
@@ -134,53 +169,20 @@ export abstract class DashboardEntityPOMCore extends BasePOMCore {
       backButton: this.cySelector('entities.header.backButton', { slug }),
       editButton: this.cySelector('entities.header.editButton', { slug }),
       deleteButton: this.cySelector('entities.header.deleteButton', { slug }),
-      copyId: this.cySelector('entities.header.copyId', { slug }),
       title: this.cySelector('entities.header.title', { slug }),
 
-      // Delete confirmation
+      // Header - Delete confirmation
       deleteDialog: this.cySelector('entities.header.deleteDialog', { slug }),
       deleteCancel: this.cySelector('entities.header.deleteCancel', { slug }),
       deleteConfirm: this.cySelector('entities.header.deleteConfirm', { slug }),
+
+      // Detail view
+      detail: this.cySelector('entities.detail.container', { slug }),
 
       // Form
       form: this.cySelector('entities.form.container', { slug }),
       field: (name: string) => this.cySelector('entities.form.field', { slug, name }),
       submitButton: this.cySelector('entities.form.submitButton', { slug }),
-
-      // Filters
-      filter: (field: string) => this.cySelector('entities.filter.container', { slug, field }),
-      filterTrigger: (field: string) => this.cySelector('entities.filter.trigger', { slug, field }),
-      filterContent: (field: string) => this.cySelector('entities.filter.content', { slug, field }),
-      filterOption: (field: string, value: string) => this.cySelector('entities.filter.option', { slug, field, value }),
-      filterBadge: (field: string, value: string) => this.cySelector('entities.filter.badge', { slug, field, value }),
-      filterRemoveBadge: (field: string, value: string) =>
-        this.cySelector('entities.filter.removeBadge', { slug, field, value }),
-      filterClearAll: (field: string) => this.cySelector('entities.filter.clearAll', { slug, field }),
-
-      // Bulk actions
-      bulkBar: this.cySelector('entities.bulk.bar', { slug }),
-      bulkCount: this.cySelector('entities.bulk.count', { slug }),
-      bulkSelectAll: this.cySelector('entities.bulk.selectAll', { slug }),
-      bulkStatus: this.cySelector('entities.bulk.statusButton', { slug }),
-      bulkDelete: this.cySelector('entities.bulk.deleteButton', { slug }),
-      bulkClear: this.cySelector('entities.bulk.clearButton', { slug }),
-
-      // Bulk status dialog
-      bulkStatusDialog: this.cySelector('entities.bulk.statusDialog', { slug }),
-      bulkStatusSelect: this.cySelector('entities.bulk.statusSelect', { slug }),
-      bulkStatusOption: (value: string) => this.cySelector('entities.bulk.statusOption', { slug, value }),
-      bulkStatusCancel: this.cySelector('entities.bulk.statusCancel', { slug }),
-      bulkStatusConfirm: this.cySelector('entities.bulk.statusConfirm', { slug }),
-
-      // Bulk delete dialog
-      bulkDeleteDialog: this.cySelector('entities.bulk.deleteDialog', { slug }),
-      bulkDeleteCancel: this.cySelector('entities.bulk.deleteCancel', { slug }),
-      bulkDeleteConfirm: this.cySelector('entities.bulk.deleteConfirm', { slug }),
-
-      // Generic confirm dialog
-      confirmDialog: this.cySelector('entities.confirm.dialog', { slug }),
-      confirmCancel: this.cySelector('entities.confirm.cancel', { slug }),
-      confirmAction: this.cySelector('entities.confirm.action', { slug }),
 
       // Parent delete confirmation (EntityDetailWrapper - generic, no slug)
       parentDeleteConfirm: '[data-cy="confirm-delete"]',
@@ -189,9 +191,6 @@ export abstract class DashboardEntityPOMCore extends BasePOMCore {
       // Row action selectors (generic patterns for checking existence)
       rowActionEditGeneric: `[data-cy^="${slug}-action-edit-"]`,
       rowActionDeleteGeneric: `[data-cy^="${slug}-action-delete-"]`,
-
-      // Detail view
-      detail: this.cySelector('entities.detail.container', { slug }),
     }
   }
 
@@ -393,15 +392,8 @@ export abstract class DashboardEntityPOMCore extends BasePOMCore {
   }
 
   /**
-   * Remove a filter badge
-   */
-  removeFilterBadge(field: string, value: string) {
-    cy.get(this.selectors.filterRemoveBadge(field, value)).click()
-    return this
-  }
-
-  /**
-   * Clear all values for a filter
+   * Clear all selected options for a specific filter
+   * NOTE: Clear button only appears when >1 option is selected
    */
   clearFilter(field: string) {
     cy.get(this.selectors.filterClearAll(field)).click()

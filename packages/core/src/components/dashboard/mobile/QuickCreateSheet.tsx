@@ -10,7 +10,7 @@ import {
 import Link from 'next/link'
 import { Loader2 } from 'lucide-react'
 import { useQuickCreateEntities } from '../../../hooks/useQuickCreateEntities'
-import { createTestId, createCyId } from '../../../lib/test'
+import { sel } from '../../../lib/test'
 import { useTranslations } from 'next-intl'
 
 interface QuickCreateSheetProps {
@@ -31,8 +31,7 @@ export function QuickCreateSheet({ isOpen, onOpenChange }: QuickCreateSheetProps
       <SheetContent
         side="bottom"
         className="rounded-t-[20px]"
-        {...createTestId('mobile-quick-create-sheet', 'content') && { 'data-testid': createTestId('mobile-quick-create-sheet', 'content') }}
-        {...createCyId('mobile-quick-create-sheet', 'content') && { 'data-cy': createCyId('mobile-quick-create-sheet', 'content') }}
+        data-cy={sel('dashboard.mobile.quickCreateSheet.container')}
       >
         <SheetHeader>
           <SheetTitle>{t('common.mobileNav.create')}</SheetTitle>
@@ -65,8 +64,7 @@ export function QuickCreateSheet({ isOpen, onOpenChange }: QuickCreateSheetProps
                 href={`/dashboard/${entity.slug}/create`}
                 onClick={handleLinkClick}
                 className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-accent transition-colors"
-                {...createTestId('mobile-quick-create-sheet', 'item', entity.slug) && { 'data-testid': createTestId('mobile-quick-create-sheet', 'item', entity.slug) }}
-                {...createCyId('mobile-quick-create-sheet', `item-${entity.slug}`) && { 'data-cy': createCyId('mobile-quick-create-sheet', `item-${entity.slug}`) }}
+                data-cy={sel('dashboard.mobile.quickCreateSheet.item', { slug: entity.slug })}
               >
                 <Icon className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
                 <div className="flex flex-col">

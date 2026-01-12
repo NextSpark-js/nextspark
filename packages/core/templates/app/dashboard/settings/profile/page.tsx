@@ -61,7 +61,7 @@ import {
 } from 'lucide-react'
 import { profileSchema, ProfileFormData } from '@nextsparkjs/core/lib/validation'
 import { countries, timezones } from '@nextsparkjs/core/lib/countries-timezones'
-import { createTestId, createCyId } from '@nextsparkjs/testing'
+import { sel } from '@nextsparkjs/core/selectors'
 import { useTranslations } from 'next-intl'
 import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
 
@@ -221,12 +221,10 @@ function ProfilePage() {
 
   if (isLoading) {
     return (
-      <div 
+      <div
         className="flex items-center justify-center py-12"
         role="status"
         aria-label={t('profile.loading.aria')}
-        {...createTestId('profile', 'loading') && { 'data-testid': createTestId('profile', 'loading') }}
-        {...createCyId('profile', 'loading') && { 'data-cy': createCyId('profile', 'loading') }}
       >
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden="true" />
         <span className="sr-only">{t('profile.loading.text')}</span>
@@ -236,12 +234,10 @@ function ProfilePage() {
 
   if (error) {
     return (
-      <Alert 
+      <Alert
         className="max-w-md"
         variant="destructive"
         role="alert"
-        {...createTestId('profile', 'error') && { 'data-testid': createTestId('profile', 'error') }}
-        {...createCyId('profile', 'error') && { 'data-cy': createCyId('profile', 'error') }}
       >
         <AlertCircle className="h-4 w-4" aria-hidden="true" />
         <AlertDescription>
@@ -254,48 +250,38 @@ function ProfilePage() {
   return (
     <>
       {/* MANDATORY: Screen reader announcements */}
-      <div 
-        aria-live="polite" 
+      <div
+        aria-live="polite"
         aria-atomic="true"
         className="sr-only"
-        {...createTestId('profile', 'status', 'message') && { 'data-testid': createTestId('profile', 'status', 'message') }}
       >
         {statusMessage}
       </div>
 
-      <div 
+      <div
         className="max-w-4xl space-y-6"
-        {...createTestId('profile', 'container') && { 'data-testid': createTestId('profile', 'container') }}
-        {...createCyId('profile', 'main') && { 'data-cy': createCyId('profile', 'main') }}
+        data-cy={sel('settings.profile.container')}
       >
         {/* Header */}
-        <header 
-          {...createTestId('profile', 'header') && { 'data-testid': createTestId('profile', 'header') }}
-          {...createCyId('profile', 'header') && { 'data-cy': createCyId('profile', 'header') }}
-        >
-          <h1 
+        <header>
+          <h1
             className="text-2xl font-bold"
             id="profile-heading"
-            {...createTestId('profile', 'title') && { 'data-testid': createTestId('profile', 'title') }}
           >
             {t('profile.title')}
           </h1>
-          <p 
-            className="text-muted-foreground mt-1"
-            {...createTestId('profile', 'description') && { 'data-testid': createTestId('profile', 'description') }}
-          >
+          <p className="text-muted-foreground mt-1">
             {t('profile.description')}
           </p>
         </header>
 
         {/* Success Alert */}
         {updateSuccess && (
-          <Alert 
+          <Alert
             className="border-green-200 bg-green-50 text-green-800"
             role="status"
             aria-live="polite"
-            {...createTestId('profile', 'success', 'alert') && { 'data-testid': createTestId('profile', 'success', 'alert') }}
-            {...createCyId('profile', 'success') && { 'data-cy': createCyId('profile', 'success') }}
+            data-cy={sel('settings.profile.successMessage')}
           >
             <CheckCircle2 className="h-4 w-4 text-green-600" aria-hidden="true" />
             <AlertDescription>
@@ -306,12 +292,10 @@ function ProfilePage() {
 
         {/* Error Alert */}
         {updateProfileMutation.error && (
-          <Alert 
+          <Alert
             variant="destructive"
             role="alert"
             aria-live="assertive"
-            {...createTestId('profile', 'error', 'alert') && { 'data-testid': createTestId('profile', 'error', 'alert') }}
-            {...createCyId('profile', 'error-alert') && { 'data-cy': createCyId('profile', 'error-alert') }}
           >
             <AlertCircle className="h-4 w-4" aria-hidden="true" />
             <AlertDescription>
@@ -321,33 +305,27 @@ function ProfilePage() {
         )}
 
         {/* Single Column Layout */}
-        <Card 
+        <Card
           className="max-w-4xl"
-          {...createTestId('profile', 'form', 'card') && { 'data-testid': createTestId('profile', 'form', 'card') }}
-          {...createCyId('profile', 'form') && { 'data-cy': createCyId('profile', 'form') }}
+          data-cy={sel('settings.profile.form')}
         >
             <CardHeader>
-              <CardTitle 
+              <CardTitle
                 className="flex items-center gap-2"
                 id="profile-form-title"
-                {...createTestId('profile', 'form', 'title') && { 'data-testid': createTestId('profile', 'form', 'title') }}
               >
                 <User className="h-5 w-5" aria-hidden="true" />
                 {t('profile.form.title')}
               </CardTitle>
-              <CardDescription
-                {...createTestId('profile', 'form', 'description') && { 'data-testid': createTestId('profile', 'form', 'description') }}
-              >
+              <CardDescription>
                 {t('profile.form.description')}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form 
-                onSubmit={handleSubmit(onSubmit)} 
+              <form
+                onSubmit={handleSubmit(onSubmit)}
                 className="space-y-6"
                 aria-labelledby="profile-form-title"
-                {...createTestId('profile', 'form', 'element') && { 'data-testid': createTestId('profile', 'form', 'element') }}
-                {...createCyId('profile', 'form-element') && { 'data-cy': createCyId('profile', 'form-element') }}
               >
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
@@ -431,8 +409,6 @@ function ProfilePage() {
                         setValue('language', value)
                       }
                     }}
-                    {...createTestId('profile', 'language', 'select') && { 'data-testid': createTestId('profile', 'language', 'select') }}
-                    {...createCyId('profile', 'language-select') && { 'data-cy': createCyId('profile', 'language-select') }}
                   >
                     <SelectTrigger>
                       <div className="flex items-center gap-2">
@@ -514,8 +490,6 @@ function ProfilePage() {
                         role="combobox"
                         aria-expanded={timezoneOpen}
                         className="w-full justify-between"
-                        {...createTestId('profile', 'timezone', 'select') && { 'data-testid': createTestId('profile', 'timezone', 'select') }}
-                        {...createCyId('profile', 'timezone-select') && { 'data-cy': createCyId('profile', 'timezone-select') }}
                       >
                         <div className="flex items-center gap-2">
                           <Clock className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
@@ -579,8 +553,7 @@ function ProfilePage() {
                   disabled={isSubmitting || updateProfileMutation.isPending}
                   aria-describedby="submit-help"
                   className="w-full md:w-auto"
-                  {...createTestId('profile', 'submit', 'button') && { 'data-testid': createTestId('profile', 'submit', 'button') }}
-                  {...createCyId('profile', 'submit') && { 'data-cy': createCyId('profile', 'submit') }}
+                  data-cy={sel('settings.profile.submitButton')}
                 >
                   {(isSubmitting || updateProfileMutation.isPending) ? (
                     <>
@@ -611,8 +584,6 @@ function ProfilePage() {
                       aria-expanded={advancedOpen}
                       aria-controls="advanced-options"
                       aria-label={advancedOpen ? t('profile.advanced.closeLabel') : t('profile.advanced.openLabel')}
-                      {...createTestId('profile', 'advanced', 'toggle') && { 'data-testid': createTestId('profile', 'advanced', 'toggle') }}
-                      {...createCyId('profile', 'advanced-toggle') && { 'data-cy': createCyId('profile', 'advanced-toggle') }}
                     >
                       {t('profile.advanced.title')}
                       {advancedOpen ? (
@@ -623,36 +594,28 @@ function ProfilePage() {
                     </Button>
                   
                     {advancedOpen && (
-                      <div 
+                      <div
                         id="advanced-options"
                         className="mt-4 space-y-4 border-t pt-4"
-                        {...createTestId('profile', 'advanced', 'section') && { 'data-testid': createTestId('profile', 'advanced', 'section') }}
-                        {...createCyId('profile', 'advanced-section') && { 'data-cy': createCyId('profile', 'advanced-section') }}
                       >
                         <div className="space-y-2">
-                          <h4 
+                          <h4
                             className="text-sm font-medium text-destructive"
                             id="danger-zone-heading"
-                            {...createTestId('profile', 'danger', 'heading') && { 'data-testid': createTestId('profile', 'danger', 'heading') }}
                           >
                             {t('profile.danger.title')}
                           </h4>
-                          <p 
-                            className="text-xs text-muted-foreground"
-                            {...createTestId('profile', 'danger', 'warning') && { 'data-testid': createTestId('profile', 'danger', 'warning') }}
-                          >
+                          <p className="text-xs text-muted-foreground">
                             {t('profile.danger.warning')}
                           </p>
                         
                         <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                             <DialogTrigger asChild>
-                              <Button 
-                                variant="destructive" 
+                              <Button
+                                variant="destructive"
                                 className="w-full gap-2"
                                 disabled={deleteAccountMutation.isPending}
                                 aria-describedby="danger-zone-heading"
-                                {...createTestId('profile', 'delete', 'trigger') && { 'data-testid': createTestId('profile', 'delete', 'trigger') }}
-                                {...createCyId('profile', 'delete-account') && { 'data-cy': createCyId('profile', 'delete-account') }}
                               >
                                 <Trash2 className="h-4 w-4" aria-hidden="true" />
                                 {t('profile.danger.deleteButton')}

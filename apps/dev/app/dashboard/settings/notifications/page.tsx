@@ -16,7 +16,7 @@ import {
   Save,
   Loader2
 } from 'lucide-react'
-import { createTestId, createCyId } from '@nextsparkjs/testing'
+import { sel } from '@nextsparkjs/core/selectors'
 import { useTranslations } from 'next-intl'
 import { useUserWithMetaSettings } from '@nextsparkjs/core/hooks/useUserSettings'
 import { NotificationsPageSkeleton } from '@nextsparkjs/core/components/settings/SettingsPageSkeleton'
@@ -268,37 +268,28 @@ function NotificationsPage() {
   return (
     <>
       {/* MANDATORY: Screen reader announcements */}
-      <div 
-        aria-live="polite" 
+      <div
+        aria-live="polite"
         aria-atomic="true"
         className="sr-only"
-        {...createTestId('notifications', 'status', 'message') && { 'data-testid': createTestId('notifications', 'status', 'message') }}
       >
         {statusMessage}
       </div>
 
-      <div 
+      <div
         className="max-w-4xl"
-        {...createTestId('notifications', 'container') && { 'data-testid': createTestId('notifications', 'container') }}
-        {...createCyId('notifications', 'main') && { 'data-cy': createCyId('notifications', 'main') }}
+        data-cy={sel('settings.notifications.container')}
       >
         <div className="space-y-6">
           {/* Header */}
-          <header 
-            {...createTestId('notifications', 'header') && { 'data-testid': createTestId('notifications', 'header') }}
-            {...createCyId('notifications', 'header') && { 'data-cy': createCyId('notifications', 'header') }}
-          >
-            <h1 
+          <header>
+            <h1
               className="text-2xl font-bold"
               id="notifications-heading"
-              {...createTestId('notifications', 'title') && { 'data-testid': createTestId('notifications', 'title') }}
             >
               {t('notifications.title')}
             </h1>
-            <p 
-              className="text-muted-foreground mt-1"
-              {...createTestId('notifications', 'description') && { 'data-testid': createTestId('notifications', 'description') }}
-            >
+            <p className="text-muted-foreground mt-1">
               {t('notifications.description')}
             </p>
           </header>
@@ -343,8 +334,7 @@ function NotificationsPage() {
                         setHasUnsavedChanges(true)
                       }}
                       aria-label={pushNotificationsEnabled ? t('notifications.channels.push.ariaEnabled') : t('notifications.channels.push.ariaDisabled')}
-                      {...createTestId('notifications', 'push', 'master') && { 'data-testid': createTestId('notifications', 'push', 'master') }}
-                      {...createCyId('notifications', 'push-master') && { 'data-cy': createCyId('notifications', 'push-master') }}
+                      data-cy={sel('settings.notifications.pushToggle')}
                     />
                   </div>
                 </div>
@@ -372,27 +362,21 @@ function NotificationsPage() {
 
             {/* Tipos de Notificaciones */}
             {notificationTypes.map((type, index) => (
-              <div 
-                key={index} 
+              <div
+                key={index}
                 className="space-y-6"
-                {...createTestId('notifications', 'category', type.category.toLowerCase().replace(/\s+/g, '-')) && { 'data-testid': createTestId('notifications', 'category', type.category.toLowerCase().replace(/\s+/g, '-')) }}
-                {...createCyId('notifications', type.category.toLowerCase().replace(/\s+/g, '-')) && { 'data-cy': createCyId('notifications', type.category.toLowerCase().replace(/\s+/g, '-')) }}
+                data-cy={sel('settings.notifications.category', { category: type.category.toLowerCase().replace(/\s+/g, '-') })}
               >
-                <h3 
-                  className="text-lg font-semibold flex items-center gap-2"
-                  {...createTestId('notifications', 'category', 'title') && { 'data-testid': createTestId('notifications', 'category', 'title') }}
-                >
+                <h3 className="text-lg font-semibold flex items-center gap-2">
                   {type.icon}
                   {type.category}
                 </h3>
                 
                 <div className="space-y-6">
                   {type.notifications.map((notification) => (
-                    <div 
-                      key={notification.id} 
+                    <div
+                      key={notification.id}
                       className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center"
-                      {...createTestId('notifications', 'item', notification.id) && { 'data-testid': createTestId('notifications', 'item', notification.id) }}
-                      {...createCyId('notifications', `item-${notification.id}`) && { 'data-cy': createCyId('notifications', `item-${notification.id}`) }}
                     >
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
@@ -419,8 +403,6 @@ function NotificationsPage() {
                               disabled={notification.required}
                               onCheckedChange={() => handleNotificationToggle(notification.id, 'email')}
                               aria-label={t('notifications.labels.emailAriaLabel', { title: notification.title, status: notification.email ? t('notifications.labels.enabled') : t('notifications.labels.disabled') })}
-                              {...createTestId('notifications', notification.id, 'email') && { 'data-testid': createTestId('notifications', notification.id, 'email') }}
-                              {...createCyId('notifications', `${notification.id}-email`) && { 'data-cy': createCyId('notifications', `${notification.id}-email`) }}
                             />
                           </div>
                           
@@ -433,8 +415,6 @@ function NotificationsPage() {
                               disabled={notification.required || !pushNotificationsEnabled}
                               onCheckedChange={() => handleNotificationToggle(notification.id, 'push')}
                               aria-label={t('notifications.labels.pushAriaLabel', { title: notification.title, status: (notification.push && pushNotificationsEnabled) ? t('notifications.labels.enabled') : t('notifications.labels.disabled') })}
-                              {...createTestId('notifications', notification.id, 'push') && { 'data-testid': createTestId('notifications', notification.id, 'push') }}
-                              {...createCyId('notifications', `${notification.id}-push`) && { 'data-cy': createCyId('notifications', `${notification.id}-push`) }}
                             />
                           </div>
                         </div>
@@ -452,12 +432,11 @@ function NotificationsPage() {
 
             {/* Botón de Guardar */}
             <div className="flex justify-end pt-6 border-t border-muted">
-              <Button 
+              <Button
                 onClick={handleSaveSettings}
                 disabled={!hasUnsavedChanges || isUpdating || isLoadingUser}
                 className="min-w-[120px]"
-                {...createTestId('notifications', 'save', 'button') && { 'data-testid': createTestId('notifications', 'save', 'button') }}
-                {...createCyId('notifications', 'save-button') && { 'data-cy': createCyId('notifications', 'save-button') }}
+                data-cy={sel('settings.notifications.submitButton')}
               >
                 {isUpdating ? (
                   <>

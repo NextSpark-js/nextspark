@@ -33,7 +33,7 @@ import { listEntityData, deleteEntityData } from '../../../lib/api/entities'
 import { useTeam } from '../../../hooks/useTeam'
 import { usePermission } from '../../../lib/permissions/hooks'
 import type { Permission } from '../../../lib/permissions/types'
-import { createCyId } from '../../../lib/test'
+import { sel } from '../../../lib/test'
 import { toast } from 'sonner'
 
 export interface EntityListWrapperProps {
@@ -299,11 +299,11 @@ export function EntityListWrapper({
   const searchValue = typeof filters.search === 'string' ? filters.search : ''
 
   return (
-    <div className="p-6 space-y-6" data-cy={createCyId(entityConfig.slug, 'page')}>
+    <div className="p-6 space-y-6" data-cy={sel('entities.list.container', { slug: entityConfig.slug })}>
       {/* Row 1: Title + Create button */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight" data-cy={createCyId(entityConfig.slug, 'title')}>
+          <h1 className="text-2xl font-bold tracking-tight" data-cy={sel('entities.page.title', { slug: entityConfig.slug })}>
             {entityConfig.names.plural}
           </h1>
           <p className="text-muted-foreground">
@@ -313,7 +313,7 @@ export function EntityListWrapper({
         <div className="flex items-center gap-2">
           {headerActions}
           {canCreate && (
-            <Button asChild data-cy={createCyId(entityConfig.slug, 'add')}>
+            <Button asChild data-cy={sel('entities.list.addButton', { slug: entityConfig.slug })}>
               <Link href={`/dashboard/${entityConfig.slug}/create`}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add {entityConfig.names.singular}
@@ -332,7 +332,7 @@ export function EntityListWrapper({
               value={searchValue}
               onChange={(e) => handleSearch(e.target.value)}
               containerClassName="flex-1 max-w-md"
-              data-cy={createCyId(entityConfig.slug, 'search')}
+              data-cy={sel('entities.list.search.container', { slug: entityConfig.slug })}
             />
           )}
 
@@ -354,7 +354,7 @@ export function EntityListWrapper({
                 }))}
                 values={values}
                 onChange={(newValues) => setFilter(filterConfig.field, newValues)}
-                data-cy={createCyId(entityConfig.slug, `filter-${filterConfig.field}`)}
+                data-cy={sel('entities.list.filters.trigger', { slug: entityConfig.slug, field: filterConfig.field })}
               />
             )
           })}

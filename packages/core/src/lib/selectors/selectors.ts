@@ -12,7 +12,7 @@
  *
  * @example Component usage:
  * ```tsx
- * import { sel } from '@nextsparkjs/testing/selectors'
+ * import { sel } from '@nextsparkjs/core/selectors'
  *
  * <nav data-cy={sel('dashboard.navigation.main')}>
  *   <Link data-cy={sel('dashboard.navigation.entityLink', { slug: 'customers' })}>
@@ -20,7 +20,7 @@
  *
  * @example Test/POM usage:
  * ```ts
- * import { cySelector } from '@nextsparkjs/testing/selectors'
+ * import { cySelector } from '@nextsparkjs/core/selectors'
  *
  * cy.get(cySelector('dashboard.navigation.main'))
  * ```
@@ -28,7 +28,7 @@
  * @example Theme extension:
  * ```ts
  * // In theme's selectors.ts
- * import { createSelectorHelpers, CORE_SELECTORS } from '@nextsparkjs/testing/selectors'
+ * import { createSelectorHelpers, CORE_SELECTORS } from '@nextsparkjs/core/selectors'
  *
  * const THEME_SELECTORS = { ...CORE_SELECTORS, myFeature: { ... } }
  * export const { sel, cySelector } = createSelectorHelpers(THEME_SELECTORS)

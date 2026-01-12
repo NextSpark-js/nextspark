@@ -43,7 +43,7 @@ import {
 import type { EntityConfig, ChildEntityDefinition } from '../../lib/entities/types'
 import { EntityFieldRenderer } from './EntityFieldRenderer'
 import { EntityForm } from './EntityForm'
-import { createTestId, createCyId } from '../../lib/test'
+import { sel } from '../../lib/test'
 
 export interface EntityChildManagerProps {
   parentEntityConfig: EntityConfig
@@ -79,19 +79,6 @@ interface ChildFormState {
   index?: number
 }
 
-/**
- * Generate test IDs for child entity manager
- */
-function generateTestIds(parentName: string, childName: string) {
-  return {
-    container: createTestId(`${parentName}-${childName}`, 'container'),
-    addButton: createTestId(`${parentName}-${childName}`, 'button', 'add'),
-    item: (id: string) => createTestId(`${parentName}-${childName}`, 'item', id),
-    editButton: (id: string) => createTestId(`${parentName}-${childName}`, 'button', `edit-${id}`),
-    deleteButton: (id: string) => createTestId(`${parentName}-${childName}`, 'button', `delete-${id}`),
-    form: createTestId(`${parentName}-${childName}`, 'form'),
-  }
-}
 
 export function EntityChildManager({
   parentEntityConfig,
@@ -135,8 +122,6 @@ export function EntityChildManager({
   
   const [sortField, setSortField] = useState<string>('')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
-
-  const testIds = generateTestIds(parentEntityConfig.slug, childEntityName)
 
   // Helper function to add transition effect
   const addTransitionEffect = useCallback((itemId: string) => {
@@ -397,10 +382,9 @@ export function EntityChildManager({
   }
 
   return (
-    <div 
+    <div
       className={`space-y-4 ${className || ''}`}
-      data-testid={testIds.container}
-      data-cy={createCyId(`${parentEntityConfig.slug}-${childEntityName}`, 'container')}
+      data-cy={sel('entities.childEntity.container', { parentSlug: parentEntityConfig.slug, childName: childEntityName })}
     >
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -425,8 +409,7 @@ export function EntityChildManager({
             <Button
               size="sm"
               onClick={handleCreate}
-              data-testid={testIds.addButton}
-              data-cy={createCyId(`${parentEntityConfig.slug}-${childEntityName}`, 'add-button')}
+              data-cy={sel('entities.childEntity.addButton', { parentSlug: parentEntityConfig.slug, childName: childEntityName })}
             >
               <Plus className="mr-2 h-4 w-4" />
               Add {childEntityConfig.display.title.slice(0, -1)}
@@ -517,12 +500,11 @@ export function EntityChildManager({
                       const isRecentlyModified = recentlyModified.has(itemId)
                       
                       return (
-                        <tr 
-                          key={itemId || index} 
+                        <tr
+                          key={itemId || index}
                           className={`hover:bg-muted/50 transition-colors duration-1000 ${
                             isRecentlyModified ? 'bg-accent/50' : ''
                           }`}
-                          data-testid={testIds.item(String(item.id || index))}
                         >
                         {visibleFields.map((field) => (
                           <td key={field.name} className="px-4 py-3">
@@ -550,7 +532,6 @@ export function EntityChildManager({
                               {onChildUpdate && (
                                 <DropdownMenuItem
                                   onClick={() => handleEdit(item, index)}
-                                  data-testid={testIds.editButton(String(item.id || index))}
                                 >
                                   <Edit className="mr-2 h-4 w-4" />
                                   Edit
@@ -571,7 +552,6 @@ export function EntityChildManager({
                                     className="text-destructive"
                                     onClick={() => handleDelete(item)}
                                     disabled={deletingItems.has(String(item.id))}
-                                    data-testid={testIds.deleteButton(String(item.id || index))}
                                   >
                                     {deletingItems.has(String(item.id)) ? (
                                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -600,12 +580,11 @@ export function EntityChildManager({
                 const isRecentlyModified = recentlyModified.has(itemId)
                 
                 return (
-                  <Card 
+                  <Card
                     key={itemId || index}
                     className={`transition-colors duration-1000 ${
                       isRecentlyModified ? 'bg-accent/30 border-accent' : ''
                     }`}
-                    data-testid={testIds.item(String(item.id || index))}
                   >
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
@@ -630,7 +609,6 @@ export function EntityChildManager({
                           {onChildUpdate && (
                             <DropdownMenuItem
                               onClick={() => handleEdit(item, index)}
-                              data-testid={testIds.editButton(String(item.id || index))}
                             >
                               <Edit className="mr-2 h-4 w-4" />
                               Edit
@@ -642,7 +620,6 @@ export function EntityChildManager({
                               className="text-destructive"
                               onClick={() => handleDelete(item)}
                               disabled={deletingItems.has(String(item.id))}
-                              data-testid={testIds.deleteButton(String(item.id || index))}
                             >
                               {deletingItems.has(String(item.id)) ? (
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -690,8 +667,8 @@ export function EntityChildManager({
               }
             </DialogDescription>
           </DialogHeader>
-          
-          <div data-testid={testIds.form}>
+
+          <div>
             {useMemo(() => {
               console.log('[EntityChildManager RENDER] Rendering form for:', childEntityName)
               console.log('[EntityChildManager RENDER] customFormComponent:', customFormComponent)

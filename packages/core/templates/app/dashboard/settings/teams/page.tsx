@@ -13,7 +13,7 @@ import { useTeamsConfig } from '@nextsparkjs/core/hooks/useTeamsConfig'
 import { TeamMembersList } from '@nextsparkjs/core/components/teams/TeamMembersList'
 import { TeamPendingInvitations } from '@nextsparkjs/core/components/teams/TeamPendingInvitations'
 import { CreateTeamDialog } from '@nextsparkjs/core/components/teams/CreateTeamDialog'
-import { createTestId, createCyId } from '@nextsparkjs/testing'
+import { sel } from '@nextsparkjs/core/selectors'
 import { TeamRole } from '@nextsparkjs/core/lib/teams/types'
 import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
 
@@ -60,8 +60,7 @@ function TeamsSettingsPage() {
         className="flex flex-col items-center justify-center py-12 gap-3"
         role="status"
         aria-label={tTeams('messages.loading')}
-        {...createTestId('teams-settings', 'loading') && { 'data-testid': createTestId('teams-settings', 'loading') }}
-        {...createCyId('teams-settings', 'loading') && { 'data-cy': createCyId('teams-settings', 'loading') }}
+        data-cy={sel('settings.teams.loading')}
       >
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         <div className="text-sm text-muted-foreground">
@@ -75,35 +74,24 @@ function TeamsSettingsPage() {
     <>
       <div
         className="max-w-4xl space-y-6"
-        {...createTestId('teams-settings', 'container') && { 'data-testid': createTestId('teams-settings', 'container') }}
-        {...createCyId('teams-settings', 'main') && { 'data-cy': createCyId('teams-settings', 'main') }}
+        data-cy={sel('settings.teams.main')}
       >
         {/* Header */}
-        <header
-          {...createTestId('teams-settings', 'header') && { 'data-testid': createTestId('teams-settings', 'header') }}
-          {...createCyId('teams-settings', 'header') && { 'data-cy': createCyId('teams-settings', 'header') }}
-        >
+        <header data-cy={sel('settings.teams.header')}>
           <h1
             className="text-2xl font-bold"
             id="teams-settings-heading"
-            {...createTestId('teams-settings', 'title') && { 'data-testid': createTestId('teams-settings', 'title') }}
           >
             {t('teams.title')}
           </h1>
-          <p
-            className="text-muted-foreground mt-1"
-            {...createTestId('teams-settings', 'description') && { 'data-testid': createTestId('teams-settings', 'description') }}
-          >
+          <p className="text-muted-foreground mt-1">
             {t('teams.description')}
           </p>
         </header>
 
         {/* Single-user mode: show simplified view */}
         {isSingleUserMode && currentTeam && (
-          <Card
-            {...createTestId('teams-settings', 'single-user-card') && { 'data-testid': createTestId('teams-settings', 'single-user-card') }}
-            {...createCyId('teams-settings', 'single-user') && { 'data-cy': createCyId('teams-settings', 'single-user') }}
-          >
+          <Card data-cy={sel('settings.teams.singleUser')}>
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5" aria-hidden="true" />
@@ -132,10 +120,7 @@ function TeamsSettingsPage() {
 
         {/* Teams List Card - only show if not single-user mode */}
         {!isSingleUserMode && (
-        <Card
-          {...createTestId('teams-settings', 'list-card') && { 'data-testid': createTestId('teams-settings', 'list-card') }}
-          {...createCyId('teams-settings', 'teams-list') && { 'data-cy': createCyId('teams-settings', 'teams-list') }}
-        >
+        <Card data-cy={sel('settings.teams.teamsList')}>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -214,10 +199,7 @@ function TeamsSettingsPage() {
 
         {/* Selected Team Details - only show if not single-user mode */}
         {!isSingleUserMode && selectedMembership && (
-          <Card
-            {...createTestId('teams-settings', 'team-details') && { 'data-testid': createTestId('teams-settings', 'team-details') }}
-            {...createCyId('teams-settings', 'team-details') && { 'data-cy': createCyId('teams-settings', 'team-details') }}
-          >
+          <Card data-cy={sel('settings.teams.teamDetails')}>
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Settings className="h-5 w-5" aria-hidden="true" />

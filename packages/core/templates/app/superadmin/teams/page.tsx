@@ -26,7 +26,7 @@ import {
   SearchInput,
   PaginationControls,
 } from "@nextsparkjs/core/components/superadmin/filters";
-import { sel } from "@nextsparkjs/testing";
+import { sel } from "@nextsparkjs/core/selectors";
 import { useAdminTeams } from "@nextsparkjs/core/hooks/teams";
 
 /**

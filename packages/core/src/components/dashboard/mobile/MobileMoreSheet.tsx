@@ -12,7 +12,7 @@ import { Button } from '../../ui/button'
 import { Separator } from '../../ui/separator'
 import Link from 'next/link'
 import { Shield, LogOut } from 'lucide-react'
-import { createTestId, createCyId } from '../../../lib/test'
+import { sel } from '../../../lib/test'
 import { TeamSwitcherCompact } from '../../teams/TeamSwitcherCompact'
 import { useTranslations } from 'next-intl'
 import { useIsSuperAdmin } from '../../app/guards/SuperAdminGuard'
@@ -85,8 +85,7 @@ export function MobileMoreSheet({ isOpen, onOpenChange }: MobileMoreSheetProps) 
       <SheetContent
         side="bottom"
         className="rounded-t-[20px]"
-        {...createTestId('mobile-more-sheet', 'content') && { 'data-testid': createTestId('mobile-more-sheet', 'content') }}
-        {...createCyId('mobile-more-sheet', 'content') && { 'data-cy': createCyId('mobile-more-sheet', 'content') }}
+        data-cy={sel('dashboard.mobile.moreSheet.container')}
       >
         <SheetHeader>
           <SheetTitle>{tCommon('mobileNav.moreOptions')}</SheetTitle>
@@ -107,8 +106,7 @@ export function MobileMoreSheet({ isOpen, onOpenChange }: MobileMoreSheetProps) 
                 className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-accent transition-colors"
                 target={item.external ? '_blank' : undefined}
                 rel={item.external ? 'noopener noreferrer' : undefined}
-                {...createTestId('mobile-more-sheet', 'item', item.id) && { 'data-testid': createTestId('mobile-more-sheet', 'item', item.id) }}
-                {...createCyId('mobile-more-sheet', `item-${item.id}`) && { 'data-cy': createCyId('mobile-more-sheet', `item-${item.id}`) }}
+                data-cy={sel('dashboard.mobile.moreSheet.item', { id: item.id })}
               >
                 <Icon className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
                 <span className="text-sm font-medium">{item.label}</span>
@@ -124,8 +122,7 @@ export function MobileMoreSheet({ isOpen, onOpenChange }: MobileMoreSheetProps) 
                 href="/superadmin"
                 onClick={handleLinkClick}
                 className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
-                {...createTestId('mobile-more-sheet', 'superadmin') && { 'data-testid': createTestId('mobile-more-sheet', 'superadmin') }}
-                {...createCyId('mobile-more-sheet', 'superadmin-link') && { 'data-cy': createCyId('mobile-more-sheet', 'superadmin-link') }}
+                data-cy={sel('dashboard.mobile.moreSheet.superadminLink')}
               >
                 <Shield className="h-5 w-5" aria-hidden="true" />
                 <span className="text-sm font-medium">Super Admin Panel</span>
@@ -135,10 +132,7 @@ export function MobileMoreSheet({ isOpen, onOpenChange }: MobileMoreSheetProps) 
 
           {/* Team Switcher */}
           <Separator className="my-2" />
-          <div
-            {...createTestId('mobile-more-sheet', 'team-switcher') && { 'data-testid': createTestId('mobile-more-sheet', 'team-switcher') }}
-            {...createCyId('mobile-more-sheet', 'team-switcher') && { 'data-cy': createCyId('mobile-more-sheet', 'team-switcher') }}
-          >
+          <div data-cy={sel('dashboard.mobile.moreSheet.teamSwitcher')}>
             <TeamSwitcherCompact className="border-0 p-0" />
           </div>
 
@@ -150,8 +144,7 @@ export function MobileMoreSheet({ isOpen, onOpenChange }: MobileMoreSheetProps) 
             onClick={handleSignOut}
             disabled={isSigningOut}
             className="w-full justify-start gap-3 px-4 py-3 h-auto text-red-600 hover:text-red-700 hover:bg-red-50"
-            {...createTestId('mobile-more-sheet', 'signout') && { 'data-testid': createTestId('mobile-more-sheet', 'signout') }}
-            {...createCyId('mobile-more-sheet', 'signout-button') && { 'data-cy': createCyId('mobile-more-sheet', 'signout-button') }}
+            data-cy={sel('dashboard.mobile.moreSheet.signoutButton')}
           >
             <LogOut className="h-5 w-5" aria-hidden="true" />
             <span className="text-sm font-medium">

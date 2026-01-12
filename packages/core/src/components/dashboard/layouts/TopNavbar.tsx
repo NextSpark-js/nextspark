@@ -21,7 +21,7 @@ import { NotificationsDropdown } from '../misc/NotificationsDropdown'
 import { SearchDropdown } from '../misc/SearchDropdown'
 import { QuickCreateDropdown } from '../misc/QuickCreateDropdown'
 import { cn } from '../../../lib/utils'
-import { createTestId, sel, createAriaLabel } from '../../../lib/test'
+import { sel, createAriaLabel } from '../../../lib/test'
 import { useTranslations } from 'next-intl'
 import { useIsSuperAdmin } from '../../app/guards/SuperAdminGuard'
 import { useIsDeveloper } from '../../app/guards/DeveloperGuard'
@@ -137,8 +137,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
         aria-live="polite" 
         aria-atomic="true"
         className="sr-only"
-        {...createTestId('topnav', 'status', 'message') && { 'data-testid': createTestId('topnav', 'status', 'message') }}
-      >
+              >
         {statusMessage}
       </div>
 
@@ -151,8 +150,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
         )}
         role="banner"
         aria-label="Navegación principal"
-        {...createTestId('topnav', 'container') && { 'data-testid': createTestId('topnav', 'container') }}
-        data-cy={sel('dashboard.topnav.header')}
+        data-cy={sel('dashboard.topnav.container')}
       >
       <div className="w-full pl-2.5 pr-4 sm:pr-6 lg:pr-8">
         <div className="flex items-center justify-between h-16">
@@ -164,7 +162,6 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                 href="/"
                 className="text-xl font-bold text-foreground lg:hidden"
                 aria-label="Ir a la página principal"
-                {...createTestId('topnav', 'logo', 'link') && { 'data-testid': createTestId('topnav', 'logo', 'link') }}
                 data-cy={sel('dashboard.topnav.logo')}
               >
                 Boilerplate
@@ -183,7 +180,6 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                   aria-label={isCollapsed ? 'Expandir sidebar' : 'Contraer sidebar'}
                   aria-expanded={!isCollapsed}
                   aria-controls="sidebar-navigation"
-                  data-testid={createTestId('topnav', 'sidebar-toggle', 'button')}
                   data-cy={sel('dashboard.topnav.sidebarToggle')}
                 >
                   {isCollapsed ? (
@@ -206,8 +202,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                     className="hidden lg:flex items-center min-w-0 max-w-sm"
                     role="search"
                     aria-label="Búsqueda de tareas"
-                    {...createTestId('topnav', 'search', 'container') && { 'data-testid': createTestId('topnav', 'search', 'container') }}
-                    data-cy={sel('dashboard.topnav.searchSection')}
+                    data-cy={sel('dashboard.topnav.search.container')}
                   >
                     <SearchDropdown />
                   </div>
@@ -222,26 +217,19 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
             className="flex items-center space-x-4 flex-shrink-0"
             role="toolbar"
             aria-label="Acciones y configuración"
-            {...createTestId('topnav', 'actions', 'toolbar') && { 'data-testid': createTestId('topnav', 'actions', 'toolbar') }}
             data-cy={sel('dashboard.topnav.actions')}
           >
             {/* Notifications - Solo visible cuando hay usuario autenticado */}
             {user && isTopbarFeatureEnabled('notifications') && (
-              <div 
-                {...createTestId('topnav', 'notifications') && { 'data-testid': createTestId('topnav', 'notifications') }}
-                data-cy={sel('dashboard.topnav.notifications')}
-              >
-                <NotificationsDropdown />
-              </div>
+              <NotificationsDropdown />
             )}
 
             {/* Help/Support - Solo visible cuando hay usuario autenticado */}
             {user && isTopbarFeatureEnabled('support') && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 asChild
-                {...createTestId('topnav', 'help', 'button') && { 'data-testid': createTestId('topnav', 'help', 'button') }}
                 data-cy={sel('dashboard.topnav.help')}
               >
                 <Link 
@@ -258,8 +246,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
             
             {/* Theme Toggle */}
             {isTopbarFeatureEnabled('themeToggle') && (
-              <div 
-                {...createTestId('topnav', 'theme', 'toggle') && { 'data-testid': createTestId('topnav', 'theme', 'toggle') }}
+              <div
                 data-cy={sel('dashboard.topnav.themeToggle')}
               >
                 <ThemeToggle />
@@ -272,7 +259,6 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                 variant="ghost"
                 size="sm"
                 asChild
-                {...createTestId('topnav', 'superadmin', 'button') && { 'data-testid': createTestId('topnav', 'superadmin', 'button') }}
                 data-cy={sel('dashboard.topnav.superadmin')}
               >
                 <Link
@@ -292,7 +278,6 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                 variant="ghost"
                 size="sm"
                 asChild
-                {...createTestId('topnav', 'devtools', 'button') && { 'data-testid': createTestId('topnav', 'devtools', 'button') }}
                 data-cy={sel('dashboard.topnav.devtools')}
               >
                 <Link
@@ -312,7 +297,6 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                 className="h-8 w-20 bg-muted animate-pulse rounded"
                 role="status"
                 aria-label="Cargando información del usuario"
-                {...createTestId('topnav', 'user', 'loading') && { 'data-testid': createTestId('topnav', 'user', 'loading') }}
                 data-cy={sel('dashboard.topnav.userLoading')}
               >
                 <span className="sr-only">Cargando...</span>
@@ -322,8 +306,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
               <DropdownMenu>
                 <DropdownMenuTrigger 
                   asChild
-                  {...createTestId('topnav', 'user', 'trigger') && { 'data-testid': createTestId('topnav', 'user', 'trigger') }}
-                  data-cy={sel('dashboard.topnav.userMenuTrigger')}
+                  data-cy={sel('dashboard.topnav.userMenu.trigger')}
                 >
                   <Button 
                     variant="ghost" 
@@ -342,15 +325,13 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                         width={32}
                         height={32}
                         className="h-8 w-8 rounded-full object-cover border border-border"
-                        {...createTestId('topnav', 'user', 'avatar') && { 'data-testid': createTestId('topnav', 'user', 'avatar') }}
-                      />
+                                              />
                     ) : (
                       <div 
                         className={`h-8 w-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${getAvatarColor(user.email)}`}
                         role="img"
                         aria-label={`Avatar de ${user.firstName || user.email}`}
-                        {...createTestId('topnav', 'user', 'avatar') && { 'data-testid': createTestId('topnav', 'user', 'avatar') }}
-                      >
+                                              >
                         {getUserInitials(user)}
                       </div>
                     )}
@@ -362,8 +343,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                 <DropdownMenuContent 
                   align="end" 
                   className="w-56"
-                  {...createTestId('topnav', 'user', 'menu') && { 'data-testid': createTestId('topnav', 'user', 'menu') }}
-                  data-cy={sel('dashboard.topnav.userMenu')}
+                                    data-cy={sel('dashboard.topnav.userMenu.content')}
                 >
                   {(TOPBAR_CONFIG.userMenu.showAvatar || TOPBAR_CONFIG.userMenu.showEmail || TOPBAR_CONFIG.userMenu.showRole) && (
                     <DropdownMenuLabel>
@@ -396,8 +376,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                         <DropdownMenuItem 
                           key={`link-${index}`}
                           asChild
-                          {...createTestId('topnav', 'menu', 'item') && { 'data-testid': createTestId('topnav', 'menu', 'item') }}
-                          data-cy={sel('dashboard.topnav.menuItem', { icon: item.icon })}
+                                                    data-cy={sel('dashboard.topnav.userMenu.item', { icon: item.icon })}
                         >
                           <Link 
                             href={item.href} 
@@ -420,8 +399,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                           key={`action-${index}`}
                           onClick={isSignOut ? handleSignOut : undefined}
                           className={isSignOut ? "text-red-600 focus:text-red-600" : undefined}
-                          {...createTestId('topnav', 'menu', 'action') && { 'data-testid': createTestId('topnav', 'menu', 'action') }}
-                          data-cy={sel('dashboard.topnav.menuAction', { action: item.action })}
+                                                    data-cy={sel('dashboard.topnav.userMenu.action', { action: item.action })}
                         >
                           {IconComponent && <IconComponent className="mr-2 h-4 w-4" aria-hidden="true" />}
                           {t(item.label)}
@@ -461,8 +439,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
               <>
                 <Link 
                   href="/login"
-                  {...createTestId('topnav', 'signin', 'link') && { 'data-testid': createTestId('topnav', 'signin', 'link') }}
-                  data-cy={sel('dashboard.topnav.signin')}
+                                    data-cy={sel('dashboard.topnav.signin')}
                 >
                   <Button 
                     variant="ghost" 
@@ -474,8 +451,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                 </Link>
                 <Link 
                   href="/signup"
-                  {...createTestId('topnav', 'signup', 'link') && { 'data-testid': createTestId('topnav', 'signup', 'link') }}
-                  data-cy={sel('dashboard.topnav.signup')}
+                                    data-cy={sel('dashboard.topnav.signup')}
                 >
                   <Button 
                     size="sm"
@@ -492,13 +468,11 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
             className="lg:hidden flex items-center space-x-2"
             role="group"
             aria-label="Acciones móviles"
-            {...createTestId('topnav', 'mobile', 'actions') && { 'data-testid': createTestId('topnav', 'mobile', 'actions') }}
-            data-cy={sel('dashboard.topnav.mobileActions')}
+                        data-cy={sel('dashboard.topnav.mobileMenu.actions')}
           >
             {isTopbarFeatureEnabled('themeToggle') && (
               <div 
-                {...createTestId('topnav', 'mobile', 'theme') && { 'data-testid': createTestId('topnav', 'mobile', 'theme') }}
-              >
+                              >
                 <ThemeToggle />
               </div>
             )}
@@ -509,8 +483,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                 aria-label={isMenuOpen ? 'Cerrar menú de navegación' : 'Abrir menú de navegación'}
                 aria-expanded={isMenuOpen}
                 aria-controls="mobile-menu"
-                                    {...createTestId('topnav', 'mobile', 'toggle') && { 'data-testid': createTestId('topnav', 'mobile', 'toggle') }}
-                data-cy={sel('dashboard.topnav.mobileMenuToggle')}
+                                                    data-cy={sel('dashboard.topnav.mobileMenu.toggle')}
               >
                 {isMenuOpen ? (
                   <X className="h-6 w-6" aria-hidden="true" />
@@ -529,8 +502,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
           id="mobile-menu"
           role="navigation"
           aria-label="Menú de navegación móvil"
-          {...createTestId('topnav', 'mobile', 'menu') && { 'data-testid': createTestId('topnav', 'mobile', 'menu') }}
-          data-cy={sel('dashboard.topnav.mobileMenu')}
+                    data-cy={sel('dashboard.topnav.mobileMenu.container')}
         >
           <div className="px-2 pt-2 pb-3 space-y-1">
             {user ? (
@@ -559,8 +531,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                       )}
                       onClick={handleMenuClose}
                       aria-label="Ir a Super Admin - Área de super administrador"
-                      {...createTestId('topnav', 'mobile', 'superadmin') && { 'data-testid': createTestId('topnav', 'mobile', 'superadmin') }}
-                      data-cy={sel('dashboard.topnav.mobileNavSuperadmin')}
+                                            data-cy={sel('dashboard.topnav.mobileMenu.superadmin')}
                     >
                       <Shield className="h-4 w-4" aria-hidden="true" />
                       <span className="sr-only">Área de super administrador</span>
@@ -579,8 +550,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                       )}
                       onClick={handleMenuClose}
                       aria-label="Ir a DevTools - Área de desarrolladores"
-                      {...createTestId('topnav', 'mobile', 'devtools') && { 'data-testid': createTestId('topnav', 'mobile', 'devtools') }}
-                      data-cy={sel('dashboard.topnav.mobileNavDevtools')}
+                                            data-cy={sel('dashboard.topnav.mobileMenu.devtools')}
                     >
                       <Code className="h-4 w-4" aria-hidden="true" />
                       <span className="sr-only">Área de desarrolladores</span>
@@ -593,8 +563,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                   className="flex items-center gap-3 px-3 py-2 border-t border-border pt-4"
                   role="group"
                   aria-label="Información del usuario"
-                  {...createTestId('topnav', 'mobile', 'userinfo') && { 'data-testid': createTestId('topnav', 'mobile', 'userinfo') }}
-                  data-cy={sel('dashboard.topnav.mobileUserInfo')}
+                                    data-cy={sel('dashboard.topnav.mobileMenu.userInfo')}
                 >
                   {user.image ? (
                     <Image
@@ -627,8 +596,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                   className="block px-3 py-2 rounded-md text-base font-medium text-foreground hover:bg-accent"
                   onClick={handleMenuClose}
                   aria-label="Ir a perfil"
-                  {...createTestId('topnav', 'mobile', 'profile') && { 'data-testid': createTestId('topnav', 'mobile', 'profile') }}
-                  data-cy={sel('dashboard.topnav.mobileLinkProfile')}
+                                    data-cy={sel('dashboard.topnav.mobileMenu.linkProfile')}
                 >
                   <User className="inline mr-2 h-4 w-4" aria-hidden="true" />
                   Profile
@@ -638,8 +606,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                   className="block px-3 py-2 rounded-md text-base font-medium text-foreground hover:bg-accent"
                   onClick={handleMenuClose}
                   aria-label="Ir a configuración"
-                  {...createTestId('topnav', 'mobile', 'settings') && { 'data-testid': createTestId('topnav', 'mobile', 'settings') }}
-                  data-cy={sel('dashboard.topnav.mobileLinkSettings')}
+                                    data-cy={sel('dashboard.topnav.mobileMenu.linkSettings')}
                 >
                   <Settings className="inline mr-2 h-4 w-4" aria-hidden="true" />
                   Settings
@@ -649,8 +616,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                   className="block px-3 py-2 rounded-md text-base font-medium text-foreground hover:bg-accent"
                   onClick={handleMenuClose}
                   aria-label="Ir a facturación"
-                  {...createTestId('topnav', 'mobile', 'billing') && { 'data-testid': createTestId('topnav', 'mobile', 'billing') }}
-                  data-cy={sel('dashboard.topnav.mobileLinkBilling')}
+                                    data-cy={sel('dashboard.topnav.mobileMenu.linkBilling')}
                 >
                   <CreditCard className="inline mr-2 h-4 w-4" aria-hidden="true" />
                   Billing
@@ -662,8 +628,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                   }}
                   className="w-full text-left px-3 py-2 rounded-md text-base font-medium text-red-600 hover:bg-accent"
                   aria-label="Cerrar sesión"
-                  {...createTestId('topnav', 'mobile', 'signout') && { 'data-testid': createTestId('topnav', 'mobile', 'signout') }}
-                  data-cy={sel('dashboard.topnav.mobileSignout')}
+                                    data-cy={sel('dashboard.topnav.mobileMenu.signout')}
                 >
                   <LogOut className="inline mr-2 h-4 w-4" aria-hidden="true" />
                   Sign out
@@ -676,8 +641,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                   className="block px-3 py-2 rounded-md text-base font-medium text-foreground hover:bg-accent"
                   onClick={handleMenuClose}
                   aria-label="Iniciar sesión"
-                  {...createTestId('topnav', 'mobile', 'signin') && { 'data-testid': createTestId('topnav', 'mobile', 'signin') }}
-                  data-cy="topnav-mobile-signin"
+                                    data-cy={sel('dashboard.topnav.signin')}
                 >
                   Sign in
                 </Link>
@@ -686,8 +650,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                   className="block px-3 py-2 rounded-md text-base font-medium text-foreground hover:bg-accent"
                   onClick={handleMenuClose}
                   aria-label="Registrarse"
-                  {...createTestId('topnav', 'mobile', 'signup') && { 'data-testid': createTestId('topnav', 'mobile', 'signup') }}
-                  data-cy="topnav-mobile-signup"
+                                    data-cy={sel('dashboard.topnav.signup')}
                 >
                   Sign up
                 </Link>

@@ -2,7 +2,7 @@ import { cn } from '@nextsparkjs/core/lib/utils'
 import { Message as MessageType } from '../../lib/hooks/useAiChat'
 import { MarkdownRenderer } from './MarkdownRenderer'
 import { User, Bot } from 'lucide-react'
-import { createCyId } from '@nextsparkjs/testing/utils'
+import { sel } from '@nextsparkjs/core/selectors'
 
 interface MessageProps {
     message: MessageType
@@ -13,7 +13,7 @@ export function Message({ message }: MessageProps) {
 
     return (
         <div
-            data-cy={createCyId('ai-chat', `message-${message.role}`)}
+            data-cy={sel(message.role === 'user' ? 'common.aiChat.messageUser' : 'common.aiChat.messageAssistant')}
             className={cn(
                 'flex w-full gap-3 p-4',
                 isUser ? 'flex-row-reverse' : 'flex-row'

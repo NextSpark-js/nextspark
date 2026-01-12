@@ -206,6 +206,9 @@ importers:
       '@inquirer/prompts':
         specifier: ^7.2.0
         version: 7.10.1(@types/node@20.19.27)
+      '@nextsparkjs/testing':
+        specifier: workspace:*
+        version: link:../testing
       '@radix-ui/react-accordion':
         specifier: ^1.2.12
         version: 1.2.12(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)

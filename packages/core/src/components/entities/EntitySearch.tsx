@@ -38,7 +38,7 @@ import {
 } from 'lucide-react'
 import type { EntityConfig } from '../../lib/entities/types'
 import { useAuth } from '../../hooks/useAuth'
-import { createTestId, createCyId } from '../../lib/test'
+import { sel } from '../../lib/test'
 
 export interface EntitySearchProps {
   /** REQUIRED: Entity configs must be passed from server component */
@@ -299,18 +299,6 @@ function highlightMatches(text: string, highlights: HighlightRange[]): React.Rea
   return <>{elements}</>
 }
 
-/**
- * Generate test IDs for entity search
- */
-function generateTestIds() {
-  return {
-    container: createTestId('search', 'container'),
-    input: createTestId('search', 'input'),
-    results: createTestId('search', 'results'),
-    result: (id: string) => createTestId('search', 'result', id),
-    filter: createTestId('search', 'filter'),
-  }
-}
 
 export function EntitySearch({
   entities,
@@ -330,8 +318,6 @@ export function EntitySearch({
   const [filters, setFilters] = useState<SearchFilters>({})
   const [isOpen, setIsOpen] = useState(false)
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-
-  const testIds = generateTestIds()
 
   // Get accessible entities for the current user - simplified to show all enabled entities
   // Entities must be provided by server component via props
@@ -431,8 +417,7 @@ export function EntitySearch({
             role="combobox"
             aria-expanded={isOpen}
             className={`justify-between ${className || ''}`}
-            data-testid={testIds.container}
-            data-cy={createCyId('search', 'trigger')}
+            data-cy={sel('globalSearch.trigger')}
           >
             <Search className="mr-2 h-4 w-4" />
             {query || placeholder}
@@ -444,7 +429,7 @@ export function EntitySearch({
               placeholder={placeholder}
               value={query}
               onValueChange={handleSearchChange}
-              data-testid={testIds.input}
+              data-cy={sel('globalSearch.input')}
             />
             <CommandList>
               {isSearching && (
@@ -485,7 +470,7 @@ export function EntitySearch({
                       <CommandItem
                         key={`${result.entityName}-${result.id}`}
                         onSelect={() => handleResultClick(result)}
-                        data-testid={testIds.result(result.id)}
+                        data-cy={sel('globalSearch.result')}
                       >
                         <div className="flex items-center gap-3 w-full">
                           {React.createElement(result.entityConfig.icon, { 
@@ -527,8 +512,7 @@ export function EntitySearch({
             value={query}
             onChange={(e) => handleSearchChange(e.target.value)}
             className="pl-9 pr-9"
-            data-testid={testIds.input}
-            data-cy={createCyId('search', 'input')}
+            data-cy={sel('globalSearch.input')}
           />
           {query && (
             <Button
@@ -545,7 +529,7 @@ export function EntitySearch({
         {enableEntityFilter && (
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" data-testid={testIds.filter}>
+              <Button variant="outline">
                 <Filter className="mr-2 h-4 w-4" />
                 {filters.entityName 
                   ? accessibleEntities.find(e => e.slug === filters.entityName)?.names.singular
@@ -578,7 +562,7 @@ export function EntitySearch({
       </div>
 
       {/* Search results */}
-      <div data-testid={testIds.results} data-cy={createCyId('search', 'results')}>
+      <div data-cy={sel('globalSearch.results')}>
         {isSearching && (
           <Card>
             <CardContent className="flex items-center justify-center py-8">
@@ -603,12 +587,11 @@ export function EntitySearch({
         {results.length > 0 && (
           <div className="space-y-3">
             {results.map((result) => (
-              <Card 
+              <Card
                 key={`${result.entityName}-${result.id}`}
                 className="cursor-pointer hover:shadow-md transition-shadow"
                 onClick={() => handleResultClick(result)}
-                data-testid={testIds.result(result.id)}
-                data-cy={createCyId('search', 'result')}
+                data-cy={sel('globalSearch.result')}
               >
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
@@ -702,7 +685,7 @@ export function EntitySearchModal({
   return (
     <div
       className={`fixed inset-0 z-50 ${isOpen ? 'block' : 'hidden'}`}
-      data-cy="search-modal"
+      data-cy={sel('globalSearch.modal')}
     >
       <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" onClick={onClose} />
       <div className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] w-full max-w-2xl max-h-[80vh] bg-background border rounded-lg shadow-lg overflow-hidden">

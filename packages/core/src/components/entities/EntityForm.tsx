@@ -22,7 +22,7 @@ import {
 } from 'lucide-react'
 import type { EntityConfig } from '../../lib/entities/types'
 import { EntityFieldRenderer } from './EntityFieldRenderer'
-import { createTestId, createCyId } from '../../lib/test'
+import { sel } from '../../lib/test'
 
 export interface EntityFormProps {
   entityConfig: EntityConfig
@@ -116,14 +116,15 @@ function validateFormData(
 
 /**
  * Generate test IDs for entity form
+ * @deprecated This will be removed when all data-testid attributes are migrated to data-cy with sel()
  */
 function generateTestIds(entityName: string) {
   return {
-    form: createTestId(entityName, 'form'),
-    field: (fieldName: string) => createTestId(entityName, 'field', fieldName),
-    submit: createTestId(entityName, 'submit'),
-    childSection: (childName: string) => createTestId(entityName, 'child', childName),
-    childAdd: (childName: string) => createTestId(`${entityName}-${childName}`, 'add'),
+    form: `${entityName}-form`,
+    field: (fieldName: string) => `${entityName}-field-${fieldName}`,
+    submit: `${entityName}-submit`,
+    childSection: (childName: string) => `${entityName}-child-${childName}`,
+    childAdd: (childName: string) => `${entityName}-${childName}-add`,
   }
 }
 
@@ -280,10 +281,10 @@ export function EntityForm({
       )}
 
       {/* Form */}
-      <form 
+      <form
         onSubmit={handleSubmit}
         data-testid={testIds.form}
-        data-cy={createCyId(entityConfig.slug, 'form')}
+        data-cy={sel('entities.form.container', { slug: entityConfig.slug })}
         className="space-y-6"
       >
         {childEntities.length > 0 ? (
@@ -340,7 +341,7 @@ export function EntityForm({
                       <div
                         key={field.name}
                         className={getColumnSpanClass(field.display.columnWidth)}
-                        data-cy={createCyId(entityConfig.slug, `field-${field.name}`)}
+                        data-cy={sel('entities.form.field', { slug: entityConfig.slug, name: field.name })}
                       >
                         <EntityFieldRenderer
                           field={field}
@@ -482,7 +483,7 @@ export function EntityForm({
                   <div
                     key={field.name}
                     className={getColumnSpanClass(field.display.columnWidth)}
-                    data-cy={createCyId(entityConfig.slug, `field-${field.name}`)}
+                    data-cy={sel('entities.form.field', { slug: entityConfig.slug, name: field.name })}
                   >
                     <EntityFieldRenderer
                       field={field}
@@ -513,7 +514,7 @@ export function EntityForm({
             type="submit"
             disabled={isSubmitting || isLoading}
             data-testid={testIds.submit}
-            data-cy={createCyId(entityConfig.slug, 'form-submit')}
+            data-cy={sel('entities.form.submitButton', { slug: entityConfig.slug })}
           >
             {isSubmitting || isLoading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

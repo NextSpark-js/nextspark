@@ -35,7 +35,7 @@ import { CreateApiKeyDialog } from '@nextsparkjs/core/components/api/keys/Create
 import { ApiKeyDisplay } from '@nextsparkjs/core/components/api/keys/ApiKeyDisplay';
 import { toast } from 'sonner';
 import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
-import { sel, createCyId } from '@nextsparkjs/testing'
+import { sel } from '@nextsparkjs/core/selectors'
 
 interface ApiKey {
   id: string;
@@ -194,7 +194,7 @@ function ApiKeysPage() {
             Gestiona las API keys para integración externa
           </p>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)} data-cy={createCyId('api-keys', 'create-button')}>
+        <Button onClick={() => setShowCreateDialog(true)} data-cy={sel('settings.apiKeys.createButton')}>
           <Plus className="h-4 w-4 mr-2" />
           Crear API Key
         </Button>
@@ -211,11 +211,11 @@ function ApiKeysPage() {
       )}
 
       {/* API Keys List */}
-      <div className="grid gap-4" data-cy={createCyId('api-keys', 'list')}>
+      <div className="grid gap-4" data-cy={sel('settings.apiKeys.list')}>
         {isLoading ? (
           // Loading skeletons
           Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i} data-cy={createCyId('api-keys', 'skeleton')}>
+            <Card key={i} data-cy={sel('settings.apiKeys.skeleton')}>
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div className="space-y-2">
@@ -234,14 +234,14 @@ function ApiKeysPage() {
             </Card>
           ))
         ) : apiKeys?.length === 0 ? (
-          <Card data-cy={createCyId('api-keys', 'empty')}>
+          <Card data-cy={sel('settings.apiKeys.empty')}>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Key className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">No API Keys</h3>
               <p className="text-muted-foreground text-center mb-4">
                 No tienes API keys creadas. Crea una para empezar a usar la API externa.
               </p>
-              <Button onClick={() => setShowCreateDialog(true)} data-cy={createCyId('api-keys', 'empty-create-button')}>
+              <Button onClick={() => setShowCreateDialog(true)} data-cy={sel('settings.apiKeys.emptyCreateButton')}>
                 <Plus className="h-4 w-4 mr-2" />
                 Crear primera API Key
               </Button>
@@ -249,45 +249,45 @@ function ApiKeysPage() {
           </Card>
         ) : (
           apiKeys?.map((apiKey) => (
-            <Card key={apiKey.id} data-cy={createCyId('api-keys', `row-${apiKey.id}`)}>
+            <Card key={apiKey.id} data-cy={sel('settings.apiKeys.keyRow', { id: apiKey.id })}>
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div>
-                    <CardTitle className="text-lg flex items-center gap-2" data-cy={createCyId('api-keys', `name-${apiKey.id}`)}>
+                    <CardTitle className="text-lg flex items-center gap-2" data-cy={sel('settings.apiKeys.keyName_', { id: apiKey.id })}>
                       {apiKey.name}
                       {apiKey.status !== 'active' && (
-                        <Badge variant="secondary" data-cy={createCyId('api-keys', `status-badge-${apiKey.id}`)}>
+                        <Badge variant="secondary" data-cy={sel('settings.apiKeys.statusBadge', { id: apiKey.id })}>
                           {apiKey.status === 'inactive' ? 'Inactiva' : 'Expirada'}
                         </Badge>
                       )}
                     </CardTitle>
-                    <CardDescription className="font-mono text-xs" data-cy={createCyId('api-keys', `prefix-${apiKey.id}`)}>
+                    <CardDescription className="font-mono text-xs" data-cy={sel('settings.apiKeys.keyPrefix', { id: apiKey.id })}>
                       {apiKey.keyPrefix}••••••••••••••••••••••••••••••••••••••••••••••••••••
                       <Button
                         variant="ghost"
                         size="sm"
                         className="ml-2 h-6 w-6 p-0"
                         onClick={() => copyToClipboard(apiKey.keyPrefix)}
-                        data-cy={createCyId('api-keys', `copy-prefix-${apiKey.id}`)}
+                        data-cy={sel('settings.apiKeys.copyPrefix', { id: apiKey.id })}
                       >
                         <Copy className="h-3 w-3" />
                       </Button>
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant={apiKey.status === 'active' ? "default" : "secondary"} data-cy={createCyId('api-keys', `status-${apiKey.id}`)}>
+                    <Badge variant={apiKey.status === 'active' ? "default" : "secondary"} data-cy={sel('settings.apiKeys.keyStatus', { id: apiKey.id })}>
                       {apiKey.status === 'active' ? 'Activa' : apiKey.status === 'inactive' ? 'Inactiva' : 'Expirada'}
                     </Badge>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" data-cy={createCyId('api-keys', `menu-trigger-${apiKey.id}`)}>
+                        <Button variant="ghost" size="sm" data-cy={sel('settings.apiKeys.menuTrigger', { id: apiKey.id })}>
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" data-cy={createCyId('api-keys', `menu-${apiKey.id}`)}>
+                      <DropdownMenuContent align="end" data-cy={sel('settings.apiKeys.menu', { id: apiKey.id })}>
                         <DropdownMenuItem
                           onClick={() => setSelectedKey(apiKey.id)}
-                          data-cy={createCyId('api-keys', `view-details-${apiKey.id}`)}
+                          data-cy={sel('settings.apiKeys.viewDetails', { id: apiKey.id })}
                         >
                           <Eye className="h-4 w-4 mr-2" />
                           Ver detalles
@@ -298,7 +298,7 @@ function ApiKeysPage() {
                             status: apiKey.status === 'active' ? 'inactive' : 'active'
                           })}
                           disabled={toggleApiKey.isPending}
-                          data-cy={createCyId('api-keys', `toggle-${apiKey.id}`)}
+                          data-cy={sel('settings.apiKeys.toggle', { id: apiKey.id })}
                         >
                           {apiKey.status === 'active' ? (
                             <>
@@ -316,7 +316,7 @@ function ApiKeysPage() {
                           onClick={() => revokeApiKey.mutate(apiKey.id)}
                           disabled={revokeApiKey.isPending}
                           className="text-destructive"
-                          data-cy={createCyId('api-keys', `revoke-${apiKey.id}`)}
+                          data-cy={sel('settings.apiKeys.revoke', { id: apiKey.id })}
                         >
                           <Trash2 className="h-4 w-4 mr-2" />
                           Revocar
@@ -329,7 +329,7 @@ function ApiKeysPage() {
               <CardContent>
                 <div className="space-y-4">
                   {/* Scopes */}
-                  <div data-cy={createCyId('api-keys', `scopes-${apiKey.id}`)}>
+                  <div data-cy={sel('settings.apiKeys.scopes', { id: apiKey.id })}>
                     <strong className="text-sm">Permisos:</strong>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {apiKey.scopes.map((scope) => (
@@ -337,7 +337,7 @@ function ApiKeysPage() {
                           key={scope}
                           variant={getScopeColor(scope)}
                           className="text-xs"
-                          data-cy={createCyId('api-keys', `scope-${apiKey.id}-${scope}`)}
+                          data-cy={sel('settings.apiKeys.scope', { id: apiKey.id, scope })}
                         >
                           {scope}
                         </Badge>
@@ -346,16 +346,16 @@ function ApiKeysPage() {
                   </div>
 
                   {/* Usage Stats */}
-                  <div className="grid grid-cols-3 gap-4 text-sm" data-cy={createCyId('api-keys', `stats-${apiKey.id}`)}>
-                    <div data-cy={createCyId('api-keys', `total-requests-${apiKey.id}`)}>
+                  <div className="grid grid-cols-3 gap-4 text-sm" data-cy={sel('settings.apiKeys.stats', { id: apiKey.id })}>
+                    <div data-cy={sel('settings.apiKeys.totalRequests', { id: apiKey.id })}>
                       <div className="text-muted-foreground">Total requests</div>
                       <div className="font-semibold">{apiKey.usage_stats.total_requests.toLocaleString()}</div>
                     </div>
-                    <div data-cy={createCyId('api-keys', `last-24h-${apiKey.id}`)}>
+                    <div data-cy={sel('settings.apiKeys.last24h', { id: apiKey.id })}>
                       <div className="text-muted-foreground">Últimas 24h</div>
                       <div className="font-semibold">{apiKey.usage_stats.last_24h.toLocaleString()}</div>
                     </div>
-                    <div data-cy={createCyId('api-keys', `avg-time-${apiKey.id}`)}>
+                    <div data-cy={sel('settings.apiKeys.avgTime', { id: apiKey.id })}>
                       <div className="text-muted-foreground">Tiempo promedio</div>
                       <div className="font-semibold">
                         {apiKey.usage_stats.avg_response_time
@@ -367,13 +367,13 @@ function ApiKeysPage() {
                   </div>
 
                   {/* Metadata */}
-                  <div className="text-sm text-muted-foreground space-y-1" data-cy={createCyId('api-keys', `metadata-${apiKey.id}`)}>
-                    <div data-cy={createCyId('api-keys', `created-at-${apiKey.id}`)}>Creada: {formatDate(apiKey.createdAt)}</div>
+                  <div className="text-sm text-muted-foreground space-y-1" data-cy={sel('settings.apiKeys.metadata', { id: apiKey.id })}>
+                    <div data-cy={sel('settings.apiKeys.createdAt', { id: apiKey.id })}>Creada: {formatDate(apiKey.createdAt)}</div>
                     {apiKey.lastUsedAt && (
-                      <div data-cy={createCyId('api-keys', `last-used-${apiKey.id}`)}>Último uso: {formatDate(apiKey.lastUsedAt)}</div>
+                      <div data-cy={sel('settings.apiKeys.lastUsed', { id: apiKey.id })}>Ultimo uso: {formatDate(apiKey.lastUsedAt)}</div>
                     )}
                     {apiKey.expiresAt && (
-                      <div data-cy={createCyId('api-keys', `expires-at-${apiKey.id}`)}>Expira: {formatDate(apiKey.expiresAt)}</div>
+                      <div data-cy={sel('settings.apiKeys.expiresAt', { id: apiKey.id })}>Expira: {formatDate(apiKey.expiresAt)}</div>
                     )}
                   </div>
                 </div>
@@ -425,34 +425,34 @@ function ApiKeyDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl" data-cy={createCyId('api-keys', 'details-dialog')}>
+      <DialogContent className="max-w-2xl" data-cy={sel('settings.apiKeys.detailsDialog')}>
         <DialogHeader>
-          <DialogTitle data-cy={createCyId('api-keys', 'details-title')}>Detalles de API Key</DialogTitle>
+          <DialogTitle data-cy={sel('settings.apiKeys.detailsTitle')}>Detalles de API Key</DialogTitle>
           <DialogDescription>
             Estadísticas de uso y configuración
           </DialogDescription>
         </DialogHeader>
 
         {isLoading ? (
-          <div className="space-y-4" data-cy={createCyId('api-keys', 'details-loading')}>
+          <div className="space-y-4" data-cy={sel('settings.apiKeys.detailsLoading')}>
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-4 w-3/4" />
             <Skeleton className="h-32 w-full" />
           </div>
         ) : keyDetails ? (
-          <div className="space-y-6" data-cy={createCyId('api-keys', 'details-content')}>
+          <div className="space-y-6" data-cy={sel('settings.apiKeys.detailsContent')}>
             {/* Basic Info */}
-            <div data-cy={createCyId('api-keys', 'details-basic-info')}>
+            <div data-cy={sel('settings.apiKeys.detailsBasicInfo')}>
               <h4 className="font-semibold mb-2">Información básica</h4>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-muted-foreground">Nombre:</span>
-                  <div className="font-medium" data-cy={createCyId('api-keys', 'details-name')}>{keyDetails.name}</div>
+                  <div className="font-medium" data-cy={sel('settings.apiKeys.detailsName')}>{keyDetails.name}</div>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Estado:</span>
                   <div>
-                    <Badge variant={keyDetails.status === 'active' ? "default" : "secondary"} data-cy={createCyId('api-keys', 'details-status')}>
+                    <Badge variant={keyDetails.status === 'active' ? "default" : "secondary"} data-cy={sel('settings.apiKeys.detailsStatus')}>
                       {keyDetails.status === 'active' ? 'Activa' : keyDetails.status === 'inactive' ? 'Inactiva' : 'Expirada'}
                     </Badge>
                   </div>
@@ -461,7 +461,7 @@ function ApiKeyDetailsDialog({
             </div>
 
             {/* Usage Statistics */}
-            <div data-cy={createCyId('api-keys', 'details-stats')}>
+            <div data-cy={sel('settings.apiKeys.detailsStats')}>
               <h4 className="font-semibold mb-2 flex items-center gap-2">
                 <Activity className="h-4 w-4" />
                 Estadísticas de uso
@@ -469,23 +469,23 @@ function ApiKeyDetailsDialog({
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-muted-foreground">Total de requests:</span>
-                  <div className="font-medium" data-cy={createCyId('api-keys', 'details-total-requests')}>{keyDetails.usage_stats.total_requests.toLocaleString()}</div>
+                  <div className="font-medium" data-cy={sel('settings.apiKeys.detailsTotalRequests')}>{keyDetails.usage_stats.total_requests.toLocaleString()}</div>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Últimas 24 horas:</span>
-                  <div className="font-medium" data-cy={createCyId('api-keys', 'details-last-24h')}>{keyDetails.usage_stats.last_24h.toLocaleString()}</div>
+                  <span className="text-muted-foreground">Ultimas 24 horas:</span>
+                  <div className="font-medium" data-cy={sel('settings.apiKeys.detailsLast24h')}>{keyDetails.usage_stats.last_24h.toLocaleString()}</div>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Últimos 7 días:</span>
-                  <div className="font-medium" data-cy={createCyId('api-keys', 'details-last-7d')}>{keyDetails.usage_stats.last_7d.toLocaleString()}</div>
+                  <span className="text-muted-foreground">Ultimos 7 dias:</span>
+                  <div className="font-medium" data-cy={sel('settings.apiKeys.detailsLast7d')}>{keyDetails.usage_stats.last_7d.toLocaleString()}</div>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Últimos 30 días:</span>
-                  <div className="font-medium" data-cy={createCyId('api-keys', 'details-last-30d')}>{keyDetails.usage_stats.last_30d.toLocaleString()}</div>
+                  <span className="text-muted-foreground">Ultimos 30 dias:</span>
+                  <div className="font-medium" data-cy={sel('settings.apiKeys.detailsLast30d')}>{keyDetails.usage_stats.last_30d.toLocaleString()}</div>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Tiempo promedio:</span>
-                  <div className="font-medium" data-cy={createCyId('api-keys', 'details-avg-time')}>
+                  <div className="font-medium" data-cy={sel('settings.apiKeys.detailsAvgTime')}>
                     {keyDetails.usage_stats.avg_response_time
                       ? `${Math.round(keyDetails.usage_stats.avg_response_time)}ms`
                       : 'N/A'
@@ -493,8 +493,8 @@ function ApiKeyDetailsDialog({
                   </div>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Tasa de éxito:</span>
-                  <div className="font-medium" data-cy={createCyId('api-keys', 'details-success-rate')}>
+                  <span className="text-muted-foreground">Tasa de exito:</span>
+                  <div className="font-medium" data-cy={sel('settings.apiKeys.detailsSuccessRate')}>
                     {keyDetails.usage_stats.success_rate
                       ? `${Math.round(keyDetails.usage_stats.success_rate)}%`
                       : 'N/A'

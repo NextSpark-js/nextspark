@@ -84,6 +84,26 @@ export class PageBuilderPOM extends BlockEditorBasePOM {
   }
 
   /**
+   * Save the page
+   */
+  savePage() {
+    // Wait for any pending state updates after adding blocks
+    cy.wait(500)
+    this.save()
+    return this
+  }
+
+  /**
+   * Save page with API wait
+   */
+  savePageWithApiWait() {
+    this.setupApiIntercepts()
+    this.savePage()
+    this.api.waitForUpdate()
+    return this
+  }
+
+  /**
    * Publish the page (set status to published and save)
    */
   publishPage() {

@@ -105,10 +105,6 @@ jest.mock('next-intl', () => ({
 
 // Mock testing utils
 jest.mock('@/core/lib/test', () => ({
-  createTestId: jest.fn((domain: string, element: string, action?: string) =>
-    action ? `${domain}-${element}-${action}` : `${domain}-${element}`
-  ),
-  createCyId: jest.fn((domain: string, element: string) => `${domain}-${element}`),
   sel: jest.fn((path: string) => {
     // Map selector paths to expected values
     const selectors: Record<string, string> = {

@@ -58,7 +58,7 @@ export function BlockSettingsPanel({
 
   if (!block) {
     return (
-      <div className="flex h-full items-center justify-center p-8 bg-muted/10" data-cy={sel('blockEditor.settingsPanel.empty')}>
+      <div className="flex h-full items-center justify-center p-8 bg-muted/10" data-cy={sel('blockEditor.blockPropertiesPanel.empty')}>
         <div className="text-center">
           <p className="text-muted-foreground">{t('empty.message')}</p>
           <p className="text-sm text-muted-foreground mt-1">{t('empty.hint')}</p>
@@ -71,7 +71,7 @@ export function BlockSettingsPanel({
 
   if (!blockConfig) {
     return (
-      <div className="p-4" data-cy={sel('blockEditor.settingsPanel.error')}>
+      <div className="p-4" data-cy={sel('blockEditor.blockPropertiesPanel.error')}>
         <Card className="border-destructive">
           <CardContent className="p-4">
             <p className="text-destructive text-sm">
@@ -94,15 +94,15 @@ export function BlockSettingsPanel({
   const hasAnyFields = hasContentFields || hasDesignFields || hasAdvancedFields
 
   return (
-    <div className="flex h-full flex-col bg-card" data-cy={sel('blockEditor.settingsPanel.container')}>
+    <div className="flex h-full flex-col bg-card" data-cy={sel('blockEditor.blockPropertiesPanel.container')}>
       {/* Header - Panel Title */}
-      <div className="border-b p-4" data-cy={sel('blockEditor.settingsPanel.header')}>
+      <div className="border-b p-4" data-cy={sel('blockEditor.blockPropertiesPanel.header')}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <SlidersHorizontal className="h-5 w-5 text-primary" />
             <h3
               className="text-lg font-semibold text-foreground"
-              data-cy={sel('blockEditor.settingsPanel.title')}
+              data-cy={sel('blockEditor.blockPropertiesPanel.blockName')}
             >
               {t('title')}
             </h3>
@@ -113,7 +113,7 @@ export function BlockSettingsPanel({
               size="icon"
               className="h-7 w-7"
               onClick={onClose}
-              data-cy={sel('blockEditor.settingsPanel.closeBtn')}
+              data-cy={sel('blockEditor.blockPropertiesPanel.closeBtn')}
             >
               <X className="h-4 w-4" />
             </Button>
@@ -123,12 +123,12 @@ export function BlockSettingsPanel({
         {/* Block Name */}
         <div
           className="flex items-center gap-2 bg-muted/50 px-3 py-2 rounded-md"
-          data-cy={sel('blockEditor.settingsPanel.blockIdentifier')}
+          data-cy={sel('blockEditor.blockPropertiesPanel.blockIcon')}
         >
           <Layers className="h-4 w-4 text-muted-foreground" />
           <span
             className="text-sm text-foreground"
-            data-cy={sel('blockEditor.settingsPanel.blockName')}
+            data-cy={sel('blockEditor.blockPropertiesPanel.blockName')}
           >
             {blockConfig.name}
           </span>
@@ -140,7 +140,7 @@ export function BlockSettingsPanel({
         {hasAnyFields ? (
           <>
             {/* Custom Tabs with Underline Style */}
-            <div className="flex border-b border-border" data-cy={sel('blockEditor.settingsPanel.tabs')}>
+            <div className="flex border-b border-border" data-cy={sel('blockEditor.blockPropertiesPanel.tabs')}>
               <button
                 className={cn(
                   'flex-1 py-3 text-sm font-medium transition-all relative flex items-center justify-center gap-1.5',
@@ -151,7 +151,7 @@ export function BlockSettingsPanel({
                 )}
                 onClick={() => hasContentFields && setActiveTab('content')}
                 disabled={!hasContentFields}
-                data-cy={sel('blockEditor.settingsPanel.tabContent')}
+                data-cy={sel('blockEditor.blockPropertiesPanel.tabContent')}
               >
                 <FileText className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">{t('tabs.content')}</span>
@@ -169,7 +169,7 @@ export function BlockSettingsPanel({
                 )}
                 onClick={() => hasDesignFields && setActiveTab('design')}
                 disabled={!hasDesignFields}
-                data-cy={sel('blockEditor.settingsPanel.tabDesign')}
+                data-cy={sel('blockEditor.blockPropertiesPanel.tabDesign')}
               >
                 <Palette className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">{t('tabs.design')}</span>
@@ -187,7 +187,7 @@ export function BlockSettingsPanel({
                 )}
                 onClick={() => hasAdvancedFields && setActiveTab('advanced')}
                 disabled={!hasAdvancedFields}
-                data-cy={sel('blockEditor.settingsPanel.tabAdvanced')}
+                data-cy={sel('blockEditor.blockPropertiesPanel.tabAdvanced')}
               >
                 <Settings2 className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">{t('tabs.advanced')}</span>

@@ -8,7 +8,7 @@ import { MessageInput } from './MessageInput'
 import { MarkdownRenderer } from './MarkdownRenderer'
 import { TypingIndicator } from './TypingIndicator'
 import { ConversationSidebar } from './ConversationSidebar'
-import { createCyId } from '@nextsparkjs/testing/utils'
+import { sel } from '@nextsparkjs/core/selectors'
 import { cn } from '@nextsparkjs/core/lib/utils'
 import { Bot, User, Loader2, Trash2, ListTodo, Users, FileText, Sparkles, X } from 'lucide-react'
 import type { ConversationInfo } from '../../lib/hooks/useConversations'
@@ -163,7 +163,7 @@ function ChatMessageItem({
 
     return (
         <div
-            data-cy={createCyId(cyPrefix, `message-${message.role}`)}
+            data-cy={sel(message.role === 'user' ? 'common.aiChat.messageUser' : 'common.aiChat.messageAssistant')}
             className={cn(
                 'flex w-full gap-3 p-4',
                 isUser ? 'flex-row-reverse' : 'flex-row'
@@ -351,7 +351,7 @@ export function ChatPanel({
     return (
         <div className="h-[calc(100vh-4rem)] p-4 md:p-6 lg:p-8">
             <Card
-                data-cy={createCyId(cyPrefix, 'panel')}
+                data-cy={sel('common.aiChat.panel')}
                 className={cn(
                     'flex h-full mx-auto overflow-hidden shadow-lg',
                     layoutClass
@@ -408,7 +408,7 @@ export function ChatPanel({
                                 {/* Clear button */}
                                 {header.showClearButton && header.onClear && (
                                     <Button
-                                        data-cy={createCyId(cyPrefix, 'clear-btn')}
+                                        data-cy={sel('common.aiChat.clearBtn')}
                                         variant="ghost"
                                         size="sm"
                                         onClick={header.onClear}
@@ -470,13 +470,13 @@ export function ChatPanel({
                     ) : (
                         /* Messages */
                         <ScrollArea
-                            data-cy={createCyId(cyPrefix, 'message-list')}
+                            data-cy={sel('common.aiChat.messageList')}
                             className="flex-1 p-4"
                         >
                             <div className="flex flex-col gap-4">
                                 {error && (
                                     <div
-                                        data-cy={createCyId(cyPrefix, 'error-message')}
+                                        data-cy={sel('common.aiChat.errorMessage')}
                                         className="p-4 mb-2 text-sm text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400 rounded-lg"
                                     >
                                         {error}
@@ -517,7 +517,7 @@ export function ChatPanel({
                                             variant="outline"
                                             size="sm"
                                             onClick={onCancelStream}
-                                            data-cy="chat-cancel-button"
+                                            data-cy={sel('common.aiChat.cancelBtn')}
                                         >
                                             <X className="h-4 w-4 mr-1" />
                                             Stop generating

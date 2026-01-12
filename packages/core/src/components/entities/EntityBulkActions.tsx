@@ -28,7 +28,7 @@ import {
   DialogTitle,
 } from '../ui/dialog'
 import { CheckSquare, Pencil, Trash2, X, Loader2 } from 'lucide-react'
-import { createCyId } from '../../lib/test'
+import { sel } from '../../lib/test'
 import type { EntityBulkActionsProps } from './entity-table.types'
 
 /**
@@ -103,12 +103,12 @@ export function EntityBulkActions({
           'bg-background border rounded-lg shadow-lg',
           'animate-in slide-in-from-bottom-4 duration-200'
         )}
-        data-cy={createCyId(entitySlug, 'bulk-bar')}
+        data-cy={sel('entities.list.bulk.bar', { slug: entitySlug })}
       >
         {/* Selection Count */}
         <span
           className="text-sm font-medium px-2 py-1 bg-primary/10 text-primary rounded"
-          data-cy={createCyId(entitySlug, 'bulk-count')}
+          data-cy={sel('entities.list.bulk.count', { slug: entitySlug })}
         >
           {selectedCount} selected
         </span>
@@ -123,7 +123,7 @@ export function EntityBulkActions({
             size="sm"
             onClick={config.onSelectAll}
             className="gap-2"
-            data-cy={createCyId(entitySlug, 'bulk-select-all')}
+            data-cy={sel('entities.list.bulk.selectAll', { slug: entitySlug })}
           >
             <CheckSquare className="h-4 w-4" />
             Select all
@@ -145,7 +145,7 @@ export function EntityBulkActions({
             size="sm"
             onClick={handleChangeStatusClick}
             className="gap-2"
-            data-cy={createCyId(entitySlug, 'bulk-status')}
+            data-cy={sel('entities.list.bulk.statusButton', { slug: entitySlug })}
           >
             <Pencil className="h-4 w-4" />
             Change status
@@ -159,7 +159,7 @@ export function EntityBulkActions({
             size="sm"
             onClick={handleDeleteClick}
             className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-            data-cy={createCyId(entitySlug, 'bulk-delete')}
+            data-cy={sel('entities.list.bulk.deleteButton', { slug: entitySlug })}
           >
             <Trash2 className="h-4 w-4" />
             Delete
@@ -176,7 +176,7 @@ export function EntityBulkActions({
           onClick={onClearSelection}
           className="h-8 w-8"
           aria-label="Clear selection"
-          data-cy={createCyId(entitySlug, 'bulk-clear')}
+          data-cy={sel('entities.list.bulk.clearButton', { slug: entitySlug })}
         >
           <X className="h-4 w-4" />
         </Button>
@@ -184,7 +184,7 @@ export function EntityBulkActions({
 
       {/* Change Status Dialog */}
       <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
-        <DialogContent data-cy={createCyId(entitySlug, 'bulk-status-dialog')}>
+        <DialogContent data-cy={sel('entities.list.bulk.statusDialog', { slug: entitySlug })}>
           <DialogHeader>
             <DialogTitle>Change Status</DialogTitle>
             <DialogDescription>
@@ -196,7 +196,7 @@ export function EntityBulkActions({
           <div className="py-4">
             <label className="text-sm font-medium mb-2 block">New Status</label>
             <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-              <SelectTrigger data-cy={createCyId(entitySlug, 'bulk-status-select')}>
+              <SelectTrigger data-cy={sel('entities.list.bulk.statusSelect', { slug: entitySlug })}>
                 <SelectValue placeholder="Select a status..." />
               </SelectTrigger>
               <SelectContent>
@@ -204,7 +204,7 @@ export function EntityBulkActions({
                   <SelectItem
                     key={option.value}
                     value={option.value}
-                    data-cy={createCyId(entitySlug, `bulk-status-option-${option.value}`)}
+                    data-cy={sel('entities.list.bulk.statusOption', { slug: entitySlug, value: option.value })}
                   >
                     {option.label}
                   </SelectItem>
@@ -218,14 +218,14 @@ export function EntityBulkActions({
               variant="outline"
               onClick={() => setIsStatusDialogOpen(false)}
               disabled={isProcessing}
-              data-cy={createCyId(entitySlug, 'bulk-status-cancel')}
+              data-cy={sel('entities.list.bulk.statusCancel', { slug: entitySlug })}
             >
               Cancel
             </Button>
             <Button
               onClick={handleConfirmStatusChange}
               disabled={!selectedStatus || isProcessing}
-              data-cy={createCyId(entitySlug, 'bulk-status-confirm')}
+              data-cy={sel('entities.list.bulk.statusConfirm', { slug: entitySlug })}
             >
               {isProcessing ? (
                 <>
@@ -242,7 +242,7 @@ export function EntityBulkActions({
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent data-cy={createCyId(entitySlug, 'bulk-delete-dialog')}>
+        <DialogContent data-cy={sel('entities.list.bulk.deleteDialog', { slug: entitySlug })}>
           <DialogHeader>
             <DialogTitle>
               Delete {selectedCount} {selectedCount === 1 ? itemLabel : itemLabelPlural}?
@@ -258,7 +258,7 @@ export function EntityBulkActions({
               variant="outline"
               onClick={() => setIsDeleteDialogOpen(false)}
               disabled={isProcessing}
-              data-cy={createCyId(entitySlug, 'bulk-delete-cancel')}
+              data-cy={sel('entities.list.bulk.deleteCancel', { slug: entitySlug })}
             >
               Cancel
             </Button>
@@ -266,7 +266,7 @@ export function EntityBulkActions({
               variant="destructive"
               onClick={handleConfirmDelete}
               disabled={isProcessing}
-              data-cy={createCyId(entitySlug, 'bulk-delete-confirm')}
+              data-cy={sel('entities.list.bulk.deleteConfirm', { slug: entitySlug })}
             >
               {isProcessing ? (
                 <>
