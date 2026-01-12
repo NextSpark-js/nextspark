@@ -21,8 +21,14 @@
     "viewer": "Acesso somente leitura ao conteudo da equipe"
   },
 
+  "entity": {
+    "description": "Gerencie suas equipes, membros e convites",
+    "plural": "Equipes"
+  },
+
   "actions": {
     "create": "Criar Equipe",
+    "creating": "Criando...",
     "edit": "Editar Equipe",
     "delete": "Excluir Equipe",
     "leave": "Sair da Equipe",
@@ -30,7 +36,9 @@
     "manage": "Gerenciar Equipe",
     "invite": "Convidar Membro",
     "removeMember": "Remover Membro",
-    "changeRole": "Alterar Funcao"
+    "changeRole": "Alterar Funcao",
+    "makeRole": "Tornar {role}",
+    "cancel": "Cancelar"
   },
 
   "switcher": {
@@ -62,7 +70,22 @@
   "editTeam": {
     "title": "Editar Equipe",
     "success": "Equipe atualizada com sucesso",
-    "error": "Erro ao atualizar a equipe"
+    "error": "Erro ao atualizar a equipe",
+    "saving": "Salvando...",
+    "editName": "Editar nome da equipe",
+    "editDescription": "Editar descricao",
+    "saveName": "Salvar nome",
+    "saveDescription": "Salvar descricao",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "editField": "Editar {field}",
+    "noValue": "Nao definido"
+  },
+
+  "validation": {
+    "nameRequired": "Nome da equipe e obrigatorio",
+    "nameMinLength": "Nome deve ter no minimo 2 caracteres",
+    "nameMaxLength": "Nome deve ter no maximo 100 caracteres"
   },
 
   "deleteTeam": {
@@ -130,11 +153,26 @@
     "permissionDenied": "Voce nao tem permissao para realizar esta acao",
     "cannotDeletePersonal": "Nao e possivel excluir a equipe pessoal",
     "cannotLeaveOwner": "Proprietarios nao podem sair. Transfira a propriedade primeiro.",
-    "lastAdmin": "Nao e possivel remover o ultimo administrador da equipe"
+    "lastAdmin": "Nao e possivel remover o ultimo administrador da equipe",
+    "ownerOnlyEdit": "Apenas proprietarios da equipe podem editar nome e descricao"
   },
 
   "empty": {
     "title": "Sem equipes ainda",
     "description": "Crie sua primeira equipe para comecar a colaborar"
+  },
+
+  "fields": {
+    "name": "Nome da Equipe",
+    "slug": "URL da Equipe",
+    "description": "Descricao (opcional)",
+    "email": "Endereco de Email",
+    "role": "Sua Funcao",
+    "joinedAt": "Data de Entrada"
+  },
+
+  "messages": {
+    "created": "Equipe criada com sucesso",
+    "loading": "Carregando equipes..."
   }
 }

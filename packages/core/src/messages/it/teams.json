@@ -21,8 +21,14 @@
     "viewer": "Accesso in sola lettura al contenuto del team"
   },
 
+  "entity": {
+    "description": "Gestisci i tuoi team, membri e inviti",
+    "plural": "Team"
+  },
+
   "actions": {
     "create": "Crea Team",
+    "creating": "Creazione...",
     "edit": "Modifica Team",
     "delete": "Elimina Team",
     "leave": "Abbandona Team",
@@ -30,7 +36,9 @@
     "manage": "Gestisci Team",
     "invite": "Invita Membro",
     "removeMember": "Rimuovi Membro",
-    "changeRole": "Cambia Ruolo"
+    "changeRole": "Cambia Ruolo",
+    "makeRole": "Rendi {role}",
+    "cancel": "Annulla"
   },
 
   "switcher": {
@@ -62,7 +70,22 @@
   "editTeam": {
     "title": "Modifica Team",
     "success": "Team aggiornato con successo",
-    "error": "Errore nell'aggiornamento del team"
+    "error": "Errore nell'aggiornamento del team",
+    "saving": "Salvataggio...",
+    "editName": "Modifica nome team",
+    "editDescription": "Modifica descrizione",
+    "saveName": "Salva nome",
+    "saveDescription": "Salva descrizione",
+    "save": "Salva",
+    "cancel": "Annulla",
+    "editField": "Modifica {field}",
+    "noValue": "Non impostato"
+  },
+
+  "validation": {
+    "nameRequired": "Il nome del team e obbligatorio",
+    "nameMinLength": "Il nome deve avere almeno 2 caratteri",
+    "nameMaxLength": "Il nome deve avere al massimo 100 caratteri"
   },
 
   "deleteTeam": {
@@ -130,11 +153,26 @@
     "permissionDenied": "Non hai il permesso per eseguire questa azione",
     "cannotDeletePersonal": "Impossibile eliminare il team personale",
     "cannotLeaveOwner": "I proprietari non possono abbandonare. Trasferisci prima la proprieta.",
-    "lastAdmin": "Impossibile rimuovere l'ultimo amministratore del team"
+    "lastAdmin": "Impossibile rimuovere l'ultimo amministratore del team",
+    "ownerOnlyEdit": "Solo i proprietari del team possono modificare nome e descrizione"
   },
 
   "empty": {
     "title": "Nessun team ancora",
     "description": "Crea il tuo primo team per iniziare a collaborare"
+  },
+
+  "fields": {
+    "name": "Nome Team",
+    "slug": "URL Team",
+    "description": "Descrizione (opzionale)",
+    "email": "Indirizzo Email",
+    "role": "Il Tuo Ruolo",
+    "joinedAt": "Data Iscrizione"
+  },
+
+  "messages": {
+    "created": "Team creato con successo",
+    "loading": "Caricamento team..."
   }
 }
