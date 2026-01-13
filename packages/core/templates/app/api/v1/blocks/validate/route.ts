@@ -24,7 +24,8 @@ export async function POST(request: NextRequest) {
 
     try {
       // Dynamic import is allowed here (server-side validation, not registry loading)
-      const schemaModule = await import(block.schemaPath)
+      // webpackIgnore tells webpack to skip static analysis for this intentional dynamic import
+      const schemaModule = await import(/* webpackIgnore: true */ block.schemaPath)
       const schema = schemaModule.schema
 
       schema.parse(props)

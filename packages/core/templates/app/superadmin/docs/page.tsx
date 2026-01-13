@@ -30,10 +30,6 @@ export default function SuperadminDocsPage() {
     )
   }
 
-  // Redirect to first page of first section
-  const firstSection = sections[0]
-  const firstPage = firstSection.pages[0]
-
   return (
     <div className="flex gap-8" data-cy={sel('superadmin.docs.container')}>
       <aside className="hidden lg:block w-64 shrink-0">
