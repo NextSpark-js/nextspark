@@ -1,6 +1,6 @@
 {
   "name": "@nextsparkjs/testing",
-  "version": "0.1.0-beta.46",
+  "version": "0.1.0-beta.47",
   "description": "Testing utilities for NextSpark applications - Selectors, POMs, and Cypress helpers",
   "license": "MIT",
   "author": "NextSpark <hello@nextspark.dev>",

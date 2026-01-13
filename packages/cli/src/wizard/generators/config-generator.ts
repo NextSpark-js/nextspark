@@ -419,3 +419,25 @@ export async function copyEnvExampleToEnv(): Promise<void> {
     await fs.copy(envExamplePath, envPath)
   }
 }
+
+/**
+ * Update app/globals.css to import from the correct theme
+ * The template has "default" hardcoded, this updates it to the project's theme
+ */
+export async function updateGlobalsCss(config: WizardConfig): Promise<void> {
+  const globalsCssPath = path.resolve(process.cwd(), 'app', 'globals.css')
+
+  if (!await fs.pathExists(globalsCssPath)) {
+    return
+  }
+
+  let content = await fs.readFile(globalsCssPath, 'utf-8')
+
+  // Replace the default theme import with the project's theme
+  content = content.replace(
+    /@import\s+["']\.\.\/contents\/themes\/[^/]+\/styles\/globals\.css["'];?/,
+    `@import "../contents/themes/${config.projectSlug}/styles/globals.css";`
+  )
+
+  await fs.writeFile(globalsCssPath, content, 'utf-8')
+}

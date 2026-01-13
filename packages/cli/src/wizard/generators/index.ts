@@ -28,6 +28,7 @@ import {
   updateDashboardUIConfig,
   updateDevToolsConfig,
   copyEnvExampleToEnv,
+  updateGlobalsCss,
 } from './config-generator.js'
 import { processI18n } from './messages-generator.js'
 import { copyContentFeatures } from './content-features-generator.js'
@@ -60,6 +61,7 @@ export {
   updateDevToolsConfig,
   copyContentFeatures,
   copyEnvExampleToEnv,
+  updateGlobalsCss,
   // Theme & Plugin installation
   installThemeAndPlugins,
   // DX generators
@@ -316,6 +318,9 @@ contents/themes/*/tests/jest/coverage
 export async function generateProject(config: WizardConfig): Promise<void> {
   // 1. Copy core project files
   await copyProjectFiles()
+
+  // 1.1 Update globals.css to use the correct theme path
+  await updateGlobalsCss(config)
 
   // 2. Copy and rename starter theme
   await copyStarterTheme(config)
