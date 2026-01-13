@@ -35,8 +35,14 @@
     "viewer": "Nur Lesezugriff auf Teaminhalte"
   },
 
+  "entity": {
+    "description": "Verwalten Sie Ihre Teams, Mitglieder und Einladungen",
+    "plural": "Teams"
+  },
+
   "actions": {
     "create": "Team erstellen",
+    "creating": "Erstellen...",
     "edit": "Team bearbeiten",
     "delete": "Team loeschen",
     "leave": "Team verlassen",
@@ -78,7 +84,22 @@
   "editTeam": {
     "title": "Team bearbeiten",
     "success": "Team erfolgreich aktualisiert",
-    "error": "Fehler beim Aktualisieren des Teams"
+    "error": "Fehler beim Aktualisieren des Teams",
+    "saving": "Speichern...",
+    "editName": "Teamname bearbeiten",
+    "editDescription": "Beschreibung bearbeiten",
+    "saveName": "Name speichern",
+    "saveDescription": "Beschreibung speichern",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "editField": "{field} bearbeiten",
+    "noValue": "Nicht festgelegt"
+  },
+
+  "validation": {
+    "nameRequired": "Teamname ist erforderlich",
+    "nameMinLength": "Name muss mindestens 2 Zeichen haben",
+    "nameMaxLength": "Name darf maximal 100 Zeichen haben"
   },
 
   "deleteTeam": {
@@ -156,11 +177,26 @@
     "permissionDenied": "Sie haben keine Berechtigung fuer diese Aktion",
     "cannotDeletePersonal": "Persoenliches Team kann nicht geloescht werden",
     "cannotLeaveOwner": "Eigentuemer koennen nicht gehen. Uebertragen Sie zuerst das Eigentum.",
-    "lastAdmin": "Letzter Administrator des Teams kann nicht entfernt werden"
+    "lastAdmin": "Letzter Administrator des Teams kann nicht entfernt werden",
+    "ownerOnlyEdit": "Nur Teameigentuemer koennen Teamnamen und Beschreibung bearbeiten"
   },
 
   "empty": {
     "title": "Noch keine Teams",
     "description": "Erstellen Sie Ihr erstes Team, um mit der Zusammenarbeit zu beginnen"
+  },
+
+  "fields": {
+    "name": "Teamname",
+    "slug": "Team-URL",
+    "description": "Beschreibung (optional)",
+    "email": "E-Mail-Adresse",
+    "role": "Ihre Rolle",
+    "joinedAt": "Beitrittsdatum"
+  },
+
+  "messages": {
+    "created": "Team erfolgreich erstellt",
+    "loading": "Teams werden geladen..."
   }
 }

@@ -50,6 +50,44 @@ export const TEAMS_SELECTORS = {
     row: 'invitation-row-{id}',
     cancel: 'cancel-invitation-{id}',
   },
+  /**
+   * Inline editing for team name and description
+   *
+   * Note on selector structure: The name and description fields have separate
+   * selector definitions rather than using a dynamic pattern. This is an intentional
+   * design decision because:
+   * 1. There are only 2 fields (name and description), making duplication minimal
+   * 2. Each field has different input types (Input vs Textarea) with distinct selectors
+   * 3. Explicit definitions provide better clarity and type safety
+   * 4. The small duplication cost is outweighed by improved readability
+   *
+   * Decision documented in PR #1 code review (Issue #9).
+   */
+  edit: {
+    // Name field - inline (v1.1)
+    name: {
+      value: 'team-edit-name-value',
+      editIcon: 'team-edit-name-edit-icon',
+      input: 'team-edit-name-input',
+      saveIcon: 'team-edit-name-save-icon',
+      cancelIcon: 'team-edit-name-cancel-icon',
+      error: 'team-edit-name-error',
+      success: 'team-edit-name-success',
+    },
+    // Description field - inline (v1.1)
+    description: {
+      value: 'team-edit-description-value',
+      editIcon: 'team-edit-description-edit-icon',
+      textarea: 'team-edit-description-textarea',
+      saveIcon: 'team-edit-description-save-icon',
+      cancelIcon: 'team-edit-description-cancel-icon',
+      error: 'team-edit-description-error',
+      success: 'team-edit-description-success',
+    },
+    // Shared feedback (deprecated - use field-specific selectors)
+    success: 'team-edit-success',
+    error: 'team-edit-error',
+  },
   acceptInvite: {
     loading: 'accept-invite-loading',
     container: 'accept-invite-container',

@@ -18,6 +18,11 @@ export const teamSchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name must be at most 100 characters'),
   slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must contain only lowercase letters, numbers, and hyphens'),
+  /**
+   * Description field has no max length limit (TEXT type in database)
+   * Database migration 007_teams_table.sql defines this as TEXT without constraints
+   * If max length is desired, it should be a business decision
+   */
   description: z.string().nullable().optional(),
   ownerId: z.string(),
   avatarUrl: z.string().url().nullable().optional(),
@@ -61,13 +66,46 @@ export const createTeamSchema = z.object({
   description: z.string().optional(),
 })
 
-export const updateTeamSchema = z.object({
-  name: z.string().min(2).max(100).optional(),
-  slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).optional(),
+/**
+ * Schema for owner-only team updates (name/description)
+ * Only team owners (ownerId === userId) can update these fields
+ * Used when: Owner updates team name or description
+ *
+ * @security This schema is only used after owner verification
+ * @note Fields are optional to allow partial updates (e.g., only description)
+ */
+export const ownerUpdateTeamSchema = z.object({
+  name: z.string()
+    .min(1, 'Team name is required')
+    .min(2, 'Name must be at least 2 characters')
+    .max(100, 'Name must be at most 100 characters')
+    .optional(),
   description: z.string().nullable().optional(),
+})
+
+/**
+ * Schema for admin team updates (non-owner-only fields)
+ * Admins can update: slug, avatarUrl, settings
+ * Does NOT include name/description (those are owner-only)
+ * Used when: Admin (non-owner) updates team metadata
+ *
+ * @security This schema explicitly excludes owner-only fields (name, description)
+ */
+export const adminUpdateTeamSchema = z.object({
+  slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).optional(),
   avatarUrl: z.string().url().nullable().optional(),
   settings: z.record(z.string(), z.unknown()).optional(),
 })
+
+/**
+ * Schema for general team updates (combined owner + admin permissions)
+ * This is a merge of ownerUpdateTeamSchema and adminUpdateTeamSchema
+ * Used for: API consumers that need a unified schema
+ *
+ * @note For internal use, prefer ownerUpdateTeamSchema or adminUpdateTeamSchema
+ * based on the user's role and the fields being updated
+ */
+export const updateTeamSchema = ownerUpdateTeamSchema.merge(adminUpdateTeamSchema)
 
 export const inviteMemberSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -111,6 +149,8 @@ export type TeamMemberSchema = z.infer<typeof teamMemberSchema>
 export type TeamInvitationSchema = z.infer<typeof teamInvitationSchema>
 export type CreateTeamSchema = z.infer<typeof createTeamSchema>
 export type UpdateTeamSchema = z.infer<typeof updateTeamSchema>
+export type OwnerUpdateTeamSchema = z.infer<typeof ownerUpdateTeamSchema>
+export type AdminUpdateTeamSchema = z.infer<typeof adminUpdateTeamSchema>
 export type InviteMemberSchema = z.infer<typeof inviteMemberSchema>
 export type UpdateMemberRoleSchema = z.infer<typeof updateMemberRoleSchema>
 export type TeamListQuerySchema = z.infer<typeof teamListQuerySchema>

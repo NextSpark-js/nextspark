@@ -118,6 +118,24 @@ export class SettingsPOM extends BasePOM {
       securitySuccess: cySelector('settings.security.successMessage'),
 
       // ============================================
+      // TEAM INLINE EDIT (14 selectors)
+      // ============================================
+      teamEditNameValue: cySelector('teams.edit.name.value'),
+      teamEditNameEditIcon: cySelector('teams.edit.name.editIcon'),
+      teamEditNameInput: cySelector('teams.edit.name.input'),
+      teamEditNameSaveIcon: cySelector('teams.edit.name.saveIcon'),
+      teamEditNameCancelIcon: cySelector('teams.edit.name.cancelIcon'),
+      teamEditNameError: cySelector('teams.edit.name.error'),
+      teamEditNameSuccess: cySelector('teams.edit.name.success'),
+      teamEditDescriptionValue: cySelector('teams.edit.description.value'),
+      teamEditDescriptionEditIcon: cySelector('teams.edit.description.editIcon'),
+      teamEditDescriptionTextarea: cySelector('teams.edit.description.textarea'),
+      teamEditDescriptionSaveIcon: cySelector('teams.edit.description.saveIcon'),
+      teamEditDescriptionCancelIcon: cySelector('teams.edit.description.cancelIcon'),
+      teamEditDescriptionError: cySelector('teams.edit.description.error'),
+      teamEditDescriptionSuccess: cySelector('teams.edit.description.success'),
+
+      // ============================================
       // 6. NOTIFICATIONS (7 selectors)
       // ============================================
       notificationsContainer: cySelector('settings.notifications.container'),
@@ -516,6 +534,172 @@ export class SettingsPOM extends BasePOM {
   waitForTeams() {
     cy.url().should('include', '/settings/teams')
     cy.get(this.selectors.teamsContainer, { timeout: 15000 }).should('be.visible')
+    return this
+  }
+
+  // ============================================
+  // TEAM INLINE EDIT METHODS
+  // ============================================
+
+  /**
+   * Click edit icon for team name
+   */
+  editTeamName() {
+    cy.get(this.selectors.teamEditNameEditIcon).click()
+    return this
+  }
+
+  /**
+   * Type into team name input field
+   */
+  typeTeamName(name: string) {
+    cy.get(this.selectors.teamEditNameInput).clear().type(name)
+    return this
+  }
+
+  /**
+   * Click save icon for team name
+   */
+  saveTeamName() {
+    cy.get(this.selectors.teamEditNameSaveIcon).click()
+    return this
+  }
+
+  /**
+   * Click cancel icon for team name
+   */
+  cancelTeamName() {
+    cy.get(this.selectors.teamEditNameCancelIcon).click()
+    return this
+  }
+
+  /**
+   * Get the current team name text value
+   */
+  getTeamNameText() {
+    return cy.get(this.selectors.teamEditNameValue).invoke('text')
+  }
+
+  /**
+   * Click edit icon for team description
+   */
+  editTeamDescription() {
+    cy.get(this.selectors.teamEditDescriptionEditIcon).click()
+    return this
+  }
+
+  /**
+   * Type into team description textarea field
+   */
+  typeTeamDescription(description: string) {
+    cy.get(this.selectors.teamEditDescriptionTextarea).clear().type(description)
+    return this
+  }
+
+  /**
+   * Click save icon for team description
+   */
+  saveTeamDescription() {
+    cy.get(this.selectors.teamEditDescriptionSaveIcon).click()
+    return this
+  }
+
+  /**
+   * Click cancel icon for team description
+   */
+  cancelTeamDescription() {
+    cy.get(this.selectors.teamEditDescriptionCancelIcon).click()
+    return this
+  }
+
+  /**
+   * Get the current team description text value
+   */
+  getTeamDescriptionText() {
+    return cy.get(this.selectors.teamEditDescriptionValue).invoke('text')
+  }
+
+  /**
+   * Assert team name edit button is visible (owner only)
+   */
+  assertTeamNameEditable() {
+    cy.get(this.selectors.teamEditNameEditIcon).should('be.visible')
+    return this
+  }
+
+  /**
+   * Assert team name edit button is NOT visible (non-owner)
+   */
+  assertTeamNameNotEditable() {
+    cy.get(this.selectors.teamEditNameEditIcon).should('not.exist')
+    return this
+  }
+
+  /**
+   * Assert team description edit button is visible (owner only)
+   */
+  assertTeamDescriptionEditable() {
+    cy.get(this.selectors.teamEditDescriptionEditIcon).should('be.visible')
+    return this
+  }
+
+  /**
+   * Assert team description edit button is NOT visible (non-owner)
+   */
+  assertTeamDescriptionNotEditable() {
+    cy.get(this.selectors.teamEditDescriptionEditIcon).should('not.exist')
+    return this
+  }
+
+  /**
+   * Edit and save team name (complete flow)
+   */
+  editAndSaveTeamName(newName: string) {
+    this.editTeamName()
+    this.typeTeamName(newName)
+    this.saveTeamName()
+    return this
+  }
+
+  /**
+   * Edit and save team description (complete flow)
+   */
+  editAndSaveTeamDescription(newDescription: string) {
+    this.editTeamDescription()
+    this.typeTeamDescription(newDescription)
+    this.saveTeamDescription()
+    return this
+  }
+
+  /**
+   * Assert team name error message is visible
+   */
+  assertTeamNameError() {
+    cy.get(this.selectors.teamEditNameError).should('be.visible')
+    return this
+  }
+
+  /**
+   * Assert team name success message is visible
+   */
+  assertTeamNameSuccess() {
+    cy.get(this.selectors.teamEditNameSuccess).should('be.visible')
+    return this
+  }
+
+  /**
+   * Assert team description error message is visible
+   */
+  assertTeamDescriptionError() {
+    cy.get(this.selectors.teamEditDescriptionError).should('be.visible')
+    return this
+  }
+
+  /**
+   * Assert team description success message is visible
+   */
+  assertTeamDescriptionSuccess() {
+    cy.get(this.selectors.teamEditDescriptionSuccess).should('be.visible')
     return this
   }
 }

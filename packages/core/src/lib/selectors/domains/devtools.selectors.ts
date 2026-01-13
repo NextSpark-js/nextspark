@@ -153,6 +153,97 @@ export const DEVTOOLS_SELECTORS = {
     paginationNext: 'scheduled-actions-pagination-next',
     emptyState: 'scheduled-actions-empty-state',
   },
+  /**
+   * API Explorer - Interactive API testing tool
+   *
+   * Layout:
+   * ┌─────────────────────────────────────────────────────────────────┐
+   * │ SIDEBAR          │ REQUEST PANEL        │ RESPONSE PANEL       │
+   * │ ═══════════════  │ ════════════════════ │ ════════════════════ │
+   * │ [Search...]      │ [Method] [URL]       │ Status: 200 OK       │
+   * │                  │ [Send] [Cancel]      │ Time: 123ms          │
+   * │ ▼ Category       │                      │                      │
+   * │   ▼ Prefix       │ [Params] [Headers]   │ [Body] [Headers]     │
+   * │     GET /path    │ [Body] [Presets]     │                      │
+   * │     POST /path   │                      │ { response... }      │
+   * │                  │ { body... }          │                      │
+   * │                  │                      │                      │
+   * │ ▼ Auth           │                      │                      │
+   * │   [Session]      │                      │                      │
+   * │   [API Key]      │                      │                      │
+   * │                  │                      │                      │
+   * │ ▼ Team           │                      │                      │
+   * │   [Select team]  │                      │                      │
+   * └─────────────────────────────────────────────────────────────────┘
+   */
+  apiExplorer: {
+    container: 'devtools-api-explorer',
+    mobileToggle: 'devtools-api-explorer-mobile-toggle',
+    docsBtn: 'devtools-api-explorer-docs-btn',
+    // Sidebar - endpoint navigation
+    sidebar: {
+      container: 'devtools-api-sidebar',
+      collapsed: 'devtools-api-sidebar-collapsed',
+      expand: 'devtools-api-sidebar-expand',
+      collapse: 'devtools-api-sidebar-collapse',
+      search: 'devtools-api-sidebar-search',
+      category: 'devtools-api-sidebar-category-{category}',
+      prefix: 'devtools-api-sidebar-prefix-{category}-{prefix}',
+      endpoint: 'devtools-api-sidebar-endpoint-{method}-{path}',
+    },
+    // Auth selector
+    auth: {
+      container: 'devtools-api-auth',
+      typeGroup: 'devtools-api-auth-type-group',
+      sessionOption: 'devtools-api-auth-session',
+      apiKeyOption: 'devtools-api-auth-apikey',
+      apiKeyInput: 'devtools-api-auth-apikey-input',
+      bypassToggle: 'devtools-api-auth-bypass-toggle',
+    },
+    // Team selector
+    team: {
+      container: 'devtools-api-team',
+      loading: 'devtools-api-team-loading',
+      trigger: 'devtools-api-team-trigger',
+      option: 'devtools-api-team-option-{slug}',
+      error: 'devtools-api-team-error',
+      bypassTrigger: 'devtools-api-team-bypass-trigger',
+      search: 'devtools-api-team-search',
+      crossTeam: 'devtools-api-team-cross-team',
+      bypassOption: 'devtools-api-team-bypass-option-{id}',
+    },
+    // Request panel
+    request: {
+      panel: 'devtools-api-request-panel',
+      sendBtn: 'devtools-api-request-send',
+      cancelBtn: 'devtools-api-request-cancel',
+      tabParams: 'devtools-api-request-tab-params',
+      tabHeaders: 'devtools-api-request-tab-headers',
+      tabBody: 'devtools-api-request-tab-body',
+      tabPresets: 'devtools-api-request-tab-presets',
+    },
+    // Response panel
+    response: {
+      panel: 'devtools-api-response-panel',
+      panelIdle: 'devtools-api-response-idle',
+      panelLoading: 'devtools-api-response-loading',
+      panelError: 'devtools-api-response-error',
+      status: 'devtools-api-response-status',
+      time: 'devtools-api-response-time',
+      tabBody: 'devtools-api-response-tab-body',
+      tabHeaders: 'devtools-api-response-tab-headers',
+      body: 'devtools-api-response-body',
+      headers: 'devtools-api-response-headers',
+    },
+    // Presets tab
+    presets: {
+      tab: 'devtools-api-presets',
+      empty: 'devtools-api-presets-empty',
+      card: 'devtools-api-presets-card-{id}',
+      viewBtn: 'devtools-api-presets-view-{id}',
+      applyBtn: 'devtools-api-presets-apply-{id}',
+    },
+  },
 } as const
 
 export type DevtoolsSelectorsType = typeof DEVTOOLS_SELECTORS

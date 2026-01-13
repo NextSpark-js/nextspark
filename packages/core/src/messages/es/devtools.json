@@ -20,6 +20,8 @@
     "configDescription": "Configuración de tema y entidades",
     "api": "Explorador API",
     "apiDescription": "Navegar todos los endpoints API",
+    "scheduledActions": "Acciones Programadas",
+    "scheduledActionsDescription": "Monitorear tareas en segundo plano",
     "expandSidebar": "Expandir barra lateral",
     "collapseSidebar": "Contraer barra lateral"
   },

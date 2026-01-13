@@ -35,8 +35,14 @@
     "viewer": "Acces en lecture seule au contenu de l'equipe"
   },
 
+  "entity": {
+    "description": "Gerez vos equipes, membres et invitations",
+    "plural": "Equipes"
+  },
+
   "actions": {
     "create": "Creer une equipe",
+    "creating": "Creation...",
     "edit": "Modifier l'equipe",
     "delete": "Supprimer l'equipe",
     "leave": "Quitter l'equipe",
@@ -78,7 +84,22 @@
   "editTeam": {
     "title": "Modifier l'equipe",
     "success": "Equipe mise a jour avec succes",
-    "error": "Erreur lors de la mise a jour de l'equipe"
+    "error": "Erreur lors de la mise a jour de l'equipe",
+    "saving": "Enregistrement...",
+    "editName": "Modifier le nom de l'equipe",
+    "editDescription": "Modifier la description",
+    "saveName": "Enregistrer le nom",
+    "saveDescription": "Enregistrer la description",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "editField": "Modifier {field}",
+    "noValue": "Non defini"
+  },
+
+  "validation": {
+    "nameRequired": "Le nom de l'equipe est requis",
+    "nameMinLength": "Le nom doit contenir au moins 2 caracteres",
+    "nameMaxLength": "Le nom doit contenir au maximum 100 caracteres"
   },
 
   "deleteTeam": {
@@ -156,11 +177,26 @@
     "permissionDenied": "Vous n'avez pas la permission d'effectuer cette action",
     "cannotDeletePersonal": "Impossible de supprimer l'equipe personnelle",
     "cannotLeaveOwner": "Les proprietaires ne peuvent pas partir. Transferez d'abord la propriete.",
-    "lastAdmin": "Impossible de supprimer le dernier administrateur de l'equipe"
+    "lastAdmin": "Impossible de supprimer le dernier administrateur de l'equipe",
+    "ownerOnlyEdit": "Seuls les proprietaires peuvent modifier le nom et la description de l'equipe"
   },
 
   "empty": {
     "title": "Aucune equipe pour le moment",
     "description": "Creez votre premiere equipe pour commencer a collaborer"
+  },
+
+  "fields": {
+    "name": "Nom de l'equipe",
+    "slug": "URL de l'equipe",
+    "description": "Description (optionnelle)",
+    "email": "Adresse email",
+    "role": "Votre role",
+    "joinedAt": "Date d'inscription"
+  },
+
+  "messages": {
+    "created": "Equipe creee avec succes",
+    "loading": "Chargement des equipes..."
   }
 }

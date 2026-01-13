@@ -13,6 +13,7 @@ import { useTeamsConfig } from '@nextsparkjs/core/hooks/useTeamsConfig'
 import { TeamMembersList } from '@nextsparkjs/core/components/teams/TeamMembersList'
 import { TeamPendingInvitations } from '@nextsparkjs/core/components/teams/TeamPendingInvitations'
 import { CreateTeamDialog } from '@nextsparkjs/core/components/teams/CreateTeamDialog'
+import { InlineEditableField } from '@nextsparkjs/core/components/teams/InlineEditableField'
 import { sel } from '@nextsparkjs/core/selectors'
 import { TeamRole } from '@nextsparkjs/core/lib/teams/types'
 import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
@@ -203,10 +204,25 @@ function TeamsSettingsPage() {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Settings className="h-5 w-5" aria-hidden="true" />
-                <CardTitle>{selectedMembership.team.name}</CardTitle>
+                <CardTitle className="flex-1">
+                  <InlineEditableField
+                    value={selectedMembership.team.name}
+                    fieldType="name"
+                    teamId={selectedMembership.team.id}
+                    placeholder={tTeams('createTeam.namePlaceholder')}
+                    disabled={selectedMembership.role !== 'owner'}
+                  />
+                </CardTitle>
               </div>
-              <CardDescription>
-                {selectedMembership.team.description || t('teams.manageTeamMembers')}
+              <CardDescription className="mt-2">
+                <InlineEditableField
+                  value={selectedMembership.team.description}
+                  fieldType="description"
+                  teamId={selectedMembership.team.id}
+                  placeholder={tTeams('createTeam.descriptionPlaceholder')}
+                  multiline={true}
+                  disabled={selectedMembership.role !== 'owner'}
+                />
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
