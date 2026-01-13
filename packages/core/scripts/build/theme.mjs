@@ -33,6 +33,75 @@ function getActiveTheme() {
 }
 
 /**
+ * Sync app/globals.css to import from the active theme
+ *
+ * This ensures the import path in app/globals.css always matches
+ * NEXT_PUBLIC_ACTIVE_THEME, handling both npm and monorepo modes.
+ *
+ * @param {object} config - Configuration from getConfig()
+ * @param {string} activeTheme - Active theme name
+ * @returns {boolean} - True if file was updated, false if already correct
+ */
+function syncAppGlobalsCss(config, activeTheme) {
+  const appGlobalsCssPath = path.join(config.projectRoot, 'app', 'globals.css')
+
+  // Calculate the correct relative path from app/ to theme globals.css
+  const appDir = path.join(config.projectRoot, 'app')
+  const themeGlobalsPath = path.join(config.themesDir, activeTheme, 'styles', 'globals.css')
+  const relativePath = path.relative(appDir, themeGlobalsPath)
+
+  // Expected import statement
+  const expectedImport = `@import "${relativePath}";`
+
+  // Template for app/globals.css
+  const template = `/* =============================================
+   GLOBAL STYLES - Import from Active Theme
+
+   This file imports styles from the active theme.
+   DO NOT edit directly - all styles are in:
+   contents/themes/{theme}/styles/globals.css
+
+   To customize colors, typography and tokens, edit
+   the globals.css file in your active theme.
+   ============================================= */
+
+${expectedImport}
+`
+
+  // Check if file exists and has correct import
+  if (fs.existsSync(appGlobalsCssPath)) {
+    const currentContent = fs.readFileSync(appGlobalsCssPath, 'utf8')
+
+    // Extract current import (handle various formats)
+    const importMatch = currentContent.match(/@import\s+["']([^"']+)["'];?/)
+
+    if (importMatch) {
+      const currentImportPath = importMatch[1]
+
+      // Check if it's already pointing to the correct theme
+      if (currentImportPath === relativePath) {
+        return false // Already correct, no update needed
+      }
+
+      // Update only the import line, preserving any custom comments
+      const updatedContent = currentContent.replace(
+        /@import\s+["'][^"']+["'];?/,
+        expectedImport
+      )
+
+      fs.writeFileSync(appGlobalsCssPath, updatedContent)
+      console.log(`   🔄 Updated app/globals.css import: ${relativePath}`)
+      return true
+    }
+  }
+
+  // File doesn't exist or has no import - write full template
+  fs.writeFileSync(appGlobalsCssPath, template)
+  console.log(`   ✅ Created app/globals.css with import: ${relativePath}`)
+  return true
+}
+
+/**
  * Recursively copy directory contents
  */
 function copyRecursive(src, dest) {
@@ -217,9 +286,9 @@ export async function buildTheme(projectRoot = null) {
     fs.mkdirSync(outputDir, { recursive: true })
   }
 
-  // NOTE: app/globals.css should import from theme, NOT be overwritten by core
-  // Theme is the single source of truth for all CSS variables
-  // See: contents/themes/{theme}/styles/globals.css
+  // Sync app/globals.css to import from the active theme
+  // This handles path differences between npm and monorepo modes
+  syncAppGlobalsCss(config, activeTheme)
 
   // Copy theme public assets (for all themes, including default)
   if (fs.existsSync(themePath)) {

@@ -20,6 +20,7 @@ import {
 } from './theme-renamer.js'
 import {
   updatePermissionsConfig,
+  updateEntityPermissions,
   updateDashboardConfig,
   generateEnvExample,
   updateReadme,
@@ -49,6 +50,7 @@ export {
   updateRolesConfig,
   updateTestFiles,
   updatePermissionsConfig,
+  updateEntityPermissions,
   updateDashboardConfig,
   generateEnvExample,
   updateReadme,
@@ -336,6 +338,7 @@ export async function generateProject(config: WizardConfig): Promise<void> {
 
   // 7. Update additional configs
   await updatePermissionsConfig(config)
+  await updateEntityPermissions(config)  // Uncomment entity permissions based on content features
   await updateDashboardConfig(config)
 
   // 8. Update Phase 3 configs (auth, dashboard UI, dev tools)

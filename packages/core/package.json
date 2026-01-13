@@ -1,6 +1,6 @@
 {
   "name": "@nextsparkjs/core",
-  "version": "0.1.0-beta.45",
+  "version": "0.1.0-beta.46",
   "description": "NextSpark - The complete SaaS framework for Next.js",
   "license": "MIT",
   "author": "NextSpark <hello@nextspark.dev>",
@@ -96,6 +96,22 @@
       "types": "./dist/lib/scheduled-actions/index.d.ts",
       "import": "./dist/lib/scheduled-actions/index.js"
     },
+    "./lib/permissions": {
+      "types": "./dist/lib/permissions/index.d.ts",
+      "import": "./dist/lib/permissions/index.js"
+    },
+    "./lib/permissions/system": {
+      "types": "./dist/lib/permissions/system.d.ts",
+      "import": "./dist/lib/permissions/system.js"
+    },
+    "./lib/permissions/types": {
+      "types": "./dist/lib/permissions/types.d.ts",
+      "import": "./dist/lib/permissions/types.js"
+    },
+    "./lib/config/config-sync": {
+      "types": "./dist/lib/config/config-sync.d.ts",
+      "import": "./dist/lib/config/config-sync.js"
+    },
     "./lib/*": {
       "types": "./dist/lib/*.d.ts",
       "import": "./dist/lib/*.js"
@@ -103,6 +119,10 @@
     "./hooks": {
       "types": "./dist/hooks/index.d.ts",
       "import": "./dist/hooks/index.js"
+    },
+    "./hooks/teams": {
+      "types": "./dist/hooks/teams/index.d.ts",
+      "import": "./dist/hooks/teams/index.js"
     },
     "./hooks/*": {
       "types": "./dist/hooks/*.d.ts",
@@ -219,6 +239,7 @@
   },
   "files": [
     "dist",
+    "styles",
     "templates",
     "migrations",
     "tests/cypress/support",

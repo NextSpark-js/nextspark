@@ -40,10 +40,14 @@ export interface ApiPreset {
   description?: string
   /** HTTP method for this preset */
   method: HttpMethod
+  /** Path suffix for sub-routes (e.g., '/{id}', '/{id}/child/{childType}') */
+  path?: string
   /** Path parameters (for dynamic segments like [id]) */
   pathParams?: Record<string, string>
   /** Query parameters */
   params?: Record<string, string | number | boolean>
+  /** Query parameters (alias for params) */
+  queryParams?: Record<string, string | number | boolean>
   /** Custom headers */
   headers?: Record<string, string>
   /** Request body (for POST/PATCH/PUT) */

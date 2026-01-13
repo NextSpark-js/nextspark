@@ -14,7 +14,7 @@
 
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
-import { existsSync, lstatSync } from 'fs'
+import { existsSync, lstatSync, readlinkSync } from 'fs'
 import dotenv from 'dotenv'
 import { loadNextSparkConfigSync } from '../config-loader.mjs'
 
@@ -86,9 +86,15 @@ export function detectProjectRoot() {
 }
 
 /**
- * Check if NextSpark is installed as a package (not a symlink from monorepo)
+ * Check if NextSpark is installed as a package (from npm registry)
+ *
+ * This handles both traditional npm/yarn AND pnpm:
+ * - npm/yarn: packages are copied to node_modules (not symlinks)
+ * - pnpm: ALL packages are symlinks, but npm packages point to .pnpm/ store
+ * - pnpm workspace: local packages symlink to the actual package path
+ *
  * @param {string} root - Project root path
- * @returns {boolean} True if installed as npm package (not a symlink)
+ * @returns {boolean} True if installed from npm registry
  */
 export function isInstalledAsPackage(root) {
   const corePath = join(root, 'node_modules/@nextsparkjs/core')
@@ -96,11 +102,27 @@ export function isInstalledAsPackage(root) {
     return false
   }
 
-  // In monorepo mode with pnpm workspaces, packages are symlinked
-  // A real npm installation is not a symlink
   try {
     const stat = lstatSync(corePath)
-    return !stat.isSymbolicLink()
+
+    // If not a symlink, it's a traditional npm/yarn install
+    if (!stat.isSymbolicLink()) {
+      return true
+    }
+
+    // For symlinks (pnpm), check WHERE it points to:
+    // - npm install: points to .pnpm/@nextsparkjs+core@version.../node_modules/@nextsparkjs/core
+    // - workspace: points to ../../packages/core or similar
+    const linkTarget = readlinkSync(corePath)
+
+    // If symlink points to .pnpm/ directory, it's a real npm installation via pnpm
+    // The .pnpm directory is pnpm's content-addressable store
+    if (linkTarget.includes('.pnpm/') || linkTarget.includes('.pnpm\\')) {
+      return true
+    }
+
+    // Otherwise it's a workspace symlink (monorepo development)
+    return false
   } catch {
     return false
   }

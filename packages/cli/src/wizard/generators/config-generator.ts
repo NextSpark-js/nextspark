@@ -200,6 +200,72 @@ export async function updatePermissionsConfig(config: WizardConfig): Promise<voi
 }
 
 /**
+ * Uncomment entity permissions based on content feature selection
+ * The starter template has pages/posts permissions commented out with markers
+ */
+export async function updateEntityPermissions(config: WizardConfig): Promise<void> {
+  const permissionsConfigPath = path.join(
+    getTargetThemesDir(),
+    config.projectSlug,
+    'config',
+    'permissions.config.ts'
+  )
+
+  if (!await fs.pathExists(permissionsConfigPath)) {
+    return
+  }
+
+  let content = await fs.readFile(permissionsConfigPath, 'utf-8')
+
+  // Uncomment pages permissions if pages feature is enabled
+  if (config.contentFeatures.pages) {
+    content = uncommentPermissionBlock(content, 'PAGES')
+  }
+
+  // Uncomment posts permissions if blog feature is enabled
+  if (config.contentFeatures.blog) {
+    content = uncommentPermissionBlock(content, 'POSTS')
+  }
+
+  await fs.writeFile(permissionsConfigPath, content, 'utf-8')
+}
+
+/**
+ * Uncomment a permission block by its marker name
+ * Removes the // comments and the marker lines
+ */
+function uncommentPermissionBlock(content: string, markerName: string): string {
+  const startMarker = `// __${markerName}_PERMISSIONS_START__`
+  const endMarker = `// __${markerName}_PERMISSIONS_END__`
+
+  const startIndex = content.indexOf(startMarker)
+  const endIndex = content.indexOf(endMarker)
+
+  if (startIndex === -1 || endIndex === -1) {
+    return content
+  }
+
+  // Extract the block between markers
+  const beforeBlock = content.slice(0, startIndex)
+  const block = content.slice(startIndex + startMarker.length, endIndex)
+  const afterBlock = content.slice(endIndex + endMarker.length)
+
+  // Uncomment the block by removing leading "// " from each line
+  const uncommentedBlock = block
+    .split('\n')
+    .map(line => {
+      // Remove "    // " at the start of entity permission lines
+      if (line.match(/^\s*\/\/\s+/)) {
+        return line.replace(/^(\s*)\/\/\s*/, '$1')
+      }
+      return line
+    })
+    .join('\n')
+
+  return beforeBlock + uncommentedBlock + afterBlock
+}
+
+/**
  * Update dashboard config with feature flags
  */
 export async function updateDashboardConfig(config: WizardConfig): Promise<void> {
