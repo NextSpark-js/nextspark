@@ -33,7 +33,7 @@ import {
   AlertDialogTrigger,
 } from '../ui/alert-dialog'
 import { CopyableId } from '../shared/CopyableId'
-import { createCyId } from '../../lib/test'
+import { sel } from '../../lib/test'
 import { usePermissions } from '../../lib/permissions/hooks'
 import type { EntityConfig } from '../../lib/entities/types'
 import type { Permission } from '../../lib/permissions/types'
@@ -189,7 +189,7 @@ export function EntityDetailHeader({
   return (
     <div
       className={`flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 ${className || ''}`}
-      data-cy={createCyId(slug, `${mode}-header`)}
+      data-cy={sel('entities.header.container', { slug, mode })}
     >
       {/* Left side: Back + Title */}
       <div className="space-y-2 flex-1">
@@ -199,7 +199,7 @@ export function EntityDetailHeader({
             size="sm"
             onClick={handleBack}
             className="gap-2 -ml-2 cursor-pointer"
-            data-cy={createCyId(slug, 'back-btn')}
+            data-cy={sel('entities.header.backButton', { slug })}
           >
             <ArrowLeft className="h-4 w-4" />
             {resolvedBackLabel}
@@ -214,7 +214,7 @@ export function EntityDetailHeader({
                 variant="outline"
                 onClick={handleEdit}
                 className="gap-2 cursor-pointer"
-                data-cy={createCyId(slug, 'edit-btn')}
+                data-cy={sel('entities.header.editButton', { slug })}
               >
                 <Edit className="h-4 w-4" />
                 {tButtons('edit')}
@@ -227,13 +227,13 @@ export function EntityDetailHeader({
                   <Button
                     variant="outline"
                     className="gap-2 text-destructive border-destructive hover:bg-destructive/10 cursor-pointer"
-                    data-cy={createCyId(slug, 'delete-btn')}
+                    data-cy={sel('entities.header.deleteButton', { slug })}
                   >
                     <Trash2 className="h-4 w-4" />
                     {tButtons('delete')}
                   </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent data-cy={createCyId(slug, 'delete-dialog')}>
+                <AlertDialogContent data-cy={sel('entities.header.deleteDialog', { slug })}>
                   <AlertDialogHeader>
                     <AlertDialogTitle>
                       {deleteTitle || tButtons('delete')}
@@ -243,14 +243,14 @@ export function EntityDetailHeader({
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel data-cy={createCyId(slug, 'delete-cancel')}>
+                    <AlertDialogCancel data-cy={sel('entities.header.deleteCancel', { slug })}>
                       {tButtons('cancel')}
                     </AlertDialogCancel>
                     <AlertDialogAction
                       onClick={onDelete}
                       disabled={isDeleting}
                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      data-cy={createCyId(slug, 'delete-confirm')}
+                      data-cy={sel('entities.header.deleteConfirm', { slug })}
                     >
                       {isDeleting ? '...' : tButtons('delete')}
                     </AlertDialogAction>
@@ -263,7 +263,7 @@ export function EntityDetailHeader({
 
         <h1
           className="text-2xl font-bold text-foreground"
-          data-cy={createCyId(slug, 'title')}
+          data-cy={sel('entities.header.title', { slug })}
         >
           {resolvedTitle}
         </h1>

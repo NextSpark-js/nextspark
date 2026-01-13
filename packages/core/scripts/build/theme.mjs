@@ -160,6 +160,36 @@ function copyThemePublicAssets(themePath, activeTheme) {
 }
 
 /**
+ * Validate that theme globals.css has all required sections
+ * @param {string} cssContent - Content of the globals.css file
+ * @param {string} themeName - Name of the theme being validated
+ * @returns {boolean} - True if valid, false if missing required sections
+ */
+function validateThemeCSS(cssContent, themeName) {
+  const required = [
+    { pattern: '@import "tailwindcss"', name: 'Tailwind import' },
+    { pattern: ':root', name: 'Light mode variables' },
+    { pattern: '.dark', name: 'Dark mode variables' },
+    { pattern: '@theme', name: 'Tailwind v4 theme mapping' },
+    { pattern: '--background:', name: '--background variable' },
+    { pattern: '--primary:', name: '--primary variable' },
+    { pattern: '--color-background:', name: '@theme background mapping' }
+  ]
+
+  const missing = required.filter(r => !cssContent.includes(r.pattern))
+
+  if (missing.length > 0) {
+    console.warn(`   ⚠️  Theme "${themeName}" globals.css missing required sections:`)
+    missing.forEach(m => console.warn(`      - ${m.name}`))
+    console.warn(`   💡 Theme globals.css should be self-contained with all variables and @theme mapping.`)
+    console.warn(`   📚 See: contents/themes/starter/styles/globals.css for reference`)
+    return false
+  }
+
+  return true
+}
+
+/**
  * Build theme CSS based on active theme
  * @param {string|null} projectRoot - Optional project root path (for NPM mode)
  */
@@ -187,24 +217,9 @@ export async function buildTheme(projectRoot = null) {
     fs.mkdirSync(outputDir, { recursive: true })
   }
 
-  // In NPM mode, copy core globals.css to project's app/ directory
-  // This is required because PostCSS processes CSS at project level, not package level
-  if (config.isNpmMode) {
-    const coreGlobalsPath = path.join(config.coreDir, 'globals.css')
-    const appGlobalsPath = path.join(config.projectRoot, 'app', 'globals.css')
-
-    if (fs.existsSync(coreGlobalsPath)) {
-      // Ensure app directory exists
-      const appDir = path.join(config.projectRoot, 'app')
-      if (!fs.existsSync(appDir)) {
-        fs.mkdirSync(appDir, { recursive: true })
-      }
-      fs.copyFileSync(coreGlobalsPath, appGlobalsPath)
-      console.log(`   ✅ Copied core globals.css to app/globals.css`)
-    } else {
-      console.warn(`   ⚠️  Core globals.css not found: ${coreGlobalsPath}`)
-    }
-  }
+  // NOTE: app/globals.css should import from theme, NOT be overwritten by core
+  // Theme is the single source of truth for all CSS variables
+  // See: contents/themes/{theme}/styles/globals.css
 
   // Copy theme public assets (for all themes, including default)
   if (fs.existsSync(themePath)) {
@@ -251,6 +266,9 @@ export async function buildTheme(projectRoot = null) {
     if (fs.existsSync(globalStylesPath)) {
       globalCSS = fs.readFileSync(globalStylesPath, 'utf8')
       console.log(`   ✅ Loaded globals.css (${globalCSS.length} chars)`)
+
+      // Validate that theme has all required sections
+      validateThemeCSS(globalCSS, activeTheme)
     } else {
       console.warn(`   ⚠️  globals.css not found: ${globalStylesPath}`)
     }

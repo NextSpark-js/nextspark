@@ -53,14 +53,13 @@ describe('Sector7 - All Users Management', {
       superadmin.visitUsers()
 
       // 2. Validate users list/table exists
-      cy.get(superadmin.selectors.usersContainer).then(($container) => {
-        const hasTable = $container.find(superadmin.selectors.usersTable).length > 0
-        const hasList = $container.find(superadmin.selectors.usersList).length > 0
-        const hasRows = $container.find('[data-cy^="superadmin-user-row"]').length > 0
-        if (hasTable || hasList || hasRows) {
+      cy.get(superadmin.selectors.users.container).then(($container) => {
+        const hasTable = $container.find(superadmin.selectors.users.table.element).length > 0
+        const hasRows = $container.find('[data-cy^="superadmin-users-row"]').length > 0
+        if (hasTable || hasRows) {
           cy.log('✅ Users displayed in list')
         } else {
-          cy.log('⚠️ Users table/list not found')
+          cy.log('⚠️ Users table not found')
         }
       })
     })
@@ -75,8 +74,8 @@ describe('Sector7 - All Users Management', {
 
       // 2. Find and click first user row
       cy.get('body').then(($body) => {
-        if ($body.find('[data-cy^="superadmin-user-row"]').length > 0) {
-          cy.get('[data-cy^="superadmin-user-row"]').first().click()
+        if ($body.find('[data-cy^="superadmin-users-row"]').length > 0) {
+          cy.get('[data-cy^="superadmin-users-row"]').first().click()
 
           // 3. Validate user details view
           cy.url().should('include', '/superadmin/users/')
@@ -98,7 +97,7 @@ describe('Sector7 - All Users Management', {
 
       // 2. Check if search exists
       cy.get('body').then(($body) => {
-        if ($body.find(superadmin.selectors.usersSearch).length > 0) {
+        if ($body.find(superadmin.selectors.users.filters.search).length > 0) {
           superadmin.searchUsers('carlos')
 
           // 3. Wait for filter to apply
@@ -120,8 +119,8 @@ describe('Sector7 - All Users Management', {
       superadmin.visitUsers()
 
       // 2. Check for email display
-      cy.get(superadmin.selectors.usersContainer).within(() => {
-        cy.get('[data-cy^="superadmin-user-row"]').first().then(($user) => {
+      cy.get(superadmin.selectors.users.container).within(() => {
+        cy.get('[data-cy^="superadmin-users-row"]').first().then(($user) => {
           // Email might be in table cell or other format
           cy.wrap($user).should('contain', '@')
           cy.log('✅ User email visible in row')
@@ -138,13 +137,13 @@ describe('Sector7 - All Users Management', {
       superadmin.visitUsers()
 
       // 2. Check for role indicators (defensive check)
-      cy.get(superadmin.selectors.usersContainer).then(($container) => {
+      cy.get(superadmin.selectors.users.container).then(($container) => {
         if ($container.find('[data-cy^="user-app-role-"]').length > 0) {
           cy.get('[data-cy^="user-app-role-"]').first().should('be.visible')
           cy.log('✅ App role displayed')
         } else {
           // Role is shown as text in table, check for role-related content
-          cy.get(superadmin.selectors.usersTable).should('be.visible')
+          cy.get(superadmin.selectors.users.table.element).should('be.visible')
           cy.log('⚠️ App role shown as table column, not dedicated selector')
         }
       })
@@ -159,13 +158,13 @@ describe('Sector7 - All Users Management', {
       superadmin.visitUsers()
 
       // 2. Check for verification status (defensive check)
-      cy.get(superadmin.selectors.usersContainer).then(($container) => {
+      cy.get(superadmin.selectors.users.container).then(($container) => {
         if ($container.find('[data-cy="user-verified-status"]').length > 0) {
           cy.get('[data-cy="user-verified-status"]').first().should('be.visible')
           cy.log('✅ Verification status displayed')
         } else {
           // Status is shown in table, check for table visibility
-          cy.get(superadmin.selectors.usersTable).should('be.visible')
+          cy.get(superadmin.selectors.users.table.element).should('be.visible')
           cy.log('⚠️ Verification status shown in table, not dedicated selector')
         }
       })
@@ -198,13 +197,13 @@ describe('Sector7 - All Users Management', {
       superadmin.visitUsers()
 
       // 2. Check user details for team info (defensive check)
-      cy.get(superadmin.selectors.usersContainer).then(($container) => {
+      cy.get(superadmin.selectors.users.container).then(($container) => {
         if ($container.find('[data-cy="user-teams-count"]').length > 0) {
           cy.get('[data-cy="user-teams-count"]').first().should('be.visible')
           cy.log('✅ Team memberships displayed')
         } else {
           // Team info not shown in list view, verify table is visible
-          cy.get(superadmin.selectors.usersTable).should('be.visible')
+          cy.get(superadmin.selectors.users.table.element).should('be.visible')
           cy.log('⚠️ Team memberships not displayed in list view (available in detail)')
         }
       })
@@ -220,8 +219,8 @@ describe('Sector7 - All Users Management', {
 
       // 2. Navigate to first user's detail view
       cy.get('body').then(($body) => {
-        if ($body.find('[data-cy^="superadmin-user-row"]').length > 0) {
-          cy.get('[data-cy^="superadmin-user-row"]').first().click()
+        if ($body.find('[data-cy^="superadmin-users-row"]').length > 0) {
+          cy.get('[data-cy^="superadmin-users-row"]').first().click()
 
           // 3. Wait for user detail page to load
           cy.url().should('include', '/superadmin/users/')
@@ -246,8 +245,8 @@ describe('Sector7 - All Users Management', {
 
       // 2. Navigate to first user's detail view
       cy.get('body').then(($body) => {
-        if ($body.find('[data-cy^="superadmin-user-row"]').length > 0) {
-          cy.get('[data-cy^="superadmin-user-row"]').first().click()
+        if ($body.find('[data-cy^="superadmin-users-row"]').length > 0) {
+          cy.get('[data-cy^="superadmin-users-row"]').first().click()
 
           // 3. Wait for user detail page to load
           cy.url().should('include', '/superadmin/users/')

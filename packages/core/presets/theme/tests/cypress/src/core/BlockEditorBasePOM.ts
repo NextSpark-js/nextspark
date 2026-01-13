@@ -56,102 +56,199 @@ export abstract class BlockEditorBasePOM extends BasePOM {
 
   get editorSelectors() {
     return {
-      // Editor main
-      container: cySelector('blockEditor.container'),
-      titleInput: cySelector('blockEditor.titleInput'),
-      slugInput: cySelector('blockEditor.slugInput'),
-      saveButton: cySelector('blockEditor.saveButton'),
-      statusBadge: cySelector('blockEditor.statusBadge'),
-      leftSidebarToggle: cySelector('blockEditor.leftSidebarToggle'),
-      viewModeToggle: cySelector('blockEditor.viewModeToggle'),
+      // =========================================================================
+      // HEADER - Top bar with title, slug, toggles, and actions
+      // =========================================================================
+      container: cySelector('blockEditor.header.container'),
+      backButton: cySelector('blockEditor.header.backButton'),
+      titleInput: cySelector('blockEditor.header.titleInput'),
+      slugInput: cySelector('blockEditor.header.slugInput'),
+      externalLink: cySelector('blockEditor.header.externalLink'),
+      viewModeToggle: cySelector('blockEditor.header.viewToggle'),
+      viewEditor: cySelector('blockEditor.header.viewEditor'),
+      viewPreview: cySelector('blockEditor.header.viewPreview'),
+      saveButton: cySelector('blockEditor.header.saveButton'),
+      publishButton: cySelector('blockEditor.header.publishButton'),
+      settingsButton: cySelector('blockEditor.header.settingsButton'),
+      // Status selector (in header)
+      statusSelector: cySelector('blockEditor.header.statusSelector'),
+      statusOption: (value: string) =>
+        cySelector('blockEditor.header.statusOption', { value }),
+      statusDot: cySelector('blockEditor.header.statusDot'),
+      statusLabel: cySelector('blockEditor.header.statusLabel'),
+      // Locale selector (in header)
+      localeSelector: cySelector('blockEditor.header.localeSelector'),
+      localeOption: (locale: string) =>
+        cySelector('blockEditor.header.localeOption', { locale }),
 
-      // Block Picker
+      // =========================================================================
+      // BLOCK PICKER - Left column "Bloques" tab
+      // =========================================================================
       blockPicker: cySelector('blockEditor.blockPicker.container'),
+      // Tabs
+      tabBlocks: cySelector('blockEditor.blockPicker.tabBlocks'),
+      tabConfig: cySelector('blockEditor.blockPicker.tabConfig'),
+      tabIndicator: cySelector('blockEditor.blockPicker.tabIndicator'),
+      // Search
+      searchWrapper: cySelector('blockEditor.blockPicker.searchWrapper'),
+      searchIcon: cySelector('blockEditor.blockPicker.searchIcon'),
       blockSearch: cySelector('blockEditor.blockPicker.searchInput'),
-      categoryAll: cySelector('blockEditor.blockPicker.categoryAll'),
+      blockSearchClear: cySelector('blockEditor.blockPicker.searchClear'),
+      // Categories
+      categoryChips: cySelector('blockEditor.blockPicker.categoryChips'),
       category: (category: string) =>
-        cySelector('blockEditor.blockPicker.category', { category }),
-      blockItem: (slug: string) => cySelector('blockEditor.blockPicker.blockItem', { slug }),
-      addBlock: (slug: string) => cySelector('blockEditor.blockPicker.addBlock', { slug }),
+        cySelector('blockEditor.blockPicker.categoryChip', { category }),
+      // Block cards
+      blockItem: (slug: string) => cySelector('blockEditor.blockPicker.blockCard', { slug }),
+      blockIcon: (slug: string) => cySelector('blockEditor.blockPicker.blockIcon', { slug }),
+      blockName: (slug: string) => cySelector('blockEditor.blockPicker.blockName', { slug }),
+      addBlock: (slug: string) => cySelector('blockEditor.blockPicker.addButton', { slug }),
+      blockPickerEmpty: cySelector('blockEditor.blockPicker.empty'),
 
-      // Block Canvas
-      blockCanvas: cySelector('blockEditor.blockCanvas.container'),
-      blockCanvasEmpty: cySelector('blockEditor.blockCanvas.empty'),
+      // =========================================================================
+      // ENTITY FIELDS PANEL - Left column "Configuración" tab
+      // =========================================================================
+      entityFieldsPanel: cySelector('blockEditor.entityFieldsPanel.container'),
+      entityField: (name: string) =>
+        cySelector('blockEditor.entityFieldsPanel.field', { name }),
+      entityCategoryList: cySelector('blockEditor.entityFieldsPanel.categoryList'),
+      entityCategory: (slug: string) =>
+        cySelector('blockEditor.entityFieldsPanel.categoryItem', { slug }),
+      entityCategoryCheckbox: (slug: string) =>
+        cySelector('blockEditor.entityFieldsPanel.categoryCheckbox', { slug }),
 
-      // Preview Canvas
+      // =========================================================================
+      // LAYOUT CANVAS - Center column - Layout mode (draggable cards)
+      // =========================================================================
+      layoutCanvas: cySelector('blockEditor.layoutCanvas.container'),
+      layoutCanvasEmpty: cySelector('blockEditor.layoutCanvas.empty'),
+      layoutDropZone: cySelector('blockEditor.layoutCanvas.dropZone'),
+      // Sortable block cards
+      sortableBlock: (id: string) =>
+        cySelector('blockEditor.layoutCanvas.sortableBlock.container', { id }),
+      sortableBlockCard: (id: string) =>
+        cySelector('blockEditor.layoutCanvas.sortableBlock.card', { id }),
+      dragHandle: (id: string) =>
+        cySelector('blockEditor.layoutCanvas.sortableBlock.dragHandle', { id }),
+      sortableBlockName: (id: string) =>
+        cySelector('blockEditor.layoutCanvas.sortableBlock.name', { id }),
+      duplicateBlock: (id: string) =>
+        cySelector('blockEditor.layoutCanvas.sortableBlock.duplicateBtn', { id }),
+      removeBlock: (id: string) =>
+        cySelector('blockEditor.layoutCanvas.sortableBlock.removeBtn', { id }),
+      blockError: (id: string) =>
+        cySelector('blockEditor.layoutCanvas.sortableBlock.error', { id }),
+      // Generic selector for counting all sortable blocks
+      sortableBlockGeneric: '[data-cy^="sortable-block-"]',
+
+      // =========================================================================
+      // PREVIEW CANVAS - Center column - Preview mode (real blocks)
+      // =========================================================================
       previewCanvas: cySelector('blockEditor.previewCanvas.container'),
+      previewWrapper: cySelector('blockEditor.previewCanvas.wrapper'),
       previewCanvasEmpty: cySelector('blockEditor.previewCanvas.empty'),
       previewBlock: (id: string) => cySelector('blockEditor.previewCanvas.block', { id }),
-      previewMoveUp: (id: string) => cySelector('blockEditor.previewCanvas.moveUp', { id }),
-      previewMoveDown: (id: string) => cySelector('blockEditor.previewCanvas.moveDown', { id }),
+      previewBlockWrapper: (id: string) =>
+        cySelector('blockEditor.previewCanvas.blockWrapper', { id }),
+      previewBlockSelected: (id: string) =>
+        cySelector('blockEditor.previewCanvas.blockSelected', { id }),
+      // Generic selector for counting all preview blocks
+      previewBlockGeneric: '[data-cy^="preview-block-"]',
+      // Move buttons (legacy selectors for backward compatibility)
+      moveUpBtn: (id: string) => `[data-cy="preview-block-${id}-move-up"]`,
+      moveDownBtn: (id: string) => `[data-cy="preview-block-${id}-move-down"]`,
+      // Floating toolbar
+      floatingToolbar: (id: string) =>
+        cySelector('blockEditor.previewCanvas.floatingToolbar.container', { id }),
+      floatingToolbarDrag: (id: string) =>
+        cySelector('blockEditor.previewCanvas.floatingToolbar.dragHandle', { id }),
+      floatingToolbarName: (id: string) =>
+        cySelector('blockEditor.previewCanvas.floatingToolbar.blockName', { id }),
+      floatingToolbarDuplicate: (id: string) =>
+        cySelector('blockEditor.previewCanvas.floatingToolbar.duplicateBtn', { id }),
+      floatingToolbarDelete: (id: string) =>
+        cySelector('blockEditor.previewCanvas.floatingToolbar.deleteBtn', { id }),
 
-      // Sortable Block
-      sortableBlock: (id: string) => cySelector('blockEditor.sortableBlock.container', { id }),
-      dragHandle: (id: string) => cySelector('blockEditor.sortableBlock.dragHandle', { id }),
-      duplicateBlock: (id: string) => cySelector('blockEditor.sortableBlock.duplicate', { id }),
-      removeBlock: (id: string) => cySelector('blockEditor.sortableBlock.remove', { id }),
-      blockError: (id: string) => cySelector('blockEditor.sortableBlock.error', { id }),
-
-      // Settings Panel
-      settingsPanel: cySelector('blockEditor.settingsPanel.container'),
-      settingsPanelEmpty: cySelector('blockEditor.settingsPanel.empty'),
-      settingsPanelError: cySelector('blockEditor.settingsPanel.error'),
-      resetProps: cySelector('blockEditor.settingsPanel.resetProps'),
-      removeBlockSettings: cySelector('blockEditor.settingsPanel.removeBlock'),
-      tabContent: cySelector('blockEditor.settingsPanel.tabContent'),
-      tabDesign: cySelector('blockEditor.settingsPanel.tabDesign'),
-      tabAdvanced: cySelector('blockEditor.settingsPanel.tabAdvanced'),
-
-      // Page Settings
-      pageSettings: cySelector('blockEditor.pageSettings.container'),
-      seoTrigger: cySelector('blockEditor.pageSettings.seoTrigger'),
-      metaTitle: cySelector('blockEditor.pageSettings.metaTitle'),
-      metaDescription: cySelector('blockEditor.pageSettings.metaDescription'),
-      metaKeywords: cySelector('blockEditor.pageSettings.metaKeywords'),
-      ogImage: cySelector('blockEditor.pageSettings.ogImage'),
-      customFieldsTrigger: cySelector('blockEditor.pageSettings.customFieldsTrigger'),
+      // =========================================================================
+      // ENTITY META PANEL - SEO and custom fields
+      // =========================================================================
+      entityMetaPanel: cySelector('blockEditor.entityMetaPanel.container'),
+      // SEO section
+      seoTrigger: cySelector('blockEditor.entityMetaPanel.seoSection.trigger'),
+      seoContent: cySelector('blockEditor.entityMetaPanel.seoSection.content'),
+      metaTitle: cySelector('blockEditor.entityMetaPanel.seoSection.metaTitle'),
+      metaDescription: cySelector('blockEditor.entityMetaPanel.seoSection.metaDescription'),
+      metaKeywords: cySelector('blockEditor.entityMetaPanel.seoSection.metaKeywords'),
+      ogImage: cySelector('blockEditor.entityMetaPanel.seoSection.ogImage'),
+      // Custom fields section
+      customFieldsTrigger: cySelector('blockEditor.entityMetaPanel.customFields.trigger'),
+      customFieldsContent: cySelector('blockEditor.entityMetaPanel.customFields.content'),
       customFieldKey: (index: number) =>
-        cySelector('blockEditor.pageSettings.customFieldKey', { index }),
+        cySelector('blockEditor.entityMetaPanel.customFields.fieldKey', { index }),
       customFieldValue: (index: number) =>
-        cySelector('blockEditor.pageSettings.customFieldValue', { index }),
+        cySelector('blockEditor.entityMetaPanel.customFields.fieldValue', { index }),
       customFieldRemove: (index: number) =>
-        cySelector('blockEditor.pageSettings.customFieldRemove', { index }),
-      addCustomField: cySelector('blockEditor.pageSettings.addCustomField'),
+        cySelector('blockEditor.entityMetaPanel.customFields.fieldRemove', { index }),
+      addCustomField: cySelector('blockEditor.entityMetaPanel.customFields.addButton'),
 
-      // Status Selector
-      statusSelector: cySelector('blockEditor.statusSelector.trigger'),
-      statusOption: (value: string) =>
-        cySelector('blockEditor.statusSelector.option', { value }),
-
-      // Dynamic Form
-      dynamicForm: cySelector('blockEditor.dynamicForm.container'),
+      // =========================================================================
+      // BLOCK PROPERTIES PANEL - Right column
+      // =========================================================================
+      blockPropertiesPanel: cySelector('blockEditor.blockPropertiesPanel.container'),
+      blockPropertiesHeader: cySelector('blockEditor.blockPropertiesPanel.header'),
+      blockPropertiesClose: cySelector('blockEditor.blockPropertiesPanel.closeBtn'),
+      blockPropertiesIcon: cySelector('blockEditor.blockPropertiesPanel.blockIcon'),
+      blockPropertiesName: cySelector('blockEditor.blockPropertiesPanel.blockName'),
+      blockPropertiesTabs: cySelector('blockEditor.blockPropertiesPanel.tabs'),
+      tabContent: cySelector('blockEditor.blockPropertiesPanel.tabContent'),
+      tabDesign: cySelector('blockEditor.blockPropertiesPanel.tabDesign'),
+      tabAdvanced: cySelector('blockEditor.blockPropertiesPanel.tabAdvanced'),
+      blockPropertiesEmpty: cySelector('blockEditor.blockPropertiesPanel.empty'),
+      blockPropertiesError: cySelector('blockEditor.blockPropertiesPanel.error'),
+      // Dynamic form
+      dynamicForm: cySelector('blockEditor.blockPropertiesPanel.form.container'),
       dynamicField: (name: string) =>
-        cySelector('blockEditor.dynamicForm.field', { name }),
+        cySelector('blockEditor.blockPropertiesPanel.form.field', { name }),
+      /** @deprecated Use dynamicField instead */
+      fieldInput: (name: string) =>
+        cySelector('blockEditor.blockPropertiesPanel.form.field', { name }),
       fieldGroup: (id: string) =>
-        cySelector('blockEditor.dynamicForm.fieldGroup', { id }),
-      arrayGroup: (name: string) =>
-        cySelector('blockEditor.dynamicForm.arrayGroup', { name }),
-
-      // Array Field
+        cySelector('blockEditor.blockPropertiesPanel.form.fieldGroup', { id }),
+      // Reset props button (legacy selector)
+      resetPropsBtn: '[data-cy="reset-block-props"]',
+      // Array field
       arrayFieldContainer: (name: string) =>
-        cySelector('blockEditor.arrayField.container', { name }),
-      arrayFieldItem: (name: string, index: number, field: string) =>
-        cySelector('blockEditor.arrayField.item', { name, index, field }),
+        cySelector('blockEditor.blockPropertiesPanel.form.arrayField.container', { name }),
+      arrayFieldItem: (name: string, index: number) =>
+        cySelector('blockEditor.blockPropertiesPanel.form.arrayField.item', { name, index }),
+      arrayFieldItemField: (name: string, index: number, field: string) =>
+        cySelector('blockEditor.blockPropertiesPanel.form.arrayField.itemField', { name, index, field }),
       arrayFieldMoveUp: (name: string, index: number) =>
-        cySelector('blockEditor.arrayField.moveUp', { name, index }),
+        cySelector('blockEditor.blockPropertiesPanel.form.arrayField.itemMoveUp', { name, index }),
       arrayFieldMoveDown: (name: string, index: number) =>
-        cySelector('blockEditor.arrayField.moveDown', { name, index }),
+        cySelector('blockEditor.blockPropertiesPanel.form.arrayField.itemMoveDown', { name, index }),
       arrayFieldRemove: (name: string, index: number) =>
-        cySelector('blockEditor.arrayField.remove', { name, index }),
+        cySelector('blockEditor.blockPropertiesPanel.form.arrayField.itemRemove', { name, index }),
       arrayFieldAdd: (name: string) =>
-        cySelector('blockEditor.arrayField.add', { name }),
+        cySelector('blockEditor.blockPropertiesPanel.form.arrayField.addButton', { name }),
 
-      // Entity Fields Sidebar
-      entityFieldsSidebar: cySelector('blockEditor.entityFieldsSidebar.container'),
-      entityField: (name: string) =>
-        cySelector('blockEditor.entityFieldsSidebar.field', { name }),
-      entityCategory: (slug: string) =>
-        cySelector('blockEditor.entityFieldsSidebar.category', { slug })
+      // =========================================================================
+      // LEGACY ALIASES (for backward compatibility - will be removed)
+      // =========================================================================
+      /** @deprecated Use layoutCanvas instead */
+      blockCanvas: cySelector('blockEditor.layoutCanvas.container'),
+      /** @deprecated Use layoutCanvasEmpty instead */
+      blockCanvasEmpty: cySelector('blockEditor.layoutCanvas.empty'),
+      /** @deprecated Use blockPropertiesPanel instead */
+      settingsPanel: cySelector('blockEditor.blockPropertiesPanel.container'),
+      /** @deprecated Use blockPropertiesEmpty instead */
+      settingsPanelEmpty: cySelector('blockEditor.blockPropertiesPanel.empty'),
+      /** @deprecated Use blockPropertiesError instead */
+      settingsPanelError: cySelector('blockEditor.blockPropertiesPanel.error'),
+      /** @deprecated Use entityMetaPanel instead */
+      pageSettings: cySelector('blockEditor.entityMetaPanel.container'),
+      /** @deprecated Use entityFieldsPanel instead */
+      entityFieldsSidebar: cySelector('blockEditor.entityFieldsPanel.container'),
     }
   }
 
@@ -181,6 +278,13 @@ export abstract class BlockEditorBasePOM extends BasePOM {
   waitForEditor() {
     cy.get(this.editorSelectors.container, { timeout: 15000 }).should('be.visible')
     return this
+  }
+
+  /**
+   * Alias for waitForEditor (legacy compatibility)
+   */
+  waitForEditorLoad() {
+    return this.waitForEditor()
   }
 
   waitForSave() {
@@ -236,18 +340,51 @@ export abstract class BlockEditorBasePOM extends BasePOM {
   }
 
   /**
-   * Toggle left sidebar
-   */
-  toggleLeftSidebar() {
-    cy.get(this.editorSelectors.leftSidebarToggle).click()
-    return this
-  }
-
-  /**
    * Toggle view mode (edit/preview)
    */
   toggleViewMode() {
     cy.get(this.editorSelectors.viewModeToggle).click()
+    return this
+  }
+
+  /**
+   * Switch to Layout/Editor mode
+   */
+  switchToLayoutMode() {
+    cy.get(this.editorSelectors.viewEditor).click()
+    // Wait for layout canvas OR empty state to render (depends on whether blocks exist)
+    cy.get('body').then(($body) => {
+      // Either the canvas with blocks or the empty state should exist
+      if ($body.find(this.editorSelectors.layoutCanvas).length > 0) {
+        cy.get(this.editorSelectors.layoutCanvas, { timeout: 5000 }).should('exist')
+      } else {
+        cy.get(this.editorSelectors.layoutCanvasEmpty, { timeout: 5000 }).should('exist')
+      }
+    })
+    return this
+  }
+
+  /**
+   * Switch to Preview mode
+   */
+  switchToPreviewMode() {
+    cy.get(this.editorSelectors.viewPreview).click()
+    return this
+  }
+
+  /**
+   * Select Blocks tab in left sidebar
+   */
+  selectBlocksTab() {
+    cy.get(this.editorSelectors.tabBlocks).click()
+    return this
+  }
+
+  /**
+   * Select Config/Fields tab in left sidebar
+   */
+  selectConfigTab() {
+    cy.get(this.editorSelectors.tabConfig).click()
     return this
   }
 
@@ -283,7 +420,7 @@ export abstract class BlockEditorBasePOM extends BasePOM {
    * Select "All" category
    */
   selectAllCategories() {
-    cy.get(this.editorSelectors.categoryAll).click()
+    cy.get(this.editorSelectors.category('all')).click()
     return this
   }
 
@@ -335,7 +472,7 @@ export abstract class BlockEditorBasePOM extends BasePOM {
    * Move block up in preview
    */
   moveBlockUp(blockId: string) {
-    cy.get(this.editorSelectors.previewMoveUp(blockId)).click()
+    cy.get(this.editorSelectors.moveUpBtn(blockId)).click()
     return this
   }
 
@@ -343,7 +480,7 @@ export abstract class BlockEditorBasePOM extends BasePOM {
    * Move block down in preview
    */
   moveBlockDown(blockId: string) {
-    cy.get(this.editorSelectors.previewMoveDown(blockId)).click()
+    cy.get(this.editorSelectors.moveDownBtn(blockId)).click()
     return this
   }
 
@@ -379,15 +516,7 @@ export abstract class BlockEditorBasePOM extends BasePOM {
    * Reset block props to defaults
    */
   resetBlockProps() {
-    cy.get(this.editorSelectors.resetProps).click()
-    return this
-  }
-
-  /**
-   * Remove block from settings panel
-   */
-  removeBlockFromSettings() {
-    cy.get(this.editorSelectors.removeBlockSettings).click()
+    cy.get(this.editorSelectors.resetPropsBtn).click()
     return this
   }
 
@@ -397,6 +526,13 @@ export abstract class BlockEditorBasePOM extends BasePOM {
   fillDynamicField(name: string, value: string) {
     cy.get(this.editorSelectors.dynamicField(name)).find('input, textarea').clear().type(value)
     return this
+  }
+
+  /**
+   * Alias for fillDynamicField (legacy compatibility)
+   */
+  fillField(name: string, value: string) {
+    return this.fillDynamicField(name, value)
   }
 
   // ============================================
@@ -549,10 +685,10 @@ export abstract class BlockEditorBasePOM extends BasePOM {
   }
 
   /**
-   * Assert status badge shows specific status
+   * Assert status label shows specific status
    */
   assertStatus(status: string) {
-    cy.get(this.editorSelectors.statusBadge).should('contain.text', status)
+    cy.get(this.editorSelectors.statusLabel).should('contain.text', status)
     return this
   }
 
@@ -569,6 +705,40 @@ export abstract class BlockEditorBasePOM extends BasePOM {
    */
   assertSettingsPanelEmpty() {
     cy.get(this.editorSelectors.settingsPanelEmpty).should('be.visible')
+    return this
+  }
+
+  /**
+   * Assert block count in canvas
+   */
+  assertBlockCount(count: number) {
+    cy.get('[data-cy^="sortable-block-"]').should('have.length', count)
+    return this
+  }
+
+  /**
+   * Assert preview block count
+   */
+  assertPreviewBlockCount(count: number) {
+    cy.get('[data-cy^="preview-block-"]').should('have.length', count)
+    return this
+  }
+
+  /**
+   * Assert block is visible in picker
+   */
+  assertBlockInPicker(blockSlug: string) {
+    cy.get(this.editorSelectors.blockItem(blockSlug))
+      .scrollIntoView()
+      .should('be.visible')
+    return this
+  }
+
+  /**
+   * Assert block picker is visible
+   */
+  assertBlockPickerVisible() {
+    cy.get(this.editorSelectors.blockPicker).should('be.visible')
     return this
   }
 }

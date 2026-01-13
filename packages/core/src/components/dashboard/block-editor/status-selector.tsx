@@ -7,6 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../ui/select'
+import { sel } from '../../../lib/test'
 
 export interface StatusOption {
   value: string
@@ -23,7 +24,7 @@ export interface StatusSelectorProps {
 export function StatusSelector({ value, onChange, disabled, options }: StatusSelectorProps) {
   return (
     <Select value={value} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger className="w-[140px] h-8" data-cy="status-selector">
+      <SelectTrigger className="w-[140px] h-8" data-cy={sel('blockEditor.header.statusSelector')}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
@@ -31,7 +32,7 @@ export function StatusSelector({ value, onChange, disabled, options }: StatusSel
           <SelectItem
             key={option.value}
             value={option.value}
-            data-cy={`status-option-${option.value}`}
+            data-cy={sel('blockEditor.header.statusOption', { value: option.value })}
           >
             {option.label}
           </SelectItem>

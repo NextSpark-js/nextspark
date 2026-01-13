@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useMemo } from 'react'
 import { cn } from '../../../lib/utils'
 import { useTranslations } from 'next-intl'
-import { createCyId } from '../../../lib/test'
+import { sel } from '../../../lib/test'
 import { Home, FileText, LucideIcon, ChevronDown } from 'lucide-react'
 import * as Icons from 'lucide-react'
 import type { SerializableEntityConfig } from '../../../lib/entities/serialization'
@@ -102,10 +102,10 @@ function SectionWithPermission({
   const sectionLabel = t(normalizedSectionKey) || labelMappings[section.labelKey] || section.id
 
   return (
-    <div className="mb-4" data-cy={createCyId('nav', `section-${section.id}`)}>
+    <div className="mb-4" data-cy={sel('dashboard.navigation.section', { id: section.id })}>
       <div
         className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2"
-        data-cy={createCyId('nav', `section-label-${section.id}`)}
+        data-cy={sel('dashboard.navigation.sectionLabel', { id: section.id })}
       >
         <SectionIcon className="h-3 w-3" />
         <span>{sectionLabel}</span>
@@ -132,7 +132,7 @@ function SectionWithPermission({
                 isMobile && "w-full"
               )}
               aria-current={isActive ? 'page' : undefined}
-              data-cy={createCyId('nav', `section-item-${section.id}-${item.id}`)}
+              data-cy={sel('dashboard.navigation.sectionItem', { sectionId: section.id, itemId: item.id })}
             >
               <ItemIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
               <span className="truncate">{itemLabel}</span>
@@ -198,7 +198,7 @@ export function DynamicNavigation({
   // If theme has custom sections, use those; otherwise fallback to entity-based navigation
   if (hasCustomSections) {
     return (
-      <nav className={cn("space-y-1", className)} data-cy={createCyId('nav', 'main')}>
+      <nav className={cn("space-y-1", className)} data-cy={sel('dashboard.navigation.container')}>
         {/* Dashboard link always visible */}
         <Link
           href="/dashboard"
@@ -211,7 +211,7 @@ export function DynamicNavigation({
             isMobile && "w-full"
           )}
           aria-current={pathname === '/dashboard' ? 'page' : undefined}
-          data-cy={createCyId('nav', 'link-dashboard')}
+          data-cy={sel('dashboard.navigation.dashboardLink')}
         >
           <Home className="h-4 w-4 shrink-0" aria-hidden="true" />
           <span className="truncate">{t('navigation.dashboard')}</span>
@@ -236,7 +236,7 @@ export function DynamicNavigation({
   const navigationItems = [...coreItems, ...entityItems]
 
   return (
-    <nav className={cn("space-y-1", className)} data-cy={createCyId('nav', 'main')}>
+    <nav className={cn("space-y-1", className)} data-cy={sel('dashboard.navigation.container')}>
       {navigationItems.map((item) => (
         <NavigationLink
           key={item.name}
@@ -278,8 +278,8 @@ function NavigationLink({
   const cySlug = item.name.toLowerCase().replace(/\s+/g, '-')
   // Dashboard link uses a different selector than entity links
   const dataCyId = cySlug === 'dashboard'
-    ? createCyId('nav', 'link-dashboard')
-    : createCyId('nav', `link-entity-${cySlug}`)
+    ? sel('dashboard.navigation.dashboardLink')
+    : sel('dashboard.navigation.entityLink', { slug: cySlug })
 
   return (
     <Link

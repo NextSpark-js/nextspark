@@ -27,7 +27,7 @@
 
 import { DashboardPOM } from '../../../src/features/DashboardPOM'
 
-describe('Dashboard Mobile Selectors Validation', { tags: ['@ui-selectors', '@mobile'] }, () => {
+describe('Dashboard Mobile Selectors Validation', { tags: ['@ui-selectors', '@dashboard', '@mobile'] }, () => {
   const dashboard = DashboardPOM.create()
 
   // ============================================
@@ -64,9 +64,9 @@ describe('Dashboard Mobile Selectors Validation', { tags: ['@ui-selectors', '@mo
   // NOTE: Only visible on mobile viewports
   // ============================================
   describe('SEL_DMOB_001: Mobile Topbar Selectors', { tags: '@SEL_DMOB_001' }, () => {
-    it.skip('should find mobile topbar header (requires mobile viewport)', () => {
+    it.skip('should find mobile topbar container (requires mobile viewport)', () => {
       // Requires: cy.viewport('iphone-x')
-      cy.get(dashboard.selectors.mobileTopbarHeader).should('exist')
+      cy.get(dashboard.selectors.mobileTopbarContainer).should('exist')
     })
 
     it.skip('should find mobile user profile button (requires mobile viewport)', () => {
@@ -86,8 +86,8 @@ describe('Dashboard Mobile Selectors Validation', { tags: ['@ui-selectors', '@mo
   // SEL_DMOB_002: MOBILE BOTTOM NAV (2 selectors)
   // ============================================
   describe('SEL_DMOB_002: Mobile Bottom Nav Selectors', { tags: '@SEL_DMOB_002' }, () => {
-    it.skip('should find mobile bottom nav (requires mobile viewport)', () => {
-      cy.get(dashboard.selectors.mobileBottomNav).should('exist')
+    it.skip('should find mobile bottom nav container (requires mobile viewport)', () => {
+      cy.get(dashboard.selectors.mobileBottomNavContainer).should('exist')
     })
 
     it.skip('should find mobile bottom nav item (requires mobile viewport)', () => {
@@ -100,16 +100,16 @@ describe('Dashboard Mobile Selectors Validation', { tags: ['@ui-selectors', '@mo
   // SEL_DMOB_003: MOBILE MORE SHEET (5 selectors)
   // ============================================
   describe('SEL_DMOB_003: Mobile More Sheet Selectors', { tags: '@SEL_DMOB_003' }, () => {
-    it.skip('should find mobile more sheet content (requires mobile viewport)', () => {
-      cy.get(dashboard.selectors.mobileMoreSheetContent).should('exist')
+    it.skip('should find mobile more sheet container (requires mobile viewport)', () => {
+      cy.get(dashboard.selectors.mobileMoreSheetContainer).should('exist')
     })
 
     it.skip('should find mobile more sheet item (requires mobile viewport)', () => {
       cy.get(dashboard.selectors.mobileMoreSheetItem('settings')).should('exist')
     })
 
-    it.skip('should find mobile more sheet sector7 link (requires mobile viewport)', () => {
-      cy.get(dashboard.selectors.mobileMoreSheetSuperadmin).should('exist')
+    it.skip('should find mobile more sheet superadmin link (requires mobile viewport)', () => {
+      cy.get(dashboard.selectors.mobileMoreSheetSuperadminLink).should('exist')
     })
 
     it.skip('should find mobile more sheet team switcher (requires mobile viewport)', () => {
@@ -117,7 +117,7 @@ describe('Dashboard Mobile Selectors Validation', { tags: ['@ui-selectors', '@mo
     })
 
     it.skip('should find mobile more sheet signout button (requires mobile viewport)', () => {
-      cy.get(dashboard.selectors.mobileMoreSheetSignout).should('exist')
+      cy.get(dashboard.selectors.mobileMoreSheetSignoutButton).should('exist')
     })
   })
 
@@ -125,13 +125,13 @@ describe('Dashboard Mobile Selectors Validation', { tags: ['@ui-selectors', '@mo
   // SEL_DMOB_004: MOBILE QUICK CREATE SHEET (2 selectors)
   // ============================================
   describe('SEL_DMOB_004: Mobile Quick Create Selectors', { tags: '@SEL_DMOB_004' }, () => {
-    it.skip('should find mobile quick create sheet content (requires mobile viewport)', () => {
-      cy.get(dashboard.selectors.mobileQuickCreateContent).should('exist')
+    it.skip('should find mobile quick create sheet container (requires mobile viewport)', () => {
+      cy.get(dashboard.selectors.mobileQuickCreateSheetContainer).should('exist')
     })
 
-    it.skip('should find mobile quick create item (requires mobile viewport)', () => {
+    it.skip('should find mobile quick create sheet item (requires mobile viewport)', () => {
       // Example: tasks, customers, posts, pages
-      cy.get(dashboard.selectors.mobileQuickCreateItem('tasks')).should('exist')
+      cy.get(dashboard.selectors.mobileQuickCreateSheetItem('tasks')).should('exist')
     })
   })
 })

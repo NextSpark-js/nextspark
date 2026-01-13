@@ -429,7 +429,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
           {/* Center: View Mode Toggle */}
           <div
             className="bg-muted p-1 rounded-lg flex items-center text-sm font-medium"
-            data-cy={sel('blockEditor.header.viewModeToggle')}
+            data-cy={sel('blockEditor.header.viewToggle')}
           >
             <button
               className={cn(
@@ -439,7 +439,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10'
               )}
               onClick={() => setViewMode('layout')}
-              data-cy={sel('blockEditor.header.viewModeEditor')}
+              data-cy={sel('blockEditor.header.viewEditor')}
             >
               <PenTool className="h-3.5 w-3.5" />
               <span>{t('viewMode.layout')}</span>
@@ -452,7 +452,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10'
               )}
               onClick={() => setViewMode('preview')}
-              data-cy={sel('blockEditor.header.viewModePreview')}
+              data-cy={sel('blockEditor.header.viewPreview')}
             >
               <Eye className="h-3.5 w-3.5" />
               <span>{t('viewMode.preview')}</span>
@@ -464,7 +464,6 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
             {/* Status Indicator */}
             <div
               className="flex items-center gap-2 mr-2"
-              data-cy={sel('blockEditor.header.statusWrapper')}
             >
               <span
                 className={cn(
@@ -490,7 +489,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
               size="sm"
               onClick={handleSaveDraft}
               disabled={saveMutation.isPending}
-              data-cy={sel('blockEditor.header.saveDraftBtn')}
+              data-cy={sel('blockEditor.header.saveButton')}
             >
               {t('header.actions.saveDraft')}
             </Button>
@@ -500,7 +499,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
               size="sm"
               onClick={status === 'published' ? handleSave : handlePublish}
               disabled={saveMutation.isPending}
-              data-cy={sel('blockEditor.header.publishBtn')}
+              data-cy={sel('blockEditor.header.publishButton')}
             >
               <span>{status === 'published' ? t('header.actions.update') : t('header.actions.publish')}</span>
               <Save className="h-4 w-4 ml-2" />
@@ -513,7 +512,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
               variant="ghost"
               size="icon"
               className="h-9 w-9"
-              data-cy={sel('blockEditor.header.settingsBtn')}
+              data-cy={sel('blockEditor.header.settingsButton')}
             >
               <Settings className="h-4 w-4" />
             </Button>

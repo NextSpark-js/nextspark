@@ -1,4 +1,12 @@
 import { defineConfig } from 'cypress'
+import path from 'path'
+import dotenv from 'dotenv'
+
+// Load environment variables from apps/dev/.env
+dotenv.config({ path: path.resolve(__dirname, '.env') })
+
+// Server port (from .env or default 3000)
+const port = process.env.PORT || 3000
 
 // Use active theme's tests (from themes/default or environment variable)
 const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME || 'default'
@@ -6,7 +14,7 @@ const themeTestsPath = `../../themes/${activeTheme}/tests/cypress/e2e/**/*.cy.ts
 
 export default defineConfig({
   e2e: {
-    baseUrl: 'http://localhost:3000',
+    baseUrl: `http://localhost:${port}`,
 
     // Tests from the active theme
     specPattern: [

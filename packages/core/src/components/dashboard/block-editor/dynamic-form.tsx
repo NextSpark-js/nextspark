@@ -16,6 +16,7 @@ import { ImageUpload } from '../../ui/image-upload'
 import { RichTextEditor } from '../../ui/rich-text-editor'
 import { ChevronDown, ChevronRight, CalendarIcon } from 'lucide-react'
 import { cn } from '../../../lib/utils'
+import { sel } from '../../../lib/test'
 import { Switch } from '../../ui/switch'
 import { RadioGroup, RadioGroupItem } from '../../ui/radio-group'
 import { Calendar } from '../../ui/calendar'
@@ -151,7 +152,7 @@ export function DynamicForm({ fieldDefinitions, values, onChange }: DynamicFormP
             onChange={(e) => handleFieldChange(field.name, e.target.value)}
             placeholder={field.placeholder}
             required={field.required}
-            data-cy={`field-${field.name}`}
+            data-cy={sel('blockEditor.blockPropertiesPanel.form.field', { name: field.name })}
           />
         )
 
@@ -163,7 +164,7 @@ export function DynamicForm({ fieldDefinitions, values, onChange }: DynamicFormP
             placeholder={field.placeholder}
             required={field.required}
             rows={field.rows || 4}
-            data-cy={`field-${field.name}`}
+            data-cy={sel('blockEditor.blockPropertiesPanel.form.field', { name: field.name })}
           />
         )
 
@@ -173,7 +174,7 @@ export function DynamicForm({ fieldDefinitions, values, onChange }: DynamicFormP
             value={String(value)}
             onChange={(newValue) => handleFieldChange(field.name, newValue)}
             placeholder={field.placeholder}
-            data-cy={`field-${field.name}`}
+            data-cy={sel('blockEditor.blockPropertiesPanel.form.field', { name: field.name })}
           />
         )
 
@@ -185,7 +186,7 @@ export function DynamicForm({ fieldDefinitions, values, onChange }: DynamicFormP
             onChange={(e) => handleFieldChange(field.name, e.target.value)}
             placeholder={field.placeholder || 'https://example.com'}
             required={field.required}
-            data-cy={`field-${field.name}`}
+            data-cy={sel('blockEditor.blockPropertiesPanel.form.field', { name: field.name })}
           />
         )
 
@@ -200,7 +201,7 @@ export function DynamicForm({ fieldDefinitions, values, onChange }: DynamicFormP
             min={field.min}
             max={field.max}
             step={field.step}
-            data-cy={`field-${field.name}`}
+            data-cy={sel('blockEditor.blockPropertiesPanel.form.field', { name: field.name })}
           />
         )
 
@@ -210,7 +211,7 @@ export function DynamicForm({ fieldDefinitions, values, onChange }: DynamicFormP
             value={String(value)}
             onValueChange={(newValue: string) => handleFieldChange(field.name, newValue)}
           >
-            <SelectTrigger data-cy={`field-${field.name}`}>
+            <SelectTrigger data-cy={sel('blockEditor.blockPropertiesPanel.form.field', { name: field.name })}>
               <SelectValue placeholder={field.placeholder || t('selectPlaceholder')} />
             </SelectTrigger>
             <SelectContent>
@@ -229,7 +230,7 @@ export function DynamicForm({ fieldDefinitions, values, onChange }: DynamicFormP
             value={Array.isArray(value) ? value : []}
             onChange={(newValue) => handleFieldChange(field.name, newValue)}
             maxImages={1}
-            data-cy={`field-${field.name}`}
+            data-cy={sel('blockEditor.blockPropertiesPanel.form.field', { name: field.name })}
           />
         )
 
@@ -249,7 +250,7 @@ export function DynamicForm({ fieldDefinitions, values, onChange }: DynamicFormP
               id={field.name}
               checked={Boolean(value)}
               onCheckedChange={(checked: boolean | 'indeterminate') => handleFieldChange(field.name, checked)}
-              data-cy={`field-${field.name}`}
+              data-cy={sel('blockEditor.blockPropertiesPanel.form.field', { name: field.name })}
             />
             <Label htmlFor={field.name} className="text-sm font-normal cursor-pointer">
               {field.checkboxLabel || field.label}
@@ -262,7 +263,7 @@ export function DynamicForm({ fieldDefinitions, values, onChange }: DynamicFormP
           <RadioGroup
             value={String(value || '')}
             onValueChange={(newValue: string) => handleFieldChange(field.name, newValue)}
-            data-cy={`field-${field.name}`}
+            data-cy={sel('blockEditor.blockPropertiesPanel.form.field', { name: field.name })}
           >
             {field.options?.map((option) => (
               <div key={String(option.value)} className="flex items-center space-x-2">
@@ -293,7 +294,7 @@ export function DynamicForm({ fieldDefinitions, values, onChange }: DynamicFormP
                 value={String(value || '#000000')}
                 onChange={(e) => handleFieldChange(field.name, e.target.value)}
                 className="opacity-0 w-full h-full cursor-pointer absolute inset-0"
-                data-cy={`field-${field.name}`}
+                data-cy={sel('blockEditor.blockPropertiesPanel.form.field', { name: field.name })}
               />
             </div>
             <Input
@@ -316,7 +317,7 @@ export function DynamicForm({ fieldDefinitions, values, onChange }: DynamicFormP
                   "w-full justify-start text-left font-normal",
                   !value && "text-muted-foreground"
                 )}
-                data-cy={`field-${field.name}`}
+                data-cy={sel('blockEditor.blockPropertiesPanel.form.field', { name: field.name })}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {value ? format(new Date(String(value)), "PPP") : "Pick a date"}
@@ -339,7 +340,7 @@ export function DynamicForm({ fieldDefinitions, values, onChange }: DynamicFormP
             type="time"
             value={String(value || '')}
             onChange={(e) => handleFieldChange(field.name, e.target.value)}
-            data-cy={`field-${field.name}`}
+            data-cy={sel('blockEditor.blockPropertiesPanel.form.field', { name: field.name })}
           />
         )
 
@@ -352,7 +353,7 @@ export function DynamicForm({ fieldDefinitions, values, onChange }: DynamicFormP
               const dateValue = e.target.value ? new Date(e.target.value).toISOString() : ''
               handleFieldChange(field.name, dateValue)
             }}
-            data-cy={`field-${field.name}`}
+            data-cy={sel('blockEditor.blockPropertiesPanel.form.field', { name: field.name })}
           />
         )
 
@@ -363,7 +364,7 @@ export function DynamicForm({ fieldDefinitions, values, onChange }: DynamicFormP
             value={String(value)}
             onChange={(e) => handleFieldChange(field.name, e.target.value)}
             placeholder={field.placeholder}
-            data-cy={`field-${field.name}`}
+            data-cy={sel('blockEditor.blockPropertiesPanel.form.field', { name: field.name })}
           />
         )
     }
@@ -393,7 +394,7 @@ export function DynamicForm({ fieldDefinitions, values, onChange }: DynamicFormP
       <div
         key={field.name}
         className="border rounded-lg overflow-hidden"
-        data-cy={`array-group-${field.name}`}
+        data-cy={sel('blockEditor.blockPropertiesPanel.form.arrayField.container', { name: field.name })}
       >
         {/* Array Field Header */}
         <button
@@ -447,7 +448,7 @@ export function DynamicForm({ fieldDefinitions, values, onChange }: DynamicFormP
       <div
         key={group.id}
         className="border rounded-lg overflow-hidden"
-        data-cy={`field-group-${group.id}`}
+        data-cy={sel('blockEditor.blockPropertiesPanel.form.fieldGroup', { id: group.id })}
       >
         {/* Group Header */}
         <button
@@ -483,7 +484,7 @@ export function DynamicForm({ fieldDefinitions, values, onChange }: DynamicFormP
   }
 
   return (
-    <div className="space-y-4" data-cy="dynamic-form">
+    <div className="space-y-4" data-cy={sel('blockEditor.blockPropertiesPanel.form.container')}>
       {/* Render ungrouped fields first - array fields get special collapsible treatment */}
       {ungrouped.map(field =>
         field.type === 'array'

@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from '../../ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
 import { Copy, Eye, EyeOff, CheckCircle, AlertTriangle, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { createCyId } from '../../../lib/test';
+import { sel } from '../../../lib/test';
 
 interface ApiKeyDisplayProps {
   apiKey: string;
@@ -36,21 +36,21 @@ export function ApiKeyDisplay({ apiKey, keyName, warning, onClose }: ApiKeyDispl
   const maskedKey = apiKey.substring(0, 16) + '••••••••••••••••••••••••••••••••••••••••••••••••••••';
 
   return (
-    <Card className="border-green-200 bg-green-50" data-cy={createCyId('api-keys', 'display')}>
+    <Card className="border-green-200 bg-green-50" data-cy={sel('settings.apiKeys.newKeyDisplay.container')}>
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CheckCircle className="h-5 w-5 text-green-600" />
-            <CardTitle className="text-green-800" data-cy={createCyId('api-keys', 'display-title')}>
+            <CardTitle className="text-green-800">
               API Key creada exitosamente
             </CardTitle>
           </div>
-          <Button variant="ghost" size="sm" onClick={onClose} data-cy={createCyId('api-keys', 'display-close')}>
+          <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         </div>
         {keyName && (
-          <CardDescription className="text-green-700" data-cy={createCyId('api-keys', 'display-name')}>
+          <CardDescription className="text-green-700">
             {keyName}
           </CardDescription>
         )}
@@ -59,7 +59,7 @@ export function ApiKeyDisplay({ apiKey, keyName, warning, onClose }: ApiKeyDispl
       <CardContent className="space-y-4">
         {/* Warning Alert */}
         {warning && (
-          <Alert variant="destructive" data-cy={createCyId('api-keys', 'display-warning')}>
+          <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
               <strong>¡Importante!</strong> {warning}
@@ -79,7 +79,6 @@ export function ApiKeyDisplay({ apiKey, keyName, warning, onClose }: ApiKeyDispl
                 value={isVisible ? apiKey : maskedKey}
                 readOnly
                 className="font-mono text-sm pr-10"
-                data-cy={createCyId('api-keys', 'display-value')}
               />
               <Button
                 type="button"
@@ -87,7 +86,6 @@ export function ApiKeyDisplay({ apiKey, keyName, warning, onClose }: ApiKeyDispl
                 size="sm"
                 className="absolute right-1 top-1 h-8 w-8 p-0"
                 onClick={() => setIsVisible(!isVisible)}
-                data-cy={createCyId('api-keys', 'display-toggle')}
               >
                 {isVisible ? (
                   <EyeOff className="h-4 w-4" />
@@ -100,7 +98,7 @@ export function ApiKeyDisplay({ apiKey, keyName, warning, onClose }: ApiKeyDispl
               onClick={copyToClipboard}
               variant={copied ? "default" : "outline"}
               className="shrink-0"
-              data-cy={createCyId('api-keys', 'display-copy')}
+              data-cy={sel('settings.apiKeys.newKeyDisplay.copyButton')}
             >
               <Copy className="h-4 w-4 mr-2" />
               {copied ? 'Copiado!' : 'Copiar'}

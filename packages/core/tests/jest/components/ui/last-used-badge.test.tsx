@@ -8,7 +8,6 @@ import { LastUsedBadge } from '@/core/components/ui/last-used-badge'
 
 // Mock the testing utils
 jest.mock('@/core/lib/test', () => ({
-  createCyId: jest.fn((domain: string, element: string) => `${domain}-${element}`),
   sel: jest.fn((path: string) => path.split('.').pop() || path)
 }))
 

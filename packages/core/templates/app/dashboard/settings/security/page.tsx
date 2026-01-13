@@ -32,7 +32,6 @@ import {
   Save,
   Loader2
 } from 'lucide-react'
-import { createTestId, createCyId } from '@nextsparkjs/testing'
 import { useTranslations } from 'next-intl'
 import { useUserWithMetaSettings } from '@nextsparkjs/core/hooks/useUserSettings'
 import { SecurityPageSkeleton } from '@nextsparkjs/core/components/settings/SettingsPageSkeleton'
@@ -195,46 +194,28 @@ function SecurityPage() {
   return (
     <>
       {/* MANDATORY: Screen reader announcements */}
-      <div 
-        aria-live="polite" 
+      <div
+        aria-live="polite"
         aria-atomic="true"
         className="sr-only"
-        {...createTestId('security', 'status', 'message') && { 'data-testid': createTestId('security', 'status', 'message') }}
       >
         {statusMessage}
       </div>
 
-      <div 
-        className="max-w-4xl"
-        {...createTestId('security', 'container') && { 'data-testid': createTestId('security', 'container') }}
-        {...createCyId('security', 'main') && { 'data-cy': createCyId('security', 'main') }}
-      >
+      <div className="max-w-4xl">
         <div className="space-y-6">
           {/* Header */}
-          <header 
-            {...createTestId('security', 'header') && { 'data-testid': createTestId('security', 'header') }}
-            {...createCyId('security', 'header') && { 'data-cy': createCyId('security', 'header') }}
-          >
-            <h1 
-              className="text-2xl font-bold"
-              id="security-heading"
-              {...createTestId('security', 'title') && { 'data-testid': createTestId('security', 'title') }}
-            >
+          <header>
+            <h1 className="text-2xl font-bold" id="security-heading">
               {t('security.title')}
             </h1>
-            <p 
-              className="text-muted-foreground mt-1"
-              {...createTestId('security', 'description') && { 'data-testid': createTestId('security', 'description') }}
-            >
+            <p className="text-muted-foreground mt-1">
               {t('security.description')}
             </p>
           </header>
 
           {/* Main Security Settings Card */}
-          <Card
-            {...createTestId('security', 'main', 'card') && { 'data-testid': createTestId('security', 'main', 'card') }}
-            {...createCyId('security', 'main') && { 'data-cy': createCyId('security', 'main') }}
-          >
+          <Card>
             <CardHeader>
               <CardTitle>{t('security.main.title')}</CardTitle>
               <CardDescription>
@@ -271,8 +252,6 @@ function SecurityPage() {
                         onCheckedChange={handleTwoFactorToggle}
                         aria-label={twoFactorEnabled ? t('security.twoFactor.ariaEnabled') : t('security.twoFactor.ariaDisabled')}
                         aria-describedby="2fa-description"
-                        {...createTestId('security', '2fa', 'switch') && { 'data-testid': createTestId('security', '2fa', 'switch') }}
-                        {...createCyId('security', '2fa-toggle') && { 'data-cy': createCyId('security', '2fa-toggle') }}
                       />
                     </div>
                   </div>
@@ -327,8 +306,6 @@ function SecurityPage() {
                       onCheckedChange={handleLoginAlertsToggle}
                       aria-label={loginAlertsEnabled ? t('security.alerts.ariaEnabled') : t('security.alerts.ariaDisabled')}
                       aria-describedby="alerts-description"
-                      {...createTestId('security', 'alerts', 'switch') && { 'data-testid': createTestId('security', 'alerts', 'switch') }}
-                      {...createCyId('security', 'alerts-toggle') && { 'data-cy': createCyId('security', 'alerts-toggle') }}
                     />
                   </div>
                 </div>
@@ -336,12 +313,10 @@ function SecurityPage() {
 
               {/* Botón de Guardar */}
               <div className="flex justify-end pt-6 border-t border-muted">
-                <Button 
+                <Button
                   onClick={handleSaveSettings}
                   disabled={!hasUnsavedChanges || isUpdating || isLoadingUser}
                   className="min-w-[120px]"
-                  {...createTestId('security', 'save', 'button') && { 'data-testid': createTestId('security', 'save', 'button') }}
-                  {...createCyId('security', 'save-button') && { 'data-cy': createCyId('security', 'save-button') }}
                 >
                   {isUpdating ? (
                     <>
@@ -363,10 +338,7 @@ function SecurityPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
             {/* Sesiones Activas */}
-            <Card
-              {...createTestId('security', 'sessions', 'card') && { 'data-testid': createTestId('security', 'sessions', 'card') }}
-              {...createCyId('security', 'sessions') && { 'data-cy': createCyId('security', 'sessions') }}
-            >
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Monitor className="h-5 w-5" />
@@ -379,11 +351,9 @@ function SecurityPage() {
               <CardContent>
                 <div className="space-y-4">
                   {activeSessions.map((session) => (
-                    <div 
-                      key={session.id} 
+                    <div
+                      key={session.id}
                       className="p-4 border border-muted/40 rounded-lg space-y-3"
-                      {...createTestId('security', 'session', session.id) && { 'data-testid': createTestId('security', 'session', session.id) }}
-                      {...createCyId('security', `session-${session.id}`) && { 'data-cy': createCyId('security', `session-${session.id}`) }}
                       role="article"
                       aria-label={t('security.sessions.sessionAriaLabel', { device: session.device, status: session.current ? t('security.sessions.currentSession') : t('security.sessions.activeSession') })}
                     >
@@ -407,12 +377,10 @@ function SecurityPage() {
                           <div className="shrink-0 ml-3">
                             <Dialog>
                               <DialogTrigger asChild>
-                                <Button 
-                                  variant="outline" 
+                                <Button
+                                  variant="outline"
                                   size="sm"
                                   aria-label={t('security.sessions.terminateAriaLabel', { device: session.device })}
-                                  {...createTestId('security', 'terminate', session.id) && { 'data-testid': createTestId('security', 'terminate', session.id) }}
-                                  {...createCyId('security', `terminate-${session.id}`) && { 'data-cy': createCyId('security', `terminate-${session.id}`) }}
                                 >
                                   <X className="h-4 w-4 mr-1" />
                                   {t('security.sessions.terminate')}
@@ -475,11 +443,9 @@ function SecurityPage() {
               <CardContent>
                 <div className="space-y-3">
                   {loginHistory.map((login) => (
-                    <div 
-                      key={login.id} 
+                    <div
+                      key={login.id}
                       className="p-3 border border-muted/40 rounded-lg space-y-2"
-                      {...createTestId('security', 'login', login.id) && { 'data-testid': createTestId('security', 'login', login.id) }}
-                      {...createCyId('security', `login-${login.id}`) && { 'data-cy': createCyId('security', `login-${login.id}`) }}
                       role="article"
                       aria-label={t('security.loginHistory.attemptAriaLabel', { status: login.success ? t('security.loginHistory.successBadge').toLowerCase() : t('security.loginHistory.failBadge').toLowerCase(), location: login.location })}
                     >
@@ -518,12 +484,10 @@ function SecurityPage() {
                   ))}
                 </div>
                 <div className="mt-4 text-center">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     aria-label={t('security.loginHistory.viewHistoryAriaLabel')}
-                    {...createTestId('security', 'view', 'history') && { 'data-testid': createTestId('security', 'view', 'history') }}
-                    {...createCyId('security', 'view-history') && { 'data-cy': createCyId('security', 'view-history') }}
                   >
                     {t('security.loginHistory.viewComplete')}
                   </Button>

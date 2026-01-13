@@ -12,7 +12,7 @@ import {
 } from '../../ui/dropdown-menu'
 import { Plus, Loader2 } from 'lucide-react'
 import { useQuickCreateEntities } from '../../../hooks/useQuickCreateEntities'
-import { createTestId, createCyId } from '../../../lib/test'
+import { sel } from '../../../lib/test'
 // import { useTranslations } from 'next-intl' // TODO: Use when translations are needed
 
 export function QuickCreateDropdown() {
@@ -42,23 +42,21 @@ export function QuickCreateDropdown() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           size="icon"
           className="relative h-8 w-8"
           aria-label="Quick create"
-          data-testid={createTestId('topnav', 'quick-create', 'trigger')}
-          data-cy={createCyId('topnav', 'quick-create-button')}
+          data-cy={sel('dashboard.topnav.quickCreate.trigger')}
         >
           <Plus className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       
-      <DropdownMenuContent 
-        align="start" 
+      <DropdownMenuContent
+        align="start"
         className="w-56"
-        data-testid={createTestId('topnav', 'quick-create', 'content')}
-        data-cy={createCyId('topnav', 'quick-create-dropdown')}
+        data-cy={sel('dashboard.topnav.quickCreate.content')}
       >
         <DropdownMenuLabel>Quick Create</DropdownMenuLabel>
         <DropdownMenuSeparator />
@@ -68,8 +66,7 @@ export function QuickCreateDropdown() {
             <Link
               href={`/dashboard/${entity.slug}/create`}
               className="flex items-center gap-3 w-full cursor-pointer"
-              data-testid={createTestId('quick-create', entity.slug, 'item')}
-              data-cy={createCyId('quick-create', `${entity.slug}-link`)}
+              data-cy={sel('dashboard.topnav.quickCreate.link', { slug: entity.slug })}
             >
               <entity.icon className="h-4 w-4" />
               <div className="flex flex-col">

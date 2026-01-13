@@ -6,6 +6,7 @@ import { MobileTopBar } from '../mobile/MobileTopBar'
 import { MobileBottomNav } from '../mobile/MobileBottomNav'
 import { SidebarProvider, useSidebar } from '../../../contexts/sidebar-context'
 import { cn } from '../../../lib/utils'
+import { sel } from '../../../lib/test'
 import { deserializeEntityConfig, type SerializableEntityConfig } from '../../../lib/entities/serialization'
 import { setServerEntities } from '../../../lib/entities/registry.client'
 
@@ -30,7 +31,7 @@ function DashboardShellContent({ children, entities }: DashboardShellProps) {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen" data-cy={sel('dashboard.container')}>
       {/* Desktop only - Sidebar */}
       <Sidebar className="hidden lg:flex" entities={entities} />
 

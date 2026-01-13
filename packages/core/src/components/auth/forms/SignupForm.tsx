@@ -17,7 +17,7 @@ import { Separator } from '../../ui/separator'
 import { PasswordInput } from '../../ui/password-input'
 import { Mail, User, Loader2, AlertCircle, ArrowRight, MailCheck, CheckCircle2, Users } from 'lucide-react'
 import { signupSchema } from '../../../lib/validation'
-import { createTestId, sel } from '../../../lib/test'
+import { sel } from '../../../lib/test'
 import { useTranslations } from 'next-intl'
 import { AuthTranslationPreloader } from '../../../lib/i18n/AuthTranslationPreloader'
 import { toast } from 'sonner'
@@ -179,8 +179,7 @@ export function SignupForm() {
           aria-live="polite" 
           aria-atomic="true"
           className="sr-only"
-          {...createTestId('signup', 'status', 'message') && { 'data-testid': createTestId('signup', 'status', 'message') }}
-        >
+                  >
           {statusMessage}
         </div>
 
@@ -188,13 +187,11 @@ export function SignupForm() {
           className="w-full max-w-md"
           role="main"
           aria-labelledby="email-sent-heading"
-          {...createTestId('signup', 'email-sent', 'card') && { 'data-testid': createTestId('signup', 'email-sent', 'card') }}
-          data-cy={sel('auth.verifyEmail.container')}
+                    data-cy={sel('auth.verifyEmail.container')}
         >
           <CardHeader 
             className="space-y-1"
-            {...createTestId('signup', 'email-sent', 'header') && { 'data-testid': createTestId('signup', 'email-sent', 'header') }}
-          >
+                      >
             <div 
               className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4"
               role="img"
@@ -205,14 +202,12 @@ export function SignupForm() {
             <CardTitle 
               id="email-sent-heading"
               className="text-2xl font-bold text-center"
-              {...createTestId('signup', 'email-sent', 'title') && { 'data-testid': createTestId('signup', 'email-sent', 'title') }}
-            >
+                          >
               {t('signup.emailVerification.title')}
             </CardTitle>
             <CardDescription 
               className="text-center"
-              {...createTestId('signup', 'email-sent', 'description') && { 'data-testid': createTestId('signup', 'email-sent', 'description') }}
-            >
+                          >
               {t('signup.emailVerification.description')}
             </CardDescription>
           </CardHeader>
@@ -311,30 +306,25 @@ export function SignupForm() {
         aria-live="polite" 
         aria-atomic="true"
         className="sr-only"
-        {...createTestId('signup', 'status', 'message') && { 'data-testid': createTestId('signup', 'status', 'message') }}
-      >
+              >
         {statusMessage}
       </div>
 
       <Card 
         className="w-full max-w-md"
-        data-testid={createTestId('signup', 'card')}
-        data-cy={sel('auth.signup.form')}
+                data-cy={sel('auth.signup.form')}
       >
         <CardHeader 
           className="space-y-1"
-          {...createTestId('signup', 'header') && { 'data-testid': createTestId('signup', 'header') }}
-        >
+                  >
           <CardTitle 
             className="text-2xl font-bold"
             id="signup-heading"
-            {...createTestId('signup', 'title') && { 'data-testid': createTestId('signup', 'title') }}
-          >
+                      >
             {t('signup.title')}
           </CardTitle>
           <CardDescription 
-            {...createTestId('signup', 'description') && { 'data-testid': createTestId('signup', 'description') }}
-          >
+                      >
             {t('signup.description')}
           </CardDescription>
         </CardHeader>
@@ -458,11 +448,11 @@ export function SignupForm() {
           )}
 
           <div className="flex items-center space-x-2">
-            <Checkbox 
+            <Checkbox
               id="terms"
               checked={agreedToTerms}
               onCheckedChange={(checked: boolean | 'indeterminate') => setAgreedToTerms(checked as boolean)}
-              data-cy="signup-terms-checkbox"
+              data-cy={sel('auth.signup.termsCheckbox')}
             />
             <Label 
               htmlFor="terms" 
@@ -525,8 +515,7 @@ export function SignupForm() {
         </Button>
         </CardContent>
         <CardFooter
-          data-testid={createTestId('signup', 'footer')}
-          data-cy="signup-footer"
+                    data-cy={sel('auth.signup.footer')}
         >
           <p className="text-sm text-muted-foreground text-center w-full">
             Already have an account?{' '}
@@ -534,8 +523,7 @@ export function SignupForm() {
               href="/login" 
               className="text-primary hover:underline font-medium focus:outline-none focus:ring-2 focus:ring-accent"
               aria-label="Ir a página de inicio de sesión"
-              data-testid={createTestId('signup', 'login', 'link')}
-              data-cy={sel('auth.signup.loginLink')}
+                            data-cy={sel('auth.signup.loginLink')}
             >
               Sign in
             </Link>

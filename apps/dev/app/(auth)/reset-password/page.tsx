@@ -19,7 +19,7 @@ import { PasswordInput } from "@nextsparkjs/core/components/ui/password-input";
 import { Alert, AlertDescription } from "@nextsparkjs/core/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@nextsparkjs/core/components/ui/card";
 import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
-import { createCyId } from '@nextsparkjs/testing'
+import { sel } from '@nextsparkjs/core/selectors'
 
 function ResetPasswordContent() {
   const searchParams = useSearchParams();
@@ -84,7 +84,7 @@ function ResetPasswordContent() {
 
   if (success) {
     return (
-      <Card className="w-full max-w-md" data-cy={createCyId('reset-password', 'success')}>
+      <Card className="w-full max-w-md" data-cy={sel('auth.resetPassword.success')}>
         <CardContent className="pt-6">
           <div className="text-center space-y-4">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
@@ -96,7 +96,7 @@ function ResetPasswordContent() {
                 Your password has been successfully reset. You can now sign in with your new password.
               </p>
             </div>
-            <Button asChild className="w-full" data-cy={createCyId('reset-password', 'login-link')}>
+            <Button asChild className="w-full" data-cy={sel('auth.resetPassword.loginLink')}>
               <Link href="/login">
                 Sign In Now
               </Link>
@@ -108,7 +108,7 @@ function ResetPasswordContent() {
   }
 
   return (
-    <Card className="w-full max-w-md" data-cy={createCyId('reset-password', 'form')}>
+    <Card className="w-full max-w-md" data-cy={sel('auth.resetPassword.form')}>
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl font-bold">Set New Password</CardTitle>
         <CardDescription>
@@ -117,7 +117,7 @@ function ResetPasswordContent() {
       </CardHeader>
       <CardContent>
         {error && (
-          <Alert variant="destructive" className="mb-4" data-cy={createCyId('reset-password', 'error')}>
+          <Alert variant="destructive" className="mb-4" data-cy={sel('auth.resetPassword.error')}>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               {error}
@@ -142,7 +142,7 @@ function ResetPasswordContent() {
               placeholder="Create a strong password"
               showRequirements={true}
               password={password || ""}
-              data-cy={createCyId('reset-password', 'password-input')}
+              data-cy={sel('auth.resetPassword.passwordInput')}
             />
             {errors.password && (
               <p className="text-sm text-destructive">{errors.password.message}</p>
@@ -156,7 +156,7 @@ function ResetPasswordContent() {
               id="confirmPassword"
               autoComplete="new-password"
               placeholder="Confirm your new password"
-              data-cy={createCyId('reset-password', 'confirm-input')}
+              data-cy={sel('auth.resetPassword.confirmInput')}
             />
             {errors.confirmPassword && (
               <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
@@ -167,7 +167,7 @@ function ResetPasswordContent() {
             type="submit"
             disabled={loading || !token}
             className="w-full"
-            data-cy={createCyId('reset-password', 'submit')}
+            data-cy={sel('auth.resetPassword.submit')}
           >
             {loading ? (
               <>
@@ -184,7 +184,7 @@ function ResetPasswordContent() {
           <Link
             href="/login"
             className="text-sm text-primary hover:underline"
-            data-cy={createCyId('reset-password', 'back')}
+            data-cy={sel('auth.resetPassword.back')}
           >
             Back to Login
           </Link>

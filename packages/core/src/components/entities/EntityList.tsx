@@ -57,7 +57,7 @@ import { SkeletonEntityList } from '../ui/skeleton-list'
 import type { EntityConfig } from '../../lib/entities/types'
 import type { Permission } from '../../lib/permissions/types'
 import { EntityFieldRenderer } from './EntityFieldRenderer'
-import { createTestId, sel } from '../../lib/test'
+import { sel } from '../../lib/test'
 import { usePermission } from '../../lib/permissions/hooks'
 
 export interface EntityListProps {
@@ -87,20 +87,6 @@ export interface EntityListProps {
   teamId?: string // Team ID for relation resolution
 }
 
-/**
- * Generate test IDs for entity list
- */
-function generateTestIds(entityName: string) {
-  return {
-    container: createTestId(entityName, 'list'),
-    search: createTestId(entityName, 'search'),
-    table: createTestId(entityName, 'table'),
-    row: (id: string) => createTestId(entityName, 'row', id),
-    actions: (id: string) => createTestId(entityName, 'actions', id),
-    bulkSelect: createTestId(entityName, 'bulk', 'select'),
-    addButton: createTestId(entityName, 'add', 'button'),
-  }
-}
 
 export function EntityList({
   entityConfig,
@@ -137,8 +123,6 @@ export function EntityList({
   const canCreate = usePermission(`${entityConfig.slug}.create` as Permission)
   const canUpdate = usePermission(`${entityConfig.slug}.update` as Permission)
   const canDelete = usePermission(`${entityConfig.slug}.delete` as Permission)
-
-  const testIds = generateTestIds(entityConfig.slug)
 
   // Get fields that should be shown in list view
   const listFields = useMemo(() => {
@@ -261,9 +245,8 @@ export function EntityList({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 py-12 px-4 sm:px-6 lg:px-8">
-      <div 
+      <div
         className={`max-w-7xl mx-auto space-y-4 ${className || ''}`}
-        data-testid={testIds.container}
         data-cy={sel('entities.list.container', { slug: entityConfig.slug })}
       >
       {/* Header with search and actions */}
@@ -284,8 +267,7 @@ export function EntityList({
                 value={localSearchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
                 className="pl-8 w-full sm:w-[300px]"
-                data-testid={testIds.search}
-                data-cy={sel('entities.table.search', { slug: entityConfig.slug })}
+                data-cy={sel('entities.list.search.input', { slug: entityConfig.slug })}
               />
             </div>
           )}
@@ -296,8 +278,7 @@ export function EntityList({
             <Button asChild>
               <Link
                 href={`/dashboard/${entityConfig.slug}/create`}
-                data-testid={testIds.addButton}
-                data-cy={sel('entities.table.addButton', { slug: entityConfig.slug })}
+                data-cy={sel('entities.list.addButton', { slug: entityConfig.slug })}
               >
                 <Plus className="mr-2 h-4 w-4" />
                 Add {entityConfig.names.singular}
@@ -368,7 +349,7 @@ export function EntityList({
         </Card>
       ) : (
         <Card>
-          <Table data-testid={testIds.table} data-cy={sel('entities.table.element', { slug: entityConfig.slug })}>
+          <Table data-cy={sel('entities.list.table.element', { slug: entityConfig.slug })}>
             <TableHeader>
               <TableRow>
                 {enableBulkOperations && (
@@ -377,7 +358,6 @@ export function EntityList({
                       checked={selectedIds.length === data.length && data.length > 0}
                       onCheckedChange={handleSelectAll}
                       aria-label="Select all rows"
-                      data-testid={testIds.bulkSelect}
                     />
                   </TableHead>
                 )}
@@ -416,8 +396,7 @@ export function EntityList({
                   <TableRow
                     key={itemId}
                     className={isSelected ? 'bg-muted/50' : ''}
-                    data-testid={testIds.row(itemId)}
-                    data-cy={sel('entities.table.row', { slug: entityConfig.slug, id: itemId })}
+                    data-cy={sel('entities.list.table.row.element', { slug: entityConfig.slug, id: itemId })}
                   >
                     {enableBulkOperations && (
                       <TableCell>
@@ -471,8 +450,7 @@ export function EntityList({
                             <Button
                               variant="ghost"
                               className="h-8 w-8 p-0"
-                              data-testid={testIds.actions(itemId)}
-                              data-cy={sel('entities.table.rowActionsMenu', { slug: entityConfig.slug, id: itemId })}
+                              data-cy={sel('entities.list.table.row.menuContent', { slug: entityConfig.slug, id: itemId })}
                             >
                               <span className="sr-only">Open menu</span>
                               <MoreVertical className="h-4 w-4" />

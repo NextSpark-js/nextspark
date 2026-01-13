@@ -2,7 +2,7 @@ import { KeyboardEvent } from 'react'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { Textarea } from '@nextsparkjs/core/components/ui/textarea'
 import { Send } from 'lucide-react'
-import { createCyId } from '@nextsparkjs/testing/utils'
+import { sel } from '@nextsparkjs/core/selectors'
 
 interface MessageInputProps {
     value: string
@@ -23,7 +23,7 @@ export function MessageInput({ value, onChange, onSend, isLoading }: MessageInpu
         <div className="p-4 border-t bg-background">
             <div className="flex gap-2">
                 <Textarea
-                    data-cy={createCyId('ai-chat', 'message-input')}
+                    data-cy={sel('common.aiChat.messageInput')}
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
                     onKeyDown={handleKeyDown}
@@ -32,7 +32,7 @@ export function MessageInput({ value, onChange, onSend, isLoading }: MessageInpu
                     disabled={isLoading}
                 />
                 <Button
-                    data-cy={createCyId('ai-chat', 'send-btn')}
+                    data-cy={sel('common.aiChat.sendBtn')}
                     size="icon"
                     onClick={onSend}
                     disabled={!value.trim() || isLoading}

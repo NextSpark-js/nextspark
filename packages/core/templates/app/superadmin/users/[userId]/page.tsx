@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { getTemplateOrDefaultClient } from "@nextsparkjs/registries/template-registry.client";
+import { sel } from "@nextsparkjs/core/selectors";
 
 interface TeamMembership {
   teamId: string;
@@ -436,9 +437,9 @@ function UserDetailPage() {
       </Card>
 
       {/* User Metadata Card */}
-      <Card data-cy="superadmin-user-metas">
+      <Card data-cy={sel('superadmin.users.detail.metas.container')}>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2" data-cy="superadmin-user-metas-title">
+          <CardTitle className="flex items-center gap-2" data-cy={sel('superadmin.users.detail.metas.title')}>
             <Database className="h-5 w-5" />
             User Metadata ({userMetas.length})
           </CardTitle>
@@ -448,7 +449,7 @@ function UserDetailPage() {
         </CardHeader>
         <CardContent>
           {userMetas.length === 0 ? (
-            <div className="text-center py-8" data-cy="superadmin-user-metas-empty">
+            <div className="text-center py-8" data-cy={sel('superadmin.users.detail.metas.empty')}>
               <Database className="mx-auto h-12 w-12 text-muted-foreground" />
               <h3 className="mt-4 text-lg font-medium">No metadata</h3>
               <p className="mt-2 text-sm text-muted-foreground">
@@ -457,7 +458,7 @@ function UserDetailPage() {
             </div>
           ) : (
             <div className="rounded-md border">
-              <Table data-cy="superadmin-user-metas-table">
+              <Table data-cy={sel('superadmin.users.detail.metas.table')}>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Key</TableHead>
@@ -470,40 +471,40 @@ function UserDetailPage() {
                 </TableHeader>
                 <TableBody>
                   {userMetas.map((meta) => (
-                    <TableRow key={meta.id} data-cy={`superadmin-user-meta-row-${meta.metaKey}`}>
+                    <TableRow key={meta.id} data-cy={sel('superadmin.users.detail.metas.row', { key: meta.metaKey })}>
                       <TableCell>
-                        <code className="text-sm bg-muted px-1.5 py-0.5 rounded" data-cy={`superadmin-user-meta-key-${meta.metaKey}`}>
+                        <code className="text-sm bg-muted px-1.5 py-0.5 rounded" data-cy={sel('superadmin.users.detail.metas.key', { key: meta.metaKey })}>
                           {meta.metaKey}
                         </code>
                       </TableCell>
                       <TableCell className="max-w-xs">
-                        <pre className="text-xs bg-muted p-2 rounded overflow-auto max-h-20" data-cy={`superadmin-user-meta-value-${meta.metaKey}`}>
+                        <pre className="text-xs bg-muted p-2 rounded overflow-auto max-h-20" data-cy={sel('superadmin.users.detail.metas.value', { key: meta.metaKey })}>
                           {typeof meta.metaValue === "object"
                             ? JSON.stringify(meta.metaValue, null, 2)
                             : String(meta.metaValue)}
                         </pre>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="text-xs" data-cy={`superadmin-user-meta-type-${meta.metaKey}`}>
+                        <Badge variant="outline" className="text-xs" data-cy={sel('superadmin.users.detail.metas.type', { key: meta.metaKey })}>
                           {meta.dataType || "json"}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         {meta.isPublic ? (
-                          <Badge variant="default" className="bg-green-100 text-green-700" data-cy={`superadmin-user-meta-public-${meta.metaKey}`}>
+                          <Badge variant="default" className="bg-green-100 text-green-700" data-cy={sel('superadmin.users.detail.metas.public', { key: meta.metaKey })}>
                             Yes
                           </Badge>
                         ) : (
-                          <Badge variant="secondary" data-cy={`superadmin-user-meta-public-${meta.metaKey}`}>No</Badge>
+                          <Badge variant="secondary" data-cy={sel('superadmin.users.detail.metas.public', { key: meta.metaKey })}>No</Badge>
                         )}
                       </TableCell>
                       <TableCell>
                         {meta.isSearchable ? (
-                          <Badge variant="default" className="bg-blue-100 text-blue-700" data-cy={`superadmin-user-meta-searchable-${meta.metaKey}`}>
+                          <Badge variant="default" className="bg-blue-100 text-blue-700" data-cy={sel('superadmin.users.detail.metas.searchable', { key: meta.metaKey })}>
                             Yes
                           </Badge>
                         ) : (
-                          <Badge variant="secondary" data-cy={`superadmin-user-meta-searchable-${meta.metaKey}`}>No</Badge>
+                          <Badge variant="secondary" data-cy={sel('superadmin.users.detail.metas.searchable', { key: meta.metaKey })}>No</Badge>
                         )}
                       </TableCell>
                       <TableCell>

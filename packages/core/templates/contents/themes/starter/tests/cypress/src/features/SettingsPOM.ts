@@ -1,17 +1,18 @@
 /**
  * SettingsPOM - Page Object Model for Settings Area
  *
- * Handles settings pages navigation and basic visibility:
- * - Profile settings
- * - Team settings
- * - Billing settings (navigation only - use BillingPOM for detailed billing tests)
- * - API Keys settings
- * - Member management
+ * Handles navigation and interactions for all 9 settings sections:
+ * 1. Sidebar       - Navigation and layout structure
+ * 2. Overview      - Settings home with quick links
+ * 3. Profile       - User profile editing
+ * 4. Password      - Password change
+ * 5. Security      - 2FA, login alerts, active sessions
+ * 6. Notifications - Notification preferences
+ * 7. API Keys      - API key management
+ * 8. Billing       - Plans, invoices, payment methods
+ * 9. Teams         - Team config, members, team switching
  *
- * Uses selectors from centralized selectors.ts
- *
- * NOTE: For detailed billing tests (upgrade, invoices, payment methods),
- * use BillingPOM from features/BillingPOM.ts instead.
+ * Uses selectors from centralized selectors.ts via cySelector()
  */
 
 import { BasePOM } from '../core/BasePOM'
@@ -33,170 +34,244 @@ export class SettingsPOM extends BasePOM {
   get selectors() {
     return {
       // ============================================
-      // LAYOUT (7 selectors)
+      // 1. SIDEBAR (11 selectors)
       // ============================================
-      layoutMain: cySelector('settings.layout.main'),
-      layoutNav: cySelector('settings.layout.nav'),
-      layoutBackToDashboard: cySelector('settings.layout.backToDashboard'),
-      layoutHeader: cySelector('settings.layout.header'),
-      layoutContentArea: cySelector('settings.layout.contentArea'),
-      layoutSidebar: cySelector('settings.layout.sidebar'),
-      layoutPageContent: cySelector('settings.layout.pageContent'),
-
-      // ============================================
-      // SIDEBAR (4 selectors)
-      // ============================================
-      navContainer: cySelector('settings.sidebar.main'),
+      sidebarContainer: cySelector('settings.sidebar.container'),
       sidebarHeader: cySelector('settings.sidebar.header'),
-      sidebarNavItems: cySelector('settings.sidebar.navItems'),
-      navItem: (section: string) => cySelector('settings.sidebar.navItem', { section }),
+      sidebarBackButton: cySelector('settings.sidebar.backButton'),
+      sidebarNavContainer: cySelector('settings.sidebar.nav.container'),
+      sidebarNavItems: cySelector('settings.sidebar.nav.items'),
+      sidebarNavItem: (section: string) => cySelector('settings.sidebar.nav.item', { section }),
+      // Layout elements (absorbed from layout.*)
+      layoutMain: cySelector('settings.sidebar.layout.main'),
+      layoutHeader: cySelector('settings.sidebar.layout.header'),
+      layoutContentArea: cySelector('settings.sidebar.layout.contentArea'),
+      layoutPageContent: cySelector('settings.sidebar.layout.pageContent'),
 
       // ============================================
-      // PROFILE (9 selectors)
+      // 2. OVERVIEW (2 selectors)
+      // ============================================
+      overviewContainer: cySelector('settings.overview.container'),
+      overviewCard: (key: string) => cySelector('settings.overview.card', { key }),
+
+      // ============================================
+      // 3. PROFILE (11 selectors)
       // ============================================
       profileContainer: cySelector('settings.profile.container'),
       profileForm: cySelector('settings.profile.form'),
-      profileAvatar: cySelector('settings.profile.avatar'),
-      profileAvatarUpload: cySelector('settings.profile.avatarUpload'),
+      profileAvatarContainer: cySelector('settings.profile.avatar.container'),
+      profileAvatarUpload: cySelector('settings.profile.avatar.upload'),
       profileFirstName: cySelector('settings.profile.firstName'),
       profileLastName: cySelector('settings.profile.lastName'),
       profileEmail: cySelector('settings.profile.email'),
+      profileCountry: cySelector('settings.profile.country'),
+      profileTimezone: cySelector('settings.profile.timezone'),
+      profileLocale: cySelector('settings.profile.locale'),
       profileSubmit: cySelector('settings.profile.submitButton'),
       profileSuccess: cySelector('settings.profile.successMessage'),
+      profileDeleteAccountButton: cySelector('settings.profile.deleteAccount.button'),
+      profileDeleteAccountDialog: cySelector('settings.profile.deleteAccount.dialog'),
+      profileDeleteAccountConfirm: cySelector('settings.profile.deleteAccount.confirm'),
 
       // ============================================
-      // PASSWORD (7 selectors)
+      // 4. PASSWORD (8 selectors)
       // ============================================
       passwordContainer: cySelector('settings.password.container'),
       passwordForm: cySelector('settings.password.form'),
       passwordCurrent: cySelector('settings.password.currentPassword'),
       passwordNew: cySelector('settings.password.newPassword'),
       passwordConfirm: cySelector('settings.password.confirmPassword'),
+      passwordRevokeOtherSessions: cySelector('settings.password.revokeOtherSessions'),
       passwordSubmit: cySelector('settings.password.submitButton'),
       passwordSuccess: cySelector('settings.password.successMessage'),
 
       // ============================================
-      // TEAM (10 selectors)
+      // 5. SECURITY (25 selectors)
       // ============================================
-      teamContainer: cySelector('settings.team.container'),
-      teamName: cySelector('settings.team.name'),
-      teamSlug: cySelector('settings.team.slug'),
-      teamDescription: cySelector('settings.team.description'),
-      teamAvatar: cySelector('settings.team.avatar'),
-      teamAvatarUpload: cySelector('settings.team.avatarUpload'),
-      teamSubmit: cySelector('settings.team.submitButton'),
-      teamDelete: cySelector('settings.team.deleteButton'),
-      teamDeleteDialog: cySelector('settings.team.deleteDialog'),
-      teamDeleteConfirm: cySelector('settings.team.deleteConfirm'),
+      securityContainer: cySelector('settings.security.container'),
+      securityHeader: cySelector('settings.security.header'),
+      // Two-Factor Authentication
+      security2faContainer: cySelector('settings.security.twoFactor.container'),
+      security2faToggle: cySelector('settings.security.twoFactor.toggle'),
+      security2faStatus: cySelector('settings.security.twoFactor.status'),
+      security2faSetupButton: cySelector('settings.security.twoFactor.setupButton'),
+      security2faDisableButton: cySelector('settings.security.twoFactor.disableButton'),
+      security2faDialogContainer: cySelector('settings.security.twoFactor.setupDialog.container'),
+      security2faQrCode: cySelector('settings.security.twoFactor.setupDialog.qrCode'),
+      security2faSecretKey: cySelector('settings.security.twoFactor.setupDialog.secretKey'),
+      security2faVerifyInput: cySelector('settings.security.twoFactor.setupDialog.verifyInput'),
+      security2faConfirmButton: cySelector('settings.security.twoFactor.setupDialog.confirmButton'),
+      // Login Alerts
+      securityLoginAlertsToggle: cySelector('settings.security.loginAlerts.toggle'),
+      securityLoginAlertsStatus: cySelector('settings.security.loginAlerts.status'),
+      // Active Sessions
+      securitySessionsContainer: cySelector('settings.security.sessions.container'),
+      securitySessionsList: cySelector('settings.security.sessions.list'),
+      securitySessionRow: (id: string) => cySelector('settings.security.sessions.row.container', { id }),
+      securitySessionDevice: (id: string) => cySelector('settings.security.sessions.row.device', { id }),
+      securitySessionBrowser: (id: string) => cySelector('settings.security.sessions.row.browser', { id }),
+      securitySessionLocation: (id: string) => cySelector('settings.security.sessions.row.location', { id }),
+      securitySessionLastActive: (id: string) => cySelector('settings.security.sessions.row.lastActive', { id }),
+      securitySessionCurrentBadge: (id: string) => cySelector('settings.security.sessions.row.currentBadge', { id }),
+      securitySessionRevokeButton: (id: string) => cySelector('settings.security.sessions.row.revokeButton', { id }),
+      securitySessionsRevokeAll: cySelector('settings.security.sessions.revokeAllButton'),
+      securitySuccess: cySelector('settings.security.successMessage'),
 
       // ============================================
-      // MEMBERS (12 selectors)
+      // 6. NOTIFICATIONS (7 selectors)
       // ============================================
-      membersContainer: cySelector('settings.members.container'),
-      membersInvite: cySelector('settings.members.inviteButton'),
-      membersInviteDialog: cySelector('settings.members.inviteDialog'),
-      membersInviteEmail: cySelector('settings.members.inviteEmail'),
-      membersInviteRole: cySelector('settings.members.inviteRole'),
-      membersInviteSubmit: cySelector('settings.members.inviteSubmit'),
-      memberRow: (id: string) => cySelector('settings.members.memberRow', { id }),
-      memberRowGeneric: '[data-cy^="member-row-"]',
-      memberRole: (id: string) => cySelector('settings.members.memberRole', { id }),
-      memberRemove: (id: string) => cySelector('settings.members.memberRemove', { id }),
-      membersPendingInvites: cySelector('settings.members.pendingInvites'),
-      membersPendingInvite: (id: string) => cySelector('settings.members.pendingInvite', { id }),
-      membersCancelInvite: (id: string) => cySelector('settings.members.cancelInvite', { id }),
+      notificationsContainer: cySelector('settings.notifications.container'),
+      notificationsMasterToggle: cySelector('settings.notifications.masterToggle'),
+      notificationsCategoryContainer: (category: string) => cySelector('settings.notifications.category.container', { category }),
+      notificationsCategoryEmail: (category: string) => cySelector('settings.notifications.category.emailToggle', { category }),
+      notificationsCategoryPush: (category: string) => cySelector('settings.notifications.category.pushToggle', { category }),
+      notificationsSubmit: cySelector('settings.notifications.submitButton'),
+      notificationsSuccess: cySelector('settings.notifications.successMessage'),
 
       // ============================================
-      // BILLING (19 selectors)
+      // 7. API KEYS (40 selectors)
+      // ============================================
+      apiKeysContainer: cySelector('settings.apiKeys.container'),
+      apiKeysHeader: cySelector('settings.apiKeys.header'),
+      apiKeysCreateButton: cySelector('settings.apiKeys.createButton'),
+      // List
+      apiKeysListContainer: cySelector('settings.apiKeys.list.container'),
+      apiKeysListEmpty: cySelector('settings.apiKeys.list.empty'),
+      apiKeysListSkeleton: cySelector('settings.apiKeys.list.skeleton'),
+      // Row (parametric)
+      apiKeyRowContainer: (id: string) => cySelector('settings.apiKeys.row.container', { id }),
+      apiKeyRowGeneric: '[data-cy^="api-key-row-"]',
+      apiKeyRowName: (id: string) => cySelector('settings.apiKeys.row.name', { id }),
+      apiKeyRowPrefix: (id: string) => cySelector('settings.apiKeys.row.prefix', { id }),
+      apiKeyRowCopyPrefix: (id: string) => cySelector('settings.apiKeys.row.copyPrefix', { id }),
+      apiKeyRowStatus: (id: string) => cySelector('settings.apiKeys.row.status', { id }),
+      apiKeyRowScopes: (id: string) => cySelector('settings.apiKeys.row.scopes', { id }),
+      apiKeyRowScope: (id: string, scope: string) => cySelector('settings.apiKeys.row.scope', { id, scope }),
+      // Row Stats
+      apiKeyRowStatsContainer: (id: string) => cySelector('settings.apiKeys.row.stats.container', { id }),
+      apiKeyRowStatsTotalRequests: (id: string) => cySelector('settings.apiKeys.row.stats.totalRequests', { id }),
+      apiKeyRowStatsLast24h: (id: string) => cySelector('settings.apiKeys.row.stats.last24h', { id }),
+      apiKeyRowStatsAvgTime: (id: string) => cySelector('settings.apiKeys.row.stats.avgTime', { id }),
+      // Row Metadata
+      apiKeyRowMetadataContainer: (id: string) => cySelector('settings.apiKeys.row.metadata.container', { id }),
+      apiKeyRowMetadataCreatedAt: (id: string) => cySelector('settings.apiKeys.row.metadata.createdAt', { id }),
+      apiKeyRowMetadataLastUsed: (id: string) => cySelector('settings.apiKeys.row.metadata.lastUsed', { id }),
+      apiKeyRowMetadataExpiresAt: (id: string) => cySelector('settings.apiKeys.row.metadata.expiresAt', { id }),
+      // Row Menu
+      apiKeyRowMenuTrigger: (id: string) => cySelector('settings.apiKeys.row.menu.trigger', { id }),
+      apiKeyRowMenuContent: (id: string) => cySelector('settings.apiKeys.row.menu.content', { id }),
+      apiKeyRowMenuViewDetails: (id: string) => cySelector('settings.apiKeys.row.menu.viewDetails', { id }),
+      apiKeyRowMenuToggle: (id: string) => cySelector('settings.apiKeys.row.menu.toggle', { id }),
+      apiKeyRowMenuRevoke: (id: string) => cySelector('settings.apiKeys.row.menu.revoke', { id }),
+      // Create Dialog
+      apiKeysCreateDialogContainer: cySelector('settings.apiKeys.createDialog.container'),
+      apiKeysCreateDialogNameInput: cySelector('settings.apiKeys.createDialog.nameInput'),
+      apiKeysCreateDialogScopesContainer: cySelector('settings.apiKeys.createDialog.scopesContainer'),
+      apiKeysCreateDialogScopeOption: (scope: string) => cySelector('settings.apiKeys.createDialog.scopeOption', { scope }),
+      apiKeysCreateDialogSubmit: cySelector('settings.apiKeys.createDialog.submitButton'),
+      apiKeysCreateDialogFooter: cySelector('settings.apiKeys.createDialog.footer'),
+      // Details Dialog
+      apiKeysDetailsDialogContainer: cySelector('settings.apiKeys.detailsDialog.container'),
+      apiKeysDetailsDialogTitle: cySelector('settings.apiKeys.detailsDialog.title'),
+      apiKeysDetailsDialogLoading: cySelector('settings.apiKeys.detailsDialog.loading'),
+      apiKeysDetailsDialogContent: cySelector('settings.apiKeys.detailsDialog.content'),
+      apiKeysDetailsDialogBasicInfo: cySelector('settings.apiKeys.detailsDialog.basicInfo'),
+      apiKeysDetailsDialogStats: cySelector('settings.apiKeys.detailsDialog.stats'),
+      // New Key Display
+      apiKeysNewKeyDisplayContainer: cySelector('settings.apiKeys.newKeyDisplay.container'),
+      apiKeysNewKeyDisplayCopyButton: cySelector('settings.apiKeys.newKeyDisplay.copyButton'),
+      // Revoke Dialog
+      apiKeysRevokeDialogContainer: cySelector('settings.apiKeys.revokeDialog.container'),
+      apiKeysRevokeDialogConfirm: cySelector('settings.apiKeys.revokeDialog.confirmButton'),
+
+      // ============================================
+      // 8. BILLING (15 selectors)
       // ============================================
       billingContainer: cySelector('settings.billing.container'),
-      billingMain: cySelector('settings.billing.main'),
       billingHeader: cySelector('settings.billing.header'),
-      billingCurrentPlan: cySelector('settings.billing.currentPlan'),
-      billingUpgrade: cySelector('settings.billing.upgradeButton'),
-      billingUpgradePlan: cySelector('settings.billing.upgradePlan'),
-      billingCancel: cySelector('settings.billing.cancelButton'),
-      billingAddPayment: cySelector('settings.billing.addPayment'),
-      billingInvoices: cySelector('settings.billing.invoicesTable'),
-      billingInvoicesAlt: cySelector('settings.billing.invoicesTableAlt'),
-      billingInvoiceRow: (id: string) => cySelector('settings.billing.invoiceRow', { id }),
-      billingInvoicesRow: cySelector('settings.billing.invoicesRow'),
-      billingInvoiceDownload: (id: string) => cySelector('settings.billing.invoiceDownload', { id }),
-      billingInvoicesLoadMore: cySelector('settings.billing.invoicesLoadMore'),
-      billingPaymentMethod: cySelector('settings.billing.paymentMethod'),
-      billingPaymentMethodAlt: cySelector('settings.billing.paymentMethodAlt'),
-      billingUpdatePayment: cySelector('settings.billing.updatePayment'),
-      billingUsage: cySelector('settings.billing.usage'),
-      billingUsageDashboard: cySelector('settings.billing.usageDashboard'),
+      // Current Plan
+      billingCurrentPlanContainer: cySelector('settings.billing.currentPlan.container'),
+      billingCurrentPlanName: cySelector('settings.billing.currentPlan.name'),
+      billingCurrentPlanPrice: cySelector('settings.billing.currentPlan.price'),
+      billingCurrentPlanFeatures: cySelector('settings.billing.currentPlan.features'),
+      billingCurrentPlanUpgrade: cySelector('settings.billing.currentPlan.upgradeButton'),
+      billingCurrentPlanCancel: cySelector('settings.billing.currentPlan.cancelButton'),
+      // Invoices
+      billingInvoicesContainer: cySelector('settings.billing.invoices.container'),
+      billingInvoicesTable: cySelector('settings.billing.invoices.table'),
+      billingInvoicesRow: (id: string) => cySelector('settings.billing.invoices.row', { id }),
+      billingInvoicesStatusBadge: (id: string) => cySelector('settings.billing.invoices.statusBadge', { id }),
+      billingInvoicesDownload: (id: string) => cySelector('settings.billing.invoices.downloadButton', { id }),
+      billingInvoicesLoadMore: cySelector('settings.billing.invoices.loadMoreButton'),
+      // Payment Method
+      billingPaymentMethodContainer: cySelector('settings.billing.paymentMethod.container'),
+      billingPaymentMethodCard: cySelector('settings.billing.paymentMethod.card'),
+      billingPaymentMethodAdd: cySelector('settings.billing.paymentMethod.addButton'),
+      billingPaymentMethodUpdate: cySelector('settings.billing.paymentMethod.updateButton'),
+      // Usage
+      billingUsageContainer: cySelector('settings.billing.usage.container'),
+      billingUsageDashboard: cySelector('settings.billing.usage.dashboard'),
+      billingUsageMetric: (slug: string) => cySelector('settings.billing.usage.metric', { slug }),
+      // Pricing
+      billingPricingTable: cySelector('settings.billing.pricing.table'),
+      billingPricingPlan: (slug: string) => cySelector('settings.billing.pricing.plan', { slug }),
+      billingPricingSelect: (slug: string) => cySelector('settings.billing.pricing.selectButton', { slug }),
+      // Features
+      billingFeaturesPlaceholder: (feature: string) => cySelector('settings.billing.features.placeholder', { feature }),
+      billingFeaturesContent: (feature: string) => cySelector('settings.billing.features.content', { feature }),
+      billingFeaturesUpgrade: cySelector('settings.billing.features.upgradeButton'),
 
       // ============================================
-      // API KEYS (56 selectors)
+      // 9. TEAMS (25 selectors)
       // ============================================
-      apiKeysPage: cySelector('settings.apiKeys.page'),
-      apiKeysTitle: cySelector('settings.apiKeys.title'),
-      apiKeysContainer: cySelector('settings.apiKeys.container'),
-      apiKeysCreate: cySelector('settings.apiKeys.createButton'),
-      apiKeysCreateDialog: cySelector('settings.apiKeys.createDialog'),
-      apiKeysList: cySelector('settings.apiKeys.list'),
-      apiKeysSkeleton: cySelector('settings.apiKeys.skeleton'),
-      apiKeysEmpty: cySelector('settings.apiKeys.empty'),
-      apiKeysEmptyCreate: cySelector('settings.apiKeys.emptyCreateButton'),
-      apiKeyName: cySelector('settings.apiKeys.keyName'),
-      apiKeyScopes: cySelector('settings.apiKeys.keyScopes'),
-      apiKeyScopeOption: (scope: string) => cySelector('settings.apiKeys.scopeOption', { scope }),
-      apiKeyCreateSubmit: cySelector('settings.apiKeys.createSubmit'),
-      apiKeyRow: (id: string) => cySelector('settings.apiKeys.keyRow', { id }),
-      apiKeyRowGeneric: '[data-cy^="api-key-row-"]',
-      apiKeyNameById: (id: string) => cySelector('settings.apiKeys.keyName_', { id }),
-      apiKeyPrefix: (id: string) => cySelector('settings.apiKeys.keyPrefix', { id }),
-      apiKeyCopyPrefix: (id: string) => cySelector('settings.apiKeys.copyPrefix', { id }),
-      apiKeyStatus: (id: string) => cySelector('settings.apiKeys.keyStatus', { id }),
-      apiKeyStatusBadge: (id: string) => cySelector('settings.apiKeys.statusBadge', { id }),
-      apiKeyMenuTrigger: (id: string) => cySelector('settings.apiKeys.menuTrigger', { id }),
-      apiKeyMenu: (id: string) => cySelector('settings.apiKeys.menu', { id }),
-      apiKeyViewDetails: (id: string) => cySelector('settings.apiKeys.viewDetails', { id }),
-      apiKeyToggle: (id: string) => cySelector('settings.apiKeys.toggle', { id }),
-      apiKeyRevoke: (id: string) => cySelector('settings.apiKeys.revoke', { id }),
-      apiKeyScopes: (id: string) => cySelector('settings.apiKeys.scopes', { id }),
-      apiKeyScope: (id: string, scope: string) => cySelector('settings.apiKeys.scope', { id, scope }),
-      apiKeyStats: (id: string) => cySelector('settings.apiKeys.stats', { id }),
-      apiKeyTotalRequests: (id: string) => cySelector('settings.apiKeys.totalRequests', { id }),
-      apiKeyLast24h: (id: string) => cySelector('settings.apiKeys.last24h', { id }),
-      apiKeyAvgTime: (id: string) => cySelector('settings.apiKeys.avgTime', { id }),
-      apiKeyMetadata: (id: string) => cySelector('settings.apiKeys.metadata', { id }),
-      apiKeyCreatedAt: (id: string) => cySelector('settings.apiKeys.createdAt', { id }),
-      apiKeyLastUsed: (id: string) => cySelector('settings.apiKeys.lastUsed', { id }),
-      apiKeyExpiresAt: (id: string) => cySelector('settings.apiKeys.expiresAt', { id }),
-      apiKeysDetailsDialog: cySelector('settings.apiKeys.detailsDialog'),
-      apiKeysDetailsTitle: cySelector('settings.apiKeys.detailsTitle'),
-      apiKeysDetailsLoading: cySelector('settings.apiKeys.detailsLoading'),
-      apiKeysDetailsContent: cySelector('settings.apiKeys.detailsContent'),
-      apiKeysDetailsBasicInfo: cySelector('settings.apiKeys.detailsBasicInfo'),
-      apiKeysDetailsName: cySelector('settings.apiKeys.detailsName'),
-      apiKeysDetailsStatus: cySelector('settings.apiKeys.detailsStatus'),
-      apiKeysDetailsStats: cySelector('settings.apiKeys.detailsStats'),
-      apiKeysDetailsTotalRequests: cySelector('settings.apiKeys.detailsTotalRequests'),
-      apiKeysDetailsLast24h: cySelector('settings.apiKeys.detailsLast24h'),
-      apiKeysDetailsLast7d: cySelector('settings.apiKeys.detailsLast7d'),
-      apiKeysDetailsLast30d: cySelector('settings.apiKeys.detailsLast30d'),
-      apiKeysDetailsAvgTime: cySelector('settings.apiKeys.detailsAvgTime'),
-      apiKeysDetailsSuccessRate: cySelector('settings.apiKeys.detailsSuccessRate'),
-      apiKeyReveal: (id: string) => cySelector('settings.apiKeys.keyReveal', { id }),
-      apiKeyRevokeById: (id: string) => cySelector('settings.apiKeys.keyRevoke', { id }),
-      apiKeyRevokeDialog: cySelector('settings.apiKeys.revokeDialog'),
-      apiKeyRevokeConfirm: cySelector('settings.apiKeys.revokeConfirm'),
-      apiKeyNewDisplay: cySelector('settings.apiKeys.newKeyDisplay'),
-      apiKeyCopyKey: cySelector('settings.apiKeys.copyKey'),
-      apiKeysDialogFooter: cySelector('settings.apiKeys.dialogFooter'),
+      teamsContainer: cySelector('settings.teams.container'),
+      teamsHeader: cySelector('settings.teams.header'),
+      teamsLoading: cySelector('settings.teams.loading'),
+      teamsSingleUserMode: cySelector('settings.teams.singleUserMode'),
+      // Current Team (ex team.*)
+      teamsCurrentContainer: cySelector('settings.teams.current.container'),
+      teamsCurrentForm: cySelector('settings.teams.current.form'),
+      teamsCurrentName: cySelector('settings.teams.current.name'),
+      teamsCurrentSlug: cySelector('settings.teams.current.slug'),
+      teamsCurrentDescription: cySelector('settings.teams.current.description'),
+      teamsCurrentAvatarContainer: cySelector('settings.teams.current.avatar.container'),
+      teamsCurrentAvatarUpload: cySelector('settings.teams.current.avatar.upload'),
+      teamsCurrentSubmit: cySelector('settings.teams.current.submitButton'),
+      teamsCurrentDelete: cySelector('settings.teams.current.deleteButton'),
+      teamsCurrentDeleteDialogContainer: cySelector('settings.teams.current.deleteDialog.container'),
+      teamsCurrentDeleteDialogConfirm: cySelector('settings.teams.current.deleteDialog.confirmButton'),
+      // Members (ex members.*)
+      teamsMembersContainer: cySelector('settings.teams.members.container'),
+      teamsMembersList: cySelector('settings.teams.members.list'),
+      teamsMembersRowContainer: (id: string) => cySelector('settings.teams.members.row.container', { id }),
+      teamsMembersRowGeneric: '[data-cy^="member-row-"]',
+      teamsMembersRowAvatar: (id: string) => cySelector('settings.teams.members.row.avatar', { id }),
+      teamsMembersRowName: (id: string) => cySelector('settings.teams.members.row.name', { id }),
+      teamsMembersRowEmail: (id: string) => cySelector('settings.teams.members.row.email', { id }),
+      teamsMembersRowRole: (id: string) => cySelector('settings.teams.members.row.role', { id }),
+      teamsMembersRowRemove: (id: string) => cySelector('settings.teams.members.row.removeButton', { id }),
+      teamsMembersInviteButton: cySelector('settings.teams.members.inviteButton'),
+      teamsMembersInviteDialogContainer: cySelector('settings.teams.members.inviteDialog.container'),
+      teamsMembersInviteDialogEmail: cySelector('settings.teams.members.inviteDialog.emailInput'),
+      teamsMembersInviteDialogRole: cySelector('settings.teams.members.inviteDialog.roleSelect'),
+      teamsMembersInviteDialogSubmit: cySelector('settings.teams.members.inviteDialog.submitButton'),
+      teamsMembersPendingContainer: cySelector('settings.teams.members.pendingInvites.container'),
+      teamsMembersPendingRow: (id: string) => cySelector('settings.teams.members.pendingInvites.row', { id }),
+      teamsMembersPendingCancel: (id: string) => cySelector('settings.teams.members.pendingInvites.cancelButton', { id }),
+      // Teams List (ex teams.*)
+      teamsListContainer: cySelector('settings.teams.list.container'),
+      teamsListTeamCard: (id: string) => cySelector('settings.teams.list.teamCard', { id }),
+      teamsListCreateButton: cySelector('settings.teams.list.createButton'),
+      teamsListDetails: (id: string) => cySelector('settings.teams.list.details', { id }),
     }
   }
 
   // ============================================
-  // NAVIGATION
+  // NAVIGATION (9 methods - 1 per section)
   // ============================================
 
   /**
-   * Navigate to settings home
+   * Navigate to settings overview (home)
    */
   visitSettings() {
     cy.visit('/dashboard/settings', { timeout: 60000 })
@@ -212,26 +287,26 @@ export class SettingsPOM extends BasePOM {
   }
 
   /**
-   * Navigate to team settings
+   * Navigate to password settings
    */
-  visitTeam() {
-    cy.visit('/dashboard/settings/team', { timeout: 60000 })
+  visitPassword() {
+    cy.visit('/dashboard/settings/password', { timeout: 60000 })
     return this
   }
 
   /**
-   * Navigate to billing settings
+   * Navigate to security settings (2FA, sessions)
    */
-  visitBilling() {
-    cy.visit('/dashboard/settings/billing', { timeout: 60000 })
+  visitSecurity() {
+    cy.visit('/dashboard/settings/security', { timeout: 60000 })
     return this
   }
 
   /**
-   * Navigate to members settings
+   * Navigate to notifications settings
    */
-  visitMembers() {
-    cy.visit('/dashboard/settings/members', { timeout: 60000 })
+  visitNotifications() {
+    cy.visit('/dashboard/settings/notifications', { timeout: 60000 })
     return this
   }
 
@@ -244,10 +319,18 @@ export class SettingsPOM extends BasePOM {
   }
 
   /**
-   * Navigate to password settings
+   * Navigate to billing settings
    */
-  visitPassword() {
-    cy.visit('/dashboard/settings/password', { timeout: 60000 })
+  visitBilling() {
+    cy.visit('/dashboard/settings/billing', { timeout: 60000 })
+    return this
+  }
+
+  /**
+   * Navigate to teams settings
+   */
+  visitTeams() {
+    cy.visit('/dashboard/settings/teams', { timeout: 60000 })
     return this
   }
 
@@ -255,19 +338,27 @@ export class SettingsPOM extends BasePOM {
    * Click on a settings nav item
    */
   clickNavItem(section: string) {
-    cy.get(this.selectors.navItem(section)).click()
+    cy.get(this.selectors.sidebarNavItem(section)).click()
     return this
   }
 
   // ============================================
-  // ASSERTIONS
+  // ASSERTIONS (12 methods)
   // ============================================
 
   /**
-   * Assert settings page is visible
+   * Assert settings page is visible (any settings page)
    */
   assertSettingsVisible() {
     cy.url().should('include', '/settings')
+    return this
+  }
+
+  /**
+   * Assert overview page is visible
+   */
+  assertOverviewVisible() {
+    cy.get(this.selectors.overviewContainer).should('be.visible')
     return this
   }
 
@@ -280,10 +371,34 @@ export class SettingsPOM extends BasePOM {
   }
 
   /**
-   * Assert team settings is visible
+   * Assert password settings is visible
    */
-  assertTeamVisible() {
-    cy.get(this.selectors.teamContainer).should('be.visible')
+  assertPasswordVisible() {
+    cy.get(this.selectors.passwordContainer).should('be.visible')
+    return this
+  }
+
+  /**
+   * Assert security settings is visible
+   */
+  assertSecurityVisible() {
+    cy.get(this.selectors.securityContainer).should('be.visible')
+    return this
+  }
+
+  /**
+   * Assert notifications settings is visible
+   */
+  assertNotificationsVisible() {
+    cy.get(this.selectors.notificationsContainer).should('be.visible')
+    return this
+  }
+
+  /**
+   * Assert API keys settings is visible
+   */
+  assertApiKeysVisible() {
+    cy.get(this.selectors.apiKeysContainer).should('be.visible')
     return this
   }
 
@@ -296,10 +411,18 @@ export class SettingsPOM extends BasePOM {
   }
 
   /**
+   * Assert teams settings is visible
+   */
+  assertTeamsVisible() {
+    cy.get(this.selectors.teamsContainer).should('be.visible')
+    return this
+  }
+
+  /**
    * Assert nav item is visible
    */
   assertNavItemVisible(section: string) {
-    cy.get(this.selectors.navItem(section)).should('be.visible')
+    cy.get(this.selectors.sidebarNavItem(section)).should('be.visible')
     return this
   }
 
@@ -307,36 +430,74 @@ export class SettingsPOM extends BasePOM {
    * Assert nav item is NOT visible (restricted)
    */
   assertNavItemNotVisible(section: string) {
-    cy.get(this.selectors.navItem(section)).should('not.exist')
-    return this
-  }
-
-  /**
-   * Assert members container is visible
-   */
-  assertMembersVisible() {
-    cy.get(this.selectors.membersContainer).should('be.visible')
-    return this
-  }
-
-  /**
-   * Assert API keys container is visible
-   */
-  assertApiKeysVisible() {
-    cy.get(this.selectors.apiKeysContainer).should('be.visible')
+    cy.get(this.selectors.sidebarNavItem(section)).should('not.exist')
     return this
   }
 
   // ============================================
-  // WAITS
+  // WAITS (9 methods - 1 per section)
   // ============================================
 
   /**
-   * Wait for settings page to load
+   * Wait for settings page to load (sidebar visible)
    */
   waitForSettings() {
     cy.url().should('include', '/settings')
-    cy.get(this.selectors.navContainer, { timeout: 15000 }).should('be.visible')
+    cy.get(this.selectors.sidebarContainer, { timeout: 15000 }).should('be.visible')
+    return this
+  }
+
+  /**
+   * Wait for overview page to load
+   */
+  waitForOverview() {
+    cy.url().should('match', /\/settings\/?$/)
+    cy.get(this.selectors.overviewContainer, { timeout: 15000 }).should('be.visible')
+    return this
+  }
+
+  /**
+   * Wait for profile page to load
+   */
+  waitForProfile() {
+    cy.url().should('include', '/settings/profile')
+    cy.get(this.selectors.profileContainer, { timeout: 15000 }).should('be.visible')
+    return this
+  }
+
+  /**
+   * Wait for password page to load
+   */
+  waitForPassword() {
+    cy.url().should('include', '/settings/password')
+    cy.get(this.selectors.passwordContainer, { timeout: 15000 }).should('be.visible')
+    return this
+  }
+
+  /**
+   * Wait for security page to load
+   */
+  waitForSecurity() {
+    cy.url().should('include', '/settings/security')
+    cy.get(this.selectors.securityContainer, { timeout: 15000 }).should('be.visible')
+    return this
+  }
+
+  /**
+   * Wait for notifications page to load
+   */
+  waitForNotifications() {
+    cy.url().should('include', '/settings/notifications')
+    cy.get(this.selectors.notificationsContainer, { timeout: 15000 }).should('be.visible')
+    return this
+  }
+
+  /**
+   * Wait for API keys page to load
+   */
+  waitForApiKeys() {
+    cy.url().should('include', '/settings/api-keys')
+    cy.get(this.selectors.apiKeysContainer, { timeout: 15000 }).should('be.visible')
     return this
   }
 
@@ -350,11 +511,11 @@ export class SettingsPOM extends BasePOM {
   }
 
   /**
-   * Wait for team page to load
+   * Wait for teams page to load
    */
-  waitForTeam() {
-    cy.url().should('include', '/settings/team')
-    cy.get(this.selectors.teamContainer, { timeout: 15000 }).should('be.visible')
+  waitForTeams() {
+    cy.url().should('include', '/settings/teams')
+    cy.get(this.selectors.teamsContainer, { timeout: 15000 }).should('be.visible')
     return this
   }
 }

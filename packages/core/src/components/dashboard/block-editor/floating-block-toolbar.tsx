@@ -42,12 +42,12 @@ export function FloatingBlockToolbar({
           ? 'opacity-100 translate-y-0 pointer-events-auto'
           : 'opacity-0 translate-y-2 pointer-events-none'
       )}
-      data-cy={sel('blockEditor.floatingToolbar.container', { id: blockId })}
+      data-cy={sel('blockEditor.previewCanvas.floatingToolbar.container', { id: blockId })}
     >
       {/* Drag Handle */}
       <span
         className="cursor-grab active:cursor-grabbing"
-        data-cy={sel('blockEditor.floatingToolbar.dragHandle', { id: blockId })}
+        data-cy={sel('blockEditor.previewCanvas.floatingToolbar.dragHandle', { id: blockId })}
         title={t('drag')}
       >
         <GripVertical className="h-3 w-3" />
@@ -56,7 +56,7 @@ export function FloatingBlockToolbar({
       {/* Block Name */}
       <span
         className="uppercase tracking-wider text-[10px]"
-        data-cy={sel('blockEditor.floatingToolbar.blockName', { id: blockId })}
+        data-cy={sel('blockEditor.previewCanvas.floatingToolbar.blockName', { id: blockId })}
       >
         {blockName}
       </span>
@@ -64,7 +64,7 @@ export function FloatingBlockToolbar({
       {/* Divider */}
       <div
         className="h-3 w-px bg-primary-foreground/30"
-        data-cy={sel('blockEditor.floatingToolbar.divider', { id: blockId })}
+        data-cy={sel('blockEditor.previewCanvas.floatingToolbar.divider', { id: blockId })}
       />
 
       {/* Actions */}
@@ -76,7 +76,7 @@ export function FloatingBlockToolbar({
           e.stopPropagation()
           onDuplicate()
         }}
-        data-cy={sel('blockEditor.floatingToolbar.duplicateBtn', { id: blockId })}
+        data-cy={sel('blockEditor.previewCanvas.floatingToolbar.duplicateBtn', { id: blockId })}
         title={t('duplicate')}
       >
         <Copy className="h-3 w-3" />
@@ -90,7 +90,7 @@ export function FloatingBlockToolbar({
           e.stopPropagation()
           onRemove()
         }}
-        data-cy={sel('blockEditor.floatingToolbar.deleteBtn', { id: blockId })}
+        data-cy={sel('blockEditor.previewCanvas.floatingToolbar.deleteBtn', { id: blockId })}
         title={t('delete')}
       >
         <Trash2 className="h-3 w-3" />

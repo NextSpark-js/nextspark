@@ -3,7 +3,7 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useState } from "react";
 import { format } from "date-fns";
-import { sel } from "@nextsparkjs/testing";
+import { sel } from "@nextsparkjs/core/selectors";
 import {
   Card,
   CardContent,
@@ -337,7 +337,7 @@ function SubscriptionsPage() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4" data-cy={sel('superadmin.subscriptions.container')}>
         {/* MRR Card */}
-        <Card className="border-green-200 bg-green-50/50" data-cy={sel('superadmin.subscriptions.mrr')}>
+        <Card className="border-green-200 bg-green-50/50" data-cy={sel('superadmin.subscriptions.stats.mrr')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Monthly Recurring Revenue</CardTitle>
             <DollarSign className="h-4 w-4 text-green-600" />
@@ -369,7 +369,7 @@ function SubscriptionsPage() {
         </Card>
 
         {/* Active Subscriptions */}
-        <Card data-cy={sel('superadmin.subscriptions.activeCount')}>
+        <Card data-cy={sel('superadmin.subscriptions.stats.activeCount')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Subscriptions</CardTitle>
             <CheckCircle className="h-4 w-4 text-green-600" />
@@ -413,7 +413,7 @@ function SubscriptionsPage() {
 
       {/* Plan Distribution */}
       {data?.planDistribution && data.planDistribution.length > 0 && (
-        <Card data-cy={sel('superadmin.subscriptions.planDistribution')}>
+        <Card data-cy={sel('superadmin.subscriptions.stats.planDistribution')}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
@@ -446,10 +446,10 @@ function SubscriptionsPage() {
           onChange={handleSearchChange}
           placeholder="Search by team name or email..."
           className="w-full sm:max-w-xs"
-          data-cy="subscriptions-search-input"
+          data-cy={sel('superadmin.subscriptions.filters.search')}
         />
         <Select value={statusFilter} onValueChange={handleStatusChange}>
-          <SelectTrigger className="w-full sm:w-[140px]" data-cy="status-filter">
+          <SelectTrigger className="w-full sm:w-[140px]" data-cy={sel('superadmin.subscriptions.filters.statusFilter')}>
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -461,7 +461,7 @@ function SubscriptionsPage() {
           </SelectContent>
         </Select>
         <Select value={planFilter} onValueChange={handlePlanChange}>
-          <SelectTrigger className="w-full sm:w-[140px]" data-cy="plan-filter">
+          <SelectTrigger className="w-full sm:w-[140px]" data-cy={sel('superadmin.subscriptions.filters.planFilter')}>
             <SelectValue placeholder="Plan" />
           </SelectTrigger>
           <SelectContent>
@@ -472,7 +472,7 @@ function SubscriptionsPage() {
           </SelectContent>
         </Select>
         <Select value={intervalFilter} onValueChange={handleIntervalChange}>
-          <SelectTrigger className="w-full sm:w-[140px]" data-cy="interval-filter">
+          <SelectTrigger className="w-full sm:w-[140px]" data-cy={sel('superadmin.subscriptions.filters.intervalFilter')}>
             <SelectValue placeholder="Interval" />
           </SelectTrigger>
           <SelectContent>
@@ -486,7 +486,7 @@ function SubscriptionsPage() {
             variant="ghost"
             size="sm"
             onClick={clearAllFilters}
-            data-cy="clear-filters-btn"
+            data-cy={sel('superadmin.subscriptions.filters.clearButton')}
           >
             Clear Filters
           </Button>
@@ -626,6 +626,7 @@ function SubscriptionsPage() {
                 limit={data.pagination.limit}
                 onPageChange={setPage}
                 onLimitChange={handleLimitChange}
+                context="subscriptions"
               />
             </div>
           )}

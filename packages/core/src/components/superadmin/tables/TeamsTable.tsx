@@ -103,7 +103,7 @@ export function TeamsTable({ teams, isLoading }: TeamsTableProps) {
   }
 
   return (
-    <div className="rounded-md border" data-cy={sel('superadmin.teams.table')}>
+    <div className="rounded-md border" data-cy={sel('superadmin.teams.table.element')}>
       <Table>
         <TableHeader>
           <TableRow>
@@ -118,7 +118,7 @@ export function TeamsTable({ teams, isLoading }: TeamsTableProps) {
           {teams.map((team) => (
               <TableRow
                 key={team.id}
-                data-cy={sel('superadmin.teams.row', { id: team.id })}
+                data-cy={sel('superadmin.teams.table.row', { id: team.id })}
                 className="cursor-pointer hover:bg-muted/50"
                 style={{ cursor: 'pointer' }}
                 onClick={() => handleRowClick(team.id)}
@@ -186,7 +186,7 @@ export function TeamsTable({ teams, isLoading }: TeamsTableProps) {
                         variant="ghost"
                         size="sm"
                         className="h-8 w-8 p-0"
-                        data-cy={sel('superadmin.teams.actionsButton', { id: team.id })}
+                        data-cy={sel('superadmin.teams.table.menuButton', { id: team.id })}
                       >
                         <span className="sr-only">Open menu</span>
                         <MoreHorizontal className="h-4 w-4" />

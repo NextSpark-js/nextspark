@@ -19,10 +19,11 @@
  * ```
  */
 
-import { type Replacements } from '../selectors'
-
-// Re-export for convenience
-export type { Replacements }
+/**
+ * Type for placeholder replacements in selectors
+ * Mirrors @nextsparkjs/core/selectors Replacements type
+ */
+export type Replacements = Record<string, string | number>
 
 export abstract class BasePOMCore {
   /**

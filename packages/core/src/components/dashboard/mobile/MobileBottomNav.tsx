@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { cn } from '../../../lib/utils'
-import { createTestId, createCyId } from '../../../lib/test'
+import { sel } from '../../../lib/test'
 import { useTranslations } from 'next-intl'
 import { MobileMoreSheet } from './MobileMoreSheet'
 import { QuickCreateSheet } from './QuickCreateSheet'
@@ -70,8 +70,7 @@ export function MobileBottomNav() {
         className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background border-t border-border safe-area-bottom"
         role="navigation"
         aria-label="Navegación móvil principal"
-        {...createTestId('mobile-bottomnav', 'container') && { 'data-testid': createTestId('mobile-bottomnav', 'container') }}
-        {...createCyId('mobile-bottomnav', 'nav') && { 'data-cy': createCyId('mobile-bottomnav', 'nav') }}
+        data-cy={sel('dashboard.mobile.bottomNav.container')}
       >
         <div className="flex items-end justify-around px-2 pb-2 pt-1">
           {navItems.map((item) => {
@@ -90,8 +89,7 @@ export function MobileBottomNav() {
                   )}
                   aria-label={item.name}
                   aria-current={isActive ? 'page' : undefined}
-                  {...createTestId('mobile-bottomnav', 'item', item.id) && { 'data-testid': createTestId('mobile-bottomnav', 'item', item.id) }}
-                  {...createCyId('mobile-bottomnav', `item-${item.id}`) && { 'data-cy': createCyId('mobile-bottomnav', `item-${item.id}`) }}
+                  data-cy={sel('dashboard.mobile.bottomNav.item', { id: item.id })}
                 >
                   {/* Central button - larger and elevated */}
                   <div className="absolute -top-6 flex items-center justify-center">
@@ -138,8 +136,7 @@ export function MobileBottomNav() {
                     "transition-all duration-200 hover:bg-accent/50 rounded-lg"
                   )}
                   aria-label={item.name}
-                  {...createTestId('mobile-bottomnav', 'item', item.id) && { 'data-testid': createTestId('mobile-bottomnav', 'item', item.id) }}
-                  {...createCyId('mobile-bottomnav', `item-${item.id}`) && { 'data-cy': createCyId('mobile-bottomnav', `item-${item.id}`) }}
+                  data-cy={sel('dashboard.mobile.bottomNav.item', { id: item.id })}
                 >
                   {content}
                 </button>
@@ -157,8 +154,7 @@ export function MobileBottomNav() {
                 )}
                 aria-label={item.name}
                 aria-current={isActive ? 'page' : undefined}
-                {...createTestId('mobile-bottomnav', 'item', item.id) && { 'data-testid': createTestId('mobile-bottomnav', 'item', item.id) }}
-                {...createCyId('mobile-bottomnav', `item-${item.id}`) && { 'data-cy': createCyId('mobile-bottomnav', `item-${item.id}`) }}
+                data-cy={sel('dashboard.mobile.bottomNav.item', { id: item.id })}
               >
                 {content}
               </Link>

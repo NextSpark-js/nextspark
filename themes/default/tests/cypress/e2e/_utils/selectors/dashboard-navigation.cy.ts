@@ -26,7 +26,7 @@
 import { DashboardPOM } from '../../../src/features/DashboardPOM'
 import { loginAsDefaultDeveloper } from '../../../src/session-helpers'
 
-describe('Dashboard Navigation Selectors Validation', { tags: ['@ui-selectors', '@dashboard'] }, () => {
+describe('Dashboard Navigation Selectors Validation', { tags: ['@ui-selectors', '@dashboard', '@navigation'] }, () => {
   const dashboard = DashboardPOM.create()
 
   beforeEach(() => {
@@ -39,8 +39,8 @@ describe('Dashboard Navigation Selectors Validation', { tags: ['@ui-selectors', 
   // SEL_DASH_001: NAVIGATION STRUCTURE
   // ============================================
   describe('SEL_DASH_001: Navigation Structure', { tags: '@SEL_DASH_001' }, () => {
-    it('should find nav main container', () => {
-      cy.get(dashboard.selectors.navMain).should('exist')
+    it('should find nav container', () => {
+      cy.get(dashboard.selectors.navContainer).should('exist')
     })
 
     it('should find dashboard link', () => {

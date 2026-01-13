@@ -15,17 +15,23 @@
  * - Fast execution (< 30 seconds per describe block)
  *
  * Test IDs:
- * - SEL_DBAR_001: Sidebar Structure
- * - SEL_DBAR_DOC: Sidebar Selector Documentation
+ * - SEL_DBAR_001: Sidebar Structure (4 selectors)
+ *
+ * Component: Sidebar.tsx
+ * Selectors:
+ * - dashboard.sidebar.container → 'sidebar-main'
+ * - dashboard.sidebar.header → 'sidebar-header'
+ * - dashboard.sidebar.logo → 'sidebar-logo'
+ * - dashboard.sidebar.content → 'sidebar-content'
+ * - dashboard.sidebar.footer → 'sidebar-footer' (not implemented in component)
  *
  * NOTE: Sidebar is only visible on desktop viewports when authenticated.
- * Some selectors are skipped due to misalignment between CORE_SELECTORS and component implementation.
  */
 
 import { DashboardPOM } from '../../../src/features/DashboardPOM'
 import { loginAsDefaultDeveloper } from '../../../src/session-helpers'
 
-describe('Dashboard Sidebar Selectors Validation', { tags: ['@ui-selectors', '@sidebar'] }, () => {
+describe('Dashboard Sidebar Selectors Validation', { tags: ['@ui-selectors', '@dashboard', '@sidebar'] }, () => {
   const dashboard = DashboardPOM.create()
 
   beforeEach(() => {
@@ -35,55 +41,28 @@ describe('Dashboard Sidebar Selectors Validation', { tags: ['@ui-selectors', '@s
   })
 
   // ============================================
-  // SEL_DBAR_001: SIDEBAR STRUCTURE
-  // NOTE: Component uses createCyId() with different values than CORE_SELECTORS
-  // - sidebar-main: implemented correctly
-  // - sidebar-header: NOT implemented (component uses sidebar-header-section)
-  // - sidebar-content: NOT implemented
-  // - sidebar-footer: NOT implemented
+  // SEL_DBAR_001: SIDEBAR STRUCTURE (4 selectors)
   // ============================================
   describe('SEL_DBAR_001: Sidebar Structure', { tags: '@SEL_DBAR_001' }, () => {
-    it('should find sidebar main container', () => {
-      cy.get(dashboard.selectors.sidebarMain).should('exist')
+    it('should find sidebar container', () => {
+      cy.get(dashboard.selectors.sidebarContainer).should('exist')
     })
 
-    // Selector mismatch: CORE_SELECTORS='sidebar-header' vs component='sidebar-header-section'
-    it.skip('should find sidebar header (selector not aligned with component)', () => {
+    it('should find sidebar header', () => {
       cy.get(dashboard.selectors.sidebarHeader).should('exist')
     })
 
-    // Not implemented in Sidebar.tsx
-    it.skip('should find sidebar content (selector not implemented)', () => {
+    it('should find sidebar logo', () => {
+      cy.get(dashboard.selectors.sidebarLogo).should('exist')
+    })
+
+    it('should find sidebar content', () => {
       cy.get(dashboard.selectors.sidebarContent).should('exist')
     })
 
-    // Not implemented in Sidebar.tsx
-    it.skip('should find sidebar footer (selector not implemented)', () => {
+    // Not implemented in Sidebar.tsx component
+    it.skip('should find sidebar footer (not implemented in component)', () => {
       cy.get(dashboard.selectors.sidebarFooter).should('exist')
-    })
-  })
-
-  // ============================================
-  // SEL_DBAR_DOC: DOCUMENTATION
-  // ============================================
-  describe('SEL_DBAR_DOC: Selector Documentation', { tags: '@SEL_DBAR_DOC' }, () => {
-    it('should document sidebar component selectors', () => {
-      cy.log('=== DASHBOARD SIDEBAR SELECTORS ===')
-      cy.log('')
-      cy.log('Implemented (working):')
-      cy.log('- sidebar-main: Main sidebar container')
-      cy.log('')
-      cy.log('Selector/Component Mismatch:')
-      cy.log('- sidebar-header: CORE_SELECTORS defines, component uses sidebar-header-section')
-      cy.log('')
-      cy.log('Not Implemented in Component:')
-      cy.log('- sidebar-content: No data-cy attribute in Sidebar.tsx')
-      cy.log('- sidebar-footer: No data-cy attribute in Sidebar.tsx')
-      cy.log('')
-      cy.log('Component uses createCyId("sidebar", "..."):')
-      cy.log('- sidebar-main, sidebar-header-section')
-      cy.log('- sidebar-logo, sidebar-nav, sidebar-nav-items')
-      cy.wrap(true).should('be.true')
     })
   })
 })

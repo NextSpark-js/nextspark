@@ -2,15 +2,17 @@
 feature: Dashboard Sidebar UI Selectors Validation
 priority: medium
 tags: [selectors, sidebar, dashboard, ui-validation]
-grepTags: [ui-selectors, sidebar, SEL_DBAR_001, SEL_DBAR_DOC]
-coverage: 2
+grepTags: [ui-selectors, dashboard, sidebar, SEL_DBAR_001]
+coverage: 1
 ---
 
 # Dashboard Sidebar UI Selectors Validation
 
-> Validates that dashboard sidebar component selectors exist in the DOM. This is a lightweight test that ONLY checks selector presence, not functionality. Some tests are skipped due to misalignment between CORE_SELECTORS definitions and component implementations.
+> Validates that dashboard sidebar component selectors exist in the DOM. This is a lightweight test that ONLY checks selector presence, not functionality. Runs as Phase 12 sub-gate before functional tests.
 
-**IMPORTANT:** Sidebar is only visible on desktop viewports (>= 1024px) when authenticated. The component uses `createCyId()` which sometimes produces different selectors than defined in CORE_SELECTORS.
+**IMPORTANT:** Sidebar is only visible on desktop viewports (>= 1024px) when authenticated.
+
+**Login:** Uses Developer via `loginAsDefaultDeveloper()`.
 
 ## @test SEL_DBAR_001: Sidebar Structure
 
@@ -18,94 +20,57 @@ coverage: 2
 - **Priority:** High
 - **Type:** Selector Validation
 - **Tags:** sidebar, structure, desktop
-- **Grep:** `@ui-selectors` `@SEL_DBAR_001`
-- **Status:** Partial - 1 passing, 3 skipped
+- **Grep:** `@ui-selectors` `@dashboard` `@sidebar` `@SEL_DBAR_001`
+- **Status:** Active (4 passing, 1 skipped)
 
 ```gherkin:en
 Scenario: Dashboard sidebar has required structure selectors
 
-Given I am logged in as a valid user
+Given I am logged in as a developer user
 And I am viewing the dashboard on desktop viewport
-Then I should find the sidebar main container
-And the sidebar header should exist (skipped - selector mismatch)
-And the sidebar content should exist (skipped - not implemented)
-And the sidebar footer should exist (skipped - not implemented)
+Then I should find the sidebar container
+And I should find the sidebar header
+And I should find the sidebar logo
+And I should find the sidebar content
+And I should find the sidebar footer (not implemented in component)
 ```
 
 ```gherkin:es
 Scenario: Sidebar del dashboard tiene selectores de estructura requeridos
 
-Given estoy logueado como usuario valido
+Given estoy logueado como usuario developer
 And estoy viendo el dashboard en viewport desktop
-Then deberia encontrar el contenedor principal del sidebar
-And deberia existir el header del sidebar (skipped - selectores desalineados)
-And deberia existir el contenido del sidebar (skipped - no implementado)
-And deberia existir el footer del sidebar (skipped - no implementado)
+Then deberia encontrar el contenedor del sidebar
+And deberia encontrar el header del sidebar
+And deberia encontrar el logo del sidebar
+And deberia encontrar el contenido del sidebar
+And deberia encontrar el footer del sidebar (no implementado en componente)
 ```
 
 ### Expected Results
-- `sidebar-main` selector exists (WORKING)
-- `sidebar-header` skipped - component uses `sidebar-header-section` instead
-- `sidebar-content` skipped - not implemented in Sidebar.tsx
-- `sidebar-footer` skipped - not implemented in Sidebar.tsx
+| Selector Path | POM Accessor | data-cy Value | Status |
+|---------------|--------------|---------------|--------|
+| dashboard.sidebar.container | dashboard.selectors.sidebarContainer | sidebar-main | Implemented |
+| dashboard.sidebar.header | dashboard.selectors.sidebarHeader | sidebar-header | Implemented |
+| dashboard.sidebar.logo | dashboard.selectors.sidebarLogo | sidebar-logo | Implemented |
+| dashboard.sidebar.content | dashboard.selectors.sidebarContent | sidebar-content | Implemented |
+| dashboard.sidebar.footer | dashboard.selectors.sidebarFooter | sidebar-footer | **NOT IMPLEMENTED** |
 
 ### Notes
-The Sidebar.tsx component uses these data-cy attributes:
-- `sidebar-main` - Main sidebar container (aligned with CORE_SELECTORS)
-- `sidebar-header-section` - NOT `sidebar-header`
-- `sidebar-logo` - Logo container
-- `sidebar-nav` - Navigation container
-- `sidebar-nav-items` - Navigation items wrapper
+- The sidebar footer selector is not currently implemented in Sidebar.tsx component
+- Sidebar is only visible on desktop viewports when authenticated
+- Component file: `packages/core/src/components/dashboard/Sidebar.tsx`
 
 ---
 
-## @test SEL_DBAR_DOC: Selector Documentation
+## Related Components
 
-### Metadata
-- **Priority:** Low
-- **Type:** Documentation
-- **Tags:** sidebar, documentation
-- **Grep:** `@ui-selectors` `@SEL_DBAR_DOC`
-- **Status:** Active
+| Component | File | Selectors |
+|-----------|------|-----------|
+| Sidebar | `packages/core/src/components/dashboard/Sidebar.tsx` | sidebar-main, sidebar-header, sidebar-logo, sidebar-content |
 
-```gherkin:en
-Scenario: Document all sidebar component selectors
+## Related POMs
 
-Given the sidebar selector tests are running
-Then the test should log all sidebar selectors
-And document which selectors are implemented vs defined in CORE_SELECTORS
-And document any selector/component mismatches
-```
-
-```gherkin:es
-Scenario: Documentar todos los selectores de componente sidebar
-
-Given los tests de selectores de sidebar estan corriendo
-Then el test deberia loguear todos los selectores de sidebar
-And documentar que selectores estan implementados vs definidos en CORE_SELECTORS
-And documentar cualquier desalineacion entre selectores y componentes
-```
-
-### Expected Results
-- Test logs all sidebar selectors for reference
-- Documents implemented vs not-implemented selectors
-- Notes selector naming mismatches
-
----
-
-## Known Issues
-
-### Selector/Component Misalignment
-
-| CORE_SELECTORS Path | Expected data-cy | Component Uses | Status |
-|---------------------|-----------------|----------------|--------|
-| `dashboard.sidebar.main` | `sidebar-main` | `sidebar-main` | ✅ Aligned |
-| `dashboard.sidebar.header` | `sidebar-header` | `sidebar-header-section` | ⚠️ Mismatch |
-| `dashboard.sidebar.content` | `sidebar-content` | N/A | ❌ Not implemented |
-| `dashboard.sidebar.footer` | `sidebar-footer` | N/A | ❌ Not implemented |
-
-### Recommendation
-Future fix should either:
-1. Update CORE_SELECTORS to match component (`sidebar-header-section`)
-2. Update component to match CORE_SELECTORS (`sidebar-header`)
-3. Add missing selectors to component (`sidebar-content`, `sidebar-footer`)
+| POM | File | Usage |
+|-----|------|-------|
+| DashboardPOM | `themes/default/tests/cypress/src/features/DashboardPOM.ts` | Sidebar selectors and methods |
