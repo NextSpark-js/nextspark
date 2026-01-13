@@ -36,7 +36,7 @@ export function ApiKeyDisplay({ apiKey, keyName, warning, onClose }: ApiKeyDispl
   const maskedKey = apiKey.substring(0, 16) + '••••••••••••••••••••••••••••••••••••••••••••••••••••';
 
   return (
-    <Card className="border-green-200 bg-green-50" data-cy={sel('settings.apiKeys.newKeyDisplay')}>
+    <Card className="border-green-200 bg-green-50" data-cy={sel('settings.apiKeys.newKeyDisplay.container')}>
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -98,7 +98,7 @@ export function ApiKeyDisplay({ apiKey, keyName, warning, onClose }: ApiKeyDispl
               onClick={copyToClipboard}
               variant={copied ? "default" : "outline"}
               className="shrink-0"
-              data-cy={sel('settings.apiKeys.copyKey')}
+              data-cy={sel('settings.apiKeys.newKeyDisplay.copyButton')}
             >
               <Copy className="h-4 w-4 mr-2" />
               {copied ? 'Copiado!' : 'Copiar'}

@@ -74,7 +74,7 @@ function TeamsSettingsPage() {
     <>
       <div
         className="max-w-4xl space-y-6"
-        data-cy={sel('settings.teams.main')}
+        data-cy={sel('settings.teams.container')}
       >
         {/* Header */}
         <header data-cy={sel('settings.teams.header')}>
@@ -91,7 +91,7 @@ function TeamsSettingsPage() {
 
         {/* Single-user mode: show simplified view */}
         {isSingleUserMode && currentTeam && (
-          <Card data-cy={sel('settings.teams.singleUser')}>
+          <Card data-cy={sel('settings.teams.singleUserMode')}>
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5" aria-hidden="true" />
@@ -120,7 +120,7 @@ function TeamsSettingsPage() {
 
         {/* Teams List Card - only show if not single-user mode */}
         {!isSingleUserMode && (
-        <Card data-cy={sel('settings.teams.teamsList')}>
+        <Card data-cy={sel('settings.teams.list.container')}>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -199,7 +199,7 @@ function TeamsSettingsPage() {
 
         {/* Selected Team Details - only show if not single-user mode */}
         {!isSingleUserMode && selectedMembership && (
-          <Card data-cy={sel('settings.teams.teamDetails')}>
+          <Card data-cy={sel('settings.teams.list.details', { id: selectedMembership.team.id })}>
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Settings className="h-5 w-5" aria-hidden="true" />

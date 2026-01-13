@@ -365,7 +365,7 @@ function NotificationsPage() {
               <div
                 key={index}
                 className="space-y-6"
-                data-cy={sel('settings.notifications.category', { category: type.category.toLowerCase().replace(/\s+/g, '-') })}
+                data-cy={sel('settings.notifications.category.container', { category: type.category.toLowerCase().replace(/\s+/g, '-') })}
               >
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                   {type.icon}

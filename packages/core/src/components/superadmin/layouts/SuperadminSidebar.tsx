@@ -172,7 +172,7 @@ export function SuperadminSidebar() {
             <Link
               key={item.title}
               href={item.href}
-              data-cy={item.selectorKey ? sel(`superadmin.navigation.${item.selectorKey}`) : undefined}
+              data-cy={item.selectorKey ? sel(`superadmin.sidebar.nav.${item.selectorKey}`) : undefined}
               className={cn(
                 "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
                 "hover:bg-accent hover:text-accent-foreground",
@@ -208,7 +208,7 @@ export function SuperadminSidebar() {
           )}
           title={isCollapsed ? "Exit Super Admin" : "Return to main dashboard"}
           aria-label="Exit Super Admin and return to main dashboard"
-          data-cy={sel('superadmin.navigation.exitToDashboard')}
+          data-cy={sel('superadmin.sidebar.exitButton')}
         >
           <ArrowLeft className="h-5 w-5 flex-shrink-0" />
           {!isCollapsed && (

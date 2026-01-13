@@ -142,9 +142,9 @@ export function CreateApiKeyDialog({ open, onClose, onSuccess }: CreateApiKeyDia
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-cy={sel('settings.apiKeys.createDialog')}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-cy={sel('settings.apiKeys.createDialog.container')}>
         <DialogHeader>
-          <DialogTitle data-cy={sel('settings.apiKeys.createSubmit')}>Crear nueva API Key</DialogTitle>
+          <DialogTitle>Crear nueva API Key</DialogTitle>
           <DialogDescription>
             Crea una API key para acceder a los endpoints externos de forma segura.
           </DialogDescription>
@@ -160,7 +160,7 @@ export function CreateApiKeyDialog({ open, onClose, onSuccess }: CreateApiKeyDia
               onChange={(e) => setName(e.target.value)}
               placeholder="ej. Mi aplicación móvil"
               maxLength={100}
-              data-cy={sel('settings.apiKeys.keyName')}
+              data-cy={sel('settings.apiKeys.createDialog.nameInput')}
             />
             <p className="text-xs text-muted-foreground">
               Un nombre descriptivo para identificar esta API key
@@ -194,7 +194,7 @@ export function CreateApiKeyDialog({ open, onClose, onSuccess }: CreateApiKeyDia
           </div>
 
           {/* Scopes Selection */}
-          <div className="space-y-4" data-cy={sel('settings.apiKeys.keyScopes')}>
+          <div className="space-y-4" data-cy={sel('settings.apiKeys.createDialog.scopesContainer')}>
             <div>
               <Label>Permisos (Scopes)</Label>
               <p className="text-xs text-muted-foreground">
@@ -249,7 +249,7 @@ export function CreateApiKeyDialog({ open, onClose, onSuccess }: CreateApiKeyDia
                             onCheckedChange={(checked: boolean | 'indeterminate') =>
                               handleScopeToggle(scope, checked as boolean)
                             }
-                            data-cy={sel('settings.apiKeys.scopeOption', { scope })}
+                            data-cy={sel('settings.apiKeys.createDialog.scopeOption', { scope })}
                           />
                           <Label htmlFor={scope} className="text-sm">
                             <code className="text-xs bg-muted px-1 py-0.5 rounded mr-2">
@@ -292,14 +292,14 @@ export function CreateApiKeyDialog({ open, onClose, onSuccess }: CreateApiKeyDia
           </Alert>
         </form>
 
-        <DialogFooter data-cy={sel('settings.apiKeys.dialogFooter')}>
+        <DialogFooter data-cy={sel('settings.apiKeys.createDialog.footer')}>
           <Button variant="outline" onClick={handleClose} disabled={createApiKey.isPending}>
             Cancelar
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={createApiKey.isPending || selectedScopes.length === 0 || !name.trim()}
-            data-cy={sel('settings.apiKeys.createSubmit')}
+            data-cy={sel('settings.apiKeys.createDialog.submitButton')}
           >
             {createApiKey.isPending ? 'Creando...' : 'Crear API Key'}
           </Button>

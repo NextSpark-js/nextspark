@@ -386,7 +386,7 @@ function UsersPage() {
           onChange={handleSearchChange}
           placeholder="Search by name or email..."
           className="w-full max-w-sm"
-          data-cy={sel('superadmin.users.search')}
+          data-cy={sel('superadmin.users.filters.search')}
         />
 
         {activeTab === "users" && (
@@ -397,7 +397,7 @@ function UsersPage() {
             label="Role"
             allLabel="All Roles"
             showIcon={false}
-            data-cy="users-role-filter"
+            data-cy={sel('superadmin.users.filters.roleFilter')}
           />
         )}
 
@@ -408,7 +408,7 @@ function UsersPage() {
           label="Status"
           allLabel="All Status"
           showIcon={false}
-          data-cy="users-status-filter"
+          data-cy={sel('superadmin.users.filters.statusFilter')}
         />
 
         {hasActiveFilters && (
@@ -416,7 +416,7 @@ function UsersPage() {
             variant="ghost"
             size="sm"
             onClick={clearFilters}
-            data-cy="clear-filters-btn"
+            data-cy={sel('superadmin.users.filters.clearButton')}
           >
             Clear filters
           </Button>
@@ -463,6 +463,7 @@ function UsersPage() {
                   limit={usersData.pagination.limit}
                   onPageChange={setPage}
                   onLimitChange={handleLimitChange}
+                  context="users"
                 />
               )}
             </CardContent>
@@ -496,6 +497,7 @@ function UsersPage() {
                     limit={usersData.pagination.limit}
                     onPageChange={setPage}
                     onLimitChange={handleLimitChange}
+                    context="users"
                   />
                 </div>
               )}

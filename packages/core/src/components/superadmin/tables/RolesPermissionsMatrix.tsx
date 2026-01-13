@@ -170,7 +170,7 @@ export function RolesPermissionsMatrix({
               {permissionsByCategory[category].map((permission) => (
                 <TableRow
                   key={permission}
-                  data-cy={sel('superadmin.permissions.row', { permission: permission.replace(/\./g, '-') })}
+                  data-cy={sel('superadmin.teamRoles.rbac.matrix.permissionRow', { permission: permission.replace(/\./g, '-') })}
                   className="hover:bg-muted/30"
                 >
                   <TableCell className="font-mono text-sm text-muted-foreground pl-6">

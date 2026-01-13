@@ -94,7 +94,7 @@ export function SettingsSidebar({ className }: SettingsSidebarProps) {
         className={cn("space-y-2", className)}
         role="navigation"
         aria-label="Navegación de configuración"
-                data-cy={sel('settings.sidebar.main')}
+                data-cy={sel('settings.sidebar.container')}
       >
         <div className="px-3 py-2">
           <header
@@ -118,7 +118,7 @@ export function SettingsSidebar({ className }: SettingsSidebarProps) {
             <div
               className="space-y-1"
               role="list"
-                            data-cy={sel('settings.sidebar.navItems')}
+                            data-cy={sel('settings.sidebar.nav.items')}
             >
               {filteredNavigation.map((item) => {
                 const isActive = pathname === item.href
@@ -146,7 +146,7 @@ export function SettingsSidebar({ className }: SettingsSidebarProps) {
                         ? "bg-accent text-accent-foreground"
                         : "text-muted-foreground hover:bg-accent/50"
                     )}
-                                        data-cy={sel('settings.sidebar.navItem', { section: item.name.toLowerCase() })}
+                                        data-cy={sel('settings.sidebar.nav.item', { section: item.name.toLowerCase() })}
                     data-nav-item={item.name.toLowerCase()}
                     data-active={isActive}
                   >

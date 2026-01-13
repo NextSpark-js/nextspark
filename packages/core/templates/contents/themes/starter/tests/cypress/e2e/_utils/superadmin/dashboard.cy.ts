@@ -58,9 +58,9 @@ describe('Admin - Superadmin Dashboard', {
 
       // 2. Validate navigation items exist
       superadmin.assertNavVisible()
-      cy.get(superadmin.selectors.navDashboard).should('be.visible')
-      cy.get(superadmin.selectors.navUsers).should('be.visible')
-      cy.get(superadmin.selectors.navTeams).should('be.visible')
+      cy.get(superadmin.selectors.sidebar.nav.dashboard).should('be.visible')
+      cy.get(superadmin.selectors.sidebar.nav.users).should('be.visible')
+      cy.get(superadmin.selectors.sidebar.nav.teams).should('be.visible')
 
       cy.log('✅ All navigation items visible')
     })
@@ -74,14 +74,13 @@ describe('Admin - Superadmin Dashboard', {
       superadmin.visitDashboard()
 
       // 2. Validate stats cards (if they exist)
-      cy.get(superadmin.selectors.dashboardContainer).then(($container) => {
-        // Check for stats section or cards (defensive)
-        if ($container.find(superadmin.selectors.statsUsers).length > 0) {
-          cy.get(superadmin.selectors.statsUsers).should('be.visible')
-          cy.get(superadmin.selectors.statsTeams).should('be.visible')
-          cy.log('✅ Stats displayed')
+      cy.get(superadmin.selectors.dashboard.container).then(($container) => {
+        // Check for quick actions or system status (defensive)
+        if ($container.find(superadmin.selectors.dashboard.quickActions.container).length > 0) {
+          cy.get(superadmin.selectors.dashboard.quickActions.container).should('be.visible')
+          cy.log('✅ Quick actions displayed')
         } else {
-          cy.log('⚠️ Stats cards not found - dashboard uses different layout')
+          cy.log('⚠️ Quick actions not found - dashboard uses different layout')
         }
       })
 
@@ -132,8 +131,8 @@ describe('Admin - Superadmin Dashboard', {
       // 1. Visit Admin
       superadmin.visitDashboard()
 
-      // 2. Click exit button (using selector from DevAreaPOM pattern)
-      cy.get('[data-cy="superadmin-sidebar-exit-to-dashboard"]').click()
+      // 2. Click exit button
+      superadmin.clickExitButton()
 
       // 3. Validate redirect to main dashboard
       cy.url().should('include', '/dashboard')

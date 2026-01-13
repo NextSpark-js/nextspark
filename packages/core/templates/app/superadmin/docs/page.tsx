@@ -3,6 +3,7 @@ import { SuperadminDocsSidebar } from '@nextsparkjs/core/components/docs/superad
 import Link from 'next/link'
 import { FileText, Folder } from 'lucide-react'
 import type { Metadata } from 'next'
+import { sel } from '@nextsparkjs/core/selectors'
 
 export const metadata: Metadata = {
   title: 'Admin Documentation | Super Admin',
@@ -34,7 +35,7 @@ export default function SuperadminDocsPage() {
   const firstPage = firstSection.pages[0]
 
   return (
-    <div className="flex gap-8" data-cy="superadmin-docs-container">
+    <div className="flex gap-8" data-cy={sel('superadmin.docs.container')}>
       <aside className="hidden lg:block w-64 shrink-0">
         <SuperadminDocsSidebar sections={sections} />
       </aside>
@@ -59,7 +60,7 @@ export default function SuperadminDocsPage() {
                     key={page.slug}
                     href={`/superadmin/docs/${section.slug}/${page.slug}`}
                     className="flex items-center gap-2 p-2 rounded-md hover:bg-accent transition-colors"
-                    data-cy={`superadmin-docs-link-${page.slug}`}
+                    data-cy={sel('superadmin.docs.pageLink', { slug: page.slug })}
                   >
                     <FileText className="h-4 w-4 text-muted-foreground" />
                     <span>{page.title}</span>

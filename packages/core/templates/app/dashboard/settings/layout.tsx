@@ -76,14 +76,14 @@ function SettingsLayout({
 
       <div
         className="min-h-screen bg-gradient-to-b from-background to-muted/20"
-        data-cy={sel('settings.layout.main')}
+        data-cy={sel('settings.sidebar.layout.main')}
       >
         <div className="max-w-7xl mx-auto p-4 lg:p-6 pt-16 pb-24 lg:pt-6 lg:pb-6">
           {/* Back Button - Desktop only */}
           <nav
             className="mb-6 hidden lg:block"
             aria-label={t('navigation.ariaLabel')}
-            data-cy={sel('settings.layout.nav')}
+            data-cy={sel('settings.sidebar.nav.container')}
           >
             <Link href="/dashboard">
               <Button
@@ -92,7 +92,7 @@ function SettingsLayout({
                 className="gap-2"
                 onClick={handleBackToDashboard}
                 aria-label={t('navigation.backToDashboard')}
-                data-cy={sel('settings.layout.backToDashboard')}
+                data-cy={sel('settings.sidebar.backButton')}
               >
                 <ArrowLeft className="h-4 w-4" aria-hidden="true" />
                 {t('navigation.backButton')}
@@ -103,7 +103,7 @@ function SettingsLayout({
           {/* Header - Desktop only */}
           <header
             className="mb-8 hidden lg:block"
-            data-cy={sel('settings.layout.header')}
+            data-cy={sel('settings.sidebar.layout.header')}
           >
             <h1
               className="text-3xl font-bold"
@@ -122,13 +122,13 @@ function SettingsLayout({
           <main
             className="flex flex-col lg:flex-row gap-0 lg:gap-8"
             aria-labelledby="settings-main-heading"
-            data-cy={sel('settings.layout.contentArea')}
+            data-cy={sel('settings.sidebar.layout.contentArea')}
           >
             {/* Settings Sidebar - Desktop only */}
             <aside
               className="w-64 hidden lg:block"
               aria-label={t('layout.sidebarLabel')}
-              data-cy={sel('settings.layout.sidebar')}
+              data-cy={sel('settings.sidebar.container')}
             >
               <SettingsSidebar />
             </aside>
@@ -137,7 +137,7 @@ function SettingsLayout({
             <section
               className="flex-1 w-full"
               aria-label={t('layout.contentLabel')}
-              data-cy={sel('settings.layout.pageContent')}
+              data-cy={sel('settings.sidebar.layout.pageContent')}
             >
               {children}
             </section>

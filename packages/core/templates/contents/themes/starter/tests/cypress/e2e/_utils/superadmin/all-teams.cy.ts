@@ -53,9 +53,9 @@ describe('Sector7 - All Teams Management', {
       superadmin.visitTeams()
 
       // 2. Validate teams list/table exists
-      cy.get(superadmin.selectors.teamsContainer).then(($container) => {
+      cy.get(superadmin.selectors.teams.container).then(($container) => {
         // Check for list or table of teams
-        const hasTable = $container.find(superadmin.selectors.teamsTable).length > 0
+        const hasTable = $container.find(superadmin.selectors.teams.table.element).length > 0
         const hasRows = $container.find('[data-cy^="superadmin-teams-row-"]').length > 0
         if (hasTable || hasRows) {
           cy.log('✅ Teams displayed in list')
@@ -75,8 +75,8 @@ describe('Sector7 - All Teams Management', {
 
       // 2. Find and click first team row
       cy.get('body').then(($body) => {
-        if ($body.find('[data-cy^="superadmin-team-row"]').length > 0) {
-          cy.get('[data-cy^="superadmin-team-row"]').first().click()
+        if ($body.find('[data-cy^="superadmin-teams-row"]').length > 0) {
+          cy.get('[data-cy^="superadmin-teams-row"]').first().click()
 
           // 3. Validate team details view
           cy.url().should('include', '/superadmin/teams/')
@@ -98,7 +98,7 @@ describe('Sector7 - All Teams Management', {
 
       // 2. Check if search exists
       cy.get('body').then(($body) => {
-        if ($body.find(superadmin.selectors.teamsSearch).length > 0) {
+        if ($body.find(superadmin.selectors.teams.filters.search).length > 0) {
           superadmin.searchTeams('Test')
 
           // 3. Wait for filter to apply
@@ -120,8 +120,8 @@ describe('Sector7 - All Teams Management', {
       superadmin.visitTeams()
 
       // 2. Check for member count display
-      cy.get(superadmin.selectors.teamsContainer).within(() => {
-        cy.get('[data-cy^="superadmin-team-row"]').first().then(($team) => {
+      cy.get(superadmin.selectors.teams.container).within(() => {
+        cy.get('[data-cy^="superadmin-teams-row"]').first().then(($team) => {
           // Check for member count indicator
           if ($team.find('[data-cy="team-member-count"]').length > 0) {
             cy.wrap($team).find('[data-cy="team-member-count"]').should('be.visible')
@@ -160,7 +160,7 @@ describe('Sector7 - All Teams Management', {
       superadmin.visitTeams()
 
       // 2. Check for plan indicator
-      cy.get(superadmin.selectors.teamsContainer).then(($container) => {
+      cy.get(superadmin.selectors.teams.container).then(($container) => {
         if ($container.find('[data-cy^="team-plan-"]').length > 0) {
           cy.get('[data-cy^="team-plan-"]').first().should('be.visible')
           cy.log('✅ Team plan displayed')

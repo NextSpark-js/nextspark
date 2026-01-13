@@ -148,7 +148,7 @@ export function PlanFeaturesMatrix({
           {featureSlugs.map((featureSlug) => (
             <TableRow
               key={featureSlug}
-              data-cy={sel('superadmin.planFeatures.featureRow', { slug: featureSlug })}
+              data-cy={sel('superadmin.teamRoles.plans.matrix.featureRow', { slug: featureSlug })}
               className="hover:bg-muted/30"
             >
               <TableCell className="font-medium text-sm text-muted-foreground pl-6">
@@ -187,7 +187,7 @@ export function PlanFeaturesMatrix({
             return (
               <TableRow
                 key={limitSlug}
-                data-cy={sel('superadmin.planFeatures.limitRow', { slug: limitSlug })}
+                data-cy={sel('superadmin.teamRoles.plans.matrix.limitRow', { slug: limitSlug })}
                 className="hover:bg-muted/30"
               >
                 <TableCell className="font-medium text-sm text-muted-foreground pl-6">

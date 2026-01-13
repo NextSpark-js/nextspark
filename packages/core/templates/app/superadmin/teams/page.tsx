@@ -189,7 +189,7 @@ function TeamsPage() {
           onChange={handleSearchChange}
           placeholder="Search teams by name or owner email..."
           className="w-full max-w-sm"
-          data-cy={sel('superadmin.teams.search')}
+          data-cy={sel('superadmin.teams.filters.search')}
         />
         {searchQuery && (
           <Button
@@ -199,7 +199,7 @@ function TeamsPage() {
               setSearchQuery("");
               setPage(1);
             }}
-            data-cy="clear-search-btn"
+            data-cy={sel('superadmin.teams.filters.clearButton')}
           >
             Clear
           </Button>
@@ -244,6 +244,7 @@ function TeamsPage() {
                   limit={pagination.limit}
                   onPageChange={setPage}
                   onLimitChange={handleLimitChange}
+                  context="teams"
                 />
               )}
             </CardContent>
@@ -271,6 +272,7 @@ function TeamsPage() {
                   limit={pagination.limit}
                   onPageChange={setPage}
                   onLimitChange={handleLimitChange}
+                  context="teams"
                 />
               )}
             </CardContent>

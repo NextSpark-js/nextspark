@@ -20,6 +20,8 @@ interface PaginationControlsProps {
   onLimitChange?: (limit: number) => void;
   showPageSize?: boolean;
   pageSizeOptions?: number[];
+  /** Context for selectors: 'users' | 'teams' | 'subscriptions' */
+  context: 'users' | 'teams' | 'subscriptions';
 }
 
 /**
@@ -36,6 +38,7 @@ export function PaginationControls({
   onLimitChange,
   showPageSize = true,
   pageSizeOptions = [10, 20, 50, 100],
+  context,
 }: PaginationControlsProps) {
   const startItem = total === 0 ? 0 : (page - 1) * limit + 1;
   const endItem = Math.min(page * limit, total);
@@ -67,7 +70,7 @@ export function PaginationControls({
               value={String(limit)}
               onValueChange={(value: string) => onLimitChange(Number(value))}
             >
-              <SelectTrigger className="h-8 w-[70px]" data-cy={sel('superadmin.pagination.pageSize')}>
+              <SelectTrigger className="h-8 w-[70px]" data-cy={sel(`superadmin.${context}.pagination.pageSize`)}>
                 <SelectValue placeholder={String(limit)} />
               </SelectTrigger>
               <SelectContent>
@@ -94,7 +97,7 @@ export function PaginationControls({
             className="h-8 w-8"
             onClick={() => onPageChange(1)}
             disabled={!canGoPrevious}
-            data-cy={sel('superadmin.pagination.first')}
+            data-cy={sel(`superadmin.${context}.pagination.first`)}
           >
             <ChevronsLeft className="h-4 w-4" />
             <span className="sr-only">First page</span>
@@ -105,7 +108,7 @@ export function PaginationControls({
             className="h-8 w-8"
             onClick={() => onPageChange(page - 1)}
             disabled={!canGoPrevious}
-            data-cy={sel('superadmin.pagination.prev')}
+            data-cy={sel(`superadmin.${context}.pagination.prev`)}
           >
             <ChevronLeft className="h-4 w-4" />
             <span className="sr-only">Previous page</span>
@@ -116,7 +119,7 @@ export function PaginationControls({
             className="h-8 w-8"
             onClick={() => onPageChange(page + 1)}
             disabled={!canGoNext}
-            data-cy={sel('superadmin.pagination.next')}
+            data-cy={sel(`superadmin.${context}.pagination.next`)}
           >
             <ChevronRight className="h-4 w-4" />
             <span className="sr-only">Next page</span>
@@ -127,7 +130,7 @@ export function PaginationControls({
             className="h-8 w-8"
             onClick={() => onPageChange(totalPages)}
             disabled={!canGoNext}
-            data-cy={sel('superadmin.pagination.last')}
+            data-cy={sel(`superadmin.${context}.pagination.last`)}
           >
             <ChevronsRight className="h-4 w-4" />
             <span className="sr-only">Last page</span>

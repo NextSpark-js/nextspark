@@ -65,7 +65,7 @@ function SettingsPage() {
                 key={page.key}
                 href={`/dashboard/settings/${page.key}`}
                 className="block p-6 rounded-lg border border-border bg-card hover:bg-accent transition-colors group"
-                data-cy={sel('settings.overview.item', { key: page.key })}
+                data-cy={sel('settings.overview.card', { key: page.key })}
               >
                 <div className="flex items-start gap-4">
                   <div className="flex-shrink-0">

@@ -42,16 +42,16 @@ describe('Superadmin Selectors Validation', { tags: ['@ui-selectors', '@superadm
     })
 
     it('should find superadmin container', () => {
-      cy.get(superadmin.selectors.navContainer).should('exist')
+      cy.get(superadmin.selectors.container).should('exist')
     })
 
     it('should find dashboard container', () => {
-      cy.get(superadmin.selectors.dashboardContainer).should('exist')
+      cy.get(superadmin.selectors.dashboard.container).should('exist')
     })
   })
 
   // ============================================
-  // SEL_SADM_002: SUPERADMIN NAVIGATION
+  // SEL_SADM_002: SUPERADMIN NAVIGATION (SIDEBAR)
   // ============================================
   describe('SEL_SADM_002: Superadmin Navigation', { tags: '@SEL_SADM_002' }, () => {
     beforeEach(() => {
@@ -61,27 +61,27 @@ describe('Superadmin Selectors Validation', { tags: ['@ui-selectors', '@superadm
     })
 
     it('should find nav dashboard link', () => {
-      cy.get(superadmin.selectors.navDashboard).should('exist')
+      cy.get(superadmin.selectors.sidebar.nav.dashboard).should('exist')
     })
 
     it('should find nav users link', () => {
-      cy.get(superadmin.selectors.navUsers).should('exist')
+      cy.get(superadmin.selectors.sidebar.nav.users).should('exist')
     })
 
     it('should find nav teams link', () => {
-      cy.get(superadmin.selectors.navTeams).should('exist')
+      cy.get(superadmin.selectors.sidebar.nav.teams).should('exist')
     })
 
     it('should find nav team-roles link', () => {
-      cy.get(superadmin.selectors.navTeamRoles).should('exist')
+      cy.get(superadmin.selectors.sidebar.nav.teamRoles).should('exist')
     })
 
     it('should find nav subscriptions link', () => {
-      cy.get(superadmin.selectors.navSubscriptions).should('exist')
+      cy.get(superadmin.selectors.sidebar.nav.subscriptions).should('exist')
     })
 
     it('should find exit to dashboard link', () => {
-      cy.get(superadmin.selectors.exitToDashboard).should('exist')
+      cy.get(superadmin.selectors.sidebar.exitButton).should('exist')
     })
   })
 
@@ -96,15 +96,15 @@ describe('Superadmin Selectors Validation', { tags: ['@ui-selectors', '@superadm
     })
 
     it('should find users container', () => {
-      cy.get(superadmin.selectors.usersContainer).should('exist')
+      cy.get(superadmin.selectors.users.container).should('exist')
     })
 
     it('should find users table', () => {
-      cy.get(superadmin.selectors.usersTable).should('exist')
+      cy.get(superadmin.selectors.users.table.element).should('exist')
     })
 
     it('should find users search input', () => {
-      cy.get(superadmin.selectors.usersSearch).should('exist')
+      cy.get(superadmin.selectors.users.filters.search).should('exist')
     })
   })
 
@@ -119,15 +119,15 @@ describe('Superadmin Selectors Validation', { tags: ['@ui-selectors', '@superadm
     })
 
     it('should find teams container', () => {
-      cy.get(superadmin.selectors.teamsContainer).should('exist')
+      cy.get(superadmin.selectors.teams.container).should('exist')
     })
 
     it('should find teams table', () => {
-      cy.get(superadmin.selectors.teamsTable).should('exist')
+      cy.get(superadmin.selectors.teams.table.element).should('exist')
     })
 
     it('should find teams search input', () => {
-      cy.get(superadmin.selectors.teamsSearch).should('exist')
+      cy.get(superadmin.selectors.teams.filters.search).should('exist')
     })
   })
 
@@ -142,19 +142,19 @@ describe('Superadmin Selectors Validation', { tags: ['@ui-selectors', '@superadm
     })
 
     it('should find subscriptions container', () => {
-      cy.get(superadmin.selectors.subscriptionsContainer).should('exist')
+      cy.get(superadmin.selectors.subscriptions.container).should('exist')
     })
 
     it('should find MRR stat', () => {
-      cy.get(superadmin.selectors.subscriptionsMrr).should('exist')
+      cy.get(superadmin.selectors.subscriptions.stats.mrr).should('exist')
     })
 
     it('should find plan distribution section', () => {
-      cy.get(superadmin.selectors.subscriptionsPlanDistribution).should('exist')
+      cy.get(superadmin.selectors.subscriptions.stats.planDistribution).should('exist')
     })
 
     it('should find active count stat', () => {
-      cy.get(superadmin.selectors.subscriptionsActiveCount).should('exist')
+      cy.get(superadmin.selectors.subscriptions.stats.activeCount).should('exist')
     })
   })
 
@@ -169,25 +169,25 @@ describe('Superadmin Selectors Validation', { tags: ['@ui-selectors', '@superadm
       cy.url().should('include', '/superadmin/users')
     })
 
-    it('should have valid userRow selector pattern', () => {
+    it('should have valid users.table.row selector pattern', () => {
       // Just verify the selector function returns a valid string
-      const selector = superadmin.selectors.userRow('test-id')
-      expect(selector).to.include('superadmin-user-row')
+      const selector = superadmin.selectors.users.table.row('test-id')
+      expect(selector).to.include('superadmin-users-row')
     })
 
-    it('should have valid userView selector pattern', () => {
-      const selector = superadmin.selectors.userView('test-id')
-      expect(selector).to.include('superadmin-user-view')
+    it('should have valid users.table.viewButton selector pattern', () => {
+      const selector = superadmin.selectors.users.table.viewButton('test-id')
+      expect(selector).to.include('superadmin-users-view')
     })
 
-    it('should have valid teamRow selector pattern', () => {
-      const selector = superadmin.selectors.teamRow('test-id')
-      expect(selector).to.include('superadmin-team-row')
+    it('should have valid teams.table.row selector pattern', () => {
+      const selector = superadmin.selectors.teams.table.row('test-id')
+      expect(selector).to.include('superadmin-teams-row')
     })
 
-    it('should have valid subscriptionsPlanCount selector pattern', () => {
-      const selector = superadmin.selectors.subscriptionsPlanCount('free')
-      expect(selector).to.include('superadmin-subscriptions-plan-count')
+    it('should have valid subscriptions.stats.planCount selector pattern', () => {
+      const selector = superadmin.selectors.subscriptions.stats.planCount('free')
+      expect(selector).to.include('superadmin-subscriptions-plan')
     })
   })
 })

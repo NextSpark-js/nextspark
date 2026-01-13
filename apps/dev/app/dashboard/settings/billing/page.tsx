@@ -78,7 +78,7 @@ function BillingPage() {
 
       <div
         className="max-w-4xl"
-        data-cy={sel('settings.billing.main')}
+        data-cy={sel('settings.billing.container')}
       >
         <div className="space-y-6">
           {/* Header */}
@@ -139,7 +139,7 @@ function BillingPage() {
                   <Link href="/pricing">
                     <Button
                       onClick={handleUpgrade}
-                      data-cy={sel('settings.billing.upgradePlan')}
+                      data-cy={sel('settings.billing.currentPlan.upgradeButton')}
                     >
                       {t('billing.upgrade.button')}
                     </Button>
@@ -174,7 +174,7 @@ function BillingPage() {
                 <Button
                   variant="outline"
                   onClick={handleLoadMoreInvoices}
-                  data-cy={sel('settings.billing.invoicesLoadMore')}
+                  data-cy={sel('settings.billing.invoices.loadMoreButton')}
                 >
                   {t('billing.invoices.loadMore')}
                 </Button>
@@ -208,7 +208,7 @@ function BillingPage() {
               <Button
                 variant="outline"
                 onClick={handleAddPayment}
-                data-cy={sel('settings.billing.addPayment')}
+                data-cy={sel('settings.billing.paymentMethod.addButton')}
               >
                 <CreditCard className="mr-2 h-4 w-4" aria-hidden="true" />
                 {t('billing.paymentMethod.addButton')}

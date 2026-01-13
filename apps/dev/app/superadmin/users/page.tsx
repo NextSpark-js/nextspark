@@ -386,7 +386,7 @@ function UsersPage() {
           onChange={handleSearchChange}
           placeholder="Search by name or email..."
           className="w-full max-w-sm"
-          data-cy={sel('superadmin.users.search')}
+          data-cy={sel('superadmin.users.filters.search')}
         />
 
         {activeTab === "users" && (
@@ -463,6 +463,7 @@ function UsersPage() {
                   limit={usersData.pagination.limit}
                   onPageChange={setPage}
                   onLimitChange={handleLimitChange}
+                  context="users"
                 />
               )}
             </CardContent>
@@ -496,6 +497,7 @@ function UsersPage() {
                     limit={usersData.pagination.limit}
                     onPageChange={setPage}
                     onLimitChange={handleLimitChange}
+                    context="users"
                   />
                 </div>
               )}

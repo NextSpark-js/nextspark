@@ -54,11 +54,11 @@ describe('Superadmin - Subscriptions Overview', {
 
       // 2. Check for revenue metrics (defensive - page may not have these yet)
       cy.get('body').then(($body) => {
-        if ($body.find(superadmin.selectors.subscriptionsMrr).length > 0) {
-          cy.get(superadmin.selectors.subscriptionsMrr).should('be.visible')
+        if ($body.find(superadmin.selectors.subscriptions.stats.mrr).length > 0) {
+          cy.get(superadmin.selectors.subscriptions.stats.mrr).should('be.visible')
           cy.log('✅ MRR metric displayed')
-        } else if ($body.find(superadmin.selectors.subscriptionsRevenue).length > 0) {
-          cy.get(superadmin.selectors.subscriptionsRevenue).should('be.visible')
+        } else if ($body.find(superadmin.selectors.subscriptions.stats.mrr).length > 0) {
+          cy.get(superadmin.selectors.subscriptions.stats.mrr).should('be.visible')
           cy.log('✅ Revenue metric displayed')
         } else {
           // Check page loads at minimum
@@ -78,8 +78,8 @@ describe('Superadmin - Subscriptions Overview', {
 
       // 2. Check for plan distribution (defensive)
       cy.get('body').then(($body) => {
-        if ($body.find(superadmin.selectors.subscriptionsPlanDistribution).length > 0) {
-          cy.get(superadmin.selectors.subscriptionsPlanDistribution).should('be.visible')
+        if ($body.find(superadmin.selectors.subscriptions.stats.planDistribution).length > 0) {
+          cy.get(superadmin.selectors.subscriptions.stats.planDistribution).should('be.visible')
           cy.log('✅ Plan distribution displayed')
         } else if ($body.find('[data-cy^="superadmin-subscriptions-plan-count-"]').length > 0) {
           cy.get('[data-cy^="superadmin-subscriptions-plan-count-"]').first().should('be.visible')
@@ -101,8 +101,8 @@ describe('Superadmin - Subscriptions Overview', {
 
       // 2. Check for subscriptions count (defensive)
       cy.get('body').then(($body) => {
-        if ($body.find(superadmin.selectors.subscriptionsActiveCount).length > 0) {
-          cy.get(superadmin.selectors.subscriptionsActiveCount).should('be.visible')
+        if ($body.find(superadmin.selectors.subscriptions.stats.activeCount).length > 0) {
+          cy.get(superadmin.selectors.subscriptions.stats.activeCount).should('be.visible')
           cy.log('✅ Active subscriptions count displayed')
         } else {
           cy.url().should('include', '/superadmin/subscriptions')
@@ -121,9 +121,9 @@ describe('Superadmin - Subscriptions Overview', {
 
       // 2. Check for free/paid breakdown (defensive)
       cy.get('body').then(($body) => {
-        if ($body.find(superadmin.selectors.subscriptionsFreeTeams).length > 0) {
-          cy.get(superadmin.selectors.subscriptionsFreeTeams).should('be.visible')
-          cy.get(superadmin.selectors.subscriptionsPaidTeams).should('be.visible')
+        if ($body.find(superadmin.selectors.subscriptions.stats.planDistribution).length > 0) {
+          cy.get(superadmin.selectors.subscriptions.stats.planDistribution).should('be.visible')
+          cy.get(superadmin.selectors.subscriptions.stats.planDistribution).should('be.visible')
           cy.log('✅ Free vs paid breakdown displayed')
         } else {
           cy.url().should('include', '/superadmin/subscriptions')
@@ -142,8 +142,8 @@ describe('Superadmin - Subscriptions Overview', {
 
       // 2. Check for trial teams (defensive)
       cy.get('body').then(($body) => {
-        if ($body.find(superadmin.selectors.subscriptionsTrialTeams).length > 0) {
-          cy.get(superadmin.selectors.subscriptionsTrialTeams).should('be.visible')
+        if ($body.find(superadmin.selectors.subscriptions.stats.needsAttention).length > 0) {
+          cy.get(superadmin.selectors.subscriptions.stats.needsAttention).should('be.visible')
           cy.log('✅ Trial teams displayed')
         } else {
           cy.url().should('include', '/superadmin/subscriptions')
