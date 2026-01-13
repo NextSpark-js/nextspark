@@ -111,7 +111,8 @@
     "member": "Membre",
     "colaborator": "Collaborateur",
     "admin": "Administrateur",
-    "superadmin": "Super administrateur"
+    "superadmin": "Super administrateur",
+    "developer": "Developer"
   },
   "accessibility": {
     "navigation": {
