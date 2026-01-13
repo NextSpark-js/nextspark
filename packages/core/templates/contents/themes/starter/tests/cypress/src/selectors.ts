@@ -5,7 +5,7 @@
  * This is the single source of truth for Cypress tests in this theme.
  *
  * Architecture:
- * - Core selectors: `@nextsparkjs/testing/selectors`
+ * - Core selectors: `@nextsparkjs/core/selectors`
  * - Theme selectors: This file (extends core)
  * - POMs import: `import { cySelector } from '../selectors'`
  *
@@ -35,7 +35,7 @@
  * ```
  */
 
-import { createSelectorHelpers, CORE_SELECTORS } from '@nextsparkjs/testing/selectors'
+import { createSelectorHelpers, CORE_SELECTORS } from '@nextsparkjs/core/selectors'
 
 // =============================================================================
 // THEME SELECTORS
@@ -147,7 +147,7 @@ export type ThemeSelectorsType = typeof THEME_SELECTORS
 /**
  * Re-export types
  */
-export type { Replacements } from '@nextsparkjs/testing/selectors'
+export type { Replacements } from '@nextsparkjs/core/selectors'
 
 /**
  * Re-export CORE_SELECTORS for reference

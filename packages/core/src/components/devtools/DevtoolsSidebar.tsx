@@ -15,7 +15,8 @@ import {
   Layers,
   GitBranch,
   LayoutGrid,
-  Tag
+  Tag,
+  Clock
 } from "lucide-react";
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
@@ -97,6 +98,12 @@ export function DevtoolsSidebar() {
       href: "/devtools/api",
       icon: Layers,
       descriptionKey: "nav.apiDescription"
+    },
+    {
+      titleKey: "nav.scheduledActions",
+      href: "/devtools/scheduled-actions",
+      icon: Clock,
+      descriptionKey: "nav.scheduledActionsDescription"
     },
   ];
 

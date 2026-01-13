@@ -1,7 +1,8 @@
 /**
- * Selectors Module
+ * Core Selectors - SOURCE OF TRUTH
  *
- * Exports all selector-related utilities for testing.
+ * This is the central location for all selector definitions.
+ * The testing package re-exports from here.
  */
 
 // Factory and utilities
@@ -17,6 +18,9 @@ export {
 
 // Core selectors
 export { CORE_SELECTORS, type CoreSelectorsType } from './core-selectors'
+
+// Domain selectors (re-exported from core-selectors)
+export * from './domains'
 
 // Pre-bound helpers
 export {

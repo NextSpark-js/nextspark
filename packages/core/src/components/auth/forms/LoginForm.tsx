@@ -18,7 +18,7 @@ import { Separator } from '../../ui/separator'
 import { LastUsedBadge } from '../../ui/last-used-badge'
 import { Mail, Lock, Loader2, AlertCircle, Users } from 'lucide-react'
 import { GoogleIcon } from '../../ui/google-icon'
-import { createTestId, sel } from '../../../lib/test'
+import { sel } from '../../../lib/test'
 import { useTranslations } from 'next-intl'
 import { AuthTranslationPreloader } from '../../../lib/i18n/AuthTranslationPreloader'
 import { DevKeyring } from '../DevKeyring'
@@ -187,33 +187,28 @@ export function LoginForm() {
         aria-live="polite" 
         aria-atomic="true"
         className="sr-only"
-        {...createTestId('login', 'status', 'message') && { 'data-testid': createTestId('login', 'status', 'message') }}
-      >
+              >
         {statusMessage}
       </div>
 
       <Card
         className="w-full max-w-md"
-        data-testid={createTestId('login', 'card')}
-        data-cy={sel('auth.login.card')}
+                data-cy={sel('auth.login.card')}
       >
         <CardHeader
           className="space-y-1"
-          data-testid={createTestId('login', 'header')}
-          data-cy={sel('auth.login.header')}
+                    data-cy={sel('auth.login.header')}
         >
           <CardTitle 
             className="text-2xl font-bold"
             id="login-heading"
             role="heading"
             aria-level={1}
-            {...createTestId('login', 'title') && { 'data-testid': createTestId('login', 'title') }}
-          >
+                      >
             {t('login.title')}
           </CardTitle>
           <CardDescription 
-            {...createTestId('login', 'description') && { 'data-testid': createTestId('login', 'description') }}
-          >
+                      >
             {t('login.description')}
           </CardDescription>
         </CardHeader>
@@ -238,8 +233,7 @@ export function LoginForm() {
                 disabled={!!loadingProvider}
                 className="w-full mb-6"
                 aria-label={t('login.form.continueWithGoogleAria')}
-                data-testid={createTestId('login', 'google', 'button')}
-                data-cy={sel('auth.login.googleSignin')}
+                                data-cy={sel('auth.login.googleSignin')}
               >
                 {loadingProvider === 'google' ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
@@ -257,8 +251,7 @@ export function LoginForm() {
               disabled={!!loadingProvider}
               className="w-full mb-6"
               aria-label={t('login.form.continueWithGoogleAria')}
-              data-testid={createTestId('login', 'google', 'button')}
-              data-cy={sel('auth.login.googleSignin')}
+                            data-cy={sel('auth.login.googleSignin')}
             >
               {loadingProvider === 'google' ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
@@ -279,8 +272,7 @@ export function LoginForm() {
                     onClick={() => setShowEmailForm(true)}
                     disabled={!!loadingProvider}
                     className="text-sm text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed"
-                    data-testid={createTestId('login', 'show-email', 'button')}
-                    data-cy={sel('auth.login.showEmail')}
+                                        data-cy={sel('auth.login.showEmail')}
                   >
                     {t('login.form.loginWithEmail', { defaultValue: 'Sign in with Email' })}
                   </button>
@@ -291,8 +283,7 @@ export function LoginForm() {
                   onClick={() => setShowEmailForm(true)}
                   disabled={!!loadingProvider}
                   className="text-sm text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed"
-                  data-testid={createTestId('login', 'show-email', 'button')}
-                  data-cy={sel('auth.login.showEmail')}
+                                    data-cy={sel('auth.login.showEmail')}
                 >
                   {t('login.form.loginWithEmail', { defaultValue: 'Sign in with Email' })}
                 </button>
@@ -318,14 +309,12 @@ export function LoginForm() {
             onSubmit={handleSubmit(onSubmit)}
             className="space-y-4"
             aria-labelledby="login-heading"
-            data-testid={createTestId('login', 'form')}
-            data-cy={sel('auth.login.form')}
+                        data-cy={sel('auth.login.form')}
           >
             <div className="space-y-2">
               <Label 
                 htmlFor="email"
-                {...createTestId('login', 'email', 'label') && { 'data-testid': createTestId('login', 'email', 'label') }}
-              >
+                              >
                 {t('login.form.email')}
               </Label>
               <div className="relative">
@@ -341,8 +330,7 @@ export function LoginForm() {
                   aria-required="true"
                   aria-describedby={errors.email ? "email-error" : undefined}
                   aria-invalid={errors.email ? "true" : "false"}
-                  data-testid={createTestId('login', 'email', 'input')}
-                  data-cy={sel('auth.login.emailInput')}
+                                    data-cy={sel('auth.login.emailInput')}
                 />
               </div>
               {errors.email && (
@@ -351,8 +339,7 @@ export function LoginForm() {
                   className="text-sm text-destructive"
                   role="alert"
                   aria-live="assertive"
-                  data-testid={createTestId('login', 'email', 'error')}
-                  data-cy={sel('auth.login.emailError')}
+                                    data-cy={sel('auth.login.emailError')}
                 >
                   {errors.email.message}
                 </p>
@@ -362,8 +349,7 @@ export function LoginForm() {
             <div className="space-y-2">
               <Label 
                 htmlFor="password"
-                {...createTestId('login', 'password', 'label') && { 'data-testid': createTestId('login', 'password', 'label') }}
-              >
+                              >
                 {t('login.form.password')}
               </Label>
               <div className="relative">
@@ -378,8 +364,7 @@ export function LoginForm() {
                   aria-required="true"
                   aria-describedby={errors.password ? "password-error" : undefined}
                   aria-invalid={errors.password ? "true" : "false"}
-                  data-testid={createTestId('login', 'password', 'input')}
-                  data-cy={sel('auth.login.passwordInput')}
+                                    data-cy={sel('auth.login.passwordInput')}
                 />
               </div>
               {errors.password && (
@@ -388,8 +373,7 @@ export function LoginForm() {
                   className="text-sm text-destructive"
                   role="alert"
                   aria-live="assertive"
-                  data-testid={createTestId('login', 'password', 'error')}
-                  data-cy={sel('auth.login.passwordError')}
+                                    data-cy={sel('auth.login.passwordError')}
                 >
                   {errors.password.message}
                 </p>
@@ -401,8 +385,7 @@ export function LoginForm() {
                 variant="destructive"
                 role="alert"
                 aria-live="assertive"
-                data-testid={createTestId('login', 'error', 'alert')}
-                data-cy={sel('auth.login.errorAlert')}
+                                data-cy={sel('auth.login.errorAlert')}
               >
                 <AlertCircle className="h-4 w-4" aria-hidden="true" />
                 <AlertDescription>{error}</AlertDescription>
@@ -411,20 +394,17 @@ export function LoginForm() {
 
             <div
               className="flex items-center justify-between"
-              data-testid={createTestId('login', 'options', 'section')}
-              data-cy={sel('auth.login.options')}
+                            data-cy={sel('auth.login.options')}
             >
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="remember"
-                  data-testid={createTestId('login', 'remember', 'checkbox')}
-                  data-cy={sel('auth.login.rememberCheckbox')}
+                                    data-cy={sel('auth.login.rememberCheckbox')}
                 />
                 <Label 
                   htmlFor="remember" 
                   className="text-sm font-normal cursor-pointer"
-                  {...createTestId('login', 'remember', 'label') && { 'data-testid': createTestId('login', 'remember', 'label') }}
-                >
+                                  >
                   {t('login.form.rememberMe')}
                 </Label>
               </div>
@@ -432,8 +412,7 @@ export function LoginForm() {
                 href="/forgot-password"
                 className="text-sm text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-accent"
                 aria-label={t('login.form.forgotPasswordAria')}
-                data-testid={createTestId('login', 'forgot', 'link')}
-                data-cy={sel('auth.login.forgotPassword')}
+                                data-cy={sel('auth.login.forgotPassword')}
               >
                 {t('login.form.forgotPassword')}
               </Link>
@@ -444,8 +423,7 @@ export function LoginForm() {
               disabled={!!loadingProvider}
               className="w-full"
               aria-describedby="submit-help"
-              data-testid={createTestId('login', 'submit', 'button')}
-              data-cy={sel('auth.login.submit')}
+                            data-cy={sel('auth.login.submit')}
             >
               {loadingProvider === 'email' ? (
                 <>
@@ -465,8 +443,7 @@ export function LoginForm() {
                     type="button"
                     onClick={() => setShowEmailForm(false)}
                     className="text-sm text-muted-foreground hover:text-primary focus:outline-none focus:ring-2 focus:ring-accent"
-                    data-testid={createTestId('login', 'hide-email', 'button')}
-                    data-cy={sel('auth.login.hideEmail')}
+                                        data-cy={sel('auth.login.hideEmail')}
                   >
                     {t('login.form.backToGoogle', { defaultValue: 'Back to main options' })}
                   </button>
@@ -476,8 +453,7 @@ export function LoginForm() {
           )}
         </CardContent>
         <CardFooter
-          data-testid={createTestId('login', 'footer')}
-          data-cy={sel('auth.login.footer')}
+                    data-cy={sel('auth.login.footer')}
         >
           <p className="text-sm text-muted-foreground text-center w-full">
             {t('login.footer.noAccount')}{' '}
@@ -485,8 +461,7 @@ export function LoginForm() {
               href="/signup" 
               className="text-primary hover:underline font-medium focus:outline-none focus:ring-2 focus:ring-accent"
               aria-label={t('login.footer.signUpAria')}
-              data-testid={createTestId('login', 'signup', 'link')}
-              data-cy={sel('auth.login.signupLink')}
+                            data-cy={sel('auth.login.signupLink')}
             >
               {t('login.footer.signUp')}
             </Link>

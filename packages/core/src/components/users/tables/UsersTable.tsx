@@ -281,7 +281,7 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
   }
 
   return (
-    <div className="rounded-md border" data-cy={sel('superadmin.users.table')}>
+    <div className="rounded-md border" data-cy={sel('superadmin.users.table.element')}>
       <Table>
         <TableHeader>
           <TableRow>
@@ -297,7 +297,7 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
           {users.map((user) => (
             <TableRow
               key={user.id}
-              data-cy={sel('superadmin.users.row', { id: user.id })}
+              data-cy={sel('superadmin.users.table.row', { id: user.id })}
               className="cursor-pointer hover:bg-muted/50"
               onClick={() => handleRowClick(user.id)}
             >

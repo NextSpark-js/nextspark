@@ -19,7 +19,7 @@ import { PasswordInput } from "@nextsparkjs/core/components/ui/password-input";
 import { Alert, AlertDescription } from "@nextsparkjs/core/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@nextsparkjs/core/components/ui/card";
 import { Checkbox } from "@nextsparkjs/core/components/ui/checkbox";
-import { createTestId, createCyId } from '@nextsparkjs/testing';
+import { sel } from '@nextsparkjs/core/selectors';
 import { useTranslations } from 'next-intl';
 import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
 
@@ -106,44 +106,39 @@ function UpdatePasswordPage() {
     return (
       <>
         {/* MANDATORY: Screen reader announcements */}
-        <div 
-          aria-live="polite" 
+        <div
+          aria-live="polite"
           aria-atomic="true"
           className="sr-only"
-          {...createTestId('password', 'status', 'message') && { 'data-testid': createTestId('password', 'status', 'message') }}
         >
           {statusMessage}
         </div>
 
-        <div 
+        <div
           className="max-w-4xl"
-          {...createTestId('password', 'success', 'container') && { 'data-testid': createTestId('password', 'success', 'container') }}
-          {...createCyId('password', 'success') && { 'data-cy': createCyId('password', 'success') }}
+          data-cy={sel('settings.password.successMessage')}
         >
           <div className="space-y-6">
-            <div 
+            <div
               className="text-center space-y-4"
               role="status"
               aria-live="polite"
             >
-              <div 
+              <div
                 className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto"
                 role="img"
                 aria-label={t('password.success.aria')}
-                {...createTestId('password', 'success', 'icon') && { 'data-testid': createTestId('password', 'success', 'icon') }}
               >
                 <CheckCircle className="w-8 h-8 text-green-600" aria-hidden="true" />
               </div>
               <div className="space-y-2">
-                <h1 
+                <h1
                   className="text-2xl font-bold"
-                  {...createTestId('password', 'success', 'title') && { 'data-testid': createTestId('password', 'success', 'title') }}
                 >
                   {t('password.success.title')}
                 </h1>
-                <p 
+                <p
                   className="text-muted-foreground"
-                  {...createTestId('password', 'success', 'description') && { 'data-testid': createTestId('password', 'success', 'description') }}
                 >
                   {t('password.success.description')}
                 </p>
@@ -158,79 +153,64 @@ function UpdatePasswordPage() {
   return (
     <>
       {/* MANDATORY: Screen reader announcements */}
-      <div 
-        aria-live="polite" 
+      <div
+        aria-live="polite"
         aria-atomic="true"
         className="sr-only"
-        {...createTestId('password', 'status', 'message') && { 'data-testid': createTestId('password', 'status', 'message') }}
       >
         {statusMessage}
       </div>
 
-      <div 
+      <div
         className="max-w-4xl"
-        {...createTestId('password', 'container') && { 'data-testid': createTestId('password', 'container') }}
-        {...createCyId('password', 'main') && { 'data-cy': createCyId('password', 'main') }}
+        data-cy={sel('settings.password.container')}
       >
         <div className="space-y-6">
           {/* Header */}
-          <header 
-            {...createTestId('password', 'header') && { 'data-testid': createTestId('password', 'header') }}
-            {...createCyId('password', 'header') && { 'data-cy': createCyId('password', 'header') }}
-          >
-            <h1 
+          <header>
+            <h1
               className="text-2xl font-bold"
               id="password-heading"
-              {...createTestId('password', 'title') && { 'data-testid': createTestId('password', 'title') }}
             >
               {t('password.title')}
             </h1>
-            <p 
+            <p
               className="text-muted-foreground mt-1"
-              {...createTestId('password', 'description') && { 'data-testid': createTestId('password', 'description') }}
             >
               {t('password.description')}
             </p>
           </header>
 
           <Card
-            {...createTestId('password', 'form', 'card') && { 'data-testid': createTestId('password', 'form', 'card') }}
-            {...createCyId('password', 'form') && { 'data-cy': createCyId('password', 'form') }}
+            data-cy={sel('settings.password.form')}
           >
             <CardHeader>
-              <CardTitle 
+              <CardTitle
                 id="password-form-title"
-                {...createTestId('password', 'form', 'title') && { 'data-testid': createTestId('password', 'form', 'title') }}
               >
                 {t('password.form.title')}
               </CardTitle>
-              <CardDescription
-                {...createTestId('password', 'form', 'description') && { 'data-testid': createTestId('password', 'form', 'description') }}
-              >
+              <CardDescription>
                 {t('password.form.description')}
               </CardDescription>
             </CardHeader>
             <CardContent>
               {error && (
-                <Alert 
-                  variant="destructive" 
+                <Alert
+                  variant="destructive"
                   className="mb-4"
                   role="alert"
                   aria-live="assertive"
-                  {...createTestId('password', 'error', 'alert') && { 'data-testid': createTestId('password', 'error', 'alert') }}
-                  {...createCyId('password', 'error') && { 'data-cy': createCyId('password', 'error') }}
                 >
                   <AlertCircle className="h-4 w-4" aria-hidden="true" />
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
 
-              <form 
-                onSubmit={handleSubmit(onSubmit)} 
+              <form
+                onSubmit={handleSubmit(onSubmit)}
                 className="space-y-6"
                 aria-labelledby="password-form-title"
-                {...createTestId('password', 'form', 'element') && { 'data-testid': createTestId('password', 'form', 'element') }}
-                {...createCyId('password', 'form-element') && { 'data-cy': createCyId('password', 'form-element') }}
               >
               <div className="space-y-2">
                 <Label htmlFor="currentPassword">{t('password.form.currentPassword')}</Label>
@@ -241,8 +221,7 @@ function UpdatePasswordPage() {
                     placeholder={t('password.form.currentPasswordPlaceholder')}
                     aria-required="true"
                     aria-describedby={errors.currentPassword ? "currentPassword-error" : undefined}
-                    {...createTestId('password', 'current', 'input') && { 'data-testid': createTestId('password', 'current', 'input') }}
-                    {...createCyId('password', 'current-input') && { 'data-cy': createCyId('password', 'current-input') }}
+                    data-cy={sel('settings.password.currentPassword')}
                   />
                 {errors.currentPassword && (
                   <p className="text-sm text-destructive">{errors.currentPassword.message}</p>
@@ -283,8 +262,6 @@ function UpdatePasswordPage() {
                   <Checkbox
                     id="revokeOtherSessions"
                     {...register("revokeOtherSessions")}
-                    {...createTestId('password', 'revoke', 'checkbox') && { 'data-testid': createTestId('password', 'revoke', 'checkbox') }}
-                    {...createCyId('password', 'revoke-sessions') && { 'data-cy': createCyId('password', 'revoke-sessions') }}
                   />
                   <Label
                     htmlFor="revokeOtherSessions"
@@ -299,8 +276,7 @@ function UpdatePasswordPage() {
                   disabled={loading}
                   aria-describedby="submit-help"
                   className="w-full md:w-auto"
-                  {...createTestId('password', 'submit', 'button') && { 'data-testid': createTestId('password', 'submit', 'button') }}
-                  {...createCyId('password', 'submit') && { 'data-cy': createCyId('password', 'submit') }}
+                  data-cy={sel('settings.password.submitButton')}
                 >
                   {loading ? (
                     <>

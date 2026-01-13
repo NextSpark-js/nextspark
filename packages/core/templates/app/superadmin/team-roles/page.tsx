@@ -29,6 +29,7 @@ import { getFullBillingMatrix } from "@nextsparkjs/core/lib/billing/queries";
 import { RolesPermissionsMatrix } from "@nextsparkjs/core/components/superadmin/tables/RolesPermissionsMatrix";
 import { PlanFeaturesMatrix } from "@nextsparkjs/core/components/superadmin/tables/PlanFeaturesMatrix";
 import { getTemplateOrDefaultClient } from "@nextsparkjs/registries/template-registry.client";
+import { sel } from "@nextsparkjs/core/selectors";
 
 /**
  * Team Roles & Permissions Page
@@ -106,12 +107,12 @@ function TeamRolesPage() {
 
       {/* Tabs for switching between matrices */}
       <Tabs defaultValue="rbac" className="space-y-6">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="rbac" className="flex items-center gap-2" data-cy="tab-rbac">
+        <TabsList className="grid w-full max-w-md grid-cols-2" data-cy={sel('superadmin.teamRoles.tabs.container')}>
+          <TabsTrigger value="rbac" className="flex items-center gap-2" data-cy={sel('superadmin.teamRoles.tabs.rbac')}>
             <Shield className="h-4 w-4" />
             RBAC Matrix
           </TabsTrigger>
-          <TabsTrigger value="plans" className="flex items-center gap-2" data-cy="tab-plans">
+          <TabsTrigger value="plans" className="flex items-center gap-2" data-cy={sel('superadmin.teamRoles.tabs.plans')}>
             <CreditCard className="h-4 w-4" />
             Plan Features
           </TabsTrigger>
@@ -185,7 +186,7 @@ function TeamRolesPage() {
                   <div
                     key={role}
                     className="flex items-center gap-2 px-4 py-2 rounded-lg border bg-card"
-                    data-cy={`role-card-${role}`}
+                    data-cy={sel('superadmin.teamRoles.rbac.hierarchy.roleCard', { role })}
                   >
                     <Badge variant={getRoleBadgeVariant(role)} className="font-semibold">
                       {hierarchy[role] ?? 0}
@@ -344,7 +345,7 @@ function TeamRolesPage() {
                   <div
                     key={plan.slug}
                     className="flex items-center gap-3 px-4 py-2 rounded-lg border bg-card"
-                    data-cy={`plan-card-${plan.slug}`}
+                    data-cy={sel('superadmin.teamRoles.plans.planCard', { slug: plan.slug })}
                   >
                     <Badge
                       variant={

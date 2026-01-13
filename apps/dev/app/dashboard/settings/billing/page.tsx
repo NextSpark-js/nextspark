@@ -14,7 +14,7 @@ import {
   Check,
   Crown
 } from 'lucide-react'
-import { createTestId, createCyId } from '@nextsparkjs/testing'
+import { sel } from '@nextsparkjs/core/selectors'
 import { useTranslations } from 'next-intl'
 import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
 import { useInvoices } from '@nextsparkjs/core/hooks/useInvoices'
@@ -68,37 +68,28 @@ function BillingPage() {
   return (
     <>
       {/* MANDATORY: Screen reader announcements */}
-      <div 
-        aria-live="polite" 
+      <div
+        aria-live="polite"
         aria-atomic="true"
         className="sr-only"
-        {...createTestId('billing', 'status', 'message') && { 'data-testid': createTestId('billing', 'status', 'message') }}
       >
         {statusMessage}
       </div>
 
-      <div 
+      <div
         className="max-w-4xl"
-        {...createTestId('billing', 'container') && { 'data-testid': createTestId('billing', 'container') }}
-        {...createCyId('billing', 'main') && { 'data-cy': createCyId('billing', 'main') }}
+        data-cy={sel('settings.billing.container')}
       >
         <div className="space-y-6">
           {/* Header */}
-          <header 
-            {...createTestId('billing', 'header') && { 'data-testid': createTestId('billing', 'header') }}
-            {...createCyId('billing', 'header') && { 'data-cy': createCyId('billing', 'header') }}
-          >
-            <h1 
+          <header data-cy={sel('settings.billing.header')}>
+            <h1
               className="text-2xl font-bold"
               id="billing-heading"
-              {...createTestId('billing', 'title') && { 'data-testid': createTestId('billing', 'title') }}
             >
               {t('billing.title')}
             </h1>
-            <p 
-              className="text-muted-foreground mt-1"
-              {...createTestId('billing', 'description') && { 'data-testid': createTestId('billing', 'description') }}
-            >
+            <p className="text-muted-foreground mt-1">
               {t('billing.description')}
             </p>
           </header>
@@ -148,8 +139,7 @@ function BillingPage() {
                   <Link href="/pricing">
                     <Button
                       onClick={handleUpgrade}
-                      {...createTestId('billing', 'upgrade', 'button') && { 'data-testid': createTestId('billing', 'upgrade', 'button') }}
-                      {...createCyId('billing', 'upgrade-plan') && { 'data-cy': createCyId('billing', 'upgrade-plan') }}
+                      data-cy={sel('settings.billing.currentPlan.upgradeButton')}
                     >
                       {t('billing.upgrade.button')}
                     </Button>
@@ -184,7 +174,7 @@ function BillingPage() {
                 <Button
                   variant="outline"
                   onClick={handleLoadMoreInvoices}
-                  data-cy="invoices-load-more"
+                  data-cy={sel('settings.billing.invoices.loadMoreButton')}
                 >
                   {t('billing.invoices.loadMore')}
                 </Button>
@@ -218,8 +208,7 @@ function BillingPage() {
               <Button
                 variant="outline"
                 onClick={handleAddPayment}
-                {...createTestId('billing', 'payment', 'button') && { 'data-testid': createTestId('billing', 'payment', 'button') }}
-                {...createCyId('billing', 'add-payment') && { 'data-cy': createCyId('billing', 'add-payment') }}
+                data-cy={sel('settings.billing.paymentMethod.addButton')}
               >
                 <CreditCard className="mr-2 h-4 w-4" aria-hidden="true" />
                 {t('billing.paymentMethod.addButton')}

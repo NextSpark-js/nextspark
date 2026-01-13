@@ -16,7 +16,7 @@ import { Bell, Check, CheckCheck, X, AlertCircle, Info, CheckCircle, AlertTriang
 import { useNotifications, type Notification } from '../../../hooks/useNotifications'
 import { cn } from '../../../lib/utils'
 import { useState, useCallback } from 'react'
-import { createTestId, createCyId, createAriaLabel } from '../../../lib/test'
+import { sel, createAriaLabel } from '../../../lib/test'
 import { useTranslations } from 'next-intl'
 
 const getNotificationIcon = (type: Notification['type']) => {
@@ -104,8 +104,6 @@ function NotificationItem({ notification, onMarkAsRead, onDelete }: Notification
           status: notification.isRead ? 'leída' : 'no leída'
         }
       )}
-      {...createTestId('notification', 'item') && { 'data-testid': createTestId('notification', 'item') }}
-      {...createCyId('notification', 'item') && { 'data-cy': createCyId('notification', 'item') }}
       data-notification-id={notification.id}
       data-read={notification.isRead}
       data-type={notification.type}
@@ -134,8 +132,6 @@ function NotificationItem({ notification, onMarkAsRead, onDelete }: Notification
                 className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={handleDelete}
                 aria-label={`Eliminar notificación: ${notification.title}`}
-                {...createTestId('notification', 'delete', 'button') && { 'data-testid': createTestId('notification', 'delete', 'button') }}
-                {...createCyId('notification', 'delete') && { 'data-cy': createCyId('notification', 'delete') }}
               >
                 <X className="h-3 w-3" aria-hidden="true" />
               </Button>
@@ -157,8 +153,6 @@ function NotificationItem({ notification, onMarkAsRead, onDelete }: Notification
                 className="h-6 px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={handleMarkAsRead}
                 aria-label={`Marcar como leída: ${notification.title}`}
-                {...createTestId('notification', 'mark', 'read') && { 'data-testid': createTestId('notification', 'mark', 'read') }}
-                {...createCyId('notification', 'mark-read') && { 'data-cy': createCyId('notification', 'mark-read') }}
               >
                 <Check className="h-3 w-3 mr-1" aria-hidden="true" />
                 Marcar leído
@@ -193,41 +187,37 @@ export function NotificationsDropdown() {
   return (
     <>
       {/* MANDATORY: Screen reader announcements */}
-      <div 
-        aria-live="polite" 
+      <div
+        aria-live="polite"
         aria-atomic="true"
         className="sr-only"
-        {...createTestId('notifications', 'status', 'message') && { 'data-testid': createTestId('notifications', 'status', 'message') }}
       >
         {statusMessage}
       </div>
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             className="relative"
             aria-label={createAriaLabel(
               '{notifications}{count}',
-              { 
+              {
                 notifications: t('notifications.title'),
-                count: unreadCount > 0 ? `, ${unreadCount} ${t('notifications.unread')}` : '' 
+                count: unreadCount > 0 ? `, ${unreadCount} ${t('notifications.unread')}` : ''
               }
             )}
             aria-haspopup="true"
             aria-expanded="false"
-            {...createTestId('notifications', 'trigger', 'button') && { 'data-testid': createTestId('notifications', 'trigger', 'button') }}
-            {...createCyId('notifications', 'trigger') && { 'data-cy': createCyId('notifications', 'trigger') }}
+            data-cy={sel('dashboard.topnav.notifications.trigger')}
           >
             <Bell className="h-4 w-4" aria-hidden="true" />
             {unreadCount > 0 && (
-              <div 
+              <div
                 className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 rounded-full flex items-center justify-center"
                 role="status"
                 aria-label={`${unreadCount} ${t('notifications.unread')}`}
-                {...createTestId('notifications', 'badge') && { 'data-testid': createTestId('notifications', 'badge') }}
-                {...createCyId('notifications', 'unread-badge') && { 'data-cy': createCyId('notifications', 'unread-badge') }}
               >
                 <span className="text-[10px] text-white font-medium" aria-hidden="true">
                   {unreadCount > 9 ? '9+' : unreadCount}
@@ -254,8 +244,6 @@ export function NotificationsDropdown() {
                     className="h-6 px-2 text-xs"
                     onClick={handleMarkAllAsRead}
                     aria-label={t('notifications.markAllAsRead')}
-                    {...createTestId('notifications', 'mark', 'all') && { 'data-testid': createTestId('notifications', 'mark', 'all') }}
-                    {...createCyId('notifications', 'mark-all') && { 'data-cy': createCyId('notifications', 'mark-all') }}
                   >
                     <CheckCheck className="h-3 w-3 mr-1" aria-hidden="true" />
                     {t('notifications.markAll')}

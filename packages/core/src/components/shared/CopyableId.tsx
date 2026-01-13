@@ -9,7 +9,7 @@
 
 import { useState } from 'react'
 import { Copy, Check } from 'lucide-react'
-import { createCyId } from '../../lib/test'
+import { sel } from '../../lib/test'
 
 interface CopyableIdProps {
   /** The full ID to copy */
@@ -42,7 +42,7 @@ export function CopyableId({
     <button
       onClick={handleCopy}
       className={`flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer ${className || ''}`}
-      data-cy={entitySlug ? createCyId(entitySlug, 'copy-id') : 'copy-id'}
+      data-cy={entitySlug ? sel('entities.detail.copyId', { slug: entitySlug }) : sel('entities.detail.copyId', { slug: 'generic' })}
     >
       <span className="font-mono">ID: {displayId}</span>
       {copied ? (

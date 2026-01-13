@@ -3,8 +3,23 @@
  *
  * Warm amber/orange palette with editorial typography.
  * Fonts: Oxanium (sans), Merriweather (serif), Fira Code (mono)
+ *
+ * ÚNICA FUENTE DE VERDAD para estilos del theme.
+ * Editar este archivo para customizar el design system.
  */
 
+/* =============================================
+   IMPORTS
+   ============================================= */
+@import "tailwindcss";
+@import "@nextsparkjs/core/styles/ui.css";
+@import "@nextsparkjs/core/styles/utilities.css";
+@import "@nextsparkjs/core/styles/docs.css";
+@source "../../../**/*.{js,ts,jsx,tsx}";
+
+/* =============================================
+   BLOG THEME - LIGHT MODE
+   ============================================= */
 :root {
     --background: oklch(0.9885 0.0057 84.5659);
     --foreground: oklch(0.3660 0.0251 49.6085);
@@ -150,6 +165,18 @@
     --shadow-lg: var(--shadow-lg);
     --shadow-xl: var(--shadow-xl);
     --shadow-2xl: var(--shadow-2xl);
+}
+
+/* =============================================
+   BASE STYLES
+   ============================================= */
+* {
+  border-color: var(--border);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
 }
 
 /* ============================================================================

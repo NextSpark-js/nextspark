@@ -1,0 +1,37 @@
+/* =============================================
+   CORE UTILITIES - Keyframes and Animations
+   These utilities USE theme variables but don't define them.
+   Include this file in your theme's globals.css
+   ============================================= */
+
+/* Accordion animations for Radix UI */
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+/* Wiggle animation for icons and interactive elements */
+@keyframes wiggle {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-15deg);
+  }
+  75% {
+    transform: rotate(15deg);
+  }
+}

@@ -29,11 +29,6 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
-    "./selectors": {
-      "types": "./dist/selectors/index.d.ts",
-      "import": "./dist/selectors/index.js",
-      "default": "./dist/selectors/index.js"
-    },
     "./utils": {
       "types": "./dist/utils/index.d.ts",
       "import": "./dist/utils/index.js",

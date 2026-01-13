@@ -23,7 +23,7 @@
  */
 
 import { DashboardEntityPOMCore, type EntityConfig } from '@nextsparkjs/testing/pom'
-import { type Replacements } from '@nextsparkjs/testing/selectors'
+import { type Replacements } from '@nextsparkjs/core/selectors'
 import { cySelector } from '../selectors'
 
 // Optional: Import entities config for validation

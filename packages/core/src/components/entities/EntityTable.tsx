@@ -479,7 +479,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
   return (
     <div
       className={cn(showHeader && 'p-6', 'space-y-4', className)}
-      data-cy={sel('entities.table.container', { slug })}
+      data-cy={sel('entities.list.table.container', { slug })}
     >
         {/* Header with search and actions - conditionally rendered */}
         {showHeader && (
@@ -500,7 +500,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                     value={localSearchQuery}
                     onChange={(e) => handleSearch(e.target.value)}
                     className="pl-8 w-full sm:w-[300px]"
-                    data-cy={sel('entities.table.search', { slug })}
+                    data-cy={sel('entities.list.search.input', { slug })}
                   />
                 </div>
               )}
@@ -511,7 +511,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                 <Button asChild>
                   <Link
                     href={`${basePath || `/dashboard/${slug}`}/create`}
-                    data-cy={sel('entities.table.addButton', { slug })}
+                    data-cy={sel('entities.list.addButton', { slug })}
                   >
                     <Plus className="mr-2 h-4 w-4" />
                     Add {entityConfig.names.singular}
@@ -526,7 +526,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
         {selectable && selectedIds.size > 0 && (
           <div
             className="text-sm text-muted-foreground"
-            data-cy={sel('entities.table.selectionCount', { slug })}
+            data-cy={sel('entities.list.selectionCount', { slug })}
           >
             {selectedIds.size} of {totalItems} selected
           </div>
@@ -565,9 +565,9 @@ export function EntityTable<T extends { id: string } = { id: string }>({
             {/* Table */}
             <div
               className="overflow-hidden shadow-sm ring-1 ring-black/5 dark:ring-white/10 rounded-lg"
-              data-cy={sel('entities.table.container', { slug })}
+              data-cy={sel('entities.list.table.container', { slug })}
             >
-              <Table data-cy={sel('entities.table.element', { slug })}>
+              <Table data-cy={sel('entities.list.table.element', { slug })}>
                 <TableHeader className="bg-muted/50 dark:bg-muted/30">
                   <TableRow>
                     {selectable && (
@@ -581,7 +581,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                           }}
                           onChange={toggleAll}
                           aria-label="Select all"
-                          data-cy={sel('entities.table.selectAll', { slug })}
+                          data-cy={sel('entities.list.table.selectAll', { slug })}
                         />
                       </TableHead>
                     )}
@@ -627,7 +627,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                         selectedIds.has(item.id) ? 'bg-primary/5' : 'hover:bg-muted/30'
                       )}
                       onClick={() => handleRowClick(item)}
-                      data-cy={sel('entities.table.row', { slug, id: item.id })}
+                      data-cy={sel('entities.list.table.row.element', { slug, id: item.id })}
                     >
                       {selectable && (
                         <TableCell
@@ -644,7 +644,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                               toggleOne(item.id, rowIndex, e.shiftKey)
                             }}
                             aria-label={`Select row ${rowIndex + 1}`}
-                            data-cy={sel('entities.table.rowSelect', { slug, id: item.id })}
+                            data-cy={sel('entities.list.table.row.checkbox', { slug, id: item.id })}
                           />
                         </TableCell>
                       )}
@@ -701,7 +701,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                                             ? 'text-destructive hover:bg-destructive/10'
                                             : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                                         )}
-                                        data-cy={sel('entities.table.quickAction', {
+                                        data-cy={sel('entities.list.table.row.quickAction', {
                                           slug,
                                           action: action.dataCySuffix || action.id,
                                           id: item.id,
@@ -731,7 +731,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8"
-                                data-cy={sel('entities.table.rowMenu', { slug, id: item.id })}
+                                data-cy={sel('entities.list.table.row.menu', { slug, id: item.id })}
                               >
                                 <MoreHorizontal className="h-4 w-4" />
                                 <span className="sr-only">Open menu</span>
@@ -751,7 +751,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                                         action.variant === 'destructive' &&
                                           'text-destructive focus:text-destructive'
                                       )}
-                                      data-cy={sel('entities.table.rowAction', {
+                                      data-cy={sel('entities.list.table.row.action', {
                                         slug,
                                         action: action.dataCySuffix || action.id,
                                         id: item.id,
@@ -776,7 +776,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
             {isPaginated && totalPages > 1 && (
               <div
                 className="flex items-center justify-between px-4 py-3 border rounded-lg bg-card"
-                data-cy={sel('entities.pagination.container', { slug })}
+                data-cy={sel('entities.list.pagination.container', { slug })}
               >
                 {/* Page size selector */}
                 <div className="flex items-center gap-2">
@@ -789,7 +789,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                       >
                         <SelectTrigger
                           className="h-8 w-[70px]"
-                          data-cy={sel('entities.pagination.pageSize', { slug })}
+                          data-cy={sel('entities.list.pagination.pageSize', { slug })}
                         >
                           <SelectValue placeholder={String(pageSize)} />
                         </SelectTrigger>
@@ -798,7 +798,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                             <SelectItem
                               key={size}
                               value={String(size)}
-                              data-cy={sel('entities.pagination.pageSizeOption', { slug, size })}
+                              data-cy={sel('entities.list.pagination.pageSizeOption', { slug, size })}
                             >
                               {size}
                             </SelectItem>
@@ -813,7 +813,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                 <div className="flex items-center gap-4">
                   <span
                     className="text-sm text-muted-foreground"
-                    data-cy={sel('entities.pagination.pageInfo', { slug })}
+                    data-cy={sel('entities.list.pagination.info', { slug })}
                   >
                     Page {currentPage} of {totalPages}
                     <span className="ml-2 text-xs">
@@ -830,7 +830,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                       className="h-8 w-8"
                       onClick={() => handlePageChange(1)}
                       disabled={currentPage === 1}
-                      data-cy={sel('entities.pagination.first', { slug })}
+                      data-cy={sel('entities.list.pagination.first', { slug })}
                     >
                       <ChevronsLeft className="h-4 w-4" />
                       <span className="sr-only">First page</span>
@@ -843,7 +843,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                       className="h-8 w-8"
                       onClick={() => handlePageChange(currentPage - 1)}
                       disabled={currentPage === 1}
-                      data-cy={sel('entities.pagination.prev', { slug })}
+                      data-cy={sel('entities.list.pagination.prev', { slug })}
                     >
                       <ChevronLeft className="h-4 w-4" />
                       <span className="sr-only">Previous page</span>
@@ -856,7 +856,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                       className="h-8 w-8"
                       onClick={() => handlePageChange(currentPage + 1)}
                       disabled={currentPage === totalPages}
-                      data-cy={sel('entities.pagination.next', { slug })}
+                      data-cy={sel('entities.list.pagination.next', { slug })}
                     >
                       <ChevronRight className="h-4 w-4" />
                       <span className="sr-only">Next page</span>
@@ -869,7 +869,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                       className="h-8 w-8"
                       onClick={() => handlePageChange(totalPages)}
                       disabled={currentPage === totalPages}
-                      data-cy={sel('entities.pagination.last', { slug })}
+                      data-cy={sel('entities.list.pagination.last', { slug })}
                     >
                       <ChevronsRight className="h-4 w-4" />
                       <span className="sr-only">Last page</span>
@@ -888,13 +888,13 @@ export function EntityTable<T extends { id: string } = { id: string }>({
             !open && setConfirmDialog({ open: false, item: null, action: null })
           }
         >
-          <AlertDialogContent data-cy={sel('entities.confirm.dialog', { slug })}>
+          <AlertDialogContent data-cy={sel('entities.list.confirm.dialog', { slug })}>
             <AlertDialogHeader>
               <AlertDialogTitle>{getConfirmationTitle()}</AlertDialogTitle>
               <AlertDialogDescription>{getConfirmationDescription()}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel data-cy={sel('entities.confirm.cancel', { slug })}>
+              <AlertDialogCancel data-cy={sel('entities.list.confirm.cancel', { slug })}>
                 Cancel
               </AlertDialogCancel>
               <AlertDialogAction
@@ -904,7 +904,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
                   confirmDialog.action?.variant === 'destructive' &&
                     'bg-destructive text-destructive-foreground hover:bg-destructive/90'
                 )}
-                data-cy={sel('entities.confirm.action', { slug })}
+                data-cy={sel('entities.list.confirm.action', { slug })}
               >
                 {isDeleting ? (
                   <>

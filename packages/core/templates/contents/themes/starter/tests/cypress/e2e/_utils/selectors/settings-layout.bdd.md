@@ -1,36 +1,35 @@
 ---
 feature: Settings Layout UI Selectors Validation
 priority: high
-tags: [selectors, settings, layout, ui-validation]
+tags: [selectors, settings, layout, sidebar, ui-validation]
 grepTags: [ui-selectors, settings, SEL_LAY_001, SEL_LAY_002]
 coverage: 2
 ---
 
 # Settings Layout UI Selectors Validation
 
-> Validates that settings layout selectors exist in the DOM. This is a lightweight test that ONLY checks selector presence, not functionality. Runs as Phase 12 sub-gate before functional tests.
+> Validates that settings layout and sidebar selectors exist in the DOM. This is a lightweight test that ONLY checks selector presence, not functionality. Runs as Phase 12 sub-gate before functional tests.
 
-## @test SEL_LAY_001: Layout Selectors
+## @test SEL_LAY_001: Layout Selectors (sidebar.layout.*)
 
 ### Metadata
 - **Priority:** High
 - **Type:** Selector Validation
 - **Tags:** settings, layout, container
 - **Grep:** `@ui-selectors` `@SEL_LAY_001`
-- **Status:** Active (7 passing, 0 skipped)
+- **Status:** Active (6 passing, 0 skipped)
 
 ```gherkin:en
 Scenario: Settings layout has required selectors
 
 Given I am logged in as developer
 And I navigate to the settings page
-Then I should find the settings layout main container
-And I should find the settings header
-And I should find the settings content area
-And I should find the settings sidebar
-And I should find the settings sidebar container
-And I should find the settings mobile menu trigger
-And I should find the settings mobile sheet
+Then I should find the layout main container
+And I should find the back to dashboard link
+And I should find the layout header
+And I should find the layout content area
+And I should find the sidebar container
+And I should find the layout page content
 ```
 
 ```gherkin:es
@@ -38,23 +37,21 @@ Scenario: El layout de settings tiene los selectores requeridos
 
 Given estoy logueado como developer
 And navego a la pagina de settings
-Then deberia encontrar el contenedor principal del layout de settings
-And deberia encontrar el header de settings
-And deberia encontrar el area de contenido de settings
-And deberia encontrar el sidebar de settings
-And deberia encontrar el contenedor del sidebar de settings
-And deberia encontrar el trigger del menu movil de settings
-And deberia encontrar el sheet movil de settings
+Then deberia encontrar el contenedor principal del layout
+And deberia encontrar el link de volver al dashboard
+And deberia encontrar el header del layout
+And deberia encontrar el area de contenido del layout
+And deberia encontrar el contenedor del sidebar
+And deberia encontrar el contenido de la pagina del layout
 ```
 
 ### Expected Results
-- `settings.layout.main` selector exists (settings-layout-main)
-- `settings.layout.header` selector exists (settings-layout-header)
-- `settings.layout.content` selector exists (settings-layout-content)
-- `settings.layout.sidebar` selector exists (settings-layout-sidebar)
-- `settings.layout.sidebarContainer` selector exists (settings-sidebar-container)
-- `settings.layout.mobileMenuTrigger` selector exists (settings-mobile-menu-trigger)
-- `settings.layout.mobileSheet` selector exists (settings-mobile-sheet)
+- `settings.sidebar.layout.main` selector exists (settings-layout-main)
+- `settings.sidebar.backButton` selector exists (settings-back-to-dashboard)
+- `settings.sidebar.layout.header` selector exists (settings-layout-header)
+- `settings.sidebar.layout.contentArea` selector exists (settings-layout-content-area)
+- `settings.sidebar.container` selector exists (settings-sidebar)
+- `settings.sidebar.layout.pageContent` selector exists (settings-layout-page-content)
 
 ---
 
@@ -65,25 +62,23 @@ And deberia encontrar el sheet movil de settings
 - **Type:** Selector Validation
 - **Tags:** settings, sidebar, navigation
 - **Grep:** `@ui-selectors` `@SEL_LAY_002`
-- **Status:** Active (11 passing, 0 skipped)
+- **Status:** Active (10 passing, 0 skipped)
 
 ```gherkin:en
 Scenario: Settings sidebar has all navigation links
 
 Given I am logged in as developer
 And I navigate to the settings page
-Then I should find the profile nav link
+Then I should find the sidebar container
+And I should find the sidebar header
+And I should find the sidebar nav items container
+And I should find the profile nav link
+And I should find the security nav link
 And I should find the password nav link
-And I should find the teams nav link
-And I should find the API keys nav link
-And I should find the appearance nav link
 And I should find the notifications nav link
+And I should find the api-keys nav link
 And I should find the billing nav link
-And I should find the members nav link
-And I should find the invite nav link
-And I should find the roles nav link
-And I should find the danger zone nav link
-And I should find the back to dashboard link
+And I should find the teams nav link
 ```
 
 ```gherkin:es
@@ -91,36 +86,32 @@ Scenario: El sidebar de settings tiene todos los links de navegacion
 
 Given estoy logueado como developer
 And navego a la pagina de settings
-Then deberia encontrar el link de navegacion a perfil
+Then deberia encontrar el contenedor del sidebar
+And deberia encontrar el header del sidebar
+And deberia encontrar el contenedor de items de navegacion
+And deberia encontrar el link de navegacion a perfil
+And deberia encontrar el link de navegacion a seguridad
 And deberia encontrar el link de navegacion a password
-And deberia encontrar el link de navegacion a equipos
-And deberia encontrar el link de navegacion a API keys
-And deberia encontrar el link de navegacion a apariencia
 And deberia encontrar el link de navegacion a notificaciones
+And deberia encontrar el link de navegacion a api-keys
 And deberia encontrar el link de navegacion a facturacion
-And deberia encontrar el link de navegacion a miembros
-And deberia encontrar el link de navegacion a invitar
-And deberia encontrar el link de navegacion a roles
-And deberia encontrar el link de navegacion a zona de peligro
-And deberia encontrar el link de volver al dashboard
+And deberia encontrar el link de navegacion a equipos
 ```
 
 ### Expected Results
-- `settings.sidebar.profile` selector exists (settings-sidebar-profile)
-- `settings.sidebar.password` selector exists (settings-sidebar-password)
-- `settings.sidebar.teams` selector exists (settings-sidebar-teams)
-- `settings.sidebar.apiKeys` selector exists (settings-sidebar-api-keys)
-- `settings.sidebar.appearance` selector exists (settings-sidebar-appearance)
-- `settings.sidebar.notifications` selector exists (settings-sidebar-notifications)
-- `settings.sidebar.billing` selector exists (settings-sidebar-billing)
-- `settings.sidebar.members` selector exists (settings-sidebar-members)
-- `settings.sidebar.invite` selector exists (settings-sidebar-invite)
-- `settings.sidebar.roles` selector exists (settings-sidebar-roles)
-- `settings.sidebar.dangerZone` selector exists (settings-sidebar-danger-zone)
-- `settings.sidebar.backToDashboard` selector exists (settings-sidebar-back-to-dashboard)
+- `settings.sidebar.container` selector exists (settings-sidebar)
+- `settings.sidebar.header` selector exists (settings-sidebar-header)
+- `settings.sidebar.nav.items` selector exists (settings-sidebar-nav-items)
+- `settings.sidebar.nav.item` with section=profile exists (settings-sidebar-nav-profile)
+- `settings.sidebar.nav.item` with section=security exists (settings-sidebar-nav-security)
+- `settings.sidebar.nav.item` with section=password exists (settings-sidebar-nav-password)
+- `settings.sidebar.nav.item` with section=notifications exists (settings-sidebar-nav-notifications)
+- `settings.sidebar.nav.item` with section=api-keys exists (settings-sidebar-nav-api-keys)
+- `settings.sidebar.nav.item` with section=billing exists (settings-sidebar-nav-billing)
+- `settings.sidebar.nav.item` with section=teams exists (settings-sidebar-nav-teams)
 
 ### Notes
-Some sidebar items may not be visible depending on user permissions. The test validates selectors that are accessible to the developer role.
+Some sidebar items may not be visible depending on user permissions and theme configuration. The test validates selectors that are accessible to the developer role.
 
 ---
 
@@ -128,11 +119,11 @@ Some sidebar items may not be visible depending on user permissions. The test va
 
 | Component | File | Selectors |
 |-----------|------|-----------|
-| SettingsLayout | `packages/core/src/components/settings/SettingsLayout.tsx` | settings-layout-main, settings-layout-header, settings-layout-content |
-| SettingsSidebar | `packages/core/src/components/settings/SettingsSidebar.tsx` | settings-sidebar-*, settings-layout-sidebar |
+| SettingsLayout | `packages/core/src/components/settings/layouts/SettingsLayout.tsx` | settings-layout-main, settings-layout-header, settings-layout-content-area |
+| SettingsSidebar | `packages/core/src/components/settings/layouts/SettingsSidebar.tsx` | settings-sidebar, settings-sidebar-header, settings-sidebar-nav-* |
 
 ## Related POMs
 
 | POM | File | Usage |
 |-----|------|-------|
-| SettingsPOM | `themes/default/tests/cypress/src/features/SettingsPOM.ts` | Settings layout and sidebar selectors |
+| SettingsPOM | `themes/starter/tests/cypress/src/features/SettingsPOM.ts` | Settings layout and sidebar selectors |

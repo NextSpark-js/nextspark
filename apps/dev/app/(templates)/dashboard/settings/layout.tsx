@@ -7,7 +7,7 @@ import { MobileTopBar } from '@nextsparkjs/core/components/dashboard/mobile/Mobi
 import { MobileBottomNav } from '@nextsparkjs/core/components/dashboard/mobile/MobileBottomNav'
 import { ArrowLeft } from 'lucide-react'
 import { useState, useCallback } from 'react'
-import { createTestId, createCyId } from '@nextsparkjs/testing'
+import { sel } from '@nextsparkjs/core/selectors'
 import { useTranslations } from 'next-intl'
 import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
 
@@ -30,7 +30,6 @@ function SettingsLayout({
         aria-live="polite"
         aria-atomic="true"
         className="sr-only"
-        {...createTestId('settings-layout', 'status', 'message') && { 'data-testid': createTestId('settings-layout', 'status', 'message') }}
       >
         {statusMessage}
       </div>
@@ -43,16 +42,14 @@ function SettingsLayout({
 
       <div
         className="min-h-screen bg-gradient-to-b from-background to-muted/20"
-        {...createTestId('settings-layout', 'container') && { 'data-testid': createTestId('settings-layout', 'container') }}
-        {...createCyId('settings-layout', 'main') && { 'data-cy': createCyId('settings-layout', 'main') }}
+        data-cy={sel('settings.sidebar.layout.main')}
       >
         <div className="max-w-7xl mx-auto p-4 lg:p-6 pt-16 pb-24 lg:pt-6 lg:pb-6">
           {/* Back Button - Desktop only */}
           <nav
             className="mb-6 hidden lg:block"
             aria-label={t('navigation.ariaLabel')}
-            {...createTestId('settings-layout', 'nav') && { 'data-testid': createTestId('settings-layout', 'nav') }}
-            {...createCyId('settings-layout', 'nav') && { 'data-cy': createCyId('settings-layout', 'nav') }}
+            data-cy={sel('settings.sidebar.nav.container')}
           >
             <Link href="/dashboard">
               <Button
@@ -61,8 +58,7 @@ function SettingsLayout({
                 className="gap-2"
                 onClick={handleBackToDashboard}
                 aria-label={t('navigation.backToDashboard')}
-                {...createTestId('settings-layout', 'back', 'button') && { 'data-testid': createTestId('settings-layout', 'back', 'button') }}
-                {...createCyId('settings-layout', 'back-to-dashboard') && { 'data-cy': createCyId('settings-layout', 'back-to-dashboard') }}
+                data-cy={sel('settings.sidebar.backButton')}
               >
                 <ArrowLeft className="h-4 w-4" aria-hidden="true" />
                 {t('navigation.backButton')}
@@ -73,19 +69,16 @@ function SettingsLayout({
           {/* Header - Desktop only */}
           <header
             className="mb-8 hidden lg:block"
-            {...createTestId('settings-layout', 'header') && { 'data-testid': createTestId('settings-layout', 'header') }}
-            {...createCyId('settings-layout', 'header') && { 'data-cy': createCyId('settings-layout', 'header') }}
+            data-cy={sel('settings.sidebar.layout.header')}
           >
             <h1
               className="text-3xl font-bold"
               id="settings-main-heading"
-              {...createTestId('settings-layout', 'title') && { 'data-testid': createTestId('settings-layout', 'title') }}
             >
               {t('layout.title')}
             </h1>
             <p
               className="text-muted-foreground text-sm mt-1"
-              {...createTestId('settings-layout', 'description') && { 'data-testid': createTestId('settings-layout', 'description') }}
             >
               {t('layout.description')}
             </p>
@@ -95,15 +88,13 @@ function SettingsLayout({
           <main
             className="flex flex-col lg:flex-row gap-0 lg:gap-8"
             aria-labelledby="settings-main-heading"
-            {...createTestId('settings-layout', 'main', 'content') && { 'data-testid': createTestId('settings-layout', 'main', 'content') }}
-            {...createCyId('settings-layout', 'content-area') && { 'data-cy': createCyId('settings-layout', 'content-area') }}
+            data-cy={sel('settings.sidebar.layout.contentArea')}
           >
             {/* Settings Sidebar - Desktop only */}
             <aside
               className="w-64 hidden lg:block"
               aria-label={t('layout.sidebarLabel')}
-              {...createTestId('settings-layout', 'sidebar', 'container') && { 'data-testid': createTestId('settings-layout', 'sidebar', 'container') }}
-              {...createCyId('settings-layout', 'sidebar') && { 'data-cy': createCyId('settings-layout', 'sidebar') }}
+              data-cy={sel('settings.sidebar.container')}
             >
               <SettingsSidebar />
             </aside>
@@ -112,8 +103,7 @@ function SettingsLayout({
             <section
               className="flex-1 w-full"
               aria-label={t('layout.contentLabel')}
-              {...createTestId('settings-layout', 'page', 'content') && { 'data-testid': createTestId('settings-layout', 'page', 'content') }}
-              {...createCyId('settings-layout', 'page-content') && { 'data-cy': createCyId('settings-layout', 'page-content') }}
+              data-cy={sel('settings.sidebar.layout.pageContent')}
             >
               {children}
             </section>

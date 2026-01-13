@@ -14,6 +14,7 @@ import {
   AccordionTrigger,
 } from '../../ui/accordion'
 import { Search, Settings2, Plus, Trash2 } from 'lucide-react'
+import { sel } from '../../../lib/test'
 
 export interface PageSeoSettings {
   metaTitle?: string
@@ -81,7 +82,7 @@ export function PageSettingsPanel({ settings, onChange }: PageSettingsPanelProps
   }, [seo, customFields, onChange])
 
   return (
-    <div className="mt-16" data-cy="page-settings-panel">
+    <div className="mt-16" data-cy={sel('blockEditor.entityMetaPanel.container')}>
       <hr className="border-border/50 mb-6" />
       <Card>
         <CardHeader className="pb-3">
@@ -94,7 +95,7 @@ export function PageSettingsPanel({ settings, onChange }: PageSettingsPanelProps
         <Accordion type="multiple" defaultValue={['seo']} className="w-full">
           {/* SEO Settings Section */}
           <AccordionItem value="seo">
-            <AccordionTrigger className="py-3" data-cy="seo-settings-trigger">
+            <AccordionTrigger className="py-3" data-cy={sel('blockEditor.entityMetaPanel.seoSection.trigger')}>
               <div className="flex items-center gap-2">
                 <Search className="h-4 w-4 text-muted-foreground" />
                 <span>{t('seo.title')}</span>
@@ -110,7 +111,7 @@ export function PageSettingsPanel({ settings, onChange }: PageSettingsPanelProps
                     value={seo.metaTitle || ''}
                     onChange={(e) => handleSeoChange('metaTitle', e.target.value)}
                     placeholder={t('seo.metaTitlePlaceholder')}
-                    data-cy="seo-meta-title"
+                    data-cy={sel('blockEditor.entityMetaPanel.seoSection.metaTitle')}
                   />
                   <p className="text-xs text-muted-foreground">
                     {t('seo.metaTitleHint')}
@@ -126,7 +127,7 @@ export function PageSettingsPanel({ settings, onChange }: PageSettingsPanelProps
                     onChange={(e) => handleSeoChange('metaDescription', e.target.value)}
                     placeholder={t('seo.metaDescriptionPlaceholder')}
                     rows={3}
-                    data-cy="seo-meta-description"
+                    data-cy={sel('blockEditor.entityMetaPanel.seoSection.metaDescription')}
                   />
                   <p className="text-xs text-muted-foreground">
                     {seo.metaDescription?.length || 0}/160 {t('seo.characters')}
@@ -141,7 +142,7 @@ export function PageSettingsPanel({ settings, onChange }: PageSettingsPanelProps
                     value={seo.metaKeywords || ''}
                     onChange={(e) => handleSeoChange('metaKeywords', e.target.value)}
                     placeholder={t('seo.metaKeywordsPlaceholder')}
-                    data-cy="seo-meta-keywords"
+                    data-cy={sel('blockEditor.entityMetaPanel.seoSection.metaKeywords')}
                   />
                   <p className="text-xs text-muted-foreground">
                     {t('seo.metaKeywordsHint')}
@@ -156,7 +157,7 @@ export function PageSettingsPanel({ settings, onChange }: PageSettingsPanelProps
                     value={seo.ogImage || ''}
                     onChange={(e) => handleSeoChange('ogImage', e.target.value)}
                     placeholder={t('seo.ogImagePlaceholder')}
-                    data-cy="seo-og-image"
+                    data-cy={sel('blockEditor.entityMetaPanel.seoSection.ogImage')}
                   />
                   <p className="text-xs text-muted-foreground">
                     {t('seo.ogImageHint')}
@@ -168,7 +169,7 @@ export function PageSettingsPanel({ settings, onChange }: PageSettingsPanelProps
 
           {/* Custom Fields Section */}
           <AccordionItem value="custom-fields">
-            <AccordionTrigger className="py-3" data-cy="custom-fields-trigger">
+            <AccordionTrigger className="py-3" data-cy={sel('blockEditor.entityMetaPanel.customFields.trigger')}>
               <div className="flex items-center gap-2">
                 <Settings2 className="h-4 w-4 text-muted-foreground" />
                 <span>{t('customFields.title')}</span>
@@ -190,7 +191,7 @@ export function PageSettingsPanel({ settings, onChange }: PageSettingsPanelProps
                             onChange={(e) => handleUpdateCustomField(index, 'key', e.target.value)}
                             placeholder={t('customFields.keyPlaceholder')}
                             className="font-mono text-sm"
-                            data-cy={`custom-field-key-${index}`}
+                            data-cy={sel('blockEditor.entityMetaPanel.customFields.fieldKey', { index })}
                           />
                         </div>
                         <div className="flex-1">
@@ -198,7 +199,7 @@ export function PageSettingsPanel({ settings, onChange }: PageSettingsPanelProps
                             value={field.value}
                             onChange={(e) => handleUpdateCustomField(index, 'value', e.target.value)}
                             placeholder={t('customFields.valuePlaceholder')}
-                            data-cy={`custom-field-value-${index}`}
+                            data-cy={sel('blockEditor.entityMetaPanel.customFields.fieldValue', { index })}
                           />
                         </div>
                         <Button
@@ -206,7 +207,7 @@ export function PageSettingsPanel({ settings, onChange }: PageSettingsPanelProps
                           size="icon"
                           className="shrink-0 text-muted-foreground hover:text-destructive"
                           onClick={() => handleRemoveCustomField(index)}
-                          data-cy={`custom-field-remove-${index}`}
+                          data-cy={sel('blockEditor.entityMetaPanel.customFields.fieldRemove', { index })}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -220,7 +221,7 @@ export function PageSettingsPanel({ settings, onChange }: PageSettingsPanelProps
                   size="sm"
                   onClick={handleAddCustomField}
                   className="w-full"
-                  data-cy="add-custom-field"
+                  data-cy={sel('blockEditor.entityMetaPanel.customFields.addButton')}
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   {t('customFields.add')}

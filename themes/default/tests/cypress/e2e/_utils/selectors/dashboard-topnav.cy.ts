@@ -19,6 +19,7 @@
  * - SEL_TNAV_002: Topnav Actions (4 selectors)
  * - SEL_TNAV_003: Topnav Admin Links (2 selectors - developer has access)
  * - SEL_TNAV_004: User Menu (5 selectors)
+ * - SEL_TNAV_005: Quick Create (3 selectors)
  * - SEL_TNAV_006: Loading State (1 skipped - transient state)
  *
  * NOTE: Public navbar tests (logo, signin, signup) are in public.cy.ts
@@ -27,7 +28,7 @@
 import { DashboardPOM } from '../../../src/features/DashboardPOM'
 import { loginAsDefaultDeveloper } from '../../../src/session-helpers'
 
-describe('Dashboard Topnav Selectors Validation', { tags: ['@ui-selectors', '@topnav'] }, () => {
+describe('Dashboard Topnav Selectors Validation', { tags: ['@ui-selectors', '@dashboard', '@topnav'] }, () => {
   const dashboard = DashboardPOM.create()
 
   beforeEach(() => {
@@ -41,16 +42,16 @@ describe('Dashboard Topnav Selectors Validation', { tags: ['@ui-selectors', '@to
   // NOTE: Logo test moved to public.cy.ts (only visible when not logged in)
   // ============================================
   describe('SEL_TNAV_001: Topnav Structure', { tags: '@SEL_TNAV_001' }, () => {
-    it('should find topnav header', () => {
-      cy.get(dashboard.selectors.topnavHeader).should('exist')
+    it('should find topnav container', () => {
+      cy.get(dashboard.selectors.topnavContainer).should('exist')
     })
 
     it('should find topnav actions container', () => {
       cy.get(dashboard.selectors.topnavActions).should('exist')
     })
 
-    it('should find topnav search section', () => {
-      cy.get(dashboard.selectors.topnavSearchSection).should('exist')
+    it('should find topnav search container', () => {
+      cy.get(dashboard.selectors.topnavSearchContainer).should('exist')
     })
   })
 
@@ -62,8 +63,8 @@ describe('Dashboard Topnav Selectors Validation', { tags: ['@ui-selectors', '@to
       cy.get(dashboard.selectors.topnavSidebarToggle).should('exist')
     })
 
-    it('should find notifications button', () => {
-      cy.get(dashboard.selectors.topnavNotifications).should('exist')
+    it('should find notifications trigger', () => {
+      cy.get(dashboard.selectors.topnavNotificationsTrigger).should('exist')
     })
 
     it('should find help button', () => {
@@ -99,25 +100,47 @@ describe('Dashboard Topnav Selectors Validation', { tags: ['@ui-selectors', '@to
       cy.get(dashboard.selectors.topnavUserMenuTrigger).should('exist')
     })
 
-    it('should find user menu when opened', () => {
+    it('should find user menu content when opened', () => {
       cy.get(dashboard.selectors.topnavUserMenuTrigger).click()
-      cy.get(dashboard.selectors.topnavUserMenu).should('be.visible')
+      cy.get(dashboard.selectors.topnavUserMenuContent).should('be.visible')
     })
 
     it('should find profile menu item when opened', () => {
       cy.get(dashboard.selectors.topnavUserMenuTrigger).click()
-      cy.get(dashboard.selectors.topnavMenuItem('user')).should('exist')
+      cy.get(dashboard.selectors.topnavUserMenuItem('user')).should('exist')
     })
 
     it('should find settings menu item when opened', () => {
       cy.get(dashboard.selectors.topnavUserMenuTrigger).click()
-      cy.get(dashboard.selectors.topnavMenuItem('settings')).should('exist')
+      cy.get(dashboard.selectors.topnavUserMenuItem('settings')).should('exist')
     })
 
     it('should find signOut action when opened', () => {
       cy.get(dashboard.selectors.topnavUserMenuTrigger).click()
       // Action is 'signOut' per dashboard.config.ts
-      cy.get(dashboard.selectors.topnavMenuAction('signOut')).should('exist')
+      cy.get(dashboard.selectors.topnavUserMenuAction('signOut')).should('exist')
+    })
+  })
+
+  // ============================================
+  // SEL_TNAV_005: QUICK CREATE (3 selectors)
+  // NOTE: Component renders null if user has no create permissions on any entity.
+  // Developer role may not have quickCreate entities configured.
+  // ============================================
+  describe('SEL_TNAV_005: Quick Create', { tags: '@SEL_TNAV_005' }, () => {
+    it.skip('should find quick create trigger (requires entity with create permission)', () => {
+      cy.get(dashboard.selectors.topnavQuickCreateTrigger).should('exist')
+    })
+
+    it.skip('should find quick create content when opened (requires entity with create permission)', () => {
+      cy.get(dashboard.selectors.topnavQuickCreateTrigger).click()
+      cy.get(dashboard.selectors.topnavQuickCreateContent).should('be.visible')
+    })
+
+    it.skip('should find quick create link for entity when opened (requires entity with create permission)', () => {
+      cy.get(dashboard.selectors.topnavQuickCreateTrigger).click()
+      // Test with 'customers' entity (common in default theme)
+      cy.get(dashboard.selectors.topnavQuickCreateLink('customers')).should('exist')
     })
   })
 

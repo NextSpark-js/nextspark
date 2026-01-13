@@ -17,6 +17,7 @@ import { ImageUpload } from '../../ui/image-upload'
 import { Card, CardContent, CardHeader } from '../../ui/card'
 import { ChevronUp, ChevronDown, Trash2, Plus } from 'lucide-react'
 import { cn } from '../../../lib/utils'
+import { sel } from '../../../lib/test'
 import type { FieldDefinition } from '../../../types/blocks'
 
 interface ArrayFieldProps {
@@ -92,7 +93,7 @@ export function ArrayField({ field, value, onChange }: ArrayFieldProps) {
             onChange={(e) => handleItemFieldChange(itemIndex, itemField.name, e.target.value)}
             placeholder={itemField.placeholder}
             required={itemField.required}
-            data-cy={`array-field-${field.name}-${itemIndex}-${itemField.name}`}
+            data-cy={sel('blockEditor.blockPropertiesPanel.form.arrayField.itemField', { name: field.name, index: itemIndex, field: itemField.name })}
           />
         )
 
@@ -104,7 +105,7 @@ export function ArrayField({ field, value, onChange }: ArrayFieldProps) {
             placeholder={itemField.placeholder}
             required={itemField.required}
             rows={itemField.rows || 3}
-            data-cy={`array-field-${field.name}-${itemIndex}-${itemField.name}`}
+            data-cy={sel('blockEditor.blockPropertiesPanel.form.arrayField.itemField', { name: field.name, index: itemIndex, field: itemField.name })}
           />
         )
 
@@ -116,7 +117,7 @@ export function ArrayField({ field, value, onChange }: ArrayFieldProps) {
             onChange={(e) => handleItemFieldChange(itemIndex, itemField.name, e.target.value)}
             placeholder={itemField.placeholder || 'https://example.com'}
             required={itemField.required}
-            data-cy={`array-field-${field.name}-${itemIndex}-${itemField.name}`}
+            data-cy={sel('blockEditor.blockPropertiesPanel.form.arrayField.itemField', { name: field.name, index: itemIndex, field: itemField.name })}
           />
         )
 
@@ -131,7 +132,7 @@ export function ArrayField({ field, value, onChange }: ArrayFieldProps) {
             min={itemField.min}
             max={itemField.max}
             step={itemField.step}
-            data-cy={`array-field-${field.name}-${itemIndex}-${itemField.name}`}
+            data-cy={sel('blockEditor.blockPropertiesPanel.form.arrayField.itemField', { name: field.name, index: itemIndex, field: itemField.name })}
           />
         )
 
@@ -141,7 +142,7 @@ export function ArrayField({ field, value, onChange }: ArrayFieldProps) {
             value={String(fieldValue)}
             onValueChange={(newValue: string) => handleItemFieldChange(itemIndex, itemField.name, newValue)}
           >
-            <SelectTrigger data-cy={`array-field-${field.name}-${itemIndex}-${itemField.name}`}>
+            <SelectTrigger data-cy={sel('blockEditor.blockPropertiesPanel.form.arrayField.itemField', { name: field.name, index: itemIndex, field: itemField.name })}>
               <SelectValue placeholder={itemField.placeholder} />
             </SelectTrigger>
             <SelectContent>
@@ -160,7 +161,7 @@ export function ArrayField({ field, value, onChange }: ArrayFieldProps) {
             value={Array.isArray(fieldValue) ? fieldValue : (fieldValue ? [String(fieldValue)] : [])}
             onChange={(newValue) => handleItemFieldChange(itemIndex, itemField.name, newValue[0] || '')}
             maxImages={1}
-            data-cy={`array-field-${field.name}-${itemIndex}-${itemField.name}`}
+            data-cy={sel('blockEditor.blockPropertiesPanel.form.arrayField.itemField', { name: field.name, index: itemIndex, field: itemField.name })}
           />
         )
 
@@ -176,7 +177,7 @@ export function ArrayField({ field, value, onChange }: ArrayFieldProps) {
                 value={String(fieldValue || '#000000')}
                 onChange={(e) => handleItemFieldChange(itemIndex, itemField.name, e.target.value)}
                 className="opacity-0 w-full h-full cursor-pointer absolute inset-0"
-                data-cy={`array-field-${field.name}-${itemIndex}-${itemField.name}`}
+                data-cy={sel('blockEditor.blockPropertiesPanel.form.arrayField.itemField', { name: field.name, index: itemIndex, field: itemField.name })}
               />
             </div>
             <Input
@@ -196,14 +197,14 @@ export function ArrayField({ field, value, onChange }: ArrayFieldProps) {
             value={String(fieldValue)}
             onChange={(e) => handleItemFieldChange(itemIndex, itemField.name, e.target.value)}
             placeholder={itemField.placeholder}
-            data-cy={`array-field-${field.name}-${itemIndex}-${itemField.name}`}
+            data-cy={sel('blockEditor.blockPropertiesPanel.form.arrayField.itemField', { name: field.name, index: itemIndex, field: itemField.name })}
           />
         )
     }
   }
 
   return (
-    <div className="space-y-3" data-cy={`array-field-${field.name}`}>
+    <div className="space-y-3" data-cy={sel('blockEditor.blockPropertiesPanel.form.arrayField.container', { name: field.name })}>
       {/* Items List */}
       {items.length === 0 ? (
         <div className="text-center py-6 border border-dashed rounded-lg">
@@ -225,7 +226,7 @@ export function ArrayField({ field, value, onChange }: ArrayFieldProps) {
                     className="h-7 w-7"
                     onClick={() => handleMoveUp(index)}
                     disabled={index === 0}
-                    data-cy={`array-field-${field.name}-${index}-move-up`}
+                    data-cy={sel('blockEditor.blockPropertiesPanel.form.arrayField.itemMoveUp', { name: field.name, index })}
                   >
                     <ChevronUp className="h-4 w-4" />
                   </Button>
@@ -236,7 +237,7 @@ export function ArrayField({ field, value, onChange }: ArrayFieldProps) {
                     className="h-7 w-7"
                     onClick={() => handleMoveDown(index)}
                     disabled={index === items.length - 1}
-                    data-cy={`array-field-${field.name}-${index}-move-down`}
+                    data-cy={sel('blockEditor.blockPropertiesPanel.form.arrayField.itemMoveDown', { name: field.name, index })}
                   >
                     <ChevronDown className="h-4 w-4" />
                   </Button>
@@ -247,7 +248,7 @@ export function ArrayField({ field, value, onChange }: ArrayFieldProps) {
                     className="h-7 w-7 text-muted-foreground hover:text-destructive"
                     onClick={() => handleRemoveItem(index)}
                     disabled={!canRemove}
-                    data-cy={`array-field-${field.name}-${index}-remove`}
+                    data-cy={sel('blockEditor.blockPropertiesPanel.form.arrayField.itemRemove', { name: field.name, index })}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -281,7 +282,7 @@ export function ArrayField({ field, value, onChange }: ArrayFieldProps) {
           onClick={handleAddItem}
           disabled={!canAdd}
           className="w-full"
-          data-cy={`array-field-${field.name}-add`}
+          data-cy={sel('blockEditor.blockPropertiesPanel.form.arrayField.addButton', { name: field.name })}
         >
           <Plus className="h-4 w-4 mr-2" />
           {t('addItem')}

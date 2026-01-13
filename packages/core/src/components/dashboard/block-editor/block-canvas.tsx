@@ -2,6 +2,7 @@
 
 import { useCallback } from 'react'
 import { useTranslations } from 'next-intl'
+import { sel } from '../../../lib/test'
 import {
   DndContext,
   closestCenter,
@@ -82,7 +83,7 @@ export function BlockCanvas({
         className="flex items-center justify-center min-h-[400px] rounded-lg border-2 border-dashed border-border bg-muted/10"
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDrop}
-        data-cy="block-canvas-empty"
+        data-cy={sel('blockEditor.layoutCanvas.empty')}
       >
         <div className="text-center">
           <p className="text-muted-foreground mb-2">{t('empty.message')}</p>
@@ -93,7 +94,7 @@ export function BlockCanvas({
   }
 
   return (
-    <div data-cy="block-canvas">
+    <div data-cy={sel('blockEditor.layoutCanvas.container')}>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}

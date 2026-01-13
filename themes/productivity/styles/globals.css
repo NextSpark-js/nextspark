@@ -3,10 +3,22 @@
  *
  * Clean, modern design focused on productivity.
  * Blue-tinted palette with clear visual hierarchy.
+ *
+ * ÚNICA FUENTE DE VERDAD para estilos del theme.
+ * Editar este archivo para customizar el design system.
  */
 
+/* =============================================
+   IMPORTS
+   ============================================= */
+@import "tailwindcss";
+@import "@nextsparkjs/core/styles/ui.css";
+@import "@nextsparkjs/core/styles/utilities.css";
+@import "@nextsparkjs/core/styles/docs.css";
+@source "../../../**/*.{js,ts,jsx,tsx}";
+
 /* ============================================================================
-   Base Theme Variables - Blue Color Scheme
+   PRODUCTIVITY THEME - LIGHT MODE
    ============================================================================ */
 
 :root {
@@ -249,7 +261,13 @@
    Base Styles
    ============================================================================ */
 
+* {
+  border-color: var(--border);
+}
+
 body {
+  background-color: var(--background);
+  color: var(--foreground);
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 

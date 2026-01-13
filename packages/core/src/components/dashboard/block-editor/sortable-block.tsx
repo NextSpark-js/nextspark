@@ -10,6 +10,7 @@ import { GripVertical, Copy, Trash2 } from 'lucide-react'
 import type { BlockInstance } from '../../../types/blocks'
 import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry'
 import { cn } from '../../../lib/utils'
+import { sel } from '../../../lib/test'
 
 interface SortableBlockProps {
   block: BlockInstance
@@ -45,7 +46,7 @@ export function SortableBlock({
 
   if (!blockConfig) {
     return (
-      <Card className="border-destructive" data-cy={`block-error-${block.id}`}>
+      <Card className="border-destructive" data-cy={sel('blockEditor.layoutCanvas.sortableBlock.error', { id: block.id })}>
         <CardContent className="p-4">
           <p className="text-destructive text-sm">
             {t('error.notFound', { slug: block.blockSlug })}
@@ -63,7 +64,7 @@ export function SortableBlock({
         'group relative',
         isDragging && 'opacity-50',
       )}
-      data-cy={`sortable-block-${block.id}`}
+      data-cy={sel('blockEditor.layoutCanvas.sortableBlock.container', { id: block.id })}
     >
       <Card
         className={cn(
@@ -80,7 +81,7 @@ export function SortableBlock({
               {...attributes}
               {...listeners}
               className="mt-1 cursor-grab active:cursor-grabbing focus:outline-none focus:ring-2 focus:ring-primary rounded p-1"
-              data-cy={`drag-handle-${block.id}`}
+              data-cy={sel('blockEditor.layoutCanvas.sortableBlock.dragHandle', { id: block.id })}
             >
               <GripVertical className="h-5 w-5 text-muted-foreground" />
             </button>
@@ -128,7 +129,7 @@ export function SortableBlock({
                   e.stopPropagation()
                   onDuplicate()
                 }}
-                data-cy={`duplicate-block-${block.id}`}
+                data-cy={sel('blockEditor.layoutCanvas.sortableBlock.duplicateBtn', { id: block.id })}
               >
                 <Copy className="h-4 w-4" />
               </Button>
@@ -140,7 +141,7 @@ export function SortableBlock({
                   onRemove()
                 }}
                 className="text-destructive hover:text-destructive"
-                data-cy={`remove-block-${block.id}`}
+                data-cy={sel('blockEditor.layoutCanvas.sortableBlock.removeBtn', { id: block.id })}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>

@@ -6,7 +6,7 @@ import { Suspense, useEffect, useState } from "react";
 import { Button } from '@nextsparkjs/core/components/ui/button';
 import { Alert, AlertDescription } from '@nextsparkjs/core/components/ui/alert';
 import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
-import { createCyId } from '@nextsparkjs/testing'
+import { sel } from '@nextsparkjs/core/selectors'
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
@@ -116,7 +116,7 @@ function VerifyEmailContent() {
 
   if (status === 'loading') {
     return (
-      <div className="space-y-4" data-cy={createCyId('verify-email', 'loading')}>
+      <div className="space-y-4" data-cy={sel('auth.verifyEmail.container')}>
         <div className="text-center">
           <h2 className="text-xl font-semibold">Verifying Email</h2>
           <p className="text-sm text-muted-foreground mt-2">Please wait while we verify your email address</p>
@@ -130,7 +130,7 @@ function VerifyEmailContent() {
 
   if (status === 'success') {
     return (
-      <div className="space-y-4" data-cy={createCyId('verify-email', 'success')}>
+      <div className="space-y-4" data-cy={sel('auth.verifyEmail.successMessage')}>
         <div className="text-center">
           <div className="flex justify-center mb-2">
             <CheckCircle className="h-12 w-12 text-primary" />
@@ -148,7 +148,7 @@ function VerifyEmailContent() {
   }
 
   return (
-    <div className="space-y-4" data-cy={createCyId('verify-email', 'error')}>
+    <div className="space-y-4">
       <div className="text-center">
         <div className="flex justify-center mb-2">
           <AlertCircle className="h-12 w-12 text-destructive" />
@@ -157,15 +157,15 @@ function VerifyEmailContent() {
         <p className="text-sm text-muted-foreground mt-2">We couldn&apos;t verify your email address</p>
       </div>
       {error && (
-        <Alert variant="destructive" data-cy={createCyId('verify-email', 'error-message')}>
+        <Alert variant="destructive" data-cy={sel('auth.verifyEmail.error')}>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
       <div className="flex gap-2">
-        <Button onClick={() => router.push('/signup')} variant="outline" className="flex-1" data-cy={createCyId('verify-email', 'back-signup')}>
+        <Button onClick={() => router.push('/signup')} variant="outline" className="flex-1">
           Back to Sign Up
         </Button>
-        <Button onClick={() => router.push('/login')} className="flex-1" data-cy={createCyId('verify-email', 'go-login')}>
+        <Button onClick={() => router.push('/login')} className="flex-1">
           Go to Login
         </Button>
       </div>

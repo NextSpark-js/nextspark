@@ -54,6 +54,8 @@
       "style": "./dist/styles/ui.css",
       "default": "./dist/styles/ui.css"
     },
+    "./styles/utilities.css": "./styles/utilities.css",
+    "./styles/docs.css": "./styles/docs.css",
     "./lib/services": {
       "types": "./dist/lib/services/index.d.ts",
       "import": "./dist/lib/services/index.js"
@@ -201,7 +203,19 @@
     "./config/*": "./dist/config/*",
     "./scripts/*": "./scripts/*",
     "./cypress-support": "./tests/cypress/support/index.ts",
-    "./jest-setup": "./tests/jest/setup.ts"
+    "./jest-setup": "./tests/jest/setup.ts",
+    "./selectors": {
+      "types": "./dist/lib/selectors/index.d.ts",
+      "import": "./dist/lib/selectors/index.js"
+    },
+    "./lib/selectors": {
+      "types": "./dist/lib/selectors/index.d.ts",
+      "import": "./dist/lib/selectors/index.js"
+    },
+    "./lib/test": {
+      "types": "./dist/lib/test/index.d.ts",
+      "import": "./dist/lib/test/index.js"
+    }
   },
   "files": [
     "dist",
@@ -252,6 +266,7 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@nextsparkjs/testing": "workspace:*",
     "@codemirror/lang-json": "^6.0.2",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",

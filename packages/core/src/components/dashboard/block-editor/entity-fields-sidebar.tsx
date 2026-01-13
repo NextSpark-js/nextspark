@@ -3,6 +3,7 @@
 import { useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { useQuery } from '@tanstack/react-query'
+import { sel } from '../../../lib/test'
 import { Input } from '../../ui/input'
 import { Textarea } from '../../ui/textarea'
 import { Label } from '../../ui/label'
@@ -94,7 +95,7 @@ export function EntityFieldsSidebar({
             placeholder={t('placeholders.excerpt')}
             rows={4}
             className="resize-none"
-            data-cy={`field-${fieldName}`}
+            data-cy={sel('blockEditor.entityFieldsPanel.field', { name: fieldName })}
           />
         </div>
       )
@@ -113,7 +114,7 @@ export function EntityFieldsSidebar({
             value={value || ''}
             onChange={(e) => onChange(fieldName, e.target.value)}
             placeholder={t('placeholders.imageUrl')}
-            data-cy={`field-${fieldName}`}
+            data-cy={sel('blockEditor.entityFieldsPanel.field', { name: fieldName })}
           />
           {value && (
             <div className="mt-2 rounded-md border overflow-hidden">
@@ -139,7 +140,7 @@ export function EntityFieldsSidebar({
           id={fieldName}
           value={value || ''}
           onChange={(e) => onChange(fieldName, e.target.value)}
-          data-cy={`field-${fieldName}`}
+          data-cy={sel('blockEditor.entityFieldsPanel.field', { name: fieldName })}
         />
       </div>
     )
@@ -156,7 +157,7 @@ export function EntityFieldsSidebar({
   }
 
   return (
-    <div className="flex h-full flex-col bg-card" data-cy="entity-fields-sidebar">
+    <div className="flex h-full flex-col bg-card" data-cy={sel('blockEditor.entityFieldsPanel.container')}>
       <div className="border-b p-4">
         <h3 className="font-semibold text-foreground">{t('sidebar.fieldsTitle')}</h3>
         <p className="text-xs text-muted-foreground">{t('sidebar.fieldsDescription')}</p>
@@ -186,17 +187,18 @@ export function EntityFieldsSidebar({
               ) : taxonomyItems.length === 0 ? (
                 <p className="text-xs text-muted-foreground">{t('sidebar.noCategories')}</p>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-2" data-cy={sel('blockEditor.entityFieldsPanel.categoryList')}>
                   {taxonomyItems.map(item => (
                     <div
                       key={item.id}
                       className="flex items-center gap-2 rounded-md border p-2 hover:bg-accent transition-colors cursor-pointer"
                       onClick={() => handleCategoryClick(item.id)}
-                      data-cy={`category-${item.slug}`}
+                      data-cy={sel('blockEditor.entityFieldsPanel.categoryItem', { slug: item.slug })}
                     >
                       <Checkbox
                         checked={currentCategories.includes(item.id)}
                         onCheckedChange={() => handleCategoryClick(item.id)}
+                        data-cy={sel('blockEditor.entityFieldsPanel.categoryCheckbox', { slug: item.slug })}
                       />
                       <span className="text-sm flex-1">{item.name}</span>
                       {item.color && (
@@ -222,6 +224,7 @@ export function EntityFieldsSidebar({
                         className="cursor-pointer"
                         onClick={() => handleCategoryClick(cat.id)}
                         style={cat.color ? { backgroundColor: cat.color, color: '#fff' } : undefined}
+                        data-cy={sel('blockEditor.entityFieldsPanel.categoryBadge', { slug: cat.slug })}
                       >
                         {cat.name} &times;
                       </Badge>

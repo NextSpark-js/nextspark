@@ -18,7 +18,7 @@ import {
 import { useEntitySearch, type EntitySearchResult } from '../../../hooks/useEntitySearch'
 import { formatSearchResult } from '../../../lib/search-highlighting'
 import { cn } from '../../../lib/utils'
-import { createTestId, createCyId, createAriaLabel } from '../../../lib/test'
+import { sel, createAriaLabel } from '../../../lib/test'
 import { useTranslations } from 'next-intl'
 
 const getTypeIcon = (result: EntitySearchResult) => {
@@ -100,8 +100,7 @@ function SearchResultItem({ result, onSelect, searchQuery }: SearchResultItemPro
           limits: result.limitInfo ? ` (${result.limitInfo.current}/${result.limitInfo.max})` : ''
         }
       )}
-      {...createTestId('search', 'result', 'item') && { 'data-testid': createTestId('search', 'result', 'item') }}
-      {...createCyId('search', 'result') && { 'data-cy': createCyId('search', 'result') }}
+      data-cy={sel('globalSearch.result')}
       data-result-id={result.id}
       data-result-type={result.type}
       data-entity-type={result.entityType}
@@ -271,20 +270,17 @@ export function SearchDropdown() {
   return (
     <>
       {/* MANDATORY: Screen reader announcements */}
-      <div 
-        aria-live="polite" 
+      <div
+        aria-live="polite"
         aria-atomic="true"
         className="sr-only"
-        {...createTestId('search', 'status', 'message') && { 'data-testid': createTestId('search', 'status', 'message') }}
       >
         {statusMessage}
       </div>
 
-      <div 
-        className="relative w-full" 
+      <div
+        className="relative w-full"
         ref={dropdownRef}
-        {...createTestId('search', 'container') && { 'data-testid': createTestId('search', 'container') }}
-        {...createCyId('search', 'dropdown') && { 'data-cy': createCyId('search', 'dropdown') }}
       >
         {/* Search Input */}
         <div className="relative">
@@ -302,8 +298,7 @@ export function SearchDropdown() {
             aria-owns={isOpen ? "search-results" : undefined}
             aria-autocomplete="list"
             aria-label={t('search.label')}
-            {...createTestId('search', 'input') && { 'data-testid': createTestId('search', 'input') }}
-            {...createCyId('search', 'input') && { 'data-cy': createCyId('search', 'input') }}
+            data-cy={sel('globalSearch.input')}
           />
         
         {/* Clear button */}
@@ -314,8 +309,6 @@ export function SearchDropdown() {
               className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
               onClick={handleClose}
               aria-label={t('search.clear')}
-              {...createTestId('search', 'clear', 'button') && { 'data-testid': createTestId('search', 'clear', 'button') }}
-              {...createCyId('search', 'clear') && { 'data-cy': createCyId('search', 'clear') }}
             >
               <X className="h-3 w-3" aria-hidden="true" />
             </Button>
@@ -331,13 +324,12 @@ export function SearchDropdown() {
 
         {/* Dropdown */}
         {showDropdown && (
-          <div 
+          <div
             className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg z-50"
             id="search-results"
             role="listbox"
             aria-label={t('search.results')}
-            {...createTestId('search', 'dropdown', 'content') && { 'data-testid': createTestId('search', 'dropdown', 'content') }}
-            {...createCyId('search', 'results') && { 'data-cy': createCyId('search', 'results') }}
+            data-cy={sel('globalSearch.results')}
           >
             <ScrollArea className="max-h-96">
             {isSearching ? (

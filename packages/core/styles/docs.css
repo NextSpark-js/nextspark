@@ -1,0 +1,82 @@
+/* =============================================
+   DOCUMENTATION - Markdown Styles
+   Styles for rendered markdown content in docs pages.
+   These styles USE theme variables (--foreground, --muted, etc.)
+   Include this file in your theme's globals.css
+   ============================================= */
+
+.docs-content {
+  @apply space-y-4;
+}
+
+.docs-content h2 {
+  @apply text-2xl font-bold mt-8 mb-4 border-b pb-2 border-border;
+}
+
+.docs-content h3 {
+  @apply text-xl font-semibold mt-6 mb-3;
+}
+
+.docs-content h4 {
+  @apply text-lg font-semibold mt-4 mb-2;
+}
+
+.docs-content p {
+  @apply leading-7 text-foreground;
+}
+
+.docs-content code {
+  @apply bg-muted px-1.5 py-0.5 rounded text-sm font-mono text-foreground;
+}
+
+.docs-content pre {
+  @apply bg-muted p-4 rounded-lg overflow-x-auto my-4 border border-border;
+}
+
+.docs-content pre code {
+  @apply bg-transparent p-0;
+}
+
+.docs-content ul {
+  @apply list-disc list-inside space-y-2 text-foreground;
+}
+
+.docs-content ol {
+  @apply list-decimal list-inside space-y-2 text-foreground;
+}
+
+.docs-content li {
+  @apply leading-7;
+}
+
+.docs-content a {
+  @apply text-primary underline-offset-4 hover:underline transition-colors;
+}
+
+.docs-content blockquote {
+  @apply border-l-4 border-primary pl-4 italic text-muted-foreground my-4;
+}
+
+.docs-content table {
+  @apply w-full border-collapse my-4;
+}
+
+.docs-content thead {
+  @apply border-b-2 border-border;
+}
+
+.docs-content th {
+  @apply text-left p-2 font-semibold bg-muted;
+}
+
+.docs-content td {
+  @apply p-2 border-b border-border;
+}
+
+.docs-content img {
+  @apply rounded-lg my-4 max-w-full h-auto;
+}
+
+.docs-content hr {
+  @apply my-8 border-border;
+}

@@ -17,7 +17,7 @@ import { getEntity, getEntityRegistry, getEntityMetadata } from '../../lib/entit
 import { EntityFieldRenderer } from './EntityFieldRenderer'
 import { EntityChildManager } from './EntityChildManager'
 import { EntityDetailHeader } from './EntityDetailHeader'
-import { createTestId, createCyId } from '../../lib/test'
+import { sel } from '../../lib/test'
 import { useTeam } from '../../hooks/useTeam'
 import { usePermissions } from '../../lib/permissions/hooks'
 
@@ -74,19 +74,6 @@ export interface EntityDetailProps {
   customSections?: CustomSectionConfig[]
 }
 
-/**
- * Generate test IDs for entity detail
- */
-function generateTestIds(entityName: string) {
-  return {
-    container: createTestId(entityName, 'detail'),
-    backButton: createTestId(entityName, 'back'),
-    editButton: createTestId(entityName, 'edit'),
-    deleteButton: createTestId(entityName, 'delete'),
-    actionsMenu: createTestId(entityName, 'actions'),
-    childSection: (childName: string) => createTestId(entityName, 'child', childName),
-  }
-}
 
 export function EntityDetail({
   entityConfig,
@@ -117,7 +104,6 @@ export function EntityDetail({
     canDelete: `${entityConfig.slug}.delete` as Permission,
   })
 
-  const testIds = generateTestIds(entityConfig.slug)
 
   // Get fields that should be shown in detail view
   const detailFields = entityConfig.fields
@@ -170,8 +156,7 @@ export function EntityDetail({
     <div className="p-6">
       <div
         className={`max-w-7xl mx-auto space-y-6 ${className || ''}`}
-        data-testid={testIds.container}
-        data-cy={createCyId(entityConfig.slug, 'detail')}
+        data-cy={sel('entities.detail.container', { slug: entityConfig.slug })}
       >
         {/* Entity Detail Header */}
         {enableActions ? (

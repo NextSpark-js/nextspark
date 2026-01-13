@@ -6,6 +6,7 @@ import { DocsContent } from '@nextsparkjs/core/components/docs/docs-content'
 import { SuperadminDocsSidebar } from '@nextsparkjs/core/components/docs/superadmin-docs-sidebar'
 import path from 'path'
 import type { Metadata } from 'next'
+import { sel } from '@nextsparkjs/core/selectors'
 
 interface SuperadminDocsPageProps {
   params: Promise<{
@@ -63,7 +64,7 @@ export default async function SuperadminDocsDetailPage({ params }: SuperadminDoc
   const { metadata, html } = await parseMarkdownFile(filePath)
 
   return (
-    <div className="flex gap-8" data-cy="superadmin-docs-page">
+    <div className="flex gap-8" data-cy={sel('superadmin.docs.pageDetail')}>
       <aside className="hidden lg:block w-64 shrink-0">
         <SuperadminDocsSidebar sections={DOCS_REGISTRY.superadmin} />
       </aside>

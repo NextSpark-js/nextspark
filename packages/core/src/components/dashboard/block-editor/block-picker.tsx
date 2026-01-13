@@ -133,7 +133,7 @@ export function BlockPicker({
                     : 'bg-muted text-muted-foreground hover:bg-muted-foreground/20'
                 )}
                 onClick={() => setSelectedCategory(null)}
-                data-cy={sel('blockEditor.blockPicker.categoryChipActive')}
+                data-cy={sel('blockEditor.blockPicker.categoryActive')}
               >
                 {t('sidebar.categories.all')}
               </button>
@@ -227,7 +227,7 @@ export function BlockPicker({
                             e.stopPropagation()
                             onAddBlock(block.slug)
                           }}
-                          data-cy={sel('blockEditor.blockPicker.blockAddBtn', { slug: block.slug })}
+                          data-cy={sel('blockEditor.blockPicker.addButton', { slug: block.slug })}
                           title={t('sidebar.addBlock')}
                         >
                           <Plus className="h-3.5 w-3.5" />

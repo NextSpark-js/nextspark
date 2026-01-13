@@ -20,6 +20,8 @@
     "configDescription": "Theme and entity configuration",
     "api": "API Explorer",
     "apiDescription": "Browse all API endpoints",
+    "scheduledActions": "Scheduled Actions",
+    "scheduledActionsDescription": "Monitor background tasks",
     "expandSidebar": "Expand sidebar",
     "collapseSidebar": "Collapse sidebar"
   },

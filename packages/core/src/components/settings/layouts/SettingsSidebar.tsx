@@ -16,7 +16,7 @@ import {
   Key,
   Share2
 } from 'lucide-react'
-import { createTestId, createCyId, createAriaLabel, sel } from '../../../lib/test'
+import { createAriaLabel, sel } from '../../../lib/test'
 import { useTranslations } from 'next-intl'
 import { getEnabledSettingsPages } from '../../../lib/config'
 
@@ -86,23 +86,20 @@ export function SettingsSidebar({ className }: SettingsSidebarProps) {
         aria-live="polite" 
         aria-atomic="true"
         className="sr-only"
-        {...createTestId('settings-sidebar', 'status', 'message') && { 'data-testid': createTestId('settings-sidebar', 'status', 'message') }}
-      >
+              >
         {statusMessage}
       </div>
 
-      <nav 
+      <nav
         className={cn("space-y-2", className)}
         role="navigation"
         aria-label="Navegación de configuración"
-        {...createTestId('settings-sidebar', 'container') && { 'data-testid': createTestId('settings-sidebar', 'container') }}
-        {...createCyId('settings-sidebar', 'main') && { 'data-cy': createCyId('settings-sidebar', 'main') }}
+                data-cy={sel('settings.sidebar.container')}
       >
         <div className="px-3 py-2">
-          <header 
+          <header
             className="flex items-center gap-2 mb-4"
-            {...createTestId('settings-sidebar', 'header') && { 'data-testid': createTestId('settings-sidebar', 'header') }}
-            {...createCyId('settings-sidebar', 'header') && { 'data-cy': createCyId('settings-sidebar', 'header') }}
+                        data-cy={sel('settings.sidebar.header')}
           >
             <Settings 
               className="h-5 w-5 text-muted-foreground" 
@@ -111,20 +108,17 @@ export function SettingsSidebar({ className }: SettingsSidebarProps) {
             <h2 
               id="settings-heading"
               className="text-lg font-semibold tracking-tight"
-              {...createTestId('settings-sidebar', 'heading') && { 'data-testid': createTestId('settings-sidebar', 'heading') }}
-            >
+                          >
               {t('navigation.settings')}
             </h2>
           </header>
           <section 
             aria-labelledby="settings-heading"
-            {...createTestId('settings-sidebar', 'nav', 'section') && { 'data-testid': createTestId('settings-sidebar', 'nav', 'section') }}
-          >
-            <div 
+                      >
+            <div
               className="space-y-1"
               role="list"
-              {...createTestId('settings-sidebar', 'nav', 'items') && { 'data-testid': createTestId('settings-sidebar', 'nav', 'items') }}
-              {...createCyId('settings-sidebar', 'nav-items') && { 'data-cy': createCyId('settings-sidebar', 'nav-items') }}
+                            data-cy={sel('settings.sidebar.nav.items')}
             >
               {filteredNavigation.map((item) => {
                 const isActive = pathname === item.href
@@ -152,8 +146,7 @@ export function SettingsSidebar({ className }: SettingsSidebarProps) {
                         ? "bg-accent text-accent-foreground"
                         : "text-muted-foreground hover:bg-accent/50"
                     )}
-                    {...createTestId('settings-sidebar', 'nav', 'item') && { 'data-testid': createTestId('settings-sidebar', 'nav', 'item') }}
-                    data-cy={sel('settings.sidebar.navItem', { section: item.name.toLowerCase() })}
+                                        data-cy={sel('settings.sidebar.nav.item', { section: item.name.toLowerCase() })}
                     data-nav-item={item.name.toLowerCase()}
                     data-active={isActive}
                   >
@@ -170,8 +163,7 @@ export function SettingsSidebar({ className }: SettingsSidebarProps) {
                           "font-medium transition-colors",
                           isActive ? "text-accent-foreground" : "text-foreground"
                         )}
-                        {...createTestId('settings-sidebar', 'nav', 'title') && { 'data-testid': createTestId('settings-sidebar', 'nav', 'title') }}
-                      >
+                                              >
                         {tSettings(`navigation.${item.name}`)}
                       </span>
                       <span 
@@ -179,8 +171,7 @@ export function SettingsSidebar({ className }: SettingsSidebarProps) {
                           "text-xs transition-colors",
                           isActive ? "text-accent-foreground/70" : "text-muted-foreground"
                         )}
-                        {...createTestId('settings-sidebar', 'nav', 'description') && { 'data-testid': createTestId('settings-sidebar', 'nav', 'description') }}
-                      >
+                                              >
                         {tSettings(`overview.${item.name}Description`)}
                       </span>
                     </div>

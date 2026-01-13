@@ -1,6 +1,6 @@
 'use client'
 
-import { createTestId, createCyId } from '@nextsparkjs/testing'
+import { sel } from '@nextsparkjs/core/selectors'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useMemo } from 'react'
@@ -36,21 +36,18 @@ function SettingsPage() {
   return (
     <div
       className="max-w-2xl"
-      {...createTestId('settings', 'overview', 'container') && { 'data-testid': createTestId('settings', 'overview', 'container') }}
-      {...createCyId('settings', 'overview') && { 'data-cy': createCyId('settings', 'overview') }}
+      data-cy={sel('settings.overview.container')}
     >
       <div className="space-y-6">
         <header>
           <h2
             className="text-2xl font-bold"
             id="settings-overview-heading"
-            {...createTestId('settings', 'overview', 'title') && { 'data-testid': createTestId('settings', 'overview', 'title') }}
           >
             {t('overview.title')}
           </h2>
           <p
             className="text-muted-foreground mt-2"
-            {...createTestId('settings', 'overview', 'description') && { 'data-testid': createTestId('settings', 'overview', 'description') }}
           >
             {t('overview.description')}
           </p>
@@ -68,8 +65,7 @@ function SettingsPage() {
                 key={page.key}
                 href={`/dashboard/settings/${page.key}`}
                 className="block p-6 rounded-lg border border-border bg-card hover:bg-accent transition-colors group"
-                {...createTestId('settings', 'overview', page.key) && { 'data-testid': createTestId('settings', 'overview', page.key) }}
-                {...createCyId('settings', `overview-${page.key}`) && { 'data-cy': createCyId('settings', `overview-${page.key}`) }}
+                data-cy={sel('settings.overview.card', { key: page.key })}
               >
                 <div className="flex items-start gap-4">
                   <div className="flex-shrink-0">
