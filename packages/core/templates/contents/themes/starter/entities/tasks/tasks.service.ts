@@ -99,7 +99,6 @@ export class TasksService {
         updatedAt: task.updatedAt,
       }
     } catch (error) {
-      console.error('TasksService.getById error:', error)
       throw new Error(
         error instanceof Error ? error.message : 'Failed to fetch task'
       )
@@ -229,7 +228,6 @@ export class TasksService {
         total,
       }
     } catch (error) {
-      console.error('TasksService.list error:', error)
       throw new Error(
         error instanceof Error ? error.message : 'Failed to list tasks'
       )
@@ -259,7 +257,6 @@ export class TasksService {
 
       return tasks
     } catch (error) {
-      console.error('TasksService.getByStatus error:', error)
       throw new Error(
         error instanceof Error
           ? error.message
@@ -323,7 +320,6 @@ export class TasksService {
         updatedAt: task.updatedAt,
       }))
     } catch (error) {
-      console.error('TasksService.getOverdue error:', error)
       throw new Error(
         error instanceof Error ? error.message : 'Failed to fetch overdue tasks'
       )
@@ -379,7 +375,6 @@ export class TasksService {
         updatedAt: task.updatedAt,
       }))
     } catch (error) {
-      console.error('TasksService.getDueToday error:', error)
       throw new Error(
         error instanceof Error
           ? error.message
