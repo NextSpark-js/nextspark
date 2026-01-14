@@ -91,6 +91,7 @@ export async function buildCommand(options: BuildOptions): Promise<void> {
     const buildProcess = spawn('npx', ['next', 'build'], {
       cwd: projectRoot,
       stdio: 'inherit',
+      shell: true,
       env: {
         ...projectEnv,
         ...process.env,

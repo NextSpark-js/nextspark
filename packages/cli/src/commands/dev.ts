@@ -48,6 +48,7 @@ export async function devCommand(options: DevOptions): Promise<void> {
     const devProcess = spawn('npx', ['next', 'dev', '-p', options.port], {
       cwd: projectRoot,
       stdio: 'inherit',
+      shell: true,
       env: {
         ...process.env,
         NEXTSPARK_CORE_DIR: coreDir,
