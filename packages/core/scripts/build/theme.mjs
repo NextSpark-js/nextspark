@@ -275,10 +275,6 @@ export async function buildTheme(projectRoot = null) {
 
   const outputDir = path.join(config.projectRoot, '.next')
   const outputPath = path.join(outputDir, 'theme-generated.css')
-  // In npm mode, write to app/theme-styles.css. In source mode, write to core/theme-styles.css
-  const themeStylesPath = config.isNpmMode
-    ? path.join(config.projectRoot, 'app', 'theme-styles.css')
-    : path.join(config.projectRoot, 'core', 'theme-styles.css')
   const themePath = path.join(config.contentsDir, 'themes', activeTheme)
 
   // Ensure output directory exists
@@ -318,7 +314,6 @@ export async function buildTheme(projectRoot = null) {
     // Fallback to empty (core styles only)
     console.log('🔄 Falling back to core styles only')
     fs.writeFileSync(outputPath, `/* Fallback: Theme '${activeTheme}' not found, using core styles */\n`)
-    fs.writeFileSync(themeStylesPath, `/* Fallback: Theme '${activeTheme}' not found, using core styles */\n`)
     return
   }
 
@@ -365,13 +360,11 @@ ${globalCSS}
 ${componentCSS}
 `
 
-    // Write final CSS to both locations
+    // Write final CSS to .next directory (for build cache)
     fs.writeFileSync(outputPath, finalCSS)
-    fs.writeFileSync(themeStylesPath, finalCSS)
 
     console.log(`✅ Theme built successfully!`)
     console.log(`📄 Output: ${outputPath} (${finalCSS.length} chars)`)
-    console.log(`📄 Theme styles: ${themeStylesPath} (${finalCSS.length} chars)`)
 
   } catch (error) {
     console.error(`❌ Theme build failed:`, error)
@@ -386,7 +379,6 @@ ${componentCSS}
  */
 `
     fs.writeFileSync(outputPath, errorCSS)
-    fs.writeFileSync(themeStylesPath, errorCSS)
 
     throw error
   }

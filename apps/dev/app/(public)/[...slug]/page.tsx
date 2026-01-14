@@ -20,12 +20,18 @@ import {
   matchPathToEntity,
   getEntityBasePath,
 } from '@nextsparkjs/core/lib/entities/schema-generator'
-import { getEntityRegistry } from '@nextsparkjs/core/lib/entities/queries'
+import { getEntityRegistry, setEntityRegistry } from '@nextsparkjs/core/lib/entities/queries'
 import { TemplateService } from '@nextsparkjs/core/lib/services/template.service'
 import { resolvePublicEntityFromUrl } from '@nextsparkjs/core/lib/api/entity/public-resolver'
 import { PublicEntityGrid } from '@nextsparkjs/core/components/public/entities/PublicEntityGrid'
 import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 import type { Metadata } from 'next'
+// Import registry directly - webpack resolves @nextsparkjs/registries alias at compile time
+import { ENTITY_REGISTRY, ENTITY_METADATA } from '@nextsparkjs/registries/entity-registry'
+
+// Initialize registry at module load time (before any component renders)
+// This ensures the registry is available even if this page loads before the layout
+setEntityRegistry(ENTITY_REGISTRY, ENTITY_METADATA)
 
 /**
  * Convert entity registry to format expected by matchPathToEntity

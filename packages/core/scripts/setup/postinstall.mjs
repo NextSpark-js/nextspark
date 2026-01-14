@@ -9,7 +9,6 @@
  * Generated files:
  * - tsconfig.json (from tsconfig.base.json + dynamic theme exclusions)
  * - core/lib/registries/*.ts (entity, theme, plugin registries)
- * - core/theme-styles.css (compiled theme CSS)
  * - public/theme/* (theme assets)
  *
  * Usage: node core/scripts/setup/postinstall.mjs
@@ -142,7 +141,6 @@ async function setup() {
     console.log('Generated files:')
     console.log('  • tsconfig.json')
     console.log('  • core/lib/registries/*.ts')
-    console.log('  • core/theme-styles.css')
     console.log('  • public/theme/*')
   }
 
