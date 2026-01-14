@@ -391,7 +391,7 @@ If required `data-cy` selectors don't exist:
 ### Example 1: Demo from Active Session
 
 ```
-User: /doc:demo-feature
+User: /doc-demo-feature
 
 Command: Detected active session: 2025-12-13-teams-permissions-v1
          Do you want to create a demo of this feature?
@@ -422,7 +422,7 @@ Command: [Launches demo-video-generator]
 ### Example 2: Custom Feature Demo
 
 ```
-User: /doc:demo-feature create demo of the billing system
+User: /doc-demo-feature create demo of the billing system
 
 Command: No active session detected.
          What is the target duration?

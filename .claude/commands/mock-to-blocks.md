@@ -36,7 +36,7 @@ Extract mock path from input above.
 
 ```bash
 # Check for resume flag
-# Example: /mock:to-blocks --resume .claude/sessions/mock-2025-01-09/
+# Example: /mock-to-blocks --resume .claude/sessions/mock-2025-01-09/
 ```
 
 ### Step 0.2: Validate Mock
@@ -373,22 +373,22 @@ See: `{SESSION_PATH}/pendings.md`
 
 ```bash
 # Basic conversion
-/mock:to-blocks _tmp/mocks/stitch/landing-page
+/mock-to-blocks _tmp/mocks/stitch/landing-page
 
 # With specific theme
-/mock:to-blocks _tmp/mocks/client-design --theme=client-theme
+/mock-to-blocks _tmp/mocks/client-design --theme=client-theme
 
 # Resume interrupted session
-/mock:to-blocks --resume .claude/sessions/mock-2025-01-09/
+/mock-to-blocks --resume .claude/sessions/mock-2025-01-09/
 ```
 
 ---
 
 ## Related Commands
 
-- `/mock:analyze` - Standalone design system analysis
-- `/block:create` - Create a single block manually
-- `/block:validate` - Validate existing blocks
+- `/mock-analyze` - Standalone design system analysis
+- `/block-create` - Create a single block manually
+- `/block-validate` - Validate existing blocks
 
 ---
 

@@ -71,7 +71,7 @@ describe('Entity CRUD', {
 }, () => {
 ```
 
-**Important:** No session tag needed - `/test:fix` can run outside active sessions.
+**Important:** No session tag needed - `/test-fix` can run outside active sessions.
 
 ---
 
@@ -682,7 +682,7 @@ ${stillFailing.map(f => `- ${f.test}: ${f.reason}`).join('\n')}
 **Next Steps:**
 1. Review escalations in context.md
 2. Fix reported issues (selectors, API bugs)
-3. Run \`/test:fix\` again
+3. Run \`/test-fix\` again
 `}
 ```
 

@@ -109,7 +109,7 @@ Este documento describe el flujo completo de desarrollo desde la creacion de una
 |  |  16. code-reviewer                                                  |  |
 |  |  17. unit-test-writer                                               |  |
 |  |  18. documentation-writer (OPCIONAL)                                |  |
-|  |  19. demo-video-generator (OPCIONAL) -> /doc:demo-feature           |  |
+|  |  19. demo-video-generator (OPCIONAL) -> /doc-demo-feature           |  |
 |  +=====================================================================+  |
 |                                  |                                        |
 |                                  v                                        |
@@ -120,11 +120,11 @@ Este documento describe el flujo completo de desarrollo desde la creacion de una
 
 ### Refinamiento Pre-Ejecucion (Opcional)
 
-Despues del planning (Fases 1-2) y antes de `/task:execute`, se puede refinar la sesion con `/task:refine`:
+Despues del planning (Fases 1-2) y antes de `/task-execute`, se puede refinar la sesion con `/task-refine`:
 
 - Ajustar requirements o plan antes de comenzar desarrollo
 - Solo para sesiones en fase de planning (desarrollo NO iniciado)
-- Para sesiones en desarrollo, usar `/task:scope-change`
+- Para sesiones en desarrollo, usar `/task-scope-change`
 
 ---
 
@@ -223,48 +223,48 @@ await AskUserQuestion({
 
 | Comando | Descripcion |
 |---------|-------------|
-| `/task:requirements` | [Step 1] Genera requerimientos interactivo |
-| `/task:plan` | [Step 2] PM + Architect workflow |
-| `/task:refine` | [Pre-Exec] Refinar sesion antes de comenzar desarrollo |
-| `/task:execute` | [Step 3] Ejecuta 19 fases completas |
-| `/task:scope-change` | Maneja cambios de alcance durante desarrollo |
-| `/task:pending` | Documenta pendientes |
+| `/task-requirements` | [Step 1] Genera requerimientos interactivo |
+| `/task-plan` | [Step 2] PM + Architect workflow |
+| `/task-refine` | [Pre-Exec] Refinar sesion antes de comenzar desarrollo |
+| `/task-execute` | [Step 3] Ejecuta 19 fases completas |
+| `/task-scope-change` | Maneja cambios de alcance durante desarrollo |
+| `/task-pending` | Documenta pendientes |
 
 ### Base de Datos
 
 | Comando | Descripcion |
 |---------|-------------|
-| `/db:entity` | Genera migration para entidad |
-| `/db:sample` | Genera sample data |
-| `/db:fix` | Fix migration errors |
+| `/db-entity` | Genera migration para entidad |
+| `/db-sample` | Genera sample data |
+| `/db-fix` | Fix migration errors |
 
 ### Testing
 
 | Comando | Descripcion |
 |---------|-------------|
-| `/test:write` | Escribe Cypress tests |
-| `/test:run` | Ejecuta suite de tests |
-| `/test:fix` | Fix failing tests |
+| `/test-write` | Escribe Cypress tests |
+| `/test-run` | Ejecuta suite de tests |
+| `/test-fix` | Fix failing tests |
 
 ### Bloques
 
 | Comando | Descripcion |
 |---------|-------------|
-| `/block:create` | Crea nuevo bloque page builder |
-| `/block:update` | Modifica bloque existente |
-| `/block:list` | Lista bloques disponibles |
-| `/block:docs` | Documenta un bloque |
-| `/block:validate` | Valida estructura de bloque |
+| `/block-create` | Crea nuevo bloque page builder |
+| `/block-update` | Modifica bloque existente |
+| `/block-list` | Lista bloques disponibles |
+| `/block-docs` | Documenta un bloque |
+| `/block-validate` | Valida estructura de bloque |
 
 ### Fixes y Otros
 
 | Comando | Descripcion |
 |---------|-------------|
-| `/fix:build` | Fix build errors |
-| `/fix:bug` | Fix bug con TDD |
-| `/doc:feature` | Documenta feature |
-| `/doc:demo-feature` | Genera video demo |
-| `/release:version` | Crea release |
+| `/fix-build` | Fix build errors |
+| `/fix-bug` | Fix bug con TDD |
+| `/doc-feature` | Documenta feature |
+| `/doc-demo-feature` | Genera video demo |
+| `/release-version` | Crea release |
 
 ---
 

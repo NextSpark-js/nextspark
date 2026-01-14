@@ -3,7 +3,7 @@ name: mock-analyst
 description: |
   Analyzes HTML/CSS mocks and creates block execution plans.
   Multi-mode agent: STRUCTURE mode for analysis, PLANNING mode for block decisions.
-  Used by /mock:to-blocks for complete mock-to-blocks workflow.
+  Used by /mock-to-blocks for complete mock-to-blocks workflow.
 
   <example>
   Context: User wants to analyze a Stitch mock structure
@@ -22,8 +22,8 @@ description: |
   </example>
 
   <example>
-  Context: /mock:to-blocks command needs complete analysis
-  user: "/mock:to-blocks _tmp/mocks/stitch/landing-page"
+  Context: /mock-to-blocks command needs complete analysis
+  user: "/mock-to-blocks _tmp/mocks/stitch/landing-page"
   assistant: "I'll use mock-analyst in FULL mode to run both STRUCTURE and PLANNING phases."
   <agent call to mock-analyst with mode: FULL>
   Commentary: The agent runs STRUCTURE then PLANNING in sequence, generating both output files.
@@ -53,7 +53,7 @@ This agent operates in three modes:
 | PLANNING | analysis.json + ds-mapping.json | block-plan.json | Create block decisions |
 | FULL | mockPath | Both files | Sequential STRUCTURE then PLANNING |
 
-**Default mode:** FULL (when invoked by /mock:to-blocks)
+**Default mode:** FULL (when invoked by /mock-to-blocks)
 
 ---
 

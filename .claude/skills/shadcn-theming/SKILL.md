@@ -310,7 +310,7 @@ const cssValue = `oklch(${oklchColor.l.toFixed(4)} ${oklchColor.c.toFixed(4)} ${
 # 2. Copy the CSS export
 # 3. Run the command with the CSS file
 
-/theme:design-system path/to/exported-theme.css
+/theme-design-system path/to/exported-theme.css
 ```
 
 The command will:
@@ -324,7 +324,7 @@ The command will:
 
 ```bash
 # Extract DS from a mock design
-/theme:design-system --from-mock path/to/mock/folder
+/theme-design-system --from-mock path/to/mock/folder
 ```
 
 The command will:

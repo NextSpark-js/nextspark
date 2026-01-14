@@ -568,11 +568,11 @@ python .claude/skills/session-management/scripts/create-session.py \
 ```
 USER REQUEST
     |
-/task:requirements (Phase 1)
+/task-requirements (Phase 1)
     | Creates: requirements.md, clickup_task.md, scope.json
-/task:plan (Phase 2)
+/task-plan (Phase 2)
     | Creates: plan.md, progress.md, context.md, tests.md, pendings.md
-/task:execute (Phases 3-19)
+/task-execute (Phases 3-19)
     | Updates: progress.md, context.md, tests.md
 FEATURE COMPLETE
 ```

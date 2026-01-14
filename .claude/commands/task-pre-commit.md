@@ -366,7 +366,7 @@ All files categorized by type only.
 Session relevance marked as "unknown".
 
 To provide session context:
-/task:pre-commit .claude/sessions/2025-12-24-feature-name-v1/
+/task-pre-commit .claude/sessions/2025-12-24-feature-name-v1/
 ```
 
 ### Mixed Session/Non-Session Work

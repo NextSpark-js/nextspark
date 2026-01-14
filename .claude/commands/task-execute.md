@@ -112,7 +112,7 @@ Prompt: |
 ## WORKFLOW PHASES OVERVIEW (v4.3)
 
 ```
-BLOQUE 1: PLANNING (ALREADY COMPLETED by /task:plan)
+BLOQUE 1: PLANNING (ALREADY COMPLETED by /task-plan)
 +- Phase 1: product-manager (requirements + decisions) [DONE]
 +- Phase 2: architecture-supervisor (plan) [DONE]
 
@@ -146,14 +146,14 @@ BLOQUE 7: FINALIZATION
 +- Phase 17: demo-video-generator [OPTIONAL]
 
 POST-WORKFLOW OPTIONAL PHASES (suggested after completion)
-+- Phase 18: /task:review-final (comprehensive validation)
-+- Phase 19: /doc:feature (generate documentation)
-+- Phase 20: /task:demo (live visual demo)
-+- Phase 21: /task:explain (code walkthrough)
-+- Phase 22: /doc:demo-feature (demo video)
++- Phase 18: /task-review-final (comprehensive validation)
++- Phase 19: /doc-feature (generate documentation)
++- Phase 20: /task-demo (live visual demo)
++- Phase 21: /task-explain (code walkthrough)
++- Phase 22: /doc-demo-feature (demo video)
 ```
 
-**Theme/Plugin Creation:** Use `/create:theme` or `/create:plugin` commands BEFORE starting workflow.
+**Theme/Plugin Creation:** Use `/create-theme` or `/create-plugin` commands BEFORE starting workflow.
 
 ---
 
@@ -178,7 +178,7 @@ Read these files to understand the plan (you CAN read files, just not write code
 
 Check `context.md` for:
 - Entry from `architecture-supervisor` with status `Completado`
-- If missing, STOP and tell user to run `/task:plan` first
+- If missing, STOP and tell user to run `/task-plan` first
 
 ### Step 3: Extract PM Decisions
 
@@ -814,7 +814,7 @@ I will now launch the documentation-writer agent for Phase 18.
 "Do you want to generate a demo video for this feature? (Yes/No)"
 
 **If Yes:**
-Execute `/doc:demo-feature` command.
+Execute `/doc-demo-feature` command.
 
 ---
 
@@ -909,13 +909,13 @@ The core workflow is complete. Choose what to do next:
 
 | Command | Description | When to Use |
 |---------|-------------|-------------|
-| `/task:review-final` | **Comprehensive code review** validating plan, scope, patterns | Before merge (recommended) |
-| `/doc:feature` | **Generate documentation** for the feature | For user-facing features |
-| `/task:demo` | **Live visual demo** with Playwright | To show stakeholders |
-| `/task:explain` | **Interactive code walkthrough** | To understand implementation |
-| `/doc:demo-feature` | **Generate demo video** with Cypress | For tutorials/docs |
+| `/task-review-final` | **Comprehensive code review** validating plan, scope, patterns | Before merge (recommended) |
+| `/doc-feature` | **Generate documentation** for the feature | For user-facing features |
+| `/task-demo` | **Live visual demo** with Playwright | To show stakeholders |
+| `/task-explain` | **Interactive code walkthrough** | To understand implementation |
+| `/doc-demo-feature` | **Generate demo video** with Cypress | For tutorials/docs |
 
-**Recommended:** Run `/task:review-final {sessionPath}` before merging.
+**Recommended:** Run `/task-review-final {sessionPath}` before merging.
 
 ---
 

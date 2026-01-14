@@ -159,7 +159,7 @@ After completing the review, suggest these options to the user:
 The code review is complete. Here are your options:
 
 ### Learn About the Implementation
-**Run:** `/task:explain {sessionPath}`
+**Run:** `/task-explain {sessionPath}`
 
 Get an interactive code walkthrough that explains how the feature works, step by step. Ideal for:
 - Understanding the implementation details
@@ -167,7 +167,7 @@ Get an interactive code walkthrough that explains how the feature works, step by
 - Onboarding team members to the new code
 
 ### See the Feature in Action
-**Run:** `/task:demo {sessionPath}`
+**Run:** `/task-demo {sessionPath}`
 
 Watch a live visual demonstration using Playwright. This will:
 - Start the dev server

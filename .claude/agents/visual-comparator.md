@@ -313,7 +313,7 @@ await browser_evaluate({
 ## Integration with Other Agents
 
 This agent is called by:
-- `/mock:to-blocks` command - As part of execution loop
+- `/mock-to-blocks` command - As part of execution loop
 - `block-developer` may trigger re-comparison after fixes
 
 This agent outputs to:

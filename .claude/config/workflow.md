@@ -13,7 +13,7 @@ Este documento describe el flujo completo de desarrollo desde la creacion de una
 |---------|------|------|
 | Fases | 19 + 7.5 + 15.5 | **17 + 5.5 + 14.5** (simplificado) |
 | Bloque FOUNDATION | Fases 3, 4, 3b, 4b en workflow | **Eliminado → Comandos standalone** |
-| Theme/Plugin Creation | Agentes en workflow | **`/create:theme`, `/create:plugin` (fuera del workflow)** |
+| Theme/Plugin Creation | Agentes en workflow | **`/create-theme`, `/create-plugin` (fuera del workflow)** |
 | Agentes | 26 → 24 | **23 (+selectors-translator, -validators)** |
 | Selectors & Translations | Implícito en frontend-dev | **Fase 9 dedicada (selectors-translator)** |
 | Skills Integration | No requerido | **Agentes referencian skills obligatoriamente** |
@@ -32,7 +32,7 @@ Este documento describe el flujo completo de desarrollo desde la creacion de una
 | Fases | 19 | **19 + Phase 15.5** |
 | BDD Documentation | Manual/Opcional | **Automatizada (bdd-docs-writer)** |
 | Nuevo Agente | - | **bdd-docs-writer (Phase 15.5)** |
-| Nuevo Comando | - | **/bdd:write** |
+| Nuevo Comando | - | **/bdd-write** |
 | Post-QA Flow | qa-automation → code-reviewer | **qa-automation → bdd-docs-writer → code-reviewer** |
 
 ---
@@ -73,8 +73,8 @@ Este documento describe el flujo completo de desarrollo desde la creacion de una
 +---------------------------------------------------------------------------+
 |                                                                           |
 |  COMANDOS STANDALONE (fuera del workflow):                                |
-|  - /create:theme <name>  → Scaffold + validación automática               |
-|  - /create:plugin <name> → Scaffold + validación automática               |
+|  - /create-theme <name>  → Scaffold + validación automática               |
+|  - /create-plugin <name> → Scaffold + validación automática               |
 |                                                                           |
 |  +=====================================================================+  |
 |  |  BLOQUE 1: PLANNING                                                 |  |
@@ -165,17 +165,17 @@ Este documento describe el flujo completo de desarrollo desde la creacion de una
 |  +=====================================================================+  |
 |  |  15. code-reviewer + Import Violation Layer                         |  |
 |  |  16. documentation-writer (OPCIONAL)                                |  |
-|  |  17. demo-video-generator (OPCIONAL) -> /doc:demo-feature           |  |
+|  |  17. demo-video-generator (OPCIONAL) -> /doc-demo-feature           |  |
 |  +=====================================================================+  |
 |                                  |                                        |
 |  +===============================v=====================================+  |
 |  |  POST-WORKFLOW: FASES OPCIONALES (18-22)                           |  |
 |  +=====================================================================+  |
-|  |  18. /task:review-final ── Validación comprehensiva                |  |
-|  |  19. /doc:feature ───────── Documentación del feature              |  |
-|  |  20. /task:demo ─────────── Demo visual con Playwright             |  |
-|  |  21. /task:explain ──────── Walkthrough interactivo de código      |  |
-|  |  22. /doc:demo-feature ──── Video demo con Cypress                 |  |
+|  |  18. /task-review-final ── Validación comprehensiva                |  |
+|  |  19. /doc-feature ───────── Documentación del feature              |  |
+|  |  20. /task-demo ─────────── Demo visual con Playwright             |  |
+|  |  21. /task-explain ──────── Walkthrough interactivo de código      |  |
+|  |  22. /doc-demo-feature ──── Video demo con Cypress                 |  |
 |  +=====================================================================+  |
 |                                  |                                        |
 |                                  v                                        |
@@ -270,16 +270,16 @@ await AskUserQuestion({
 
 ## Comandos Standalone (Fuera del Workflow)
 
-### /create:theme y /create:plugin
+### /create-theme y /create-plugin
 
 Estos comandos crean themes/plugins **antes** de iniciar el workflow principal:
 
 ```bash
 # Crear nuevo theme
-/create:theme my-app
+/create-theme my-app
 
 # Crear nuevo plugin
-/create:plugin analytics --complexity service
+/create-plugin analytics --complexity service
 ```
 
 **Cada comando incluye validación automática:**
@@ -288,7 +288,7 @@ Estos comandos crean themes/plugins **antes** de iniciar el workflow principal:
 - Registro en registries
 - Build pasa
 
-**Ver:** `.claude/commands/create:theme.md` y `.claude/commands/create:plugin.md`
+**Ver:** `.claude/commands/create-theme.md` y `.claude/commands/create-plugin.md`
 
 ---
 
@@ -300,7 +300,7 @@ Estos comandos crean themes/plugins **antes** de iniciar el workflow principal:
 1. **Plugin Preset** (`core/presets/plugin/`) - Template con estructura completa
 2. **Create Script** (`pnpm create:plugin`) - Scaffolding automatizado
 3. **Plugin Sandbox** (`contents/themes/plugin-sandbox/`) - Theme dedicado para testing
-4. **Create Command** (`/create:plugin`) - Crea + valida en un solo paso
+4. **Create Command** (`/create-plugin`) - Crea + valida en un solo paso
 
 **Creacion de Plugins:**
 
@@ -369,21 +369,21 @@ NEXT_PUBLIC_ACTIVE_THEME=plugin-sandbox pnpm build
 
 #### Refinamiento Pre-Ejecucion (Opcional)
 
-Antes de ejecutar `/task:execute`, se puede refinar la sesion usando `/task:refine`:
+Antes de ejecutar `/task-execute`, se puede refinar la sesion usando `/task-refine`:
 
 ```
-/task:refine .claude/sessions/YYYY-MM-DD-feature-v1
+/task-refine .claude/sessions/YYYY-MM-DD-feature-v1
 Cambios solicitados: [descripcion de ajustes]
 ```
 
-**Cuando usar `/task:refine`:**
+**Cuando usar `/task-refine`:**
 - Ajustar requirements antes de comenzar desarrollo
 - Cambiar decisiones arquitectonicas del plan
 - Agregar/remover Acceptance Criteria
 - Modificar schema de base de datos planificado
 
 **Nota:** Este comando es solo para sesiones en fase de planning (desarrollo NO iniciado).
-Para sesiones donde el desarrollo ya comenzo, usar `/task:scope-change`.
+Para sesiones donde el desarrollo ya comenzo, usar `/task-scope-change`.
 
 ---
 
@@ -691,7 +691,7 @@ for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
 
 **Trigger:**
 - Automatico: Despues de que qa-automation complete Phase 14
-- Manual: `/bdd:write [session-path | test-file]`
+- Manual: `/bdd-write [session-path | test-file]`
 
 ---
 
@@ -737,7 +737,7 @@ if (remainingTags.length > 0) {
 - Actualizar .rules/ si necesario
 
 #### Phase 17: Demo Video Generator [OPCIONAL]
-**Comando:** `/doc:demo-feature`
+**Comando:** `/doc-demo-feature`
 **Estado:** SKIP por defecto
 
 **Responsabilidades:**
@@ -750,10 +750,10 @@ if (remainingTags.length > 0) {
 
 ### Fases Opcionales Post-Workflow (18-22)
 
-Estas fases se ejecutan **después** del workflow principal y son sugeridas al usuario al finalizar `/task:execute`.
+Estas fases se ejecutan **después** del workflow principal y son sugeridas al usuario al finalizar `/task-execute`.
 
 #### Phase 18: Final Review [OPCIONAL]
-**Comando:** `/task:review-final`
+**Comando:** `/task-review-final`
 **Estado:** Sugerido al completar workflow
 
 **Responsabilidades:**
@@ -775,7 +775,7 @@ Estas fases se ejecutan **después** del workflow principal y son sugeridas al u
 ```
 
 #### Phase 19: Feature Documentation [OPCIONAL]
-**Comando:** `/doc:feature`
+**Comando:** `/doc-feature`
 **Estado:** SKIP por defecto
 
 **Responsabilidades:**
@@ -786,7 +786,7 @@ Estas fases se ejecutan **después** del workflow principal y son sugeridas al u
 - Incluir API reference, componentes, ejemplos
 
 #### Phase 20: Live Demo [OPCIONAL]
-**Comando:** `/task:demo`
+**Comando:** `/task-demo`
 **Estado:** SKIP por defecto
 
 **Responsabilidades:**
@@ -807,7 +807,7 @@ Estas fases se ejecutan **después** del workflow principal y son sugeridas al u
 | `/dashboard/*` (member) | Team Member | `emily.johnson@tmt.dev` |
 
 #### Phase 21: Code Walkthrough [OPCIONAL]
-**Comando:** `/task:explain`
+**Comando:** `/task-explain`
 **Estado:** SKIP por defecto
 
 **Responsabilidades:**
@@ -832,7 +832,7 @@ Estas fases se ejecutan **después** del workflow principal y son sugeridas al u
 ```
 
 #### Phase 22: Demo Video [OPCIONAL]
-**Comando:** `/doc:demo-feature`
+**Comando:** `/doc-demo-feature`
 **Estado:** SKIP por defecto
 
 **Responsabilidades:**
@@ -1026,7 +1026,7 @@ Cuando se resuelve una violación, documentar en `context.md`:
 | **code-reviewer** | - | - | - | OPCIONAL |
 | **Humano** | SI | SI | SI | SI |
 
-**Nota v4.3:** Theme/plugin creation ahora usan comandos standalone: `/create:theme`, `/create:plugin`
+**Nota v4.3:** Theme/plugin creation ahora usan comandos standalone: `/create-theme`, `/create-plugin`
 
 ---
 
@@ -1036,49 +1036,49 @@ Cuando se resuelve una violación, documentar en `context.md`:
 
 | Comando | Descripcion |
 |---------|-------------|
-| `/task:requirements` | [Step 1] Genera requerimientos interactivo |
-| `/task:plan` | [Step 2] PM + Architect workflow |
-| `/task:refine` | [Pre-Exec] Refinar sesion antes de comenzar desarrollo |
-| `/task:execute` | [Step 3] Ejecuta 17 fases completas |
-| `/task:scope-change` | Maneja cambios de alcance durante desarrollo |
-| `/task:pending` | Documenta pendientes |
+| `/task-requirements` | [Step 1] Genera requerimientos interactivo |
+| `/task-plan` | [Step 2] PM + Architect workflow |
+| `/task-refine` | [Pre-Exec] Refinar sesion antes de comenzar desarrollo |
+| `/task-execute` | [Step 3] Ejecuta 17 fases completas |
+| `/task-scope-change` | Maneja cambios de alcance durante desarrollo |
+| `/task-pending` | Documenta pendientes |
 
 ### Base de Datos
 
 | Comando | Descripcion |
 |---------|-------------|
-| `/db:entity` | [Step 1] Genera migration para entidad |
-| `/db:sample` | [Step 2] Genera sample data |
-| `/db:fix` | Fix migration errors |
+| `/db-entity` | [Step 1] Genera migration para entidad |
+| `/db-sample` | [Step 2] Genera sample data |
+| `/db-fix` | Fix migration errors |
 
 ### Testing
 
 | Comando | Descripcion |
 |---------|-------------|
-| `/test:write` | [Step 1] Escribe Cypress tests |
-| `/test:run` | [Step 2] Ejecuta suite de tests |
-| `/test:fix` | Fix failing tests |
-| `/bdd:write` | [NEW v4.2] Genera documentacion BDD (.bdd.md) desde tests Cypress |
+| `/test-write` | [Step 1] Escribe Cypress tests |
+| `/test-run` | [Step 2] Ejecuta suite de tests |
+| `/test-fix` | Fix failing tests |
+| `/bdd-write` | [NEW v4.2] Genera documentacion BDD (.bdd.md) desde tests Cypress |
 
 ### Bloques
 
 | Comando | Descripcion |
 |---------|-------------|
-| `/block:create` | Crea nuevo bloque page builder |
-| `/block:update` | Modifica bloque existente |
-| `/block:list` | Lista bloques disponibles |
-| `/block:docs` | Documenta un bloque |
-| `/block:validate` | Valida estructura de bloque |
+| `/block-create` | Crea nuevo bloque page builder |
+| `/block-update` | Modifica bloque existente |
+| `/block-list` | Lista bloques disponibles |
+| `/block-docs` | Documenta un bloque |
+| `/block-validate` | Valida estructura de bloque |
 
 ### Fixes y Otros
 
 | Comando | Descripcion |
 |---------|-------------|
-| `/fix:build` | Fix build errors |
-| `/fix:bug` | Fix bug con TDD |
-| `/doc:feature` | Documenta feature |
-| `/doc:demo-feature` | Genera video demo |
-| `/release:version` | Crea release |
+| `/fix-build` | Fix build errors |
+| `/fix-bug` | Fix bug con TDD |
+| `/doc-feature` | Documenta feature |
+| `/doc-demo-feature` | Genera video demo |
+| `/release-version` | Crea release |
 
 ---
 
@@ -1213,7 +1213,7 @@ Before starting, read these skills:
 | qa-tester | cypress-e2e, cypress-api |
 
 **Total:** 23 agentes
-**Comandos standalone:** `/create:theme`, `/create:plugin`
+**Comandos standalone:** `/create-theme`, `/create-plugin`
 
 ### Skills Count
 

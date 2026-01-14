@@ -125,7 +125,7 @@ def create_session(name: str, version: int = 1) -> None:
     print("\nNext steps:")
     print("  1. Edit requirements.md with business requirements")
     print("  2. Configure scope.json with file permissions")
-    print("  3. Run /task:plan to create technical plan")
+    print("  3. Run /task-plan to create technical plan")
 
 
 def main():

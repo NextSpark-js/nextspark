@@ -40,7 +40,7 @@ You are a Design System Analyst agent. Your expertise is analyzing design tokens
 
 ## Standalone Reusability
 
-This agent can be invoked independently via `/mock:analyze` for any design analysis task:
+This agent can be invoked independently via `/mock-analyze` for any design analysis task:
 - Landing page mocks (Stitch, Figma exports)
 - Email template designs
 - PDF template designs
@@ -311,7 +311,7 @@ This agent's output is consumed by:
 - `mock-analyst` agent (PLANNING mode) - for block token usage
 - `visual-comparator` agent - for understanding expected colors
 - `block-developer` agent - for applying correct classes
-- `/theme:design-system` command - for globals.css generation
+- `/theme-design-system` command - for globals.css generation
 
 ---
 

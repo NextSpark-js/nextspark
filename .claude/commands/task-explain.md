@@ -268,7 +268,7 @@ You've explored all [N] items covering:
 **Want to:**
 - Ask any remaining questions?
 - See a specific part in more detail?
-- Move on to `/task:demo` to see the feature in action?
+- Move on to `/task-demo` to see the feature in action?
 ```
 
 ---

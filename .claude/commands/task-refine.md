@@ -80,8 +80,8 @@ if (hasProgress) {
     console.log(`
 ⚠️ **Development has already started on this session.**
 
-Use \`/task:scope-change\` instead to handle mid-development changes.
-This command (\`/task:refine\`) is only for sessions that haven't started development yet.
+Use \`/task-scope-change\` instead to handle mid-development changes.
+This command (\`/task-refine\`) is only for sessions that haven't started development yet.
     `)
     return
   }
@@ -297,7 +297,7 @@ ${userRefinementRequest}
 ${hasPlan ? '- architecture-supervisor: Updated technical plan' : ''}
 
 **Next Step:**
-${hasPlan ? '- Ready for /task:execute' : '- Run /task:plan to create technical plan'}
+${hasPlan ? '- Ready for /task-execute' : '- Run /task-plan to create technical plan'}
 
 **Notes:**
 - Session NOT yet started (pre-development)
@@ -335,8 +335,8 @@ await appendToFile(`${sessionPath}/context.md`, contextEntry)
 ### Next Step
 
 ${hasPlan
-  ? 'The session is ready to execute. Run `/task:execute` to begin development.'
-  : 'The requirements are refined. Run `/task:plan` to create the technical plan.'
+  ? 'The session is ready to execute. Run `/task-execute` to begin development.'
+  : 'The requirements are refined. Run `/task-plan` to create the technical plan.'
 }
 ```
 
@@ -344,13 +344,13 @@ ${hasPlan
 
 ## When NOT to Use This Command
 
-**Use `/task:scope-change` instead when:**
+**Use `/task-scope-change` instead when:**
 - Development has already started (Phase 5+ in progress.md)
 - Code has been written
 - Migrations have been executed
 - API endpoints exist
 
-**Use `/task:requirements` instead when:**
+**Use `/task-requirements` instead when:**
 - Starting a completely new feature
 - No session exists yet
 
@@ -372,25 +372,25 @@ ${hasPlan
 ### Example 1: Refine Requirements Only
 
 ```
-User: /task:refine 2025-12-16-posts-system-v1
+User: /task-refine 2025-12-16-posts-system-v1
       I want to change the categories schema to a generic taxonomy system
 
 -> Session has requirements.md but no plan.md
 -> Launch: product-manager only
 -> PM updates requirements with new schema
--> Next step: /task:plan
+-> Next step: /task-plan
 ```
 
 ### Example 2: Refine Requirements + Plan
 
 ```
-User: /task:refine 2025-12-16-posts-system-v1
+User: /task-refine 2025-12-16-posts-system-v1
       I want to change the categories schema to a generic taxonomy system
 
 -> Session has both requirements.md and plan.md
 -> Launch: product-manager (first), then architecture-supervisor
 -> PM updates requirements, Architect updates plan
--> Next step: /task:execute
+-> Next step: /task-execute
 ```
 
 ---

@@ -328,7 +328,7 @@ ${results.failures.map(f => `
 `).join('\n')}
 
 ### Recommended Actions
-1. Run \`/test:fix\` to auto-repair failing tests
+1. Run \`/test-fix\` to auto-repair failing tests
 2. Check screenshots in \`cypress/screenshots/\`
 3. Review test logs for stack traces
 `}
@@ -338,7 +338,7 @@ ${testFiles.map(f => `- \`${f}\``).join('\n')}
 
 ### Next Steps
 ${results.failed > 0
-  ? '- Run `/test:fix` to attempt automatic fixes'
+  ? '- Run `/test-fix` to attempt automatic fixes'
   : '- Tests passing. Ready for code review.'}
 ```
 

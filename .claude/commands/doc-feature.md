@@ -393,7 +393,7 @@ The folder .claude/sessions/${featureName}/ does not exist.
 Solutions:
 1. Verify the feature name (use kebab-case)
 2. List available sessions: ls .claude/sessions/
-3. Run /task:plan to create a new session
+3. Run /task-plan to create a new session
 ```
 
 ### Feature Not Complete

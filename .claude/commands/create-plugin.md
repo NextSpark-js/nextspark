@@ -156,7 +156,7 @@ If validation fails:
 [Instructions to fix the issue]
 
 ### Retry
-After fixing, run: `/create:plugin {name}` again
+After fixing, run: `/create-plugin {name}` again
 ```
 
 ---

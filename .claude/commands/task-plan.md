@@ -31,7 +31,7 @@ if (input.startsWith('.claude/sessions/')) {
   await Read(`${input}/requirements.md`)
 } else {
   // Feature description provided - prompt user
-  console.log("No requirements file found. Run /task:requirements first, or provide session path.")
+  console.log("No requirements file found. Run /task-requirements first, or provide session path.")
   return
 }
 ```
@@ -350,7 +350,7 @@ await launchAgent('architecture-supervisor', {
 - **Key Decisions:** [List key technical decisions]
 
 ### Next Step
-Run `/task:execute` to begin the 8-phase development workflow.
+Run `/task-execute` to begin the 8-phase development workflow.
 ```
 
 ---

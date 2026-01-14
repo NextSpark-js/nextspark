@@ -218,7 +218,7 @@ While reading documentation for **{topic}**, I found errors that should be corre
 ...
 
 **Recommendation:**
-Consider running `/doc:feature` to update the documentation for this area before proceeding.
+Consider running `/doc-feature` to update the documentation for this area before proceeding.
 
 **Can I still work?**
 {Yes/No} - {explanation of whether the task can proceed despite issues}

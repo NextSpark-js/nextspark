@@ -1092,8 +1092,8 @@ ${entityName}-submit-button
 \`\`\`
 
 ### Next Steps
-1. Run \`/test:run\` to execute tests
-2. If failures, run \`/test:fix\` to auto-repair
+1. Run \`/test-run\` to execute tests
+2. If failures, run \`/test-fix\` to auto-repair
 3. Add missing data-cy selectors to components
 4. Verify BDD file is complete and accurate
 ```

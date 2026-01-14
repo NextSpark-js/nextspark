@@ -1,0 +1,74 @@
+# Auto detect text files and perform LF normalization
+* text=auto eol=lf
+
+# Source code
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
+
+# JSON & Config
+*.json text eol=lf
+*.jsonc text eol=lf
+*.json5 text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.toml text eol=lf
+
+# Web
+*.html text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+*.sass text eol=lf
+*.less text eol=lf
+*.svg text eol=lf
+
+# Documentation
+*.md text eol=lf
+*.mdx text eol=lf
+*.txt text eol=lf
+
+# Shell scripts (should always use LF even on Windows)
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Windows scripts (should use CRLF)
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# SQL
+*.sql text eol=lf
+
+# Environment files
+.env* text eol=lf
+*.env text eol=lf
+
+# Lock files (should not be modified)
+package-lock.json text eol=lf -diff
+pnpm-lock.yaml text eol=lf -diff
+yarn.lock text eol=lf -diff
+
+# Binary files (explicitly mark as binary)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.avif binary
+*.woff binary
+*.woff2 binary
+*.eot binary
+*.ttf binary
+*.otf binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.tar binary
+*.mp4 binary
+*.mp3 binary
+*.mov binary
+*.avi binary

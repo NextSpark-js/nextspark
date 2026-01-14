@@ -53,7 +53,7 @@
 
 ---
 
-## BLOQUE 1: PLANNING (Completed by /task:plan)
+## BLOQUE 1: PLANNING (Completed by /task-plan)
 
 ### Phase 1: Product Manager
 **Responsable:** product-manager
@@ -347,7 +347,7 @@
 - [ ] Update relevant .rules/ if needed
 
 ### Phase 19: Demo Video Generator [OPTIONAL]
-**Responsable:** demo-video-generator (via /doc:demo-feature)
+**Responsable:** demo-video-generator (via /doc-demo-feature)
 **Estado:** [ ] SKIPPED / [ ] Not Started / [ ] In Progress / [ ] Completed
 
 - [ ] Create Cypress demo script

@@ -40,7 +40,7 @@ await Bash({
 // Commit all changes first:
 //   1. git add .
 //   2. git commit -m "your message"
-//   3. Then run /release:version again
+//   3. Then run /release-version again
 ```
 
 ### Check 2: Correct Branch
@@ -58,7 +58,7 @@ await Bash({
 //   1. git checkout main
 //   2. git merge [your-branch]
 //   3. git push origin main
-//   4. Then run /release:version again
+//   4. Then run /release-version again
 ```
 
 ### Check 3: Version File Exists
@@ -389,7 +389,7 @@ Current status:
 Steps to fix:
   1. git add .
   2. git commit -m "description"
-  3. /release:version again
+  3. /release-version again
 ```
 
 ### Wrong Branch
@@ -405,7 +405,7 @@ Steps to fix:
   1. git checkout main
   2. git merge feature/my-feature
   3. git push origin main
-  4. /release:version again
+  4. /release-version again
 ```
 
 ### No Changes

@@ -421,7 +421,7 @@ ${openQuestions}
 
 ---
 
-**Next Step:** Run \`/task:plan\` to create technical implementation plan.
+**Next Step:** Run \`/task-plan\` to create technical implementation plan.
 `
 })
 ```
@@ -460,7 +460,7 @@ ${openQuestions}
 **Please review the requirements AND scope above.**
 
 **Options:**
-1. **Approve** - Ready to proceed to `/task:plan`
+1. **Approve** - Ready to proceed to `/task-plan`
 2. **Modify** - Adjust specific requirements
 3. **Change Scope** - Modify scope settings
 4. **Add more** - Include additional requirements
@@ -493,7 +493,7 @@ ${openQuestions}
 - `requirements.md` - Complete requirements document (includes scope)
 
 ### Next Step
-Run `/task:plan` to create the technical implementation plan.
+Run `/task-plan` to create the technical implementation plan.
 
 The Product Manager and Architecture Supervisor will use these requirements
 (including the confirmed scope) to create the ClickUp task, scope.json, and technical plan.

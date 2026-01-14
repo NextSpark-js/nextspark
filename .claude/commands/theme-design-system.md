@@ -387,26 +387,26 @@ When adding missing `@theme inline`, use this complete template:
 
 ```bash
 # Path 1: From tweakcn.com CSS file
-/theme:design-system _tmp/my-theme.css
+/theme-design-system _tmp/my-theme.css
 
 # Path 1: From CSS content (paste)
-/theme:design-system --from-css
+/theme-design-system --from-css
 # (Then paste CSS content)
 
 # Path 2: From mock folder
-/theme:design-system --from-mock _tmp/mocks/stitch/landing-page
+/theme-design-system --from-mock _tmp/mocks/stitch/landing-page
 
 # Path 2: Shorthand (folder auto-detection)
-/theme:design-system _tmp/mocks/stitch/landing-page
+/theme-design-system _tmp/mocks/stitch/landing-page
 ```
 
 ---
 
 ## Related Commands
 
-- `/mock:analyze` - Standalone design token analysis
-- `/mock:to-blocks` - Full mock-to-blocks workflow
-- `/block:create` - Create new page builder blocks
+- `/mock-analyze` - Standalone design token analysis
+- `/mock-to-blocks` - Full mock-to-blocks workflow
+- `/block-create` - Create new page builder blocks
 
 ---
 

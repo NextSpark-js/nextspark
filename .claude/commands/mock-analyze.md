@@ -149,7 +149,7 @@ Read generated `ds-mapping.json` and present summary:
 ### Next Steps
 
 1. **Review gaps** and decide on resolutions (A, B, or C for each)
-2. **If converting to blocks:** Run `/mock:to-blocks {mockPath}`
+2. **If converting to blocks:** Run `/mock-to-blocks {mockPath}`
 3. **If other use:** Use ds-mapping.json for your implementation
 ```
 
@@ -167,21 +167,21 @@ Read generated `ds-mapping.json` and present summary:
 
 ```bash
 # Analyze a Stitch mock
-/mock:analyze _tmp/mocks/stitch/landing-page
+/mock-analyze _tmp/mocks/stitch/landing-page
 
 # Analyze email template design
-/mock:analyze _tmp/mocks/email-template
+/mock-analyze _tmp/mocks/email-template
 
 # Analyze PDF template design
-/mock:analyze _tmp/designs/pdf-invoice
+/mock-analyze _tmp/designs/pdf-invoice
 ```
 
 ---
 
 ## Related Commands
 
-- `/mock:to-blocks` - Full mock-to-blocks conversion (uses this analysis)
-- `/block:create` - Create a single block manually
+- `/mock-to-blocks` - Full mock-to-blocks conversion (uses this analysis)
+- `/block-create` - Create a single block manually
 
 ---
 

@@ -204,7 +204,7 @@ Reference: .rules/scope.md
 
 Required Action:
 1. Revert modifications to files outside scope
-2. OR request scope expansion via /task:scope-change
+2. OR request scope expansion via /task-scope-change
 3. OR move logic to an allowed path
 
 Review BLOCKED until scope violations are resolved.

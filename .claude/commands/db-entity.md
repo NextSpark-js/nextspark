@@ -365,8 +365,8 @@ All entity files in `contents/themes/${themeName}/entities/${entityName}/`:
 - `idx_{{ENTITY_NAME}}_created_at` - Sorting by date
 
 ### Next Steps
-1. Run `/db:sample` to generate sample data
-2. Run `/db:fix` if any migration errors occur
+1. Run `/db-sample` to generate sample data
+2. Run `/db-fix` if any migration errors occur
 3. Launch `db-validator` to verify migrations
 4. Use entity service in API routes: `import { ${EntityName}Service } from '...'`
 ```

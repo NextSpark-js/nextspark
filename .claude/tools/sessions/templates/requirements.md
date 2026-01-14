@@ -195,4 +195,4 @@
 
 ---
 
-**Next Step:** Run `/task:plan` to create technical implementation plan.
+**Next Step:** Run `/task-plan` to create technical implementation plan.

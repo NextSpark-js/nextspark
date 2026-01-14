@@ -275,9 +275,9 @@ ${recommendations.map(r => `- ${r}`).join('\n')}
 ## Integration with Other Commands
 
 Works well with:
-- `/task:execute` - Continue task after fixing build
-- `/task:scope-change` - If fix requires scope changes
-- `/test:run` - Run tests after build succeeds
+- `/task-execute` - Continue task after fixing build
+- `/task-scope-change` - If fix requires scope changes
+- `/test-run` - Run tests after build succeeds
 
 ---
 

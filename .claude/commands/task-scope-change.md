@@ -68,8 +68,8 @@ if (!hasStartedDevelopment) {
   console.log(`
 ⚠️ **Development has NOT started on this session yet.**
 
-Use \`/task:refine\` instead to refine requirements before development begins.
-This command (\`/task:scope-change\`) is for sessions where development is already in progress.
+Use \`/task-refine\` instead to refine requirements before development begins.
+This command (\`/task-scope-change\`) is for sessions where development is already in progress.
   `)
   return
 }
@@ -540,7 +540,7 @@ if (impactLevel === 'complete' || reworkPercentage > 50) {
 
 It is recommended to create a new version of the session:
 
-1. Run \`/task:requirements\` with the new requirements
+1. Run \`/task-requirements\` with the new requirements
 2. Use name: \`${sessionBaseName}-v2\`
 3. Reference \`${sessionPath}/pendings.md\` in the new session
 4. Document lessons learned from v1
