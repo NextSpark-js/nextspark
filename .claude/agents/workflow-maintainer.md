@@ -6,7 +6,7 @@ description: |
   - Commands (`.claude/commands/`)
   - Configuration (`.claude/config/`)
   - Workflow documentation (`.claude/config/workflow.md`)
-  - Session templates (`.claude/tools/sessions/templates/`)
+  - Session templates (`.claude/templates/`)
 
   **CRITICAL UNDERSTANDING:**
   1. `.claude/` is the working directory (gitignored) - each developer can customize
@@ -72,9 +72,8 @@ Use thorough analysis before implementing ANY change.
 │   ├── workflow.md                         # Workflow documentation
 │   └── workflow.example.md                 # Template
 ├── sessions/                               # Session data (gitignored)
-├── tools/
-│   ├── clickup/                            # ClickUp integration docs
-│   └── sessions/templates/                 # 8 session file templates
+├── templates/                              # Session file templates
+├── skills/                                 # Skills with SKILL.md and scripts
 ├── settings.local.json                     # Tool permissions
 └── README.md                               # System documentation
 

@@ -37,6 +37,10 @@ core/lib/registries/
 Build script: node core/scripts/build/registry.mjs
 ```
 
+> **📍 Context-Aware Paths:** Registries are auto-generated from core + theme. In consumer projects,
+> theme configs go in `contents/themes/{theme}/config/`. Core registries are read-only.
+> See `core-theme-responsibilities` skill for complete rules.
+
 ## When to Use This Skill
 
 - Understanding registry patterns

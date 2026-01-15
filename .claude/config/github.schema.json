@@ -1,0 +1,106 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GitHub Workflow Configuration",
+  "type": "object",
+  "properties": {
+    "repository": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Repository name in format: organization/repo-name"
+        },
+        "defaultBranch": {
+          "type": "string",
+          "default": "main"
+        }
+      },
+      "required": ["defaultBranch"]
+    },
+    "gitflow": {
+      "type": "object",
+      "properties": {
+        "environments": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Ordered list of environment branches from dev to prod",
+          "default": ["develop", "qa", "main"]
+        },
+        "featureBranch": {
+          "type": "object",
+          "properties": {
+            "baseBranch": { "type": "string", "default": "main" },
+            "targetBranch": { "type": "string", "default": "develop" }
+          }
+        },
+        "hotfixBranch": {
+          "type": "object",
+          "properties": {
+            "baseBranch": { "type": "string", "default": "main" },
+            "targetBranch": { "type": "string", "default": "main" },
+            "skipEnvironments": { "type": "boolean", "default": true }
+          }
+        },
+        "promotionFlow": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Maps source branch to target branch for promotions"
+        }
+      }
+    },
+    "branches": {
+      "type": "object",
+      "properties": {
+        "pattern": {
+          "type": "string",
+          "description": "Branch naming pattern with placeholders: {type}, {issue-key}, {description}, {initials}"
+        },
+        "types": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "description": { "type": "string" },
+              "base": { "type": "string" },
+              "target": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "commits": {
+      "type": "object",
+      "properties": {
+        "pattern": {
+          "type": "string",
+          "description": "Commit message pattern with placeholders: {issue-key}, {description}"
+        },
+        "requireIssueKey": { "type": "boolean", "default": true },
+        "suggestedPrefixes": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "pullRequests": {
+      "type": "object",
+      "properties": {
+        "titlePattern": { "type": "string" },
+        "bodyTemplate": { "type": "string" },
+        "squashMerge": { "type": "boolean", "default": true },
+        "deleteBranchOnMerge": { "type": "boolean", "default": true }
+      }
+    },
+    "reviewers": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string",
+          "default": ".claude/config/team.json",
+          "description": "Reference to team config file"
+        },
+        "askUserToSelect": { "type": "boolean", "default": true }
+      }
+    }
+  }
+}

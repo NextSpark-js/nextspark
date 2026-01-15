@@ -1,0 +1,10 @@
+{
+  "session": "{{SESSION_FULL}}",
+  "type": "story",
+  "tshirt": "{{TSHIRT}}",
+  "workflow": "complete",
+  "createdAt": "{{DATE}}",
+  "paths": [],
+  "entities": [],
+  "notes": ""
+}

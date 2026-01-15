@@ -41,7 +41,7 @@ Validation Flow:
 
 Integration Points:
 ├── code-reviewer (Layer 0 check)
-├── /task-scope-change (scope modification)
+├── /task:scope-change (scope modification)
 ├── product-manager (scope definition)
 └── All development agents (scope respect)
 ```
@@ -325,7 +325,7 @@ ${violations.map(f => '- ' + f).join('\n')}
 
 Required Action:
 1. Revert modifications to files outside scope
-2. OR request scope expansion via /task-scope-change
+2. OR request scope expansion via /task:scope-change
 3. OR move logic to an allowed path
 
 Review BLOCKED until scope violations are resolved.
@@ -350,10 +350,10 @@ git checkout HEAD -- core/  # if core not allowed
 
 ### Option 2: Request Scope Change
 
-Use `/task-scope-change` to expand scope.
+Use `/task:scope-change` to expand scope.
 
 ```markdown
-/task-scope-change .claude/sessions/2025-12-30-my-feature-v1/
+/task:scope-change .claude/sessions/2025-12-30-my-feature-v1/
 
 I need to also modify:
 - core/lib/services/my-service.ts (new service)
@@ -372,7 +372,7 @@ Refactor to place logic in allowed paths.
 // contents/themes/default/lib/utils/my-utility.ts
 ```
 
-## /task-scope-change Workflow
+## /task:scope-change Workflow
 
 When scope needs to change mid-development:
 
@@ -391,7 +391,7 @@ When scope needs to change mid-development:
 ### Scope Change Request Format
 
 ```markdown
-/task-scope-change .claude/sessions/{session-name}/
+/task:scope-change .claude/sessions/{session-name}/
 
 Requested changes:
 - Add core access for [reason]
@@ -486,13 +486,13 @@ Scope is typically set based on development type:
 - Bypass scope validation
 - Add exceptions for broad access
 - Ignore scope violations
-- Change scope.json directly (use /task-scope-change)
+- Change scope.json directly (use /task:scope-change)
 
 ## Anti-Patterns
 
 ```typescript
 // NEVER: Modify scope.json directly
-fs.writeFileSync('scope.json', newScope)  // Use /task-scope-change
+fs.writeFileSync('scope.json', newScope)  // Use /task:scope-change
 
 // NEVER: Ignore scope violations
 if (scopeViolation) {

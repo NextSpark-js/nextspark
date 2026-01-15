@@ -34,6 +34,10 @@ Config-driven system for defining entities with automatic CRUDs, similar to Word
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
+> **📍 Context-Aware Paths:** Entity configs go in `contents/themes/{theme}/entities/` in both contexts.
+> Core entities are read-only in consumer projects.
+> See `core-theme-responsibilities` skill for complete rules.
+
 ## When to Use This Skill
 
 - Creating a new entity (CRUD resource)
@@ -172,6 +176,213 @@ From an EntityConfig, the system automatically provides:
 6. **i18n Support** - Labels, placeholders, messages
 7. **Search & Filtering** - Based on field API config
 8. **Metadata System** - Key-value pairs (if enabled)
+9. **Server Actions** - Direct CRUD from Client Components
+
+## Server Actions (Client Component CRUD)
+
+Server Actions permiten ejecutar operaciones CRUD desde Client Components sin pasar por HTTP.
+
+### Server Actions Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                     SERVER ACTIONS FLOW                              │
+│                                                                      │
+│  Client Component          Server Action           GenericEntityService
+│  ─────────────────         ─────────────           ────────────────────
+│        │                         │                         │
+│        │ createEntity(slug,data) │                         │
+│        │ ─────────────────────►  │                         │
+│        │                         │                         │
+│        │                   ┌─────┴─────┐                   │
+│        │                   │ 1. Auth   │                   │
+│        │                   │ (session) │                   │
+│        │                   ├───────────┤                   │
+│        │                   │ 2. Perms  │                   │
+│        │                   │ (registry)│                   │
+│        │                   └─────┬─────┘                   │
+│        │                         │                         │
+│        │                         │ create(slug,uid,tid,data)
+│        │                         │ ─────────────────────► │
+│        │                         │                   ┌────┴────┐
+│        │                         │                   │ Validate│
+│        │                         │                   │ Hooks   │
+│        │                         │                   │ SQL+RLS │
+│        │                         │                   └────┬────┘
+│        │                         │ ◄───────────────────── │
+│        │ ◄─────────────────────  │                         │
+│        │    EntityActionResult   │                         │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Server Actions vs API HTTP
+
+| Escenario | Server Actions | API HTTP |
+|-----------|----------------|----------|
+| Client Component mutations | Recommended | No |
+| Server Component data fetching | No | Yes |
+| External integrations | No | Yes |
+| Webhooks | No | Yes |
+| Cache revalidation automática | Yes | Manual |
+
+### Available Functions
+
+| Function | Required Permission | Description |
+|----------|---------------------|-------------|
+| `createEntity(slug, data, config?)` | `{slug}.create` | Create entity |
+| `updateEntity(slug, id, data, config?)` | `{slug}.update` | Update entity |
+| `deleteEntity(slug, id, config?)` | `{slug}.delete` | Delete one |
+| `deleteEntities(slug, ids, config?)` | `{slug}.delete` | Delete many |
+| `getEntity(slug, id)` | `{slug}.read` | Get by ID |
+| `listEntities(slug, options?)` | `{slug}.list` | List with filters |
+| `entityExists(slug, id)` | `{slug}.read` | Check existence |
+| `countEntities(slug, where?)` | `{slug}.list` | Count records |
+
+### Usage Example
+
+```typescript
+'use client'
+
+import { createEntity, updateEntity, deleteEntity } from '@nextsparkjs/core/actions'
+
+// CREATE - Auth and permissions verified automatically
+async function handleCreate(data: FormData) {
+  const result = await createEntity('schools', {
+    name: data.get('name'),
+    status: 'active'
+  })
+
+  if (result.success) {
+    console.log('Created:', result.data)
+  } else {
+    console.error('Error:', result.error)
+  }
+}
+
+// UPDATE with custom revalidation
+async function handleUpdate(id: string, data: Partial<School>) {
+  const result = await updateEntity('schools', id, data, {
+    revalidatePaths: ['/dashboard/overview'],
+    revalidateTags: ['school-stats'],
+  })
+}
+
+// DELETE with redirect
+async function handleDelete(id: string) {
+  await deleteEntity('schools', id, {
+    redirectTo: '/dashboard/schools'
+  })
+}
+```
+
+### Return Types
+
+```typescript
+// For operations that return data
+type EntityActionResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: string }
+
+// For void operations (delete)
+type EntityActionVoidResult =
+  | { success: true }
+  | { success: false; error: string }
+
+// List result
+interface ListEntityResult<T> {
+  data: T[]
+  total: number
+  limit: number
+  offset: number
+}
+```
+
+### Action Configuration
+
+```typescript
+interface ActionConfig {
+  revalidatePaths?: string[]  // Paths to revalidate
+  revalidateTags?: string[]   // Cache tags
+  redirectTo?: string         // Redirect after action
+}
+```
+
+### Automatic Security
+
+1. **Auth**: userId from `getTypedSession()` (server-side)
+2. **Team**: teamId from httpOnly cookie `activeTeamId`
+3. **Permissions**: Verified against `permissions.config.ts`
+4. **Validation**: Fields validated against entity schema
+5. **RLS**: Queries executed with Row-Level Security
+6. **Team Isolation**: All operations filter by active teamId (prevents cross-team access for multi-team users)
+
+### Team Isolation (Multi-Team Users)
+
+Users can belong to multiple teams. Server Actions automatically filter by the active team cookie to prevent accidental cross-team data access:
+
+```
+User belongs to: TeamA, TeamB
+Active team cookie: TeamA
+
+getEntity('campaigns', 'id-from-teamB')  → Returns null (filtered out)
+updateEntity('campaigns', 'id-from-teamB', data) → Error: not found
+deleteEntity('campaigns', 'id-from-teamB') → Error: not found
+```
+
+This isolation is automatic and cannot be bypassed from client code.
+
+### Server Actions Anti-Patterns
+
+```typescript
+// NEVER: Ignore the result
+await createEntity('schools', data) // Without checking success
+
+// CORRECT: Always check result
+const result = await createEntity('schools', data)
+if (!result.success) {
+  toast.error(result.error)
+}
+
+// NEVER: Use for Server Components (no 'use client')
+// Server Actions are for CLIENT Components only
+
+// CORRECT: In Server Components use service directly
+import { GenericEntityService } from '@nextsparkjs/core/services'
+const data = await GenericEntityService.list('schools', userId, { teamId })
+```
+
+### List Entities Example
+
+```typescript
+'use client'
+
+import { listEntities } from '@nextsparkjs/core/actions'
+
+async function loadCampaigns() {
+  const result = await listEntities<Campaign>('campaigns', {
+    where: { status: 'active' },
+    orderBy: 'createdAt',
+    orderDir: 'desc',
+    limit: 20,
+    offset: 0,
+    search: 'marketing', // Full-text search on searchable fields
+  })
+
+  if (result.success) {
+    const { data, total, limit, offset } = result.data
+    console.log(`Showing ${data.length} of ${total} campaigns`)
+  }
+}
+```
+
+### Server Actions Files
+
+| File | Purpose |
+|------|---------|
+| `core/lib/actions/entity.actions.ts` | Server Actions (entry points) |
+| `core/lib/actions/types.ts` | TypeScript types |
+| `core/lib/services/generic-entity.service.ts` | Business logic |
+| `core/lib/permissions/check.ts` | Permission verification |
 
 ## Metadata System
 
@@ -272,7 +483,7 @@ interface ChildEntityDefinition {
   fields: ChildEntityField[]       // Child entity fields
   showInParentView: boolean        // Show in parent view
   hasOwnRoutes: boolean            // Has independent routes?
-  permissions?: EntityPermissions  // Specific permissions (inherits from parent if not set)
+  // Note: Permissions are defined centrally in permissions.config.ts
   display: {
     title: string
     description?: string

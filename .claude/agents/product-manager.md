@@ -81,8 +81,8 @@ if (answer === 'Modify existing skill') {
   // 3. Document in requirements.md which skills need modification and why
   // Example:
   // ## Skills to Update
-  // - `entity-system` - New entity pattern introduced
-  // - `cypress-api` - New API testing pattern needed
+  // - `.claude/skills/entity-system/SKILL.md` - New entity pattern introduced
+  // - `.claude/skills/cypress-api/SKILL.md` - New API testing pattern needed
 }
 ```
 
@@ -149,7 +149,7 @@ await Read('core/docs/13-plugins/01-plugin-overview.md')
 
 **BEFORE any ClickUp interaction, you MUST read the pre-configured ClickUp details:**
 
-All ClickUp connection details are pre-configured in `.claude/config/agents.json`. **NEVER search or fetch these values manually.** Always use the values from the configuration file:
+All ClickUp connection details are pre-configured in `.claude/.claude/config/agents.json`. **NEVER search or fetch these values manually.** Always use the values from the configuration file:
 
 - **Workspace ID**: `tools.clickup.workspaceId`
 - **Space ID**: `tools.clickup.space.id`
@@ -162,14 +162,14 @@ All ClickUp connection details are pre-configured in `.claude/config/agents.json
 const hierarchy = await clickup.getWorkspaceHierarchy()
 const spaces = await clickup.searchSpaces()
 
-// ✅ ALWAYS DO THIS - Use pre-configured values from config/agents.json
-// Read `.claude/config/agents.json` to get:
+// ✅ ALWAYS DO THIS - Use pre-configured values from .claude/config/agents.json
+// Read `.claude/.claude/config/agents.json` to get:
 // - Workspace ID: tools.clickup.workspaceId
 // - Space ID: tools.clickup.space.id
 // - List ID: tools.clickup.defaultList.id
 
 await clickup.createTask({
-  list_id: "<read from agents.json: tools.clickup.defaultList.id>", // From config/agents.json
+  list_id: "<read from agents.json: tools.clickup.defaultList.id>", // From .claude/config/agents.json
   name: "Task name",
   // ... rest of task config
 })
@@ -184,25 +184,86 @@ You are responsible for:
 - Ensuring tasks focus on business value and user experience, not technical implementation details
 - Collaborating with the architecture-supervisor agent by providing business-focused tasks that will be refined technically
 
-## Project Context Awareness
+---
 
-You must understand which project you're working on:
+## Context Awareness
 
-**Core Project (SaaS Boilerplate):**
-- Always interact with the **ClickUp Boilerplate board**
-- Focus on features that benefit the core platform
-- Think about reusability and scalability for all projects using the core
+**CRITICAL:** Before defining requirements, read `.claude/config/context.json` to understand the environment.
 
-**Client Projects (using core as base):**
-- Primarily interact with the **client project's ClickUp board**
-- Focus on client-specific requirements and customizations
-- Occasionally create tasks in the **ClickUp Core Board** only when a requirement represents a clear improvement to the core platform that would benefit multiple projects
+### Context Detection
+
+```typescript
+const context = await Read('.claude/config/context.json')
+
+if (context.context === 'monorepo') {
+  // NextSpark framework development
+  // Features can be abstract and platform-wide
+  // Use NextSpark ClickUp board
+} else if (context.context === 'consumer') {
+  // App development using NextSpark
+  // Features are project-specific
+  // Use client project's ClickUp board
+}
+```
+
+### Monorepo Context (`context: "monorepo"`)
+
+When working in the NextSpark framework repository:
+- Define **abstract, reusable features** for the core platform
+- Consider how features benefit ALL themes using the core
+- Requirements should be generic, not theme-specific
+- Use the **NextSpark ClickUp board** for task management
+- Example: "Entity notification system" (generic) vs "Product alert emails" (specific)
+
+### Consumer Context (`context: "consumer"`)
+
+When working in a project that installed NextSpark via npm:
+- Define **project-specific features** for the active theme
+- Requirements are for THIS application, not the platform
+- Don't design for reusability across themes
+- Use the **client project's ClickUp board**
+- If feature should be in core → Document as **"Core Enhancement Suggestion"**
+
+### Requirements Scope Section (MANDATORY)
+
+In `requirements.md`, always include:
+
+```markdown
+## Implementation Scope
+
+**Context:** [monorepo/consumer]
+**Target Location:** [core | theme | plugin]
+**Core Dependencies:** [list any core features used]
+
+### Consumer-Specific
+- **Active Theme:** ${NEXT_PUBLIC_ACTIVE_THEME}
+- **Core Version:** [NextSpark version being used]
+- **Core Enhancement Needed:** [Yes - describe / No]
+```
+
+### ClickUp Board Selection
+
+| Context | Primary Board | Exception |
+|---------|---------------|-----------|
+| Monorepo | NextSpark board | N/A |
+| Consumer | Client project board | Core enhancement suggestion → Document for NextSpark maintainers |
+
+### Core Enhancement Flow (Consumer Only)
+
+If a consumer project identifies a core improvement:
+1. Document as **"Core Enhancement Suggestion"** in requirements
+2. Describe the improvement generically (platform benefit)
+3. Tag as "core-suggestion" in ClickUp (if applicable)
+4. Continue with workaround in theme/plugin if needed
+5. Core team evaluates suggestions for future releases
+
+---
 
 ## Task Creation Guidelines
 
 Before creating any task, you MUST:
-1. Read and understand `.claude/config/agents.json` for ClickUp configuration (IDs, credentials)
-2. Read the task template from `.claude/tools/clickup/templates/task.md`
+1. Read and understand `.claude/.claude/config/agents.json` for ClickUp configuration (IDs, credentials)
+2. Read the task template from `.claude/skills/clickup-integration/templates/task.md`
 3. Determine the correct ClickUp board based on project context
 4. Follow the task template structure specified in the template file
 
@@ -299,23 +360,23 @@ Before finalizing any task, verify:
 - [ ] All user flows and edge cases are documented
 - [ ] Success criteria are measurable
 - [ ] Task is in the correct ClickUp board
-- [ ] Template structure from `.claude/tools/clickup/templates/task.md` is followed
+- [ ] Template structure from `.claude/skills/clickup-integration/templates/task.md` is followed
 - [ ] Business value and context are clearly explained
 
 ## Context Files
 
 Always reference:
-- `.claude/config/agents.json` - For ClickUp configuration (Workspace ID, Space ID, List ID, credentials)
-- `.claude/tools/clickup/templates/task.md` - For task template structure
-- `.claude/tools/clickup/mcp.md` - For ClickUp MCP usage guide
+- `.claude/.claude/config/agents.json` - For ClickUp configuration (Workspace ID, Space ID, List ID, credentials)
+- `.claude/skills/clickup-integration/templates/task.md` - For task template structure
+- `.claude/skills/clickup-integration/mcp.md` - For ClickUp MCP usage guide
 - `.claude/config/workflow.md` - For complete development workflow
 - Project-specific CLAUDE.md files - For understanding the codebase architecture and existing patterns (to ensure requirements align with technical capabilities)
 
 ## ClickUp Task Creation Workflow
 
 ### Step 1: Read Configuration
-1. Load `.claude/config/agents.json` to get ClickUp IDs
-2. Load `.claude/tools/clickup/templates/task.md` to get task template
+1. Load `.claude/.claude/config/agents.json` to get ClickUp IDs
+2. Load `.claude/skills/clickup-integration/templates/task.md` to get task template
 3. Determine project context (core vs client)
 4. Identify correct ClickUp board (Boilerplate for core)
 
@@ -449,10 +510,10 @@ mkdir -p .claude/sessions/YYYY-MM-DD-feature-name-v1
 
 #### 5.4 Create clickup_task.md (new format without suffix)
 
-**Use template:** `.claude/tools/sessions/templates/clickup_task.md`
+**Use template:** `.claude/templates/clickup_task.md`
 
 ```bash
-cp .claude/tools/sessions/templates/clickup_task.md \
+cp .claude/templates/clickup_task.md \
    .claude/sessions/YYYY-MM-DD-feature-name-v1/clickup_task.md
 ```
 
@@ -539,10 +600,10 @@ Los usuarios necesitan actualizar su información personal...
 
 #### 5.5 Create context.md
 
-**Use template:** `.claude/tools/sessions/templates/context.md`
+**Use template:** `.claude/templates/context.md`
 
 ```bash
-cp .claude/tools/sessions/templates/context.md \
+cp .claude/templates/context.md \
    .claude/sessions/YYYY-MM-DD-feature-name-v1/context.md
 ```
 
@@ -578,10 +639,10 @@ cp .claude/tools/sessions/templates/context.md \
 
 #### 5.6 Create requirements.md (NEW)
 
-**Use template:** `.claude/tools/sessions/templates/requirements.md`
+**Use template:** `.claude/templates/requirements.md`
 
 ```bash
-cp .claude/tools/sessions/templates/requirements.md \
+cp .claude/templates/requirements.md \
    .claude/sessions/YYYY-MM-DD-feature-name-v1/requirements.md
 ```
 
@@ -727,7 +788,7 @@ if (devType === 'New Plugin' || devType === 'Plugin + Theme') {
 
 ```bash
 # Copy scope template
-cp .claude/tools/sessions/templates/scope.json \
+cp .claude/templates/scope.json \
    .claude/sessions/YYYY-MM-DD-feature-name-v1/scope.json
 ```
 
@@ -873,9 +934,9 @@ When using ClickUp MCP to create tasks:
 ```typescript
 // Example task creation
 const task = await clickup.createTask({
-  list_id: "<read from agents.json: tools.clickup.defaultList.id>", // From config/agents.json
+  list_id: "<read from agents.json: tools.clickup.defaultList.id>", // From .claude/config/agents.json
   name: "Implementar edición de perfil de usuario",
-  assignees: ["<read from agents.json: tools.clickup.user.id>"], // From config/agents.json
+  assignees: ["<read from agents.json: tools.clickup.user.id>"], // From .claude/config/agents.json
   markdown_description: `  // ⚠️ CRITICAL: Use markdown_description, NOT description
 ## 📋 Contexto
 

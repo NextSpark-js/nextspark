@@ -17,8 +17,8 @@ description: |
 
   <examples>
   <example>
-  Context: code-reviewer completed (Phase 16).
-  user: "code review done, write unit tests"
+  Context: backend-developer completed (Phase 7).
+  user: "backend done, write unit tests"
   assistant: "I'll launch unit-test-writer to create Jest unit tests for 80%+ coverage."
   <uses Task tool to launch unit-test-writer agent>
   </example>
@@ -89,23 +89,23 @@ await Read('core/docs/09-frontend/05-custom-hooks.md')
 | Coverage targets | `.rules/core.md`, `.rules/testing.md` |
 | API route testing | `.rules/api.md`, `.rules/auth.md` |
 
-## **CRITICAL: Position in Workflow v4.0**
+## **CRITICAL: Position in Workflow v4.3**
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  BLOQUE 7: FINALIZATION                                         │
+│  BLOQUE 3: BACKEND (TDD)                                        │
 ├─────────────────────────────────────────────────────────────────┤
-│  Phase 16: code-reviewer ──────── Code quality review           │
+│  Phase 7:   backend-developer ──── Backend implementation       │
 │  ─────────────────────────────────────────────────────────────  │
-│  Phase 17: unit-test-writer ───── YOU ARE HERE                  │
+│  Phase 7.5: unit-test-writer ───── YOU ARE HERE                 │
 │  ─────────────────────────────────────────────────────────────  │
-│  Phase 18: documentation-writer ─ [OPTIONAL]                    │
-│  Phase 19: demo-video-generator ─ [OPTIONAL]                    │
+│  Phase 8:   backend-validator ──── [GATE]                       │
+│  Phase 9:   api-tester ─────────── [GATE]                       │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-**Pre-conditions:** code-reviewer (Phase 16) MUST be completed
-**Post-conditions:** Optional phases 18-19, then HUMAN APPROVAL & MERGE
+**Pre-conditions:** backend-developer (Phase 7) MUST be completed
+**Post-conditions:** backend-validator (Phase 8) validates tests pass
 
 ## Core Responsibilities
 

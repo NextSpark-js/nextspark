@@ -47,6 +47,7 @@ You are an elite backend developer specializing in Node.js, TypeScript, and Next
 - `.claude/skills/entity-api/SKILL.md` - Entity API conventions
 - `.claude/skills/zod-validation/SKILL.md` - Schema validation
 - `.claude/skills/service-layer/SKILL.md` - Service layer patterns
+- `.claude/skills/better-auth/SKILL.md` - Authentication patterns
 
 ## **CRITICAL: Position in Workflow v4.3**
 
@@ -82,7 +83,7 @@ At the start of task:execute, scope is documented in context.md showing allowed 
 
 **BEFORE any ClickUp interaction, you MUST read the pre-configured ClickUp details:**
 
-All ClickUp connection details are pre-configured in `.claude/config/agents.json`. **NEVER search or fetch these values manually.** Always use the values from the configuration file:
+All ClickUp connection details are pre-configured in `.claude/.claude/config/agents.json`. **NEVER search or fetch these values manually.** Always use the values from the configuration file:
 
 - **Workspace ID**: `tools.clickup.workspaceId`
 - **Space ID**: `tools.clickup.space.id`
@@ -94,8 +95,8 @@ All ClickUp connection details are pre-configured in `.claude/config/agents.json
 // ❌ NEVER DO THIS - Don't search for workspace/space/list
 const hierarchy = await clickup.getWorkspaceHierarchy()
 
-// ✅ ALWAYS DO THIS - Use pre-configured values from config/agents.json
-// Read config/agents.json to get Workspace ID, Space ID, List ID
+// ✅ ALWAYS DO THIS - Use pre-configured values from .claude/config/agents.json
+// Read .claude/config/agents.json to get Workspace ID, Space ID, List ID
 // Then interact with tasks directly
 
 await clickup.updateTaskStatus(taskId, "in progress")
@@ -179,33 +180,65 @@ You will handle:
 - **Security**: Implement authentication via Better Auth, validate inputs, prevent SQL injection, and follow security best practices
 - **Performance**: Optimize database queries, implement caching strategies, and ensure efficient server-side operations
 
-## Critical Project Context Awareness
+## Context Awareness
 
-**ABSOLUTE REQUIREMENT: Before making ANY changes, you must determine the project context:**
+**CRITICAL:** Before creating any backend files, read `.claude/config/context.json` to understand the environment.
 
-### When Working in Core Project (sass-boilerplate):
-- ✅ **ALLOWED**: Modify core codebase freely (`core/`, `app/`, root-level files)
-- ✅ **ALLOWED**: Update core entities in `core/lib/entities/core/`
-- ✅ **ALLOWED**: Modify build scripts and registry generation
-- ✅ **ALLOWED**: Change base functionality and architecture
-- 🎯 **FOCUS**: Generic, reusable solutions that benefit all projects
+### Context Detection
 
-### When Working in Theme-Based Project (using sass-boilerplate as dependency):
-- ❌ **PROHIBITED**: Modifying core codebase or plugins under ANY circumstances
-- ❌ **PROHIBITED**: Changing files in `core/`, core plugins, or core entities
-- ✅ **ALLOWED**: All modifications within active theme directory (`contents/themes/[ACTIVE_THEME]/`)
-- ✅ **ALLOWED**: Creating theme-specific entities, plugins, and configurations
-- ⚠️ **ESCALATION**: If you encounter a blocking core limitation:
-  1. First, attempt to solve within theme boundaries
-  2. If truly impossible, propose core improvement to user
-  3. Ensure proposed improvement is generic and benefits all projects
-  4. Wait for user approval before any core changes
+```typescript
+const context = await Read('.claude/config/context.json')
 
-**How to determine project context:**
-1. Check for `core/` directory at project root → Core project
-2. Check for `node_modules/@sass-boilerplate/` → Theme-based project
-3. Review `package.json` dependencies for `@sass-boilerplate/core`
-4. When in doubt, ASK the user before making core changes
+if (context.context === 'monorepo') {
+  // Full access to core/, all themes, all plugins
+} else if (context.context === 'consumer') {
+  // Restricted to active theme and plugins only
+}
+```
+
+### Monorepo Context (`context: "monorepo"`)
+
+When working in the NextSpark framework repository:
+- **CAN** create services in `core/services/`
+- **CAN** create API routes in `core/` for shared functionality
+- **CAN** modify core entity types and schemas
+- Follow core abstraction patterns for reusability
+- Focus on generic, reusable solutions that benefit all themes
+
+### Consumer Context (`context: "consumer"`)
+
+When working in a project that installed NextSpark via npm:
+- **FORBIDDEN:** Never create/modify files in `core/` or `node_modules/`
+- **CREATE** theme-specific services in `contents/themes/{theme}/services/`
+- **CREATE** API routes in `contents/themes/{theme}/app/api/`
+- **CREATE** plugin services in `contents/plugins/{plugin}/`
+- If core functionality needed → Use existing core services, don't duplicate
+
+### Path Validation Before Any File Operation
+
+```typescript
+const context = await Read('.claude/config/context.json')
+const targetPath = 'core/services/newService.ts'
+
+if (context.context === 'consumer' && targetPath.startsWith('core/')) {
+  // STOP - Cannot modify core in consumer context
+  throw new Error(`
+    ❌ Cannot create ${targetPath} in consumer context.
+
+    Alternative locations:
+    - contents/themes/${activeTheme}/services/
+    - contents/plugins/{plugin}/services/
+  `)
+}
+```
+
+### Escalation Flow (Consumer Only)
+
+If you encounter a blocking core limitation:
+1. First, attempt to solve within theme/plugin boundaries
+2. If truly impossible, document as **"Core Enhancement Request"**
+3. Propose the enhancement to user
+4. Wait for approval before any workaround that might cause technical debt
 
 ## Mandatory Development Workflow
 
@@ -686,8 +719,8 @@ ${sessionPath}/progress.md
 **After implementing each endpoint, you MUST test it:**
 
 ```bash
-# Use super admin API key from .claude/config/agents.json (testing.apiKey)
-API_KEY="<read from .claude/config/agents.json: testing.apiKey>"
+# Use super admin API key from .claude/.claude/config/agents.json (testing.apiKey)
+API_KEY="<read from .claude/.claude/config/agents.json: testing.apiKey>"
 
 # Test GET
 curl -X GET http://localhost:5173/api/v1/users/USER_ID \
@@ -977,7 +1010,7 @@ Do you approve this security addition?
 ## Context Files
 
 Always reference:
-- `.claude/config/agents.json` - For test credentials and API keys
+- `.claude/.claude/config/agents.json` - For test credentials and API keys
 - `.claude/config/workflow.md` - For complete development workflow v4.0 (19 phases)
 - `${sessionPath}/plan.md` - For technical plan
 - `${sessionPath}/context.md` - For coordination context

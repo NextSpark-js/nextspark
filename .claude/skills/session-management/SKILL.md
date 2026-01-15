@@ -1,658 +1,266 @@
----
-name: session-management
-description: |
-  Session management for Claude Code workflow in this application.
-  Covers the 8 session files, templates, progress tracking, scope enforcement, and agent coordination.
-  Use this skill when creating or managing development sessions.
-allowed-tools: Read, Glob, Grep, Bash
-version: 1.0.0
----
-
 # Session Management Skill
 
-Patterns for managing Claude Code development sessions with the 19-phase workflow.
+Sistema de gestión de sesiones de desarrollo para Claude Code.
 
-## Architecture Overview
+## Conceptos Clave
 
-```
-SESSION MANAGEMENT:
+### Tipos de Sesión
 
-Session Folder Structure:
-.claude/sessions/{YYYY-MM-DD-feature-name-v1}/
-├── requirements.md     # Business requirements and ACs
-├── clickup_task.md     # ClickUp task details (or LOCAL_ONLY)
-├── scope.json          # File modification permissions
-├── plan.md             # Technical implementation plan
-├── progress.md         # Phase progress tracking
-├── context.md          # Agent communication log
-├── tests.md            # Test documentation and selectors
-└── pendings.md         # Items for future iterations
+| Tipo | T-Shirt | Workflow | Carpeta | Descripción |
+|------|---------|----------|---------|-------------|
+| **Story** | L - XL | COMPLETE | `stories/` | Features complejos, múltiples iteraciones |
+| **Task** | S - M | STANDARD | `tasks/` | Mejoras, bugs medianos |
+| **Log** | XS | QUICK | `logs/` | Fixes rápidos, cambios triviales |
 
-Templates Location:
-.claude/tools/sessions/templates/
-├── requirements.md
-├── clickup_task.md
-├── scope.json
-├── plan.md
-├── progress.md
-├── context.md
-├── tests.md
-└── pendings.md
-
-Workflow Configuration:
-.claude/config/workflow.md   # 19-phase workflow definition
-```
-
-## When to Use This Skill
-
-- Creating new development sessions
-- Understanding session file structure
-- Tracking development progress
-- Managing agent coordination
-- Enforcing scope permissions
-- Documenting test results
-
-## Session Naming Convention
+### Estructura de Carpetas
 
 ```
-{YYYY-MM-DD}-{feature-name}-v{N}
-
-Examples:
-- 2025-12-30-scheduled-actions-v1
-- 2025-12-20-subscriptions-system-v1
-- 2025-12-15-user-authentication-v2
+.claude/sessions/
+├── scripts/              # Scripts de gestión
+├── templates/            # Templates por tipo
+│   ├── story/
+│   ├── task/
+│   ├── iteration/
+│   └── log.md
+├── stories/              # Sesiones COMPLETE
+├── tasks/                # Sesiones STANDARD
+├── logs/                 # Sesiones QUICK
+└── archive/              # Sesiones completadas
 ```
 
-## The 8 Session Files
-
-### 1. requirements.md
-
-Business requirements gathered by `product-manager` agent.
-
-```markdown
-# Feature Requirements: [Feature Name]
-
-**Session:** `.claude/sessions/YYYY-MM-DD-feature-name-v1/`
-**Created:** YYYY-MM-DD
-**Created By:** User (with assistant help)
-**Version:** v1
-
 ---
 
-## Business Context
+## Scripts Disponibles
 
-### Problem Statement
-[What problem does this feature solve?]
+### session-init.sh
 
-### Target Users
-[Who will use this feature?]
-
-### Business Value
-[Why is this important?]
-
----
-
-## User Stories
-
-### Primary User Story
-**As a** [user type]
-**I want** [goal/action]
-**So that** [benefit/value]
-
----
-
-## Acceptance Criteria (DETAILED)
-
-### AC1: [Title]
-**Given** [precondition]
-**When** [action]
-**Then** [expected result]
-
-**Details:**
-- [Specific behavior]
-
-**Validation:**
-- [How to verify]
-
----
-
-## Technical Flags
-
-| Flag | Value | Description |
-|------|-------|-------------|
-| **Requires New Selectors** | `yes` / `no` / `tbd` | New data-cy selectors needed? |
-| **Selector Impact** | `new-components` / `modify-existing` / `backend-only` | Type of UI changes |
-
----
-
-## Approval
-
-- [ ] Requirements reviewed by user
-- [ ] Questions clarified
-- [ ] Technical Flags set
-- [ ] Ready for technical planning
-```
-
-### 2. clickup_task.md
-
-ClickUp task details (or LOCAL_ONLY mode).
-
-```markdown
-# ClickUp Task: [Feature Name]
-
-**Task ID:** [TASK_ID] or "LOCAL_ONLY"
-**List:** [List Name]
-**Status:** [todo/in_progress/qa/done]
-**Assignee:** [User Name]
-**Priority:** [normal/high/urgent/low]
-**Due Date:** [YYYY-MM-DD] or "None"
-
----
-
-## Task Description
-[Business description from ClickUp]
-
----
-
-## Acceptance Criteria
-[From requirements.md]
-
----
-
-## Notes
-[Additional context]
-```
-
-### 3. scope.json
-
-Defines what files agents can modify.
-
-```json
-{
-  "$schema": "Session Scope Configuration",
-  "definedBy": "product-manager",
-  "date": "YYYY-MM-DD",
-  "scope": {
-    "core": false,
-    "theme": "default",
-    "plugins": false
-  },
-  "exceptions": []
-}
-```
-
-#### Scope Rules
-
-| Scope | Paths Allowed |
-|-------|---------------|
-| `core: true` | `core/**/*`, `app/**/*`, `scripts/**/*`, `migrations/**/*` |
-| `theme: "name"` | `contents/themes/{name}/**/*` |
-| `plugins: ["name"]` | `contents/plugins/{name}/**/*` |
-
-#### Common Scope Patterns
-
-```json
-// Feature in existing theme
-{
-  "scope": {
-    "core": false,
-    "theme": "default",
-    "plugins": false
-  }
-}
-
-// New plugin development
-{
-  "scope": {
-    "core": false,
-    "theme": "plugin-sandbox",
-    "plugins": ["my-new-plugin"]
-  }
-}
-
-// Core framework change
-{
-  "scope": {
-    "core": true,
-    "theme": false,
-    "plugins": false
-  }
-}
-
-// Full access (rare)
-{
-  "scope": {
-    "core": true,
-    "theme": "default",
-    "plugins": ["analytics", "payment"]
-  }
-}
-```
-
-### 4. plan.md
-
-Technical implementation plan created by `architecture-supervisor`.
-
-```markdown
-# Technical Plan: [Feature Name]
-
-**Session:** `.claude/sessions/YYYY-MM-DD-feature-name-v1/`
-**Created:** YYYY-MM-DD by architecture-supervisor
-**Based on:** requirements.md, clickup_task.md
-
----
-
-## Overview
-[Technical summary of what will be implemented]
-
----
-
-## Scope Analysis
-- **Core:** [Modifications needed]
-- **Theme:** [Theme-specific work]
-- **Plugins:** [Plugin work]
-
----
-
-## Implementation Phases
-
-### Phase 1: Database (db-developer)
-- [ ] Create migration: `migrations/0XX_feature.sql`
-- [ ] Add sample data
-
-### Phase 2: Backend (backend-developer)
-- [ ] Create API endpoint
-- [ ] Implement validation
-- [ ] Add tests
-
-### Phase 3: Frontend (frontend-developer)
-- [ ] Create components
-- [ ] Add translations
-- [ ] Add data-cy selectors
-
----
-
-## Files to Create/Modify
-[List of files with descriptions]
-
----
-
-## Dependencies
-[External dependencies or blockers]
-
----
-
-## Testing Strategy
-[How this will be tested]
-```
-
-### 5. progress.md
-
-Tracks development progress through the 19 phases.
-
-```markdown
-# Progress: [Feature Name]
-
-**Session:** `.claude/sessions/YYYY-MM-DD-feature-name-v1/`
-**ClickUp Task:** [TASK_ID]
-**Started:** [YYYY-MM-DD]
-**Last Updated:** [YYYY-MM-DD HH:MM]
-
----
-
-## IMPORTANT: This file replaces ClickUp checklists
-
-- All progress is tracked HERE (NOT in ClickUp)
-- Developers mark items with `[x]` as they complete them
-- Gates are automatically updated by validator agents
-
----
-
-## PM Decisions (Phase 1)
-
-**Theme:** [x] Existing theme: `default` / [ ] New theme
-**DB Policy:** [x] Reset allowed / [ ] Incremental migrations
-**Requires Blocks:** [x] No / [ ] Yes
-
----
-
-## General Status
-
-**Current Status:** [Planning/Foundation/Backend/Frontend/QA/Finalization/Done]
-**Completed:** [X]% ([Y] of [Z] items)
-
----
-
-## Gates Status
-
-| Gate | Phase | Status | Last Check |
-|------|-------|--------|------------|
-| theme-validator | 4 | [ ] SKIP / [ ] PASS / [ ] FAIL | - |
-| db-validator | 6 | [ ] PENDING / [ ] PASS / [ ] FAIL | - |
-| backend-validator | 8 | [ ] PENDING / [ ] PASS / [ ] FAIL | - |
-| api-tester | 9 | [ ] PENDING / [ ] PASS / [ ] FAIL | - |
-| frontend-validator | 12 | [ ] PENDING / [ ] PASS / [ ] FAIL | - |
-| functional-validator | 13 | [ ] PENDING / [ ] PASS / [ ] FAIL | - |
-| qa-manual | 14 | [ ] PENDING / [ ] PASS / [ ] FAIL | - |
-| qa-automation | 15 | [ ] PENDING / [ ] PASS / [ ] FAIL | - |
-
----
-
-## Phase Progress
-
-### BLOCK 1: PLANNING
-- [x] Phase 1: product-manager - Requirements gathered
-- [x] Phase 2: architecture-supervisor - Plan created
-
-### BLOCK 2: FOUNDATION
-- [ ] Phase 3: theme-creator [CONDITIONAL]
-- [ ] Phase 4: theme-validator [GATE]
-- [ ] Phase 5: db-developer - Migrations
-- [ ] Phase 6: db-validator [GATE]
-
-### BLOCK 3: BACKEND
-- [ ] Phase 7: backend-developer - API implementation
-- [ ] Phase 8: backend-validator [GATE]
-- [ ] Phase 9: api-tester [GATE]
-
-### BLOCK 4: BLOCKS [CONDITIONAL]
-- [ ] Phase 10: block-developer
-
-### BLOCK 5: FRONTEND
-- [ ] Phase 11: frontend-developer - UI components
-- [ ] Phase 12: frontend-validator [GATE]
-- [ ] Phase 13: functional-validator [GATE]
-
-### BLOCK 6: QA
-- [ ] Phase 14: qa-manual [GATE + RETRY]
-- [ ] Phase 15: qa-automation [GATE]
-- [ ] Phase 15.5: bdd-docs-writer
-
-### BLOCK 7: FINALIZATION
-- [ ] Phase 16: code-reviewer
-- [ ] Phase 17: unit-test-writer
-- [ ] Phase 18: documentation-writer [OPTIONAL]
-- [ ] Phase 19: demo-video-generator [OPTIONAL]
-```
-
-### 6. context.md
-
-Agent communication and coordination log.
-
-```markdown
-# Context & Coordination: [Feature Name]
-
-**Session:** `.claude/sessions/YYYY-MM-DD-feature-name-v1/`
-
----
-
-## Purpose
-
-This file serves as the **communication nexus between agents**. Each agent
-that completes work MUST add an entry with:
-
-1. Agent name
-2. Date and time
-3. Work summary
-4. Status (Completed / With pending items / Blocked)
-5. Notes for next agent
-
----
-
-## Valid States
-
-- **Completed:** Task completed, next agent can proceed
-- **Completed with pending items:** Completed with non-blocking improvements
-- **Blocked:** Cannot proceed, next agent must wait
-
----
-
-## Coordination Log
-
-### [YYYY-MM-DD HH:MM] - product-manager
-
-**Status:** Completed
-
-**Work Performed:**
-- Created ClickUp task (ID: [TASK_ID])
-- Defined acceptance criteria
-- Created session folder
-
-**Next Step:**
-- architecture-supervisor must read requirements and create plan
-
----
-
-### [YYYY-MM-DD HH:MM] - architecture-supervisor
-
-**Status:** Completed
-
-**Work Performed:**
-- Read requirements.md and clickup_task.md
-- Created technical plan in plan.md
-- Created progress.md template
-- Created tests.md and pendings.md
-
-**Technical Decisions:**
-- [Decision #1 and reason]
-
-**Next Step:**
-- db-developer can begin Phase 5
-
----
-
-### [YYYY-MM-DD HH:MM] - [next-agent]
-...
-```
-
-### 7. tests.md
-
-Test documentation, selectors, and coverage reports.
-
-```markdown
-# Test Documentation: [Feature Name]
-
-**Session:** `.claude/sessions/YYYY-MM-DD-feature-name-v1/`
-**Last Updated:** [YYYY-MM-DD HH:MM]
-
----
-
-## Test Results Summary
-
-| Category | Passed | Failed | Coverage |
-|----------|--------|--------|----------|
-| API Tests | X | 0 | 100% |
-| UAT Tests | Y | 0 | 100% |
-| Unit Tests | Z | 0 | 85% |
-
----
-
-## Data-cy Selectors
-
-### Component: [ComponentName]
-
-| Selector | Element | Purpose |
-|----------|---------|---------|
-| `feature-form` | `<form>` | Main form container |
-| `feature-name-input` | `<input>` | Name input field |
-| `feature-submit-btn` | `<button>` | Submit button |
-
----
-
-## Test Files
-
-### API Tests
-- `cypress/e2e/api/feature.cy.ts` - [X] tests
-
-### UAT Tests
-- `cypress/e2e/uat/feature.cy.ts` - [X] tests
-
-### Unit Tests
-- `core/tests/jest/feature.test.ts` - [X] tests
-
----
-
-## AC Coverage Report
-
-| AC | Test Type | Test File | Status |
-|----|-----------|-----------|--------|
-| AC1 | UAT | `feature.cy.ts:15` | Pass |
-| AC2 | API | `feature-api.cy.ts:30` | Pass |
-| AC3 | UAT | `feature.cy.ts:45` | Pass |
-```
-
-### 8. pendings.md
-
-Items discovered during development for future iterations.
-
-```markdown
-# Pending Items: [Feature Name]
-
-**Session:** `.claude/sessions/YYYY-MM-DD-feature-name-v1/`
-**Last Updated:** [YYYY-MM-DD HH:MM]
-
----
-
-## Purpose
-
-Document items discovered during development that are:
-- Out of scope for current iteration
-- Nice-to-have improvements
-- Technical debt to address later
-- Ideas for v2
-
----
-
-## Pending Items
-
-### P1: [Title]
-**Discovered by:** [agent-name]
-**Date:** [YYYY-MM-DD]
-**Priority:** [high/medium/low]
-
-**Description:**
-[What needs to be done]
-
-**Reason for deferral:**
-[Why it's not in current scope]
-
----
-
-### P2: [Title]
-...
-```
-
-## Creating a New Session
-
-### Manual Creation
+Crea una nueva sesión con toda su estructura.
 
 ```bash
-# Create session folder
-mkdir -p .claude/sessions/2025-12-30-feature-name-v1
+# Sintaxis
+.claude/skills/session-management/scripts/session-init.sh <type> <name> [tshirt]
 
-# Copy templates
-cp .claude/tools/sessions/templates/* .claude/sessions/2025-12-30-feature-name-v1/
+# Parámetros
+# type:   story | task | log
+# name:   nombre descriptivo (sin fecha, se agrega auto)
+# tshirt: xs | s | m | l | xl (opcional, default según type)
+
+# Ejemplos
+.claude/skills/session-management/scripts/session-init.sh story new-products-entity L
+.claude/skills/session-management/scripts/session-init.sh task improve-search M
+.claude/skills/session-management/scripts/session-init.sh log fix-typo
 ```
 
-### Using Script
+**Output:**
+```
+Creating story session: 2026-01-11-new-products-entity
+
+Created: stories/2026-01-11-new-products-entity/
+Files: context.md, requirements.md, plan.md, scope.json, pendings.md, tests.md
+Iteration: iterations/01-initial/
+Current: current/ -> iterations/01-initial/
+```
+
+### session-list.sh
+
+Lista sesiones activas con su estado.
 
 ```bash
-# Run the create-session script
-python .claude/skills/session-management/scripts/create-session.py \
-  --name "feature-name" \
-  --version 1
+# Sintaxis
+.claude/skills/session-management/scripts/session-list.sh [type] [--all]
+
+# Ejemplos
+.claude/skills/session-management/scripts/session-list.sh              # Solo activas
+.claude/skills/session-management/scripts/session-list.sh stories      # Solo stories activas
+.claude/skills/session-management/scripts/session-list.sh --all        # Incluir archivadas
 ```
 
-## Session Workflow Integration
-
+**Output:**
 ```
-USER REQUEST
-    |
-/task-requirements (Phase 1)
-    | Creates: requirements.md, clickup_task.md, scope.json
-/task-plan (Phase 2)
-    | Creates: plan.md, progress.md, context.md, tests.md, pendings.md
-/task-execute (Phases 3-19)
-    | Updates: progress.md, context.md, tests.md
-FEATURE COMPLETE
-```
+=== SESSION LIST ===
 
-## Progress Tracking Rules
+STORIES
+  2026-01-11-new-products-entity [L] iteration-02 (60%)
+  2026-01-08-refactor-auth [XL] iteration-01 (30%)
+  Total: 2 active
 
-1. **Developers update progress.md** as they complete items
-2. **Gates update their status** after validation
-3. **context.md** is updated by each agent after completing work
-4. **tests.md** is updated with selectors and results
-5. **pendings.md** captures out-of-scope items
+TASKS
+  2026-01-10-improve-search [M] (80%)
+  Total: 1 active
 
-## Agent Coordination Pattern
-
-```markdown
-### [2025-12-30 14:30] - backend-developer
-
-**Status:** Completed
-
-**Work Performed:**
-- Created migration: `migrations/017_feature.sql`
-- Implemented API endpoints: POST, GET, PATCH, DELETE
-- Build validated: `pnpm build` Pass
-
-**Progress:**
-- Marked 8 of 10 items in progress.md (Phase 7)
-
-**Next Step:**
-- backend-validator can begin Phase 8 validation
-
-**Notes:**
-- API key auth working correctly
-- Consider adding pagination in v2
+LOGS
+  2026-01-11-fix-typo-login
+  Total: 1 active
 ```
 
-## Anti-Patterns
+### session-close.sh
 
-```markdown
-# NEVER: Skip updating context.md
-# Each agent MUST log their work
+Cierra una sesión activa (marca como completada).
 
-# NEVER: Modify files outside scope.json
-# Check scope before editing
+```bash
+# Sintaxis
+.claude/skills/session-management/scripts/session-close.sh <session-path> [summary]
 
-# NEVER: Skip gate validation
-# Gates must pass before proceeding
-
-# NEVER: Forget to update progress.md
-# Mark items as you complete them
-
-# NEVER: Put code changes in pendings.md
-# Only document items, don't implement
-
-# NEVER: Create duplicate sessions
-# Use version numbers (v1, v2, v3)
+# Ejemplo
+.claude/skills/session-management/scripts/session-close.sh stories/2026-01-11-new-products-entity "Feature completed"
 ```
 
-## Checklist
+### session-archive.sh
 
-Before starting session work:
+Mueve una sesión cerrada al archivo.
 
-- [ ] Session folder created with correct naming
-- [ ] All 8 template files copied
-- [ ] scope.json configured correctly
-- [ ] requirements.md filled with ACs
-- [ ] plan.md created by architecture-supervisor
-- [ ] progress.md initialized
-- [ ] context.md has first entry from product-manager
+```bash
+# Sintaxis
+.claude/skills/session-management/scripts/session-archive.sh <session-path>
 
-During session work:
+# Ejemplo
+.claude/skills/session-management/scripts/session-archive.sh stories/2026-01-11-new-products-entity
+```
 
-- [ ] Update progress.md after completing items
-- [ ] Add entry to context.md after each phase
-- [ ] Document selectors in tests.md
-- [ ] Add out-of-scope items to pendings.md
-- [ ] Respect scope.json file restrictions
+### iteration-init.sh
 
-## Related Skills
+Crea una nueva iteración dentro de una story.
 
-- `scope-enforcement` - Scope validation
-- `cypress-selectors` - Selector documentation
-- `pom-patterns` - Test patterns for tests.md
-- `documentation` - Session documentation patterns
+```bash
+# Sintaxis
+.claude/skills/session-management/scripts/iteration-init.sh <session-path> <reason> [name]
+
+# Parámetros
+# reason: scope-change | blocked | review-feedback | continuation
+
+# Ejemplo
+.claude/skills/session-management/scripts/iteration-init.sh stories/2026-01-11-new-products-entity scope-change "add-variants"
+```
+
+### iteration-close.sh
+
+Cierra la iteración actual sin crear una nueva.
+
+```bash
+# Sintaxis
+.claude/skills/session-management/scripts/iteration-close.sh <session-path> <status> [summary]
+
+# Parámetros
+# status: completed | blocked | paused
+
+# Ejemplo
+.claude/skills/session-management/scripts/iteration-close.sh stories/2026-01-11-new-products-entity completed "All ACs met"
+```
+
+---
+
+## Flujos de Uso
+
+### Iniciar Nueva Sesión
+
+1. **Evaluar complejidad** (T-Shirt sizing)
+2. **Determinar tipo** de sesión:
+   - XS → `log`
+   - S-M → `task`
+   - L-XL → `story`
+3. **Ejecutar script**:
+   ```bash
+   ./session-init.sh <type> <name> <tshirt>
+   ```
+4. **Completar templates** generados
+
+### Retomar Sesión Existente
+
+1. **Listar sesiones**:
+   ```bash
+   ./session-list.sh
+   ```
+2. **Leer archivos de la sesión**:
+   - `context.md` → Contexto general
+   - `requirements.md` → Qué hay que hacer
+   - `plan.md` → Cómo hacerlo
+   - `current/progress.md` → Estado actual
+3. **Continuar desarrollo**
+
+### Cambio de Scope
+
+Cuando el alcance cambia significativamente:
+
+1. **Crear nueva iteración**:
+   ```bash
+   ./iteration-init.sh <session> scope-change "descripción"
+   ```
+2. **Actualizar** `requirements.md` o `plan.md`
+3. **Continuar** desde nueva iteración
+
+### Cerrar Sesión
+
+1. **Verificar** que todos los ACs están cumplidos
+2. **Cerrar sesión**:
+   ```bash
+   ./session-close.sh <session> "summary"
+   ```
+3. **Archivar** (opcional):
+   ```bash
+   ./session-archive.sh <session>
+   ```
+
+---
+
+## Templates
+
+### Story (COMPLETE)
+
+| Archivo | Propósito | Cambia entre iteraciones? |
+|---------|-----------|---------------------------|
+| `context.md` | Info permanente del proyecto | No |
+| `requirements.md` | ACs, user stories | Sí (git history) |
+| `plan.md` | Plan técnico | Sí (git history) |
+| `scope.json` | Paths permitidos | Sí |
+| `pendings.md` | Pendientes globales | Sí (acumulativo) |
+| `tests.md` | Selectores, traducciones | Sí (acumulativo) |
+
+### Task (STANDARD)
+
+| Archivo | Propósito |
+|---------|-----------|
+| `requirements.md` | Objetivo y ACs |
+| `progress.md` | Estado actual |
+
+### Log (QUICK)
+
+| Archivo | Propósito |
+|---------|-----------|
+| `{date}-{name}.md` | Registro del fix |
+
+---
+
+## Placeholders en Templates
+
+| Placeholder | Descripción | Ejemplo |
+|-------------|-------------|---------|
+| `{{SESSION_NAME}}` | Nombre sin fecha | new-products-entity |
+| `{{SESSION_FULL}}` | Nombre completo | 2026-01-11-new-products-entity |
+| `{{DATE}}` | Fecha de creación | 2026-01-11 |
+| `{{TSHIRT}}` | T-Shirt size | L |
+| `{{ITERATION}}` | Número de iteración | 01 |
+| `{{ITERATION_NAME}}` | Nombre de iteración | initial |
+| `{{CLICKUP_URL}}` | URL de tarea (manual) | - |
+
+---
+
+## Integración con Comandos
+
+Esta skill es utilizada por los comandos `/session:*`:
+
+- `/session:start` → Usa `session-init.sh`
+- `/session:resume` → Usa `session-list.sh` + lectura de archivos
+- `/session:status` → Usa `session-list.sh`
+- `/session:close` → Usa `session-close.sh`
+- `/session:scope-change` → Usa `iteration-init.sh`
+
+---
+
+## Reducción de Tokens
+
+| Operación | Sin Script | Con Script | Reducción |
+|-----------|------------|------------|-----------|
+| Crear story | ~2350 tokens | ~280 tokens | **88%** |
+| Crear task | ~800 tokens | ~150 tokens | **81%** |
+| Listar sesiones | ~500 tokens | ~100 tokens | **80%** |
+| Nueva iteración | ~1200 tokens | ~200 tokens | **83%** |

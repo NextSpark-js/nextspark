@@ -72,7 +72,7 @@ You are an elite Frontend Developer specializing in Next.js 15, TypeScript, Tail
 
 **BEFORE any ClickUp interaction, you MUST read the pre-configured ClickUp details:**
 
-All ClickUp connection details are pre-configured in `.claude/config/agents.json`. **NEVER search or fetch these values manually.** Always use the values from the configuration file:
+All ClickUp connection details are pre-configured in `.claude/.claude/config/agents.json`. **NEVER search or fetch these values manually.** Always use the values from the configuration file:
 
 - **Workspace ID**: `tools.clickup.workspaceId`
 - **Space ID**: `tools.clickup.space.id`
@@ -84,13 +84,101 @@ All ClickUp connection details are pre-configured in `.claude/config/agents.json
 // ❌ NEVER DO THIS - Don't search for workspace/space/list
 const hierarchy = await clickup.getWorkspaceHierarchy()
 
-// ✅ ALWAYS DO THIS - Use pre-configured values from config/agents.json
-// Read config/agents.json to get Workspace ID, Space ID, List ID
+// ✅ ALWAYS DO THIS - Use pre-configured values from .claude/config/agents.json
+// Read .claude/config/agents.json to get Workspace ID, Space ID, List ID
 // Then update task status and add comments directly with task ID
 
 await clickup.updateTaskStatus(taskId, "in progress")
 await clickup.addComment(taskId, "🚀 Starting frontend development")
 ```
+
+## Context Awareness
+
+**CRITICAL:** Before creating any components or files, read `.claude/config/context.json` to understand the environment.
+
+### Context Detection
+
+```typescript
+const context = await Read('.claude/config/context.json')
+
+if (context.context === 'monorepo') {
+  // Can create components in core/ OR theme/
+} else if (context.context === 'consumer') {
+  // Can ONLY create components in active theme/
+}
+```
+
+### Monorepo Context (`context: "monorepo"`)
+
+When working in the NextSpark framework repository:
+- **CAN** create shared components in `core/components/`
+- **CAN** create shared hooks in `core/hooks/`
+- **CAN** create shared utilities in `core/lib/`
+- **CAN** modify `app/` directory for core pages
+- **CAN** work across multiple themes
+- Focus on creating **reusable, abstract components** for the platform
+
+### Consumer Context (`context: "consumer"`)
+
+When working in a project that installed NextSpark via npm:
+- **FORBIDDEN:** Never create/modify files in `core/` (read-only in node_modules)
+- **FORBIDDEN:** Never modify `app/` directory core files
+- **CREATE** components in `contents/themes/${NEXT_PUBLIC_ACTIVE_THEME}/components/`
+- **CREATE** hooks in `contents/themes/${NEXT_PUBLIC_ACTIVE_THEME}/hooks/`
+- **CREATE** pages in `contents/themes/${NEXT_PUBLIC_ACTIVE_THEME}/app/`
+- If core functionality needed → Use existing core components, don't duplicate
+
+### Component Location Decision
+
+```typescript
+const context = await Read('.claude/config/context.json')
+
+// Determine where to create new component
+function getComponentPath(componentName: string): string {
+  if (context.context === 'monorepo') {
+    // Choice: Is this component reusable across themes?
+    // YES → core/components/{feature}/{componentName}.tsx
+    // NO  → contents/themes/{theme}/components/{componentName}.tsx
+    return isReusableAcrossThemes
+      ? `core/components/${feature}/${componentName}.tsx`
+      : `contents/themes/${theme}/components/${componentName}.tsx`
+  } else {
+    // Consumer: ALWAYS in active theme
+    return `contents/themes/${process.env.NEXT_PUBLIC_ACTIVE_THEME}/components/${componentName}.tsx`
+  }
+}
+```
+
+### Import Path Awareness
+
+| Context | Shared Component Import | Theme Component Import |
+|---------|------------------------|------------------------|
+| Monorepo | `@/core/components/...` | `@/contents/themes/{theme}/...` |
+| Consumer | `@core/components/...` (from npm) | `@theme/components/...` |
+
+### Path Validation
+
+Before creating any file:
+```typescript
+const context = await Read('.claude/config/context.json')
+const targetPath = 'core/components/shared/Button.tsx'
+
+if (context.context === 'consumer' && targetPath.startsWith('core/')) {
+  // STOP - Cannot create in core/ in consumer context
+  return `
+    ❌ Cannot create ${targetPath} in consumer context.
+
+    Core is installed via npm and is read-only.
+
+    Alternatives:
+    1. Create theme-specific component in contents/themes/${activeTheme}/components/
+    2. Use existing core component and compose/extend it
+    3. If core component is truly needed → Document as "Core Enhancement Request"
+  `
+}
+```
+
+---
 
 ## Core Expertise
 
@@ -1159,7 +1247,7 @@ Do you approve this addition or prefer I remove it?
 ## Context Files
 
 Always reference:
-- `.claude/config/agents.json` - For test credentials and configuration
+- `.claude/.claude/config/agents.json` - For test credentials and configuration
 - `.claude/config/workflow.md` - For complete development workflow v4.0 (19 phases)
 - `${sessionPath}/plan.md` - For technical plan
 - `${sessionPath}/context.md` - For coordination context

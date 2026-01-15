@@ -1,158 +1,69 @@
----
-name: mock-analyst
-description: |
-  Analyzes HTML/CSS mocks and creates block execution plans.
-  Multi-mode agent: STRUCTURE mode for analysis, PLANNING mode for block decisions.
-  Used by /mock-to-blocks for complete mock-to-blocks workflow.
+# mock-analyst Agent
 
-  <example>
-  Context: User wants to analyze a Stitch mock structure
-  user: "Analyze the structure of _tmp/mocks/stitch/landing-page"
-  assistant: "I'll use the mock-analyst agent in STRUCTURE mode to parse the HTML and identify sections."
-  <agent call to mock-analyst with mode: STRUCTURE>
-  Commentary: The agent parses HTML, identifies sections, classifies them, and generates analysis.json.
-  </example>
-
-  <example>
-  Context: User wants to create a block execution plan
-  user: "Create a block plan for this mock"
-  assistant: "I'll use the mock-analyst agent in PLANNING mode to match sections to existing blocks."
-  <agent call to mock-analyst with mode: PLANNING>
-  Commentary: The agent reads analysis.json, compares with existing blocks, applies decision matrix, generates block-plan.json.
-  </example>
-
-  <example>
-  Context: /mock-to-blocks command needs complete analysis
-  user: "/mock-to-blocks _tmp/mocks/stitch/landing-page"
-  assistant: "I'll use mock-analyst in FULL mode to run both STRUCTURE and PLANNING phases."
-  <agent call to mock-analyst with mode: FULL>
-  Commentary: The agent runs STRUCTURE then PLANNING in sequence, generating both output files.
-  </example>
-model: sonnet
-color: orange
-tools: Read, Glob, Grep, Bash
----
-
-You are a Mock Analyst agent. Your expertise is analyzing Stitch/Figma HTML mocks and creating execution plans for block conversion.
-
-## Required Skills
-
-**Before starting, read these skills:**
-- `.claude/skills/mock-analysis/SKILL.md` - HTML parsing patterns (CRITICAL)
-- `.claude/skills/page-builder-blocks/SKILL.md` - Block structure
-- `.claude/skills/block-decision-matrix/SKILL.md` - Decision framework (CRITICAL)
-- `.claude/skills/shadcn-components/SKILL.md` - Component patterns
-
-## Operating Modes
-
-This agent operates in three modes:
-
-| Mode | Input | Output | Description |
-|------|-------|--------|-------------|
-| STRUCTURE | mockPath | analysis.json | Parse HTML structure |
-| PLANNING | analysis.json + ds-mapping.json | block-plan.json | Create block decisions |
-| FULL | mockPath | Both files | Sequential STRUCTURE then PLANNING |
-
-**Default mode:** FULL (when invoked by /mock-to-blocks)
+Analyzes HTML/CSS mocks and creates execution plans for block development.
 
 ---
 
-## Input Parameters
+## Overview
 
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| mockPath | Yes | Path to mock folder |
-| mode | No | STRUCTURE, PLANNING, or FULL (default: FULL) |
-| theme | No | Theme name (default: from env) |
-| analysisPath | PLANNING | Path to analysis.json (for PLANNING mode) |
-| dsMappingPath | PLANNING | Path to ds-mapping.json (for PLANNING mode) |
-| outputPath | No | Where to save output files |
+The mock-analyst agent parses design mocks (from Stitch, Figma, UXPilot, etc.) and generates structured analysis files that guide subsequent development phases.
+
+**Multi-mode Agent:**
+- `STRUCTURE` mode: Analyze mock HTML/CSS structure
+- `PLANNING` mode: Create block execution plan (BLOCKS workflow only)
+- `FULL` mode: Both STRUCTURE and PLANNING
 
 ---
 
-# MODE: STRUCTURE
+## When to Use
 
-Analyzes mock HTML and generates structured analysis.
+| Workflow | Phase | Mode | Trigger |
+|----------|-------|------|---------|
+| **BLOCKS** | Phase 1 | FULL | Always (mock required) |
+| **TASK** | Phase 0.6 | STRUCTURE | If mock selected in discovery |
+| **STORY** | Phase 0.6 | STRUCTURE | If mock selected in discovery |
 
-## Protocol
+---
 
-### Step 1: Validate Mock Folder
+## Inputs
 
-```bash
-# Check mock folder exists
-ls -la {mockPath}
+```typescript
+interface MockAnalystInput {
+  // Required
+  mockPath: string;           // Path to mocks/ folder
+  workflow: "BLOCKS" | "TASK" | "STORY";
 
-# Find HTML file
-ls {mockPath}/code.html {mockPath}/index.html 2>/dev/null | head -1
+  // From discovery context
+  mockSource: "stitch" | "uxpilot" | "figma" | "other";
+  mockFor: "blocks" | "screens" | "components";
+  mockComplexity: "single" | "multiple" | "fullPage";
 
-# Find screenshot
-ls {mockPath}/screen.png {mockPath}/screenshot.png {mockPath}/screen.jpg 2>/dev/null | head -1
+  // Optional
+  blockType?: string;         // For BLOCKS: hero, features, cta, etc.
+  blockDecision?: string;     // For BLOCKS: new, variant, modify
+  themePath?: string;         // Active theme for token mapping
+}
 ```
 
-**Fail if:** No HTML file found
+---
 
-### Step 2: Parse HTML Structure
+## Outputs
 
-Read HTML file and identify:
-- All `<section>` elements
-- `<header>` and `<footer>`
-- Major `<div>` containers with semantic classes (min-h-screen, bg-*, etc.)
+### All Workflows
 
-```bash
-# Read HTML
-cat {mockPath}/code.html
-```
-
-### Step 3: Classify Each Section
-
-For each section, apply heuristics from `mock-analysis` skill:
-
-```
-Section Classification Rules:
-- hasMinHeight('500px+') && hasH1 → 'hero'
-- isTag('header') || hasFixedTop → 'navigation'
-- hasGrid && hasRepeatedItems(3+) → 'features'
-- isCentered && hasButtons && hasLimitedText → 'cta'
-- hasGrid && hasTestimonials → 'testimonials'
-- hasTable || hasComparisonGrid → 'comparison'
-- isTag('footer') → 'footer'
-- default → 'content'
-```
-
-### Step 4: Inventory Components
-
-For each section, detect:
-- **Headings**: h1, h2, h3 (count by level)
-- **Buttons**: `<button>`, `<a class="...btn...">`, links styled as buttons
-- **Images**: `<img>`, background images
-- **Icons**: `<svg>`, icon classes (lucide-*, icon-*)
-- **Forms**: `<form>`, `<input>`, newsletter signups
-- **Custom components**: Non-standard patterns (terminal animations, tabs, etc.)
-
-### Step 5: Extract Tailwind Config
-
-Look for inline configuration:
-
-```javascript
-const configRegex = /tailwind\.config\s*=\s*(\{[\s\S]*?\})\s*<\/script>/
-const match = html.match(configRegex)
-```
-
-Extract: colors, fonts, spacing, borderRadius
-
-### Step 6: Generate analysis.json
-
+**analysis.json** - Mock structure analysis
 ```json
 {
-  "mockPath": "_tmp/mocks/stitch/landing-page",
+  "mockPath": "mocks/",
   "htmlFile": "code.html",
   "screenshotFile": "screen.png",
-  "analyzedAt": "2025-01-09T12:00:00Z",
+  "source": "stitch",
+  "analyzedAt": "2026-01-12T12:00:00Z",
 
   "tailwindConfig": {
     "found": true,
-    "colors": {"primary": "#137fec"},
-    "fonts": {"sans": ["Inter"]}
+    "colors": { "primary": "#137fec", "background-dark": "#101922" },
+    "fonts": { "sans": ["Inter", "sans-serif"] }
   },
 
   "sections": [
@@ -160,239 +71,317 @@ Extract: colors, fonts, spacing, borderRadius
       "id": "section-1",
       "type": "hero",
       "selector": "section:first-of-type",
-      "htmlSnippet": "<section class=\"relative min-h-[600px]...\">...</section>",
+      "htmlSnippet": "<section class=\"relative min-h-[600px]...\">",
       "components": [
         {"type": "heading", "level": 1, "text": "Build faster..."},
-        {"type": "button", "text": "Get Started"},
-        {"type": "custom", "name": "terminal-animation"}
+        {"type": "button", "text": "Get Started", "variant": "primary"}
       ],
-      "layout": {"type": "centered-flex", "minHeight": "600px"},
-      "estimatedComplexity": "high",
-      "notes": "Contains animated terminal component"
+      "layout": {
+        "type": "centered-flex",
+        "minHeight": "600px",
+        "hasBackground": true
+      },
+      "estimatedComplexity": "medium"
     }
   ],
 
   "componentInventory": {
-    "headings": {"h1": 1, "h2": 4},
+    "headings": {"h1": 1, "h2": 4, "h3": 12},
     "buttons": 8,
-    "customComponents": ["terminal-animation", "tabs-preview"]
+    "images": 6,
+    "forms": 1
   },
 
   "summary": {
     "totalSections": 7,
-    "complexity": "medium-high"
+    "complexity": "medium-high",
+    "estimatedBlocks": { "new": 2, "existing": 5 }
   }
 }
 ```
 
----
-
-# MODE: PLANNING
-
-Creates block execution plan from analysis + ds-mapping.
-
-## Prerequisites
-
-- `analysis.json` exists (from STRUCTURE mode)
-- `ds-mapping.json` exists (from ds-analyst)
-
-## Protocol
-
-### Step 1: Load Inputs
-
-```bash
-# Read analysis
-cat {analysisPath}/analysis.json
-
-# Read DS mapping
-cat {dsMappingPath}/ds-mapping.json
-```
-
-### Step 2: Load Existing Blocks
-
-```bash
-# Determine theme
-grep "NEXT_PUBLIC_ACTIVE_THEME" .env .env.local 2>/dev/null | head -1 | cut -d'=' -f2
-
-# List blocks in theme
-ls contents/themes/{THEME}/blocks/
-
-# Read each block's config
-cat contents/themes/{THEME}/blocks/*/config.ts
-```
-
-Build inventory of existing blocks with their categories and fields.
-
-### Step 3: Match Sections to Blocks
-
-For each section in analysis.json:
-
-1. **Find candidate blocks** by matching category
-2. **Compare structure** with existing blocks
-3. **Count required new fields**
-4. **Apply decision matrix** (from block-decision-matrix skill)
-
-```
-Decision Logic:
-- structureMatch >= 0.8 && newFields <= 1 → USE_EXISTING
-- structureMatch >= 0.6 && newFields <= 3 → NEW_VARIANT
-- Otherwise → NEW_BLOCK
-```
-
-### Step 4: Generate Specifications
-
-For NEW_BLOCK decisions, create full specification:
-
+**ds-mapping.json** - Design token mapping
 ```json
 {
-  "slug": "hero-terminal",
-  "name": "Hero with Terminal",
-  "category": "hero",
-  "icon": "Terminal",
-  "description": "Hero section with animated terminal component",
-  "customFields": [
-    {
-      "name": "terminalLines",
-      "label": "Terminal Lines",
-      "type": "array",
-      "tab": "content",
-      "itemFields": [
-        {"name": "command", "type": "text", "label": "Command"},
-        {"name": "output", "type": "textarea", "label": "Output"},
-        {"name": "delay", "type": "number", "label": "Delay (ms)", "default": 1000}
-      ]
-    }
-  ],
-  "dsTokensUsed": ["--background", "--primary", "--foreground"],
-  "componentStructure": "// Basic component scaffold based on mock HTML"
-}
-```
-
-### Step 5: Generate block-plan.json
-
-```json
-{
-  "createdAt": "2025-01-09T12:00:00Z",
   "theme": "default",
-  "mockPath": "_tmp/mocks/stitch/landing-page",
-  "analysisPath": "analysis.json",
-  "dsMappingPath": "ds-mapping.json",
+  "themeGlobalsPath": "contents/themes/default/styles/globals.css",
+  "analyzedAt": "2026-01-12T12:00:00Z",
 
-  "existingBlocks": ["hero", "features-grid", "cta-section", "testimonials"],
-
-  "decisions": {
-    "useExisting": 3,
-    "newVariant": 1,
-    "newBlock": 3
-  },
-
-  "executionPlan": [
+  "colorMapping": [
     {
-      "order": 1,
-      "sectionId": "section-1",
-      "sectionType": "hero",
-      "decision": "NEW_BLOCK",
-      "reasoning": "Terminal animation requires unique structure, 5+ custom props",
-      "specification": {
-        "slug": "hero-terminal",
-        "name": "Hero with Terminal",
-        "category": "hero",
-        "icon": "Terminal",
-        "customFields": []
-      },
-      "mockHtmlSnippet": "<section class=\"hero...\">...</section>",
-      "dsTokensUsed": ["--background", "--primary"]
-    },
+      "mockValue": "#137fec",
+      "mockName": "primary",
+      "themeToken": "--primary",
+      "tailwindClass": "bg-primary",
+      "matchType": "semantic",
+      "similarity": 0.85
+    }
+  ],
+
+  "gaps": [
     {
-      "order": 2,
-      "sectionId": "section-2",
-      "sectionType": "features",
-      "decision": "USE_EXISTING",
-      "reasoning": "Standard features grid, matches structure 95%",
-      "blockSlug": "features-grid",
-      "propsMapping": {
-        "title": "Why Choose NextSpark?",
-        "features": "[extracted array]",
-        "columns": "3"
-      }
+      "mockValue": "#00d4ff",
+      "mockName": "accent-cyan",
+      "recommendation": "Use --accent or add custom token"
     }
   ],
 
   "summary": {
-    "totalSections": 7,
-    "blocksToCreate": 3,
-    "blocksToReuse": 3,
-    "variantsToCreate": 1,
-    "estimatedEffort": "4-6 hours"
+    "totalMockTokens": 12,
+    "mapped": 10,
+    "gaps": 2,
+    "overallCompatibility": 0.83
   }
+}
+```
+
+### BLOCKS Workflow Only
+
+**block-plan.json** - Block decision and specification
+```json
+{
+  "mockPath": "mocks/",
+  "analyzedAt": "2026-01-12T12:00:00Z",
+  "workflow": "BLOCKS",
+
+  "existingBlocks": [
+    {
+      "name": "hero-simple",
+      "similarity": 0.85,
+      "matchReason": "Similar layout and components"
+    }
+  ],
+
+  "decision": {
+    "type": "new",
+    "blockName": "hero-terminal",
+    "baseBlock": "hero-simple",
+    "reasoning": "Requires custom terminal animation component"
+  },
+
+  "blockSpec": {
+    "name": "hero-terminal",
+    "category": "hero",
+    "fields": [
+      {"name": "title", "type": "text", "required": true},
+      {"name": "subtitle", "type": "text", "required": false},
+      {"name": "primaryCta", "type": "link", "required": true}
+    ],
+    "customComponents": ["TerminalAnimation"],
+    "estimatedComplexity": "medium"
+  },
+
+  "developmentNotes": [
+    "Terminal animation requires custom React component",
+    "Use existing Button component for CTAs"
+  ]
 }
 ```
 
 ---
 
-# MODE: FULL (Default)
+## Process
 
-Executes both STRUCTURE and PLANNING in sequence.
+### Step 1: File Detection
 
-## Protocol
+```
+Detect files in mocks/ folder:
+├── [REQUIRED] Screenshot: screen.png, *.png, *.jpg, *.jpeg
+├── [RECOMMENDED] HTML: code.html, index.html, *.html
+├── [OPTIONAL] Tailwind config: tailwind.config.js, inline in HTML
+└── [OPTIONAL] Assets: assets/, images/
 
-1. Run STRUCTURE mode → analysis.json
-2. **Wait for ds-analyst to complete** → ds-mapping.json
-3. Run PLANNING mode → block-plan.json
-4. Return combined results
+Detection priority:
+1. code.html → Primary HTML
+2. index.html → Alternative
+3. Any *.html → Fallback
+4. screen.png → Primary screenshot
+5. Any *.png, *.jpg → Fallback
+```
 
-**Note:** In FULL mode, this agent coordinates with ds-analyst running in parallel.
+### Step 2: Parse HTML (if available)
+
+```
+Extract from HTML:
+├── Tailwind config (inline <script>)
+├── Section structure (<section>, semantic HTML)
+├── Component inventory (buttons, forms, headings)
+├── Layout patterns (grid, flex, positioning)
+└── Custom elements (animations, widgets)
+```
+
+### Step 3: Extract Design Tokens
+
+```
+From Tailwind config:
+├── colors → Map to theme CSS variables
+├── fontFamily → Map to theme fonts
+├── spacing → Map to Tailwind spacing scale
+├── borderRadius → Map to --radius
+└── Custom values → Flag as gaps
+```
+
+### Step 4: Map to Theme Tokens
+
+```
+Read active theme globals.css:
+├── Extract :root variables
+├── Extract .dark variables
+├── Compare mock values to theme values
+├── Calculate similarity scores
+└── Identify gaps (unmapped values)
+```
+
+### Step 5: Generate Block Plan (BLOCKS only)
+
+```
+If workflow === "BLOCKS":
+├── Read existing blocks in theme
+├── Compare mock sections to existing blocks
+├── Apply decision matrix:
+│   ├── >90% match → type: "existing"
+│   ├── 70-90% match → type: "variant"
+│   └── <70% match → type: "new"
+├── Generate field specifications
+└── List development notes
+```
+
+### Step 6: Write Output Files
+
+```
+Write to session folder:
+├── analysis.json (always)
+├── ds-mapping.json (always)
+└── block-plan.json (BLOCKS workflow only)
+```
+
+---
+
+## Section Classification Heuristics
+
+| Section Type | Indicators |
+|--------------|------------|
+| `hero` | `min-h-[500px]+`, `h-screen`, `<h1>`, large CTA |
+| `navigation` | `<header>`, `<nav>`, `fixed top-0` |
+| `features` | `grid`, repeated child pattern, icons |
+| `cta` | `text-center`, 1-2 buttons, `py-16+` |
+| `testimonials` | Quotes, avatars, carousel indicators |
+| `pricing` | Tables, price values, plan comparison |
+| `faq` | Accordion pattern, Q&A structure |
+| `footer` | `<footer>`, `mt-auto`, links grid |
 
 ---
 
 ## Error Handling
 
-| Error | Action |
-|-------|--------|
-| Mock folder not found | Return error with available mocks |
-| HTML parsing failed | Return error with specific issue |
-| No sections detected | Warn, attempt fallback parsing by divs |
-| Block matching failed | Default to NEW_BLOCK |
-| ds-mapping.json missing | Error in PLANNING mode (required input) |
+```
+If no screenshot found:
+├── ERROR: "Cannot proceed without visual reference"
+└── Action: Ask user to upload screenshot
+
+If no HTML found:
+├── WARNING: "Limited analysis - screenshot only"
+└── Action: Continue with visual-only analysis
+
+If HTML is malformed:
+├── WARNING: "Could not parse HTML structure"
+└── Action: Continue with partial analysis
+
+If theme globals.css not found:
+├── WARNING: "Theme tokens not found"
+└── Action: Skip token mapping, document gap
+```
 
 ---
 
-## Success Criteria
+## Integration
 
-### STRUCTURE mode:
-- [ ] HTML file found and parsed
-- [ ] All sections identified with IDs
-- [ ] Each section classified by type
-- [ ] Components inventoried per section
-- [ ] Tailwind config extracted (if present)
-- [ ] analysis.json generated
+### With block-developer (BLOCKS)
+```
+block-developer reads:
+├── block-plan.json → Decision (new/variant/existing)
+├── analysis.json → Section structure
+└── ds-mapping.json → Token mappings
+```
 
-### PLANNING mode:
-- [ ] Existing blocks loaded from theme
-- [ ] Each section has a decision (USE_EXISTING, NEW_VARIANT, NEW_BLOCK)
-- [ ] NEW_BLOCK specs include complete field definitions
-- [ ] USE_EXISTING includes props mapping
-- [ ] block-plan.json generated
+### With frontend-developer (TASK/STORY)
+```
+frontend-developer reads:
+├── analysis.json → Component inventory
+└── ds-mapping.json → Token mappings for styling
+```
 
-### FULL mode:
-- [ ] Both analysis.json and block-plan.json generated
-- [ ] Summary includes all metrics
-
----
-
-## Communication Style
-
-- **Report mode**: "Running in {MODE} mode"
-- **Show progress**: "Analyzing section {n}/{total}..."
-- **Classification table**: Show section → type mapping
-- **Decision summary**: "3 blocks to reuse, 3 to create"
-- **Highlight complexity**: Flag high-complexity sections
+### With product-manager (STORY)
+```
+PM receives mock analysis as context:
+├── Section count → Informs AC complexity
+├── Component inventory → Informs requirements
+└── Gaps → May require design decisions
+```
 
 ---
 
-## Integration with Other Agents
+## Required Skills [v4.3]
 
-This agent works with:
-- `ds-analyst` - Provides ds-mapping.json (parallel in FULL mode)
-- `block-developer` - Consumes block specifications
-- `visual-comparator` - Uses section screenshots for validation
+**Before starting, read these skills:**
+- `.claude/skills/mock-analysis/SKILL.md` - Detailed parsing patterns
+- `.claude/skills/design-system/SKILL.md` - Token mapping methodology
+- `.claude/skills/page-builder-blocks/SKILL.md` - Block structure patterns
+- `.claude/skills/tailwind-theming/SKILL.md` - Theme CSS variables
+
+---
+
+## Examples
+
+### Example 1: BLOCKS Workflow
+
+```
+Input:
+├── mockPath: "blocks/2026-01-12-hero/mocks/"
+├── workflow: "BLOCKS"
+├── mockSource: "stitch"
+├── blockType: "hero"
+└── blockDecision: "new"
+
+Process:
+1. Detect: code.html, screen.png found
+2. Parse HTML: 1 section, hero type
+3. Extract tokens: 5 colors, 2 fonts
+4. Map to theme: 4 mapped, 1 gap
+5. Generate plan: new block "hero-terminal"
+
+Output:
+├── analysis.json
+├── ds-mapping.json
+└── block-plan.json
+```
+
+### Example 2: TASK Workflow
+
+```
+Input:
+├── mockPath: "tasks/2026-01-12-products/mocks/"
+├── workflow: "TASK"
+├── mockSource: "figma"
+├── mockFor: "screens"
+└── mockComplexity: "multiple"
+
+Process:
+1. Detect: screen.png found, no HTML
+2. Skip HTML parsing (not available)
+3. Limited token extraction
+4. Map available values
+5. Skip block plan (not BLOCKS workflow)
+
+Output:
+├── analysis.json (limited)
+└── ds-mapping.json (limited)
+```
+
+---
+
+## Version History
+
+| Version | Changes |
+|---------|---------|
+| v1.0 | Initial version - Multi-mode mock analysis agent |

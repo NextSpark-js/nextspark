@@ -1,0 +1,69 @@
+{
+  "$schema": "./github.schema.json",
+
+  "repository": {
+    "name": "",
+    "defaultBranch": "main"
+  },
+
+  "gitflow": {
+    "environments": ["develop", "qa", "main"],
+    "featureBranch": {
+      "baseBranch": "main",
+      "targetBranch": "develop"
+    },
+    "hotfixBranch": {
+      "baseBranch": "main",
+      "targetBranch": "main",
+      "skipEnvironments": true
+    },
+    "promotionFlow": {
+      "develop": "qa",
+      "qa": "main"
+    }
+  },
+
+  "branches": {
+    "pattern": "{type}/{issue-key}-{description}-{initials}",
+    "types": {
+      "feature": {
+        "description": "New features or enhancements",
+        "base": "main",
+        "target": "develop"
+      },
+      "bugfix": {
+        "description": "Non-urgent bug fixes",
+        "base": "main",
+        "target": "develop"
+      },
+      "hotfix": {
+        "description": "Urgent production fixes",
+        "base": "main",
+        "target": "main"
+      },
+      "chore": {
+        "description": "Maintenance tasks, deps updates",
+        "base": "main",
+        "target": "develop"
+      }
+    }
+  },
+
+  "commits": {
+    "pattern": "[{issue-key}] {description}",
+    "requireIssueKey": true,
+    "suggestedPrefixes": ["Add", "Fix", "Update", "Refactor", "Remove", "Improve", "Implement"]
+  },
+
+  "pullRequests": {
+    "titlePattern": "[{issue-key}] {description}",
+    "bodyTemplate": "## Description\n{description}\n\n## Changes\n- \n\n## Testing\n- [ ] \n\n## Screenshots\n\n\n## Related Issues\n- {issue-key}",
+    "squashMerge": true,
+    "deleteBranchOnMerge": true
+  },
+
+  "reviewers": {
+    "source": ".claude/config/team.json",
+    "askUserToSelect": true
+  }
+}

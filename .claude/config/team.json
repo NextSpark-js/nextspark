@@ -1,0 +1,79 @@
+{
+  "$schema": "./team.schema.json",
+
+  "members": [
+    {
+      "name": "Pablo Capello",
+      "initials": "pc",
+      "role": "lead",
+      "email": "pablo@nextspark.com",
+      "ids": {
+        "github": "capellopablo",
+        "taskManager": "",
+        "slack": ""
+      },
+      "permissions": {
+        "canReview": true,
+        "canMerge": true,
+        "canApproveProduction": true
+      }
+    },
+    {
+      "name": "Federico Gonzalez",
+      "initials": "pc",
+      "role": "lead",
+      "email": "fede@nextspark.com",
+      "ids": {
+        "github": "fedevgonzalez",
+        "taskManager": "",
+        "slack": ""
+      },
+      "permissions": {
+        "canReview": true,
+        "canMerge": true,
+        "canApproveProduction": true
+      }
+    }
+  ],
+
+  "roles": {
+    "lead": {
+      "description": "Team lead with full permissions",
+      "defaultPermissions": {
+        "canReview": true,
+        "canMerge": true,
+        "canApproveProduction": true
+      }
+    },
+    "developer": {
+      "description": "Developer with standard permissions",
+      "defaultPermissions": {
+        "canReview": true,
+        "canMerge": true,
+        "canApproveProduction": false
+      }
+    },
+    "junior": {
+      "description": "Junior developer requiring review",
+      "defaultPermissions": {
+        "canReview": false,
+        "canMerge": false,
+        "canApproveProduction": false
+      }
+    },
+    "qa": {
+      "description": "QA engineer",
+      "defaultPermissions": {
+        "canReview": false,
+        "canMerge": false,
+        "canApproveProduction": false
+      }
+    }
+  },
+
+  "reviewRules": {
+    "minRequired": 1,
+    "requireQaForProduction": false,
+    "defaultReviewers": []
+  }
+}

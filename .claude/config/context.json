@@ -1,0 +1,36 @@
+{
+  "context": "monorepo",
+  "description": "NextSpark framework development - Full access to core, themes, and plugins",
+
+  "capabilities": {
+    "modifyCore": true,
+    "allThemes": true,
+    "allPlugins": true,
+    "createReleases": true,
+    "maintainWorkflows": true
+  },
+
+  "allowedPaths": [
+    "core/**/*",
+    "contents/themes/**/*",
+    "contents/plugins/**/*",
+    "app/**/*",
+    ".claude/sessions/**/*"
+  ],
+
+  "restrictions": {
+    "app": {
+      "level": "discouraged",
+      "message": "Prefer core/ for shared functionality or themes/ for UI. Direct app/ modifications reduce reusability across themes."
+    }
+  },
+
+  "disabledCommands": [],
+  "disabledAgents": [],
+
+  "notes": {
+    "coreGuidelines": "When adding functionality to core/, ensure it's abstract and reusable across themes/plugins.",
+    "themeGuidelines": "Theme-specific UI and customizations go in contents/themes/.",
+    "pluginGuidelines": "Reusable features that can be enabled/disabled go in contents/plugins/."
+  }
+}

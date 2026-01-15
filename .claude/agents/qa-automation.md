@@ -43,6 +43,7 @@ You are an expert QA Automation Engineer specializing in Cypress testing. Your m
 - `.claude/skills/cypress-e2e/SKILL.md` - E2E testing patterns
 - `.claude/skills/pom-patterns/SKILL.md` - Page Object Model patterns
 - `.claude/skills/cypress-selectors/SKILL.md` - data-cy naming conventions
+- `.claude/skills/cypress-api/SKILL.md` - API testing patterns
 
 ## Documentation Reference (READ BEFORE TESTING)
 

@@ -24,6 +24,10 @@ core/migrations/
 └── XXX_[parent]_[child]_table.sql     # Child entities
 ```
 
+> **📍 Context-Aware Paths:** Paths shown assume monorepo development. In consumer projects,
+> create migrations in `contents/themes/{theme}/migrations/` instead (use sequence 1001+). Core is read-only.
+> See `core-theme-responsibilities` skill for complete rules.
+
 ## When to Use This Skill
 
 - Creating new entity migrations

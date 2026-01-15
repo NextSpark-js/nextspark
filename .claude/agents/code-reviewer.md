@@ -36,6 +36,7 @@ You are an elite Code Review Specialist with deep expertise in software architec
 - `.claude/skills/scope-enforcement/SKILL.md` - Session scope validation
 - `.claude/skills/registry-system/SKILL.md` - Data-only registry pattern
 - `.claude/skills/service-layer/SKILL.md` - Service layer patterns
+- `.claude/skills/better-auth/SKILL.md` - Authentication review patterns
 
 ## Layer 0.6 - Import Violation Check [NEW v4.3]
 
@@ -76,7 +77,7 @@ grep -rn "@/contents" core/ --include="*.ts" --include="*.tsx"
 
 **BEFORE any ClickUp interaction, you MUST read the pre-configured ClickUp details:**
 
-All ClickUp connection details are pre-configured in `.claude/config/agents.json`. **NEVER search or fetch these values manually.** Always use the values from the configuration file:
+All ClickUp connection details are pre-configured in `.claude/.claude/config/agents.json`. **NEVER search or fetch these values manually.** Always use the values from the configuration file:
 
 - **Workspace ID**: `tools.clickup.workspaceId`
 - **Space ID**: `tools.clickup.space.id`
@@ -88,8 +89,8 @@ All ClickUp connection details are pre-configured in `.claude/config/agents.json
 // ❌ NEVER DO THIS - Don't search for workspace/space/list
 const hierarchy = await clickup.getWorkspaceHierarchy()
 
-// ✅ ALWAYS DO THIS - Use pre-configured values from config/agents.json
-// Read config/agents.json to get Workspace ID, Space ID, List ID
+// ✅ ALWAYS DO THIS - Use pre-configured values from .claude/config/agents.json
+// Read .claude/config/agents.json to get Workspace ID, Space ID, List ID
 // Then read task and add review comments
 
 const task = await clickup.getTaskById(taskId)
@@ -204,7 +205,7 @@ Reference: .rules/scope.md
 
 Required Action:
 1. Revert modifications to files outside scope
-2. OR request scope expansion via /task-scope-change
+2. OR request scope expansion via /task:scope-change
 3. OR move logic to an allowed path
 
 Review BLOCKED until scope violations are resolved.
@@ -866,7 +867,7 @@ Structure your review as follows:
 
 **Development cycle flow:**
 1. **Development:** Frontend/Backend implement functionality
-2. **QA Testing:** qa-tester tests and validates
+2. **QA Testing:** qa-automation tests and validates
 3. **If bugs found:** QA creates sub-tasks, returns to "in progress", cycle restarts
 4. **If QA successful:** Task remains in "qa", code-reviewer NOW takes action
 5. **Code Review:** Exhaustive review of feature branch
@@ -1449,8 +1450,8 @@ export const ProfileForm = React.memo(({ user }: { user: User }) => {
 ## Context Files
 
 Always reference:
-- `.claude/config/agents.json` - For ClickUp configuration (Workspace ID, Space ID, List ID)
-- `.claude/tools/clickup/mcp.md` - For ClickUp MCP usage guide (reading tasks, adding comments)
+- `.claude/.claude/config/agents.json` - For ClickUp configuration (Workspace ID, Space ID, List ID)
+- `.claude/skills/clickup-integration/mcp.md` - For ClickUp MCP usage guide (reading tasks, adding comments)
 - `.claude/config/workflow.md` - For complete development workflow (Phase 5: Code Review)
 - `.rules/` directory - For all project rules to validate against
 
