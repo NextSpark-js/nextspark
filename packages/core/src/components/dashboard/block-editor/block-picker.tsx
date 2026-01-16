@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
-import { Search, Plus, LayoutGrid, Settings2 } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { Search, Plus, LayoutGrid, Settings2, Layers } from 'lucide-react'
 import { Input } from '../../ui/input'
 import { Button } from '../../ui/button'
 import { Badge } from '../../ui/badge'
@@ -11,32 +12,70 @@ import { cn } from '../../../lib/utils'
 import { sel } from '../../../lib/test'
 import { getCategoryConfig } from './category-helpers'
 import { EntityFieldsSidebar } from './entity-fields-sidebar'
+import { PatternCard } from './pattern-card'
 import type { BlockConfig } from '../../../types/blocks'
 import type { ClientEntityConfig } from '@nextsparkjs/registries/entity-registry.client'
+import type { Pattern } from '../../../types/pattern-reference'
 
-type TabValue = 'blocks' | 'config'
+type TabValue = 'blocks' | 'patterns' | 'config'
+
+// Helper to get team ID from localStorage
+function getTeamId(): string | null {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('activeTeamId')
+  }
+  return null
+}
+
+// Helper to build headers with team context
+function buildApiHeaders(): HeadersInit {
+  const headers: Record<string, string> = {}
+  const teamId = getTeamId()
+  if (teamId) {
+    headers['x-team-id'] = teamId
+  }
+  return headers
+}
 
 interface BlockPickerProps {
   blocks: BlockConfig[]
   onAddBlock: (blockSlug: string) => void
+  onAddPattern?: (patternId: string) => void
   entityConfig: ClientEntityConfig
   entityFields: Record<string, unknown>
   onEntityFieldChange: (field: string, value: unknown) => void
   showFieldsTab: boolean
+  showPatternsTab?: boolean
 }
 
 export function BlockPicker({
   blocks,
   onAddBlock,
+  onAddPattern,
   entityConfig,
   entityFields,
   onEntityFieldChange,
   showFieldsTab,
+  showPatternsTab = false,
 }: BlockPickerProps) {
   const t = useTranslations('admin.builder')
+  const tPatterns = useTranslations('patterns')
   const [activeTab, setActiveTab] = useState<TabValue>('blocks')
   const [search, setSearch] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+
+  // Fetch published patterns (only when patterns tab is visible and active)
+  const { data: patternsData, isLoading: patternsLoading } = useQuery<{ data: Pattern[] }>({
+    queryKey: ['patterns', 'published'],
+    queryFn: async () => {
+      const response = await fetch('/api/v1/patterns?status=published', {
+        headers: buildApiHeaders(),
+      })
+      if (!response.ok) throw new Error('Failed to fetch patterns')
+      return response.json()
+    },
+    enabled: showPatternsTab && activeTab === 'patterns',
+  })
 
   // Get unique categories
   const categories = useMemo(() => {
@@ -56,6 +95,17 @@ export function BlockPicker({
       return matchesSearch && matchesCategory
     })
   }, [blocks, search, selectedCategory])
+
+  // Filter patterns
+  const filteredPatterns = useMemo(() => {
+    const patterns = patternsData?.data || []
+    if (search === '') return patterns
+
+    return patterns.filter(pattern =>
+      pattern.title.toLowerCase().includes(search.toLowerCase()) ||
+      pattern.description?.toLowerCase().includes(search.toLowerCase())
+    )
+  }, [patternsData, search])
 
   return (
     <div className="flex h-full flex-col bg-card" data-cy={sel('blockEditor.blockPicker.container')}>
@@ -80,6 +130,24 @@ export function BlockPicker({
             />
           )}
         </button>
+        {showPatternsTab && (
+          <button
+            className={cn(
+              'flex-1 py-3 text-sm font-medium transition-all relative',
+              activeTab === 'patterns'
+                ? 'text-primary bg-primary/5'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+            )}
+            onClick={() => setActiveTab('patterns')}
+            data-cy={sel('blockEditor.blockPicker.tabPatterns')}
+          >
+            <Layers className="h-4 w-4 inline mr-2" />
+            {t('sidebar.tabs.patterns')}
+            {activeTab === 'patterns' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+            )}
+          </button>
+        )}
         {showFieldsTab && (
           <button
             className={cn(
@@ -238,6 +306,64 @@ export function BlockPicker({
                 })
               )}
             </div>
+          </ScrollArea>
+        </>
+      ) : activeTab === 'patterns' ? (
+        // Patterns Tab
+        <>
+          {/* Search */}
+          <div className="p-4 border-b border-border sticky top-0 bg-card z-10">
+            <div className="relative" data-cy={sel('blockEditor.blockPicker.patternsSearchWrapper')}>
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
+                data-cy={sel('blockEditor.blockPicker.patternsSearchIcon')}
+              />
+              <Input
+                type="text"
+                placeholder={tPatterns('picker.search')}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+                data-cy={sel('blockEditor.blockPicker.patternsSearch')}
+              />
+            </div>
+          </div>
+
+          {/* Patterns List */}
+          <ScrollArea className="flex-1 p-4" data-cy={sel('blockEditor.blockPicker.patternsList')}>
+            {patternsLoading ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <p className="text-sm">{tPatterns('picker.loading') || 'Loading patterns...'}</p>
+              </div>
+            ) : filteredPatterns.length === 0 ? (
+              <div
+                className="text-center py-8 text-muted-foreground"
+                data-cy={sel('blockEditor.blockPicker.patternsEmpty')}
+              >
+                <Layers className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                <p className="text-sm font-medium mb-1">
+                  {search ? tPatterns('picker.noResults') : tPatterns('list.empty')}
+                </p>
+                <p className="text-xs">
+                  {search ? tPatterns('picker.noResults') : tPatterns('list.emptyDescription')}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredPatterns.map(pattern => (
+                  <PatternCard
+                    key={pattern.id}
+                    pattern={pattern}
+                    onSelect={(patternId) => {
+                      if (onAddPattern) {
+                        onAddPattern(patternId)
+                        setSearch('') // Clear search after inserting
+                      }
+                    }}
+                  />
+                ))}
+              </div>
+            )}
           </ScrollArea>
         </>
       ) : (

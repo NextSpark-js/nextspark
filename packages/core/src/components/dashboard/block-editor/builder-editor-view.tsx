@@ -90,13 +90,15 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
     )
   }, [entityConfig])
 
+  // Determine if we should show the Patterns tab (hide when editing patterns)
+  const showPatternsTab = useMemo(() => {
+    return entitySlug !== 'patterns'
+  }, [entitySlug])
+
   // Filter blocks by entity scope
+  // When editing patterns, BlockService.getForScope automatically filters by allowInPatterns
   const availableBlocks = useMemo(() => {
-    const allBlocks = BlockService.getAll()
-    return allBlocks.filter(block =>
-      block.scope?.includes(entitySlug) ||
-      block.scope?.includes('*')
-    )
+    return BlockService.getForScope(entitySlug)
   }, [entitySlug])
 
   // Fetch entity data (only in edit mode)
@@ -244,6 +246,18 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
     }
     setBlocks(prev => [...prev, newBlock])
     setSelectedBlockId(newBlock.id)
+  }, [])
+
+  // Pattern operations
+  const handleAddPattern = useCallback((patternId: string) => {
+    const patternRef = {
+      type: 'pattern' as const,
+      ref: patternId,
+      id: uuidv4(),  // Unique instance ID
+    }
+    // Insert as if it were a block
+    setBlocks(prev => [...prev, patternRef as unknown as BlockInstance])
+    setSelectedBlockId(patternRef.id)
   }, [])
 
   const handleRemoveBlock = useCallback((blockId: string) => {
@@ -527,10 +541,12 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
           <BlockPicker
             blocks={availableBlocks}
             onAddBlock={handleAddBlock}
+            onAddPattern={handleAddPattern}
             entityConfig={entityConfig}
             entityFields={entityFields}
             onEntityFieldChange={handleEntityFieldChange}
             showFieldsTab={!!showFieldsOption}
+            showPatternsTab={showPatternsTab}
           />
         </div>
 

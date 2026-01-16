@@ -219,6 +219,7 @@
       "noCategories": "No categories available",
       "tabs": {
         "blocks": "Blocks",
+        "patterns": "Patterns",
         "config": "Configuration"
       },
       "search": {

@@ -1,0 +1,87 @@
+{
+  "entity": {
+    "singular": "Pattern",
+    "plural": "Patterns"
+  },
+  "title": "Patterns",
+  "subtitle": "Create reusable block compositions for your pages",
+  "description": "Manage reusable patterns that can be inserted into pages and posts",
+  "fields": {
+    "title": {
+      "label": "Title",
+      "placeholder": "Enter pattern name...",
+      "description": "Pattern display name"
+    },
+    "slug": {
+      "label": "Slug",
+      "placeholder": "pattern-slug",
+      "description": "URL-friendly identifier, unique per team"
+    },
+    "status": {
+      "label": "Status",
+      "placeholder": "Select status...",
+      "description": "Publication status"
+    },
+    "description": {
+      "label": "Description",
+      "placeholder": "Describe this pattern...",
+      "description": "Brief description of pattern purpose"
+    }
+  },
+  "status": {
+    "draft": "Draft",
+    "published": "Published"
+  },
+  "messages": {
+    "created": "Pattern created successfully",
+    "updated": "Pattern updated successfully",
+    "deleted": "Pattern deleted successfully",
+    "createError": "Error creating pattern",
+    "updateError": "Error updating pattern",
+    "deleteError": "Error deleting pattern",
+    "notFound": "Pattern not found",
+    "emptyPattern": "This pattern has no blocks yet",
+    "locked": {
+      "title": "Pattern Reference",
+      "description": "This is a pattern reference. Edit the pattern directly to make changes."
+    }
+  },
+  "actions": {
+    "create": "Create Pattern",
+    "edit": "Edit Pattern",
+    "delete": "Delete Pattern",
+    "publish": "Publish",
+    "unpublish": "Unpublish",
+    "duplicate": "Duplicate",
+    "editPattern": "Edit Pattern",
+    "removeReference": "Remove Reference"
+  },
+  "labels": {
+    "patternPrefix": "Pattern"
+  },
+  "builder": {
+    "title": "Pattern Builder",
+    "description": "Add blocks to create your reusable pattern",
+    "emptyState": "No blocks yet. Add blocks to create your pattern.",
+    "blocksAllowed": "Only certain blocks can be used in patterns",
+    "patternReference": "Pattern Reference",
+    "lockedMessage": "This is a pattern reference. Edit the pattern directly to make changes."
+  },
+  "list": {
+    "title": "All Patterns",
+    "empty": "No patterns yet",
+    "emptyDescription": "Create your first pattern to get started",
+    "filters": {
+      "all": "All",
+      "draft": "Drafts",
+      "published": "Published"
+    }
+  },
+  "picker": {
+    "title": "Insert Pattern",
+    "search": "Search patterns...",
+    "noResults": "No patterns found",
+    "selectPattern": "Select a pattern to insert",
+    "loading": "Loading patterns..."
+  }
+}
