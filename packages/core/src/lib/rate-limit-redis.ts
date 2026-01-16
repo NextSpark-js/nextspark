@@ -30,6 +30,7 @@ export const authRateLimiter = redis
       limiter: Ratelimit.slidingWindow(5, '15 m'),
       analytics: true,
       prefix: 'ratelimit:auth',
+      ephemeralCache: new Map(),
     })
   : null
 
@@ -44,6 +45,7 @@ export const apiRateLimiter = redis
       limiter: Ratelimit.slidingWindow(100, '1 m'),
       analytics: true,
       prefix: 'ratelimit:api',
+      ephemeralCache: new Map(),
     })
   : null
 
@@ -58,6 +60,7 @@ export const strictRateLimiter = redis
       limiter: Ratelimit.slidingWindow(10, '1 h'),
       analytics: true,
       prefix: 'ratelimit:strict',
+      ephemeralCache: new Map(),
     })
   : null
 
@@ -66,6 +69,7 @@ export interface RateLimitCheckResult {
   remaining: number
   reset: number
   limit?: number
+  retryAfter?: number
 }
 
 /**
@@ -90,11 +94,14 @@ export async function checkRateLimit(
 
   try {
     const result = await limiter.limit(identifier)
+    const retryAfter = result.success ? undefined : Math.ceil((result.reset - Date.now()) / 1000)
+
     return {
       success: result.success,
       remaining: result.remaining,
       reset: result.reset,
       limit: result.limit,
+      retryAfter,
     }
   } catch (error) {
     // On Redis error, fail open (allow the request) but log the error
@@ -118,9 +125,39 @@ export function isRedisConfigured(): boolean {
  * Get rate limit headers for HTTP response
  */
 export function getRateLimitHeaders(result: RateLimitCheckResult): Record<string, string> {
-  return {
+  const headers: Record<string, string> = {
     'X-RateLimit-Remaining': String(result.remaining),
     'X-RateLimit-Reset': String(result.reset),
-    ...(result.limit ? { 'X-RateLimit-Limit': String(result.limit) } : {}),
   }
+
+  if (result.limit) {
+    headers['X-RateLimit-Limit'] = String(result.limit)
+  }
+
+  if (result.retryAfter !== undefined && result.retryAfter > 0) {
+    headers['Retry-After'] = String(result.retryAfter)
+  }
+
+  return headers
+}
+
+/**
+ * Create rate limit error response
+ * Use this to return a consistent 429 response when rate limited
+ */
+export function createRateLimitResponse(result: RateLimitCheckResult): Response {
+  return new Response(
+    JSON.stringify({
+      error: 'Too Many Requests',
+      message: 'Rate limit exceeded. Please try again later.',
+      retryAfter: result.retryAfter,
+    }),
+    {
+      status: 429,
+      headers: {
+        'Content-Type': 'application/json',
+        ...getRateLimitHeaders(result),
+      },
+    }
+  )
 }

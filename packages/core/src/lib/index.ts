@@ -9,6 +9,7 @@ export * from './locale'
 export * from './locale-client'
 export * from './namespace-loader'
 export * from './rate-limit'
+export * from './rate-limit-redis'
 
 // Note: Auth, DB, and other specific modules should be imported directly:
 // - @nextsparkjs/core/lib/auth
