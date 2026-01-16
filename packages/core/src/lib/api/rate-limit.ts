@@ -2,11 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getRateLimitForScopes } from './keys';
 import { rateLimitCache, getCacheKey } from './cache';
 import {
-  apiRateLimiter,
-  authRateLimiter,
-  strictRateLimiter,
   checkRateLimit as checkRedisRateLimit,
-  isRedisConfigured,
+  maybeRedisConfigured,
   type RateLimitCheckResult as RedisRateLimitResult,
 } from '../rate-limit-redis';
 
@@ -84,15 +81,9 @@ export async function checkDistributedRateLimit(
   identifier: string,
   type: RateLimitType = 'api'
 ): Promise<RateLimitResult & { retryAfter?: number }> {
-  // Use Redis if configured
-  if (isRedisConfigured()) {
-    const limiter = type === 'auth'
-      ? authRateLimiter
-      : type === 'strict'
-        ? strictRateLimiter
-        : apiRateLimiter;
-
-    const result = await checkRedisRateLimit(identifier, limiter);
+  // Use Redis if configured (check env vars first for fast path)
+  if (maybeRedisConfigured()) {
+    const result = await checkRedisRateLimit(identifier, type);
 
     return {
       allowed: result.success,
@@ -149,10 +140,11 @@ export function createRateLimitErrorResponse(result: RateLimitResult & { retryAf
 }
 
 /**
- * Check if Redis-based distributed rate limiting is available
+ * Check if Redis-based distributed rate limiting might be available
+ * (based on environment variables)
  */
 export function isDistributedRateLimitAvailable(): boolean {
-  return isRedisConfigured();
+  return maybeRedisConfigured();
 }
 
 /**
