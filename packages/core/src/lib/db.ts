@@ -1,4 +1,5 @@
 import { Pool, type PoolClient } from 'pg';
+import { isValidUUID } from './api/helpers';
 
 // Track active connections for graceful shutdown
 let activeConnections = 0;
@@ -79,17 +80,13 @@ const pool = new Pool({
 
 /**
  * Validate userId format to prevent SQL injection in SET LOCAL commands
+ * Requires userId to be a valid UUID format
  * @internal
  */
 function validateUserId(userId: string): void {
-  // FIX: Add explicit validation even though auth system should validate
-  // Reject backslashes (escape sequences) and excessively long values
-  if (userId.includes('\\') || userId.length > 255) {
-    throw new Error('Invalid userId format: contains invalid characters or is too long');
-  }
-  // Also reject null bytes and other control characters
-  if (/[\x00-\x1f]/.test(userId)) {
-    throw new Error('Invalid userId format: contains control characters');
+  // SEC-003: Validate UUID format before using in SET LOCAL
+  if (!isValidUUID(userId)) {
+    throw new Error('Invalid userId format - must be valid UUID');
   }
 }
 
