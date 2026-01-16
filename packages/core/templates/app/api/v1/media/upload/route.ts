@@ -2,8 +2,9 @@ import { NextRequest } from 'next/server'
 import { put } from '@vercel/blob'
 import { authenticateRequest, hasRequiredScope } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
-export async function POST(request: NextRequest) {
+export const POST = withRateLimitTier(async (request: NextRequest) => {
   try {
     // 1. Dual Authentication (API Key OR Session)
     const authResult = await authenticateRequest(request)
@@ -111,10 +112,10 @@ export async function POST(request: NextRequest) {
       { error: error instanceof Error ? error.message : String(error) }
     )
   }
-}
+}, 'write');
 
 // Optional: Add a GET endpoint to get upload info
-export async function GET(request: NextRequest) {
+export const GET = withRateLimitTier(async (request: NextRequest) => {
   try {
     // 1. Dual Authentication (API Key OR Session)
     const authResult = await authenticateRequest(request)
@@ -147,4 +148,4 @@ export async function GET(request: NextRequest) {
       { error: error instanceof Error ? error.message : String(error) }
     )
   }
-}
+}, 'read');

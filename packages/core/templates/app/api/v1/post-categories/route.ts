@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { query as dbQuery } from '@nextsparkjs/core/lib/db'
 import { z } from 'zod'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 const createCategorySchema = z.object({
   name: z.string().min(1).max(255),
@@ -26,7 +27,7 @@ function generateSlug(name: string): string {
 }
 
 // GET /api/v1/post-categories - List categories (filters taxonomies by type = 'post_category')
-export async function GET() {
+export const GET = withRateLimitTier(async () => {
   try {
     const result = await dbQuery(
       `SELECT id, name, slug, description, icon, color, "parentId", "order", "isDefault", "isActive",
@@ -44,10 +45,10 @@ export async function GET() {
     console.error('Error fetching post categories:', error)
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
   }
-}
+}, 'read');
 
 // POST /api/v1/post-categories - Create category
-export async function POST(request: NextRequest) {
+export const POST = withRateLimitTier(async (request: NextRequest) => {
   try {
     // Dual authentication: API key or session
     const authResult = await authenticateRequest(request)
@@ -116,4 +117,4 @@ export async function POST(request: NextRequest) {
     console.error('Error creating post category:', error)
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
   }
-}
+}, 'write');

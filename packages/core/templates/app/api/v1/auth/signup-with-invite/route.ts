@@ -11,6 +11,7 @@ import {
 import type { TeamInvitation, TeamMember } from '@nextsparkjs/core/lib/teams/types'
 import { I18N_CONFIG } from '@nextsparkjs/core/lib/config'
 import { withSignupContext } from '@nextsparkjs/core/lib/auth-context'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 // Handle CORS preflight
 export async function OPTIONS() {
@@ -26,7 +27,7 @@ interface SignupWithInviteBody {
 }
 
 // POST /api/v1/auth/signup-with-invite - Create account and auto-accept invitation
-export const POST = withApiLogging(
+export const POST = withRateLimitTier(withApiLogging(
   async (req: NextRequest): Promise<NextResponse> => {
     try {
       const body: SignupWithInviteBody = await req.json()
@@ -224,4 +225,4 @@ export const POST = withApiLogging(
       return addCorsHeaders(response)
     }
   }
-)
+), 'auth')

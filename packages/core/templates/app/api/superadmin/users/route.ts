@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getTypedSession } from '@nextsparkjs/core/lib/auth';
 import { queryWithRLS } from '@nextsparkjs/core/lib/db';
 import type { User } from '@nextsparkjs/core/types/user.types';
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 
 /**
  * GET /api/superadmin/users
@@ -23,7 +24,7 @@ import type { User } from '@nextsparkjs/core/types/user.types';
  * - counts: Object with user counts
  * - pagination: Pagination info for the active tab
  */
-export async function GET(request: NextRequest) {
+export const GET = withRateLimitTier(async (request: NextRequest) => {
   try {
     // Get the current session using Better Auth
     const session = await getTypedSession(request.headers);
@@ -292,7 +293,7 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+}, 'strict');
 
 /**
  * POST /api/superadmin/users
@@ -300,12 +301,12 @@ export async function GET(request: NextRequest) {
  * Future endpoint for user management actions (create, update roles, etc.)
  * Currently returns not implemented.
  */
-export async function POST() {
+export const POST = withRateLimitTier(async () => {
   return NextResponse.json(
     { error: 'Not implemented yet' },
     { status: 501 }
   );
-}
+}, 'strict');
 
 /**
  * PUT /api/superadmin/users
@@ -313,9 +314,9 @@ export async function POST() {
  * Future endpoint for bulk user operations
  * Currently returns not implemented.
  */
-export async function PUT() {
+export const PUT = withRateLimitTier(async () => {
   return NextResponse.json(
     { error: 'Not implemented yet' },
     { status: 501 }
   );
-}
+}, 'strict');

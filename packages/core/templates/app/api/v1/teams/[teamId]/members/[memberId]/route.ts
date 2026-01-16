@@ -8,6 +8,7 @@ import {
   addCorsHeaders,
 } from '@nextsparkjs/core/lib/api/helpers'
 import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { updateMemberRoleSchema } from '@nextsparkjs/core/lib/teams/schema'
 import { MembershipService } from '@nextsparkjs/core/lib/services'
 import { validateRoleTransition, canManageRole } from '@nextsparkjs/core/lib/teams/permissions'
@@ -19,7 +20,7 @@ export async function OPTIONS() {
 }
 
 // PATCH /api/v1/teams/:teamId/members/:memberId - Update member role
-export const PATCH = withApiLogging(
+export const PATCH = withRateLimitTier('write', withApiLogging(
   async (
     req: NextRequest,
     { params }: { params: Promise<{ teamId: string; memberId: string }> }
@@ -155,10 +156,10 @@ export const PATCH = withApiLogging(
       return addCorsHeaders(response)
     }
   }
-)
+))
 
 // DELETE /api/v1/teams/:teamId/members/:memberId - Remove member from team
-export const DELETE = withApiLogging(
+export const DELETE = withRateLimitTier('write', withApiLogging(
   async (
     req: NextRequest,
     { params }: { params: Promise<{ teamId: string; memberId: string }> }
@@ -260,4 +261,4 @@ export const DELETE = withApiLogging(
       return addCorsHeaders(response)
     }
   }
-)
+))

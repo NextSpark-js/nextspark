@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { queryWithRLS } from '@nextsparkjs/core/lib/db'
 import { resolveEntityFromUrl } from '@nextsparkjs/core/lib/api/entity/resolver'
 import { getChildEntities, getEntity, setEntityRegistry } from '@nextsparkjs/core/lib/entities/queries'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 // Import registry directly - webpack resolves @nextsparkjs/registries alias at compile time
 import { ENTITY_REGISTRY, ENTITY_METADATA } from '@nextsparkjs/registries/entity-registry'
 
@@ -21,7 +22,7 @@ interface RouteParams {
   childId: string
 }
 
-export async function PUT(
+export const PUT = withRateLimitTier(async (
   request: NextRequest,
   { params }: { params: Promise<RouteParams> }
 ) {
@@ -144,9 +145,9 @@ export async function PUT(
       { status: 500 }
     )
   }
-}
+}, 'write')
 
-export async function DELETE(
+export const DELETE = withRateLimitTier(async (
   request: NextRequest,
   { params }: { params: Promise<RouteParams> }
 ) {
@@ -204,4 +205,4 @@ export async function DELETE(
       { status: 500 }
     )
   }
-}
+}, 'write')

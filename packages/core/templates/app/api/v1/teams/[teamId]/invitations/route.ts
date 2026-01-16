@@ -9,6 +9,7 @@ import {
   addCorsHeaders,
 } from '@nextsparkjs/core/lib/api/helpers'
 import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { TeamMemberService, MembershipService } from '@nextsparkjs/core/lib/services'
 import type { TeamInvitation } from '@nextsparkjs/core/lib/teams/types'
 
@@ -18,7 +19,7 @@ export async function OPTIONS() {
 }
 
 // GET /api/v1/teams/:teamId/invitations - List pending invitations for a team
-export const GET = withApiLogging(
+export const GET = withRateLimitTier('read', withApiLogging(
   async (req: NextRequest, { params }: { params: Promise<{ teamId: string }> }): Promise<NextResponse> => {
     try {
       // Authenticate using dual auth
@@ -98,10 +99,10 @@ export const GET = withApiLogging(
       return addCorsHeaders(response)
     }
   }
-)
+))
 
 // DELETE /api/v1/teams/:teamId/invitations/:invitationId - Cancel/revoke an invitation
-export const DELETE = withApiLogging(
+export const DELETE = withRateLimitTier('write', withApiLogging(
   async (req: NextRequest, { params }: { params: Promise<{ teamId: string }> }): Promise<NextResponse> => {
     try {
       // Authenticate using dual auth
@@ -168,4 +169,4 @@ export const DELETE = withApiLogging(
       return addCorsHeaders(response)
     }
   }
-)
+))

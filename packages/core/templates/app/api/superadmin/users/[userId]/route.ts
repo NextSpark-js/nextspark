@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTypedSession } from '@nextsparkjs/core/lib/auth';
 import { queryWithRLS } from '@nextsparkjs/core/lib/db';
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 
 interface UserResult {
   id: string;
@@ -46,7 +47,7 @@ interface RouteParams {
  * - teams: Array of team memberships
  * - stats: User statistics
  */
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export const GET = withRateLimitTier(async (request: NextRequest, { params }: RouteParams) => {
   try {
     // Get the current session using Better Auth
     const session = await getTypedSession(request.headers);
@@ -212,7 +213,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-}
+}, 'strict');
 
 interface UserActionBody {
   action: 'change-role' | 'suspend' | 'unsuspend' | 'verify-email';
@@ -231,7 +232,7 @@ interface UserActionBody {
  * - unsuspend: Restore user's role to 'member'
  * - verify-email: Manually verify user's email
  */
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export const PATCH = withRateLimitTier(async (request: NextRequest, { params }: RouteParams) => {
   try {
     // Get the current session using Better Auth
     const session = await getTypedSession(request.headers);
@@ -390,7 +391,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-}
+}, 'strict');
 
 /**
  * DELETE /api/superadmin/users/[userId]
@@ -403,7 +404,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
  * - Delete user's personal team
  * - Delete the user account
  */
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export const DELETE = withRateLimitTier(async (request: NextRequest, { params }: RouteParams) => {
   try {
     // Get the current session using Better Auth
     const session = await getTypedSession(request.headers);
@@ -531,4 +532,4 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-}
+}, 'strict');

@@ -8,10 +8,11 @@
 import { NextResponse } from 'next/server'
 import { PluginService, type PluginRegistryEntry } from '@nextsparkjs/core/lib/services'
 import { PLUGIN_REGISTRY } from '@nextsparkjs/registries/plugin-registry'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
-export async function GET() {
+export const GET = withRateLimitTier(async () => {
   return listPluginsWithAPI()
-}
+}, 'read');
 
 /**
  * List all plugins with their API status

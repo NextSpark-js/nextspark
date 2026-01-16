@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { readFile } from 'fs/promises'
 import { join, dirname } from 'path'
 import { existsSync } from 'fs'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 /**
  * Valid path patterns for documentation files
@@ -80,7 +81,7 @@ function getBasePaths(): string[] {
   return paths
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withRateLimitTier(async (request: NextRequest) => {
   const searchParams = request.nextUrl.searchParams
   const docPath = searchParams.get('path')
 
@@ -147,4 +148,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+}, 'read');
