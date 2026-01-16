@@ -87,7 +87,11 @@ export interface ActionConfig {
   revalidatePaths?: string[]
   /** Tags to revalidate after mutation (uses revalidateTag) */
   revalidateTags?: string[]
-  /** Redirect after successful mutation */
+  /**
+   * Redirect after successful mutation.
+   * WARNING: Uses Next.js redirect() which throws NEXT_REDIRECT.
+   * When redirectTo is set, the action will NOT return data - it redirects instead.
+   */
   redirectTo?: string
 }
 

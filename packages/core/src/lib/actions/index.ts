@@ -2,6 +2,8 @@
  * Entity Server Actions
  *
  * Generic Server Actions for CRUD operations on any registered entity.
+ * Auth (userId/teamId) is obtained automatically from session and cookies.
+ *
  * Import from '@nextsparkjs/core/actions' or '@nextsparkjs/core/lib/actions'.
  *
  * @example
@@ -14,20 +16,22 @@
  *   listEntities,
  * } from '@nextsparkjs/core/actions'
  *
- * // Create
- * const result = await createEntity('schools', userId, teamId, { name: 'MIT' })
+ * // Create - auth obtained from server session
+ * const result = await createEntity('schools', { name: 'MIT' })
  *
- * // Update
- * await updateEntity('campaigns', id, userId, { status: 'paused' })
+ * // Update with revalidation
+ * await updateEntity('campaigns', id, { status: 'paused' }, {
+ *   revalidatePaths: ['/dashboard']
+ * })
  *
- * // Delete
- * await deleteEntity('leads', id, userId)
+ * // Delete with redirect
+ * await deleteEntity('leads', id, { redirectTo: '/leads' })
  *
- * // Get
- * const entity = await getEntity('schools', id, userId)
+ * // Get by ID
+ * const entity = await getEntity('schools', id)
  *
- * // List
- * const list = await listEntities('campaigns', userId, teamId, { limit: 20 })
+ * // List with filters
+ * const list = await listEntities('campaigns', { limit: 20, where: { status: 'active' } })
  * ```
  */
 

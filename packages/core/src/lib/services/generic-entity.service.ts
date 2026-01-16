@@ -277,10 +277,26 @@ function validateFieldType(field: EntityField, value: unknown): string | null {
 /**
  * Validate entity data against the entity configuration schema
  *
+ * Validates field types, required fields, and selection options.
+ * Can be used to pre-validate data before calling create/update actions.
+ *
  * @param entityConfig - Entity configuration with field definitions
  * @param data - Data to validate
  * @param isUpdate - If true, required fields are not enforced (partial update)
- * @returns Validation result with any errors
+ * @returns Validation result with { valid: boolean, errors: string[] }
+ *
+ * @example
+ * ```typescript
+ * import { entityRegistry } from '@nextsparkjs/core/entities'
+ * import { validateEntityData } from '@nextsparkjs/core/services'
+ *
+ * const config = entityRegistry.get('schools')
+ * const result = validateEntityData(config, formData, false)
+ *
+ * if (!result.valid) {
+ *   console.error('Validation errors:', result.errors)
+ * }
+ * ```
  */
 export function validateEntityData(
   entityConfig: EntityConfig,
@@ -865,6 +881,10 @@ export class GenericEntityService {
    * @param options.executeHooks - If true, executes hooks for each entity (less efficient). Default: false
    * @param options.teamId - Team ID for team isolation (prevents cross-team access)
    * @returns Number of entities deleted
+   *
+   * @note When executeHooks is false (default), uses a single atomic DELETE query.
+   * When executeHooks is true, deletes are performed sequentially and are NOT transactional.
+   * If one delete fails mid-batch, previous deletes remain committed.
    */
   static async deleteMany(
     entitySlug: string,
