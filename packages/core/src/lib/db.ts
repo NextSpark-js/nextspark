@@ -8,10 +8,18 @@ let shutdownPromise: Promise<void> | null = null;
 /**
  * Parse SSL mode from DATABASE_URL using proper URL parameter parsing
  * Supports: disable, allow, prefer, require, verify-ca, verify-full
+ *
+ * Security behavior:
+ * - Production: Defaults to rejectUnauthorized: true (validates certificates)
+ * - Development: Defaults to no SSL (localhost doesn't need it)
+ * - Explicit sslmode in URL always takes precedence
  */
-function parseSSLConfig(databaseUrl: string): false | { rejectUnauthorized: boolean } {
+export function parseSSLConfig(databaseUrl: string): false | { rejectUnauthorized: boolean } {
+  const isProduction = process.env.NODE_ENV === 'production';
+
   if (!databaseUrl) {
-    return { rejectUnauthorized: false };
+    // No URL: production requires SSL with validation, dev doesn't need SSL
+    return isProduction ? { rejectUnauthorized: true } : false;
   }
 
   try {
@@ -19,27 +27,34 @@ function parseSSLConfig(databaseUrl: string): false | { rejectUnauthorized: bool
     const url = new URL(databaseUrl);
     const sslmode = url.searchParams.get('sslmode');
 
-    // Handle different SSL modes
-    switch (sslmode) {
-      case 'disable':
-        return false;
-      case 'require':
-      case 'prefer':
-      case 'allow':
-        return { rejectUnauthorized: false };
-      case 'verify-ca':
-      case 'verify-full':
-        return { rejectUnauthorized: true };
-      default:
-        // Default: use SSL with rejectUnauthorized: false for compatibility
-        return { rejectUnauthorized: false };
+    // Explicit sslmode in URL takes precedence
+    if (sslmode) {
+      switch (sslmode) {
+        case 'disable':
+          return false;
+        case 'require':
+        case 'prefer':
+        case 'allow':
+          // These modes use SSL but don't validate certificates
+          return { rejectUnauthorized: false };
+        case 'verify-ca':
+        case 'verify-full':
+          // These modes require certificate validation
+          return { rejectUnauthorized: true };
+      }
     }
+
+    // No explicit sslmode: use environment-based defaults
+    // Production: SSL enabled with certificate validation
+    // Development: No SSL needed for localhost
+    return isProduction ? { rejectUnauthorized: true } : false;
   } catch {
-    // If URL parsing fails, fall back to simple check for backward compatibility
+    // If URL parsing fails, fall back to simple check
     if (databaseUrl.includes('sslmode=disable')) {
       return false;
     }
-    return { rejectUnauthorized: false };
+    // Production requires secure defaults even on parse failure
+    return isProduction ? { rejectUnauthorized: true } : false;
   }
 }
 
