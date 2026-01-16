@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { Pool } from "pg";
 import { nextCookies } from "better-auth/next-js";
+import { parseSSLConfig } from './db';
 import { EmailFactory, emailTemplates } from './email';
 import { I18N_CONFIG, USER_ROLES_CONFIG, TEAMS_CONFIG, type UserRole } from './config';
 import { getUserFlags } from './services/user-flags.service';
@@ -40,7 +41,7 @@ const connectionString = databaseUrl.includes('?')
 
 const pool = new Pool({
   connectionString,
-  ssl: { rejectUnauthorized: false },
+  ssl: parseSSLConfig(databaseUrl),
   connectionTimeoutMillis: 10000,
   idleTimeoutMillis: 30000,
   max: 20,

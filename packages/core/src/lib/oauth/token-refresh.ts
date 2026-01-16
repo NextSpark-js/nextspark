@@ -14,6 +14,7 @@
  */
 
 import { Pool } from 'pg';
+import { parseSSLConfig } from '../db';
 import { TokenEncryption } from './encryption';
 import {
   OAuthProvider,
@@ -56,7 +57,7 @@ const connectionString = databaseUrl.includes('?')
 
 const pool = new Pool({
   connectionString,
-  ssl: { rejectUnauthorized: false },
+  ssl: parseSSLConfig(databaseUrl),
   connectionTimeoutMillis: 10000,
   idleTimeoutMillis: 30000,
   max: 20,
