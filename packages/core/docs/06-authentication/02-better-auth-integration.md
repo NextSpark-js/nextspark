@@ -40,6 +40,7 @@ Better Auth requires a PostgreSQL connection with the `pgbouncer=true` parameter
 ```typescript
 // core/lib/auth.ts
 import { Pool } from "pg";
+import { parseSSLConfig } from './db';
 
 const databaseUrl = process.env.DATABASE_URL!;
 const connectionString = databaseUrl.includes('?')
@@ -48,7 +49,7 @@ const connectionString = databaseUrl.includes('?')
 
 const pool = new Pool({
   connectionString,
-  ssl: { rejectUnauthorized: false },
+  ssl: parseSSLConfig(databaseUrl),
   connectionTimeoutMillis: 10000,
   idleTimeoutMillis: 30000,
   max: 20,
@@ -59,7 +60,10 @@ const pool = new Pool({
 - `pgbouncer=true` - Required for Supabase transaction pooler compatibility
 - `max: 20` - Maximum 20 concurrent connections
 - `idleTimeoutMillis: 30000` - Close idle connections after 30 seconds
-- `ssl: { rejectUnauthorized: false }` - Required for Supabase SSL
+- `ssl: parseSSLConfig(databaseUrl)` - Environment-aware SSL configuration:
+  - **Production**: Validates SSL certificates (`rejectUnauthorized: true`)
+  - **Development**: Disables SSL for localhost
+  - **Explicit sslmode**: Respects `sslmode` parameter in DATABASE_URL
 
 ## Better Auth Configuration
 
