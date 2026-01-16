@@ -6,13 +6,16 @@
  */
 
 import type { PoolClient } from 'pg'
-import { getPool } from './db'
+import { getPool, isPoolHealthy } from './db'
 import type { PlanType, UserFlag } from './entities/types'
 import type { SessionUser } from './auth'
 
 // Default values for fallbacks
 const DEFAULT_PLAN: PlanType = 'free'
 const DEFAULT_FLAGS: UserFlag[] = []
+
+// Error handling configuration
+const isDevelopment = process.env.NODE_ENV !== 'production'
 
 // Cache for user data to avoid repeated database queries
 const userDataCache = new Map<string, {
@@ -35,8 +38,25 @@ export interface UserPlanData {
 
 
 /**
+ * Custom error class for user data operations
+ */
+export class UserDataError extends Error {
+  constructor(
+    message: string,
+    public readonly userId: string,
+    public readonly operation: string,
+    public readonly originalError?: unknown
+  ) {
+    super(message)
+    this.name = 'UserDataError'
+  }
+}
+
+/**
  * Get user plan and flags from database
  * Uses user_metas table to store plan and flags data
+ *
+ * @throws UserDataError in production when database operations fail
  */
 export async function getUserPlanAndFlags(userId: string): Promise<UserPlanData> {
   // Check cache first
@@ -47,6 +67,21 @@ export async function getUserPlanAndFlags(userId: string): Promise<UserPlanData>
       flags: cached.flags,
       cached: true
     }
+  }
+
+  // Check pool health before attempting connection
+  if (!isPoolHealthy()) {
+    const error = new UserDataError(
+      'Database pool is not healthy',
+      userId,
+      'getUserPlanAndFlags'
+    )
+    console.error('[UserData] Pool unhealthy:', error.message)
+
+    if (!isDevelopment) {
+      throw error
+    }
+    return { plan: DEFAULT_PLAN, flags: DEFAULT_FLAGS, cached: false }
   }
 
   let client: PoolClient | null = null
@@ -103,9 +138,25 @@ export async function getUserPlanAndFlags(userId: string): Promise<UserPlanData>
     }
 
   } catch (error) {
-    console.error('Failed to get user plan and flags:', error)
+    const wrappedError = new UserDataError(
+      `Failed to get user plan and flags: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      userId,
+      'getUserPlanAndFlags',
+      error
+    )
 
-    // Return defaults on error
+    console.error('[UserData] Error:', wrappedError.message, {
+      userId,
+      operation: 'getUserPlanAndFlags',
+      originalError: error
+    })
+
+    // In production, throw the error to surface issues
+    // In development, return defaults for easier testing
+    if (!isDevelopment) {
+      throw wrappedError
+    }
+
     return {
       plan: DEFAULT_PLAN,
       flags: DEFAULT_FLAGS,
@@ -121,8 +172,25 @@ export async function getUserPlanAndFlags(userId: string): Promise<UserPlanData>
 
 /**
  * Update user plan in database
+ *
+ * @throws UserDataError in production when database operations fail
  */
 export async function updateUserPlan(userId: string, plan: PlanType): Promise<boolean> {
+  // Check pool health before attempting connection
+  if (!isPoolHealthy()) {
+    const error = new UserDataError(
+      'Database pool is not healthy',
+      userId,
+      'updateUserPlan'
+    )
+    console.error('[UserData] Pool unhealthy:', error.message)
+
+    if (!isDevelopment) {
+      throw error
+    }
+    return false
+  }
+
   let client: PoolClient | null = null
 
   try {
@@ -145,7 +213,23 @@ export async function updateUserPlan(userId: string, plan: PlanType): Promise<bo
     return true
 
   } catch (error) {
-    console.error('Failed to update user plan:', error)
+    const wrappedError = new UserDataError(
+      `Failed to update user plan: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      userId,
+      'updateUserPlan',
+      error
+    )
+
+    console.error('[UserData] Error:', wrappedError.message, {
+      userId,
+      operation: 'updateUserPlan',
+      plan,
+      originalError: error
+    })
+
+    if (!isDevelopment) {
+      throw wrappedError
+    }
     return false
   } finally {
     if (client) {
@@ -156,8 +240,25 @@ export async function updateUserPlan(userId: string, plan: PlanType): Promise<bo
 
 /**
  * Update user flags in database
+ *
+ * @throws UserDataError in production when database operations fail
  */
 export async function updateUserFlags(userId: string, flags: UserFlag[]): Promise<boolean> {
+  // Check pool health before attempting connection
+  if (!isPoolHealthy()) {
+    const error = new UserDataError(
+      'Database pool is not healthy',
+      userId,
+      'updateUserFlags'
+    )
+    console.error('[UserData] Pool unhealthy:', error.message)
+
+    if (!isDevelopment) {
+      throw error
+    }
+    return false
+  }
+
   let client: PoolClient | null = null
 
   try {
@@ -180,7 +281,23 @@ export async function updateUserFlags(userId: string, flags: UserFlag[]): Promis
     return true
 
   } catch (error) {
-    console.error('Failed to update user flags:', error)
+    const wrappedError = new UserDataError(
+      `Failed to update user flags: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      userId,
+      'updateUserFlags',
+      error
+    )
+
+    console.error('[UserData] Error:', wrappedError.message, {
+      userId,
+      operation: 'updateUserFlags',
+      flags,
+      originalError: error
+    })
+
+    if (!isDevelopment) {
+      throw wrappedError
+    }
     return false
   } finally {
     if (client) {
