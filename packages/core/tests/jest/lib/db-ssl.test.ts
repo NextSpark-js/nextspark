@@ -7,6 +7,28 @@
  * @security SEC-001 - SSL/TLS validation for database connections
  */
 
+// Mock pg Pool to avoid database connection
+jest.mock('pg', () => ({
+  Pool: jest.fn(() => ({
+    connect: jest.fn(),
+    query: jest.fn(),
+    end: jest.fn(),
+    on: jest.fn(),
+    options: { max: 20 },
+    totalCount: 0,
+    idleCount: 0,
+    waitingCount: 0,
+  })),
+}));
+
+// Mock the helpers module to provide isValidUUID without auth dependency
+jest.mock('@/core/lib/api/helpers', () => ({
+  isValidUUID: (uuid: string): boolean => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(uuid);
+  },
+}));
+
 describe('parseSSLConfig', () => {
   const originalEnv = process.env.NODE_ENV;
 
@@ -14,6 +36,25 @@ describe('parseSSLConfig', () => {
   const getParseSSLConfig = () => {
     // Clear the module cache to get fresh import
     jest.resetModules();
+    // Re-apply mocks after resetModules
+    jest.doMock('pg', () => ({
+      Pool: jest.fn(() => ({
+        connect: jest.fn(),
+        query: jest.fn(),
+        end: jest.fn(),
+        on: jest.fn(),
+        options: { max: 20 },
+        totalCount: 0,
+        idleCount: 0,
+        waitingCount: 0,
+      })),
+    }));
+    jest.doMock('@/core/lib/api/helpers', () => ({
+      isValidUUID: (uuid: string): boolean => {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        return uuidRegex.test(uuid);
+      },
+    }));
     return require('@/core/lib/db').parseSSLConfig;
   };
 

@@ -80,11 +80,25 @@ const pool = new Pool({
 
 /**
  * Validate userId format to prevent SQL injection in SET LOCAL commands
- * - Production: Requires valid UUID format (strict)
- * - Development: Allows test IDs but still validates for dangerous characters
- * @internal
+ *
+ * Security behavior:
+ * - Production: Requires valid UUID format (RFC 4122 compliant)
+ * - Development: Allows test IDs but validates against SQL injection
+ *
+ * Valid test ID patterns (development only):
+ * - Alphanumeric characters: a-z, A-Z, 0-9
+ * - Hyphens and underscores: -, _
+ * - Examples: "test-superadmin-001", "dev_user_123"
+ *
+ * Blocked in ALL environments:
+ * - SQL injection characters: ' " \ ;
+ * - Control characters: 0x00-0x1F
+ * - Values exceeding 255 characters
+ *
+ * @security SEC-003 - SQL injection prevention in SET LOCAL commands
+ * @internal Exported for testing only
  */
-function validateUserId(userId: string): void {
+export function validateUserId(userId: string): void {
   const isProduction = process.env.NODE_ENV === 'production';
 
   // SEC-003: In production, strictly require UUID format
