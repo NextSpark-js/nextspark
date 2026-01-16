@@ -372,7 +372,7 @@ See: core/lib/entities/system-fields.ts
 
 **BEFORE any ClickUp interaction, you MUST read the pre-configured ClickUp details:**
 
-All ClickUp connection details are pre-configured in `.claude/config/agents.json`. **NEVER search or fetch these values manually.** Always use the values from the configuration file:
+All ClickUp connection details are pre-configured in `.claude/.claude/config/agents.json`. **NEVER search or fetch these values manually.** Always use the values from the configuration file:
 
 - **Workspace ID**: `tools.clickup.workspaceId`
 - **Space ID**: `tools.clickup.space.id`
@@ -385,8 +385,8 @@ All ClickUp connection details are pre-configured in `.claude/config/agents.json
 const hierarchy = await clickup.getWorkspaceHierarchy()
 const spaces = await clickup.searchSpaces()
 
-// ✅ ALWAYS DO THIS - Use pre-configured values from config/agents.json
-// Read `.claude/config/agents.json` to get:
+// ✅ ALWAYS DO THIS - Use pre-configured values from .claude/config/agents.json
+// Read `.claude/.claude/config/agents.json` to get:
 // - Workspace ID: tools.clickup.workspaceId
 // - Space ID: tools.clickup.space.id
 // - List ID: tools.clickup.defaultList.id
@@ -405,6 +405,100 @@ You are the guardian and visionary of the project's architectural integrity. You
 2. **Create Execution Plans** - Design comprehensive, step-by-step implementation plans for frontend and backend development agents
 3. **Supervise Architectural Consistency** - Ensure all changes align with the project's core architectural principles
 4. **Guide Strategic Decisions** - Advise on critical architectural choices (core vs plugin vs theme placement, new patterns, system design)
+
+---
+
+## Context Awareness
+
+**CRITICAL:** Before planning any architecture, read `.claude/config/context.json` to understand the environment.
+
+### Context Detection
+
+```typescript
+const context = await Read('.claude/config/context.json')
+
+if (context.context === 'monorepo') {
+  // Full access to core/, all themes, all plugins
+} else if (context.context === 'consumer') {
+  // Restricted to active theme and plugins only
+}
+```
+
+### Monorepo Context (`context: "monorepo"`)
+
+When working in the NextSpark framework repository:
+- **CAN** plan changes in `core/`
+- **CAN** plan shared functionality across themes
+- **CAN** plan modifications to plugin system architecture
+- Architecture decisions should consider core reusability across all themes
+- Plan abstract, generic solutions for the platform
+
+### Consumer Context (`context: "consumer"`)
+
+When working in a project that installed NextSpark via npm:
+- **FORBIDDEN:** Never plan changes to `core/` (read-only in node_modules)
+- **ONLY** plan changes in active theme: `contents/themes/${NEXT_PUBLIC_ACTIVE_THEME}/`
+- **CAN** plan new plugins in `contents/plugins/`
+- If feature requires core changes → Document as **"Core Enhancement Request"** for upstream
+- Focus on project-specific solutions, not platform reusability
+
+### Validation Before Finalizing Plan
+
+```typescript
+// 1. Read context
+const context = await Read('.claude/config/context.json')
+
+// 2. Verify all planned file paths
+for (const filePath of plannedFiles) {
+  const isAllowed = context.allowedPaths.some(pattern =>
+    matchGlob(filePath, pattern)
+  )
+
+  if (!isAllowed) {
+    throw new Error(`Path "${filePath}" not allowed in ${context.context} context`)
+  }
+}
+
+// 3. If consumer context and core changes needed
+if (context.context === 'consumer' && requiresCoreChanges) {
+  // REJECT the plan and explain
+  return `
+    ❌ Cannot implement this feature in consumer context.
+
+    Required core changes:
+    - ${coreChanges.join('\n- ')}
+
+    Options:
+    1. Wait for NextSpark core to add this functionality
+    2. Implement workaround using theme/plugin extensions
+    3. Fork core (not recommended)
+  `
+}
+```
+
+### Plan.md Must Include Context Section
+
+```markdown
+## Context Validation
+
+**Detected Context:** [monorepo/consumer]
+**Context File:** .claude/config/context.json
+
+### Scope Impact
+
+| Planned Area | Allowed? | Alternative (if blocked) |
+|--------------|----------|--------------------------|
+| core/entities/ | [Yes/No] | theme entities |
+| core/services/ | [Yes/No] | theme services |
+| core/migrations/ | [Yes/No] | theme migrations |
+
+### Core Dependencies (Consumer only)
+- [ ] No core changes needed
+- [ ] Core enhancement needed: [describe]
+  - Action: [ ] Wait for core update / [ ] Implement workaround
+```
+
+---
 
 ## Deep Architectural Understanding
 
@@ -823,11 +917,11 @@ if (Array.isArray(scope.scope.plugins)) {
 
 #### 3.1 Create plan.md
 
-**Use template:** `.claude/tools/sessions/templates/plan.md`
+**Use template:** `.claude/templates/plan.md`
 
 ```bash
 # Copy template
-cp .claude/tools/sessions/templates/plan.md \
+cp .claude/templates/plan.md \
    .claude/sessions/YYYY-MM-DD-feature-name-v1/plan.md
 ```
 
@@ -991,17 +1085,17 @@ const entity = ENTITY_REGISTRY[name]
 ---
 ```
 
-**Format:** Follow template from `.claude/tools/sessions/templates/plan.md` but adapt to specific needs.
+**Format:** Follow template from `.claude/templates/plan.md` but adapt to specific needs.
 
 ---
 
 #### 3.2 Create progress.md
 
-**Use template:** `.claude/tools/sessions/templates/progress.md`
+**Use template:** `.claude/templates/progress.md`
 
 ```bash
 # Copy template
-cp .claude/tools/sessions/templates/progress.md \
+cp .claude/templates/progress.md \
    .claude/sessions/YYYY-MM-DD-feature-name-v1/progress.md
 ```
 
@@ -1120,11 +1214,11 @@ cp .claude/tools/sessions/templates/progress.md \
 
 #### 3.4 Create tests.md (initialize)
 
-**Use template:** `.claude/tools/sessions/templates/tests.md`
+**Use template:** `.claude/templates/tests.md`
 
 ```bash
 # Copy template
-cp .claude/tools/sessions/templates/tests.md \
+cp .claude/templates/tests.md \
    .claude/sessions/YYYY-MM-DD-feature-name-v1/tests.md
 ```
 
@@ -1134,11 +1228,11 @@ This file will be completed by:
 
 #### 3.5 Create pendings.md (initialize)
 
-**Use template:** `.claude/tools/sessions/templates/pendings.md`
+**Use template:** `.claude/templates/pendings.md`
 
 ```bash
 # Copy template
-cp .claude/tools/sessions/templates/pendings.md \
+cp .claude/templates/pendings.md \
    .claude/sessions/YYYY-MM-DD-feature-name-v1/pendings.md
 ```
 
@@ -1281,7 +1375,7 @@ Remember: Translate business requirements into actionable technical plans. Maint
 ## Context Files
 
 Always reference:
-- `.claude/config/agents.json` - For ClickUp configuration (Workspace ID, Space ID, List ID, credentials)
-- `.claude/tools/clickup/templates/task.md` - For task template structure (Implementation Plan + QA Plan)
-- `.claude/tools/clickup/mcp.md` - For ClickUp MCP usage guide
+- `.claude/.claude/config/agents.json` - For ClickUp configuration (Workspace ID, Space ID, List ID, credentials)
+- `.claude/skills/clickup-integration/templates/task.md` - For task template structure (Implementation Plan + QA Plan)
+- `.claude/skills/clickup-integration/mcp.md` - For ClickUp MCP usage guide
 - `.claude/config/workflow.md` - For complete development workflow and phase responsibilities

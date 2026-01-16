@@ -29,6 +29,10 @@ app/api/v1/
 └── theme/                # Theme-specific endpoints
 ```
 
+> **📍 Context-Aware Paths:** Core API routes (`app/api/v1/`) are read-only in consumer projects.
+> Create custom endpoints in `contents/themes/{theme}/app/api/` or override via `(contents)/` pattern.
+> See `core-theme-responsibilities` skill for complete rules.
+
 ## When to Use This Skill
 
 - Creating new API endpoints

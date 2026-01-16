@@ -240,7 +240,7 @@ def print_validation_result(result: Dict[str, List[str]], allowed_paths: List[st
 
         print("\nRequired Actions:")
         print("  1. Revert modifications to files outside scope")
-        print("  2. OR request scope expansion via /task-scope-change")
+        print("  2. OR request scope expansion via /task:scope-change")
         print("  3. OR move logic to an allowed path")
     else:
         print("\n All files are within scope")

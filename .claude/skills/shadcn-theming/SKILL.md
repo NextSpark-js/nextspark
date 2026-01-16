@@ -310,7 +310,7 @@ const cssValue = `oklch(${oklchColor.l.toFixed(4)} ${oklchColor.c.toFixed(4)} ${
 # 2. Copy the CSS export
 # 3. Run the command with the CSS file
 
-/theme-design-system path/to/exported-theme.css
+/theme:design-system path/to/exported-theme.css
 ```
 
 The command will:
@@ -322,16 +322,18 @@ The command will:
 
 ### Path 2: From Mock Analysis
 
+Use `how-to:customize-theme` command with a mock folder:
+
 ```bash
 # Extract DS from a mock design
-/theme-design-system --from-mock path/to/mock/folder
+how-to:customize-theme --from-mock path/to/mock/folder
 ```
 
-The command will:
-1. Launch `ds-analyst` agent
-2. Extract color palette from mock
-3. Generate OKLCH variables
-4. Create both light and dark mode
+The process will:
+1. Read the `design-system` skill for patterns
+2. Extract color palette from mock's Tailwind config
+3. Convert HEX to OKLCH format
+4. Generate dark mode by inverting lightness
 5. Write to active theme's `globals.css`
 6. Run `pnpm theme:build`
 

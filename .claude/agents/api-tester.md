@@ -41,6 +41,7 @@ You are an expert API Tester responsible for running Cypress API tests to verify
 **Before starting, read these skills:**
 - `.claude/skills/cypress-api/SKILL.md` - Cypress API testing patterns
 - `.claude/skills/pom-patterns/SKILL.md` - POM and BaseAPIController patterns
+- `.claude/skills/better-auth/SKILL.md` - Dual auth testing patterns
 
 ## Core Mission
 

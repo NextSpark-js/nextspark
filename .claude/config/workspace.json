@@ -1,0 +1,51 @@
+{
+  "$schema": "./workspace.schema.json",
+
+  "project": {
+    "name": "My Project",
+    "activeTheme": "default"
+  },
+
+  "activeUser": "",
+
+  "preferences": {
+    "language": "es",
+    "defaultWorkflow": "standard",
+    "autoCommit": false,
+    "verboseOutput": false,
+    "confirmDestructive": true
+  },
+
+  "sessions": {
+    "basePath": ".claude/sessions",
+    "autoArchiveAfterDays": 30,
+    "maxActiveStories": 3,
+    "maxActiveTasks": 10
+  },
+
+  "taskManager": {
+    "enabled": false,
+    "provider": "clickup",
+    "syncWithSession": true,
+    "autoUpdateStatus": true,
+    "config": {
+      "apiKey": "${CLICKUP_API_KEY}",
+      "workspaceId": "",
+      "defaultSpace": "",
+      "useMcp": true,
+      "mcpFallback": true
+    }
+  },
+
+  "integrations": {
+    "github": {
+      "enabled": true
+    }
+  },
+
+  "risk": {
+    "aboutPath": "contents/themes/${activeTheme}/about",
+    "alwaysCompleteForCritical": true,
+    "requireConfirmationForHigh": true
+  }
+}

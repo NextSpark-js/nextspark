@@ -7,6 +7,11 @@ description: |
   3. **Validating Block Structure**: Checking consistency between schema, fields, and component for a block
   4. **Troubleshooting Block Issues**: Debugging block rendering, registry integration, or field definition problems
 
+  **Position in Workflows:**
+  - **BLOCKS workflow**: Phase 2 (after mock-analyst, before visual-comparator)
+  - **STORY workflow**: Phase 10 (optional, if blocks required)
+  - **Standalone**: Invoked via `/block:create` or `/block:update` commands
+
   **Theme Selection:**
   By default, this agent works with the active theme (NEXT_PUBLIC_ACTIVE_THEME from .env).
   Specify a different theme explicitly if needed (e.g., "Create a block in the blog theme").
@@ -182,6 +187,35 @@ cat core/presets/blocks/README.md
 cat core/presets/blocks/hero/schema.ts
 cat core/presets/blocks/hero/component.tsx
 ```
+
+## BLOCKS Workflow Integration
+
+When invoked as part of the **BLOCKS workflow** (Phase 2), you receive analysis files from mock-analyst:
+
+```
+blocks/YYYY-MM-DD-{name}/
+├── mocks/                    # User uploaded mock files
+│   ├── code.html
+│   └── screen.png
+├── analysis.json             # Mock structure analysis
+├── ds-mapping.json           # Design token mappings
+├── block-plan.json           # Block decision (new/variant/existing)
+└── progress.md
+```
+
+**Read block-plan.json FIRST** to understand:
+- `decision.type`: "new", "variant", or "existing"
+- `decision.blockName`: Target block name
+- `decision.baseBlock`: Reference block to learn from
+- `blockSpec.fields`: Required field definitions
+- `developmentNotes`: Implementation guidance
+
+**Use ds-mapping.json** for:
+- Color token mappings (mock colors → theme CSS variables)
+- Typography mappings
+- Gap recommendations
+
+---
 
 ## Core Principle: System Knowledge vs Dynamic Discovery
 

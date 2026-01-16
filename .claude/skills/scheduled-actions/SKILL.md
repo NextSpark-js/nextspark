@@ -42,6 +42,10 @@ Flow:
 Entity Event → Entity Hook → scheduleAction() → DB Table → Cron → Handler → Result
 ```
 
+> **📍 Context-Aware Paths:** Core layer (`core/lib/scheduled-actions/`) is read-only in consumer projects.
+> Create handlers in `contents/themes/{theme}/lib/scheduled-actions/handlers/`.
+> See `core-theme-responsibilities` skill for complete rules.
+
 ## When to Use This Skill
 
 - Creating new action handlers

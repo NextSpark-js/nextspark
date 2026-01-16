@@ -21,23 +21,41 @@ Patterns for parsing and analyzing HTML/CSS mocks to prepare for block conversio
 
 ## Mock File Structure
 
-Standard Stitch export structure:
+Standard export structure (flexible detection):
 
 ```
 mock-folder/
-├── code.html          # Main HTML markup
-├── screen.png         # Visual screenshot (required for comparison)
+├── code.html          # Main HTML markup (or *.html)
+├── screen.png         # Visual screenshot (or *.png, *.jpg)
 ├── assets/            # Images, fonts (optional)
 │   ├── images/
 │   └── fonts/
 └── tailwind.config.js # Sometimes included inline in HTML
 ```
 
+**Flexible File Detection:**
+
+| File Type | Detection Pattern | Required |
+|-----------|-------------------|----------|
+| HTML | `code.html`, `index.html`, `*.html` | Recommended |
+| Screenshot | `screen.png`, `*.png`, `*.jpg`, `*.jpeg` | Required |
+| Tailwind Config | `tailwind.config.js`, inline in HTML | Optional |
+| Assets | `assets/`, `images/` | Optional |
+| PDF | `*.pdf` (for Figma exports) | Alternative |
+
 **Detection Priority:**
 1. `code.html` → Primary HTML file
 2. `index.html` → Alternative name
-3. `screen.png` → Primary screenshot
-4. `screenshot.png`, `screen.jpg` → Alternatives
+3. Any `*.html` → Fallback
+4. `screen.png` → Primary screenshot
+5. `screenshot.png`, `screen.jpg` → Alternatives
+6. Any `*.png`, `*.jpg` → Fallback
+
+**Workflow Integration:**
+- BLOCKS: Mock is required
+- TASK/STORY: Mock is optional
+- Phase 0.6 runs mock-analyst when mock is selected
+- Output files go to session's `mocks/` folder
 
 ## Section Identification Heuristics
 

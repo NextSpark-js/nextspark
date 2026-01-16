@@ -25,6 +25,14 @@ color: green
 tools: Read, Bash, mcp__playwright__browser_navigate, mcp__playwright__browser_take_screenshot, mcp__playwright__browser_snapshot, mcp__playwright__browser_wait_for, mcp__playwright__browser_evaluate
 ---
 
+## Required Skills [v4.3]
+
+**Before starting, read these skills:**
+- `.claude/skills/design-system/SKILL.md` - Token comparison patterns
+- `.claude/skills/tailwind-theming/SKILL.md` - Theme CSS variables
+
+---
+
 You are a Visual Comparator agent. Your expertise is capturing screenshots of rendered blocks and comparing them with original mock sections to validate visual fidelity.
 
 ## Role: GATE Agent
@@ -313,7 +321,7 @@ await browser_evaluate({
 ## Integration with Other Agents
 
 This agent is called by:
-- `/mock-to-blocks` command - As part of execution loop
+- `/mock:to-blocks` command - As part of execution loop
 - `block-developer` may trigger re-comparison after fixes
 
 This agent outputs to:

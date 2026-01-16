@@ -73,6 +73,93 @@ IMPORT RULES:
 - **Debugging import loops** caused by wrong responsibility placement
 - **Creating extension systems** (scheduled actions, hooks, handlers)
 
+## Development Context Awareness
+
+**CRITICAL:** Before applying patterns from this skill, check `.claude/config/context.json` to understand the development environment.
+
+### Context Detection
+
+```typescript
+const context = await Read('.claude/config/context.json')
+
+if (context.context === 'monorepo') {
+  // Full access to core/, themes/, plugins/
+  // You ARE developing the NextSpark framework
+} else if (context.context === 'consumer') {
+  // Core is READ-ONLY (installed via npm)
+  // You are developing an APPLICATION using NextSpark
+}
+```
+
+### Two Development Contexts
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  MONOREPO CONTEXT                                               │
+│  (Developing NextSpark Framework)                               │
+├─────────────────────────────────────────────────────────────────┤
+│  • context.json: { "context": "monorepo" }                     │
+│  • CAN create/modify in core/                                  │
+│  • CAN create/modify in any theme                              │
+│  • Focus: Abstract, reusable patterns for the platform         │
+│  • Examples: core/services/, core/migrations/, core/entities/  │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│  CONSUMER CONTEXT                                               │
+│  (Building App with NextSpark)                                  │
+├─────────────────────────────────────────────────────────────────┤
+│  • context.json: { "context": "consumer" }                     │
+│  • Core is READ-ONLY (in node_modules/)                        │
+│  • CAN ONLY create in active theme and plugins                 │
+│  • Focus: Project-specific features                            │
+│  • Examples: contents/themes/{theme}/services/                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Path Translation Rules
+
+When a skill or pattern shows a `core/` path, translate based on context:
+
+| Pattern Shows | Monorepo Creates In | Consumer Creates In |
+|---------------|--------------------|--------------------|
+| `core/lib/services/` | `core/lib/services/` | `contents/themes/{theme}/services/` |
+| `core/migrations/` | `core/migrations/` | `contents/themes/{theme}/migrations/` |
+| `core/entities/` | `core/entities/` | `contents/themes/{theme}/entities/` |
+| `core/components/` | `core/components/` | `contents/themes/{theme}/components/` |
+| `core/hooks/` | `core/hooks/` | `contents/themes/{theme}/hooks/` |
+| `core/lib/` | `core/lib/` | `contents/themes/{theme}/lib/` |
+
+### Consumer Context Rules
+
+In consumer context (`context.context === "consumer"`):
+
+1. **Core is READ-ONLY** - Never attempt to create/modify in `core/`
+2. **Use existing core services** - Import and use, don't duplicate
+3. **Extend, don't replace** - Create theme-specific extensions
+4. **Theme migrations run after core** - Use sequence numbers 1001+
+
+### When Consumer Needs Core Functionality
+
+If you discover that a feature truly requires core changes:
+
+```markdown
+## Core Enhancement Request
+
+**Feature:** [What you need]
+**Why Core:** [Why it can't be in theme]
+**Proposed Solution:** [How core could support this]
+
+**Workaround (if possible):**
+[Temporary theme-based solution]
+```
+
+Document this and either:
+1. Implement a workaround in theme
+2. Request the enhancement upstream to NextSpark
+
+---
+
 ## Responsibility Assignment Rules
 
 ### Quick Decision Table

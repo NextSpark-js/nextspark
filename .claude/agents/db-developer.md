@@ -256,47 +256,94 @@ Create database infrastructure that enables comprehensive testing:
 3. Test users with standard credentials
 4. devKeyring configuration for API testing
 
-## CRITICAL: Naming Conventions
+---
 
-### camelCase is MANDATORY (NO snake_case)
+## Context Awareness
 
-```sql
--- ✅ CORRECT: camelCase field names with proper types
-CREATE TABLE IF NOT EXISTS public."products" (
-  id              TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,  -- TEXT not UUID!
-  "userId"        TEXT NOT NULL REFERENCES public."users"(id) ON DELETE CASCADE,
-  "teamId"        TEXT NOT NULL REFERENCES public."teams"(id) ON DELETE CASCADE,
-  "categoryId"    TEXT REFERENCES public."categories"(id),
-  name            TEXT NOT NULL,
-  description     TEXT,
-  price           NUMERIC(10,2) NOT NULL,
-  stock           INTEGER DEFAULT 0,
-  "isActive"      BOOLEAN DEFAULT true,
-  "publishedAt"   TIMESTAMPTZ,                                       -- TIMESTAMPTZ not TIMESTAMP!
-  "createdAt"     TIMESTAMPTZ NOT NULL DEFAULT now(),                -- NOT NULL + now()
-  "updatedAt"     TIMESTAMPTZ NOT NULL DEFAULT now()                 -- NOT NULL + now()
-);
+**CRITICAL:** Before creating any migrations, read `.claude/config/context.json` to understand the environment.
 
--- ❌ WRONG: snake_case, UUID type, TIMESTAMP without TZ
--- "user_id", "team_id", "created_at" - FORBIDDEN!
--- UUID PRIMARY KEY DEFAULT gen_random_uuid() - WRONG (use TEXT)
--- TIMESTAMP DEFAULT CURRENT_TIMESTAMP - WRONG (use TIMESTAMPTZ + now())
+### Context Detection
+
+```typescript
+const context = await Read('.claude/config/context.json')
+
+if (context.context === 'monorepo') {
+  // Can create migrations in core/ or themes/
+} else if (context.context === 'consumer') {
+  // Can ONLY create migrations in themes/ or plugins/
+}
 ```
 
-### Relational Field Naming Pattern
+### Monorepo Context (`context: "monorepo"`)
 
-```sql
--- Pattern: {relatedTable}Id (singular, camelCase)
-"userId"      -- References user table
-"teamId"      -- References team table
-"categoryId"  -- References category table
-"parentId"    -- Self-reference
-"createdById" -- User who created the record
-"updatedById" -- User who last updated
+When working in the NextSpark framework repository:
+- **CAN** create migrations in `core/migrations/`
+- **CAN** add core entities shared across themes
+- **CAN** modify devKeyring in `app.config.ts` (root)
+- Migration numbering: `0001_`, `0002_`, etc.
+- Sample data goes in `core/migrations/*_sample.sql`
 
--- NEVER use:
--- "user_id", "UserID", "USER_ID", "userID" - ALL WRONG
+### Consumer Context (`context: "consumer"`)
+
+When working in a project that installed NextSpark via npm:
+- **FORBIDDEN:** Never create migrations in `core/` (read-only in node_modules)
+- **CREATE** migrations in `contents/themes/{theme}/migrations/`
+- **CREATE** plugin migrations in `contents/plugins/{plugin}/migrations/`
+- Migration numbering: `1001_`, `1002_`, etc. (ensures theme runs AFTER core)
+- If schema extends core entity → Use theme overlay pattern, don't modify core
+
+### Migration Location Decision
+
+```typescript
+const context = await Read('.claude/config/context.json')
+
+if (context.context === 'monorepo') {
+  // Core migrations: core/migrations/0XXX_*.sql
+  // Theme migrations: contents/themes/{theme}/migrations/0XXX_*.sql
+  // Choice depends on: Is this entity shared across themes?
+} else {
+  // ONLY theme/plugin migrations allowed
+  // contents/themes/{theme}/migrations/1XXX_*.sql
+  // contents/plugins/{plugin}/migrations/1XXX_*.sql
+}
 ```
+
+### Sample Data Location
+
+| Context | Core Entities | Theme Entities |
+|---------|---------------|----------------|
+| Monorepo | `core/migrations/*_sample.sql` | `contents/themes/{theme}/migrations/*_sample.sql` |
+| Consumer | N/A (core read-only) | `contents/themes/{theme}/migrations/*_sample.sql` |
+
+---
+
+## Migration Patterns (SKILL REFERENCE)
+
+**CRITICAL: All migration patterns are documented in the database-migrations skill.**
+
+For detailed patterns including:
+- camelCase naming conventions (MANDATORY)
+- TIMESTAMPTZ requirements (NOT plain TIMESTAMP)
+- TEXT vs UUID rules (Better Auth uses TEXT)
+- Meta table patterns (`"entityId"`)
+- Child table patterns (`"parentId"`)
+- RLS policies by mode
+- Better Auth function usage (`set_updated_at()`, `get_auth_user_id()`)
+- Index naming conventions
+- Trigger patterns
+
+**Always read:** `.claude/skills/database-migrations/SKILL.md`
+
+**Always use templates from:** `core/presets/migrations/[mode]/`
+
+### Quick Reference (full details in skill)
+
+| Convention | Example |
+|------------|---------|
+| Field names | camelCase: `"userId"`, `"createdAt"` |
+| ID type | TEXT (not UUID): `id TEXT PRIMARY KEY` |
+| Timestamps | `TIMESTAMPTZ NOT NULL DEFAULT now()` |
+| FK pattern | `"entityId"` for metas, `"parentId"` for children |
 
 ## CRITICAL: Test Users Configuration
 
@@ -471,66 +518,15 @@ core/migrations/
 └── README.md                        # Migration documentation
 ```
 
-### Migration Template
+### Migration Template (USE PRESETS)
 
 **IMPORTANT: Use templates from `core/presets/migrations/[mode]/` instead of writing from scratch!**
 
-```sql
--- Migration: 001_entity_table.sql
--- Description: Entity (table, indexes, RLS)
--- Date: YYYY-MM-DD
--- Mode: team-mode | private-mode | shared-mode | public-mode
-
--- ============================================
--- TABLE
--- ============================================
-DROP TABLE IF EXISTS public."entity" CASCADE;
-
-CREATE TABLE IF NOT EXISTS public."entity" (
-  -- Primary Key (TEXT, not UUID!)
-  id              TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-
-  -- Foreign keys (camelCase, TEXT type!)
-  "userId"        TEXT NOT NULL REFERENCES public."users"(id) ON DELETE CASCADE,
-  "teamId"        TEXT NOT NULL REFERENCES public."teams"(id) ON DELETE CASCADE,
-
-  -- Entity fields (camelCase!)
-  name            TEXT NOT NULL,
-  description     TEXT,
-
-  -- Timestamps (TIMESTAMPTZ, NOT NULL, now())
-  "createdAt"     TIMESTAMPTZ NOT NULL DEFAULT now(),
-  "updatedAt"     TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- ============================================
--- TRIGGER (use Better Auth function!)
--- ============================================
-DROP TRIGGER IF EXISTS entity_set_updated_at ON public."entity";
-CREATE TRIGGER entity_set_updated_at
-BEFORE UPDATE ON public."entity"
-FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();  -- DO NOT redefine!
-
--- ============================================
--- INDEXES
--- ============================================
-CREATE INDEX IF NOT EXISTS idx_entity_user_id    ON public."entity"("userId");
-CREATE INDEX IF NOT EXISTS idx_entity_team_id    ON public."entity"("teamId");
-CREATE INDEX IF NOT EXISTS idx_entity_created_at ON public."entity"("createdAt" DESC);
-
--- ============================================
--- RLS (select from core/presets/migrations/[mode]/)
--- ============================================
-ALTER TABLE public."entity" ENABLE ROW LEVEL SECURITY;
--- See templates for specific RLS policies based on mode
-```
-
-**Key Differences from Old Pattern:**
-- `TEXT` instead of `UUID` for IDs
-- `TIMESTAMPTZ NOT NULL DEFAULT now()` instead of `TIMESTAMP DEFAULT NOW()`
-- Use `public.set_updated_at()` (Better Auth function) instead of custom function
-- Always include RLS policies
-- Use section separators: `-- ============================================`
+See `.claude/skills/database-migrations/SKILL.md` for complete SQL patterns including:
+- Table structure with field ordering (id → FK → business → system)
+- Trigger setup using `public.set_updated_at()`
+- Index patterns for common queries
+- RLS policy examples for each mode
 
 ## RLS Mode Selection Workflow
 

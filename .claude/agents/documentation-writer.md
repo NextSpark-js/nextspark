@@ -55,7 +55,7 @@ You are a specialized documentation agent responsible for creating comprehensive
 
 **YOU MUST NEVER MODIFY SESSION FILES.**
 
-Session files (`.claude/sessions/`) are managed by development agents (backend-developer, frontend-developer, qa-tester, code-reviewer). Your job is to:
+Session files (`.claude/sessions/`) are managed by development agents (backend-developer, frontend-developer, qa-automation, code-reviewer). Your job is to:
 
 1. **READ** session files to understand what was built
 2. **READ** actual implementation code to validate and extract examples
@@ -527,7 +527,7 @@ const progress = await Read(`.claude/sessions/${featureName}/progress_${featureN
 - Integration points
 
 **From `context_{feature}.md`:**
-- Latest entry from qa-tester:
+- Latest entry from qa-automation:
   - Test results (passed or bugs found)
   - Edge cases tested
   - Performance metrics
@@ -1103,7 +1103,7 @@ await Read('core/docs/15-documentation-system/03-core-vs-theme-docs.md')
 await Read('.claude/config/agents.json')
 
 // 3. ClickUp MCP tool documentation (how to use ClickUp tools)
-await Read('.claude/tools/clickup/mcp.md')
+await Read('.claude/skills/clickup-integration/mcp.md')
 
 // 4. Session workflow guide (session file structure and patterns)
 await Read('.claude/sessions/README.md')

@@ -149,19 +149,16 @@ export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
     },
   },
 
-  // 2. Define which roles can perform which actions
-  entities: [
-    {
-      slug: 'products',
-      permissions: [
-        { action: 'products.read', roles: ['owner', 'admin', 'member', 'editor', 'contributor', 'moderator', 'viewer'] },
-        { action: 'products.create', roles: ['owner', 'admin', 'member', 'editor', 'contributor'] },
-        { action: 'products.update', roles: ['owner', 'admin', 'member', 'editor'] },
-        { action: 'products.delete', roles: ['owner', 'admin'] },
-        { action: 'products.moderate', roles: ['owner', 'admin', 'moderator'] },
-      ],
-    },
-  ],
+  // 2. Define which roles can perform which actions (object format, not array)
+  entities: {
+    products: [
+      { action: 'read', roles: ['owner', 'admin', 'member', 'editor', 'contributor', 'moderator', 'viewer'] },
+      { action: 'create', roles: ['owner', 'admin', 'member', 'editor', 'contributor'] },
+      { action: 'update', roles: ['owner', 'admin', 'member', 'editor'] },
+      { action: 'delete', roles: ['owner', 'admin'] },
+      { action: 'moderate', roles: ['owner', 'admin', 'moderator'] },
+    ],
+  },
 
   // 3. Define team-level permissions
   teams: [

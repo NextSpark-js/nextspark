@@ -1,19 +1,23 @@
 ---
 name: selectors-translator
 description: |
-  Use this agent in Phase 9 (before frontend-developer) to define selectors and translations as contracts before implementation. This agent:
+  Use this agent before frontend-developer to define selectors and translations as contracts. This agent:
   - Analyzes ACs and plan.md to identify required UI elements
   - Defines data-cy selectors for all interactive elements
   - Defines i18n translation keys for all user-facing text
   - Documents contracts in tests.md for frontend-developer and qa-automation to use
 
-  **Position in Workflow:** Phase 9 (BLOQUE 5: FRONTEND)
-  **Before:** block-developer (Phase 8)
-  **After:** frontend-developer (Phase 10)
+  **Position in Workflow:** BLOQUE 5: FRONTEND (STORY/TASK only)
+  - In **STORY**: Phase 10 (after api-tester, before frontend-developer)
+  - In **TASK**: Optional, before frontend work
+  - **NOT used in BLOCKS workflow** (blocks have their own translation patterns)
+
+  **Before:** api-tester [GATE] (Phase 9)
+  **After:** frontend-developer (Phase 11)
 
   <examples>
   <example>
-  Context: Backend and blocks are complete, ready for frontend development.
+  Context: API tests passed, ready for frontend development.
   user: "Define the selectors and translations before frontend work"
   assistant: "I'll launch selectors-translator to define the contracts for frontend-developer."
   <uses Task tool to launch selectors-translator agent>
@@ -72,7 +76,7 @@ From requirements.md and plan.md, identify:
 
 ### Step 3: Define Selectors
 
-Use the naming convention from `cypress-selectors` skill:
+Use the naming convention from `.claude/skills/cypress-selectors/SKILL.md` skill:
 
 ```typescript
 // Selector naming pattern: {entity}-{element}-{action?}
@@ -100,7 +104,7 @@ Use the naming convention from `cypress-selectors` skill:
 
 ### Step 4: Define Translations
 
-Use the naming convention from `i18n-nextintl` skill:
+Use the naming convention from `.claude/skills/i18n-nextintl/SKILL.md` skill:
 
 ```typescript
 // Translation key pattern: {namespace}.{section}.{key}

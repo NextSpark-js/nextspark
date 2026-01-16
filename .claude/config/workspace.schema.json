@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Claude Workspace Configuration",
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "activeTheme": { "type": "string" }
+      },
+      "required": ["name"]
+    },
+    "activeUser": {
+      "type": "string",
+      "description": "Name of the active user (must match a member name in .claude/config/team.json)"
+    },
+    "preferences": {
+      "type": "object",
+      "properties": {
+        "language": { "enum": ["es", "en", "pt"] },
+        "defaultWorkflow": { "enum": ["quick", "standard", "complete"] },
+        "autoCommit": { "type": "boolean" },
+        "verboseOutput": { "type": "boolean" },
+        "confirmDestructive": { "type": "boolean" }
+      }
+    },
+    "sessions": {
+      "type": "object",
+      "properties": {
+        "basePath": { "type": "string" },
+        "autoArchiveAfterDays": { "type": "integer", "minimum": 1 },
+        "maxActiveStories": { "type": "integer", "minimum": 1 },
+        "maxActiveTasks": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "taskManager": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "provider": { "enum": ["clickup", "jira", "notion", "asana", "linear", "custom"] },
+        "syncWithSession": { "type": "boolean" },
+        "autoUpdateStatus": { "type": "boolean" },
+        "config": { "type": "object" }
+      }
+    },
+    "integrations": {
+      "type": "object",
+      "properties": {
+        "github": {
+          "type": "object",
+          "description": "GitHub integration - detailed config in .claude/config/github.json",
+          "properties": {
+            "enabled": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "risk": {
+      "type": "object",
+      "properties": {
+        "aboutPath": { "type": "string" },
+        "alwaysCompleteForCritical": { "type": "boolean" },
+        "requireConfirmationForHigh": { "type": "boolean" }
+      }
+    }
+  }
+}

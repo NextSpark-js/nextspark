@@ -1,0 +1,106 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Team Configuration",
+  "type": "object",
+  "properties": {
+    "members": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Full name of the team member"
+          },
+          "initials": {
+            "type": "string",
+            "maxLength": 3,
+            "description": "Initials used in branch names"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["lead", "developer", "junior", "qa"],
+            "description": "Team role"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "ids": {
+            "type": "object",
+            "properties": {
+              "github": {
+                "type": "string",
+                "description": "GitHub username"
+              },
+              "taskManager": {
+                "type": "string",
+                "description": "User ID in the configured task manager (ClickUp, Jira, etc.)"
+              },
+              "slack": {
+                "type": "string",
+                "description": "Slack member ID"
+              }
+            },
+            "required": ["github"]
+          },
+          "permissions": {
+            "type": "object",
+            "properties": {
+              "canReview": {
+                "type": "boolean",
+                "default": true
+              },
+              "canMerge": {
+                "type": "boolean",
+                "default": true
+              },
+              "canApproveProduction": {
+                "type": "boolean",
+                "default": false
+              }
+            }
+          }
+        },
+        "required": ["name", "initials", "role", "ids"]
+      }
+    },
+    "roles": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "description": { "type": "string" },
+          "defaultPermissions": {
+            "type": "object",
+            "properties": {
+              "canReview": { "type": "boolean" },
+              "canMerge": { "type": "boolean" },
+              "canApproveProduction": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    "reviewRules": {
+      "type": "object",
+      "properties": {
+        "minRequired": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 1
+        },
+        "requireQaForProduction": {
+          "type": "boolean",
+          "default": false
+        },
+        "defaultReviewers": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "GitHub usernames of default reviewers"
+        }
+      }
+    }
+  },
+  "required": ["members"]
+}
