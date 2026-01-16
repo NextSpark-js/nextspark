@@ -1,6 +1,6 @@
 {
   "name": "@nextsparkjs/core",
-  "version": "0.1.0-beta.48",
+  "version": "0.1.0-beta.50",
   "description": "NextSpark - The complete SaaS framework for Next.js",
   "license": "MIT",
   "author": "NextSpark <hello@nextspark.dev>",
@@ -235,6 +235,14 @@
     "./lib/test": {
       "types": "./dist/lib/test/index.d.ts",
       "import": "./dist/lib/test/index.js"
+    },
+    "./actions": {
+      "types": "./dist/lib/actions/index.d.ts",
+      "import": "./dist/lib/actions/index.js"
+    },
+    "./lib/actions": {
+      "types": "./dist/lib/actions/index.d.ts",
+      "import": "./dist/lib/actions/index.js"
     }
   },
   "files": [
