@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { queryWithRLS } from '@nextsparkjs/core/lib/db'
 import type { Trace } from '../../../types/observability.types'
 
@@ -38,7 +39,7 @@ interface TraceRow {
   createdAt: Date
 }
 
-export async function GET(req: NextRequest) {
+const getHandler = async (req: NextRequest) => {
   // 1. Authenticate (superadmin only)
   const authResult = await authenticateRequest(req)
   if (!authResult.success || !authResult.user) {
@@ -203,3 +204,5 @@ export async function GET(req: NextRequest) {
     )
   }
 }
+
+export const GET = withRateLimitTier(getHandler, 'read')

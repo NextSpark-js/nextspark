@@ -18,6 +18,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { TokenEncryption } from '@nextsparkjs/core/lib/oauth/encryption'
 import { FacebookAPI } from '../../../../lib/providers/facebook'
 import {
@@ -26,7 +27,7 @@ import {
 } from '../../../../lib/oauth-helper'
 import { mutateWithRLS } from '@nextsparkjs/core/lib/db'
 
-export async function GET(request: NextRequest) {
+const getHandler = async (request: NextRequest) => {
   try {
     // 1. Parse state to extract clientId, platform, and mode
     const { searchParams } = new URL(request.url)
@@ -667,3 +668,5 @@ export async function GET(request: NextRequest) {
     })
   }
 }
+
+export const GET = withRateLimitTier(getHandler, 'read')

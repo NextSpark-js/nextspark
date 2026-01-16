@@ -20,6 +20,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { tokenTracker } from '@/plugins/langchain/lib/token-tracker'
 import { queryOne } from '@nextsparkjs/core/lib/db'
 
@@ -28,7 +29,7 @@ type Period = 'today' | '7d' | '30d' | 'all'
 /**
  * GET - Retrieve token usage statistics
  */
-export async function GET(request: NextRequest) {
+const getHandler = async (request: NextRequest) => {
     try {
         // 1. Authentication
         const authResult = await authenticateRequest(request)
@@ -120,3 +121,5 @@ export async function GET(request: NextRequest) {
         )
     }
 }
+
+export const GET = withRateLimitTier(getHandler, 'read')

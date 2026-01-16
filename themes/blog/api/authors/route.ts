@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { queryWithRLS } from '@nextsparkjs/core/lib/db'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 interface AuthorWithCount {
   id: string
@@ -19,7 +20,7 @@ interface AuthorWithCount {
   postCount: number
 }
 
-export async function GET(request: NextRequest) {
+const getHandler = async (request: NextRequest) => {
   try {
     // Get all authors who have at least one published post
     const authorsQuery = `
@@ -61,3 +62,5 @@ export async function GET(request: NextRequest) {
     )
   }
 }
+
+export const GET = withRateLimitTier(getHandler, 'read')

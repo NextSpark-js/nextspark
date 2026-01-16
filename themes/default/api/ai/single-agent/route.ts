@@ -14,6 +14,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { createAgent } from '@/plugins/langchain/lib/agent-factory'
 import {
     dbMemoryStore,
@@ -74,7 +75,7 @@ function convertToApiMessages(
 /**
  * POST - Send message to single agent
  */
-export async function POST(req: NextRequest) {
+const postHandler = async (req: NextRequest) => {
     try {
         // 1. Authentication
         const authResult = await authenticateRequest(req)
@@ -181,10 +182,12 @@ export async function POST(req: NextRequest) {
     }
 }
 
+export const POST = withRateLimitTier(postHandler, 'write')
+
 /**
  * GET - Retrieve conversation history
  */
-export async function GET(req: NextRequest) {
+const getHandler = async (req: NextRequest) => {
     const { searchParams } = new URL(req.url)
     const sessionId = searchParams.get('sessionId')
 
@@ -252,10 +255,12 @@ export async function GET(req: NextRequest) {
     }
 }
 
+export const GET = withRateLimitTier(getHandler, 'read')
+
 /**
  * DELETE - Clear conversation
  */
-export async function DELETE(req: NextRequest) {
+const deleteHandler = async (req: NextRequest) => {
     const authResult = await authenticateRequest(req)
     if (!authResult.success || !authResult.user) {
         return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
@@ -289,3 +294,5 @@ export async function DELETE(req: NextRequest) {
         return NextResponse.json({ success: false, error: 'Failed to clear' }, { status: 500 })
     }
 }
+
+export const DELETE = withRateLimitTier(deleteHandler, 'write')
