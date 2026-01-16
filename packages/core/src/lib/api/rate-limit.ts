@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRateLimitForScopes } from './keys';
 import { rateLimitCache, getCacheKey } from './cache';
+import {
+  apiRateLimiter,
+  authRateLimiter,
+  strictRateLimiter,
+  checkRateLimit as checkRedisRateLimit,
+  isRedisConfigured,
+  type RateLimitCheckResult as RedisRateLimitResult,
+} from '../rate-limit-redis';
 
 export interface RateLimitResult {
   allowed: boolean;
@@ -60,11 +68,99 @@ export function checkRateLimit(
 }
 
 /**
+ * Rate limit types for distributed rate limiting
+ */
+export type RateLimitType = 'auth' | 'api' | 'strict';
+
+/**
+ * Check rate limit using Redis (distributed) when configured,
+ * falls back to in-memory rate limiting otherwise.
+ *
+ * @param identifier - Unique identifier (IP, user ID, or combination)
+ * @param type - Rate limit tier: 'auth' (5/15min), 'api' (100/1min), 'strict' (10/1hr)
+ * @returns Promise with rate limit result
+ */
+export async function checkDistributedRateLimit(
+  identifier: string,
+  type: RateLimitType = 'api'
+): Promise<RateLimitResult & { retryAfter?: number }> {
+  // Use Redis if configured
+  if (isRedisConfigured()) {
+    const limiter = type === 'auth'
+      ? authRateLimiter
+      : type === 'strict'
+        ? strictRateLimiter
+        : apiRateLimiter;
+
+    const result = await checkRedisRateLimit(identifier, limiter);
+
+    return {
+      allowed: result.success,
+      remaining: result.remaining,
+      resetTime: result.reset,
+      limit: result.limit ?? (type === 'auth' ? 5 : type === 'strict' ? 10 : 100),
+      retryAfter: result.retryAfter,
+    };
+  }
+
+  // Fallback to in-memory rate limiting
+  const limits = {
+    auth: { limit: 5, windowMs: 15 * 60 * 1000 },    // 5 requests per 15 minutes
+    api: { limit: 100, windowMs: 60 * 1000 },         // 100 requests per minute
+    strict: { limit: 10, windowMs: 60 * 60 * 1000 },  // 10 requests per hour
+  };
+
+  const config = limits[type];
+  const result = checkRateLimit(`${type}:${identifier}`, config.limit, config.windowMs);
+
+  return {
+    ...result,
+    retryAfter: result.allowed ? undefined : Math.ceil((result.resetTime - Date.now()) / 1000),
+  };
+}
+
+/**
+ * Create a 429 rate limit response
+ */
+export function createRateLimitErrorResponse(result: RateLimitResult & { retryAfter?: number }): NextResponse {
+  return NextResponse.json(
+    {
+      success: false,
+      error: 'Rate limit exceeded',
+      message: 'Too many requests. Please try again later.',
+      code: 'RATE_LIMIT_EXCEEDED',
+      meta: {
+        limit: result.limit,
+        remaining: result.remaining,
+        resetTime: new Date(result.resetTime).toISOString(),
+        retryAfter: result.retryAfter ?? Math.ceil((result.resetTime - Date.now()) / 1000)
+      }
+    },
+    {
+      status: 429,
+      headers: {
+        'X-RateLimit-Limit': result.limit.toString(),
+        'X-RateLimit-Remaining': result.remaining.toString(),
+        'X-RateLimit-Reset': result.resetTime.toString(),
+        'Retry-After': (result.retryAfter ?? Math.ceil((result.resetTime - Date.now()) / 1000)).toString()
+      }
+    }
+  );
+}
+
+/**
+ * Check if Redis-based distributed rate limiting is available
+ */
+export function isDistributedRateLimitAvailable(): boolean {
+  return isRedisConfigured();
+}
+
+/**
  * Aplica rate limiting a una request API
  */
 export function applyRateLimit(
-  request: NextRequest, 
-  keyId: string, 
+  request: NextRequest,
+  keyId: string,
   scopes: string[]
 ): NextResponse | null {
   // Obtener límites basados en scopes
