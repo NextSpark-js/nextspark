@@ -27,8 +27,37 @@ const userDataCache = new Map<string, {
 // Cache TTL: 5 minutes
 const CACHE_TTL = 5 * 60 * 1000
 
+// Maximum cache size to prevent unbounded growth
+const MAX_CACHE_SIZE = 10000
+
+/**
+ * Evict oldest entries from cache when size limit is exceeded
+ * Uses LRU-like eviction based on timestamp
+ * @internal
+ */
+function evictOldestCacheEntries(): void {
+  if (userDataCache.size <= MAX_CACHE_SIZE) {
+    return
+  }
+
+  // Get entries sorted by timestamp (oldest first)
+  const entries = Array.from(userDataCache.entries())
+    .sort((a, b) => a[1].timestamp - b[1].timestamp)
+
+  // Remove oldest 10% of entries to avoid frequent eviction
+  const entriesToRemove = Math.max(1, Math.floor(entries.length * 0.1))
+  for (let i = 0; i < entriesToRemove; i++) {
+    userDataCache.delete(entries[i][0])
+  }
+
+  console.log(`[UserData] Cache eviction: removed ${entriesToRemove} oldest entries, size now ${userDataCache.size}`)
+}
+
 /**
  * Interface for user plan and flag data
+ * @property plan - User's subscription plan type (free, starter, premium)
+ * @property flags - Array of feature flags assigned to the user
+ * @property cached - Whether this data was retrieved from cache vs database
  */
 export interface UserPlanData {
   plan: PlanType
@@ -132,6 +161,9 @@ export async function getUserPlanAndFlags(userId: string): Promise<UserPlanData>
       flags,
       timestamp: Date.now()
     })
+
+    // Evict oldest entries if cache is too large
+    evictOldestCacheEntries()
 
     return {
       plan,

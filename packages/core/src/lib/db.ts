@@ -1,4 +1,4 @@
-import { Pool } from 'pg';
+import { Pool, type PoolClient } from 'pg';
 
 // Track active connections for graceful shutdown
 let activeConnections = 0;
@@ -92,7 +92,7 @@ async function acquireClient() {
  * Release a client back to the pool with tracking
  * @internal
  */
-function releaseClient(client: import('pg').PoolClient) {
+function releaseClient(client: PoolClient) {
   activeConnections = Math.max(0, activeConnections - 1);
   client.release();
 }
@@ -323,7 +323,7 @@ export function isPoolHealthy(): boolean {
   }
 
   // Check if pool is completely exhausted (all connections busy + waiting queue)
-  const maxConnections = 20; // From pool config
+  const maxConnections = pool.options.max || 20;
   const isExhausted = pool.totalCount >= maxConnections &&
                       pool.idleCount === 0 &&
                       pool.waitingCount > 10; // Allow some waiting, but not excessive
@@ -400,6 +400,7 @@ export async function gracefulShutdown(timeoutMs: number = 30000): Promise<void>
       }
 
       // Check again in 100ms - store reference for cleanup
+      // Note: The early return above prevents scheduling after resolution
       timeoutId = setTimeout(checkAndClose, 100);
     };
 
