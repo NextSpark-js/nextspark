@@ -58,13 +58,18 @@ const pool = new Pool({
 /**
  * Acquire a client from the pool with tracking
  * @internal Use the public query functions instead
+ *
+ * Note: Counter is incremented AFTER successful connection to avoid drift
+ * if pool.connect() fails.
  */
 async function acquireClient() {
   if (isShuttingDown) {
     throw new Error('Database pool is shutting down. Cannot acquire new connections.');
   }
+  // FIX: Increment counter AFTER successful connection to prevent drift on failure
+  const client = await pool.connect();
   activeConnections++;
-  return pool.connect();
+  return client;
 }
 
 /**
@@ -172,7 +177,7 @@ export async function mutateWithRLS<T = unknown>(
 /**
  * Get a transaction client for multiple operations
  * Useful when you need to run multiple queries in the same RLS context
- * 
+ *
  * @example
  * const tx = await getTransactionClient(userId);
  * try {
@@ -187,12 +192,19 @@ export async function mutateWithRLS<T = unknown>(
 export async function getTransactionClient(userId?: string | null) {
   const client = await acquireClient();
 
-  await client.query('BEGIN');
+  // FIX: Wrap BEGIN/SET LOCAL in try-catch to release client on failure
+  try {
+    await client.query('BEGIN');
 
-  if (userId) {
-    // PostgreSQL doesn't accept parameters in SET LOCAL, must use string interpolation
-    // This is safe because userId comes from our auth system, not user input
-    await client.query(`SET LOCAL app.user_id = '${userId.replace(/'/g, "''")}'`);
+    if (userId) {
+      // PostgreSQL doesn't accept parameters in SET LOCAL, must use string interpolation
+      // This is safe because userId comes from our auth system, not user input
+      await client.query(`SET LOCAL app.user_id = '${userId.replace(/'/g, "''")}'`);
+    }
+  } catch (error) {
+    // Release client if transaction setup fails to prevent connection leak
+    releaseClient(client);
+    throw error;
   }
 
   return {
@@ -275,9 +287,35 @@ export function getPool(): Pool {
 
 /**
  * Check if the pool is healthy and accepting connections
+ *
+ * Checks:
+ * - Pool is not shutting down
+ * - Pool has available capacity (not at max with all busy)
+ * - No excessive waiting queue
  */
 export function isPoolHealthy(): boolean {
-  return !isShuttingDown && pool.totalCount >= 0;
+  // Pool is shutting down - not healthy
+  if (isShuttingDown) {
+    console.warn('[DB] Pool health check failed: shutting down');
+    return false;
+  }
+
+  // Check if pool is completely exhausted (all connections busy + waiting queue)
+  const maxConnections = 20; // From pool config
+  const isExhausted = pool.totalCount >= maxConnections &&
+                      pool.idleCount === 0 &&
+                      pool.waitingCount > 10; // Allow some waiting, but not excessive
+
+  if (isExhausted) {
+    console.warn('[DB] Pool health check failed: pool exhausted', {
+      total: pool.totalCount,
+      idle: pool.idleCount,
+      waiting: pool.waitingCount,
+    });
+    return false;
+  }
+
+  return true;
 }
 
 /**
@@ -306,34 +344,41 @@ export async function gracefulShutdown(timeoutMs: number = 30000): Promise<void>
   }
 
   isShuttingDown = true;
-  console.log('Initiating graceful database shutdown...');
+  console.log('[DB] Initiating graceful database shutdown...');
 
   shutdownPromise = new Promise<void>((resolve) => {
     const startTime = Date.now();
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
     const checkAndClose = async () => {
       const elapsed = Date.now() - startTime;
 
       // Check if all connections are released or timeout reached
       if (activeConnections === 0 || elapsed >= timeoutMs) {
+        // FIX: Clear any pending timeout to prevent memory leak
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+
         if (activeConnections > 0) {
-          console.warn(`Shutdown timeout reached. Forcing close with ${activeConnections} active connections.`);
+          console.warn(`[DB] Shutdown timeout reached. Forcing close with ${activeConnections} active connections.`);
         } else {
-          console.log('All connections released. Closing pool...');
+          console.log('[DB] All connections released. Closing pool...');
         }
 
         try {
           await pool.end();
-          console.log('Database pool closed successfully.');
+          console.log('[DB] Database pool closed successfully.');
         } catch (error) {
-          console.error('Error closing database pool:', error);
+          console.error('[DB] Error closing database pool:', error);
         }
         resolve();
         return;
       }
 
-      // Check again in 100ms
-      setTimeout(checkAndClose, 100);
+      // Check again in 100ms - store reference for cleanup
+      timeoutId = setTimeout(checkAndClose, 100);
     };
 
     checkAndClose();
@@ -343,16 +388,19 @@ export async function gracefulShutdown(timeoutMs: number = 30000): Promise<void>
 }
 
 // Graceful shutdown handlers
+// FIX: Don't call process.exit() - let the shutdown complete naturally
+// Next.js and other frameworks handle process termination after async cleanup
 process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, initiating graceful shutdown...');
+  console.log('[DB] SIGTERM received, initiating graceful shutdown...');
   await gracefulShutdown();
-  process.exit(0);
+  // Note: Don't call process.exit() here - let the event loop drain naturally
+  // The process will exit when all handlers complete
 });
 
 process.on('SIGINT', async () => {
-  console.log('SIGINT received, initiating graceful shutdown...');
+  console.log('[DB] SIGINT received, initiating graceful shutdown...');
   await gracefulShutdown();
-  process.exit(0);
+  // Note: Don't call process.exit() here - let the event loop drain naturally
 });
 
 // Export a helper to check database connection
