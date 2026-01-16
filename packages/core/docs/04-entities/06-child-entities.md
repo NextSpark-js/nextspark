@@ -65,7 +65,7 @@ interface ChildEntityDefinition {
   fields: ChildEntityField[]       // Child entity fields
   showInParentView: boolean        // Show in parent view
   hasOwnRoutes: boolean           // Has independent routes?
-  permissions?: EntityPermissions  // Specific permissions
+  // Note: Permissions are now defined centrally in permissions.config.ts
   hooks?: ChildEntityHooks        // Specific hooks
   display: ChildEntityDisplay     // Display configuration
   idStrategy?: {                  // ID strategy
@@ -140,22 +140,25 @@ Whether it has independent routes (`/api/v1/comments`).
 - `false`: Only `/api/v1/projects/{id}/child/comments`
 - `true`: Also `/api/v1/comments` (as an independent entity)
 
-### `permissions` (optional)
+### Permissions (centralized)
 
-Specific permissions for the child entity.
+Permissions for child entities are defined centrally in `permissions.config.ts`:
 
 ```typescript
-{
-  permissions: {
-    read: ['admin', 'colaborator', 'member'],
-    create: ['admin', 'colaborator'],
-    update: ['admin'],
-    delete: ['admin']
+// config/permissions.config.ts
+export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
+  entities: {
+    order_items: [  // Use child table name
+      { action: 'read', roles: ['owner', 'admin', 'member'] },
+      { action: 'create', roles: ['owner', 'admin'] },
+      { action: 'update', roles: ['owner', 'admin'] },
+      { action: 'delete', roles: ['owner'], dangerous: true }
+    ]
   }
 }
 ```
 
-If not specified, inherits permissions from the parent.
+Child entities no longer support inline permissions.
 
 ### `display` (required)
 
@@ -239,14 +242,8 @@ export const orderEntityConfig: EntityConfig = {
         title: 'Order Items',
         description: 'Products in this order',
         mode: 'table'
-      },
-      
-      permissions: {
-        read: ['admin', 'colaborator', 'member'],
-        create: ['admin', 'colaborator'],
-        update: ['admin', 'colaborator'],
-        delete: ['admin', 'colaborator']
       }
+      // Note: Permissions for 'order_items' are defined in permissions.config.ts
     }
   }
 }

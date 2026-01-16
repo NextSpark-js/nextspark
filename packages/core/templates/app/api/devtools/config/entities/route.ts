@@ -29,11 +29,8 @@ interface EntityInfo {
     label?: string;
     required?: boolean;
   }[];
-  // Permissions are now optional in entity config (centralized in permissions.config.ts)
-  permissions?: {
-    actions: Array<{ action: string; label: string; description?: string }>;
-    customActions?: Array<{ action: string; label: string; description?: string }>;
-  };
+  // Note: Permissions are now defined centrally in permissions.config.ts
+  // Use PermissionService to query entity permissions
 }
 
 /**
@@ -83,7 +80,7 @@ export async function GET(request: Request) {
           label: field.label,
           required: field.required,
         })) || [],
-        permissions: config.permissions,
+        // Note: Permissions are now centralized in permissions.config.ts
       });
     }
 

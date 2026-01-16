@@ -33,13 +33,8 @@ interface EntityInfo {
     label?: string;
     required?: boolean;
   }>;
-  permissions: {
-    actions: Array<{
-      action: string;
-      label: string;
-      description: string;
-    }>;
-  };
+  // Note: Permissions are now defined centrally in permissions.config.ts
+  // Use PermissionService to query entity permissions
 }
 
 interface JsonViewerProps {

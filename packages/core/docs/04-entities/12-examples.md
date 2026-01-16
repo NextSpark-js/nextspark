@@ -55,13 +55,8 @@ export const taskEntityConfig: EntityConfig = {
     }
   },
 
-  // 4. PERMISSIONS
-  permissions: {
-    read: ['admin', 'colaborator', 'member'],
-    create: ['admin', 'colaborator', 'member'],
-    update: ['admin', 'colaborator', 'member'],
-    delete: ['admin', 'colaborator', 'member']
-  },
+  // 4. PERMISSIONS (centralized in permissions.config.ts)
+  // See: config/permissions.config.ts → entities.tasks
   
   // 5. I18N
   i18n: {
@@ -270,12 +265,7 @@ export const blogPostConfig: EntityConfig = {
     }
   },
   
-  permissions: {
-    read: ['admin', 'colaborator', 'member', 'user'],  // + anon via RLS
-    create: ['admin', 'colaborator'],
-    update: ['admin', 'colaborator'],
-    delete: ['admin']
-  },
+  // Permissions defined in config/permissions.config.ts → entities.posts
   
   i18n: {
     fallbackLocale: 'en',
@@ -513,12 +503,7 @@ export const orderConfig: EntityConfig = {
     }
   },
   
-  permissions: {
-    read: ['admin', 'colaborator', 'member'],
-    create: ['admin', 'colaborator', 'member'],
-    update: ['admin', 'colaborator'],
-    delete: ['admin']
-  },
+  // Permissions defined in config/permissions.config.ts → entities.invoices
   
   i18n: {
     fallbackLocale: 'en',
@@ -725,12 +710,7 @@ export const contactConfig: EntityConfig = {
     }
   },
   
-  permissions: {
-    read: ['admin', 'colaborator', 'member'],
-    create: ['admin', 'colaborator', 'member'],
-    update: ['admin', 'colaborator', 'member'],
-    delete: ['admin', 'colaborator']
-  },
+  // Permissions defined in config/permissions.config.ts → entities.projects
   
   i18n: {
     fallbackLocale: 'en',

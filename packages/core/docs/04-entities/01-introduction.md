@@ -87,13 +87,8 @@ export const productEntityConfig: EntityConfig = {
     }
   },
   
-  // Permisos por rol
-  permissions: {
-    read: ['admin', 'colaborator', 'member'],
-    create: ['admin', 'colaborator'],
-    update: ['admin', 'colaborator'],
-    delete: ['admin']
-  },
+  // Permisos - definidos centralmente en permissions.config.ts
+  // Ver: config/permissions.config.ts → entities.products
   
   // Internacionalización
   i18n: {
@@ -241,24 +236,28 @@ Controla cómo se muestra y comporta en la interfaz.
 
 ### 4. Sistema de Permisos
 
-Define qué roles pueden realizar qué acciones.
+Los permisos de entidades se definen **centralmente** en `permissions.config.ts`:
 
 ```typescript
-{
-  permissions: {
-    read: ['admin', 'colaborator', 'member'],    // Quién puede ver
-    create: ['admin', 'colaborator', 'member'],  // Quién puede crear
-    update: ['admin', 'colaborator', 'member'],  // Quién puede editar
-    delete: ['admin', 'colaborator']             // Quién puede eliminar
+// config/permissions.config.ts
+export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
+  entities: {
+    products: [
+      { action: 'read', roles: ['owner', 'admin', 'member'] },
+      { action: 'create', roles: ['owner', 'admin'] },
+      { action: 'update', roles: ['owner', 'admin'] },
+      { action: 'delete', roles: ['owner'], dangerous: true }
+    ]
   }
 }
 ```
 
 **Roles Disponibles:**
-- `admin` - Administrador con acceso total
-- `colaborator` - Colaborador con permisos amplios
-- `member` - Miembro con permisos básicos
-- `user` - Usuario estándar
+- `owner` - Dueño del equipo con control total (nivel 100)
+- `admin` - Administrador con permisos amplios (nivel 50)
+- `member` - Miembro con permisos estándar (nivel 10)
+- `viewer` - Solo lectura (nivel 1)
+- Roles personalizados definidos en `permissions.config.ts → roles`
 
 ### 5. Internacionalización
 

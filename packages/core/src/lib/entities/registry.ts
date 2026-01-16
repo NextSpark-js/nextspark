@@ -194,10 +194,8 @@ export class EntityRegistry {
 
     if (isChildEntity) {
       // Child entity validation - only validate properties that child entities have
+      // Note: Permissions are now defined centrally in permissions.config.ts
       const childConfig = config as ChildEntityDefinition
-      if (!childConfig.permissions) {
-        warnings.push('Child entity has no permissions defined')
-      }
       if (!Array.isArray(childConfig.fields)) {
         errors.push('Child entity must have fields array')
       }
@@ -262,13 +260,9 @@ export class EntityRegistry {
       return { allowed: false, reason: 'Entity is disabled' }
     }
 
-    // Check role permissions via actions array (if defined in entity config)
-    // NOTE: When permissions are centralized in permissions.config.ts, this check is skipped
-    // and the PermissionService should be used instead
-    const actionConfig = entity.permissions?.actions?.find(a => a.action === action)
-    if (entity.permissions && (!actionConfig || !actionConfig.roles.includes(userRole))) {
-      return { allowed: false, reason: 'Insufficient role permissions' }
-    }
+    // NOTE: Role permissions are now defined centrally in permissions.config.ts
+    // Use PermissionService.hasPermission(role, `${entitySlug}.${action}`) to check permissions
+    // This function only checks entity-level access (enabled status)
 
     // TODO: Implement flag-based access control if needed
 //     // Check flag access

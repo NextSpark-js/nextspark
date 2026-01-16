@@ -141,19 +141,12 @@ export function validateEntityOperation(
   switch (operation) {
     case 'list':
     case 'read':
-      return entityConfig.enabled
     case 'create':
-      // Check if create is allowed via permissions
-      // When permissions are centralized, assume allowed (PermissionService handles this)
-      return entityConfig.enabled && (entityConfig.permissions?.actions?.some(a => a.action === 'create') ?? true)
     case 'update':
-      // Check if update is allowed via permissions
-      // When permissions are centralized, assume allowed (PermissionService handles this)
-      return entityConfig.enabled && (entityConfig.permissions?.actions?.some(a => a.action === 'update') ?? true)
     case 'delete':
-      // Check if delete is allowed via permissions
-      // When permissions are centralized, assume allowed (PermissionService handles this)
-      return entityConfig.enabled && (entityConfig.permissions?.actions?.some(a => a.action === 'delete') ?? true)
+      // Entity enabled check only - PermissionService handles role-based permissions
+      // Permissions are defined centrally in permissions.config.ts
+      return entityConfig.enabled
     default:
       return false
   }

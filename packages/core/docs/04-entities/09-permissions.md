@@ -282,4 +282,4 @@ entities: {
 
 ---
 
-> **Note**: Entity permissions in `entity.config.ts` are optional and serve as fallback. The recommended approach is to define all permissions in `permissions.config.ts` for a single source of truth.
+> **Important**: Entity permissions are now defined **exclusively** in `permissions.config.ts`. Defining permissions directly in `entity.config.ts` is deprecated and no longer supported.
