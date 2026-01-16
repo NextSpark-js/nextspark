@@ -36,6 +36,20 @@
       ],
       "source": "theme"
     },
+    "patterns": {
+      "slug": "patterns",
+      "singular": "pattern",
+      "plural": "Patterns",
+      "tableName": "patterns",
+      "fields": [
+        "title",
+        "slug",
+        "status",
+        "description"
+      ],
+      "filters": [],
+      "source": "theme"
+    },
     "posts": {
       "slug": "posts",
       "singular": "post",
