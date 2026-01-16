@@ -166,6 +166,46 @@ describe('parseSSLConfig', () => {
 
       expect(result).toBe(false);
     });
+
+    test('should handle case-insensitive sslmode values', () => {
+      process.env.NODE_ENV = 'development';
+      const parseSSLConfig = getParseSSLConfig();
+
+      // Uppercase should be normalized to lowercase
+      expect(parseSSLConfig('postgresql://h/d?sslmode=VERIFY-FULL')).toEqual({
+        rejectUnauthorized: true,
+      });
+      expect(parseSSLConfig('postgresql://h/d?sslmode=DISABLE')).toBe(false);
+      expect(parseSSLConfig('postgresql://h/d?sslmode=Require')).toEqual({
+        rejectUnauthorized: false,
+      });
+    });
+
+    test('should handle whitespace in sslmode values', () => {
+      process.env.NODE_ENV = 'production';
+      const parseSSLConfig = getParseSSLConfig();
+
+      // Whitespace should be trimmed
+      expect(parseSSLConfig('postgresql://h/d?sslmode=%20require%20')).toEqual({
+        rejectUnauthorized: false,
+      });
+    });
+
+    test('should handle unknown sslmode values by falling back to environment defaults', () => {
+      // Unknown value in production should fall back to secure default
+      process.env.NODE_ENV = 'production';
+      let parseSSLConfig = getParseSSLConfig();
+
+      expect(parseSSLConfig('postgresql://h/d?sslmode=unknown-mode')).toEqual({
+        rejectUnauthorized: true,
+      });
+
+      // Unknown value in development should fall back to no SSL
+      process.env.NODE_ENV = 'development';
+      parseSSLConfig = getParseSSLConfig();
+
+      expect(parseSSLConfig('postgresql://h/d?sslmode=invalid')).toBe(false);
+    });
   });
 
   describe('Security guarantees', () => {

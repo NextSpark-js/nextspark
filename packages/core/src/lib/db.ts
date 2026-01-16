@@ -25,12 +25,16 @@ export function parseSSLConfig(databaseUrl: string): false | { rejectUnauthorize
   try {
     // Parse URL to extract query parameters
     const url = new URL(databaseUrl);
-    const sslmode = url.searchParams.get('sslmode');
+    // Normalize sslmode: trim whitespace and convert to lowercase for robustness
+    const sslmode = url.searchParams.get('sslmode')?.trim().toLowerCase();
 
     // Explicit sslmode in URL takes precedence
     if (sslmode) {
       switch (sslmode) {
         case 'disable':
+          if (isProduction) {
+            console.warn('[DB] WARNING: SSL disabled in production environment. This is insecure!');
+          }
           return false;
         case 'require':
         case 'prefer':
@@ -41,6 +45,9 @@ export function parseSSLConfig(databaseUrl: string): false | { rejectUnauthorize
         case 'verify-full':
           // These modes require certificate validation
           return { rejectUnauthorized: true };
+        default:
+          // Unknown sslmode value - log warning and fall through to environment defaults
+          console.warn(`[DB] Unknown sslmode value: "${sslmode}". Using environment defaults.`);
       }
     }
 
