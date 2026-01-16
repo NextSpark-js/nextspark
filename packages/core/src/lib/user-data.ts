@@ -81,6 +81,8 @@ export async function getUserPlanAndFlags(userId: string): Promise<UserPlanData>
     if (!isDevelopment) {
       throw error
     }
+    // FIX: Log warning in development so issues don't go unnoticed
+    console.warn('[UserData] Using defaults due to pool health check failure in development')
     return { plan: DEFAULT_PLAN, flags: DEFAULT_FLAGS, cached: false }
   }
 
@@ -188,6 +190,8 @@ export async function updateUserPlan(userId: string, plan: PlanType): Promise<bo
     if (!isDevelopment) {
       throw error
     }
+    // FIX: Log warning in development so issues don't go unnoticed
+    console.warn('[UserData] Using defaults due to pool health check failure in development')
     return false
   }
 
@@ -256,6 +260,8 @@ export async function updateUserFlags(userId: string, flags: UserFlag[]): Promis
     if (!isDevelopment) {
       throw error
     }
+    // FIX: Log warning in development so issues don't go unnoticed
+    console.warn('[UserData] Using defaults due to pool health check failure in development')
     return false
   }
 

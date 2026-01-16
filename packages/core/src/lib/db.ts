@@ -56,6 +56,22 @@ const pool = new Pool({
 });
 
 /**
+ * Validate userId format to prevent SQL injection in SET LOCAL commands
+ * @internal
+ */
+function validateUserId(userId: string): void {
+  // FIX: Add explicit validation even though auth system should validate
+  // Reject backslashes (escape sequences) and excessively long values
+  if (userId.includes('\\') || userId.length > 255) {
+    throw new Error('Invalid userId format: contains invalid characters or is too long');
+  }
+  // Also reject null bytes and other control characters
+  if (/[\x00-\x1f]/.test(userId)) {
+    throw new Error('Invalid userId format: contains control characters');
+  }
+}
+
+/**
  * Acquire a client from the pool with tracking
  * @internal Use the public query functions instead
  *
@@ -103,8 +119,10 @@ export async function queryWithRLS<T = unknown>(
 
     // Set the user ID for RLS policies if provided
     if (userId) {
+      // Validate userId format before using in SET LOCAL
+      validateUserId(userId);
       // PostgreSQL doesn't accept parameters in SET LOCAL, must use string interpolation
-      // This is safe because userId comes from our auth system, not user input
+      // Safe: userId is validated above and comes from our auth system
       await client.query(`SET LOCAL app.user_id = '${userId.replace(/'/g, "''")}'`);
     }
 
@@ -153,8 +171,10 @@ export async function mutateWithRLS<T = unknown>(
     await client.query('BEGIN');
 
     if (userId) {
+      // Validate userId format before using in SET LOCAL
+      validateUserId(userId);
       // PostgreSQL doesn't accept parameters in SET LOCAL, must use string interpolation
-      // This is safe because userId comes from our auth system, not user input
+      // Safe: userId is validated above and comes from our auth system
       await client.query(`SET LOCAL app.user_id = '${userId.replace(/'/g, "''")}'`);
     }
 
@@ -197,8 +217,10 @@ export async function getTransactionClient(userId?: string | null) {
     await client.query('BEGIN');
 
     if (userId) {
+      // Validate userId format before using in SET LOCAL
+      validateUserId(userId);
       // PostgreSQL doesn't accept parameters in SET LOCAL, must use string interpolation
-      // This is safe because userId comes from our auth system, not user input
+      // Safe: userId is validated above and comes from our auth system
       await client.query(`SET LOCAL app.user_id = '${userId.replace(/'/g, "''")}'`);
     }
   } catch (error) {
