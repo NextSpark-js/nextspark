@@ -226,6 +226,28 @@ REDIS_URL=redis://localhost:6379
 
 Without Redis, the system falls back to in-memory rate limiting (single-instance only).
 
+## Disabling Rate Limiting (Development/Testing)
+
+To disable rate limiting completely (useful for development, testing, or debugging):
+
+```env
+# .env.local or .env
+DISABLE_RATE_LIMITING=true
+```
+
+When disabled:
+- All rate limit checks are bypassed
+- A warning is logged once: `[RateLimit] WARNING: Rate limiting is DISABLED...`
+- Handlers execute without rate limit headers
+
+**WARNING:** Never disable rate limiting in production environments!
+
+**Use cases for disabling:**
+- Local development when hitting limits during testing
+- Running automated tests that make many requests
+- Debugging API behavior without rate limit interference
+- Load testing (measure true capacity without limits)
+
 ## Anti-Patterns
 
 ```typescript

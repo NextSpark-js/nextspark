@@ -395,11 +395,31 @@ function getUserIdentifier(request: NextRequest): string | null {
  *   return NextResponse.json({ created: true });
  * }, 'write');
  */
+/**
+ * Check if rate limiting is disabled via environment variable.
+ * Use DISABLE_RATE_LIMITING=true to disable rate limiting (development/testing only).
+ * WARNING: Never disable rate limiting in production!
+ */
+let rateLimitDisabledWarningLogged = false;
+function isRateLimitingDisabled(): boolean {
+  const disabled = process.env.DISABLE_RATE_LIMITING === 'true';
+  if (disabled && !rateLimitDisabledWarningLogged) {
+    console.warn('[RateLimit] WARNING: Rate limiting is DISABLED via DISABLE_RATE_LIMITING=true. Do not use in production!');
+    rateLimitDisabledWarningLogged = true;
+  }
+  return disabled;
+}
+
 export function withRateLimitTier<T extends unknown[]>(
   handler: (request: NextRequest, ...args: T) => Promise<NextResponse>,
   tier: RateLimitTier = 'api'
 ) {
   return async (request: NextRequest, ...args: T): Promise<NextResponse> => {
+    // Skip rate limiting if disabled via environment variable
+    if (isRateLimitingDisabled()) {
+      return handler(request, ...args);
+    }
+
     // Get client identifier - prefer user-based (API key) over IP-based
     const userIdentifier = getUserIdentifier(request);
     const clientIp = getClientIp(request);
