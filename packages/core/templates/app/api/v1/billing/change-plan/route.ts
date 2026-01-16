@@ -7,10 +7,11 @@
  * P1-3: Plan Change con Proration
  */
 
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { authenticateRequest, createAuthError } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { SubscriptionService, MembershipService } from '@nextsparkjs/core/lib/services'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 const changePlanSchema = z.object({
   planSlug: z.string().min(1, 'Plan slug is required'),
@@ -25,7 +26,7 @@ const changePlanSchema = z.object({
  * - planSlug: string - Target plan slug
  * - billingInterval: 'monthly' | 'yearly' (default: monthly)
  */
-export async function POST(request: NextRequest) {
+export const POST = withRateLimitTier(async (request: NextRequest) => {
   // 1. Dual authentication
   const authResult = await authenticateRequest(request)
 
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
   const teamId = request.headers.get('x-team-id') || authResult.user.defaultTeamId
 
   if (!teamId) {
-    return Response.json(
+    return NextResponse.json(
       {
         success: false,
         error: 'No team context available. Please provide x-team-id header.',
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
   const actionResult = membership.canPerformAction('billing.change-plan')
 
   if (!actionResult.allowed) {
-    return Response.json(
+    return NextResponse.json(
       {
         success: false,
         error: actionResult.message,
@@ -67,12 +68,12 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json()
   } catch {
-    return Response.json({ success: false, error: 'Invalid JSON body' }, { status: 400 })
+    return NextResponse.json({ success: false, error: 'Invalid JSON body' }, { status: 400 })
   }
 
   const parseResult = changePlanSchema.safeParse(body)
   if (!parseResult.success) {
-    return Response.json(
+    return NextResponse.json(
       { success: false, error: 'Invalid request body', details: parseResult.error.issues },
       { status: 400 }
     )
@@ -84,14 +85,14 @@ export async function POST(request: NextRequest) {
   const result = await SubscriptionService.changePlan(teamId, planSlug, billingInterval)
 
   if (!result.success) {
-    return Response.json({ success: false, error: result.error }, { status: 400 })
+    return NextResponse.json({ success: false, error: result.error }, { status: 400 })
   }
 
-  return Response.json({
+  return NextResponse.json({
     success: true,
     data: {
       subscription: result.subscription,
       warnings: result.downgradeWarnings,
     },
   })
-}
+}, 'strict');

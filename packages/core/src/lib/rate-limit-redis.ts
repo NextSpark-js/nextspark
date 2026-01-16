@@ -47,6 +47,12 @@ let apiRateLimiterInstance: ReturnType<UpstashRatelimit['prototype']['limit']> e
 let strictRateLimiterInstance: ReturnType<UpstashRatelimit['prototype']['limit']> extends Promise<infer R>
   ? { limit: (id: string) => Promise<R> } | null
   : never = null
+let readRateLimiterInstance: ReturnType<UpstashRatelimit['prototype']['limit']> extends Promise<infer R>
+  ? { limit: (id: string) => Promise<R> } | null
+  : never = null
+let writeRateLimiterInstance: ReturnType<UpstashRatelimit['prototype']['limit']> extends Promise<infer R>
+  ? { limit: (id: string) => Promise<R> } | null
+  : never = null
 
 /**
  * Load Upstash modules dynamically
@@ -95,6 +101,22 @@ async function loadUpstashModules(): Promise<boolean> {
         prefix: 'ratelimit:strict',
         ephemeralCache: new Map(),
       })
+
+      readRateLimiterInstance = new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(200, '1 m'),
+        analytics: true,
+        prefix: 'ratelimit:read',
+        ephemeralCache: new Map(),
+      })
+
+      writeRateLimiterInstance = new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(50, '1 m'),
+        analytics: true,
+        prefix: 'ratelimit:write',
+        ephemeralCache: new Map(),
+      })
     }
 
     modulesLoaded = true
@@ -124,25 +146,33 @@ export interface RateLimitCheckResult {
 }
 
 /**
+ * Rate limit tiers available for API endpoints
+ */
+export type RateLimitTier = 'auth' | 'api' | 'strict' | 'read' | 'write'
+
+/**
  * Check rate limit for a given identifier
  *
  * @param identifier - Unique identifier (e.g., IP address, user ID, or combination)
- * @param type - Rate limit tier: 'auth', 'api', or 'strict'
+ * @param type - Rate limit tier: 'auth' (5/15min), 'api' (100/1min), 'strict' (10/1hr), 'read' (200/1min), 'write' (50/1min)
  * @returns Promise with success status, remaining requests, and reset timestamp
  */
 export async function checkRateLimit(
   identifier: string,
-  type: 'auth' | 'api' | 'strict' = 'api'
+  type: RateLimitTier = 'api'
 ): Promise<RateLimitCheckResult> {
   // Try to load modules if not already loaded
   await loadUpstashModules()
 
   // Select the appropriate limiter
-  const limiter = type === 'auth'
-    ? authRateLimiterInstance
-    : type === 'strict'
-      ? strictRateLimiterInstance
-      : apiRateLimiterInstance
+  const limiterMap: Record<RateLimitTier, typeof authRateLimiterInstance> = {
+    auth: authRateLimiterInstance,
+    api: apiRateLimiterInstance,
+    strict: strictRateLimiterInstance,
+    read: readRateLimiterInstance,
+    write: writeRateLimiterInstance,
+  }
+  const limiter = limiterMap[type]
 
   // If no limiter (Redis not configured or modules not available), allow all requests
   if (!limiter) {

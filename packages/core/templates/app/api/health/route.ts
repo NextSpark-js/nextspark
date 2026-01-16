@@ -1,11 +1,13 @@
 import { queryWithRLS } from "@nextsparkjs/core/lib/db";
+import { withRateLimitTier } from "@nextsparkjs/core/lib/api/rate-limit";
+import { NextResponse } from "next/server";
 
-export async function GET() {
+export const GET = withRateLimitTier(async () => {
   try {
     // Test database connection
     await queryWithRLS('SELECT 1');
     
-    return Response.json({ 
+    return NextResponse.json({
       status: 'healthy',
       timestamp: new Date().toISOString(),
       services: {
@@ -15,7 +17,7 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Health check failed:', error);
-    return Response.json({ 
+    return NextResponse.json({
       status: 'unhealthy',
       timestamp: new Date().toISOString(),
       error: 'Database connection failed',
@@ -25,5 +27,5 @@ export async function GET() {
       }
     }, { status: 503 });
   }
-}
+}, 'read');
 

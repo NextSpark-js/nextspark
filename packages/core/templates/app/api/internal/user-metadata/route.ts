@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { MetaService } from '@nextsparkjs/core/lib/services/meta.service'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 // Endpoint interno para crear metadata default después del signup
-export async function POST(req: NextRequest) {
+export const POST = withRateLimitTier(async (req: NextRequest) => {
   try {
     const body = await req.json()
     const { userId, metadata } = body
@@ -33,4 +34,4 @@ export async function POST(req: NextRequest) {
       error: 'Internal server error'
     }, { status: 500 })
   }
-}
+}, 'write');

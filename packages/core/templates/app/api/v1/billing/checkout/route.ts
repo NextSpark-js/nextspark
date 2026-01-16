@@ -9,18 +9,19 @@
  * P2: Stripe Integration
  */
 
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest, createAuthError } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { createCheckoutSession } from '@nextsparkjs/core/lib/billing/gateways/stripe'
 import { SubscriptionService, MembershipService } from '@nextsparkjs/core/lib/services'
 import { z } from 'zod'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 const checkoutSchema = z.object({
   planSlug: z.string().min(1, 'Plan slug is required'),
   billingPeriod: z.enum(['monthly', 'yearly']).default('monthly')
 })
 
-export async function POST(request: NextRequest) {
+export const POST = withRateLimitTier(async (request: NextRequest) => {
   // 1. Dual authentication
   const authResult = await authenticateRequest(request)
 
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json()
   } catch {
-    return Response.json(
+    return NextResponse.json(
       { success: false, error: 'Invalid JSON body' },
       { status: 400 }
     )
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
 
   const parseResult = checkoutSchema.safeParse(body)
   if (!parseResult.success) {
-    return Response.json(
+    return NextResponse.json(
       {
         success: false,
         error: 'Validation failed',
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest) {
     authResult.user.defaultTeamId
 
   if (!teamId) {
-    return Response.json(
+    return NextResponse.json(
       {
         success: false,
         error: 'No team context available. Please provide x-team-id header.'
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
   const actionResult = membership.canPerformAction('billing.checkout')
 
   if (!actionResult.allowed) {
-    return Response.json(
+    return NextResponse.json(
       {
         success: false,
         error: actionResult.message,
@@ -104,7 +105,7 @@ export async function POST(request: NextRequest) {
       customerId: subscription?.externalCustomerId || undefined
     })
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: {
         url: session.url,
@@ -113,7 +114,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('[checkout] Error creating checkout session:', error)
-    return Response.json(
+    return NextNextResponse.json(
       {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to create checkout session'
@@ -121,4 +122,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+}, 'strict');

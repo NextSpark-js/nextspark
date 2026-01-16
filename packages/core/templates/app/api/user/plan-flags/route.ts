@@ -10,6 +10,7 @@ import { getTypedSession } from '@nextsparkjs/core/lib/auth'
 import { getUserPlanAndFlags, updateUserPlan, updateUserFlags } from '@nextsparkjs/core/lib/user-data'
 import { z } from 'zod'
 import type { UserRole } from '@nextsparkjs/core/types/user.types'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 // Validation schemas
 const planFlagsQuerySchema = z.object({
@@ -26,7 +27,7 @@ const planFlagsUpdateSchema = z.object({
  * GET /api/user/plan-flags
  * Fetch user plan and flags data
  */
-export async function GET(request: NextRequest) {
+export const GET = withRateLimitTier(async (request: NextRequest) => {
   try {
     // Get session
     const session = await getTypedSession(request.headers)
@@ -82,13 +83,13 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+}, 'read');
 
 /**
  * PATCH /api/user/plan-flags
  * Update user plan and/or flags
  */
-export async function PATCH(request: NextRequest) {
+export const PATCH = withRateLimitTier(async (request: NextRequest) => {
   try {
     // Get session
     const session = await getTypedSession(request.headers)
@@ -176,13 +177,13 @@ export async function PATCH(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+}, 'write');
 
 /**
  * POST /api/user/plan-flags/bulk
  * Bulk update user plans and flags (admin only)
  */
-export async function POST(request: NextRequest) {
+export const POST = withRateLimitTier(async (request: NextRequest) => {
   try {
     // Get session
     const session = await getTypedSession(request.headers)
@@ -274,4 +275,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+}, 'strict');
