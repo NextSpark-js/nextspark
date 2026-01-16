@@ -29,11 +29,13 @@
 
 import { Pool } from 'pg'
 import { getEntityMetaConfig, EntityType } from '../../types/meta.types'
+import { parseSSLConfig } from '../db'
 
 // Use the existing pool from db.ts
+const databaseUrl = process.env.DATABASE_URL!;
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL!,
-  ssl: { rejectUnauthorized: false },
+  connectionString: databaseUrl,
+  ssl: parseSSLConfig(databaseUrl),
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
