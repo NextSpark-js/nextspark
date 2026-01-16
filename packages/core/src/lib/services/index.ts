@@ -36,6 +36,7 @@ export {
   findDocsPage,
   searchDocs,
 } from './docs.service'
+export { GenericEntityService } from './generic-entity.service'
 
 // Export types
 export type { UpdateUserPayload } from './user.service'
@@ -53,3 +54,4 @@ export type { ScopeConfig, ApiConfig, RestrictionRule } from './scope.service'
 export type { RouteHandler } from './route-handler.service'
 export type { PluginRegistryEntry, RouteFileEndpoint, PluginEntity, PluginName, PluginConfig, RouteMetadata } from './plugin.service'
 export type { ApiRouteEntry, RouteCategory } from './api-routes.service'
+export type { GenericListOptions, GenericListResult } from './generic-entity.service'

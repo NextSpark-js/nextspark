@@ -54,15 +54,7 @@ export function createMockEntityConfig(overrides: Partial<EntityConfig> = {}): E
       }
     },
 
-    permissions: {
-      actions: [
-        { action: 'create', label: 'Create', roles: ['owner', 'admin', 'member'] },
-        { action: 'read', label: 'View', roles: ['owner', 'admin', 'member', 'viewer'] },
-        { action: 'list', label: 'List', roles: ['owner', 'admin', 'member', 'viewer'] },
-        { action: 'update', label: 'Edit', roles: ['owner', 'admin', 'member'] },
-        { action: 'delete', label: 'Delete', roles: ['owner', 'admin'], dangerous: true },
-      ],
-    },
+    // Permissions are now defined centrally in permissions.config.ts
 
     i18n: {
       fallbackLocale: 'en',

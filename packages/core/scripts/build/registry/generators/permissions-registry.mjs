@@ -75,110 +75,14 @@ export async function generatePermissionsRegistry(permissionsConfig, entities, c
     }
   }
 
-  // FALLBACK: For entities NOT defined in permissions.config.ts, try entity.config.ts
-  // This provides backwards compatibility during migration
-  const extractPermissionsFromFile = async (filePath, entityName, displayName) => {
-    try {
-      const content = await readFile(filePath, 'utf8')
-      const permStartIdx = content.indexOf('permissions:')
-      if (permStartIdx === -1) {
-        verbose(`  No permissions section in ${entityName}`)
-        return []
-      }
+  // NOTE: Entity permissions are now ONLY read from permissions.config.ts (centralized)
+  // The legacy fallback to entity.config.ts has been removed.
+  // All entity permissions must be defined in permissions.config.ts -> entities
 
-      const actionsStartIdx = content.indexOf('actions:', permStartIdx)
-      if (actionsStartIdx === -1) {
-        verbose(`  No actions array in ${entityName}`)
-        return []
-      }
-
-      const arrayStartIdx = content.indexOf('[', actionsStartIdx)
-      if (arrayStartIdx === -1) return []
-
-      let bracketCount = 1
-      let i = arrayStartIdx + 1
-      while (i < content.length && bracketCount > 0) {
-        if (content[i] === '[') bracketCount++
-        if (content[i] === ']') bracketCount--
-        i++
-      }
-
-      const actionsContent = content.slice(arrayStartIdx + 1, i - 1)
-      const actionRegex = /\{[^{}]*action:\s*['"](\w+)['"][^{}]*\}/g
-      const permissions = []
-      let match
-
-      while ((match = actionRegex.exec(actionsContent)) !== null) {
-        const actionBlock = match[0]
-        const action = match[1]
-
-        const labelMatch = actionBlock.match(/label:\s*['"]([^'"]+)['"]/)
-        const label = labelMatch ? labelMatch[1] : `${action.charAt(0).toUpperCase() + action.slice(1)} ${displayName}`
-
-        const rolesMatch = actionBlock.match(/roles:\s*\[([^\]]+)\]/)
-        const roles = rolesMatch
-          ? rolesMatch[1].split(',').map(r => r.trim().replace(/['"]/g, ''))
-          : ['owner', 'admin']
-
-        const dangerousMatch = actionBlock.match(/dangerous:\s*(true|false)/)
-        const dangerous = dangerousMatch ? dangerousMatch[1] === 'true' : false
-
-        permissions.push({
-          id: `${entityName}.${action}`,
-          label,
-          description: `${action} permission for ${displayName}`,
-          category: displayName,
-          roles,
-          dangerous,
-          source: 'theme'
-        })
-      }
-      return permissions
-    } catch (err) {
-      verbose(`  Error reading ${entityName}: ${err.message}`)
-      return []
-    }
-  }
-
-  // Only process entities NOT already handled by permissions.config.ts
+  // Log entities without permissions in permissions.config.ts
   for (const entity of entities) {
-    if (processedEntities.has(entity.name)) {
-      verbose(`  Skipping ${entity.name} - already processed from permissions.config.ts`)
-      continue
-    }
-
-    try {
-      const realConfigPath = resolveAliasPath(entity.configPath)
-      const configModule = await import(realConfigPath)
-      const config = configModule[entity.exportName]
-
-      if (config?.permissions?.actions && Array.isArray(config.permissions.actions)) {
-        for (const perm of config.permissions.actions) {
-          entityPermissions.push({
-            id: `${entity.name}.${perm.action}`,
-            label: perm.label || `${perm.action.charAt(0).toUpperCase() + perm.action.slice(1)} ${entity.displayName || entity.name}`,
-            description: perm.description || `${perm.action} permission for ${entity.displayName || entity.name}`,
-            category: entity.displayName || entity.name,
-            roles: perm.roles || ['owner', 'admin'],
-            dangerous: perm.dangerous || false,
-            source: entity.source || 'theme'
-          })
-        }
-        log(`  ⚠️ Extracted ${config.permissions.actions.length} permissions from ${entity.name} (LEGACY: entity.config.ts)`, 'warning')
-      }
-    } catch (err) {
-      const realConfigPath = resolveAliasPath(entity.configPath)
-      const extracted = await extractPermissionsFromFile(
-        realConfigPath,
-        entity.name,
-        entity.displayName || entity.name
-      )
-      if (extracted.length > 0) {
-        entityPermissions.push(...extracted)
-        log(`  ⚠️ Extracted ${extracted.length} permissions from ${entity.name} (LEGACY: regex fallback)`, 'warning')
-      } else {
-        verbose(`No permissions for ${entity.name} (not in permissions.config.ts and no entity.config.ts permissions)`)
-      }
+    if (!processedEntities.has(entity.name)) {
+      verbose(`  ℹ️ No permissions defined for ${entity.name} in permissions.config.ts`)
     }
   }
 

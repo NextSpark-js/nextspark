@@ -22,8 +22,9 @@ interface EntityConfig {
     features: { searchable: boolean; sortable: boolean; filterable: boolean; bulkOperations: boolean; importExport: boolean }
   }
 
-  // 4. PERMISSIONS SYSTEM (optional - prefer permissions.config.ts)
-  permissions?: { actions?: EntityPermissionAction[]; customActions?: EntityPermissionAction[] }
+  // 4. PERMISSIONS SYSTEM (centralized in permissions.config.ts)
+  // Note: Permissions are NO LONGER defined in entity config files.
+  // See: permissions.config.ts → entities.{entitySlug}
 
   // 5. INTERNATIONALIZATION
   i18n: { fallbackLocale: SupportedLocale; loaders: Record<SupportedLocale, TranslationLoader> }
@@ -455,14 +456,12 @@ Features funcionales de la entidad.
 
 ## 4. Sistema de Permisos
 
-### `permissions` (optional)
+> **Importante:** Los permisos de entidades se definen **exclusivamente** en `permissions.config.ts`. Definir permisos directamente en `entity.config.ts` ya **no está soportado**.
 
-> **Importante:** Los permisos de entidades ahora se definen **centralmente** en `permissions.config.ts`. Definirlos en `entity.config.ts` es opcional y sirve como fallback.
-
-**Ubicación recomendada:** `contents/themes/{theme}/permissions.config.ts`
+**Ubicación:** `contents/themes/{theme}/config/permissions.config.ts`
 
 ```typescript
-// permissions.config.ts - RECOMENDADO
+// permissions.config.ts - ÚNICO LUGAR PARA DEFINIR PERMISOS
 export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
   entities: {
     tasks: [
@@ -480,37 +479,20 @@ export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
 
 | Rol | Nivel | Descripción |
 |-----|-------|-------------|
-| `owner` | 4 | Dueño del equipo, control total |
-| `admin` | 3 | Administrador, mayoría de permisos |
-| `member` | 2 | Miembro estándar |
+| `owner` | 100 | Dueño del equipo, control total |
+| `admin` | 50 | Administrador, mayoría de permisos |
+| `member` | 10 | Miembro estándar |
 | `viewer` | 1 | Solo lectura |
 | `editor`* | Custom | Rol personalizado por tema |
 
-*Los roles personalizados se definen en `app.config.ts`
-
-**Formato en entity.config.ts (opcional/fallback):**
-
-```typescript
-{
-  permissions: {
-    actions: [
-      { action: 'create', label: 'Create tasks', roles: ['owner', 'admin', 'member'] },
-      { action: 'read', label: 'View tasks', roles: ['owner', 'admin', 'member'] },
-      { action: 'delete', label: 'Delete tasks', roles: ['owner', 'admin'], dangerous: true },
-    ],
-    customActions: [
-      { action: 'assign', label: 'Assign tasks', roles: ['owner', 'admin'] },
-    ],
-  }
-}
-```
+*Los roles personalizados se definen en `permissions.config.ts → roles`
 
 **Validación:**
 - Aplicada automáticamente en APIs via `canPerformAction()`
 - Verificada en componentes UI via `usePermission()`
 - Integrada con RLS en base de datos
 
-**Ejemplos por escenario (en permissions.config.ts):**
+**Ejemplos por escenario:**
 
 ```typescript
 // Entidad privada (cada usuario ve solo sus registros)
@@ -822,9 +804,9 @@ export const taskEntityConfig: EntityConfig = {
     }
   },
 
-  // 4. PERMISOS (opcional - definir en permissions.config.ts)
-  // Los permisos de esta entidad se definen centralmente en:
-  // contents/themes/{theme}/permissions.config.ts → entities.tasks
+  // 4. PERMISOS (definidos centralmente)
+  // Los permisos de esta entidad se definen en:
+  // contents/themes/{theme}/config/permissions.config.ts → entities.tasks
 
   // 5. I18N
   i18n: {

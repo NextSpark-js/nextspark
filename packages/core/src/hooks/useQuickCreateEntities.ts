@@ -24,10 +24,11 @@ export function useQuickCreateEntities() {
 
       // Get entities from client registry (populated by server component via EntityProvider)
       const entities = getAllEntityConfigs()
+      // Filter by enabled and showInTopbar only
+      // User's create permission is checked later using centralized PermissionService
       const topbarEntities = entities.filter(entity =>
         entity.enabled &&
-        entity.ui?.dashboard?.showInTopbar &&
-        entity.permissions?.actions?.some(a => a.action === 'create')
+        entity.ui?.dashboard?.showInTopbar
       )
 
       setAllEntities(topbarEntities)

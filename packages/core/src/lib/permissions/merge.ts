@@ -11,6 +11,10 @@ import type {
 /**
  * Merge configuration from core with theme and entities
  *
+ * @deprecated This function is no longer used. Permissions are now pre-computed
+ * at build time and stored in the permissions-registry. Use PermissionService
+ * for runtime permission checks instead.
+ *
  * Order of precedence:
  * 1. Core config (base)
  * 2. Theme overrides (override specific properties)
@@ -103,6 +107,10 @@ export function mergePermissionsConfig(
 
 /**
  * Extract permissions from EntityConfig
+ *
+ * @deprecated This function is no longer used. Entity permissions are now defined
+ * centrally in permissions.config.ts and processed at build time by the registry
+ * generator script. Do not use this function for new code.
  *
  * Converts entity permissions configuration into PermissionConfig objects
  * that can be merged into the global permissions registry.

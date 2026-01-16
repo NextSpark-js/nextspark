@@ -448,29 +448,11 @@ function generateRLSPolicies(
     comment: includeComments ? 'Service role has full access' : undefined
   })
 
-  // Role-based policies based on entity permissions (CRUD operations only)
-  // NOTE: If no permissions defined, skip role-based policies (permissions are centralized)
-  const crudActions = ['read', 'create', 'update', 'delete'] as const
-  crudActions.forEach((action) => {
-    // Find the action in permissions.actions array (if defined)
-    const actionConfig = entityConfig.permissions?.actions?.find(a => a.action === action)
-    const roles = actionConfig?.roles || []
-    if (Array.isArray(roles)) {
-      roles.forEach((role: string) => {
-        if (role !== 'superadmin') { // superadmin handled by service_role
-          const policyAction = action.toUpperCase() as RLSPolicyDefinition['action']
-          policies.push({
-            name: `${tableName}_${role}_${action}`,
-            action: policyAction,
-            using: hasUserField
-              ? `auth.jwt() ->> 'role' = '${role}' AND (auth.uid() = user_id OR auth.jwt() ->> 'role' IN ('admin', 'superadmin'))`
-              : `auth.jwt() ->> 'role' = '${role}'`,
-            comment: includeComments ? `${role} can ${action} records` : undefined
-          })
-        }
-      })
-    }
-  })
+  // NOTE: Role-based CRUD permissions are now defined centrally in permissions.config.ts
+  // and enforced at the application level via PermissionService.
+  // RLS policies here provide base-level security (owner access, service role).
+  // For custom role-based RLS policies, add them manually to migrations or use
+  // a separate RLS policy generator that reads from the permissions registry.
 
   return policies
 }

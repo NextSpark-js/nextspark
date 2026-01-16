@@ -44,23 +44,6 @@ export type CoreTeamRole = 'owner' | 'admin' | 'member' | 'viewer'
 export type TeamRole = CoreTeamRole | (string & {})
 
 /**
- * Granular permission action configuration
- * Used for defining fine-grained permissions per entity action
- */
-export interface EntityPermissionAction {
-  /** Action identifier (e.g., 'create', 'read', 'publish', 'archive') */
-  action: string
-  /** Human-readable label for the permission */
-  label: string
-  /** Detailed description of what this permission allows */
-  description?: string
-  /** Team roles that have this permission */
-  roles: TeamRole[]
-  /** Whether this is a dangerous/destructive action */
-  dangerous?: boolean
-}
-
-/**
  * Supported locales for translations
  */
 export type SupportedLocale = 'en' | 'es'
@@ -211,32 +194,7 @@ export interface EntityConfig {
   }
 
   // ==========================================
-  // 4. PERMISSIONS SYSTEM (OPTIONAL)
-  // ==========================================
-  /**
-   * Entity permissions - NOW OPTIONAL
-   * Permissions can be defined in entity.config.ts (legacy) or centralized in
-   * permissions.config.ts -> entities (recommended).
-   *
-   * When using centralized permissions, this property can be omitted.
-   * See: contents/themes/[theme]/permissions.config.ts
-   */
-  permissions?: {
-    /**
-     * Granular permission actions (PRIMARY SYSTEM)
-     * Defines which TeamRoles can perform each action on this entity.
-     * Standard actions: create, read, list, update, delete
-     */
-    actions: EntityPermissionAction[]
-    /**
-     * Custom actions specific to this entity
-     * Examples: publish, archive, assign, convert, complete
-     */
-    customActions?: EntityPermissionAction[]
-  }
-
-  // ==========================================
-  // 5. INTERNATIONALIZATION
+  // 4. INTERNATIONALIZATION
   // ==========================================
   i18n?: {
     /** Default fallback locale */
@@ -532,23 +490,6 @@ export interface FieldOption {
 }
 
 /**
- * Entity permissions configuration
- */
-export interface EntityPermissions {
-  /** Roles that can read/view the entity */
-  read: TeamRole[]
-
-  /** Roles that can create new records */
-  create: TeamRole[]
-
-  /** Roles that can update existing records */
-  update: TeamRole[]
-
-  /** Roles that can delete records */
-  delete: TeamRole[]
-}
-
-/**
  * Entity plan limits configuration
  */
 export interface EntityPlanLimits {
@@ -632,9 +573,6 @@ export interface ChildEntityDefinition {
 
   /** Has independent routes */
   hasOwnRoutes: boolean
-
-  /** Independent permissions (optional) */
-  permissions?: EntityPermissions
 
   /** Child-specific hooks */
   hooks?: ChildEntityHooks

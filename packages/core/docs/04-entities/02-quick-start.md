@@ -187,14 +187,10 @@ export const productEntityConfig: EntityConfig = {
   },
   
   // ==========================================
-  // 4. PERMISSIONS SYSTEM
+  // 4. PERMISSIONS SYSTEM (centralized)
   // ==========================================
-  permissions: {
-    read: ['admin', 'colaborator', 'member'],
-    create: ['admin', 'colaborator', 'member'],
-    update: ['admin', 'colaborator', 'member'],
-    delete: ['admin', 'colaborator']
-  },
+  // Los permisos se definen en config/permissions.config.ts
+  // Ver: permissions.config.ts → entities.products
   
   // ==========================================
   // 5. INTERNATIONALIZATION
@@ -715,14 +711,19 @@ Edita `products.fields.ts` y agrega nuevos campos:
 
 ### Cambiar permisos
 
-Edita `products.config.ts`:
+Edita `config/permissions.config.ts` (no el archivo de la entidad):
 
 ```typescript
-permissions: {
-  read: ['admin', 'colaborator', 'member'],
-  create: ['admin', 'colaborator'],        // Solo admin y colaborator
-  update: ['admin'],                       // Solo admin puede editar
-  delete: ['admin']                        // Solo admin puede eliminar
+// config/permissions.config.ts
+export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
+  entities: {
+    products: [
+      { action: 'read', roles: ['owner', 'admin', 'member'] },
+      { action: 'create', roles: ['owner', 'admin'] },        // Solo owner y admin
+      { action: 'update', roles: ['owner', 'admin'] },        // Solo owner y admin pueden editar
+      { action: 'delete', roles: ['owner'], dangerous: true } // Solo owner puede eliminar
+    ]
+  }
 }
 ```
 

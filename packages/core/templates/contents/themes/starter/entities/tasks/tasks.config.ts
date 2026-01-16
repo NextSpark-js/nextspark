@@ -55,49 +55,8 @@ export const taskEntityConfig: EntityConfig = {
   // ==========================================
   // 4. PERMISSIONS SYSTEM
   // ==========================================
-  permissions: {
-    actions: [
-      {
-        action: 'create',
-        label: 'Create tasks',
-        description: 'Can create new tasks',
-        roles: ['owner', 'admin', 'member'],
-      },
-      {
-        action: 'read',
-        label: 'View tasks',
-        description: 'Can view task details',
-        roles: ['owner', 'admin', 'member'],
-      },
-      {
-        action: 'list',
-        label: 'List tasks',
-        description: 'Can see the tasks list',
-        roles: ['owner', 'admin', 'member'],
-      },
-      {
-        action: 'update',
-        label: 'Edit tasks',
-        description: 'Can modify task information',
-        roles: ['owner', 'admin', 'member'],
-      },
-      {
-        action: 'delete',
-        label: 'Delete tasks',
-        description: 'Can delete tasks',
-        roles: ['owner', 'admin'],
-        dangerous: true,
-      },
-    ],
-    customActions: [
-      {
-        action: 'assign',
-        label: 'Assign tasks',
-        description: 'Can assign tasks to team members',
-        roles: ['owner', 'admin'],
-      },
-    ],
-  },
+  // Permissions are now centralized in permissions.config.ts
+  // See: contents/themes/starter/config/permissions.config.ts -> entities.tasks
 
   // ==========================================
   // FIELDS (imported from separate file)

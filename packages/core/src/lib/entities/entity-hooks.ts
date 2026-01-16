@@ -283,14 +283,7 @@ export class EntityHookManager {
       icon: null,
       fields: [],
       features: { enabled: true },
-      permissions: {
-        actions: [
-          { action: 'read', label: 'Read', roles: [] },
-          { action: 'create', label: 'Create', roles: [] },
-          { action: 'update', label: 'Update', roles: [] },
-          { action: 'delete', label: 'Delete', roles: [], dangerous: true },
-        ],
-      },
+      // Permissions are defined centrally in permissions.config.ts
       planLimits: { free: {}, starter: {}, premium: {} },
       routes: { list: '', detail: '' },
       hooks: {},

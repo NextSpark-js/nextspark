@@ -49,25 +49,19 @@ export async function checkPermission(
   const teamRole = await getTeamMemberRole(userId, teamId)
 
   if (!teamRole) {
-    console.log(`[checkPermission] User ${userId} is not a member of team ${teamId}`)
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[checkPermission] User ${userId} is not a member of team ${teamId}`)
+    }
     return false // User is not a member of the team
   }
 
   // 2. Check permission in registry
   const hasPermission = permissionRegistry.hasPermission(teamRole as TeamRole, permission)
-  const permConfig = permissionRegistry.getPermissionConfig(permission)
-  const rolePerms = permissionRegistry.getRolePermissions(teamRole as TeamRole)
 
-  console.log(`[checkPermission] ============================================`)
-  console.log(`[checkPermission] User role: ${teamRole}, Permission: ${permission}`)
-  console.log(`[checkPermission] Has permission: ${hasPermission}`)
-  console.log(`[checkPermission] Registry initialized: ${permissionRegistry.isInitialized()}`)
-  console.log(`[checkPermission] Permission config exists: ${!!permConfig}`)
-  console.log(`[checkPermission] Role ${teamRole} has ${rolePerms.length} permissions`)
-  if (permConfig) {
-    console.log(`[checkPermission] Permission roles: ${JSON.stringify(permConfig.roles)}`)
+  // Debug logging only in development
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[checkPermission] Role: ${teamRole}, Perm: ${permission}, Has: ${hasPermission}`)
   }
-  console.log(`[checkPermission] ============================================`)
 
   return hasPermission
 }
