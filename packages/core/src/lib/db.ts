@@ -80,13 +80,33 @@ const pool = new Pool({
 
 /**
  * Validate userId format to prevent SQL injection in SET LOCAL commands
- * Requires userId to be a valid UUID format
+ * - Production: Requires valid UUID format (strict)
+ * - Development: Allows test IDs but still validates for dangerous characters
  * @internal
  */
 function validateUserId(userId: string): void {
-  // SEC-003: Validate UUID format before using in SET LOCAL
-  if (!isValidUUID(userId)) {
-    throw new Error('Invalid userId format - must be valid UUID');
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  // SEC-003: In production, strictly require UUID format
+  if (isProduction) {
+    if (!isValidUUID(userId)) {
+      throw new Error('Invalid userId format - must be valid UUID');
+    }
+    return;
+  }
+
+  // In development: Allow test IDs like "test-superadmin-001" but validate for injection
+  // Reject dangerous characters that could be used for SQL injection
+  if (userId.includes("'") || userId.includes('"') || userId.includes('\\') || userId.includes(';')) {
+    throw new Error('Invalid userId format: contains dangerous characters');
+  }
+  // Reject control characters and null bytes
+  if (/[\x00-\x1f]/.test(userId)) {
+    throw new Error('Invalid userId format: contains control characters');
+  }
+  // Reject excessively long values
+  if (userId.length > 255) {
+    throw new Error('Invalid userId format: too long');
   }
 }
 
