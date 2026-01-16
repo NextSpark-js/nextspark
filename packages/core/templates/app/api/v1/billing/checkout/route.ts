@@ -114,7 +114,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     })
   } catch (error) {
     console.error('[checkout] Error creating checkout session:', error)
-    return NextNextResponse.json(
+    return NextResponse.json(
       {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to create checkout session'
@@ -122,4 +122,4 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
       { status: 500 }
     )
   }
-}, 'strict');
+}, 'write');

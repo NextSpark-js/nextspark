@@ -175,7 +175,9 @@ export async function checkRateLimit(
   const limiter = limiterMap[type]
 
   // If no limiter (Redis not configured or modules not available), allow all requests
+  // Log warning to alert operators that rate limiting is disabled
   if (!limiter) {
+    console.warn('[RateLimit] FALLBACK MODE: Rate limiting disabled - Redis unavailable. Identifier:', identifier, 'Tier:', type)
     return {
       success: true,
       remaining: 100,

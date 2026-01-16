@@ -343,10 +343,34 @@ function getClientIp(request: NextRequest): string {
 }
 
 /**
+ * Extract user identifier from request headers if available.
+ * Checks for API key header which indicates an authenticated API request.
+ * This allows for user-based rate limiting when authenticated.
+ */
+function getUserIdentifier(request: NextRequest): string | null {
+  // Check for API key - if present, use it as user identifier
+  // This provides user-based rate limiting for API key authenticated requests
+  const apiKey = request.headers.get('x-api-key');
+  if (apiKey) {
+    // Use a hash of the API key (first 16 chars) to avoid exposing full key in logs
+    return `apikey:${apiKey.substring(0, 16)}`;
+  }
+
+  // For session-based auth, we can't easily extract user ID without async auth check
+  // The handler itself will perform auth, so we fall back to IP-based limiting here
+  return null;
+}
+
+/**
  * Higher-Order Component that applies rate limiting to API route handlers.
  *
- * This HOC wraps a Next.js route handler and applies IP-based rate limiting
- * using the distributed rate limiting system (Redis when configured, in-memory fallback).
+ * This HOC wraps a Next.js route handler and applies rate limiting using the
+ * distributed rate limiting system (Redis when configured, in-memory fallback).
+ *
+ * Rate limiting strategy:
+ * - Uses user identifier (API key) when available for more accurate per-user limiting
+ * - Falls back to IP-based limiting for unauthenticated or session-based requests
+ * - Rate limits are applied per-tier across ALL endpoints (not per-endpoint)
  *
  * Rate limit tiers:
  * - 'auth': 5 requests per 15 minutes (for authentication endpoints)
@@ -376,13 +400,16 @@ export function withRateLimitTier<T extends unknown[]>(
   tier: RateLimitTier = 'api'
 ) {
   return async (request: NextRequest, ...args: T): Promise<NextResponse> => {
-    // Get client identifier (IP address)
+    // Get client identifier - prefer user-based (API key) over IP-based
+    const userIdentifier = getUserIdentifier(request);
     const clientIp = getClientIp(request);
-    const endpoint = request.nextUrl.pathname;
 
-    // Create a unique identifier combining tier, IP, and optionally endpoint
-    // Using tier in the identifier allows different tiers to have separate counters
-    const identifier = `${tier}:${clientIp}:${endpoint}`;
+    // Create identifier: use user-based when available, otherwise IP-based
+    // Rate limits apply per-tier across all endpoints (not per-endpoint)
+    // This prevents attackers from hitting multiple endpoints to bypass limits
+    const identifier = userIdentifier
+      ? `${tier}:${userIdentifier}`
+      : `${tier}:ip:${clientIp}`;
 
     // Check rate limit using distributed system
     const rateLimitResult = await checkDistributedRateLimit(identifier, tier);

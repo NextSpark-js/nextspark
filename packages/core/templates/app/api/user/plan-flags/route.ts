@@ -120,14 +120,6 @@ export const PATCH = withRateLimitTier(async (request: NextRequest) => {
     // Security check: users can only update their own data unless admin
     if (userId !== session.user.id && !['admin', 'superadmin'].includes(userRole)) {
       return NextResponse.json(
-        { error: 'Permission denied' },
-        { status: 403 }
-      )
-    }
-
-    // Additional security: only admins can update other users' data
-    if (userId !== session.user.id && !['admin', 'superadmin'].includes(userRole)) {
-      return NextResponse.json(
         { error: 'Only admins can update other users data' },
         { status: 403 }
       )
