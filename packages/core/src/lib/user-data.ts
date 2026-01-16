@@ -5,7 +5,8 @@
  * via users_metas table. Replaces hardcoded values throughout the system.
  */
 
-import { Pool } from 'pg'
+import type { PoolClient } from 'pg'
+import { getPool } from './db'
 import type { PlanType, UserFlag } from './entities/types'
 import type { SessionUser } from './auth'
 
@@ -32,15 +33,6 @@ export interface UserPlanData {
   cached: boolean
 }
 
-/**
- * Get database pool for user data queries
- */
-function getDatabasePool(): Pool {
-  return new Pool({
-    connectionString: process.env.DATABASE_URL!,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  })
-}
 
 /**
  * Get user plan and flags from database
@@ -57,9 +49,11 @@ export async function getUserPlanAndFlags(userId: string): Promise<UserPlanData>
     }
   }
 
+  let client: PoolClient | null = null
+
   try {
-    const pool = getDatabasePool()
-    
+    client = await getPool().connect()
+
     // Query users_metas for plan and flags
     const query = `
       SELECT
@@ -69,12 +63,12 @@ export async function getUserPlanAndFlags(userId: string): Promise<UserPlanData>
       WHERE "userId" = $1
       AND "metaKey" IN ('user_plan', 'user_flags')
     `
-    
-    const result = await pool.query(query, [userId])
-    
+
+    const result = await client.query(query, [userId])
+
     let plan: PlanType = DEFAULT_PLAN
     let flags: UserFlag[] = DEFAULT_FLAGS
-    
+
     // Process results
     for (const row of result.rows) {
       if (row.metaKey === 'user_plan') {
@@ -86,38 +80,41 @@ export async function getUserPlanAndFlags(userId: string): Promise<UserPlanData>
         const flagsValue = row.metaValue
         if (Array.isArray(flagsValue)) {
           // Validate flags array
-          const validFlags = flagsValue.filter(flag => 
-            typeof flag === 'string' && 
+          const validFlags = flagsValue.filter(flag =>
+            typeof flag === 'string' &&
             ['beta_tester', 'early_adopter', 'limited_access', 'vip', 'restricted', 'experimental'].includes(flag)
           )
           flags = validFlags as UserFlag[]
         }
       }
     }
-    
+
     // Cache the result
     userDataCache.set(userId, {
       plan,
       flags,
       timestamp: Date.now()
     })
-    
-    await pool.end()
-    
+
     return {
       plan,
       flags,
       cached: false
     }
-    
+
   } catch (error) {
     console.error('Failed to get user plan and flags:', error)
-    
+
     // Return defaults on error
     return {
       plan: DEFAULT_PLAN,
       flags: DEFAULT_FLAGS,
       cached: false
+    }
+  } finally {
+    // Release client back to pool (NEVER call pool.end())
+    if (client) {
+      client.release()
     }
   }
 }
@@ -126,9 +123,11 @@ export async function getUserPlanAndFlags(userId: string): Promise<UserPlanData>
  * Update user plan in database
  */
 export async function updateUserPlan(userId: string, plan: PlanType): Promise<boolean> {
+  let client: PoolClient | null = null
+
   try {
-    const pool = getDatabasePool()
-    
+    client = await getPool().connect()
+
     const query = `
       INSERT INTO "users_metas" ("userId", "metaKey", "metaValue", "dataType", "updatedAt")
       VALUES ($1, 'user_plan', $2, 'string', CURRENT_TIMESTAMP)
@@ -137,18 +136,21 @@ export async function updateUserPlan(userId: string, plan: PlanType): Promise<bo
         "metaValue" = EXCLUDED."metaValue",
         "updatedAt" = CURRENT_TIMESTAMP
     `
-    
-    await pool.query(query, [userId, plan])
-    await pool.end()
-    
+
+    await client.query(query, [userId, plan])
+
     // Clear cache for this user
     userDataCache.delete(userId)
-    
+
     return true
-    
+
   } catch (error) {
     console.error('Failed to update user plan:', error)
     return false
+  } finally {
+    if (client) {
+      client.release()
+    }
   }
 }
 
@@ -156,9 +158,11 @@ export async function updateUserPlan(userId: string, plan: PlanType): Promise<bo
  * Update user flags in database
  */
 export async function updateUserFlags(userId: string, flags: UserFlag[]): Promise<boolean> {
+  let client: PoolClient | null = null
+
   try {
-    const pool = getDatabasePool()
-    
+    client = await getPool().connect()
+
     const query = `
       INSERT INTO "users_metas" ("userId", "metaKey", "metaValue", "dataType", "updatedAt")
       VALUES ($1, 'user_flags', $2, 'json', CURRENT_TIMESTAMP)
@@ -167,18 +171,21 @@ export async function updateUserFlags(userId: string, flags: UserFlag[]): Promis
         "metaValue" = EXCLUDED."metaValue",
         "updatedAt" = CURRENT_TIMESTAMP
     `
-    
-    await pool.query(query, [userId, JSON.stringify(flags)])
-    await pool.end()
-    
+
+    await client.query(query, [userId, JSON.stringify(flags)])
+
     // Clear cache for this user
     userDataCache.delete(userId)
-    
+
     return true
-    
+
   } catch (error) {
     console.error('Failed to update user flags:', error)
     return false
+  } finally {
+    if (client) {
+      client.release()
+    }
   }
 }
 

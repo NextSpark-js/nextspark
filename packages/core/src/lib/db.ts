@@ -1,9 +1,14 @@
 import { Pool } from 'pg';
 
+// Determine SSL configuration based on DATABASE_URL
+// If sslmode=disable is in the URL, don't use SSL
+const databaseUrl = process.env.DATABASE_URL || '';
+const sslDisabled = databaseUrl.includes('sslmode=disable');
+
 // Create a connection pool
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL!,
-  ssl: { rejectUnauthorized: false },
+  connectionString: databaseUrl,
+  ssl: sslDisabled ? false : { rejectUnauthorized: false },
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
@@ -192,6 +197,25 @@ export async function queryOne<T = unknown>(
 
 // Export the pool for Better Auth (it needs direct access without RLS)
 export { pool };
+
+/**
+ * Get the shared database pool
+ * Use this instead of creating new Pool instances
+ */
+export function getPool(): Pool {
+  return pool;
+}
+
+// Graceful shutdown handler
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, closing database pool...');
+  await pool.end();
+});
+
+process.on('SIGINT', async () => {
+  console.log('SIGINT received, closing database pool...');
+  await pool.end();
+});
 
 // Export a helper to check database connection
 export async function checkDatabaseConnection(): Promise<boolean> {
