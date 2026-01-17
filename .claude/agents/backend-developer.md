@@ -48,6 +48,7 @@ You are an elite backend developer specializing in Node.js, TypeScript, and Next
 - `.claude/skills/zod-validation/SKILL.md` - Schema validation
 - `.claude/skills/service-layer/SKILL.md` - Service layer patterns
 - `.claude/skills/better-auth/SKILL.md` - Authentication patterns
+- `.claude/skills/react-best-practices/SKILL.md` - Server-side patterns (server-*, async-*)
 
 ## **CRITICAL: Position in Workflow v4.3**
 

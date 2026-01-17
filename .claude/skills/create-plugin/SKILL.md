@@ -318,30 +318,21 @@ Each entity requires 4 files:
 | Skipping sandbox registration | Can't test plugin | Add to plugin-sandbox theme |
 | Skipping registry rebuild | Plugin won't be recognized | Run `node core/scripts/build/registry.mjs` |
 | Modifying core files | Architecture violation | Only work in `contents/plugins/` |
-| Implementing features | Scope creep | Hand off to dev-plugin agent |
 
 ---
 
-## Handoff Template
+## Next Steps After Creation
 
-After creating plugin, document:
+After scaffolding the plugin, continue with implementation:
 
-```markdown
-## Plugin Created: <plugin-name>
+1. **Implement core business logic** in `lib/`
+2. **Create API endpoints** if needed
+3. **Build UI components** in `components/`
+4. **Add entities** if the plugin manages data
+5. **Run verification checklist** above
 
-### Completed Setup:
-- Plugin scaffolded from preset
-- Complexity: service
-- plugin.config.ts configured with lifecycle hooks
-- TypeScript types defined
-- Plugin registered in plugin-sandbox theme
-
-### Ready for Development:
-- dev-plugin: Implement core business logic
-- dev-plugin: Create additional API endpoints
-- dev-plugin: Build UI components
-
-### Environment Setup:
+### Environment Setup
+```bash
 NEXT_PUBLIC_ACTIVE_THEME='plugin-sandbox'
 ```
 
