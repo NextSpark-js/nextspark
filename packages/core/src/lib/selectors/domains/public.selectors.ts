@@ -6,6 +6,7 @@
  * - Footer
  * - Public pages
  * - Blog
+ * - Docs
  */
 
 export const PUBLIC_SELECTORS = {
@@ -27,6 +28,12 @@ export const PUBLIC_SELECTORS = {
   blog: {
     listContainer: 'blog-list',
     postCard: 'blog-post-{slug}',
+  },
+  docs: {
+    mainContent: 'public-docs-main-content',
+    sectionCard: 'public-docs-section-{slug}',
+    pageLink: 'public-docs-link-{slug}',
+    pageDetail: 'public-docs-page',
   },
 } as const
 
