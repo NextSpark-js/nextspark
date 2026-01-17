@@ -3,13 +3,16 @@
  *
  * Integrates pattern usage tracking with the entity hook system.
  * Automatically syncs pattern usages when entities with blocks are created/updated/deleted.
+ * Also handles ISR cache invalidation when patterns are updated.
  *
  * @module PatternUsageHooks
  */
 
+import { revalidatePath } from 'next/cache'
 import { getGlobalHooks } from '../plugins/hook-system'
 import { PatternUsageService } from '../services/pattern-usage.service'
 import { entityRegistry } from './registry'
+import { getEntityBasePath } from './schema-generator'
 import type { EntityHookData } from './entity-hooks'
 
 /**
@@ -38,6 +41,101 @@ function extractBlocks(data: Record<string, unknown> | undefined): unknown[] {
   const blocks = data.blocks
   if (!Array.isArray(blocks)) return []
   return blocks
+}
+
+/**
+ * Build public URL for an entity
+ *
+ * Uses entity's basePath configuration to construct the public URL.
+ * Returns null if entity has no public page (access.public === false).
+ *
+ * @param entityType - Entity slug (e.g., 'pages', 'posts')
+ * @param entitySlug - Slug of the specific entity instance
+ * @returns Public URL or null if no public page
+ *
+ * @example
+ * // Pages with basePath '/'
+ * getEntityPublicUrl('pages', 'about') // '/about'
+ *
+ * // Posts with basePath '/blog'
+ * getEntityPublicUrl('posts', 'hello-world') // '/blog/hello-world'
+ */
+function getEntityPublicUrl(entityType: string, entitySlug: string | undefined): string | null {
+  if (!entitySlug) return null
+
+  try {
+    const entityConfig = entityRegistry.get(entityType)
+    if (!entityConfig) return null
+
+    // Check if entity has public pages
+    if (entityConfig.access?.public === false) return null
+
+    // Get base path (e.g., '/' for pages, '/blog' for posts)
+    const basePath = getEntityBasePath(entityConfig)
+
+    // Build full public URL
+    if (basePath === '/') {
+      return `/${entitySlug}`
+    } else if (basePath) {
+      return `${basePath}/${entitySlug}`
+    }
+
+    // Fallback: use entity slug as path prefix
+    return `/${entityType}/${entitySlug}`
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Invalidate ISR cache for all pages using a pattern
+ *
+ * Queries pattern_usages to find all entities using the pattern,
+ * then calls revalidatePath for each entity's public URL.
+ *
+ * @param patternId - ID of the updated pattern
+ * @param userId - User ID for RLS queries
+ */
+async function invalidateDependentPagesCache(patternId: string, userId: string): Promise<void> {
+  try {
+    // Get all entities using this pattern
+    const { usages, total } = await PatternUsageService.getUsagesWithEntityInfo(
+      patternId,
+      userId,
+      { limit: 1000 } // High limit to get all usages
+    )
+
+    if (total === 0) {
+      console.log(`[PatternUsageHooks] Pattern ${patternId} has no usages, no cache invalidation needed`)
+      return
+    }
+
+    // Track invalidated paths for logging
+    const invalidatedPaths: string[] = []
+
+    // Invalidate cache for each entity's public URL
+    for (const usage of usages) {
+      const publicUrl = getEntityPublicUrl(usage.entityType, usage.entitySlug)
+
+      if (publicUrl) {
+        try {
+          revalidatePath(publicUrl)
+          invalidatedPaths.push(publicUrl)
+        } catch (error) {
+          console.warn(`[PatternUsageHooks] Failed to revalidate ${publicUrl}:`, error)
+        }
+      }
+    }
+
+    console.log(
+      `[PatternUsageHooks] Pattern ${patternId} updated. ` +
+      `Invalidated ISR cache for ${invalidatedPaths.length}/${total} pages: ` +
+      `${invalidatedPaths.slice(0, 5).join(', ')}${invalidatedPaths.length > 5 ? '...' : ''}`
+    )
+  } catch (error) {
+    // Log but don't fail - cache invalidation is best-effort
+    console.error(`[PatternUsageHooks] Error invalidating cache for pattern ${patternId}:`, error)
+  }
 }
 
 /**
@@ -129,7 +227,20 @@ export function initPatternUsageHooks(): void {
     )
   })
 
-  console.log('[PatternUsageHooks] Initialized pattern usage tracking hooks')
+  // Hook: entity.patterns.updated - Invalidate ISR cache for pages using the updated pattern
+  // This ensures that when a pattern's blocks are modified, all pages using that pattern
+  // are immediately refreshed instead of waiting for ISR expiration (1 hour default)
+  hooks.addAction('entity.patterns.updated', async (hookData: unknown) => {
+    const data = hookData as EntityHookData
+    const { id, userId } = data
+
+    if (!id) return
+
+    // Invalidate cache for all pages using this pattern
+    await invalidateDependentPagesCache(id, userId || 'system')
+  })
+
+  console.log('[PatternUsageHooks] Initialized pattern usage tracking and cache invalidation hooks')
 }
 
 /**
