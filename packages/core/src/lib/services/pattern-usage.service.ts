@@ -363,4 +363,29 @@ export class PatternUsageService {
     )
     return results.map(r => r.patternId)
   }
+
+  /**
+   * Validate which pattern IDs exist in the database
+   *
+   * Returns only the IDs that exist and are accessible.
+   * Used for lazy cleanup - filtering orphaned pattern references on entity save.
+   *
+   * @param patternIds - Array of pattern IDs to check
+   * @param userId - User ID for RLS
+   * @returns Set of pattern IDs that exist
+   */
+  static async getExistingPatternIds(
+    patternIds: string[],
+    userId: string
+  ): Promise<Set<string>> {
+    if (!patternIds.length) return new Set()
+
+    const result = await queryWithRLS<{ id: string }>(
+      `SELECT id FROM patterns WHERE id = ANY($1::text[])`,
+      [patternIds],
+      userId
+    )
+
+    return new Set(result.map(r => r.id))
+  }
 }

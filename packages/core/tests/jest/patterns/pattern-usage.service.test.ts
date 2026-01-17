@@ -384,4 +384,64 @@ describe('PatternUsageService', () => {
       expect(result).toEqual([])
     })
   })
+
+  // ===========================================
+  // getExistingPatternIds (Lazy Cleanup)
+  // ===========================================
+  describe('getExistingPatternIds', () => {
+    it('returns empty set when given empty input', async () => {
+      const result = await PatternUsageService.getExistingPatternIds([], mockUserId)
+
+      expect(result).toBeInstanceOf(Set)
+      expect(result.size).toBe(0)
+      expect(mockQueryWithRLS).not.toHaveBeenCalled()
+    })
+
+    it('returns set of existing pattern IDs', async () => {
+      const patternIds = ['pat-001', 'pat-002', 'pat-003']
+      mockQueryWithRLS.mockResolvedValue([
+        { id: 'pat-001' },
+        { id: 'pat-003' }
+      ])
+
+      const result = await PatternUsageService.getExistingPatternIds(patternIds, mockUserId)
+
+      expect(result).toBeInstanceOf(Set)
+      expect(result.size).toBe(2)
+      expect(result.has('pat-001')).toBe(true)
+      expect(result.has('pat-002')).toBe(false)
+      expect(result.has('pat-003')).toBe(true)
+      expect(mockQueryWithRLS).toHaveBeenCalledWith(
+        expect.stringContaining('SELECT id FROM patterns'),
+        [patternIds],
+        mockUserId
+      )
+    })
+
+    it('returns empty set when no patterns exist', async () => {
+      mockQueryWithRLS.mockResolvedValue([])
+
+      const result = await PatternUsageService.getExistingPatternIds(
+        ['pat-deleted-001'],
+        mockUserId
+      )
+
+      expect(result).toBeInstanceOf(Set)
+      expect(result.size).toBe(0)
+    })
+
+    it('queries using ANY() for efficient bulk lookup', async () => {
+      const patternIds = ['pat-001', 'pat-002']
+      mockQueryWithRLS.mockResolvedValue([{ id: 'pat-001' }])
+
+      await PatternUsageService.getExistingPatternIds(patternIds, mockUserId)
+
+      // Should use ANY() for array parameter
+      expect(mockQueryWithRLS).toHaveBeenCalledWith(
+        expect.stringContaining('ANY($1::text[])'),
+        [patternIds],
+        mockUserId
+      )
+    })
+  })
 })

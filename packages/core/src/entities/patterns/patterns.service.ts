@@ -657,8 +657,10 @@ export class PatternsService {
   /**
    * Delete a pattern
    *
-   * WARNING: This does not check for pattern references in pages.
-   * Consider implementing soft delete or reference counting before deletion.
+   * Uses "Lazy Cleanup" strategy: patterns can be deleted even if in use.
+   * - ON DELETE CASCADE cleans up pattern_usages
+   * - Orphaned PatternReferences in entities are filtered out on next save
+   * - Public rendering gracefully skips missing patterns
    *
    * @param id - Pattern ID
    * @param userId - Current user ID for RLS
@@ -678,6 +680,21 @@ export class PatternsService {
 
       if (!userId?.trim()) {
         throw new Error('User ID is required')
+      }
+
+      // Informative: Log usage count for auditing
+      // Uses dynamic import to avoid circular dependency
+      try {
+        const { PatternUsageService } = await import('../../lib/services/pattern-usage.service')
+        const usageCount = await PatternUsageService.getUsageCount(id, userId)
+        if (usageCount > 0) {
+          console.info(
+            `[PatternsService.delete] Deleting pattern ${id} with ${usageCount} active usages. ` +
+            `References will be cleaned up on next entity save.`
+          )
+        }
+      } catch {
+        // Don't fail delete if usage count check fails
       }
 
       const result = await mutateWithRLS<DbPattern>(
