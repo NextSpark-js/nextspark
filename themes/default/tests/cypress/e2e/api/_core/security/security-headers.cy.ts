@@ -250,6 +250,45 @@ describe('Security Headers', {
         expect(csp).to.include("frame-ancestors 'none'")
       })
     })
+
+    it('SEC_HDR_035: CSP should block object/plugin loading', () => {
+      allure.severity('normal')
+      cy.request({
+        method: 'GET',
+        url: `${BASE_URL}/`,
+        failOnStatusCode: false
+      }).then((response) => {
+        const csp = response.headers['content-security-policy']
+        expect(csp).to.include("object-src 'none'")
+      })
+    })
+
+    it('SEC_HDR_036: CSP should restrict base-uri to self', () => {
+      allure.severity('normal')
+      cy.request({
+        method: 'GET',
+        url: `${BASE_URL}/`,
+        failOnStatusCode: false
+      }).then((response) => {
+        const csp = response.headers['content-security-policy']
+        expect(csp).to.include("base-uri 'self'")
+      })
+    })
+
+    it('SEC_HDR_037: CSP img-src should allow specific trusted domains', () => {
+      allure.severity('normal')
+      cy.request({
+        method: 'GET',
+        url: `${BASE_URL}/`,
+        failOnStatusCode: false
+      }).then((response) => {
+        const csp = response.headers['content-security-policy']
+        // Should include specific domains, not https: wildcard
+        expect(csp).to.include('img-src')
+        expect(csp).to.include('lh3.googleusercontent.com')
+        expect(csp).to.include('images.unsplash.com')
+      })
+    })
   })
 
   // ============================================

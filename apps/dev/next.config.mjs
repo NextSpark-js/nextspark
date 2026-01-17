@@ -81,6 +81,33 @@ const nextConfig = {
   async headers() {
     const isProduction = process.env.NODE_ENV === 'production';
 
+    // Allowed image domains (must match remotePatterns above)
+    const allowedImageDomains = [
+      'https://lh3.googleusercontent.com',
+      'https://*.public.blob.vercel-storage.com',
+      'https://images.unsplash.com',
+      'https://upload.wikimedia.org',
+      'https://i.pravatar.cc',
+    ].join(' ');
+
+    // CSP directives
+    // Note: 'unsafe-inline' for styles is required by many UI libraries including shadcn/ui
+    // Note: 'unsafe-eval' is required by Next.js in development for hot reload
+    const cspDirectives = [
+      "default-src 'self'",
+      // unsafe-inline/eval required for Next.js dev mode; consider nonce-based approach for stricter production CSP
+      `script-src 'self' 'unsafe-inline'${!isProduction ? " 'unsafe-eval'" : ''} https://js.stripe.com`,
+      "style-src 'self' 'unsafe-inline'",
+      `img-src 'self' data: blob: ${allowedImageDomains}`,
+      "font-src 'self' data:",
+      // wss: needed for Next.js hot reload in development
+      `connect-src 'self' https://api.stripe.com${!isProduction ? ' wss:' : ''}`,
+      "frame-src https://js.stripe.com https://hooks.stripe.com",
+      "frame-ancestors 'none'",
+      "object-src 'none'",
+      "base-uri 'self'",
+    ];
+
     // Security headers for all routes
     const securityHeaders = [
       {
@@ -91,6 +118,8 @@ const nextConfig = {
         key: 'X-Frame-Options',
         value: 'DENY'
       },
+      // X-XSS-Protection is deprecated but kept for legacy browser support
+      // Modern browsers use CSP instead
       {
         key: 'X-XSS-Protection',
         value: '1; mode=block'
@@ -105,16 +134,7 @@ const nextConfig = {
       },
       {
         key: 'Content-Security-Policy',
-        value: [
-          "default-src 'self'",
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com",
-          "style-src 'self' 'unsafe-inline'",
-          "img-src 'self' data: https: blob:",
-          "font-src 'self' data:",
-          "connect-src 'self' https://api.stripe.com wss:",
-          "frame-src https://js.stripe.com https://hooks.stripe.com",
-          "frame-ancestors 'none'",
-        ].join('; ')
+        value: cspDirectives.join('; ')
       },
     ];
 

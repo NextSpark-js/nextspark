@@ -494,48 +494,49 @@ NextSpark includes comprehensive security headers configured in `next.config.mjs
 
 ```typescript
 // next.config.mjs - headers() function
+const isProduction = process.env.NODE_ENV === 'production';
+
+// Allowed image domains (must match remotePatterns)
+const allowedImageDomains = [
+  'https://lh3.googleusercontent.com',
+  'https://*.public.blob.vercel-storage.com',
+  'https://images.unsplash.com',
+  'https://upload.wikimedia.org',
+  'https://i.pravatar.cc',
+].join(' ');
+
+// CSP directives - environment-aware
+const cspDirectives = [
+  "default-src 'self'",
+  // unsafe-eval only in development (Next.js hot reload)
+  `script-src 'self' 'unsafe-inline'${!isProduction ? " 'unsafe-eval'" : ''} https://js.stripe.com`,
+  "style-src 'self' 'unsafe-inline'",
+  `img-src 'self' data: blob: ${allowedImageDomains}`,
+  "font-src 'self' data:",
+  // wss: only in development (hot reload)
+  `connect-src 'self' https://api.stripe.com${!isProduction ? ' wss:' : ''}`,
+  "frame-src https://js.stripe.com https://hooks.stripe.com",
+  "frame-ancestors 'none'",
+  "object-src 'none'",
+  "base-uri 'self'",
+];
+
 const securityHeaders = [
-  {
-    key: 'X-Content-Type-Options',
-    value: 'nosniff'
-  },
-  {
-    key: 'X-Frame-Options',
-    value: 'DENY'
-  },
-  {
-    key: 'X-XSS-Protection',
-    value: '1; mode=block'
-  },
-  {
-    key: 'Referrer-Policy',
-    value: 'strict-origin-when-cross-origin'
-  },
-  {
-    key: 'Permissions-Policy',
-    value: 'camera=(), microphone=(), geolocation=()'
-  },
-  {
-    key: 'Content-Security-Policy',
-    value: [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com",
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: https: blob:",
-      "font-src 'self' data:",
-      "connect-src 'self' https://api.stripe.com wss:",
-      "frame-src https://js.stripe.com https://hooks.stripe.com",
-      "frame-ancestors 'none'",
-    ].join('; ')
-  },
-]
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'X-Frame-Options', value: 'DENY' },
+  // X-XSS-Protection deprecated but kept for legacy browsers
+  { key: 'X-XSS-Protection', value: '1; mode=block' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+  { key: 'Content-Security-Policy', value: cspDirectives.join('; ') },
+];
 
 // HSTS only in production
-if (process.env.NODE_ENV === 'production') {
+if (isProduction) {
   securityHeaders.push({
     key: 'Strict-Transport-Security',
     value: 'max-age=31536000; includeSubDomains'
-  })
+  });
 }
 ```
 
@@ -553,22 +554,42 @@ if (process.env.NODE_ENV === 'production') {
 
 ### Content Security Policy (CSP)
 
-The CSP is configured to allow:
+The CSP is configured with environment-aware settings:
 
+**Production-specific hardening:**
+- `unsafe-eval` is **removed** from script-src in production
+- WebSocket wildcard (`wss:`) is **removed** in production
+- Only specific image domains are allowed (no `https:` wildcard)
+
+**Allowed resources:**
 - **Self-hosted resources**: Scripts, styles, images from your domain
 - **Stripe integration**: Scripts and iframes from `js.stripe.com`, API calls to `api.stripe.com`
-- **WebSocket connections**: For real-time features
-- **Inline styles**: Required for many UI libraries
+- **Specific image domains**: Google, Unsplash, Vercel Blob, Wikimedia, Pravatar
+- **Inline styles**: Required by shadcn/ui and many UI libraries
 - **Data URIs**: For images and fonts
+
+**Security directives:**
+- `object-src 'none'`: Blocks Flash, Java, and other plugins
+- `base-uri 'self'`: Prevents base tag injection attacks
+- `frame-ancestors 'none'`: Prevents clickjacking
 
 #### Customizing CSP
 
 If you integrate additional third-party services, update the CSP in your `next.config.mjs`:
 
 ```typescript
-// Example: Adding analytics
-"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com",
-"connect-src 'self' https://api.stripe.com https://www.google-analytics.com wss:",
+// Example: Adding Google Analytics
+const cspDirectives = [
+  // ... existing directives
+  `script-src 'self' 'unsafe-inline'${!isProduction ? " 'unsafe-eval'" : ''} https://js.stripe.com https://www.googletagmanager.com`,
+  `connect-src 'self' https://api.stripe.com https://www.google-analytics.com${!isProduction ? ' wss:' : ''}`,
+];
+
+// Example: Adding a new image domain
+const allowedImageDomains = [
+  // ... existing domains
+  'https://cdn.yourservice.com',
+].join(' ');
 ```
 
 ### Testing Security Headers
