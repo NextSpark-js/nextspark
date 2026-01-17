@@ -488,18 +488,24 @@ const apiLimiter = rateLimit({
 
 ## Security Headers
 
-### Recommended Headers
+NextSpark includes comprehensive security headers configured in `next.config.mjs`. These headers are automatically applied to all routes.
+
+### Default Security Headers
 
 ```typescript
-// next.config.ts
+// next.config.mjs - headers() function
 const securityHeaders = [
-  {
-    key: 'X-Frame-Options',
-    value: 'SAMEORIGIN'
-  },
   {
     key: 'X-Content-Type-Options',
     value: 'nosniff'
+  },
+  {
+    key: 'X-Frame-Options',
+    value: 'DENY'
+  },
+  {
+    key: 'X-XSS-Protection',
+    value: '1; mode=block'
   },
   {
     key: 'Referrer-Policy',
@@ -508,9 +514,72 @@ const securityHeaders = [
   {
     key: 'Permissions-Policy',
     value: 'camera=(), microphone=(), geolocation=()'
-  }
+  },
+  {
+    key: 'Content-Security-Policy',
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: https: blob:",
+      "font-src 'self' data:",
+      "connect-src 'self' https://api.stripe.com wss:",
+      "frame-src https://js.stripe.com https://hooks.stripe.com",
+      "frame-ancestors 'none'",
+    ].join('; ')
+  },
 ]
+
+// HSTS only in production
+if (process.env.NODE_ENV === 'production') {
+  securityHeaders.push({
+    key: 'Strict-Transport-Security',
+    value: 'max-age=31536000; includeSubDomains'
+  })
+}
 ```
+
+### Header Purposes
+
+| Header | Purpose | Security Benefit |
+|--------|---------|------------------|
+| `X-Content-Type-Options: nosniff` | Prevent MIME sniffing | Stops browsers from interpreting files as different content types |
+| `X-Frame-Options: DENY` | Prevent clickjacking | Blocks the site from being embedded in iframes |
+| `X-XSS-Protection: 1; mode=block` | Enable XSS filter | Legacy browser protection against reflected XSS |
+| `Referrer-Policy` | Control referrer info | Limits data sent in Referer header |
+| `Permissions-Policy` | Restrict browser features | Disables camera, microphone, geolocation |
+| `Content-Security-Policy` | Control resource loading | Prevents XSS, data injection attacks |
+| `Strict-Transport-Security` | Enforce HTTPS | Forces HTTPS connections (production only) |
+
+### Content Security Policy (CSP)
+
+The CSP is configured to allow:
+
+- **Self-hosted resources**: Scripts, styles, images from your domain
+- **Stripe integration**: Scripts and iframes from `js.stripe.com`, API calls to `api.stripe.com`
+- **WebSocket connections**: For real-time features
+- **Inline styles**: Required for many UI libraries
+- **Data URIs**: For images and fonts
+
+#### Customizing CSP
+
+If you integrate additional third-party services, update the CSP in your `next.config.mjs`:
+
+```typescript
+// Example: Adding analytics
+"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com",
+"connect-src 'self' https://api.stripe.com https://www.google-analytics.com wss:",
+```
+
+### Testing Security Headers
+
+Run the security headers tests:
+
+```bash
+pnpm cy:run -- --spec "**/security-headers.cy.ts"
+```
+
+Or verify manually in browser DevTools (Network tab > Response Headers).
 
 ## Audit Logging
 
