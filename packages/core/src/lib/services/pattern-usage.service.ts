@@ -9,6 +9,7 @@
 
 import { queryWithRLS, mutateWithRLS, queryOneWithRLS } from '../db'
 import { extractPatternIds } from '../blocks/pattern-resolver'
+import { entityRegistry } from '../entities/registry'
 import type { BlockInstance } from '../../types/blocks'
 import type { PatternReference } from '../../types/pattern-reference'
 
@@ -288,7 +289,19 @@ export class PatternUsageService {
 
     for (const [entityType, typeUsages] of usagesByType) {
       const entityIds = typeUsages.map(u => u.entityId)
-      const tableName = entityType // Assumes table name matches entity type (pages, posts, etc.)
+
+      // SECURITY: Validate entityType exists in registry before using as table name
+      // This prevents SQL injection through malicious entityType values
+      const entityConfig = entityRegistry.get(entityType)
+      if (!entityConfig) {
+        console.warn(`[PatternUsageService] Unknown entity type: ${entityType}, skipping entity info lookup`)
+        // Add empty map so we can still return the usage (without enriched info)
+        entityInfoMap.set(entityType, new Map())
+        continue
+      }
+
+      // Use the validated slug from config as table name (guaranteed safe)
+      const tableName = entityConfig.slug
 
       try {
         // Try to fetch common fields (title, slug, status, updatedAt)

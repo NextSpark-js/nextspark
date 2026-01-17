@@ -24,6 +24,21 @@ jest.mock('@/core/lib/blocks/pattern-resolver', () => ({
   extractPatternIds: jest.fn(),
 }))
 
+// Mock entity registry
+jest.mock('@/core/lib/entities/registry', () => ({
+  entityRegistry: {
+    get: jest.fn((entityType: string) => {
+      // Return valid config for known entity types
+      const knownEntities: Record<string, { slug: string }> = {
+        pages: { slug: 'pages' },
+        posts: { slug: 'posts' },
+        patterns: { slug: 'patterns' },
+      }
+      return knownEntities[entityType] || null
+    }),
+  },
+}))
+
 const mockQueryWithRLS = queryWithRLS as jest.MockedFunction<typeof queryWithRLS>
 const mockMutateWithRLS = mutateWithRLS as jest.MockedFunction<typeof mutateWithRLS>
 const mockQueryOneWithRLS = queryOneWithRLS as jest.MockedFunction<typeof queryOneWithRLS>
@@ -442,6 +457,135 @@ describe('PatternUsageService', () => {
         [patternIds],
         mockUserId
       )
+    })
+  })
+
+  // ===========================================
+  // SECURITY TESTS - SQL Injection Prevention
+  // ===========================================
+  describe('getUsagesWithEntityInfo - Security', () => {
+    it('should skip unknown entity types without SQL injection risk', async () => {
+      // Setup: mock usage with unknown (potentially malicious) entity type
+      const maliciousEntityType = 'pages"; DROP TABLE users; --'
+      const maliciousUsage = {
+        id: 'pu-malicious',
+        patternId: mockPatternId,
+        entityType: maliciousEntityType,
+        entityId: 'entity-001',
+        teamId: mockTeamId,
+        createdAt: new Date().toISOString()
+      }
+
+      // Mock count query
+      mockQueryOneWithRLS.mockResolvedValueOnce({ count: '1' })
+
+      // Mock counts by type
+      mockQueryWithRLS
+        .mockResolvedValueOnce([{ entityType: maliciousEntityType, count: '1' }]) // getUsageCounts
+        .mockResolvedValueOnce([maliciousUsage]) // usages query
+
+      // Note: entityRegistry.get will return null for unknown types
+      // so no additional entity info query should be made
+
+      const result = await PatternUsageService.getUsagesWithEntityInfo(
+        mockPatternId,
+        mockUserId
+      )
+
+      // Should return usage but with undefined entity info (since type was skipped)
+      expect(result.total).toBe(1)
+      expect(result.usages).toHaveLength(1)
+      expect(result.usages[0].entityType).toBe(maliciousEntityType)
+      expect(result.usages[0].entityTitle).toBeUndefined()
+      expect(result.usages[0].entitySlug).toBeUndefined()
+
+      // Should NOT have made a query with the malicious table name
+      // Only 3 calls: count query, counts by type, usages query (no entity info query)
+      expect(mockQueryWithRLS).toHaveBeenCalledTimes(2)
+
+      // Verify the malicious string was never used in a FROM clause
+      const allCalls = mockQueryWithRLS.mock.calls
+      for (const call of allCalls) {
+        const query = call[0] as string
+        expect(query).not.toContain(maliciousEntityType)
+      }
+    })
+
+    it('should validate entityType against registry before query', async () => {
+      // Mock count query
+      mockQueryOneWithRLS.mockResolvedValueOnce({ count: '1' })
+
+      // Mock with valid entity type
+      mockQueryWithRLS
+        .mockResolvedValueOnce([{ entityType: 'pages', count: '1' }])
+        .mockResolvedValueOnce([{
+          id: 'pu-001',
+          patternId: mockPatternId,
+          entityType: 'pages',
+          entityId: 'page-001',
+          teamId: mockTeamId,
+          createdAt: new Date().toISOString()
+        }])
+        .mockResolvedValueOnce([{ // entity info query for valid type
+          id: 'page-001',
+          title: 'Test Page',
+          slug: 'test'
+        }])
+
+      const result = await PatternUsageService.getUsagesWithEntityInfo(
+        mockPatternId,
+        mockUserId
+      )
+
+      // Should successfully fetch entity info for valid types
+      expect(result.usages).toHaveLength(1)
+      expect(result.usages[0].entityTitle).toBe('Test Page')
+    })
+
+    it('should handle mix of valid and unknown entity types', async () => {
+      const unknownType = 'unknown_entity'
+      const validUsage = {
+        id: 'pu-valid',
+        patternId: mockPatternId,
+        entityType: 'pages',
+        entityId: 'page-001',
+        teamId: mockTeamId,
+        createdAt: new Date().toISOString()
+      }
+      const unknownUsage = {
+        id: 'pu-unknown',
+        patternId: mockPatternId,
+        entityType: unknownType,
+        entityId: 'entity-001',
+        teamId: mockTeamId,
+        createdAt: new Date().toISOString()
+      }
+
+      mockQueryOneWithRLS.mockResolvedValueOnce({ count: '2' })
+      mockQueryWithRLS
+        .mockResolvedValueOnce([
+          { entityType: 'pages', count: '1' },
+          { entityType: unknownType, count: '1' }
+        ])
+        .mockResolvedValueOnce([validUsage, unknownUsage])
+        .mockResolvedValueOnce([{ id: 'page-001', title: 'Page Title', slug: 'page' }])
+
+      const result = await PatternUsageService.getUsagesWithEntityInfo(
+        mockPatternId,
+        mockUserId
+      )
+
+      // Should return both usages
+      expect(result.usages).toHaveLength(2)
+
+      // Valid type should have entity info
+      const validResult = result.usages.find(u => u.entityType === 'pages')
+      expect(validResult?.entityTitle).toBe('Page Title')
+
+      // Unknown type should NOT have entity info (but should still be in results)
+      const unknownResult = result.usages.find(u => u.entityType === unknownType)
+      expect(unknownResult).toBeDefined()
+      expect(unknownResult?.entityTitle).toBeUndefined()
     })
   })
 })

@@ -269,5 +269,21 @@
       "saved": "Saved successfully",
       "created": "Created successfully"
     }
+  },
+  "patterns": {
+    "delete": {
+      "trigger": "Delete",
+      "title": "Delete pattern",
+      "confirm": "Are you sure you want to delete",
+      "loading": "Checking usage...",
+      "error": "Error checking pattern usage.",
+      "inUse": "This pattern is in use in {count, plural, one {# entity} other {# entities}}:",
+      "moreItems": "... and {count} more",
+      "notInUse": "This pattern is not currently in use.",
+      "cleanupNote": "References will be automatically removed when editing each entity.",
+      "cancel": "Cancel",
+      "deleting": "Deleting...",
+      "deleteAction": "Delete"
+    }
   }
 }
