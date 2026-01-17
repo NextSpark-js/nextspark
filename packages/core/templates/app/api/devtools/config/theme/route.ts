@@ -1,6 +1,7 @@
 import { getTypedSession } from "@nextsparkjs/core/lib/auth";
 import { NextResponse } from "next/server";
 import { ThemeService } from "@nextsparkjs/core/lib/services/theme.service";
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 
 /**
  * GET /api/devtools/config/theme
@@ -8,7 +9,7 @@ import { ThemeService } from "@nextsparkjs/core/lib/services/theme.service";
  * Returns current theme configuration
  * Only accessible to developer role
  */
-export async function GET(request: Request) {
+export const GET = withRateLimitTier(async (request: Request) => {
   try {
     // Verify developer role
     const session = await getTypedSession(request.headers);
@@ -63,4 +64,4 @@ export async function GET(request: Request) {
       { status: 500 }
     );
   }
-}
+}, 'read');

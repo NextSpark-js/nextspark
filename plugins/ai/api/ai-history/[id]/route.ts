@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@nextsparkjs/core/lib/auth'
 import { AIHistoryService } from '@/plugins/ai/lib/ai-history-service'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 interface RouteParams {
   params: Promise<{
@@ -21,10 +22,10 @@ interface RouteParams {
  * PATCH /api/v1/plugin/ai/ai-history/:id
  * Update related entity information for an AI history record
  */
-export async function PATCH(
+const patchHandler = async (
   request: NextRequest,
   { params }: RouteParams
-): Promise<NextResponse> {
+): Promise<NextResponse> => {
   try {
     // Authenticate user
     const session = await auth.api.getSession({
@@ -110,3 +111,5 @@ export async function PATCH(
     )
   }
 }
+
+export const PATCH = withRateLimitTier(patchHandler, 'write')

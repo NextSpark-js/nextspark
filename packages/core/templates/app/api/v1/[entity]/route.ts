@@ -17,12 +17,13 @@ import {
   handleGenericOptions
 } from '@nextsparkjs/core/lib/api/entity/generic-handler'
 import { setEntityRegistry } from '@nextsparkjs/core/lib/entities/queries'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 // Import registry directly - webpack resolves @nextsparkjs/registries alias at compile time
 import { ENTITY_REGISTRY, ENTITY_METADATA } from '@nextsparkjs/registries/entity-registry'
 
 // Initialize registry at module load time (before any handler runs)
 setEntityRegistry(ENTITY_REGISTRY, ENTITY_METADATA)
 
-export const GET = handleGenericList
-export const POST = handleGenericCreate
+export const GET = withRateLimitTier(handleGenericList, 'read')
+export const POST = withRateLimitTier(handleGenericCreate, 'write')
 export const OPTIONS = handleGenericOptions

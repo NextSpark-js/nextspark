@@ -8,6 +8,7 @@ import {
   addCorsHeaders,
 } from '@nextsparkjs/core/lib/api/helpers'
 import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { updateTeamSchema } from '@nextsparkjs/core/lib/teams/schema'
 import { TeamService, MembershipService } from '@nextsparkjs/core/lib/services'
 import type { Team, TeamRole } from '@nextsparkjs/core/lib/teams/types'
@@ -18,7 +19,7 @@ export async function OPTIONS() {
 }
 
 // GET /api/v1/teams/:teamId - Get team details
-export const GET = withApiLogging(
+export const GET = withRateLimitTier('read', withApiLogging(
   async (req: NextRequest, { params }: { params: Promise<{ teamId: string }> }): Promise<NextResponse> => {
     try {
       // Authenticate using dual auth
@@ -87,10 +88,10 @@ export const GET = withApiLogging(
       return addCorsHeaders(response)
     }
   }
-)
+))
 
 // PATCH /api/v1/teams/:teamId - Update team (owners/admins only)
-export const PATCH = withApiLogging(
+export const PATCH = withRateLimitTier('write', withApiLogging(
   async (req: NextRequest, { params }: { params: Promise<{ teamId: string }> }): Promise<NextResponse> => {
     try {
       // Authenticate using dual auth
@@ -228,10 +229,10 @@ export const PATCH = withApiLogging(
       return addCorsHeaders(response)
     }
   }
-)
+))
 
 // DELETE /api/v1/teams/:teamId - Delete team (owners only, NOT personal teams)
-export const DELETE = withApiLogging(
+export const DELETE = withRateLimitTier('write', withApiLogging(
   async (req: NextRequest, { params }: { params: Promise<{ teamId: string }> }): Promise<NextResponse> => {
     try {
       // Authenticate using dual auth
@@ -291,4 +292,4 @@ export const DELETE = withApiLogging(
       return addCorsHeaders(response)
     }
   }
-)
+))

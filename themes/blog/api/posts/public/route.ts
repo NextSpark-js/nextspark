@@ -10,6 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { queryWithRLS } from '@nextsparkjs/core/lib/db'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 interface Post {
   id: string
@@ -31,7 +32,7 @@ interface Post {
   authorImage: string | null
 }
 
-export async function GET(request: NextRequest) {
+const getHandler = async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url)
 
@@ -149,3 +150,5 @@ export async function GET(request: NextRequest) {
     )
   }
 }
+
+export const GET = withRateLimitTier(getHandler, 'read')

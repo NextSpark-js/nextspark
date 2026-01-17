@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { validatePlugin, handleAIError } from '../../lib/core-utils'
 import { getServerPluginConfig } from '../../lib/server-env'
 import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { embed } from 'ai'
 import { openai } from '@ai-sdk/openai'
 import { z } from 'zod'
@@ -18,7 +19,7 @@ const EmbeddingRequestSchema = z.object({
   text: z.string().min(1, 'Text cannot be empty').max(50000, 'Text too long')
 })
 
-export async function POST(request: NextRequest) {
+const postHandler = async (request: NextRequest) => {
   try {
     // 1. Authentication
     const authResult = await authenticateRequest(request)
@@ -80,10 +81,12 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export const POST = withRateLimitTier(postHandler, 'write')
+
 /**
  * Get endpoint info
  */
-export async function GET(): Promise<NextResponse> {
+const getHandler = async (): Promise<NextResponse> => {
   return NextResponse.json({
     endpoint: '/api/v1/plugin/ai/embeddings',
     description: 'Generate text embeddings using OpenAI',
@@ -127,3 +130,5 @@ export async function GET(): Promise<NextResponse> {
     }
   })
 }
+
+export const GET = withRateLimitTier(getHandler, 'read')

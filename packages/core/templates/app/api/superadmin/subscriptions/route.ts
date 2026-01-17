@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTypedSession } from '@nextsparkjs/core/lib/auth';
 import { queryWithRLS } from '@nextsparkjs/core/lib/db';
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 
 interface SubscriptionResult {
   id: string;
@@ -51,7 +52,7 @@ interface PlanDistribution {
  * Retrieves all subscriptions with stats for superadmin overview.
  * Supports filtering by status and pagination.
  */
-export async function GET(request: NextRequest) {
+export const GET = withRateLimitTier(async (request: NextRequest) => {
   try {
     // Get the current session using Better Auth
     const session = await getTypedSession(request.headers);
@@ -305,4 +306,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+}, 'strict');

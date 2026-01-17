@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { BLOCK_REGISTRY, BLOCK_CATEGORIES } from '@nextsparkjs/registries/block-registry'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
-export async function GET(request: NextRequest) {
+export const GET = withRateLimitTier(async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url)
     const category = searchParams.get('category')
@@ -42,4 +43,4 @@ export async function GET(request: NextRequest) {
     console.error('Error listing blocks:', err)
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
   }
-}
+}, 'read');

@@ -7,10 +7,11 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { DisconnectAccountSchema } from '../../../lib/validation'
 import { queryOneWithRLS, mutateWithRLS } from '@nextsparkjs/core/lib/db'
 
-export async function POST(request: NextRequest) {
+const postHandler = async (request: NextRequest) => {
   try {
     // 1. Authentication
     const authResult = await authenticateRequest(request)
@@ -134,13 +135,15 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export const POST = withRateLimitTier(postHandler, 'write')
+
 /**
  * DELETE method - Alternative endpoint using accountId in URL
  */
-export async function DELETE(
+const deleteHandler = async (
   request: NextRequest,
   { params }: { params: Promise<{ accountId: string }> }
-) {
+) => {
   try {
     // 1. Authentication
     const authResult = await authenticateRequest(request)
@@ -185,3 +188,5 @@ export async function DELETE(
     )
   }
 }
+
+export const DELETE = withRateLimitTier(deleteHandler, 'write')

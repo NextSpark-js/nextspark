@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTypedSession } from '@nextsparkjs/core/lib/auth';
 import { queryWithRLS } from '@nextsparkjs/core/lib/db';
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 
 interface TeamResult {
   id: string;
@@ -62,10 +63,10 @@ interface UsageResult {
  * Retrieves a single team with owner info and members.
  * Only accessible by superadmin or developer users.
  */
-export async function GET(
+export const GET = withRateLimitTier(async (
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
-) {
+) => {
   try {
     const { teamId } = await params;
 
@@ -281,4 +282,4 @@ export async function GET(
       { status: 500 }
     );
   }
-}
+}, 'strict');

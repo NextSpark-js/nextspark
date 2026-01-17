@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { selectModel, calculateCost, validatePlugin, extractTokens, handleAIError } from '../../lib/core-utils'
 import { getServerPluginConfig } from '../../lib/server-env'
 import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { generateText } from 'ai'
 import { saveExampleSafely } from '../../lib/save-example'
 import { z } from 'zod'
@@ -25,7 +26,7 @@ const GenerateRequestSchema = z.object({
   saveExample: z.boolean().optional().default(false)
 })
 
-export async function POST(request: NextRequest) {
+const postHandler = async (request: NextRequest) => {
   try {
     // 1. Authentication
     const authResult = await authenticateRequest(request)
@@ -119,10 +120,12 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export const POST = withRateLimitTier(postHandler, 'write')
+
 /**
  * Get endpoint info
  */
-export async function GET(): Promise<NextResponse> {
+const getHandler = async (): Promise<NextResponse> => {
   const config = await getServerPluginConfig()
 
   return NextResponse.json({
@@ -158,3 +161,5 @@ export async function GET(): Promise<NextResponse> {
     }
   })
 }
+
+export const GET = withRateLimitTier(getHandler, 'read')

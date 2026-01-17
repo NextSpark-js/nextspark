@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { validateAndAuthenticateRequest, createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { SubscriptionService, UsageService, MembershipService } from '@nextsparkjs/core/lib/services'
 import { trackUsageSchema } from '@nextsparkjs/core/lib/billing/schema'
 
@@ -14,7 +15,7 @@ interface RouteParams {
   params: Promise<{ teamId: string; limitSlug: string }>
 }
 
-export async function GET(request: NextRequest, props: RouteParams) {
+export const GET = withRateLimitTier('read', async function GET(request: NextRequest, props: RouteParams) {
   // Authenticate request
   const { auth, rateLimitResponse } = await validateAndAuthenticateRequest(request)
   if (rateLimitResponse) return rateLimitResponse
@@ -44,9 +45,9 @@ export async function GET(request: NextRequest, props: RouteParams) {
     console.error('[Billing API] Error checking quota:', error)
     return createApiError('Failed to check quota', 500)
   }
-}
+})
 
-export async function POST(request: NextRequest, props: RouteParams) {
+export const POST = withRateLimitTier('write', async function POST(request: NextRequest, props: RouteParams) {
   // Authenticate request
   const { auth, rateLimitResponse } = await validateAndAuthenticateRequest(request)
   if (rateLimitResponse) return rateLimitResponse
@@ -88,4 +89,4 @@ export async function POST(request: NextRequest, props: RouteParams) {
     const errorMessage = error instanceof Error ? error.message : 'Failed to track usage'
     return createApiError(errorMessage, 500)
   }
-}
+})

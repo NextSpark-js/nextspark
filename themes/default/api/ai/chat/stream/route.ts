@@ -26,6 +26,7 @@
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { streamChat } from '@/plugins/langchain/lib/agent-factory'
 import { createSSEEncoder } from '@/plugins/langchain/lib/streaming'
 import { loadSystemPrompt } from '@/themes/default/lib/langchain/agents'
@@ -46,7 +47,7 @@ const StreamChatRequestSchema = z.object({
 /**
  * POST - Stream chat response
  */
-export async function POST(request: NextRequest) {
+const postHandler = async (request: NextRequest) => {
     try {
         // 1. Authentication
         const authResult = await authenticateRequest(request)
@@ -210,3 +211,5 @@ export async function POST(request: NextRequest) {
         ) as any
     }
 }
+
+export const POST = withRateLimitTier(postHandler, 'write')

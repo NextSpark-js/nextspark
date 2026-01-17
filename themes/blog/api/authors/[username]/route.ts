@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { queryWithRLS } from '@nextsparkjs/core/lib/db'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 interface Author {
   id: string
@@ -39,10 +40,10 @@ interface RouteContext {
   }>
 }
 
-export async function GET(
+const getHandler = async (
   request: NextRequest,
   context: RouteContext
-) {
+) => {
   try {
     const { username } = await context.params
 
@@ -148,3 +149,5 @@ export async function GET(
     )
   }
 }
+
+export const GET = withRateLimitTier(getHandler, 'read')

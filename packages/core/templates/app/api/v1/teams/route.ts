@@ -10,6 +10,7 @@ import {
 } from '@nextsparkjs/core/lib/api/helpers'
 import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { isSuperAdmin } from '@nextsparkjs/core/lib/api/auth/permissions'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { createTeamSchema, teamListQuerySchema } from '@nextsparkjs/core/lib/teams/schema'
 import { TeamService } from '@nextsparkjs/core/lib/services'
 import type { Team } from '@nextsparkjs/core/lib/teams/types'
@@ -21,7 +22,7 @@ export async function OPTIONS() {
 }
 
 // GET /api/v1/teams - List user's teams
-export const GET = withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
+export const GET = withRateLimitTier('read', withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
   try {
     // Authenticate using dual auth
     const authResult = await authenticateRequest(req)
@@ -160,10 +161,10 @@ export const GET = withApiLogging(async (req: NextRequest): Promise<NextResponse
     const response = createApiError('Internal server error', 500)
     return addCorsHeaders(response)
   }
-})
+}))
 
 // POST /api/v1/teams - Create new team
-export const POST = withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
+export const POST = withRateLimitTier('write', withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
   try {
     // Authenticate using dual auth
     const authResult = await authenticateRequest(req)
@@ -290,4 +291,4 @@ export const POST = withApiLogging(async (req: NextRequest): Promise<NextRespons
     const response = createApiError('Internal server error', 500)
     return addCorsHeaders(response)
   }
-})
+}))

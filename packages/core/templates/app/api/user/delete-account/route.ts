@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@nextsparkjs/core/lib/auth";
 import { mutateWithRLS } from "@nextsparkjs/core/lib/db";
+import { withRateLimitTier } from "@nextsparkjs/core/lib/api/rate-limit";
 
-export async function DELETE(req: NextRequest) {
+export const DELETE = withRateLimitTier(async (req: NextRequest) => {
   try {
     // Get session from Better Auth
     const session = await auth.api.getSession({
@@ -52,4 +53,4 @@ export async function DELETE(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+}, 'strict');

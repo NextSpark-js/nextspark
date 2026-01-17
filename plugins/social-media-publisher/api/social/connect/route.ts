@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { TokenEncryption } from '@nextsparkjs/core/lib/oauth/encryption'
 import { FacebookAPI } from '../../../lib/providers/facebook'
 import { ConnectAccountSchema } from '../../../lib/validation'
@@ -18,7 +19,7 @@ import { mutateWithRLS } from '@nextsparkjs/core/lib/db'
  * GET - Initiate OAuth flow
  * Redirects user to Facebook OAuth authorization page
  */
-export async function GET(request: NextRequest) {
+const getHandler = async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url)
     const platform = searchParams.get('platform') || 'instagram_business'
@@ -96,11 +97,13 @@ export async function GET(request: NextRequest) {
   }
 }
 
+export const GET = withRateLimitTier(getHandler, 'read')
+
 /**
  * POST - Handle OAuth callback (deprecated - use /callback endpoint instead)
  * This endpoint receives the authorization code and exchanges it for access token
  */
-export async function POST(request: NextRequest) {
+const postHandler = async (request: NextRequest) => {
   try {
     // 1. Authentication
     const authResult = await authenticateRequest(request)
@@ -325,3 +328,5 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+
+export const POST = withRateLimitTier(postHandler, 'write')

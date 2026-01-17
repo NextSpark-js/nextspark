@@ -11,46 +11,47 @@ import {
   type ThemeRouteFile,
   type ThemeRegistryEntry
 } from '@nextsparkjs/registries/theme-registry'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
-export async function GET(
+export const GET = withRateLimitTier(async (
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
-) {
+) => {
   const { path } = await params
   return handleThemeRequest(request, path, 'GET')
-}
+}, 'read');
 
-export async function POST(
+export const POST = withRateLimitTier(async (
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
-) {
+) => {
   const { path } = await params
   return handleThemeRequest(request, path, 'POST')
-}
+}, 'write');
 
-export async function PUT(
+export const PUT = withRateLimitTier(async (
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
-) {
+) => {
   const { path } = await params
   return handleThemeRequest(request, path, 'PUT')
-}
+}, 'write');
 
-export async function DELETE(
+export const DELETE = withRateLimitTier(async (
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
-) {
+) => {
   const { path } = await params
   return handleThemeRequest(request, path, 'DELETE')
-}
+}, 'write');
 
-export async function PATCH(
+export const PATCH = withRateLimitTier(async (
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
-) {
+) => {
   const { path } = await params
   return handleThemeRequest(request, path, 'PATCH')
-}
+}, 'write');
 
 /**
  * Handle theme API requests with nested paths

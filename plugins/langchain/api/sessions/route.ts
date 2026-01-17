@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { dbMemoryStore, CONVERSATION_LIMITS } from '../../lib/db-memory-store'
 import { config } from '../../plugin.config'
 import type {
@@ -36,7 +37,7 @@ function toApiConversationInfo(conv: {
  * Without id: returns list of all conversations
  * With id: returns single conversation details
  */
-export async function GET(req: NextRequest) {
+const getHandler = async (req: NextRequest) => {
     // 1. Auth
     const authResult = await authenticateRequest(req)
     if (!authResult.success || !authResult.user) {
@@ -103,13 +104,15 @@ export async function GET(req: NextRequest) {
     }
 }
 
+export const GET = withRateLimitTier(getHandler, 'read')
+
 /**
  * POST - Create a new conversation
  *
  * Body:
  * - name: Optional name for the conversation
  */
-export async function POST(req: NextRequest) {
+const postHandler = async (req: NextRequest) => {
     // 1. Auth
     const authResult = await authenticateRequest(req)
     if (!authResult.success || !authResult.user) {
@@ -183,6 +186,8 @@ export async function POST(req: NextRequest) {
     }
 }
 
+export const POST = withRateLimitTier(postHandler, 'write')
+
 /**
  * PATCH - Update a conversation (rename, pin/unpin)
  *
@@ -191,7 +196,7 @@ export async function POST(req: NextRequest) {
  * - name: New name (optional)
  * - isPinned: New pin status (optional)
  */
-export async function PATCH(req: NextRequest) {
+const patchHandler = async (req: NextRequest) => {
     // 1. Auth
     const authResult = await authenticateRequest(req)
     if (!authResult.success || !authResult.user) {
@@ -262,13 +267,15 @@ export async function PATCH(req: NextRequest) {
     }
 }
 
+export const PATCH = withRateLimitTier(patchHandler, 'write')
+
 /**
  * DELETE - Delete a conversation
  *
  * Body:
  * - sessionId: Session ID to delete (required)
  */
-export async function DELETE(req: NextRequest) {
+const deleteHandler = async (req: NextRequest) => {
     // 1. Auth
     const authResult = await authenticateRequest(req)
     if (!authResult.success || !authResult.user) {
@@ -330,3 +337,5 @@ export async function DELETE(req: NextRequest) {
         )
     }
 }
+
+export const DELETE = withRateLimitTier(deleteHandler, 'write')

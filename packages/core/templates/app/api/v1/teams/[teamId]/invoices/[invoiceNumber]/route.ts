@@ -8,6 +8,7 @@ import {
   addCorsHeaders,
 } from '@nextsparkjs/core/lib/api/helpers'
 import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { MembershipService } from '@nextsparkjs/core/lib/services'
 import type { InvoiceResponse } from '@nextsparkjs/core/lib/validation/invoices'
 
@@ -17,7 +18,7 @@ export async function OPTIONS() {
 }
 
 // GET /api/v1/teams/:teamId/invoices/:invoiceNumber - Get single invoice (owner only)
-export const GET = withApiLogging(
+export const GET = withRateLimitTier('read', withApiLogging(
   async (
     req: NextRequest,
     { params }: { params: Promise<{ teamId: string; invoiceNumber: string }> }
@@ -102,4 +103,4 @@ export const GET = withApiLogging(
       return addCorsHeaders(response)
     }
   }
-)
+))

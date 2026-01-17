@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry'
 import { z } from 'zod'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 const requestSchema = z.object({
   blockSlug: z.string(),
   props: z.record(z.string(), z.unknown())
 })
 
-export async function POST(request: NextRequest) {
+export const POST = withRateLimitTier(async (request: NextRequest) => {
   try {
     const body = await request.json()
     const { blockSlug, props } = requestSchema.parse(body)
@@ -43,4 +44,4 @@ export async function POST(request: NextRequest) {
     console.error('Error validating block:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+}, 'write');

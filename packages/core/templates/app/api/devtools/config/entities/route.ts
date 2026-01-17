@@ -2,6 +2,7 @@ import { getTypedSession } from "@nextsparkjs/core/lib/auth";
 import { NextResponse } from "next/server";
 import { getEntityRegistry } from "@nextsparkjs/core/lib/entities/queries";
 import type { EntityConfig, ChildEntityDefinition } from "@nextsparkjs/core/lib/entities/types";
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 
 // Type guard to check if entity is a full EntityConfig
 function isEntityConfig(entity: EntityConfig | ChildEntityDefinition): entity is EntityConfig {
@@ -39,7 +40,7 @@ interface EntityInfo {
  * Returns entity registry information
  * Only accessible to developer role
  */
-export async function GET(request: Request) {
+export const GET = withRateLimitTier(async (request: Request) => {
   try {
     // Verify developer role
     const session = await getTypedSession(request.headers);
@@ -111,4 +112,4 @@ export async function GET(request: Request) {
       { status: 500 }
     );
   }
-}
+}, 'read');

@@ -10,7 +10,7 @@ import {
 } from '@nextsparkjs/core/lib/api/helpers'
 import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { isSuperAdmin } from '@nextsparkjs/core/lib/api/auth/permissions'
-import { checkRateLimit } from '@nextsparkjs/core/lib/api/rate-limit'
+import { checkRateLimit, withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { RATE_LIMITS } from '@nextsparkjs/core/lib/api/keys'
 import { inviteMemberSchema, memberListQuerySchema } from '@nextsparkjs/core/lib/teams/schema'
 import { TeamMemberService, MembershipService } from '@nextsparkjs/core/lib/services'
@@ -37,7 +37,7 @@ export async function OPTIONS() {
 }
 
 // GET /api/v1/teams/:teamId/members - List team members
-export const GET = withApiLogging(
+export const GET = withRateLimitTier('read', withApiLogging(
   async (req: NextRequest, { params }: { params: Promise<{ teamId: string }> }): Promise<NextResponse> => {
     try {
       // Authenticate using dual auth
@@ -159,10 +159,10 @@ export const GET = withApiLogging(
       return addCorsHeaders(response)
     }
   }
-)
+))
 
 // POST /api/v1/teams/:teamId/members - Invite new member (creates invitation)
-export const POST = withApiLogging(
+export const POST = withRateLimitTier('write', withApiLogging(
   async (req: NextRequest, { params }: { params: Promise<{ teamId: string }> }): Promise<NextResponse> => {
     try {
       // Authenticate using dual auth
@@ -355,4 +355,4 @@ export const POST = withApiLogging(
       return addCorsHeaders(response)
     }
   }
-)
+))
