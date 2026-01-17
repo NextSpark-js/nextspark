@@ -9,7 +9,7 @@
  * @module PatternsService
  */
 
-import { queryOneWithRLS, queryWithRLS, mutateWithRLS } from '@nextsparkjs/core/lib/db'
+import { queryOneWithRLS, queryWithRLS, mutateWithRLS } from '../../lib/db'
 import type {
   Pattern,
   CreatePatternInput,
@@ -18,6 +18,7 @@ import type {
   PatternListResult,
   PatternStatus
 } from './patterns.types'
+import { isPatternReference } from './patterns.types'
 
 // Database row type for pattern
 interface DbPattern {
@@ -31,6 +32,15 @@ interface DbPattern {
   description: string | null
   createdAt: string
   updatedAt: string
+}
+
+/**
+ * Helper function to check if blocks contain pattern references
+ * Used to prevent nesting patterns inside patterns
+ */
+function containsPatternReference(blocks: unknown[]): boolean {
+  if (!Array.isArray(blocks)) return false
+  return blocks.some(block => isPatternReference(block))
 }
 
 export class PatternsService {
@@ -456,6 +466,11 @@ export class PatternsService {
         throw new Error('Slug is required')
       }
 
+      // Validate: patterns cannot contain other patterns (prevent nesting)
+      if (data.blocks && containsPatternReference(data.blocks)) {
+        throw new Error('Patterns cannot contain other patterns')
+      }
+
       const result = await mutateWithRLS<DbPattern>(
         `
         INSERT INTO "patterns" (
@@ -544,6 +559,11 @@ export class PatternsService {
 
       if (!userId?.trim()) {
         throw new Error('User ID is required')
+      }
+
+      // Validate: patterns cannot contain other patterns (prevent nesting)
+      if (data.blocks !== undefined && containsPatternReference(data.blocks)) {
+        throw new Error('Patterns cannot contain other patterns')
       }
 
       // Build SET clause dynamically

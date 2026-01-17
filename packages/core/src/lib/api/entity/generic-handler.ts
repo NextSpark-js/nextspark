@@ -449,6 +449,11 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
       })
 
       fields = [...systemFieldsFormatted, ...configFields].join(', ')
+
+      // Add usageCount for patterns entity (computed field)
+      if (entityConfig.slug === 'patterns') {
+        fields += ', COALESCE(pu.usage_count, 0)::int as "usageCount"'
+      }
     }
 
     // Build query based on access type and request type
@@ -662,11 +667,24 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
           ? `WHERE ${whereConditions.join(' AND ')}`
           : ''
 
+      // Add LEFT JOIN for patterns entity to include usageCount
+      let joinClause = ''
+      if (entityConfig.slug === 'patterns') {
+        joinClause = `
+          LEFT JOIN (
+            SELECT "patternId", COUNT(*) as usage_count
+            FROM pattern_usages
+            GROUP BY "patternId"
+          ) pu ON t.id = pu."patternId"
+        `
+      }
+
       // Use COUNT(*) OVER() window function to get total count in single query
       // This eliminates a separate COUNT query, saving ~230ms per request
       query = `
         SELECT ${fields}, COUNT(*) OVER() as total_count
         FROM "${tableName}" t
+        ${joinClause}
         ${whereClause}
         ORDER BY t."createdAt" DESC
         LIMIT $${paramIndex++} OFFSET $${paramIndex++}

@@ -5,8 +5,9 @@
  * Pattern references are resolved at render time to support automatic propagation
  * of changes when patterns are edited.
  *
- * NOTE: The Pattern entity itself (config, service, fields) lives in the theme.
- * Only the reference types are in core because they're used by core components.
+ * NOTE: The full Pattern entity (config, service, fields) is in core/entities/patterns.
+ * This file provides minimal types for core components that only need reference handling.
+ * For full Pattern types and service, import from '@nextsparkjs/core/entities/patterns'.
  */
 
 import type { BlockInstance } from './blocks'

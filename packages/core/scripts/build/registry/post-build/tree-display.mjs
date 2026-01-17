@@ -9,9 +9,29 @@
 /**
  * Display discovered contents in a beautiful tree structure
  */
-export function displayTreeStructure(plugins, entities, themes) {
+export function displayTreeStructure(plugins, themes, coreEntities = []) {
   console.log('Discovered Contents Structure:')
   console.log()
+
+  // Display core entities first if any
+  if (coreEntities && coreEntities.length > 0) {
+    console.log('packages/core/')
+    console.log('└── entities/')
+    coreEntities.forEach((entity, index) => {
+      const isLast = index === coreEntities.length - 1
+      const features = [
+        entity.hasComponents && 'components',
+        entity.hasHooks && 'hooks',
+        entity.hasMigrations && 'migrations',
+        entity.hasMessages && 'messages',
+        entity.hasAssets && 'assets'
+      ].filter(Boolean)
+      const featureInfo = features.length > 0 ? ` (${features.join(', ')})` : ''
+      console.log(`    ${isLast ? '└──' : '├──'} ${entity.name}${featureInfo}`)
+    })
+    console.log()
+  }
+
   console.log('contents/')
 
   // Helper function to get tree characters

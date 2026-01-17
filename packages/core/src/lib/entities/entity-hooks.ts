@@ -321,5 +321,12 @@ export const validateEntity = <T>(entityName: string, data: T, operation: 'creat
 export const beforeEntityRead = (entityName: string, query: Record<string, unknown>, userId?: string) => 
   entityHookManager.beforeEntityRead(entityName, query, userId)
 
-export const afterEntityRead = <T>(entityName: string, results: T[], query: Record<string, unknown>, userId?: string) => 
+export const afterEntityRead = <T>(entityName: string, results: T[], query: Record<string, unknown>, userId?: string) =>
   entityHookManager.afterEntityRead(entityName, results, query, userId)
+
+// ============================================
+// AUTO-REGISTER CORE HOOKS
+// ============================================
+// Initialize pattern usage hooks to track which entities use each pattern
+import { initPatternUsageHooks } from './pattern-usage-hooks'
+initPatternUsageHooks()

@@ -5,7 +5,7 @@
  * Patterns is a team-scoped entity (shared: true) - all team members see the same patterns.
  */
 
-import type { BlockInstance } from '@nextsparkjs/core/types/blocks'
+import type { BlockInstance } from '../../types/blocks'
 
 /**
  * Pattern status values

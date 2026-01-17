@@ -3,10 +3,11 @@
  *
  * Minimal service for resolving pattern references in public pages.
  * This is a core service that provides only the functionality needed
- * for public page rendering.
+ * for public page rendering without RLS (for anonymous access).
  *
- * NOTE: The full PatternsService (CRUD, list, etc.) is in the theme entity.
- * This core service is specifically for pattern resolution at render time.
+ * NOTE: The full PatternsService (CRUD, list, etc.) is in core/entities/patterns.
+ * This service specifically handles anonymous pattern resolution at render time,
+ * while PatternsService handles authenticated operations with RLS.
  *
  * @module core/lib/blocks/patterns-resolver.service
  */

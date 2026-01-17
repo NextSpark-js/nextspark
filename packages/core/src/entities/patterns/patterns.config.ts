@@ -6,7 +6,7 @@
  */
 
 import { Layers } from 'lucide-react'
-import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
+import type { EntityConfig } from '../../lib/entities/types'
 import { patternsFields } from './patterns.fields'
 
 export const patternsEntityConfig: EntityConfig = {
@@ -79,5 +79,5 @@ export const patternsEntityConfig: EntityConfig = {
   // ==========================================
   // SOURCE
   // ==========================================
-  source: 'theme'
+  source: 'core'
 }

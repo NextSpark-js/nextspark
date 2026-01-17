@@ -8,7 +8,7 @@
  * Reference: core/lib/entities/system-fields.ts
  */
 
-import type { EntityField } from '@nextsparkjs/core/lib/entities/types'
+import type { EntityField } from '../../lib/entities/types'
 
 export const patternsFields: EntityField[] = [
   {
