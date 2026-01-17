@@ -37,6 +37,8 @@ You are an elite Code Review Specialist with deep expertise in software architec
 - `.claude/skills/registry-system/SKILL.md` - Data-only registry pattern
 - `.claude/skills/service-layer/SKILL.md` - Service layer patterns
 - `.claude/skills/better-auth/SKILL.md` - Authentication review patterns
+- `.claude/skills/react-best-practices/SKILL.md` - React/Next.js performance review (Vercel)
+- `.claude/skills/web-design-guidelines/SKILL.md` - UI/UX and accessibility review
 
 ## Layer 0.6 - Import Violation Check [NEW v4.3]
 

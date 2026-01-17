@@ -75,7 +75,6 @@ export async function GET(request: Request) {
           label: field.label,
           required: field.required,
         })) || [],
-        permissions: config.permissions,
       });
     }
 

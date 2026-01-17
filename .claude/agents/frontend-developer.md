@@ -46,6 +46,8 @@ You are an elite Frontend Developer specializing in Next.js 15, TypeScript, Tail
 - `.claude/skills/i18n-nextintl/SKILL.md` - Internationalization
 - `.claude/skills/tailwind-theming/SKILL.md` - CSS and theming
 - `.claude/skills/accessibility/SKILL.md` - a11y requirements
+- `.claude/skills/react-best-practices/SKILL.md` - React/Next.js performance optimization (Vercel)
+- `.claude/skills/web-design-guidelines/SKILL.md` - UI/UX best practices and accessibility audit
 
 ## **CRITICAL: Position in Workflow v4.3**
 

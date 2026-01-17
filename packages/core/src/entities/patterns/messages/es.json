@@ -1,0 +1,86 @@
+{
+  "entity": {
+    "singular": "Patrón",
+    "plural": "Patrones"
+  },
+  "title": "Patrones",
+  "subtitle": "Crea composiciones de bloques reutilizables para tus páginas",
+  "description": "Gestiona patrones reutilizables que se pueden insertar en páginas y publicaciones",
+  "fields": {
+    "title": {
+      "label": "Título",
+      "placeholder": "Ingresa el nombre del patrón...",
+      "description": "Nombre del patrón"
+    },
+    "slug": {
+      "label": "Slug",
+      "placeholder": "patron-slug",
+      "description": "Identificador amigable para URL, único por equipo"
+    },
+    "status": {
+      "label": "Estado",
+      "placeholder": "Selecciona un estado...",
+      "description": "Estado de publicación"
+    },
+    "description": {
+      "label": "Descripción",
+      "placeholder": "Describe este patrón...",
+      "description": "Breve descripción del propósito del patrón"
+    }
+  },
+  "status": {
+    "draft": "Borrador",
+    "published": "Publicado"
+  },
+  "messages": {
+    "created": "Patrón creado exitosamente",
+    "updated": "Patrón actualizado exitosamente",
+    "deleted": "Patrón eliminado exitosamente",
+    "createError": "Error al crear el patrón",
+    "updateError": "Error al actualizar el patrón",
+    "deleteError": "Error al eliminar el patrón",
+    "notFound": "Patrón no encontrado",
+    "emptyPattern": "Este patrón aún no tiene bloques",
+    "locked": {
+      "title": "Referencia de Patrón",
+      "description": "Esta es una referencia de patrón. Edita el patrón directamente para hacer cambios."
+    }
+  },
+  "actions": {
+    "create": "Crear Patrón",
+    "edit": "Editar Patrón",
+    "delete": "Eliminar Patrón",
+    "publish": "Publicar",
+    "unpublish": "Despublicar",
+    "duplicate": "Duplicar",
+    "editPattern": "Editar Patrón",
+    "removeReference": "Eliminar Referencia"
+  },
+  "labels": {
+    "patternPrefix": "Patrón"
+  },
+  "builder": {
+    "title": "Constructor de Patrones",
+    "description": "Agrega bloques para crear tu patrón reutilizable",
+    "emptyState": "Aún no hay bloques. Agrega bloques para crear tu patrón.",
+    "blocksAllowed": "Solo ciertos bloques se pueden usar en patrones",
+    "patternReference": "Referencia de Patrón",
+    "lockedMessage": "Esta es una referencia de patrón. Edita el patrón directamente para hacer cambios."
+  },
+  "list": {
+    "title": "Todos los Patrones",
+    "empty": "Aún no hay patrones",
+    "emptyDescription": "Crea tu primer patrón para comenzar",
+    "filters": {
+      "all": "Todos",
+      "draft": "Borradores",
+      "published": "Publicados"
+    }
+  },
+  "picker": {
+    "title": "Insertar Patrón",
+    "search": "Buscar patrones...",
+    "noResults": "No se encontraron patrones",
+    "selectPattern": "Selecciona un patrón para insertar"
+  }
+}

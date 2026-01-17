@@ -65,14 +65,16 @@ export function TextContentBlock({
         )}
 
         {/* Rich Text Content */}
-        <div
-          className={cn(
-            'prose prose-lg dark:prose-invert',
-            maxWidthClasses[maxWidth],
-            alignmentClasses[alignment]
-          )}
-          dangerouslySetInnerHTML={{ __html: content }}
-        />
+        {content && (
+          <div
+            className={cn(
+              'prose prose-lg dark:prose-invert',
+              maxWidthClasses[maxWidth],
+              alignmentClasses[alignment]
+            )}
+            dangerouslySetInnerHTML={{ __html: content }}
+          />
+        )}
 
         {/* Optional CTA */}
         {cta && (

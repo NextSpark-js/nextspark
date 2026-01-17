@@ -9,6 +9,7 @@
 // Re-export individual discovery functions
 export { discoverPlugins, discoverRouteFiles } from './plugins.mjs'
 export { discoverEntities, discoverNestedEntities } from './entities.mjs'
+export { discoverCoreEntities } from './core-entities.mjs'
 export { discoverThemes, discoverThemeRouteFiles } from './themes.mjs'
 export { discoverTemplates, discoverThemeTemplates } from './templates.mjs'
 export { discoverBlocks } from './blocks.mjs'

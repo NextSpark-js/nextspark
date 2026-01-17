@@ -9,6 +9,8 @@ import { sel } from '../../../lib/test'
 import { FloatingBlockToolbar } from './floating-block-toolbar'
 import type { BlockInstance } from '../../../types/blocks'
 import { getBlockComponent, normalizeBlockProps } from '../../../lib/blocks/loader'
+import { isPatternReference } from '../../../types/pattern-reference'
+import { PatternReferencePreview } from './pattern-reference-preview'
 
 // Loading skeleton
 function BlockSkeleton() {
@@ -112,6 +114,19 @@ function SelectableBlockPreview({
   onRemove,
 }: SelectableBlockPreviewProps) {
   const t = useTranslations('admin.builder')
+
+  // Check if this is a pattern reference
+  if (isPatternReference(block)) {
+    return (
+      <PatternReferencePreview
+        patternRef={block}
+        isSelected={isSelected}
+        onSelect={onSelect}
+        onRemove={onRemove}
+      />
+    )
+  }
+
   const BlockComponent = getBlockComponent(block.blockSlug)
 
   // Memoize normalized props to prevent unnecessary recalculations

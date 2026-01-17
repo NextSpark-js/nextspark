@@ -21,7 +21,10 @@
     "cy:run": "node packages/core/scripts/test/cy.mjs run",
     "cy:tags": "node packages/core/scripts/test/cy.mjs tags",
     "test:core": "pnpm --filter @nextsparkjs/core test",
-    "test:theme": "node packages/core/scripts/test/jest-theme.mjs"
+    "test:theme": "node packages/core/scripts/test/jest-theme.mjs",
+    "db:drop": "cd apps/dev && node scripts/drop-all-tables.mjs",
+    "db:migrate": "cd apps/dev && node ../../packages/core/scripts/db/run-migrations.mjs",
+    "db:reset": "cd apps/dev && node scripts/drop-all-tables.mjs && node ../../packages/core/scripts/db/run-migrations.mjs"
   },
   "devDependencies": {
     "@cypress/grep": "^5.0.1",

@@ -26,6 +26,11 @@ import { resolvePublicEntityFromUrl } from '@nextsparkjs/core/lib/api/entity/pub
 import { PublicEntityGrid } from '@nextsparkjs/core/components/public/entities/PublicEntityGrid'
 import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 import type { Metadata } from 'next'
+// Pattern resolution imports
+import { PatternsResolverService } from '@nextsparkjs/core/lib/blocks/patterns-resolver.service'
+import { extractPatternIds, resolvePatternReferences } from '@nextsparkjs/core/lib/blocks/pattern-resolver'
+import type { BlockInstance } from '@nextsparkjs/core/types/blocks'
+import type { PatternReference } from '@nextsparkjs/core/types/pattern-reference'
 // Import registry directly - webpack resolves @nextsparkjs/registries alias at compile time
 import { ENTITY_REGISTRY, ENTITY_METADATA } from '@nextsparkjs/registries/entity-registry'
 
@@ -70,6 +75,43 @@ interface PublishedItem {
   ogImage?: string
   locale?: string
   createdAt?: string
+}
+
+/**
+ * Resolve pattern references in blocks array
+ *
+ * Fetches all referenced patterns and expands them inline.
+ * This ensures public pages show the actual pattern content.
+ *
+ * @param blocks - Blocks array which may contain pattern references
+ * @returns Resolved blocks array with patterns expanded
+ */
+async function getResolvedBlocks(
+  blocks: (BlockInstance | PatternReference)[]
+): Promise<BlockInstance[]> {
+  // Extract pattern IDs from blocks array
+  const patternIds = extractPatternIds(blocks)
+
+  // If no patterns referenced, return blocks as-is
+  if (patternIds.length === 0) {
+    return blocks as BlockInstance[]
+  }
+
+  try {
+    // Batch fetch all referenced patterns (only published ones)
+    const patterns = await PatternsResolverService.getByIds(patternIds)
+
+    // Build pattern cache (Map for O(1) lookup)
+    const patternCache = new Map(patterns.map((p) => [p.id, p]))
+
+    // Resolve pattern references and return flattened blocks
+    return resolvePatternReferences(blocks, patternCache)
+  } catch (error) {
+    console.error('[getResolvedBlocks] Failed to resolve patterns:', error)
+    // Fallback: Return blocks without pattern resolution
+    // Pattern references will be skipped gracefully
+    return blocks.filter((block) => !('type' in block && block.type === 'pattern')) as BlockInstance[]
+  }
 }
 
 /**
@@ -221,6 +263,12 @@ export default async function DynamicPublicPage({
       notFound()
     }
 
+    // Resolve pattern references before rendering
+    // This expands pattern blocks inline for public display
+    const resolvedBlocks = await getResolvedBlocks(
+      item.blocks as (BlockInstance | PatternReference)[]
+    )
+
     // Default rendering with PageRenderer
     return (
       <main
@@ -234,7 +282,7 @@ export default async function DynamicPublicPage({
             id: item.id,
             title: item.title,
             slug: item.slug,
-            blocks: item.blocks || [],
+            blocks: resolvedBlocks,
             locale: item.locale || 'en',
           }}
         />

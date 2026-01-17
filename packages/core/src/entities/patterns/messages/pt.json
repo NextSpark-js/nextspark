@@ -1,0 +1,76 @@
+{
+  "entity": {
+    "singular": "Padrão",
+    "plural": "Padrões"
+  },
+  "title": "Padrões",
+  "subtitle": "Crie composições de blocos reutilizáveis para suas páginas",
+  "description": "Gerencie padrões reutilizáveis que podem ser inseridos em páginas e posts",
+  "fields": {
+    "title": {
+      "label": "Título",
+      "placeholder": "Digite o nome do padrão...",
+      "description": "Nome de exibição do padrão"
+    },
+    "slug": {
+      "label": "Slug",
+      "placeholder": "padrao-slug",
+      "description": "Identificador amigável para URL, único por equipe"
+    },
+    "status": {
+      "label": "Status",
+      "placeholder": "Selecione o status...",
+      "description": "Status de publicação"
+    },
+    "description": {
+      "label": "Descrição",
+      "placeholder": "Descreva este padrão...",
+      "description": "Breve descrição do propósito do padrão"
+    }
+  },
+  "status": {
+    "draft": "Rascunho",
+    "published": "Publicado"
+  },
+  "messages": {
+    "created": "Padrão criado com sucesso",
+    "updated": "Padrão atualizado com sucesso",
+    "deleted": "Padrão excluído com sucesso",
+    "createError": "Erro ao criar padrão",
+    "updateError": "Erro ao atualizar padrão",
+    "deleteError": "Erro ao excluir padrão",
+    "notFound": "Padrão não encontrado"
+  },
+  "actions": {
+    "create": "Criar Padrão",
+    "edit": "Editar Padrão",
+    "delete": "Excluir Padrão",
+    "publish": "Publicar",
+    "unpublish": "Despublicar",
+    "duplicate": "Duplicar"
+  },
+  "builder": {
+    "title": "Construtor de Padrões",
+    "description": "Adicione blocos para criar seu padrão reutilizável",
+    "emptyState": "Ainda não há blocos. Adicione blocos para criar seu padrão.",
+    "blocksAllowed": "Apenas certos blocos podem ser usados em padrões",
+    "patternReference": "Referência de Padrão",
+    "lockedMessage": "Esta é uma referência de padrão. Edite o padrão diretamente para fazer alterações."
+  },
+  "list": {
+    "title": "Todos os Padrões",
+    "empty": "Ainda não há padrões",
+    "emptyDescription": "Crie seu primeiro padrão para começar",
+    "filters": {
+      "all": "Todos",
+      "draft": "Rascunhos",
+      "published": "Publicados"
+    }
+  },
+  "picker": {
+    "title": "Inserir Padrão",
+    "search": "Pesquisar padrões...",
+    "noResults": "Nenhum padrão encontrado",
+    "selectPattern": "Selecione um padrão para inserir"
+  }
+}

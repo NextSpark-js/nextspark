@@ -3,6 +3,7 @@ import { DOCS_REGISTRY } from '@nextsparkjs/registries/docs-registry'
 import { parseMarkdownFile } from '@nextsparkjs/core/lib/docs/parser'
 import { DocsBreadcrumbs } from '@nextsparkjs/core/components/docs/docs-breadcrumbs'
 import { DocsContent } from '@nextsparkjs/core/components/docs/docs-content'
+import { sel } from '@nextsparkjs/core/selectors'
 import { getTranslations } from 'next-intl/server'
 import path from 'path'
 import type { Metadata } from 'next'
@@ -67,7 +68,7 @@ export default async function DocsPage({ params }: DocsPageProps) {
   const { metadata, html } = await parseMarkdownFile(filePath)
 
   return (
-    <div className="max-w-4xl" data-cy="docs-page">
+    <div className="max-w-4xl" data-cy={sel('public.docs.pageDetail')}>
       <DocsBreadcrumbs
         items={[
           { label: t('breadcrumbs.home'), href: '/docs' },

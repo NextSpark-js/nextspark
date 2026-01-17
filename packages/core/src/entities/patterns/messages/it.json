@@ -1,0 +1,76 @@
+{
+  "entity": {
+    "singular": "Modello",
+    "plural": "Modelli"
+  },
+  "title": "Modelli",
+  "subtitle": "Crea composizioni di blocchi riutilizzabili per le tue pagine",
+  "description": "Gestisci modelli riutilizzabili che possono essere inseriti in pagine e post",
+  "fields": {
+    "title": {
+      "label": "Titolo",
+      "placeholder": "Inserisci il nome del modello...",
+      "description": "Nome visualizzato del modello"
+    },
+    "slug": {
+      "label": "Slug",
+      "placeholder": "modello-slug",
+      "description": "Identificatore compatibile con URL, unico per team"
+    },
+    "status": {
+      "label": "Stato",
+      "placeholder": "Seleziona stato...",
+      "description": "Stato di pubblicazione"
+    },
+    "description": {
+      "label": "Descrizione",
+      "placeholder": "Descrivi questo modello...",
+      "description": "Breve descrizione dello scopo del modello"
+    }
+  },
+  "status": {
+    "draft": "Bozza",
+    "published": "Pubblicato"
+  },
+  "messages": {
+    "created": "Modello creato con successo",
+    "updated": "Modello aggiornato con successo",
+    "deleted": "Modello eliminato con successo",
+    "createError": "Errore durante la creazione del modello",
+    "updateError": "Errore durante l'aggiornamento del modello",
+    "deleteError": "Errore durante l'eliminazione del modello",
+    "notFound": "Modello non trovato"
+  },
+  "actions": {
+    "create": "Crea Modello",
+    "edit": "Modifica Modello",
+    "delete": "Elimina Modello",
+    "publish": "Pubblica",
+    "unpublish": "Annulla Pubblicazione",
+    "duplicate": "Duplica"
+  },
+  "builder": {
+    "title": "Costruttore di Modelli",
+    "description": "Aggiungi blocchi per creare il tuo modello riutilizzabile",
+    "emptyState": "Nessun blocco ancora. Aggiungi blocchi per creare il tuo modello.",
+    "blocksAllowed": "Solo alcuni blocchi possono essere utilizzati nei modelli",
+    "patternReference": "Riferimento al Modello",
+    "lockedMessage": "Questo è un riferimento al modello. Modifica il modello direttamente per apportare modifiche."
+  },
+  "list": {
+    "title": "Tutti i Modelli",
+    "empty": "Nessun modello ancora",
+    "emptyDescription": "Crea il tuo primo modello per iniziare",
+    "filters": {
+      "all": "Tutti",
+      "draft": "Bozze",
+      "published": "Pubblicati"
+    }
+  },
+  "picker": {
+    "title": "Inserisci Modello",
+    "search": "Cerca modelli...",
+    "noResults": "Nessun modello trovato",
+    "selectPattern": "Seleziona un modello da inserire"
+  }
+}

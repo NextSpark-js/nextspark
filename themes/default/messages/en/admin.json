@@ -258,7 +258,18 @@
         "noDesignFields": "No design fields",
         "noAdvancedFields": "No advanced fields"
       },
-      "noFields": "This block has no configurable fields"
+      "noFields": "This block has no configurable fields",
+      "pattern": {
+        "title": "Pattern Reference",
+        "locked": {
+          "title": "Pattern is read-only",
+          "description": "To edit this pattern's content, edit the pattern directly. Changes will be reflected everywhere it's used."
+        },
+        "actions": {
+          "edit": "Edit Pattern",
+          "remove": "Remove from page"
+        }
+      }
     }
   }
 }

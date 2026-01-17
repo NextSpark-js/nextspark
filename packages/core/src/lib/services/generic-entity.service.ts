@@ -324,7 +324,7 @@ export function validateEntityData(
       try {
         const result = field.validation.safeParse(value)
         if (!result.success) {
-          const zodError = result.error.errors[0]
+          const zodError = result.error.issues[0]
           errors.push(`Field "${field.name}": ${zodError?.message || 'Invalid value'}`)
           continue
         }

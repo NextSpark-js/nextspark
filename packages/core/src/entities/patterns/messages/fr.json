@@ -1,0 +1,76 @@
+{
+  "entity": {
+    "singular": "Modèle",
+    "plural": "Modèles"
+  },
+  "title": "Modèles",
+  "subtitle": "Créez des compositions de blocs réutilisables pour vos pages",
+  "description": "Gérez les modèles réutilisables qui peuvent être insérés dans les pages et les articles",
+  "fields": {
+    "title": {
+      "label": "Titre",
+      "placeholder": "Entrez le nom du modèle...",
+      "description": "Nom d'affichage du modèle"
+    },
+    "slug": {
+      "label": "Slug",
+      "placeholder": "modele-slug",
+      "description": "Identifiant convivial pour URL, unique par équipe"
+    },
+    "status": {
+      "label": "Statut",
+      "placeholder": "Sélectionnez un statut...",
+      "description": "Statut de publication"
+    },
+    "description": {
+      "label": "Description",
+      "placeholder": "Décrivez ce modèle...",
+      "description": "Brève description de l'objectif du modèle"
+    }
+  },
+  "status": {
+    "draft": "Brouillon",
+    "published": "Publié"
+  },
+  "messages": {
+    "created": "Modèle créé avec succès",
+    "updated": "Modèle mis à jour avec succès",
+    "deleted": "Modèle supprimé avec succès",
+    "createError": "Erreur lors de la création du modèle",
+    "updateError": "Erreur lors de la mise à jour du modèle",
+    "deleteError": "Erreur lors de la suppression du modèle",
+    "notFound": "Modèle introuvable"
+  },
+  "actions": {
+    "create": "Créer un Modèle",
+    "edit": "Modifier le Modèle",
+    "delete": "Supprimer le Modèle",
+    "publish": "Publier",
+    "unpublish": "Dépublier",
+    "duplicate": "Dupliquer"
+  },
+  "builder": {
+    "title": "Constructeur de Modèles",
+    "description": "Ajoutez des blocs pour créer votre modèle réutilisable",
+    "emptyState": "Aucun bloc pour le moment. Ajoutez des blocs pour créer votre modèle.",
+    "blocksAllowed": "Seuls certains blocs peuvent être utilisés dans les modèles",
+    "patternReference": "Référence de Modèle",
+    "lockedMessage": "Ceci est une référence de modèle. Modifiez le modèle directement pour apporter des modifications."
+  },
+  "list": {
+    "title": "Tous les Modèles",
+    "empty": "Aucun modèle pour le moment",
+    "emptyDescription": "Créez votre premier modèle pour commencer",
+    "filters": {
+      "all": "Tous",
+      "draft": "Brouillons",
+      "published": "Publiés"
+    }
+  },
+  "picker": {
+    "title": "Insérer un Modèle",
+    "search": "Rechercher des modèles...",
+    "noResults": "Aucun modèle trouvé",
+    "selectPattern": "Sélectionnez un modèle à insérer"
+  }
+}

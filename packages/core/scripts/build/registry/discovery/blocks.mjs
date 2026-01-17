@@ -76,6 +76,7 @@ export async function discoverBlocks(config = DEFAULT_CONFIG) {
         const categoryMatch = configContent.match(/category:\s*['"]([^'"]+)['"]/)
         const iconMatch = configContent.match(/icon:\s*['"]([^'"]+)['"]/)
         const scopeMatch = configContent.match(/scope:\s*\[([^\]]+)\]/)
+        const allowInPatternsMatch = configContent.match(/allowInPatterns:\s*(true|false)/)
 
         const extractedSlug = slugMatch ? slugMatch[1] : blockSlug
 
@@ -93,6 +94,12 @@ export async function discoverBlocks(config = DEFAULT_CONFIG) {
             .filter(s => s.length > 0)
         }
 
+        // Parse allowInPatterns (default: undefined, which means true)
+        let allowInPatterns = undefined
+        if (allowInPatternsMatch) {
+          allowInPatterns = allowInPatternsMatch[1] === 'true'
+        }
+
         blocks.push({
           slug: extractedSlug,
           name: nameMatch ? nameMatch[1] : blockSlug,
@@ -100,6 +107,7 @@ export async function discoverBlocks(config = DEFAULT_CONFIG) {
           category: categoryMatch ? categoryMatch[1] : 'other',
           icon: iconMatch ? iconMatch[1] : 'Box',
           scope,
+          allowInPatterns,
           themeName,
           hasExamples,
           paths: {

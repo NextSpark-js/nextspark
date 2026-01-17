@@ -20,7 +20,7 @@ INSERT INTO public.pages (
   "createdAt",
   "updatedAt"
 ) VALUES (
-  gen_random_uuid(),
+  '00000000-0000-4000-a000-000000000001',
   'usr-carlos-001',
   'team-everpoint-001',
   'home',
@@ -332,7 +332,7 @@ INSERT INTO public.pages (
   "createdAt",
   "updatedAt"
 ) VALUES (
-  gen_random_uuid(),
+  '00000000-0000-4000-a000-000000000002',
   'usr-carlos-001',
   'team-everpoint-001',
   'features',
@@ -500,7 +500,7 @@ INSERT INTO public.pages (
   "createdAt",
   "updatedAt"
 ) VALUES (
-  gen_random_uuid(),
+  '00000000-0000-4000-a000-000000000003',
   'usr-carlos-001',
   'team-everpoint-001',
   'pricing',
@@ -644,7 +644,7 @@ INSERT INTO public.pages (
   "createdAt",
   "updatedAt"
 ) VALUES (
-  gen_random_uuid(),
+  '00000000-0000-4000-a000-000000000004',
   'usr-carlos-001',
   'team-everpoint-001',
   'about',
@@ -803,7 +803,7 @@ INSERT INTO public.pages (
   "createdAt",
   "updatedAt"
 ) VALUES (
-  gen_random_uuid(),
+  '00000000-0000-4000-a000-000000000005',
   'usr-carlos-001',
   'team-everpoint-001',
   'getting-started',
@@ -955,7 +955,7 @@ INSERT INTO public.pages (
   "createdAt",
   "updatedAt"
 ) VALUES (
-  gen_random_uuid(),
+  '00000000-0000-4000-a000-000000000006',
   'usr-carlos-001',
   'team-everpoint-001',
   'contact',
@@ -1068,7 +1068,7 @@ INSERT INTO public.pages (
   "createdAt",
   "updatedAt"
 ) VALUES (
-  gen_random_uuid(),
+  '00000000-0000-4000-a000-000000000007',
   'usr-carlos-001',
   'team-everpoint-001',
   'demo',

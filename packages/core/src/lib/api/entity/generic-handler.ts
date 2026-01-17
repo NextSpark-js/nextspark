@@ -32,6 +32,11 @@ import {
   handleCorsPreflightRequest
 } from '../helpers'
 import { afterEntityCreate, afterEntityUpdate, afterEntityDelete } from '../../entities/entity-hooks'
+import { extractPatternIds } from '../../blocks/pattern-resolver'
+import { isPatternReference } from '../../../types/pattern-reference'
+import { PatternUsageService } from '../../services/pattern-usage.service'
+import type { BlockInstance } from '../../../types/blocks'
+import type { PatternReference } from '../../../types/pattern-reference'
 
 // ==========================================
 // TAXONOMY HELPER FUNCTIONS
@@ -215,6 +220,51 @@ function parseTaxonomyFilterParams(url: URL, entityConfig: EntityConfig): { taxo
  */
 function getTableName(entityConfig: EntityConfig): string {
   return entityConfig.tableName || entityConfig.slug
+}
+
+// ==========================================
+// PATTERN REFERENCE HELPER FUNCTIONS
+// ==========================================
+
+/**
+ * Filter out PatternReferences to deleted patterns
+ *
+ * This enables lazy cleanup - patterns can be deleted without updating all entities.
+ * When an entity is saved, any references to deleted patterns are automatically filtered out.
+ *
+ * @param blocks - Array of blocks that may contain pattern references
+ * @param userId - User ID for RLS
+ * @returns Filtered array with orphaned pattern references removed
+ */
+async function filterOrphanedPatternReferences(
+  blocks: unknown[],
+  userId: string
+): Promise<unknown[]> {
+  if (!Array.isArray(blocks) || blocks.length === 0) return blocks
+
+  // Extract pattern IDs referenced in blocks
+  const patternIds = extractPatternIds(blocks as (BlockInstance | PatternReference)[])
+  if (patternIds.length === 0) return blocks
+
+  // Check which patterns still exist
+  const existingIds = await PatternUsageService.getExistingPatternIds(patternIds, userId)
+
+  // If all patterns exist, return blocks unchanged
+  if (existingIds.size === patternIds.length) return blocks
+
+  // Filter out references to deleted patterns
+  const filtered = blocks.filter(block => {
+    if (isPatternReference(block)) {
+      const exists = existingIds.has(block.ref)
+      if (!exists) {
+        console.info(`[generic-handler] Filtering orphaned PatternReference: ${block.ref}`)
+      }
+      return exists
+    }
+    return true
+  })
+
+  return filtered
 }
 
 /**
@@ -449,6 +499,11 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
       })
 
       fields = [...systemFieldsFormatted, ...configFields].join(', ')
+
+      // Add usageCount for patterns entity (computed field)
+      if (entityConfig.slug === 'patterns') {
+        fields += ', COALESCE(pu.usage_count, 0)::int as "usageCount"'
+      }
     }
 
     // Build query based on access type and request type
@@ -662,11 +717,24 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
           ? `WHERE ${whereConditions.join(' AND ')}`
           : ''
 
+      // Add LEFT JOIN for patterns entity to include usageCount
+      let joinClause = ''
+      if (entityConfig.slug === 'patterns') {
+        joinClause = `
+          LEFT JOIN (
+            SELECT "patternId", COUNT(*) as usage_count
+            FROM pattern_usages
+            GROUP BY "patternId"
+          ) pu ON t.id = pu."patternId"
+        `
+      }
+
       // Use COUNT(*) OVER() window function to get total count in single query
       // This eliminates a separate COUNT query, saving ~230ms per request
       query = `
         SELECT ${fields}, COUNT(*) OVER() as total_count
         FROM "${tableName}" t
+        ${joinClause}
         ${whereClause}
         ORDER BY t."createdAt" DESC
         LIMIT $${paramIndex++} OFFSET $${paramIndex++}
@@ -853,7 +921,11 @@ export async function handleGenericCreate(request: NextRequest): Promise<NextRes
     const entityHasBuilder = entityConfig.builder?.enabled === true
 
     if (builderRequest && entityHasBuilder && 'blocks' in (validatedData as Record<string, unknown>)) {
-      const blocksValue = (validatedData as Record<string, unknown>).blocks
+      let blocksValue = (validatedData as Record<string, unknown>).blocks as unknown[]
+
+      // Filter orphaned pattern references (lazy cleanup)
+      blocksValue = await filterOrphanedPatternReferences(blocksValue, authResult.user!.id)
+
       insertFields.push('"blocks"')
       placeholders.push(`$${paramCount++}::jsonb`)
       values.push(JSON.stringify(blocksValue))
@@ -1292,8 +1364,13 @@ export async function handleGenericUpdate(request: NextRequest, { params }: { pa
     const entityHasBuilder = entityConfig.builder?.enabled === true
 
     if (builderRequest && entityHasBuilder && 'blocks' in entityData) {
+      let blocksData = entityData.blocks as unknown[]
+
+      // Filter orphaned pattern references (lazy cleanup)
+      blocksData = await filterOrphanedPatternReferences(blocksData, authResult.user!.id)
+
       updates.push(`"blocks" = $${paramCount++}::jsonb`)
-      values.push(JSON.stringify(entityData.blocks))
+      values.push(JSON.stringify(blocksData))
     }
 
     // Filter out undefined/null fields AND fields not in original request

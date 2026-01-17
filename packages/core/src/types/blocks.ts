@@ -439,6 +439,13 @@ export interface BlockConfig {
   // If undefined or empty, block is NOT available anywhere (explicit opt-in required)
   scope?: Array<'pages' | 'posts' | string>
 
+  /**
+   * Whether this block can be used inside patterns.
+   * Default: true (blocks are allowed in patterns by default)
+   * Set to false for blocks that should not be included in patterns.
+   */
+  allowInPatterns?: boolean
+
   // Schema reference (not the actual Zod schema, just metadata)
   schemaType?: string
 

@@ -69,6 +69,9 @@ export const BLOCK_METADATA = {
       ? `[${block.scope.map(s => `'${s}'`).join(', ')}]`
       : 'undefined'
     const examplesValue = block.hasExamples ? `${slugVar}_examples` : '[]'
+    const allowInPatternsValue = block.allowInPatterns !== undefined
+      ? block.allowInPatterns.toString()
+      : 'undefined'
 
     return `  '${block.slug}': {
     slug: '${block.slug}',
@@ -83,6 +86,7 @@ export const BLOCK_METADATA = {
     fieldDefinitions: ${slugVar}_fields,
     examples: ${examplesValue},
     scope: ${scopeValue},
+    allowInPatterns: ${allowInPatternsValue},
     isCore: false,
     source: 'theme' as const,
     sourceId: '${block.themeName}'

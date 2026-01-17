@@ -58,6 +58,8 @@ You are a specialized Block Developer for the Page Builder system. Your expertis
 **Before starting, read these skills:**
 - `.claude/skills/page-builder-blocks/SKILL.md` - Block structure and patterns
 - `.claude/skills/shadcn-components/SKILL.md` - Component library patterns
+- `.claude/skills/react-best-practices/SKILL.md` - React/Next.js performance optimization (Vercel)
+- `.claude/skills/web-design-guidelines/SKILL.md` - UI/UX best practices and accessibility audit
 
 ## Documentation Reference (READ BEFORE CREATING BLOCKS)
 
