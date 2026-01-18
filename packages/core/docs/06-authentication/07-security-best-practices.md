@@ -531,11 +531,11 @@ const securityHeaders = [
   { key: 'Content-Security-Policy', value: cspDirectives.join('; ') },
 ];
 
-// HSTS only in production
+// HSTS only in production (includes preload directive)
 if (isProduction) {
   securityHeaders.push({
     key: 'Strict-Transport-Security',
-    value: 'max-age=31536000; includeSubDomains'
+    value: 'max-age=31536000; includeSubDomains; preload'
   });
 }
 ```
@@ -551,6 +551,23 @@ if (isProduction) {
 | `Permissions-Policy` | Restrict browser features | Disables camera, microphone, geolocation |
 | `Content-Security-Policy` | Control resource loading | Prevents XSS, data injection attacks |
 | `Strict-Transport-Security` | Enforce HTTPS | Forces HTTPS connections (production only) |
+
+### HSTS Preload
+
+The HSTS header includes the `preload` directive, which allows your domain to be included in browser preload lists. This provides protection from the first request, before any HTTP response is received.
+
+**Requirements for HSTS Preload submission:**
+
+Before submitting to [hstspreload.org](https://hstspreload.org), ensure your site meets these requirements:
+
+1. **Valid HTTPS certificate** - Must be valid and not self-signed
+2. **Redirect HTTP to HTTPS** - All HTTP requests must redirect to HTTPS (301 redirect)
+3. **Serve HSTS on base domain** - The header must be served on the root domain, not just subdomains
+4. **Include all subdomains** - `includeSubDomains` must be present (it is by default)
+5. **max-age at least 1 year** - Must be at least 31536000 seconds (it is by default)
+6. **preload directive** - Must include `preload` (it is by default)
+
+**Warning:** HSTS preload is difficult to undo. Once your domain is in browser preload lists, it can take months to remove. Only submit if you're committed to HTTPS permanently.
 
 ### Content Security Policy (CSP)
 

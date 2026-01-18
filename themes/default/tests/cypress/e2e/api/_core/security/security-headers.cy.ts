@@ -317,7 +317,7 @@ describe('Security Headers', {
 
   describe('CSP Violation Reporting', () => {
 
-    it('SEC_HDR_050: CSP should include report-uri directive', () => {
+    it('SEC_HDR_050: CSP should include report-uri and report-to directives', () => {
       allure.severity('normal')
       cy.request({
         method: 'GET',
@@ -325,7 +325,13 @@ describe('Security Headers', {
         failOnStatusCode: false
       }).then((response) => {
         const csp = response.headers['content-security-policy']
+        // Legacy report-uri for older browsers
         expect(csp).to.include('report-uri /api/csp-report')
+        // Modern report-to for newer browsers
+        expect(csp).to.include('report-to csp-endpoint')
+        // Reporting-Endpoints header should also be present
+        expect(response.headers).to.have.property('reporting-endpoints')
+        expect(response.headers['reporting-endpoints']).to.include('csp-endpoint')
       })
     })
 

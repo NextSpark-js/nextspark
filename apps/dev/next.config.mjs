@@ -93,9 +93,22 @@ const nextConfig = {
     // CSP directives
     // Note: 'unsafe-inline' for styles is required by many UI libraries including shadcn/ui
     // Note: 'unsafe-eval' is required by Next.js in development for hot reload
+    //
+    // SECURITY NOTE: 'unsafe-inline' for scripts
+    // ==========================================
+    // 'unsafe-inline' is required because:
+    // 1. Next.js injects inline scripts for hydration and routing
+    // 2. Many React patterns rely on inline event handlers
+    // 3. Implementing nonces requires middleware changes and affects all components
+    //
+    // To implement nonce-based CSP (stricter security):
+    // 1. Create middleware to generate nonce per request
+    // 2. Pass nonce to all Script components: <Script nonce={nonce} />
+    // 3. Update CSP: script-src 'self' 'nonce-${nonce}'
+    // See: https://nextjs.org/docs/app/building-your-application/configuring/content-security-policy
     const cspDirectives = [
       "default-src 'self'",
-      // unsafe-inline/eval required for Next.js dev mode; consider nonce-based approach for stricter production CSP
+      // unsafe-inline required for Next.js hydration; unsafe-eval only in dev for hot reload
       `script-src 'self' 'unsafe-inline'${!isProduction ? " 'unsafe-eval'" : ''} https://js.stripe.com`,
       "style-src 'self' 'unsafe-inline'",
       `img-src 'self' data: blob: ${allowedImageDomains}`,
@@ -107,11 +120,19 @@ const nextConfig = {
       "object-src 'none'",
       "base-uri 'self'",
       // CSP violation reporting - sends violations to /api/csp-report
+      // report-uri is deprecated but has wider browser support
+      // report-to is the modern replacement (configured via Reporting-Endpoints header)
       "report-uri /api/csp-report",
+      "report-to csp-endpoint",
     ];
 
     // Security headers for all routes
     const securityHeaders = [
+      // Reporting API endpoint for modern browsers (used by report-to CSP directive)
+      {
+        key: 'Reporting-Endpoints',
+        value: 'csp-endpoint="/api/csp-report"'
+      },
       {
         key: 'X-Content-Type-Options',
         value: 'nosniff'
