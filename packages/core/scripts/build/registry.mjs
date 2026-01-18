@@ -342,7 +342,9 @@ process.on('SIGINT', () => {
 
 // Run if executed directly
 // Check if this script's filename matches argv[1] (handles symlinks and different path resolutions)
-const isMainScript = process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop())
+// Note: On Windows, argv[1] uses backslashes but import.meta.url uses forward slashes
+// Split by both separators to handle cross-platform paths
+const isMainScript = process.argv[1] && import.meta.url.endsWith(process.argv[1].split(/[/\\]/).pop())
 if (isMainScript) {
   main().catch(error => {
     log(`Fatal error: ${error.message}`, 'error')
