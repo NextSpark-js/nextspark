@@ -79,13 +79,110 @@ const nextConfig = {
     return config
   },
   async headers() {
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    // Allowed image domains (must match remotePatterns above)
+    const allowedImageDomains = [
+      'https://lh3.googleusercontent.com',
+      'https://*.public.blob.vercel-storage.com',
+      'https://images.unsplash.com',
+      'https://upload.wikimedia.org',
+      'https://i.pravatar.cc',
+    ].join(' ');
+
+    // CSP directives
+    // Note: 'unsafe-inline' for styles is required by many UI libraries including shadcn/ui
+    // Note: 'unsafe-eval' is required by Next.js in development for hot reload
+    //
+    // SECURITY NOTE: 'unsafe-inline' for scripts
+    // ==========================================
+    // 'unsafe-inline' is required because:
+    // 1. Next.js injects inline scripts for hydration and routing
+    // 2. Many React patterns rely on inline event handlers
+    // 3. Implementing nonces requires middleware changes and affects all components
+    //
+    // To implement nonce-based CSP (stricter security):
+    // 1. Create middleware to generate nonce per request
+    // 2. Pass nonce to all Script components: <Script nonce={nonce} />
+    // 3. Update CSP: script-src 'self' 'nonce-${nonce}'
+    // See: https://nextjs.org/docs/app/building-your-application/configuring/content-security-policy
+    const cspDirectives = [
+      "default-src 'self'",
+      // unsafe-inline required for Next.js hydration; unsafe-eval only in dev for hot reload
+      `script-src 'self' 'unsafe-inline'${!isProduction ? " 'unsafe-eval'" : ''} https://js.stripe.com`,
+      "style-src 'self' 'unsafe-inline'",
+      `img-src 'self' data: blob: ${allowedImageDomains}`,
+      "font-src 'self' data:",
+      // wss: needed for Next.js hot reload in development
+      `connect-src 'self' https://api.stripe.com${!isProduction ? ' wss:' : ''}`,
+      "frame-src https://js.stripe.com https://hooks.stripe.com",
+      "frame-ancestors 'none'",
+      "object-src 'none'",
+      "base-uri 'self'",
+      // CSP violation reporting - sends violations to /api/csp-report
+      // report-uri is deprecated but has wider browser support
+      // report-to is the modern replacement (configured via Reporting-Endpoints header)
+      "report-uri /api/csp-report",
+      "report-to csp-endpoint",
+    ];
+
+    // Security headers for all routes
+    const securityHeaders = [
+      // Reporting API endpoint for modern browsers (used by report-to CSP directive)
+      {
+        key: 'Reporting-Endpoints',
+        value: 'csp-endpoint="/api/csp-report"'
+      },
+      {
+        key: 'X-Content-Type-Options',
+        value: 'nosniff'
+      },
+      {
+        key: 'X-Frame-Options',
+        value: 'DENY'
+      },
+      // X-XSS-Protection is deprecated but kept for legacy browser support
+      // Modern browsers use CSP instead
+      {
+        key: 'X-XSS-Protection',
+        value: '1; mode=block'
+      },
+      {
+        key: 'Referrer-Policy',
+        value: 'strict-origin-when-cross-origin'
+      },
+      {
+        key: 'Permissions-Policy',
+        value: 'camera=(), microphone=(), geolocation=()'
+      },
+      {
+        key: 'Content-Security-Policy',
+        value: cspDirectives.join('; ')
+      },
+    ];
+
+    // Add HSTS only in production
+    // Note: Only add 'preload' if you plan to submit to https://hstspreload.org
+    if (isProduction) {
+      securityHeaders.push({
+        key: 'Strict-Transport-Security',
+        value: 'max-age=31536000; includeSubDomains; preload'
+      });
+    }
+
     return [
+      // Security headers for all routes
+      {
+        source: '/:path*',
+        headers: securityHeaders
+      },
+      // CORS headers for API routes
       {
         source: '/api/:path*',
         headers: [
           {
             key: 'Access-Control-Allow-Origin',
-            value: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173'
+            value: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
           },
           {
             key: 'Access-Control-Allow-Methods',
@@ -93,7 +190,7 @@ const nextConfig = {
           },
           {
             key: 'Access-Control-Allow-Headers',
-            value: 'Content-Type, Authorization, x-verify-from-ui, Cookie, Set-Cookie'
+            value: 'Content-Type, Authorization, x-api-key, x-verify-from-ui, Cookie, Set-Cookie'
           },
           {
             key: 'Access-Control-Allow-Credentials',

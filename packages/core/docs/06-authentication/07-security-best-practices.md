@@ -363,20 +363,24 @@ const tasks = await db
 ### Content Security Policy
 
 ```typescript
-// next.config.ts
-const securityHeaders = [
-  {
-    key: 'Content-Security-Policy',
-    value: [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: https:",
-      "font-src 'self' data:",
-      "connect-src 'self' https://api.yourapp.com",
-    ].join('; ')
-  }
-]
+// next.config.mjs - Environment-aware CSP (actual implementation)
+const isProduction = process.env.NODE_ENV === 'production';
+
+const cspDirectives = [
+  "default-src 'self'",
+  // unsafe-inline required for Next.js; unsafe-eval only in dev
+  `script-src 'self' 'unsafe-inline'${!isProduction ? " 'unsafe-eval'" : ''} https://js.stripe.com`,
+  "style-src 'self' 'unsafe-inline'",
+  `img-src 'self' data: blob: ${allowedImageDomains}`,
+  "font-src 'self' data:",
+  `connect-src 'self' https://api.stripe.com${!isProduction ? ' wss:' : ''}`,
+  "frame-src https://js.stripe.com https://hooks.stripe.com",
+  "frame-ancestors 'none'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "report-uri /api/csp-report",
+  "report-to csp-endpoint",
+];
 ```
 
 ### Input Sanitization
@@ -488,29 +492,136 @@ const apiLimiter = rateLimit({
 
 ## Security Headers
 
-### Recommended Headers
+NextSpark includes comprehensive security headers configured in `next.config.mjs`. These headers are automatically applied to all routes.
+
+### Default Security Headers
 
 ```typescript
-// next.config.ts
+// next.config.mjs - headers() function
+const isProduction = process.env.NODE_ENV === 'production';
+
+// Allowed image domains (must match remotePatterns)
+const allowedImageDomains = [
+  'https://lh3.googleusercontent.com',
+  'https://*.public.blob.vercel-storage.com',
+  'https://images.unsplash.com',
+  'https://upload.wikimedia.org',
+  'https://i.pravatar.cc',
+].join(' ');
+
+// CSP directives - environment-aware
+const cspDirectives = [
+  "default-src 'self'",
+  // unsafe-eval only in development (Next.js hot reload)
+  `script-src 'self' 'unsafe-inline'${!isProduction ? " 'unsafe-eval'" : ''} https://js.stripe.com`,
+  "style-src 'self' 'unsafe-inline'",
+  `img-src 'self' data: blob: ${allowedImageDomains}`,
+  "font-src 'self' data:",
+  // wss: only in development (hot reload)
+  `connect-src 'self' https://api.stripe.com${!isProduction ? ' wss:' : ''}`,
+  "frame-src https://js.stripe.com https://hooks.stripe.com",
+  "frame-ancestors 'none'",
+  "object-src 'none'",
+  "base-uri 'self'",
+];
+
 const securityHeaders = [
-  {
-    key: 'X-Frame-Options',
-    value: 'SAMEORIGIN'
-  },
-  {
-    key: 'X-Content-Type-Options',
-    value: 'nosniff'
-  },
-  {
-    key: 'Referrer-Policy',
-    value: 'strict-origin-when-cross-origin'
-  },
-  {
-    key: 'Permissions-Policy',
-    value: 'camera=(), microphone=(), geolocation=()'
-  }
-]
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'X-Frame-Options', value: 'DENY' },
+  // X-XSS-Protection deprecated but kept for legacy browsers
+  { key: 'X-XSS-Protection', value: '1; mode=block' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+  { key: 'Content-Security-Policy', value: cspDirectives.join('; ') },
+];
+
+// HSTS only in production (includes preload directive)
+if (isProduction) {
+  securityHeaders.push({
+    key: 'Strict-Transport-Security',
+    value: 'max-age=31536000; includeSubDomains; preload'
+  });
+}
 ```
+
+### Header Purposes
+
+| Header | Purpose | Security Benefit |
+|--------|---------|------------------|
+| `X-Content-Type-Options: nosniff` | Prevent MIME sniffing | Stops browsers from interpreting files as different content types |
+| `X-Frame-Options: DENY` | Prevent clickjacking | Blocks the site from being embedded in iframes |
+| `X-XSS-Protection: 1; mode=block` | Enable XSS filter | Legacy browser protection against reflected XSS |
+| `Referrer-Policy` | Control referrer info | Limits data sent in Referer header |
+| `Permissions-Policy` | Restrict browser features | Disables camera, microphone, geolocation |
+| `Content-Security-Policy` | Control resource loading | Prevents XSS, data injection attacks |
+| `Strict-Transport-Security` | Enforce HTTPS | Forces HTTPS connections (production only) |
+
+### HSTS Preload
+
+The HSTS header includes the `preload` directive, which allows your domain to be included in browser preload lists. This provides protection from the first request, before any HTTP response is received.
+
+**Requirements for HSTS Preload submission:**
+
+Before submitting to [hstspreload.org](https://hstspreload.org), ensure your site meets these requirements:
+
+1. **Valid HTTPS certificate** - Must be valid and not self-signed
+2. **Redirect HTTP to HTTPS** - All HTTP requests must redirect to HTTPS (301 redirect)
+3. **Serve HSTS on base domain** - The header must be served on the root domain, not just subdomains
+4. **Include all subdomains** - `includeSubDomains` must be present (it is by default)
+5. **max-age at least 1 year** - Must be at least 31536000 seconds (it is by default)
+6. **preload directive** - Must include `preload` (it is by default)
+
+**Warning:** HSTS preload is difficult to undo. Once your domain is in browser preload lists, it can take months to remove. Only submit if you're committed to HTTPS permanently.
+
+### Content Security Policy (CSP)
+
+The CSP is configured with environment-aware settings:
+
+**Production-specific hardening:**
+- `unsafe-eval` is **removed** from script-src in production
+- WebSocket wildcard (`wss:`) is **removed** in production
+- Only specific image domains are allowed (no `https:` wildcard)
+
+**Allowed resources:**
+- **Self-hosted resources**: Scripts, styles, images from your domain
+- **Stripe integration**: Scripts and iframes from `js.stripe.com`, API calls to `api.stripe.com`
+- **Specific image domains**: Google, Unsplash, Vercel Blob, Wikimedia, Pravatar
+- **Inline styles**: Required by shadcn/ui and many UI libraries
+- **Data URIs**: For images and fonts
+
+**Security directives:**
+- `object-src 'none'`: Blocks Flash, Java, and other plugins
+- `base-uri 'self'`: Prevents base tag injection attacks
+- `frame-ancestors 'none'`: Prevents clickjacking
+
+#### Customizing CSP
+
+If you integrate additional third-party services, update the CSP in your `next.config.mjs`:
+
+```typescript
+// Example: Adding Google Analytics
+const cspDirectives = [
+  // ... existing directives
+  `script-src 'self' 'unsafe-inline'${!isProduction ? " 'unsafe-eval'" : ''} https://js.stripe.com https://www.googletagmanager.com`,
+  `connect-src 'self' https://api.stripe.com https://www.google-analytics.com${!isProduction ? ' wss:' : ''}`,
+];
+
+// Example: Adding a new image domain
+const allowedImageDomains = [
+  // ... existing domains
+  'https://cdn.yourservice.com',
+].join(' ');
+```
+
+### Testing Security Headers
+
+Run the security headers tests:
+
+```bash
+pnpm cy:run -- --spec "**/security-headers.cy.ts"
+```
+
+Or verify manually in browser DevTools (Network tab > Response Headers).
 
 ## Audit Logging
 
@@ -564,6 +675,91 @@ async function logAuthEvent(event: {
 - [ ] Enable audit logging
 - [ ] Review and rotate secrets regularly
 - [ ] Monitor for suspicious activity
+
+## Security Headers Migration Guide
+
+If you're upgrading from an older version of NextSpark or adding security headers to an existing application, follow this guide to ensure a smooth transition.
+
+### Phase 1: Report-Only Mode (Recommended)
+
+Before enforcing CSP, use report-only mode to identify potential issues:
+
+```typescript
+// next.config.mjs - Use Content-Security-Policy-Report-Only first
+{
+  key: 'Content-Security-Policy-Report-Only',  // Not enforced, just reports
+  value: cspDirectives.join('; ')
+}
+```
+
+Monitor `/api/csp-report` logs for violations before switching to enforced CSP.
+
+### Phase 2: Identify CSP Violations
+
+Common issues when adding CSP:
+
+| Issue | Symptom | Solution |
+|-------|---------|----------|
+| Inline scripts blocked | Scripts not executing | Add domain to `script-src` or use nonces |
+| External images blocked | Images not loading | Add domain to `img-src` allowlist |
+| Third-party widgets broken | Iframes not loading | Add domain to `frame-src` |
+| API calls failing | Fetch/XHR blocked | Add domain to `connect-src` |
+| Fonts not loading | @font-face failing | Add domain to `font-src` |
+
+### Phase 3: Add Third-Party Integrations
+
+Update CSP for common integrations:
+
+```typescript
+// Google Analytics
+`script-src 'self' https://www.googletagmanager.com`,
+`connect-src 'self' https://www.google-analytics.com`,
+
+// Intercom
+`script-src 'self' https://widget.intercom.io`,
+`connect-src 'self' https://api.intercom.io`,
+`frame-src https://widget.intercom.io`,
+
+// Sentry
+`connect-src 'self' https://*.sentry.io`,
+
+// Cloudflare Analytics
+`script-src 'self' https://static.cloudflareinsights.com`,
+`connect-src 'self' https://cloudflareinsights.com`,
+```
+
+### Phase 4: Switch to Enforced Mode
+
+Once violations are resolved:
+
+```typescript
+{
+  key: 'Content-Security-Policy',  // Now enforced
+  value: cspDirectives.join('; ')
+}
+```
+
+### Phase 5: Monitor and Maintain
+
+1. **Check CSP reports regularly** - Review `/api/csp-report` logs
+2. **Test after dependency updates** - New library versions may require CSP changes
+3. **Use security scanners** - Tools like [securityheaders.com](https://securityheaders.com) or [Mozilla Observatory](https://observatory.mozilla.org)
+4. **Consider HSTS preload** - Once stable, submit to [hstspreload.org](https://hstspreload.org)
+
+### Rollback Plan
+
+If issues occur after enabling CSP:
+
+1. **Immediate**: Comment out CSP header in `next.config.mjs`
+2. **Investigate**: Check `/api/csp-report` logs for blocked resources
+3. **Fix**: Add missing domains to appropriate directives
+4. **Re-enable**: Uncomment CSP header
+
+### X-XSS-Protection Deprecation Note
+
+The `X-XSS-Protection` header is included for legacy browser support but is deprecated in modern browsers. It may be removed in future versions. Modern browsers rely on CSP for XSS protection instead.
+
+See [MDN X-XSS-Protection documentation](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-XSS-Protection) for more details.
 
 ## Next Steps
 
