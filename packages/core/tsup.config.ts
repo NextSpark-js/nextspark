@@ -73,9 +73,14 @@ async function fixEsmImports(dir: string): Promise<void> {
   }
 }
 
+// Normalize paths to forward slashes (Windows compatibility)
+const normalizePathSeparators = (paths: string[]): string[] =>
+  paths.map(p => p.replace(/\\/g, '/'))
+
 export default defineConfig({
   // Use glob to get all source files - preserves module structure
-  entry: await glob('src/**/*.{ts,tsx}', {
+  // Note: glob on Windows returns backslashes, but tsup expects forward slashes
+  entry: normalizePathSeparators(await glob('src/**/*.{ts,tsx}', {
     ignore: [
       '**/*.test.ts',
       '**/*.test.tsx',
@@ -86,7 +91,7 @@ export default defineConfig({
       // Jest test helpers (not needed at runtime)
       'src/testing/**',
     ],
-  }),
+  })),
 
   // Output format
   format: ['esm'],
