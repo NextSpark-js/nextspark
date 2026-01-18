@@ -106,6 +106,8 @@ const nextConfig = {
       "frame-ancestors 'none'",
       "object-src 'none'",
       "base-uri 'self'",
+      // CSP violation reporting - sends violations to /api/csp-report
+      "report-uri /api/csp-report",
     ];
 
     // Security headers for all routes
@@ -139,10 +141,11 @@ const nextConfig = {
     ];
 
     // Add HSTS only in production
+    // Note: Only add 'preload' if you plan to submit to https://hstspreload.org
     if (isProduction) {
       securityHeaders.push({
         key: 'Strict-Transport-Security',
-        value: 'max-age=31536000; includeSubDomains'
+        value: 'max-age=31536000; includeSubDomains; preload'
       });
     }
 
