@@ -38,6 +38,7 @@ const rootDir = join(__dirname, '../../../..')
 
 // Import shared utilities
 import { log, verbose, setVerboseMode } from '../utils/index.mjs'
+import { getBasename } from '../utils/paths.mjs'
 
 // Import configuration
 import { getConfig } from './registry/config.mjs'
@@ -342,9 +343,8 @@ process.on('SIGINT', () => {
 
 // Run if executed directly
 // Check if this script's filename matches argv[1] (handles symlinks and different path resolutions)
-// Note: On Windows, argv[1] uses backslashes but import.meta.url uses forward slashes
-// Split by both separators to handle cross-platform paths
-const isMainScript = process.argv[1] && import.meta.url.endsWith(process.argv[1].split(/[/\\]/).pop())
+// Uses getBasename to handle cross-platform path separators (Windows backslashes vs POSIX forward slashes)
+const isMainScript = process.argv[1] && import.meta.url.endsWith(getBasename(process.argv[1]))
 if (isMainScript) {
   main().catch(error => {
     log(`Fatal error: ${error.message}`, 'error')
