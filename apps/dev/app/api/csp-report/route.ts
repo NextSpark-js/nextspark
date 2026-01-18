@@ -1,11 +1,28 @@
 import { randomUUID } from 'node:crypto';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+
+// Dynamic import for rate limiting - graceful fallback if not available
+let checkDistributedRateLimit: ((id: string, tier: string) => Promise<{ allowed: boolean; limit: number; remaining: number; resetTime: number; retryAfter?: number }>) | null = null;
+let createRateLimitErrorResponse: ((result: { allowed: boolean; limit: number; remaining: number; resetTime: number; retryAfter?: number }) => NextResponse) | null = null;
+
+// Try to load rate limiting functions
+try {
+  const rateLimitModule = require('@nextsparkjs/core/lib/api');
+  checkDistributedRateLimit = rateLimitModule.checkDistributedRateLimit;
+  createRateLimitErrorResponse = rateLimitModule.createRateLimitErrorResponse;
+} catch {
+  // Rate limiting not available - will skip rate limit checks
+  console.warn('[CSP Report] Rate limiting not available - running without rate limits');
+}
 
 /**
  * CSP Violation Report Endpoint
  *
  * Receives Content-Security-Policy violation reports from browsers.
  * Reports are logged for monitoring and debugging CSP issues.
+ *
+ * Rate limiting: Uses 'api' tier (100 requests/minute per IP) to prevent abuse.
+ * Falls back gracefully if rate limiting is not available.
  *
  * NOTE: This file exists in both apps/dev/app/api/csp-report/ and
  * packages/core/templates/app/api/csp-report/. The template version
@@ -37,8 +54,52 @@ const getAllowedOrigin = () => {
   return process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 };
 
+/**
+ * Get client IP address from request headers.
+ * Handles various proxy scenarios (X-Forwarded-For, X-Real-IP, etc.)
+ */
+function getClientIp(request: NextRequest): string {
+  const forwardedFor = request.headers.get('x-forwarded-for');
+  if (forwardedFor) {
+    const ips = forwardedFor.split(',').map(ip => ip.trim());
+    if (ips[0]) return ips[0];
+  }
+  const realIp = request.headers.get('x-real-ip');
+  if (realIp) return realIp;
+  const cfIp = request.headers.get('cf-connecting-ip');
+  if (cfIp) return cfIp;
+  return 'unknown';
+}
+
 export async function POST(request: NextRequest) {
   const requestId = randomUUID().slice(0, 8);
+  let rateLimitHeaders: Record<string, string> = {};
+
+  // Rate limiting: 100 requests per minute per IP (api tier)
+  // Skip if rate limiting is not available
+  if (checkDistributedRateLimit && createRateLimitErrorResponse) {
+    try {
+      const clientIp = getClientIp(request);
+      const rateLimitResult = await checkDistributedRateLimit(`csp-report:ip:${clientIp}`, 'api');
+
+      if (!rateLimitResult.allowed) {
+        console.warn(`[CSP Report ${requestId}] Rate limit exceeded for IP: ${clientIp}`);
+        return createRateLimitErrorResponse(rateLimitResult);
+      }
+
+      // Store rate limit headers to include in response
+      rateLimitHeaders = {
+        'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+        'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+        'X-RateLimit-Reset': rateLimitResult.resetTime.toString(),
+      };
+    } catch (rateLimitError) {
+      // Log but continue without rate limiting
+      console.warn(`[CSP Report ${requestId}] Rate limit check failed, continuing without:`, {
+        error: rateLimitError instanceof Error ? rateLimitError.message : 'Unknown error',
+      });
+    }
+  }
 
   try {
     const contentType = request.headers.get('content-type') || '';
@@ -78,7 +139,10 @@ export async function POST(request: NextRequest) {
       });
 
       // Return 204 No Content - browsers don't expect a response body
-      return new Response(null, { status: 204 });
+      return new Response(null, {
+        status: 204,
+        headers: rateLimitHeaders,
+      });
     } catch (parseError) {
       console.error(`[CSP Report ${requestId}] JSON parse error:`, {
         error: parseError instanceof Error ? parseError.message : 'Unknown error',

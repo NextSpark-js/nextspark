@@ -192,7 +192,7 @@ const nextConfig = {
           },
           {
             key: 'Access-Control-Allow-Headers',
-            value: 'Content-Type, Authorization, x-verify-from-ui, Cookie, Set-Cookie'
+            value: 'Content-Type, Authorization, x-api-key, x-verify-from-ui, Cookie, Set-Cookie'
           },
           {
             key: 'Access-Control-Allow-Credentials',

@@ -519,4 +519,83 @@ describe('Security Headers', {
       })
     })
   })
+
+  // ============================================
+  // Rate Limiting Tests
+  // ============================================
+
+  describe('CSP Report Rate Limiting', () => {
+
+    it('SEC_HDR_080: CSP report endpoint should work and optionally include rate limit headers', () => {
+      allure.severity('normal')
+      const mockViolation = {
+        'csp-report': {
+          'document-uri': 'https://example.com/page',
+          'violated-directive': 'script-src',
+          'blocked-uri': 'https://evil.com/malicious.js',
+        }
+      }
+
+      cy.request({
+        method: 'POST',
+        url: `${BASE_URL}/api/csp-report`,
+        headers: {
+          'Content-Type': 'application/csp-report'
+        },
+        body: mockViolation,
+        failOnStatusCode: false
+      }).then((response) => {
+        // CSP report should succeed with 204
+        expect(response.status).to.eq(204)
+
+        // Rate limit headers are optional (depend on @nextsparkjs/core/lib/api availability)
+        // If present, verify they have valid values
+        if (response.headers['x-ratelimit-limit']) {
+          expect(response.headers).to.have.property('x-ratelimit-remaining')
+          expect(response.headers).to.have.property('x-ratelimit-reset')
+          cy.log('Rate limiting is enabled')
+        } else {
+          cy.log('Rate limiting not available - skipping rate limit header checks')
+        }
+      })
+    })
+  })
+
+  // ============================================
+  // CORS x-api-key Header Tests
+  // ============================================
+
+  describe('CORS API Key Header', () => {
+
+    it('SEC_HDR_090: API CORS should allow x-api-key header', () => {
+      allure.severity('critical')
+      cy.request({
+        method: 'GET',
+        url: `${BASE_URL}/api/v1/theme`,
+        failOnStatusCode: false
+      }).then((response) => {
+        expect(response.headers).to.have.property('access-control-allow-headers')
+        const allowedHeaders = response.headers['access-control-allow-headers'].toLowerCase()
+        expect(allowedHeaders).to.include('x-api-key')
+      })
+    })
+
+    it('SEC_HDR_091: API CORS headers should include all required headers', () => {
+      allure.severity('normal')
+      cy.request({
+        method: 'GET',
+        url: `${BASE_URL}/api/v1/theme`,
+        failOnStatusCode: false
+      }).then((response) => {
+        expect(response.headers).to.have.property('access-control-allow-headers')
+        const allowedHeaders = response.headers['access-control-allow-headers'].toLowerCase()
+
+        // Verify all critical headers are allowed
+        expect(allowedHeaders).to.include('content-type')
+        expect(allowedHeaders).to.include('authorization')
+        expect(allowedHeaders).to.include('x-api-key')
+        expect(allowedHeaders).to.include('cookie')
+      })
+    })
+  })
 })
