@@ -470,22 +470,52 @@ describe('Security Headers', {
 
   describe('HSTS Configuration', () => {
 
-    it('SEC_HDR_070: Should document HSTS preload readiness', () => {
-      allure.severity('minor')
+    it('SEC_HDR_070: Should have correct HSTS behavior based on environment', () => {
+      allure.severity('normal')
       // HSTS is only enabled in production
-      // This test documents the expected configuration
-      // In production, the header should be:
-      // Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+      // In production: Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+      // In development: Header should NOT be present
 
-      // In development, we verify HSTS is NOT set (correct behavior)
       cy.request({
         method: 'GET',
         url: `${BASE_URL}/`,
         failOnStatusCode: false
       }).then((response) => {
-        // In dev, HSTS might not be present (expected)
-        // Just verify request succeeds
-        expect(response.status).to.be.lessThan(500)
+        const isProduction = Cypress.env('NODE_ENV') === 'production'
+
+        if (isProduction) {
+          // Production: HSTS must be present with correct values
+          expect(response.headers).to.have.property('strict-transport-security')
+          const hsts = response.headers['strict-transport-security']
+          expect(hsts).to.include('max-age=31536000')
+          expect(hsts).to.include('includeSubDomains')
+          expect(hsts).to.include('preload')
+        } else {
+          // Development: HSTS should NOT be set (to avoid localhost issues)
+          expect(response.headers).to.not.have.property('strict-transport-security')
+        }
+      })
+    })
+
+    it('SEC_HDR_071: Development should NOT have HSTS header', () => {
+      allure.severity('normal')
+      // This test specifically verifies dev behavior
+      // HSTS on localhost would cause browser issues
+
+      cy.request({
+        method: 'GET',
+        url: `${BASE_URL}/`,
+        failOnStatusCode: false
+      }).then((response) => {
+        const isProduction = Cypress.env('NODE_ENV') === 'production'
+
+        if (!isProduction) {
+          // Explicitly verify no HSTS in development
+          expect(response.headers).to.not.have.property('strict-transport-security')
+        } else {
+          // Skip in production - SEC_HDR_070 covers this
+          cy.log('Skipping - running in production mode')
+        }
       })
     })
   })

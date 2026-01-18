@@ -363,20 +363,24 @@ const tasks = await db
 ### Content Security Policy
 
 ```typescript
-// next.config.ts
-const securityHeaders = [
-  {
-    key: 'Content-Security-Policy',
-    value: [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: https:",
-      "font-src 'self' data:",
-      "connect-src 'self' https://api.yourapp.com",
-    ].join('; ')
-  }
-]
+// next.config.mjs - Environment-aware CSP (actual implementation)
+const isProduction = process.env.NODE_ENV === 'production';
+
+const cspDirectives = [
+  "default-src 'self'",
+  // unsafe-inline required for Next.js; unsafe-eval only in dev
+  `script-src 'self' 'unsafe-inline'${!isProduction ? " 'unsafe-eval'" : ''} https://js.stripe.com`,
+  "style-src 'self' 'unsafe-inline'",
+  `img-src 'self' data: blob: ${allowedImageDomains}`,
+  "font-src 'self' data:",
+  `connect-src 'self' https://api.stripe.com${!isProduction ? ' wss:' : ''}`,
+  "frame-src https://js.stripe.com https://hooks.stripe.com",
+  "frame-ancestors 'none'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "report-uri /api/csp-report",
+  "report-to csp-endpoint",
+];
 ```
 
 ### Input Sanitization

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { NextRequest } from 'next/server';
 
 /**
@@ -37,7 +38,7 @@ const getAllowedOrigin = () => {
 };
 
 export async function POST(request: NextRequest) {
-  const requestId = crypto.randomUUID().slice(0, 8);
+  const requestId = randomUUID().slice(0, 8);
 
   try {
     const contentType = request.headers.get('content-type') || '';
