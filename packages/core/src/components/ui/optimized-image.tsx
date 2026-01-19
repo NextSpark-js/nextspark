@@ -5,10 +5,15 @@ import Image, { type ImageProps } from "next/image"
 import { cn } from "../../lib/utils"
 
 export interface OptimizedImageProps extends Omit<ImageProps, 'placeholder'> {
+  /** Fallback component to render when image fails to load */
   fallback?: React.ReactNode
+  /** Aspect ratio preset for the container */
   aspectRatio?: "square" | "video" | "portrait" | "auto"
+  /** Additional classes for the container div (only used with fill or aspectRatio) */
   containerClassName?: string
+  /** Enable blur placeholder (requires blurDataURL) */
   enableBlur?: boolean
+  /** Base64 data URL for blur placeholder */
   blurDataURL?: string
 }
 
@@ -36,7 +41,29 @@ export interface OptimizedImageProps extends Omit<ImageProps, 'placeholder'> {
  * />
  *
  * @example
- * // With blur placeholder
+ * // With responsive sizes (CRITICAL for performance)
+ * // The sizes prop tells the browser which image size to download
+ * // Without it, Next.js generates all sizes, impacting performance
+ * <OptimizedImage
+ *   src="/hero.jpg"
+ *   alt="Hero"
+ *   fill
+ *   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+ * />
+ *
+ * @example
+ * // Hero image (above the fold) - use priority to preload
+ * // This avoids LCP issues for important visible images
+ * <OptimizedImage
+ *   src="/hero.jpg"
+ *   alt="Hero"
+ *   fill
+ *   priority
+ *   sizes="100vw"
+ * />
+ *
+ * @example
+ * // With blur placeholder for smooth loading transition
  * <OptimizedImage
  *   src="/photo.jpg"
  *   alt="Photo"
@@ -45,6 +72,21 @@ export interface OptimizedImageProps extends Omit<ImageProps, 'placeholder'> {
  *   enableBlur
  *   blurDataURL="data:image/jpeg;base64,..."
  * />
+ *
+ * @example
+ * // High quality for marketing/hero images (default is 75)
+ * <OptimizedImage
+ *   src="/hero.jpg"
+ *   alt="Hero"
+ *   fill
+ *   quality={90}
+ *   priority
+ *   sizes="100vw"
+ * />
+ *
+ * @see https://nextjs.org/docs/app/api-reference/components/image#sizes
+ * @see https://nextjs.org/docs/app/api-reference/components/image#priority
+ * @see https://nextjs.org/docs/app/api-reference/components/image#quality
  */
 const OptimizedImage = React.forwardRef<HTMLImageElement, OptimizedImageProps>(
   (
@@ -126,7 +168,7 @@ const OptimizedImage = React.forwardRef<HTMLImageElement, OptimizedImageProps>(
             containerClassName
           )}
         >
-          {isLoading && (
+          {isLoading && !enableBlur && (
             <div className="absolute inset-0 bg-muted animate-pulse" />
           )}
           <Image

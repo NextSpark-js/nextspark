@@ -97,6 +97,9 @@ const nextConfig = {
     const isProduction = process.env.NODE_ENV === 'production';
 
     // Allowed image domains (must match remotePatterns above)
+    // NOTE: Wildcard patterns (*.public.blob.vercel-storage.com, *.supabase.co, *.cloudinary.com)
+    // allow images from any account on these services for development flexibility.
+    // For production with stricter security, consider restricting to specific account subdomains.
     const allowedImageDomains = [
       'https://lh3.googleusercontent.com',
       'https://*.public.blob.vercel-storage.com',
