@@ -11,6 +11,7 @@ export * from './keys';
 export * from './helpers';
 export * from './rate-limit';
 export * from './cache';
+export * from './distributed-cache';
 
 // Re-export commonly used types and utilities
 export type { ApiKeyAuth, ApiKeyValidationResult } from './auth';
