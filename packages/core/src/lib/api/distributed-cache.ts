@@ -20,6 +20,8 @@
  */
 
 // L1 Memory Cache (local to each instance)
+// Note: Uses FIFO eviction (first-in-first-out) when max capacity is reached.
+// JavaScript Maps maintain insertion order, making FIFO simple and efficient.
 interface L1CacheEntry<T> {
   value: T
   expiresAt: number
@@ -38,11 +40,15 @@ class L1MemoryCache {
     // Cleanup expired entries every 5 minutes (not in test)
     if (process.env.NODE_ENV !== 'test') {
       this.cleanupInterval = setInterval(() => this.cleanup(), 300000)
+      // Ensure interval doesn't prevent process exit
+      if (this.cleanupInterval.unref) {
+        this.cleanupInterval.unref()
+      }
     }
   }
 
   set<T>(key: string, value: T, ttlMs: number, tags: string[] = []): void {
-    // Evict LRU if full
+    // Evict oldest (FIFO) if full
     if (this.cache.size >= this.maxSize && !this.cache.has(key)) {
       this.evictOldest()
     }
@@ -101,11 +107,28 @@ class L1MemoryCache {
     const keys = this.tagIndex.get(tag)
     if (!keys) return 0
 
-    let count = 0
-    for (const key of keys) {
-      if (this.delete(key)) count++
-    }
+    // Copy keys to array to avoid mutation during iteration (fix #2 race condition)
+    const keysToDelete = [...keys]
+
+    // Remove tag index first to prevent re-adding during delete
     this.tagIndex.delete(tag)
+
+    let count = 0
+    for (const key of keysToDelete) {
+      // Directly delete from cache without going through delete() to avoid
+      // re-accessing the tag index we just deleted
+      const entry = this.cache.get(key)
+      if (entry) {
+        // Clean up other tag associations (not the one being invalidated)
+        for (const otherTag of entry.tags) {
+          if (otherTag !== tag) {
+            this.tagIndex.get(otherTag)?.delete(key)
+          }
+        }
+        this.cache.delete(key)
+        count++
+      }
+    }
     return count
   }
 
@@ -114,6 +137,10 @@ class L1MemoryCache {
     this.tagIndex.clear()
   }
 
+  /**
+   * Evicts the oldest entry (FIFO - First In, First Out).
+   * JavaScript Maps maintain insertion order, so the first key is the oldest.
+   */
   private evictOldest(): void {
     const firstKey = this.cache.keys().next().value
     if (firstKey) {
@@ -153,10 +180,12 @@ class L1MemoryCache {
   }
 }
 
-// L1 instance
-const l1Cache = new L1MemoryCache()
+// L1 instance (mutable for testing reset)
+let l1Cache = new L1MemoryCache()
 
 // L2 Redis types and lazy loading
+type RedisScanResult = [cursor: string, keys: string[]]
+
 type RedisClient = {
   get: (key: string) => Promise<string | null>
   set: (key: string, value: string, options?: { ex?: number }) => Promise<unknown>
@@ -164,11 +193,11 @@ type RedisClient = {
   sadd: (key: string, ...members: string[]) => Promise<number>
   smembers: (key: string) => Promise<string[]>
   srem: (key: string, ...members: string[]) => Promise<number>
-  keys: (pattern: string) => Promise<string[]>
+  scan: (cursor: number | string, options?: { match?: string; count?: number }) => Promise<RedisScanResult>
   pipeline: () => {
     del: (...keys: string[]) => unknown
     srem: (key: string, ...members: string[]) => unknown
-    exec: () => Promise<unknown>
+    exec: () => Promise<Array<{ error: Error | null; result: unknown }> | null>
   }
 }
 
@@ -226,7 +255,10 @@ function serialize<T>(value: T): string {
 function deserialize<T>(value: string): T {
   try {
     return JSON.parse(value) as T
-  } catch {
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[DistributedCache] JSON parse error, returning raw value:', error)
+    }
     return value as unknown as T
   }
 }
@@ -257,8 +289,15 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
       if (redisValue) {
         const parsed = deserialize<{ value: T; tags: string[]; ttl: number }>(redisValue)
 
-        // Populate L1 with remaining TTL
-        const remainingTtl = Math.max(parsed.ttl - Date.now(), 1000)
+        // Calculate remaining TTL (fix #3: don't extend expired entries)
+        const remainingTtl = parsed.ttl - Date.now()
+
+        // If entry has expired or has less than 100ms remaining, treat as miss
+        if (remainingTtl <= 100) {
+          return null
+        }
+
+        // Populate L1 with actual remaining TTL (no minimum extension)
         l1Cache.set(key, parsed.value, remainingTtl, parsed.tags)
 
         return parsed.value
@@ -365,7 +404,12 @@ export async function cacheInvalidateByTag(tag: string): Promise<number> {
         const pipeline = redis.pipeline()
         pipeline.del(...redisKeys)
         pipeline.srem(tagKey, ...keys)
-        await pipeline.exec()
+
+        // Fix #5: Verify pipeline execution result
+        const result = await pipeline.exec()
+        if (!result) {
+          console.error('[DistributedCache] Pipeline execution returned null for tag:', tag)
+        }
       }
     } catch (error) {
       console.error('[DistributedCache] Redis invalidate error:', error)
@@ -376,27 +420,45 @@ export async function cacheInvalidateByTag(tag: string): Promise<number> {
 }
 
 /**
+ * Delete keys matching a pattern using SCAN (non-blocking)
+ * Fix #6: Use SCAN instead of KEYS to avoid blocking Redis
+ */
+async function scanAndDelete(redis: RedisClient, pattern: string): Promise<number> {
+  let cursor = '0'
+  let totalDeleted = 0
+
+  do {
+    const [nextCursor, keys] = await redis.scan(cursor, { match: pattern, count: 100 })
+    cursor = nextCursor
+
+    if (keys.length > 0) {
+      const deleted = await redis.del(...keys)
+      totalDeleted += deleted
+    }
+  } while (cursor !== '0')
+
+  return totalDeleted
+}
+
+/**
  * Clear all cache entries
  *
  * Use with caution - clears entire cache.
+ * Uses SCAN for Redis to avoid blocking (safe for production).
  */
 export async function cacheClear(): Promise<void> {
   // L1: Clear memory
   l1Cache.clear()
 
-  // L2: Clear Redis cache keys (not tag keys)
+  // L2: Clear Redis cache keys using SCAN (fix #6: non-blocking)
   const redis = await getRedisClient()
   if (redis) {
     try {
-      const keys = await redis.keys(`${CACHE_PREFIX}*`)
-      if (keys.length > 0) {
-        await redis.del(...keys)
-      }
+      // Delete cache entries
+      await scanAndDelete(redis, `${CACHE_PREFIX}*`)
 
-      const tagKeys = await redis.keys(`${TAG_PREFIX}*`)
-      if (tagKeys.length > 0) {
-        await redis.del(...tagKeys)
-      }
+      // Delete tag indexes
+      await scanAndDelete(redis, `${TAG_PREFIX}*`)
     } catch (error) {
       console.error('[DistributedCache] Redis clear error:', error)
     }
@@ -433,12 +495,28 @@ export function createCacheKey(namespace: string, ...parts: string[]): string {
 }
 
 // Export L1 cache for testing purposes
-export const _l1Cache = l1Cache
+export { l1Cache as _l1Cache }
 
-// Reset function for testing
+/**
+ * Reset function for testing (fix #7: properly destroy and recreate)
+ */
 export function _resetForTesting(): void {
-  l1Cache.clear()
+  // Destroy existing instance to clear intervals
+  l1Cache.destroy()
+
+  // Create fresh instance
+  l1Cache = new L1MemoryCache()
+
+  // Reset Redis state
   redisClient = null
   redisInitialized = false
   redisError = null
+}
+
+/**
+ * Cleanup function for graceful shutdown (fix #1: lifecycle management)
+ * Call this when your application is shutting down.
+ */
+export function destroyCache(): void {
+  l1Cache.destroy()
 }
