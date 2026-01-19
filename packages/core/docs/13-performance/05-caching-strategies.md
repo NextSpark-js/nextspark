@@ -10,7 +10,7 @@ Caching is a **multi-layer optimization strategy** that dramatically reduces lat
 
 ## The Caching Hierarchy
 
-### Four-Layer Strategy
+### Five-Layer Strategy
 
 ```text
 User Request
@@ -34,6 +34,13 @@ User Request
 │  • Next.js fetch cache                                 │
 │  • React cache() API                                   │
 │  • Registry System (build-time)                        │
+└─────────────────────────────────────────────────────────┘
+      ↓ (Cache Miss)
+┌─────────────────────────────────────────────────────────┐
+│  Layer 3.5: DISTRIBUTED CACHE (1-20ms)                 │
+│  • L1: In-memory (per instance)                        │
+│  • L2: Redis/Upstash (shared across instances)         │
+│  • Tag-based invalidation                              │
 └─────────────────────────────────────────────────────────┘
       ↓ (Cache Miss)
 ┌─────────────────────────────────────────────────────────┐
@@ -432,6 +439,166 @@ export async function POST(request: NextRequest) {
 
 ---
 
+## Layer 3.5: Distributed Cache (Two-Tier)
+
+### L1 Memory + L2 Redis Architecture
+
+For multi-instance deployments, the distributed cache provides shared caching across server instances:
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  L1: MEMORY CACHE (per instance)                            │
+│  • Fastest access (~0.1ms)                                  │
+│  • LRU eviction (10K entries max)                          │
+│  • Tag-based invalidation                                   │
+└─────────────────────────────────────────────────────────────┘
+        ↓ (Cache Miss)
+┌─────────────────────────────────────────────────────────────┐
+│  L2: REDIS (shared across instances)                        │
+│  • Upstash Redis REST API                                  │
+│  • Distributed cache coherence                             │
+│  • Persistent across deployments                            │
+│  • Tag index for bulk invalidation                          │
+└─────────────────────────────────────────────────────────────┘
+        ↓ (Cache Miss)
+┌─────────────────────────────────────────────────────────────┐
+│  DATABASE / EXTERNAL API                                    │
+│  • PostgreSQL with pooling                                  │
+│  • External service calls                                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Basic Usage
+
+```typescript
+import {
+  cacheGet,
+  cacheSet,
+  cacheDelete,
+  cacheInvalidateByTag,
+  createCacheKey,
+} from '@nextsparkjs/core/lib/api'
+
+// Store data with 5 minute TTL
+await cacheSet('user:123', userData, 300)
+
+// Retrieve data (checks L1 first, then L2)
+const user = await cacheGet<UserData>('user:123')
+
+// Delete specific key
+await cacheDelete('user:123')
+
+// Create namespaced keys
+const key = createCacheKey('users', tenantId, 'profile')
+// Result: 'users:tenant-1:profile'
+```
+
+### Tag-Based Invalidation
+
+Tags allow efficient bulk cache invalidation:
+
+```typescript
+// Cache with tags
+await cacheSet('user:1', user1, 300, ['users', 'team:alpha'])
+await cacheSet('user:2', user2, 300, ['users', 'team:alpha'])
+await cacheSet('user:3', user3, 300, ['users', 'team:beta'])
+
+// Invalidate all users (clears user:1, user:2, user:3)
+await cacheInvalidateByTag('users')
+
+// Invalidate specific team (clears user:1, user:2)
+await cacheInvalidateByTag('team:alpha')
+```
+
+### Common Patterns
+
+```typescript
+// Pattern 1: Entity caching
+async function getEntityById(entity: string, id: string) {
+  const cacheKey = createCacheKey(entity, id)
+
+  // Try cache first
+  const cached = await cacheGet(cacheKey)
+  if (cached) return cached
+
+  // Fetch from database
+  const data = await db.query(...)
+
+  // Cache for 5 minutes with entity tag
+  await cacheSet(cacheKey, data, 300, [entity, `${entity}:${id}`])
+
+  return data
+}
+
+// Pattern 2: Invalidate on mutation
+async function updateEntity(entity: string, id: string, data: any) {
+  await db.update(...)
+
+  // Invalidate specific record
+  await cacheDelete(createCacheKey(entity, id))
+
+  // Or invalidate all of this entity type
+  await cacheInvalidateByTag(entity)
+}
+
+// Pattern 3: Cache API responses
+export async function GET(request: NextRequest) {
+  const cacheKey = `api:${request.nextUrl.pathname}`
+
+  const cached = await cacheGet(cacheKey)
+  if (cached) {
+    return NextResponse.json(cached)
+  }
+
+  const data = await fetchData()
+  await cacheSet(cacheKey, data, 60, ['api-responses'])
+
+  return NextResponse.json(data)
+}
+```
+
+### Configuration
+
+The distributed cache requires Redis (Upstash) credentials:
+
+```bash
+# .env
+UPSTASH_REDIS_REST_URL=https://your-instance.upstash.io
+UPSTASH_REDIS_REST_TOKEN=your-token
+```
+
+Without Redis configured, the cache gracefully falls back to L1 (memory-only) mode.
+
+### Monitoring Cache Health
+
+```typescript
+import { getCacheStats, isDistributedCacheAvailable } from '@nextsparkjs/core/lib/api'
+
+// Check if Redis is available
+const distributed = await isDistributedCacheAvailable()
+// true if Redis is configured and connected
+
+// Get cache statistics
+const stats = await getCacheStats()
+// {
+//   l1: { size: 150, maxSize: 10000, tagCount: 12 },
+//   l2Available: true
+// }
+```
+
+### When to Use Distributed Cache
+
+| Use Case | Recommended | Reason |
+|----------|-------------|--------|
+| **Rate limiting** | ✅ Yes | Already uses Redis via `@upstash/ratelimit` |
+| **API response cache** | ✅ Yes | Reduces database load across instances |
+| **Session data** | ❌ No | Use Better Auth session store |
+| **Entity configs** | ❌ No | Use Registry System (build-time) |
+| **User preferences** | ✅ Yes | Frequently accessed, rarely changed |
+| **Computed aggregates** | ✅ Yes | Expensive calculations worth caching |
+
+---
+
 ## Layer 4: Registry System Caching
 
 ### Build-Time Precomputation
@@ -715,8 +882,8 @@ console.log('Cache hit rate:',
 
 ---
 
-**Last Updated:** 2025-11-20  
-**Version:** 1.0.0  
-**Status:** Complete  
-**TanStack Query:** v5.85.0  
+**Last Updated:** 2026-01-19
+**Version:** 1.1.0
+**Status:** Complete
+**TanStack Query:** v5.85.0
 **Next.js:** 15.4.6
