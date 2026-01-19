@@ -193,10 +193,20 @@ export function getApiAuth(request: NextRequest): ApiKeyAuth {
     throw new Error('Missing API authentication headers');
   }
   
+  let scopes: string[] = [];
+  try {
+    const parsed = JSON.parse(scopesHeader);
+    if (Array.isArray(parsed)) {
+      scopes = parsed.filter((s): s is string => typeof s === 'string');
+    }
+  } catch {
+    console.warn('[API] Invalid scopes header format');
+  }
+
   return {
     userId,
     keyId,
-    scopes: JSON.parse(scopesHeader)
+    scopes
   };
 }
 
