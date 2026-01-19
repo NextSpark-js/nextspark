@@ -35,21 +35,50 @@ export async function extractExportName(filePath, patterns) {
 /**
  * Extract HTTP methods from a Next.js route.ts file
  *
+ * Supports multiple export patterns:
+ * - export async function GET(...) { }
+ * - export const POST = handler
+ * - export { GET, POST }
+ *
  * @param {string} filePath - Path to the route.ts file
  * @returns {Promise<string[]>} Array of HTTP methods (defaults to ['GET'])
  */
 export async function extractHttpMethods(filePath) {
   try {
     const content = await readFile(filePath, 'utf8')
-    const methods = []
-    const httpMethodRegex = /export\s+async\s+function\s+(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)\s*\(/g
-    let match
+    const methods = new Set()
 
-    while ((match = httpMethodRegex.exec(content)) !== null) {
-      methods.push(match[1])
+    // HTTP method names to search for
+    const HTTP_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS']
+
+    // Pattern 1: export async function METHOD(...)
+    const funcRegex = /export\s+(?:async\s+)?function\s+(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)\s*\(/g
+    let match
+    while ((match = funcRegex.exec(content)) !== null) {
+      methods.add(match[1])
     }
 
-    return methods.length > 0 ? methods : ['GET']
+    // Pattern 2: export const METHOD = ...
+    const constRegex = /export\s+const\s+(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)\s*=/g
+    while ((match = constRegex.exec(content)) !== null) {
+      methods.add(match[1])
+    }
+
+    // Pattern 3: export { METHOD } or export { METHOD, ... }
+    // Match entire export { ... } block first, then extract methods
+    const namedExportRegex = /export\s*\{([^}]+)\}/g
+    while ((match = namedExportRegex.exec(content)) !== null) {
+      const exportList = match[1]
+      for (const method of HTTP_METHODS) {
+        // Match "METHOD" or "METHOD as something" but not "something as METHOD"
+        const methodPattern = new RegExp(`(?:^|,|\\s)${method}(?:\\s*,|\\s*}|\\s+as\\s|$)`)
+        if (methodPattern.test(exportList)) {
+          methods.add(method)
+        }
+      }
+    }
+
+    return methods.size > 0 ? Array.from(methods) : ['GET']
   } catch {
     return ['GET']
   }
