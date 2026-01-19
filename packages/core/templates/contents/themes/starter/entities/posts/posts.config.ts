@@ -70,6 +70,7 @@ export const postsEntityConfig: EntityConfig = {
   // ==========================================
   builder: {
     enabled: true,
+    showSlug: true, // Slug is user-editable (public content)
     sidebarFields: ['excerpt', 'featuredImage'], // Extra fields shown in sidebar
     seo: true, // Enable SEO fields panel in editor
   },

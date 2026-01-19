@@ -117,13 +117,59 @@ function SelectableBlockPreview({
 
   // Check if this is a pattern reference
   if (isPatternReference(block)) {
+    const handlePatternMoveUp = (e: React.MouseEvent) => {
+      e.stopPropagation()
+      onMoveUp?.()
+    }
+
+    const handlePatternMoveDown = (e: React.MouseEvent) => {
+      e.stopPropagation()
+      onMoveDown?.()
+    }
+
     return (
-      <PatternReferencePreview
-        patternRef={block}
-        isSelected={isSelected}
-        onSelect={onSelect}
-        onRemove={onRemove}
-      />
+      <div
+        className="relative group"
+        onMouseEnter={onHover}
+        onMouseLeave={onLeave}
+      >
+        {/* Reorder controls for pattern reference - same as regular blocks */}
+        {(onMoveUp || onMoveDown) && (
+          <div className={cn(
+            'absolute top-2 left-2 z-30 flex gap-1 transition-opacity',
+            'opacity-0 group-hover:opacity-100',
+            isSelected && 'opacity-100'
+          )}>
+            <Button
+              variant="secondary"
+              size="icon"
+              className="h-7 w-7 shadow-md"
+              onClick={handlePatternMoveUp}
+              disabled={isFirst}
+              data-cy={sel('blockEditor.previewCanvas.moveUp', { id: block.id })}
+            >
+              <ChevronUp className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="secondary"
+              size="icon"
+              className="h-7 w-7 shadow-md"
+              onClick={handlePatternMoveDown}
+              disabled={isLast}
+              data-cy={sel('blockEditor.previewCanvas.moveDown', { id: block.id })}
+            >
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+
+        <PatternReferencePreview
+          patternRef={block}
+          isSelected={isSelected}
+          onSelect={onSelect}
+          onRemove={onRemove}
+        />
+      </div>
     )
   }
 

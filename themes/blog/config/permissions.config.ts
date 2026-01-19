@@ -48,6 +48,17 @@ export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
       { action: 'update', label: 'Edit categories', description: 'Can modify category information', roles: ['owner'] },
       { action: 'delete', label: 'Delete categories', description: 'Can delete categories', roles: ['owner'], dangerous: true },
     ],
+
+    // ------------------------------------------
+    // PATTERNS
+    // ------------------------------------------
+    patterns: [
+      { action: 'create', label: 'Create Patterns', description: 'Can create reusable patterns', roles: ['owner'] },
+      { action: 'read', label: 'View Patterns', description: 'Can view pattern details', roles: ['owner'] },
+      { action: 'list', label: 'List Patterns', description: 'Can see the patterns list', roles: ['owner'] },
+      { action: 'update', label: 'Edit Patterns', description: 'Can modify patterns', roles: ['owner'] },
+      { action: 'delete', label: 'Delete Patterns', description: 'Can delete patterns', roles: ['owner'], dangerous: true },
+    ],
   },
 
   // ==========================================

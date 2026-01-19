@@ -157,12 +157,17 @@ export function EntityTable<T extends { id: string } = { id: string }>({
     [onSelectionChange]
   )
 
+  // Determine if entity is public (has public pages)
+  const isPublicEntity = entityConfig.access?.public === true
+
   // Generate columns from entity config if not provided
   const columns = useMemo<EntityTableColumn<T>[]>(() => {
     if (customColumns) return customColumns
 
     return entityConfig.fields
       .filter(field => field.display.showInList)
+      // Hide slug column for non-public entities (e.g., patterns)
+      .filter(field => field.name !== 'slug' || isPublicEntity)
       .sort((a, b) => a.display.order - b.display.order)
       .map(field => ({
         key: field.name,
@@ -170,7 +175,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
         sortable: field.api.sortable,
         className: field.display.className,
       }))
-  }, [customColumns, entityConfig.fields])
+  }, [customColumns, entityConfig.fields, isPublicEntity])
 
   // Auto-detect public URL from entity config (access.basePath or deprecated builder.public.basePath)
   const publicBasePath = entityConfig.access?.basePath ?? entityConfig.builder?.public?.basePath

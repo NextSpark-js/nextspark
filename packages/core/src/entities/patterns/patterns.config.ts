@@ -57,6 +57,7 @@ export const patternsEntityConfig: EntityConfig = {
   // ==========================================
   builder: {
     enabled: true,          // Patterns use the block builder
+    showSlug: false,        // Slug is auto-generated, not user-editable
     seo: false              // Patterns don't need SEO metadata
   },
 

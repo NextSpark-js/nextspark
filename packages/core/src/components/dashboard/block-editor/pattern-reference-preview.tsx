@@ -135,9 +135,9 @@ export function PatternReferencePreview({
       onClick={onSelect}
       data-cy={sel('blockEditor.patternReference.container', { ref: patternRef.ref })}
     >
-      {/* Pattern badge (top-left) */}
+      {/* Pattern badge (bottom-left) - positioned to not cover block controls */}
       <div
-        className="absolute top-2 left-2 z-20 bg-primary text-primary-foreground text-xs px-2 py-1 rounded shadow-md flex items-center gap-1"
+        className="absolute bottom-2 left-2 z-20 bg-primary text-primary-foreground text-xs px-2 py-1 rounded shadow-md flex items-center gap-1"
         data-cy={sel('blockEditor.patternReference.badge', { ref: patternRef.ref })}
       >
         <Layers className="h-3 w-3" />
@@ -159,7 +159,7 @@ export function PatternReferencePreview({
           onClick={(e) => e.stopPropagation()}
           data-cy={sel('blockEditor.patternReference.editLink', { ref: patternRef.ref })}
         >
-          <Link href={`/dashboard/patterns/${patternRef.ref}/edit`}>
+          <Link href={`/dashboard/patterns/${patternRef.ref}/edit`} target="_blank" rel="noopener noreferrer">
             {t('actions.editPattern')} →
           </Link>
         </Button>

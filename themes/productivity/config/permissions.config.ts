@@ -82,6 +82,17 @@ export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
       { action: 'update', label: 'Edit cards', description: 'Can modify card information', roles: ['owner', 'admin', 'member'] },
       { action: 'delete', label: 'Delete cards', description: 'Can delete cards', roles: ['owner', 'admin'], dangerous: true },
     ],
+
+    // ------------------------------------------
+    // PATTERNS
+    // ------------------------------------------
+    patterns: [
+      { action: 'create', label: 'Create Patterns', description: 'Can create reusable patterns', roles: ['owner', 'admin'] },
+      { action: 'read', label: 'View Patterns', description: 'Can view pattern details', roles: ['owner', 'admin', 'member'] },
+      { action: 'list', label: 'List Patterns', description: 'Can see the patterns list', roles: ['owner', 'admin', 'member'] },
+      { action: 'update', label: 'Edit Patterns', description: 'Can modify patterns', roles: ['owner', 'admin'] },
+      { action: 'delete', label: 'Delete Patterns', description: 'Can delete patterns', roles: ['owner', 'admin'], dangerous: true },
+    ],
   },
 
   // ==========================================

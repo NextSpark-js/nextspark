@@ -1,0 +1,76 @@
+{
+  "entity": {
+    "singular": "Muster",
+    "plural": "Muster"
+  },
+  "title": "Muster",
+  "subtitle": "Erstellen Sie wiederverwendbare Blockkompositionen für Ihre Seiten",
+  "description": "Verwalten Sie wiederverwendbare Muster, die in Seiten und Beiträge eingefügt werden können",
+  "fields": {
+    "title": {
+      "label": "Titel",
+      "placeholder": "Geben Sie den Musternamen ein...",
+      "description": "Anzeigename des Musters"
+    },
+    "slug": {
+      "label": "Slug",
+      "placeholder": "muster-slug",
+      "description": "URL-freundlicher Identifikator, eindeutig pro Team"
+    },
+    "status": {
+      "label": "Status",
+      "placeholder": "Status auswählen...",
+      "description": "Veröffentlichungsstatus"
+    },
+    "description": {
+      "label": "Beschreibung",
+      "placeholder": "Beschreiben Sie dieses Muster...",
+      "description": "Kurze Beschreibung des Musterzwecks"
+    }
+  },
+  "status": {
+    "draft": "Entwurf",
+    "published": "Veröffentlicht"
+  },
+  "messages": {
+    "created": "Muster erfolgreich erstellt",
+    "updated": "Muster erfolgreich aktualisiert",
+    "deleted": "Muster erfolgreich gelöscht",
+    "createError": "Fehler beim Erstellen des Musters",
+    "updateError": "Fehler beim Aktualisieren des Musters",
+    "deleteError": "Fehler beim Löschen des Musters",
+    "notFound": "Muster nicht gefunden"
+  },
+  "actions": {
+    "create": "Muster Erstellen",
+    "edit": "Muster Bearbeiten",
+    "delete": "Muster Löschen",
+    "publish": "Veröffentlichen",
+    "unpublish": "Veröffentlichung Aufheben",
+    "duplicate": "Duplizieren"
+  },
+  "builder": {
+    "title": "Muster-Builder",
+    "description": "Fügen Sie Blöcke hinzu, um Ihr wiederverwendbares Muster zu erstellen",
+    "emptyState": "Noch keine Blöcke. Fügen Sie Blöcke hinzu, um Ihr Muster zu erstellen.",
+    "blocksAllowed": "Nur bestimmte Blöcke können in Mustern verwendet werden",
+    "patternReference": "Musterreferenz",
+    "lockedMessage": "Dies ist eine Musterreferenz. Bearbeiten Sie das Muster direkt, um Änderungen vorzunehmen."
+  },
+  "list": {
+    "title": "Alle Muster",
+    "empty": "Noch keine Muster",
+    "emptyDescription": "Erstellen Sie Ihr erstes Muster, um loszulegen",
+    "filters": {
+      "all": "Alle",
+      "draft": "Entwürfe",
+      "published": "Veröffentlicht"
+    }
+  },
+  "picker": {
+    "title": "Muster Einfügen",
+    "search": "Muster suchen...",
+    "noResults": "Keine Muster gefunden",
+    "selectPattern": "Wählen Sie ein Muster zum Einfügen aus"
+  }
+}
