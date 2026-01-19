@@ -237,7 +237,15 @@ export function withRateLimit<T extends unknown[]>(
         return handler(request, ...args);
       }
       
-      const scopes = JSON.parse(scopesHeader);
+      let scopes: string[] = [];
+      try {
+        const parsed = JSON.parse(scopesHeader);
+        if (Array.isArray(parsed)) {
+          scopes = parsed.filter((s): s is string => typeof s === 'string');
+        }
+      } catch {
+        console.warn('[RateLimit] Invalid scopes header format');
+      }
       
       // Verificar rate limit
       const rateLimitResponse = applyRateLimit(request, keyId, scopes);
