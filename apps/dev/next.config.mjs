@@ -23,6 +23,9 @@ const nextConfig = {
     },
   },
   images: {
+    formats: ['image/avif', 'image/webp'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     remotePatterns: [
       {
         protocol: 'https',
@@ -47,6 +50,16 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'i.pravatar.cc',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.cloudinary.com',
         pathname: '/**',
       },
     ],
@@ -82,12 +95,17 @@ const nextConfig = {
     const isProduction = process.env.NODE_ENV === 'production';
 
     // Allowed image domains (must match remotePatterns above)
+    // NOTE: Wildcard patterns (*.public.blob.vercel-storage.com, *.supabase.co, *.cloudinary.com)
+    // allow images from any account on these services for development flexibility.
+    // For production with stricter security, consider restricting to specific account subdomains.
     const allowedImageDomains = [
       'https://lh3.googleusercontent.com',
       'https://*.public.blob.vercel-storage.com',
       'https://images.unsplash.com',
       'https://upload.wikimedia.org',
       'https://i.pravatar.cc',
+      'https://*.supabase.co',
+      'https://*.cloudinary.com',
     ].join(' ');
 
     // CSP directives
