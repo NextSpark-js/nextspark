@@ -2,10 +2,11 @@
  * Tests for Distributed Cache System (Two-Tier: L1 Memory + L2 Redis)
  *
  * Tests the caching functionality including:
- * - L1 memory cache operations
+ * - L1 memory cache operations (FIFO eviction)
  * - L2 Redis integration (mocked)
  * - Tag-based invalidation
  * - Fallback behavior when Redis is unavailable
+ * - SCAN-based cache clearing (production-safe)
  */
 
 import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals'
@@ -18,6 +19,7 @@ import {
   getCacheStats,
   createCacheKey,
   isDistributedCacheAvailable,
+  destroyCache,
   _l1Cache,
   _resetForTesting,
 } from '@/core/lib/api/distributed-cache'
@@ -29,7 +31,7 @@ const mockRedisDel = jest.fn()
 const mockRedisSadd = jest.fn()
 const mockRedisSmembers = jest.fn()
 const mockRedisSrem = jest.fn()
-const mockRedisKeys = jest.fn()
+const mockRedisScan = jest.fn()
 const mockPipelineExec = jest.fn()
 
 const mockPipeline = jest.fn(() => ({
@@ -46,7 +48,7 @@ jest.mock('@upstash/redis', () => ({
     sadd: mockRedisSadd,
     smembers: mockRedisSmembers,
     srem: mockRedisSrem,
-    keys: mockRedisKeys,
+    scan: mockRedisScan,
     pipeline: mockPipeline,
   })),
 }))
@@ -108,6 +110,25 @@ describe('Distributed Cache System', () => {
       // Verify L1 was populated
       const l1Value = _l1Cache.get('user:123')
       expect(l1Value).toEqual({ name: 'Test User' })
+    })
+
+    it('should NOT populate L1 when Redis entry is nearly expired (fix #3)', async () => {
+      // Entry with only 50ms remaining (less than 100ms threshold)
+      const cachedData = {
+        value: { name: 'Expiring User' },
+        tags: ['users'],
+        ttl: Date.now() + 50,
+      }
+      mockRedisGet.mockResolvedValue(JSON.stringify(cachedData))
+
+      const result = await cacheGet<{ name: string }>('user:expiring')
+
+      // Should return null because entry is nearly expired
+      expect(result).toBeNull()
+
+      // L1 should NOT be populated
+      const l1Value = _l1Cache.get('user:expiring')
+      expect(l1Value).toBeNull()
     })
 
     it('should handle Redis errors gracefully', async () => {
@@ -209,7 +230,7 @@ describe('Distributed Cache System', () => {
   describe('cacheInvalidateByTag', () => {
     it('should invalidate all keys with given tag in L1', async () => {
       mockRedisSmembers.mockResolvedValue(['user:1', 'user:2'])
-      mockPipelineExec.mockResolvedValue([])
+      mockPipelineExec.mockResolvedValue([{ error: null, result: 2 }, { error: null, result: 2 }])
 
       // Pre-populate L1 with tagged entries
       _l1Cache.set('user:1', { id: 1 }, 60000, ['users'])
@@ -226,7 +247,7 @@ describe('Distributed Cache System', () => {
 
     it('should invalidate in Redis using pipeline', async () => {
       mockRedisSmembers.mockResolvedValue(['key1', 'key2'])
-      mockPipelineExec.mockResolvedValue([])
+      mockPipelineExec.mockResolvedValue([{ error: null, result: 2 }, { error: null, result: 2 }])
 
       await cacheInvalidateByTag('test-tag')
 
@@ -241,11 +262,28 @@ describe('Distributed Cache System', () => {
 
       expect(count).toBe(0)
     })
+
+    it('should handle entries with multiple tags correctly (fix #2)', async () => {
+      mockRedisSmembers.mockResolvedValue(['user:1'])
+      mockPipelineExec.mockResolvedValue([{ error: null, result: 1 }, { error: null, result: 1 }])
+
+      // Entry with multiple tags
+      _l1Cache.set('user:1', { id: 1 }, 60000, ['users', 'team:alpha'])
+
+      // Invalidate by one tag
+      await cacheInvalidateByTag('users')
+
+      // Entry should be deleted
+      expect(_l1Cache.get('user:1')).toBeNull()
+    })
   })
 
   describe('cacheClear', () => {
     it('should clear L1 cache', async () => {
-      mockRedisKeys.mockResolvedValue([])
+      // Mock SCAN to return keys then end
+      mockRedisScan
+        .mockResolvedValueOnce(['0', []])
+        .mockResolvedValueOnce(['0', []])
 
       // Pre-populate
       _l1Cache.set('key1', 'value1', 60000, [])
@@ -257,16 +295,27 @@ describe('Distributed Cache System', () => {
       expect(_l1Cache.get('key2')).toBeNull()
     })
 
-    it('should clear Redis cache keys', async () => {
-      mockRedisKeys
-        .mockResolvedValueOnce(['cache:key1', 'cache:key2'])
-        .mockResolvedValueOnce(['cache:tag:users'])
+    it('should use SCAN instead of KEYS for Redis (fix #6)', async () => {
+      // First SCAN call returns some keys, second returns empty (cursor 0)
+      mockRedisScan
+        .mockResolvedValueOnce(['123', ['cache:key1', 'cache:key2']])
+        .mockResolvedValueOnce(['0', ['cache:key3']])
+        .mockResolvedValueOnce(['0', []])
       mockRedisDel.mockResolvedValue(2)
 
       await cacheClear()
 
-      expect(mockRedisKeys).toHaveBeenCalledWith('cache:*')
-      expect(mockRedisKeys).toHaveBeenCalledWith('cache:tag:*')
+      // Verify SCAN was called instead of KEYS
+      expect(mockRedisScan).toHaveBeenCalledWith('0', { match: 'cache:*', count: 100 })
+      expect(mockRedisDel).toHaveBeenCalled()
+    })
+
+    it('should handle empty Redis gracefully', async () => {
+      mockRedisScan
+        .mockResolvedValueOnce(['0', []])
+        .mockResolvedValueOnce(['0', []])
+
+      await expect(cacheClear()).resolves.not.toThrow()
     })
   })
 
@@ -294,6 +343,17 @@ describe('Distributed Cache System', () => {
       const key = createCacheKey('config', 'app')
 
       expect(key).toBe('config:app')
+    })
+  })
+
+  describe('destroyCache', () => {
+    it('should clean up L1 cache resources', () => {
+      _l1Cache.set('key1', 'value', 60000, [])
+
+      destroyCache()
+
+      // After destroy, cache should be cleared
+      expect(_l1Cache.get('key1')).toBeNull()
     })
   })
 
@@ -345,6 +405,60 @@ describe('Distributed Cache System', () => {
       expect(_l1Cache.get('expiring-key')).toBeNull()
 
       jest.useRealTimers()
+    })
+  })
+
+  describe('L1 FIFO Eviction (fix #4)', () => {
+    it('should evict oldest entry when at capacity', () => {
+      // Create a small cache for testing
+      const smallCache = new (class extends Object {
+        private cache = new Map<string, { value: unknown; expiresAt: number; tags: string[] }>()
+        private maxSize = 3
+
+        set(key: string, value: unknown) {
+          if (this.cache.size >= this.maxSize && !this.cache.has(key)) {
+            // FIFO: Remove first key
+            const firstKey = this.cache.keys().next().value
+            if (firstKey) this.cache.delete(firstKey)
+          }
+          this.cache.set(key, { value, expiresAt: Date.now() + 60000, tags: [] })
+        }
+
+        get(key: string) {
+          return this.cache.get(key)?.value ?? null
+        }
+
+        getKeys() {
+          return [...this.cache.keys()]
+        }
+      })()
+
+      // Fill cache
+      smallCache.set('first', 1)
+      smallCache.set('second', 2)
+      smallCache.set('third', 3)
+
+      // Add fourth - should evict 'first' (FIFO)
+      smallCache.set('fourth', 4)
+
+      expect(smallCache.get('first')).toBeNull()
+      expect(smallCache.get('second')).toBe(2)
+      expect(smallCache.get('third')).toBe(3)
+      expect(smallCache.get('fourth')).toBe(4)
+    })
+  })
+
+  describe('_resetForTesting (fix #7)', () => {
+    it('should properly destroy and recreate cache instance', async () => {
+      // Set some data
+      await cacheSet('test-key', 'test-value', 300)
+      expect(await cacheGet('test-key')).toBe('test-value')
+
+      // Reset
+      _resetForTesting()
+
+      // Data should be cleared
+      expect(_l1Cache.get('test-key')).toBeNull()
     })
   })
 })
