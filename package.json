@@ -1,7 +1,7 @@
 {
   "name": "nextspark-monorepo",
   "private": true,
-  "version": "0.1.0-beta.45",
+  "version": "0.1.0-beta.51",
   "packageManager": "pnpm@9.0.0",
   "scripts": {
     "dev": "pnpm --filter @nextsparkjs/dev dev",
