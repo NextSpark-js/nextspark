@@ -21,6 +21,7 @@
  * - SEL_TNAV_004: User Menu (5 selectors)
  * - SEL_TNAV_005: Quick Create (3 selectors)
  * - SEL_TNAV_006: Loading State (1 skipped - transient state)
+ * - SEL_TNAV_007: Settings Menu (3 selectors)
  *
  * NOTE: Public navbar tests (logo, signin, signup) are in public.cy.ts
  */
@@ -149,8 +150,28 @@ describe('Dashboard Topnav Selectors Validation', { tags: ['@ui-selectors', '@da
   // NOTE: Only visible during auth loading - transient state
   // ============================================
   describe('SEL_TNAV_006: Loading State', { tags: '@SEL_TNAV_006' }, () => {
-    it.skip('should find user loading state (only visible during auth loading)', () => {
+    it.skip('SEL_TNAV_006_01: should find user loading state (only visible during auth loading)', { tags: '@SEL_TNAV_006_01' }, () => {
       cy.get(dashboard.selectors.topnavUserLoading).should('exist')
+    })
+  })
+
+  // ============================================
+  // SEL_TNAV_007: SETTINGS MENU (3 selectors)
+  // NOTE: settingsMenu must be enabled in theme config
+  // ============================================
+  describe('SEL_TNAV_007: Settings Menu', { tags: '@SEL_TNAV_007' }, () => {
+    it('SEL_TNAV_007_01: should find settings menu trigger', { tags: '@SEL_TNAV_007_01' }, () => {
+      cy.get(dashboard.selectors.topnavSettingsMenuTrigger).should('exist')
+    })
+
+    it('SEL_TNAV_007_02: should find settings menu content when opened', { tags: '@SEL_TNAV_007_02' }, () => {
+      cy.get(dashboard.selectors.topnavSettingsMenuTrigger).click()
+      cy.get(dashboard.selectors.topnavSettingsMenuContent).should('be.visible')
+    })
+
+    it('SEL_TNAV_007_03: should find settings menu link when opened', { tags: '@SEL_TNAV_007_03' }, () => {
+      cy.get(dashboard.selectors.topnavSettingsMenuTrigger).click()
+      cy.get(dashboard.selectors.topnavSettingsMenuLink(0)).should('exist')
     })
   })
 })
