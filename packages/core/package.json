@@ -1,6 +1,6 @@
 {
   "name": "@nextsparkjs/core",
-  "version": "0.1.0-beta.53",
+  "version": "0.1.0-beta.54",
   "description": "NextSpark - The complete SaaS framework for Next.js",
   "license": "MIT",
   "author": "NextSpark <hello@nextspark.dev>",
@@ -112,6 +112,10 @@
       "types": "./dist/lib/config/config-sync.d.ts",
       "import": "./dist/lib/config/config-sync.js"
     },
+    "./lib/blocks/*": {
+      "types": "./dist/lib/blocks/*.d.ts",
+      "import": "./dist/lib/blocks/*.js"
+    },
     "./lib/*": {
       "types": "./dist/lib/*.d.ts",
       "import": "./dist/lib/*.js"
@@ -195,6 +199,10 @@
     "./components/dashboard/mobile": {
       "types": "./dist/components/dashboard/mobile/index.d.ts",
       "import": "./dist/components/dashboard/mobile/index.js"
+    },
+    "./components/patterns": {
+      "types": "./dist/components/patterns/index.d.ts",
+      "import": "./dist/components/patterns/index.js"
     },
     "./components/*": {
       "types": "./dist/components/*.d.ts",
