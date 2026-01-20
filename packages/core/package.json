@@ -1,6 +1,6 @@
 {
   "name": "@nextsparkjs/core",
-  "version": "0.1.0-beta.52",
+  "version": "0.1.0-beta.53",
   "description": "NextSpark - The complete SaaS framework for Next.js",
   "license": "MIT",
   "author": "NextSpark <hello@nextspark.dev>",
@@ -295,7 +295,7 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@nextsparkjs/testing": "workspace:*",
+    "@nextsparkjs/testing": "0.1.0-beta.53",
     "@upstash/ratelimit": "^2.0.3",
     "@upstash/redis": "^1.20.6",
     "@codemirror/lang-json": "^6.0.2",
