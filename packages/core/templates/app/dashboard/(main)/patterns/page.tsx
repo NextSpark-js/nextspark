@@ -42,7 +42,7 @@ export default function PatternsListPage() {
   const router = useRouter()
 
   // Use the new centralized hook for entity configuration
-  const { config: entityConfig, isLoading, error: configError, isOverride } = useEntityConfig(entityType)
+  const { config: entityConfig, isLoading, error: configError } = useEntityConfig(entityType)
 
   // Get current team for relation resolution
   const { teamId } = useTeam()

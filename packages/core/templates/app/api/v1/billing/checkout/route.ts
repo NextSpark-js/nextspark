@@ -10,7 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest, createAuthError } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { createCheckoutSession } from '@nextsparkjs/core/lib/billing/gateways/stripe'
 import { SubscriptionService, MembershipService } from '@nextsparkjs/core/lib/services'
 import { z } from 'zod'
@@ -26,7 +26,10 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
   const authResult = await authenticateRequest(request)
 
   if (!authResult.success || !authResult.user) {
-    return createAuthError('Unauthorized', 401)
+    return NextResponse.json(
+      { success: false, error: 'Unauthorized' },
+      { status: 401 }
+    )
   }
 
   // 2. Parse and validate request body

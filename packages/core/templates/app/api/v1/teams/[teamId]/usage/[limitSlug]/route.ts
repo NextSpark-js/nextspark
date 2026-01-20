@@ -15,7 +15,7 @@ interface RouteParams {
   params: Promise<{ teamId: string; limitSlug: string }>
 }
 
-export const GET = withRateLimitTier('read', async function GET(request: NextRequest, props: RouteParams) {
+export const GET = withRateLimitTier(async function GET(request: NextRequest, props: RouteParams) {
   // Authenticate request
   const { auth, rateLimitResponse } = await validateAndAuthenticateRequest(request)
   if (rateLimitResponse) return rateLimitResponse
@@ -45,9 +45,9 @@ export const GET = withRateLimitTier('read', async function GET(request: NextReq
     console.error('[Billing API] Error checking quota:', error)
     return createApiError('Failed to check quota', 500)
   }
-})
+}, 'read')
 
-export const POST = withRateLimitTier('write', async function POST(request: NextRequest, props: RouteParams) {
+export const POST = withRateLimitTier(async function POST(request: NextRequest, props: RouteParams) {
   // Authenticate request
   const { auth, rateLimitResponse } = await validateAndAuthenticateRequest(request)
   if (rateLimitResponse) return rateLimitResponse
@@ -89,4 +89,4 @@ export const POST = withRateLimitTier('write', async function POST(request: Next
     const errorMessage = error instanceof Error ? error.message : 'Failed to track usage'
     return createApiError(errorMessage, 500)
   }
-})
+}, 'write')
