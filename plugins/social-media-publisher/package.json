@@ -1,6 +1,6 @@
 {
   "name": "@nextsparkjs/plugin-social-media-publisher",
-  "version": "0.1.0-beta.57",
+  "version": "0.1.0-beta.58",
   "private": false,
   "main": "./plugin.config.ts",
   "requiredPlugins": [],

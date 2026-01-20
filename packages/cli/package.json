@@ -1,6 +1,6 @@
 {
   "name": "@nextsparkjs/cli",
-  "version": "0.1.0-beta.57",
+  "version": "0.1.0-beta.58",
   "description": "NextSpark CLI - Complete development toolkit",
   "type": "module",
   "bin": {
