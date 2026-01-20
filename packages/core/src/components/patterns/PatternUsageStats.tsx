@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@nextsparkjs/core/components/ui/card'
 import { FileText, LayoutGrid, Newspaper, Hash } from 'lucide-react'
+import { sel } from '@nextsparkjs/core/lib/test'
 import type { PatternUsageCount } from '@nextsparkjs/core/hooks/usePatternUsages'
 
 interface PatternUsageStatsProps {
@@ -41,7 +42,7 @@ function formatEntityType(entityType: string): string {
 export function PatternUsageStats({ counts, total, isLoading }: PatternUsageStatsProps) {
   if (isLoading) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" data-cy="pattern-usage-stats-loading">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" data-cy={sel('patterns.usageStats.loading')}>
         {[...Array(4)].map((_, i) => (
           <Card key={i}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -58,9 +59,9 @@ export function PatternUsageStats({ counts, total, isLoading }: PatternUsageStat
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" data-cy="pattern-usage-stats">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" data-cy={sel('patterns.usageStats.container')}>
       {/* Total Usage Card */}
-      <Card data-cy="pattern-usage-stats-total">
+      <Card data-cy={sel('patterns.usageStats.total')}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Uses</CardTitle>
           <Hash className="h-4 w-4 text-muted-foreground" />
@@ -77,7 +78,7 @@ export function PatternUsageStats({ counts, total, isLoading }: PatternUsageStat
       {counts.map((item) => {
         const Icon = getEntityIcon(item.entityType)
         return (
-          <Card key={item.entityType} data-cy={`pattern-usage-stats-${item.entityType}`}>
+          <Card key={item.entityType} data-cy={sel('patterns.usageStats.byType', { entityType: item.entityType })}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
                 {formatEntityType(item.entityType)}

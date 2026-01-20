@@ -16,6 +16,7 @@ import {
 } from '@nextsparkjs/core/components/ui/alert-dialog'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { usePatternUsages } from '@nextsparkjs/core/hooks/usePatternUsages'
+import { sel } from '@nextsparkjs/core/lib/test'
 
 interface PatternDeleteDialogProps {
   /** The ID of the pattern to delete */
@@ -28,6 +29,10 @@ interface PatternDeleteDialogProps {
   trigger?: React.ReactNode
   /** Whether the delete action is in progress */
   isDeleting?: boolean
+  /** Controlled open state (optional - for external control) */
+  open?: boolean
+  /** Callback when open state changes (optional - for external control) */
+  onOpenChange?: (open: boolean) => void
 }
 
 /**
@@ -58,8 +63,17 @@ export function PatternDeleteDialog({
   onConfirm,
   trigger,
   isDeleting = false,
+  open: controlledOpen,
+  onOpenChange,
 }: PatternDeleteDialogProps) {
-  const [open, setOpen] = useState(false)
+  // Internal state for uncontrolled mode
+  const [internalOpen, setInternalOpen] = useState(false)
+
+  // Use controlled or uncontrolled mode
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : internalOpen
+  const setOpen = isControlled ? (onOpenChange ?? (() => {})) : setInternalOpen
+
   const t = useTranslations('admin.patterns.delete')
 
   // Lazy fetch: only enabled when dialog is open
@@ -76,20 +90,25 @@ export function PatternDeleteDialog({
     setOpen(false)
   }
 
+  // In controlled mode without trigger, don't render trigger
+  const showTrigger = !isControlled || trigger
+
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger asChild>
-        {trigger ?? (
-          <Button
-            variant="outline"
-            className="text-destructive hover:text-destructive"
-            data-cy="pattern-delete-trigger"
-          >
-            {t('trigger')}
-          </Button>
-        )}
-      </AlertDialogTrigger>
-      <AlertDialogContent data-cy="pattern-delete-dialog">
+      {showTrigger && (
+        <AlertDialogTrigger asChild>
+          {trigger ?? (
+            <Button
+              variant="outline"
+              className="text-destructive hover:text-destructive"
+              data-cy={sel('patterns.deleteDialog.trigger')}
+            >
+              {t('trigger')}
+            </Button>
+          )}
+        </AlertDialogTrigger>
+      )}
+      <AlertDialogContent data-cy={sel('patterns.deleteDialog.container')}>
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-destructive" />
@@ -105,7 +124,7 @@ export function PatternDeleteDialog({
               {isLoading ? (
                 <div
                   className="flex items-center gap-2 text-muted-foreground"
-                  data-cy="pattern-delete-loading"
+                  data-cy={sel('patterns.deleteDialog.loading')}
                 >
                   <Loader2 className="h-4 w-4 animate-spin" />
                   {t('loading')}
@@ -113,21 +132,21 @@ export function PatternDeleteDialog({
               ) : error ? (
                 <div
                   className="text-sm text-destructive"
-                  data-cy="pattern-delete-error"
+                  data-cy={sel('patterns.deleteDialog.error')}
                 >
                   {t('error')}
                 </div>
               ) : usageCount > 0 ? (
                 <div
                   className="rounded-md border border-destructive/20 bg-destructive/5 p-3"
-                  data-cy="pattern-delete-warning"
+                  data-cy={sel('patterns.deleteDialog.warning')}
                 >
                   <p className="font-medium text-destructive">
                     {t('inUse', { count: usageCount })}
                   </p>
                   <ul
                     className="mt-2 space-y-1 text-sm text-muted-foreground"
-                    data-cy="pattern-delete-usage-list"
+                    data-cy={sel('patterns.deleteDialog.usageList')}
                   >
                     {usages.map((usage) => (
                       <li key={usage.entityId}>
@@ -148,7 +167,7 @@ export function PatternDeleteDialog({
               ) : (
                 <p
                   className="text-muted-foreground"
-                  data-cy="pattern-delete-no-usage"
+                  data-cy={sel('patterns.deleteDialog.noUsage')}
                 >
                   {t('notInUse')}
                 </p>
@@ -157,14 +176,14 @@ export function PatternDeleteDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel data-cy="pattern-delete-cancel">
+          <AlertDialogCancel data-cy={sel('patterns.deleteDialog.cancel')}>
             {t('cancel')}
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={handleConfirm}
             disabled={isDeleting}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            data-cy="pattern-delete-confirm"
+            data-cy={sel('patterns.deleteDialog.confirm')}
           >
             {isDeleting ? (
               <>

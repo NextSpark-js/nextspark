@@ -118,8 +118,9 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
   }, [entityConfig])
 
   // Determine if entity is public (for external link visibility)
+  // ClientEntityConfig only exposes basePath, so we check if it exists
   const isPublicEntity = useMemo(() => {
-    return entityConfig.access?.public === true
+    return !!entityConfig.access?.basePath
   }, [entityConfig])
 
   // Filter blocks by entity scope

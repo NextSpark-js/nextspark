@@ -7,7 +7,7 @@
  * @module PatternUsageService
  */
 
-import { queryWithRLS, mutateWithRLS, queryOneWithRLS } from '../db'
+import { queryWithRLS, mutateWithRLS, queryOneWithRLS, queryRows } from '../db'
 import { extractPatternIds } from '../blocks/pattern-resolver'
 import { entityRegistry } from '../entities/registry'
 import type { BlockInstance } from '../../types/blocks'
@@ -28,6 +28,10 @@ export interface PatternUsage {
 
 export interface PatternUsageWithEntityInfo extends PatternUsage {
   entityTitle?: string
+  entityName?: string
+  entityFirstName?: string
+  entityLastName?: string
+  entityEmail?: string
   entitySlug?: string
   entityStatus?: string
   entityUpdatedAt?: string
@@ -285,7 +289,16 @@ export class PatternUsageService {
     }
 
     // Fetch entity info for each type
-    const entityInfoMap = new Map<string, Map<string, { title?: string; slug?: string; status?: string; updatedAt?: string }>>()
+    const entityInfoMap = new Map<string, Map<string, {
+      title?: string
+      name?: string
+      firstName?: string
+      lastName?: string
+      email?: string
+      slug?: string
+      status?: string
+      updatedAt?: string
+    }>>()
 
     for (const [entityType, typeUsages] of usagesByType) {
       const entityIds = typeUsages.map(u => u.entityId)
@@ -304,30 +317,60 @@ export class PatternUsageService {
       const tableName = entityConfig.slug
 
       try {
-        // Try to fetch common fields (title, slug, status, updatedAt)
+        // First, get available columns for this table to build a safe query
+        // Note: Use queryRows (no RLS) for information_schema since it's a system catalog
+        const columnsResult = await queryRows<{ column_name: string }>(
+          `SELECT column_name
+           FROM information_schema.columns
+           WHERE table_schema = 'public' AND table_name = $1`,
+          [tableName]
+        )
+        const columns = new Set(columnsResult.map(c => c.column_name))
+
+        // Build SELECT dynamically based on available columns
+        const selectParts: string[] = ['id']
+        if (columns.has('title')) selectParts.push('title')
+        if (columns.has('name')) selectParts.push('name')
+        if (columns.has('firstName')) selectParts.push('"firstName"')
+        if (columns.has('lastName')) selectParts.push('"lastName"')
+        if (columns.has('email')) selectParts.push('email')
+        if (columns.has('slug')) selectParts.push('slug')
+        if (columns.has('status')) selectParts.push('status')
+        if (columns.has('updatedAt')) selectParts.push('"updatedAt"')
+
         const entities = await queryWithRLS<{
           id: string
           title?: string
           name?: string
+          firstName?: string
+          lastName?: string
+          email?: string
           slug?: string
           status?: string
           updatedAt?: string
         }>(
-          `SELECT id,
-                  COALESCE(title, name) as title,
-                  slug,
-                  status,
-                  "updatedAt"
-           FROM "${tableName}"
-           WHERE id = ANY($1)`,
+          `SELECT ${selectParts.join(', ')} FROM "${tableName}" WHERE id = ANY($1)`,
           [entityIds],
           userId
         )
 
-        const infoMap = new Map<string, { title?: string; slug?: string; status?: string; updatedAt?: string }>()
+        const infoMap = new Map<string, {
+          title?: string
+          name?: string
+          firstName?: string
+          lastName?: string
+          email?: string
+          slug?: string
+          status?: string
+          updatedAt?: string
+        }>()
         for (const entity of entities) {
           infoMap.set(entity.id, {
             title: entity.title,
+            name: entity.name,
+            firstName: entity.firstName,
+            lastName: entity.lastName,
+            email: entity.email,
             slug: entity.slug,
             status: entity.status,
             updatedAt: entity.updatedAt
@@ -335,8 +378,8 @@ export class PatternUsageService {
         }
         entityInfoMap.set(entityType, infoMap)
       } catch (error) {
-        // Table might not have these columns, that's OK
-        console.warn(`[PatternUsageService] Could not fetch entity info for ${entityType}:`, error)
+        // Log error but don't fail
+        console.error(`[PatternUsageService] Could not fetch entity info for ${entityType}:`, error)
         entityInfoMap.set(entityType, new Map())
       }
     }
@@ -348,6 +391,10 @@ export class PatternUsageService {
       return {
         ...usage,
         entityTitle: entityInfo?.title,
+        entityName: entityInfo?.name,
+        entityFirstName: entityInfo?.firstName,
+        entityLastName: entityInfo?.lastName,
+        entityEmail: entityInfo?.email,
         entitySlug: entityInfo?.slug,
         entityStatus: entityInfo?.status,
         entityUpdatedAt: entityInfo?.updatedAt

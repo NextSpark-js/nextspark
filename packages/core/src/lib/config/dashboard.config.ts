@@ -92,6 +92,21 @@ export const DEFAULT_DASHBOARD_CONFIG = {
     },
 
     /**
+     * Settings menu dropdown (gear icon)
+     * Contains links to admin-level features
+     */
+    settingsMenu: {
+      enabled: true,
+      links: [
+        {
+          label: 'navigation.patterns',
+          href: '/dashboard/patterns',
+          icon: 'layers',
+        },
+      ],
+    },
+
+    /**
      * User menu dropdown
      */
     userMenu: {

@@ -53,6 +53,19 @@ export const DASHBOARD_CONFIG = {
     devtoolsAccess: {
       enabled: true,
     },
+    /**
+     * Settings menu dropdown (gear icon)
+     */
+    settingsMenu: {
+      enabled: true,
+      links: [
+        {
+          label: 'navigation.patterns',
+          href: '/dashboard/patterns',
+          icon: 'layers',
+        },
+      ],
+    },
     userMenu: {
       enabled: true,
       showAvatar: true,

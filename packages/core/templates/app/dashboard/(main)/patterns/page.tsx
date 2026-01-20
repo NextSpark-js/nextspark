@@ -10,7 +10,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Plus, Loader2, BarChart3 } from 'lucide-react'
+import { Plus, Loader2, BarChart3, Pencil, Trash2 } from 'lucide-react'
 import { EntityTable } from '@nextsparkjs/core/components/entities/EntityTable'
 import { EntityBulkActions } from '@nextsparkjs/core/components/entities/EntityBulkActions'
 import { Alert, AlertDescription } from '@nextsparkjs/core/components/ui/alert'
@@ -18,13 +18,14 @@ import { Button } from '@nextsparkjs/core/components/ui/button'
 import { SkeletonEntityList } from '@nextsparkjs/core/components/ui/skeleton-list'
 import { SearchInput } from '@nextsparkjs/core/components/shared/SearchInput'
 import { MultiSelectFilter } from '@nextsparkjs/core/components/shared/MultiSelectFilter'
+import { PatternDeleteDialog } from '@nextsparkjs/core/components/patterns'
 import { useEntityConfig } from '@nextsparkjs/core/hooks/useEntityConfig'
 import { useUrlFilters, type FilterSchema, type EntityFiltersReturn } from '@nextsparkjs/core/hooks/useUrlFilters'
 import { listEntityData, deleteEntityData } from '@nextsparkjs/core/lib/api/entities'
 import { useTeam } from '@nextsparkjs/core/hooks/useTeam'
 import { usePermission } from '@nextsparkjs/core/lib/permissions/hooks'
 import type { Permission } from '@nextsparkjs/core/lib/permissions/types'
-import type { QuickAction } from '@nextsparkjs/core/components/entities/entity-table.types'
+import type { QuickAction, DropdownAction } from '@nextsparkjs/core/components/entities/entity-table.types'
 import { sel } from '@nextsparkjs/core/lib/test'
 import { toast } from 'sonner'
 
@@ -79,6 +80,11 @@ export default function PatternsListPage() {
 
   // Selection state for bulk actions
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+  // Delete dialog state for PatternDeleteDialog
+  const [deleteTarget, setDeleteTarget] = useState<PatternItem | null>(null)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Build API filters from URL filter state
   const buildApiFilters = useCallback(() => {
@@ -187,23 +193,34 @@ export default function PatternsListPage() {
     setFilter('search', query)
   }, [setFilter])
 
-  // Handle single item delete
-  const handleDelete = useCallback(async (id: string) => {
+  // Handler that opens the delete dialog (called from dropdown action)
+  const handleDeleteClick = useCallback((item: PatternItem) => {
+    setDeleteTarget(item)
+    setIsDeleteDialogOpen(true)
+  }, [])
+
+  // Handler that executes the delete (called from PatternDeleteDialog)
+  const handleConfirmDelete = useCallback(async () => {
+    if (!deleteTarget) return
+    setIsDeleting(true)
     try {
-      await deleteEntityData(entityType, id)
+      await deleteEntityData(entityType, deleteTarget.id)
       toast.success(`Pattern deleted successfully`)
       setSelectedIds(prev => {
         const newSet = new Set(prev)
-        newSet.delete(id)
+        newSet.delete(deleteTarget.id)
         return newSet
       })
       await loadData(false)
     } catch (err) {
       console.error(`[PatternsListPage] Error deleting pattern:`, err)
       toast.error(`Error deleting: ${err instanceof Error ? err.message : 'Unknown error'}`)
-      throw err
+    } finally {
+      setIsDeleting(false)
+      setIsDeleteDialogOpen(false)
+      setDeleteTarget(null)
     }
-  }, [entityType, loadData])
+  }, [deleteTarget, entityType, loadData])
 
   // Handle bulk delete
   const handleBulkDelete = useCallback(async (ids: string[]) => {
@@ -248,6 +265,29 @@ export default function PatternsListPage() {
       },
     ],
     [router]
+  )
+
+  // Custom dropdownActions - replace default delete with PatternDeleteDialog
+  const dropdownActions: DropdownAction<PatternItem>[] = useMemo(
+    () => [
+      {
+        id: 'edit',
+        label: 'Edit',
+        icon: <Pencil className="h-4 w-4" />,
+        onClick: (item) => router.push(`/dashboard/patterns/${item.id}/edit`),
+        dataCySuffix: 'edit',
+      },
+      {
+        id: 'delete',
+        label: 'Delete',
+        icon: <Trash2 className="h-4 w-4" />,
+        onClick: handleDeleteClick,
+        variant: 'destructive',
+        separator: true,
+        dataCySuffix: 'delete',
+      },
+    ],
+    [router, handleDeleteClick]
   )
 
   if (isLoading) {
@@ -344,7 +384,7 @@ export default function PatternsListPage() {
         </div>
       )}
 
-      {/* Row 3: Data Table with custom quickActions */}
+      {/* Row 3: Data Table with custom quickActions and dropdownActions */}
       <EntityTable
         entityConfig={entityConfig}
         data={data as Array<{ id: string }>}
@@ -355,11 +395,11 @@ export default function PatternsListPage() {
         enableSearch={false}
         searchQuery={searchValue}
         onSearch={handleSearch}
-        onDelete={handleDelete}
         getItemName={getItemName}
         teamId={teamId}
-        useDefaultActions={true}
+        useDefaultActions={false}
         quickActions={quickActions}
+        dropdownActions={dropdownActions}
         showHeader={false}
         pagination={{
           pageSize: 10,
@@ -383,6 +423,18 @@ export default function PatternsListPage() {
             itemLabel: entityConfig.names.singular,
             itemLabelPlural: entityConfig.names.plural,
           }}
+        />
+      )}
+
+      {/* Pattern Delete Dialog - shows usage warning before deleting */}
+      {deleteTarget && (
+        <PatternDeleteDialog
+          patternId={deleteTarget.id}
+          patternTitle={getItemName(deleteTarget)}
+          onConfirm={handleConfirmDelete}
+          isDeleting={isDeleting}
+          open={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
         />
       )}
     </div>

@@ -1,7 +1,9 @@
 'use client'
 
 import { AlertTriangle, Trash2 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Button } from '../ui/button'
+import { sel } from '@nextsparkjs/core/lib/test'
 
 interface DeletedPatternPlaceholderProps {
   /**
@@ -38,17 +40,19 @@ export function DeletedPatternPlaceholder({
   patternId,
   onRemove
 }: DeletedPatternPlaceholderProps) {
+  const t = useTranslations('admin.patterns.placeholder')
+
   return (
     <div
       className="flex items-center gap-3 p-4 border border-dashed border-destructive/50 rounded-lg bg-destructive/5"
-      data-cy="deleted-pattern-placeholder"
+      data-cy={sel('patterns.placeholder.container')}
       data-pattern-id={patternId}
     >
       <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0" />
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-destructive">Pattern eliminado</p>
+        <p className="text-sm font-medium text-destructive">{t('title')}</p>
         <p className="text-xs text-muted-foreground truncate">
-          Este pattern fue eliminado y será removido al guardar.
+          {t('description')}
         </p>
       </div>
       <Button
@@ -56,10 +60,10 @@ export function DeletedPatternPlaceholder({
         size="sm"
         onClick={onRemove}
         className="text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
-        data-cy="deleted-pattern-remove-btn"
+        data-cy={sel('patterns.placeholder.removeBtn')}
       >
         <Trash2 className="h-4 w-4 mr-1" />
-        Remover
+        {t('remove')}
       </Button>
     </div>
   )

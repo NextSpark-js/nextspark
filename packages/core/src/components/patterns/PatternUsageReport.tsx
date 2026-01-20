@@ -14,6 +14,7 @@ import {
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@nextsparkjs/core/components/ui/alert'
 import { ChevronLeft, ChevronRight, AlertCircle, RefreshCw } from 'lucide-react'
+import { sel } from '@nextsparkjs/core/lib/test'
 
 interface PatternUsageReportProps {
   /** Pattern ID to show usages for */
@@ -62,7 +63,7 @@ export function PatternUsageReport({
 
   if (isError) {
     return (
-      <Alert variant="destructive" data-cy="pattern-usage-report-error">
+      <Alert variant="destructive" data-cy={sel('patterns.usageReport.error')}>
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Error Loading Usages</AlertTitle>
         <AlertDescription className="flex items-center justify-between">
@@ -77,7 +78,7 @@ export function PatternUsageReport({
   }
 
   return (
-    <div className="space-y-6" data-cy="pattern-usage-report">
+    <div className="space-y-6" data-cy={sel('patterns.usageReport.container')}>
       {/* Stats Section */}
       <PatternUsageStats
         counts={counts}
@@ -86,11 +87,11 @@ export function PatternUsageReport({
       />
 
       {/* Filter Section */}
-      <div className="flex items-center justify-between" data-cy="pattern-usage-filters">
+      <div className="flex items-center justify-between" data-cy={sel('patterns.usageReport.filters')}>
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground">Filter by type:</span>
           <Select value={entityTypeFilter} onValueChange={handleFilterChange}>
-            <SelectTrigger className="w-[180px]" data-cy="pattern-usage-filter-select">
+            <SelectTrigger className="w-[180px]" data-cy={sel('patterns.usageReport.filterSelect')}>
               <SelectValue placeholder="All entity types" />
             </SelectTrigger>
             <SelectContent>
@@ -106,13 +107,13 @@ export function PatternUsageReport({
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center gap-2" data-cy="pattern-usage-pagination">
+          <div className="flex items-center gap-2" data-cy={sel('patterns.usageReport.pagination')}>
             <Button
               variant="outline"
               size="sm"
               onClick={handlePrevPage}
               disabled={page === 1 || isLoading}
-              data-cy="pattern-usage-prev-page"
+              data-cy={sel('patterns.usageReport.prevPage')}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -124,7 +125,7 @@ export function PatternUsageReport({
               size="sm"
               onClick={handleNextPage}
               disabled={page >= totalPages || isLoading}
-              data-cy="pattern-usage-next-page"
+              data-cy={sel('patterns.usageReport.nextPage')}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -145,7 +146,7 @@ export function PatternUsageReport({
 
       {/* Results Info */}
       {!isLoading && usages.length > 0 && (
-        <p className="text-sm text-muted-foreground" data-cy="pattern-usage-results-info">
+        <p className="text-sm text-muted-foreground" data-cy={sel('patterns.usageReport.resultsInfo')}>
           Showing {(page - 1) * pageSize + 1} to {Math.min(page * pageSize, total)} of {total} usages
         </p>
       )}

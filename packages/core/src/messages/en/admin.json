@@ -284,6 +284,11 @@
       "cancel": "Cancel",
       "deleting": "Deleting...",
       "deleteAction": "Delete"
+    },
+    "placeholder": {
+      "title": "Pattern deleted",
+      "description": "This pattern was deleted and will be removed on save.",
+      "remove": "Remove"
     }
   }
 }

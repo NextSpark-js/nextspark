@@ -36,7 +36,7 @@ export const patternsEntityConfig: EntityConfig = {
   // ==========================================
   ui: {
     dashboard: {
-      showInMenu: true,
+      showInMenu: false,  // Hidden from sidebar, accessible via topbar settings menu
       showInTopbar: true
     },
     public: {

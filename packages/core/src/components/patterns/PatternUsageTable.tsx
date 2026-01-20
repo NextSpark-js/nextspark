@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import {
   Table,
   TableBody,
@@ -13,6 +13,7 @@ import { Button } from '@nextsparkjs/core/components/ui/button'
 import { Badge } from '@nextsparkjs/core/components/ui/badge'
 import { Skeleton } from '@nextsparkjs/core/components/ui/skeleton'
 import { ExternalLink, FileText, LayoutGrid, Newspaper } from 'lucide-react'
+import { sel } from '@nextsparkjs/core/lib/test'
 import type { PatternUsage } from '@nextsparkjs/core/hooks/usePatternUsages'
 
 interface PatternUsageTableProps {
@@ -59,6 +60,21 @@ function formatDate(dateString?: string): string {
 }
 
 /**
+ * Get display name for entity
+ * Priority: title > name > firstName+lastName > email > slug > id
+ */
+function getEntityDisplayName(usage: PatternUsage): string {
+  if (usage.entityTitle) return usage.entityTitle
+  if (usage.entityName) return usage.entityName
+  if (usage.entityFirstName || usage.entityLastName) {
+    return [usage.entityFirstName, usage.entityLastName].filter(Boolean).join(' ')
+  }
+  if (usage.entityEmail) return usage.entityEmail
+  if (usage.entitySlug) return usage.entitySlug
+  return usage.entityId
+}
+
+/**
  * PatternUsageTable
  *
  * Displays a table of entities that use a specific pattern,
@@ -69,17 +85,9 @@ export function PatternUsageTable({
   isLoading,
   emptyMessage = 'No usages found',
 }: PatternUsageTableProps) {
-  const router = useRouter()
-
-  // Navigate to entity detail page
-  const handleNavigateToEntity = (usage: PatternUsage) => {
-    const url = `/dashboard/${usage.entityType}/${usage.entityId}`
-    router.push(url)
-  }
-
   if (isLoading) {
     return (
-      <div className="rounded-md border" data-cy="pattern-usage-table-loading">
+      <div className="rounded-md border" data-cy={sel('patterns.usageTable.loading')}>
         <Table>
           <TableHeader>
             <TableRow>
@@ -110,7 +118,7 @@ export function PatternUsageTable({
     return (
       <div
         className="flex flex-col items-center justify-center rounded-md border border-dashed p-8 text-center"
-        data-cy="pattern-usage-table-empty"
+        data-cy={sel('patterns.usageTable.empty')}
       >
         <LayoutGrid className="h-12 w-12 text-muted-foreground/50" />
         <h3 className="mt-4 text-lg font-semibold">No Usages Found</h3>
@@ -120,7 +128,7 @@ export function PatternUsageTable({
   }
 
   return (
-    <div className="rounded-md border" data-cy="pattern-usage-table">
+    <div className="rounded-md border" data-cy={sel('patterns.usageTable.container')}>
       <Table>
         <TableHeader>
           <TableRow>
@@ -134,12 +142,14 @@ export function PatternUsageTable({
         <TableBody>
           {usages.map((usage) => {
             const Icon = entityIcons[usage.entityType] || FileText
+            const displayName = getEntityDisplayName(usage)
+            const entityUrl = `/dashboard/${usage.entityType}/${usage.entityId}`
             return (
-              <TableRow key={usage.id} data-cy={`pattern-usage-row-${usage.id}`}>
+              <TableRow key={usage.id} data-cy={sel('patterns.usageTable.row', { id: usage.id })}>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-2">
                     <Icon className="h-4 w-4 text-muted-foreground" />
-                    <span>{usage.entityTitle || usage.entitySlug || usage.entityId}</span>
+                    <span>{displayName}</span>
                   </div>
                 </TableCell>
                 <TableCell>
@@ -161,11 +171,17 @@ export function PatternUsageTable({
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleNavigateToEntity(usage)}
-                    title="View entity"
-                    data-cy={`pattern-usage-view-${usage.id}`}
+                    asChild
+                    data-cy={sel('patterns.usageTable.viewLink', { id: usage.id })}
                   >
-                    <ExternalLink className="h-4 w-4" />
+                    <Link
+                      href={entityUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="View entity (opens in new tab)"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </Link>
                   </Button>
                 </TableCell>
               </TableRow>

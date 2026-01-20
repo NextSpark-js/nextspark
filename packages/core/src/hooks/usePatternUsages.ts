@@ -31,6 +31,10 @@ export interface PatternUsage {
   teamId: string
   createdAt: string
   entityTitle?: string
+  entityName?: string
+  entityFirstName?: string
+  entityLastName?: string
+  entityEmail?: string
   entitySlug?: string
   entityStatus?: string
   entityUpdatedAt?: string

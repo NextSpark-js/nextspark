@@ -2,6 +2,7 @@
   "navigation": {
     "dashboard": "Dashboard",
     "settings": "Settings",
+    "patterns": "Patterns",
     "profile": "Profile",
     "password": "Password",
     "security": "Security",

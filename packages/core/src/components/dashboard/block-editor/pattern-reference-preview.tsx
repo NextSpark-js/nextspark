@@ -101,7 +101,7 @@ export function PatternReferencePreview({
       >
         <div className="max-w-7xl mx-auto text-center">
           <p className="text-destructive">
-            {t('errors.notFound')}
+            {t('messages.notFound')}
           </p>
           {onRemove && (
             <Button
