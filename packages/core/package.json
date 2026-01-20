@@ -84,6 +84,10 @@
       "types": "./dist/lib/api/index.d.ts",
       "import": "./dist/lib/api/index.js"
     },
+    "./lib/api/routes": {
+      "types": "./dist/lib/api/routes/index.d.ts",
+      "import": "./dist/lib/api/routes/index.js"
+    },
     "./lib/email": {
       "types": "./dist/lib/email/index.d.ts",
       "import": "./dist/lib/email/index.js"
@@ -203,6 +207,10 @@
     "./components/patterns": {
       "types": "./dist/components/patterns/index.d.ts",
       "import": "./dist/components/patterns/index.js"
+    },
+    "./components/patterns/pages": {
+      "types": "./dist/components/patterns/pages/index.d.ts",
+      "import": "./dist/components/patterns/pages/index.js"
     },
     "./components/*": {
       "types": "./dist/components/*.d.ts",

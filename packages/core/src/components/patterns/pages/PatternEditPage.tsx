@@ -1,0 +1,107 @@
+/**
+ * Patterns Edit Page
+ *
+ * Wrapper that delegates to the BuilderEditorView for pattern editing.
+ * Uses useEntityConfig hook for entity configuration.
+ */
+
+'use client'
+
+import { notFound, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { EntityFormWrapper } from '../../entities/wrappers/EntityFormWrapper'
+import { BuilderEditorView } from '../../dashboard/block-editor/builder-editor-view'
+import { Alert, AlertDescription } from '../../ui/alert'
+import { useEntityConfig } from '../../../hooks/useEntityConfig'
+import { getEntityData } from '../../../lib/api/entities'
+
+export default function PatternEditPage() {
+  const params = useParams()
+  const router = useRouter()
+  const [initialData, setInitialData] = useState<Record<string, unknown> | null>(null)
+  const [dataLoading, setDataLoading] = useState(true)
+
+  const entitySlug = 'patterns'
+  const entityId = params.id as string
+
+  // Use the centralized hook for entity configuration
+  const { config: entityConfig, isLoading: configLoading } = useEntityConfig(entitySlug)
+
+  useEffect(() => {
+    async function loadEntityData() {
+      if (!entityId || !entityConfig) {
+        setDataLoading(false)
+        return
+      }
+
+      try {
+        // For builder-enabled entities, BuilderEditorView handles its own data fetching
+        // For regular entities, fetch data here
+        if (!entityConfig.builder?.enabled) {
+          const data = await getEntityData(entitySlug, entityId, true)
+          setInitialData(data as Record<string, unknown>)
+        }
+      } catch (error) {
+        console.error('Error loading pattern:', error)
+        setInitialData(null)
+      } finally {
+        setDataLoading(false)
+      }
+    }
+
+    if (entityConfig) {
+      loadEntityData()
+    }
+  }, [entityId, entityConfig])
+
+  if (configLoading || dataLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    )
+  }
+
+  if (!entityConfig || !entityConfig.enabled) {
+    return (
+      <Alert>
+        <AlertDescription>
+          Patterns entity is not configured or not enabled.
+        </AlertDescription>
+      </Alert>
+    )
+  }
+
+  // Use BuilderEditorView for builder-enabled entities
+  if (entityConfig.builder?.enabled) {
+    return (
+      <BuilderEditorView
+        entitySlug={entitySlug}
+        entityConfig={entityConfig}
+        id={entityId}
+        mode="edit"
+      />
+    )
+  }
+
+  // For non-builder entities, we need the initial data
+  if (!initialData) {
+    notFound()
+  }
+
+  // Use EntityFormWrapper for regular entities
+  return (
+    <EntityFormWrapper
+      entityType={entitySlug}
+      id={entityId}
+      mode="edit"
+      onSuccess={() => {
+        router.push(`/dashboard/${entitySlug}/${entityId}`)
+      }}
+      onError={(error) => {
+        console.error('Error updating pattern:', error)
+      }}
+    />
+  )
+}
