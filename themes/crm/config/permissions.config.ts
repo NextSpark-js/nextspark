@@ -151,6 +151,17 @@ export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
       { action: 'update', label: 'Edit pipelines', description: 'Can modify pipeline stages', roles: ['owner'] },
       { action: 'delete', label: 'Delete pipelines', description: 'Can delete pipelines', roles: ['owner'], dangerous: true },
     ],
+
+    // ------------------------------------------
+    // PATTERNS
+    // ------------------------------------------
+    patterns: [
+      { action: 'create', label: 'Create Patterns', description: 'Can create reusable patterns', roles: ['owner', 'admin'] },
+      { action: 'read', label: 'View Patterns', description: 'Can view pattern details', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'list', label: 'List Patterns', description: 'Can see the patterns list', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'update', label: 'Edit Patterns', description: 'Can modify patterns', roles: ['owner', 'admin'] },
+      { action: 'delete', label: 'Delete Patterns', description: 'Can delete patterns', roles: ['owner', 'admin'], dangerous: true },
+    ],
   },
 
   // ==========================================

@@ -10,6 +10,7 @@ import entities from './entities.json'
 import footer from './footer.json'
 import home from './home.json'
 import navigation from './navigation.json'
+import patterns from './patterns.json'
 import permissions from './permissions.json'
 import public_ from './public.json'
 import settings from './settings.json'
@@ -30,6 +31,7 @@ export default {
   footer,
   home,
   navigation,
+  patterns,
   permissions,
   public: public_,
   settings,

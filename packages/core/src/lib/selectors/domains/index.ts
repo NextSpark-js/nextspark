@@ -16,3 +16,4 @@ export { SUPERADMIN_SELECTORS, type SuperadminSelectorsType } from './superadmin
 export { DEVTOOLS_SELECTORS, type DevtoolsSelectorsType } from './devtools.selectors'
 export { PUBLIC_SELECTORS, type PublicSelectorsType } from './public.selectors'
 export { COMMON_SELECTORS, type CommonSelectorsType } from './common.selectors'
+export { PATTERNS_SELECTORS, type PatternsSelectorsType } from './patterns.selectors'

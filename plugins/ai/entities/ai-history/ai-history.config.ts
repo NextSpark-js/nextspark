@@ -57,46 +57,7 @@ export const aiHistoryEntityConfig: EntityConfig = {
   },
 
   // ==========================================
-  // 4. PERMISSIONS SYSTEM
-  // ==========================================
-  permissions: {
-    actions: [
-      {
-        action: 'create',
-        label: 'Create AI history',
-        description: 'Can create AI history entries (typically via API)',
-        roles: ['owner', 'admin', 'member'],
-      },
-      {
-        action: 'read',
-        label: 'View AI history',
-        description: 'Can view AI history entries (users see their own via API filtering)',
-        roles: ['owner', 'admin', 'member'],
-      },
-      {
-        action: 'list',
-        label: 'List AI history',
-        description: 'Can list AI history entries',
-        roles: ['owner', 'admin', 'member'],
-      },
-      {
-        action: 'update',
-        label: 'Edit AI history',
-        description: 'Can modify AI history entries (immutable for most users)',
-        roles: ['owner', 'admin'],
-      },
-      {
-        action: 'delete',
-        label: 'Delete AI history',
-        description: 'Can delete AI history entries (users can delete their own)',
-        roles: ['owner', 'admin', 'member'],
-        dangerous: true,
-      },
-    ],
-  },
-
-  // ==========================================
-  // 5. INTERNATIONALIZATION
+  // 4. INTERNATIONALIZATION
   // ==========================================
   i18n: {
     fallbackLocale: 'en',

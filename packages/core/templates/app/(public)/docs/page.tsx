@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@nextsparkjs/core/components/ui/card'
 import { DOCS_REGISTRY } from '@nextsparkjs/registries/docs-registry'
+import { sel } from '@nextsparkjs/core/selectors'
 import { BookOpen, Folder, FileText, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import type { Metadata } from 'next'
@@ -32,7 +33,7 @@ export default function DocsPage() {
       {sections.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sections.map((section) => (
-            <Card key={section.slug} className="h-full hover:shadow-lg transition-shadow" data-cy={`docs-section-card-${section.slug}`}>
+            <Card key={section.slug} className="h-full hover:shadow-lg transition-shadow" data-cy={sel('public.docs.sectionCard', { slug: section.slug })}>
               <CardHeader>
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-primary/10 rounded-lg text-primary">
@@ -53,7 +54,7 @@ export default function DocsPage() {
                       <Link
                         href={`/docs/${section.slug}/${page.slug}`}
                         className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2 group"
-                        data-cy={`docs-page-link-${page.slug}`}
+                        data-cy={sel('public.docs.pageLink', { slug: page.slug })}
                       >
                         <FileText className="h-3 w-3" />
                         <span className="flex-1">{page.title}</span>

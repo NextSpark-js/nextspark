@@ -70,6 +70,7 @@ export const pagesEntityConfig: EntityConfig = {
   // ==========================================
   builder: {
     enabled: true,
+    showSlug: true, // Slug is user-editable (public content)
     sidebarFields: ['locale'], // Pages don't have extra sidebar fields beyond basic settings
     seo: true, // Enable SEO fields panel in editor
   },

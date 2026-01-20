@@ -172,6 +172,13 @@ export const DASHBOARD_SELECTORS = {
     // Container for right side actions
     actions: 'topnav-actions',
 
+    // Settings Menu Dropdown
+    settingsMenu: {
+      trigger: 'topnav-settings-menu-trigger',
+      content: 'topnav-settings-menu',
+      item: 'topnav-settings-item-{index}',
+    },
+
     // Single action buttons
     help: 'topnav-help',
     themeToggle: 'topnav-theme-toggle',

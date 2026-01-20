@@ -275,6 +275,13 @@ export interface BuilderConfig {
   sidebarFields?: string[]
 
   /**
+   * Show slug input field in builder header
+   * Default: true
+   * Set to false for entities where slug is auto-generated (e.g., patterns)
+   */
+  showSlug?: boolean
+
+  /**
    * @deprecated Use access.basePath instead. Will be removed in v2.0.
    * Public route configuration
    */

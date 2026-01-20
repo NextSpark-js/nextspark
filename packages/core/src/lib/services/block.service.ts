@@ -84,4 +84,54 @@ export class BlockService {
   static has(slug: string): boolean {
     return slug in BLOCK_REGISTRY
   }
+
+  /**
+   * Get blocks that are allowed in patterns
+   * Filters out blocks with allowInPatterns: false
+   *
+   * @returns Array of blocks allowed in patterns
+   *
+   * @example
+   * ```typescript
+   * const patternsBlocks = BlockService.getForPatterns()
+   * // Returns all blocks except pattern references
+   * ```
+   */
+  static getForPatterns(): BlockConfig[] {
+    return Object.values(BLOCK_REGISTRY).filter(block =>
+      block.allowInPatterns !== false
+    )
+  }
+
+  /**
+   * Get blocks for a specific entity scope, respecting pattern context
+   *
+   * @param entitySlug - Entity slug (e.g., 'pages', 'posts', 'patterns')
+   * @returns Filtered blocks array
+   *
+   * @example
+   * ```typescript
+   * // Get blocks for pages
+   * const pageBlocks = BlockService.getForScope('pages')
+   *
+   * // Get blocks for patterns (excludes blocks with allowInPatterns: false)
+   * const patternBlocks = BlockService.getForScope('patterns')
+   * ```
+   */
+  static getForScope(entitySlug: string): BlockConfig[] {
+    // For patterns, use 'pages' scope since patterns are reusable block compositions
+    // that can be embedded in any page-like entity
+    const effectiveScope = entitySlug === 'patterns' ? 'pages' : entitySlug
+
+    const scopeFiltered = Object.values(BLOCK_REGISTRY).filter(block =>
+      block.scope?.includes(effectiveScope) || block.scope?.includes('*')
+    )
+
+    // If editing patterns, additionally filter by allowInPatterns
+    if (entitySlug === 'patterns') {
+      return scopeFiltered.filter(block => block.allowInPatterns !== false)
+    }
+
+    return scopeFiltered
+  }
 }

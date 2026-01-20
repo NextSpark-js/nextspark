@@ -2,6 +2,7 @@
   "navigation": {
     "dashboard": "Tableau de bord",
     "settings": "Parametres",
+    "patterns": "Modeles",
     "profile": "Profil",
     "password": "Mot de passe",
     "security": "Securite",

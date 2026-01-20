@@ -5,15 +5,18 @@ import { useTranslations } from 'next-intl'
 import { Button } from '../../ui/button'
 import { Card, CardContent } from '../../ui/card'
 import { Badge } from '../../ui/badge'
-import { Trash2, RotateCcw, FileText, Palette, Settings2, X, SlidersHorizontal, Layers } from 'lucide-react'
+import { Trash2, RotateCcw, FileText, Palette, Settings2, X, SlidersHorizontal, Layers, Lock } from 'lucide-react'
+import Link from 'next/link'
 import { cn } from '../../../lib/utils'
 import { sel } from '../../../lib/test'
 import { DynamicForm } from './dynamic-form'
 import type { BlockInstance, FieldDefinition, FieldTab } from '../../../types/blocks'
+import type { PatternReference } from '../../../types/pattern-reference'
+import { isPatternReference } from '../../../types/pattern-reference'
 import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry'
 
 interface BlockSettingsPanelProps {
-  block: BlockInstance | undefined
+  block: BlockInstance | PatternReference | undefined
   onUpdateProps: (props: Record<string, unknown>) => void
   onRemove: () => void
   onClose?: () => void
@@ -48,10 +51,10 @@ export function BlockSettingsPanel({
   const t = useTranslations('admin.builder.settingsPanel')
   const [activeTab, setActiveTab] = useState<SettingsTab>('content')
 
-  // Memoize grouped fields
+  // Memoize grouped fields (only for regular blocks, not pattern references)
   const groupedFields = useMemo(() => {
-    if (!block) return null
-    const blockConfig = BLOCK_REGISTRY[block.blockSlug]
+    if (!block || isPatternReference(block)) return null
+    const blockConfig = BLOCK_REGISTRY[(block as BlockInstance).blockSlug]
     if (!blockConfig?.fieldDefinitions) return null
     return groupFieldsByTab(blockConfig.fieldDefinitions)
   }, [block])
@@ -67,7 +70,72 @@ export function BlockSettingsPanel({
     )
   }
 
-  const blockConfig = BLOCK_REGISTRY[block.blockSlug]
+  // Pattern reference - show locked message
+  if (isPatternReference(block)) {
+    return (
+      <div className="flex h-full flex-col bg-card" data-cy={sel('blockEditor.blockPropertiesPanel.patternLocked')}>
+        {/* Header */}
+        <div className="border-b p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Layers className="h-5 w-5 text-primary" />
+              <h3 className="text-lg font-semibold text-foreground">
+                {t('pattern.title')}
+              </h3>
+            </div>
+            {onClose && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={onClose}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Locked Message */}
+        <div className="flex-1 flex items-center justify-center p-8">
+          <div className="text-center max-w-xs">
+            <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+              <Lock className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <p className="text-sm font-medium text-foreground mb-2">
+              {t('pattern.locked.title')}
+            </p>
+            <p className="text-xs text-muted-foreground mb-6">
+              {t('pattern.locked.description')}
+            </p>
+            <div className="space-y-2">
+              <Button
+                variant="default"
+                size="sm"
+                className="w-full"
+                asChild
+              >
+                <Link href={`/dashboard/patterns/${block.ref}/edit`}>
+                  {t('pattern.actions.edit')} →
+                </Link>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={onRemove}
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-2" />
+                {t('pattern.actions.remove')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const blockConfig = BLOCK_REGISTRY[(block as BlockInstance).blockSlug]
 
   if (!blockConfig) {
     return (

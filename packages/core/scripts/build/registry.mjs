@@ -46,7 +46,7 @@ import { getConfig } from './registry/config.mjs'
 // Import discovery modules (migrated from this file)
 import { discoverParentChildRelations } from './registry/discovery/parent-child.mjs'
 import { discoverPermissionsConfig } from './registry/discovery/permissions.mjs'
-import { discoverEntities } from './registry/discovery/entities.mjs'
+import { discoverCoreEntities } from './registry/discovery/core-entities.mjs'
 import { discoverPlugins } from './registry/discovery/plugins.mjs'
 import { discoverThemes } from './registry/discovery/themes.mjs'
 import { discoverMiddlewares } from './registry/discovery/middlewares.mjs'
@@ -164,9 +164,9 @@ export async function buildRegistries(projectRoot = null) {
     await discoverParentChildRelations(CONFIG)
 
     // Discover all content types in parallel (pass CONFIG to each)
-    const [plugins, entities, themes, templates, middlewares, blocks, permissionsConfig, coreRoutes, apiPresetsData] = await Promise.all([
+    const [plugins, coreEntities, themes, templates, middlewares, blocks, permissionsConfig, coreRoutes, apiPresetsData] = await Promise.all([
       discoverPlugins(CONFIG),
-      discoverEntities(CONFIG),
+      discoverCoreEntities(CONFIG),
       discoverThemes(CONFIG),
       discoverTemplates(CONFIG),
       discoverMiddlewares(CONFIG),
@@ -176,7 +176,7 @@ export async function buildRegistries(projectRoot = null) {
       discoverApiPresets(CONFIG)
     ])
 
-    // Aggregate all entities with proper priority: plugin < standalone < theme
+    // Aggregate all entities with proper priority: plugin < core < theme
     // Start with plugin entities (lowest priority)
     const pluginEntities = []
     plugins.forEach(plugin => {
@@ -185,7 +185,7 @@ export async function buildRegistries(projectRoot = null) {
       }
     })
 
-    // Add theme entities (medium priority)
+    // Add theme entities (highest priority - can override core)
     const themeEntities = []
     themes.forEach(theme => {
       if (theme.entities && theme.entities.length > 0) {
@@ -193,11 +193,11 @@ export async function buildRegistries(projectRoot = null) {
       }
     })
 
-    // Merge all entities with priority: plugins < standalone entities < themes
+    // Merge all entities with priority: plugins < core < themes
     const allEntities = [
       ...pluginEntities,      // Lowest priority
-      ...entities,            // Standalone entities
-      ...themeEntities        // Highest priority
+      ...coreEntities,        // Core framework entities
+      ...themeEntities        // Highest priority (can override core)
     ]
 
     // PHASE 3 VALIDATION: Ensure all entities have access.shared defined
@@ -210,8 +210,8 @@ export async function buildRegistries(projectRoot = null) {
       return
     }
 
-    // Display beautiful tree structure (use original entities for display)
-    displayTreeStructure(plugins, entities, themes)
+    // Display beautiful tree structure
+    displayTreeStructure(plugins, themes, coreEntities)
 
     // Clean up old generated route files first
     await cleanupOldRouteFiles(CONFIG)

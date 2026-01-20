@@ -185,6 +185,7 @@ export function generateEntityRegistryClient(entities, config) {
     builder: ${entity.exportName}.builder ? {
       enabled: ${entity.exportName}.builder.enabled,
       sidebarFields: ${entity.exportName}.builder.sidebarFields,
+      showSlug: ${entity.exportName}.builder.showSlug,
       public: ${entity.exportName}.builder.public,
       seo: ${entity.exportName}.builder.seo
     } : undefined,
@@ -249,6 +250,7 @@ export interface ClientEntityConfig {
   builder?: {
     enabled: boolean
     sidebarFields?: string[]
+    showSlug?: boolean
     public?: { basePath: string }
     seo?: boolean
   }
