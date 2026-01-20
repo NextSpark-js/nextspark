@@ -47,7 +47,6 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      test123312312123123123
       {/* Precargar traducciones del dashboard para mejorar UX de navegación */}
       <DashboardTranslationPreloader key="dashboard-translation-preloader" />
 
