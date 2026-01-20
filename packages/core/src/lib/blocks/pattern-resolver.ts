@@ -10,9 +10,9 @@
  * @module core/lib/blocks/pattern-resolver
  */
 
-import type { BlockInstance } from '@/core/types/blocks'
-import type { Pattern, PatternReference } from '@/core/types/pattern-reference'
-import { isPatternReference } from '@/core/types/pattern-reference'
+import type { BlockInstance } from '../../types/blocks'
+import type { Pattern, PatternReference } from '../../types/pattern-reference'
+import { isPatternReference } from '../../types/pattern-reference'
 
 /**
  * Resolve pattern references in a blocks array

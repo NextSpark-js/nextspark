@@ -12,9 +12,9 @@
  * @module core/lib/blocks/patterns-resolver.service
  */
 
-import { query } from '@/core/lib/db'
-import type { Pattern } from '@/core/types/pattern-reference'
-import type { BlockInstance } from '@/core/types/blocks'
+import { query } from '../db'
+import type { Pattern } from '../../types/pattern-reference'
+import type { BlockInstance } from '../../types/blocks'
 
 // Database row type for pattern
 interface DbPattern {
