@@ -42,7 +42,7 @@ function getActiveTheme() {
  * @param {string} activeTheme - Active theme name
  * @returns {boolean} - True if file was updated, false if already correct
  */
-function syncAppGlobalsCss(config, activeTheme) {
+export function syncAppGlobalsCss(config, activeTheme) {
   const appGlobalsCssPath = path.join(config.projectRoot, 'app', 'globals.css')
 
   // Calculate the correct relative path from app/ to theme globals.css
@@ -423,21 +423,25 @@ async function watchTheme() {
   }
 }
 
-// Main execution
-const watchMode = process.argv.includes('--watch') || process.argv.includes('-w')
+// Main execution - only run when invoked directly, not when imported
+const isMainScript = process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop())
 
-console.log('🎨 Starting theme build process...')
+if (isMainScript) {
+  const watchMode = process.argv.includes('--watch') || process.argv.includes('-w')
 
-try {
-  await buildTheme()
-  console.log('✅ Theme build process completed successfully!')
+  console.log('🎨 Starting theme build process...')
 
-  if (watchMode) {
-    console.log()
-    console.log('👀 Starting watch mode...')
-    await watchTheme()
+  try {
+    await buildTheme()
+    console.log('✅ Theme build process completed successfully!')
+
+    if (watchMode) {
+      console.log()
+      console.log('👀 Starting watch mode...')
+      await watchTheme()
+    }
+  } catch (error) {
+    console.error('❌ Theme build process failed:', error)
+    process.exit(1)
   }
-} catch (error) {
-  console.error('❌ Theme build process failed:', error)
-  process.exit(1)
 }

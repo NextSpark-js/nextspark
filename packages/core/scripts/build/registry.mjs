@@ -83,6 +83,7 @@ import {
   cleanupOrphanedTemplates
 } from './registry/post-build/index.mjs'
 import { watchContents } from './registry/watch.mjs'
+import { syncAppGlobalsCss } from './theme.mjs'
 
 // ==================== Registry File Generation ====================
 
@@ -159,6 +160,12 @@ export async function buildRegistries(projectRoot = null) {
   const startTime = Date.now()
 
   try {
+    // Sync app/globals.css to import from active theme
+    // This ensures the import path matches NEXT_PUBLIC_ACTIVE_THEME
+    if (CONFIG.activeTheme) {
+      syncAppGlobalsCss(CONFIG, CONFIG.activeTheme)
+    }
+
     // Initialize parent-child discovery FIRST (needed for dynamic parseChildEntity)
     log('→ Initializing dynamic parent-child discovery...', 'info')
     await discoverParentChildRelations(CONFIG)

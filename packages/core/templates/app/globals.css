@@ -1,12 +1,15 @@
 /* =============================================
    GLOBAL STYLES - Import from Active Theme
 
-   Este archivo importa los estilos del theme activo.
-   NO editar directamente - todos los estilos están en:
+   This file imports styles from the active theme.
+   DO NOT edit directly - all styles are in:
    contents/themes/{theme}/styles/globals.css
 
-   Para personalizar colores, tipografía y tokens, edita
-   el archivo globals.css de tu theme activo.
+   This import is AUTO-SYNCED by the registry build process
+   to match NEXT_PUBLIC_ACTIVE_THEME from your .env file.
+
+   To customize colors, typography and tokens, edit
+   the globals.css file in your active theme.
    ============================================= */
 
-@import "../contents/themes/default/styles/globals.css";
+@import "../contents/themes/starter/styles/globals.css";
