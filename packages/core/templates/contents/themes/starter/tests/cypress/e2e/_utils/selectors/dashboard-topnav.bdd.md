@@ -2,8 +2,8 @@
 feature: Dashboard Topnav UI Selectors Validation
 priority: high
 tags: [selectors, topnav, dashboard, ui-validation]
-grepTags: [ui-selectors, dashboard, topnav, SEL_TNAV_001, SEL_TNAV_002, SEL_TNAV_003, SEL_TNAV_004, SEL_TNAV_005, SEL_TNAV_006]
-coverage: 6
+grepTags: [ui-selectors, dashboard, topnav, SEL_TNAV_001, SEL_TNAV_002, SEL_TNAV_003, SEL_TNAV_004, SEL_TNAV_005, SEL_TNAV_006, SEL_TNAV_007]
+coverage: 7
 ---
 
 # Dashboard Topnav UI Selectors Validation
@@ -260,6 +260,53 @@ Then deberia encontrar el indicador de estado de carga del usuario
 ### Notes
 - This transient state is only visible during auth loading
 - Difficult to test reliably in normal flow
+
+---
+
+## @test SEL_TNAV_007: Settings Menu
+
+### Metadata
+- **Priority:** Medium
+- **Type:** Selector Validation
+- **Tags:** topnav, settings-menu, dropdown
+- **Grep:** `@ui-selectors` `@dashboard` `@topnav` `@SEL_TNAV_007`
+- **Status:** Active (3 passing, 0 skipped)
+
+```gherkin:en
+Scenario: Settings menu opens and shows links
+
+Given I am logged in as a developer user
+And the settings menu is enabled in theme config
+And I navigate to the dashboard
+Then I should find the settings menu trigger
+When I click on the settings menu trigger
+Then I should see the settings menu content
+And I should find settings menu links (e.g., patterns)
+```
+
+```gherkin:es
+Scenario: Menu de configuracion se abre y muestra links
+
+Given estoy logueado como usuario developer
+And el menu de configuracion esta habilitado en la config del tema
+And navego al dashboard
+Then deberia encontrar el trigger del menu de configuracion
+When hago click en el trigger del menu de configuracion
+Then deberia ver el contenido del menu de configuracion
+And deberia encontrar links del menu de configuracion (ej. patrones)
+```
+
+### Expected Results
+| Test ID | Selector Path | POM Accessor | data-cy Value | Status |
+|---------|---------------|--------------|---------------|--------|
+| SEL_TNAV_007_01 | dashboard.topnav.settingsMenu.trigger | dashboard.selectors.topnavSettingsMenuTrigger | topnav-settings-menu-trigger | Implemented |
+| SEL_TNAV_007_02 | dashboard.topnav.settingsMenu.content | dashboard.selectors.topnavSettingsMenuContent | topnav-settings-menu | Implemented |
+| SEL_TNAV_007_03 | dashboard.topnav.settingsMenu.link(index) | dashboard.selectors.topnavSettingsMenuLink(0) | topnav-settings-link-0 | Implemented |
+
+### Notes
+- Settings menu must be enabled in theme config (TOPBAR_CONFIG.settingsMenu)
+- Links are dynamically generated from config
+- Common links include: Patterns
 
 ---
 

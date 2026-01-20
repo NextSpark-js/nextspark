@@ -20,8 +20,8 @@ INSERT INTO public.patterns (
   "updatedAt"
 ) VALUES (
   '00000000-0000-4000-b000-000000000001',
-  'usr-carlos-001',
-  'team-everpoint-001',
+  'test-developer-001',
+  'team-nextspark-001',
   'Newsletter CTA',
   'newsletter-cta',
   '[
@@ -72,8 +72,8 @@ INSERT INTO public.patterns (
   "updatedAt"
 ) VALUES (
   '00000000-0000-4000-b000-000000000002',
-  'usr-carlos-001',
-  'team-everpoint-001',
+  'test-developer-001',
+  'team-nextspark-001',
   'Footer Links',
   'footer-links',
   '[
@@ -114,8 +114,8 @@ INSERT INTO public.patterns (
   "updatedAt"
 ) VALUES (
   '00000000-0000-4000-b000-000000000003',
-  'usr-carlos-001',
-  'team-everpoint-001',
+  'test-developer-001',
+  'team-nextspark-001',
   'Hero Header',
   'hero-header',
   '[
@@ -169,7 +169,7 @@ INSERT INTO public.pattern_usages (
   '00000000-0000-4000-b000-000000000001',
   'pages',
   '00000000-0000-4000-a000-000000000001',
-  'team-everpoint-001',
+  'team-nextspark-001',
   NOW() - INTERVAL '5 days'
 ) ON CONFLICT ("patternId", "entityType", "entityId") DO NOTHING;
 
@@ -186,7 +186,7 @@ INSERT INTO public.pattern_usages (
   '00000000-0000-4000-b000-000000000001',
   'pages',
   '00000000-0000-4000-a000-000000000002',
-  'team-everpoint-001',
+  'team-nextspark-001',
   NOW() - INTERVAL '4 days'
 ) ON CONFLICT ("patternId", "entityType", "entityId") DO NOTHING;
 
@@ -203,7 +203,7 @@ INSERT INTO public.pattern_usages (
   '00000000-0000-4000-b000-000000000002',
   'pages',
   '00000000-0000-4000-a000-000000000001',
-  'team-everpoint-001',
+  'team-nextspark-001',
   NOW() - INTERVAL '10 days'
 ) ON CONFLICT ("patternId", "entityType", "entityId") DO NOTHING;
 
@@ -220,7 +220,7 @@ INSERT INTO public.pattern_usages (
   '00000000-0000-4000-b000-000000000002',
   'pages',
   '00000000-0000-4000-a000-000000000004',
-  'team-everpoint-001',
+  'team-nextspark-001',
   NOW() - INTERVAL '8 days'
 ) ON CONFLICT ("patternId", "entityType", "entityId") DO NOTHING;
 

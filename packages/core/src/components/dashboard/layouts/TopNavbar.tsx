@@ -306,14 +306,26 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                     <span className="sr-only">{t('navigation.settings')}</span>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuContent
+                  align="end"
+                  className="w-56"
+                  data-cy={sel('dashboard.topnav.settingsMenu.content')}
+                >
                   <DropdownMenuLabel>{t('navigation.settings')}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {TOPBAR_CONFIG.settingsMenu?.links?.map((link: { label: string; href: string; icon?: string }, index: number) => {
                     const IconComponent = iconMap[link.icon as keyof typeof iconMap]
                     return (
-                      <DropdownMenuItem key={index} asChild>
-                        <Link href={link.href} className="flex items-center">
+                      <DropdownMenuItem
+                        key={index}
+                        asChild
+                        data-cy={sel('dashboard.topnav.settingsMenu.item', { index })}
+                      >
+                        <Link
+                          href={link.href}
+                          className="flex items-center"
+                          data-cy={sel('dashboard.topnav.settingsMenu.link', { index })}
+                        >
                           {IconComponent && <IconComponent className="mr-2 h-4 w-4" aria-hidden="true" />}
                           {t(link.label)}
                         </Link>

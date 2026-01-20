@@ -177,6 +177,7 @@ export const DASHBOARD_SELECTORS = {
       trigger: 'topnav-settings-menu-trigger',
       content: 'topnav-settings-menu',
       item: 'topnav-settings-item-{index}',
+      link: 'topnav-settings-link-{index}',
     },
 
     // Single action buttons

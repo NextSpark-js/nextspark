@@ -320,123 +320,125 @@ export default function PatternsListPage() {
   const searchValue = typeof filters.search === 'string' ? filters.search : ''
 
   return (
-    <div className="p-6 space-y-6" data-cy={sel('entities.list.container', { slug: entityConfig.slug })}>
-      {/* Row 1: Title + Create button */}
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight" data-cy={sel('entities.page.title', { slug: entityConfig.slug })}>
-            {entityConfig.names.plural}
-          </h1>
-          <p className="text-muted-foreground">
-            Manage your {entityConfig.names.plural.toLowerCase()}
-          </p>
+    <div data-cy={sel('entities.page.container', { slug: entityConfig.slug })}>
+      <div className="p-6 space-y-6" data-cy={sel('entities.list.container', { slug: entityConfig.slug })}>
+        {/* Row 1: Title + Create button */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold tracking-tight" data-cy={sel('entities.header.title', { slug: entityConfig.slug })}>
+              {entityConfig.names.plural}
+            </h1>
+            <p className="text-muted-foreground">
+              Manage your {entityConfig.names.plural.toLowerCase()}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {canCreate && (
+              <Button asChild data-cy={sel('entities.list.addButton', { slug: entityConfig.slug })}>
+                <Link href={`/dashboard/${entityConfig.slug}/create`}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add {entityConfig.names.singular}
+                </Link>
+              </Button>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          {canCreate && (
-            <Button asChild data-cy={sel('entities.list.addButton', { slug: entityConfig.slug })}>
-              <Link href={`/dashboard/${entityConfig.slug}/create`}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add {entityConfig.names.singular}
-              </Link>
-            </Button>
-          )}
-        </div>
-      </div>
 
-      {/* Row 2: Search + Filters */}
-      {(enableSearch || enableFilters) && (
-        <div className="flex flex-col sm:flex-row gap-3 items-center flex-wrap">
-          {enableSearch && (
-            <SearchInput
-              placeholder={`Search ${entityConfig.names.plural.toLowerCase()}...`}
-              value={searchValue}
-              onChange={(e) => handleSearch(e.target.value)}
-              containerClassName="flex-1 max-w-md"
-              data-cy={sel('entities.list.search.container', { slug: entityConfig.slug })}
-            />
-          )}
-
-          {enableFilters && entityConfig.ui.dashboard.filters?.map(filterConfig => {
-            const field = entityConfig.fields.find(f => f.name === filterConfig.field)
-            if (!field?.options) return null
-
-            const filterValues = filters[filterConfig.field]
-            const values = Array.isArray(filterValues) ? filterValues : []
-
-            return (
-              <MultiSelectFilter
-                key={filterConfig.field}
-                label={filterConfig.label || field.display.label}
-                options={field.options.map(opt => ({
-                  value: String(opt.value),
-                  label: opt.label
-                }))}
-                values={values}
-                onChange={(newValues) => setFilter(filterConfig.field, newValues)}
-                data-cy={sel('entities.list.filters.trigger', { slug: entityConfig.slug, field: filterConfig.field })}
+        {/* Row 2: Search + Filters */}
+        {(enableSearch || enableFilters) && (
+          <div className="flex flex-col sm:flex-row gap-3 items-center flex-wrap">
+            {enableSearch && (
+              <SearchInput
+                placeholder={`Search ${entityConfig.names.plural.toLowerCase()}...`}
+                value={searchValue}
+                onChange={(e) => handleSearch(e.target.value)}
+                containerClassName="flex-1 max-w-md"
+                data-cy={sel('entities.list.search.container', { slug: entityConfig.slug })}
               />
-            )
-          })}
+            )}
 
-          {isSearching && (
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          )}
-        </div>
-      )}
+            {enableFilters && entityConfig.ui.dashboard.filters?.map(filterConfig => {
+              const field = entityConfig.fields.find(f => f.name === filterConfig.field)
+              if (!field?.options) return null
 
-      {/* Row 3: Data Table with custom quickActions and dropdownActions */}
-      <EntityTable
-        entityConfig={entityConfig}
-        data={data as Array<{ id: string }>}
-        loading={isInitialLoad}
-        selectable={bulkOperationsEnabled}
-        selectedIds={selectedIds}
-        onSelectionChange={setSelectedIds}
-        enableSearch={false}
-        searchQuery={searchValue}
-        onSearch={handleSearch}
-        getItemName={getItemName}
-        teamId={teamId}
-        useDefaultActions={false}
-        quickActions={quickActions}
-        dropdownActions={dropdownActions}
-        showHeader={false}
-        pagination={{
-          pageSize: 10,
-          showPageSizeSelector: true,
-          pageSizeOptions: [10, 20, 50, 100],
-        }}
-      />
+              const filterValues = filters[filterConfig.field]
+              const values = Array.isArray(filterValues) ? filterValues : []
 
-      {/* Floating Bulk Actions Bar */}
-      {bulkOperationsEnabled && (
-        <EntityBulkActions
-          entitySlug={entityConfig.slug}
+              return (
+                <MultiSelectFilter
+                  key={filterConfig.field}
+                  label={filterConfig.label || field.display.label}
+                  options={field.options.map(opt => ({
+                    value: String(opt.value),
+                    label: opt.label
+                  }))}
+                  values={values}
+                  onChange={(newValues) => setFilter(filterConfig.field, newValues)}
+                  data-cy={sel('entities.list.filters.trigger', { slug: entityConfig.slug, field: filterConfig.field })}
+                />
+              )
+            })}
+
+            {isSearching && (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            )}
+          </div>
+        )}
+
+        {/* Row 3: Data Table with custom quickActions and dropdownActions */}
+        <EntityTable
+          entityConfig={entityConfig}
+          data={data as Array<{ id: string }>}
+          loading={isInitialLoad}
+          selectable={bulkOperationsEnabled}
           selectedIds={selectedIds}
-          onClearSelection={handleClearSelection}
-          config={{
-            enableSelectAll: true,
-            totalItems: data.length,
-            onSelectAll: handleSelectAll,
-            enableDelete: true,
-            onDelete: handleBulkDelete,
-            itemLabel: entityConfig.names.singular,
-            itemLabelPlural: entityConfig.names.plural,
+          onSelectionChange={setSelectedIds}
+          enableSearch={false}
+          searchQuery={searchValue}
+          onSearch={handleSearch}
+          getItemName={getItemName}
+          teamId={teamId}
+          useDefaultActions={false}
+          quickActions={quickActions}
+          dropdownActions={dropdownActions}
+          showHeader={false}
+          pagination={{
+            pageSize: 10,
+            showPageSizeSelector: true,
+            pageSizeOptions: [10, 20, 50, 100],
           }}
         />
-      )}
 
-      {/* Pattern Delete Dialog - shows usage warning before deleting */}
-      {deleteTarget && (
-        <PatternDeleteDialog
-          patternId={deleteTarget.id}
-          patternTitle={getItemName(deleteTarget)}
-          onConfirm={handleConfirmDelete}
-          isDeleting={isDeleting}
-          open={isDeleteDialogOpen}
-          onOpenChange={setIsDeleteDialogOpen}
-        />
-      )}
+        {/* Floating Bulk Actions Bar */}
+        {bulkOperationsEnabled && (
+          <EntityBulkActions
+            entitySlug={entityConfig.slug}
+            selectedIds={selectedIds}
+            onClearSelection={handleClearSelection}
+            config={{
+              enableSelectAll: true,
+              totalItems: data.length,
+              onSelectAll: handleSelectAll,
+              enableDelete: true,
+              onDelete: handleBulkDelete,
+              itemLabel: entityConfig.names.singular,
+              itemLabelPlural: entityConfig.names.plural,
+            }}
+          />
+        )}
+
+        {/* Pattern Delete Dialog - shows usage warning before deleting */}
+        {deleteTarget && (
+          <PatternDeleteDialog
+            patternId={deleteTarget.id}
+            patternTitle={getItemName(deleteTarget)}
+            onConfirm={handleConfirmDelete}
+            isDeleting={isDeleting}
+            open={isDeleteDialogOpen}
+            onOpenChange={setIsDeleteDialogOpen}
+          />
+        )}
+      </div>
     </div>
   )
 }
