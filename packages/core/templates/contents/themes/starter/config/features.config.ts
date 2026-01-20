@@ -1,5 +1,5 @@
 /**
- * Default Theme - Features Configuration
+ * Starter Theme - Features Configuration
  *
  * Defines all features of the application for this theme.
  * Each feature key becomes a tag: @feat-{key}
@@ -14,37 +14,10 @@
 import { defineFeatures } from '@nextsparkjs/core/lib/config/features-types'
 
 export default defineFeatures({
-
-
-  // ===========================================================================
-  // AI FEATURES
-  // AI-powered assistant and tools
-  // ===========================================================================
-
-  ai: {
-    name: 'AI Assistant',
-    description: 'AI-powered assistant with multi-agent orchestration, chat, and usage tracking',
-    category: 'core',
-    icon: 'bot',
-    entities: [],
-    permissions: ['ai.*'],
-    docs: ['03-ai/*'],
-  },
-
   // ===========================================================================
   // ENTITY FEATURES
   // Business entity CRUD features
   // ===========================================================================
-
-  customers: {
-    name: 'Customers',
-    description: 'Customer management with metadata support',
-    category: 'entities',
-    icon: 'user-circle',
-    entities: ['customers'],
-    permissions: ['customers.*'],
-    docs: [],
-  },
 
   tasks: {
     name: 'Tasks',
@@ -53,26 +26,6 @@ export default defineFeatures({
     icon: 'check-square',
     entities: ['tasks'],
     permissions: ['tasks.*'],
-    docs: [],
-  },
-
-  posts: {
-    name: 'Posts',
-    description: 'Blog posts and content publishing',
-    category: 'entities',
-    icon: 'file-text',
-    entities: ['posts', 'categories'],
-    permissions: ['posts.*', 'categories.*'],
-    docs: [],
-  },
-
-  pages: {
-    name: 'Pages',
-    description: 'Page management, publishing, and SEO settings',
-    category: 'entities',
-    icon: 'file',
-    entities: ['pages'],
-    permissions: ['pages.*'],
     docs: [],
   },
 
@@ -199,15 +152,5 @@ export default defineFeatures({
     entities: [],
     permissions: ['developer.*'],
     docs: ['19-restricted-zones/03-devtools.md'],
-  },
-
-  'scheduled-actions': {
-    name: 'Scheduled Actions',
-    description: 'Background task processing, webhooks, and recurring operations',
-    category: 'core',
-    icon: 'clock',
-    entities: [],
-    permissions: ['developer.*'],
-    docs: ['20-scheduled-actions/*'],
   },
 })
