@@ -103,7 +103,11 @@ function parseEntitiesFromConfig(content) {
   const entitiesContent = entitiesMatch[1]
 
   // Match each entity block: entityName: [ ... ]
-  const entityBlockRegex = /(\w+):\s*\[([\s\S]*?)\],?\s*(?=\n\s*\/\/|$|\n\s*\w+:)/g
+  // Supports: customers:, "ai-agents":, 'landing-metrics':
+  // The key can be:
+  //   - Simple word: customers
+  //   - Quoted with hyphens: "ai-agents" or 'ai-agents'
+  const entityBlockRegex = /["']?([\w-]+)["']?:\s*\[([\s\S]*?)\],?\s*(?=\n\s*\/\/|$|\n\s*["']?[\w-]+["']?:)/g
   let entityMatch
 
   while ((entityMatch = entityBlockRegex.exec(entitiesContent)) !== null) {
