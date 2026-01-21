@@ -47,6 +47,12 @@ Each `do:` command is **MINIMAL** - it only points to where to read the full ins
 | `/do:npm-version` | Increment package versions | `how-to/releases/npm-version` |
 | `/do:release-version` | Create a core version release | `how-to/releases/release-version` |
 
+### Git & GitHub
+
+| Command | Description | Reads |
+|---------|-------------|-------|
+| `/do:sync-code-review` | Sync with PR code review: evaluate, fix, respond | `github` |
+
 ### Meta
 
 | Command | Description | Reads |
