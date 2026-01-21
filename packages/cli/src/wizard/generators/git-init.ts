@@ -12,35 +12,48 @@ import type { WizardConfig } from '../types.js'
 
 /**
  * NextSpark .gitignore content
+ * Keep in sync with packages/core/templates/.gitignore
  */
 const GITIGNORE_CONTENT = `# Dependencies
 node_modules/
 
-# Next.js
+# Build
 .next/
 out/
+dist/
+
+# NextSpark
+.nextspark/
+
+# Auto-generated templates (from theme templates at build time)
+app/(templates)/
+
+# Mocks
+app/(public)/mock-demo/
+_tmp/
+
+# Claude Code
+.claude/
+
+# Playwright MCP
+.playwright-mcp/
+
+# Cypress (theme-based)
+contents/themes/*/tests/cypress/videos
+contents/themes/*/tests/cypress/screenshots
+contents/themes/*/tests/cypress/allure-results
+contents/themes/*/tests/cypress/allure-report
+
+# Jest (theme-based)
+contents/themes/*/tests/jest/coverage
 
 # Environment
 .env
 .env.local
-.env.*.local
+.env*.local
 
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Build
-dist/
-build/
-
-# Turbo
-.turbo/
+# TypeScript
+*.tsbuildinfo
 
 # IDE
 .idea/
@@ -48,12 +61,18 @@ build/
 *.swp
 *.swo
 
-# Testing
-coverage/
-.nyc_output/
+# OS
+.DS_Store
+Thumbs.db
 
-# NextSpark
-.nextspark/
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Misc
+*.pem
 `
 
 /**
