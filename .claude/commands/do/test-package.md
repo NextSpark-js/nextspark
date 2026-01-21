@@ -10,7 +10,16 @@ description: "Test npm package from scratch - creates fresh Next.js project and 
 
 ## Purpose
 
-Test the npm package distribution by creating a fresh Next.js project and validating the complete installation and runtime flow. This simulates exactly what a new user would experience when installing NextSpark from npm.
+Test the npm package distribution by creating a **fresh Next.js project** and validating the complete installation and runtime flow. This simulates exactly what a new user would experience when installing NextSpark from npm.
+
+**When to use this command:**
+- **Pre-publish validation** - Before releasing a new version to npm
+- **Clean install testing** - After major changes to CLI or init process
+- **New user experience validation** - Ensuring the onboarding flow works
+
+**This is different from daily development testing:**
+- Daily dev testing uses `pnpm setup:update-local` with `projects/my-app`
+- This command creates a **completely fresh project** to simulate npm install
 
 ---
 
@@ -22,67 +31,85 @@ Read `.claude/skills/npm-development-workflow/SKILL.md` for context on dual-mode
 
 ## Execution Steps
 
-Execute these steps in order. Stop and report if any step fails.
+Execute these steps in order. **Stop and report if any step fails.**
+
+### Step 0: Verify Environment
+
+```bash
+# Determine paths relative to repo root
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+PROJECTS_DIR="$(dirname "$REPO_ROOT")/projects"
+
+# Ensure projects directory exists
+if [ ! -d "$PROJECTS_DIR" ]; then
+  echo "Creating projects directory..."
+  mkdir -p "$PROJECTS_DIR"
+fi
+
+echo "REPO_ROOT: $REPO_ROOT"
+echo "PROJECTS_DIR: $PROJECTS_DIR"
+```
 
 ### Step 1: Clean Previous Test Project
 
 ```bash
-# Remove existing test project
-cd G:/GitHub/nextspark/projects
+cd "$PROJECTS_DIR"
 rm -rf test-package
 ```
 
 ### Step 2: Build Core Package
 
 ```bash
-cd G:/GitHub/nextspark/repo/packages/core
+cd "$REPO_ROOT/packages/core"
 pnpm build:js
 ```
 
-**Validation:** Build completes without errors.
+**Validation:** Build completes without errors. If build fails, stop here.
 
 ### Step 3: Pack Core Package
 
 ```bash
-cd G:/GitHub/nextspark/repo/packages/core
+cd "$REPO_ROOT/packages/core"
 pnpm pack
 ```
 
-**Output:** Creates `nextsparkjs-core-X.Y.Z.tgz` file.
+**Output:** Creates `nextsparkjs-core-X.Y.Z.tgz` file in `packages/core/`.
 
 ### Step 4: Create Fresh Next.js Project
 
 ```bash
-cd G:/GitHub/nextspark/projects
-npx create-next-app@latest test-package --typescript --tailwind --eslint --app --src-dir --import-alias "@/*" --use-pnpm
+cd "$PROJECTS_DIR"
+npx create-next-app@latest test-package --typescript --tailwind --eslint --app --src-dir --import-alias "@/*" --use-pnpm --yes
 ```
-
-**Note:** Use `--yes` or provide answers non-interactively if needed.
 
 ### Step 5: Install Core Tarball
 
 ```bash
-cd G:/GitHub/nextspark/projects/test-package
+cd "$PROJECTS_DIR/test-package"
 
 # Find the tarball version dynamically
-TARBALL=$(ls ../../repo/packages/core/nextsparkjs-core-*.tgz | head -1)
+TARBALL=$(ls "$REPO_ROOT/packages/core"/nextsparkjs-core-*.tgz | head -1)
 pnpm add "$TARBALL"
 ```
 
 ### Step 6: Run CLI Init
 
 ```bash
-cd G:/GitHub/nextspark/projects/test-package
+cd "$PROJECTS_DIR/test-package"
 npx nextspark init
 ```
 
 **Expected:** CLI copies structure, theme, configs to the project.
 
-### Step 7: Copy Environment File
+### Step 7: Copy and Configure Environment
 
 ```bash
-cd G:/GitHub/nextspark/projects/test-package
-cp ../../repo/apps/dev/.env .env
+cd "$PROJECTS_DIR/test-package"
+cp "$REPO_ROOT/apps/dev/.env" .env
+
+# Ensure PORT is set to 3000 for clean test project
+# (avoids conflict with monorepo dev server on 5173)
+sed -i 's/^PORT=.*/PORT=3000/' .env 2>/dev/null || echo "PORT=3000" >> .env
 ```
 
 **Important:** Verify DATABASE_URL points to valid database.
@@ -90,7 +117,7 @@ cp ../../repo/apps/dev/.env .env
 ### Step 8: Run Database Migrations
 
 ```bash
-cd G:/GitHub/nextspark/projects/test-package
+cd "$PROJECTS_DIR/test-package"
 pnpm db:migrate
 ```
 
@@ -99,11 +126,11 @@ pnpm db:migrate
 ### Step 9: Start Development Server
 
 ```bash
-cd G:/GitHub/nextspark/projects/test-package
+cd "$PROJECTS_DIR/test-package"
 pnpm dev
 ```
 
-**Expected:** Server starts on port 3000 (or as configured in .env).
+**Expected:** Server starts on http://localhost:3000
 
 ### Step 10: Manual Verification Checklist
 
@@ -115,19 +142,25 @@ Open browser at http://localhost:3000 and verify:
 - [ ] Login page accessible at /login
 - [ ] Can login with test user: `superadmin@tmt.dev` / `Test1234`
 - [ ] Dashboard loads after login
-- [ ] Sidebar shows entities
-- [ ] Can create/edit/delete records
+- [ ] Sidebar shows entities (users, teams, etc.)
+- [ ] Can create a new record
+- [ ] Can edit an existing record
+- [ ] Can delete a record
+- [ ] List pagination works
 
 ---
 
 ## Quick One-Liner (For Experienced Users)
 
 ```bash
-cd G:/GitHub/nextspark/projects && rm -rf test-package && \
-cd ../repo/packages/core && pnpm build:js && pnpm pack && \
-cd ../../projects && npx create-next-app@latest test-package --typescript --tailwind --eslint --app --src-dir --import-alias "@/*" --use-pnpm --yes && \
-cd test-package && pnpm add ../../repo/packages/core/nextsparkjs-core-*.tgz && \
-npx nextspark init && cp ../../repo/apps/dev/.env .env && \
+REPO_ROOT="$(git rev-parse --show-toplevel)" && \
+PROJECTS_DIR="$(dirname "$REPO_ROOT")/projects" && \
+mkdir -p "$PROJECTS_DIR" && \
+cd "$PROJECTS_DIR" && rm -rf test-package && \
+cd "$REPO_ROOT/packages/core" && pnpm build:js && pnpm pack && \
+cd "$PROJECTS_DIR" && npx create-next-app@latest test-package --typescript --tailwind --eslint --app --src-dir --import-alias "@/*" --use-pnpm --yes && \
+cd test-package && pnpm add "$REPO_ROOT/packages/core"/nextsparkjs-core-*.tgz && \
+npx nextspark init && cp "$REPO_ROOT/apps/dev/.env" .env && \
 pnpm db:migrate && pnpm dev
 ```
 
@@ -138,10 +171,14 @@ pnpm db:migrate && pnpm dev
 | Issue | Solution |
 |-------|----------|
 | `nextspark: command not found` | Ensure core package installed: `pnpm list @nextsparkjs/core` |
+| `create-next-app` fails | Check Node.js version (requires 18+), check internet connection |
+| Tarball not found | Run Step 3 again, check `packages/core/` for `.tgz` file |
+| `nextspark init` fails | Verify CLI is bundled in core package, check CLI build |
 | Migration fails | Check DATABASE_URL in .env, ensure DB server running |
 | `Module not found` | Run `pnpm install` again, check tarball version matches |
-| Port already in use | Change PORT in .env or kill existing process |
+| Port already in use | Change PORT in .env or kill existing process on 3000 |
 | Login fails | Run migrations again, check test users exist in DB |
+| Database connection refused | Start PostgreSQL server, verify connection string |
 
 ---
 
@@ -149,9 +186,14 @@ pnpm db:migrate && pnpm dev
 
 The test passes if:
 1. All 10 steps complete without errors
-2. Dev server starts and serves pages
+2. Dev server starts and serves pages at http://localhost:3000
 3. Authentication flow works (login/logout)
-4. CRUD operations function correctly
+4. CRUD operations function correctly:
+   - Can create a new record
+   - Can view record details
+   - Can edit and save changes
+   - Can delete a record
+   - List shows pagination
 5. No hydration mismatches or console errors
 
 ---
@@ -160,9 +202,20 @@ The test passes if:
 
 If test passes, the package is ready for publishing:
 ```bash
-cd G:/GitHub/nextspark/repo
+cd "$REPO_ROOT"
 pnpm pkg:version -- patch  # or minor/major
 pnpm pkg:publish
 ```
 
-If test fails, fix issues and re-run `/do:test-package`.
+If test fails, fix issues in the repo and re-run `/do:test-package`.
+
+---
+
+## Relationship with Daily Development
+
+| Scenario | Command to Use |
+|----------|----------------|
+| Daily development testing | `pnpm setup:update-local` (uses `projects/my-app`) |
+| Pre-publish clean install | `/do:test-package` (creates fresh `projects/test-package`) |
+| After CLI/init changes | `/do:test-package` (validates fresh install flow) |
+| After core changes only | `pnpm setup:update-local` (faster, reuses existing project) |
