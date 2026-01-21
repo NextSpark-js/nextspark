@@ -18,7 +18,7 @@ import { Skeleton } from './skeleton'
  */
 export function SkeletonFeaturePlaceholder() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[400px] p-8">
+    <div data-cy="skeleton-feature-placeholder" className="flex flex-col items-center justify-center min-h-[400px] p-8">
       <Card className="max-w-md w-full text-center">
         <CardHeader className="pb-4">
           {/* Icon */}

@@ -299,7 +299,7 @@ body {
 
 /**
  * GPU-accelerated skeleton pulse animation
- * Uses transform instead of opacity for better performance
+ * Uses opacity with will-change hint for smooth GPU-composited animation
  * Respects prefers-reduced-motion for accessibility
  */
 @keyframes skeleton-pulse {

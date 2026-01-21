@@ -34,7 +34,7 @@ export function SkeletonSettingsNavCard() {
  */
 export function SkeletonSettingsOverview() {
   return (
-    <div className="max-w-2xl">
+    <div data-cy="skeleton-settings-overview" className="max-w-2xl">
       <div className="space-y-6">
         {/* Header */}
         <header>
@@ -61,7 +61,7 @@ export function SkeletonSettingsOverview() {
  */
 export function SkeletonProfileForm() {
   return (
-    <div className="max-w-4xl space-y-6">
+    <div data-cy="skeleton-profile-form" className="max-w-4xl space-y-6">
       {/* Header */}
       <header>
         <Skeleton className="h-8 w-32 mb-2" />
@@ -148,7 +148,7 @@ export function SkeletonProfileForm() {
  */
 export function SkeletonBillingPage() {
   return (
-    <div className="max-w-4xl space-y-6">
+    <div data-cy="skeleton-billing-page" className="max-w-4xl space-y-6">
       {/* Header */}
       <header>
         <Skeleton className="h-8 w-48 mb-2" />
@@ -206,7 +206,7 @@ export function SkeletonBillingPage() {
  */
 export function SkeletonPasswordPage() {
   return (
-    <div className="max-w-xl space-y-6">
+    <div data-cy="skeleton-password-page" className="max-w-xl space-y-6">
       {/* Header */}
       <header>
         <Skeleton className="h-8 w-40 mb-2" />
@@ -246,7 +246,7 @@ export function SkeletonPasswordPage() {
  */
 export function SkeletonSecurityPage() {
   return (
-    <div className="max-w-4xl space-y-6">
+    <div data-cy="skeleton-security-page" className="max-w-4xl space-y-6">
       {/* Header */}
       <header>
         <Skeleton className="h-8 w-32 mb-2" />
@@ -285,7 +285,7 @@ export function SkeletonSecurityPage() {
  */
 export function SkeletonApiKeysPage() {
   return (
-    <div className="max-w-4xl space-y-6">
+    <div data-cy="skeleton-api-keys-page" className="max-w-4xl space-y-6">
       {/* Header */}
       <header className="flex items-center justify-between">
         <div>
@@ -326,7 +326,7 @@ export function SkeletonApiKeysPage() {
  */
 export function SkeletonNotificationsPage() {
   return (
-    <div className="max-w-2xl space-y-6">
+    <div data-cy="skeleton-notifications-page" className="max-w-2xl space-y-6">
       {/* Header */}
       <header>
         <Skeleton className="h-8 w-36 mb-2" />
@@ -358,7 +358,7 @@ export function SkeletonNotificationsPage() {
  */
 export function SkeletonTeamsPage() {
   return (
-    <div className="max-w-4xl space-y-6">
+    <div data-cy="skeleton-teams-page" className="max-w-4xl space-y-6">
       {/* Header */}
       <header>
         <Skeleton className="h-8 w-32 mb-2" />
@@ -406,7 +406,7 @@ export function SkeletonTeamsPage() {
  */
 export function SkeletonInvoicesPage() {
   return (
-    <div className="max-w-4xl space-y-6">
+    <div data-cy="skeleton-invoices-page" className="max-w-4xl space-y-6">
       {/* Header */}
       <header>
         <Skeleton className="h-8 w-40 mb-2" />
@@ -454,7 +454,7 @@ export function SkeletonInvoicesPage() {
  */
 export function SkeletonPlansPage() {
   return (
-    <div className="max-w-6xl space-y-6">
+    <div data-cy="skeleton-plans-page" className="max-w-6xl space-y-6">
       {/* Header */}
       <header className="text-center">
         <Skeleton className="h-10 w-64 mx-auto mb-2" />

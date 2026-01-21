@@ -6,7 +6,7 @@ import { cn } from '../../lib/utils'
  * Performance optimizations:
  * - CSS containment isolates layout/paint calculations
  * - content-visibility:auto skips rendering for off-screen elements
- * - GPU-accelerated animation using transform instead of opacity
+ * - GPU-accelerated opacity animation with will-change hint
  * - will-change hint pre-optimizes composition layer
  * - Respects prefers-reduced-motion for accessibility
  */

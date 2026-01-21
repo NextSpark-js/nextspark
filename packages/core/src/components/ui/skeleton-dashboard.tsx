@@ -36,7 +36,7 @@ export function SkeletonStatCard() {
  */
 export function SkeletonStatsGrid() {
   return (
-    <SkeletonContainer className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <SkeletonContainer data-cy="skeleton-stats-grid" className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <SkeletonStatCard />
       <SkeletonStatCard />
       <SkeletonStatCard />
@@ -103,7 +103,7 @@ export function SkeletonActivity() {
  */
 export function SkeletonDashboardHome() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 py-12 px-4 sm:px-6 lg:px-8">
+    <div data-cy="skeleton-dashboard-home" className="min-h-screen bg-gradient-to-b from-background to-muted/20 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
         <div className="mb-8">
