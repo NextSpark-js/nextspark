@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../../ui/dropdown-menu'
-import { Menu, X, LogOut, User, Settings, CreditCard, HelpCircle, Shield, PanelLeft, PanelLeftClose, Key, Code } from 'lucide-react'
+import { Menu, X, LogOut, User, Settings, CreditCard, HelpCircle, Shield, PanelLeft, PanelLeftClose, Key, Code, Layers, Tags } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 import { ThemeToggle } from '../../app/misc/ThemeToggle'
 import { NotificationsDropdown } from '../misc/NotificationsDropdown'
@@ -53,7 +53,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
   const showSuperadmin = superadminConfig?.enabled && (isSuperAdmin || (isDeveloper && superadminConfig?.showToDevelopers))
   const showDevZone = devtoolsConfig?.enabled && isDeveloper
 
-  // Icon mapping for user menu items
+  // Icon mapping for user menu items and settings menu
   const iconMap = {
     'user': User,
     'settings': Settings,
@@ -61,6 +61,8 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
     'key': Key,
     'shield': Shield,
     'log-out': LogOut,
+    'layers': Layers,
+    'tags': Tags,
   }
 
   // Función para generar iniciales del usuario  
@@ -290,7 +292,50 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                 </Link>
               </Button>
             )}
-            
+
+            {/* Settings Menu - Admin-level features */}
+            {user && isTopbarFeatureEnabled('settingsMenu') && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    data-cy={sel('dashboard.topnav.settingsMenu.trigger')}
+                  >
+                    <Settings className="h-4 w-4" aria-hidden="true" />
+                    <span className="sr-only">{t('navigation.settings')}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="w-56"
+                  data-cy={sel('dashboard.topnav.settingsMenu.content')}
+                >
+                  <DropdownMenuLabel>{t('navigation.settings')}</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {TOPBAR_CONFIG.settingsMenu?.links?.map((link: { label: string; href: string; icon?: string }, index: number) => {
+                    const IconComponent = iconMap[link.icon as keyof typeof iconMap]
+                    return (
+                      <DropdownMenuItem
+                        key={index}
+                        asChild
+                        data-cy={sel('dashboard.topnav.settingsMenu.item', { index })}
+                      >
+                        <Link
+                          href={link.href}
+                          className="flex items-center"
+                          data-cy={sel('dashboard.topnav.settingsMenu.link', { index })}
+                        >
+                          {IconComponent && <IconComponent className="mr-2 h-4 w-4" aria-hidden="true" />}
+                          {t(link.label)}
+                        </Link>
+                      </DropdownMenuItem>
+                    )
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
             {/* User Menu */}
             {isLoading ? (
               <div 

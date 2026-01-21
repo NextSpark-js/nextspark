@@ -25,7 +25,7 @@ interface RouteParams {
 export const GET = withRateLimitTier(async (
   request: NextRequest,
   { params }: { params: Promise<RouteParams> }
-) {
+) => {
   const { entity, id, childType } = await params
 
   try {
@@ -90,7 +90,7 @@ export const GET = withRateLimitTier(async (
 export const POST = withRateLimitTier(async (
   request: NextRequest,
   { params }: { params: Promise<RouteParams> }
-) {
+) => {
   const { entity, id, childType } = await params
   
   try {

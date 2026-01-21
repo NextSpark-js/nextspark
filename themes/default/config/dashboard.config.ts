@@ -95,6 +95,20 @@ export const DASHBOARD_CONFIG = {
     },
 
     /**
+     * Settings menu dropdown (gear icon)
+     */
+    settingsMenu: {
+      enabled: true,
+      links: [
+        {
+          label: 'navigation.patterns',
+          href: '/dashboard/patterns',
+          icon: 'layers',
+        },
+      ],
+    },
+
+    /**
      * User menu dropdown
      */
     userMenu: {

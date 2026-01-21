@@ -152,8 +152,8 @@ importers:
         specifier: ^7.2.0
         version: 7.10.1(@types/node@20.19.27)
       '@nextsparkjs/core':
-        specifier: ^0.1.0-beta.50
-        version: 0.1.0-beta.50(@babel/runtime@7.28.4)(@codemirror/autocomplete@6.20.0)(@codemirror/language@6.12.1)(@codemirror/lint@6.9.2)(@codemirror/search@6.5.11)(@codemirror/state@6.5.3)(@codemirror/theme-one-dark@6.1.3)(@codemirror/view@6.39.9)(@swc/helpers@0.5.15)(@types/node@20.19.27)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(codemirror@6.0.2)(cypress@15.8.2)(next@15.4.6(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(typescript@5.9.3)
+        specifier: ^0.1.0-beta.54
+        version: 0.1.0-beta.57(@babel/runtime@7.28.4)(@codemirror/autocomplete@6.20.0)(@codemirror/language@6.12.1)(@codemirror/lint@6.9.2)(@codemirror/search@6.5.11)(@codemirror/state@6.5.3)(@codemirror/theme-one-dark@6.1.3)(@codemirror/view@6.39.9)(@swc/helpers@0.5.15)(@types/node@20.19.27)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(codemirror@6.0.2)(cypress@15.8.2)(next@15.4.6(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(typescript@5.9.3)
       chalk:
         specifier: ^5.3.0
         version: 5.6.2
@@ -210,8 +210,8 @@ importers:
         specifier: ^7.2.0
         version: 7.10.1(@types/node@20.19.27)
       '@nextsparkjs/testing':
-        specifier: workspace:*
-        version: link:../testing
+        specifier: 0.1.0-beta.53
+        version: 0.1.0-beta.53(cypress@15.8.2)
       '@radix-ui/react-accordion':
         specifier: ^1.2.12
         version: 1.2.12(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -2258,15 +2258,15 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@nextsparkjs/core@0.1.0-beta.50':
-    resolution: {integrity: sha512-QDk+B8UXsOez4vfg3SnskwPLPyYq/dfJVWQSOcmfWaqI5YDHGVcdRLynMNfW4GBIpnl4/m9vEJDLwHuJilMHKA==}
+  '@nextsparkjs/core@0.1.0-beta.57':
+    resolution: {integrity: sha512-kaySZUu87hAsr9LPACZ+BUvCrmKX6d6UTW4VGgdnL6zM79w0eSPIBfi3u5sI3B7xFO+ptzvQ0GvNNzbQAwbJRA==}
     peerDependencies:
       next: '>=14.0.0'
       react: '>=18.0.0'
       react-dom: '>=18.0.0'
 
-  '@nextsparkjs/testing@0.1.0-beta.50':
-    resolution: {integrity: sha512-H0UdUIZocycMENQyabNlZy8+9In52kZdzYvpNqvdD3lieIRACDgKlPbAUYF2hYeMRm5+s9UoRG546b8HoSryGA==}
+  '@nextsparkjs/testing@0.1.0-beta.53':
+    resolution: {integrity: sha512-6iUeEmQepgFoFvn97PzR37TUD1Js67PPasMY1fXy1jydGu9wUXqhTOjpc/fu1p1+tr94CB5IKPDs4PRW9s9NRw==}
     peerDependencies:
       cypress: '>=13.0.0'
     peerDependenciesMeta:
@@ -9041,7 +9041,7 @@ snapshots:
   '@next/swc-win32-x64-msvc@15.4.6':
     optional: true
 
-  '@nextsparkjs/core@0.1.0-beta.50(@babel/runtime@7.28.4)(@codemirror/autocomplete@6.20.0)(@codemirror/language@6.12.1)(@codemirror/lint@6.9.2)(@codemirror/search@6.5.11)(@codemirror/state@6.5.3)(@codemirror/theme-one-dark@6.1.3)(@codemirror/view@6.39.9)(@swc/helpers@0.5.15)(@types/node@20.19.27)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(codemirror@6.0.2)(cypress@15.8.2)(next@15.4.6(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(typescript@5.9.3)':
+  '@nextsparkjs/core@0.1.0-beta.57(@babel/runtime@7.28.4)(@codemirror/autocomplete@6.20.0)(@codemirror/language@6.12.1)(@codemirror/lint@6.9.2)(@codemirror/search@6.5.11)(@codemirror/state@6.5.3)(@codemirror/theme-one-dark@6.1.3)(@codemirror/view@6.39.9)(@swc/helpers@0.5.15)(@types/node@20.19.27)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(codemirror@6.0.2)(cypress@15.8.2)(next@15.4.6(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(typescript@5.9.3)':
     dependencies:
       '@codemirror/lang-json': 6.0.2
       '@dnd-kit/core': 6.3.1(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -9049,7 +9049,7 @@ snapshots:
       '@dnd-kit/utilities': 3.2.2(react@19.1.0)
       '@hookform/resolvers': 5.2.2(react-hook-form@7.69.0(react@19.1.0))
       '@inquirer/prompts': 7.10.1(@types/node@20.19.27)
-      '@nextsparkjs/testing': 0.1.0-beta.50(cypress@15.8.2)
+      '@nextsparkjs/testing': 0.1.0-beta.53(cypress@15.8.2)
       '@radix-ui/react-accordion': 1.2.12(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@radix-ui/react-alert-dialog': 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@radix-ui/react-avatar': 1.1.11(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -9078,6 +9078,8 @@ snapshots:
       '@tanstack/react-query-devtools': 5.91.2(@tanstack/react-query@5.90.16(react@19.1.0))(react@19.1.0)
       '@uiw/codemirror-theme-github': 4.25.4(@codemirror/language@6.12.1)(@codemirror/state@6.5.3)(@codemirror/view@6.39.9)
       '@uiw/react-codemirror': 4.25.4(@babel/runtime@7.28.4)(@codemirror/autocomplete@6.20.0)(@codemirror/language@6.12.1)(@codemirror/lint@6.9.2)(@codemirror/search@6.5.11)(@codemirror/state@6.5.3)(@codemirror/theme-one-dark@6.1.3)(@codemirror/view@6.39.9)(codemirror@6.0.2)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@upstash/ratelimit': 2.0.8(@upstash/redis@1.36.1)
+      '@upstash/redis': 1.36.1
       '@vercel/blob': 2.0.0
       better-auth: 1.3.5(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(zod@4.3.4)
       chalk: 5.6.2
@@ -9131,7 +9133,7 @@ snapshots:
       - supports-color
       - typescript
 
-  '@nextsparkjs/testing@0.1.0-beta.50(cypress@15.8.2)':
+  '@nextsparkjs/testing@0.1.0-beta.53(cypress@15.8.2)':
     optionalDependencies:
       cypress: 15.8.2
 

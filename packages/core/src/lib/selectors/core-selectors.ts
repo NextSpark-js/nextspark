@@ -34,6 +34,7 @@ import { SUPERADMIN_SELECTORS } from './domains/superadmin.selectors'
 import { DEVTOOLS_SELECTORS } from './domains/devtools.selectors'
 import { PUBLIC_SELECTORS } from './domains/public.selectors'
 import { COMMON_SELECTORS } from './domains/common.selectors'
+import { PATTERNS_SELECTORS } from './domains/patterns.selectors'
 
 /**
  * CORE_SELECTORS - Composed from all domain selectors
@@ -51,6 +52,7 @@ import { COMMON_SELECTORS } from './domains/common.selectors'
  * - devtools: Developer tools
  * - public: Public pages, navbar, footer
  * - common: Shared components (modals, toasts, loading)
+ * - patterns: Pattern usage, delete dialog, placeholders
  */
 export const CORE_SELECTORS = {
   auth: AUTH_SELECTORS,
@@ -65,6 +67,7 @@ export const CORE_SELECTORS = {
   devtools: DEVTOOLS_SELECTORS,
   public: PUBLIC_SELECTORS,
   common: COMMON_SELECTORS,
+  patterns: PATTERNS_SELECTORS,
 } as const
 
 /**

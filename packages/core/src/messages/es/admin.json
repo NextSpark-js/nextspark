@@ -268,5 +268,26 @@
       "saved": "Guardado exitosamente",
       "created": "Creado exitosamente"
     }
+  },
+  "patterns": {
+    "delete": {
+      "trigger": "Eliminar",
+      "title": "Eliminar pattern",
+      "confirm": "¿Estás seguro de que deseas eliminar",
+      "loading": "Verificando uso...",
+      "error": "Error al verificar el uso del pattern.",
+      "inUse": "Este pattern está en uso en {count, plural, one {# entidad} other {# entidades}}:",
+      "moreItems": "... y {count} más",
+      "notInUse": "Este pattern no está en uso actualmente.",
+      "cleanupNote": "Las referencias serán removidas automáticamente al editar cada entidad.",
+      "cancel": "Cancelar",
+      "deleting": "Eliminando...",
+      "deleteAction": "Eliminar"
+    },
+    "placeholder": {
+      "title": "Pattern eliminado",
+      "description": "Este pattern fue eliminado y será removido al guardar.",
+      "remove": "Remover"
+    }
   }
 }

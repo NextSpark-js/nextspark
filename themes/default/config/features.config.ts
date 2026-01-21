@@ -91,6 +91,16 @@ export default defineFeatures({
     docs: ['18-page-builder/*'],
   },
 
+  patterns: {
+    name: 'Patterns',
+    description: 'Reusable block patterns for page builder',
+    category: 'content',
+    icon: 'grid',
+    entities: ['patterns'],
+    permissions: ['patterns.*'],
+    docs: [],
+  },
+
   // ===========================================================================
   // CORE FEATURES
   // Platform-level features that exist in all themes

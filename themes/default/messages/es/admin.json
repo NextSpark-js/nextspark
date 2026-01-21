@@ -258,7 +258,18 @@
         "noDesignFields": "Sin campos de diseño",
         "noAdvancedFields": "Sin campos avanzados"
       },
-      "noFields": "Este bloque no tiene campos configurables"
+      "noFields": "Este bloque no tiene campos configurables",
+      "pattern": {
+        "title": "Referencia de Patrón",
+        "locked": {
+          "title": "El patrón es de solo lectura",
+          "description": "Para editar el contenido de este patrón, edítalo directamente. Los cambios se reflejarán en todos los lugares donde se usa."
+        },
+        "actions": {
+          "edit": "Editar Patrón",
+          "remove": "Quitar de la página"
+        }
+      }
     }
   }
 }

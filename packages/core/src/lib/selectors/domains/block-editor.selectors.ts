@@ -72,6 +72,7 @@ export const BLOCK_EDITOR_SELECTORS = {
     container: 'block-picker',
     // Tabs
     tabBlocks: 'block-picker-tab-blocks',
+    tabPatterns: 'block-picker-tab-patterns',
     tabConfig: 'block-picker-tab-config',
     tabIndicator: 'block-picker-tab-indicator',
     // Search
@@ -92,6 +93,18 @@ export const BLOCK_EDITOR_SELECTORS = {
     blockCategory: 'block-picker-cat-{slug}',
     addButton: 'block-picker-add-{slug}',
     empty: 'block-picker-empty',
+    // Patterns tab
+    patternsSearchWrapper: 'block-picker-patterns-search-wrapper',
+    patternsSearchIcon: 'block-picker-patterns-search-icon',
+    patternsSearch: 'block-picker-patterns-search',
+    patternsList: 'block-picker-patterns-list',
+    patternsEmpty: 'block-picker-patterns-empty',
+    patternCard: 'block-picker-pattern-card-{id}',
+    patternCardIcon: 'block-picker-pattern-icon-{id}',
+    patternCardTitle: 'block-picker-pattern-title-{id}',
+    patternCardDescription: 'block-picker-pattern-desc-{id}',
+    patternCardBlockCount: 'block-picker-pattern-blocks-{id}',
+    patternCardInsertButton: 'block-picker-pattern-insert-{id}',
   },
 
   // =========================================================================
@@ -154,6 +167,17 @@ export const BLOCK_EDITOR_SELECTORS = {
   },
 
   // =========================================================================
+  // PATTERN REFERENCE - Pattern reference rendering in canvas
+  // =========================================================================
+  patternReference: {
+    container: 'pattern-reference-{ref}',
+    badge: 'pattern-reference-badge-{ref}',
+    remove: 'pattern-reference-remove-{ref}',
+    locked: 'pattern-reference-locked-{ref}',
+    editLink: 'pattern-reference-edit-link-{ref}',
+  },
+
+  // =========================================================================
   // 6. ENTITY META PANEL - Center column (below canvas in layout mode)
   // =========================================================================
   entityMetaPanel: {
@@ -193,6 +217,11 @@ export const BLOCK_EDITOR_SELECTORS = {
     tabAdvanced: 'block-properties-tab-advanced',
     empty: 'block-properties-empty',
     error: 'block-properties-error',
+    // Pattern reference (when a pattern is selected)
+    patternLocked: 'block-properties-pattern-locked',
+    patternTitle: 'block-properties-pattern-title',
+    patternEditLink: 'block-properties-pattern-edit',
+    patternRemoveBtn: 'block-properties-pattern-remove',
     // Dynamic form (child)
     form: {
       container: 'block-properties-form',

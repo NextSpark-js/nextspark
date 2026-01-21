@@ -2,9 +2,45 @@
  * Testing Utilities
  * Helper functions for consistent testing attribute generation
  *
- * NOTE: For data-cy selectors, use sel() from '@nextsparkjs/core/selectors'
+ * For advanced selector patterns, use sel() from '@nextsparkjs/core/lib/selectors'
  * This file contains runtime utilities for accessibility and keyboard handling.
  */
+
+// =============================================================================
+// SELECTOR HELPERS
+// =============================================================================
+
+/**
+ * Create a Cypress selector ID by joining parts with hyphens
+ *
+ * @example
+ * createCyId('verify-email', 'loading') // 'verify-email-loading'
+ * createCyId('settings', 'billing', 'plans') // 'settings-billing-plans'
+ */
+export function createCyId(...parts: string[]): string {
+  return parts.filter(Boolean).join('-')
+}
+
+/**
+ * Create a test ID by joining parts with hyphens
+ *
+ * @example
+ * createTestId('settings', 'billing') // 'settings-billing'
+ */
+export function createTestId(...parts: string[]): string {
+  return parts.filter(Boolean).join('-')
+}
+
+/**
+ * Simple selector function that joins parts with a dot
+ * For advanced patterns use sel() from '@nextsparkjs/core/lib/selectors'
+ *
+ * @example
+ * sel('auth', 'login', 'form') // 'auth.login.form'
+ */
+export function sel(...parts: string[]): string {
+  return parts.filter(Boolean).join('.')
+}
 
 // =============================================================================
 // ENVIRONMENT DETECTION

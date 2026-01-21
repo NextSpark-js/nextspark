@@ -12,10 +12,14 @@
  * - SEL_BE_005: Preview Canvas Selectors
  * - SEL_BE_006: Block Properties Panel Selectors
  * - SEL_BE_007: Array Fields Selectors
+ * - SEL_BE_008: Patterns Tab Selectors
+ * - SEL_BE_009: Pattern Reference Selectors
  *
  * Re-execution:
  *   pnpm tags @SEL_BE_001        # Run only Header tests
  *   pnpm tags @SEL_BE_004        # Run only Layout Canvas tests
+ *   pnpm tags @SEL_BE_008        # Run only Patterns Tab tests
+ *   pnpm tags @patterns          # Run all patterns-related tests
  *   pnpm tags @ui-selectors      # Run all selector tests
  */
 
@@ -470,6 +474,126 @@ describe('Block Editor Selectors Validation', {
         // Selector is block-array-{name}-{index}-remove
         cy.get('[data-cy$="-remove"][data-cy^="block-array-"]').should('exist')
       })
+    })
+  })
+
+  // ===========================================================================
+  // SEL_BE_008: PATTERNS TAB SELECTORS
+  // ===========================================================================
+  describe('SEL_BE_008: Patterns Tab Selectors', { tags: ['@SEL_BE_008', '@patterns'] }, () => {
+    beforeEach(() => {
+      pom.visitCreate()
+      pom.waitForEditor()
+    })
+
+    it('SEL_BE_008_01: should find patterns tab button', { tags: '@SEL_BE_008_01' }, () => {
+      cy.get('[data-cy="block-picker-tab-patterns"]').should('exist').and('be.visible')
+    })
+
+    it('SEL_BE_008_02: should find patterns search input after clicking patterns tab', { tags: '@SEL_BE_008_02' }, () => {
+      cy.get('[data-cy="block-picker-tab-patterns"]').click()
+      cy.get('[data-cy="block-picker-patterns-search"]').should('exist').and('be.visible')
+    })
+
+    it('SEL_BE_008_03: should find patterns list container', { tags: '@SEL_BE_008_03' }, () => {
+      cy.get('[data-cy="block-picker-tab-patterns"]').click()
+      cy.get('[data-cy="block-picker-patterns-list"]').should('exist').and('be.visible')
+    })
+
+    it('SEL_BE_008_04: should find pattern cards for sample patterns', { tags: '@SEL_BE_008_04' }, () => {
+      cy.get('[data-cy="block-picker-tab-patterns"]').click()
+      // Wait for patterns to load
+      cy.wait(500)
+      // Check for pattern cards with specific IDs (using generic selector)
+      // Pattern cards should exist for published patterns
+      cy.get('[data-cy^="block-picker-pattern-card-"]').should('have.length.at.least', 1)
+    })
+
+    it('SEL_BE_008_05: should find pattern card icon element', { tags: '@SEL_BE_008_05' }, () => {
+      cy.get('[data-cy="block-picker-tab-patterns"]').click()
+      cy.wait(500)
+      // Icon selector pattern: block-picker-pattern-icon-{id}
+      cy.get('[data-cy^="block-picker-pattern-icon-"]').first().should('exist')
+    })
+
+    it('SEL_BE_008_06: should find pattern card title element', { tags: '@SEL_BE_008_06' }, () => {
+      cy.get('[data-cy="block-picker-tab-patterns"]').click()
+      cy.wait(500)
+      // Title selector pattern: block-picker-pattern-title-{id}
+      cy.get('[data-cy^="block-picker-pattern-title-"]').first().should('exist')
+    })
+
+    it('SEL_BE_008_07: should find pattern card description element', { tags: '@SEL_BE_008_07' }, () => {
+      cy.get('[data-cy="block-picker-tab-patterns"]').click()
+      cy.wait(500)
+      // Description selector pattern: block-picker-pattern-desc-{id}
+      cy.get('[data-cy^="block-picker-pattern-desc-"]').first().should('exist')
+    })
+
+    it('SEL_BE_008_08: should find pattern card insert button', { tags: '@SEL_BE_008_08' }, () => {
+      cy.get('[data-cy="block-picker-tab-patterns"]').click()
+      cy.wait(500)
+      // Insert button selector pattern: block-picker-pattern-insert-{id}
+      cy.get('[data-cy^="block-picker-pattern-insert-"]').first().should('exist')
+    })
+  })
+
+  // ===========================================================================
+  // SEL_BE_009: PATTERN REFERENCE SELECTORS
+  // ===========================================================================
+  describe('SEL_BE_009: Pattern Reference Selectors', { tags: ['@SEL_BE_009', '@patterns'] }, () => {
+    let patternRefId: string
+
+    beforeEach(() => {
+      pom.visitCreate()
+      pom.waitForEditor()
+      pom.switchToLayoutMode()
+
+      // Insert a pattern to create a pattern reference
+      cy.get('[data-cy="block-picker-tab-patterns"]').click()
+      cy.wait(500)
+
+      // Click insert on first available pattern
+      cy.get('[data-cy^="block-picker-pattern-insert-"]').first().click()
+
+      // Wait for pattern reference to be created
+      cy.wait(1000)
+
+      // Switch to preview mode to see pattern reference rendering
+      pom.switchToPreviewMode()
+
+      // Get the pattern reference ID from the first pattern-reference element
+      cy.get('[data-cy^="pattern-reference-"]').first()
+        .invoke('attr', 'data-cy')
+        .then((dataCy) => {
+          patternRefId = dataCy?.replace('pattern-reference-', '') || ''
+          cy.log(`Pattern reference ID: ${patternRefId}`)
+        })
+    })
+
+    it('SEL_BE_009_01: should find pattern reference container', { tags: '@SEL_BE_009_01' }, () => {
+      cy.get('[data-cy^="pattern-reference-"]').should('exist').and('be.visible')
+    })
+
+    it('SEL_BE_009_02: should find pattern reference badge', { tags: '@SEL_BE_009_02' }, () => {
+      cy.get('[data-cy^="pattern-reference-badge-"]').should('exist')
+    })
+
+    it('SEL_BE_009_03: should find pattern reference remove button', { tags: '@SEL_BE_009_03' }, () => {
+      cy.get('[data-cy^="pattern-reference-remove-"]').should('exist')
+    })
+
+    it('SEL_BE_009_04: should find pattern reference locked state when selected', { tags: '@SEL_BE_009_04' }, () => {
+      // Click on the pattern reference to select it
+      cy.get('[data-cy^="pattern-reference-"]').first().click()
+      cy.wait(500)
+      // Locked selector should appear when pattern reference is selected
+      cy.get('[data-cy^="pattern-reference-locked-"]').should('exist')
+    })
+
+    it('SEL_BE_009_05: should find pattern reference edit link', { tags: '@SEL_BE_009_05' }, () => {
+      // Edit link selector pattern: pattern-reference-edit-link-{ref}
+      cy.get('[data-cy^="pattern-reference-edit-link-"]').should('exist')
     })
   })
 })

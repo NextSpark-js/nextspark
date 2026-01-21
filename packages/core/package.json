@@ -1,6 +1,6 @@
 {
   "name": "@nextsparkjs/core",
-  "version": "0.1.0-beta.50",
+  "version": "0.1.0-beta.61",
   "description": "NextSpark - The complete SaaS framework for Next.js",
   "license": "MIT",
   "author": "NextSpark <hello@nextspark.dev>",
@@ -84,6 +84,10 @@
       "types": "./dist/lib/api/index.d.ts",
       "import": "./dist/lib/api/index.js"
     },
+    "./lib/api/routes": {
+      "types": "./dist/lib/api/routes/index.d.ts",
+      "import": "./dist/lib/api/routes/index.js"
+    },
     "./lib/email": {
       "types": "./dist/lib/email/index.d.ts",
       "import": "./dist/lib/email/index.js"
@@ -111,6 +115,10 @@
     "./lib/config/config-sync": {
       "types": "./dist/lib/config/config-sync.d.ts",
       "import": "./dist/lib/config/config-sync.js"
+    },
+    "./lib/blocks/*": {
+      "types": "./dist/lib/blocks/*.d.ts",
+      "import": "./dist/lib/blocks/*.js"
     },
     "./lib/*": {
       "types": "./dist/lib/*.d.ts",
@@ -196,6 +204,14 @@
       "types": "./dist/components/dashboard/mobile/index.d.ts",
       "import": "./dist/components/dashboard/mobile/index.js"
     },
+    "./components/patterns": {
+      "types": "./dist/components/patterns/index.d.ts",
+      "import": "./dist/components/patterns/index.js"
+    },
+    "./components/patterns/pages": {
+      "types": "./dist/components/patterns/pages/index.d.ts",
+      "import": "./dist/components/patterns/pages/index.js"
+    },
     "./components/*": {
       "types": "./dist/components/*.d.ts",
       "import": "./dist/components/*.js"
@@ -259,6 +275,7 @@
     "scripts"
   ],
   "scripts": {
+    "postinstall": "node scripts/postinstall.mjs || true",
     "build": "tsup && pnpm build:dts && pnpm build:ui-css",
     "build:js": "tsup",
     "build:dts": "tsc -p tsconfig.dts.json || echo '⚠️  DTS generation completed with some type errors (partial coverage)'",
@@ -295,7 +312,7 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@nextsparkjs/testing": "workspace:*",
+    "@nextsparkjs/testing": "0.1.0-beta.53",
     "@upstash/ratelimit": "^2.0.3",
     "@upstash/redis": "^1.20.6",
     "@codemirror/lang-json": "^6.0.2",

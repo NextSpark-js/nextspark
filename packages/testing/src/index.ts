@@ -15,6 +15,10 @@
 // UTILS
 // =============================================================================
 export {
+  // Selector helpers
+  createCyId,
+  createTestId,
+  sel,
   // Attribute generators
   createStateAttr,
   createPriorityAttr,

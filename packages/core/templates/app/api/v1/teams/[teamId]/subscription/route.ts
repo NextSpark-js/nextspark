@@ -13,7 +13,7 @@ interface RouteParams {
   params: Promise<{ teamId: string }>
 }
 
-export const GET = withRateLimitTier('read', async function GET(request: NextRequest, props: RouteParams) {
+export const GET = withRateLimitTier(async function GET(request: NextRequest, props: RouteParams) {
   // Authenticate request
   const { auth, rateLimitResponse } = await validateAndAuthenticateRequest(request)
   if (rateLimitResponse) return rateLimitResponse
@@ -48,4 +48,4 @@ export const GET = withRateLimitTier('read', async function GET(request: NextReq
     console.error('[Billing API] Error fetching subscription:', error)
     return createApiError('Failed to fetch subscription', 500)
   }
-})
+}, 'read')

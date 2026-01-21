@@ -1,9 +1,9 @@
 ---
 feature: Block Editor UI Selectors Validation
 priority: high
-tags: [selectors, block-editor, page-builder, ui-validation]
-grepTags: [ui-selectors, block-editor, selector-validation, SEL_BE_001, SEL_BE_002, SEL_BE_003, SEL_BE_004, SEL_BE_005, SEL_BE_006, SEL_BE_007]
-coverage: 7
+tags: [selectors, block-editor, page-builder, ui-validation, patterns]
+grepTags: [ui-selectors, block-editor, selector-validation, SEL_BE_001, SEL_BE_002, SEL_BE_003, SEL_BE_004, SEL_BE_005, SEL_BE_006, SEL_BE_007, SEL_BE_008, SEL_BE_009]
+coverage: 9
 ---
 
 # Block Editor UI Selectors Validation
@@ -489,3 +489,127 @@ And deberia encontrar el boton de remover del item
 |-----|------|-------|
 | PageBuilderPOM | `themes/default/tests/cypress/src/features/PageBuilderPOM.ts` | Block editor selectors and methods |
 | PagesPOM | `themes/default/tests/cypress/src/entities/PagesPOM.ts` | Pages entity selectors |
+
+---
+
+## @test SEL_BE_008: Patterns Tab Selectors
+
+### Metadata
+- **Priority:** High
+- **Type:** Selector Validation
+- **Tags:** block-editor, patterns, patterns-tab
+- **Grep:** `@ui-selectors` `@SEL_BE_008` `@patterns`
+- **Status:** Active (8 passing, 0 skipped)
+
+```gherkin:en
+Scenario: Patterns tab has all required selectors
+
+Given I am logged in as developer
+And I navigate to the page builder create page
+When the editor loads
+Then I should find the patterns tab button
+When I click the patterns tab
+Then I should find the patterns search input
+And I should find the patterns list container
+And I should find pattern cards for published patterns
+And I should find pattern card icon
+And I should find pattern card title
+And I should find pattern card description
+And I should find pattern card insert button
+```
+
+```gherkin:es
+Scenario: El tab de patrones tiene todos los selectores requeridos
+
+Given estoy logueado como developer
+And navego a la pagina de crear page builder
+When el editor carga
+Then deberia encontrar el boton de tab de patrones
+When hago click en el tab de patrones
+Then deberia encontrar el input de busqueda de patrones
+And deberia encontrar el contenedor de lista de patrones
+And deberia encontrar tarjetas de patrones para patrones publicados
+And deberia encontrar el icono de tarjeta de patron
+And deberia encontrar el titulo de tarjeta de patron
+And deberia encontrar la descripcion de tarjeta de patron
+And deberia encontrar el boton de insertar de tarjeta de patron
+```
+
+### Expected Results
+| Test ID | Selector Path | POM Accessor | data-cy Value |
+|---------|---------------|--------------|---------------|
+| SEL_BE_008_01 | blockPicker.tabPatterns | `[data-cy="block-picker-tab-patterns"]` | block-picker-tab-patterns |
+| SEL_BE_008_02 | blockPicker.patternsSearch | `[data-cy="block-picker-patterns-search"]` | block-picker-patterns-search |
+| SEL_BE_008_03 | blockPicker.patternsList | `[data-cy="block-picker-patterns-list"]` | block-picker-patterns-list |
+| SEL_BE_008_04 | blockPicker.patternCard(id) | `[data-cy^="block-picker-pattern-card-"]` | block-picker-pattern-card-{id} |
+| SEL_BE_008_05 | blockPicker.patternCardIcon(id) | `[data-cy^="block-picker-pattern-icon-"]` | block-picker-pattern-icon-{id} |
+| SEL_BE_008_06 | blockPicker.patternCardTitle(id) | `[data-cy^="block-picker-pattern-title-"]` | block-picker-pattern-title-{id} |
+| SEL_BE_008_07 | blockPicker.patternCardDescription(id) | `[data-cy^="block-picker-pattern-desc-"]` | block-picker-pattern-desc-{id} |
+| SEL_BE_008_08 | blockPicker.patternCardInsertButton(id) | `[data-cy^="block-picker-pattern-insert-"]` | block-picker-pattern-insert-{id} |
+
+### Notes
+- Patterns tab is only visible when editing pages, NOT when editing patterns (prevents nesting)
+- Tests use sample patterns from team-nextspark-001 (Newsletter CTA, Footer Links, etc.)
+- Pattern cards are filtered by published status
+
+---
+
+## @test SEL_BE_009: Pattern Reference Selectors
+
+### Metadata
+- **Priority:** High
+- **Type:** Selector Validation
+- **Tags:** block-editor, patterns, pattern-reference
+- **Grep:** `@ui-selectors` `@SEL_BE_009` `@patterns`
+- **Status:** Active (5 passing, 0 skipped)
+
+```gherkin:en
+Scenario: Pattern reference has all required selectors when inserted
+
+Given I am logged in as developer
+And I navigate to the page builder create page
+When the editor loads
+And I switch to layout mode
+And I click the patterns tab
+And I insert a pattern
+And I switch to preview mode
+Then I should find the pattern reference container
+And I should find the pattern reference badge
+And I should find the pattern reference remove button
+When I click on the pattern reference
+Then I should find the pattern reference locked state indicator
+And I should find the pattern reference edit link
+```
+
+```gherkin:es
+Scenario: La referencia de patron tiene todos los selectores requeridos cuando se inserta
+
+Given estoy logueado como developer
+And navego a la pagina de crear page builder
+When el editor carga
+And cambio a modo layout
+And hago click en el tab de patrones
+And inserto un patron
+And cambio a modo preview
+Then deberia encontrar el contenedor de referencia de patron
+And deberia encontrar el badge de referencia de patron
+And deberia encontrar el boton de remover de referencia de patron
+When hago click en la referencia de patron
+Then deberia encontrar el indicador de estado bloqueado de referencia de patron
+And deberia encontrar el link de editar de referencia de patron
+```
+
+### Expected Results
+| Test ID | Selector Path | POM Accessor | data-cy Value |
+|---------|---------------|--------------|---------------|
+| SEL_BE_009_01 | patternReference.container(ref) | `[data-cy^="pattern-reference-"]` | pattern-reference-{ref} |
+| SEL_BE_009_02 | patternReference.badge(ref) | `[data-cy^="pattern-reference-badge-"]` | pattern-reference-badge-{ref} |
+| SEL_BE_009_03 | patternReference.remove(ref) | `[data-cy^="pattern-reference-remove-"]` | pattern-reference-remove-{ref} |
+| SEL_BE_009_04 | patternReference.locked(ref) | `[data-cy^="pattern-reference-locked-"]` | pattern-reference-locked-{ref} |
+| SEL_BE_009_05 | patternReference.editLink(ref) | `[data-cy^="pattern-reference-edit-link-"]` | pattern-reference-edit-link-{ref} |
+
+### Notes
+- Pattern reference is rendered in preview mode after inserting a pattern
+- Locked state appears when the pattern reference is selected (prevents editing blocks within)
+- Edit link allows navigating to the pattern editor to modify the source pattern
+- Pattern reference can be removed like any other block

@@ -66,6 +66,11 @@ export class DashboardPOM extends BasePOM {
       topnavUserLoading: cySelector('dashboard.topnav.userLoading'),
       topnavSignin: cySelector('dashboard.topnav.signin'),
       topnavSignup: cySelector('dashboard.topnav.signup'),
+      // Topnav settings menu
+      topnavSettingsMenuTrigger: cySelector('dashboard.topnav.settingsMenu.trigger'),
+      topnavSettingsMenuContent: cySelector('dashboard.topnav.settingsMenu.content'),
+      topnavSettingsMenuItem: (index: number) => cySelector('dashboard.topnav.settingsMenu.item', { index }),
+      topnavSettingsMenuLink: (index: number) => cySelector('dashboard.topnav.settingsMenu.link', { index }),
       // Topnav mobile menu
       topnavMobileMenuToggle: cySelector('dashboard.topnav.mobileMenu.toggle'),
       topnavMobileMenuContainer: cySelector('dashboard.topnav.mobileMenu.container'),

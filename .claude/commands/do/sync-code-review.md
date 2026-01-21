@@ -8,72 +8,46 @@ description: "Sync with GitHub PR code review: evaluate, fix, and respond"
 
 ---
 
-## Instructions
+## Related Skills
 
-You will synchronize with a GitHub PR code review. Follow these steps:
+See `.claude/skills/github/SKILL.md` for general GitHub workflow patterns (branches, commits, PRs).
 
-### Step 1: Fetch PR Data
+---
 
-```bash
-# If input is a URL, extract the PR number
-# If input is just a number, use it directly
-gh pr view <number> --repo <owner/repo> --json number,title,body,comments,reviews,state,headRefName,baseRefName
-```
+## Quick Reference
 
-Parse the response to find the latest code review comment (look for @claude mentions or structured code review format with "Critical", "Medium", "Minor" severity labels).
+### Workflow
 
-### Step 2: Checkout PR Branch
+1. **Fetch PR** → `gh pr view <number> --json comments,headRefName`
+2. **Check for review** → Look for @claude code review comment
+3. **If no review** → Comment `@claude` and poll for response (30s intervals, max 5min)
+4. **Checkout branch** → `git checkout <headRefName>`
+5. **Evaluate issues** → ACCEPT / PARTIAL / DEFER / REJECT
+6. **Implement fixes** → For ACCEPT and PARTIAL issues
+7. **Verify** → `pnpm build`
+8. **Commit & push** → With structured message
+9. **Comment on PR** → With response table
 
-```bash
-git fetch origin <headRefName>
-git checkout <headRefName>
-git pull origin <headRefName>
-```
+### Evaluation Criteria
 
-### Step 3: Evaluate Each Issue
+| Action | When to Use |
+|--------|-------------|
+| **ACCEPT** | Issue is valid, fix as suggested |
+| **PARTIAL** | Issue is valid, will fix differently |
+| **DEFER** | Valid but out of scope |
+| **REJECT** | Based on incorrect assumption or intentional design |
 
-For each issue in the code review:
+### Evaluation Process
 
-1. **Read the actual code** at the mentioned file/line
-2. **Verify if the issue is valid** - check if the code review observation is correct
-3. **Determine appropriate action**:
-   - **ACCEPT**: Issue is valid, fix as suggested
-   - **PARTIAL**: Issue is valid, but will fix differently (better approach)
-   - **DEFER**: Valid but out of scope, create follow-up
-   - **REJECT**: Issue is based on incorrect assumption or intentional design
+1. **Read the code review carefully** - Identify all reported issues (vulnerabilities, race conditions, bugs, style issues, etc.)
+2. **Perform your own analysis** - For each issue, verify if it's correctly reported:
+   - Is the issue real or a false positive?
+   - Does the suggested fix make sense?
+   - Are there better alternatives?
+3. **Prioritize by severity** - Critical (security/data loss) > Medium (bugs) > Minor (style)
+4. **Decide action for each** - ACCEPT, PARTIAL, DEFER, or REJECT with reasoning
 
-Document your evaluation for each issue.
-
-### Step 4: Implement Fixes
-
-For ACCEPT and PARTIAL issues:
-1. Make the code changes
-2. Verify the fix doesn't break anything
-3. Run build: `pnpm build`
-
-### Step 5: Commit & Push
-
-```bash
-git add <changed-files>
-git commit -m "fix: address code review feedback for PR #<number>
-
-- <change 1>
-- <change 2>
-
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
-
-git push origin <branch>
-```
-
-### Step 6: Comment on PR
-
-Use gh CLI to post a response comment:
-
-```bash
-gh pr comment <number> --repo <owner/repo> --body "<response>"
-```
-
-**Comment format:**
+### Response Format
 
 ```markdown
 ## Code Review Response
@@ -82,53 +56,52 @@ gh pr comment <number> --repo <owner/repo> --body "<response>"
 
 | Issue | Severity | Status | Details |
 |-------|----------|--------|---------|
-| <issue title> | Critical/Medium/Minor | ✅ Fixed / ⏭️ Deferred / ❌ Won't Fix | <brief details> |
+| <title> | Critical/Medium/Minor | ✅ Fixed / ⏭️ Deferred / ❌ Won't Fix | <details> |
 
 ### Explanation for Deferred/Rejected Issues
 
-#### <Issue Title> (Deferred/Won't Fix)
-<Explanation of why this was not addressed>
+> For each DEFER or REJECT, explain your reasoning to reach agreement with the reviewer.
+
+<explanations>
 
 ### Verification
 
-- [x] All accepted issues have been addressed
+- [x] All accepted issues addressed
 - [x] Build passes
 - [x] Ready for re-review
 
 ---
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+Co-Authored-By: Claude Code <noreply@anthropic.com>
 ```
 
----
+### Commands
 
-## Evaluation Criteria
+```bash
+# Fetch PR data
+gh pr view <number> --repo <owner/repo> --json number,title,comments,headRefName
 
-### ACCEPT (Will Fix)
-- Issue is technically correct
-- Fix aligns with project patterns
-- Clear improvement to codebase
+# Request code review
+gh pr comment <number> --body "@claude"
 
-### PARTIAL (Will Fix Differently)
-- Issue is valid but suggested fix is suboptimal
-- Better alternative exists
+# Poll for review response (30s intervals, max 5min)
+for i in {1..10}; do
+  REVIEW=$(gh pr view <number> --json comments --jq '.comments[-1].body' | grep -i "code review complete")
+  if [ -n "$REVIEW" ]; then
+    echo "Review received"
+    break
+  fi
+  echo "Waiting for review... ($i/10)"
+  sleep 30
+done
 
-### DEFER (Create Follow-up)
-- Valid issue but out of scope for current PR
-- Would cause scope creep
+# Commit with attribution
+git commit -m "fix: address code review feedback for PR #<number>
 
-### REJECT (Won't Fix)
-- Issue based on incorrect assumptions
-- Code is intentionally designed that way
-- Fix would introduce worse problems
+Co-Authored-By: Claude Code <noreply@anthropic.com>"
 
----
-
-## Safety Checks
-
-Before pushing:
-1. **Build check**: Run `pnpm build` to catch errors
-2. **Type check**: Ensure TypeScript compiles
-3. **Verify branch**: Ensure you're on the correct PR branch
+# Comment response
+gh pr comment <number> --body "<response>"
+```
 
 ---
 

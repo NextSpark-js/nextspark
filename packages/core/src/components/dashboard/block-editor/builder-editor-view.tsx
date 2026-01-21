@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -54,6 +54,18 @@ function buildApiHeaders(includeContentType = false): HeadersInit {
 }
 type LeftSidebarMode = 'blocks' | 'fields' | 'none'
 
+// Helper to convert title to URL-friendly slug
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+    .trim()
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single
+}
+
 export interface BuilderEditorViewProps {
   entitySlug: string
   entityConfig: ClientEntityConfig
@@ -71,6 +83,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)
   const [title, setTitle] = useState('')
   const [slug, setSlug] = useState('')
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false)
   const [status, setStatus] = useState<string>('draft')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('preview')
@@ -81,6 +94,10 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
   })
   // Entity-specific fields (excerpt, featuredImage, etc.)
   const [entityFields, setEntityFields] = useState<Record<string, unknown>>({})
+  // Validation errors
+  const [validationErrors, setValidationErrors] = useState<{ title?: boolean; slug?: boolean }>({})
+  // Ref for title input auto-focus
+  const titleInputRef = useRef<HTMLInputElement>(null)
 
   // Determine if we should show the Fields option
   const showFieldsOption = useMemo(() => {
@@ -90,13 +107,26 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
     )
   }, [entityConfig])
 
+  // Determine if we should show the Patterns tab (hide when editing patterns)
+  const showPatternsTab = useMemo(() => {
+    return entitySlug !== 'patterns'
+  }, [entitySlug])
+
+  // Determine if slug should be visible (default: true)
+  const showSlug = useMemo(() => {
+    return entityConfig.builder?.showSlug !== false
+  }, [entityConfig])
+
+  // Determine if entity is public (for external link visibility)
+  // ClientEntityConfig only exposes basePath, so we check if it exists
+  const isPublicEntity = useMemo(() => {
+    return !!entityConfig.access?.basePath
+  }, [entityConfig])
+
   // Filter blocks by entity scope
+  // When editing patterns, BlockService.getForScope automatically filters by allowInPatterns
   const availableBlocks = useMemo(() => {
-    const allBlocks = BlockService.getAll()
-    return allBlocks.filter(block =>
-      block.scope?.includes(entitySlug) ||
-      block.scope?.includes('*')
-    )
+    return BlockService.getForScope(entitySlug)
   }, [entitySlug])
 
   // Fetch entity data (only in edit mode)
@@ -119,6 +149,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
       const entity = entityData.data
       setTitle(entity.title ?? '')
       setSlug(entity.slug ?? '')
+      setSlugManuallyEdited(true) // In edit mode, don't auto-generate slug
       setStatus(entity.status || 'draft')
       setBlocks(entity.blocks || [])
       setPageSettings(entity.settings || { seo: {}, customFields: [] })
@@ -158,6 +189,27 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
       )
     setHasUnsavedChanges(hasChanges)
   }, [title, slug, status, blocks, pageSettings, entityFields, entityData, entityConfig, mode])
+
+  // Auto-focus title input in create mode
+  useEffect(() => {
+    if (mode === 'create' && titleInputRef.current) {
+      // Small delay to ensure the component is fully mounted
+      const timer = setTimeout(() => {
+        titleInputRef.current?.focus()
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [mode])
+
+  // Clear validation errors when fields are filled
+  useEffect(() => {
+    if (title && validationErrors.title) {
+      setValidationErrors(prev => ({ ...prev, title: false }))
+    }
+    if (slug && validationErrors.slug) {
+      setValidationErrors(prev => ({ ...prev, slug: false }))
+    }
+  }, [title, slug, validationErrors.title, validationErrors.slug])
 
   // Save/Create mutation
   const saveMutation = useMutation({
@@ -199,7 +251,34 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
     },
   })
 
+  // Validate required fields before save
+  const validateFields = useCallback((): boolean => {
+    const errors: { title?: boolean; slug?: boolean } = {}
+
+    if (!title.trim()) {
+      errors.title = true
+    }
+    // Only validate slug if it's visible/editable
+    if (showSlug && !slug.trim()) {
+      errors.slug = true
+    }
+
+    setValidationErrors(errors)
+
+    if (errors.title || errors.slug) {
+      // Focus the first invalid field
+      if (errors.title) {
+        titleInputRef.current?.focus()
+      }
+      return false
+    }
+
+    return true
+  }, [title, slug, showSlug])
+
   const handleSave = useCallback(() => {
+    if (!validateFields()) return
+
     const data: Record<string, unknown> = {
       title,
       slug,
@@ -209,9 +288,11 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
       ...entityFields,
     }
     saveMutation.mutate(data)
-  }, [title, slug, blocks, status, pageSettings, entityFields, saveMutation])
+  }, [title, slug, blocks, status, pageSettings, entityFields, saveMutation, validateFields])
 
   const handleSaveDraft = useCallback(() => {
+    if (!validateFields()) return
+
     const data: Record<string, unknown> = {
       title,
       slug,
@@ -221,9 +302,11 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
       ...entityFields,
     }
     saveMutation.mutate(data)
-  }, [title, slug, blocks, pageSettings, entityFields, saveMutation])
+  }, [title, slug, blocks, pageSettings, entityFields, saveMutation, validateFields])
 
   const handlePublish = useCallback(() => {
+    if (!validateFields()) return
+
     const data: Record<string, unknown> = {
       title,
       slug,
@@ -233,7 +316,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
       ...entityFields,
     }
     saveMutation.mutate(data)
-  }, [title, slug, blocks, pageSettings, entityFields, saveMutation])
+  }, [title, slug, blocks, pageSettings, entityFields, saveMutation, validateFields])
 
   // Block operations
   const handleAddBlock = useCallback((blockSlug: string) => {
@@ -244,6 +327,18 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
     }
     setBlocks(prev => [...prev, newBlock])
     setSelectedBlockId(newBlock.id)
+  }, [])
+
+  // Pattern operations
+  const handleAddPattern = useCallback((patternId: string) => {
+    const patternRef = {
+      type: 'pattern' as const,
+      ref: patternId,
+      id: uuidv4(),  // Unique instance ID
+    }
+    // Insert as if it were a block
+    setBlocks(prev => [...prev, patternRef as unknown as BlockInstance])
+    setSelectedBlockId(patternRef.id)
   }, [])
 
   const handleRemoveBlock = useCallback((blockId: string) => {
@@ -388,41 +483,76 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
 
             <Separator orientation="vertical" className="h-8" />
 
-            {/* Inline Title/Slug Editing */}
+            {/* Inline Title/Slug Editing - Borderless design */}
             <div className="flex flex-col justify-center" data-cy={sel('blockEditor.header.titleWrapper')}>
               <Input
+                ref={titleInputRef}
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="h-8 w-64 text-lg font-semibold bg-transparent border-transparent hover:border-border hover:bg-muted/50 focus:border-primary focus:bg-background transition-all"
+                onChange={(e) => {
+                  const newTitle = e.target.value
+                  setTitle(newTitle)
+                  // Auto-generate slug if not manually edited and slug is empty
+                  if (!slugManuallyEdited || !slug) {
+                    setSlug(slugify(newTitle))
+                  }
+                }}
+                className={cn(
+                  "h-auto py-0 px-0 !text-2xl font-semibold bg-transparent border-none shadow-none rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50",
+                  validationErrors.title && "!text-destructive placeholder:!text-destructive/50"
+                )}
                 placeholder={t('placeholders.title')}
                 data-cy={sel('blockEditor.header.titleInput')}
               />
-              <div
-                className="flex items-center gap-1 text-xs text-muted-foreground px-2"
-                data-cy={sel('blockEditor.header.slugWrapper')}
-              >
-                <span className="opacity-60" data-cy={sel('blockEditor.header.slugPrefix')}>/</span>
-                <Input
-                  value={slug}
-                  onChange={(e) => setSlug(e.target.value)}
-                  className="h-6 w-32 text-xs bg-transparent border-transparent hover:border-border hover:bg-muted/50 focus:border-primary focus:bg-background transition-all px-1"
-                  placeholder={t('placeholders.slug')}
-                  data-cy={sel('blockEditor.header.slugInput')}
-                />
-                {publicUrl && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-4 w-4 p-0"
-                    asChild
-                    data-cy={sel('blockEditor.header.externalLink')}
-                  >
-                    <Link href={publicUrl} target="_blank">
-                      <ExternalLink className="h-3 w-3" />
-                    </Link>
-                  </Button>
-                )}
-              </div>
+              {/* Slug input - conditionally shown based on entityConfig.builder.showSlug */}
+              {showSlug && (
+                <div
+                  className={cn(
+                    "flex items-center gap-0.5 text-sm text-muted-foreground",
+                    validationErrors.slug && "text-destructive"
+                  )}
+                  data-cy={sel('blockEditor.header.slugWrapper')}
+                >
+                  <span className={cn("opacity-50", validationErrors.slug && "opacity-100")} data-cy={sel('blockEditor.header.slugPrefix')}>/</span>
+                  <Input
+                    value={slug}
+                    onChange={(e) => {
+                      const newSlug = e.target.value
+                      setSlug(newSlug)
+                      // Mark as manually edited when user types
+                      if (newSlug !== slugify(title)) {
+                        setSlugManuallyEdited(true)
+                      }
+                    }}
+                    onBlur={() => {
+                      // If user clears the slug, allow auto-generation again
+                      if (!slug.trim()) {
+                        setSlugManuallyEdited(false)
+                      }
+                    }}
+                    className={cn(
+                      "h-auto py-0 px-0 text-sm bg-transparent border-none shadow-none rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/40 w-auto min-w-[60px]",
+                      validationErrors.slug && "!text-destructive placeholder:!text-destructive/50"
+                    )}
+                    placeholder={t('placeholders.slug')}
+                    data-cy={sel('blockEditor.header.slugInput')}
+                    style={{ width: slug ? `${Math.max(slug.length, 4)}ch` : '60px' }}
+                  />
+                  {/* External link - only for public entities */}
+                  {isPublicEntity && publicUrl && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5 p-0 ml-1 text-muted-foreground hover:text-foreground"
+                      asChild
+                      data-cy={sel('blockEditor.header.externalLink')}
+                    >
+                      <Link href={publicUrl} target="_blank">
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </Link>
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -527,10 +657,12 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
           <BlockPicker
             blocks={availableBlocks}
             onAddBlock={handleAddBlock}
+            onAddPattern={handleAddPattern}
             entityConfig={entityConfig}
             entityFields={entityFields}
             onEntityFieldChange={handleEntityFieldChange}
             showFieldsTab={!!showFieldsOption}
+            showPatternsTab={showPatternsTab}
           />
         </div>
 

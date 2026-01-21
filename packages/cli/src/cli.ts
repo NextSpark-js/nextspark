@@ -15,6 +15,7 @@ import { addPluginCommand } from './commands/add-plugin.js';
 import { addThemeCommand } from './commands/add-theme.js';
 import { doctorCommand } from './commands/doctor.js';
 import { dbMigrateCommand, dbSeedCommand } from './commands/db.js';
+import { syncAppCommand } from './commands/sync-app.js';
 
 const program = new Command();
 
@@ -142,6 +143,16 @@ program
   .command('db:seed')
   .description('Seed database with sample data (alias)')
   .action(dbSeedCommand);
+
+// Sync app command
+program
+  .command('sync:app')
+  .description('Sync /app folder with @nextsparkjs/core templates')
+  .option('--dry-run', 'Preview changes without applying')
+  .option('-f, --force', 'Skip confirmation prompt')
+  .option('--backup', 'Backup existing files before overwriting')
+  .option('-v, --verbose', 'Show detailed file operations')
+  .action(syncAppCommand);
 
 // Error handling
 program.showHelpAfterError();

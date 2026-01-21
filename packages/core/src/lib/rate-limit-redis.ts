@@ -186,7 +186,7 @@ export async function checkRateLimit(
   }
 
   try {
-    const result = await limiter.limit(identifier)
+    const result = await limiter.limit(identifier) as { success: boolean; remaining: number; reset: number; limit: number }
     const retryAfter = result.success ? undefined : Math.ceil((result.reset - Date.now()) / 1000)
 
     return {

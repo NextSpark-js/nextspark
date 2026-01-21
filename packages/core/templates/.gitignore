@@ -1,0 +1,59 @@
+# Dependencies
+node_modules/
+
+# Build
+.next/
+out/
+dist/
+
+# NextSpark
+.nextspark/
+
+# Auto-generated templates (from theme templates at build time)
+app/(templates)/
+
+# Mocks
+app/(public)/mock-demo/
+_tmp/
+
+# Claude Code
+.claude/
+
+# Playwright MCP
+.playwright-mcp/
+
+# Cypress (theme-based)
+contents/themes/*/tests/cypress/videos
+contents/themes/*/tests/cypress/screenshots
+contents/themes/*/tests/cypress/allure-results
+contents/themes/*/tests/cypress/allure-report
+
+# Jest (theme-based)
+contents/themes/*/tests/jest/coverage
+
+# Environment
+.env
+.env.local
+.env*.local
+
+# TypeScript
+*.tsbuildinfo
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Misc
+*.pem
