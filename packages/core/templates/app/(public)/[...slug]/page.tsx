@@ -58,6 +58,23 @@ interface PageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
+/**
+ * Base fields that all builder-enabled entities have (from migrations)
+ * These are the minimum fields needed for public page rendering
+ */
+const BASE_PUBLIC_FIELDS = ['id', 'slug', 'title', 'status', 'blocks', 'locale', 'createdAt', 'userId']
+
+/**
+ * Optional SEO fields that may exist on builder entities
+ */
+const SEO_FIELDS = ['seoTitle', 'seoDescription', 'ogImage']
+
+/**
+ * Common optional fields for content entities (posts, articles, etc.)
+ * These are checked dynamically - only included if they exist in entity.fields
+ */
+const OPTIONAL_CONTENT_FIELDS = ['excerpt', 'featuredImage']
+
 interface PublishedItem {
   id: string
   slug: string
@@ -76,6 +93,34 @@ interface PublishedItem {
   locale?: string
   createdAt?: string
   userId?: string
+}
+
+/**
+ * Quote a field name for PostgreSQL (handles camelCase)
+ */
+function quoteField(field: string): string {
+  return /[A-Z]/.test(field) ? `"${field}"` : field
+}
+
+/**
+ * Build SELECT clause dynamically based on entity configuration
+ * Only includes fields that actually exist in the entity's schema
+ */
+function buildPublicSelectClause(entity: EntityConfig): string {
+  const fields = new Set<string>(BASE_PUBLIC_FIELDS)
+
+  // Add SEO fields (these are standard for builder entities)
+  SEO_FIELDS.forEach(f => fields.add(f))
+
+  // Check entity.fields for optional content fields
+  const entityFieldNames = entity.fields?.map(f => f.name) || []
+  OPTIONAL_CONTENT_FIELDS.forEach(f => {
+    if (entityFieldNames.includes(f)) {
+      fields.add(f)
+    }
+  })
+
+  return Array.from(fields).map(quoteField).join(', ')
 }
 
 /**
@@ -128,18 +173,24 @@ function buildTemplatePath(entity: EntityConfig): string {
 
 /**
  * Fetch a published item from the database
+ * Dynamically builds SELECT clause based on entity configuration
+ * to avoid querying non-existent columns
  */
 async function fetchPublishedItem(
-  tableName: string,
+  entity: EntityConfig,
   slug: string
 ): Promise<PublishedItem | null> {
   try {
+    const tableName = entity.tableName || entity.slug
+    const selectClause = buildPublicSelectClause(entity)
+
     const result = await query<PublishedItem>(
-      `SELECT id, slug, title, status, blocks, excerpt, "featuredImage", "seoTitle", "seoDescription", "ogImage", locale, "createdAt", "userId" FROM "${tableName}" WHERE slug = $1 AND status = 'published'`,
+      `SELECT ${selectClause} FROM "${tableName}" WHERE slug = $1 AND status = 'published'`,
       [slug]
     )
     return result.rows[0] || null
-  } catch {
+  } catch (error) {
+    console.error(`[fetchPublishedItem] Error fetching ${entity.slug}:`, error)
     return null
   }
 }
@@ -171,7 +222,7 @@ export async function generateMetadata({
     }
 
     // Metadata from database
-    const item = await fetchPublishedItem(entity.tableName || entity.slug, slug)
+    const item = await fetchPublishedItem(entity, slug)
     if (item) {
       return {
         title: item.seoTitle || `${item.title} | Boilerplate`,
@@ -258,7 +309,7 @@ export default async function DynamicPublicPage({
     }
 
     // No template override - use default rendering
-    const item = await fetchPublishedItem(entity.tableName || entity.slug, slug)
+    const item = await fetchPublishedItem(entity, slug)
 
     if (!item) {
       notFound()

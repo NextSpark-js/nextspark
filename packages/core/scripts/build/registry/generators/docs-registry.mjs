@@ -12,17 +12,14 @@ import path from 'path'
 import { existsSync } from 'fs'
 import { CONFIG } from '../config.mjs'
 
-// Get config values
+// Get config values - use themesDir which correctly handles monorepo mode
 const projectRoot = CONFIG.projectRoot
+const monorepoRoot = CONFIG.monorepoRoot
 const isNpmMode = CONFIG.isNpmMode
+const isMonorepoMode = CONFIG.isMonorepoMode
 
-// Path prefix for registry entries
-const PATH_PREFIX = isNpmMode ? '' : '../..'
-
-// Themes directory
-const THEMES_DIR = isNpmMode
-  ? path.join(projectRoot, 'contents/themes')
-  : path.join(projectRoot, 'themes')
+// Themes directory - use CONFIG.themesDir for correct monorepo/npm mode handling
+const THEMES_DIR = CONFIG.themesDir
 
 /**
  * Extract order number from filename (01-example -> 1)
@@ -84,7 +81,18 @@ function scanDocsDirectory(docsPath, source) {
       const pageTitle = slugToTitle(pageSlug)
 
       // Get relative path from consuming app directory
-      const relativePath = PATH_PREFIX + filePath.replace(projectRoot, '')
+      // In monorepo mode: calculate relative from projectRoot (apps/dev) to file in themes/
+      // In npm mode: calculate relative from projectRoot to file in contents/themes/
+      let relativePath
+      if (isMonorepoMode && monorepoRoot) {
+        // In monorepo, themes are at monorepoRoot/themes/
+        // projectRoot is apps/dev, so we need ../../themes/...
+        const themeRelativePath = filePath.replace(monorepoRoot, '')
+        relativePath = '../..' + themeRelativePath
+      } else {
+        // In npm mode, themes are at projectRoot/contents/themes/
+        relativePath = filePath.replace(projectRoot, '')
+      }
 
       pages.push({
         slug: pageSlug,
