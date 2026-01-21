@@ -8,8 +8,6 @@
  * - Supports prefers-reduced-motion
  */
 
-'use client'
-
 import React from 'react'
 import { Skeleton } from './skeleton'
 

@@ -1,7 +1,7 @@
 /**
- * Entity Server Actions
+ * NextSpark Server Actions
  *
- * Generic Server Actions for CRUD operations on any registered entity.
+ * Server Actions for CRUD operations, user management, and team management.
  * Auth (userId/teamId) is obtained automatically from session and cookies.
  *
  * Import from '@nextsparkjs/core/actions' or '@nextsparkjs/core/lib/actions'.
@@ -9,33 +9,45 @@
  * @example
  * ```typescript
  * import {
+ *   // Entity actions
  *   createEntity,
  *   updateEntity,
  *   deleteEntity,
  *   getEntity,
  *   listEntities,
+ *   // User actions
+ *   updateProfile,
+ *   updateAvatar,
+ *   deleteAccount,
+ *   // Team actions
+ *   updateTeam,
+ *   inviteMember,
+ *   removeMember,
+ *   updateMemberRole,
  * } from '@nextsparkjs/core/actions'
  *
- * // Create - auth obtained from server session
+ * // Entity operations - auth obtained from server session
  * const result = await createEntity('schools', { name: 'MIT' })
- *
- * // Update with revalidation
- * await updateEntity('campaigns', id, { status: 'paused' }, {
- *   revalidatePaths: ['/dashboard']
- * })
- *
- * // Delete with redirect
+ * await updateEntity('campaigns', id, { status: 'paused' })
  * await deleteEntity('leads', id, { redirectTo: '/leads' })
  *
- * // Get by ID
- * const entity = await getEntity('schools', id)
+ * // User profile operations
+ * await updateProfile({ firstName: 'John', lastName: 'Doe' })
+ * await updateAvatar(formData)
+ * await deleteAccount()
  *
- * // List with filters
- * const list = await listEntities('campaigns', { limit: 20, where: { status: 'active' } })
+ * // Team operations
+ * await updateTeam('team-id', { name: 'New Name' })
+ * await inviteMember('team-id', 'user@example.com', 'member')
+ * await removeMember('team-id', 'member-id')
+ * await updateMemberRole('team-id', 'member-id', 'admin')
  * ```
  */
 
-// Re-export all entity actions
+// ============================================================================
+// ENTITY ACTIONS
+// ============================================================================
+
 export {
   createEntity,
   updateEntity,
@@ -47,7 +59,41 @@ export {
   countEntities,
 } from './entity.actions'
 
-// Re-export all types
+// ============================================================================
+// USER ACTIONS
+// ============================================================================
+
+export {
+  updateProfile,
+  updateAvatar,
+  deleteAccount,
+} from './user.actions'
+
+export type {
+  UpdateProfileData,
+  ProfileUpdateResult,
+} from './user.actions'
+
+// ============================================================================
+// TEAM ACTIONS
+// ============================================================================
+
+export {
+  updateTeam,
+  inviteMember,
+  removeMember,
+  updateMemberRole,
+} from './team.actions'
+
+export type {
+  UpdateTeamData,
+  InviteMemberResult,
+} from './team.actions'
+
+// ============================================================================
+// SHARED TYPES
+// ============================================================================
+
 export type {
   EntityActionResult,
   EntityActionVoidResult,
