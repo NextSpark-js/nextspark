@@ -46,6 +46,7 @@ Each `do:` command is **MINIMAL** - it only points to where to read the full ins
 | `/do:npm-publish` | Publish packages to npm | `how-to/releases/npm-publish` |
 | `/do:npm-version` | Increment package versions | `how-to/releases/npm-version` |
 | `/do:release-version` | Create a core version release | `how-to/releases/release-version` |
+| `/do:test-package` | Test npm package from scratch | `npm-development-workflow` |
 
 ### Git & GitHub
 
@@ -66,6 +67,9 @@ Each `do:` command is **MINIMAL** - it only points to where to read the full ins
 /do:create-entity products
 /do:create-migration add-status-to-orders
 /do:npm-publish
+
+# Test package before publishing
+/do:test-package
 
 # For general tasks (skill enforcement)
 /do:use-skills create a webhook integration
