@@ -8,15 +8,9 @@ description: "Sync with GitHub PR code review: evaluate, fix, and respond"
 
 ---
 
-## MANDATORY: Read Skills First
+## Related Skills
 
-Read `.claude/skills/github/SKILL.md` for GitHub workflow patterns.
-
----
-
-## Automation Scripts
-
-> **Note:** No automation scripts are available for this workflow yet. The command provides inline guidance for manual execution. Future enhancements may include scripts for parsing review comments and formatting responses.
+See `.claude/skills/github/SKILL.md` for general GitHub workflow patterns (branches, commits, PRs).
 
 ---
 
@@ -115,5 +109,5 @@ gh pr comment <number> --body "<response>"
 
 ```bash
 /do:sync-code-review https://github.com/NextSpark-js/nextspark/pull/19
-/do:sync-code-review 24
+/do:sync-code-review 19
 ```
