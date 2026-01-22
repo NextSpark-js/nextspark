@@ -108,15 +108,14 @@ function parseEntitiesFromConfig(content) {
   //   - Simple word: customers
   //   - Quoted with hyphens: "ai-agents" or 'ai-agents'
   //
-  // IMPORTANT: Entity keys must be at start of line (with indentation)
-  // This prevents matching `roles: [...]` inside action objects
+  // IMPORTANT: The closing bracket must be at the start of a line (after newline + whitespace)
+  // This prevents matching `]` inside nested arrays like `roles: ['owner', 'admin']`
+  // which appear in the MIDDLE of a line, not at the start.
   //
-  // Lookahead handles:
-  //   - Next entity (quoted or unquoted)
-  //   - End of content ($)
-  //   - Trailing comments (// ...)
-  //   - Closing brace of entities object (})
-  const entityBlockRegex = /(?:^|\n)\s*["']?([\w-]+)["']?:\s*\[([\s\S]*?)\],?(?=\s*(?:\/\/[^\n]*\n)?\s*(?:["'][\w-]+["']:|[\w-]+:|\}|$))/g
+  // The regex requires:
+  //   - Entity key at start of line (newline + whitespace)
+  //   - Closing bracket at start of line (newline + whitespace)
+  const entityBlockRegex = /\n\s*['"]?([\w-]+)['"]?:\s*\[([\s\S]*?)\n\s*\]/g
   let entityMatch
 
   while ((entityMatch = entityBlockRegex.exec(entitiesContent)) !== null) {
