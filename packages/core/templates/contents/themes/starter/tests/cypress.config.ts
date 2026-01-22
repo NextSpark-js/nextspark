@@ -11,6 +11,7 @@ import { defineConfig } from 'cypress'
 import path from 'path'
 import fs from 'fs'
 import { fileURLToPath } from 'url'
+import webpackPreprocessor from '@cypress/webpack-preprocessor'
 
 // ESM-compatible __dirname
 const __filename = fileURLToPath(import.meta.url)
@@ -111,6 +112,54 @@ export default defineConfig({
     },
 
     async setupNodeEvents(on, config) {
+      // =================================================================
+      // WEBPACK PREPROCESSOR - Enable "exports" field support
+      // =================================================================
+      // Fix for: "Package path ./selectors is not exported from package @nextsparkjs/core"
+      // Cypress default webpack doesn't support package.json "exports" field properly.
+      // This custom config enables it.
+      const webpackOptions = {
+        resolve: {
+          extensions: ['.ts', '.tsx', '.js', '.jsx', '.mjs'],
+          // CRITICAL: Enable package.json "exports" field resolution
+          exportsFields: ['exports'],
+          conditionNames: ['import', 'module', 'default'],
+          mainFields: ['module', 'main'],
+          // Polyfills for Node.js core modules (webpack 5 doesn't include them)
+          fallback: {
+            tty: false,
+            util: false,
+            fs: false,
+            path: false,
+            os: false,
+          },
+        },
+        module: {
+          rules: [
+            {
+              test: /\.tsx?$/,
+              use: [
+                {
+                  loader: 'ts-loader',
+                  options: {
+                    transpileOnly: true,
+                  },
+                },
+              ],
+              exclude: /node_modules/,
+            },
+            {
+              test: /\.m?js$/,
+              resolve: {
+                fullySpecified: false,
+              },
+            },
+          ],
+        },
+      }
+
+      on('file:preprocessor', webpackPreprocessor({ webpackOptions }))
+
       // Allure plugin setup (allure-cypress)
       const { allureCypress } = await import('allure-cypress/reporter')
       allureCypress(on, config, {
