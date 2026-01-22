@@ -49,6 +49,7 @@
     "switch": "Cambia Team",
     "manage": "Gestisci Team",
     "invite": "Invita Membro",
+    "inviting": "Invio in corso...",
     "removeMember": "Rimuovi Membro",
     "changeRole": "Cambia Ruolo",
     "makeRole": "Rendi {role}",
@@ -197,6 +198,7 @@
 
   "messages": {
     "created": "Team creato con successo",
-    "loading": "Caricamento team..."
+    "loading": "Caricamento team...",
+    "memberInvited": "Membro invitato con successo"
   }
 }

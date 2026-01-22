@@ -2,6 +2,24 @@
 -- Description: Extensiones y funciones de identidad para Better Auth
 -- Date: 2025-01-19
 
+-- =============================================================================
+-- ROLES FOR RLS (Row Level Security)
+-- These roles are pre-created in Supabase but not in vanilla PostgreSQL (Neon, etc.)
+-- =============================================================================
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+    CREATE ROLE authenticated;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+    CREATE ROLE anon;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
+    CREATE ROLE service_role;
+  END IF;
+END
+$$;
+
 -- Extensiones
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
