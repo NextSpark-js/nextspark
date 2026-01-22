@@ -272,12 +272,12 @@
       "types": "./dist/lib/actions/index.d.ts",
       "import": "./dist/lib/actions/index.js"
     },
-    "./entities/patterns/*": {
-      "types": "./dist/entities/patterns/*.d.ts",
-      "import": "./dist/entities/patterns/*.js"
+    "./entities/*/*": {
+      "types": "./dist/entities/*/*.d.ts",
+      "import": "./dist/entities/*/*.js"
     },
-    "./entities/patterns/messages/*": {
-      "import": "./dist/entities/patterns/messages/*"
+    "./entities/*/messages/*": {
+      "import": "./dist/entities/*/messages/*"
     }
   },
   "files": [
