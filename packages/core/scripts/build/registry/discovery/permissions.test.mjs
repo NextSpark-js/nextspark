@@ -14,8 +14,10 @@ import assert from 'node:assert'
  * Test the entity block regex pattern
  */
 describe('Entity Block Regex', () => {
-  // The regex pattern from permissions.mjs
-  const entityBlockRegex = /["']?([\w-]+)["']?:\s*\[([\s\S]*?)\],?(?=\s*(?:\/\/[^\n]*\n)?\s*(?:["'][\w-]+["']:|[\w-]+:|\}|$))/g
+  // The regex pattern from permissions.mjs (MUST match the actual implementation!)
+  // IMPORTANT: The (?:^|\n)\s* prefix ensures we only match keys at line start,
+  // preventing false matches on `roles: [...]` inside action objects.
+  const entityBlockRegex = /(?:^|\n)\s*["']?([\w-]+)["']?:\s*\[([\s\S]*?)\],?(?=\s*(?:\/\/[^\n]*\n)?\s*(?:["'][\w-]+["']:|[\w-]+:|\}|$))/g
 
   it('should match simple entity keys', () => {
     const content = `
@@ -153,6 +155,65 @@ describe('Entity Block Regex', () => {
     assert.strictEqual(matches.length, 2)
     assert.strictEqual(matches[0][1], 'customers')
     assert.strictEqual(matches[0][2].trim(), '')
+  })
+
+  /**
+   * CRITICAL TEST: This is the exact bug that broke beta.62
+   * The regex was matching `roles: ['owner', 'admin']` inside action objects
+   * as if it were an entity key, causing "Invalid entity slug: roles" errors.
+   */
+  it('should NOT match roles inside action objects as entity keys', () => {
+    // This is the exact structure from a real permissions.config.ts
+    const content = `
+    patterns: [
+      { action: 'create', label: 'Create Patterns', description: 'Can create patterns', roles: ['owner', 'admin'] },
+      { action: 'read', label: 'View Patterns', description: 'Can view patterns', roles: ['owner', 'admin', 'member'] },
+      { action: 'delete', label: 'Delete Patterns', description: 'Can delete patterns', roles: ['owner', 'admin'], dangerous: true },
+    ],
+
+    'ai-agents': [
+      { action: 'create', label: 'Create AI Agents', description: 'Can create agents', roles: ['owner', 'admin'] },
+      { action: 'read', label: 'View AI Agents', description: 'Can view agents', roles: ['owner', 'admin', 'member'] },
+    ],
+
+    analysis: [
+      { action: 'create', label: 'Create Analysis', description: 'Can create analyses', roles: ['owner'] },
+      { action: 'read', label: 'View Analysis', description: 'Can view analyses', roles: ['owner', 'admin', 'member'] },
+    ],
+  }`
+
+    const matches = [...content.matchAll(entityBlockRegex)]
+
+    // Should find exactly 3 entity keys: patterns, ai-agents, analysis
+    // Should NOT find 'roles' as an entity key
+    assert.strictEqual(matches.length, 3, `Expected 3 entities but found ${matches.length}: ${matches.map(m => m[1]).join(', ')}`)
+
+    const entityNames = matches.map(m => m[1])
+    assert.ok(entityNames.includes('patterns'), 'Should include patterns')
+    assert.ok(entityNames.includes('ai-agents'), 'Should include ai-agents')
+    assert.ok(entityNames.includes('analysis'), 'Should include analysis')
+    assert.ok(!entityNames.includes('roles'), 'Should NOT include roles (that\'s inside action objects)')
+  })
+
+  it('should handle real-world permissions config structure', () => {
+    // Mimics the exact indentation and structure of a real config file
+    const content = `
+    // PATTERNS ENTITY
+    patterns: [
+      { action: 'create', label: 'Create', roles: ['owner', 'admin'] },
+      { action: 'read', label: 'Read', roles: ['owner', 'admin', 'member'] },
+    ],
+
+    // AI-AGENTS ENTITY (hyphenated, quoted)
+    'ai-agents': [
+      { action: 'create', label: 'Create', roles: ['owner'] },
+    ],
+  }`
+
+    const matches = [...content.matchAll(entityBlockRegex)]
+    assert.strictEqual(matches.length, 2)
+    assert.strictEqual(matches[0][1], 'patterns')
+    assert.strictEqual(matches[1][1], 'ai-agents')
   })
 })
 
