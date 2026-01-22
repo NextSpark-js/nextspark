@@ -1,6 +1,6 @@
 {
   "name": "@nextsparkjs/core",
-  "version": "0.1.0-beta.65",
+  "version": "0.1.0-beta.66",
   "description": "NextSpark - The complete SaaS framework for Next.js",
   "license": "MIT",
   "author": "NextSpark <hello@nextspark.dev>",
@@ -271,6 +271,13 @@
     "./lib/actions": {
       "types": "./dist/lib/actions/index.d.ts",
       "import": "./dist/lib/actions/index.js"
+    },
+    "./entities/*/*": {
+      "types": "./dist/entities/*/*.d.ts",
+      "import": "./dist/entities/*/*.js"
+    },
+    "./entities/*/messages/*": {
+      "import": "./dist/entities/*/messages/*"
     }
   },
   "files": [
@@ -278,6 +285,7 @@
     "styles",
     "templates",
     "migrations",
+    "src/entities",
     "tests/cypress/support",
     "tests/jest/setup.ts",
     "tests/jest/__mocks__",
