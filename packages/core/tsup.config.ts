@@ -139,6 +139,13 @@ export default defineConfig({
       { recursive: true }
     ).catch(() => console.log('No messages directory to copy'))
 
+    // Copy entity messages directories (for core entities like patterns)
+    await cp(
+      join(process.cwd(), 'src/entities/patterns/messages'),
+      join(distDir, 'entities/patterns/messages'),
+      { recursive: true }
+    ).catch(() => console.log('No patterns messages directory to copy'))
+
     // Copy presets/ directory
     await cp(
       join(process.cwd(), 'presets'),
