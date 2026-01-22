@@ -272,20 +272,12 @@
       "types": "./dist/lib/actions/index.d.ts",
       "import": "./dist/lib/actions/index.js"
     },
-    "./entities/patterns/patterns.config": {
-      "types": "./dist/entities/patterns/patterns.config.d.ts",
-      "import": "./dist/entities/patterns/patterns.config.js"
-    },
-    "./entities/patterns/patterns.fields": {
-      "types": "./dist/entities/patterns/patterns.fields.d.ts",
-      "import": "./dist/entities/patterns/patterns.fields.js"
-    },
-    "./entities/patterns/patterns.service": {
-      "types": "./dist/entities/patterns/patterns.service.d.ts",
-      "import": "./dist/entities/patterns/patterns.service.js"
+    "./entities/patterns/*": {
+      "types": "./dist/entities/patterns/*.d.ts",
+      "import": "./dist/entities/patterns/*.js"
     },
     "./entities/patterns/messages/*": {
-      "import": "./src/entities/patterns/messages/*"
+      "import": "./dist/entities/patterns/messages/*"
     }
   },
   "files": [
