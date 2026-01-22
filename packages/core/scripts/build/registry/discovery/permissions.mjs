@@ -107,7 +107,13 @@ function parseEntitiesFromConfig(content) {
   // The key can be:
   //   - Simple word: customers
   //   - Quoted with hyphens: "ai-agents" or 'ai-agents'
-  const entityBlockRegex = /["']?([\w-]+)["']?:\s*\[([\s\S]*?)\],?\s*(?=\n\s*\/\/|$|\n\s*["']?[\w-]+["']?:)/g
+  //
+  // Lookahead handles:
+  //   - Next entity (quoted or unquoted)
+  //   - End of content ($)
+  //   - Trailing comments (// ...)
+  //   - Closing brace of entities object (})
+  const entityBlockRegex = /["']?([\w-]+)["']?:\s*\[([\s\S]*?)\],?(?=\s*(?:\/\/[^\n]*\n)?\s*(?:["'][\w-]+["']:|[\w-]+:|\}|$))/g
   let entityMatch
 
   while ((entityMatch = entityBlockRegex.exec(entitiesContent)) !== null) {
