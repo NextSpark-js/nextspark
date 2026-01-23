@@ -1,8 +1,20 @@
 import { defineConfig } from 'tsup'
-import { cp, readFile, writeFile, readdir, stat } from 'fs/promises'
+import { cp, readFile, writeFile, readdir, stat, mkdir } from 'fs/promises'
 import { join, resolve, dirname } from 'path'
 import { glob } from 'glob'
 import { existsSync } from 'fs'
+
+/**
+ * Safe copy that ensures parent directories exist
+ */
+async function safeCopy(src: string, dest: string, options?: { recursive?: boolean }): Promise<void> {
+  // Ensure parent directory exists
+  const parentDir = dirname(dest)
+  await mkdir(parentDir, { recursive: true }).catch(() => {})
+
+  // Copy the file/directory
+  await cp(src, dest, options)
+}
 
 /**
  * Fix ESM imports by adding .js extensions to relative imports
@@ -147,17 +159,23 @@ export default defineConfig({
         .then(entries => entries.filter(e => e.isDirectory()).map(e => e.name))
         .catch(() => [])
 
+      let copiedCount = 0
       for (const entityName of entityDirs) {
         const entityMessagesPath = join(entitiesDir, entityName, 'messages')
         if (existsSync(entityMessagesPath)) {
-          await cp(
-            entityMessagesPath,
-            join(distDir, 'entities', entityName, 'messages'),
-            { recursive: true }
-          ).catch(() => console.log(`No ${entityName} messages directory to copy`))
+          const destPath = join(distDir, 'entities', entityName, 'messages')
+          try {
+            // Ensure parent directory exists before copying
+            await mkdir(dirname(destPath), { recursive: true })
+            await cp(entityMessagesPath, destPath, { recursive: true })
+            copiedCount++
+            console.log(`  📦 Copied ${entityName}/messages/`)
+          } catch (err) {
+            console.log(`  ⚠️ Failed to copy ${entityName}/messages/:`, err)
+          }
         }
       }
-      console.log(`✅ Copied messages for ${entityDirs.length} core entities`)
+      console.log(`✅ Copied messages for ${copiedCount}/${entityDirs.length} core entities`)
     }
 
     // Copy presets/ directory
