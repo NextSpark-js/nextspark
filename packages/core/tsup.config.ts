@@ -139,6 +139,27 @@ export default defineConfig({
       { recursive: true }
     ).catch(() => console.log('No messages directory to copy'))
 
+    // Copy entity messages directories dynamically (for all core entities)
+    // This auto-discovers all entities with messages folders, eliminating manual updates
+    const entitiesDir = join(process.cwd(), 'src/entities')
+    if (existsSync(entitiesDir)) {
+      const entityDirs = await readdir(entitiesDir, { withFileTypes: true })
+        .then(entries => entries.filter(e => e.isDirectory()).map(e => e.name))
+        .catch(() => [])
+
+      for (const entityName of entityDirs) {
+        const entityMessagesPath = join(entitiesDir, entityName, 'messages')
+        if (existsSync(entityMessagesPath)) {
+          await cp(
+            entityMessagesPath,
+            join(distDir, 'entities', entityName, 'messages'),
+            { recursive: true }
+          ).catch(() => console.log(`No ${entityName} messages directory to copy`))
+        }
+      }
+      console.log(`✅ Copied messages for ${entityDirs.length} core entities`)
+    }
+
     // Copy presets/ directory
     await cp(
       join(process.cwd(), 'presets'),

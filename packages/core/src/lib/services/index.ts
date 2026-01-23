@@ -18,10 +18,15 @@ export { TeamService } from './team.service'
 export { TeamMemberService } from './team-member.service'
 export { PermissionService } from './permission.service'
 export { MembershipService, TeamMembership } from './membership.service'
-export { ThemeService } from './theme.service'
+export { ThemeService, getThemeAppConfig } from './theme.service'
 export { EntityTypeService } from './entity-type.service'
 export { NamespaceService } from './namespace.service'
-export { MiddlewareService } from './middleware.service'
+export {
+  MiddlewareService,
+  hasThemeMiddleware,
+  executeThemeMiddleware,
+  addUserHeadersMiddleware
+} from './middleware.service'
 export { ScopeService } from './scope.service'
 export { RouteHandlerService } from './route-handler.service'
 export { PluginService, usePlugin } from './plugin.service'

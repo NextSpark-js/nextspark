@@ -27,6 +27,7 @@ See `.claude/skills/github/SKILL.md` for general GitHub workflow patterns (branc
 7. **Verify** → `pnpm build`
 8. **Commit & push** → With structured message
 9. **Comment on PR** → With response table
+10. **Request re-review** → Comment `@claude` again to validate fixes
 
 ### Evaluation Criteria
 
@@ -101,6 +102,9 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 
 # Comment response
 gh pr comment <number> --body "<response>"
+
+# Request re-review after fixes
+gh pr comment <number> --body "@claude"
 ```
 
 ---

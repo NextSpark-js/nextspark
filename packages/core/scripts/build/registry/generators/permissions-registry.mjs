@@ -48,10 +48,73 @@ export async function generatePermissionsRegistry(permissionsConfig, entities, c
   const entityPermissions = []
   const processedEntities = new Set()
 
+  // Build a Set of all known entity slugs for validation
+  // Entities come from theme + plugins, use 'name' which matches directory/slug
+  const knownEntitySlugs = new Set(entities.map(e => e.name))
+
   // PRIORITY 1: Read from permissions.config.ts -> entities (centralized definition)
   // This allows custom roles like 'editor' to be included directly in roles
   if (hasThemeConfig && permissionsConfig.entities) {
     log('  📋 Reading entity permissions from permissions.config.ts (centralized)', 'info')
+
+    // =========================================================================
+    // VALIDATION: Ensure all entity keys in permissions.config.ts match
+    // discovered entity slugs. This prevents runtime permission resolution bugs.
+    // =========================================================================
+    const permissionEntityKeys = Object.keys(permissionsConfig.entities)
+    const unmatchedEntities = []
+
+    for (const entityKey of permissionEntityKeys) {
+      if (!knownEntitySlugs.has(entityKey)) {
+        // Try to find similar slugs for helpful error message
+        const similarSlugs = [...knownEntitySlugs].filter(slug => {
+          // Check for common variations: kebab vs camelCase, plural vs singular
+          const normalized = slug.toLowerCase().replace(/-/g, '')
+          const keyNormalized = entityKey.toLowerCase().replace(/-/g, '')
+          return normalized === keyNormalized ||
+                 slug.includes(entityKey) ||
+                 entityKey.includes(slug)
+        })
+
+        unmatchedEntities.push({
+          key: entityKey,
+          suggestions: similarSlugs
+        })
+      }
+    }
+
+    if (unmatchedEntities.length > 0) {
+      const errorLines = [
+        '',
+        '╔══════════════════════════════════════════════════════════════════════════════╗',
+        '║  PERMISSIONS CONFIG ERROR: Entity slug mismatch detected                     ║',
+        '╚══════════════════════════════════════════════════════════════════════════════╝',
+        '',
+        'The following keys in permissions.config.ts → entities do not match any',
+        'discovered entity slug. This will cause permission checks to fail at runtime.',
+        ''
+      ]
+
+      for (const { key, suggestions } of unmatchedEntities) {
+        errorLines.push(`  ❌ "${key}" - No entity found with this slug`)
+        if (suggestions.length > 0) {
+          errorLines.push(`     Did you mean: ${suggestions.map(s => `"${s}"`).join(', ')}?`)
+        }
+      }
+
+      errorLines.push('')
+      errorLines.push('Available entity slugs:')
+      errorLines.push(`  ${[...knownEntitySlugs].sort().join(', ')}`)
+      errorLines.push('')
+      errorLines.push('Fix: Ensure the key in permissions.config.ts → entities matches')
+      errorLines.push('     the "slug" field in the corresponding entity.config.ts')
+      errorLines.push('')
+
+      throw new Error(errorLines.join('\n'))
+    }
+
+    log('  ✅ All permission entity keys validated against discovered entities', 'info')
+
     for (const [entitySlug, actions] of Object.entries(permissionsConfig.entities)) {
       if (!Array.isArray(actions)) continue
 

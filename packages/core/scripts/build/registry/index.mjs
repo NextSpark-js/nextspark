@@ -12,7 +12,6 @@ export { CONFIG, CONTENT_TYPES, rootDir } from './config.mjs'
 
 // Discovery functions
 export {
-  discoverAll,
   discoverPlugins,
   discoverRouteFiles,
   discoverEntities,
