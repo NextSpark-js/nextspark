@@ -201,7 +201,8 @@
     },
     "viewMode": {
       "layout": "Diseno",
-      "preview": "Vista previa"
+      "preview": "Vista previa",
+      "settings": "Configuración"
     },
     "header": {
       "actions": {
@@ -219,6 +220,8 @@
       "noCategories": "No hay categorias disponibles",
       "tabs": {
         "blocks": "Bloques",
+        "patterns": "Patterns",
+        "layout": "Layout",
         "config": "Configuracion"
       },
       "search": {
@@ -263,6 +266,15 @@
         "design": "Diseño",
         "advanced": "Avanzado"
       }
+    },
+    "config": {
+      "entityFields": "Campos de Entidad",
+      "entityFieldsDescription": "Configura propiedades a nivel de página",
+      "seoMeta": "SEO y Meta",
+      "seoMetaDescription": "Configuración para motores de búsqueda"
+    },
+    "layout": {
+      "empty": "Aún no hay bloques agregados"
     },
     "messages": {
       "saved": "Guardado exitosamente",

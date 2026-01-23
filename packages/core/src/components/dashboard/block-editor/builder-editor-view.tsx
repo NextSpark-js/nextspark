@@ -11,7 +11,7 @@ import { Input } from '../../ui/input'
 import { Label } from '../../ui/label'
 import { Separator } from '../../ui/separator'
 import { Badge } from '../../ui/badge'
-import { ArrowLeft, Save, ExternalLink, LayoutGrid, FileText, Eye, PenTool, Settings } from 'lucide-react'
+import { ArrowLeft, Save, ExternalLink, Eye, Settings } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { sel } from '../../../lib/test'
@@ -23,12 +23,15 @@ import { PageSettingsPanel, type PageSettings } from './page-settings-panel'
 import { EntityFieldsSidebar } from './entity-fields-sidebar'
 import { StatusSelector, type StatusOption } from './status-selector'
 import { BlockService } from '../../../lib/services/block.service'
+import { ViewportToggle, type ViewportMode, MOBILE_VIEWPORT_WIDTH } from './viewport-toggle'
+import { ConfigPanel } from './config-panel'
 import { useSidebar } from '../../../contexts/sidebar-context'
 import { cn } from '../../../lib/utils'
 import type { BlockInstance } from '../../../types/blocks'
+import type { PatternReference } from '../../../types/pattern-reference'
 import type { ClientEntityConfig } from '@nextsparkjs/registries/entity-registry.client'
 
-type ViewMode = 'layout' | 'preview'
+type ViewMode = 'preview' | 'settings'
 
 // Helper to get team ID from localStorage
 function getTeamId(): string | null {
@@ -87,6 +90,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
   const [status, setStatus] = useState<string>('draft')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('preview')
+  const [viewportMode, setViewportMode] = useState<ViewportMode>('desktop')
   const [leftSidebarMode, setLeftSidebarMode] = useState<LeftSidebarMode>('blocks')
   const [pageSettings, setPageSettings] = useState<PageSettings>({
     seo: {},
@@ -325,9 +329,23 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
       blockSlug,
       props: {}
     }
+
+    // Insert after selected block, or at end if none selected
+    if (selectedBlockId) {
+      const index = blocks.findIndex(b => b.id === selectedBlockId)
+      if (index !== -1) {
+        const newBlocks = [...blocks]
+        newBlocks.splice(index + 1, 0, newBlock)
+        setBlocks(newBlocks)
+        setSelectedBlockId(newBlock.id)
+        return
+      }
+    }
+
+    // No selection or not found - add to end
     setBlocks(prev => [...prev, newBlock])
     setSelectedBlockId(newBlock.id)
-  }, [])
+  }, [blocks, selectedBlockId])
 
   // Pattern operations
   const handleAddPattern = useCallback((patternId: string) => {
@@ -370,8 +388,10 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
     ))
   }, [])
 
-  const handleReorderBlocks = useCallback((newBlocks: BlockInstance[]) => {
-    setBlocks(newBlocks)
+  const handleReorderBlocks = useCallback((newBlocks: (BlockInstance | PatternReference)[]) => {
+    // For now we only support BlockInstance in state, filter out PatternReferences
+    // TODO: Add full pattern reference support when implementing pattern expansion
+    setBlocks(newBlocks.filter((b): b is BlockInstance => !('ref' in b)))
   }, [])
 
   const handleMoveBlockUp = useCallback((blockId: string) => {
@@ -406,6 +426,14 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
       setLeftSidebarMode(value as LeftSidebarMode)
     }
   }, [leftSidebarMode])
+
+  // Handle view mode change - deselect block when switching to settings
+  const handleViewModeChange = useCallback((mode: ViewMode) => {
+    setViewMode(mode)
+    if (mode === 'settings') {
+      setSelectedBlockId(null)
+    }
+  }, [])
 
   const selectedBlock = selectedBlockId ? blocks.find(b => b.id === selectedBlockId) : undefined
 
@@ -556,37 +584,48 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
             </div>
           </div>
 
-          {/* Center: View Mode Toggle */}
-          <div
-            className="bg-muted p-1 rounded-lg flex items-center text-sm font-medium"
-            data-cy={sel('blockEditor.header.viewToggle')}
-          >
-            <button
-              className={cn(
-                'px-3 py-1.5 rounded-md transition-all flex items-center gap-2',
-                viewMode === 'layout'
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10'
-              )}
-              onClick={() => setViewMode('layout')}
-              data-cy={sel('blockEditor.header.viewEditor')}
+          {/* Center: View Mode Toggle + Viewport Toggle */}
+          <div className="flex items-center gap-3">
+            {/* View Mode Tabs (Preview | Settings) */}
+            <div
+              className="bg-muted p-1 rounded-lg flex items-center text-sm font-medium"
+              data-cy={sel('blockEditor.header.viewToggle')}
             >
-              <PenTool className="h-3.5 w-3.5" />
-              <span>{t('viewMode.layout')}</span>
-            </button>
-            <button
-              className={cn(
-                'px-3 py-1.5 rounded-md transition-all flex items-center gap-2',
-                viewMode === 'preview'
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10'
-              )}
-              onClick={() => setViewMode('preview')}
-              data-cy={sel('blockEditor.header.viewPreview')}
-            >
-              <Eye className="h-3.5 w-3.5" />
-              <span>{t('viewMode.preview')}</span>
-            </button>
+              <button
+                className={cn(
+                  'px-3 py-1.5 rounded-md transition-all flex items-center gap-2',
+                  viewMode === 'preview'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10'
+                )}
+                onClick={() => handleViewModeChange('preview')}
+                data-cy={sel('blockEditor.header.viewPreview')}
+              >
+                <Eye className="h-3.5 w-3.5" />
+                <span>{t('viewMode.preview')}</span>
+              </button>
+              <button
+                className={cn(
+                  'px-3 py-1.5 rounded-md transition-all flex items-center gap-2',
+                  viewMode === 'settings'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10'
+                )}
+                onClick={() => handleViewModeChange('settings')}
+                data-cy={sel('blockEditor.header.viewSettings')}
+              >
+                <Settings className="h-3.5 w-3.5" />
+                <span>{t('viewMode.settings')}</span>
+              </button>
+            </div>
+
+            {/* Viewport Toggle (only in Preview mode) */}
+            {viewMode === 'preview' && (
+              <ViewportToggle
+                value={viewportMode}
+                onChange={setViewportMode}
+              />
+            )}
           </div>
 
           {/* Right: Status & Actions */}
@@ -663,46 +702,51 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
             onEntityFieldChange={handleEntityFieldChange}
             showFieldsTab={!!showFieldsOption}
             showPatternsTab={showPatternsTab}
+            // TreeView props for Layout tab
+            pageBlocks={blocks}
+            selectedBlockId={selectedBlockId}
+            onSelectBlock={setSelectedBlockId}
+            onReorderBlocks={handleReorderBlocks}
           />
         </div>
 
-        {/* Center - Block Canvas / Preview */}
-        <div className="flex-1 overflow-y-auto bg-gray-100">
-          {viewMode === 'layout' ? (
-            <div className="p-6">
-              <div className="max-w-4xl mx-auto">
-                <BlockCanvas
+        {/* Center - Preview or Settings */}
+        <div className="flex-1 overflow-hidden">
+          {viewMode === 'preview' ? (
+            <div
+              className="h-full overflow-y-auto bg-muted/30"
+              data-cy={sel('blockEditor.previewCanvas.container')}
+            >
+              {/* Preview with responsive viewport */}
+              <div
+                className={cn(
+                  'min-h-full bg-background transition-all duration-300',
+                  viewportMode === 'mobile' && 'max-w-[375px] mx-auto shadow-xl border-x'
+                )}
+                data-cy={viewportMode === 'mobile'
+                  ? sel('blockEditor.previewCanvas.viewportMobile')
+                  : sel('blockEditor.previewCanvas.viewportDesktop')
+                }
+              >
+                <BlockPreviewCanvas
                   blocks={blocks}
                   selectedBlockId={selectedBlockId}
                   onSelectBlock={setSelectedBlockId}
-                  onRemoveBlock={handleRemoveBlock}
-                  onDuplicateBlock={handleDuplicateBlock}
-                  onReorder={handleReorderBlocks}
-                  onUpdateProps={handleUpdateBlockProps}
-                  onAddBlock={handleAddBlock}
+                  onMoveUp={handleMoveBlockUp}
+                  onMoveDown={handleMoveBlockDown}
+                  onDuplicate={handleDuplicateBlock}
+                  onRemove={handleRemoveBlock}
                 />
-
-                {/* Page Settings - Only in Layout view and if SEO is enabled */}
-                {entityConfig.builder?.seo && (
-                  <PageSettingsPanel
-                    settings={pageSettings}
-                    onChange={setPageSettings}
-                  />
-                )}
               </div>
             </div>
           ) : (
-            <div className="bg-background">
-              <BlockPreviewCanvas
-                blocks={blocks}
-                selectedBlockId={selectedBlockId}
-                onSelectBlock={setSelectedBlockId}
-                onMoveUp={handleMoveBlockUp}
-                onMoveDown={handleMoveBlockDown}
-                onDuplicate={handleDuplicateBlock}
-                onRemove={handleRemoveBlock}
-              />
-            </div>
+            <ConfigPanel
+              entityConfig={entityConfig}
+              entityFields={entityFields}
+              onEntityFieldChange={handleEntityFieldChange}
+              pageSettings={pageSettings}
+              onPageSettingsChange={setPageSettings}
+            />
           )}
         </div>
 

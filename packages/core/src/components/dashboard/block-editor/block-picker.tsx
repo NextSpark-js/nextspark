@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { useQuery } from '@tanstack/react-query'
-import { Search, Plus, LayoutGrid, Settings2, Layers } from 'lucide-react'
+import { Search, Plus, LayoutGrid, LayoutList, Layers } from 'lucide-react'
 import { Input } from '../../ui/input'
 import { Button } from '../../ui/button'
 import { Badge } from '../../ui/badge'
@@ -11,13 +11,14 @@ import { ScrollArea } from '../../ui/scroll-area'
 import { cn } from '../../../lib/utils'
 import { sel } from '../../../lib/test'
 import { getCategoryConfig } from './category-helpers'
-import { EntityFieldsSidebar } from './entity-fields-sidebar'
+import { TreeView } from './tree-view'
 import { PatternCard } from './pattern-card'
-import type { BlockConfig } from '../../../types/blocks'
+import type { BlockConfig, BlockInstance } from '../../../types/blocks'
+import type { PatternReference } from '../../../types/pattern-reference'
 import type { ClientEntityConfig } from '@nextsparkjs/registries/entity-registry.client'
 import type { Pattern } from '../../../types/pattern-reference'
 
-type TabValue = 'blocks' | 'patterns' | 'config'
+type TabValue = 'blocks' | 'patterns' | 'layout'
 
 // Helper to get team ID from localStorage
 function getTeamId(): string | null {
@@ -46,6 +47,11 @@ interface BlockPickerProps {
   onEntityFieldChange: (field: string, value: unknown) => void
   showFieldsTab: boolean
   showPatternsTab?: boolean
+  // TreeView props for Layout tab
+  pageBlocks: (BlockInstance | PatternReference)[]
+  selectedBlockId: string | null
+  onSelectBlock: (id: string) => void
+  onReorderBlocks: (blocks: (BlockInstance | PatternReference)[]) => void
 }
 
 export function BlockPicker({
@@ -57,6 +63,11 @@ export function BlockPicker({
   onEntityFieldChange,
   showFieldsTab,
   showPatternsTab = false,
+  // TreeView props
+  pageBlocks,
+  selectedBlockId,
+  onSelectBlock,
+  onReorderBlocks,
 }: BlockPickerProps) {
   const t = useTranslations('admin.builder')
   const tPatterns = useTranslations('patterns')
@@ -148,24 +159,23 @@ export function BlockPicker({
             )}
           </button>
         )}
-        {showFieldsTab && (
-          <button
-            className={cn(
-              'flex-1 py-3 text-sm font-medium transition-all relative',
-              activeTab === 'config'
-                ? 'text-primary bg-primary/5'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-            )}
-            onClick={() => setActiveTab('config')}
-            data-cy={sel('blockEditor.blockPicker.tabConfig')}
-          >
-            <Settings2 className="h-4 w-4 inline mr-2" />
-            {t('sidebar.tabs.config')}
-            {activeTab === 'config' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-            )}
-          </button>
-        )}
+        {/* Layout tab - always shown (for tree view) */}
+        <button
+          className={cn(
+            'flex-1 py-3 text-sm font-medium transition-all relative',
+            activeTab === 'layout'
+              ? 'text-primary bg-primary/5'
+              : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+          )}
+          onClick={() => setActiveTab('layout')}
+          data-cy={sel('blockEditor.blockPicker.tabLayout')}
+        >
+          <LayoutList className="h-4 w-4 inline mr-2" />
+          {t('sidebar.tabs.layout')}
+          {activeTab === 'layout' && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+          )}
+        </button>
       </div>
 
       {/* Tab Content */}
@@ -367,11 +377,13 @@ export function BlockPicker({
           </ScrollArea>
         </>
       ) : (
-        // Config/Fields Tab
-        <EntityFieldsSidebar
-          entityConfig={entityConfig}
-          fields={entityFields}
-          onChange={onEntityFieldChange}
+        // Layout Tab - Tree View
+        <TreeView
+          blocks={pageBlocks}
+          selectedBlockId={selectedBlockId}
+          onSelectBlock={onSelectBlock}
+          onReorder={onReorderBlocks}
+          emptyMessage={t('layout.empty')}
         />
       )}
     </div>
