@@ -19,6 +19,15 @@ import { CONFIG as DEFAULT_CONFIG } from '../config.mjs'
 import { log, verbose } from '../../../utils/index.mjs'
 
 /**
+ * Normalize path separators to forward slashes (for cross-platform compatibility)
+ * @param {string} path - Path to normalize
+ * @returns {string} Path with forward slashes
+ */
+function normalizePath(path) {
+  return path.replace(/\\/g, '/')
+}
+
+/**
  * Find the matching closing brace for an opening brace
  * Uses brace counting to handle nested objects correctly
  *
@@ -276,23 +285,22 @@ function deriveEndpointFromRoute(routePath) {
 
 /**
  * Get the storage path for registry (handles monorepo vs npm mode)
+ * Always normalizes to forward slashes for cross-platform compatibility
  * @param {string} absolutePath - Absolute file path
  * @param {object} config - Configuration object
- * @returns {string} Path to store in registry
+ * @returns {string} Path to store in registry (with forward slashes)
  */
 function getStoragePath(absolutePath, config) {
+  let result
   if (config.isMonorepoMode) {
     // In monorepo, use path relative to monorepo root
-    return relative(config.monorepoRoot, absolutePath)
+    result = relative(config.monorepoRoot, absolutePath)
   } else {
     // In npm mode, use path relative to project root with contents/ prefix
-    const relativePath = relative(config.projectRoot, absolutePath)
-    // If path doesn't start with contents/, add it
-    if (!relativePath.startsWith('contents/')) {
-      return relativePath
-    }
-    return relativePath
+    result = relative(config.projectRoot, absolutePath)
   }
+  // Always normalize to forward slashes (Windows uses backslashes)
+  return normalizePath(result)
 }
 
 /**
@@ -447,7 +455,7 @@ async function discoverThemeRoutes(config, results, processedEndpoints) {
     try {
       const routeDir = dirname(docsPath)
       const relativeDir = relative(join(config.themesDir, themeName, 'app'), routeDir)
-      const endpoint = '/' + relativeDir
+      const endpoint = '/' + normalizePath(relativeDir)
 
       const content = await readFile(docsPath, 'utf-8')
       const title = extractMarkdownTitle(content)
@@ -476,7 +484,7 @@ async function discoverThemeRoutes(config, results, processedEndpoints) {
     try {
       const routeDir = dirname(presetsPath)
       const relativeDir = relative(join(config.themesDir, themeName, 'app'), routeDir)
-      const endpoint = '/' + relativeDir
+      const endpoint = '/' + normalizePath(relativeDir)
 
       const content = await readFile(presetsPath, 'utf-8')
       const presetConfig = parsePresetFile(content)
@@ -525,7 +533,7 @@ async function discoverCoreRoutes(config, results, processedEndpoints) {
     try {
       const routeDir = dirname(docsPath)
       const relativeDir = relative(join(config.coreDir, 'templates', 'app'), routeDir)
-      const endpoint = '/' + relativeDir
+      const endpoint = '/' + normalizePath(relativeDir)
 
       // Skip if already processed by theme or entity
       if (processedEndpoints.has(endpoint)) {
@@ -557,7 +565,7 @@ async function discoverCoreRoutes(config, results, processedEndpoints) {
     try {
       const routeDir = dirname(presetsPath)
       const relativeDir = relative(join(config.coreDir, 'templates', 'app'), routeDir)
-      const endpoint = '/' + relativeDir
+      const endpoint = '/' + normalizePath(relativeDir)
 
       // Skip if already processed by theme or entity
       if (processedEndpoints.has(endpoint)) {

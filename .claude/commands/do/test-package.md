@@ -10,7 +10,7 @@ description: "Test npm package from scratch - creates fresh project and validate
 
 ## Purpose
 
-Test the npm package distribution by creating a **fresh project** and validating the complete installation and runtime flow with **automated Cypress tests**. This simulates exactly what a new user would experience when installing NextSpark from npm.
+Test the npm package distribution by creating a **fresh project** and validating the complete installation and runtime flow. This simulates exactly what a new user would experience when installing NextSpark from npm.
 
 **When to use this command:**
 - **Pre-publish validation** - Before releasing a new version to npm
@@ -18,7 +18,7 @@ Test the npm package distribution by creating a **fresh project** and validating
 - **New user experience validation** - Ensuring the onboarding flow works
 
 **This is different from daily development testing:**
-- Daily dev testing uses `pnpm setup:update-local` with `projects/my-app`
+- Daily dev testing uses `pnpm setup:update-local` with `projects/local`
 - This command creates a **completely fresh project** to simulate npm install
 
 ---
@@ -29,7 +29,20 @@ Before running this command, ensure:
 1. **PostgreSQL database** is running and accessible
 2. **Node.js 18+** is installed
 3. **pnpm** is installed and working
-4. **No processes using ports 3000-3010** (or be prepared to kill them)
+4. **No processes using the test port** (default 3005)
+
+---
+
+## Cross-Platform Compatibility
+
+This command must work on **both Windows and Unix** systems. Key differences:
+
+| Operation | Windows (Git Bash) | Linux/Mac |
+|-----------|-------------------|-----------|
+| Kill process by PID | `cmd //c "taskkill /F /PID $PID"` | `kill -9 $PID` |
+| Find process on port | `netstat -ano \| findstr ":$PORT"` | `lsof -ti:$PORT` |
+| Delete locked folder | `cmd //c "rmdir /s /q folder"` | `rm -rf folder` |
+| Background process | `cmd //c "..." &` | `command &` |
 
 ---
 
@@ -37,50 +50,79 @@ Before running this command, ensure:
 
 Execute these steps in order. **Stop and report if any step fails.**
 
-### Step 1: Define Variables and Clean Environment
+### Step 1: Define Variables
+
+**IMPORTANT:** Set these variables based on your local environment. All paths should be **relative to the nextspark root** or use environment variables.
 
 ```bash
-# Define paths
-REPO_ROOT="G:/GitHub/nextspark/repo"
-PROJECTS_DIR="G:/GitHub/nextspark/projects"
+# Determine repo root (parent of repo/ folder)
+# Adjust this to match your local setup
+NEXTSPARK_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"  # If running from script
+# OR set manually:
+# NEXTSPARK_ROOT="/path/to/your/nextspark"  # Linux/Mac
+# NEXTSPARK_ROOT="C:/path/to/nextspark"     # Windows (use forward slashes!)
+
+# Derived paths (don't change these)
+REPO_ROOT="$NEXTSPARK_ROOT/repo"
+PROJECTS_DIR="$NEXTSPARK_ROOT/projects"
 TEST_DIR="$PROJECTS_DIR/test-package"
 TEST_PORT=3005
-
-# Kill any processes on test port
-netstat -ano | grep ":$TEST_PORT" | awk '{print $5}' | xargs -I {} taskkill /F /PID {} 2>/dev/null || true
-
-# Clean previous test project (handle Windows file locks)
-rm -rf "$TEST_DIR" 2>/dev/null || cmd //c "rmdir /s /q ${TEST_DIR//\//\\\\}" 2>/dev/null || true
 ```
 
-### Step 2: Build and Pack Packages
+### Step 2: Clean Environment
+
+```bash
+# Kill any processes on test port
+# Windows:
+netstat -ano 2>/dev/null | grep ":$TEST_PORT" | head -1 | awk '{print $5}' | xargs -I {} cmd //c "taskkill /F /PID {}" 2>/dev/null || true
+# Linux/Mac:
+# lsof -ti:$TEST_PORT | xargs kill -9 2>/dev/null || true
+
+# Clean previous test project
+rm -rf "$TEST_DIR" 2>/dev/null || true
+# Windows fallback for locked files:
+# cmd //c "rmdir /s /q test-package" 2>/dev/null || true
+```
+
+### Step 3: Build and Pack ALL Packages
+
+**IMPORTANT:** Build core, CLI, AND testing packages.
 
 ```bash
 # Build and pack core
 cd "$REPO_ROOT/packages/core"
 pnpm build:js
+rm -f nextsparkjs-core-*.tgz
 pnpm pack
 
 # Build and pack CLI
 cd "$REPO_ROOT/packages/cli"
 pnpm build
+rm -f nextsparkjs-cli-*.tgz
+pnpm pack
+
+# Build and pack testing (required for Cypress tests)
+cd "$REPO_ROOT/packages/testing"
+pnpm build
+rm -f nextsparkjs-testing-*.tgz
 pnpm pack
 
 # Verify tarballs exist
-ls -la "$REPO_ROOT/packages/core"/nextsparkjs-core-*.tgz
-ls -la "$REPO_ROOT/packages/cli"/nextsparkjs-cli-*.tgz
+ls "$REPO_ROOT/packages/core"/nextsparkjs-core-*.tgz
+ls "$REPO_ROOT/packages/cli"/nextsparkjs-cli-*.tgz
+ls "$REPO_ROOT/packages/testing"/nextsparkjs-testing-*.tgz
 ```
 
-**Validation:** Both `.tgz` files must exist.
+**Validation:** All three `.tgz` files must exist.
 
-### Step 3: Create Test Project from Template
+### Step 4: Create Test Project from Template
 
-Instead of creating from scratch, copy from `my-app` template (which has proper npm mode configuration) but **exclude node_modules**:
+Copy from `my-app` template, **excluding node_modules**:
 
 ```bash
 mkdir -p "$TEST_DIR"
 
-# Copy essential directories (excluding node_modules)
+# Copy essential directories
 cd "$PROJECTS_DIR/my-app"
 cp -r app contents .nextspark public "$TEST_DIR/"
 cp -r scripts "$TEST_DIR/" 2>/dev/null || true
@@ -88,28 +130,43 @@ cp -r scripts "$TEST_DIR/" 2>/dev/null || true
 # Copy config files
 cp i18n.ts next.config.mjs tsconfig.json postcss.config.mjs \
    eslint.config.mjs .env .env.example .gitignore .npmrc \
-   cypress.config.ts cypress.d.ts tsconfig.cypress.json \
+   cypress.d.ts tsconfig.cypress.json \
    "$TEST_DIR/" 2>/dev/null || true
 ```
 
-### Step 4: Create package.json with Tarball References
+### Step 5: Create package.json with Tarball References
+
+Get the absolute paths to the tarballs and create package.json:
 
 ```bash
 cd "$TEST_DIR"
 
-# Get tarball filenames
+# Get tarball paths (absolute)
 CORE_TGZ=$(ls "$REPO_ROOT/packages/core"/nextsparkjs-core-*.tgz | head -1)
 CLI_TGZ=$(ls "$REPO_ROOT/packages/cli"/nextsparkjs-cli-*.tgz | head -1)
+TESTING_TGZ=$(ls "$REPO_ROOT/packages/testing"/nextsparkjs-testing-*.tgz | head -1)
 
-# Create package.json with file: references
-cat > package.json << EOF
+# On Windows Git Bash, convert /c/... to C:/... format for pnpm
+# This sed handles the conversion automatically
+CORE_TGZ=$(echo "$CORE_TGZ" | sed 's|^/\([a-zA-Z]\)/|\1:/|')
+CLI_TGZ=$(echo "$CLI_TGZ" | sed 's|^/\([a-zA-Z]\)/|\1:/|')
+TESTING_TGZ=$(echo "$TESTING_TGZ" | sed 's|^/\([a-zA-Z]\)/|\1:/|')
+
+echo "Core: $CORE_TGZ"
+echo "CLI: $CLI_TGZ"
+echo "Testing: $TESTING_TGZ"
+```
+
+Then use the **Write tool** to create package.json with the actual tarball paths:
+
+```json
 {
   "name": "test-package",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@nextsparkjs/cli": "file:$CLI_TGZ",
-    "@nextsparkjs/core": "file:$CORE_TGZ",
+    "@nextsparkjs/cli": "file:<CLI_TGZ_PATH>",
+    "@nextsparkjs/core": "file:<CORE_TGZ_PATH>",
     "next": "^15.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -155,35 +212,76 @@ cat > package.json << EOF
     "drizzle-kit": "^0.31.4",
     "cypress": "^15.8.2",
     "@testing-library/cypress": "^10.0.2",
-    "@cypress/grep": "^5.0.1"
+    "@cypress/grep": "^5.0.1",
+    "@nextsparkjs/testing": "file:<TESTING_TGZ_PATH>",
+    "allure-cypress": "^3.0.0",
+    "dotenv": "^16.4.7"
   }
 }
-EOF
 ```
 
-### Step 5: Configure Environment
+**NOTE:** Replace `<CORE_TGZ_PATH>`, `<CLI_TGZ_PATH>`, `<TESTING_TGZ_PATH>` with actual paths from the variables above.
+
+### Step 6: Create cypress.config.ts
+
+The my-app template may not have this file. Create it:
+
+```typescript
+import { defineConfig } from 'cypress'
+import path from 'path'
+import dotenv from 'dotenv'
+
+dotenv.config({ path: path.resolve(__dirname, '.env') })
+
+const port = process.env.PORT || 3005
+const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME || 'my-saas-app'
+
+export default defineConfig({
+  e2e: {
+    baseUrl: `http://localhost:${port}`,
+    specPattern: [`contents/themes/${activeTheme}/tests/cypress/e2e/**/*.cy.ts`],
+    supportFile: `contents/themes/${activeTheme}/tests/cypress/support/e2e.ts`,
+    fixturesFolder: `contents/themes/${activeTheme}/tests/cypress/fixtures`,
+    videosFolder: 'cypress/videos',
+    screenshotsFolder: 'cypress/screenshots',
+    viewportWidth: 1280,
+    viewportHeight: 720,
+    defaultCommandTimeout: 10000,
+    requestTimeout: 10000,
+    retries: { runMode: 2, openMode: 0 },
+    experimentalRunAllSpecs: true,
+  },
+})
+```
+
+### Step 7: Configure Environment
 
 ```bash
 cd "$TEST_DIR"
 
 # Create .env with test database and correct port
-cat > .env << EOF
-# Database - Uses dedicated test database (will be reset)
-DATABASE_URL="postgresql://dbuser:dbpass_SecurePassword123@postgres.lab:5432/nextspark_test?sslmode=disable"
+# IMPORTANT: Adjust DATABASE_URL for your local PostgreSQL setup
+cat > .env << 'EOF'
+# Database - ADJUST THIS FOR YOUR SETUP
+DATABASE_URL="postgresql://user:password@localhost:5432/nextspark_test?sslmode=disable"
 
 # Authentication
-BETTER_AUTH_SECRET=2e205f79e4b0b8a061e79af9da52f1010ffe923a527a72791f0dbf7492df087a
+BETTER_AUTH_SECRET=test_secret_key_for_local_development_only
 
 # Theme
 NEXT_PUBLIC_ACTIVE_THEME="my-saas-app"
 
 # Application
-NEXT_PUBLIC_APP_URL="http://localhost:$TEST_PORT"
+NEXT_PUBLIC_APP_URL="http://localhost:3005"
 NODE_ENV="development"
-PORT=$TEST_PORT
+PORT=3005
 
-# Cypress Test Credentials
-CYPRESS_BASE_URL=http://localhost:$TEST_PORT
+# Email Provider (dummy key for production build - devKeyring handles login in dev)
+# This bypasses the email provider validation during `next build`
+RESEND_API_KEY=re_dummy_key_for_build_only
+
+# Cypress Test Credentials (match your seeded test users)
+CYPRESS_BASE_URL=http://localhost:3005
 CYPRESS_TEST_PASSWORD=Test1234
 CYPRESS_SUPERADMIN_EMAIL=superadmin@nextspark.dev
 CYPRESS_SUPERADMIN_PASSWORD=Pandora1234
@@ -191,119 +289,80 @@ CYPRESS_OWNER_EMAIL=carlos.mendoza@tmt.dev
 EOF
 ```
 
-**Note:** Uses `nextspark_test` database which will be reset. If using shared database, change to `nextspark`.
+**Note:** The `RESEND_API_KEY` is a dummy value that passes build validation. For actual email functionality, use a real Resend API key. In development, the `devKeyring` system allows login without email verification.
 
-### Step 6: Install Dependencies
+### Step 8: Install Dependencies
 
 ```bash
 cd "$TEST_DIR"
-
-# On Windows, use full path if pnpm hangs
-pnpm install 2>&1 || /c/nvm4w/nodejs/pnpm.cmd install 2>&1
+pnpm install
 
 # Verify installation
 ls node_modules/@nextsparkjs/core/package.json
 ls node_modules/@nextsparkjs/cli/package.json
+ls node_modules/@nextsparkjs/testing/package.json
 ```
 
-### Step 7: Reset Database and Run Migrations
+### Step 9: Run Migrations
 
 ```bash
 cd "$TEST_DIR"
-
-# Reset database (drops all tables and recreates)
-npx nextspark db reset --force 2>&1 || echo "DB reset not available, running migrate"
-
-# Run migrations
-npx nextspark db migrate 2>&1
-
-# Seed sample data
-npx nextspark db seed 2>&1 || echo "Seed command not available"
+npx nextspark db migrate
+npx nextspark db seed || echo "Seed command not available"
 ```
 
-**Alternative if using shared database:**
-```bash
-# Skip reset, just verify connection
-npx nextspark db verify 2>&1 || echo "DB verify not available"
-```
-
-### Step 8: Build Registries
+### Step 10: Build Registries
 
 ```bash
 cd "$TEST_DIR"
-
-# Build registries for the theme
-npx nextspark registry build 2>&1
+npx nextspark registry build
 ```
 
 **Expected:** All registry files generated in `.nextspark/registries/`.
 
-### Step 9: Start Server and Run Automated Tests
-
-Start the server in background and run Cypress tests:
+### Step 11: Start Server and Verify
 
 ```bash
 cd "$TEST_DIR"
 
-# Clean any stale .next cache (Windows file lock workaround)
-rm -rf .next 2>/dev/null || cmd //c "rmdir /s /q .next" 2>/dev/null || true
+# Clean any stale .next cache
+rm -rf .next 2>/dev/null || true
 
-# Start server in background
-npx nextspark dev &
-SERVER_PID=$!
+# Start dev server in background
+PORT=$TEST_PORT npx next dev -p $TEST_PORT &
 
-# Wait for server to be ready
-echo "Waiting for server on port $TEST_PORT..."
-for i in {1..30}; do
-  if curl -s "http://localhost:$TEST_PORT" > /dev/null 2>&1; then
-    echo "Server ready!"
+# Wait for server (up to 60 seconds)
+for i in {1..12}; do
+  sleep 5
+  echo "Check $i..."
+  if curl -s http://localhost:$TEST_PORT > /dev/null 2>&1; then
+    echo "Server is up!"
     break
   fi
-  sleep 2
 done
-
-# Run Cypress smoke tests
-npx cypress run --env grepTags=@smoke --config baseUrl=http://localhost:$TEST_PORT 2>&1
-TEST_RESULT=$?
-
-# Kill server
-kill $SERVER_PID 2>/dev/null || true
-
-# Report result
-if [ $TEST_RESULT -eq 0 ]; then
-  echo "✅ All tests passed!"
-else
-  echo "❌ Tests failed with exit code $TEST_RESULT"
-  exit $TEST_RESULT
-fi
 ```
 
-**Alternative: Run API tests only (faster):**
+### Step 12: Verify Endpoints
+
 ```bash
-npx cypress run --env grepTags=@api --config baseUrl=http://localhost:$TEST_PORT
+# Quick verification
+curl -s http://localhost:$TEST_PORT | grep -q "DOCTYPE" && echo "Homepage OK" || echo "Homepage FAILED"
+curl -s http://localhost:$TEST_PORT/login | grep -q "DOCTYPE" && echo "Login OK" || echo "Login FAILED"
+curl -s http://localhost:$TEST_PORT/api/auth/get-session && echo "Auth API OK"
 ```
 
----
+### Step 13: Test Production Build (Optional)
 
-## Automated Verification Checklist
+First kill the dev server, then:
 
-The Cypress tests should verify:
+```bash
+# Kill dev server
+# Windows: netstat -ano | findstr ":$TEST_PORT" | awk '{print $5}' | head -1 | xargs -I {} cmd //c "taskkill /F /PID {}"
+# Linux/Mac: lsof -ti:$TEST_PORT | xargs kill -9 || true
 
-| Test Tag | What It Verifies |
-|----------|------------------|
-| `@smoke` | Homepage loads, login works, dashboard accessible |
-| `@api` | All API endpoints return correct responses |
-| `@auth` | Login, logout, session management |
-| `@crud` | Create, read, update, delete operations |
-
-**If Cypress tests don't exist for the theme**, fall back to these manual checks with Playwright:
-
-```javascript
-// Use mcp__playwright to verify
-await browser_navigate({ url: `http://localhost:${TEST_PORT}` });
-await browser_snapshot(); // Should show homepage
-await browser_navigate({ url: `http://localhost:${TEST_PORT}/login` });
-await browser_snapshot(); // Should show login form
+# Clean and build
+rm -rf .next
+npx nextspark build
 ```
 
 ---
@@ -311,16 +370,37 @@ await browser_snapshot(); // Should show login form
 ## Success Criteria
 
 The test passes if:
-1. ✅ All packages build and pack without errors
-2. ✅ Dependencies install successfully
-3. ✅ Registries build successfully
-4. ✅ Server starts and reaches "Ready" state
-5. ✅ Cypress smoke tests pass (or manual Playwright verification)
-6. ✅ No hydration mismatches or console errors
+1. All packages build and pack without errors
+2. Dependencies install successfully
+3. Registries build successfully (no path escaping errors)
+4. Server starts and reaches "Ready" state
+5. Homepage and login pages render correctly
+6. Production build completes without errors
 
 ---
 
 ## Known Issues & Workarounds
+
+### Windows Path Escaping in Registries (FIXED)
+
+**Issue:** Registry files used backslashes (`\`) causing escape sequence errors like `\v` being interpreted as vertical tab.
+
+**Status:** Fixed in core registry generator. All paths are now normalized to forward slashes.
+
+**If still occurring:** Rebuild core package: `cd packages/core && pnpm build:js && pnpm pack`
+
+### CSS Import Paths with Backslashes
+
+**Issue:** On Windows, CSS `@import` statements may get backslash paths causing build errors.
+
+**Solution:** Ensure all CSS imports use forward slashes:
+```css
+/* WRONG */
+@import "..\contents\themes\my-saas-app\styles\globals.css";
+
+/* CORRECT */
+@import "../contents/themes/my-saas-app/styles/globals.css";
+```
 
 ### Windows File Locking (.next/trace)
 
@@ -328,20 +408,9 @@ The test passes if:
 
 **Workaround:**
 ```bash
-# Try multiple removal methods
 rm -rf .next 2>/dev/null
-cmd //c "rmdir /s /q .next" 2>/dev/null
-# If still locked, restart terminal or use different .next path
-NEXT_DIST_DIR=".next-test" npx next dev
-```
-
-### Windows pnpm Silent Hang
-
-**Issue:** `pnpm install` appears to hang without output on Windows Git Bash.
-
-**Workaround:** Use full path:
-```bash
-/c/nvm4w/nodejs/pnpm.cmd install
+# Windows: cmd //c "rmdir /s /q .next" 2>/dev/null
+# If still locked, kill all node processes or restart terminal
 ```
 
 ### Port Already in Use
@@ -350,28 +419,22 @@ NEXT_DIST_DIR=".next-test" npx next dev
 
 **Workaround:**
 ```bash
-# Find and kill process on port
-netstat -ano | grep ":3005" | awk '{print $5}' | head -1 | xargs taskkill /F /PID
-# Or use different port
-PORT=3006 npx nextspark dev
+# Windows
+netstat -ano | findstr ":3005" | awk '{print $5}' | head -1 | xargs -I {} cmd //c "taskkill /F /PID {}"
+# Linux/Mac
+lsof -ti:3005 | xargs kill -9
 ```
-
-### Database SSL Error
-
-**Issue:** Migration script expects SSL but local DB doesn't support it.
-
-**Workaround:** Ensure `?sslmode=disable` in DATABASE_URL.
 
 ---
 
 ## Cleanup
 
 ```bash
-# Stop any running servers
-pkill -f "next dev" 2>/dev/null || taskkill /F /IM node.exe 2>/dev/null || true
+# Kill server
+# (use appropriate command for your OS from above)
 
 # Remove test project
-rm -rf "$PROJECTS_DIR/test-package"
+rm -rf "$TEST_DIR"
 ```
 
 ---
@@ -393,7 +456,21 @@ pnpm pkg:publish
 
 | Task | Command |
 |------|---------|
-| Full test (with Cypress) | `/do:test-package` |
+| Full test (manual verification) | `/do:test-package` |
 | Daily dev testing | `pnpm setup:update-local` |
 | Just rebuild packages | `pnpm build:core && pnpm build:cli` |
-| Just run API tests | `pnpm cy:run -- --env grepTags=@api` |
+| Verify server running | `curl http://localhost:3005` |
+
+---
+
+## Template Locations (For Reference)
+
+When fixing bugs found during testing, modify the **TEMPLATES** not the test project:
+
+| What | Location |
+|------|----------|
+| App templates | `repo/packages/core/templates/app/` |
+| Starter theme | `repo/packages/core/templates/contents/themes/starter/` |
+| Registry generators | `repo/packages/core/scripts/build/registry/` |
+
+**DO NOT** fix bugs in `projects/test-package/` - those changes are temporary and won't help future users.

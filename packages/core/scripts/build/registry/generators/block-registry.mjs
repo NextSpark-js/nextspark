@@ -28,7 +28,7 @@ export function generateBlockRegistry(blocks, config) {
  */
 
 import React from 'react'
-import type { BlockConfig } from '${convertCorePath('@/core/types/blocks', outputFilePath, config)}'
+import type { BlockConfig } from '${convertCorePath('@/core/types', outputFilePath, config)}'
 
 export const BLOCK_REGISTRY: Record<string, BlockConfig> = {}
 
@@ -109,7 +109,7 @@ export const BLOCK_METADATA = {
  */
 
 import React from 'react'
-import type { BlockConfig, BlockCategory } from '${convertCorePath('@/core/types/blocks', outputFilePath, config)}'
+import type { BlockConfig, BlockCategory } from '${convertCorePath('@/core/types', outputFilePath, config)}'
 
 ${fieldImports}
 
