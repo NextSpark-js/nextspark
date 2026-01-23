@@ -273,6 +273,9 @@
       "seoMeta": "SEO & Meta",
       "seoMetaDescription": "Search engine optimization settings"
     },
+    "preview": {
+      "loading": "Loading preview..."
+    },
     "layout": {
       "empty": "No blocks added yet"
     },

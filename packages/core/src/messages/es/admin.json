@@ -273,6 +273,9 @@
       "seoMeta": "SEO y Meta",
       "seoMetaDescription": "Configuración para motores de búsqueda"
     },
+    "preview": {
+      "loading": "Cargando vista previa..."
+    },
     "layout": {
       "empty": "Aún no hay bloques agregados"
     },

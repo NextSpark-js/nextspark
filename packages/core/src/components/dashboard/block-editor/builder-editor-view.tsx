@@ -18,6 +18,7 @@ import { sel } from '../../../lib/test'
 import { BlockPicker } from './block-picker'
 import { BlockCanvas } from './block-canvas'
 import { BlockPreviewCanvas } from './block-preview-canvas'
+import { IframePreview } from './iframe-preview'
 import { BlockSettingsPanel } from './block-settings-panel'
 import { PageSettingsPanel, type PageSettings } from './page-settings-panel'
 import { EntityFieldsSidebar } from './entity-fields-sidebar'
@@ -718,26 +719,40 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
               data-cy={sel('blockEditor.previewCanvas.container')}
             >
               {/* Preview with responsive viewport */}
-              <div
-                className={cn(
-                  'min-h-full bg-background transition-all duration-300',
-                  viewportMode === 'mobile' && 'max-w-[375px] mx-auto shadow-xl border-x'
-                )}
-                data-cy={viewportMode === 'mobile'
-                  ? sel('blockEditor.previewCanvas.viewportMobile')
-                  : sel('blockEditor.previewCanvas.viewportDesktop')
-                }
-              >
-                <BlockPreviewCanvas
-                  blocks={blocks}
-                  selectedBlockId={selectedBlockId}
-                  onSelectBlock={setSelectedBlockId}
-                  onMoveUp={handleMoveBlockUp}
-                  onMoveDown={handleMoveBlockDown}
-                  onDuplicate={handleDuplicateBlock}
-                  onRemove={handleRemoveBlock}
-                />
-              </div>
+              {viewportMode === 'mobile' ? (
+                /* Mobile: Use iframe for real viewport simulation */
+                <div
+                  className="h-full py-4"
+                  data-cy={sel('blockEditor.previewCanvas.viewportMobile')}
+                >
+                  <IframePreview
+                    blocks={blocks}
+                    selectedBlockId={selectedBlockId}
+                    onSelectBlock={setSelectedBlockId}
+                    width={MOBILE_VIEWPORT_WIDTH}
+                    onMoveUp={handleMoveBlockUp}
+                    onMoveDown={handleMoveBlockDown}
+                    onDuplicate={handleDuplicateBlock}
+                    onRemove={handleRemoveBlock}
+                  />
+                </div>
+              ) : (
+                /* Desktop: Use direct canvas for better interactivity */
+                <div
+                  className="min-h-full bg-background transition-all duration-300"
+                  data-cy={sel('blockEditor.previewCanvas.viewportDesktop')}
+                >
+                  <BlockPreviewCanvas
+                    blocks={blocks}
+                    selectedBlockId={selectedBlockId}
+                    onSelectBlock={setSelectedBlockId}
+                    onMoveUp={handleMoveBlockUp}
+                    onMoveDown={handleMoveBlockDown}
+                    onDuplicate={handleDuplicateBlock}
+                    onRemove={handleRemoveBlock}
+                  />
+                </div>
+              )}
             </div>
           ) : (
             <ConfigPanel
