@@ -153,6 +153,12 @@ export const BLOCK_EDITOR_SELECTORS = {
     // Viewport modes
     viewportMobile: 'preview-canvas-mobile',
     viewportDesktop: 'preview-canvas-desktop',
+    // Iframe preview (for mobile - real viewport simulation)
+    iframePreview: {
+      container: 'preview-iframe-container',
+      loading: 'preview-iframe-loading',
+      frame: 'preview-iframe-frame',
+    },
     // Blocks
     block: 'preview-block-{id}',
     blockWrapper: 'preview-block-wrapper-{id}',

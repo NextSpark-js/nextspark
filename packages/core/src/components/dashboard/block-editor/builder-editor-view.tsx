@@ -713,48 +713,56 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
 
         {/* Center - Preview or Settings */}
         <div className="flex-1 overflow-hidden">
-          {viewMode === 'preview' ? (
+          {/* Preview Mode - Both viewports are pre-rendered for instant switching */}
+          <div
+            className={cn(
+              "h-full overflow-y-auto bg-muted/30",
+              viewMode !== 'preview' && "hidden"
+            )}
+            data-cy={sel('blockEditor.previewCanvas.container')}
+          >
+            {/* Mobile viewport - Always rendered (hidden when desktop active) */}
             <div
-              className="h-full overflow-y-auto bg-muted/30"
-              data-cy={sel('blockEditor.previewCanvas.container')}
-            >
-              {/* Preview with responsive viewport */}
-              {viewportMode === 'mobile' ? (
-                /* Mobile: Use iframe for real viewport simulation */
-                <div
-                  className="h-full py-4"
-                  data-cy={sel('blockEditor.previewCanvas.viewportMobile')}
-                >
-                  <IframePreview
-                    blocks={blocks}
-                    selectedBlockId={selectedBlockId}
-                    onSelectBlock={setSelectedBlockId}
-                    width={MOBILE_VIEWPORT_WIDTH}
-                    onMoveUp={handleMoveBlockUp}
-                    onMoveDown={handleMoveBlockDown}
-                    onDuplicate={handleDuplicateBlock}
-                    onRemove={handleRemoveBlock}
-                  />
-                </div>
-              ) : (
-                /* Desktop: Use direct canvas for better interactivity */
-                <div
-                  className="min-h-full bg-background transition-all duration-300"
-                  data-cy={sel('blockEditor.previewCanvas.viewportDesktop')}
-                >
-                  <BlockPreviewCanvas
-                    blocks={blocks}
-                    selectedBlockId={selectedBlockId}
-                    onSelectBlock={setSelectedBlockId}
-                    onMoveUp={handleMoveBlockUp}
-                    onMoveDown={handleMoveBlockDown}
-                    onDuplicate={handleDuplicateBlock}
-                    onRemove={handleRemoveBlock}
-                  />
-                </div>
+              className={cn(
+                "h-full py-4",
+                viewportMode !== 'mobile' && "hidden"
               )}
+              data-cy={sel('blockEditor.previewCanvas.viewportMobile')}
+            >
+              <IframePreview
+                blocks={blocks}
+                selectedBlockId={selectedBlockId}
+                onSelectBlock={setSelectedBlockId}
+                width={MOBILE_VIEWPORT_WIDTH}
+                onMoveUp={handleMoveBlockUp}
+                onMoveDown={handleMoveBlockDown}
+                onDuplicate={handleDuplicateBlock}
+                onRemove={handleRemoveBlock}
+              />
             </div>
-          ) : (
+
+            {/* Desktop viewport - Always rendered (hidden when mobile active) */}
+            <div
+              className={cn(
+                "min-h-full bg-background",
+                viewportMode !== 'desktop' && "hidden"
+              )}
+              data-cy={sel('blockEditor.previewCanvas.viewportDesktop')}
+            >
+              <BlockPreviewCanvas
+                blocks={blocks}
+                selectedBlockId={selectedBlockId}
+                onSelectBlock={setSelectedBlockId}
+                onMoveUp={handleMoveBlockUp}
+                onMoveDown={handleMoveBlockDown}
+                onDuplicate={handleDuplicateBlock}
+                onRemove={handleRemoveBlock}
+              />
+            </div>
+          </div>
+
+          {/* Settings Mode */}
+          <div className={cn(viewMode !== 'settings' && "hidden")}>
             <ConfigPanel
               entityConfig={entityConfig}
               entityFields={entityFields}
@@ -762,7 +770,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
               pageSettings={pageSettings}
               onPageSettingsChange={setPageSettings}
             />
-          )}
+          </div>
         </div>
 
         {/* Right Sidebar - Block Settings */}
