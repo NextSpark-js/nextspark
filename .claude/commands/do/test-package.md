@@ -31,6 +31,16 @@ Read `.claude/skills/npm-development-workflow/SKILL.md` for context on dual-mode
 
 ---
 
+## Prerequisites
+
+Before running this command, ensure:
+1. **PostgreSQL database** is running and accessible
+2. **Node.js 18+** is installed
+3. **pnpm** is installed and working
+4. **CLI package** is built and packed (in addition to core)
+
+---
+
 ## Execution Steps
 
 Execute these steps in order. **Stop and report if any step fails.**
@@ -59,49 +69,112 @@ cd "$PROJECTS_DIR"
 rm -rf test-package
 ```
 
-### Step 2: Build Core Package
+### Step 2: Build and Pack Packages
+
+Build and pack both core and CLI packages:
 
 ```bash
+# Build and pack core
 cd "$REPO_ROOT/packages/core"
 pnpm build:js
-```
+pnpm pack
 
-**Validation:** Build completes without errors. If build fails, stop here.
-
-### Step 3: Pack Core Package
-
-```bash
-cd "$REPO_ROOT/packages/core"
+# Build and pack CLI (required for nextspark command)
+cd "$REPO_ROOT/packages/cli"
+pnpm build
 pnpm pack
 ```
 
-**Output:** Creates `nextsparkjs-core-X.Y.Z.tgz` file in `packages/core/`.
+**Validation:** Both builds complete without errors. `.tgz` files created in each package directory.
 
-### Step 4: Create Fresh Next.js Project
+### Step 3: Create Fresh Next.js Project
 
+**Option A: Using create-next-app (may timeout on some systems)**
 ```bash
 cd "$PROJECTS_DIR"
-npx create-next-app@latest test-package --typescript --tailwind --eslint --app --src-dir --import-alias "@/*" --use-pnpm --yes
+npx create-next-app@latest test-package --typescript --tailwind --eslint --app --src-dir --import-alias "@/*" --use-pnpm --turbopack --yes
 ```
 
-### Step 5: Install Core Tarball
+**Option B: Manual creation (if Option A fails)**
+```bash
+cd "$PROJECTS_DIR"
+mkdir test-package && cd test-package
+
+# Create package.json
+cat > package.json << 'EOF'
+{
+  "name": "test-package",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --turbopack -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "15.1.6",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.1.6",
+    "typescript": "^5"
+  }
+}
+EOF
+
+# Create minimal structure
+mkdir -p src/app
+# ... (add tsconfig.json, next.config.ts, etc.)
+```
+
+**Note:** On Windows with Git Bash, `create-next-app` may appear to hang. Use `npm install` with full path (`/c/nvm4w/nodejs/npm.cmd install`) if standard `npm`/`pnpm` commands don't produce output.
+
+### Step 4: Install Core and CLI Tarballs
 
 ```bash
 cd "$PROJECTS_DIR/test-package"
 
-# Find the tarball version dynamically
-TARBALL=$(ls "$REPO_ROOT/packages/core"/nextsparkjs-core-*.tgz | head -1)
-pnpm add "$TARBALL"
+# Install both core and CLI packages
+CORE_TARBALL=$(ls "$REPO_ROOT/packages/core"/nextsparkjs-core-*.tgz | head -1)
+CLI_TARBALL=$(ls "$REPO_ROOT/packages/cli"/nextsparkjs-cli-*.tgz | head -1)
+
+pnpm add "$CORE_TARBALL" "$CLI_TARBALL"
 ```
 
-### Step 6: Run CLI Init
+**IMPORTANT:** The CLI package is separate from core and must be installed for the `nextspark` command to work.
+
+### Step 5: Run CLI Init
 
 ```bash
 cd "$PROJECTS_DIR/test-package"
-npx nextspark init
+npx nextspark init --registries-only
 ```
 
-**Expected:** CLI copies structure, theme, configs to the project.
+**Note:** The full wizard (`npx nextspark init`) requires interactive input. Use `--registries-only` for non-interactive testing, then manually configure or copy files from apps/dev.
+
+**For full init with wizard:**
+```bash
+npx nextspark init --quick --yes
+# Answer prompts for project name, etc.
+```
+
+### Step 6: Build Registries
+
+After init, rebuild registries to ensure all theme/entity data is generated:
+
+```bash
+cd "$PROJECTS_DIR/test-package"
+npx nextspark registry build
+```
+
+**Expected output:** Registry files created in `.nextspark/registries/`.
 
 ### Step 7: Copy and Configure Environment
 
@@ -109,28 +182,38 @@ npx nextspark init
 cd "$PROJECTS_DIR/test-package"
 cp "$REPO_ROOT/apps/dev/.env" .env
 
-# Ensure PORT is set to 3000 for clean test project
-# (avoids conflict with monorepo dev server on 5173)
-# Portable sed: works on both Linux and macOS
-if grep -q '^PORT=' .env 2>/dev/null; then
-  sed -i.bak 's/^PORT=.*/PORT=3000/' .env && rm -f .env.bak
-else
-  echo "PORT=3000" >> .env
-fi
+# Add/update PORT for test project
+echo "PORT=3000" >> .env
 ```
 
-**Important:** Verify DATABASE_URL points to valid database.
+**Important:**
+- Verify `DATABASE_URL` points to a valid, accessible database
+- If database uses SSL, ensure SSL mode is correct in connection string
 
 ### Step 8: Run Database Migrations
 
 ```bash
 cd "$PROJECTS_DIR/test-package"
-pnpm db:migrate
+npx nextspark db migrate
 ```
 
-**Validation:** All migrations run successfully, tables created.
+**Known issue:** The migration script hardcodes SSL settings. If your database doesn't support SSL, migrations will fail with "The server does not support SSL connections".
 
-### Step 9: Start Development Server
+**Workaround:** If using shared database with monorepo (same DATABASE_URL), migrations are already applied and this step can be skipped.
+
+### Step 9: Configure next.config for NPM Mode
+
+The `next.config.mjs` from monorepo has paths specific to monorepo structure. Update for NPM mode:
+
+```bash
+# Fix i18n config path (points to monorepo location by default)
+# Change from:
+#   createNextIntlPlugin('../../packages/core/src/i18n.ts')
+# To:
+#   createNextIntlPlugin('./node_modules/@nextsparkjs/core/dist/i18n.js')
+```
+
+### Step 10: Start Development Server
 
 ```bash
 cd "$PROJECTS_DIR/test-package"
@@ -139,7 +222,7 @@ pnpm dev
 
 **Expected:** Server starts on http://localhost:3000
 
-### Step 10: Manual Verification Checklist
+### Step 11: Manual Verification Checklist
 
 Open browser at http://localhost:3000 and verify:
 
@@ -157,19 +240,31 @@ Open browser at http://localhost:3000 and verify:
 
 ---
 
-## Quick One-Liner (For Experienced Users)
+## Known Issues (NPM Mode)
 
-```bash
-REPO_ROOT="$(git rev-parse --show-toplevel)" && \
-PROJECTS_DIR="$(dirname "$REPO_ROOT")/projects" && \
-mkdir -p "$PROJECTS_DIR" && \
-cd "$PROJECTS_DIR" && rm -rf test-package && \
-cd "$REPO_ROOT/packages/core" && pnpm build:js && pnpm pack && \
-cd "$PROJECTS_DIR" && npx create-next-app@latest test-package --typescript --tailwind --eslint --app --src-dir --import-alias "@/*" --use-pnpm --yes && \
-cd test-package && pnpm add "$REPO_ROOT/packages/core"/nextsparkjs-core-*.tgz && \
-npx nextspark init && cp "$REPO_ROOT/apps/dev/.env" .env && \
-pnpm db:migrate && pnpm dev
-```
+### 1. CLI is Separate Package
+**Issue:** The `nextspark` CLI command comes from `@nextsparkjs/cli`, not `@nextsparkjs/core`.
+**Solution:** Install both packages: `pnpm add @nextsparkjs/core @nextsparkjs/cli`
+
+### 2. Theme Dependencies on Plugins
+**Issue:** Default theme imports from langchain plugin (`@/plugins/langchain/...`).
+**Solution:** Install required plugins or use a theme without plugin dependencies.
+
+### 3. Migration Script SSL
+**Issue:** `run-migrations.mjs` hardcodes `ssl: { require: true }` which fails on local databases without SSL.
+**Solution:** Use shared database with existing migrations, or modify the script locally.
+
+### 4. Nested node_modules in Theme
+**Issue:** Copying theme from monorepo may include nested `node_modules/` with monorepo-specific `@nextsparkjs/core`.
+**Solution:** Remove nested `node_modules` from `contents/themes/*/node_modules/`.
+
+### 5. next.config Paths
+**Issue:** `next.config.mjs` references monorepo paths like `../../packages/core/src/i18n.ts`.
+**Solution:** Update paths to use `node_modules/@nextsparkjs/core/dist/...`.
+
+### 6. Windows Git Bash
+**Issue:** Some npm/pnpm commands appear to hang without output on Windows.
+**Solution:** Use full path to npm/npx: `/c/nvm4w/nodejs/npm.cmd install`
 
 ---
 
@@ -177,53 +272,45 @@ pnpm db:migrate && pnpm dev
 
 | Issue | Solution |
 |-------|----------|
-| `nextspark: command not found` | Ensure core package installed: `pnpm list @nextsparkjs/core` |
-| `create-next-app` fails | Check Node.js version (requires 18+), check internet connection |
-| Tarball not found | Run Step 3 again, check `packages/core/` for `.tgz` file |
-| `nextspark init` fails | Verify CLI is bundled in core package, check CLI build |
-| Migration fails | Check DATABASE_URL in .env, ensure DB server running |
-| `Module not found` | Run `pnpm install` again, check tarball version matches |
-| Port already in use | Change PORT in .env or kill existing process on 3000 |
-| Login fails | Run migrations again, check test users exist in DB |
-| Database connection refused | Start PostgreSQL server, verify connection string |
+| `nextspark: command not found` | Install CLI package: `pnpm add @nextsparkjs/cli` |
+| `create-next-app` hangs | Use manual project creation (Option B in Step 3) |
+| Tarball not found | Run pack commands in Step 2 |
+| `nextspark init` prompts | Use `--registries-only` flag for non-interactive |
+| Migration SSL error | Skip if using shared DB, or modify `run-migrations.mjs` |
+| `Module not found: @nextsparkjs/registries` | Run `nextspark registry build` |
+| `Module not found: @/plugins/...` | Install required plugin or remove plugin-dependent templates |
+| Port already in use | Use different port: `next dev -p 3001` |
+| `i18n config not found` | Update next.config.mjs i18n path for NPM mode |
 
 ---
 
 ## Success Criteria
 
 The test passes if:
-1. All 10 steps complete without errors
-2. Dev server starts and serves pages at http://localhost:3000
+1. All steps complete without unrecoverable errors
+2. Dev server starts and serves pages
 3. Authentication flow works (login/logout)
-4. CRUD operations function correctly:
-   - Can create a new record
-   - Can view record details
-   - Can edit and save changes
-   - Can delete a record
-   - List shows pagination
+4. CRUD operations function correctly
 5. No hydration mismatches or console errors
 
 ---
 
 ## After Testing
 
-If test passes, the package is ready for publishing. Follow the npm-development-workflow:
+If test passes, the package is ready for publishing:
 
 ```bash
 cd "$REPO_ROOT"
-# See /do:npm-version and /do:npm-publish for complete details
-pnpm pkg:version -- patch  # or minor/major based on changes
-pnpm pkg:pack              # Create .tgz files
-pnpm pkg:publish           # Publish to npm registry
+pnpm pkg:version -- patch  # or minor/major
+pnpm pkg:pack
+pnpm pkg:publish
 ```
 
-If test fails, fix issues in the repo and re-run `/do:test-package`.
+If test fails, document issues and fix in the repo before re-running.
 
 ---
 
 ## Cleanup
-
-To remove the test project after validation:
 
 ```bash
 cd "$PROJECTS_DIR"
