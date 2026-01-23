@@ -12,6 +12,7 @@
    IMPORTS
    ============================================= */
 @import "tailwindcss";
+@plugin "@tailwindcss/container-queries";
 @import "@nextsparkjs/core/styles/ui.css";
 @import "@nextsparkjs/core/styles/utilities.css";
 @import "@nextsparkjs/core/styles/docs.css";

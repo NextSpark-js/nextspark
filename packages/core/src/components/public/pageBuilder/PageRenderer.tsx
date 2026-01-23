@@ -89,7 +89,12 @@ export function PageRenderer({ page }: PageRendererProps) {
   return (
     <div className="min-h-screen" data-page-id={page.id} data-page-slug={page.slug}>
       {blocks.map((block) => (
-        <div key={block.id} data-block-id={block.id} data-block-slug={block.blockSlug}>
+        <div
+          key={block.id}
+          className="@container w-full"
+          data-block-id={block.id}
+          data-block-slug={block.blockSlug}
+        >
           <BlockRenderer block={block} />
         </div>
       ))}

@@ -83,13 +83,13 @@ export function HeroBlock({
         alignmentClasses[alignment]
       )}>
         {title && (
-          <h1 className="mb-6 text-5xl font-bold leading-tight md:text-6xl lg:text-7xl">
+          <h1 className="mb-6 text-5xl font-bold leading-tight @md:text-6xl @lg:text-7xl">
             {title}
           </h1>
         )}
 
         {displayContent && (
-          <p className="mb-8 text-xl md:text-2xl opacity-90 max-w-2xl">
+          <p className="mb-8 text-xl @md:text-2xl opacity-90 max-w-2xl">
             {displayContent}
           </p>
         )}

@@ -71,13 +71,13 @@ export function HeroBlock({
       {/* Content */}
       <div className="container relative z-10 mx-auto max-w-4xl text-center">
         {title && (
-          <h1 className="mb-6 text-5xl font-bold leading-tight md:text-6xl lg:text-7xl">
+          <h1 className="mb-6 text-5xl font-bold leading-tight @md:text-6xl @lg:text-7xl">
             {title}
           </h1>
         )}
 
         {displayContent && (
-          <p className="mb-8 text-xl md:text-2xl opacity-90">
+          <p className="mb-8 text-xl @md:text-2xl opacity-90">
             {displayContent}
           </p>
         )}

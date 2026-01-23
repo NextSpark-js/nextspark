@@ -44,7 +44,7 @@ export function TextContentBlock({
 
   // Build section classes with background and custom className
   const sectionClasses = buildSectionClasses(
-    'py-16 px-4 md:py-24',
+    'py-16 px-4 @md:py-24',
     { backgroundColor, className }
   )
 
@@ -58,7 +58,7 @@ export function TextContentBlock({
             maxWidthClasses[maxWidth],
             alignmentClasses[alignment]
           )}>
-            <h2 className="text-3xl font-bold md:text-4xl">
+            <h2 className="text-3xl font-bold @md:text-4xl">
               {title}
             </h2>
           </div>

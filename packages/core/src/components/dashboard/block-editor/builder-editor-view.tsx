@@ -18,13 +18,12 @@ import { sel } from '../../../lib/test'
 import { BlockPicker } from './block-picker'
 import { BlockCanvas } from './block-canvas'
 import { BlockPreviewCanvas } from './block-preview-canvas'
-import { IframePreview } from './iframe-preview'
 import { BlockSettingsPanel } from './block-settings-panel'
 import { PageSettingsPanel, type PageSettings } from './page-settings-panel'
 import { EntityFieldsSidebar } from './entity-fields-sidebar'
 import { StatusSelector, type StatusOption } from './status-selector'
 import { BlockService } from '../../../lib/services/block.service'
-import { ViewportToggle, type ViewportMode, MOBILE_VIEWPORT_WIDTH } from './viewport-toggle'
+import { ViewportToggle, type ViewportMode } from './viewport-toggle'
 import { ConfigPanel } from './config-panel'
 import { useSidebar } from '../../../contexts/sidebar-context'
 import { cn } from '../../../lib/utils'
@@ -92,16 +91,6 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('preview')
   const [viewportMode, setViewportMode] = useState<ViewportMode>('desktop')
-  // Lazy loading: track if mobile has ever been activated (iframe only loads on first use)
-  const [hasActivatedMobile, setHasActivatedMobile] = useState(false)
-
-  // Track first mobile activation for lazy loading
-  useEffect(() => {
-    if (viewportMode === 'mobile' && !hasActivatedMobile) {
-      setHasActivatedMobile(true)
-    }
-  }, [viewportMode, hasActivatedMobile])
-
   const [leftSidebarMode, setLeftSidebarMode] = useState<LeftSidebarMode>('blocks')
   const [pageSettings, setPageSettings] = useState<PageSettings>({
     seo: {},
@@ -723,7 +712,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
 
         {/* Center - Preview or Settings */}
         <div className="flex-1 overflow-hidden">
-          {/* Preview Mode - Conditional rendering for performance (only one viewport mounted at a time) */}
+          {/* Preview Mode - Single canvas with variable width for viewport simulation */}
           <div
             className={cn(
               "h-full overflow-y-auto bg-muted/30",
@@ -731,29 +720,16 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
             )}
             data-cy={sel('blockEditor.previewCanvas.container')}
           >
-            {viewportMode === 'mobile' ? (
-              /* Mobile viewport - Only rendered when active (lazy loaded on first use) */
-              <div
-                className="h-full py-4"
-                data-cy={sel('blockEditor.previewCanvas.viewportMobile')}
-              >
-                <IframePreview
-                  blocks={blocks}
-                  selectedBlockId={selectedBlockId}
-                  onSelectBlock={setSelectedBlockId}
-                  width={MOBILE_VIEWPORT_WIDTH}
-                  onMoveUp={handleMoveBlockUp}
-                  onMoveDown={handleMoveBlockDown}
-                  onDuplicate={handleDuplicateBlock}
-                  onRemove={handleRemoveBlock}
-                />
-              </div>
-            ) : (
-              /* Desktop viewport - Default view */
-              <div
-                className="min-h-full bg-background"
-                data-cy={sel('blockEditor.previewCanvas.viewportDesktop')}
-              >
+            {/* Viewport wrapper with dynamic width */}
+            <div
+              className="mx-auto transition-[width] duration-200 min-h-full"
+              style={{
+                width: viewportMode === 'mobile' ? '375px' : '100%',
+                maxWidth: '100%'
+              }}
+              data-cy={sel('blockEditor.previewCanvas.viewport', { mode: viewportMode })}
+            >
+              <div className="min-h-full bg-background">
                 <BlockPreviewCanvas
                   blocks={blocks}
                   selectedBlockId={selectedBlockId}
@@ -764,7 +740,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
                   onRemove={handleRemoveBlock}
                 />
               </div>
-            )}
+            </div>
           </div>
 
           {/* Settings Mode */}
