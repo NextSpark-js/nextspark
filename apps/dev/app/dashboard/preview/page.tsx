@@ -194,18 +194,32 @@ export default function PreviewPage() {
   })
   const containerRef = useRef<HTMLDivElement>(null)
   const resizeObserverRef = useRef<ResizeObserver | null>(null)
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   // Send message to parent
   const sendToParent = useCallback((message: Record<string, unknown>) => {
     window.parent.postMessage(message, '*')
   }, [])
 
-  // Send content height to parent
+  // Send content height to parent (immediate version for explicit calls)
   const sendContentHeight = useCallback(() => {
     if (containerRef.current) {
       const height = containerRef.current.scrollHeight
       sendToParent({ type: 'CONTENT_HEIGHT', height })
     }
+  }, [sendToParent])
+
+  // Debounced version for ResizeObserver to prevent thrashing (reduces postMessages from 10-30/sec to ~1/100ms)
+  const sendContentHeightDebounced = useCallback(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+    }
+    debounceTimerRef.current = setTimeout(() => {
+      if (containerRef.current) {
+        const height = containerRef.current.scrollHeight
+        sendToParent({ type: 'CONTENT_HEIGHT', height })
+      }
+    }, 100)
   }, [sendToParent])
 
   // Handle incoming messages from parent
@@ -258,12 +272,12 @@ export default function PreviewPage() {
     sendToParent({ type: 'READY' })
   }, [sendToParent])
 
-  // Watch for content size changes
+  // Watch for content size changes (using debounced callback to prevent thrashing)
   useEffect(() => {
     if (!containerRef.current) return
 
     resizeObserverRef.current = new ResizeObserver(() => {
-      sendContentHeight()
+      sendContentHeightDebounced()
     })
 
     resizeObserverRef.current.observe(containerRef.current)
@@ -271,7 +285,7 @@ export default function PreviewPage() {
     return () => {
       resizeObserverRef.current?.disconnect()
     }
-  }, [sendContentHeight])
+  }, [sendContentHeightDebounced])
 
   // Block action handlers
   const handleBlockClick = useCallback((blockId: string) => {

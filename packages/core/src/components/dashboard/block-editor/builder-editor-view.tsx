@@ -92,6 +92,16 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('preview')
   const [viewportMode, setViewportMode] = useState<ViewportMode>('desktop')
+  // Lazy loading: track if mobile has ever been activated (iframe only loads on first use)
+  const [hasActivatedMobile, setHasActivatedMobile] = useState(false)
+
+  // Track first mobile activation for lazy loading
+  useEffect(() => {
+    if (viewportMode === 'mobile' && !hasActivatedMobile) {
+      setHasActivatedMobile(true)
+    }
+  }, [viewportMode, hasActivatedMobile])
+
   const [leftSidebarMode, setLeftSidebarMode] = useState<LeftSidebarMode>('blocks')
   const [pageSettings, setPageSettings] = useState<PageSettings>({
     seo: {},
@@ -713,7 +723,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
 
         {/* Center - Preview or Settings */}
         <div className="flex-1 overflow-hidden">
-          {/* Preview Mode - Both viewports are pre-rendered for instant switching */}
+          {/* Preview Mode - Conditional rendering for performance (only one viewport mounted at a time) */}
           <div
             className={cn(
               "h-full overflow-y-auto bg-muted/30",
@@ -721,44 +731,40 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
             )}
             data-cy={sel('blockEditor.previewCanvas.container')}
           >
-            {/* Mobile viewport - Always rendered (hidden when desktop active) */}
-            <div
-              className={cn(
-                "h-full py-4",
-                viewportMode !== 'mobile' && "hidden"
-              )}
-              data-cy={sel('blockEditor.previewCanvas.viewportMobile')}
-            >
-              <IframePreview
-                blocks={blocks}
-                selectedBlockId={selectedBlockId}
-                onSelectBlock={setSelectedBlockId}
-                width={MOBILE_VIEWPORT_WIDTH}
-                onMoveUp={handleMoveBlockUp}
-                onMoveDown={handleMoveBlockDown}
-                onDuplicate={handleDuplicateBlock}
-                onRemove={handleRemoveBlock}
-              />
-            </div>
-
-            {/* Desktop viewport - Always rendered (hidden when mobile active) */}
-            <div
-              className={cn(
-                "min-h-full bg-background",
-                viewportMode !== 'desktop' && "hidden"
-              )}
-              data-cy={sel('blockEditor.previewCanvas.viewportDesktop')}
-            >
-              <BlockPreviewCanvas
-                blocks={blocks}
-                selectedBlockId={selectedBlockId}
-                onSelectBlock={setSelectedBlockId}
-                onMoveUp={handleMoveBlockUp}
-                onMoveDown={handleMoveBlockDown}
-                onDuplicate={handleDuplicateBlock}
-                onRemove={handleRemoveBlock}
-              />
-            </div>
+            {viewportMode === 'mobile' ? (
+              /* Mobile viewport - Only rendered when active (lazy loaded on first use) */
+              <div
+                className="h-full py-4"
+                data-cy={sel('blockEditor.previewCanvas.viewportMobile')}
+              >
+                <IframePreview
+                  blocks={blocks}
+                  selectedBlockId={selectedBlockId}
+                  onSelectBlock={setSelectedBlockId}
+                  width={MOBILE_VIEWPORT_WIDTH}
+                  onMoveUp={handleMoveBlockUp}
+                  onMoveDown={handleMoveBlockDown}
+                  onDuplicate={handleDuplicateBlock}
+                  onRemove={handleRemoveBlock}
+                />
+              </div>
+            ) : (
+              /* Desktop viewport - Default view */
+              <div
+                className="min-h-full bg-background"
+                data-cy={sel('blockEditor.previewCanvas.viewportDesktop')}
+              >
+                <BlockPreviewCanvas
+                  blocks={blocks}
+                  selectedBlockId={selectedBlockId}
+                  onSelectBlock={setSelectedBlockId}
+                  onMoveUp={handleMoveBlockUp}
+                  onMoveDown={handleMoveBlockDown}
+                  onDuplicate={handleDuplicateBlock}
+                  onRemove={handleRemoveBlock}
+                />
+              </div>
+            )}
           </div>
 
           {/* Settings Mode */}
