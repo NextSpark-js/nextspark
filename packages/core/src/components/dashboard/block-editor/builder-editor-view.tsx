@@ -486,7 +486,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
 
   return (
     <div className={cn(
-      "fixed inset-0 pt-14 pb-20 lg:top-16 lg:pt-0 lg:pb-0 flex flex-col bg-background z-20 transition-all duration-300",
+      "fixed inset-0 pt-14 pb-20 lg:top-16 lg:pt-0 lg:pb-0 flex flex-col bg-background z-20 transition-[width,padding] duration-300",
       isCollapsed ? "lg:left-16" : "lg:left-64"
     )} data-cy={sel('blockEditor.container')}>
       {/* Top Bar - Redesigned Header */}
@@ -593,7 +593,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
             >
               <button
                 className={cn(
-                  'px-3 py-1.5 rounded-md transition-all flex items-center gap-2',
+                  'px-3 py-1.5 rounded-md transition-colors flex items-center gap-2',
                   viewMode === 'preview'
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10'
@@ -606,7 +606,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
               </button>
               <button
                 className={cn(
-                  'px-3 py-1.5 rounded-md transition-all flex items-center gap-2',
+                  'px-3 py-1.5 rounded-md transition-colors flex items-center gap-2',
                   viewMode === 'settings'
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10'

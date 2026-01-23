@@ -16,7 +16,7 @@ export function PatternCard({ pattern, onSelect }: PatternCardProps) {
 
   return (
     <div
-      className="group relative bg-background border border-border rounded-lg p-3 hover:border-primary hover:shadow-md transition-all cursor-pointer"
+      className="group relative bg-background border border-border rounded-lg p-3 hover:border-primary hover:shadow-md transition-[border-color,box-shadow] cursor-pointer"
       onClick={() => onSelect(pattern.id)}
       data-cy={sel('blockEditor.blockPicker.patternCard', { id: pattern.id })}
     >

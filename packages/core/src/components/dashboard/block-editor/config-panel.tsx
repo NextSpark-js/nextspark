@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -65,18 +65,6 @@ export function ConfigPanel({
   // Entity fields section state
   const [entityFieldsOpen, setEntityFieldsOpen] = useState(true)
   const [seoMetaOpen, setSeoMetaOpen] = useState(true)
-
-  // SEO state (synced with pageSettings)
-  const [seo, setSeo] = useState<PageSeoSettings>(pageSettings.seo || {})
-  const [customFields, setCustomFields] = useState<PageCustomField[]>(
-    pageSettings.customFields || []
-  )
-
-  // Sync SEO state when pageSettings prop changes
-  useEffect(() => {
-    setSeo(pageSettings.seo || {})
-    setCustomFields(pageSettings.customFields || [])
-  }, [pageSettings])
 
   // Get sidebar field definitions
   const sidebarFields = entityConfig.builder?.sidebarFields || []
@@ -195,33 +183,38 @@ export function ConfigPanel({
     onEntityFieldChange('categories', newCategories)
   }, [currentCategories, onEntityFieldChange])
 
-  // SEO handlers
+  // SEO handlers - use pageSettings directly as single source of truth
   const handleSeoChange = useCallback((field: keyof PageSeoSettings, value: string | boolean) => {
-    const newSeo = { ...seo, [field]: value }
-    setSeo(newSeo)
-    onPageSettingsChange({ seo: newSeo, customFields })
-  }, [seo, customFields, onPageSettingsChange])
+    onPageSettingsChange({
+      seo: { ...(pageSettings.seo || {}), [field]: value },
+      customFields: pageSettings.customFields || []
+    })
+  }, [pageSettings, onPageSettingsChange])
 
-  // Custom fields handlers
+  // Custom fields handlers - use pageSettings directly
   const handleAddCustomField = useCallback(() => {
-    const newFields = [...customFields, { key: '', value: '' }]
-    setCustomFields(newFields)
-    onPageSettingsChange({ seo, customFields: newFields })
-  }, [seo, customFields, onPageSettingsChange])
+    onPageSettingsChange({
+      seo: pageSettings.seo || {},
+      customFields: [...(pageSettings.customFields || []), { key: '', value: '' }]
+    })
+  }, [pageSettings, onPageSettingsChange])
 
   const handleUpdateCustomField = useCallback((index: number, field: 'key' | 'value', value: string) => {
-    const newFields = customFields.map((f, i) =>
+    const newFields = (pageSettings.customFields || []).map((f, i) =>
       i === index ? { ...f, [field]: value } : f
     )
-    setCustomFields(newFields)
-    onPageSettingsChange({ seo, customFields: newFields })
-  }, [seo, customFields, onPageSettingsChange])
+    onPageSettingsChange({
+      seo: pageSettings.seo || {},
+      customFields: newFields
+    })
+  }, [pageSettings, onPageSettingsChange])
 
   const handleRemoveCustomField = useCallback((index: number) => {
-    const newFields = customFields.filter((_, i) => i !== index)
-    setCustomFields(newFields)
-    onPageSettingsChange({ seo, customFields: newFields })
-  }, [seo, customFields, onPageSettingsChange])
+    onPageSettingsChange({
+      seo: pageSettings.seo || {},
+      customFields: (pageSettings.customFields || []).filter((_, i) => i !== index)
+    })
+  }, [pageSettings, onPageSettingsChange])
 
   return (
     <div
@@ -359,7 +352,7 @@ export function ConfigPanel({
                     <Label htmlFor="meta-title">{tSettings('seo.metaTitle')}</Label>
                     <Input
                       id="meta-title"
-                      value={seo.metaTitle || ''}
+                      value={pageSettings.seo?.metaTitle || ''}
                       onChange={(e) => handleSeoChange('metaTitle', e.target.value)}
                       placeholder={tSettings('seo.metaTitlePlaceholder')}
                       data-cy={sel('blockEditor.configPanel.seoMetaSection.metaTitle')}
@@ -374,14 +367,14 @@ export function ConfigPanel({
                     <Label htmlFor="meta-description">{tSettings('seo.metaDescription')}</Label>
                     <Textarea
                       id="meta-description"
-                      value={seo.metaDescription || ''}
+                      value={pageSettings.seo?.metaDescription || ''}
                       onChange={(e) => handleSeoChange('metaDescription', e.target.value)}
                       placeholder={tSettings('seo.metaDescriptionPlaceholder')}
                       rows={3}
                       data-cy={sel('blockEditor.configPanel.seoMetaSection.metaDescription')}
                     />
                     <p className="text-xs text-muted-foreground">
-                      {seo.metaDescription?.length || 0}/160 {tSettings('seo.characters')}
+                      {pageSettings.seo?.metaDescription?.length || 0}/160 {tSettings('seo.characters')}
                     </p>
                   </div>
 
@@ -390,7 +383,7 @@ export function ConfigPanel({
                     <Label htmlFor="meta-keywords">{tSettings('seo.metaKeywords')}</Label>
                     <Input
                       id="meta-keywords"
-                      value={seo.metaKeywords || ''}
+                      value={pageSettings.seo?.metaKeywords || ''}
                       onChange={(e) => handleSeoChange('metaKeywords', e.target.value)}
                       placeholder={tSettings('seo.metaKeywordsPlaceholder')}
                       data-cy={sel('blockEditor.configPanel.seoMetaSection.metaKeywords')}
@@ -402,7 +395,7 @@ export function ConfigPanel({
                     <Label htmlFor="og-image">{tSettings('seo.ogImage')}</Label>
                     <Input
                       id="og-image"
-                      value={seo.ogImage || ''}
+                      value={pageSettings.seo?.ogImage || ''}
                       onChange={(e) => handleSeoChange('ogImage', e.target.value)}
                       placeholder={tSettings('seo.ogImagePlaceholder')}
                       data-cy={sel('blockEditor.configPanel.seoMetaSection.ogImage')}
@@ -416,13 +409,13 @@ export function ConfigPanel({
                       <Label>{tSettings('customFields.title')}</Label>
                     </div>
 
-                    {customFields.length === 0 ? (
+                    {(pageSettings.customFields || []).length === 0 ? (
                       <p className="text-sm text-muted-foreground text-center py-4">
                         {tSettings('customFields.empty')}
                       </p>
                     ) : (
                       <div className="space-y-3">
-                        {customFields.map((field, index) => (
+                        {(pageSettings.customFields || []).map((field, index) => (
                           <div key={index} className="flex gap-2 items-start">
                             <div className="flex-1">
                               <Input

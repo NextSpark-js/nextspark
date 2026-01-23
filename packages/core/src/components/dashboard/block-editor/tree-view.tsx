@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useEffect } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -94,17 +94,21 @@ export function TreeView({
     }
   }, [blocks, onReorder])
 
-  // Handle block selection with scroll
-  const handleSelectBlock = useCallback((blockId: string) => {
-    onSelectBlock(blockId)
-
-    // Scroll to block in preview (with small delay for state update)
-    setTimeout(() => {
-      const previewBlock = document.querySelector(`[data-cy="${sel('blockEditor.previewCanvas.block', { id: blockId })}"]`)
+  // Scroll to selected block when selection changes
+  useEffect(() => {
+    if (selectedBlockId) {
+      const previewBlock = document.querySelector(
+        `[data-cy="${sel('blockEditor.previewCanvas.block', { id: selectedBlockId })}"]`
+      )
       if (previewBlock) {
         previewBlock.scrollIntoView({ behavior: 'smooth', block: 'center' })
       }
-    }, 50)
+    }
+  }, [selectedBlockId])
+
+  // Handle block selection
+  const handleSelectBlock = useCallback((blockId: string) => {
+    onSelectBlock(blockId)
   }, [onSelectBlock])
 
   // Empty state
