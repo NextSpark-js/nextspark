@@ -17,6 +17,8 @@ Test the npm package distribution by creating a **fresh Next.js project** and va
 - **Clean install testing** - After major changes to CLI or init process
 - **New user experience validation** - Ensuring the onboarding flow works
 
+See also: `.claude/skills/npm-development-workflow/SKILL.md` section "When to Reset my-app from Scratch" for the decision framework.
+
 **This is different from daily development testing:**
 - Daily dev testing uses `pnpm setup:update-local` with `projects/my-app`
 - This command creates a **completely fresh project** to simulate npm install
@@ -109,7 +111,12 @@ cp "$REPO_ROOT/apps/dev/.env" .env
 
 # Ensure PORT is set to 3000 for clean test project
 # (avoids conflict with monorepo dev server on 5173)
-sed -i 's/^PORT=.*/PORT=3000/' .env 2>/dev/null || echo "PORT=3000" >> .env
+# Portable sed: works on both Linux and macOS
+if grep -q '^PORT=' .env 2>/dev/null; then
+  sed -i.bak 's/^PORT=.*/PORT=3000/' .env && rm -f .env.bak
+else
+  echo "PORT=3000" >> .env
+fi
 ```
 
 **Important:** Verify DATABASE_URL points to valid database.
@@ -200,14 +207,28 @@ The test passes if:
 
 ## After Testing
 
-If test passes, the package is ready for publishing:
+If test passes, the package is ready for publishing. Follow the npm-development-workflow:
+
 ```bash
 cd "$REPO_ROOT"
-pnpm pkg:version -- patch  # or minor/major
-pnpm pkg:publish
+# See /do:npm-version and /do:npm-publish for complete details
+pnpm pkg:version -- patch  # or minor/major based on changes
+pnpm pkg:pack              # Create .tgz files
+pnpm pkg:publish           # Publish to npm registry
 ```
 
 If test fails, fix issues in the repo and re-run `/do:test-package`.
+
+---
+
+## Cleanup
+
+To remove the test project after validation:
+
+```bash
+cd "$PROJECTS_DIR"
+rm -rf test-package
+```
 
 ---
 
