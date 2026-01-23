@@ -1,5 +1,5 @@
 ---
-description: "Test npm package from scratch - creates fresh Next.js project and validates full flow"
+description: "Test npm package from scratch - creates fresh project and validates full flow with automated tests"
 ---
 
 # do:test-package
@@ -10,24 +10,16 @@ description: "Test npm package from scratch - creates fresh Next.js project and 
 
 ## Purpose
 
-Test the npm package distribution by creating a **fresh Next.js project** and validating the complete installation and runtime flow. This simulates exactly what a new user would experience when installing NextSpark from npm.
+Test the npm package distribution by creating a **fresh project** and validating the complete installation and runtime flow with **automated Cypress tests**. This simulates exactly what a new user would experience when installing NextSpark from npm.
 
 **When to use this command:**
 - **Pre-publish validation** - Before releasing a new version to npm
 - **Clean install testing** - After major changes to CLI or init process
 - **New user experience validation** - Ensuring the onboarding flow works
 
-See also: `.claude/skills/npm-development-workflow/SKILL.md` section "When to Reset my-app from Scratch" for the decision framework.
-
 **This is different from daily development testing:**
 - Daily dev testing uses `pnpm setup:update-local` with `projects/my-app`
 - This command creates a **completely fresh project** to simulate npm install
-
----
-
-## MANDATORY: Read Skill First
-
-Read `.claude/skills/npm-development-workflow/SKILL.md` for context on dual-mode testing.
 
 ---
 
@@ -37,41 +29,31 @@ Before running this command, ensure:
 1. **PostgreSQL database** is running and accessible
 2. **Node.js 18+** is installed
 3. **pnpm** is installed and working
-4. **CLI package** is built and packed (in addition to core)
+4. **No processes using ports 3000-3010** (or be prepared to kill them)
 
 ---
 
-## Execution Steps
+## Automated Execution
 
 Execute these steps in order. **Stop and report if any step fails.**
 
-### Step 0: Verify Environment
+### Step 1: Define Variables and Clean Environment
 
 ```bash
-# Determine paths relative to repo root
-REPO_ROOT="$(git rev-parse --show-toplevel)"
-PROJECTS_DIR="$(dirname "$REPO_ROOT")/projects"
+# Define paths
+REPO_ROOT="G:/GitHub/nextspark/repo"
+PROJECTS_DIR="G:/GitHub/nextspark/projects"
+TEST_DIR="$PROJECTS_DIR/test-package"
+TEST_PORT=3005
 
-# Ensure projects directory exists
-if [ ! -d "$PROJECTS_DIR" ]; then
-  echo "Creating projects directory..."
-  mkdir -p "$PROJECTS_DIR"
-fi
+# Kill any processes on test port
+netstat -ano | grep ":$TEST_PORT" | awk '{print $5}' | xargs -I {} taskkill /F /PID {} 2>/dev/null || true
 
-echo "REPO_ROOT: $REPO_ROOT"
-echo "PROJECTS_DIR: $PROJECTS_DIR"
-```
-
-### Step 1: Clean Previous Test Project
-
-```bash
-cd "$PROJECTS_DIR"
-rm -rf test-package
+# Clean previous test project (handle Windows file locks)
+rm -rf "$TEST_DIR" 2>/dev/null || cmd //c "rmdir /s /q ${TEST_DIR//\//\\\\}" 2>/dev/null || true
 ```
 
 ### Step 2: Build and Pack Packages
-
-Build and pack both core and CLI packages:
 
 ```bash
 # Build and pack core
@@ -79,225 +61,324 @@ cd "$REPO_ROOT/packages/core"
 pnpm build:js
 pnpm pack
 
-# Build and pack CLI (required for nextspark command)
+# Build and pack CLI
 cd "$REPO_ROOT/packages/cli"
 pnpm build
 pnpm pack
+
+# Verify tarballs exist
+ls -la "$REPO_ROOT/packages/core"/nextsparkjs-core-*.tgz
+ls -la "$REPO_ROOT/packages/cli"/nextsparkjs-cli-*.tgz
 ```
 
-**Validation:** Both builds complete without errors. `.tgz` files created in each package directory.
+**Validation:** Both `.tgz` files must exist.
 
-### Step 3: Create Fresh Next.js Project
+### Step 3: Create Test Project from Template
 
-**Option A: Using create-next-app (may timeout on some systems)**
+Instead of creating from scratch, copy from `my-app` template (which has proper npm mode configuration) but **exclude node_modules**:
+
 ```bash
-cd "$PROJECTS_DIR"
-npx create-next-app@latest test-package --typescript --tailwind --eslint --app --src-dir --import-alias "@/*" --use-pnpm --turbopack --yes
+mkdir -p "$TEST_DIR"
+
+# Copy essential directories (excluding node_modules)
+cd "$PROJECTS_DIR/my-app"
+cp -r app contents .nextspark public "$TEST_DIR/"
+cp -r scripts "$TEST_DIR/" 2>/dev/null || true
+
+# Copy config files
+cp i18n.ts next.config.mjs tsconfig.json postcss.config.mjs \
+   eslint.config.mjs .env .env.example .gitignore .npmrc \
+   cypress.config.ts cypress.d.ts tsconfig.cypress.json \
+   "$TEST_DIR/" 2>/dev/null || true
 ```
 
-**Option B: Manual creation (if Option A fails)**
-```bash
-cd "$PROJECTS_DIR"
-mkdir test-package && cd test-package
+### Step 4: Create package.json with Tarball References
 
-# Create package.json
-cat > package.json << 'EOF'
+```bash
+cd "$TEST_DIR"
+
+# Get tarball filenames
+CORE_TGZ=$(ls "$REPO_ROOT/packages/core"/nextsparkjs-core-*.tgz | head -1)
+CLI_TGZ=$(ls "$REPO_ROOT/packages/cli"/nextsparkjs-cli-*.tgz | head -1)
+
+# Create package.json with file: references
+cat > package.json << EOF
 {
   "name": "test-package",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "next dev --turbopack -p 3000",
-    "build": "next build",
-    "start": "next start -p 3000",
-    "lint": "next lint"
-  },
   "dependencies": {
-    "next": "15.1.6",
-    "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "@nextsparkjs/cli": "file:$CLI_TGZ",
+    "@nextsparkjs/core": "file:$CORE_TGZ",
+    "next": "^15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "better-auth": "^1.4.0",
+    "next-intl": "^4.0.2",
+    "drizzle-orm": "^0.41.0",
+    "postgres": "^3.4.5",
+    "@tanstack/react-query": "^5.64.2",
+    "zod": "^4.1.5",
+    "react-hook-form": "^7.54.2",
+    "@hookform/resolvers": "^5.0.1",
+    "tailwindcss": "^4.0.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.6.0",
+    "lucide-react": "^0.469.0",
+    "sonner": "^1.7.4",
+    "date-fns": "^4.1.0",
+    "nanoid": "^5.0.9",
+    "slugify": "^1.6.6"
+  },
+  "scripts": {
+    "dev": "nextspark dev",
+    "build": "nextspark build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:reset": "nextspark db reset",
+    "db:migrate": "nextspark db migrate",
+    "db:seed": "nextspark db seed",
+    "cy:run": "cypress run",
+    "cy:run:api": "cypress run --env grepTags=@api",
+    "cy:run:smoke": "cypress run --env grepTags=@smoke"
   },
   "devDependencies": {
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "15.1.6",
-    "typescript": "^5"
+    "typescript": "^5.7.3",
+    "@types/node": "^22.10.7",
+    "@types/react": "^19.0.7",
+    "@types/react-dom": "^19.0.3",
+    "@tailwindcss/postcss": "^4.0.0",
+    "eslint": "^9.18.0",
+    "eslint-config-next": "^15.1.0",
+    "@eslint/eslintrc": "^3.2.0",
+    "drizzle-kit": "^0.31.4",
+    "cypress": "^15.8.2",
+    "@testing-library/cypress": "^10.0.2",
+    "@cypress/grep": "^5.0.1"
   }
 }
 EOF
-
-# Create minimal structure
-mkdir -p src/app
-# ... (add tsconfig.json, next.config.ts, etc.)
 ```
 
-**Note:** On Windows with Git Bash, `create-next-app` may appear to hang. Use `npm install` with full path (`/c/nvm4w/nodejs/npm.cmd install`) if standard `npm`/`pnpm` commands don't produce output.
-
-### Step 4: Install Core and CLI Tarballs
+### Step 5: Configure Environment
 
 ```bash
-cd "$PROJECTS_DIR/test-package"
+cd "$TEST_DIR"
 
-# Install both core and CLI packages
-CORE_TARBALL=$(ls "$REPO_ROOT/packages/core"/nextsparkjs-core-*.tgz | head -1)
-CLI_TARBALL=$(ls "$REPO_ROOT/packages/cli"/nextsparkjs-cli-*.tgz | head -1)
+# Create .env with test database and correct port
+cat > .env << EOF
+# Database - Uses dedicated test database (will be reset)
+DATABASE_URL="postgresql://dbuser:dbpass_SecurePassword123@postgres.lab:5432/nextspark_test?sslmode=disable"
 
-pnpm add "$CORE_TARBALL" "$CLI_TARBALL"
+# Authentication
+BETTER_AUTH_SECRET=2e205f79e4b0b8a061e79af9da52f1010ffe923a527a72791f0dbf7492df087a
+
+# Theme
+NEXT_PUBLIC_ACTIVE_THEME="my-saas-app"
+
+# Application
+NEXT_PUBLIC_APP_URL="http://localhost:$TEST_PORT"
+NODE_ENV="development"
+PORT=$TEST_PORT
+
+# Cypress Test Credentials
+CYPRESS_BASE_URL=http://localhost:$TEST_PORT
+CYPRESS_TEST_PASSWORD=Test1234
+CYPRESS_SUPERADMIN_EMAIL=superadmin@nextspark.dev
+CYPRESS_SUPERADMIN_PASSWORD=Pandora1234
+CYPRESS_OWNER_EMAIL=carlos.mendoza@tmt.dev
+EOF
 ```
 
-**IMPORTANT:** The CLI package is separate from core and must be installed for the `nextspark` command to work.
+**Note:** Uses `nextspark_test` database which will be reset. If using shared database, change to `nextspark`.
 
-### Step 5: Run CLI Init
+### Step 6: Install Dependencies
 
 ```bash
-cd "$PROJECTS_DIR/test-package"
-npx nextspark init --registries-only
+cd "$TEST_DIR"
+
+# On Windows, use full path if pnpm hangs
+pnpm install 2>&1 || /c/nvm4w/nodejs/pnpm.cmd install 2>&1
+
+# Verify installation
+ls node_modules/@nextsparkjs/core/package.json
+ls node_modules/@nextsparkjs/cli/package.json
 ```
 
-**Note:** The full wizard (`npx nextspark init`) requires interactive input. Use `--registries-only` for non-interactive testing, then manually configure or copy files from apps/dev.
-
-**For full init with wizard:**
-```bash
-npx nextspark init --quick --yes
-# Answer prompts for project name, etc.
-```
-
-### Step 6: Build Registries
-
-After init, rebuild registries to ensure all theme/entity data is generated:
+### Step 7: Reset Database and Run Migrations
 
 ```bash
-cd "$PROJECTS_DIR/test-package"
-npx nextspark registry build
+cd "$TEST_DIR"
+
+# Reset database (drops all tables and recreates)
+npx nextspark db reset --force 2>&1 || echo "DB reset not available, running migrate"
+
+# Run migrations
+npx nextspark db migrate 2>&1
+
+# Seed sample data
+npx nextspark db seed 2>&1 || echo "Seed command not available"
 ```
 
-**Expected output:** Registry files created in `.nextspark/registries/`.
+**Alternative if using shared database:**
+```bash
+# Skip reset, just verify connection
+npx nextspark db verify 2>&1 || echo "DB verify not available"
+```
 
-### Step 7: Copy and Configure Environment
+### Step 8: Build Registries
 
 ```bash
-cd "$PROJECTS_DIR/test-package"
-cp "$REPO_ROOT/apps/dev/.env" .env
+cd "$TEST_DIR"
 
-# Add/update PORT for test project
-echo "PORT=3000" >> .env
+# Build registries for the theme
+npx nextspark registry build 2>&1
 ```
 
-**Important:**
-- Verify `DATABASE_URL` points to a valid, accessible database
-- If database uses SSL, ensure SSL mode is correct in connection string
+**Expected:** All registry files generated in `.nextspark/registries/`.
 
-### Step 8: Run Database Migrations
+### Step 9: Start Server and Run Automated Tests
+
+Start the server in background and run Cypress tests:
 
 ```bash
-cd "$PROJECTS_DIR/test-package"
-npx nextspark db migrate
+cd "$TEST_DIR"
+
+# Clean any stale .next cache (Windows file lock workaround)
+rm -rf .next 2>/dev/null || cmd //c "rmdir /s /q .next" 2>/dev/null || true
+
+# Start server in background
+npx nextspark dev &
+SERVER_PID=$!
+
+# Wait for server to be ready
+echo "Waiting for server on port $TEST_PORT..."
+for i in {1..30}; do
+  if curl -s "http://localhost:$TEST_PORT" > /dev/null 2>&1; then
+    echo "Server ready!"
+    break
+  fi
+  sleep 2
+done
+
+# Run Cypress smoke tests
+npx cypress run --env grepTags=@smoke --config baseUrl=http://localhost:$TEST_PORT 2>&1
+TEST_RESULT=$?
+
+# Kill server
+kill $SERVER_PID 2>/dev/null || true
+
+# Report result
+if [ $TEST_RESULT -eq 0 ]; then
+  echo "✅ All tests passed!"
+else
+  echo "❌ Tests failed with exit code $TEST_RESULT"
+  exit $TEST_RESULT
+fi
 ```
 
-**Known issue:** The migration script hardcodes SSL settings. If your database doesn't support SSL, migrations will fail with "The server does not support SSL connections".
-
-**Workaround:** If using shared database with monorepo (same DATABASE_URL), migrations are already applied and this step can be skipped.
-
-### Step 9: Configure next.config for NPM Mode
-
-The `next.config.mjs` from monorepo has paths specific to monorepo structure. Update for NPM mode:
-
+**Alternative: Run API tests only (faster):**
 ```bash
-# Fix i18n config path (points to monorepo location by default)
-# Change from:
-#   createNextIntlPlugin('../../packages/core/src/i18n.ts')
-# To:
-#   createNextIntlPlugin('./node_modules/@nextsparkjs/core/dist/i18n.js')
+npx cypress run --env grepTags=@api --config baseUrl=http://localhost:$TEST_PORT
 ```
-
-### Step 10: Start Development Server
-
-```bash
-cd "$PROJECTS_DIR/test-package"
-pnpm dev
-```
-
-**Expected:** Server starts on http://localhost:3000
-
-### Step 11: Manual Verification Checklist
-
-Open browser at http://localhost:3000 and verify:
-
-- [ ] Homepage loads without errors
-- [ ] No console errors in browser DevTools
-- [ ] No server errors in terminal
-- [ ] Login page accessible at /login
-- [ ] Can login with test user: `superadmin@tmt.dev` / `Test1234`
-- [ ] Dashboard loads after login
-- [ ] Sidebar shows entities (users, teams, etc.)
-- [ ] Can create a new record
-- [ ] Can edit an existing record
-- [ ] Can delete a record
-- [ ] List pagination works
 
 ---
 
-## Known Issues (NPM Mode)
+## Automated Verification Checklist
 
-### 1. CLI is Separate Package
-**Issue:** The `nextspark` CLI command comes from `@nextsparkjs/cli`, not `@nextsparkjs/core`.
-**Solution:** Install both packages: `pnpm add @nextsparkjs/core @nextsparkjs/cli`
+The Cypress tests should verify:
 
-### 2. Theme Dependencies on Plugins
-**Issue:** Default theme imports from langchain plugin (`@/plugins/langchain/...`).
-**Solution:** Install required plugins or use a theme without plugin dependencies.
+| Test Tag | What It Verifies |
+|----------|------------------|
+| `@smoke` | Homepage loads, login works, dashboard accessible |
+| `@api` | All API endpoints return correct responses |
+| `@auth` | Login, logout, session management |
+| `@crud` | Create, read, update, delete operations |
 
-### 3. Migration Script SSL
-**Issue:** `run-migrations.mjs` hardcodes `ssl: { require: true }` which fails on local databases without SSL.
-**Solution:** Use shared database with existing migrations, or modify the script locally.
+**If Cypress tests don't exist for the theme**, fall back to these manual checks with Playwright:
 
-### 4. Nested node_modules in Theme
-**Issue:** Copying theme from monorepo may include nested `node_modules/` with monorepo-specific `@nextsparkjs/core`.
-**Solution:** Remove nested `node_modules` from `contents/themes/*/node_modules/`.
-
-### 5. next.config Paths
-**Issue:** `next.config.mjs` references monorepo paths like `../../packages/core/src/i18n.ts`.
-**Solution:** Update paths to use `node_modules/@nextsparkjs/core/dist/...`.
-
-### 6. Windows Git Bash
-**Issue:** Some npm/pnpm commands appear to hang without output on Windows.
-**Solution:** Use full path to npm/npx: `/c/nvm4w/nodejs/npm.cmd install`
-
----
-
-## Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| `nextspark: command not found` | Install CLI package: `pnpm add @nextsparkjs/cli` |
-| `create-next-app` hangs | Use manual project creation (Option B in Step 3) |
-| Tarball not found | Run pack commands in Step 2 |
-| `nextspark init` prompts | Use `--registries-only` flag for non-interactive |
-| Migration SSL error | Skip if using shared DB, or modify `run-migrations.mjs` |
-| `Module not found: @nextsparkjs/registries` | Run `nextspark registry build` |
-| `Module not found: @/plugins/...` | Install required plugin or remove plugin-dependent templates |
-| Port already in use | Use different port: `next dev -p 3001` |
-| `i18n config not found` | Update next.config.mjs i18n path for NPM mode |
+```javascript
+// Use mcp__playwright to verify
+await browser_navigate({ url: `http://localhost:${TEST_PORT}` });
+await browser_snapshot(); // Should show homepage
+await browser_navigate({ url: `http://localhost:${TEST_PORT}/login` });
+await browser_snapshot(); // Should show login form
+```
 
 ---
 
 ## Success Criteria
 
 The test passes if:
-1. All steps complete without unrecoverable errors
-2. Dev server starts and serves pages
-3. Authentication flow works (login/logout)
-4. CRUD operations function correctly
-5. No hydration mismatches or console errors
+1. ✅ All packages build and pack without errors
+2. ✅ Dependencies install successfully
+3. ✅ Registries build successfully
+4. ✅ Server starts and reaches "Ready" state
+5. ✅ Cypress smoke tests pass (or manual Playwright verification)
+6. ✅ No hydration mismatches or console errors
+
+---
+
+## Known Issues & Workarounds
+
+### Windows File Locking (.next/trace)
+
+**Issue:** Previous Next.js process leaves `.next/trace` locked.
+
+**Workaround:**
+```bash
+# Try multiple removal methods
+rm -rf .next 2>/dev/null
+cmd //c "rmdir /s /q .next" 2>/dev/null
+# If still locked, restart terminal or use different .next path
+NEXT_DIST_DIR=".next-test" npx next dev
+```
+
+### Windows pnpm Silent Hang
+
+**Issue:** `pnpm install` appears to hang without output on Windows Git Bash.
+
+**Workaround:** Use full path:
+```bash
+/c/nvm4w/nodejs/pnpm.cmd install
+```
+
+### Port Already in Use
+
+**Issue:** Previous test left server running.
+
+**Workaround:**
+```bash
+# Find and kill process on port
+netstat -ano | grep ":3005" | awk '{print $5}' | head -1 | xargs taskkill /F /PID
+# Or use different port
+PORT=3006 npx nextspark dev
+```
+
+### Database SSL Error
+
+**Issue:** Migration script expects SSL but local DB doesn't support it.
+
+**Workaround:** Ensure `?sslmode=disable` in DATABASE_URL.
+
+---
+
+## Cleanup
+
+```bash
+# Stop any running servers
+pkill -f "next dev" 2>/dev/null || taskkill /F /IM node.exe 2>/dev/null || true
+
+# Remove test project
+rm -rf "$PROJECTS_DIR/test-package"
+```
 
 ---
 
 ## After Testing
 
-If test passes, the package is ready for publishing:
+If all tests pass, the package is ready for publishing:
 
 ```bash
 cd "$REPO_ROOT"
@@ -306,24 +387,13 @@ pnpm pkg:pack
 pnpm pkg:publish
 ```
 
-If test fails, document issues and fix in the repo before re-running.
-
 ---
 
-## Cleanup
+## Quick Reference
 
-```bash
-cd "$PROJECTS_DIR"
-rm -rf test-package
-```
-
----
-
-## Relationship with Daily Development
-
-| Scenario | Command to Use |
-|----------|----------------|
-| Daily development testing | `pnpm setup:update-local` (uses `projects/my-app`) |
-| Pre-publish clean install | `/do:test-package` (creates fresh `projects/test-package`) |
-| After CLI/init changes | `/do:test-package` (validates fresh install flow) |
-| After core changes only | `pnpm setup:update-local` (faster, reuses existing project) |
+| Task | Command |
+|------|---------|
+| Full test (with Cypress) | `/do:test-package` |
+| Daily dev testing | `pnpm setup:update-local` |
+| Just rebuild packages | `pnpm build:core && pnpm build:cli` |
+| Just run API tests | `pnpm cy:run -- --env grepTags=@api` |
