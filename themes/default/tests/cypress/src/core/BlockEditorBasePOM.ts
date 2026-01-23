@@ -65,8 +65,10 @@ export abstract class BlockEditorBasePOM extends BasePOM {
       slugInput: cySelector('blockEditor.header.slugInput'),
       externalLink: cySelector('blockEditor.header.externalLink'),
       viewModeToggle: cySelector('blockEditor.header.viewToggle'),
-      viewEditor: cySelector('blockEditor.header.viewEditor'),
       viewPreview: cySelector('blockEditor.header.viewPreview'),
+      viewSettings: cySelector('blockEditor.header.viewSettings'),
+      /** @deprecated Use viewSettings instead - v2.0 renamed viewEditor to viewSettings */
+      viewEditor: cySelector('blockEditor.header.viewSettings'),
       saveButton: cySelector('blockEditor.header.saveButton'),
       publishButton: cySelector('blockEditor.header.publishButton'),
       settingsButton: cySelector('blockEditor.header.settingsButton'),
@@ -85,10 +87,15 @@ export abstract class BlockEditorBasePOM extends BasePOM {
       // BLOCK PICKER - Left column "Bloques" tab
       // =========================================================================
       blockPicker: cySelector('blockEditor.blockPicker.container'),
-      // Tabs
+      // Tabs (v2.0: Blocks | Patterns | Layout)
       tabBlocks: cySelector('blockEditor.blockPicker.tabBlocks'),
-      tabConfig: cySelector('blockEditor.blockPicker.tabConfig'),
       tabIndicator: cySelector('blockEditor.blockPicker.tabIndicator'),
+      /**
+       * @deprecated tabConfig no longer exists in v2.0.
+       * Entity fields moved to Settings mode (viewSettings) in center column.
+       * Use tabLayout for tree view, or viewSettings for entity config.
+       */
+      tabConfig: cySelector('blockEditor.blockPicker.tabLayout'),
       // Search
       searchWrapper: cySelector('blockEditor.blockPicker.searchWrapper'),
       searchIcon: cySelector('blockEditor.blockPicker.searchIcon'),
@@ -104,13 +111,68 @@ export abstract class BlockEditorBasePOM extends BasePOM {
       blockName: (slug: string) => cySelector('blockEditor.blockPicker.blockName', { slug }),
       addBlock: (slug: string) => cySelector('blockEditor.blockPicker.addButton', { slug }),
       blockPickerEmpty: cySelector('blockEditor.blockPicker.empty'),
+      // Generic selector for counting all categories
+      categoryGeneric: '[data-cy^="block-picker-category-"]',
 
       // =========================================================================
-      // ENTITY FIELDS PANEL - Left column "Configuración" tab
+      // PATTERNS TAB (in block picker)
       // =========================================================================
-      entityFieldsPanel: cySelector('blockEditor.entityFieldsPanel.container'),
+      tabPatterns: cySelector('blockEditor.blockPicker.tabPatterns'),
+      patternsSearch: cySelector('blockEditor.blockPicker.patternsSearch'),
+      patternsList: cySelector('blockEditor.blockPicker.patternsList'),
+      patternsEmpty: cySelector('blockEditor.blockPicker.patternsEmpty'),
+      // Pattern cards (dynamic)
+      patternCard: (id: string) =>
+        cySelector('blockEditor.blockPicker.patternCard', { id }),
+      patternCardIcon: (id: string) =>
+        cySelector('blockEditor.blockPicker.patternCardIcon', { id }),
+      patternCardTitle: (id: string) =>
+        cySelector('blockEditor.blockPicker.patternCardTitle', { id }),
+      patternCardDescription: (id: string) =>
+        cySelector('blockEditor.blockPicker.patternCardDescription', { id }),
+      patternCardInsertButton: (id: string) =>
+        cySelector('blockEditor.blockPicker.patternCardInsertButton', { id }),
+      // Generic selector for counting patterns
+      patternCardGeneric: '[data-cy^="block-picker-pattern-card-"]',
+
+      // =========================================================================
+      // TREE VIEW (Layout tab)
+      // =========================================================================
+      tabLayout: cySelector('blockEditor.blockPicker.tabLayout'),
+      treeView: cySelector('blockEditor.treeView.container'),
+      treeViewEmpty: cySelector('blockEditor.treeView.empty'),
+      treeNode: (id: string) => cySelector('blockEditor.treeView.node', { id }),
+      treeNodeIcon: (id: string) =>
+        cySelector('blockEditor.treeView.nodeIcon', { id }),
+      treeNodeName: (id: string) =>
+        cySelector('blockEditor.treeView.nodeName', { id }),
+
+      // =========================================================================
+      // CONFIG PANEL - Center column - Settings mode (v2.0)
+      // =========================================================================
+      configPanel: cySelector('blockEditor.configPanel.container'),
+      configPanelScroll: cySelector('blockEditor.configPanel.scroll'),
+      // Entity Fields Section (collapsible)
+      configEntitySection: cySelector('blockEditor.configPanel.entityFieldsSection.container'),
+      configEntityTrigger: cySelector('blockEditor.configPanel.entityFieldsSection.trigger'),
+      configEntityContent: cySelector('blockEditor.configPanel.entityFieldsSection.content'),
+      configEntityField: (name: string) =>
+        cySelector('blockEditor.configPanel.entityFieldsSection.field', { name }),
+      // SEO Section (collapsible) - v2.0 moved from entityMetaPanel
+      configSeoSection: cySelector('blockEditor.configPanel.seoMetaSection.container'),
+      configSeoTrigger: cySelector('blockEditor.configPanel.seoMetaSection.trigger'),
+      configSeoContent: cySelector('blockEditor.configPanel.seoMetaSection.content'),
+      configMetaTitle: cySelector('blockEditor.configPanel.seoMetaSection.metaTitle'),
+      configMetaDescription: cySelector('blockEditor.configPanel.seoMetaSection.metaDescription'),
+
+      // =========================================================================
+      // ENTITY FIELDS PANEL - DEPRECATED (moved to configPanel in v2.0)
+      // =========================================================================
+      /** @deprecated Use configEntitySection in Settings mode instead */
+      entityFieldsPanel: cySelector('blockEditor.configPanel.entityFieldsSection.container'),
+      /** @deprecated Use configEntityField instead */
       entityField: (name: string) =>
-        cySelector('blockEditor.entityFieldsPanel.field', { name }),
+        cySelector('blockEditor.configPanel.entityFieldsSection.field', { name }),
       entityCategoryList: cySelector('blockEditor.entityFieldsPanel.categoryList'),
       entityCategory: (slug: string) =>
         cySelector('blockEditor.entityFieldsPanel.categoryItem', { slug }),
@@ -154,9 +216,9 @@ export abstract class BlockEditorBasePOM extends BasePOM {
         cySelector('blockEditor.previewCanvas.blockSelected', { id }),
       // Generic selector for counting all preview blocks
       previewBlockGeneric: '[data-cy^="preview-block-"]',
-      // Move buttons (legacy selectors for backward compatibility)
-      moveUpBtn: (id: string) => `[data-cy="preview-block-${id}-move-up"]`,
-      moveDownBtn: (id: string) => `[data-cy="preview-block-${id}-move-down"]`,
+      // Move buttons
+      moveUpBtn: (id: string) => cySelector('blockEditor.previewCanvas.moveUp', { id }),
+      moveDownBtn: (id: string) => cySelector('blockEditor.previewCanvas.moveDown', { id }),
       // Floating toolbar
       floatingToolbar: (id: string) =>
         cySelector('blockEditor.previewCanvas.floatingToolbar.container', { id }),
@@ -168,6 +230,22 @@ export abstract class BlockEditorBasePOM extends BasePOM {
         cySelector('blockEditor.previewCanvas.floatingToolbar.duplicateBtn', { id }),
       floatingToolbarDelete: (id: string) =>
         cySelector('blockEditor.previewCanvas.floatingToolbar.deleteBtn', { id }),
+
+      // =========================================================================
+      // PATTERN REFERENCE (in canvas)
+      // =========================================================================
+      patternReference: (ref: string) =>
+        cySelector('blockEditor.patternReference.container', { ref }),
+      patternReferenceBadge: (ref: string) =>
+        cySelector('blockEditor.patternReference.badge', { ref }),
+      patternReferenceRemove: (ref: string) =>
+        cySelector('blockEditor.patternReference.remove', { ref }),
+      patternReferenceLocked: (ref: string) =>
+        cySelector('blockEditor.patternReference.locked', { ref }),
+      patternReferenceEditLink: (ref: string) =>
+        cySelector('blockEditor.patternReference.editLink', { ref }),
+      // Generic selector for counting pattern references
+      patternReferenceGeneric: '[data-cy^="pattern-reference-"]',
 
       // =========================================================================
       // ENTITY META PANEL - SEO and custom fields
@@ -214,8 +292,8 @@ export abstract class BlockEditorBasePOM extends BasePOM {
         cySelector('blockEditor.blockPropertiesPanel.form.field', { name }),
       fieldGroup: (id: string) =>
         cySelector('blockEditor.blockPropertiesPanel.form.fieldGroup', { id }),
-      // Reset props button (legacy selector)
-      resetPropsBtn: '[data-cy="reset-block-props"]',
+      // Reset props button
+      resetPropsBtn: cySelector('blockEditor.blockPropertiesPanel.resetPropsBtn'),
       // Array field
       arrayFieldContainer: (name: string) =>
         cySelector('blockEditor.blockPropertiesPanel.form.arrayField.container', { name }),
@@ -231,6 +309,12 @@ export abstract class BlockEditorBasePOM extends BasePOM {
         cySelector('blockEditor.blockPropertiesPanel.form.arrayField.itemRemove', { name, index }),
       arrayFieldAdd: (name: string) =>
         cySelector('blockEditor.blockPropertiesPanel.form.arrayField.addButton', { name }),
+      // Generic selectors for array fields (for counting/prefix matching)
+      arrayFieldGeneric: '[data-cy^="block-array-"]',
+      arrayFieldAddGeneric: '[data-cy$="-add"][data-cy^="block-array-"]',
+      arrayFieldRemoveGeneric: '[data-cy$="-remove"][data-cy^="block-array-"]',
+      arrayFieldUpGeneric: '[data-cy$="-up"][data-cy^="block-array-"]',
+      arrayFieldDownGeneric: '[data-cy$="-down"][data-cy^="block-array-"]',
 
       // =========================================================================
       // LEGACY ALIASES (for backward compatibility - will be removed)
@@ -348,19 +432,23 @@ export abstract class BlockEditorBasePOM extends BasePOM {
   }
 
   /**
+   * Switch to Settings mode (v2.0 - entity fields, SEO, etc.)
+   * In v2.0, this shows the configPanel in the center column.
+   */
+  switchToSettingsMode() {
+    cy.get(this.editorSelectors.viewSettings).click()
+    return this
+  }
+
+  /**
    * Switch to Layout/Editor mode
+   * @deprecated In v2.0, Layout is now a tab in BlockPicker (tabLayout), not a view mode.
+   * Use selectLayoutTab() for tree view, or switchToSettingsMode() for entity config.
    */
   switchToLayoutMode() {
-    cy.get(this.editorSelectors.viewEditor).click()
-    // Wait for layout canvas OR empty state to render (depends on whether blocks exist)
-    cy.get('body').then(($body) => {
-      // Either the canvas with blocks or the empty state should exist
-      if ($body.find(this.editorSelectors.layoutCanvas).length > 0) {
-        cy.get(this.editorSelectors.layoutCanvas, { timeout: 5000 }).should('exist')
-      } else {
-        cy.get(this.editorSelectors.layoutCanvasEmpty, { timeout: 5000 }).should('exist')
-      }
-    })
+    // v2.0: "Layout" mode is now accessed via the Layout tab in left sidebar
+    // This method now clicks the Layout tab for backward compatibility
+    cy.get(this.editorSelectors.tabLayout).click()
     return this
   }
 
@@ -382,9 +470,20 @@ export abstract class BlockEditorBasePOM extends BasePOM {
 
   /**
    * Select Config/Fields tab in left sidebar
+   * @deprecated In v2.0, entity fields moved to Settings mode (center column).
+   * Use switchToSettingsMode() for entity config/fields.
    */
   selectConfigTab() {
-    cy.get(this.editorSelectors.tabConfig).click()
+    // v2.0: Config is now accessed via Settings mode, not a tab
+    cy.get(this.editorSelectors.viewSettings).click()
+    return this
+  }
+
+  /**
+   * Select Layout tab in left sidebar (tree view)
+   */
+  selectLayoutTab() {
+    cy.get(this.editorSelectors.tabLayout).click()
     return this
   }
 
@@ -712,7 +811,7 @@ export abstract class BlockEditorBasePOM extends BasePOM {
    * Assert block count in canvas
    */
   assertBlockCount(count: number) {
-    cy.get('[data-cy^="sortable-block-"]').should('have.length', count)
+    cy.get(this.editorSelectors.sortableBlockGeneric).should('have.length', count)
     return this
   }
 
@@ -720,7 +819,7 @@ export abstract class BlockEditorBasePOM extends BasePOM {
    * Assert preview block count
    */
   assertPreviewBlockCount(count: number) {
-    cy.get('[data-cy^="preview-block-"]').should('have.length', count)
+    cy.get(this.editorSelectors.previewBlockGeneric).should('have.length', count)
     return this
   }
 

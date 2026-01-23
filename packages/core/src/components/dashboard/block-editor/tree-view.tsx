@@ -100,7 +100,7 @@ export function TreeView({
 
     // Scroll to block in preview (with small delay for state update)
     setTimeout(() => {
-      const previewBlock = document.querySelector(`[data-cy="preview-block-${blockId}"]`)
+      const previewBlock = document.querySelector(`[data-cy="${sel('blockEditor.previewCanvas.block', { id: blockId })}"]`)
       if (previewBlock) {
         previewBlock.scrollIntoView({ behavior: 'smooth', block: 'center' })
       }

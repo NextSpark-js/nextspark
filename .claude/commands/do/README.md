@@ -32,6 +32,7 @@ Each `do:` command is **MINIMAL** - it only points to where to read the full ins
 | Command | Description | Reads |
 |---------|-------------|-------|
 | `/do:validate-blocks` | Validate page builder blocks | `page-builder-blocks`, `block-decision-matrix` |
+| `/do:update-selectors` | Sync selectors between components, core, and POMs | `cypress-selectors` |
 
 ### Background Tasks
 

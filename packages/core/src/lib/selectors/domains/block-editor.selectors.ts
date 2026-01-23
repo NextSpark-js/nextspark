@@ -150,6 +150,8 @@ export const BLOCK_EDITOR_SELECTORS = {
     wrapper: 'preview-canvas-wrapper',
     content: 'preview-canvas-content',
     empty: 'preview-canvas-empty',
+    // Viewport wrapper (for container queries responsive preview)
+    viewport: 'preview-canvas-viewport-{mode}',
     // Viewport modes
     viewportMobile: 'preview-canvas-mobile',
     viewportDesktop: 'preview-canvas-desktop',
@@ -164,6 +166,8 @@ export const BLOCK_EDITOR_SELECTORS = {
     blockWrapper: 'preview-block-wrapper-{id}',
     blockSelected: 'preview-block-selected-{id}',
     editingBadge: 'preview-block-editing-{id}',
+    // Generic selector prefix for counting blocks
+    blockGeneric: 'preview-block-',
     // Floating toolbar (child)
     floatingToolbar: {
       container: 'floating-toolbar-{id}',
@@ -237,6 +241,8 @@ export const BLOCK_EDITOR_SELECTORS = {
     tabAdvanced: 'block-properties-tab-advanced',
     empty: 'block-properties-empty',
     error: 'block-properties-error',
+    // Reset props button
+    resetPropsBtn: 'block-properties-reset-btn',
     // Pattern reference (when a pattern is selected)
     patternLocked: 'block-properties-pattern-locked',
     patternTitle: 'block-properties-pattern-title',
@@ -291,6 +297,8 @@ export const BLOCK_EDITOR_SELECTORS = {
       duplicateBtn: 'sortable-block-duplicate-{id}',
       removeBtn: 'sortable-block-remove-{id}',
       error: 'sortable-block-error-{id}',
+      // Generic selector prefix for counting blocks
+      generic: 'sortable-block-',
     },
   },
 
