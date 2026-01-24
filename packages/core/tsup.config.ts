@@ -219,6 +219,28 @@ export default defineConfig({
       join(distDir, 'nextspark-registries.d.ts')
     ).catch(() => console.log('No registry declarations to copy'))
 
+    // Copy entity type declarations (for npm mode without DTS)
+    await cp(
+      join(process.cwd(), 'nextspark-entities.d.ts'),
+      join(distDir, 'nextspark-entities.d.ts')
+    ).catch(() => console.log('No entity declarations to copy'))
+
+    // Create declaration files for core entities (workaround for DTS disabled)
+    // Using 'any' for EntityConfig since the full type is very complex and
+    // proper typing would require DTS generation which is disabled for performance
+    const coreEntitiesDts = `
+// Auto-generated declaration file for patterns entity config
+// Used when DTS generation is disabled in core package
+
+// EntityConfig is complex - using permissive typing for npm mode compatibility
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const patternsEntityConfig: any
+`
+    // Ensure directory exists and write declaration file
+    await mkdir(join(distDir, 'entities', 'patterns'), { recursive: true })
+    await writeFile(join(distDir, 'entities', 'patterns', 'patterns.config.d.ts'), coreEntitiesDts.trim())
+    console.log('✅ Created patterns entity declaration file')
+
     console.log('✅ Assets copied successfully')
   },
 })

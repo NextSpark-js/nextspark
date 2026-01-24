@@ -18,6 +18,8 @@ import { convertCorePath } from '../config.mjs'
 export function generateBlockRegistry(blocks, config) {
   const outputFilePath = join(config.outputDir, 'block-registry.ts')
   if (blocks.length === 0) {
+    // When no blocks, use inline type definition to avoid import issues in npm mode
+    // (DTS generation is disabled in core package for performance reasons)
     return `/**
  * Auto-generated Block Registry
  *
@@ -28,13 +30,22 @@ export function generateBlockRegistry(blocks, config) {
  */
 
 import React from 'react'
-import type { BlockConfig } from '${convertCorePath('@/core/types', outputFilePath, config)}'
+
+// Inline type definition for empty registry (avoids import issues in npm mode)
+type BlockConfig = {
+  slug: string
+  name: string
+  description?: string
+  category: string
+  icon?: string
+  fields?: unknown[]
+}
 
 export const BLOCK_REGISTRY: Record<string, BlockConfig> = {}
 
 export const BLOCK_CATEGORIES: string[] = []
 
-export const BLOCK_COMPONENTS: Record<string, React.LazyExoticComponent<React.ComponentType<any>>> = {}
+export const BLOCK_COMPONENTS: Record<string, React.LazyExoticComponent<React.ComponentType<unknown>>> = {}
 
 export const BLOCK_METADATA = {
   totalBlocks: 0,

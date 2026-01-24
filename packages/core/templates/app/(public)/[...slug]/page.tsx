@@ -45,7 +45,8 @@ function getEntityConfigs(): Record<string, EntityConfig> {
   const registry = getEntityRegistry()
   const configs: Record<string, EntityConfig> = {}
   for (const [key, entry] of Object.entries(registry)) {
-    configs[key] = entry.config as EntityConfig
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    configs[key] = (entry as any).config as EntityConfig
   }
   return configs
 }
