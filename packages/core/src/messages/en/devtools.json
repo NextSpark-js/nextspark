@@ -34,6 +34,8 @@
   "restrictedArea": "Developer Area",
   "developerAccessOnly": "Developer access only",
   "config": {
+    "title": "Configuration Viewer",
+    "description": "Explore theme and entity configuration settings",
     "error": "Error loading configuration",
     "tabs": {
       "theme": "Theme Config",
@@ -47,6 +49,8 @@
     "copy": "Copy"
   },
   "tests": {
+    "title": "Test Cases",
+    "description": "Browse and view test documentation",
     "searchPlaceholder": "Search tests...",
     "collapseAll": "Collapse all",
     "expandAll": "Expand all",

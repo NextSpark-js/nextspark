@@ -32,6 +32,8 @@
   "restrictedArea": "Entwicklerbereich",
   "developerAccessOnly": "Nur Entwicklerzugang",
   "config": {
+    "title": "Konfigurationsanzeige",
+    "description": "Theme- und Entitaetskonfiguration erkunden",
     "error": "Fehler beim Laden der Konfiguration",
     "tabs": {
       "theme": "Theme-Konfiguration",
@@ -45,6 +47,8 @@
     "copy": "Kopieren"
   },
   "tests": {
+    "title": "Testfaelle",
+    "description": "Testdokumentation durchsuchen und anzeigen",
     "searchPlaceholder": "Tests suchen...",
     "collapseAll": "Alle einklappen",
     "expandAll": "Alle ausklappen",

@@ -108,7 +108,7 @@ async function copyProjectFiles(): Promise<void> {
   const itemsToCopy = [
     { src: 'app', dest: 'app', force: true },
     { src: 'public', dest: 'public', force: true },
-    { src: 'middleware.ts', dest: 'middleware.ts', force: true }, // Required for EntityPermissionLayout
+    { src: 'proxy.ts', dest: 'proxy.ts', force: true }, // Next.js 16+ proxy (formerly middleware.ts)
     { src: 'next.config.mjs', dest: 'next.config.mjs', force: true },
     { src: 'tsconfig.json', dest: 'tsconfig.json', force: true },
     { src: 'postcss.config.mjs', dest: 'postcss.config.mjs', force: true },

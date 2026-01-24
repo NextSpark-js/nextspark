@@ -19,7 +19,7 @@ interface DevTestsPageProps {
  */
 export default async function DevTestsPage({ params }: DevTestsPageProps) {
   const { path } = await params;
-  const t = await getTranslations("dev.tests");
+  const t = await getTranslations("devtools.tests");
 
   // Convert path array to string (e.g., ['auth', 'login.bdd.md'] -> 'auth/login.bdd.md')
   const initialPath = path?.join("/") || null;

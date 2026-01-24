@@ -18,7 +18,7 @@ const EXCLUDED_TEMPLATE_PATTERNS = ['(templates)'];
 // Root template files that should be synced to project root (not /app)
 // These are critical files that must stay in sync with core
 const ROOT_TEMPLATE_FILES = [
-  'middleware.ts',      // Required for EntityPermissionLayout permission validation
+  'proxy.ts',           // Next.js 16+ proxy (formerly middleware.ts) - required for auth/permission validation
   'next.config.mjs',    // Required for webpack aliases, transpilePackages, security headers
   'tsconfig.json',      // Required for proper path aliases and test file exclusions
   'i18n.ts',            // Required for next-intl configuration
@@ -231,7 +231,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
 
       spinner.succeed(`Synced ${filesToUpdate.length} files (${updated} updated, ${created} created)`);
 
-      // Sync root template files (middleware.ts, etc.)
+      // Sync root template files (proxy.ts, next.config.mjs, etc.)
       const rootTemplatesDir = join(coreDir, 'templates');
       let rootUpdated = 0;
       let rootCreated = 0;
