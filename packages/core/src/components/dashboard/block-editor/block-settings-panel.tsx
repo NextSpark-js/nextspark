@@ -215,7 +215,8 @@ export function BlockSettingsPanel({
                   activeTab === 'content'
                     ? 'text-primary bg-primary/5'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
-                  !hasContentFields && 'opacity-50 cursor-not-allowed'
+                  !hasContentFields && 'opacity-50 cursor-not-allowed',
+                  hasContentFields && 'cursor-pointer'
                 )}
                 onClick={() => hasContentFields && setActiveTab('content')}
                 disabled={!hasContentFields}
@@ -233,7 +234,8 @@ export function BlockSettingsPanel({
                   activeTab === 'design'
                     ? 'text-primary bg-primary/5'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
-                  !hasDesignFields && 'opacity-50 cursor-not-allowed'
+                  !hasDesignFields && 'opacity-50 cursor-not-allowed',
+                  hasDesignFields && 'cursor-pointer'
                 )}
                 onClick={() => hasDesignFields && setActiveTab('design')}
                 disabled={!hasDesignFields}
@@ -251,7 +253,8 @@ export function BlockSettingsPanel({
                   activeTab === 'advanced'
                     ? 'text-primary bg-primary/5'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
-                  !hasAdvancedFields && 'opacity-50 cursor-not-allowed'
+                  !hasAdvancedFields && 'opacity-50 cursor-not-allowed',
+                  hasAdvancedFields && 'cursor-pointer'
                 )}
                 onClick={() => hasAdvancedFields && setActiveTab('advanced')}
                 disabled={!hasAdvancedFields}

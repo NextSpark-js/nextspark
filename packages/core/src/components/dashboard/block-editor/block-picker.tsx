@@ -124,7 +124,7 @@ export function BlockPicker({
       <div className="flex border-b border-border">
         <button
           className={cn(
-            'flex-1 py-3 text-sm font-medium transition-colors relative',
+            'flex-1 py-3 text-sm font-medium transition-colors relative cursor-pointer',
             activeTab === 'blocks'
               ? 'text-primary bg-primary/5'
               : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
@@ -144,7 +144,7 @@ export function BlockPicker({
         {showPatternsTab && (
           <button
             className={cn(
-              'flex-1 py-3 text-sm font-medium transition-colors relative',
+              'flex-1 py-3 text-sm font-medium transition-colors relative cursor-pointer',
               activeTab === 'patterns'
                 ? 'text-primary bg-primary/5'
                 : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
@@ -162,7 +162,7 @@ export function BlockPicker({
         {/* Layout tab - always shown (for tree view) */}
         <button
           className={cn(
-            'flex-1 py-3 text-sm font-medium transition-colors relative',
+            'flex-1 py-3 text-sm font-medium transition-colors relative cursor-pointer',
             activeTab === 'layout'
               ? 'text-primary bg-primary/5'
               : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
@@ -205,7 +205,7 @@ export function BlockPicker({
             >
               <button
                 className={cn(
-                  'px-2.5 py-1 text-xs font-medium rounded-md whitespace-nowrap transition-colors',
+                  'px-2.5 py-1 text-xs font-medium rounded-md whitespace-nowrap transition-colors cursor-pointer',
                   !selectedCategory
                     ? 'bg-foreground text-background'
                     : 'bg-muted text-muted-foreground hover:bg-muted-foreground/20'
@@ -224,7 +224,7 @@ export function BlockPicker({
                   <button
                     key={category}
                     className={cn(
-                      'px-2.5 py-1 text-xs font-medium rounded-md whitespace-nowrap transition-colors capitalize flex items-center gap-1.5',
+                      'px-2.5 py-1 text-xs font-medium rounded-md whitespace-nowrap transition-colors capitalize flex items-center gap-1.5 cursor-pointer',
                       isActive
                         ? `${config.bgColor} ${config.textColor} ${config.borderColor} border`
                         : 'bg-muted text-muted-foreground hover:bg-muted-foreground/20'
@@ -255,12 +255,7 @@ export function BlockPicker({
                   return (
                     <div
                       key={block.slug}
-                      className="group relative bg-background border border-border rounded-lg p-3 hover:border-primary hover:shadow-md transition-[border-color,box-shadow] cursor-grab active:cursor-grabbing"
-                      draggable
-                      onDragStart={(e) => {
-                        e.dataTransfer.setData('blockSlug', block.slug)
-                        e.dataTransfer.effectAllowed = 'copy'
-                      }}
+                      className="group relative bg-background border border-border rounded-lg p-3 hover:border-primary hover:shadow-md transition-[border-color,box-shadow] cursor-pointer"
                       onClick={() => onAddBlock(block.slug)}
                       data-cy={sel('blockEditor.blockPicker.blockCard', { slug: block.slug })}
                     >
@@ -300,7 +295,7 @@ export function BlockPicker({
                       {/* Hover "+" Button */}
                       <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
-                          className="w-6 h-6 bg-foreground text-background rounded flex items-center justify-center text-xs shadow-md hover:scale-110 transition-transform"
+                          className="w-6 h-6 bg-foreground text-background rounded flex items-center justify-center text-xs shadow-md hover:scale-110 transition-transform cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation()
                             onAddBlock(block.slug)

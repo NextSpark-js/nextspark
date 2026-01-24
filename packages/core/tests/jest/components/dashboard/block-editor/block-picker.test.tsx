@@ -286,8 +286,8 @@ describe('BlockPicker', () => {
     const getBlockCard = (container: HTMLElement, blockName: string) => {
       const blockList = container.querySelector('[data-cy="blockList"]')
       if (!blockList) return null
-      // Find the card that contains the block name
-      return Array.from(blockList.querySelectorAll('[draggable="true"]')).find(
+      // Find the card that contains the block name (using data-cy="blockCard")
+      return Array.from(blockList.querySelectorAll('[data-cy="blockCard"]')).find(
         card => card.textContent?.includes(blockName)
       ) as HTMLElement | null
     }
@@ -303,28 +303,12 @@ describe('BlockPicker', () => {
       expect(onAddBlock).toHaveBeenCalledWith('hero-section')
     })
 
-    test('block cards are draggable', () => {
+    test('block cards are clickable (cursor-pointer)', () => {
       const { container } = render(<BlockPicker {...defaultProps} />)
 
       const heroBlock = getBlockCard(container, 'Hero Section')
-      expect(heroBlock).toHaveAttribute('draggable', 'true')
-    })
-
-    test('sets correct data on drag start', () => {
-      const { container } = render(<BlockPicker {...defaultProps} />)
-
-      const heroBlock = getBlockCard(container, 'Hero Section')!
-      const mockDataTransfer = {
-        setData: jest.fn(),
-        effectAllowed: '',
-      }
-
-      fireEvent.dragStart(heroBlock, {
-        dataTransfer: mockDataTransfer,
-      })
-
-      expect(mockDataTransfer.setData).toHaveBeenCalledWith('blockSlug', 'hero-section')
-      expect(mockDataTransfer.effectAllowed).toBe('copy')
+      expect(heroBlock).toBeTruthy()
+      expect(heroBlock).toHaveClass('cursor-pointer')
     })
   })
 
