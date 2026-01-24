@@ -18,7 +18,10 @@ const EXCLUDED_TEMPLATE_PATTERNS = ['(templates)'];
 // Root template files that should be synced to project root (not /app)
 // These are critical files that must stay in sync with core
 const ROOT_TEMPLATE_FILES = [
-  'middleware.ts', // Required for EntityPermissionLayout permission validation
+  'middleware.ts',      // Required for EntityPermissionLayout permission validation
+  'next.config.mjs',    // Required for webpack aliases, transpilePackages, security headers
+  'tsconfig.json',      // Required for proper path aliases and test file exclusions
+  'i18n.ts',            // Required for next-intl configuration
 ];
 
 // Display limits for file listings
