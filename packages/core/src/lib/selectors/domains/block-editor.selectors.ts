@@ -195,7 +195,28 @@ export const BLOCK_EDITOR_SELECTORS = {
       content: 'builder-config-entity-content',
       field: 'builder-config-entity-field-{name}',
     },
-    // SEO & Meta section (collapsible)
+    // SEO section (collapsible) - standalone
+    seoSection: {
+      container: 'builder-config-seo-section',
+      trigger: 'builder-config-seo-trigger',
+      content: 'builder-config-seo-content',
+      metaTitle: 'builder-config-seo-title',
+      metaDescription: 'builder-config-seo-description',
+      metaKeywords: 'builder-config-seo-keywords',
+      ogImage: 'builder-config-seo-og-image',
+    },
+    // Custom Fields section (collapsible) - standalone
+    customFieldsSection: {
+      container: 'builder-config-custom-section',
+      trigger: 'builder-config-custom-trigger',
+      content: 'builder-config-custom-content',
+      addButton: 'builder-config-custom-add',
+      fieldKey: 'builder-config-custom-key-{index}',
+      fieldValue: 'builder-config-custom-value-{index}',
+      fieldRemove: 'builder-config-custom-remove-{index}',
+    },
+    // SEO & Meta section (collapsible) - DEPRECATED: use seoSection + customFieldsSection
+    /** @deprecated Use seoSection and customFieldsSection instead */
     seoMetaSection: {
       container: 'builder-config-seo-section',
       trigger: 'builder-config-seo-trigger',

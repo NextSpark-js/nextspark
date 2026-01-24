@@ -62,9 +62,10 @@ export function ConfigPanel({
   const t = useTranslations('admin.builder')
   const tSettings = useTranslations('admin.pages.settings')
 
-  // Entity fields section state
+  // Collapsible section states
   const [entityFieldsOpen, setEntityFieldsOpen] = useState(true)
-  const [seoMetaOpen, setSeoMetaOpen] = useState(true)
+  const [seoOpen, setSeoOpen] = useState(true)
+  const [customFieldsOpen, setCustomFieldsOpen] = useState(true)
 
   // Get sidebar field definitions
   const sidebarFields = entityConfig.builder?.sidebarFields || []
@@ -225,17 +226,18 @@ export function ConfigPanel({
         data-cy={sel('blockEditor.configPanel.scroll')}
         className="h-full"
       >
-        <div className="max-w-2xl mx-auto p-6 space-y-6">
+        <div className="max-w-4xl mx-auto p-6 space-y-4">
           {/* Entity Fields Section */}
           {showEntityFieldsSection && (
             <Collapsible
               open={entityFieldsOpen}
               onOpenChange={setEntityFieldsOpen}
               data-cy={sel('blockEditor.configPanel.entityFieldsSection.container')}
+              className="bg-card rounded-lg border"
             >
               <CollapsibleTrigger
                 data-cy={sel('blockEditor.configPanel.entityFieldsSection.trigger')}
-                className="flex items-center justify-between w-full p-4 bg-card rounded-lg border hover:bg-accent/50 transition-colors"
+                className="flex items-center justify-between w-full p-4 hover:bg-accent/50 transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-2">
                   <FileText className="h-4 w-4 text-muted-foreground" />
@@ -248,9 +250,8 @@ export function ConfigPanel({
               </CollapsibleTrigger>
               <CollapsibleContent
                 data-cy={sel('blockEditor.configPanel.entityFieldsSection.content')}
-                className="pt-4"
               >
-                <div className="space-y-6 p-4 bg-card rounded-lg border">
+                <div className="space-y-6 px-4 pb-4 pt-2 border-t">
                   {/* Entity specific fields */}
                   {sidebarFields.length > 0 && (
                     <div className="space-y-4">
@@ -322,31 +323,31 @@ export function ConfigPanel({
             </Collapsible>
           )}
 
-          {/* SEO & Meta Section */}
+          {/* SEO Section */}
           {showSeoSection && (
             <Collapsible
-              open={seoMetaOpen}
-              onOpenChange={setSeoMetaOpen}
-              data-cy={sel('blockEditor.configPanel.seoMetaSection.container')}
+              open={seoOpen}
+              onOpenChange={setSeoOpen}
+              data-cy={sel('blockEditor.configPanel.seoSection.container')}
+              className="bg-card rounded-lg border"
             >
               <CollapsibleTrigger
-                data-cy={sel('blockEditor.configPanel.seoMetaSection.trigger')}
-                className="flex items-center justify-between w-full p-4 bg-card rounded-lg border hover:bg-accent/50 transition-colors"
+                data-cy={sel('blockEditor.configPanel.seoSection.trigger')}
+                className="flex items-center justify-between w-full p-4 hover:bg-accent/50 transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-2">
                   <Search className="h-4 w-4 text-muted-foreground" />
-                  <h3 className="font-semibold">{t('config.seoMeta')}</h3>
+                  <h3 className="font-semibold">{t('config.seo')}</h3>
                 </div>
                 <ChevronDown className={cn(
                   'h-4 w-4 text-muted-foreground transition-transform',
-                  seoMetaOpen && 'rotate-180'
+                  seoOpen && 'rotate-180'
                 )} />
               </CollapsibleTrigger>
               <CollapsibleContent
-                data-cy={sel('blockEditor.configPanel.seoMetaSection.content')}
-                className="pt-4"
+                data-cy={sel('blockEditor.configPanel.seoSection.content')}
               >
-                <div className="space-y-6 p-4 bg-card rounded-lg border">
+                <div className="space-y-6 px-4 pb-4 pt-2 border-t">
                   {/* Meta Title */}
                   <div className="space-y-2">
                     <Label htmlFor="meta-title">{tSettings('seo.metaTitle')}</Label>
@@ -355,7 +356,7 @@ export function ConfigPanel({
                       value={pageSettings.seo?.metaTitle || ''}
                       onChange={(e) => handleSeoChange('metaTitle', e.target.value)}
                       placeholder={tSettings('seo.metaTitlePlaceholder')}
-                      data-cy={sel('blockEditor.configPanel.seoMetaSection.metaTitle')}
+                      data-cy={sel('blockEditor.configPanel.seoSection.metaTitle')}
                     />
                     <p className="text-xs text-muted-foreground">
                       {tSettings('seo.metaTitleHint')}
@@ -371,7 +372,7 @@ export function ConfigPanel({
                       onChange={(e) => handleSeoChange('metaDescription', e.target.value)}
                       placeholder={tSettings('seo.metaDescriptionPlaceholder')}
                       rows={3}
-                      data-cy={sel('blockEditor.configPanel.seoMetaSection.metaDescription')}
+                      data-cy={sel('blockEditor.configPanel.seoSection.metaDescription')}
                     />
                     <p className="text-xs text-muted-foreground">
                       {pageSettings.seo?.metaDescription?.length || 0}/160 {tSettings('seo.characters')}
@@ -386,7 +387,7 @@ export function ConfigPanel({
                       value={pageSettings.seo?.metaKeywords || ''}
                       onChange={(e) => handleSeoChange('metaKeywords', e.target.value)}
                       placeholder={tSettings('seo.metaKeywordsPlaceholder')}
-                      data-cy={sel('blockEditor.configPanel.seoMetaSection.metaKeywords')}
+                      data-cy={sel('blockEditor.configPanel.seoSection.metaKeywords')}
                     />
                   </div>
 
@@ -398,71 +399,90 @@ export function ConfigPanel({
                       value={pageSettings.seo?.ogImage || ''}
                       onChange={(e) => handleSeoChange('ogImage', e.target.value)}
                       placeholder={tSettings('seo.ogImagePlaceholder')}
-                      data-cy={sel('blockEditor.configPanel.seoMetaSection.ogImage')}
+                      data-cy={sel('blockEditor.configPanel.seoSection.ogImage')}
                     />
-                  </div>
-
-                  {/* Custom Fields */}
-                  <div className="space-y-4 pt-4 border-t">
-                    <div className="flex items-center gap-2">
-                      <Settings2 className="h-4 w-4 text-muted-foreground" />
-                      <Label>{tSettings('customFields.title')}</Label>
-                    </div>
-
-                    {(pageSettings.customFields || []).length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">
-                        {tSettings('customFields.empty')}
-                      </p>
-                    ) : (
-                      <div className="space-y-3">
-                        {(pageSettings.customFields || []).map((field, index) => (
-                          <div key={index} className="flex gap-2 items-start">
-                            <div className="flex-1">
-                              <Input
-                                value={field.key}
-                                onChange={(e) => handleUpdateCustomField(index, 'key', e.target.value)}
-                                placeholder={tSettings('customFields.keyPlaceholder')}
-                                className="font-mono text-sm"
-                                data-cy={sel('blockEditor.configPanel.seoMetaSection.customFields.fieldKey', { index })}
-                              />
-                            </div>
-                            <div className="flex-1">
-                              <Input
-                                value={field.value}
-                                onChange={(e) => handleUpdateCustomField(index, 'value', e.target.value)}
-                                placeholder={tSettings('customFields.valuePlaceholder')}
-                                data-cy={sel('blockEditor.configPanel.seoMetaSection.customFields.fieldValue', { index })}
-                              />
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="shrink-0 text-muted-foreground hover:text-destructive"
-                              onClick={() => handleRemoveCustomField(index)}
-                              data-cy={sel('blockEditor.configPanel.seoMetaSection.customFields.fieldRemove', { index })}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleAddCustomField}
-                      className="w-full"
-                      data-cy={sel('blockEditor.configPanel.seoMetaSection.customFields.addButton')}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      {tSettings('customFields.add')}
-                    </Button>
                   </div>
                 </div>
               </CollapsibleContent>
             </Collapsible>
           )}
+
+          {/* Custom Fields Section */}
+          <Collapsible
+            open={customFieldsOpen}
+            onOpenChange={setCustomFieldsOpen}
+            data-cy={sel('blockEditor.configPanel.customFieldsSection.container')}
+            className="bg-card rounded-lg border"
+          >
+            <CollapsibleTrigger
+              data-cy={sel('blockEditor.configPanel.customFieldsSection.trigger')}
+              className="flex items-center justify-between w-full p-4 hover:bg-accent/50 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <Settings2 className="h-4 w-4 text-muted-foreground" />
+                <h3 className="font-semibold">{tSettings('customFields.title')}</h3>
+              </div>
+              <ChevronDown className={cn(
+                'h-4 w-4 text-muted-foreground transition-transform',
+                customFieldsOpen && 'rotate-180'
+              )} />
+            </CollapsibleTrigger>
+            <CollapsibleContent
+              data-cy={sel('blockEditor.configPanel.customFieldsSection.content')}
+            >
+              <div className="space-y-4 px-4 pb-4 pt-2 border-t">
+                {(pageSettings.customFields || []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    {tSettings('customFields.empty')}
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {(pageSettings.customFields || []).map((field, index) => (
+                      <div key={index} className="flex gap-2 items-start">
+                        <div className="flex-1">
+                          <Input
+                            value={field.key}
+                            onChange={(e) => handleUpdateCustomField(index, 'key', e.target.value)}
+                            placeholder={tSettings('customFields.keyPlaceholder')}
+                            className="font-mono text-sm"
+                            data-cy={sel('blockEditor.configPanel.customFieldsSection.fieldKey', { index })}
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <Input
+                            value={field.value}
+                            onChange={(e) => handleUpdateCustomField(index, 'value', e.target.value)}
+                            placeholder={tSettings('customFields.valuePlaceholder')}
+                            data-cy={sel('blockEditor.configPanel.customFieldsSection.fieldValue', { index })}
+                          />
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="shrink-0 text-muted-foreground hover:text-destructive"
+                          onClick={() => handleRemoveCustomField(index)}
+                          data-cy={sel('blockEditor.configPanel.customFieldsSection.fieldRemove', { index })}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddCustomField}
+                  className="w-full"
+                  data-cy={sel('blockEditor.configPanel.customFieldsSection.addButton')}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {tSettings('customFields.add')}
+                </Button>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
       </ScrollArea>
     </div>
