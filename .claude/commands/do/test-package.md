@@ -133,11 +133,12 @@ fi
 
 ### Step 3: Build and Pack ALL Packages
 
-**CRITICAL:** Must rebuild to include latest code changes.
+**CRITICAL:** Must do a **CLEAN rebuild** to include latest code changes. Stale build caches can cause the packed tarball to contain outdated code even when source files are correct.
 
 ```bash
 # Core package
 cd "${REPO_ROOT}/packages/core"
+rm -rf dist                    # IMPORTANT: Clean dist to prevent stale cache
 pnpm build:js
 rm -f *.tgz
 $NPM_CMD pack
@@ -145,16 +146,20 @@ $NPM_CMD pack
 
 # CLI package
 cd "${REPO_ROOT}/packages/cli"
+rm -rf dist                    # IMPORTANT: Clean dist to prevent stale cache
 pnpm build
 rm -f *.tgz
 $NPM_CMD pack
 
 # Testing package
 cd "${REPO_ROOT}/packages/testing"
+rm -rf dist                    # IMPORTANT: Clean dist to prevent stale cache
 pnpm build
 rm -f *.tgz
 $NPM_CMD pack
 ```
+
+**Why clean builds matter:** Build tools like tsup may cache intermediate results. If source files changed but the cache wasn't invalidated, the packed tarball will contain old code. Always `rm -rf dist` before building to ensure fresh compilation.
 
 **Verify all three `.tgz` files exist:**
 ```bash
@@ -530,6 +535,8 @@ If ANY step fails:
 | CSP violation errors | Wrong APP_URL | Update `NEXT_PUBLIC_APP_URL` to match actual port |
 | npm/npx silent on Windows | Git Bash compatibility | Use `cmd.exe /c "npm ..."` wrapper |
 | `.next/dev/lock` error | Stale lock from crashed server | `rm -rf .next` and restart |
+| Root config files not synced (i18n.ts, tsconfig.json, etc.) | Stale CLI build cache | `rm -rf dist && pnpm build` before `npm pack` |
+| Tarball contains old code despite source changes | Build cache not invalidated | Always `rm -rf dist` before building each package |
 
 ---
 
