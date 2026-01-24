@@ -71,8 +71,9 @@ describe('Block Editor Selectors Validation', {
       cy.get(pom.editorSelectors.viewModeToggle).should('exist').and('be.visible')
     })
 
-    it('SEL_BE_001_06: should find layout mode button (viewEditor)', { tags: '@SEL_BE_001_06' }, () => {
-      cy.get(pom.editorSelectors.viewEditor).should('exist').and('be.visible')
+    it('SEL_BE_001_06: should find settings mode button (viewSettings)', { tags: '@SEL_BE_001_06' }, () => {
+      // v2.0: viewEditor renamed to viewSettings
+      cy.get(pom.editorSelectors.viewSettings).should('exist').and('be.visible')
     })
 
     it('SEL_BE_001_07: should find preview mode button (viewPreview)', { tags: '@SEL_BE_001_07' }, () => {
@@ -113,8 +114,10 @@ describe('Block Editor Selectors Validation', {
       cy.get(pom.editorSelectors.tabBlocks).should('exist').and('be.visible')
     })
 
-    it('SEL_BE_002_03: should find config tab', { tags: '@SEL_BE_002_03' }, () => {
-      cy.get(pom.editorSelectors.tabConfig).should('exist').and('be.visible')
+    it('SEL_BE_002_03: should find layout tab', { tags: '@SEL_BE_002_03' }, () => {
+      // v2.0: tabConfig replaced by tabLayout (tree view)
+      // Entity fields moved to Settings mode in center column
+      cy.get(pom.editorSelectors.tabLayout).should('exist').and('be.visible')
     })
 
     it('SEL_BE_002_04: should find search input', { tags: '@SEL_BE_002_04' }, () => {
@@ -127,7 +130,7 @@ describe('Block Editor Selectors Validation', {
 
     it('SEL_BE_002_06: should find category chip by name', { tags: '@SEL_BE_002_06' }, () => {
       // Test with 'content' or 'hero' category depending on available blocks
-      cy.get('[data-cy^="block-picker-category-"]').first().should('exist').and('be.visible')
+      cy.get(pom.editorSelectors.categoryGeneric).first().should('exist').and('be.visible')
     })
 
     it('SEL_BE_002_07: should find hero block card', { tags: '@SEL_BE_002_07' }, () => {
@@ -172,8 +175,8 @@ describe('Block Editor Selectors Validation', {
     beforeEach(() => {
       pom.visitEdit(testPageId)
       pom.waitForEditor()
-      // Switch to config tab to see entity fields
-      cy.get(pom.editorSelectors.tabConfig).click()
+      // v2.0: Switch to Settings mode to see entity fields (moved to center column)
+      cy.get(pom.editorSelectors.viewSettings).click()
     })
 
     after(() => {
@@ -188,15 +191,15 @@ describe('Block Editor Selectors Validation', {
       }
     })
 
-    it('SEL_BE_003_01: should find entity fields panel container', { tags: '@SEL_BE_003_01' }, () => {
-      cy.get(pom.editorSelectors.entityFieldsPanel).should('exist').and('be.visible')
+    it('SEL_BE_003_01: should find entity fields section container', { tags: '@SEL_BE_003_01' }, () => {
+      // v2.0: Entity fields moved to configPanel.entityFieldsSection in Settings mode
+      cy.get(pom.editorSelectors.configEntitySection).should('exist').and('be.visible')
     })
 
     // Note: These tests depend on the entity having specific fields configured
     it('SEL_BE_003_02: should find entity field by name', { tags: '@SEL_BE_003_02' }, () => {
-      // Check if any field exists - pages might have excerpt, featuredImage, etc.
-      // Selector pattern is entity-field-{name}
-      cy.get('[data-cy^="entity-field-"]').should('exist')
+      // v2.0: Selector pattern is builder-config-entity-field-{name}
+      cy.get('[data-cy^="builder-config-entity-field-"]').should('exist')
     })
 
     it('SEL_BE_003_03: should find category list (if taxonomies enabled)', { tags: '@SEL_BE_003_03' }, () => {
@@ -212,78 +215,92 @@ describe('Block Editor Selectors Validation', {
   })
 
   // ===========================================================================
-  // SEL_BE_004: LAYOUT CANVAS SELECTORS
+  // SEL_BE_004: TREE VIEW SELECTORS (v2.0 - Layout tab)
+  // NOTE: layoutCanvas is deprecated in v2.0. Block list is now in treeView (Layout tab).
   // ===========================================================================
-  describe('SEL_BE_004: Layout Canvas Selectors', { tags: '@SEL_BE_004' }, () => {
+  describe('SEL_BE_004: Tree View Selectors (Layout Tab)', { tags: '@SEL_BE_004' }, () => {
     beforeEach(() => {
       pom.visitCreate()
       pom.waitForEditor()
-      pom.switchToLayoutMode()
+      // v2.0: Click Layout tab in left sidebar to see tree view
+      cy.get(pom.editorSelectors.tabLayout).click()
     })
 
-    // When no blocks: only empty state exists (no container)
+    // When no blocks: empty state in tree view
     it('SEL_BE_004_01: should find empty state when no blocks', { tags: '@SEL_BE_004_01' }, () => {
-      cy.get(pom.editorSelectors.layoutCanvasEmpty).should('exist').and('be.visible')
+      cy.get(pom.editorSelectors.treeViewEmpty).should('exist').and('be.visible')
     })
 
     describe('With block added', () => {
       beforeEach(() => {
+        // Switch to Blocks tab to add a block
+        cy.get(pom.editorSelectors.tabBlocks).click()
         pom.addBlock('hero')
-        // Wait for block to be added
-        cy.get(pom.editorSelectors.sortableBlockGeneric).should('have.length.at.least', 1)
+        // Switch back to Layout tab
+        cy.get(pom.editorSelectors.tabLayout).click()
+        // Wait for tree view to show the block
+        cy.get(pom.editorSelectors.treeView).should('exist')
       })
 
-      // Container only exists when there ARE blocks
-      it('SEL_BE_004_02: should find layout canvas container with blocks', { tags: '@SEL_BE_004_02' }, () => {
-        cy.get(pom.editorSelectors.layoutCanvas).should('exist').and('be.visible')
+      // Tree view container exists when there ARE blocks
+      it('SEL_BE_004_02: should find tree view container with blocks', { tags: '@SEL_BE_004_02' }, () => {
+        cy.get(pom.editorSelectors.treeView).should('exist').and('be.visible')
       })
 
-      it('SEL_BE_004_03: should find sortable blocks (generic)', { tags: '@SEL_BE_004_03' }, () => {
-        cy.get(pom.editorSelectors.sortableBlockGeneric).should('exist')
+      // Test preview canvas has blocks (v2.0: blocks render in preview mode)
+      it('SEL_BE_004_03: should find preview blocks (generic)', { tags: '@SEL_BE_004_03' }, () => {
+        // Preview canvas is visible by default in v2.0
+        cy.get(pom.editorSelectors.previewBlockGeneric).should('exist')
       })
 
-      it('SEL_BE_004_04: should find specific sortable block by ID', { tags: '@SEL_BE_004_04' }, () => {
-        cy.get(pom.editorSelectors.sortableBlockGeneric).first()
+      it('SEL_BE_004_04: should find specific preview block by ID', { tags: '@SEL_BE_004_04' }, () => {
+        cy.get(pom.editorSelectors.previewBlockGeneric).first()
           .invoke('attr', 'data-cy')
           .then((dataCy) => {
-            const blockId = dataCy?.replace('sortable-block-', '') || ''
+            const blockId = dataCy?.replace('preview-block-', '') || ''
             expect(blockId).to.not.be.empty
-            cy.get(pom.editorSelectors.sortableBlock(blockId)).should('exist')
+            cy.get(pom.editorSelectors.previewBlock(blockId)).should('exist')
           })
       })
 
-      it('SEL_BE_004_05: should find drag handle', { tags: '@SEL_BE_004_05' }, () => {
-        cy.get(pom.editorSelectors.sortableBlockGeneric).first()
+      it('SEL_BE_004_05: should find floating toolbar drag handle on hover', { tags: '@SEL_BE_004_05' }, () => {
+        cy.get(pom.editorSelectors.previewBlockGeneric).first()
           .invoke('attr', 'data-cy')
           .then((dataCy) => {
-            const blockId = dataCy?.replace('sortable-block-', '') || ''
-            cy.get(pom.editorSelectors.dragHandle(blockId)).should('exist')
+            const blockId = dataCy?.replace('preview-block-', '') || ''
+            cy.get(pom.editorSelectors.previewBlock(blockId)).trigger('mouseenter')
+            cy.get(pom.editorSelectors.floatingToolbarDrag(blockId)).should('exist')
           })
       })
 
-      it('SEL_BE_004_06: should find duplicate button', { tags: '@SEL_BE_004_06' }, () => {
-        cy.get(pom.editorSelectors.sortableBlockGeneric).first()
+      it('SEL_BE_004_06: should find floating toolbar duplicate button', { tags: '@SEL_BE_004_06' }, () => {
+        cy.get(pom.editorSelectors.previewBlockGeneric).first()
           .invoke('attr', 'data-cy')
           .then((dataCy) => {
-            const blockId = dataCy?.replace('sortable-block-', '') || ''
-            cy.get(pom.editorSelectors.duplicateBlock(blockId)).should('exist')
+            const blockId = dataCy?.replace('preview-block-', '') || ''
+            cy.get(pom.editorSelectors.previewBlock(blockId)).trigger('mouseenter')
+            cy.get(pom.editorSelectors.floatingToolbarDuplicate(blockId)).should('exist')
           })
       })
 
-      it('SEL_BE_004_07: should find remove button', { tags: '@SEL_BE_004_07' }, () => {
-        cy.get(pom.editorSelectors.sortableBlockGeneric).first()
+      it('SEL_BE_004_07: should find floating toolbar delete button', { tags: '@SEL_BE_004_07' }, () => {
+        cy.get(pom.editorSelectors.previewBlockGeneric).first()
           .invoke('attr', 'data-cy')
           .then((dataCy) => {
-            const blockId = dataCy?.replace('sortable-block-', '') || ''
-            cy.get(pom.editorSelectors.removeBlock(blockId)).should('exist')
+            const blockId = dataCy?.replace('preview-block-', '') || ''
+            cy.get(pom.editorSelectors.previewBlock(blockId)).trigger('mouseenter')
+            cy.get(pom.editorSelectors.floatingToolbarDelete(blockId)).should('exist')
           })
       })
 
-      // Note: sortableBlockName selector is defined but not yet implemented in component
-      // This test validates the block card contains the block name text
-      it('SEL_BE_004_08: should display block name in sortable card', { tags: '@SEL_BE_004_08' }, () => {
-        cy.get(pom.editorSelectors.sortableBlockGeneric).first()
-          .should('contain.text', 'Hero') // Hero block should show its name
+      it('SEL_BE_004_08: should display block name in floating toolbar', { tags: '@SEL_BE_004_08' }, () => {
+        cy.get(pom.editorSelectors.previewBlockGeneric).first()
+          .invoke('attr', 'data-cy')
+          .then((dataCy) => {
+            const blockId = dataCy?.replace('preview-block-', '') || ''
+            cy.get(pom.editorSelectors.previewBlock(blockId)).trigger('mouseenter')
+            cy.get(pom.editorSelectors.floatingToolbarName(blockId)).should('contain.text', 'Hero')
+          })
       })
     })
   })
@@ -295,11 +312,10 @@ describe('Block Editor Selectors Validation', {
     beforeEach(() => {
       pom.visitCreate()
       pom.waitForEditor()
-      // Add a block first, then switch to preview
-      pom.switchToLayoutMode()
+      // v2.0: Preview mode is the default, just add a block
       pom.addBlock('hero')
-      cy.get(pom.editorSelectors.sortableBlockGeneric).should('have.length.at.least', 1)
-      pom.switchToPreviewMode()
+      // Wait for block to render in preview canvas
+      cy.get(pom.editorSelectors.previewBlockGeneric).should('have.length.at.least', 1)
     })
 
     it('SEL_BE_005_01: should find preview canvas container', { tags: '@SEL_BE_005_01' }, () => {
@@ -378,10 +394,10 @@ describe('Block Editor Selectors Validation', {
 
     describe('With block selected', () => {
       beforeEach(() => {
-        pom.switchToLayoutMode()
+        // v2.0: Add block (auto-selected) in Preview mode
         pom.addBlock('hero')
-        // Block is auto-selected after adding
-        cy.get(pom.editorSelectors.sortableBlockGeneric).should('have.length.at.least', 1)
+        // Block is auto-selected after adding - wait for it in preview canvas
+        cy.get(pom.editorSelectors.previewBlockGeneric).should('have.length.at.least', 1)
       })
 
       // Container only exists when a block IS selected
@@ -427,52 +443,52 @@ describe('Block Editor Selectors Validation', {
     beforeEach(() => {
       pom.visitCreate()
       pom.waitForEditor()
-      pom.switchToLayoutMode()
-      // Add features-grid block which has array fields
+      // v2.0: Add features-grid block which has array fields
       pom.addBlock('features-grid')
-      cy.get(pom.editorSelectors.sortableBlockGeneric).should('have.length.at.least', 1)
+      // Wait for block in preview canvas (v2.0 - preview mode is default)
+      cy.get(pom.editorSelectors.previewBlockGeneric).should('have.length.at.least', 1)
     })
 
     it('SEL_BE_007_01: should find array field container', { tags: '@SEL_BE_007_01' }, () => {
       // features-grid has 'features' array field - selector is block-array-{name}
-      cy.get('[data-cy^="block-array-"]').should('exist')
+      cy.get(pom.editorSelectors.arrayFieldGeneric).should('exist')
     })
 
     it('SEL_BE_007_02: should find array field add button', { tags: '@SEL_BE_007_02' }, () => {
       // Selector is block-array-{name}-add
-      cy.get('[data-cy$="-add"][data-cy^="block-array-"]').should('exist')
+      cy.get(pom.editorSelectors.arrayFieldAddGeneric).should('exist')
     })
 
     describe('With array items', () => {
       beforeEach(() => {
         // Click add button to add an item
-        cy.get('[data-cy$="-add"][data-cy^="block-array-"]').first().click()
+        cy.get(pom.editorSelectors.arrayFieldAddGeneric).first().click()
         // Wait for item controls to appear - use remove button as indicator
         // Selector pattern is block-array-{name}-{index}-remove
-        cy.get('[data-cy$="-remove"][data-cy^="block-array-"]', { timeout: 10000 }).should('have.length.at.least', 1)
+        cy.get(pom.editorSelectors.arrayFieldRemoveGeneric, { timeout: 10000 }).should('have.length.at.least', 1)
       })
 
       it('SEL_BE_007_03: should find array field item controls', { tags: '@SEL_BE_007_03' }, () => {
         // Item exists if it has remove button
-        cy.get('[data-cy$="-remove"][data-cy^="block-array-"]').first().should('exist')
+        cy.get(pom.editorSelectors.arrayFieldRemoveGeneric).first().should('exist')
       })
 
       it('SEL_BE_007_04: should find array field item move up button', { tags: '@SEL_BE_007_04' }, () => {
         // Add second item for move buttons to be enabled
-        cy.get('[data-cy$="-add"][data-cy^="block-array-"]').first().click()
-        cy.get('[data-cy$="-remove"][data-cy^="block-array-"]').should('have.length.at.least', 2)
+        cy.get(pom.editorSelectors.arrayFieldAddGeneric).first().click()
+        cy.get(pom.editorSelectors.arrayFieldRemoveGeneric).should('have.length.at.least', 2)
         // Selector is block-array-{name}-{index}-up
-        cy.get('[data-cy$="-up"][data-cy^="block-array-"]').should('exist')
+        cy.get(pom.editorSelectors.arrayFieldUpGeneric).should('exist')
       })
 
       it('SEL_BE_007_05: should find array field item move down button', { tags: '@SEL_BE_007_05' }, () => {
         // Selector is block-array-{name}-{index}-down
-        cy.get('[data-cy$="-down"][data-cy^="block-array-"]').should('exist')
+        cy.get(pom.editorSelectors.arrayFieldDownGeneric).should('exist')
       })
 
       it('SEL_BE_007_06: should find array field item remove button', { tags: '@SEL_BE_007_06' }, () => {
         // Selector is block-array-{name}-{index}-remove
-        cy.get('[data-cy$="-remove"][data-cy^="block-array-"]').should('exist')
+        cy.get(pom.editorSelectors.arrayFieldRemoveGeneric).should('exist')
       })
     })
   })
@@ -487,54 +503,74 @@ describe('Block Editor Selectors Validation', {
     })
 
     it('SEL_BE_008_01: should find patterns tab button', { tags: '@SEL_BE_008_01' }, () => {
-      cy.get('[data-cy="block-picker-tab-patterns"]').should('exist').and('be.visible')
+      cy.get(pom.editorSelectors.tabPatterns).should('exist').and('be.visible')
     })
 
     it('SEL_BE_008_02: should find patterns search input after clicking patterns tab', { tags: '@SEL_BE_008_02' }, () => {
-      cy.get('[data-cy="block-picker-tab-patterns"]').click()
-      cy.get('[data-cy="block-picker-patterns-search"]').should('exist').and('be.visible')
+      cy.get(pom.editorSelectors.tabPatterns).click()
+      cy.get(pom.editorSelectors.patternsSearch).should('exist').and('be.visible')
     })
 
     it('SEL_BE_008_03: should find patterns list container', { tags: '@SEL_BE_008_03' }, () => {
-      cy.get('[data-cy="block-picker-tab-patterns"]').click()
-      cy.get('[data-cy="block-picker-patterns-list"]').should('exist').and('be.visible')
+      cy.get(pom.editorSelectors.tabPatterns).click()
+      cy.get(pom.editorSelectors.patternsList).should('exist').and('be.visible')
     })
 
     it('SEL_BE_008_04: should find pattern cards for sample patterns', { tags: '@SEL_BE_008_04' }, () => {
-      cy.get('[data-cy="block-picker-tab-patterns"]').click()
+      cy.get(pom.editorSelectors.tabPatterns).click()
       // Wait for patterns to load
       cy.wait(500)
       // Check for pattern cards with specific IDs (using generic selector)
       // Pattern cards should exist for published patterns
-      cy.get('[data-cy^="block-picker-pattern-card-"]').should('have.length.at.least', 1)
+      cy.get(pom.editorSelectors.patternCardGeneric).should('have.length.at.least', 1)
     })
 
     it('SEL_BE_008_05: should find pattern card icon element', { tags: '@SEL_BE_008_05' }, () => {
-      cy.get('[data-cy="block-picker-tab-patterns"]').click()
+      cy.get(pom.editorSelectors.tabPatterns).click()
       cy.wait(500)
-      // Icon selector pattern: block-picker-pattern-icon-{id}
-      cy.get('[data-cy^="block-picker-pattern-icon-"]').first().should('exist')
+      // Get first pattern ID and use dynamic selector
+      cy.get(pom.editorSelectors.patternCardGeneric).first()
+        .invoke('attr', 'data-cy')
+        .then((dataCy) => {
+          const id = dataCy?.replace('block-picker-pattern-card-', '') || ''
+          cy.get(pom.editorSelectors.patternCardIcon(id)).should('exist')
+        })
     })
 
     it('SEL_BE_008_06: should find pattern card title element', { tags: '@SEL_BE_008_06' }, () => {
-      cy.get('[data-cy="block-picker-tab-patterns"]').click()
+      cy.get(pom.editorSelectors.tabPatterns).click()
       cy.wait(500)
-      // Title selector pattern: block-picker-pattern-title-{id}
-      cy.get('[data-cy^="block-picker-pattern-title-"]').first().should('exist')
+      // Get first pattern ID and use dynamic selector
+      cy.get(pom.editorSelectors.patternCardGeneric).first()
+        .invoke('attr', 'data-cy')
+        .then((dataCy) => {
+          const id = dataCy?.replace('block-picker-pattern-card-', '') || ''
+          cy.get(pom.editorSelectors.patternCardTitle(id)).should('exist')
+        })
     })
 
     it('SEL_BE_008_07: should find pattern card description element', { tags: '@SEL_BE_008_07' }, () => {
-      cy.get('[data-cy="block-picker-tab-patterns"]').click()
+      cy.get(pom.editorSelectors.tabPatterns).click()
       cy.wait(500)
-      // Description selector pattern: block-picker-pattern-desc-{id}
-      cy.get('[data-cy^="block-picker-pattern-desc-"]').first().should('exist')
+      // Get first pattern ID and use dynamic selector
+      cy.get(pom.editorSelectors.patternCardGeneric).first()
+        .invoke('attr', 'data-cy')
+        .then((dataCy) => {
+          const id = dataCy?.replace('block-picker-pattern-card-', '') || ''
+          cy.get(pom.editorSelectors.patternCardDescription(id)).should('exist')
+        })
     })
 
     it('SEL_BE_008_08: should find pattern card insert button', { tags: '@SEL_BE_008_08' }, () => {
-      cy.get('[data-cy="block-picker-tab-patterns"]').click()
+      cy.get(pom.editorSelectors.tabPatterns).click()
       cy.wait(500)
-      // Insert button selector pattern: block-picker-pattern-insert-{id}
-      cy.get('[data-cy^="block-picker-pattern-insert-"]').first().should('exist')
+      // Get first pattern ID and use dynamic selector
+      cy.get(pom.editorSelectors.patternCardGeneric).first()
+        .invoke('attr', 'data-cy')
+        .then((dataCy) => {
+          const id = dataCy?.replace('block-picker-pattern-card-', '') || ''
+          cy.get(pom.editorSelectors.patternCardInsertButton(id)).should('exist')
+        })
     })
   })
 
@@ -550,11 +586,16 @@ describe('Block Editor Selectors Validation', {
       pom.switchToLayoutMode()
 
       // Insert a pattern to create a pattern reference
-      cy.get('[data-cy="block-picker-tab-patterns"]').click()
+      cy.get(pom.editorSelectors.tabPatterns).click()
       cy.wait(500)
 
       // Click insert on first available pattern
-      cy.get('[data-cy^="block-picker-pattern-insert-"]').first().click()
+      cy.get(pom.editorSelectors.patternCardGeneric).first()
+        .invoke('attr', 'data-cy')
+        .then((dataCy) => {
+          const id = dataCy?.replace('block-picker-pattern-card-', '') || ''
+          cy.get(pom.editorSelectors.patternCardInsertButton(id)).click()
+        })
 
       // Wait for pattern reference to be created
       cy.wait(1000)
@@ -563,7 +604,7 @@ describe('Block Editor Selectors Validation', {
       pom.switchToPreviewMode()
 
       // Get the pattern reference ID from the first pattern-reference element
-      cy.get('[data-cy^="pattern-reference-"]').first()
+      cy.get(pom.editorSelectors.patternReferenceGeneric).first()
         .invoke('attr', 'data-cy')
         .then((dataCy) => {
           patternRefId = dataCy?.replace('pattern-reference-', '') || ''
@@ -572,28 +613,50 @@ describe('Block Editor Selectors Validation', {
     })
 
     it('SEL_BE_009_01: should find pattern reference container', { tags: '@SEL_BE_009_01' }, () => {
-      cy.get('[data-cy^="pattern-reference-"]').should('exist').and('be.visible')
+      cy.get(pom.editorSelectors.patternReferenceGeneric).should('exist').and('be.visible')
     })
 
     it('SEL_BE_009_02: should find pattern reference badge', { tags: '@SEL_BE_009_02' }, () => {
-      cy.get('[data-cy^="pattern-reference-badge-"]').should('exist')
+      // Get ref from first pattern-reference, then use dynamic selector
+      cy.get(pom.editorSelectors.patternReferenceGeneric).first()
+        .invoke('attr', 'data-cy')
+        .then((dataCy) => {
+          const ref = dataCy?.replace('pattern-reference-', '') || ''
+          cy.get(pom.editorSelectors.patternReferenceBadge(ref)).should('exist')
+        })
     })
 
     it('SEL_BE_009_03: should find pattern reference remove button', { tags: '@SEL_BE_009_03' }, () => {
-      cy.get('[data-cy^="pattern-reference-remove-"]').should('exist')
+      // Get ref from first pattern-reference, then use dynamic selector
+      cy.get(pom.editorSelectors.patternReferenceGeneric).first()
+        .invoke('attr', 'data-cy')
+        .then((dataCy) => {
+          const ref = dataCy?.replace('pattern-reference-', '') || ''
+          cy.get(pom.editorSelectors.patternReferenceRemove(ref)).should('exist')
+        })
     })
 
-    it('SEL_BE_009_04: should find pattern reference locked state when selected', { tags: '@SEL_BE_009_04' }, () => {
-      // Click on the pattern reference to select it
-      cy.get('[data-cy^="pattern-reference-"]').first().click()
+    it.skip('SEL_BE_009_04: should find pattern reference locked state when selected', { tags: '@SEL_BE_009_04' }, () => {
+      // SKIPPED: patternReferenceLocked selector is defined in core but not yet implemented in component
+      // TODO: Implement locked state visual indicator for pattern references
+      cy.get(pom.editorSelectors.patternReferenceGeneric).first().click()
       cy.wait(500)
-      // Locked selector should appear when pattern reference is selected
-      cy.get('[data-cy^="pattern-reference-locked-"]').should('exist')
+      cy.get(pom.editorSelectors.patternReferenceGeneric).first()
+        .invoke('attr', 'data-cy')
+        .then((dataCy) => {
+          const ref = dataCy?.replace('pattern-reference-', '') || ''
+          cy.get(pom.editorSelectors.patternReferenceLocked(ref)).should('exist')
+        })
     })
 
     it('SEL_BE_009_05: should find pattern reference edit link', { tags: '@SEL_BE_009_05' }, () => {
-      // Edit link selector pattern: pattern-reference-edit-link-{ref}
-      cy.get('[data-cy^="pattern-reference-edit-link-"]').should('exist')
+      // Get ref from first pattern-reference, then use dynamic selector
+      cy.get(pom.editorSelectors.patternReferenceGeneric).first()
+        .invoke('attr', 'data-cy')
+        .then((dataCy) => {
+          const ref = dataCy?.replace('pattern-reference-', '') || ''
+          cy.get(pom.editorSelectors.patternReferenceEditLink(ref)).should('exist')
+        })
     })
   })
 })

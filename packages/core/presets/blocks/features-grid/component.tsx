@@ -41,14 +41,14 @@ export function FeaturesGridBlock({
 
   // Build column classes based on columns prop
   const columnClasses: Record<string, string> = {
-    '2': 'sm:grid-cols-2',
-    '3': 'sm:grid-cols-2 lg:grid-cols-3',
-    '4': 'sm:grid-cols-2 lg:grid-cols-4',
+    '2': '@sm:grid-cols-2',
+    '3': '@sm:grid-cols-2 @lg:grid-cols-3',
+    '4': '@sm:grid-cols-2 @lg:grid-cols-4',
   }
 
   // Build section classes with background and custom className
   const sectionClasses = buildSectionClasses(
-    'py-16 px-4 md:py-24',
+    'py-16 px-4 @md:py-24',
     { backgroundColor, className }
   )
 
@@ -59,7 +59,7 @@ export function FeaturesGridBlock({
         {(title || displayContent) && (
           <div className="mb-12 text-center">
             {title && (
-              <h2 className="mb-4 text-4xl font-bold md:text-5xl">
+              <h2 className="mb-4 text-4xl font-bold @md:text-5xl">
                 {title}
               </h2>
             )}

@@ -18,14 +18,15 @@ jest.mock('next-intl', () => ({
   },
 }))
 
-// Mock the testing utils
+// Mock the testing utils - generate predictable selectors for testing
 jest.mock('@/core/lib/test', () => ({
   sel: jest.fn((path: string, params?: Record<string, string>) => {
-    const selector = path.split('.').pop() || path
+    // Generate selector like: blockEditor-previewCanvas-floatingToolbar-container-{id}
+    const basePath = path.replace(/\./g, '-')
     if (params?.id) {
-      return `${selector}-${params.id}`
+      return `${basePath}-${params.id}`
     }
-    return selector
+    return basePath
   }),
 }))
 
@@ -156,14 +157,14 @@ describe('FloatingBlockToolbar', () => {
     test('applies visible classes when isVisible is true', () => {
       const { container } = render(<FloatingBlockToolbar {...mockProps} isVisible={true} />)
 
-      const toolbar = container.querySelector('[data-cy^="floating-toolbar"]')
+      const toolbar = container.querySelector('[data-cy^="blockEditor-previewCanvas-floatingToolbar-container"]')
       expect(toolbar).toHaveClass('opacity-100', 'translate-y-0', 'pointer-events-auto')
     })
 
     test('applies hidden classes when isVisible is false', () => {
       const { container } = render(<FloatingBlockToolbar {...mockProps} isVisible={false} />)
 
-      const toolbar = container.querySelector('[data-cy^="floating-toolbar"]')
+      const toolbar = container.querySelector('[data-cy^="blockEditor-previewCanvas-floatingToolbar-container"]')
       expect(toolbar).toHaveClass('opacity-0', 'translate-y-2', 'pointer-events-none')
     })
   })
@@ -172,7 +173,7 @@ describe('FloatingBlockToolbar', () => {
     test('applies correct visual classes', () => {
       const { container } = render(<FloatingBlockToolbar {...mockProps} />)
 
-      const toolbar = container.querySelector('[data-cy^="floating-toolbar"]')
+      const toolbar = container.querySelector('[data-cy^="blockEditor-previewCanvas-floatingToolbar-container"]')
       expect(toolbar).toHaveClass(
         'absolute',
         'bg-primary',
@@ -192,8 +193,8 @@ describe('FloatingBlockToolbar', () => {
     test('has smooth transition', () => {
       const { container } = render(<FloatingBlockToolbar {...mockProps} />)
 
-      const toolbar = container.querySelector('[data-cy^="floating-toolbar"]')
-      expect(toolbar).toHaveClass('transition-all', 'duration-200')
+      const toolbar = container.querySelector('[data-cy^="blockEditor-previewCanvas-floatingToolbar-container"]')
+      expect(toolbar).toHaveClass('transition-[opacity,transform]', 'duration-200')
     })
   })
 

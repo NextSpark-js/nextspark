@@ -43,10 +43,10 @@ export function LogoCloudBlock({
 
   // Build column classes for grid layout
   const columnClasses: Record<string, string> = {
-    '3': 'grid-cols-2 sm:grid-cols-3',
-    '4': 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4',
-    '5': 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5',
-    '6': 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6',
+    '3': 'grid-cols-2 @sm:grid-cols-3',
+    '4': 'grid-cols-2 @sm:grid-cols-3 @lg:grid-cols-4',
+    '5': 'grid-cols-2 @sm:grid-cols-3 @lg:grid-cols-5',
+    '6': 'grid-cols-2 @sm:grid-cols-3 @lg:grid-cols-6',
   }
 
   // Build size classes for logo containers
@@ -66,7 +66,7 @@ export function LogoCloudBlock({
 
   // Build section classes with background and custom className
   const sectionClasses = buildSectionClasses(
-    'py-12 px-4 md:py-16',
+    'py-12 px-4 @md:py-16',
     { backgroundColor, className }
   )
 
@@ -77,7 +77,7 @@ export function LogoCloudBlock({
         {(title || content) && (
           <div className="mb-10 text-center">
             {title && (
-              <h2 className="mb-3 text-2xl font-semibold md:text-3xl">
+              <h2 className="mb-3 text-2xl font-semibold @md:text-3xl">
                 {title}
               </h2>
             )}

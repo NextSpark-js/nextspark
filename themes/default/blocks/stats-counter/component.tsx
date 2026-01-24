@@ -34,16 +34,16 @@ export function StatsCounterBlock({
 
   // Build column classes based on columns prop
   const columnClasses: Record<string, string> = {
-    '2': 'sm:grid-cols-2',
-    '3': 'sm:grid-cols-2 lg:grid-cols-3',
-    '4': 'sm:grid-cols-2 lg:grid-cols-4',
+    '2': '@sm:grid-cols-2',
+    '3': '@sm:grid-cols-2 @lg:grid-cols-3',
+    '4': '@sm:grid-cols-2 @lg:grid-cols-4',
   }
 
   // Size classes for numbers
   const sizeClasses: Record<string, string> = {
-    sm: 'text-3xl md:text-4xl',
-    md: 'text-4xl md:text-5xl',
-    lg: 'text-5xl md:text-6xl lg:text-7xl',
+    sm: 'text-3xl @md:text-4xl',
+    md: 'text-4xl @md:text-5xl',
+    lg: 'text-5xl @md:text-6xl @lg:text-7xl',
   }
 
   // Variant-specific stat item classes
@@ -62,7 +62,7 @@ export function StatsCounterBlock({
 
   // Build section classes with background and custom className
   const sectionClasses = buildSectionClasses(
-    'py-16 px-4 md:py-24',
+    'py-16 px-4 @md:py-24',
     { backgroundColor, className }
   )
 
@@ -73,7 +73,7 @@ export function StatsCounterBlock({
         {(title || content) && (
           <div className="mb-12 text-center">
             {title && (
-              <h2 className="mb-4 text-4xl font-bold md:text-5xl">
+              <h2 className="mb-4 text-4xl font-bold @md:text-5xl">
                 {title}
               </h2>
             )}
@@ -98,7 +98,7 @@ export function StatsCounterBlock({
                   <span className="text-primary">{stat.suffix}</span>
                 )}
               </div>
-              <div className="text-sm md:text-base text-muted-foreground font-medium">
+              <div className="text-sm @md:text-base text-muted-foreground font-medium">
                 {stat.label}
               </div>
             </div>

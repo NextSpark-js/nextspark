@@ -47,7 +47,7 @@ export function CTASectionBlock({
 
   // Build section classes with background and custom className
   const sectionClasses = buildSectionClasses(
-    'py-16 px-4 md:py-24',
+    'py-16 px-4 @md:py-24',
     { backgroundColor, className }
   )
 
@@ -55,15 +55,15 @@ export function CTASectionBlock({
     <section id={id} className={sectionClasses} data-cy="block-cta-section">
       <div className="container mx-auto max-w-4xl text-center">
         {title && (
-          <h2 className="mb-4 text-4xl font-bold md:text-5xl">{title}</h2>
+          <h2 className="mb-4 text-4xl font-bold @md:text-5xl">{title}</h2>
         )}
 
         {displayContent && (
-          <p className="mb-8 text-lg md:text-xl opacity-90">{displayContent}</p>
+          <p className="mb-8 text-lg @md:text-xl opacity-90">{displayContent}</p>
         )}
 
         {(primaryCta || secondaryButton) && (
-          <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
+          <div className="flex flex-col gap-4 @sm:flex-row @sm:justify-center">
             {primaryCta && (
               <Button asChild size="lg">
                 <a

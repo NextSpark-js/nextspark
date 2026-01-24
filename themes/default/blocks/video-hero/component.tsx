@@ -151,13 +151,13 @@ export function VideoHeroBlock({
         {/* Content Overlay */}
         <div className="container relative z-10 mx-auto max-w-4xl text-center px-4 py-20 text-white">
           {title && (
-            <h1 className="mb-6 text-5xl font-bold leading-tight md:text-6xl lg:text-7xl">
+            <h1 className="mb-6 text-5xl font-bold leading-tight @md:text-6xl @lg:text-7xl">
               {title}
             </h1>
           )}
 
           {content && (
-            <p className="mb-8 text-xl md:text-2xl opacity-90">
+            <p className="mb-8 text-xl @md:text-2xl opacity-90">
               {content}
             </p>
           )}
@@ -187,17 +187,17 @@ export function VideoHeroBlock({
         data-cy={sel('blocks.videoHero.container')}
       >
         <div className="container mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+          <div className="grid grid-cols-1 @lg:grid-cols-2 gap-8 items-center">
             {/* Text Content */}
             <div className="space-y-6">
               {title && (
-                <h1 className="text-4xl font-bold leading-tight md:text-5xl lg:text-6xl">
+                <h1 className="text-4xl font-bold leading-tight @md:text-5xl @lg:text-6xl">
                   {title}
                 </h1>
               )}
 
               {content && (
-                <p className="text-lg md:text-xl text-gray-600">
+                <p className="text-lg @md:text-xl text-gray-600">
                   {content}
                 </p>
               )}
@@ -236,13 +236,13 @@ export function VideoHeroBlock({
         {/* Text Content */}
         <div className="text-center mb-10 space-y-6">
           {title && (
-            <h1 className="text-4xl font-bold leading-tight md:text-5xl lg:text-6xl">
+            <h1 className="text-4xl font-bold leading-tight @md:text-5xl @lg:text-6xl">
               {title}
             </h1>
           )}
 
           {content && (
-            <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-lg @md:text-xl text-gray-600 max-w-3xl mx-auto">
               {content}
             </p>
           )}

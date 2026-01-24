@@ -31,13 +31,13 @@ export function TestimonialsBlock({
 }: TestimonialsBlockProps) {
   // Build column classes based on columns prop
   const columnClasses: Record<string, string> = {
-    '2': 'md:grid-cols-2',
-    '3': 'md:grid-cols-2 lg:grid-cols-3',
+    '2': '@md:grid-cols-2',
+    '3': '@md:grid-cols-2 @lg:grid-cols-3',
   }
 
   // Build section classes with background and custom className
   const sectionClasses = buildSectionClasses(
-    'py-16 px-4 md:py-24',
+    'py-16 px-4 @md:py-24',
     { backgroundColor, className }
   )
 
@@ -51,7 +51,7 @@ export function TestimonialsBlock({
         {(title || content) && (
           <div className="mb-12 text-center">
             {title && (
-              <h2 className="mb-4 text-4xl font-bold md:text-5xl">
+              <h2 className="mb-4 text-4xl font-bold @md:text-5xl">
                 {title}
               </h2>
             )}

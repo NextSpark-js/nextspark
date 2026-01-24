@@ -46,16 +46,16 @@ export function JumbotronBlock({
   }[align]
 
   const ctaJustifyClasses = {
-    center: 'sm:justify-center',
-    left: 'sm:justify-start',
-    right: 'sm:justify-end',
+    center: '@sm:justify-center',
+    left: '@sm:justify-start',
+    right: '@sm:justify-end',
   }[align]
 
   // Build section classes with fullscreen or standard padding
   const sectionClasses = buildSectionClasses(
     cn(
       'relative flex overflow-hidden px-4',
-      fullscreen ? 'min-h-screen' : 'py-16 md:py-24',
+      fullscreen ? 'min-h-screen' : 'py-16 @md:py-24',
       alignmentClasses,
       textColor === 'light' ? 'text-white' : 'text-gray-900'
     ),
@@ -81,20 +81,20 @@ export function JumbotronBlock({
       {/* Content */}
       <div className={cn('container relative z-10 max-w-4xl', contentAlignmentClasses)}>
         {title && (
-          <h1 className="mb-6 text-5xl font-bold leading-tight md:text-6xl lg:text-7xl">
+          <h1 className="mb-6 text-5xl font-bold leading-tight @md:text-6xl @lg:text-7xl">
             {title}
           </h1>
         )}
 
         {subtitle && (
-          <p className="mb-8 text-xl md:text-2xl opacity-90">
+          <p className="mb-8 text-xl @md:text-2xl opacity-90">
             {subtitle}
           </p>
         )}
 
         {/* CTAs - automatically center based on count */}
         {(primaryCta || secondaryCta) && (
-          <div className={cn('flex flex-col gap-4 sm:flex-row', ctaJustifyClasses)}>
+          <div className={cn('flex flex-col gap-4 @sm:flex-row', ctaJustifyClasses)}>
             {primaryCta && primaryCta.text && (
               <Button
                 asChild

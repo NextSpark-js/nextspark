@@ -88,26 +88,26 @@ export function HeroWithFormBlock({
       </div>
 
       {/* Content Container */}
-      <div className="container relative z-10 mx-auto px-4 py-12 lg:py-0">
-        <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 min-h-screen items-center">
+      <div className="container relative z-10 mx-auto px-4 py-12 @lg:py-0">
+        <div className="grid @lg:grid-cols-2 gap-8 @lg:gap-16 min-h-screen items-center">
 
           {/* Left: Title/Subtitle - vertically centered, bottom aligned on mobile */}
-          <div className="text-white order-2 lg:order-1 flex flex-col justify-end lg:justify-center pb-8 lg:pb-0">
+          <div className="text-white order-2 @lg:order-1 flex flex-col justify-end @lg:justify-center pb-8 @lg:pb-0">
             {title && (
-              <h1 className="text-4xl lg:text-5xl xl:text-6xl font-bold italic mb-4 leading-tight">
+              <h1 className="text-4xl @lg:text-5xl @xl:text-6xl font-bold italic mb-4 leading-tight">
                 {title}
               </h1>
             )}
             {subtitle && (
-              <p className="text-lg lg:text-xl xl:text-2xl opacity-90 max-w-lg">
+              <p className="text-lg @lg:text-xl @xl:text-2xl opacity-90 max-w-lg">
                 {subtitle}
               </p>
             )}
           </div>
 
           {/* Right: Form Card - centered vertically */}
-          <div className="order-1 lg:order-2 flex justify-center lg:justify-end items-start lg:items-center pt-8 lg:pt-0">
-            <div className="bg-white rounded-lg shadow-2xl p-6 sm:p-8 w-full max-w-md">
+          <div className="order-1 @lg:order-2 flex justify-center @lg:justify-end items-start @lg:items-center pt-8 @lg:pt-0">
+            <div className="bg-white rounded-lg shadow-2xl p-6 @sm:p-8 w-full max-w-md">
               {/* Form Header */}
               {formTitle && (
                 <h2 className="text-xl font-bold text-center text-primary mb-2">

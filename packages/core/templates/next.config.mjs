@@ -147,8 +147,9 @@ const nextConfig = {
       "font-src 'self' data:",
       // wss: needed for Next.js hot reload in development
       `connect-src 'self' https://api.stripe.com${!isProduction ? ' wss:' : ''}`,
-      "frame-src https://js.stripe.com https://hooks.stripe.com",
-      "frame-ancestors 'none'",
+      "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
+      // Allow embedding in iframes from same origin (needed for page builder preview)
+      "frame-ancestors 'self'",
       "object-src 'none'",
       "base-uri 'self'",
       // CSP violation reporting - sends violations to /api/csp-report
@@ -170,8 +171,9 @@ const nextConfig = {
         value: 'nosniff'
       },
       {
+        // SAMEORIGIN allows same-origin iframes (needed for page builder preview)
         key: 'X-Frame-Options',
-        value: 'DENY'
+        value: 'SAMEORIGIN'
       },
       // X-XSS-Protection is deprecated but kept for legacy browser support
       // Modern browsers use CSP instead

@@ -68,7 +68,7 @@ export function SortableBlock({
     >
       <Card
         className={cn(
-          'cursor-pointer transition-all',
+          'cursor-pointer transition-shadow duration-150',
           isSelected && 'ring-2 ring-primary ring-offset-2',
           'hover:shadow-md'
         )}

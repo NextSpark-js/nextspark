@@ -38,7 +38,7 @@ export function SplitContentBlock({
 
   // Build section classes with background and custom className
   const sectionClasses = buildSectionClasses(
-    'py-16 px-4 md:py-24',
+    'py-16 px-4 @md:py-24',
     { backgroundColor, className }
   )
 
@@ -57,13 +57,13 @@ export function SplitContentBlock({
   }
 
   // Grid order classes based on image position
-  const imageOrderClass = imagePosition === 'right' ? 'lg:order-2' : 'lg:order-1'
-  const contentOrderClass = imagePosition === 'right' ? 'lg:order-1' : 'lg:order-2'
+  const imageOrderClass = imagePosition === 'right' ? '@lg:order-2' : '@lg:order-1'
+  const contentOrderClass = imagePosition === 'right' ? '@lg:order-1' : '@lg:order-2'
 
   return (
     <section id={id} className={sectionClasses} data-cy={sel('blocks.splitContent.container')}>
       <div className="container mx-auto max-w-7xl">
-        <div className={cn('grid gap-8 lg:grid-cols-2 lg:gap-12', alignmentClasses[verticalAlign as 'top' | 'center' | 'bottom'])}>
+        <div className={cn('grid gap-8 @lg:grid-cols-2 @lg:gap-12', alignmentClasses[verticalAlign as 'top' | 'center' | 'bottom'])}>
           {/* Image Column */}
           <div className={cn('relative', imageOrderClass)}>
             <div className="relative aspect-[4/3] w-full overflow-hidden">
@@ -86,7 +86,7 @@ export function SplitContentBlock({
             )}
 
             {title && (
-              <h2 className="mb-4 text-3xl font-bold md:text-4xl lg:text-5xl">
+              <h2 className="mb-4 text-3xl font-bold @md:text-4xl @lg:text-5xl">
                 {title}
               </h2>
             )}

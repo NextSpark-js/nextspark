@@ -127,7 +127,7 @@ export function PatternReferencePreview({
   return (
     <div
       className={cn(
-        'group relative cursor-pointer transition-all',
+        'group relative cursor-pointer transition-[border-color] duration-150',
         'border-2 rounded-lg overflow-hidden',
         isSelected ? 'border-primary border-solid' : 'border-dashed border-muted-foreground/30',
         'hover:border-primary/50'

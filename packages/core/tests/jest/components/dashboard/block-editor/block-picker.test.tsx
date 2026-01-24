@@ -5,18 +5,32 @@
 import { describe, test, expect, jest, beforeEach } from '@jest/globals'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { BlockPicker } from '@/core/components/dashboard/block-editor/block-picker'
-import type { BlockConfig } from '@/core/types/blocks'
+import type { BlockConfig, BlockInstance } from '@/core/types/blocks'
+
+// Mock TanStack Query
+jest.mock('@tanstack/react-query', () => ({
+  useQuery: () => ({ data: null, isLoading: false }),
+}))
+
+// Mock TreeView since it has complex DnD dependencies
+jest.mock('@/core/components/dashboard/block-editor/tree-view', () => ({
+  TreeView: ({ emptyMessage }: { emptyMessage?: string }) => (
+    <div data-testid="tree-view-mock">{emptyMessage || 'TreeView'}</div>
+  ),
+}))
 
 // Mock next-intl
 jest.mock('next-intl', () => ({
   useTranslations: () => (key: string) => {
     const translations: Record<string, string> = {
       'sidebar.tabs.blocks': 'Blocks',
-      'sidebar.tabs.config': 'Config',
+      'sidebar.tabs.patterns': 'Patterns',
+      'sidebar.tabs.layout': 'Layout',
       'sidebar.search.placeholder': 'Search blocks...',
       'sidebar.categories.all': 'All',
       'sidebar.empty': 'No blocks found',
       'sidebar.addBlock': 'Add block',
+      'layout.empty': 'No blocks added yet',
     }
     return translations[key] || key
   },
@@ -118,6 +132,12 @@ describe('BlockPicker', () => {
     entityFields: {},
     onEntityFieldChange: jest.fn(),
     showFieldsTab: false,
+    showPatternsTab: false,
+    // TreeView props for Layout tab
+    pageBlocks: [] as BlockInstance[],
+    selectedBlockId: null,
+    onSelectBlock: jest.fn(),
+    onReorderBlocks: jest.fn(),
   }
 
   beforeEach(() => {
@@ -149,10 +169,14 @@ describe('BlockPicker', () => {
     test('renders category chips', () => {
       render(<BlockPicker {...defaultProps} />)
 
+      // Get the category chips container
+      const categoryChips = screen.getByText('All').parentElement!
+
       expect(screen.getByText('All')).toBeInTheDocument()
-      expect(screen.getByText('hero')).toBeInTheDocument()
-      expect(screen.getByText('content')).toBeInTheDocument()
-      expect(screen.getByText('cta')).toBeInTheDocument()
+      // Use getAllByText since 'hero', 'content', 'cta' appear both in chips and block cards
+      expect(categoryChips).toHaveTextContent('hero')
+      expect(categoryChips).toHaveTextContent('content')
+      expect(categoryChips).toHaveTextContent('cta')
     })
   })
 
@@ -199,11 +223,22 @@ describe('BlockPicker', () => {
   })
 
   describe('Category Filtering', () => {
-    test('filters blocks by selected category', () => {
-      render(<BlockPicker {...defaultProps} />)
+    // Helper to get category chip by name (first element with text in the category chips area)
+    const getCategoryChip = (container: HTMLElement, name: string) => {
+      const allChipsArea = container.querySelector('[data-cy="categoryChips"]')
+      if (!allChipsArea) return null
+      return Array.from(allChipsArea.querySelectorAll('button')).find(
+        btn => btn.textContent?.toLowerCase().includes(name.toLowerCase())
+      )
+    }
 
-      const heroCategory = screen.getByText('hero')
-      fireEvent.click(heroCategory)
+    test('filters blocks by selected category', () => {
+      const { container } = render(<BlockPicker {...defaultProps} />)
+
+      // Get the hero category chip (first match in category chips area)
+      const heroCategory = getCategoryChip(container, 'hero')
+      expect(heroCategory).toBeTruthy()
+      fireEvent.click(heroCategory!)
 
       expect(screen.getByText('Hero Section')).toBeInTheDocument()
       expect(screen.queryByText('Content Grid')).not.toBeInTheDocument()
@@ -211,11 +246,11 @@ describe('BlockPicker', () => {
     })
 
     test('shows all blocks when All category is selected', () => {
-      render(<BlockPicker {...defaultProps} />)
+      const { container } = render(<BlockPicker {...defaultProps} />)
 
       // First select a category
-      const heroCategory = screen.getByText('hero')
-      fireEvent.click(heroCategory)
+      const heroCategory = getCategoryChip(container, 'hero')
+      fireEvent.click(heroCategory!)
 
       // Then click All
       const allCategory = screen.getByText('All')
@@ -227,11 +262,11 @@ describe('BlockPicker', () => {
     })
 
     test('combines search and category filters', () => {
-      render(<BlockPicker {...defaultProps} />)
+      const { container } = render(<BlockPicker {...defaultProps} />)
 
       // Filter by hero category
-      const heroCategory = screen.getByText('hero')
-      fireEvent.click(heroCategory)
+      const heroCategory = getCategoryChip(container, 'hero')
+      fireEvent.click(heroCategory!)
 
       // Add search term
       const searchInput = screen.getByPlaceholderText('Search blocks...')
@@ -247,27 +282,38 @@ describe('BlockPicker', () => {
   })
 
   describe('Block Interactions', () => {
+    // Helper to find block card by name
+    const getBlockCard = (container: HTMLElement, blockName: string) => {
+      const blockList = container.querySelector('[data-cy="blockList"]')
+      if (!blockList) return null
+      // Find the card that contains the block name
+      return Array.from(blockList.querySelectorAll('[draggable="true"]')).find(
+        card => card.textContent?.includes(blockName)
+      ) as HTMLElement | null
+    }
+
     test('calls onAddBlock when block is clicked', () => {
       const onAddBlock = jest.fn()
-      render(<BlockPicker {...defaultProps} onAddBlock={onAddBlock} />)
+      const { container } = render(<BlockPicker {...defaultProps} onAddBlock={onAddBlock} />)
 
-      const heroBlock = screen.getByText('Hero Section')
-      fireEvent.click(heroBlock.closest('[data-cy*="block-picker-card"]')!)
+      const heroBlock = getBlockCard(container, 'Hero Section')
+      expect(heroBlock).toBeTruthy()
+      fireEvent.click(heroBlock!)
 
       expect(onAddBlock).toHaveBeenCalledWith('hero-section')
     })
 
     test('block cards are draggable', () => {
-      render(<BlockPicker {...defaultProps} />)
+      const { container } = render(<BlockPicker {...defaultProps} />)
 
-      const heroBlock = screen.getByText('Hero Section').closest('[data-cy*="block-picker-card"]')
+      const heroBlock = getBlockCard(container, 'Hero Section')
       expect(heroBlock).toHaveAttribute('draggable', 'true')
     })
 
     test('sets correct data on drag start', () => {
-      render(<BlockPicker {...defaultProps} />)
+      const { container } = render(<BlockPicker {...defaultProps} />)
 
-      const heroBlock = screen.getByText('Hero Section').closest('[data-cy*="block-picker-card"]')!
+      const heroBlock = getBlockCard(container, 'Hero Section')!
       const mockDataTransfer = {
         setData: jest.fn(),
         effectAllowed: '',
@@ -283,28 +329,47 @@ describe('BlockPicker', () => {
   })
 
   describe('Tabs', () => {
-    test('switches to config tab when clicked', () => {
-      render(<BlockPicker {...defaultProps} showFieldsTab={true} />)
+    test('renders Blocks and Layout tabs', () => {
+      render(<BlockPicker {...defaultProps} />)
 
-      const configTab = screen.getByText('Config')
-      fireEvent.click(configTab)
-
-      // Config tab should be active (indicated by specific styling)
-      expect(configTab.closest('button')).toHaveClass('text-primary')
+      expect(screen.getByText('Blocks')).toBeInTheDocument()
+      expect(screen.getByText('Layout')).toBeInTheDocument()
     })
 
-    test('does not show config tab when showFieldsTab is false', () => {
-      render(<BlockPicker {...defaultProps} showFieldsTab={false} />)
+    test('switches to layout tab when clicked', () => {
+      render(<BlockPicker {...defaultProps} />)
 
-      expect(screen.queryByText('Config')).not.toBeInTheDocument()
+      const layoutTab = screen.getByText('Layout')
+      fireEvent.click(layoutTab)
+
+      // Layout tab should be active (indicated by specific styling)
+      expect(layoutTab.closest('button')).toHaveClass('text-primary')
+      // TreeView should be rendered
+      expect(screen.getByTestId('tree-view-mock')).toBeInTheDocument()
+    })
+
+    test('shows patterns tab when showPatternsTab is true', () => {
+      render(<BlockPicker {...defaultProps} showPatternsTab={true} />)
+
+      expect(screen.getByText('Patterns')).toBeInTheDocument()
+    })
+
+    test('does not show patterns tab when showPatternsTab is false', () => {
+      render(<BlockPicker {...defaultProps} showPatternsTab={false} />)
+
+      expect(screen.queryByText('Patterns')).not.toBeInTheDocument()
     })
   })
 
   describe('Category Icons and Colors', () => {
     test('applies correct colors to category chips when active', () => {
-      render(<BlockPicker {...defaultProps} />)
+      const { container } = render(<BlockPicker {...defaultProps} />)
 
-      const heroCategory = screen.getByText('hero').closest('button')!
+      // Get the hero category chip from category chips area
+      const categoryChipsArea = container.querySelector('[data-cy="categoryChips"]')
+      const heroCategory = Array.from(categoryChipsArea!.querySelectorAll('button')).find(
+        btn => btn.textContent?.toLowerCase().includes('hero')
+      )!
       fireEvent.click(heroCategory)
 
       expect(heroCategory).toHaveClass('bg-indigo-50', 'text-indigo-600', 'border-indigo-200')
