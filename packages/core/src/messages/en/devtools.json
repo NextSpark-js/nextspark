@@ -33,6 +33,18 @@
   "superAdminArea": "Super admin area",
   "restrictedArea": "Developer Area",
   "developerAccessOnly": "Developer access only",
+  "home": {
+    "welcome": "Welcome to DevTools",
+    "welcomeDescription": "Your central hub for development and debugging tools",
+    "intro": "Use these tools to explore your theme configuration, view test documentation, inspect API endpoints, and more. Each section provides specialized functionality to help you build and debug your application.",
+    "systemInfo": "System Information",
+    "systemInfoDescription": "Current environment and access details",
+    "accessLevel": "Access Level",
+    "hierarchy": "Hierarchy Level"
+  },
+  "style": {
+    "description": "Browse component styles and design tokens"
+  },
   "config": {
     "title": "Configuration Viewer",
     "description": "Explore theme and entity configuration settings",

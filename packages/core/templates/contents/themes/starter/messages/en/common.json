@@ -8,7 +8,10 @@
   "delete": "Delete",
   "edit": "Edit",
   "create": "Create",
-  "search": "Search...",
+  "search": {
+    "placeholder": "Search...",
+    "label": "Search"
+  },
   "noResults": "No results found",
   "confirm": "Confirm",
   "back": "Back",
