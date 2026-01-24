@@ -44,7 +44,7 @@ export function FaqAccordionBlock({
 
   // Build section classes with background and custom className
   const sectionClasses = buildSectionClasses(
-    'py-16 px-4 md:py-24',
+    'py-16 px-4 @md:py-24',
     { backgroundColor, className }
   )
 
@@ -80,7 +80,7 @@ export function FaqAccordionBlock({
         {(title || subtitle) && (
           <div className="mb-12 text-center">
             {title && (
-              <h2 className="mb-4 text-4xl font-bold md:text-5xl">
+              <h2 className="mb-4 text-4xl font-bold @md:text-5xl">
                 {title}
               </h2>
             )}

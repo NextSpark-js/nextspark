@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useMemo, useState } from 'react'
+import { Suspense, useMemo, useState, memo, useCallback } from 'react'
 import { ChevronUp, ChevronDown } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Button } from '../../ui/button'
@@ -47,6 +47,10 @@ export function BlockPreviewCanvas({
   const t = useTranslations('admin.builder')
   const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null)
 
+  // Memoized callbacks to prevent re-renders of child components
+  const handleHover = useCallback((id: string) => setHoveredBlockId(id), [])
+  const handleLeave = useCallback(() => setHoveredBlockId(null), [])
+
   if (blocks.length === 0) {
     return (
       <div
@@ -69,15 +73,16 @@ export function BlockPreviewCanvas({
           block={block}
           isSelected={selectedBlockId === block.id}
           isHovered={hoveredBlockId === block.id}
-          onSelect={() => onSelectBlock(block.id)}
-          onHover={() => setHoveredBlockId(block.id)}
-          onLeave={() => setHoveredBlockId(null)}
+          onSelect={onSelectBlock}
+          blockId={block.id}
+          onHover={handleHover}
+          onLeave={handleLeave}
           isFirst={index === 0}
           isLast={index === blocks.length - 1}
-          onMoveUp={onMoveUp ? () => onMoveUp(block.id) : undefined}
-          onMoveDown={onMoveDown ? () => onMoveDown(block.id) : undefined}
-          onDuplicate={onDuplicate ? () => onDuplicate(block.id) : undefined}
-          onRemove={onRemove ? () => onRemove(block.id) : undefined}
+          onMoveUp={onMoveUp}
+          onMoveDown={onMoveDown}
+          onDuplicate={onDuplicate}
+          onRemove={onRemove}
         />
       ))}
     </div>
@@ -86,21 +91,23 @@ export function BlockPreviewCanvas({
 
 interface SelectableBlockPreviewProps {
   block: BlockInstance
+  blockId: string
   isSelected: boolean
   isHovered: boolean
-  onSelect: () => void
-  onHover: () => void
+  onSelect: (id: string) => void
+  onHover: (id: string) => void
   onLeave: () => void
   isFirst?: boolean
   isLast?: boolean
-  onMoveUp?: () => void
-  onMoveDown?: () => void
-  onDuplicate?: () => void
-  onRemove?: () => void
+  onMoveUp?: (id: string) => void
+  onMoveDown?: (id: string) => void
+  onDuplicate?: (id: string) => void
+  onRemove?: (id: string) => void
 }
 
-function SelectableBlockPreview({
+const SelectableBlockPreview = memo(function SelectableBlockPreview({
   block,
+  blockId,
   isSelected,
   isHovered,
   onSelect,
@@ -115,22 +122,26 @@ function SelectableBlockPreview({
 }: SelectableBlockPreviewProps) {
   const t = useTranslations('admin.builder')
 
+  // Memoized handlers to prevent re-renders
+  const handleSelect = useCallback(() => onSelect(blockId), [onSelect, blockId])
+  const handleHover = useCallback(() => onHover(blockId), [onHover, blockId])
+  const handleMoveUp = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    onMoveUp?.(blockId)
+  }, [onMoveUp, blockId])
+  const handleMoveDown = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    onMoveDown?.(blockId)
+  }, [onMoveDown, blockId])
+  const handleDuplicate = useCallback(() => onDuplicate?.(blockId), [onDuplicate, blockId])
+  const handleRemove = useCallback(() => onRemove?.(blockId), [onRemove, blockId])
+
   // Check if this is a pattern reference
   if (isPatternReference(block)) {
-    const handlePatternMoveUp = (e: React.MouseEvent) => {
-      e.stopPropagation()
-      onMoveUp?.()
-    }
-
-    const handlePatternMoveDown = (e: React.MouseEvent) => {
-      e.stopPropagation()
-      onMoveDown?.()
-    }
-
     return (
       <div
         className="relative group"
-        onMouseEnter={onHover}
+        onMouseEnter={handleHover}
         onMouseLeave={onLeave}
       >
         {/* Reorder controls for pattern reference - same as regular blocks */}
@@ -144,7 +155,7 @@ function SelectableBlockPreview({
               variant="secondary"
               size="icon"
               className="h-7 w-7 shadow-md"
-              onClick={handlePatternMoveUp}
+              onClick={handleMoveUp}
               disabled={isFirst}
               data-cy={sel('blockEditor.previewCanvas.moveUp', { id: block.id })}
             >
@@ -154,7 +165,7 @@ function SelectableBlockPreview({
               variant="secondary"
               size="icon"
               className="h-7 w-7 shadow-md"
-              onClick={handlePatternMoveDown}
+              onClick={handleMoveDown}
               disabled={isLast}
               data-cy={sel('blockEditor.previewCanvas.moveDown', { id: block.id })}
             >
@@ -166,8 +177,8 @@ function SelectableBlockPreview({
         <PatternReferencePreview
           patternRef={block}
           isSelected={isSelected}
-          onSelect={onSelect}
-          onRemove={onRemove}
+          onSelect={handleSelect}
+          onRemove={handleRemove}
         />
       </div>
     )
@@ -185,7 +196,7 @@ function SelectableBlockPreview({
     return (
       <div
         className="w-full py-12 px-4 bg-destructive/10 border border-destructive/20"
-        onClick={onSelect}
+        onClick={handleSelect}
       >
         <div className="max-w-7xl mx-auto text-center">
           <p className="text-destructive">
@@ -196,26 +207,16 @@ function SelectableBlockPreview({
     )
   }
 
-  const handleMoveUp = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    onMoveUp?.()
-  }
-
-  const handleMoveDown = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    onMoveDown?.()
-  }
-
   return (
     <div
       className={cn(
-        'relative cursor-pointer transition-all group',
+        'relative cursor-pointer transition-[border-color] duration-150 group @container',
         'border-2 border-transparent',
         'hover:border-primary/50',
         isSelected && 'border-primary'
       )}
-      onClick={onSelect}
-      onMouseEnter={onHover}
+      onClick={handleSelect}
+      onMouseEnter={handleHover}
       onMouseLeave={onLeave}
       data-cy={sel('blockEditor.previewCanvas.block', { id: block.id })}
     >
@@ -225,8 +226,8 @@ function SelectableBlockPreview({
           blockId={block.id}
           blockSlug={block.blockSlug}
           isVisible={isHovered || isSelected}
-          onDuplicate={onDuplicate}
-          onRemove={onRemove}
+          onDuplicate={handleDuplicate}
+          onRemove={handleRemove}
         />
       )}
 
@@ -278,4 +279,4 @@ function SelectableBlockPreview({
       </div>
     </div>
   )
-}
+})

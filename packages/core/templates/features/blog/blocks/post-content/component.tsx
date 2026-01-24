@@ -79,7 +79,7 @@ export function PostContentBlock({
 
   // Build section classes with background
   const sectionClasses = buildSectionClasses(
-    'py-16 px-4 md:py-24',
+    'py-16 px-4 @md:py-24',
     { backgroundColor, className }
   )
 
@@ -119,7 +119,7 @@ export function PostContentBlock({
         {/* Optional Section Title */}
         {title && (
           <div className={cn('mb-12 text-center', maxWidthClasses[maxWidth], 'mx-auto')}>
-            <h2 className="text-4xl font-bold md:text-5xl lg:text-6xl tracking-tight">
+            <h2 className="text-4xl font-bold @md:text-5xl @lg:text-6xl tracking-tight">
               {title}
             </h2>
           </div>

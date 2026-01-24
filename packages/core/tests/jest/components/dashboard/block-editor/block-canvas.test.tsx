@@ -183,7 +183,8 @@ describe('BlockCanvas', () => {
       const onAddBlock = jest.fn()
       const { container } = render(<BlockCanvas {...defaultProps} blocks={[]} onAddBlock={onAddBlock} />)
 
-      const dropZone = container.querySelector('[data-cy="block-canvas-empty"]')!
+      // Uses actual selector value from BLOCK_EDITOR_SELECTORS.layoutCanvas.empty
+      const dropZone = container.querySelector('[data-cy="layout-canvas-empty"]')!
 
       // Simulate drag over
       fireEvent.dragOver(dropZone, {
@@ -209,7 +210,8 @@ describe('BlockCanvas', () => {
     test('prevents default on drag over empty canvas', () => {
       const { container } = render(<BlockCanvas {...defaultProps} blocks={[]} />)
 
-      const dropZone = container.querySelector('[data-cy="block-canvas-empty"]')!
+      // Uses actual selector value from BLOCK_EDITOR_SELECTORS.layoutCanvas.empty
+      const dropZone = container.querySelector('[data-cy="layout-canvas-empty"]')!
 
       // The component should not throw when dragOver is fired
       expect(() => {
@@ -222,14 +224,16 @@ describe('BlockCanvas', () => {
     test('shows empty state with correct data-cy attribute', () => {
       const { container } = render(<BlockCanvas {...defaultProps} blocks={[]} />)
 
-      expect(container.querySelector('[data-cy="block-canvas-empty"]')).toBeInTheDocument()
+      // Uses actual selector value from BLOCK_EDITOR_SELECTORS.layoutCanvas.empty
+      expect(container.querySelector('[data-cy="layout-canvas-empty"]')).toBeInTheDocument()
     })
 
     test('empty state is droppable', () => {
       const onAddBlock = jest.fn()
       const { container } = render(<BlockCanvas {...defaultProps} blocks={[]} onAddBlock={onAddBlock} />)
 
-      const dropZone = container.querySelector('[data-cy="block-canvas-empty"]')!
+      // Uses actual selector value from BLOCK_EDITOR_SELECTORS.layoutCanvas.empty
+      const dropZone = container.querySelector('[data-cy="layout-canvas-empty"]')!
       expect(dropZone).toBeInTheDocument()
 
       // Should have drag event handlers
@@ -242,13 +246,15 @@ describe('BlockCanvas', () => {
     test('applies correct data-cy attribute to canvas container', () => {
       const { container } = render(<BlockCanvas {...defaultProps} />)
 
-      expect(container.querySelector('[data-cy="block-canvas"]')).toBeInTheDocument()
+      // Uses actual selector value from BLOCK_EDITOR_SELECTORS.layoutCanvas.container
+      expect(container.querySelector('[data-cy="layout-canvas"]')).toBeInTheDocument()
     })
 
     test('applies correct data-cy attribute to empty state', () => {
       const { container } = render(<BlockCanvas {...defaultProps} blocks={[]} />)
 
-      expect(container.querySelector('[data-cy="block-canvas-empty"]')).toBeInTheDocument()
+      // Uses actual selector value from BLOCK_EDITOR_SELECTORS.layoutCanvas.empty
+      expect(container.querySelector('[data-cy="layout-canvas-empty"]')).toBeInTheDocument()
     })
   })
 })

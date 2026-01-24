@@ -23,9 +23,9 @@ export function BenefitsBlock({
   const bgClasses = getBackgroundClasses(backgroundColor)
 
   const gridCols = {
-    '2': 'md:grid-cols-2',
-    '3': 'md:grid-cols-3',
-    '4': 'md:grid-cols-2 lg:grid-cols-4',
+    '2': '@md:grid-cols-2',
+    '3': '@md:grid-cols-3',
+    '4': '@md:grid-cols-2 @lg:grid-cols-4',
   }
 
   const cardStyles = {
@@ -49,7 +49,7 @@ export function BenefitsBlock({
         {(sectionTitle || sectionSubtitle) && (
           <div className="text-center mb-12">
             {sectionTitle && (
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              <h2 className="text-3xl @md:text-4xl font-bold mb-4">
                 {sectionTitle}
               </h2>
             )}

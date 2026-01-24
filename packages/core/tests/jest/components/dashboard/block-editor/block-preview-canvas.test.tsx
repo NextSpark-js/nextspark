@@ -20,14 +20,15 @@ jest.mock('next-intl', () => ({
   },
 }))
 
-// Mock the testing utils
+// Mock the testing utils - generate predictable selectors for testing
 jest.mock('@/core/lib/test', () => ({
   sel: jest.fn((path: string, params?: Record<string, string>) => {
-    const selector = path.split('.').pop() || path
+    // Generate selector like: blockEditor-previewCanvas-block-{id}
+    const basePath = path.replace(/\./g, '-')
     if (params?.id) {
-      return selector.replace('{id}', params.id)
+      return `${basePath}-${params.id}`
     }
-    return selector
+    return basePath
   }),
 }))
 
@@ -108,7 +109,7 @@ describe('BlockPreviewCanvas', () => {
     test('renders correct number of blocks', () => {
       const { container } = render(<BlockPreviewCanvas {...defaultProps} />)
 
-      const blocks = container.querySelectorAll('[data-cy*="preview-block"]')
+      const blocks = container.querySelectorAll('[data-cy*="previewCanvas-block"]')
       expect(blocks).toHaveLength(3)
     })
   })
@@ -119,7 +120,7 @@ describe('BlockPreviewCanvas', () => {
         <BlockPreviewCanvas {...defaultProps} selectedBlockId="block-2" />
       )
 
-      const selectedBlock = container.querySelector('[data-cy="preview-block-block-2"]')
+      const selectedBlock = container.querySelector('[data-cy="blockEditor-previewCanvas-block-block-2"]')
       expect(selectedBlock).toHaveClass('border-primary')
     })
 
@@ -153,7 +154,7 @@ describe('BlockPreviewCanvas', () => {
         <BlockPreviewCanvas {...defaultProps} onMoveUp={onMoveUp} selectedBlockId="block-2" />
       )
 
-      const upButton = container.querySelector('[data-cy="preview-block-moveUp-block-2"]')
+      const upButton = container.querySelector('[data-cy="blockEditor-previewCanvas-moveUp-block-2"]')
       if (upButton) {
         fireEvent.click(upButton)
         expect(onMoveUp).toHaveBeenCalledWith('block-2')
@@ -166,7 +167,7 @@ describe('BlockPreviewCanvas', () => {
         <BlockPreviewCanvas {...defaultProps} onMoveDown={onMoveDown} selectedBlockId="block-2" />
       )
 
-      const downButton = container.querySelector('[data-cy="preview-block-moveDown-block-2"]')
+      const downButton = container.querySelector('[data-cy="blockEditor-previewCanvas-moveDown-block-2"]')
       if (downButton) {
         fireEvent.click(downButton)
         expect(onMoveDown).toHaveBeenCalledWith('block-2')
@@ -178,7 +179,7 @@ describe('BlockPreviewCanvas', () => {
         <BlockPreviewCanvas {...defaultProps} selectedBlockId="block-1" />
       )
 
-      const upButton = container.querySelector('[data-cy="preview-block-moveUp-block-1"]')
+      const upButton = container.querySelector('[data-cy="blockEditor-previewCanvas-moveUp-block-1"]')
       expect(upButton).toBeDisabled()
     })
 
@@ -187,7 +188,7 @@ describe('BlockPreviewCanvas', () => {
         <BlockPreviewCanvas {...defaultProps} selectedBlockId="block-3" />
       )
 
-      const downButton = container.querySelector('[data-cy="preview-block-moveDown-block-3"]')
+      const downButton = container.querySelector('[data-cy="blockEditor-previewCanvas-moveDown-block-3"]')
       expect(downButton).toBeDisabled()
     })
 
@@ -196,7 +197,7 @@ describe('BlockPreviewCanvas', () => {
         <BlockPreviewCanvas {...defaultProps} selectedBlockId="block-2" />
       )
 
-      const upButton = container.querySelector('[data-cy="preview-block-moveUp-block-2"]')
+      const upButton = container.querySelector('[data-cy="blockEditor-previewCanvas-moveUp-block-2"]')
       expect(upButton).not.toBeDisabled()
     })
 
@@ -205,7 +206,7 @@ describe('BlockPreviewCanvas', () => {
         <BlockPreviewCanvas {...defaultProps} selectedBlockId="block-2" />
       )
 
-      const downButton = container.querySelector('[data-cy="preview-block-moveDown-block-2"]')
+      const downButton = container.querySelector('[data-cy="blockEditor-previewCanvas-moveDown-block-2"]')
       expect(downButton).not.toBeDisabled()
     })
   })
@@ -272,12 +273,11 @@ describe('BlockPreviewCanvas', () => {
   })
 
   describe('Hover States', () => {
-    test('applies hover border on mouse enter', () => {
+    test('applies hover border class to block wrapper', () => {
       const { container } = render(<BlockPreviewCanvas {...defaultProps} />)
 
-      const firstBlock = container.querySelector('[data-cy="preview-block-block-1"]')!
-      fireEvent.mouseEnter(firstBlock)
-
+      // The block wrapper should have the hover:border-primary/50 class by default
+      const firstBlock = container.querySelector('[data-cy="blockEditor-previewCanvas-block-block-1"]')
       expect(firstBlock).toHaveClass('hover:border-primary/50')
     })
 

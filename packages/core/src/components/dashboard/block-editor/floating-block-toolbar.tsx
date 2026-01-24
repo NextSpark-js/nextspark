@@ -37,7 +37,7 @@ export function FloatingBlockToolbar({
         'bg-primary text-primary-foreground rounded-full',
         'px-3 py-1 text-xs font-medium shadow-lg',
         'flex items-center gap-3',
-        'transition-all duration-200',
+        'transition-[opacity,transform] duration-200',
         isVisible
           ? 'opacity-100 translate-y-0 pointer-events-auto'
           : 'opacity-0 translate-y-2 pointer-events-none'

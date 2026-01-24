@@ -32,7 +32,7 @@ export function TimelineBlock({
 }: TimelineBlockProps) {
   // Build section classes with background and custom className
   const sectionClasses = buildSectionClasses(
-    'py-16 px-4 md:py-24',
+    'py-16 px-4 @md:py-24',
     { backgroundColor, className }
   )
 
@@ -46,7 +46,7 @@ export function TimelineBlock({
         {(title || subtitle) && (
           <div className="mb-16 text-center">
             {title && (
-              <h2 className="mb-4 text-4xl font-bold md:text-5xl">
+              <h2 className="mb-4 text-4xl font-bold @md:text-5xl">
                 {title}
               </h2>
             )}
@@ -96,10 +96,10 @@ function VerticalTimeline({
     <div className="relative">
       {/* Connector Line */}
       {showConnector && (
-        <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-border -translate-x-1/2 hidden md:block" />
+        <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-border -translate-x-1/2 hidden @md:block" />
       )}
       {showConnector && (
-        <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-border md:hidden" />
+        <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-border @md:hidden" />
       )}
 
       {/* Timeline Items */}
@@ -112,27 +112,27 @@ function VerticalTimeline({
               key={index}
               className={cn(
                 'relative flex items-center gap-8',
-                alternating ? 'md:justify-center' : 'md:justify-start md:pl-[50%]',
-                'justify-start pl-16 md:pl-0'
+                alternating ? '@md:justify-center' : '@md:justify-start @md:pl-[50%]',
+                'justify-start pl-16 @md:pl-0'
               )}
             >
               {/* Mobile/Left Content */}
               <div className={cn(
                 'flex-1',
-                alternating && !isLeft && 'md:text-right md:order-1',
-                !alternating && 'md:pl-8'
+                alternating && !isLeft && '@md:text-right @md:order-1',
+                !alternating && '@md:pl-8'
               )}>
                 <TimelineItemContent item={item} variant={variant} align={alternating && !isLeft ? 'right' : 'left'} />
               </div>
 
               {/* Center Dot */}
-              <div className="absolute left-8 md:left-1/2 md:-translate-x-1/2 flex-shrink-0">
+              <div className="absolute left-8 @md:left-1/2 @md:-translate-x-1/2 flex-shrink-0">
                 <TimelineIcon item={item} />
               </div>
 
               {/* Desktop Spacer (for alternating layout) */}
               {alternating && (
-                <div className="hidden md:block flex-1" />
+                <div className="hidden @md:block flex-1" />
               )}
             </div>
           )
@@ -158,7 +158,7 @@ function HorizontalTimeline({
   return (
     <div className="relative">
       {/* Mobile: Vertical Layout */}
-      <div className="md:hidden">
+      <div className="@md:hidden">
         {showConnector && (
           <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-border" />
         )}
@@ -175,7 +175,7 @@ function HorizontalTimeline({
       </div>
 
       {/* Desktop: Horizontal Layout */}
-      <div className="hidden md:block overflow-x-auto pb-4">
+      <div className="hidden @md:block overflow-x-auto pb-4">
         <div className="relative min-w-max">
           {/* Connector Line */}
           {showConnector && (

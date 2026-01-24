@@ -25,10 +25,8 @@ jest.mock('next-intl', () => ({
   },
 }))
 
-// Mock the testing utils
-jest.mock('@/core/lib/test', () => ({
-  sel: jest.fn((path: string) => path.split('.').pop() || path),
-}))
+// Note: We do NOT mock sel() - we let it use the real implementation
+// so tests verify the correct selector paths are used
 
 // Mock block registry
 jest.mock('@nextsparkjs/registries/block-registry', () => ({
@@ -120,11 +118,11 @@ describe('BlockSettingsPanel', () => {
       expect(screen.getByText('Click on a block to edit')).toBeInTheDocument()
     })
 
-    test('renders block name and description from registry', () => {
+    test('renders block name from registry', () => {
       render(<BlockSettingsPanel {...defaultProps} />)
 
+      // v2.0: Only block name is shown, not the slug
       expect(screen.getByText('Hero Section')).toBeInTheDocument()
-      expect(screen.getByText('hero-section')).toBeInTheDocument()
     })
 
     test('renders error state for unknown block slug', () => {
@@ -142,17 +140,18 @@ describe('BlockSettingsPanel', () => {
     test('renders close button when onClose is provided', () => {
       const { container } = render(<BlockSettingsPanel {...defaultProps} />)
 
-      const closeBtn = container.querySelector('[data-cy="closeBtn"]')
+      const closeBtn = container.querySelector('[data-cy="block-properties-close"]')
       expect(closeBtn).toBeInTheDocument()
     })
 
     test('does not render close button when onClose is not provided', () => {
       const { container } = render(<BlockSettingsPanel {...defaultProps} onClose={undefined} />)
 
-      expect(container.querySelector('[data-cy="closeBtn"]')).not.toBeInTheDocument()
+      expect(container.querySelector('[data-cy="block-properties-close"]')).not.toBeInTheDocument()
     })
 
-    test('renders category badge', () => {
+    // v2.0: Category badge was removed from the UI
+    test.skip('renders category badge', () => {
       render(<BlockSettingsPanel {...defaultProps} />)
 
       expect(screen.getByText('hero')).toBeInTheDocument()
@@ -168,7 +167,8 @@ describe('BlockSettingsPanel', () => {
       expect(screen.getByTestId('dynamic-form')).toBeInTheDocument()
     })
 
-    test('calls onRemove when remove button clicked', () => {
+    // v2.0: Remove button was moved to floating toolbar in preview canvas
+    test.skip('calls onRemove when remove button clicked', () => {
       const onRemove = jest.fn()
       render(<BlockSettingsPanel {...defaultProps} onRemove={onRemove} />)
 
@@ -182,13 +182,14 @@ describe('BlockSettingsPanel', () => {
       const onClose = jest.fn()
       const { container } = render(<BlockSettingsPanel {...defaultProps} onClose={onClose} />)
 
-      const closeBtn = container.querySelector('[data-cy="closeBtn"]')!
+      const closeBtn = container.querySelector('[data-cy="block-properties-close"]')!
       fireEvent.click(closeBtn)
 
       expect(onClose).toHaveBeenCalledTimes(1)
     })
 
-    test('resets props when reset button clicked', () => {
+    // v2.0: Reset button was removed from the panel
+    test.skip('resets props when reset button clicked', () => {
       const onUpdateProps = jest.fn()
       render(<BlockSettingsPanel {...defaultProps} onUpdateProps={onUpdateProps} />)
 
@@ -233,14 +234,15 @@ describe('BlockSettingsPanel', () => {
   })
 
   describe('Header Information', () => {
-    test('displays block identifier with category and slug', () => {
+    test('displays block name in header', () => {
       render(<BlockSettingsPanel {...defaultProps} />)
 
-      expect(screen.getByText('hero')).toBeInTheDocument()
-      expect(screen.getByText('hero-section')).toBeInTheDocument()
+      // v2.0: Only block name shown, category and slug removed
+      expect(screen.getByText('Hero Section')).toBeInTheDocument()
     })
 
-    test('renders action buttons in header', () => {
+    // v2.0: Action buttons (Reset/Remove) were removed from the panel
+    test.skip('renders action buttons in header', () => {
       render(<BlockSettingsPanel {...defaultProps} />)
 
       expect(screen.getByText('Reset')).toBeInTheDocument()
@@ -252,16 +254,17 @@ describe('BlockSettingsPanel', () => {
     test('applies correct data-cy attributes', () => {
       const { container } = render(<BlockSettingsPanel {...defaultProps} />)
 
-      expect(container.querySelector('[data-cy="container"]')).toBeInTheDocument()
-      expect(container.querySelector('[data-cy="header"]')).toBeInTheDocument()
-      expect(container.querySelector('[data-cy="block-name"]')).toBeInTheDocument()
-      expect(container.querySelector('[data-cy="block-id"]')).toBeInTheDocument()
+      // Uses actual selector values from BLOCK_EDITOR_SELECTORS.blockPropertiesPanel
+      expect(container.querySelector('[data-cy="block-properties-panel"]')).toBeInTheDocument()
+      expect(container.querySelector('[data-cy="block-properties-header"]')).toBeInTheDocument()
+      expect(container.querySelector('[data-cy="block-properties-name"]')).toBeInTheDocument()
     })
 
     test('applies empty state data-cy attribute', () => {
       const { container } = render(<BlockSettingsPanel {...defaultProps} block={undefined} />)
 
-      expect(container.querySelector('[data-cy="empty"]')).toBeInTheDocument()
+      // Uses actual selector value from BLOCK_EDITOR_SELECTORS.blockPropertiesPanel.empty
+      expect(container.querySelector('[data-cy="block-properties-empty"]')).toBeInTheDocument()
     })
 
     test('applies error state data-cy attribute', () => {
@@ -273,7 +276,8 @@ describe('BlockSettingsPanel', () => {
 
       const { container } = render(<BlockSettingsPanel {...defaultProps} block={unknownBlock} />)
 
-      expect(container.querySelector('[data-cy="error"]')).toBeInTheDocument()
+      // Uses actual selector value from BLOCK_EDITOR_SELECTORS.blockPropertiesPanel.error
+      expect(container.querySelector('[data-cy="block-properties-error"]')).toBeInTheDocument()
     })
   })
 })

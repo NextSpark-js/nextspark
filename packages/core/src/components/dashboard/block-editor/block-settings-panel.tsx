@@ -211,7 +211,7 @@ export function BlockSettingsPanel({
             <div className="flex border-b border-border" data-cy={sel('blockEditor.blockPropertiesPanel.tabs')}>
               <button
                 className={cn(
-                  'flex-1 py-3 text-sm font-medium transition-all relative flex items-center justify-center gap-1.5',
+                  'flex-1 py-3 text-sm font-medium transition-colors relative flex items-center justify-center gap-1.5',
                   activeTab === 'content'
                     ? 'text-primary bg-primary/5'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
@@ -229,7 +229,7 @@ export function BlockSettingsPanel({
               </button>
               <button
                 className={cn(
-                  'flex-1 py-3 text-sm font-medium transition-all relative flex items-center justify-center gap-1.5',
+                  'flex-1 py-3 text-sm font-medium transition-colors relative flex items-center justify-center gap-1.5',
                   activeTab === 'design'
                     ? 'text-primary bg-primary/5'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
@@ -247,7 +247,7 @@ export function BlockSettingsPanel({
               </button>
               <button
                 className={cn(
-                  'flex-1 py-3 text-sm font-medium transition-all relative flex items-center justify-center gap-1.5',
+                  'flex-1 py-3 text-sm font-medium transition-colors relative flex items-center justify-center gap-1.5',
                   activeTab === 'advanced'
                     ? 'text-primary bg-primary/5'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
