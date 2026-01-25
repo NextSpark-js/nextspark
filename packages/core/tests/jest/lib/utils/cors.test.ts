@@ -515,6 +515,27 @@ describe('getCorsOrigins - Debug Logging', () => {
       expect.stringContaining('Env origins')
     )
   })
+
+  it('should warn about invalid origin format when debugging', () => {
+    process.env.NEXTSPARK_DEBUG_CORS = 'true'
+    const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation()
+
+    const config = createMockConfig({
+      allowedOrigins: {
+        development: ['invalid-origin', 'http://valid.com'],
+        production: [],
+      },
+      allowAllOrigins: { development: false, production: false },
+    })
+
+    getCorsOrigins(config, 'development')
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Invalid origin format: "invalid-origin"')
+    )
+
+    consoleWarnSpy.mockRestore()
+  })
 })
 
 // =============================================================================

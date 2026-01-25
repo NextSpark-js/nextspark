@@ -95,7 +95,8 @@ export function getCorsOrigins(
   // 2. Theme additional origins (new extensible pattern)
   const themeOrigins = [...(config.api.cors.additionalOrigins?.[key] || [])]
 
-  // 3. Runtime env var (comma-separated)
+  // 3. Runtime env var (comma-separated list of origins)
+  // Example: CORS_ADDITIONAL_ORIGINS="http://localhost:8081,https://mobile.myapp.com"
   const envVar = process.env.CORS_ADDITIONAL_ORIGINS || ''
   const envOrigins = envVar.split(',').map(o => o.trim()).filter(Boolean)
 
@@ -115,6 +116,13 @@ export function getCorsOrigins(
     console.log(`[cors]   - Core origins: ${coreOrigins.length}`)
     console.log(`[cors]   - Theme origins: ${themeOrigins.length}`)
     console.log(`[cors]   - Env origins: ${envOrigins.length}`)
+
+    // Validate origin format in debug mode
+    for (const origin of origins) {
+      if (!origin.startsWith('http://') && !origin.startsWith('https://')) {
+        console.warn(`[cors] Invalid origin format: "${origin}" (must start with http:// or https://)`)
+      }
+    }
   }
 
   return origins
