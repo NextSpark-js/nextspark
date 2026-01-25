@@ -130,7 +130,7 @@ After configuration, the wizard shows a preview of files to be created before ge
 The wizard can automatically:
 - Copy `.env.example` to `.env`
 - Set your theme as active (`NEXT_PUBLIC_ACTIVE_THEME`)
-- Generate secure secrets (`AUTH_SECRET`, `ENCRYPTION_KEY`)
+- Generate secure `BETTER_AUTH_SECRET`
 - Configure database URL
 
 ### Git Integration

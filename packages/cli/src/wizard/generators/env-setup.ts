@@ -77,14 +77,8 @@ async function updateExistingEnv(
   // Generate and set secrets if requested
   if (answers.generateSecrets) {
     const authSecret = generateSecret()
-    const encryptionKey = generateSecret()
-
-    content = updateEnvVar(content, 'AUTH_SECRET', authSecret)
     content = updateEnvVar(content, 'BETTER_AUTH_SECRET', authSecret)
-    content = updateEnvVar(content, 'ENCRYPTION_KEY', encryptionKey)
-
-    showSuccess('Generated secure AUTH_SECRET')
-    showSuccess('Generated secure ENCRYPTION_KEY')
+    showSuccess('Generated secure BETTER_AUTH_SECRET')
   }
 
   // Set DATABASE_URL if provided
@@ -113,15 +107,8 @@ async function updateEnvFile(
   // Generate and set secrets if requested
   if (answers.generateSecrets) {
     const authSecret = generateSecret()
-    const encryptionKey = generateSecret()
-
-    // Try to update AUTH_SECRET or BETTER_AUTH_SECRET (depending on what's in the file)
-    content = updateEnvVar(content, 'AUTH_SECRET', authSecret)
     content = updateEnvVar(content, 'BETTER_AUTH_SECRET', authSecret)
-    content = updateEnvVar(content, 'ENCRYPTION_KEY', encryptionKey)
-
-    showSuccess('Generated secure AUTH_SECRET')
-    showSuccess('Generated secure ENCRYPTION_KEY')
+    showSuccess('Generated secure BETTER_AUTH_SECRET')
   }
 
   // Set DATABASE_URL if provided
@@ -158,7 +145,6 @@ async function createDefaultEnv(
   config: WizardConfig
 ): Promise<void> {
   const authSecret = answers.generateSecrets ? generateSecret() : 'your-secret-key-min-32-chars'
-  const encryptionKey = answers.generateSecrets ? generateSecret() : 'your-encryption-key-min-32-chars'
   const databaseUrl = answers.databaseUrl || 'postgresql://user:password@localhost:5432/nextspark'
 
   const content = `# NextSpark Environment Configuration
@@ -168,11 +154,7 @@ async function createDefaultEnv(
 DATABASE_URL=${databaseUrl}
 
 # Authentication (Better Auth)
-AUTH_SECRET=${authSecret}
 BETTER_AUTH_SECRET=${authSecret}
-
-# Encryption
-ENCRYPTION_KEY=${encryptionKey}
 
 # App URL
 NEXT_PUBLIC_APP_URL=http://localhost:3000
@@ -187,25 +169,54 @@ RESEND_FROM_EMAIL=
 # Google OAuth - Optional
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
+# Required if using OAuth providers - encrypts OAuth tokens in database
+# Generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+# OAUTH_ENCRYPTION_KEY=
 
 # Stripe - Optional
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
 
+# Upstash Redis - Optional (for distributed rate limiting)
+# Get credentials from https://upstash.com
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
+
+# Rate Limiting - Optional (development/testing only)
+# Set to 'true' to disable rate limiting (WARNING: Never use in production!)
+# DISABLE_RATE_LIMITING=true
+
 # CORS Configuration - Optional
 # Additional origins for CORS (comma-separated)
 # CORS_ADDITIONAL_ORIGINS=http://localhost:8081,https://mobile.myapp.com
 # Enable CORS debug logging
 # NEXTSPARK_DEBUG_CORS=true
+
+# =============================================================================
+# CYPRESS TEST CREDENTIALS
+# =============================================================================
+# Used by Cypress tests for authentication.
+# The CYPRESS_ prefix makes them available as Cypress.env('VARIABLE_NAME')
+#
+# Core system users (pre-installed from core migrations)
+CYPRESS_DEVELOPER_EMAIL=developer@nextspark.dev
+CYPRESS_DEVELOPER_PASSWORD=Pandora1234
+CYPRESS_SUPERADMIN_EMAIL=superadmin@nextspark.dev
+CYPRESS_SUPERADMIN_PASSWORD=Pandora1234
+
+# Theme users - Uncomment and customize when you create your own test users
+# CYPRESS_TEST_PASSWORD=Test1234
+# CYPRESS_OWNER_EMAIL=owner@example.com
+# CYPRESS_ADMIN_EMAIL=admin@example.com
+# CYPRESS_MEMBER_EMAIL=member@example.com
 `
 
   await fs.writeFile(envPath, content, 'utf-8')
   showSuccess('Created .env file with default configuration')
 
   if (answers.generateSecrets) {
-    showSuccess('Generated secure AUTH_SECRET')
-    showSuccess('Generated secure ENCRYPTION_KEY')
+    showSuccess('Generated secure BETTER_AUTH_SECRET')
   }
 
   if (answers.databaseUrl) {
