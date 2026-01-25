@@ -19,6 +19,8 @@
 @import "@nextsparkjs/core/styles/utilities.css";
 @import "@nextsparkjs/core/styles/docs.css";
 @source "../../../**/*.{js,ts,jsx,tsx}";
+/* Core package: monorepo (short path) + npm projects (long path) */
+@source "../node_modules/@nextsparkjs/core/dist/**/*.js";
 @source "../../../../node_modules/@nextsparkjs/core/dist/**/*.js";
 
 /* ============================================================================
