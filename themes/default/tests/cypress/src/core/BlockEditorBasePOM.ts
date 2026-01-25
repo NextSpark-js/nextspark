@@ -166,6 +166,35 @@ export abstract class BlockEditorBasePOM extends BasePOM {
       configMetaDescription: cySelector('blockEditor.configPanel.seoMetaSection.metaDescription'),
 
       // =========================================================================
+      // CONFIG PANEL - SEO SECTION (standalone box - v2.1)
+      // =========================================================================
+      configSeoSectionContainer: cySelector('blockEditor.configPanel.seoSection.container'),
+      configSeoSectionTrigger: cySelector('blockEditor.configPanel.seoSection.trigger'),
+      configSeoSectionContent: cySelector('blockEditor.configPanel.seoSection.content'),
+      configSeoMetaTitle: cySelector('blockEditor.configPanel.seoSection.metaTitle'),
+      configSeoMetaDescription: cySelector('blockEditor.configPanel.seoSection.metaDescription'),
+      configSeoMetaKeywords: cySelector('blockEditor.configPanel.seoSection.metaKeywords'),
+      configSeoOgImage: cySelector('blockEditor.configPanel.seoSection.ogImage'),
+
+      // =========================================================================
+      // CONFIG PANEL - CUSTOM FIELDS SECTION (standalone box - v2.1)
+      // =========================================================================
+      configCustomFieldsContainer: cySelector('blockEditor.configPanel.customFieldsSection.container'),
+      configCustomFieldsTrigger: cySelector('blockEditor.configPanel.customFieldsSection.trigger'),
+      configCustomFieldsContent: cySelector('blockEditor.configPanel.customFieldsSection.content'),
+      configCustomFieldsAddBtn: cySelector('blockEditor.configPanel.customFieldsSection.addButton'),
+      configCustomFieldKey: (index: number) =>
+        cySelector('blockEditor.configPanel.customFieldsSection.fieldKey', { index: String(index) }),
+      configCustomFieldValue: (index: number) =>
+        cySelector('blockEditor.configPanel.customFieldsSection.fieldValue', { index: String(index) }),
+      configCustomFieldRemove: (index: number) =>
+        cySelector('blockEditor.configPanel.customFieldsSection.fieldRemove', { index: String(index) }),
+      // Generic selectors for counting
+      configCustomFieldKeyGeneric: '[data-cy^="builder-config-custom-key-"]',
+      configCustomFieldValueGeneric: '[data-cy^="builder-config-custom-value-"]',
+      configCustomFieldRemoveGeneric: '[data-cy^="builder-config-custom-remove-"]',
+
+      // =========================================================================
       // ENTITY FIELDS PANEL - DEPRECATED (moved to configPanel in v2.0)
       // =========================================================================
       /** @deprecated Use configEntitySection in Settings mode instead */
