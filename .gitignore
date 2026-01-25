@@ -61,3 +61,8 @@ yarn.lock
 
 # Claude Code
 .claude/sessions/
+
+# Mobile app (outside pnpm workspace)
+apps/mobile/node_modules/
+apps/mobile/.expo/
+apps/mobile/dist/
