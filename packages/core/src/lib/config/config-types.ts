@@ -55,6 +55,15 @@ export interface ApiConfig {
       development: boolean
       production: boolean
     }
+    /**
+     * Theme extension pattern for CORS origins
+     * Use this to add theme-specific origins without duplicating core defaults
+     * These are merged with core allowedOrigins at runtime
+     */
+    additionalOrigins?: {
+      development?: readonly string[]
+      production?: readonly string[]
+    }
   }
 }
 

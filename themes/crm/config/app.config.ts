@@ -64,11 +64,10 @@ export const APP_CONFIG_OVERRIDES = {
   // =============================================================================
   api: {
     cors: {
-      allowedOrigins: {
-        development: [
-          'http://localhost:3000',
-          'http://localhost:5173',
-        ],
+      // Theme-specific CORS origins (extends core defaults, does not replace)
+      // No additional origins needed for CRM theme - uses core defaults
+      additionalOrigins: {
+        development: [],
         production: [],
       },
     },

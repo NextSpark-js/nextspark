@@ -9,6 +9,7 @@ import { ScopeService } from '../services/scope.service';
 import { getEntityConfig } from '../entities/registry';
 import { getChildEntities, getEntity } from '../entities/queries';
 import { CreateMetaPayload } from '../../types/meta.types';
+import { getCorsOrigins } from '../utils/cors';
 
 // Types for session-based auth
 interface SessionAuth {
@@ -451,39 +452,46 @@ function getAllowedFiltersFromRegistry(): string[] {
 
 /**
  * Agrega headers de CORS para API externa
+ * Uses unified getCorsOrigins() for single source of truth
  */
 export async function addCorsHeaders(response: NextResponse, request?: NextRequest): Promise<NextResponse> {
   const env = process.env.NODE_ENV || 'development';
   const config = await getApplicationConfig();
   const corsConfig = config.api.cors;
-  
+
   // Determinar el origen permitido
   let allowedOrigin = 'null';
-  
+
   if (request) {
     const origin = request.headers.get('origin');
-    
+
     if (origin) {
       // En desarrollo, permitir todos los orígenes si está configurado
       if (env === 'development' && corsConfig.allowAllOrigins.development) {
         allowedOrigin = origin;
-      } 
+      }
       // En producción o desarrollo con restricciones, verificar lista permitida
       else {
-        const allowedOrigins = corsConfig.allowedOrigins[env as keyof typeof corsConfig.allowedOrigins] || [];
-        if ((allowedOrigins as readonly string[]).includes(origin)) {
+        // Use unified origin list from getCorsOrigins()
+        const allowedOrigins = getCorsOrigins(config, env);
+        if (allowedOrigins.includes(origin)) {
           allowedOrigin = origin;
         }
       }
     }
+  } else if (env === 'development' && corsConfig.allowAllOrigins.development) {
+    // In development with allowAllOrigins but no request, use the first allowed origin
+    // This handles cases where generic handlers don't pass the request
+    const allowedOrigins = getCorsOrigins(config, env);
+    allowedOrigin = allowedOrigins[0] || 'http://localhost:3000';
   }
-  
+
   response.headers.set('Access-Control-Allow-Origin', allowedOrigin);
   response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key, x-team-id, x-builder-source');
   response.headers.set('Access-Control-Allow-Credentials', 'true');
   response.headers.set('Access-Control-Max-Age', '86400');
-  
+
   return response;
 }
 
