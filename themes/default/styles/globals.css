@@ -17,6 +17,7 @@
 @import "@nextsparkjs/core/styles/utilities.css";
 @import "@nextsparkjs/core/styles/docs.css";
 @source "../../../**/*.{js,ts,jsx,tsx}";
+@source "../../../../node_modules/@nextsparkjs/core/dist/**/*.js";
 
 /* =============================================
    DEFAULT THEME - LIGHT MODE
