@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { TEAMS_CONFIG } from "@nextsparkjs/core/lib/config";
 import { isPublicSignupRestricted } from "@nextsparkjs/core/lib/teams/helpers";
 import { TeamService } from "@nextsparkjs/core/lib/services";
-import { wrapAuthHandlerWithCors, handleCorsPreflightRequest } from "@nextsparkjs/core/lib/api/helpers";
+import { wrapAuthHandlerWithCors, handleCorsPreflightRequest, addCorsHeaders } from "@nextsparkjs/core/lib/api/helpers";
 
 const handlers = toNextJsHandler(auth);
 
@@ -59,9 +59,8 @@ export async function POST(req: NextRequest) {
 
       if (teamExists) {
         // Block public signup - users must be invited
-        // Note: We return directly here without CORS wrapper since this is an error response
-        // and the browser won't process it anyway due to the 403 status
-        return NextResponse.json(
+        // Add CORS headers so mobile apps can read the error message
+        const errorResponse = NextResponse.json(
           {
             error: 'Registration is closed',
             message: 'This application requires an invitation to register. Please contact an administrator.',
@@ -69,6 +68,7 @@ export async function POST(req: NextRequest) {
           },
           { status: 403 }
         );
+        return await addCorsHeaders(errorResponse, req);
       }
     }
   }

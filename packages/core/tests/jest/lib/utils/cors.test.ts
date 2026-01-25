@@ -8,7 +8,7 @@
  * - Debug logging
  */
 
-import { getCorsOrigins, normalizeCorsEnvironment, type CorsEnvironment } from '@/core/lib/utils/cors'
+import { getCorsOrigins, normalizeCorsEnvironment, normalizeOrigin, type CorsEnvironment } from '@/core/lib/utils/cors'
 import type { ApplicationConfig } from '@/core/lib/config/config-types'
 
 // =============================================================================
@@ -550,5 +550,65 @@ describe('Type Exports', () => {
 
     const validEnvs: CorsEnvironment[] = ['development', 'production', 'staging', 'qa']
     expect(validEnvs).toHaveLength(4)
+  })
+})
+
+// =============================================================================
+// DESCRIBE: normalizeOrigin
+// =============================================================================
+
+describe('normalizeOrigin', () => {
+  it('should remove single trailing slash', () => {
+    expect(normalizeOrigin('http://localhost:3000/')).toBe('http://localhost:3000')
+  })
+
+  it('should remove multiple trailing slashes', () => {
+    expect(normalizeOrigin('https://app.com///')).toBe('https://app.com')
+  })
+
+  it('should be idempotent', () => {
+    const origin = 'http://localhost:3000'
+    expect(normalizeOrigin(origin)).toBe(origin)
+    expect(normalizeOrigin(normalizeOrigin(origin))).toBe(origin)
+  })
+
+  it('should handle origins without trailing slashes', () => {
+    expect(normalizeOrigin('https://example.com')).toBe('https://example.com')
+  })
+
+  it('should normalize scheme to lowercase', () => {
+    expect(normalizeOrigin('HTTP://localhost:3000')).toBe('http://localhost:3000')
+    expect(normalizeOrigin('HTTPS://EXAMPLE.COM')).toBe('https://example.com')
+  })
+
+  it('should normalize host to lowercase', () => {
+    expect(normalizeOrigin('http://LOCALHOST:3000')).toBe('http://localhost:3000')
+    expect(normalizeOrigin('https://APP.EXAMPLE.COM')).toBe('https://app.example.com')
+  })
+
+  it('should handle empty string', () => {
+    expect(normalizeOrigin('')).toBe('')
+  })
+
+  it('should handle null/undefined gracefully', () => {
+    expect(normalizeOrigin(null as unknown as string)).toBe('')
+    expect(normalizeOrigin(undefined as unknown as string)).toBe('')
+  })
+
+  it('should preserve port numbers', () => {
+    expect(normalizeOrigin('http://localhost:8080/')).toBe('http://localhost:8080')
+    expect(normalizeOrigin('https://api.example.com:443')).toBe('https://api.example.com')
+  })
+
+  it('should remove default ports', () => {
+    // URL.origin removes default ports (80 for http, 443 for https)
+    expect(normalizeOrigin('http://example.com:80')).toBe('http://example.com')
+    expect(normalizeOrigin('https://example.com:443')).toBe('https://example.com')
+  })
+
+  it('should handle invalid URLs gracefully', () => {
+    // Falls back to lowercase + remove trailing slashes
+    expect(normalizeOrigin('not-a-valid-url/')).toBe('not-a-valid-url')
+    expect(normalizeOrigin('INVALID/')).toBe('invalid')
   })
 })

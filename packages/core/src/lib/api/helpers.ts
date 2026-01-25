@@ -9,7 +9,7 @@ import { ScopeService } from '../services/scope.service';
 import { getEntityConfig } from '../entities/registry';
 import { getChildEntities, getEntity } from '../entities/queries';
 import { CreateMetaPayload } from '../../types/meta.types';
-import { getCorsOrigins } from '../utils/cors';
+import { getCorsOrigins, normalizeOrigin } from '../utils/cors';
 
 // Types for session-based auth
 interface SessionAuth {
@@ -466,16 +466,19 @@ export async function addCorsHeaders(response: NextResponse, request?: NextReque
     const origin = request.headers.get('origin');
 
     if (origin) {
+      // Normalize the incoming origin for consistent comparison
+      const normalizedOrigin = normalizeOrigin(origin);
+
       // En desarrollo, permitir todos los orígenes si está configurado
       if (env === 'development' && corsConfig.allowAllOrigins.development) {
-        allowedOrigin = origin;
+        allowedOrigin = normalizedOrigin;
       }
       // En producción o desarrollo con restricciones, verificar lista permitida
       else {
-        // Use unified origin list from getCorsOrigins()
+        // Use unified origin list from getCorsOrigins() (already normalized)
         const allowedOrigins = getCorsOrigins(config, env);
-        if (allowedOrigins.includes(origin)) {
-          allowedOrigin = origin;
+        if (allowedOrigins.includes(normalizedOrigin)) {
+          allowedOrigin = normalizedOrigin;
         }
       }
     }
@@ -543,16 +546,18 @@ export async function wrapAuthHandlerWithCors(
   const origin = request.headers.get('origin')
 
   if (origin) {
+    // Normalize the incoming origin for consistent comparison
+    const normalizedOrigin = normalizeOrigin(origin)
     let allowedOrigin = 'null'
 
     // In development with allowAllOrigins, allow any origin
     if (env === 'development' && corsConfig.allowAllOrigins.development) {
-      allowedOrigin = origin
+      allowedOrigin = normalizedOrigin
     } else {
-      // Check against allowed origins list
+      // Check against allowed origins list (already normalized)
       const allowedOrigins = getCorsOrigins(config, env)
-      if (allowedOrigins.includes(origin)) {
-        allowedOrigin = origin
+      if (allowedOrigins.includes(normalizedOrigin)) {
+        allowedOrigin = normalizedOrigin
       }
     }
 

@@ -33,24 +33,42 @@ function isDebugEnabled(): boolean {
 }
 
 /**
- * Normalize an origin URL by removing trailing slashes
+ * Normalize an origin URL by removing trailing slashes and converting to lowercase
  *
  * Browsers send Origin headers without trailing slashes (e.g., "http://localhost:8081")
  * but environment variables like NEXT_PUBLIC_APP_URL may include them.
  * This ensures consistent comparison for CORS validation.
  *
+ * Also normalizes scheme and host to lowercase per RFC 3986.
+ *
  * @param origin - Origin URL that may have trailing slash
- * @returns Origin URL without trailing slash
+ * @returns Normalized origin URL, or empty string if input is invalid
  *
  * @example
  * ```ts
  * normalizeOrigin('http://localhost:3000/')  // 'http://localhost:3000'
  * normalizeOrigin('http://localhost:3000')   // 'http://localhost:3000'
  * normalizeOrigin('https://app.com///')      // 'https://app.com'
+ * normalizeOrigin('HTTP://LOCALHOST:3000')   // 'http://localhost:3000'
+ * normalizeOrigin('')                         // ''
+ * normalizeOrigin(null as any)               // ''
  * ```
  */
 export function normalizeOrigin(origin: string): string {
-  return origin.replace(/\/+$/, '')
+  // Defensive input validation
+  if (!origin || typeof origin !== 'string') {
+    return ''
+  }
+
+  try {
+    // URL constructor normalizes scheme and host to lowercase
+    // and url.origin gives us scheme://host:port without trailing slash
+    const url = new URL(origin)
+    return url.origin
+  } catch {
+    // If URL parsing fails, fall back to string manipulation
+    return origin.toLowerCase().replace(/\/+$/, '')
+  }
 }
 
 /**
