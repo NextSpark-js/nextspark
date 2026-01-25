@@ -9,6 +9,7 @@ import { ScopeService } from '../services/scope.service';
 import { getEntityConfig } from '../entities/registry';
 import { getChildEntities, getEntity } from '../entities/queries';
 import { CreateMetaPayload } from '../../types/meta.types';
+import { getCorsOrigins, normalizeOrigin } from '../utils/cors';
 
 // Types for session-based auth
 interface SessionAuth {
@@ -451,39 +452,49 @@ function getAllowedFiltersFromRegistry(): string[] {
 
 /**
  * Agrega headers de CORS para API externa
+ * Uses unified getCorsOrigins() for single source of truth
  */
 export async function addCorsHeaders(response: NextResponse, request?: NextRequest): Promise<NextResponse> {
   const env = process.env.NODE_ENV || 'development';
   const config = await getApplicationConfig();
   const corsConfig = config.api.cors;
-  
+
   // Determinar el origen permitido
   let allowedOrigin = 'null';
-  
+
   if (request) {
     const origin = request.headers.get('origin');
-    
+
     if (origin) {
+      // Normalize the incoming origin for consistent comparison
+      const normalizedOrigin = normalizeOrigin(origin);
+
       // En desarrollo, permitir todos los orígenes si está configurado
       if (env === 'development' && corsConfig.allowAllOrigins.development) {
-        allowedOrigin = origin;
-      } 
+        allowedOrigin = normalizedOrigin;
+      }
       // En producción o desarrollo con restricciones, verificar lista permitida
       else {
-        const allowedOrigins = corsConfig.allowedOrigins[env as keyof typeof corsConfig.allowedOrigins] || [];
-        if ((allowedOrigins as readonly string[]).includes(origin)) {
-          allowedOrigin = origin;
+        // Use unified origin list from getCorsOrigins() (already normalized)
+        const allowedOrigins = getCorsOrigins(config, env);
+        if (allowedOrigins.includes(normalizedOrigin)) {
+          allowedOrigin = normalizedOrigin;
         }
       }
     }
+  } else if (env === 'development' && corsConfig.allowAllOrigins.development) {
+    // In development with allowAllOrigins but no request, use the first allowed origin
+    // This handles cases where generic handlers don't pass the request
+    const allowedOrigins = getCorsOrigins(config, env);
+    allowedOrigin = allowedOrigins[0] || 'http://localhost:3000';
   }
-  
+
   response.headers.set('Access-Control-Allow-Origin', allowedOrigin);
   response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key, x-team-id, x-builder-source');
   response.headers.set('Access-Control-Allow-Credentials', 'true');
   response.headers.set('Access-Control-Max-Age', '86400');
-  
+
   return response;
 }
 
@@ -493,6 +504,68 @@ export async function addCorsHeaders(response: NextResponse, request?: NextReque
 export async function handleCorsPreflightRequest(request?: NextRequest): Promise<NextResponse> {
   const response = new NextResponse(null, { status: 200 });
   return await addCorsHeaders(response, request);
+}
+
+/**
+ * Wraps an auth handler response with CORS headers
+ *
+ * Better Auth handles OPTIONS preflight but doesn't add CORS headers to actual responses.
+ * This utility wraps responses to add proper CORS headers for cross-origin requests.
+ *
+ * @param handler - The original handler function (GET, POST, etc.)
+ * @param request - The incoming request
+ * @returns Response with CORS headers added
+ *
+ * @example
+ * ```ts
+ * // In your auth route:
+ * import { wrapAuthHandlerWithCors } from '@nextsparkjs/core/lib/api/helpers'
+ *
+ * export async function POST(req: NextRequest) {
+ *   return wrapAuthHandlerWithCors(() => handlers.POST(req), req)
+ * }
+ * ```
+ */
+export async function wrapAuthHandlerWithCors(
+  handler: () => Promise<Response>,
+  request: NextRequest
+): Promise<Response> {
+  const response = await handler()
+
+  // Clone the response to make headers mutable
+  const newResponse = new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: new Headers(response.headers),
+  })
+
+  // Add CORS headers
+  const env = process.env.NODE_ENV || 'development'
+  const config = await getApplicationConfig()
+  const corsConfig = config.api.cors
+  const origin = request.headers.get('origin')
+
+  if (origin) {
+    // Normalize the incoming origin for consistent comparison
+    const normalizedOrigin = normalizeOrigin(origin)
+    let allowedOrigin = 'null'
+
+    // In development with allowAllOrigins, allow any origin
+    if (env === 'development' && corsConfig.allowAllOrigins.development) {
+      allowedOrigin = normalizedOrigin
+    } else {
+      // Check against allowed origins list (already normalized)
+      const allowedOrigins = getCorsOrigins(config, env)
+      if (allowedOrigins.includes(normalizedOrigin)) {
+        allowedOrigin = normalizedOrigin
+      }
+    }
+
+    newResponse.headers.set('Access-Control-Allow-Origin', allowedOrigin)
+    newResponse.headers.set('Access-Control-Allow-Credentials', 'true')
+  }
+
+  return newResponse
 }
 
 /**

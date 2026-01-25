@@ -55,7 +55,7 @@ export async function promptEnvSetup(): Promise<EnvSetupAnswers> {
 
   // Ask if user wants to generate secrets
   const generateSecrets = await confirm({
-    message: 'Generate secure AUTH_SECRET and ENCRYPTION_KEY automatically?',
+    message: 'Generate secure BETTER_AUTH_SECRET automatically?',
     default: true,
   })
 

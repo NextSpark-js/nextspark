@@ -4,8 +4,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { TEAMS_CONFIG } from "@nextsparkjs/core/lib/config";
 import { isPublicSignupRestricted } from "@nextsparkjs/core/lib/teams/helpers";
 import { TeamService } from "@nextsparkjs/core/lib/services";
+import { wrapAuthHandlerWithCors, handleCorsPreflightRequest, addCorsHeaders } from "@nextsparkjs/core/lib/api/helpers";
 
 const handlers = toNextJsHandler(auth);
+
+// Handle CORS preflight requests for cross-origin auth (mobile apps, etc.)
+export async function OPTIONS(req: NextRequest) {
+  return handleCorsPreflightRequest(req);
+}
 
 // Intercept email verification requests to redirect to UI page
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -31,8 +37,8 @@ export async function GET(req: NextRequest, context: { params: Promise<{ all: st
     }
   }
 
-  // For all other requests (including UI verification calls), use the default Better Auth handler
-  return handlers.GET(req);
+  // Wrap with CORS headers for cross-origin requests (mobile apps, etc.)
+  return wrapAuthHandlerWithCors(() => handlers.GET(req), req);
 }
 
 // Intercept signup requests to validate single-tenant mode
@@ -53,7 +59,8 @@ export async function POST(req: NextRequest) {
 
       if (teamExists) {
         // Block public signup - users must be invited
-        return NextResponse.json(
+        // Add CORS headers so mobile apps can read the error message
+        const errorResponse = NextResponse.json(
           {
             error: 'Registration is closed',
             message: 'This application requires an invitation to register. Please contact an administrator.',
@@ -61,10 +68,11 @@ export async function POST(req: NextRequest) {
           },
           { status: 403 }
         );
+        return await addCorsHeaders(errorResponse, req);
       }
     }
   }
 
-  // Continue with normal Better Auth handling
-  return handlers.POST(req);
+  // Wrap with CORS headers for cross-origin requests (mobile apps, etc.)
+  return wrapAuthHandlerWithCors(() => handlers.POST(req), req);
 }

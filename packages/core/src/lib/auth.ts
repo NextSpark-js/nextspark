@@ -3,7 +3,7 @@ import { Pool } from "pg";
 import { nextCookies } from "better-auth/next-js";
 import { parseSSLConfig } from './db';
 import { EmailFactory, emailTemplates } from './email';
-import { I18N_CONFIG, USER_ROLES_CONFIG, TEAMS_CONFIG, type UserRole } from './config';
+import { I18N_CONFIG, USER_ROLES_CONFIG, TEAMS_CONFIG, APP_CONFIG_MERGED, type UserRole } from './config';
 import { getUserFlags } from './services/user-flags.service';
 // Direct import to avoid circular dependency: auth -> services/index -> middleware.service -> auth
 import { TeamService } from './services/team.service';
@@ -11,6 +11,7 @@ import { shouldSkipTeamCreation } from './auth-context';
 import {
   isPublicSignupRestricted,
 } from './teams/helpers';
+import { getCorsOrigins } from './utils/cors';
 
 interface UserWithEmail {
   email: string;
@@ -159,15 +160,8 @@ export const auth = betterAuth({
     },
   },
   baseURL: baseUrl,
-  trustedOrigins: [
-    baseUrl,
-    process.env.NEXT_PUBLIC_APP_URL, // Additional public URL
-    'http://localhost:5173',
-    'http://localhost:3000', // Ionic app
-    'http://localhost:3008', // Ionic app (puerto actual)
-    'http://127.0.0.1:3000', // Alternative localhost
-    'http://127.0.0.1:3008', // Alternative localhost actual
-  ].filter((origin): origin is string => Boolean(origin)),
+  // Use unified CORS configuration from app.config.ts + theme extensions + env vars
+  trustedOrigins: getCorsOrigins(APP_CONFIG_MERGED),
   plugins: [
     nextCookies(), // MUST be the last plugin for Next.js cookie handling
   ],

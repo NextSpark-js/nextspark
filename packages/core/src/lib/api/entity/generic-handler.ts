@@ -368,13 +368,13 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
 
     if (!resolution.isValidEntity || !resolution.entityConfig) {
       const response = createApiError('Entity not found', 404)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, request)
     }
 
     // Check if entity supports list operation
     if (!validateEntityOperation(resolution.entityConfig, 'list')) {
       const response = createApiError('List operation not supported for this entity', 405)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, request)
     }
 
     // Authenticate request
@@ -401,7 +401,7 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
       // Check required permissions for authenticated access
       if (!hasRequiredScope(authResult, `${resolution.entityConfig.slug}:read`)) {
         const response = createApiError('Insufficient permissions', 403)
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, request)
       }
 
       userId = authResult.user!.id
@@ -790,12 +790,12 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
     }
 
     const response = createApiResponse(dataWithTaxonomies, paginationMeta)
-    return addCorsHeaders(response)
+    return addCorsHeaders(response, request)
 
   } catch (error) {
     console.error('Error in generic list handler:', error)
     const response = createApiError('Internal server error', 500)
-    return addCorsHeaders(response)
+    return addCorsHeaders(response, request)
   }
 }
 
@@ -809,13 +809,13 @@ export async function handleGenericCreate(request: NextRequest): Promise<NextRes
 
     if (!resolution.isValidEntity || !resolution.entityConfig) {
       const response = createApiError('Entity not found', 404)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, request)
     }
 
     // Check if entity supports create operation
     if (!validateEntityOperation(resolution.entityConfig, 'create')) {
       const response = createApiError('Create operation not supported for this entity', 405)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, request)
     }
 
     // Authenticate request
@@ -835,7 +835,7 @@ export async function handleGenericCreate(request: NextRequest): Promise<NextRes
     // Check required permissions for all auth types
     if (!hasRequiredScope(authResult, `${resolution.entityConfig.slug}:write`)) {
       const response = createApiError('Insufficient permissions', 403)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, request)
     }
 
     // Parse request body
@@ -844,7 +844,7 @@ export async function handleGenericCreate(request: NextRequest): Promise<NextRes
       body = await request.json()
     } catch {
       const response = createApiError('Invalid JSON body', 400)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, request)
     }
 
     // Separate metadata from entity data
@@ -865,7 +865,7 @@ export async function handleGenericCreate(request: NextRequest): Promise<NextRes
         errors: validation.error.issues
       })
       const response = createApiError('Validation error', 400, validation.error.issues, 'VALIDATION_ERROR')
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, request)
     }
 
     const validatedData = validation.data
@@ -895,7 +895,7 @@ export async function handleGenericCreate(request: NextRequest): Promise<NextRes
     if (!teamId) {
       // Even with bypass, CREATE needs a target team
       const response = createApiError('Team context required for create operations. Include x-team-id header.', 400, undefined, 'TEAM_CONTEXT_REQUIRED')
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, request)
     }
 
     if (idStrategy === 'serial') {
@@ -1093,12 +1093,12 @@ export async function handleGenericCreate(request: NextRequest): Promise<NextRes
     }
 
     const response = createApiResponse(responseData, { created: true }, 201)
-    return addCorsHeaders(response)
+    return addCorsHeaders(response, request)
 
   } catch (error) {
     console.error('Error in generic create handler:', error)
     const response = createApiError('Internal server error', 500)
-    return addCorsHeaders(response)
+    return addCorsHeaders(response, request)
   }
 }
 
@@ -1114,13 +1114,13 @@ export async function handleGenericRead(request: NextRequest, { params }: { para
 
     if (!resolution.isValidEntity || !resolution.entityConfig) {
       const response = createApiError('Entity not found', 404)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, request)
     }
 
     // Check if entity supports read operation
     if (!validateEntityOperation(resolution.entityConfig, 'read')) {
       const response = createApiError('Read operation not supported for this entity', 405)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, request)
     }
 
     // Authenticate request
@@ -1147,7 +1147,7 @@ export async function handleGenericRead(request: NextRequest, { params }: { para
       // Check required permissions for authenticated access
       if (!hasRequiredScope(authResult, `${resolution.entityConfig.slug}:read`)) {
         const response = createApiError('Insufficient permissions', 403)
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, request)
       }
 
       userId = authResult.user!.id
@@ -1216,7 +1216,7 @@ export async function handleGenericRead(request: NextRequest, { params }: { para
 
     if (!items[0]) {
       const response = createApiError('Item not found', 404)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, request)
     }
 
     const item = items[0] as Record<string, unknown>
@@ -1260,12 +1260,12 @@ export async function handleGenericRead(request: NextRequest, { params }: { para
     }
 
     const response = createApiResponse(itemWithTaxonomies)
-    return addCorsHeaders(response)
+    return addCorsHeaders(response, request)
 
   } catch (error) {
     console.error('Error in generic read handler:', error)
     const response = createApiError('Internal server error', 500)
-    return addCorsHeaders(response)
+    return addCorsHeaders(response, request)
   }
 }
 
@@ -1281,13 +1281,13 @@ export async function handleGenericUpdate(request: NextRequest, { params }: { pa
 
     if (!resolution.isValidEntity || !resolution.entityConfig) {
       const response = createApiError('Entity not found', 404)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, request)
     }
 
     // Check if entity supports update operation
     if (!validateEntityOperation(resolution.entityConfig, 'update')) {
       const response = createApiError('Update operation not supported for this entity', 405)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, request)
     }
 
     // Authenticate request
@@ -1307,7 +1307,7 @@ export async function handleGenericUpdate(request: NextRequest, { params }: { pa
     // Check required permissions for all auth types
     if (!hasRequiredScope(authResult, `${resolution.entityConfig.slug}:write`)) {
       const response = createApiError('Insufficient permissions', 403)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, request)
     }
 
     // Validate team context with admin bypass support
@@ -1320,7 +1320,7 @@ export async function handleGenericUpdate(request: NextRequest, { params }: { pa
     if (!teamId) {
       // Even with bypass, UPDATE needs a target team for WHERE clause
       const response = createApiError('Team context required for update operations. Include x-team-id header.', 400, undefined, 'TEAM_CONTEXT_REQUIRED')
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, request)
     }
 
     // Parse request body
@@ -1329,7 +1329,7 @@ export async function handleGenericUpdate(request: NextRequest, { params }: { pa
       body = await request.json()
     } catch {
       const response = createApiError('Invalid JSON body', 400)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, request)
     }
 
     // Separate metadata from entity data
@@ -1348,7 +1348,7 @@ export async function handleGenericUpdate(request: NextRequest, { params }: { pa
         errors: validation.error.issues
       })
       const response = createApiError('Validation error', 400, validation.error.issues, 'VALIDATION_ERROR')
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, request)
     }
 
     const validatedData = validation.data
@@ -1455,7 +1455,7 @@ export async function handleGenericUpdate(request: NextRequest, { params }: { pa
 
     if (updates.length === 0 && !metadataWasProvided) {
       const response = createApiError('No fields to update', 400)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, request)
     }
 
     // If we have entity fields to update, add updatedAt
@@ -1494,7 +1494,7 @@ export async function handleGenericUpdate(request: NextRequest, { params }: { pa
 
       if (!result.rows || result.rows.length === 0) {
         const response = createApiError('Item not found', 404)
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, request)
       }
 
       updatedItem = result.rows[0] as Record<string, unknown>
@@ -1513,7 +1513,7 @@ export async function handleGenericUpdate(request: NextRequest, { params }: { pa
 
       if (!result || result.length === 0) {
         const response = createApiError('Item not found', 404)
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, request)
       }
 
       updatedItem = result[0] as Record<string, unknown>
@@ -1562,12 +1562,12 @@ export async function handleGenericUpdate(request: NextRequest, { params }: { pa
     }
 
     const response = createApiResponse(responseData)
-    return addCorsHeaders(response)
+    return addCorsHeaders(response, request)
 
   } catch (error) {
     console.error('Error in generic update handler:', error)
     const response = createApiError('Internal server error', 500)
-    return addCorsHeaders(response)
+    return addCorsHeaders(response, request)
   }
 }
 
@@ -1583,13 +1583,13 @@ export async function handleGenericDelete(request: NextRequest, { params }: { pa
 
     if (!resolution.isValidEntity || !resolution.entityConfig) {
       const response = createApiError('Entity not found', 404)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, request)
     }
 
     // Check if entity supports delete operation
     if (!validateEntityOperation(resolution.entityConfig, 'delete')) {
       const response = createApiError('Delete operation not supported for this entity', 405)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, request)
     }
 
     // Authenticate request
@@ -1609,7 +1609,7 @@ export async function handleGenericDelete(request: NextRequest, { params }: { pa
     // Check required permissions for all auth types
     if (!hasRequiredScope(authResult, `${resolution.entityConfig.slug}:write`)) {
       const response = createApiError('Insufficient permissions', 403)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, request)
     }
 
     // Validate team context with admin bypass support
@@ -1622,7 +1622,7 @@ export async function handleGenericDelete(request: NextRequest, { params }: { pa
     if (!teamId) {
       // Even with bypass, DELETE needs a target team for WHERE clause
       const response = createApiError('Team context required for delete operations. Include x-team-id header.', 400, undefined, 'TEAM_CONTEXT_REQUIRED')
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, request)
     }
 
     // Delete the item
@@ -1656,7 +1656,7 @@ export async function handleGenericDelete(request: NextRequest, { params }: { pa
 
     if (!result.rows || result.rows.length === 0) {
       const response = createApiError('Item not found', 404)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, request)
     }
 
     // Fire entity hooks for plugins to react
@@ -1668,20 +1668,20 @@ export async function handleGenericDelete(request: NextRequest, { params }: { pa
     }
 
     const response = createApiResponse({ success: true, id })
-    return addCorsHeaders(response)
+    return addCorsHeaders(response, request)
 
   } catch (error) {
     console.error('Error in generic delete handler:', error)
     const response = createApiError('Internal server error', 500)
-    return addCorsHeaders(response)
+    return addCorsHeaders(response, request)
   }
 }
 
 /**
  * Handle CORS preflight for all generic endpoints
  */
-export async function handleGenericOptions(): Promise<NextResponse> {
-  return handleCorsPreflightRequest()
+export async function handleGenericOptions(request: NextRequest): Promise<NextResponse> {
+  return handleCorsPreflightRequest(request)
 }
 
 /**

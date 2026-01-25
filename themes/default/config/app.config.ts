@@ -72,17 +72,16 @@ export const APP_CONFIG_OVERRIDES = {
   // =============================================================================
   api: {
     cors: {
-      allowedOrigins: {
+      // Theme-specific CORS origins (extends core defaults, does not replace)
+      // Core already includes: localhost:3000, localhost:5173, and their 127.0.0.1 variants
+      additionalOrigins: {
         development: [
-          'http://localhost:3000',
-          'http://localhost:5173',
-          'http://127.0.0.1:3000',
-          'http://127.0.0.1:5173',
-          // Project specific development origins
+          'http://localhost:8081', // Expo mobile web
+          // Add theme-specific development origins here
         ],
         production: [
-          // Add Project production domains
-          // 'https://boilerplate-themoneyteam.xyz',
+          // Add theme-specific production domains
+          // 'https://mobile.boilerplate-themoneyteam.xyz',
         ],
       },
     },
