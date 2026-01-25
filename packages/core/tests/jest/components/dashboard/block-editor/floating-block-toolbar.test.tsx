@@ -10,7 +10,6 @@ import { FloatingBlockToolbar } from '@/core/components/dashboard/block-editor/f
 jest.mock('next-intl', () => ({
   useTranslations: () => (key: string) => {
     const translations: Record<string, string> = {
-      drag: 'Drag block',
       duplicate: 'Duplicate',
       delete: 'Delete',
     }
@@ -66,13 +65,6 @@ describe('FloatingBlockToolbar', () => {
       render(<FloatingBlockToolbar {...mockProps} />)
 
       expect(screen.getByText('Hero Section')).toBeInTheDocument()
-    })
-
-    test('shows drag handle', () => {
-      render(<FloatingBlockToolbar {...mockProps} />)
-
-      const dragHandle = screen.getByTitle('Drag block')
-      expect(dragHandle).toBeInTheDocument()
     })
 
     test('renders duplicate button', () => {
@@ -199,13 +191,6 @@ describe('FloatingBlockToolbar', () => {
   })
 
   describe('Accessibility', () => {
-    test('drag handle has title attribute', () => {
-      render(<FloatingBlockToolbar {...mockProps} />)
-
-      const dragHandle = screen.getByTitle('Drag block')
-      expect(dragHandle).toHaveAttribute('title', 'Drag block')
-    })
-
     test('duplicate button has title attribute', () => {
       render(<FloatingBlockToolbar {...mockProps} />)
 

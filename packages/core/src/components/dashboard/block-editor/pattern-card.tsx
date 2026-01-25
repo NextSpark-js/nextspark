@@ -55,7 +55,7 @@ export function PatternCard({ pattern, onSelect }: PatternCardProps) {
       {/* Hover "+" Button */}
       <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
-          className="w-6 h-6 bg-foreground text-background rounded flex items-center justify-center text-xs shadow-md hover:scale-110 transition-transform"
+          className="w-6 h-6 bg-foreground text-background rounded flex items-center justify-center text-xs shadow-md hover:scale-110 transition-transform cursor-pointer"
           onClick={(e) => {
             e.stopPropagation()
             onSelect(pattern.id)

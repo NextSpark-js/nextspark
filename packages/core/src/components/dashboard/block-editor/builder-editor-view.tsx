@@ -593,7 +593,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
             >
               <button
                 className={cn(
-                  'px-3 py-1.5 rounded-md transition-colors flex items-center gap-2',
+                  'px-3 py-1.5 rounded-md transition-colors flex items-center gap-2 cursor-pointer',
                   viewMode === 'preview'
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10'
@@ -606,7 +606,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
               </button>
               <button
                 className={cn(
-                  'px-3 py-1.5 rounded-md transition-colors flex items-center gap-2',
+                  'px-3 py-1.5 rounded-md transition-colors flex items-center gap-2 cursor-pointer',
                   viewMode === 'settings'
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10'

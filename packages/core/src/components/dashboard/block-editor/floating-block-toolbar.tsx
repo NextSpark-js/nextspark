@@ -1,6 +1,6 @@
 'use client'
 
-import { GripVertical, Copy, Trash2 } from 'lucide-react'
+import { Copy, Trash2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Button } from '../../ui/button'
 import { cn } from '../../../lib/utils'
@@ -44,15 +44,6 @@ export function FloatingBlockToolbar({
       )}
       data-cy={sel('blockEditor.previewCanvas.floatingToolbar.container', { id: blockId })}
     >
-      {/* Drag Handle */}
-      <span
-        className="cursor-grab active:cursor-grabbing"
-        data-cy={sel('blockEditor.previewCanvas.floatingToolbar.dragHandle', { id: blockId })}
-        title={t('drag')}
-      >
-        <GripVertical className="h-3 w-3" />
-      </span>
-
       {/* Block Name */}
       <span
         className="uppercase tracking-wider text-[10px]"

@@ -659,4 +659,125 @@ describe('Block Editor Selectors Validation', {
         })
     })
   })
+
+  // ===========================================================================
+  // SEL_BE_010: CONFIG PANEL SEO & CUSTOM FIELDS SELECTORS (v2.1)
+  // ===========================================================================
+  describe('SEL_BE_010: Config Panel SEO & Custom Fields Selectors', { tags: '@SEL_BE_010' }, () => {
+    let testPageId: string
+
+    before(() => {
+      loginAsDefaultDeveloper()
+      cy.request({
+        method: 'POST',
+        url: '/api/v1/pages',
+        headers: {
+          'x-team-id': DEVELOPER_TEAM_ID,
+          'Content-Type': 'application/json'
+        },
+        body: {
+          title: `SEO Test Page ${Date.now()}`,
+          slug: `seo-test-${Date.now()}`,
+          locale: 'en',
+          published: false,
+          blocks: []
+        }
+      }).then((response) => {
+        testPageId = response.body.data.id
+      })
+    })
+
+    beforeEach(() => {
+      pom.visitEdit(testPageId)
+      pom.waitForEditor()
+      cy.get(pom.editorSelectors.viewSettings).click()
+    })
+
+    after(() => {
+      if (testPageId) {
+        cy.request({
+          method: 'DELETE',
+          url: `/api/v1/pages/${testPageId}`,
+          headers: { 'x-team-id': DEVELOPER_TEAM_ID },
+          failOnStatusCode: false
+        })
+      }
+    })
+
+    // SEO Section tests
+    describe('SEO Section', () => {
+      it('SEL_BE_010_01: should find SEO section container', { tags: '@SEL_BE_010_01' }, () => {
+        cy.get(pom.editorSelectors.configSeoSectionContainer).should('exist').and('be.visible')
+      })
+
+      it('SEL_BE_010_02: should find SEO section trigger', { tags: '@SEL_BE_010_02' }, () => {
+        cy.get(pom.editorSelectors.configSeoSectionTrigger).should('exist').and('be.visible')
+      })
+
+      it('SEL_BE_010_03: should find SEO section content after click', { tags: '@SEL_BE_010_03' }, () => {
+        cy.get(pom.editorSelectors.configSeoSectionTrigger).click()
+        cy.get(pom.editorSelectors.configSeoSectionContent).should('exist').and('be.visible')
+      })
+
+      it('SEL_BE_010_04: should find meta title input', { tags: '@SEL_BE_010_04' }, () => {
+        cy.get(pom.editorSelectors.configSeoSectionTrigger).click()
+        cy.get(pom.editorSelectors.configSeoMetaTitle).should('exist').and('be.visible')
+      })
+
+      it('SEL_BE_010_05: should find meta description input', { tags: '@SEL_BE_010_05' }, () => {
+        cy.get(pom.editorSelectors.configSeoSectionTrigger).click()
+        cy.get(pom.editorSelectors.configSeoMetaDescription).should('exist').and('be.visible')
+      })
+
+      it('SEL_BE_010_06: should find meta keywords input', { tags: '@SEL_BE_010_06' }, () => {
+        cy.get(pom.editorSelectors.configSeoSectionTrigger).click()
+        cy.get(pom.editorSelectors.configSeoMetaKeywords).should('exist').and('be.visible')
+      })
+
+      it('SEL_BE_010_07: should find OG image input', { tags: '@SEL_BE_010_07' }, () => {
+        cy.get(pom.editorSelectors.configSeoSectionTrigger).click()
+        cy.get(pom.editorSelectors.configSeoOgImage).should('exist').and('be.visible')
+      })
+    })
+
+    // Custom Fields Section tests
+    describe('Custom Fields Section', () => {
+      it('SEL_BE_010_08: should find custom fields section container', { tags: '@SEL_BE_010_08' }, () => {
+        cy.get(pom.editorSelectors.configCustomFieldsContainer).should('exist').and('be.visible')
+      })
+
+      it('SEL_BE_010_09: should find custom fields section trigger', { tags: '@SEL_BE_010_09' }, () => {
+        cy.get(pom.editorSelectors.configCustomFieldsTrigger).should('exist').and('be.visible')
+      })
+
+      it('SEL_BE_010_10: should find custom fields content after click', { tags: '@SEL_BE_010_10' }, () => {
+        cy.get(pom.editorSelectors.configCustomFieldsTrigger).click()
+        cy.get(pom.editorSelectors.configCustomFieldsContent).should('exist').and('be.visible')
+      })
+
+      it('SEL_BE_010_11: should find add custom field button', { tags: '@SEL_BE_010_11' }, () => {
+        cy.get(pom.editorSelectors.configCustomFieldsTrigger).click()
+        cy.get(pom.editorSelectors.configCustomFieldsAddBtn).should('exist').and('be.visible')
+      })
+
+      describe('With custom field added', () => {
+        beforeEach(() => {
+          cy.get(pom.editorSelectors.configCustomFieldsTrigger).click()
+          cy.get(pom.editorSelectors.configCustomFieldsAddBtn).click()
+        })
+
+        it('SEL_BE_010_12: should find custom field key input', { tags: '@SEL_BE_010_12' }, () => {
+          cy.get(pom.editorSelectors.configCustomFieldKey(0)).should('exist').and('be.visible')
+        })
+
+        it('SEL_BE_010_13: should find custom field value input', { tags: '@SEL_BE_010_13' }, () => {
+          cy.get(pom.editorSelectors.configCustomFieldValue(0)).should('exist').and('be.visible')
+        })
+
+        it('SEL_BE_010_14: should find custom field remove button', { tags: '@SEL_BE_010_14' }, () => {
+          cy.get(pom.editorSelectors.configCustomFieldRemove(0)).should('exist').and('be.visible')
+        })
+      })
+    })
+  })
 })

@@ -270,6 +270,7 @@
     "config": {
       "entityFields": "Campos de Entidad",
       "entityFieldsDescription": "Configura propiedades a nivel de página",
+      "seo": "SEO",
       "seoMeta": "SEO y Meta",
       "seoMetaDescription": "Configuración para motores de búsqueda"
     },

@@ -28,7 +28,7 @@ export function ViewportToggle({ value, onChange, className }: ViewportTogglePro
         variant="ghost"
         size="sm"
         className={cn(
-          'h-7 w-7 p-0 rounded-md',
+          'h-7 w-7 p-0 rounded-md cursor-pointer',
           value === 'mobile' && 'bg-background shadow-sm'
         )}
         onClick={() => onChange('mobile')}
@@ -41,7 +41,7 @@ export function ViewportToggle({ value, onChange, className }: ViewportTogglePro
         variant="ghost"
         size="sm"
         className={cn(
-          'h-7 w-7 p-0 rounded-md',
+          'h-7 w-7 p-0 rounded-md cursor-pointer',
           value === 'desktop' && 'bg-background shadow-sm'
         )}
         onClick={() => onChange('desktop')}
