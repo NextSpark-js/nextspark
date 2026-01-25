@@ -8,7 +8,7 @@
 export { cn } from '../utils.js'
 
 // CORS configuration helper
-export { getCorsOrigins, normalizeCorsEnvironment, type CorsEnvironment } from './cors'
+export { getCorsOrigins, normalizeCorsEnvironment, normalizeOrigin, type CorsEnvironment } from './cors'
 
 // Config merge utilities
 export * from './config-merge'

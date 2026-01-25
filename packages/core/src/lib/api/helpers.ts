@@ -504,6 +504,66 @@ export async function handleCorsPreflightRequest(request?: NextRequest): Promise
 }
 
 /**
+ * Wraps an auth handler response with CORS headers
+ *
+ * Better Auth handles OPTIONS preflight but doesn't add CORS headers to actual responses.
+ * This utility wraps responses to add proper CORS headers for cross-origin requests.
+ *
+ * @param handler - The original handler function (GET, POST, etc.)
+ * @param request - The incoming request
+ * @returns Response with CORS headers added
+ *
+ * @example
+ * ```ts
+ * // In your auth route:
+ * import { wrapAuthHandlerWithCors } from '@nextsparkjs/core/lib/api/helpers'
+ *
+ * export async function POST(req: NextRequest) {
+ *   return wrapAuthHandlerWithCors(() => handlers.POST(req), req)
+ * }
+ * ```
+ */
+export async function wrapAuthHandlerWithCors(
+  handler: () => Promise<Response>,
+  request: NextRequest
+): Promise<Response> {
+  const response = await handler()
+
+  // Clone the response to make headers mutable
+  const newResponse = new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: new Headers(response.headers),
+  })
+
+  // Add CORS headers
+  const env = process.env.NODE_ENV || 'development'
+  const config = await getApplicationConfig()
+  const corsConfig = config.api.cors
+  const origin = request.headers.get('origin')
+
+  if (origin) {
+    let allowedOrigin = 'null'
+
+    // In development with allowAllOrigins, allow any origin
+    if (env === 'development' && corsConfig.allowAllOrigins.development) {
+      allowedOrigin = origin
+    } else {
+      // Check against allowed origins list
+      const allowedOrigins = getCorsOrigins(config, env)
+      if (allowedOrigins.includes(origin)) {
+        allowedOrigin = origin
+      }
+    }
+
+    newResponse.headers.set('Access-Control-Allow-Origin', allowedOrigin)
+    newResponse.headers.set('Access-Control-Allow-Credentials', 'true')
+  }
+
+  return newResponse
+}
+
+/**
  * Parsea los parámetros de metadata de una request
  * Soporta: metas=all, metas=key1,key2,key3, o sin parámetro
  */

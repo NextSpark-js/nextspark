@@ -33,6 +33,27 @@ function isDebugEnabled(): boolean {
 }
 
 /**
+ * Normalize an origin URL by removing trailing slashes
+ *
+ * Browsers send Origin headers without trailing slashes (e.g., "http://localhost:8081")
+ * but environment variables like NEXT_PUBLIC_APP_URL may include them.
+ * This ensures consistent comparison for CORS validation.
+ *
+ * @param origin - Origin URL that may have trailing slash
+ * @returns Origin URL without trailing slash
+ *
+ * @example
+ * ```ts
+ * normalizeOrigin('http://localhost:3000/')  // 'http://localhost:3000'
+ * normalizeOrigin('http://localhost:3000')   // 'http://localhost:3000'
+ * normalizeOrigin('https://app.com///')      // 'https://app.com'
+ * ```
+ */
+export function normalizeOrigin(origin: string): string {
+  return origin.replace(/\/+$/, '')
+}
+
+/**
  * Normalize environment string to a valid CorsEnvironment
  * Maps staging/qa to use development origins, unknown environments default to development
  *
@@ -107,8 +128,10 @@ export function getCorsOrigins(
   if (appUrl) baseOrigins.push(appUrl)
   if (authUrl && authUrl !== appUrl) baseOrigins.push(authUrl)
 
-  // Return deduplicated union
-  const origins = [...new Set([...baseOrigins, ...coreOrigins, ...themeOrigins, ...envOrigins])]
+  // Normalize all origins (remove trailing slashes) and deduplicate
+  // This ensures consistent matching with browser Origin headers
+  const allOrigins = [...baseOrigins, ...coreOrigins, ...themeOrigins, ...envOrigins]
+  const origins = [...new Set(allOrigins.map(normalizeOrigin))]
 
   if (isDebugEnabled()) {
     console.log(`[cors] Merged origins (${origins.length}):`, origins)
