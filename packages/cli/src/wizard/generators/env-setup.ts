@@ -192,6 +192,12 @@ GOOGLE_CLIENT_SECRET=
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+
+# CORS Configuration - Optional
+# Additional origins for CORS (comma-separated)
+# CORS_ADDITIONAL_ORIGINS=http://localhost:8081,https://mobile.myapp.com
+# Enable CORS debug logging
+# NEXTSPARK_DEBUG_CORS=true
 `
 
   await fs.writeFile(envPath, content, 'utf-8')
