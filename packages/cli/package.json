@@ -10,7 +10,8 @@
   "types": "./dist/index.d.ts",
   "files": [
     "dist",
-    "bin"
+    "bin",
+    "templates"
   ],
   "scripts": {
     "build": "tsup src/cli.ts --format esm --dts --outDir dist",
