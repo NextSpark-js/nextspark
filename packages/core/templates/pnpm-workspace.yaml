@@ -1,0 +1,3 @@
+packages:
+  - 'contents/themes/*'
+  - 'contents/plugins/*'

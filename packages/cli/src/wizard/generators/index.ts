@@ -113,6 +113,7 @@ async function copyProjectFiles(): Promise<void> {
     { src: 'tsconfig.json', dest: 'tsconfig.json', force: true },
     { src: 'postcss.config.mjs', dest: 'postcss.config.mjs', force: true },
     { src: 'i18n.ts', dest: 'i18n.ts', force: true },
+    { src: 'pnpm-workspace.yaml', dest: 'pnpm-workspace.yaml', force: false }, // Enable workspace for themes/plugins
     { src: 'npmrc', dest: '.npmrc', force: false },
     { src: 'tsconfig.cypress.json', dest: 'tsconfig.cypress.json', force: false },
     { src: 'cypress.d.ts', dest: 'cypress.d.ts', force: false },
