@@ -4,9 +4,6 @@
  * Re-exports all types from their canonical locations for backward compatibility.
  */
 
-// Re-export from shared types (POC)
-export type { BaseUser, BaseTeam, BaseTeamMember } from "@nextsparkjs/types"
-
 // Re-export API types
 export type { PaginatedResponse, SingleResponse } from '../api/client.types'
 export { ApiError } from '../api/client.types'

@@ -9,7 +9,6 @@ const config = getDefaultConfig(projectRoot);
 
 // Watch the shared packages from monorepo
 config.watchFolders = [
-  path.resolve(monorepoRoot, 'packages/types'),
   path.resolve(monorepoRoot, 'packages/ui'),
 ];
 
@@ -27,16 +26,6 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
       filePath: path.resolve(
         monorepoRoot,
         'packages/ui/dist/index.native.js'
-      ),
-      type: 'sourceFile',
-    };
-  }
-  // For @nextsparkjs/types, redirect to the dist entry point
-  if (moduleName === '@nextsparkjs/types') {
-    return {
-      filePath: path.resolve(
-        monorepoRoot,
-        'packages/types/dist/index.js'
       ),
       type: 'sourceFile',
     };

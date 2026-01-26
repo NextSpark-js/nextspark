@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@nextsparkjs/core": "workspace:*",
-    "@nextsparkjs/types": "workspace:*",
     "@nextsparkjs/ui": "workspace:*",
     "@nextsparkjs/testing": "workspace:*",
     "@nextsparkjs/theme-default": "workspace:*",

@@ -75,9 +75,6 @@ importers:
       '@nextsparkjs/theme-productivity':
         specifier: workspace:*
         version: link:../../themes/productivity
-      '@nextsparkjs/types':
-        specifier: workspace:*
-        version: link:../../packages/types
       '@nextsparkjs/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -527,15 +524,6 @@ importers:
         specifier: ^5
         version: 5.9.3
 
-  packages/types:
-    devDependencies:
-      tsup:
-        specifier: ^8.5.1
-        version: 8.5.1(@swc/core@1.15.8(@swc/helpers@0.5.15))(jiti@2.6.1)(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.2)
-      typescript:
-        specifier: ^5
-        version: 5.9.3
-
   packages/ui:
     dependencies:
       class-variance-authority:
@@ -553,16 +541,16 @@ importers:
     devDependencies:
       '@radix-ui/react-slot':
         specifier: ^1.2.3
-        version: 1.2.4(@types/react@18.3.27)(react@19.1.0)
+        version: 1.2.4(@types/react@19.2.7)(react@19.1.0)
       '@types/react':
-        specifier: ~18.3.0
-        version: 18.3.27
+        specifier: ^19
+        version: 19.2.7
       react-native:
         specifier: ^0.79.2
-        version: 0.79.7(@babel/core@7.28.5)(@types/react@18.3.27)(react@19.1.0)
+        version: 0.79.7(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0)
       react-native-reanimated:
         specifier: ^4.2.1
-        version: 4.2.1(react-native-worklets@0.7.2(@babel/core@7.28.5)(react-native@0.79.7(@babel/core@7.28.5)(@types/react@18.3.27)(react@19.1.0))(react@19.1.0))(react-native@0.79.7(@babel/core@7.28.5)(@types/react@18.3.27)(react@19.1.0))(react@19.1.0)
+        version: 4.2.1(react-native-worklets@0.7.2(@babel/core@7.28.5)(react-native@0.79.7(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.79.7(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0)
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(@swc/core@1.15.8(@swc/helpers@0.5.15))(jiti@2.6.1)(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.2)
@@ -3790,9 +3778,6 @@ packages:
   '@types/prompts@2.4.9':
     resolution: {integrity: sha512-qTxFi6Buiu8+50/+3DGIWLHM6QuWsEKugJnnP6iv2Mc4ncxE4A/OJkjuVOA+5X0X1S/nq5VJRa8Lu+nwcvbrKA==}
 
-  '@types/prop-types@15.7.15':
-    resolution: {integrity: sha512-F6bEyamV9jKGAFBEmlQnesRPGOQqS2+Uwi0Em15xenOxHaf2hv6L8YCVn3rPdPJOiJfPiCnLIRyvwVaqMY3MIw==}
-
   '@types/react-dom@19.2.3':
     resolution: {integrity: sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ==}
     peerDependencies:
@@ -3800,9 +3785,6 @@ packages:
 
   '@types/react-syntax-highlighter@15.5.13':
     resolution: {integrity: sha512-uLGJ87j6Sz8UaBAooU0T6lWJ0dBmjZgN1PZTrj05TNql2/XpC6+4HhMT5syIdFUUt+FASfCeLLv4kBygNU+8qA==}
-
-  '@types/react@18.3.27':
-    resolution: {integrity: sha512-cisd7gxkzjBKU2GgdYrTdtQx1SORymWyaAFhaxQPK9bYO9ot3Y5OikQRvY0VYQtvwjeQnizCINJAenh/V7MK2w==}
 
   '@types/react@19.2.7':
     resolution: {integrity: sha512-MWtvHrGZLFttgeEj28VXHxpmwYbor/ATPYbBfSFZEIRK0ecCFLl2Qo55z52Hss+UV9CRN7trSeq1zbgx7YDWWg==}
@@ -8609,7 +8591,7 @@ snapshots:
 
   '@babel/helper-annotate-as-pure@7.27.3':
     dependencies:
-      '@babel/types': 7.28.5
+      '@babel/types': 7.28.6
 
   '@babel/helper-compilation-targets@7.27.2':
     dependencies:
@@ -8644,7 +8626,7 @@ snapshots:
   '@babel/helper-member-expression-to-functions@7.28.5':
     dependencies:
       '@babel/traverse': 7.28.6
-      '@babel/types': 7.28.5
+      '@babel/types': 7.28.6
     transitivePeerDependencies:
       - supports-color
 
@@ -8682,7 +8664,7 @@ snapshots:
 
   '@babel/helper-optimise-call-expression@7.27.1':
     dependencies:
-      '@babel/types': 7.28.5
+      '@babel/types': 7.28.6
 
   '@babel/helper-plugin-utils@7.27.1': {}
 
@@ -8699,8 +8681,8 @@ snapshots:
 
   '@babel/helper-skip-transparent-expression-wrappers@7.27.1':
     dependencies:
-      '@babel/traverse': 7.28.5
-      '@babel/types': 7.28.5
+      '@babel/traverse': 7.28.6
+      '@babel/types': 7.28.6
     transitivePeerDependencies:
       - supports-color
 
@@ -8816,13 +8798,13 @@ snapshots:
   '@babel/plugin-transform-arrow-functions@7.27.1(@babel/core@7.28.5)':
     dependencies:
       '@babel/core': 7.28.5
-      '@babel/helper-plugin-utils': 7.27.1
+      '@babel/helper-plugin-utils': 7.28.6
 
   '@babel/plugin-transform-class-properties@7.27.1(@babel/core@7.28.5)':
     dependencies:
       '@babel/core': 7.28.5
       '@babel/helper-create-class-features-plugin': 7.28.6(@babel/core@7.28.5)
-      '@babel/helper-plugin-utils': 7.27.1
+      '@babel/helper-plugin-utils': 7.28.6
     transitivePeerDependencies:
       - supports-color
 
@@ -8832,9 +8814,9 @@ snapshots:
       '@babel/helper-annotate-as-pure': 7.27.3
       '@babel/helper-compilation-targets': 7.27.2
       '@babel/helper-globals': 7.28.0
-      '@babel/helper-plugin-utils': 7.27.1
+      '@babel/helper-plugin-utils': 7.28.6
       '@babel/helper-replace-supers': 7.28.6(@babel/core@7.28.5)
-      '@babel/traverse': 7.28.5
+      '@babel/traverse': 7.28.6
     transitivePeerDependencies:
       - supports-color
 
@@ -8849,12 +8831,12 @@ snapshots:
   '@babel/plugin-transform-nullish-coalescing-operator@7.27.1(@babel/core@7.28.5)':
     dependencies:
       '@babel/core': 7.28.5
-      '@babel/helper-plugin-utils': 7.27.1
+      '@babel/helper-plugin-utils': 7.28.6
 
   '@babel/plugin-transform-optional-chaining@7.27.1(@babel/core@7.28.5)':
     dependencies:
       '@babel/core': 7.28.5
-      '@babel/helper-plugin-utils': 7.27.1
+      '@babel/helper-plugin-utils': 7.28.6
       '@babel/helper-skip-transparent-expression-wrappers': 7.27.1
     transitivePeerDependencies:
       - supports-color
@@ -8862,12 +8844,12 @@ snapshots:
   '@babel/plugin-transform-shorthand-properties@7.27.1(@babel/core@7.28.5)':
     dependencies:
       '@babel/core': 7.28.5
-      '@babel/helper-plugin-utils': 7.27.1
+      '@babel/helper-plugin-utils': 7.28.6
 
   '@babel/plugin-transform-template-literals@7.27.1(@babel/core@7.28.5)':
     dependencies:
       '@babel/core': 7.28.5
-      '@babel/helper-plugin-utils': 7.27.1
+      '@babel/helper-plugin-utils': 7.28.6
 
   '@babel/plugin-transform-typescript@7.28.6(@babel/core@7.28.5)':
     dependencies:
@@ -8884,12 +8866,12 @@ snapshots:
     dependencies:
       '@babel/core': 7.28.5
       '@babel/helper-create-regexp-features-plugin': 7.28.5(@babel/core@7.28.5)
-      '@babel/helper-plugin-utils': 7.27.1
+      '@babel/helper-plugin-utils': 7.28.6
 
   '@babel/preset-typescript@7.27.1(@babel/core@7.28.5)':
     dependencies:
       '@babel/core': 7.28.5
-      '@babel/helper-plugin-utils': 7.27.1
+      '@babel/helper-plugin-utils': 7.28.6
       '@babel/helper-validator-option': 7.27.1
       '@babel/plugin-syntax-jsx': 7.27.1(@babel/core@7.28.5)
       '@babel/plugin-transform-modules-commonjs': 7.28.6(@babel/core@7.28.5)
@@ -10383,12 +10365,6 @@ snapshots:
       '@types/react': 19.2.7
       '@types/react-dom': 19.2.3(@types/react@19.2.7)
 
-  '@radix-ui/react-compose-refs@1.1.2(@types/react@18.3.27)(react@19.1.0)':
-    dependencies:
-      react: 19.1.0
-    optionalDependencies:
-      '@types/react': 18.3.27
-
   '@radix-ui/react-compose-refs@1.1.2(@types/react@19.2.7)(react@19.1.0)':
     dependencies:
       react: 19.1.0
@@ -10763,13 +10739,6 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.2.7
 
-  '@radix-ui/react-slot@1.2.4(@types/react@18.3.27)(react@19.1.0)':
-    dependencies:
-      '@radix-ui/react-compose-refs': 1.1.2(@types/react@18.3.27)(react@19.1.0)
-      react: 19.1.0
-    optionalDependencies:
-      '@types/react': 18.3.27
-
   '@radix-ui/react-slot@1.2.4(@types/react@19.2.7)(react@19.1.0)':
     dependencies:
       '@radix-ui/react-compose-refs': 1.1.2(@types/react@19.2.7)(react@19.1.0)
@@ -10964,14 +10933,14 @@ snapshots:
 
   '@react-native/normalize-colors@0.79.7': {}
 
-  '@react-native/virtualized-lists@0.79.7(@types/react@18.3.27)(react-native@0.79.7(@babel/core@7.28.5)(@types/react@18.3.27)(react@19.1.0))(react@19.1.0)':
+  '@react-native/virtualized-lists@0.79.7(@types/react@19.2.7)(react-native@0.79.7(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0)':
     dependencies:
       invariant: 2.2.4
       nullthrows: 1.1.1
       react: 19.1.0
-      react-native: 0.79.7(@babel/core@7.28.5)(@types/react@18.3.27)(react@19.1.0)
+      react-native: 0.79.7(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0)
     optionalDependencies:
-      '@types/react': 18.3.27
+      '@types/react': 19.2.7
 
   '@rollup/rollup-android-arm-eabi@4.54.0':
     optional: true
@@ -11423,8 +11392,6 @@ snapshots:
       '@types/node': 20.19.27
       kleur: 3.0.3
 
-  '@types/prop-types@15.7.15': {}
-
   '@types/react-dom@19.2.3(@types/react@19.2.7)':
     dependencies:
       '@types/react': 19.2.7
@@ -11432,11 +11399,6 @@ snapshots:
   '@types/react-syntax-highlighter@15.5.13':
     dependencies:
       '@types/react': 19.2.7
-
-  '@types/react@18.3.27':
-    dependencies:
-      '@types/prop-types': 15.7.15
-      csstype: 3.2.3
 
   '@types/react@19.2.7':
     dependencies:
@@ -14780,7 +14742,7 @@ snapshots:
   metro-source-map@0.82.5:
     dependencies:
       '@babel/traverse': 7.28.5
-      '@babel/traverse--for-generate-function-map': '@babel/traverse@7.28.5'
+      '@babel/traverse--for-generate-function-map': '@babel/traverse@7.28.6'
       '@babel/types': 7.28.5
       flow-enums-runtime: 0.0.6
       invariant: 2.2.4
@@ -15721,20 +15683,20 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  react-native-is-edge-to-edge@1.2.1(react-native@0.79.7(@babel/core@7.28.5)(@types/react@18.3.27)(react@19.1.0))(react@19.1.0):
+  react-native-is-edge-to-edge@1.2.1(react-native@0.79.7(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0):
     dependencies:
       react: 19.1.0
-      react-native: 0.79.7(@babel/core@7.28.5)(@types/react@18.3.27)(react@19.1.0)
+      react-native: 0.79.7(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0)
 
-  react-native-reanimated@4.2.1(react-native-worklets@0.7.2(@babel/core@7.28.5)(react-native@0.79.7(@babel/core@7.28.5)(@types/react@18.3.27)(react@19.1.0))(react@19.1.0))(react-native@0.79.7(@babel/core@7.28.5)(@types/react@18.3.27)(react@19.1.0))(react@19.1.0):
+  react-native-reanimated@4.2.1(react-native-worklets@0.7.2(@babel/core@7.28.5)(react-native@0.79.7(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.79.7(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0):
     dependencies:
       react: 19.1.0
-      react-native: 0.79.7(@babel/core@7.28.5)(@types/react@18.3.27)(react@19.1.0)
-      react-native-is-edge-to-edge: 1.2.1(react-native@0.79.7(@babel/core@7.28.5)(@types/react@18.3.27)(react@19.1.0))(react@19.1.0)
-      react-native-worklets: 0.7.2(@babel/core@7.28.5)(react-native@0.79.7(@babel/core@7.28.5)(@types/react@18.3.27)(react@19.1.0))(react@19.1.0)
+      react-native: 0.79.7(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0)
+      react-native-is-edge-to-edge: 1.2.1(react-native@0.79.7(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0)
+      react-native-worklets: 0.7.2(@babel/core@7.28.5)(react-native@0.79.7(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0)
       semver: 7.7.3
 
-  react-native-worklets@0.7.2(@babel/core@7.28.5)(react-native@0.79.7(@babel/core@7.28.5)(@types/react@18.3.27)(react@19.1.0))(react@19.1.0):
+  react-native-worklets@0.7.2(@babel/core@7.28.5)(react-native@0.79.7(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0):
     dependencies:
       '@babel/core': 7.28.5
       '@babel/plugin-transform-arrow-functions': 7.27.1(@babel/core@7.28.5)
@@ -15748,12 +15710,12 @@ snapshots:
       '@babel/preset-typescript': 7.27.1(@babel/core@7.28.5)
       convert-source-map: 2.0.0
       react: 19.1.0
-      react-native: 0.79.7(@babel/core@7.28.5)(@types/react@18.3.27)(react@19.1.0)
+      react-native: 0.79.7(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0)
       semver: 7.7.3
     transitivePeerDependencies:
       - supports-color
 
-  react-native@0.79.7(@babel/core@7.28.5)(@types/react@18.3.27)(react@19.1.0):
+  react-native@0.79.7(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0):
     dependencies:
       '@jest/create-cache-key-function': 29.7.0
       '@react-native/assets-registry': 0.79.7
@@ -15762,7 +15724,7 @@ snapshots:
       '@react-native/gradle-plugin': 0.79.7
       '@react-native/js-polyfills': 0.79.7
       '@react-native/normalize-colors': 0.79.7
-      '@react-native/virtualized-lists': 0.79.7(@types/react@18.3.27)(react-native@0.79.7(@babel/core@7.28.5)(@types/react@18.3.27)(react@19.1.0))(react@19.1.0)
+      '@react-native/virtualized-lists': 0.79.7(@types/react@19.2.7)(react-native@0.79.7(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0)
       abort-controller: 3.0.0
       anser: 1.4.10
       ansi-regex: 5.0.1
@@ -15793,7 +15755,7 @@ snapshots:
       ws: 6.2.3
       yargs: 17.7.2
     optionalDependencies:
-      '@types/react': 18.3.27
+      '@types/react': 19.2.7
     transitivePeerDependencies:
       - '@babel/core'
       - '@react-native-community/cli'
