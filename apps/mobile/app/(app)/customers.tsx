@@ -7,13 +7,13 @@ import {
   View,
   Text,
   FlatList,
-  TouchableOpacity,
   RefreshControl,
   StyleSheet,
 } from 'react-native'
 import { router } from 'expo-router'
 import { useCustomers } from '@/src/hooks/useCustomers'
 import { CustomerCard } from '@/src/components/CustomerCard'
+import { Button } from '@/src/components/ui'
 import { Colors } from '@/src/constants/colors'
 import type { Customer } from '@/src/types'
 
@@ -58,9 +58,9 @@ export default function CustomersListScreen() {
       <Text style={styles.errorText}>
         {error instanceof Error ? error.message : 'Error al cargar clientes'}
       </Text>
-      <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-        <Text style={styles.retryButtonText}>Reintentar</Text>
-      </TouchableOpacity>
+      <Button onPress={() => refetch()}>
+        Reintentar
+      </Button>
     </View>
   )
 
@@ -161,16 +161,5 @@ const styles = StyleSheet.create({
     color: Colors.foregroundSecondary,
     textAlign: 'center',
     marginBottom: 16,
-  },
-  retryButton: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: Colors.primaryForeground,
-    fontSize: 14,
-    fontWeight: '600',
   },
 })

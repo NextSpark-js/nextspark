@@ -15,6 +15,7 @@ import {
 } from 'react-native'
 import { Colors } from '../constants/colors'
 import { useAuth } from '../providers/AuthProvider'
+import { Button } from './ui'
 import type { Team } from '../types'
 
 interface MoreSheetProps {
@@ -192,14 +193,12 @@ export function MoreSheet({
 
             {/* Logout */}
             <View style={styles.divider} />
-            <TouchableOpacity
-              style={styles.logoutItem}
+            <Button
+              variant="destructive"
               onPress={onLogout}
-              activeOpacity={0.7}
             >
-              <Text style={styles.logoutIcon}>↪</Text>
-              <Text style={styles.logoutText}>Cerrar Sesión</Text>
-            </TouchableOpacity>
+              Cerrar Sesión
+            </Button>
           </ScrollView>
         </Pressable>
       </Pressable>
@@ -400,22 +399,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.success,
     fontWeight: '600',
-  },
-  logoutItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    gap: 16,
-  },
-  logoutIcon: {
-    fontSize: 20,
-    color: Colors.destructive,
-    width: 28,
-    textAlign: 'center',
-  },
-  logoutText: {
-    fontSize: 16,
-    color: Colors.destructive,
-    fontWeight: '500',
   },
 })

@@ -7,9 +7,7 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -17,6 +15,7 @@ import {
 import { router } from 'expo-router'
 import { useAuth } from '@/src/providers/AuthProvider'
 import { Colors } from '@/src/constants/colors'
+import { Button } from '@/src/components/ui'
 
 export default function LoginScreen() {
   const { login, isLoading } = useAuth()
@@ -90,17 +89,13 @@ export default function LoginScreen() {
               />
             </View>
 
-            <TouchableOpacity
-              style={[styles.button, isLoading && styles.buttonDisabled]}
+            <Button
               onPress={handleLogin}
-              disabled={isLoading}
+              isLoading={isLoading}
+              style={{ marginTop: 8 }}
             >
-              {isLoading ? (
-                <ActivityIndicator color={Colors.primaryForeground} />
-              ) : (
-                <Text style={styles.buttonText}>Iniciar Sesión</Text>
-              )}
-            </TouchableOpacity>
+              Iniciar Sesión
+            </Button>
           </View>
 
           {/* Dev Hint */}
@@ -172,21 +167,6 @@ const styles = StyleSheet.create({
     padding: 14,
     fontSize: 16,
     color: Colors.foreground,
-  },
-  button: {
-    backgroundColor: Colors.primary,
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: Colors.primaryForeground,
-    fontSize: 16,
-    fontWeight: '600',
   },
   hint: {
     marginTop: 24,

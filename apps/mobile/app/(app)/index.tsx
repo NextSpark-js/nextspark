@@ -8,6 +8,7 @@ import { useAuth } from '@/src/providers/AuthProvider'
 import { useTasks } from '@/src/hooks/useTasks'
 import { useCustomers } from '@/src/hooks/useCustomers'
 import { Colors } from '@/src/constants/colors'
+import { Button } from '@/src/components/ui'
 import { CustomButton } from '@nextsparkjs/ui'
 
 export default function HomeScreen() {
@@ -53,9 +54,9 @@ export default function HomeScreen() {
             <Text style={styles.cardIcon}>💳</Text>
           </View>
           <Text style={styles.cardValue}>Gratis</Text>
-          <TouchableOpacity>
-            <Text style={styles.cardLink}>Actualizar plan →</Text>
-          </TouchableOpacity>
+          <Button variant="link" size="sm" style={{ alignSelf: 'flex-start', height: 'auto', paddingHorizontal: 0 }}>
+            Actualizar plan →
+          </Button>
         </View>
 
         {/* Tasks Summary Card */}

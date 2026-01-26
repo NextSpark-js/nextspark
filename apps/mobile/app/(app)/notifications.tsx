@@ -6,7 +6,7 @@
 import { useState, useMemo } from "react";
 import { View, FlatList, Pressable, RefreshControl } from "react-native";
 import { router } from "expo-router";
-import { Text, Card, Badge, Separator } from "@/src/components/ui";
+import { Text, Card, Badge, Separator, Button } from "@/src/components/ui";
 import { cn } from "@/src/lib/utils";
 import notificationsData from "@/src/data/notifications.mock.json";
 
@@ -195,19 +195,15 @@ export default function NotificationsScreen() {
               </Badge>
             )}
           </View>
-          <View className="flex-row gap-3">
+          <View className="flex-row gap-2">
             {unreadCount > 0 && (
-              <Pressable onPress={handleMarkAllAsRead}>
-                <Text variant="muted" size="sm" className="text-primary">
-                  Marcar todo leído
-                </Text>
-              </Pressable>
+              <Button variant="link" size="sm" onPress={handleMarkAllAsRead}>
+                Marcar todo leído
+              </Button>
             )}
-            <Pressable onPress={handleClearAll}>
-              <Text variant="muted" size="sm" className="text-destructive">
-                Limpiar
-              </Text>
-            </Pressable>
+            <Button variant="link" size="sm" onPress={handleClearAll} textStyle={{ color: '#ef4444' }}>
+              Limpiar
+            </Button>
           </View>
         </View>
       )}
