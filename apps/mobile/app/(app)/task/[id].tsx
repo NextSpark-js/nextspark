@@ -4,9 +4,8 @@
 
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native'
 import { useLocalSearchParams, router } from 'expo-router'
-import { TaskForm } from '@/src/components/TaskForm'
-import { useTask, useUpdateTask, useDeleteTask } from '@/src/hooks/useTasks'
-import type { UpdateTaskInput } from '@/src/types'
+import { TaskForm } from '@/src/components/entities/tasks'
+import { useTask, useUpdateTask, useDeleteTask, type UpdateTaskInput } from '@/src/entities/tasks'
 
 export default function EditTaskScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()

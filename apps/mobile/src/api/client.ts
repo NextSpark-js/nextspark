@@ -1,26 +1,14 @@
 /**
  * API Client for NextSpark Backend
  *
+ * Base HTTP client with authentication and team context management.
  * Uses Better Auth session-based authentication with cookie support.
- * For mobile, we store user info separately to handle session restoration.
  */
 
 import * as Storage from '../lib/storage'
 import Constants from 'expo-constants'
-import type {
-  Task,
-  User,
-  CreateTaskInput,
-  UpdateTaskInput,
-  Customer,
-  CreateCustomerInput,
-  UpdateCustomerInput,
-  PaginatedResponse,
-  SingleResponse,
-  LoginResponse,
-  TeamsResponse,
-  SessionResponse,
-} from '../types'
+import { ApiError, type RequestConfig } from './client.types'
+import type { User } from './core/types'
 
 const API_URL =
   Constants.expoConfig?.extra?.apiUrl ||
@@ -54,25 +42,15 @@ class ApiClient {
     }
   }
 
+  // ==========================================
+  // Token & Team Management
+  // ==========================================
+
   /**
    * Get stored token
    */
   getToken(): string | null {
     return this.token
-  }
-
-  /**
-   * Get stored team ID
-   */
-  getTeamId(): string | null {
-    return this.teamId
-  }
-
-  /**
-   * Get stored user info
-   */
-  getStoredUser(): User | null {
-    return this.storedUser
   }
 
   /**
@@ -84,11 +62,10 @@ class ApiClient {
   }
 
   /**
-   * Set user info
+   * Get stored team ID
    */
-  async setUser(user: User): Promise<void> {
-    this.storedUser = user
-    await Storage.setItemAsync(USER_KEY, JSON.stringify(user))
+  getTeamId(): string | null {
+    return this.teamId
   }
 
   /**
@@ -97,6 +74,21 @@ class ApiClient {
   async setTeamId(teamId: string): Promise<void> {
     this.teamId = teamId
     await Storage.setItemAsync(TEAM_ID_KEY, teamId)
+  }
+
+  /**
+   * Get stored user info
+   */
+  getStoredUser(): User | null {
+    return this.storedUser
+  }
+
+  /**
+   * Set user info
+   */
+  async setUser(user: User): Promise<void> {
+    this.storedUser = user
+    await Storage.setItemAsync(USER_KEY, JSON.stringify(user))
   }
 
   /**
@@ -111,19 +103,39 @@ class ApiClient {
     await Storage.deleteItemAsync(USER_KEY)
   }
 
+  // ==========================================
+  // HTTP Methods
+  // ==========================================
+
+  /**
+   * Build URL with query parameters
+   */
+  private buildUrl(endpoint: string, params?: Record<string, string | number | boolean | undefined>): string {
+    const url = `${API_URL}${endpoint}`
+    if (!params) return url
+
+    const searchParams = new URLSearchParams()
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) {
+        searchParams.set(key, String(value))
+      }
+    })
+
+    const queryString = searchParams.toString()
+    return queryString ? `${url}?${queryString}` : url
+  }
+
   /**
    * Make authenticated request
    * Uses credentials: 'include' to support cookie-based auth alongside Bearer token
    */
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
-    const url = `${API_URL}${endpoint}`
+  async request<T>(endpoint: string, options: RequestConfig = {}): Promise<T> {
+    const { params, ...fetchOptions } = options
+    const url = this.buildUrl(endpoint, params)
 
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
-      ...options.headers,
+      ...fetchOptions.headers,
     }
 
     // Add Bearer token if available (Better Auth mobile flow)
@@ -137,7 +149,7 @@ class ApiClient {
     }
 
     const response = await fetch(url, {
-      ...options,
+      ...fetchOptions,
       headers,
       credentials: 'include', // Support cookie-based sessions
     })
@@ -159,211 +171,43 @@ class ApiClient {
     return response.json()
   }
 
-  // ==========================================
-  // Auth Methods
-  // ==========================================
+  /**
+   * GET request with optional query parameters
+   */
+  async get<T>(endpoint: string, params?: Record<string, string | number | boolean | undefined>): Promise<T> {
+    return this.request<T>(endpoint, { method: 'GET', params })
+  }
 
   /**
-   * Login with email and password
-   * Better Auth returns user and session info
+   * POST request with JSON body
    */
-  async login(email: string, password: string): Promise<LoginResponse> {
-    const response = await this.request<LoginResponse>('/api/auth/sign-in/email', {
+  async post<T>(endpoint: string, data?: unknown): Promise<T> {
+    return this.request<T>(endpoint, {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
-    })
-
-    // Store user info for session restoration
-    await this.setUser(response.user)
-
-    // Store token if provided (Better Auth may return it for mobile clients)
-    if (response.session?.token) {
-      await this.setToken(response.session.token)
-    }
-
-    return response
-  }
-
-  /**
-   * Get current session from server
-   * Used to validate stored credentials and get fresh user data
-   */
-  async getSession(): Promise<SessionResponse | null> {
-    try {
-      const response = await this.request<SessionResponse>('/api/auth/get-session')
-
-      // Update stored user with fresh data
-      if (response.user) {
-        await this.setUser(response.user)
-      }
-
-      return response
-    } catch (error) {
-      // Session invalid or expired
-      if (error instanceof ApiError && error.status === 401) {
-        return null
-      }
-      throw error
-    }
-  }
-
-  /**
-   * Get user's teams
-   */
-  async getTeams(): Promise<TeamsResponse> {
-    return this.request<TeamsResponse>('/api/v1/teams')
-  }
-
-  /**
-   * Logout - clear local auth and call server signout
-   */
-  async logout(): Promise<void> {
-    try {
-      // Call server signout endpoint to invalidate session
-      await this.request('/api/auth/sign-out', { method: 'POST' })
-    } catch {
-      // Ignore errors - we'll clear local state anyway
-    }
-    await this.clearAuth()
-  }
-
-  // ==========================================
-  // Tasks CRUD
-  // ==========================================
-
-  /**
-   * List tasks with pagination
-   */
-  async listTasks(params?: {
-    page?: number
-    limit?: number
-    status?: string
-    priority?: string
-    search?: string
-  }): Promise<PaginatedResponse<Task>> {
-    const searchParams = new URLSearchParams()
-    if (params?.page) searchParams.set('page', String(params.page))
-    if (params?.limit) searchParams.set('limit', String(params.limit))
-    if (params?.status) searchParams.set('status', params.status)
-    if (params?.priority) searchParams.set('priority', params.priority)
-    if (params?.search) searchParams.set('search', params.search)
-
-    const queryString = searchParams.toString()
-    const endpoint = `/api/v1/tasks${queryString ? `?${queryString}` : ''}`
-
-    return this.request<PaginatedResponse<Task>>(endpoint)
-  }
-
-  /**
-   * Get single task by ID
-   */
-  async getTask(id: string): Promise<SingleResponse<Task>> {
-    return this.request<SingleResponse<Task>>(`/api/v1/tasks/${id}`)
-  }
-
-  /**
-   * Create a new task
-   */
-  async createTask(data: CreateTaskInput): Promise<SingleResponse<Task>> {
-    return this.request<SingleResponse<Task>>('/api/v1/tasks', {
-      method: 'POST',
-      body: JSON.stringify(data),
+      body: data ? JSON.stringify(data) : undefined,
     })
   }
 
   /**
-   * Update an existing task
+   * PATCH request with JSON body
    */
-  async updateTask(id: string, data: UpdateTaskInput): Promise<SingleResponse<Task>> {
-    return this.request<SingleResponse<Task>>(`/api/v1/tasks/${id}`, {
+  async patch<T>(endpoint: string, data?: unknown): Promise<T> {
+    return this.request<T>(endpoint, {
       method: 'PATCH',
-      body: JSON.stringify(data),
+      body: data ? JSON.stringify(data) : undefined,
     })
   }
 
   /**
-   * Delete a task
+   * DELETE request
    */
-  async deleteTask(id: string): Promise<void> {
-    await this.request<void>(`/api/v1/tasks/${id}`, {
-      method: 'DELETE',
-    })
-  }
-
-  // ==========================================
-  // Customers CRUD
-  // ==========================================
-
-  /**
-   * List customers with pagination
-   */
-  async listCustomers(params?: {
-    page?: number
-    limit?: number
-    search?: string
-  }): Promise<PaginatedResponse<Customer>> {
-    const searchParams = new URLSearchParams()
-    if (params?.page) searchParams.set('page', String(params.page))
-    if (params?.limit) searchParams.set('limit', String(params.limit))
-    if (params?.search) searchParams.set('search', params.search)
-
-    const queryString = searchParams.toString()
-    const endpoint = `/api/v1/customers${queryString ? `?${queryString}` : ''}`
-
-    return this.request<PaginatedResponse<Customer>>(endpoint)
-  }
-
-  /**
-   * Get single customer by ID
-   */
-  async getCustomer(id: string): Promise<SingleResponse<Customer>> {
-    return this.request<SingleResponse<Customer>>(`/api/v1/customers/${id}`)
-  }
-
-  /**
-   * Create a new customer
-   */
-  async createCustomer(data: CreateCustomerInput): Promise<SingleResponse<Customer>> {
-    return this.request<SingleResponse<Customer>>('/api/v1/customers', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    })
-  }
-
-  /**
-   * Update an existing customer
-   */
-  async updateCustomer(id: string, data: UpdateCustomerInput): Promise<SingleResponse<Customer>> {
-    return this.request<SingleResponse<Customer>>(`/api/v1/customers/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(data),
-    })
-  }
-
-  /**
-   * Delete a customer
-   */
-  async deleteCustomer(id: string): Promise<void> {
-    await this.request<void>(`/api/v1/customers/${id}`, {
-      method: 'DELETE',
-    })
-  }
-}
-
-/**
- * Custom API Error class
- */
-export class ApiError extends Error {
-  status: number
-  data: unknown
-
-  constructor(message: string, status: number, data?: unknown) {
-    super(message)
-    this.name = 'ApiError'
-    this.status = status
-    this.data = data
+  async delete<T>(endpoint: string): Promise<T> {
+    return this.request<T>(endpoint, { method: 'DELETE' })
   }
 }
 
 // Export singleton instance
 export const apiClient = new ApiClient()
+
+// Re-export ApiError for convenience
+export { ApiError } from './client.types'

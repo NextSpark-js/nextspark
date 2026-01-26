@@ -3,9 +3,8 @@
  */
 
 import { router } from 'expo-router'
-import { TaskForm } from '@/src/components/TaskForm'
-import { useCreateTask } from '@/src/hooks/useTasks'
-import type { CreateTaskInput } from '@/src/types'
+import { TaskForm } from '@/src/components/entities/tasks'
+import { useCreateTask, type CreateTaskInput } from '@/src/entities/tasks'
 
 export default function CreateTaskScreen() {
   const createTask = useCreateTask()

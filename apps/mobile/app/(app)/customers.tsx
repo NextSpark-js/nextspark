@@ -11,11 +11,10 @@ import {
   StyleSheet,
 } from 'react-native'
 import { router } from 'expo-router'
-import { useCustomers } from '@/src/hooks/useCustomers'
-import { CustomerCard } from '@/src/components/CustomerCard'
+import { useCustomers, type Customer } from '@/src/entities/customers'
+import { CustomerCard } from '@/src/components/entities/customers'
 import { Button } from '@/src/components/ui'
 import { Colors } from '@/src/constants/colors'
-import type { Customer } from '@/src/types'
 
 export default function CustomersListScreen() {
   const { data, isLoading, error, refetch } = useCustomers()

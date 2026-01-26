@@ -4,16 +4,15 @@
  */
 
 import { View } from "react-native";
-import type { Task } from "../types";
-import { STATUS_LABELS, PRIORITY_LABELS } from "../types";
+import type { Task } from "../../../entities/tasks";
+import { STATUS_LABELS, PRIORITY_LABELS } from "../../../entities/tasks";
 import {
   Text,
   PressableCard,
   CardContent,
   CardFooter,
   Badge,
-  Separator,
-} from "./ui";
+} from "../../ui";
 
 interface TaskCardProps {
   task: Task;

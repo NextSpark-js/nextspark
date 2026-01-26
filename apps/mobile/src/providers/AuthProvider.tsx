@@ -11,7 +11,8 @@ import {
   type ReactNode,
 } from 'react'
 import { apiClient, ApiError } from '../api/client'
-import type { User, Team } from '../types'
+import { authApi, teamsApi } from '../api/core'
+import type { User, Team } from '../api/core/types'
 
 interface AuthContextValue {
   user: User | null
@@ -48,7 +49,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         if (hasToken || storedUser) {
           // Try to validate session with server and get fresh user data
-          const sessionResponse = await apiClient.getSession()
+          const sessionResponse = await authApi.getSession()
 
           if (sessionResponse?.user) {
             // Session is valid, use fresh user data
@@ -64,7 +65,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           }
 
           // Get teams and restore team selection
-          const teamsResponse = await apiClient.getTeams()
+          const teamsResponse = await teamsApi.getTeams()
           setTeams(teamsResponse.data)
 
           if (teamsResponse.data.length > 0) {
@@ -77,12 +78,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
             } else {
               // Select first team by default
               const firstTeam = teamsResponse.data[0]
-              await apiClient.setTeamId(firstTeam.id)
+              await teamsApi.switchTeam(firstTeam.id)
               setTeam(firstTeam)
             }
           }
         }
-      } catch (error) {
+      } catch {
         // Token invalid or expired, clear auth
         await apiClient.clearAuth()
       } finally {
@@ -98,11 +99,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     try {
       // Login to get token
-      const loginResponse = await apiClient.login(email, password)
+      const loginResponse = await authApi.login(email, password)
       setUser(loginResponse.user)
 
       // Get user's teams
-      const teamsResponse = await apiClient.getTeams()
+      const teamsResponse = await teamsApi.getTeams()
       setTeams(teamsResponse.data)
 
       if (teamsResponse.data.length === 0) {
@@ -111,7 +112,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       // Select first team
       const firstTeam = teamsResponse.data[0]
-      await apiClient.setTeamId(firstTeam.id)
+      await teamsApi.switchTeam(firstTeam.id)
       setTeam(firstTeam)
     } finally {
       setIsLoading(false)
@@ -119,14 +120,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [])
 
   const logout = useCallback(async () => {
-    await apiClient.logout()
+    await authApi.logout()
     setUser(null)
     setTeam(null)
     setTeams([])
   }, [])
 
   const selectTeam = useCallback(async (newTeam: Team) => {
-    await apiClient.setTeamId(newTeam.id)
+    await teamsApi.switchTeam(newTeam.id)
     setTeam(newTeam)
   }, [])
 

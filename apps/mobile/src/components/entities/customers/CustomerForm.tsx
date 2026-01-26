@@ -10,8 +10,8 @@ import type {
   Customer,
   CreateCustomerInput,
   UpdateCustomerInput,
-} from "../types";
-import { Text, Input, Button, Card } from "./ui";
+} from "../../../entities/customers";
+import { Text, Input, Button, Card } from "../../ui";
 
 type CustomerFormProps =
   | {

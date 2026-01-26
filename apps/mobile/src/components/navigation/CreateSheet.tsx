@@ -5,7 +5,7 @@
 
 import { View, TouchableOpacity, Modal, Pressable } from "react-native";
 import { Users, CheckSquare, X, type LucideIcon } from "lucide-react-native";
-import { Text } from "./ui";
+import { Text } from "../ui";
 
 interface CreateSheetProps {
   visible: boolean;

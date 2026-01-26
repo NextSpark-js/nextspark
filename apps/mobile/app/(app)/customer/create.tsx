@@ -3,9 +3,8 @@
  */
 
 import { router } from 'expo-router'
-import { CustomerForm } from '@/src/components/CustomerForm'
-import { useCreateCustomer } from '@/src/hooks/useCustomers'
-import type { CreateCustomerInput } from '@/src/types'
+import { CustomerForm } from '@/src/components/entities/customers'
+import { useCreateCustomer, type CreateCustomerInput } from '@/src/entities/customers'
 
 export default function CreateCustomerScreen() {
   const createCustomer = useCreateCustomer()

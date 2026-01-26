@@ -7,7 +7,7 @@
 import { View, Pressable } from "react-native";
 import { router } from "expo-router";
 import { Bell, Moon } from "lucide-react-native";
-import { useAuth } from "../providers/AuthProvider";
+import { useAuth } from "../../providers/AuthProvider";
 import {
   Text,
   Avatar,
@@ -15,7 +15,7 @@ import {
   AvatarFallback,
   getInitials,
   Badge,
-} from "./ui";
+} from "../ui";
 
 interface TopBarProps {
   notificationCount?: number;

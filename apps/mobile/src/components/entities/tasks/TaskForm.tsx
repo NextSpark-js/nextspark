@@ -12,9 +12,9 @@ import type {
   TaskPriority,
   CreateTaskInput,
   UpdateTaskInput,
-} from "../types";
-import { STATUS_LABELS, PRIORITY_LABELS } from "../types";
-import { Text, Input, Textarea, Button, PressableBadge, Card } from "./ui";
+} from "../../../entities/tasks";
+import { STATUS_LABELS, PRIORITY_LABELS } from "../../../entities/tasks";
+import { Text, Input, Textarea, Button, PressableBadge, Card } from "../../ui";
 
 type TaskFormProps =
   | {

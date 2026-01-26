@@ -5,8 +5,8 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native'
 import { router } from 'expo-router'
 import { useAuth } from '@/src/providers/AuthProvider'
-import { useTasks } from '@/src/hooks/useTasks'
-import { useCustomers } from '@/src/hooks/useCustomers'
+import { useTasks } from '@/src/entities/tasks'
+import { useCustomers } from '@/src/entities/customers'
 import { Colors } from '@/src/constants/colors'
 import { Button } from '@/src/components/ui'
 

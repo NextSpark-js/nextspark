@@ -6,7 +6,7 @@
 
 import { View, Pressable } from "react-native";
 import { Home, CheckSquare, Plus, Users, Menu, type LucideIcon } from "lucide-react-native";
-import { Text } from "./ui";
+import { Text } from "../ui";
 
 export type TabKey = "home" | "tasks" | "create" | "customers" | "more";
 

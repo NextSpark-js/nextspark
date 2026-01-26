@@ -8,10 +8,13 @@ import { Alert } from '@/src/lib/alert'
 import { Stack, router } from 'expo-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/src/providers/AuthProvider'
-import { TopBar } from '@/src/components/TopBar'
-import { BottomTabBar, type TabKey } from '@/src/components/BottomTabBar'
-import { MoreSheet } from '@/src/components/MoreSheet'
-import { CreateSheet } from '@/src/components/CreateSheet'
+import {
+  TopBar,
+  BottomTabBar,
+  MoreSheet,
+  CreateSheet,
+  type TabKey,
+} from '@/src/components/navigation'
 import { Colors } from '@/src/constants/colors'
 import notificationsData from '@/src/data/notifications.mock.json'
 

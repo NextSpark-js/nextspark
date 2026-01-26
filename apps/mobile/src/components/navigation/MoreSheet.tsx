@@ -13,10 +13,10 @@ import {
   Pressable,
   ScrollView,
 } from 'react-native'
-import { Colors } from '../constants/colors'
-import { useAuth } from '../providers/AuthProvider'
-import { Button } from './ui'
-import type { Team } from '../types'
+import { Colors } from '../../constants/colors'
+import { useAuth } from '../../providers/AuthProvider'
+import { Button } from '../ui'
+import type { Team } from '../../types'
 
 interface MoreSheetProps {
   visible: boolean

@@ -4,9 +4,8 @@
 
 import { useLocalSearchParams, router } from 'expo-router'
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native'
-import { CustomerForm } from '@/src/components/CustomerForm'
-import { useCustomer, useUpdateCustomer, useDeleteCustomer } from '@/src/hooks/useCustomers'
-import type { UpdateCustomerInput } from '@/src/types'
+import { CustomerForm } from '@/src/components/entities/customers'
+import { useCustomer, useUpdateCustomer, useDeleteCustomer, type UpdateCustomerInput } from '@/src/entities/customers'
 
 export default function EditCustomerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()

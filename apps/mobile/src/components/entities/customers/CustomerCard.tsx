@@ -4,8 +4,8 @@
  */
 
 import { View } from "react-native";
-import type { Customer } from "../types";
-import { Text, PressableCard, CardContent, Badge } from "./ui";
+import type { Customer } from "../../../entities/customers";
+import { Text, PressableCard, CardContent, Badge } from "../../ui";
 
 interface CustomerCardProps {
   customer: Customer;

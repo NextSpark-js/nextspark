@@ -11,11 +11,10 @@ import {
   StyleSheet,
 } from 'react-native'
 import { router } from 'expo-router'
-import { useTasks } from '@/src/hooks/useTasks'
-import { TaskCard } from '@/src/components/TaskCard'
+import { useTasks, type Task } from '@/src/entities/tasks'
+import { TaskCard } from '@/src/components/entities/tasks'
 import { Button } from '@/src/components/ui'
 import { Colors } from '@/src/constants/colors'
-import type { Task } from '@/src/types'
 
 export default function TasksScreen() {
   const { data, isLoading, error, refetch } = useTasks()
