@@ -9,7 +9,6 @@ import { useTasks } from '@/src/hooks/useTasks'
 import { useCustomers } from '@/src/hooks/useCustomers'
 import { Colors } from '@/src/constants/colors'
 import { Button } from '@/src/components/ui'
-import { CustomButton } from '@nextsparkjs/ui'
 
 export default function HomeScreen() {
   const { user, team } = useAuth()
@@ -109,38 +108,6 @@ export default function HomeScreen() {
         )}
       </View>
 
-      {/* POC: Shared UI Package Demo */}
-      <View style={styles.pocContainer}>
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardLabel}>POC: @nextsparkjs/ui</Text>
-            <Text style={styles.cardIcon}>🎨</Text>
-          </View>
-          <Text style={[styles.cardValue, { fontSize: 16, marginBottom: 12 }]}>
-            CustomButton shared with web
-          </Text>
-          <View style={styles.pocButtonRow}>
-            <CustomButton variant="primary" size="sm">
-              Primary
-            </CustomButton>
-            <CustomButton variant="secondary" size="sm">
-              Secondary
-            </CustomButton>
-            <CustomButton variant="outline" size="sm">
-              Outline
-            </CustomButton>
-          </View>
-          <View style={[styles.pocButtonRow, { marginTop: 8 }]}>
-            <CustomButton variant="destructive" size="sm">
-              Destructive
-            </CustomButton>
-            <CustomButton variant="ghost" size="sm">
-              Ghost
-            </CustomButton>
-          </View>
-        </View>
-      </View>
-
       <View style={styles.spacer} />
     </ScrollView>
   )
@@ -227,14 +194,5 @@ const styles = StyleSheet.create({
   },
   spacer: {
     height: 40,
-  },
-  pocContainer: {
-    paddingHorizontal: 16,
-    marginTop: 12,
-  },
-  pocButtonRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
   },
 })

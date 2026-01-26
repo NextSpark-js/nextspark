@@ -68,7 +68,7 @@ module.exports = {
     },
   },
   plugins: [],
-  // Safelist classes used by @nextsparkjs/ui CustomButton
+  // Safelist common utility classes for dynamic usage
   safelist: [
     // Container variants
     "flex-row",

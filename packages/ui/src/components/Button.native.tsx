@@ -1,31 +1,15 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Pressable,
   Text,
+  View,
   StyleSheet,
   ActivityIndicator,
   type PressableProps,
   type ViewStyle,
   type TextStyle,
 } from "react-native";
-
-// NextSpark theme colors (hardcoded for React Native)
-// NativeWind doesn't process external packages, so we use StyleSheet
-const colors = {
-  primary: "#171717",
-  primaryForeground: "#fafafa",
-  secondary: "#f5f5f5",
-  secondaryForeground: "#1a1a1a",
-  destructive: "#ef4444",
-  destructiveForeground: "#FFFFFF",
-  background: "#FFFFFF",
-  foreground: "#1a1a1a",
-  border: "#e5e5e5",
-  input: "#e5e5e5",
-  accent: "#f5f5f5",
-  accentForeground: "#1a1a1a",
-  ring: "#a3a3a3",
-};
+import { useTheme } from "../native/ThemeContext";
 
 export type ButtonVariant =
   | "default"
@@ -51,62 +35,115 @@ export interface ButtonProps extends Omit<PressableProps, "children"> {
   textClassName?: string;
 }
 
-export function Button({
-  variant = "default",
-  size = "default",
-  children,
-  disabled,
-  style,
-  textStyle,
-  isLoading,
-  asChild, // Ignored in RN
-  className, // Ignored in RN (NativeWind doesn't work for external packages)
-  textClassName, // Ignored in RN
-  ...props
-}: ButtonProps) {
-  const variantStyle = variantStyles[variant] || variantStyles.default;
-  const sizeStyle = sizeStyles[size] || sizeStyles.default;
-  const isDisabled = disabled || isLoading;
+export const Button = React.forwardRef<View, ButtonProps>(
+  (
+    {
+      variant = "default",
+      size = "default",
+      children,
+      disabled,
+      style,
+      textStyle,
+      isLoading,
+      asChild, // Ignored in RN
+      className, // Ignored in RN (NativeWind doesn't work for external packages)
+      textClassName, // Ignored in RN
+      ...props
+    },
+    ref
+  ) => {
+    const { colors } = useTheme();
+    const isDisabled = disabled || isLoading;
 
-  // Determine spinner color based on variant
-  const getSpinnerColor = () => {
-    if (
-      variant === "outline" ||
-      variant === "ghost" ||
-      variant === "outline-destructive"
-    ) {
-      return colors.foreground;
-    }
-    return colors.primaryForeground;
-  };
+    // Compute variant styles with theme colors
+    const variantStyles = useMemo(
+      () => ({
+        default: {
+          container: { backgroundColor: colors.primary } as ViewStyle,
+          text: { color: colors.primaryForeground } as TextStyle,
+        },
+        destructive: {
+          container: { backgroundColor: colors.destructive } as ViewStyle,
+          text: { color: colors.destructiveForeground } as TextStyle,
+        },
+        outline: {
+          container: {
+            backgroundColor: colors.background,
+            borderWidth: 1,
+            borderColor: colors.input,
+          } as ViewStyle,
+          text: { color: colors.foreground } as TextStyle,
+        },
+        secondary: {
+          container: { backgroundColor: colors.secondary } as ViewStyle,
+          text: { color: colors.secondaryForeground } as TextStyle,
+        },
+        ghost: {
+          container: { backgroundColor: "transparent" } as ViewStyle,
+          text: { color: colors.foreground } as TextStyle,
+        },
+        link: {
+          container: { backgroundColor: "transparent" } as ViewStyle,
+          text: { color: colors.primary, textDecorationLine: "underline" } as TextStyle,
+        },
+        "outline-destructive": {
+          container: {
+            backgroundColor: colors.background,
+            borderWidth: 1,
+            borderColor: colors.destructive,
+          } as ViewStyle,
+          text: { color: colors.destructive } as TextStyle,
+        },
+      }),
+      [colors]
+    );
 
-  return (
-    <Pressable
-      disabled={isDisabled}
-      style={({ pressed }) => [
-        styles.base,
-        variantStyle.container,
-        sizeStyle.container,
-        pressed && styles.pressed,
-        isDisabled && styles.disabled,
-        style,
-      ]}
-      {...props}
-    >
-      {isLoading ? (
-        <ActivityIndicator color={getSpinnerColor()} size="small" />
-      ) : typeof children === "string" ? (
-        <Text
-          style={[styles.text, variantStyle.text, sizeStyle.text, textStyle]}
-        >
-          {children}
-        </Text>
-      ) : (
-        children
-      )}
-    </Pressable>
-  );
-}
+    const variantStyle = variantStyles[variant] || variantStyles.default;
+    const sizeStyle = sizeStyles[size] || sizeStyles.default;
+
+    // Determine spinner color based on variant
+    const getSpinnerColor = () => {
+      if (
+        variant === "outline" ||
+        variant === "ghost" ||
+        variant === "outline-destructive"
+      ) {
+        return colors.foreground;
+      }
+      return colors.primaryForeground;
+    };
+
+    return (
+      <Pressable
+        ref={ref}
+        disabled={isDisabled}
+        style={({ pressed }) => [
+          styles.base,
+          variantStyle.container,
+          sizeStyle.container,
+          pressed && styles.pressed,
+          isDisabled && styles.disabled,
+          style,
+        ]}
+        {...props}
+      >
+        {isLoading ? (
+          <ActivityIndicator color={getSpinnerColor()} size="small" />
+        ) : typeof children === "string" ? (
+          <Text
+            style={[styles.text, variantStyle.text, sizeStyle.text, textStyle]}
+          >
+            {children}
+          </Text>
+        ) : (
+          children
+        )}
+      </Pressable>
+    );
+  }
+);
+
+Button.displayName = "Button";
 
 // buttonVariants export for API compatibility with web version
 export const buttonVariants = (options: {
@@ -137,48 +174,6 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
 });
-
-const variantStyles: Record<
-  ButtonVariant,
-  { container: ViewStyle; text: TextStyle }
-> = {
-  default: {
-    container: { backgroundColor: colors.primary },
-    text: { color: colors.primaryForeground },
-  },
-  destructive: {
-    container: { backgroundColor: colors.destructive },
-    text: { color: colors.destructiveForeground },
-  },
-  outline: {
-    container: {
-      backgroundColor: colors.background,
-      borderWidth: 1,
-      borderColor: colors.input,
-    },
-    text: { color: colors.foreground },
-  },
-  secondary: {
-    container: { backgroundColor: colors.secondary },
-    text: { color: colors.secondaryForeground },
-  },
-  ghost: {
-    container: { backgroundColor: "transparent" },
-    text: { color: colors.foreground },
-  },
-  link: {
-    container: { backgroundColor: "transparent" },
-    text: { color: colors.primary, textDecorationLine: "underline" },
-  },
-  "outline-destructive": {
-    container: {
-      backgroundColor: colors.background,
-      borderWidth: 1,
-      borderColor: colors.destructive,
-    },
-    text: { color: colors.destructive },
-  },
-};
 
 const sizeStyles: Record<
   ButtonSize,

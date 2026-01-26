@@ -4,7 +4,6 @@ import { useUserProfile } from '@nextsparkjs/core/hooks/useUserProfile'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { Button } from '@nextsparkjs/core/components/ui/button'
-import { CustomButton } from '@nextsparkjs/ui'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@nextsparkjs/core/components/ui/card'
 import { Badge } from '@nextsparkjs/core/components/ui/badge'
 import { useTranslations } from 'next-intl'
@@ -102,48 +101,6 @@ function DefaultDashboardPage() {
             </Card>
           ))}
         </div>
-
-
-
-        {/* POC: Shared UI Package Demo */}
-        <Card data-cy="poc-shared-ui">
-          <CardHeader>
-            <CardTitle>POC: @nextsparkjs/ui</CardTitle>
-            <CardDescription>
-              CustomButton shared between web and mobile
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-4 flex-wrap">
-              <CustomButton variant="primary" size="default">
-                Primary
-              </CustomButton>
-              <CustomButton variant="secondary" size="default">
-                Secondary
-              </CustomButton>
-              <CustomButton variant="outline" size="default">
-                Outline
-              </CustomButton>
-              <CustomButton variant="ghost" size="default">
-                Ghost
-              </CustomButton>
-              <CustomButton variant="destructive" size="default">
-                Destructive
-              </CustomButton>
-            </div>
-            <div className="flex gap-4 flex-wrap mt-4">
-              <CustomButton variant="primary" size="sm">
-                Small
-              </CustomButton>
-              <CustomButton variant="primary" size="default">
-                Default
-              </CustomButton>
-              <CustomButton variant="primary" size="lg">
-                Large
-              </CustomButton>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Quick Actions */}
         <Card>

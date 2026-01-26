@@ -38,8 +38,9 @@
   },
   "devDependencies": {
     "@radix-ui/react-slot": "^1.2.3",
-    "@types/react": "^19",
+    "@types/react": "~18.3.0",
     "react-native": "^0.79.2",
+    "react-native-reanimated": "^4.2.1",
     "tsup": "^8.5.1",
     "typescript": "^5"
   }
