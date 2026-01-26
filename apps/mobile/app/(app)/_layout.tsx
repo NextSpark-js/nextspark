@@ -54,7 +54,7 @@ export default function AppLayout() {
     // Navigate based on tab
     switch (tab) {
       case 'home':
-        router.replace('/(app)/')
+        router.replace('/(app)' as const)
         break
       case 'tasks':
         router.replace('/(app)/tasks')
@@ -112,7 +112,7 @@ export default function AppLayout() {
     queryClient.invalidateQueries()
     // Navigate to home to show refreshed data
     setActiveTab('home')
-    router.replace('/(app)/')
+    router.replace('/(app)' as const)
   }
 
   return (

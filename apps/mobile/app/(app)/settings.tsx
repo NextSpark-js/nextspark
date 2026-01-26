@@ -85,7 +85,8 @@ export default function SettingsScreen() {
 
   const handleNavigation = (item: SettingItem) => {
     if (item.screen) {
-      router.push(`/(app)/${item.screen}`)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      router.push(`/(app)/${item.screen}` as any)
     }
   }
 
@@ -121,7 +122,7 @@ export default function SettingsScreen() {
                 <Text style={styles.settingIcon}>{item.icon}</Text>
                 <View style={styles.settingInfo}>
                   <Text style={styles.settingLabel}>{item.label}</Text>
-                  {item.description && (
+                  {'description' in item && item.description && (
                     <Text style={styles.settingDescription}>
                       {item.description}
                     </Text>

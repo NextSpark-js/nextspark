@@ -19,6 +19,14 @@ const textVariants = cva("text-foreground", {
       label: "text-sm font-semibold",
       error: "text-destructive text-sm",
     },
+    size: {
+      xs: "text-xs",
+      sm: "text-sm",
+      base: "text-base",
+      lg: "text-lg",
+      xl: "text-xl",
+      "2xl": "text-2xl",
+    },
     weight: {
       normal: "font-normal",
       medium: "font-medium",
@@ -40,13 +48,14 @@ export interface TextProps
 export function Text({
   className,
   variant,
+  size,
   weight,
   children,
   ...props
 }: TextProps) {
   return (
     <RNText
-      className={cn(textVariants({ variant, weight }), className)}
+      className={cn(textVariants({ variant, size, weight }), className)}
       {...props}
     >
       {children}

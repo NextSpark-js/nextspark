@@ -176,7 +176,7 @@ export function MoreSheet({
                               {t.name}
                             </Text>
                             <Text style={styles.teamListRole}>
-                              {t.userRole}
+                              {t.role}
                             </Text>
                           </View>
                           {isCurrentTeam && (

@@ -102,7 +102,7 @@ export default function HomeScreen() {
             </View>
             <Text style={styles.cardValue}>{team.name}</Text>
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>{team.userRole}</Text>
+              <Text style={styles.badgeText}>{team.role}</Text>
             </View>
           </View>
         )}
