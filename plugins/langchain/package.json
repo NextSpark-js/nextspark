@@ -5,7 +5,7 @@
   "main": "./plugin.config.ts",
   "requiredPlugins": [],
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.36.0",
+    "@anthropic-ai/sdk": "^0.71.0",
     "@langchain/anthropic": "^0.3.0",
     "@langchain/community": "^0.3.0",
     "@langchain/core": "^0.3.0",

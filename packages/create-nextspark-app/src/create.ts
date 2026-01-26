@@ -4,6 +4,34 @@ import chalk from 'chalk'
 import ora from 'ora'
 import { execSync, spawnSync } from 'node:child_process'
 
+/**
+ * Find local tarball for a package (for development testing)
+ * Looks in .packages/ directory in current dir or parent directories
+ */
+function findLocalTarball(packageName: string): string | null {
+  // Package name patterns: @nextsparkjs/core -> nextsparkjs-core-*.tgz
+  const tarballPrefix = packageName.replace('@', '').replace('/', '-')
+
+  const searchPaths = [
+    path.join(process.cwd(), '.packages'),
+    path.join(process.cwd(), '..', '.packages'),
+    path.join(process.cwd(), '..', '..', '.packages'),
+    path.join(process.cwd(), '..', '..', 'repo', '.packages'),
+  ]
+
+  for (const searchPath of searchPaths) {
+    if (fs.existsSync(searchPath)) {
+      const files = fs.readdirSync(searchPath)
+      const tarball = files.find(f => f.startsWith(tarballPrefix) && f.endsWith('.tgz'))
+      if (tarball) {
+        return path.join(searchPath, tarball)
+      }
+    }
+  }
+
+  return null
+}
+
 export interface ProjectOptions {
   projectName: string
   projectPath: string
@@ -46,10 +74,34 @@ export async function createProject(options: ProjectOptions): Promise<void> {
   await fs.writeJson(path.join(projectPath, 'package.json'), packageJson, { spaces: 2 })
   pkgSpinner.succeed('  package.json created')
 
+  // Step 2.5: Create .npmrc BEFORE any pnpm commands
+  // This ensures consistent public-hoist-pattern across all pnpm operations
+  const npmrcContent = `# Hoist @nextsparkjs/core dependencies so they're accessible from the project
+# This is required for pnpm to make peer dependencies available
+public-hoist-pattern[]=*
+`
+  await fs.writeFile(path.join(projectPath, '.npmrc'), npmrcContent)
+
   // Step 3: Install @nextsparkjs/core and @nextsparkjs/cli
   const cliSpinner = ora('  Installing @nextsparkjs/core and @nextsparkjs/cli...').start()
   try {
-    execSync('pnpm add @nextsparkjs/core @nextsparkjs/cli', {
+    // Check for local tarballs (for development testing)
+    const localCoreTarball = findLocalTarball('@nextsparkjs/core')
+    const localCliTarball = findLocalTarball('@nextsparkjs/cli')
+
+    let corePackage = '@nextsparkjs/core'
+    let cliPackage = '@nextsparkjs/cli'
+
+    if (localCoreTarball && localCliTarball) {
+      corePackage = localCoreTarball
+      cliPackage = localCliTarball
+      cliSpinner.text = '  Installing @nextsparkjs/core and @nextsparkjs/cli from local tarballs...'
+    }
+
+    // .npmrc is created above with public-hoist-pattern[]=* to ensure consistent hoisting
+    // This prevents ERR_PNPM_PUBLIC_HOIST_PATTERN_DIFF errors when plugins
+    // are installed later with their dependencies
+    execSync(`pnpm add ${corePackage} ${cliPackage}`, {
       cwd: projectPath,
       stdio: 'pipe',
     })
