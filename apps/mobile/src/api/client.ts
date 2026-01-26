@@ -16,10 +16,10 @@ const API_URL =
     ? `http://${Constants.expoConfig.hostUri.split(':')[0]}:5173`
     : 'http://localhost:5173')
 
-// Storage keys
-const TOKEN_KEY = 'auth_token'
-const TEAM_ID_KEY = 'team_id'
-const USER_KEY = 'user_data'
+// Storage keys (namespaced to avoid conflicts)
+const TOKEN_KEY = '@nextspark:auth:token'
+const TEAM_ID_KEY = '@nextspark:auth:team_id'
+const USER_KEY = '@nextspark:auth:user'
 
 class ApiClient {
   private token: string | null = null
@@ -168,7 +168,8 @@ class ApiClient {
       return {} as T
     }
 
-    return response.json()
+    // Defensive JSON parsing - handle malformed responses
+    return response.json().catch(() => ({} as T))
   }
 
   /**
@@ -200,8 +201,9 @@ class ApiClient {
 
   /**
    * DELETE request
+   * Returns void for delete operations (most common case)
    */
-  async delete<T>(endpoint: string): Promise<T> {
+  async delete<T = void>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, { method: 'DELETE' })
   }
 }

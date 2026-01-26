@@ -15,6 +15,10 @@ import type { EntityApi, EntityListParams } from './types'
  * @param entityPath - The entity path (e.g., 'tasks', 'customers')
  * @returns Typed API client with CRUD operations
  *
+ * Note: This factory assumes entities have an `id: string` field for get/update/delete operations.
+ * We intentionally don't enforce this via generic constraints to maintain flexibility for
+ * entities with different ID field names or types.
+ *
  * @example
  * ```typescript
  * const tasksApi = createEntityApi<Task, CreateTaskInput, UpdateTaskInput>('tasks')
@@ -67,8 +71,9 @@ export function createEntityApi<T, CreateInput = Partial<T>, UpdateInput = Parti
 
     /**
      * Delete an entity
+     * Returns void (no content expected from DELETE operations)
      */
-    delete: (id: string) =>
-      apiClient.delete(`${basePath}/${id}`),
+    delete: (id: string): Promise<void> =>
+      apiClient.delete<void>(`${basePath}/${id}`),
   }
 }

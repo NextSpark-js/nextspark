@@ -37,8 +37,10 @@ export const authApi = {
     try {
       // Call server signout endpoint to invalidate session
       await apiClient.post('/api/auth/sign-out')
-    } catch {
-      // Ignore errors - we'll clear local state anyway
+    } catch (error) {
+      // Log error for debugging but continue with local cleanup
+      // Server session may remain active if this fails (network issues)
+      console.warn('[AuthApi] Failed to sign out from server:', error)
     }
     await apiClient.clearAuth()
   },

@@ -1,6 +1,12 @@
 /**
  * Cross-platform secure storage
  * Uses expo-secure-store on native, localStorage on web
+ *
+ * ⚠️ SECURITY NOTE: Web storage uses localStorage which is vulnerable to XSS attacks.
+ * For production web deployments, consider:
+ * - Using httpOnly cookies for session management (requires backend changes)
+ * - Implementing Content Security Policy (CSP)
+ * - This is acceptable for development/testing and native mobile apps
  */
 
 import { Platform } from 'react-native'

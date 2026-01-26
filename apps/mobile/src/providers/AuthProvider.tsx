@@ -83,9 +83,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
             }
           }
         }
-      } catch {
-        // Token invalid or expired, clear auth
-        await apiClient.clearAuth()
+      } catch (error) {
+        // Only clear auth for authentication failures (401)
+        // For network errors or other issues, keep credentials to allow retry
+        if (error instanceof ApiError && error.status === 401) {
+          await apiClient.clearAuth()
+        } else {
+          console.warn('[AuthProvider] Init failed (network or server error):', error)
+          // Try to use stored user for offline-first behavior
+          const storedUser = apiClient.getStoredUser()
+          if (storedUser) {
+            setUser(storedUser)
+          }
+        }
       } finally {
         setIsLoading(false)
       }
