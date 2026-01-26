@@ -1,4 +1,5 @@
 // Web exports
+export { Button, buttonVariants } from "./components/Button";
 export { CustomButton, type CustomButtonProps } from "./components/CustomButton";
 export {
   buttonVariantConfig,

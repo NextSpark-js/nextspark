@@ -221,6 +221,9 @@ importers:
       '@nextsparkjs/testing':
         specifier: 0.1.0-beta.53
         version: 0.1.0-beta.53(cypress@15.8.2)
+      '@nextsparkjs/ui':
+        specifier: workspace:*
+        version: link:../ui
       '@radix-ui/react-accordion':
         specifier: ^1.2.12
         version: 1.2.12(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -538,9 +541,15 @@ importers:
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
       react:
         specifier: '>=18.0.0'
         version: 19.1.0
+      tailwind-merge:
+        specifier: ^3.3.0
+        version: 3.4.0
     devDependencies:
       '@radix-ui/react-slot':
         specifier: ^1.2.3

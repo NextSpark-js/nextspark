@@ -1,4 +1,5 @@
 // React Native exports
+export { Button, buttonVariants } from "./components/Button.native";
 export {
   CustomButton,
   type CustomButtonProps,
