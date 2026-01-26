@@ -36,6 +36,8 @@ module.exports = {
     'tests/jest/patterns/pattern-usage.service.test.ts',
   ],
   moduleNameMapper: {
+    // Workspace packages
+    '^@nextsparkjs/ui$': '<rootDir>/../ui/src/index.ts',
     '^@nextsparkjs/core/(.*)$': '<rootDir>/src/$1',
     '^@nextsparkjs/core$': '<rootDir>/src',
     '^@/core/lib/registries/(.*)$': '<rootDir>/tests/jest/__mocks__/@nextsparkjs/registries/$1',

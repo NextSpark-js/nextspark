@@ -4,7 +4,9 @@
     "strict": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@nextsparkjs/ui": ["../../packages/ui/src/index.native.ts"],
+      "@nextsparkjs/types": ["../../packages/types/src/index.ts"]
     }
   },
   "include": [
