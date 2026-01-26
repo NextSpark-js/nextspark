@@ -2,6 +2,9 @@
  * Type definitions for the NextSpark Mobile App
  */
 
+// Re-export shared types from @nextsparkjs/types (POC)
+export type { BaseUser, BaseTeam, BaseTeamMember } from '@nextsparkjs/types'
+
 // Task status options (matching backend - uses hyphens, not underscores)
 export type TaskStatus = 'todo' | 'in-progress' | 'review' | 'done' | 'blocked'
 

@@ -1,6 +1,12 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ["./app/**/*.{js,jsx,ts,tsx}", "./src/**/*.{js,jsx,ts,tsx}"],
+  content: [
+    "./app/**/*.{js,jsx,ts,tsx}",
+    "./src/**/*.{js,jsx,ts,tsx}",
+    // Include shared UI package for NativeWind to scan
+    "../../packages/ui/src/**/*.{js,jsx,ts,tsx}",
+    "../../packages/ui/dist/**/*.{js,jsx,ts,tsx}",
+  ],
   presets: [require("nativewind/preset")],
   theme: {
     extend: {
@@ -62,4 +68,39 @@ module.exports = {
     },
   },
   plugins: [],
+  // Safelist classes used by @nextsparkjs/ui CustomButton
+  safelist: [
+    // Container variants
+    "flex-row",
+    "items-center",
+    "justify-center",
+    "rounded-lg",
+    "font-semibold",
+    "active:opacity-80",
+    // Primary
+    "bg-primary",
+    "text-primary-foreground",
+    // Secondary
+    "bg-secondary",
+    "text-secondary-foreground",
+    // Outline
+    "border",
+    "border-input",
+    "bg-background",
+    "text-foreground",
+    // Ghost (no bg)
+    // Destructive
+    "bg-destructive",
+    "text-destructive-foreground",
+    // Sizes
+    "h-9",
+    "h-11",
+    "h-12",
+    "px-3",
+    "px-4",
+    "px-6",
+    "text-sm",
+    "text-base",
+    "text-lg",
+  ],
 };
