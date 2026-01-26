@@ -90,9 +90,11 @@ export async function createProject(options: ProjectOptions): Promise<void> {
   }
 
   // Use spawnSync to properly handle arguments with spaces
+  // shell: true is required for Windows compatibility
   const result = spawnSync('npx', initArgs, {
     cwd: projectPath,
     stdio: 'inherit', // Interactive mode
+    shell: true,
   })
 
   if (result.status !== 0) {
