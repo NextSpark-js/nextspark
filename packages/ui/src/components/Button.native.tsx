@@ -3,12 +3,14 @@ import {
   Pressable,
   Text,
   StyleSheet,
+  ActivityIndicator,
   type PressableProps,
   type ViewStyle,
   type TextStyle,
 } from "react-native";
 
 // NextSpark theme colors (hardcoded for React Native)
+// NativeWind doesn't process external packages, so we use StyleSheet
 const colors = {
   primary: "#171717",
   primaryForeground: "#fafafa",
@@ -19,6 +21,7 @@ const colors = {
   background: "#FFFFFF",
   foreground: "#1a1a1a",
   border: "#e5e5e5",
+  input: "#e5e5e5",
   accent: "#f5f5f5",
   accentForeground: "#1a1a1a",
   ring: "#a3a3a3",
@@ -30,7 +33,9 @@ export type ButtonVariant =
   | "outline"
   | "secondary"
   | "ghost"
-  | "link";
+  | "link"
+  | "outline-destructive";
+
 export type ButtonSize = "default" | "sm" | "lg" | "icon";
 
 export interface ButtonProps extends Omit<PressableProps, "children"> {
@@ -39,8 +44,11 @@ export interface ButtonProps extends Omit<PressableProps, "children"> {
   children?: React.ReactNode;
   style?: ViewStyle;
   textStyle?: TextStyle;
-  asChild?: boolean; // Not used in RN but added for API compatibility
-  className?: string; // Not used in RN but added for API compatibility
+  isLoading?: boolean;
+  // API compatibility props (accepted but may not be used)
+  asChild?: boolean;
+  className?: string;
+  textClassName?: string;
 }
 
 export function Button({
@@ -50,27 +58,44 @@ export function Button({
   disabled,
   style,
   textStyle,
+  isLoading,
   asChild, // Ignored in RN
-  className, // Ignored in RN
+  className, // Ignored in RN (NativeWind doesn't work for external packages)
+  textClassName, // Ignored in RN
   ...props
 }: ButtonProps) {
   const variantStyle = variantStyles[variant] || variantStyles.default;
   const sizeStyle = sizeStyles[size] || sizeStyles.default;
+  const isDisabled = disabled || isLoading;
+
+  // Determine spinner color based on variant
+  const getSpinnerColor = () => {
+    if (
+      variant === "outline" ||
+      variant === "ghost" ||
+      variant === "outline-destructive"
+    ) {
+      return colors.foreground;
+    }
+    return colors.primaryForeground;
+  };
 
   return (
     <Pressable
-      disabled={disabled}
+      disabled={isDisabled}
       style={({ pressed }) => [
         styles.base,
         variantStyle.container,
         sizeStyle.container,
         pressed && styles.pressed,
-        disabled && styles.disabled,
+        isDisabled && styles.disabled,
         style,
       ]}
       {...props}
     >
-      {typeof children === "string" ? (
+      {isLoading ? (
+        <ActivityIndicator color={getSpinnerColor()} size="small" />
+      ) : typeof children === "string" ? (
         <Text
           style={[styles.text, variantStyle.text, sizeStyle.text, textStyle]}
         >
@@ -98,12 +123,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 6,
+    borderRadius: 8, // rounded-lg equivalent
     gap: 8,
   },
   text: {
-    fontSize: 14,
-    fontWeight: "500",
+    fontSize: 16,
+    fontWeight: "600", // font-semibold
   },
   pressed: {
     opacity: 0.8,
@@ -129,7 +154,7 @@ const variantStyles: Record<
     container: {
       backgroundColor: colors.background,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: colors.input,
     },
     text: { color: colors.foreground },
   },
@@ -145,6 +170,14 @@ const variantStyles: Record<
     container: { backgroundColor: "transparent" },
     text: { color: colors.primary, textDecorationLine: "underline" },
   },
+  "outline-destructive": {
+    container: {
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.destructive,
+    },
+    text: { color: colors.destructive },
+  },
 };
 
 const sizeStyles: Record<
@@ -152,19 +185,19 @@ const sizeStyles: Record<
   { container: ViewStyle; text: TextStyle }
 > = {
   default: {
-    container: { height: 36, paddingHorizontal: 16, paddingVertical: 8 },
-    text: { fontSize: 14 },
+    container: { height: 44, paddingHorizontal: 16 }, // h-11
+    text: { fontSize: 16 }, // text-base
   },
   sm: {
-    container: { height: 32, paddingHorizontal: 12 },
-    text: { fontSize: 14 },
+    container: { height: 36, paddingHorizontal: 12 }, // h-9
+    text: { fontSize: 14 }, // text-sm
   },
   lg: {
-    container: { height: 40, paddingHorizontal: 24 },
-    text: { fontSize: 14 },
+    container: { height: 48, paddingHorizontal: 24 }, // h-12
+    text: { fontSize: 18 }, // text-lg
   },
   icon: {
-    container: { height: 36, width: 36, paddingHorizontal: 0 },
-    text: {},
+    container: { height: 40, width: 40, paddingHorizontal: 0 }, // h-10 w-10
+    text: { fontSize: 16 },
   },
 };

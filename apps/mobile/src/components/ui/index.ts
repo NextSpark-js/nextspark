@@ -5,7 +5,8 @@
 
 // Core primitives
 export { Text, type TextProps } from "./text";
-export { Button, type ButtonProps } from "./button";
+// Button re-exported from shared package for web/mobile compatibility
+export { Button, type ButtonProps } from "@nextsparkjs/ui";
 export { Input, type InputProps } from "./input";
 export { Textarea, type TextareaProps } from "./textarea";
 export {
