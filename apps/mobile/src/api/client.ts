@@ -17,9 +17,10 @@ const API_URL =
     : 'http://localhost:5173')
 
 // Storage keys (namespaced to avoid conflicts)
-const TOKEN_KEY = '@nextspark:auth:token'
-const TEAM_ID_KEY = '@nextspark:auth:team_id'
-const USER_KEY = '@nextspark:auth:user'
+// SecureStore only allows alphanumeric, ".", "-", and "_"
+const TOKEN_KEY = 'nextspark.auth.token'
+const TEAM_ID_KEY = 'nextspark.auth.teamId'
+const USER_KEY = 'nextspark.auth.user'
 
 class ApiClient {
   private token: string | null = null
