@@ -32,6 +32,8 @@
   "restrictedArea": "Area de Desenvolvedor",
   "developerAccessOnly": "Apenas acesso de desenvolvedor",
   "config": {
+    "title": "Visualizador de Configuração",
+    "description": "Explorar configuração do tema e entidades",
     "error": "Erro carregando configuracao",
     "tabs": {
       "theme": "Config de Tema",
@@ -45,6 +47,8 @@
     "copy": "Copiar"
   },
   "tests": {
+    "title": "Casos de Teste",
+    "description": "Navegar e visualizar documentação de testes",
     "searchPlaceholder": "Buscar testes...",
     "collapseAll": "Recolher todos",
     "expandAll": "Expandir todos",

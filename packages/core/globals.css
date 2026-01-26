@@ -293,6 +293,60 @@ body {
 }
 
 /* =============================================
+   SKELETON - INP OPTIMIZED ANIMATIONS
+   High-performance skeleton loading states
+   ============================================= */
+
+/**
+ * GPU-accelerated skeleton pulse animation
+ * Uses opacity with will-change hint for smooth GPU-composited animation
+ * Respects prefers-reduced-motion for accessibility
+ */
+@keyframes skeleton-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Skeleton animation class - GPU accelerated */
+.animate-skeleton-pulse {
+  animation: skeleton-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  will-change: opacity;
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .animate-skeleton-pulse {
+    animation: none;
+  }
+}
+
+/**
+ * CSS Containment for skeleton elements
+ * Isolates layout/paint calculations to improve INP
+ */
+.skeleton-contained {
+  contain: content;
+}
+
+/**
+ * Skeleton container with content-visibility optimization
+ * Skips rendering of off-screen skeleton items
+ */
+.skeleton-container {
+  contain: layout style;
+}
+
+/* Apply content-visibility to direct children for virtualization effect */
+.skeleton-container > * {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 100px;
+}
+
+/* =============================================
    THEME SYSTEM - BUILD-TIME LOADING
    Custom theme CSS is automatically injected based on activeTheme config
    ============================================= */

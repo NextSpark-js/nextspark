@@ -12,6 +12,16 @@ import { join } from 'path'
 import { convertCorePath } from '../config.mjs'
 
 /**
+ * Normalize path separators to forward slashes (for cross-platform compatibility)
+ * @param {string} path - Path to normalize
+ * @returns {string} Path with forward slashes
+ */
+function normalizePath(path) {
+  if (typeof path !== 'string') return path
+  return path.replace(/\\/g, '/')
+}
+
+/**
  * Escape string for use in TypeScript string literal
  * @param {string} str - String to escape
  * @returns {string} Escaped string
@@ -170,10 +180,12 @@ export function hasPresets(endpoint: string): boolean {
       .join(',\n')
 
     const source = endpointConfig.source || 'unknown'
-    return `  '${endpointConfig.endpoint}': {
-    endpoint: '${endpointConfig.endpoint}',
+    const normalizedEndpoint = normalizePath(endpointConfig.endpoint)
+    const normalizedSourcePath = normalizePath(endpointConfig.sourcePath)
+    return `  '${normalizedEndpoint}': {
+    endpoint: '${normalizedEndpoint}',
     summary: '${escapeString(endpointConfig.summary || '')}',
-    sourcePath: '${endpointConfig.sourcePath}',
+    sourcePath: '${normalizedSourcePath}',
     source: '${source}',
     presets: [
 ${presetsCode}
@@ -325,10 +337,11 @@ export function getAllDocEndpoints(): string[] {
 
   // Build docs code - use endpoint from discovery
   const docsCode = docs.map(doc => {
-    const endpoint = doc.endpoint
+    const endpoint = normalizePath(doc.endpoint)
+    const filePath = normalizePath(doc.filePath)
     const source = doc.source || 'unknown'
     return `  '${endpoint}': {
-    path: '${doc.filePath}',
+    path: '${filePath}',
     title: '${escapeString(doc.title)}',
     endpoint: '${endpoint}',
     source: '${source}'

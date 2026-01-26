@@ -1,7 +1,8 @@
 /**
- * NextSpark Middleware
+ * NextSpark Proxy (Next.js 16+)
  *
  * Handles authentication, route protection, and user context injection.
+ * Note: In Next.js 16, "middleware" was renamed to "proxy" with nodejs runtime.
  *
  * Key responsibilities:
  * 1. Theme middleware override support
@@ -14,7 +15,6 @@
  */
 import { betterFetch } from '@better-fetch/fetch'
 import { NextRequest, NextResponse } from 'next/server'
-// Edge-compatible imports (do NOT use lib/services or lib/auth - they have Node.js dependencies)
 import {
   hasThemeMiddleware,
   executeThemeMiddleware,
@@ -22,8 +22,7 @@ import {
 } from '@nextsparkjs/core/lib/middleware'
 
 /**
- * Session type for middleware (edge-compatible inline definition)
- * We can't import from @nextsparkjs/core/lib/auth because it has Node.js dependencies
+ * Session type for proxy (inline definition)
  */
 interface Session {
   user: {
@@ -65,7 +64,7 @@ function isPublicPath(pathname: string): boolean {
   )
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // 1. Check for theme middleware override
@@ -178,7 +177,7 @@ export async function middleware(request: NextRequest) {
         request: { headers: requestHeaders },
       })
     } catch (error) {
-      console.error('Middleware error:', error)
+      console.error('Proxy error:', error)
       const loginUrl = new URL('/login', request.url)
       loginUrl.searchParams.set('callbackUrl', pathname)
       return NextResponse.redirect(loginUrl)

@@ -93,11 +93,14 @@ function getEntityLocales(entityDir, supportedLocales) {
 
 /**
  * Detect locale entries from a messages directory
- * Supports both directory pattern (en/, es/ with index.ts) and flat file pattern (en.json, es.json)
- * Directory pattern takes precedence if both exist
+ * Supports three patterns:
+ * 1. Directory with index.ts (en/, es/ with index.ts) - imports from directory
+ * 2. Directory with JSON files (en/, es/ with *.json files) - imports individual files
+ * 3. Flat file pattern (en.json, es.json) - imports single file
+ * Directory patterns take precedence if both exist
  *
  * @param {string} messagesDir - Path to the messages directory
- * @returns {Array<{locale: string, isDirectory: boolean}>} Detected locales with their type
+ * @returns {Array<{locale: string, isDirectory: boolean, hasIndexTs: boolean, jsonFiles: string[]}>} Detected locales with their type
  */
 function detectLocales(messagesDir) {
   if (!existsSync(messagesDir)) {
@@ -112,17 +115,23 @@ function detectLocales(messagesDir) {
     const stat = statSync(entryPath)
 
     if (stat.isDirectory()) {
-      // Directory pattern: check for index.ts
+      // Directory pattern: check for index.ts first
       const indexPath = join(entryPath, 'index.ts')
       if (existsSync(indexPath)) {
-        // Directory pattern takes precedence
-        locales.set(entry, { locale: entry, isDirectory: true })
+        // Directory with index.ts takes precedence
+        locales.set(entry, { locale: entry, isDirectory: true, hasIndexTs: true, jsonFiles: [] })
+      } else {
+        // Check for JSON files in directory (new pattern for themes)
+        const jsonFiles = readdirSync(entryPath).filter(f => f.endsWith('.json'))
+        if (jsonFiles.length > 0) {
+          locales.set(entry, { locale: entry, isDirectory: true, hasIndexTs: false, jsonFiles })
+        }
       }
     } else if (entry.endsWith('.json')) {
       // Flat file pattern (only if directory doesn't exist)
       const locale = entry.replace(/\.json$/, '')
       if (!locales.has(locale)) {
-        locales.set(locale, { locale, isDirectory: false })
+        locales.set(locale, { locale, isDirectory: false, hasIndexTs: false, jsonFiles: [] })
       }
     }
   })

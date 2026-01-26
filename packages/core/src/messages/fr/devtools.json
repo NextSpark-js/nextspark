@@ -32,6 +32,8 @@
   "restrictedArea": "Zone developpeur",
   "developerAccessOnly": "Acces developpeur uniquement",
   "config": {
+    "title": "Visualiseur de Configuration",
+    "description": "Explorer la configuration du thème et des entités",
     "error": "Erreur lors du chargement de la configuration",
     "tabs": {
       "theme": "Config du theme",
@@ -45,6 +47,8 @@
     "copy": "Copier"
   },
   "tests": {
+    "title": "Cas de Test",
+    "description": "Parcourir et visualiser la documentation des tests",
     "searchPlaceholder": "Rechercher des tests...",
     "collapseAll": "Tout reduire",
     "expandAll": "Tout etendre",

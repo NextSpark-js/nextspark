@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useState, useCallback, useMemo } from 'react'
 import { cn } from '../../../lib/utils'
 import { useUserProfile } from '../../../hooks/useUserProfile'
+import { usePrefetchSettings } from '../../../hooks/usePrefetch'
 import {
   User,
   Users,
@@ -41,8 +42,21 @@ export function SettingsSidebar({ className }: SettingsSidebarProps) {
   const pathname = usePathname()
   const [statusMessage, setStatusMessage] = useState('')
   const { hasPassword } = useUserProfile()
+  const { prefetchProfile, prefetchTeams } = usePrefetchSettings()
   const t = useTranslations('common')
   const tSettings = useTranslations('settings')
+
+  // Prefetch handlers for instant navigation
+  const getPrefetchHandler = useCallback((pageName: string) => {
+    switch (pageName) {
+      case 'profile':
+        return prefetchProfile
+      case 'teams':
+        return prefetchTeams
+      default:
+        return undefined
+    }
+  }, [prefetchProfile, prefetchTeams])
 
   // Get enabled settings pages from configuration and filter based on user's auth method
   const filteredNavigation = useMemo(() => {
@@ -123,7 +137,8 @@ export function SettingsSidebar({ className }: SettingsSidebarProps) {
               {filteredNavigation.map((item) => {
                 const isActive = pathname === item.href
                 const Icon = item.icon
-                
+                const prefetchHandler = getPrefetchHandler(item.name)
+
                 return (
                   <Link
                     key={item.name}
@@ -131,6 +146,7 @@ export function SettingsSidebar({ className }: SettingsSidebarProps) {
                     role="listitem"
                     onClick={() => handleNavigation(tSettings(`navigation.${item.name}`), tSettings(`overview.${item.name}Description`))}
                     onKeyDown={(e) => handleKeyDown(e, item.href, tSettings(`navigation.${item.name}`), tSettings(`overview.${item.name}Description`))}
+                    onMouseEnter={prefetchHandler}
                     aria-current={isActive ? 'page' : undefined}
                     aria-label={createAriaLabel(
                       '{name} - {description}{current}',

@@ -61,7 +61,8 @@ async function DefaultMainDashboardLayout({
   children: React.ReactNode
 }) {
   // Get entities directly from the imported registry
-  const allEntities = Object.values(ENTITY_REGISTRY).map(entry => entry.config)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const allEntities = Object.values(ENTITY_REGISTRY).map(entry => (entry as any).config)
   // Filter to only include full EntityConfig (not child entities)
   const entities = allEntities.filter(isEntityConfig)
   const serializedEntities: SerializableEntityConfig[] = entities.map(serializeEntityConfig)

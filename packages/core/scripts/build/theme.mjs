@@ -48,7 +48,8 @@ export function syncAppGlobalsCss(config, activeTheme) {
   // Calculate the correct relative path from app/ to theme globals.css
   const appDir = path.join(config.projectRoot, 'app')
   const themeGlobalsPath = path.join(config.themesDir, activeTheme, 'styles', 'globals.css')
-  const relativePath = path.relative(appDir, themeGlobalsPath)
+  // Normalize to forward slashes for cross-platform CSS compatibility
+  const relativePath = path.relative(appDir, themeGlobalsPath).replace(/\\/g, '/')
 
   // Expected import statement
   const expectedImport = `@import "${relativePath}";`

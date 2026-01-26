@@ -288,6 +288,7 @@
     "tests/jest/__mocks__",
     "globals.css",
     "theme-styles.css",
+    "nextspark-entities.d.ts",
     "README.md",
     "scripts"
   ],

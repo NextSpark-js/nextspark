@@ -94,9 +94,11 @@ export const PUT = withRateLimitTier(async (
         
         // Handle relation-multi fields - store as JSONB array of IDs
         if (field?.type === 'relation-multi') {
-          let relationIds = []
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          let relationIds: any[] = []
           if (Array.isArray(value)) {
-            relationIds = value.map(item => 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            relationIds = value.map((item: any) =>
               typeof item === 'object' && item && 'id' in item ? item.id : item
             ).filter(id => id && String(id).trim() !== '')
           }
