@@ -3,7 +3,7 @@
  * Custom slider using Animated + PanResponder
  */
 
-import React, { useRef, useState, useCallback } from "react"
+import React, { useRef, useState, useCallback, useEffect } from "react"
 import {
   View,
   Animated,
@@ -11,6 +11,8 @@ import {
   StyleSheet,
   LayoutChangeEvent,
   type ViewStyle,
+  type GestureResponderEvent,
+  type PanResponderGestureState,
 } from "react-native"
 import { useTheme } from "../native/ThemeContext"
 
@@ -63,63 +65,107 @@ const Slider = React.forwardRef<View, SliderProps>(
     // Animated value for thumb position
     const pan = useRef(new Animated.Value(0)).current
 
+    // Refs to access current values in PanResponder without recreating it
+    const stateRef = useRef({
+      trackWidth: 0,
+      currentValue: 0,
+      isControlled: false,
+      disabled: false,
+      min: 0,
+      max: 100,
+      step: 1,
+      onValueChange: undefined as ((value: number[]) => void) | undefined,
+      onValueCommit: undefined as ((value: number[]) => void) | undefined,
+      setInternalValue: (() => {}) as React.Dispatch<React.SetStateAction<number>>,
+    })
+
+    // Track starting position for drag gestures
+    const startPosition = useRef(0)
+
+    // Keep refs in sync with props/state
+    useEffect(() => {
+      stateRef.current = {
+        trackWidth,
+        currentValue,
+        isControlled,
+        disabled,
+        min,
+        max,
+        step,
+        onValueChange,
+        onValueCommit,
+        setInternalValue,
+      }
+    })
+
     // Calculate position from value
     const valueToPosition = useCallback(
-      (val: number) => {
-        if (trackWidth === 0) return 0
+      (val: number, width: number = trackWidth) => {
+        if (width === 0) return 0
         const percentage = (val - min) / (max - min)
-        return percentage * trackWidth
+        return percentage * width
       },
       [trackWidth, min, max]
     )
 
-    // Calculate value from position
-    const positionToValue = useCallback(
-      (pos: number) => {
-        if (trackWidth === 0) return min
-        const percentage = Math.max(0, Math.min(1, pos / trackWidth))
-        let val = min + percentage * (max - min)
-        // Apply step
-        val = Math.round(val / step) * step
-        return Math.max(min, Math.min(max, val))
-      },
-      [trackWidth, min, max, step]
-    )
+    // Calculate value from position (using ref values for PanResponder)
+    const positionToValueRef = (pos: number) => {
+      const { trackWidth: w, min: minVal, max: maxVal, step: stepVal } = stateRef.current
+      if (w === 0) return minVal
+      const percentage = Math.max(0, Math.min(1, pos / w))
+      let val = minVal + percentage * (maxVal - minVal)
+      // Apply step
+      val = Math.round(val / stepVal) * stepVal
+      return Math.max(minVal, Math.min(maxVal, val))
+    }
 
-    // Update animated position when value changes
-    React.useEffect(() => {
+    // Calculate position from value (using ref values for PanResponder)
+    const valueToPositionRef = (val: number) => {
+      const { trackWidth: w, min: minVal, max: maxVal } = stateRef.current
+      if (w === 0) return 0
+      const percentage = (val - minVal) / (maxVal - minVal)
+      return percentage * w
+    }
+
+    // Update animated position when value changes (not during drag)
+    useEffect(() => {
       const position = valueToPosition(currentValue)
       pan.setValue(position)
     }, [currentValue, valueToPosition, pan])
 
+    // Create PanResponder ONCE - use refs to access current values
     const panResponder = useRef(
       PanResponder.create({
-        onStartShouldSetPanResponder: () => !disabled,
-        onMoveShouldSetPanResponder: () => !disabled,
+        onStartShouldSetPanResponder: () => !stateRef.current.disabled,
+        onMoveShouldSetPanResponder: () => !stateRef.current.disabled,
         onPanResponderGrant: () => {
-          // Stop any ongoing animation
+          // Store current position when drag starts
           pan.stopAnimation()
+          startPosition.current = valueToPositionRef(stateRef.current.currentValue)
         },
-        onPanResponderMove: (_, gestureState) => {
-          const currentPosition = valueToPosition(currentValue)
+        onPanResponderMove: (
+          _: GestureResponderEvent,
+          gestureState: PanResponderGestureState
+        ) => {
+          const { trackWidth: w, isControlled: controlled, onValueChange: onChange, setInternalValue: setVal } = stateRef.current
+
+          // Calculate new position based on start position + drag delta
           const newPosition = Math.max(
             0,
-            Math.min(trackWidth, currentPosition + gestureState.dx)
+            Math.min(w, startPosition.current + gestureState.dx)
           )
           pan.setValue(newPosition)
 
-          const newValue = positionToValue(newPosition)
-          if (newValue !== currentValue) {
-            if (!isControlled) {
-              setInternalValue(newValue)
-            }
-            onValueChange?.([newValue])
+          const newValue = positionToValueRef(newPosition)
+          if (!controlled) {
+            setVal(newValue)
           }
+          onChange?.([newValue])
         },
         onPanResponderRelease: () => {
-          pan.flattenOffset()
-          const newValue = positionToValue((pan as any)._value)
-          onValueCommit?.([newValue])
+          const { onValueCommit: onCommit } = stateRef.current
+          const newValue = positionToValueRef((pan as any)._value)
+          onCommit?.([newValue])
         },
       })
     ).current
@@ -133,6 +179,14 @@ const Slider = React.forwardRef<View, SliderProps>(
     const handleTrackPress = (event: any) => {
       if (disabled) return
       const { locationX } = event.nativeEvent
+      const positionToValue = (pos: number) => {
+        if (trackWidth === 0) return min
+        const percentage = Math.max(0, Math.min(1, pos / trackWidth))
+        let val = min + percentage * (max - min)
+        val = Math.round(val / step) * step
+        return Math.max(min, Math.min(max, val))
+      }
+
       const newValue = positionToValue(locationX - 8) // Offset for thumb center
 
       if (!isControlled) {
