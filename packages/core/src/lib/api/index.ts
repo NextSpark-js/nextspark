@@ -7,6 +7,7 @@
 
 // Core API functionality
 export * from './auth';
+export * from './auth/dual-auth';
 export * from './keys';
 export * from './helpers';
 export * from './rate-limit';

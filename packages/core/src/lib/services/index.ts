@@ -43,6 +43,7 @@ export {
 } from './docs.service'
 export { GenericEntityService } from './generic-entity.service'
 export { PatternUsageService } from './pattern-usage.service'
+export { TransactionalMetaService } from './transactional-meta.service'
 
 // Export types
 export type { UpdateUserPayload } from './user.service'
