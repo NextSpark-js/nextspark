@@ -132,6 +132,10 @@
       "types": "./dist/lib/blocks/*.d.ts",
       "import": "./dist/lib/blocks/*.js"
     },
+    "./lib/plugins/env-loader": {
+      "types": "./dist/lib/plugins/env-loader.d.ts",
+      "import": "./dist/lib/plugins/env-loader.js"
+    },
     "./lib/*": {
       "types": "./dist/lib/*.d.ts",
       "import": "./dist/lib/*.js"

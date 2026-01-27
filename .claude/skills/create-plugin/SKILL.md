@@ -124,12 +124,13 @@ pnpm create:plugin analytics \
 plugins/<plugin-name>/              # Monorepo location
 ├── plugin.config.ts        # Plugin configuration
 ├── README.md               # Plugin documentation
-├── .env.example            # Environment variables
+├── .env.example            # Environment variables template
 ├── api/
 │   └── example/route.ts    # Example API endpoint
 ├── lib/
 │   ├── core.ts             # Core plugin logic
-│   └── types.ts            # TypeScript types
+│   ├── types.ts            # TypeScript types
+│   └── plugin-env.ts       # Env loader wrapper (REQUIRED)
 ├── components/
 │   └── ExampleWidget.tsx   # Example UI component
 ├── hooks/
@@ -213,13 +214,90 @@ export interface MyPluginResult {
 ### 4.3 .env.example - Environment Variables
 
 ```bash
+# ============================================
+# MY PLUGIN CONFIGURATION
+# ============================================
+# Copy this file to .env
+# Priority: Plugin .env > Root .env > Defaults
+
 # Required for production
 MY_PLUGIN_API_KEY=your-api-key-here
 
 # Optional configuration
 MY_PLUGIN_BASE_URL=https://api.example.com
 MY_PLUGIN_DEBUG=false
+MY_PLUGIN_ENABLED=true
 ```
+
+### 4.4 lib/plugin-env.ts - Centralized Env Loader (REQUIRED)
+
+Every plugin MUST use the core's centralized env-loader:
+
+```typescript
+// plugins/my-plugin/lib/plugin-env.ts
+import { getPluginEnv } from '@nextsparkjs/core/lib/plugins/env-loader'
+
+interface MyPluginEnvConfig {
+  MY_PLUGIN_API_KEY?: string
+  MY_PLUGIN_BASE_URL?: string
+  MY_PLUGIN_DEBUG?: string
+  MY_PLUGIN_ENABLED?: string
+}
+
+class PluginEnvironment {
+  private static instance: PluginEnvironment
+  private config: MyPluginEnvConfig = {}
+  private loaded = false
+
+  private constructor() {
+    this.loadEnvironment()
+  }
+
+  public static getInstance(): PluginEnvironment {
+    if (!PluginEnvironment.instance) {
+      PluginEnvironment.instance = new PluginEnvironment()
+    }
+    return PluginEnvironment.instance
+  }
+
+  private loadEnvironment(): void {
+    if (this.loaded) return
+
+    const env = getPluginEnv('my-plugin')
+    this.config = {
+      MY_PLUGIN_API_KEY: env.MY_PLUGIN_API_KEY,
+      MY_PLUGIN_BASE_URL: env.MY_PLUGIN_BASE_URL || 'https://api.example.com',
+      MY_PLUGIN_DEBUG: env.MY_PLUGIN_DEBUG || 'false',
+      MY_PLUGIN_ENABLED: env.MY_PLUGIN_ENABLED || 'true',
+    }
+    this.loaded = true
+  }
+
+  public getApiKey(): string | undefined {
+    return this.config.MY_PLUGIN_API_KEY
+  }
+
+  public getBaseUrl(): string {
+    return this.config.MY_PLUGIN_BASE_URL || 'https://api.example.com'
+  }
+
+  public isDebugEnabled(): boolean {
+    return this.config.MY_PLUGIN_DEBUG === 'true'
+  }
+
+  public isPluginEnabled(): boolean {
+    return this.config.MY_PLUGIN_ENABLED !== 'false'
+  }
+}
+
+export const pluginEnv = PluginEnvironment.getInstance()
+```
+
+**Benefits:**
+- ✅ Plugin .env takes priority over root .env
+- ✅ Automatic fallback to root .env for shared variables
+- ✅ Type-safe configuration access
+- ✅ Singleton pattern for performance
 
 ---
 
@@ -301,6 +379,7 @@ Each entity requires 4 files:
 - [ ] **package.json** tiene `peerDependencies` correctas (no duplicar core)
 - [ ] plugin.config.ts has correct metadata
 - [ ] lib/types.ts has appropriate interfaces
+- [ ] **lib/plugin-env.ts** uses core's env-loader
 - [ ] .env.example documents all environment variables
 - [ ] Plugin registered in plugin-sandbox theme
 - [ ] Registry rebuilt: `node core/scripts/build/registry.mjs`

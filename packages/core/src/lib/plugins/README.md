@@ -44,6 +44,29 @@ const anthropicKey = env.ANTHROPIC_API_KEY
 const useLocal = env.USE_LOCAL_AI === 'true'
 ```
 
+## Priority System
+
+The env-loader follows this priority order:
+
+1. **Plugin `.env`** (`contents/plugins/{plugin}/.env`) - Highest priority
+2. **Root `.env`** (project root) - Fallback for variables not in plugin .env
+3. **Built-in defaults** - Lowest priority
+
+This means:
+- Plugin-specific variables override root variables
+- Shared credentials (like API keys) can stay in root `.env`
+- Each plugin can customize its own configuration
+
+```typescript
+// If plugin .env has AI_PLUGIN_ENABLED=true
+// And root .env has AI_PLUGIN_ENABLED=false
+// The plugin .env value (true) wins
+
+const env = getPluginEnv('ai')
+env.AI_PLUGIN_ENABLED // 'true' (from plugin .env)
+env.DATABASE_URL      // from root .env (fallback)
+```
+
 ## Benefits
 
 ✅ **DRY**: No code duplication across plugins
@@ -51,6 +74,8 @@ const useLocal = env.USE_LOCAL_AI === 'true'
 ✅ **Type-safe**: Add your own types per plugin
 ✅ **Centralized**: Single source of truth for env loading
 ✅ **Scalable**: Add unlimited plugins without changing core code
+✅ **Priority**: Plugin .env overrides root .env
+✅ **Fallback**: Root .env available for shared configuration
 
 ## API Reference
 
