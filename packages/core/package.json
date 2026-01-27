@@ -228,6 +228,22 @@
       "types": "./dist/components/patterns/pages/index.d.ts",
       "import": "./dist/components/patterns/pages/index.js"
     },
+    "./components/app": {
+      "types": "./dist/components/app/index.d.ts",
+      "import": "./dist/components/app/index.js"
+    },
+    "./components/app/layouts": {
+      "types": "./dist/components/app/layouts/index.d.ts",
+      "import": "./dist/components/app/layouts/index.js"
+    },
+    "./components/app/layouts/PublicNavbar": {
+      "types": "./dist/components/app/layouts/PublicNavbar.d.ts",
+      "import": "./dist/components/app/layouts/PublicNavbar.js"
+    },
+    "./components/app/layouts/PublicFooter": {
+      "types": "./dist/components/app/layouts/PublicFooter.d.ts",
+      "import": "./dist/components/app/layouts/PublicFooter.js"
+    },
     "./components/*": {
       "types": "./dist/components/*.d.ts",
       "import": "./dist/components/*.js"
@@ -279,6 +295,10 @@
     "./entities/*": {
       "types": "./dist/entities/*.d.ts",
       "import": "./dist/entities/*.js"
+    },
+    "./entities/patterns/*": {
+      "types": "./dist/entities/patterns/*.d.ts",
+      "import": "./dist/entities/patterns/*.js"
     }
   },
   "files": [

@@ -193,8 +193,19 @@ export function useUrlFilters<S extends FilterSchema>(
   }
 }
 
-// Re-export types for convenience
-export * from './useUrlFilters.types'
+// Re-export types for convenience (named exports required in client boundary)
+export type {
+  FilterType,
+  NumberRange,
+  DateRange,
+  FilterDefinition,
+  FilterSchema,
+  FilterValueType,
+  FilterValues,
+  UseUrlFiltersOptions,
+  UseUrlFiltersReturn,
+  EntityFiltersReturn,
+} from './useUrlFilters.types'
 export {
   parseFiltersFromUrl,
   serializeFiltersToUrl,
