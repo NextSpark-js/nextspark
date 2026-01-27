@@ -1,0 +1,26 @@
+{
+  "tasks": {
+    "title": "Tasks",
+    "empty": "No tasks yet",
+    "create": "Create Task",
+    "edit": "Edit Task",
+    "delete": "Delete Task",
+    "fields": {
+      "title": "Title",
+      "description": "Description",
+      "status": "Status",
+      "priority": "Priority",
+      "dueDate": "Due Date"
+    },
+    "status": {
+      "pending": "Pending",
+      "in_progress": "In Progress",
+      "completed": "Completed"
+    },
+    "priority": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    }
+  }
+}

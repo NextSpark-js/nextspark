@@ -13,6 +13,7 @@ import { registryBuildCommand, registryWatchCommand } from './commands/registry.
 import { initCommand } from './commands/init.js';
 import { addPluginCommand } from './commands/add-plugin.js';
 import { addThemeCommand } from './commands/add-theme.js';
+import { addMobileCommand } from './commands/add-mobile.js';
 import { doctorCommand } from './commands/doctor.js';
 import { dbMigrateCommand, dbSeedCommand } from './commands/db.js';
 import { syncAppCommand } from './commands/sync-app.js';
@@ -111,6 +112,14 @@ program
   .option('--no-deps', 'Skip installing dependencies')
   .option('--dry-run', 'Show what would be done without making changes')
   .action(addThemeCommand);
+
+// Add mobile command
+program
+  .command('add:mobile')
+  .description('Add mobile app to your project')
+  .option('-f, --force', 'Overwrite if already exists')
+  .option('--skip-install', 'Skip npm install')
+  .action(addMobileCommand);
 
 // Doctor command (health check)
 program

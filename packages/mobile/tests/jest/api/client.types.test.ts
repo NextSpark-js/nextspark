@@ -3,7 +3,7 @@
  * ApiError class and type definitions
  */
 
-import { ApiError } from '@/api/client.types'
+import { ApiError } from '../../../src/api/client.types'
 
 describe('ApiError', () => {
   it('should be instance of Error', () => {

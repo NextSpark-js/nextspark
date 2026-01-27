@@ -2,12 +2,11 @@
  * Tests for lib/alert.ts
  * Native Alert utility tests (iOS/Android only)
  *
- * Note: Platform.OS is mocked as 'ios' by default in setup.ts
- * This app is native-only, no web tests needed
+ * Note: Platform.OS is mocked as 'ios' by default in jest.setup.js
  */
 
 import { Alert as RNAlert } from 'react-native'
-import { alert, confirm, confirmDestructive, Alert } from '@/lib/alert'
+import { alert, confirm, confirmDestructive, Alert } from '../../../src/lib/alert'
 
 describe('Alert utility (native)', () => {
   beforeEach(() => {

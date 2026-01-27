@@ -1,0 +1,99 @@
+{
+  "name": "@nextsparkjs/mobile",
+  "version": "0.1.0",
+  "description": "Mobile app infrastructure for NextSpark - API client, providers, and utilities for Expo apps",
+  "license": "MIT",
+  "author": "NextSpark <hello@nextspark.dev>",
+  "homepage": "https://nextspark.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NextSpark-js/nextspark.git",
+    "directory": "packages/mobile"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./api": {
+      "types": "./dist/api/index.d.ts",
+      "import": "./dist/api/index.js"
+    },
+    "./api/core": {
+      "types": "./dist/api/core/index.d.ts",
+      "import": "./dist/api/core/index.js"
+    },
+    "./api/entities": {
+      "types": "./dist/api/entities/index.d.ts",
+      "import": "./dist/api/entities/index.js"
+    },
+    "./providers": {
+      "types": "./dist/providers/index.d.ts",
+      "import": "./dist/providers/index.js"
+    },
+    "./hooks": {
+      "types": "./dist/hooks/index.d.ts",
+      "import": "./dist/hooks/index.js"
+    },
+    "./lib": {
+      "types": "./dist/lib/index.d.ts",
+      "import": "./dist/lib/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "templates",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "build:watch": "tsup --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.0.0",
+    "expo": ">=54.0.0",
+    "expo-constants": ">=18.0.0",
+    "expo-secure-store": ">=15.0.0",
+    "react": ">=18.0.0",
+    "react-native": ">=0.75.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.0",
+    "@babel/preset-env": "^7.25.0",
+    "@babel/preset-react": "^7.25.0",
+    "@babel/preset-typescript": "^7.25.0",
+    "@testing-library/react-native": "^13.0.0",
+    "@types/jest": "^29.5.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19",
+    "babel-jest": "^29.7.0",
+    "glob": "^11.0.0",
+    "jest": "^29.7.0",
+    "jest-expo": "^54.0.0",
+    "react": "19.1.0",
+    "react-native": "0.81.5",
+    "react-test-renderer": "19.1.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5"
+  },
+  "keywords": [
+    "nextspark",
+    "mobile",
+    "expo",
+    "react-native",
+    "api-client",
+    "authentication"
+  ],
+  "nextspark": {
+    "type": "mobile"
+  }
+}

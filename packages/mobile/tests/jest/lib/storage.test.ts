@@ -2,12 +2,12 @@
  * Tests for lib/storage.ts
  * Native secure storage tests (iOS/Android only)
  *
- * Note: These tests use the global mocks from setup.ts
+ * Note: These tests use the global mocks from jest.setup.js
  * Platform.OS is mocked as 'ios' by default
  */
 
 import * as SecureStore from 'expo-secure-store'
-import { getItemAsync, setItemAsync, deleteItemAsync } from '@/lib/storage'
+import { getItemAsync, setItemAsync, deleteItemAsync } from '../../../src/lib/storage'
 
 describe('Storage utility (native)', () => {
   beforeEach(() => {
