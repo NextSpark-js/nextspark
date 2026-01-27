@@ -29,7 +29,17 @@
     "dev": "tsup --watch"
   },
   "peerDependencies": {
-    "react": ">=18.0.0"
+    "react": ">=18.0.0",
+    "react-native": ">=0.75.0",
+    "react-native-reanimated": ">=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react-native": {
+      "optional": true
+    },
+    "react-native-reanimated": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.11",
@@ -49,8 +59,6 @@
   },
   "devDependencies": {
     "@types/react": "^19",
-    "react-native": "^0.79.2",
-    "react-native-reanimated": "^4.2.1",
     "tsup": "^8.5.1",
     "typescript": "^5"
   }
