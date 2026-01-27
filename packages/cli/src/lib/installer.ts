@@ -42,7 +42,7 @@ export async function installPlugin(
     mkdirSync(pluginsDir, { recursive: true })
   }
 
-  // Copiar archivos
+  // Copy files
   console.log(`  Copying to contents/plugins/${pluginName}/...`)
   cpSync(extractedPath, targetDir, { recursive: true })
 
@@ -105,7 +105,7 @@ export async function installTheme(
     mkdirSync(themesDir, { recursive: true })
   }
 
-  // Copiar archivos
+  // Copy files
   console.log(`  Copying to contents/themes/${themeName}/...`)
   cpSync(extractedPath, targetDir, { recursive: true })
 
