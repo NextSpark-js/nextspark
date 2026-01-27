@@ -165,9 +165,11 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
     }).start()
 
     try {
+      // TODO: Change back to stdio: 'pipe' once Windows issues are resolved
+      installSpinner.stop()
       execSync('pnpm install --force', {
         cwd: process.cwd(),
-        stdio: 'pipe',
+        stdio: 'inherit',
       })
       installSpinner.succeed('Dependencies installed!')
     } catch (error) {
@@ -184,9 +186,11 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
     try {
       const projectRoot = process.cwd()
       const registryScript = join(projectRoot, 'node_modules/@nextsparkjs/core/scripts/build/registry.mjs')
+      // TODO: Change back to stdio: 'pipe' once Windows issues are resolved
+      registrySpinner.stop()
       execSync(`node "${registryScript}" --build`, {
         cwd: projectRoot,
-        stdio: 'pipe',
+        stdio: 'inherit',
         env: {
           ...process.env,
           NEXTSPARK_PROJECT_ROOT: projectRoot,
@@ -473,8 +477,10 @@ async function installCore(): Promise<boolean> {
       installCmd = `npm install ${packageSpec}`
     }
 
+    // TODO: Change back to stdio: 'pipe' once Windows issues are resolved
+    spinner.stop()
     execSync(installCmd, {
-      stdio: 'pipe',
+      stdio: 'inherit',
       cwd: process.cwd(),
     })
 
