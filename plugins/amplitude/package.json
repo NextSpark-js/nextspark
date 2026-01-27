@@ -1,12 +1,12 @@
 {
   "name": "@nextsparkjs/plugin-amplitude",
-  "version": "0.1.0-beta.73",
+  "version": "0.1.0-beta.74",
   "private": false,
   "main": "./plugin.config.ts",
   "requiredPlugins": [],
   "dependencies": {},
   "peerDependencies": {
-    "@nextsparkjs/core": "workspace:*",
+    "@nextsparkjs/core": "*",
     "next": "^15.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

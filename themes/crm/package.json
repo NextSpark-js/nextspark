@@ -1,14 +1,14 @@
 {
   "name": "@nextsparkjs/theme-crm",
-  "version": "0.1.0-beta.73",
+  "version": "0.1.0-beta.74",
   "private": false,
   "type": "module",
   "main": "./config/theme.config.ts",
   "requiredPlugins": [],
   "dependencies": {},
   "peerDependencies": {
-    "@nextsparkjs/core": "workspace:*",
-    "@nextsparkjs/testing": "workspace:*",
+    "@nextsparkjs/core": "*",
+    "@nextsparkjs/testing": "*",
     "lucide-react": "^0.539.0",
     "next": "^15.0.0",
     "next-intl": "^4.0.0",
