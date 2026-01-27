@@ -39,8 +39,8 @@ export class MetaSystemAdapter {
 
     if (config && config.access?.metadata) {
       return {
-        tableName: config.slug,
-        metaTableName: `${config.slug}_metas`,
+        tableName: config.tableName || config.slug,
+        metaTableName: `${config.tableName || config.slug}_metas`,
         idColumn: 'entityId',
         apiPath: `/api/v1/${config.slug}`
       }
@@ -98,8 +98,8 @@ export class MetaSystemAdapter {
 
     return {
       entityType: entityConfig.slug,
-      tableName: entityConfig.slug,
-      metaTableName: `${entityConfig.slug}_metas`,
+      tableName: entityConfig.tableName || entityConfig.slug,
+      metaTableName: `${entityConfig.tableName || entityConfig.slug}_metas`,
       idColumn: 'entityId',
       apiPath: `/api/v1/${entityConfig.slug}`
     }
