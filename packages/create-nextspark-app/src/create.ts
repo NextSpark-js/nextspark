@@ -15,6 +15,7 @@ function findLocalTarball(packageName: string): string | null {
   const searchPaths = [
     path.join(process.cwd(), '.packages'),
     path.join(process.cwd(), '..', '.packages'),
+    path.join(process.cwd(), '..', 'repo', '.packages'),  // projects/ -> repo/.packages
     path.join(process.cwd(), '..', '..', '.packages'),
     path.join(process.cwd(), '..', '..', 'repo', '.packages'),
   ]

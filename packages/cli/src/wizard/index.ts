@@ -58,32 +58,31 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
 
   try {
     // Theme & Plugin Selection (before wizard prompts)
+    // This runs regardless of preset mode to support CLI flags
     let selectedTheme: ThemeChoice = null
     let selectedPlugins: PluginChoice[] = []
 
-    if (!options.preset) {
-      // Non-interactive mode: use CLI flags
-      if (options.theme !== undefined) {
-        selectedTheme = options.theme === 'none' ? null : options.theme as ThemeChoice
-        showInfo(`Reference theme: ${selectedTheme || 'None'}`)
-      } else if (options.mode !== 'quick') {
-        // Interactive mode: prompt user
-        selectedTheme = await promptThemeSelection()
-      }
+    // Non-interactive mode: use CLI flags
+    if (options.theme !== undefined) {
+      selectedTheme = options.theme === 'none' ? null : options.theme as ThemeChoice
+      showInfo(`Reference theme: ${selectedTheme || 'None'}`)
+    } else if (!options.preset && options.mode !== 'quick') {
+      // Interactive mode: prompt user (only if not using preset)
+      selectedTheme = await promptThemeSelection()
+    }
 
-      // Plugins selection
-      if (options.plugins !== undefined) {
-        selectedPlugins = options.plugins as PluginChoice[]
-        if (selectedPlugins.length > 0) {
-          showInfo(`Selected plugins: ${selectedPlugins.join(', ')}`)
-        }
-      } else if (options.mode !== 'quick' && !options.yes) {
-        // Interactive mode: prompt user (skip in --yes mode)
-        selectedPlugins = await promptPluginsSelection(selectedTheme)
-      } else if (selectedTheme) {
-        // In quick/yes mode, auto-include required plugins for theme
-        selectedPlugins = getRequiredPlugins(selectedTheme)
+    // Plugins selection
+    if (options.plugins !== undefined) {
+      selectedPlugins = options.plugins as PluginChoice[]
+      if (selectedPlugins.length > 0) {
+        showInfo(`Selected plugins: ${selectedPlugins.join(', ')}`)
       }
+    } else if (!options.preset && options.mode !== 'quick' && !options.yes) {
+      // Interactive mode: prompt user (skip in --yes mode or preset mode)
+      selectedPlugins = await promptPluginsSelection(selectedTheme)
+    } else if (selectedTheme) {
+      // In quick/yes/preset mode, auto-include required plugins for theme
+      selectedPlugins = getRequiredPlugins(selectedTheme)
     }
 
     let config: WizardConfig

@@ -144,7 +144,7 @@ async function registerPluginInThemeConfig(pluginName: string): Promise<void> {
 
   if (existsSync(envPath)) {
     const envContent = readFileSync(envPath, 'utf-8')
-    const match = envContent.match(/NEXT_PUBLIC_ACTIVE_THEME=([^\s\n]+)/)
+    const match = envContent.match(/NEXT_PUBLIC_ACTIVE_THEME=["']?([^"'\s\n]+)["']?/)
     if (match) {
       activeTheme = match[1]
     }
