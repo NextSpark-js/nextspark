@@ -83,3 +83,30 @@ export {
   type DialogFooterProps,
   type DialogCloseProps,
 } from "./components/Dialog.native";
+
+// Progress
+export { Progress, type ProgressProps } from "./components/Progress.native";
+
+// Tabs
+export {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+  type TabsProps,
+  type TabsListProps,
+  type TabsTriggerProps,
+  type TabsContentProps,
+} from "./components/Tabs.native";
+
+// Accordion
+export {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+  type AccordionProps,
+  type AccordionItemProps,
+  type AccordionTriggerProps,
+  type AccordionContentProps,
+} from "./components/Accordion.native";

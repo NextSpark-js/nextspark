@@ -1,117 +1,65 @@
-"use client";
-
 /**
  * Avatar Component - Web version
- * User avatar with fallback using Tailwind
+ * Matches @nextsparkjs/core implementation (uses Radix)
  */
+"use client";
+
 import * as React from "react";
-import { cva, type VariantProps } from "class-variance-authority";
+import * as AvatarPrimitive from "@radix-ui/react-avatar";
 import { cn } from "../utils";
-
-const avatarVariants = cva(
-  "relative flex shrink-0 overflow-hidden rounded-full",
-  {
-    variants: {
-      size: {
-        sm: "h-8 w-8",
-        default: "h-10 w-10",
-        lg: "h-12 w-12",
-        xl: "h-16 w-16",
-      },
-    },
-    defaultVariants: {
-      size: "default",
-    },
-  }
-);
-
-const avatarTextVariants = cva("font-semibold text-white", {
-  variants: {
-    size: {
-      sm: "text-xs",
-      default: "text-sm",
-      lg: "text-base",
-      xl: "text-lg",
-    },
-  },
-  defaultVariants: {
-    size: "default",
-  },
-});
 
 export type AvatarSize = "sm" | "default" | "lg" | "xl";
 
 export interface AvatarProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof avatarVariants> {}
+  extends React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Root> {}
 
-const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
-  ({ className, size, children, ...props }, ref) => {
-    return (
-      <div ref={ref} className={cn(avatarVariants({ size }), className)} {...props}>
-        {children}
-      </div>
-    );
-  }
-);
+const Avatar = React.forwardRef<
+  React.ElementRef<typeof AvatarPrimitive.Root>,
+  AvatarProps
+>(({ className, ...props }, ref) => (
+  <AvatarPrimitive.Root
+    ref={ref}
+    className={cn(
+      "relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full",
+      className
+    )}
+    {...props}
+  />
+));
+Avatar.displayName = AvatarPrimitive.Root.displayName;
 
-Avatar.displayName = "Avatar";
+export interface AvatarImageProps
+  extends React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image> {}
 
-// Avatar Image
-export interface AvatarImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageElement>, "src"> {
-  src?: string | null;
-}
+const AvatarImage = React.forwardRef<
+  React.ElementRef<typeof AvatarPrimitive.Image>,
+  AvatarImageProps
+>(({ className, ...props }, ref) => (
+  <AvatarPrimitive.Image
+    ref={ref}
+    className={cn("aspect-square h-full w-full", className)}
+    {...props}
+  />
+));
+AvatarImage.displayName = AvatarPrimitive.Image.displayName;
 
-const AvatarImage = React.forwardRef<HTMLImageElement, AvatarImageProps>(
-  ({ className, src, alt = "", ...props }, ref) => {
-    const [hasError, setHasError] = React.useState(false);
-
-    if (!src || hasError) return null;
-
-    return (
-      <img
-        ref={ref}
-        src={src}
-        alt={alt}
-        className={cn("aspect-square h-full w-full object-cover", className)}
-        onError={() => setHasError(true)}
-        {...props}
-      />
-    );
-  }
-);
-
-AvatarImage.displayName = "AvatarImage";
-
-// Avatar Fallback
 export interface AvatarFallbackProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof avatarVariants> {}
+  extends React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Fallback> {}
 
-const AvatarFallback = React.forwardRef<HTMLDivElement, AvatarFallbackProps>(
-  ({ className, size, children, ...props }, ref) => {
-    return (
-      <div
-        ref={ref}
-        className={cn(
-          "flex h-full w-full items-center justify-center bg-accent",
-          className
-        )}
-        {...props}
-      >
-        {typeof children === "string" ? (
-          <span className={cn(avatarTextVariants({ size }), "text-accent-foreground")}>
-            {children}
-          </span>
-        ) : (
-          children
-        )}
-      </div>
-    );
-  }
-);
-
-AvatarFallback.displayName = "AvatarFallback";
+const AvatarFallback = React.forwardRef<
+  React.ElementRef<typeof AvatarPrimitive.Fallback>,
+  AvatarFallbackProps
+>(({ className, ...props }, ref) => (
+  <AvatarPrimitive.Fallback
+    ref={ref}
+    className={cn(
+      "flex h-full w-full items-center justify-center rounded-full bg-muted",
+      className
+    )}
+    {...props}
+  />
+));
+AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName;
 
 // Convenience function to get initials
 function getInitials(name?: string | null): string {
@@ -123,4 +71,4 @@ function getInitials(name?: string | null): string {
   return name.substring(0, 2).toUpperCase();
 }
 
-export { Avatar, AvatarImage, AvatarFallback, getInitials, avatarVariants };
+export { Avatar, AvatarImage, AvatarFallback, getInitials };

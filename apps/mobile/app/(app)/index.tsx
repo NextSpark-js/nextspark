@@ -2,6 +2,7 @@
  * Home/Dashboard Screen
  */
 
+import { useState } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native'
 import { router } from 'expo-router'
 import { useAuth } from '@/src/providers/AuthProvider'
@@ -9,11 +10,23 @@ import { useTasks } from '@/src/entities/tasks'
 import { useCustomers } from '@/src/entities/customers'
 import { Colors } from '@/src/constants/colors'
 import { Button } from '@/src/components/ui'
+import {
+  Progress,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from '@nextsparkjs/ui'
 
 export default function HomeScreen() {
   const { user, team } = useAuth()
   const { data: tasksData } = useTasks()
   const { data: customersData } = useCustomers()
+  const [activeTab, setActiveTab] = useState('tab1')
 
   const firstName = user?.name?.split(' ')[0] || 'Usuario'
   const taskCount = tasksData?.data?.length || 0
@@ -108,6 +121,60 @@ export default function HomeScreen() {
         )}
       </View>
 
+      {/* === TEST COMPONENTS - Phase 3 Migration === */}
+      <View style={styles.testSection}>
+        <Text style={styles.testTitle}>Component Test (Phase 3)</Text>
+
+        {/* Progress Test */}
+        <View style={styles.testCard}>
+          <Text style={styles.testLabel}>Progress Component</Text>
+          <Progress value={30} style={{ marginBottom: 8 }} />
+          <Progress value={60} style={{ marginBottom: 8 }} />
+          <Progress value={90} />
+        </View>
+
+        {/* Tabs Test */}
+        <View style={styles.testCard}>
+          <Text style={styles.testLabel}>Tabs Component</Text>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList>
+              <TabsTrigger value="tab1">Tab 1</TabsTrigger>
+              <TabsTrigger value="tab2">Tab 2</TabsTrigger>
+              <TabsTrigger value="tab3">Tab 3</TabsTrigger>
+            </TabsList>
+            <TabsContent value="tab1">
+              <Text style={styles.testText}>Content for Tab 1</Text>
+            </TabsContent>
+            <TabsContent value="tab2">
+              <Text style={styles.testText}>Content for Tab 2</Text>
+            </TabsContent>
+            <TabsContent value="tab3">
+              <Text style={styles.testText}>Content for Tab 3</Text>
+            </TabsContent>
+          </Tabs>
+        </View>
+
+        {/* Accordion Test */}
+        <View style={styles.testCard}>
+          <Text style={styles.testLabel}>Accordion Component</Text>
+          <Accordion type="single" collapsible>
+            <AccordionItem value="item1">
+              <AccordionTrigger>Section 1</AccordionTrigger>
+              <AccordionContent>
+                <Text style={styles.testText}>This is the content for section 1.</Text>
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="item2">
+              <AccordionTrigger>Section 2</AccordionTrigger>
+              <AccordionContent>
+                <Text style={styles.testText}>This is the content for section 2.</Text>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </View>
+      </View>
+      {/* === END TEST COMPONENTS === */}
+
       <View style={styles.spacer} />
     </ScrollView>
   )
@@ -194,5 +261,35 @@ const styles = StyleSheet.create({
   },
   spacer: {
     height: 40,
+  },
+  // Test section styles
+  testSection: {
+    padding: 16,
+    marginTop: 16,
+  },
+  testTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.foreground,
+    marginBottom: 16,
+  },
+  testCard: {
+    backgroundColor: Colors.card,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  testLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.foregroundSecondary,
+    marginBottom: 12,
+  },
+  testText: {
+    fontSize: 14,
+    color: Colors.foreground,
+    paddingVertical: 8,
   },
 })

@@ -1,4 +1,7 @@
-// Web exports
+/**
+ * @nextsparkjs/ui - Web exports
+ * These components match @nextsparkjs/core implementations exactly
+ */
 
 // Buttons
 export { Button, buttonVariants, type ButtonProps } from "./components/Button";
@@ -8,7 +11,6 @@ export { Input, type InputProps } from "./components/Input";
 export { Textarea, type TextareaProps } from "./components/Textarea";
 export { Checkbox, type CheckboxProps } from "./components/Checkbox";
 export { Switch, type SwitchProps } from "./components/Switch";
-export { Select, type SelectProps, type SelectOption } from "./components/Select";
 export { Label, type LabelProps } from "./components/Label";
 
 // Display
@@ -18,7 +20,6 @@ export {
   AvatarImage,
   AvatarFallback,
   getInitials,
-  avatarVariants,
   type AvatarProps,
   type AvatarImageProps,
   type AvatarFallbackProps,
@@ -69,6 +70,33 @@ export {
   type DialogFooterProps,
   type DialogCloseProps,
 } from "./components/Dialog";
+
+// Progress
+export { Progress, type ProgressProps } from "./components/Progress";
+
+// Tabs
+export {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+  type TabsProps,
+  type TabsListProps,
+  type TabsTriggerProps,
+  type TabsContentProps,
+} from "./components/Tabs";
+
+// Accordion
+export {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+  type AccordionProps,
+  type AccordionItemProps,
+  type AccordionTriggerProps,
+  type AccordionContentProps,
+} from "./components/Accordion";
 
 // Utils
 export { cn } from "./utils";

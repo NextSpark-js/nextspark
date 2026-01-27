@@ -1,69 +1,37 @@
-"use client";
-
 /**
  * Checkbox Component - Web version
- * Custom checkbox with Tailwind styling
+ * Matches @nextsparkjs/core implementation (uses Radix)
  */
+"use client";
+
 import * as React from "react";
+import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
+import { CheckIcon } from "@radix-ui/react-icons";
 import { cn } from "../utils";
 
-export interface CheckboxProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "onChange"> {
-  checked?: boolean;
-  onCheckedChange?: (checked: boolean) => void;
-  label?: string;
-}
+export interface CheckboxProps
+  extends React.ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root> {}
 
-const Checkbox = React.forwardRef<HTMLButtonElement, CheckboxProps>(
-  ({ className, checked = false, onCheckedChange, disabled, label, id, ...props }, ref) => {
-    const checkboxId = id || React.useId();
+const Checkbox = React.forwardRef<
+  React.ElementRef<typeof CheckboxPrimitive.Root>,
+  CheckboxProps
+>(({ className, ...props }, ref) => (
+  <CheckboxPrimitive.Root
+    ref={ref}
+    className={cn(
+      "peer h-4 w-4 shrink-0 rounded-sm border border-primary shadow focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground",
+      className
+    )}
+    {...props}
+  >
+    <CheckboxPrimitive.Indicator
+      className={cn("flex items-center justify-center text-current")}
+    >
+      <CheckIcon className="h-4 w-4" />
+    </CheckboxPrimitive.Indicator>
+  </CheckboxPrimitive.Root>
+));
 
-    return (
-      <div className={cn("flex items-center gap-2", disabled && "opacity-50", className)}>
-        <button
-          ref={ref}
-          type="button"
-          role="checkbox"
-          aria-checked={checked}
-          id={checkboxId}
-          disabled={disabled}
-          onClick={() => onCheckedChange?.(!checked)}
-          className={cn(
-            "flex h-5 w-5 items-center justify-center rounded border-2 transition-colors",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-            checked
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-input bg-background"
-          )}
-          {...props}
-        >
-          {checked && (
-            <svg
-              className="h-3 w-3"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={3}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-          )}
-        </button>
-        {label && (
-          <label
-            htmlFor={checkboxId}
-            className={cn(
-              "text-sm cursor-pointer select-none",
-              disabled && "cursor-not-allowed"
-            )}
-          >
-            {label}
-          </label>
-        )}
-      </div>
-    );
-  }
-);
-
-Checkbox.displayName = "Checkbox";
+Checkbox.displayName = CheckboxPrimitive.Root.displayName;
 
 export { Checkbox };

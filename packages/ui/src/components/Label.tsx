@@ -1,32 +1,26 @@
 /**
  * Label Component - Web version
- * Form label element with Tailwind styling
+ * Matches @nextsparkjs/core implementation (uses Radix)
  */
+"use client";
+
 import * as React from "react";
+import * as LabelPrimitive from "@radix-ui/react-label";
 import { cn } from "../utils";
 
-export interface LabelProps extends React.LabelHTMLAttributes<HTMLLabelElement> {
-  required?: boolean;
+export interface LabelProps extends React.ComponentProps<typeof LabelPrimitive.Root> {}
+
+function Label({ className, ...props }: LabelProps) {
+  return (
+    <LabelPrimitive.Root
+      data-slot="label"
+      className={cn(
+        "flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
+        className
+      )}
+      {...props}
+    />
+  );
 }
-
-const Label = React.forwardRef<HTMLLabelElement, LabelProps>(
-  ({ className, children, required, ...props }, ref) => {
-    return (
-      <label
-        ref={ref}
-        className={cn(
-          "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
-          className
-        )}
-        {...props}
-      >
-        {children}
-        {required && <span className="ml-1 text-destructive">*</span>}
-      </label>
-    );
-  }
-);
-
-Label.displayName = "Label";
 
 export { Label };
