@@ -12,7 +12,7 @@ export async function installPlugin(
   const pluginName = extractPluginName(packageJson.name)
   const targetDir = join(process.cwd(), 'contents', 'plugins', pluginName)
 
-  // Dry run: solo mostrar qué haría
+  // Dry run: only show what would be done
   if (options.dryRun) {
     console.log(chalk.cyan('\n  [Dry Run] Would perform:'))
     console.log(`    - Copy to: contents/plugins/${pluginName}/`)
@@ -24,7 +24,7 @@ export async function installPlugin(
     return { success: true, installedPath: targetDir, name: pluginName }
   }
 
-  // Verificar si ya existe
+  // Check if already exists
   if (existsSync(targetDir)) {
     if (!options.force) {
       throw new Error(
@@ -36,7 +36,7 @@ export async function installPlugin(
     rmSync(targetDir, { recursive: true, force: true })
   }
 
-  // Asegurar que contents/plugins existe
+  // Ensure contents/plugins directory exists
   const pluginsDir = join(process.cwd(), 'contents', 'plugins')
   if (!existsSync(pluginsDir)) {
     mkdirSync(pluginsDir, { recursive: true })
@@ -55,7 +55,7 @@ export async function installPlugin(
     console.log(`  Plugin has ${depCount} dependencies (will be installed via workspace)`)
   }
 
-  // Actualizar configs
+  // Update configs
   await updateTsConfig(pluginName, 'plugin')
   await registerInPackageJson(packageJson.name, packageJson.version || '0.0.0', 'plugin')
 
@@ -99,7 +99,7 @@ export async function installTheme(
     rmSync(targetDir, { recursive: true, force: true })
   }
 
-  // Asegurar que contents/themes existe
+  // Ensure contents/themes directory exists
   const themesDir = join(process.cwd(), 'contents', 'themes')
   if (!existsSync(themesDir)) {
     mkdirSync(themesDir, { recursive: true })
@@ -109,7 +109,7 @@ export async function installTheme(
   console.log(`  Copying to contents/themes/${themeName}/...`)
   cpSync(extractedPath, targetDir, { recursive: true })
 
-  // Actualizar configs
+  // Update configs
   await updateTsConfig(themeName, 'theme')
   await registerInPackageJson(packageJson.name, packageJson.version || '0.0.0', 'theme')
 
@@ -168,8 +168,8 @@ async function registerPluginInThemeConfig(pluginName: string): Promise<void> {
     }
 
     // Find the plugins array and add the plugin
-    // Match patterns like: plugins: [] or plugins: ['existing']
-    const pluginsArrayMatch = content.match(/plugins:\s*\[([^\]]*)\]/)
+    // Match patterns like: plugins: [] or plugins: ['existing'] (supports multiline arrays)
+    const pluginsArrayMatch = content.match(/plugins:\s*\[([^\]]*)\]/s)
 
     if (pluginsArrayMatch) {
       const existingPlugins = pluginsArrayMatch[1].trim()
@@ -178,7 +178,7 @@ async function registerPluginInThemeConfig(pluginName: string): Promise<void> {
         : `'${pluginName}'`
 
       content = content.replace(
-        /plugins:\s*\[([^\]]*)\]/,
+        /plugins:\s*\[([^\]]*)\]/s,
         `plugins: [${newPlugins}]`
       )
 
