@@ -687,6 +687,53 @@ Configure how structured output works for multi-provider compatibility:
 
 ## Environment Variables
 
+### ⭐ Plugin-Level Environment Configuration (Recommended)
+
+The LangChain plugin supports **plugin-level `.env` files** that take priority over root environment variables. This provides isolation and modularity for your AI configuration.
+
+#### Setup
+
+1. **Copy the example file:**
+   ```bash
+   cp contents/plugins/langchain/.env.example contents/plugins/langchain/.env
+   ```
+
+2. **Configure your settings:**
+   ```env
+   # Plugin Settings
+   LANGCHAIN_PLUGIN_ENABLED=true
+   LANGCHAIN_PLUGIN_DEBUG=false
+
+   # Ollama Configuration (Local)
+   LANGCHAIN_OLLAMA_BASE_URL=http://localhost:11434
+   LANGCHAIN_OLLAMA_MODEL=llama3.2:3b
+
+   # OpenAI Configuration (LM Studio or OpenAI API)
+   LANGCHAIN_OPENAI_BASE_URL=http://localhost:1234/v1
+   LANGCHAIN_OPENAI_MODEL=gpt-4o-mini
+   OPENAI_API_KEY=your-api-key
+   ```
+
+#### Priority System
+
+The plugin environment loader uses this priority:
+
+1. **Plugin `.env`** (`contents/plugins/langchain/.env`) - Highest priority
+2. **Root `.env`** (`/.env`) - Fallback for variables not in plugin .env
+3. **Built-in defaults** - Lowest priority
+
+This means you can:
+- Keep API keys in the root `.env` (shared across plugins)
+- Override specific settings in the plugin `.env` (isolated configuration)
+
+#### Benefits
+
+- ✅ **Isolation**: LangChain config doesn't pollute root `.env`
+- ✅ **Modularity**: Each plugin manages its own environment
+- ✅ **Security**: API keys can be scoped to specific plugins
+- ✅ **Flexibility**: Different configurations for different plugins
+- ✅ **Fallback**: Automatically uses root `.env` when plugin `.env` doesn't define a variable
+
 ### Provider Configuration
 
 ```env

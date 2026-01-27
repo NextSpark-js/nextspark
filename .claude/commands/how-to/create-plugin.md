@@ -139,7 +139,7 @@ mkdir -p plugins/my-plugin/{types,lib,hooks,components,providers,docs}
 # Create initial files
 touch plugins/my-plugin/{package.json,plugin.config.ts,README.md,.env.example}
 touch plugins/my-plugin/types/my-plugin.types.ts
-touch plugins/my-plugin/lib/{core.ts,utils.ts}
+touch plugins/my-plugin/lib/{core.ts,utils.ts,plugin-env.ts}
 touch plugins/my-plugin/hooks/useMyPlugin.ts
 touch plugins/my-plugin/components/MyPluginWidget.tsx
 ```

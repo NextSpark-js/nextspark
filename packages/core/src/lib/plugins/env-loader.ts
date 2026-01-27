@@ -74,7 +74,12 @@ class PluginEnvLoader {
           const result = config({ path: envPath, override: false })
 
           if (result.error) {
-            console.error(`[Plugin Env Loader] Error loading ${entry}/.env:`, result.error)
+            // Sanitize error logging - only show full details in development
+            if (process.env.NODE_ENV === 'development') {
+              console.error(`[Plugin Env Loader] Error loading ${entry}/.env:`, result.error)
+            } else {
+              console.error(`[Plugin Env Loader] Error loading ${entry}/.env`)
+            }
             // Fallback to process.env on error
             pluginEnv = { ...process.env }
           } else if (result.parsed) {
@@ -101,7 +106,12 @@ class PluginEnvLoader {
 
       this.loaded = true
     } catch (error) {
-      console.error('[Plugin Env Loader] Failed to load plugin environments:', error)
+      // Sanitize error logging - only show full details in development
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[Plugin Env Loader] Failed to load plugin environments:', error)
+      } else {
+        console.error('[Plugin Env Loader] Failed to load plugin environments')
+      }
       this.loaded = true
     }
   }
@@ -120,7 +130,9 @@ class PluginEnvLoader {
       if (process.env.NODE_ENV === 'development') {
         console.warn(`[Plugin Env Loader] No .env found for plugin: ${pluginName}`)
       }
-      return {}
+      // Return process.env as fallback for unknown/unloaded plugins
+      // This maintains consistency with the priority system (Plugin .env > Root .env)
+      return { ...process.env }
     }
 
     return pluginEnv

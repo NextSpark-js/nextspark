@@ -1,6 +1,6 @@
 {
   "name": "@nextsparkjs/core",
-  "version": "0.1.0-beta.69",
+  "version": "0.1.0-beta.70",
   "description": "NextSpark - The complete SaaS framework for Next.js",
   "license": "MIT",
   "author": "NextSpark <hello@nextspark.dev>",
@@ -131,6 +131,10 @@
     "./lib/blocks/*": {
       "types": "./dist/lib/blocks/*.d.ts",
       "import": "./dist/lib/blocks/*.js"
+    },
+    "./lib/plugins/env-loader": {
+      "types": "./dist/lib/plugins/env-loader.d.ts",
+      "import": "./dist/lib/plugins/env-loader.js"
     },
     "./lib/*": {
       "types": "./dist/lib/*.d.ts",

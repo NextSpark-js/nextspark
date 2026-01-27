@@ -251,6 +251,46 @@ async function publishToInstagram(account: any, imageUrl: string, caption: strin
 
 ## Environment Variables
 
+### ⭐ Plugin-Level Environment Configuration (Recommended)
+
+The Social Media Publisher plugin supports **plugin-level `.env` files** that take priority over root environment variables.
+
+#### Setup
+
+1. **Copy the example file:**
+   ```bash
+   cp contents/plugins/social-media-publisher/.env.example contents/plugins/social-media-publisher/.env
+   ```
+
+2. **Configure your credentials:**
+   ```env
+   # Facebook/Meta OAuth
+   FACEBOOK_CLIENT_ID="your-facebook-app-id"
+   FACEBOOK_CLIENT_SECRET="your-facebook-app-secret"
+
+   # Cron Job Authentication
+   CRON_SECRET="your-cron-secret-key-here"
+   ```
+
+#### Priority System
+
+The plugin environment loader uses this priority:
+
+1. **Plugin `.env`** (`contents/plugins/social-media-publisher/.env`) - Highest priority
+2. **Root `.env`** (`/.env`) - Fallback for variables not in plugin .env
+3. **Built-in defaults** - Lowest priority
+
+#### Benefits
+
+- ✅ **Isolation**: OAuth credentials isolated to the plugin
+- ✅ **Security**: Sensitive keys scoped to specific plugins
+- ✅ **Modularity**: Each plugin manages its own secrets
+- ✅ **Flexibility**: Different configs per environment
+
+### Root Environment Variables (Alternative)
+
+You can also configure credentials in the root `.env`:
+
 ```env
 # Facebook App Credentials (same as Better Auth)
 FACEBOOK_CLIENT_ID=your_app_id
