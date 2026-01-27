@@ -12,6 +12,7 @@ import { Checkbox } from '../../ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
 import { Progress } from '../../ui/progress';
+import { Slider } from '../../ui/slider';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../../ui/accordion';
 import { Alert, AlertDescription, AlertTitle } from '../../ui/alert';
 import { Avatar, AvatarFallback } from '../../ui/avatar';
@@ -130,6 +131,25 @@ export function ComponentGallery() {
                 <Progress value={25} />
                 <Progress value={60} />
                 <Progress value={90} />
+              </div>
+            </div>
+          </div>
+
+          {/* Slider */}
+          <div>
+            <h4 className="text-sm font-medium mb-3">Slider</h4>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Default Slider</Label>
+                <Slider defaultValue={[50]} max={100} step={1} />
+              </div>
+              <div className="space-y-2">
+                <Label>Volume: 25%</Label>
+                <Slider defaultValue={[25]} max={100} step={5} />
+              </div>
+              <div className="space-y-2">
+                <Label>Disabled Slider</Label>
+                <Slider defaultValue={[75]} max={100} step={1} disabled />
               </div>
             </div>
           </div>

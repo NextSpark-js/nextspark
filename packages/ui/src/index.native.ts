@@ -110,3 +110,6 @@ export {
   type AccordionTriggerProps,
   type AccordionContentProps,
 } from "./components/Accordion.native";
+
+// Slider
+export { Slider, type SliderProps } from "./components/Slider.native";

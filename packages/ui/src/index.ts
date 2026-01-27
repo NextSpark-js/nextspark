@@ -98,5 +98,8 @@ export {
   type AccordionContentProps,
 } from "./components/Accordion";
 
+// Slider
+export { Slider, type SliderProps } from "./components/Slider";
+
 // Utils
 export { cn } from "./utils";

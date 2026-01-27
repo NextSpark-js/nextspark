@@ -8,6 +8,7 @@ const radixPackages = [
   "@radix-ui/react-label",
   "@radix-ui/react-progress",
   "@radix-ui/react-separator",
+  "@radix-ui/react-slider",
   "@radix-ui/react-slot",
   "@radix-ui/react-switch",
   "@radix-ui/react-tabs",

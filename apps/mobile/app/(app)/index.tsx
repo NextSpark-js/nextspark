@@ -20,6 +20,7 @@ import {
   AccordionItem,
   AccordionTrigger,
   AccordionContent,
+  Slider,
 } from '@nextsparkjs/ui'
 
 export default function HomeScreen() {
@@ -27,6 +28,7 @@ export default function HomeScreen() {
   const { data: tasksData } = useTasks()
   const { data: customersData } = useCustomers()
   const [activeTab, setActiveTab] = useState('tab1')
+  const [sliderValue, setSliderValue] = useState([50])
 
   const firstName = user?.name?.split(' ')[0] || 'Usuario'
   const taskCount = tasksData?.data?.length || 0
@@ -171,6 +173,19 @@ export default function HomeScreen() {
               </AccordionContent>
             </AccordionItem>
           </Accordion>
+        </View>
+
+        {/* Slider Test */}
+        <View style={styles.testCard}>
+          <Text style={styles.testLabel}>Slider Component</Text>
+          <Text style={styles.testText}>Value: {sliderValue[0]}</Text>
+          <Slider
+            value={sliderValue}
+            onValueChange={setSliderValue}
+            min={0}
+            max={100}
+            step={1}
+          />
         </View>
       </View>
       {/* === END TEST COMPONENTS === */}
