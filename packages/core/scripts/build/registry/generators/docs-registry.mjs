@@ -168,10 +168,28 @@ export function generateDocsRegistry() {
  * DO NOT EDIT - This file is auto-generated
  */
 
-import type { DocPageMeta, DocSectionMeta, DocsRegistryStructure } from '@nextsparkjs/core/types/docs'
+// Inline type definitions for npm mode (avoids import issues since DTS is disabled)
+export interface DocPageMeta {
+  slug: string
+  title: string
+  order: number
+  path: string
+  source: 'public' | 'superadmin'
+}
 
-// Re-export types for external use
-export type { DocPageMeta, DocSectionMeta, DocsRegistryStructure }
+export interface DocSectionMeta {
+  slug: string
+  title: string
+  order: number
+  pages: DocPageMeta[]
+  source: 'public' | 'superadmin'
+}
+
+export interface DocsRegistryStructure {
+  public: DocSectionMeta[]
+  superadmin: DocSectionMeta[]
+  all: DocSectionMeta[]
+}
 
 export const DOCS_REGISTRY: DocsRegistryStructure = ${JSON.stringify(registry, null, 2)} as const
 

@@ -309,6 +309,25 @@ export const aiHistoryFields: EntityField[] = [
     },
   },
   {
+    name: 'updatedAt',
+    type: 'datetime',
+    required: false,
+    display: {
+      label: 'Updated At',
+      description: 'When the record was last updated',
+      showInList: false,
+      showInDetail: true,
+      showInForm: false,
+      order: 98,
+      columnWidth: 6,
+    },
+    api: {
+      searchable: false,
+      sortable: true,
+      readOnly: true,
+    },
+  },
+  {
     name: 'completedAt',
     type: 'datetime',
     required: false,
@@ -318,7 +337,7 @@ export const aiHistoryFields: EntityField[] = [
       showInList: false,
       showInDetail: true,
       showInForm: false,
-      order: 98,
+      order: 99,
       columnWidth: 6,
     },
     api: {

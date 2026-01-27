@@ -58,32 +58,31 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
 
   try {
     // Theme & Plugin Selection (before wizard prompts)
+    // This runs regardless of preset mode to support CLI flags
     let selectedTheme: ThemeChoice = null
     let selectedPlugins: PluginChoice[] = []
 
-    if (!options.preset) {
-      // Non-interactive mode: use CLI flags
-      if (options.theme !== undefined) {
-        selectedTheme = options.theme === 'none' ? null : options.theme as ThemeChoice
-        showInfo(`Reference theme: ${selectedTheme || 'None'}`)
-      } else if (options.mode !== 'quick') {
-        // Interactive mode: prompt user
-        selectedTheme = await promptThemeSelection()
-      }
+    // Non-interactive mode: use CLI flags
+    if (options.theme !== undefined) {
+      selectedTheme = options.theme === 'none' ? null : options.theme as ThemeChoice
+      showInfo(`Reference theme: ${selectedTheme || 'None'}`)
+    } else if (!options.preset && options.mode !== 'quick') {
+      // Interactive mode: prompt user (only if not using preset)
+      selectedTheme = await promptThemeSelection()
+    }
 
-      // Plugins selection
-      if (options.plugins !== undefined) {
-        selectedPlugins = options.plugins as PluginChoice[]
-        if (selectedPlugins.length > 0) {
-          showInfo(`Selected plugins: ${selectedPlugins.join(', ')}`)
-        }
-      } else if (options.mode !== 'quick' && !options.yes) {
-        // Interactive mode: prompt user (skip in --yes mode)
-        selectedPlugins = await promptPluginsSelection(selectedTheme)
-      } else if (selectedTheme) {
-        // In quick/yes mode, auto-include required plugins for theme
-        selectedPlugins = getRequiredPlugins(selectedTheme)
+    // Plugins selection
+    if (options.plugins !== undefined) {
+      selectedPlugins = options.plugins as PluginChoice[]
+      if (selectedPlugins.length > 0) {
+        showInfo(`Selected plugins: ${selectedPlugins.join(', ')}`)
       }
+    } else if (!options.preset && options.mode !== 'quick' && !options.yes) {
+      // Interactive mode: prompt user (skip in --yes mode or preset mode)
+      selectedPlugins = await promptPluginsSelection(selectedTheme)
+    } else if (selectedTheme) {
+      // In quick/yes/preset mode, auto-include required plugins for theme
+      selectedPlugins = getRequiredPlugins(selectedTheme)
     }
 
     let config: WizardConfig
@@ -166,9 +165,11 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
     }).start()
 
     try {
+      // TODO: Change back to stdio: 'pipe' once Windows issues are resolved
+      installSpinner.stop()
       execSync('pnpm install --force', {
         cwd: process.cwd(),
-        stdio: 'pipe',
+        stdio: 'inherit',
       })
       installSpinner.succeed('Dependencies installed!')
     } catch (error) {
@@ -185,9 +186,11 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
     try {
       const projectRoot = process.cwd()
       const registryScript = join(projectRoot, 'node_modules/@nextsparkjs/core/scripts/build/registry.mjs')
+      // TODO: Change back to stdio: 'pipe' once Windows issues are resolved
+      registrySpinner.stop()
       execSync(`node "${registryScript}" --build`, {
         cwd: projectRoot,
-        stdio: 'pipe',
+        stdio: 'inherit',
         env: {
           ...process.env,
           NEXTSPARK_PROJECT_ROOT: projectRoot,
@@ -474,8 +477,10 @@ async function installCore(): Promise<boolean> {
       installCmd = `npm install ${packageSpec}`
     }
 
+    // TODO: Change back to stdio: 'pipe' once Windows issues are resolved
+    spinner.stop()
     execSync(installCmd, {
-      stdio: 'pipe',
+      stdio: 'inherit',
       cwd: process.cwd(),
     })
 

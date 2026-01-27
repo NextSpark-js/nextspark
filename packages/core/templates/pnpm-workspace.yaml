@@ -1,0 +1,5 @@
+# pnpm workspace configuration
+# Enables plugins and themes to have their own package.json with dependencies
+packages:
+  - 'contents/themes/*'
+  - 'contents/plugins/*'

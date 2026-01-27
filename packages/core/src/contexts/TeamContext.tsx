@@ -1,8 +1,8 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Team, UserTeamMembership } from '../lib/teams/types'
 import { useAuth } from '../hooks/useAuth'
 import { TeamSwitchModal } from '../components/teams/TeamSwitchModal'
@@ -21,83 +21,110 @@ interface TeamContextValue {
 
 const TeamContext = createContext<TeamContextValue | undefined>(undefined)
 
+// Query key for teams data
+export const TEAMS_QUERY_KEY = ['user-teams'] as const
+
+// Fetch function for teams (can be reused for prefetching)
+export async function fetchUserTeams(): Promise<UserTeamMembership[]> {
+  const response = await fetch('/api/v1/teams')
+  const data = await response.json()
+
+  if (!response.ok || !data.data) {
+    throw new Error('Failed to fetch teams')
+  }
+
+  // Transform API response to UserTeamMembership format
+  return data.data.map((t: any) => ({
+    team: {
+      id: t.id,
+      name: t.name,
+      slug: t.slug,
+      description: t.description,
+      ownerId: t.owner_id || t.ownerId,
+      avatarUrl: t.avatar_url || t.avatarUrl,
+      settings: t.settings || {},
+      createdAt: t.created_at || t.createdAt,
+      updatedAt: t.updated_at || t.updatedAt
+    },
+    role: t.userRole || t.user_role || t.role,
+    joinedAt: t.joinedAt || t.joined_at
+  }))
+}
+
 export function TeamProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth()
+  const { user, isLoading: authLoading } = useAuth()
   const router = useRouter()
   const queryClient = useQueryClient()
   const [currentTeam, setCurrentTeam] = useState<Team | null>(null)
-  const [userTeams, setUserTeams] = useState<UserTeamMembership[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [isSwitching, setIsSwitching] = useState(false)
-  const [canCurrentUserCreateTeam, setCanCurrentUserCreateTeam] = useState(true)
+  const [initialSyncDone, setInitialSyncDone] = useState(false)
 
   // Modal state for team switching animation
   const [switchModalOpen, setSwitchModalOpen] = useState(false)
   const [previousTeam, setPreviousTeam] = useState<Team | null>(null)
   const [targetTeam, setTargetTeam] = useState<Team | null>(null)
 
-  // Load user teams from API
-  const loadUserTeams = useCallback(async () => {
-    if (!user) {
-      setUserTeams([])
-      setCurrentTeam(null)
-      setIsLoading(false)
-      return
-    }
+  // Use TanStack Query for teams data with caching
+  const {
+    data: userTeams = [],
+    isLoading: teamsLoading,
+    refetch: refetchTeams
+  } = useQuery<UserTeamMembership[]>({
+    queryKey: TEAMS_QUERY_KEY,
+    queryFn: fetchUserTeams,
+    enabled: !!user && !authLoading,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes - prevents refetch on navigation
+    gcTime: 1000 * 60 * 60, // Keep in cache for 1 hour
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    refetchOnMount: false, // Don't refetch if data exists and is not stale
+  })
 
-    try {
-      setIsLoading(true)
-      const response = await fetch('/api/v1/teams')
-      const data = await response.json()
+  // Combined loading state
+  const isLoading = authLoading || teamsLoading
 
-      if (response.ok && data.data) {
-        // Transform API response to UserTeamMembership format
-        const teams: UserTeamMembership[] = data.data.map((t: any) => ({
-          team: {
-            id: t.id,
-            name: t.name,
-            slug: t.slug,
-            description: t.description,
-            ownerId: t.owner_id || t.ownerId,
-            avatarUrl: t.avatar_url || t.avatarUrl,
-            settings: t.settings || {},
-            createdAt: t.created_at || t.createdAt,
-            updatedAt: t.updated_at || t.updatedAt
-          },
-          role: t.userRole || t.user_role || t.role,
-          joinedAt: t.joinedAt || t.joined_at
-        }))
+  // Calculate if current user can create teams
+  const canCurrentUserCreateTeam = useMemo(() => {
+    if (!user || !userTeams.length) return false
+    const { mode, options } = APP_CONFIG_MERGED.teams
+    const ownedTeamsCount = userTeams.filter(m => m.role === 'owner').length
+    return canUserCreateTeam(mode, options || {}, ownedTeamsCount)
+  }, [userTeams, user])
 
-        setUserTeams(teams)
+  // Initialize current team when teams data loads
+  useEffect(() => {
+    if (!userTeams.length || initialSyncDone) return
 
-        // Determine active team (priority: localStorage > first)
-        const storedTeamId = typeof window !== 'undefined' ? localStorage.getItem('activeTeamId') : null
-        const storedTeam = teams.find(t => t.team.id === storedTeamId)
-        const activeTeam = storedTeam || teams[0]
+    // Determine active team (priority: localStorage > first)
+    const storedTeamId = typeof window !== 'undefined' ? localStorage.getItem('activeTeamId') : null
+    const storedTeam = userTeams.find(t => t.team.id === storedTeamId)
+    const activeTeam = storedTeam || userTeams[0]
 
-        if (activeTeam) {
-          setCurrentTeam(activeTeam.team)
-          // Always sync localStorage with actual active team
-          // This handles: user switch, invalid stored team, first login, etc.
-          if (typeof window !== 'undefined' && storedTeamId !== activeTeam.team.id) {
-            localStorage.setItem('activeTeamId', activeTeam.team.id)
-          }
-          // Sync cookie via API for server-side access (layouts, server components)
-          // This enables permission validation in [entity]/layout.tsx
-          // Cookie is set with httpOnly flag for security
-          if (typeof window !== 'undefined') {
-            fetch('/api/v1/teams/switch', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ teamId: activeTeam.team.id })
-            }).catch(err => console.error('Failed to sync team cookie:', err))
-          }
-        }
+    if (activeTeam) {
+      setCurrentTeam(activeTeam.team)
+
+      // Sync localStorage if needed
+      if (typeof window !== 'undefined' && storedTeamId !== activeTeam.team.id) {
+        localStorage.setItem('activeTeamId', activeTeam.team.id)
       }
-    } catch (error) {
-      console.error('Failed to load teams:', error)
-    } finally {
-      setIsLoading(false)
+
+      // Sync cookie via API for server-side access (only once on initial load)
+      if (typeof window !== 'undefined') {
+        fetch('/api/v1/teams/switch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ teamId: activeTeam.team.id })
+        }).catch(err => console.error('Failed to sync team cookie:', err))
+      }
+
+      setInitialSyncDone(true)
+    }
+  }, [userTeams, initialSyncDone])
+
+  // Reset sync flag when user changes
+  useEffect(() => {
+    if (!user) {
+      setCurrentTeam(null)
+      setInitialSyncDone(false)
     }
   }, [user])
 
@@ -106,7 +133,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     setSwitchModalOpen(false)
     setIsSwitching(false)
 
-    // Clear all TanStack Query cache to ensure fresh data
+    // Clear all TanStack Query cache to ensure fresh data for the new team
     queryClient.clear()
 
     // Dispatch custom event for team switching
@@ -159,28 +186,11 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     }
   }, [userTeams, currentTeam])
 
-  // Refresh teams list
+  // Refresh teams list - invalidate and refetch
   const refreshTeams = useCallback(async () => {
-    await loadUserTeams()
-  }, [loadUserTeams])
-
-  // Load teams when user changes
-  useEffect(() => {
-    loadUserTeams()
-  }, [loadUserTeams])
-
-  // Calculate if current user can create teams
-  useEffect(() => {
-    if (!user || !userTeams) {
-      setCanCurrentUserCreateTeam(false)
-      return
-    }
-
-    const { mode, options } = APP_CONFIG_MERGED.teams
-    const ownedTeamsCount = userTeams.filter(m => m.role === 'owner').length
-    const canCreate = canUserCreateTeam(mode, options || {}, ownedTeamsCount)
-    setCanCurrentUserCreateTeam(canCreate)
-  }, [userTeams, user])
+    await queryClient.invalidateQueries({ queryKey: TEAMS_QUERY_KEY })
+    await refetchTeams()
+  }, [queryClient, refetchTeams])
 
   return (
     <TeamContext.Provider

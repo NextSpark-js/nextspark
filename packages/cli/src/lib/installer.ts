@@ -1,8 +1,7 @@
-import { existsSync, cpSync, rmSync, mkdirSync } from 'fs'
+import { existsSync, cpSync, rmSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import chalk from 'chalk'
 import type { NextSparkPackageJson, InstallOptions, InstallResult } from '../types/nextspark-package.js'
-import { detectPackageManager, runInstall } from './package-manager.js'
 import { updateTsConfig, registerInPackageJson } from './config-updater.js'
 
 export async function installPlugin(
@@ -13,7 +12,7 @@ export async function installPlugin(
   const pluginName = extractPluginName(packageJson.name)
   const targetDir = join(process.cwd(), 'contents', 'plugins', pluginName)
 
-  // Dry run: solo mostrar qué haría
+  // Dry run: only show what would be done
   if (options.dryRun) {
     console.log(chalk.cyan('\n  [Dry Run] Would perform:'))
     console.log(`    - Copy to: contents/plugins/${pluginName}/`)
@@ -25,7 +24,7 @@ export async function installPlugin(
     return { success: true, installedPath: targetDir, name: pluginName }
   }
 
-  // Verificar si ya existe
+  // Check if already exists
   if (existsSync(targetDir)) {
     if (!options.force) {
       throw new Error(
@@ -37,33 +36,31 @@ export async function installPlugin(
     rmSync(targetDir, { recursive: true, force: true })
   }
 
-  // Asegurar que contents/plugins existe
+  // Ensure contents/plugins directory exists
   const pluginsDir = join(process.cwd(), 'contents', 'plugins')
   if (!existsSync(pluginsDir)) {
     mkdirSync(pluginsDir, { recursive: true })
   }
 
-  // Copiar archivos
+  // Copy files
   console.log(`  Copying to contents/plugins/${pluginName}/...`)
   cpSync(extractedPath, targetDir, { recursive: true })
 
-  // Instalar dependencies
-  if (!options.skipDeps) {
-    const deps = packageJson.dependencies || {}
-    const depNames = Object.keys(deps)
-
-    if (depNames.length > 0) {
-      console.log(`  Installing ${depNames.length} dependencies...`)
-      const pm = detectPackageManager()
-      const depsWithVersions = Object.entries(deps)
-        .map(([name, version]) => `${name}@${version}`)
-      await runInstall(pm, depsWithVersions)
-    }
+  // Plugin dependencies are handled by pnpm workspaces
+  // The pnpm-workspace.yaml includes contents/plugins/* so each plugin
+  // gets its own node_modules when `pnpm install` is run at root
+  const deps = packageJson.dependencies || {}
+  const depCount = Object.keys(deps).length
+  if (depCount > 0) {
+    console.log(`  Plugin has ${depCount} dependencies (will be installed via workspace)`)
   }
 
-  // Actualizar configs
+  // Update configs
   await updateTsConfig(pluginName, 'plugin')
   await registerInPackageJson(packageJson.name, packageJson.version || '0.0.0', 'plugin')
+
+  // Register plugin in active theme's config
+  await registerPluginInThemeConfig(pluginName)
 
   return {
     success: true,
@@ -102,17 +99,17 @@ export async function installTheme(
     rmSync(targetDir, { recursive: true, force: true })
   }
 
-  // Asegurar que contents/themes existe
+  // Ensure contents/themes directory exists
   const themesDir = join(process.cwd(), 'contents', 'themes')
   if (!existsSync(themesDir)) {
     mkdirSync(themesDir, { recursive: true })
   }
 
-  // Copiar archivos
+  // Copy files
   console.log(`  Copying to contents/themes/${themeName}/...`)
   cpSync(extractedPath, targetDir, { recursive: true })
 
-  // Actualizar configs
+  // Update configs
   await updateTsConfig(themeName, 'theme')
   await registerInPackageJson(packageJson.name, packageJson.version || '0.0.0', 'theme')
 
@@ -135,4 +132,60 @@ function extractThemeName(npmName: string): string {
     .replace(/^@[^/]+\//, '')           // @scope/name → name
     .replace(/^nextspark-theme-/, '')   // nextspark-theme-foo → foo
     .replace(/^theme-/, '')             // theme-foo → foo
+}
+
+/**
+ * Register a plugin in the active theme's theme.config.ts
+ */
+async function registerPluginInThemeConfig(pluginName: string): Promise<void> {
+  // Find active theme from .env
+  const envPath = join(process.cwd(), '.env')
+  let activeTheme = 'starter'
+
+  if (existsSync(envPath)) {
+    const envContent = readFileSync(envPath, 'utf-8')
+    const match = envContent.match(/NEXT_PUBLIC_ACTIVE_THEME=["']?([^"'\s\n]+)["']?/)
+    if (match) {
+      activeTheme = match[1]
+    }
+  }
+
+  // Find theme.config.ts
+  const themeConfigPath = join(process.cwd(), 'contents', 'themes', activeTheme, 'config', 'theme.config.ts')
+
+  if (!existsSync(themeConfigPath)) {
+    console.log(chalk.gray(`  Theme config not found, skipping plugin registration`))
+    return
+  }
+
+  try {
+    let content = readFileSync(themeConfigPath, 'utf-8')
+
+    // Check if plugin is already registered
+    if (content.includes(`'${pluginName}'`) || content.includes(`"${pluginName}"`)) {
+      console.log(chalk.gray(`  Plugin ${pluginName} already registered in theme config`))
+      return
+    }
+
+    // Find the plugins array and add the plugin
+    // Match patterns like: plugins: [] or plugins: ['existing'] (supports multiline arrays)
+    const pluginsArrayMatch = content.match(/plugins:\s*\[([^\]]*)\]/s)
+
+    if (pluginsArrayMatch) {
+      const existingPlugins = pluginsArrayMatch[1].trim()
+      const newPlugins = existingPlugins
+        ? `${existingPlugins}, '${pluginName}'`
+        : `'${pluginName}'`
+
+      content = content.replace(
+        /plugins:\s*\[([^\]]*)\]/s,
+        `plugins: [${newPlugins}]`
+      )
+
+      writeFileSync(themeConfigPath, content)
+      console.log(`  Registered plugin in theme.config.ts`)
+    }
+  } catch (error) {
+    console.log(chalk.yellow(`  Could not register plugin in theme config: ${error}`))
+  }
 }

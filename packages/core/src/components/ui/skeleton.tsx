@@ -1,2 +1,8 @@
 // Re-export from shared package for web/mobile compatibility
-export { Skeleton, type SkeletonProps } from '@nextsparkjs/ui'
+export {
+  Skeleton,
+  SkeletonContainer,
+  SkeletonText,
+  type SkeletonProps,
+  type SkeletonTextProps,
+} from '@nextsparkjs/ui'

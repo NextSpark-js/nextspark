@@ -3,8 +3,6 @@
  * Provides realistic loading states that match the actual list content structure
  */
 
-'use client'
-
 import React from 'react'
 import { Card, CardContent } from './card'
 import { Skeleton } from './skeleton'

@@ -44,11 +44,13 @@ export {
 export { Separator, type SeparatorProps } from "./components/Separator";
 export {
   Skeleton,
+  SkeletonContainer,
   SkeletonText,
   SkeletonTitle,
   SkeletonAvatar,
   SkeletonCard,
   type SkeletonProps,
+  type SkeletonTextProps,
 } from "./components/Skeleton";
 
 // Overlays

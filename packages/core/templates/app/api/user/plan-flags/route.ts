@@ -219,7 +219,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     }
 
     const { updates } = validation.data
-    const results = []
+    const results: Array<{ success: boolean; userId: string; plan?: boolean; flags?: boolean; error?: string }> = []
 
     // Process each update
     for (const update of updates) {

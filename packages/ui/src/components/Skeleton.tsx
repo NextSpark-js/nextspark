@@ -1,6 +1,12 @@
 /**
  * Skeleton Component - Web version
- * Loading placeholder with animate-pulse
+ * Optimized for INP (Interaction to Next Paint)
+ *
+ * Performance optimizations:
+ * - CSS containment isolates layout/paint calculations
+ * - content-visibility:auto skips rendering for off-screen elements
+ * - GPU-accelerated opacity animation with will-change hint
+ * - Respects prefers-reduced-motion for accessibility
  */
 import * as React from "react";
 import { cn } from "../utils";
@@ -12,7 +18,15 @@ const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
     return (
       <div
         ref={ref}
-        className={cn("animate-pulse rounded-md bg-muted", className)}
+        className={cn(
+          // Base styles
+          "rounded-md bg-muted",
+          // Optimized animation - GPU accelerated
+          "animate-skeleton-pulse",
+          // CSS containment for better INP
+          "skeleton-contained",
+          className
+        )}
         {...props}
       />
     );
@@ -21,15 +35,56 @@ const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
 
 Skeleton.displayName = "Skeleton";
 
-// Common skeleton patterns
-const SkeletonText = React.forwardRef<HTMLDivElement, SkeletonProps>(
-  ({ className, ...props }, ref) => {
-    return <Skeleton ref={ref} className={cn("h-4 w-3/4", className)} {...props} />;
+/**
+ * SkeletonContainer - Wraps multiple skeletons with content-visibility optimization
+ * Use this for lists or grids of skeleton items to improve rendering performance
+ */
+const SkeletonContainer = React.forwardRef<HTMLDivElement, SkeletonProps>(
+  ({ className, children, ...props }, ref) => {
+    return (
+      <div
+        ref={ref}
+        className={cn("skeleton-container", className)}
+        {...props}
+      >
+        {children}
+      </div>
+    );
+  }
+);
+
+SkeletonContainer.displayName = "SkeletonContainer";
+
+/**
+ * SkeletonText - Optimized skeleton for text content
+ * Pre-sized for common text patterns to reduce layout shift
+ */
+export interface SkeletonTextProps extends React.HTMLAttributes<HTMLDivElement> {
+  lines?: number;
+}
+
+const SkeletonText = React.forwardRef<HTMLDivElement, SkeletonTextProps>(
+  ({ className, lines = 1, ...props }, ref) => {
+    return (
+      <div ref={ref} className={cn("space-y-2", className)} {...props}>
+        {Array.from({ length: lines }).map((_, i) => (
+          <Skeleton
+            key={i}
+            className={cn(
+              "h-4",
+              // Last line is typically shorter
+              i === lines - 1 && lines > 1 ? "w-3/4" : "w-full"
+            )}
+          />
+        ))}
+      </div>
+    );
   }
 );
 
 SkeletonText.displayName = "SkeletonText";
 
+// Simple preset components
 const SkeletonTitle = React.forwardRef<HTMLDivElement, SkeletonProps>(
   ({ className, ...props }, ref) => {
     return <Skeleton ref={ref} className={cn("h-6 w-1/2", className)} {...props} />;
@@ -68,4 +123,11 @@ const SkeletonCard = React.forwardRef<HTMLDivElement, SkeletonProps>(
 
 SkeletonCard.displayName = "SkeletonCard";
 
-export { Skeleton, SkeletonText, SkeletonTitle, SkeletonAvatar, SkeletonCard };
+export {
+  Skeleton,
+  SkeletonContainer,
+  SkeletonText,
+  SkeletonTitle,
+  SkeletonAvatar,
+  SkeletonCard,
+};

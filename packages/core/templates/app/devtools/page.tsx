@@ -10,7 +10,7 @@ import { getTranslations } from "next-intl/server";
  * Shows overview of available sections in the dev area.
  */
 export default async function DevHomePage() {
-  const t = await getTranslations('dev');
+  const t = await getTranslations('devtools');
   const tCommon = await getTranslations('common');
 
   const sections = [

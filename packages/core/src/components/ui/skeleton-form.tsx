@@ -3,8 +3,6 @@
  * Provides realistic loading states that match the actual form structure
  */
 
-'use client'
-
 import React from 'react'
 import { Card, CardContent, CardHeader } from './card'
 import { Skeleton } from './skeleton'

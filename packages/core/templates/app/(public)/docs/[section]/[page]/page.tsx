@@ -16,7 +16,7 @@ interface DocsPageProps {
 }
 
 export async function generateStaticParams() {
-  const params = []
+  const params: Array<{ section: string; page: string }> = []
 
   // Generate params for public docs only
   for (const section of DOCS_REGISTRY.public) {

@@ -177,23 +177,49 @@ export default myPluginConfig
 
 ## Environment Variables Pattern
 
+### ⭐ Centralized Plugin Env Loader (RECOMMENDED)
+
+Use the core's centralized env-loader for automatic plugin `.env` loading:
+
+```typescript
+// contents/plugins/my-plugin/lib/plugin-env.ts
+import { getPluginEnv } from '@nextsparkjs/core/lib/plugins/env-loader'
+
+const env = getPluginEnv('my-plugin')
+const apiKey = env.MY_PLUGIN_API_KEY
+const enabled = env.MY_PLUGIN_ENABLED === 'true'
+```
+
+### Priority System
+
+1. **Plugin `.env`** (`contents/plugins/my-plugin/.env`) - Highest priority
+2. **Root `.env`** (project root) - Fallback
+3. **Built-in defaults** - Lowest priority
+
 ### Namespace-Based Architecture
 
-**GLOBAL Variables (root `.env` ONLY):**
+**SHARED Variables (root `.env`):**
 - `DATABASE_URL`, `BETTER_AUTH_SECRET`
-- `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`
+- `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` (can be shared across plugins)
 
 **PLUGIN Variables (plugin `.env` with prefix):**
-- All plugin variables MUST use `MY_PLUGIN_*` namespace
+- All plugin-specific variables MUST use `MY_PLUGIN_*` namespace
 
 ```bash
 # contents/plugins/my-plugin/.env.example
-# ONLY MY_PLUGIN_* namespaced variables
+# Plugin-specific configuration
 MY_PLUGIN_ENABLED=true
 MY_PLUGIN_DEBUG=false
 MY_PLUGIN_API_KEY=your-api-key-here
 MY_PLUGIN_TIMEOUT=5000
 ```
+
+### Required Files
+
+| File | Purpose |
+|------|---------|
+| `.env.example` | Template with all variables documented |
+| `lib/plugin-env.ts` | Type-safe wrapper using core's env-loader |
 
 ---
 
@@ -279,6 +305,7 @@ export interface BadInterface { data: any }
 - [ ] `plugin.config.ts` with all required fields
 - [ ] `README.md` with usage documentation
 - [ ] `.env.example` with namespaced variables only
+- [ ] `lib/plugin-env.ts` using core's env-loader
 - [ ] Types defined in `types/` directory
 - [ ] All variables use `MY_PLUGIN_*` namespace
 - [ ] Components have `data-cy` selectors

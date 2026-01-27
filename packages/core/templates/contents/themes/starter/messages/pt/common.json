@@ -8,7 +8,10 @@
   "delete": "Excluir",
   "edit": "Editar",
   "create": "Criar",
-  "search": "Pesquisar...",
+  "search": {
+    "placeholder": "Pesquisar...",
+    "label": "Pesquisar"
+  },
   "noResults": "Nenhum resultado encontrado",
   "confirm": "Confirmar",
   "back": "Voltar",

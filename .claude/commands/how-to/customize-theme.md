@@ -189,7 +189,6 @@ This file contains EVERYTHING:
    IMPORTS
    ============================================= */
 @import "tailwindcss";
-@import "@nextsparkjs/core/styles/ui.css";
 @import "@nextsparkjs/core/styles/utilities.css";
 @import "@nextsparkjs/core/styles/docs.css";
 @source "../../../**/*.{js,ts,jsx,tsx}";

@@ -2,6 +2,107 @@
 
 Copy-paste templates for plugin components, hooks, and API endpoints.
 
+---
+
+## ⭐ Plugin Environment Loader (REQUIRED)
+
+Every plugin MUST have a `lib/plugin-env.ts` using core's centralized env-loader:
+
+```typescript
+// contents/plugins/my-plugin/lib/plugin-env.ts
+import { getPluginEnv } from '@nextsparkjs/core/lib/plugins/env-loader'
+
+interface MyPluginEnvConfig {
+  MY_PLUGIN_ENABLED?: string
+  MY_PLUGIN_DEBUG?: string
+  MY_PLUGIN_API_KEY?: string
+  MY_PLUGIN_TIMEOUT?: string
+}
+
+class PluginEnvironment {
+  private static instance: PluginEnvironment
+  private config: MyPluginEnvConfig = {}
+  private loaded = false
+
+  private constructor() {
+    this.loadEnvironment()
+  }
+
+  public static getInstance(): PluginEnvironment {
+    if (!PluginEnvironment.instance) {
+      PluginEnvironment.instance = new PluginEnvironment()
+    }
+    return PluginEnvironment.instance
+  }
+
+  private loadEnvironment(forceReload: boolean = false): void {
+    if (this.loaded && !forceReload) return
+
+    try {
+      // Use centralized plugin env loader
+      // Priority: Plugin .env > Root .env > Defaults
+      const env = getPluginEnv('my-plugin')
+
+      this.config = {
+        MY_PLUGIN_ENABLED: env.MY_PLUGIN_ENABLED || 'true',
+        MY_PLUGIN_DEBUG: env.MY_PLUGIN_DEBUG || 'false',
+        MY_PLUGIN_API_KEY: env.MY_PLUGIN_API_KEY,
+        MY_PLUGIN_TIMEOUT: env.MY_PLUGIN_TIMEOUT || '5000',
+      }
+
+      this.loaded = true
+    } catch (error) {
+      console.error('[My Plugin] Failed to load environment:', error)
+      this.loaded = true
+    }
+  }
+
+  public getConfig(): MyPluginEnvConfig {
+    if (!this.loaded) this.loadEnvironment()
+    return this.config
+  }
+
+  // Type-safe helper methods
+  public isPluginEnabled(): boolean {
+    return this.getConfig().MY_PLUGIN_ENABLED !== 'false'
+  }
+
+  public isDebugEnabled(): boolean {
+    return this.getConfig().MY_PLUGIN_DEBUG === 'true'
+  }
+
+  public getApiKey(): string | undefined {
+    return this.getConfig().MY_PLUGIN_API_KEY
+  }
+
+  public getTimeout(): number {
+    return parseInt(this.getConfig().MY_PLUGIN_TIMEOUT || '5000', 10)
+  }
+
+  public reload(): void {
+    this.loaded = false
+    this.loadEnvironment(true)
+  }
+}
+
+export const pluginEnv = PluginEnvironment.getInstance()
+
+// Convenience exports
+export const isPluginEnabled = () => pluginEnv.isPluginEnabled()
+export const isDebugEnabled = () => pluginEnv.isDebugEnabled()
+export const getApiKey = () => pluginEnv.getApiKey()
+export const getTimeout = () => pluginEnv.getTimeout()
+```
+
+**Benefits:**
+- ✅ Plugin `.env` takes priority over root `.env`
+- ✅ Automatic fallback to root `.env` for shared variables (API keys, etc.)
+- ✅ Type-safe configuration access
+- ✅ Singleton pattern for performance
+- ✅ Reload support for testing
+
+---
+
 ## Type Definitions
 
 ```typescript

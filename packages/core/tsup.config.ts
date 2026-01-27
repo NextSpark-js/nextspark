@@ -1,8 +1,20 @@
 import { defineConfig } from 'tsup'
-import { cp, readFile, writeFile, readdir, stat } from 'fs/promises'
+import { cp, readFile, writeFile, readdir, stat, mkdir } from 'fs/promises'
 import { join, resolve, dirname } from 'path'
 import { glob } from 'glob'
 import { existsSync } from 'fs'
+
+/**
+ * Safe copy that ensures parent directories exist
+ */
+async function safeCopy(src: string, dest: string, options?: { recursive?: boolean }): Promise<void> {
+  // Ensure parent directory exists
+  const parentDir = dirname(dest)
+  await mkdir(parentDir, { recursive: true }).catch(() => {})
+
+  // Copy the file/directory
+  await cp(src, dest, options)
+}
 
 /**
  * Fix ESM imports by adding .js extensions to relative imports
@@ -147,17 +159,23 @@ export default defineConfig({
         .then(entries => entries.filter(e => e.isDirectory()).map(e => e.name))
         .catch(() => [])
 
+      let copiedCount = 0
       for (const entityName of entityDirs) {
         const entityMessagesPath = join(entitiesDir, entityName, 'messages')
         if (existsSync(entityMessagesPath)) {
-          await cp(
-            entityMessagesPath,
-            join(distDir, 'entities', entityName, 'messages'),
-            { recursive: true }
-          ).catch(() => console.log(`No ${entityName} messages directory to copy`))
+          const destPath = join(distDir, 'entities', entityName, 'messages')
+          try {
+            // Ensure parent directory exists before copying
+            await mkdir(dirname(destPath), { recursive: true })
+            await cp(entityMessagesPath, destPath, { recursive: true })
+            copiedCount++
+            console.log(`  📦 Copied ${entityName}/messages/`)
+          } catch (err) {
+            console.log(`  ⚠️ Failed to copy ${entityName}/messages/:`, err)
+          }
         }
       }
-      console.log(`✅ Copied messages for ${entityDirs.length} core entities`)
+      console.log(`✅ Copied messages for ${copiedCount}/${entityDirs.length} core entities`)
     }
 
     // Copy presets/ directory
@@ -200,6 +218,28 @@ export default defineConfig({
       join(process.cwd(), 'nextspark-registries.d.ts'),
       join(distDir, 'nextspark-registries.d.ts')
     ).catch(() => console.log('No registry declarations to copy'))
+
+    // Copy entity type declarations (for npm mode without DTS)
+    await cp(
+      join(process.cwd(), 'nextspark-entities.d.ts'),
+      join(distDir, 'nextspark-entities.d.ts')
+    ).catch(() => console.log('No entity declarations to copy'))
+
+    // Create declaration files for core entities (workaround for DTS disabled)
+    // Using 'any' for EntityConfig since the full type is very complex and
+    // proper typing would require DTS generation which is disabled for performance
+    const coreEntitiesDts = `
+// Auto-generated declaration file for patterns entity config
+// Used when DTS generation is disabled in core package
+
+// EntityConfig is complex - using permissive typing for npm mode compatibility
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const patternsEntityConfig: any
+`
+    // Ensure directory exists and write declaration file
+    await mkdir(join(distDir, 'entities', 'patterns'), { recursive: true })
+    await writeFile(join(distDir, 'entities', 'patterns', 'patterns.config.d.ts'), coreEntitiesDts.trim())
+    console.log('✅ Created patterns entity declaration file')
 
     console.log('✅ Assets copied successfully')
   },

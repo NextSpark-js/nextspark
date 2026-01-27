@@ -108,11 +108,12 @@ async function copyProjectFiles(): Promise<void> {
   const itemsToCopy = [
     { src: 'app', dest: 'app', force: true },
     { src: 'public', dest: 'public', force: true },
-    { src: 'middleware.ts', dest: 'middleware.ts', force: true }, // Required for EntityPermissionLayout
+    { src: 'proxy.ts', dest: 'proxy.ts', force: true }, // Next.js 16+ proxy (formerly middleware.ts)
     { src: 'next.config.mjs', dest: 'next.config.mjs', force: true },
     { src: 'tsconfig.json', dest: 'tsconfig.json', force: true },
     { src: 'postcss.config.mjs', dest: 'postcss.config.mjs', force: true },
     { src: 'i18n.ts', dest: 'i18n.ts', force: true },
+    { src: 'pnpm-workspace.yaml', dest: 'pnpm-workspace.yaml', force: true }, // Enable workspace for themes/plugins - REQUIRED
     { src: 'npmrc', dest: '.npmrc', force: false },
     { src: 'tsconfig.cypress.json', dest: 'tsconfig.cypress.json', force: false },
     { src: 'cypress.d.ts', dest: 'cypress.d.ts', force: false },

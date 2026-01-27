@@ -60,7 +60,8 @@ export const GET = withRateLimitTier(async (request: Request) => {
     const registry = getEntityRegistry();
 
     for (const [, entry] of Object.entries(registry)) {
-      const config = entry.config;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const config = (entry as any).config;
       if (!isEntityConfig(config)) continue;
 
       entities.push({

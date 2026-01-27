@@ -313,8 +313,8 @@ export class PatternUsageService {
         continue
       }
 
-      // Use the validated slug from config as table name (guaranteed safe)
-      const tableName = entityConfig.slug
+      // Use the validated tableName or slug from config as table name (guaranteed safe)
+      const tableName = entityConfig.tableName || entityConfig.slug
 
       try {
         // First, get available columns for this table to build a safe query
