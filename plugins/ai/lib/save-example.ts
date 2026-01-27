@@ -1,28 +1,31 @@
 /**
- * AI Example Saving - PostgreSQL Implementation
+ * AI History Saving - PostgreSQL Implementation
  *
  * Uses project's PostgreSQL connection with RLS support.
- * Self-contained plugin with direct DB access.
+ * Saves AI interactions to the ai_history table.
  */
 
 import { mutateWithRLS, queryWithRLS } from '@nextsparkjs/core/lib/db'
 import { sanitizePrompt, sanitizeResponse } from './sanitize'
 
 export interface AIExampleData {
-  title?: string
   prompt: string
   response: string
   model: string
   status: 'pending' | 'processing' | 'completed' | 'failed'
-  userId?: string
+  operation?: 'generate' | 'refine' | 'analyze' | 'chat' | 'completion' | 'other'
+  provider?: string
   metadata?: {
     tokens?: number
+    tokensInput?: number
+    tokensOutput?: number
     cost?: number
     duration?: number
-    provider?: string
     isLocal?: boolean
     platforms?: number
     imagesProcessed?: number
+    relatedEntityType?: string
+    relatedEntityId?: string
   }
 }
 
@@ -34,11 +37,12 @@ export interface SaveExampleResult {
 }
 
 /**
- * Save AI example to PostgreSQL database
+ * Save AI interaction to ai_history table
  */
 export async function saveAIExample(
   data: AIExampleData,
-  userId: string
+  userId: string,
+  teamId: string
 ): Promise<SaveExampleResult> {
   try {
     // 1. Sanitize sensitive data
@@ -49,25 +53,35 @@ export async function saveAIExample(
       sanitizedPrompt !== data.prompt ||
       sanitizedResponse !== data.response
 
-    // 2. Generate title if not provided
-    const title = data.title || generateTitle(sanitizedPrompt)
+    // 2. Extract token info
+    const tokensInput = data.metadata?.tokensInput || 0
+    const tokensOutput = data.metadata?.tokensOutput || 0
+    const tokensUsed = data.metadata?.tokens || (tokensInput + tokensOutput)
 
-    // 3. Insert into database with RLS
+    // 3. Insert into ai_history table with RLS
     const query = `
-      INSERT INTO ai_example (
-        title, prompt, response, model, status, "userId", metadata, "createdAt", "updatedAt"
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+      INSERT INTO ai_history (
+        "userId", "teamId", operation, model, provider, status,
+        "tokensUsed", "tokensInput", "tokensOutput", "estimatedCost",
+        "relatedEntityType", "relatedEntityId",
+        "createdAt", "updatedAt"
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
       RETURNING id
     `
 
     const params = [
-      title,
-      sanitizedPrompt,
-      sanitizedResponse,
-      data.model,
-      data.status,
       userId,
-      JSON.stringify(data.metadata || {})
+      teamId,
+      data.operation || 'generate',
+      data.model,
+      data.provider || 'ollama',
+      data.status,
+      tokensUsed || null,
+      tokensInput || null,
+      tokensOutput || null,
+      data.metadata?.cost || null,
+      data.metadata?.relatedEntityType || null,
+      data.metadata?.relatedEntityId || null
     ]
 
     const result = await mutateWithRLS<{ id: string }>(query, params, userId)
@@ -75,13 +89,14 @@ export async function saveAIExample(
     if (result.rowCount === 0 || !result.rows[0]) {
       return {
         success: false,
-        error: 'Failed to insert example'
+        error: 'Failed to insert ai_history record'
       }
     }
 
-    console.log('[AI Plugin] Example saved to database:', {
+    console.log('[AI Plugin] History saved to database:', {
       id: result.rows[0].id,
-      title,
+      operation: data.operation || 'generate',
+      model: data.model,
       sanitizationApplied
     })
 
@@ -92,7 +107,7 @@ export async function saveAIExample(
     }
 
   } catch (error) {
-    console.error('[AI Plugin] Save example failed:', error)
+    console.error('[AI Plugin] Save history failed:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -101,27 +116,42 @@ export async function saveAIExample(
 }
 
 /**
- * Get AI examples from PostgreSQL
+ * Get AI history from PostgreSQL
  */
 export async function getAIExamples(params: {
   userId?: string
+  teamId?: string
   limit?: number
   offset?: number
   status?: string
+  operation?: string
 }) {
   try {
-    const { userId, limit = 50, offset = 0, status } = params
+    const { userId, teamId, limit = 50, offset = 0, status, operation } = params
 
     let query = `
-      SELECT id, title, prompt, response, model, status, "userId", metadata, "createdAt", "updatedAt"
-      FROM ai_example
+      SELECT id, "userId", "teamId", operation, model, provider, status,
+             "tokensUsed", "tokensInput", "tokensOutput", "estimatedCost",
+             "relatedEntityType", "relatedEntityId",
+             "createdAt", "updatedAt", "completedAt"
+      FROM ai_history
       WHERE 1=1
     `
     const queryParams: (string | number)[] = []
 
+    if (teamId) {
+      queryParams.push(teamId)
+      query += ` AND "teamId" = $${queryParams.length}`
+    }
+
     if (status) {
       queryParams.push(status)
       query += ` AND status = $${queryParams.length}`
+    }
+
+    if (operation) {
+      queryParams.push(operation)
+      query += ` AND operation = $${queryParams.length}`
     }
 
     query += ` ORDER BY "createdAt" DESC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`
@@ -134,7 +164,7 @@ export async function getAIExamples(params: {
       data: rows
     }
   } catch (error) {
-    console.error('[AI Plugin] Get examples failed:', error)
+    console.error('[AI Plugin] Get history failed:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -144,13 +174,16 @@ export async function getAIExamples(params: {
 }
 
 /**
- * Get single AI example by ID from PostgreSQL
+ * Get single AI history record by ID
  */
 export async function getAIExampleById(id: string, userId?: string) {
   try {
     const query = `
-      SELECT id, title, prompt, response, model, status, "userId", metadata, "createdAt", "updatedAt"
-      FROM ai_example
+      SELECT id, "userId", "teamId", operation, model, provider, status,
+             "tokensUsed", "tokensInput", "tokensOutput", "estimatedCost",
+             "relatedEntityType", "relatedEntityId",
+             "createdAt", "updatedAt", "completedAt"
+      FROM ai_history
       WHERE id = $1
     `
 
@@ -159,7 +192,7 @@ export async function getAIExampleById(id: string, userId?: string) {
     if (rows.length === 0) {
       return {
         success: false,
-        error: 'Example not found'
+        error: 'History record not found'
       }
     }
 
@@ -168,7 +201,7 @@ export async function getAIExampleById(id: string, userId?: string) {
       data: rows[0]
     }
   } catch (error) {
-    console.error('[AI Plugin] Get example by ID failed:', error)
+    console.error('[AI Plugin] Get history by ID failed:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -177,18 +210,18 @@ export async function getAIExampleById(id: string, userId?: string) {
 }
 
 /**
- * Delete AI example from PostgreSQL
+ * Delete AI history record
  */
 export async function deleteAIExample(id: string, userId: string) {
   try {
-    const query = `DELETE FROM ai_example WHERE id = $1 RETURNING id`
+    const query = `DELETE FROM ai_history WHERE id = $1 RETURNING id`
 
     const result = await mutateWithRLS<{ id: string }>(query, [id], userId)
 
     if (result.rowCount === 0) {
       return {
         success: false,
-        error: 'Example not found or unauthorized'
+        error: 'History record not found or unauthorized'
       }
     }
 
@@ -197,7 +230,7 @@ export async function deleteAIExample(id: string, userId: string) {
       id: result.rows[0].id
     }
   } catch (error) {
-    console.error('[AI Plugin] Delete example failed:', error)
+    console.error('[AI Plugin] Delete history failed:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -206,32 +239,23 @@ export async function deleteAIExample(id: string, userId: string) {
 }
 
 /**
- * Generate title from prompt (helper)
- */
-function generateTitle(prompt: string): string {
-  const cleaned = prompt.replace(/\n/g, ' ').trim()
-  return cleaned.length > 50
-    ? cleaned.substring(0, 50) + '...'
-    : cleaned
-}
-
-/**
- * Save example with automatic error handling (fire-and-forget)
+ * Save history with automatic error handling (fire-and-forget)
  */
 export async function saveExampleSafely(
   data: AIExampleData,
-  userId: string
+  userId: string,
+  teamId: string
 ): Promise<void> {
   try {
-    const result = await saveAIExample(data, userId)
+    const result = await saveAIExample(data, userId, teamId)
 
     if (!result.success) {
-      console.error('[AI Plugin] Example save failed:', result.error)
+      console.error('[AI Plugin] History save failed:', result.error)
     } else if (result.sanitizationApplied) {
-      console.warn('[AI Plugin] Sanitization was applied to saved example')
+      console.warn('[AI Plugin] Sanitization was applied to saved history')
     }
   } catch (error) {
     // Silent fail - don't break the main request
-    console.error('[AI Plugin] Example save error:', error)
+    console.error('[AI Plugin] History save error:', error)
   }
 }

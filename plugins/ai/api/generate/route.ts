@@ -80,20 +80,25 @@ const postHandler = async (request: NextRequest) => {
 
     // 8. Save example if requested (opt-in)
     if (saveExample) {
+      const teamId = request.headers.get('x-team-id') || ''
       await saveExampleSafely(
         {
           prompt,
           response: result.text,
           model: selectedModel.modelName,
           status: 'completed',
+          operation: 'generate',
+          provider: selectedModel.provider,
           metadata: {
             tokens: tokens.total,
+            tokensInput: tokens.input,
+            tokensOutput: tokens.output,
             cost,
-            provider: selectedModel.provider,
             isLocal: selectedModel.isLocal
           }
         },
-        authResult.user!.id
+        authResult.user!.id,
+        teamId
       )
     }
 

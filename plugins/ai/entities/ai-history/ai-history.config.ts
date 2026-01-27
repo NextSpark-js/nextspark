@@ -17,7 +17,8 @@ export const aiHistoryEntityConfig: EntityConfig = {
   // ==========================================
   // 1. BASIC IDENTIFICATION
   // ==========================================
-  slug: 'ai-history',    // Single source of truth - derives tableName, apiPath, metaTableName, i18nNamespace
+  slug: 'ai-history',
+  tableName: 'ai_history',  // Explicit table name (underscores, not hyphens)
   enabled: true,
   names: {
     singular: 'AI History',
