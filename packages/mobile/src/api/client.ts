@@ -16,23 +16,40 @@ import type { User } from './core/types'
 
 /**
  * Resolve API URL from configuration
+ *
+ * Priority order:
+ * 1. app.config.ts > extra > apiUrl (explicit configuration)
+ * 2. EXPO_PUBLIC_API_URL environment variable
+ * 3. Auto-detect from Expo dev server hostUri (development)
+ * 4. Fallback to http://localhost:5173
+ *
+ * @returns The resolved API URL
+ * @example
+ * ```ts
+ * // In app.config.ts:
+ * export default {
+ *   extra: {
+ *     apiUrl: 'https://api.myapp.com'
+ *   }
+ * }
+ * ```
  */
 export function getApiUrl(): string {
-  // 1. From Expo config (app.config.ts extra.apiUrl)
+  // 1. From Expo config (app.config.ts > extra > apiUrl)
   const configUrl = Constants.expoConfig?.extra?.apiUrl
   if (configUrl) return configUrl
 
-  // 2. From environment variable
+  // 2. From environment variable (EXPO_PUBLIC_API_URL)
   const envUrl = process.env.EXPO_PUBLIC_API_URL
   if (envUrl) return envUrl
 
-  // 3. Auto-detect from Expo dev server
+  // 3. Auto-detect from Expo dev server (development mode)
   if (Constants.expoConfig?.hostUri) {
     const host = Constants.expoConfig.hostUri.split(':')[0]
     return `http://${host}:5173`
   }
 
-  // 4. Fallback
+  // 4. Fallback for local development
   return 'http://localhost:5173'
 }
 

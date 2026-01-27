@@ -98,7 +98,9 @@ export async function addMobileCommand(options: AddMobileOptions = {}): Promise<
       const rootPkgPath = join(projectRoot, 'package.json')
       if (existsSync(rootPkgPath)) {
         const rootPkg = JSON.parse(readFileSync(rootPkgPath, 'utf-8'))
-        const projectName = rootPkg.name || 'my-project'
+        // Remove scope prefix if present (e.g., @scope/project -> project)
+        const rawName = rootPkg.name || 'my-project'
+        const projectName = rawName.replace(/^@[\w-]+\//, '')
         pkg.name = `${projectName}-mobile`
       }
 
