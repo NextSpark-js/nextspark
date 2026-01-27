@@ -133,8 +133,8 @@ function generateTableDefinition(
     includeComments: boolean
   }
 ): TableDefinition {
-  // Derive database config from slug (as per EntityConfig design)
-  const tableName = entityConfig.slug
+  // Use explicit tableName if defined, otherwise derive from slug
+  const tableName = entityConfig.tableName || entityConfig.slug
   const primaryKey = 'id' // Standard primary key name
 
   // Generate columns

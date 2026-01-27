@@ -62,7 +62,7 @@ export function generateSelectQuery(
   const selectClause = selectFields.join(', ')
 
   // Build FROM clause with table name
-  const tableName = entityConfig.slug
+  const tableName = entityConfig.tableName || entityConfig.slug
   const fromClause = `FROM ${tableName}`
 
   // Build WHERE clause
@@ -144,7 +144,7 @@ export function generateInsertQuery(
   data: Record<string, unknown>,
   userId?: string
 ): QueryResult {
-  const tableName = entityConfig.slug
+  const tableName = entityConfig.tableName || entityConfig.slug
   const insertableFields = getInsertableFields(entityConfig)
   
   const fields: string[] = []
@@ -199,7 +199,7 @@ export function generateUpdateQuery(
   data: Record<string, unknown>,
   userId?: string
 ): QueryResult {
-  const tableName = entityConfig.slug
+  const tableName = entityConfig.tableName || entityConfig.slug
   const updatableFields = getUpdatableFields(entityConfig)
   
   const setConditions: string[] = []
@@ -253,7 +253,7 @@ export function generateDeleteQuery(
   id: string,
   userId?: string
 ): QueryResult {
-  const tableName = entityConfig.slug
+  const tableName = entityConfig.tableName || entityConfig.slug
   const params: unknown[] = [id]
   let paramIndex = 2
 
@@ -535,7 +535,7 @@ export function generateCountQuery(
   entityConfig: EntityConfig,
   where: WhereClause[] = []
 ): QueryResult {
-  const tableName = entityConfig.slug
+  const tableName = entityConfig.tableName || entityConfig.slug
   const whereConditions: string[] = []
   const params: unknown[] = []
   let paramIndex = 1
@@ -570,7 +570,7 @@ export function generateCountQuery(
 // Helper functions
 
 function generateSelectFields(entityConfig: EntityConfig): string[] {
-  const tableName = entityConfig.slug
+  const tableName = entityConfig.tableName || entityConfig.slug
   const fields = ["id"]
   
   // Add entity fields
