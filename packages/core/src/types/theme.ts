@@ -17,6 +17,8 @@ export interface ThemeConfig {
   description?: string
   author?: string
   enabled?: boolean
+  /** Default theme mode - controls next-themes behavior */
+  defaultMode?: 'light' | 'dark' | 'system'
   dependencies?: string[]
   plugins?: string[]
   styles?: {

@@ -74,7 +74,8 @@ export default async function RootLayout({
           <NextThemeProvider
             attribute="class"
             defaultTheme={defaultTheme}
-            enableSystem
+            // Only detect OS preference when theme configures defaultMode: 'system'
+            enableSystem={defaultTheme === 'system'}
             disableTransitionOnChange
           >
             <CustomThemeProvider>
