@@ -336,6 +336,7 @@ export async function generateAndSaveDescription(productId: string) {
   // Start operation tracking
   const historyId = await AIHistoryService.startOperation({
     userId: session.user.id,
+    teamId: session.user.activeTeamId,
     operation: 'generate',
     model: 'gpt-4o-mini',
     provider: 'openai',
