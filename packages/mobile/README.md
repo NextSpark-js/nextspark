@@ -2,6 +2,34 @@
 
 Mobile app infrastructure for NextSpark. Provides API client, authentication providers, and utilities for building Expo apps that connect to your NextSpark backend.
 
+## Repository Structure
+
+When developing the package, it's important to understand the different directories:
+
+```
+packages/mobile/
+├── src/                    # Package source code (published to npm)
+│   ├── api/                # API client and entity factory
+│   ├── providers/          # AuthProvider, QueryProvider
+│   ├── hooks/              # useAuth hook
+│   └── lib/                # Storage, Alert utilities
+├── templates/              # Scaffolding templates for `nextspark add:mobile`
+│   ├── app/                # Expo Router pages
+│   └── src/                # Example entities and components
+└── dist/                   # Compiled output
+
+apps/mobile/                # Monorepo development app (NOT distributed)
+├── app/                    # Uses local source for development
+└── src/                    # Local copies for hot reload & debugging
+```
+
+**Key distinction:**
+- **`packages/mobile/src/`** → Published to npm as `@nextsparkjs/mobile`
+- **`packages/mobile/templates/`** → Copied to user projects via `nextspark add:mobile`
+- **`apps/mobile/`** → Internal dev app with local source (for package development)
+
+The templates correctly use `@nextsparkjs/mobile` imports, while `apps/mobile` uses local paths for development convenience.
+
 ## Installation
 
 ```bash

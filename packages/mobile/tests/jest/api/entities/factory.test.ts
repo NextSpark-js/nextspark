@@ -72,40 +72,46 @@ describe('createEntityApi', () => {
   })
 
   describe('get', () => {
-    it('calls apiClient.get with correct path including id', async () => {
-      const mockResponse = { data: { id: 'task-1', title: 'Task 1', status: 'pending' } }
+    it('calls apiClient.get with correct path including id and unwraps response', async () => {
+      const mockEntity = { id: 'task-1', title: 'Task 1', status: 'pending' }
+      const mockResponse = { data: mockEntity }
       ;(apiClient.get as jest.Mock).mockResolvedValueOnce(mockResponse)
 
       const result = await tasksApi.get('task-1')
 
       expect(apiClient.get).toHaveBeenCalledWith('/api/v1/tasks/task-1')
-      expect(result).toEqual(mockResponse)
+      // Result should be the entity directly, not wrapped in { data: ... }
+      expect(result).toEqual(mockEntity)
     })
   })
 
   describe('create', () => {
-    it('calls apiClient.post with correct path and data', async () => {
-      const mockResponse = { data: { id: 'new-task', title: 'New Task', status: 'pending' } }
+    it('calls apiClient.post with correct path and data and unwraps response', async () => {
+      const mockEntity = { id: 'new-task', title: 'New Task', status: 'pending' }
+      const mockResponse = { data: mockEntity }
       ;(apiClient.post as jest.Mock).mockResolvedValueOnce(mockResponse)
 
       const createData: CreateTaskInput = { title: 'New Task', status: 'pending' }
       const result = await tasksApi.create(createData)
 
       expect(apiClient.post).toHaveBeenCalledWith('/api/v1/tasks', createData)
-      expect(result).toEqual(mockResponse)
+      // Result should be the entity directly, not wrapped in { data: ... }
+      expect(result).toEqual(mockEntity)
     })
   })
 
   describe('update', () => {
-    it('calls apiClient.patch with correct path and data', async () => {
-      const mockResponse = { data: { id: 'task-1', title: 'Task 1', status: 'completed' } }
+    it('calls apiClient.patch with correct path and data and unwraps response', async () => {
+      const mockEntity = { id: 'task-1', title: 'Task 1', status: 'completed' }
+      const mockResponse = { data: mockEntity }
       ;(apiClient.patch as jest.Mock).mockResolvedValueOnce(mockResponse)
 
       const updateData: UpdateTaskInput = { status: 'completed' }
       const result = await tasksApi.update('task-1', updateData)
 
       expect(apiClient.patch).toHaveBeenCalledWith('/api/v1/tasks/task-1', updateData)
-      expect(result).toEqual(mockResponse)
+      // Result should be the entity directly, not wrapped in { data: ... }
+      expect(result).toEqual(mockEntity)
     })
   })
 
