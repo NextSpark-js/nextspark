@@ -12,6 +12,8 @@ import { Checkbox } from '../../ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
 import { Progress } from '../../ui/progress';
+import { Slider } from '../../ui/slider';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../../ui/accordion';
 import { Alert, AlertDescription, AlertTitle } from '../../ui/alert';
 import { Avatar, AvatarFallback } from '../../ui/avatar';
 import { Separator } from '../../ui/separator';
@@ -133,6 +135,25 @@ export function ComponentGallery() {
             </div>
           </div>
 
+          {/* Slider */}
+          <div>
+            <h4 className="text-sm font-medium mb-3">Slider</h4>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Default Slider</Label>
+                <Slider defaultValue={[50]} max={100} step={1} />
+              </div>
+              <div className="space-y-2">
+                <Label>Volume: 25%</Label>
+                <Slider defaultValue={[25]} max={100} step={5} />
+              </div>
+              <div className="space-y-2">
+                <Label>Disabled Slider</Label>
+                <Slider defaultValue={[75]} max={100} step={1} disabled />
+              </div>
+            </div>
+          </div>
+
           {/* Avatars */}
           <div>
             <h4 className="text-sm font-medium mb-3">Avatars</h4>
@@ -233,6 +254,67 @@ export function ComponentGallery() {
               </div>
             </TabsContent>
           </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* Accordion */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Accordion</CardTitle>
+          <CardDescription>Collapsible content sections for FAQs and grouped information</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Single Accordion */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium">Single Mode (collapsible)</h4>
+              <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="item-1">
+                  <AccordionTrigger>Is it accessible?</AccordionTrigger>
+                  <AccordionContent>
+                    Yes. It adheres to the WAI-ARIA design pattern for accordions.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="item-2">
+                  <AccordionTrigger>Is it styled?</AccordionTrigger>
+                  <AccordionContent>
+                    Yes. It comes with default styles that match the other components&apos; aesthetic.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="item-3">
+                  <AccordionTrigger>Is it animated?</AccordionTrigger>
+                  <AccordionContent>
+                    Yes. It&apos;s animated by default, but you can disable it if you prefer.
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </div>
+
+            {/* Multiple Accordion */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium">Multiple Mode</h4>
+              <Accordion type="multiple" className="w-full">
+                <AccordionItem value="faq-1">
+                  <AccordionTrigger>How do I get started?</AccordionTrigger>
+                  <AccordionContent>
+                    Simply clone the repository and run <code className="bg-muted px-1 rounded">pnpm install</code> to install dependencies.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="faq-2">
+                  <AccordionTrigger>Can I customize the theme?</AccordionTrigger>
+                  <AccordionContent>
+                    Absolutely! All components use CSS variables that can be customized in your theme configuration.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="faq-3">
+                  <AccordionTrigger>Is there mobile support?</AccordionTrigger>
+                  <AccordionContent>
+                    Yes! All components have native React Native implementations in the @nextsparkjs/ui package.
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

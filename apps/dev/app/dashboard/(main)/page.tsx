@@ -102,8 +102,6 @@ function DefaultDashboardPage() {
           ))}
         </div>
 
-
-
         {/* Quick Actions */}
         <Card>
           <CardHeader>

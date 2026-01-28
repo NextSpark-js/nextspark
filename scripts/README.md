@@ -10,6 +10,7 @@ scripts/
 │   ├── local.sh        # Crear proyecto test NUEVO con .tgz locales
 │   ├── npm.sh          # Crear proyecto test NUEVO con paquetes npm
 │   ├── update-local.sh # Actualizar proyecto EXISTENTE con .tgz locales
+│   ├── mobile-local.sh # Crear proyecto Expo test con mobile package local
 │   └── claude.sh       # Configurar Claude Code symlinks
 ├── packages/
 │   ├── version.sh      # Incrementar versiones
@@ -26,6 +27,7 @@ scripts/
 pnpm setup:local         # Crear proyecto test NUEVO con paquetes locales
 pnpm setup:npm           # Crear proyecto test NUEVO con paquetes npm
 pnpm setup:update-local  # Actualizar proyecto EXISTENTE (my-app) con paquetes locales
+pnpm setup:mobile-local  # Crear proyecto Expo test con mobile package local
 pnpm setup:claude        # Configurar Claude Code
 
 pnpm pkg:version         # Incrementar versiones
@@ -173,6 +175,36 @@ Actualiza un proyecto EXISTENTE con paquetes locales `.tgz`. A diferencia de `lo
 - Desarrollar en monorepo (puerto 5173)
 - Ejecutar `pnpm setup:update-local`
 - Probar en my-app (puerto 3000)
+
+---
+
+### `mobile-local.sh`
+
+Crea un proyecto Expo test con el paquete `@nextsparkjs/mobile` local.
+
+```bash
+./scripts/setup/mobile-local.sh [options]
+
+# Opciones:
+#   --skip-build        Saltar build del paquete
+#   --skip-expo-create  Actualizar proyecto existente
+#   --target <path>     Directorio destino
+
+# Ejemplos:
+./scripts/setup/mobile-local.sh                      # Setup completo
+./scripts/setup/mobile-local.sh --skip-build         # Reempaquetar sin rebuild
+./scripts/setup/mobile-local.sh --skip-expo-create   # Actualizar proyecto existente
+```
+
+**Ubicación:** `../projects/test-mobile-package/`
+
+**Flujo interno:**
+1. Build packages/mobile con pnpm build
+2. Crea .tgz con npm pack
+3. Crea proyecto Expo (blank-typescript)
+4. Copia .tgz al proyecto
+5. Instala con npm
+6. Verifica instalación
 
 ---
 

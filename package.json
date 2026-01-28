@@ -13,6 +13,7 @@
     "setup:local": "./scripts/setup/local.sh",
     "setup:npm": "./scripts/setup/npm.sh",
     "setup:update-local": "./scripts/setup/update-local.sh",
+    "setup:mobile-local": "./scripts/setup/mobile-local.sh",
     "setup:claude": "./scripts/setup/claude.sh",
     "pkg:version": "./scripts/packages/version.sh",
     "pkg:pack": "./scripts/packages/pack.sh --all --clean",
@@ -24,7 +25,10 @@
     "test:theme": "node packages/core/scripts/test/jest-theme.mjs",
     "db:drop": "cd apps/dev && node scripts/drop-all-tables.mjs",
     "db:migrate": "cd apps/dev && node ../../packages/core/scripts/db/run-migrations.mjs",
-    "db:reset": "cd apps/dev && node scripts/drop-all-tables.mjs && node ../../packages/core/scripts/db/run-migrations.mjs"
+    "db:reset": "cd apps/dev && node scripts/drop-all-tables.mjs && node ../../packages/core/scripts/db/run-migrations.mjs",
+    "mobile:install": "cd apps/mobile && pnpm install",
+    "mobile:start": "cd apps/mobile && pnpm start",
+    "mobile:web": "cd apps/mobile && pnpm run web"
   },
   "devDependencies": {
     "@cypress/grep": "^5.0.1",

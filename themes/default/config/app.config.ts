@@ -77,6 +77,9 @@ export const APP_CONFIG_OVERRIDES = {
       additionalOrigins: {
         development: [
           'http://localhost:8081', // Expo mobile web
+          'http://localhost:8082', // Expo alternate port
+          'http://localhost:19006', // Expo web (legacy)
+          'http://192.168.68.106:8081', // Local network Expo
           // Add theme-specific development origins here
         ],
         production: [
