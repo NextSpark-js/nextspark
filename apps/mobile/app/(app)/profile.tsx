@@ -3,7 +3,7 @@
  */
 
 import { View, Text, TextInput, ScrollView, StyleSheet } from 'react-native'
-import { useAuth } from '@/src/providers/AuthProvider'
+import { useAuth } from '@nextsparkjs/mobile'
 import { Colors } from '@/src/constants/colors'
 
 export default function ProfileScreen() {

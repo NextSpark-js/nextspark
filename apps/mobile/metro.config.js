@@ -30,6 +30,16 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
       type: 'sourceFile',
     };
   }
+  // For @nextsparkjs/mobile, redirect to the source (for development)
+  if (moduleName === '@nextsparkjs/mobile') {
+    return {
+      filePath: path.resolve(
+        monorepoRoot,
+        'packages/mobile/src/index.ts'
+      ),
+      type: 'sourceFile',
+    };
+  }
   // Fall back to default resolution
   return context.resolveRequest(context, moduleName, platform);
 };

@@ -11,11 +11,10 @@ build/
 .packages/
 
 # Generated templates (synced at pack time)
-# Source of truth: apps/dev/app/
+# Source of truth: apps/dev/app/ and apps/mobile/app/
 # Only /app/ folders are synced - config files are intentionally different for standalone projects
 packages/core/templates/app/
-# NOTE: packages/mobile/templates/ is NOT ignored - it's manually maintained
-# Config files (metro.config.js, babel.config.js, etc.) differ between monorepo and standalone
+packages/mobile/templates/app/
 
 # Package tarballs
 *.tgz
