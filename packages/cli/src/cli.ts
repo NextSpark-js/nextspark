@@ -93,6 +93,7 @@ program
   .option('--name <name>', 'Project name (non-interactive mode)')
   .option('--slug <slug>', 'Project slug (non-interactive mode)')
   .option('--description <desc>', 'Project description (non-interactive mode)')
+  .option('--type <type>', 'Project type: web-only or web-mobile (non-interactive mode)')
   .action(initCommand);
 
 // Add plugin command

@@ -5,6 +5,11 @@
  */
 
 /**
+ * Project type options (web only vs web + mobile monorepo)
+ */
+export type ProjectType = 'web-only' | 'web-mobile'
+
+/**
  * Team mode options for the project
  */
 export type TeamMode = 'multi-tenant' | 'single-tenant' | 'single-user'
@@ -36,7 +41,7 @@ export interface FeatureFlags {
 }
 
 /**
- * Authentication configuration (Step 7)
+ * Authentication configuration (Step 8)
  * Note: Only email/password and Google OAuth are currently supported
  */
 export interface AuthConfig {
@@ -46,7 +51,7 @@ export interface AuthConfig {
 }
 
 /**
- * Dashboard configuration (Step 8)
+ * Dashboard configuration (Step 9)
  */
 export interface DashboardConfig {
   search: boolean
@@ -60,7 +65,7 @@ export interface DashboardConfig {
 }
 
 /**
- * Content features configuration (Step 6)
+ * Content features configuration (Step 7)
  * Optional content types: Pages with Page Builder and Blog
  */
 export interface ContentFeaturesConfig {
@@ -69,7 +74,7 @@ export interface ContentFeaturesConfig {
 }
 
 /**
- * Development tools configuration (Step 9)
+ * Development tools configuration (Step 10)
  */
 export interface DevConfig {
   devKeyring: boolean
@@ -100,6 +105,7 @@ export interface CLIOptions {
   name?: string
   slug?: string
   description?: string
+  type?: ProjectType // Project type override for non-interactive mode
 }
 
 /**
@@ -111,31 +117,34 @@ export interface WizardConfig {
   projectSlug: string
   projectDescription: string
 
-  // Step 2: Team Configuration
+  // Step 2: Project Type (web only or web + mobile monorepo)
+  projectType: ProjectType
+
+  // Step 3: Team Configuration
   teamMode: TeamMode
   teamRoles: string[]
 
-  // Step 3: Internationalization
+  // Step 4: Internationalization
   defaultLocale: string
   supportedLocales: string[]
 
-  // Step 4: Billing Configuration
+  // Step 5: Billing Configuration
   billingModel: BillingModel
   currency: string
 
-  // Step 5: Features
+  // Step 6: Features
   features: FeatureFlags
 
-  // Step 6: Content Features
+  // Step 7: Content Features
   contentFeatures: ContentFeaturesConfig
 
-  // Step 7: Authentication
+  // Step 8: Authentication
   auth: AuthConfig
 
-  // Step 8: Dashboard
+  // Step 9: Dashboard
   dashboard: DashboardConfig
 
-  // Step 9: Dev Tools
+  // Step 10: Dev Tools
   dev: DevConfig
 }
 

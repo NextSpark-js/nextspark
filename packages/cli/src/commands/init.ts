@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import chalk from 'chalk';
 import ora from 'ora';
 import { runWizard } from '../wizard/index.js';
-import type { CLIOptions, WizardMode, PresetName, ThemeOption, PluginOption } from '../wizard/types.js';
+import type { CLIOptions, WizardMode, PresetName, ThemeOption, PluginOption, ProjectType } from '../wizard/types.js';
 
 interface InitOptions {
   force?: boolean;
@@ -18,6 +18,7 @@ interface InitOptions {
   name?: string;
   slug?: string;
   description?: string;
+  type?: string;
 }
 
 /**
@@ -215,6 +216,7 @@ export async function initCommand(options: InitOptions): Promise<void> {
     name: options.name,
     slug: options.slug,
     description: options.description,
+    type: options.type as ProjectType | undefined,
   };
 
   await runWizard(wizardOptions);

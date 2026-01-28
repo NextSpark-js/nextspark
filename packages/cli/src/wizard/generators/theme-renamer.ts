@@ -16,28 +16,27 @@ const __dirname = path.dirname(__filename)
  * Get the templates directory path from @nextsparkjs/core
  */
 function getTemplatesDir(): string {
-  // In development (monorepo), templates are in core package
-  // In production, they come from installed @nextsparkjs/core
-  try {
-    // Try to resolve from @nextsparkjs/core package
-    const corePkgPath = require.resolve('@nextsparkjs/core/package.json');
-    return path.join(path.dirname(corePkgPath), 'templates');
-  } catch {
-    // Fallback for monorepo development
-    const possiblePaths = [
-      path.resolve(__dirname, '../../../../../core/templates'),
-      path.resolve(__dirname, '../../../../core/templates'),
-      path.resolve(process.cwd(), 'node_modules/@nextsparkjs/core/templates'),
-    ];
+  const rootDir = process.cwd()
 
-    for (const p of possiblePaths) {
-      if (fs.existsSync(p)) {
-        return p;
-      }
+  // Check multiple possible paths for templates directory
+  // Priority: installed package in node_modules > development monorepo paths
+  const possiblePaths = [
+    // From project root node_modules (most common for installed packages)
+    path.resolve(rootDir, 'node_modules/@nextsparkjs/core/templates'),
+    // From CLI dist folder for development
+    path.resolve(__dirname, '../../core/templates'),
+    // Legacy paths for different build structures
+    path.resolve(__dirname, '../../../../../core/templates'),
+    path.resolve(__dirname, '../../../../core/templates'),
+  ];
+
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      return p;
     }
-
-    throw new Error('Could not find @nextsparkjs/core templates directory');
   }
+
+  throw new Error(`Could not find @nextsparkjs/core templates directory. Searched: ${possiblePaths.join(', ')}`);
 }
 
 /**

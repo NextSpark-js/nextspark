@@ -13,7 +13,7 @@ import { existsSync, readdirSync } from 'fs'
 import { join, resolve } from 'path'
 import { showBanner, showSection, showSuccess, showError, showInfo, showWarning } from './banner.js'
 import { runAllPrompts, runQuickPrompts, runExpertPrompts } from './prompts/index.js'
-import { generateProject } from './generators/index.js'
+import { generateProject, isMonorepoProject, getWebDir } from './generators/index.js'
 import { getPreset, applyPreset, PRESET_DESCRIPTIONS } from './presets.js'
 import type { WizardConfig, CLIOptions } from './types.js'
 import { promptProjectInfo } from './prompts/project-info.js'
@@ -158,9 +158,14 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
       await installThemeAndPlugins(selectedTheme, selectedPlugins)
     }
 
+    // Determine the web directory for monorepo projects
+    const projectRoot = process.cwd()
+    const webDir = getWebDir(projectRoot, config)
+    const isMonorepo = isMonorepoProject(config)
+
     // Install all dependencies
     const installSpinner = ora({
-      text: 'Installing dependencies...',
+      text: isMonorepo ? 'Installing dependencies (monorepo)...' : 'Installing dependencies...',
       prefixText: '  ',
     }).start()
 
@@ -168,7 +173,7 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
       // TODO: Change back to stdio: 'pipe' once Windows issues are resolved
       installSpinner.stop()
       execSync('pnpm install --force', {
-        cwd: process.cwd(),
+        cwd: projectRoot, // Always install from root (works for both flat and monorepo)
         stdio: 'inherit',
       })
       installSpinner.succeed('Dependencies installed!')
@@ -184,22 +189,23 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
     }).start()
 
     try {
-      const projectRoot = process.cwd()
-      const registryScript = join(projectRoot, 'node_modules/@nextsparkjs/core/scripts/build/registry.mjs')
+      // For monorepo, registry script is in web/node_modules
+      const registryScript = join(webDir, 'node_modules/@nextsparkjs/core/scripts/build/registry.mjs')
       // TODO: Change back to stdio: 'pipe' once Windows issues are resolved
       registrySpinner.stop()
       execSync(`node "${registryScript}" --build`, {
-        cwd: projectRoot,
+        cwd: webDir, // Run from web directory
         stdio: 'inherit',
         env: {
           ...process.env,
-          NEXTSPARK_PROJECT_ROOT: projectRoot,
+          NEXTSPARK_PROJECT_ROOT: webDir,
         },
       })
       registrySpinner.succeed('Registries built!')
     } catch (error) {
       registrySpinner.fail('Failed to build registries')
-      console.log(chalk.yellow('  Registries will be built automatically when you run "pnpm dev"'))
+      const devCmd = isMonorepo ? 'pnpm dev' : 'pnpm dev'
+      console.log(chalk.yellow(`  Registries will be built automatically when you run "${devCmd}"`))
     }
 
     // Show next steps
@@ -261,8 +267,8 @@ async function runPresetMode(presetName: CLIOptions['preset'], options: CLIOptio
     projectInfo = await promptProjectInfo()
   }
 
-  // Apply preset to project info
-  const config = applyPreset(projectInfo, presetName)
+  // Apply preset to project info (with optional type override from CLI)
+  const config = applyPreset(projectInfo, presetName, options.type)
 
   return config
 }
@@ -281,6 +287,7 @@ function showConfigSummary(config: WizardConfig): void {
   console.log(chalk.gray(`    Name: ${chalk.white(config.projectName)}`))
   console.log(chalk.gray(`    Slug: ${chalk.white(config.projectSlug)}`))
   console.log(chalk.gray(`    Description: ${chalk.white(config.projectDescription)}`))
+  console.log(chalk.gray(`    Type: ${chalk.white(config.projectType === 'web-mobile' ? 'Web + Mobile (Monorepo)' : 'Web only')}`))
   console.log('')
 
   console.log(chalk.white('  Team Mode:'))
@@ -366,6 +373,8 @@ function formatDevTool(tool: string): string {
  * Display next steps after successful generation
  */
 function showNextSteps(config: WizardConfig, referenceTheme: ThemeChoice = null): void {
+  const isMonorepo = config.projectType === 'web-mobile'
+
   console.log('')
   console.log(chalk.cyan('  ' + '='.repeat(60)))
   console.log(chalk.bold.green('  ✨ NextSpark project ready!'))
@@ -376,8 +385,9 @@ function showNextSteps(config: WizardConfig, referenceTheme: ThemeChoice = null)
   console.log('')
 
   // Step 1: Configure .env (already created, just edit values)
+  const envPath = isMonorepo ? 'web/.env' : '.env'
   console.log(chalk.white('  1. Configure your .env file:'))
-  console.log(chalk.gray('     Edit these values in .env:'))
+  console.log(chalk.gray(`     Edit these values in ${envPath}:`))
   console.log('')
   console.log(chalk.yellow('     DATABASE_URL'))
   console.log(chalk.gray('     PostgreSQL connection string'))
@@ -398,12 +408,30 @@ function showNextSteps(config: WizardConfig, referenceTheme: ThemeChoice = null)
   console.log(chalk.cyan('     pnpm dev'))
   console.log('')
 
+  // Mobile-specific steps for monorepo
+  if (isMonorepo) {
+    console.log(chalk.white('  4. (Optional) Start the mobile app:'))
+    console.log(chalk.cyan('     pnpm dev:mobile'))
+    console.log(chalk.gray('     Or: cd mobile && pnpm start'))
+    console.log('')
+  }
+
   // Footer info
   console.log(chalk.gray('  ' + '-'.repeat(60)))
-  console.log(chalk.gray(`  Theme: ${chalk.white(`contents/themes/${config.projectSlug}/`)}`))
-  console.log(chalk.gray(`  Active theme: ${chalk.green(`NEXT_PUBLIC_ACTIVE_THEME=${config.projectSlug}`)}`))
+
+  if (isMonorepo) {
+    console.log(chalk.gray(`  Structure: ${chalk.white('Monorepo (web/ + mobile/)')}`))
+    console.log(chalk.gray(`  Web theme: ${chalk.white(`web/contents/themes/${config.projectSlug}/`)}`))
+    console.log(chalk.gray(`  Mobile app: ${chalk.white('mobile/')}`))
+    console.log(chalk.gray(`  Active theme: ${chalk.green(`NEXT_PUBLIC_ACTIVE_THEME=${config.projectSlug}`)}`))
+  } else {
+    console.log(chalk.gray(`  Theme: ${chalk.white(`contents/themes/${config.projectSlug}/`)}`))
+    console.log(chalk.gray(`  Active theme: ${chalk.green(`NEXT_PUBLIC_ACTIVE_THEME=${config.projectSlug}`)}`))
+  }
+
   if (referenceTheme) {
-    console.log(chalk.gray(`  Reference: ${chalk.white(`contents/themes/${referenceTheme}/`)}`))
+    const refPath = isMonorepo ? `web/contents/themes/${referenceTheme}/` : `contents/themes/${referenceTheme}/`
+    console.log(chalk.gray(`  Reference: ${chalk.white(refPath)}`))
   }
   console.log(chalk.gray('  Docs: https://nextspark.dev/docs'))
   console.log('')

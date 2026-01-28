@@ -58,7 +58,7 @@ function validateSlug(slug: string): string | true {
  * Run project info prompts
  */
 export async function promptProjectInfo(): Promise<Pick<WizardConfig, 'projectName' | 'projectSlug' | 'projectDescription'>> {
-  showSection('Project Information', 1, 5)
+  showSection('Project Information', 1, 10)
 
   // Get project name
   const projectName = await input({
