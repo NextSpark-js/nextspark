@@ -12,9 +12,74 @@ import { headers } from 'next/headers'
 
 type ThemeMode = 'light' | 'dark' | 'system'
 
+export interface ThemeSettings {
+  defaultMode: ThemeMode
+  allowUserToggle: boolean
+}
+
+/**
+ * Get theme settings for the RootLayout
+ * Returns defaultMode and whether user can toggle theme
+ * Server-side only function
+ */
+export async function getThemeSettings(): Promise<ThemeSettings> {
+  const activeThemeName = process.env.NEXT_PUBLIC_ACTIVE_THEME || 'default'
+  const themeConfig = ThemeService.getByName(activeThemeName)
+  const appConfig = ThemeService.getAppConfig(activeThemeName)
+
+  // Get allowUserToggle from app.config.ts (ui.theme.allowUserToggle)
+  // Default to true if not specified
+  const allowUserToggle = appConfig?.ui?.theme?.allowUserToggle ?? true
+
+  // Get base defaultMode from theme.config.ts
+  const configDefaultMode = (themeConfig?.defaultMode as ThemeMode) || 'system'
+
+  // If user can toggle, try to get their preference
+  if (allowUserToggle) {
+    const userTheme = await getUserThemePreference()
+    if (userTheme) {
+      return { defaultMode: userTheme, allowUserToggle }
+    }
+  }
+
+  return { defaultMode: configDefaultMode, allowUserToggle }
+}
+
+/**
+ * Get user's theme preference from their profile metadata
+ */
+async function getUserThemePreference(): Promise<ThemeMode | null> {
+  try {
+    const session = await auth.api.getSession({
+      headers: await headers()
+    })
+
+    if (session?.user?.id) {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173'
+      const response = await fetch(`${baseUrl}/api/user/profile?includeMeta=true`, {
+        headers: {
+          cookie: (await headers()).get('cookie') || '',
+        },
+        cache: 'no-store'
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.meta?.uiPreferences?.theme) {
+          return data.meta.uiPreferences.theme as ThemeMode
+        }
+      }
+    }
+  } catch {
+    // Silently fail during static generation
+  }
+  return null
+}
+
 /**
  * Get the default theme mode for the current user
  * Server-side only function
+ * @deprecated Use getThemeSettings() instead for full theme configuration
  */
 export async function getDefaultThemeMode(): Promise<ThemeMode> {
   try {
