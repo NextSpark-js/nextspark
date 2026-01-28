@@ -7,7 +7,7 @@
 /**
  * Project type options (web only vs web + mobile monorepo)
  */
-export type ProjectType = 'web-only' | 'web-mobile'
+export type ProjectType = 'web' | 'web-mobile'
 
 /**
  * Team mode options for the project

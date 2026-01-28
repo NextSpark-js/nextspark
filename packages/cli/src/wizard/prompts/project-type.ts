@@ -14,7 +14,7 @@ import type { WizardConfig, ProjectType } from '../types.js'
 const PROJECT_TYPE_OPTIONS = [
   {
     name: 'Web only',
-    value: 'web-only' as ProjectType,
+    value: 'web' as ProjectType,
     description: 'Next.js web application with NextSpark. Standard flat project structure.',
   },
   {
@@ -33,7 +33,7 @@ export async function promptProjectType(): Promise<Pick<WizardConfig, 'projectTy
   const projectType = await select({
     message: 'What type of project do you want to create?',
     choices: PROJECT_TYPE_OPTIONS,
-    default: 'web-only',
+    default: 'web',
   })
 
   // Show info about selected type
@@ -57,5 +57,5 @@ export async function promptProjectType(): Promise<Pick<WizardConfig, 'projectTy
  * Get default project type (for quick mode or non-interactive)
  */
 export function getDefaultProjectType(): ProjectType {
-  return 'web-only'
+  return 'web'
 }

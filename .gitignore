@@ -10,9 +10,10 @@ build/
 !packages/core/scripts/build/
 .packages/
 
-# Generated templates (synced from apps/dev/app at pack time)
-# Source of truth: apps/dev/app/
+# Generated templates (synced at pack time)
+# Source of truth: apps/dev/app/ and apps/mobile/
 packages/core/templates/app/
+packages/mobile/templates/
 
 # Package tarballs
 *.tgz

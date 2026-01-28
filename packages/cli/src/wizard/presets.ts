@@ -44,7 +44,7 @@ export interface PresetConfig {
  * team management, and authentication options.
  */
 const SAAS_PRESET: PresetConfig = {
-  projectType: 'web-only',
+  projectType: 'web',
   teamMode: 'multi-tenant',
   teamRoles: ['owner', 'admin', 'member', 'viewer'],
   defaultLocale: 'en',
@@ -90,7 +90,7 @@ const SAAS_PRESET: PresetConfig = {
  * minimal authentication, and simple dashboard.
  */
 const BLOG_PRESET: PresetConfig = {
-  projectType: 'web-only',
+  projectType: 'web',
   teamMode: 'single-user',
   teamRoles: ['owner'],
   defaultLocale: 'en',
@@ -136,7 +136,7 @@ const BLOG_PRESET: PresetConfig = {
  * team roles, and full dashboard features.
  */
 const CRM_PRESET: PresetConfig = {
-  projectType: 'web-only',
+  projectType: 'web',
   teamMode: 'single-tenant',
   teamRoles: ['owner', 'admin', 'member'],
   defaultLocale: 'en',
@@ -243,7 +243,7 @@ export function applyPreset(
  */
 export function getDefaultConfig(): PresetConfig {
   return {
-    projectType: 'web-only',
+    projectType: 'web',
     teamMode: 'multi-tenant',
     teamRoles: ['owner', 'admin', 'member', 'viewer'],
     defaultLocale: 'en',
