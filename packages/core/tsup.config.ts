@@ -3,7 +3,6 @@ import { cp, readFile, writeFile, readdir, stat, mkdir } from 'fs/promises'
 import { join, resolve, dirname } from 'path'
 import { glob } from 'glob'
 import { existsSync } from 'fs'
-import { execSync } from 'child_process'
 
 /**
  * Safe copy that ensures parent directories exist
@@ -186,21 +185,9 @@ export default defineConfig({
       { recursive: true }
     ).catch(() => console.log('No presets directory to copy'))
 
-    // Verify templates are in sync with apps/dev before copying
-    // This ensures the distributed templates match the development source
-    console.log('🔍 Verifying template sync...')
-    try {
-      execSync('pnpm sync:templates --check', {
-        cwd: join(process.cwd(), '../..'), // repo root
-        stdio: 'pipe',
-      })
-      console.log('✅ Templates are in sync')
-    } catch {
-      console.log('⚠️  Templates may be out of sync (run pnpm sync:templates --sync)')
-      // Don't fail the build, just warn - CI can enforce this separately
-    }
-
     // Copy templates/ directory
+    // Note: Templates are synced from apps/dev by pack.sh before building
+    // In dev mode, templates may be out of sync - this is expected
     await cp(
       join(process.cwd(), 'templates'),
       join(distDir, 'templates'),

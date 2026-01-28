@@ -277,6 +277,19 @@ echo ""
 if [ "$SKIP_BUILD" = false ]; then
     echo -e "${CYAN}Building packages...${NC}"
 
+    # Sync templates from apps/dev before building core
+    # This ensures templates are up-to-date with the development source
+    if [[ " ${FINAL_PACKAGES[*]} " =~ " $REPO_ROOT/packages/core " ]]; then
+        echo -e "  ${CYAN}Syncing templates from apps/dev...${NC}"
+        cd "$REPO_ROOT"
+        if pnpm sync:templates --sync > /dev/null 2>&1; then
+            echo -e "    ${GREEN}[OK]${NC} Templates synced"
+        else
+            echo -e "    ${RED}[FAIL]${NC} Template sync failed"
+            exit 1
+        fi
+    fi
+
     # Build core first (required by other packages)
     if [[ " ${FINAL_PACKAGES[*]} " =~ " $REPO_ROOT/packages/core " ]]; then
         build_package "$REPO_ROOT/packages/core"
