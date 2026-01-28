@@ -37,6 +37,7 @@ export interface ProjectOptions {
   projectName: string
   projectPath: string
   preset?: string
+  type?: string
   name?: string
   slug?: string
   description?: string
@@ -75,14 +76,6 @@ export async function createProject(options: ProjectOptions): Promise<void> {
   await fs.writeJson(path.join(projectPath, 'package.json'), packageJson, { spaces: 2 })
   pkgSpinner.succeed('  package.json created')
 
-  // Step 2.5: Create .npmrc BEFORE any pnpm commands
-  // This ensures consistent public-hoist-pattern across all pnpm operations
-  const npmrcContent = `# Hoist @nextsparkjs/core dependencies so they're accessible from the project
-# This is required for pnpm to make peer dependencies available
-public-hoist-pattern[]=*
-`
-  await fs.writeFile(path.join(projectPath, '.npmrc'), npmrcContent)
-
   // Step 3: Install @nextsparkjs/core and @nextsparkjs/cli
   const cliSpinner = ora('  Installing @nextsparkjs/core and @nextsparkjs/cli...').start()
   try {
@@ -99,10 +92,7 @@ public-hoist-pattern[]=*
       cliSpinner.text = '  Installing @nextsparkjs/core and @nextsparkjs/cli from local tarballs...'
     }
 
-    // .npmrc is created above with public-hoist-pattern[]=* to ensure consistent hoisting
-    // Use --force to prevent ERR_PNPM_PUBLIC_HOIST_PATTERN_DIFF errors when plugins
-    // are installed later with their dependencies
-    execSync(`pnpm add ${corePackage} ${cliPackage} --force`, {
+    execSync(`pnpm add ${corePackage} ${cliPackage}`, {
       cwd: projectPath,
       stdio: 'pipe',
     })
@@ -122,6 +112,9 @@ public-hoist-pattern[]=*
   const initArgs: string[] = ['nextspark', 'init']
   if (preset) {
     initArgs.push('--preset', preset)
+  }
+  if (options.type) {
+    initArgs.push('--type', options.type)
   }
   if (options.name) {
     initArgs.push('--name', options.name)

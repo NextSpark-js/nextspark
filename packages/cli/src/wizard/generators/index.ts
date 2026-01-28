@@ -128,7 +128,8 @@ async function copyProjectFiles(): Promise<void> {
     { src: 'postcss.config.mjs', dest: 'postcss.config.mjs', force: true },
     { src: 'i18n.ts', dest: 'i18n.ts', force: true },
     { src: 'pnpm-workspace.yaml', dest: 'pnpm-workspace.yaml', force: true }, // Enable workspace for themes/plugins - REQUIRED
-    { src: 'npmrc', dest: '.npmrc', force: false },
+    // Note: .npmrc is NOT copied for web-only projects (not needed, pnpm default hoisting works fine)
+    // For monorepo projects, monorepo-generator.ts creates a specific .npmrc with expo/react-native patterns
     { src: 'tsconfig.cypress.json', dest: 'tsconfig.cypress.json', force: false },
     { src: 'cypress.d.ts', dest: 'cypress.d.ts', force: false },
     { src: 'eslint.config.mjs', dest: 'eslint.config.mjs', force: false },
@@ -241,7 +242,12 @@ async function updatePackageJson(config: WizardConfig): Promise<void> {
   }
 
   for (const [name, version] of Object.entries(depsToAdd)) {
-    if (!packageJson.dependencies[name]) {
+    // Always set our core packages to 'latest' for consistency
+    // pnpm may have resolved to specific versions during initial install,
+    // but we want package.json to use 'latest' semantic versioning
+    if (name.startsWith('@nextsparkjs/')) {
+      packageJson.dependencies[name] = version
+    } else if (!packageJson.dependencies[name]) {
       packageJson.dependencies[name] = version
     }
   }
@@ -286,7 +292,10 @@ async function updatePackageJson(config: WizardConfig): Promise<void> {
   }
 
   for (const [name, version] of Object.entries(devDepsToAdd)) {
-    if (!packageJson.devDependencies[name]) {
+    // Always set our core packages to 'latest' for consistency
+    if (name.startsWith('@nextsparkjs/')) {
+      packageJson.devDependencies[name] = version
+    } else if (!packageJson.devDependencies[name]) {
       packageJson.devDependencies[name] = version
     }
   }

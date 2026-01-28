@@ -16,13 +16,14 @@ program
   .version(pkg.version)
   .argument('[project-name]', 'Name of the project')
   .option('--preset <preset>', 'Use a preset (saas, blog, crm)')
+  .option('--type <type>', 'Project type: web or web-mobile')
   .option('--name <name>', 'Project name (non-interactive mode)')
   .option('--slug <slug>', 'Project slug (non-interactive mode)')
   .option('--description <desc>', 'Project description (non-interactive mode)')
   .option('--theme <theme>', 'Theme to use (default, blog, crm, productivity, none)')
   .option('--plugins <plugins>', 'Plugins to install (comma-separated)')
   .option('-y, --yes', 'Skip prompts and use defaults', false)
-  .action(async (projectName: string | undefined, options: { preset?: string; name?: string; slug?: string; description?: string; theme?: string; plugins?: string; yes: boolean }) => {
+  .action(async (projectName: string | undefined, options: { preset?: string; type?: string; name?: string; slug?: string; description?: string; theme?: string; plugins?: string; yes: boolean }) => {
     console.log()
     console.log(chalk.bold.cyan('  NextSpark'))
     console.log(chalk.dim('  Create a new SaaS project'))
@@ -34,6 +35,7 @@ program
       await createProject({
         ...projectOptions,
         preset: options.preset,
+        type: options.type,
         name: options.name,
         slug: options.slug,
         description: options.description,

@@ -64,9 +64,9 @@ const MOBILE_TEMPLATE_FILES = [
  * Update these when releasing new versions of NextSpark packages.
  */
 const VERSIONS = {
-  // NextSpark packages
-  NEXTSPARK_MOBILE: '^0.1.0-beta.1',
-  NEXTSPARK_UI: '^0.1.0-beta.1',
+  // NextSpark packages - use 'latest' for consistency with web packages
+  NEXTSPARK_MOBILE: 'latest',
+  NEXTSPARK_UI: 'latest',
 
   // Core dependencies
   TANSTACK_QUERY: '^5.62.0',

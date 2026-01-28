@@ -127,15 +127,22 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
       }
     }
 
-    // Copy .npmrc first (required for pnpm hoist pattern consistency)
-    await copyNpmrc()
-
     // Install @nextsparkjs/core first (required for templates)
     console.log('')
     const coreInstalled = await installCore()
     if (!coreInstalled) {
       showError('Failed to install @nextsparkjs/core. Cannot generate project.')
       process.exit(1)
+    }
+
+    // For monorepo projects, also install @nextsparkjs/mobile (required for mobile templates)
+    if (config.projectType === 'web-mobile') {
+      console.log('')
+      const mobileInstalled = await installMobile()
+      if (!mobileInstalled) {
+        showError('Failed to install @nextsparkjs/mobile. Cannot generate monorepo project.')
+        process.exit(1)
+      }
     }
 
     // Generate the project
@@ -525,23 +532,87 @@ async function installCore(): Promise<boolean> {
 }
 
 /**
- * Copy .npmrc before installing any dependencies
- * This ensures pnpm uses consistent hoist patterns
+ * Check if mobile is already installed
  */
-async function copyNpmrc(): Promise<void> {
-  const npmrcPath = join(process.cwd(), '.npmrc')
+function isMobileInstalled(): boolean {
+  const mobilePath = join(process.cwd(), 'node_modules', '@nextsparkjs', 'mobile')
+  return existsSync(mobilePath)
+}
 
-  // Skip if already exists
-  if (existsSync(npmrcPath)) {
-    return
+/**
+ * Find local tarball for mobile package
+ */
+function findLocalMobileTarball(): string | null {
+  const cwd = process.cwd()
+
+  try {
+    const files = readdirSync(cwd)
+    const mobileTarball = files.find((f) =>
+      f.includes('nextsparkjs-mobile') && f.endsWith('.tgz')
+    )
+    if (mobileTarball) {
+      return join(cwd, mobileTarball)
+    }
+  } catch {
+    // Ignore errors
   }
 
-  // Create .npmrc with required pnpm settings
-  const npmrcContent = `# Hoist @nextsparkjs/core dependencies so they're accessible from the project
-# This is required for pnpm to make peer dependencies available
-public-hoist-pattern[]=*
-`
-
-  const { writeFileSync } = await import('fs')
-  writeFileSync(npmrcPath, npmrcContent)
+  return null
 }
+
+/**
+ * Install @nextsparkjs/mobile package
+ * Required before monorepo project generation (provides mobile templates)
+ */
+async function installMobile(): Promise<boolean> {
+  // Skip if already installed
+  if (isMobileInstalled()) {
+    return true
+  }
+
+  const spinner = ora({
+    text: 'Installing @nextsparkjs/mobile...',
+    prefixText: '  ',
+  }).start()
+
+  try {
+    // Check for local tarball first
+    const localTarball = findLocalMobileTarball()
+
+    let packageSpec = '@nextsparkjs/mobile'
+    if (localTarball) {
+      packageSpec = localTarball
+      spinner.text = 'Installing @nextsparkjs/mobile from local tarball...'
+    }
+
+    // Detect package manager
+    const useYarn = existsSync(join(process.cwd(), 'yarn.lock'))
+    const usePnpm = existsSync(join(process.cwd(), 'pnpm-lock.yaml'))
+
+    let installCmd: string
+    if (usePnpm) {
+      installCmd = `pnpm add ${packageSpec}`
+    } else if (useYarn) {
+      installCmd = `yarn add ${packageSpec}`
+    } else {
+      installCmd = `npm install ${packageSpec}`
+    }
+
+    spinner.stop()
+    execSync(installCmd, {
+      stdio: 'inherit',
+      cwd: process.cwd(),
+    })
+
+    spinner.succeed(chalk.green('@nextsparkjs/mobile installed successfully!'))
+    return true
+  } catch (error) {
+    spinner.fail(chalk.red('Failed to install @nextsparkjs/mobile'))
+    if (error instanceof Error) {
+      console.log(chalk.red(`  Error: ${error.message}`))
+    }
+    console.log(chalk.gray('  Hint: Make sure the package is available (npm registry or local tarball)'))
+    return false
+  }
+}
+
