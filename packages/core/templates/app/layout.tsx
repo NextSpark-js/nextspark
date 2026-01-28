@@ -74,7 +74,7 @@ export default async function RootLayout({
           <NextThemeProvider
             attribute="class"
             defaultTheme={defaultTheme}
-            enableSystem
+            enableSystem={defaultTheme === 'system'}
             disableTransitionOnChange
           >
             <CustomThemeProvider>
