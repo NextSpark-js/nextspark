@@ -53,11 +53,11 @@ export type { EnvSetupAnswers, GitSetupAnswers, ThemeChoice, PluginChoice }
  * Run all prompts in sequence (interactive mode - 10 steps)
  */
 export async function runAllPrompts(): Promise<WizardConfig> {
-  // Step 1: Project Info
-  const projectInfo = await promptProjectInfo()
-
-  // Step 2: Project Type (web only or web + mobile)
+  // Step 1: Project Type (web only or web + mobile) - FIRST to determine folder structure
   const projectTypeConfig = await promptProjectType()
+
+  // Step 2: Project Info (name, slug, description)
+  const projectInfo = await promptProjectInfo()
 
   // Step 3: Team Configuration
   const teamConfig = await promptTeamConfig()
@@ -102,11 +102,11 @@ export async function runAllPrompts(): Promise<WizardConfig> {
  * Run quick prompts (steps 1-7) with defaults for steps 8-10
  */
 export async function runQuickPrompts(): Promise<WizardConfig> {
-  // Step 1: Project Info
-  const projectInfo = await promptProjectInfo()
-
-  // Step 2: Project Type (web only or web + mobile)
+  // Step 1: Project Type (web only or web + mobile) - FIRST to determine folder structure
   const projectTypeConfig = await promptProjectType()
+
+  // Step 2: Project Info (name, slug, description)
+  const projectInfo = await promptProjectInfo()
 
   // Step 3: Team Configuration
   const teamConfig = await promptTeamConfig()
@@ -147,11 +147,11 @@ export async function runQuickPrompts(): Promise<WizardConfig> {
  * Run all prompts with expert options (all 10 steps with advanced settings)
  */
 export async function runExpertPrompts(): Promise<WizardConfig> {
-  // Step 1: Project Info
-  const projectInfo = await promptProjectInfo()
-
-  // Step 2: Project Type (web only or web + mobile)
+  // Step 1: Project Type (web only or web + mobile) - FIRST to determine folder structure
   const projectTypeConfig = await promptProjectType()
+
+  // Step 2: Project Info (name, slug, description)
+  const projectInfo = await promptProjectInfo()
 
   // Step 3: Team Configuration
   const teamConfig = await promptTeamConfig()

@@ -1,7 +1,8 @@
 /**
- * Project Type Prompts (Step 2)
+ * Project Type Prompts (Step 1)
  *
  * Collects project type configuration (web only vs web + mobile).
+ * This is the FIRST step so we know the folder structure early.
  */
 
 import { select } from '@inquirer/prompts'
@@ -28,7 +29,7 @@ const PROJECT_TYPE_OPTIONS = [
  * Run project type prompt
  */
 export async function promptProjectType(): Promise<Pick<WizardConfig, 'projectType'>> {
-  showSection('Project Type', 2, 10)
+  showSection('Project Type', 1, 10)
 
   const projectType = await select({
     message: 'What type of project do you want to create?',

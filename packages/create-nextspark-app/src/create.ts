@@ -100,9 +100,9 @@ public-hoist-pattern[]=*
     }
 
     // .npmrc is created above with public-hoist-pattern[]=* to ensure consistent hoisting
-    // This prevents ERR_PNPM_PUBLIC_HOIST_PATTERN_DIFF errors when plugins
+    // Use --force to prevent ERR_PNPM_PUBLIC_HOIST_PATTERN_DIFF errors when plugins
     // are installed later with their dependencies
-    execSync(`pnpm add ${corePackage} ${cliPackage}`, {
+    execSync(`pnpm add ${corePackage} ${cliPackage} --force`, {
       cwd: projectPath,
       stdio: 'pipe',
     })

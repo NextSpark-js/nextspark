@@ -57,13 +57,34 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
   showModeIndicator(options)
 
   try {
-    // Theme & Plugin Selection (before wizard prompts)
-    // This runs regardless of preset mode to support CLI flags
     let selectedTheme: ThemeChoice = null
     let selectedPlugins: PluginChoice[] = []
+    let config: WizardConfig
 
-    // Non-interactive mode: use CLI flags
+    if (options.preset) {
+      // Preset mode: get project info then apply preset
+      config = await runPresetMode(options.preset, options)
+    } else {
+      // Run prompts based on mode
+      // Order: 1. Type, 2. Info, 3-10. Config options
+      switch (options.mode) {
+        case 'quick':
+          config = await runQuickPrompts()
+          break
+        case 'expert':
+          config = await runExpertPrompts()
+          break
+        case 'interactive':
+        default:
+          config = await runAllPrompts()
+          break
+      }
+    }
+
+    // Theme & Plugin Selection (AFTER project type and info)
+    // This ensures we know the project structure before asking about themes
     if (options.theme !== undefined) {
+      // Non-interactive mode: use CLI flags
       selectedTheme = options.theme === 'none' ? null : options.theme as ThemeChoice
       showInfo(`Reference theme: ${selectedTheme || 'None'}`)
     } else if (!options.preset && options.mode !== 'quick') {
@@ -83,27 +104,6 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
     } else if (selectedTheme) {
       // In quick/yes/preset mode, auto-include required plugins for theme
       selectedPlugins = getRequiredPlugins(selectedTheme)
-    }
-
-    let config: WizardConfig
-
-    if (options.preset) {
-      // Preset mode: get project info then apply preset
-      config = await runPresetMode(options.preset, options)
-    } else {
-      // Run prompts based on mode
-      switch (options.mode) {
-        case 'quick':
-          config = await runQuickPrompts()
-          break
-        case 'expert':
-          config = await runExpertPrompts()
-          break
-        case 'interactive':
-        default:
-          config = await runAllPrompts()
-          break
-      }
     }
 
     // Show summary before generating
