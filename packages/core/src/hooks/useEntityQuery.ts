@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from './useAuth'
+import { fetchWithTeam } from '../lib/api/entities'
 import type { EntityConfig } from '../lib/entities/types'
 
 export interface UseEntityQueryOptions {
@@ -38,10 +39,17 @@ export function useEntityQuery(options: UseEntityQueryOptions) {
 
   const { user } = useAuth()
 
+  // Get active team ID for query key scoping
+  const activeTeamId = typeof window !== 'undefined'
+    ? localStorage.getItem('activeTeamId')
+    : null
+
   // Build query key with all params for proper cache invalidation
+  // Including teamId ensures queries are properly scoped per team
   const queryKey = [
     'entity',
     entityConfig.slug,
+    activeTeamId,
     {
       pageSize,
       includeChildren,
@@ -75,9 +83,17 @@ export function useEntityQuery(options: UseEntityQueryOptions) {
       const params = new URLSearchParams(queryParams)
       const url = `/api/v1/${entityConfig.slug}?${params.toString()}`
 
-      const response = await fetch(url)
+      const response = await fetchWithTeam(url)
 
       if (!response.ok) {
+        // Handle TEAM_CONTEXT_REQUIRED gracefully during initial load
+        if (response.status === 400) {
+          const errorData = await response.json().catch(() => ({}))
+          if (errorData.code === 'TEAM_CONTEXT_REQUIRED') {
+            console.warn('[useEntityQuery] Team context not ready yet, returning empty list')
+            return { items: [], total: 0, page: 1, totalPages: 0 }
+          }
+        }
         throw new Error(`Failed to fetch ${entityConfig.names.plural}`)
       }
 
@@ -112,7 +128,13 @@ export function useEntityOne(
   const { user } = useAuth()
   const { includeChildren = false, enabled = true } = options
 
-  const queryKey = ['entity', entityConfig.slug, id, { includeChildren }]
+  // Get active team ID for query key scoping
+  const activeTeamId = typeof window !== 'undefined'
+    ? localStorage.getItem('activeTeamId')
+    : null
+
+  // Including teamId ensures queries are properly scoped per team
+  const queryKey = ['entity', entityConfig.slug, activeTeamId, id, { includeChildren }]
 
   return useQuery({
     queryKey,
@@ -120,11 +142,19 @@ export function useEntityOne(
       const params = includeChildren ? '?child=all' : ''
       const url = `/api/v1/${entityConfig.slug}/${id}${params}`
 
-      const response = await fetch(url)
+      const response = await fetchWithTeam(url)
 
       if (!response.ok) {
         if (response.status === 404) {
           throw new Error(`${entityConfig.names.singular} not found`)
+        }
+        // Handle TEAM_CONTEXT_REQUIRED gracefully during initial load
+        if (response.status === 400) {
+          const errorData = await response.json().catch(() => ({}))
+          if (errorData.code === 'TEAM_CONTEXT_REQUIRED') {
+            console.warn('[useEntityOne] Team context not ready yet, returning null')
+            return null
+          }
         }
         throw new Error(`Failed to fetch ${entityConfig.names.singular}`)
       }
