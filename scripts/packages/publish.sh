@@ -165,6 +165,14 @@ echo -e "${CYAN}  NextSpark - Publish to npm${NC}"
 echo -e "${CYAN}========================================${NC}"
 echo ""
 
+# Run version validation before publishing
+echo -e "${CYAN}Running version validation...${NC}"
+if ! pnpm pkg:validate; then
+    echo -e "${RED}Version validation failed. Fix errors before publishing.${NC}"
+    exit 1
+fi
+echo ""
+
 # Verify npm authentication
 echo -e "${CYAN}Verifying npm authentication...${NC}"
 REGISTRY_ARGS=""

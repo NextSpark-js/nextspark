@@ -1,15 +1,19 @@
 #!/usr/bin/env node
 import { Command } from 'commander'
 import chalk from 'chalk'
+import { readFileSync } from 'fs'
 import { createProject } from './create.js'
 import { getProjectOptions } from './utils/prompts.js'
+
+// Read version from package.json dynamically
+const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf-8'))
 
 const program = new Command()
 
 program
   .name('create-nextspark-app')
   .description('Create a new NextSpark SaaS project')
-  .version('0.1.0-beta.4')
+  .version(pkg.version)
   .argument('[project-name]', 'Name of the project')
   .option('--preset <preset>', 'Use a preset (saas, blog, crm)')
   .option('--name <name>', 'Project name (non-interactive mode)')

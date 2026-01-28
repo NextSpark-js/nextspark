@@ -3,6 +3,7 @@
 import { config } from 'dotenv';
 import { Command } from 'commander';
 import chalk from 'chalk';
+import { readFileSync } from 'fs';
 import { devCommand } from './commands/dev.js';
 
 // Load .env from project root
@@ -18,12 +19,15 @@ import { doctorCommand } from './commands/doctor.js';
 import { dbMigrateCommand, dbSeedCommand } from './commands/db.js';
 import { syncAppCommand } from './commands/sync-app.js';
 
+// Read version from package.json dynamically
+const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf-8'));
+
 const program = new Command();
 
 program
   .name('nextspark')
   .description('NextSpark CLI - Professional SaaS Boilerplate')
-  .version('0.1.0-beta.4');
+  .version(pkg.version);
 
 // Dev command
 program
