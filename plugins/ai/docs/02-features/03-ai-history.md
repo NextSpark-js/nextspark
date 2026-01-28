@@ -81,6 +81,7 @@ import { AIHistoryService } from '@/contents/plugins/ai/lib/ai-history-service'
 ```typescript
 const historyId = await AIHistoryService.startOperation({
   userId: 'user-id',
+  teamId: 'team-id',
   operation: 'generate',
   model: 'gpt-4o-mini',
   provider: 'openai',
@@ -133,6 +134,7 @@ await AIHistoryService.failOperation({
 ```typescript
 {
   userId: string              // Required
+  teamId: string              // Required - team context for the operation
   operation: AIOperation      // 'generate' | 'refine' | 'analyze' | 'chat' | 'completion' | 'other'
   model: string               // Model name (e.g., 'gpt-4o-mini')
   provider?: AIProvider       // 'openai' | 'anthropic' | 'ollama'
@@ -147,6 +149,7 @@ await AIHistoryService.failOperation({
 ```typescript
 const historyId = await AIHistoryService.startOperation({
   userId: session.user.id,
+  teamId: session.user.activeTeamId,
   operation: 'generate',
   model: 'llama3.2:3b',
   provider: 'ollama'
@@ -225,6 +228,7 @@ try {
 ```typescript
 const historyId = await AIHistoryService.startOperation({
   userId: 'user-id',
+  teamId: 'team-id',
   operation: 'analyze',
   model: 'claude-3-5-haiku-20241022',
   relatedEntityType: 'clients',
@@ -249,6 +253,7 @@ PATCH /api/v1/plugin/ai/ai-history/:id
 // Generate product description
 const historyId = await AIHistoryService.startOperation({
   userId: session.user.id,
+  teamId: session.user.activeTeamId,
   operation: 'generate',
   model: 'gpt-4o-mini',
   relatedEntityType: 'products',
@@ -265,6 +270,7 @@ const historyId = await AIHistoryService.startOperation({
 // Analyze client data
 const historyId = await AIHistoryService.startOperation({
   userId: session.user.id,
+  teamId: session.user.activeTeamId,
   operation: 'analyze',
   model: 'claude-3-5-sonnet-20241022',
   relatedEntityType: 'clients',
@@ -279,6 +285,7 @@ const historyId = await AIHistoryService.startOperation({
 // Audit article content
 const historyId = await AIHistoryService.startOperation({
   userId: session.user.id,
+  teamId: session.user.activeTeamId,
   operation: 'analyze',
   model: 'gpt-4o',
   relatedEntityType: 'articles',
@@ -384,6 +391,7 @@ export async function generateProductDescription(productId: string) {
   // 1. Start operation tracking
   const historyId = await AIHistoryService.startOperation({
     userId: session.user.id,
+    teamId: session.user.activeTeamId,
     operation: 'generate',
     model: 'gpt-4o-mini',
     provider: 'openai',
