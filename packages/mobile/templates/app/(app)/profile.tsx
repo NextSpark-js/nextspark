@@ -1,129 +1,254 @@
 /**
- * Profile Screen
+ * Profile Screen - User information and settings
  */
 
-import { View, Text, StyleSheet, Image } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { View, Text, TextInput, ScrollView, StyleSheet } from 'react-native'
 import { useAuth } from '@nextsparkjs/mobile'
+import { Colors } from '@/src/constants/colors'
 
 export default function ProfileScreen() {
-  const { user, team } = useAuth()
+  const { user } = useAuth()
 
-  const getInitials = (name?: string | null, email?: string) => {
-    if (name) {
-      return name
-        .split(' ')
-        .map((n) => n[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2)
-    }
-    return email?.substring(0, 2).toUpperCase() || '??'
-  }
+  // Split name into first and last name
+  const nameParts = user?.name?.split(' ') || ['', '']
+  const firstName = nameParts[0] || ''
+  const lastName = nameParts.slice(1).join(' ') || ''
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
-      <View style={styles.content}>
-        {/* Avatar */}
-        <View style={styles.avatarSection}>
-          {user?.image ? (
-            <Image source={{ uri: user.image }} style={styles.avatar} />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarText}>
-                {getInitials(user?.name, user?.email)}
-              </Text>
-            </View>
-          )}
-          <Text style={styles.userName}>{user?.name || 'User'}</Text>
-          <Text style={styles.userEmail}>{user?.email}</Text>
+    <ScrollView style={styles.container}>
+      {/* Page Header */}
+      <View style={styles.header}>
+        <Text style={styles.pageTitle}>Información Personal</Text>
+        <Text style={styles.pageSubtitle}>
+          Gestiona tu información personal y preferencias básicas de tu cuenta.
+        </Text>
+      </View>
+
+      {/* Personal Data Card */}
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardIcon}>👤</Text>
+          <View>
+            <Text style={styles.cardTitle}>Datos Personales</Text>
+            <Text style={styles.cardSubtitle}>
+              Actualiza tu nombre, país, zona horaria e idioma preferido
+            </Text>
+          </View>
         </View>
 
-        {/* Info Cards */}
-        <View style={styles.cards}>
-          <View style={styles.card}>
-            <Text style={styles.cardLabel}>User ID</Text>
-            <Text style={styles.cardValue}>{user?.id}</Text>
-          </View>
+        {/* Name Field */}
+        <View style={styles.field}>
+          <Text style={styles.label}>Nombre</Text>
+          <TextInput
+            style={styles.input}
+            value={firstName}
+            editable={false}
+            placeholder="Tu nombre"
+            placeholderTextColor={Colors.foregroundMuted}
+          />
+        </View>
 
-          {team && (
-            <>
-              <View style={styles.card}>
-                <Text style={styles.cardLabel}>Current Team</Text>
-                <Text style={styles.cardValue}>{team.name}</Text>
-              </View>
-              <View style={styles.card}>
-                <Text style={styles.cardLabel}>Role</Text>
-                <Text style={styles.cardValue}>{team.role}</Text>
-              </View>
-            </>
-          )}
+        {/* Last Name Field */}
+        <View style={styles.field}>
+          <Text style={styles.label}>Apellido</Text>
+          <TextInput
+            style={styles.input}
+            value={lastName}
+            editable={false}
+            placeholder="Tu apellido"
+            placeholderTextColor={Colors.foregroundMuted}
+          />
+        </View>
+
+        {/* Email Field */}
+        <View style={styles.field}>
+          <Text style={styles.label}>Email</Text>
+          <View style={styles.emailInputWrapper}>
+            <Text style={styles.emailIcon}>✉</Text>
+            <TextInput
+              style={[styles.input, styles.emailInput]}
+              value={user?.email || ''}
+              editable={false}
+              placeholder="Tu email"
+              placeholderTextColor={Colors.foregroundMuted}
+            />
+          </View>
+          <Text style={styles.hint}>No se puede cambiar</Text>
+        </View>
+
+        {/* Auth Method */}
+        <View style={styles.field}>
+          <Text style={styles.label}>Método de Autenticación</Text>
+          <View style={styles.readOnlyRow}>
+            <Text style={styles.readOnlyIcon}>✉</Text>
+            <Text style={styles.readOnlyText}>Email</Text>
+          </View>
+        </View>
+
+        {/* Verification Status */}
+        <View style={styles.field}>
+          <Text style={styles.label}>Estado de Verificación</Text>
+          <View style={styles.readOnlyRow}>
+            <Text style={styles.verifiedIcon}>✓</Text>
+            <Text style={styles.verifiedText}>Verificado</Text>
+          </View>
+        </View>
+
+        {/* Language */}
+        <View style={styles.field}>
+          <Text style={styles.label}>Idioma</Text>
+          <View style={styles.selectWrapper}>
+            <Text style={styles.selectIcon}>文</Text>
+            <Text style={styles.selectText}>Español</Text>
+            <Text style={styles.selectChevron}>⌄</Text>
+          </View>
         </View>
       </View>
-    </SafeAreaView>
+
+      <View style={styles.spacer} />
+    </ScrollView>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
   },
-  content: {
-    flex: 1,
-    padding: 16,
+  header: {
+    padding: 20,
   },
-  avatarSection: {
-    alignItems: 'center',
-    paddingVertical: 32,
-  },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-  },
-  avatarPlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#171717',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    color: '#FFFFFF',
-    fontSize: 36,
-    fontWeight: '600',
-  },
-  userName: {
-    fontSize: 24,
+  pageTitle: {
+    fontSize: 28,
     fontWeight: '700',
-    color: '#111827',
-    marginTop: 16,
+    color: Colors.foreground,
+    marginBottom: 8,
   },
-  userEmail: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 4,
-  },
-  cards: {
-    gap: 12,
+  pageSubtitle: {
+    fontSize: 15,
+    color: Colors.foregroundSecondary,
+    lineHeight: 22,
   },
   card: {
-    backgroundColor: '#FFFFFF',
-    padding: 16,
+    backgroundColor: Colors.card,
+    marginHorizontal: 16,
     borderRadius: 12,
+    padding: 20,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.border,
   },
-  cardLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginBottom: 4,
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 24,
   },
-  cardValue: {
-    fontSize: 16,
-    color: '#111827',
+  cardIcon: {
+    fontSize: 20,
+    marginTop: 2,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.foreground,
+  },
+  cardSubtitle: {
+    fontSize: 14,
+    color: Colors.foregroundSecondary,
+    marginTop: 4,
+    lineHeight: 20,
+  },
+  field: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 14,
     fontWeight: '500',
+    color: Colors.foreground,
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: Colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: Colors.foreground,
+  },
+  emailInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+  },
+  emailIcon: {
+    fontSize: 16,
+    color: Colors.foregroundMuted,
+    marginRight: 10,
+  },
+  emailInput: {
+    flex: 1,
+    borderWidth: 0,
+    paddingHorizontal: 0,
+    backgroundColor: 'transparent',
+  },
+  hint: {
+    fontSize: 12,
+    color: Colors.foregroundMuted,
+    marginTop: 6,
+  },
+  readOnlyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  readOnlyIcon: {
+    fontSize: 16,
+    color: Colors.foregroundSecondary,
+  },
+  readOnlyText: {
+    fontSize: 15,
+    color: Colors.foreground,
+  },
+  verifiedIcon: {
+    fontSize: 16,
+    color: Colors.success,
+  },
+  verifiedText: {
+    fontSize: 15,
+    color: Colors.success,
+    fontWeight: '500',
+  },
+  selectWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  selectIcon: {
+    fontSize: 16,
+    color: Colors.foregroundSecondary,
+    marginRight: 10,
+  },
+  selectText: {
+    flex: 1,
+    fontSize: 15,
+    color: Colors.foreground,
+  },
+  selectChevron: {
+    fontSize: 16,
+    color: Colors.foregroundSecondary,
+  },
+  spacer: {
+    height: 40,
   },
 })

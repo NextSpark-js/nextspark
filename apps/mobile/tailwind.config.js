@@ -102,5 +102,8 @@ module.exports = {
     "text-sm",
     "text-base",
     "text-lg",
+    // Avatar colors
+    "bg-amber-500",
+    "text-amber-500",
   ],
 };

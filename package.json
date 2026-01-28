@@ -13,6 +13,7 @@
     "setup:local": "./scripts/setup/local.sh",
     "setup:npm": "./scripts/setup/npm.sh",
     "setup:update-local": "./scripts/setup/update-local.sh",
+    "setup:mobile-local": "./scripts/setup/mobile-local.sh",
     "setup:claude": "./scripts/setup/claude.sh",
     "pkg:version": "./scripts/packages/version.sh",
     "pkg:pack": "./scripts/packages/pack.sh --all --clean",

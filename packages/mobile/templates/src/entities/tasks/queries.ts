@@ -1,26 +1,42 @@
 /**
- * Tasks Queries
- *
- * TanStack Query hooks for fetching tasks.
+ * TanStack Query hooks for Tasks
  */
 
 import { useQuery } from '@tanstack/react-query'
 import { tasksApi } from './api'
-import type { EntityListParams } from '@nextsparkjs/mobile'
+import { TASKS_QUERY_KEY } from './constants.internal'
 
-export const TASKS_QUERY_KEY = ['tasks'] as const
+export { TASKS_QUERY_KEY }
 
-export function useTasks(params?: EntityListParams) {
+interface UseTasksOptions {
+  page?: number
+  limit?: number
+  status?: string
+  priority?: string
+  search?: string
+  enabled?: boolean
+}
+
+/**
+ * Hook to fetch paginated tasks list
+ */
+export function useTasks(options: UseTasksOptions = {}) {
+  const { page = 1, limit = 20, status, priority, search, enabled = true } = options
+
   return useQuery({
-    queryKey: [...TASKS_QUERY_KEY, params],
-    queryFn: () => tasksApi.list(params),
+    queryKey: [...TASKS_QUERY_KEY, { page, limit, status, priority, search }],
+    queryFn: () => tasksApi.list({ page, limit, status, priority, search }),
+    enabled,
   })
 }
 
-export function useTask(id: string) {
+/**
+ * Hook to fetch a single task by ID
+ */
+export function useTask(id: string | undefined) {
   return useQuery({
     queryKey: [...TASKS_QUERY_KEY, id],
-    queryFn: () => tasksApi.get(id),
+    queryFn: () => tasksApi.get(id!),
     enabled: !!id,
   })
 }

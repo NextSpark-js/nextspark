@@ -1,8 +1,7 @@
 /**
- * Tasks API
+ * Tasks API Client
  *
- * Uses the entity factory from @nextsparkjs/mobile to create
- * a typed API client for the tasks entity.
+ * Auto-generated entity API using createEntityApi factory.
  */
 
 import { createEntityApi } from '@nextsparkjs/mobile'

@@ -1,35 +1,52 @@
 /**
  * Task Entity Types
- *
- * Example entity showing the pattern for mobile entities.
- * Copy this structure for your own entities.
  */
 
+// Task status options (matching backend - uses hyphens, not underscores)
+export type TaskStatus = 'todo' | 'in-progress' | 'review' | 'done' | 'blocked'
+
+// Task priority options
+export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
+
+// Task entity
 export interface Task {
   id: string
   title: string
-  description?: string
-  status: 'pending' | 'in_progress' | 'completed'
-  priority: 'low' | 'medium' | 'high'
-  dueDate?: string
-  userId: string
+  description?: string | null
+  projectId?: string | null
+  status: TaskStatus
+  priority: TaskPriority
+  dueDate?: string | null
+  assigneeId?: string | null
+  estimatedHours?: number | null
+  actualHours?: number | null
   teamId: string
+  userId: string
   createdAt: string
   updatedAt: string
 }
 
+// Create task payload
 export interface CreateTaskInput {
   title: string
   description?: string
-  status?: Task['status']
-  priority?: Task['priority']
+  projectId?: string
+  status?: TaskStatus
+  priority?: TaskPriority
   dueDate?: string
+  assigneeId?: string
+  estimatedHours?: number
 }
 
+// Update task payload
 export interface UpdateTaskInput {
   title?: string
-  description?: string
-  status?: Task['status']
-  priority?: Task['priority']
-  dueDate?: string
+  description?: string | null
+  projectId?: string | null
+  status?: TaskStatus
+  priority?: TaskPriority
+  dueDate?: string | null
+  assigneeId?: string | null
+  estimatedHours?: number | null
+  actualHours?: number | null
 }

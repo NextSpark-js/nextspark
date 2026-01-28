@@ -1,6 +1,6 @@
 {
   "name": "@nextsparkjs/ui",
-  "version": "0.1.0",
+  "version": "0.1.0-beta.2",
   "description": "Shared UI components for NextSpark",
   "type": "module",
   "main": "./dist/index.js",
@@ -16,6 +16,11 @@
         "import": "./dist/index.js"
       }
     },
+    "./native": {
+      "types": "./dist/index.native.d.ts",
+      "import": "./dist/index.native.js"
+    },
+    "./package.json": "./package.json",
     "./variants/*": {
       "types": "./dist/variants/*.d.ts",
       "import": "./dist/variants/*.js"

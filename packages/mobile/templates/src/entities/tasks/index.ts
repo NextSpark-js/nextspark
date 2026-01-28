@@ -1,10 +1,9 @@
 /**
- * Tasks Entity
- *
- * Re-exports all task-related modules.
+ * Tasks Entity Module
  */
 
 export * from './types'
 export * from './api'
 export * from './queries'
 export * from './mutations'
+export * from './constants'

@@ -34,9 +34,9 @@ export function TopBar({ notificationCount = 0 }: TopBarProps) {
     <View className="flex-row items-center justify-between border-b border-border bg-background px-4 py-3">
       {/* Left: Avatar + Greeting */}
       <View className="flex-row items-center gap-3">
-        <Avatar className="bg-amber-500">
+        <Avatar style={{ backgroundColor: "#f59e0b" }}>
           <AvatarImage src={user?.image} />
-          <AvatarFallback className="bg-amber-500">
+          <AvatarFallback style={{ backgroundColor: "#f59e0b" }}>
             {getInitials(user?.name)}
           </AvatarFallback>
         </Avatar>

@@ -3,6 +3,11 @@
  * These components match @nextsparkjs/core implementations exactly
  */
 
+// Theme system (re-export from native for Expo web compatibility)
+export { ThemeProvider, useTheme, type ThemeProviderProps } from "./native/ThemeContext";
+export { defaultColors } from "./native/defaultColors";
+export type { ThemeColors } from "./native/types";
+
 // Buttons
 export { Button, buttonVariants, type ButtonProps } from "./components/Button";
 

@@ -10,12 +10,12 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
-  ActivityIndicator,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { useAuth } from '@nextsparkjs/mobile'
+import { Colors } from '@/src/constants/colors'
+import { Button } from '@/src/components/ui'
 
 export default function LoginScreen() {
   const { login, isLoading } = useAuth()
@@ -27,7 +27,7 @@ export default function LoginScreen() {
     setError(null)
 
     if (!email.trim() || !password.trim()) {
-      setError('Please enter your email and password')
+      setError('Por favor ingresa tu email y contraseña')
       return
     }
 
@@ -35,7 +35,7 @@ export default function LoginScreen() {
       await login(email.trim(), password)
       router.replace('/(app)')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed. Please try again.')
+      setError(err instanceof Error ? err.message : 'Error al iniciar sesión. Por favor intenta de nuevo.')
     }
   }
 
@@ -48,8 +48,8 @@ export default function LoginScreen() {
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.logo}>My App</Text>
-            <Text style={styles.subtitle}>Sign in to your account</Text>
+            <Text style={styles.logo}>NextSpark</Text>
+            <Text style={styles.subtitle}>Inicia sesión en tu cuenta</Text>
           </View>
 
           {/* Error */}
@@ -67,8 +67,8 @@ export default function LoginScreen() {
                 style={styles.input}
                 value={email}
                 onChangeText={setEmail}
-                placeholder="Enter your email"
-                placeholderTextColor="#9CA3AF"
+                placeholder="Ingresa tu email"
+                placeholderTextColor={Colors.foregroundMuted}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -77,29 +77,32 @@ export default function LoginScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Password</Text>
+              <Text style={styles.label}>Contraseña</Text>
               <TextInput
                 style={styles.input}
                 value={password}
                 onChangeText={setPassword}
-                placeholder="Enter your password"
-                placeholderTextColor="#9CA3AF"
+                placeholder="Ingresa tu contraseña"
+                placeholderTextColor={Colors.foregroundMuted}
                 secureTextEntry
                 editable={!isLoading}
               />
             </View>
 
-            <Pressable
-              style={[styles.button, isLoading && styles.buttonDisabled]}
+            <Button
               onPress={handleLogin}
-              disabled={isLoading}
+              isLoading={isLoading}
+              style={{ marginTop: 8 }}
             >
-              {isLoading ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.buttonText}>Sign In</Text>
-              )}
-            </Pressable>
+              Iniciar Sesión
+            </Button>
+          </View>
+
+          {/* Dev Hint */}
+          <View style={styles.hint}>
+            <Text style={styles.hintText}>
+              Dev: carlos.mendoza@nextspark.dev / Test1234
+            </Text>
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -110,7 +113,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
   },
   container: {
     flex: 1,
@@ -127,11 +130,11 @@ const styles = StyleSheet.create({
   logo: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.foreground,
   },
   subtitle: {
     fontSize: 16,
-    color: '#6B7280',
+    color: Colors.foregroundSecondary,
     marginTop: 8,
   },
   errorContainer: {
@@ -141,7 +144,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   errorText: {
-    color: '#DC2626',
+    color: Colors.destructive,
     fontSize: 14,
     textAlign: 'center',
   },
@@ -154,30 +157,23 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#111827',
+    color: Colors.foreground,
   },
   input: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.card,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.border,
     borderRadius: 8,
     padding: 14,
     fontSize: 16,
-    color: '#111827',
+    color: Colors.foreground,
   },
-  button: {
-    backgroundColor: '#171717',
-    borderRadius: 8,
-    padding: 14,
+  hint: {
+    marginTop: 24,
     alignItems: 'center',
-    marginTop: 8,
   },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+  hintText: {
+    fontSize: 12,
+    color: Colors.foregroundMuted,
   },
 })

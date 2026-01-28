@@ -2,221 +2,163 @@
  * Tasks List Screen
  */
 
-import { View, Text, FlatList, StyleSheet, Pressable, ActivityIndicator } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { useCallback, useState } from 'react'
+import {
+  View,
+  Text,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+} from 'react-native'
 import { router } from 'expo-router'
-import { useTasks } from '../../src/entities/tasks/queries'
-import type { Task } from '../../src/entities/tasks/types'
-
-function TaskItem({ task }: { task: Task }) {
-  return (
-    <Pressable
-      style={styles.taskItem}
-      onPress={() => router.push(`/(app)/task/${task.id}`)}
-    >
-      <View style={styles.taskContent}>
-        <Text style={styles.taskTitle}>{task.title}</Text>
-        {task.description && (
-          <Text style={styles.taskDescription} numberOfLines={2}>
-            {task.description}
-          </Text>
-        )}
-        <View style={styles.taskMeta}>
-          <View style={[styles.statusBadge, styles[`status_${task.status}`]]}>
-            <Text style={styles.statusText}>{task.status}</Text>
-          </View>
-          <View style={[styles.priorityBadge, styles[`priority_${task.priority}`]]}>
-            <Text style={styles.priorityText}>{task.priority}</Text>
-          </View>
-        </View>
-      </View>
-    </Pressable>
-  )
-}
+import { useTasks, type Task } from '@/src/entities/tasks'
+import { TaskCard } from '@/src/components/entities/tasks'
+import { Button } from '@/src/components/ui'
+import { Colors } from '@/src/constants/colors'
 
 export default function TasksScreen() {
   const { data, isLoading, error, refetch } = useTasks()
+  const [refreshing, setRefreshing] = useState(false)
 
-  if (isLoading) {
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true)
+    try {
+      await refetch()
+    } finally {
+      setRefreshing(false)
+    }
+  }, [refetch])
+
+  const handleTaskPress = (task: Task) => {
+    router.push(`/(app)/task/${task.id}`)
+  }
+
+  const renderTask = ({ item }: { item: Task }) => (
+    <TaskCard task={item} onPress={() => handleTaskPress(item)} />
+  )
+
+  const renderEmpty = () => {
+    if (isLoading) return null
+
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#3B82F6" />
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyIcon}>☑</Text>
+        <Text style={styles.emptyTitle}>Sin tareas</Text>
+        <Text style={styles.emptyText}>
+          Toca el botón Crear para agregar tu primera tarea
+        </Text>
       </View>
     )
   }
 
-  if (error) {
-    return (
-      <View style={styles.centered}>
-        <Text style={styles.errorText}>Failed to load tasks</Text>
-        <Pressable style={styles.retryButton} onPress={() => refetch()}>
-          <Text style={styles.retryText}>Retry</Text>
-        </Pressable>
-      </View>
-    )
-  }
+  const renderError = () => (
+    <View style={styles.errorContainer}>
+      <Text style={styles.errorTitle}>Algo salió mal</Text>
+      <Text style={styles.errorText}>
+        {error instanceof Error ? error.message : 'Error al cargar tareas'}
+      </Text>
+      <Button onPress={() => refetch()}>
+        Reintentar
+      </Button>
+    </View>
+  )
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
-      <FlatList
-        data={data?.data || []}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <TaskItem task={item} />}
-        contentContainerStyle={styles.list}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyText}>No tasks yet</Text>
-            <Pressable
-              style={styles.createButton}
-              onPress={() => router.push('/(app)/task/create')}
-            >
-              <Text style={styles.createButtonText}>Create your first task</Text>
-            </Pressable>
-          </View>
-        }
-      />
+    <View style={styles.container}>
+      {/* Page Header */}
+      <View style={styles.header}>
+        <Text style={styles.pageTitle}>Tareas</Text>
+        <Text style={styles.pageSubtitle}>
+          Gestiona y organiza tus tareas pendientes
+        </Text>
+      </View>
 
-      {/* FAB */}
-      <Pressable
-        style={styles.fab}
-        onPress={() => router.push('/(app)/task/create')}
-      >
-        <Text style={styles.fabText}>+</Text>
-      </Pressable>
-    </SafeAreaView>
+      {/* Error State */}
+      {error && renderError()}
+
+      {/* Tasks List */}
+      {!error && (
+        <FlatList
+          data={data?.data || []}
+          renderItem={renderTask}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={Colors.primary}
+            />
+          }
+          ListEmptyComponent={renderEmpty}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
   },
-  centered: {
+  header: {
+    padding: 20,
+    paddingBottom: 12,
+  },
+  pageTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: Colors.foreground,
+    marginBottom: 4,
+  },
+  pageSubtitle: {
+    fontSize: 15,
+    color: Colors.foregroundSecondary,
+  },
+  listContent: {
+    paddingBottom: 12,
+    flexGrow: 1,
+  },
+  emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    paddingHorizontal: 32,
   },
-  list: {
-    padding: 16,
-    gap: 12,
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+    opacity: 0.5,
   },
-  taskItem: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  taskContent: {
-    gap: 8,
-  },
-  taskTitle: {
-    fontSize: 16,
+  emptyTitle: {
+    fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
-  },
-  taskDescription: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  taskMeta: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 4,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  status_pending: {
-    backgroundColor: '#FEF3C7',
-  },
-  status_in_progress: {
-    backgroundColor: '#DBEAFE',
-  },
-  status_completed: {
-    backgroundColor: '#D1FAE5',
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#374151',
-  },
-  priorityBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  priority_low: {
-    backgroundColor: '#E5E7EB',
-  },
-  priority_medium: {
-    backgroundColor: '#FED7AA',
-  },
-  priority_high: {
-    backgroundColor: '#FECACA',
-  },
-  priorityText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#374151',
-  },
-  empty: {
-    alignItems: 'center',
-    padding: 40,
+    color: Colors.foreground,
+    marginBottom: 8,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#6B7280',
-    marginBottom: 16,
+    fontSize: 14,
+    color: Colors.foregroundSecondary,
+    textAlign: 'center',
   },
-  createButton: {
-    backgroundColor: '#171717',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  createButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  fab: {
-    position: 'absolute',
-    right: 16,
-    bottom: 16,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#171717',
+  errorContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    paddingHorizontal: 32,
   },
-  fabText: {
-    color: '#FFFFFF',
-    fontSize: 28,
-    fontWeight: '300',
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.destructive,
+    marginBottom: 8,
   },
   errorText: {
-    fontSize: 16,
-    color: '#DC2626',
+    fontSize: 14,
+    color: Colors.foregroundSecondary,
+    textAlign: 'center',
     marginBottom: 16,
-  },
-  retryButton: {
-    backgroundColor: '#171717',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  retryText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
   },
 })
