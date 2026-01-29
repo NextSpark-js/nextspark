@@ -71,15 +71,41 @@ claude/
 └── sessions/     # Created on setup (empty)
 ```
 
+## Auto-Sync on Update
+
+When you run `pnpm update` in a consumer project, this package automatically syncs your `.claude/` directory via postinstall. Framework-managed files are updated while your custom files and configs are preserved.
+
+Requirements for auto-sync:
+- `.claude/` must already exist (run `nextspark setup:ai` first)
+- `pnpm.onlyBuiltDependencies` must include `@nextsparkjs/ai-workflow` in your root `package.json`
+
+You can also trigger a manual sync at any time:
+
+```bash
+nextspark sync:ai
+```
+
+## Troubleshooting
+
+Set `NEXTSPARK_DEBUG=1` to enable verbose logging in the postinstall script:
+
+```bash
+NEXTSPARK_DEBUG=1 pnpm update @nextsparkjs/ai-workflow
+```
+
+This prints detection steps (project root, monorepo check, `.claude/` location) to help diagnose sync issues.
+
 ## For Monorepo Contributors
 
-If you're developing the NextSpark framework itself, use the sync script to copy your working `.claude/` directory into this package before publishing:
+If you're developing the NextSpark framework itself, you **must** run the sync script before publishing to populate the package with the latest files from your working `.claude/` directory:
 
 ```bash
 node packages/ai-workflow/scripts/sync.mjs
 ```
 
 This syncs agents, commands, skills, templates, workflows, docs, and schemas while preserving the consumer config templates (context.json, workspace.json, team.json, github.json).
+
+**Do not publish without syncing first** — the package will ship with stale or empty content.
 
 ## Versioning
 
