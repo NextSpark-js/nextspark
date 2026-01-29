@@ -66,13 +66,24 @@ function validateProjectRoot(projectRoot) {
 }
 
 /**
- * Detect if we're in a NextSpark project (not the monorepo)
+ * Detect if we're in the NextSpark development monorepo.
+ * Consumer projects may also have pnpm-workspace.yaml (for themes/plugins),
+ * so we check for packages/core/ which only exists in the dev monorepo.
+ */
+function isDevMonorepo(projectRoot) {
+  const isMonorepo = existsSync(join(projectRoot, 'packages', 'core', 'package.json'));
+  if (isMonorepo) {
+    debug('Skipping: NextSpark development monorepo detected');
+  }
+  return isMonorepo;
+}
+
+/**
+ * Detect if we're in a NextSpark consumer project
  */
 function isNextSparkProject(projectRoot) {
-  // If we're in the monorepo, skip
-  const pnpmWorkspace = join(projectRoot, 'pnpm-workspace.yaml');
-  if (existsSync(pnpmWorkspace)) {
-    debug('Skipping: monorepo detected (pnpm-workspace.yaml exists)');
+  // If we're in the dev monorepo, skip
+  if (isDevMonorepo(projectRoot)) {
     return false;
   }
 

@@ -72,6 +72,12 @@ export async function createProject(options: ProjectOptions): Promise<void> {
     name: projectName,
     version: '0.1.0',
     private: true,
+    pnpm: {
+      onlyBuiltDependencies: [
+        '@nextsparkjs/core',
+        '@nextsparkjs/ai-workflow',
+      ],
+    },
   }
   await fs.writeJson(path.join(projectPath, 'package.json'), packageJson, { spaces: 2 })
   pkgSpinner.succeed('  package.json created')
