@@ -1,0 +1,34 @@
+{
+  "name": "@nextsparkjs/ai-workflow",
+  "version": "0.1.0-beta.85",
+  "description": "AI workflow templates for NextSpark - Claude Code agents, commands, skills, and multi-editor support",
+  "license": "MIT",
+  "author": "NextSpark <hello@nextspark.dev>",
+  "homepage": "https://nextspark.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NextSpark-js/nextspark.git",
+    "directory": "packages/ai-workflow"
+  },
+  "keywords": [
+    "nextjs",
+    "ai",
+    "workflow",
+    "claude",
+    "cursor",
+    "agents",
+    "developer-tools"
+  ],
+  "type": "module",
+  "main": "./scripts/setup.mjs",
+  "files": [
+    "claude",
+    "cursor",
+    "scripts",
+    "README.md"
+  ],
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "sync": "node scripts/sync.mjs"
+  }
+}

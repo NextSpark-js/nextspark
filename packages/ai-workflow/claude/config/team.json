@@ -1,0 +1,46 @@
+{
+  "$schema": "./team.schema.json",
+
+  "members": [],
+
+  "roles": {
+    "lead": {
+      "description": "Team lead with full permissions",
+      "defaultPermissions": {
+        "canReview": true,
+        "canMerge": true,
+        "canApproveProduction": true
+      }
+    },
+    "developer": {
+      "description": "Developer with standard permissions",
+      "defaultPermissions": {
+        "canReview": true,
+        "canMerge": true,
+        "canApproveProduction": false
+      }
+    },
+    "junior": {
+      "description": "Junior developer requiring review",
+      "defaultPermissions": {
+        "canReview": false,
+        "canMerge": false,
+        "canApproveProduction": false
+      }
+    },
+    "qa": {
+      "description": "QA engineer",
+      "defaultPermissions": {
+        "canReview": false,
+        "canMerge": false,
+        "canApproveProduction": false
+      }
+    }
+  },
+
+  "reviewRules": {
+    "minRequired": 1,
+    "requireQaForProduction": false,
+    "defaultReviewers": []
+  }
+}
