@@ -1,6 +1,6 @@
 {
   "name": "@nextsparkjs/ui",
-  "version": "0.1.0-beta.82",
+  "version": "0.1.0-beta.83",
   "description": "Shared UI components for NextSpark",
   "type": "module",
   "main": "./dist/index.js",
