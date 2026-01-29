@@ -6,7 +6,7 @@
  * 1. app.config.ts extra.apiUrl
  * 2. EXPO_PUBLIC_API_URL environment variable
  * 3. Auto-detect from Expo dev server
- * 4. Fallback to localhost:5173
+ * 4. Fallback to localhost:3000
  */
 
 import Constants from 'expo-constants'
@@ -21,7 +21,7 @@ import type { User } from './core/types'
  * 1. app.config.ts > extra > apiUrl (explicit configuration)
  * 2. EXPO_PUBLIC_API_URL environment variable
  * 3. Auto-detect from Expo dev server hostUri (development)
- * 4. Fallback to http://localhost:5173
+ * 4. Fallback to http://localhost:3000
  *
  * @returns The resolved API URL
  * @example
@@ -46,11 +46,11 @@ export function getApiUrl(): string {
   // 3. Auto-detect from Expo dev server (development mode)
   if (Constants.expoConfig?.hostUri) {
     const host = Constants.expoConfig.hostUri.split(':')[0]
-    return `http://${host}:5173`
+    return `http://${host}:3000`
   }
 
   // 4. Fallback for local development
-  return 'http://localhost:5173'
+  return 'http://localhost:3000'
 }
 
 const API_URL = getApiUrl()
