@@ -51,14 +51,6 @@
           }
         }
       }
-    },
-    "risk": {
-      "type": "object",
-      "properties": {
-        "aboutPath": { "type": "string" },
-        "alwaysCompleteForCritical": { "type": "boolean" },
-        "requireConfirmationForHigh": { "type": "boolean" }
-      }
     }
   }
 }

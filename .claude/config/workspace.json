@@ -39,11 +39,5 @@
     "github": {
       "enabled": true
     }
-  },
-
-  "risk": {
-    "aboutPath": "contents/themes/${activeTheme}/about",
-    "alwaysCompleteForCritical": true,
-    "requireConfirmationForHigh": true
   }
 }

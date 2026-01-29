@@ -25,9 +25,6 @@
     }
   },
 
-  "disabledCommands": [],
-  "disabledAgents": [],
-
   "notes": {
     "coreGuidelines": "When adding functionality to core/, ensure it's abstract and reusable across themes/plugins.",
     "themeGuidelines": "Theme-specific UI and customizations go in contents/themes/.",
