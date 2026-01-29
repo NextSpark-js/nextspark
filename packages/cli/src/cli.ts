@@ -18,6 +18,7 @@ import { addMobileCommand } from './commands/add-mobile.js';
 import { doctorCommand } from './commands/doctor.js';
 import { dbMigrateCommand, dbSeedCommand } from './commands/db.js';
 import { syncAppCommand } from './commands/sync-app.js';
+import { setupAICommand } from './commands/setup-ai.js';
 
 // Read version from package.json dynamically
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf-8'));
@@ -167,6 +168,13 @@ program
   .option('--backup', 'Backup existing files before overwriting')
   .option('-v, --verbose', 'Show detailed file operations')
   .action(syncAppCommand);
+
+// Setup AI workflow
+program
+  .command('setup:ai')
+  .description('Setup AI workflow for your editor (Claude Code, Cursor, Antigravity)')
+  .option('-e, --editor <editor>', 'Editor to setup (claude, cursor, antigravity, all)', 'claude')
+  .action(setupAICommand);
 
 // Error handling
 program.showHelpAfterError();

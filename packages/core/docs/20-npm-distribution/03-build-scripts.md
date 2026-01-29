@@ -26,7 +26,6 @@ packages/core/scripts/
 ├── setup/
 │   ├── npm-postinstall.mjs    # npm postinstall hook
 │   ├── postinstall.mjs        # General postinstall
-│   ├── setup-claude.mjs       # Claude AI workflow setup
 │   └── setup-ci.mjs           # CI/CD workflow setup
 ├── db/
 │   ├── run-migrations.mjs     # Database migrations

@@ -35,6 +35,14 @@
     "tsup": "^8.0.0",
     "typescript": "^5.0.0"
   },
+  "peerDependencies": {
+    "@nextsparkjs/ai-workflow": "^0.1.0"
+  },
+  "peerDependenciesMeta": {
+    "@nextsparkjs/ai-workflow": {
+      "optional": true
+    }
+  },
   "keywords": [
     "nextspark",
     "cli",

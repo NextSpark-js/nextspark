@@ -7,7 +7,7 @@
 
 import chalk from 'chalk'
 import ora from 'ora'
-import { confirm } from '@inquirer/prompts'
+import { confirm, select } from '@inquirer/prompts'
 import { execSync } from 'child_process'
 import { existsSync, readdirSync } from 'fs'
 import { join, resolve } from 'path'
@@ -214,6 +214,9 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
       const devCmd = isMonorepo ? 'pnpm dev' : 'pnpm dev'
       console.log(chalk.yellow(`  Registries will be built automatically when you run "${devCmd}"`))
     }
+
+    // AI Workflow setup (optional)
+    await promptAIWorkflowSetup()
 
     // Show next steps
     showNextSteps(config, selectedTheme)
@@ -440,8 +443,72 @@ function showNextSteps(config: WizardConfig, referenceTheme: ThemeChoice = null)
     const refPath = isMonorepo ? `web/contents/themes/${referenceTheme}/` : `contents/themes/${referenceTheme}/`
     console.log(chalk.gray(`  Reference: ${chalk.white(refPath)}`))
   }
+  console.log('')
+  console.log(chalk.white(`  ${isMonorepo ? '5' : '4'}. (Optional) Setup AI workflows:`))
+  console.log(chalk.cyan('     nextspark setup:ai'))
+  console.log('')
+
   console.log(chalk.gray('  Docs: https://nextspark.dev/docs'))
   console.log('')
+}
+
+/**
+ * Prompt user for AI workflow setup (optional step at end of wizard)
+ */
+async function promptAIWorkflowSetup(): Promise<void> {
+  console.log('')
+  console.log(chalk.cyan('  ' + '='.repeat(60)))
+  console.log(chalk.bold.white('  AI Workflow Setup (Optional)'))
+  console.log(chalk.cyan('  ' + '='.repeat(60)))
+  console.log('')
+
+  const choice = await select({
+    message: 'Setup AI-assisted development workflows?',
+    choices: [
+      { name: 'Claude Code (Recommended)', value: 'claude' },
+      { name: 'Cursor (Coming soon)', value: 'cursor' },
+      { name: 'Antigravity (Coming soon)', value: 'antigravity' },
+      { name: 'Skip for now', value: 'skip' },
+    ],
+  })
+
+  if (choice === 'skip') {
+    showInfo('Skipped AI workflow setup. Run "nextspark setup:ai" later to set up.')
+    return
+  }
+
+  if (choice === 'cursor' || choice === 'antigravity') {
+    showInfo(`${choice} support is coming soon. For now, use Claude Code.`)
+    return
+  }
+
+  // Install @nextsparkjs/ai-workflow
+  const spinner = ora({
+    text: 'Installing @nextsparkjs/ai-workflow...',
+    prefixText: '  ',
+  }).start()
+
+  try {
+    spinner.stop()
+    execSync('pnpm add -D @nextsparkjs/ai-workflow', {
+      cwd: process.cwd(),
+      stdio: 'inherit',
+    })
+
+    // Run setup
+    const setupScript = join(process.cwd(), 'node_modules', '@nextsparkjs', 'ai-workflow', 'scripts', 'setup.mjs')
+    if (existsSync(setupScript)) {
+      execSync(`node "${setupScript}" ${choice}`, {
+        cwd: process.cwd(),
+        stdio: 'inherit',
+      })
+      showSuccess('AI workflow setup complete!')
+    } else {
+      showWarning('AI workflow package installed but setup script not found. Run "nextspark setup:ai" manually.')
+    }
+  } catch (error) {
+    showError('Failed to install AI workflow package. Run "nextspark setup:ai" later.')
+  }
 }
 
 /**

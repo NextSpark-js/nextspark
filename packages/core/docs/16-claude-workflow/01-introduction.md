@@ -260,7 +260,7 @@ Every acceptance criteria tagged for verification:
 
 ```bash
 # 1. Run setup
-npm run setup:claude
+nextspark setup:ai
 
 # 2. Create configuration
 cp .claude/config/agents.example.json .claude/config/agents.json

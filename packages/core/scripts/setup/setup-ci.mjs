@@ -3,7 +3,6 @@
  * CI Workflows Setup Script
  *
  * Copies CI workflow templates from core/presets/ci-workflows/github/ to .github/workflows/
- * Similar pattern to setup-claude.mjs for ai-workflows.
  *
  * Usage: npm run setup:ci
  *
