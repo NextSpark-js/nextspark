@@ -40,15 +40,6 @@ Each `do:` command is **MINIMAL** - it only points to where to read the full ins
 |---------|-------------|-------|
 | `/do:setup-scheduled-action` | Create a scheduled action handler | `scheduled-actions` |
 
-### NPM & Releases
-
-| Command | Description | Reads |
-|---------|-------------|-------|
-| `/do:npm-publish` | Publish packages to npm | `how-to/releases/npm-publish` |
-| `/do:npm-version` | Increment package versions | `how-to/releases/npm-version` |
-| `/do:release-version` | Create a core version release | `how-to/releases/release-version` |
-| `/do:test-package` | Test npm package from scratch | `npm-development-workflow` |
-
 ### Git & GitHub
 
 | Command | Description | Reads |
@@ -67,11 +58,6 @@ Each `do:` command is **MINIMAL** - it only points to where to read the full ins
 # For specific tasks
 /do:create-entity products
 /do:create-migration add-status-to-orders
-/do:npm-publish
-
-# Test package before publishing
-/do:test-package
-
 # For general tasks (skill enforcement)
 /do:use-skills create a webhook integration
 /do:use-skills add authentication to the API

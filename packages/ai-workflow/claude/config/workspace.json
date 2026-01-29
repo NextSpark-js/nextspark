@@ -1,0 +1,43 @@
+{
+  "$schema": "./workspace.schema.json",
+
+  "project": {
+    "name": "",
+    "activeTheme": "default"
+  },
+
+  "preferences": {
+    "language": "en",
+    "defaultWorkflow": "standard",
+    "autoCommit": false,
+    "verboseOutput": false,
+    "confirmDestructive": true
+  },
+
+  "sessions": {
+    "basePath": ".claude/sessions",
+    "autoArchiveAfterDays": 30,
+    "maxActiveStories": 3,
+    "maxActiveTasks": 10
+  },
+
+  "taskManager": {
+    "enabled": false,
+    "provider": "clickup",
+    "syncWithSession": true,
+    "autoUpdateStatus": true,
+    "config": {
+      "apiKey": "${CLICKUP_API_KEY}",
+      "workspaceId": "",
+      "defaultSpace": "",
+      "useMcp": true,
+      "mcpFallback": true
+    }
+  },
+
+  "integrations": {
+    "github": {
+      "enabled": true
+    }
+  }
+}

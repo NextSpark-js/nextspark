@@ -2,8 +2,7 @@
 /**
  * CI Workflows Setup Script
  *
- * Copies CI workflow templates from core/presets/ci-workflows/github/ to .github/workflows/
- * Similar pattern to setup-claude.mjs for ai-workflows.
+ * Copies CI workflow templates from core/templates/ci-workflows/github/ to .github/workflows/
  *
  * Usage: npm run setup:ci
  *
@@ -21,7 +20,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // Path from packages/core/scripts/setup/ to project root (4 levels up)
 const ROOT_DIR = path.resolve(__dirname, '../../../..')
 
-const SOURCE_DIR = path.join(ROOT_DIR, 'packages/core/presets/ci-workflows/github')
+const SOURCE_DIR = path.join(ROOT_DIR, 'packages/core/templates/ci-workflows/github')
 const TARGET_DIR = path.join(ROOT_DIR, '.github/workflows')
 
 // Parse arguments
@@ -49,7 +48,7 @@ if (flags.help) {
   console.log(`
 CI Workflows Setup Script
 
-Copies CI workflow templates from core/presets/ci-workflows/github/ to .github/workflows/
+Copies CI workflow templates from core/templates/ci-workflows/github/ to .github/workflows/
 
 Usage:
   npm run setup:ci [options]
@@ -95,7 +94,7 @@ console.log('\n🔧 CI Workflows Setup\n')
 // Check source directory exists
 if (!fs.existsSync(SOURCE_DIR)) {
   console.error(`❌ Source directory not found: ${SOURCE_DIR}`)
-  console.error(`   Make sure core/presets/ci-workflows/github/ exists.`)
+  console.error(`   Make sure core/templates/ci-workflows/github/ exists.`)
   process.exit(1)
 }
 

@@ -129,7 +129,7 @@ await Read('.rules/testing.md')
 These are **implicit system fields** - see `core/lib/entities/system-fields.ts`
 
 **Entity Presets Available:**
-- `core/presets/theme/entities/tasks/` - Complete entity example
+- `core/templates/contents/themes/starter/entities/tasks/` - Complete entity example
 
 **Note:** Most blocks do NOT require custom entities. Only use this if your block needs persistent data storage beyond page content.
 
@@ -139,7 +139,7 @@ These are **implicit system fields** - see `core/lib/entities/system-fields.ts`
 
 ### Available Block Presets
 
-Location: `core/presets/blocks/`
+Location: `core/templates/blocks/`
 
 | Block | Category | Description |
 |-------|----------|-------------|
@@ -155,7 +155,7 @@ Location: `core/presets/blocks/`
 
 ```bash
 # 1. Copy the preset to the theme
-cp -r core/presets/blocks/hero contents/themes/{THEME}/blocks/
+cp -r core/templates/blocks/hero contents/themes/{THEME}/blocks/
 
 # 2. Customize as needed (config.ts, schema.ts, fields.ts, component.tsx)
 
@@ -167,11 +167,11 @@ node core/scripts/build/registry.mjs
 
 | Scenario | Approach |
 |----------|----------|
-| Need a hero section | **Copy** `core/presets/blocks/hero`, customize |
-| Need a CTA block | **Copy** `core/presets/blocks/cta-section`, customize |
-| Need a features grid | **Copy** `core/presets/blocks/features-grid`, customize |
-| Need testimonials | **Copy** `core/presets/blocks/testimonials`, customize |
-| Need rich text | **Copy** `core/presets/blocks/text-content`, customize |
+| Need a hero section | **Copy** `core/templates/blocks/hero`, customize |
+| Need a CTA block | **Copy** `core/templates/blocks/cta-section`, customize |
+| Need a features grid | **Copy** `core/templates/blocks/features-grid`, customize |
+| Need testimonials | **Copy** `core/templates/blocks/testimonials`, customize |
+| Need rich text | **Copy** `core/templates/blocks/text-content`, customize |
 | Completely unique block | Create from scratch using preset as reference |
 
 ### Preset Inspection Before Creating
@@ -180,14 +180,14 @@ node core/scripts/build/registry.mjs
 
 ```bash
 # List available presets
-ls core/presets/blocks/
+ls core/templates/blocks/
 
 # Read preset README
-cat core/presets/blocks/README.md
+cat core/templates/blocks/README.md
 
 # Inspect a specific preset for patterns
-cat core/presets/blocks/hero/schema.ts
-cat core/presets/blocks/hero/component.tsx
+cat core/templates/blocks/hero/schema.ts
+cat core/templates/blocks/hero/component.tsx
 ```
 
 ## BLOCKS Workflow Integration
@@ -226,7 +226,7 @@ blocks/YYYY-MM-DD-{name}/
 - File structure requirements
 - Base schemas and helpers
 - Development rules and anti-patterns
-- **Block presets in `core/presets/blocks/`** ← NEW
+- **Block presets in `core/templates/blocks/`** ← NEW
 
 **You DISCOVER at runtime** (dynamic knowledge):
 - Which theme to work with
@@ -261,7 +261,7 @@ At the start of task:execute, scope is documented in `context.md` showing allowe
 - `theme: "default"` → You CAN only create/modify blocks in `contents/themes/default/blocks/**/*`
 - `theme: false` → You CANNOT create blocks (report as blocker - need theme scope)
 - `core: false` → You CANNOT modify core block types in `core/types/blocks.ts`
-- Preset copying from `core/presets/blocks/` is READ-ONLY (always allowed for copying)
+- Preset copying from `core/templates/blocks/` is READ-ONLY (always allowed for copying)
 
 **Integration with theme determination:**
 When determining which theme to work in (STEP 1), also verify that scope allows access to that theme:

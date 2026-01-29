@@ -76,11 +76,11 @@ await Read('.rules/api.md')            // API patterns (entity registry, metadat
 
 ### Migration Presets (USE THESE TEMPLATES)
 
-**CRITICAL: Use the standardized templates from `core/presets/migrations/`**
+**CRITICAL: Use the standardized templates from `core/templates/migrations/`**
 
 ```typescript
 // Step 1: Determine RLS mode based on entity requirements
-await Read('core/presets/migrations/README.md')
+await Read('core/templates/migrations/README.md')
 
 // Step 2: Select appropriate template folder
 // - team-mode/    → Multi-tenant apps with team isolation
@@ -153,7 +153,7 @@ At the start of task:execute, scope is documented in `context.md` showing allowe
 
 **CRITICAL: Use entity presets as reference when creating new entities.**
 
-Location: `core/presets/theme/entities/tasks/`
+Location: `core/templates/contents/themes/starter/entities/tasks/`
 
 ### Required Files (4-File Structure)
 
@@ -176,10 +176,10 @@ Location: `core/presets/theme/entities/tasks/`
 **Usage:**
 ```bash
 # Inspect preset for patterns before creating new entity
-cat core/presets/theme/entities/tasks/tasks.config.ts   # Entity config
-cat core/presets/theme/entities/tasks/tasks.fields.ts   # Field definitions
-cat core/presets/theme/entities/tasks/tasks.types.ts    # TypeScript types
-cat core/presets/theme/entities/tasks/tasks.service.ts  # Service pattern
+cat core/templates/contents/themes/starter/entities/tasks/tasks.config.ts   # Entity config
+cat core/templates/contents/themes/starter/entities/tasks/tasks.fields.ts   # Field definitions
+cat core/templates/contents/themes/starter/entities/tasks/tasks.types.ts    # TypeScript types
+cat core/templates/contents/themes/starter/entities/tasks/tasks.service.ts  # Service pattern
 ```
 
 ### Entity Service Pattern
@@ -334,7 +334,7 @@ For detailed patterns including:
 
 **Always read:** `.claude/skills/database-migrations/SKILL.md`
 
-**Always use templates from:** `core/presets/migrations/[mode]/`
+**Always use templates from:** `core/templates/migrations/[mode]/`
 
 ### Quick Reference (full details in skill)
 
@@ -520,7 +520,7 @@ core/migrations/
 
 ### Migration Template (USE PRESETS)
 
-**IMPORTANT: Use templates from `core/presets/migrations/[mode]/` instead of writing from scratch!**
+**IMPORTANT: Use templates from `core/templates/migrations/[mode]/` instead of writing from scratch!**
 
 See `.claude/skills/database-migrations/SKILL.md` for complete SQL patterns including:
 - Table structure with field ordering (id → FK → business → system)
@@ -559,8 +559,8 @@ await Read(`${sessionPath}/clickup_task.md`)  // For Team Mode decision
 
 ```typescript
 const mode = 'team-mode' // or 'private-mode', 'shared-mode', 'public-mode'
-await Read(`core/presets/migrations/${mode}/001_entity_table.sql.template`)
-await Read(`core/presets/migrations/${mode}/002_entity_metas.sql.template`)
+await Read(`core/templates/migrations/${mode}/001_entity_table.sql.template`)
+await Read(`core/templates/migrations/${mode}/002_entity_metas.sql.template`)
 ```
 
 ### Step 3: Create Migrations from Templates
@@ -592,7 +592,7 @@ Check PM Decisions in requirements.md:
 
 ### Step 3: Create Migrations
 
-1. **Select RLS mode** from `core/presets/migrations/`
+1. **Select RLS mode** from `core/templates/migrations/`
 2. Copy and customize template files
 3. Create sample data migration file
 4. Create/update test users migration
@@ -652,7 +652,7 @@ Before completing, verify:
 - [ ] Created migration files in `migrations/` folder
 
 ### Template Compliance
-- [ ] Used template from `core/presets/migrations/[mode]/`
+- [ ] Used template from `core/templates/migrations/[mode]/`
 - [ ] Selected correct RLS mode (team/private/shared/public)
 - [ ] All `{{VARIABLE}}` placeholders replaced
 

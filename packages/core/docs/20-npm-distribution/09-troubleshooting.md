@@ -51,7 +51,7 @@ pnpm tsc --noEmit
 
 **Error:**
 ```
-ENOENT: no such file or directory 'core/presets/...'
+ENOENT: no such file or directory 'core/templates/...'
 ```
 
 **Cause:** Script using old `core/` path instead of `packages/core/`
@@ -63,7 +63,7 @@ ENOENT: no such file or directory 'core/presets/...'
 const ROOT_DIR = join(__dirname, '..', '..', '..', '..')  // Adjust levels
 
 // Use new path
-const presetsDir = join(ROOT_DIR, 'packages/core/presets')
+const templatesDir = join(ROOT_DIR, 'packages/core/templates')
 ```
 
 ## Configuration Issues

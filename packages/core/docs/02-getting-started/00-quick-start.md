@@ -421,12 +421,12 @@ public/theme/
 If you're using Claude Code for development, set up the AI workflow system:
 
 ```bash
-npm run setup:claude
+nextspark setup:ai
 ```
 
 **What it does:**
-- Copies Claude Code agent templates to `.claude/` directory
-- Sets up project management workflow integration
+- Installs `@nextsparkjs/ai-workflow` and copies agents, commands, skills to `.claude/`
+- Sets up AI-assisted development workflow for Claude Code
 - Preserves your custom configurations
 
 **Learn more:** See [Claude Workflow Documentation](../16-claude-workflow/01-overview.md)

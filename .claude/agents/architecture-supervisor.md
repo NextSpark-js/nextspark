@@ -277,7 +277,7 @@ await Read('core/docs/18-page-builder/01-introduction.md')
 
 **CRITICAL: When planning entity features, reference the presets.**
 
-Location: `core/presets/theme/entities/tasks/`
+Location: `core/templates/contents/themes/starter/entities/tasks/`
 
 ### Required Files (4-File Structure)
 
@@ -299,7 +299,7 @@ Location: `core/presets/theme/entities/tasks/`
 **Include in plan.md when planning entity features:**
 ```markdown
 ## Entity Structure Reference
-Use `core/presets/theme/entities/tasks/` as reference for:
+Use `core/templates/contents/themes/starter/entities/tasks/` as reference for:
 - Entity config structure (5 sections) - `tasks.config.ts`
 - Field definitions pattern - `tasks.fields.ts`
 - TypeScript types - `tasks.types.ts`

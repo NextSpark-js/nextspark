@@ -57,7 +57,7 @@ Cada plugin DEBE tener un `package.json` con esta estructura:
 ## Prerequisites
 
 - **Command:** `pnpm create:plugin <plugin-name>`
-- **Preset Location:** `core/presets/plugin/`
+- **Preset Location:** `core/templates/contents/plugins/starter/`
 - **Output Location (monorepo):** `plugins/<plugin-name>/`
 - **Output Location (user project):** `contents/plugins/<plugin-name>/`
 
@@ -361,7 +361,7 @@ Each entity requires 4 files:
 | `[entity].types.ts` | TypeScript types |
 | `[entity].service.ts` | Data access service |
 
-**Reference:** `core/presets/theme/entities/tasks/`
+**Reference:** `core/templates/contents/themes/starter/entities/tasks/`
 
 ---
 

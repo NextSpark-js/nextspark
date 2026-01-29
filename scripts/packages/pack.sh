@@ -29,7 +29,7 @@
 #   ./repackage.sh --package plugin-ai             # Package a specific plugin
 #
 # PACKAGE NAMES:
-#   Core packages: core, testing, cli, create-app
+#   Core packages: core, testing, cli, create-app, ai-workflow
 #   Themes:        theme-default, theme-blog, theme-crm, theme-productivity, etc.
 #   Plugins:       plugin-ai, plugin-amplitude, plugin-langchain, plugin-social-media-publisher, etc.
 #
@@ -108,7 +108,7 @@ while [[ $# -gt 0 ]]; do
             echo "  --skip-build       Skip building before packing"
             echo "  --clean            Clean output directory first"
             echo ""
-            echo "Package names: core, testing, cli, create-app, theme-*, plugin-*"
+            echo "Package names: core, testing, cli, create-app, ai-workflow, theme-*, plugin-*"
             echo ""
             echo "Examples:"
             echo "  $0 --all"
@@ -152,6 +152,9 @@ resolve_package_path() {
             ;;
         create-app)
             echo "$REPO_ROOT/packages/create-nextspark-app"
+            ;;
+        ai-workflow)
+            echo "$REPO_ROOT/packages/ai-workflow"
             ;;
         theme-*)
             local theme_name="${name#theme-}"
@@ -237,6 +240,7 @@ if [ "$PACK_ALL" = true ]; then
     FINAL_PACKAGES+=("$REPO_ROOT/packages/testing")
     FINAL_PACKAGES+=("$REPO_ROOT/packages/cli")
     FINAL_PACKAGES+=("$REPO_ROOT/packages/create-nextspark-app")
+    FINAL_PACKAGES+=("$REPO_ROOT/packages/ai-workflow")
 
     # Add all themes
     for theme in "$REPO_ROOT/themes"/*; do
@@ -288,6 +292,19 @@ if [ "$SKIP_BUILD" = false ]; then
             echo -e "    ${GREEN}[OK]${NC} Templates synced"
         else
             echo -e "    ${RED}[FAIL]${NC} Template sync failed"
+            exit 1
+        fi
+    fi
+
+    # Sync .claude/ into ai-workflow package before building
+    # This ensures agents, commands, skills, etc. are up-to-date
+    if [[ " ${FINAL_PACKAGES[*]} " =~ " $REPO_ROOT/packages/ai-workflow " ]]; then
+        echo -e "  ${CYAN}Syncing .claude/ into ai-workflow package...${NC}"
+        cd "$REPO_ROOT"
+        if node packages/ai-workflow/scripts/sync.mjs > /dev/null 2>&1; then
+            echo -e "    ${GREEN}[OK]${NC} AI workflow synced"
+        else
+            echo -e "    ${RED}[FAIL]${NC} AI workflow sync failed"
             exit 1
         fi
     fi

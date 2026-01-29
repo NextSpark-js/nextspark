@@ -317,7 +317,7 @@ If you're using Claude Code for AI-assisted development, you can set up the work
 
 **Setup command:**
 ```bash
-npm run setup:claude
+nextspark setup:ai
 ```
 
 **What it provides:**

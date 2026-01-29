@@ -372,6 +372,9 @@ export async function generateProject(config: WizardConfig): Promise<void> {
     // 2. Copy and rename starter theme
     await copyStarterTheme(config)
 
+    // 2.1 Ensure contents/plugins/ directory exists (even without plugins selected)
+    await fs.ensureDir(path.join(process.cwd(), 'contents', 'plugins'))
+
     // 3. Copy optional content features (pages entity, blog entity + block)
     await copyContentFeatures(config)
 

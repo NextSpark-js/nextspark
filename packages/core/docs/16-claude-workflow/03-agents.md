@@ -694,14 +694,14 @@ if (remainingTags.length > 0) {
 1. Create/modify agents in `.claude/agents/`
 2. Create/modify commands in `.claude/commands/`
 3. Update configuration in `.claude/config/`
-4. Sync changes to presets (if core project)
+4. Sync changes to `packages/ai-workflow/` (if core project)
 5. Ensure workflow coherence
 6. Detect core vs derived project
 
 **Configuration Awareness:**
 - Reads from `.claude/config/agents.json`
 - Uses JSON path references (not hardcoded values)
-- Syncs to `core/presets/ai-workflow/claude/` when appropriate
+- Syncs to `packages/ai-workflow/claude/` via sync script when appropriate
 
 **Tools:** Bash, Glob, Grep, Read, Edit, Write, TodoWrite, AskUserQuestion
 

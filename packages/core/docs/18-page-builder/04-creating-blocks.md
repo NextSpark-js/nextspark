@@ -33,14 +33,14 @@ See [Block Commands Documentation](../16-claude-workflow/06-commands.md#block-co
 
 ## Using Block Presets (Fastest)
 
-The core includes ready-to-use block presets at `core/presets/blocks/`. Simply copy them to your theme:
+The core includes ready-to-use block presets at `core/templates/blocks/`. Simply copy them to your theme:
 
 ```bash
 # Copy a single block
-cp -r core/presets/blocks/testimonials contents/themes/YOUR_THEME/blocks/
+cp -r core/templates/blocks/testimonials contents/themes/YOUR_THEME/blocks/
 
 # Copy multiple blocks
-cp -r core/presets/blocks/{hero,cta-section,features-grid} contents/themes/YOUR_THEME/blocks/
+cp -r core/templates/blocks/{hero,cta-section,features-grid} contents/themes/YOUR_THEME/blocks/
 
 # Rebuild registry
 node core/scripts/build/registry.mjs

@@ -71,7 +71,7 @@ sortableBlockGeneric: '[data-cy^="sortable-block-"]',  // OK - needed for prefix
 | Core Selectors | `packages/core/src/lib/selectors/domains/*.selectors.ts` |
 | Component Usage | `packages/core/src/components/**/*.tsx` |
 | POM Classes | `themes/*/tests/cypress/src/core/*POM.ts` |
-| POM Presets | `packages/core/presets/theme/tests/cypress/src/core/*POM.ts` |
+| POM Presets | `packages/core/templates/contents/themes/starter/tests/cypress/src/core/*POM.ts` |
 
 ---
 
@@ -93,7 +93,7 @@ sortableBlockGeneric: '[data-cy^="sortable-block-"]',  // OK - needed for prefix
    ```
 
 4. **After sync, update presets:**
-   - `packages/core/presets/theme/tests/cypress/src/core/`
+   - `packages/core/templates/contents/themes/starter/tests/cypress/src/core/`
    - `packages/core/templates/contents/themes/starter/tests/cypress/src/core/`
 
 ---

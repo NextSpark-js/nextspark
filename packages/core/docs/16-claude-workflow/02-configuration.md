@@ -10,7 +10,7 @@ The Claude Workflow system uses configuration files in `.claude/config/` to stor
 - **JSON Format** - Configuration moved from `agents.md` to `agents.json`
 - **Structured Data** - Type-safe configuration with clear schema
 - **Template System** - `agents.example.json` provides template structure
-- **Preset Sync** - Core projects sync to `core/presets/ai-workflow/claude/`
+- **Package-Based Setup** - Install via `@nextsparkjs/ai-workflow` package
 
 ---
 
@@ -19,13 +19,14 @@ The Claude Workflow system uses configuration files in `.claude/config/` to stor
 ### Step 1: Run Setup Command
 
 ```bash
-npm run setup:claude
+nextspark setup:ai
 ```
 
 **What This Does:**
-- Copies all templates from `core/presets/ai-workflow/claude/` to `.claude/`
+- Installs `@nextsparkjs/ai-workflow` package (if not already installed)
+- Copies agents, commands, skills, templates to `.claude/`
 - Creates configuration directory structure
-- Copies example files (`.example.json`, `.example.md`)
+- Preserves any custom files you've created in `.claude/`
 
 ### Step 2: Create Your Configuration
 
@@ -57,12 +58,13 @@ code .claude/config/agents.json
 
 ### What's Protected vs Updated
 
-**Updated on `npm run setup:claude`:**
+**Updated on `nextspark setup:ai`:**
 - ✅ Agent definitions (`.claude/agents/*.md`)
-- ✅ Command definitions (`.claude/commands/*.md`)
-- ✅ Tool documentation (`.claude/tools/**`)
-- ✅ Session templates (`.claude/tools/sessions/templates/`)
-- ✅ Example files (`*.example.json`, `*.example.md`)
+- ✅ Command definitions (`.claude/commands/**/*.md`)
+- ✅ Skill definitions (`.claude/skills/**/*`)
+- ✅ Session templates (`.claude/templates/**/*`)
+- ✅ Workflow definitions (`.claude/workflows/**/*`)
+- ✅ Schema files (`.claude/config/*.schema.json`)
 
 **Never Touched (Your Customizations Safe):**
 - `.claude/config/agents.json` (your credentials)
@@ -429,7 +431,7 @@ Verify `.gitignore` includes:
 
 ```bash
 # New team member setup
-npm run setup:claude
+nextspark setup:ai
 cp .claude/config/agents.example.json .claude/config/agents.json
 # Edit agents.json with your credentials
 ```

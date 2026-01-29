@@ -108,7 +108,7 @@ await clickup.addComment(taskId, "🚀 Starting backend development")
 
 **When creating or modifying entities, use presets as reference:**
 
-Location: `core/presets/theme/entities/tasks/`
+Location: `core/templates/contents/themes/starter/entities/tasks/`
 
 ### Required Files (4-File Structure)
 
