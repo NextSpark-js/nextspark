@@ -20,6 +20,7 @@ export type AIStatus = 'pending' | 'processing' | 'completed' | 'failed'
 
 export interface StartOperationParams {
   userId: string
+  teamId: string // Required - team context for the operation
   operation: AIOperation
   model: string
   provider?: AIProvider
@@ -75,6 +76,7 @@ export class AIHistoryService {
   static async startOperation(params: StartOperationParams): Promise<string> {
     const {
       userId,
+      teamId,
       operation,
       model,
       provider = 'anthropic',
@@ -86,6 +88,7 @@ export class AIHistoryService {
       const result = await queryOne<{ id: string }>(
         `INSERT INTO "ai_history" (
           "userId",
+          "teamId",
           operation,
           model,
           provider,
@@ -93,9 +96,9 @@ export class AIHistoryService {
           "relatedEntityId",
           status,
           "createdAt"
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, now())
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now())
         RETURNING id`,
-        [userId, operation, model, provider, relatedEntityType || null, relatedEntityId || null, 'pending']
+        [userId, teamId, operation, model, provider, relatedEntityType || null, relatedEntityId || null, 'pending']
       )
 
       if (!result) {

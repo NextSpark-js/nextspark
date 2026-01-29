@@ -17,7 +17,7 @@ import { Alert, AlertDescription } from '../../ui/alert'
 import { SkeletonEntityDetail } from '../../ui/skeleton-detail'
 import { useEntityConfig } from '../../../hooks/useEntityConfig'
 import { useRouter } from 'next/navigation'
-import { getEntityData, deleteEntityData } from '../../../lib/api/entities'
+import { getEntityData, deleteEntityData, fetchWithTeam } from '../../../lib/api/entities'
 import { TeamDetailSection } from '../../teams/TeamDetailSection'
 import type { EntityConfig } from '../../../lib/entities/types'
 
@@ -93,13 +93,9 @@ export function EntityDetailWrapper({
         try {
           console.log(`[EntityDetailWrapper] Loading child data for ${childName}`)
           
-          // Load child data from API endpoint
-          const response = await fetch(`/api/v1/${entityType}/${parentId}/child/${childName}`, {
+          // Load child data from API endpoint (using fetchWithTeam for team context)
+          const response = await fetchWithTeam(`/api/v1/${entityType}/${parentId}/child/${childName}`, {
             method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            credentials: 'include', // Include cookies for session auth
           })
           
           if (response.ok) {
@@ -164,12 +160,8 @@ export function EntityDetailWrapper({
 
           console.log(`[EntityDetailWrapper] Loading parent+child data from:`, url.toString())
 
-          const response = await fetch(url.toString(), {
+          const response = await fetchWithTeam(url.toString(), {
             method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            credentials: 'include',
           })
 
           if (!response.ok) {
@@ -260,14 +252,10 @@ export function EntityDetailWrapper({
         url.searchParams.set('child', 'all')
         url.searchParams.set('metas', 'all')
         
-        const response = await fetch(url.toString(), {
+        const response = await fetchWithTeam(url.toString(), {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
         })
-        
+
         if (!response.ok) {
           throw new Error(`Failed to reload ${entityType} with children: ${response.status}`)
         }
@@ -306,12 +294,8 @@ export function EntityDetailWrapper({
       console.log(`[EntityDetailWrapper] Calling URL: ${url}`)
       console.log(`[EntityDetailWrapper] Sending data:`, JSON.stringify(childData, null, 2))
       
-      const response = await fetch(url, {
+      const response = await fetchWithTeam(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // Include cookies for session auth
         body: JSON.stringify(childData),
       })
       
@@ -343,14 +327,10 @@ export function EntityDetailWrapper({
     try {
       console.log(`[EntityDetailWrapper] Editing child ${childName} with id ${childId}`, childData)
       
-      // Call API to update child entity
+      // Call API to update child entity (using fetchWithTeam for team context)
       const endpointPath = entityConfig?.slug || `${entityType}s`
-      const response = await fetch(`/api/v1/${endpointPath}/${id}/child/${childName}/${childId}`, {
+      const response = await fetchWithTeam(`/api/v1/${endpointPath}/${id}/child/${childName}/${childId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // Include cookies for session auth
         body: JSON.stringify(childData),
       })
       
@@ -381,14 +361,10 @@ export function EntityDetailWrapper({
     try {
       console.log(`[EntityDetailWrapper] Deleting child ${childName} with id ${childId}`)
       
-      // Call API to delete child entity  
+      // Call API to delete child entity (using fetchWithTeam for team context)
       const endpointPath = entityConfig?.slug || `${entityType}s`
-      const response = await fetch(`/api/v1/${endpointPath}/${id}/child/${childName}/${childId}`, {
+      const response = await fetchWithTeam(`/api/v1/${endpointPath}/${id}/child/${childName}/${childId}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // Include cookies for session auth
       })
       
       if (!response.ok) {

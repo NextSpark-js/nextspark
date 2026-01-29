@@ -12,55 +12,89 @@ import { headers } from 'next/headers'
 
 type ThemeMode = 'light' | 'dark' | 'system'
 
+export interface ThemeSettings {
+  defaultMode: ThemeMode
+  allowUserToggle: boolean
+}
+
 /**
- * Get the default theme mode for the current user
+ * Get theme settings for the RootLayout
+ * Returns defaultMode and whether user can toggle theme
  * Server-side only function
  */
-export async function getDefaultThemeMode(): Promise<ThemeMode> {
+export async function getThemeSettings(): Promise<ThemeSettings> {
+  const activeThemeName = process.env.NEXT_PUBLIC_ACTIVE_THEME || 'default'
+  const themeConfig = ThemeService.getByName(activeThemeName)
+  const appConfig = ThemeService.getAppConfig(activeThemeName)
+
+  // Get allowUserToggle from app.config.ts (ui.theme.allowUserToggle)
+  // Default to true if not specified
+  const allowUserToggle = appConfig?.ui?.theme?.allowUserToggle ?? true
+
+  // Get base defaultMode from theme.config.ts
+  const configDefaultMode = (themeConfig?.defaultMode as ThemeMode) || 'system'
+
+  // If user can toggle, try to get their preference
+  if (allowUserToggle) {
+    const userTheme = await getUserThemePreference()
+    if (userTheme) {
+      return { defaultMode: userTheme, allowUserToggle }
+    }
+  }
+
+  return { defaultMode: configDefaultMode, allowUserToggle }
+}
+
+const VALID_THEME_MODES: ThemeMode[] = ['light', 'dark', 'system']
+
+/**
+ * Validate if a value is a valid ThemeMode
+ */
+function isValidThemeMode(value: unknown): value is ThemeMode {
+  return typeof value === 'string' && VALID_THEME_MODES.includes(value as ThemeMode)
+}
+
+/**
+ * Get user's theme preference from their profile metadata
+ */
+async function getUserThemePreference(): Promise<ThemeMode | null> {
   try {
-    // Get current session
     const session = await auth.api.getSession({
       headers: await headers()
     })
 
-    // If user is logged in, try to get their theme preference from user meta
     if (session?.user?.id) {
-      try {
-        // Fetch user profile with metadata
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173'
-        const response = await fetch(`${baseUrl}/api/user/profile?includeMeta=true`, {
-          headers: {
-            cookie: (await headers()).get('cookie') || '',
-          },
-          cache: 'no-store'
-        })
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173'
+      const response = await fetch(`${baseUrl}/api/user/profile?includeMeta=true`, {
+        headers: {
+          cookie: (await headers()).get('cookie') || '',
+        },
+        cache: 'no-store'
+      })
 
-        if (response.ok) {
-          const data = await response.json()
-
-          // Check if user has uiPreferences.theme in metadata
-          if (data.meta?.uiPreferences?.theme) {
-            const userTheme = data.meta.uiPreferences.theme as ThemeMode
-            return userTheme
-          }
+      if (response.ok) {
+        const data = await response.json()
+        const theme = data.meta?.uiPreferences?.theme
+        if (isValidThemeMode(theme)) {
+          return theme
         }
-      } catch (error) {
-        // Continue to fallback - silently fail during static generation
       }
     }
   } catch (error) {
-    // Silently fail during static generation when headers() is not available
+    // Silently fail during static generation
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[getThemeSettings] Failed to fetch user preference:', error)
+    }
   }
+  return null
+}
 
-  // Fallback: use theme.config defaultMode
-  try {
-    const activeThemeName = process.env.NEXT_PUBLIC_ACTIVE_THEME || 'default'
-    const themeConfig = ThemeService.getByName(activeThemeName)
-
-    const defaultMode = (themeConfig?.defaultMode as ThemeMode) || 'system'
-    return defaultMode
-  } catch (error) {
-    // Ultimate fallback
-    return 'system'
-  }
+/**
+ * Get the default theme mode for the current user
+ * Server-side only function
+ * @deprecated Use getThemeSettings() instead for full theme configuration
+ */
+export async function getDefaultThemeMode(): Promise<ThemeMode> {
+  const { defaultMode } = await getThemeSettings()
+  return defaultMode
 }
