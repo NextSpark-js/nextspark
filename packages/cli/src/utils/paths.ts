@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
+import { resolve, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -62,4 +62,26 @@ export function isMonorepoMode(): boolean {
   const cwd = process.cwd();
   const npmCorePath = resolve(cwd, 'node_modules', '@nextsparkjs', 'core');
   return !existsSync(npmCorePath);
+}
+
+/**
+ * Resolve the ai-workflow package path.
+ * Checks node_modules first, then monorepo workspace.
+ */
+export function getAIWorkflowDir(): string | null {
+  const cwd = process.cwd();
+
+  // Check node_modules (consumer project — flat or workspace root)
+  const nmPath = join(cwd, 'node_modules', '@nextsparkjs', 'ai-workflow');
+  if (existsSync(nmPath)) return nmPath;
+
+  // Check web/node_modules (monorepo with hoisted deps in web/)
+  const webNmPath = join(cwd, 'web', 'node_modules', '@nextsparkjs', 'ai-workflow');
+  if (existsSync(webNmPath)) return webNmPath;
+
+  // Check monorepo workspace (packages/ai-workflow relative to project root)
+  const monoPath = join(cwd, 'packages', 'ai-workflow');
+  if (existsSync(monoPath)) return monoPath;
+
+  return null;
 }

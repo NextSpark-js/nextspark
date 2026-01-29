@@ -3,31 +3,10 @@ import { join } from 'node:path';
 import { execSync } from 'node:child_process';
 import chalk from 'chalk';
 import ora from 'ora';
+import { getAIWorkflowDir } from '../utils/paths.js';
 
 interface SetupAIOptions {
   editor?: string;
-}
-
-/**
- * Resolve the ai-workflow package path.
- * Checks node_modules first, then monorepo workspace.
- */
-function resolveAIWorkflowPath(): string | null {
-  const cwd = process.cwd();
-
-  // Check node_modules (consumer project — flat or workspace root)
-  const nmPath = join(cwd, 'node_modules', '@nextsparkjs', 'ai-workflow');
-  if (existsSync(nmPath)) return nmPath;
-
-  // Check web/node_modules (monorepo with hoisted deps in web/)
-  const webNmPath = join(cwd, 'web', 'node_modules', '@nextsparkjs', 'ai-workflow');
-  if (existsSync(webNmPath)) return webNmPath;
-
-  // Check monorepo workspace (packages/ai-workflow relative to project root)
-  const monoPath = join(cwd, 'packages', 'ai-workflow');
-  if (existsSync(monoPath)) return monoPath;
-
-  return null;
 }
 
 const VALID_EDITORS = ['claude', 'cursor', 'antigravity', 'all'];
@@ -47,7 +26,7 @@ export async function setupAICommand(options: SetupAIOptions): Promise<void> {
   console.log('');
 
   // 1. Find ai-workflow package
-  const pkgPath = resolveAIWorkflowPath();
+  const pkgPath = getAIWorkflowDir();
 
   if (!pkgPath) {
     console.log(chalk.red('  @nextsparkjs/ai-workflow package not found.'));
