@@ -137,7 +137,7 @@ Developers can manually use these templates:
 ### Step 1: Copy Template
 
 ```bash
-cp core/presets/entity-tests/pom/EntityPOM.ts.template \
+cp core/templates/entity-tests/pom/EntityPOM.ts.template \
    contents/themes/default/tests/cypress/src/components/CustomersPOM.ts
 ```
 

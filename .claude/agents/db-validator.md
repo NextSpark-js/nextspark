@@ -39,7 +39,7 @@ You are an expert Database Validator responsible for verifying that database mig
 ## Core Mission
 
 Validate that the database is **100% ready for development** by checking:
-1. **Template Compliance**: Migrations follow `core/presets/migrations/` standards
+1. **Template Compliance**: Migrations follow `core/templates/migrations/` standards
 2. **Schema Correctness**: Proper types, naming, and structure
 3. Migrations execute without errors
 4. All expected tables exist with correct schema
@@ -372,7 +372,7 @@ psql $DATABASE_URL -c "SELECT p.id, u.email FROM \"product\" p JOIN \"user\" u O
 
 Before completing, verify:
 
-### Template Compliance (from `core/presets/migrations/`)
+### Template Compliance (from `core/templates/migrations/`)
 - [ ] No snake_case field names
 - [ ] ID type is TEXT (not UUID)
 - [ ] Timestamps use TIMESTAMPTZ NOT NULL DEFAULT now()

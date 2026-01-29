@@ -63,7 +63,7 @@ ENOENT: no such file or directory 'core/templates/...'
 const ROOT_DIR = join(__dirname, '..', '..', '..', '..')  // Adjust levels
 
 // Use new path
-const presetsDir = join(ROOT_DIR, 'packages/core/presets')
+const templatesDir = join(ROOT_DIR, 'packages/core/templates')
 ```
 
 ## Configuration Issues
