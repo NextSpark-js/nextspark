@@ -111,14 +111,28 @@ function isNextSparkProject(projectRoot) {
 }
 
 /**
- * Check if the project has a .claude/ folder (AI workflow already set up)
+ * Find the .claude/ folder location.
+ * In workspace setups, .claude/ may be in the parent directory (e.g., web/ is a
+ * workspace member but .claude/ lives at the monorepo root alongside web/).
+ * Returns the directory containing .claude/, or null if not found.
  */
-function hasAIWorkflowSetup(projectRoot) {
-  const hasClaudeDir = existsSync(join(projectRoot, '.claude'));
-  if (!hasClaudeDir) {
-    debug('Skipping: no .claude/ folder found (AI workflow not set up yet)');
+function findClaudeRoot(projectRoot) {
+  // Check project root itself
+  if (existsSync(join(projectRoot, '.claude'))) {
+    debug(`.claude/ found at ${projectRoot}`);
+    return projectRoot;
   }
-  return hasClaudeDir;
+
+  // Check parent directory (workspace pattern: my-project/web/ has package.json,
+  // but .claude/ is at my-project/)
+  const parentDir = resolve(projectRoot, '..');
+  if (existsSync(join(parentDir, '.claude'))) {
+    debug(`.claude/ found at parent: ${parentDir}`);
+    return parentDir;
+  }
+
+  debug('Skipping: no .claude/ folder found (AI workflow not set up yet)');
+  return null;
 }
 
 /**
@@ -151,22 +165,25 @@ try {
   }
 
   // Only run in NextSpark projects with an existing .claude/ folder
-  if (isNextSparkProject(projectRoot) && hasAIWorkflowSetup(projectRoot)) {
-    console.log('\n  📦 @nextsparkjs/ai-workflow updated - syncing AI workflow files...\n');
+  if (isNextSparkProject(projectRoot)) {
+    const claudeRoot = findClaudeRoot(projectRoot);
+    if (claudeRoot) {
+      console.log('\n  📦 @nextsparkjs/ai-workflow updated - syncing AI workflow files...\n');
 
-    const setupScript = getSetupScriptPath();
-    if (setupScript) {
-      try {
-        execSync(`node "${setupScript}" claude`, {
-          stdio: 'inherit',
-          cwd: projectRoot,
-        });
-      } catch (syncError) {
-        console.warn('\n  ⚠️  Auto-sync failed. Run manually: npx nextspark sync:ai\n');
-        debug(`Sync error: ${syncError.message}`);
+      const setupScript = getSetupScriptPath();
+      if (setupScript) {
+        try {
+          execSync(`node "${setupScript}" claude`, {
+            stdio: 'inherit',
+            cwd: claudeRoot,
+          });
+        } catch (syncError) {
+          console.warn('\n  ⚠️  Auto-sync failed. Run manually: npx nextspark sync:ai\n');
+          debug(`Sync error: ${syncError.message}`);
+        }
+      } else {
+        debug('Skipping: setup.mjs script not found');
       }
-    } else {
-      debug('Skipping: setup.mjs script not found');
     }
   }
 } catch (error) {
