@@ -1,6 +1,6 @@
 {
   "name": "@nextsparkjs/mobile",
-  "version": "0.1.0-beta.84",
+  "version": "0.1.0-beta.85",
   "description": "Mobile app infrastructure for NextSpark - API client, providers, and utilities for Expo apps",
   "license": "MIT",
   "author": "NextSpark <hello@nextspark.dev>",
