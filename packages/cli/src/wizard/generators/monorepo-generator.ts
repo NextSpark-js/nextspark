@@ -47,6 +47,7 @@ const REQUIRED_MOBILE_TEMPLATE_FILES = [
 const MOBILE_TEMPLATE_FILES = [
   'app',
   'src',
+  'assets',
   'babel.config.js',
   'metro.config.js',
   'tailwind.config.js',
