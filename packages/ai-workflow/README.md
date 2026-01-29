@@ -97,15 +97,18 @@ This prints detection steps (project root, monorepo check, `.claude/` location) 
 
 ## For Monorepo Contributors
 
-If you're developing the NextSpark framework itself, you **must** run the sync script before publishing to populate the package with the latest files from your working `.claude/` directory:
+The `packages/ai-workflow/claude/` directory is **intentionally gitignored** (except config JSONs). The source of truth is the repo's `.claude/` working directory. Content is synced into the package at two points:
+
+1. **`pnpm pkg:pack`** — `pack.sh` runs `sync.mjs` automatically before creating the tarball
+2. **`prepack` script** — `package.json` runs `sync.mjs` as a safety net before any `npm pack`
+
+This means the published npm package always contains all agents, commands, skills, etc. — even though git does not track them in `packages/ai-workflow/claude/`.
+
+To sync manually (e.g. for local testing):
 
 ```bash
 node packages/ai-workflow/scripts/sync.mjs
 ```
-
-This syncs agents, commands, skills, templates, workflows, docs, and schemas while preserving the consumer config templates (context.json, workspace.json, team.json, github.json).
-
-**Do not publish without syncing first** — the package will ship with stale or empty content.
 
 ## Versioning
 

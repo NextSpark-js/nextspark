@@ -30,6 +30,7 @@
   "scripts": {
     "setup": "node scripts/setup.mjs",
     "sync": "node scripts/sync.mjs",
+    "prepack": "node scripts/sync.mjs",
     "postinstall": "node scripts/postinstall.mjs || true"
   }
 }
