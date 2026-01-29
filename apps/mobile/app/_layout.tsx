@@ -6,8 +6,7 @@ import "../src/styles/globals.css";
 
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { QueryProvider } from "@/src/providers/QueryProvider";
-import { AuthProvider } from "@/src/providers/AuthProvider";
+import { QueryProvider, AuthProvider } from "@nextsparkjs/mobile";
 import { ThemeProvider } from "@nextsparkjs/ui";
 
 /**

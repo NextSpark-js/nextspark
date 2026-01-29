@@ -5,7 +5,7 @@
 import { useState } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native'
 import { router } from 'expo-router'
-import { useAuth } from '@/src/providers/AuthProvider'
+import { useAuth } from '@nextsparkjs/mobile'
 import { useTasks } from '@/src/entities/tasks'
 import { useCustomers } from '@/src/entities/customers'
 import { Colors } from '@/src/constants/colors'

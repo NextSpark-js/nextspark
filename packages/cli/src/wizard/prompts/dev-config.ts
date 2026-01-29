@@ -1,5 +1,5 @@
 /**
- * Development Tools Configuration Prompts (Step 8)
+ * Development Tools Configuration Prompts (Step 10)
  *
  * Collects development and debugging preferences.
  */
@@ -43,7 +43,7 @@ export async function promptDevConfig(
   mode: WizardMode = 'interactive',
   totalSteps: number = 8
 ): Promise<Pick<WizardConfig, 'dev'>> {
-  showSection('Development Tools', 8, totalSteps)
+  showSection('Development Tools', 10, totalSteps)
 
   showInfo('Configure development and debugging tools.')
   showWarning('These tools are disabled in production builds.')

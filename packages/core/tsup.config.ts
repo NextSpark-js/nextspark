@@ -186,6 +186,8 @@ export default defineConfig({
     ).catch(() => console.log('No presets directory to copy'))
 
     // Copy templates/ directory
+    // Note: Templates are synced from apps/dev by pack.sh before building
+    // In dev mode, templates may be out of sync - this is expected
     await cp(
       join(process.cwd(), 'templates'),
       join(distDir, 'templates'),

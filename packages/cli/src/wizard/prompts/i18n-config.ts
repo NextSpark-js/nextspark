@@ -1,5 +1,5 @@
 /**
- * Internationalization Prompts (Step 3)
+ * Internationalization Prompts (Step 4)
  *
  * Collects language and locale configuration.
  */
@@ -22,7 +22,7 @@ const LOCALE_OPTIONS = Object.entries(AVAILABLE_LOCALES).map(([value, name]) => 
  * Run i18n configuration prompts
  */
 export async function promptI18nConfig(): Promise<Pick<WizardConfig, 'defaultLocale' | 'supportedLocales'>> {
-  showSection('Internationalization', 3, 5)
+  showSection('Internationalization', 4, 10)
 
   // Select supported languages
   const supportedLocales = await checkbox({

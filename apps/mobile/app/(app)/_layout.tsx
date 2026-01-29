@@ -4,10 +4,9 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { View, StyleSheet } from 'react-native'
-import { Alert } from '@/src/lib/alert'
+import { Alert, useAuth } from '@nextsparkjs/mobile'
 import { Stack, router } from 'expo-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { useAuth } from '@/src/providers/AuthProvider'
 import {
   TopBar,
   BottomTabBar,

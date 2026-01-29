@@ -1,5 +1,5 @@
 /**
- * Features Configuration Prompts (Step 5)
+ * Features Configuration Prompts (Step 6)
  *
  * Collects feature flags and optional modules.
  */
@@ -48,7 +48,7 @@ const FEATURE_OPTIONS = [
  * Run features configuration prompts
  */
 export async function promptFeaturesConfig(): Promise<Pick<WizardConfig, 'features'>> {
-  showSection('Features', 5, 5)
+  showSection('Features', 6, 10)
 
   showInfo('Select the features you want to include in your project.')
   showInfo('You can add or remove features later by editing your config files.')

@@ -1,5 +1,5 @@
 /**
- * Team Configuration Prompts (Step 2)
+ * Team Configuration Prompts (Step 3)
  *
  * Collects team mode and role configuration.
  */
@@ -44,7 +44,7 @@ const ROLE_OPTIONS = [
  * Run team configuration prompts
  */
 export async function promptTeamConfig(): Promise<Pick<WizardConfig, 'teamMode' | 'teamRoles'>> {
-  showSection('Team Configuration', 2, 5)
+  showSection('Team Configuration', 3, 10)
 
   // Select team mode
   const teamMode = await select({

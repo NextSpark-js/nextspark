@@ -8,6 +8,7 @@
 import type {
   WizardConfig,
   PresetName,
+  ProjectType,
   TeamMode,
   BillingModel,
   FeatureFlags,
@@ -22,6 +23,7 @@ import type {
  * are always prompted even with presets)
  */
 export interface PresetConfig {
+  projectType: ProjectType
   teamMode: TeamMode
   teamRoles: string[]
   defaultLocale: string
@@ -42,6 +44,7 @@ export interface PresetConfig {
  * team management, and authentication options.
  */
 const SAAS_PRESET: PresetConfig = {
+  projectType: 'web',
   teamMode: 'multi-tenant',
   teamRoles: ['owner', 'admin', 'member', 'viewer'],
   defaultLocale: 'en',
@@ -87,6 +90,7 @@ const SAAS_PRESET: PresetConfig = {
  * minimal authentication, and simple dashboard.
  */
 const BLOG_PRESET: PresetConfig = {
+  projectType: 'web',
   teamMode: 'single-user',
   teamRoles: ['owner'],
   defaultLocale: 'en',
@@ -132,6 +136,7 @@ const BLOG_PRESET: PresetConfig = {
  * team roles, and full dashboard features.
  */
 const CRM_PRESET: PresetConfig = {
+  projectType: 'web',
   teamMode: 'single-tenant',
   teamRoles: ['owner', 'admin', 'member'],
   defaultLocale: 'en',
@@ -216,15 +221,19 @@ export function getAvailablePresets(): PresetName[] {
 /**
  * Apply preset to partial config
  * (merges project info with preset defaults)
+ * Optional typeOverride allows CLI to specify project type
  */
 export function applyPreset(
   projectInfo: Pick<WizardConfig, 'projectName' | 'projectSlug' | 'projectDescription'>,
-  presetName: PresetName
+  presetName: PresetName,
+  typeOverride?: ProjectType
 ): WizardConfig {
   const preset = getPreset(presetName)
   return {
     ...projectInfo,
     ...preset,
+    // Apply type override if provided
+    ...(typeOverride && { projectType: typeOverride }),
   }
 }
 
@@ -234,6 +243,7 @@ export function applyPreset(
  */
 export function getDefaultConfig(): PresetConfig {
   return {
+    projectType: 'web',
     teamMode: 'multi-tenant',
     teamRoles: ['owner', 'admin', 'member', 'viewer'],
     defaultLocale: 'en',

@@ -211,7 +211,10 @@ const nextConfig = {
         headers: securityHeaders
       },
       // CORS headers for API routes
-      {
+      // NOTE: In development, CORS is handled dynamically by API routes using addCorsHeaders()
+      // to support multiple origins (web app, mobile app, etc.)
+      // In production, we set static CORS headers here
+      ...(isProduction ? [{
         source: '/api/:path*',
         headers: [
           {
@@ -235,7 +238,7 @@ const nextConfig = {
             value: 'Set-Cookie'
           }
         ]
-      }
+      }] : [])
     ]
   },
 }

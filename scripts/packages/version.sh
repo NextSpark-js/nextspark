@@ -24,10 +24,8 @@
 #   ./increment-version.sh rc             # 0.1.0 -> 0.1.1-rc.0 or 0.1.0-rc.0 -> 0.1.0-rc.1
 #   ./increment-version.sh patch --yes    # Skip confirmation
 #
-# PACKAGES UPDATED:
-#   - packages/core
-#   - packages/cli
-#   - packages/create-nextspark-app
+# PACKAGES UPDATED (auto-discovered):
+#   - packages/* (all packages: core, cli, ui, mobile, testing, create-nextspark-app, etc.)
 #   - themes/* (all themes)
 #   - plugins/* (all plugins)
 #
@@ -175,25 +173,24 @@ fi
 echo -e "New version:     ${GREEN}$NEW_VERSION${NC}"
 echo ""
 
-# Collect all package paths
+# Collect all package paths dynamically
 PACKAGES=()
 
-# Core packages
-for pkg in core testing cli create-nextspark-app; do
-    pkg_path="$REPO_ROOT/packages/$pkg"
-    if [ -d "$pkg_path" ] && [ -f "$pkg_path/package.json" ]; then
-        PACKAGES+=("$pkg_path")
+# All packages in packages/ directory (core, cli, ui, mobile, testing, create-nextspark-app, etc.)
+for pkg in "$REPO_ROOT/packages"/*; do
+    if [ -d "$pkg" ] && [ -f "$pkg/package.json" ]; then
+        PACKAGES+=("$pkg")
     fi
 done
 
-# Themes
+# All themes in themes/ directory
 for theme in "$REPO_ROOT/themes"/*; do
     if [ -d "$theme" ] && [ -f "$theme/package.json" ]; then
         PACKAGES+=("$theme")
     fi
 done
 
-# Plugins
+# All plugins in plugins/ directory
 for plugin in "$REPO_ROOT/plugins"/*; do
     if [ -d "$plugin" ] && [ -f "$plugin/package.json" ]; then
         PACKAGES+=("$plugin")

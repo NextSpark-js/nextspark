@@ -1,5 +1,5 @@
 /**
- * Billing Configuration Prompts (Step 4)
+ * Billing Configuration Prompts (Step 5)
  *
  * Collects billing model and payment configuration.
  */
@@ -34,7 +34,7 @@ const BILLING_MODEL_OPTIONS = [
  * Run billing configuration prompts
  */
 export async function promptBillingConfig(): Promise<Pick<WizardConfig, 'billingModel' | 'currency'>> {
-  showSection('Billing Configuration', 4, 5)
+  showSection('Billing Configuration', 5, 10)
 
   // Select billing model
   const billingModel = await select({

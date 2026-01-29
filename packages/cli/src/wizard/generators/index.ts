@@ -2,6 +2,7 @@
  * Generators Index
  *
  * Orchestrates all generators to create the complete project.
+ * Supports both flat (web-only) and monorepo (web+mobile) structures.
  */
 
 import fs from 'fs-extra'
@@ -37,6 +38,8 @@ import { installThemeAndPlugins } from './theme-plugins-installer.js'
 // DX improvement generators
 import { setupEnvironment } from './env-setup.js'
 import { setupGit } from './git-init.js'
+// Monorepo generator
+import { generateMonorepoStructure, isMonorepoProject, getWebDir } from './monorepo-generator.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -67,41 +70,52 @@ export {
   // DX generators
   setupEnvironment,
   setupGit,
+  // Monorepo generators
+  generateMonorepoStructure,
+  isMonorepoProject,
+  getWebDir,
 }
 
 /**
  * Get the templates directory path from @nextsparkjs/core
+ * @param projectRoot - The original project root directory (important for monorepo where CWD may change)
  */
-function getTemplatesDir(): string {
-  // In development (monorepo), templates are in core package
-  // In production, they come from installed @nextsparkjs/core
-  try {
-    // Try to resolve from @nextsparkjs/core package
-    const corePkgPath = require.resolve('@nextsparkjs/core/package.json');
-    return path.join(path.dirname(corePkgPath), 'templates');
-  } catch {
-    // Fallback for monorepo development
-    const possiblePaths = [
-      path.resolve(__dirname, '../../../../../core/templates'),
-      path.resolve(__dirname, '../../../../core/templates'),
-      path.resolve(process.cwd(), 'node_modules/@nextsparkjs/core/templates'),
-    ];
+function getTemplatesDir(projectRoot?: string): string {
+  const rootDir = projectRoot || process.cwd()
 
-    for (const p of possiblePaths) {
-      if (fs.existsSync(p)) {
-        return p;
-      }
+  // Check multiple possible paths for templates directory
+  // Priority: installed package in node_modules > development monorepo paths
+  const possiblePaths = [
+    // From project root node_modules (most common for installed packages)
+    path.resolve(rootDir, 'node_modules/@nextsparkjs/core/templates'),
+    // From CLI dist folder for development
+    path.resolve(__dirname, '../../core/templates'),
+    // Legacy paths for different build structures
+    path.resolve(__dirname, '../../../../../core/templates'),
+    path.resolve(__dirname, '../../../../core/templates'),
+  ];
+
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      return p;
     }
-
-    throw new Error('Could not find @nextsparkjs/core templates directory');
   }
+
+  throw new Error(`Could not find @nextsparkjs/core templates directory. Searched: ${possiblePaths.join(', ')}`);
 }
+
+// Cache the templates directory to avoid recalculating after chdir
+let cachedTemplatesDir: string | null = null;
 
 /**
  * Copy core project files (app/, public/, config files)
+ * Uses cached templates directory to work correctly after chdir
  */
 async function copyProjectFiles(): Promise<void> {
-  const templatesDir = getTemplatesDir()
+  if (!cachedTemplatesDir) {
+    throw new Error('Templates directory not cached. Call cacheTemplatesDir() first.')
+  }
+  const templatesDir = cachedTemplatesDir
   const projectDir = process.cwd()
 
   // Files and directories to copy
@@ -114,7 +128,8 @@ async function copyProjectFiles(): Promise<void> {
     { src: 'postcss.config.mjs', dest: 'postcss.config.mjs', force: true },
     { src: 'i18n.ts', dest: 'i18n.ts', force: true },
     { src: 'pnpm-workspace.yaml', dest: 'pnpm-workspace.yaml', force: true }, // Enable workspace for themes/plugins - REQUIRED
-    { src: 'npmrc', dest: '.npmrc', force: false },
+    // Note: .npmrc is NOT copied for web-only projects (not needed, pnpm default hoisting works fine)
+    // For monorepo projects, monorepo-generator.ts creates a specific .npmrc with expo/react-native patterns
     { src: 'tsconfig.cypress.json', dest: 'tsconfig.cypress.json', force: false },
     { src: 'cypress.d.ts', dest: 'cypress.d.ts', force: false },
     { src: 'eslint.config.mjs', dest: 'eslint.config.mjs', force: false },
@@ -227,7 +242,12 @@ async function updatePackageJson(config: WizardConfig): Promise<void> {
   }
 
   for (const [name, version] of Object.entries(depsToAdd)) {
-    if (!packageJson.dependencies[name]) {
+    // Always set our core packages to 'latest' for consistency
+    // pnpm may have resolved to specific versions during initial install,
+    // but we want package.json to use 'latest' semantic versioning
+    if (name.startsWith('@nextsparkjs/')) {
+      packageJson.dependencies[name] = version
+    } else if (!packageJson.dependencies[name]) {
       packageJson.dependencies[name] = version
     }
   }
@@ -272,7 +292,10 @@ async function updatePackageJson(config: WizardConfig): Promise<void> {
   }
 
   for (const [name, version] of Object.entries(devDepsToAdd)) {
-    if (!packageJson.devDependencies[name]) {
+    // Always set our core packages to 'latest' for consistency
+    if (name.startsWith('@nextsparkjs/')) {
+      packageJson.devDependencies[name] = version
+    } else if (!packageJson.devDependencies[name]) {
       packageJson.devDependencies[name] = version
     }
   }
@@ -316,53 +339,91 @@ contents/themes/*/tests/jest/coverage
 
 /**
  * Generate complete project based on wizard configuration
+ * Supports both flat (web-only) and monorepo (web+mobile) structures.
  */
 export async function generateProject(config: WizardConfig): Promise<void> {
-  // 1. Copy core project files
-  await copyProjectFiles()
+  const projectDir = process.cwd()
 
-  // 1.1 Update globals.css to use the correct theme path
-  await updateGlobalsCss(config)
+  // IMPORTANT: Cache templates directory BEFORE changing directories
+  // This ensures we can find templates even after chdir for monorepo
+  cachedTemplatesDir = getTemplatesDir(projectDir)
 
-  // 2. Copy and rename starter theme
-  await copyStarterTheme(config)
+  // Determine the web directory based on project type
+  const webDir = getWebDir(projectDir, config)
 
-  // 3. Copy optional content features (pages entity, blog entity + block)
-  await copyContentFeatures(config)
+  // For monorepo projects, create the root structure first
+  if (isMonorepoProject(config)) {
+    await generateMonorepoStructure(projectDir, config)
+  }
 
-  // 4. Update theme configuration files
-  await updateThemeConfig(config)
-  await updateDevConfig(config)
-  await updateAppConfig(config)
-  await updateBillingConfig(config)
-  await updateRolesConfig(config)
+  // Change to web directory for web-specific generation (monorepo only)
+  const originalCwd = process.cwd()
+  if (isMonorepoProject(config)) {
+    process.chdir(webDir)
+  }
 
-  // 5. Update migrations
-  await updateMigrations(config)
+  try {
+    // 1. Copy core project files
+    await copyProjectFiles()
 
-  // 6. Update test files (replace starter path with project slug)
-  await updateTestFiles(config)
+    // 1.1 Update globals.css to use the correct theme path
+    await updateGlobalsCss(config)
 
-  // 7. Update additional configs
-  await updatePermissionsConfig(config)
-  await updateEntityPermissions(config)  // Uncomment entity permissions based on content features
-  await updateDashboardConfig(config)
+    // 2. Copy and rename starter theme
+    await copyStarterTheme(config)
 
-  // 8. Update Phase 3 configs (auth, dashboard UI, dev tools)
-  await updateAuthConfig(config)
-  await updateDashboardUIConfig(config)
-  await updateDevToolsConfig(config)
+    // 3. Copy optional content features (pages entity, blog entity + block)
+    await copyContentFeatures(config)
 
-  // 9. Process i18n files
-  await processI18n(config)
+    // 4. Update theme configuration files
+    await updateThemeConfig(config)
+    await updateDevConfig(config)
+    await updateAppConfig(config)
+    await updateBillingConfig(config)
+    await updateRolesConfig(config)
 
-  // 10. Update project files
-  await updatePackageJson(config)
-  await updateGitignore(config)
-  await generateEnvExample(config)
-  await updateReadme(config)
+    // 5. Update migrations
+    await updateMigrations(config)
 
-  // 11. Setup environment for immediate use
-  await copyEnvExampleToEnv()
-  // Note: Registries are built after pnpm install in wizard/index.ts
+    // 6. Update test files (replace starter path with project slug)
+    await updateTestFiles(config)
+
+    // 7. Update additional configs
+    await updatePermissionsConfig(config)
+    await updateEntityPermissions(config)  // Uncomment entity permissions based on content features
+    await updateDashboardConfig(config)
+
+    // 8. Update Phase 3 configs (auth, dashboard UI, dev tools)
+    await updateAuthConfig(config)
+    await updateDashboardUIConfig(config)
+    await updateDevToolsConfig(config)
+
+    // 9. Process i18n files
+    await processI18n(config)
+
+    // 10. Update project files
+    await updatePackageJson(config)
+    if (!isMonorepoProject(config)) {
+      // Only update root gitignore for flat projects
+      // Monorepo has its own root gitignore created by generateMonorepoStructure
+      await updateGitignore(config)
+    }
+    await generateEnvExample(config)
+    if (!isMonorepoProject(config)) {
+      // Only update root README for flat projects
+      // Monorepo has its own root README created by generateMonorepoStructure
+      await updateReadme(config)
+    }
+
+    // 11. Setup environment for immediate use
+    await copyEnvExampleToEnv()
+    // Note: Registries are built after pnpm install in wizard/index.ts
+  } finally {
+    // Restore original directory
+    if (isMonorepoProject(config)) {
+      process.chdir(originalCwd)
+    }
+    // Clear cache
+    cachedTemplatesDir = null
+  }
 }

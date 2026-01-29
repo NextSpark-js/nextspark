@@ -13,7 +13,7 @@ import { existsSync, readdirSync } from 'fs'
 import { join, resolve } from 'path'
 import { showBanner, showSection, showSuccess, showError, showInfo, showWarning } from './banner.js'
 import { runAllPrompts, runQuickPrompts, runExpertPrompts } from './prompts/index.js'
-import { generateProject } from './generators/index.js'
+import { generateProject, isMonorepoProject, getWebDir } from './generators/index.js'
 import { getPreset, applyPreset, PRESET_DESCRIPTIONS } from './presets.js'
 import type { WizardConfig, CLIOptions } from './types.js'
 import { promptProjectInfo } from './prompts/project-info.js'
@@ -57,13 +57,34 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
   showModeIndicator(options)
 
   try {
-    // Theme & Plugin Selection (before wizard prompts)
-    // This runs regardless of preset mode to support CLI flags
     let selectedTheme: ThemeChoice = null
     let selectedPlugins: PluginChoice[] = []
+    let config: WizardConfig
 
-    // Non-interactive mode: use CLI flags
+    if (options.preset) {
+      // Preset mode: get project info then apply preset
+      config = await runPresetMode(options.preset, options)
+    } else {
+      // Run prompts based on mode
+      // Order: 1. Type, 2. Info, 3-10. Config options
+      switch (options.mode) {
+        case 'quick':
+          config = await runQuickPrompts()
+          break
+        case 'expert':
+          config = await runExpertPrompts()
+          break
+        case 'interactive':
+        default:
+          config = await runAllPrompts()
+          break
+      }
+    }
+
+    // Theme & Plugin Selection (AFTER project type and info)
+    // This ensures we know the project structure before asking about themes
     if (options.theme !== undefined) {
+      // Non-interactive mode: use CLI flags
       selectedTheme = options.theme === 'none' ? null : options.theme as ThemeChoice
       showInfo(`Reference theme: ${selectedTheme || 'None'}`)
     } else if (!options.preset && options.mode !== 'quick') {
@@ -83,27 +104,6 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
     } else if (selectedTheme) {
       // In quick/yes/preset mode, auto-include required plugins for theme
       selectedPlugins = getRequiredPlugins(selectedTheme)
-    }
-
-    let config: WizardConfig
-
-    if (options.preset) {
-      // Preset mode: get project info then apply preset
-      config = await runPresetMode(options.preset, options)
-    } else {
-      // Run prompts based on mode
-      switch (options.mode) {
-        case 'quick':
-          config = await runQuickPrompts()
-          break
-        case 'expert':
-          config = await runExpertPrompts()
-          break
-        case 'interactive':
-        default:
-          config = await runAllPrompts()
-          break
-      }
     }
 
     // Show summary before generating
@@ -127,15 +127,22 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
       }
     }
 
-    // Copy .npmrc first (required for pnpm hoist pattern consistency)
-    await copyNpmrc()
-
     // Install @nextsparkjs/core first (required for templates)
     console.log('')
     const coreInstalled = await installCore()
     if (!coreInstalled) {
       showError('Failed to install @nextsparkjs/core. Cannot generate project.')
       process.exit(1)
+    }
+
+    // For monorepo projects, also install @nextsparkjs/mobile (required for mobile templates)
+    if (config.projectType === 'web-mobile') {
+      console.log('')
+      const mobileInstalled = await installMobile()
+      if (!mobileInstalled) {
+        showError('Failed to install @nextsparkjs/mobile. Cannot generate monorepo project.')
+        process.exit(1)
+      }
     }
 
     // Generate the project
@@ -158,9 +165,14 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
       await installThemeAndPlugins(selectedTheme, selectedPlugins)
     }
 
+    // Determine the web directory for monorepo projects
+    const projectRoot = process.cwd()
+    const webDir = getWebDir(projectRoot, config)
+    const isMonorepo = isMonorepoProject(config)
+
     // Install all dependencies
     const installSpinner = ora({
-      text: 'Installing dependencies...',
+      text: isMonorepo ? 'Installing dependencies (monorepo)...' : 'Installing dependencies...',
       prefixText: '  ',
     }).start()
 
@@ -168,7 +180,7 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
       // TODO: Change back to stdio: 'pipe' once Windows issues are resolved
       installSpinner.stop()
       execSync('pnpm install --force', {
-        cwd: process.cwd(),
+        cwd: projectRoot, // Always install from root (works for both flat and monorepo)
         stdio: 'inherit',
       })
       installSpinner.succeed('Dependencies installed!')
@@ -184,22 +196,23 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
     }).start()
 
     try {
-      const projectRoot = process.cwd()
-      const registryScript = join(projectRoot, 'node_modules/@nextsparkjs/core/scripts/build/registry.mjs')
+      // For monorepo, registry script is in web/node_modules
+      const registryScript = join(webDir, 'node_modules/@nextsparkjs/core/scripts/build/registry.mjs')
       // TODO: Change back to stdio: 'pipe' once Windows issues are resolved
       registrySpinner.stop()
       execSync(`node "${registryScript}" --build`, {
-        cwd: projectRoot,
+        cwd: webDir, // Run from web directory
         stdio: 'inherit',
         env: {
           ...process.env,
-          NEXTSPARK_PROJECT_ROOT: projectRoot,
+          NEXTSPARK_PROJECT_ROOT: webDir,
         },
       })
       registrySpinner.succeed('Registries built!')
     } catch (error) {
       registrySpinner.fail('Failed to build registries')
-      console.log(chalk.yellow('  Registries will be built automatically when you run "pnpm dev"'))
+      const devCmd = isMonorepo ? 'pnpm dev' : 'pnpm dev'
+      console.log(chalk.yellow(`  Registries will be built automatically when you run "${devCmd}"`))
     }
 
     // Show next steps
@@ -261,8 +274,8 @@ async function runPresetMode(presetName: CLIOptions['preset'], options: CLIOptio
     projectInfo = await promptProjectInfo()
   }
 
-  // Apply preset to project info
-  const config = applyPreset(projectInfo, presetName)
+  // Apply preset to project info (with optional type override from CLI)
+  const config = applyPreset(projectInfo, presetName, options.type)
 
   return config
 }
@@ -281,6 +294,7 @@ function showConfigSummary(config: WizardConfig): void {
   console.log(chalk.gray(`    Name: ${chalk.white(config.projectName)}`))
   console.log(chalk.gray(`    Slug: ${chalk.white(config.projectSlug)}`))
   console.log(chalk.gray(`    Description: ${chalk.white(config.projectDescription)}`))
+  console.log(chalk.gray(`    Type: ${chalk.white(config.projectType === 'web-mobile' ? 'Web + Mobile (Monorepo)' : 'Web only')}`))
   console.log('')
 
   console.log(chalk.white('  Team Mode:'))
@@ -366,6 +380,8 @@ function formatDevTool(tool: string): string {
  * Display next steps after successful generation
  */
 function showNextSteps(config: WizardConfig, referenceTheme: ThemeChoice = null): void {
+  const isMonorepo = config.projectType === 'web-mobile'
+
   console.log('')
   console.log(chalk.cyan('  ' + '='.repeat(60)))
   console.log(chalk.bold.green('  ✨ NextSpark project ready!'))
@@ -376,8 +392,9 @@ function showNextSteps(config: WizardConfig, referenceTheme: ThemeChoice = null)
   console.log('')
 
   // Step 1: Configure .env (already created, just edit values)
+  const envPath = isMonorepo ? 'web/.env' : '.env'
   console.log(chalk.white('  1. Configure your .env file:'))
-  console.log(chalk.gray('     Edit these values in .env:'))
+  console.log(chalk.gray(`     Edit these values in ${envPath}:`))
   console.log('')
   console.log(chalk.yellow('     DATABASE_URL'))
   console.log(chalk.gray('     PostgreSQL connection string'))
@@ -398,12 +415,30 @@ function showNextSteps(config: WizardConfig, referenceTheme: ThemeChoice = null)
   console.log(chalk.cyan('     pnpm dev'))
   console.log('')
 
+  // Mobile-specific steps for monorepo
+  if (isMonorepo) {
+    console.log(chalk.white('  4. (Optional) Start the mobile app:'))
+    console.log(chalk.cyan('     pnpm dev:mobile'))
+    console.log(chalk.gray('     Or: cd mobile && pnpm start'))
+    console.log('')
+  }
+
   // Footer info
   console.log(chalk.gray('  ' + '-'.repeat(60)))
-  console.log(chalk.gray(`  Theme: ${chalk.white(`contents/themes/${config.projectSlug}/`)}`))
-  console.log(chalk.gray(`  Active theme: ${chalk.green(`NEXT_PUBLIC_ACTIVE_THEME=${config.projectSlug}`)}`))
+
+  if (isMonorepo) {
+    console.log(chalk.gray(`  Structure: ${chalk.white('Monorepo (web/ + mobile/)')}`))
+    console.log(chalk.gray(`  Web theme: ${chalk.white(`web/contents/themes/${config.projectSlug}/`)}`))
+    console.log(chalk.gray(`  Mobile app: ${chalk.white('mobile/')}`))
+    console.log(chalk.gray(`  Active theme: ${chalk.green(`NEXT_PUBLIC_ACTIVE_THEME=${config.projectSlug}`)}`))
+  } else {
+    console.log(chalk.gray(`  Theme: ${chalk.white(`contents/themes/${config.projectSlug}/`)}`))
+    console.log(chalk.gray(`  Active theme: ${chalk.green(`NEXT_PUBLIC_ACTIVE_THEME=${config.projectSlug}`)}`))
+  }
+
   if (referenceTheme) {
-    console.log(chalk.gray(`  Reference: ${chalk.white(`contents/themes/${referenceTheme}/`)}`))
+    const refPath = isMonorepo ? `web/contents/themes/${referenceTheme}/` : `contents/themes/${referenceTheme}/`
+    console.log(chalk.gray(`  Reference: ${chalk.white(refPath)}`))
   }
   console.log(chalk.gray('  Docs: https://nextspark.dev/docs'))
   console.log('')
@@ -497,23 +532,87 @@ async function installCore(): Promise<boolean> {
 }
 
 /**
- * Copy .npmrc before installing any dependencies
- * This ensures pnpm uses consistent hoist patterns
+ * Check if mobile is already installed
  */
-async function copyNpmrc(): Promise<void> {
-  const npmrcPath = join(process.cwd(), '.npmrc')
+function isMobileInstalled(): boolean {
+  const mobilePath = join(process.cwd(), 'node_modules', '@nextsparkjs', 'mobile')
+  return existsSync(mobilePath)
+}
 
-  // Skip if already exists
-  if (existsSync(npmrcPath)) {
-    return
+/**
+ * Find local tarball for mobile package
+ */
+function findLocalMobileTarball(): string | null {
+  const cwd = process.cwd()
+
+  try {
+    const files = readdirSync(cwd)
+    const mobileTarball = files.find((f) =>
+      f.includes('nextsparkjs-mobile') && f.endsWith('.tgz')
+    )
+    if (mobileTarball) {
+      return join(cwd, mobileTarball)
+    }
+  } catch {
+    // Ignore errors
   }
 
-  // Create .npmrc with required pnpm settings
-  const npmrcContent = `# Hoist @nextsparkjs/core dependencies so they're accessible from the project
-# This is required for pnpm to make peer dependencies available
-public-hoist-pattern[]=*
-`
-
-  const { writeFileSync } = await import('fs')
-  writeFileSync(npmrcPath, npmrcContent)
+  return null
 }
+
+/**
+ * Install @nextsparkjs/mobile package
+ * Required before monorepo project generation (provides mobile templates)
+ */
+async function installMobile(): Promise<boolean> {
+  // Skip if already installed
+  if (isMobileInstalled()) {
+    return true
+  }
+
+  const spinner = ora({
+    text: 'Installing @nextsparkjs/mobile...',
+    prefixText: '  ',
+  }).start()
+
+  try {
+    // Check for local tarball first
+    const localTarball = findLocalMobileTarball()
+
+    let packageSpec = '@nextsparkjs/mobile'
+    if (localTarball) {
+      packageSpec = localTarball
+      spinner.text = 'Installing @nextsparkjs/mobile from local tarball...'
+    }
+
+    // Detect package manager
+    const useYarn = existsSync(join(process.cwd(), 'yarn.lock'))
+    const usePnpm = existsSync(join(process.cwd(), 'pnpm-lock.yaml'))
+
+    let installCmd: string
+    if (usePnpm) {
+      installCmd = `pnpm add ${packageSpec}`
+    } else if (useYarn) {
+      installCmd = `yarn add ${packageSpec}`
+    } else {
+      installCmd = `npm install ${packageSpec}`
+    }
+
+    spinner.stop()
+    execSync(installCmd, {
+      stdio: 'inherit',
+      cwd: process.cwd(),
+    })
+
+    spinner.succeed(chalk.green('@nextsparkjs/mobile installed successfully!'))
+    return true
+  } catch (error) {
+    spinner.fail(chalk.red('Failed to install @nextsparkjs/mobile'))
+    if (error instanceof Error) {
+      console.log(chalk.red(`  Error: ${error.message}`))
+    }
+    console.log(chalk.gray('  Hint: Make sure the package is available (npm registry or local tarball)'))
+    return false
+  }
+}
+

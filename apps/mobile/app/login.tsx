@@ -13,7 +13,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
-import { useAuth } from '@/src/providers/AuthProvider'
+import { useAuth } from '@nextsparkjs/mobile'
 import { Colors } from '@/src/constants/colors'
 import { Button } from '@/src/components/ui'
 

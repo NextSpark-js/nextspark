@@ -1,5 +1,5 @@
 /**
- * Content Features Configuration Prompts (Step 6)
+ * Content Features Configuration Prompts (Step 7)
  *
  * Collects optional content features: Pages with Page Builder and Blog.
  */
@@ -43,7 +43,7 @@ export async function promptContentFeaturesConfig(
   mode: WizardMode = 'interactive',
   totalSteps: number = 9
 ): Promise<Pick<WizardConfig, 'contentFeatures'>> {
-  showSection('Content Features', 6, totalSteps)
+  showSection('Content Features', 7, totalSteps)
 
   showInfo('Enable optional content features for your project.')
   showInfo('These features add entities and blocks for building pages and blog posts.')

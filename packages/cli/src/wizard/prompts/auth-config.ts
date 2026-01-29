@@ -1,5 +1,5 @@
 /**
- * Authentication Configuration Prompts (Step 6)
+ * Authentication Configuration Prompts (Step 8)
  *
  * Collects authentication method preferences and security settings.
  * Currently supports: Email/Password and Google OAuth
@@ -58,7 +58,7 @@ export async function promptAuthConfig(
   mode: WizardMode = 'interactive',
   totalSteps: number = 8
 ): Promise<Pick<WizardConfig, 'auth'>> {
-  showSection('Authentication', 6, totalSteps)
+  showSection('Authentication', 8, totalSteps)
 
   showInfo('Configure how users will authenticate to your application.')
   console.log('')

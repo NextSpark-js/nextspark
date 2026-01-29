@@ -230,7 +230,9 @@ echo ""
 declare -a FINAL_PACKAGES=()
 
 if [ "$PACK_ALL" = true ]; then
-    # Add core packages in order
+    # Add core packages in order (ui and mobile must come before core)
+    FINAL_PACKAGES+=("$REPO_ROOT/packages/ui")
+    FINAL_PACKAGES+=("$REPO_ROOT/packages/mobile")
     FINAL_PACKAGES+=("$REPO_ROOT/packages/core")
     FINAL_PACKAGES+=("$REPO_ROOT/packages/testing")
     FINAL_PACKAGES+=("$REPO_ROOT/packages/cli")
@@ -277,12 +279,35 @@ echo ""
 if [ "$SKIP_BUILD" = false ]; then
     echo -e "${CYAN}Building packages...${NC}"
 
-    # Build core first (required by other packages)
+    # Sync templates from apps/dev before building core
+    # This ensures templates are up-to-date with the development source
+    if [[ " ${FINAL_PACKAGES[*]} " =~ " $REPO_ROOT/packages/core " ]]; then
+        echo -e "  ${CYAN}Syncing templates from apps/dev...${NC}"
+        cd "$REPO_ROOT"
+        if pnpm sync:templates --sync > /dev/null 2>&1; then
+            echo -e "    ${GREEN}[OK]${NC} Templates synced"
+        else
+            echo -e "    ${RED}[FAIL]${NC} Template sync failed"
+            exit 1
+        fi
+    fi
+
+    # Build ui first (other packages depend on this)
+    if [[ " ${FINAL_PACKAGES[*]} " =~ " $REPO_ROOT/packages/ui " ]]; then
+        build_package "$REPO_ROOT/packages/ui"
+    fi
+
+    # Build mobile second
+    if [[ " ${FINAL_PACKAGES[*]} " =~ " $REPO_ROOT/packages/mobile " ]]; then
+        build_package "$REPO_ROOT/packages/mobile"
+    fi
+
+    # Build core third (required by other packages)
     if [[ " ${FINAL_PACKAGES[*]} " =~ " $REPO_ROOT/packages/core " ]]; then
         build_package "$REPO_ROOT/packages/core"
     fi
 
-    # Build cli second
+    # Build cli
     if [[ " ${FINAL_PACKAGES[*]} " =~ " $REPO_ROOT/packages/cli " ]]; then
         build_package "$REPO_ROOT/packages/cli"
     fi
@@ -295,7 +320,7 @@ if [ "$SKIP_BUILD" = false ]; then
     # Build remaining packages (themes and plugins)
     for pkg in "${FINAL_PACKAGES[@]}"; do
         case "$pkg" in
-            */packages/core|*/packages/cli|*/packages/create-nextspark-app)
+            */packages/ui|*/packages/mobile|*/packages/core|*/packages/cli|*/packages/create-nextspark-app)
                 # Already built above
                 ;;
             *)

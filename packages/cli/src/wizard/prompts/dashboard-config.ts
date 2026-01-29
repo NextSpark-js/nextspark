@@ -1,5 +1,5 @@
 /**
- * Dashboard Configuration Prompts (Step 7)
+ * Dashboard Configuration Prompts (Step 9)
  *
  * Collects dashboard UI preferences and layout options.
  */
@@ -79,7 +79,7 @@ export async function promptDashboardConfig(
   mode: WizardMode = 'interactive',
   totalSteps: number = 8
 ): Promise<Pick<WizardConfig, 'dashboard'>> {
-  showSection('Dashboard', 7, totalSteps)
+  showSection('Dashboard', 9, totalSteps)
 
   showInfo('Configure your dashboard user interface.')
   showInfo('These settings can be changed later in your theme config.')
