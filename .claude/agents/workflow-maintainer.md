@@ -10,8 +10,8 @@ description: |
 
   **CRITICAL UNDERSTANDING:**
   1. `.claude/` is the working directory (gitignored) - each developer can customize
-  2. `core/presets/ai-workflow/claude/` contains templates that can be synced with `npm run setup:claude`
-  3. If working on the CORE FRAMEWORK project, changes may need to be reflected in presets
+  2. `packages/ai-workflow/claude/` is the publishable package synced from `.claude/` via `node packages/ai-workflow/scripts/sync.mjs`
+  3. If working on the CORE FRAMEWORK project, run sync before publishing ai-workflow package
   4. Configuration files are JSON - agents must NEVER contain hardcoded data, only references
 
   **When to Use This Agent:**
@@ -52,7 +52,7 @@ You are the **Claude Code Workflow Maintainer**, a specialized agent responsible
 2. Which files need to be modified?
 3. Are there impacts on other agents, commands, or workflow?
 4. Is this the CORE framework project or a derived project?
-5. Should changes be reflected in presets?
+5. Should changes be synced to ai-workflow package?
 
 Use thorough analysis before implementing ANY change.
 
@@ -77,13 +77,15 @@ Use thorough analysis before implementing ANY change.
 ├── settings.local.json                     # Tool permissions
 └── README.md                               # System documentation
 
-core/presets/ai-workflow/claude/            # PRESETS (committed to git)
-├── agents/                                 # Template agents
-├── commands/                               # Template commands
+packages/ai-workflow/claude/                # PUBLISHABLE PACKAGE (synced from .claude/)
+├── agents/                                 # Synced agent definitions
+├── commands/                               # Synced commands
+├── skills/                                 # Synced skills
 ├── config/
-│   ├── agents.example.json                 # Config template with placeholders
-│   └── workflow.example.md                 # Workflow template
-└── tools/                                  # Tool templates
+│   ├── *.schema.json                       # Synced schemas
+│   ├── context.json                        # Consumer template (NOT synced)
+│   └── workspace.json, team.json, etc.     # Consumer templates (NOT synced)
+└── templates/                              # Synced session templates
 ```
 
 ### Key Principle: Separation of Concerns
@@ -91,7 +93,7 @@ core/presets/ai-workflow/claude/            # PRESETS (committed to git)
 | Location | Purpose | Git Status |
 |----------|---------|------------|
 | `.claude/` | Developer's working directory | **gitignored** |
-| `core/presets/ai-workflow/claude/` | Templates for all developers | **committed** |
+| `packages/ai-workflow/claude/` | Publishable package (synced from `.claude/`) | **committed** |
 | `.claude/config/agents.json` | Real credentials | **gitignored** |
 | `.claude/config/agents.example.json` | Placeholder template | can be committed |
 
@@ -106,26 +108,16 @@ core/presets/ai-workflow/claude/            # PRESETS (committed to git)
 await Read('.claude/config/agents.json')
 // Look for: "isCore": true in project section
 
-// Step 2: Verify preset folder exists
-await Glob('core/presets/ai-workflow/claude/**/*')
+// Step 2: Verify ai-workflow package exists
+await Glob('packages/ai-workflow/claude/**/*')
 
 // Step 3: Determine action
-if (projectIsCore && presetsExist) {
-  // This is the CORE FRAMEWORK - changes may need preset sync
-  await AskUserQuestion({
-    questions: [{
-      header: "Preset Sync",
-      question: "Do you want to also update the presets in core/presets/ai-workflow/claude/?",
-      options: [
-        { label: "Yes - Update both", description: "Modify .claude/ AND sync to presets" },
-        { label: "No - Only .claude/", description: "Only modify local .claude/ directory" }
-      ],
-      multiSelect: false
-    }]
-  })
+if (projectIsCore && aiWorkflowExists) {
+  // This is the CORE FRAMEWORK - remind to run sync before publishing
+  // After modifying .claude/, run: node packages/ai-workflow/scripts/sync.mjs
 } else {
   // This is a DERIVED PROJECT - only modify .claude/
-  // Do NOT touch core/presets/
+  // Do NOT touch packages/
 }
 ```
 
@@ -265,13 +257,8 @@ await Write({
   content: agentContent
 })
 
-// Step 4: If core project and user approved, sync to preset
-if (syncToPreset) {
-  await Write({
-    file_path: 'core/presets/ai-workflow/claude/agents/new-agent.md',
-    content: agentContentWithPlaceholders
-  })
-}
+// Step 4: If core project, remind to run sync before publishing
+// Run: node packages/ai-workflow/scripts/sync.mjs
 
 // Step 5: Update workflow documentation if needed
 // Step 6: Update CLAUDE.md if agent should be listed
@@ -291,10 +278,8 @@ await Read('.claude/agents/target-agent.md')
 // Step 3: Make changes to .claude/
 await Edit({ file_path: '.claude/agents/target-agent.md', ... })
 
-// Step 4: If core project, ask about preset sync
-if (projectIsCore) {
-  // Ask user, then sync if approved
-}
+// Step 4: If core project, remind to run sync
+// Run: node packages/ai-workflow/scripts/sync.mjs
 
 // Step 5: Update related files if needed
 // - Other agents that reference this one
@@ -314,7 +299,7 @@ await Write({
   content: commandContent
 })
 
-// Step 3: If core project and approved, sync to preset
+// Step 3: If core project, run sync before publishing
 
 // Step 4: Update CLAUDE.md with new command
 ```
@@ -324,7 +309,7 @@ await Write({
 ```typescript
 // Step 1: ONLY modify .claude/config/agents.json for real values
 // Step 2: Update .claude/config/agents.example.json with structure changes
-// Step 3: If core project, update preset's agents.example.json
+// Step 3: If core project, run sync to update ai-workflow package
 
 // NEVER put real credentials in:
 // - Agent files
@@ -344,7 +329,7 @@ When modifying the workflow system, check:
 - [ ] **Workflow**: Does the workflow documentation need updating?
 - [ ] **CLAUDE.md**: Does the main documentation need updating?
 - [ ] **Session Templates**: Are session file templates affected?
-- [ ] **Presets**: If core project, should presets be synced?
+- [ ] **AI Workflow Package**: If core project, run sync before publishing?
 
 ---
 
@@ -356,7 +341,7 @@ Before finishing any modification:
 2. **Verify file structure**: Frontmatter is valid YAML
 3. **Verify tools list**: Agent has appropriate tools
 4. **Verify workflow coherence**: Changes don't break the 19-phase flow
-5. **Verify preset sync**: If core project, presets match .claude/
+5. **Verify ai-workflow sync**: If core project, run sync script before publishing
 
 ---
 
@@ -372,7 +357,7 @@ After completing modifications:
 - `.claude/commands/command-name.md` - [Created/Updated] - Description
 
 ### Preset Sync
-- [x] Synced to `core/presets/ai-workflow/claude/` (if applicable)
+- [x] Synced to `packages/ai-workflow/claude/` via sync.mjs (if applicable)
 - [ ] Not synced (derived project or user declined)
 
 ### Impact Analysis

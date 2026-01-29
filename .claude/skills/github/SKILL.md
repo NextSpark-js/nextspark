@@ -124,11 +124,17 @@ hotfix/*  ─────┴─────────────────�
 
 ```javascript
 const github = await Read('.claude/config/github.json')
-const workspace = await Read('.claude/config/workspace.json')
 const team = await Read('.claude/config/team.json')
 
-// Get active user info
-const activeUser = team.members.find(m => m.name === workspace.activeUser)
+// Resolve active user: git config → CLAUDE_USER env → single-member auto
+const gitName = exec('git config user.name')
+const gitEmail = exec('git config user.email')
+let activeUser = team.members.find(m => m.name === gitName || m.email === gitEmail)
+if (!activeUser) {
+  const envUser = process.env.CLAUDE_USER
+  if (envUser) activeUser = team.members.find(m => m.name === envUser)
+}
+if (!activeUser && team.members.length === 1) activeUser = team.members[0]
 const initials = activeUser.initials // "pc"
 
 const branchType = "feature" // or "bugfix", "hotfix", "chore"

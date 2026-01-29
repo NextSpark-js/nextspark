@@ -11,10 +11,6 @@
       },
       "required": ["name"]
     },
-    "activeUser": {
-      "type": "string",
-      "description": "Name of the active user (must match a member name in .claude/config/team.json)"
-    },
     "preferences": {
       "type": "object",
       "properties": {

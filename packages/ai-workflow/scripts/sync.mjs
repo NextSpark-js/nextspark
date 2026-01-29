@@ -60,6 +60,9 @@ const SYNC_DIRS = [
   '_docs',
 ]
 
+/** Subdirectories to exclude from sync (monorepo-only content) */
+const EXCLUDE_DIRS = new Set(['_monorepo'])
+
 /** File globs within config/ to sync (only schemas) */
 const CONFIG_SYNC_PATTERN = /\.schema\.json$/
 
@@ -85,6 +88,7 @@ function getAllFiles(dir, baseDir = dir) {
   if (!fs.existsSync(dir)) return results
 
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (EXCLUDE_DIRS.has(entry.name)) continue
     const fullPath = path.join(dir, entry.name)
     if (entry.isDirectory()) {
       results.push(...getAllFiles(fullPath, baseDir))
