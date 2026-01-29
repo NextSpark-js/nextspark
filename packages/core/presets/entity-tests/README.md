@@ -176,7 +176,7 @@ Templates depend on base classes in the theme preset:
 See the Tasks example in the theme preset for a complete implementation:
 
 ```
-core/presets/theme/tests/cypress/_examples/tasks/
+core/templates/contents/themes/starter/tests/cypress/_examples/tasks/
 ├── TasksPOM.ts           # POM implementation
 ├── TaskAPIController.js  # API controller
 ├── tasks-owner.cy.ts     # UAT tests

@@ -216,10 +216,10 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
     }
 
     // AI Workflow setup (optional)
-    await promptAIWorkflowSetup(config)
+    const aiChoice = await promptAIWorkflowSetup(config)
 
     // Show next steps
-    showNextSteps(config, selectedTheme)
+    showNextSteps(config, selectedTheme, aiChoice)
   } catch (error) {
     if (error instanceof Error) {
       if (error.message.includes('User force closed')) {
@@ -382,8 +382,9 @@ function formatDevTool(tool: string): string {
 /**
  * Display next steps after successful generation
  */
-function showNextSteps(config: WizardConfig, referenceTheme: ThemeChoice = null): void {
+function showNextSteps(config: WizardConfig, referenceTheme: ThemeChoice = null, aiChoice: string = 'skip'): void {
   const isMonorepo = config.projectType === 'web-mobile'
+  const aiSetupDone = aiChoice === 'claude'
 
   console.log('')
   console.log(chalk.cyan('  ' + '='.repeat(60)))
@@ -394,14 +395,14 @@ function showNextSteps(config: WizardConfig, referenceTheme: ThemeChoice = null)
   console.log(chalk.bold.white('  Next steps:'))
   console.log('')
 
-  // Step 1: Configure .env (already created, just edit values)
+  // Step 1: Configure .env
   const envPath = isMonorepo ? 'web/.env' : '.env'
-  console.log(chalk.white('  1. Configure your .env file:'))
-  console.log(chalk.gray(`     Edit these values in ${envPath}:`))
+  console.log(chalk.white('  1. Configure your environment:'))
+  console.log(chalk.gray(`     Edit ${envPath} with your credentials:`))
   console.log('')
   console.log(chalk.yellow('     DATABASE_URL'))
   console.log(chalk.gray('     PostgreSQL connection string'))
-  console.log(chalk.dim('     Example: postgresql://user:pass@localhost:5432/mydb'))
+  console.log(chalk.gray(`     Recommended: ${chalk.cyan('https://supabase.com')} | ${chalk.cyan('https://neon.com')}`))
   console.log('')
   console.log(chalk.yellow('     BETTER_AUTH_SECRET'))
   console.log(chalk.gray('     Generate with:'))
@@ -418,11 +419,26 @@ function showNextSteps(config: WizardConfig, referenceTheme: ThemeChoice = null)
   console.log(chalk.cyan('     pnpm dev'))
   console.log('')
 
-  // Mobile-specific steps for monorepo
+  let nextStep = 4
+
+  // Mobile-specific step for monorepo
   if (isMonorepo) {
-    console.log(chalk.white('  4. (Optional) Start the mobile app:'))
+    console.log(chalk.white(`  ${nextStep}. (Optional) Start the mobile app:`))
     console.log(chalk.cyan('     pnpm dev:mobile'))
     console.log(chalk.gray('     Or: cd mobile && pnpm start'))
+    console.log('')
+    nextStep++
+  }
+
+  // AI step — conditional on what the user chose
+  if (aiSetupDone) {
+    console.log(chalk.white(`  ${nextStep}. Start building with AI:`))
+    console.log(chalk.gray('     Open Claude Code in your project and run:'))
+    console.log(chalk.cyan('     /how-to:start'))
+    console.log('')
+  } else {
+    console.log(chalk.white(`  ${nextStep}. (Optional) Setup AI workflows:`))
+    console.log(chalk.cyan('     nextspark setup:ai'))
     console.log('')
   }
 
@@ -443,23 +459,16 @@ function showNextSteps(config: WizardConfig, referenceTheme: ThemeChoice = null)
     const refPath = isMonorepo ? `web/contents/themes/${referenceTheme}/` : `contents/themes/${referenceTheme}/`
     console.log(chalk.gray(`  Reference: ${chalk.white(refPath)}`))
   }
-  console.log('')
-  console.log(chalk.white(`  ${isMonorepo ? '5' : '4'}. (Optional) Setup AI workflows:`))
-  console.log(chalk.cyan('     nextspark setup:ai'))
-  console.log('')
 
-  console.log(chalk.gray('  Docs: https://nextspark.dev/docs'))
+  console.log(chalk.gray(`  Docs: ${chalk.cyan('https://nextspark.dev/docs')}`))
   console.log('')
 }
 
 /**
  * Prompt user for AI workflow setup (optional step at end of wizard)
+ * Returns the choice made ('claude', 'cursor', 'antigravity', or 'skip')
  */
-async function promptAIWorkflowSetup(config: WizardConfig): Promise<void> {
-  console.log('')
-  console.log(chalk.cyan('  ' + '='.repeat(60)))
-  console.log(chalk.bold.white('  AI Workflow Setup (Optional)'))
-  console.log(chalk.cyan('  ' + '='.repeat(60)))
+async function promptAIWorkflowSetup(config: WizardConfig): Promise<string> {
   console.log('')
 
   const choice = await select({
@@ -473,13 +482,12 @@ async function promptAIWorkflowSetup(config: WizardConfig): Promise<void> {
   })
 
   if (choice === 'skip') {
-    showInfo('Skipped AI workflow setup. Run "nextspark setup:ai" later to set up.')
-    return
+    return 'skip'
   }
 
   if (choice === 'cursor' || choice === 'antigravity') {
     showInfo(`${choice} support is coming soon. For now, use Claude Code.`)
-    return
+    return 'skip'
   }
 
   const projectRoot = process.cwd()
@@ -511,7 +519,10 @@ async function promptAIWorkflowSetup(config: WizardConfig): Promise<void> {
     }
   } catch (error) {
     showError('Failed to install AI workflow package. Run "nextspark setup:ai" later.')
+    return 'skip'
   }
+
+  return choice
 }
 
 /**

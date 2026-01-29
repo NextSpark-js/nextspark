@@ -25,7 +25,7 @@ Install all workflow templates:
 pnpm setup:ci
 ```
 
-This copies workflows from `core/presets/ci-workflows/github/` to `.github/workflows/`.
+This copies workflows from `core/templates/ci-workflows/github/` to `.github/workflows/`.
 
 ### Command Options
 

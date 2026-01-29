@@ -20,11 +20,11 @@ Copy the entire block folder to your theme's blocks directory:
 
 ```bash
 # Copy a single block
-cp -r core/presets/blocks/hero contents/themes/YOUR_THEME/blocks/
+cp -r core/templates/blocks/hero contents/themes/YOUR_THEME/blocks/
 
 # Copy multiple blocks
-cp -r core/presets/blocks/cta-section contents/themes/YOUR_THEME/blocks/
-cp -r core/presets/blocks/features-grid contents/themes/YOUR_THEME/blocks/
+cp -r core/templates/blocks/cta-section contents/themes/YOUR_THEME/blocks/
+cp -r core/templates/blocks/features-grid contents/themes/YOUR_THEME/blocks/
 ```
 
 ### 2. Rebuild Registry

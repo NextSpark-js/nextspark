@@ -5,7 +5,7 @@ This directory contains CI/CD workflow templates that can be installed into your
 ## Overview
 
 The workflow system follows the **core-as-provider** pattern:
-- **Core** provides workflow templates in `core/presets/ci-workflows/github/`
+- **Core** provides workflow templates in `core/templates/ci-workflows/github/`
 - **User** installs workflows via `npm run setup:ci`
 
 ## Available Workflows
@@ -25,7 +25,7 @@ Run the setup command to copy workflows to your project:
 npm run setup:ci
 ```
 
-This copies all workflow templates from `core/presets/ci-workflows/github/` to `.github/workflows/`.
+This copies all workflow templates from `core/templates/ci-workflows/github/` to `.github/workflows/`.
 
 ## Workflow Details
 

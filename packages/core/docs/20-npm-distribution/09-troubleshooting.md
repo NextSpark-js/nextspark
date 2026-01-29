@@ -51,7 +51,7 @@ pnpm tsc --noEmit
 
 **Error:**
 ```
-ENOENT: no such file or directory 'core/presets/...'
+ENOENT: no such file or directory 'core/templates/...'
 ```
 
 **Cause:** Script using old `core/` path instead of `packages/core/`

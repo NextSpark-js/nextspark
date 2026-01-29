@@ -53,7 +53,7 @@ Complete guide for scaffolding and configuring new themes from the preset templa
 ## Prerequisites
 
 - **Command:** `pnpm create:theme <theme-name>`
-- **Preset Location:** `core/presets/theme/`
+- **Preset Location:** `core/templates/contents/themes/starter/`
 - **Output Location:** `themes/<theme-name>/`
 
 ---
@@ -250,7 +250,7 @@ Each theme entity requires 4 files:
 | `[entity].types.ts` | TypeScript types |
 | `[entity].service.ts` | Data access service |
 
-**Reference:** `core/presets/theme/entities/tasks/`
+**Reference:** `core/templates/contents/themes/starter/entities/tasks/`
 
 ---
 

@@ -153,7 +153,7 @@ At the start of task:execute, scope is documented in `context.md` showing allowe
 
 **CRITICAL: Use entity presets as reference when creating new entities.**
 
-Location: `core/presets/theme/entities/tasks/`
+Location: `core/templates/contents/themes/starter/entities/tasks/`
 
 ### Required Files (4-File Structure)
 
@@ -176,10 +176,10 @@ Location: `core/presets/theme/entities/tasks/`
 **Usage:**
 ```bash
 # Inspect preset for patterns before creating new entity
-cat core/presets/theme/entities/tasks/tasks.config.ts   # Entity config
-cat core/presets/theme/entities/tasks/tasks.fields.ts   # Field definitions
-cat core/presets/theme/entities/tasks/tasks.types.ts    # TypeScript types
-cat core/presets/theme/entities/tasks/tasks.service.ts  # Service pattern
+cat core/templates/contents/themes/starter/entities/tasks/tasks.config.ts   # Entity config
+cat core/templates/contents/themes/starter/entities/tasks/tasks.fields.ts   # Field definitions
+cat core/templates/contents/themes/starter/entities/tasks/tasks.types.ts    # TypeScript types
+cat core/templates/contents/themes/starter/entities/tasks/tasks.service.ts  # Service pattern
 ```
 
 ### Entity Service Pattern
