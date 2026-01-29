@@ -15,9 +15,13 @@ interface SetupAIOptions {
 function resolveAIWorkflowPath(): string | null {
   const cwd = process.cwd();
 
-  // Check node_modules (consumer project)
+  // Check node_modules (consumer project — flat or workspace root)
   const nmPath = join(cwd, 'node_modules', '@nextsparkjs', 'ai-workflow');
   if (existsSync(nmPath)) return nmPath;
+
+  // Check web/node_modules (monorepo with hoisted deps in web/)
+  const webNmPath = join(cwd, 'web', 'node_modules', '@nextsparkjs', 'ai-workflow');
+  if (existsSync(webNmPath)) return webNmPath;
 
   // Check monorepo workspace (packages/ai-workflow relative to project root)
   const monoPath = join(cwd, 'packages', 'ai-workflow');
@@ -49,7 +53,7 @@ export async function setupAICommand(options: SetupAIOptions): Promise<void> {
     console.log(chalk.red('  @nextsparkjs/ai-workflow package not found.'));
     console.log('');
     console.log(chalk.gray('  Install it first:'));
-    console.log(chalk.cyan('    pnpm add -D @nextsparkjs/ai-workflow'));
+    console.log(chalk.cyan('    pnpm add -D -w @nextsparkjs/ai-workflow'));
     console.log('');
     process.exit(1);
   }

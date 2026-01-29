@@ -216,7 +216,7 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
     }
 
     // AI Workflow setup (optional)
-    await promptAIWorkflowSetup()
+    await promptAIWorkflowSetup(config)
 
     // Show next steps
     showNextSteps(config, selectedTheme)
@@ -455,7 +455,7 @@ function showNextSteps(config: WizardConfig, referenceTheme: ThemeChoice = null)
 /**
  * Prompt user for AI workflow setup (optional step at end of wizard)
  */
-async function promptAIWorkflowSetup(): Promise<void> {
+async function promptAIWorkflowSetup(config: WizardConfig): Promise<void> {
   console.log('')
   console.log(chalk.cyan('  ' + '='.repeat(60)))
   console.log(chalk.bold.white('  AI Workflow Setup (Optional)'))
@@ -482,24 +482,27 @@ async function promptAIWorkflowSetup(): Promise<void> {
     return
   }
 
-  // Install @nextsparkjs/ai-workflow
-  const spinner = ora({
-    text: 'Installing @nextsparkjs/ai-workflow...',
-    prefixText: '  ',
-  }).start()
+  const projectRoot = process.cwd()
+  const isMonorepo = isMonorepoProject(config)
 
+  // All generated projects use pnpm workspaces (web-only for themes/plugins,
+  // monorepo for web/ + mobile/), so -w flag is always required
   try {
-    spinner.stop()
-    execSync('pnpm add -D @nextsparkjs/ai-workflow', {
-      cwd: process.cwd(),
+    execSync('pnpm add -D -w @nextsparkjs/ai-workflow', {
+      cwd: projectRoot,
       stdio: 'inherit',
     })
 
-    // Run setup
-    const setupScript = join(process.cwd(), 'node_modules', '@nextsparkjs', 'ai-workflow', 'scripts', 'setup.mjs')
+    // Find setup script — check root node_modules first, then web/ for monorepo hoisting
+    let setupScript = join(projectRoot, 'node_modules', '@nextsparkjs', 'ai-workflow', 'scripts', 'setup.mjs')
+    if (!existsSync(setupScript) && isMonorepo) {
+      setupScript = join(projectRoot, 'web', 'node_modules', '@nextsparkjs', 'ai-workflow', 'scripts', 'setup.mjs')
+    }
+
     if (existsSync(setupScript)) {
+      // .claude/ always goes at project root (applies to both web and mobile)
       execSync(`node "${setupScript}" ${choice}`, {
-        cwd: process.cwd(),
+        cwd: projectRoot,
         stdio: 'inherit',
       })
       showSuccess('AI workflow setup complete!')
