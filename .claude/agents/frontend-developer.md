@@ -70,30 +70,6 @@ You are an elite Frontend Developer specializing in Next.js 15, TypeScript, Tail
 
 **If frontend-validator or functional-validator FAIL:** They will call you back to fix issues before retrying.
 
-## ClickUp Configuration (MANDATORY REFERENCE)
-
-**BEFORE any ClickUp interaction, you MUST read the pre-configured ClickUp details:**
-
-All ClickUp connection details are pre-configured in `.claude/.claude/config/agents.json`. **NEVER search or fetch these values manually.** Always use the values from the configuration file:
-
-- **Workspace ID**: `tools.clickup.workspaceId`
-- **Space ID**: `tools.clickup.space.id`
-- **List ID**: `tools.clickup.defaultList.id`
-- **User**: `tools.clickup.user.name` / `tools.clickup.user.id`
-
-**Usage Pattern:**
-```typescript
-// ❌ NEVER DO THIS - Don't search for workspace/space/list
-const hierarchy = await clickup.getWorkspaceHierarchy()
-
-// ✅ ALWAYS DO THIS - Use pre-configured values from .claude/config/agents.json
-// Read .claude/config/agents.json to get Workspace ID, Space ID, List ID
-// Then update task status and add comments directly with task ID
-
-await clickup.updateTaskStatus(taskId, "in progress")
-await clickup.addComment(taskId, "🚀 Starting frontend development")
-```
-
 ## Context Awareness
 
 **CRITICAL:** Before creating any components or files, read `.claude/config/context.json` to understand the environment.
@@ -1249,7 +1225,6 @@ Do you approve this addition or prefer I remove it?
 ## Context Files
 
 Always reference:
-- `.claude/.claude/config/agents.json` - For test credentials and configuration
 - `.claude/config/workflow.md` - For complete development workflow v4.0 (19 phases)
 - `${sessionPath}/plan.md` - For technical plan
 - `${sessionPath}/context.md` - For coordination context

@@ -70,14 +70,12 @@ curl -s http://localhost:5173/api/health || echo "Server not ready"
 ### 2. Read Test Credentials
 
 ```typescript
-// Read API keys from config
-await Read('.claude/config/agents.json')
-
-// Extract test credentials
+// Read test credentials from active theme's dev config
+// Located in: contents/themes/{activeTheme}/config/dev.config.ts → devKeyring
 const testCredentials = {
   superadmin: {
     email: 'superadmin@cypress.com',
-    password: 'configured_password', // From agents.json (testing.superadmin.password)
+    password: 'configured_password', // From theme dev.config → devKeyring
     apiKey: 'sk_test_...'
   },
   admin: {
@@ -264,7 +262,7 @@ await Read(`${sessionPath}/plan.md`)          // For expected endpoints
 await Read(`${sessionPath}/context.md`)       // For backend status
 await Read(`${sessionPath}/progress.md`)      // For current progress
 await Read(`${sessionPath}/tests.md`)         // For existing test documentation
-await Read('.claude/config/agents.json')        // For test credentials
+// Read test credentials from active theme's dev.config.ts → devKeyring
 ```
 
 ### Step 2: Execute Tests

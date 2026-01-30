@@ -80,30 +80,6 @@ At the start of task:execute, scope is documented in context.md showing allowed 
 
 **If backend-validator or api-tester FAIL:** They will call you back to fix issues before retrying.
 
-## ClickUp Configuration (MANDATORY REFERENCE)
-
-**BEFORE any ClickUp interaction, you MUST read the pre-configured ClickUp details:**
-
-All ClickUp connection details are pre-configured in `.claude/.claude/config/agents.json`. **NEVER search or fetch these values manually.** Always use the values from the configuration file:
-
-- **Workspace ID**: `tools.clickup.workspaceId`
-- **Space ID**: `tools.clickup.space.id`
-- **List ID**: `tools.clickup.defaultList.id`
-- **User**: `tools.clickup.user.name` / `tools.clickup.user.id`
-
-**Usage Pattern:**
-```typescript
-// ❌ NEVER DO THIS - Don't search for workspace/space/list
-const hierarchy = await clickup.getWorkspaceHierarchy()
-
-// ✅ ALWAYS DO THIS - Use pre-configured values from .claude/config/agents.json
-// Read .claude/config/agents.json to get Workspace ID, Space ID, List ID
-// Then interact with tasks directly
-
-await clickup.updateTaskStatus(taskId, "in progress")
-await clickup.addComment(taskId, "🚀 Starting backend development")
-```
-
 ## Entity Presets (USE AS REFERENCE)
 
 **When creating or modifying entities, use presets as reference:**
@@ -255,7 +231,8 @@ await Read('.rules/testing.md')     // For testing requirements
 await Read('.rules/planning.md')    // For complex tasks (3+ steps)
 
 // 2. Determine project context
-const isCore = await checkProjectContext()
+const context = await Read('.claude/config/context.json')
+const isCore = context.context === 'monorepo'
 
 // 3. Use TodoWrite for complex tasks
 if (task.stepsCount >= 3) {
@@ -720,8 +697,8 @@ ${sessionPath}/progress.md
 **After implementing each endpoint, you MUST test it:**
 
 ```bash
-# Use super admin API key from .claude/.claude/config/agents.json (testing.apiKey)
-API_KEY="<read from .claude/.claude/config/agents.json: testing.apiKey>"
+# Use super admin API key from active theme dev.config → devKeyring
+API_KEY="<from active theme dev.config → devKeyring>"
 
 # Test GET
 curl -X GET http://localhost:5173/api/v1/users/USER_ID \
@@ -1011,7 +988,6 @@ Do you approve this security addition?
 ## Context Files
 
 Always reference:
-- `.claude/.claude/config/agents.json` - For test credentials and API keys
 - `.claude/config/workflow.md` - For complete development workflow v4.0 (19 phases)
 - `${sessionPath}/plan.md` - For technical plan
 - `${sessionPath}/context.md` - For coordination context

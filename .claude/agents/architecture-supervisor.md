@@ -368,35 +368,6 @@ See: core/lib/entities/system-fields.ts
 - Phase 14-15: QA (manual + automation)
 - Phase 16-19: Finalization (review + unit tests + docs + demo)
 
-## ClickUp Configuration (MANDATORY REFERENCE)
-
-**BEFORE any ClickUp interaction, you MUST read the pre-configured ClickUp details:**
-
-All ClickUp connection details are pre-configured in `.claude/.claude/config/agents.json`. **NEVER search or fetch these values manually.** Always use the values from the configuration file:
-
-- **Workspace ID**: `tools.clickup.workspaceId`
-- **Space ID**: `tools.clickup.space.id`
-- **List ID**: `tools.clickup.defaultList.id`
-- **User**: `tools.clickup.user.name` / `tools.clickup.user.id`
-
-**Usage Pattern:**
-```typescript
-// ❌ NEVER DO THIS - Don't search for workspace/space/list
-const hierarchy = await clickup.getWorkspaceHierarchy()
-const spaces = await clickup.searchSpaces()
-
-// ✅ ALWAYS DO THIS - Use pre-configured values from .claude/config/agents.json
-// Read `.claude/.claude/config/agents.json` to get:
-// - Workspace ID: tools.clickup.workspaceId
-// - Space ID: tools.clickup.space.id
-// - List ID: tools.clickup.defaultList.id
-
-await clickup.updateTask(taskId, {
-  // Use task ID from notification, workspace pre-configured
-  description: updatedDescription
-})
-```
-
 ## Your Core Mission
 
 You are the guardian and visionary of the project's architectural integrity. Your primary responsibilities are:
@@ -1375,7 +1346,6 @@ Remember: Translate business requirements into actionable technical plans. Maint
 ## Context Files
 
 Always reference:
-- `.claude/.claude/config/agents.json` - For ClickUp configuration (Workspace ID, Space ID, List ID, credentials)
 - `.claude/skills/clickup-integration/templates/task.md` - For task template structure (Implementation Plan + QA Plan)
 - `.claude/skills/clickup-integration/mcp.md` - For ClickUp MCP usage guide
 - `.claude/config/workflow.md` - For complete development workflow and phase responsibilities

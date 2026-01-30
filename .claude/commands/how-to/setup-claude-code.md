@@ -21,10 +21,9 @@ This is the **first step** when starting with NextSpark. Before you can use any 
 
 **What you'll configure:**
 1. `context.json` - Monorepo vs Consumer project type
-2. `workspace.json` - Your personal preferences and active user
+2. `workspace.json` - Your personal preferences, active user, and task manager config
 3. `team.json` - Team members and their platform IDs
 4. `github.json` - Git workflow conventions (branches, commits, PRs)
-5. `agents.json` - Credentials and API keys (sensitive)
 
 ---
 
@@ -60,12 +59,7 @@ This is the **first step** when starting with NextSpark. Before you can use any 
 │     - Set commit message patterns                              │
 │     - Create/update .claude/config/github.json                 │
 │     ↓                                                           │
-│  6. Step 5: Credentials Configuration                           │
-│     - ClickUp API key (if using)                               │
-│     - Test user credentials (for Cypress)                      │
-│     - Create/update .claude/config/agents.json                 │
-│     ↓                                                           │
-│  7. Validation                                                  │
+│  6. Validation                                                  │
 │     - Verify all config files exist                            │
 │     - Validate JSON syntax                                     │
 │     - Check required fields                                    │
@@ -85,7 +79,7 @@ This is the **first step** when starting with NextSpark. Before you can use any 
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📚 STEP 1 OF 5: Project Context
+📚 STEP 1 OF 4: Project Context
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 First, let's determine your project type.
@@ -123,7 +117,7 @@ What type of project is this?
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📚 STEP 2 OF 5: Team Members
+📚 STEP 2 OF 4: Team Members
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Now let's configure your team. This enables:
@@ -206,7 +200,7 @@ Team Member #1:
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📚 STEP 3 OF 5: Your Workspace
+📚 STEP 3 OF 4: Your Workspace
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 This is YOUR personal workspace configuration.
@@ -219,11 +213,9 @@ Who are you? (Select from team members)
 [1] Pablo Capello
 [2] Other team member...
 
-What's your preferred language?
-
-[1] English
-[2] Spanish
-[3] Portuguese
+Preferred language: (use language already chosen in /how-to:start,
+or read from workspace.json preferences.language if available.
+Only ask if no language has been selected yet in this session.)
 
 Do you use a task manager?
 
@@ -271,7 +263,7 @@ Do you use a task manager?
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📚 STEP 4 OF 5: Git Workflow
+📚 STEP 4 OF 4: Git Workflow
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Let's configure your git workflow conventions.
@@ -358,67 +350,6 @@ Commit message pattern?
 
 ---
 
-### Step 5: Credentials Configuration
-
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📚 STEP 5 OF 5: Credentials (Sensitive)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-⚠️  IMPORTANT: This file contains sensitive data.
-    It's gitignored and should NEVER be committed.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Do you use ClickUp for task management?
-
-[1] Yes - I'll provide my API key
-[2] No - Skip ClickUp configuration
-
-Do you need test credentials for Cypress?
-
-[1] Yes - I'll provide superadmin email/password
-[2] No - I'll configure this later
-```
-
-**Create `.claude/config/agents.json`:**
-
-```json
-{
-  "project": {
-    "name": "My NextSpark App",
-    "isCore": false
-  },
-  "testing": {
-    "superadmin": {
-      "email": "superadmin@cypress.com",
-      "password": "Test1234"
-    },
-    "apiKey": "sk_test_..."
-  },
-  "tools": {
-    "clickup": {
-      "apiKey": "${CLICKUP_API_KEY}",
-      "workspaceId": "90132320273",
-      "space": {
-        "name": "My Space",
-        "id": "90139892186"
-      },
-      "defaultList": {
-        "name": "Backlog",
-        "id": "901300753108"
-      },
-      "user": {
-        "name": "Pablo Capello",
-        "id": "3020828"
-      }
-    }
-  }
-}
-```
-
----
-
 ## Validation
 
 After all steps are complete:
@@ -434,7 +365,6 @@ Validating your configuration...
 ✓ .claude/config/team.json        - Valid
 ✓ .claude/config/workspace.json   - Valid
 ✓ .claude/config/github.json      - Valid
-✓ .claude/config/agents.json      - Valid
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -445,8 +375,7 @@ Your configuration:
 ├── Active User: Pablo Capello
 ├── Language: Spanish
 ├── Task Manager: ClickUp (enabled)
-├── Git Flow: feature → develop → qa → main
-└── Credentials: Configured
+└── Git Flow: feature → develop → qa → main
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -465,9 +394,8 @@ What would you like to do next?
 |------|---------|---------|
 | `context.json` | Project type (monorepo/consumer) | Yes |
 | `team.json` | Team members and roles | Yes |
-| `workspace.json` | Personal preferences | No (per developer) |
+| `workspace.json` | Personal preferences + task manager config | No (per developer) |
 | `github.json` | Git workflow conventions | Yes |
-| `agents.json` | Credentials and API keys | No (gitignored) |
 
 ---
 
