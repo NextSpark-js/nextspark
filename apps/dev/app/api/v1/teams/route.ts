@@ -102,7 +102,7 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
         LEFT JOIN "team_members" tm ON t.id = tm."teamId"
         ${whereClause}
         GROUP BY t.id, t.name, t.slug, t.description, t."ownerId", t."avatarUrl",
-                 t.settings, t."createdAt", t."updatedAt"
+                 t.settings, t.metadata, t."createdAt", t."updatedAt"
         ORDER BY ${orderByClause}
         LIMIT $${paramCount++} OFFSET $${paramCount++}`,
         queryValues
@@ -127,7 +127,7 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
         LEFT JOIN "team_members" tm2 ON t.id = tm2."teamId"
         ${whereClause}
         GROUP BY t.id, t.name, t.slug, t.description, t."ownerId", t."avatarUrl",
-                 t.settings, t."createdAt", t."updatedAt", tm.role
+                 t.settings, t.metadata, t."createdAt", t."updatedAt", tm.role
         ORDER BY ${orderByClause}
         LIMIT $${paramCount++} OFFSET $${paramCount++}`,
         queryValues,
