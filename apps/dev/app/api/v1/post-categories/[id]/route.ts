@@ -32,7 +32,7 @@ export const GET = withRateLimitTier(async (
       [id]
     )
 
-    if (result.rows.length === 0) => {
+    if (result.rows.length === 0) {
       return NextResponse.json({ success: false, error: 'Category not found' }, { status: 404 })
     }
 
@@ -40,7 +40,7 @@ export const GET = withRateLimitTier(async (
       success: true,
       data: result.rows[0]
     })
-  } catch (err) => {
+  } catch (err) {
     console.error('Error in post-categories API:', err)
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
   }
@@ -54,7 +54,7 @@ export const PUT = withRateLimitTier(async (
   try {
     // Dual authentication: API key or session
     const authResult = await authenticateRequest(request)
-    if (!authResult.success || !authResult.user) => {
+    if (!authResult.success || !authResult.user) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -68,17 +68,17 @@ export const PUT = withRateLimitTier(async (
       [id]
     )
 
-    if (typeCheck.rows.length === 0) => {
+    if (typeCheck.rows.length === 0) {
       return NextResponse.json({ success: false, error: 'Category not found' }, { status: 404 })
     }
 
     // Check slug uniqueness if slug is being updated
-    if (data.slug) => {
+    if (data.slug) {
       const slugCheck = await dbQuery(
         'SELECT id FROM taxonomies WHERE type = \'post_category\' AND slug = $1 AND id != $2',
         [data.slug, id]
       )
-      if (slugCheck.rows.length > 0) => {
+      if (slugCheck.rows.length > 0) {
         return NextResponse.json(
           { success: false, error: 'A category with this slug already exists' },
           { status: 409 }
@@ -87,12 +87,12 @@ export const PUT = withRateLimitTier(async (
     }
 
     // Verify parentId exists if provided
-    if (data.parentId) => {
+    if (data.parentId) {
       const parentCheck = await dbQuery(
         'SELECT id FROM taxonomies WHERE id = $1 AND type = \'post_category\'',
         [data.parentId]
       )
-      if (parentCheck.rows.length === 0) => {
+      if (parentCheck.rows.length === 0) {
         return NextResponse.json({
           success: false,
           error: 'Parent category not found'
@@ -100,7 +100,7 @@ export const PUT = withRateLimitTier(async (
       }
 
       // Prevent circular reference
-      if (data.parentId === id) => {
+      if (data.parentId === id) {
         return NextResponse.json({
           success: false,
           error: 'A category cannot be its own parent'
@@ -113,45 +113,45 @@ export const PUT = withRateLimitTier(async (
     const values: unknown[] = []
     let paramIndex = 1
 
-    if (data.name !== undefined) => {
+    if (data.name !== undefined) {
       updates.push(`name = $${paramIndex++}`)
       values.push(data.name)
     }
-    if (data.slug !== undefined) => {
+    if (data.slug !== undefined) {
       updates.push(`slug = $${paramIndex++}`)
       values.push(data.slug)
     }
-    if (data.description !== undefined) => {
+    if (data.description !== undefined) {
       updates.push(`description = $${paramIndex++}`)
       values.push(data.description || null)
     }
-    if (data.icon !== undefined) => {
+    if (data.icon !== undefined) {
       updates.push(`icon = $${paramIndex++}`)
       values.push(data.icon || null)
     }
-    if (data.color !== undefined) => {
+    if (data.color !== undefined) {
       updates.push(`color = $${paramIndex++}`)
       values.push(data.color || null)
     }
-    if (data.parentId !== undefined) => {
+    if (data.parentId !== undefined) {
       updates.push(`"parentId" = $${paramIndex++}`)
       values.push(data.parentId || null)
     }
-    if (data.order !== undefined) => {
+    if (data.order !== undefined) {
       updates.push(`"order" = $${paramIndex++}`)
       values.push(data.order)
     }
-    if (data.isDefault !== undefined) => {
+    if (data.isDefault !== undefined) {
       updates.push(`"isDefault" = $${paramIndex++}`)
       values.push(data.isDefault)
     }
-    if (data.isActive !== undefined) => {
+    if (data.isActive !== undefined) {
       updates.push(`"isActive" = $${paramIndex++}`)
       values.push(data.isActive)
     }
 
     // Only update if there are fields to update
-    if (updates.length === 0) => {
+    if (updates.length === 0) {
       // No fields to update, just return current data
       const current = await dbQuery(
         `SELECT id, name, slug, description, icon, color, "parentId", "order", "isDefault", "isActive",
@@ -168,7 +168,7 @@ export const PUT = withRateLimitTier(async (
     const query = `UPDATE taxonomies SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`
     const result = await dbQuery(query, values)
 
-    if (result.rows.length === 0) => {
+    if (result.rows.length === 0) {
       return NextResponse.json({ success: false, error: 'Category not found' }, { status: 404 })
     }
 
@@ -176,9 +176,9 @@ export const PUT = withRateLimitTier(async (
       success: true,
       data: result.rows[0]
     })
-  } catch (err) => {
+  } catch (err) {
     console.error('Error in post-categories API PUT:', err)
-    if (err instanceof z.ZodError) => {
+    if (err instanceof z.ZodError) {
       return NextResponse.json({ success: false, error: 'Validation error', details: err.issues }, { status: 400 })
     }
     const errorMessage = err instanceof Error ? err.message : 'Internal server error'
@@ -194,7 +194,7 @@ export const DELETE = withRateLimitTier(async (
   try {
     // Dual authentication: API key or session
     const authResult = await authenticateRequest(request)
-    if (!authResult.success || !authResult.user) => {
+    if (!authResult.success || !authResult.user) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -206,7 +206,7 @@ export const DELETE = withRateLimitTier(async (
       [id]
     )
 
-    if (typeCheck.rows.length === 0) => {
+    if (typeCheck.rows.length === 0) {
       return NextResponse.json({ success: false, error: 'Category not found' }, { status: 404 })
     }
 
@@ -225,7 +225,7 @@ export const DELETE = withRateLimitTier(async (
     }
 
     // Soft delete if used, hard delete if not used
-    if (usageCount > 0) => {
+    if (usageCount > 0) {
       // Soft delete: SET deletedAt = now()
       await dbQuery(
         'UPDATE taxonomies SET "deletedAt" = now() WHERE id = $1',
@@ -241,7 +241,7 @@ export const DELETE = withRateLimitTier(async (
         'DELETE FROM taxonomies WHERE id = $1 RETURNING id',
         [id]
       )
-      if (result.rows.length === 0) => {
+      if (result.rows.length === 0) {
         return NextResponse.json({ success: false, error: 'Category not found' }, { status: 404 })
       }
       return NextResponse.json({
@@ -249,7 +249,7 @@ export const DELETE = withRateLimitTier(async (
         data: { id: result.rows[0].id, deleted: 'hard' }
       })
     }
-  } catch (err) => {
+  } catch (err) {
     console.error('Error in post-categories API DELETE:', err)
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
   }
