@@ -151,6 +151,17 @@ export interface RateLimitCheckResult {
 export type RateLimitTier = 'auth' | 'api' | 'strict' | 'read' | 'write'
 
 /**
+ * Default limits for each tier (used in fallback mode when Redis unavailable)
+ */
+const DEFAULT_TIER_LIMITS: Record<RateLimitTier, number> = {
+  auth: 5,
+  api: 100,
+  strict: 10,
+  read: 200,
+  write: 50,
+}
+
+/**
  * Check rate limit for a given identifier
  *
  * @param identifier - Unique identifier (e.g., IP address, user ID, or combination)
@@ -177,19 +188,12 @@ export async function checkRateLimit(
   // If no limiter (Redis not configured or modules not available), allow all requests
   // Log warning to alert operators that rate limiting is disabled
   if (!limiter) {
-    const defaultLimits: Record<RateLimitTier, number> = {
-      auth: 5,
-      api: 100,
-      strict: 10,
-      read: 200,
-      write: 50,
-    }
     console.warn('[RateLimit] FALLBACK MODE: Rate limiting disabled - Redis unavailable. Identifier:', identifier, 'Tier:', type)
     return {
       success: true,
-      remaining: defaultLimits[type],
+      remaining: DEFAULT_TIER_LIMITS[type],
       reset: Date.now() + 60000,
-      limit: defaultLimits[type],
+      limit: DEFAULT_TIER_LIMITS[type],
     }
   }
 
@@ -206,19 +210,12 @@ export async function checkRateLimit(
     }
   } catch (error) {
     // On Redis error, fail open (allow the request) but log the error
-    const defaultLimits: Record<RateLimitTier, number> = {
-      auth: 5,
-      api: 100,
-      strict: 10,
-      read: 200,
-      write: 50,
-    }
     console.error('[RateLimit] Redis error:', error)
     return {
       success: true,
-      remaining: defaultLimits[type],
+      remaining: DEFAULT_TIER_LIMITS[type],
       reset: Date.now() + 60000,
-      limit: defaultLimits[type],
+      limit: DEFAULT_TIER_LIMITS[type],
     }
   }
 }
