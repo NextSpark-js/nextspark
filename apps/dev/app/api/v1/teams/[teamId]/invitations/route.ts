@@ -19,7 +19,7 @@ export async function OPTIONS() {
 }
 
 // GET /api/v1/teams/:teamId/invitations - List pending invitations for a team
-export const GET = withRateLimitTier('read', withApiLogging(
+export const GET = withRateLimitTier(withApiLogging(
   async (req: NextRequest, { params }: { params: Promise<{ teamId: string }> }): Promise<NextResponse> => {
     try {
       // Authenticate using dual auth
@@ -99,10 +99,10 @@ export const GET = withRateLimitTier('read', withApiLogging(
       return addCorsHeaders(response)
     }
   }
-))
+), 'read')
 
 // DELETE /api/v1/teams/:teamId/invitations/:invitationId - Cancel/revoke an invitation
-export const DELETE = withRateLimitTier('write', withApiLogging(
+export const DELETE = withRateLimitTier(withApiLogging(
   async (req: NextRequest, { params }: { params: Promise<{ teamId: string }> }): Promise<NextResponse> => {
     try {
       // Authenticate using dual auth
@@ -169,4 +169,4 @@ export const DELETE = withRateLimitTier('write', withApiLogging(
       return addCorsHeaders(response)
     }
   }
-))
+), 'write')

@@ -449,6 +449,109 @@ mcp__playwright__browser_console_messages -> Check for errors
 - TypeScript errors
 - Build errors
 
+#### 12.6 Entity CRUD Test (Tasks)
+
+**CRITICAL:** Test full CRUD operations on an entity to verify the data flow works end-to-end.
+
+##### 12.6.1 Navigate to Tasks
+```
+mcp__playwright__browser_navigate -> http://localhost:3005/dashboard/tasks
+mcp__playwright__browser_snapshot -> Verify:
+  - Page title contains "Tasks"
+  - "Add task" button visible
+  - Table or empty state visible
+```
+
+##### 12.6.2 CREATE - Add New Task
+```
+# Click "Add task" button
+mcp__playwright__browser_click -> ref for "Add task" link
+
+# Wait for create form
+mcp__playwright__browser_snapshot -> Verify form fields:
+  - Title (required)
+  - Description
+  - Status dropdown
+  - Priority dropdown
+  - Due Date
+  - Estimated Hours
+
+# Fill the form
+mcp__playwright__browser_type -> Title field: "Playwright Test Task"
+mcp__playwright__browser_type -> Description field: "Task created during NPM package test"
+
+# Submit
+mcp__playwright__browser_click -> "Create" button
+
+# Verify redirect to detail page
+mcp__playwright__browser_snapshot -> Verify:
+  - Title shows "Playwright Test Task"
+  - Detail view renders correctly
+  - Edit and Delete buttons visible
+```
+
+##### 12.6.3 READ - Verify Task Detail
+```
+mcp__playwright__browser_snapshot -> Verify all fields display:
+  - Title: "Playwright Test Task"
+  - Description: "Task created during NPM package test"
+  - Status: "To Do" (default)
+  - Priority: "Medium" (default)
+  - Created/Updated timestamps
+```
+
+##### 12.6.4 UPDATE - Edit Task
+```
+# Click Edit button
+mcp__playwright__browser_click -> "Edit" button
+
+# Verify edit form loads with current data
+mcp__playwright__browser_snapshot -> Verify form pre-filled
+
+# Update title
+mcp__playwright__browser_type -> Title field: "Playwright Test Task - UPDATED"
+
+# Change status dropdown
+mcp__playwright__browser_click -> Status dropdown
+mcp__playwright__browser_click -> "In Progress" option
+
+# Save changes
+mcp__playwright__browser_click -> "Save Changes" button
+
+# Verify updates persisted
+mcp__playwright__browser_snapshot -> Verify:
+  - Title: "Playwright Test Task - UPDATED"
+  - Status: "In Progress"
+```
+
+##### 12.6.5 DELETE - Remove Task
+```
+# Click Delete button
+mcp__playwright__browser_click -> "Delete" button
+
+# Confirm in dialog
+mcp__playwright__browser_snapshot -> Verify confirmation dialog appears
+mcp__playwright__browser_click -> Confirm "Delete" button in dialog
+
+# Verify redirect to list
+mcp__playwright__browser_snapshot -> Verify:
+  - Redirected to /dashboard/tasks
+  - Task no longer in list (or empty state shows)
+```
+
+##### 12.6.6 CRUD Test Summary
+All four operations must pass:
+- **CREATE** ✓ - Form submission creates entity
+- **READ** ✓ - Detail page shows correct data
+- **UPDATE** ✓ - Edit form saves changes
+- **DELETE** ✓ - Confirmation removes entity
+
+**If any CRUD operation fails:**
+1. Check console for API errors: `mcp__playwright__browser_console_messages`
+2. Check network requests: `mcp__playwright__browser_network_requests`
+3. Verify database connection in .env
+4. Check entity config in `contents/themes/starter/entities/tasks/`
+
 ---
 
 ### Step 13: Stop Dev Server
@@ -527,6 +630,12 @@ Summarize all results:
 - [ ] Signup page renders
 - [ ] No critical console errors
 
+### CRUD Test Phase (Tasks Entity)
+- [ ] CREATE: Task created via form
+- [ ] READ: Task detail page renders
+- [ ] UPDATE: Task edited and saved
+- [ ] DELETE: Task removed with confirmation
+
 ### Production Phase
 - [ ] Production build passed
 - [ ] All routes compiled
@@ -599,6 +708,8 @@ pnpm pkg:publish
 | Dev server startup | Yes |
 | Page rendering | Yes |
 | Auth system UI | Yes |
+| Entity CRUD (Tasks) | Yes |
+| API endpoints (via CRUD) | Yes |
 | Production build | Yes |
 
 ---

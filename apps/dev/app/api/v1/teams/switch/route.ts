@@ -21,7 +21,7 @@ export async function OPTIONS() {
 }
 
 // POST /api/v1/teams/switch - Switch active team context
-export const POST = withRateLimitTier('write', withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
+export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
   try {
     // Authenticate using dual auth
     const authResult = await authenticateRequest(req)
@@ -86,4 +86,4 @@ export const POST = withRateLimitTier('write', withApiLogging(async (req: NextRe
     const response = createApiError('Internal server error', 500)
     return addCorsHeaders(response)
   }
-}))
+}), 'write')

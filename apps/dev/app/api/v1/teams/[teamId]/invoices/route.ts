@@ -20,7 +20,7 @@ export async function OPTIONS() {
 }
 
 // GET /api/v1/teams/:teamId/invoices - List team invoices (owner only)
-export const GET = withRateLimitTier('read', withApiLogging(
+export const GET = withRateLimitTier(withApiLogging(
   async (req: NextRequest, { params }: { params: Promise<{ teamId: string }> }): Promise<NextResponse> => {
     try {
       // Authenticate using dual auth (API key OR session)
@@ -123,4 +123,4 @@ export const GET = withRateLimitTier('read', withApiLogging(
       return addCorsHeaders(response)
     }
   }
-))
+), 'read')

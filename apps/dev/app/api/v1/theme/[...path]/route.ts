@@ -65,7 +65,7 @@ async function handleThemeRequest(
 
   try {
     // Extract theme name from path segments
-    if (!pathSegments || pathSegments.length === 0) => {
+    if (!pathSegments || pathSegments.length === 0) {
       return NextResponse.json(
         {
           error: 'Theme name is required',
@@ -80,7 +80,7 @@ async function handleThemeRequest(
     // Get registered theme
     const themeEntry = THEME_REGISTRY[themeName as keyof typeof THEME_REGISTRY]
 
-    if (!themeEntry) => {
+    if (!themeEntry) {
       return NextResponse.json(
         {
           error: 'Theme not found',
@@ -99,12 +99,12 @@ async function handleThemeRequest(
 
     // Check if route exists in registry
     const hasRoute = checkIfRouteExists(requestPath, method, themeEntry)
-    if (hasRoute) => {
+    if (hasRoute) {
       console.log(`[Theme API] Route found in registry: ${requestPath}`)
 
       // Try to execute the theme route
       const response = await loadThemeRouteFromRegistry(themeName, request, method, endpointPath)
-      if (response) => {
+      if (response) {
         return response
       }
     } else {
@@ -112,7 +112,7 @@ async function handleThemeRequest(
     }
 
     // Default theme info endpoint
-    if (!endpointPath && method === 'GET') => {
+    if (!endpointPath && method === 'GET') {
       return NextResponse.json({
         theme: {
           name: themeEntry.name,
@@ -141,7 +141,7 @@ async function handleThemeRequest(
       { status: 404 }
     )
 
-  } catch (error) => {
+  } catch (error) {
     console.error('[Theme API] Error handling nested request:', error)
 
     return NextResponse.json(
@@ -166,7 +166,7 @@ function matchRoutePattern(pattern: string, path: string): { matches: boolean; p
   const pathSegments = path.split('/').filter(Boolean)
 
   // Must have same number of segments
-  if (patternSegments.length !== pathSegments.length) => {
+  if (patternSegments.length !== pathSegments.length) {
     return { matches: false, params }
   }
 
@@ -182,7 +182,7 @@ function matchRoutePattern(pattern: string, path: string): { matches: boolean; p
       params[paramName] = pathSeg
     } else {
       // Static segment must match exactly
-      if (patternSeg !== pathSeg) => {
+      if (patternSeg !== pathSeg) {
         return { matches: false, params: {} }
       }
     }
@@ -195,7 +195,7 @@ function matchRoutePattern(pattern: string, path: string): { matches: boolean; p
  * Check if route exists in theme registry
  */
 function checkIfRouteExists(requestPath: string, method: string, themeEntry: ThemeRegistryEntry): boolean {
-  if (!themeEntry.routeFiles || themeEntry.routeFiles.length === 0) => {
+  if (!themeEntry.routeFiles || themeEntry.routeFiles.length === 0) {
     return false
   }
 
@@ -221,7 +221,7 @@ async function loadThemeRouteFromRegistry(
   try {
     const themeEntry = THEME_REGISTRY[themeName as keyof typeof THEME_REGISTRY]
 
-    if (!themeEntry || !themeEntry.routeFiles) => {
+    if (!themeEntry || !themeEntry.routeFiles) {
       return null
     }
 
@@ -250,7 +250,7 @@ async function loadThemeRouteFromRegistry(
       }
     }
 
-    if (matchedRoute) => {
+    if (matchedRoute) {
       console.log(`[Theme API] Found route file for ${themeName}: ${matchedRoute.relativePath}`)
       console.log(`[Theme API] Extracted params:`, extractedParams)
 
@@ -262,7 +262,7 @@ async function loadThemeRouteFromRegistry(
         const routeKey = `${themeName}/${routePattern}`
         const themeHandler = RouteHandlerService.getThemeHandler(routeKey, method)
 
-        if (!themeHandler) => {
+        if (!themeHandler) {
           console.error(`[Theme API] Handler not found for ${routeKey}:${method}`)
           return NextResponse.json(
             {
@@ -280,7 +280,7 @@ async function loadThemeRouteFromRegistry(
           params: Promise.resolve(extractedParams)
         })
 
-      } catch (executionError) => {
+      } catch (executionError) {
         console.error(`[Theme API] Error executing theme route:`, executionError)
 
         return NextResponse.json(
@@ -299,7 +299,7 @@ async function loadThemeRouteFromRegistry(
 
     return null
 
-  } catch (error) => {
+  } catch (error) {
     console.error(`[Theme API] Error loading ${themeName} route from registry:`, error)
 
     return NextResponse.json(
@@ -327,7 +327,7 @@ function getThemeEndpoints(themeName: string): ThemeEndpoint[] {
   const endpoints = []
   const themeEntry = THEME_REGISTRY[themeName as keyof typeof THEME_REGISTRY]
 
-  if (themeEntry?.routeFiles) => {
+  if (themeEntry?.routeFiles) {
     endpoints.push(...themeEntry.routeFiles.map((endpoint: ThemeRouteFile) => ({
       path: endpoint.relativePath === '/' ? '/' : '/' + endpoint.relativePath,
       methods: endpoint.methods,
@@ -337,7 +337,7 @@ function getThemeEndpoints(themeName: string): ThemeEndpoint[] {
   }
 
   // Add default endpoint if theme exists but no specific routes
-  if (themeEntry && endpoints.length === 0) => {
+  if (themeEntry && endpoints.length === 0) {
     endpoints.push({
       path: '/',
       methods: ['GET'],

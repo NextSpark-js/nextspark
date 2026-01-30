@@ -19,7 +19,7 @@ export async function OPTIONS() {
 }
 
 // GET /api/v1/teams/:teamId - Get team details
-export const GET = withRateLimitTier('read', withApiLogging(
+export const GET = withRateLimitTier(withApiLogging(
   async (req: NextRequest, { params }: { params: Promise<{ teamId: string }> }): Promise<NextResponse> => {
     try {
       // Authenticate using dual auth
@@ -88,10 +88,10 @@ export const GET = withRateLimitTier('read', withApiLogging(
       return addCorsHeaders(response)
     }
   }
-))
+), 'read')
 
 // PATCH /api/v1/teams/:teamId - Update team (owners/admins only)
-export const PATCH = withRateLimitTier('write', withApiLogging(
+export const PATCH = withRateLimitTier(withApiLogging(
   async (req: NextRequest, { params }: { params: Promise<{ teamId: string }> }): Promise<NextResponse> => {
     try {
       // Authenticate using dual auth
@@ -229,10 +229,10 @@ export const PATCH = withRateLimitTier('write', withApiLogging(
       return addCorsHeaders(response)
     }
   }
-))
+), 'write')
 
 // DELETE /api/v1/teams/:teamId - Delete team (owners only, NOT personal teams)
-export const DELETE = withRateLimitTier('write', withApiLogging(
+export const DELETE = withRateLimitTier(withApiLogging(
   async (req: NextRequest, { params }: { params: Promise<{ teamId: string }> }): Promise<NextResponse> => {
     try {
       // Authenticate using dual auth
@@ -292,4 +292,4 @@ export const DELETE = withRateLimitTier('write', withApiLogging(
       return addCorsHeaders(response)
     }
   }
-))
+), 'write')

@@ -15,11 +15,11 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
 
     const block = BLOCK_REGISTRY[blockSlug]
 
-    if (!block) => {
+    if (!block) {
       return NextResponse.json({ error: 'Block not found' }, { status: 404 })
     }
 
-    if (!block.schemaPath) => {
+    if (!block.schemaPath) {
       return NextResponse.json({ error: 'Block schema not found' }, { status: 500 })
     }
 
@@ -31,8 +31,8 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
 
       schema.parse(props)
       return NextResponse.json({ valid: true })
-    } catch (error) => {
-      if (error instanceof z.ZodError) => {
+    } catch (error) {
+      if (error instanceof z.ZodError) {
         return NextResponse.json({
           valid: false,
           errors: error.issues
@@ -40,7 +40,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
       }
       throw error
     }
-  } catch (err) => {
+  } catch (err) {
     console.error('Error validating block:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

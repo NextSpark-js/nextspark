@@ -20,7 +20,7 @@ export async function OPTIONS() {
 }
 
 // PATCH /api/v1/teams/:teamId/members/:memberId - Update member role
-export const PATCH = withRateLimitTier('write', withApiLogging(
+export const PATCH = withRateLimitTier(withApiLogging(
   async (
     req: NextRequest,
     { params }: { params: Promise<{ teamId: string; memberId: string }> }
@@ -156,10 +156,10 @@ export const PATCH = withRateLimitTier('write', withApiLogging(
       return addCorsHeaders(response)
     }
   }
-))
+), 'write')
 
 // DELETE /api/v1/teams/:teamId/members/:memberId - Remove member from team
-export const DELETE = withRateLimitTier('write', withApiLogging(
+export const DELETE = withRateLimitTier(withApiLogging(
   async (
     req: NextRequest,
     { params }: { params: Promise<{ teamId: string; memberId: string }> }
@@ -261,4 +261,4 @@ export const DELETE = withRateLimitTier('write', withApiLogging(
       return addCorsHeaders(response)
     }
   }
-))
+), 'write')
