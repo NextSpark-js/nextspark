@@ -191,12 +191,12 @@ function matchRoutePattern(pattern: string, path: string): { matches: boolean; p
   }
 
   // Check each segment
-  for (let i = 0; i < patternSegments.length; i++) => {
+  for (let i = 0; i < patternSegments.length; i++) {
     const patternSeg = patternSegments[i]
     const pathSeg = pathSegments[i]
 
     // Check if this is a dynamic parameter [paramName]
-    if (patternSeg.startsWith('[') && patternSeg.endsWith(']')) => {
+    if (patternSeg.startsWith('[') && patternSeg.endsWith(']')) {
       // Extract parameter name
       const paramName = patternSeg.slice(1, -1)
       params[paramName] = pathSeg
@@ -251,10 +251,10 @@ async function loadPluginAPIFromRegistry(
 
       const endpointPath = path.substring(1) // Remove leading slash
 
-      for (const route of pluginEntry.routeFiles) => {
+      for (const route of pluginEntry.routeFiles) {
         const { matches, params } = matchRoutePattern(route.relativePath, endpointPath)
 
-        if (matches && route.methods.includes(method)) => {
+        if (matches && route.methods.includes(method)) {
           matchedRoute = route
           extractedParams = params
           break
