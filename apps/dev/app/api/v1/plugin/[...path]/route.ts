@@ -103,7 +103,7 @@ async function handlePluginRequest(
     const requestPath = `/api/v1/plugin/${pathSegments.join('/')}`
 
     // Check if route exists in registry metadata
-    if (PluginService.hasRoute(requestPath, method)) => {
+    if (PluginService.hasRoute(requestPath, method)) {
       console.log(`[Plugin API] Route found in registry: ${requestPath}`)
       // Note: Route exists but execution handled by fallback mechanisms below
       // This maintains zero-dynamic-imports policy
