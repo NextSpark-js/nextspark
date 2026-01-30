@@ -133,41 +133,52 @@ fi
 
 ### Step 3: Build and Pack ALL Packages
 
-**CRITICAL:** Must do a **CLEAN rebuild** to include latest code changes. Stale build caches can cause the packed tarball to contain outdated code even when source files are correct.
+**CRITICAL:**
+1. Must do a **CLEAN rebuild** to include latest code changes
+2. **MUST use `pnpm pack`** (not `npm pack`) to properly resolve `workspace:*` dependencies
 
 ```bash
+# UI package (dependency of core)
+cd "${REPO_ROOT}/packages/ui"
+rm -rf dist
+pnpm build
+rm -f *.tgz
+pnpm pack                      # CRITICAL: Use pnpm pack, NOT npm pack
+
 # Core package
 cd "${REPO_ROOT}/packages/core"
-rm -rf dist                    # IMPORTANT: Clean dist to prevent stale cache
-pnpm build:js
+rm -rf dist
+pnpm build
 rm -f *.tgz
-$NPM_CMD pack
-# Or on Windows: cmd.exe /c "npm pack"
+pnpm pack                      # CRITICAL: Use pnpm pack to resolve workspace:* refs
 
 # CLI package
 cd "${REPO_ROOT}/packages/cli"
-rm -rf dist                    # IMPORTANT: Clean dist to prevent stale cache
+rm -rf dist
 pnpm build
 rm -f *.tgz
-$NPM_CMD pack
+pnpm pack
 
 # Testing package
 cd "${REPO_ROOT}/packages/testing"
-rm -rf dist                    # IMPORTANT: Clean dist to prevent stale cache
+rm -rf dist
 pnpm build
 rm -f *.tgz
-$NPM_CMD pack
+pnpm pack
 ```
+
+**Why pnpm pack is required:** The core package uses `workspace:*` references (e.g., `@nextsparkjs/testing`). When using `pnpm pack`, these are automatically converted to actual version numbers (e.g., `0.1.0-beta.93`). Using `npm pack` leaves them as `workspace:*`, which causes `EUNSUPPORTEDPROTOCOL` errors during installation.
 
 **Why clean builds matter:** Build tools like tsup may cache intermediate results. If source files changed but the cache wasn't invalidated, the packed tarball will contain old code. Always `rm -rf dist` before building to ensure fresh compilation.
 
-**Verify all three `.tgz` files exist:**
+**Verify all four `.tgz` files exist:**
 ```bash
+UI_TGZ=$(ls "${REPO_ROOT}/packages/ui/"*.tgz 2>/dev/null | head -1)
 CORE_TGZ=$(ls "${REPO_ROOT}/packages/core/"*.tgz 2>/dev/null | head -1)
 CLI_TGZ=$(ls "${REPO_ROOT}/packages/cli/"*.tgz 2>/dev/null | head -1)
 TESTING_TGZ=$(ls "${REPO_ROOT}/packages/testing/"*.tgz 2>/dev/null | head -1)
 
-if [ -z "$CORE_TGZ" ] || [ -z "$CLI_TGZ" ] || [ -z "$TESTING_TGZ" ]; then
+if [ -z "$UI_TGZ" ] || [ -z "$CORE_TGZ" ] || [ -z "$CLI_TGZ" ] || [ -z "$TESTING_TGZ" ]; then
   echo "ERROR: Not all tarballs were created"
   exit 1
 fi
@@ -206,27 +217,37 @@ fi
 
 ### Step 6: Install NextSpark Packages + Peer Dependencies
 
+**IMPORTANT:** Install UI first (dependency of core), then core+CLI, then testing.
+
 ```bash
 cd "$TEST_DIR"
 
+# Copy tarballs to project directory (avoids path issues on Windows)
+cp "$UI_TGZ" "$CORE_TGZ" "$CLI_TGZ" "$TESTING_TGZ" ./
+
 if [ "$IS_WINDOWS" = true ]; then
+  # Install UI first (dependency of core)
+  cmd.exe /c "npm install ./nextsparkjs-ui-*.tgz"
+
   # Install core and CLI from tarballs
-  cmd.exe /c "npm install \"$CORE_TGZ\" \"$CLI_TGZ\""
+  cmd.exe /c "npm install ./nextsparkjs-core-*.tgz ./nextsparkjs-cli-*.tgz"
 
   # Install testing as devDependency
-  cmd.exe /c "npm install -D \"$TESTING_TGZ\""
+  cmd.exe /c "npm install -D ./nextsparkjs-testing-*.tgz"
 
   # Install required peer dependency
   cmd.exe /c "npm install better-auth"
 else
-  npm install "$CORE_TGZ" "$CLI_TGZ"
-  npm install -D "$TESTING_TGZ"
+  npm install ./nextsparkjs-ui-*.tgz
+  npm install ./nextsparkjs-core-*.tgz ./nextsparkjs-cli-*.tgz
+  npm install -D ./nextsparkjs-testing-*.tgz
   npm install better-auth
 fi
 ```
 
 **Verify:**
 ```bash
+ls -la node_modules/@nextsparkjs/ui
 ls -la node_modules/@nextsparkjs/core
 ls -la node_modules/@nextsparkjs/cli
 ls -la node_modules/@nextsparkjs/testing
@@ -478,13 +499,16 @@ Summarize all results:
 ```markdown
 ## NPM Package Test Results
 
-### Build Phase
+### Build Phase (using pnpm pack)
+- [ ] UI package built and packed (size: X KB)
 - [ ] Core package built and packed (size: X MB)
 - [ ] CLI package built and packed (size: X KB)
 - [ ] Testing package built and packed (size: X KB)
+- [ ] workspace:* references resolved correctly
 
 ### Installation Phase
 - [ ] create-next-app succeeded (Next.js version: X.X.X)
+- [ ] UI package installed (dependency of core)
 - [ ] Packages installed from tarballs
 - [ ] better-auth peer dependency installed
 - [ ] nextspark init --registries-only completed
@@ -529,13 +553,15 @@ If ANY step fails:
 
 | Issue | Cause | Fix |
 |-------|-------|-----|
+| `EUNSUPPORTEDPROTOCOL: workspace:*` | Used `npm pack` instead of `pnpm pack` | **Always use `pnpm pack`** - it converts `workspace:*` to real versions |
+| `Module not found: @nextsparkjs/ui` | UI package not installed | Install UI tarball before core: `npm install ./nextsparkjs-ui-*.tgz` |
 | `Module not found: better-auth/next-js` | Missing peer dependency | `npm install better-auth` |
 | `Cannot find module 'cypress'` | Tests not excluded | Ensure tsconfig.json has `**/tests/**` in exclude |
 | `@nextsparkjs/registries` not found | Missing webpack alias | Ensure `next.config.mjs` was synced |
 | CSP violation errors | Wrong APP_URL | Update `NEXT_PUBLIC_APP_URL` to match actual port |
 | npm/npx silent on Windows | Git Bash compatibility | Use `cmd.exe /c "npm ..."` wrapper |
 | `.next/dev/lock` error | Stale lock from crashed server | `rm -rf .next` and restart |
-| Root config files not synced (i18n.ts, tsconfig.json, etc.) | Stale CLI build cache | `rm -rf dist && pnpm build` before `npm pack` |
+| Root config files not synced (i18n.ts, tsconfig.json, etc.) | Stale CLI build cache | `rm -rf dist && pnpm build` before packing |
 | Tarball contains old code despite source changes | Build cache not invalidated | Always `rm -rf dist` before building each package |
 
 ---
@@ -556,9 +582,11 @@ pnpm pkg:publish
 
 | Component | Tested |
 |-----------|--------|
+| `@nextsparkjs/ui` build & pack | Yes |
 | `@nextsparkjs/core` build & pack | Yes |
 | `@nextsparkjs/cli` build & pack | Yes |
 | `@nextsparkjs/testing` build & pack | Yes |
+| `workspace:*` resolution (pnpm pack) | Yes |
 | Tarball installation | Yes |
 | `nextspark init` CLI command | Yes |
 | `nextspark sync:app` CLI command | Yes |
@@ -584,6 +612,7 @@ After testing, optionally clean up:
 rm -rf "$TEST_DIR"
 
 # Remove tarballs (optional - keep for re-testing)
+rm -f "${REPO_ROOT}/packages/ui/"*.tgz
 rm -f "${REPO_ROOT}/packages/core/"*.tgz
 rm -f "${REPO_ROOT}/packages/cli/"*.tgz
 rm -f "${REPO_ROOT}/packages/testing/"*.tgz
