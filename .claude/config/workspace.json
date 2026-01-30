@@ -29,7 +29,7 @@
     "config": {
       "apiKey": "${CLICKUP_API_KEY}",
       "workspaceId": "",
-      "defaultSpace": "",
+      "defaultList": "",
       "useMcp": true,
       "mcpFallback": true
     }

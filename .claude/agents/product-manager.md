@@ -145,35 +145,25 @@ await Read('core/docs/13-plugins/01-plugin-overview.md')
 | Page customization | `core/docs/18-page-builder/` |
 | Development phases | `.rules/planning.md` |
 
-## ClickUp Configuration (MANDATORY REFERENCE)
+## Task Manager Configuration (MANDATORY REFERENCE)
 
-**BEFORE any ClickUp interaction, you MUST read the pre-configured ClickUp details:**
+**BEFORE any task manager interaction, you MUST read the workspace configuration:**
 
-All ClickUp connection details are pre-configured in `.claude/.claude/config/agents.json`. **NEVER search or fetch these values manually.** Always use the values from the configuration file:
-
-- **Workspace ID**: `tools.clickup.workspaceId`
-- **Space ID**: `tools.clickup.space.id`
-- **List ID**: `tools.clickup.defaultList.id`
-- **User**: `tools.clickup.user.name` / `tools.clickup.user.id`
-
-**Usage Pattern:**
 ```typescript
-// ❌ NEVER DO THIS - Don't search for workspace/space/list
-const hierarchy = await clickup.getWorkspaceHierarchy()
-const spaces = await clickup.searchSpaces()
+// 1. Read workspace config for task manager settings
+const workspace = await Read('.claude/config/workspace.json')
+// → workspace.taskManager.provider (e.g., "clickup", "jira", "asana")
+// → workspace.taskManager.config (provider-specific settings: workspaceId, defaultList, etc.)
 
-// ✅ ALWAYS DO THIS - Use pre-configured values from .claude/config/agents.json
-// Read `.claude/.claude/config/agents.json` to get:
-// - Workspace ID: tools.clickup.workspaceId
-// - Space ID: tools.clickup.space.id
-// - List ID: tools.clickup.defaultList.id
+// 2. Read team config for user mapping
+const team = await Read('.claude/config/team.json')
+// → Find active user via workspace.activeUser → team.members[].ids.taskManager
 
-await clickup.createTask({
-  list_id: "<read from agents.json: tools.clickup.defaultList.id>", // From .claude/config/agents.json
-  name: "Task name",
-  // ... rest of task config
-})
+// 3. Load the integration skill matching the provider
+// e.g., .claude/skills/clickup-integration/SKILL.md
 ```
+
+**NEVER hardcode provider-specific IDs.** Always read from `workspace.json → taskManager.config`.
 
 ## Core Responsibilities
 
@@ -262,10 +252,11 @@ If a consumer project identifies a core improvement:
 ## Task Creation Guidelines
 
 Before creating any task, you MUST:
-1. Read and understand `.claude/.claude/config/agents.json` for ClickUp configuration (IDs, credentials)
-2. Read the task template from `.claude/skills/clickup-integration/templates/task.md`
-3. Determine the correct ClickUp board based on project context
-4. Follow the task template structure specified in the template file
+1. Read `.claude/config/workspace.json` for task manager configuration (`taskManager.provider`, `taskManager.config`)
+2. Read `.claude/config/team.json` to resolve user IDs from `activeUser`
+3. Read the task template from the matching integration skill (e.g., `.claude/skills/clickup-integration/templates/task.md`)
+4. Determine the correct board/list based on `workspace.json → taskManager.config`
+5. Follow the task template structure specified in the template file
 
 ### Task Template Structure
 
@@ -366,8 +357,9 @@ Before finalizing any task, verify:
 ## Context Files
 
 Always reference:
-- `.claude/.claude/config/agents.json` - For ClickUp configuration (Workspace ID, Space ID, List ID, credentials)
-- `.claude/skills/clickup-integration/templates/task.md` - For task template structure
+- `.claude/config/workspace.json` - For task manager configuration (`taskManager.provider`, `taskManager.config`)
+- `.claude/config/team.json` - For user mapping (`activeUser` → `members[].ids.taskManager`)
+- `.claude/skills/clickup-integration/templates/task.md` - For task template structure (when using ClickUp)
 - `.claude/skills/clickup-integration/mcp.md` - For ClickUp MCP usage guide
 - `.claude/config/workflow.md` - For complete development workflow
 - Project-specific CLAUDE.md files - For understanding the codebase architecture and existing patterns (to ensure requirements align with technical capabilities)
@@ -375,10 +367,10 @@ Always reference:
 ## ClickUp Task Creation Workflow
 
 ### Step 1: Read Configuration
-1. Load `.claude/.claude/config/agents.json` to get ClickUp IDs
-2. Load `.claude/skills/clickup-integration/templates/task.md` to get task template
-3. Determine project context (core vs client)
-4. Identify correct ClickUp board (Boilerplate for core)
+1. Load `.claude/config/workspace.json` to get task manager settings (`taskManager.provider`, `taskManager.config`)
+2. Load `.claude/config/team.json` to resolve active user's task manager ID
+3. Load the task template from the matching integration skill
+4. Determine project context (core vs client) from `.claude/config/context.json`
 
 ### Step 2: Create Task in ClickUp (IN SPANISH)
 1. Use ClickUp MCP `createTask`
@@ -387,7 +379,7 @@ Always reference:
    - **Initial Status:** **backlog**
    - **Priority:** High/Medium/Low based on business impact
    - **Tags:** feature/bug/enhancement/refactor
-   - **Assign to:** User from `tools.clickup.user.name` (ID: `tools.clickup.user.id`)
+   - **Assign to:** Active user (from `workspace.json → activeUser` → `team.json → members[].ids.taskManager`)
    - **Context:** Why, Impact, Benefits, User Story
    - **Acceptance Criteria:** NUMBERED LIST focused on business (NOT technical, NOT checkboxes)
 3. Leave **Implementation Plan** and **QA Plan** EMPTY (for architecture-supervisor)
@@ -548,7 +540,7 @@ cp .claude/templates/clickup_task.md \
 **Created By:** product-manager
 **Task ID:** 86abc123
 **Task URL:** https://app.clickup.com/t/86abc123
-**Assigned To:** <read from agents.json: tools.clickup.user.name> (ID: <read from agents.json: tools.clickup.user.id>)
+**Assigned To:** <from workspace.json activeUser + team.json taskManager ID>
 **Status:** backlog
 **Priority:** normal
 
@@ -839,7 +831,7 @@ cp .claude/templates/scope.json \
 - Task ID: 86abc123
 - URL: https://app.clickup.com/t/86abc123
 - Status: backlog
-- Assigned: <read from agents.json: tools.clickup.user.name>
+- Assigned: <from workspace.json activeUser>
 
 **Session:**
 - Folder: .claude/sessions/2025-01-19-user-profile-edit-v1/
@@ -922,7 +914,7 @@ await clickup.addComment(taskId, `
 Task ID: 86abc123
 URL: https://app.clickup.com/t/86abc123
 Status: backlog
-Assigned: <read from agents.json: tools.clickup.user.name>
+Assigned: <from workspace.json activeUser>
 File: \`clickup_task_feature.md\`
 
 Next step: Architecture-supervisor will create the technical plan
@@ -934,9 +926,9 @@ When using ClickUp MCP to create tasks:
 ```typescript
 // Example task creation
 const task = await clickup.createTask({
-  list_id: "<read from agents.json: tools.clickup.defaultList.id>", // From .claude/config/agents.json
+  list_id: "<from workspace.json → taskManager.config.defaultList>",
   name: "Implementar edición de perfil de usuario",
-  assignees: ["<read from agents.json: tools.clickup.user.id>"], // From .claude/config/agents.json
+  assignees: ["<from team.json → members[activeUser].ids.taskManager>"],
   markdown_description: `  // ⚠️ CRITICAL: Use markdown_description, NOT description
 ## 📋 Contexto
 

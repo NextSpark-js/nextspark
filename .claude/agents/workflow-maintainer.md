@@ -67,8 +67,6 @@ Use thorough analysis before implementing ANY change.
 ├── agents/                                 # 22+ agent definitions
 ├── commands/                               # Slash commands
 ├── config/
-│   ├── agents.json                         # Credentials & IDs (NEVER commit)
-│   ├── agents.example.json                 # Template for new developers
 │   ├── workflow.md                         # Workflow documentation
 │   └── workflow.example.md                 # Template
 ├── sessions/                               # Session data (gitignored)
@@ -94,8 +92,6 @@ packages/ai-workflow/claude/                # PUBLISHABLE PACKAGE (synced from .
 |----------|---------|------------|
 | `.claude/` | Developer's working directory | **gitignored** |
 | `packages/ai-workflow/claude/` | Publishable package (synced from `.claude/`) | **committed** |
-| `.claude/config/agents.json` | Real credentials | **gitignored** |
-| `.claude/config/agents.example.json` | Placeholder template | can be committed |
 
 ---
 
@@ -105,14 +101,14 @@ packages/ai-workflow/claude/                # PUBLISHABLE PACKAGE (synced from .
 
 ```typescript
 // Step 1: Check if this is the core framework
-await Read('.claude/config/agents.json')
-// Look for: "isCore": true in project section
+await Read('.claude/config/context.json')
+// Look for: "context": "monorepo" (core) or "consumer" (derived)
 
 // Step 2: Verify ai-workflow package exists
 await Glob('packages/ai-workflow/claude/**/*')
 
 // Step 3: Determine action
-if (projectIsCore && aiWorkflowExists) {
+if (context === 'monorepo' && aiWorkflowExists) {
   // This is the CORE FRAMEWORK - remind to run sync before publishing
   // After modifying .claude/, run: node packages/ai-workflow/scripts/sync.mjs
 } else {
@@ -127,31 +123,15 @@ if (projectIsCore && aiWorkflowExists) {
 
 **Agents must NEVER contain hardcoded configuration data.**
 
-### Configuration Structure (`agents.json`)
+### Configuration Sources
 
-```json
-{
-  "project": {
-    "name": "Project Name",
-    "isCore": true|false
-  },
-  "testing": {
-    "superadmin": {
-      "email": "superadmin@cypress.com",
-      "password": "..."
-    },
-    "apiKey": "sk_test_..."
-  },
-  "tools": {
-    "clickup": {
-      "workspaceId": "...",
-      "space": { "name": "...", "id": "..." },
-      "defaultList": { "name": "...", "id": "..." },
-      "user": { "name": "...", "id": "..." }
-    }
-  }
-}
-```
+| Data | Source |
+|------|--------|
+| Project type (monorepo/consumer) | `.claude/config/context.json` → `context` |
+| Task manager settings | `.claude/config/workspace.json` → `taskManager` |
+| Active user & team members | `.claude/config/workspace.json` → `activeUser` + `.claude/config/team.json` |
+| Test credentials & API keys | Active theme `dev.config.ts` → `devKeyring` |
+| Git workflow conventions | `.claude/config/github.json` |
 
 ### Reference Patterns in Agents
 
@@ -159,12 +139,11 @@ if (projectIsCore && aiWorkflowExists) {
 # ❌ NEVER DO THIS - Hardcoded values
 - Workspace ID: 90132320273
 - User: Pablo Capello (ID: 3020828)
-API_KEY="sk_test_62fc..."
 
 # ✅ ALWAYS DO THIS - JSON path references
-- **Workspace ID**: `tools.clickup.workspaceId`
-- **User**: `tools.clickup.user.name` / `tools.clickup.user.id`
-API_KEY="<read from agents.json: testing.apiKey>"
+- **Task Manager Config**: `workspace.json → taskManager.config`
+- **Active User**: `workspace.json → activeUser` + `team.json → members[].ids`
+- **Test Credentials**: Active theme `dev.config.ts` → `devKeyring`
 ```
 
 ---
@@ -307,8 +286,8 @@ await Write({
 ### 4. Modifying Configuration
 
 ```typescript
-// Step 1: ONLY modify .claude/config/agents.json for real values
-// Step 2: Update .claude/config/agents.example.json with structure changes
+// Step 1: Modify .claude/config/workspace.json for task manager settings
+// Step 2: Update .claude/config/team.json for team member changes
 // Step 3: If core project, run sync to update ai-workflow package
 
 // NEVER put real credentials in:

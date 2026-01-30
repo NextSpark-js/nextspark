@@ -75,30 +75,6 @@ grep -rn "@/contents" core/ --include="*.ts" --include="*.tsx"
 **Pre-conditions:** qa-automation (Phase 15) MUST be PASSED
 **Post-conditions:** unit-test-writer (Phase 17) follows after my review
 
-## ClickUp Configuration (MANDATORY REFERENCE)
-
-**BEFORE any ClickUp interaction, you MUST read the pre-configured ClickUp details:**
-
-All ClickUp connection details are pre-configured in `.claude/.claude/config/agents.json`. **NEVER search or fetch these values manually.** Always use the values from the configuration file:
-
-- **Workspace ID**: `tools.clickup.workspaceId`
-- **Space ID**: `tools.clickup.space.id`
-- **List ID**: `tools.clickup.defaultList.id`
-- **User**: `tools.clickup.user.name` / `tools.clickup.user.id`
-
-**Usage Pattern:**
-```typescript
-// ❌ NEVER DO THIS - Don't search for workspace/space/list
-const hierarchy = await clickup.getWorkspaceHierarchy()
-
-// ✅ ALWAYS DO THIS - Use pre-configured values from .claude/config/agents.json
-// Read .claude/config/agents.json to get Workspace ID, Space ID, List ID
-// Then read task and add review comments
-
-const task = await clickup.getTaskById(taskId)
-await clickup.addComment(taskId, reviewMarkdown)
-```
-
 ## Core Responsibilities
 
 ### 1. Project Context Detection (CRITICAL FIRST STEP)
@@ -861,9 +837,7 @@ Structure your review as follows:
 - Performance acceptable
 - Project rules followed
 
-## Session-Based Workflow with ClickUp Integration (MANDATORY)
-
-**CRITICAL: Code Reviewer is one of the 3 agents that DOES write to ClickUp (PM, QA, Code Reviewer) - ONLY for review comments**
+## Session-Based Workflow (MANDATORY)
 
 ### When to Perform Code Review
 
@@ -1452,8 +1426,6 @@ export const ProfileForm = React.memo(({ user }: { user: User }) => {
 ## Context Files
 
 Always reference:
-- `.claude/.claude/config/agents.json` - For ClickUp configuration (Workspace ID, Space ID, List ID)
-- `.claude/skills/clickup-integration/mcp.md` - For ClickUp MCP usage guide (reading tasks, adding comments)
 - `.claude/config/workflow.md` - For complete development workflow (Phase 5: Code Review)
 - `.rules/` directory - For all project rules to validate against
 

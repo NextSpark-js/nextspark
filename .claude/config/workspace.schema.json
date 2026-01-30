@@ -14,7 +14,7 @@
     "preferences": {
       "type": "object",
       "properties": {
-        "language": { "enum": ["es", "en", "pt"] },
+        "language": { "type": "string", "description": "User's preferred language (e.g., es, en, pt, fr, it, de)" },
         "defaultWorkflow": { "enum": ["quick", "standard", "complete"] },
         "autoCommit": { "type": "boolean" },
         "verboseOutput": { "type": "boolean" },
@@ -37,7 +37,16 @@
         "provider": { "enum": ["clickup", "jira", "notion", "asana", "linear", "custom"] },
         "syncWithSession": { "type": "boolean" },
         "autoUpdateStatus": { "type": "boolean" },
-        "config": { "type": "object" }
+        "config": {
+          "type": "object",
+          "properties": {
+            "apiKey": { "type": "string" },
+            "workspaceId": { "type": "string" },
+            "defaultList": { "type": "string" },
+            "useMcp": { "type": "boolean" },
+            "mcpFallback": { "type": "boolean" }
+          }
+        }
       }
     },
     "integrations": {

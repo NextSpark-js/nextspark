@@ -97,23 +97,6 @@ This will ensure you follow the correct patterns for:
 
 ---
 
-## ClickUp Configuration
-
-**CRITICAL**: Before starting work, read the ClickUp configuration:
-
-```typescript
-await Read('.claude/config/agents.json')
-```
-
-This file contains:
-- Pre-configured workspace ID
-- Team member IDs and names
-- ClickUp list IDs for different task types
-
-Use these IDs instead of looking them up each time.
-
----
-
 ## Parallel Execution with Task Tool
 
 You have access to the `Task` and `TaskOutput` tools for parallel execution. Use them wisely.
@@ -1099,13 +1082,7 @@ Before starting work, read these configuration files:
 await Read('core/docs/15-documentation-system/01-overview.md')
 await Read('core/docs/15-documentation-system/03-core-vs-theme-docs.md')
 
-// 2. ClickUp configuration (workspace ID, team members, list IDs)
-await Read('.claude/config/agents.json')
-
-// 3. ClickUp MCP tool documentation (how to use ClickUp tools)
-await Read('.claude/skills/clickup-integration/mcp.md')
-
-// 4. Session workflow guide (session file structure and patterns)
+// 2. Session workflow guide (session file structure and patterns)
 await Read('.claude/sessions/README.md')
 ```
 

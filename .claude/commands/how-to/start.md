@@ -32,24 +32,69 @@ This command presents an interactive menu of all available tutorials, organized 
 │  /how-to:start                                                   │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
-│  1. Welcome & Introduction                                      │
-│     - Brief explanation of the how-to system                   │
+│  1. [MANDATORY] Language Selection                               │
+│     - Read workspace.json → preferences.language                │
+│     - Ask user preferred interaction language                   │
+│     - Suggest detected language as first (recommended) option   │
+│     - ALL subsequent interaction in chosen language             │
+│     ↓                                                           │
+│  2. Welcome & Introduction                                      │
+│     - Brief explanation of the how-to system (in user language) │
 │     - Show tutorial categories                                 │
 │     ↓                                                           │
-│  2. [MANDATORY] Ask user's learning goal                        │
+│  3. [MANDATORY] Ask user's learning goal                        │
 │     - "What would you like to learn?"                          │
 │     - Present categories as options                            │
 │     ↓                                                           │
-│  3. Show relevant tutorials                                     │
+│  4. Show relevant tutorials                                     │
 │     - List tutorials in selected category                      │
 │     - Suggest learning path if applicable                      │
 │     ↓                                                           │
-│  4. [MANDATORY] Launch selected tutorial                        │
+│  5. [MANDATORY] Launch selected tutorial                        │
 │     - Hand off to specific how-to command                      │
-│     - Preserve context for follow-up                           │
+│     - Preserve language context for follow-up                  │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+### Step 1: Language Detection & Selection
+
+This is the **first interaction** before anything else.
+
+**Detection:**
+1. Read `.claude/config/workspace.json` → `preferences.language`
+2. Map the detected code to a language label
+
+**Language mapping:**
+| Code | Label |
+|------|-------|
+| `en` | English |
+| `es` | Español |
+| `it` | Italiano |
+| `fr` | Français |
+
+**Interaction:**
+- Use `AskUserQuestion` with the detected language as first option marked `(Recommended)`
+- Remaining options: the other 3 languages from the table above (excluding the detected one)
+- The user can also type a custom language via the "Other" open field
+
+**Example (detected `es`):**
+```
+┌─ Language / Idioma ──────────────────────────┐
+│                                               │
+│  [1] Español (Recommended)                    │
+│  [2] English                                  │
+│  [3] Italiano                                 │
+│  [4] Français                                 │
+│  [Other] Type your preferred language         │
+│                                               │
+└───────────────────────────────────────────────┘
+```
+
+**After selection:**
+- From this point forward, **ALL responses** must be in the chosen language
+- Internal documents (skills, how-to files) are read in their original language but Claude **always responds and explains in the user's chosen language**
+- This applies to the welcome message, categories, learning paths, tutorial content, and all follow-up interactions
 
 ---
 
