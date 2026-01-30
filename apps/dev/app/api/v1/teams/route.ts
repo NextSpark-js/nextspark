@@ -10,18 +10,19 @@ import {
 } from '@nextsparkjs/core/lib/api/helpers'
 import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { isSuperAdmin } from '@nextsparkjs/core/lib/api/auth/permissions'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { createTeamSchema, teamListQuerySchema } from '@nextsparkjs/core/lib/teams/schema'
 import { TeamService } from '@nextsparkjs/core/lib/services'
 import type { Team } from '@nextsparkjs/core/lib/teams/types'
 import { APP_CONFIG_MERGED } from '@nextsparkjs/core/lib/config/config-sync'
 
 // Handle CORS preflight
-export async function OPTIONS(req: NextRequest) {
-  return handleCorsPreflightRequest(req)
+export async function OPTIONS() {
+  return handleCorsPreflightRequest()
 }
 
 // GET /api/v1/teams - List user's teams
-export const GET = withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
+export const GET = withRateLimitTier('read', withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
   try {
     // Authenticate using dual auth
     const authResult = await authenticateRequest(req)
@@ -61,7 +62,7 @@ export const GET = withApiLogging(async (req: NextRequest): Promise<NextResponse
         'Insufficient permissions. Superadmin access required for scope=all.',
         403
       )
-      return addCorsHeaders(response, req)
+      return addCorsHeaders(response)
     }
 
     // Build WHERE clause based on filters
@@ -154,16 +155,16 @@ export const GET = withApiLogging(async (req: NextRequest): Promise<NextResponse
     }))
 
     const response = createApiResponse(teamsWithMembers, paginationMeta)
-    return addCorsHeaders(response, req)
+    return addCorsHeaders(response)
   } catch (error) {
     console.error('Error fetching teams:', error)
     const response = createApiError('Internal server error', 500)
-    return addCorsHeaders(response, req)
+    return addCorsHeaders(response)
   }
-})
+}))
 
 // POST /api/v1/teams - Create new team
-export const POST = withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
+export const POST = withRateLimitTier('write', withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
   try {
     // Authenticate using dual auth
     const authResult = await authenticateRequest(req)
@@ -193,7 +194,7 @@ export const POST = withApiLogging(async (req: NextRequest): Promise<NextRespons
         null,
         'TEAM_CREATION_DISABLED'
       )
-      return addCorsHeaders(response, req)
+      return addCorsHeaders(response)
     }
 
     // Validate allowCreateTeams option
@@ -214,7 +215,7 @@ export const POST = withApiLogging(async (req: NextRequest): Promise<NextRespons
           null,
           'MAX_TEAMS_REACHED'
         )
-        return addCorsHeaders(response, req)
+        return addCorsHeaders(response)
       }
     }
 
@@ -222,7 +223,7 @@ export const POST = withApiLogging(async (req: NextRequest): Promise<NextRespons
     const slugAvailable = await TeamService.isSlugAvailable(validatedData.slug)
     if (!slugAvailable) {
       const response = createApiError('Team slug already exists', 409, null, 'SLUG_EXISTS')
-      return addCorsHeaders(response, req)
+      return addCorsHeaders(response)
     }
 
     // Use transaction to ensure atomicity
@@ -274,7 +275,7 @@ export const POST = withApiLogging(async (req: NextRequest): Promise<NextRespons
       }
 
       const response = createApiResponse(responseData, { created: true }, 201)
-      return addCorsHeaders(response, req)
+      return addCorsHeaders(response)
     } catch (error) {
       await tx.rollback()
       throw error
@@ -283,11 +284,11 @@ export const POST = withApiLogging(async (req: NextRequest): Promise<NextRespons
     if (error instanceof Error && error.name === 'ZodError') {
       const zodError = error as { issues?: unknown[] }
       const response = createApiError('Validation error', 400, zodError.issues, 'VALIDATION_ERROR')
-      return addCorsHeaders(response, req)
+      return addCorsHeaders(response)
     }
 
     console.error('Error creating team:', error)
     const response = createApiError('Internal server error', 500)
-    return addCorsHeaders(response, req)
+    return addCorsHeaders(response)
   }
-})
+}))

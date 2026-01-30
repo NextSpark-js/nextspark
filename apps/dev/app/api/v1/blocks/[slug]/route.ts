@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
-export async function GET(
+export const GET = withRateLimitTier(async (
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
-): Promise<NextResponse> {
+): Promise<NextResponse> => {
   try {
     const { slug } = await params
     const block = BLOCK_REGISTRY[slug]
@@ -26,4 +27,4 @@ export async function GET(
     console.error('Error fetching block:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+}, 'read');

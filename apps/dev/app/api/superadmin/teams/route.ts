@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@nextsparkjs/core/lib/auth';
+import { getTypedSession } from '@nextsparkjs/core/lib/auth';
 import { queryWithRLS } from '@nextsparkjs/core/lib/db';
 import { SYSTEM_ADMIN_TEAM_ID } from '@nextsparkjs/core/lib/api/auth/dual-auth';
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 
 interface TeamWithStats {
   id: string;
@@ -31,12 +32,10 @@ interface TeamWithStats {
  * - counts: Object with team counts
  * - pagination: Pagination info
  */
-export async function GET(request: NextRequest) {
+export const GET = withRateLimitTier(async (request: NextRequest) => {
   try {
     // Get the current session using Better Auth
-    const session = await auth.api.getSession({
-      headers: request.headers
-    });
+    const session = await getTypedSession(request.headers);
 
     // Check if user is authenticated
     if (!session?.user) {
@@ -185,4 +184,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+}, 'strict');

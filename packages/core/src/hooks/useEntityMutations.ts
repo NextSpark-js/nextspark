@@ -1,7 +1,7 @@
 'use client'
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useAuth } from './useAuth'
+import { fetchWithTeam } from '../lib/api/entities'
 import type { EntityConfig } from '../lib/entities/types'
 
 export interface UseEntityMutationsOptions {
@@ -12,7 +12,6 @@ export interface UseEntityMutationsOptions {
 
 export function useEntityMutations(options: UseEntityMutationsOptions) {
   const { entityConfig, onSuccess, onError } = options
-  const { user } = useAuth()
   const queryClient = useQueryClient()
 
   const baseQueryKey = ['entity', entityConfig.slug]
@@ -20,9 +19,8 @@ export function useEntityMutations(options: UseEntityMutationsOptions) {
   // CREATE mutation with optimistic update
   const createMutation = useMutation({
     mutationFn: async (data: Record<string, unknown>) => {
-      const response = await fetch(`/api/v1/${entityConfig.slug}`, {
+      const response = await fetchWithTeam(`/api/v1/${entityConfig.slug}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       })
 
@@ -74,9 +72,8 @@ export function useEntityMutations(options: UseEntityMutationsOptions) {
   // UPDATE mutation with optimistic update
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Record<string, unknown> }) => {
-      const response = await fetch(`/api/v1/${entityConfig.slug}/${id}`, {
+      const response = await fetchWithTeam(`/api/v1/${entityConfig.slug}/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       })
 
@@ -131,7 +128,7 @@ export function useEntityMutations(options: UseEntityMutationsOptions) {
   // DELETE mutation with optimistic update
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/v1/${entityConfig.slug}/${id}`, {
+      const response = await fetchWithTeam(`/api/v1/${entityConfig.slug}/${id}`, {
         method: 'DELETE',
       })
 
@@ -177,9 +174,8 @@ export function useEntityMutations(options: UseEntityMutationsOptions) {
   // BULK DELETE mutation
   const bulkDeleteMutation = useMutation({
     mutationFn: async (ids: string[]) => {
-      const response = await fetch(`/api/v1/${entityConfig.slug}/bulk`, {
+      const response = await fetchWithTeam(`/api/v1/${entityConfig.slug}/bulk`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids }),
       })
 

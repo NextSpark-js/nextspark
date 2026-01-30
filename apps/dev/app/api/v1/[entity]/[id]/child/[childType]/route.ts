@@ -4,18 +4,16 @@
  * POST /api/v1/[entity]/[id]/child/[childType]
  */
 
-// CRITICAL: Initialize entity registry for API routes
-// This import is processed by webpack which resolves the @nextsparkjs alias
-// The setEntityRegistry call happens at module load time
-import { setEntityRegistry, isRegistryInitialized, getChildEntities, getEntity } from '@nextsparkjs/core/lib/entities/queries'
-import { ENTITY_REGISTRY, ENTITY_METADATA } from '@nextsparkjs/registries/entity-registry'
-if (!isRegistryInitialized()) {
-  setEntityRegistry(ENTITY_REGISTRY, ENTITY_METADATA)
-}
-
 import { NextRequest, NextResponse } from 'next/server'
 import { queryWithRLS } from '@nextsparkjs/core/lib/db'
 import { resolveEntityFromUrl } from '@nextsparkjs/core/lib/api/entity/resolver'
+import { getChildEntities, getEntity, setEntityRegistry } from '@nextsparkjs/core/lib/entities/queries'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+// Import registry directly - webpack resolves @nextsparkjs/registries alias at compile time
+import { ENTITY_REGISTRY, ENTITY_METADATA } from '@nextsparkjs/registries/entity-registry'
+
+// Initialize registry at module load time (before any handler runs)
+setEntityRegistry(ENTITY_REGISTRY, ENTITY_METADATA)
 
 
 interface RouteParams {
@@ -24,7 +22,7 @@ interface RouteParams {
   childType: string
 }
 
-export async function GET(
+export const GET = withRateLimitTier(async (
   request: NextRequest,
   { params }: { params: Promise<RouteParams> }
 ) {
@@ -42,7 +40,7 @@ export async function GET(
     }
 
     // Check if child entity exists using the new registry system
-    const childEntities = getChildEntities(resolution.entityName as string)
+    const childEntities = getChildEntities(resolution.entityName)
     const childEntity = childEntities.find(child => child.name === childType)
 
     if (!childEntity) {
@@ -53,7 +51,7 @@ export async function GET(
     }
 
     // Get child config from registry
-    const childConfig = getEntity(childType as string)
+    const childConfig = getEntity(childType)
     if (!childConfig) {
       return NextResponse.json(
         { error: `Child entity configuration "${childType}" not found` },
@@ -87,9 +85,9 @@ export async function GET(
       { status: 500 }
     )
   }
-}
+}, 'read')
 
-export async function POST(
+export const POST = withRateLimitTier(async (
   request: NextRequest,
   { params }: { params: Promise<RouteParams> }
 ) {
@@ -111,7 +109,7 @@ export async function POST(
     }
 
     // Check if child entity exists using the new registry system
-    const childEntities = getChildEntities(resolution.entityName as string)
+    const childEntities = getChildEntities(resolution.entityName)
     const childEntity = childEntities.find(child => child.name === childType)
     console.log(`[ChildAPI] Found child entities for ${entity}:`, childEntities.map(c => c.name))
     console.log(`[ChildAPI] Looking for childType:`, childType)
@@ -125,7 +123,7 @@ export async function POST(
     }
 
     // Get child config from registry
-    const childConfig = getEntity(childType as string)
+    const childConfig = getEntity(childType)
     console.log(`[ChildAPI] Child config for ${childType}:`, childConfig)
     if (!childConfig) {
       return NextResponse.json(
@@ -328,4 +326,4 @@ export async function POST(
       { status: 500 }
     )
   }
-}
+}, 'write')

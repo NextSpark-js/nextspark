@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryWithRLS, mutateWithRLS } from '@nextsparkjs/core/lib/db';
-import { 
-  createApiResponse, 
+import {
+  createApiResponse,
   createApiError,
   parsePaginationParams,
   createPaginationMeta,
@@ -17,6 +17,7 @@ import {
 import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth';
 import { hasAdminPermission } from '@nextsparkjs/core/lib/api/auth/permissions';
 import { z } from 'zod';
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 
 const createUserSchema = z.object({
   email: z.string().email('Invalid email format'),
@@ -38,7 +39,7 @@ export async function OPTIONS() {
 }
 
 // GET /api/v1/users - List users with dual auth
-export const GET = withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
+export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
   try {
     // Authenticate using dual auth
     const authResult = await authenticateRequest(req);
@@ -108,10 +109,10 @@ export const GET = withApiLogging(async (req: NextRequest): Promise<NextResponse
     const response = createApiError('Internal server error', 500);
     return addCorsHeaders(response);
   }
-});
+}), 'read');
 
 // POST /api/v1/users - Create user with dual auth
-export const POST = withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
+export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
   try {
     // Authenticate using dual auth
     const authResult = await authenticateRequest(req);
@@ -193,5 +194,5 @@ export const POST = withApiLogging(async (req: NextRequest): Promise<NextRespons
     const response = createApiError('Internal server error', 500);
     return addCorsHeaders(response);
   }
-});
+}), 'write');
 

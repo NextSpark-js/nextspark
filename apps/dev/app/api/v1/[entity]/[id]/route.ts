@@ -13,23 +13,21 @@
  * DELETE /api/v1/orders/456       -> Delete order
  */
 
-// CRITICAL: Initialize entity registry for API routes
-// This import is processed by webpack which resolves the @nextsparkjs alias
-// The setEntityRegistry call happens at module load time
-import { setEntityRegistry, isRegistryInitialized } from '@nextsparkjs/core/lib/entities/queries'
-import { ENTITY_REGISTRY, ENTITY_METADATA } from '@nextsparkjs/registries/entity-registry'
-if (!isRegistryInitialized()) {
-  setEntityRegistry(ENTITY_REGISTRY, ENTITY_METADATA)
-}
-
 import {
   handleGenericRead,
   handleGenericUpdate,
   handleGenericDelete,
   handleGenericOptions
 } from '@nextsparkjs/core/lib/api/entity/generic-handler'
+import { setEntityRegistry } from '@nextsparkjs/core/lib/entities/queries'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+// Import registry directly - webpack resolves @nextsparkjs/registries alias at compile time
+import { ENTITY_REGISTRY, ENTITY_METADATA } from '@nextsparkjs/registries/entity-registry'
 
-export const GET = handleGenericRead
-export const PATCH = handleGenericUpdate
-export const DELETE = handleGenericDelete
+// Initialize registry at module load time (before any handler runs)
+setEntityRegistry(ENTITY_REGISTRY, ENTITY_METADATA)
+
+export const GET = withRateLimitTier(handleGenericRead, 'read')
+export const PATCH = withRateLimitTier(handleGenericUpdate, 'write')
+export const DELETE = withRateLimitTier(handleGenericDelete, 'write')
 export const OPTIONS = handleGenericOptions

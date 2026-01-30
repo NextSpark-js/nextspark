@@ -17,8 +17,9 @@ import {
 import { queryWithRLS } from '@nextsparkjs/core/lib/db'
 import type { ScheduledAction, ScheduledActionStatus } from '@nextsparkjs/core/lib/scheduled-actions/types'
 import { getAllRegisteredActions } from '@nextsparkjs/core/lib/scheduled-actions/registry'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
-export async function GET(request: NextRequest) {
+export const GET = withRateLimitTier(async (request: NextRequest) => {
   // Authenticate request
   const authResult = await authenticateRequest(request)
 
@@ -107,7 +108,7 @@ export async function GET(request: NextRequest) {
       },
     },
   })
-}
+}, 'read');
 
 export async function OPTIONS() {
   return new NextResponse(null, {

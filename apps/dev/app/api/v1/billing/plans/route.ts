@@ -10,8 +10,9 @@ import { validateAndAuthenticateRequest, createApiResponse, createApiError } fro
 import { PlanService } from '@nextsparkjs/core/lib/services'
 import { createPlanSchema } from '@nextsparkjs/core/lib/billing/schema'
 import { mutateWithRLS } from '@nextsparkjs/core/lib/db'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
-export async function GET(request: NextRequest) {
+export const GET = withRateLimitTier(async (request: NextRequest) => {
   // Plans list is partially public (public plans visible to all, hidden plans only to superadmin)
   let includeHidden = false
 
@@ -31,9 +32,9 @@ export async function GET(request: NextRequest) {
     console.error('[Billing API] Error fetching plans:', error)
     return createApiError('Failed to fetch plans', 500)
   }
-}
+}, 'read');
 
-export async function POST(request: NextRequest) {
+export const POST = withRateLimitTier(async (request: NextRequest) => {
   // Authenticate request
   const { auth, rateLimitResponse } = await validateAndAuthenticateRequest(request)
   if (rateLimitResponse) return rateLimitResponse
@@ -82,4 +83,4 @@ export async function POST(request: NextRequest) {
     console.error('[Billing API] Error creating plan:', error)
     return createApiError('Failed to create plan', 500)
   }
-}
+}, 'strict');

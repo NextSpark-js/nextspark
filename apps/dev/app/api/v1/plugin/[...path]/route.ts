@@ -8,46 +8,47 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PluginService, type RouteFileEndpoint, type PluginRegistryEntry } from '@nextsparkjs/core/lib/services'
 import { PLUGIN_REGISTRY } from '@nextsparkjs/registries/plugin-registry'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
-export async function GET(
+export const GET = withRateLimitTier(async (
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
-) {
+) => {
   const { path } = await params
   return handlePluginRequest(request, path, 'GET')
-}
+}, 'read');
 
-export async function POST(
+export const POST = withRateLimitTier(async (
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
-) {
+) => {
   const { path } = await params
   return handlePluginRequest(request, path, 'POST')
-}
+}, 'write');
 
-export async function PUT(
+export const PUT = withRateLimitTier(async (
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
-) {
+) => {
   const { path } = await params
   return handlePluginRequest(request, path, 'PUT')
-}
+}, 'write');
 
-export async function DELETE(
+export const DELETE = withRateLimitTier(async (
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
-) {
+) => {
   const { path } = await params
   return handlePluginRequest(request, path, 'DELETE')
-}
+}, 'write');
 
-export async function PATCH(
+export const PATCH = withRateLimitTier(async (
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
-) {
+) => {
   const { path } = await params
   return handlePluginRequest(request, path, 'PATCH')
-}
+}, 'write');
 
 /**
  * Handle plugin API requests with nested paths

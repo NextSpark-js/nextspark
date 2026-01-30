@@ -30,6 +30,7 @@ import {
 } from '@nextsparkjs/core/lib/api/helpers'
 import { authenticateRequest, hasRequiredScope } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { z } from 'zod'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 // Validation schema for metadata value
 const metadataValueSchema = z.object({
@@ -56,7 +57,7 @@ export async function OPTIONS() {
  * GET /api/v1/users/user-123/meta/theme
  * Response: { success: true, data: { key: "theme", value: "dark" } }
  */
-export const GET = withApiLogging(async (
+export const GET = withRateLimitTier(withApiLogging(async (
   req: NextRequest,
   { params }: { params: Promise<{ id: string; key: string }> }
 ): Promise<NextResponse> => {
@@ -140,7 +141,7 @@ export const GET = withApiLogging(async (
     )
     return addCorsHeaders(response)
   }
-})
+}), 'read');
 
 /**
  * PUT /api/v1/users/:id/meta/:key
@@ -159,7 +160,7 @@ export const GET = withApiLogging(async (
  * Body: { value: "dark", isPublic: false }
  * Response: { success: true, data: { key: "theme", value: "dark", updated: true } }
  */
-export const PUT = withApiLogging(async (
+export const PUT = withRateLimitTier(withApiLogging(async (
   req: NextRequest,
   { params }: { params: Promise<{ id: string; key: string }> }
 ): Promise<NextResponse> => {
@@ -270,7 +271,7 @@ export const PUT = withApiLogging(async (
     )
     return addCorsHeaders(response)
   }
-})
+}), 'write');
 
 /**
  * PATCH /api/v1/users/:id/meta/:key
@@ -287,7 +288,7 @@ export const PATCH = PUT
  * DELETE /api/v1/users/user-123/meta/theme
  * Response: { success: true, data: { key: "theme", deleted: true } }
  */
-export const DELETE = withApiLogging(async (
+export const DELETE = withRateLimitTier(withApiLogging(async (
   req: NextRequest,
   { params }: { params: Promise<{ id: string; key: string }> }
 ): Promise<NextResponse> => {
@@ -360,4 +361,4 @@ export const DELETE = withApiLogging(async (
     )
     return addCorsHeaders(response)
   }
-})
+}), 'write');

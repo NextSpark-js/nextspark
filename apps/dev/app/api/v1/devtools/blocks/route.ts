@@ -16,8 +16,9 @@ import {
 } from '@nextsparkjs/core/lib/api/auth/devtools-auth'
 import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry'
 import { TAGS_REGISTRY, COVERAGE_SUMMARY } from '@nextsparkjs/registries/testing-registry'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
-export async function GET(request: NextRequest) {
+export const GET = withRateLimitTier(async (request: NextRequest) => {
   // Authenticate request
   const authResult = await authenticateRequest(request)
 
@@ -69,7 +70,7 @@ export async function GET(request: NextRequest) {
       },
     },
   })
-}
+}, 'read');
 
 export async function OPTIONS() {
   return new NextResponse(null, {

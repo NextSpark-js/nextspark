@@ -11,6 +11,7 @@ import {
 import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { invitationListQuerySchema } from '@nextsparkjs/core/lib/teams/schema'
 import type { TeamInvitation } from '@nextsparkjs/core/lib/teams/types'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 // Handle CORS preflight
 export async function OPTIONS() {
@@ -18,7 +19,7 @@ export async function OPTIONS() {
 }
 
 // GET /api/v1/team-invitations - List pending invitations for current user
-export const GET = withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
+export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
   try {
     // Authenticate using dual auth
     const authResult = await authenticateRequest(req)
@@ -111,4 +112,4 @@ export const GET = withApiLogging(async (req: NextRequest): Promise<NextResponse
     const response = createApiError('Internal server error', 500)
     return addCorsHeaders(response)
   }
-})
+}), 'read');

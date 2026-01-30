@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryWithRLS, mutateWithRLS } from '@nextsparkjs/core/lib/db';
-import { 
-  createApiResponse, 
+import {
+  createApiResponse,
   createApiError,
   withApiLogging,
   handleCorsPreflightRequest,
@@ -10,6 +10,7 @@ import {
 import { authenticateRequest, hasRequiredScope } from '@nextsparkjs/core/lib/api/auth/dual-auth';
 import { ApiKeyManager, API_SCOPES, API_KEY_LIMITS } from '@nextsparkjs/core/lib/api/keys';
 import { validateScopesForUser } from '@nextsparkjs/core/lib/api/auth';
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 import { z } from 'zod';
 
 const createApiKeySchema = z.object({
@@ -24,7 +25,7 @@ export async function OPTIONS() {
 }
 
 // GET /api/v1/api-keys - List user's API keys with dual auth
-export const GET = withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
+export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
   try {
     // Authenticate using dual auth
     const authResult = await authenticateRequest(req);
@@ -130,10 +131,10 @@ export const GET = withApiLogging(async (req: NextRequest): Promise<NextResponse
     const response = createApiError('Internal server error', 500);
     return addCorsHeaders(response);
   }
-});
+}), 'strict');
 
 // POST /api/v1/api-keys - Create new API key with dual auth
-export const POST = withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
+export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
   try {
     // Authenticate using dual auth
     const authResult = await authenticateRequest(req);
@@ -247,4 +248,4 @@ export const POST = withApiLogging(async (req: NextRequest): Promise<NextRespons
     const response = createApiError('Internal server error', 500);
     return addCorsHeaders(response);
   }
-});
+}), 'strict');

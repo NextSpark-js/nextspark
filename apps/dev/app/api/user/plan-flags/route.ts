@@ -6,10 +6,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@nextsparkjs/core/lib/auth'
+import { getTypedSession } from '@nextsparkjs/core/lib/auth'
 import { getUserPlanAndFlags, updateUserPlan, updateUserFlags } from '@nextsparkjs/core/lib/user-data'
 import { z } from 'zod'
 import type { UserRole } from '@nextsparkjs/core/types/user.types'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 // Validation schemas
 const planFlagsQuerySchema = z.object({
@@ -26,12 +27,10 @@ const planFlagsUpdateSchema = z.object({
  * GET /api/user/plan-flags
  * Fetch user plan and flags data
  */
-export async function GET(request: NextRequest) {
+export const GET = withRateLimitTier(async (request: NextRequest) => {
   try {
     // Get session
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
+    const session = await getTypedSession(request.headers)
 
     if (!session) {
       return NextResponse.json(
@@ -84,18 +83,16 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+}, 'read');
 
 /**
  * PATCH /api/user/plan-flags
  * Update user plan and/or flags
  */
-export async function PATCH(request: NextRequest) {
+export const PATCH = withRateLimitTier(async (request: NextRequest) => {
   try {
     // Get session
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
+    const session = await getTypedSession(request.headers)
 
     if (!session) {
       return NextResponse.json(
@@ -121,14 +118,6 @@ export async function PATCH(request: NextRequest) {
     const userRole = session.user.role as UserRole
 
     // Security check: users can only update their own data unless admin
-    if (userId !== session.user.id && !['admin', 'superadmin'].includes(userRole)) {
-      return NextResponse.json(
-        { error: 'Permission denied' },
-        { status: 403 }
-      )
-    }
-
-    // Additional security: only admins can update other users' data
     if (userId !== session.user.id && !['admin', 'superadmin'].includes(userRole)) {
       return NextResponse.json(
         { error: 'Only admins can update other users data' },
@@ -180,18 +169,16 @@ export async function PATCH(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+}, 'write');
 
 /**
  * POST /api/user/plan-flags/bulk
  * Bulk update user plans and flags (admin only)
  */
-export async function POST(request: NextRequest) {
+export const POST = withRateLimitTier(async (request: NextRequest) => {
   try {
     // Get session
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
+    const session = await getTypedSession(request.headers)
 
     if (!session) {
       return NextResponse.json(
@@ -280,4 +267,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+}, 'strict');

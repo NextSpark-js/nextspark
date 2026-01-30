@@ -1,6 +1,13 @@
-import { auth } from "@nextsparkjs/core/lib/auth";
+import { getTypedSession } from "@nextsparkjs/core/lib/auth";
 import { NextResponse } from "next/server";
-import { ENTITY_REGISTRY } from "@nextsparkjs/registries/entity-registry";
+import { getEntityRegistry } from "@nextsparkjs/core/lib/entities/queries";
+import type { EntityConfig, ChildEntityDefinition } from "@nextsparkjs/core/lib/entities/types";
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
+
+// Type guard to check if entity is a full EntityConfig
+function isEntityConfig(entity: EntityConfig | ChildEntityDefinition): entity is EntityConfig {
+  return 'slug' in entity
+}
 
 /**
  * Entity information structure
@@ -23,11 +30,8 @@ interface EntityInfo {
     label?: string;
     required?: boolean;
   }[];
-  // Permissions are now optional in entity config (centralized in permissions.config.ts)
-  permissions?: {
-    actions: Array<{ action: string; label: string; description?: string }>;
-    customActions?: Array<{ action: string; label: string; description?: string }>;
-  };
+  // Note: Permissions are now defined centrally in permissions.config.ts
+  // Use PermissionService to query entity permissions
 }
 
 /**
@@ -36,10 +40,10 @@ interface EntityInfo {
  * Returns entity registry information
  * Only accessible to developer role
  */
-export async function GET(request: Request) {
+export const GET = withRateLimitTier(async (request: Request) => {
   try {
     // Verify developer role
-    const session = await auth.api.getSession({ headers: request.headers });
+    const session = await getTypedSession(request.headers);
 
     if (!session?.user || session.user.role !== "developer") {
       return NextResponse.json(
@@ -53,9 +57,11 @@ export async function GET(request: Request) {
 
     // Build entity info array
     const entities: EntityInfo[] = [];
+    const registry = getEntityRegistry();
 
-    for (const [, entry] of Object.entries(ENTITY_REGISTRY)) {
+    for (const [, entry] of Object.entries(registry)) {
       const config = entry.config;
+      if (!isEntityConfig(config)) continue;
 
       entities.push({
         slug: config.slug,
@@ -75,6 +81,7 @@ export async function GET(request: Request) {
           label: field.label,
           required: field.required,
         })) || [],
+        // Note: Permissions are now centralized in permissions.config.ts
       });
     }
 
@@ -105,4 +112,4 @@ export async function GET(request: Request) {
       { status: 500 }
     );
   }
-}
+}, 'read');

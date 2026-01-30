@@ -2,8 +2,37 @@ import { NextRequest } from 'next/server'
 import { put } from '@vercel/blob'
 import { authenticateRequest, hasRequiredScope } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { writeFile, mkdir } from 'fs/promises'
+import { join } from 'path'
+import { existsSync } from 'fs'
 
-export async function POST(request: NextRequest) {
+// Check if Vercel Blob is configured
+// NOTE: We use Vercel Blob even in development when available because some external APIs
+// (like social media platforms) cannot access localhost URLs - they need publicly accessible URLs
+const isVercelBlobConfigured = () => {
+  const token = process.env.BLOB_READ_WRITE_TOKEN
+  return !!token && token.startsWith('vercel_blob_')
+}
+
+// Local storage fallback - accepts buffer directly
+// Used when Vercel Blob is not configured or fails
+async function uploadToLocalStorageBuffer(buffer: Buffer, fileName: string): Promise<string> {
+  const uploadDir = join(process.cwd(), 'public', 'uploads', 'temp')
+
+  // Create directory if it doesn't exist
+  if (!existsSync(uploadDir)) {
+    await mkdir(uploadDir, { recursive: true })
+  }
+
+  const filePath = join(uploadDir, fileName)
+  await writeFile(filePath, buffer)
+
+  // Return relative URL that can be served from public folder
+  return `/uploads/temp/${fileName}`
+}
+
+export const POST = withRateLimitTier(async (request: NextRequest) => {
   try {
     // 1. Dual Authentication (API Key OR Session)
     const authResult = await authenticateRequest(request)
@@ -27,6 +56,9 @@ export async function POST(request: NextRequest) {
     }
 
     const uploadedUrls: string[] = []
+    const useVercelBlob = isVercelBlobConfigured()
+
+    console.log(`📤 [Media Upload] Storage mode: ${useVercelBlob ? 'Vercel Blob' : 'Local Storage'}`)
 
     for (const file of files) {
       if (!file.size) {
@@ -67,19 +99,41 @@ export async function POST(request: NextRequest) {
       // Generate unique filename
       const timestamp = Date.now()
       const randomString = Math.random().toString(36).substring(2, 15)
-      const extension = file.name.split('.').pop()
+      const extension = file.name.split('.').pop() || 'bin'
       const fileName = `${timestamp}_${randomString}.${extension}`
 
       try {
-        // Upload to Vercel Blob
-        const blob = await put(`uploads/temp/${fileName}`, file, {
-          access: 'public',
-          addRandomSuffix: false
-        })
+        let uploadedUrl: string
 
-        uploadedUrls.push(blob.url)
+        // Read file buffer once - needed for both Vercel Blob and local storage
+        // Important: File stream can only be read once, so we buffer it first
+        const fileBuffer = Buffer.from(await file.arrayBuffer())
+
+        if (useVercelBlob) {
+          // Try Vercel Blob first - use buffer with content type
+          try {
+            const blob = await put(`uploads/temp/${fileName}`, fileBuffer, {
+              access: 'public',
+              addRandomSuffix: false,
+              contentType: file.type
+            })
+            uploadedUrl = blob.url
+            console.log(`✅ [Media Upload] Uploaded to Vercel Blob: ${uploadedUrl}`)
+          } catch (blobError) {
+            // Fallback to local storage if Vercel Blob fails
+            console.warn(`⚠️ [Media Upload] Vercel Blob failed, falling back to local storage:`, blobError)
+            uploadedUrl = await uploadToLocalStorageBuffer(fileBuffer, fileName)
+            console.log(`✅ [Media Upload] Uploaded to local storage (fallback): ${uploadedUrl}`)
+          }
+        } else {
+          // Use local storage directly
+          uploadedUrl = await uploadToLocalStorageBuffer(fileBuffer, fileName)
+          console.log(`✅ [Media Upload] Uploaded to local storage: ${uploadedUrl}`)
+        }
+
+        uploadedUrls.push(uploadedUrl)
       } catch (fileError) {
-        console.error(`❌ Failed to upload ${file.name} to Vercel Blob:`)
+        console.error(`❌ Failed to upload ${file.name}:`)
         console.error(`❌ Error details:`, fileError)
 
         const errorMessage = fileError instanceof Error ? fileError.message : String(fileError)
@@ -100,7 +154,8 @@ export async function POST(request: NextRequest) {
     return createApiResponse({
       message: 'Files uploaded successfully',
       urls: uploadedUrls,
-      count: uploadedUrls.length
+      count: uploadedUrls.length,
+      storage: useVercelBlob ? 'vercel-blob' : 'local'
     })
 
   } catch (error) {
@@ -111,10 +166,10 @@ export async function POST(request: NextRequest) {
       { error: error instanceof Error ? error.message : String(error) }
     )
   }
-}
+}, 'write');
 
 // Optional: Add a GET endpoint to get upload info
-export async function GET(request: NextRequest) {
+export const GET = withRateLimitTier(async (request: NextRequest) => {
   try {
     // 1. Dual Authentication (API Key OR Session)
     const authResult = await authenticateRequest(request)
@@ -130,10 +185,12 @@ export async function GET(request: NextRequest) {
       return createApiError('Insufficient permissions - media:read scope required', 403)
     }
 
+    const useVercelBlob = isVercelBlobConfigured()
+
     // This could be used for cleanup or management
     return createApiResponse({
       message: 'Media upload endpoint is active',
-      storage: 'Vercel Blob',
+      storage: useVercelBlob ? 'Vercel Blob' : 'Local Storage',
       uploadPath: 'uploads/temp/',
       supportedTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm'],
       maxFileSize: '10MB'
@@ -147,4 +204,4 @@ export async function GET(request: NextRequest) {
       { error: error instanceof Error ? error.message : String(error) }
     )
   }
-}
+}, 'read');

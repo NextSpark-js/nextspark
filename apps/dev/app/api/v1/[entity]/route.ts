@@ -11,21 +11,19 @@
  * POST /api/v1/orders       -> Create order
  */
 
-// CRITICAL: Initialize entity registry for API routes
-// This import is processed by webpack which resolves the @nextsparkjs alias
-// The setEntityRegistry call happens at module load time
-import { setEntityRegistry, isRegistryInitialized } from '@nextsparkjs/core/lib/entities/queries'
-import { ENTITY_REGISTRY, ENTITY_METADATA } from '@nextsparkjs/registries/entity-registry'
-if (!isRegistryInitialized()) {
-  setEntityRegistry(ENTITY_REGISTRY, ENTITY_METADATA)
-}
-
 import {
   handleGenericList,
   handleGenericCreate,
   handleGenericOptions
 } from '@nextsparkjs/core/lib/api/entity/generic-handler'
+import { setEntityRegistry } from '@nextsparkjs/core/lib/entities/queries'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+// Import registry directly - webpack resolves @nextsparkjs/registries alias at compile time
+import { ENTITY_REGISTRY, ENTITY_METADATA } from '@nextsparkjs/registries/entity-registry'
 
-export const GET = handleGenericList
-export const POST = handleGenericCreate
+// Initialize registry at module load time (before any handler runs)
+setEntityRegistry(ENTITY_REGISTRY, ENTITY_METADATA)
+
+export const GET = withRateLimitTier(handleGenericList, 'read')
+export const POST = withRateLimitTier(handleGenericCreate, 'write')
 export const OPTIONS = handleGenericOptions
