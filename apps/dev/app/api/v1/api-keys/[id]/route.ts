@@ -13,14 +13,15 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { queryOneWithRLS, mutateWithRLS } from '@nextsparkjs/core/lib/db';
-import { 
-  createApiResponse, 
+import {
+  createApiResponse,
   createApiError,
   withApiLogging,
   handleCorsPreflightRequest,
   addCorsHeaders
 } from '@nextsparkjs/core/lib/api/helpers';
 import { authenticateRequest, hasRequiredScope } from '@nextsparkjs/core/lib/api/auth/dual-auth';
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 
 // Handle CORS preflight
 export async function OPTIONS() {
@@ -28,7 +29,7 @@ export async function OPTIONS() {
 }
 
 // GET /api/v1/api-keys/:id - Get specific API key details
-export const GET = withApiLogging(async (
+export const GET = withRateLimitTier(withApiLogging(async (
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> => {
@@ -134,10 +135,10 @@ export const GET = withApiLogging(async (
     const response = createApiError('Internal server error', 500);
     return addCorsHeaders(response);
   }
-});
+}), 'strict');
 
 // PATCH /api/v1/api-keys/:id - Update API key (only name and active status)
-export const PATCH = withApiLogging(async (
+export const PATCH = withRateLimitTier(withApiLogging(async (
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> => {
@@ -225,10 +226,10 @@ export const PATCH = withApiLogging(async (
     const response = createApiError('Internal server error', 500);
     return addCorsHeaders(response);
   }
-});
+}), 'strict');
 
 // DELETE /api/v1/api-keys/:id - Revoke API key
-export const DELETE = withApiLogging(async (
+export const DELETE = withRateLimitTier(withApiLogging(async (
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> => {
@@ -300,4 +301,4 @@ export const DELETE = withApiLogging(async (
     const response = createApiError('Internal server error', 500);
     return addCorsHeaders(response);
   }
-});
+}), 'strict');

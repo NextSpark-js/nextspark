@@ -8,6 +8,7 @@ import {
   addCorsHeaders,
 } from '@nextsparkjs/core/lib/api/helpers'
 import type { TeamInvitation } from '@nextsparkjs/core/lib/teams/types'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 // Handle CORS preflight
 export async function OPTIONS() {
@@ -15,7 +16,7 @@ export async function OPTIONS() {
 }
 
 // GET /api/v1/team-invitations/:token - Get invitation details (public endpoint for preview)
-export const GET = withApiLogging(
+export const GET = withRateLimitTier(withApiLogging(
   async (req: NextRequest, { params }: { params: Promise<{ token: string }> }): Promise<NextResponse> => {
     try {
       const { token } = await params
@@ -86,4 +87,4 @@ export const GET = withApiLogging(
       return addCorsHeaders(response)
     }
   }
-)
+), 'read');

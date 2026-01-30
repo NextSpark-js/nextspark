@@ -8,7 +8,7 @@ import {
   addCorsHeaders,
 } from '@nextsparkjs/core/lib/api/helpers'
 import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
-import { checkRateLimit } from '@nextsparkjs/core/lib/api/rate-limit'
+import { checkRateLimit, withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { RATE_LIMITS } from '@nextsparkjs/core/lib/api/keys'
 import type { TeamInvitation, TeamMember } from '@nextsparkjs/core/lib/teams/types'
 
@@ -18,7 +18,7 @@ export async function OPTIONS() {
 }
 
 // POST /api/v1/team-invitations/:token/accept - Accept invitation and become member
-export const POST = withApiLogging(
+export const POST = withRateLimitTier(withApiLogging(
   async (req: NextRequest, { params }: { params: Promise<{ token: string }> }): Promise<NextResponse> => {
     try {
       // Authenticate using dual auth
@@ -176,4 +176,4 @@ export const POST = withApiLogging(
       return addCorsHeaders(response)
     }
   }
-)
+), 'write');

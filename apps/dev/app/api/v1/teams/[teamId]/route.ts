@@ -8,7 +8,8 @@ import {
   addCorsHeaders,
 } from '@nextsparkjs/core/lib/api/helpers'
 import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
-import { ownerUpdateTeamSchema, adminUpdateTeamSchema } from '@nextsparkjs/core/lib/teams/schema'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { updateTeamSchema } from '@nextsparkjs/core/lib/teams/schema'
 import { TeamService, MembershipService } from '@nextsparkjs/core/lib/services'
 import type { Team, TeamRole } from '@nextsparkjs/core/lib/teams/types'
 
@@ -18,7 +19,7 @@ export async function OPTIONS() {
 }
 
 // GET /api/v1/teams/:teamId - Get team details
-export const GET = withApiLogging(
+export const GET = withRateLimitTier('read', withApiLogging(
   async (req: NextRequest, { params }: { params: Promise<{ teamId: string }> }): Promise<NextResponse> => {
     try {
       // Authenticate using dual auth
@@ -87,10 +88,10 @@ export const GET = withApiLogging(
       return addCorsHeaders(response)
     }
   }
-)
+))
 
 // PATCH /api/v1/teams/:teamId - Update team (owners/admins only)
-export const PATCH = withApiLogging(
+export const PATCH = withRateLimitTier('write', withApiLogging(
   async (req: NextRequest, { params }: { params: Promise<{ teamId: string }> }): Promise<NextResponse> => {
     try {
       // Authenticate using dual auth
@@ -115,56 +116,28 @@ export const PATCH = withApiLogging(
         return addCorsHeaders(response)
       }
 
-      const body = await req.json()
+      // Check if user has permission to edit team using MembershipService
+      const membership = await MembershipService.get(authResult.user!.id, teamId)
+      const actionResult = membership.canPerformAction('teams.update')
 
-      // FIX #2: Check owner-only requirement FIRST for name/description fields
-      // This provides clearer error messages to users
-      // Issue: https://github.com/NextSpark-js/nextspark/pull/1 (Issue #2)
-      // FIX #1: Use 'in' operator to check property existence (not value truthiness)
-      // This prevents type coercion bypass with falsy values (empty string, null, 0, false)
-      // Issue: https://github.com/NextSpark-js/nextspark/pull/1 (Issue #1)
-      const isOwnerOnlyUpdate = 'name' in body || 'description' in body
-
-      if (isOwnerOnlyUpdate) {
-        // Fetch team to verify ownership BEFORE other checks
-        const team = await TeamService.getById(teamId, authResult.user!.id)
-
-        if (!team || team.ownerId !== authResult.user!.id) {
-          const response = createApiError(
-            'Only team owners can edit team name and description',
-            403,
-            null,
-            'OWNER_ONLY'
-          )
-          return addCorsHeaders(response)
-        }
-
-        // Proceed with owner update (skip general permission check)
-      } else {
-        // Check general teams.update permission for non-owner-only fields
-        const membership = await MembershipService.get(authResult.user!.id, teamId)
-        const actionResult = membership.canPerformAction('teams.update')
-
-        if (!actionResult.allowed) {
-          const response = NextResponse.json(
-            {
-              success: false,
-              error: actionResult.message,
-              reason: actionResult.reason,
-              meta: actionResult.meta,
-            },
-            { status: 403 }
-          )
-          return addCorsHeaders(response)
-        }
+      if (!actionResult.allowed) {
+        const response = NextResponse.json(
+          {
+            success: false,
+            error: actionResult.message,
+            reason: actionResult.reason,
+            meta: actionResult.meta,
+          },
+          { status: 403 }
+        )
+        return addCorsHeaders(response)
       }
 
-      // Validate with appropriate schema based on update type
-      const schema = isOwnerOnlyUpdate ? ownerUpdateTeamSchema : adminUpdateTeamSchema
-      const validatedData = schema.parse(body) as Record<string, unknown>
+      const body = await req.json()
+      const validatedData = updateTeamSchema.parse(body)
 
       // Check if slug is being changed and if it's available
-      if ('slug' in validatedData && typeof validatedData.slug === 'string') {
+      if (validatedData.slug) {
         const slugAvailable = await TeamService.isSlugAvailable(validatedData.slug, teamId)
         if (!slugAvailable) {
           const response = createApiError('Team slug already exists', 409, null, 'SLUG_EXISTS')
@@ -177,27 +150,27 @@ export const PATCH = withApiLogging(
       const values = []
       let paramCount = 1
 
-      if ('name' in validatedData && validatedData.name !== undefined) {
+      if (validatedData.name !== undefined) {
         updates.push(`name = $${paramCount++}`)
         values.push(validatedData.name)
       }
 
-      if ('slug' in validatedData && validatedData.slug !== undefined) {
+      if (validatedData.slug !== undefined) {
         updates.push(`slug = $${paramCount++}`)
         values.push(validatedData.slug)
       }
 
-      if ('description' in validatedData && validatedData.description !== undefined) {
+      if (validatedData.description !== undefined) {
         updates.push(`description = $${paramCount++}`)
         values.push(validatedData.description)
       }
 
-      if ('avatarUrl' in validatedData && validatedData.avatarUrl !== undefined) {
+      if (validatedData.avatarUrl !== undefined) {
         updates.push(`"avatarUrl" = $${paramCount++}`)
         values.push(validatedData.avatarUrl)
       }
 
-      if ('settings' in validatedData && validatedData.settings !== undefined) {
+      if (validatedData.settings !== undefined) {
         updates.push(`settings = $${paramCount++}`)
         values.push(JSON.stringify(validatedData.settings))
       }
@@ -256,10 +229,10 @@ export const PATCH = withApiLogging(
       return addCorsHeaders(response)
     }
   }
-)
+))
 
 // DELETE /api/v1/teams/:teamId - Delete team (owners only, NOT personal teams)
-export const DELETE = withApiLogging(
+export const DELETE = withRateLimitTier('write', withApiLogging(
   async (req: NextRequest, { params }: { params: Promise<{ teamId: string }> }): Promise<NextResponse> => {
     try {
       // Authenticate using dual auth
@@ -319,4 +292,4 @@ export const DELETE = withApiLogging(
       return addCorsHeaders(response)
     }
   }
-)
+))

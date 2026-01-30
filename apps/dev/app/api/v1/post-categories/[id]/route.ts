@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { query as dbQuery } from '@nextsparkjs/core/lib/db'
 import { z } from 'zod'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 const updateCategorySchema = z.object({
   name: z.string().min(1).max(255).optional(),
@@ -16,10 +17,10 @@ const updateCategorySchema = z.object({
 })
 
 // GET /api/v1/post-categories/:id - Get category by ID
-export async function GET(
+export const GET = withRateLimitTier(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
+): Promise<NextResponse> => {
   try {
     const { id } = await params
 
@@ -43,13 +44,13 @@ export async function GET(
     console.error('Error in post-categories API:', err)
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
   }
-}
+}, 'read');
 
 // PUT /api/v1/post-categories/:id - Update category
-export async function PUT(
+export const PUT = withRateLimitTier(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
+): Promise<NextResponse> => {
   try {
     // Dual authentication: API key or session
     const authResult = await authenticateRequest(request)
@@ -183,13 +184,13 @@ export async function PUT(
     const errorMessage = err instanceof Error ? err.message : 'Internal server error'
     return NextResponse.json({ success: false, error: errorMessage }, { status: 500 })
   }
-}
+}, 'write');
 
 // DELETE /api/v1/post-categories/:id - Delete category
-export async function DELETE(
+export const DELETE = withRateLimitTier(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
+): Promise<NextResponse> => {
   try {
     // Dual authentication: API key or session
     const authResult = await authenticateRequest(request)
@@ -252,4 +253,4 @@ export async function DELETE(
     console.error('Error in post-categories API DELETE:', err)
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
   }
-}
+}, 'write');

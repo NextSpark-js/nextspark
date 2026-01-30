@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry'
 import { z } from 'zod'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 const requestSchema = z.object({
   blockSlug: z.string(),
   props: z.record(z.string(), z.unknown())
 })
 
-export async function POST(request: NextRequest) {
+export const POST = withRateLimitTier(async (request: NextRequest) => {
   try {
     const body = await request.json()
     const { blockSlug, props } = requestSchema.parse(body)
@@ -24,7 +25,8 @@ export async function POST(request: NextRequest) {
 
     try {
       // Dynamic import is allowed here (server-side validation, not registry loading)
-      const schemaModule = await import(block.schemaPath)
+      // webpackIgnore tells webpack to skip static analysis for this intentional dynamic import
+      const schemaModule = await import(/* webpackIgnore: true */ block.schemaPath)
       const schema = schemaModule.schema
 
       schema.parse(props)
@@ -42,4 +44,4 @@ export async function POST(request: NextRequest) {
     console.error('Error validating block:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+}, 'write');

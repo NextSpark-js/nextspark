@@ -1,8 +1,9 @@
-import { auth } from "@nextsparkjs/core/lib/auth";
+import { getTypedSession } from "@nextsparkjs/core/lib/auth";
 import { NextResponse } from "next/server";
 import { readFile, stat } from "fs/promises";
 import { join } from "path";
 import matter from "gray-matter";
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 
 /**
  * GET /api/devtools/tests/[...path]
@@ -12,13 +13,13 @@ import matter from "gray-matter";
  *
  * @param path - Array of path segments (e.g., ['auth', 'login.md'])
  */
-export async function GET(
+export const GET = withRateLimitTier(async (
   request: Request,
   { params }: { params: Promise<{ path: string[] }> }
-) {
+) => {
   try {
     // Verify developer role
-    const session = await auth.api.getSession({ headers: request.headers });
+    const session = await getTypedSession(request.headers);
 
     if (!session?.user || session.user.role !== "developer") {
       return NextResponse.json(
@@ -127,4 +128,4 @@ export async function GET(
       { status: 500 }
     );
   }
-}
+}, 'read');

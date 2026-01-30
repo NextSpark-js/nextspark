@@ -9,17 +9,18 @@
  * FIX1: This endpoint was missing, causing useMembership.canDo() to fail
  */
 
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest, createAuthError } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { MembershipService } from '@nextsparkjs/core/lib/services'
 import { z } from 'zod'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 const checkActionSchema = z.object({
   action: z.string().min(1, 'Action is required'),
   teamId: z.string().uuid().optional()
 })
 
-export async function POST(request: NextRequest) {
+export const POST = withRateLimitTier(async (request: NextRequest) => {
   // 1. Dual authentication (API Key OR Session)
   const authResult = await authenticateRequest(request)
 
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json()
   } catch {
-    return Response.json(
+    return NextResponse.json(
       { success: false, error: 'Invalid JSON body' },
       { status: 400 }
     )
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
 
   const parseResult = checkActionSchema.safeParse(body)
   if (!parseResult.success) {
-    return Response.json(
+    return NextResponse.json(
       {
         success: false,
         error: 'Validation failed',
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest) {
     authResult.user.defaultTeamId
 
   if (!teamId) {
-    return Response.json(
+    return NextResponse.json(
       {
         success: false,
         error: 'No team context available. Please provide teamId in body or x-team-id header.'
@@ -74,8 +75,8 @@ export async function POST(request: NextRequest) {
   const membership = await MembershipService.get(authResult.user.id, teamId)
   const result = membership.canPerformAction(action)
 
-  return Response.json({
+  return NextResponse.json({
     success: true,
     data: result
   })
-}
+}, 'read');

@@ -4,18 +4,16 @@
  * DELETE /api/v1/[entity]/[id]/child/[childType]/[childId]
  */
 
-// CRITICAL: Initialize entity registry for API routes
-// This import is processed by webpack which resolves the @nextsparkjs alias
-// The setEntityRegistry call happens at module load time
-import { setEntityRegistry, isRegistryInitialized, getChildEntities, getEntity } from '@nextsparkjs/core/lib/entities/queries'
-import { ENTITY_REGISTRY, ENTITY_METADATA } from '@nextsparkjs/registries/entity-registry'
-if (!isRegistryInitialized()) {
-  setEntityRegistry(ENTITY_REGISTRY, ENTITY_METADATA)
-}
-
 import { NextRequest, NextResponse } from 'next/server'
 import { queryWithRLS } from '@nextsparkjs/core/lib/db'
 import { resolveEntityFromUrl } from '@nextsparkjs/core/lib/api/entity/resolver'
+import { getChildEntities, getEntity, setEntityRegistry } from '@nextsparkjs/core/lib/entities/queries'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+// Import registry directly - webpack resolves @nextsparkjs/registries alias at compile time
+import { ENTITY_REGISTRY, ENTITY_METADATA } from '@nextsparkjs/registries/entity-registry'
+
+// Initialize registry at module load time (before any handler runs)
+setEntityRegistry(ENTITY_REGISTRY, ENTITY_METADATA)
 
 interface RouteParams {
   entity: string
@@ -24,7 +22,7 @@ interface RouteParams {
   childId: string
 }
 
-export async function PUT(
+export const PUT = withRateLimitTier(async (
   request: NextRequest,
   { params }: { params: Promise<RouteParams> }
 ) {
@@ -43,7 +41,7 @@ export async function PUT(
     }
 
     // Get child entities for this parent entity from registry
-    const childEntities = getChildEntities(resolution.entityName as string)
+    const childEntities = getChildEntities(resolution.entityName)
     const childEntity = childEntities.find(child => child.name === childType)
 
     if (!childEntity) {
@@ -54,7 +52,7 @@ export async function PUT(
     }
 
     // Get child entity configuration from registry
-    const childConfig = getEntity(childType as string)
+    const childConfig = getEntity(childType)
     if (!childConfig) {
       return NextResponse.json(
         { error: `Child entity configuration "${childType}" not found` },
@@ -147,9 +145,9 @@ export async function PUT(
       { status: 500 }
     )
   }
-}
+}, 'write')
 
-export async function DELETE(
+export const DELETE = withRateLimitTier(async (
   request: NextRequest,
   { params }: { params: Promise<RouteParams> }
 ) {
@@ -166,7 +164,7 @@ export async function DELETE(
     }
 
     // Get child entities for this parent entity from registry
-    const childEntities = getChildEntities(resolution.entityName as string)
+    const childEntities = getChildEntities(resolution.entityName)
     const childEntity = childEntities.find(child => child.name === childType)
 
     if (!childEntity) {
@@ -207,4 +205,4 @@ export async function DELETE(
       { status: 500 }
     )
   }
-}
+}, 'write')

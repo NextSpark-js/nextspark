@@ -1,11 +1,12 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@nextsparkjs/core/lib/auth'
 import { headers } from 'next/headers'
 import { queryOneWithRLS, mutateWithRLS, queryOne } from '@nextsparkjs/core/lib/db'
 import { profileSchema } from '@nextsparkjs/core/lib/validation'
 import { MetaService } from '@nextsparkjs/core/lib/services/meta.service'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
-export async function GET(request: Request) {
+export const GET = withRateLimitTier(async (request: NextRequest) => {
   const url = new URL(request.url)
   const includeMeta = url.searchParams.get('includeMeta') === 'true'
   try {
@@ -53,9 +54,9 @@ export async function GET(request: Request) {
     console.error('Error fetching user profile:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+}, 'read');
 
-export async function PATCH(request: Request) {
+export const PATCH = withRateLimitTier(async (request: NextRequest) => {
   try {
     const sessionHeaders = await headers()
     const session = await auth.api.getSession({ headers: sessionHeaders })
@@ -122,7 +123,7 @@ export async function PATCH(request: Request) {
       }
     }
     
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: 'Profile updated successfully',
       success: true
     })
@@ -130,4 +131,4 @@ export async function PATCH(request: Request) {
     console.error('Error updating user profile:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+}, 'write');

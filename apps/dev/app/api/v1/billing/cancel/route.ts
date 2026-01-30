@@ -7,7 +7,7 @@
  * P1-4: Cancel subscription directo
  */
 
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { authenticateRequest, createAuthError } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { SubscriptionService, MembershipService } from '@nextsparkjs/core/lib/services'
@@ -17,6 +17,7 @@ import {
   reactivateSubscription
 } from '@nextsparkjs/core/lib/billing/gateways/stripe'
 import { queryWithRLS } from '@nextsparkjs/core/lib/db'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 const cancelSchema = z.object({
   immediate: z.boolean().optional().default(false),
@@ -31,7 +32,7 @@ const cancelSchema = z.object({
  * - immediate: boolean (default: false) - If true, cancels immediately. If false, cancels at period end.
  * - reason: string (optional) - Reason for cancellation (stored in metadata)
  */
-export async function POST(request: NextRequest) {
+export const POST = withRateLimitTier(async (request: NextRequest) => {
   // 1. Dual authentication
   const authResult = await authenticateRequest(request)
 
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
   const teamId = request.headers.get('x-team-id') || authResult.user.defaultTeamId
 
   if (!teamId) {
-    return Response.json(
+    return NextResponse.json(
       {
         success: false,
         error: 'No team context available. Please provide x-team-id header.'
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
   const actionResult = membership.canPerformAction('billing.cancel')
 
   if (!actionResult.allowed) {
-    return Response.json(
+    return NextResponse.json(
       {
         success: false,
         error: actionResult.message,
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json()
   } catch {
-    return Response.json(
+    return NextResponse.json(
       { success: false, error: 'Invalid JSON body' },
       { status: 400 }
     )
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
   // Otherwise, it's a cancel request
   const parseResult = cancelSchema.safeParse(body)
   if (!parseResult.success) {
-    return Response.json(
+    return NextResponse.json(
       { success: false, error: 'Invalid request body', details: parseResult.error.issues },
       { status: 400 }
     )
@@ -99,7 +100,7 @@ export async function POST(request: NextRequest) {
   const subscription = await SubscriptionService.getActive(teamId)
 
   if (!subscription || !subscription.externalSubscriptionId) {
-    return Response.json(
+    return NextResponse.json(
       { success: false, error: 'No active subscription found' },
       { status: 404 }
     )
@@ -129,7 +130,7 @@ export async function POST(request: NextRequest) {
       ]
     )
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: {
         canceledAt: immediate ? new Date().toISOString() : null,
@@ -142,7 +143,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('[cancel] Error canceling subscription:', error)
-    return Response.json(
+    return NextResponse.json(
       {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to cancel subscription'
@@ -150,7 +151,7 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+}, 'strict');
 
 /**
  * Handle reactivation of a subscription that was scheduled to cancel
@@ -159,14 +160,14 @@ async function handleReactivation(teamId: string) {
   const subscription = await SubscriptionService.getActive(teamId)
 
   if (!subscription || !subscription.externalSubscriptionId) {
-    return Response.json(
+    return NextResponse.json(
       { success: false, error: 'No active subscription found' },
       { status: 404 }
     )
   }
 
   if (!subscription.cancelAtPeriodEnd) {
-    return Response.json(
+    return NextResponse.json(
       { success: false, error: 'Subscription is not scheduled for cancellation' },
       { status: 400 }
     )
@@ -186,7 +187,7 @@ async function handleReactivation(teamId: string) {
       [subscription.id]
     )
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: {
         reactivated: true,
@@ -195,7 +196,7 @@ async function handleReactivation(teamId: string) {
     })
   } catch (error) {
     console.error('[cancel] Error reactivating subscription:', error)
-    return Response.json(
+    return NextResponse.json(
       {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to reactivate subscription'

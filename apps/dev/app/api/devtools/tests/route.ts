@@ -1,7 +1,8 @@
-import { auth } from "@nextsparkjs/core/lib/auth";
+import { getTypedSession } from "@nextsparkjs/core/lib/auth";
 import { NextResponse } from "next/server";
 import { readdir, stat } from "fs/promises";
 import { join } from "path";
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 
 /**
  * File tree node structure
@@ -58,10 +59,10 @@ async function buildFileTree(dirPath: string, basePath: string): Promise<FileTre
  * Returns file tree structure of test documentation files
  * Only accessible to developer role
  */
-export async function GET(request: Request) {
+export const GET = withRateLimitTier(async (request: Request) => {
   try {
     // Verify developer role
-    const session = await auth.api.getSession({ headers: request.headers });
+    const session = await getTypedSession(request.headers);
 
     if (!session?.user || session.user.role !== "developer") {
       return NextResponse.json(
@@ -131,4 +132,4 @@ export async function GET(request: Request) {
       { status: 500 }
     );
   }
-}
+}, 'read');

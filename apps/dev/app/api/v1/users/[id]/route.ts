@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryOneWithRLS, mutateWithRLS } from '@nextsparkjs/core/lib/db';
-import { 
-  createApiResponse, 
+import {
+  createApiResponse,
   createApiError,
   withApiLogging,
   handleCorsPreflightRequest,
@@ -13,6 +13,7 @@ import {
 } from '@nextsparkjs/core/lib/api/helpers';
 import { authenticateRequest, hasRequiredScope } from '@nextsparkjs/core/lib/api/auth/dual-auth';
 import { z } from 'zod';
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 
 const updateUserSchema = z.object({
   firstName: z.string().min(1).optional(),
@@ -28,7 +29,7 @@ export async function OPTIONS() {
 }
 
 // GET /api/v1/users/:id - Get specific user
-export const GET = withApiLogging(async (
+export const GET = withRateLimitTier(withApiLogging(async (
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> => {
@@ -87,10 +88,10 @@ export const GET = withApiLogging(async (
     const response = createApiError('Internal server error', 500);
     return addCorsHeaders(response);
   }
-});
+}), 'read');
 
 // PATCH /api/v1/users/:id - Update user
-export const PATCH = withApiLogging(async (
+export const PATCH = withRateLimitTier(withApiLogging(async (
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> => {
@@ -224,10 +225,10 @@ export const PATCH = withApiLogging(async (
     const response = createApiError('Internal server error', 500);
     return addCorsHeaders(response);
   }
-});
+}), 'write');
 
 // DELETE /api/v1/users/:id - Delete user
-export const DELETE = withApiLogging(async (
+export const DELETE = withRateLimitTier(withApiLogging(async (
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> => {
@@ -299,4 +300,4 @@ export const DELETE = withApiLogging(async (
     const response = createApiError('Internal server error', 500);
     return addCorsHeaders(response);
   }
-});
+}), 'write');

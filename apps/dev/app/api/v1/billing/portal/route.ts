@@ -7,12 +7,13 @@
  * P6: Customer Portal
  */
 
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest, createAuthError } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { createPortalSession } from '@nextsparkjs/core/lib/billing/gateways/stripe'
 import { SubscriptionService, MembershipService } from '@nextsparkjs/core/lib/services'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
-export async function POST(request: NextRequest) {
+export const POST = withRateLimitTier(async (request: NextRequest) => {
   // 1. Dual authentication
   const authResult = await authenticateRequest(request)
 
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
     authResult.user.defaultTeamId
 
   if (!teamId) {
-    return Response.json(
+    return NextResponse.json(
       {
         success: false,
         error: 'No team context available. Please provide x-team-id header.'
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
   const actionResult = membership.canPerformAction('billing.portal')
 
   if (!actionResult.allowed) {
-    return Response.json(
+    return NextResponse.json(
       {
         success: false,
         error: actionResult.message,
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
     const subscription = await SubscriptionService.getActive(teamId)
 
     if (!subscription?.externalCustomerId) {
-      return Response.json(
+      return NextResponse.json(
         {
           success: false,
           error: 'No billing account found. Please upgrade to a paid plan first.'
@@ -73,13 +74,13 @@ export async function POST(request: NextRequest) {
       returnUrl
     })
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: { url: session.url }
     })
   } catch (error) {
     console.error('[portal] Error creating portal session:', error)
-    return Response.json(
+    return NextResponse.json(
       {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to create portal session'
@@ -87,4 +88,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+}, 'write');
