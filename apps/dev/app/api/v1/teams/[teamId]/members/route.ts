@@ -37,7 +37,7 @@ export async function OPTIONS() {
 }
 
 // GET /api/v1/teams/:teamId/members - List team members
-export const GET = withRateLimitTier('read', withApiLogging(
+export const GET = withRateLimitTier(withApiLogging(
   async (req: NextRequest, { params }: { params: Promise<{ teamId: string }> }): Promise<NextResponse> => {
     try {
       // Authenticate using dual auth
@@ -159,10 +159,10 @@ export const GET = withRateLimitTier('read', withApiLogging(
       return addCorsHeaders(response)
     }
   }
-))
+), 'read')
 
 // POST /api/v1/teams/:teamId/members - Invite new member (creates invitation)
-export const POST = withRateLimitTier('write', withApiLogging(
+export const POST = withRateLimitTier(withApiLogging(
   async (req: NextRequest, { params }: { params: Promise<{ teamId: string }> }): Promise<NextResponse> => {
     try {
       // Authenticate using dual auth
@@ -355,4 +355,4 @@ export const POST = withRateLimitTier('write', withApiLogging(
       return addCorsHeaders(response)
     }
   }
-))
+), 'write')

@@ -177,11 +177,19 @@ export async function checkRateLimit(
   // If no limiter (Redis not configured or modules not available), allow all requests
   // Log warning to alert operators that rate limiting is disabled
   if (!limiter) {
+    const defaultLimits: Record<RateLimitTier, number> = {
+      auth: 5,
+      api: 100,
+      strict: 10,
+      read: 200,
+      write: 50,
+    }
     console.warn('[RateLimit] FALLBACK MODE: Rate limiting disabled - Redis unavailable. Identifier:', identifier, 'Tier:', type)
     return {
       success: true,
-      remaining: 100,
+      remaining: defaultLimits[type],
       reset: Date.now() + 60000,
+      limit: defaultLimits[type],
     }
   }
 
@@ -198,11 +206,19 @@ export async function checkRateLimit(
     }
   } catch (error) {
     // On Redis error, fail open (allow the request) but log the error
+    const defaultLimits: Record<RateLimitTier, number> = {
+      auth: 5,
+      api: 100,
+      strict: 10,
+      read: 200,
+      write: 50,
+    }
     console.error('[RateLimit] Redis error:', error)
     return {
       success: true,
-      remaining: 100,
+      remaining: defaultLimits[type],
       reset: Date.now() + 60000,
+      limit: defaultLimits[type],
     }
   }
 }

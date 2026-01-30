@@ -22,7 +22,7 @@ export async function OPTIONS() {
 }
 
 // GET /api/v1/teams - List user's teams
-export const GET = withRateLimitTier('read', withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
+export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
   try {
     // Authenticate using dual auth
     const authResult = await authenticateRequest(req)
@@ -161,10 +161,10 @@ export const GET = withRateLimitTier('read', withApiLogging(async (req: NextRequ
     const response = createApiError('Internal server error', 500)
     return addCorsHeaders(response)
   }
-}))
+}), 'read')
 
 // POST /api/v1/teams - Create new team
-export const POST = withRateLimitTier('write', withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
+export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
   try {
     // Authenticate using dual auth
     const authResult = await authenticateRequest(req)
@@ -291,4 +291,4 @@ export const POST = withRateLimitTier('write', withApiLogging(async (req: NextRe
     const response = createApiError('Internal server error', 500)
     return addCorsHeaders(response)
   }
-}))
+}), 'write')

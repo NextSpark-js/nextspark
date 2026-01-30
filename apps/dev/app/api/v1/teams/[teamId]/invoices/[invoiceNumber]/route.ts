@@ -18,7 +18,7 @@ export async function OPTIONS() {
 }
 
 // GET /api/v1/teams/:teamId/invoices/:invoiceNumber - Get single invoice (owner only)
-export const GET = withRateLimitTier('read', withApiLogging(
+export const GET = withRateLimitTier(withApiLogging(
   async (
     req: NextRequest,
     { params }: { params: Promise<{ teamId: string; invoiceNumber: string }> }
@@ -103,4 +103,4 @@ export const GET = withRateLimitTier('read', withApiLogging(
       return addCorsHeaders(response)
     }
   }
-))
+), 'read')
