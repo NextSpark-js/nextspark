@@ -25,7 +25,7 @@ interface RouteParams {
 export const PUT = withRateLimitTier(async (
   request: NextRequest,
   { params }: { params: Promise<RouteParams> }
-) {
+) => {
   const { entity, id, childType, childId } = await params
 
   try {
@@ -150,7 +150,7 @@ export const PUT = withRateLimitTier(async (
 export const DELETE = withRateLimitTier(async (
   request: NextRequest,
   { params }: { params: Promise<RouteParams> }
-) {
+) => {
   try {
     const { entity, id, childType, childId } = await params
 

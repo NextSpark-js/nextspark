@@ -21,7 +21,7 @@ export const GET = withRateLimitTier(async (
     // Verify developer role
     const session = await getTypedSession(request.headers);
 
-    if (!session?.user || session.user.role !== "developer") {
+    if (!session?.user || session.user.role !== "developer") => {
       return NextResponse.json(
         {
           success: false,
@@ -35,7 +35,7 @@ export const GET = withRateLimitTier(async (
     const resolvedParams = await params;
     const pathSegments = resolvedParams.path;
 
-    if (!pathSegments || pathSegments.length === 0) {
+    if (!pathSegments || pathSegments.length === 0) => {
       return NextResponse.json(
         {
           success: false,
@@ -49,7 +49,7 @@ export const GET = withRateLimitTier(async (
     const hasTraversal = pathSegments.some(
       (segment) => segment.includes("..") || segment.includes("/")
     );
-    if (hasTraversal) {
+    if (hasTraversal) => {
       return NextResponse.json(
         {
           success: false,
@@ -77,7 +77,7 @@ export const GET = withRateLimitTier(async (
     // Verify file exists and is a file
     try {
       const stats = await stat(filePath);
-      if (!stats.isFile()) {
+      if (!stats.isFile()) => {
         return NextResponse.json(
           {
             success: false,
@@ -114,7 +114,7 @@ export const GET = withRateLimitTier(async (
       },
       { status: 200 }
     );
-  } catch (error) {
+  } catch (error) => {
     console.error("[API] /api/devtools/tests/[...path] error:", error);
     return NextResponse.json(
       {

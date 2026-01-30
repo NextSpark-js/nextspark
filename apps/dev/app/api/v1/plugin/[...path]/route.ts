@@ -62,7 +62,7 @@ async function handlePluginRequest(
 
   try {
     // Extract plugin name from path segments
-    if (!pathSegments || pathSegments.length === 0) {
+    if (!pathSegments || pathSegments.length === 0) => {
       return NextResponse.json(
         {
           error: 'Plugin name is required',
@@ -78,7 +78,7 @@ async function handlePluginRequest(
     const plugins = PluginService.getAll()
     const plugin = plugins.find(p => p.name === pluginName)
 
-    if (!plugin) {
+    if (!plugin) => {
       return NextResponse.json(
         {
           error: 'Plugin not found',
@@ -89,7 +89,7 @@ async function handlePluginRequest(
       )
     }
 
-    if (!plugin.enabled) {
+    if (!plugin.enabled) => {
       return NextResponse.json(
         { error: 'Plugin is disabled' },
         { status: 403 }
@@ -103,7 +103,7 @@ async function handlePluginRequest(
     const requestPath = `/api/v1/plugin/${pathSegments.join('/')}`
 
     // Check if route exists in registry metadata
-    if (PluginService.hasRoute(requestPath, method)) {
+    if (PluginService.hasRoute(requestPath, method)) => {
       console.log(`[Plugin API] Route found in registry: ${requestPath}`)
       // Note: Route exists but execution handled by fallback mechanisms below
       // This maintains zero-dynamic-imports policy
@@ -112,28 +112,28 @@ async function handlePluginRequest(
 
       // Check if this plugin has route files but handler not found - possible configuration issue
       const pluginEntry = (PLUGIN_REGISTRY as Record<string, PluginRegistryEntry>)[pluginName]
-      if (pluginEntry?.routeFiles && pluginEntry.routeFiles.length > 0) {
+      if (pluginEntry?.routeFiles && pluginEntry.routeFiles.length > 0) => {
         console.warn(`[Plugin API] Plugin '${pluginName}' has route files but route '${requestPath}' not found in registry`)
       }
     }
 
     // Fallback: Try to load plugin's API handler from registry
     const pluginEntry2 = (PLUGIN_REGISTRY as Record<string, PluginRegistryEntry>)[pluginName]
-    if (pluginEntry2?.hasAPI) {
+    if (pluginEntry2?.hasAPI) => {
       const response = await loadPluginAPIFromRegistry(pluginName, request, method, endpointPath)
-      if (response) {
+      if (response) => {
         return response
       }
     }
 
 
     // Fallback to plugin's built-in API handler
-    if (plugin.api && typeof plugin.api.handler === 'function') {
+    if (plugin.api && typeof plugin.api.handler === 'function') => {
       return plugin.api.handler(request, method, endpointPath)
     }
 
     // Default plugin info endpoint
-    if (endpointPath === '/' && method === 'GET') {
+    if (endpointPath === '/' && method === 'GET') => {
       return NextResponse.json({
         plugin: {
           name: plugin.name,
@@ -161,7 +161,7 @@ async function handlePluginRequest(
       { status: 404 }
     )
 
-  } catch (error) {
+  } catch (error) => {
     console.error('[Plugin API] Error handling nested request:', error)
 
     return NextResponse.json(
@@ -186,23 +186,23 @@ function matchRoutePattern(pattern: string, path: string): { matches: boolean; p
   const pathSegments = path.split('/').filter(Boolean)
 
   // Must have same number of segments
-  if (patternSegments.length !== pathSegments.length) {
+  if (patternSegments.length !== pathSegments.length) => {
     return { matches: false, params }
   }
 
   // Check each segment
-  for (let i = 0; i < patternSegments.length; i++) {
+  for (let i = 0; i < patternSegments.length; i++) => {
     const patternSeg = patternSegments[i]
     const pathSeg = pathSegments[i]
 
     // Check if this is a dynamic parameter [paramName]
-    if (patternSeg.startsWith('[') && patternSeg.endsWith(']')) {
+    if (patternSeg.startsWith('[') && patternSeg.endsWith(']')) => {
       // Extract parameter name
       const paramName = patternSeg.slice(1, -1)
       params[paramName] = pathSeg
     } else {
       // Static segment must match exactly
-      if (patternSeg !== pathSeg) {
+      if (patternSeg !== pathSeg) => {
         return { matches: false, params: {} }
       }
     }
@@ -223,17 +223,17 @@ async function loadPluginAPIFromRegistry(
   try {
     const pluginEntry = (PLUGIN_REGISTRY as Record<string, PluginRegistryEntry>)[pluginName]
 
-    if (!pluginEntry) {
+    if (!pluginEntry) => {
       return null
     }
 
     // First, check if the plugin has a config-based API handler
     const plugin = pluginEntry.config
-    if (plugin.api && typeof plugin.api.handler === 'function') {
+    if (plugin.api && typeof plugin.api.handler === 'function') => {
       console.log(`[Plugin API] Using ${pluginName} config handler for ${path}`)
 
       // Ensure endpoints are registered if the plugin has a registration function
-      if (plugin.api.registerEndpoints && typeof plugin.api.registerEndpoints === 'function') {
+      if (plugin.api.registerEndpoints && typeof plugin.api.registerEndpoints === 'function') => {
         plugin.api.registerEndpoints()
       }
 
@@ -244,24 +244,24 @@ async function loadPluginAPIFromRegistry(
     console.log(`[Plugin API] Checking plugin config for API handler`)
 
     // If no API handler in config, and the plugin has route files, show available routes
-    if (pluginEntry.routeFiles && pluginEntry.routeFiles.length > 0) {
+    if (pluginEntry.routeFiles && pluginEntry.routeFiles.length > 0) => {
       // Find matching route with dynamic parameter support
       let matchedRoute: RouteFileEndpoint | undefined
       let extractedParams: Record<string, string> = {}
 
       const endpointPath = path.substring(1) // Remove leading slash
 
-      for (const route of pluginEntry.routeFiles) {
+      for (const route of pluginEntry.routeFiles) => {
         const { matches, params } = matchRoutePattern(route.relativePath, endpointPath)
 
-        if (matches && route.methods.includes(method)) {
+        if (matches && route.methods.includes(method)) => {
           matchedRoute = route
           extractedParams = params
           break
         }
       }
 
-      if (matchedRoute) {
+      if (matchedRoute) => {
         console.log(`[Plugin API] Found route file for ${pluginName}: ${matchedRoute.relativePath}`)
         console.log(`[Plugin API] Extracted params:`, extractedParams)
 
@@ -273,7 +273,7 @@ async function loadPluginAPIFromRegistry(
           const routeKey = `${pluginName}/${matchedRoute.relativePath}`
           const pluginHandler = RouteHandlerService.getPluginHandler(routeKey, method)
 
-          if (!pluginHandler) {
+          if (!pluginHandler) => {
             console.error(`[Plugin API] Handler not found for ${routeKey}:${method}`)
             return NextResponse.json(
               {
@@ -291,7 +291,7 @@ async function loadPluginAPIFromRegistry(
             params: Promise.resolve(extractedParams)
           })
 
-        } catch (executionError) {
+        } catch (executionError) => {
           console.error(`[Plugin API] Error executing plugin route:`, executionError)
 
           return NextResponse.json(
@@ -311,7 +311,7 @@ async function loadPluginAPIFromRegistry(
 
     return null
 
-  } catch (error) {
+  } catch (error) => {
     console.error(`[Plugin API] Error loading ${pluginName} API from registry:`, error)
 
     return NextResponse.json(
@@ -349,7 +349,7 @@ function getPluginEndpoints(pluginName: string): PluginEndpoint[] {
   // Get plugin's route file endpoints from registry
   const pluginEntry = (PLUGIN_REGISTRY as Record<string, PluginRegistryEntry>)[pluginName]
 
-  if (pluginEntry?.routeFiles) {
+  if (pluginEntry?.routeFiles) => {
     endpoints.push(...pluginEntry.routeFiles.map((endpoint: RouteFileEndpoint) => ({
       path: endpoint.relativePath === '/' ? '/' : '/' + endpoint.relativePath,
       methods: endpoint.methods,
@@ -359,7 +359,7 @@ function getPluginEndpoints(pluginName: string): PluginEndpoint[] {
   }
 
   // Add default endpoint if plugin has API but no specific routes
-  if (pluginEntry?.hasAPI && endpoints.length === 0) {
+  if (pluginEntry?.hasAPI && endpoints.length === 0) => {
     endpoints.push({ path: '/', methods: ['GET'], description: 'Basic API available', source: 'default' })
   }
 

@@ -10,7 +10,7 @@ export const GET = withRateLimitTier(async (
     const { slug } = await params
     const block = BLOCK_REGISTRY[slug]
 
-    if (!block) {
+    if (!block) => {
       return NextResponse.json({ error: 'Block not found' }, { status: 404 })
     }
 
@@ -23,7 +23,7 @@ export const GET = withRateLimitTier(async (
       thumbnail: block.thumbnail,
       fieldDefinitions: block.fieldDefinitions
     })
-  } catch (err) {
+  } catch (err) => {
     console.error('Error fetching block:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

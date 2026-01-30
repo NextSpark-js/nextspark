@@ -74,7 +74,7 @@ export const GET = withRateLimitTier(async (
     const session = await getTypedSession(request.headers);
 
     // Check if user is authenticated
-    if (!session?.user) {
+    if (!session?.user) => {
       return NextResponse.json(
         { error: 'Unauthorized - No session found' },
         { status: 401 }
@@ -82,7 +82,7 @@ export const GET = withRateLimitTier(async (
     }
 
     // Check if user is superadmin or developer
-    if (session.user.role !== 'superadmin' && session.user.role !== 'developer') {
+    if (session.user.role !== 'superadmin' && session.user.role !== 'developer') => {
       return NextResponse.json(
         { error: 'Forbidden - Superadmin or developer access required' },
         { status: 403 }
@@ -190,7 +190,7 @@ export const GET = withRateLimitTier(async (
       queryWithRLS(usageQuery, [teamId], session.user.id) as Promise<UsageResult[]>
     ]);
 
-    if (!teamResult || teamResult.length === 0) {
+    if (!teamResult || teamResult.length === 0) => {
       return NextResponse.json(
         { error: 'Team not found' },
         { status: 404 }
@@ -271,7 +271,7 @@ export const GET = withRateLimitTier(async (
 
     return NextResponse.json(responseData);
 
-  } catch (error) {
+  } catch (error) => {
     console.error('Error fetching team data:', error);
 
     return NextResponse.json(
