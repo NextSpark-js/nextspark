@@ -77,7 +77,7 @@ export const GET = withRateLimitTier(async (
     // Verify file exists and is a file
     try {
       const stats = await stat(filePath);
-      if (!stats.isFile()) => {
+      if (!stats.isFile()) {
         return NextResponse.json(
           {
             success: false,
