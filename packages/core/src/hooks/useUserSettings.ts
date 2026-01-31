@@ -1,4 +1,7 @@
-import { useState, useEffect, useCallback } from 'react'
+'use client'
+
+import { useCallback } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from './useAuth'
 
 interface UserData {
@@ -21,22 +24,27 @@ interface UseUserSettingsOptions {
   includeMeta?: boolean
 }
 
+// Shared query key for user profile with metadata
+// This MUST match the key in useEnsureUserMetadata for proper deduplication
+export const USER_PROFILE_WITH_META_QUERY_KEY = (userId: string | undefined) =>
+  ['user-profile-with-meta', userId] as const
+
 export function useUserSettings(options: UseUserSettingsOptions = {}) {
   const { user } = useAuth()
-  const [data, setData] = useState<UserData | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [isUpdating, setIsUpdating] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
+  const queryClient = useQueryClient()
   const { includeMeta = false } = options
 
-  const fetchUserData = useCallback(async () => {
-    if (!user?.id) return
-
-    setIsLoading(true)
-    setError(null)
-
-    try {
+  // Use TanStack Query for proper caching and deduplication
+  const {
+    data,
+    isLoading,
+    error: queryError,
+    refetch
+  } = useQuery<UserData>({
+    queryKey: includeMeta
+      ? USER_PROFILE_WITH_META_QUERY_KEY(user?.id)
+      : ['user-profile', user?.id],
+    queryFn: async () => {
       const url = new URL('/api/user/profile', window.location.origin)
       if (includeMeta) {
         url.searchParams.set('includeMeta', 'true')
@@ -52,24 +60,16 @@ export function useUserSettings(options: UseUserSettingsOptions = {}) {
         throw new Error(errorData.error || 'Failed to fetch user data')
       }
 
-      const userData = await response.json()
-      setData(userData)
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-      setError(errorMessage)
-      console.error('Error fetching user data:', err)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [user?.id, includeMeta])
+      return response.json()
+    },
+    enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000, // 5 minutes - matches useEnsureUserMetadata
+    gcTime: 30 * 60 * 1000, // 30 minutes cache
+  })
 
-  const updateUserSettings = useCallback(async (updates: { meta?: Record<string, unknown> }) => {
-    if (!user?.id) return
-
-    setIsUpdating(true)
-    setError(null)
-
-    try {
+  // Mutation for updating user settings
+  const updateMutation = useMutation({
+    mutationFn: async (updates: { meta?: Record<string, unknown> }) => {
       const response = await fetch('/api/user/profile', {
         method: 'PATCH',
         headers: {
@@ -84,28 +84,31 @@ export function useUserSettings(options: UseUserSettingsOptions = {}) {
         throw new Error(errorData.error || 'Failed to update user settings')
       }
 
-      // Refresh data after successful update
-      await fetchUserData()
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-      setError(errorMessage)
-      console.error('Error updating user settings:', err)
-      throw err
-    } finally {
-      setIsUpdating(false)
-    }
-  }, [user?.id, fetchUserData])
+      return response.json()
+    },
+    onSuccess: () => {
+      // Invalidate both query variants to ensure fresh data
+      queryClient.invalidateQueries({
+        queryKey: USER_PROFILE_WITH_META_QUERY_KEY(user?.id)
+      })
+      queryClient.invalidateQueries({
+        queryKey: ['user-profile', user?.id]
+      })
+    },
+  })
 
-  useEffect(() => {
-    fetchUserData()
-  }, [fetchUserData])
+  const updateUserSettings = useCallback(async (updates: { meta?: Record<string, unknown> }) => {
+    return updateMutation.mutateAsync(updates)
+  }, [updateMutation])
+
+  const error = queryError?.message || updateMutation.error?.message || null
 
   return {
-    data,
+    data: data || null,
     isLoading,
-    isUpdating,
+    isUpdating: updateMutation.isPending,
     error,
-    refetch: fetchUserData,
+    refetch,
     updateEntity: updateUserSettings,
   }
 }
