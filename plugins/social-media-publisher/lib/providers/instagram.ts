@@ -136,10 +136,13 @@ export class InstagramAPI {
         }
       }
 
+      // Fetch the actual permalink from Instagram API
+      const postUrl = await this.getMediaPermalink(publishData.id, options.accessToken)
+
       return {
         success: true,
         postId: publishData.id,
-        postUrl: `https://www.instagram.com/p/${this.getShortcodeFromId(publishData.id)}`,
+        postUrl,
       }
     } catch (error) {
       console.error('[InstagramAPI] Exception during publish:', error)
@@ -230,10 +233,13 @@ export class InstagramAPI {
         }
       }
 
+      // Fetch the actual permalink from Instagram API
+      const postUrl = await this.getMediaPermalink(publishData.id, options.accessToken)
+
       return {
         success: true,
         postId: publishData.id,
-        postUrl: `https://www.instagram.com/p/${this.getShortcodeFromId(publishData.id)}`,
+        postUrl,
       }
     } catch (error) {
       return {
@@ -526,14 +532,36 @@ export class InstagramAPI {
   }
 
   /**
-   * Convert Instagram media ID to shortcode for URL
-   * Instagram uses base64-like encoding for shortcodes
+   * Get the permalink URL for a published Instagram media
+   * Uses Instagram Graph API to fetch the actual permalink
+   *
+   * @param mediaId - The Instagram media ID returned from publish
+   * @param accessToken - Access token for the API
+   * @returns The full permalink URL (e.g., https://www.instagram.com/p/C1abc2DE3fg/)
    */
-  private static getShortcodeFromId(id: string): string {
-    // This is a simplified version
-    // In production, you'd use Instagram's actual conversion algorithm
-    // For now, we'll just return the ID (Instagram API should provide permalink)
-    return id
+  private static async getMediaPermalink(
+    mediaId: string,
+    accessToken: string
+  ): Promise<string | undefined> {
+    try {
+      const response = await fetch(
+        `${GRAPH_API_BASE}/${mediaId}?fields=permalink&access_token=${accessToken}`
+      )
+
+      const data = await response.json()
+
+      if (data.error) {
+        console.error('[InstagramAPI] Failed to fetch permalink:', data.error.message)
+        // Return a fallback URL constructed from the ID (may not work but better than nothing)
+        return `https://www.instagram.com/p/${mediaId}/`
+      }
+
+      console.log(`[InstagramAPI] ✅ Got permalink: ${data.permalink}`)
+      return data.permalink
+    } catch (error) {
+      console.error('[InstagramAPI] Exception fetching permalink:', error)
+      return `https://www.instagram.com/p/${mediaId}/`
+    }
   }
 
   /**
@@ -682,10 +710,13 @@ export class InstagramAPI {
 
       console.log(`[InstagramAPI] ✅ Carousel published successfully: ${publishData.id}`)
 
+      // Fetch the actual permalink from Instagram API
+      const postUrl = await this.getMediaPermalink(publishData.id, accessToken)
+
       return {
         success: true,
         postId: publishData.id,
-        postUrl: `https://www.instagram.com/p/${this.getShortcodeFromId(publishData.id)}`,
+        postUrl,
       }
     } catch (error) {
       console.error('[InstagramAPI] Exception during carousel publish:', error)

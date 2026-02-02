@@ -1,28 +1,39 @@
 /**
  * Social Media Publisher - Validation Schemas
  *
- * Zod schemas for request validation
+ * Zod schemas for request validation.
+ * Uses platform constants from social.types.ts for consistency.
  */
 
 import { z } from 'zod'
+import {
+  IMPLEMENTED_PLATFORMS,
+  IMAGE_REQUIRED_PLATFORMS,
+  type ImplementedPlatform
+} from '../types/social.types'
 
 // ============================================
 // PUBLISH REQUEST SCHEMAS
 // ============================================
 
+/**
+ * Schema for publishing photos/carousels to social media.
+ * Uses IMPLEMENTED_PLATFORMS for validation - only platforms with working providers.
+ */
 export const PublishPhotoSchema = z.object({
   accountId: z.string().uuid('Invalid account ID'),
+  entityId: z.string().uuid('Invalid entity ID').optional(), // Parent entity for adapter lookup
   imageUrl: z.string().url('Invalid image URL').nullish(), // ✅ Accepts null/undefined - Facebook allows text-only
   imageUrls: z.array(z.string().url('Invalid image URL')).optional(), // For carousels
   caption: z.string().max(2200).optional(),
-  platform: z.enum(['instagram_business', 'facebook_page']),
+  platform: z.enum(IMPLEMENTED_PLATFORMS),
 }).refine(data => {
-  // Instagram requires at least one image
-  if (data.platform === 'instagram_business') {
+  // Platforms in IMAGE_REQUIRED_PLATFORMS require at least one image
+  if (IMAGE_REQUIRED_PLATFORMS.includes(data.platform)) {
     return (data.imageUrl || (data.imageUrls && data.imageUrls.length > 0))
   }
   return true
-}, { message: 'Instagram requires at least one image' }).refine(data => {
+}, { message: 'This platform requires at least one image' }).refine(data => {
   // Instagram allows maximum 10 images per carousel
   if (data.platform === 'instagram_business' && data.imageUrls && data.imageUrls.length > 10) {
     return false
@@ -50,7 +61,7 @@ export const PublishLinkSchema = z.object({
 export const ConnectAccountSchema = z.object({
   code: z.string().min(1, 'Authorization code is required'),
   state: z.string().min(1, 'State parameter is required'),
-  platform: z.enum(['instagram_business', 'facebook_page']),
+  platform: z.enum(IMPLEMENTED_PLATFORMS),
 })
 
 // ============================================
@@ -114,21 +125,30 @@ export function validateImageUrl(url: string): {
 }
 
 /**
+ * Maximum caption lengths per platform.
+ * Add new platforms here as they are implemented.
+ */
+const CAPTION_MAX_LENGTHS: Record<ImplementedPlatform, number> = {
+  instagram_business: 2200,
+  facebook_page: 63206,
+}
+
+/**
  * Validate caption length for platform
  */
 export function validateCaption(
   caption: string,
-  platform: 'instagram_business' | 'facebook_page'
+  platform: ImplementedPlatform
 ): {
   valid: boolean
   error?: string
 } {
-  const maxLengths = {
-    instagram_business: 2200,
-    facebook_page: 63206,
-  }
+  const maxLength = CAPTION_MAX_LENGTHS[platform]
 
-  const maxLength = maxLengths[platform]
+  if (!maxLength) {
+    // Unknown platform, allow any length
+    return { valid: true }
+  }
 
   if (caption.length > maxLength) {
     return {
@@ -141,15 +161,19 @@ export function validateCaption(
 }
 
 /**
- * Check if a platform requires an image to publish
- * Instagram: Always requires image/video
- * Facebook: Allows text-only posts
+ * Check if a platform requires an image to publish.
+ * Uses IMAGE_REQUIRED_PLATFORMS constant from social.types.ts.
+ *
+ * Platforms that require images:
+ * - Instagram: Always requires image/video
+ * - TikTok: Video platform
+ * - Pinterest: Visual platform
+ *
+ * Platforms that allow text-only:
+ * - Facebook: Supports text posts
+ * - Twitter: Supports text tweets
+ * - LinkedIn: Supports text posts
  */
 export function platformRequiresImage(platform: string): boolean {
-  const platformsRequiringImage = [
-    'instagram_business',
-    'tiktok',
-    'pinterest',
-  ]
-  return platformsRequiringImage.includes(platform)
+  return IMAGE_REQUIRED_PLATFORMS.includes(platform as ImplementedPlatform)
 }

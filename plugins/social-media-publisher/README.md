@@ -1,29 +1,187 @@
 # Social Media Publisher Plugin
 
-Multi-account social media publishing plugin for Instagram Business and Facebook Pages with OAuth integration and token encryption. Social accounts are managed per-client, allowing each client to have their own connected social media platforms.
+Multi-account social media publishing plugin with OAuth integration and token encryption. **Theme-agnostic design** allows any theme to integrate social media publishing for their specific entity structure.
 
 ## Features
 
-- ✅ **Per-Client Multi-Account Support** - Each client can connect multiple Instagram Business or Facebook Page accounts
+- ✅ **Theme-Agnostic Adapter Pattern** - Works with any entity (clients, projects, teams, etc.)
+- ✅ **Multi-Account Support** - Connect multiple social media accounts per entity
 - ✅ **Secure Token Storage** - AES-256-GCM encryption for OAuth tokens
 - ✅ **Auto Token Refresh** - Automatic refresh before expiration
 - ✅ **Audit Logging** - Complete audit trail for all actions
 - ✅ **Platform Support**:
-  - Instagram Business API (photos, videos, insights)
-  - Facebook Pages API (posts, photos, links, insights)
+  - Instagram Business API (photos, videos, carousels, insights)
+  - Facebook Pages API (posts, photos, carousels, links, insights)
+  - Extensible for Twitter, LinkedIn, TikTok, YouTube, and more
 
 ## Architecture
 
-### Per-Client Social Platform Management
+### Two-Level Token Architecture
 
-Social media accounts are managed as a **child entity** of clients (`social-platforms`), not as global user accounts. This means:
+This plugin uses a **"Connect Once, Link Anywhere"** architecture:
 
-- Each client can have multiple connected social media platforms
-- Social accounts belong to the client, not directly to the user
-- Users manage social platforms within the client context
-- OAuth connections are stored in `clients_social_platforms` table (child entity)
+```
+┌────────────────────────────────────────────────────────────────┐
+│ PLUGIN LEVEL: social_accounts (User-owned tokens)              │
+│ ─────────────────────────────────────────────────              │
+│ • OAuth tokens stored here (encrypted)                         │
+│ • One token per platform per user                              │
+│ • Reusable across multiple entities                            │
+└────────────────────────────────────────────────────────────────┘
+              ↓ socialAccountId (FK)
+┌────────────────────────────────────────────────────────────────┐
+│ THEME LEVEL: {entity}_social_platforms (Entity assignments)    │
+│ ─────────────────────────────────────────────────────────────  │
+│ • Links entities to social accounts (no token storage)         │
+│ • Theme controls: table name, entity type, permissions         │
+│ • Examples: clients_social_platforms, projects_social_media    │
+└────────────────────────────────────────────────────────────────┘
+```
 
-This architecture allows for better organization when managing social media for multiple clients or projects.
+### Theme Integration via Adapter Pattern
+
+The plugin is **entity-agnostic**. Themes provide an **Adapter** that tells the plugin:
+- Which entity type to work with (e.g., `clients`, `projects`, `teams`)
+- Which table stores assignments (e.g., `clients_social_platforms`)
+- How to verify user permissions (team-based, owner-based, or custom)
+
+---
+
+## 🔌 Theme Integration Guide
+
+### Step 1: Create the Adapter Class
+
+Create a class that extends `SocialPlatformAdapter`:
+
+```typescript
+// contents/themes/{your-theme}/lib/social-media/my-adapter.ts
+import {
+  SocialPlatformAdapter,
+  type SocialPlatformAdapterConfig,
+  type AssignmentData,
+  type SocialPlatformAssignment,
+  type EntityAccessResult,
+  type SaveAssignmentResult
+} from '@/plugins/social-media-publisher/lib/adapter'
+import { queryWithRLS, mutateWithRLS } from '@nextsparkjs/core/lib/db'
+
+const CONFIG: SocialPlatformAdapterConfig = {
+  entitySlug: 'projects',                    // Your entity name
+  tableName: 'projects_social_platforms',    // Your assignment table
+  parentIdColumn: 'projectId',               // FK column to parent entity
+  permissionCheck: 'team'                    // 'team' | 'owner' | 'custom'
+}
+
+export class ProjectsSocialPlatformAdapter extends SocialPlatformAdapter {
+  constructor() {
+    super(CONFIG)
+  }
+
+  async checkEntityAccess(userId: string, entityId: string): Promise<EntityAccessResult> {
+    // Implement: Return { hasAccess: true/false, teamId?, reason? }
+  }
+
+  async getAssignments(entityId: string, userId: string): Promise<SocialPlatformAssignment[]> {
+    // Implement: Return array of assignments with tokens from social_accounts JOIN
+  }
+
+  async getAssignedPlatformIds(entityId: string, userId: string): Promise<Set<string>> {
+    // Implement: Return Set of platformAccountIds already assigned
+  }
+
+  async saveAssignment(data: AssignmentData, userId: string): Promise<SaveAssignmentResult> {
+    // Implement: Upsert assignment, return { id, isNew }
+  }
+
+  async removeAssignment(assignmentId: string, userId: string): Promise<void> {
+    // Implement: Soft-delete (set isActive = false)
+  }
+}
+```
+
+### Step 2: Export via Factory Function
+
+Create the module index that the plugin auto-discovers:
+
+```typescript
+// contents/themes/{your-theme}/lib/social-media/index.ts
+import { ProjectsSocialPlatformAdapter } from './my-adapter'
+import type { SocialPlatformAdapter } from '@/plugins/social-media-publisher/lib/adapter'
+
+// Re-export for direct usage
+export { ProjectsSocialPlatformAdapter } from './my-adapter'
+
+/**
+ * Factory function - REQUIRED for plugin auto-discovery.
+ * The plugin looks for this function in:
+ * `contents/themes/{NEXT_PUBLIC_ACTIVE_THEME}/lib/social-media/index.ts`
+ */
+export function createAdapter(): SocialPlatformAdapter {
+  return new ProjectsSocialPlatformAdapter()
+}
+```
+
+### Step 3: Create the Assignment Table Migration
+
+```sql
+-- contents/themes/{your-theme}/migrations/XXX_projects_social_platforms.sql
+
+CREATE TABLE IF NOT EXISTS "projects_social_platforms" (
+  id                  TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  "projectId"         TEXT NOT NULL REFERENCES "projects"(id) ON DELETE CASCADE,
+  platform            TEXT NOT NULL,
+  "platformAccountId" TEXT,
+  "username"          TEXT,
+  "socialAccountId"   UUID REFERENCES "social_accounts"(id) ON DELETE SET NULL,
+  permissions         JSONB DEFAULT '[]'::jsonb,
+  "accountMetadata"   JSONB DEFAULT '{}'::jsonb,
+  "isActive"          BOOLEAN DEFAULT true,
+  "createdAt"         TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "updatedAt"         TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+  UNIQUE("projectId", "platformAccountId") WHERE "platformAccountId" IS NOT NULL
+);
+
+-- Add indexes and RLS as needed
+```
+
+### Auto-Discovery Convention
+
+The plugin automatically discovers your adapter using:
+
+```
+NEXT_PUBLIC_ACTIVE_THEME → contents/themes/{theme}/lib/social-media/index.ts
+                                                          ↓
+                                              createAdapter() → Your adapter instance
+```
+
+**Fallback options** (in order of priority):
+1. `createAdapter()` factory function ✅ Recommended
+2. Default export (instance or class)
+3. `SocialPlatformAdapterImpl` named export
+
+---
+
+## Supported Platforms
+
+| Platform | Status | OAuth Provider |
+|----------|--------|----------------|
+| Instagram Business | ✅ Implemented | Meta (Facebook) |
+| Facebook Pages | ✅ Implemented | Meta (Facebook) |
+| Twitter/X | 🔜 Planned | Twitter |
+| LinkedIn | 🔜 Planned | LinkedIn |
+| YouTube | 🔜 Planned | Google |
+| TikTok | 🔜 Planned | TikTok |
+| Pinterest | 🔜 Planned | Pinterest |
+| Threads | 🔜 Planned | Meta |
+| Bluesky | 🔜 Planned | Bluesky |
+| Mastodon | 🔜 Planned | Instance-specific |
+
+---
+
+## Legacy: Per-Client Architecture (Content-Buddy Example)
+
+The content-buddy theme uses this plugin with clients as the parent entity:
 
 ## Directory Structure
 

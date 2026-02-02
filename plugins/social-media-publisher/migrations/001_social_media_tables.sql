@@ -10,10 +10,29 @@
 -- Social Accounts Table
 -- Stores OAuth-connected social media accounts for publishing
 -- Supports multiple accounts per platform per user
+--
+-- NOTE: This is the USER-LEVEL token storage table.
+-- Theme-specific entity assignments (e.g., clients_social_platforms)
+-- should reference this table via socialAccountId FK.
 CREATE TABLE IF NOT EXISTS "social_accounts" (
   id                          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   "userId"                    TEXT NOT NULL REFERENCES "users"(id) ON DELETE CASCADE,
-  platform                    TEXT NOT NULL CHECK (platform IN ('instagram_business', 'facebook_page')),
+  -- Platform types aligned with common social media platforms
+  -- Themes can use any subset of these platforms
+  platform                    TEXT NOT NULL CHECK (platform IN (
+    'instagram_business',
+    'facebook_page',
+    'twitter',
+    'linkedin',
+    'youtube',
+    'tiktok',
+    'pinterest',
+    'snapchat',
+    'threads',
+    'bluesky',
+    'mastodon',
+    'other'
+  )),
   "platformAccountId"         TEXT NOT NULL,
   "username"                  TEXT NOT NULL,
   "accessToken"               TEXT NOT NULL, -- Encrypted (format: encrypted:iv:keyId)
@@ -30,18 +49,26 @@ CREATE TABLE IF NOT EXISTS "social_accounts" (
 
 -- Audit Logs Table
 -- Tracks all actions performed through social media plugin
--- Note: accountId references clients_social_platforms.id (not enforced with FK to preserve historical logs)
+-- Note: accountId can reference either social_accounts.id (user-level) or
+-- theme assignment tables (e.g., clients_social_platforms.id)
+-- No FK enforced to preserve historical logs and support multiple reference types
 CREATE TABLE IF NOT EXISTS "audit_logs" (
   id                          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   "userId"                    TEXT NOT NULL REFERENCES "users"(id) ON DELETE CASCADE,
-  "accountId"                 UUID, -- References clients_social_platforms.id (nullable, no FK to preserve historical logs)
+  "accountId"                 UUID, -- References social account or assignment (nullable, no FK to preserve historical logs)
   action                      TEXT NOT NULL CHECK (action IN (
-    'account_connected',
-    'account_disconnected',
-    'post_published',
-    'post_failed',
-    'token_refreshed',
-    'token_refresh_failed'
+    -- Account lifecycle
+    'account_connected',      -- OAuth flow completed, token saved to social_accounts
+    'account_assigned',       -- Account linked to entity via adapter
+    'account_disconnected',   -- Account removed/deactivated
+    -- Publishing
+    'post_published',         -- Content successfully published
+    'post_scheduled',         -- Content scheduled for future publish
+    'post_failed',            -- Publishing attempt failed
+    -- Token management
+    'token_refreshed',        -- Token successfully refreshed
+    'token_refresh_failed',   -- Token refresh attempt failed
+    'token_expired'           -- Token expired and needs reconnection
   )),
   details                     JSONB DEFAULT '{}'::jsonb,
   "ipAddress"                 TEXT,

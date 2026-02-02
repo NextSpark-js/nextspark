@@ -1,12 +1,57 @@
 /**
  * Social Media Publisher - TypeScript Types
+ *
+ * These types are designed to be theme-agnostic and extensible.
+ * The plugin currently implements Meta (Facebook/Instagram) providers,
+ * but the type system supports additional platforms for future expansion.
  */
 
 // ============================================
 // PLATFORM TYPES
 // ============================================
 
-export type SocialPlatform = 'instagram_business' | 'facebook_page'
+/**
+ * All supported social media platforms.
+ * Aligned with the database CHECK constraint in migrations.
+ */
+export const SUPPORTED_PLATFORMS = [
+  'instagram_business',
+  'facebook_page',
+  'twitter',
+  'linkedin',
+  'youtube',
+  'tiktok',
+  'pinterest',
+  'snapchat',
+  'threads',
+  'bluesky',
+  'mastodon',
+  'other',
+] as const
+
+export type SocialPlatform = typeof SUPPORTED_PLATFORMS[number]
+
+/**
+ * Platforms that currently have implemented providers.
+ * Use this for UI dropdowns where only working platforms should be shown.
+ */
+export const IMPLEMENTED_PLATFORMS = [
+  'instagram_business',
+  'facebook_page',
+] as const
+
+export type ImplementedPlatform = typeof IMPLEMENTED_PLATFORMS[number]
+
+/**
+ * Platforms that require an image for posting.
+ * Text-only posts are not allowed on these platforms.
+ */
+export const IMAGE_REQUIRED_PLATFORMS: SocialPlatform[] = [
+  'instagram_business',
+  'tiktok',
+  'pinterest',
+  'snapchat',
+]
 
 export type FacebookScope =
   | 'email'
