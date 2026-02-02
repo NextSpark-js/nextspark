@@ -21,7 +21,8 @@ import { TokenEncryption } from '@nextsparkjs/core/lib/oauth/encryption'
 import { FacebookAPI } from '../../../lib/providers/facebook'
 import { InstagramAPI } from '../../../lib/providers/instagram'
 import { PublishPhotoSchema, validateImageUrl, validateCaption, platformRequiresImage } from '../../../lib/validation'
-import { queryOneWithRLS, mutateWithRLS } from '@nextsparkjs/core/lib/db'
+import { mutateWithRLS } from '@nextsparkjs/core/lib/db'
+import { getAdapter } from '../../../lib/adapter'
 
 const postHandler = async (request: NextRequest) => {
   try {
@@ -33,6 +34,8 @@ const postHandler = async (request: NextRequest) => {
         { status: 401 }
       )
     }
+
+    const userId = authResult.user!.id
 
     // 2. Parse and validate request body
     const body = await request.json()
@@ -48,7 +51,7 @@ const postHandler = async (request: NextRequest) => {
       )
     }
 
-    const { accountId, imageUrl, imageUrls, caption, platform } = validation.data
+    const { accountId, entityId, imageUrl, imageUrls, caption, platform } = validation.data
 
     // Determine media URLs (UPDATED: Support carousels)
     const allImageUrls = imageUrls && imageUrls.length > 0
@@ -97,27 +100,35 @@ const postHandler = async (request: NextRequest) => {
       }
     }
 
-    // 4. Get social account from database (clients_social_platforms child entity)
-    const account = await queryOneWithRLS<{
-      id: string
-      platform: string
-      platformAccountId: string
-      username: string
-      accessToken: string
-      tokenExpiresAt: string
-      isActive: boolean
-      permissions: string
-      accountMetadata: string
-    }>(
-      `SELECT id, platform, "platformAccountId", "username",
-              "accessToken", "tokenExpiresAt", "isActive", permissions, "accountMetadata"
-       FROM "clients_social_platforms"
-       WHERE id = $1 AND platform = $2 AND "isActive" = true`,
-      [accountId, platform],
-      authResult.user!.id
-    )
+    // 4. Get adapter and look up account by accountId
+    // NOTE: entityId is the CONTENT ID (for updating after publish), not the parent entity ID
+    // The adapter's getAccountById() returns the parent entity ID for access checks
+    const adapter = await getAdapter()
 
-    // Verify account exists (access verified by RLS policy)
+    // Look up account using the adapter (generic - no hardcoded table/column names)
+    const accountLookup = await adapter.getAccountById(accountId, platform, userId)
+
+    if (!accountLookup) {
+      return NextResponse.json(
+        { error: 'Account not found' },
+        { status: 404 }
+      )
+    }
+
+    // Verify user has access to the parent entity (e.g., client)
+    const parentEntityId = accountLookup.parentEntityId
+    const accessResult = await adapter.checkEntityAccess(userId, parentEntityId)
+    if (!accessResult.hasAccess) {
+      return NextResponse.json(
+        { error: accessResult.reason || 'Access denied to this account' },
+        { status: 403 }
+      )
+    }
+
+    // Get the full account data including tokens from the adapter
+    const assignments = await adapter.getAssignments(parentEntityId, userId)
+    const account = assignments.find(a => a.id === accountId && a.platform === platform)
+
     if (!account) {
       return NextResponse.json(
         { error: 'Account not found or access denied' },
@@ -155,18 +166,19 @@ const postHandler = async (request: NextRequest) => {
 
     // Token refresh threshold: 10 minutes before expiration
     const REFRESH_THRESHOLD_MINUTES = 10
+    let currentExpiresAt = account.tokenExpiresAt.toISOString()
 
     if (minutesUntilExpiry < REFRESH_THRESHOLD_MINUTES) {
       console.log(`[social-publish] 🔄 Token expires in ${minutesUntilExpiry.toFixed(2)} minutes - refreshing...`)
 
-      // Attempt to refresh the token
-      const refreshResult = await refreshAccountToken(accountId, platform, decryptedToken)
+      // Attempt to refresh the token (use platformAccountId to find token in social_accounts)
+      const refreshResult = await refreshAccountToken(account.platformAccountId, platform, decryptedToken)
 
       if (refreshResult.success && refreshResult.newAccessToken) {
         console.log(`[social-publish] ✅ Token refreshed successfully for ${platform}`)
         // Update decrypted token for this request (DB already updated)
         decryptedToken = refreshResult.newAccessToken
-        account.tokenExpiresAt = refreshResult.newExpiresAt!
+        currentExpiresAt = refreshResult.newExpiresAt!
       } else {
         console.error(`[social-publish] ❌ Token refresh failed: ${refreshResult.error}`)
         return NextResponse.json(
@@ -237,16 +249,20 @@ const postHandler = async (request: NextRequest) => {
 
     // 8. Create audit log (UPDATED: Track carousel details)
     const auditAction = publishResult.success ? 'post_published' : 'post_failed'
+    const publishedAt = new Date().toISOString()
+
     await mutateWithRLS(
       `INSERT INTO "audit_logs"
         ("userId", "accountId", action, details, "ipAddress", "userAgent")
        VALUES ($1, $2::uuid, $3, $4, $5, $6)`,
       [
-        authResult.user!.id,
-        accountId, // clients_social_platforms.id (TEXT) cast to UUID for audit_logs compatibility
+        userId,
+        accountId, // Entity assignment ID cast to UUID for audit_logs compatibility
         auditAction,
         JSON.stringify({
           platform,
+          entitySlug: adapter.getEntitySlug(),
+          entityId,
           accountName: account.username,
           success: publishResult.success,
           postId: publishResult.postId,
@@ -255,13 +271,39 @@ const postHandler = async (request: NextRequest) => {
           imageCount: allImageUrls.length,
           imageUrls: allImageUrls,
           caption: caption || '',
-          publishedAt: new Date().toISOString()
+          publishedAt
         }),
         request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || null,
         request.headers.get('user-agent') || null
       ],
-      authResult.user!.id
+      userId
     )
+
+    // 9. Update content entity with publish reference (if successful and entityId provided)
+    if (publishResult.success && entityId) {
+      try {
+        await mutateWithRLS(
+          `UPDATE "contents"
+           SET "platformPostId" = $1,
+               "platformPostUrl" = $2,
+               "publishedAt" = $3,
+               status = 'published',
+               "updatedAt" = NOW()
+           WHERE id = $4`,
+          [
+            publishResult.postId,
+            publishResult.postUrl,
+            publishedAt,
+            entityId
+          ],
+          userId
+        )
+        console.log(`[social-publish] ✅ Updated content ${entityId} with platform reference`)
+      } catch (updateError) {
+        // Log but don't fail the request - the publish was successful
+        console.error(`[social-publish] ⚠️ Failed to update content with publish reference:`, updateError)
+      }
+    }
 
     // 9. Return result
     if (!publishResult.success) {
@@ -308,16 +350,20 @@ export const POST = withRateLimitTier(postHandler, 'write')
 /**
  * Refresh OAuth token for a social media account
  *
- * This function handles token refresh for accounts stored in clients_social_platforms table.
+ * This function handles token refresh for social media accounts.
  * Uses Meta's token exchange endpoint to get a fresh long-lived token.
  *
- * @param accountId - Social platform account ID (clients_social_platforms.id)
+ * IMPORTANT: Tokens are stored in the plugin's `social_accounts` table, NOT in
+ * theme-specific assignment tables (e.g., clients_social_platforms).
+ * This function updates tokens by platformAccountId in social_accounts.
+ *
+ * @param platformAccountId - The platform's account ID (e.g., Instagram Business Account ID)
  * @param platform - Platform type ('instagram_business' | 'facebook_page')
  * @param currentToken - Current decrypted access token
  * @returns Refresh result with new token (decrypted) and expiration
  */
 async function refreshAccountToken(
-  accountId: string,
+  platformAccountId: string,
   platform: string,
   currentToken: string
 ): Promise<{
@@ -374,18 +420,19 @@ async function refreshAccountToken(
     const encryptedToken = `${encrypted}:${iv}:${keyId}`
     const newExpiresAt = new Date(Date.now() + expiresIn * 1000).toISOString()
 
-    // 4. Update database with new token
+    // 4. Update token in social_accounts table (plugin's central token storage)
+    // Tokens are stored by platformAccountId (unique per account)
     await mutateWithRLS(
-      `UPDATE "clients_social_platforms"
+      `UPDATE "social_accounts"
        SET "accessToken" = $1,
            "tokenExpiresAt" = $2,
            "updatedAt" = NOW()
-       WHERE id = $3`,
-      [encryptedToken, newExpiresAt, accountId],
+       WHERE "platformAccountId" = $3`,
+      [encryptedToken, newExpiresAt, platformAccountId],
       'system'
     )
 
-    console.log(`[social-publish] 🔐 Token refreshed and encrypted for account ${accountId}`)
+    console.log(`[social-publish] 🔐 Token refreshed and encrypted for platformAccountId ${platformAccountId}`)
     console.log(`[social-publish] 📅 New expiration: ${newExpiresAt}`)
 
     // Return DECRYPTED token for immediate use in this request
@@ -396,7 +443,7 @@ async function refreshAccountToken(
     }
 
   } catch (error) {
-    console.error(`[social-publish] Token refresh failed for account ${accountId}:`, error)
+    console.error(`[social-publish] Token refresh failed for platformAccountId ${platformAccountId}:`, error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
