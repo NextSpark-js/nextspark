@@ -107,8 +107,10 @@ const getHandler = async (request: NextRequest) => {
     // 4. Get accounts already assigned to this entity via adapter
     const assignedAccountIds = await adapter.getAssignedPlatformIds(entityId, userId)
 
-    // 4.1 Get ALL clients that use each platformAccountId (for showing connected clients info)
-    // This query gets all clients in the user's teams that have this account connected
+    // 4.1 Get ALL entities that use each platformAccountId (for showing connected entities info)
+    // NOTE: This functionality should be moved into the adapter to avoid hardcoded assumptions
+    // Current implementation assumes content-buddy theme structure
+    // TODO: Add adapter.getConnectedEntities() method for theme-agnostic queries
     const clientsByPlatformAccountId = new Map<string, ConnectedClient[]>()
 
     const connectedClientsResult = await queryWithRLS<{

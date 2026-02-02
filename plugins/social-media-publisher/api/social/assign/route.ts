@@ -155,13 +155,26 @@ const postHandler = async (request: NextRequest) => {
           userId
         )
 
-        const socialAccountId = socialAccountResult.rows[0]?.id
-        if (!socialAccountId) {
+        // Validate UPSERT result
+        if (!socialAccountResult || !socialAccountResult.rows || socialAccountResult.rows.length === 0) {
+          console.error(`[assign-accounts] UPSERT failed for ${account.username}: no rows returned`)
           results.push({
             platformAccountId: account.platformAccountId,
             username: account.username,
             success: false,
-            error: 'Failed to save social_account'
+            error: 'Database operation failed'
+          })
+          continue
+        }
+
+        const socialAccountId = socialAccountResult.rows[0].id
+        if (!socialAccountId) {
+          console.error(`[assign-accounts] UPSERT returned row but no id for ${account.username}`)
+          results.push({
+            platformAccountId: account.platformAccountId,
+            username: account.username,
+            success: false,
+            error: 'Failed to retrieve account id'
           })
           continue
         }
