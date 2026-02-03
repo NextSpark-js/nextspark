@@ -279,10 +279,38 @@ buildSectionClasses('py-16 px-4', {
 ### Architecture
 
 ```
-1. CSS Variables → Define light/dark values
-2. next-themes  → Manages .dark class on <html>
-3. Tailwind     → Reads CSS variables automatically
+1. CSS Variables → Define light/dark values in :root and .dark
+2. @custom-variant → Tell Tailwind to use .dark class (NOT prefers-color-scheme)
+3. next-themes  → Manages .dark class on <html>
+4. Tailwind     → Reads CSS variables and applies dark: variants via class
 ```
+
+### CRITICAL: Tailwind v4 Dark Mode Configuration
+
+**By default, Tailwind v4 uses `@media (prefers-color-scheme: dark)` for `dark:` variants.**
+
+This causes a mismatch with `next-themes` which uses the `.dark` class on `<html>`.
+
+**Required in every theme's `globals.css`:**
+
+```css
+@import "tailwindcss";
+
+/* REQUIRED: Use class selector instead of prefers-color-scheme */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ... rest of imports */
+```
+
+**Without this configuration:**
+- User sets theme to "light" in app
+- OS has dark mode enabled
+- Tailwind ignores the HTML class and uses OS preference
+- `dark:bg-slate-800` applies even though app should be light
+
+**With this configuration:**
+- Tailwind respects the `.dark` class from next-themes
+- App theme setting is honored regardless of OS preference
 
 ### Theme Provider Setup
 

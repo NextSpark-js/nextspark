@@ -12,6 +12,20 @@
    IMPORTS
    ============================================= */
 @import "tailwindcss";
+
+/* =============================================
+   TAILWIND v4 DARK MODE CONFIGURATION
+
+   Por defecto Tailwind v4 usa @media (prefers-color-scheme: dark)
+   para las variantes dark:. Esto causa problemas porque:
+   - next-themes usa la clase .dark en el HTML
+   - El sistema operativo puede tener dark mode aunque la app use light
+
+   Esta configuración hace que Tailwind use el selector de clase .dark
+   en lugar de la media query, sincronizándose con next-themes.
+   ============================================= */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @plugin "@tailwindcss/container-queries";
 @import "@nextsparkjs/core/styles/ui.css";
 @import "@nextsparkjs/core/styles/utilities.css";
