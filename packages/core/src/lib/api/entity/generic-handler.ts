@@ -478,8 +478,8 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
           .join(', ')
     } else {
       // All fields (default behavior)
-      // Always include system fields (id, createdAt, updatedAt) even if not in entity fields config
-      const systemFields = ['id', 'createdAt', 'updatedAt']
+      // Always include system fields (id, userId, teamId, createdAt, updatedAt) even if not in entity fields config
+      const systemFields = ['id', 'userId', 'teamId', 'createdAt', 'updatedAt']
 
       // Add blocks for builder-enabled entities
       if (entityConfig.builder?.enabled) {
@@ -1017,9 +1017,10 @@ export async function handleGenericCreate(request: NextRequest): Promise<NextRes
     const createdEntityId = String(insertResult.rows[0]?.id)
 
     // Get the created item with full data (include all fields for read operations)
-    // Always include system fields (id, userId, createdAt, updatedAt)
+    // Always include system fields (id, userId, teamId, createdAt, updatedAt)
     // userId is always included to track ownership even for shared entities
-    const systemFields = ['id', 'userId', 'createdAt', 'updatedAt']
+    // teamId is always included for team context in hooks
+    const systemFields = ['id', 'userId', 'teamId', 'createdAt', 'updatedAt']
 
     // Add blocks for builder-enabled entities
     if (entityConfig.builder?.enabled) {
@@ -1164,8 +1165,8 @@ export async function handleGenericRead(request: NextRequest, { params }: { para
     // Build dynamic query (include all fields for read operations)
     const entityConfig = resolution.entityConfig
     const tableName = getTableName(entityConfig)
-    // Always include system fields (id, createdAt, updatedAt)
-    const systemFields = ['id', 'createdAt', 'updatedAt']
+    // Always include system fields (id, userId, teamId, createdAt, updatedAt)
+    const systemFields = ['id', 'userId', 'teamId', 'createdAt', 'updatedAt']
 
     // Add blocks for builder-enabled entities
     if (entityConfig.builder?.enabled) {

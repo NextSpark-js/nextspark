@@ -13,9 +13,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import {
   processPendingActions,
   cleanupOldActions,
-  initializeScheduledActions
+  initializeScheduledActions,
+  initializeRecurringActions
 } from '@nextsparkjs/core/lib/scheduled-actions'
 import type { ProcessResult } from '@nextsparkjs/core/lib/scheduled-actions'
+
+// Track if recurring actions have been initialized in this server instance
+let recurringActionsInitialized = false
 
 /**
  * Process pending scheduled actions
@@ -27,6 +31,18 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   // Ensure action handlers are registered in this context
   // (initializeScheduledActions has its own guard against duplicates)
   initializeScheduledActions()
+
+  // Initialize recurring actions once per server instance
+  // This creates recurring actions in DB if they don't exist
+  if (!recurringActionsInitialized) {
+    try {
+      await initializeRecurringActions()
+      recurringActionsInitialized = true
+    } catch (error) {
+      console.error('[Cron] Failed to initialize recurring actions:', error)
+      // Continue processing - don't block cron if recurring init fails
+    }
+  }
 
   try {
     // Validate CRON_SECRET

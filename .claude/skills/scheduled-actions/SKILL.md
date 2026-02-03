@@ -5,7 +5,7 @@ description: |
   Covers action scheduling, handler creation, webhook configuration, and cron processing.
   Use this skill when creating, debugging, or configuring scheduled actions.
 allowed-tools: Read, Glob, Grep, Bash, Write, Edit
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Scheduled Actions Skill
@@ -45,6 +45,102 @@ Entity Event → Entity Hook → scheduleAction() → DB Table → Cron → Hand
 > **📍 Context-Aware Paths:** Core layer (`core/lib/scheduled-actions/`) is read-only in consumer projects.
 > Create handlers in `contents/themes/{theme}/lib/scheduled-actions/handlers/`.
 > See `core-theme-responsibilities` skill for complete rules.
+
+## Initialization Flow
+
+**CRITICAL:** All initialization happens in the cron endpoint, NOT in `instrumentation.ts`.
+
+```
+Cron Endpoint (/api/v1/cron/process) - Called every ~1 minute
+│
+├─ initializeScheduledActions()          # Sync - registers handlers
+│  └─ Calls theme's registerAllHandlers()
+│     ├─ Register action handlers (e.g., content:publish)
+│     └─ Register entity hooks (e.g., on content.created)
+│
+├─ initializeRecurringActions()          # Async - creates DB rows (once per server)
+│  └─ Calls theme's registerRecurringActions()
+│     └─ Creates recurring action rows in DB if not exist
+│        (e.g., social:refresh-tokens every 30 minutes)
+│
+└─ processPendingActions()               # Async - executes due actions
+   └─ Processes actions where scheduledAt <= now
+```
+
+### Cron Endpoint Implementation
+
+```typescript
+// app/api/v1/cron/process/route.ts
+import {
+  processPendingActions,
+  cleanupOldActions,
+  initializeScheduledActions,
+  initializeRecurringActions
+} from '@nextsparkjs/core/lib/scheduled-actions'
+
+// Track if recurring actions have been initialized in this server instance
+let recurringActionsInitialized = false
+
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  // 1. Register handlers (sync, idempotent)
+  initializeScheduledActions()
+
+  // 2. Initialize recurring actions (async, once per server instance)
+  if (!recurringActionsInitialized) {
+    try {
+      await initializeRecurringActions()
+      recurringActionsInitialized = true
+    } catch (error) {
+      console.error('[Cron] Failed to initialize recurring actions:', error)
+      // Continue - don't block cron if recurring init fails
+    }
+  }
+
+  // 3. Validate CRON_SECRET...
+  // 4. Process pending actions...
+  // 5. Cleanup old actions...
+}
+```
+
+### Theme Registration Functions
+
+```typescript
+// contents/themes/{theme}/lib/scheduled-actions/index.ts
+
+// Called by initializeScheduledActions() - registers handlers
+export function registerAllHandlers() {
+  registerContentPublishHandler()    // One-time actions
+  registerTokenRefreshHandler()      // Handler for recurring action
+  registerEntityHooks()              // Entity event → action mapping
+}
+
+// Called by initializeRecurringActions() - creates DB rows
+export async function registerRecurringActions(): Promise<void> {
+  // Check if already exists to avoid duplicates
+  const existing = await queryWithRLS(
+    `SELECT id FROM "scheduled_actions" WHERE "actionType" = $1 AND "recurringInterval" IS NOT NULL`,
+    ['social:refresh-tokens'],
+    null
+  )
+
+  if (existing.length === 0) {
+    await scheduleRecurringAction('social:refresh-tokens', {}, 'every-30-minutes')
+  }
+}
+```
+
+### Action Types
+
+| Type | Trigger | Created By | Example |
+|------|---------|------------|---------|
+| **One-time** | Entity event | Entity hooks | `content:publish` when content.status='scheduled' |
+| **Recurring** | Cron interval | `registerRecurringActions()` | `social:refresh-tokens` every 30 min |
+
+> **⚠️ DO NOT use `instrumentation.ts`** for scheduled actions initialization.
+> The cron endpoint is the correct place because:
+> - It runs after DB is available
+> - It's called regularly to self-heal
+> - It has proper error handling
 
 ## When to Use This Skill
 
@@ -243,16 +339,33 @@ await scheduleAction({
 
 ### Recurring Action
 
-```typescript
-import { scheduleRecurringAction } from '@/core/lib/scheduled-actions'
+**IMPORTANT:** Recurring actions should be created in `registerRecurringActions()`, NOT ad-hoc.
 
-await scheduleRecurringAction({
-  type: 'report:generate',
-  payload: { reportType: 'daily-summary' },
-  cron: '0 9 * * *',  // Every day at 9 AM
-  teamId: 'team_123'
-})
+```typescript
+// In theme's lib/scheduled-actions/index.ts
+export async function registerRecurringActions(): Promise<void> {
+  const { scheduleRecurringAction } = await import('@nextsparkjs/core/lib/scheduled-actions')
+
+  // Check if already exists (idempotent)
+  const existing = await queryWithRLS(
+    `SELECT id FROM "scheduled_actions" WHERE "actionType" = $1 AND "recurringInterval" IS NOT NULL AND status = 'pending'`,
+    ['report:generate'],
+    null
+  )
+
+  if (existing.length > 0) return
+
+  // Available intervals: 'every-minute', 'every-5-minutes', 'every-15-minutes',
+  //                      'every-30-minutes', 'every-hour', 'every-6-hours', 'every-day'
+  await scheduleRecurringAction(
+    'report:generate',
+    { reportType: 'daily-summary' },
+    'every-day'
+  )
+}
 ```
+
+**Flow:** After processing a recurring action, it auto-reschedules for the next interval.
 
 ## Debugging Actions
 
@@ -330,6 +443,8 @@ Set `windowSeconds: 0` to disable deduplication entirely.
 | Actions stuck pending | Cron not running | Verify cron service and `CRON_SECRET` |
 | 401 on cron endpoint | Wrong header | Use `x-cron-secret` (not `Authorization`) |
 | Env variable undefined | Not set | Add to `.env` and restart server |
+| Recurring action not created | Missing `registerRecurringActions()` | Export function from theme's `index.ts` |
+| Recurring action not running | Cron endpoint not updated | Ensure cron calls `initializeRecurringActions()` |
 
 ## Anti-Patterns
 
@@ -385,6 +500,24 @@ registerScheduledAction('my:action', async (payload) => {
     return { success: false, message: error.message }
   }
 })
+
+// NEVER: Initialize in instrumentation.ts
+// instrumentation.ts has limitations with async DB calls
+export async function register() {
+  initializeScheduledActions()           // WRONG location
+  await initializeRecurringActions()     // WRONG - may fail silently
+}
+
+// CORRECT: Initialize in cron endpoint
+// /api/v1/cron/process/route.ts
+export async function GET(request: NextRequest) {
+  initializeScheduledActions()           // Sync, idempotent
+  if (!recurringActionsInitialized) {
+    await initializeRecurringActions()   // Async, once per server
+    recurringActionsInitialized = true
+  }
+  // ...process actions
+}
 ```
 
 ## Checklist

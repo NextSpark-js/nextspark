@@ -19,8 +19,12 @@ import { convertCorePath } from '../config.mjs'
 export function generateEntityRegistry(entities, config) {
   const outputFilePath = join(config.outputDir, 'entity-registry.ts')
   const imports = entities.map(entity => {
-    // Ensure .ts extension is included for Windows compatibility
-    const configPath = entity.configPath.endsWith('.ts') ? entity.configPath : `${entity.configPath}.ts`
+    // For package imports (@nextsparkjs/core), don't add .ts extension
+    // For local paths, add .ts extension for Windows compatibility
+    let configPath = entity.configPath
+    if (!configPath.startsWith('@nextsparkjs/') && !configPath.endsWith('.ts')) {
+      configPath = `${configPath}.ts`
+    }
     return `import { ${entity.exportName} } from '${configPath}'`
   }).join('\n')
 
@@ -140,8 +144,12 @@ export function generateEntityRegistryClient(entities, config) {
 
   // Import entity configurations to extract client-safe properties
   const imports = entities.map(entity => {
-    // Ensure .ts extension is included for Windows compatibility
-    const configPath = entity.configPath.endsWith('.ts') ? entity.configPath : `${entity.configPath}.ts`
+    // For package imports (@nextsparkjs/core), don't add .ts extension
+    // For local paths, add .ts extension for Windows compatibility
+    let configPath = entity.configPath
+    if (!configPath.startsWith('@nextsparkjs/') && !configPath.endsWith('.ts')) {
+      configPath = `${configPath}.ts`
+    }
     return `import { ${entity.exportName} } from '${configPath}'`
   }).join('\n')
 
