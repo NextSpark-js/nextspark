@@ -55,10 +55,13 @@ export function generateRouteHandlersRegistry(plugins, themes, coreRoutes = [], 
     if (theme.routeFiles && theme.routeFiles.length > 0) {
       theme.routeFiles.forEach(route => {
         const routeKey = route.relativePath === '/' ? '' : route.relativePath
+        // Ensure .ts extension is included for Windows compatibility
+        const routeFile = route.relativePath === '/' ? '/route' : '/' + route.relativePath + '/route'
+        const filePath = `@/contents/themes/${theme.name}/api${routeFile}${routeFile.endsWith('.ts') ? '' : '.ts'}`
         themeRoutes.push({
           themeName: theme.name,
           routePath: routeKey,
-          filePath: `@/contents/themes/${theme.name}/api${route.relativePath === '/' ? '/route' : '/' + route.relativePath + '/route'}`,
+          filePath,
           methods: route.methods,
           importKey: `theme_${theme.name.replace(/-/g, '_')}_${routeKey.replace(/[\\/\-\[\]]/g, '_') || 'root'}`
         })
@@ -72,10 +75,13 @@ export function generateRouteHandlersRegistry(plugins, themes, coreRoutes = [], 
     if (plugin.routeFiles && plugin.routeFiles.length > 0) {
       plugin.routeFiles.forEach(route => {
         const routeKey = route.relativePath === '/' ? '' : route.relativePath
+        // Ensure .ts extension is included for Windows compatibility
+        const routeFile = route.relativePath === '/' ? '/route' : '/' + route.relativePath + '/route'
+        const filePath = `@/contents/plugins/${plugin.name}/api${routeFile}${routeFile.endsWith('.ts') ? '' : '.ts'}`
         pluginRoutes.push({
           pluginName: plugin.name,
           routePath: routeKey,
-          filePath: `@/contents/plugins/${plugin.name}/api${route.relativePath === '/' ? '/route' : '/' + route.relativePath + '/route'}`,
+          filePath,
           methods: route.methods,
           importKey: `plugin_${plugin.name.replace(/-/g, '_')}_${routeKey.replace(/[\\/\-\[\]]/g, '_') || 'root'}`
         })

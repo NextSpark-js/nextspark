@@ -49,14 +49,18 @@ export function generateTemplateRegistry(templates, config) {
     .map(([appPath, pathTemplates], index) => {
       const highestPriorityTemplate = pathTemplates[0]
       const safeName = `Template_${index}`
-      const templatePathWithoutTsx = highestPriorityTemplate.templatePath.replace(/\.(tsx|ts)$/, '')
+      // Ensure .tsx extension is included for Windows compatibility
+      let templatePath = highestPriorityTemplate.templatePath
+      if (!templatePath.endsWith('.tsx') && !templatePath.endsWith('.ts')) {
+        templatePath += '.tsx'
+      }
 
       // Skip import for metadata-only templates (PROTECTED_RENDER)
       if (!canOverrideComponent(appPath)) {
         return `// ${safeName} skipped - PROTECTED_RENDER (metadata-only)`
       }
 
-      return `import ${safeName} from '${templatePathWithoutTsx}'`
+      return `import ${safeName} from '${templatePath}'`
     })
     .join('\n')
 
@@ -240,8 +244,12 @@ export async function generateTemplateRegistryClient(templates, config) {
     .map(([appPath, pathTemplates], index) => {
       const template = pathTemplates[0]
       const safeName = `ClientTemplate_${index}`
-      const templatePathWithoutTsx = template.templatePath.replace(/\.(tsx|ts)$/, '')
-      return `import ${safeName} from '${templatePathWithoutTsx}'`
+      // Ensure .tsx extension is included for Windows compatibility
+      let templatePath = template.templatePath
+      if (!templatePath.endsWith('.tsx') && !templatePath.endsWith('.ts')) {
+        templatePath += '.tsx'
+      }
+      return `import ${safeName} from '${templatePath}'`
     })
     .join('\n')
 

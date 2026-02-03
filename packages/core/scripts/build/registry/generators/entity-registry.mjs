@@ -18,9 +18,11 @@ import { convertCorePath } from '../config.mjs'
  */
 export function generateEntityRegistry(entities, config) {
   const outputFilePath = join(config.outputDir, 'entity-registry.ts')
-  const imports = entities.map(entity =>
-    `import { ${entity.exportName} } from '${entity.configPath}'`
-  ).join('\n')
+  const imports = entities.map(entity => {
+    // Ensure .ts extension is included for Windows compatibility
+    const configPath = entity.configPath.endsWith('.ts') ? entity.configPath : `${entity.configPath}.ts`
+    return `import { ${entity.exportName} } from '${configPath}'`
+  }).join('\n')
 
   const registryEntries = entities.map(entity => {
     // NEW STRUCTURE: Derive table name from slug automatically
@@ -137,9 +139,11 @@ export function generateEntityRegistryClient(entities, config) {
   const entityNames = entities.map(e => `'${e.name}'`).join(' | ')
 
   // Import entity configurations to extract client-safe properties
-  const imports = entities.map(entity =>
-    `import { ${entity.exportName} } from '${entity.configPath}'`
-  ).join('\n')
+  const imports = entities.map(entity => {
+    // Ensure .ts extension is included for Windows compatibility
+    const configPath = entity.configPath.endsWith('.ts') ? entity.configPath : `${entity.configPath}.ts`
+    return `import { ${entity.exportName} } from '${configPath}'`
+  }).join('\n')
 
   const clientRegistryEntries = entities.map(entity => {
     // Use dynamic reference to extract client-safe properties from imported config
