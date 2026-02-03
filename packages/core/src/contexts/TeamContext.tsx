@@ -102,8 +102,8 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     if (activeTeam) {
       setCurrentTeam(activeTeam.team)
 
-      // Sync localStorage if needed
-      if (typeof window !== 'undefined' && storedTeamId !== activeTeam.team.id) {
+      // ALWAYS sync localStorage (critical for getCurrentTeamId())
+      if (typeof window !== 'undefined') {
         localStorage.setItem('activeTeamId', activeTeam.team.id)
       }
 
