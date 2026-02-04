@@ -32,7 +32,9 @@ CREATE TABLE IF NOT EXISTS public."scheduled_actions" (
   "completedAt"       TIMESTAMPTZ,
   "errorMessage"      TEXT,
   attempts            INTEGER NOT NULL DEFAULT 0,
+  "maxRetries"        INTEGER NOT NULL DEFAULT 3,
   "recurringInterval" TEXT,
+  "lockGroup"         TEXT,
 
   -- System fields (always last)
   "createdAt"         TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -49,7 +51,9 @@ COMMENT ON COLUMN public."scheduled_actions"."startedAt"         IS 'When execut
 COMMENT ON COLUMN public."scheduled_actions"."completedAt"       IS 'When execution finished';
 COMMENT ON COLUMN public."scheduled_actions"."errorMessage"      IS 'Error details if action failed';
 COMMENT ON COLUMN public."scheduled_actions".attempts            IS 'Number of execution attempts';
+COMMENT ON COLUMN public."scheduled_actions"."maxRetries"        IS 'Maximum number of retry attempts before marking action as failed. Default: 3';
 COMMENT ON COLUMN public."scheduled_actions"."recurringInterval" IS 'Recurrence pattern: hourly, daily, weekly, or cron expression';
+COMMENT ON COLUMN public."scheduled_actions"."lockGroup"         IS 'Lock group key for parallel execution control. Actions with same lockGroup run sequentially';
 
 -- ============================================
 -- TRIGGER updatedAt (uses Better Auth function)
@@ -83,6 +87,16 @@ CREATE INDEX IF NOT EXISTS idx_scheduled_actions_completed_at
 -- Created at for general sorting
 CREATE INDEX IF NOT EXISTS idx_scheduled_actions_created_at
   ON public."scheduled_actions"("createdAt" DESC);
+
+-- Lock group for parallel execution control
+CREATE INDEX IF NOT EXISTS idx_scheduled_actions_lock_group
+  ON public."scheduled_actions"("lockGroup")
+  WHERE "lockGroup" IS NOT NULL;
+
+-- Retry status filtering (queries checking retry eligibility)
+CREATE INDEX IF NOT EXISTS idx_scheduled_actions_retry_status
+  ON public."scheduled_actions"(attempts, "maxRetries")
+  WHERE status = 'pending';
 
 -- ============================================
 -- RLS

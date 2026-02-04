@@ -20,6 +20,16 @@ export interface ScheduledAction {
   completedAt: Date | null
   errorMessage: string | null
   attempts: number
+  /**
+   * Maximum number of retry attempts before marking action as failed.
+   * Default: 3
+   *
+   * @example
+   * maxRetries = 0 -> Fail immediately, no retries
+   * maxRetries = 3 -> Retry up to 3 times (4 total attempts)
+   * maxRetries = 5 -> Retry up to 5 times (6 total attempts)
+   */
+  maxRetries: number
   recurringInterval: string | null
   /**
    * Lock group key for parallel execution control.
@@ -61,6 +71,16 @@ export interface ScheduleOptions {
   scheduledAt?: Date          // Default: now
   teamId?: string             // Optional team context
   recurringInterval?: 'hourly' | 'daily' | 'weekly' | string // cron expression
+  /**
+   * Maximum number of retry attempts before marking action as failed.
+   * Default: 3
+   *
+   * @example
+   * { maxRetries: 0 } -> Fail immediately, no retries
+   * { maxRetries: 3 } -> Retry up to 3 times (4 total attempts)
+   * { maxRetries: 5 } -> Retry up to 5 times for critical operations
+   */
+  maxRetries?: number
   /**
    * Lock group key for parallel execution control.
    * Actions with the same lockGroup will be processed sequentially.
