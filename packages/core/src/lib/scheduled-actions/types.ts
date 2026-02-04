@@ -6,6 +6,18 @@
 export type ScheduledActionStatus = 'pending' | 'running' | 'completed' | 'failed'
 
 /**
+ * Determines how next execution time is calculated for recurring actions
+ *
+ * @example
+ * 'fixed' - Maintains exact schedule times (e.g., daily at 12:00)
+ *           If action scheduled at 12:00 runs at 12:05, next is still 12:00 tomorrow
+ *
+ * 'rolling' - Intervals from actual completion time (e.g., 30min after execution finishes)
+ *             If action scheduled at 12:00 runs at 12:15, next is 12:45
+ */
+export type RecurrenceType = 'fixed' | 'rolling'
+
+/**
  * Scheduled action record from database
  * NOTE: Database uses camelCase (e.g., actionType, teamId, scheduledAt)
  */
@@ -32,6 +44,12 @@ export interface ScheduledAction {
    */
   maxRetries: number
   recurringInterval: string | null
+  /**
+   * Determines how next execution time is calculated for recurring actions.
+   * Only relevant when recurringInterval is set.
+   * Default: 'fixed'
+   */
+  recurrenceType: RecurrenceType | null
   /**
    * Lock group key for parallel execution control.
    * Actions with the same lockGroup will be processed sequentially.
@@ -92,6 +110,21 @@ export interface ScheduleOptions {
    * { lockGroup: `content:${contentId}` } -> Prevents concurrent content publishing
    */
   lockGroup?: string
+  /**
+   * Determines how next execution time is calculated for recurring actions.
+   * Only relevant when recurringInterval is set.
+   * Default: 'fixed'
+   *
+   * @example
+   * // Daily report at 12:00 (fixed schedule)
+   * { recurringInterval: 'daily', recurrenceType: 'fixed' }
+   * // If runs at 12:05, next is still 12:00 tomorrow
+   *
+   * // Token refresh every 30 minutes (rolling interval)
+   * { recurringInterval: 'every-30-minutes', recurrenceType: 'rolling' }
+   * // If scheduled at 12:00 but runs at 12:15, next is 12:45
+   */
+  recurrenceType?: RecurrenceType
 }
 
 /**

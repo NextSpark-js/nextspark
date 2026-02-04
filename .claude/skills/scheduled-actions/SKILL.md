@@ -379,6 +379,96 @@ export async function registerRecurringActions(): Promise<void> {
 
 **Flow:** After processing a recurring action, it auto-reschedules for the next interval.
 
+## Recurrence Types
+
+For recurring actions, you can control how the next execution time is calculated using the `recurrenceType` parameter.
+
+### Fixed Schedule (default)
+
+Maintains exact schedule times, ignoring execution delays. Ideal for reports, batch jobs, or any task that should run at specific times.
+
+```typescript
+await scheduleRecurringAction(
+  'report:daily',
+  { type: 'sales' },
+  'daily',
+  {
+    scheduledAt: new Date('2026-02-05T12:00:00Z'),
+    recurrenceType: 'fixed' // or omit, defaults to 'fixed'
+  }
+)
+```
+
+**Behavior:**
+- Action scheduled: 12:00:00
+- Actually runs: 12:05:00 (5 min delay due to cron or processing)
+- **Next scheduled: 12:00:00 tomorrow** ✅ (maintains exact time)
+
+### Rolling Interval
+
+Calculates intervals from actual completion time. Ideal for token refreshes, polling, or tasks where consistent spacing matters more than exact timing.
+
+```typescript
+await scheduleRecurringAction(
+  'social:refresh-tokens',
+  {},
+  'every-30-minutes',
+  {
+    recurrenceType: 'rolling'
+  }
+)
+```
+
+**Behavior:**
+- Action scheduled: 12:00:00
+- Actually runs: 12:15:00 (15 min delay)
+- **Next scheduled: 12:45:00** ✅ (30 min from actual execution)
+
+### Comparison
+
+| Scenario | Fixed | Rolling |
+|----------|-------|---------|
+| Daily report at 9:00 AM | ✅ Runs at 9:00 daily (or as soon as possible) | ❌ Drifts if delayed |
+| Token refresh every 30 min | ❌ Can stack up if delayed | ✅ Consistent 30 min gaps |
+| Batch cleanup at midnight | ✅ Runs at midnight sharp | ❌ Drifts based on execution time |
+| API polling every 5 min | ⚠️ Can create bursts if delayed | ✅ Steady 5 min spacing |
+
+### Usage Examples
+
+```typescript
+// Example 1: Fixed - Daily backup at 2:00 AM
+await scheduleRecurringAction(
+  'backup:database',
+  { retention: 30 },
+  'daily',
+  {
+    scheduledAt: new Date('2026-02-05T02:00:00Z'),
+    recurrenceType: 'fixed'
+  }
+)
+
+// Example 2: Rolling - Check external API every 15 minutes
+await scheduleRecurringAction(
+  'external:sync',
+  { endpoint: 'https://api.example.com' },
+  'every-15-minutes',
+  {
+    recurrenceType: 'rolling'
+  }
+)
+
+// Example 3: Fixed - Weekly report on Mondays at 8:00 AM
+await scheduleRecurringAction(
+  'report:weekly',
+  { format: 'pdf' },
+  'weekly',
+  {
+    scheduledAt: new Date('2026-02-10T08:00:00Z'), // Monday
+    recurrenceType: 'fixed'
+  }
+)
+```
+
 ## Debugging Actions
 
 ### Check Pending Actions

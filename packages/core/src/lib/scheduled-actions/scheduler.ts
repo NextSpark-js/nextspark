@@ -102,6 +102,7 @@ export async function scheduleAction(
   const recurringInterval = options?.recurringInterval || null
   const lockGroup = options?.lockGroup || null
   const maxRetries = options?.maxRetries ?? 3 // Default: 3 retries
+  const recurrenceType = options?.recurrenceType || null
 
   await mutateWithRLS(
     `INSERT INTO "scheduled_actions" (
@@ -113,8 +114,9 @@ export async function scheduleAction(
       "scheduledAt",
       "recurringInterval",
       "lockGroup",
-      "maxRetries"
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      "maxRetries",
+      "recurrenceType"
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
     [
       actionId,
       actionType,
@@ -124,7 +126,8 @@ export async function scheduleAction(
       scheduledAt.toISOString(),
       recurringInterval,
       lockGroup,
-      maxRetries
+      maxRetries,
+      recurrenceType
     ],
     null // System operation, no RLS context needed
   )

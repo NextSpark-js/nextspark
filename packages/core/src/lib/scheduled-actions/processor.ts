@@ -130,7 +130,8 @@ async function fetchAndLockPendingActions(batchSize: number): Promise<ScheduledA
     )
     SELECT id, "actionType", status, payload, "teamId", "scheduledAt",
            "startedAt", "completedAt", "errorMessage", attempts,
-           "recurringInterval", "lockGroup", "createdAt", "updatedAt"
+           "recurringInterval", "recurrenceType", "lockGroup", "maxRetries",
+           "createdAt", "updatedAt"
     FROM ranked_actions
     WHERE rn = 1 OR "lockGroup" IS NULL
     ORDER BY "scheduledAt" ASC
@@ -348,18 +349,27 @@ async function rescheduleFailedAction(
 
 /**
  * Reschedule a recurring action
- * Creates a new action for the next occurrence, preserving the lockGroup
+ * Creates a new action for the next occurrence, preserving the lockGroup and recurrenceType
  */
 async function rescheduleRecurringAction(action: ScheduledAction): Promise<void> {
   if (!action.recurringInterval) {
     return
   }
 
-  // Calculate next scheduled time based on interval
-  // Uses the original scheduledAt as base to prevent drift
-  const nextScheduledAt = calculateNextScheduledTime(action.recurringInterval, action.scheduledAt)
+  // Calculate next scheduled time based on recurrence type
+  let nextScheduledAt: Date
 
-  // Schedule the next occurrence (preserving lockGroup)
+  if (action.recurrenceType === 'rolling') {
+    // Rolling: Calculate from NOW (actual completion time)
+    // This ensures intervals are measured from when action finishes, not from scheduled time
+    nextScheduledAt = calculateNextScheduledTime(action.recurringInterval, new Date())
+  } else {
+    // Fixed (default): Calculate from original scheduledAt to prevent drift
+    // This maintains exact schedule times (e.g., daily at 12:00)
+    nextScheduledAt = calculateNextScheduledTime(action.recurringInterval, action.scheduledAt)
+  }
+
+  // Schedule the next occurrence (preserving all recurring settings)
   await scheduleAction(
     action.actionType,
     action.payload,
@@ -367,11 +377,15 @@ async function rescheduleRecurringAction(action: ScheduledAction): Promise<void>
       scheduledAt: nextScheduledAt,
       teamId: action.teamId ?? undefined,
       recurringInterval: action.recurringInterval ?? undefined,
+      recurrenceType: action.recurrenceType ?? undefined,
       lockGroup: action.lockGroup ?? undefined
     }
   )
 
-  console.log(`[ScheduledActions] Rescheduled recurring action ${action.actionType} for ${nextScheduledAt.toISOString()}`)
+  console.log(
+    `[ScheduledActions] Rescheduled recurring action ${action.actionType} ` +
+    `for ${nextScheduledAt.toISOString()} (type: ${action.recurrenceType || 'fixed'})`
+  )
 }
 
 /**
