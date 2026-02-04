@@ -235,7 +235,18 @@ async function executeAction(action: ScheduledAction): Promise<void> {
 
     console.error(`[ScheduledActions] Action ${action.id} failed after ${executionTime}ms:`, errorMessage)
 
-    await markActionFailed(action.id, errorMessage)
+    // Check if we should retry based on action's maxRetries setting
+    if (action.attempts < action.maxRetries) {
+      // Calculate retry delay with exponential backoff: 5min, 10min, 15min...
+      const retryDelayMinutes = action.attempts * 5
+      console.log(`[ScheduledActions] Will retry action ${action.id} in ${retryDelayMinutes} minutes (attempt ${action.attempts}/${action.maxRetries})`)
+
+      await rescheduleFailedAction(action, errorMessage, retryDelayMinutes)
+    } else {
+      // Max retries reached
+      console.error(`[ScheduledActions] Max retries (${action.maxRetries}) reached for action ${action.id}`)
+      await markActionFailed(action.id, errorMessage)
+    }
 
     // Re-throw so caller can track failures
     throw error
@@ -302,6 +313,34 @@ async function markActionFailed(actionId: string, errorMessage: string): Promise
     [actionId, errorMessage],
     null
   )
+}
+
+/**
+ * Reschedule a failed action for retry
+ * Resets the action to pending with a new scheduled time
+ * The attempts counter is preserved for the next execution
+ */
+async function rescheduleFailedAction(
+  action: ScheduledAction,
+  errorMessage: string,
+  delayMinutes: number
+): Promise<void> {
+  const nextAttemptTime = new Date(Date.now() + delayMinutes * 60 * 1000)
+
+  await mutateWithRLS(
+    `UPDATE "scheduled_actions"
+     SET status = 'pending',
+         "scheduledAt" = $2,
+         "errorMessage" = $3,
+         "startedAt" = NULL,
+         "completedAt" = NULL,
+         "updatedAt" = NOW()
+     WHERE id = $1`,
+    [action.id, nextAttemptTime, errorMessage],
+    null
+  )
+
+  console.log(`[ScheduledActions] Rescheduled action ${action.id} for ${nextAttemptTime.toISOString()}`)
 }
 
 /**
