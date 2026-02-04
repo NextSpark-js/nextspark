@@ -48,57 +48,68 @@ Entity Event → Entity Hook → scheduleAction() → DB Table → Cron → Hand
 
 ## Initialization Flow
 
-**CRITICAL:** All initialization happens in the cron endpoint, NOT in `instrumentation.ts`.
+**CRITICAL:** Initialization happens in `instrumentation.ts` at server startup.
 
 ```
-Cron Endpoint (/api/v1/cron/process) - Called every ~1 minute
+Server Start (instrumentation.ts)
 │
 ├─ initializeScheduledActions()          # Sync - registers handlers
 │  └─ Calls theme's registerAllHandlers()
 │     ├─ Register action handlers (e.g., content:publish)
-│     └─ Register entity hooks (e.g., on content.created)
+│     └─ Register entity hooks (e.g., on entity.contents.updated)
 │
-├─ initializeRecurringActions()          # Async - creates DB rows (once per server)
-│  └─ Calls theme's registerRecurringActions()
-│     └─ Creates recurring action rows in DB if not exist
-│        (e.g., social:refresh-tokens every 30 minutes)
+└─ initializeRecurringActions()          # Async - creates DB rows (once per server)
+   └─ Calls theme's registerRecurringActions()
+      └─ Creates recurring action rows in DB if not exist
+         (e.g., social:refresh-tokens every 30 minutes)
+
+Then...
+
+Cron Endpoint (/api/v1/cron/process) - Called every ~1 minute
 │
 └─ processPendingActions()               # Async - executes due actions
    └─ Processes actions where scheduledAt <= now
 ```
 
-### Cron Endpoint Implementation
+### Server Initialization (instrumentation.ts)
+
+```typescript
+// instrumentation.ts (root of project)
+export async function register() {
+  if (process.env.NEXT_RUNTIME === 'nodejs') {
+    const {
+      initializeScheduledActions,
+      initializeRecurringActions,
+    } = await import('@nextsparkjs/core/lib/scheduled-actions')
+
+    console.log('[Instrumentation] Initializing scheduled actions...')
+
+    // 1. Register handlers + entity hooks (sync, idempotent)
+    initializeScheduledActions()
+
+    // 2. Create recurring actions in DB (async, idempotent)
+    await initializeRecurringActions()
+
+    console.log('[Instrumentation] ✅ Scheduled actions initialized')
+  }
+}
+```
+
+### Cron Endpoint (Simplified)
 
 ```typescript
 // app/api/v1/cron/process/route.ts
 import {
   processPendingActions,
-  cleanupOldActions,
-  initializeScheduledActions,
-  initializeRecurringActions
+  cleanupOldActions
 } from '@nextsparkjs/core/lib/scheduled-actions'
 
-// Track if recurring actions have been initialized in this server instance
-let recurringActionsInitialized = false
-
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  // 1. Register handlers (sync, idempotent)
-  initializeScheduledActions()
+  // Handlers already registered via instrumentation.ts
 
-  // 2. Initialize recurring actions (async, once per server instance)
-  if (!recurringActionsInitialized) {
-    try {
-      await initializeRecurringActions()
-      recurringActionsInitialized = true
-    } catch (error) {
-      console.error('[Cron] Failed to initialize recurring actions:', error)
-      // Continue - don't block cron if recurring init fails
-    }
-  }
-
-  // 3. Validate CRON_SECRET...
-  // 4. Process pending actions...
-  // 5. Cleanup old actions...
+  // 1. Validate CRON_SECRET...
+  // 2. Process pending actions...
+  // 3. Cleanup old actions...
 }
 ```
 
@@ -136,11 +147,12 @@ export async function registerRecurringActions(): Promise<void> {
 | **One-time** | Entity event | Entity hooks | `content:publish` when content.status='scheduled' |
 | **Recurring** | Cron interval | `registerRecurringActions()` | `social:refresh-tokens` every 30 min |
 
-> **⚠️ DO NOT use `instrumentation.ts`** for scheduled actions initialization.
-> The cron endpoint is the correct place because:
-> - It runs after DB is available
-> - It's called regularly to self-heal
-> - It has proper error handling
+> **✅ ALWAYS use `instrumentation.ts`** for scheduled actions initialization.
+> This is the correct place because:
+> - Runs ONCE at server startup (not on every cron request)
+> - Entity hooks are registered before any API requests
+> - Official Next.js 13+ pattern for global initialization
+> - Idempotent functions handle edge cases safely
 
 ## When to Use This Skill
 
@@ -444,7 +456,8 @@ Set `windowSeconds: 0` to disable deduplication entirely.
 | 401 on cron endpoint | Wrong header | Use `x-cron-secret` (not `Authorization`) |
 | Env variable undefined | Not set | Add to `.env` and restart server |
 | Recurring action not created | Missing `registerRecurringActions()` | Export function from theme's `index.ts` |
-| Recurring action not running | Cron endpoint not updated | Ensure cron calls `initializeRecurringActions()` |
+| Recurring action not running | Handlers not initialized | Ensure `instrumentation.ts` exists and runs |
+| Entity hooks not firing | Handlers not registered early | Use `instrumentation.ts`, not cron endpoint |
 
 ## Anti-Patterns
 
@@ -501,22 +514,26 @@ registerScheduledAction('my:action', async (payload) => {
   }
 })
 
-// NEVER: Initialize in instrumentation.ts
-// instrumentation.ts has limitations with async DB calls
-export async function register() {
-  initializeScheduledActions()           // WRONG location
-  await initializeRecurringActions()     // WRONG - may fail silently
-}
-
-// CORRECT: Initialize in cron endpoint
+// NEVER: Initialize in API routes (adds overhead to every request)
 // /api/v1/cron/process/route.ts
 export async function GET(request: NextRequest) {
-  initializeScheduledActions()           // Sync, idempotent
-  if (!recurringActionsInitialized) {
-    await initializeRecurringActions()   // Async, once per server
-    recurringActionsInitialized = true
-  }
+  initializeScheduledActions()           // WRONG - runs on every cron call
+  await initializeRecurringActions()     // WRONG - unnecessary DB queries
   // ...process actions
+}
+
+// CORRECT: Initialize in instrumentation.ts (runs once at startup)
+// instrumentation.ts
+export async function register() {
+  if (process.env.NEXT_RUNTIME === 'nodejs') {
+    const {
+      initializeScheduledActions,
+      initializeRecurringActions,
+    } = await import('@nextsparkjs/core/lib/scheduled-actions')
+
+    initializeScheduledActions()         // ✅ Registers handlers + hooks
+    await initializeRecurringActions()   // ✅ Creates recurring actions in DB
+  }
 }
 ```
 

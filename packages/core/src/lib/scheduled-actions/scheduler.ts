@@ -100,6 +100,7 @@ export async function scheduleAction(
   const scheduledAt = options?.scheduledAt || new Date()
   const teamId = options?.teamId || null
   const recurringInterval = options?.recurringInterval || null
+  const lockGroup = options?.lockGroup || null
 
   await mutateWithRLS(
     `INSERT INTO "scheduled_actions" (
@@ -109,8 +110,9 @@ export async function scheduleAction(
       payload,
       "teamId",
       "scheduledAt",
-      "recurringInterval"
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      "recurringInterval",
+      "lockGroup"
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
     [
       actionId,
       actionType,
@@ -118,12 +120,13 @@ export async function scheduleAction(
       JSON.stringify(payload),
       teamId,
       scheduledAt.toISOString(),
-      recurringInterval
+      recurringInterval,
+      lockGroup
     ],
     null // System operation, no RLS context needed
   )
 
-  console.log(`[ScheduledActions] Scheduled action '${actionType}' with ID: ${actionId}`)
+  console.log(`[ScheduledActions] Scheduled action '${actionType}' with ID: ${actionId}${lockGroup ? ` (lockGroup: ${lockGroup})` : ''}`)
 
   return actionId
 }
