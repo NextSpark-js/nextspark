@@ -290,9 +290,12 @@
       "type": "Type",
       "status": "Statut",
       "scheduledAt": "Programme pour",
+      "startedAt": "Demarre",
+      "completedAt": "Termine",
       "team": "Equipe",
       "payload": "Donnees",
       "error": "Erreur",
+      "actions": "Actions",
       "noTeam": "Global"
     },
     "status": {

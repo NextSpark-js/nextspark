@@ -306,6 +306,8 @@
       "type": "Type",
       "status": "Status",
       "scheduledAt": "Scheduled At",
+      "startedAt": "Started At",
+      "completedAt": "Completed At",
       "team": "Team",
       "payload": "Payload",
       "error": "Error",

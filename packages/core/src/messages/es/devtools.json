@@ -292,6 +292,8 @@
       "type": "Tipo",
       "status": "Estado",
       "scheduledAt": "Programado Para",
+      "startedAt": "Iniciado",
+      "completedAt": "Completado",
       "team": "Equipo",
       "payload": "Datos",
       "error": "Error",

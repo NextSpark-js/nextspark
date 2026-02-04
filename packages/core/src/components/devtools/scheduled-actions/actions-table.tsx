@@ -122,6 +122,12 @@ export function ActionsTable({ actions }: ActionsTableProps) {
             <TableHead data-cy={sel('devtools.scheduledActions.cellScheduledAt')}>
               {t('table.scheduledAt')}
             </TableHead>
+            <TableHead data-cy={sel('devtools.scheduledActions.cellStartedAt')}>
+              {t('table.startedAt')}
+            </TableHead>
+            <TableHead data-cy={sel('devtools.scheduledActions.cellCompletedAt')}>
+              {t('table.completedAt')}
+            </TableHead>
             <TableHead data-cy={sel('devtools.scheduledActions.cellTeam')}>
               {t('table.team')}
             </TableHead>
@@ -165,6 +171,20 @@ export function ActionsTable({ actions }: ActionsTableProps) {
                 <TableCell>{getStatusBadge(action.status)}</TableCell>
                 <TableCell className="text-sm">
                   {formatDate(action.scheduledAt)}
+                </TableCell>
+                <TableCell className="text-sm">
+                  {action.startedAt ? (
+                    formatDate(action.startedAt)
+                  ) : (
+                    <span className="text-muted-foreground">-</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-sm">
+                  {action.completedAt ? (
+                    formatDate(action.completedAt)
+                  ) : (
+                    <span className="text-muted-foreground">-</span>
+                  )}
                 </TableCell>
                 <TableCell className="text-sm">
                   {action.teamId ? (
