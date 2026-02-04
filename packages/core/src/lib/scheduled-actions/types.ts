@@ -21,13 +21,14 @@ export interface ScheduledAction {
   errorMessage: string | null
   attempts: number
   /**
-   * Maximum number of retry attempts before marking action as failed.
+   * Maximum value for the attempts counter before marking action as failed.
+   * Represents total attempts (initial execution + retries), not retry count.
    * Default: 3
    *
    * @example
-   * maxRetries = 0 -> Fail immediately, no retries
-   * maxRetries = 3 -> Retry up to 3 times (4 total attempts)
-   * maxRetries = 5 -> Retry up to 5 times (6 total attempts)
+   * maxRetries = 0 -> Fail immediately, no retries (1 total attempt)
+   * maxRetries = 3 -> 3 total attempts (1 initial + 2 retries)
+   * maxRetries = 5 -> 5 total attempts (1 initial + 4 retries)
    */
   maxRetries: number
   recurringInterval: string | null
@@ -72,13 +73,14 @@ export interface ScheduleOptions {
   teamId?: string             // Optional team context
   recurringInterval?: 'hourly' | 'daily' | 'weekly' | string // cron expression
   /**
-   * Maximum number of retry attempts before marking action as failed.
+   * Maximum value for the attempts counter before marking action as failed.
+   * Represents total attempts (initial execution + retries), not retry count.
    * Default: 3
    *
    * @example
-   * { maxRetries: 0 } -> Fail immediately, no retries
-   * { maxRetries: 3 } -> Retry up to 3 times (4 total attempts)
-   * { maxRetries: 5 } -> Retry up to 5 times for critical operations
+   * { maxRetries: 0 } -> Fail immediately, no retries (1 total attempt)
+   * { maxRetries: 3 } -> 3 total attempts (1 initial + 2 retries)
+   * { maxRetries: 5 } -> 5 total attempts (1 initial + 4 retries) for critical operations
    */
   maxRetries?: number
   /**
