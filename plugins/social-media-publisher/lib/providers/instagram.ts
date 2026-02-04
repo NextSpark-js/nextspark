@@ -107,8 +107,8 @@ export class InstagramAPI {
 
       const creationId = containerData.id
 
-      // Wait for Instagram to process the image (recommended: 2-5 seconds)
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      // Wait for Instagram to process the image (recommended: 5 seconds)
+      await new Promise(resolve => setTimeout(resolve, 5000))
 
       // Step 2: Publish the container
       const publishResponse = await fetch(
