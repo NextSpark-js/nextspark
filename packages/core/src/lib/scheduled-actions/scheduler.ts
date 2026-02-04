@@ -9,7 +9,7 @@
  * Uses PostgreSQL advisory locks to prevent race conditions during deduplication.
  */
 
-import { mutateWithRLS, queryWithRLS } from '../db'
+import { mutateWithRLS, getTransactionClient } from '../db'
 import { APP_CONFIG_MERGED } from '../config/config-sync'
 import type { ScheduleOptions } from './types'
 
@@ -55,47 +55,7 @@ export async function scheduleAction(
   // - This is a recurring action (recurring actions don't deduplicate)
   const shouldDeduplicate = windowSeconds > 0 && entityId && !options?.recurringInterval
 
-  if (shouldDeduplicate) {
-    // Acquire advisory lock to prevent race conditions
-    // Lock key is based on actionType + entityId + entityType
-    const dedupKey = `${actionType}:${entityId}:${entityType || ''}`
-
-    await queryWithRLS(
-      `SELECT pg_advisory_xact_lock(hashtext($1))`,
-      [dedupKey],
-      null
-    )
-
-    // Check for existing pending action within time window
-    const existing = await queryWithRLS<{ id: string }>(
-      `SELECT id
-       FROM "scheduled_actions"
-       WHERE "actionType" = $1
-         AND status = 'pending'
-         AND payload->>'entityId' = $2
-         AND payload->>'entityType' = $3
-         AND "createdAt" > NOW() - INTERVAL '1 second' * $4
-       LIMIT 1`,
-      [actionType, entityId, entityType || '', windowSeconds],
-      null
-    )
-
-    if (existing.length > 0) {
-      // Duplicate found: update existing action's payload
-      await mutateWithRLS(
-        `UPDATE "scheduled_actions"
-         SET payload = $1, "updatedAt" = NOW()
-         WHERE id = $2 AND status = 'pending'`,
-        [JSON.stringify(payload), existing[0].id],
-        null
-      )
-
-      console.log(`[ScheduledActions] Duplicate detected, updated payload: ${existing[0].id}`)
-      return existing[0].id
-    }
-  }
-
-  // No duplicate found (or deduplication disabled): create new action
+  // Prepare action data
   const actionId = globalThis.crypto.randomUUID()
   const scheduledAt = options?.scheduledAt || new Date()
   const teamId = options?.teamId || null
@@ -104,6 +64,81 @@ export async function scheduleAction(
   const maxRetries = options?.maxRetries ?? 3 // Default: 3 retries
   const recurrenceType = options?.recurrenceType || null
 
+  if (shouldDeduplicate) {
+    // Use a SINGLE transaction for the entire deduplication + insert/update process
+    // This ensures the advisory lock is held throughout the operation
+    const dedupKey = `${actionType}:${entityId}:${entityType || ''}`
+    const client = await getTransactionClient(null)
+
+    try {
+      // Acquire advisory lock (held until COMMIT)
+      await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [dedupKey])
+
+      // Check for existing pending action within time window
+      const existing = await client.query<{ id: string }>(
+        `SELECT id
+         FROM "scheduled_actions"
+         WHERE "actionType" = $1
+           AND status = 'pending'
+           AND payload->>'entityId' = $2
+           AND payload->>'entityType' = $3
+           AND "createdAt" > NOW() - INTERVAL '1 second' * $4
+         LIMIT 1`,
+        [actionType, entityId, entityType || '', windowSeconds]
+      )
+
+      if (existing.length > 0) {
+        // Duplicate found: update existing action's payload
+        await client.query(
+          `UPDATE "scheduled_actions"
+           SET payload = $1, "updatedAt" = NOW()
+           WHERE id = $2 AND status = 'pending'`,
+          [JSON.stringify(payload), existing[0].id]
+        )
+
+        await client.commit()
+        console.log(`[ScheduledActions] Duplicate detected, updated payload: ${existing[0].id}`)
+        return existing[0].id
+      }
+
+      // No duplicate: create new action (still within locked transaction)
+      await client.query(
+        `INSERT INTO "scheduled_actions" (
+          id,
+          "actionType",
+          status,
+          payload,
+          "teamId",
+          "scheduledAt",
+          "recurringInterval",
+          "lockGroup",
+          "maxRetries",
+          "recurrenceType"
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [
+          actionId,
+          actionType,
+          'pending',
+          JSON.stringify(payload),
+          teamId,
+          scheduledAt.toISOString(),
+          recurringInterval,
+          lockGroup,
+          maxRetries,
+          recurrenceType
+        ]
+      )
+
+      await client.commit()
+      console.log(`[ScheduledActions] Scheduled action '${actionType}' with ID: ${actionId}${lockGroup ? ` (lockGroup: ${lockGroup})` : ''}`)
+      return actionId
+    } catch (error) {
+      await client.rollback()
+      throw error
+    }
+  }
+
+  // Deduplication disabled: create new action directly
   await mutateWithRLS(
     `INSERT INTO "scheduled_actions" (
       id,

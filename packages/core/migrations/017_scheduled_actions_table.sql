@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS public."scheduled_actions" (
   attempts            INTEGER NOT NULL DEFAULT 0,
   "maxRetries"        INTEGER NOT NULL DEFAULT 3,
   "recurringInterval" TEXT,
+  "recurrenceType"    TEXT,
   "lockGroup"         TEXT,
 
   -- System fields (always last)
@@ -53,6 +54,7 @@ COMMENT ON COLUMN public."scheduled_actions"."errorMessage"      IS 'Error detai
 COMMENT ON COLUMN public."scheduled_actions".attempts            IS 'Number of execution attempts';
 COMMENT ON COLUMN public."scheduled_actions"."maxRetries"        IS 'Maximum number of retry attempts before marking action as failed. Default: 3';
 COMMENT ON COLUMN public."scheduled_actions"."recurringInterval" IS 'Recurrence pattern: hourly, daily, weekly, or cron expression';
+COMMENT ON COLUMN public."scheduled_actions"."recurrenceType"    IS 'Recurrence calculation type: "fixed" (calculate from scheduledAt to prevent drift) or "rolling" (calculate from completion time for consistent intervals)';
 COMMENT ON COLUMN public."scheduled_actions"."lockGroup"         IS 'Lock group key for parallel execution control. Actions with same lockGroup run sequentially';
 
 -- ============================================
