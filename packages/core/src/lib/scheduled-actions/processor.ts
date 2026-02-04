@@ -314,7 +314,8 @@ async function rescheduleRecurringAction(action: ScheduledAction): Promise<void>
   }
 
   // Calculate next scheduled time based on interval
-  const nextScheduledAt = calculateNextScheduledTime(action.recurringInterval)
+  // Uses the original scheduledAt as base to prevent drift
+  const nextScheduledAt = calculateNextScheduledTime(action.recurringInterval, action.scheduledAt)
 
   // Schedule the next occurrence (preserving lockGroup)
   await scheduleAction(
@@ -333,24 +334,32 @@ async function rescheduleRecurringAction(action: ScheduledAction): Promise<void>
 
 /**
  * Calculate next scheduled time based on interval
+ * Uses the original scheduled time as base to prevent drift
+ *
+ * @param interval - The recurrence interval
+ * @param baseTime - The original scheduled time to calculate from
+ * @returns The next scheduled time
  */
-function calculateNextScheduledTime(interval: string): Date {
-  const now = new Date()
+function calculateNextScheduledTime(interval: string, baseTime: Date): Date {
+  const base = new Date(baseTime)
 
   switch (interval) {
+    case 'every-30-minutes':
+      return new Date(base.getTime() + 30 * 60 * 1000)
+
     case 'hourly':
-      return new Date(now.getTime() + 60 * 60 * 1000)
+      return new Date(base.getTime() + 60 * 60 * 1000)
 
     case 'daily':
-      return new Date(now.getTime() + 24 * 60 * 60 * 1000)
+      return new Date(base.getTime() + 24 * 60 * 60 * 1000)
 
     case 'weekly':
-      return new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+      return new Date(base.getTime() + 7 * 24 * 60 * 60 * 1000)
 
     default:
-      // For custom intervals, default to 1 hour from now
+      // For custom intervals, default to 1 hour from base time
       // In future versions, parse cron expressions here
       console.warn(`[ScheduledActions] Unknown interval '${interval}', defaulting to 1 hour`)
-      return new Date(now.getTime() + 60 * 60 * 1000)
+      return new Date(base.getTime() + 60 * 60 * 1000)
   }
 }
