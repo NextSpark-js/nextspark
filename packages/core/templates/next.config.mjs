@@ -19,6 +19,7 @@ const nextConfig = {
   serverExternalPackages: ['handlebars'],
   experimental: {
     externalDir: true,
+    instrumentationHook: true,
   },
   // Include markdown files in Vercel deployment for dynamic file reads
   // Required because fs.readFileSync() reads are not automatically traced

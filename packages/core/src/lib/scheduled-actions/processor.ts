@@ -114,14 +114,14 @@ export async function processPendingActions(
  * 3. Ensure only one action per lockGroup is fetched (DISTINCT ON)
  */
 async function fetchAndLockPendingActions(batchSize: number): Promise<ScheduledAction[]> {
-  // Strategy: Fetch actions ensuring no two actions with same lockGroup are selected
-  // For actions with NULL lockGroup, they can all be selected
-  // For actions with same lockGroup, only pick the oldest one
+  // Strategy: Fetch actions ensuring no two actions with same non-NULL lockGroup are selected
+  // - For actions with NULL lockGroup: All can be selected (parallel execution safe)
+  // - For actions with same non-NULL lockGroup: Only pick the oldest one (sequential execution)
   const actions = await queryWithRLS<ScheduledAction>(
     `WITH ranked_actions AS (
       SELECT *,
         ROW_NUMBER() OVER (
-          PARTITION BY COALESCE("lockGroup", id::text)
+          PARTITION BY "lockGroup"
           ORDER BY "scheduledAt" ASC
         ) as rn
       FROM "scheduled_actions"
@@ -132,7 +132,7 @@ async function fetchAndLockPendingActions(batchSize: number): Promise<ScheduledA
            "startedAt", "completedAt", "errorMessage", attempts,
            "recurringInterval", "lockGroup", "createdAt", "updatedAt"
     FROM ranked_actions
-    WHERE rn = 1
+    WHERE rn = 1 OR "lockGroup" IS NULL
     ORDER BY "scheduledAt" ASC
     LIMIT $1
     FOR UPDATE SKIP LOCKED`,

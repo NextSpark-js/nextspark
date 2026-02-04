@@ -29,11 +29,11 @@ function getActiveTheme(): string {
  * This function reads from the auto-generated registry and calls
  * the theme's registerAllHandlers function to register action handlers.
  *
- * Should be called at server startup (e.g., in cron endpoints, instrumentation.ts)
+ * Should be called at server startup (typically in instrumentation.ts)
  *
  * @example
- * // In cron endpoint
- * import { initializeScheduledActions } from './'
+ * // In instrumentation.ts
+ * import { initializeScheduledActions } from '@nextsparkjs/core/lib/scheduled-actions'
  * initializeScheduledActions()
  */
 export function initializeScheduledActions(): void {
