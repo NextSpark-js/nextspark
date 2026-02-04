@@ -144,6 +144,8 @@ export const DEVTOOLS_SELECTORS = {
     cellTeam: 'scheduled-actions-cell-team',
     cellPayload: 'scheduled-actions-cell-payload',
     cellError: 'scheduled-actions-cell-error',
+    cellActions: 'scheduled-actions-cell-actions',
+    retryBtn: 'scheduled-actions-retry-btn-{id}',
     statusPending: 'scheduled-actions-status-pending',
     statusRunning: 'scheduled-actions-status-running',
     statusCompleted: 'scheduled-actions-status-completed',

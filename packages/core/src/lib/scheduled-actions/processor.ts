@@ -238,7 +238,10 @@ async function executeAction(action: ScheduledAction): Promise<void> {
     // Check if we should retry based on action's maxRetries setting
     if (action.attempts < action.maxRetries) {
       // Calculate retry delay with exponential backoff: 5min, 10min, 15min...
-      const retryDelayMinutes = action.attempts * 5
+      // Note: action.attempts was incremented in markActionRunning, so we use attempts value directly
+      // After 1st attempt (attempts=1): 1*5 = 5min
+      // After 2nd attempt (attempts=2): 2*5 = 10min
+      const retryDelayMinutes = (action.attempts + 1) * 5
       console.log(`[ScheduledActions] Will retry action ${action.id} in ${retryDelayMinutes} minutes (attempt ${action.attempts}/${action.maxRetries})`)
 
       await rescheduleFailedAction(action, errorMessage, retryDelayMinutes)
