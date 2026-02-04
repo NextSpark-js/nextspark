@@ -291,6 +291,7 @@
     "table": {
       "type": "Tipo",
       "status": "Estado",
+      "attempts": "Intentos",
       "scheduledAt": "Programado Para",
       "startedAt": "Iniciado",
       "completedAt": "Completado",

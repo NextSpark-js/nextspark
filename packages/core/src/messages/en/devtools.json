@@ -305,6 +305,7 @@
     "table": {
       "type": "Type",
       "status": "Status",
+      "attempts": "Attempts",
       "scheduledAt": "Scheduled At",
       "startedAt": "Started At",
       "completedAt": "Completed At",

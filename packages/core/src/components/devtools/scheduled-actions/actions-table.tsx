@@ -119,6 +119,9 @@ export function ActionsTable({ actions }: ActionsTableProps) {
             <TableHead data-cy={sel('devtools.scheduledActions.cellStatus')}>
               {t('table.status')}
             </TableHead>
+            <TableHead data-cy={sel('devtools.scheduledActions.cellAttempts')}>
+              {t('table.attempts')}
+            </TableHead>
             <TableHead data-cy={sel('devtools.scheduledActions.cellScheduledAt')}>
               {t('table.scheduledAt')}
             </TableHead>
@@ -169,6 +172,12 @@ export function ActionsTable({ actions }: ActionsTableProps) {
                   {action.actionType}
                 </TableCell>
                 <TableCell>{getStatusBadge(action.status)}</TableCell>
+                <TableCell className="text-sm font-mono">
+                  <span className={action.attempts > 0 ? 'text-destructive font-semibold' : ''}>
+                    {action.attempts}
+                  </span>
+                  <span className="text-muted-foreground"> / {action.maxRetries}</span>
+                </TableCell>
                 <TableCell className="text-sm">
                   {formatDate(action.scheduledAt)}
                 </TableCell>
