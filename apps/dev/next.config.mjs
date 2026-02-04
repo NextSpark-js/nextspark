@@ -12,7 +12,6 @@ const nextConfig = {
   transpilePackages: ['@nextsparkjs/core'],
   experimental: {
     externalDir: true,
-    instrumentationHook: true,
   },
   // Optimize imports from @nextsparkjs/core to reduce bundle size and improve tree-shaking
   modularizeImports: {
