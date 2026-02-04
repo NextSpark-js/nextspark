@@ -17,7 +17,7 @@ import {
   TableRow,
 } from '../../ui/table'
 import { Button } from '../../ui/button'
-import { ChevronDownIcon, ChevronRightIcon, RotateCcwIcon } from 'lucide-react'
+import { ChevronDownIcon, ChevronRightIcon, RotateCcwIcon, PlayIcon } from 'lucide-react'
 import { sel } from '../../../lib/test'
 import type { ScheduledAction } from '../../../lib/scheduled-actions/types'
 import { toast } from 'sonner'
@@ -44,6 +44,24 @@ async function retryAction(actionId: string): Promise<{ newActionId: string }> {
   return data.data
 }
 
+async function runAction(actionId: string): Promise<{ success: boolean }> {
+  const response = await fetch('/api/v1/devtools/scheduled-actions/run', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ actionId }),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to run action')
+  }
+
+  const data = await response.json()
+  return data.data
+}
+
 export function ActionsTable({ actions }: ActionsTableProps) {
   const t = useTranslations('devtools.scheduledActions')
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
@@ -59,6 +77,19 @@ export function ActionsTable({ actions }: ActionsTableProps) {
     },
     onError: (error: Error) => {
       toast.error(t('retry.error', { message: error.message }))
+    },
+  })
+
+  // Run mutation
+  const runMutation = useMutation({
+    mutationFn: runAction,
+    onSuccess: () => {
+      toast.success(t('run.success'))
+      // Invalidate the scheduled actions query to refresh the table
+      queryClient.invalidateQueries({ queryKey: ['scheduled-actions'] })
+    },
+    onError: (error: Error) => {
+      toast.error(t('run.error', { message: error.message }))
     },
   })
 
@@ -233,6 +264,18 @@ export function ActionsTable({ actions }: ActionsTableProps) {
                     >
                       <RotateCcwIcon className="h-3 w-3 mr-1" />
                       {t('retry.button')}
+                    </Button>
+                  )}
+                  {action.status === 'pending' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => runMutation.mutate(action.id)}
+                      disabled={runMutation.isPending}
+                      data-cy={sel('devtools.scheduledActions.runBtn', { id: action.id })}
+                    >
+                      <PlayIcon className="h-3 w-3 mr-1" />
+                      {t('run.button')}
                     </Button>
                   )}
                 </TableCell>

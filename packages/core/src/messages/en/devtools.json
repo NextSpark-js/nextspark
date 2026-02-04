@@ -320,6 +320,11 @@
       "success": "Action scheduled for retry",
       "error": "Failed to retry action: {message}"
     },
+    "run": {
+      "button": "Run Now",
+      "success": "Action executed successfully",
+      "error": "Failed to run action: {message}"
+    },
     "status": {
       "pending": "Pending",
       "running": "Running",

@@ -193,9 +193,9 @@ async function processWithConcurrencyLimit(
 
 /**
  * Execute a single action
- * Internal function that handles the full lifecycle of action execution
+ * Handles the full lifecycle of action execution
  */
-async function executeAction(action: ScheduledAction): Promise<void> {
+export async function executeAction(action: ScheduledAction): Promise<void> {
   const startTime = Date.now()
   const configDefaultTimeout = APP_CONFIG_MERGED.scheduledActions?.defaultTimeout ?? DEFAULT_TIMEOUT
 
