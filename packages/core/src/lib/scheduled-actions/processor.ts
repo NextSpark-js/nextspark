@@ -1,6 +1,12 @@
 /**
  * Scheduled Actions - Processor
- * Processes pending actions and manages their lifecycle
+ * Processes pending actions with parallel execution and lock-group based locking
+ *
+ * Features:
+ * - Controlled parallelism with configurable concurrency limit
+ * - Lock-group based locking to prevent race conditions on same resource
+ * - SELECT FOR UPDATE SKIP LOCKED for safe concurrent processing
+ * - Timeout protection per action
  */
 
 import { queryWithRLS, mutateWithRLS } from '../db'
@@ -12,10 +18,16 @@ import type { ScheduledAction, ProcessResult } from './types'
 // Fallback defaults if config is not available
 const DEFAULT_BATCH_SIZE = 10
 const DEFAULT_TIMEOUT = 30000 // 30 seconds
+const DEFAULT_CONCURRENCY_LIMIT = 1 // Sequential by default for backward compatibility
 
 /**
- * Process pending actions
- * Fetches pending actions, executes them, and updates their status
+ * Process pending actions with parallel execution
+ * Uses SELECT FOR UPDATE SKIP LOCKED for safe concurrent processing
+ *
+ * Lock Group Behavior:
+ * - Actions with same lockGroup are processed sequentially
+ * - Actions with NULL lockGroup can run in parallel with any other action
+ * - Uses PostgreSQL row-level locking to prevent race conditions
  *
  * @param batchSize - Maximum number of actions to process (uses config default if not provided)
  * @returns Result with counts and errors
@@ -28,6 +40,7 @@ export async function processPendingActions(
   batchSize?: number
 ): Promise<ProcessResult> {
   const effectiveBatchSize = batchSize ?? APP_CONFIG_MERGED.scheduledActions?.batchSize ?? DEFAULT_BATCH_SIZE
+  const concurrencyLimit = APP_CONFIG_MERGED.scheduledActions?.concurrencyLimit ?? DEFAULT_CONCURRENCY_LIMIT
 
   const result: ProcessResult = {
     processed: 0,
@@ -37,32 +50,50 @@ export async function processPendingActions(
   }
 
   try {
-    // Fetch pending actions that are scheduled for now or earlier
-    const actions = await queryWithRLS<ScheduledAction>(
-      `SELECT * FROM "scheduled_actions"
-       WHERE status = 'pending'
-         AND "scheduledAt" <= NOW()
-       ORDER BY "scheduledAt" ASC
-       LIMIT $1`,
-      [effectiveBatchSize],
-      null // System operation
-    )
+    // Fetch and lock pending actions using FOR UPDATE SKIP LOCKED
+    // This ensures:
+    // 1. Multiple cron instances don't grab the same action
+    // 2. Actions with same lockGroup are processed one at a time
+    const actions = await fetchAndLockPendingActions(effectiveBatchSize)
 
-    console.log(`[ScheduledActions] Found ${actions.length} pending action(s) to process`)
+    if (actions.length === 0) {
+      console.log('[ScheduledActions] No pending actions to process')
+      return result
+    }
 
-    // Process each action sequentially
-    for (const action of actions) {
-      result.processed++
+    console.log(`[ScheduledActions] Found ${actions.length} pending action(s) to process (concurrency: ${concurrencyLimit})`)
 
-      try {
-        await executeAction(action)
-        result.succeeded++
-      } catch (error) {
-        result.failed++
-        result.errors.push({
-          actionId: action.id,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        })
+    // Process actions with controlled parallelism
+    if (concurrencyLimit === 1) {
+      // Sequential processing (backward compatible)
+      for (const action of actions) {
+        result.processed++
+        try {
+          await executeAction(action)
+          result.succeeded++
+        } catch (error) {
+          result.failed++
+          result.errors.push({
+            actionId: action.id,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          })
+        }
+      }
+    } else {
+      // Parallel processing with concurrency limit
+      const results = await processWithConcurrencyLimit(actions, concurrencyLimit)
+
+      for (const r of results) {
+        result.processed++
+        if (r.status === 'fulfilled') {
+          result.succeeded++
+        } else {
+          result.failed++
+          result.errors.push({
+            actionId: r.actionId,
+            error: r.reason instanceof Error ? r.reason.message : 'Unknown error'
+          })
+        }
       }
     }
 
@@ -76,6 +107,90 @@ export async function processPendingActions(
 }
 
 /**
+ * Fetch and lock pending actions with row-level locking
+ * Uses SELECT FOR UPDATE SKIP LOCKED to:
+ * 1. Lock selected rows so other processes can't grab them
+ * 2. Skip rows already locked by other processes
+ * 3. Ensure only one action per lockGroup is fetched (DISTINCT ON)
+ */
+async function fetchAndLockPendingActions(batchSize: number): Promise<ScheduledAction[]> {
+  // Strategy: Fetch actions ensuring no two actions with same lockGroup are selected
+  // For actions with NULL lockGroup, they can all be selected
+  // For actions with same lockGroup, only pick the oldest one
+  const actions = await queryWithRLS<ScheduledAction>(
+    `WITH ranked_actions AS (
+      SELECT *,
+        ROW_NUMBER() OVER (
+          PARTITION BY COALESCE("lockGroup", id::text)
+          ORDER BY "scheduledAt" ASC
+        ) as rn
+      FROM "scheduled_actions"
+      WHERE status = 'pending'
+        AND "scheduledAt" <= NOW()
+    )
+    SELECT id, "actionType", status, payload, "teamId", "scheduledAt",
+           "startedAt", "completedAt", "errorMessage", attempts,
+           "recurringInterval", "lockGroup", "createdAt", "updatedAt"
+    FROM ranked_actions
+    WHERE rn = 1
+    ORDER BY "scheduledAt" ASC
+    LIMIT $1
+    FOR UPDATE SKIP LOCKED`,
+    [batchSize],
+    null // System operation
+  )
+
+  return actions
+}
+
+/**
+ * Result type for parallel processing
+ */
+interface ParallelResult {
+  actionId: string
+  status: 'fulfilled' | 'rejected'
+  reason?: Error
+}
+
+/**
+ * Process actions with controlled concurrency
+ * Limits the number of concurrent action executions
+ */
+async function processWithConcurrencyLimit(
+  actions: ScheduledAction[],
+  limit: number
+): Promise<ParallelResult[]> {
+  const results: ParallelResult[] = []
+  const executing = new Set<Promise<void>>()
+
+  for (const action of actions) {
+    // Create a promise for this action
+    const promise = executeAction(action)
+      .then(() => {
+        results.push({ actionId: action.id, status: 'fulfilled' })
+      })
+      .catch((error) => {
+        results.push({ actionId: action.id, status: 'rejected', reason: error })
+      })
+      .finally(() => {
+        executing.delete(promise)
+      })
+
+    executing.add(promise)
+
+    // If we've reached the concurrency limit, wait for one to complete
+    if (executing.size >= limit) {
+      await Promise.race(executing)
+    }
+  }
+
+  // Wait for all remaining promises to complete
+  await Promise.all(executing)
+
+  return results
+}
+
+/**
  * Execute a single action
  * Internal function that handles the full lifecycle of action execution
  */
@@ -83,7 +198,7 @@ async function executeAction(action: ScheduledAction): Promise<void> {
   const startTime = Date.now()
   const configDefaultTimeout = APP_CONFIG_MERGED.scheduledActions?.defaultTimeout ?? DEFAULT_TIMEOUT
 
-  console.log(`[ScheduledActions] Executing action ${action.id} (${action.actionType})`)
+  console.log(`[ScheduledActions] Executing action ${action.id} (${action.actionType})${action.lockGroup ? ` [lockGroup: ${action.lockGroup}]` : ''}`)
 
   // Mark as running
   await markActionRunning(action.id)
@@ -191,7 +306,7 @@ async function markActionFailed(actionId: string, errorMessage: string): Promise
 
 /**
  * Reschedule a recurring action
- * Creates a new action for the next occurrence
+ * Creates a new action for the next occurrence, preserving the lockGroup
  */
 async function rescheduleRecurringAction(action: ScheduledAction): Promise<void> {
   if (!action.recurringInterval) {
@@ -201,14 +316,15 @@ async function rescheduleRecurringAction(action: ScheduledAction): Promise<void>
   // Calculate next scheduled time based on interval
   const nextScheduledAt = calculateNextScheduledTime(action.recurringInterval)
 
-  // Schedule the next occurrence
+  // Schedule the next occurrence (preserving lockGroup)
   await scheduleAction(
     action.actionType,
     action.payload,
     {
       scheduledAt: nextScheduledAt,
       teamId: action.teamId ?? undefined,
-      recurringInterval: action.recurringInterval ?? undefined
+      recurringInterval: action.recurringInterval ?? undefined,
+      lockGroup: action.lockGroup ?? undefined
     }
   )
 

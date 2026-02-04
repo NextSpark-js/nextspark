@@ -12,8 +12,9 @@ import 'server-only'
 
 import { SCHEDULED_ACTIONS_REGISTRY } from '@nextsparkjs/registries/scheduled-actions-registry'
 
-// Guard to prevent multiple initializations
-let initialized = false
+// Guards to prevent multiple initializations
+let handlersInitialized = false
+let recurringInitialized = false
 
 /**
  * Get the active theme name from environment
@@ -36,8 +37,8 @@ function getActiveTheme(): string {
  * initializeScheduledActions()
  */
 export function initializeScheduledActions(): void {
-  if (initialized) {
-    console.log('[ScheduledActions] Already initialized, skipping...')
+  if (handlersInitialized) {
+    console.log('[ScheduledActions] Handlers already initialized, skipping...')
     return
   }
 
@@ -47,8 +48,8 @@ export function initializeScheduledActions(): void {
   if (module) {
     console.log(`[ScheduledActions] Initializing handlers for theme: ${themeName}`)
     module.registerAllHandlers()
-    initialized = true
-    console.log(`[ScheduledActions] Handlers initialized successfully`)
+    handlersInitialized = true
+    console.log(`[ScheduledActions] ✅ Handlers initialized successfully`)
   } else {
     console.warn(`[ScheduledActions] No handlers found for theme: ${themeName}`)
   }
@@ -60,6 +61,9 @@ export function initializeScheduledActions(): void {
  * This async function reads from the auto-generated registry and calls
  * the theme's registerRecurringActions function to schedule recurring tasks.
  *
+ * Includes guard to prevent duplicate DB queries in same server instance.
+ * Theme's registerRecurringActions should also check DB for existing actions.
+ *
  * Should be called after handlers are registered.
  *
  * @example
@@ -69,13 +73,19 @@ export function initializeScheduledActions(): void {
  * await initializeRecurringActions()
  */
 export async function initializeRecurringActions(): Promise<void> {
+  if (recurringInitialized) {
+    console.log('[ScheduledActions] Recurring actions already initialized, skipping...')
+    return
+  }
+
   const themeName = getActiveTheme()
   const module = SCHEDULED_ACTIONS_REGISTRY[themeName]
 
   if (module) {
     console.log(`[ScheduledActions] Initializing recurring actions for theme: ${themeName}`)
     await module.registerRecurringActions()
-    console.log(`[ScheduledActions] Recurring actions initialized successfully`)
+    recurringInitialized = true
+    console.log(`[ScheduledActions] ✅ Recurring actions initialized successfully`)
   } else {
     console.warn(`[ScheduledActions] No recurring actions found for theme: ${themeName}`)
   }

@@ -216,25 +216,55 @@ node core/scripts/build/registry.mjs
 Server Start
     │
     ▼
-initializeScheduledActions() (core/lib/scheduled-actions/initializer.ts)
+instrumentation.ts::register() (Next.js 13+ Pattern)
     │
-    ├── Guard: Skip if already initialized
+    ├── initializeScheduledActions()
+    │   │
+    │   ├── Guard: Skip if already initialized
+    │   │
+    │   ▼
+    │   registerAllHandlers() (theme/lib/scheduled-actions/index.ts)
+    │       │
+    │       ├── registerWebhookHandler()
+    │       ├── registerBillingHandler()
+    │       ├── registerContentHooks() → Entity event listeners
+    │       └── registerCustomHandlers()
     │
-    ▼
-registerAllHandlers() (theme/lib/scheduled-actions/index.ts)
-    │
-    ├── registerWebhookHandler()
-    ├── registerBillingHandler()
-    └── registerCustomHandlers()
-    │
-    ▼
-Handlers registered in core registry
+    └── initializeRecurringActions()
+        │
+        ├── Guard: Skip if already initialized
+        │
+        ▼
+        registerRecurringActions() (theme/lib/scheduled-actions/index.ts)
+            │
+            ├── Check DB for existing recurring actions
+            │
+            └── Create new recurring actions if needed
+                (e.g., token refresh every 30 minutes)
 ```
 
 **Key Points:**
-- Core initializer handles the guard to prevent double registration
-- Theme only exports registration functions
+- **✅ Use `instrumentation.ts`** - Official Next.js pattern for server startup code
+- Runs ONCE when server starts (not on every request)
+- Both initializers have guards to prevent double registration
+- Themes check DB before creating recurring actions (idempotent)
 - All handlers must be registered before processing starts
+
+**Example `instrumentation.ts`:**
+
+```typescript
+export async function register() {
+  if (process.env.NEXT_RUNTIME === 'nodejs') {
+    const {
+      initializeScheduledActions,
+      initializeRecurringActions,
+    } = await import('@nextsparkjs/core/lib/scheduled-actions')
+
+    initializeScheduledActions()
+    await initializeRecurringActions()
+  }
+}
+```
 
 ## Quick Start
 

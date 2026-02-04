@@ -318,6 +318,16 @@ export interface ScheduledActionsConfig {
   defaultTimeout: number
 
   /**
+   * Maximum number of actions to execute in parallel.
+   * Actions are executed concurrently up to this limit.
+   * Default: 1 (sequential execution for backward compatibility)
+   *
+   * @example
+   * concurrencyLimit: 5 -> Up to 5 actions run simultaneously
+   */
+  concurrencyLimit?: number
+
+  /**
    * @deprecated Use webhooks.endpoints instead for multi-endpoint support
    * Legacy single webhook URL for backward compatibility
    */

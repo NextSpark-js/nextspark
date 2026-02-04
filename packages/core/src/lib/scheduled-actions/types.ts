@@ -21,6 +21,16 @@ export interface ScheduledAction {
   errorMessage: string | null
   attempts: number
   recurringInterval: string | null
+  /**
+   * Lock group key for parallel execution control.
+   * Actions with the same lockGroup will be processed sequentially.
+   * Actions with NULL lockGroup can run in parallel with any other action.
+   *
+   * @example
+   * lockGroup = 'client:123' -> All actions for client 123 run sequentially
+   * lockGroup = 'content:456' -> All actions for content 456 run sequentially
+   */
+  lockGroup: string | null
   createdAt: Date
   updatedAt: Date
 }
@@ -51,6 +61,15 @@ export interface ScheduleOptions {
   scheduledAt?: Date          // Default: now
   teamId?: string             // Optional team context
   recurringInterval?: 'hourly' | 'daily' | 'weekly' | string // cron expression
+  /**
+   * Lock group key for parallel execution control.
+   * Actions with the same lockGroup will be processed sequentially.
+   *
+   * @example
+   * { lockGroup: 'client:123' } -> All actions for client 123 run sequentially
+   * { lockGroup: `content:${contentId}` } -> Prevents concurrent content publishing
+   */
+  lockGroup?: string
 }
 
 /**
