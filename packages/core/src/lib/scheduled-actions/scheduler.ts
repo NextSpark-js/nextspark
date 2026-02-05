@@ -93,7 +93,7 @@ export async function scheduleAction(
           `UPDATE "scheduled_actions"
            SET payload = $1, "updatedAt" = NOW()
            WHERE id = $2 AND status = 'pending'`,
-          [JSON.stringify(payload), existing[0].id]
+          [payload, existing[0].id]
         )
 
         await client.commit()
@@ -119,7 +119,7 @@ export async function scheduleAction(
           actionId,
           actionType,
           'pending',
-          JSON.stringify(payload),
+          payload,
           teamId,
           scheduledAt.toISOString(),
           recurringInterval,
@@ -156,7 +156,7 @@ export async function scheduleAction(
       actionId,
       actionType,
       'pending',
-      JSON.stringify(payload),
+      payload,
       teamId,
       scheduledAt.toISOString(),
       recurringInterval,

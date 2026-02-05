@@ -18,6 +18,7 @@ import { queryWithRLS } from '@nextsparkjs/core/lib/db'
 import type { ScheduledAction, ScheduledActionStatus } from '@nextsparkjs/core/lib/scheduled-actions/types'
 import { getAllRegisteredActions } from '@nextsparkjs/core/lib/scheduled-actions/registry'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { scheduleAction } from '@nextsparkjs/core/lib/scheduled-actions/scheduler'
 
 export const GET = withRateLimitTier(async (request: NextRequest) => {
   // Authenticate request
@@ -79,6 +80,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
       "completedAt",
       "errorMessage",
       attempts,
+      "maxRetries",
       "recurringInterval",
       "createdAt",
       "updatedAt"
@@ -93,6 +95,16 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
   // Get all registered action types
   const registeredActions = getAllRegisteredActions()
 
+  // Count failed actions (last 24 hours)
+  const failedCountQuery = `
+    SELECT COUNT(*) as count
+    FROM "scheduled_actions"
+    WHERE status = 'failed'
+      AND "completedAt" > NOW() - INTERVAL '24 hours'
+  `
+  const failedCountResult = await queryWithRLS<{ count: string }>(failedCountQuery, [], null)
+  const failedCount = parseInt(failedCountResult[0]?.count || '0', 10)
+
   return NextResponse.json({
     success: true,
     data: {
@@ -105,16 +117,103 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
       },
       meta: {
         registeredActionTypes: registeredActions,
+        failedCount,
       },
     },
   })
 }, 'read');
 
+/**
+ * POST /api/v1/devtools/scheduled-actions
+ *
+ * Retry a failed action by creating a new action with the same payload.
+ * Requires superadmin or developer user role.
+ *
+ * Body:
+ * {
+ *   "actionId": "uuid-of-failed-action"
+ * }
+ */
+export const POST = withRateLimitTier(async (request: NextRequest) => {
+  // Authenticate request
+  const authResult = await authenticateRequest(request)
+
+  if (!authResult.success) {
+    return createDevtoolsUnauthorizedResponse()
+  }
+
+  // Check DevTools access permission
+  if (!canAccessDevtoolsApi(authResult)) {
+    return createDevtoolsAccessDeniedResponse()
+  }
+
+  // Parse request body
+  const body = await request.json()
+  const { actionId } = body
+
+  if (!actionId) {
+    return NextResponse.json({
+      success: false,
+      error: 'actionId is required'
+    }, { status: 400 })
+  }
+
+  // Fetch the failed action
+  const actions = await queryWithRLS<ScheduledAction>(
+    `SELECT
+      id,
+      "actionType",
+      status,
+      payload,
+      "teamId",
+      "lockGroup"
+    FROM "scheduled_actions"
+    WHERE id = $1`,
+    [actionId],
+    null
+  )
+
+  if (actions.length === 0) {
+    return NextResponse.json({
+      success: false,
+      error: 'Action not found'
+    }, { status: 404 })
+  }
+
+  const failedAction = actions[0]
+
+  // Only allow retrying failed actions
+  if (failedAction.status !== 'failed') {
+    return NextResponse.json({
+      success: false,
+      error: 'Only failed actions can be retried'
+    }, { status: 400 })
+  }
+
+  // Create a new action with the same payload
+  const newActionId = await scheduleAction(
+    failedAction.actionType,
+    failedAction.payload,
+    {
+      scheduledAt: new Date(), // Schedule immediately
+      teamId: failedAction.teamId ?? undefined,
+      lockGroup: failedAction.lockGroup ?? undefined
+    }
+  )
+
+  return NextResponse.json({
+    success: true,
+    data: {
+      newActionId
+    }
+  })
+}, 'write');
+
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 204,
     headers: {
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-api-key',
     },
   })
