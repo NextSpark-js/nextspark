@@ -49,6 +49,16 @@
         }
       }
     },
+    "worktrees": {
+      "type": "object",
+      "description": "Git worktree configuration for parallel feature development",
+      "properties": {
+        "enabled": { "type": "boolean", "description": "Show worktree question in session:start" },
+        "basePath": { "type": "string", "description": "Base directory for worktrees (relative to repo parent). Default: sibling to repo" },
+        "autoInstall": { "type": "boolean", "description": "Automatically run pnpm install in new worktrees" },
+        "cleanupOnClose": { "type": "boolean", "description": "Ask to remove worktree on session:close" }
+      }
+    },
     "integrations": {
       "type": "object",
       "properties": {

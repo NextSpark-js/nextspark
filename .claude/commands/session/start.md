@@ -66,6 +66,18 @@ Skips evaluation but still asks discovery questions for the selected workflow.
 │  /session:start                                                  │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
+│  PHASE 0: WORKTREE HEALTH CHECK (if worktrees.enabled)           │
+│  ──────────────────────────────────────────────                 │
+│  0. Scan for stale worktrees:                                   │
+│     $ git worktree list                                         │
+│     For each worktree (excluding main repo):                    │
+│       $ gh pr list --head <branch> --state merged --json number │
+│       IF PR merged AND worktree still exists:                   │
+│         → Warn: "Worktree <path> has merged PR #N. Remove?"     │
+│         → If yes: git worktree remove <path>                    │
+│                   git branch -d <branch>                        │
+│     Also run: git worktree prune (clean stale refs)             │
+│     ↓                                                           │
 │  PHASE A: EVALUATION                                            │
 │  ───────────────────                                            │
 │  1. Read user description                                       │
@@ -109,8 +121,9 @@ Skips evaluation but still asks discovery questions for the selected workflow.
 │     │   ├── Testing?                                            │
 │     │   └── Documentation?                                      │
 │     │                                                           │
-│     ├── BLOCKS: 7 block-specific questions                      │
+│     ├── BLOCKS: 8 block-specific questions                      │
 │     │   ├── Task Manager?                                       │
+│     │   ├── Worktree? (parallel development)                    │
 │     │   ├── Block Type? (hero/features/cta/etc)                 │
 │     │   ├── Block Decision? (new/variant/modify)                │
 │     │   ├── Mock Source? (Stitch/UXPilot/Figma/Other)           │
@@ -118,8 +131,9 @@ Skips evaluation but still asks discovery questions for the selected workflow.
 │     │   ├── Testing?                                            │
 │     │   └── Documentation?                                      │
 │     │                                                           │
-│     ├── TASK: All 7 questions + conditional mock questions      │
+│     ├── TASK: All 8 questions + conditional mock questions      │
 │     │   ├── Task Manager?                                       │
+│     │   ├── Worktree? (parallel development)                    │
 │     │   ├── Database Policy?                                    │
 │     │   ├── Entity Type?                                        │
 │     │   ├── Blocks?                                             │
@@ -127,9 +141,19 @@ Skips evaluation but still asks discovery questions for the selected workflow.
 │     │   ├── Testing?                                            │
 │     │   └── Documentation?                                      │
 │     │                                                           │
-│     └── STORY: All 7 questions + conditional mock questions     │
+│     └── STORY: All 8 questions + conditional mock questions     │
 │     ↓                                                           │
 │  10. Collect discovery context                                  │
+│     ↓                                                           │
+│  PHASE B.5: WORKTREE SETUP (if worktree selected)               │
+│  ──────────────────────────────────────────────                 │
+│  9.5 If worktree = yes:                                         │
+│     ├── Create branch: feature/<session-slug>                   │
+│     ├── git worktree add <basePath>/repo-<slug> <branch>        │
+│     ├── Copy .env from main repo                                │
+│     ├── Run pnpm install (if autoInstall = true)                │
+│     ├── Store worktree path in session metadata                 │
+│     └── Show: "Worktree ready at <path>"                        │
 │     ↓                                                           │
 │  PHASE C: MOCK UPLOAD PAUSE (if mock selected)                  │
 │  ──────────────────────────────────────────────                 │
@@ -211,6 +235,16 @@ I need some context before we begin. Please answer:
 
 ─────────────────────────────────────────
 
+1b. WORKTREE
+   Work in a separate worktree? (for parallel development)
+
+   [1] No, work in current directory
+   [2] Yes, create new worktree
+
+> 1
+
+─────────────────────────────────────────
+
 2. DATABASE POLICY
    How should the database be handled?
 
@@ -281,6 +315,7 @@ I need some context before we begin. Please answer:
 
 Context collected:
 ├── Task Manager: ClickUp (abc123)
+├── Worktree: No (current directory)
 ├── Database: No changes
 ├── Entity: Modify users
 ├── Blocks: None
@@ -340,6 +375,7 @@ Continue with these precautions? [Yes/No]
 | Question | TWEAK | BLOCKS | TASK | STORY |
 |----------|:-----:|:------:|:----:|:-----:|
 | 1. Task Manager | ✓ | ✓ | ✓ | ✓ |
+| 1b. Worktree | - | ✓ | ✓ | ✓ |
 | 2. Database Policy | - | - | ✓ | ✓ |
 | 3. Entity Type | - | - | ✓ | ✓ |
 | 4. Blocks | - | ✓* | ✓ | ✓ |
@@ -363,6 +399,22 @@ Continue with these precautions? [Yes/No]
    - Yes, Jira (request task_id)
    - Yes, Linear (request task_id)
    - Yes, Asana (request task_id)
+
+1b. WORKTREE (TASK, STORY, BLOCKS only)
+   - Only shown if worktrees.enabled = true in workspace.json
+   - Useful for parallel feature development without switching branches
+   - No, work in current directory
+   - Yes, create new worktree
+     IF YES:
+     ├── Creates branch: feature/<session-slug> (-b flag for new branch)
+     │   If branch already exists, uses: git worktree add <path> <existing-branch>
+     ├── Creates worktree at: <basePath>/repo-<session-slug>
+     ├── Copies .env from current repo
+     ├── Runs pnpm install (if autoInstall = true)
+     └── All session work happens in the worktree directory
+   - NOTE: The worktree path is stored in session metadata for cleanup:
+     Session file stores: { "worktree": { "path": "../repo-<slug>", "branch": "feature/<slug>" } }
+     Location: .claude/sessions/<type>/<session-name>/metadata.json
 
 2. DATABASE POLICY
    - No database changes needed
@@ -437,6 +489,82 @@ During discovery, if user answers suggest more complexity:
 | `--force-complete` | Force STORY without evaluation |
 | `--no-risk-check` | Skip risk evaluation |
 | `--task <id>` | Link with existing task |
+
+---
+
+## Worktree Setup (when selected)
+
+When the user selects "Yes, create new worktree":
+
+```
+🌳 WORKTREE SETUP
+
+Creating worktree for parallel development...
+
+Branch: feature/add-phone-field
+Path: G:/GitHub/nextspark/repo-add-phone-field
+
+─────────────────────────────────────────
+
+$ git worktree add ../repo-add-phone-field -b feature/add-phone-field
+Preparing worktree (new branch 'feature/add-phone-field')
+HEAD is now at 49db548 ...
+
+$ cp .env ../repo-add-phone-field/.env
+✓ Environment copied
+
+$ cd ../repo-add-phone-field && pnpm install
+✓ Dependencies installed
+
+─────────────────────────────────────────
+
+✓ Worktree ready!
+
+Working directory: G:/GitHub/nextspark/repo-add-phone-field
+Branch: feature/add-phone-field
+
+⚠️ IMPORTANT: Open a new Claude Code terminal in the
+worktree directory to work on this feature:
+
+  cd G:/GitHub/nextspark/repo-add-phone-field
+
+All session files and work will happen there.
+To see all worktrees: git worktree list
+```
+
+### Worktree Commands
+
+```bash
+# Execute these from the MAIN repo (not the worktree):
+
+# List all active worktrees
+git worktree list
+
+# Remove a worktree after merging
+git worktree remove ../repo-add-phone-field
+
+# Prune stale worktree references
+git worktree prune
+```
+
+### Error Handling
+
+```
+If git worktree add fails:
+├── Branch already checked out → "Branch is in use by another worktree. Use a different name."
+├── Path already exists → "Path already exists. Remove it or choose a different name."
+└── Other git error → Show error, abort worktree setup, continue session without worktree
+
+If .env copy fails:
+└── Warn: ".env not found. Copy it manually: cp <repo>/.env <worktree>/.env"
+
+If pnpm install fails:
+└── Warn: "pnpm install failed. Run it manually in the worktree directory."
+    (Do not block session creation)
+
+If worktree path missing during cleanup (/session:close):
+└── Already removed manually → Skip cleanup, just clear session metadata
+```
 
 ---
 
