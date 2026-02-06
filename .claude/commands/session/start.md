@@ -394,12 +394,15 @@ Continue with these precautions? [Yes/No]
    - No, work in current directory
    - Yes, create new worktree
      IF YES:
-     ├── Creates branch: feature/<session-slug> (or uses existing branch)
+     ├── Creates branch: feature/<session-slug> (-b flag for new branch)
+     │   If branch already exists, uses: git worktree add <path> <existing-branch>
      ├── Creates worktree at: <basePath>/repo-<session-slug>
+     ├── Copies .env from current repo
      ├── Runs pnpm install (if autoInstall = true)
      └── All session work happens in the worktree directory
-   - NOTE: The worktree path is stored in session metadata
-     for cleanup on /session:close
+   - NOTE: The worktree path is stored in session metadata for cleanup:
+     Session file stores: { "worktree": { "path": "../repo-<slug>", "branch": "feature/<slug>" } }
+     Location: .claude/sessions/<type>/<session-name>/metadata.json
 
 2. DATABASE POLICY
    - No database changes needed
@@ -530,6 +533,25 @@ git worktree remove ../repo-add-phone-field
 
 # Prune stale worktree references
 git worktree prune
+```
+
+### Error Handling
+
+```
+If git worktree add fails:
+├── Branch already checked out → "Branch is in use by another worktree. Use a different name."
+├── Path already exists → "Path already exists. Remove it or choose a different name."
+└── Other git error → Show error, abort worktree setup, continue session without worktree
+
+If .env copy fails:
+└── Warn: ".env not found. Copy it manually: cp <repo>/.env <worktree>/.env"
+
+If pnpm install fails:
+└── Warn: "pnpm install failed. Run it manually in the worktree directory."
+    (Do not block session creation)
+
+If worktree path missing during cleanup (/session:close):
+└── Already removed manually → Skip cleanup, just clear session metadata
 ```
 
 ---
