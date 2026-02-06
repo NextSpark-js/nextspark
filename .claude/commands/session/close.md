@@ -52,14 +52,23 @@ Closes the specified session.
 │     ↓                                                           │
 │  3. Execute session-close.sh                                    │
 │     ↓                                                           │
-│  4. Archive?                                                    │
+│  4. Worktree cleanup (if session used a worktree)               │
+│     - Check if worktree path exists in session metadata         │
+│     - Ask: "Remove worktree at <path>?"                         │
+│     │                                                           │
+│     ├─► YES: git worktree remove <path>                         │
+│     │        Delete branch if merged                            │
+│     │                                                           │
+│     └─► NO: Keep worktree (user can remove later)               │
+│     ↓                                                           │
+│  5. Archive?                                                    │
 │     [Yes, archive] [No, keep]                                   │
 │     ↓                                                           │
-│  5. Update task manager (if enabled)                            │
+│  6. Update task manager (if enabled)                            │
 │     - Post final comment                                        │
 │     - Change status to "done"                                   │
 │     ↓                                                           │
-│  6. Show summary                                                │
+│  7. Show summary                                                │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -100,6 +109,25 @@ All ACs completed: 4/4
 ✓ Session closed
 
 Archive session? [Yes/No]
+```
+
+---
+
+## With Worktree
+
+If the session used a worktree:
+
+```
+🌳 WORKTREE CLEANUP
+
+This session used a worktree:
+  Path: G:/GitHub/nextspark/repo-add-phone-field
+  Branch: feature/add-phone-field
+
+Options:
+[1] Remove worktree and delete branch (if merged)
+[2] Remove worktree but keep branch
+[3] Keep worktree (remove later with: git worktree remove ../repo-add-phone-field)
 ```
 
 ---
