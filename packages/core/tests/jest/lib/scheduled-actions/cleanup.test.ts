@@ -12,6 +12,15 @@ jest.mock('@/core/lib/db', () => ({
   mutateWithRLS: jest.fn()
 }))
 
+// Mock config
+jest.mock('@/core/lib/config', () => ({
+  APP_CONFIG_MERGED: {
+    scheduledActions: {
+      retentionDays: 7
+    }
+  }
+}))
+
 describe('Scheduled Actions Cleanup', () => {
   const mockMutateWithRLS = mutateWithRLS as jest.MockedFunction<typeof mutateWithRLS>
 
@@ -85,7 +94,7 @@ describe('Scheduled Actions Cleanup', () => {
       await cleanupOldActions(7)
 
       const sql = mockMutateWithRLS.mock.calls[0][0]
-      expect(sql).toContain('DELETE FROM "scheduledActions"')
+      expect(sql).toContain('DELETE FROM "scheduled_actions"')
       expect(sql).toContain('WHERE')
       expect(sql).toContain('AND')
     })

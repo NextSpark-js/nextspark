@@ -244,20 +244,14 @@ export function registerWebhookHandler() {
     const endpoint = findMatchingEndpoint(eventType, webhookKey)
 
     if (!endpoint) {
-      return {
-        success: false,
-        message: `No webhook endpoint found for event: ${eventType}`
-      }
+      throw new Error(`No webhook endpoint found for event: ${eventType}`)
     }
 
     // Get URL from environment
     const url = process.env[endpoint.envVar]
 
     if (!url) {
-      return {
-        success: false,
-        message: `Webhook URL not configured: ${endpoint.envVar}`
-      }
+      throw new Error(`Webhook URL not configured: ${endpoint.envVar}`)
     }
 
     // Send webhook
@@ -276,15 +270,12 @@ export function registerWebhookHandler() {
       })
     })
 
-    return {
-      success: response.ok,
-      message: `Webhook sent: ${response.status} ${response.statusText}`,
-      data: {
-        endpoint: endpoint.envVar,
-        status: response.status
-      }
+    if (!response.ok) {
+      throw new Error(`Webhook failed: ${response.status} ${response.statusText} (endpoint: ${endpoint.envVar})`)
     }
-  })
+
+    console.log(`[ScheduledActions] Webhook sent: ${response.status} ${response.statusText}`)
+  }, { description: 'Send webhook notification' })
 }
 
 function findMatchingEndpoint(eventType: string, webhookKey?: string) {
@@ -372,7 +363,16 @@ curl "http://localhost:5173/api/v1/devtools/scheduled-actions/ACTION_ID" \
 
 ### Retry Behavior
 
-Failed webhooks are marked with status `failed` and `errorMessage`. To retry:
+Failed webhooks are automatically retried based on the action's `maxRetries` setting (default: 3) with linear backoff:
+
+```text
+Attempt 1: immediate
+Attempt 2: +5 minutes
+Attempt 3: +10 minutes
+After max retries: marked as 'failed' with errorMessage
+```
+
+To manually retry after all retries are exhausted:
 
 1. Fix the underlying issue (endpoint, URL, etc.)
 2. Use DevTools to manually retry
@@ -454,6 +454,6 @@ if (endpoint.critical && !response.ok) {
 
 ---
 
-**Last Updated**: 2025-12-30
-**Version**: 1.0.0
+**Last Updated**: 2026-02-06
+**Version**: 2.0.0
 **Status**: Complete

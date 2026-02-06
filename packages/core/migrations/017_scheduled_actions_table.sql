@@ -100,6 +100,11 @@ CREATE INDEX IF NOT EXISTS idx_scheduled_actions_retry_status
   ON public."scheduled_actions"(attempts, "maxRetries")
   WHERE status = 'pending';
 
+-- Recurrence type filtering (for recurring actions)
+CREATE INDEX IF NOT EXISTS idx_scheduled_actions_recurrence_type
+  ON public."scheduled_actions"("recurrenceType")
+  WHERE "recurringInterval" IS NOT NULL;
+
 -- ============================================
 -- RLS
 -- ============================================

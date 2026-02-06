@@ -40,7 +40,7 @@ export async function scheduleAction(
   actionType: string,
   payload: unknown,
   options?: ScheduleOptions
-): Promise<string | null> {
+): Promise<string> {
   const dedupeConfig = APP_CONFIG_MERGED.scheduledActions?.deduplication
   const windowSeconds = dedupeConfig?.windowSeconds ?? 5
 
@@ -195,12 +195,10 @@ export async function scheduleRecurringAction(
   interval: string,
   options?: Omit<ScheduleOptions, 'recurringInterval'>
 ): Promise<string> {
-  // Recurring actions skip deduplication, so they always return a string
-  const result = await scheduleAction(actionType, payload, {
+  return scheduleAction(actionType, payload, {
     ...options,
     recurringInterval: interval
   })
-  return result as string
 }
 
 /**

@@ -25,6 +25,10 @@ export const APP_CONFIG_OVERRIDES = {
     // Default timeout per action (milliseconds)
     defaultTimeout: 30000,
 
+    // Concurrent action execution limit
+    // 1 = sequential (safe default), >1 = parallel processing
+    concurrencyLimit: 1,
+
     // Time-window deduplication settings
     deduplication: {
       windowSeconds: 5,
@@ -68,6 +72,7 @@ export const APP_CONFIG_OVERRIDES = {
 | `retentionDays` | `number` | `7` | Days to keep completed/failed actions before cleanup |
 | `batchSize` | `number` | `10` | Maximum actions processed per cron invocation |
 | `defaultTimeout` | `number` | `30000` | Timeout per action in milliseconds |
+| `concurrencyLimit` | `number` | `1` | Max parallel action executions (1 = sequential) |
 
 ### Deduplication Settings
 
@@ -158,6 +163,7 @@ export interface ScheduledActionsConfig {
   retentionDays: number
   batchSize: number
   defaultTimeout: number
+  concurrencyLimit: number
   webhookUrl?: string  // @deprecated - use webhooks.endpoints
   webhooks?: WebhooksConfig
   deduplication?: {
@@ -265,6 +271,6 @@ retentionDays: 1   // Clean up quickly
 
 ---
 
-**Last Updated**: 2025-12-30
-**Version**: 1.0.0
+**Last Updated**: 2026-02-06
+**Version**: 2.0.0
 **Status**: Complete

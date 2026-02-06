@@ -238,7 +238,7 @@ export async function executeAction(action: ScheduledAction): Promise<void> {
 
     // Check if we should retry based on action's maxRetries setting
     if (action.attempts < action.maxRetries) {
-      // Calculate retry delay with exponential backoff: 5min, 10min, 15min...
+      // Calculate retry delay with linear backoff: 5min, 10min, 15min...
       // Note: action.attempts was incremented in markActionRunning, so we use attempts value directly
       // After 1st attempt (attempts=1): 1*5 = 5min
       // After 2nd attempt (attempts=2): 2*5 = 10min
