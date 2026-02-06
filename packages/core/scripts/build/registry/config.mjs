@@ -199,6 +199,47 @@ export function getConfig(projectRoot = null) {
 }
 
 /**
+ * Validate that required environment variables are present.
+ * This should be called early in the build process to fail fast
+ * with clear, actionable error messages.
+ *
+ * @param {object} config - Configuration object from getConfig()
+ * @returns {{ valid: boolean, errors: string[] }} Validation result
+ */
+export function validateEnvironment(config) {
+  const errors = []
+
+  // Check if .env file exists at the project root
+  const envFilePath = join(config.projectRoot, '.env')
+  const envExamplePath = join(config.projectRoot, '.env.example')
+
+  if (!existsSync(envFilePath)) {
+    let fix = `Create a .env file in your project root: ${config.projectRoot}`
+    if (existsSync(envExamplePath)) {
+      fix = `Copy the example file:\n   cp .env.example .env\n   Then update it with your configuration.`
+    }
+    errors.push(
+      `Missing .env file.\n` +
+      `   The .env file is required to configure your NextSpark application.\n` +
+      `   Fix: ${fix}\n` +
+      `   Required variable: NEXT_PUBLIC_ACTIVE_THEME (e.g., "default")`
+    )
+  }
+
+  // Check for NEXT_PUBLIC_ACTIVE_THEME
+  if (!config.activeTheme) {
+    errors.push(
+      `Missing NEXT_PUBLIC_ACTIVE_THEME environment variable.\n` +
+      `   This variable tells NextSpark which theme to use.\n` +
+      `   Fix: Add the following line to your .env file:\n` +
+      `   NEXT_PUBLIC_ACTIVE_THEME=default`
+    )
+  }
+
+  return { valid: errors.length === 0, errors }
+}
+
+/**
  * Build configuration (legacy - for backward compatibility)
  * Uses getConfig() with no projectRoot (auto-detect)
  */
