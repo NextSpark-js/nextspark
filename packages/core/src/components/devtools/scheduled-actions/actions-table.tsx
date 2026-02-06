@@ -6,7 +6,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Badge } from '../../ui/badge'
 import {
@@ -192,9 +192,8 @@ export function ActionsTable({ actions }: ActionsTableProps) {
             const duration = calculateDuration(action.startedAt, action.completedAt)
 
             return (
-              <>
+              <Fragment key={action.id}>
                 <TableRow
-                  key={action.id}
                   className="hover:bg-muted/50 transition-colors"
                   data-cy={sel('devtools.scheduledActions.row', { id: action.id })}
                 >
@@ -223,11 +222,15 @@ export function ActionsTable({ actions }: ActionsTableProps) {
                       </span>
                     ) : action.status === 'completed' && action.attempts > 1 ? (
                       <span className="text-green-600 dark:text-green-500">
-                        {action.attempts}
+                        {action.attempts}/{action.maxRetries}
                       </span>
                     ) : action.status === 'running' ? (
                       <span className="text-blue-600 dark:text-blue-500">
-                        {action.attempts}
+                        {action.attempts}/{action.maxRetries}
+                      </span>
+                    ) : action.status === 'pending' && action.attempts > 0 ? (
+                      <span className="text-amber-600 dark:text-amber-500">
+                        {action.attempts}/{action.maxRetries}
                       </span>
                     ) : (
                       <span className="text-muted-foreground">-</span>
@@ -332,7 +335,7 @@ export function ActionsTable({ actions }: ActionsTableProps) {
                     </TableCell>
                   </TableRow>
                 )}
-              </>
+              </Fragment>
             )
           })}
         </TableBody>

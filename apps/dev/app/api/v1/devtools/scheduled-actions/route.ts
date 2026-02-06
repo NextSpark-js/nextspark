@@ -190,6 +190,28 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     }, { status: 400 })
   }
 
+  // Check if there's already a pending action with the same actionType and payload
+  // Use JSONB containment operator for reliable comparison
+  const existingPending = await queryWithRLS<{ id: string }>(
+    `SELECT id
+     FROM "scheduled_actions"
+     WHERE "actionType" = $1
+       AND payload @> $2::jsonb
+       AND $2::jsonb @> payload
+       AND status = 'pending'
+     LIMIT 1`,
+    [failedAction.actionType, JSON.stringify(failedAction.payload)],
+    null
+  )
+
+  if (existingPending.length > 0) {
+    return NextResponse.json({
+      success: false,
+      error: 'A pending action with the same payload already exists',
+      existingActionId: existingPending[0].id
+    }, { status: 409 })
+  }
+
   // Create a new action with the same payload
   const newActionId = await scheduleAction(
     failedAction.actionType,
