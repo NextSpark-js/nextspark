@@ -54,12 +54,24 @@ Closes the specified session.
 │     ↓                                                           │
 │  4. Worktree cleanup (if session used a worktree)               │
 │     - Check if worktree path exists in session metadata         │
-│     - Ask: "Remove worktree at <path>?"                         │
+│     - Check PR merge status:                                    │
+│       $ gh pr list --head <branch> --state merged               │
 │     │                                                           │
-│     ├─► YES: git worktree remove <path>                         │
-│     │        Delete branch if merged                            │
+│     ├─► PR MERGED: Auto-suggest removal                         │
+│     │   "PR merged! Removing worktree and branch..."            │
+│     │   $ git worktree remove <path>                            │
+│     │   $ git branch -d <branch>                                │
+│     │   (Still ask for confirmation before deleting)             │
 │     │                                                           │
-│     └─► NO: Keep worktree (user can remove later)               │
+│     ├─► PR OPEN: Ask what to do                                 │
+│     │   "PR still open. Remove worktree?"                       │
+│     │   [1] Remove worktree (keep branch)                       │
+│     │   [2] Keep worktree                                       │
+│     │                                                           │
+│     └─► NO PR: Ask with all options                             │
+│         [1] Remove worktree and delete branch                   │
+│         [2] Remove worktree but keep branch                     │
+│         [3] Keep worktree                                       │
 │     ↓                                                           │
 │  5. Archive?                                                    │
 │     [Yes, archive] [No, keep]                                   │
@@ -115,7 +127,46 @@ Archive session? [Yes/No]
 
 ## With Worktree
 
-If the session used a worktree:
+### PR Already Merged
+
+```
+🌳 WORKTREE CLEANUP
+
+This session used a worktree:
+  Path: G:/GitHub/nextspark/repo-add-phone-field
+  Branch: feature/add-phone-field
+
+✅ PR #42 was MERGED into main.
+
+Recommended: Remove worktree and clean up branch.
+
+$ git worktree remove ../repo-add-phone-field
+✓ Worktree removed
+
+$ git branch -d feature/add-phone-field
+✓ Branch deleted (was merged)
+
+$ git remote prune origin
+✓ Remote references cleaned
+```
+
+### PR Still Open
+
+```
+🌳 WORKTREE CLEANUP
+
+This session used a worktree:
+  Path: G:/GitHub/nextspark/repo-add-phone-field
+  Branch: feature/add-phone-field
+
+⏳ PR #42 is still OPEN (not merged yet).
+
+Options:
+[1] Remove worktree but keep branch (can re-create worktree later)
+[2] Keep worktree (continue working later)
+```
+
+### No PR Found
 
 ```
 🌳 WORKTREE CLEANUP
@@ -125,7 +176,7 @@ This session used a worktree:
   Branch: feature/add-phone-field
 
 Options:
-[1] Remove worktree and delete branch (if merged)
+[1] Remove worktree and delete branch
 [2] Remove worktree but keep branch
 [3] Keep worktree (remove later with: git worktree remove ../repo-add-phone-field)
 ```

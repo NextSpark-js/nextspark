@@ -66,6 +66,18 @@ Skips evaluation but still asks discovery questions for the selected workflow.
 │  /session:start                                                  │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
+│  PHASE 0: WORKTREE HEALTH CHECK (if worktrees.enabled)           │
+│  ──────────────────────────────────────────────                 │
+│  0. Scan for stale worktrees:                                   │
+│     $ git worktree list                                         │
+│     For each worktree (excluding main repo):                    │
+│       $ gh pr list --head <branch> --state merged --json number │
+│       IF PR merged AND worktree still exists:                   │
+│         → Warn: "Worktree <path> has merged PR #N. Remove?"     │
+│         → If yes: git worktree remove <path>                    │
+│                   git branch -d <branch>                        │
+│     Also run: git worktree prune (clean stale refs)             │
+│     ↓                                                           │
 │  PHASE A: EVALUATION                                            │
 │  ───────────────────                                            │
 │  1. Read user description                                       │
