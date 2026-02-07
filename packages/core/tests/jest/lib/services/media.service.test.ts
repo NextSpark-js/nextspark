@@ -203,17 +203,17 @@ describe('MediaService', () => {
 
       await MediaService.list('user-456', { search: 'logo' })
 
-      // Verify search is applied with lowercase
+      // Verify search is applied with LIKE fallback for robustness
       expect(mockQueryWithRLS).toHaveBeenNthCalledWith(
         1,
-        expect.stringContaining('lower(filename) LIKE'),
+        expect.stringContaining('lower(m.filename) LIKE'),
         expect.arrayContaining(['active', '%logo%']),
         'user-456'
       )
 
       expect(mockQueryWithRLS).toHaveBeenNthCalledWith(
         2,
-        expect.stringContaining('lower(filename) LIKE'),
+        expect.stringContaining('lower(m.filename) LIKE'),
         expect.arrayContaining(['active', '%logo%']),
         'user-456'
       )
@@ -228,7 +228,7 @@ describe('MediaService', () => {
 
       expect(mockQueryWithRLS).toHaveBeenNthCalledWith(
         2,
-        expect.stringContaining('ORDER BY "createdAt" DESC'),
+        expect.stringContaining('ORDER BY m."createdAt" DESC'),
         expect.anything(),
         'user-456'
       )
@@ -246,7 +246,7 @@ describe('MediaService', () => {
 
       expect(mockQueryWithRLS).toHaveBeenNthCalledWith(
         2,
-        expect.stringContaining('ORDER BY filename ASC'),
+        expect.stringContaining('ORDER BY m.filename ASC'),
         expect.anything(),
         'user-456'
       )
@@ -264,7 +264,7 @@ describe('MediaService', () => {
 
       expect(mockQueryWithRLS).toHaveBeenNthCalledWith(
         2,
-        expect.stringContaining('ORDER BY "fileSize" DESC'),
+        expect.stringContaining('ORDER BY m."fileSize" DESC'),
         expect.anything(),
         'user-456'
       )
@@ -288,10 +288,10 @@ describe('MediaService', () => {
       const countQuery = mockQueryWithRLS.mock.calls[0][0] as string
       expect(countQuery).toContain("status = $1")
       expect(countQuery).toContain("\"mimeType\" LIKE 'image/%'")
-      expect(countQuery).toContain('lower(filename) LIKE')
+      expect(countQuery).toContain('lower(m.filename) LIKE')
 
       const dataQuery = mockQueryWithRLS.mock.calls[1][0] as string
-      expect(dataQuery).toContain('ORDER BY filename ASC')
+      expect(dataQuery).toContain('ORDER BY m.filename ASC')
       expect(dataQuery).toContain('LIMIT')
       expect(dataQuery).toContain('OFFSET')
     })
@@ -476,7 +476,7 @@ describe('MediaService', () => {
       await MediaService.create('user-456', 'team-789', createData)
 
       expect(mockMutateWithRLS).toHaveBeenCalledWith(
-        expect.stringContaining("status\n      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'active')"),
+        expect.stringContaining("status\n      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'active')"),
         expect.anything(),
         'user-456'
       )

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, hasRequiredScope } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
@@ -18,6 +18,10 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     const authResult = await authenticateRequest(request)
     if (!authResult.success) {
       return createApiError('Unauthorized', 401)
+    }
+
+    if (!hasRequiredScope(authResult, 'media:read')) {
+      return createApiError('Insufficient permissions - media:read scope required', 403)
     }
 
     const body = await request.json()

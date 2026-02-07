@@ -85,7 +85,6 @@ export function MediaDetailPanel({ media, onClose, showPreview = true, className
 
       toast({
         title: t('detail.saved'),
-        description: t('detail.saved'),
       })
 
       onClose?.()

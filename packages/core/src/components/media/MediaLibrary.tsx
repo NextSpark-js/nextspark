@@ -136,7 +136,6 @@ export function MediaLibrary({
 
       toast({
         title: t('delete.success'),
-        description: t('delete.success'),
       })
 
       setDeletingMedia(null)

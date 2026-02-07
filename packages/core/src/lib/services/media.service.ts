@@ -228,7 +228,7 @@ export class MediaService {
   }
 
   /**
-   * Update media metadata (alt, caption only - file properties are immutable)
+   * Update media metadata (title, alt, caption - file properties are immutable)
    *
    * @param id - Media ID
    * @param userId - User ID for RLS context

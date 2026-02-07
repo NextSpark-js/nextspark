@@ -72,7 +72,7 @@ export function useMediaItem(id: string | null) {
 }
 
 /**
- * Update media metadata (alt text and caption)
+ * Update media metadata (title, alt text, and caption)
  */
 export function useUpdateMedia() {
   const queryClient = useQueryClient()
@@ -142,7 +142,7 @@ export function useMediaTags() {
       const res = await fetch('/api/v1/media-tags')
       if (!res.ok) throw new Error('Failed to fetch media tags')
       const json = await res.json()
-      return json.data?.data || json.data || []
+      return json.data || []
     },
     enabled: !!user,
     staleTime: 1000 * 60 * 10, // 10 minutes - tags change infrequently
@@ -162,7 +162,7 @@ export function useMediaItemTags(mediaId: string | null) {
       const res = await fetch(`/api/v1/media/${mediaId}/tags`)
       if (!res.ok) throw new Error('Failed to fetch media tags')
       const json = await res.json()
-      return json.data?.data || json.data || []
+      return json.data || []
     },
     enabled: !!user && !!mediaId,
   })
@@ -183,7 +183,7 @@ export function useAddMediaTag() {
       })
       if (!res.ok) throw new Error('Failed to add tag')
       const json = await res.json()
-      return json.data?.data || json.data || []
+      return json.data || []
     },
     onSuccess: (_, { mediaId }) => {
       queryClient.invalidateQueries({ queryKey: [MEDIA_TAGS_QUERY_KEY, 'item', mediaId] })
@@ -209,7 +209,7 @@ export function useCreateMediaTag() {
       })
       if (!res.ok) throw new Error('Failed to create tag')
       const json = await res.json()
-      return json.data?.data || json.data
+      return json.data
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [MEDIA_TAGS_QUERY_KEY] })

@@ -34,7 +34,7 @@ export const GET = withRateLimitTier(async (
 
     const { id } = await params
     const tags = await MediaService.getMediaTags(id, authResult.user!.id)
-    return createApiResponse({ data: tags })
+    return createApiResponse(tags)
   } catch (error) {
     console.error('[Media Tags API] Error getting tags:', error)
     return createApiError('Failed to get media tags', 500)
@@ -72,7 +72,7 @@ export const POST = withRateLimitTier(async (
     await MediaService.addTag(id, parsed.data.tagId, authResult.user!.id)
     const tags = await MediaService.getMediaTags(id, authResult.user!.id)
 
-    return createApiResponse({ data: tags }, 201)
+    return createApiResponse(tags, 201)
   } catch (error) {
     console.error('[Media Tags API] Error adding tag:', error)
     return createApiError('Failed to add tag', 500)
@@ -110,7 +110,7 @@ export const PUT = withRateLimitTier(async (
     await MediaService.setTags(id, parsed.data.tagIds, authResult.user!.id)
     const tags = await MediaService.getMediaTags(id, authResult.user!.id)
 
-    return createApiResponse({ data: tags })
+    return createApiResponse(tags)
   } catch (error) {
     console.error('[Media Tags API] Error setting tags:', error)
     return createApiError('Failed to set tags', 500)

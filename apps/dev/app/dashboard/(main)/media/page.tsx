@@ -137,7 +137,7 @@ export default function MediaDashboardPage() {
     if (!deletingMedia) return
     try {
       await deleteMutation.mutateAsync(deletingMedia.id)
-      toast({ title: t('delete.success'), description: t('delete.success') })
+      toast({ title: t('delete.success') })
       setDeletingMedia(null)
       setSelectedIds((prev) => {
         const newSet = new Set(prev)

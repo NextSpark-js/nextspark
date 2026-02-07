@@ -23,7 +23,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     }
 
     const tags = await MediaService.getTags(authResult.user!.id)
-    return createApiResponse({ data: tags })
+    return createApiResponse(tags)
   } catch (error) {
     console.error('[Media Tags API] Error listing tags:', error)
     return createApiError('Failed to list media tags', 500)
@@ -57,7 +57,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     }
 
     const tag = await MediaService.createTag(name, authResult.user!.id)
-    return createApiResponse({ data: tag }, 201)
+    return createApiResponse(tag, 201)
   } catch (error) {
     console.error('[Media Tags API] Error creating tag:', error)
     return createApiError('Failed to create media tag', 500)

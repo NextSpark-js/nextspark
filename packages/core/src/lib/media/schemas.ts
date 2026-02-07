@@ -25,6 +25,6 @@ export const mediaListQuerySchema = z.object({
   orderDir: z.enum(['asc', 'desc']).optional().default('desc'),
   type: z.enum(['image', 'video', 'all']).optional().default('all'),
   search: z.string().optional(),
-  tagIds: z.string().transform(s => s.split(',')).optional(),
-  tagSlugs: z.string().transform(s => s.split(',')).optional(),
+  tagIds: z.string().transform(s => s ? s.split(',').filter(Boolean) : []).optional(),
+  tagSlugs: z.string().transform(s => s ? s.split(',').filter(Boolean) : []).optional(),
 })

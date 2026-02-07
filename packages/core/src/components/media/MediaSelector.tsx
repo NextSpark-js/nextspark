@@ -40,7 +40,7 @@ export function MediaSelector({
   const [isLibraryOpen, setIsLibraryOpen] = React.useState(false)
 
   // Fetch media details if value is set
-  const { data: selectedMedia, isLoading } = useMediaItem(value || null)
+  const { data: selectedMedia, isLoading, isError } = useMediaItem(value || null)
 
   const handleSelect = (media: Media | Media[]) => {
     if (Array.isArray(media)) {
@@ -70,7 +70,7 @@ export function MediaSelector({
         data-cy={sel('media.selector.container')}
         className={cn('space-y-2', className)}
       >
-        {!value || !selectedMedia ? (
+        {!value || !selectedMedia || isError ? (
           // Empty state
           <Card
             className={cn(
