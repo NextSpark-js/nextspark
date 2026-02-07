@@ -1,0 +1,109 @@
+{
+  "title": "Biblioteca de Medios",
+  "subtitle": "Gestiona tus imágenes y videos",
+  "toolbar": {
+    "upload": "Subir",
+    "search": "Buscar por nombre de archivo...",
+    "typeFilter": {
+      "all": "Todos los Tipos",
+      "images": "Imágenes",
+      "videos": "Videos"
+    },
+    "sort": {
+      "newest": "Más Recientes Primero",
+      "oldest": "Más Antiguos Primero",
+      "nameAsc": "Nombre A-Z",
+      "nameDesc": "Nombre Z-A",
+      "sizeDesc": "Más Grandes Primero",
+      "sizeAsc": "Más Pequeños Primero"
+    },
+    "viewGrid": "Vista de Cuadrícula",
+    "viewList": "Vista de Lista"
+  },
+  "upload": {
+    "dragDrop": "Arrastra y suelta archivos aquí o",
+    "browse": "navega para subir",
+    "maxSize": "Tamaño máximo de archivo: {maxSize}MB",
+    "uploading": "Subiendo...",
+    "uploadingFile": "Subiendo {filename}...",
+    "success": "Archivo subido exitosamente",
+    "successMultiple": "{count} archivos subidos exitosamente",
+    "error": "Error al subir archivo",
+    "invalidType": "Tipo de archivo no permitido",
+    "tooLarge": "El archivo es demasiado grande",
+    "maxSelectionsReached": "Máximo {maxSelections} selecciones permitidas"
+  },
+  "grid": {
+    "selected": "Seleccionado",
+    "dimensions": "{width} x {height}",
+    "noResults": "No se encontraron medios",
+    "loading": "Cargando medios..."
+  },
+  "list": {
+    "filename": "Nombre de Archivo",
+    "type": "Tipo",
+    "size": "Tamaño",
+    "dimensions": "Dimensiones",
+    "uploaded": "Subido",
+    "actions": "Acciones"
+  },
+  "detail": {
+    "title": "Detalles del Medio",
+    "altLabel": "Texto Alternativo",
+    "altPlaceholder": "Describe esta imagen para accesibilidad...",
+    "altDescription": "Texto alternativo para lectores de pantalla y SEO",
+    "captionLabel": "Leyenda",
+    "captionPlaceholder": "Añade una leyenda...",
+    "captionDescription": "Descripción opcional mostrada debajo del medio",
+    "save": "Guardar Cambios",
+    "saving": "Guardando...",
+    "saved": "Cambios guardados",
+    "cancel": "Cancelar",
+    "info": {
+      "filename": "Nombre de Archivo",
+      "fileSize": "Tamaño de Archivo",
+      "mimeType": "Tipo",
+      "dimensions": "Dimensiones",
+      "uploadedBy": "Subido por",
+      "uploadedAt": "Subido el"
+    }
+  },
+  "footer": {
+    "itemsSelected": "{count} elemento seleccionado",
+    "itemsSelectedPlural": "{count} elementos seleccionados",
+    "cancel": "Cancelar",
+    "select": "Seleccionar"
+  },
+  "selector": {
+    "selectMedia": "Seleccionar Medio",
+    "change": "Cambiar",
+    "remove": "Eliminar",
+    "noSelection": "Ningún medio seleccionado"
+  },
+  "empty": {
+    "title": "Aún no hay archivos de medios",
+    "description": "Sube imágenes o videos para comenzar",
+    "uploadBtn": "Subir Archivos"
+  },
+  "delete": {
+    "title": "Eliminar Medio",
+    "message": "¿Estás seguro de que deseas eliminar este archivo de medios? Esta acción no se puede deshacer.",
+    "confirm": "Eliminar",
+    "cancel": "Cancelar",
+    "success": "Medio eliminado exitosamente",
+    "error": "Error al eliminar medio"
+  },
+  "errors": {
+    "loadFailed": "Error al cargar medios",
+    "unauthorized": "No tienes permiso para acceder a los medios",
+    "notFound": "Medio no encontrado",
+    "uploadFailed": "Error en la subida: {error}"
+  },
+  "actions": {
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "select": "Seleccionar",
+    "cancel": "Cancelar",
+    "save": "Guardar"
+  }
+}
