@@ -7,11 +7,13 @@ export const createMediaSchema = z.object({
   mimeType: z.string().min(1),
   width: z.number().int().positive().nullable().optional(),
   height: z.number().int().positive().nullable().optional(),
+  title: z.string().max(255).nullable().optional(),
   alt: z.string().max(500).nullable().optional(),
   caption: z.string().max(1000).nullable().optional(),
 })
 
 export const updateMediaSchema = z.object({
+  title: z.string().max(255).nullable().optional(),
   alt: z.string().max(500).nullable().optional(),
   caption: z.string().max(1000).nullable().optional(),
 })
@@ -23,4 +25,6 @@ export const mediaListQuerySchema = z.object({
   orderDir: z.enum(['asc', 'desc']).optional().default('desc'),
   type: z.enum(['image', 'video', 'all']).optional().default('all'),
   search: z.string().optional(),
+  tagIds: z.string().transform(s => s.split(',')).optional(),
+  tagSlugs: z.string().transform(s => s.split(',')).optional(),
 })

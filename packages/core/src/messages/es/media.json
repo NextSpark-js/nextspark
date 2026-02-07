@@ -3,7 +3,7 @@
   "subtitle": "Gestiona tus imágenes y videos",
   "toolbar": {
     "upload": "Subir",
-    "search": "Buscar por nombre de archivo...",
+    "search": "Buscar archivos...",
     "typeFilter": {
       "all": "Todos los Tipos",
       "images": "Imágenes",
@@ -18,7 +18,8 @@
       "sizeAsc": "Más Pequeños Primero"
     },
     "viewGrid": "Vista de Cuadrícula",
-    "viewList": "Vista de Lista"
+    "viewList": "Vista de Lista",
+    "columns": "Columnas"
   },
   "upload": {
     "dragDrop": "Arrastra y suelta archivos aquí o",
@@ -31,7 +32,12 @@
     "error": "Error al subir archivo",
     "invalidType": "Tipo de archivo no permitido",
     "tooLarge": "El archivo es demasiado grande",
-    "maxSelectionsReached": "Máximo {maxSelections} selecciones permitidas"
+    "maxSelectionsReached": "Máximo {maxSelections} selecciones permitidas",
+    "duplicateFound": "{count, plural, one {# archivo ya existe} other {# archivos ya existen}} en tu biblioteca",
+    "duplicateConfirm": "¿Subir de todos modos?",
+    "duplicateSkip": "Omitir duplicados",
+    "duplicateUploadAll": "Subir Todos",
+    "checking": "Verificando duplicados..."
   },
   "grid": {
     "selected": "Seleccionado",
@@ -49,6 +55,9 @@
   },
   "detail": {
     "title": "Detalles del Medio",
+    "titleLabel": "Título",
+    "titlePlaceholder": "Dale un título a este archivo...",
+    "titleDescription": "Nombre de visualización opcional para este medio",
     "altLabel": "Texto Alternativo",
     "altPlaceholder": "Describe esta imagen para accesibilidad...",
     "altDescription": "Texto alternativo para lectores de pantalla y SEO",
@@ -65,7 +74,8 @@
       "mimeType": "Tipo",
       "dimensions": "Dimensiones",
       "uploadedBy": "Subido por",
-      "uploadedAt": "Subido el"
+      "uploadedAt": "Subido",
+      "url": "URL"
     }
   },
   "footer": {
@@ -105,5 +115,30 @@
     "select": "Seleccionar",
     "cancel": "Cancelar",
     "save": "Guardar"
+  },
+  "dashboard": {
+    "subtitle": "{count, plural, =0 {Sin archivos} one {# archivo} other {# archivos}} en tu biblioteca",
+    "selected": "{count, plural, one {# seleccionado} other {# seleccionados}}",
+    "bulkDelete": "Eliminar Seleccionados",
+    "bulkDeleteSuccess": "{count, plural, one {# archivo eliminado} other {# archivos eliminados}}",
+    "hideUpload": "Ocultar Subida",
+    "clearSelection": "Limpiar",
+    "pagination": "Mostrando {from}-{to} de {total}",
+    "prevPage": "Anterior",
+    "nextPage": "Siguiente",
+    "tags": "Etiquetas",
+    "allTags": "Todas las Etiquetas",
+    "filterByTag": "Filtrar por etiqueta...",
+    "noTags": "Sin etiquetas"
+  },
+  "tags": {
+    "title": "Etiquetas",
+    "add": "Añadir Etiqueta",
+    "remove": "Eliminar",
+    "create": "Crear Etiqueta",
+    "createPlaceholder": "Nombre de nueva etiqueta...",
+    "applied": "Etiqueta añadida",
+    "removed": "Etiqueta eliminada",
+    "empty": "Sin etiquetas asignadas"
   }
 }

@@ -15,6 +15,7 @@ export interface Media {
   mimeType: string
   width: number | null
   height: number | null
+  title: string | null
   alt: string | null
   caption: string | null
   status: MediaStatus
@@ -29,11 +30,13 @@ export interface CreateMediaInput {
   mimeType: string
   width?: number | null
   height?: number | null
+  title?: string | null
   alt?: string | null
   caption?: string | null
 }
 
 export interface UpdateMediaInput {
+  title?: string | null
   alt?: string | null
   caption?: string | null
 }
@@ -46,6 +49,8 @@ export interface MediaListOptions {
   type?: 'image' | 'video' | 'all'
   search?: string
   status?: MediaStatus
+  tagIds?: string[]
+  tagSlugs?: string[]
 }
 
 export interface MediaListResult {
@@ -53,4 +58,18 @@ export interface MediaListResult {
   total: number
   limit: number
   offset: number
+}
+
+export interface MediaTag {
+  id: string
+  type: string
+  slug: string
+  name: string
+  description: string | null
+  icon: string | null
+  color: string | null
+  order: number
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
 }

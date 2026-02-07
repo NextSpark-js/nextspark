@@ -1,5 +1,5 @@
--- Migration: 021_media_table.sql
--- Description: Media library table for tracking uploaded files
+-- Migration: 021_media.sql
+-- Description: Media library table, full-text search, cleanup trigger, and default media tags
 -- Date: 2026-02-06
 
 -- ============================================
@@ -25,8 +25,12 @@ CREATE TABLE IF NOT EXISTS public."media" (
   height       INTEGER,
 
   -- User-editable metadata
+  title        TEXT,
   alt          TEXT,
   caption      TEXT,
+
+  -- Full-text search
+  "searchVector" tsvector,
 
   -- Status
   status       TEXT NOT NULL DEFAULT 'active',
@@ -38,6 +42,7 @@ CREATE TABLE IF NOT EXISTS public."media" (
   -- Constraints
   CONSTRAINT media_status_check CHECK (status IN ('active', 'deleted')),
   CONSTRAINT media_filename_length CHECK (length(filename) <= 255),
+  CONSTRAINT media_title_length CHECK (title IS NULL OR length(title) <= 255),
   CONSTRAINT media_alt_length CHECK (alt IS NULL OR length(alt) <= 500),
   CONSTRAINT media_caption_length CHECK (caption IS NULL OR length(caption) <= 1000),
   CONSTRAINT media_file_size_positive CHECK ("fileSize" > 0),
@@ -56,6 +61,7 @@ COMMENT ON COLUMN public."media"."fileSize"  IS 'File size in bytes';
 COMMENT ON COLUMN public."media"."mimeType"  IS 'MIME type (e.g., image/jpeg, video/mp4)';
 COMMENT ON COLUMN public."media".width       IS 'Image width in pixels (null for non-images)';
 COMMENT ON COLUMN public."media".height      IS 'Image height in pixels (null for non-images)';
+COMMENT ON COLUMN public."media".title       IS 'User-defined title (optional, defaults to filename in UI)';
 COMMENT ON COLUMN public."media".alt         IS 'Alt text for accessibility/SEO';
 COMMENT ON COLUMN public."media".caption     IS 'Caption or description';
 COMMENT ON COLUMN public."media".status      IS 'active or deleted (soft delete)';
@@ -69,6 +75,28 @@ BEFORE UPDATE ON public."media"
 FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- ============================================
+-- FULL-TEXT SEARCH TRIGGER
+-- ============================================
+CREATE OR REPLACE FUNCTION public.media_search_vector_update()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW."searchVector" := to_tsvector('english',
+    coalesce(NEW.title, '') || ' ' ||
+    coalesce(NEW.filename, '') || ' ' ||
+    coalesce(NEW.alt, '') || ' ' ||
+    coalesce(NEW.caption, '')
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS media_search_vector_trigger ON public."media";
+CREATE TRIGGER media_search_vector_trigger
+BEFORE INSERT OR UPDATE OF title, filename, alt, caption ON public."media"
+FOR EACH ROW
+EXECUTE FUNCTION public.media_search_vector_update();
+
+-- ============================================
 -- INDEXES
 -- ============================================
 CREATE INDEX IF NOT EXISTS idx_media_user_id        ON public."media"("userId");
@@ -80,6 +108,7 @@ CREATE INDEX IF NOT EXISTS idx_media_mime_type      ON public."media"("mimeType"
 CREATE INDEX IF NOT EXISTS idx_media_filename       ON public."media"(filename);
 CREATE INDEX IF NOT EXISTS idx_media_team_status    ON public."media"("teamId", status);
 CREATE INDEX IF NOT EXISTS idx_media_filename_lower ON public."media"(lower(filename));
+CREATE INDEX IF NOT EXISTS idx_media_search_vector  ON public."media" USING GIN ("searchVector");
 
 -- ============================================
 -- RLS
@@ -101,3 +130,25 @@ WITH CHECK (
   OR
   "teamId" = ANY(public.get_user_team_ids())
 );
+
+-- ============================================
+-- CLEANUP TRIGGER for media -> entity_taxonomy_relations
+-- ============================================
+-- When a media item is deleted, remove its taxonomy relations
+DROP TRIGGER IF EXISTS cleanup_media_entity_taxonomy ON public."media";
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'entity_taxonomy_relations' AND table_schema = 'public') THEN
+    CREATE TRIGGER cleanup_media_entity_taxonomy
+    AFTER DELETE ON public."media"
+    FOR EACH ROW
+    EXECUTE FUNCTION public.cleanup_entity_taxonomy_relations('media');
+  END IF;
+END $$;
+
+-- ============================================
+-- MEDIA TAGS
+-- ============================================
+-- No default media tags are seeded.
+-- Users create their own tags on-the-fly via the media detail panel.

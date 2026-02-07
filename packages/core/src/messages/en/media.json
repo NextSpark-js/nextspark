@@ -3,7 +3,7 @@
   "subtitle": "Manage your images and videos",
   "toolbar": {
     "upload": "Upload",
-    "search": "Search by filename...",
+    "search": "Search files...",
     "typeFilter": {
       "all": "All Types",
       "images": "Images",
@@ -18,7 +18,8 @@
       "sizeAsc": "Smallest First"
     },
     "viewGrid": "Grid View",
-    "viewList": "List View"
+    "viewList": "List View",
+    "columns": "Columns"
   },
   "upload": {
     "dragDrop": "Drag and drop files here or",
@@ -31,7 +32,12 @@
     "error": "Failed to upload file",
     "invalidType": "File type not allowed",
     "tooLarge": "File is too large",
-    "maxSelectionsReached": "Maximum {maxSelections} selections allowed"
+    "maxSelectionsReached": "Maximum {maxSelections} selections allowed",
+    "duplicateFound": "{count, plural, one {# file already exists} other {# files already exist}} in your library",
+    "duplicateConfirm": "Upload anyway?",
+    "duplicateSkip": "Skip duplicates",
+    "duplicateUploadAll": "Upload All",
+    "checking": "Checking for duplicates..."
   },
   "grid": {
     "selected": "Selected",
@@ -49,6 +55,9 @@
   },
   "detail": {
     "title": "Media Details",
+    "titleLabel": "Title",
+    "titlePlaceholder": "Give this file a title...",
+    "titleDescription": "Optional display name for this media",
     "altLabel": "Alt Text",
     "altPlaceholder": "Describe this image for accessibility...",
     "altDescription": "Alternative text for screen readers and SEO",
@@ -65,7 +74,8 @@
       "mimeType": "Type",
       "dimensions": "Dimensions",
       "uploadedBy": "Uploaded By",
-      "uploadedAt": "Uploaded At"
+      "uploadedAt": "Uploaded",
+      "url": "URL"
     }
   },
   "footer": {
@@ -105,5 +115,30 @@
     "select": "Select",
     "cancel": "Cancel",
     "save": "Save"
+  },
+  "dashboard": {
+    "subtitle": "{count, plural, =0 {No files} one {# file} other {# files}} in your library",
+    "selected": "{count, plural, one {# selected} other {# selected}}",
+    "bulkDelete": "Delete Selected",
+    "bulkDeleteSuccess": "{count, plural, one {# file deleted} other {# files deleted}}",
+    "hideUpload": "Hide Upload",
+    "clearSelection": "Clear",
+    "pagination": "Showing {from}-{to} of {total}",
+    "prevPage": "Previous",
+    "nextPage": "Next",
+    "tags": "Tags",
+    "allTags": "All Tags",
+    "filterByTag": "Filter by tag...",
+    "noTags": "No tags"
+  },
+  "tags": {
+    "title": "Tags",
+    "add": "Add Tag",
+    "remove": "Remove",
+    "create": "Create Tag",
+    "createPlaceholder": "New tag name...",
+    "applied": "Tag added",
+    "removed": "Tag removed",
+    "empty": "No tags assigned"
   }
 }

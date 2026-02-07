@@ -24,6 +24,7 @@ interface MediaGridProps {
   onEdit?: (media: Media) => void
   onDelete?: (media: Media) => void
   mode?: 'single' | 'multiple'
+  columns?: number
   className?: string
 }
 
@@ -35,22 +36,22 @@ export function MediaGrid({
   onEdit,
   onDelete,
   mode = 'single',
+  columns = 6,
   className,
 }: MediaGridProps) {
   const t = useTranslations('media')
+  const gridStyle = { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }
 
   if (isLoading) {
     return (
       <div
         data-cy={sel('media.grid.container')}
-        className={cn(
-          'grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4',
-          className
-        )}
+        className={cn('grid gap-3', className)}
+        style={gridStyle}
       >
-        {Array.from({ length: 12 }).map((_, i) => (
+        {Array.from({ length: columns * 2 }).map((_, i) => (
           <div key={i} className="space-y-2">
-            <Skeleton className="aspect-square w-full" />
+            <Skeleton className="aspect-square w-full rounded-lg" />
             <Skeleton className="h-4 w-3/4" />
           </div>
         ))}
@@ -74,10 +75,8 @@ export function MediaGrid({
   return (
     <div
       data-cy={sel('media.grid.container')}
-      className={cn(
-        'grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4',
-        className
-      )}
+      className={cn('grid gap-3', className)}
+      style={gridStyle}
     >
       {items.map((media) => (
         <MediaCard

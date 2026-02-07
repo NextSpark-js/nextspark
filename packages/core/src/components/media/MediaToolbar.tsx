@@ -53,13 +53,13 @@ export function MediaToolbar({
 }: MediaToolbarProps) {
   const t = useTranslations('media')
 
-  const sortOptions = [
-    { value: 'createdAt:desc', label: t('toolbar.sort.newest'), orderBy: 'createdAt', orderDir: 'desc' as const },
-    { value: 'createdAt:asc', label: t('toolbar.sort.oldest'), orderBy: 'createdAt', orderDir: 'asc' as const },
-    { value: 'filename:asc', label: t('toolbar.sort.nameAsc'), orderBy: 'filename', orderDir: 'asc' as const },
-    { value: 'filename:desc', label: t('toolbar.sort.nameDesc'), orderBy: 'filename', orderDir: 'desc' as const },
-    { value: 'fileSize:desc', label: t('toolbar.sort.sizeDesc'), orderBy: 'fileSize', orderDir: 'desc' as const },
-    { value: 'fileSize:asc', label: t('toolbar.sort.sizeAsc'), orderBy: 'fileSize', orderDir: 'asc' as const },
+  const sortOptions: { value: string; label: string; orderBy: MediaListOptions['orderBy']; orderDir: 'asc' | 'desc' }[] = [
+    { value: 'createdAt:desc', label: t('toolbar.sort.newest'), orderBy: 'createdAt', orderDir: 'desc' },
+    { value: 'createdAt:asc', label: t('toolbar.sort.oldest'), orderBy: 'createdAt', orderDir: 'asc' },
+    { value: 'filename:asc', label: t('toolbar.sort.nameAsc'), orderBy: 'filename', orderDir: 'asc' },
+    { value: 'filename:desc', label: t('toolbar.sort.nameDesc'), orderBy: 'filename', orderDir: 'desc' },
+    { value: 'fileSize:desc', label: t('toolbar.sort.sizeDesc'), orderBy: 'fileSize', orderDir: 'desc' },
+    { value: 'fileSize:asc', label: t('toolbar.sort.sizeAsc'), orderBy: 'fileSize', orderDir: 'asc' },
   ]
 
   const currentSortValue = `${sortBy}:${sortDir}`

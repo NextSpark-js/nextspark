@@ -9,7 +9,7 @@
 
 import * as React from 'react'
 import { useTranslations } from 'next-intl'
-import { ImageIcon, VideoIcon, FileIcon, MoreVerticalIcon, Edit2Icon, Trash2Icon, CheckCircle2Icon } from 'lucide-react'
+import { ImageIcon, VideoIcon, FileIcon, MoreVerticalIcon, Edit2Icon, Trash2Icon } from 'lucide-react'
 import { Card, CardContent } from '../ui/card'
 import { Button } from '../ui/button'
 import { Checkbox } from '../ui/checkbox'
@@ -41,18 +41,13 @@ export function MediaCard({
   mode = 'single',
 }: MediaCardProps) {
   const t = useTranslations('media')
-  const [isHovered, setIsHovered] = React.useState(false)
 
   const isImage = media.mimeType.startsWith('image/')
   const isVideo = media.mimeType.startsWith('video/')
 
   const handleCardClick = () => {
-    onSelect(media)
-  }
-
-  const handleCheckboxChange = (checked: boolean) => {
-    if (checked) {
-      onSelect(media)
+    if (onEdit) {
+      onEdit(media)
     }
   }
 
@@ -60,11 +55,9 @@ export function MediaCard({
     <Card
       data-cy={sel('media.grid.item', { id: media.id })}
       className={cn(
-        'group relative overflow-hidden transition-all cursor-pointer hover:shadow-lg',
-        isSelected && 'ring-2 ring-primary'
+        'group relative overflow-hidden transition-all cursor-pointer hover:shadow-md',
+        isSelected && 'ring-2 ring-primary ring-offset-2 ring-offset-background'
       )}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
       onClick={handleCardClick}
     >
       <CardContent className="p-0">
@@ -84,77 +77,87 @@ export function MediaCard({
             <FileIcon className="w-12 h-12 text-muted-foreground" />
           )}
 
-          {/* Selection indicator */}
+          {/* Selection overlay */}
           {isSelected && (
-            <div className="absolute inset-0 bg-primary/10 flex items-center justify-center">
-              <CheckCircle2Icon className="w-12 h-12 text-primary" />
-            </div>
+            <div className="absolute inset-0 bg-primary/10 z-[1] pointer-events-none" />
           )}
 
           {/* Checkbox for multi-select */}
           {mode === 'multiple' && (
-            <div className="absolute top-2 left-2 z-10" onClick={(e) => e.stopPropagation()}>
+            <div
+              className={cn(
+                'absolute top-2 left-2 z-10 transition-all duration-150',
+                isSelected ? 'opacity-100 scale-100' : 'opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100'
+              )}
+              onClick={(e) => e.stopPropagation()}
+            >
               <Checkbox
                 data-cy={sel('media.grid.checkbox', { id: media.id })}
                 checked={isSelected}
-                onCheckedChange={handleCheckboxChange}
+                onCheckedChange={() => onSelect(media)}
                 aria-label={`${t('actions.select')} ${media.filename}`}
-                className="bg-background border-2"
+                className={cn(
+                  'h-5 w-5 rounded-md shadow-md border-2 transition-colors',
+                  isSelected
+                    ? 'bg-primary border-primary text-primary-foreground'
+                    : 'bg-white/90 border-white/60 backdrop-blur-sm'
+                )}
               />
             </div>
           )}
 
-          {/* Actions menu */}
-          {(isHovered || isSelected) && (
-            <div className="absolute top-2 right-2 z-10" onClick={(e) => e.stopPropagation()}>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    data-cy={sel('media.grid.menuBtn', { id: media.id })}
-                    variant="secondary"
-                    size="icon"
-                    className="h-8 w-8"
-                    aria-label={t('list.actions')}
+          {/* Actions menu - always visible on hover */}
+          <div
+            className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  data-cy={sel('media.grid.menuBtn', { id: media.id })}
+                  variant="secondary"
+                  size="icon"
+                  className="h-8 w-8"
+                  aria-label={t('list.actions')}
+                >
+                  <MoreVerticalIcon className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {onEdit && (
+                  <DropdownMenuItem
+                    data-cy={sel('media.grid.menuEdit', { id: media.id })}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onEdit(media)
+                    }}
                   >
-                    <MoreVerticalIcon className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {onEdit && (
-                    <DropdownMenuItem
-                      data-cy={sel('media.grid.menuEdit', { id: media.id })}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onEdit(media)
-                      }}
-                    >
-                      <Edit2Icon className="mr-2 h-4 w-4" />
-                      {t('actions.edit')}
-                    </DropdownMenuItem>
-                  )}
-                  {onDelete && (
-                    <DropdownMenuItem
-                      data-cy={sel('media.grid.menuDelete', { id: media.id })}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onDelete(media)
-                      }}
-                      className="text-destructive focus:text-destructive"
-                    >
-                      <Trash2Icon className="mr-2 h-4 w-4" />
-                      {t('actions.delete')}
-                    </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          )}
+                    <Edit2Icon className="mr-2 h-4 w-4" />
+                    {t('actions.edit')}
+                  </DropdownMenuItem>
+                )}
+                {onDelete && (
+                  <DropdownMenuItem
+                    data-cy={sel('media.grid.menuDelete', { id: media.id })}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onDelete(media)
+                    }}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2Icon className="mr-2 h-4 w-4" />
+                    {t('actions.delete')}
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
-        {/* Filename */}
+        {/* Title / Filename */}
         <div className="p-2">
-          <p className="text-sm truncate" title={media.filename}>
-            {media.filename}
+          <p className="text-sm truncate" title={media.title || media.filename}>
+            {media.title || media.filename}
           </p>
           {media.width && media.height && (
             <p className="text-xs text-muted-foreground">

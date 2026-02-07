@@ -24,6 +24,7 @@ export const MEDIA_SELECTORS = {
       grid: 'media-view-grid',
       list: 'media-view-list',
     },
+    columnSelect: 'media-column-select',
   },
 
   // Upload zone
@@ -54,11 +55,16 @@ export const MEDIA_SELECTORS = {
 
   // Detail panel (edit metadata)
   detail: {
+    dialog: 'media-detail-dialog',
     panel: 'media-detail-panel',
+    titleInput: 'media-title-input',
     altInput: 'media-alt-input',
     captionInput: 'media-caption-input',
     saveBtn: 'media-detail-save',
     cancelBtn: 'media-detail-cancel',
+    tags: 'media-detail-tags',
+    tagBadge: 'media-detail-tag-{id}',
+    addTagBtn: 'media-detail-add-tag',
   },
 
   // Footer controls
@@ -89,6 +95,25 @@ export const MEDIA_SELECTORS = {
     dialog: 'media-delete-confirm',
     confirmBtn: 'media-delete-confirm-btn',
     cancelBtn: 'media-delete-cancel-btn',
+  },
+
+  // Dashboard page
+  dashboard: {
+    container: 'media-dashboard',
+    title: 'media-dashboard-title',
+    bulkDeleteBtn: 'media-bulk-delete-btn',
+    pagination: 'media-pagination',
+    prevPageBtn: 'media-prev-page-btn',
+    nextPageBtn: 'media-next-page-btn',
+  },
+
+  // Tag filter
+  tagFilter: {
+    container: 'media-tag-filter',
+    trigger: 'media-tag-filter-trigger',
+    popover: 'media-tag-filter-popover',
+    tag: 'media-tag-filter-tag-{id}',
+    activeTag: 'media-tag-filter-active-{id}',
   },
 } as const
 

@@ -164,7 +164,7 @@ export function MediaList({
                   'cursor-pointer',
                   isSelected && 'bg-muted'
                 )}
-                onClick={() => onSelect(media)}
+                onClick={() => onEdit?.(media)}
               >
                 {mode === 'multiple' && (
                   <TableCell onClick={(e) => e.stopPropagation()}>
@@ -188,7 +188,7 @@ export function MediaList({
                     </div>
                   )}
                 </TableCell>
-                <TableCell className="font-medium">{media.filename}</TableCell>
+                <TableCell className="font-medium">{media.title || media.filename}</TableCell>
                 <TableCell className="hidden md:table-cell text-muted-foreground">
                   {media.mimeType}
                 </TableCell>
