@@ -6,14 +6,13 @@
 
 import { describe, it } from 'node:test'
 import assert from 'node:assert'
-import { join } from 'path'
 import { validateEnvironment } from './config.mjs'
 
 describe('validateEnvironment', () => {
   it('should return valid when .env exists and activeTheme is set', () => {
-    // Use the current project root which has a .env file
+    // Use the current working directory which has a .env file
     const config = {
-      projectRoot: join(process.cwd(), 'apps/dev'),
+      projectRoot: process.cwd(),
       activeTheme: 'default'
     }
 
@@ -36,7 +35,7 @@ describe('validateEnvironment', () => {
 
   it('should return error when activeTheme is undefined', () => {
     const config = {
-      projectRoot: join(process.cwd(), 'apps/dev'),
+      projectRoot: process.cwd(),
       activeTheme: undefined
     }
 
@@ -47,7 +46,7 @@ describe('validateEnvironment', () => {
 
   it('should return error when activeTheme is empty string', () => {
     const config = {
-      projectRoot: join(process.cwd(), 'apps/dev'),
+      projectRoot: process.cwd(),
       activeTheme: ''
     }
 
@@ -79,12 +78,12 @@ describe('validateEnvironment', () => {
 
   it('should include fix instructions in activeTheme error', () => {
     const config = {
-      projectRoot: join(process.cwd(), 'apps/dev'),
+      projectRoot: process.cwd(),
       activeTheme: undefined
     }
 
     const result = validateEnvironment(config)
-    const themeError = result.errors.find(e => e.includes('NEXT_PUBLIC_ACTIVE_THEME'))
+    const themeError = result.errors.find(e => e.includes('Missing NEXT_PUBLIC_ACTIVE_THEME'))
     assert.ok(themeError)
     assert.ok(themeError.includes('NEXT_PUBLIC_ACTIVE_THEME=default'))
   })

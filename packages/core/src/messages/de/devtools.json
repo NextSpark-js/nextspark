@@ -278,6 +278,8 @@
     "loading": "Geplante Aktionen werden geladen...",
     "empty": "Keine geplanten Aktionen gefunden",
     "emptyDescription": "Geplante Aktionen werden hier angezeigt, wenn sie erstellt werden",
+    "failedNotification": "{count, plural, one {# Aktion ist fehlgeschlagen} other {# Aktionen sind fehlgeschlagen}} in den letzten 24 Stunden",
+    "viewFailed": "Fehlgeschlagene anzeigen",
     "filters": {
       "status": "Status",
       "allStatuses": "Alle Status",
@@ -298,6 +300,16 @@
       "error": "Fehler",
       "actions": "Aktionen",
       "noTeam": "Global"
+    },
+    "retry": {
+      "button": "Wiederholen",
+      "success": "Aktion zur Wiederholung geplant",
+      "error": "Fehler beim Wiederholen der Aktion: {message}"
+    },
+    "run": {
+      "button": "Jetzt ausfuehren",
+      "success": "Aktion erfolgreich ausgefuehrt",
+      "error": "Fehler beim Ausfuehren der Aktion: {message}"
     },
     "status": {
       "pending": "Ausstehend",
