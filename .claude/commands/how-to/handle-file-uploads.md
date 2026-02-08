@@ -11,6 +11,7 @@ Interactive guide to implement file uploads and media management in NextSpark.
 Before executing, these skills provide deeper context:
 - `.claude/skills/entity-system/SKILL.md` - Entity field definitions
 - `.claude/skills/zod-validation/SKILL.md` - Input validation patterns
+- `.claude/skills/media-library/SKILL.md` - Media Library system
 
 ---
 
@@ -36,7 +37,7 @@ Guides the user through implementing file uploads, using upload components, and 
 STEPS OVERVIEW (5 steps)
 
 Step 1: Understanding the Media System
-        └── Vercel Blob, supported types, limits
+        └── Media Library, Vercel Blob, supported types, limits
 
 Step 2: Configure Environment
         └── BLOB_READ_WRITE_TOKEN setup
@@ -107,6 +108,36 @@ packages/core/src/components/ui/
 ├── video-upload.tsx   # Video with thumbnail generation
 └── audio-upload.tsx   # Audio with built-in player
 ```
+
+**📋 Media Library (Recommended for Images):**
+
+```
+packages/core/src/components/media/
+├── MediaLibrary.tsx      # Full modal for browsing/selecting media
+├── MediaSelector.tsx     # Form field for entity integration
+├── MediaGrid.tsx         # Grid view with thumbnails
+├── MediaList.tsx         # List view with details
+├── MediaDetailPanel.tsx  # Edit metadata panel
+├── MediaUploadZone.tsx   # Drag & drop upload area
+└── MediaTagFilter.tsx    # Filter by tags
+```
+
+The **Media Library** provides a WordPress-style media management experience:
+- Browse all uploaded media with grid/list views
+- Search by filename, title, alt text
+- Filter by type (image/video) and tags
+- Upload new files directly from the modal
+- Edit metadata (title, alt, caption)
+- Duplicate detection via file hash
+- Full API at `/api/v1/media`
+
+**When to use what:**
+
+| Need | Component | Field Type |
+|------|-----------|------------|
+| Simple file upload (drag & drop) | `FileUpload` / `ImageUpload` | `'image'` |
+| Full media browsing + upload | `MediaLibrary` / `MediaSelector` | `'media-library'` |
+| Page builder blocks | `MediaLibraryField` (automatic) | `'media-library'` |
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -309,6 +340,39 @@ interface UploadedVideo extends UploadedFile {
 interface UploadedAudio extends UploadedFile {
   duration?: number
 }
+```
+
+**📋 5. MediaLibrary Modal (Browse + Upload):**
+
+```typescript
+import { MediaLibrary } from '@/core/components/media/MediaLibrary'
+
+// Opens a full-screen modal to browse, search, filter, and upload media
+<MediaLibrary
+  isOpen={isOpen}
+  onClose={() => setIsOpen(false)}
+  onSelect={(media) => {
+    // media.url - The file URL
+    // media.filename, media.title, media.alt, etc.
+    console.log('Selected:', media.url)
+  }}
+  mode="single"           // or "multiple"
+  allowedTypes={['image']} // optional filter
+  maxSelections={5}        // optional limit (multiple mode)
+/>
+```
+
+**📋 6. MediaSelector (Entity Form Field):**
+
+```typescript
+import { MediaSelector } from '@/core/components/media/MediaSelector'
+
+// Compact form field that opens MediaLibrary on click
+<MediaSelector
+  value={mediaId}
+  onChange={(id) => setMediaId(id)}
+  type="image"
+/>
 ```
 
 ```
@@ -555,7 +619,7 @@ The upload endpoint validates:
 ✅ TUTORIAL STORY!
 
 You've learned:
-• Media system architecture (Vercel Blob)
+• Media system architecture (Media Library + Vercel Blob)
 • Environment configuration
 • Using upload components
 • Adding file fields to entities
@@ -679,3 +743,4 @@ export function ProductForm() {
 | `/how-to:create-entity` | Create entities with file fields |
 | `/how-to:create-api` | Custom API endpoints |
 | `/how-to:add-metadata` | Add metadata to uploaded files |
+| `/how-to:create-block` | Create blocks with media-library fields |
