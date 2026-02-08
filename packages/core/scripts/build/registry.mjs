@@ -41,7 +41,7 @@ import { log, verbose, setVerboseMode } from '../utils/index.mjs'
 import { getBasename } from '../utils/paths.mjs'
 
 // Import configuration
-import { getConfig } from './registry/config.mjs'
+import { getConfig, validateEnvironment } from './registry/config.mjs'
 
 // Import discovery modules (migrated from this file)
 import { discoverParentChildRelations } from './registry/discovery/parent-child.mjs'
@@ -150,6 +150,23 @@ export async function buildRegistries(projectRoot = null) {
 
   // Initialize verbose mode from config
   setVerboseMode(CONFIG.verbose)
+
+  // Validate required environment variables before proceeding
+  const validation = validateEnvironment(CONFIG)
+  if (!validation.valid) {
+    console.error('')
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    console.error('❌ NextSpark Environment Configuration Error')
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    console.error('')
+    for (const error of validation.errors) {
+      console.error(`   ${error}`)
+      console.error('')
+    }
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    console.error('')
+    process.exit(1)
+  }
 
   log('Building Unified Registry System', 'build')
   if (CONFIG.isNpmMode) {

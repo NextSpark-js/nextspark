@@ -1,11 +1,11 @@
 ---
 title: Scheduled Actions Overview
-description: Background task processing system for deferred and recurring operations
+description: Background task processing system for deferred, recurring, and lock-group-based operations
 ---
 
 # Scheduled Actions System
 
-The Scheduled Actions system provides a robust infrastructure for scheduling, processing, and managing background tasks. It supports one-time actions, recurring jobs, webhook delivery, and time-window deduplication.
+The Scheduled Actions system provides a robust infrastructure for scheduling, processing, and managing background tasks. It supports one-time actions, recurring jobs with fixed or rolling recurrence, lock-group-based sequential execution, time-window deduplication with advisory locks, and configurable retries with linear backoff.
 
 ## Core Concepts
 
@@ -13,33 +13,53 @@ The Scheduled Actions system provides a robust infrastructure for scheduling, pr
 
 Scheduled Actions are database-backed tasks that execute asynchronously via an external cron trigger. They're ideal for:
 
+- **Content Publishing:** Publish content to social media at scheduled times
+- **Token Refresh:** Proactively refresh OAuth tokens before they expire
 - **Webhook Delivery:** Send notifications to external systems on entity events
 - **Billing Operations:** Process subscription renewals, trial expirations
 - **Data Processing:** Batch operations, cleanup tasks
-- **Notifications:** Delayed emails, push notifications
 
 ### Architecture Overview
 
-```
-┌─────────────────┐     ┌───────────────────┐     ┌─────────────────┐
-│   Application   │────▶│  scheduled_actions │────▶│  Action Handler │
-│  (Hooks/API)    │     │      (table)       │     │   (Registry)    │
-└─────────────────┘     └───────────────────┘     └─────────────────┘
-                               ▲
-                               │
-                        ┌──────┴──────┐
-                        │ External    │
-                        │ Cron (1min) │
-                        └─────────────┘
+```text
++-------------------+          +----------------------------+
+|  Entity Hooks     |          |     Cron Endpoint          |
+|  (content status  +--------->|  1. initializeHandlers()   |
+|   changes)        | creates  |  2. processPendingActions() |
+|                   | actions  |  3. cleanupOldActions()     |
++-------------------+          +-------------+--------------+
+                                             |
+                                    External Cron (1 min)
+                                    x-cron-secret header
+                                             |
+                                             v
+                               +----------------------------+
+                               |      Processor             |
+                               |  - Fetch pending actions   |
+                               |  - SKIP LOCKED row locking |
+                               |  - Lock group enforcement  |
+                               |  - Execute with timeout    |
+                               |  - Retry / mark failed     |
+                               |  - Reschedule recurring    |
+                               +----------------------------+
+                                             |
+                                             v
+                               +----------------------------+
+                               |    Handler Registry        |
+                               |  (in-memory Map)           |
+                               +----------------------------+
 ```
 
-| Component | Purpose |
-|-----------|---------|
-| **Scheduler** | Creates actions in the database |
-| **Database Table** | Persists pending/completed actions |
-| **Processor** | Executes due actions via cron |
-| **Registry** | Maps action types to handlers |
-| **Handlers** | Implement actual business logic |
+### Module Architecture (6 Modules)
+
+| Module | File | Responsibility |
+|--------|------|----------------|
+| **Types** | `types.ts` | Type definitions (`ScheduledAction`, `ScheduleOptions`, `ProcessResult`, `RecurrenceType`) |
+| **Registry** | `registry.ts` | In-memory Map of action handlers. Register/lookup by action type |
+| **Scheduler** | `scheduler.ts` | Create actions in DB with deduplication via PostgreSQL advisory locks |
+| **Processor** | `processor.ts` | Fetch pending actions, execute handlers, manage retries, lock groups, and recurring |
+| **Cleanup** | `cleanup.ts` | Delete old completed/failed actions based on retention policy |
+| **Initializer** | `initializer.ts` | Load theme handlers from auto-generated `SCHEDULED_ACTIONS_REGISTRY` on startup |
 
 ### Why External Cron?
 
@@ -57,29 +77,48 @@ The `scheduled_actions` table stores all scheduled tasks:
 
 ```sql
 CREATE TABLE "scheduled_actions" (
-  "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  "actionType" VARCHAR(255) NOT NULL,       -- e.g., 'webhook:send'
-  "status" VARCHAR(50) DEFAULT 'pending',   -- pending, processing, completed, failed
-  "payload" JSONB NOT NULL,                 -- Action-specific data
-  "teamId" UUID REFERENCES "teams"("id"),   -- Optional team scope
-  "scheduledAt" TIMESTAMP DEFAULT NOW(),    -- When to execute
-  "startedAt" TIMESTAMP,                    -- Execution start
-  "completedAt" TIMESTAMP,                  -- Execution end
-  "errorMessage" TEXT,                      -- Error details if failed
-  "retryCount" INT DEFAULT 0,               -- Number of retries
-  "recurringInterval" VARCHAR(50),          -- For recurring: 'hourly', 'daily', cron
-  "createdAt" TIMESTAMP DEFAULT NOW(),
-  "updatedAt" TIMESTAMP DEFAULT NOW()
+  id                  TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  "teamId"            TEXT REFERENCES "teams"(id) ON DELETE CASCADE,
+  "actionType"        TEXT NOT NULL,
+  status              scheduled_action_status NOT NULL DEFAULT 'pending',
+  payload             JSONB DEFAULT '{}'::jsonb,
+  "scheduledAt"       TIMESTAMPTZ NOT NULL,
+  "startedAt"         TIMESTAMPTZ,
+  "completedAt"       TIMESTAMPTZ,
+  "errorMessage"      TEXT,
+  attempts            INTEGER NOT NULL DEFAULT 0,
+  "maxRetries"        INTEGER NOT NULL DEFAULT 3,
+  "recurringInterval" TEXT,
+  "recurrenceType"    TEXT,
+  "lockGroup"         TEXT,
+  "createdAt"         TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "updatedAt"         TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ```
 
+Key columns:
+
+| Column | Description |
+|--------|-------------|
+| `attempts` | Number of execution attempts so far |
+| `maxRetries` | Total attempts allowed before marking as failed (default: 3) |
+| `recurrenceType` | `'fixed'` (maintain schedule times) or `'rolling'` (interval from completion) |
+| `lockGroup` | Actions with same lockGroup execute sequentially |
+
 ### Status Lifecycle
 
+```text
+  PENDING -----> RUNNING -----> COMPLETED
+     ^              |                |
+     |              v                v
+     +--- RETRY  FAILED     (reschedule if
+     (linear           |       recurring)
+      backoff)         |
+                       v
+                [End of life]
 ```
-pending ─────▶ processing ─────▶ completed
-                  │
-                  └─────▶ failed (with errorMessage)
-```
+
+Status values: `pending`, `running`, `completed`, `failed`
 
 ## Key Features
 
@@ -88,14 +127,17 @@ pending ─────▶ processing ─────▶ completed
 Schedule an action to execute once at a specific time:
 
 ```typescript
-import { scheduleAction } from '@/core/lib/scheduled-actions'
+import { scheduleAction } from '@nextsparkjs/core/lib/scheduled-actions'
 
-await scheduleAction('email:send', {
-  to: 'user@example.com',
-  subject: 'Welcome!',
-  template: 'welcome'
+await scheduleAction('content:publish', {
+  contentId: 'content-123',
+  entityId: 'content-123',
+  entityType: 'contents'
 }, {
-  scheduledAt: new Date(Date.now() + 3600000) // 1 hour from now
+  scheduledAt: new Date('2026-03-01T10:00:00Z'),
+  teamId: 'team-456',
+  lockGroup: 'content:content-123',
+  maxRetries: 1
 })
 ```
 
@@ -104,25 +146,60 @@ await scheduleAction('email:send', {
 Schedule actions that repeat on a pattern:
 
 ```typescript
-import { scheduleRecurringAction } from '@/core/lib/scheduled-actions'
+import { scheduleRecurringAction } from '@nextsparkjs/core/lib/scheduled-actions'
 
-await scheduleRecurringAction('billing:check-renewals', {}, 'daily', {
-  scheduledAt: new Date('2024-01-01T00:00:00Z')
+await scheduleRecurringAction('social:refresh-tokens', {}, 'every-30-minutes', {
+  recurrenceType: 'rolling'
 })
 ```
 
 Supported intervals:
+- `every-30-minutes` - Every 30 minutes
 - `hourly` - Every hour
 - `daily` - Every day
 - `weekly` - Every week
-- Custom cron expressions (future)
 
-### 3. Time-Window Deduplication
+Recurrence types:
+- `fixed` (default) - Next run calculated from `scheduledAt` to prevent drift
+- `rolling` - Next run calculated from actual completion time
 
-Prevent duplicate actions within a configurable time window:
+### 3. Lock Groups
+
+Control parallel execution per resource:
 
 ```typescript
-// Config in app.config.ts
+// These run sequentially (same lockGroup)
+await scheduleAction('content:publish', payload1, { lockGroup: 'content:123' })
+await scheduleAction('content:publish', payload2, { lockGroup: 'content:123' })
+
+// This runs in parallel (different lockGroup)
+await scheduleAction('content:publish', payload3, { lockGroup: 'content:456' })
+
+// This runs in parallel with everything (no lockGroup)
+await scheduleAction('email:send', payload4)
+```
+
+The processor uses `SELECT FOR UPDATE SKIP LOCKED` with `PARTITION BY lockGroup` to ensure only one action per lockGroup is fetched per batch.
+
+### 4. Retry with Linear Backoff
+
+Failed actions are automatically retried based on `maxRetries`:
+
+```text
+maxRetries = 3 (default):
+  Attempt 1: immediate
+  Attempt 2: +5 minutes
+  Attempt 3: +10 minutes
+  After 3rd failure: marked as 'failed'
+
+Backoff formula: attempts * 5 minutes
+```
+
+### 5. Time-Window Deduplication
+
+Prevent duplicate actions within a configurable time window using PostgreSQL advisory locks:
+
+```typescript
 scheduledActions: {
   deduplication: {
     windowSeconds: 5,   // Duplicates within 5 seconds update existing action
@@ -130,178 +207,121 @@ scheduledActions: {
 }
 ```
 
-**Behavior:**
-- `windowSeconds > 0`: Duplicates update existing action's payload with latest data
-- `windowSeconds = 0`: Deduplication disabled (all actions created)
-
 See [Deduplication](./06-deduplication.md) for details.
 
-### 4. Multi-Endpoint Webhooks
+### 6. Configurable Timeout
 
-Route webhook events to different endpoints based on patterns:
+Each handler can define its own timeout:
 
 ```typescript
-webhooks: {
-  endpoints: {
-    tasks: {
-      envVar: 'WEBHOOK_URL_TASKS',
-      patterns: ['task:created', 'task:updated'],
-      enabled: true
-    },
-    billing: {
-      envVar: 'WEBHOOK_URL_BILLING',
-      patterns: ['subscription:*'],
-      enabled: true
-    }
-  }
-}
+registerScheduledAction('content:publish', handler, {
+  timeout: 60000  // 60 seconds
+})
 ```
 
-See [Webhooks](./04-webhooks.md) for details.
+Priority: handler timeout > config `defaultTimeout` > 30000ms fallback.
 
 ## Core/Theme Separation
 
 | Layer | Location | Responsibility |
 |-------|----------|----------------|
-| **Core** | `core/lib/scheduled-actions/` | Infrastructure (processor, scheduler, registry) |
-| **Theme** | `contents/themes/*/lib/scheduled-actions/` | Handlers (webhook, billing, custom) |
+| **Core** | `core/lib/scheduled-actions/` | Infrastructure (processor, scheduler, registry, initializer) |
+| **Theme** | `contents/themes/*/lib/scheduled-actions/` | Handlers, entity hooks, recurring action registration |
 
-**Core provides:**
-- Database schema and queries
-- Scheduler functions
-- Processor logic
-- Action registry
-- Type definitions
+**Core provides:** Database schema, scheduler functions, processor logic, action registry, type definitions, initializer.
 
-**Theme provides:**
-- Action handler implementations
-- Webhook routing configuration
-- Entity hook integrations
-- Custom action types
+**Theme provides:** Action handler implementations, entity hook integrations, recurring action definitions, custom action types.
 
 ## Registry System
 
-The Scheduled Actions system uses an auto-generated registry to map action types to their handlers.
-
-### Auto-Generated Registry
-
-The `SCHEDULED_ACTIONS_REGISTRY` is generated during the build process:
+The Scheduled Actions system uses an auto-generated registry (`SCHEDULED_ACTIONS_REGISTRY`) that maps themes to their handler registration modules:
 
 ```typescript
-// core/lib/registries/scheduled-actions-registry.ts (AUTO-GENERATED)
-export const SCHEDULED_ACTIONS_REGISTRY = {
-  actionTypes: ['webhook:send', 'billing:check-renewals'],
-  handlers: {
-    'webhook:send': () => import('@/contents/themes/default/lib/scheduled-actions/handlers/webhook'),
-    'billing:check-renewals': () => import('@/contents/themes/default/lib/scheduled-actions/handlers/billing'),
+// .nextspark/registries/scheduled-actions-registry.ts (AUTO-GENERATED)
+import * as myThemeScheduledActions from '@/contents/themes/my-theme/lib/scheduled-actions'
+
+export const SCHEDULED_ACTIONS_REGISTRY: Record<string, ScheduledActionsModule> = {
+  'my-theme': {
+    registerAllHandlers: myThemeScheduledActions.registerAllHandlers,
+    registerRecurringActions: myThemeScheduledActions.registerRecurringActions,
   }
 }
-```
-
-### When to Rebuild
-
-Run the registry generator after:
-
-- Adding a new action handler
-- Removing an existing handler
-- Renaming an action type
-
-```bash
-node core/scripts/build/registry.mjs
 ```
 
 ### Initialization Flow
 
-```
+```text
 Server Start
-    │
-    ▼
-instrumentation.ts::register() (Next.js 13+ Pattern)
-    │
-    ├── initializeScheduledActions()
-    │   │
-    │   ├── Guard: Skip if already initialized
-    │   │
-    │   ▼
-    │   registerAllHandlers() (theme/lib/scheduled-actions/index.ts)
-    │       │
-    │       ├── registerWebhookHandler()
-    │       ├── registerBillingHandler()
-    │       ├── registerContentHooks() → Entity event listeners
-    │       └── registerCustomHandlers()
-    │
-    └── initializeRecurringActions()
-        │
-        ├── Guard: Skip if already initialized
-        │
-        ▼
-        registerRecurringActions() (theme/lib/scheduled-actions/index.ts)
-            │
-            ├── Check DB for existing recurring actions
-            │
-            └── Create new recurring actions if needed
-                (e.g., token refresh every 30 minutes)
+    |
+    v
+instrumentation.ts::register()
+    |
+    +-- initializeScheduledActions()
+    |   |
+    |   +-- Guard: Skip if already initialized
+    |   |
+    |   +-- SCHEDULED_ACTIONS_REGISTRY[themeName].registerAllHandlers()
+    |       |
+    |       +-- registerContentPublishHandler()
+    |       +-- registerTokenRefreshHandler()
+    |       +-- registerContentHooks()
+    |
+    +-- initializeRecurringActions()
+        |
+        +-- Guard: Skip if already initialized
+        |
+        +-- SCHEDULED_ACTIONS_REGISTRY[themeName].registerRecurringActions()
+            |
+            +-- Check DB for existing recurring actions
+            +-- Create new ones if needed
 ```
 
-**Key Points:**
-- **✅ Use `instrumentation.ts`** - Official Next.js pattern for server startup code
-- Runs ONCE when server starts (not on every request)
-- Both initializers have guards to prevent double registration
-- Themes check DB before creating recurring actions (idempotent)
-- All handlers must be registered before processing starts
-
-**Example `instrumentation.ts`:**
-
-```typescript
-export async function register() {
-  if (process.env.NEXT_RUNTIME === 'nodejs') {
-    const {
-      initializeScheduledActions,
-      initializeRecurringActions,
-    } = await import('@nextsparkjs/core/lib/scheduled-actions')
-
-    initializeScheduledActions()
-    await initializeRecurringActions()
-  }
-}
-```
+The cron endpoint also calls `initializeScheduledActions()` as a safety net to re-register handlers after server restarts.
 
 ## Quick Start
 
 ### 1. Schedule an Action
 
 ```typescript
-import { scheduleAction } from '@/core/lib/scheduled-actions'
+import { scheduleAction } from '@nextsparkjs/core/lib/scheduled-actions'
 
-// Schedule a webhook
-await scheduleAction('webhook:send', {
-  eventType: 'task:created',
-  entityType: 'task',
-  entityId: 'task-123',
-  data: { title: 'New Task' }
-}, { teamId: 'team-456' })
+const actionId = await scheduleAction('my:action', {
+  key: 'value'
+}, {
+  scheduledAt: new Date(Date.now() + 3600000),
+  maxRetries: 3
+})
 ```
 
-### 2. Create a Custom Handler
+### 2. Create a Handler
 
 ```typescript
-// contents/themes/default/lib/scheduled-actions/handlers/my-handler.ts
-import { registerScheduledAction } from '@/core/lib/scheduled-actions'
+import { registerScheduledAction } from '@nextsparkjs/core/lib/scheduled-actions'
 
-registerScheduledAction('my-action', async (payload) => {
-  // Your logic here
+registerScheduledAction('my:action', async (payload, action) => {
+  // Your logic here. Throw to fail, return to succeed.
   console.log('Processing:', payload)
-  return { success: true }
+}, {
+  description: 'My custom action',
+  timeout: 30000
 })
 ```
 
 ### 3. Trigger Processing
 
 ```bash
-# External cron calls this endpoint every minute
-curl -X GET "https://yourapp.com/api/v1/cron/process" \
+curl -s "https://yourapp.com/api/v1/cron/process" \
   -H "x-cron-secret: YOUR_CRON_SECRET"
 ```
+
+## DevTools Monitoring
+
+Navigate to **DevTools > Acciones Programadas** (`/devtools/scheduled-actions`) to:
+
+- View all actions with status, attempts, timing, lock group
+- Filter by status and action type
+- Expand rows to see payload data and error messages
+- Manually execute pending actions or retry failed ones
 
 ## Next Steps
 
@@ -313,13 +333,11 @@ curl -X GET "https://yourapp.com/api/v1/cron/process" \
 
 ## Related Documentation
 
-- [Background Jobs](../10-backend/07-background-jobs.md) - Alternative job processing patterns
 - [API Authentication](../05-api/02-authentication.md) - Dual auth pattern
 - [Entity Hooks](../04-entities/08-hooks-and-lifecycle.md) - Entity lifecycle events
-- [Billing System](../19-billing/01-overview.md) - Subscription webhooks
 
 ---
 
-**Last Updated**: 2025-12-30
-**Version**: 1.0.0
+**Last Updated**: 2026-02-06
+**Version**: 2.0.0
 **Status**: Complete

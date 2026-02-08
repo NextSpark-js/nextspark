@@ -27,9 +27,7 @@ module.exports = {
     'tests/jest/lib/billing/enforcement.test.ts',
     // Config tests requiring runtime data
     'tests/jest/lib/config/roles-merge.test.ts',
-    // Scheduled actions tests requiring theme config
-    'tests/jest/lib/scheduled-actions/cleanup.test.ts',
-    'tests/jest/lib/scheduled-actions/processor.test.ts',
+    // (scheduled actions tests now mock config properly)
     // UI component tests with selector issues (preexisting)
     'tests/jest/components/ui/last-used-badge.test.tsx',
     // Pattern tests with async issues (preexisting)

@@ -13,8 +13,11 @@ import 'server-only'
 import { SCHEDULED_ACTIONS_REGISTRY } from '@nextsparkjs/registries/scheduled-actions-registry'
 
 // Guards to prevent multiple initializations
-let handlersInitialized = false
-let recurringInitialized = false
+// Stored on globalThis to survive HMR module reloads in dev mode
+const globalForInit = globalThis as typeof globalThis & {
+  __scheduledActionsHandlersInitialized?: boolean
+  __scheduledActionsRecurringInitialized?: boolean
+}
 
 /**
  * Get the active theme name from environment
@@ -37,7 +40,7 @@ function getActiveTheme(): string {
  * initializeScheduledActions()
  */
 export function initializeScheduledActions(): void {
-  if (handlersInitialized) {
+  if (globalForInit.__scheduledActionsHandlersInitialized) {
     console.log('[ScheduledActions] Handlers already initialized, skipping...')
     return
   }
@@ -48,7 +51,7 @@ export function initializeScheduledActions(): void {
   if (module) {
     console.log(`[ScheduledActions] Initializing handlers for theme: ${themeName}`)
     module.registerAllHandlers()
-    handlersInitialized = true
+    globalForInit.__scheduledActionsHandlersInitialized = true
     console.log(`[ScheduledActions] ✅ Handlers initialized successfully`)
   } else {
     console.warn(`[ScheduledActions] No handlers found for theme: ${themeName}`)
@@ -73,7 +76,7 @@ export function initializeScheduledActions(): void {
  * await initializeRecurringActions()
  */
 export async function initializeRecurringActions(): Promise<void> {
-  if (recurringInitialized) {
+  if (globalForInit.__scheduledActionsRecurringInitialized) {
     console.log('[ScheduledActions] Recurring actions already initialized, skipping...')
     return
   }
@@ -84,7 +87,7 @@ export async function initializeRecurringActions(): Promise<void> {
   if (module) {
     console.log(`[ScheduledActions] Initializing recurring actions for theme: ${themeName}`)
     await module.registerRecurringActions()
-    recurringInitialized = true
+    globalForInit.__scheduledActionsRecurringInitialized = true
     console.log(`[ScheduledActions] ✅ Recurring actions initialized successfully`)
   } else {
     console.warn(`[ScheduledActions] No recurring actions found for theme: ${themeName}`)

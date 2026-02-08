@@ -130,7 +130,8 @@ async function fetchAndLockPendingActions(batchSize: number): Promise<ScheduledA
     )
     SELECT id, "actionType", status, payload, "teamId", "scheduledAt",
            "startedAt", "completedAt", "errorMessage", attempts,
-           "recurringInterval", "lockGroup", "createdAt", "updatedAt"
+           "recurringInterval", "recurrenceType", "lockGroup", "maxRetries",
+           "createdAt", "updatedAt"
     FROM ranked_actions
     WHERE rn = 1 OR "lockGroup" IS NULL
     ORDER BY "scheduledAt" ASC
@@ -192,9 +193,9 @@ async function processWithConcurrencyLimit(
 
 /**
  * Execute a single action
- * Internal function that handles the full lifecycle of action execution
+ * Handles the full lifecycle of action execution
  */
-async function executeAction(action: ScheduledAction): Promise<void> {
+export async function executeAction(action: ScheduledAction): Promise<void> {
   const startTime = Date.now()
   const configDefaultTimeout = APP_CONFIG_MERGED.scheduledActions?.defaultTimeout ?? DEFAULT_TIMEOUT
 
@@ -235,7 +236,21 @@ async function executeAction(action: ScheduledAction): Promise<void> {
 
     console.error(`[ScheduledActions] Action ${action.id} failed after ${executionTime}ms:`, errorMessage)
 
-    await markActionFailed(action.id, errorMessage)
+    // Check if we should retry based on action's maxRetries setting
+    if (action.attempts < action.maxRetries) {
+      // Calculate retry delay with linear backoff: 5min, 10min, 15min...
+      // Note: action.attempts was incremented in markActionRunning, so we use attempts value directly
+      // After 1st attempt (attempts=1): 1*5 = 5min
+      // After 2nd attempt (attempts=2): 2*5 = 10min
+      const retryDelayMinutes = action.attempts * 5
+      console.log(`[ScheduledActions] Will retry action ${action.id} in ${retryDelayMinutes} minutes (attempt ${action.attempts}/${action.maxRetries})`)
+
+      await rescheduleFailedAction(action, errorMessage, retryDelayMinutes)
+    } else {
+      // Max retries reached
+      console.error(`[ScheduledActions] Max retries (${action.maxRetries}) reached for action ${action.id}`)
+      await markActionFailed(action.id, errorMessage)
+    }
 
     // Re-throw so caller can track failures
     throw error
@@ -305,19 +320,56 @@ async function markActionFailed(actionId: string, errorMessage: string): Promise
 }
 
 /**
+ * Reschedule a failed action for retry
+ * Resets the action to pending with a new scheduled time
+ * The attempts counter is preserved for the next execution
+ */
+async function rescheduleFailedAction(
+  action: ScheduledAction,
+  errorMessage: string,
+  delayMinutes: number
+): Promise<void> {
+  const nextAttemptTime = new Date(Date.now() + delayMinutes * 60 * 1000)
+
+  await mutateWithRLS(
+    `UPDATE "scheduled_actions"
+     SET status = 'pending',
+         "scheduledAt" = $2,
+         "errorMessage" = $3,
+         "startedAt" = NULL,
+         "completedAt" = NULL,
+         "updatedAt" = NOW()
+     WHERE id = $1`,
+    [action.id, nextAttemptTime, errorMessage],
+    null
+  )
+
+  console.log(`[ScheduledActions] Rescheduled action ${action.id} for ${nextAttemptTime.toISOString()}`)
+}
+
+/**
  * Reschedule a recurring action
- * Creates a new action for the next occurrence, preserving the lockGroup
+ * Creates a new action for the next occurrence, preserving the lockGroup and recurrenceType
  */
 async function rescheduleRecurringAction(action: ScheduledAction): Promise<void> {
   if (!action.recurringInterval) {
     return
   }
 
-  // Calculate next scheduled time based on interval
-  // Uses the original scheduledAt as base to prevent drift
-  const nextScheduledAt = calculateNextScheduledTime(action.recurringInterval, action.scheduledAt)
+  // Calculate next scheduled time based on recurrence type
+  let nextScheduledAt: Date
 
-  // Schedule the next occurrence (preserving lockGroup)
+  if (action.recurrenceType === 'rolling') {
+    // Rolling: Calculate from NOW (actual completion time)
+    // This ensures intervals are measured from when action finishes, not from scheduled time
+    nextScheduledAt = calculateNextScheduledTime(action.recurringInterval, new Date())
+  } else {
+    // Fixed (default): Calculate from original scheduledAt to prevent drift
+    // This maintains exact schedule times (e.g., daily at 12:00)
+    nextScheduledAt = calculateNextScheduledTime(action.recurringInterval, action.scheduledAt)
+  }
+
+  // Schedule the next occurrence (preserving all recurring settings)
   await scheduleAction(
     action.actionType,
     action.payload,
@@ -325,11 +377,15 @@ async function rescheduleRecurringAction(action: ScheduledAction): Promise<void>
       scheduledAt: nextScheduledAt,
       teamId: action.teamId ?? undefined,
       recurringInterval: action.recurringInterval ?? undefined,
+      recurrenceType: action.recurrenceType ?? undefined,
       lockGroup: action.lockGroup ?? undefined
     }
   )
 
-  console.log(`[ScheduledActions] Rescheduled recurring action ${action.actionType} for ${nextScheduledAt.toISOString()}`)
+  console.log(
+    `[ScheduledActions] Rescheduled recurring action ${action.actionType} ` +
+    `for ${nextScheduledAt.toISOString()} (type: ${action.recurrenceType || 'fixed'})`
+  )
 }
 
 /**

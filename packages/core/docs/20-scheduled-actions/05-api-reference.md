@@ -34,29 +34,15 @@ CRON_SECRET=your-secure-random-string-min-32-chars
 
 ```json
 {
-  "success": true,
   "processed": 3,
-  "results": [
-    {
-      "actionId": "uuid-1",
-      "actionType": "webhook:send",
-      "success": true,
-      "duration": 245
-    },
-    {
-      "actionId": "uuid-2",
-      "actionType": "billing:check-renewals",
-      "success": true,
-      "duration": 1230
-    },
+  "succeeded": 2,
+  "failed": 1,
+  "errors": [
     {
       "actionId": "uuid-3",
-      "actionType": "webhook:send",
-      "success": false,
-      "error": "Timeout after 30000ms"
+      "error": "Action webhook:send exceeded timeout of 30000ms"
     }
-  ],
-  "duration": 1520
+  ]
 }
 ```
 
@@ -64,10 +50,10 @@ CRON_SECRET=your-secure-random-string-min-32-chars
 
 ```json
 {
-  "success": true,
   "processed": 0,
-  "results": [],
-  "duration": 12
+  "succeeded": 0,
+  "failed": 0,
+  "errors": []
 }
 ```
 
@@ -82,11 +68,18 @@ CRON_SECRET=your-secure-random-string-min-32-chars
 
 #### Processing Logic
 
-1. Fetch up to `batchSize` pending actions where `scheduledAt <= NOW()`
-2. Mark each as `processing` (prevents duplicate execution)
-3. Execute handler for each action
-4. Update status to `completed` or `failed`
-5. For recurring actions, schedule next occurrence
+1. Call `initializeScheduledActions()` as safety net (re-registers handlers after server restarts)
+2. Fetch up to `batchSize` pending actions where `scheduledAt <= NOW()`
+3. Apply lock group enforcement: only one action per `lockGroup` in each batch
+4. Mark each as `running` (with `attempts` counter incremented)
+5. Execute handler with timeout protection
+6. On success: mark `completed`, reschedule if recurring
+7. On failure: if `attempts < maxRetries`, reschedule with linear backoff; otherwise mark `failed`
+8. Run `cleanupOldActions()` based on `retentionDays` config
+
+#### Handler Initialization Safety Net
+
+The cron endpoint calls `initializeScheduledActions()` before processing. This re-registers all theme handlers from the `SCHEDULED_ACTIONS_REGISTRY` if they were lost due to a server restart (common in serverless environments). The initializer has a guard to prevent double registration.
 
 #### Cron Service Setup
 
@@ -105,7 +98,7 @@ CRON_SECRET=your-secure-random-string-min-32-chars
 
 **External Service (e.g., cron-job.org):**
 
-```
+```text
 URL: https://yourapp.com/api/v1/cron/process
 Method: GET
 Headers: x-cron-secret: YOUR_SECRET
@@ -127,8 +120,8 @@ List scheduled actions with filtering.
 Requires API key with developer/superadmin role:
 
 ```bash
-curl "http://localhost:5173/api/v1/devtools/scheduled-actions" \
-  -H "Authorization: Bearer YOUR_API_KEY"
+curl "http://localhost:3000/api/v1/devtools/scheduled-actions" \
+  -H "x-api-key: YOUR_API_KEY"
 ```
 
 #### Query Parameters
@@ -144,15 +137,15 @@ curl "http://localhost:5173/api/v1/devtools/scheduled-actions" \
 
 ```bash
 # Get all pending actions
-curl "http://localhost:5173/api/v1/devtools/scheduled-actions?status=pending" \
+curl "http://localhost:3000/api/v1/devtools/scheduled-actions?status=pending" \
   -H "x-api-key: YOUR_API_KEY"
 
 # Get completed webhook actions
-curl "http://localhost:5173/api/v1/devtools/scheduled-actions?status=completed&action_type=webhook:send" \
+curl "http://localhost:3000/api/v1/devtools/scheduled-actions?status=completed&action_type=webhook:send" \
   -H "x-api-key: YOUR_API_KEY"
 
 # Get page 2 with 10 results
-curl "http://localhost:5173/api/v1/devtools/scheduled-actions?page=2&limit=10" \
+curl "http://localhost:3000/api/v1/devtools/scheduled-actions?page=2&limit=10" \
   -H "x-api-key: YOUR_API_KEY"
 ```
 
@@ -174,14 +167,17 @@ curl "http://localhost:5173/api/v1/devtools/scheduled-actions?page=2&limit=10" \
           "data": { "title": "New Task" }
         },
         "teamId": "team-uuid",
-        "scheduledAt": "2024-01-15T10:30:00Z",
+        "scheduledAt": "2026-01-15T10:30:00Z",
         "startedAt": null,
         "completedAt": null,
         "errorMessage": null,
         "attempts": 0,
+        "maxRetries": 3,
         "recurringInterval": null,
-        "createdAt": "2024-01-15T10:30:00Z",
-        "updatedAt": "2024-01-15T10:30:00Z"
+        "recurrenceType": null,
+        "lockGroup": null,
+        "createdAt": "2026-01-15T10:30:00Z",
+        "updatedAt": "2026-01-15T10:30:00Z"
       }
     ],
     "pagination": {
@@ -193,7 +189,8 @@ curl "http://localhost:5173/api/v1/devtools/scheduled-actions?page=2&limit=10" \
     "meta": {
       "registeredActionTypes": [
         "webhook:send",
-        "billing:check-renewals"
+        "content:publish",
+        "social:refresh-tokens"
       ]
     }
   }
@@ -207,8 +204,8 @@ curl "http://localhost:5173/api/v1/devtools/scheduled-actions?page=2&limit=10" \
 Get details of a specific action.
 
 ```bash
-curl "http://localhost:5173/api/v1/devtools/scheduled-actions/uuid-123" \
-  -H "Authorization: Bearer API_KEY"
+curl "http://localhost:3000/api/v1/devtools/scheduled-actions/uuid-123" \
+  -H "x-api-key: YOUR_API_KEY"
 ```
 
 #### Response
@@ -218,23 +215,25 @@ curl "http://localhost:5173/api/v1/devtools/scheduled-actions/uuid-123" \
   "success": true,
   "data": {
     "id": "uuid-123",
-    "actionType": "webhook:send",
+    "actionType": "content:publish",
     "status": "completed",
     "payload": {
-      "eventType": "task:created",
-      "entityType": "task",
-      "entityId": "task-uuid",
-      "data": { "title": "New Task" }
+      "contentId": "content-456",
+      "entityId": "content-456",
+      "entityType": "contents"
     },
     "teamId": "team-uuid",
-    "scheduledAt": "2024-01-15T10:30:00Z",
-    "startedAt": "2024-01-15T10:31:00Z",
-    "completedAt": "2024-01-15T10:31:01Z",
+    "scheduledAt": "2026-01-15T10:30:00Z",
+    "startedAt": "2026-01-15T10:31:00Z",
+    "completedAt": "2026-01-15T10:31:01Z",
     "errorMessage": null,
-    "retryCount": 0,
+    "attempts": 1,
+    "maxRetries": 3,
     "recurringInterval": null,
-    "createdAt": "2024-01-15T10:30:00Z",
-    "updatedAt": "2024-01-15T10:31:01Z"
+    "recurrenceType": null,
+    "lockGroup": "content:content-456",
+    "createdAt": "2026-01-15T10:30:00Z",
+    "updatedAt": "2026-01-15T10:31:01Z"
   }
 }
 ```
@@ -246,8 +245,8 @@ curl "http://localhost:5173/api/v1/devtools/scheduled-actions/uuid-123" \
 Manually create a scheduled action (for testing).
 
 ```bash
-curl -X POST "http://localhost:5173/api/v1/devtools/scheduled-actions" \
-  -H "Authorization: Bearer API_KEY" \
+curl -X POST "http://localhost:3000/api/v1/devtools/scheduled-actions" \
+  -H "x-api-key: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "actionType": "webhook:send",
@@ -258,7 +257,7 @@ curl -X POST "http://localhost:5173/api/v1/devtools/scheduled-actions" \
       "data": { "message": "Test webhook" }
     },
     "teamId": "team-uuid",
-    "scheduledAt": "2024-01-15T12:00:00Z"
+    "scheduledAt": "2026-01-15T12:00:00Z"
   }'
 ```
 
@@ -270,7 +269,10 @@ curl -X POST "http://localhost:5173/api/v1/devtools/scheduled-actions" \
 | `payload` | `object` | Yes | Action-specific data |
 | `teamId` | `string` | No | Team scope |
 | `scheduledAt` | `string` | No | ISO 8601 date (default: now) |
-| `recurringInterval` | `string` | No | For recurring: `hourly`, `daily`, etc. |
+| `recurringInterval` | `string` | No | For recurring: `every-30-minutes`, `hourly`, `daily`, `weekly` |
+| `maxRetries` | `number` | No | Max attempts (default: 3) |
+| `lockGroup` | `string` | No | Lock group for sequential execution |
+| `recurrenceType` | `string` | No | `fixed` or `rolling` (default: `fixed`) |
 
 #### Response
 
@@ -292,8 +294,8 @@ curl -X POST "http://localhost:5173/api/v1/devtools/scheduled-actions" \
 Retry a failed action.
 
 ```bash
-curl -X POST "http://localhost:5173/api/v1/devtools/scheduled-actions/uuid-123/retry" \
-  -H "Authorization: Bearer API_KEY"
+curl -X POST "http://localhost:3000/api/v1/devtools/scheduled-actions/uuid-123/retry" \
+  -H "x-api-key: YOUR_API_KEY"
 ```
 
 #### Response
@@ -305,7 +307,7 @@ curl -X POST "http://localhost:5173/api/v1/devtools/scheduled-actions/uuid-123/r
   "data": {
     "id": "uuid-123",
     "status": "pending",
-    "retryCount": 1
+    "attempts": 1
   }
 }
 ```
@@ -317,8 +319,8 @@ curl -X POST "http://localhost:5173/api/v1/devtools/scheduled-actions/uuid-123/r
 Cancel/delete a pending action.
 
 ```bash
-curl -X DELETE "http://localhost:5173/api/v1/devtools/scheduled-actions/uuid-123" \
-  -H "Authorization: Bearer API_KEY"
+curl -X DELETE "http://localhost:3000/api/v1/devtools/scheduled-actions/uuid-123" \
+  -H "x-api-key: YOUR_API_KEY"
 ```
 
 #### Response
@@ -351,15 +353,20 @@ const actionId = await scheduleAction('webhook:send', {
   data: { title: 'New Task' }
 }, {
   teamId: 'team-456',
-  scheduledAt: new Date(Date.now() + 3600000)
+  scheduledAt: new Date(Date.now() + 3600000),
+  maxRetries: 5,
+  lockGroup: 'task:task-123'
 })
 
 // Schedule recurring action
 const recurringId = await scheduleRecurringAction(
-  'billing:check-renewals',
+  'social:refresh-tokens',
   {},
-  'daily',
-  { scheduledAt: new Date('2024-01-01T00:00:00Z') }
+  'every-30-minutes',
+  {
+    recurrenceType: 'rolling',
+    maxRetries: 3
+  }
 )
 
 // Cancel action
@@ -373,27 +380,42 @@ await cancelScheduledAction(actionId)
 function scheduleAction(
   actionType: string,
   payload: unknown,
-  options?: {
-    scheduledAt?: Date
-    teamId?: string
-    recurringInterval?: string
-  }
-): Promise<string | null>
+  options?: ScheduleOptions
+): Promise<string>
 
-// Recurring action (always returns ID)
+// Recurring action (always returns new ID, bypasses deduplication)
 function scheduleRecurringAction(
   actionType: string,
   payload: unknown,
   interval: string,
-  options?: {
-    scheduledAt?: Date
-    teamId?: string
-  }
+  options?: Omit<ScheduleOptions, 'recurringInterval'>
 ): Promise<string>
 
-// Cancel pending action
+// Cancel pending action (marks as 'failed' with cancellation message)
 function cancelScheduledAction(actionId: string): Promise<boolean>
 ```
+
+### ScheduleOptions
+
+```typescript
+interface ScheduleOptions {
+  scheduledAt?: Date                    // Default: now
+  teamId?: string                      // Optional team context
+  recurringInterval?: string           // 'every-30-minutes' | 'hourly' | 'daily' | 'weekly'
+  maxRetries?: number                  // Total attempts before failing (default: 3)
+  lockGroup?: string                   // Sequential execution key
+  recurrenceType?: 'fixed' | 'rolling' // How next run is calculated (default: 'fixed')
+}
+```
+
+### Supported Recurring Intervals
+
+| Interval | Duration |
+|----------|----------|
+| `every-30-minutes` | 30 minutes |
+| `hourly` | 1 hour |
+| `daily` | 24 hours |
+| `weekly` | 7 days |
 
 ---
 
@@ -423,6 +445,6 @@ The cron endpoint has special rate limiting:
 
 ---
 
-**Last Updated**: 2025-12-30
-**Version**: 1.0.0
+**Last Updated**: 2026-02-06
+**Version**: 2.0.0
 **Status**: Complete

@@ -292,6 +292,8 @@
     "loading": "Loading scheduled actions...",
     "empty": "No scheduled actions found",
     "emptyDescription": "Scheduled actions will appear here when they are created",
+    "failedNotification": "{count, plural, one {# action has failed} other {# actions have failed}} in the last 24 hours",
+    "viewFailed": "View Failed",
     "filters": {
       "status": "Status",
       "allStatuses": "All Statuses",
@@ -303,11 +305,25 @@
     "table": {
       "type": "Type",
       "status": "Status",
+      "attempts": "Attempts",
       "scheduledAt": "Scheduled At",
+      "startedAt": "Started At",
+      "completedAt": "Completed At",
       "team": "Team",
       "payload": "Payload",
       "error": "Error",
+      "actions": "Actions",
       "noTeam": "Global"
+    },
+    "retry": {
+      "button": "Retry",
+      "success": "Action scheduled for retry",
+      "error": "Failed to retry action: {message}"
+    },
+    "run": {
+      "button": "Run Now",
+      "success": "Action executed successfully",
+      "error": "Failed to run action: {message}"
     },
     "status": {
       "pending": "Pending",

@@ -278,6 +278,8 @@
     "loading": "Carregando acoes agendadas...",
     "empty": "Nenhuma acao agendada encontrada",
     "emptyDescription": "As acoes agendadas aparecerao aqui quando forem criadas",
+    "failedNotification": "{count, plural, one {# acao falhou} other {# acoes falharam}} nas ultimas 24 horas",
+    "viewFailed": "Ver falhas",
     "filters": {
       "status": "Status",
       "allStatuses": "Todos os Status",
@@ -289,11 +291,25 @@
     "table": {
       "type": "Tipo",
       "status": "Status",
+      "attempts": "Tentativas",
       "scheduledAt": "Agendado Para",
+      "startedAt": "Iniciado",
+      "completedAt": "Concluido",
       "team": "Equipe",
       "payload": "Dados",
       "error": "Erro",
+      "actions": "Acoes",
       "noTeam": "Global"
+    },
+    "retry": {
+      "button": "Tentar novamente",
+      "success": "Acao agendada para nova tentativa",
+      "error": "Falha ao tentar novamente a acao: {message}"
+    },
+    "run": {
+      "button": "Executar agora",
+      "success": "Acao executada com sucesso",
+      "error": "Falha ao executar a acao: {message}"
     },
     "status": {
       "pending": "Pendente",

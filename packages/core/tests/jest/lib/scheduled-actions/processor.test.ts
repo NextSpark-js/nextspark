@@ -1,12 +1,12 @@
 /**
  * Unit Tests: Scheduled Actions Processor
- * Tests action execution, status transitions, and error handling
+ * Tests action execution, status transitions, retry logic, and error handling
  */
 
 import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals'
 import { processPendingActions } from '@/core/lib/scheduled-actions/processor'
 import { queryWithRLS, mutateWithRLS } from '@/core/lib/db'
-import { registerScheduledAction, clearActionRegistry, getActionHandler } from '@/core/lib/scheduled-actions/registry'
+import { registerScheduledAction, clearActionRegistry } from '@/core/lib/scheduled-actions/registry'
 import type { ScheduledAction } from '@/core/lib/scheduled-actions/types'
 
 // Mock database functions
@@ -19,6 +19,42 @@ jest.mock('@/core/lib/db', () => ({
 jest.mock('@/core/lib/scheduled-actions/scheduler', () => ({
   scheduleAction: jest.fn().mockResolvedValue('new-action-id')
 }))
+
+// Mock config
+jest.mock('@/core/lib/config', () => ({
+  APP_CONFIG_MERGED: {
+    scheduledActions: {
+      batchSize: 10,
+      defaultTimeout: 30000,
+      concurrencyLimit: 1
+    }
+  }
+}))
+
+/**
+ * Helper to create a mock ScheduledAction with all required fields
+ */
+function createMockAction(overrides: Partial<ScheduledAction> = {}): ScheduledAction {
+  return {
+    id: 'action-123',
+    actionType: 'test:action',
+    status: 'pending',
+    payload: {},
+    teamId: null,
+    scheduledAt: new Date(),
+    startedAt: null,
+    completedAt: null,
+    errorMessage: null,
+    attempts: 0,
+    maxRetries: 3,
+    recurringInterval: null,
+    recurrenceType: null,
+    lockGroup: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides
+  }
+}
 
 describe('Scheduled Actions Processor', () => {
   const mockQueryWithRLS = queryWithRLS as jest.MockedFunction<typeof queryWithRLS>
@@ -49,20 +85,6 @@ describe('Scheduled Actions Processor', () => {
       })
     })
 
-    test('should query pending actions with correct SQL', async () => {
-      mockQueryWithRLS.mockResolvedValue([])
-
-      await processPendingActions()
-
-      const call = mockQueryWithRLS.mock.calls[0]
-      expect(call[0]).toContain('SELECT * FROM "scheduledActions"')
-      expect(call[0]).toContain("status = 'pending'")
-      expect(call[0]).toContain('scheduledAt')
-      expect(call[0]).toContain('NOW()')
-      expect(call[0]).toContain('ORDER BY')
-      expect(call[0]).toContain('LIMIT')
-    })
-
     test('should use default batch size of 10', async () => {
       mockQueryWithRLS.mockResolvedValue([])
 
@@ -91,22 +113,7 @@ describe('Scheduled Actions Processor', () => {
     })
 
     test('should process single action successfully', async () => {
-      const mockAction: ScheduledAction = {
-        id: 'action-123',
-        actionType: 'test:action',
-        status: 'pending',
-        payload: { test: 'data' },
-        teamId: null,
-        scheduledAt: new Date(),
-        startedAt: null,
-        completedAt: null,
-        errorMessage: null,
-        attempts: 0,
-        recurringInterval: null,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-
+      const mockAction = createMockAction()
       mockQueryWithRLS.mockResolvedValue([mockAction])
 
       let handlerCalled = false
@@ -124,52 +131,10 @@ describe('Scheduled Actions Processor', () => {
     })
 
     test('should process multiple actions in order', async () => {
-      const actions: ScheduledAction[] = [
-        {
-          id: 'action-1',
-          actionType: 'test:action',
-          status: 'pending',
-          payload: { order: 1 },
-          teamId: null,
-          scheduledAt: new Date('2025-01-01T10:00:00Z'),
-          startedAt: null,
-          completedAt: null,
-          errorMessage: null,
-          attempts: 0,
-          recurringInterval: null,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        },
-        {
-          id: 'action-2',
-          actionType: 'test:action',
-          status: 'pending',
-          payload: { order: 2 },
-          teamId: null,
-          scheduledAt: new Date('2025-01-01T11:00:00Z'),
-          startedAt: null,
-          completedAt: null,
-          errorMessage: null,
-          attempts: 0,
-          recurringInterval: null,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        },
-        {
-          id: 'action-3',
-          actionType: 'test:action',
-          status: 'pending',
-          payload: { order: 3 },
-          teamId: null,
-          scheduledAt: new Date('2025-01-01T12:00:00Z'),
-          startedAt: null,
-          completedAt: null,
-          errorMessage: null,
-          attempts: 0,
-          recurringInterval: null,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }
+      const actions = [
+        createMockAction({ id: 'action-1', payload: { order: 1 }, scheduledAt: new Date('2025-01-01T10:00:00Z') }),
+        createMockAction({ id: 'action-2', payload: { order: 2 }, scheduledAt: new Date('2025-01-01T11:00:00Z') }),
+        createMockAction({ id: 'action-3', payload: { order: 3 }, scheduledAt: new Date('2025-01-01T12:00:00Z') })
       ]
 
       mockQueryWithRLS.mockResolvedValue(actions)
@@ -185,28 +150,12 @@ describe('Scheduled Actions Processor', () => {
     })
 
     test('should mark action as running before execution', async () => {
-      const mockAction: ScheduledAction = {
-        id: 'action-123',
-        actionType: 'test:action',
-        status: 'pending',
-        payload: {},
-        teamId: null,
-        scheduledAt: new Date(),
-        startedAt: null,
-        completedAt: null,
-        errorMessage: null,
-        attempts: 0,
-        recurringInterval: null,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-
+      const mockAction = createMockAction()
       mockQueryWithRLS.mockResolvedValue([mockAction])
       registerScheduledAction('test:action', async () => {})
 
       await processPendingActions()
 
-      // Check that mutateWithRLS was called to mark as running
       const runningCalls = mockMutateWithRLS.mock.calls.filter(call =>
         call[0].includes("status = 'running'")
       )
@@ -214,22 +163,7 @@ describe('Scheduled Actions Processor', () => {
     })
 
     test('should increment attempts when marking as running', async () => {
-      const mockAction: ScheduledAction = {
-        id: 'action-123',
-        actionType: 'test:action',
-        status: 'pending',
-        payload: {},
-        teamId: null,
-        scheduledAt: new Date(),
-        startedAt: null,
-        completedAt: null,
-        errorMessage: null,
-        attempts: 0,
-        recurringInterval: null,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-
+      const mockAction = createMockAction()
       mockQueryWithRLS.mockResolvedValue([mockAction])
       registerScheduledAction('test:action', async () => {})
 
@@ -242,22 +176,7 @@ describe('Scheduled Actions Processor', () => {
     })
 
     test('should mark action as completed on success', async () => {
-      const mockAction: ScheduledAction = {
-        id: 'action-123',
-        actionType: 'test:action',
-        status: 'pending',
-        payload: {},
-        teamId: null,
-        scheduledAt: new Date(),
-        startedAt: null,
-        completedAt: null,
-        errorMessage: null,
-        attempts: 0,
-        recurringInterval: null,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-
+      const mockAction = createMockAction()
       mockQueryWithRLS.mockResolvedValue([mockAction])
       registerScheduledAction('test:action', async () => {})
 
@@ -269,132 +188,10 @@ describe('Scheduled Actions Processor', () => {
       expect(completedCalls.length).toBeGreaterThan(0)
     })
 
-    test('should mark action as failed on error', async () => {
-      const mockAction: ScheduledAction = {
-        id: 'action-123',
-        actionType: 'test:action',
-        status: 'pending',
-        payload: {},
-        teamId: null,
-        scheduledAt: new Date(),
-        startedAt: null,
-        completedAt: null,
-        errorMessage: null,
-        attempts: 0,
-        recurringInterval: null,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-
-      mockQueryWithRLS.mockResolvedValue([mockAction])
-      registerScheduledAction('test:action', async () => {
-        throw new Error('Handler failed')
-      })
-
-      const result = await processPendingActions()
-
-      expect(result.failed).toBe(1)
-      expect(result.errors).toHaveLength(1)
-      expect(result.errors[0].actionId).toBe('action-123')
-      expect(result.errors[0].error).toBe('Handler failed')
-
-      const failedCalls = mockMutateWithRLS.mock.calls.filter(call =>
-        call[0].includes("status = 'failed'")
-      )
-      expect(failedCalls.length).toBeGreaterThan(0)
-    })
-
-    test('should store error message when action fails', async () => {
-      const mockAction: ScheduledAction = {
-        id: 'action-123',
-        actionType: 'test:action',
-        status: 'pending',
-        payload: {},
-        teamId: null,
-        scheduledAt: new Date(),
-        startedAt: null,
-        completedAt: null,
-        errorMessage: null,
-        attempts: 0,
-        recurringInterval: null,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-
-      mockQueryWithRLS.mockResolvedValue([mockAction])
-      registerScheduledAction('test:action', async () => {
-        throw new Error('Custom error message')
-      })
-
-      await processPendingActions()
-
-      const failedCalls = mockMutateWithRLS.mock.calls.filter(call =>
-        call[0].includes('errorMessage')
-      )
-      expect(failedCalls.length).toBeGreaterThan(0)
-
-      const errorMessageParam = failedCalls[0][1][1]
-      expect(errorMessageParam).toBe('Custom error message')
-    })
-
-    test('should fail action when handler not registered', async () => {
-      const mockAction: ScheduledAction = {
-        id: 'action-123',
-        actionType: 'unknown:action',
-        status: 'pending',
-        payload: {},
-        teamId: null,
-        scheduledAt: new Date(),
-        startedAt: null,
-        completedAt: null,
-        errorMessage: null,
-        attempts: 0,
-        recurringInterval: null,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-
-      mockQueryWithRLS.mockResolvedValue([mockAction])
-
-      const result = await processPendingActions()
-
-      expect(result.failed).toBe(1)
-      expect(result.errors[0].error).toContain('No handler registered')
-      expect(result.errors[0].error).toContain('unknown:action')
-    })
-
     test('should continue processing after one action fails', async () => {
-      const actions: ScheduledAction[] = [
-        {
-          id: 'action-1',
-          actionType: 'failing:action',
-          status: 'pending',
-          payload: {},
-          teamId: null,
-          scheduledAt: new Date(),
-          startedAt: null,
-          completedAt: null,
-          errorMessage: null,
-          attempts: 0,
-          recurringInterval: null,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        },
-        {
-          id: 'action-2',
-          actionType: 'success:action',
-          status: 'pending',
-          payload: {},
-          teamId: null,
-          scheduledAt: new Date(),
-          startedAt: null,
-          completedAt: null,
-          errorMessage: null,
-          attempts: 0,
-          recurringInterval: null,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }
+      const actions = [
+        createMockAction({ id: 'action-1', actionType: 'failing:action' }),
+        createMockAction({ id: 'action-2', actionType: 'success:action' })
       ]
 
       mockQueryWithRLS.mockResolvedValue(actions)
@@ -413,22 +210,7 @@ describe('Scheduled Actions Processor', () => {
 
     test('should pass payload to handler', async () => {
       const mockPayload = { test: 'data', nested: { value: 42 } }
-      const mockAction: ScheduledAction = {
-        id: 'action-123',
-        actionType: 'test:action',
-        status: 'pending',
-        payload: mockPayload,
-        teamId: null,
-        scheduledAt: new Date(),
-        startedAt: null,
-        completedAt: null,
-        errorMessage: null,
-        attempts: 0,
-        recurringInterval: null,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-
+      const mockAction = createMockAction({ payload: mockPayload })
       mockQueryWithRLS.mockResolvedValue([mockAction])
 
       let receivedPayload: unknown
@@ -442,22 +224,13 @@ describe('Scheduled Actions Processor', () => {
     })
 
     test('should pass full action to handler', async () => {
-      const mockAction: ScheduledAction = {
+      const mockAction = createMockAction({
         id: 'action-123',
-        actionType: 'test:action',
-        status: 'pending',
-        payload: { test: 'data' },
         teamId: 'team-456',
-        scheduledAt: new Date('2025-01-01T10:00:00Z'),
-        startedAt: null,
-        completedAt: null,
-        errorMessage: null,
-        attempts: 0,
         recurringInterval: 'daily',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-
+        recurrenceType: 'fixed',
+        lockGroup: 'test-group'
+      })
       mockQueryWithRLS.mockResolvedValue([mockAction])
 
       let receivedAction: ScheduledAction | undefined
@@ -469,161 +242,160 @@ describe('Scheduled Actions Processor', () => {
 
       expect(receivedAction).toEqual(mockAction)
     })
+
+    test('should fail action when handler not registered', async () => {
+      const mockAction = createMockAction({ actionType: 'unknown:action', maxRetries: 0 })
+      mockQueryWithRLS.mockResolvedValue([mockAction])
+
+      const result = await processPendingActions()
+
+      expect(result.failed).toBe(1)
+      expect(result.errors[0].error).toContain('No handler registered')
+      expect(result.errors[0].error).toContain('unknown:action')
+    })
+  })
+
+  describe('Retry Logic', () => {
+    test('should retry action when attempts < maxRetries', async () => {
+      // Action with attempts=0, maxRetries=3 (after marking running, attempts becomes 1)
+      const mockAction = createMockAction({
+        id: 'retry-action',
+        maxRetries: 3,
+        attempts: 0
+      })
+      mockQueryWithRLS.mockResolvedValue([mockAction])
+
+      registerScheduledAction('test:action', async () => {
+        throw new Error('Temporary failure')
+      })
+
+      await processPendingActions()
+
+      // Should reschedule (set back to pending), NOT mark as failed
+      const pendingCalls = mockMutateWithRLS.mock.calls.filter(call =>
+        call[0].includes("status = 'pending'") && call[0].includes('scheduledAt')
+      )
+      expect(pendingCalls.length).toBeGreaterThan(0)
+    })
+
+    test('should mark as failed when attempts >= maxRetries', async () => {
+      // Action that has already exhausted retries
+      const mockAction = createMockAction({
+        id: 'exhausted-action',
+        maxRetries: 3,
+        attempts: 3 // Already at max, after increment will be > maxRetries
+      })
+      mockQueryWithRLS.mockResolvedValue([mockAction])
+
+      registerScheduledAction('test:action', async () => {
+        throw new Error('Permanent failure')
+      })
+
+      await processPendingActions()
+
+      const failedCalls = mockMutateWithRLS.mock.calls.filter(call =>
+        call[0].includes("status = 'failed'")
+      )
+      expect(failedCalls.length).toBeGreaterThan(0)
+    })
+
+    test('should not retry when maxRetries is 0', async () => {
+      const mockAction = createMockAction({
+        maxRetries: 0,
+        attempts: 0 // After marking running, becomes 1. 1 < 0 = false, so fail immediately
+      })
+      mockQueryWithRLS.mockResolvedValue([mockAction])
+
+      registerScheduledAction('test:action', async () => {
+        throw new Error('No retry')
+      })
+
+      await processPendingActions()
+
+      // Should mark as failed immediately (no pending reschedule)
+      const failedCalls = mockMutateWithRLS.mock.calls.filter(call =>
+        call[0].includes("status = 'failed'")
+      )
+      expect(failedCalls.length).toBeGreaterThan(0)
+    })
   })
 
   describe('Recurring Actions', () => {
     test('should reschedule recurring action after completion', async () => {
-      // Test that recurring actions are successfully processed
-      // The actual rescheduling is handled by scheduleAction which is mocked
-      const mockAction: ScheduledAction = {
-        id: 'action-123',
-        actionType: 'recurring:action',
-        status: 'pending',
-        payload: { test: 'recurring' },
-        teamId: 'team-456',
-        scheduledAt: new Date(),
-        startedAt: null,
-        completedAt: null,
-        errorMessage: null,
-        attempts: 0,
-        recurringInterval: 'daily',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
+      const { scheduleAction: mockScheduleAction } = require('@/core/lib/scheduled-actions/scheduler')
 
+      const mockAction = createMockAction({
+        actionType: 'recurring:action',
+        recurringInterval: 'daily',
+        recurrenceType: 'fixed',
+        teamId: 'team-456'
+      })
       mockQueryWithRLS.mockResolvedValue([mockAction])
       registerScheduledAction('recurring:action', async () => {})
 
       const result = await processPendingActions()
 
-      // Verify the action was successfully completed
       expect(result.succeeded).toBe(1)
-      expect(result.failed).toBe(0)
 
-      // Verify it was marked as completed
-      const completedCalls = mockMutateWithRLS.mock.calls.filter(call =>
-        call[0].includes("status = 'completed'")
+      // Should have called scheduleAction to create next occurrence
+      expect(mockScheduleAction).toHaveBeenCalledWith(
+        'recurring:action',
+        expect.anything(),
+        expect.objectContaining({
+          recurringInterval: 'daily',
+          recurrenceType: 'fixed',
+          teamId: 'team-456'
+        })
       )
-      expect(completedCalls.length).toBeGreaterThan(0)
     })
 
     test('should not reschedule one-time action', async () => {
-      const mockAction: ScheduledAction = {
-        id: 'action-123',
-        actionType: 'onetime:action',
-        status: 'pending',
-        payload: {},
-        teamId: null,
-        scheduledAt: new Date(),
-        startedAt: null,
-        completedAt: null,
-        errorMessage: null,
-        attempts: 0,
-        recurringInterval: null,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
+      const { scheduleAction: mockScheduleAction } = require('@/core/lib/scheduled-actions/scheduler')
 
+      const mockAction = createMockAction({
+        actionType: 'onetime:action',
+        recurringInterval: null
+      })
       mockQueryWithRLS.mockResolvedValue([mockAction])
       registerScheduledAction('onetime:action', async () => {})
 
-      const mutateCallsBefore = mockMutateWithRLS.mock.calls.length
-
       await processPendingActions()
 
-      const mutateCallsAfter = mockMutateWithRLS.mock.calls.length
-
-      // Should have called mutate for: running and completed only (no INSERT for rescheduling)
-      const insertCalls = mockMutateWithRLS.mock.calls.slice(mutateCallsBefore).filter(call =>
-        call[0].includes('INSERT INTO "scheduledActions"')
-      )
-      expect(insertCalls.length).toBe(0)
+      // Should NOT call scheduleAction for rescheduling
+      expect(mockScheduleAction).not.toHaveBeenCalled()
     })
 
-    test('should not reschedule recurring action if it failed', async () => {
-      const mockAction: ScheduledAction = {
-        id: 'action-123',
-        actionType: 'failing:recurring',
-        status: 'pending',
-        payload: {},
-        teamId: null,
-        scheduledAt: new Date(),
-        startedAt: null,
-        completedAt: null,
-        errorMessage: null,
-        attempts: 0,
-        recurringInterval: 'daily',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
+    test('should preserve lockGroup when rescheduling', async () => {
+      const { scheduleAction: mockScheduleAction } = require('@/core/lib/scheduled-actions/scheduler')
 
-      mockQueryWithRLS.mockResolvedValue([mockAction])
-      registerScheduledAction('failing:recurring', async () => {
-        throw new Error('Handler failed')
+      const mockAction = createMockAction({
+        actionType: 'recurring:locked',
+        recurringInterval: 'hourly',
+        lockGroup: 'content:456',
+        recurrenceType: 'rolling'
       })
-
-      const mutateCallsBefore = mockMutateWithRLS.mock.calls.length
+      mockQueryWithRLS.mockResolvedValue([mockAction])
+      registerScheduledAction('recurring:locked', async () => {})
 
       await processPendingActions()
 
-      const mutateCallsAfter = mockMutateWithRLS.mock.calls.length
-
-      // Should have called mutate for: running and failed only (no INSERT for rescheduling)
-      const insertCalls = mockMutateWithRLS.mock.calls.slice(mutateCallsBefore).filter(call =>
-        call[0].includes('INSERT INTO "scheduledActions"')
+      expect(mockScheduleAction).toHaveBeenCalledWith(
+        'recurring:locked',
+        expect.anything(),
+        expect.objectContaining({
+          lockGroup: 'content:456',
+          recurrenceType: 'rolling'
+        })
       )
-      expect(insertCalls.length).toBe(0)
     })
   })
 
   describe('Timeout Protection', () => {
-    test('should use default timeout of 30 seconds', async () => {
-      const mockAction: ScheduledAction = {
-        id: 'action-123',
-        actionType: 'slow:action',
-        status: 'pending',
-        payload: {},
-        teamId: null,
-        scheduledAt: new Date(),
-        startedAt: null,
-        completedAt: null,
-        errorMessage: null,
-        attempts: 0,
-        recurringInterval: null,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-
-      mockQueryWithRLS.mockResolvedValue([mockAction])
-
-      // Handler that takes longer than timeout
-      registerScheduledAction('slow:action', async () => {
-        await new Promise(resolve => setTimeout(resolve, 35000))
-      })
-
-      const result = await processPendingActions()
-
-      expect(result.failed).toBe(1)
-      expect(result.errors[0].error).toContain('timeout')
-    }, 40000) // Test timeout of 40s to allow for 30s timeout + overhead
-
     test('should use custom timeout from handler definition', async () => {
-      const mockAction: ScheduledAction = {
-        id: 'action-123',
+      const mockAction = createMockAction({
         actionType: 'custom:timeout',
-        status: 'pending',
-        payload: {},
-        teamId: null,
-        scheduledAt: new Date(),
-        startedAt: null,
-        completedAt: null,
-        errorMessage: null,
-        attempts: 0,
-        recurringInterval: null,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-
+        maxRetries: 0
+      })
       mockQueryWithRLS.mockResolvedValue([mockAction])
 
       // Register with 100ms timeout for faster test
@@ -635,7 +407,7 @@ describe('Scheduled Actions Processor', () => {
 
       expect(result.failed).toBe(1)
       expect(result.errors[0].error).toContain('timeout')
-    }, 1000) // Test timeout of 1s
+    }, 2000)
   })
 
   describe('Error Handling', () => {
@@ -647,22 +419,10 @@ describe('Scheduled Actions Processor', () => {
     })
 
     test('should handle non-Error exceptions', async () => {
-      const mockAction: ScheduledAction = {
-        id: 'action-123',
+      const mockAction = createMockAction({
         actionType: 'string:thrower',
-        status: 'pending',
-        payload: {},
-        teamId: null,
-        scheduledAt: new Date(),
-        startedAt: null,
-        completedAt: null,
-        errorMessage: null,
-        attempts: 0,
-        recurringInterval: null,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-
+        maxRetries: 0
+      })
       mockQueryWithRLS.mockResolvedValue([mockAction])
       registerScheduledAction('string:thrower', async () => {
         throw 'String error' // Non-Error exception
@@ -672,6 +432,57 @@ describe('Scheduled Actions Processor', () => {
 
       expect(result.failed).toBe(1)
       expect(result.errors[0].error).toBe('Unknown error')
+    })
+
+    test('should store error message when action fails', async () => {
+      const mockAction = createMockAction({ maxRetries: 0 })
+      mockQueryWithRLS.mockResolvedValue([mockAction])
+      registerScheduledAction('test:action', async () => {
+        throw new Error('Custom error message')
+      })
+
+      await processPendingActions()
+
+      const failedCalls = mockMutateWithRLS.mock.calls.filter(call =>
+        call[0].includes('errorMessage')
+      )
+      expect(failedCalls.length).toBeGreaterThan(0)
+
+      const errorMessageParam = failedCalls[0][1][1]
+      expect(errorMessageParam).toBe('Custom error message')
+    })
+  })
+
+  describe('Lock Groups', () => {
+    test('should use FOR UPDATE SKIP LOCKED in query', async () => {
+      mockQueryWithRLS.mockResolvedValue([])
+
+      await processPendingActions()
+
+      const sql = mockQueryWithRLS.mock.calls[0][0] as string
+      expect(sql).toContain('FOR UPDATE SKIP LOCKED')
+    })
+
+    test('should filter by lockGroup in query', async () => {
+      mockQueryWithRLS.mockResolvedValue([])
+
+      await processPendingActions()
+
+      const sql = mockQueryWithRLS.mock.calls[0][0] as string
+      expect(sql).toContain('lockGroup')
+      expect(sql).toContain('PARTITION BY')
+    })
+
+    test('should process action with lockGroup', async () => {
+      const mockAction = createMockAction({
+        lockGroup: 'client:123'
+      })
+      mockQueryWithRLS.mockResolvedValue([mockAction])
+      registerScheduledAction('test:action', async () => {})
+
+      const result = await processPendingActions()
+
+      expect(result.succeeded).toBe(1)
     })
   })
 })

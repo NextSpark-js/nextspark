@@ -291,12 +291,28 @@
     "table": {
       "type": "Tipo",
       "status": "Estado",
+      "attempts": "Intentos",
       "scheduledAt": "Programado Para",
+      "startedAt": "Iniciado",
+      "completedAt": "Completado",
       "team": "Equipo",
       "payload": "Datos",
       "error": "Error",
+      "actions": "Acciones",
       "noTeam": "Global"
     },
+    "retry": {
+      "button": "Reintentar",
+      "success": "Acción programada para reintentar",
+      "error": "Error al reintentar acción: {message}"
+    },
+    "run": {
+      "button": "Ejecutar",
+      "success": "Acción ejecutada exitosamente",
+      "error": "Error al ejecutar acción: {message}"
+    },
+    "failedNotification": "{count, plural, one {# acción ha fallado} other {# acciones han fallado}} en las últimas 24 horas",
+    "viewFailed": "Ver Fallidas",
     "status": {
       "pending": "Pendiente",
       "running": "Ejecutando",

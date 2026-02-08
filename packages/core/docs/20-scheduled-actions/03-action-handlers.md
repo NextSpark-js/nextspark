@@ -19,12 +19,10 @@ export function registerMyAction() {
   registerScheduledAction('my-action:type', async (payload) => {
     // Your logic here
     console.log('Processing:', payload)
-
-    // Return result
-    return {
-      success: true,
-      message: 'Action completed'
-    }
+    // Return nothing on success. Throw to fail.
+  }, {
+    description: 'My custom action',
+    timeout: 30000  // 30 seconds (optional)
   })
 }
 ```
@@ -32,27 +30,49 @@ export function registerMyAction() {
 ### Handler Function Signature
 
 ```typescript
-type ActionHandler = (
+type ScheduledActionHandler = (
   payload: unknown,
   action: ScheduledAction
-) => Promise<ActionResult>
+) => Promise<void>
+```
 
-interface ActionResult {
-  success: boolean
-  message?: string
-  data?: unknown
-}
+Handlers return `Promise<void>`. On success, simply return. On failure, **throw an error** — the processor will catch it and handle retries automatically.
 
+### ScheduledAction Interface
+
+The `action` parameter gives access to the full database record:
+
+```typescript
 interface ScheduledAction {
   id: string
   actionType: string
-  status: string
+  status: ScheduledActionStatus  // 'pending' | 'running' | 'completed' | 'failed'
   payload: unknown
   teamId: string | null
   scheduledAt: Date
+  startedAt: Date | null
+  completedAt: Date | null
+  errorMessage: string | null
+  attempts: number              // Current attempt count
+  maxRetries: number            // Max attempts before marking failed (default: 3)
   recurringInterval: string | null
+  recurrenceType: 'fixed' | 'rolling' | null
+  lockGroup: string | null
+  createdAt: Date
+  updatedAt: Date
 }
 ```
+
+### Registration Options
+
+```typescript
+registerScheduledAction(name, handler, {
+  description?: string   // Human-readable description
+  timeout?: number       // Timeout in ms (overrides config defaultTimeout)
+})
+```
+
+**Timeout priority:** handler timeout > config `defaultTimeout` > 30000ms fallback.
 
 ## Built-in Handlers
 
@@ -63,13 +83,21 @@ The webhook handler sends HTTP POST requests to configured endpoints:
 ```typescript
 // core/lib/scheduled-actions/handlers/webhook.ts
 registerScheduledAction('webhook:send', async (payload) => {
-  const { eventType, entityType, entityId, data, webhookKey } = payload
+  const { eventType, entityType, entityId, data, webhookKey } = payload as WebhookPayload
 
-  // Find matching endpoint
+  // Find matching endpoint from config
   const endpoint = findMatchingEndpoint(eventType, webhookKey)
 
-  // Send webhook
-  const response = await fetch(endpoint.url, {
+  if (!endpoint) {
+    throw new Error(`No webhook endpoint found for event: ${eventType}`)
+  }
+
+  const url = process.env[endpoint.envVar]
+  if (!url) {
+    throw new Error(`Webhook URL not configured: ${endpoint.envVar}`)
+  }
+
+  const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -81,31 +109,10 @@ registerScheduledAction('webhook:send', async (payload) => {
     })
   })
 
-  return {
-    success: response.ok,
-    message: `Webhook sent with status ${response.status}`
+  if (!response.ok) {
+    throw new Error(`Webhook failed: ${response.status} ${response.statusText}`)
   }
-})
-```
-
-### Billing Handler
-
-Handles subscription lifecycle operations:
-
-```typescript
-// contents/themes/default/lib/scheduled-actions/handlers/billing.ts
-registerScheduledAction('billing:check-renewals', async () => {
-  const dueSubscriptions = await findDueRenewals()
-
-  for (const sub of dueSubscriptions) {
-    await processRenewal(sub)
-  }
-
-  return {
-    success: true,
-    data: { processed: dueSubscriptions.length }
-  }
-})
+}, { description: 'Send webhook notification' })
 ```
 
 ## Creating Custom Handlers
@@ -116,34 +123,25 @@ registerScheduledAction('billing:check-renewals', async () => {
 // contents/themes/default/lib/scheduled-actions/handlers/email.ts
 import { registerScheduledAction } from '@/core/lib/scheduled-actions'
 
+interface EmailPayload {
+  to: string
+  subject: string
+  template: string
+  data: Record<string, unknown>
+}
+
 export function registerEmailHandler() {
   registerScheduledAction('email:send', async (payload, action) => {
-    const { to, subject, template, data } = payload as {
-      to: string
-      subject: string
-      template: string
-      data: Record<string, unknown>
-    }
+    const { to, subject, template, data } = payload as EmailPayload
 
-    try {
-      // Send email using your email service
-      await sendEmail({
-        to,
-        subject,
-        template,
-        data
-      })
+    // Send email using your email service
+    // Throw on failure — processor handles retries automatically
+    await sendEmail({ to, subject, template, data })
 
-      return {
-        success: true,
-        message: `Email sent to ${to}`
-      }
-    } catch (error) {
-      return {
-        success: false,
-        message: `Failed to send email: ${error.message}`
-      }
-    }
+    console.log(`[ScheduledActions] Email sent to ${to} (action: ${action.id})`)
+  }, {
+    description: 'Send email notification',
+    timeout: 15000  // 15 seconds
   })
 }
 ```
@@ -154,7 +152,6 @@ export function registerEmailHandler() {
 // contents/themes/default/lib/scheduled-actions/index.ts
 import { registerEmailHandler } from './handlers/email'
 import { registerWebhookAction } from './handlers/webhook'
-import { registerBillingAction } from './handlers/billing'
 
 /**
  * Register all handlers for this theme.
@@ -163,7 +160,6 @@ import { registerBillingAction } from './handlers/billing'
  */
 export function registerAllHandlers(): void {
   registerWebhookAction()
-  registerBillingAction()
   registerEmailHandler()  // Add your handler
 }
 ```
@@ -184,41 +180,45 @@ await scheduleAction('email:send', {
   data: { name: 'John' }
 })
 
-// Delayed
+// Delayed with options
 await scheduleAction('email:send', {
   to: 'user@example.com',
   subject: 'Reminder',
   template: 'reminder',
   data: { taskName: 'Complete profile' }
 }, {
-  scheduledAt: new Date(Date.now() + 86400000) // 24 hours
+  scheduledAt: new Date(Date.now() + 86400000), // 24 hours
+  maxRetries: 5,                                // 5 total attempts
+  lockGroup: 'email:user@example.com'           // Sequential per recipient
 })
 ```
 
 ## Action Registry
 
-The registry maps action types to handlers:
+The registry maps action types to handler definitions:
 
 ```typescript
 // core/lib/scheduled-actions/registry.ts
-const handlers = new Map<string, ActionHandler>()
+const actionRegistry = new Map<string, ScheduledActionDefinition>()
 
-export function registerScheduledAction(actionType: string, handler: ActionHandler) {
-  if (handlers.has(actionType)) {
-    console.warn(`Handler for '${actionType}' already registered`)
-    return
+export function registerScheduledAction(
+  name: string,
+  handler: ScheduledActionHandler,
+  options?: { description?: string; timeout?: number }
+): void {
+  if (actionRegistry.has(name)) {
+    console.warn(`[ScheduledActions] Action '${name}' is already registered. Overwriting.`)
   }
-  handlers.set(actionType, handler)
+  actionRegistry.set(name, { name, handler, ...options })
 }
 
-export function getHandler(actionType: string): ActionHandler | undefined {
-  return handlers.get(actionType)
-}
-
-export function listHandlers(): string[] {
-  return Array.from(handlers.keys())
-}
+export function getActionHandler(name: string): ScheduledActionDefinition | undefined
+export function getAllRegisteredActions(): string[]
+export function isActionRegistered(name: string): boolean
+export function clearActionRegistry(): void  // For testing
 ```
+
+**Important:** Duplicate registrations **overwrite** the existing handler (with a warning). This is intentional — it allows the cron endpoint's safety net to re-register handlers after server restarts without issues.
 
 ## Integrating with Entity Hooks
 
@@ -264,52 +264,63 @@ export function registerEntityWebhookHooks() {
 
 ## Error Handling
 
-### Handler Errors
+### Throw to Fail
+
+Handlers signal failure by **throwing an error**. The processor catches it and manages the retry lifecycle:
 
 ```typescript
 registerScheduledAction('risky:action', async (payload) => {
-  try {
-    const result = await performRiskyOperation(payload)
-    return { success: true, data: result }
-  } catch (error) {
-    // Log for debugging
-    console.error('[ScheduledActions] risky:action failed:', error)
+  const result = await performRiskyOperation(payload)
 
-    // Return failure (action will be marked as 'failed')
-    return {
-      success: false,
-      message: error instanceof Error ? error.message : 'Unknown error'
-    }
+  if (!result.ok) {
+    // Throwing triggers retry logic (if attempts < maxRetries)
+    throw new Error(`Operation failed: ${result.reason}`)
   }
+
+  // Returning without throwing = success
+}, { description: 'Risky operation with retries' })
+```
+
+### Automatic Retry with Linear Backoff
+
+The processor automatically retries failed actions based on `maxRetries`:
+
+```text
+maxRetries = 3 (default):
+  Attempt 1: immediate execution
+  Attempt 2: +5 minutes (if attempt 1 failed)
+  Attempt 3: +10 minutes (if attempt 2 failed)
+  After 3rd failure: marked as 'failed' permanently
+
+Backoff formula: attempts * 5 minutes
+```
+
+Configure retries when scheduling:
+
+```typescript
+// Critical operation: allow more retries
+await scheduleAction('payment:process', payload, {
+  maxRetries: 5  // 5 total attempts
+})
+
+// Fire-and-forget: no retries
+await scheduleAction('analytics:track', payload, {
+  maxRetries: 1  // 1 attempt only, fail immediately
 })
 ```
 
-### Retry Logic
+### Automatic Timeout Protection
 
-Failed actions can be retried by the processor if configured:
+The processor wraps every handler execution with a timeout. You do **not** need to implement timeout logic in your handler:
 
 ```typescript
-// The processor handles retries automatically
-// Actions with retryCount < maxRetries will be re-queued
-
-// Custom retry logic in handler
-registerScheduledAction('retryable:action', async (payload, action) => {
-  const maxAttempts = 3
-
-  if (action.retryCount >= maxAttempts) {
-    return {
-      success: false,
-      message: `Max retries (${maxAttempts}) exceeded`
-    }
-  }
-
-  try {
-    await performAction(payload)
-    return { success: true }
-  } catch (error) {
-    // Let processor retry
-    throw error
-  }
+// Handler timeout is set at registration time
+registerScheduledAction('slow:api-call', async (payload) => {
+  // If this takes longer than 60 seconds, the processor
+  // will abort it and throw a timeout error automatically
+  await callSlowExternalAPI(payload)
+}, {
+  timeout: 60000  // 60 seconds
 })
 ```
 
@@ -320,7 +331,7 @@ registerScheduledAction('retryable:action', async (payload, action) => {
 ```typescript
 // __tests__/handlers/email.test.ts
 import { registerEmailHandler } from '../handlers/email'
-import { getHandler } from '@/core/lib/scheduled-actions/registry'
+import { getActionHandler } from '@/core/lib/scheduled-actions/registry'
 
 describe('Email Handler', () => {
   beforeAll(() => {
@@ -328,16 +339,28 @@ describe('Email Handler', () => {
   })
 
   it('should send email successfully', async () => {
-    const handler = getHandler('email:send')
+    const actionDef = getActionHandler('email:send')
+    expect(actionDef).toBeDefined()
 
-    const result = await handler({
-      to: 'test@example.com',
-      subject: 'Test',
-      template: 'test',
-      data: {}
-    }, mockAction)
+    // Handler returns void on success (no throw = success)
+    await expect(
+      actionDef!.handler(
+        { to: 'test@example.com', subject: 'Test', template: 'test', data: {} },
+        mockAction
+      )
+    ).resolves.toBeUndefined()
+  })
 
-    expect(result.success).toBe(true)
+  it('should throw on failure', async () => {
+    const actionDef = getActionHandler('email:send')
+
+    // Handler throws on failure
+    await expect(
+      actionDef!.handler(
+        { to: 'invalid', subject: '', template: '', data: {} },
+        mockAction
+      )
+    ).rejects.toThrow()
   })
 })
 ```
@@ -345,17 +368,15 @@ describe('Email Handler', () => {
 ### Integration Testing
 
 ```typescript
-// Create action and process
+// Create action and process via cron endpoint
 await scheduleAction('email:send', payload)
 
-// Trigger processor
 const response = await fetch('/api/v1/cron/process', {
   headers: { 'x-cron-secret': CRON_SECRET }
 })
 
-// Verify action completed
-const actions = await getScheduledActions({ status: 'completed' })
-expect(actions).toHaveLength(1)
+const result = await response.json()
+expect(result.succeeded).toBeGreaterThan(0)
 ```
 
 ## Best Practices
@@ -363,23 +384,22 @@ expect(actions).toHaveLength(1)
 ### 1. Keep Handlers Idempotent
 
 ```typescript
-// ✅ Idempotent - can safely retry
+// Idempotent - safe to retry
 registerScheduledAction('order:process', async (payload) => {
-  const order = await getOrder(payload.orderId)
+  const order = await getOrder((payload as any).orderId)
 
   if (order.status === 'processed') {
-    return { success: true, message: 'Already processed' }
+    // Already done, return successfully
+    return
   }
 
   await processOrder(order)
-  return { success: true }
 })
 ```
 
 ### 2. Use Structured Payloads
 
 ```typescript
-// Define payload types
 interface EmailPayload {
   to: string
   subject: string
@@ -399,33 +419,27 @@ registerScheduledAction('email:send', async (payload) => {
 registerScheduledAction('important:action', async (payload, action) => {
   console.log(`[ScheduledActions] Processing ${action.id}`, {
     type: action.actionType,
-    scheduledAt: action.scheduledAt
+    attempt: action.attempts,
+    lockGroup: action.lockGroup
   })
 
-  const result = await process(payload)
+  await process(payload)
 
-  console.log(`[ScheduledActions] Completed ${action.id}`, {
-    success: result.success
-  })
-
-  return result
+  console.log(`[ScheduledActions] Completed ${action.id}`)
 })
 ```
 
-### 4. Set Reasonable Timeouts
+### 4. Use Lock Groups for Resource Safety
 
 ```typescript
-registerScheduledAction('slow:action', async (payload) => {
-  // Use AbortController for timeout
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 25000)
+// Prevent concurrent operations on the same content
+registerScheduledAction('content:publish', async (payload, action) => {
+  await publishContent((payload as any).contentId)
+})
 
-  try {
-    const result = await fetch(url, { signal: controller.signal })
-    return { success: true, data: await result.json() }
-  } finally {
-    clearTimeout(timeout)
-  }
+// When scheduling, set the lockGroup
+await scheduleAction('content:publish', { contentId: 'abc' }, {
+  lockGroup: 'content:abc'  // Sequential per content item
 })
 ```
 
@@ -438,6 +452,6 @@ registerScheduledAction('slow:action', async (payload) => {
 
 ---
 
-**Last Updated**: 2025-12-30
-**Version**: 1.0.0
+**Last Updated**: 2026-02-06
+**Version**: 2.0.0
 **Status**: Complete

@@ -21,6 +21,7 @@ export interface ScheduledActionsResponse {
     }
     meta: {
       registeredActionTypes: string[]
+      failedCount: number
     }
   }
 }

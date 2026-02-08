@@ -278,6 +278,8 @@
     "loading": "Chargement des actions programmees...",
     "empty": "Aucune action programmee trouvee",
     "emptyDescription": "Les actions programmees apparaitront ici lorsqu'elles seront creees",
+    "failedNotification": "{count, plural, one {# action a echoue} other {# actions ont echoue}} au cours des 24 dernieres heures",
+    "viewFailed": "Voir les echecs",
     "filters": {
       "status": "Statut",
       "allStatuses": "Tous les statuts",
@@ -289,11 +291,25 @@
     "table": {
       "type": "Type",
       "status": "Statut",
+      "attempts": "Tentatives",
       "scheduledAt": "Programme pour",
+      "startedAt": "Demarre",
+      "completedAt": "Termine",
       "team": "Equipe",
       "payload": "Donnees",
       "error": "Erreur",
+      "actions": "Actions",
       "noTeam": "Global"
+    },
+    "retry": {
+      "button": "Reessayer",
+      "success": "Action programmee pour reessai",
+      "error": "Echec du reessai de l'action: {message}"
+    },
+    "run": {
+      "button": "Executer maintenant",
+      "success": "Action executee avec succes",
+      "error": "Echec de l'execution de l'action: {message}"
     },
     "status": {
       "pending": "En attente",

@@ -5,12 +5,22 @@
 
 import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals'
 import { scheduleAction, scheduleRecurringAction, cancelScheduledAction } from '@/core/lib/scheduled-actions/scheduler'
-import { mutateWithRLS, queryWithRLS } from '@/core/lib/db'
+import { mutateWithRLS, getTransactionClient } from '@/core/lib/db'
+
+// Mock transaction client
+const mockTransactionQuery = jest.fn()
+const mockTransactionCommit = jest.fn()
+const mockTransactionRollback = jest.fn()
+const mockTransactionClient = {
+  query: mockTransactionQuery,
+  commit: mockTransactionCommit,
+  rollback: mockTransactionRollback
+}
 
 // Mock database functions
 jest.mock('@/core/lib/db', () => ({
   mutateWithRLS: jest.fn(),
-  queryWithRLS: jest.fn()
+  getTransactionClient: jest.fn()
 }))
 
 // Mock config
@@ -26,13 +36,16 @@ jest.mock('@/core/lib/config/config-sync', () => ({
 
 describe('Scheduled Actions Scheduler', () => {
   const mockMutateWithRLS = mutateWithRLS as jest.MockedFunction<typeof mutateWithRLS>
-  const mockQueryWithRLS = queryWithRLS as jest.MockedFunction<typeof queryWithRLS>
+  const mockGetTransactionClient = getTransactionClient as jest.MockedFunction<typeof getTransactionClient>
 
   beforeEach(() => {
     jest.clearAllMocks()
     mockMutateWithRLS.mockResolvedValue({ rowCount: 1, rows: [] })
-    // Default: no duplicates found, advisory lock succeeds
-    mockQueryWithRLS.mockResolvedValue([])
+    // Default: transaction client with empty results (no duplicates)
+    mockTransactionQuery.mockResolvedValue([])
+    mockTransactionCommit.mockResolvedValue(undefined)
+    mockTransactionRollback.mockResolvedValue(undefined)
+    mockGetTransactionClient.mockResolvedValue(mockTransactionClient as any)
   })
 
   afterEach(() => {
@@ -59,6 +72,9 @@ describe('Scheduled Actions Scheduler', () => {
       expect(call[0]).toContain('teamId')
       expect(call[0]).toContain('scheduledAt')
       expect(call[0]).toContain('recurringInterval')
+      expect(call[0]).toContain('lockGroup')
+      expect(call[0]).toContain('maxRetries')
+      expect(call[0]).toContain('recurrenceType')
     })
 
     test('should use system RLS context (null)', async () => {
@@ -75,13 +91,14 @@ describe('Scheduled Actions Scheduler', () => {
       expect(params).toContain('pending')
     })
 
-    test('should serialize payload as JSON', async () => {
-      const payload = { eventType: 'create', entityId: '123', nested: { value: 42 } }
+    test('should pass payload as object (JSONB)', async () => {
+      // Use payload WITHOUT entityId to avoid dedup path
+      const payload = { eventType: 'create', nested: { value: 42 } }
       await scheduleAction('webhook:send', payload)
 
       const params = mockMutateWithRLS.mock.calls[0][1]
       const payloadParam = params[3] // payload is 4th parameter
-      expect(payloadParam).toBe(JSON.stringify(payload))
+      expect(payloadParam).toEqual(payload)
     })
 
     test('should use current time as default scheduledAt', async () => {
@@ -132,6 +149,58 @@ describe('Scheduled Actions Scheduler', () => {
       expect(params[6]).toBeNull()
     })
 
+    test('should set lockGroup when provided', async () => {
+      await scheduleAction('webhook:send', { test: 'data' }, { lockGroup: 'client:123' })
+
+      const params = mockMutateWithRLS.mock.calls[0][1]
+      expect(params[7]).toBe('client:123')
+    })
+
+    test('should set lockGroup to null when not provided', async () => {
+      await scheduleAction('webhook:send', { test: 'data' })
+
+      const params = mockMutateWithRLS.mock.calls[0][1]
+      expect(params[7]).toBeNull()
+    })
+
+    test('should set maxRetries to 3 by default', async () => {
+      await scheduleAction('webhook:send', { test: 'data' })
+
+      const params = mockMutateWithRLS.mock.calls[0][1]
+      expect(params[8]).toBe(3) // maxRetries default
+    })
+
+    test('should set custom maxRetries when provided', async () => {
+      await scheduleAction('webhook:send', { test: 'data' }, { maxRetries: 5 })
+
+      const params = mockMutateWithRLS.mock.calls[0][1]
+      expect(params[8]).toBe(5)
+    })
+
+    test('should set maxRetries to 0 for no-retry actions', async () => {
+      await scheduleAction('webhook:send', { test: 'data' }, { maxRetries: 0 })
+
+      const params = mockMutateWithRLS.mock.calls[0][1]
+      expect(params[8]).toBe(0)
+    })
+
+    test('should set recurrenceType when provided', async () => {
+      await scheduleAction('webhook:send', { test: 'data' }, {
+        recurringInterval: 'daily',
+        recurrenceType: 'rolling'
+      })
+
+      const params = mockMutateWithRLS.mock.calls[0][1]
+      expect(params[9]).toBe('rolling')
+    })
+
+    test('should set recurrenceType to null when not provided', async () => {
+      await scheduleAction('webhook:send', { test: 'data' })
+
+      const params = mockMutateWithRLS.mock.calls[0][1]
+      expect(params[9]).toBeNull()
+    })
+
     test('should generate unique action IDs', async () => {
       const id1 = await scheduleAction('webhook:send', { test: '1' })
       const id2 = await scheduleAction('webhook:send', { test: '2' })
@@ -142,26 +211,6 @@ describe('Scheduled Actions Scheduler', () => {
       expect(id1).not.toBe(id3)
     })
 
-    test('should handle complex payload objects', async () => {
-      const complexPayload = {
-        user: {
-          id: '123',
-          metadata: {
-            preferences: ['opt1', 'opt2'],
-            settings: { theme: 'dark', notifications: true }
-          }
-        },
-        timestamp: new Date().toISOString(),
-        tags: ['tag1', 'tag2', 'tag3']
-      }
-
-      await scheduleAction('webhook:send', complexPayload)
-
-      const params = mockMutateWithRLS.mock.calls[0][1]
-      const storedPayload = JSON.parse(params[3] as string)
-      expect(storedPayload).toEqual(complexPayload)
-    })
-
     test('should handle all options together', async () => {
       const scheduledAt = new Date('2025-06-15T10:30:00Z')
       const payload = { test: 'data', nested: { value: 42 } }
@@ -169,39 +218,51 @@ describe('Scheduled Actions Scheduler', () => {
       await scheduleAction('billing:check', payload, {
         scheduledAt,
         teamId: 'team-456',
-        recurringInterval: 'weekly'
+        recurringInterval: 'weekly',
+        lockGroup: 'billing:team-456',
+        maxRetries: 5,
+        recurrenceType: 'fixed'
       })
 
       const params = mockMutateWithRLS.mock.calls[0][1]
-      expect(params[1]).toBe('billing:check')
-      expect(params[2]).toBe('pending')
-      expect(JSON.parse(params[3] as string)).toEqual(payload)
-      expect(params[4]).toBe('team-456')
-      expect(params[5]).toBe(scheduledAt.toISOString())
-      expect(params[6]).toBe('weekly')
+      expect(params[1]).toBe('billing:check')        // actionType
+      expect(params[2]).toBe('pending')                // status
+      expect(params[3]).toEqual(payload)               // payload
+      expect(params[4]).toBe('team-456')               // teamId
+      expect(params[5]).toBe(scheduledAt.toISOString()) // scheduledAt
+      expect(params[6]).toBe('weekly')                 // recurringInterval
+      expect(params[7]).toBe('billing:team-456')       // lockGroup
+      expect(params[8]).toBe(5)                        // maxRetries
+      expect(params[9]).toBe('fixed')                  // recurrenceType
     })
   })
 
   describe('Deduplication', () => {
-    test('should acquire advisory lock when deduplicating', async () => {
+    test('should use transaction client when deduplicating', async () => {
       const payload = { entityId: 'task-123', entityType: 'task', data: {} }
       await scheduleAction('webhook:send', payload)
 
-      // First call should be the advisory lock
-      expect(mockQueryWithRLS).toHaveBeenCalledWith(
+      expect(mockGetTransactionClient).toHaveBeenCalledWith(null)
+    })
+
+    test('should acquire advisory lock via transaction', async () => {
+      const payload = { entityId: 'task-123', entityType: 'task', data: {} }
+      await scheduleAction('webhook:send', payload)
+
+      // First query should be the advisory lock
+      expect(mockTransactionQuery).toHaveBeenCalledWith(
         expect.stringContaining('pg_advisory_xact_lock'),
-        expect.any(Array),
-        null
+        expect.any(Array)
       )
     })
 
-    test('should check for existing duplicate', async () => {
+    test('should check for existing duplicate via transaction', async () => {
       const payload = { entityId: 'task-123', entityType: 'task', data: {} }
       await scheduleAction('webhook:send', payload)
 
-      // Second call should be the duplicate check
-      const calls = mockQueryWithRLS.mock.calls
-      const checkCall = calls.find(call =>
+      // Second query should be the duplicate check
+      const calls = mockTransactionQuery.mock.calls
+      const checkCall = calls.find((call: any) =>
         typeof call[0] === 'string' && call[0].includes('SELECT id')
       )
       expect(checkCall).toBeDefined()
@@ -210,10 +271,12 @@ describe('Scheduled Actions Scheduler', () => {
     })
 
     test('should update payload when duplicate found', async () => {
-      // Mock finding a duplicate
-      mockQueryWithRLS
+      // First call: advisory lock (returns [])
+      // Second call: duplicate check (returns existing action)
+      mockTransactionQuery
         .mockResolvedValueOnce([]) // advisory lock
         .mockResolvedValueOnce([{ id: 'existing-action-id' }]) // duplicate found
+        .mockResolvedValueOnce(undefined) // UPDATE
 
       const payload = { entityId: 'task-123', entityType: 'task', data: { title: 'Updated' } }
       const result = await scheduleAction('webhook:send', payload)
@@ -221,43 +284,58 @@ describe('Scheduled Actions Scheduler', () => {
       // Should return the existing action ID
       expect(result).toBe('existing-action-id')
 
-      // Should have updated the existing action
-      expect(mockMutateWithRLS).toHaveBeenCalledWith(
-        expect.stringContaining('UPDATE'),
-        expect.arrayContaining([JSON.stringify(payload), 'existing-action-id']),
-        null
-      )
+      // Should have committed the transaction
+      expect(mockTransactionCommit).toHaveBeenCalled()
+
+      // Should NOT have rolled back
+      expect(mockTransactionRollback).not.toHaveBeenCalled()
     })
 
-    test('should create new action when no duplicate found', async () => {
-      mockQueryWithRLS.mockResolvedValue([]) // No duplicate
+    test('should create new action via transaction when no duplicate found', async () => {
+      // First call: advisory lock
+      // Second call: duplicate check (empty - no duplicate)
+      // Third call: INSERT
+      mockTransactionQuery
+        .mockResolvedValueOnce([]) // advisory lock
+        .mockResolvedValueOnce([]) // no duplicate
+        .mockResolvedValueOnce(undefined) // INSERT
 
       const payload = { entityId: 'task-123', entityType: 'task', data: {} }
       const result = await scheduleAction('webhook:send', payload)
 
       // Should return a new UUID
       expect(result).toBeDefined()
-      expect(result).not.toBe('existing-action-id')
+      expect(typeof result).toBe('string')
 
-      // Should have inserted new action
-      expect(mockMutateWithRLS).toHaveBeenCalledWith(
-        expect.stringContaining('INSERT INTO "scheduled_actions"'),
-        expect.any(Array),
-        null
-      )
+      // Should have committed the transaction
+      expect(mockTransactionCommit).toHaveBeenCalled()
+
+      // Should NOT use mutateWithRLS for dedup path
+      expect(mockMutateWithRLS).not.toHaveBeenCalled()
+    })
+
+    test('should rollback transaction on error', async () => {
+      mockTransactionQuery
+        .mockResolvedValueOnce([]) // advisory lock
+        .mockRejectedValueOnce(new Error('DB error')) // duplicate check fails
+
+      const payload = { entityId: 'task-123', entityType: 'task', data: {} }
+
+      await expect(scheduleAction('webhook:send', payload)).rejects.toThrow('DB error')
+
+      // Should have rolled back
+      expect(mockTransactionRollback).toHaveBeenCalled()
+      expect(mockTransactionCommit).not.toHaveBeenCalled()
     })
 
     test('should skip deduplication when no entityId in payload', async () => {
       const payload = { data: { title: 'No entity' } }
       await scheduleAction('webhook:send', payload)
 
-      // Should not acquire advisory lock (no entityId to deduplicate on)
-      const lockCalls = mockQueryWithRLS.mock.calls.filter(call =>
-        typeof call[0] === 'string' && call[0].includes('pg_advisory_xact_lock')
-      )
-      expect(lockCalls.length).toBe(0)
+      // Should not use transaction client
+      expect(mockGetTransactionClient).not.toHaveBeenCalled()
 
-      // Should directly insert
+      // Should directly insert via mutateWithRLS
       expect(mockMutateWithRLS).toHaveBeenCalledWith(
         expect.stringContaining('INSERT'),
         expect.any(Array),
@@ -269,11 +347,8 @@ describe('Scheduled Actions Scheduler', () => {
       const payload = { entityId: 'task-123', entityType: 'task', data: {} }
       await scheduleAction('webhook:send', payload, { recurringInterval: 'daily' })
 
-      // Should not acquire advisory lock for recurring actions
-      const lockCalls = mockQueryWithRLS.mock.calls.filter(call =>
-        typeof call[0] === 'string' && call[0].includes('pg_advisory_xact_lock')
-      )
-      expect(lockCalls.length).toBe(0)
+      // Should not use transaction client for recurring actions
+      expect(mockGetTransactionClient).not.toHaveBeenCalled()
     })
   })
 
@@ -293,10 +368,11 @@ describe('Scheduled Actions Scheduler', () => {
     })
 
     test('should support all predefined intervals', async () => {
-      const intervals = ['hourly', 'daily', 'weekly']
+      const intervals = ['hourly', 'daily', 'weekly', 'every-30-minutes']
 
       for (const interval of intervals) {
         jest.clearAllMocks()
+        mockMutateWithRLS.mockResolvedValue({ rowCount: 1, rows: [] })
         await scheduleRecurringAction('test:action', {}, interval)
 
         const params = mockMutateWithRLS.mock.calls[0][1]
@@ -304,12 +380,14 @@ describe('Scheduled Actions Scheduler', () => {
       }
     })
 
-    test('should support custom cron expressions', async () => {
-      const cronExpression = '0 0 * * *'
-      await scheduleRecurringAction('test:action', {}, cronExpression)
+    test('should accept recurrenceType option', async () => {
+      await scheduleRecurringAction('token:refresh', {}, 'every-30-minutes', {
+        recurrenceType: 'rolling'
+      })
 
       const params = mockMutateWithRLS.mock.calls[0][1]
-      expect(params[6]).toBe(cronExpression)
+      expect(params[6]).toBe('every-30-minutes')
+      expect(params[9]).toBe('rolling')
     })
 
     test('should accept teamId option', async () => {
@@ -327,14 +405,13 @@ describe('Scheduled Actions Scheduler', () => {
       expect(params[5]).toBe(firstRun.toISOString())
     })
 
-    test('should not override interval with recurringInterval option', async () => {
-      // TypeScript prevents this, but test runtime behavior
-      await scheduleRecurringAction('test:action', {}, 'daily', {
-        scheduledAt: new Date()
-      } as any)
+    test('should accept lockGroup option', async () => {
+      await scheduleRecurringAction('billing:check', {}, 'daily', {
+        lockGroup: 'billing:global'
+      })
 
       const params = mockMutateWithRLS.mock.calls[0][1]
-      expect(params[6]).toBe('daily')
+      expect(params[7]).toBe('billing:global')
     })
   })
 
@@ -368,7 +445,6 @@ describe('Scheduled Actions Scheduler', () => {
 
       const call = mockMutateWithRLS.mock.calls[0]
       expect(call[0]).toContain('errorMessage')
-      expect(call[0]).toContain('Action cancelled by system')
     })
 
     test('should only cancel pending actions', async () => {

@@ -16,12 +16,12 @@ Without deduplication, these scenarios create duplicate actions:
 3. **Retry Logic:** External systems retry requests that already succeeded
 4. **Network Issues:** Duplicate requests due to timeout retries
 
-```
+```text
 User clicks "Save" twice quickly
-  ↓
+  |
 Hook fires: task.updated (entityId: abc-123)
-Hook fires: task.updated (entityId: abc-123)  ← Duplicate!
-  ↓
+Hook fires: task.updated (entityId: abc-123)  <- Duplicate!
+  |
 Without deduplication: 2 webhook scheduled actions
 With deduplication: 1 webhook scheduled action (with latest payload)
 ```
@@ -36,27 +36,27 @@ The deduplication system uses a **time-window** approach with **payload override
 - This ensures the webhook always sends the **most recent** data when processed
 - The action ID remains the same (the original one)
 
-```
+```text
 Timeline:
-|──────────5 seconds──────────|
+|----------5 seconds----------|
 
-t=0: First action created     ← Created (id: uuid-123, payload: v1)
-t=2: Second action attempted  ← Updated (id: uuid-123, payload: v2)
-t=4: Third action attempted   ← Updated (id: uuid-123, payload: v3)
-t=6: Fourth action attempted  ← Created (new action, outside window)
+t=0: First action created     <- Created (id: uuid-123, payload: v1)
+t=2: Second action attempted  <- Updated (id: uuid-123, payload: v2)
+t=4: Third action attempted   <- Updated (id: uuid-123, payload: v3)
+t=6: Fourth action attempted  <- Created (new action, outside window)
 ```
 
 ### Deduplication Key
 
 The system uses a composite key to identify duplicates:
 
-```
+```text
 actionType + entityId + entityType
 ```
 
 **Example:**
 ```typescript
-// Both generate the same deduplication key → second updates the first
+// Both generate the same deduplication key -> second updates the first
 scheduleAction('webhook:send', {
   entityId: 'task-123',
   entityType: 'task',
@@ -75,17 +75,27 @@ scheduleAction('webhook:send', {
 
 ### Race Condition Protection
 
-The system uses **PostgreSQL advisory locks** to prevent race conditions when multiple concurrent requests try to schedule actions for the same entity:
+The system uses **PostgreSQL advisory locks** within a **single transaction** to prevent race conditions when multiple concurrent requests try to schedule actions for the same entity:
 
 ```typescript
-// Acquire transaction-level lock
-await queryWithRLS(
-  `SELECT pg_advisory_xact_lock(hashtext($1))`,
-  [dedupKey],
-  null
-)
+// Single transaction ensures atomicity
+const client = await getTransactionClient(null)
 
-// Now safe to check and insert/update
+try {
+  // Acquire transaction-level lock (released on COMMIT/ROLLBACK)
+  await client.query(
+    `SELECT pg_advisory_xact_lock(hashtext($1))`,
+    [dedupKey]
+  )
+
+  // Check for existing + insert/update within same transaction
+  // ...
+
+  await client.commit()
+} catch (error) {
+  await client.rollback()
+  throw error
+}
 ```
 
 **Benefits:**
@@ -93,6 +103,7 @@ await queryWithRLS(
 - No database schema changes required
 - Works with the dynamic time window
 - Prevents duplicate actions even under high concurrency
+- Check + insert/update is atomic (no TOCTOU race)
 
 ## Configuration
 
@@ -132,25 +143,25 @@ Use this when:
 
 ## Return Values
 
-The `scheduleAction()` function returns:
+The `scheduleAction()` function always returns a `string` (the action ID):
 
 ```typescript
 // New action created
 const id = await scheduleAction('webhook:send', payload)
-// id = 'uuid-123'
+// id = 'uuid-123' (new UUID)
 
 // Duplicate detected - existing action updated
 const id = await scheduleAction('webhook:send', payload)
 // id = 'uuid-123' (same as existing action)
 ```
 
-**Note:** The function always returns a string (the action ID), whether it's a new action or an updated existing one.
+**Note:** The function always returns `Promise<string>`, whether it's a new action or an updated existing one. It never returns `null`.
 
 ## Implementation Details
 
 ### Database Query
 
-The deduplication check uses this query:
+The deduplication check uses this query within a locked transaction:
 
 ```sql
 SELECT id
@@ -175,49 +186,72 @@ export async function scheduleAction(
   actionType: string,
   payload: unknown,
   options?: ScheduleOptions
-): Promise<string | null> {
+): Promise<string> {
   const windowSeconds = APP_CONFIG_MERGED.scheduledActions?.deduplication?.windowSeconds ?? 5
-  const entityId = payload?.entityId
-  const entityType = payload?.entityType
+  const entityId = (payload as any)?.entityId
+  const entityType = (payload as any)?.entityType
 
   // Skip deduplication if:
-  // - windowSeconds is 0 (disabled)
-  // - No entityId in payload
-  // - This is a recurring action
+  // - windowSeconds is 0 or negative (disabled)
+  // - No entityId in payload (can't deduplicate)
+  // - This is a recurring action (recurring actions don't deduplicate)
   const shouldDeduplicate = windowSeconds > 0 && entityId && !options?.recurringInterval
 
   if (shouldDeduplicate) {
-    // Acquire advisory lock to prevent race conditions
+    // Use a SINGLE transaction for the entire deduplication + insert/update
+    // This ensures the advisory lock is held throughout
     const dedupKey = `${actionType}:${entityId}:${entityType || ''}`
-    await queryWithRLS(
-      `SELECT pg_advisory_xact_lock(hashtext($1))`,
-      [dedupKey],
-      null
-    )
+    const client = await getTransactionClient(null)
 
-    // Check for existing pending action within window
-    const existing = await queryWithRLS(...)
+    try {
+      // Acquire advisory lock (held until COMMIT)
+      await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [dedupKey])
 
-    if (existing.length > 0) {
-      // Update existing action's payload
-      await mutateWithRLS(
-        `UPDATE "scheduled_actions"
-         SET payload = $1, "updatedAt" = NOW()
-         WHERE id = $2 AND status = 'pending'`,
-        [JSON.stringify(payload), existing[0].id],
-        null
+      // Check for existing pending action within window
+      const existing = await client.query<{ id: string }>(
+        `SELECT id FROM "scheduled_actions"
+         WHERE "actionType" = $1 AND status = 'pending'
+         AND payload->>'entityId' = $2 AND payload->>'entityType' = $3
+         AND "createdAt" > NOW() - INTERVAL '1 second' * $4
+         LIMIT 1`,
+        [actionType, entityId, entityType || '', windowSeconds]
       )
-      console.log(`[ScheduledActions] Duplicate detected, updated payload: ${existing[0].id}`)
-      return existing[0].id
+
+      if (existing.length > 0) {
+        // Duplicate found: update existing action's payload
+        await client.query(
+          `UPDATE "scheduled_actions"
+           SET payload = $1, "updatedAt" = NOW()
+           WHERE id = $2 AND status = 'pending'`,
+          [payload, existing[0].id]
+        )
+        await client.commit()
+        return existing[0].id
+      }
+
+      // No duplicate: create new action (still within locked transaction)
+      const actionId = crypto.randomUUID()
+      await client.query(
+        `INSERT INTO "scheduled_actions" (id, "actionType", status, payload, ...)
+         VALUES ($1, $2, 'pending', $3, ...)`,
+        [actionId, actionType, payload, ...]
+      )
+      await client.commit()
+      return actionId
+    } catch (error) {
+      await client.rollback()
+      throw error
     }
   }
 
-  // No duplicate found: create new action
+  // Deduplication disabled: create new action directly via mutateWithRLS
   const actionId = crypto.randomUUID()
-  // ... insert into database
+  await mutateWithRLS(`INSERT INTO "scheduled_actions" ...`, [...], null)
   return actionId
 }
 ```
+
+**Key implementation detail:** `getTransactionClient()` returns a transaction object where `client.query()` returns rows as an **array directly** (not wrapped in `{ rows: [] }`). Access results with `existing.length` and `existing[0]`, not `existing.rows`.
 
 ## Best Practices
 
@@ -242,14 +276,14 @@ windowSeconds: 0   // Disabled
 Deduplication requires `entityId` in the payload:
 
 ```typescript
-// ✅ Deduplication works
+// Deduplication works
 await scheduleAction('webhook:send', {
   entityId: 'task-123',  // Required for deduplication
   entityType: 'task',
   data: { ... }
 })
 
-// ❌ Cannot deduplicate (no entityId)
+// Cannot deduplicate (no entityId)
 await scheduleAction('webhook:send', {
   message: 'Hello',
   data: { ... }
@@ -276,7 +310,7 @@ deduplication: {
 
 ### Console Logs
 
-```
+```text
 [ScheduledActions] Scheduled action 'webhook:send' with ID: uuid-123
 [ScheduledActions] Duplicate detected, updated payload: uuid-123
 ```
@@ -319,14 +353,14 @@ await scheduleAction('system:cleanup', {
 
 ### High Concurrency
 
-With advisory locks, even high-concurrency scenarios are handled correctly:
+With advisory locks in a single transaction, even high-concurrency scenarios are handled correctly:
 
 ```typescript
 // Multiple concurrent requests for same entity
 Promise.all([
-  scheduleAction('webhook:send', { entityId: 'task-1', data: 'v1' }),
-  scheduleAction('webhook:send', { entityId: 'task-1', data: 'v2' }),
-  scheduleAction('webhook:send', { entityId: 'task-1', data: 'v3' }),
+  scheduleAction('webhook:send', { entityId: 'task-1', entityType: 'task', data: 'v1' }),
+  scheduleAction('webhook:send', { entityId: 'task-1', entityType: 'task', data: 'v2' }),
+  scheduleAction('webhook:send', { entityId: 'task-1', entityType: 'task', data: 'v3' }),
 ])
 // Result: 1 action with the last payload to acquire the lock
 ```
@@ -362,6 +396,6 @@ If you need to track every change:
 
 ---
 
-**Last Updated**: 2025-12-30
+**Last Updated**: 2026-02-06
 **Version**: 2.0.0
 **Status**: Complete

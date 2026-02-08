@@ -278,6 +278,8 @@
     "loading": "Caricamento azioni programmate...",
     "empty": "Nessuna azione programmata trovata",
     "emptyDescription": "Le azioni programmate appariranno qui quando verranno create",
+    "failedNotification": "{count, plural, one {# azione fallita} other {# azioni fallite}} nelle ultime 24 ore",
+    "viewFailed": "Vedi fallite",
     "filters": {
       "status": "Stato",
       "allStatuses": "Tutti gli Stati",
@@ -289,11 +291,25 @@
     "table": {
       "type": "Tipo",
       "status": "Stato",
+      "attempts": "Tentativi",
       "scheduledAt": "Programmato Per",
+      "startedAt": "Iniziato",
+      "completedAt": "Completato",
       "team": "Team",
       "payload": "Dati",
       "error": "Errore",
+      "actions": "Azioni",
       "noTeam": "Globale"
+    },
+    "retry": {
+      "button": "Riprova",
+      "success": "Azione programmata per il ritentativo",
+      "error": "Errore nel ritentativo dell'azione: {message}"
+    },
+    "run": {
+      "button": "Esegui ora",
+      "success": "Azione eseguita con successo",
+      "error": "Errore nell'esecuzione dell'azione: {message}"
     },
     "status": {
       "pending": "In Attesa",
