@@ -74,7 +74,6 @@ function DefaultMediaDashboardPage() {
   const [columns, setColumns] = React.useState(6)
   const [isBulkDeleting, setIsBulkDeleting] = React.useState(false)
   const [bulkDeleteProgress, setBulkDeleteProgress] = React.useState({ current: 0, total: 0 })
-  const [deletingIds, setDeletingIds] = React.useState<Set<string>>(new Set())
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = React.useState(false)
   const lastSelectedIndexRef = React.useRef<number | null>(null)
 
@@ -144,11 +143,13 @@ function DefaultMediaDashboardPage() {
 
   const handleSelect = React.useCallback((media: Media, options?: { shiftKey?: boolean }) => {
     const currentIndex = items.findIndex(m => m.id === media.id)
+    if (currentIndex === -1) return
 
-    if (options?.shiftKey && lastSelectedIndexRef.current !== null && currentIndex !== -1) {
+    const lastIndex = lastSelectedIndexRef.current
+    if (options?.shiftKey && lastIndex !== null && lastIndex >= 0 && lastIndex < items.length) {
       // Range selection: select all items between last selected and current
-      const start = Math.min(lastSelectedIndexRef.current, currentIndex)
-      const end = Math.max(lastSelectedIndexRef.current, currentIndex)
+      const start = Math.min(lastIndex, currentIndex)
+      const end = Math.max(lastIndex, currentIndex)
       setSelectedIds(prev => {
         const newSet = new Set(prev)
         for (let i = start; i <= end; i++) {
@@ -197,7 +198,6 @@ function DefaultMediaDashboardPage() {
     if (selectedIds.size === 0) return
     setShowBulkDeleteConfirm(false)
     setIsBulkDeleting(true)
-    setDeletingIds(new Set(selectedIds))
     const idsArray = Array.from(selectedIds)
     const totalCount = idsArray.length
     setBulkDeleteProgress({ current: 0, total: totalCount })
@@ -212,7 +212,6 @@ function DefaultMediaDashboardPage() {
     }
 
     setIsBulkDeleting(false)
-    setDeletingIds(new Set())
     setBulkDeleteProgress({ current: 0, total: 0 })
 
     if (successCount > 0) {
@@ -221,6 +220,7 @@ function DefaultMediaDashboardPage() {
         description: t('dashboard.bulkDeleteSuccess', { count: successCount }),
       })
       setSelectedIds(new Set())
+      lastSelectedIndexRef.current = null
       refetch()
     }
   }, [selectedIds, deleteMutation, toast, t, refetch])
@@ -402,15 +402,7 @@ function DefaultMediaDashboardPage() {
       </div>
 
       {/* Row 3: Content */}
-      <div className={isBulkDeleting ? 'pointer-events-none' : ''}>
-        {isBulkDeleting && (
-          <style>{`
-            [data-cy^="media-grid-item-"] { transition: opacity 0.2s; }
-            ${Array.from(deletingIds).map(id =>
-              `[data-cy="media-grid-item-${id}"] { opacity: 0.35; }`
-            ).join('\n')}
-          `}</style>
-        )}
+      <div className={isBulkDeleting ? 'pointer-events-none opacity-50' : ''}>
         {viewMode === 'grid' ? (
           <MediaGrid
             items={items}
@@ -593,7 +585,10 @@ function DefaultMediaDashboardPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setSelectedIds(new Set())}
+                  onClick={() => {
+                    setSelectedIds(new Set())
+                    lastSelectedIndexRef.current = null
+                  }}
                   className="text-muted-foreground"
                 >
                   <XIcon className="mr-1 h-3.5 w-3.5" />

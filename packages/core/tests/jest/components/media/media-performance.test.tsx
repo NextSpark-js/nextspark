@@ -225,24 +225,28 @@ describe('MediaCard', () => {
   })
 
   describe('callback stability', () => {
-    test('calls onSelect with media on card click', () => {
+    test('in single mode, card click calls onEdit (not onSelect)', () => {
       const onSelect = jest.fn()
-      render(<MediaCard {...defaultProps} onSelect={onSelect} />)
-
-      const card = screen.getByTestId('card')
-      fireEvent.click(card)
-
-      expect(onSelect).toHaveBeenCalledWith(defaultProps.media, { shiftKey: false })
-    })
-
-    test('calls onEdit with media on card click when onEdit is provided', () => {
       const onEdit = jest.fn()
-      render(<MediaCard {...defaultProps} onEdit={onEdit} />)
+      render(<MediaCard {...defaultProps} onSelect={onSelect} onEdit={onEdit} mode="single" />)
 
       const card = screen.getByTestId('card')
       fireEvent.click(card)
 
       expect(onEdit).toHaveBeenCalledWith(defaultProps.media)
+      expect(onSelect).not.toHaveBeenCalled()
+    })
+
+    test('in multiple mode, card click calls onSelect with shiftKey', () => {
+      const onSelect = jest.fn()
+      const onEdit = jest.fn()
+      render(<MediaCard {...defaultProps} onSelect={onSelect} onEdit={onEdit} mode="multiple" />)
+
+      const card = screen.getByTestId('card')
+      fireEvent.click(card)
+
+      expect(onSelect).toHaveBeenCalledWith(defaultProps.media, { shiftKey: false })
+      expect(onEdit).not.toHaveBeenCalled()
     })
 
     test('checkbox click does not propagate to card', () => {

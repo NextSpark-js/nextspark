@@ -49,11 +49,14 @@ export const MediaCard = React.memo(function MediaCard({
   const isVideo = media.mimeType.startsWith('video/')
 
   const handleCardClick = React.useCallback((e: React.MouseEvent) => {
-    onSelect(media, { shiftKey: e.shiftKey })
-    if (onEdit && !e.shiftKey) {
-      onEdit(media)
+    if (mode === 'multiple') {
+      // In multi-select mode, card click toggles selection (no edit)
+      onSelect(media, { shiftKey: e.shiftKey })
+    } else {
+      // In single mode, click opens detail/edit
+      onEdit?.(media)
     }
-  }, [media, onSelect, onEdit])
+  }, [media, onSelect, onEdit, mode])
 
   const handleCheckboxClick = React.useCallback((e: React.MouseEvent) => {
     e.stopPropagation()

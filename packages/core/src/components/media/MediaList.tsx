@@ -175,6 +175,7 @@ export function MediaList({
                     onSelect(media, { shiftKey: e.shiftKey })
                   }}>
                     <Checkbox
+                      data-cy={sel('media.list.checkbox', { id: media.id })}
                       checked={isSelected}
                       aria-label={`${t('actions.select')} ${media.filename}`}
                       className="pointer-events-none"
