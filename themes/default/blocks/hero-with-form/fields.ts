@@ -34,7 +34,7 @@ const heroWithFormContentFields: FieldDefinition[] = [
   {
     name: 'backgroundImage',
     label: 'Background Image',
-    type: 'image',
+    type: 'media-library',
     tab: 'content',
     required: true,
     helpText: 'Full-width background image (recommended: 1920x1080px minimum)',

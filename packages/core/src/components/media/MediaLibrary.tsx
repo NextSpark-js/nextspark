@@ -25,6 +25,7 @@ import { MediaGrid } from './MediaGrid'
 import { MediaList } from './MediaList'
 import { MediaUploadZone } from './MediaUploadZone'
 import { MediaDetailPanel } from './MediaDetailPanel'
+import { MediaTagFilter } from './MediaTagFilter'
 import { useMediaList, useDeleteMedia } from '../../hooks/useMedia'
 import { useDebounce } from '../../hooks/useDebounce'
 import { useToast } from '../../hooks/useToast'
@@ -61,6 +62,7 @@ export function MediaLibrary({
   const [sortBy, setSortBy] = React.useState<MediaListOptions['orderBy']>('createdAt')
   const [sortDir, setSortDir] = React.useState<MediaListOptions['orderDir']>('desc')
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set())
+  const [selectedTagIds, setSelectedTagIds] = React.useState<string[]>([])
   const [showUploadZone, setShowUploadZone] = React.useState(false)
   const [editingMedia, setEditingMedia] = React.useState<Media | null>(null)
   const [deletingMedia, setDeletingMedia] = React.useState<Media | null>(null)
@@ -76,6 +78,7 @@ export function MediaLibrary({
     orderDir: sortDir,
     type: typeFilter,
     search: debouncedSearch || undefined,
+    tagIds: selectedTagIds.length > 0 ? selectedTagIds : undefined,
   })
 
   const items = data?.data || []
@@ -84,6 +87,7 @@ export function MediaLibrary({
   React.useEffect(() => {
     if (!isOpen) {
       setSelectedIds(new Set())
+      setSelectedTagIds([])
       setEditingMedia(null)
       setShowUploadZone(false)
     }
@@ -173,7 +177,7 @@ export function MediaLibrary({
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
         <DialogContent
           data-cy={sel('media.library.dialog')}
-          className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col"
+          className="sm:max-w-[90vw] lg:max-w-6xl h-[90vh] overflow-hidden flex flex-col"
           showCloseButton={false}
         >
           <DialogHeader>
@@ -196,7 +200,7 @@ export function MediaLibrary({
             </div>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto space-y-4">
+          <div className="flex-1 min-h-0 overflow-y-auto space-y-4">
             {/* Toolbar */}
             <MediaToolbar
               onUploadClick={() => setShowUploadZone(!showUploadZone)}
@@ -209,6 +213,12 @@ export function MediaLibrary({
               onSortChange={handleSortChange}
               viewMode={viewMode}
               onViewModeChange={setViewMode}
+            />
+
+            {/* Tag filter */}
+            <MediaTagFilter
+              selectedTagIds={selectedTagIds}
+              onTagsChange={setSelectedTagIds}
             />
 
             {/* Upload zone */}

@@ -284,6 +284,15 @@ export const BLOCK_EDITOR_SELECTORS = {
         itemRemove: 'block-array-{name}-{index}-remove',
         addButton: 'block-array-{name}-add',
       },
+      // Media library field (grandchild)
+      mediaField: {
+        preview: 'block-media-{name}-preview',
+        empty: 'block-media-{name}-empty',
+        changeBtn: 'block-media-{name}-change',
+        removeBtn: 'block-media-{name}-remove',
+        dropzone: 'block-media-{name}-dropzone',
+        fileInput: 'block-media-{name}-input',
+      },
     },
   },
 

@@ -28,7 +28,7 @@ const videoHeroContentFields: FieldDefinition[] = [
   {
     name: 'videoThumbnail',
     label: 'Custom Thumbnail',
-    type: 'image',
+    type: 'media-library',
     tab: 'content',
     required: false,
     helpText: 'Optional custom thumbnail shown before video plays (recommended: 1920x1080px)',

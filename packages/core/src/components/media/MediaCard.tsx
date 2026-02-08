@@ -46,6 +46,7 @@ export function MediaCard({
   const isVideo = media.mimeType.startsWith('video/')
 
   const handleCardClick = () => {
+    onSelect(media)
     if (onEdit) {
       onEdit(media)
     }

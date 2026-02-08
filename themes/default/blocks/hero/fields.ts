@@ -21,7 +21,7 @@ const heroDesignFields: FieldDefinition[] = [
   {
     name: 'backgroundImage',
     label: 'Background Image',
-    type: 'image',
+    type: 'media-library',
     tab: 'design',
     required: false,
     helpText: 'Optional background image (recommended: 1920x1080px minimum)',

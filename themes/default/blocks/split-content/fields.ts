@@ -46,7 +46,7 @@ const splitContentFields: FieldDefinition[] = [
   {
     name: 'image',
     label: 'Image',
-    type: 'image',
+    type: 'media-library',
     tab: 'content',
     required: true,
     helpText: 'Featured image (recommended: 800x600px minimum)',
