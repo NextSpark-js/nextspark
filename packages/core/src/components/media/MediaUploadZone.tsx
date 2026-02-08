@@ -3,6 +3,9 @@
  *
  * Drag-and-drop file upload area with progress indicators.
  * Uses useMediaUpload hook for upload mutations.
+ *
+ * Performance: Uses ref-based drag counter to avoid excessive setState
+ * on dragEnter/dragLeave events from nested elements.
  */
 
 'use client'
@@ -45,6 +48,7 @@ export function MediaUploadZone({
   const [pendingFiles, setPendingFiles] = React.useState<File[] | null>(null)
   const [duplicates, setDuplicates] = React.useState<DuplicateInfo[]>([])
   const fileInputRef = React.useRef<HTMLInputElement>(null)
+  const dragCounterRef = React.useRef(0)
 
   const uploadMutation = useMediaUpload()
 
@@ -146,24 +150,36 @@ export function MediaUploadZone({
     setPendingFiles(null)
   }
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragEnter = React.useCallback((e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setIsDragging(true)
-  }
+    dragCounterRef.current++
+    if (dragCounterRef.current === 1) {
+      setIsDragging(true)
+    }
+  }, [])
 
-  const handleDragLeave = (e: React.DragEvent) => {
+  const handleDragOver = React.useCallback((e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setIsDragging(false)
-  }
+  }, [])
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDragLeave = React.useCallback((e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    dragCounterRef.current--
+    if (dragCounterRef.current === 0) {
+      setIsDragging(false)
+    }
+  }, [])
+
+  const handleDrop = React.useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounterRef.current = 0
     setIsDragging(false)
     handleFiles(e.dataTransfer.files)
-  }
+  }, [])
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     handleFiles(e.target.files)
@@ -220,12 +236,13 @@ export function MediaUploadZone({
       <div
         data-cy={sel('media.upload.dropzone')}
         className={cn(
-          'border-2 border-dashed rounded-lg p-8 text-center transition-colors',
+          'border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200',
           isDragging
-            ? 'border-primary bg-primary/5'
+            ? 'border-primary bg-primary/5 scale-[1.01]'
             : 'border-muted-foreground/25 hover:border-muted-foreground/50',
           isBusy && 'opacity-50 pointer-events-none'
         )}
+        onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}

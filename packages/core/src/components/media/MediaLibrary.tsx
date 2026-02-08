@@ -3,6 +3,8 @@
  *
  * Main modal for browsing, uploading, and selecting media.
  * Manages state for search, filtering, sorting, selection, and view mode.
+ *
+ * Performance: Stable callbacks with useCallback + functional setState.
  */
 
 'use client'
@@ -93,7 +95,7 @@ export function MediaLibrary({
     }
   }, [isOpen])
 
-  const handleSelect = (media: Media) => {
+  const handleSelect = React.useCallback((media: Media) => {
     if (mode === 'single') {
       setSelectedIds(new Set([media.id]))
     } else {
@@ -115,7 +117,7 @@ export function MediaLibrary({
         return newSet
       })
     }
-  }
+  }, [mode, maxSelections, toast, t])
 
   const handleConfirmSelection = () => {
     if (selectedIds.size === 0) return
@@ -159,15 +161,23 @@ export function MediaLibrary({
     }
   }
 
-  const handleUploadComplete = () => {
+  const handleUploadComplete = React.useCallback(() => {
     setShowUploadZone(false)
     refetch()
-  }
+  }, [refetch])
 
-  const handleSortChange = (orderBy: MediaListOptions['orderBy'], orderDir: MediaListOptions['orderDir']) => {
+  const handleSortChange = React.useCallback((orderBy: MediaListOptions['orderBy'], orderDir: MediaListOptions['orderDir']) => {
     setSortBy(orderBy)
     setSortDir(orderDir)
-  }
+  }, [])
+
+  const handleToggleUpload = React.useCallback(() => {
+    setShowUploadZone(prev => !prev)
+  }, [])
+
+  const handleCloseDetail = React.useCallback(() => {
+    setEditingMedia(null)
+  }, [])
 
   const selectedCount = selectedIds.size
   const canSelect = selectedCount > 0
@@ -203,7 +213,7 @@ export function MediaLibrary({
           <div className="flex-1 min-h-0 overflow-y-auto space-y-4">
             {/* Toolbar */}
             <MediaToolbar
-              onUploadClick={() => setShowUploadZone(!showUploadZone)}
+              onUploadClick={handleToggleUpload}
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
               typeFilter={typeFilter}
@@ -257,7 +267,7 @@ export function MediaLibrary({
                 <div className="hidden lg:block">
                   <MediaDetailPanel
                     media={editingMedia}
-                    onClose={() => setEditingMedia(null)}
+                    onClose={handleCloseDetail}
                   />
                 </div>
               )}

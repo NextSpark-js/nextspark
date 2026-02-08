@@ -3,6 +3,8 @@
  *
  * Tag-based filter chips for the media toolbar.
  * Shows available media_tag taxonomies and allows selecting one or more.
+ *
+ * Performance: Wrapped with React.memo. Uses Set for O(1) tag lookups.
  */
 
 'use client'
@@ -28,7 +30,7 @@ interface MediaTagFilterProps {
   className?: string
 }
 
-export function MediaTagFilter({
+export const MediaTagFilter = React.memo(function MediaTagFilter({
   selectedTagIds,
   onTagsChange,
   className,
@@ -37,19 +39,23 @@ export function MediaTagFilter({
   const { data: tags = [], isLoading } = useMediaTags()
   const [isOpen, setIsOpen] = React.useState(false)
 
-  const selectedTags = tags.filter((tag: MediaTag) => selectedTagIds.includes(tag.id))
+  const selectedIdSet = React.useMemo(() => new Set(selectedTagIds), [selectedTagIds])
+  const selectedTags = React.useMemo(
+    () => tags.filter((tag: MediaTag) => selectedIdSet.has(tag.id)),
+    [tags, selectedIdSet]
+  )
 
-  const toggleTag = (tagId: string) => {
-    if (selectedTagIds.includes(tagId)) {
+  const toggleTag = React.useCallback((tagId: string) => {
+    if (selectedIdSet.has(tagId)) {
       onTagsChange(selectedTagIds.filter(id => id !== tagId))
     } else {
       onTagsChange([...selectedTagIds, tagId])
     }
-  }
+  }, [selectedIdSet, selectedTagIds, onTagsChange])
 
-  const clearTags = () => {
+  const clearTags = React.useCallback(() => {
     onTagsChange([])
-  }
+  }, [onTagsChange])
 
   if (isLoading) return null
 
@@ -88,7 +94,7 @@ export function MediaTagFilter({
                 <p className="text-sm text-muted-foreground">{t('dashboard.noTags')}</p>
               ) : (
                 tags.map((tag: MediaTag) => {
-                  const isSelected = selectedTagIds.includes(tag.id)
+                  const isSelected = selectedIdSet.has(tag.id)
                   return (
                     <Badge
                       key={tag.id}
@@ -137,4 +143,4 @@ export function MediaTagFilter({
       ))}
     </div>
   )
-}
+})

@@ -2,6 +2,9 @@
  * MediaList Component
  *
  * Table/list view of media items with columns for metadata.
+ *
+ * Performance: Images use lazy loading + async decoding.
+ * Row hover highlights for better visual feedback.
  */
 
 'use client'
@@ -74,7 +77,7 @@ export function MediaList({
           <TableHeader>
             <TableRow>
               {mode === 'multiple' && <TableHead className="w-12"></TableHead>}
-              <TableHead className="w-16">{t('list.filename')}</TableHead>
+              <TableHead className="w-16"></TableHead>
               <TableHead>{t('list.filename')}</TableHead>
               <TableHead className="hidden md:table-cell">{t('list.type')}</TableHead>
               <TableHead className="hidden md:table-cell">{t('list.size')}</TableHead>
@@ -161,7 +164,7 @@ export function MediaList({
                 key={media.id}
                 data-cy={sel('media.list.row', { id: media.id })}
                 className={cn(
-                  'cursor-pointer',
+                  'cursor-pointer transition-colors hover:bg-muted/50',
                   isSelected && 'bg-muted'
                 )}
                 onClick={() => onEdit?.(media)}
@@ -181,6 +184,8 @@ export function MediaList({
                       src={media.url}
                       alt={media.alt || media.filename}
                       className="h-10 w-10 rounded object-cover"
+                      loading="lazy"
+                      decoding="async"
                     />
                   ) : (
                     <div className="h-10 w-10 rounded bg-muted flex items-center justify-center">

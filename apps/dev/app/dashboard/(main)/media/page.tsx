@@ -3,6 +3,12 @@
  *
  * Full-page media library for browsing, uploading, and managing media.
  * Follows the same layout pattern as EntityListWrapper for consistency.
+ *
+ * Performance:
+ * - useCallback for all handlers with functional setState
+ * - useMemo for sortOptions to prevent array recreation
+ * - startTransition for search/filter state updates (INP)
+ * - decoding="async" on detail preview image
  */
 
 'use client'
@@ -103,25 +109,46 @@ export default function MediaDashboardPage() {
   const hasNextPage = page < totalPages - 1
   const hasPrevPage = page > 0
 
-  const sortOptions: { value: string; label: string; orderBy: MediaListOptions['orderBy']; orderDir: 'asc' | 'desc' }[] = [
-    { value: 'createdAt:desc', label: t('toolbar.sort.newest'), orderBy: 'createdAt', orderDir: 'desc' },
-    { value: 'createdAt:asc', label: t('toolbar.sort.oldest'), orderBy: 'createdAt', orderDir: 'asc' },
-    { value: 'filename:asc', label: t('toolbar.sort.nameAsc'), orderBy: 'filename', orderDir: 'asc' },
-    { value: 'filename:desc', label: t('toolbar.sort.nameDesc'), orderBy: 'filename', orderDir: 'desc' },
-    { value: 'fileSize:desc', label: t('toolbar.sort.sizeDesc'), orderBy: 'fileSize', orderDir: 'desc' },
-    { value: 'fileSize:asc', label: t('toolbar.sort.sizeAsc'), orderBy: 'fileSize', orderDir: 'asc' },
-  ]
+  // Memoize sort options to prevent array recreation
+  const sortOptions = React.useMemo(() => [
+    { value: 'createdAt:desc', label: t('toolbar.sort.newest'), orderBy: 'createdAt' as const, orderDir: 'desc' as const },
+    { value: 'createdAt:asc', label: t('toolbar.sort.oldest'), orderBy: 'createdAt' as const, orderDir: 'asc' as const },
+    { value: 'filename:asc', label: t('toolbar.sort.nameAsc'), orderBy: 'filename' as const, orderDir: 'asc' as const },
+    { value: 'filename:desc', label: t('toolbar.sort.nameDesc'), orderBy: 'filename' as const, orderDir: 'desc' as const },
+    { value: 'fileSize:desc', label: t('toolbar.sort.sizeDesc'), orderBy: 'fileSize' as const, orderDir: 'desc' as const },
+    { value: 'fileSize:asc', label: t('toolbar.sort.sizeAsc'), orderBy: 'fileSize' as const, orderDir: 'asc' as const },
+  ], [t])
+
   const currentSortValue = `${sortBy}:${sortDir}`
 
-  const handleSortChange = (value: string) => {
+  // Stable callbacks with useCallback + functional setState
+  const handleSortChange = React.useCallback((value: string) => {
     const option = sortOptions.find(opt => opt.value === value)
     if (option) {
-      setSortBy(option.orderBy)
-      setSortDir(option.orderDir)
+      React.startTransition(() => {
+        setSortBy(option.orderBy)
+        setSortDir(option.orderDir)
+      })
     }
-  }
+  }, [sortOptions])
 
-  const handleSelect = (media: Media) => {
+  const handleSearchChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value)
+  }, [])
+
+  const handleTypeFilterChange = React.useCallback((value: string) => {
+    React.startTransition(() => {
+      setTypeFilter(value as 'all' | 'image' | 'video')
+    })
+  }, [])
+
+  const handleTagsChange = React.useCallback((tagIds: string[]) => {
+    React.startTransition(() => {
+      setSelectedTagIds(tagIds)
+    })
+  }, [])
+
+  const handleSelect = React.useCallback((media: Media) => {
     setSelectedIds((prev) => {
       const newSet = new Set(prev)
       if (newSet.has(media.id)) {
@@ -131,9 +158,9 @@ export default function MediaDashboardPage() {
       }
       return newSet
     })
-  }
+  }, [])
 
-  const handleDelete = async () => {
+  const handleDelete = React.useCallback(async () => {
     if (!deletingMedia) return
     try {
       await deleteMutation.mutateAsync(deletingMedia.id)
@@ -152,9 +179,9 @@ export default function MediaDashboardPage() {
         variant: 'destructive',
       })
     }
-  }
+  }, [deletingMedia, deleteMutation, toast, t, refetch])
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = React.useCallback(async () => {
     if (selectedIds.size === 0) return
     let successCount = 0
     for (const id of selectedIds) {
@@ -171,9 +198,9 @@ export default function MediaDashboardPage() {
       setSelectedIds(new Set())
       refetch()
     }
-  }
+  }, [selectedIds, deleteMutation, toast, t, refetch])
 
-  const handleUploadComplete = (uploadedMedia: Media[]) => {
+  const handleUploadComplete = React.useCallback((uploadedMedia: Media[]) => {
     setShowUpload(false)
     refetch()
 
@@ -181,7 +208,35 @@ export default function MediaDashboardPage() {
     if (uploadedMedia.length === 1) {
       setEditingMedia(uploadedMedia[0])
     }
-  }
+  }, [refetch])
+
+  const handleToggleUpload = React.useCallback(() => {
+    setShowUpload(prev => !prev)
+  }, [])
+
+  const handleClearSelection = React.useCallback(() => {
+    setSelectedIds(new Set())
+  }, [])
+
+  const handleCloseDetail = React.useCallback(() => {
+    setEditingMedia(null)
+  }, [])
+
+  const handleCloseDeletingMedia = React.useCallback((open: boolean) => {
+    if (!open) setDeletingMedia(null)
+  }, [])
+
+  const handlePrevPage = React.useCallback(() => {
+    setPage(prev => prev - 1)
+  }, [])
+
+  const handleNextPage = React.useCallback(() => {
+    setPage(prev => prev + 1)
+  }, [])
+
+  const handleColumnsChange = React.useCallback((v: string) => {
+    setColumns(Number(v))
+  }, [])
 
   const selectedCount = selectedIds.size
 
@@ -223,14 +278,14 @@ export default function MediaDashboardPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setSelectedIds(new Set())}
+                onClick={handleClearSelection}
               >
                 <XIcon className="h-4 w-4" />
               </Button>
             </>
           )}
 
-          <Button onClick={() => setShowUpload(!showUpload)}>
+          <Button onClick={handleToggleUpload}>
             {showUpload ? (
               <>
                 <ChevronUpIcon className="mr-2 h-4 w-4" />
@@ -261,13 +316,13 @@ export default function MediaDashboardPage() {
             type="text"
             placeholder={t('toolbar.search')}
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={handleSearchChange}
             className="pl-8"
           />
         </div>
 
         {/* Type filter */}
-        <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as typeof typeFilter)}>
+        <Select value={typeFilter} onValueChange={handleTypeFilterChange}>
           <SelectTrigger
             data-cy={sel('media.toolbar.typeFilter')}
             className="w-[140px]"
@@ -284,7 +339,7 @@ export default function MediaDashboardPage() {
         {/* Tag filter */}
         <MediaTagFilter
           selectedTagIds={selectedTagIds}
-          onTagsChange={setSelectedTagIds}
+          onTagsChange={handleTagsChange}
         />
 
         {/* Sort */}
@@ -309,7 +364,7 @@ export default function MediaDashboardPage() {
           {viewMode === 'grid' && (
             <Select
               value={String(columns)}
-              onValueChange={(v) => setColumns(Number(v))}
+              onValueChange={handleColumnsChange}
             >
               <SelectTrigger
                 data-cy={sel('media.toolbar.columnSelect')}
@@ -395,7 +450,7 @@ export default function MediaDashboardPage() {
               variant="outline"
               size="sm"
               disabled={!hasPrevPage}
-              onClick={() => setPage(page - 1)}
+              onClick={handlePrevPage}
             >
               {t('dashboard.prevPage')}
             </Button>
@@ -404,7 +459,7 @@ export default function MediaDashboardPage() {
               variant="outline"
               size="sm"
               disabled={!hasNextPage}
-              onClick={() => setPage(page + 1)}
+              onClick={handleNextPage}
             >
               {t('dashboard.nextPage')}
             </Button>
@@ -427,6 +482,7 @@ export default function MediaDashboardPage() {
                   alt={editingMedia.alt || editingMedia.filename}
                   className="max-w-[90%] max-h-[90%] object-contain select-none"
                   draggable={false}
+                  decoding="async"
                 />
               ) : (
                 <ImageIcon className="h-20 w-20 text-neutral-700" />
@@ -440,7 +496,7 @@ export default function MediaDashboardPage() {
               </div>
               <MediaDetailPanel
                 media={editingMedia}
-                onClose={() => setEditingMedia(null)}
+                onClose={handleCloseDetail}
                 showPreview={false}
                 className="flex-1 min-h-0"
               />
@@ -452,7 +508,7 @@ export default function MediaDashboardPage() {
       {/* Delete confirmation dialog */}
       <AlertDialog
         open={!!deletingMedia}
-        onOpenChange={(open) => !open && setDeletingMedia(null)}
+        onOpenChange={handleCloseDeletingMedia}
       >
         <AlertDialogContent data-cy={sel('media.deleteConfirm.dialog')}>
           <AlertDialogHeader>

@@ -3,6 +3,9 @@
  *
  * Grid view of media items using MediaCard components.
  * Responsive: 6 cols desktop, 4 cols tablet, 2 cols mobile.
+ *
+ * Performance: Memoized gridStyle to prevent object recreation.
+ * MediaCard children benefit from React.memo.
  */
 
 'use client'
@@ -40,7 +43,10 @@ export function MediaGrid({
   className,
 }: MediaGridProps) {
   const t = useTranslations('media')
-  const gridStyle = { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }
+  const gridStyle = React.useMemo(
+    () => ({ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }),
+    [columns]
+  )
 
   if (isLoading) {
     return (

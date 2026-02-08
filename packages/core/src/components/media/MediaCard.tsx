@@ -3,6 +3,9 @@
  *
  * Individual media thumbnail card for grid view.
  * Shows image preview, filename, selection state, and actions menu.
+ *
+ * Performance: Wrapped with React.memo to prevent re-renders when sibling cards change.
+ * Uses content-visibility: auto for off-screen rendering optimization.
  */
 
 'use client'
@@ -32,7 +35,7 @@ interface MediaCardProps {
   mode?: 'single' | 'multiple'
 }
 
-export function MediaCard({
+export const MediaCard = React.memo(function MediaCard({
   media,
   isSelected,
   onSelect,
@@ -45,18 +48,41 @@ export function MediaCard({
   const isImage = media.mimeType.startsWith('image/')
   const isVideo = media.mimeType.startsWith('video/')
 
-  const handleCardClick = () => {
+  const handleCardClick = React.useCallback(() => {
     onSelect(media)
     if (onEdit) {
       onEdit(media)
     }
-  }
+  }, [media, onSelect, onEdit])
+
+  const handleCheckboxClick = React.useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+  }, [])
+
+  const handleCheckboxChange = React.useCallback(() => {
+    onSelect(media)
+  }, [media, onSelect])
+
+  const handleMenuClick = React.useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+  }, [])
+
+  const handleEditClick = React.useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    onEdit?.(media)
+  }, [media, onEdit])
+
+  const handleDeleteClick = React.useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    onDelete?.(media)
+  }, [media, onDelete])
 
   return (
     <Card
       data-cy={sel('media.grid.item', { id: media.id })}
       className={cn(
-        'group relative overflow-hidden transition-all cursor-pointer hover:shadow-md',
+        'group relative overflow-hidden transition-shadow cursor-pointer hover:shadow-md',
+        '[content-visibility:auto] [contain-intrinsic-size:auto_200px]',
         isSelected && 'ring-2 ring-primary ring-offset-2 ring-offset-background'
       )}
       onClick={handleCardClick}
@@ -71,6 +97,7 @@ export function MediaCard({
               alt={media.alt || media.filename}
               className="w-full h-full object-cover"
               loading="lazy"
+              decoding="async"
             />
           ) : isVideo ? (
             <VideoIcon className="w-12 h-12 text-muted-foreground" />
@@ -90,12 +117,12 @@ export function MediaCard({
                 'absolute top-2 left-2 z-10 transition-all duration-150',
                 isSelected ? 'opacity-100 scale-100' : 'opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100'
               )}
-              onClick={(e) => e.stopPropagation()}
+              onClick={handleCheckboxClick}
             >
               <Checkbox
                 data-cy={sel('media.grid.checkbox', { id: media.id })}
                 checked={isSelected}
-                onCheckedChange={() => onSelect(media)}
+                onCheckedChange={handleCheckboxChange}
                 aria-label={`${t('actions.select')} ${media.filename}`}
                 className={cn(
                   'h-5 w-5 rounded-md shadow-md border-2 transition-colors',
@@ -110,7 +137,7 @@ export function MediaCard({
           {/* Actions menu - always visible on hover */}
           <div
             className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={(e) => e.stopPropagation()}
+            onClick={handleMenuClick}
           >
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -128,10 +155,7 @@ export function MediaCard({
                 {onEdit && (
                   <DropdownMenuItem
                     data-cy={sel('media.grid.menuEdit', { id: media.id })}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onEdit(media)
-                    }}
+                    onClick={handleEditClick}
                   >
                     <Edit2Icon className="mr-2 h-4 w-4" />
                     {t('actions.edit')}
@@ -140,10 +164,7 @@ export function MediaCard({
                 {onDelete && (
                   <DropdownMenuItem
                     data-cy={sel('media.grid.menuDelete', { id: media.id })}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onDelete(media)
-                    }}
+                    onClick={handleDeleteClick}
                     className="text-destructive focus:text-destructive"
                   >
                     <Trash2Icon className="mr-2 h-4 w-4" />
@@ -169,4 +190,4 @@ export function MediaCard({
       </CardContent>
     </Card>
   )
-}
+})
