@@ -333,6 +333,41 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
   },
 
   // =============================================================================
+  // MEDIA LIBRARY CONFIGURATION
+  // =============================================================================
+  media: {
+    /**
+     * Maximum upload file size in MB (general fallback for all file types)
+     */
+    maxSizeMB: 10,
+
+    /**
+     * Maximum image file size in MB
+     * Overrides maxSizeMB for image/* files. Falls back to maxSizeMB if not set.
+     */
+    // maxSizeImageMB: 10,
+
+    /**
+     * Maximum video file size in MB
+     * Overrides maxSizeMB for video/* files. Falls back to maxSizeMB if not set.
+     */
+    // maxSizeVideoMB: 50,
+
+    /**
+     * Accepted MIME type patterns for the client-side file input
+     */
+    acceptedTypes: ['image/*', 'video/*'],
+
+    /**
+     * Specific MIME types allowed by the server-side upload endpoint
+     */
+    allowedMimeTypes: [
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+      'video/mp4', 'video/mpeg', 'video/quicktime', 'video/webm',
+    ],
+  },
+
+  // =============================================================================
   // MOBILE NAVIGATION CONFIGURATION
   // =============================================================================
   mobileNav: {

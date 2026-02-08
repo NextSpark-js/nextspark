@@ -3,6 +3,7 @@ import { put } from '@vercel/blob'
 import { authenticateRequest, hasRequiredScope } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { MEDIA_CONFIG } from '@nextsparkjs/core/lib/config/config-sync'
 import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
 import { extractImageDimensions } from '@nextsparkjs/core/lib/media/utils'
 import type { Media } from '@nextsparkjs/core/lib/media/types'
@@ -95,17 +96,10 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
         continue // Skip empty files
       }
 
-      // Validate file type (images and videos)
-      const allowedTypes = [
-        'image/jpeg',
-        'image/jpg',
-        'image/png',
-        'image/gif',
-        'image/webp',
-        'video/mp4',
-        'video/mpeg',
-        'video/quicktime',
-        'video/webm'
+      // Validate file type using config (theme-overridable)
+      const allowedTypes = MEDIA_CONFIG?.allowedMimeTypes ?? [
+        'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+        'video/mp4', 'video/mpeg', 'video/quicktime', 'video/webm',
       ]
 
       if (!allowedTypes.includes(file.type)) {
@@ -116,13 +110,20 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
         )
       }
 
-      // Validate file size (max 10MB)
-      const maxSize = 10 * 1024 * 1024 // 10MB
+      // Determine max size based on file type category (theme-overridable)
+      const defaultMaxSizeMB = MEDIA_CONFIG?.maxSizeMB ?? 10
+      let maxSizeMB = defaultMaxSizeMB
+      if (file.type.startsWith('image/') && MEDIA_CONFIG?.maxSizeImageMB != null) {
+        maxSizeMB = MEDIA_CONFIG.maxSizeImageMB
+      } else if (file.type.startsWith('video/') && MEDIA_CONFIG?.maxSizeVideoMB != null) {
+        maxSizeMB = MEDIA_CONFIG.maxSizeVideoMB
+      }
+      const maxSize = maxSizeMB * 1024 * 1024
       if (file.size > maxSize) {
         return createApiError(
-          `File ${file.name} is too large. Maximum size is 10MB.`,
+          `File ${file.name} is too large. Maximum size is ${maxSizeMB}MB.`,
           400,
-          { maxSize: '10MB', fileSize: `${(file.size / 1024 / 1024).toFixed(2)}MB` }
+          { maxSize: `${maxSizeMB}MB`, fileSize: `${(file.size / 1024 / 1024).toFixed(2)}MB` }
         )
       }
 
@@ -251,12 +252,15 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     const useVercelBlob = isVercelBlobConfigured()
 
     // This could be used for cleanup or management
+    const maxSizeMB = MEDIA_CONFIG?.maxSizeMB ?? 10
     return createApiResponse({
       message: 'Media upload endpoint is active',
       storage: useVercelBlob ? 'Vercel Blob' : 'Local Storage',
       uploadPath: 'uploads/temp/',
-      supportedTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm'],
-      maxFileSize: '10MB'
+      supportedTypes: MEDIA_CONFIG?.allowedMimeTypes ?? ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm'],
+      maxFileSize: `${maxSizeMB}MB`,
+      ...(MEDIA_CONFIG?.maxSizeImageMB != null && { maxImageSize: `${MEDIA_CONFIG.maxSizeImageMB}MB` }),
+      ...(MEDIA_CONFIG?.maxSizeVideoMB != null && { maxVideoSize: `${MEDIA_CONFIG.maxSizeVideoMB}MB` }),
     })
 
   } catch (error) {

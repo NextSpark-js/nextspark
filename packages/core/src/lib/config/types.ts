@@ -351,6 +351,25 @@ export interface ScheduledActionsConfig {
 }
 
 /**
+ * Media Library Configuration
+ *
+ * Controls file upload limits and accepted types for the media system.
+ * Themes can override these defaults in their app.config.ts.
+ */
+export interface MediaConfig {
+  /** Maximum upload file size in MB (general fallback) */
+  maxSizeMB: number
+  /** Maximum image file size in MB (overrides maxSizeMB for images). Falls back to maxSizeMB if not set. */
+  maxSizeImageMB?: number
+  /** Maximum video file size in MB (overrides maxSizeMB for videos). Falls back to maxSizeMB if not set. */
+  maxSizeVideoMB?: number
+  /** Accepted MIME type patterns for the file input (e.g., ['image/*', 'video/*']) */
+  acceptedTypes: string[]
+  /** Specific MIME types allowed by the server-side upload endpoint */
+  allowedMimeTypes: string[]
+}
+
+/**
  * Complete Application Configuration
  *
  * Root configuration object structure.
@@ -404,6 +423,9 @@ export interface AppConfig {
 
   /** Scheduled actions system configuration */
   scheduledActions?: ScheduledActionsConfig
+
+  /** Media library configuration */
+  media?: MediaConfig
 
   // Allow additional properties
   [key: string]: any
