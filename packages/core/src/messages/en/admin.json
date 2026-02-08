@@ -171,7 +171,10 @@
       "emptyArray": "No items added yet",
       "itemNumber": "Item {number}",
       "addItem": "Add Item",
-      "itemCount": "{current} of {max} items"
+      "itemCount": "{current} of {max} items",
+      "changeImage": "Change",
+      "removeImage": "Remove",
+      "browseMedia": "Click to upload or browse images"
     }
   },
   "builder": {

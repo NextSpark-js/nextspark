@@ -35,6 +35,7 @@ import { DEVTOOLS_SELECTORS } from './domains/devtools.selectors'
 import { PUBLIC_SELECTORS } from './domains/public.selectors'
 import { COMMON_SELECTORS } from './domains/common.selectors'
 import { PATTERNS_SELECTORS } from './domains/patterns.selectors'
+import { MEDIA_SELECTORS } from './domains/media.selectors'
 
 /**
  * CORE_SELECTORS - Composed from all domain selectors
@@ -68,6 +69,7 @@ export const CORE_SELECTORS = {
   public: PUBLIC_SELECTORS,
   common: COMMON_SELECTORS,
   patterns: PATTERNS_SELECTORS,
+  media: MEDIA_SELECTORS,
 } as const
 
 /**

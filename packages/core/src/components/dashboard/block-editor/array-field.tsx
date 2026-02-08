@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Button } from '../../ui/button'
 import { Input } from '../../ui/input'
@@ -14,16 +14,71 @@ import {
   SelectValue,
 } from '../../ui/select'
 import { ImageUpload } from '../../ui/image-upload'
+import { MediaLibrary } from '../../media/MediaLibrary'
 import { Card, CardContent, CardHeader } from '../../ui/card'
-import { ChevronUp, ChevronDown, Trash2, Plus } from 'lucide-react'
+import { ChevronUp, ChevronDown, Trash2, Plus, ImageIcon, X } from 'lucide-react'
 import { cn } from '../../../lib/utils'
 import { sel } from '../../../lib/test'
 import type { FieldDefinition } from '../../../types/blocks'
+import type { Media } from '../../../lib/media/types'
 
 interface ArrayFieldProps {
   field: FieldDefinition
   value: unknown[]
   onChange: (value: unknown[]) => void
+}
+
+function ArrayMediaLibraryField({
+  value,
+  onChange,
+  fieldName,
+}: {
+  value: string
+  onChange: (url: string) => void
+  fieldName: string
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const t = useTranslations('admin.blockEditor.form')
+
+  const handleSelect = (media: Media | Media[]) => {
+    if (Array.isArray(media)) return
+    onChange(media.url)
+    setIsOpen(false)
+  }
+
+  return (
+    <>
+      {value ? (
+        <div className="relative group rounded-md overflow-hidden">
+          <img src={value} alt="" className="w-full h-24 object-cover" />
+          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+            <Button type="button" variant="secondary" size="sm" onClick={() => setIsOpen(true)}>
+              {t('changeImage')}
+            </Button>
+            <Button type="button" variant="destructive" size="sm" onClick={() => onChange('')}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div
+          onClick={() => setIsOpen(true)}
+          className="border-2 border-dashed rounded-md p-4 text-center cursor-pointer hover:border-primary/50 transition-colors"
+        >
+          <ImageIcon className="h-6 w-6 mx-auto mb-1 text-muted-foreground" />
+          <p className="text-xs text-muted-foreground">{t('browseMedia')}</p>
+        </div>
+      )}
+
+      <MediaLibrary
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        onSelect={handleSelect}
+        mode="single"
+        allowedTypes={['image']}
+      />
+    </>
+  )
 }
 
 export function ArrayField({ field, value, onChange }: ArrayFieldProps) {
@@ -162,6 +217,15 @@ export function ArrayField({ field, value, onChange }: ArrayFieldProps) {
             onChange={(newValue) => handleItemFieldChange(itemIndex, itemField.name, newValue[0] || '')}
             maxImages={1}
             data-cy={sel('blockEditor.blockPropertiesPanel.form.arrayField.itemField', { name: field.name, index: itemIndex, field: itemField.name })}
+          />
+        )
+
+      case 'media-library':
+        return (
+          <ArrayMediaLibraryField
+            value={String(fieldValue || '')}
+            onChange={(url) => handleItemFieldChange(itemIndex, itemField.name, url)}
+            fieldName={`${field.name}-${itemIndex}-${itemField.name}`}
           />
         )
 

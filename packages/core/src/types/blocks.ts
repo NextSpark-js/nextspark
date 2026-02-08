@@ -314,6 +314,7 @@ export type FieldType =
   | 'number'
   | 'color'
   | 'image'
+  | 'media-library'
   | 'select'
   | 'checkbox'
   | 'radio'

@@ -14,7 +14,8 @@ import {
 } from '../../ui/select'
 import { ImageUpload } from '../../ui/image-upload'
 import { RichTextEditor } from '../../ui/rich-text-editor'
-import { ChevronDown, ChevronRight, CalendarIcon } from 'lucide-react'
+import { MediaLibrary } from '../../media/MediaLibrary'
+import { ChevronDown, ChevronRight, CalendarIcon, ImageIcon, X } from 'lucide-react'
 import { cn } from '../../../lib/utils'
 import { sel } from '../../../lib/test'
 import { Switch } from '../../ui/switch'
@@ -25,6 +26,7 @@ import { Button } from '../../ui/button'
 import { format } from 'date-fns'
 import { ArrayField } from './array-field'
 import type { FieldDefinition } from '../../../types/blocks'
+import type { Media } from '../../../lib/media/types'
 
 interface DynamicFormProps {
   fieldDefinitions: FieldDefinition[]
@@ -68,6 +70,80 @@ function organizeFields(fields: FieldDefinition[]): {
     ungrouped,
     groups: Array.from(groupMap.values()),
   }
+}
+
+/**
+ * MediaLibraryField - Opens the Media Library modal for image selection
+ * Stores the URL string (not media ID) for backward compatibility with block schemas
+ */
+function MediaLibraryField({
+  value,
+  onChange,
+  fieldName,
+}: {
+  value: string
+  onChange: (url: string) => void
+  fieldName: string
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const t = useTranslations('admin.blockEditor.form')
+
+  const handleSelect = (media: Media | Media[]) => {
+    if (Array.isArray(media)) return
+    onChange(media.url)
+    setIsOpen(false)
+  }
+
+  return (
+    <>
+      {value ? (
+        <div
+          className="relative group rounded-md overflow-hidden"
+          data-cy={sel('blockEditor.blockPropertiesPanel.form.mediaField.preview', { name: fieldName })}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={value} alt="" className="w-full h-40 object-cover" />
+          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsOpen(true)}
+              data-cy={sel('blockEditor.blockPropertiesPanel.form.mediaField.changeBtn', { name: fieldName })}
+            >
+              {t('changeImage')}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={() => onChange('')}
+              data-cy={sel('blockEditor.blockPropertiesPanel.form.mediaField.removeBtn', { name: fieldName })}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div
+          onClick={() => setIsOpen(true)}
+          className="border-2 border-dashed rounded-md p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+          data-cy={sel('blockEditor.blockPropertiesPanel.form.mediaField.empty', { name: fieldName })}
+        >
+          <ImageIcon className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">{t('browseMedia')}</p>
+        </div>
+      )}
+
+      <MediaLibrary
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        onSelect={handleSelect}
+        mode="single"
+        allowedTypes={['image']}
+      />
+    </>
+  )
 }
 
 export function DynamicForm({ fieldDefinitions, values, onChange }: DynamicFormProps) {
@@ -231,6 +307,15 @@ export function DynamicForm({ fieldDefinitions, values, onChange }: DynamicFormP
             onChange={(newValue) => handleFieldChange(field.name, newValue)}
             maxImages={1}
             data-cy={sel('blockEditor.blockPropertiesPanel.form.field', { name: field.name })}
+          />
+        )
+
+      case 'media-library':
+        return (
+          <MediaLibraryField
+            value={String(value || '')}
+            onChange={(url) => handleFieldChange(field.name, url)}
+            fieldName={field.name}
           />
         )
 

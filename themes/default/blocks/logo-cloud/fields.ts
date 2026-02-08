@@ -30,7 +30,7 @@ const logoCloudContentFields: FieldDefinition[] = [
       {
         name: 'image',
         label: 'Logo Image',
-        type: 'image',
+        type: 'media-library',
         tab: 'content',
         required: true,
         helpText: 'Logo image URL (recommended: transparent PNG, 200x100px)',

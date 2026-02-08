@@ -44,6 +44,7 @@ export {
 export { GenericEntityService } from './generic-entity.service'
 export { PatternUsageService } from './pattern-usage.service'
 export { TransactionalMetaService } from './transactional-meta.service'
+export { MediaService } from './media.service'
 
 // Export types
 export type { UpdateUserPayload } from './user.service'
@@ -63,3 +64,11 @@ export type { PluginRegistryEntry, RouteFileEndpoint, PluginEntity, PluginName, 
 export type { ApiRouteEntry, RouteCategory } from './api-routes.service'
 export type { GenericListOptions, GenericListResult } from './generic-entity.service'
 export type { PatternUsage, PatternUsageWithEntityInfo, PatternUsageCount, GetUsagesOptions, GetUsagesResult } from './pattern-usage.service'
+export type {
+  Media,
+  CreateMediaInput,
+  UpdateMediaInput,
+  MediaListOptions,
+  MediaListResult,
+  MediaStatus,
+} from '../media/types'
