@@ -36,8 +36,7 @@
     "duplicateFound": "{count, plural, one {# file already exists} other {# files already exist}} in your library",
     "duplicateConfirm": "Upload anyway?",
     "duplicateSkip": "Skip duplicates",
-    "duplicateUploadAll": "Upload All",
-    "checking": "Checking for duplicates..."
+    "duplicateUploadAll": "Upload All"
   },
   "grid": {
     "selected": "Selected",
@@ -119,8 +118,12 @@
   "dashboard": {
     "subtitle": "{count, plural, =0 {No files} one {# file} other {# files}} in your library",
     "selected": "{count, plural, one {# selected} other {# selected}}",
-    "bulkDelete": "Delete Selected",
+    "bulkDelete": "Delete",
+    "bulkDeleteConfirm": "Delete {count, plural, one {# file} other {# files}}?",
+    "bulkDeleteConfirmDesc": "This action cannot be undone. The files will be permanently deleted.",
+    "bulkDeleting": "Deleting {current} of {total}...",
     "bulkDeleteSuccess": "{count, plural, one {# file deleted} other {# files deleted}}",
+    "deselectAll": "Deselect all",
     "hideUpload": "Hide Upload",
     "clearSelection": "Clear",
     "pagination": "Showing {from}-{to} of {total}",

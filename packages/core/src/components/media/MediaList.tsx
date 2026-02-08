@@ -37,7 +37,7 @@ interface MediaListProps {
   items: Media[]
   isLoading: boolean
   selectedIds: Set<string>
-  onSelect: (media: Media) => void
+  onSelect: (media: Media, options?: { shiftKey?: boolean }) => void
   onEdit?: (media: Media) => void
   onDelete?: (media: Media) => void
   mode?: 'single' | 'multiple'
@@ -170,11 +170,14 @@ export function MediaList({
                 onClick={() => onEdit?.(media)}
               >
                 {mode === 'multiple' && (
-                  <TableCell onClick={(e) => e.stopPropagation()}>
+                  <TableCell onClick={(e) => {
+                    e.stopPropagation()
+                    onSelect(media, { shiftKey: e.shiftKey })
+                  }}>
                     <Checkbox
                       checked={isSelected}
-                      onCheckedChange={() => onSelect(media)}
                       aria-label={`${t('actions.select')} ${media.filename}`}
+                      className="pointer-events-none"
                     />
                   </TableCell>
                 )}

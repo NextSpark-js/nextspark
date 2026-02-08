@@ -232,7 +232,7 @@ describe('MediaCard', () => {
       const card = screen.getByTestId('card')
       fireEvent.click(card)
 
-      expect(onSelect).toHaveBeenCalledWith(defaultProps.media)
+      expect(onSelect).toHaveBeenCalledWith(defaultProps.media, { shiftKey: false })
     })
 
     test('calls onEdit with media on card click when onEdit is provided', () => {

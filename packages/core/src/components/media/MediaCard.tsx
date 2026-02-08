@@ -29,7 +29,7 @@ import type { Media } from '../../lib/media/types'
 interface MediaCardProps {
   media: Media
   isSelected: boolean
-  onSelect: (media: Media) => void
+  onSelect: (media: Media, options?: { shiftKey?: boolean }) => void
   onEdit?: (media: Media) => void
   onDelete?: (media: Media) => void
   mode?: 'single' | 'multiple'
@@ -48,19 +48,16 @@ export const MediaCard = React.memo(function MediaCard({
   const isImage = media.mimeType.startsWith('image/')
   const isVideo = media.mimeType.startsWith('video/')
 
-  const handleCardClick = React.useCallback(() => {
-    onSelect(media)
-    if (onEdit) {
+  const handleCardClick = React.useCallback((e: React.MouseEvent) => {
+    onSelect(media, { shiftKey: e.shiftKey })
+    if (onEdit && !e.shiftKey) {
       onEdit(media)
     }
   }, [media, onSelect, onEdit])
 
   const handleCheckboxClick = React.useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
-  }, [])
-
-  const handleCheckboxChange = React.useCallback(() => {
-    onSelect(media)
+    onSelect(media, { shiftKey: e.shiftKey })
   }, [media, onSelect])
 
   const handleMenuClick = React.useCallback((e: React.MouseEvent) => {
@@ -122,10 +119,9 @@ export const MediaCard = React.memo(function MediaCard({
               <Checkbox
                 data-cy={sel('media.grid.checkbox', { id: media.id })}
                 checked={isSelected}
-                onCheckedChange={handleCheckboxChange}
                 aria-label={`${t('actions.select')} ${media.filename}`}
                 className={cn(
-                  'h-5 w-5 rounded-md shadow-md border-2 transition-colors',
+                  'h-5 w-5 rounded-md shadow-md border-2 transition-colors pointer-events-none',
                   isSelected
                     ? 'bg-primary border-primary text-primary-foreground'
                     : 'bg-white/90 border-white/60 backdrop-blur-sm'

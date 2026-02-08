@@ -247,7 +247,7 @@ export function MediaUploadZone({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        {uploadMutation.isPending ? (
+        {(uploadMutation.isPending || isChecking) ? (
           <div className="flex flex-col items-center gap-4">
             <LoaderIcon className="h-12 w-12 animate-spin text-primary" />
             <div className="w-full max-w-xs">
@@ -260,13 +260,6 @@ export function MediaUploadZone({
                 className="w-full"
               />
             </div>
-          </div>
-        ) : isChecking ? (
-          <div className="flex flex-col items-center gap-4">
-            <LoaderIcon className="h-12 w-12 animate-spin text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              {t('upload.checking')}
-            </p>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-4">

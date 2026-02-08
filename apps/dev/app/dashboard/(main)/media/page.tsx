@@ -1,16 +1,3 @@
-/**
- * Media Dashboard Page
- *
- * Full-page media library for browsing, uploading, and managing media.
- * Follows the same layout pattern as EntityListWrapper for consistency.
- *
- * Performance:
- * - useCallback for all handlers with functional setState
- * - useMemo for sortOptions to prevent array recreation
- * - startTransition for search/filter state updates (INP)
- * - decoding="async" on detail preview image
- */
-
 'use client'
 
 import * as React from 'react'
@@ -24,6 +11,7 @@ import {
   XIcon,
   ChevronUpIcon,
   ImageIcon,
+  LoaderIcon,
 } from 'lucide-react'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { Input } from '@nextsparkjs/core/components/ui/input'
@@ -59,13 +47,14 @@ import { useMediaList, useDeleteMedia } from '@nextsparkjs/core/hooks/useMedia'
 import { useDebounce } from '@nextsparkjs/core/hooks/useDebounce'
 import { useToast } from '@nextsparkjs/core/hooks/useToast'
 import { sel } from '@nextsparkjs/core/lib/selectors'
+import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
 import type { Media, MediaListOptions } from '@nextsparkjs/core/lib/media/types'
 
 type ViewMode = 'grid' | 'list'
 
 const PAGE_SIZE = 40
 
-export default function MediaDashboardPage() {
+function DefaultMediaDashboardPage() {
   const t = useTranslations('media')
   const { toast } = useToast()
   const deleteMutation = useDeleteMedia()
@@ -83,6 +72,11 @@ export default function MediaDashboardPage() {
   const [selectedTagIds, setSelectedTagIds] = React.useState<string[]>([])
   const [showUpload, setShowUpload] = React.useState(false)
   const [columns, setColumns] = React.useState(6)
+  const [isBulkDeleting, setIsBulkDeleting] = React.useState(false)
+  const [bulkDeleteProgress, setBulkDeleteProgress] = React.useState({ current: 0, total: 0 })
+  const [deletingIds, setDeletingIds] = React.useState<Set<string>>(new Set())
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = React.useState(false)
+  const lastSelectedIndexRef = React.useRef<number | null>(null)
 
   // Debounce search
   const debouncedSearch = useDebounce(searchQuery, 300)
@@ -148,17 +142,35 @@ export default function MediaDashboardPage() {
     })
   }, [])
 
-  const handleSelect = React.useCallback((media: Media) => {
-    setSelectedIds((prev) => {
-      const newSet = new Set(prev)
-      if (newSet.has(media.id)) {
-        newSet.delete(media.id)
-      } else {
-        newSet.add(media.id)
-      }
-      return newSet
-    })
-  }, [])
+  const handleSelect = React.useCallback((media: Media, options?: { shiftKey?: boolean }) => {
+    const currentIndex = items.findIndex(m => m.id === media.id)
+
+    if (options?.shiftKey && lastSelectedIndexRef.current !== null && currentIndex !== -1) {
+      // Range selection: select all items between last selected and current
+      const start = Math.min(lastSelectedIndexRef.current, currentIndex)
+      const end = Math.max(lastSelectedIndexRef.current, currentIndex)
+      setSelectedIds(prev => {
+        const newSet = new Set(prev)
+        for (let i = start; i <= end; i++) {
+          newSet.add(items[i].id)
+        }
+        return newSet
+      })
+    } else {
+      // Toggle single selection
+      setSelectedIds((prev) => {
+        const newSet = new Set(prev)
+        if (newSet.has(media.id)) {
+          newSet.delete(media.id)
+        } else {
+          newSet.add(media.id)
+        }
+        return newSet
+      })
+    }
+
+    lastSelectedIndexRef.current = currentIndex
+  }, [items])
 
   const handleDelete = React.useCallback(async () => {
     if (!deletingMedia) return
@@ -183,13 +195,26 @@ export default function MediaDashboardPage() {
 
   const handleBulkDelete = React.useCallback(async () => {
     if (selectedIds.size === 0) return
+    setShowBulkDeleteConfirm(false)
+    setIsBulkDeleting(true)
+    setDeletingIds(new Set(selectedIds))
+    const idsArray = Array.from(selectedIds)
+    const totalCount = idsArray.length
+    setBulkDeleteProgress({ current: 0, total: totalCount })
+
     let successCount = 0
-    for (const id of selectedIds) {
+    for (let i = 0; i < idsArray.length; i++) {
+      setBulkDeleteProgress({ current: i + 1, total: totalCount })
       try {
-        await deleteMutation.mutateAsync(id)
+        await deleteMutation.mutateAsync(idsArray[i])
         successCount++
       } catch { /* continue */ }
     }
+
+    setIsBulkDeleting(false)
+    setDeletingIds(new Set())
+    setBulkDeleteProgress({ current: 0, total: 0 })
+
     if (successCount > 0) {
       toast({
         title: t('delete.success'),
@@ -212,10 +237,6 @@ export default function MediaDashboardPage() {
 
   const handleToggleUpload = React.useCallback(() => {
     setShowUpload(prev => !prev)
-  }, [])
-
-  const handleClearSelection = React.useCallback(() => {
-    setSelectedIds(new Set())
   }, [])
 
   const handleCloseDetail = React.useCallback(() => {
@@ -259,46 +280,19 @@ export default function MediaDashboardPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Bulk actions */}
-          {selectedCount > 0 && (
+        <Button onClick={handleToggleUpload}>
+          {showUpload ? (
             <>
-              <span className="text-sm text-muted-foreground">
-                {t('dashboard.selected', { count: selectedCount })}
-              </span>
-              <Button
-                data-cy={sel('media.dashboard.bulkDeleteBtn')}
-                variant="destructive"
-                size="sm"
-                onClick={handleBulkDelete}
-              >
-                <Trash2Icon className="mr-1.5 h-4 w-4" />
-                {t('dashboard.bulkDelete')}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleClearSelection}
-              >
-                <XIcon className="h-4 w-4" />
-              </Button>
+              <ChevronUpIcon className="mr-2 h-4 w-4" />
+              {t('dashboard.hideUpload')}
+            </>
+          ) : (
+            <>
+              <UploadIcon className="mr-2 h-4 w-4" />
+              {t('toolbar.upload')}
             </>
           )}
-
-          <Button onClick={handleToggleUpload}>
-            {showUpload ? (
-              <>
-                <ChevronUpIcon className="mr-2 h-4 w-4" />
-                {t('dashboard.hideUpload')}
-              </>
-            ) : (
-              <>
-                <UploadIcon className="mr-2 h-4 w-4" />
-                {t('toolbar.upload')}
-              </>
-            )}
-          </Button>
-        </div>
+        </Button>
       </div>
 
       {/* Upload zone (collapsible) */}
@@ -408,28 +402,38 @@ export default function MediaDashboardPage() {
       </div>
 
       {/* Row 3: Content */}
-      {viewMode === 'grid' ? (
-        <MediaGrid
-          items={items}
-          isLoading={isLoading}
-          selectedIds={selectedIds}
-          onSelect={handleSelect}
-          onEdit={setEditingMedia}
-          onDelete={setDeletingMedia}
-          mode="multiple"
-          columns={columns}
-        />
-      ) : (
-        <MediaList
-          items={items}
-          isLoading={isLoading}
-          selectedIds={selectedIds}
-          onSelect={handleSelect}
-          onEdit={setEditingMedia}
-          onDelete={setDeletingMedia}
-          mode="multiple"
-        />
-      )}
+      <div className={isBulkDeleting ? 'pointer-events-none' : ''}>
+        {isBulkDeleting && (
+          <style>{`
+            [data-cy^="media-grid-item-"] { transition: opacity 0.2s; }
+            ${Array.from(deletingIds).map(id =>
+              `[data-cy="media-grid-item-${id}"] { opacity: 0.35; }`
+            ).join('\n')}
+          `}</style>
+        )}
+        {viewMode === 'grid' ? (
+          <MediaGrid
+            items={items}
+            isLoading={isLoading}
+            selectedIds={selectedIds}
+            onSelect={handleSelect}
+            onEdit={isBulkDeleting ? undefined : setEditingMedia}
+            onDelete={isBulkDeleting ? undefined : setDeletingMedia}
+            mode="multiple"
+            columns={columns}
+          />
+        ) : (
+          <MediaList
+            items={items}
+            isLoading={isLoading}
+            selectedIds={selectedIds}
+            onSelect={handleSelect}
+            onEdit={isBulkDeleting ? undefined : setEditingMedia}
+            onDelete={isBulkDeleting ? undefined : setDeletingMedia}
+            mode="multiple"
+          />
+        )}
+      </div>
 
       {/* Pagination */}
       {totalPages > 1 && (
@@ -505,7 +509,7 @@ export default function MediaDashboardPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete confirmation dialog */}
+      {/* Single delete confirmation dialog */}
       <AlertDialog
         open={!!deletingMedia}
         onOpenChange={handleCloseDeletingMedia}
@@ -529,6 +533,80 @@ export default function MediaDashboardPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Bulk delete confirmation dialog */}
+      <AlertDialog
+        open={showBulkDeleteConfirm}
+        onOpenChange={(open) => !open && setShowBulkDeleteConfirm(false)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t('dashboard.bulkDeleteConfirm', { count: selectedCount })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('dashboard.bulkDeleteConfirmDesc')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('delete.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              <Trash2Icon className="mr-1.5 h-4 w-4" />
+              {t('dashboard.bulkDelete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Floating action bar */}
+      {(selectedCount > 0 || isBulkDeleting) && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-200">
+          <div className="flex items-center gap-3 bg-background border border-border rounded-xl shadow-lg px-4 py-2.5">
+            {isBulkDeleting ? (
+              <>
+                <LoaderIcon className="h-4 w-4 animate-spin text-destructive" />
+                <span className="text-sm font-medium">
+                  {t('dashboard.bulkDeleting', {
+                    current: bulkDeleteProgress.current,
+                    total: bulkDeleteProgress.total,
+                  })}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="text-sm font-medium">
+                  {t('dashboard.selected', { count: selectedCount })}
+                </span>
+                <div className="h-4 w-px bg-border" />
+                <Button
+                  data-cy={sel('media.dashboard.bulkDeleteBtn')}
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setShowBulkDeleteConfirm(true)}
+                >
+                  <Trash2Icon className="mr-1.5 h-4 w-4" />
+                  {t('dashboard.bulkDelete')}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedIds(new Set())}
+                  className="text-muted-foreground"
+                >
+                  <XIcon className="mr-1 h-3.5 w-3.5" />
+                  {t('dashboard.deselectAll')}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
+
+// Export the resolved component (theme override or default)
+export default getTemplateOrDefaultClient('app/dashboard/(main)/media/page.tsx', DefaultMediaDashboardPage)
