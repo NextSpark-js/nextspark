@@ -264,6 +264,43 @@ export const fieldDefinitions: FieldDefinition[] = [
 export const fields = fieldDefinitions
 ```
 
+#### Using the Media Library Field Type
+
+For image fields in blocks, use `type: 'media-library'` instead of `type: 'image'`. This opens the full Media Library modal where users can browse, search, filter, and upload images:
+
+```typescript
+// Regular field
+{
+  name: 'backgroundImage',
+  label: 'Background Image',
+  type: 'media-library',    // Opens Media Library modal
+  tab: 'design',
+  required: false,
+  helpText: 'Optional background image (recommended: 1920x1080px)',
+}
+
+// Inside an array field
+{
+  name: 'logos',
+  type: 'array',
+  tab: 'content',
+  itemFields: [
+    {
+      name: 'image',
+      label: 'Logo Image',
+      type: 'media-library',  // Also works in arrays
+      tab: 'content',
+      required: true,
+    },
+    // ... other fields
+  ],
+}
+```
+
+The `media-library` field stores a **URL string** in the block data, so no schema changes are needed — blocks continue to use `z.string().url()` or `z.string().optional()`.
+
+> **Note:** The old `type: 'image'` field still works but uses a basic drag-and-drop upload. For a better user experience, prefer `type: 'media-library'`. See [Media Library in Block Editor](../21-media-library/04-block-editor-integration.md) for details.
+
 ### Step 3: schema.ts
 
 Define validation schema with Zod:

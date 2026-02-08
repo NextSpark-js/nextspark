@@ -1,0 +1,144 @@
+{
+  "title": "Media Library",
+  "subtitle": "Manage your images and videos",
+  "toolbar": {
+    "upload": "Upload",
+    "search": "Search files...",
+    "typeFilter": {
+      "all": "All Types",
+      "images": "Images",
+      "videos": "Videos"
+    },
+    "sort": {
+      "newest": "Newest First",
+      "oldest": "Oldest First",
+      "nameAsc": "Name A-Z",
+      "nameDesc": "Name Z-A",
+      "sizeDesc": "Largest First",
+      "sizeAsc": "Smallest First"
+    },
+    "viewGrid": "Grid View",
+    "viewList": "List View",
+    "columns": "Columns"
+  },
+  "upload": {
+    "dragDrop": "Drag and drop files here or",
+    "browse": "browse to upload",
+    "maxSize": "Maximum file size: {maxSize}MB",
+    "uploading": "Uploading...",
+    "uploadingFile": "Uploading {filename}...",
+    "success": "File uploaded successfully",
+    "successMultiple": "{count} files uploaded successfully",
+    "error": "Failed to upload file",
+    "invalidType": "File type not allowed",
+    "tooLarge": "File is too large",
+    "maxSelectionsReached": "Maximum {maxSelections} selections allowed",
+    "duplicateFound": "{count, plural, one {# file already exists} other {# files already exist}} in your library",
+    "duplicateConfirm": "Upload anyway?",
+    "duplicateSkip": "Skip duplicates",
+    "duplicateUploadAll": "Upload All",
+    "checking": "Checking for duplicates..."
+  },
+  "grid": {
+    "selected": "Selected",
+    "dimensions": "{width} x {height}",
+    "noResults": "No media found",
+    "loading": "Loading media..."
+  },
+  "list": {
+    "filename": "Filename",
+    "type": "Type",
+    "size": "Size",
+    "dimensions": "Dimensions",
+    "uploaded": "Uploaded",
+    "actions": "Actions"
+  },
+  "detail": {
+    "title": "Media Details",
+    "titleLabel": "Title",
+    "titlePlaceholder": "Give this file a title...",
+    "titleDescription": "Optional display name for this media",
+    "altLabel": "Alt Text",
+    "altPlaceholder": "Describe this image for accessibility...",
+    "altDescription": "Alternative text for screen readers and SEO",
+    "captionLabel": "Caption",
+    "captionPlaceholder": "Add a caption...",
+    "captionDescription": "Optional description displayed below the media",
+    "save": "Save Changes",
+    "saving": "Saving...",
+    "saved": "Changes saved",
+    "cancel": "Cancel",
+    "info": {
+      "filename": "Filename",
+      "fileSize": "File Size",
+      "mimeType": "Type",
+      "dimensions": "Dimensions",
+      "uploadedBy": "Uploaded By",
+      "uploadedAt": "Uploaded",
+      "url": "URL"
+    }
+  },
+  "footer": {
+    "itemsSelected": "{count} item selected",
+    "itemsSelectedPlural": "{count} items selected",
+    "cancel": "Cancel",
+    "select": "Select"
+  },
+  "selector": {
+    "selectMedia": "Select Media",
+    "change": "Change",
+    "remove": "Remove",
+    "noSelection": "No media selected"
+  },
+  "empty": {
+    "title": "No media files yet",
+    "description": "Upload images or videos to get started",
+    "uploadBtn": "Upload Files"
+  },
+  "delete": {
+    "title": "Delete Media",
+    "message": "Are you sure you want to delete this media file? This action cannot be undone.",
+    "confirm": "Delete",
+    "cancel": "Cancel",
+    "success": "Media deleted successfully",
+    "error": "Failed to delete media"
+  },
+  "errors": {
+    "loadFailed": "Failed to load media",
+    "unauthorized": "You don't have permission to access media",
+    "notFound": "Media not found",
+    "uploadFailed": "Upload failed: {error}"
+  },
+  "actions": {
+    "edit": "Edit",
+    "delete": "Delete",
+    "select": "Select",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "dashboard": {
+    "subtitle": "{count, plural, =0 {No files} one {# file} other {# files}} in your library",
+    "selected": "{count, plural, one {# selected} other {# selected}}",
+    "bulkDelete": "Delete Selected",
+    "bulkDeleteSuccess": "{count, plural, one {# file deleted} other {# files deleted}}",
+    "hideUpload": "Hide Upload",
+    "clearSelection": "Clear",
+    "pagination": "Showing {from}-{to} of {total}",
+    "prevPage": "Previous",
+    "nextPage": "Next",
+    "tags": "Tags",
+    "allTags": "All Tags",
+    "filterByTag": "Filter by tag...",
+    "noTags": "No tags"
+  },
+  "tags": {
+    "title": "Tags",
+    "add": "Add Tag",
+    "remove": "Remove",
+    "create": "Create Tag",
+    "createPlaceholder": "New tag name...",
+    "applied": "Tag added",
+    "removed": "Tag removed",
+    "empty": "No tags assigned"
+  }
+}

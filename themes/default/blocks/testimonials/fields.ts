@@ -58,7 +58,7 @@ const testimonialsContentFields: FieldDefinition[] = [
       {
         name: 'avatar',
         label: 'Avatar Image',
-        type: 'image',
+        type: 'media-library',
         tab: 'content',
         required: false,
         description: 'Profile picture of the person',

@@ -334,6 +334,23 @@ export const APP_CONFIG_OVERRIDES = {
   },
 
   // =============================================================================
+  // MEDIA LIBRARY OVERRIDES
+  // =============================================================================
+  // Uncomment and modify to customize media upload limits and accepted file types.
+  //
+  // media: {
+  //   maxSizeMB: 10,           // General fallback max size
+  //   maxSizeImageMB: 10,      // Max size for image/* files (overrides maxSizeMB)
+  //   maxSizeVideoMB: 50,      // Max size for video/* files (overrides maxSizeMB)
+  //   acceptedTypes: ['image/*', 'video/*', 'application/pdf'],
+  //   allowedMimeTypes: [
+  //     'image/jpeg', 'image/png', 'image/webp',
+  //     'video/mp4', 'video/webm',
+  //     'application/pdf',
+  //   ],
+  // },
+
+  // =============================================================================
   // DEV KEYRING - MOVED TO dev.config.ts
   // =============================================================================
   // DevKeyring configuration has been moved to dev.config.ts

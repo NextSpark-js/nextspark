@@ -35,6 +35,13 @@
     }
   },
 
+  "worktrees": {
+    "enabled": true,
+    "basePath": "..",
+    "autoInstall": true,
+    "cleanupOnClose": true
+  },
+
   "integrations": {
     "github": {
       "enabled": true

@@ -9,6 +9,7 @@ import docs from './docs.json'
 import entities from './entities.json'
 import footer from './footer.json'
 import home from './home.json'
+import media from './media.json'
 import navigation from './navigation.json'
 import patterns from './patterns.json'
 import permissions from './permissions.json'
@@ -30,6 +31,7 @@ export default {
   entities,
   footer,
   home,
+  media,
   navigation,
   patterns,
   permissions,

@@ -247,6 +247,7 @@ export const USER_ROLES_CONFIG = APP_CONFIG_MERGED.userRoles
 export const API_CONFIG = APP_CONFIG_MERGED.api
 export const MOBILE_NAV_CONFIG = APP_CONFIG_MERGED.mobileNav
 export const TEAMS_CONFIG = APP_CONFIG_MERGED.teams
+export const MEDIA_CONFIG = APP_CONFIG_MERGED.media
 
 // Re-export dashboard configuration sections
 // These always exist thanks to the default config + merge system

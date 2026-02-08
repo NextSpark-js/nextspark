@@ -258,7 +258,7 @@ export { HeroBlock as Component } from './component'
 export type { HeroProps } from './schema'
 ```
 
-## Field Types (15 Available)
+## Field Types (16 Available)
 
 | Type | Description | Additional Props |
 |------|-------------|------------------|
@@ -272,11 +272,57 @@ export type { HeroProps } from './schema'
 | `radio` | Radio group | `options: [{label, value}]` |
 | `rich-text` | WYSIWYG editor | - |
 | `image` | Image upload | `aspectRatio`, `maxSize` |
+| `media-library` | Media Library modal | Opens full media browser with search, filter, tags, upload |
 | `color` | Color picker | `presets` |
 | `date` | Date picker | `format` |
 | `time` | Time picker | `format` |
 | `datetime` | DateTime picker | `format` |
 | `array` | Repeatable items | `itemFields`, `minItems`, `maxItems` |
+
+### media-library Field Type
+
+The `media-library` field type opens the full Media Library modal instead of a basic file upload. Users can browse existing media, search, filter by type/tags, and upload new files.
+
+**Usage in fields.ts:**
+
+```typescript
+{
+  name: 'backgroundImage',
+  label: 'Background Image',
+  type: 'media-library',
+  tab: 'design',
+  required: false,
+  helpText: 'Optional background image (recommended: 1920x1080px)',
+}
+```
+
+**In array sub-fields:**
+
+```typescript
+{
+  name: 'logos',
+  type: 'array',
+  itemFields: [
+    {
+      name: 'image',
+      label: 'Logo Image',
+      type: 'media-library',  // Works inside arrays too
+      tab: 'content',
+      required: true,
+    },
+  ],
+}
+```
+
+**Key behavior:**
+- Stores URL string (not media ID) in block data
+- Zero schema changes needed (blocks use `z.string().url()`)
+- Empty state: dashed border with "Browse Media Library" prompt
+- With value: image preview with Change/Remove hover overlay
+- Both `dynamic-form.tsx` and `array-field.tsx` handle this type
+
+**Migration from `'image'` to `'media-library'`:**
+Simply change `type: 'image'` to `type: 'media-library'` in any block's `fields.ts`. No schema or component changes required.
 
 ## Block Categories (15)
 
@@ -481,3 +527,4 @@ Interactive prompts for: slug, name, description, category, icon, scope.
 - `cypress-selectors` - data-cy attribute patterns
 - `shadcn-components` - UI component patterns
 - `tailwind-theming` - CSS variable patterns
+- `media-library` - Media Library system and components

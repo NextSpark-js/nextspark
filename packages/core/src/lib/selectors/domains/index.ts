@@ -17,3 +17,4 @@ export { DEVTOOLS_SELECTORS, type DevtoolsSelectorsType } from './devtools.selec
 export { PUBLIC_SELECTORS, type PublicSelectorsType } from './public.selectors'
 export { COMMON_SELECTORS, type CommonSelectorsType } from './common.selectors'
 export { PATTERNS_SELECTORS, type PatternsSelectorsType } from './patterns.selectors'
+export { MEDIA_SELECTORS, type MediaSelectorsType } from './media.selectors'

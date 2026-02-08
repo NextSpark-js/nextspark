@@ -6,7 +6,7 @@ import { useMemo } from 'react'
 import { cn } from '../../../lib/utils'
 import { useTranslations } from 'next-intl'
 import { sel } from '../../../lib/test'
-import { Home, FileText, LucideIcon, ChevronDown } from 'lucide-react'
+import { Home, Camera, FileText, LucideIcon, ChevronDown } from 'lucide-react'
 import * as Icons from 'lucide-react'
 import type { SerializableEntityConfig } from '../../../lib/entities/serialization'
 import { THEME_REGISTRY } from '@nextsparkjs/registries/theme-registry'
@@ -54,6 +54,12 @@ const coreItems: NavigationItem[] = [
     href: '/dashboard',
     icon: Home,
     descriptionKey: 'dashboard'
+  },
+  {
+    name: 'media',
+    href: '/dashboard/media',
+    icon: Camera,
+    descriptionKey: 'media'
   },
 ]
 
