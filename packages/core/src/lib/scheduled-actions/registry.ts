@@ -1,6 +1,9 @@
 /**
  * Scheduled Actions - Registry
  * Manages registration and lookup of action handlers
+ *
+ * Uses globalThis to persist across HMR in development mode.
+ * Same pattern as Next.js recommends for database connections.
  */
 
 import type { ScheduledActionDefinition, ScheduledActionHandler } from './types'
@@ -9,8 +12,14 @@ import type { ScheduledActionDefinition, ScheduledActionHandler } from './types'
  * In-memory registry of action handlers
  * Key: action name (e.g., 'webhook:send', 'billing:check-renewals')
  * Value: action definition with handler function
+ *
+ * Stored on globalThis to survive HMR module reloads in dev mode.
  */
-const actionRegistry = new Map<string, ScheduledActionDefinition>()
+const globalForScheduledActions = globalThis as typeof globalThis & {
+  __scheduledActionsRegistry?: Map<string, ScheduledActionDefinition>
+}
+
+const actionRegistry = globalForScheduledActions.__scheduledActionsRegistry ??= new Map<string, ScheduledActionDefinition>()
 
 /**
  * Register a scheduled action handler
