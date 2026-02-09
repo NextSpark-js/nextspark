@@ -49,14 +49,10 @@ export const MediaCard = React.memo(function MediaCard({
   const isVideo = media.mimeType.startsWith('video/')
 
   const handleCardClick = React.useCallback((e: React.MouseEvent) => {
-    if (mode === 'multiple') {
-      // In multi-select mode, card click toggles selection (no edit)
-      onSelect(media, { shiftKey: e.shiftKey })
-    } else {
-      // In single mode, click just selects (no detail panel)
-      onSelect(media)
-    }
-  }, [media, onSelect, mode])
+    // Card body click always opens detail/edit (WordPress/Google Photos pattern)
+    // Selection is handled exclusively by the checkbox
+    onEdit?.(media)
+  }, [media, onEdit])
 
   const handleCheckboxClick = React.useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
@@ -115,7 +111,7 @@ export const MediaCard = React.memo(function MediaCard({
             <div
               className={cn(
                 'absolute top-2 left-2 z-10 transition-all duration-150',
-                'opacity-100 scale-100'
+                isSelected ? 'opacity-100 scale-100' : 'opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100'
               )}
               onClick={handleCheckboxClick}
             >
