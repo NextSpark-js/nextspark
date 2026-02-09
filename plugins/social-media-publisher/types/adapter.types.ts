@@ -15,7 +15,7 @@
 export interface SocialPlatformAdapterConfig {
   /**
    * The entity slug that social accounts are assigned to.
-   * @example 'clients' in content-buddy, 'projects' in another theme
+   * @example 'clients'
    */
   entitySlug: string
 

@@ -5,7 +5,7 @@
  * Used by the unified /api/v1/ endpoints.
  */
 
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '../../auth'
 import { validateApiKey } from '../auth'
 import { queryOne } from '../../db'
@@ -245,17 +245,12 @@ async function checkSystemAdminMembership(userId: string): Promise<boolean> {
  * Create standardized auth error response
  */
 export function createAuthError(message: string = 'Authentication required', status: number = 401) {
-  return new Response(
-    JSON.stringify({
+  return NextResponse.json(
+    {
       success: false,
       error: message,
       code: 'AUTHENTICATION_FAILED'
-    }),
-    {
-      status,
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    }
+    },
+    { status }
   )
 }

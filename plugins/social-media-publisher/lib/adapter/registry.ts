@@ -67,8 +67,7 @@ export function registerSocialPlatformAdapter(adapter: SocialPlatformAdapter): v
  * Alternatively, themes can call registerSocialPlatformAdapter() at app startup.
  */
 const THEME_ADAPTER_LOADERS: Record<string, () => Promise<{ createAdapter?: () => SocialPlatformAdapter; default?: unknown; SocialPlatformAdapterImpl?: new () => SocialPlatformAdapter }>> = {
-  'content-buddy': () => import('@/themes/content-buddy/lib/social-media'),
-  // Add other themes here as needed:
+  // Add your theme here if you need lazy loading:
   // 'default': () => import('@/themes/default/lib/social-media'),
 }
 
@@ -112,14 +111,16 @@ async function tryLazyLoadAdapter(): Promise<void> {
     if (themeModule.default) {
       // If it's a class, instantiate it
       if (typeof themeModule.default === 'function' && themeModule.default.prototype) {
-        const adapter = new themeModule.default()
+        const AdapterClass = themeModule.default as new () => SocialPlatformAdapter
+        const adapter = new AdapterClass()
         registerSocialPlatformAdapter(adapter)
         console.log(`[social-media-publisher] Adapter loaded via default export class from theme "${themeName}"`)
         return
       }
       // If it's already an instance
-      if (typeof themeModule.default.checkEntityAccess === 'function') {
-        registerSocialPlatformAdapter(themeModule.default)
+      const defaultExport = themeModule.default as Record<string, unknown>
+      if (typeof defaultExport.checkEntityAccess === 'function') {
+        registerSocialPlatformAdapter(defaultExport as unknown as SocialPlatformAdapter)
         console.log(`[social-media-publisher] Adapter loaded via default export instance from theme "${themeName}"`)
         return
       }

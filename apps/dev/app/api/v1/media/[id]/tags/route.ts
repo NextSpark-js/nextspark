@@ -72,7 +72,7 @@ export const POST = withRateLimitTier(async (
     await MediaService.addTag(id, parsed.data.tagId, authResult.user!.id)
     const tags = await MediaService.getMediaTags(id, authResult.user!.id)
 
-    return createApiResponse(tags, 201)
+    return createApiResponse(tags, undefined, 201)
   } catch (error) {
     console.error('[Media Tags API] Error adding tag:', error)
     return createApiError('Failed to add tag', 500)

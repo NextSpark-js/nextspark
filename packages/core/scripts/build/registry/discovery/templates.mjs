@@ -168,7 +168,6 @@ export function calculateTemplatePriority(themeName, relativePath, templateType)
   priority += pathDepth * 2
 
   // Could add theme-specific priority logic here
-  // if (themeName === 'content-buddy') priority += 1
 
   return priority
 }

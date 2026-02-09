@@ -138,7 +138,6 @@ export async function cleanupOrphanedTemplates(activeTemplates, CONFIG) {
 
 /**
  * Map template file path to generated app template path
- * contents/themes/content-buddy/templates/(public)/pricing/page.tsx → app/(templates)/(public)/pricing/page.tsx
  * @param {string} templateFilePath - Full path to the template file
  * @param {object} CONFIG - Configuration object from getConfig()
  */

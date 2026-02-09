@@ -1498,7 +1498,7 @@ async function deployToVercel(projectConfig) {
     const { stdout } = await execCommand('vercel', ['ls'])
 
     // Parse text output to find first deployment URL
-    // Format: "  16m     https://content-buddy-xyz-the-money-team.vercel.app     ● Ready"
+    // Format: "  16m     https://nextspark-xyz-the-money-team.vercel.app     ● Ready"
     const lines = stdout.split('\n')
     const urlLine = lines.find(line => line.includes('https://'))
 
