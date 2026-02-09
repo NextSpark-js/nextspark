@@ -18,11 +18,32 @@
 import type { SocialPlatformAdapter } from './abstract-adapter'
 
 /**
- * The registered adapter instance.
- * Null until a theme registers one or it's lazily loaded.
+ * Global key for storing the adapter singleton.
+ *
+ * Uses globalThis instead of module-level variable to survive
+ * Next.js module isolation (Turbopack/webpack create separate
+ * module instances for instrumentation.ts vs API routes).
+ *
+ * Pattern: Vercel best practice `advanced-init-once`
  */
-let registeredAdapter: SocialPlatformAdapter | null = null
-let lazyLoadAttempted = false
+const GLOBAL_KEY = Symbol.for('smp.adapter')
+const GLOBAL_LAZY_KEY = Symbol.for('smp.adapter.lazyLoaded')
+
+function getRegisteredAdapter(): SocialPlatformAdapter | null {
+  return (globalThis as any)[GLOBAL_KEY] ?? null
+}
+
+function setRegisteredAdapter(adapter: SocialPlatformAdapter | null): void {
+  (globalThis as any)[GLOBAL_KEY] = adapter
+}
+
+function isLazyLoadAttempted(): boolean {
+  return (globalThis as any)[GLOBAL_LAZY_KEY] === true
+}
+
+function setLazyLoadAttempted(value: boolean): void {
+  (globalThis as any)[GLOBAL_LAZY_KEY] = value
+}
 
 /**
  * Register the theme's social platform adapter.
@@ -30,15 +51,16 @@ let lazyLoadAttempted = false
  * @param adapter - The theme's adapter implementation
  */
 export function registerSocialPlatformAdapter(adapter: SocialPlatformAdapter): void {
-  if (registeredAdapter) {
+  const current = getRegisteredAdapter()
+  if (current) {
     console.warn(
       '[social-media-publisher] Adapter already registered, overwriting.',
-      'Previous:', registeredAdapter.getEntitySlug(),
+      'Previous:', current.getEntitySlug(),
       'New:', adapter.getEntitySlug()
     )
   }
 
-  registeredAdapter = adapter
+  setRegisteredAdapter(adapter)
 
   console.log(
     '[social-media-publisher] Adapter registered for entity:',
@@ -72,11 +94,11 @@ const THEME_ADAPTER_LOADERS: Record<string, () => Promise<{ createAdapter?: () =
 }
 
 async function tryLazyLoadAdapter(): Promise<void> {
-  if (lazyLoadAttempted || registeredAdapter) {
+  if (isLazyLoadAttempted() || getRegisteredAdapter()) {
     return
   }
 
-  lazyLoadAttempted = true
+  setLazyLoadAttempted(true)
 
   // Get active theme from environment
   const themeName = process.env.NEXT_PUBLIC_ACTIVE_THEME
@@ -152,7 +174,8 @@ async function tryLazyLoadAdapter(): Promise<void> {
  * @throws Error if no adapter has been registered or found
  */
 export function getSocialPlatformAdapter(): SocialPlatformAdapter {
-  if (!registeredAdapter) {
+  const adapter = getRegisteredAdapter()
+  if (!adapter) {
     const themeName = process.env.NEXT_PUBLIC_ACTIVE_THEME || '{your-theme}'
     throw new Error(
       '[social-media-publisher] No adapter registered.\n\n' +
@@ -170,7 +193,7 @@ export function getSocialPlatformAdapter(): SocialPlatformAdapter {
     )
   }
 
-  return registeredAdapter
+  return adapter
 }
 
 /**
@@ -178,7 +201,7 @@ export function getSocialPlatformAdapter(): SocialPlatformAdapter {
  * Use this in API routes instead of getSocialPlatformAdapter() directly.
  */
 export async function getAdapter(): Promise<SocialPlatformAdapter> {
-  if (!registeredAdapter) {
+  if (!getRegisteredAdapter()) {
     await tryLazyLoadAdapter()
   }
 
@@ -192,17 +215,17 @@ export async function getAdapter(): Promise<SocialPlatformAdapter> {
  * @returns True if an adapter is registered
  */
 export function hasAdapter(): boolean {
-  return registeredAdapter !== null
+  return getRegisteredAdapter() !== null
 }
 
 /**
  * Check if adapter is available, attempting lazy load first.
  */
 export async function ensureAdapter(): Promise<boolean> {
-  if (!registeredAdapter) {
+  if (!getRegisteredAdapter()) {
     await tryLazyLoadAdapter()
   }
-  return registeredAdapter !== null
+  return getRegisteredAdapter() !== null
 }
 
 /**
@@ -210,8 +233,8 @@ export async function ensureAdapter(): Promise<boolean> {
  * Primarily for testing purposes.
  */
 export function clearAdapter(): void {
-  registeredAdapter = null
-  lazyLoadAttempted = false
+  setRegisteredAdapter(null)
+  setLazyLoadAttempted(false)
 }
 
 /**
@@ -219,10 +242,11 @@ export function clearAdapter(): void {
  * Returns null if no adapter registered.
  */
 export function getAdapterInfo(): { entitySlug: string; tableName: string } | null {
-  if (!registeredAdapter) return null
+  const adapter = getRegisteredAdapter()
+  if (!adapter) return null
 
   return {
-    entitySlug: registeredAdapter.getEntitySlug(),
-    tableName: registeredAdapter.getTableName()
+    entitySlug: adapter.getEntitySlug(),
+    tableName: adapter.getTableName()
   }
 }
