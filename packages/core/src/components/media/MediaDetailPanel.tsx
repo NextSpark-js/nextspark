@@ -168,7 +168,7 @@ export function MediaDetailPanel({ media, onClose, showPreview = true, className
               type="button"
               className="shrink-0 p-1 rounded-md hover:bg-muted transition-colors"
               onClick={handleCopyUrl}
-              aria-label="Copy URL"
+              aria-label={t('detail.info.url')}
             >
               {urlCopied ? (
                 <CheckIcon className="h-3.5 w-3.5 text-green-600" />

@@ -173,13 +173,13 @@ export function MediaUploadZone({
     }
   }, [])
 
-  const handleDrop = useCallback(async (e: DragEvent) => {
+  const handleDrop = async (e: DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
     dragCounterRef.current = 0
     setIsDragging(false)
     await handleFiles(e.dataTransfer.files)
-  }, [])
+  }
 
   const handleFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     handleFiles(e.target.files)

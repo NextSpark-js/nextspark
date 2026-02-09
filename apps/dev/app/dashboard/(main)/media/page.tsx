@@ -1,6 +1,6 @@
 'use client'
 
-import * as React from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect, startTransition, type ChangeEvent } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   UploadIcon,
@@ -60,28 +60,28 @@ function DefaultMediaDashboardPage() {
   const deleteMutation = useDeleteMedia()
 
   // State
-  const [viewMode, setViewMode] = React.useState<ViewMode>('grid')
-  const [searchQuery, setSearchQuery] = React.useState('')
-  const [typeFilter, setTypeFilter] = React.useState<'all' | 'image' | 'video'>('all')
-  const [sortBy, setSortBy] = React.useState<MediaListOptions['orderBy']>('createdAt')
-  const [sortDir, setSortDir] = React.useState<MediaListOptions['orderDir']>('desc')
-  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set())
-  const [editingMedia, setEditingMedia] = React.useState<Media | null>(null)
-  const [deletingMedia, setDeletingMedia] = React.useState<Media | null>(null)
-  const [page, setPage] = React.useState(0)
-  const [selectedTagIds, setSelectedTagIds] = React.useState<string[]>([])
-  const [showUpload, setShowUpload] = React.useState(false)
-  const [columns, setColumns] = React.useState(6)
-  const [isBulkDeleting, setIsBulkDeleting] = React.useState(false)
-  const [bulkDeleteProgress, setBulkDeleteProgress] = React.useState({ current: 0, total: 0 })
-  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = React.useState(false)
-  const lastSelectedIndexRef = React.useRef<number | null>(null)
+  const [viewMode, setViewMode] = useState<ViewMode>('grid')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [typeFilter, setTypeFilter] = useState<'all' | 'image' | 'video'>('all')
+  const [sortBy, setSortBy] = useState<MediaListOptions['orderBy']>('createdAt')
+  const [sortDir, setSortDir] = useState<MediaListOptions['orderDir']>('desc')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [editingMedia, setEditingMedia] = useState<Media | null>(null)
+  const [deletingMedia, setDeletingMedia] = useState<Media | null>(null)
+  const [page, setPage] = useState(0)
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
+  const [showUpload, setShowUpload] = useState(false)
+  const [columns, setColumns] = useState(6)
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
+  const [bulkDeleteProgress, setBulkDeleteProgress] = useState({ current: 0, total: 0 })
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false)
+  const lastSelectedIndexRef = useRef<number | null>(null)
 
   // Debounce search
   const debouncedSearch = useDebounce(searchQuery, 300)
 
   // Reset pagination when filters change
-  React.useEffect(() => {
+  useEffect(() => {
     setPage(0)
   }, [debouncedSearch, typeFilter, sortBy, sortDir, selectedTagIds])
 
@@ -103,7 +103,7 @@ function DefaultMediaDashboardPage() {
   const hasPrevPage = page > 0
 
   // Memoize sort options to prevent array recreation
-  const sortOptions = React.useMemo(() => [
+  const sortOptions = useMemo(() => [
     { value: 'createdAt:desc', label: t('toolbar.sort.newest'), orderBy: 'createdAt' as const, orderDir: 'desc' as const },
     { value: 'createdAt:asc', label: t('toolbar.sort.oldest'), orderBy: 'createdAt' as const, orderDir: 'asc' as const },
     { value: 'filename:asc', label: t('toolbar.sort.nameAsc'), orderBy: 'filename' as const, orderDir: 'asc' as const },
@@ -115,33 +115,33 @@ function DefaultMediaDashboardPage() {
   const currentSortValue = `${sortBy}:${sortDir}`
 
   // Stable callbacks with useCallback + functional setState
-  const handleSortChange = React.useCallback((value: string) => {
+  const handleSortChange = useCallback((value: string) => {
     const option = sortOptions.find(opt => opt.value === value)
     if (option) {
-      React.startTransition(() => {
+      startTransition(() => {
         setSortBy(option.orderBy)
         setSortDir(option.orderDir)
       })
     }
   }, [sortOptions])
 
-  const handleSearchChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSearchChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value)
   }, [])
 
-  const handleTypeFilterChange = React.useCallback((value: string) => {
-    React.startTransition(() => {
+  const handleTypeFilterChange = useCallback((value: string) => {
+    startTransition(() => {
       setTypeFilter(value as 'all' | 'image' | 'video')
     })
   }, [])
 
-  const handleTagsChange = React.useCallback((tagIds: string[]) => {
-    React.startTransition(() => {
+  const handleTagsChange = useCallback((tagIds: string[]) => {
+    startTransition(() => {
       setSelectedTagIds(tagIds)
     })
   }, [])
 
-  const handleSelect = React.useCallback((media: Media, options?: { shiftKey?: boolean }) => {
+  const handleSelect = useCallback((media: Media, options?: { shiftKey?: boolean }) => {
     const currentIndex = items.findIndex(m => m.id === media.id)
     if (currentIndex === -1) return
 
@@ -173,7 +173,7 @@ function DefaultMediaDashboardPage() {
     lastSelectedIndexRef.current = currentIndex
   }, [items])
 
-  const handleDelete = React.useCallback(async () => {
+  const handleDelete = useCallback(async () => {
     if (!deletingMedia) return
     try {
       await deleteMutation.mutateAsync(deletingMedia.id)
@@ -194,7 +194,7 @@ function DefaultMediaDashboardPage() {
     }
   }, [deletingMedia, deleteMutation, toast, t, refetch])
 
-  const handleBulkDelete = React.useCallback(async () => {
+  const handleBulkDelete = useCallback(async () => {
     if (selectedIds.size === 0) return
     setShowBulkDeleteConfirm(false)
     setIsBulkDeleting(true)
@@ -225,7 +225,7 @@ function DefaultMediaDashboardPage() {
     }
   }, [selectedIds, deleteMutation, toast, t, refetch])
 
-  const handleUploadComplete = React.useCallback((uploadedMedia: Media[]) => {
+  const handleUploadComplete = useCallback((uploadedMedia: Media[]) => {
     setShowUpload(false)
     refetch()
 
@@ -235,27 +235,27 @@ function DefaultMediaDashboardPage() {
     }
   }, [refetch])
 
-  const handleToggleUpload = React.useCallback(() => {
+  const handleToggleUpload = useCallback(() => {
     setShowUpload(prev => !prev)
   }, [])
 
-  const handleCloseDetail = React.useCallback(() => {
+  const handleCloseDetail = useCallback(() => {
     setEditingMedia(null)
   }, [])
 
-  const handleCloseDeletingMedia = React.useCallback((open: boolean) => {
+  const handleCloseDeletingMedia = useCallback((open: boolean) => {
     if (!open) setDeletingMedia(null)
   }, [])
 
-  const handlePrevPage = React.useCallback(() => {
+  const handlePrevPage = useCallback(() => {
     setPage(prev => prev - 1)
   }, [])
 
-  const handleNextPage = React.useCallback(() => {
+  const handleNextPage = useCallback(() => {
     setPage(prev => prev + 1)
   }, [])
 
-  const handleColumnsChange = React.useCallback((v: string) => {
+  const handleColumnsChange = useCallback((v: string) => {
     setColumns(Number(v))
   }, [])
 
