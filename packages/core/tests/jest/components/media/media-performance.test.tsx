@@ -225,7 +225,7 @@ describe('MediaCard', () => {
   })
 
   describe('callback stability', () => {
-    test('card click always calls onEdit (opens detail)', () => {
+    test('normal card click opens edit (not select)', () => {
       const onSelect = jest.fn()
       const onEdit = jest.fn()
       render(<MediaCard {...defaultProps} onSelect={onSelect} onEdit={onEdit} mode="multiple" />)
@@ -237,13 +237,25 @@ describe('MediaCard', () => {
       expect(onSelect).not.toHaveBeenCalled()
     })
 
-    test('card click in single mode also calls onEdit', () => {
+    test('shift+click on card does range selection in multiple mode', () => {
+      const onSelect = jest.fn()
+      const onEdit = jest.fn()
+      render(<MediaCard {...defaultProps} onSelect={onSelect} onEdit={onEdit} mode="multiple" />)
+
+      const card = screen.getByTestId('card')
+      fireEvent.click(card, { shiftKey: true })
+
+      expect(onSelect).toHaveBeenCalledWith(defaultProps.media, { shiftKey: true })
+      expect(onEdit).not.toHaveBeenCalled()
+    })
+
+    test('shift+click on card in single mode still opens edit', () => {
       const onSelect = jest.fn()
       const onEdit = jest.fn()
       render(<MediaCard {...defaultProps} onSelect={onSelect} onEdit={onEdit} mode="single" />)
 
       const card = screen.getByTestId('card')
-      fireEvent.click(card)
+      fireEvent.click(card, { shiftKey: true })
 
       expect(onEdit).toHaveBeenCalledWith(defaultProps.media)
       expect(onSelect).not.toHaveBeenCalled()

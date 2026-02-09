@@ -49,10 +49,14 @@ export const MediaCard = React.memo(function MediaCard({
   const isVideo = media.mimeType.startsWith('video/')
 
   const handleCardClick = React.useCallback((e: React.MouseEvent) => {
-    // Card body click always opens detail/edit (WordPress/Google Photos pattern)
-    // Selection is handled exclusively by the checkbox
-    onEdit?.(media)
-  }, [media, onEdit])
+    if (e.shiftKey && mode === 'multiple') {
+      // Shift+click = range selection (Google Photos pattern)
+      onSelect(media, { shiftKey: true })
+    } else {
+      // Normal click = open detail/edit
+      onEdit?.(media)
+    }
+  }, [media, onSelect, onEdit, mode])
 
   const handleCheckboxClick = React.useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
@@ -77,7 +81,7 @@ export const MediaCard = React.memo(function MediaCard({
     <Card
       data-cy={sel('media.grid.item', { id: media.id })}
       className={cn(
-        'group relative overflow-hidden transition-shadow cursor-pointer hover:shadow-md',
+        'group relative overflow-hidden transition-shadow cursor-pointer hover:shadow-md select-none',
         '[content-visibility:auto] [contain-intrinsic-size:auto_200px]',
         isSelected && 'ring-2 ring-primary ring-offset-2 ring-offset-background'
       )}
