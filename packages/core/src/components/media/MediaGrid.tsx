@@ -5,12 +5,12 @@
  * Responsive: 6 cols desktop, 4 cols tablet, 2 cols mobile.
  *
  * Performance: Memoized gridStyle to prevent object recreation.
- * MediaCard children benefit from React.memo.
+ * MediaCard children benefit from memo.
  */
 
 'use client'
 
-import * as React from 'react'
+import { useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { ImageIcon } from 'lucide-react'
 import { MediaCard } from './MediaCard'
@@ -43,7 +43,7 @@ export function MediaGrid({
   className,
 }: MediaGridProps) {
   const t = useTranslations('media')
-  const gridStyle = React.useMemo(
+  const gridStyle = useMemo(
     () => ({ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }),
     [columns]
   )

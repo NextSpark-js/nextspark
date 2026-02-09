@@ -4,12 +4,12 @@
  * Tag-based filter chips for the media toolbar.
  * Shows available media_tag taxonomies and allows selecting one or more.
  *
- * Performance: Wrapped with React.memo. Uses Set for O(1) tag lookups.
+ * Performance: Wrapped with memo. Uses Set for O(1) tag lookups.
  */
 
 'use client'
 
-import * as React from 'react'
+import { memo, useState, useMemo, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { TagIcon, XIcon } from 'lucide-react'
 import { Badge } from '../ui/badge'
@@ -30,22 +30,22 @@ interface MediaTagFilterProps {
   className?: string
 }
 
-export const MediaTagFilter = React.memo(function MediaTagFilter({
+export const MediaTagFilter = memo(function MediaTagFilter({
   selectedTagIds,
   onTagsChange,
   className,
 }: MediaTagFilterProps) {
   const t = useTranslations('media')
   const { data: tags = [], isLoading } = useMediaTags()
-  const [isOpen, setIsOpen] = React.useState(false)
+  const [isOpen, setIsOpen] = useState(false)
 
-  const selectedIdSet = React.useMemo(() => new Set(selectedTagIds), [selectedTagIds])
-  const selectedTags = React.useMemo(
+  const selectedIdSet = useMemo(() => new Set(selectedTagIds), [selectedTagIds])
+  const selectedTags = useMemo(
     () => tags.filter((tag: MediaTag) => selectedIdSet.has(tag.id)),
     [tags, selectedIdSet]
   )
 
-  const toggleTag = React.useCallback((tagId: string) => {
+  const toggleTag = useCallback((tagId: string) => {
     if (selectedIdSet.has(tagId)) {
       onTagsChange(selectedTagIds.filter(id => id !== tagId))
     } else {
@@ -53,7 +53,7 @@ export const MediaTagFilter = React.memo(function MediaTagFilter({
     }
   }, [selectedIdSet, selectedTagIds, onTagsChange])
 
-  const clearTags = React.useCallback(() => {
+  const clearTags = useCallback(() => {
     onTagsChange([])
   }, [onTagsChange])
 

@@ -4,13 +4,13 @@
  * Individual media thumbnail card for grid view.
  * Shows image preview, filename, selection state, and actions menu.
  *
- * Performance: Wrapped with React.memo to prevent re-renders when sibling cards change.
+ * Performance: Wrapped with memo to prevent re-renders when sibling cards change.
  * Uses content-visibility: auto for off-screen rendering optimization.
  */
 
 'use client'
 
-import * as React from 'react'
+import { memo, useCallback, type MouseEvent } from 'react'
 import { useTranslations } from 'next-intl'
 import { ImageIcon, VideoIcon, FileIcon, MoreVerticalIcon, Edit2Icon, Trash2Icon } from 'lucide-react'
 import { Card, CardContent } from '../ui/card'
@@ -35,7 +35,7 @@ interface MediaCardProps {
   mode?: 'single' | 'multiple'
 }
 
-export const MediaCard = React.memo(function MediaCard({
+export const MediaCard = memo(function MediaCard({
   media,
   isSelected,
   onSelect,
@@ -48,7 +48,7 @@ export const MediaCard = React.memo(function MediaCard({
   const isImage = media.mimeType.startsWith('image/')
   const isVideo = media.mimeType.startsWith('video/')
 
-  const handleCardClick = React.useCallback((e: React.MouseEvent) => {
+  const handleCardClick = useCallback((e: MouseEvent) => {
     if (e.shiftKey && mode === 'multiple') {
       // Shift+click = range selection (Google Photos pattern)
       onSelect(media, { shiftKey: true })
@@ -61,21 +61,21 @@ export const MediaCard = React.memo(function MediaCard({
     }
   }, [media, onSelect, onEdit, mode])
 
-  const handleCheckboxClick = React.useCallback((e: React.MouseEvent) => {
+  const handleCheckboxClick = useCallback((e: MouseEvent) => {
     e.stopPropagation()
     onSelect(media, { shiftKey: e.shiftKey })
   }, [media, onSelect])
 
-  const handleMenuClick = React.useCallback((e: React.MouseEvent) => {
+  const handleMenuClick = useCallback((e: MouseEvent) => {
     e.stopPropagation()
   }, [])
 
-  const handleEditClick = React.useCallback((e: React.MouseEvent) => {
+  const handleEditClick = useCallback((e: MouseEvent) => {
     e.stopPropagation()
     onEdit?.(media)
   }, [media, onEdit])
 
-  const handleDeleteClick = React.useCallback((e: React.MouseEvent) => {
+  const handleDeleteClick = useCallback((e: MouseEvent) => {
     e.stopPropagation()
     onDelete?.(media)
   }, [media, onDelete])

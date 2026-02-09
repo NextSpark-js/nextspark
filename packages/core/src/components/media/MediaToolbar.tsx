@@ -3,12 +3,12 @@
  *
  * Toolbar with upload button, search input, filters, sort, and view toggle.
  *
- * Performance: Wrapped with React.memo. Sort options memoized.
+ * Performance: Wrapped with memo. Sort options memoized.
  */
 
 'use client'
 
-import * as React from 'react'
+import { memo, useMemo, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { UploadIcon, SearchIcon, GridIcon, ListIcon } from 'lucide-react'
 import { Button } from '../ui/button'
@@ -40,7 +40,7 @@ interface MediaToolbarProps {
   className?: string
 }
 
-export const MediaToolbar = React.memo(function MediaToolbar({
+export const MediaToolbar = memo(function MediaToolbar({
   onUploadClick,
   searchQuery,
   onSearchChange,
@@ -55,7 +55,7 @@ export const MediaToolbar = React.memo(function MediaToolbar({
 }: MediaToolbarProps) {
   const t = useTranslations('media')
 
-  const sortOptions = React.useMemo(() => [
+  const sortOptions = useMemo(() => [
     { value: 'createdAt:desc', label: t('toolbar.sort.newest'), orderBy: 'createdAt' as const, orderDir: 'desc' as const },
     { value: 'createdAt:asc', label: t('toolbar.sort.oldest'), orderBy: 'createdAt' as const, orderDir: 'asc' as const },
     { value: 'filename:asc', label: t('toolbar.sort.nameAsc'), orderBy: 'filename' as const, orderDir: 'asc' as const },
@@ -66,7 +66,7 @@ export const MediaToolbar = React.memo(function MediaToolbar({
 
   const currentSortValue = `${sortBy}:${sortDir}`
 
-  const handleSortChange = React.useCallback((value: string) => {
+  const handleSortChange = useCallback((value: string) => {
     const option = sortOptions.find(opt => opt.value === value)
     if (option) {
       onSortChange(option.orderBy, option.orderDir)

@@ -603,6 +603,16 @@ function LoginForm() {
 ## Anti-Patterns
 
 ```typescript
+// ❌ NEVER: Use namespace import for React
+import * as React from 'react'
+React.useState()
+React.useCallback()
+React.memo()
+
+// ✅ CORRECT: Use named imports (project convention)
+import { useState, useCallback, memo } from 'react'
+// For types: import { type MouseEvent, type DragEvent } from 'react'
+
 // ❌ NEVER: Use useEffect for data fetching
 useEffect(() => {
   fetch('/api/data').then(setData)
@@ -659,6 +669,7 @@ export default function Page() {
 Before finalizing React component implementation:
 
 - [ ] Correct component type (Server vs Client)
+- [ ] Named imports from 'react' (never `import * as React`)
 - [ ] 'use client' directive if using hooks
 - [ ] TanStack Query for data fetching (not useEffect)
 - [ ] Context with custom hook for state sharing

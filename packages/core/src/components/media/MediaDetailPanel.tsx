@@ -8,7 +8,7 @@
 
 'use client'
 
-import * as React from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { ImageIcon, LoaderIcon, TagIcon, XIcon, PlusIcon, CopyIcon, CheckIcon, CalendarIcon } from 'lucide-react'
 import { Button } from '../ui/button'
@@ -50,16 +50,16 @@ export function MediaDetailPanel({ media, onClose, showPreview = true, className
 
   const { data: allTags = [] } = useMediaTags()
   const { data: mediaTags = [] } = useMediaItemTags(media?.id || null)
-  const [tagPopoverOpen, setTagPopoverOpen] = React.useState(false)
-  const [newTagName, setNewTagName] = React.useState('')
+  const [tagPopoverOpen, setTagPopoverOpen] = useState(false)
+  const [newTagName, setNewTagName] = useState('')
 
-  const [title, setTitle] = React.useState(media?.title || '')
-  const [alt, setAlt] = React.useState(media?.alt || '')
-  const [caption, setCaption] = React.useState(media?.caption || '')
-  const [urlCopied, setUrlCopied] = React.useState(false)
+  const [title, setTitle] = useState(media?.title || '')
+  const [alt, setAlt] = useState(media?.alt || '')
+  const [caption, setCaption] = useState(media?.caption || '')
+  const [urlCopied, setUrlCopied] = useState(false)
 
   // Update local state when media changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (media) {
       setTitle(media.title || '')
       setAlt(media.alt || '')

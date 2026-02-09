@@ -10,7 +10,7 @@
 
 'use client'
 
-import * as React from 'react'
+import { useState, useRef, useCallback, type DragEvent, type ChangeEvent } from 'react'
 import { useTranslations } from 'next-intl'
 import { UploadCloudIcon, LoaderIcon, CheckCircle2Icon, XCircleIcon, AlertTriangleIcon } from 'lucide-react'
 import { Button } from '../ui/button'
@@ -43,12 +43,12 @@ export function MediaUploadZone({
 }: MediaUploadZoneProps) {
   const t = useTranslations('media')
   const { toast } = useToast()
-  const [isDragging, setIsDragging] = React.useState(false)
-  const [isChecking, setIsChecking] = React.useState(false)
-  const [pendingFiles, setPendingFiles] = React.useState<File[] | null>(null)
-  const [duplicates, setDuplicates] = React.useState<DuplicateInfo[]>([])
-  const fileInputRef = React.useRef<HTMLInputElement>(null)
-  const dragCounterRef = React.useRef(0)
+  const [isDragging, setIsDragging] = useState(false)
+  const [isChecking, setIsChecking] = useState(false)
+  const [pendingFiles, setPendingFiles] = useState<File[] | null>(null)
+  const [duplicates, setDuplicates] = useState<DuplicateInfo[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const dragCounterRef = useRef(0)
 
   const uploadMutation = useMediaUpload()
 
@@ -150,7 +150,7 @@ export function MediaUploadZone({
     setPendingFiles(null)
   }
 
-  const handleDragEnter = React.useCallback((e: React.DragEvent) => {
+  const handleDragEnter = useCallback((e: DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
     dragCounterRef.current++
@@ -159,12 +159,12 @@ export function MediaUploadZone({
     }
   }, [])
 
-  const handleDragOver = React.useCallback((e: React.DragEvent) => {
+  const handleDragOver = useCallback((e: DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
   }, [])
 
-  const handleDragLeave = React.useCallback((e: React.DragEvent) => {
+  const handleDragLeave = useCallback((e: DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
     dragCounterRef.current--
@@ -173,7 +173,7 @@ export function MediaUploadZone({
     }
   }, [])
 
-  const handleDrop = React.useCallback(async (e: React.DragEvent) => {
+  const handleDrop = useCallback(async (e: DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
     dragCounterRef.current = 0
@@ -181,7 +181,7 @@ export function MediaUploadZone({
     await handleFiles(e.dataTransfer.files)
   }, [])
 
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     handleFiles(e.target.files)
   }
 

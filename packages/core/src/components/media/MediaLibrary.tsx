@@ -9,7 +9,7 @@
 
 'use client'
 
-import * as React from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { XIcon } from 'lucide-react'
 import {
@@ -55,15 +55,15 @@ export function MediaLibrary({
   const { toast } = useToast()
 
   // State
-  const [viewMode, setViewMode] = React.useState<ViewMode>('grid')
-  const [searchQuery, setSearchQuery] = React.useState('')
-  const [typeFilter, setTypeFilter] = React.useState<'all' | 'image' | 'video'>('all')
-  const [sortBy, setSortBy] = React.useState<MediaListOptions['orderBy']>('createdAt')
-  const [sortDir, setSortDir] = React.useState<MediaListOptions['orderDir']>('desc')
-  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set())
-  const [selectedTagIds, setSelectedTagIds] = React.useState<string[]>([])
-  const [showUploadZone, setShowUploadZone] = React.useState(false)
-  const lastSelectedIndexRef = React.useRef<number | null>(null)
+  const [viewMode, setViewMode] = useState<ViewMode>('grid')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [typeFilter, setTypeFilter] = useState<'all' | 'image' | 'video'>('all')
+  const [sortBy, setSortBy] = useState<MediaListOptions['orderBy']>('createdAt')
+  const [sortDir, setSortDir] = useState<MediaListOptions['orderDir']>('desc')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
+  const [showUploadZone, setShowUploadZone] = useState(false)
+  const lastSelectedIndexRef = useRef<number | null>(null)
 
   // Debounce search
   const debouncedSearch = useDebounce(searchQuery, 300)
@@ -82,7 +82,7 @@ export function MediaLibrary({
   const items = data?.data || []
 
   // Reset selection when dialog closes
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isOpen) {
       setSelectedIds(new Set())
       setSelectedTagIds([])
@@ -91,7 +91,7 @@ export function MediaLibrary({
     }
   }, [isOpen])
 
-  const handleSelect = React.useCallback((media: Media, options?: { shiftKey?: boolean }) => {
+  const handleSelect = useCallback((media: Media, options?: { shiftKey?: boolean }) => {
     if (mode === 'single') {
       setSelectedIds(new Set([media.id]))
     } else {
@@ -158,17 +158,17 @@ export function MediaLibrary({
     onClose()
   }
 
-  const handleUploadComplete = React.useCallback(() => {
+  const handleUploadComplete = useCallback(() => {
     setShowUploadZone(false)
     refetch()
   }, [refetch])
 
-  const handleSortChange = React.useCallback((orderBy: MediaListOptions['orderBy'], orderDir: MediaListOptions['orderDir']) => {
+  const handleSortChange = useCallback((orderBy: MediaListOptions['orderBy'], orderDir: MediaListOptions['orderDir']) => {
     setSortBy(orderBy)
     setSortDir(orderDir)
   }, [])
 
-  const handleToggleUpload = React.useCallback(() => {
+  const handleToggleUpload = useCallback(() => {
     setShowUploadZone(prev => !prev)
   }, [])
 
