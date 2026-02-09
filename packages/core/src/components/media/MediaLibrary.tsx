@@ -68,6 +68,7 @@ export function MediaLibrary({
   const [showUploadZone, setShowUploadZone] = React.useState(false)
   const [editingMedia, setEditingMedia] = React.useState<Media | null>(null)
   const [deletingMedia, setDeletingMedia] = React.useState<Media | null>(null)
+  const lastSelectedIndexRef = React.useRef<number | null>(null)
 
   // Debounce search
   const debouncedSearch = useDebounce(searchQuery, 300)
@@ -92,32 +93,61 @@ export function MediaLibrary({
       setSelectedTagIds([])
       setEditingMedia(null)
       setShowUploadZone(false)
+      lastSelectedIndexRef.current = null
     }
   }, [isOpen])
 
-  const handleSelect = React.useCallback((media: Media) => {
+  const handleSelect = React.useCallback((media: Media, options?: { shiftKey?: boolean }) => {
     if (mode === 'single') {
       setSelectedIds(new Set([media.id]))
     } else {
-      setSelectedIds((prev) => {
-        const newSet = new Set(prev)
-        if (newSet.has(media.id)) {
-          newSet.delete(media.id)
-        } else {
-          if (maxSelections && newSet.size >= maxSelections) {
-            toast({
-              title: t('upload.error'),
-              description: t('upload.maxSelectionsReached', { maxSelections }),
-              variant: 'destructive',
-            })
-            return prev
+      const currentIndex = items.findIndex((m) => m.id === media.id)
+
+      if (options?.shiftKey && lastSelectedIndexRef.current !== null && currentIndex !== -1) {
+        // Shift+click: select range
+        const start = Math.min(lastSelectedIndexRef.current, currentIndex)
+        const end = Math.max(lastSelectedIndexRef.current, currentIndex)
+        const rangeIds = items.slice(start, end + 1).map((m) => m.id)
+
+        setSelectedIds((prev) => {
+          const newSet = new Set(prev)
+          for (const id of rangeIds) {
+            if (maxSelections && newSet.size >= maxSelections) {
+              toast({
+                title: t('upload.error'),
+                description: t('upload.maxSelectionsReached', { maxSelections }),
+                variant: 'destructive',
+              })
+              break
+            }
+            newSet.add(id)
           }
-          newSet.add(media.id)
-        }
-        return newSet
-      })
+          return newSet
+        })
+      } else {
+        // Normal click: toggle single item
+        setSelectedIds((prev) => {
+          const newSet = new Set(prev)
+          if (newSet.has(media.id)) {
+            newSet.delete(media.id)
+          } else {
+            if (maxSelections && newSet.size >= maxSelections) {
+              toast({
+                title: t('upload.error'),
+                description: t('upload.maxSelectionsReached', { maxSelections }),
+                variant: 'destructive',
+              })
+              return prev
+            }
+            newSet.add(media.id)
+          }
+          return newSet
+        })
+      }
+
+      lastSelectedIndexRef.current = currentIndex
     }
-  }, [mode, maxSelections, toast, t])
+  }, [mode, maxSelections, toast, t, items])
 
   const handleConfirmSelection = () => {
     if (selectedIds.size === 0) return
