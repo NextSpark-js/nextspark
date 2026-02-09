@@ -2,11 +2,13 @@
  * MediaList Component
  *
  * Table/list view of media items with columns for metadata.
+ *
+ * Performance: Images use lazy loading + async decoding.
+ * Row hover highlights for better visual feedback.
  */
 
 'use client'
 
-import * as React from 'react'
 import { useTranslations } from 'next-intl'
 import { MoreVerticalIcon, Edit2Icon, Trash2Icon, ImageIcon } from 'lucide-react'
 import {
@@ -34,7 +36,7 @@ interface MediaListProps {
   items: Media[]
   isLoading: boolean
   selectedIds: Set<string>
-  onSelect: (media: Media) => void
+  onSelect: (media: Media, options?: { shiftKey?: boolean }) => void
   onEdit?: (media: Media) => void
   onDelete?: (media: Media) => void
   mode?: 'single' | 'multiple'
@@ -74,13 +76,13 @@ export function MediaList({
           <TableHeader>
             <TableRow>
               {mode === 'multiple' && <TableHead className="w-12"></TableHead>}
-              <TableHead className="w-16">{t('list.filename')}</TableHead>
+              <TableHead className="w-16"></TableHead>
               <TableHead>{t('list.filename')}</TableHead>
               <TableHead className="hidden md:table-cell">{t('list.type')}</TableHead>
               <TableHead className="hidden md:table-cell">{t('list.size')}</TableHead>
               <TableHead className="hidden lg:table-cell">{t('list.dimensions')}</TableHead>
               <TableHead className="hidden lg:table-cell">{t('list.uploaded')}</TableHead>
-              <TableHead className="w-12"></TableHead>
+              {(onEdit || onDelete) && <TableHead className="w-12"></TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -109,9 +111,11 @@ export function MediaList({
                 <TableCell className="hidden lg:table-cell">
                   <Skeleton className="h-4 w-24" />
                 </TableCell>
-                <TableCell>
-                  <Skeleton className="h-8 w-8" />
-                </TableCell>
+                {(onEdit || onDelete) && (
+                  <TableCell>
+                    <Skeleton className="h-8 w-8" />
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>
@@ -148,7 +152,7 @@ export function MediaList({
             <TableHead className="hidden md:table-cell">{t('list.size')}</TableHead>
             <TableHead className="hidden lg:table-cell">{t('list.dimensions')}</TableHead>
             <TableHead className="hidden lg:table-cell">{t('list.uploaded')}</TableHead>
-            <TableHead className="w-12">{t('list.actions')}</TableHead>
+            {(onEdit || onDelete) && <TableHead className="w-12">{t('list.actions')}</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -161,17 +165,21 @@ export function MediaList({
                 key={media.id}
                 data-cy={sel('media.list.row', { id: media.id })}
                 className={cn(
-                  'cursor-pointer',
+                  'cursor-pointer transition-colors hover:bg-muted/50',
                   isSelected && 'bg-muted'
                 )}
-                onClick={() => onEdit?.(media)}
+                onClick={() => onEdit ? onEdit(media) : onSelect(media)}
               >
                 {mode === 'multiple' && (
-                  <TableCell onClick={(e) => e.stopPropagation()}>
+                  <TableCell onClick={(e) => {
+                    e.stopPropagation()
+                    onSelect(media, { shiftKey: e.shiftKey })
+                  }}>
                     <Checkbox
+                      data-cy={sel('media.list.checkbox', { id: media.id })}
                       checked={isSelected}
-                      onCheckedChange={() => onSelect(media)}
                       aria-label={`${t('actions.select')} ${media.filename}`}
+                      className="pointer-events-none"
                     />
                   </TableCell>
                 )}
@@ -181,6 +189,8 @@ export function MediaList({
                       src={media.url}
                       alt={media.alt || media.filename}
                       className="h-10 w-10 rounded object-cover"
+                      loading="lazy"
+                      decoding="async"
                     />
                   ) : (
                     <div className="h-10 w-10 rounded bg-muted flex items-center justify-center">
@@ -203,37 +213,39 @@ export function MediaList({
                 <TableCell className="hidden lg:table-cell text-muted-foreground">
                   {formatDate(media.createdAt)}
                 </TableCell>
-                <TableCell onClick={(e) => e.stopPropagation()}>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        aria-label={t('list.actions')}
-                      >
-                        <MoreVerticalIcon className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {onEdit && (
-                        <DropdownMenuItem onClick={() => onEdit(media)}>
-                          <Edit2Icon className="mr-2 h-4 w-4" />
-                          {t('actions.edit')}
-                        </DropdownMenuItem>
-                      )}
-                      {onDelete && (
-                        <DropdownMenuItem
-                          onClick={() => onDelete(media)}
-                          className="text-destructive focus:text-destructive"
+                {(onEdit || onDelete) && (
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          aria-label={t('list.actions')}
                         >
-                          <Trash2Icon className="mr-2 h-4 w-4" />
-                          {t('actions.delete')}
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
+                          <MoreVerticalIcon className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {onEdit && (
+                          <DropdownMenuItem onClick={() => onEdit(media)}>
+                            <Edit2Icon className="mr-2 h-4 w-4" />
+                            {t('actions.edit')}
+                          </DropdownMenuItem>
+                        )}
+                        {onDelete && (
+                          <DropdownMenuItem
+                            onClick={() => onDelete(media)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2Icon className="mr-2 h-4 w-4" />
+                            {t('actions.delete')}
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                )}
               </TableRow>
             )
           })}

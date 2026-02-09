@@ -14,27 +14,6 @@ import { CreateMetaPayload } from '@nextsparkjs/core/types/meta.types';
  * METADATA BY ENDPOINT (Standardized)
  * ============================================
  *
- * analyze-brief (/api/v1/theme/content-buddy/analyze-brief):
- * - briefText: Original brief text (for auditing/debugging)
- * - briefLength: Length of brief text
- * - extractedFieldsCount: Number of fields extracted
- * - audiencesCount: Number of audience entities extracted
- * - objectivesCount: Number of objective entities extracted
- * - productsCount: Number of product entities extracted
- * - totalChildEntities: Total child entities extracted
- * - clientName: Extracted client name
- * - clientIndustry: Extracted client industry
- *
- * generate-content (/api/v1/theme/content-buddy/generate-content):
- * Core generation parameters (reproducibility):
- * - temperature: AI model temperature used
- * - tone: Content tone
- * - brandVoice: Brand voice style
- * - audience: Target audience description
- * - topic: Content topic
- * - postType: Type of post
- * - language: Content language code (e.g., "en", "es")
- *
  * Content specifications (analytics):
  * - wordCount: Target word count
  * - keywords: Comma-separated keywords (e.g., "innovation,tech,ai")
@@ -53,13 +32,6 @@ import { CreateMetaPayload } from '@nextsparkjs/core/types/meta.types';
  * - productId: Related product (if specified)
  * - objectiveId: Marketing objective (if specified)
  * - targetAudienceId: Specific audience segment (if specified)
- *
- * refine-content (/api/v1/theme/content-buddy/refine-content):
- * - userInstruction: User's refinement instruction
- * - sourceOperationId: UUID linking to source operation (for workflow tracking)
- * - temperature: AI model temperature used
- * - tone: Desired tone (if specified)
- * - platform: Social media platform being refined for
  *
  * ============================================
  * DEPRECATED METADATA (Use ai_history columns instead)

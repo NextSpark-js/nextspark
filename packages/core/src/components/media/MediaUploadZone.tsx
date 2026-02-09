@@ -3,11 +3,14 @@
  *
  * Drag-and-drop file upload area with progress indicators.
  * Uses useMediaUpload hook for upload mutations.
+ *
+ * Performance: Uses ref-based drag counter to avoid excessive setState
+ * on dragEnter/dragLeave events from nested elements.
  */
 
 'use client'
 
-import * as React from 'react'
+import { useState, useRef, useCallback, type DragEvent, type ChangeEvent } from 'react'
 import { useTranslations } from 'next-intl'
 import { UploadCloudIcon, LoaderIcon, CheckCircle2Icon, XCircleIcon, AlertTriangleIcon } from 'lucide-react'
 import { Button } from '../ui/button'
@@ -40,11 +43,12 @@ export function MediaUploadZone({
 }: MediaUploadZoneProps) {
   const t = useTranslations('media')
   const { toast } = useToast()
-  const [isDragging, setIsDragging] = React.useState(false)
-  const [isChecking, setIsChecking] = React.useState(false)
-  const [pendingFiles, setPendingFiles] = React.useState<File[] | null>(null)
-  const [duplicates, setDuplicates] = React.useState<DuplicateInfo[]>([])
-  const fileInputRef = React.useRef<HTMLInputElement>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [isChecking, setIsChecking] = useState(false)
+  const [pendingFiles, setPendingFiles] = useState<File[] | null>(null)
+  const [duplicates, setDuplicates] = useState<DuplicateInfo[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const dragCounterRef = useRef(0)
 
   const uploadMutation = useMediaUpload()
 
@@ -146,26 +150,38 @@ export function MediaUploadZone({
     setPendingFiles(null)
   }
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragEnter = useCallback((e: DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setIsDragging(true)
-  }
+    dragCounterRef.current++
+    if (dragCounterRef.current === 1) {
+      setIsDragging(true)
+    }
+  }, [])
 
-  const handleDragLeave = (e: React.DragEvent) => {
+  const handleDragOver = useCallback((e: DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
+  }, [])
+
+  const handleDragLeave = useCallback((e: DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounterRef.current--
+    if (dragCounterRef.current === 0) {
+      setIsDragging(false)
+    }
+  }, [])
+
+  const handleDrop = async (e: DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounterRef.current = 0
     setIsDragging(false)
+    await handleFiles(e.dataTransfer.files)
   }
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragging(false)
-    handleFiles(e.dataTransfer.files)
-  }
-
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     handleFiles(e.target.files)
   }
 
@@ -220,17 +236,18 @@ export function MediaUploadZone({
       <div
         data-cy={sel('media.upload.dropzone')}
         className={cn(
-          'border-2 border-dashed rounded-lg p-8 text-center transition-colors',
+          'border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200',
           isDragging
-            ? 'border-primary bg-primary/5'
+            ? 'border-primary bg-primary/5 scale-[1.01]'
             : 'border-muted-foreground/25 hover:border-muted-foreground/50',
           isBusy && 'opacity-50 pointer-events-none'
         )}
+        onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        {uploadMutation.isPending ? (
+        {(uploadMutation.isPending || isChecking) ? (
           <div className="flex flex-col items-center gap-4">
             <LoaderIcon className="h-12 w-12 animate-spin text-primary" />
             <div className="w-full max-w-xs">
@@ -243,13 +260,6 @@ export function MediaUploadZone({
                 className="w-full"
               />
             </div>
-          </div>
-        ) : isChecking ? (
-          <div className="flex flex-col items-center gap-4">
-            <LoaderIcon className="h-12 w-12 animate-spin text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              {t('upload.checking')}
-            </p>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-4">

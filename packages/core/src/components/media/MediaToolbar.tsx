@@ -2,11 +2,13 @@
  * MediaToolbar Component
  *
  * Toolbar with upload button, search input, filters, sort, and view toggle.
+ *
+ * Performance: Wrapped with memo. Sort options memoized.
  */
 
 'use client'
 
-import * as React from 'react'
+import { memo, useMemo, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { UploadIcon, SearchIcon, GridIcon, ListIcon } from 'lucide-react'
 import { Button } from '../ui/button'
@@ -38,7 +40,7 @@ interface MediaToolbarProps {
   className?: string
 }
 
-export function MediaToolbar({
+export const MediaToolbar = memo(function MediaToolbar({
   onUploadClick,
   searchQuery,
   onSearchChange,
@@ -53,23 +55,23 @@ export function MediaToolbar({
 }: MediaToolbarProps) {
   const t = useTranslations('media')
 
-  const sortOptions: { value: string; label: string; orderBy: MediaListOptions['orderBy']; orderDir: 'asc' | 'desc' }[] = [
-    { value: 'createdAt:desc', label: t('toolbar.sort.newest'), orderBy: 'createdAt', orderDir: 'desc' },
-    { value: 'createdAt:asc', label: t('toolbar.sort.oldest'), orderBy: 'createdAt', orderDir: 'asc' },
-    { value: 'filename:asc', label: t('toolbar.sort.nameAsc'), orderBy: 'filename', orderDir: 'asc' },
-    { value: 'filename:desc', label: t('toolbar.sort.nameDesc'), orderBy: 'filename', orderDir: 'desc' },
-    { value: 'fileSize:desc', label: t('toolbar.sort.sizeDesc'), orderBy: 'fileSize', orderDir: 'desc' },
-    { value: 'fileSize:asc', label: t('toolbar.sort.sizeAsc'), orderBy: 'fileSize', orderDir: 'asc' },
-  ]
+  const sortOptions = useMemo(() => [
+    { value: 'createdAt:desc', label: t('toolbar.sort.newest'), orderBy: 'createdAt' as const, orderDir: 'desc' as const },
+    { value: 'createdAt:asc', label: t('toolbar.sort.oldest'), orderBy: 'createdAt' as const, orderDir: 'asc' as const },
+    { value: 'filename:asc', label: t('toolbar.sort.nameAsc'), orderBy: 'filename' as const, orderDir: 'asc' as const },
+    { value: 'filename:desc', label: t('toolbar.sort.nameDesc'), orderBy: 'filename' as const, orderDir: 'desc' as const },
+    { value: 'fileSize:desc', label: t('toolbar.sort.sizeDesc'), orderBy: 'fileSize' as const, orderDir: 'desc' as const },
+    { value: 'fileSize:asc', label: t('toolbar.sort.sizeAsc'), orderBy: 'fileSize' as const, orderDir: 'asc' as const },
+  ], [t])
 
   const currentSortValue = `${sortBy}:${sortDir}`
 
-  const handleSortChange = (value: string) => {
+  const handleSortChange = useCallback((value: string) => {
     const option = sortOptions.find(opt => opt.value === value)
     if (option) {
       onSortChange(option.orderBy, option.orderDir)
     }
-  }
+  }, [sortOptions, onSortChange])
 
   return (
     <div
@@ -158,4 +160,4 @@ export function MediaToolbar({
       </div>
     </div>
   )
-}
+})

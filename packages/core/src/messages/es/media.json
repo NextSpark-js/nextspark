@@ -36,8 +36,7 @@
     "duplicateFound": "{count, plural, one {# archivo ya existe} other {# archivos ya existen}} en tu biblioteca",
     "duplicateConfirm": "¿Subir de todos modos?",
     "duplicateSkip": "Omitir duplicados",
-    "duplicateUploadAll": "Subir Todos",
-    "checking": "Verificando duplicados..."
+    "duplicateUploadAll": "Subir Todos"
   },
   "grid": {
     "selected": "Seleccionado",
@@ -119,8 +118,12 @@
   "dashboard": {
     "subtitle": "{count, plural, =0 {Sin archivos} one {# archivo} other {# archivos}} en tu biblioteca",
     "selected": "{count, plural, one {# seleccionado} other {# seleccionados}}",
-    "bulkDelete": "Eliminar Seleccionados",
+    "bulkDelete": "Eliminar",
+    "bulkDeleteConfirm": "¿Eliminar {count, plural, one {# archivo} other {# archivos}}?",
+    "bulkDeleteConfirmDesc": "Esta acción no se puede deshacer. Los archivos se eliminarán permanentemente.",
+    "bulkDeleting": "Eliminando {current} de {total}...",
     "bulkDeleteSuccess": "{count, plural, one {# archivo eliminado} other {# archivos eliminados}}",
+    "deselectAll": "Deseleccionar todo",
     "hideUpload": "Ocultar Subida",
     "clearSelection": "Limpiar",
     "pagination": "Mostrando {from}-{to} de {total}",

@@ -3,11 +3,14 @@
  *
  * Grid view of media items using MediaCard components.
  * Responsive: 6 cols desktop, 4 cols tablet, 2 cols mobile.
+ *
+ * Performance: Memoized gridStyle to prevent object recreation.
+ * MediaCard children benefit from memo.
  */
 
 'use client'
 
-import * as React from 'react'
+import { useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { ImageIcon } from 'lucide-react'
 import { MediaCard } from './MediaCard'
@@ -20,7 +23,7 @@ interface MediaGridProps {
   items: Media[]
   isLoading: boolean
   selectedIds: Set<string>
-  onSelect: (media: Media) => void
+  onSelect: (media: Media, options?: { shiftKey?: boolean }) => void
   onEdit?: (media: Media) => void
   onDelete?: (media: Media) => void
   mode?: 'single' | 'multiple'
@@ -40,7 +43,10 @@ export function MediaGrid({
   className,
 }: MediaGridProps) {
   const t = useTranslations('media')
-  const gridStyle = { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }
+  const gridStyle = useMemo(
+    () => ({ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }),
+    [columns]
+  )
 
   if (isLoading) {
     return (

@@ -25,6 +25,7 @@ export async function extractImageDimensions(
   }
 
   try {
+    // @ts-expect-error -- sharp is an optional peer dependency, dynamically loaded
     const sharpModule = await import('sharp')
     const sharp = 'default' in sharpModule ? sharpModule.default : sharpModule
     const metadata = await sharp(buffer).metadata()

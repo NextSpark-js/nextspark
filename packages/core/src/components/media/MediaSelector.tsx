@@ -8,7 +8,7 @@
 
 'use client'
 
-import * as React from 'react'
+import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { ImageIcon, XIcon } from 'lucide-react'
 import { Button } from '../ui/button'
@@ -37,7 +37,7 @@ export function MediaSelector({
   disabled = false,
 }: MediaSelectorProps) {
   const t = useTranslations('media')
-  const [isLibraryOpen, setIsLibraryOpen] = React.useState(false)
+  const [isLibraryOpen, setIsLibraryOpen] = useState(false)
 
   // Fetch media details if value is set
   const { data: selectedMedia, isLoading, isError } = useMediaItem(value || null)

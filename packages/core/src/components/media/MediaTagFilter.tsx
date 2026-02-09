@@ -3,11 +3,13 @@
  *
  * Tag-based filter chips for the media toolbar.
  * Shows available media_tag taxonomies and allows selecting one or more.
+ *
+ * Performance: Wrapped with memo. Uses Set for O(1) tag lookups.
  */
 
 'use client'
 
-import * as React from 'react'
+import { memo, useState, useMemo, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { TagIcon, XIcon } from 'lucide-react'
 import { Badge } from '../ui/badge'
@@ -28,28 +30,32 @@ interface MediaTagFilterProps {
   className?: string
 }
 
-export function MediaTagFilter({
+export const MediaTagFilter = memo(function MediaTagFilter({
   selectedTagIds,
   onTagsChange,
   className,
 }: MediaTagFilterProps) {
   const t = useTranslations('media')
   const { data: tags = [], isLoading } = useMediaTags()
-  const [isOpen, setIsOpen] = React.useState(false)
+  const [isOpen, setIsOpen] = useState(false)
 
-  const selectedTags = tags.filter((tag: MediaTag) => selectedTagIds.includes(tag.id))
+  const selectedIdSet = useMemo(() => new Set(selectedTagIds), [selectedTagIds])
+  const selectedTags = useMemo(
+    () => tags.filter((tag: MediaTag) => selectedIdSet.has(tag.id)),
+    [tags, selectedIdSet]
+  )
 
-  const toggleTag = (tagId: string) => {
-    if (selectedTagIds.includes(tagId)) {
+  const toggleTag = useCallback((tagId: string) => {
+    if (selectedIdSet.has(tagId)) {
       onTagsChange(selectedTagIds.filter(id => id !== tagId))
     } else {
       onTagsChange([...selectedTagIds, tagId])
     }
-  }
+  }, [selectedIdSet, selectedTagIds, onTagsChange])
 
-  const clearTags = () => {
+  const clearTags = useCallback(() => {
     onTagsChange([])
-  }
+  }, [onTagsChange])
 
   if (isLoading) return null
 
@@ -88,7 +94,7 @@ export function MediaTagFilter({
                 <p className="text-sm text-muted-foreground">{t('dashboard.noTags')}</p>
               ) : (
                 tags.map((tag: MediaTag) => {
-                  const isSelected = selectedTagIds.includes(tag.id)
+                  const isSelected = selectedIdSet.has(tag.id)
                   return (
                     <Badge
                       key={tag.id}
@@ -137,4 +143,4 @@ export function MediaTagFilter({
       ))}
     </div>
   )
-}
+})

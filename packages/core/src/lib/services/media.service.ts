@@ -455,7 +455,7 @@ export class MediaService {
       userId
     )
 
-    return result.rows[0]
+    return result.rows[0] as MediaTag
   }
 
   /**

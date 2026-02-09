@@ -55,9 +55,9 @@ export function generateRouteHandlersRegistry(plugins, themes, coreRoutes = [], 
     if (theme.routeFiles && theme.routeFiles.length > 0) {
       theme.routeFiles.forEach(route => {
         const routeKey = route.relativePath === '/' ? '' : route.relativePath
-        // Ensure .ts extension is included for Windows compatibility
+        // No .ts extension - Next.js resolves extensions automatically on all platforms
         const routeFile = route.relativePath === '/' ? '/route' : '/' + route.relativePath + '/route'
-        const filePath = `@/contents/themes/${theme.name}/api${routeFile}${routeFile.endsWith('.ts') ? '' : '.ts'}`
+        const filePath = `@/contents/themes/${theme.name}/api${routeFile}`
         themeRoutes.push({
           themeName: theme.name,
           routePath: routeKey,
@@ -75,9 +75,9 @@ export function generateRouteHandlersRegistry(plugins, themes, coreRoutes = [], 
     if (plugin.routeFiles && plugin.routeFiles.length > 0) {
       plugin.routeFiles.forEach(route => {
         const routeKey = route.relativePath === '/' ? '' : route.relativePath
-        // Ensure .ts extension is included for Windows compatibility
+        // No .ts extension - Next.js resolves extensions automatically on all platforms
         const routeFile = route.relativePath === '/' ? '/route' : '/' + route.relativePath + '/route'
-        const filePath = `@/contents/plugins/${plugin.name}/api${routeFile}${routeFile.endsWith('.ts') ? '' : '.ts'}`
+        const filePath = `@/contents/plugins/${plugin.name}/api${routeFile}`
         pluginRoutes.push({
           pluginName: plugin.name,
           routePath: routeKey,

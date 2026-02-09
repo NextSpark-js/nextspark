@@ -49,10 +49,12 @@ export function generateTemplateRegistry(templates, config) {
     .map(([appPath, pathTemplates], index) => {
       const highestPriorityTemplate = pathTemplates[0]
       const safeName = `Template_${index}`
-      // Ensure .tsx extension is included for Windows compatibility
+      // Strip .tsx/.ts extension - Next.js resolves extensions automatically on all platforms
       let templatePath = highestPriorityTemplate.templatePath
-      if (!templatePath.endsWith('.tsx') && !templatePath.endsWith('.ts')) {
-        templatePath += '.tsx'
+      if (templatePath.endsWith('.tsx')) {
+        templatePath = templatePath.slice(0, -4)
+      } else if (templatePath.endsWith('.ts')) {
+        templatePath = templatePath.slice(0, -3)
       }
 
       // Skip import for metadata-only templates (PROTECTED_RENDER)
@@ -244,10 +246,12 @@ export async function generateTemplateRegistryClient(templates, config) {
     .map(([appPath, pathTemplates], index) => {
       const template = pathTemplates[0]
       const safeName = `ClientTemplate_${index}`
-      // Ensure .tsx extension is included for Windows compatibility
+      // Strip .tsx/.ts extension - Next.js resolves extensions automatically on all platforms
       let templatePath = template.templatePath
-      if (!templatePath.endsWith('.tsx') && !templatePath.endsWith('.ts')) {
-        templatePath += '.tsx'
+      if (templatePath.endsWith('.tsx')) {
+        templatePath = templatePath.slice(0, -4)
+      } else if (templatePath.endsWith('.ts')) {
+        templatePath = templatePath.slice(0, -3)
       }
       return `import ${safeName} from '${templatePath}'`
     })

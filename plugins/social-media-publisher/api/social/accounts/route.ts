@@ -109,7 +109,6 @@ const getHandler = async (request: NextRequest) => {
 
     // 4.1 Get ALL entities that use each platformAccountId (for showing connected entities info)
     // NOTE: This functionality should be moved into the adapter to avoid hardcoded assumptions
-    // Current implementation assumes content-buddy theme structure
     // TODO: Add adapter.getConnectedEntities() method for theme-agnostic queries
     const clientsByPlatformAccountId = new Map<string, ConnectedClient[]>()
 

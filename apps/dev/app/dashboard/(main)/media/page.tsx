@@ -1,13 +1,6 @@
-/**
- * Media Dashboard Page
- *
- * Full-page media library for browsing, uploading, and managing media.
- * Follows the same layout pattern as EntityListWrapper for consistency.
- */
-
 'use client'
 
-import * as React from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect, startTransition, type ChangeEvent } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   UploadIcon,
@@ -18,6 +11,7 @@ import {
   XIcon,
   ChevronUpIcon,
   ImageIcon,
+  LoaderIcon,
 } from 'lucide-react'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { Input } from '@nextsparkjs/core/components/ui/input'
@@ -53,36 +47,41 @@ import { useMediaList, useDeleteMedia } from '@nextsparkjs/core/hooks/useMedia'
 import { useDebounce } from '@nextsparkjs/core/hooks/useDebounce'
 import { useToast } from '@nextsparkjs/core/hooks/useToast'
 import { sel } from '@nextsparkjs/core/lib/selectors'
+import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
 import type { Media, MediaListOptions } from '@nextsparkjs/core/lib/media/types'
 
 type ViewMode = 'grid' | 'list'
 
 const PAGE_SIZE = 40
 
-export default function MediaDashboardPage() {
+function DefaultMediaDashboardPage() {
   const t = useTranslations('media')
   const { toast } = useToast()
   const deleteMutation = useDeleteMedia()
 
   // State
-  const [viewMode, setViewMode] = React.useState<ViewMode>('grid')
-  const [searchQuery, setSearchQuery] = React.useState('')
-  const [typeFilter, setTypeFilter] = React.useState<'all' | 'image' | 'video'>('all')
-  const [sortBy, setSortBy] = React.useState<MediaListOptions['orderBy']>('createdAt')
-  const [sortDir, setSortDir] = React.useState<MediaListOptions['orderDir']>('desc')
-  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set())
-  const [editingMedia, setEditingMedia] = React.useState<Media | null>(null)
-  const [deletingMedia, setDeletingMedia] = React.useState<Media | null>(null)
-  const [page, setPage] = React.useState(0)
-  const [selectedTagIds, setSelectedTagIds] = React.useState<string[]>([])
-  const [showUpload, setShowUpload] = React.useState(false)
-  const [columns, setColumns] = React.useState(6)
+  const [viewMode, setViewMode] = useState<ViewMode>('grid')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [typeFilter, setTypeFilter] = useState<'all' | 'image' | 'video'>('all')
+  const [sortBy, setSortBy] = useState<MediaListOptions['orderBy']>('createdAt')
+  const [sortDir, setSortDir] = useState<MediaListOptions['orderDir']>('desc')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [editingMedia, setEditingMedia] = useState<Media | null>(null)
+  const [deletingMedia, setDeletingMedia] = useState<Media | null>(null)
+  const [page, setPage] = useState(0)
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
+  const [showUpload, setShowUpload] = useState(false)
+  const [columns, setColumns] = useState(6)
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
+  const [bulkDeleteProgress, setBulkDeleteProgress] = useState({ current: 0, total: 0 })
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false)
+  const lastSelectedIndexRef = useRef<number | null>(null)
 
   // Debounce search
   const debouncedSearch = useDebounce(searchQuery, 300)
 
   // Reset pagination when filters change
-  React.useEffect(() => {
+  useEffect(() => {
     setPage(0)
   }, [debouncedSearch, typeFilter, sortBy, sortDir, selectedTagIds])
 
@@ -103,37 +102,78 @@ export default function MediaDashboardPage() {
   const hasNextPage = page < totalPages - 1
   const hasPrevPage = page > 0
 
-  const sortOptions: { value: string; label: string; orderBy: MediaListOptions['orderBy']; orderDir: 'asc' | 'desc' }[] = [
-    { value: 'createdAt:desc', label: t('toolbar.sort.newest'), orderBy: 'createdAt', orderDir: 'desc' },
-    { value: 'createdAt:asc', label: t('toolbar.sort.oldest'), orderBy: 'createdAt', orderDir: 'asc' },
-    { value: 'filename:asc', label: t('toolbar.sort.nameAsc'), orderBy: 'filename', orderDir: 'asc' },
-    { value: 'filename:desc', label: t('toolbar.sort.nameDesc'), orderBy: 'filename', orderDir: 'desc' },
-    { value: 'fileSize:desc', label: t('toolbar.sort.sizeDesc'), orderBy: 'fileSize', orderDir: 'desc' },
-    { value: 'fileSize:asc', label: t('toolbar.sort.sizeAsc'), orderBy: 'fileSize', orderDir: 'asc' },
-  ]
+  // Memoize sort options to prevent array recreation
+  const sortOptions = useMemo(() => [
+    { value: 'createdAt:desc', label: t('toolbar.sort.newest'), orderBy: 'createdAt' as const, orderDir: 'desc' as const },
+    { value: 'createdAt:asc', label: t('toolbar.sort.oldest'), orderBy: 'createdAt' as const, orderDir: 'asc' as const },
+    { value: 'filename:asc', label: t('toolbar.sort.nameAsc'), orderBy: 'filename' as const, orderDir: 'asc' as const },
+    { value: 'filename:desc', label: t('toolbar.sort.nameDesc'), orderBy: 'filename' as const, orderDir: 'desc' as const },
+    { value: 'fileSize:desc', label: t('toolbar.sort.sizeDesc'), orderBy: 'fileSize' as const, orderDir: 'desc' as const },
+    { value: 'fileSize:asc', label: t('toolbar.sort.sizeAsc'), orderBy: 'fileSize' as const, orderDir: 'asc' as const },
+  ], [t])
+
   const currentSortValue = `${sortBy}:${sortDir}`
 
-  const handleSortChange = (value: string) => {
+  // Stable callbacks with useCallback + functional setState
+  const handleSortChange = useCallback((value: string) => {
     const option = sortOptions.find(opt => opt.value === value)
     if (option) {
-      setSortBy(option.orderBy)
-      setSortDir(option.orderDir)
+      startTransition(() => {
+        setSortBy(option.orderBy)
+        setSortDir(option.orderDir)
+      })
     }
-  }
+  }, [sortOptions])
 
-  const handleSelect = (media: Media) => {
-    setSelectedIds((prev) => {
-      const newSet = new Set(prev)
-      if (newSet.has(media.id)) {
-        newSet.delete(media.id)
-      } else {
-        newSet.add(media.id)
-      }
-      return newSet
+  const handleSearchChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value)
+  }, [])
+
+  const handleTypeFilterChange = useCallback((value: string) => {
+    startTransition(() => {
+      setTypeFilter(value as 'all' | 'image' | 'video')
     })
-  }
+  }, [])
 
-  const handleDelete = async () => {
+  const handleTagsChange = useCallback((tagIds: string[]) => {
+    startTransition(() => {
+      setSelectedTagIds(tagIds)
+    })
+  }, [])
+
+  const handleSelect = useCallback((media: Media, options?: { shiftKey?: boolean }) => {
+    const currentIndex = items.findIndex(m => m.id === media.id)
+    if (currentIndex === -1) return
+
+    const lastIndex = lastSelectedIndexRef.current
+    if (options?.shiftKey && lastIndex !== null && lastIndex >= 0 && lastIndex < items.length) {
+      // Range selection: select all items between last selected and current
+      const start = Math.min(lastIndex, currentIndex)
+      const end = Math.max(lastIndex, currentIndex)
+      setSelectedIds(prev => {
+        const newSet = new Set(prev)
+        for (let i = start; i <= end; i++) {
+          newSet.add(items[i].id)
+        }
+        return newSet
+      })
+    } else {
+      // Toggle single selection
+      setSelectedIds((prev) => {
+        const newSet = new Set(prev)
+        if (newSet.has(media.id)) {
+          newSet.delete(media.id)
+        } else {
+          newSet.add(media.id)
+        }
+        return newSet
+      })
+    }
+
+    lastSelectedIndexRef.current = currentIndex
+  }, [items])
+
+  const handleDelete = useCallback(async () => {
     if (!deletingMedia) return
     try {
       await deleteMutation.mutateAsync(deletingMedia.id)
@@ -152,28 +192,40 @@ export default function MediaDashboardPage() {
         variant: 'destructive',
       })
     }
-  }
+  }, [deletingMedia, deleteMutation, toast, t, refetch])
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = useCallback(async () => {
     if (selectedIds.size === 0) return
+    setShowBulkDeleteConfirm(false)
+    setIsBulkDeleting(true)
+    const idsArray = Array.from(selectedIds)
+    const totalCount = idsArray.length
+    setBulkDeleteProgress({ current: 0, total: totalCount })
+
     let successCount = 0
-    for (const id of selectedIds) {
+    for (let i = 0; i < idsArray.length; i++) {
+      setBulkDeleteProgress({ current: i + 1, total: totalCount })
       try {
-        await deleteMutation.mutateAsync(id)
+        await deleteMutation.mutateAsync(idsArray[i])
         successCount++
       } catch { /* continue */ }
     }
+
+    setIsBulkDeleting(false)
+    setBulkDeleteProgress({ current: 0, total: 0 })
+
     if (successCount > 0) {
       toast({
         title: t('delete.success'),
         description: t('dashboard.bulkDeleteSuccess', { count: successCount }),
       })
       setSelectedIds(new Set())
+      lastSelectedIndexRef.current = null
       refetch()
     }
-  }
+  }, [selectedIds, deleteMutation, toast, t, refetch])
 
-  const handleUploadComplete = (uploadedMedia: Media[]) => {
+  const handleUploadComplete = useCallback((uploadedMedia: Media[]) => {
     setShowUpload(false)
     refetch()
 
@@ -181,7 +233,31 @@ export default function MediaDashboardPage() {
     if (uploadedMedia.length === 1) {
       setEditingMedia(uploadedMedia[0])
     }
-  }
+  }, [refetch])
+
+  const handleToggleUpload = useCallback(() => {
+    setShowUpload(prev => !prev)
+  }, [])
+
+  const handleCloseDetail = useCallback(() => {
+    setEditingMedia(null)
+  }, [])
+
+  const handleCloseDeletingMedia = useCallback((open: boolean) => {
+    if (!open) setDeletingMedia(null)
+  }, [])
+
+  const handlePrevPage = useCallback(() => {
+    setPage(prev => prev - 1)
+  }, [])
+
+  const handleNextPage = useCallback(() => {
+    setPage(prev => prev + 1)
+  }, [])
+
+  const handleColumnsChange = useCallback((v: string) => {
+    setColumns(Number(v))
+  }, [])
 
   const selectedCount = selectedIds.size
 
@@ -204,46 +280,19 @@ export default function MediaDashboardPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Bulk actions */}
-          {selectedCount > 0 && (
+        <Button onClick={handleToggleUpload}>
+          {showUpload ? (
             <>
-              <span className="text-sm text-muted-foreground">
-                {t('dashboard.selected', { count: selectedCount })}
-              </span>
-              <Button
-                data-cy={sel('media.dashboard.bulkDeleteBtn')}
-                variant="destructive"
-                size="sm"
-                onClick={handleBulkDelete}
-              >
-                <Trash2Icon className="mr-1.5 h-4 w-4" />
-                {t('dashboard.bulkDelete')}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelectedIds(new Set())}
-              >
-                <XIcon className="h-4 w-4" />
-              </Button>
+              <ChevronUpIcon className="mr-2 h-4 w-4" />
+              {t('dashboard.hideUpload')}
+            </>
+          ) : (
+            <>
+              <UploadIcon className="mr-2 h-4 w-4" />
+              {t('toolbar.upload')}
             </>
           )}
-
-          <Button onClick={() => setShowUpload(!showUpload)}>
-            {showUpload ? (
-              <>
-                <ChevronUpIcon className="mr-2 h-4 w-4" />
-                {t('dashboard.hideUpload')}
-              </>
-            ) : (
-              <>
-                <UploadIcon className="mr-2 h-4 w-4" />
-                {t('toolbar.upload')}
-              </>
-            )}
-          </Button>
-        </div>
+        </Button>
       </div>
 
       {/* Upload zone (collapsible) */}
@@ -261,13 +310,13 @@ export default function MediaDashboardPage() {
             type="text"
             placeholder={t('toolbar.search')}
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={handleSearchChange}
             className="pl-8"
           />
         </div>
 
         {/* Type filter */}
-        <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as typeof typeFilter)}>
+        <Select value={typeFilter} onValueChange={handleTypeFilterChange}>
           <SelectTrigger
             data-cy={sel('media.toolbar.typeFilter')}
             className="w-[140px]"
@@ -284,7 +333,7 @@ export default function MediaDashboardPage() {
         {/* Tag filter */}
         <MediaTagFilter
           selectedTagIds={selectedTagIds}
-          onTagsChange={setSelectedTagIds}
+          onTagsChange={handleTagsChange}
         />
 
         {/* Sort */}
@@ -309,7 +358,7 @@ export default function MediaDashboardPage() {
           {viewMode === 'grid' && (
             <Select
               value={String(columns)}
-              onValueChange={(v) => setColumns(Number(v))}
+              onValueChange={handleColumnsChange}
             >
               <SelectTrigger
                 data-cy={sel('media.toolbar.columnSelect')}
@@ -353,28 +402,30 @@ export default function MediaDashboardPage() {
       </div>
 
       {/* Row 3: Content */}
-      {viewMode === 'grid' ? (
-        <MediaGrid
-          items={items}
-          isLoading={isLoading}
-          selectedIds={selectedIds}
-          onSelect={handleSelect}
-          onEdit={setEditingMedia}
-          onDelete={setDeletingMedia}
-          mode="multiple"
-          columns={columns}
-        />
-      ) : (
-        <MediaList
-          items={items}
-          isLoading={isLoading}
-          selectedIds={selectedIds}
-          onSelect={handleSelect}
-          onEdit={setEditingMedia}
-          onDelete={setDeletingMedia}
-          mode="multiple"
-        />
-      )}
+      <div className={isBulkDeleting ? 'pointer-events-none opacity-50' : ''}>
+        {viewMode === 'grid' ? (
+          <MediaGrid
+            items={items}
+            isLoading={isLoading}
+            selectedIds={selectedIds}
+            onSelect={handleSelect}
+            onEdit={isBulkDeleting ? undefined : setEditingMedia}
+            onDelete={isBulkDeleting ? undefined : setDeletingMedia}
+            mode="multiple"
+            columns={columns}
+          />
+        ) : (
+          <MediaList
+            items={items}
+            isLoading={isLoading}
+            selectedIds={selectedIds}
+            onSelect={handleSelect}
+            onEdit={isBulkDeleting ? undefined : setEditingMedia}
+            onDelete={isBulkDeleting ? undefined : setDeletingMedia}
+            mode="multiple"
+          />
+        )}
+      </div>
 
       {/* Pagination */}
       {totalPages > 1 && (
@@ -395,7 +446,7 @@ export default function MediaDashboardPage() {
               variant="outline"
               size="sm"
               disabled={!hasPrevPage}
-              onClick={() => setPage(page - 1)}
+              onClick={handlePrevPage}
             >
               {t('dashboard.prevPage')}
             </Button>
@@ -404,7 +455,7 @@ export default function MediaDashboardPage() {
               variant="outline"
               size="sm"
               disabled={!hasNextPage}
-              onClick={() => setPage(page + 1)}
+              onClick={handleNextPage}
             >
               {t('dashboard.nextPage')}
             </Button>
@@ -427,6 +478,7 @@ export default function MediaDashboardPage() {
                   alt={editingMedia.alt || editingMedia.filename}
                   className="max-w-[90%] max-h-[90%] object-contain select-none"
                   draggable={false}
+                  decoding="async"
                 />
               ) : (
                 <ImageIcon className="h-20 w-20 text-neutral-700" />
@@ -440,7 +492,7 @@ export default function MediaDashboardPage() {
               </div>
               <MediaDetailPanel
                 media={editingMedia}
-                onClose={() => setEditingMedia(null)}
+                onClose={handleCloseDetail}
                 showPreview={false}
                 className="flex-1 min-h-0"
               />
@@ -449,10 +501,10 @@ export default function MediaDashboardPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete confirmation dialog */}
+      {/* Single delete confirmation dialog */}
       <AlertDialog
         open={!!deletingMedia}
-        onOpenChange={(open) => !open && setDeletingMedia(null)}
+        onOpenChange={handleCloseDeletingMedia}
       >
         <AlertDialogContent data-cy={sel('media.deleteConfirm.dialog')}>
           <AlertDialogHeader>
@@ -473,6 +525,83 @@ export default function MediaDashboardPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Bulk delete confirmation dialog */}
+      <AlertDialog
+        open={showBulkDeleteConfirm}
+        onOpenChange={(open) => !open && setShowBulkDeleteConfirm(false)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t('dashboard.bulkDeleteConfirm', { count: selectedCount })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('dashboard.bulkDeleteConfirmDesc')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('delete.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              <Trash2Icon className="mr-1.5 h-4 w-4" />
+              {t('dashboard.bulkDelete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Floating action bar */}
+      {(selectedCount > 0 || isBulkDeleting) && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-200">
+          <div className="flex items-center gap-3 bg-background border border-border rounded-xl shadow-lg px-4 py-2.5">
+            {isBulkDeleting ? (
+              <>
+                <LoaderIcon className="h-4 w-4 animate-spin text-destructive" />
+                <span className="text-sm font-medium">
+                  {t('dashboard.bulkDeleting', {
+                    current: bulkDeleteProgress.current,
+                    total: bulkDeleteProgress.total,
+                  })}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="text-sm font-medium">
+                  {t('dashboard.selected', { count: selectedCount })}
+                </span>
+                <div className="h-4 w-px bg-border" />
+                <Button
+                  data-cy={sel('media.dashboard.bulkDeleteBtn')}
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setShowBulkDeleteConfirm(true)}
+                >
+                  <Trash2Icon className="mr-1.5 h-4 w-4" />
+                  {t('dashboard.bulkDelete')}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedIds(new Set())
+                    lastSelectedIndexRef.current = null
+                  }}
+                  className="text-muted-foreground"
+                >
+                  <XIcon className="mr-1 h-3.5 w-3.5" />
+                  {t('dashboard.deselectAll')}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
+
+// Export the resolved component (theme override or default)
+export default getTemplateOrDefaultClient('app/dashboard/(main)/media/page.tsx', DefaultMediaDashboardPage)

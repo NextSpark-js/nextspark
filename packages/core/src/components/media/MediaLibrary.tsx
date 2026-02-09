@@ -3,11 +3,13 @@
  *
  * Main modal for browsing, uploading, and selecting media.
  * Manages state for search, filtering, sorting, selection, and view mode.
+ *
+ * Performance: Stable callbacks with useCallback + functional setState.
  */
 
 'use client'
 
-import * as React from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { XIcon } from 'lucide-react'
 import {
@@ -19,14 +21,12 @@ import {
   DialogTitle,
 } from '../ui/dialog'
 import { Button } from '../ui/button'
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog'
 import { MediaToolbar } from './MediaToolbar'
 import { MediaGrid } from './MediaGrid'
 import { MediaList } from './MediaList'
 import { MediaUploadZone } from './MediaUploadZone'
-import { MediaDetailPanel } from './MediaDetailPanel'
 import { MediaTagFilter } from './MediaTagFilter'
-import { useMediaList, useDeleteMedia } from '../../hooks/useMedia'
+import { useMediaList } from '../../hooks/useMedia'
 import { useDebounce } from '../../hooks/useDebounce'
 import { useToast } from '../../hooks/useToast'
 import { sel } from '../../lib/selectors'
@@ -53,19 +53,17 @@ export function MediaLibrary({
 }: MediaLibraryProps) {
   const t = useTranslations('media')
   const { toast } = useToast()
-  const deleteMutation = useDeleteMedia()
 
   // State
-  const [viewMode, setViewMode] = React.useState<ViewMode>('grid')
-  const [searchQuery, setSearchQuery] = React.useState('')
-  const [typeFilter, setTypeFilter] = React.useState<'all' | 'image' | 'video'>('all')
-  const [sortBy, setSortBy] = React.useState<MediaListOptions['orderBy']>('createdAt')
-  const [sortDir, setSortDir] = React.useState<MediaListOptions['orderDir']>('desc')
-  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set())
-  const [selectedTagIds, setSelectedTagIds] = React.useState<string[]>([])
-  const [showUploadZone, setShowUploadZone] = React.useState(false)
-  const [editingMedia, setEditingMedia] = React.useState<Media | null>(null)
-  const [deletingMedia, setDeletingMedia] = React.useState<Media | null>(null)
+  const [viewMode, setViewMode] = useState<ViewMode>('grid')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [typeFilter, setTypeFilter] = useState<'all' | 'image' | 'video'>('all')
+  const [sortBy, setSortBy] = useState<MediaListOptions['orderBy']>('createdAt')
+  const [sortDir, setSortDir] = useState<MediaListOptions['orderDir']>('desc')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
+  const [showUploadZone, setShowUploadZone] = useState(false)
+  const lastSelectedIndexRef = useRef<number | null>(null)
 
   // Debounce search
   const debouncedSearch = useDebounce(searchQuery, 300)
@@ -84,38 +82,66 @@ export function MediaLibrary({
   const items = data?.data || []
 
   // Reset selection when dialog closes
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isOpen) {
       setSelectedIds(new Set())
       setSelectedTagIds([])
-      setEditingMedia(null)
       setShowUploadZone(false)
+      lastSelectedIndexRef.current = null
     }
   }, [isOpen])
 
-  const handleSelect = (media: Media) => {
+  const handleSelect = useCallback((media: Media, options?: { shiftKey?: boolean }) => {
     if (mode === 'single') {
       setSelectedIds(new Set([media.id]))
     } else {
-      setSelectedIds((prev) => {
-        const newSet = new Set(prev)
-        if (newSet.has(media.id)) {
-          newSet.delete(media.id)
-        } else {
-          if (maxSelections && newSet.size >= maxSelections) {
-            toast({
-              title: t('upload.error'),
-              description: t('upload.maxSelectionsReached', { maxSelections }),
-              variant: 'destructive',
-            })
-            return prev
+      const currentIndex = items.findIndex((m) => m.id === media.id)
+
+      if (options?.shiftKey && lastSelectedIndexRef.current !== null && currentIndex !== -1) {
+        // Shift+click: select range
+        const start = Math.min(lastSelectedIndexRef.current, currentIndex)
+        const end = Math.max(lastSelectedIndexRef.current, currentIndex)
+        const rangeIds = items.slice(start, end + 1).map((m) => m.id)
+
+        setSelectedIds((prev) => {
+          const newSet = new Set(prev)
+          for (const id of rangeIds) {
+            if (maxSelections && newSet.size >= maxSelections) {
+              toast({
+                title: t('upload.error'),
+                description: t('upload.maxSelectionsReached', { maxSelections }),
+                variant: 'destructive',
+              })
+              break
+            }
+            newSet.add(id)
           }
-          newSet.add(media.id)
-        }
-        return newSet
-      })
+          return newSet
+        })
+      } else {
+        // Normal click: toggle single item
+        setSelectedIds((prev) => {
+          const newSet = new Set(prev)
+          if (newSet.has(media.id)) {
+            newSet.delete(media.id)
+          } else {
+            if (maxSelections && newSet.size >= maxSelections) {
+              toast({
+                title: t('upload.error'),
+                description: t('upload.maxSelectionsReached', { maxSelections }),
+                variant: 'destructive',
+              })
+              return prev
+            }
+            newSet.add(media.id)
+          }
+          return newSet
+        })
+      }
+
+      lastSelectedIndexRef.current = currentIndex
     }
-  }
+  }, [mode, maxSelections, toast, t, items])
 
   const handleConfirmSelection = () => {
     if (selectedIds.size === 0) return
@@ -132,42 +158,19 @@ export function MediaLibrary({
     onClose()
   }
 
-  const handleDelete = async () => {
-    if (!deletingMedia) return
-
-    try {
-      await deleteMutation.mutateAsync(deletingMedia.id)
-
-      toast({
-        title: t('delete.success'),
-      })
-
-      setDeletingMedia(null)
-      setSelectedIds((prev) => {
-        const newSet = new Set(prev)
-        newSet.delete(deletingMedia.id)
-        return newSet
-      })
-
-      refetch()
-    } catch (error) {
-      toast({
-        title: t('delete.error'),
-        description: error instanceof Error ? error.message : t('delete.error'),
-        variant: 'destructive',
-      })
-    }
-  }
-
-  const handleUploadComplete = () => {
+  const handleUploadComplete = useCallback(() => {
     setShowUploadZone(false)
     refetch()
-  }
+  }, [refetch])
 
-  const handleSortChange = (orderBy: MediaListOptions['orderBy'], orderDir: MediaListOptions['orderDir']) => {
+  const handleSortChange = useCallback((orderBy: MediaListOptions['orderBy'], orderDir: MediaListOptions['orderDir']) => {
     setSortBy(orderBy)
     setSortDir(orderDir)
-  }
+  }, [])
+
+  const handleToggleUpload = useCallback(() => {
+    setShowUploadZone(prev => !prev)
+  }, [])
 
   const selectedCount = selectedIds.size
   const canSelect = selectedCount > 0
@@ -200,10 +203,10 @@ export function MediaLibrary({
             </div>
           </DialogHeader>
 
-          <div className="flex-1 min-h-0 overflow-y-auto space-y-4">
+          <div className="flex-1 min-h-0 overflow-y-auto space-y-4 p-1 -m-1">
             {/* Toolbar */}
             <MediaToolbar
-              onUploadClick={() => setShowUploadZone(!showUploadZone)}
+              onUploadClick={handleToggleUpload}
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
               typeFilter={typeFilter}
@@ -226,42 +229,24 @@ export function MediaLibrary({
               <MediaUploadZone onUploadComplete={handleUploadComplete} />
             )}
 
-            {/* Grid or List */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className={editingMedia ? 'lg:col-span-2' : 'lg:col-span-3'}>
-                {viewMode === 'grid' ? (
-                  <MediaGrid
-                    items={items}
-                    isLoading={isLoading}
-                    selectedIds={selectedIds}
-                    onSelect={handleSelect}
-                    onEdit={setEditingMedia}
-                    onDelete={setDeletingMedia}
-                    mode={mode}
-                  />
-                ) : (
-                  <MediaList
-                    items={items}
-                    isLoading={isLoading}
-                    selectedIds={selectedIds}
-                    onSelect={handleSelect}
-                    onEdit={setEditingMedia}
-                    onDelete={setDeletingMedia}
-                    mode={mode}
-                  />
-                )}
-              </div>
-
-              {/* Detail panel */}
-              {editingMedia && (
-                <div className="hidden lg:block">
-                  <MediaDetailPanel
-                    media={editingMedia}
-                    onClose={() => setEditingMedia(null)}
-                  />
-                </div>
-              )}
-            </div>
+            {/* Grid or List - picker mode: no onEdit/onDelete so card click = select */}
+            {viewMode === 'grid' ? (
+              <MediaGrid
+                items={items}
+                isLoading={isLoading}
+                selectedIds={selectedIds}
+                onSelect={handleSelect}
+                mode={mode}
+              />
+            ) : (
+              <MediaList
+                items={items}
+                isLoading={isLoading}
+                selectedIds={selectedIds}
+                onSelect={handleSelect}
+                mode={mode}
+              />
+            )}
           </div>
 
           {/* Footer */}
@@ -296,31 +281,6 @@ export function MediaLibrary({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Delete confirmation dialog */}
-      <AlertDialog
-        open={!!deletingMedia}
-        onOpenChange={(open) => !open && setDeletingMedia(null)}
-      >
-        <AlertDialogContent data-cy={sel('media.deleteConfirm.dialog')}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('delete.title')}</AlertDialogTitle>
-            <AlertDialogDescription>{t('delete.message')}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel data-cy={sel('media.deleteConfirm.cancelBtn')}>
-              {t('delete.cancel')}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              data-cy={sel('media.deleteConfirm.confirmBtn')}
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {t('delete.confirm')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   )
 }
