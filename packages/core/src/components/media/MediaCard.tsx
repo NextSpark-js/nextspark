@@ -52,9 +52,12 @@ export const MediaCard = React.memo(function MediaCard({
     if (e.shiftKey && mode === 'multiple') {
       // Shift+click = range selection (Google Photos pattern)
       onSelect(media, { shiftKey: true })
+    } else if (onEdit) {
+      // Normal click = open detail/edit (dashboard manager mode)
+      onEdit(media)
     } else {
-      // Normal click = open detail/edit
-      onEdit?.(media)
+      // No onEdit handler = picker mode, click selects
+      onSelect(media)
     }
   }, [media, onSelect, onEdit, mode])
 
@@ -133,46 +136,48 @@ export const MediaCard = React.memo(function MediaCard({
             </div>
           )}
 
-          {/* Actions menu - always visible on hover */}
-          <div
-            className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={handleMenuClick}
-          >
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  data-cy={sel('media.grid.menuBtn', { id: media.id })}
-                  variant="secondary"
-                  size="icon"
-                  className="h-8 w-8"
-                  aria-label={t('list.actions')}
-                >
-                  <MoreVerticalIcon className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {onEdit && (
-                  <DropdownMenuItem
-                    data-cy={sel('media.grid.menuEdit', { id: media.id })}
-                    onClick={handleEditClick}
+          {/* Actions menu - visible on hover, hidden in picker mode (no onEdit/onDelete) */}
+          {(onEdit || onDelete) && (
+            <div
+              className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={handleMenuClick}
+            >
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    data-cy={sel('media.grid.menuBtn', { id: media.id })}
+                    variant="secondary"
+                    size="icon"
+                    className="h-8 w-8"
+                    aria-label={t('list.actions')}
                   >
-                    <Edit2Icon className="mr-2 h-4 w-4" />
-                    {t('actions.edit')}
-                  </DropdownMenuItem>
-                )}
-                {onDelete && (
-                  <DropdownMenuItem
-                    data-cy={sel('media.grid.menuDelete', { id: media.id })}
-                    onClick={handleDeleteClick}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <Trash2Icon className="mr-2 h-4 w-4" />
-                    {t('actions.delete')}
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+                    <MoreVerticalIcon className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {onEdit && (
+                    <DropdownMenuItem
+                      data-cy={sel('media.grid.menuEdit', { id: media.id })}
+                      onClick={handleEditClick}
+                    >
+                      <Edit2Icon className="mr-2 h-4 w-4" />
+                      {t('actions.edit')}
+                    </DropdownMenuItem>
+                  )}
+                  {onDelete && (
+                    <DropdownMenuItem
+                      data-cy={sel('media.grid.menuDelete', { id: media.id })}
+                      onClick={handleDeleteClick}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2Icon className="mr-2 h-4 w-4" />
+                      {t('actions.delete')}
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
         </div>
 
         {/* Title / Filename */}

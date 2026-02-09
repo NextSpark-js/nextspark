@@ -273,6 +273,22 @@ describe('MediaCard', () => {
       expect(onSelect).toHaveBeenCalledTimes(1)
       expect(onEdit).not.toHaveBeenCalled()
     })
+
+    test('picker mode: card click calls onSelect when onEdit is not provided', () => {
+      const onSelect = jest.fn()
+      render(<MediaCard {...defaultProps} onSelect={onSelect} onEdit={undefined} onDelete={undefined} mode="single" />)
+
+      const card = screen.getByTestId('card')
+      fireEvent.click(card)
+
+      expect(onSelect).toHaveBeenCalledWith(defaultProps.media)
+    })
+
+    test('picker mode: dropdown menu is hidden when no onEdit/onDelete', () => {
+      render(<MediaCard {...defaultProps} onEdit={undefined} onDelete={undefined} />)
+
+      expect(screen.queryByTestId('dropdown-menu')).not.toBeInTheDocument()
+    })
   })
 
   describe('visual states', () => {

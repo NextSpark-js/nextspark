@@ -21,14 +21,12 @@ import {
   DialogTitle,
 } from '../ui/dialog'
 import { Button } from '../ui/button'
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog'
 import { MediaToolbar } from './MediaToolbar'
 import { MediaGrid } from './MediaGrid'
 import { MediaList } from './MediaList'
 import { MediaUploadZone } from './MediaUploadZone'
-import { MediaDetailPanel } from './MediaDetailPanel'
 import { MediaTagFilter } from './MediaTagFilter'
-import { useMediaList, useDeleteMedia } from '../../hooks/useMedia'
+import { useMediaList } from '../../hooks/useMedia'
 import { useDebounce } from '../../hooks/useDebounce'
 import { useToast } from '../../hooks/useToast'
 import { sel } from '../../lib/selectors'
@@ -55,7 +53,6 @@ export function MediaLibrary({
 }: MediaLibraryProps) {
   const t = useTranslations('media')
   const { toast } = useToast()
-  const deleteMutation = useDeleteMedia()
 
   // State
   const [viewMode, setViewMode] = React.useState<ViewMode>('grid')
@@ -66,8 +63,6 @@ export function MediaLibrary({
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set())
   const [selectedTagIds, setSelectedTagIds] = React.useState<string[]>([])
   const [showUploadZone, setShowUploadZone] = React.useState(false)
-  const [editingMedia, setEditingMedia] = React.useState<Media | null>(null)
-  const [deletingMedia, setDeletingMedia] = React.useState<Media | null>(null)
   const lastSelectedIndexRef = React.useRef<number | null>(null)
 
   // Debounce search
@@ -91,7 +86,6 @@ export function MediaLibrary({
     if (!isOpen) {
       setSelectedIds(new Set())
       setSelectedTagIds([])
-      setEditingMedia(null)
       setShowUploadZone(false)
       lastSelectedIndexRef.current = null
     }
@@ -164,33 +158,6 @@ export function MediaLibrary({
     onClose()
   }
 
-  const handleDelete = async () => {
-    if (!deletingMedia) return
-
-    try {
-      await deleteMutation.mutateAsync(deletingMedia.id)
-
-      toast({
-        title: t('delete.success'),
-      })
-
-      setDeletingMedia(null)
-      setSelectedIds((prev) => {
-        const newSet = new Set(prev)
-        newSet.delete(deletingMedia.id)
-        return newSet
-      })
-
-      refetch()
-    } catch (error) {
-      toast({
-        title: t('delete.error'),
-        description: error instanceof Error ? error.message : t('delete.error'),
-        variant: 'destructive',
-      })
-    }
-  }
-
   const handleUploadComplete = React.useCallback(() => {
     setShowUploadZone(false)
     refetch()
@@ -203,10 +170,6 @@ export function MediaLibrary({
 
   const handleToggleUpload = React.useCallback(() => {
     setShowUploadZone(prev => !prev)
-  }, [])
-
-  const handleCloseDetail = React.useCallback(() => {
-    setEditingMedia(null)
   }, [])
 
   const selectedCount = selectedIds.size
@@ -266,42 +229,24 @@ export function MediaLibrary({
               <MediaUploadZone onUploadComplete={handleUploadComplete} />
             )}
 
-            {/* Grid or List */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className={editingMedia ? 'lg:col-span-2' : 'lg:col-span-3'}>
-                {viewMode === 'grid' ? (
-                  <MediaGrid
-                    items={items}
-                    isLoading={isLoading}
-                    selectedIds={selectedIds}
-                    onSelect={handleSelect}
-                    onEdit={setEditingMedia}
-                    onDelete={setDeletingMedia}
-                    mode={mode}
-                  />
-                ) : (
-                  <MediaList
-                    items={items}
-                    isLoading={isLoading}
-                    selectedIds={selectedIds}
-                    onSelect={handleSelect}
-                    onEdit={setEditingMedia}
-                    onDelete={setDeletingMedia}
-                    mode={mode}
-                  />
-                )}
-              </div>
-
-              {/* Detail panel */}
-              {editingMedia && (
-                <div className="hidden lg:block">
-                  <MediaDetailPanel
-                    media={editingMedia}
-                    onClose={handleCloseDetail}
-                  />
-                </div>
-              )}
-            </div>
+            {/* Grid or List - picker mode: no onEdit/onDelete so card click = select */}
+            {viewMode === 'grid' ? (
+              <MediaGrid
+                items={items}
+                isLoading={isLoading}
+                selectedIds={selectedIds}
+                onSelect={handleSelect}
+                mode={mode}
+              />
+            ) : (
+              <MediaList
+                items={items}
+                isLoading={isLoading}
+                selectedIds={selectedIds}
+                onSelect={handleSelect}
+                mode={mode}
+              />
+            )}
           </div>
 
           {/* Footer */}
@@ -336,31 +281,6 @@ export function MediaLibrary({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Delete confirmation dialog */}
-      <AlertDialog
-        open={!!deletingMedia}
-        onOpenChange={(open) => !open && setDeletingMedia(null)}
-      >
-        <AlertDialogContent data-cy={sel('media.deleteConfirm.dialog')}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('delete.title')}</AlertDialogTitle>
-            <AlertDialogDescription>{t('delete.message')}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel data-cy={sel('media.deleteConfirm.cancelBtn')}>
-              {t('delete.cancel')}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              data-cy={sel('media.deleteConfirm.confirmBtn')}
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {t('delete.confirm')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   )
 }
