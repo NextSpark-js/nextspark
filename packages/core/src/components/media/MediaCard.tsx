@@ -53,10 +53,10 @@ export const MediaCard = React.memo(function MediaCard({
       // In multi-select mode, card click toggles selection (no edit)
       onSelect(media, { shiftKey: e.shiftKey })
     } else {
-      // In single mode, click opens detail/edit
-      onEdit?.(media)
+      // In single mode, click just selects (no detail panel)
+      onSelect(media)
     }
-  }, [media, onSelect, onEdit, mode])
+  }, [media, onSelect, mode])
 
   const handleCheckboxClick = React.useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
@@ -115,7 +115,7 @@ export const MediaCard = React.memo(function MediaCard({
             <div
               className={cn(
                 'absolute top-2 left-2 z-10 transition-all duration-150',
-                isSelected ? 'opacity-100 scale-100' : 'opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100'
+                'opacity-100 scale-100'
               )}
               onClick={handleCheckboxClick}
             >
