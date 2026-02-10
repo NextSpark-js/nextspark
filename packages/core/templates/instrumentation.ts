@@ -13,21 +13,27 @@
 export async function register() {
   // Only run on server (not during build or in edge runtime)
   if (process.env.NEXT_RUNTIME === 'nodejs') {
-    const {
-      initializeScheduledActions,
-      initializeRecurringActions,
-    } = await import('@nextsparkjs/core/lib/scheduled-actions')
-
     console.log('[Instrumentation] Initializing scheduled actions system...')
 
-    // Register scheduled action handlers (includes entity hooks for automatic scheduling)
-    // This registers hooks like 'entity.contents.updated' that create scheduled actions
-    initializeScheduledActions()
+    try {
+      const {
+        initializeScheduledActions,
+        initializeRecurringActions,
+      } = await import('@nextsparkjs/core/lib/scheduled-actions')
 
-    // Register recurring scheduled actions (token refresh, cleanup jobs, etc.)
-    // These are background tasks that run on a schedule (e.g., every 30 minutes)
-    await initializeRecurringActions()
+      // Register scheduled action handlers (includes entity hooks for automatic scheduling)
+      // This registers hooks like 'entity.contents.updated' that create scheduled actions
+      initializeScheduledActions()
 
-    console.log('[Instrumentation] ✅ Scheduled actions initialized')
+      // Register recurring scheduled actions (token refresh, cleanup jobs, etc.)
+      // These are background tasks that run on a schedule (e.g., every 30 minutes)
+      // Non-blocking: if DB is unavailable at cold start, the server still boots
+      await initializeRecurringActions()
+
+      console.log('[Instrumentation] ✅ Scheduled actions initialized')
+    } catch (error) {
+      console.warn(`[Instrumentation] ⚠️ Failed to initialize scheduled actions: ${error instanceof Error ? error.message : error}`)
+      console.warn('[Instrumentation] Server will continue without recurring actions')
+    }
   }
 }
