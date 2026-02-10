@@ -208,7 +208,7 @@ const postHandler = async (request: NextRequest) => {
             platformAccountId: igAccount.id,
             username: igAccount.username,
             accessToken: page.accessToken, // Use page token (has IG permissions)
-            permissions: ['instagram_basic', 'instagram_content_publish', 'instagram_manage_comments'],
+            permissions: ['instagram_basic', 'instagram_content_publish', 'instagram_manage_comments', 'pages_show_list', 'pages_read_engagement'],
             metadata: {
               profilePictureUrl: igAccount.profilePictureUrl,
               followersCount: igAccount.followersCount,

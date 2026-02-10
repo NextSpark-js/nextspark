@@ -2,7 +2,7 @@
  * Facebook Graph API Wrapper
  *
  * Provides methods for publishing to Facebook Pages
- * Uses Facebook Graph API v18.0
+ * Uses Facebook Graph API v21.0
  *
  * @see https://developers.facebook.com/docs/graph-api
  */
@@ -369,7 +369,7 @@ export class FacebookAPI {
    * IMPORTANT: This is Instagram Graph API (NOT Basic Display API)
    * - Requires Facebook Page to have Instagram Business Account linked
    * - Returns null if Page has no Instagram connected
-   * - Requires instagram_basic permission
+   * - Requires instagram_basic + pages_show_list permissions
    *
    * @param pageId - Facebook Page ID
    * @param pageAccessToken - Page Access Token (NOT user token)

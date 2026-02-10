@@ -10,8 +10,10 @@
  */
 
 // Facebook OAuth endpoints (for Facebook Page + Instagram Graph API publishing)
-const FACEBOOK_OAUTH_URL = 'https://www.facebook.com/v18.0/dialog/oauth'
-const FACEBOOK_TOKEN_URL = 'https://graph.facebook.com/v18.0/oauth/access_token'
+// Must match the Graph API version used in providers/facebook.ts
+const FACEBOOK_API_VERSION = 'v21.0'
+const FACEBOOK_OAUTH_URL = `https://www.facebook.com/${FACEBOOK_API_VERSION}/dialog/oauth`
+const FACEBOOK_TOKEN_URL = `https://graph.facebook.com/${FACEBOOK_API_VERSION}/oauth/access_token`
 
 export interface OAuthConfig {
   // Facebook OAuth credentials (used for both Facebook Pages and Instagram Graph API)
@@ -43,8 +45,6 @@ export function generateAuthorizationUrl(
     'pages_show_list',
     'pages_manage_posts',
     'pages_read_engagement',
-    'read_insights',
-    'business_management', // Required to read instagram_business_account field from Pages
   ]
 
   // Add Instagram scopes for Instagram Graph API

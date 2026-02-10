@@ -8,14 +8,16 @@
 import type { PluginConfig } from '@nextsparkjs/core/types/plugin'
 
 // OAuth Providers configuration (plugin-specific metadata)
+const FACEBOOK_API_VERSION = 'v21.0'
+
 const OAUTH_PROVIDERS = {
   facebook: {
     name: 'Facebook',
-    authEndpoint: 'https://www.facebook.com/v18.0/dialog/oauth',
-    tokenEndpoint: 'https://graph.facebook.com/v18.0/oauth/access_token',
-    apiVersion: 'v18.0',
+    authEndpoint: `https://www.facebook.com/${FACEBOOK_API_VERSION}/dialog/oauth`,
+    tokenEndpoint: `https://graph.facebook.com/${FACEBOOK_API_VERSION}/oauth/access_token`,
+    apiVersion: FACEBOOK_API_VERSION,
     scopes: {
-      minimal: ['email', 'public_profile'],
+      minimal: ['pages_show_list'],
       publishing: [
         'pages_show_list',
         'pages_manage_posts',
@@ -25,15 +27,18 @@ const OAUTH_PROVIDERS = {
   },
   instagram: {
     name: 'Instagram Business',
-    authEndpoint: 'https://www.facebook.com/v18.0/dialog/oauth', // Uses Facebook OAuth
-    tokenEndpoint: 'https://graph.facebook.com/v18.0/oauth/access_token',
-    apiVersion: 'v18.0',
+    authEndpoint: `https://www.facebook.com/${FACEBOOK_API_VERSION}/dialog/oauth`, // Uses Facebook OAuth
+    tokenEndpoint: `https://graph.facebook.com/${FACEBOOK_API_VERSION}/oauth/access_token`,
+    apiVersion: FACEBOOK_API_VERSION,
     scopes: {
-      minimal: ['instagram_basic'],
+      minimal: ['instagram_basic', 'pages_show_list'],
       publishing: [
         'instagram_basic',
         'instagram_content_publish',
-        'instagram_manage_insights'
+        'instagram_manage_comments',
+        'pages_show_list',
+        'pages_manage_posts',
+        'pages_read_engagement'
       ]
     }
   }

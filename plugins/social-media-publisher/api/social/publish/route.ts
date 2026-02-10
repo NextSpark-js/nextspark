@@ -393,7 +393,7 @@ async function refreshAccountToken(
     // 2. Call Meta token refresh endpoint
     // For Facebook/Instagram, we use the token exchange endpoint
     // https://developers.facebook.com/docs/facebook-login/guides/access-tokens/get-long-lived
-    const tokenEndpoint = 'https://graph.facebook.com/v18.0/oauth/access_token'
+    const tokenEndpoint = 'https://graph.facebook.com/v21.0/oauth/access_token'
     const params = new URLSearchParams({
       grant_type: 'fb_exchange_token',
       client_id: clientId,
