@@ -41,18 +41,18 @@ export function generateAuthorizationUrl(
 ): string {
   // Both platforms use Facebook OAuth
   // instagram_business requires additional Instagram scopes
+  // business_management required for pages managed via Meta Business Suite
   const scopes = [
     'pages_show_list',
     'pages_manage_posts',
-    'pages_read_engagement',
+    'business_management',
   ]
 
   // Add Instagram scopes for Instagram Graph API
   if (platform === 'instagram_business') {
     scopes.push(
       'instagram_basic',
-      'instagram_content_publish',
-      'instagram_manage_comments'
+      'instagram_content_publish'
     )
   }
 
