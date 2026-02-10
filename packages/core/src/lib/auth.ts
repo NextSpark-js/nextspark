@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { Pool } from "pg";
 import { nextCookies } from "better-auth/next-js";
-import { parseSSLConfig } from './db';
+import { parseSSLConfig, stripSSLParams } from './db';
 import { EmailFactory, emailTemplates } from './email';
 import { I18N_CONFIG, USER_ROLES_CONFIG, TEAMS_CONFIG, APP_CONFIG_MERGED, type UserRole } from './config';
 import { getUserFlags } from './services/user-flags.service';
@@ -35,10 +35,12 @@ const baseUrl = process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL |
 const emailService = EmailFactory.create();
 
 // Supabase transaction pooler (port 6543) requires pgbouncer parameter for Better Auth compatibility
+// Strip sslmode from URL to prevent pg-connection-string from overriding our explicit ssl config
 const databaseUrl = process.env.DATABASE_URL!;
-const connectionString = databaseUrl.includes('?')
-  ? `${databaseUrl}&pgbouncer=true`
-  : `${databaseUrl}?pgbouncer=true`;
+const cleanUrl = stripSSLParams(databaseUrl);
+const connectionString = cleanUrl.includes('?')
+  ? `${cleanUrl}&pgbouncer=true`
+  : `${cleanUrl}?pgbouncer=true`;
 
 const pool = new Pool({
   connectionString,

@@ -7,6 +7,32 @@ let isShuttingDown = false;
 let shutdownPromise: Promise<void> | null = null;
 
 /**
+ * Strip SSL-related parameters from DATABASE_URL to prevent pg-connection-string
+ * from overriding our explicit ssl config.
+ *
+ * pg v8+ treats sslmode=require as verify-full internally, which breaks connections
+ * to providers like Supabase that use self-signed certs in the chain.
+ * By removing sslmode from the connection string and handling it via the explicit
+ * `ssl` Pool option, we maintain full control over SSL behavior.
+ */
+export function stripSSLParams(databaseUrl: string): string {
+  if (!databaseUrl) return databaseUrl;
+  try {
+    const url = new URL(databaseUrl);
+    url.searchParams.delete('sslmode');
+    url.searchParams.delete('uselibpqcompat');
+    return url.toString();
+  } catch {
+    // Fallback: regex strip if URL parsing fails
+    return databaseUrl
+      .replace(/[?&]sslmode=[^&]*/g, '')
+      .replace(/[?&]uselibpqcompat=[^&]*/g, '')
+      .replace(/\?&/, '?')
+      .replace(/\?$/, '');
+  }
+}
+
+/**
  * Parse SSL mode from DATABASE_URL using proper URL parameter parsing
  * Supports: disable, allow, prefer, require, verify-ca, verify-full
  *
@@ -70,8 +96,10 @@ const databaseUrl = process.env.DATABASE_URL || '';
 const sslConfig = parseSSLConfig(databaseUrl);
 
 // Create a connection pool
+// Strip sslmode from connectionString to prevent pg-connection-string from
+// overriding our explicit ssl config (pg v8+ treats require as verify-full)
 const pool = new Pool({
-  connectionString: databaseUrl,
+  connectionString: stripSSLParams(databaseUrl),
   ssl: sslConfig,
   max: 20,
   idleTimeoutMillis: 30000,
