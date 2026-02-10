@@ -165,7 +165,7 @@ async function updatePackageJson(config: WizardConfig): Promise<void> {
   }
   if (!await fs.pathExists(packageJsonPath)) {
     packageJson = {
-      name: config.projectSlug,
+      name: isMonorepoProject(config) ? 'web' : config.projectSlug,
       version: '0.1.0',
       private: true,
       scripts: {},
