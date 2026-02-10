@@ -129,15 +129,10 @@ const pool = new Pool({
 export function validateUserId(userId: string): void {
   const isProduction = process.env.NODE_ENV === 'production';
 
-  // SEC-003: In production, strictly require UUID format
-  if (isProduction) {
-    if (!isValidUUID(userId)) {
-      throw new Error('Invalid userId format - must be valid UUID');
-    }
-    return;
-  }
+  // SEC-003: Validate userId to prevent SQL injection in SET LOCAL commands
+  // Better Auth generates nanoid IDs (alphanumeric, 32 chars) by default,
+  // so we accept both UUID and safe alphanumeric formats in all environments.
 
-  // In development: Allow test IDs like "test-superadmin-001" but validate for injection
   // Reject dangerous characters that could be used for SQL injection
   if (userId.includes("'") || userId.includes('"') || userId.includes('\\') || userId.includes(';')) {
     throw new Error('Invalid userId format: contains dangerous characters');
@@ -149,6 +144,10 @@ export function validateUserId(userId: string): void {
   // Reject excessively long values
   if (userId.length > 255) {
     throw new Error('Invalid userId format: too long');
+  }
+  // In production, require either UUID or alphanumeric (nanoid) format
+  if (isProduction && !isValidUUID(userId) && !/^[a-zA-Z0-9_-]+$/.test(userId)) {
+    throw new Error('Invalid userId format - must be valid UUID or alphanumeric');
   }
 }
 
