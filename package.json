@@ -52,6 +52,11 @@
     "@tailwindcss/container-queries": "^0.1.1",
     "pg": "^8.16.3"
   },
+  "pnpm": {
+    "overrides": {
+      "next": "15.5.10"
+    }
+  },
   "engines": {
     "node": ">=18.0.0",
     "pnpm": ">=9.0.0"
