@@ -47,9 +47,17 @@ export async function POST(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
   // Determine request type
-  const isEmailSignup = pathname === '/api/auth/sign-up/email';
+  // Comprehensive signup endpoint detection to prevent bypasses
+  const signupEndpoints = [
+    '/sign-up/email',
+    '/sign-up/credentials',
+    '/signup',
+    '/register',
+  ];
+
+  const isSignupAttempt = signupEndpoints.some(endpoint => pathname.includes(endpoint));
   const isOAuthCallback = pathname.includes('/api/auth/callback/');
-  const isSignupRequest = isEmailSignup || isOAuthCallback;
+  const isSignupRequest = isSignupAttempt || isOAuthCallback;
 
   if (isSignupRequest) {
     const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open';
@@ -57,26 +65,42 @@ export async function POST(req: NextRequest) {
 
     // --- Registration mode enforcement ---
 
-    // 1. Closed mode: block ALL signup attempts
+    // 1. Closed mode: block ALL signup attempts (except invitation flow)
     if (shouldBlockSignup(registrationMode, isOAuthCallback)) {
+      // Check for invitation token in headers or query params
+      const hasInviteToken = req.headers.get('x-invite-token') ||
+                           new URL(req.url).searchParams.get('inviteToken');
+
+      if (!hasInviteToken) {
+        const errorResponse = NextResponse.json(
+          {
+            error: 'Registration is closed',
+            message: 'Public registration is not available. Please contact an administrator.',
+            code: 'REGISTRATION_CLOSED',
+          },
+          { status: 403 }
+        );
+        return await addCorsHeaders(errorResponse, req);
+      }
+    }
+
+    // 2. Domain-restricted mode: block email signup, allow OAuth (validated in database hooks)
+    if (registrationMode === 'domain-restricted' && isSignupAttempt && !isOAuthCallback) {
+      // Block direct email/password signup in domain-restricted mode
+      // Only Google OAuth is allowed (domain validation happens in database hooks)
       const errorResponse = NextResponse.json(
         {
-          error: 'Registration is closed',
-          message: 'Public registration is not available. Please contact an administrator.',
-          code: 'REGISTRATION_CLOSED',
+          error: 'Email signup disabled',
+          message: 'Please sign up with Google using an authorized email domain.',
+          code: 'EMAIL_SIGNUP_DISABLED',
         },
         { status: 403 }
       );
       return await addCorsHeaders(errorResponse, req);
     }
 
-    // 2. Domain-restricted mode: validate email domain on OAuth callback
-    if (registrationMode === 'domain-restricted' && isOAuthCallback) {
-      // We can't read the email from the OAuth callback directly here
-      // because Better Auth handles the token exchange internally.
-      // Domain validation for OAuth is handled in auth.ts databaseHooks (user.create.before)
-      // See Phase 3b below - we add a hook in auth.ts instead.
-    }
+    // Note: OAuth domain validation happens in auth.ts databaseHooks (user.create.before)
+    // The hook throws an error if the email domain is not in allowedDomains
 
     // 3. Invitation-only mode OR single-tenant teams mode: existing behavior
     if (registrationMode === 'invitation-only' || isPublicSignupRestricted(teamsMode)) {

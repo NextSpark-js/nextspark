@@ -12,6 +12,7 @@ import {
   isPublicSignupRestricted,
 } from './teams/helpers';
 import { isDomainAllowed } from './auth/registration-helpers';
+import { registrationGuardPlugin } from './auth/registration-guard-plugin';
 import { getCorsOrigins } from './utils/cors';
 
 interface UserWithEmail {
@@ -166,6 +167,7 @@ export const auth = betterAuth({
   // Use unified CORS configuration from app.config.ts + theme extensions + env vars
   trustedOrigins: getCorsOrigins(APP_CONFIG_MERGED),
   plugins: [
+    registrationGuardPlugin(), // Intercept OAuth signup attempts
     nextCookies(), // MUST be the last plugin for Next.js cookie handling
   ],
   session: {
@@ -189,7 +191,7 @@ export const auth = betterAuth({
             if (!shouldSkipTeamCreation()) {
               // shouldSkipTeamCreation() is true during invitation flow
               // If it's false, this is a public signup attempt - block it
-              return false;
+              throw new Error('REGISTRATION_CLOSED: Public registration is not available. Contact an administrator.');
             }
           }
 
@@ -197,12 +199,12 @@ export const auth = betterAuth({
           if (registrationMode === 'domain-restricted') {
             const allowedDomains = AUTH_CONFIG?.registration?.allowedDomains ?? [];
             if (allowedDomains.length > 0 && !isDomainAllowed(user.email, allowedDomains)) {
-              console.log(`[Auth] Blocked registration for ${user.email}: domain not in allowedDomains`);
-              return false;
+              console.log(`[Auth] Blocked registration for ${user.email}: domain not in allowedDomains (allowed: ${allowedDomains.join(', ')})`);
+              throw new Error(`DOMAIN_NOT_ALLOWED: Email domain not authorized. Please use an email from: ${allowedDomains.join(', ')}`);
             }
           }
 
-          return true;
+          return user;
         },
         // Create team when a new user signs up (email/password or OAuth)
         // Team type depends on configured teams mode
