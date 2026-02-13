@@ -65,8 +65,23 @@ export async function POST(req: NextRequest) {
 
     // --- Registration mode enforcement ---
 
-    // 1. Closed mode: block ALL signup attempts (except invitation flow)
-    if (shouldBlockSignup(registrationMode, isOAuthCallback)) {
+    // 1. Domain-restricted mode: block email signup, allow OAuth (validated in database hooks)
+    if (registrationMode === 'domain-restricted' && isSignupAttempt && !isOAuthCallback) {
+      // Block direct email/password signup in domain-restricted mode
+      // Only Google OAuth is allowed (domain validation happens in database hooks)
+      const errorResponse = NextResponse.json(
+        {
+          error: 'Email signup disabled',
+          message: 'Please sign up with Google using an authorized email domain.',
+          code: 'EMAIL_SIGNUP_DISABLED',
+        },
+        { status: 403 }
+      );
+      return await addCorsHeaders(errorResponse, req);
+    }
+
+    // 2. Closed mode: block ALL signup attempts (except invitation flow)
+    if (registrationMode === 'closed') {
       // Check for invitation token in headers or query params
       const hasInviteToken = req.headers.get('x-invite-token') ||
                            new URL(req.url).searchParams.get('inviteToken');
@@ -82,21 +97,6 @@ export async function POST(req: NextRequest) {
         );
         return await addCorsHeaders(errorResponse, req);
       }
-    }
-
-    // 2. Domain-restricted mode: block email signup, allow OAuth (validated in database hooks)
-    if (registrationMode === 'domain-restricted' && isSignupAttempt && !isOAuthCallback) {
-      // Block direct email/password signup in domain-restricted mode
-      // Only Google OAuth is allowed (domain validation happens in database hooks)
-      const errorResponse = NextResponse.json(
-        {
-          error: 'Email signup disabled',
-          message: 'Please sign up with Google using an authorized email domain.',
-          code: 'EMAIL_SIGNUP_DISABLED',
-        },
-        { status: 403 }
-      );
-      return await addCorsHeaders(errorResponse, req);
     }
 
     // Note: OAuth domain validation happens in auth.ts databaseHooks (user.create.before)
