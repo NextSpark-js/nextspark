@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { put } from '@vercel/blob'
 import { authenticateRequest, hasRequiredScope, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
+import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { MEDIA_CONFIG } from '@nextsparkjs/core/lib/config/config-sync'
 import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
@@ -71,6 +72,11 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     const teamResult = await resolveTeamContext(request, authResult)
     if (teamResult instanceof Response) return teamResult
     const teamId = teamResult
+
+    // 3b. Check role-based permission
+    if (!await checkPermission(authResult.user!.id, teamId, 'media.upload')) {
+      return createApiError('Permission denied', 403)
+    }
 
     const formData = await request.formData()
     const files = formData.getAll('files') as File[]

@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { authenticateRequest, hasRequiredScope, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
+import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
 import { updateMediaSchema } from '@nextsparkjs/core/lib/media/schemas'
@@ -33,6 +34,11 @@ export const GET = withRateLimitTier(async (
     const teamResult = await resolveTeamContext(request, authResult)
     if (teamResult instanceof Response) return teamResult
     const teamId = teamResult
+
+    // 3b. Check role-based permission
+    if (!await checkPermission(authResult.user!.id, teamId, 'media.read')) {
+      return createApiError('Permission denied', 403)
+    }
 
     // 4. Get media ID from params
     const { id } = await params
@@ -84,6 +90,11 @@ export const PATCH = withRateLimitTier(async (
     const teamResult = await resolveTeamContext(request, authResult)
     if (teamResult instanceof Response) return teamResult
     const teamId = teamResult
+
+    // 3b. Check role-based permission
+    if (!await checkPermission(authResult.user!.id, teamId, 'media.update')) {
+      return createApiError('Permission denied', 403)
+    }
 
     // 4. Get media ID from params
     const { id } = await params
@@ -144,6 +155,11 @@ export const DELETE = withRateLimitTier(async (
     const teamResult = await resolveTeamContext(request, authResult)
     if (teamResult instanceof Response) return teamResult
     const teamId = teamResult
+
+    // 3b. Check role-based permission
+    if (!await checkPermission(authResult.user!.id, teamId, 'media.delete')) {
+      return createApiError('Permission denied', 403)
+    }
 
     // 4. Get media ID from params
     const { id } = await params

@@ -47,8 +47,10 @@ import { useMediaList, useDeleteMedia } from '@nextsparkjs/core/hooks/useMedia'
 import { useDebounce } from '@nextsparkjs/core/hooks/useDebounce'
 import { useToast } from '@nextsparkjs/core/hooks/useToast'
 import { sel } from '@nextsparkjs/core/lib/selectors'
+import { usePermissions } from '@nextsparkjs/core/lib/permissions/hooks'
 import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
 import type { Media, MediaListOptions } from '@nextsparkjs/core/lib/media/types'
+import type { Permission } from '@nextsparkjs/core/lib/permissions/types'
 
 type ViewMode = 'grid' | 'list'
 
@@ -58,6 +60,11 @@ function DefaultMediaDashboardPage() {
   const t = useTranslations('media')
   const { toast } = useToast()
   const deleteMutation = useDeleteMedia()
+  const { canUpload, canUpdate, canDelete } = usePermissions({
+    canUpload: 'media.upload' as Permission,
+    canUpdate: 'media.update' as Permission,
+    canDelete: 'media.delete' as Permission,
+  })
 
   // State
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
@@ -280,23 +287,25 @@ function DefaultMediaDashboardPage() {
           </p>
         </div>
 
-        <Button onClick={handleToggleUpload}>
-          {showUpload ? (
-            <>
-              <ChevronUpIcon className="mr-2 h-4 w-4" />
-              {t('dashboard.hideUpload')}
-            </>
-          ) : (
-            <>
-              <UploadIcon className="mr-2 h-4 w-4" />
-              {t('toolbar.upload')}
-            </>
-          )}
-        </Button>
+        {canUpload && (
+          <Button onClick={handleToggleUpload}>
+            {showUpload ? (
+              <>
+                <ChevronUpIcon className="mr-2 h-4 w-4" />
+                {t('dashboard.hideUpload')}
+              </>
+            ) : (
+              <>
+                <UploadIcon className="mr-2 h-4 w-4" />
+                {t('toolbar.upload')}
+              </>
+            )}
+          </Button>
+        )}
       </div>
 
       {/* Upload zone (collapsible) */}
-      {showUpload && (
+      {showUpload && canUpload && (
         <MediaUploadZone onUploadComplete={handleUploadComplete} />
       )}
 
@@ -407,22 +416,22 @@ function DefaultMediaDashboardPage() {
           <MediaGrid
             items={items}
             isLoading={isLoading}
-            selectedIds={selectedIds}
-            onSelect={handleSelect}
+            selectedIds={canDelete ? selectedIds : new Set<string>()}
+            onSelect={canDelete ? handleSelect : undefined}
             onEdit={isBulkDeleting ? undefined : setEditingMedia}
-            onDelete={isBulkDeleting ? undefined : setDeletingMedia}
-            mode="multiple"
+            onDelete={isBulkDeleting || !canDelete ? undefined : setDeletingMedia}
+            mode={canDelete ? 'multiple' : 'single'}
             columns={columns}
           />
         ) : (
           <MediaList
             items={items}
             isLoading={isLoading}
-            selectedIds={selectedIds}
-            onSelect={handleSelect}
+            selectedIds={canDelete ? selectedIds : new Set<string>()}
+            onSelect={canDelete ? handleSelect : undefined}
             onEdit={isBulkDeleting ? undefined : setEditingMedia}
-            onDelete={isBulkDeleting ? undefined : setDeletingMedia}
-            mode="multiple"
+            onDelete={isBulkDeleting || !canDelete ? undefined : setDeletingMedia}
+            mode={canDelete ? 'multiple' : 'single'}
           />
         )}
       </div>
@@ -494,6 +503,7 @@ function DefaultMediaDashboardPage() {
                 media={editingMedia}
                 onClose={handleCloseDetail}
                 showPreview={false}
+                readOnly={!canUpdate}
                 className="flex-1 min-h-0"
               />
             </div>
@@ -554,7 +564,7 @@ function DefaultMediaDashboardPage() {
       </AlertDialog>
 
       {/* Floating action bar */}
-      {(selectedCount > 0 || isBulkDeleting) && (
+      {canDelete && (selectedCount > 0 || isBulkDeleting) && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-200">
           <div className="flex items-center gap-3 bg-background border border-border rounded-xl shadow-lg px-4 py-2.5">
             {isBulkDeleting ? (
