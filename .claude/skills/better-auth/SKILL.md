@@ -358,7 +358,7 @@ auth: {
 auth: {
   registration: {
     mode: 'domain-restricted',
-    allowedDomains: ['aprende.com', 'mycompany.com'],
+    allowedDomains: ['nextspark.dev', 'mycompany.com'],
   },
 }
 

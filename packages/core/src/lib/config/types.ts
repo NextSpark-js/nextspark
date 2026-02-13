@@ -392,7 +392,7 @@ export interface AuthRegistrationConfig {
 
   /**
    * Allowed email domains for 'domain-restricted' mode.
-   * Only the domain part without @. e.g., ['aprende.com', 'mycompany.com']
+   * Only the domain part without @. e.g., ['nextspark.dev', 'mycompany.com']
    * Ignored for other modes.
    */
   allowedDomains?: string[]

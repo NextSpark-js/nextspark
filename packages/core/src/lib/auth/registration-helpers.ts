@@ -21,8 +21,8 @@ export function isRegistrationOpen(mode: RegistrationMode): boolean {
 /**
  * Check if an email domain is in the allowed domains list.
  *
- * @param email - Full email address (e.g., "user@aprende.com")
- * @param allowedDomains - List of allowed domains without @ (e.g., ["aprende.com"])
+ * @param email - Full email address (e.g., "user@nextspark.dev")
+ * @param allowedDomains - List of allowed domains without @ (e.g., ["nextspark.dev"])
  * @returns true if the email domain is allowed
  */
 export function isDomainAllowed(email: string, allowedDomains: string[]): boolean {

@@ -47,7 +47,7 @@ export const APP_CONFIG_OVERRIDES = {
   auth: {
     registration: {
       mode: 'domain-restricted' as const,
-      allowedDomains: ['aprende.com'],
+      allowedDomains: ['nextspark.dev'],
     },
     providers: {
       google: {
