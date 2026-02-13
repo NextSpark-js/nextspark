@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '../../auth'
 import { validateApiKey } from '../auth'
 import { queryOne } from '../../db'
+import { TeamMemberService } from '../../services/team-member.service'
 
 // ==========================================
 // ADMIN BYPASS CONSTANTS
@@ -186,6 +187,50 @@ export function hasRequiredScope(authResult: DualAuthResult, requiredScope: stri
   }
 
   return false
+}
+
+// ==========================================
+// TEAM CONTEXT RESOLUTION
+// ==========================================
+
+/**
+ * Resolve and validate team context from request.
+ *
+ * Resolution priority: x-team-id header > activeTeamId cookie > user's defaultTeamId
+ *
+ * Returns the validated teamId string on success, or a NextResponse error if:
+ * - No team context can be resolved (400)
+ * - User is not a member of the resolved team (403)
+ *
+ * @example
+ * const teamResult = await resolveTeamContext(request, authResult)
+ * if (teamResult instanceof NextResponse) return teamResult
+ * const teamId = teamResult
+ */
+export async function resolveTeamContext(
+  request: NextRequest,
+  authResult: DualAuthResult
+): Promise<string | NextResponse> {
+  const teamId = request.headers.get('x-team-id')
+    || request.cookies.get('activeTeamId')?.value
+    || authResult.user!.defaultTeamId
+
+  if (!teamId) {
+    return NextResponse.json(
+      { success: false, error: 'Team context required. Include x-team-id header.' },
+      { status: 400 }
+    )
+  }
+
+  const isMember = await TeamMemberService.isMember(teamId, authResult.user!.id)
+  if (!isMember) {
+    return NextResponse.json(
+      { success: false, error: 'Access denied: You are not a member of this team' },
+      { status: 403 }
+    )
+  }
+
+  return teamId
 }
 
 // ==========================================

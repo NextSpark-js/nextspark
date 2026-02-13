@@ -31,6 +31,7 @@ interface MediaDetailPanelProps {
   media: Media | null
   onClose?: () => void
   showPreview?: boolean
+  readOnly?: boolean
   className?: string
 }
 
@@ -40,7 +41,7 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-export function MediaDetailPanel({ media, onClose, showPreview = true, className }: MediaDetailPanelProps) {
+export function MediaDetailPanel({ media, onClose, showPreview = true, readOnly = false, className }: MediaDetailPanelProps) {
   const t = useTranslations('media')
   const { toast } = useToast()
   const updateMutation = useUpdateMedia()
@@ -192,6 +193,7 @@ export function MediaDetailPanel({ media, onClose, showPreview = true, className
               onChange={(e) => setTitle(e.target.value)}
               placeholder={t('detail.titlePlaceholder')}
               maxLength={255}
+              disabled={readOnly}
             />
           </div>
 
@@ -206,6 +208,7 @@ export function MediaDetailPanel({ media, onClose, showPreview = true, className
               onChange={(e) => setAlt(e.target.value)}
               placeholder={t('detail.altPlaceholder')}
               maxLength={500}
+              disabled={readOnly}
             />
           </div>
 
@@ -222,6 +225,7 @@ export function MediaDetailPanel({ media, onClose, showPreview = true, className
               maxLength={1000}
               rows={2}
               className="resize-none"
+              disabled={readOnly}
             />
           </div>
         </div>
@@ -241,25 +245,27 @@ export function MediaDetailPanel({ media, onClose, showPreview = true, className
                   key={tag.id}
                   data-cy={sel('media.detail.tagBadge', { id: tag.id })}
                   variant="secondary"
-                  className="gap-1 text-xs pr-1"
+                  className={cn('gap-1 text-xs', readOnly ? '' : 'pr-1')}
                   style={tag.color ? { borderColor: tag.color, borderLeftWidth: 3 } : undefined}
                 >
                   {tag.name}
-                  <button
-                    type="button"
-                    className="ml-0.5 rounded-full p-0.5 hover:bg-destructive/10 hover:text-destructive transition-colors"
-                    onClick={() => {
-                      removeTagMutation.mutate({ mediaId: media.id, tagId: tag.id })
-                    }}
-                  >
-                    <XIcon className="h-3 w-3" />
-                  </button>
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      className="ml-0.5 rounded-full p-0.5 hover:bg-destructive/10 hover:text-destructive transition-colors"
+                      onClick={() => {
+                        removeTagMutation.mutate({ mediaId: media.id, tagId: tag.id })
+                      }}
+                    >
+                      <XIcon className="h-3 w-3" />
+                    </button>
+                  )}
                 </Badge>
               ))
             )}
 
             {/* Add tag button */}
-            <Popover open={tagPopoverOpen} onOpenChange={setTagPopoverOpen}>
+            {!readOnly && <Popover open={tagPopoverOpen} onOpenChange={setTagPopoverOpen}>
               <PopoverTrigger asChild>
                 <Button
                   data-cy={sel('media.detail.addTagBtn')}
@@ -343,33 +349,46 @@ export function MediaDetailPanel({ media, onClose, showPreview = true, className
                   </div>
                 </div>
               </PopoverContent>
-            </Popover>
+            </Popover>}
           </div>
         </div>
       </div>
 
       {/* Sticky action footer */}
       <div className="px-5 py-2.5 border-t bg-muted/20 shrink-0 flex items-center justify-end gap-2">
-        <Button
-          data-cy={sel('media.detail.cancelBtn')}
-          onClick={handleCancel}
-          variant="ghost"
-          size="sm"
-          disabled={updateMutation.isPending}
-        >
-          {t('detail.cancel')}
-        </Button>
-        <Button
-          data-cy={sel('media.detail.saveBtn')}
-          onClick={handleSave}
-          disabled={!hasChanges || updateMutation.isPending}
-          size="sm"
-        >
-          {updateMutation.isPending && (
-            <LoaderIcon className="mr-2 h-3.5 w-3.5 animate-spin" />
-          )}
-          {updateMutation.isPending ? t('detail.saving') : t('detail.save')}
-        </Button>
+        {readOnly ? (
+          <Button
+            data-cy={sel('media.detail.cancelBtn')}
+            onClick={onClose}
+            variant="ghost"
+            size="sm"
+          >
+            {t('detail.cancel')}
+          </Button>
+        ) : (
+          <>
+            <Button
+              data-cy={sel('media.detail.cancelBtn')}
+              onClick={handleCancel}
+              variant="ghost"
+              size="sm"
+              disabled={updateMutation.isPending}
+            >
+              {t('detail.cancel')}
+            </Button>
+            <Button
+              data-cy={sel('media.detail.saveBtn')}
+              onClick={handleSave}
+              disabled={!hasChanges || updateMutation.isPending}
+              size="sm"
+            >
+              {updateMutation.isPending && (
+                <LoaderIcon className="mr-2 h-3.5 w-3.5 animate-spin" />
+              )}
+              {updateMutation.isPending ? t('detail.saving') : t('detail.save')}
+            </Button>
+          </>
+        )}
       </div>
     </div>
   )

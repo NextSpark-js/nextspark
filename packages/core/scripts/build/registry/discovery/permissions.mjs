@@ -159,6 +159,71 @@ function parseEntitiesFromConfig(content) {
 }
 
 /**
+ * Parse a flat array of permission action objects from a named section
+ * Works for both `teams: [...]` and `features: [...]`
+ * Each item has: action, label, description, roles, category?, dangerous?
+ *
+ * @param {string} content - Full file content
+ * @param {string} sectionName - Section name ('teams' or 'features')
+ * @returns {Array} Parsed permission actions
+ */
+function parseActionArrayFromConfig(content, sectionName) {
+  const results = []
+
+  // Find the section: sectionName: [ ... ]
+  // The closing bracket must be at column 2 (two-space indent) followed by ],
+  const sectionRegex = new RegExp(`${sectionName}:\\s*\\[([\\s\\S]*?)\\n  \\],?\\s*\\n`)
+  const sectionMatch = content.match(sectionRegex)
+  if (!sectionMatch) {
+    verbose(`No ${sectionName} section found in permissions.config.ts`)
+    return results
+  }
+
+  const sectionContent = sectionMatch[1]
+
+  // Match each action object { ... }
+  // Handles both single-line: { action: 'x', ... }
+  // and multi-line: {\n  action: 'x',\n  ...\n}
+  const actionRegex = /\{[^}]+\}/g
+  let actionMatch
+
+  while ((actionMatch = actionRegex.exec(sectionContent)) !== null) {
+    const block = actionMatch[0]
+
+    // Extract action (supports dotted names like 'media.upload', 'team.view')
+    const actionKeyMatch = block.match(/action:\s*['"]([^'"]+)['"]/)
+    if (!actionKeyMatch) continue
+    const action = actionKeyMatch[1]
+
+    // Extract label
+    const labelMatch = block.match(/label:\s*['"]([^'"]+)['"]/)
+    const label = labelMatch ? labelMatch[1] : action
+
+    // Extract description
+    const descMatch = block.match(/description:\s*['"]([^'"]+)['"]/)
+    const description = descMatch ? descMatch[1] : null
+
+    // Extract category (features have this, teams don't)
+    const categoryMatch = block.match(/category:\s*['"]([^'"]+)['"]/)
+    const category = categoryMatch ? categoryMatch[1] : null
+
+    // Extract roles
+    const rolesMatch = block.match(/roles:\s*\[([^\]]+)\]/)
+    const roles = rolesMatch
+      ? rolesMatch[1].split(',').map(r => r.trim().replace(/['"]/g, ''))
+      : ['owner', 'admin']
+
+    // Extract dangerous
+    const dangerousMatch = block.match(/dangerous:\s*(true|false)/)
+    const dangerous = dangerousMatch ? dangerousMatch[1] === 'true' : false
+
+    results.push({ action, label, description, category, roles, dangerous })
+  }
+
+  return results
+}
+
+/**
  * Discover permissions configuration from active theme
  * Returns null if theme doesn't have a permissions.config.ts
  * @param {object} config - Optional configuration object (defaults to DEFAULT_CONFIG)
@@ -180,18 +245,28 @@ export async function discoverPermissionsConfig(config = DEFAULT_CONFIG) {
 
   log(`Found permissions.config.ts for theme ${themeName}`, 'success')
 
-  // Parse entities and roles from the config file
+  // Parse entities, roles, teams, and features from the config file
   let entities = {}
   let roles = null
+  let teams = []
+  let features = []
   try {
     const content = readFileSync(permissionsPath, 'utf8')
     entities = parseEntitiesFromConfig(content)
     roles = parseRolesFromConfig(content)
+    teams = parseActionArrayFromConfig(content, 'teams')
+    features = parseActionArrayFromConfig(content, 'features')
 
     const entityCount = Object.keys(entities).length
     const permCount = Object.values(entities).reduce((acc, arr) => acc + arr.length, 0)
     if (entityCount > 0) {
       log(`  📋 Parsed ${permCount} entity permissions across ${entityCount} entities`, 'info')
+    }
+    if (teams.length > 0) {
+      log(`  🔑 Parsed ${teams.length} team permissions`, 'info')
+    }
+    if (features.length > 0) {
+      log(`  ⚡ Parsed ${features.length} feature permissions`, 'info')
     }
     if (roles && roles.additionalRoles) {
       log(`  👥 Parsed ${roles.additionalRoles.length} custom roles: ${roles.additionalRoles.join(', ')}`, 'info')
@@ -205,6 +280,8 @@ export async function discoverPermissionsConfig(config = DEFAULT_CONFIG) {
     importPath: `@/contents/themes/${themeName}/config/permissions.config`,
     themeName,
     entities,
-    roles
+    roles,
+    teams,
+    features
   }
 }

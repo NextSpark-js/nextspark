@@ -1,7 +1,9 @@
 import { NextRequest } from 'next/server'
 import { put } from '@vercel/blob'
-import { authenticateRequest, hasRequiredScope } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, hasRequiredScope, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
+import { API_ERROR_CODES } from '@nextsparkjs/core/lib/api/api-error'
+import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { MEDIA_CONFIG } from '@nextsparkjs/core/lib/config/config-sync'
 import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
@@ -64,17 +66,17 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     const hasPermission = hasRequiredScope(authResult, 'media:write')
 
     if (!hasPermission) {
-      return createApiError('Insufficient permissions - media:write scope required', 403)
+      return createApiError('Insufficient permissions', 403, undefined, API_ERROR_CODES.INSUFFICIENT_SCOPE)
     }
 
-    // 3. Get team context (x-team-id header or default team)
-    const teamId = request.headers.get('x-team-id') || authResult.user!.defaultTeamId
+    // 3. Resolve and validate team context
+    const teamResult = await resolveTeamContext(request, authResult)
+    if (teamResult instanceof Response) return teamResult
+    const teamId = teamResult
 
-    if (!teamId) {
-      return createApiError(
-        'No team context available. Please provide x-team-id header or have a default team.',
-        400
-      )
+    // 4. Check role-based permission
+    if (!await checkPermission(authResult.user!.id, teamId, 'media.upload')) {
+      return createApiError('Permission denied', 403, undefined, API_ERROR_CODES.PERMISSION_DENIED)
     }
 
     const formData = await request.formData()
@@ -246,7 +248,17 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     const hasPermission = hasRequiredScope(authResult, 'media:read')
 
     if (!hasPermission) {
-      return createApiError('Insufficient permissions - media:read scope required', 403)
+      return createApiError('Insufficient permissions', 403, undefined, API_ERROR_CODES.INSUFFICIENT_SCOPE)
+    }
+
+    // 3. Resolve and validate team context
+    const teamResult = await resolveTeamContext(request, authResult)
+    if (teamResult instanceof Response) return teamResult
+    const teamId = teamResult
+
+    // 4. Check role-based permission
+    if (!await checkPermission(authResult.user!.id, teamId, 'media.read')) {
+      return createApiError('Permission denied', 403, undefined, API_ERROR_CODES.PERMISSION_DENIED)
     }
 
     const useVercelBlob = isVercelBlobConfigured()

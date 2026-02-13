@@ -2,7 +2,7 @@
  * Unit Tests - MediaService
  *
  * Tests all MediaService methods for media management,
- * including CRUD operations, filtering, and search.
+ * including CRUD operations, filtering, search, and team isolation.
  */
 
 import { MediaService } from '@/core/lib/services/media.service'
@@ -51,17 +51,17 @@ describe('MediaService', () => {
     it('returns media when found', async () => {
       mockQueryOneWithRLS.mockResolvedValue(mockMedia)
 
-      const result = await MediaService.getById('media-123', 'user-456')
+      const result = await MediaService.getById('media-123', 'user-456', 'team-789')
 
       expect(result).toEqual(mockMedia)
       expect(mockQueryOneWithRLS).toHaveBeenCalledWith(
         expect.stringContaining('SELECT * FROM "media"'),
-        ['media-123'],
+        ['media-123', 'team-789'],
         'user-456'
       )
       expect(mockQueryOneWithRLS).toHaveBeenCalledWith(
-        expect.stringContaining("status = 'active'"),
-        ['media-123'],
+        expect.stringContaining('"teamId" = $2'),
+        expect.anything(),
         'user-456'
       )
     })
@@ -69,19 +69,24 @@ describe('MediaService', () => {
     it('returns null when not found', async () => {
       mockQueryOneWithRLS.mockResolvedValue(null)
 
-      const result = await MediaService.getById('non-existent', 'user-456')
+      const result = await MediaService.getById('non-existent', 'user-456', 'team-789')
 
       expect(result).toBeNull()
     })
 
     it('throws error for empty mediaId', async () => {
-      await expect(MediaService.getById('', 'user-456')).rejects.toThrow('Media ID is required')
-      await expect(MediaService.getById('  ', 'user-456')).rejects.toThrow('Media ID is required')
+      await expect(MediaService.getById('', 'user-456', 'team-789')).rejects.toThrow('Media ID is required')
+      await expect(MediaService.getById('  ', 'user-456', 'team-789')).rejects.toThrow('Media ID is required')
     })
 
     it('throws error for empty userId', async () => {
-      await expect(MediaService.getById('media-123', '')).rejects.toThrow('User ID is required')
-      await expect(MediaService.getById('media-123', '  ')).rejects.toThrow('User ID is required')
+      await expect(MediaService.getById('media-123', '', 'team-789')).rejects.toThrow('User ID is required')
+      await expect(MediaService.getById('media-123', '  ', 'team-789')).rejects.toThrow('User ID is required')
+    })
+
+    it('throws error for empty teamId', async () => {
+      await expect(MediaService.getById('media-123', 'user-456', '')).rejects.toThrow('Team ID is required')
+      await expect(MediaService.getById('media-123', 'user-456', '  ')).rejects.toThrow('Team ID is required')
     })
   })
 
@@ -96,26 +101,41 @@ describe('MediaService', () => {
         .mockResolvedValueOnce([{ count: '25' }]) // count query
         .mockResolvedValueOnce(mockMediaList) // data query
 
-      const result = await MediaService.list('user-456')
+      const result = await MediaService.list('user-456', 'team-789')
 
       expect(result.data).toEqual(mockMediaList)
       expect(result.total).toBe(25)
       expect(result.limit).toBe(20)
       expect(result.offset).toBe(0)
 
-      // Verify count query
+      // Verify count query includes teamId filter
       expect(mockQueryWithRLS).toHaveBeenNthCalledWith(
         1,
         expect.stringContaining('COUNT(*)'),
-        expect.arrayContaining(['active']),
+        expect.arrayContaining(['active', 'team-789']),
         'user-456'
       )
 
-      // Verify data query with pagination
+      // Verify data query with pagination and teamId
       expect(mockQueryWithRLS).toHaveBeenNthCalledWith(
         2,
         expect.stringContaining('LIMIT'),
-        expect.arrayContaining(['active', 20, 0]),
+        expect.arrayContaining(['active', 'team-789', 20, 0]),
+        'user-456'
+      )
+    })
+
+    it('always filters by teamId', async () => {
+      mockQueryWithRLS
+        .mockResolvedValueOnce([{ count: '10' }])
+        .mockResolvedValueOnce(mockMediaList)
+
+      await MediaService.list('user-456', 'team-789')
+
+      expect(mockQueryWithRLS).toHaveBeenNthCalledWith(
+        1,
+        expect.stringContaining('"teamId" = $2'),
+        expect.arrayContaining(['team-789']),
         'user-456'
       )
     })
@@ -125,7 +145,7 @@ describe('MediaService', () => {
         .mockResolvedValueOnce([{ count: '100' }])
         .mockResolvedValueOnce(mockMediaList)
 
-      const result = await MediaService.list('user-456', {
+      const result = await MediaService.list('user-456', 'team-789', {
         limit: 50,
         offset: 100,
       })
@@ -147,7 +167,7 @@ describe('MediaService', () => {
         .mockResolvedValueOnce([{ count: '10' }])
         .mockResolvedValueOnce(mockMediaList)
 
-      await MediaService.list('user-456', { type: 'image' })
+      await MediaService.list('user-456', 'team-789', { type: 'image' })
 
       // Verify both queries contain image filter
       expect(mockQueryWithRLS).toHaveBeenNthCalledWith(
@@ -170,7 +190,7 @@ describe('MediaService', () => {
         .mockResolvedValueOnce([{ count: '5' }])
         .mockResolvedValueOnce([])
 
-      await MediaService.list('user-456', { type: 'video' })
+      await MediaService.list('user-456', 'team-789', { type: 'video' })
 
       expect(mockQueryWithRLS).toHaveBeenNthCalledWith(
         1,
@@ -185,7 +205,7 @@ describe('MediaService', () => {
         .mockResolvedValueOnce([{ count: '20' }])
         .mockResolvedValueOnce(mockMediaList)
 
-      await MediaService.list('user-456', { type: 'all' })
+      await MediaService.list('user-456', 'team-789', { type: 'all' })
 
       // Verify no mimeType filter is applied
       expect(mockQueryWithRLS).toHaveBeenNthCalledWith(
@@ -201,20 +221,20 @@ describe('MediaService', () => {
         .mockResolvedValueOnce([{ count: '3' }])
         .mockResolvedValueOnce(mockMediaList)
 
-      await MediaService.list('user-456', { search: 'logo' })
+      await MediaService.list('user-456', 'team-789', { search: 'logo' })
 
       // Verify search is applied with LIKE fallback for robustness
       expect(mockQueryWithRLS).toHaveBeenNthCalledWith(
         1,
         expect.stringContaining('lower(m.filename) LIKE'),
-        expect.arrayContaining(['active', '%logo%']),
+        expect.arrayContaining(['active', 'team-789', '%logo%']),
         'user-456'
       )
 
       expect(mockQueryWithRLS).toHaveBeenNthCalledWith(
         2,
         expect.stringContaining('lower(m.filename) LIKE'),
-        expect.arrayContaining(['active', '%logo%']),
+        expect.arrayContaining(['active', 'team-789', '%logo%']),
         'user-456'
       )
     })
@@ -224,7 +244,7 @@ describe('MediaService', () => {
         .mockResolvedValueOnce([{ count: '10' }])
         .mockResolvedValueOnce(mockMediaList)
 
-      await MediaService.list('user-456')
+      await MediaService.list('user-456', 'team-789')
 
       expect(mockQueryWithRLS).toHaveBeenNthCalledWith(
         2,
@@ -239,7 +259,7 @@ describe('MediaService', () => {
         .mockResolvedValueOnce([{ count: '10' }])
         .mockResolvedValueOnce(mockMediaList)
 
-      await MediaService.list('user-456', {
+      await MediaService.list('user-456', 'team-789', {
         orderBy: 'filename',
         orderDir: 'asc',
       })
@@ -257,7 +277,7 @@ describe('MediaService', () => {
         .mockResolvedValueOnce([{ count: '10' }])
         .mockResolvedValueOnce(mockMediaList)
 
-      await MediaService.list('user-456', {
+      await MediaService.list('user-456', 'team-789', {
         orderBy: 'fileSize',
         orderDir: 'desc',
       })
@@ -275,7 +295,7 @@ describe('MediaService', () => {
         .mockResolvedValueOnce([{ count: '2' }])
         .mockResolvedValueOnce(mockMediaList)
 
-      await MediaService.list('user-456', {
+      await MediaService.list('user-456', 'team-789', {
         type: 'image',
         search: 'logo',
         limit: 10,
@@ -287,6 +307,7 @@ describe('MediaService', () => {
       // Verify all filters are present
       const countQuery = mockQueryWithRLS.mock.calls[0][0] as string
       expect(countQuery).toContain("status = $1")
+      expect(countQuery).toContain('"teamId" = $2')
       expect(countQuery).toContain("\"mimeType\" LIKE 'image/%'")
       expect(countQuery).toContain('lower(m.filename) LIKE')
 
@@ -301,15 +322,20 @@ describe('MediaService', () => {
         .mockResolvedValueOnce([{ count: '0' }])
         .mockResolvedValueOnce([])
 
-      const result = await MediaService.list('user-456')
+      const result = await MediaService.list('user-456', 'team-789')
 
       expect(result.data).toEqual([])
       expect(result.total).toBe(0)
     })
 
     it('throws error for empty userId', async () => {
-      await expect(MediaService.list('')).rejects.toThrow('User ID is required')
-      await expect(MediaService.list('  ')).rejects.toThrow('User ID is required')
+      await expect(MediaService.list('', 'team-789')).rejects.toThrow('User ID is required')
+      await expect(MediaService.list('  ', 'team-789')).rejects.toThrow('User ID is required')
+    })
+
+    it('throws error for empty teamId', async () => {
+      await expect(MediaService.list('user-456', '')).rejects.toThrow('Team ID is required')
+      await expect(MediaService.list('user-456', '  ')).rejects.toThrow('Team ID is required')
     })
 
     it('handles count result with no rows', async () => {
@@ -317,7 +343,7 @@ describe('MediaService', () => {
         .mockResolvedValueOnce([]) // No count result
         .mockResolvedValueOnce([])
 
-      const result = await MediaService.list('user-456')
+      const result = await MediaService.list('user-456', 'team-789')
 
       expect(result.total).toBe(0)
     })
@@ -484,7 +510,7 @@ describe('MediaService', () => {
   })
 
   describe('update', () => {
-    it('updates alt text', async () => {
+    it('updates alt text with teamId filtering', async () => {
       const updatedMedia = { ...mockMedia, alt: 'Updated alt text' }
       mockMutateWithRLS.mockResolvedValue({
         rows: [updatedMedia],
@@ -493,16 +519,16 @@ describe('MediaService', () => {
 
       const result = await MediaService.update('media-123', 'user-456', {
         alt: 'Updated alt text',
-      })
+      }, 'team-789')
 
-      expect(result.alt).toBe('Updated alt text')
+      expect(result!.alt).toBe('Updated alt text')
       expect(mockMutateWithRLS).toHaveBeenCalledWith(
         expect.stringContaining('UPDATE "media"'),
-        expect.arrayContaining(['Updated alt text', 'media-123']),
+        expect.arrayContaining(['Updated alt text', 'media-123', 'team-789']),
         'user-456'
       )
       expect(mockMutateWithRLS).toHaveBeenCalledWith(
-        expect.stringContaining('alt = $1'),
+        expect.stringContaining('"teamId"'),
         expect.anything(),
         'user-456'
       )
@@ -517,12 +543,12 @@ describe('MediaService', () => {
 
       const result = await MediaService.update('media-123', 'user-456', {
         caption: 'Updated caption',
-      })
+      }, 'team-789')
 
-      expect(result.caption).toBe('Updated caption')
+      expect(result!.caption).toBe('Updated caption')
       expect(mockMutateWithRLS).toHaveBeenCalledWith(
         expect.stringContaining('caption = $1'),
-        expect.arrayContaining(['Updated caption', 'media-123']),
+        expect.arrayContaining(['Updated caption', 'media-123', 'team-789']),
         'user-456'
       )
     })
@@ -541,10 +567,10 @@ describe('MediaService', () => {
       const result = await MediaService.update('media-123', 'user-456', {
         alt: 'New alt',
         caption: 'New caption',
-      })
+      }, 'team-789')
 
-      expect(result.alt).toBe('New alt')
-      expect(result.caption).toBe('New caption')
+      expect(result!.alt).toBe('New alt')
+      expect(result!.caption).toBe('New caption')
 
       const query = mockMutateWithRLS.mock.calls[0][0] as string
       expect(query).toContain('alt = $1')
@@ -559,7 +585,7 @@ describe('MediaService', () => {
 
       await MediaService.update('media-123', 'user-456', {
         alt: 'New alt',
-      })
+      }, 'team-789')
 
       expect(mockMutateWithRLS).toHaveBeenCalledWith(
         expect.stringContaining('"updatedAt" = NOW()'),
@@ -576,7 +602,7 @@ describe('MediaService', () => {
 
       await MediaService.update('media-123', 'user-456', {
         alt: 'New alt',
-      })
+      }, 'team-789')
 
       expect(mockMutateWithRLS).toHaveBeenCalledWith(
         expect.stringContaining("status = 'active'"),
@@ -587,31 +613,36 @@ describe('MediaService', () => {
 
     it('throws error when no fields to update', async () => {
       await expect(
-        MediaService.update('media-123', 'user-456', {})
+        MediaService.update('media-123', 'user-456', {}, 'team-789')
       ).rejects.toThrow('No fields to update')
     })
 
     it('throws error for empty mediaId', async () => {
       await expect(
-        MediaService.update('', 'user-456', { alt: 'Test' })
+        MediaService.update('', 'user-456', { alt: 'Test' }, 'team-789')
       ).rejects.toThrow('Media ID is required')
     })
 
     it('throws error for empty userId', async () => {
       await expect(
-        MediaService.update('media-123', '', { alt: 'Test' })
+        MediaService.update('media-123', '', { alt: 'Test' }, 'team-789')
       ).rejects.toThrow('User ID is required')
     })
 
-    it('throws error when media not found', async () => {
+    it('throws error for empty teamId', async () => {
+      await expect(
+        MediaService.update('media-123', 'user-456', { alt: 'Test' }, '')
+      ).rejects.toThrow('Team ID is required')
+    })
+
+    it('returns null when media not found', async () => {
       mockMutateWithRLS.mockResolvedValue({
         rows: [],
         rowCount: 0,
       } as any)
 
-      await expect(
-        MediaService.update('non-existent', 'user-456', { alt: 'Test' })
-      ).rejects.toThrow('Media not found or not authorized')
+      const result = await MediaService.update('non-existent', 'user-456', { alt: 'Test' }, 'team-789')
+      expect(result).toBeNull()
     })
 
     it('accepts null values to clear fields', async () => {
@@ -624,32 +655,37 @@ describe('MediaService', () => {
       await MediaService.update('media-123', 'user-456', {
         alt: null,
         caption: null,
-      })
+      }, 'team-789')
 
       expect(mockMutateWithRLS).toHaveBeenCalledWith(
         expect.anything(),
-        expect.arrayContaining([null, null, 'media-123']),
+        expect.arrayContaining([null, null, 'media-123', 'team-789']),
         'user-456'
       )
     })
   })
 
   describe('softDelete', () => {
-    it('soft deletes media successfully', async () => {
+    it('soft deletes media with teamId filtering', async () => {
       mockMutateWithRLS.mockResolvedValue({
         rowCount: 1,
       } as any)
 
-      const result = await MediaService.softDelete('media-123', 'user-456')
+      const result = await MediaService.softDelete('media-123', 'user-456', 'team-789')
 
       expect(result).toBe(true)
       expect(mockMutateWithRLS).toHaveBeenCalledWith(
         expect.stringContaining('UPDATE "media"'),
-        ['media-123'],
+        ['media-123', 'team-789'],
         'user-456'
       )
       expect(mockMutateWithRLS).toHaveBeenCalledWith(
         expect.stringContaining("status = 'deleted'"),
+        expect.anything(),
+        'user-456'
+      )
+      expect(mockMutateWithRLS).toHaveBeenCalledWith(
+        expect.stringContaining('"teamId" = $2'),
         expect.anything(),
         'user-456'
       )
@@ -660,7 +696,7 @@ describe('MediaService', () => {
         rowCount: 1,
       } as any)
 
-      await MediaService.softDelete('media-123', 'user-456')
+      await MediaService.softDelete('media-123', 'user-456', 'team-789')
 
       expect(mockMutateWithRLS).toHaveBeenCalledWith(
         expect.stringContaining('"updatedAt" = NOW()'),
@@ -674,7 +710,7 @@ describe('MediaService', () => {
         rowCount: 1,
       } as any)
 
-      await MediaService.softDelete('media-123', 'user-456')
+      await MediaService.softDelete('media-123', 'user-456', 'team-789')
 
       expect(mockMutateWithRLS).toHaveBeenCalledWith(
         expect.stringContaining("status = 'active'"),
@@ -688,34 +724,80 @@ describe('MediaService', () => {
         rowCount: 0,
       } as any)
 
-      const result = await MediaService.softDelete('non-existent', 'user-456')
+      const result = await MediaService.softDelete('non-existent', 'user-456', 'team-789')
 
       expect(result).toBe(false)
     })
 
     it('throws error for empty mediaId', async () => {
       await expect(
-        MediaService.softDelete('', 'user-456')
+        MediaService.softDelete('', 'user-456', 'team-789')
       ).rejects.toThrow('Media ID is required')
     })
 
     it('throws error for empty userId', async () => {
       await expect(
-        MediaService.softDelete('media-123', '')
+        MediaService.softDelete('media-123', '', 'team-789')
       ).rejects.toThrow('User ID is required')
+    })
+
+    it('throws error for empty teamId', async () => {
+      await expect(
+        MediaService.softDelete('media-123', 'user-456', '')
+      ).rejects.toThrow('Team ID is required')
+    })
+  })
+
+  describe('findDuplicates', () => {
+    it('finds duplicates with teamId filtering', async () => {
+      mockQueryWithRLS.mockResolvedValue([mockMedia])
+
+      const result = await MediaService.findDuplicates('user-456', 'team-789', 'image.jpg', 150000)
+
+      expect(result).toEqual([mockMedia])
+      expect(mockQueryWithRLS).toHaveBeenCalledWith(
+        expect.stringContaining('"teamId" = $3'),
+        ['image.jpg', 150000, 'team-789'],
+        'user-456'
+      )
+    })
+
+    it('returns empty array when no duplicates', async () => {
+      mockQueryWithRLS.mockResolvedValue([])
+
+      const result = await MediaService.findDuplicates('user-456', 'team-789', 'unique.jpg', 100)
+
+      expect(result).toEqual([])
+    })
+
+    it('throws error for empty userId', async () => {
+      await expect(
+        MediaService.findDuplicates('', 'team-789', 'file.jpg', 100)
+      ).rejects.toThrow('User ID is required')
+    })
+
+    it('throws error for empty teamId', async () => {
+      await expect(
+        MediaService.findDuplicates('user-456', '', 'file.jpg', 100)
+      ).rejects.toThrow('Team ID is required')
     })
   })
 
   describe('count', () => {
-    it('counts all media by default', async () => {
+    it('counts all media with teamId filtering', async () => {
       mockQueryWithRLS.mockResolvedValue([{ count: '25' }])
 
-      const result = await MediaService.count('user-456')
+      const result = await MediaService.count('user-456', 'team-789')
 
       expect(result).toBe(25)
       expect(mockQueryWithRLS).toHaveBeenCalledWith(
         expect.stringContaining('COUNT(*)'),
-        ['active'],
+        ['active', 'team-789'],
+        'user-456'
+      )
+      expect(mockQueryWithRLS).toHaveBeenCalledWith(
+        expect.stringContaining('"teamId" = $2'),
+        expect.anything(),
         'user-456'
       )
     })
@@ -723,7 +805,7 @@ describe('MediaService', () => {
     it('counts only images', async () => {
       mockQueryWithRLS.mockResolvedValue([{ count: '15' }])
 
-      const result = await MediaService.count('user-456', { type: 'image' })
+      const result = await MediaService.count('user-456', 'team-789', { type: 'image' })
 
       expect(result).toBe(15)
       expect(mockQueryWithRLS).toHaveBeenCalledWith(
@@ -736,7 +818,7 @@ describe('MediaService', () => {
     it('counts only videos', async () => {
       mockQueryWithRLS.mockResolvedValue([{ count: '8' }])
 
-      const result = await MediaService.count('user-456', { type: 'video' })
+      const result = await MediaService.count('user-456', 'team-789', { type: 'video' })
 
       expect(result).toBe(8)
       expect(mockQueryWithRLS).toHaveBeenCalledWith(
@@ -749,7 +831,7 @@ describe('MediaService', () => {
     it('counts all types when type is "all"', async () => {
       mockQueryWithRLS.mockResolvedValue([{ count: '30' }])
 
-      const result = await MediaService.count('user-456', { type: 'all' })
+      const result = await MediaService.count('user-456', 'team-789', { type: 'all' })
 
       expect(result).toBe(30)
       expect(mockQueryWithRLS).toHaveBeenCalledWith(
@@ -762,12 +844,12 @@ describe('MediaService', () => {
     it('filters by status', async () => {
       mockQueryWithRLS.mockResolvedValue([{ count: '5' }])
 
-      const result = await MediaService.count('user-456', { status: 'deleted' })
+      const result = await MediaService.count('user-456', 'team-789', { status: 'deleted' })
 
       expect(result).toBe(5)
       expect(mockQueryWithRLS).toHaveBeenCalledWith(
         expect.anything(),
-        ['deleted'],
+        ['deleted', 'team-789'],
         'user-456'
       )
     })
@@ -775,7 +857,7 @@ describe('MediaService', () => {
     it('returns 0 when no results', async () => {
       mockQueryWithRLS.mockResolvedValue([{ count: '0' }])
 
-      const result = await MediaService.count('user-456')
+      const result = await MediaService.count('user-456', 'team-789')
 
       expect(result).toBe(0)
     })
@@ -783,22 +865,109 @@ describe('MediaService', () => {
     it('returns 0 when count result is empty', async () => {
       mockQueryWithRLS.mockResolvedValue([])
 
-      const result = await MediaService.count('user-456')
+      const result = await MediaService.count('user-456', 'team-789')
 
       expect(result).toBe(0)
     })
 
     it('throws error for empty userId', async () => {
-      await expect(MediaService.count('')).rejects.toThrow('User ID is required')
-      await expect(MediaService.count('  ')).rejects.toThrow('User ID is required')
+      await expect(MediaService.count('', 'team-789')).rejects.toThrow('User ID is required')
+      await expect(MediaService.count('  ', 'team-789')).rejects.toThrow('User ID is required')
+    })
+
+    it('throws error for empty teamId', async () => {
+      await expect(MediaService.count('user-456', '')).rejects.toThrow('Team ID is required')
+      await expect(MediaService.count('user-456', '  ')).rejects.toThrow('Team ID is required')
     })
 
     it('handles large counts', async () => {
       mockQueryWithRLS.mockResolvedValue([{ count: '999999' }])
 
-      const result = await MediaService.count('user-456')
+      const result = await MediaService.count('user-456', 'team-789')
 
       expect(result).toBe(999999)
+    })
+  })
+
+  // ===========================================
+  // TAG OPERATIONS
+  // ===========================================
+
+  describe('getTags', () => {
+    it('returns tags scoped to team', async () => {
+      const mockTags = [
+        { id: 'tag-1', slug: 'branding', name: 'Branding' },
+        { id: 'tag-2', slug: 'product', name: 'Product' },
+      ]
+      mockQueryWithRLS.mockResolvedValue(mockTags)
+
+      const result = await MediaService.getTags('user-456', 'team-789')
+
+      expect(result).toEqual(mockTags)
+      expect(mockQueryWithRLS).toHaveBeenCalledWith(
+        expect.stringContaining('"teamId" = $1'),
+        ['team-789'],
+        'user-456'
+      )
+    })
+
+    it('throws error for empty userId', async () => {
+      await expect(MediaService.getTags('', 'team-789')).rejects.toThrow('User ID is required')
+    })
+
+    it('throws error for empty teamId', async () => {
+      await expect(MediaService.getTags('user-456', '')).rejects.toThrow('Team ID is required')
+    })
+  })
+
+  describe('getMediaTags', () => {
+    it('returns tags for a media item scoped to team', async () => {
+      const mockTags = [{ id: 'tag-1', slug: 'branding', name: 'Branding' }]
+      mockQueryWithRLS.mockResolvedValue(mockTags)
+
+      const result = await MediaService.getMediaTags('media-123', 'user-456', 'team-789')
+
+      expect(result).toEqual(mockTags)
+      expect(mockQueryWithRLS).toHaveBeenCalledWith(
+        expect.stringContaining('"teamId" = $2'),
+        ['media-123', 'team-789'],
+        'user-456'
+      )
+    })
+
+    it('throws error for empty mediaId', async () => {
+      await expect(MediaService.getMediaTags('', 'user-456', 'team-789')).rejects.toThrow('Media ID is required')
+    })
+
+    it('throws error for empty teamId', async () => {
+      await expect(MediaService.getMediaTags('media-123', 'user-456', '')).rejects.toThrow('Team ID is required')
+    })
+  })
+
+  describe('createTag', () => {
+    it('creates a tag scoped to team', async () => {
+      const mockTag = { id: 'tag-new', slug: 'marketing', name: 'Marketing' }
+      mockMutateWithRLS.mockResolvedValue({
+        rows: [mockTag],
+        rowCount: 1,
+      } as any)
+
+      const result = await MediaService.createTag('Marketing', 'user-456', 'team-789')
+
+      expect(result).toEqual(mockTag)
+      expect(mockMutateWithRLS).toHaveBeenCalledWith(
+        expect.stringContaining('"teamId"'),
+        expect.arrayContaining(['marketing', 'Marketing', 'team-789']),
+        'user-456'
+      )
+    })
+
+    it('throws error for empty name', async () => {
+      await expect(MediaService.createTag('', 'user-456', 'team-789')).rejects.toThrow('Tag name is required')
+    })
+
+    it('throws error for empty teamId', async () => {
+      await expect(MediaService.createTag('Test', 'user-456', '')).rejects.toThrow('Team ID is required')
     })
   })
 })

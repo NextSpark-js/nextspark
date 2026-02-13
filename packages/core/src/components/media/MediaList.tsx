@@ -10,7 +10,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { MoreVerticalIcon, Edit2Icon, Trash2Icon, ImageIcon } from 'lucide-react'
+import { MoreVerticalIcon, Edit2Icon, EyeIcon, Trash2Icon, ImageIcon } from 'lucide-react'
 import {
   Table,
   TableBody,
@@ -36,10 +36,11 @@ interface MediaListProps {
   items: Media[]
   isLoading: boolean
   selectedIds: Set<string>
-  onSelect: (media: Media, options?: { shiftKey?: boolean }) => void
+  onSelect?: (media: Media, options?: { shiftKey?: boolean }) => void
   onEdit?: (media: Media) => void
   onDelete?: (media: Media) => void
   mode?: 'single' | 'multiple'
+  readOnly?: boolean
   className?: string
 }
 
@@ -65,6 +66,7 @@ export function MediaList({
   onEdit,
   onDelete,
   mode = 'single',
+  readOnly = false,
   className,
 }: MediaListProps) {
   const t = useTranslations('media')
@@ -168,9 +170,9 @@ export function MediaList({
                   'cursor-pointer transition-colors hover:bg-muted/50',
                   isSelected && 'bg-muted'
                 )}
-                onClick={() => onEdit ? onEdit(media) : onSelect(media)}
+                onClick={() => onEdit ? onEdit(media) : onSelect?.(media)}
               >
-                {mode === 'multiple' && (
+                {mode === 'multiple' && onSelect && (
                   <TableCell onClick={(e) => {
                     e.stopPropagation()
                     onSelect(media, { shiftKey: e.shiftKey })
@@ -229,8 +231,17 @@ export function MediaList({
                       <DropdownMenuContent align="end">
                         {onEdit && (
                           <DropdownMenuItem onClick={() => onEdit(media)}>
-                            <Edit2Icon className="mr-2 h-4 w-4" />
-                            {t('actions.edit')}
+                            {readOnly ? (
+                              <>
+                                <EyeIcon className="mr-2 h-4 w-4" />
+                                {t('actions.viewDetails')}
+                              </>
+                            ) : (
+                              <>
+                                <Edit2Icon className="mr-2 h-4 w-4" />
+                                {t('actions.edit')}
+                              </>
+                            )}
                           </DropdownMenuItem>
                         )}
                         {onDelete && (

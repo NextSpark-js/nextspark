@@ -92,11 +92,13 @@ export function TeamProvider({ children }: { children: ReactNode }) {
 
   // Initialize current team when teams data loads
   useEffect(() => {
-    if (!userTeams.length || initialSyncDone) return
+    // Guard: don't run during logout (user null but stale TanStack cache)
+    if (!user || !userTeams.length || initialSyncDone) return
 
-    // Determine active team (priority: localStorage > first)
+    // Determine active team (priority: localStorage > user's teams)
     const storedTeamId = typeof window !== 'undefined' ? localStorage.getItem('activeTeamId') : null
-    const storedTeam = userTeams.find(t => t.team.id === storedTeamId)
+    // Only use stored team if user is actually a member of it
+    const storedTeam = storedTeamId ? userTeams.find(t => t.team.id === storedTeamId) : null
     const activeTeam = storedTeam || userTeams[0]
 
     if (activeTeam) {
@@ -118,15 +120,26 @@ export function TeamProvider({ children }: { children: ReactNode }) {
 
       setInitialSyncDone(true)
     }
-  }, [userTeams, initialSyncDone])
+  }, [user, userTeams, initialSyncDone])
 
-  // Reset sync flag when user changes
+  // Reset sync flag, clear localStorage and TanStack Query cache when user logs out
+  // IMPORTANT: Only run when auth has finished loading (!authLoading) to distinguish
+  // actual logout (user=null, authLoading=false) from initial page load (user=null, authLoading=true).
+  // Without the authLoading guard, this effect fires on every page reload/navigation,
+  // wiping localStorage before the initial sync can read the saved team — causing
+  // uploads and queries to always fall back to the user's first team.
   useEffect(() => {
-    if (!user) {
+    if (!user && !authLoading) {
       setCurrentTeam(null)
       setInitialSyncDone(false)
+      // Clear team context to prevent leaking to next user session
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('activeTeamId')
+      }
+      // Clear all TanStack Query cache to prevent stale data leaking to next user
+      queryClient.clear()
     }
-  }, [user])
+  }, [user, authLoading, queryClient])
 
   // Handle modal completion - refresh router and invalidate cache
   const handleSwitchComplete = useCallback(() => {

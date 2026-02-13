@@ -1,6 +1,6 @@
 /**
  * API Library - Public API functionality
- * 
+ *
  * This module exports all the core functionality for the public API system,
  * including authentication, rate limiting, caching, and utilities.
  */
@@ -13,7 +13,9 @@ export * from './helpers';
 export * from './rate-limit';
 export * from './cache';
 export * from './distributed-cache';
+export * from './api-error';
 
 // Re-export commonly used types and utilities
 export type { ApiKeyAuth, ApiKeyValidationResult } from './auth';
 export type { ApiScope } from './keys';
+export { ApiError } from './api-error';

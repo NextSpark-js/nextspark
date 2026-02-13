@@ -8,9 +8,14 @@
  */
 
 import { z } from 'zod'
+import { AVAILABLE_ROLES } from '@nextsparkjs/registries/permissions-registry'
+import { getInvitableRoles } from './permissions'
 
-// Enum schemas
-export const teamRoleSchema = z.enum(['owner', 'admin', 'member', 'viewer'])
+// Dynamic role schema - reads available roles from permissions-registry
+export const teamRoleSchema = z.string().refine(
+  (role) => (AVAILABLE_ROLES as readonly string[]).includes(role),
+  (role) => ({ message: `Invalid team role: ${role}. Must be one of: ${[...AVAILABLE_ROLES].join(', ')}` })
+)
 export const invitationStatusSchema = z.enum(['pending', 'accepted', 'declined', 'expired'])
 
 // Base Team schema
@@ -109,15 +114,17 @@ export const updateTeamSchema = ownerUpdateTeamSchema.merge(adminUpdateTeamSchem
 
 export const inviteMemberSchema = z.object({
   email: z.string().email('Invalid email address'),
-  role: z.enum(['admin', 'member', 'viewer'], {
-    message: 'Role must be admin, member, or viewer'
-  }), // Cannot invite as owner
+  role: z.string().refine(
+    (role) => getInvitableRoles().includes(role),
+    (role) => ({ message: `Role must be one of: ${getInvitableRoles().join(', ')}` })
+  ), // Cannot invite as owner
 })
 
 export const updateMemberRoleSchema = z.object({
-  role: z.enum(['admin', 'member', 'viewer'], {
-    message: 'Role must be admin, member, or viewer'
-  }), // Cannot promote to owner
+  role: z.string().refine(
+    (role) => getInvitableRoles().includes(role),
+    (role) => ({ message: `Role must be one of: ${getInvitableRoles().join(', ')}` })
+  ), // Cannot promote to owner
 })
 
 // Pagination schema

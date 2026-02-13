@@ -847,6 +847,11 @@ describe('Teams Validation Schemas', () => {
       expect(result.success).toBe(true)
     })
 
+    it('accepts editor role (custom theme role)', () => {
+      const result = teamRoleSchema.safeParse('editor')
+      expect(result.success).toBe(true)
+    })
+
     it('rejects invalid role', () => {
       const result = teamRoleSchema.safeParse('superadmin')
       expect(result.success).toBe(false)
@@ -892,11 +897,17 @@ describe('Teams Validation Schemas', () => {
       expect(result.success).toBe(false)
     })
 
-    it('accepts admin, member, viewer roles', () => {
+    it('accepts admin, editor, member, viewer roles', () => {
       expect(
         inviteMemberSchema.safeParse({
           email: 'user@example.com',
           role: 'admin',
+        }).success
+      ).toBe(true)
+      expect(
+        inviteMemberSchema.safeParse({
+          email: 'user@example.com',
+          role: 'editor',
         }).success
       ).toBe(true)
       expect(
@@ -917,12 +928,18 @@ describe('Teams Validation Schemas', () => {
   describe('updateMemberRoleSchema', () => {
     it('accepts valid roles', () => {
       expect(updateMemberRoleSchema.safeParse({ role: 'admin' }).success).toBe(true)
+      expect(updateMemberRoleSchema.safeParse({ role: 'editor' }).success).toBe(true)
       expect(updateMemberRoleSchema.safeParse({ role: 'member' }).success).toBe(true)
       expect(updateMemberRoleSchema.safeParse({ role: 'viewer' }).success).toBe(true)
     })
 
     it('rejects owner role', () => {
       const result = updateMemberRoleSchema.safeParse({ role: 'owner' })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects unknown role', () => {
+      const result = updateMemberRoleSchema.safeParse({ role: 'superadmin' })
       expect(result.success).toBe(false)
     })
   })
