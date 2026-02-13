@@ -2,7 +2,7 @@
  * Media Service
  *
  * Provides CRUD operations for media library entries.
- * Supports team isolation via RLS, search, filtering by type.
+ * ALL methods require teamId for strict team isolation.
  *
  * @module MediaService
  */
@@ -23,63 +23,36 @@ export class MediaService {
   // ============================================
 
   /**
-   * Get media item by ID
+   * Get media item by ID (team-scoped)
    *
    * @param id - Media ID
    * @param userId - User ID for RLS context
+   * @param teamId - Team ID for isolation
    * @returns Media or null if not found
-   *
-   * @example
-   * const media = await MediaService.getById('media-123', 'user-456')
    */
-  static async getById(id: string, userId: string, teamId?: string): Promise<Media | null> {
+  static async getById(id: string, userId: string, teamId: string): Promise<Media | null> {
     if (!id?.trim()) throw new Error('Media ID is required')
     if (!userId?.trim()) throw new Error('User ID is required')
-
-    if (teamId) {
-      return queryOneWithRLS<Media>(
-        `SELECT * FROM "media" WHERE id = $1 AND "teamId" = $2 AND status = 'active'`,
-        [id, teamId],
-        userId
-      )
-    }
+    if (!teamId?.trim()) throw new Error('Team ID is required')
 
     return queryOneWithRLS<Media>(
-      `SELECT * FROM "media" WHERE id = $1 AND status = 'active'`,
-      [id],
+      `SELECT * FROM "media" WHERE id = $1 AND "teamId" = $2 AND status = 'active'`,
+      [id, teamId],
       userId
     )
   }
 
   /**
-   * List media with pagination, filtering, and search
+   * List media with pagination, filtering, and search (team-scoped)
    *
    * @param userId - User ID for RLS context
+   * @param teamId - Team ID for isolation
    * @param options - List options (pagination, filtering, search, sort)
    * @returns Paginated media list result
-   *
-   * @example
-   * const result = await MediaService.list('user-123', {
-   *   limit: 20,
-   *   offset: 0,
-   *   type: 'image',
-   *   search: 'logo',
-   *   orderBy: 'createdAt',
-   *   orderDir: 'desc'
-   * })
    */
-  static async list(userId: string, teamIdOrOptions?: string | MediaListOptions, options?: MediaListOptions): Promise<MediaListResult> {
+  static async list(userId: string, teamId: string, options: MediaListOptions = {}): Promise<MediaListResult> {
     if (!userId?.trim()) throw new Error('User ID is required')
-
-    // Support both signatures: list(userId, options) and list(userId, teamId, options)
-    let teamId: string | undefined
-    let resolvedOptions: MediaListOptions
-    if (typeof teamIdOrOptions === 'string') {
-      teamId = teamIdOrOptions
-      resolvedOptions = options || {}
-    } else {
-      resolvedOptions = teamIdOrOptions || {}
-    }
+    if (!teamId?.trim()) throw new Error('Team ID is required')
 
     const {
       limit = 20,
@@ -91,19 +64,12 @@ export class MediaService {
       status = 'active',
       tagIds,
       tagSlugs,
-    } = resolvedOptions
+    } = options
 
     // Build WHERE clause
-    const conditions: string[] = ['m.status = $1']
-    const params: unknown[] = [status]
-    let paramIndex = 2
-
-    // Team isolation filter
-    if (teamId) {
-      conditions.push(`m."teamId" = $${paramIndex}`)
-      params.push(teamId)
-      paramIndex++
-    }
+    const conditions: string[] = ['m.status = $1', 'm."teamId" = $2']
+    const params: unknown[] = [status, teamId]
+    let paramIndex = 3
 
     if (type === 'image') {
       conditions.push(`m."mimeType" LIKE 'image/%'`)
@@ -180,54 +146,29 @@ export class MediaService {
   }
 
   /**
-   * Find existing media by filename and fileSize (duplicate detection)
+   * Find existing media by filename and fileSize (duplicate detection, team-scoped)
    *
    * @param userId - User ID for RLS context
+   * @param teamId - Team ID for isolation
    * @param filename - Original filename
    * @param fileSize - File size in bytes
    * @returns Matching media items (same name+size = likely duplicate)
    */
   static async findDuplicates(
     userId: string,
-    teamIdOrFilename: string,
-    filenameOrFileSize: string | number,
-    fileSize?: number
+    teamId: string,
+    filename: string,
+    fileSize: number
   ): Promise<Media[]> {
     if (!userId?.trim()) throw new Error('User ID is required')
-
-    // Support both: findDuplicates(userId, filename, fileSize) and findDuplicates(userId, teamId, filename, fileSize)
-    let teamId: string | undefined
-    let resolvedFilename: string
-    let resolvedFileSize: number
-
-    if (typeof filenameOrFileSize === 'number') {
-      // Old signature: findDuplicates(userId, filename, fileSize)
-      resolvedFilename = teamIdOrFilename
-      resolvedFileSize = filenameOrFileSize
-    } else {
-      // New signature: findDuplicates(userId, teamId, filename, fileSize)
-      teamId = teamIdOrFilename
-      resolvedFilename = filenameOrFileSize
-      resolvedFileSize = fileSize!
-    }
-
-    if (teamId) {
-      return queryWithRLS<Media>(
-        `SELECT * FROM "media"
-         WHERE filename = $1 AND "fileSize" = $2 AND "teamId" = $3 AND status = 'active'
-         ORDER BY "createdAt" DESC
-         LIMIT 5`,
-        [resolvedFilename, resolvedFileSize, teamId],
-        userId
-      )
-    }
+    if (!teamId?.trim()) throw new Error('Team ID is required')
 
     return queryWithRLS<Media>(
       `SELECT * FROM "media"
-       WHERE filename = $1 AND "fileSize" = $2 AND status = 'active'
+       WHERE filename = $1 AND "fileSize" = $2 AND "teamId" = $3 AND status = 'active'
        ORDER BY "createdAt" DESC
        LIMIT 5`,
-      [resolvedFilename, resolvedFileSize],
+      [filename, fileSize, teamId],
       userId
     )
   }
@@ -243,16 +184,6 @@ export class MediaService {
    * @param teamId - Team ID for isolation
    * @param data - Media data
    * @returns Created media record
-   *
-   * @example
-   * const media = await MediaService.create('user-123', 'team-456', {
-   *   url: 'https://example.com/image.jpg',
-   *   filename: 'image.jpg',
-   *   fileSize: 150000,
-   *   mimeType: 'image/jpeg',
-   *   width: 1920,
-   *   height: 1080
-   * })
    */
   static async create(
     userId: string,
@@ -281,27 +212,23 @@ export class MediaService {
   }
 
   /**
-   * Update media metadata (title, alt, caption - file properties are immutable)
+   * Update media metadata (team-scoped)
    *
    * @param id - Media ID
    * @param userId - User ID for RLS context
-   * @param data - Update data (alt, caption)
-   * @returns Updated media record
-   *
-   * @example
-   * const media = await MediaService.update('media-123', 'user-456', {
-   *   alt: 'Company logo',
-   *   caption: 'Our brand logo in high resolution'
-   * })
+   * @param data - Update data (title, alt, caption)
+   * @param teamId - Team ID for isolation
+   * @returns Updated media record or null if not found
    */
   static async update(
     id: string,
     userId: string,
     data: UpdateMediaInput,
-    teamId?: string
+    teamId: string
   ): Promise<Media | null> {
     if (!id?.trim()) throw new Error('Media ID is required')
     if (!userId?.trim()) throw new Error('User ID is required')
+    if (!teamId?.trim()) throw new Error('Team ID is required')
 
     const setClauses: string[] = []
     const params: unknown[] = []
@@ -324,18 +251,13 @@ export class MediaService {
 
     setClauses.push(`"updatedAt" = NOW()`)
     params.push(id)
-
-    let whereClause = `id = $${paramIndex} AND status = 'active'`
-    if (teamId) {
-      paramIndex++
-      params.push(teamId)
-      whereClause += ` AND "teamId" = $${paramIndex}`
-    }
+    paramIndex++
+    params.push(teamId)
 
     const result = await mutateWithRLS<Media>(
       `UPDATE "media"
        SET ${setClauses.join(', ')}
-       WHERE ${whereClause}
+       WHERE id = $${paramIndex - 1} AND status = 'active' AND "teamId" = $${paramIndex}
        RETURNING *`,
       params,
       userId
@@ -345,58 +267,48 @@ export class MediaService {
   }
 
   /**
-   * Soft delete a media record (sets status to 'deleted')
+   * Soft delete a media record (team-scoped)
    *
    * @param id - Media ID
    * @param userId - User ID for RLS context
+   * @param teamId - Team ID for isolation
    * @returns True if deleted successfully
-   *
-   * @example
-   * const deleted = await MediaService.softDelete('media-123', 'user-456')
    */
-  static async softDelete(id: string, userId: string, teamId?: string): Promise<boolean> {
+  static async softDelete(id: string, userId: string, teamId: string): Promise<boolean> {
     if (!id?.trim()) throw new Error('Media ID is required')
     if (!userId?.trim()) throw new Error('User ID is required')
-
-    if (teamId) {
-      const result = await mutateWithRLS(
-        `UPDATE "media" SET status = 'deleted', "updatedAt" = NOW()
-         WHERE id = $1 AND "teamId" = $2 AND status = 'active'`,
-        [id, teamId],
-        userId
-      )
-      return result.rowCount > 0
-    }
+    if (!teamId?.trim()) throw new Error('Team ID is required')
 
     const result = await mutateWithRLS(
       `UPDATE "media" SET status = 'deleted', "updatedAt" = NOW()
-       WHERE id = $1 AND status = 'active'`,
-      [id],
+       WHERE id = $1 AND "teamId" = $2 AND status = 'active'`,
+      [id, teamId],
       userId
     )
-
     return result.rowCount > 0
   }
 
   // ============================================
-  // TAG OPERATIONS
+  // TAG OPERATIONS (team-scoped)
   // ============================================
 
   /**
-   * Get all media tags
+   * Get all media tags for a team
    *
    * @param userId - User ID for RLS context
-   * @returns Array of media tags
+   * @param teamId - Team ID for isolation
+   * @returns Array of media tags scoped to the team
    */
-  static async getTags(userId: string): Promise<MediaTag[]> {
+  static async getTags(userId: string, teamId: string): Promise<MediaTag[]> {
     if (!userId?.trim()) throw new Error('User ID is required')
+    if (!teamId?.trim()) throw new Error('Team ID is required')
 
     return queryWithRLS<MediaTag>(
       `SELECT id, type, slug, name, description, icon, color, "order", "isActive", "createdAt", "updatedAt"
        FROM "taxonomies"
-       WHERE type = 'media_tag' AND "isActive" = true AND "deletedAt" IS NULL
+       WHERE type = 'media_tag' AND "teamId" = $1 AND "isActive" = true AND "deletedAt" IS NULL
        ORDER BY "order" ASC, name ASC`,
-      [],
+      [teamId],
       userId
     )
   }
@@ -406,22 +318,23 @@ export class MediaService {
    *
    * @param mediaId - Media item ID
    * @param userId - User ID for RLS context
+   * @param teamId - Team ID for isolation (media ownership verified before calling)
    * @returns Array of tags assigned to the media
    */
-  static async getMediaTags(mediaId: string, userId: string, _teamId?: string): Promise<MediaTag[]> {
+  static async getMediaTags(mediaId: string, userId: string, teamId: string): Promise<MediaTag[]> {
     if (!mediaId?.trim()) throw new Error('Media ID is required')
     if (!userId?.trim()) throw new Error('User ID is required')
+    if (!teamId?.trim()) throw new Error('Team ID is required')
 
-    // Note: teamId accepted for API consistency but not used in query.
-    // Media ownership is verified via getById() before calling this method.
     return queryWithRLS<MediaTag>(
       `SELECT t.id, t.type, t.slug, t.name, t.description, t.icon, t.color, t."order", t."isActive", t."createdAt", t."updatedAt"
        FROM "taxonomies" t
        JOIN "entity_taxonomy_relations" etr ON etr."taxonomyId" = t.id
        WHERE etr."entityType" = 'media' AND etr."entityId" = $1
+         AND t."teamId" = $2
          AND t."isActive" = true AND t."deletedAt" IS NULL
        ORDER BY t."order" ASC, t.name ASC`,
-      [mediaId],
+      [mediaId, teamId],
       userId
     )
   }
@@ -506,24 +419,27 @@ export class MediaService {
   }
 
   /**
-   * Create a new media tag (taxonomy of type 'media_tag')
+   * Create a new media tag (team-scoped)
    *
    * @param name - Tag display name
    * @param userId - User ID for RLS context
+   * @param teamId - Team ID for isolation
    * @returns The created tag
    */
-  static async createTag(name: string, userId: string): Promise<MediaTag> {
+  static async createTag(name: string, userId: string, teamId: string): Promise<MediaTag> {
     if (!name?.trim()) throw new Error('Tag name is required')
     if (!userId?.trim()) throw new Error('User ID is required')
+    if (!teamId?.trim()) throw new Error('Team ID is required')
 
     const slug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
     const result = await mutateWithRLS(
-      `INSERT INTO "taxonomies" (type, slug, name, "isActive")
-       VALUES ('media_tag', $1, $2, true)
-       ON CONFLICT (type, slug) DO UPDATE SET name = EXCLUDED.name
+      `INSERT INTO "taxonomies" (type, slug, name, "teamId", "isActive")
+       VALUES ('media_tag', $1, $2, $3, true)
+       ON CONFLICT (type, slug, "teamId") WHERE "teamId" IS NOT NULL
+       DO UPDATE SET name = EXCLUDED.name
        RETURNING id, slug, name, color, icon, "order", "isActive"`,
-      [slug, name.trim()],
+      [slug, name.trim(), teamId],
       userId
     )
 
@@ -531,24 +447,24 @@ export class MediaService {
   }
 
   /**
-   * Count media items
+   * Count media items (team-scoped)
    *
    * @param userId - User ID for RLS context
+   * @param teamId - Team ID for isolation
    * @param options - Count options (type filter, status filter)
    * @returns Total count
-   *
-   * @example
-   * const imageCount = await MediaService.count('user-123', { type: 'image' })
    */
   static async count(
     userId: string,
+    teamId: string,
     options: { type?: 'image' | 'video' | 'all'; status?: string } = {}
   ): Promise<number> {
     if (!userId?.trim()) throw new Error('User ID is required')
+    if (!teamId?.trim()) throw new Error('Team ID is required')
 
     const { type = 'all', status = 'active' } = options
-    const conditions: string[] = ['status = $1']
-    const params: unknown[] = [status]
+    const conditions: string[] = ['status = $1', '"teamId" = $2']
+    const params: unknown[] = [status, teamId]
 
     if (type === 'image') conditions.push(`"mimeType" LIKE 'image/%'`)
     else if (type === 'video') conditions.push(`"mimeType" LIKE 'video/%'`)
