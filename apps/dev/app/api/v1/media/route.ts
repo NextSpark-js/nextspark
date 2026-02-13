@@ -3,6 +3,7 @@ import { authenticateRequest, hasRequiredScope } from '@nextsparkjs/core/lib/api
 import { createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
+import { TeamMemberService } from '@nextsparkjs/core/lib/services/team-member.service'
 import { mediaListQuerySchema } from '@nextsparkjs/core/lib/media/schemas'
 
 /**
@@ -35,7 +36,25 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
       return createApiError('Insufficient permissions - media:read scope required', 403)
     }
 
-    // 3. Parse and validate query parameters
+    // 3. Get team context (header > cookie > defaultTeamId)
+    const teamId = request.headers.get('x-team-id')
+      || request.cookies.get('activeTeamId')?.value
+      || authResult.user!.defaultTeamId
+
+    if (!teamId) {
+      return createApiError(
+        'Team context required. Include x-team-id header.',
+        400
+      )
+    }
+
+    // 4. Validate team membership
+    const isMember = await TeamMemberService.isMember(teamId, authResult.user!.id)
+    if (!isMember) {
+      return createApiError('Access denied: You are not a member of this team', 403)
+    }
+
+    // 5. Parse and validate query parameters
     const { searchParams } = new URL(request.url)
     const parsed = mediaListQuerySchema.safeParse(Object.fromEntries(searchParams))
 
@@ -45,8 +64,8 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
       })
     }
 
-    // 4. Query media list with RLS
-    const result = await MediaService.list(authResult.user!.id, parsed.data)
+    // 5. Query media list with team isolation
+    const result = await MediaService.list(authResult.user!.id, teamId, parsed.data)
 
     return createApiResponse(result)
   } catch (error) {

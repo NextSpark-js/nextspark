@@ -3,6 +3,7 @@ import { authenticateRequest, hasRequiredScope } from '@nextsparkjs/core/lib/api
 import { createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
+import { TeamMemberService } from '@nextsparkjs/core/lib/services/team-member.service'
 import { updateMediaSchema } from '@nextsparkjs/core/lib/media/schemas'
 
 /**
@@ -29,11 +30,25 @@ export const GET = withRateLimitTier(async (
       return createApiError('Insufficient permissions', 403)
     }
 
-    // 3. Get media ID from params
+    // 3. Get team context
+    const teamId = request.headers.get('x-team-id')
+      || request.cookies.get('activeTeamId')?.value
+      || authResult.user!.defaultTeamId
+    if (!teamId) {
+      return createApiError('Team context required. Include x-team-id header.', 400)
+    }
+
+    // 4. Validate team membership
+    const isMember = await TeamMemberService.isMember(teamId, authResult.user!.id)
+    if (!isMember) {
+      return createApiError('Access denied: You are not a member of this team', 403)
+    }
+
+    // 5. Get media ID from params
     const { id } = await params
 
-    // 4. Fetch media with RLS
-    const media = await MediaService.getById(id, authResult.user!.id)
+    // 6. Fetch media with team isolation
+    const media = await MediaService.getById(id, authResult.user!.id, teamId)
 
     if (!media) {
       return createApiError('Media not found', 404)
@@ -75,10 +90,24 @@ export const PATCH = withRateLimitTier(async (
       return createApiError('Insufficient permissions', 403)
     }
 
-    // 3. Get media ID from params
+    // 3. Get team context
+    const teamId = request.headers.get('x-team-id')
+      || request.cookies.get('activeTeamId')?.value
+      || authResult.user!.defaultTeamId
+    if (!teamId) {
+      return createApiError('Team context required. Include x-team-id header.', 400)
+    }
+
+    // 4. Validate team membership
+    const isMember = await TeamMemberService.isMember(teamId, authResult.user!.id)
+    if (!isMember) {
+      return createApiError('Access denied: You are not a member of this team', 403)
+    }
+
+    // 5. Get media ID from params
     const { id } = await params
 
-    // 4. Parse and validate request body
+    // 6. Parse and validate request body
     const body = await request.json()
     const parsed = updateMediaSchema.safeParse(body)
 
@@ -88,8 +117,12 @@ export const PATCH = withRateLimitTier(async (
       })
     }
 
-    // 5. Update media with RLS
-    const media = await MediaService.update(id, authResult.user!.id, parsed.data)
+    // 6. Update media with team isolation
+    const media = await MediaService.update(id, authResult.user!.id, parsed.data, teamId)
+
+    if (!media) {
+      return createApiError('Media not found', 404)
+    }
 
     return createApiResponse(media)
   } catch (error) {
@@ -126,11 +159,25 @@ export const DELETE = withRateLimitTier(async (
       return createApiError('Insufficient permissions', 403)
     }
 
-    // 3. Get media ID from params
+    // 3. Get team context
+    const teamId = request.headers.get('x-team-id')
+      || request.cookies.get('activeTeamId')?.value
+      || authResult.user!.defaultTeamId
+    if (!teamId) {
+      return createApiError('Team context required. Include x-team-id header.', 400)
+    }
+
+    // 4. Validate team membership
+    const isMember = await TeamMemberService.isMember(teamId, authResult.user!.id)
+    if (!isMember) {
+      return createApiError('Access denied: You are not a member of this team', 403)
+    }
+
+    // 5. Get media ID from params
     const { id } = await params
 
-    // 4. Soft delete media with RLS
-    const deleted = await MediaService.softDelete(id, authResult.user!.id)
+    // 6. Soft delete media with team isolation
+    const deleted = await MediaService.softDelete(id, authResult.user!.id, teamId)
 
     if (!deleted) {
       return createApiError('Media not found', 404)

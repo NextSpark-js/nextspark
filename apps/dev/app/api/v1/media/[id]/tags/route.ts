@@ -3,6 +3,7 @@ import { authenticateRequest, hasRequiredScope } from '@nextsparkjs/core/lib/api
 import { createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
+import { TeamMemberService } from '@nextsparkjs/core/lib/services/team-member.service'
 import { z } from 'zod'
 
 const addTagSchema = z.object({
@@ -32,8 +33,27 @@ export const GET = withRateLimitTier(async (
       return createApiError('Insufficient permissions', 403)
     }
 
+    const teamId = request.headers.get('x-team-id')
+      || request.cookies.get('activeTeamId')?.value
+      || authResult.user!.defaultTeamId
+    if (!teamId) {
+      return createApiError('Team context required. Include x-team-id header.', 400)
+    }
+
+    const isMember = await TeamMemberService.isMember(teamId, authResult.user!.id)
+    if (!isMember) {
+      return createApiError('Access denied: You are not a member of this team', 403)
+    }
+
     const { id } = await params
-    const tags = await MediaService.getMediaTags(id, authResult.user!.id)
+
+    // Verify media belongs to team
+    const media = await MediaService.getById(id, authResult.user!.id, teamId)
+    if (!media) {
+      return createApiError('Media not found', 404)
+    }
+
+    const tags = await MediaService.getMediaTags(id, authResult.user!.id, teamId)
     return createApiResponse(tags)
   } catch (error) {
     console.error('[Media Tags API] Error getting tags:', error)
@@ -61,7 +81,26 @@ export const POST = withRateLimitTier(async (
       return createApiError('Insufficient permissions', 403)
     }
 
+    const teamId = request.headers.get('x-team-id')
+      || request.cookies.get('activeTeamId')?.value
+      || authResult.user!.defaultTeamId
+    if (!teamId) {
+      return createApiError('Team context required. Include x-team-id header.', 400)
+    }
+
+    const isMember = await TeamMemberService.isMember(teamId, authResult.user!.id)
+    if (!isMember) {
+      return createApiError('Access denied: You are not a member of this team', 403)
+    }
+
     const { id } = await params
+
+    // Verify media belongs to team
+    const media = await MediaService.getById(id, authResult.user!.id, teamId)
+    if (!media) {
+      return createApiError('Media not found', 404)
+    }
+
     const body = await request.json()
     const parsed = addTagSchema.safeParse(body)
 
@@ -70,7 +109,7 @@ export const POST = withRateLimitTier(async (
     }
 
     await MediaService.addTag(id, parsed.data.tagId, authResult.user!.id)
-    const tags = await MediaService.getMediaTags(id, authResult.user!.id)
+    const tags = await MediaService.getMediaTags(id, authResult.user!.id, teamId)
 
     return createApiResponse(tags, undefined, 201)
   } catch (error) {
@@ -99,7 +138,26 @@ export const PUT = withRateLimitTier(async (
       return createApiError('Insufficient permissions', 403)
     }
 
+    const teamId = request.headers.get('x-team-id')
+      || request.cookies.get('activeTeamId')?.value
+      || authResult.user!.defaultTeamId
+    if (!teamId) {
+      return createApiError('Team context required. Include x-team-id header.', 400)
+    }
+
+    const isMember = await TeamMemberService.isMember(teamId, authResult.user!.id)
+    if (!isMember) {
+      return createApiError('Access denied: You are not a member of this team', 403)
+    }
+
     const { id } = await params
+
+    // Verify media belongs to team
+    const media = await MediaService.getById(id, authResult.user!.id, teamId)
+    if (!media) {
+      return createApiError('Media not found', 404)
+    }
+
     const body = await request.json()
     const parsed = setTagsSchema.safeParse(body)
 
@@ -108,7 +166,7 @@ export const PUT = withRateLimitTier(async (
     }
 
     await MediaService.setTags(id, parsed.data.tagIds, authResult.user!.id)
-    const tags = await MediaService.getMediaTags(id, authResult.user!.id)
+    const tags = await MediaService.getMediaTags(id, authResult.user!.id, teamId)
 
     return createApiResponse(tags)
   } catch (error) {
@@ -137,7 +195,26 @@ export const DELETE = withRateLimitTier(async (
       return createApiError('Insufficient permissions', 403)
     }
 
+    const teamId = request.headers.get('x-team-id')
+      || request.cookies.get('activeTeamId')?.value
+      || authResult.user!.defaultTeamId
+    if (!teamId) {
+      return createApiError('Team context required. Include x-team-id header.', 400)
+    }
+
+    const isMember = await TeamMemberService.isMember(teamId, authResult.user!.id)
+    if (!isMember) {
+      return createApiError('Access denied: You are not a member of this team', 403)
+    }
+
     const { id } = await params
+
+    // Verify media belongs to team
+    const media = await MediaService.getById(id, authResult.user!.id, teamId)
+    if (!media) {
+      return createApiError('Media not found', 404)
+    }
+
     const { searchParams } = new URL(request.url)
     const tagId = searchParams.get('tagId')
 

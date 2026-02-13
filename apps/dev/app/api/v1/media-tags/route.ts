@@ -3,11 +3,13 @@ import { authenticateRequest, hasRequiredScope } from '@nextsparkjs/core/lib/api
 import { createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
+import { TeamMemberService } from '@nextsparkjs/core/lib/services/team-member.service'
 
 /**
  * GET /api/v1/media-tags
  *
  * List all available media tags (taxonomies of type 'media_tag').
+ * Filtered by team context - only returns tags used in media of the active team.
  *
  * Authentication: Requires valid session or API key with media:read scope
  */
@@ -22,7 +24,19 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
       return createApiError('Insufficient permissions', 403)
     }
 
-    const tags = await MediaService.getTags(authResult.user!.id)
+    const teamId = request.headers.get('x-team-id')
+      || request.cookies.get('activeTeamId')?.value
+      || authResult.user!.defaultTeamId
+    if (!teamId) {
+      return createApiError('Team context required. Include x-team-id header.', 400)
+    }
+
+    const isMember = await TeamMemberService.isMember(teamId, authResult.user!.id)
+    if (!isMember) {
+      return createApiError('Access denied: You are not a member of this team', 403)
+    }
+
+    const tags = await MediaService.getTags(authResult.user!.id, teamId)
     return createApiResponse(tags)
   } catch (error) {
     console.error('[Media Tags API] Error listing tags:', error)
