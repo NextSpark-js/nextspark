@@ -6,6 +6,8 @@
   "allPermissions": "Alle Berechtigungen",
   "permission": "Berechtigung",
   "dangerousAction": "Dies ist eine potenziell gefaehrliche Aktion",
+  "roleChanged": "Berechtigung aktualisiert",
+  "roleChangedDescription": "Ihre Berechtigungen wurden aktualisiert. Die Seite wird aktualisiert, um die Aenderungen widerzuspiegeln.",
   "roles": {
     "owner": {
       "title": "Eigentuemer",

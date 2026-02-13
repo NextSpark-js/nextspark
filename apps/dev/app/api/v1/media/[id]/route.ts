@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server'
-import { authenticateRequest, hasRequiredScope } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, hasRequiredScope, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
+import { API_ERROR_CODES } from '@nextsparkjs/core/lib/api/api-error'
+import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
 import { updateMediaSchema } from '@nextsparkjs/core/lib/media/schemas'
@@ -26,14 +28,24 @@ export const GET = withRateLimitTier(async (
 
     // 2. Check permissions
     if (!hasRequiredScope(authResult, 'media:read')) {
-      return createApiError('Insufficient permissions', 403)
+      return createApiError('Insufficient permissions', 403, undefined, API_ERROR_CODES.INSUFFICIENT_SCOPE)
     }
 
-    // 3. Get media ID from params
+    // 3. Resolve and validate team context
+    const teamResult = await resolveTeamContext(request, authResult)
+    if (teamResult instanceof Response) return teamResult
+    const teamId = teamResult
+
+    // 3b. Check role-based permission
+    if (!await checkPermission(authResult.user!.id, teamId, 'media.read')) {
+      return createApiError('Permission denied', 403, undefined, API_ERROR_CODES.PERMISSION_DENIED)
+    }
+
+    // 4. Get media ID from params
     const { id } = await params
 
-    // 4. Fetch media with RLS
-    const media = await MediaService.getById(id, authResult.user!.id)
+    // 5. Fetch media with team isolation
+    const media = await MediaService.getById(id, authResult.user!.id, teamId)
 
     if (!media) {
       return createApiError('Media not found', 404)
@@ -72,13 +84,23 @@ export const PATCH = withRateLimitTier(async (
 
     // 2. Check permissions
     if (!hasRequiredScope(authResult, 'media:write')) {
-      return createApiError('Insufficient permissions', 403)
+      return createApiError('Insufficient permissions', 403, undefined, API_ERROR_CODES.INSUFFICIENT_SCOPE)
     }
 
-    // 3. Get media ID from params
+    // 3. Resolve and validate team context
+    const teamResult = await resolveTeamContext(request, authResult)
+    if (teamResult instanceof Response) return teamResult
+    const teamId = teamResult
+
+    // 3b. Check role-based permission
+    if (!await checkPermission(authResult.user!.id, teamId, 'media.update')) {
+      return createApiError('Permission denied', 403, undefined, API_ERROR_CODES.PERMISSION_DENIED)
+    }
+
+    // 4. Get media ID from params
     const { id } = await params
 
-    // 4. Parse and validate request body
+    // 5. Parse and validate request body
     const body = await request.json()
     const parsed = updateMediaSchema.safeParse(body)
 
@@ -88,8 +110,12 @@ export const PATCH = withRateLimitTier(async (
       })
     }
 
-    // 5. Update media with RLS
-    const media = await MediaService.update(id, authResult.user!.id, parsed.data)
+    // 6. Update media with team isolation
+    const media = await MediaService.update(id, authResult.user!.id, parsed.data, teamId)
+
+    if (!media) {
+      return createApiError('Media not found', 404)
+    }
 
     return createApiResponse(media)
   } catch (error) {
@@ -123,14 +149,24 @@ export const DELETE = withRateLimitTier(async (
 
     // 2. Check permissions
     if (!hasRequiredScope(authResult, 'media:delete')) {
-      return createApiError('Insufficient permissions', 403)
+      return createApiError('Insufficient permissions', 403, undefined, API_ERROR_CODES.INSUFFICIENT_SCOPE)
     }
 
-    // 3. Get media ID from params
+    // 3. Resolve and validate team context
+    const teamResult = await resolveTeamContext(request, authResult)
+    if (teamResult instanceof Response) return teamResult
+    const teamId = teamResult
+
+    // 3b. Check role-based permission
+    if (!await checkPermission(authResult.user!.id, teamId, 'media.delete')) {
+      return createApiError('Permission denied', 403, undefined, API_ERROR_CODES.PERMISSION_DENIED)
+    }
+
+    // 4. Get media ID from params
     const { id } = await params
 
-    // 4. Soft delete media with RLS
-    const deleted = await MediaService.softDelete(id, authResult.user!.id)
+    // 5. Soft delete media with team isolation
+    const deleted = await MediaService.softDelete(id, authResult.user!.id, teamId)
 
     if (!deleted) {
       return createApiError('Media not found', 404)

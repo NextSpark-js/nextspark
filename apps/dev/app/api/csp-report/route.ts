@@ -7,6 +7,7 @@ let createRateLimitErrorResponse: ((result: { allowed: boolean; limit: number; r
 
 // Try to load rate limiting functions
 try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const rateLimitModule = require('@nextsparkjs/core/lib/api');
   checkDistributedRateLimit = rateLimitModule.checkDistributedRateLimit;
   createRateLimitErrorResponse = rateLimitModule.createRateLimitErrorResponse;

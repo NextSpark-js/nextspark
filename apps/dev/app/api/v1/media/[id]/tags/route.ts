@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server'
-import { authenticateRequest, hasRequiredScope } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, hasRequiredScope, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
+import { API_ERROR_CODES } from '@nextsparkjs/core/lib/api/api-error'
+import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
 import { z } from 'zod'
@@ -29,11 +31,27 @@ export const GET = withRateLimitTier(async (
     }
 
     if (!hasRequiredScope(authResult, 'media:read')) {
-      return createApiError('Insufficient permissions', 403)
+      return createApiError('Insufficient permissions', 403, undefined, API_ERROR_CODES.INSUFFICIENT_SCOPE)
+    }
+
+    const teamResult = await resolveTeamContext(request, authResult)
+    if (teamResult instanceof Response) return teamResult
+    const teamId = teamResult
+
+    // Check role-based permission
+    if (!await checkPermission(authResult.user!.id, teamId, 'media.read')) {
+      return createApiError('Permission denied', 403, undefined, API_ERROR_CODES.PERMISSION_DENIED)
     }
 
     const { id } = await params
-    const tags = await MediaService.getMediaTags(id, authResult.user!.id)
+
+    // Verify media belongs to team
+    const media = await MediaService.getById(id, authResult.user!.id, teamId)
+    if (!media) {
+      return createApiError('Media not found', 404)
+    }
+
+    const tags = await MediaService.getMediaTags(id, authResult.user!.id, teamId)
     return createApiResponse(tags)
   } catch (error) {
     console.error('[Media Tags API] Error getting tags:', error)
@@ -58,10 +76,26 @@ export const POST = withRateLimitTier(async (
     }
 
     if (!hasRequiredScope(authResult, 'media:write')) {
-      return createApiError('Insufficient permissions', 403)
+      return createApiError('Insufficient permissions', 403, undefined, API_ERROR_CODES.INSUFFICIENT_SCOPE)
+    }
+
+    const teamResult = await resolveTeamContext(request, authResult)
+    if (teamResult instanceof Response) return teamResult
+    const teamId = teamResult
+
+    // Check role-based permission
+    if (!await checkPermission(authResult.user!.id, teamId, 'media.update')) {
+      return createApiError('Permission denied', 403, undefined, API_ERROR_CODES.PERMISSION_DENIED)
     }
 
     const { id } = await params
+
+    // Verify media belongs to team
+    const media = await MediaService.getById(id, authResult.user!.id, teamId)
+    if (!media) {
+      return createApiError('Media not found', 404)
+    }
+
     const body = await request.json()
     const parsed = addTagSchema.safeParse(body)
 
@@ -70,7 +104,7 @@ export const POST = withRateLimitTier(async (
     }
 
     await MediaService.addTag(id, parsed.data.tagId, authResult.user!.id)
-    const tags = await MediaService.getMediaTags(id, authResult.user!.id)
+    const tags = await MediaService.getMediaTags(id, authResult.user!.id, teamId)
 
     return createApiResponse(tags, undefined, 201)
   } catch (error) {
@@ -96,10 +130,26 @@ export const PUT = withRateLimitTier(async (
     }
 
     if (!hasRequiredScope(authResult, 'media:write')) {
-      return createApiError('Insufficient permissions', 403)
+      return createApiError('Insufficient permissions', 403, undefined, API_ERROR_CODES.INSUFFICIENT_SCOPE)
+    }
+
+    const teamResult = await resolveTeamContext(request, authResult)
+    if (teamResult instanceof Response) return teamResult
+    const teamId = teamResult
+
+    // Check role-based permission
+    if (!await checkPermission(authResult.user!.id, teamId, 'media.update')) {
+      return createApiError('Permission denied', 403, undefined, API_ERROR_CODES.PERMISSION_DENIED)
     }
 
     const { id } = await params
+
+    // Verify media belongs to team
+    const media = await MediaService.getById(id, authResult.user!.id, teamId)
+    if (!media) {
+      return createApiError('Media not found', 404)
+    }
+
     const body = await request.json()
     const parsed = setTagsSchema.safeParse(body)
 
@@ -108,7 +158,7 @@ export const PUT = withRateLimitTier(async (
     }
 
     await MediaService.setTags(id, parsed.data.tagIds, authResult.user!.id)
-    const tags = await MediaService.getMediaTags(id, authResult.user!.id)
+    const tags = await MediaService.getMediaTags(id, authResult.user!.id, teamId)
 
     return createApiResponse(tags)
   } catch (error) {
@@ -133,11 +183,27 @@ export const DELETE = withRateLimitTier(async (
       return createApiError('Unauthorized', 401)
     }
 
-    if (!hasRequiredScope(authResult, 'media:delete')) {
-      return createApiError('Insufficient permissions', 403)
+    if (!hasRequiredScope(authResult, 'media:write')) {
+      return createApiError('Insufficient permissions', 403, undefined, API_ERROR_CODES.INSUFFICIENT_SCOPE)
+    }
+
+    const teamResult = await resolveTeamContext(request, authResult)
+    if (teamResult instanceof Response) return teamResult
+    const teamId = teamResult
+
+    // Check role-based permission (removing a tag is an update action, not media deletion)
+    if (!await checkPermission(authResult.user!.id, teamId, 'media.update')) {
+      return createApiError('Permission denied', 403, undefined, API_ERROR_CODES.PERMISSION_DENIED)
     }
 
     const { id } = await params
+
+    // Verify media belongs to team
+    const media = await MediaService.getById(id, authResult.user!.id, teamId)
+    if (!media) {
+      return createApiError('Media not found', 404)
+    }
+
     const { searchParams } = new URL(request.url)
     const tagId = searchParams.get('tagId')
 

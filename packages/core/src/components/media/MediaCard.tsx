@@ -12,7 +12,7 @@
 
 import { memo, useCallback, type MouseEvent } from 'react'
 import { useTranslations } from 'next-intl'
-import { ImageIcon, VideoIcon, FileIcon, MoreVerticalIcon, Edit2Icon, Trash2Icon } from 'lucide-react'
+import { ImageIcon, VideoIcon, FileIcon, MoreVerticalIcon, Edit2Icon, EyeIcon, Trash2Icon } from 'lucide-react'
 import { Card, CardContent } from '../ui/card'
 import { Button } from '../ui/button'
 import { Checkbox } from '../ui/checkbox'
@@ -29,10 +29,11 @@ import type { Media } from '../../lib/media/types'
 interface MediaCardProps {
   media: Media
   isSelected: boolean
-  onSelect: (media: Media, options?: { shiftKey?: boolean }) => void
+  onSelect?: (media: Media, options?: { shiftKey?: boolean }) => void
   onEdit?: (media: Media) => void
   onDelete?: (media: Media) => void
   mode?: 'single' | 'multiple'
+  readOnly?: boolean
 }
 
 export const MediaCard = memo(function MediaCard({
@@ -42,6 +43,7 @@ export const MediaCard = memo(function MediaCard({
   onEdit,
   onDelete,
   mode = 'single',
+  readOnly = false,
 }: MediaCardProps) {
   const t = useTranslations('media')
 
@@ -49,7 +51,7 @@ export const MediaCard = memo(function MediaCard({
   const isVideo = media.mimeType.startsWith('video/')
 
   const handleCardClick = useCallback((e: MouseEvent) => {
-    if (e.shiftKey && mode === 'multiple') {
+    if (e.shiftKey && mode === 'multiple' && onSelect) {
       // Shift+click = range selection (Google Photos pattern)
       onSelect(media, { shiftKey: true })
     } else if (onEdit) {
@@ -57,13 +59,13 @@ export const MediaCard = memo(function MediaCard({
       onEdit(media)
     } else {
       // No onEdit handler = picker mode, click selects
-      onSelect(media)
+      onSelect?.(media)
     }
   }, [media, onSelect, onEdit, mode])
 
   const handleCheckboxClick = useCallback((e: MouseEvent) => {
     e.stopPropagation()
-    onSelect(media, { shiftKey: e.shiftKey })
+    onSelect?.(media, { shiftKey: e.shiftKey })
   }, [media, onSelect])
 
   const handleMenuClick = useCallback((e: MouseEvent) => {
@@ -160,8 +162,17 @@ export const MediaCard = memo(function MediaCard({
                       data-cy={sel('media.grid.menuEdit', { id: media.id })}
                       onClick={handleEditClick}
                     >
-                      <Edit2Icon className="mr-2 h-4 w-4" />
-                      {t('actions.edit')}
+                      {readOnly ? (
+                        <>
+                          <EyeIcon className="mr-2 h-4 w-4" />
+                          {t('actions.viewDetails')}
+                        </>
+                      ) : (
+                        <>
+                          <Edit2Icon className="mr-2 h-4 w-4" />
+                          {t('actions.edit')}
+                        </>
+                      )}
                     </DropdownMenuItem>
                   )}
                   {onDelete && (

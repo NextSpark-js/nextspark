@@ -9,6 +9,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from './useAuth'
+import { ApiError } from '../lib/api/api-error'
 import type { Media, MediaListOptions, MediaListResult, UpdateMediaInput, MediaTag } from '../lib/media/types'
 
 const MEDIA_QUERY_KEY = 'media'
@@ -36,8 +37,7 @@ export function useMediaList(options: MediaListOptions = {}) {
 
       const res = await fetch(`/api/v1/media?${params}`)
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: 'Failed to fetch media' }))
-        throw new Error(errorData.error || 'Failed to fetch media')
+        throw await ApiError.fromResponse(res, 'Failed to fetch media')
       }
       const json = await res.json()
       return json.data
@@ -60,9 +60,7 @@ export function useMediaItem(id: string | null) {
 
       const res = await fetch(`/api/v1/media/${id}`)
       if (!res.ok) {
-        if (res.status === 404) throw new Error('Media not found')
-        const errorData = await res.json().catch(() => ({ error: 'Failed to fetch media' }))
-        throw new Error(errorData.error || 'Failed to fetch media')
+        throw await ApiError.fromResponse(res, res.status === 404 ? 'Media not found' : 'Failed to fetch media')
       }
       const json = await res.json()
       return json.data
@@ -86,8 +84,7 @@ export function useUpdateMedia() {
       })
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: 'Failed to update media' }))
-        throw new Error(errorData.error || 'Failed to update media')
+        throw await ApiError.fromResponse(res, 'Failed to update media')
       }
 
       const json = await res.json()
@@ -115,8 +112,7 @@ export function useDeleteMedia() {
       })
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: 'Failed to delete media' }))
-        throw new Error(errorData.error || 'Failed to delete media')
+        throw await ApiError.fromResponse(res, 'Failed to delete media')
       }
     },
     onSuccess: () => {
@@ -140,7 +136,9 @@ export function useMediaTags() {
     queryKey: [MEDIA_TAGS_QUERY_KEY],
     queryFn: async () => {
       const res = await fetch('/api/v1/media-tags')
-      if (!res.ok) throw new Error('Failed to fetch media tags')
+      if (!res.ok) {
+        throw await ApiError.fromResponse(res, 'Failed to fetch media tags')
+      }
       const json = await res.json()
       return json.data || []
     },
@@ -160,7 +158,9 @@ export function useMediaItemTags(mediaId: string | null) {
     queryFn: async () => {
       if (!mediaId) throw new Error('Media ID is required')
       const res = await fetch(`/api/v1/media/${mediaId}/tags`)
-      if (!res.ok) throw new Error('Failed to fetch media tags')
+      if (!res.ok) {
+        throw await ApiError.fromResponse(res, 'Failed to fetch media tags')
+      }
       const json = await res.json()
       return json.data || []
     },
@@ -181,7 +181,9 @@ export function useAddMediaTag() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tagId }),
       })
-      if (!res.ok) throw new Error('Failed to add tag')
+      if (!res.ok) {
+        throw await ApiError.fromResponse(res, 'Failed to add tag')
+      }
       const json = await res.json()
       return json.data || []
     },
@@ -207,7 +209,9 @@ export function useCreateMediaTag() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),
       })
-      if (!res.ok) throw new Error('Failed to create tag')
+      if (!res.ok) {
+        throw await ApiError.fromResponse(res, 'Failed to create tag')
+      }
       const json = await res.json()
       return json.data
     },
@@ -228,7 +232,9 @@ export function useRemoveMediaTag() {
       const res = await fetch(`/api/v1/media/${mediaId}/tags?tagId=${tagId}`, {
         method: 'DELETE',
       })
-      if (!res.ok) throw new Error('Failed to remove tag')
+      if (!res.ok) {
+        throw await ApiError.fromResponse(res, 'Failed to remove tag')
+      }
     },
     onSuccess: (_, { mediaId }) => {
       queryClient.invalidateQueries({ queryKey: [MEDIA_TAGS_QUERY_KEY, 'item', mediaId] })

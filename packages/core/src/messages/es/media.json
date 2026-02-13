@@ -110,6 +110,7 @@
   },
   "actions": {
     "edit": "Editar",
+    "viewDetails": "Ver Detalles",
     "delete": "Eliminar",
     "select": "Seleccionar",
     "cancel": "Cancelar",

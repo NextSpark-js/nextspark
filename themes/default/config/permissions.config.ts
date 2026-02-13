@@ -200,11 +200,25 @@ export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
 
     // MEDIA MANAGEMENT
     {
+      action: 'media.read',
+      label: 'View Media',
+      description: 'Can browse and view media files in the library',
+      category: 'Media',
+      roles: ['owner', 'admin', 'editor', 'member', 'viewer'],
+    },
+    {
       action: 'media.upload',
       label: 'Upload Media',
       description: 'Can upload images, videos, and other media files',
       category: 'Media',
-      roles: ['owner', 'admin', 'editor', 'member'],
+      roles: ['owner', 'admin', 'editor'],
+    },
+    {
+      action: 'media.update',
+      label: 'Edit Media',
+      description: 'Can edit media metadata, tags, and captions',
+      category: 'Media',
+      roles: ['owner', 'admin', 'editor'],
     },
     {
       action: 'media.delete',

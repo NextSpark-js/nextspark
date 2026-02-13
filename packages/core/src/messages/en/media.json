@@ -110,6 +110,7 @@
   },
   "actions": {
     "edit": "Edit",
+    "viewDetails": "View Details",
     "delete": "Delete",
     "select": "Select",
     "cancel": "Cancel",
