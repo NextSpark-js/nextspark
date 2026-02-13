@@ -74,7 +74,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     if (teamResult instanceof Response) return teamResult
     const teamId = teamResult
 
-    // 3b. Check role-based permission
+    // 4. Check role-based permission
     if (!await checkPermission(authResult.user!.id, teamId, 'media.upload')) {
       return createApiError('Permission denied', 403, undefined, API_ERROR_CODES.PERMISSION_DENIED)
     }
