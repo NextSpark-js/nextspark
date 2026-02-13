@@ -16,9 +16,9 @@
  * - MEDIA_TEAM_006: DELETE cannot delete media from another team (403 - not a member)
  * - MEDIA_TEAM_007: GET by ID cannot view media from another team (403 - not a member)
  * - MEDIA_TEAM_008: Check duplicates only searches within active team
- * - MEDIA_TEAM_011: Search with non-member team returns 403
- * - MEDIA_TEAM_012: Pagination with non-member team returns 403
- * - MEDIA_TEAM_013: Type filtering with non-member team returns 403
+ * - MEDIA_TEAM_009: Search with non-member team returns 403
+ * - MEDIA_TEAM_010: Pagination with non-member team returns 403
+ * - MEDIA_TEAM_009: Type filtering with non-member team returns 403
  */
 
 /// <reference types="cypress" />
@@ -300,10 +300,10 @@ describe('Media API - Team Isolation', {
   })
 
   // ============================================
-  // MEDIA_TEAM_011: Search respects team isolation
+  // MEDIA_TEAM_009: Search respects team isolation
   // ============================================
   describe('Team Isolation - Search', () => {
-    it('MEDIA_TEAM_011: Should search within active team and reject non-member teams', () => {
+    it('MEDIA_TEAM_009: Should search within active team and reject non-member teams', () => {
       allure.severity('high')
 
       const searchTerm = 'sample'
@@ -333,10 +333,10 @@ describe('Media API - Team Isolation', {
   })
 
   // ============================================
-  // MEDIA_TEAM_012: Pagination reflects only active team
+  // MEDIA_TEAM_010: Pagination reflects only active team
   // ============================================
   describe('Team Isolation - Pagination', () => {
-    it('MEDIA_TEAM_012: Should paginate within member team and reject non-member teams', () => {
+    it('MEDIA_TEAM_010: Should paginate within member team and reject non-member teams', () => {
       allure.severity('medium')
 
       // Get total count for team A (user is a member)
@@ -364,10 +364,10 @@ describe('Media API - Team Isolation', {
   })
 
   // ============================================
-  // MEDIA_TEAM_013: Type filtering respects team isolation
+  // MEDIA_TEAM_011: Type filtering respects team isolation
   // ============================================
   describe('Team Isolation - Type Filtering', () => {
-    it('MEDIA_TEAM_013: Should filter by type within member team and reject non-member teams', () => {
+    it('MEDIA_TEAM_011: Should filter by type within member team and reject non-member teams', () => {
       allure.severity('medium')
 
       // Get images from team A (user is a member)

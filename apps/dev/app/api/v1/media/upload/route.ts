@@ -1,11 +1,10 @@
 import { NextRequest } from 'next/server'
 import { put } from '@vercel/blob'
-import { authenticateRequest, hasRequiredScope } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, hasRequiredScope, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { MEDIA_CONFIG } from '@nextsparkjs/core/lib/config/config-sync'
 import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
-import { TeamMemberService } from '@nextsparkjs/core/lib/services/team-member.service'
 import { extractImageDimensions } from '@nextsparkjs/core/lib/media/utils'
 import type { Media } from '@nextsparkjs/core/lib/media/types'
 import { writeFile, mkdir } from 'fs/promises'
@@ -68,23 +67,10 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
       return createApiError('Insufficient permissions - media:write scope required', 403)
     }
 
-    // 3. Get team context (x-team-id header or default team)
-    const teamId = request.headers.get('x-team-id')
-      || request.cookies.get('activeTeamId')?.value
-      || authResult.user!.defaultTeamId
-
-    if (!teamId) {
-      return createApiError(
-        'No team context available. Please provide x-team-id header or have a default team.',
-        400
-      )
-    }
-
-    // 4. Validate team membership
-    const isMember = await TeamMemberService.isMember(teamId, authResult.user!.id)
-    if (!isMember) {
-      return createApiError('Access denied: You are not a member of this team', 403)
-    }
+    // 3. Resolve and validate team context
+    const teamResult = await resolveTeamContext(request, authResult)
+    if (teamResult instanceof Response) return teamResult
+    const teamId = teamResult
 
     const formData = await request.formData()
     const files = formData.getAll('files') as File[]

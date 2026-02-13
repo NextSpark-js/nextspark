@@ -32,9 +32,17 @@ export class MediaService {
    * @example
    * const media = await MediaService.getById('media-123', 'user-456')
    */
-  static async getById(id: string, userId: string): Promise<Media | null> {
+  static async getById(id: string, userId: string, teamId?: string): Promise<Media | null> {
     if (!id?.trim()) throw new Error('Media ID is required')
     if (!userId?.trim()) throw new Error('User ID is required')
+
+    if (teamId) {
+      return queryOneWithRLS<Media>(
+        `SELECT * FROM "media" WHERE id = $1 AND "teamId" = $2 AND status = 'active'`,
+        [id, teamId],
+        userId
+      )
+    }
 
     return queryOneWithRLS<Media>(
       `SELECT * FROM "media" WHERE id = $1 AND status = 'active'`,
@@ -60,8 +68,18 @@ export class MediaService {
    *   orderDir: 'desc'
    * })
    */
-  static async list(userId: string, options: MediaListOptions = {}): Promise<MediaListResult> {
+  static async list(userId: string, teamIdOrOptions?: string | MediaListOptions, options?: MediaListOptions): Promise<MediaListResult> {
     if (!userId?.trim()) throw new Error('User ID is required')
+
+    // Support both signatures: list(userId, options) and list(userId, teamId, options)
+    let teamId: string | undefined
+    let resolvedOptions: MediaListOptions
+    if (typeof teamIdOrOptions === 'string') {
+      teamId = teamIdOrOptions
+      resolvedOptions = options || {}
+    } else {
+      resolvedOptions = teamIdOrOptions || {}
+    }
 
     const {
       limit = 20,
@@ -73,12 +91,19 @@ export class MediaService {
       status = 'active',
       tagIds,
       tagSlugs,
-    } = options
+    } = resolvedOptions
 
     // Build WHERE clause
     const conditions: string[] = ['m.status = $1']
     const params: unknown[] = [status]
     let paramIndex = 2
+
+    // Team isolation filter
+    if (teamId) {
+      conditions.push(`m."teamId" = $${paramIndex}`)
+      params.push(teamId)
+      paramIndex++
+    }
 
     if (type === 'image') {
       conditions.push(`m."mimeType" LIKE 'image/%'`)
@@ -164,17 +189,45 @@ export class MediaService {
    */
   static async findDuplicates(
     userId: string,
-    filename: string,
-    fileSize: number
+    teamIdOrFilename: string,
+    filenameOrFileSize: string | number,
+    fileSize?: number
   ): Promise<Media[]> {
     if (!userId?.trim()) throw new Error('User ID is required')
+
+    // Support both: findDuplicates(userId, filename, fileSize) and findDuplicates(userId, teamId, filename, fileSize)
+    let teamId: string | undefined
+    let resolvedFilename: string
+    let resolvedFileSize: number
+
+    if (typeof filenameOrFileSize === 'number') {
+      // Old signature: findDuplicates(userId, filename, fileSize)
+      resolvedFilename = teamIdOrFilename
+      resolvedFileSize = filenameOrFileSize
+    } else {
+      // New signature: findDuplicates(userId, teamId, filename, fileSize)
+      teamId = teamIdOrFilename
+      resolvedFilename = filenameOrFileSize
+      resolvedFileSize = fileSize!
+    }
+
+    if (teamId) {
+      return queryWithRLS<Media>(
+        `SELECT * FROM "media"
+         WHERE filename = $1 AND "fileSize" = $2 AND "teamId" = $3 AND status = 'active'
+         ORDER BY "createdAt" DESC
+         LIMIT 5`,
+        [resolvedFilename, resolvedFileSize, teamId],
+        userId
+      )
+    }
 
     return queryWithRLS<Media>(
       `SELECT * FROM "media"
        WHERE filename = $1 AND "fileSize" = $2 AND status = 'active'
        ORDER BY "createdAt" DESC
        LIMIT 5`,
-      [filename, fileSize],
+      [resolvedFilename, resolvedFileSize],
       userId
     )
   }
@@ -244,8 +297,9 @@ export class MediaService {
   static async update(
     id: string,
     userId: string,
-    data: UpdateMediaInput
-  ): Promise<Media> {
+    data: UpdateMediaInput,
+    teamId?: string
+  ): Promise<Media | null> {
     if (!id?.trim()) throw new Error('Media ID is required')
     if (!userId?.trim()) throw new Error('User ID is required')
 
@@ -271,17 +325,23 @@ export class MediaService {
     setClauses.push(`"updatedAt" = NOW()`)
     params.push(id)
 
+    let whereClause = `id = $${paramIndex} AND status = 'active'`
+    if (teamId) {
+      paramIndex++
+      params.push(teamId)
+      whereClause += ` AND "teamId" = $${paramIndex}`
+    }
+
     const result = await mutateWithRLS<Media>(
       `UPDATE "media"
        SET ${setClauses.join(', ')}
-       WHERE id = $${paramIndex} AND status = 'active'
+       WHERE ${whereClause}
        RETURNING *`,
       params,
       userId
     )
 
-    if (!result.rows[0]) throw new Error('Media not found or not authorized')
-    return result.rows[0]
+    return result.rows[0] || null
   }
 
   /**
@@ -294,9 +354,19 @@ export class MediaService {
    * @example
    * const deleted = await MediaService.softDelete('media-123', 'user-456')
    */
-  static async softDelete(id: string, userId: string): Promise<boolean> {
+  static async softDelete(id: string, userId: string, teamId?: string): Promise<boolean> {
     if (!id?.trim()) throw new Error('Media ID is required')
     if (!userId?.trim()) throw new Error('User ID is required')
+
+    if (teamId) {
+      const result = await mutateWithRLS(
+        `UPDATE "media" SET status = 'deleted', "updatedAt" = NOW()
+         WHERE id = $1 AND "teamId" = $2 AND status = 'active'`,
+        [id, teamId],
+        userId
+      )
+      return result.rowCount > 0
+    }
 
     const result = await mutateWithRLS(
       `UPDATE "media" SET status = 'deleted', "updatedAt" = NOW()
@@ -338,10 +408,12 @@ export class MediaService {
    * @param userId - User ID for RLS context
    * @returns Array of tags assigned to the media
    */
-  static async getMediaTags(mediaId: string, userId: string): Promise<MediaTag[]> {
+  static async getMediaTags(mediaId: string, userId: string, _teamId?: string): Promise<MediaTag[]> {
     if (!mediaId?.trim()) throw new Error('Media ID is required')
     if (!userId?.trim()) throw new Error('User ID is required')
 
+    // Note: teamId accepted for API consistency but not used in query.
+    // Media ownership is verified via getById() before calling this method.
     return queryWithRLS<MediaTag>(
       `SELECT t.id, t.type, t.slug, t.name, t.description, t.icon, t.color, t."order", t."isActive", t."createdAt", t."updatedAt"
        FROM "taxonomies" t

@@ -603,15 +603,14 @@ describe('MediaService', () => {
       ).rejects.toThrow('User ID is required')
     })
 
-    it('throws error when media not found', async () => {
+    it('returns null when media not found', async () => {
       mockMutateWithRLS.mockResolvedValue({
         rows: [],
         rowCount: 0,
       } as any)
 
-      await expect(
-        MediaService.update('non-existent', 'user-456', { alt: 'Test' })
-      ).rejects.toThrow('Media not found or not authorized')
+      const result = await MediaService.update('non-existent', 'user-456', { alt: 'Test' })
+      expect(result).toBeNull()
     })
 
     it('accepts null values to clear fields', async () => {

@@ -1,9 +1,8 @@
 import { NextRequest } from 'next/server'
-import { authenticateRequest, hasRequiredScope } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, hasRequiredScope, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
-import { TeamMemberService } from '@nextsparkjs/core/lib/services/team-member.service'
 import { updateMediaSchema } from '@nextsparkjs/core/lib/media/schemas'
 
 /**
@@ -30,24 +29,15 @@ export const GET = withRateLimitTier(async (
       return createApiError('Insufficient permissions', 403)
     }
 
-    // 3. Get team context
-    const teamId = request.headers.get('x-team-id')
-      || request.cookies.get('activeTeamId')?.value
-      || authResult.user!.defaultTeamId
-    if (!teamId) {
-      return createApiError('Team context required. Include x-team-id header.', 400)
-    }
+    // 3. Resolve and validate team context
+    const teamResult = await resolveTeamContext(request, authResult)
+    if (teamResult instanceof Response) return teamResult
+    const teamId = teamResult
 
-    // 4. Validate team membership
-    const isMember = await TeamMemberService.isMember(teamId, authResult.user!.id)
-    if (!isMember) {
-      return createApiError('Access denied: You are not a member of this team', 403)
-    }
-
-    // 5. Get media ID from params
+    // 4. Get media ID from params
     const { id } = await params
 
-    // 6. Fetch media with team isolation
+    // 5. Fetch media with team isolation
     const media = await MediaService.getById(id, authResult.user!.id, teamId)
 
     if (!media) {
@@ -90,24 +80,15 @@ export const PATCH = withRateLimitTier(async (
       return createApiError('Insufficient permissions', 403)
     }
 
-    // 3. Get team context
-    const teamId = request.headers.get('x-team-id')
-      || request.cookies.get('activeTeamId')?.value
-      || authResult.user!.defaultTeamId
-    if (!teamId) {
-      return createApiError('Team context required. Include x-team-id header.', 400)
-    }
+    // 3. Resolve and validate team context
+    const teamResult = await resolveTeamContext(request, authResult)
+    if (teamResult instanceof Response) return teamResult
+    const teamId = teamResult
 
-    // 4. Validate team membership
-    const isMember = await TeamMemberService.isMember(teamId, authResult.user!.id)
-    if (!isMember) {
-      return createApiError('Access denied: You are not a member of this team', 403)
-    }
-
-    // 5. Get media ID from params
+    // 4. Get media ID from params
     const { id } = await params
 
-    // 6. Parse and validate request body
+    // 5. Parse and validate request body
     const body = await request.json()
     const parsed = updateMediaSchema.safeParse(body)
 
@@ -159,24 +140,15 @@ export const DELETE = withRateLimitTier(async (
       return createApiError('Insufficient permissions', 403)
     }
 
-    // 3. Get team context
-    const teamId = request.headers.get('x-team-id')
-      || request.cookies.get('activeTeamId')?.value
-      || authResult.user!.defaultTeamId
-    if (!teamId) {
-      return createApiError('Team context required. Include x-team-id header.', 400)
-    }
+    // 3. Resolve and validate team context
+    const teamResult = await resolveTeamContext(request, authResult)
+    if (teamResult instanceof Response) return teamResult
+    const teamId = teamResult
 
-    // 4. Validate team membership
-    const isMember = await TeamMemberService.isMember(teamId, authResult.user!.id)
-    if (!isMember) {
-      return createApiError('Access denied: You are not a member of this team', 403)
-    }
-
-    // 5. Get media ID from params
+    // 4. Get media ID from params
     const { id } = await params
 
-    // 6. Soft delete media with team isolation
+    // 5. Soft delete media with team isolation
     const deleted = await MediaService.softDelete(id, authResult.user!.id, teamId)
 
     if (!deleted) {
