@@ -331,6 +331,97 @@ CORE_USERS = {
 | `team-tmt-001` | Everpoint Labs | Primary test team |
 | `team-tmt-002` | Ironvale Global | Secondary test team |
 
+## Registration Control
+
+Registration behavior is configurable at the theme level via `auth` in `app.config.ts`.
+
+### Registration Modes
+
+| Mode | Email Signup | Google OAuth Signup | Email Login | Google Login | Signup Page |
+|------|-------------|-------------------|-------------|-------------|-------------|
+| `open` (default) | Yes | Yes | Yes | Yes | Visible |
+| `domain-restricted` | No | Only allowed domains | Yes | Yes | Hidden |
+| `closed` | No | No | Yes | No | Hidden |
+| `invitation-only` | Via invite | Via invite | Yes | Yes | Invite only |
+
+### Theme Configuration
+
+```typescript
+// contents/themes/my-theme/config/app.config.ts
+
+// Option 1: Open registration (default, no config needed)
+auth: {
+  registration: { mode: 'open' },
+}
+
+// Option 2: Only Google OAuth for specific domains
+auth: {
+  registration: {
+    mode: 'domain-restricted',
+    allowedDomains: ['aprende.com', 'mycompany.com'],
+  },
+}
+
+// Option 3: No public registration (manual user creation only)
+auth: {
+  registration: { mode: 'closed' },
+  providers: { google: { enabled: false } },
+}
+
+// Option 4: Invitation-only (integrates with single-tenant teams mode)
+auth: {
+  registration: { mode: 'invitation-only' },
+}
+```
+
+### Types
+
+```typescript
+// packages/core/src/lib/config/types.ts
+type RegistrationMode = 'open' | 'domain-restricted' | 'closed' | 'invitation-only'
+
+interface AuthConfig {
+  registration: {
+    mode: RegistrationMode
+    allowedDomains?: string[]  // For 'domain-restricted' mode
+  }
+  providers?: {
+    google?: { enabled?: boolean }
+  }
+}
+```
+
+### Helper Functions
+
+```typescript
+import {
+  isRegistrationOpen,
+  isDomainAllowed,
+  isGoogleAuthEnabled,
+  shouldBlockSignup,
+  getPublicAuthConfig,
+} from '@/core/lib/auth/registration-helpers'
+```
+
+### Enforcement Points
+
+1. **Route handler** (`app/api/auth/[...all]/route.ts`): Blocks email signup for `closed` and `domain-restricted` modes
+2. **Database hook** (`auth.ts` → `databaseHooks.user.create.before`): Validates email domain for `domain-restricted` mode on OAuth
+3. **Signup page** (`app/(auth)/signup/page.tsx`): Redirects to `/login` for `closed` and `domain-restricted`
+4. **LoginForm**: Hides Google OAuth button and signup link based on mode
+5. **SignupForm**: Hides Google button when disabled
+
+### Client-Side Config
+
+Use `PUBLIC_AUTH_CONFIG` (from `config-sync.ts`) in client components. This strips `allowedDomains` for security.
+
+```typescript
+import { PUBLIC_AUTH_CONFIG } from '@/core/lib/config/config-sync'
+
+// PUBLIC_AUTH_CONFIG.registration.mode → 'open' | 'closed' | etc.
+// PUBLIC_AUTH_CONFIG.providers.google.enabled → boolean
+```
+
 ## Authentication Flows
 
 ### Email/Password Registration
@@ -506,6 +597,8 @@ export default async function DashboardPage() {
 | `INVALID_API_KEY` | 401 | API key invalid or expired |
 | `INVALID_CREDENTIALS` | 401 | Wrong email/password |
 | `EMAIL_NOT_VERIFIED` | 401 | User hasn't verified email |
+| `REGISTRATION_CLOSED` | 403 | Registration disabled (closed or domain-restricted) |
+| `SIGNUP_RESTRICTED` | 403 | Invitation-only / single-tenant mode |
 | `INSUFFICIENT_PERMISSIONS` | 403 | User lacks required scope |
 | `TEAM_CONTEXT_REQUIRED` | 400 | Missing x-team-id header |
 | `SESSION_EXPIRED` | 401 | Session no longer valid |

@@ -1,8 +1,9 @@
 import { auth } from "@nextsparkjs/core/lib/auth";
 import { toNextJsHandler } from "better-auth/next-js";
 import { NextRequest, NextResponse } from "next/server";
-import { TEAMS_CONFIG } from "@nextsparkjs/core/lib/config";
+import { TEAMS_CONFIG, AUTH_CONFIG } from "@nextsparkjs/core/lib/config";
 import { isPublicSignupRestricted } from "@nextsparkjs/core/lib/teams/helpers";
+import { shouldBlockSignup, isDomainAllowed } from "@nextsparkjs/core/lib/auth/registration-helpers";
 import { TeamService } from "@nextsparkjs/core/lib/services";
 import { wrapAuthHandlerWithCors, handleCorsPreflightRequest, addCorsHeaders } from "@nextsparkjs/core/lib/api/helpers";
 
@@ -41,25 +42,47 @@ export async function GET(req: NextRequest, context: { params: Promise<{ all: st
   return wrapAuthHandlerWithCors(() => handlers.GET(req), req);
 }
 
-// Intercept signup requests to validate single-tenant mode
+// Intercept signup requests to validate registration mode
 export async function POST(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
-  // Check if this is a signup request (email or OAuth)
-  const isSignupRequest =
-    pathname === '/api/auth/sign-up/email' ||
-    pathname.includes('/api/auth/callback/'); // OAuth callbacks can create users
+  // Determine request type
+  const isEmailSignup = pathname === '/api/auth/sign-up/email';
+  const isOAuthCallback = pathname.includes('/api/auth/callback/');
+  const isSignupRequest = isEmailSignup || isOAuthCallback;
 
   if (isSignupRequest) {
+    const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open';
     const teamsMode = TEAMS_CONFIG.mode;
 
-    // In single-tenant mode, block public signup if team already exists
-    if (isPublicSignupRestricted(teamsMode)) {
+    // --- Registration mode enforcement ---
+
+    // 1. Closed mode: block ALL signup attempts
+    if (shouldBlockSignup(registrationMode, isOAuthCallback)) {
+      const errorResponse = NextResponse.json(
+        {
+          error: 'Registration is closed',
+          message: 'Public registration is not available. Please contact an administrator.',
+          code: 'REGISTRATION_CLOSED',
+        },
+        { status: 403 }
+      );
+      return await addCorsHeaders(errorResponse, req);
+    }
+
+    // 2. Domain-restricted mode: validate email domain on OAuth callback
+    if (registrationMode === 'domain-restricted' && isOAuthCallback) {
+      // We can't read the email from the OAuth callback directly here
+      // because Better Auth handles the token exchange internally.
+      // Domain validation for OAuth is handled in auth.ts databaseHooks (user.create.before)
+      // See Phase 3b below - we add a hook in auth.ts instead.
+    }
+
+    // 3. Invitation-only mode OR single-tenant teams mode: existing behavior
+    if (registrationMode === 'invitation-only' || isPublicSignupRestricted(teamsMode)) {
       const teamExists = await TeamService.hasGlobal();
 
       if (teamExists) {
-        // Block public signup - users must be invited
-        // Add CORS headers so mobile apps can read the error message
         const errorResponse = NextResponse.json(
           {
             error: 'Registration is closed',

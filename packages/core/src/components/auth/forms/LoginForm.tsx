@@ -22,7 +22,7 @@ import { sel } from '../../../lib/test'
 import { useTranslations } from 'next-intl'
 import { AuthTranslationPreloader } from '../../../lib/i18n/AuthTranslationPreloader'
 import { DevKeyring } from '../DevKeyring'
-import { DEV_CONFIG } from '../../../lib/config/config-sync'
+import { DEV_CONFIG, PUBLIC_AUTH_CONFIG } from '../../../lib/config/config-sync'
 import type { AuthProviderWithNull, AuthErrorCode, AuthError } from '../../../types/auth'
 
 /**
@@ -98,10 +98,16 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>
 
 export function LoginForm() {
+  // Auth config for conditional rendering
+  const registrationMode = PUBLIC_AUTH_CONFIG.registration.mode
+  const googleEnabled = PUBLIC_AUTH_CONFIG.providers.google.enabled
+  const signupVisible = registrationMode === 'open'
+
   const [loadingProvider, setLoadingProvider] = useState<AuthProviderWithNull>(null)
   const [error, setError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState('')
-  const [showEmailForm, setShowEmailForm] = useState(false)
+  // Show email form by default when Google is disabled
+  const [showEmailForm, setShowEmailForm] = useState(!googleEnabled)
   const isProcessingRef = useRef(false)
   const { signIn, googleSignIn } = useAuth()
   const { lastMethod, isReady } = useLastAuthMethod()
@@ -223,47 +229,51 @@ export function LoginForm() {
             </Alert>
           )}
 
-          {/* Google Sign In - Primary Option */}
-          {isReady && lastMethod === 'google' ? (
-            <LastUsedBadge text={t('login.form.lastUsed')}>
-              <Button
-                type="button"
-                size="lg"
-                onClick={handleGoogleSignIn}
-                disabled={!!loadingProvider}
-                className="w-full mb-6"
-                aria-label={t('login.form.continueWithGoogleAria')}
-                                data-cy={sel('auth.login.googleSignin')}
-              >
-                {loadingProvider === 'google' ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                ) : (
-                  <GoogleIcon className="mr-2" data-cy="google-icon" />
-                )}
-                {t('login.form.continueWithGoogle')}
-              </Button>
-            </LastUsedBadge>
-          ) : (
-            <Button
-              type="button"
-              size="lg"
-              onClick={handleGoogleSignIn}
-              disabled={!!loadingProvider}
-              className="w-full mb-6"
-              aria-label={t('login.form.continueWithGoogleAria')}
-                            data-cy={sel('auth.login.googleSignin')}
-            >
-              {loadingProvider === 'google' ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+          {/* Google Sign In - Primary Option (hidden when Google is disabled) */}
+          {googleEnabled && (
+            <>
+              {isReady && lastMethod === 'google' ? (
+                <LastUsedBadge text={t('login.form.lastUsed')}>
+                  <Button
+                    type="button"
+                    size="lg"
+                    onClick={handleGoogleSignIn}
+                    disabled={!!loadingProvider}
+                    className="w-full mb-6"
+                    aria-label={t('login.form.continueWithGoogleAria')}
+                                        data-cy={sel('auth.login.googleSignin')}
+                  >
+                    {loadingProvider === 'google' ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <GoogleIcon className="mr-2" data-cy="google-icon" />
+                    )}
+                    {t('login.form.continueWithGoogle')}
+                  </Button>
+                </LastUsedBadge>
               ) : (
-                <GoogleIcon className="mr-2" data-cy="google-icon" />
+                <Button
+                  type="button"
+                  size="lg"
+                  onClick={handleGoogleSignIn}
+                  disabled={!!loadingProvider}
+                  className="w-full mb-6"
+                  aria-label={t('login.form.continueWithGoogleAria')}
+                                    data-cy={sel('auth.login.googleSignin')}
+                >
+                  {loadingProvider === 'google' ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <GoogleIcon className="mr-2" data-cy="google-icon" />
+                  )}
+                  {t('login.form.continueWithGoogle')}
+                </Button>
               )}
-              {t('login.form.continueWithGoogle')}
-            </Button>
+            </>
           )}
 
-          {/* Email Login Link */}
-          {!showEmailForm && (
+          {/* Email Login Link (hidden when Google is disabled since email form shows by default) */}
+          {!showEmailForm && googleEnabled && (
             <div className="text-center">
               {isReady && lastMethod === 'email' ? (
                 <LastUsedBadge text={t('login.form.lastUsed')}>
@@ -438,35 +448,39 @@ export function LoginForm() {
               {t('login.form.submitHelp')}
             </div>
 
-                <div className="text-center mt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowEmailForm(false)}
-                    className="text-sm text-muted-foreground hover:text-primary focus:outline-none focus:ring-2 focus:ring-accent"
-                                        data-cy={sel('auth.login.hideEmail')}
-                  >
-                    {t('login.form.backToGoogle', { defaultValue: 'Back to main options' })}
-                  </button>
-                </div>
+                {googleEnabled && (
+                  <div className="text-center mt-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowEmailForm(false)}
+                      className="text-sm text-muted-foreground hover:text-primary focus:outline-none focus:ring-2 focus:ring-accent"
+                                          data-cy={sel('auth.login.hideEmail')}
+                    >
+                      {t('login.form.backToGoogle', { defaultValue: 'Back to main options' })}
+                    </button>
+                  </div>
+                )}
               </form>
             </>
           )}
         </CardContent>
-        <CardFooter
-                    data-cy={sel('auth.login.footer')}
-        >
-          <p className="text-sm text-muted-foreground text-center w-full">
-            {t('login.footer.noAccount')}{' '}
-            <Link 
-              href="/signup" 
-              className="text-primary hover:underline font-medium focus:outline-none focus:ring-2 focus:ring-accent"
-              aria-label={t('login.footer.signUpAria')}
-                            data-cy={sel('auth.login.signupLink')}
-            >
-              {t('login.footer.signUp')}
-            </Link>
-          </p>
-        </CardFooter>
+        {signupVisible && (
+          <CardFooter
+                      data-cy={sel('auth.login.footer')}
+          >
+            <p className="text-sm text-muted-foreground text-center w-full">
+              {t('login.footer.noAccount')}{' '}
+              <Link
+                href="/signup"
+                className="text-primary hover:underline font-medium focus:outline-none focus:ring-2 focus:ring-accent"
+                aria-label={t('login.footer.signUpAria')}
+                              data-cy={sel('auth.login.signupLink')}
+              >
+                {t('login.footer.signUp')}
+              </Link>
+            </p>
+          </CardFooter>
+        )}
       </Card>
 
       {/* DevKeyring - Development quick login (only if theme defines it in dev.config.ts) */}

@@ -370,6 +370,79 @@ export interface MediaConfig {
 }
 
 /**
+ * Registration Mode
+ *
+ * Controls how new users can register in the application.
+ *
+ * - 'open': Anyone can register via email+password and Google OAuth (default)
+ * - 'domain-restricted': Only Google OAuth for specific email domains. No email+password signup.
+ *   Users with allowed domains are auto-created on first Google sign-in.
+ * - 'closed': No public registration at all. Users must be created manually in the DB.
+ *   Only email+password login for existing users. Google OAuth disabled.
+ * - 'invitation-only': Registration only via invitation link. Integrates with single-tenant mode.
+ */
+export type RegistrationMode = 'open' | 'domain-restricted' | 'closed' | 'invitation-only'
+
+/**
+ * Auth Registration Configuration
+ */
+export interface AuthRegistrationConfig {
+  /** Registration mode */
+  mode: RegistrationMode
+
+  /**
+   * Allowed email domains for 'domain-restricted' mode.
+   * Only the domain part without @. e.g., ['aprende.com', 'mycompany.com']
+   * Ignored for other modes.
+   */
+  allowedDomains?: string[]
+}
+
+/**
+ * Auth Providers Configuration
+ */
+export interface AuthProvidersConfig {
+  google?: {
+    /**
+     * Whether Google OAuth button is shown in login/signup.
+     * Defaults to true when GOOGLE_CLIENT_ID env var is set.
+     */
+    enabled?: boolean
+  }
+}
+
+/**
+ * Auth Configuration
+ *
+ * Controls authentication behavior including registration modes
+ * and provider visibility. Configured at theme level.
+ */
+export interface AuthConfig {
+  /** Registration settings */
+  registration: AuthRegistrationConfig
+
+  /** OAuth provider settings */
+  providers?: AuthProvidersConfig
+}
+
+/**
+ * Public Auth Config
+ *
+ * Subset of AuthConfig safe to expose to client components.
+ * Does NOT include allowedDomains or other sensitive data.
+ */
+export interface PublicAuthConfig {
+  registration: {
+    mode: RegistrationMode
+  }
+  providers: {
+    google: {
+      enabled: boolean
+    }
+  }
+}
+
+/**
  * Complete Application Configuration
  *
  * Root configuration object structure.
@@ -426,6 +499,9 @@ export interface AppConfig {
 
   /** Media library configuration */
   media?: MediaConfig
+
+  /** Authentication and registration configuration */
+  auth?: AuthConfig
 
   // Allow additional properties
   [key: string]: any

@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
+import { redirect } from 'next/navigation'
 import { SignupForm } from '@nextsparkjs/core/components/auth/forms/SignupForm'
 import { getTemplateOrDefault, getMetadataOrDefault } from '@nextsparkjs/core/lib/template-resolver'
+import { AUTH_CONFIG } from '@nextsparkjs/core/lib/config'
 
 const defaultMetadata: Metadata = {
   title: 'Create Account',
@@ -13,6 +15,14 @@ export const metadata: Metadata = getMetadataOrDefault(
 )
 
 function SignupPage() {
+  const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open'
+
+  // In closed or domain-restricted modes, redirect to login.
+  // Invitation links use /accept-invite/[token] route, not /signup.
+  if (registrationMode === 'closed' || registrationMode === 'domain-restricted') {
+    redirect('/login')
+  }
+
   return <SignupForm />
 }
 
