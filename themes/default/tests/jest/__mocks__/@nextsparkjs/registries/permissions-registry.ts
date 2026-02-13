@@ -73,11 +73,12 @@ export const ALL_PERMISSIONS: Permission[] = ALL_RESOLVED_PERMISSIONS.map(p => p
 
 export const ALL_PERMISSIONS_SET = new Set(ALL_PERMISSIONS)
 
-export const AVAILABLE_ROLES: readonly string[] = ['owner', 'admin', 'member', 'viewer']
+export const AVAILABLE_ROLES: readonly string[] = ['owner', 'admin', 'editor', 'member', 'viewer']
 
 export const ROLE_HIERARCHY: Record<string, number> = {
   owner: 100,
   admin: 50,
+  editor: 30,
   member: 10,
   viewer: 1,
 }
@@ -85,6 +86,7 @@ export const ROLE_HIERARCHY: Record<string, number> = {
 export const ROLE_DISPLAY_NAMES: Record<string, string> = {
   owner: 'common.teamRoles.owner',
   admin: 'common.teamRoles.admin',
+  editor: 'common.teamRoles.editor',
   member: 'common.teamRoles.member',
   viewer: 'common.teamRoles.viewer',
 }
@@ -92,20 +94,22 @@ export const ROLE_DISPLAY_NAMES: Record<string, string> = {
 export const ROLE_DESCRIPTIONS: Record<string, string> = {
   owner: 'Full team control, cannot be removed',
   admin: 'Manage team members and settings',
+  editor: 'Can edit content but not manage team',
   member: 'Standard team access',
   viewer: 'Read-only access to team resources',
 }
 
 export const CUSTOM_ROLES: RolesConfig = {
-  additionalRoles: [],
-  hierarchy: {},
-  displayNames: {},
-  descriptions: {},
+  additionalRoles: ['editor'],
+  hierarchy: { editor: 30 },
+  displayNames: { editor: 'common.teamRoles.editor' },
+  descriptions: { editor: 'Can edit content but not manage team' },
 }
 
 export const PERMISSIONS_BY_ROLE: Record<string, Set<Permission>> = {
   owner: new Set(ALL_PERMISSIONS),
   admin: new Set(['tasks.create', 'tasks.read', 'tasks.update', 'tasks.delete']),
+  editor: new Set(['tasks.create', 'tasks.read', 'tasks.update']),
   member: new Set(['tasks.create', 'tasks.read', 'tasks.update']),
   viewer: new Set(['tasks.read']),
 }
@@ -113,6 +117,7 @@ export const PERMISSIONS_BY_ROLE: Record<string, Set<Permission>> = {
 export const ROLE_PERMISSIONS_ARRAY: Record<string, Permission[]> = {
   owner: [...ALL_PERMISSIONS],
   admin: ['tasks.create', 'tasks.read', 'tasks.update', 'tasks.delete'],
+  editor: ['tasks.create', 'tasks.read', 'tasks.update'],
   member: ['tasks.create', 'tasks.read', 'tasks.update'],
   viewer: ['tasks.read'],
 }
