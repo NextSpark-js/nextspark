@@ -221,13 +221,6 @@ export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
       roles: ['owner', 'admin', 'editor'],
     },
     {
-      action: 'media.update',
-      label: 'Edit Media',
-      description: 'Can edit media metadata, tags, and captions',
-      category: 'Media',
-      roles: ['owner', 'admin', 'editor', 'member'],
-    },
-    {
       action: 'media.delete',
       label: 'Delete Media',
       description: 'Can permanently delete media files',

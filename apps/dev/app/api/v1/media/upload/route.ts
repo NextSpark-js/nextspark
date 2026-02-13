@@ -251,6 +251,16 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
       return createApiError('Insufficient permissions', 403, undefined, API_ERROR_CODES.INSUFFICIENT_SCOPE)
     }
 
+    // 3. Resolve and validate team context
+    const teamResult = await resolveTeamContext(request, authResult)
+    if (teamResult instanceof Response) return teamResult
+    const teamId = teamResult
+
+    // 4. Check role-based permission
+    if (!await checkPermission(authResult.user!.id, teamId, 'media.read')) {
+      return createApiError('Permission denied', 403, undefined, API_ERROR_CODES.PERMISSION_DENIED)
+    }
+
     const useVercelBlob = isVercelBlobConfigured()
 
     // This could be used for cleanup or management
