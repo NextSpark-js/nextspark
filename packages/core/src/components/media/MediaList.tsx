@@ -36,7 +36,7 @@ interface MediaListProps {
   items: Media[]
   isLoading: boolean
   selectedIds: Set<string>
-  onSelect: (media: Media, options?: { shiftKey?: boolean }) => void
+  onSelect?: (media: Media, options?: { shiftKey?: boolean }) => void
   onEdit?: (media: Media) => void
   onDelete?: (media: Media) => void
   mode?: 'single' | 'multiple'
@@ -168,9 +168,9 @@ export function MediaList({
                   'cursor-pointer transition-colors hover:bg-muted/50',
                   isSelected && 'bg-muted'
                 )}
-                onClick={() => onEdit ? onEdit(media) : onSelect(media)}
+                onClick={() => onEdit ? onEdit(media) : onSelect?.(media)}
               >
-                {mode === 'multiple' && (
+                {mode === 'multiple' && onSelect && (
                   <TableCell onClick={(e) => {
                     e.stopPropagation()
                     onSelect(media, { shiftKey: e.shiftKey })

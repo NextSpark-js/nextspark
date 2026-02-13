@@ -29,7 +29,7 @@ import type { Media } from '../../lib/media/types'
 interface MediaCardProps {
   media: Media
   isSelected: boolean
-  onSelect: (media: Media, options?: { shiftKey?: boolean }) => void
+  onSelect?: (media: Media, options?: { shiftKey?: boolean }) => void
   onEdit?: (media: Media) => void
   onDelete?: (media: Media) => void
   mode?: 'single' | 'multiple'
@@ -49,7 +49,7 @@ export const MediaCard = memo(function MediaCard({
   const isVideo = media.mimeType.startsWith('video/')
 
   const handleCardClick = useCallback((e: MouseEvent) => {
-    if (e.shiftKey && mode === 'multiple') {
+    if (e.shiftKey && mode === 'multiple' && onSelect) {
       // Shift+click = range selection (Google Photos pattern)
       onSelect(media, { shiftKey: true })
     } else if (onEdit) {
@@ -57,13 +57,13 @@ export const MediaCard = memo(function MediaCard({
       onEdit(media)
     } else {
       // No onEdit handler = picker mode, click selects
-      onSelect(media)
+      onSelect?.(media)
     }
   }, [media, onSelect, onEdit, mode])
 
   const handleCheckboxClick = useCallback((e: MouseEvent) => {
     e.stopPropagation()
-    onSelect(media, { shiftKey: e.shiftKey })
+    onSelect?.(media, { shiftKey: e.shiftKey })
   }, [media, onSelect])
 
   const handleMenuClick = useCallback((e: MouseEvent) => {
