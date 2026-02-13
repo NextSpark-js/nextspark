@@ -421,6 +421,7 @@ function DefaultMediaDashboardPage() {
             onEdit={isBulkDeleting ? undefined : setEditingMedia}
             onDelete={isBulkDeleting || !canDelete ? undefined : setDeletingMedia}
             mode={canDelete ? 'multiple' : 'single'}
+            readOnly={!canUpdate}
             columns={columns}
           />
         ) : (
@@ -432,6 +433,7 @@ function DefaultMediaDashboardPage() {
             onEdit={isBulkDeleting ? undefined : setEditingMedia}
             onDelete={isBulkDeleting || !canDelete ? undefined : setDeletingMedia}
             mode={canDelete ? 'multiple' : 'single'}
+            readOnly={!canUpdate}
           />
         )}
       </div>

@@ -12,7 +12,7 @@
 
 import { memo, useCallback, type MouseEvent } from 'react'
 import { useTranslations } from 'next-intl'
-import { ImageIcon, VideoIcon, FileIcon, MoreVerticalIcon, Edit2Icon, Trash2Icon } from 'lucide-react'
+import { ImageIcon, VideoIcon, FileIcon, MoreVerticalIcon, Edit2Icon, EyeIcon, Trash2Icon } from 'lucide-react'
 import { Card, CardContent } from '../ui/card'
 import { Button } from '../ui/button'
 import { Checkbox } from '../ui/checkbox'
@@ -33,6 +33,7 @@ interface MediaCardProps {
   onEdit?: (media: Media) => void
   onDelete?: (media: Media) => void
   mode?: 'single' | 'multiple'
+  readOnly?: boolean
 }
 
 export const MediaCard = memo(function MediaCard({
@@ -42,6 +43,7 @@ export const MediaCard = memo(function MediaCard({
   onEdit,
   onDelete,
   mode = 'single',
+  readOnly = false,
 }: MediaCardProps) {
   const t = useTranslations('media')
 
@@ -160,8 +162,17 @@ export const MediaCard = memo(function MediaCard({
                       data-cy={sel('media.grid.menuEdit', { id: media.id })}
                       onClick={handleEditClick}
                     >
-                      <Edit2Icon className="mr-2 h-4 w-4" />
-                      {t('actions.edit')}
+                      {readOnly ? (
+                        <>
+                          <EyeIcon className="mr-2 h-4 w-4" />
+                          {t('actions.viewDetails')}
+                        </>
+                      ) : (
+                        <>
+                          <Edit2Icon className="mr-2 h-4 w-4" />
+                          {t('actions.edit')}
+                        </>
+                      )}
                     </DropdownMenuItem>
                   )}
                   {onDelete && (
