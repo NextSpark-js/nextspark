@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { authenticateRequest, hasRequiredScope, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
+import { API_ERROR_CODES } from '@nextsparkjs/core/lib/api/api-error'
 import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
@@ -33,7 +34,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
 
     // 2. Check permissions
     if (!hasRequiredScope(authResult, 'media:read')) {
-      return createApiError('Insufficient permissions - media:read scope required', 403)
+      return createApiError('Insufficient permissions', 403, undefined, API_ERROR_CODES.INSUFFICIENT_SCOPE)
     }
 
     // 3. Resolve and validate team context
@@ -43,7 +44,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
 
     // 3b. Check role-based permission
     if (!await checkPermission(authResult.user!.id, teamId, 'media.read')) {
-      return createApiError('Permission denied', 403)
+      return createApiError('Permission denied', 403, undefined, API_ERROR_CODES.PERMISSION_DENIED)
     }
 
     // 4. Parse and validate query parameters

@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { authenticateRequest, hasRequiredScope, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
+import { API_ERROR_CODES } from '@nextsparkjs/core/lib/api/api-error'
 import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
@@ -30,7 +31,7 @@ export const GET = withRateLimitTier(async (
     }
 
     if (!hasRequiredScope(authResult, 'media:read')) {
-      return createApiError('Insufficient permissions', 403)
+      return createApiError('Insufficient permissions', 403, undefined, API_ERROR_CODES.INSUFFICIENT_SCOPE)
     }
 
     const teamResult = await resolveTeamContext(request, authResult)
@@ -39,7 +40,7 @@ export const GET = withRateLimitTier(async (
 
     // Check role-based permission
     if (!await checkPermission(authResult.user!.id, teamId, 'media.read')) {
-      return createApiError('Permission denied', 403)
+      return createApiError('Permission denied', 403, undefined, API_ERROR_CODES.PERMISSION_DENIED)
     }
 
     const { id } = await params
@@ -75,7 +76,7 @@ export const POST = withRateLimitTier(async (
     }
 
     if (!hasRequiredScope(authResult, 'media:write')) {
-      return createApiError('Insufficient permissions', 403)
+      return createApiError('Insufficient permissions', 403, undefined, API_ERROR_CODES.INSUFFICIENT_SCOPE)
     }
 
     const teamResult = await resolveTeamContext(request, authResult)
@@ -84,7 +85,7 @@ export const POST = withRateLimitTier(async (
 
     // Check role-based permission
     if (!await checkPermission(authResult.user!.id, teamId, 'media.update')) {
-      return createApiError('Permission denied', 403)
+      return createApiError('Permission denied', 403, undefined, API_ERROR_CODES.PERMISSION_DENIED)
     }
 
     const { id } = await params
@@ -129,7 +130,7 @@ export const PUT = withRateLimitTier(async (
     }
 
     if (!hasRequiredScope(authResult, 'media:write')) {
-      return createApiError('Insufficient permissions', 403)
+      return createApiError('Insufficient permissions', 403, undefined, API_ERROR_CODES.INSUFFICIENT_SCOPE)
     }
 
     const teamResult = await resolveTeamContext(request, authResult)
@@ -138,7 +139,7 @@ export const PUT = withRateLimitTier(async (
 
     // Check role-based permission
     if (!await checkPermission(authResult.user!.id, teamId, 'media.update')) {
-      return createApiError('Permission denied', 403)
+      return createApiError('Permission denied', 403, undefined, API_ERROR_CODES.PERMISSION_DENIED)
     }
 
     const { id } = await params
@@ -183,7 +184,7 @@ export const DELETE = withRateLimitTier(async (
     }
 
     if (!hasRequiredScope(authResult, 'media:write')) {
-      return createApiError('Insufficient permissions', 403)
+      return createApiError('Insufficient permissions', 403, undefined, API_ERROR_CODES.INSUFFICIENT_SCOPE)
     }
 
     const teamResult = await resolveTeamContext(request, authResult)
@@ -192,7 +193,7 @@ export const DELETE = withRateLimitTier(async (
 
     // Check role-based permission (removing a tag is an update action, not media deletion)
     if (!await checkPermission(authResult.user!.id, teamId, 'media.update')) {
-      return createApiError('Permission denied', 403)
+      return createApiError('Permission denied', 403, undefined, API_ERROR_CODES.PERMISSION_DENIED)
     }
 
     const { id } = await params

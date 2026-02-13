@@ -1,10 +1,24 @@
 /**
+ * API Error Codes
+ *
+ * Standardized error codes used across API responses.
+ * Backend sets these in createApiError(), frontend detects them in ApiError.
+ */
+export const API_ERROR_CODES = {
+  /** Role-based permission check failed (checkPermission) */
+  PERMISSION_DENIED: 'PERMISSION_DENIED',
+  /** API key scope check failed (hasRequiredScope) */
+  INSUFFICIENT_SCOPE: 'INSUFFICIENT_SCOPE',
+} as const
+
+export type ApiErrorCode = typeof API_ERROR_CODES[keyof typeof API_ERROR_CODES]
+
+/**
  * API Error Class
  *
  * Custom error class that preserves API response metadata like error codes.
  * Used for proper error handling in TanStack Query mutations.
  */
-
 export class ApiError extends Error {
   code?: string
   status?: number
@@ -27,7 +41,7 @@ export class ApiError extends Error {
    * Check if this is a permission denied error
    */
   isPermissionDenied(): boolean {
-    return this.code === 'PERMISSION_DENIED' && this.status === 403
+    return this.code === API_ERROR_CODES.PERMISSION_DENIED && this.status === 403
   }
 
   /**

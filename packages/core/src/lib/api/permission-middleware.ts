@@ -8,6 +8,7 @@
 import { checkPermission } from '../permissions/check'
 import type { Permission } from '../permissions/types'
 import { NextResponse } from 'next/server'
+import { API_ERROR_CODES } from './api-error'
 
 /**
  * Map HTTP methods to entity actions
@@ -113,7 +114,7 @@ export async function checkEntityPermission(
           success: false,
           error: {
             message: `Permission denied: You do not have permission to ${action} ${entitySlug}`,
-            code: 'PERMISSION_DENIED',
+            code: API_ERROR_CODES.PERMISSION_DENIED,
             details: {
               requiredPermission: permission,
               entity: entitySlug,
