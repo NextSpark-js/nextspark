@@ -1,6 +1,6 @@
 {
   "name": "@nextsparkjs/core",
-  "version": "0.1.0-beta.99",
+  "version": "0.1.0-beta.100",
   "description": "NextSpark - The complete SaaS framework for Next.js",
   "license": "MIT",
   "author": "NextSpark <hello@nextspark.dev>",
@@ -87,6 +87,10 @@
     "./lib/api": {
       "types": "./dist/lib/api/index.d.ts",
       "import": "./dist/lib/api/index.js"
+    },
+    "./lib/api/api-error": {
+      "types": "./dist/lib/api/api-error.d.ts",
+      "import": "./dist/lib/api/api-error.js"
     },
     "./lib/api/routes": {
       "types": "./dist/lib/api/routes/index.d.ts",
