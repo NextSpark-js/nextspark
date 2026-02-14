@@ -102,6 +102,9 @@ export function LoginForm() {
   const registrationMode = PUBLIC_AUTH_CONFIG.registration.mode
   const googleEnabled = PUBLIC_AUTH_CONFIG.providers.google.enabled
   const signupVisible = registrationMode === 'open'
+  // In dev mode with DevKeyring, always allow email login regardless of registration mode
+  const devKeyringActive = process.env.NODE_ENV !== 'production' && !!DEV_CONFIG?.devKeyring?.enabled
+  const emailLoginAllowed = registrationMode !== 'domain-restricted' || devKeyringActive
 
   const [loadingProvider, setLoadingProvider] = useState<AuthProviderWithNull>(null)
   const [error, setError] = useState<string | null>(null)
@@ -272,8 +275,8 @@ export function LoginForm() {
             </>
           )}
 
-          {/* Email Login Link (hidden when Google is disabled or in domain-restricted mode) */}
-          {!showEmailForm && googleEnabled && registrationMode !== 'domain-restricted' && (
+          {/* Email Login Link (hidden when Google is disabled or in domain-restricted mode, unless DevKeyring is active) */}
+          {!showEmailForm && googleEnabled && emailLoginAllowed && (
             <div className="text-center">
               {isReady && lastMethod === 'email' ? (
                 <LastUsedBadge text={t('login.form.lastUsed')}>
@@ -301,8 +304,8 @@ export function LoginForm() {
             </div>
           )}
 
-          {/* Email Form - Shown when requested (hidden in domain-restricted mode) */}
-          {showEmailForm && registrationMode !== 'domain-restricted' && (
+          {/* Email Form - Shown when requested (hidden in domain-restricted mode, unless DevKeyring is active) */}
+          {showEmailForm && emailLoginAllowed && (
             <>
               <div className="relative my-6">
                 <div className="absolute inset-0 flex items-center">
