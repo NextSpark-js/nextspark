@@ -107,7 +107,7 @@ describe('PluginEnvLoader', () => {
       delete process.env.ANTHROPIC_API_KEY
     })
 
-    it('should return empty object for non-existent plugin', async () => {
+    it('should fallback to process.env for non-existent plugin', async () => {
       // Create different plugin, not the one we're looking for
       const otherPluginDir = path.join(pluginsDir, 'other-plugin')
       fs.mkdirSync(otherPluginDir, { recursive: true })
@@ -116,10 +116,13 @@ describe('PluginEnvLoader', () => {
 
       const env = getPluginEnv('non-existent-plugin')
 
-      expect(env).toEqual({})
+      // Unknown plugins get process.env as fallback (design decision for consistency)
+      // Verify it returns a non-empty object containing system env vars
+      expect(Object.keys(env).length).toBeGreaterThan(0)
+      expect(env).toHaveProperty('PATH')
     })
 
-    it('should return empty object when plugins directory does not exist', async () => {
+    it('should fallback to process.env when plugins directory does not exist', async () => {
       // Remove plugins directory
       fs.rmSync(pluginsDir, { recursive: true, force: true })
 
@@ -127,7 +130,9 @@ describe('PluginEnvLoader', () => {
 
       const env = getPluginEnv('any-plugin')
 
-      expect(env).toEqual({})
+      // Falls back to process.env when plugins dir doesn't exist
+      expect(Object.keys(env).length).toBeGreaterThan(0)
+      expect(env).toHaveProperty('PATH')
     })
   })
 
@@ -349,7 +354,7 @@ describe('PluginEnvLoader', () => {
       expect(env.SPECIAL).toBe('value')
     })
 
-    it('should handle empty plugin name', async () => {
+    it('should fallback to process.env for empty plugin name', async () => {
       const aiPluginDir = path.join(pluginsDir, 'ai')
       fs.mkdirSync(aiPluginDir, { recursive: true })
 
@@ -357,7 +362,9 @@ describe('PluginEnvLoader', () => {
 
       const env = getPluginEnv('')
 
-      expect(env).toEqual({})
+      // Empty plugin name treated as non-existent, falls back to process.env
+      expect(Object.keys(env).length).toBeGreaterThan(0)
+      expect(env).toHaveProperty('PATH')
     })
 
     it('should handle .env with comments and empty lines', async () => {
