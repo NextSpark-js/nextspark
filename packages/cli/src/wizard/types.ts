@@ -41,10 +41,21 @@ export interface FeatureFlags {
 }
 
 /**
+ * Registration mode for the application
+ *
+ * Controls how new users can sign up:
+ * - 'open': Anyone can register (email+password and Google OAuth)
+ * - 'domain-restricted': Only Google OAuth for specific email domains
+ * - 'invitation-only': Registration only via invitation link
+ * - 'closed': No public registration. Users created manually, login only.
+ */
+export type RegistrationMode = 'open' | 'domain-restricted' | 'invitation-only' | 'closed'
+
+/**
  * Authentication configuration (Step 8)
- * Note: Only email/password and Google OAuth are currently supported
  */
 export interface AuthConfig {
+  registrationMode: RegistrationMode
   emailPassword: boolean
   googleOAuth: boolean
   emailVerification: boolean

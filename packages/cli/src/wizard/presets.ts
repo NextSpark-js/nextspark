@@ -63,6 +63,7 @@ const SAAS_PRESET: PresetConfig = {
     blog: false,
   },
   auth: {
+    registrationMode: 'open',
     emailPassword: true,
     googleOAuth: true,
     emailVerification: true,
@@ -109,6 +110,7 @@ const BLOG_PRESET: PresetConfig = {
     blog: true,
   },
   auth: {
+    registrationMode: 'closed',
     emailPassword: true,
     googleOAuth: false,
     emailVerification: false,
@@ -155,6 +157,7 @@ const CRM_PRESET: PresetConfig = {
     blog: false,
   },
   auth: {
+    registrationMode: 'invitation-only',
     emailPassword: true,
     googleOAuth: true,
     emailVerification: true,
@@ -262,6 +265,7 @@ export function getDefaultConfig(): PresetConfig {
       blog: false,
     },
     auth: {
+      registrationMode: 'open',
       emailPassword: true,
       googleOAuth: false,
       emailVerification: true,

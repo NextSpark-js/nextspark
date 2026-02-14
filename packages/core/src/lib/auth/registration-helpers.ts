@@ -85,6 +85,16 @@ export function shouldBlockSignup(
 }
 
 /**
+ * Check if email+password login should be visible on the login page.
+ *
+ * In 'domain-restricted' mode, only Google OAuth is shown — email login is hidden
+ * because new users cannot register via email and the UX is simplified to Google-only.
+ */
+export function isEmailLoginVisible(mode: RegistrationMode): boolean {
+  return mode !== 'domain-restricted'
+}
+
+/**
  * Build a PublicAuthConfig from the full AuthConfig.
  * Strips sensitive data (allowedDomains) for client exposure.
  */

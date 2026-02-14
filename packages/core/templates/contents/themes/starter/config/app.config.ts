@@ -97,6 +97,28 @@ export const APP_CONFIG_OVERRIDES = {
   },
 
   // =============================================================================
+  // AUTHENTICATION
+  // =============================================================================
+  /**
+   * Registration modes:
+   * - 'open': Anyone can register (email+password and Google OAuth) - DEFAULT
+   * - 'domain-restricted': Only Google OAuth for specific email domains
+   * - 'closed': No public registration. Users created manually, login only.
+   * - 'invitation-only': Registration only via invitation link
+   */
+  auth: {
+    registration: {
+      mode: 'open' as const,
+      // allowedDomains: ['yourcompany.com'], // Only for 'domain-restricted' mode
+    },
+    providers: {
+      google: {
+        enabled: false,
+      },
+    },
+  },
+
+  // =============================================================================
   // DOCUMENTATION
   // =============================================================================
   /**

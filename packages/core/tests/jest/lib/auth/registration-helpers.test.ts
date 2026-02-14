@@ -5,6 +5,7 @@ import {
   isGoogleAuthEnabled,
   isSignupPageVisible,
   isEmailSignupEnabled,
+  isEmailLoginVisible,
   shouldBlockSignup,
   getPublicAuthConfig,
 } from '@/core/lib/auth/registration-helpers'
@@ -136,6 +137,24 @@ describe('Registration Helpers', () => {
       expect(isEmailSignupEnabled('closed')).toBe(false)
       expect(isEmailSignupEnabled('domain-restricted')).toBe(false)
       expect(isEmailSignupEnabled('invitation-only')).toBe(false)
+    })
+  })
+
+  describe('isEmailLoginVisible', () => {
+    test('returns true for open mode', () => {
+      expect(isEmailLoginVisible('open')).toBe(true)
+    })
+
+    test('returns true for closed mode', () => {
+      expect(isEmailLoginVisible('closed')).toBe(true)
+    })
+
+    test('returns true for invitation-only mode', () => {
+      expect(isEmailLoginVisible('invitation-only')).toBe(true)
+    })
+
+    test('returns false for domain-restricted mode', () => {
+      expect(isEmailLoginVisible('domain-restricted')).toBe(false)
     })
   })
 

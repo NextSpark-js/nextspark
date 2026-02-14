@@ -272,8 +272,8 @@ export function LoginForm() {
             </>
           )}
 
-          {/* Email Login Link (hidden when Google is disabled since email form shows by default) */}
-          {!showEmailForm && googleEnabled && (
+          {/* Email Login Link (hidden when Google is disabled or in domain-restricted mode) */}
+          {!showEmailForm && googleEnabled && registrationMode !== 'domain-restricted' && (
             <div className="text-center">
               {isReady && lastMethod === 'email' ? (
                 <LastUsedBadge text={t('login.form.lastUsed')}>
@@ -292,24 +292,17 @@ export function LoginForm() {
                   type="button"
                   onClick={() => setShowEmailForm(true)}
                   disabled={!!loadingProvider}
-                  className={
-                    registrationMode === 'domain-restricted'
-                      ? "text-xs text-muted-foreground hover:text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed"
-                      : "text-sm text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed"
-                  }
+                  className="text-sm text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed"
                                     data-cy={sel('auth.login.showEmail')}
                 >
-                  {registrationMode === 'domain-restricted'
-                    ? t('login.form.loginWithEmailExisting', { defaultValue: 'Already have an account? Sign in with email' })
-                    : t('login.form.loginWithEmail', { defaultValue: 'Sign in with Email' })
-                  }
+                  {t('login.form.loginWithEmail', { defaultValue: 'Sign in with Email' })}
                 </button>
               )}
             </div>
           )}
 
-          {/* Email Form - Shown when requested */}
-          {showEmailForm && (
+          {/* Email Form - Shown when requested (hidden in domain-restricted mode) */}
+          {showEmailForm && registrationMode !== 'domain-restricted' && (
             <>
               <div className="relative my-6">
                 <div className="absolute inset-0 flex items-center">
@@ -321,17 +314,6 @@ export function LoginForm() {
                   </span>
                 </div>
               </div>
-
-              {/* Domain-restricted mode notice */}
-              {registrationMode === 'domain-restricted' && (
-                <Alert className="mb-4">
-                  <AlertDescription className="text-sm">
-                    {t('login.form.emailExistingOnly', {
-                      defaultValue: 'Email sign-in is only available for existing accounts. New users must sign up with an authorized domain.'
-                    })}
-                  </AlertDescription>
-                </Alert>
-              )}
 
               <form
             onSubmit={handleSubmit(onSubmit)}
