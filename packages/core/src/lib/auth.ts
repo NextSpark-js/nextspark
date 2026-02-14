@@ -255,7 +255,33 @@ export const auth = betterAuth({
           }
         }
       }
-    }
+    },
+    session: {
+      create: {
+        // Enforce domain restrictions on EVERY login (not just signup)
+        before: async (session: { userId: string; [key: string]: unknown }) => {
+          const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open';
+
+          if (registrationMode === 'domain-restricted') {
+            const allowedDomains = AUTH_CONFIG?.registration?.allowedDomains ?? [];
+            if (allowedDomains.length > 0) {
+              // Look up user email from DB
+              const result = await pool.query(
+                'SELECT email FROM users WHERE id = $1 LIMIT 1',
+                [session.userId]
+              );
+              const email = result.rows[0]?.email;
+              if (email && !isDomainAllowed(email, allowedDomains)) {
+                console.log(`[Auth] Blocked sign-in for ${email}: domain not in allowedDomains`);
+                return false; // Abort session creation
+              }
+            }
+          }
+
+          return session;
+        },
+      },
+    },
   },
   callbacks: {
     session: {
