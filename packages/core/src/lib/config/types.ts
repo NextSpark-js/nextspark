@@ -429,7 +429,7 @@ export interface AuthConfig {
  * Public Auth Config
  *
  * Subset of AuthConfig safe to expose to client components.
- * Does NOT include allowedDomains or other sensitive data.
+ * Does NOT include allowedDomains (security: prevents domain enumeration).
  */
 export interface PublicAuthConfig {
   registration: {

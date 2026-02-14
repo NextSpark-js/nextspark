@@ -257,6 +257,7 @@ export const AUTH_CONFIG = APP_CONFIG_MERGED.auth
 export const PUBLIC_AUTH_CONFIG = {
   registration: {
     mode: (APP_CONFIG_MERGED.auth?.registration?.mode ?? 'open') as import('./types').RegistrationMode,
+    // NOTE: allowedDomains intentionally NOT exposed to client (security: prevents domain enumeration)
   },
   providers: {
     google: {

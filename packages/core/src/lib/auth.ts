@@ -166,6 +166,10 @@ export const auth = betterAuth({
   baseURL: baseUrl,
   // Use unified CORS configuration from app.config.ts + theme extensions + env vars
   trustedOrigins: getCorsOrigins(APP_CONFIG_MERGED),
+  // Redirect auth errors to our custom error page instead of Better Auth's default
+  onAPIError: {
+    errorURL: '/auth-error',
+  },
   plugins: [
     registrationGuardPlugin(), // Intercept OAuth signup attempts
     nextCookies(), // MUST be the last plugin for Next.js cookie handling
