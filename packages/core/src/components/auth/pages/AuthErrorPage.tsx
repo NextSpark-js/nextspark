@@ -12,8 +12,10 @@ export function AuthErrorPage() {
   const error = searchParams.get('error')
 
   // Intentionally generic: don't reveal registration mode or system config
-  const isAccountError = error?.toLowerCase() === 'unable_to_create_user'
-    || error?.toLowerCase() === 'user_not_found'
+  const code = error?.toLowerCase() ?? ''
+  const isAccountError = code === 'unable_to_create_user'
+    || code === 'unable_to_create_session'
+    || code === 'user_not_found'
 
   const titleKey = isAccountError ? 'unable_to_create.title' : 'generic.title'
   const descriptionKey = isAccountError ? 'unable_to_create.description' : 'generic.description'
