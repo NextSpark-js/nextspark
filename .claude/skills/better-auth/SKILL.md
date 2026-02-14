@@ -341,8 +341,7 @@ Registration behavior is configurable at the theme level via `auth` in `app.conf
 |------|-------------|-------------------|-------------|-------------|-------------|
 | `open` (default) | Yes | Yes | Yes | Yes | Visible |
 | `domain-restricted` | No | Only allowed domains | Yes | Yes | Hidden |
-| `closed` | No | No | Yes | No | Hidden |
-| `invitation-only` | Via invite | Via invite | Yes | Yes | Invite only |
+| `invitation-only` | Via invite | Via invite | Yes | Configurable | Invite only |
 
 ### Theme Configuration
 
@@ -362,13 +361,7 @@ auth: {
   },
 }
 
-// Option 3: No public registration (manual user creation only)
-auth: {
-  registration: { mode: 'closed' },
-  providers: { google: { enabled: false } },
-}
-
-// Option 4: Invitation-only (integrates with single-tenant teams mode)
+// Option 3: Invitation-only (integrates with single-tenant teams mode)
 auth: {
   registration: { mode: 'invitation-only' },
 }
@@ -378,7 +371,7 @@ auth: {
 
 ```typescript
 // packages/core/src/lib/config/types.ts
-type RegistrationMode = 'open' | 'domain-restricted' | 'closed' | 'invitation-only'
+type RegistrationMode = 'open' | 'domain-restricted' | 'invitation-only'
 
 interface AuthConfig {
   registration: {
@@ -405,9 +398,9 @@ import {
 
 ### Enforcement Points
 
-1. **Route handler** (`app/api/auth/[...all]/route.ts`): Blocks email signup for `closed` and `domain-restricted` modes
-2. **Database hook** (`auth.ts` → `databaseHooks.user.create.before`): Validates email domain for `domain-restricted` mode on OAuth
-3. **Signup page** (`app/(auth)/signup/page.tsx`): Redirects to `/login` for `closed` and `domain-restricted`
+1. **Route handler** (`app/api/auth/[...all]/route.ts`): Blocks email signup for `domain-restricted` and `invitation-only` modes
+2. **Database hook** (`auth.ts` → `databaseHooks.user.create.before`): Validates email domain for `domain-restricted` mode; blocks signup in `invitation-only` mode when team exists
+3. **Signup page** (`app/(auth)/signup/page.tsx`): Redirects to `/login` for `domain-restricted` and `invitation-only`
 4. **LoginForm**: Hides Google OAuth button and signup link based on mode
 5. **SignupForm**: Hides Google button when disabled
 
@@ -418,7 +411,7 @@ Use `PUBLIC_AUTH_CONFIG` (from `config-sync.ts`) in client components. This stri
 ```typescript
 import { PUBLIC_AUTH_CONFIG } from '@/core/lib/config/config-sync'
 
-// PUBLIC_AUTH_CONFIG.registration.mode → 'open' | 'closed' | etc.
+// PUBLIC_AUTH_CONFIG.registration.mode → 'open' | 'domain-restricted' | 'invitation-only'
 // PUBLIC_AUTH_CONFIG.providers.google.enabled → boolean
 ```
 
@@ -597,8 +590,7 @@ export default async function DashboardPage() {
 | `INVALID_API_KEY` | 401 | API key invalid or expired |
 | `INVALID_CREDENTIALS` | 401 | Wrong email/password |
 | `EMAIL_NOT_VERIFIED` | 401 | User hasn't verified email |
-| `REGISTRATION_CLOSED` | 403 | Registration disabled (closed or domain-restricted) |
-| `SIGNUP_RESTRICTED` | 403 | Invitation-only / single-tenant mode |
+| `SIGNUP_RESTRICTED` | 403 | Invitation-only / single-tenant mode (registration requires invite) |
 | `INSUFFICIENT_PERMISSIONS` | 403 | User lacks required scope |
 | `TEAM_CONTEXT_REQUIRED` | 400 | Missing x-team-id header |
 | `SESSION_EXPIRED` | 401 | Session no longer valid |

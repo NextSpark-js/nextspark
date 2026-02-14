@@ -103,7 +103,6 @@ export const APP_CONFIG_OVERRIDES = {
    * Registration modes:
    * - 'open': Anyone can register (email+password and Google OAuth) - DEFAULT
    * - 'domain-restricted': Only Google OAuth for specific email domains
-   * - 'closed': No public registration. Users created manually, login only.
    * - 'invitation-only': Registration only via invitation link
    */
   auth: {

@@ -28,11 +28,6 @@ const REGISTRATION_MODE_OPTIONS = [
     value: 'invitation-only' as RegistrationMode,
     description: 'Users can only register when invited by an existing user',
   },
-  {
-    name: 'Closed (no public registration)',
-    value: 'closed' as RegistrationMode,
-    description: 'No signup at all. Users are created manually by admins.',
-  },
 ]
 
 /**
@@ -108,12 +103,6 @@ export async function promptAuthConfig(
     googleOAuth = true
     emailPassword = false
     showInfo('Domain-restricted mode: Google OAuth enabled, email login hidden on login page.')
-    console.log('')
-  } else if (registrationMode === 'closed') {
-    // Closed mode: only email login (no OAuth signup)
-    emailPassword = true
-    googleOAuth = false
-    showInfo('Closed mode: Only email login for manually-created users.')
     console.log('')
   } else {
     // Open or invitation-only: let user choose methods

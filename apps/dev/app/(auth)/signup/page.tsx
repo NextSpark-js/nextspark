@@ -17,9 +17,9 @@ export const metadata: Metadata = getMetadataOrDefault(
 function SignupPage() {
   const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open'
 
-  // In closed or domain-restricted modes, redirect to login.
+  // In domain-restricted or invitation-only modes, redirect to login.
   // Invitation links use /accept-invite/[token] route, not /signup.
-  if (registrationMode === 'closed' || registrationMode === 'domain-restricted') {
+  if (registrationMode === 'domain-restricted' || registrationMode === 'invitation-only') {
     redirect('/login')
   }
 

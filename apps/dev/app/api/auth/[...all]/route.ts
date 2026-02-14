@@ -3,7 +3,8 @@ import { toNextJsHandler } from "better-auth/next-js";
 import { NextRequest, NextResponse } from "next/server";
 import { TEAMS_CONFIG, AUTH_CONFIG } from "@nextsparkjs/core/lib/config";
 import { isPublicSignupRestricted } from "@nextsparkjs/core/lib/teams/helpers";
-import { shouldBlockSignup, isDomainAllowed } from "@nextsparkjs/core/lib/auth/registration-helpers";
+// Registration helpers available if needed: shouldBlockSignup, isDomainAllowed
+// Currently domain validation happens in auth.ts databaseHooks
 import { TeamService } from "@nextsparkjs/core/lib/services";
 import { wrapAuthHandlerWithCors, handleCorsPreflightRequest, addCorsHeaders } from "@nextsparkjs/core/lib/api/helpers";
 
@@ -80,29 +81,10 @@ export async function POST(req: NextRequest) {
       return await addCorsHeaders(errorResponse, req);
     }
 
-    // 2. Closed mode: block ALL signup attempts (except invitation flow)
-    if (registrationMode === 'closed') {
-      // Check for invitation token in headers or query params
-      const hasInviteToken = req.headers.get('x-invite-token') ||
-                           new URL(req.url).searchParams.get('inviteToken');
-
-      if (!hasInviteToken) {
-        const errorResponse = NextResponse.json(
-          {
-            error: 'Registration is closed',
-            message: 'Public registration is not available. Please contact an administrator.',
-            code: 'REGISTRATION_CLOSED',
-          },
-          { status: 403 }
-        );
-        return await addCorsHeaders(errorResponse, req);
-      }
-    }
-
     // Note: OAuth domain validation happens in auth.ts databaseHooks (user.create.before)
     // The hook throws an error if the email domain is not in allowedDomains
 
-    // 3. Invitation-only mode OR single-tenant teams mode: existing behavior
+    // 2. Invitation-only mode OR single-tenant teams mode: existing behavior
     if (registrationMode === 'invitation-only' || isPublicSignupRestricted(teamsMode)) {
       const teamExists = await TeamService.hasGlobal();
 

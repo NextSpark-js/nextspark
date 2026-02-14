@@ -261,9 +261,7 @@ export const PUBLIC_AUTH_CONFIG = {
   },
   providers: {
     google: {
-      enabled: APP_CONFIG_MERGED.auth?.registration?.mode === 'closed'
-        ? false
-        : APP_CONFIG_MERGED.auth?.providers?.google?.enabled !== false,
+      enabled: APP_CONFIG_MERGED.auth?.providers?.google?.enabled !== false,
     },
   },
 } satisfies import('./types').PublicAuthConfig

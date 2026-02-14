@@ -352,7 +352,6 @@ function formatRegistrationMode(mode: string): string {
     'open': 'Open (anyone can register)',
     'domain-restricted': 'Domain-Restricted (Google OAuth only)',
     'invitation-only': 'Invitation-Only',
-    'closed': 'Closed (no public registration)',
   }
   return mapping[mode] || mode
 }

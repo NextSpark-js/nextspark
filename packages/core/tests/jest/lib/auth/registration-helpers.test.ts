@@ -21,10 +21,6 @@ describe('Registration Helpers', () => {
       expect(isRegistrationOpen('domain-restricted')).toBe(false)
     })
 
-    test('returns false for closed mode', () => {
-      expect(isRegistrationOpen('closed')).toBe(false)
-    })
-
     test('returns false for invitation-only mode', () => {
       expect(isRegistrationOpen('invitation-only')).toBe(false)
     })
@@ -84,21 +80,6 @@ describe('Registration Helpers', () => {
       expect(isGoogleAuthEnabled(config)).toBe(true)
     })
 
-    test('returns false for closed mode', () => {
-      const config: AuthConfig = {
-        registration: { mode: 'closed' },
-      }
-      expect(isGoogleAuthEnabled(config)).toBe(false)
-    })
-
-    test('returns false for closed mode even if explicitly enabled', () => {
-      const config: AuthConfig = {
-        registration: { mode: 'closed' },
-        providers: { google: { enabled: true } },
-      }
-      expect(isGoogleAuthEnabled(config)).toBe(false)
-    })
-
     test('returns false when explicitly disabled', () => {
       const config: AuthConfig = {
         registration: { mode: 'open' },
@@ -125,7 +106,6 @@ describe('Registration Helpers', () => {
   describe('isSignupPageVisible', () => {
     test('returns true only for open mode', () => {
       expect(isSignupPageVisible('open')).toBe(true)
-      expect(isSignupPageVisible('closed')).toBe(false)
       expect(isSignupPageVisible('domain-restricted')).toBe(false)
       expect(isSignupPageVisible('invitation-only')).toBe(false)
     })
@@ -134,7 +114,6 @@ describe('Registration Helpers', () => {
   describe('isEmailSignupEnabled', () => {
     test('returns true only for open mode', () => {
       expect(isEmailSignupEnabled('open')).toBe(true)
-      expect(isEmailSignupEnabled('closed')).toBe(false)
       expect(isEmailSignupEnabled('domain-restricted')).toBe(false)
       expect(isEmailSignupEnabled('invitation-only')).toBe(false)
     })
@@ -143,10 +122,6 @@ describe('Registration Helpers', () => {
   describe('isEmailLoginVisible', () => {
     test('returns true for open mode', () => {
       expect(isEmailLoginVisible('open')).toBe(true)
-    })
-
-    test('returns true for closed mode', () => {
-      expect(isEmailLoginVisible('closed')).toBe(true)
     })
 
     test('returns true for invitation-only mode', () => {
@@ -159,11 +134,6 @@ describe('Registration Helpers', () => {
   })
 
   describe('shouldBlockSignup', () => {
-    test('blocks all signup in closed mode', () => {
-      expect(shouldBlockSignup('closed', false)).toBe(true)
-      expect(shouldBlockSignup('closed', true)).toBe(true)
-    })
-
     test('blocks email signup in domain-restricted mode', () => {
       expect(shouldBlockSignup('domain-restricted', false)).toBe(true)
     })
@@ -203,11 +173,6 @@ describe('Registration Helpers', () => {
       }
       expect(getPublicAuthConfig(openConfig).providers.google.enabled).toBe(true)
 
-      const closedConfig: AuthConfig = {
-        registration: { mode: 'closed' },
-      }
-      expect(getPublicAuthConfig(closedConfig).providers.google.enabled).toBe(false)
-
       const disabledGoogle: AuthConfig = {
         registration: { mode: 'open' },
         providers: { google: { enabled: false } },
@@ -216,7 +181,7 @@ describe('Registration Helpers', () => {
     })
 
     test('returns correct shape for all modes', () => {
-      const modes = ['open', 'closed', 'domain-restricted', 'invitation-only'] as const
+      const modes = ['open', 'domain-restricted', 'invitation-only'] as const
       for (const mode of modes) {
         const config: AuthConfig = { registration: { mode } }
         const result = getPublicAuthConfig(config)

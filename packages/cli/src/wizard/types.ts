@@ -47,9 +47,8 @@ export interface FeatureFlags {
  * - 'open': Anyone can register (email+password and Google OAuth)
  * - 'domain-restricted': Only Google OAuth for specific email domains
  * - 'invitation-only': Registration only via invitation link
- * - 'closed': No public registration. Users created manually, login only.
  */
-export type RegistrationMode = 'open' | 'domain-restricted' | 'invitation-only' | 'closed'
+export type RegistrationMode = 'open' | 'domain-restricted' | 'invitation-only'
 
 /**
  * Authentication configuration (Step 8)

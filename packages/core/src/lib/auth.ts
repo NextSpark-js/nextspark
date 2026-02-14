@@ -190,12 +190,16 @@ export const auth = betterAuth({
         before: async (user: { email: string; [key: string]: unknown }) => {
           const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open';
 
-          // In 'closed' mode, block all new user creation (except via invitation flow)
-          if (registrationMode === 'closed') {
+          // In 'invitation-only' mode, block new user creation (except via invitation flow or first user)
+          if (registrationMode === 'invitation-only') {
             if (!shouldSkipTeamCreation()) {
               // shouldSkipTeamCreation() is true during invitation flow
-              // If it's false, this is a public signup attempt - block it
-              throw new Error('REGISTRATION_CLOSED: Public registration is not available. Contact an administrator.');
+              // If it's false, check if this is the first user (team bootstrap)
+              const existingTeam = await TeamService.getGlobal();
+              if (existingTeam) {
+                // Team exists, so this is not the first user - block it
+                throw new Error('SIGNUP_RESTRICTED: Registration requires an invitation. Contact an administrator.');
+              }
             }
           }
 

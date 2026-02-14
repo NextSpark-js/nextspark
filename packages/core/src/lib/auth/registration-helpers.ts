@@ -41,11 +41,9 @@ export function isDomainAllowed(email: string, allowedDomains: string[]): boolea
  *
  * Google is disabled when:
  * - providers.google.enabled is explicitly false
- * - mode is 'closed' (no OAuth at all)
  * - GOOGLE_CLIENT_ID env var is not set (runtime check, not done here)
  */
 export function isGoogleAuthEnabled(authConfig: AuthConfig): boolean {
-  if (authConfig.registration.mode === 'closed') return false
   return authConfig.providers?.google?.enabled !== false
 }
 
@@ -53,7 +51,6 @@ export function isGoogleAuthEnabled(authConfig: AuthConfig): boolean {
  * Check if the signup page should be accessible.
  *
  * Signup page is hidden for:
- * - 'closed': No registration at all
  * - 'domain-restricted': Registration happens via Google OAuth on login page
  * - 'invitation-only': Only accessible with valid invite params
  */
@@ -71,7 +68,6 @@ export function isEmailSignupEnabled(mode: RegistrationMode): boolean {
 /**
  * Check if signup should be blocked entirely (server-side enforcement).
  *
- * In 'closed' mode, ALL signup attempts are blocked.
  * In 'domain-restricted' mode, email+password signup is blocked
  * but Google OAuth may be allowed (with domain check).
  */
@@ -79,7 +75,6 @@ export function shouldBlockSignup(
   mode: RegistrationMode,
   isOAuth: boolean
 ): boolean {
-  if (mode === 'closed') return true
   if (mode === 'domain-restricted' && !isOAuth) return true
   return false
 }

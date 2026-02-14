@@ -110,7 +110,7 @@ const BLOG_PRESET: PresetConfig = {
     blog: true,
   },
   auth: {
-    registrationMode: 'closed',
+    registrationMode: 'invitation-only',
     emailPassword: true,
     googleOAuth: false,
     emailVerification: false,

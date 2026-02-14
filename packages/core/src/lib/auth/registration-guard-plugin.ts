@@ -11,6 +11,7 @@
  */
 
 import { AUTH_CONFIG } from '../config';
+import { TeamService } from '../services/team.service';
 import type { BetterAuthPlugin } from 'better-auth';
 
 export const registrationGuardPlugin = (): BetterAuthPlugin => {
@@ -31,15 +32,19 @@ export const registrationGuardPlugin = (): BetterAuthPlugin => {
           handler: async (ctx) => {
             const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open';
 
-            // Block OAuth in closed mode (unless invitation token present)
-            if (registrationMode === 'closed') {
+            // Block OAuth in invitation-only mode (unless invite token present or first user)
+            if (registrationMode === 'invitation-only') {
               const request = ctx.request;
               const url = new URL(request.url);
               const hasInviteToken = request.headers.get('x-invite-token') ||
                                    url.searchParams.get('inviteToken');
 
               if (!hasInviteToken) {
-                throw new Error('REGISTRATION_CLOSED: Public registration is not available');
+                // Allow first user bootstrap (no team exists yet)
+                const teamExists = await TeamService.hasGlobal();
+                if (teamExists) {
+                  throw new Error('SIGNUP_RESTRICTED: Registration requires an invitation');
+                }
               }
             }
 
