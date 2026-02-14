@@ -75,3 +75,4 @@ apps/mobile/dist/
 
 # TypeScript build cache
 *.tsbuildinfo
+/.claude/plans
