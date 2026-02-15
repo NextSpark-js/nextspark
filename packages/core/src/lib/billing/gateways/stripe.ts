@@ -117,7 +117,10 @@ export class StripeGateway implements BillingGateway {
   }
 
   async getCustomer(customerId: string): Promise<CustomerResult> {
-    const customer = await getStripe().customers.retrieve(customerId) as Stripe.Customer
+    const customer = await getStripe().customers.retrieve(customerId)
+    if ('deleted' in customer && customer.deleted) {
+      throw new Error(`Customer ${customerId} has been deleted`)
+    }
     return {
       id: customer.id,
       email: customer.email ?? null,

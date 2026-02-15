@@ -67,23 +67,23 @@ export async function POST(request: NextRequest) {
 
     switch (event.type) {
       case 'checkout.updated':
-        await handleCheckoutUpdated(event.data)
+        await handleCheckoutUpdated(event.data, eventId)
         break
 
       case 'subscription.created':
-        await handleSubscriptionCreated(event.data)
+        await handleSubscriptionCreated(event.data, eventId)
         break
 
       case 'subscription.updated':
-        await handleSubscriptionUpdated(event.data)
+        await handleSubscriptionUpdated(event.data, eventId)
         break
 
       case 'subscription.canceled':
-        await handleSubscriptionCanceled(event.data)
+        await handleSubscriptionCanceled(event.data, eventId)
         break
 
       case 'order.paid':
-        await handleOrderPaid(event.data)
+        await handleOrderPaid(event.data, eventId)
         break
 
       default:
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
  * Handle checkout.updated
  * Polar fires this when a checkout session is completed (status changes to 'succeeded')
  */
-async function handleCheckoutUpdated(data: Record<string, unknown>) {
+async function handleCheckoutUpdated(data: Record<string, unknown>, eventId: string) {
   const status = data.status as string
   if (status !== 'succeeded') {
     console.log(`[polar-webhook] Checkout status: ${status}, ignoring (only process succeeded)`)
@@ -178,7 +178,7 @@ async function handleCheckoutUpdated(data: Record<string, unknown>) {
     status: 'succeeded',
     amount: amount || 0,
     currency: currency || 'usd',
-    polarEventId: data.id as string || 'unknown',
+    polarEventId: eventId,
   })
 }
 
@@ -186,7 +186,7 @@ async function handleCheckoutUpdated(data: Record<string, unknown>) {
  * Handle subscription.created
  * New subscription was created in Polar
  */
-async function handleSubscriptionCreated(data: Record<string, unknown>) {
+async function handleSubscriptionCreated(data: Record<string, unknown>, eventId: string) {
   const polarSubId = data.id as string
   const polarCustomerId = data.customerId as string | undefined
   const status = mapPolarStatus(data.status as string)
@@ -204,6 +204,9 @@ async function handleSubscriptionCreated(data: Record<string, unknown>) {
        WHERE "externalCustomerId" = $3`,
       [polarSubId, status, polarCustomerId]
     )
+
+    // Log webhook event for idempotency tracking
+    await logWebhookEvent(polarCustomerId, 'subscription.created', eventId)
   }
 }
 
@@ -211,7 +214,7 @@ async function handleSubscriptionCreated(data: Record<string, unknown>) {
  * Handle subscription.updated
  * Subscription status or plan changed
  */
-async function handleSubscriptionUpdated(data: Record<string, unknown>) {
+async function handleSubscriptionUpdated(data: Record<string, unknown>, eventId: string) {
   const polarSubId = data.id as string
   const status = mapPolarStatus(data.status as string)
   const cancelAtPeriodEnd = (data.cancelAtPeriodEnd as boolean) ?? false
@@ -227,13 +230,16 @@ async function handleSubscriptionUpdated(data: Record<string, unknown>) {
      WHERE "externalSubscriptionId" = $3`,
     [status, cancelAtPeriodEnd, polarSubId]
   )
+
+  // Log webhook event for idempotency tracking
+  await logWebhookEventBySubId(polarSubId, 'subscription.updated', eventId)
 }
 
 /**
  * Handle subscription.canceled
  * Subscription was canceled (revoked) in Polar
  */
-async function handleSubscriptionCanceled(data: Record<string, unknown>) {
+async function handleSubscriptionCanceled(data: Record<string, unknown>, eventId: string) {
   const polarSubId = data.id as string
 
   console.log(`[polar-webhook] Subscription canceled ${polarSubId}`)
@@ -246,19 +252,21 @@ async function handleSubscriptionCanceled(data: Record<string, unknown>) {
      WHERE "externalSubscriptionId" = $1`,
     [polarSubId]
   )
+
+  // Log webhook event for idempotency tracking
+  await logWebhookEventBySubId(polarSubId, 'subscription.canceled', eventId)
 }
 
 /**
  * Handle order.paid
  * Payment was completed for an order (Polar's equivalent of invoice.paid)
  */
-async function handleOrderPaid(data: Record<string, unknown>) {
-  const orderId = data.id as string
+async function handleOrderPaid(data: Record<string, unknown>, eventId: string) {
   const subscriptionId = data.subscriptionId as string | undefined
   const amount = data.amount as number | undefined
   const currency = data.currency as string | undefined
 
-  console.log(`[polar-webhook] Order paid: ${orderId}`)
+  console.log(`[polar-webhook] Order paid: ${eventId}`)
 
   if (subscriptionId) {
     // Mark subscription as active
@@ -271,8 +279,8 @@ async function handleOrderPaid(data: Record<string, unknown>) {
     )
 
     // Log billing event for audit trail (recurring payments)
-    const sub = await queryOne<{ id: string; teamId: string }>(
-      `SELECT id, "teamId" FROM subscriptions WHERE "externalSubscriptionId" = $1 LIMIT 1`,
+    const sub = await queryOne<{ id: string }>(
+      `SELECT id FROM subscriptions WHERE "externalSubscriptionId" = $1 LIMIT 1`,
       [subscriptionId]
     )
     if (sub) {
@@ -285,7 +293,7 @@ async function handleOrderPaid(data: Record<string, unknown>) {
           'succeeded',
           amount || 0,
           currency || 'usd',
-          JSON.stringify({ polarEventId: orderId })
+          JSON.stringify({ polarEventId: eventId })
         ]
       )
     }
@@ -314,7 +322,8 @@ function mapPolarStatus(polarStatus: string): string {
 }
 
 /**
- * Log billing event for audit trail
+ * Log billing event for audit trail.
+ * Also serves as idempotency record (polarEventId in metadata).
  */
 async function logBillingEvent(params: {
   teamId: string
@@ -345,5 +354,57 @@ async function logBillingEvent(params: {
       params.currency,
       JSON.stringify({ polarEventId: params.polarEventId })
     ]
+  )
+}
+
+/**
+ * Log a webhook event by customer ID for idempotency tracking.
+ * Used by subscription handlers that don't involve payments.
+ */
+async function logWebhookEvent(
+  polarCustomerId: string,
+  eventType: string,
+  polarEventId: string
+) {
+  const sub = await queryOne<{ id: string }>(
+    `SELECT id FROM subscriptions WHERE "externalCustomerId" = $1 LIMIT 1`,
+    [polarCustomerId]
+  )
+
+  if (!sub) {
+    console.warn(`[polar-webhook] No subscription found for customer ${polarCustomerId}, cannot log webhook event`)
+    return
+  }
+
+  await query(
+    `INSERT INTO "billing_events" ("subscriptionId", type, status, amount, currency, metadata)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [sub.id, 'webhook', eventType, 0, 'usd', JSON.stringify({ polarEventId })]
+  )
+}
+
+/**
+ * Log a webhook event by external subscription ID for idempotency tracking.
+ * Used by subscription handlers that identify by subscription ID.
+ */
+async function logWebhookEventBySubId(
+  polarSubId: string,
+  eventType: string,
+  polarEventId: string
+) {
+  const sub = await queryOne<{ id: string }>(
+    `SELECT id FROM subscriptions WHERE "externalSubscriptionId" = $1 LIMIT 1`,
+    [polarSubId]
+  )
+
+  if (!sub) {
+    console.warn(`[polar-webhook] No subscription found for polar sub ${polarSubId}, cannot log webhook event`)
+    return
+  }
+
+  await query(
+    `INSERT INTO "billing_events" ("subscriptionId", type, status, amount, currency, metadata)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [sub.id, 'webhook', eventType, 0, 'usd', JSON.stringify({ polarEventId })]
   )
 }

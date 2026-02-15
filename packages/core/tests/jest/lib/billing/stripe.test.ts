@@ -281,6 +281,18 @@ describe('Stripe Gateway', () => {
           name: 'Test Customer',
         })
       })
+
+      test('should throw error for deleted customer', async () => {
+        mockCustomersRetrieve.mockResolvedValue({
+          id: 'cus_deleted_123',
+          object: 'customer',
+          deleted: true,
+        })
+
+        await expect(gateway.getCustomer('cus_deleted_123')).rejects.toThrow(
+          'Customer cus_deleted_123 has been deleted'
+        )
+      })
     })
 
     describe('createCustomer', () => {
@@ -631,6 +643,18 @@ describe('Stripe Gateway', () => {
 
         await expect(getCustomer('cus_invalid')).rejects.toThrow(
           'No such customer'
+        )
+      })
+
+      test('should throw error for deleted customer', async () => {
+        mockCustomersRetrieve.mockResolvedValue({
+          id: 'cus_deleted_456',
+          object: 'customer',
+          deleted: true,
+        })
+
+        await expect(getCustomer('cus_deleted_456')).rejects.toThrow(
+          'Customer cus_deleted_456 has been deleted'
         )
       })
     })
