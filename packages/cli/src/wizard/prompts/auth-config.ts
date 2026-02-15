@@ -5,7 +5,7 @@
  * Registration mode controls how new users can sign up.
  */
 
-import { checkbox, select } from '@inquirer/prompts'
+import { checkbox, input, select } from '@inquirer/prompts'
 import { showSection, showInfo } from '../banner.js'
 import type { WizardConfig, AuthConfig, WizardMode, RegistrationMode } from '../types.js'
 
@@ -98,11 +98,27 @@ export async function promptAuthConfig(
   let emailPassword = true
   let googleOAuth = false
 
+  let allowedDomains: string[] | undefined
+
   if (registrationMode === 'domain-restricted') {
     // Domain-restricted requires Google OAuth, email login is hidden
     googleOAuth = true
     emailPassword = false
     showInfo('Domain-restricted mode: Google OAuth enabled, email login hidden on login page.')
+    console.log('')
+
+    const domainsInput = await input({
+      message: 'Allowed email domains (comma-separated, e.g. yourcompany.com, partner.org):',
+      validate: (value) => {
+        if (!value.trim()) return 'At least one domain is required for domain-restricted mode'
+        const domains = value.split(',').map((d) => d.trim()).filter(Boolean)
+        const invalid = domains.find((d) => !d.includes('.'))
+        if (invalid) return `Invalid domain: "${invalid}" (must contain a dot)`
+        return true
+      },
+    })
+
+    allowedDomains = domainsInput.split(',').map((d) => d.trim().toLowerCase()).filter(Boolean)
     console.log('')
   } else {
     // Open or invitation-only: let user choose methods
@@ -134,6 +150,7 @@ export async function promptAuthConfig(
     emailPassword,
     googleOAuth,
     emailVerification: selectedSecurity.includes('emailVerification'),
+    allowedDomains,
   }
 
   return { auth }

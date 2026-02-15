@@ -58,6 +58,7 @@ export interface AuthConfig {
   emailPassword: boolean
   googleOAuth: boolean
   emailVerification: boolean
+  allowedDomains?: string[]
 }
 
 /**
