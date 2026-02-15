@@ -5,11 +5,15 @@
  * Wraps Polar SDK types into provider-agnostic result types.
  *
  * Key differences from Stripe:
- * - Uses `productPriceId` instead of `priceId`
+ * - Checkout uses `products: [productId]` (Polar product IDs, not Stripe price IDs)
  * - Cancel = "revoke" in Polar terminology (immediate)
  * - Customer portal via "customer sessions" (not a hosted portal page)
  * - Webhook verification requires ALL headers, not just a signature string
  * - Uses `validateEvent` from @polar-sh/sdk/webhooks
+ *
+ * NOTE: In billing.config.ts, Polar's `providerPriceIds` should contain Polar **product IDs**
+ * (not price IDs). Polar associates prices with products, so the product ID is used for checkout
+ * and subscription plan changes.
  *
  * NOTE: Polar also offers @polar-sh/better-auth for direct Better Auth integration.
  * That is an ALTERNATIVE approach to this gateway. If you want the simpler plugin-based
@@ -19,6 +23,8 @@
  */
 
 import { Polar } from '@polar-sh/sdk'
+import type { CheckoutCreate } from '@polar-sh/sdk/models/components/checkoutcreate'
+import type { CustomerCreate } from '@polar-sh/sdk/models/components/customercreate'
 import { validateEvent, WebhookVerificationError } from '@polar-sh/sdk/webhooks'
 import { PlanService } from '../../services/plan.service'
 import type { BillingGateway } from './interface'
@@ -57,29 +63,22 @@ export class PolarGateway implements BillingGateway {
   async createCheckoutSession(params: CreateCheckoutParams): Promise<CheckoutSessionResult> {
     const { teamId, planSlug, billingPeriod, successUrl, cancelUrl, customerEmail } = params
 
-    // Get price ID from billing config (uses providerPriceIds -> stripePriceId* fallback)
-    const priceId = PlanService.getPriceId(planSlug, billingPeriod)
-    if (!priceId) {
-      throw new Error(`No price ID configured for ${planSlug} ${billingPeriod}`)
+    // Get product ID from billing config (Polar uses product IDs, not price IDs)
+    const productId = PlanService.getPriceId(planSlug, billingPeriod)
+    if (!productId) {
+      throw new Error(`No product ID configured for ${planSlug} ${billingPeriod}`)
     }
 
-    const checkoutParams: Record<string, unknown> = {
-      productPriceId: priceId,
-      successUrl,
+    const checkoutParams: CheckoutCreate = {
+      products: [productId],
+      successUrl: successUrl ?? undefined,
       metadata: { teamId, planSlug, billingPeriod },
+      ...(customerEmail && { customerEmail }),
+      // Polar uses returnUrl for back navigation (equivalent to Stripe's cancel_url)
+      ...(cancelUrl && { returnUrl: cancelUrl }),
     }
 
-    if (customerEmail) {
-      checkoutParams.customerEmail = customerEmail
-    }
-
-    // Polar doesn't have a cancel_url concept like Stripe,
-    // but we can use the success/return URLs
-    if (cancelUrl) {
-      checkoutParams.returnUrl = cancelUrl
-    }
-
-    const result = await getPolar().checkouts.create(checkoutParams as Parameters<typeof getPolar.prototype.checkouts.create>[0])
+    const result = await getPolar().checkouts.create(checkoutParams)
 
     return {
       id: result.id,
@@ -145,18 +144,17 @@ export class PolarGateway implements BillingGateway {
   async createCustomer(params: CreateCustomerParams): Promise<CustomerResult> {
     const { email, name, metadata } = params
 
-    const customerParams: Record<string, unknown> = { email }
-    if (name) customerParams.name = name
-    if (metadata) customerParams.metadata = metadata
-
-    // Add organization ID if available
-    if (process.env.POLAR_ORGANIZATION_ID) {
-      customerParams.organizationId = process.env.POLAR_ORGANIZATION_ID
+    const customerParams: CustomerCreate = {
+      email,
+      ...(name && { name }),
+      ...(metadata && { metadata }),
+      // Add organization ID if available
+      ...(process.env.POLAR_ORGANIZATION_ID && {
+        organizationId: process.env.POLAR_ORGANIZATION_ID,
+      }),
     }
 
-    const customer = await getPolar().customers.create(
-      customerParams as Parameters<typeof getPolar.prototype.customers.create>[0]
-    )
+    const customer = await getPolar().customers.create(customerParams)
 
     return {
       id: customer.id,
@@ -168,11 +166,11 @@ export class PolarGateway implements BillingGateway {
   async updateSubscriptionPlan(params: UpdateSubscriptionParams): Promise<SubscriptionResult> {
     const { subscriptionId, newPriceId } = params
 
-    // Polar uses subscriptions.update with productPriceId
+    // Polar uses subscriptions.update with productId (SubscriptionUpdateProduct)
     const result = await getPolar().subscriptions.update({
       id: subscriptionId,
       subscriptionUpdate: {
-        productPriceId: newPriceId,
+        productId: newPriceId,
       },
     })
 

@@ -87,8 +87,8 @@ describe('Polar Gateway', () => {
     })
 
     describe('createCheckoutSession', () => {
-      test('should create checkout session with productPriceId and return provider-agnostic result', async () => {
-        mockGetPriceId.mockReturnValue('polar_price_pro_monthly')
+      test('should create checkout session with products array and return provider-agnostic result', async () => {
+        mockGetPriceId.mockReturnValue('polar_product_pro_monthly')
         mockCheckoutsCreate.mockResolvedValue({
           id: 'polar_checkout_123',
           url: 'https://polar.sh/checkout/test',
@@ -110,7 +110,7 @@ describe('Polar Gateway', () => {
 
         expect(mockCheckoutsCreate).toHaveBeenCalledWith(
           expect.objectContaining({
-            productPriceId: 'polar_price_pro_monthly',
+            products: ['polar_product_pro_monthly'],
             successUrl: 'http://localhost:3000/success',
             returnUrl: 'http://localhost:3000/cancel',
             customerEmail: 'user@test.com',
@@ -166,7 +166,7 @@ describe('Polar Gateway', () => {
             successUrl: 'http://localhost:3000/success',
             cancelUrl: 'http://localhost:3000/cancel',
           })
-        ).rejects.toThrow('No price ID configured for free monthly')
+        ).rejects.toThrow('No product ID configured for free monthly')
       })
 
       test('should not include customerEmail when not provided', async () => {
@@ -408,7 +408,7 @@ describe('Polar Gateway', () => {
     })
 
     describe('updateSubscriptionPlan', () => {
-      test('should update subscription with productPriceId and return provider-agnostic result', async () => {
+      test('should update subscription with productId and return provider-agnostic result', async () => {
         mockSubscriptionsUpdate.mockResolvedValue({
           id: 'polar_sub_123',
           status: 'active',
@@ -417,7 +417,7 @@ describe('Polar Gateway', () => {
 
         const result = await gateway.updateSubscriptionPlan({
           subscriptionId: 'polar_sub_123',
-          newPriceId: 'polar_price_enterprise',
+          newPriceId: 'polar_product_enterprise',
         })
 
         expect(result).toEqual({
@@ -428,7 +428,7 @@ describe('Polar Gateway', () => {
         expect(mockSubscriptionsUpdate).toHaveBeenCalledWith({
           id: 'polar_sub_123',
           subscriptionUpdate: {
-            productPriceId: 'polar_price_enterprise',
+            productId: 'polar_product_enterprise',
           },
         })
       })
