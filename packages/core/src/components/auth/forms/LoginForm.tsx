@@ -104,6 +104,7 @@ export function LoginForm() {
   const signupVisible = registrationMode === 'open'
   // In dev mode with DevKeyring, always allow email login regardless of registration mode
   const devKeyringActive = process.env.NODE_ENV !== 'production' && !!DEV_CONFIG?.devKeyring?.enabled
+  // In domain-restricted mode, hide email login UNLESS DevKeyring is active (dev mode)
   const emailLoginAllowed = registrationMode !== 'domain-restricted' || devKeyringActive
 
   const [loadingProvider, setLoadingProvider] = useState<AuthProviderWithNull>(null)

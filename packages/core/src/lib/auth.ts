@@ -204,6 +204,7 @@ export const auth = betterAuth({
           }
 
           // In 'domain-restricted' mode, validate email domain
+          // Empty allowedDomains list = allow all domains (permissive fallback)
           if (registrationMode === 'domain-restricted') {
             const allowedDomains = AUTH_CONFIG?.registration?.allowedDomains ?? [];
             if (allowedDomains.length > 0 && !isDomainAllowed(user.email, allowedDomains)) {

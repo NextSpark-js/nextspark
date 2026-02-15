@@ -20,6 +20,8 @@ export function isRegistrationOpen(mode: RegistrationMode): boolean {
 
 /**
  * Check if an email domain is in the allowed domains list.
+ * Returns false if allowedDomains is empty — callers should handle
+ * the empty-list case separately (e.g., skip validation entirely).
  *
  * @param email - Full email address (e.g., "user@nextspark.dev")
  * @param allowedDomains - List of allowed domains without @ (e.g., ["nextspark.dev"])

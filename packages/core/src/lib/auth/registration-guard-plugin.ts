@@ -43,7 +43,7 @@ export const registrationGuardPlugin = (): BetterAuthPlugin => {
                 // Allow first user bootstrap (no team exists yet)
                 const teamExists = await TeamService.hasGlobal();
                 if (teamExists) {
-                  throw new Error('SIGNUP_RESTRICTED: Registration requires an invitation');
+                  throw new Error('SIGNUP_RESTRICTED: Registration requires an invitation. Use an invite link or contact an administrator.');
                 }
               }
             }
