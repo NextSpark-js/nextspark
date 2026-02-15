@@ -10,21 +10,22 @@ interface FileTreeProps {
   onSelectFile: (path: string) => void
 }
 
-const FILE_ICONS: Record<string, string> = {
+const EXT_COLORS: Record<string, string> = {
   '.ts': 'text-blue-400',
   '.tsx': 'text-blue-400',
   '.js': 'text-yellow-400',
   '.jsx': 'text-yellow-400',
   '.css': 'text-pink-400',
-  '.json': 'text-yellow-300',
+  '.json': 'text-yellow-300/70',
   '.md': 'text-text-secondary',
-  '.env': 'text-green-400',
+  '.env': 'text-green-400/70',
   '.mjs': 'text-yellow-400',
+  '.mts': 'text-blue-400',
 }
 
 function getFileColor(name: string): string {
   const ext = name.slice(name.lastIndexOf('.'))
-  return FILE_ICONS[ext] || 'text-text-muted'
+  return EXT_COLORS[ext] || 'text-text-muted'
 }
 
 function TreeNode({
@@ -54,28 +55,30 @@ function TreeNode({
     <div>
       <button
         onClick={handleClick}
-        className={`flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left text-xs transition-colors hover:bg-bg-hover ${
-          isSelected ? 'bg-accent-muted text-accent' : 'text-text-secondary'
+        className={`flex w-full items-center gap-1 py-[3px] text-left text-[11px] transition-colors hover:bg-bg-hover/60 ${
+          isSelected
+            ? 'bg-accent-muted text-accent'
+            : 'text-text-secondary'
         }`}
-        style={{ paddingLeft: `${depth * 12 + 8}px` }}
+        style={{ paddingLeft: `${depth * 12 + 8}px`, paddingRight: '8px' }}
       >
         {isDir ? (
           <>
             {expanded ? (
-              <ChevronDown className="h-3 w-3 flex-shrink-0 text-text-muted" />
+              <ChevronDown className="h-3 w-3 flex-shrink-0 text-text-muted/50" />
             ) : (
-              <ChevronRight className="h-3 w-3 flex-shrink-0 text-text-muted" />
+              <ChevronRight className="h-3 w-3 flex-shrink-0 text-text-muted/50" />
             )}
             {expanded ? (
-              <FolderOpen className="h-3.5 w-3.5 flex-shrink-0 text-accent" />
+              <FolderOpen className="h-3.5 w-3.5 flex-shrink-0 text-accent/70" />
             ) : (
-              <Folder className="h-3.5 w-3.5 flex-shrink-0 text-accent" />
+              <Folder className="h-3.5 w-3.5 flex-shrink-0 text-accent/50" />
             )}
           </>
         ) : (
           <>
-            <span className="w-3" />
-            <File className={`h-3.5 w-3.5 flex-shrink-0 ${getFileColor(node.name)}`} />
+            <span className="w-3 flex-shrink-0" />
+            <File className={`h-3 w-3 flex-shrink-0 ${getFileColor(node.name)}`} />
           </>
         )}
         <span className="truncate">{node.name}</span>
@@ -101,14 +104,14 @@ function TreeNode({
 export function FileTree({ files, selectedPath, onSelectFile }: FileTreeProps) {
   if (files.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center p-4">
-        <p className="text-xs text-text-muted">No files yet</p>
+      <div className="flex h-32 items-center justify-center">
+        <p className="text-[11px] text-text-muted/50">No files</p>
       </div>
     )
   }
 
   return (
-    <div className="overflow-y-auto p-2">
+    <div className="overflow-y-auto py-1">
       {files.map((node) => (
         <TreeNode
           key={node.path}

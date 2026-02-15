@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Copy, Check, FileCode } from 'lucide-react'
 
 interface CodeViewerProps {
@@ -40,6 +40,16 @@ export function CodeViewer({ slug, filePath }: CodeViewerProps) {
     return () => { cancelled = true }
   }, [slug, filePath])
 
+  const lines = useMemo(() => {
+    if (!content) return []
+    return content.split('\n')
+  }, [content])
+
+  const gutterWidth = useMemo(() => {
+    const digits = String(lines.length).length
+    return Math.max(digits, 2)
+  }, [lines.length])
+
   async function handleCopy() {
     if (!content) return
     await navigator.clipboard.writeText(content)
@@ -50,9 +60,9 @@ export function CodeViewer({ slug, filePath }: CodeViewerProps) {
   if (!filePath) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="text-center space-y-2">
-          <FileCode className="h-8 w-8 text-border mx-auto" />
-          <p className="text-sm text-text-muted">Select a file to view its content</p>
+        <div className="text-center space-y-3 opacity-25">
+          <FileCode className="h-12 w-12 mx-auto text-text-muted" />
+          <p className="text-xs text-text-muted">Select a file</p>
         </div>
       </div>
     )
@@ -60,38 +70,48 @@ export function CodeViewer({ slug, filePath }: CodeViewerProps) {
 
   return (
     <div className="flex h-full flex-col">
-      {/* File header */}
-      <div className="flex items-center justify-between border-b border-border bg-bg-surface px-3 py-2">
-        <span className="text-xs font-mono text-text-secondary truncate">{filePath}</span>
+      {/* File path header */}
+      <div className="flex h-8 items-center justify-between border-b border-border bg-bg-surface/40 px-3 flex-shrink-0">
+        <span className="text-[11px] font-mono text-text-muted truncate">{filePath}</span>
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-text-muted hover:text-text-secondary hover:bg-bg-hover transition-colors"
+          className="flex items-center gap-1 text-[11px] text-text-muted hover:text-text-secondary transition-colors flex-shrink-0"
         >
           {copied ? (
-            <>
-              <Check className="h-3 w-3 text-success" />
-              Copied
-            </>
+            <Check className="h-3 w-3 text-success" />
           ) : (
-            <>
-              <Copy className="h-3 w-3" />
-              Copy
-            </>
+            <Copy className="h-3 w-3" />
           )}
         </button>
       </div>
 
-      {/* Code content */}
-      <div className="flex-1 overflow-auto bg-bg p-4">
+      {/* Code with line numbers */}
+      <div className="flex-1 overflow-auto">
         {loading ? (
-          <div className="flex items-center gap-2 text-sm text-text-muted">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-border border-t-accent" />
+          <div className="flex items-center gap-2 p-4 text-xs text-text-muted">
+            <div className="h-3 w-3 animate-spin rounded-full border border-border border-t-accent" />
             Loading...
           </div>
         ) : (
-          <pre className="text-xs font-mono leading-relaxed text-text-secondary whitespace-pre-wrap break-words">
-            <code>{content}</code>
-          </pre>
+          <div className="flex font-mono text-[12px] leading-[1.65]">
+            {/* Line number gutter */}
+            <div className="sticky left-0 flex-shrink-0 select-none border-r border-border bg-bg-surface/30 py-3 text-right">
+              {lines.map((_, i) => (
+                <div
+                  key={i}
+                  className="px-3 text-text-muted/30"
+                  style={{ minWidth: `${gutterWidth + 2}ch` }}
+                >
+                  {i + 1}
+                </div>
+              ))}
+            </div>
+
+            {/* Code content */}
+            <pre className="flex-1 py-3 px-4 text-text-secondary overflow-x-auto">
+              <code>{content}</code>
+            </pre>
+          </div>
         )}
       </div>
     </div>

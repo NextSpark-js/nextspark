@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Sparkles, ArrowRight } from 'lucide-react'
+import { Zap, ArrowRight } from 'lucide-react'
 
 const EXAMPLES = [
   'A CRM for my gym with clients, memberships and payments',
@@ -24,16 +24,16 @@ export default function HomePage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-4">
-      <div className="w-full max-w-2xl space-y-8">
+      <div className="w-full max-w-xl space-y-8">
         {/* Logo */}
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-3">
           <div className="flex items-center justify-center gap-2">
-            <Sparkles className="h-8 w-8 text-accent" />
-            <h1 className="text-3xl font-bold tracking-tight">
-              NextSpark Studio
+            <Zap className="h-7 w-7 text-accent" />
+            <h1 className="text-2xl font-bold tracking-tight">
+              nextspark studio
             </h1>
           </div>
-          <p className="text-text-secondary text-lg">
+          <p className="text-text-secondary text-sm">
             Describe your app. We build it.
           </p>
         </div>
@@ -50,28 +50,30 @@ export default function HomePage() {
               }
             }}
             placeholder="Describe the app you want to build..."
-            rows={4}
-            className="w-full resize-none rounded-xl border border-border bg-bg-surface p-4 pr-14 text-lg text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+            rows={3}
+            className="w-full resize-none rounded-xl border border-border bg-bg-surface p-4 pr-14 text-sm text-text-primary placeholder:text-text-muted/60 focus:border-accent/50 focus:outline-none focus:ring-1 focus:ring-accent/30 transition-colors"
             autoFocus
           />
           <button
             onClick={() => handleSubmit()}
             disabled={!prompt.trim()}
-            className="absolute bottom-4 right-4 flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-white transition-colors hover:bg-accent-hover disabled:opacity-30 disabled:cursor-not-allowed"
+            className="absolute bottom-4 right-4 flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-white transition-all hover:bg-accent-hover disabled:opacity-20 disabled:cursor-not-allowed"
           >
-            <ArrowRight className="h-5 w-5" />
+            <ArrowRight className="h-4 w-4" />
           </button>
         </div>
 
         {/* Examples */}
         <div className="space-y-3">
-          <p className="text-sm text-text-muted text-center">Try an example</p>
+          <p className="text-[11px] text-text-muted text-center uppercase tracking-wider font-medium">
+            Try an example
+          </p>
           <div className="flex flex-wrap justify-center gap-2">
             {EXAMPLES.map((example) => (
               <button
                 key={example}
                 onClick={() => handleSubmit(example)}
-                className="rounded-lg border border-border bg-bg-surface px-3 py-2 text-sm text-text-secondary transition-colors hover:border-border-strong hover:bg-bg-elevated hover:text-text-primary"
+                className="rounded-lg border border-border bg-bg-surface px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
               >
                 {example}
               </button>
@@ -81,7 +83,7 @@ export default function HomePage() {
       </div>
 
       {/* Footer */}
-      <div className="fixed bottom-6 text-sm text-text-muted">
+      <div className="fixed bottom-6 text-[11px] text-text-muted/50">
         Powered by NextSpark + Claude
       </div>
     </div>

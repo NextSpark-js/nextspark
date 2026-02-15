@@ -18,8 +18,8 @@ export function PromptInput({ onSubmit, disabled }: PromptInputProps) {
   }
 
   return (
-    <div className="border-t border-border bg-bg-surface p-4">
-      <div className="relative">
+    <div className="border-t border-border p-2 flex-shrink-0">
+      <div className="relative flex items-end rounded-lg border border-border bg-bg hover:border-border-strong focus-within:border-accent/40 transition-colors">
         <textarea
           value={value}
           onChange={(e) => setValue(e.target.value)}
@@ -29,17 +29,17 @@ export function PromptInput({ onSubmit, disabled }: PromptInputProps) {
               handleSubmit()
             }
           }}
-          placeholder="Describe what you want to change..."
-          rows={2}
+          placeholder="Follow up..."
+          rows={1}
           disabled={disabled}
-          className="w-full resize-none rounded-lg border border-border bg-bg p-3 pr-12 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50"
+          className="flex-1 resize-none bg-transparent px-3 py-2 text-[12px] text-text-primary placeholder:text-text-muted/50 focus:outline-none disabled:opacity-30 font-sans"
         />
         <button
           onClick={handleSubmit}
           disabled={!value.trim() || disabled}
-          className="absolute bottom-3 right-3 flex h-8 w-8 items-center justify-center rounded-md bg-accent text-white transition-colors hover:bg-accent-hover disabled:opacity-30 disabled:cursor-not-allowed"
+          className="m-1.5 flex h-5 w-5 items-center justify-center rounded-md bg-accent text-white transition-all hover:bg-accent-hover disabled:opacity-15 disabled:cursor-not-allowed flex-shrink-0"
         >
-          <ArrowUp className="h-4 w-4" />
+          <ArrowUp className="h-2.5 w-2.5" />
         </button>
       </div>
     </div>

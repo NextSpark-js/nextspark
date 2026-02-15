@@ -2,19 +2,12 @@
 
 import { useEffect, useRef } from 'react'
 import Markdown from 'react-markdown'
-import { User, Sparkles, Wrench, Loader2, CheckCircle2, Terminal } from 'lucide-react'
+import { Loader2, ChevronRight } from 'lucide-react'
 import type { ChatMessage, StudioStatus } from '@/lib/types'
 
 interface ChatMessagesProps {
   messages: ChatMessage[]
   status: StudioStatus
-}
-
-function ToolIcon({ status }: { status: StudioStatus }) {
-  if (status === 'streaming') {
-    return <Loader2 className="h-4 w-4 animate-spin text-accent" />
-  }
-  return <CheckCircle2 className="h-4 w-4 text-success" />
 }
 
 function toolDisplayName(name?: string): string {
@@ -27,6 +20,7 @@ function toolDisplayName(name?: string): string {
 }
 
 export function ChatMessages({ messages, status }: ChatMessagesProps) {
+  const scrollRef = useRef<HTMLDivElement>(null)
   const endRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -34,69 +28,63 @@ export function ChatMessages({ messages, status }: ChatMessagesProps) {
   }, [messages])
 
   return (
-    <div className="flex-1 overflow-y-auto space-y-4 p-4">
-      {messages.map((msg) => (
-        <div key={msg.id} className="flex gap-3">
-          {/* Avatar */}
-          <div className="flex-shrink-0 mt-0.5">
-            {msg.role === 'user' ? (
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-bg-elevated">
-                <User className="h-4 w-4 text-text-secondary" />
-              </div>
-            ) : msg.role === 'tool' ? (
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-accent-muted">
-                <Wrench className="h-4 w-4 text-accent" />
-              </div>
-            ) : msg.role === 'system' ? (
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-bg-elevated">
-                <Terminal className="h-4 w-4 text-success" />
-              </div>
-            ) : (
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-accent-muted">
-                <Sparkles className="h-4 w-4 text-accent" />
-              </div>
-            )}
-          </div>
-
-          {/* Content */}
-          <div className="flex-1 min-w-0">
-            {msg.role === 'tool' ? (
-              <div className="flex items-center gap-2 rounded-lg border border-border bg-bg-surface px-3 py-2 text-sm">
-                <ToolIcon status={status} />
-                <span className="text-text-secondary">
-                  {toolDisplayName(msg.toolName)}
-                </span>
-                <span className="text-text-muted truncate">
-                  {msg.content}
-                </span>
-              </div>
-            ) : msg.role === 'system' ? (
-              <div className="rounded-lg border border-border bg-bg-surface px-3 py-2 text-xs font-mono text-text-muted">
+    <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain px-3 py-3 space-y-2">
+      {messages.map((msg) => {
+        // User message
+        if (msg.role === 'user') {
+          return (
+            <div key={msg.id} className="space-y-0.5">
+              <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-text-muted/60">
+                You
+              </span>
+              <p className="text-[12px] text-text-primary leading-relaxed">
                 {msg.content}
-              </div>
-            ) : msg.role === 'assistant' ? (
-              <div className="prose-studio text-sm leading-relaxed">
-                <Markdown>{msg.content}</Markdown>
-              </div>
-            ) : (
-              <div className="text-sm leading-relaxed text-text-primary">
-                {msg.content}
-              </div>
-            )}
-          </div>
-        </div>
-      ))}
+              </p>
+            </div>
+          )
+        }
 
-      {/* Loading indicator */}
+        // Tool usage — compact inline
+        if (msg.role === 'tool') {
+          return (
+            <div key={msg.id} className="flex items-center gap-1.5 py-px">
+              <ChevronRight className="h-2 w-2 text-accent/50 flex-shrink-0" />
+              <span className="text-[10px] text-text-muted/70">
+                {toolDisplayName(msg.toolName)}
+              </span>
+            </div>
+          )
+        }
+
+        // System messages — compact log
+        if (msg.role === 'system') {
+          return (
+            <div key={msg.id} className="border-l border-border/60 pl-2 py-px">
+              <span className="text-[10px] font-mono text-text-muted/60 leading-relaxed line-clamp-2">
+                {msg.content}
+              </span>
+            </div>
+          )
+        }
+
+        // Assistant message
+        return (
+          <div key={msg.id} className="space-y-0.5">
+            <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-accent/60">
+              AI
+            </span>
+            <div className="prose-studio text-[12px]">
+              <Markdown>{msg.content}</Markdown>
+            </div>
+          </div>
+        )
+      })}
+
+      {/* Thinking indicator */}
       {status === 'loading' && (
-        <div className="flex gap-3">
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-accent-muted">
-            <Sparkles className="h-4 w-4 text-accent" />
-          </div>
-          <div className="flex items-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin text-accent" />
-            <span className="text-sm text-text-muted">Thinking...</span>
-          </div>
+        <div className="flex items-center gap-2 py-1">
+          <Loader2 className="h-3 w-3 animate-spin text-accent" />
+          <span className="text-[10px] text-text-muted">Thinking...</span>
         </div>
       )}
 
