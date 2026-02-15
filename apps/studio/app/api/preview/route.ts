@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   if (action === 'setup') {
     try {
       // Pick a port for the preview so .env has the correct APP_URL
-      const port = 5100 + Math.floor(Math.random() * 900)
+      const port = 5500 + Math.floor(Math.random() * 500)
       const logs: string[] = []
       const result = await setupProjectDatabase(slug, port, (line) => {
         logs.push(line)
