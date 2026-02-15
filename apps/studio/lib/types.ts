@@ -14,7 +14,7 @@ export interface ChatMessage {
   timestamp: number
 }
 
-export type StudioPhase = 'idle' | 'analyzing' | 'generating' | 'ready' | 'error'
+export type StudioPhase = 'idle' | 'analyzing' | 'generating' | 'setting_up_db' | 'ready' | 'error'
 
 export type StudioStatus = 'idle' | 'loading' | 'streaming' | 'complete' | 'error'
 

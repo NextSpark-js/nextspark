@@ -33,6 +33,31 @@ export function useStudioChat() {
   })
 
   const abortRef = useRef<AbortController | null>(null)
+  // Track the slug from SSE events so we can fetch files after stream ends
+  const readySlugRef = useRef<string | null>(null)
+
+  const fetchFiles = useCallback(async (slug: string) => {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        if (attempt > 0) {
+          await new Promise((r) => setTimeout(r, 1000 * attempt))
+        }
+        const res = await fetch(`/api/files?slug=${encodeURIComponent(slug)}`)
+        if (!res.ok) continue
+        const data = await res.json()
+        const files = data.files || []
+        if (files.length > 0) {
+          setState((prev) => ({
+            ...prev,
+            project: { ...prev.project, files },
+          }))
+          return
+        }
+      } catch {
+        // retry
+      }
+    }
+  }, [])
 
   const sendPrompt = useCallback(async (prompt: string) => {
     const userMessage: ChatMessage = {
@@ -41,6 +66,8 @@ export function useStudioChat() {
       content: prompt,
       timestamp: Date.now(),
     }
+
+    readySlugRef.current = null
 
     setState({
       status: 'loading',
@@ -90,6 +117,10 @@ export function useStudioChat() {
           const jsonStr = line.slice(6)
           try {
             const event = JSON.parse(jsonStr)
+            // Track slug synchronously (outside setState)
+            if (event.type === 'project_ready' && event.slug) {
+              readySlugRef.current = event.slug
+            }
             processEvent(event)
           } catch {
             // skip malformed
@@ -101,6 +132,9 @@ export function useStudioChat() {
       if (buffer.startsWith('data: ')) {
         try {
           const event = JSON.parse(buffer.slice(6))
+          if (event.type === 'project_ready' && event.slug) {
+            readySlugRef.current = event.slug
+          }
           processEvent(event)
         } catch {
           // skip
@@ -111,6 +145,12 @@ export function useStudioChat() {
         ...prev,
         status: prev.error ? 'error' : 'complete',
       }))
+
+      // Fetch files immediately after stream completes (not via useEffect)
+      const slug = readySlugRef.current
+      if (slug) {
+        fetchFiles(slug)
+      }
     } catch (error) {
       if ((error as Error).name === 'AbortError') return
 
@@ -121,7 +161,7 @@ export function useStudioChat() {
         error: message,
       }))
     }
-  }, [])
+  }, [fetchFiles])
 
   function processEvent(event: StudioEvent) {
     setState((prev) => {
@@ -242,33 +282,42 @@ export function useStudioChat() {
     })
   }
 
-  // Fetch file tree for the generated project
-  const fetchFiles = useCallback(async (slug: string) => {
-    try {
-      const res = await fetch(`/api/files?slug=${encodeURIComponent(slug)}`)
-      if (!res.ok) return
-      const data = await res.json()
-      setState((prev) => ({
-        ...prev,
-        project: { ...prev.project, files: data.files || [] },
-      }))
-    } catch {
-      // ignore
-    }
-  }, [])
-
-  // Start preview server
+  // Set up database + start preview server
   const startPreview = useCallback(async (slug: string) => {
     setState((prev) => ({
       ...prev,
-      project: { ...prev.project, previewLoading: true },
+      project: { ...prev.project, previewLoading: true, phase: 'setting_up_db' },
+    }))
+
+    // Step 1: Set up the database (create DB, migrate, seed)
+    let setupPort: number | undefined
+    try {
+      const setupRes = await fetch('/api/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'setup', slug }),
+      })
+
+      if (setupRes.ok) {
+        const setupData = await setupRes.json()
+        setupPort = setupData.port
+      }
+      // If setup fails, continue anyway - preview will work without DB
+    } catch {
+      // DB setup is best-effort, don't block preview
+    }
+
+    // Step 2: Start the dev server
+    setState((prev) => ({
+      ...prev,
+      project: { ...prev.project, phase: 'ready' },
     }))
 
     try {
       const res = await fetch('/api/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'start', slug }),
+        body: JSON.stringify({ action: 'start', slug, port: setupPort }),
       })
 
       if (!res.ok) {
@@ -298,6 +347,7 @@ export function useStudioChat() {
 
   const reset = useCallback(() => {
     abortRef.current?.abort()
+    readySlugRef.current = null
     setState({
       status: 'idle',
       messages: [],

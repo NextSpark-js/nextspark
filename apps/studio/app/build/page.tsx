@@ -1,0 +1,331 @@
+'use client'
+
+import { useEffect, useState, useCallback, useRef, Suspense } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import {
+  RotateCcw, RefreshCw, PanelLeftClose, PanelLeft,
+  Code2, Eye, Settings2, Loader2, Zap, Monitor, Tablet, Smartphone,
+} from 'lucide-react'
+import { useStudioChat } from '@/lib/use-studio-chat'
+import { ChatMessages } from '@/components/chat-messages'
+import { PromptInput } from '@/components/prompt-input'
+import { ConfigPreview } from '@/components/config-preview'
+import { EntityPreview } from '@/components/entity-preview'
+import { FileTree } from '@/components/file-tree'
+import { CodeViewer } from '@/components/code-viewer'
+import { PreviewFrame } from '@/components/preview-frame'
+
+type RightTab = 'preview' | 'code' | 'config'
+type Viewport = 'desktop' | 'tablet' | 'mobile'
+
+function BuildContent() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const {
+    status, messages, result, error, project,
+    sendPrompt, reset, fetchFiles, startPreview,
+  } = useStudioChat()
+
+  const [activeTab, setActiveTab] = useState<RightTab>('preview')
+  const [selectedFile, setSelectedFile] = useState<string | null>(null)
+  const [chatOpen, setChatOpen] = useState(true)
+  const [viewport, setViewport] = useState<Viewport>('desktop')
+  const autoStartedRef = useRef(false)
+
+  // Auto-send the initial prompt from URL
+  useEffect(() => {
+    const prompt = searchParams.get('prompt')
+    if (prompt && status === 'idle') {
+      sendPrompt(prompt)
+    }
+  }, [searchParams, status, sendPrompt])
+
+  // When project is ready, auto-start preview
+  useEffect(() => {
+    if (
+      project.phase === 'ready' &&
+      project.slug &&
+      !project.previewUrl &&
+      !project.previewLoading &&
+      !autoStartedRef.current
+    ) {
+      autoStartedRef.current = true
+      startPreview(project.slug)
+      setActiveTab('preview')
+    }
+  }, [project.phase, project.slug, project.previewUrl, project.previewLoading, startPreview])
+
+  // Reset autoStarted ref when user resets
+  const handleReset = useCallback(() => {
+    autoStartedRef.current = false
+    reset()
+    router.push('/')
+  }, [reset, router])
+
+  const isProcessing = status === 'loading' || status === 'streaming'
+  const isComplete = status === 'complete'
+  const projectReady = project.phase === 'ready' && !!project.slug
+
+  const handleStartPreview = useCallback(() => {
+    if (project.slug) {
+      startPreview(project.slug)
+      setActiveTab('preview')
+    }
+  }, [project.slug, startPreview])
+
+  const handleSelectFile = useCallback((path: string) => {
+    setSelectedFile(path)
+  }, [])
+
+  const tabs: { id: RightTab; label: string; icon: typeof Code2 }[] = [
+    { id: 'preview', label: 'Preview', icon: Eye },
+    { id: 'code', label: 'Code', icon: Code2 },
+    { id: 'config', label: 'Config', icon: Settings2 },
+  ]
+
+  const viewports: { id: Viewport; icon: typeof Monitor; label: string }[] = [
+    { id: 'desktop', icon: Monitor, label: 'Desktop' },
+    { id: 'tablet', icon: Tablet, label: 'Tablet' },
+    { id: 'mobile', icon: Smartphone, label: 'Mobile' },
+  ]
+
+  return (
+    <div className="fixed inset-0 flex flex-col bg-bg">
+      {/* Header */}
+      <header className="flex h-11 items-center justify-between border-b border-border bg-bg-surface/50 px-3 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setChatOpen(!chatOpen)}
+            className="flex h-7 w-7 items-center justify-center rounded-md text-text-muted hover:text-text-secondary hover:bg-bg-hover transition-colors"
+            title={chatOpen ? 'Collapse chat' : 'Expand chat'}
+          >
+            {chatOpen ? (
+              <PanelLeftClose className="h-3.5 w-3.5" />
+            ) : (
+              <PanelLeft className="h-3.5 w-3.5" />
+            )}
+          </button>
+
+          <div className="h-4 w-px bg-border" />
+
+          <div className="flex items-center gap-1.5">
+            <Zap className="h-3.5 w-3.5 text-accent" />
+            <span className="text-xs font-semibold tracking-wide text-text-secondary lowercase">
+              nextspark studio
+            </span>
+          </div>
+
+          {project.slug && (
+            <>
+              <span className="text-text-muted/40">/</span>
+              <span className="text-xs font-mono text-text-muted">{project.slug}</span>
+            </>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          {isProcessing && (
+            <div className="flex items-center gap-1.5 rounded-full bg-accent-muted px-2.5 py-1">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-accent animate-pulse-ring" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-accent" />
+              </span>
+              <span className="text-[11px] text-accent font-medium">
+                {project.phase === 'generating' ? 'Generating' : project.phase === 'setting_up_db' ? 'Setting up DB' : 'Analyzing'}
+              </span>
+            </div>
+          )}
+
+          {project.phase === 'setting_up_db' && !isProcessing && (
+            <div className="flex items-center gap-1.5 rounded-full bg-accent-muted px-2.5 py-1">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-accent animate-pulse-ring" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-accent" />
+              </span>
+              <span className="text-[11px] text-accent font-medium">Setting up DB</span>
+            </div>
+          )}
+
+          {isComplete && projectReady && !isProcessing && project.phase !== 'setting_up_db' && (
+            <div className="flex items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-success" />
+              <span className="text-[11px] text-success font-medium">Ready</span>
+            </div>
+          )}
+
+          {error && (
+            <div className="flex items-center gap-1.5 rounded-full bg-error/10 px-2.5 py-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-error" />
+              <span className="text-[11px] text-error font-medium">Error</span>
+            </div>
+          )}
+
+          <button
+            onClick={handleReset}
+            className="flex items-center gap-1 rounded-md px-2.5 py-1.5 text-[11px] text-text-muted hover:text-text-secondary hover:bg-bg-hover transition-colors"
+          >
+            <RotateCcw className="h-3 w-3" />
+            New
+          </button>
+        </div>
+      </header>
+
+      {/* Main split */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left — Collapsible Chat Panel */}
+        <div
+          className="h-full overflow-hidden flex-shrink-0 transition-[width] duration-300 ease-in-out"
+          style={{ width: chatOpen ? 340 : 0 }}
+        >
+          <div className="flex flex-col w-[340px] h-full border-r border-border bg-bg-surface/20">
+            <ChatMessages messages={messages} status={status} />
+            <PromptInput onSubmit={sendPrompt} disabled={isProcessing} />
+          </div>
+        </div>
+
+        {/* Right — Preview / Code / Config */}
+        <div className="flex flex-1 flex-col min-w-0">
+          {/* Tab bar */}
+          <div className="flex h-10 items-center border-b border-border bg-bg-surface/30 px-1 flex-shrink-0">
+            <div className="flex items-center gap-0.5 px-1">
+              {tabs.map((tab) => {
+                const Icon = tab.icon
+                const isActive = activeTab === tab.id
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`relative flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[11px] font-medium transition-all ${
+                      isActive
+                        ? 'bg-bg-elevated text-text-primary shadow-sm'
+                        : 'text-text-muted hover:text-text-secondary hover:bg-bg-hover/50'
+                    }`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {tab.label}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Viewport controls — preview tab only */}
+            {activeTab === 'preview' && project.previewUrl && (
+              <div className="ml-auto flex items-center gap-0.5 px-2">
+                {viewports.map((vp) => {
+                  const Icon = vp.icon
+                  const isActive = viewport === vp.id
+                  return (
+                    <button
+                      key={vp.id}
+                      onClick={() => setViewport(vp.id)}
+                      className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
+                        isActive
+                          ? 'bg-bg-elevated text-text-primary'
+                          : 'text-text-muted/40 hover:text-text-secondary hover:bg-bg-hover/50'
+                      }`}
+                      title={vp.label}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Tab content */}
+          <div className="flex-1 overflow-hidden">
+            {activeTab === 'preview' && (
+              <PreviewFrame
+                url={project.previewUrl}
+                loading={project.previewLoading}
+                onStart={handleStartPreview}
+                canStart={projectReady}
+                viewport={viewport}
+                isProcessing={isProcessing}
+                phase={project.phase}
+              />
+            )}
+
+            {activeTab === 'code' && (
+              <div className="flex h-full">
+                <div className="w-52 flex-shrink-0 border-r border-border overflow-y-auto bg-bg-surface/20">
+                  <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-text-muted">
+                      Explorer
+                    </span>
+                    {projectReady && (
+                      <button
+                        onClick={() => project.slug && fetchFiles(project.slug)}
+                        className="text-text-muted/50 hover:text-text-secondary transition-colors"
+                        title="Refresh files"
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                  <FileTree
+                    files={project.files}
+                    selectedPath={selectedFile}
+                    onSelectFile={handleSelectFile}
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  {project.slug ? (
+                    <CodeViewer slug={project.slug} filePath={selectedFile} />
+                  ) : (
+                    <div className="flex h-full items-center justify-center">
+                      <div className="text-center space-y-3 opacity-30">
+                        <Code2 className="h-12 w-12 mx-auto text-text-muted" />
+                        <p className="text-xs text-text-muted">Code appears after generation</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'config' && (
+              <div className="overflow-y-auto p-5 space-y-5">
+                {result ? (
+                  <>
+                    <ConfigPreview result={result} />
+                    <EntityPreview result={result} />
+                  </>
+                ) : (
+                  <div className="flex h-full items-center justify-center pt-20">
+                    <div className="text-center space-y-3 opacity-30">
+                      <Settings2 className="h-12 w-12 mx-auto text-text-muted" />
+                      <p className="text-xs text-text-muted">
+                        {isProcessing ? 'Configuration will appear here...' : 'Describe your app to start'}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Error banner */}
+      {error && (
+        <div className="border-t border-error/20 bg-error/5 px-4 py-2 flex-shrink-0">
+          <p className="text-xs text-error/80">{error}</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default function BuildPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen items-center justify-center bg-bg">
+        <Loader2 className="h-5 w-5 animate-spin text-accent" />
+      </div>
+    }>
+      <BuildContent />
+    </Suspense>
+  )
+}

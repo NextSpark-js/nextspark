@@ -6,9 +6,11 @@
  */
 
 import { spawn, type ChildProcess } from 'child_process'
-import { readdir, readFile, stat, mkdir } from 'fs/promises'
+import { readdir, readFile, writeFile, stat, mkdir } from 'fs/promises'
 import path from 'path'
-import { existsSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
+import { randomBytes } from 'crypto'
+import pg from 'pg'
 
 // All generated projects live here
 const PROJECTS_ROOT = path.resolve(process.cwd(), '../../studio-projects')
@@ -193,10 +195,209 @@ export async function readProjectFile(
   return readFile(fullPath, 'utf-8')
 }
 
+// Track which projects have had their DB set up
+const dbSetupDone = new Set<string>()
+
+/**
+ * Parse a DATABASE_URL into its components
+ */
+function parseDbUrl(url: string): {
+  user: string
+  password: string
+  host: string
+  port: string
+  database: string
+  params: string
+} {
+  // postgresql://user:password@host:port/database?params
+  const match = url.match(
+    /^postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/([^?]+)(\?.+)?$/
+  )
+  if (!match) throw new Error('Invalid DATABASE_URL format')
+  return {
+    user: match[1],
+    password: match[2],
+    host: match[3],
+    port: match[4],
+    database: match[5],
+    params: match[6] || '',
+  }
+}
+
+/**
+ * Set up a PostgreSQL database for a generated project.
+ *
+ * 1. Creates database `studio_<slug>` on the same PostgreSQL server
+ * 2. Writes a proper .env to the project with real credentials
+ * 3. Runs `pnpm db:migrate` to set up tables and seed data
+ */
+export async function setupProjectDatabase(
+  slug: string,
+  previewPort: number,
+  onLog?: (line: string) => void
+): Promise<{ ok: boolean; error?: string }> {
+  const log = onLog || (() => {})
+
+  if (dbSetupDone.has(slug)) {
+    log('[db] Database already set up for this project')
+    return { ok: true }
+  }
+
+  const projectPath = getProjectPath(slug)
+  if (!existsSync(projectPath)) {
+    return { ok: false, error: 'Project not found' }
+  }
+
+  // Get the studio's DATABASE_URL
+  const studioDbUrl = process.env.DATABASE_URL
+  if (!studioDbUrl) {
+    return { ok: false, error: 'Studio DATABASE_URL not configured' }
+  }
+
+  let dbInfo: ReturnType<typeof parseDbUrl>
+  try {
+    dbInfo = parseDbUrl(studioDbUrl.replace(/^["']|["']$/g, ''))
+  } catch {
+    return { ok: false, error: 'Failed to parse studio DATABASE_URL' }
+  }
+
+  const dbName = `studio_${slug.replace(/-/g, '_')}`
+  const projectDbUrl = `postgresql://${dbInfo.user}:${dbInfo.password}@${dbInfo.host}:${dbInfo.port}/${dbName}${dbInfo.params}`
+
+  // Step 1: Create the database using pg Client
+  log(`[db] Creating database "${dbName}"...`)
+  try {
+    const adminClient = new pg.Client({
+      user: dbInfo.user,
+      password: dbInfo.password,
+      host: dbInfo.host,
+      port: parseInt(dbInfo.port, 10),
+      database: dbInfo.database,
+      ssl: dbInfo.params.includes('sslmode=disable') ? false : { rejectUnauthorized: false },
+    })
+    await adminClient.connect()
+
+    // Check if database already exists
+    const check = await adminClient.query(
+      `SELECT 1 FROM pg_database WHERE datname = $1`,
+      [dbName]
+    )
+
+    if (check.rows.length === 0) {
+      // CREATE DATABASE can't use parameterized queries, but dbName is sanitized (only alphanumeric + underscore)
+      await adminClient.query(`CREATE DATABASE "${dbName}"`)
+      log(`[db] Database "${dbName}" created`)
+    } else {
+      log(`[db] Database "${dbName}" already exists`)
+    }
+
+    await adminClient.end()
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    if (!msg.includes('already exists')) {
+      return { ok: false, error: `Failed to create database: ${msg}` }
+    }
+    log(`[db] Database "${dbName}" already exists`)
+  }
+
+  // Step 2: Write proper .env
+  log('[db] Configuring project environment...')
+  const authSecret = randomBytes(32).toString('base64')
+
+  // Read the project's active theme from existing .env
+  let activeTheme = slug
+  try {
+    const existingEnv = readFileSync(path.join(projectPath, '.env'), 'utf-8')
+    const themeMatch = existingEnv.match(/NEXT_PUBLIC_ACTIVE_THEME="?([^"\n]+)"?/)
+    if (themeMatch) activeTheme = themeMatch[1]
+  } catch {
+    // Use slug as fallback theme name
+  }
+
+  const envContent = `# NextSpark Environment Configuration
+# Auto-configured by NextSpark Studio
+
+# DATABASE
+DATABASE_URL="${projectDbUrl}"
+
+# AUTHENTICATION
+BETTER_AUTH_SECRET="${authSecret}"
+BETTER_AUTH_URL="http://localhost:${previewPort}"
+
+# THEME
+NEXT_PUBLIC_ACTIVE_THEME="${activeTheme}"
+
+# APPLICATION
+NEXT_PUBLIC_APP_URL="http://localhost:${previewPort}"
+NODE_ENV="development"
+
+# STRIPE (disabled for preview)
+STRIPE_SECRET_KEY=""
+STRIPE_WEBHOOK_SECRET=""
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=""
+
+# EMAIL (disabled for preview)
+RESEND_API_KEY=""
+`
+
+  await writeFile(path.join(projectPath, '.env'), envContent, 'utf-8')
+  log('[db] Environment configured')
+
+  // Step 3: Run migrations
+  log('[db] Running database migrations...')
+  try {
+    const migrateResult = await new Promise<number>((resolve, reject) => {
+      const child = spawn('pnpm', ['db:migrate'], {
+        cwd: projectPath,
+        shell: true,
+        env: {
+          ...process.env,
+          DATABASE_URL: projectDbUrl,
+          NEXT_PUBLIC_ACTIVE_THEME: activeTheme,
+          FORCE_COLOR: '0',
+        },
+        stdio: 'pipe',
+      })
+
+      let output = ''
+      child.stdout?.on('data', (data: Buffer) => {
+        const text = data.toString().trim()
+        if (text) {
+          output += text + '\n'
+          log(`[migrate] ${text.split('\n').pop()}`)
+        }
+      })
+
+      child.stderr?.on('data', (data: Buffer) => {
+        const text = data.toString().trim()
+        if (text) output += text + '\n'
+      })
+
+      child.on('error', reject)
+      child.on('close', (code) => resolve(code ?? 1))
+    })
+
+    if (migrateResult !== 0) {
+      return { ok: false, error: 'Migration failed' }
+    }
+
+    log('[db] Migrations completed successfully')
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return { ok: false, error: `Migration error: ${msg}` }
+  }
+
+  dbSetupDone.add(slug)
+  log('[db] Database setup complete!')
+  return { ok: true }
+}
+
 /**
  * Start pnpm dev on a generated project
+ * @param slug - Project slug
+ * @param preferredPort - Optional port (from setupProjectDatabase) to keep .env in sync
  */
-export function startPreview(slug: string): Promise<number> {
+export function startPreview(slug: string, preferredPort?: number): Promise<number> {
   return new Promise((resolve, reject) => {
     const existing = runningServers.get(slug)
     if (existing) {
@@ -205,12 +406,41 @@ export function startPreview(slug: string): Promise<number> {
     }
 
     const projectPath = getProjectPath(slug)
-    const port = 5100 + Math.floor(Math.random() * 900)
+    const port = preferredPort || (5100 + Math.floor(Math.random() * 900))
 
-    const child = spawn('pnpm', ['dev', '--', '-p', String(port)], {
+    // Read the project's .env and pass values explicitly to the child process.
+    // Critical: The nextspark CLI uses dotenvx which traverses parent directories
+    // to find .env files. The Studio's parent .env would override the project's .env.
+    // Also: Next.js won't override process.env vars with .env file values.
+    // Solution: Read project .env, strip parent vars, set explicitly in child env.
+    const projectEnvOverrides: Record<string, string> = {}
+    const envVarsToIsolate = [
+      'DATABASE_URL', 'BETTER_AUTH_SECRET', 'BETTER_AUTH_URL',
+      'NEXT_PUBLIC_APP_URL', 'NEXT_PUBLIC_ACTIVE_THEME',
+      'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY',
+      'RESEND_API_KEY', 'NODE_ENV',
+    ]
+
+    try {
+      const envContent = readFileSync(path.join(projectPath, '.env'), 'utf-8')
+      for (const line of envContent.split('\n')) {
+        const match = line.match(/^([A-Z_][A-Z0-9_]*)=["']?(.+?)["']?\s*$/)
+        if (match && envVarsToIsolate.includes(match[1])) {
+          projectEnvOverrides[match[1]] = match[2]
+        }
+      }
+    } catch {
+      // .env not found - continue without overrides
+    }
+
+    // Prevent dotenvx from traversing parent directories and finding the Studio's .env
+    // DOTENV_CONFIG_PATH forces dotenvx to use only the project's .env
+    projectEnvOverrides['DOTENV_CONFIG_PATH'] = path.join(projectPath, '.env')
+
+    const child = spawn('pnpm', ['dev'], {
       cwd: projectPath,
       shell: true,
-      env: { ...process.env, PORT: String(port), FORCE_COLOR: '0' },
+      env: { ...process.env, ...projectEnvOverrides, PORT: String(port), FORCE_COLOR: '0' },
       stdio: 'pipe',
     })
 
