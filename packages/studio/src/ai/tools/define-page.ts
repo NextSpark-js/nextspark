@@ -10,6 +10,19 @@
 
 import { z } from 'zod'
 
+// Preprocess props: AI sometimes sends props as a JSON string instead of an object
+const propsSchema = z.preprocess(
+  (val) => {
+    if (typeof val === 'string') {
+      try { return JSON.parse(val) } catch { return val }
+    }
+    return val
+  },
+  z.record(z.unknown()).describe(
+    'Block-specific props as an object. Always include "title" for section blocks. Use "content" for subtitle/description text. Use "cta" object with {text, link} for buttons. Use "items" array for list-based blocks (features, testimonials, FAQ, pricing plans, etc.).'
+  ),
+)
+
 const blockInstanceSchema = z.object({
   blockType: z.enum([
     'hero', 'hero-with-form', 'jumbotron', 'video-hero',
@@ -20,9 +33,7 @@ const blockInstanceSchema = z.object({
   ]).describe(
     'Block type slug. Must match an available block from the theme.'
   ),
-  props: z.record(z.unknown()).describe(
-    'Block-specific props. Each block type has different props. Always include "title" for section blocks. Use "content" for subtitle/description text. Use "cta" object with {text, link} for buttons. Use "items" array for list-based blocks (features, testimonials, FAQ, pricing plans, etc.).'
-  ),
+  props: propsSchema,
   order: z.number().int().min(0).describe(
     'Display order on the page (0 = first block at top)'
   ),
