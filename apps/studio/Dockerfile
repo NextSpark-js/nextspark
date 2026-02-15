@@ -4,15 +4,17 @@ FROM node:20-alpine AS builder
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 WORKDIR /app
 
-# Copy workspace root config
+# Copy full workspace config (lockfile needs all package.json references)
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-
-# Copy only the packages needed for the studio app
 COPY packages/studio/package.json packages/studio/
 COPY apps/studio/package.json apps/studio/
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile
+# Stub out workspace packages referenced in lockfile but not needed
+RUN mkdir -p packages/core packages/cli packages/create-nextspark-app packages/testing packages/ui packages/mobile packages/ai-workflow apps/dev themes/default themes/blog themes/crm themes/productivity plugins/ai plugins/langchain plugins/amplitude plugins/social-media
+RUN for d in packages/core packages/cli packages/create-nextspark-app packages/testing packages/ui packages/mobile packages/ai-workflow apps/dev themes/default themes/blog themes/crm themes/productivity plugins/ai plugins/langchain plugins/amplitude plugins/social-media; do echo '{"name":"stub-'$d'","version":"0.0.0","private":true}' > "$d/package.json"; done
+
+# Install dependencies (lockfile needs all workspace entries)
+RUN pnpm install --no-frozen-lockfile
 
 # Copy source code
 COPY packages/studio/ packages/studio/
