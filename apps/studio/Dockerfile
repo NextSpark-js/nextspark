@@ -43,6 +43,9 @@ ENV PORT=4000
 COPY --from=builder /app/apps/studio/.next/standalone ./
 COPY --from=builder /app/apps/studio/.next/static ./apps/studio/.next/static
 
+# Copy migrations (needed at runtime for auto-migration)
+COPY --from=builder /app/apps/studio/migrations ./apps/studio/migrations
+
 # Create directory for generated projects
 RUN mkdir -p /app/studio-projects
 
