@@ -154,6 +154,7 @@ export type StudioEventType =
   | 'phase'
   | 'generate_log'
   | 'project_ready'
+  | 'session_init'
   | 'error'
 
 export interface StudioEvent {
@@ -163,6 +164,7 @@ export interface StudioEvent {
   data?: unknown
   slug?: string
   phase?: string
+  sessionId?: string
 }
 
 export type StudioEventHandler = (event: StudioEvent) => void

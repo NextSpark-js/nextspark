@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Zap, ArrowRight } from 'lucide-react'
+import { Zap, ArrowRight, FolderOpen } from 'lucide-react'
 
 const EXAMPLES = [
   'A CRM for my gym with clients, memberships and payments',
@@ -11,9 +11,25 @@ const EXAMPLES = [
   'SaaS para gestionar reservas de un restaurante',
 ]
 
+interface SessionSummary {
+  id: string
+  prompt: string
+  status: string
+  project_slug: string | null
+  updated_at: string
+}
+
 export default function HomePage() {
   const [prompt, setPrompt] = useState('')
+  const [recentSessions, setRecentSessions] = useState<SessionSummary[]>([])
   const router = useRouter()
+
+  useEffect(() => {
+    fetch('/api/sessions?limit=3')
+      .then((res) => res.ok ? res.json() : { sessions: [] })
+      .then((data) => setRecentSessions(data.sessions || []))
+      .catch(() => {})
+  }, [])
 
   function handleSubmit(text?: string) {
     const input = text || prompt
@@ -88,6 +104,55 @@ export default function HomePage() {
             ))}
           </div>
         </div>
+
+        {/* Recent projects */}
+        {recentSessions.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-center gap-2">
+              <div className="h-px flex-1 bg-border/50" />
+              <p className="text-[11px] text-text-muted uppercase tracking-wider font-medium">
+                Recent projects
+              </p>
+              <div className="h-px flex-1 bg-border/50" />
+            </div>
+            <div className="space-y-2">
+              {recentSessions.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => router.push(`/build?session=${s.id}`)}
+                  className="w-full flex items-center gap-3 rounded-lg border border-border bg-bg-surface px-4 py-3 text-left transition-all hover:border-border-strong hover:bg-bg-hover group"
+                >
+                  <FolderOpen className="h-4 w-4 text-text-muted/50 group-hover:text-accent transition-colors flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-text-primary truncate">
+                      {s.project_slug || s.prompt.slice(0, 60)}
+                    </p>
+                    <p className="text-[10px] text-text-muted/60 truncate mt-0.5">
+                      {s.prompt.slice(0, 80)}
+                    </p>
+                  </div>
+                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${
+                    s.status === 'complete'
+                      ? 'bg-success/10 text-success'
+                      : s.status === 'error'
+                      ? 'bg-error/10 text-error'
+                      : 'bg-accent-muted text-accent'
+                  }`}>
+                    {s.status}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <div className="text-center">
+              <button
+                onClick={() => router.push('/projects')}
+                className="text-[11px] text-accent hover:text-accent-hover transition-colors"
+              >
+                View all projects
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Footer */}

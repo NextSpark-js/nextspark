@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import {
   RotateCcw, RefreshCw, PanelLeftClose, PanelLeft,
   Code2, Eye, Settings2, Loader2, Zap, Monitor, Tablet, Smartphone,
-  ChevronDown, LayoutGrid,
+  ChevronDown, LayoutGrid, FolderOpen,
 } from 'lucide-react'
 import { useStudioChat } from '@/lib/use-studio-chat'
 import { useGitHub } from '@/lib/use-github'
@@ -28,8 +28,8 @@ function BuildContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const {
-    status, messages, result, error, project, pages,
-    sendPrompt, reset, fetchFiles, startPreview, updatePages,
+    status, messages, result, error, project, pages, sessionId,
+    sendPrompt, reset, fetchFiles, startPreview, updatePages, loadSession,
   } = useStudioChat()
 
   const github = useGitHub()
@@ -42,6 +42,7 @@ function BuildContent() {
   const [viewport, setViewport] = useState<Viewport>('desktop')
   const [errorExpanded, setErrorExpanded] = useState(false)
   const autoStartedRef = useRef(false)
+  const sessionLoadedRef = useRef(false)
 
   // After GitHub OAuth redirect, re-check status
   useEffect(() => {
@@ -50,13 +51,31 @@ function BuildContent() {
     }
   }, [searchParams]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-send the initial prompt from URL
+  // Load existing session or start new generation from URL params
   useEffect(() => {
-    const prompt = searchParams.get('prompt')
-    if (prompt && status === 'idle') {
-      sendPrompt(prompt)
+    if (sessionLoadedRef.current) return
+
+    const sessionParam = searchParams.get('session')
+    const promptParam = searchParams.get('prompt')
+
+    if (sessionParam && status === 'idle') {
+      sessionLoadedRef.current = true
+      loadSession(sessionParam)
+    } else if (promptParam && status === 'idle') {
+      sessionLoadedRef.current = true
+      sendPrompt(promptParam)
     }
-  }, [searchParams, status, sendPrompt])
+  }, [searchParams, status, sendPrompt, loadSession])
+
+  // Update URL when sessionId becomes available (after generation starts)
+  useEffect(() => {
+    if (sessionId && searchParams.get('session') !== sessionId) {
+      const url = new URL(window.location.href)
+      url.searchParams.delete('prompt')
+      url.searchParams.set('session', sessionId)
+      window.history.replaceState({}, '', url.toString())
+    }
+  }, [sessionId, searchParams])
 
   // When project is ready, auto-start preview
   useEffect(() => {
@@ -76,6 +95,7 @@ function BuildContent() {
   // Reset autoStarted ref when user resets
   const handleReset = useCallback(() => {
     autoStartedRef.current = false
+    sessionLoadedRef.current = false
     reset()
     router.push('/')
   }, [reset, router])
@@ -222,6 +242,15 @@ function BuildContent() {
           />
 
           <div className="h-4 w-px bg-border" />
+
+          <button
+            onClick={() => router.push('/projects')}
+            className="flex items-center gap-1 rounded-md px-2.5 py-1.5 text-[11px] text-text-muted hover:text-text-secondary hover:bg-bg-hover transition-colors"
+            title="View all projects"
+          >
+            <FolderOpen className="h-3 w-3" />
+            Projects
+          </button>
 
           <button
             onClick={handleReset}

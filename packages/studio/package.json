@@ -19,7 +19,7 @@
     "test": "tsx src/cli.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.74.0",
+    "@anthropic-ai/claude-agent-sdk": "^0.2.42",
     "chalk": "^5.3.0",
     "ora": "^8.0.0",
     "zod": "^3.24.0"

@@ -6,7 +6,7 @@
  */
 
 export { runStudio } from './ai/orchestrator'
-export { STUDIO_TOOLS } from './ai/tools/index'
+export { createStudioMcpServer, STUDIO_MCP_TOOL_NAMES } from './ai/tools/mcp-server'
 export { SYSTEM_PROMPT } from './ai/system-prompt'
 
 export type {

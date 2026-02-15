@@ -1,8 +1,9 @@
 /**
  * React hook for Studio full flow:
- * AI analysis → project generation → file browsing → preview
+ * AI analysis -> project generation -> file browsing -> preview
  *
  * Sends to /api/generate which streams AI + create-nextspark-app output.
+ * Supports session persistence: load from DB on mount, auto-save during generation.
  */
 
 'use client'
@@ -33,6 +34,7 @@ export function useStudioChat() {
     pages: [],
   })
 
+  const [sessionId, setSessionId] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   // Track the slug from SSE events so we can fetch files after stream ends
   const readySlugRef = useRef<string | null>(null)
@@ -64,6 +66,84 @@ export function useStudioChat() {
     setState((prev) => ({ ...prev, pages }))
   }, [])
 
+  /**
+   * Load an existing session from the DB.
+   * Returns the session ID if found, null otherwise.
+   */
+  const loadSession = useCallback(async (id: string): Promise<string | null> => {
+    try {
+      const res = await fetch(`/api/sessions/${encodeURIComponent(id)}`)
+      if (!res.ok) return null
+
+      const { session } = await res.json()
+      if (!session) return null
+
+      const messages: ChatMessage[] = Array.isArray(session.messages)
+        ? session.messages
+        : []
+      const pages: PageDefinition[] = Array.isArray(session.pages)
+        ? session.pages
+        : []
+      const result: StudioResult | null = session.result || null
+      const slug: string | null = session.project_slug || null
+      const error: string | null = session.error || null
+
+      // Map DB status to UI status
+      let status: StudioState['status'] = 'idle'
+      if (session.status === 'complete') status = 'complete'
+      else if (session.status === 'error') status = 'error'
+      else if (session.status === 'streaming' || session.status === 'generating') status = 'streaming'
+      else if (session.status === 'loading') status = 'loading'
+
+      // Determine project phase
+      let phase: ProjectState['phase'] = 'idle'
+      if (slug && (status === 'complete')) phase = 'ready'
+      else if (status === 'error') phase = 'error'
+      else if (status === 'streaming') phase = 'generating'
+
+      setState({
+        status,
+        messages,
+        result,
+        error,
+        project: {
+          slug,
+          phase,
+          files: [],
+          previewUrl: null,
+          previewLoading: false,
+        },
+        pages,
+      })
+
+      setSessionId(id)
+
+      // Fetch files if project is ready
+      if (slug && phase === 'ready') {
+        fetchFiles(slug)
+      }
+
+      return id
+    } catch {
+      return null
+    }
+  }, [fetchFiles])
+
+  /**
+   * Save the current messages to the session (called after stream completes).
+   */
+  const saveMessages = useCallback(async (sid: string, messages: ChatMessage[]) => {
+    try {
+      await fetch(`/api/sessions/${encodeURIComponent(sid)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages }),
+      })
+    } catch {
+      // Best-effort
+    }
+  }, [])
+
   const sendPrompt = useCallback(async (prompt: string) => {
     const userMessage: ChatMessage = {
       id: nextId(),
@@ -87,11 +167,15 @@ export function useStudioChat() {
     const controller = new AbortController()
     abortRef.current = controller
 
+    // Generate a session ID upfront
+    const sid = crypto.randomUUID()
+    setSessionId(sid)
+
     try {
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, sessionId: sid }),
         signal: controller.signal,
       })
 
@@ -127,6 +211,10 @@ export function useStudioChat() {
             if (event.type === 'project_ready' && event.slug) {
               readySlugRef.current = event.slug
             }
+            // session_init event — update URL
+            if (event.type === 'session_init' && event.sessionId) {
+              // URL update is handled by the build page component
+            }
             processEvent(event)
           } catch {
             // skip malformed
@@ -147,10 +235,12 @@ export function useStudioChat() {
         }
       }
 
-      setState((prev) => ({
-        ...prev,
-        status: prev.error ? 'error' : 'complete',
-      }))
+      setState((prev) => {
+        const finalStatus = prev.error ? 'error' : 'complete'
+        // Save messages to session after stream completes
+        saveMessages(sid, prev.messages)
+        return { ...prev, status: finalStatus }
+      })
 
       // Fetch files immediately after stream completes (not via useEffect)
       const slug = readySlugRef.current
@@ -167,7 +257,7 @@ export function useStudioChat() {
         error: message,
       }))
     }
-  }, [fetchFiles])
+  }, [fetchFiles, saveMessages])
 
   function processEvent(event: StudioEvent) {
     setState((prev) => {
@@ -361,6 +451,7 @@ export function useStudioChat() {
   const reset = useCallback(() => {
     abortRef.current?.abort()
     readySlugRef.current = null
+    setSessionId(null)
     setState({
       status: 'idle',
       messages: [],
@@ -373,10 +464,12 @@ export function useStudioChat() {
 
   return {
     ...state,
+    sessionId,
     sendPrompt,
     reset,
     fetchFiles,
     startPreview,
     updatePages,
+    loadSession,
   }
 }

@@ -3,9 +3,10 @@
  *
  * Runs create-nextspark-app and streams progress back.
  * After generation, triggers the AI chat to configure the project.
+ * Persists session state to PostgreSQL throughout.
  *
  * POST /api/generate
- * Body: { prompt: string }
+ * Body: { prompt: string, sessionId?: string }
  * Response: text/event-stream
  */
 
@@ -13,6 +14,8 @@ import { runStudio } from '@nextsparkjs/studio'
 import type { StudioEvent } from '@nextsparkjs/studio'
 import { generateProject, setCurrentProject, getProjectPath } from '@/lib/project-manager'
 import { existsSync } from 'fs'
+import { query, queryOne } from '@/lib/db'
+import { runMigrations } from '@/lib/migrate'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300
@@ -25,16 +28,60 @@ function slugify(text: string): string {
     .slice(0, 40) || 'my-project'
 }
 
+async function saveSession(
+  sessionId: string,
+  data: Record<string, unknown>
+): Promise<void> {
+  const fields = Object.keys(data)
+  if (fields.length === 0) return
+
+  const setClauses = ['updated_at = NOW()']
+  const values: unknown[] = []
+  let i = 1
+
+  for (const field of fields) {
+    const value = (field === 'result' || field === 'messages' || field === 'pages')
+      ? JSON.stringify(data[field])
+      : data[field]
+    setClauses.push(`${field} = $${i}`)
+    values.push(value)
+    i++
+  }
+
+  values.push(sessionId)
+  await query(
+    `UPDATE sessions SET ${setClauses.join(', ')} WHERE id = $${i}`,
+    values
+  )
+}
+
 export async function POST(request: Request) {
   const body = await request.json()
-  const { prompt } = body as { prompt?: string }
+  const { prompt, sessionId } = body as { prompt?: string; sessionId?: string }
 
   if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
     return Response.json({ error: 'prompt is required' }, { status: 400 })
   }
 
+  // Generate session ID if not provided
+  const sid = sessionId || crypto.randomUUID()
+
+  // Ensure migrations are applied
+  await runMigrations()
+
+  // Create session row
+  await queryOne(
+    `INSERT INTO sessions (id, prompt, status)
+     VALUES ($1, $2, 'streaming')
+     ON CONFLICT (id) DO UPDATE SET status = 'streaming', updated_at = NOW()`,
+    [sid, prompt.trim()]
+  )
+
   const encoder = new TextEncoder()
   let closed = false
+
+  // Collect messages for periodic saves
+  const collectedMessages: unknown[] = []
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -58,6 +105,9 @@ export async function POST(request: Request) {
       }
 
       try {
+        // Send session ID as first event so client can update URL
+        send({ type: 'session_init', sessionId: sid })
+
         // Phase 1: Run AI to analyze and configure
         send({ type: 'phase', phase: 'analyzing', content: 'Analyzing your requirements...' })
 
@@ -71,14 +121,25 @@ export async function POST(request: Request) {
           data: studioResult,
         })
 
+        // Save result to session
+        const pages = studioResult?.pages || []
+        await saveSession(sid, {
+          result: studioResult,
+          pages,
+          status: 'generating',
+        })
+
         // Phase 2: Generate the actual project
         if (!studioResult?.wizardConfig) {
           send({ type: 'error', content: 'No configuration generated' })
+          await saveSession(sid, { status: 'error', error: 'No configuration generated' })
           return
         }
 
         const wc = studioResult.wizardConfig
         const slug = slugify(wc.projectName || wc.projectSlug || 'my-project')
+
+        await saveSession(sid, { project_slug: slug })
 
         // Check if project already exists
         if (existsSync(getProjectPath(slug))) {
@@ -89,6 +150,7 @@ export async function POST(request: Request) {
             slug,
             content: `Project ready: ${slug}`,
           })
+          await saveSession(sid, { status: 'complete' })
           return
         }
 
@@ -120,10 +182,27 @@ export async function POST(request: Request) {
           slug,
           content: `Project "${slug}" generated successfully!`,
         })
+
+        // Final save — complete
+        await saveSession(sid, { status: 'complete' })
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         send({ type: 'error', content: message })
+        // Save error state
+        try {
+          await saveSession(sid, { status: 'error', error: message })
+        } catch {
+          // Best-effort persistence
+        }
       } finally {
+        // Save collected messages before closing
+        if (collectedMessages.length > 0) {
+          try {
+            await saveSession(sid, { messages: collectedMessages })
+          } catch {
+            // Best-effort
+          }
+        }
         close()
       }
     },

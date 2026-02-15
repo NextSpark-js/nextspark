@@ -1,8 +1,8 @@
 /**
  * Studio Tool Definitions
  *
- * All tools available to Claude for configuring NextSpark projects.
- * Tools use Zod schemas for type-safe validation.
+ * Exports Zod schemas and tool descriptions for external consumers.
+ * The STUDIO_TOOLS array is replaced by the MCP server in mcp-server.ts.
  */
 
 export { ANALYZE_REQUIREMENT_TOOL, analyzeRequirementSchema } from './analyze-requirement'
@@ -17,19 +17,13 @@ export type { DefineEntityInput } from './define-entity'
 export { DEFINE_PAGE_TOOL, definePageSchema } from './define-page'
 export type { DefinePageInput } from './define-page'
 
-import { ANALYZE_REQUIREMENT_TOOL } from './analyze-requirement'
-import { CONFIGURE_PROJECT_TOOL } from './configure-project'
-import { DEFINE_ENTITY_TOOL } from './define-entity'
-import { DEFINE_PAGE_TOOL } from './define-page'
+export { createStudioMcpServer, STUDIO_MCP_TOOL_NAMES } from './mcp-server'
 
 /**
- * All studio tools in execution order
+ * Tool names used by the tool executor (short names without MCP prefix).
  */
-export const STUDIO_TOOLS = [
-  ANALYZE_REQUIREMENT_TOOL,
-  CONFIGURE_PROJECT_TOOL,
-  DEFINE_ENTITY_TOOL,
-  DEFINE_PAGE_TOOL,
-] as const
-
-export type StudioToolName = typeof STUDIO_TOOLS[number]['name']
+export type StudioToolName =
+  | 'analyze_requirement'
+  | 'configure_project'
+  | 'define_entity'
+  | 'define_page'

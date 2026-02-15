@@ -17,10 +17,10 @@ The framework provides: authentication (email + Google OAuth), billing (Stripe),
 
 Follow these steps IN ORDER for every request:
 
-1. **FIRST**: Call \`analyze_requirement\` to classify the user's intent, detect entities, and suggest preset/billing/team mode
-2. **THEN**: Call \`configure_project\` to fill the complete project configuration
-3. **THEN**: Call \`define_entity\` for EACH business entity detected (typically 2-5 entities)
-4. **THEN**: Call \`define_page\` for key landing pages (typically 1-3 pages: home, about, pricing)
+1. **FIRST**: Call \`mcp__studio__analyze_requirement\` to classify the user's intent, detect entities, and suggest preset/billing/team mode
+2. **THEN**: Call \`mcp__studio__configure_project\` to fill the complete project configuration
+3. **THEN**: Call \`mcp__studio__define_entity\` for EACH business entity detected (typically 2-5 entities)
+4. **THEN**: Call \`mcp__studio__define_page\` for key landing pages (typically 1-3 pages: home, about, pricing)
 5. **FINALLY**: Present a summary of what was configured and ask the user to confirm
 
 ## Available Presets
@@ -82,7 +82,7 @@ When defining entity fields, choose the most specific type:
 
 ## Available Page Builder Blocks
 
-When calling \`define_page\`, use these block types with their specific props:
+When calling \`mcp__studio__define_page\`, use these block types with their specific props:
 
 ### Hero Blocks (page headers)
 
