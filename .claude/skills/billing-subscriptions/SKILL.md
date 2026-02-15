@@ -6,7 +6,7 @@ description: |
   plans configuration, checkout flow, customer portal, webhooks, and usage tracking.
   Use this skill when implementing billing features or working with subscription management.
 allowed-tools: Read, Glob, Grep
-version: 2.0.0
+version: 3.0.0
 ---
 
 # Billing & Subscriptions Skill
@@ -38,7 +38,7 @@ core/lib/billing/
 │   ├── interface.ts     # BillingGateway interface (contract)
 │   ├── factory.ts       # getBillingGateway() factory
 │   └── stripe.ts        # StripeGateway implements BillingGateway
-│   └── polar.ts         # PolarGateway implements BillingGateway (future)
+│   └── polar.ts         # PolarGateway implements BillingGateway
 ├── queries.ts           # Database queries
 ├── enforcement.ts       # Limit/feature enforcement
 ├── helpers.ts           # Utility functions
@@ -95,8 +95,8 @@ export interface BillingGateway {
   cancelSubscriptionImmediately(subscriptionId: string): Promise<SubscriptionResult>
   reactivateSubscription(subscriptionId: string): Promise<SubscriptionResult>
 
-  // Webhooks
-  verifyWebhookSignature(payload: string | Buffer, signature: string): WebhookEventResult
+  // Webhooks (Stripe passes string signature, Polar passes headers Record)
+  verifyWebhookSignature(payload: string | Buffer, signatureOrHeaders: string | Record<string, string>): WebhookEventResult
 }
 ```
 
@@ -912,6 +912,51 @@ if (current >= limit) return false
 - [ ] Polar product price IDs set in plan definitions
 - [ ] Customer `externalId` mapping to userId working
 - [ ] (Optional) Better Auth plugin configured for auto customer creation
+
+## Testing
+
+### Unit Tests
+
+Both gateway implementations have comprehensive Jest unit tests:
+
+```
+packages/core/tests/jest/lib/billing/
+├── stripe.test.ts    # 38 tests - StripeGateway, factory, deprecated compat
+├── polar.test.ts     # 26 tests - PolarGateway, getPolarInstance
+└── (billing-queries.test.ts)  # Billing query tests
+```
+
+**Mock pattern:** Mock the provider SDK, `PlanService`, and `BILLING_REGISTRY` before importing the gateway class.
+
+```typescript
+// Example: Polar test mocks
+jest.mock('@polar-sh/sdk', () => ({
+  Polar: jest.fn().mockImplementation(() => ({
+    checkouts: { create: mockCheckoutsCreate },
+    customerSessions: { create: mockCustomerSessionsCreate },
+    // ...
+  }))
+}))
+
+jest.mock('@polar-sh/sdk/webhooks', () => ({
+  validateEvent: mockValidateEvent,
+  WebhookVerificationError: MockWebhookVerificationError,
+}))
+
+jest.mock('@/core/lib/services/plan.service', () => ({
+  PlanService: { getPriceId: mockGetPriceId }
+}))
+```
+
+**Running tests:**
+```bash
+# All billing tests
+cd packages/core && npx jest --config jest.config.cjs tests/jest/lib/billing/
+
+# Specific provider
+npx jest --config jest.config.cjs tests/jest/lib/billing/polar.test.ts
+npx jest --config jest.config.cjs tests/jest/lib/billing/stripe.test.ts
+```
 
 ## Related Skills
 
