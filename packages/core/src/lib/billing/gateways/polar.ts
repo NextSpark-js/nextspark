@@ -20,7 +20,6 @@
 
 import { Polar } from '@polar-sh/sdk'
 import { validateEvent, WebhookVerificationError } from '@polar-sh/sdk/webhooks'
-import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
 import { PlanService } from '../../services/plan.service'
 import type { BillingGateway } from './interface'
 import type {
