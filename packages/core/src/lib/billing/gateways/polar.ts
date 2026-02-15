@@ -71,7 +71,7 @@ export class PolarGateway implements BillingGateway {
 
     const checkoutParams: CheckoutCreate = {
       products: [productId],
-      successUrl: successUrl ?? undefined,
+      successUrl,
       metadata: { teamId, planSlug, billingPeriod },
       ...(customerEmail && { customerEmail }),
       // Polar uses returnUrl for back navigation (equivalent to Stripe's cancel_url)

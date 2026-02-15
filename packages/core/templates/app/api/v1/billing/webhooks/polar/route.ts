@@ -269,6 +269,26 @@ async function handleOrderPaid(data: Record<string, unknown>) {
        WHERE "externalSubscriptionId" = $1`,
       [subscriptionId]
     )
+
+    // Log billing event for audit trail (recurring payments)
+    const sub = await queryOne<{ id: string; teamId: string }>(
+      `SELECT id, "teamId" FROM subscriptions WHERE "externalSubscriptionId" = $1 LIMIT 1`,
+      [subscriptionId]
+    )
+    if (sub) {
+      await query(
+        `INSERT INTO "billing_events" ("subscriptionId", type, status, amount, currency, metadata)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [
+          sub.id,
+          'payment',
+          'succeeded',
+          amount || 0,
+          currency || 'usd',
+          JSON.stringify({ polarEventId: orderId })
+        ]
+      )
+    }
   }
 }
 
@@ -290,7 +310,7 @@ function mapPolarStatus(polarStatus: string): string {
     unpaid: 'past_due',
     revoked: 'canceled',
   }
-  return statusMap[polarStatus] || 'active'
+  return statusMap[polarStatus] || polarStatus
 }
 
 /**
