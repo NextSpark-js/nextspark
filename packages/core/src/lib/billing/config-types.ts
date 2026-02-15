@@ -52,6 +52,12 @@ export interface PlanDefinition {
   /** Stripe price IDs (P2: Stripe Integration) */
   stripePriceIdMonthly?: string | null
   stripePriceIdYearly?: string | null
+
+  /** Generic price IDs for any payment provider (checked first, falls back to stripe-specific) */
+  providerPriceIds?: {
+    monthly?: string | null
+    yearly?: string | null
+  }
 }
 
 // ===========================================

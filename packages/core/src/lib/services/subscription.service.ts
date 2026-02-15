@@ -17,7 +17,7 @@ import {
   isSubscriptionActive,
   hasFeature as checkFeatureInList,
 } from '../billing/helpers'
-import { updateSubscriptionPlan } from '../billing/gateways/stripe'
+import { getBillingGateway } from '../billing/gateways/factory'
 // Note: checkDowngrade is imported dynamically in changePlan() to avoid circular dependency
 import type {
   Plan,
@@ -452,10 +452,10 @@ export class SubscriptionService {
       return { success: false, error: `Plan ${targetPlanSlug} not found` }
     }
 
-    // 3. Get Stripe price ID
-    const newPriceId = PlanService.getStripePriceId(targetPlanSlug, billingInterval)
+    // 3. Get provider price ID
+    const newPriceId = PlanService.getPriceId(targetPlanSlug, billingInterval)
     if (!newPriceId) {
-      return { success: false, error: `No Stripe price for ${targetPlanSlug} ${billingInterval}` }
+      return { success: false, error: `No price ID configured for ${targetPlanSlug} ${billingInterval}` }
     }
 
     // 4. Check for downgrade warnings
@@ -469,9 +469,9 @@ export class SubscriptionService {
       downgradeWarnings = downgradeCheck.warnings
     }
 
-    // 5. Update via Stripe
+    // 5. Update via payment provider
     try {
-      await updateSubscriptionPlan({
+      await getBillingGateway().updateSubscriptionPlan({
         subscriptionId: currentSub.externalSubscriptionId,
         newPriceId,
         prorationBehavior: 'create_prorations',
