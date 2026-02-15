@@ -1,13 +1,34 @@
 /**
  * Authentication Configuration Prompts (Step 8)
  *
- * Collects authentication method preferences and security settings.
- * Currently supports: Email/Password and Google OAuth
+ * Collects registration mode, authentication method preferences, and security settings.
+ * Registration mode controls how new users can sign up.
  */
 
-import { checkbox } from '@inquirer/prompts'
+import { checkbox, input, select } from '@inquirer/prompts'
 import { showSection, showInfo } from '../banner.js'
-import type { WizardConfig, AuthConfig, WizardMode } from '../types.js'
+import type { WizardConfig, AuthConfig, WizardMode, RegistrationMode } from '../types.js'
+
+/**
+ * Registration mode options
+ */
+const REGISTRATION_MODE_OPTIONS = [
+  {
+    name: 'Open (anyone can register)',
+    value: 'open' as RegistrationMode,
+    description: 'Email+password and Google OAuth signup available to everyone',
+  },
+  {
+    name: 'Domain-Restricted (Google OAuth only for specific domains)',
+    value: 'domain-restricted' as RegistrationMode,
+    description: 'Only Google OAuth for allowed email domains (e.g., @yourcompany.com)',
+  },
+  {
+    name: 'Invitation-Only (registration via invite link)',
+    value: 'invitation-only' as RegistrationMode,
+    description: 'Users can only register when invited by an existing user',
+  },
+]
 
 /**
  * Authentication method options
@@ -45,6 +66,7 @@ const SECURITY_OPTIONS = [
  */
 export function getDefaultAuthConfig(): AuthConfig {
   return {
+    registrationMode: 'open',
     emailPassword: true,
     googleOAuth: false,
     emailVerification: true,
@@ -63,11 +85,51 @@ export async function promptAuthConfig(
   showInfo('Configure how users will authenticate to your application.')
   console.log('')
 
-  // Select authentication methods
-  const selectedMethods = await checkbox({
-    message: 'Which authentication methods do you want to enable?',
-    choices: AUTH_METHOD_OPTIONS,
+  // Select registration mode
+  const registrationMode = await select({
+    message: 'How should new users register?',
+    choices: REGISTRATION_MODE_OPTIONS,
+    default: 'open',
   })
+
+  console.log('')
+
+  // Determine auth methods based on registration mode
+  let emailPassword = true
+  let googleOAuth = false
+
+  let allowedDomains: string[] | undefined
+
+  if (registrationMode === 'domain-restricted') {
+    // Domain-restricted requires Google OAuth, email login is hidden
+    googleOAuth = true
+    emailPassword = false
+    showInfo('Domain-restricted mode: Google OAuth enabled, email login hidden on login page.')
+    console.log('')
+
+    const domainsInput = await input({
+      message: 'Allowed email domains (comma-separated, e.g. yourcompany.com, partner.org):',
+      validate: (value) => {
+        if (!value.trim()) return 'At least one domain is required for domain-restricted mode'
+        const domains = value.split(',').map((d) => d.trim()).filter(Boolean)
+        const invalid = domains.find((d) => !d.includes('.'))
+        if (invalid) return `Invalid domain: "${invalid}" (must contain a dot)`
+        return true
+      },
+    })
+
+    allowedDomains = domainsInput.split(',').map((d) => d.trim().toLowerCase()).filter(Boolean)
+    console.log('')
+  } else {
+    // Open or invitation-only: let user choose methods
+    const selectedMethods = await checkbox({
+      message: 'Which authentication methods do you want to enable?',
+      choices: AUTH_METHOD_OPTIONS,
+    })
+
+    emailPassword = selectedMethods.includes('emailPassword')
+    googleOAuth = selectedMethods.includes('googleOAuth')
+  }
 
   // In expert mode, also ask about security features
   let selectedSecurity: string[] = ['emailVerification']
@@ -84,9 +146,11 @@ export async function promptAuthConfig(
   }
 
   const auth: AuthConfig = {
-    emailPassword: selectedMethods.includes('emailPassword'),
-    googleOAuth: selectedMethods.includes('googleOAuth'),
+    registrationMode,
+    emailPassword,
+    googleOAuth,
     emailVerification: selectedSecurity.includes('emailVerification'),
+    allowedDomains,
   }
 
   return { auth }

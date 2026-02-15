@@ -1,8 +1,10 @@
 import { auth } from "@nextsparkjs/core/lib/auth";
 import { toNextJsHandler } from "better-auth/next-js";
 import { NextRequest, NextResponse } from "next/server";
-import { TEAMS_CONFIG } from "@nextsparkjs/core/lib/config";
+import { TEAMS_CONFIG, AUTH_CONFIG } from "@nextsparkjs/core/lib/config";
 import { isPublicSignupRestricted } from "@nextsparkjs/core/lib/teams/helpers";
+// Registration helpers available if needed: shouldBlockSignup, isDomainAllowed
+// Currently domain validation happens in auth.ts databaseHooks
 import { TeamService } from "@nextsparkjs/core/lib/services";
 import { wrapAuthHandlerWithCors, handleCorsPreflightRequest, addCorsHeaders } from "@nextsparkjs/core/lib/api/helpers";
 
@@ -41,25 +43,52 @@ export async function GET(req: NextRequest, context: { params: Promise<{ all: st
   return wrapAuthHandlerWithCors(() => handlers.GET(req), req);
 }
 
-// Intercept signup requests to validate single-tenant mode
+// Intercept signup requests to validate registration mode
 export async function POST(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
-  // Check if this is a signup request (email or OAuth)
-  const isSignupRequest =
-    pathname === '/api/auth/sign-up/email' ||
-    pathname.includes('/api/auth/callback/'); // OAuth callbacks can create users
+  // Determine request type
+  // Comprehensive signup endpoint detection to prevent bypasses
+  const signupEndpoints = [
+    '/sign-up/email',
+    '/sign-up/credentials',
+    '/signup',
+    '/register',
+  ];
+
+  const isSignupAttempt = signupEndpoints.some(endpoint => pathname.includes(endpoint));
+  const isOAuthCallback = pathname.includes('/api/auth/callback/');
+  const isSignupRequest = isSignupAttempt || isOAuthCallback;
 
   if (isSignupRequest) {
+    const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open';
     const teamsMode = TEAMS_CONFIG.mode;
 
-    // In single-tenant mode, block public signup if team already exists
-    if (isPublicSignupRestricted(teamsMode)) {
+    // --- Registration mode enforcement ---
+
+    // 1. Domain-restricted mode: block email signup, allow OAuth (validated in database hooks)
+    if (registrationMode === 'domain-restricted' && isSignupAttempt && !isOAuthCallback) {
+      // Block direct email/password signup in domain-restricted mode
+      // Only Google OAuth is allowed (domain validation happens in database hooks)
+      const errorResponse = NextResponse.json(
+        {
+          error: 'Email signup disabled',
+          message: 'Please sign up with Google using an authorized email domain.',
+          code: 'EMAIL_SIGNUP_DISABLED',
+        },
+        { status: 403 }
+      );
+      return await addCorsHeaders(errorResponse, req);
+    }
+
+    // Note: OAuth domain validation happens in auth.ts databaseHooks (user.create.before)
+    // The hook throws an error if the email domain is not in allowedDomains
+
+    // 2. Invitation-only mode OR single-tenant teams mode: existing behavior
+    if (registrationMode === 'invitation-only' || isPublicSignupRestricted(teamsMode)) {
       const teamExists = await TeamService.hasGlobal();
 
       if (teamExists) {
-        // Block public signup - users must be invited
-        // Add CORS headers so mobile apps can read the error message
         const errorResponse = NextResponse.json(
           {
             error: 'Registration is closed',

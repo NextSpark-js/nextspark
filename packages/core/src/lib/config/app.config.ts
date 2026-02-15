@@ -368,6 +368,32 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
   },
 
   // =============================================================================
+  // AUTHENTICATION CONFIGURATION
+  // =============================================================================
+  auth: {
+    /**
+     * Registration settings
+     *
+     * Controls how new users can register:
+     * - 'open': Anyone can register (email+password and Google OAuth) - DEFAULT
+     * - 'domain-restricted': Only Google OAuth for specific email domains
+     * - 'invitation-only': Registration only via invitation link
+     */
+    registration: {
+      mode: 'open' as const,
+    },
+
+    /**
+     * OAuth provider settings
+     */
+    providers: {
+      google: {
+        enabled: true,
+      },
+    },
+  },
+
+  // =============================================================================
   // MOBILE NAVIGATION CONFIGURATION
   // =============================================================================
   mobileNav: {

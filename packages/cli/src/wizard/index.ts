@@ -323,8 +323,9 @@ function showConfigSummary(config: WizardConfig): void {
   console.log('')
 
   console.log(chalk.white('  Authentication:'))
+  console.log(chalk.gray(`    Registration: ${chalk.white(formatRegistrationMode(config.auth.registrationMode))}`))
   const enabledAuth = Object.entries(config.auth)
-    .filter(([_, enabled]) => enabled)
+    .filter(([key, enabled]) => key !== 'registrationMode' && enabled)
     .map(([method]) => formatAuthMethod(method))
   console.log(chalk.gray(`    Methods: ${chalk.white(enabledAuth.join(', ') || 'None')}`))
   console.log('')
@@ -341,6 +342,18 @@ function showConfigSummary(config: WizardConfig): void {
     .filter(([_, enabled]) => enabled)
     .map(([tool]) => formatDevTool(tool))
   console.log(chalk.gray(`    Enabled: ${chalk.white(enabledDevTools.join(', ') || 'None')}`))
+}
+
+/**
+ * Format registration mode for display
+ */
+function formatRegistrationMode(mode: string): string {
+  const mapping: Record<string, string> = {
+    'open': 'Open (anyone can register)',
+    'domain-restricted': 'Domain-Restricted (Google OAuth only)',
+    'invitation-only': 'Invitation-Only',
+  }
+  return mapping[mode] || mode
 }
 
 /**

@@ -16,42 +16,50 @@ function getTargetThemesDir(): string {
 }
 
 /**
- * Update authentication config based on wizard responses
- * Note: Only email/password and Google OAuth are currently supported
+ * Update authentication config in app.config.ts based on wizard responses.
+ *
+ * Updates:
+ * - auth.registration.mode (open/domain-restricted/invitation-only/closed)
+ * - auth.providers.google.enabled (true/false)
  */
 export async function updateAuthConfig(config: WizardConfig): Promise<void> {
-  const authConfigPath = path.join(
+  const appConfigPath = path.join(
     getTargetThemesDir(),
     config.projectSlug,
     'config',
-    'auth.config.ts'
+    'app.config.ts'
   )
 
-  if (!await fs.pathExists(authConfigPath)) {
+  if (!await fs.pathExists(appConfigPath)) {
     return
   }
 
-  let content = await fs.readFile(authConfigPath, 'utf-8')
+  let content = await fs.readFile(appConfigPath, 'utf-8')
 
-  // Update email/password enabled
+  // Update registration mode
   content = content.replace(
-    /(emailPassword:\s*{[^}]*enabled:\s*)(?:true|false)/gs,
-    `$1${config.auth.emailPassword}`
+    /(mode:\s*)'open'(\s*as\s*const)/,
+    `$1'${config.auth.registrationMode}'$2`
   )
 
   // Update Google OAuth enabled
   content = content.replace(
-    /(google:\s*{[^}]*enabled:\s*)(?:true|false)/gs,
+    /(google:\s*{\s*enabled:\s*)(?:true|false)/s,
     `$1${config.auth.googleOAuth}`
   )
 
-  // Update email verification
-  content = content.replace(
-    /(emailVerification:\s*)(?:true|false)/g,
-    `$1${config.auth.emailVerification}`
-  )
+  // For domain-restricted mode, uncomment allowedDomains with user-provided values
+  if (config.auth.registrationMode === 'domain-restricted') {
+    const domains = config.auth.allowedDomains?.length
+      ? config.auth.allowedDomains.map((d) => `'${d}'`).join(', ')
+      : "'yourcompany.com'"
+    content = content.replace(
+      /\/\/\s*allowedDomains:\s*\['yourcompany\.com'\],\s*\/\/\s*Only for 'domain-restricted' mode/,
+      `allowedDomains: [${domains}],`
+    )
+  }
 
-  await fs.writeFile(authConfigPath, content, 'utf-8')
+  await fs.writeFile(appConfigPath, content, 'utf-8')
 }
 
 /**

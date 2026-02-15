@@ -35,6 +35,27 @@ export const APP_CONFIG_OVERRIDES = {
   },
 
   // =============================================================================
+  // AUTHENTICATION CONFIGURATION
+  // =============================================================================
+  /**
+   * Registration modes:
+   * - 'open': Anyone can register (email+password and Google OAuth) - DEFAULT
+   * - 'domain-restricted': Only Google OAuth for specific email domains
+   * - 'invitation-only': Registration only via invitation link
+   */
+  auth: {
+    registration: {
+      mode: 'domain-restricted' as const,
+      allowedDomains: ['nextspark.dev'],
+    },
+    providers: {
+      google: {
+        enabled: true,
+      },
+    },
+  },
+
+  // =============================================================================
   // INTERNATIONALIZATION OVERRIDES
   // =============================================================================
   i18n: {

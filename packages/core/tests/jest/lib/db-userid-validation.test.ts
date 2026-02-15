@@ -86,40 +86,38 @@ describe('validateUserId', () => {
       expect(() => validateUserId('550E8400-E29B-41D4-A716-446655440000')).not.toThrow();
     });
 
-    test('should reject test IDs in production', () => {
+    test('should accept alphanumeric IDs in production (nanoid format)', () => {
       const validateUserId = getValidateUserId();
 
-      expect(() => validateUserId('test-superadmin-001')).toThrow(
-        'Invalid userId format - must be valid UUID'
-      );
-      expect(() => validateUserId('dev_user_123')).toThrow(
-        'Invalid userId format - must be valid UUID'
-      );
+      // Better Auth uses nanoid (alphanumeric) IDs, so these are valid in production
+      expect(() => validateUserId('test-superadmin-001')).not.toThrow();
+      expect(() => validateUserId('dev_user_123')).not.toThrow();
     });
 
     test('should reject SQL injection attempts', () => {
       const validateUserId = getValidateUserId();
 
       expect(() => validateUserId("'; DROP TABLE users; --")).toThrow(
-        'Invalid userId format - must be valid UUID'
+        'Invalid userId format: contains dangerous characters'
       );
       expect(() => validateUserId("admin'--")).toThrow(
-        'Invalid userId format - must be valid UUID'
+        'Invalid userId format: contains dangerous characters'
       );
       expect(() => validateUserId('1; DELETE FROM users')).toThrow(
-        'Invalid userId format - must be valid UUID'
+        'Invalid userId format: contains dangerous characters'
       );
     });
 
-    test('should reject UUID-like strings with invalid format', () => {
+    test('should reject values with non-alphanumeric characters', () => {
       const validateUserId = getValidateUserId();
 
-      // Missing hyphens
-      expect(() => validateUserId('550e8400e29b41d4a716446655440000')).toThrow();
-      // Invalid character
-      expect(() => validateUserId('550e8400-e29b-41d4-a716-44665544000g')).toThrow();
-      // Wrong length
-      expect(() => validateUserId('550e8400-e29b-41d4-a716')).toThrow();
+      // Spaces and special characters should be rejected in production
+      expect(() => validateUserId('user name')).toThrow(
+        'Invalid userId format - must be valid UUID or alphanumeric'
+      );
+      expect(() => validateUserId('user@domain.com')).toThrow(
+        'Invalid userId format - must be valid UUID or alphanumeric'
+      );
     });
   });
 
@@ -263,25 +261,21 @@ describe('validateUserId', () => {
       }
     });
 
-    test('production NEVER accepts non-UUID values', () => {
+    test('production NEVER accepts values with dangerous or non-alphanumeric characters', () => {
       process.env.NODE_ENV = 'production';
       const validateUserId = getValidateUserId();
 
-      const nonUuidValues = [
-        'test-superadmin-001',
-        'dev_user_123',
-        'admin',
-        '12345',
-        'user@example.com',
-        '',
-        'null',
-        'undefined',
+      // Production rejects dangerous characters and non-alphanumeric values
+      const dangerousValues = [
+        'user@example.com',      // @ not allowed
+        'user name',             // space not allowed
+        "admin'--",              // SQL injection
+        'user;drop',             // semicolon
+        'path\\escape',          // backslash
       ];
 
-      for (const value of nonUuidValues) {
-        expect(() => validateUserId(value)).toThrow(
-          'Invalid userId format - must be valid UUID'
-        );
+      for (const value of dangerousValues) {
+        expect(() => validateUserId(value)).toThrow();
       }
     });
   });

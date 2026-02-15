@@ -3,7 +3,7 @@ import { Pool } from "pg";
 import { nextCookies } from "better-auth/next-js";
 import { parseSSLConfig, stripSSLParams } from './db';
 import { EmailFactory, emailTemplates } from './email';
-import { I18N_CONFIG, USER_ROLES_CONFIG, TEAMS_CONFIG, APP_CONFIG_MERGED, type UserRole } from './config';
+import { I18N_CONFIG, USER_ROLES_CONFIG, TEAMS_CONFIG, AUTH_CONFIG, APP_CONFIG_MERGED, type UserRole } from './config';
 import { getUserFlags } from './services/user-flags.service';
 // Direct import to avoid circular dependency: auth -> services/index -> middleware.service -> auth
 import { TeamService } from './services/team.service';
@@ -11,6 +11,8 @@ import { shouldSkipTeamCreation } from './auth-context';
 import {
   isPublicSignupRestricted,
 } from './teams/helpers';
+import { isDomainAllowed } from './auth/registration-helpers';
+import { registrationGuardPlugin } from './auth/registration-guard-plugin';
 import { getCorsOrigins } from './utils/cors';
 
 interface UserWithEmail {
@@ -164,7 +166,12 @@ export const auth = betterAuth({
   baseURL: baseUrl,
   // Use unified CORS configuration from app.config.ts + theme extensions + env vars
   trustedOrigins: getCorsOrigins(APP_CONFIG_MERGED),
+  // Redirect auth errors to our custom error page instead of Better Auth's default
+  onAPIError: {
+    errorURL: '/auth-error',
+  },
   plugins: [
+    registrationGuardPlugin(), // Intercept OAuth signup attempts
     nextCookies(), // MUST be the last plugin for Next.js cookie handling
   ],
   session: {
@@ -179,6 +186,35 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
+        // Validate registration mode before creating user
+        before: async (user: { email: string; [key: string]: unknown }) => {
+          const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open';
+
+          // In 'invitation-only' mode, block new user creation (except via invitation flow or first user)
+          if (registrationMode === 'invitation-only') {
+            if (!shouldSkipTeamCreation()) {
+              // shouldSkipTeamCreation() is true during invitation flow
+              // If it's false, check if this is the first user (team bootstrap)
+              const existingTeam = await TeamService.getGlobal();
+              if (existingTeam) {
+                // Team exists, so this is not the first user - block it
+                throw new Error('SIGNUP_RESTRICTED: Registration requires an invitation. Contact an administrator.');
+              }
+            }
+          }
+
+          // In 'domain-restricted' mode, validate email domain
+          // Empty allowedDomains list = allow all domains (permissive fallback)
+          if (registrationMode === 'domain-restricted') {
+            const allowedDomains = AUTH_CONFIG?.registration?.allowedDomains ?? [];
+            if (allowedDomains.length > 0 && !isDomainAllowed(user.email, allowedDomains)) {
+              console.log(`[Auth] Blocked registration for ${user.email}: domain not in allowedDomains (allowed: ${allowedDomains.join(', ')})`);
+              throw new Error(`DOMAIN_NOT_ALLOWED: Email domain not authorized. Please use an email from: ${allowedDomains.join(', ')}`);
+            }
+          }
+
+          return user;
+        },
         // Create team when a new user signs up (email/password or OAuth)
         // Team type depends on configured teams mode
         after: async (user: { id: string; name?: string; [key: string]: unknown }) => {
@@ -224,7 +260,33 @@ export const auth = betterAuth({
           }
         }
       }
-    }
+    },
+    session: {
+      create: {
+        // Enforce domain restrictions on EVERY login (not just signup)
+        before: async (session: { userId: string; [key: string]: unknown }) => {
+          const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open';
+
+          if (registrationMode === 'domain-restricted') {
+            const allowedDomains = AUTH_CONFIG?.registration?.allowedDomains ?? [];
+            if (allowedDomains.length > 0) {
+              // Look up user email from DB
+              const result = await pool.query(
+                'SELECT email FROM users WHERE id = $1 LIMIT 1',
+                [session.userId]
+              );
+              const email = result.rows[0]?.email;
+              if (email && !isDomainAllowed(email, allowedDomains)) {
+                console.log(`[Auth] Blocked sign-in for ${email}: domain not in allowedDomains`);
+                return false; // Abort session creation
+              }
+            }
+          }
+
+          return session;
+        },
+      },
+    },
   },
   callbacks: {
     session: {

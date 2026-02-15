@@ -95,6 +95,7 @@ export class TeamService {
   static async getGlobal(): Promise<Team | null> {
     return queryOneWithRLS<Team>(
       `SELECT * FROM "teams"
+       WHERE (metadata->>'isSeedData')::boolean IS NOT TRUE
        ORDER BY "createdAt" ASC
        LIMIT 1`,
       []
