@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Zap, ArrowRight, FolderOpen } from 'lucide-react'
+import { Zap, ArrowRight, FolderOpen, Loader2 } from 'lucide-react'
 
 const EXAMPLES = [
   'A CRM for my gym with clients, memberships and payments',
@@ -21,6 +21,7 @@ interface SessionSummary {
 
 export default function HomePage() {
   const [prompt, setPrompt] = useState('')
+  const [submitting, setSubmitting] = useState(false)
   const [recentSessions, setRecentSessions] = useState<SessionSummary[]>([])
   const router = useRouter()
 
@@ -31,11 +32,29 @@ export default function HomePage() {
       .catch(() => {})
   }, [])
 
-  function handleSubmit(text?: string) {
+  async function handleSubmit(text?: string) {
     const input = text || prompt
-    if (!input.trim()) return
-    const encoded = encodeURIComponent(input.trim())
-    router.push(`/build?prompt=${encoded}`)
+    if (!input.trim() || submitting) return
+
+    setSubmitting(true)
+    try {
+      const id = crypto.randomUUID()
+      const res = await fetch('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, prompt: input.trim() }),
+      })
+      if (res.ok) {
+        router.push(`/build?session=${id}`)
+      } else {
+        // Fallback — navigate anyway, build page will handle it
+        router.push(`/build?session=${id}`)
+      }
+    } catch {
+      // Fallback
+      const id = crypto.randomUUID()
+      router.push(`/build?session=${id}`)
+    }
   }
 
   return (
@@ -76,10 +95,10 @@ export default function HomePage() {
             />
             <button
               onClick={() => handleSubmit()}
-              disabled={!prompt.trim()}
+              disabled={!prompt.trim() || submitting}
               className="absolute bottom-4 right-4 flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-white transition-all hover:bg-accent-hover disabled:opacity-20 disabled:cursor-not-allowed"
             >
-              <ArrowRight className="h-4 w-4" />
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
             </button>
           </div>
           <p className="text-[10px] text-text-muted/50 text-center">
@@ -97,7 +116,8 @@ export default function HomePage() {
               <button
                 key={example}
                 onClick={() => handleSubmit(example)}
-                className="rounded-lg border border-border bg-bg-surface px-3 py-1.5 text-xs text-text-secondary transition-all hover:border-border-strong hover:text-text-primary hover:scale-[1.03]"
+                disabled={submitting}
+                className="rounded-lg border border-border bg-bg-surface px-3 py-1.5 text-xs text-text-secondary transition-all hover:border-border-strong hover:text-text-primary hover:scale-[1.03] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {example}
               </button>

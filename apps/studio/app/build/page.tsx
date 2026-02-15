@@ -56,26 +56,17 @@ function BuildContent() {
     if (sessionLoadedRef.current) return
 
     const sessionParam = searchParams.get('session')
-    const promptParam = searchParams.get('prompt')
 
     if (sessionParam && status === 'idle') {
       sessionLoadedRef.current = true
-      loadSession(sessionParam)
-    } else if (promptParam && status === 'idle') {
-      sessionLoadedRef.current = true
-      sendPrompt(promptParam)
+      loadSession(sessionParam).then((result) => {
+        // Fresh session — trigger generation with stored prompt
+        if (result && typeof result === 'object' && 'prompt' in result) {
+          sendPrompt(result.prompt, result.id)
+        }
+      })
     }
   }, [searchParams, status, sendPrompt, loadSession])
-
-  // Update URL when sessionId becomes available (after generation starts)
-  useEffect(() => {
-    if (sessionId && searchParams.get('session') !== sessionId) {
-      const url = new URL(window.location.href)
-      url.searchParams.delete('prompt')
-      url.searchParams.set('session', sessionId)
-      window.history.replaceState({}, '', url.toString())
-    }
-  }, [sessionId, searchParams])
 
   // When project is ready, auto-start preview
   useEffect(() => {

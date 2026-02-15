@@ -68,15 +68,23 @@ export function useStudioChat() {
 
   /**
    * Load an existing session from the DB.
-   * Returns the session ID if found, null otherwise.
+   * Returns { id, prompt } if the session is fresh (needs generation),
+   * the session ID string if it's a completed/in-progress session,
+   * or null if not found.
    */
-  const loadSession = useCallback(async (id: string): Promise<string | null> => {
+  const loadSession = useCallback(async (id: string): Promise<string | { id: string; prompt: string } | null> => {
     try {
       const res = await fetch(`/api/sessions/${encodeURIComponent(id)}`)
       if (!res.ok) return null
 
       const { session } = await res.json()
       if (!session) return null
+
+      // Fresh session (just created from home page) — needs generation
+      if (session.status === 'loading' && session.prompt && !session.result) {
+        setSessionId(id)
+        return { id, prompt: session.prompt }
+      }
 
       const messages: ChatMessage[] = Array.isArray(session.messages)
         ? session.messages
@@ -93,7 +101,6 @@ export function useStudioChat() {
       if (session.status === 'complete') status = 'complete'
       else if (session.status === 'error') status = 'error'
       else if (session.status === 'streaming' || session.status === 'generating') status = 'streaming'
-      else if (session.status === 'loading') status = 'loading'
 
       // Determine project phase
       let phase: ProjectState['phase'] = 'idle'
@@ -144,7 +151,7 @@ export function useStudioChat() {
     }
   }, [])
 
-  const sendPrompt = useCallback(async (prompt: string) => {
+  const sendPrompt = useCallback(async (prompt: string, existingSessionId?: string) => {
     const userMessage: ChatMessage = {
       id: nextId(),
       role: 'user',
@@ -167,8 +174,8 @@ export function useStudioChat() {
     const controller = new AbortController()
     abortRef.current = controller
 
-    // Generate a session ID upfront
-    const sid = crypto.randomUUID()
+    // Use existing session ID or generate a new one
+    const sid = existingSessionId || crypto.randomUUID()
     setSessionId(sid)
 
     try {
