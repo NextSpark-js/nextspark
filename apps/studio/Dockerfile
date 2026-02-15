@@ -41,7 +41,6 @@ ENV PORT=4000
 # Copy standalone output
 COPY --from=builder /app/apps/studio/.next/standalone ./
 COPY --from=builder /app/apps/studio/.next/static ./apps/studio/.next/static
-COPY --from=builder /app/apps/studio/public ./apps/studio/public
 
 # Create directory for generated projects
 RUN mkdir -p /app/studio-projects
