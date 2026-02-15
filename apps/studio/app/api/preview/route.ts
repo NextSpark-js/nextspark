@@ -51,7 +51,10 @@ export async function POST(request: Request) {
   if (action === 'start') {
     try {
       const port = await startPreview(slug, requestedPort || undefined)
-      return Response.json({ port, url: `http://localhost:${port}` })
+      // Use the request host so preview works both locally and on remote VPS
+      const requestHost = request.headers.get('host') || 'localhost'
+      const hostname = requestHost.split(':')[0]
+      return Response.json({ port, url: `http://${hostname}:${port}` })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to start preview'
       return Response.json({ error: message }, { status: 500 })

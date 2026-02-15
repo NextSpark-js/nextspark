@@ -47,6 +47,7 @@ COPY --from=builder /app/apps/studio/.next/static ./apps/studio/.next/static
 RUN mkdir -p /app/studio-projects
 
 EXPOSE 4000
+EXPOSE 5100-5999
 EXPOSE 6000-6999
 
 CMD ["node", "apps/studio/server.js"]
