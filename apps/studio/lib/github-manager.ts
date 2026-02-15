@@ -48,19 +48,35 @@ export function decryptToken(encrypted: string): string {
 
 // ─── OAuth ─────────────────────────────────────────────────────────────────
 
-export function getAuthUrl(state?: string): string {
+export function getAuthUrl(returnTo?: string): string {
   if (!GITHUB_CLIENT_ID) {
     throw new Error('GITHUB_CLIENT_ID not configured')
   }
+
+  // Encode returnTo URL in state so the callback can redirect back
+  const statePayload = JSON.stringify({
+    nonce: randomBytes(8).toString('hex'),
+    returnTo: returnTo || '/build',
+  })
+  const state = Buffer.from(statePayload).toString('base64url')
 
   const params = new URLSearchParams({
     client_id: GITHUB_CLIENT_ID,
     redirect_uri: CALLBACK_URL,
     scope: 'repo',
-    state: state || randomBytes(16).toString('hex'),
+    state,
   })
 
   return `https://github.com/login/oauth/authorize?${params.toString()}`
+}
+
+export function parseState(state: string): { returnTo: string } {
+  try {
+    const payload = JSON.parse(Buffer.from(state, 'base64url').toString())
+    return { returnTo: payload.returnTo || '/build' }
+  } catch {
+    return { returnTo: '/build' }
+  }
 }
 
 export async function exchangeToken(code: string): Promise<string> {

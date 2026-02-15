@@ -62,7 +62,8 @@ export async function POST(request: Request) {
     }
 
     try {
-      const url = getAuthUrl()
+      const { returnTo } = body as { returnTo?: string }
+      const url = getAuthUrl(returnTo)
       return Response.json({ url })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to generate auth URL'

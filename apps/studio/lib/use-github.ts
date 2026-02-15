@@ -75,7 +75,7 @@ export function useGitHub() {
       const res = await fetch('/api/github', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'auth-url' }),
+        body: JSON.stringify({ action: 'auth-url', returnTo: window.location.pathname + window.location.search }),
       })
       const data = await res.json()
       if (data.devMode) {

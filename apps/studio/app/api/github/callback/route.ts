@@ -10,7 +10,7 @@
 
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
-import { exchangeToken, encryptToken } from '@/lib/github-manager'
+import { exchangeToken, encryptToken, parseState } from '@/lib/github-manager'
 
 export const runtime = 'nodejs'
 
@@ -18,10 +18,12 @@ const COOKIE_NAME = 'gh_token'
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get('code')
+  const state = request.nextUrl.searchParams.get('state') || ''
+  const { returnTo } = parseState(state)
 
   if (!code) {
     // User denied or error — redirect back
-    const errorUrl = new URL('/build', request.url)
+    const errorUrl = new URL(returnTo, request.url)
     errorUrl.searchParams.set('gh_error', 'no_code')
     return NextResponse.redirect(errorUrl)
   }
@@ -39,15 +41,15 @@ export async function GET(request: NextRequest) {
       maxAge: 60 * 60 * 24 * 30, // 30 days
     })
 
-    // Redirect to build page with success indicator
-    const successUrl = new URL('/build', request.url)
+    // Redirect back to the original page with success indicator
+    const successUrl = new URL(returnTo, request.url)
     successUrl.searchParams.set('gh_connected', '1')
     return NextResponse.redirect(successUrl)
   } catch (error) {
     const message = error instanceof Error ? error.message : 'OAuth failed'
     console.error('[github/callback] OAuth error:', message)
 
-    const errorUrl = new URL('/build', request.url)
+    const errorUrl = new URL(returnTo, request.url)
     errorUrl.searchParams.set('gh_error', 'token_exchange_failed')
     return NextResponse.redirect(errorUrl)
   }
