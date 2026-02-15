@@ -7,7 +7,9 @@
  */
 
 import { existsSync } from 'fs'
+import { readFileSync } from 'fs'
 import { join } from 'path'
+import { createJiti } from 'jiti'
 
 import { log } from '../../../utils/index.mjs'
 import { convertCorePath } from '../config.mjs'
@@ -126,13 +128,14 @@ export async function generateBillingRegistry(activeTheme, contentsDir, config) 
 
   // Dynamically import the billing config at build time
   const themePath = existsSync(billingConfigPath) ? themeName : 'default'
-  // Use file:// URL for ESM dynamic import
   const absolutePath = join(themesDir, themePath, 'config', 'billing.config.ts')
 
   let billingConfig
   try {
-    const module = await import(`file://${absolutePath}`)
-    billingConfig = module.billingConfig
+    // Use jiti to import .ts files at build time (Node.js can't import .ts natively)
+    const jiti = createJiti(import.meta.url, { interopDefault: true })
+    const module = await jiti.import(absolutePath)
+    billingConfig = module.billingConfig || module.default
   } catch (error) {
     log(`Failed to import billing config from ${absolutePath}: ${error.message}`, 'error')
     return generateEmptyBillingRegistry(config)

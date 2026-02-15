@@ -43,7 +43,7 @@ export type SubscriptionStatus =
   | 'paused'
   | 'expired'
 
-export type PaymentProvider = 'stripe' | 'paddle' | 'lemonsqueezy'
+export type PaymentProvider = 'stripe' | 'polar' | 'paddle' | 'lemonsqueezy'
 export type BillingInterval = 'monthly' | 'yearly'
 
 export interface Subscription {

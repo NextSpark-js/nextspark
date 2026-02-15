@@ -140,6 +140,42 @@
       "types": "./dist/lib/plugins/env-loader.d.ts",
       "import": "./dist/lib/plugins/env-loader.js"
     },
+    "./lib/billing/gateways/factory": {
+      "types": "./dist/lib/billing/gateways/factory.d.ts",
+      "import": "./dist/lib/billing/gateways/factory.js"
+    },
+    "./lib/billing/gateways/stripe": {
+      "types": "./dist/lib/billing/gateways/stripe.d.ts",
+      "import": "./dist/lib/billing/gateways/stripe.js"
+    },
+    "./lib/billing/gateways/polar": {
+      "types": "./dist/lib/billing/gateways/polar.d.ts",
+      "import": "./dist/lib/billing/gateways/polar.js"
+    },
+    "./lib/billing/gateways/interface": {
+      "types": "./dist/lib/billing/gateways/interface.d.ts",
+      "import": "./dist/lib/billing/gateways/interface.js"
+    },
+    "./lib/billing/gateways/types": {
+      "types": "./dist/lib/billing/gateways/types.d.ts",
+      "import": "./dist/lib/billing/gateways/types.js"
+    },
+    "./lib/billing/config-types": {
+      "types": "./dist/lib/billing/config-types.d.ts",
+      "import": "./dist/lib/billing/config-types.js"
+    },
+    "./lib/services/index": {
+      "types": "./dist/lib/services/index.d.ts",
+      "import": "./dist/lib/services/index.js"
+    },
+    "./lib/api/auth/dual-auth": {
+      "types": "./dist/lib/api/auth/dual-auth.d.ts",
+      "import": "./dist/lib/api/auth/dual-auth.js"
+    },
+    "./lib/api/rate-limit": {
+      "types": "./dist/lib/api/rate-limit.d.ts",
+      "import": "./dist/lib/api/rate-limit.js"
+    },
     "./lib/*": {
       "types": "./dist/lib/*.d.ts",
       "import": "./dist/lib/*.js"
@@ -424,6 +460,7 @@
     "sharp": "^0.33.5",
     "shiki": "^3.20.0",
     "sonner": "^2.0.7",
+    "@polar-sh/sdk": "^0.43.1",
     "stripe": "^18.5.0",
     "tailwind-merge": "^3.3.1",
     "uuid": "^13.0.0",
