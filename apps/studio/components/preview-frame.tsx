@@ -1,6 +1,6 @@
 'use client'
 
-import { Loader2, ExternalLink, Globe, Play, RotateCw, Database } from 'lucide-react'
+import { ExternalLink, Globe, Play, RotateCw, Database, Zap } from 'lucide-react'
 import type { StudioPhase } from '@/lib/types'
 
 type Viewport = 'desktop' | 'tablet' | 'mobile'
@@ -19,6 +19,42 @@ const VIEWPORT_WIDTHS: Record<Viewport, string> = {
   desktop: '100%',
   tablet: '768px',
   mobile: '375px',
+}
+
+/** Unified loading state with icon + spinner ring + bouncing dots */
+function LoadingState({
+  icon: Icon,
+  title,
+  subtitle,
+}: {
+  icon: typeof Zap
+  title: string
+  subtitle: string
+}) {
+  return (
+    <div className="flex h-full items-center justify-center bg-bg">
+      <div className="text-center space-y-6">
+        <div className="relative mx-auto w-16 h-16">
+          <div className="absolute inset-0 rounded-full border-2 border-accent/10" />
+          <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-accent animate-spin" />
+          <Icon className="h-6 w-6 text-accent absolute inset-0 m-auto" />
+        </div>
+        <div className="space-y-1.5">
+          <p className="text-sm font-medium text-text-primary">{title}</p>
+          <p className="text-xs text-text-muted">{subtitle}</p>
+        </div>
+        <div className="flex justify-center gap-1">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="h-1 w-1 rounded-full bg-accent/60 animate-bounce"
+              style={{ animationDelay: `${i * 0.15}s` }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export function PreviewFrame({
@@ -102,77 +138,33 @@ export function PreviewFrame({
   // Processing — building animation
   if (isProcessing) {
     return (
-      <div className="flex h-full items-center justify-center bg-bg">
-        <div className="text-center space-y-6">
-          <div className="relative mx-auto w-20 h-20">
-            <div className="absolute inset-0 rounded-full border-2 border-accent/10" />
-            <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-accent animate-spin" />
-            <div
-              className="absolute inset-2 rounded-full border-2 border-transparent border-t-accent/50 animate-spin"
-              style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}
-            />
-            <div
-              className="absolute inset-4 rounded-full border border-transparent border-t-accent/30 animate-spin"
-              style={{ animationDuration: '2s' }}
-            />
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-text-primary">Building your app</p>
-            <p className="text-xs text-text-muted">AI is analyzing and generating your project...</p>
-          </div>
-          <div className="flex justify-center gap-1">
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className="h-1 w-1 rounded-full bg-accent/60 animate-bounce"
-                style={{ animationDelay: `${i * 0.15}s` }}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
+      <LoadingState
+        icon={Zap}
+        title="Building your app"
+        subtitle="AI is generating your project..."
+      />
     )
   }
 
   // Setting up database
   if (loading && phase === 'setting_up_db') {
     return (
-      <div className="flex h-full items-center justify-center bg-bg">
-        <div className="text-center space-y-5">
-          <div className="relative mx-auto w-14 h-14">
-            <Database className="h-7 w-7 text-accent absolute inset-0 m-auto" />
-            <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-accent animate-spin" />
-          </div>
-          <div className="space-y-1.5">
-            <p className="text-sm font-medium text-text-primary">Setting up database</p>
-            <p className="text-xs text-text-muted">Creating database, running migrations & seeding data...</p>
-          </div>
-          <div className="flex justify-center gap-1">
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className="h-1 w-1 rounded-full bg-accent/60 animate-bounce"
-                style={{ animationDelay: `${i * 0.15}s` }}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
+      <LoadingState
+        icon={Database}
+        title="Setting up database"
+        subtitle="Running migrations and seeding data..."
+      />
     )
   }
 
   // Loading dev server
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center bg-bg">
-        <div className="text-center space-y-5">
-          <Loader2 className="h-8 w-8 animate-spin text-accent mx-auto" />
-          <div className="space-y-1.5">
-            <p className="text-sm font-medium text-text-primary">Starting dev server</p>
-            <p className="text-xs text-text-muted">Compiling your application...</p>
-          </div>
-        </div>
-      </div>
+      <LoadingState
+        icon={Globe}
+        title="Starting preview"
+        subtitle="Compiling your application..."
+      />
     )
   }
 
@@ -203,9 +195,9 @@ export function PreviewFrame({
   // Idle — no project yet
   return (
     <div className="flex h-full items-center justify-center bg-bg">
-      <div className="text-center space-y-4 opacity-40">
-        <Globe className="h-12 w-12 mx-auto text-text-muted" />
-        <p className="text-xs text-text-muted">Describe your app to get started</p>
+      <div className="text-center space-y-4 opacity-50">
+        <Globe className="h-14 w-14 mx-auto text-text-muted" />
+        <p className="text-sm text-text-muted">Enter a prompt to start building</p>
       </div>
     </div>
   )

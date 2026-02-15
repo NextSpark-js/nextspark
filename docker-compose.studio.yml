@@ -35,8 +35,10 @@ services:
       - NODE_ENV=production
     volumes:
       - studio_projects:/app/studio-projects
+      - pm2_logs:/root/.pm2/logs
     ports:
       - "127.0.0.1:4000:4000"
+      - "6000-6999:6000-6999"
 
   caddy:
     image: caddy:2-alpine
@@ -46,6 +48,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      - "127.0.0.1:2019:2019"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
@@ -54,5 +57,6 @@ services:
 volumes:
   pg_data:
   studio_projects:
+  pm2_logs:
   caddy_data:
   caddy_config:

@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef, Suspense } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import {
   RotateCcw, RefreshCw, PanelLeftClose, PanelLeft,
   Code2, Eye, Settings2, Loader2, Zap, Monitor, Tablet, Smartphone,
+  ChevronDown, LayoutGrid,
 } from 'lucide-react'
 import { useStudioChat } from '@/lib/use-studio-chat'
 import { useGitHub } from '@/lib/use-github'
@@ -12,30 +13,34 @@ import { ChatMessages } from '@/components/chat-messages'
 import { PromptInput } from '@/components/prompt-input'
 import { ConfigPreview } from '@/components/config-preview'
 import { EntityPreview } from '@/components/entity-preview'
-import { FileTree } from '@/components/file-tree'
+import { FileTree, countFiles } from '@/components/file-tree'
 import { CodeViewer } from '@/components/code-viewer'
 import { PreviewFrame } from '@/components/preview-frame'
 import { DeployMenu } from '@/components/deploy-menu'
+import { DeployModal } from '@/components/deploy-modal'
 import { GitHubPushModal } from '@/components/github-push-modal'
+import { PageEditor } from '@/components/page-editor'
 
-type RightTab = 'preview' | 'code' | 'config'
+type RightTab = 'preview' | 'pages' | 'code' | 'config'
 type Viewport = 'desktop' | 'tablet' | 'mobile'
 
 function BuildContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const {
-    status, messages, result, error, project,
-    sendPrompt, reset, fetchFiles, startPreview,
+    status, messages, result, error, project, pages,
+    sendPrompt, reset, fetchFiles, startPreview, updatePages,
   } = useStudioChat()
 
   const github = useGitHub()
   const [showPushModal, setShowPushModal] = useState(false)
+  const [showDeployModal, setShowDeployModal] = useState(false)
 
   const [activeTab, setActiveTab] = useState<RightTab>('preview')
   const [selectedFile, setSelectedFile] = useState<string | null>(null)
   const [chatOpen, setChatOpen] = useState(true)
   const [viewport, setViewport] = useState<Viewport>('desktop')
+  const [errorExpanded, setErrorExpanded] = useState(false)
   const autoStartedRef = useRef(false)
 
   // After GitHub OAuth redirect, re-check status
@@ -79,6 +84,9 @@ function BuildContent() {
   const isComplete = status === 'complete'
   const projectReady = project.phase === 'ready' && !!project.slug
 
+  const fileCount = useMemo(() => countFiles(project.files), [project.files])
+  const isFilesLoading = projectReady && project.files.length === 0
+
   const handleStartPreview = useCallback(() => {
     if (project.slug) {
       startPreview(project.slug)
@@ -106,8 +114,13 @@ function BuildContent() {
     github.resetPush()
   }, [github])
 
+  const handleDeployVPS = useCallback(() => {
+    setShowDeployModal(true)
+  }, [])
+
   const tabs: { id: RightTab; label: string; icon: typeof Code2 }[] = [
     { id: 'preview', label: 'Preview', icon: Eye },
+    { id: 'pages', label: 'Pages', icon: LayoutGrid },
     { id: 'code', label: 'Code', icon: Code2 },
     { id: 'config', label: 'Config', icon: Settings2 },
   ]
@@ -117,6 +130,13 @@ function BuildContent() {
     { id: 'tablet', icon: Tablet, label: 'Tablet' },
     { id: 'mobile', icon: Smartphone, label: 'Mobile' },
   ]
+
+  // Error display: truncate if long, allow expand
+  const errorText = error || ''
+  const isLongError = errorText.length > 100
+  const displayError = isLongError && !errorExpanded
+    ? errorText.slice(0, 100) + '...'
+    : errorText
 
   return (
     <div className="fixed inset-0 flex flex-col bg-bg">
@@ -198,6 +218,7 @@ function BuildContent() {
             onDownloadZip={handleDownloadZip}
             onConnect={github.connect}
             onDisconnect={github.disconnect}
+            onDeployVPS={handleDeployVPS}
           />
 
           <div className="h-4 w-px bg-border" />
@@ -225,7 +246,7 @@ function BuildContent() {
           </div>
         </div>
 
-        {/* Right — Preview / Code / Config */}
+        {/* Right — Preview / Pages / Code / Config */}
         <div className="flex flex-1 flex-col min-w-0">
           {/* Tab bar */}
           <div className="flex h-10 items-center border-b border-border bg-bg-surface/30 px-1 flex-shrink-0">
@@ -245,23 +266,39 @@ function BuildContent() {
                   >
                     <Icon className="h-3.5 w-3.5" />
                     {tab.label}
+                    {tab.id === 'pages' && pages.length > 0 && (
+                      <span className="ml-0.5 text-[9px] text-accent font-normal">
+                        {pages.length}
+                      </span>
+                    )}
                   </button>
                 )
               })}
             </div>
 
-            {/* Viewport controls — preview tab only */}
-            {activeTab === 'preview' && project.previewUrl && (
-              <div className="ml-auto flex items-center gap-0.5 px-2">
+            {/* Viewport controls — always visible in preview tab (disabled when no preview) */}
+            {activeTab === 'preview' && (
+              <div className="ml-auto flex items-center gap-1 px-2">
+                {!project.previewUrl && (
+                  <div className="flex items-center rounded-md bg-bg/80 border border-border/40 px-2.5 py-0.5 mr-2">
+                    <span className="text-[10px] font-mono text-text-muted/40 truncate">
+                      http://localhost:3000
+                    </span>
+                  </div>
+                )}
                 {viewports.map((vp) => {
                   const Icon = vp.icon
                   const isActive = viewport === vp.id
+                  const hasPreview = !!project.previewUrl
                   return (
                     <button
                       key={vp.id}
                       onClick={() => setViewport(vp.id)}
+                      disabled={!hasPreview}
                       className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
-                        isActive
+                        !hasPreview
+                          ? 'text-text-muted/20 cursor-not-allowed'
+                          : isActive
                           ? 'bg-bg-elevated text-text-primary'
                           : 'text-text-muted/40 hover:text-text-secondary hover:bg-bg-hover/50'
                       }`}
@@ -289,12 +326,21 @@ function BuildContent() {
               />
             )}
 
+            {activeTab === 'pages' && (
+              <PageEditor pages={pages} onUpdatePages={updatePages} />
+            )}
+
             {activeTab === 'code' && (
               <div className="flex h-full">
                 <div className="w-52 flex-shrink-0 border-r border-border overflow-y-auto bg-bg-surface/20">
                   <div className="flex items-center justify-between px-3 py-2 border-b border-border">
                     <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-text-muted">
                       Explorer
+                      {fileCount > 0 && (
+                        <span className="ml-1.5 text-[9px] font-normal text-text-muted/50">
+                          ({fileCount})
+                        </span>
+                      )}
                     </span>
                     {projectReady && (
                       <button
@@ -310,6 +356,8 @@ function BuildContent() {
                     files={project.files}
                     selectedPath={selectedFile}
                     onSelectFile={handleSelectFile}
+                    isLoading={isFilesLoading}
+                    hasProject={projectReady}
                   />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -317,9 +365,9 @@ function BuildContent() {
                     <CodeViewer slug={project.slug} filePath={selectedFile} />
                   ) : (
                     <div className="flex h-full items-center justify-center">
-                      <div className="text-center space-y-3 opacity-30">
-                        <Code2 className="h-12 w-12 mx-auto text-text-muted" />
-                        <p className="text-xs text-text-muted">Code appears after generation</p>
+                      <div className="text-center space-y-3 opacity-50">
+                        <Code2 className="h-14 w-14 mx-auto text-text-muted" />
+                        <p className="text-xs text-text-muted">Your code will appear here once generation completes</p>
                       </div>
                     </div>
                   )}
@@ -336,8 +384,8 @@ function BuildContent() {
                   </>
                 ) : (
                   <div className="flex h-full items-center justify-center pt-20">
-                    <div className="text-center space-y-3 opacity-30">
-                      <Settings2 className="h-12 w-12 mx-auto text-text-muted" />
+                    <div className="text-center space-y-3 opacity-50">
+                      <Settings2 className="h-14 w-14 mx-auto text-text-muted" />
                       <p className="text-xs text-text-muted">
                         {isProcessing ? 'Configuration will appear here...' : 'Describe your app to start'}
                       </p>
@@ -350,11 +398,30 @@ function BuildContent() {
         </div>
       </div>
 
-      {/* Error banner */}
+      {/* Error banner — expandable */}
       {error && (
         <div className="border-t border-error/20 bg-error/5 px-4 py-2 flex-shrink-0">
-          <p className="text-xs text-error/80">{error}</p>
+          <div className="flex items-start gap-2">
+            <p className="text-xs text-error/80 flex-1">{displayError}</p>
+            {isLongError && (
+              <button
+                onClick={() => setErrorExpanded(!errorExpanded)}
+                className="flex items-center gap-0.5 text-[10px] text-error/60 hover:text-error/90 transition-colors flex-shrink-0"
+              >
+                {errorExpanded ? 'Less' : 'Details'}
+                <ChevronDown className={`h-3 w-3 transition-transform ${errorExpanded ? 'rotate-180' : ''}`} />
+              </button>
+            )}
+          </div>
         </div>
+      )}
+
+      {/* Deploy to VPS Modal */}
+      {showDeployModal && project.slug && (
+        <DeployModal
+          slug={project.slug}
+          onClose={() => setShowDeployModal(false)}
+        />
       )}
 
       {/* GitHub Push Modal */}

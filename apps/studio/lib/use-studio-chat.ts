@@ -8,7 +8,7 @@
 'use client'
 
 import { useState, useCallback, useRef } from 'react'
-import type { StudioState, ChatMessage, StudioEvent, StudioResult, ProjectState } from './types'
+import type { StudioState, ChatMessage, StudioEvent, StudioResult, ProjectState, PageDefinition } from './types'
 
 let messageIdCounter = 0
 function nextId(): string {
@@ -30,6 +30,7 @@ export function useStudioChat() {
     result: null,
     error: null,
     project: { ...INITIAL_PROJECT },
+    pages: [],
   })
 
   const abortRef = useRef<AbortController | null>(null)
@@ -59,6 +60,10 @@ export function useStudioChat() {
     }
   }, [])
 
+  const updatePages = useCallback((pages: PageDefinition[]) => {
+    setState((prev) => ({ ...prev, pages }))
+  }, [])
+
   const sendPrompt = useCallback(async (prompt: string) => {
     const userMessage: ChatMessage = {
       id: nextId(),
@@ -75,6 +80,7 @@ export function useStudioChat() {
       result: null,
       error: null,
       project: { ...INITIAL_PROJECT },
+      pages: [],
     })
 
     abortRef.current?.abort()
@@ -168,6 +174,7 @@ export function useStudioChat() {
       const messages = [...prev.messages]
       let result = prev.result
       let project = { ...prev.project }
+      let pages = prev.pages
 
       switch (event.type) {
         case 'text': {
@@ -213,7 +220,12 @@ export function useStudioChat() {
         }
 
         case 'generation_complete': {
-          result = (event.data as StudioResult) || null
+          const studioResult = (event.data as StudioResult) || null
+          result = studioResult
+          // Extract pages from studio result
+          if (studioResult?.pages && studioResult.pages.length > 0) {
+            pages = studioResult.pages
+          }
           break
         }
 
@@ -274,11 +286,12 @@ export function useStudioChat() {
             messages,
             error: event.content || 'Unknown error',
             project: { ...project, phase: 'error' },
+            pages,
           }
         }
       }
 
-      return { ...prev, messages, result, project }
+      return { ...prev, messages, result, project, pages }
     })
   }
 
@@ -354,6 +367,7 @@ export function useStudioChat() {
       result: null,
       error: null,
       project: { ...INITIAL_PROJECT },
+      pages: [],
     })
   }, [])
 
@@ -363,5 +377,6 @@ export function useStudioChat() {
     reset,
     fetchFiles,
     startPreview,
+    updatePages,
   }
 }

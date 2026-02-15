@@ -1,11 +1,11 @@
 /**
- * Deploy dropdown menu — Push to GitHub or Download ZIP
+ * Deploy dropdown menu — Deploy to VPS, Push to GitHub, or Download ZIP
  */
 
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { ChevronDown, Github, Download, ExternalLink, LogOut } from 'lucide-react'
+import { ChevronDown, Github, Download, ExternalLink, LogOut, Server } from 'lucide-react'
 import type { GitHubUser } from '@/lib/use-github'
 
 interface DeployMenuProps {
@@ -17,6 +17,7 @@ interface DeployMenuProps {
   onDownloadZip: () => void
   onConnect: () => void
   onDisconnect: () => void
+  onDeployVPS?: () => void
 }
 
 export function DeployMenu({
@@ -28,6 +29,7 @@ export function DeployMenu({
   onDownloadZip,
   onConnect,
   onDisconnect,
+  onDeployVPS,
 }: DeployMenuProps) {
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -72,6 +74,23 @@ export function DeployMenu({
 
       {open && (
         <div className="absolute right-0 top-full mt-1 w-56 rounded-lg border border-border bg-bg-surface shadow-xl z-50 overflow-hidden">
+          {/* Deploy to VPS */}
+          {onDeployVPS && (
+            <>
+              <button
+                onClick={() => handleAction(onDeployVPS)}
+                className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-xs text-text-secondary hover:bg-bg-hover transition-colors"
+              >
+                <Server className="h-4 w-4" />
+                <div>
+                  <div className="font-medium">Deploy to VPS</div>
+                  <div className="text-[10px] text-text-muted">Build & start with PM2</div>
+                </div>
+              </button>
+              <div className="border-t border-border" />
+            </>
+          )}
+
           {/* GitHub section */}
           {configured && authenticated && user ? (
             <>

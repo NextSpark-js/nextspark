@@ -32,13 +32,13 @@ interface GitHubPushModalProps {
 }
 
 const STEPS: { key: PushStep; label: string }[] = [
-  { key: 'creating_repo', label: 'Creating repository' },
-  { key: 'sanitizing', label: 'Sanitizing credentials' },
-  { key: 'initializing', label: 'Initializing git' },
-  { key: 'staging', label: 'Staging files' },
-  { key: 'committing', label: 'Creating commit' },
-  { key: 'pushing', label: 'Pushing to GitHub' },
-  { key: 'cleaning', label: 'Cleaning up' },
+  { key: 'sanitizing', label: 'Securing files' },
+  { key: 'initializing', label: 'Creating repository' },
+  { key: 'staging', label: 'Preparing code' },
+  { key: 'committing', label: 'Saving snapshot' },
+  { key: 'creating_repo', label: 'Setting up GitHub' },
+  { key: 'pushing', label: 'Uploading to GitHub' },
+  { key: 'cleaning', label: 'Complete' },
 ]
 
 function getStepIndex(step: PushStep): number {

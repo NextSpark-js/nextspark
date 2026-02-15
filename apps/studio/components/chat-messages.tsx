@@ -28,16 +28,16 @@ export function ChatMessages({ messages, status }: ChatMessagesProps) {
   }, [messages])
 
   return (
-    <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain px-3 py-3 space-y-2">
+    <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain px-3 py-3 space-y-3">
       {messages.map((msg) => {
         // User message
         if (msg.role === 'user') {
           return (
             <div key={msg.id} className="space-y-0.5">
-              <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-text-muted/60">
+              <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-muted/60">
                 You
               </span>
-              <p className="text-[12px] text-text-primary leading-relaxed">
+              <p className="text-[13px] text-text-primary leading-relaxed">
                 {msg.content}
               </p>
             </div>
@@ -49,18 +49,18 @@ export function ChatMessages({ messages, status }: ChatMessagesProps) {
           return (
             <div key={msg.id} className="flex items-center gap-1.5 py-px">
               <ChevronRight className="h-2 w-2 text-accent/50 flex-shrink-0" />
-              <span className="text-[10px] text-text-muted/70">
+              <span className="text-[11px] text-text-muted/70">
                 {toolDisplayName(msg.toolName)}
               </span>
             </div>
           )
         }
 
-        // System messages — compact log
+        // System messages — compact log (no truncation)
         if (msg.role === 'system') {
           return (
             <div key={msg.id} className="border-l border-border/60 pl-2 py-px">
-              <span className="text-[10px] font-mono text-text-muted/60 leading-relaxed line-clamp-2">
+              <span className="text-[10px] font-mono text-text-muted/60 leading-relaxed">
                 {msg.content}
               </span>
             </div>
@@ -70,10 +70,10 @@ export function ChatMessages({ messages, status }: ChatMessagesProps) {
         // Assistant message
         return (
           <div key={msg.id} className="space-y-0.5">
-            <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-accent/60">
+            <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-accent/60">
               AI
             </span>
-            <div className="prose-studio text-[12px]">
+            <div className="prose-studio text-[13px]">
               <Markdown>{msg.content}</Markdown>
             </div>
           </div>

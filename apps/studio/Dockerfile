@@ -31,6 +31,7 @@ FROM node:20-alpine AS runner
 
 RUN apk add --no-cache git
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
+RUN npm install -g pm2
 
 WORKDIR /app
 
@@ -46,5 +47,6 @@ COPY --from=builder /app/apps/studio/.next/static ./apps/studio/.next/static
 RUN mkdir -p /app/studio-projects
 
 EXPOSE 4000
+EXPOSE 6000-6999
 
 CMD ["node", "apps/studio/server.js"]

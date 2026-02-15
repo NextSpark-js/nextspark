@@ -17,4 +17,6 @@ export type {
   EntityDefinition,
   EntityFieldDefinition,
   StudioAnalysis,
+  PageDefinition,
+  BlockInstance,
 } from './types'

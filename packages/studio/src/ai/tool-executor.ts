@@ -9,10 +9,11 @@
  * like projectType='web', teamRoles=['owner',...], currency='usd', etc.
  */
 
-import type { StudioResult, StudioAnalysis, EntityDefinition } from '../types'
+import type { StudioResult, StudioAnalysis, EntityDefinition, PageDefinition } from '../types'
 import { analyzeRequirementSchema, type AnalyzeRequirementInput } from './tools/analyze-requirement'
 import { configureProjectSchema, type ConfigureProjectInput } from './tools/configure-project'
 import { defineEntitySchema, type DefineEntityInput } from './tools/define-entity'
+import { definePageSchema, type DefinePageInput } from './tools/define-page'
 import type { StudioToolName } from './tools/index'
 
 export interface ToolExecutionResult {
@@ -37,6 +38,8 @@ export function executeTool(
       return executeConfigureProject(configureProjectSchema.parse(input), result)
     case 'define_entity':
       return executeDefineEntity(defineEntitySchema.parse(input), result)
+    case 'define_page':
+      return executeDefinePage(definePageSchema.parse(input), result)
     default:
       return {
         success: false,
@@ -130,5 +133,31 @@ function executeDefineEntity(
     success: true,
     data: entity,
     message: `Entity "${input.names.plural}" (${input.slug}) defined with ${input.fields.length} fields: ${input.fields.map(f => f.name).join(', ')}.`,
+  }
+}
+
+function executeDefinePage(
+  input: DefinePageInput,
+  result: StudioResult
+): ToolExecutionResult {
+  const page: PageDefinition = {
+    pageName: input.pageName,
+    route: input.route,
+    blocks: input.blocks.map(b => ({
+      blockType: b.blockType,
+      props: b.props,
+      order: b.order,
+    })),
+  }
+
+  if (!result.pages) {
+    result.pages = []
+  }
+  result.pages.push(page)
+
+  return {
+    success: true,
+    data: page,
+    message: `Page "${input.pageName}" (${input.route}) defined with ${input.blocks.length} blocks: ${input.blocks.map(b => b.blockType).join(', ')}.`,
   }
 }

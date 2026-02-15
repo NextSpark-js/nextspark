@@ -101,6 +101,22 @@ export interface EntityDefinition {
 }
 
 // ============================================================
+// Page Builder Definitions
+// ============================================================
+
+export interface BlockInstance {
+  blockType: string
+  props: Record<string, unknown>
+  order: number
+}
+
+export interface PageDefinition {
+  pageName: string
+  route: string
+  blocks: BlockInstance[]
+}
+
+// ============================================================
 // Studio Session & Events
 // ============================================================
 
@@ -122,6 +138,7 @@ export interface StudioResult {
   analysis?: StudioAnalysis
   wizardConfig?: WizardConfig
   entities?: EntityDefinition[]
+  pages?: PageDefinition[]
   theme?: ThemeOption
   plugins?: PluginOption[]
 }

@@ -25,10 +25,13 @@ export default function HomePage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-4">
       <div className="w-full max-w-xl space-y-8">
-        {/* Logo */}
+        {/* Logo with gradient glow */}
         <div className="text-center space-y-3">
           <div className="flex items-center justify-center gap-2">
-            <Zap className="h-7 w-7 text-accent" />
+            <div className="relative">
+              <div className="absolute -inset-3 rounded-full bg-accent/20 blur-xl" />
+              <Zap className="relative h-7 w-7 text-accent" />
+            </div>
             <h1 className="text-2xl font-bold tracking-tight">
               nextspark studio
             </h1>
@@ -39,28 +42,33 @@ export default function HomePage() {
         </div>
 
         {/* Prompt Input */}
-        <div className="relative">
-          <textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                handleSubmit()
-              }
-            }}
-            placeholder="Describe the app you want to build..."
-            rows={3}
-            className="w-full resize-none rounded-xl border border-border bg-bg-surface p-4 pr-14 text-sm text-text-primary placeholder:text-text-muted/60 focus:border-accent/50 focus:outline-none focus:ring-1 focus:ring-accent/30 transition-colors"
-            autoFocus
-          />
-          <button
-            onClick={() => handleSubmit()}
-            disabled={!prompt.trim()}
-            className="absolute bottom-4 right-4 flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-white transition-all hover:bg-accent-hover disabled:opacity-20 disabled:cursor-not-allowed"
-          >
-            <ArrowRight className="h-4 w-4" />
-          </button>
+        <div className="space-y-2">
+          <div className="relative">
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  handleSubmit()
+                }
+              }}
+              placeholder="Describe the app you want to build..."
+              rows={3}
+              className="w-full resize-none rounded-xl border border-border bg-bg-surface p-4 pr-14 text-sm text-text-primary placeholder:text-text-muted/60 focus:border-accent/50 focus:outline-none focus:ring-1 focus:ring-accent/30 transition-colors"
+              autoFocus
+            />
+            <button
+              onClick={() => handleSubmit()}
+              disabled={!prompt.trim()}
+              className="absolute bottom-4 right-4 flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-white transition-all hover:bg-accent-hover disabled:opacity-20 disabled:cursor-not-allowed"
+            >
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+          <p className="text-[10px] text-text-muted/50 text-center">
+            Press Enter to submit &middot; Shift+Enter for new line
+          </p>
         </div>
 
         {/* Examples */}
@@ -73,7 +81,7 @@ export default function HomePage() {
               <button
                 key={example}
                 onClick={() => handleSubmit(example)}
-                className="rounded-lg border border-border bg-bg-surface px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
+                className="rounded-lg border border-border bg-bg-surface px-3 py-1.5 text-xs text-text-secondary transition-all hover:border-border-strong hover:text-text-primary hover:scale-[1.03]"
               >
                 {example}
               </button>
@@ -83,8 +91,8 @@ export default function HomePage() {
       </div>
 
       {/* Footer */}
-      <div className="fixed bottom-6 text-[11px] text-text-muted/50">
-        Powered by NextSpark + Claude
+      <div className="fixed bottom-6 text-[11px] text-text-muted/40">
+        Built with NextSpark &times; Claude
       </div>
     </div>
   )

@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  next: 15.5.10
+
 importers:
 
   .:
@@ -187,6 +190,9 @@ importers:
       react-markdown:
         specifier: ^10.1.0
         version: 10.1.0(@types/react@19.2.7)(react@19.1.0)
+      shiki:
+        specifier: ^3.20.0
+        version: 3.20.0
     devDependencies:
       '@tailwindcss/postcss':
         specifier: ^4
@@ -3388,7 +3394,7 @@ packages:
   '@nextsparkjs/core@0.1.0-beta.100':
     resolution: {integrity: sha512-3B0A3ML6Qp1l1AnVFP7Xg4WUJrLT9juJDV+o+Yyipjl4w4PSPZmsML1zySDJFseh8PxAMQ48psMd5kt8tockEg==}
     peerDependencies:
-      next: '>=14.0.0'
+      next: 15.5.10
       react: '>=18.0.0'
       react-dom: '>=18.0.0'
 
@@ -8348,7 +8354,7 @@ packages:
   next-intl@4.7.0:
     resolution: {integrity: sha512-gvROzcNr/HM0jTzQlKWQxUNk8jrZ0bREz+bht3wNbv+uzlZ5Kn3J+m+viosub18QJ72S08UJnVK50PXWcUvwpQ==}
     peerDependencies:
-      next: ^12.0.0 || ^13.0.0 || ^14.0.0 || ^15.0.0 || ^16.0.0
+      next: 15.5.10
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || >=19.0.0-rc <19.0.0 || ^19.0.0
       typescript: ^5.0.0
     peerDependenciesMeta:

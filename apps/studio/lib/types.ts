@@ -2,7 +2,7 @@
  * UI-specific types for NextSpark Studio
  */
 
-import type { StudioResult, StudioEvent } from '@nextsparkjs/studio'
+import type { StudioResult, StudioEvent, PageDefinition, BlockInstance } from '@nextsparkjs/studio'
 
 export type ChatMessageRole = 'user' | 'assistant' | 'tool' | 'system'
 
@@ -39,6 +39,7 @@ export interface StudioState {
   result: StudioResult | null
   error: string | null
   project: ProjectState
+  pages: PageDefinition[]
 }
 
-export type { StudioResult, StudioEvent }
+export type { StudioResult, StudioEvent, PageDefinition, BlockInstance }

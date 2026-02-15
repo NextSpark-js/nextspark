@@ -1,13 +1,15 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import { ChevronRight, ChevronDown, File, Folder, FolderOpen } from 'lucide-react'
+import { useState, useCallback, useMemo } from 'react'
+import { ChevronRight, ChevronDown, File, Folder, FolderOpen, Loader2 } from 'lucide-react'
 import type { FileNode } from '@/lib/types'
 
 interface FileTreeProps {
   files: FileNode[]
   selectedPath: string | null
   onSelectFile: (path: string) => void
+  isLoading?: boolean
+  hasProject?: boolean
 }
 
 const EXT_COLORS: Record<string, string> = {
@@ -26,6 +28,15 @@ const EXT_COLORS: Record<string, string> = {
 function getFileColor(name: string): string {
   const ext = name.slice(name.lastIndexOf('.'))
   return EXT_COLORS[ext] || 'text-text-muted'
+}
+
+function countFiles(nodes: FileNode[]): number {
+  let count = 0
+  for (const node of nodes) {
+    if (node.type === 'file') count++
+    if (node.children) count += countFiles(node.children)
+  }
+  return count
 }
 
 function TreeNode({
@@ -101,11 +112,33 @@ function TreeNode({
   )
 }
 
-export function FileTree({ files, selectedPath, onSelectFile }: FileTreeProps) {
+export function FileTree({ files, selectedPath, onSelectFile, isLoading, hasProject }: FileTreeProps) {
+  const fileCount = useMemo(() => countFiles(files), [files])
+
+  // Loading state — project ready but files still fetching
+  if (isLoading) {
+    return (
+      <div className="flex h-32 items-center justify-center gap-2">
+        <Loader2 className="h-3.5 w-3.5 animate-spin text-accent" />
+        <p className="text-[11px] text-text-muted">Fetching files...</p>
+      </div>
+    )
+  }
+
+  // No project yet
+  if (!hasProject) {
+    return (
+      <div className="flex h-32 items-center justify-center">
+        <p className="text-[11px] text-text-muted/50">Files will appear here</p>
+      </div>
+    )
+  }
+
+  // Project exists but no files
   if (files.length === 0) {
     return (
       <div className="flex h-32 items-center justify-center">
-        <p className="text-[11px] text-text-muted/50">No files</p>
+        <p className="text-[11px] text-text-muted/50">No files found</p>
       </div>
     )
   }
@@ -124,3 +157,5 @@ export function FileTree({ files, selectedPath, onSelectFile }: FileTreeProps) {
     </div>
   )
 }
+
+export { countFiles }
