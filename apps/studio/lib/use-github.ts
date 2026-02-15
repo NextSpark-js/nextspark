@@ -78,8 +78,11 @@ export function useGitHub() {
         body: JSON.stringify({ action: 'auth-url' }),
       })
       const data = await res.json()
-      if (data.url) {
-        // Open in same window (OAuth will redirect back)
+      if (data.devMode) {
+        // Dev mode: PAT is already configured, just refresh status
+        await checkStatus()
+      } else if (data.url) {
+        // Production: open OAuth flow in same window
         window.location.href = data.url
       } else if (data.error) {
         setState((prev) => ({ ...prev, pushError: data.error }))
@@ -90,7 +93,7 @@ export function useGitHub() {
         pushError: error instanceof Error ? error.message : 'Failed to connect',
       }))
     }
-  }, [])
+  }, [checkStatus])
 
   const disconnect = useCallback(async () => {
     await fetch('/api/github', {

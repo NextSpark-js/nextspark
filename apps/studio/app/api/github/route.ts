@@ -15,6 +15,8 @@ import {
   pushProject,
   decryptToken,
   isConfigured,
+  getDevToken,
+  isDevMode,
 } from '@/lib/github-manager'
 
 export const runtime = 'nodejs'
@@ -22,6 +24,11 @@ export const runtime = 'nodejs'
 const COOKIE_NAME = 'gh_token'
 
 async function getToken(): Promise<string | null> {
+  // Dev mode: use PAT directly (skips OAuth)
+  const devToken = getDevToken()
+  if (devToken) return devToken
+
+  // Production: read encrypted token from cookie
   const cookieStore = await cookies()
   const encrypted = cookieStore.get(COOKIE_NAME)?.value
   if (!encrypted) return null
@@ -43,6 +50,11 @@ export async function POST(request: Request) {
 
   // ── auth-url: Return GitHub OAuth URL ───────────────────────────────────
   if (action === 'auth-url') {
+    // Dev mode: PAT is already available, no OAuth needed
+    if (isDevMode()) {
+      return Response.json({ devMode: true })
+    }
+
     if (!isConfigured()) {
       return Response.json({
         error: 'GitHub OAuth not configured. Set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET.',

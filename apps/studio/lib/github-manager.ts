@@ -6,7 +6,7 @@
  */
 
 import { spawn } from 'child_process'
-import { readFileSync, writeFileSync, existsSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync, rmSync } from 'fs'
 import path from 'path'
 import { createCipheriv, createDecipheriv, randomBytes, createHash } from 'crypto'
 import { Octokit } from 'octokit'
@@ -16,6 +16,7 @@ import { getProjectPath } from './project-manager'
 
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID || ''
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET || ''
+const GITHUB_PAT = process.env.GITHUB_PAT || '' // Dev mode: skip OAuth, use PAT directly
 const ENCRYPTION_KEY = process.env.GITHUB_TOKEN_SECRET || process.env.BETTER_AUTH_SECRET || 'studio-dev-key-change-me'
 const CALLBACK_URL = process.env.NEXT_PUBLIC_APP_URL
   ? `${process.env.NEXT_PUBLIC_APP_URL}/api/github/callback`
@@ -204,25 +205,34 @@ export async function pushProject(options: PushOptions): Promise<void> {
   }
 
   try {
-    // Step 3: git init
+    // Step 3: Ensure .gitignore has essential entries
+    ensureGitignore(projectPath)
+
+    // Step 4: Clean previous .git if exists (from failed push)
+    const gitDir = path.join(projectPath, '.git')
+    if (existsSync(gitDir)) {
+      rmSync(gitDir, { recursive: true, force: true })
+    }
+
+    // Step 4: git init
     log('initializing')
     await runGit(projectPath, ['init', '-b', 'main'])
 
-    // Step 4: git add
+    // Step 5: git add
     log('staging')
     await runGit(projectPath, ['add', '-A'])
 
-    // Step 5: git commit
+    // Step 6: git commit
     log('committing')
     await runGit(projectPath, ['commit', '-m', 'Initial commit from NextSpark Studio'])
 
-    // Step 6: git remote + push (with token in URL)
+    // Step 7: git remote + push (with token in URL)
     log('pushing')
     const authUrl = cloneUrl.replace('https://', `https://x-access-token:${token}@`)
     await runGit(projectPath, ['remote', 'add', 'origin', authUrl])
     await runGit(projectPath, ['push', '-u', 'origin', 'main'])
 
-    // Step 7: Clean token from remote URL
+    // Step 8: Clean token from remote URL
     log('cleaning')
     await runGit(projectPath, ['remote', 'set-url', 'origin', cloneUrl])
 
@@ -236,11 +246,38 @@ export async function pushProject(options: PushOptions): Promise<void> {
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
+const REQUIRED_GITIGNORE_ENTRIES = [
+  'node_modules',
+  '.next',
+  '.turbo',
+  '.env',
+  '.env.local',
+  '.git',
+]
+
+function ensureGitignore(projectPath: string): void {
+  const gitignorePath = path.join(projectPath, '.gitignore')
+  let content = ''
+
+  if (existsSync(gitignorePath)) {
+    content = readFileSync(gitignorePath, 'utf-8')
+  }
+
+  const lines = content.split('\n').map((l) => l.trim())
+  const missing = REQUIRED_GITIGNORE_ENTRIES.filter((entry) => !lines.includes(entry))
+
+  if (missing.length > 0) {
+    const suffix = (content && !content.endsWith('\n') ? '\n' : '') +
+      '\n# Added by NextSpark Studio\n' +
+      missing.join('\n') + '\n'
+    writeFileSync(gitignorePath, content + suffix, 'utf-8')
+  }
+}
+
 function runGit(cwd: string, args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = spawn('git', args, {
       cwd,
-      shell: true,
       env: {
         ...process.env,
         GIT_TERMINAL_PROMPT: '0', // Never prompt for credentials
@@ -326,5 +363,14 @@ Generated with [NextSpark Studio](https://nextspark.dev/studio)
 }
 
 export function isConfigured(): boolean {
-  return !!GITHUB_CLIENT_ID && !!GITHUB_CLIENT_SECRET
+  return (!!GITHUB_CLIENT_ID && !!GITHUB_CLIENT_SECRET) || !!GITHUB_PAT
+}
+
+/** Dev mode: return PAT directly if set (skips OAuth) */
+export function getDevToken(): string | null {
+  return GITHUB_PAT || null
+}
+
+export function isDevMode(): boolean {
+  return !!GITHUB_PAT
 }
