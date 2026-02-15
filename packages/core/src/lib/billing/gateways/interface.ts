@@ -34,5 +34,5 @@ export interface BillingGateway {
   reactivateSubscription(subscriptionId: string): Promise<SubscriptionResult>
 
   // Webhooks
-  verifyWebhookSignature(payload: string | Buffer, signature: string): WebhookEventResult
+  verifyWebhookSignature(payload: string | Buffer, signatureOrHeaders: string | Record<string, string>): WebhookEventResult
 }

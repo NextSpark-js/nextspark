@@ -31,14 +31,19 @@ export function getBillingGateway(): BillingGateway {
         gatewayInstance = new StripeGateway()
         break
       }
+      case 'polar': {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { PolarGateway } = require('./polar') as typeof import('./polar')
+        gatewayInstance = new PolarGateway()
+        break
+      }
       // Future providers:
-      // case 'polar': { ... }
       // case 'paddle': { ... }
       // case 'lemonsqueezy': { ... }
       default:
         throw new Error(
           `Unsupported billing provider: "${provider}". ` +
-          `Supported providers: stripe. ` +
+          `Supported providers: stripe, polar. ` +
           `Check your billing.config.ts provider setting.`
         )
     }

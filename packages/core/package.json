@@ -148,6 +148,10 @@
       "types": "./dist/lib/billing/gateways/stripe.d.ts",
       "import": "./dist/lib/billing/gateways/stripe.js"
     },
+    "./lib/billing/gateways/polar": {
+      "types": "./dist/lib/billing/gateways/polar.d.ts",
+      "import": "./dist/lib/billing/gateways/polar.js"
+    },
     "./lib/billing/gateways/interface": {
       "types": "./dist/lib/billing/gateways/interface.d.ts",
       "import": "./dist/lib/billing/gateways/interface.js"
@@ -456,6 +460,8 @@
     "sharp": "^0.33.5",
     "shiki": "^3.20.0",
     "sonner": "^2.0.7",
+    "@polar-sh/sdk": "^0.43.1",
+    "jiti": "^2.6.1",
     "stripe": "^18.5.0",
     "tailwind-merge": "^3.3.1",
     "uuid": "^13.0.0",

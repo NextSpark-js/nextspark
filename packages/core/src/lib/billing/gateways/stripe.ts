@@ -99,11 +99,15 @@ export class StripeGateway implements BillingGateway {
     return { url: session.url }
   }
 
-  verifyWebhookSignature(payload: string | Buffer, signature: string): WebhookEventResult {
+  verifyWebhookSignature(payload: string | Buffer, signatureOrHeaders: string | Record<string, string>): WebhookEventResult {
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
     if (!webhookSecret) {
       throw new Error('STRIPE_WEBHOOK_SECRET is not configured')
     }
+    // Stripe uses a single signature string (stripe-signature header)
+    const signature = typeof signatureOrHeaders === 'string'
+      ? signatureOrHeaders
+      : signatureOrHeaders['stripe-signature'] || ''
     const event = getStripe().webhooks.constructEvent(payload, signature, webhookSecret)
     return {
       id: event.id,
@@ -218,8 +222,8 @@ export async function createPortalSession(params: CreatePortalParams) {
 }
 
 /** @deprecated Use getBillingGateway().verifyWebhookSignature() instead */
-export function verifyWebhookSignature(payload: string | Buffer, signature: string) {
-  return _defaultGateway.verifyWebhookSignature(payload, signature)
+export function verifyWebhookSignature(payload: string | Buffer, signatureOrHeaders: string | Record<string, string>) {
+  return _defaultGateway.verifyWebhookSignature(payload, signatureOrHeaders)
 }
 
 /** @deprecated Use getBillingGateway().getCustomer() instead */
