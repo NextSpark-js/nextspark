@@ -1,0 +1,123 @@
+'use client'
+
+import { useState, useCallback } from 'react'
+import { ChevronRight, ChevronDown, File, Folder, FolderOpen } from 'lucide-react'
+import type { FileNode } from '@/lib/types'
+
+interface FileTreeProps {
+  files: FileNode[]
+  selectedPath: string | null
+  onSelectFile: (path: string) => void
+}
+
+const FILE_ICONS: Record<string, string> = {
+  '.ts': 'text-blue-400',
+  '.tsx': 'text-blue-400',
+  '.js': 'text-yellow-400',
+  '.jsx': 'text-yellow-400',
+  '.css': 'text-pink-400',
+  '.json': 'text-yellow-300',
+  '.md': 'text-text-secondary',
+  '.env': 'text-green-400',
+  '.mjs': 'text-yellow-400',
+}
+
+function getFileColor(name: string): string {
+  const ext = name.slice(name.lastIndexOf('.'))
+  return FILE_ICONS[ext] || 'text-text-muted'
+}
+
+function TreeNode({
+  node,
+  depth,
+  selectedPath,
+  onSelectFile,
+}: {
+  node: FileNode
+  depth: number
+  selectedPath: string | null
+  onSelectFile: (path: string) => void
+}) {
+  const [expanded, setExpanded] = useState(depth < 2)
+  const isDir = node.type === 'directory'
+  const isSelected = node.path === selectedPath
+
+  const handleClick = useCallback(() => {
+    if (isDir) {
+      setExpanded((prev) => !prev)
+    } else {
+      onSelectFile(node.path)
+    }
+  }, [isDir, node.path, onSelectFile])
+
+  return (
+    <div>
+      <button
+        onClick={handleClick}
+        className={`flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left text-xs transition-colors hover:bg-bg-hover ${
+          isSelected ? 'bg-accent-muted text-accent' : 'text-text-secondary'
+        }`}
+        style={{ paddingLeft: `${depth * 12 + 8}px` }}
+      >
+        {isDir ? (
+          <>
+            {expanded ? (
+              <ChevronDown className="h-3 w-3 flex-shrink-0 text-text-muted" />
+            ) : (
+              <ChevronRight className="h-3 w-3 flex-shrink-0 text-text-muted" />
+            )}
+            {expanded ? (
+              <FolderOpen className="h-3.5 w-3.5 flex-shrink-0 text-accent" />
+            ) : (
+              <Folder className="h-3.5 w-3.5 flex-shrink-0 text-accent" />
+            )}
+          </>
+        ) : (
+          <>
+            <span className="w-3" />
+            <File className={`h-3.5 w-3.5 flex-shrink-0 ${getFileColor(node.name)}`} />
+          </>
+        )}
+        <span className="truncate">{node.name}</span>
+      </button>
+
+      {isDir && expanded && node.children && (
+        <div>
+          {node.children.map((child) => (
+            <TreeNode
+              key={child.path}
+              node={child}
+              depth={depth + 1}
+              selectedPath={selectedPath}
+              onSelectFile={onSelectFile}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export function FileTree({ files, selectedPath, onSelectFile }: FileTreeProps) {
+  if (files.length === 0) {
+    return (
+      <div className="flex h-full items-center justify-center p-4">
+        <p className="text-xs text-text-muted">No files yet</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="overflow-y-auto p-2">
+      {files.map((node) => (
+        <TreeNode
+          key={node.path}
+          node={node}
+          depth={0}
+          selectedPath={selectedPath}
+          onSelectFile={onSelectFile}
+        />
+      ))}
+    </div>
+  )
+}

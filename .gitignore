@@ -76,3 +76,7 @@ apps/mobile/dist/
 # TypeScript build cache
 *.tsbuildinfo
 /.claude/plans
+
+# Studio generated projects
+studio-projects/
+apps/studio/.env.local

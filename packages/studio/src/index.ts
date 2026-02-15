@@ -1,0 +1,20 @@
+/**
+ * @nextsparkjs/studio
+ *
+ * AI-powered SaaS app builder for NextSpark.
+ * Translates natural language descriptions into complete project configurations.
+ */
+
+export { runStudio } from './ai/orchestrator'
+export { STUDIO_TOOLS } from './ai/tools/index'
+export { SYSTEM_PROMPT } from './ai/system-prompt'
+
+export type {
+  StudioResult,
+  StudioEvent,
+  StudioEventHandler,
+  WizardConfig,
+  EntityDefinition,
+  EntityFieldDefinition,
+  StudioAnalysis,
+} from './types'
