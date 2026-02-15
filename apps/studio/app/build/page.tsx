@@ -7,6 +7,7 @@ import {
   Code2, Eye, Settings2, Loader2, Zap, Monitor, Tablet, Smartphone,
 } from 'lucide-react'
 import { useStudioChat } from '@/lib/use-studio-chat'
+import { useGitHub } from '@/lib/use-github'
 import { ChatMessages } from '@/components/chat-messages'
 import { PromptInput } from '@/components/prompt-input'
 import { ConfigPreview } from '@/components/config-preview'
@@ -14,6 +15,8 @@ import { EntityPreview } from '@/components/entity-preview'
 import { FileTree } from '@/components/file-tree'
 import { CodeViewer } from '@/components/code-viewer'
 import { PreviewFrame } from '@/components/preview-frame'
+import { DeployMenu } from '@/components/deploy-menu'
+import { GitHubPushModal } from '@/components/github-push-modal'
 
 type RightTab = 'preview' | 'code' | 'config'
 type Viewport = 'desktop' | 'tablet' | 'mobile'
@@ -26,11 +29,21 @@ function BuildContent() {
     sendPrompt, reset, fetchFiles, startPreview,
   } = useStudioChat()
 
+  const github = useGitHub()
+  const [showPushModal, setShowPushModal] = useState(false)
+
   const [activeTab, setActiveTab] = useState<RightTab>('preview')
   const [selectedFile, setSelectedFile] = useState<string | null>(null)
   const [chatOpen, setChatOpen] = useState(true)
   const [viewport, setViewport] = useState<Viewport>('desktop')
   const autoStartedRef = useRef(false)
+
+  // After GitHub OAuth redirect, re-check status
+  useEffect(() => {
+    if (searchParams.get('gh_connected') === '1') {
+      github.checkStatus()
+    }
+  }, [searchParams]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-send the initial prompt from URL
   useEffect(() => {
@@ -76,6 +89,22 @@ function BuildContent() {
   const handleSelectFile = useCallback((path: string) => {
     setSelectedFile(path)
   }, [])
+
+  const handleDownloadZip = useCallback(() => {
+    if (project.slug) {
+      window.open(`/api/export?slug=${encodeURIComponent(project.slug)}`, '_blank')
+    }
+  }, [project.slug])
+
+  const handleOpenPushModal = useCallback(() => {
+    github.resetPush()
+    setShowPushModal(true)
+  }, [github])
+
+  const handleClosePushModal = useCallback(() => {
+    setShowPushModal(false)
+    github.resetPush()
+  }, [github])
 
   const tabs: { id: RightTab; label: string; icon: typeof Code2 }[] = [
     { id: 'preview', label: 'Preview', icon: Eye },
@@ -159,6 +188,19 @@ function BuildContent() {
               <span className="text-[11px] text-error font-medium">Error</span>
             </div>
           )}
+
+          <DeployMenu
+            slug={project.slug}
+            authenticated={github.authenticated}
+            configured={github.configured}
+            user={github.user}
+            onPushToGitHub={handleOpenPushModal}
+            onDownloadZip={handleDownloadZip}
+            onConnect={github.connect}
+            onDisconnect={github.disconnect}
+          />
+
+          <div className="h-4 w-px bg-border" />
 
           <button
             onClick={handleReset}
@@ -313,6 +355,20 @@ function BuildContent() {
         <div className="border-t border-error/20 bg-error/5 px-4 py-2 flex-shrink-0">
           <p className="text-xs text-error/80">{error}</p>
         </div>
+      )}
+
+      {/* GitHub Push Modal */}
+      {showPushModal && project.slug && github.user && (
+        <GitHubPushModal
+          slug={project.slug}
+          user={github.user}
+          pushStep={github.pushStep}
+          pushError={github.pushError}
+          pushResult={github.pushResult}
+          description={result?.wizardConfig?.projectDescription}
+          onPush={github.push}
+          onClose={handleClosePushModal}
+        />
       )}
     </div>
   )

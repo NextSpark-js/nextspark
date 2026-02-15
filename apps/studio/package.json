@@ -11,9 +11,12 @@
   },
   "dependencies": {
     "@nextsparkjs/studio": "workspace:*",
+    "@types/archiver": "^7.0.0",
     "@types/pg": "^8.15.5",
+    "archiver": "^7.0.1",
     "lucide-react": "^0.513.0",
     "next": "15.5.10",
+    "octokit": "^5.0.5",
     "pg": "^8.16.3",
     "react": "19.1.0",
     "react-dom": "19.1.0",
