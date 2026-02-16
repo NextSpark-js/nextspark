@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSessionCookie } from 'better-auth/cookies'
 
-const PUBLIC_PATHS = ['/login', '/register', '/api/auth']
+const PUBLIC_PATHS = ['/login', '/register', '/api/auth', '/api/clear-session']
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -20,8 +20,9 @@ export function middleware(request: NextRequest) {
   }
 
   if (sessionCookie && (pathname === '/login' || pathname === '/register')) {
-    // Already authenticated — redirect to home
-    return NextResponse.redirect(new URL('/', request.url))
+    // Don't block login/register access — cookie may be stale (session expired in DB).
+    // Let the page render; the login page itself will redirect if truly authenticated.
+    return NextResponse.next()
   }
 
   return NextResponse.next()
