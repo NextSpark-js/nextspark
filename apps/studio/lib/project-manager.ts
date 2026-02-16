@@ -275,6 +275,17 @@ export async function setupProjectDatabase(
     ? `http://${host}/p/${previewPort}`
     : `http://${host}:${previewPort}`
 
+  // Better Auth uses baseURL to build its internal router basePath via:
+  //   const basePath = new URL(ctx.baseURL).pathname
+  // When Next.js basePath is active (e.g., /p/5556), Next.js strips it from
+  // request.url before the route handler sees it. So Better Auth must NOT
+  // include the Next.js basePath in its baseURL — otherwise its router expects
+  // /p/5556/api/auth/... but receives /api/auth/... (already stripped) → 404.
+  // NEXT_PUBLIC_APP_URL keeps the full external URL for client-side use.
+  const betterAuthUrl = isRemote
+    ? `http://${host}`
+    : appUrl
+
   const envContent = `# NextSpark Environment Configuration
 # Auto-configured by NextSpark Studio
 
@@ -283,7 +294,7 @@ DATABASE_URL="${projectDbUrl}"
 
 # AUTHENTICATION
 BETTER_AUTH_SECRET="${authSecret}"
-BETTER_AUTH_URL="${appUrl}"
+BETTER_AUTH_URL="${betterAuthUrl}"
 
 # THEME
 NEXT_PUBLIC_ACTIVE_THEME="${activeTheme}"
@@ -385,8 +396,11 @@ export function startPreview(slug: string, preferredPort?: number): Promise<numb
       : `http://${previewHost}:${port}`
 
     // Sync .env auth/app URLs with the actual preview port/path.
-    // BETTER_AUTH_URL and NEXT_PUBLIC_APP_URL must match the running server URL
-    // for authentication to work (cookie domain, CORS, fetch base URL).
+    // BETTER_AUTH_URL must NOT include the Next.js basePath — see setupProjectDatabase comment.
+    // NEXT_PUBLIC_APP_URL keeps the full external URL for client-side use.
+    const betterAuthUrl = isRemote
+      ? `http://${previewHost}`
+      : appUrl
     try {
       const envPath = path.join(projectPath, '.env')
       if (existsSync(envPath)) {
@@ -394,7 +408,7 @@ export function startPreview(slug: string, preferredPort?: number): Promise<numb
         // Replace the full URL values (handles both port and proxy formats)
         envContent = envContent.replace(
           /BETTER_AUTH_URL="[^"]+"/,
-          `BETTER_AUTH_URL="${appUrl}"`
+          `BETTER_AUTH_URL="${betterAuthUrl}"`
         )
         envContent = envContent.replace(
           /NEXT_PUBLIC_APP_URL="[^"]+"/,
