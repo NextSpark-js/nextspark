@@ -10,6 +10,10 @@ const withNextIntl = createNextIntlPlugin('./i18n.ts');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Allow basePath to be set via environment variable (used by Studio preview proxy).
+  // When previewing behind a reverse proxy (e.g., Caddy at /p/{port}/), this prefix
+  // is injected so all Next.js routes are served under the correct path.
+  ...(process.env.NEXT_BASE_PATH ? { basePath: process.env.NEXT_BASE_PATH } : {}),
   // Ignore TypeScript build errors - needed until DTS generation is enabled for @nextsparkjs/core
   // Without this, production builds fail due to missing declaration files for deep imports
   typescript: {

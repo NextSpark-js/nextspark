@@ -6,7 +6,7 @@
  */
 
 import { spawn, type ChildProcess } from 'child_process'
-import { readdir, readFile, writeFile, stat, mkdir, symlink, rm } from 'fs/promises'
+import { readdir, readFile, writeFile, stat, mkdir, symlink } from 'fs/promises'
 import path from 'path'
 import { existsSync, readFileSync } from 'fs'
 import { randomBytes } from 'crypto'
@@ -406,29 +406,27 @@ export function startPreview(slug: string, preferredPort?: number): Promise<numb
       // Non-fatal — auth may fail but preview will still work
     }
 
-    // When running behind Caddy (remote), inject basePath into next.config.mjs.
-    // This makes all Next.js routes use /p/{port}/ prefix, so Caddy can proxy
-    // them to the correct dev server while keeping the same origin for cookies.
+    // When running behind Caddy (remote), ensure next.config.mjs reads basePath
+    // from NEXT_BASE_PATH env var. The env var is set in the spawn env below.
+    // This is more robust than regex-replacing the config file (no race conditions,
+    // no cache invalidation needed, works through any config wrapper like withNextIntl).
     if (isRemote) {
       try {
         const nextConfigPath = path.join(projectPath, 'next.config.mjs')
         if (existsSync(nextConfigPath)) {
           let config = readFileSync(nextConfigPath, 'utf-8')
-          // Remove any existing basePath (in case port changed)
-          config = config.replace(/\s*basePath:\s*'\/p\/\d+',?\n?/g, '')
-          // Inject basePath after the opening of nextConfig
-          config = config.replace(
-            'const nextConfig = {',
-            `const nextConfig = {\n  basePath: '/p/${port}',`
-          )
-          await writeFile(nextConfigPath, config, 'utf-8')
-        }
-        // Delete .next cache so dev server picks up the new basePath.
-        // Without this, webpack loaders cache basePath="" from the first build
-        // and ignore the updated config.
-        const dotNextPath = path.join(projectPath, '.next')
-        if (existsSync(dotNextPath)) {
-          await rm(dotNextPath, { recursive: true, force: true })
+          // One-time patch: add env var support if not already present.
+          // New projects from updated templates already have this.
+          if (!config.includes('NEXT_BASE_PATH')) {
+            // Remove any hardcoded basePath from previous approach
+            config = config.replace(/\s*basePath:\s*'\/p\/\d+',?\n?/g, '')
+            // Add env var-based basePath after the opening of nextConfig
+            config = config.replace(
+              'const nextConfig = {',
+              `const nextConfig = {\n  ...(process.env.NEXT_BASE_PATH ? { basePath: process.env.NEXT_BASE_PATH } : {}),`
+            )
+            await writeFile(nextConfigPath, config, 'utf-8')
+          }
         }
       } catch {
         // Non-fatal — preview works without basePath, just cookies won't persist in iframe
@@ -550,6 +548,9 @@ export function startPreview(slug: string, preferredPort?: number): Promise<numb
         // Next.js dev server needs ~1.5GB for first compilation of a full project.
         // 512MB/1024MB cause heap OOM during webpack compilation.
         NODE_OPTIONS: '--max-old-space-size=2048',
+        // Set basePath for Caddy proxy routing. next.config.mjs reads this env var
+        // to prefix all routes with /p/{port}/, keeping preview on the same origin.
+        ...(isRemote ? { NEXT_BASE_PATH: `/p/${port}` } : {}),
       },
       stdio: 'pipe',
     })
