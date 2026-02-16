@@ -78,7 +78,7 @@ const nextConfig = {
       },
     ],
   },
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, webpack: wp }) => {
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
@@ -95,6 +95,16 @@ const nextConfig = {
         dns: false,
       }
     }
+
+    // Force next-intl config resolution — webpack 5 package.json exports field
+    // can override resolve.alias set by createNextIntlPlugin. This plugin
+    // intercepts after resolution and redirects to the project's i18n.ts.
+    config.plugins.push(
+      new wp.NormalModuleReplacementPlugin(
+        /next-intl[/\\]dist[/\\]esm[/\\](?:development|production)[/\\]config\.js$/,
+        path.resolve(__dirname, 'i18n.ts')
+      )
+    );
 
     // Add alias for @nextsparkjs/registries to fix ChunkLoadError
     config.resolve.alias = {
