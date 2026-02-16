@@ -6,7 +6,7 @@
  */
 
 import { spawn, type ChildProcess } from 'child_process'
-import { readdir, readFile, writeFile, stat, mkdir } from 'fs/promises'
+import { readdir, readFile, writeFile, stat, mkdir, symlink } from 'fs/promises'
 import path from 'path'
 import { existsSync, readFileSync } from 'fs'
 import { randomBytes } from 'crypto'
@@ -354,7 +354,7 @@ RESEND_API_KEY=""
  * @param preferredPort - Optional port (from setupProjectDatabase) to keep .env in sync
  */
 export function startPreview(slug: string, preferredPort?: number): Promise<number> {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     const existing = runningServers.get(slug)
     if (existing) {
       resolve(existing.port)
@@ -363,6 +363,18 @@ export function startPreview(slug: string, preferredPort?: number): Promise<numb
 
     const projectPath = getProjectPath(slug)
     const port = preferredPort || (5500 + Math.floor(Math.random() * 100))
+
+    // Ensure @nextsparkjs/registries symlink exists before starting dev server
+    try {
+      const registriesTarget = path.join(projectPath, '.nextspark', 'registries')
+      const registriesLink = path.join(projectPath, 'node_modules', '@nextsparkjs', 'registries')
+      if (existsSync(registriesTarget) && !existsSync(registriesLink)) {
+        await mkdir(path.dirname(registriesLink), { recursive: true })
+        await symlink(registriesTarget, registriesLink, 'junction')
+      }
+    } catch {
+      // Non-fatal — webpack alias should handle it
+    }
 
     // Read the project's .env and pass values explicitly to the child process.
     // Critical: The nextspark CLI uses dotenvx which traverses parent directories

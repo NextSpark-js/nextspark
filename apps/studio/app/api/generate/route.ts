@@ -12,6 +12,7 @@
 
 import { spawn } from 'child_process'
 import path from 'path'
+import { symlink, mkdir } from 'fs/promises'
 import { runStudio } from '@nextsparkjs/studio'
 import type { StudioEvent } from '@nextsparkjs/studio'
 import { generateProject, setCurrentProject, getProjectPath } from '@/lib/project-manager'
@@ -221,6 +222,24 @@ export async function POST(request: Request) {
               code === 0 ? resolve() : reject(new Error(`Registry build failed with exit code ${code}`))
             )
           })
+        }
+
+        // Step 4: Create symlink for @nextsparkjs/registries resolution
+        // Webpack alias in next.config.mjs handles this for app code, but imports from within
+        // node_modules/@nextsparkjs/core may not resolve through webpack aliases.
+        // The symlink ensures Node.js module resolution also finds the registries.
+        send({ type: 'generate_log', content: '[studio] Linking registries...' })
+        try {
+          const registriesTarget = path.join(projectDir, '.nextspark', 'registries')
+          const registriesLink = path.join(projectDir, 'node_modules', '@nextsparkjs', 'registries')
+          if (existsSync(registriesTarget) && !existsSync(registriesLink)) {
+            await mkdir(path.dirname(registriesLink), { recursive: true })
+            await symlink(registriesTarget, registriesLink, 'junction')
+            send({ type: 'generate_log', content: '[studio] Registries linked successfully' })
+          }
+        } catch (err) {
+          // Non-fatal: webpack alias should still work as fallback
+          send({ type: 'generate_log', content: `[studio] Registry linking skipped: ${err instanceof Error ? err.message : String(err)}` })
         }
 
         send({ type: 'generate_log', content: '[studio] Project ready!' })
