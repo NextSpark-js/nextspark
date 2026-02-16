@@ -238,6 +238,30 @@ export async function POST(request: Request) {
           send({ type: 'generate_log', content: `[studio] Core patch warning: ${err instanceof Error ? err.message : String(err)}` })
         }
 
+        // Step 2.7: Patch auth-client.js for basePath compatibility
+        // The published @nextsparkjs/core auth-client uses NEXT_PUBLIC_APP_URL as baseURL.
+        // When running behind Caddy proxy with basePath (e.g., /p/5510), Better Auth treats
+        // the pathname as the auth route prefix, causing 404s on /p/5510/sign-in/email
+        // instead of /p/5510/api/auth/sign-in/email. Fix: use window.location.origin on
+        // client side and BETTER_AUTH_URL on server side.
+        send({ type: 'generate_log', content: '[studio] Patching auth client...' })
+        try {
+          const authClientFile = path.join(projectDir, 'node_modules/@nextsparkjs/core/dist/lib/auth-client.js')
+          if (existsSync(authClientFile)) {
+            let content = await readFile(authClientFile, 'utf-8')
+            if (content.includes('process.env.NEXT_PUBLIC_APP_URL')) {
+              content = content.replace(
+                /baseURL:\s*process\.env\.NEXT_PUBLIC_APP_URL\s*\|\|\s*["'][^"']+["']/,
+                'baseURL: typeof window !== "undefined" ? window.location.origin : (process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000")'
+              )
+              await writeFile(authClientFile, content, 'utf-8')
+              send({ type: 'generate_log', content: '[studio] Auth client patched for basePath' })
+            }
+          }
+        } catch (err) {
+          send({ type: 'generate_log', content: `[studio] Auth client patch warning: ${err instanceof Error ? err.message : String(err)}` })
+        }
+
         // Step 3: Build registries
         send({ type: 'generate_log', content: '[studio] Building registries...' })
         const registryScript = path.join(

@@ -514,6 +514,26 @@ export function startPreview(slug: string, preferredPort?: number): Promise<numb
       // Non-fatal — NMR plugin in next.config.mjs is fallback
     }
 
+    // Patch auth-client.js for basePath compatibility (needed for proxy setups).
+    // Better Auth treats the URL pathname as the auth route prefix, causing 404s.
+    if (isRemote) {
+      try {
+        const authClientFile = path.join(projectPath, 'node_modules/@nextsparkjs/core/dist/lib/auth-client.js')
+        if (existsSync(authClientFile)) {
+          const content = readFileSync(authClientFile, 'utf-8')
+          if (content.includes('process.env.NEXT_PUBLIC_APP_URL') && !content.includes('window.location.origin')) {
+            const patched = content.replace(
+              /baseURL:\s*process\.env\.NEXT_PUBLIC_APP_URL\s*\|\|\s*["'][^"']+["']/,
+              'baseURL: typeof window !== "undefined" ? window.location.origin : (process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000")'
+            )
+            await writeFile(authClientFile, patched, 'utf-8')
+          }
+        }
+      } catch {
+        // Non-fatal
+      }
+    }
+
     // Read the project's .env and pass values explicitly to the child process.
     // Critical: The nextspark CLI uses dotenvx which traverses parent directories
     // to find .env files. The Studio's parent .env would override the project's .env.
