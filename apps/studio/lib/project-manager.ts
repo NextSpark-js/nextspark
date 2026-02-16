@@ -268,7 +268,12 @@ export async function setupProjectDatabase(
   }
 
   const host = externalHostname || 'localhost'
-  const appUrl = `http://${host}:${previewPort}`
+  const isRemote = !host.startsWith('localhost') && !host.startsWith('127.')
+  // Remote: proxy through Caddy on port 80 using basePath /p/{port}
+  // Local: direct access to dev server port
+  const appUrl = isRemote
+    ? `http://${host}/p/${previewPort}`
+    : `http://${host}:${previewPort}`
 
   const envContent = `# NextSpark Environment Configuration
 # Auto-configured by NextSpark Studio
@@ -364,26 +369,84 @@ export function startPreview(slug: string, preferredPort?: number): Promise<numb
     const projectPath = getProjectPath(slug)
     const port = preferredPort || (5500 + Math.floor(Math.random() * 100))
 
-    // Sync .env auth/app URLs with the actual preview port.
-    // BETTER_AUTH_URL and NEXT_PUBLIC_APP_URL must match the running server port
+    // Determine if running behind Caddy (remote/production) or direct (local dev).
+    // Remote: preview is proxied through Caddy on port 80 at /p/{port}/
+    // Local: preview is accessed directly at http://localhost:{port}
+    let previewHost = 'localhost'
+    try {
+      const envContent = readFileSync(path.join(projectPath, '.env'), 'utf-8')
+      const urlMatch = envContent.match(/NEXT_PUBLIC_APP_URL="http:\/\/([^/:"]+)/)
+      if (urlMatch) previewHost = urlMatch[1]
+    } catch { /* use localhost default */ }
+
+    const isRemote = !previewHost.startsWith('localhost') && !previewHost.startsWith('127.')
+    const appUrl = isRemote
+      ? `http://${previewHost}/p/${port}`
+      : `http://${previewHost}:${port}`
+
+    // Sync .env auth/app URLs with the actual preview port/path.
+    // BETTER_AUTH_URL and NEXT_PUBLIC_APP_URL must match the running server URL
     // for authentication to work (cookie domain, CORS, fetch base URL).
     try {
       const envPath = path.join(projectPath, '.env')
       if (existsSync(envPath)) {
         let envContent = readFileSync(envPath, 'utf-8')
-        // Replace any port in BETTER_AUTH_URL and NEXT_PUBLIC_APP_URL
+        // Replace the full URL values (handles both port and proxy formats)
         envContent = envContent.replace(
-          /(BETTER_AUTH_URL="http:\/\/[^:]+:)\d+(")/g,
-          `$1${port}$2`
+          /BETTER_AUTH_URL="[^"]+"/,
+          `BETTER_AUTH_URL="${appUrl}"`
         )
         envContent = envContent.replace(
-          /(NEXT_PUBLIC_APP_URL="http:\/\/[^:]+:)\d+(")/g,
-          `$1${port}$2`
+          /NEXT_PUBLIC_APP_URL="[^"]+"/,
+          `NEXT_PUBLIC_APP_URL="${appUrl}"`
         )
         await writeFile(envPath, envContent, 'utf-8')
       }
     } catch {
       // Non-fatal — auth may fail but preview will still work
+    }
+
+    // When running behind Caddy (remote), inject basePath into next.config.mjs.
+    // This makes all Next.js routes use /p/{port}/ prefix, so Caddy can proxy
+    // them to the correct dev server while keeping the same origin for cookies.
+    if (isRemote) {
+      try {
+        const nextConfigPath = path.join(projectPath, 'next.config.mjs')
+        if (existsSync(nextConfigPath)) {
+          let config = readFileSync(nextConfigPath, 'utf-8')
+          // Remove any existing basePath (in case port changed)
+          config = config.replace(/\s*basePath:\s*'\/p\/\d+',?\n?/g, '')
+          // Inject basePath after the opening of nextConfig
+          config = config.replace(
+            'const nextConfig = {',
+            `const nextConfig = {\n  basePath: '/p/${port}',`
+          )
+          await writeFile(nextConfigPath, config, 'utf-8')
+        }
+      } catch {
+        // Non-fatal — preview works without basePath, just cookies won't persist in iframe
+      }
+    }
+
+    // Patch proxy.ts to use basePath in auth fetch calls.
+    // The template uses request.nextUrl.origin which doesn't include basePath,
+    // causing middleware auth checks to hit Studio instead of the preview.
+    if (isRemote) {
+      try {
+        const proxyPath = path.join(projectPath, 'proxy.ts')
+        if (existsSync(proxyPath)) {
+          let proxy = readFileSync(proxyPath, 'utf-8')
+          if (proxy.includes('baseURL: request.nextUrl.origin,') && !proxy.includes('basePath')) {
+            proxy = proxy.replace(
+              /baseURL: request\.nextUrl\.origin,/g,
+              "baseURL: request.nextUrl.origin + (request.nextUrl.basePath || ''),"
+            )
+            await writeFile(proxyPath, proxy, 'utf-8')
+          }
+        }
+      } catch {
+        // Non-fatal
+      }
     }
 
     // Ensure @nextsparkjs/registries symlink exists before starting dev server

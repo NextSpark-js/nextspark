@@ -60,7 +60,13 @@ export async function POST(request: Request) {
       // Use the request host so preview works both locally and on remote VPS
       const requestHost = request.headers.get('host') || 'localhost'
       const hostname = requestHost.split(':')[0]
-      return Response.json({ port, url: `http://${hostname}:${port}` })
+      // Remote: proxy through Caddy on port 80 using basePath /p/{port}
+      // Local: direct access to the dev server port
+      const isRemote = !hostname.startsWith('localhost') && !hostname.startsWith('127.')
+      const url = isRemote
+        ? `http://${hostname}/p/${port}`
+        : `http://${hostname}:${port}`
+      return Response.json({ port, url })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to start preview'
       return Response.json({ error: message }, { status: 500 })
