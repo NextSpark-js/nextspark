@@ -522,10 +522,12 @@ export function useStudioChat() {
         }
 
         case 'error': {
+          // Ignore empty error events (e.g. from agent end_turn)
+          if (!event.content) break
           return {
             ...prev,
             messages,
-            error: event.content || 'Unknown error',
+            error: event.content,
           }
         }
       }

@@ -106,10 +106,12 @@ export async function runChat(
 
     if (message.type === 'result') {
       if (message.subtype !== 'success') {
-        const errorMsg = 'errors' in message
-          ? (message.errors as string[]).join('; ')
-          : 'Unknown error'
-        onEvent?.({ type: 'error', content: errorMsg })
+        const errors = 'errors' in message ? (message.errors as string[]) : []
+        // Only emit error if there are actual error messages
+        // (end_turn / max_turns are normal completion, not errors)
+        if (errors.length > 0) {
+          onEvent?.({ type: 'error', content: errors.join('; ') })
+        }
       }
     }
   }
