@@ -530,11 +530,25 @@ export function startPreview(slug: string, preferredPort?: number): Promise<numb
     // DOTENV_CONFIG_PATH forces dotenvx to use only the project's .env
     projectEnvOverrides['DOTENV_CONFIG_PATH'] = path.join(projectPath, '.env')
 
+    // Build a clean env for the preview process.
+    // CRITICAL: Strip __NEXT_PRIVATE_* vars from the Studio's process.env.
+    // The Studio runs in standalone mode which sets __NEXT_PRIVATE_STANDALONE_CONFIG
+    // containing the Studio's serialized config (basePath: "", output: "standalone").
+    // If leaked to the preview's `next dev`, the worker process uses this pre-serialized
+    // config instead of evaluating the project's own next.config.mjs — breaking basePath,
+    // transpilePackages, remotePatterns, and every other project-specific setting.
+    const cleanEnv: Record<string, string | undefined> = {}
+    for (const [key, value] of Object.entries(process.env)) {
+      if (!key.startsWith('__NEXT_PRIVATE')) {
+        cleanEnv[key] = value
+      }
+    }
+
     const child = spawn('pnpm', ['dev'], {
       cwd: projectPath,
       shell: true,
       env: {
-        ...process.env,
+        ...cleanEnv,
         ...projectEnvOverrides,
         PORT: String(port),
         HOSTNAME: '0.0.0.0', // Listen on all interfaces (required in Docker)
