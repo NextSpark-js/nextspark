@@ -9,7 +9,11 @@ import { betterAuth } from 'better-auth'
 import { nextCookies } from 'better-auth/next-js'
 import { pool } from './db'
 
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:4000'
+const isHttps = appUrl.startsWith('https://')
+
 export const auth = betterAuth({
+  baseURL: appUrl,
   database: pool,
   emailAndPassword: {
     enabled: true,
@@ -21,6 +25,13 @@ export const auth = betterAuth({
       enabled: true,
       maxAge: 5 * 60,               // 5 min cookie cache
     },
+  },
+  trustedOrigins: [appUrl],
+  advanced: {
+    // Only use Secure cookies when served over HTTPS.
+    // Without this, NODE_ENV=production forces Secure cookies
+    // which breaks session persistence over plain HTTP.
+    useSecureCookies: isHttps,
   },
   user: {
     additionalFields: {
