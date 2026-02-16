@@ -97,11 +97,11 @@ const nextConfig = {
     }
 
     // Force next-intl config resolution — webpack 5 package.json exports field
-    // can override resolve.alias set by createNextIntlPlugin. This plugin
-    // intercepts after resolution and redirects to the project's i18n.ts.
+    // overrides resolve.alias set by createNextIntlPlugin. This plugin
+    // intercepts the request in beforeResolve and redirects to the project's i18n.ts.
     config.plugins.push(
       new wp.NormalModuleReplacementPlugin(
-        /next-intl[/\\]dist[/\\]esm[/\\](?:development|production)[/\\]config\.js$/,
+        /^next-intl\/config$/,
         path.resolve(__dirname, 'i18n.ts')
       )
     );
