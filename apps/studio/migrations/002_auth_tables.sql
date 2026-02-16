@@ -1,52 +1,53 @@
--- Better Auth standard tables (snake_case convention)
+-- Better Auth standard tables (camelCase columns, matching core convention)
 
 CREATE TABLE IF NOT EXISTS "user" (
-  id            TEXT PRIMARY KEY,
-  name          TEXT NOT NULL,
-  email         TEXT NOT NULL UNIQUE,
-  email_verified BOOLEAN DEFAULT FALSE,
-  image         TEXT,
-  role          TEXT NOT NULL DEFAULT 'user',
-  created_at    TIMESTAMPTZ DEFAULT NOW(),
-  updated_at    TIMESTAMPTZ DEFAULT NOW()
+  id                TEXT PRIMARY KEY,
+  name              TEXT NOT NULL,
+  email             TEXT NOT NULL UNIQUE,
+  "emailVerified"   BOOLEAN DEFAULT FALSE,
+  image             TEXT,
+  role              TEXT NOT NULL DEFAULT 'user',
+  "createdAt"       TIMESTAMPTZ DEFAULT NOW(),
+  "updatedAt"       TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS "session" (
-  id            TEXT PRIMARY KEY,
-  token         TEXT NOT NULL UNIQUE,
-  expires_at    TIMESTAMPTZ NOT NULL,
-  ip_address    TEXT,
-  user_agent    TEXT,
-  user_id       TEXT NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
-  created_at    TIMESTAMPTZ DEFAULT NOW(),
-  updated_at    TIMESTAMPTZ DEFAULT NOW()
+  id              TEXT PRIMARY KEY,
+  token           TEXT NOT NULL UNIQUE,
+  "expiresAt"     TIMESTAMPTZ NOT NULL,
+  "ipAddress"     TEXT,
+  "userAgent"     TEXT,
+  "userId"        TEXT NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+  "createdAt"     TIMESTAMPTZ DEFAULT NOW(),
+  "updatedAt"     TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS "account" (
-  id            TEXT PRIMARY KEY,
-  account_id    TEXT NOT NULL,
-  provider_id   TEXT NOT NULL,
-  user_id       TEXT NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
-  password      TEXT,
-  access_token  TEXT,
-  refresh_token TEXT,
-  id_token      TEXT,
-  expires_at    TIMESTAMPTZ,
-  scope         TEXT,
-  created_at    TIMESTAMPTZ DEFAULT NOW(),
-  updated_at    TIMESTAMPTZ DEFAULT NOW()
+  id              TEXT PRIMARY KEY,
+  "accountId"     TEXT NOT NULL,
+  "providerId"    TEXT NOT NULL,
+  "userId"        TEXT NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+  password        TEXT,
+  "accessToken"   TEXT,
+  "refreshToken"  TEXT,
+  "idToken"       TEXT,
+  "accessTokenExpiresAt"  TIMESTAMPTZ,
+  "refreshTokenExpiresAt" TIMESTAMPTZ,
+  scope           TEXT,
+  "createdAt"     TIMESTAMPTZ DEFAULT NOW(),
+  "updatedAt"     TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS "verification" (
-  id            TEXT PRIMARY KEY,
-  identifier    TEXT NOT NULL,
-  value         TEXT NOT NULL,
-  expires_at    TIMESTAMPTZ NOT NULL,
-  created_at    TIMESTAMPTZ DEFAULT NOW(),
-  updated_at    TIMESTAMPTZ DEFAULT NOW()
+  id              TEXT PRIMARY KEY,
+  identifier      TEXT NOT NULL,
+  value           TEXT NOT NULL,
+  "expiresAt"     TIMESTAMPTZ NOT NULL,
+  "createdAt"     TIMESTAMPTZ DEFAULT NOW(),
+  "updatedAt"     TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_session_user_id ON "session"(user_id);
+CREATE INDEX IF NOT EXISTS idx_session_user_id ON "session"("userId");
 CREATE INDEX IF NOT EXISTS idx_session_token ON "session"(token);
-CREATE INDEX IF NOT EXISTS idx_account_user_id ON "account"(user_id);
+CREATE INDEX IF NOT EXISTS idx_account_user_id ON "account"("userId");
 CREATE INDEX IF NOT EXISTS idx_user_email ON "user"(email);
