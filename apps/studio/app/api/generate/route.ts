@@ -1,8 +1,8 @@
 /**
  * Project Generation API Route (SSE)
  *
- * Runs create-nextspark-app and streams progress back.
- * After generation, triggers the AI chat to configure the project.
+ * Generates projects directly from bundled templates and streams progress.
+ * After generation, installs dependencies and builds registries.
  * Persists session state to PostgreSQL throughout.
  *
  * POST /api/generate
@@ -10,6 +10,8 @@
  * Response: text/event-stream
  */
 
+import { spawn } from 'child_process'
+import path from 'path'
 import { runStudio } from '@nextsparkjs/studio'
 import type { StudioEvent } from '@nextsparkjs/studio'
 import { generateProject, setCurrentProject, getProjectPath } from '@/lib/project-manager'
@@ -164,26 +166,64 @@ export async function POST(request: Request) {
 
         send({ type: 'phase', phase: 'generating', content: `Generating project "${slug}"...` })
 
+        // Step 1: Generate project files directly from templates
+        await generateProject(slug, wc, (line: string) => {
+          send({ type: 'generate_log', content: line })
+        })
+
+        // Step 2: Install dependencies
+        send({ type: 'generate_log', content: '[studio] Installing dependencies...' })
+        const projectDir = getProjectPath(slug)
+
         await new Promise<void>((resolve, reject) => {
-          generateProject(
-            slug,
-            {
-              preset: studioResult.analysis?.preset || 'saas',
-              name: wc.projectName || slug,
-              description: wc.projectDescription || prompt.trim().slice(0, 100),
-            },
-            (line: string) => {
-              send({ type: 'generate_log', content: line })
-            },
-            (code: number) => {
-              if (code === 0) {
-                resolve()
-              } else {
-                reject(new Error(`Generation failed with exit code ${code}`))
-              }
+          const child = spawn('pnpm', ['install'], {
+            cwd: projectDir,
+            shell: true,
+            env: { ...process.env, FORCE_COLOR: '0', CI: 'true', NO_COLOR: '1' },
+          })
+          child.stdout?.on('data', (data: Buffer) => {
+            const lines = data.toString().split('\n').filter((l: string) => l.trim())
+            for (const line of lines) {
+              send({ type: 'generate_log', content: `[pnpm] ${line.trim()}` })
             }
+          })
+          child.stderr?.on('data', (data: Buffer) => {
+            const lines = data.toString().split('\n').filter((l: string) => l.trim())
+            for (const line of lines) {
+              send({ type: 'generate_log', content: `[pnpm] ${line.trim()}` })
+            }
+          })
+          child.on('close', (code) =>
+            code === 0 ? resolve() : reject(new Error(`pnpm install failed with exit code ${code}`))
           )
         })
+
+        // Step 3: Build registries
+        send({ type: 'generate_log', content: '[studio] Building registries...' })
+        const registryScript = path.join(
+          projectDir,
+          'node_modules/@nextsparkjs/core/scripts/build/registry.mjs'
+        )
+        if (existsSync(registryScript)) {
+          await new Promise<void>((resolve, reject) => {
+            const child = spawn('node', [registryScript, '--build'], {
+              cwd: projectDir,
+              shell: true,
+              env: { ...process.env, NEXTSPARK_PROJECT_ROOT: projectDir },
+            })
+            child.stdout?.on('data', (data: Buffer) => {
+              const lines = data.toString().split('\n').filter((l: string) => l.trim())
+              for (const line of lines) {
+                send({ type: 'generate_log', content: `[registry] ${line.trim()}` })
+              }
+            })
+            child.on('close', (code) =>
+              code === 0 ? resolve() : reject(new Error(`Registry build failed with exit code ${code}`))
+            )
+          })
+        }
+
+        send({ type: 'generate_log', content: '[studio] Project ready!' })
 
         send({
           type: 'project_ready',

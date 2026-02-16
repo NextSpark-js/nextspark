@@ -436,24 +436,36 @@ export function useStudioChat() {
         }
 
         case 'generate_log': {
+          const logContent = event.content || ''
+
           // Append to last system message or create new
           const lastSys = messages[messages.length - 1]
           if (lastSys?.role === 'system' && !lastSys.content.startsWith('Project')) {
             // Replace the last system message (log lines)
             messages[messages.length - 1] = {
               ...lastSys,
-              content: event.content || '',
+              content: logContent,
             }
           } else {
             messages.push({
               id: nextId(),
               role: 'system',
-              content: event.content || '',
+              content: logContent,
               timestamp: Date.now(),
             })
           }
-          // Update detail on active generating step
-          steps = updateSteps(steps, 'update_detail', { detail: event.content || '' })
+
+          // Create granular steps from structured log prefixes
+          if (logContent.includes('Installing dependencies')) {
+            steps = updateSteps(steps, 'add', { label: 'Installing dependencies', icon: 'package' })
+          } else if (logContent.includes('Building registries')) {
+            steps = updateSteps(steps, 'add', { label: 'Building registries', icon: 'database' })
+          } else if (logContent.includes('Project ready!')) {
+            steps = updateSteps(steps, 'complete_active')
+          } else {
+            // Update detail on active generating step
+            steps = updateSteps(steps, 'update_detail', { detail: logContent })
+          }
           break
         }
 

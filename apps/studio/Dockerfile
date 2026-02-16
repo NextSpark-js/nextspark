@@ -13,6 +13,9 @@ COPY apps/studio/package.json apps/studio/
 RUN mkdir -p packages/core packages/cli packages/create-nextspark-app packages/testing packages/ui packages/mobile packages/ai-workflow apps/dev themes/default themes/blog themes/crm themes/productivity plugins/ai plugins/langchain plugins/amplitude plugins/social-media
 RUN for d in packages/core packages/cli packages/create-nextspark-app packages/testing packages/ui packages/mobile packages/ai-workflow apps/dev themes/default themes/blog themes/crm themes/productivity plugins/ai plugins/langchain plugins/amplitude plugins/social-media; do echo '{"name":"stub-'$d'","version":"0.0.0","private":true}' > "$d/package.json"; done
 
+# Copy real core templates (needed for direct project generation at runtime)
+COPY packages/core/templates /app/packages/core/templates
+
 # Install dependencies (lockfile needs all workspace entries)
 RUN pnpm install --no-frozen-lockfile
 
@@ -45,6 +48,9 @@ COPY --from=builder /app/apps/studio/.next/static ./apps/studio/.next/static
 
 # Copy migrations (needed at runtime for auto-migration)
 COPY --from=builder /app/apps/studio/migrations ./apps/studio/migrations
+
+# Copy templates for direct project generation (replaces npx create-nextspark-app)
+COPY --from=builder /app/packages/core/templates /app/templates
 
 # Copy Claude Agent SDK CLI (needed at runtime — Next.js standalone doesn't trace child-process binaries)
 COPY --from=builder /app/node_modules/.pnpm/@anthropic-ai+claude-agent-sdk@0.2.42_zod@3.25.76/node_modules/@anthropic-ai/claude-agent-sdk /app/node_modules/.pnpm/@anthropic-ai+claude-agent-sdk@0.2.42_zod@3.25.76/node_modules/@anthropic-ai/claude-agent-sdk

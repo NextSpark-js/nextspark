@@ -11,6 +11,8 @@ import path from 'path'
 import { existsSync, readFileSync } from 'fs'
 import { randomBytes } from 'crypto'
 import pg from 'pg'
+import type { WizardConfig } from '@nextsparkjs/studio'
+import { generateProjectDirect, resolveTemplatesDir } from './project-generator'
 
 // All generated projects live here
 const PROJECTS_ROOT = path.resolve(process.cwd(), '../../studio-projects')
@@ -38,84 +40,27 @@ export function setCurrentProject(slug: string) {
 }
 
 /**
- * Generate a project using create-nextspark-app
+ * Generate a project directly from bundled templates.
+ * Replaces the old npx create-nextspark-app subprocess approach.
  */
-export function generateProject(
+export async function generateProject(
   slug: string,
-  options: {
-    preset: string
-    name: string
-    description: string
-    theme?: string
-    plugins?: string[]
-  },
-  onData: (line: string) => void,
-  onDone: (code: number) => void
-) {
-  const projectPath = getProjectPath(slug)
+  wizardConfig: WizardConfig,
+  onData: (line: string) => void
+): Promise<void> {
+  const templatesDir = resolveTemplatesDir()
 
-  // Ensure parent dir exists
-  if (!existsSync(PROJECTS_ROOT)) {
-    require('fs').mkdirSync(PROJECTS_ROOT, { recursive: true })
-  }
+  onData(`[studio] Generating project "${slug}" directly from templates`)
+  onData(`[studio] Templates: ${templatesDir}`)
 
-  // Build the command
-  const args = [
-    'create-nextspark-app',
-    slug,
-    '--preset', options.preset,
-    '--name', `"${options.name}"`,
-    '--slug', slug,
-    '--description', `"${options.description}"`,
-    '--yes',
-  ]
-
-  if (options.theme) {
-    args.push('--theme', options.theme)
-  }
-  if (options.plugins && options.plugins.length > 0) {
-    args.push('--plugins', `"${options.plugins.join(',')}"`)
-  }
-
-  onData(`[studio] Running: npx ${args.join(' ')}`)
-  onData(`[studio] Directory: ${PROJECTS_ROOT}`)
-
-  const child = spawn('npx', args, {
-    cwd: PROJECTS_ROOT,
-    shell: true,
-    env: {
-      ...process.env,
-      FORCE_COLOR: '0',
-      CI: 'true',
-      TERM: 'dumb',
-      NO_COLOR: '1',
-    },
+  await generateProjectDirect(slug, wizardConfig, {
+    projectsRoot: PROJECTS_ROOT,
+    templatesDir,
+  }, (step, detail) => {
+    onData(`[studio] ${step}${detail ? ': ' + detail : ''}`)
   })
 
-  // Strip ANSI escape codes from output
-  const stripAnsi = (text: string) =>
-    text.replace(/\x1B\[[0-9;]*[a-zA-Z]|\x1B\].*?\x07|\x1B\[.*?[Gm]|\r/g, '')
-
-  child.stdout?.on('data', (data: Buffer) => {
-    const clean = stripAnsi(data.toString())
-    const lines = clean.split('\n').filter((l) => l.trim())
-    lines.forEach(onData)
-  })
-
-  child.stderr?.on('data', (data: Buffer) => {
-    const clean = stripAnsi(data.toString())
-    const lines = clean.split('\n').filter((l) => l.trim())
-    lines.forEach((line) => onData(`[stderr] ${line}`))
-  })
-
-  child.on('close', (code) => {
-    if (code === 0) {
-      setCurrentProject(slug)
-    }
-    onDone(code ?? 1)
-  })
-
-  return child
+  setCurrentProject(slug)
 }
 
 /**
