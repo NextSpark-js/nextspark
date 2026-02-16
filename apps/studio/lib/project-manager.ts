@@ -448,6 +448,9 @@ export function startPreview(slug: string, preferredPort?: number): Promise<numb
         PORT: String(port),
         HOSTNAME: '0.0.0.0', // Listen on all interfaces (required in Docker)
         FORCE_COLOR: '0',
+        // Limit Node.js heap to prevent OOM kills on small VPS instances.
+        // Next.js dev server can easily consume 2GB+ without a cap.
+        NODE_OPTIONS: '--max-old-space-size=512',
       },
       stdio: 'pipe',
     })
