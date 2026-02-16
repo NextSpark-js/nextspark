@@ -6,8 +6,12 @@
  */
 
 export { runStudio } from './ai/orchestrator'
+export { runChat } from './ai/chat-orchestrator'
+export type { ChatMessage, ChatOptions } from './ai/chat-orchestrator'
 export { createStudioMcpServer, STUDIO_MCP_TOOL_NAMES } from './ai/tools/mcp-server'
+export { createChatMcpServer, CHAT_MCP_TOOL_NAMES } from './ai/tools/chat-tools'
 export { SYSTEM_PROMPT } from './ai/system-prompt'
+export { buildChatSystemPrompt } from './ai/chat-system-prompt'
 
 export type {
   StudioResult,

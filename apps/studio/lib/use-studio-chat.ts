@@ -1,8 +1,9 @@
 /**
  * React hook for Studio full flow:
- * AI analysis -> project generation -> file browsing -> preview
+ * AI analysis -> project generation -> file browsing -> preview -> iterative chat
  *
- * Sends to /api/generate which streams AI + create-nextspark-app output.
+ * Phase 1 (generation): Sends to /api/generate which streams AI + project generation output.
+ * Phase 2 (chat): Sends to /api/chat which lets AI read/modify project files.
  * Supports session persistence: load from DB on mount, auto-save during generation.
  */
 
@@ -337,6 +338,202 @@ export function useStudioChat() {
     }
   }, [fetchFiles, saveMessages])
 
+  /**
+   * Send a chat message for post-generation project modification.
+   * Routes to /api/chat instead of /api/generate.
+   * Maintains conversation history for context.
+   */
+  const sendChatMessage = useCallback(async (message: string) => {
+    const slug = state.project.slug
+    if (!slug) return
+
+    const userMessage: ChatMessage = {
+      id: nextId(),
+      role: 'user',
+      content: message,
+      timestamp: Date.now(),
+    }
+
+    setState((prev) => ({
+      ...prev,
+      status: 'streaming',
+      error: null,
+      messages: [...prev.messages, userMessage],
+    }))
+
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    // Build conversation history from previous messages (user + assistant only)
+    const history = state.messages
+      .filter(m => m.role === 'user' || m.role === 'assistant')
+      .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug,
+          message,
+          history,
+          sessionId: sessionId,
+        }),
+        signal: controller.signal,
+      })
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: 'Request failed' }))
+        throw new Error(err.error || `HTTP ${response.status}`)
+      }
+
+      if (!response.body) {
+        throw new Error('No response body')
+      }
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let filesWereModified = false
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          try {
+            const event = JSON.parse(line.slice(6)) as StudioEvent
+            if (event.type === 'files_modified') {
+              filesWereModified = true
+            }
+            processChatEvent(event)
+          } catch {
+            // skip malformed
+          }
+        }
+      }
+
+      // Process remaining buffer
+      if (buffer.startsWith('data: ')) {
+        try {
+          const event = JSON.parse(buffer.slice(6)) as StudioEvent
+          if (event.type === 'files_modified') {
+            filesWereModified = true
+          }
+          processChatEvent(event)
+        } catch {
+          // skip
+        }
+      }
+
+      setState((prev) => ({
+        ...prev,
+        status: 'complete',
+      }))
+
+      // Refresh file tree if files were modified
+      if (filesWereModified) {
+        fetchFiles(slug)
+      }
+    } catch (error) {
+      if ((error as Error).name === 'AbortError') return
+
+      const msg = error instanceof Error ? error.message : String(error)
+      setState((prev) => ({
+        ...prev,
+        status: 'error',
+        error: msg,
+      }))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.project.slug, state.messages, sessionId, fetchFiles])
+
+  /**
+   * Process SSE events from the chat API.
+   * Handles text, tool_start, tool_result, files_modified, chat_complete, and error events.
+   */
+  function processChatEvent(event: StudioEvent) {
+    setState((prev) => {
+      const messages = [...prev.messages]
+
+      switch (event.type) {
+        case 'text': {
+          const last = messages[messages.length - 1]
+          if (last?.role === 'assistant' && !last.toolName) {
+            messages[messages.length - 1] = {
+              ...last,
+              content: last.content + (event.content || ''),
+            }
+          } else {
+            messages.push({
+              id: nextId(),
+              role: 'assistant',
+              content: event.content || '',
+              timestamp: Date.now(),
+            })
+          }
+          break
+        }
+
+        case 'tool_start': {
+          messages.push({
+            id: nextId(),
+            role: 'tool',
+            content: event.content || `Running ${event.toolName}...`,
+            toolName: event.toolName,
+            timestamp: Date.now(),
+          })
+          break
+        }
+
+        case 'tool_result': {
+          const toolIdx = messages.findLastIndex(
+            (m) => m.role === 'tool' && m.toolName === event.toolName
+          )
+          if (toolIdx >= 0) {
+            messages[toolIdx] = {
+              ...messages[toolIdx],
+              content: event.content || 'Done',
+            }
+          }
+          break
+        }
+
+        case 'files_modified': {
+          const fileList = event.filesModified?.join(', ') || ''
+          messages.push({
+            id: nextId(),
+            role: 'system',
+            content: `Modified files: ${fileList}`,
+            timestamp: Date.now(),
+          })
+          break
+        }
+
+        case 'chat_complete': {
+          // Chat turn complete — no special handling needed
+          break
+        }
+
+        case 'error': {
+          return {
+            ...prev,
+            messages,
+            error: event.content || 'Unknown error',
+          }
+        }
+      }
+
+      return { ...prev, messages }
+    })
+  }
+
   function processEvent(event: StudioEvent) {
     setState((prev) => {
       const messages = [...prev.messages]
@@ -587,6 +784,7 @@ export function useStudioChat() {
     ...state,
     sessionId,
     sendPrompt,
+    sendChatMessage,
     reset,
     fetchFiles,
     startPreview,

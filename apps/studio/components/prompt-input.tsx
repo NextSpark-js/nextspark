@@ -6,9 +6,10 @@ import { ArrowUp } from 'lucide-react'
 interface PromptInputProps {
   onSubmit: (prompt: string) => void
   disabled?: boolean
+  placeholder?: string
 }
 
-export function PromptInput({ onSubmit, disabled }: PromptInputProps) {
+export function PromptInput({ onSubmit, disabled, placeholder }: PromptInputProps) {
   const [value, setValue] = useState('')
 
   function handleSubmit() {
@@ -29,7 +30,7 @@ export function PromptInput({ onSubmit, disabled }: PromptInputProps) {
               handleSubmit()
             }
           }}
-          placeholder="Follow up..."
+          placeholder={placeholder || "Follow up..."}
           rows={1}
           disabled={disabled}
           className="flex-1 resize-none bg-transparent px-3 py-2 text-[12px] text-text-primary placeholder:text-text-muted/50 focus:outline-none disabled:opacity-30 font-sans"

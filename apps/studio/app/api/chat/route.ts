@@ -1,21 +1,33 @@
 /**
- * SSE Streaming Chat API Route
+ * Chat API Route (SSE)
  *
- * Receives a user prompt, runs the Studio orchestrator,
- * and streams StudioEvents back as Server-Sent Events.
+ * Handles post-generation iterative chat. Users can modify their
+ * project through natural language messages. The AI reads/writes
+ * project files and rebuilds registries as needed.
  *
  * POST /api/chat
- * Body: { prompt: string }
+ * Body: { slug: string, message: string, history?: ChatMessage[], sessionId?: string }
  * Response: text/event-stream
  */
 
-import { runStudio } from '@nextsparkjs/studio'
-import type { StudioEvent } from '@nextsparkjs/studio'
+import { runChat } from '@nextsparkjs/studio'
+import type { StudioEvent, StudioResult } from '@nextsparkjs/studio'
+import { getProjectPath } from '@/lib/project-manager'
+import { existsSync, readFileSync } from 'fs'
+import path from 'path'
+import { query, queryOne } from '@/lib/db'
 import { requireSession } from '@/lib/auth-helpers'
 import { checkRateLimit, AI_RATE_LIMITS, rateLimitResponse } from '@/lib/rate-limit'
 
 export const runtime = 'nodejs'
 export const maxDuration = 120
+
+interface ChatRequestBody {
+  slug: string
+  message: string
+  history?: Array<{ role: 'user' | 'assistant'; content: string }>
+  sessionId?: string
+}
 
 export async function POST(request: Request) {
   let session
@@ -24,36 +36,115 @@ export async function POST(request: Request) {
   const rateCheck = checkRateLimit(session.user.id, AI_RATE_LIMITS)
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.resetAt)
 
-  const body = await request.json()
-  const { prompt } = body as { prompt?: string }
+  const body = (await request.json()) as ChatRequestBody
 
-  if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
-    return Response.json({ error: 'prompt is required' }, { status: 400 })
+  if (!body.slug || typeof body.slug !== 'string') {
+    return Response.json({ error: 'slug is required' }, { status: 400 })
+  }
+  if (!body.message || typeof body.message !== 'string' || !body.message.trim()) {
+    return Response.json({ error: 'message is required' }, { status: 400 })
+  }
+
+  const projectDir = getProjectPath(body.slug)
+  if (!existsSync(projectDir)) {
+    return Response.json({ error: 'Project not found' }, { status: 404 })
+  }
+
+  // Resolve theme name from .env
+  let themeName = body.slug
+  try {
+    const envContent = readFileSync(path.join(projectDir, '.env'), 'utf-8')
+    const themeMatch = envContent.match(/NEXT_PUBLIC_ACTIVE_THEME="?([^"\n]+)"?/)
+    if (themeMatch) themeName = themeMatch[1]
+  } catch {
+    // Use slug as fallback
+  }
+
+  // Load studio result from session if available
+  let studioResult: StudioResult | undefined
+  if (body.sessionId) {
+    try {
+      const row = await queryOne(
+        `SELECT result FROM sessions WHERE id = $1`,
+        [body.sessionId]
+      )
+      if (row?.result) {
+        studioResult = typeof row.result === 'string' ? JSON.parse(row.result) : row.result
+      }
+    } catch {
+      // Non-critical — chat works without previous context
+    }
   }
 
   const encoder = new TextEncoder()
+  let closed = false
 
   const stream = new ReadableStream({
     async start(controller) {
-      function sendEvent(event: StudioEvent) {
-        const data = JSON.stringify(event)
-        controller.enqueue(encoder.encode(`data: ${data}\n\n`))
+      function send(event: StudioEvent) {
+        if (closed) return
+        try {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`))
+        } catch {
+          // Stream may have been closed
+        }
+      }
+
+      function close() {
+        if (closed) return
+        closed = true
+        try {
+          controller.close()
+        } catch {
+          // Already closed
+        }
       }
 
       try {
-        const result = await runStudio(prompt.trim(), sendEvent)
+        const { response, filesModified } = await runChat(
+          body.message.trim(),
+          {
+            projectDir,
+            projectSlug: body.slug,
+            themeName,
+            studioResult,
+            history: body.history,
+          },
+          (event: StudioEvent) => {
+            send(event)
+          }
+        )
 
-        // Send final result as a special event
-        sendEvent({
-          type: 'generation_complete',
-          content: 'Configuration complete',
-          data: result,
+        // Send completion event with list of modified files
+        if (filesModified.length > 0) {
+          send({
+            type: 'files_modified',
+            content: `Modified ${filesModified.length} file(s)`,
+            filesModified,
+          })
+        }
+
+        send({
+          type: 'chat_complete',
+          content: response || 'Done',
         })
+
+        // Update session timestamp if sessionId provided
+        if (body.sessionId) {
+          try {
+            await query(
+              `UPDATE sessions SET updated_at = NOW() WHERE id = $1`,
+              [body.sessionId]
+            )
+          } catch {
+            // Best-effort
+          }
+        }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
-        sendEvent({ type: 'error', content: message })
+        send({ type: 'error', content: message })
       } finally {
-        controller.close()
+        close()
       }
     },
   })

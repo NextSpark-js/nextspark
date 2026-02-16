@@ -155,6 +155,8 @@ export type StudioEventType =
   | 'generate_log'
   | 'project_ready'
   | 'session_init'
+  | 'chat_complete'
+  | 'files_modified'
   | 'error'
 
 export interface StudioEvent {
@@ -165,6 +167,7 @@ export interface StudioEvent {
   slug?: string
   phase?: string
   sessionId?: string
+  filesModified?: string[]
 }
 
 export type StudioEventHandler = (event: StudioEvent) => void

@@ -30,7 +30,7 @@ function BuildContent() {
   const router = useRouter()
   const {
     status, messages, result, error, project, pages, sessionId,
-    sendPrompt, reset, fetchFiles, startPreview, updatePages, loadSession,
+    sendPrompt, sendChatMessage, reset, fetchFiles, startPreview, updatePages, loadSession,
   } = useStudioChat()
 
   const github = useGitHub()
@@ -263,7 +263,11 @@ function BuildContent() {
         >
           <div className="flex flex-col w-[340px] h-full border-r border-border bg-bg-surface/20">
             <ChatMessages messages={messages} status={status} />
-            <PromptInput onSubmit={sendPrompt} disabled={isProcessing} />
+            <PromptInput
+              onSubmit={projectReady ? sendChatMessage : sendPrompt}
+              disabled={isProcessing}
+              placeholder={projectReady ? 'Modify your project...' : undefined}
+            />
           </div>
         </div>
 
