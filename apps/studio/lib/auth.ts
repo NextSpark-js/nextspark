@@ -10,10 +10,7 @@ import { nextCookies } from 'better-auth/next-js'
 import { pool } from './db'
 
 export const auth = betterAuth({
-  database: {
-    type: 'postgres',
-    pool,
-  },
+  database: pool,
   emailAndPassword: {
     enabled: true,
   },
