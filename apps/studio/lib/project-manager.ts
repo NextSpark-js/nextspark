@@ -357,7 +357,7 @@ export function startPreview(slug: string, preferredPort?: number): Promise<numb
     }
 
     const projectPath = getProjectPath(slug)
-    const port = preferredPort || (5500 + Math.floor(Math.random() * 500))
+    const port = preferredPort || (5500 + Math.floor(Math.random() * 100))
 
     // Read the project's .env and pass values explicitly to the child process.
     // Critical: The nextspark CLI uses dotenvx which traverses parent directories

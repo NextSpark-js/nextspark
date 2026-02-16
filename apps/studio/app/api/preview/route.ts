@@ -33,7 +33,7 @@ export async function POST(request: Request) {
   if (action === 'setup') {
     try {
       // Pick a port for the preview so .env has the correct APP_URL
-      const port = 5500 + Math.floor(Math.random() * 500)
+      const port = 5500 + Math.floor(Math.random() * 100)
       const logs: string[] = []
       // Extract hostname from request so BETTER_AUTH_URL matches the real URL
       const requestHost = request.headers.get('host') || 'localhost'
