@@ -12,7 +12,7 @@
 
 import { spawn } from 'child_process'
 import path from 'path'
-import { symlink, mkdir } from 'fs/promises'
+import { symlink, mkdir, readFile, writeFile, readdir } from 'fs/promises'
 import { runStudio } from '@nextsparkjs/studio'
 import type { StudioEvent } from '@nextsparkjs/studio'
 import { generateProject, setCurrentProject, getProjectPath } from '@/lib/project-manager'
@@ -198,6 +198,26 @@ export async function POST(request: Request) {
             code === 0 ? resolve() : reject(new Error(`pnpm install failed with exit code ${code}`))
           )
         })
+
+        // Step 2.5: Patch next-intl config stubs
+        // next-intl uses self-referencing imports (import from "next-intl/config") which
+        // webpack 5 resolves directly via package.json exports field to stub files that throw.
+        // Neither resolve.alias nor NormalModuleReplacementPlugin can intercept self-references.
+        // Fix: replace the stub files with a re-export of the project's i18n config.
+        send({ type: 'generate_log', content: '[studio] Patching next-intl config...' })
+        try {
+          const nextIntlBase = path.join(projectDir, 'node_modules/next-intl/dist/esm')
+          const configRedirect = `export { default } from '@nextsparkjs/core/i18n';\n`
+          for (const env of ['production', 'development']) {
+            const stubPath = path.join(nextIntlBase, env, 'config.js')
+            if (existsSync(stubPath)) {
+              await writeFile(stubPath, configRedirect, 'utf-8')
+            }
+          }
+          send({ type: 'generate_log', content: '[studio] next-intl config patched' })
+        } catch (err) {
+          send({ type: 'generate_log', content: `[studio] next-intl patch warning: ${err instanceof Error ? err.message : String(err)}` })
+        }
 
         // Step 3: Build registries
         send({ type: 'generate_log', content: '[studio] Building registries...' })

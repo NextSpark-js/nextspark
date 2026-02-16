@@ -376,6 +376,25 @@ export function startPreview(slug: string, preferredPort?: number): Promise<numb
       // Non-fatal — webpack alias should handle it
     }
 
+    // Ensure next-intl config stubs are patched before starting dev server.
+    // Webpack 5 self-referencing imports bypass resolve.alias and NMR plugins,
+    // so we patch the stub files directly to re-export from @nextsparkjs/core/i18n.
+    try {
+      const nextIntlBase = path.join(projectPath, 'node_modules/next-intl/dist/esm')
+      const configRedirect = `export { default } from '@nextsparkjs/core/i18n';\n`
+      for (const env of ['production', 'development']) {
+        const stubPath = path.join(nextIntlBase, env, 'config.js')
+        if (existsSync(stubPath)) {
+          const content = readFileSync(stubPath, 'utf-8')
+          if (content.includes("Couldn't find next-intl config")) {
+            await writeFile(stubPath, configRedirect, 'utf-8')
+          }
+        }
+      }
+    } catch {
+      // Non-fatal — NMR plugin in next.config.mjs is fallback
+    }
+
     // Read the project's .env and pass values explicitly to the child process.
     // Critical: The nextspark CLI uses dotenvx which traverses parent directories
     // to find .env files. The Studio's parent .env would override the project's .env.
