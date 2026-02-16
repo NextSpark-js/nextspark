@@ -714,7 +714,7 @@ async function processI18n(
     }
   }
 
-  // Remove unused entity messages
+  // Remove unused entity messages AND their loader references in entity configs
   const entitiesDir = path.join(themePath, 'entities')
   if (await pathExists(entitiesDir)) {
     const entityFolders = await readdir(entitiesDir)
@@ -722,6 +722,8 @@ async function processI18n(
       const entityMessagesDir = path.join(entitiesDir, entity, 'messages')
       if (!(await pathExists(entityMessagesDir))) continue
 
+      // Collect locales to remove
+      const localesToRemove: string[] = []
       const files = await readdir(entityMessagesDir)
       for (const file of files) {
         const locale = path.basename(file, '.json')
@@ -730,6 +732,23 @@ async function processI18n(
           !config.supportedLocales.includes(locale)
         ) {
           await rm(path.join(entityMessagesDir, file))
+          localesToRemove.push(locale)
+        }
+      }
+
+      // Remove the loader entries from entity config files
+      if (localesToRemove.length > 0) {
+        const configFile = path.join(entitiesDir, entity, `${entity}.config.ts`)
+        if (await pathExists(configFile)) {
+          let configContent = await readFile(configFile, 'utf-8')
+          for (const locale of localesToRemove) {
+            // Remove lines like: es: () => import('./messages/es.json'),
+            configContent = configContent.replace(
+              new RegExp(`\\s*${locale}:\\s*\\(\\)\\s*=>\\s*import\\([^)]+\\),?\\n?`, 'g'),
+              '\n'
+            )
+          }
+          await writeFile(configFile, configContent, 'utf-8')
         }
       }
     }
