@@ -208,7 +208,12 @@ export async function setupProjectDatabase(
   }
 
   const dbName = `studio_${slug.replace(/-/g, '_')}`
-  const projectDbUrl = `postgresql://${dbInfo.user}:${dbInfo.password}@${dbInfo.host}:${dbInfo.port}/${dbName}${dbInfo.params}`
+  // Ensure sslmode=disable for Docker PostgreSQL (no SSL support)
+  let params = dbInfo.params
+  if (!params.includes('sslmode')) {
+    params = params ? `${params}&sslmode=disable` : '?sslmode=disable'
+  }
+  const projectDbUrl = `postgresql://${dbInfo.user}:${dbInfo.password}@${dbInfo.host}:${dbInfo.port}/${dbName}${params}`
 
   // Step 1: Create the database using pg Client
   log(`[db] Creating database "${dbName}"...`)
