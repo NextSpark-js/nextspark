@@ -216,7 +216,8 @@ async function copyProjectFiles(
     { src: 'tsconfig.json', dest: 'tsconfig.json', force: true },
     { src: 'postcss.config.mjs', dest: 'postcss.config.mjs', force: true },
     { src: 'i18n.ts', dest: 'i18n.ts', force: true },
-    { src: 'pnpm-workspace.yaml', dest: 'pnpm-workspace.yaml', force: true },
+    // pnpm-workspace.yaml is NOT copied — Studio generates flat projects, not monorepos.
+    // Including it causes pnpm to refuse auto-installing TypeScript deps (ERR_PNPM_ADDING_TO_ROOT).
     { src: 'tsconfig.cypress.json', dest: 'tsconfig.cypress.json', force: false },
     { src: 'cypress.d.ts', dest: 'cypress.d.ts', force: false },
     { src: 'eslint.config.mjs', dest: 'eslint.config.mjs', force: false },
