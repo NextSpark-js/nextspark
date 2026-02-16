@@ -364,6 +364,28 @@ export function startPreview(slug: string, preferredPort?: number): Promise<numb
     const projectPath = getProjectPath(slug)
     const port = preferredPort || (5500 + Math.floor(Math.random() * 100))
 
+    // Sync .env auth/app URLs with the actual preview port.
+    // BETTER_AUTH_URL and NEXT_PUBLIC_APP_URL must match the running server port
+    // for authentication to work (cookie domain, CORS, fetch base URL).
+    try {
+      const envPath = path.join(projectPath, '.env')
+      if (existsSync(envPath)) {
+        let envContent = readFileSync(envPath, 'utf-8')
+        // Replace any port in BETTER_AUTH_URL and NEXT_PUBLIC_APP_URL
+        envContent = envContent.replace(
+          /(BETTER_AUTH_URL="http:\/\/[^:]+:)\d+(")/g,
+          `$1${port}$2`
+        )
+        envContent = envContent.replace(
+          /(NEXT_PUBLIC_APP_URL="http:\/\/[^:]+:)\d+(")/g,
+          `$1${port}$2`
+        )
+        await writeFile(envPath, envContent, 'utf-8')
+      }
+    } catch {
+      // Non-fatal — auth may fail but preview will still work
+    }
+
     // Ensure @nextsparkjs/registries symlink exists before starting dev server
     try {
       const registriesTarget = path.join(projectPath, '.nextspark', 'registries')
