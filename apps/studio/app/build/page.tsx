@@ -7,6 +7,7 @@ import {
   Code2, Eye, Settings2, Loader2, Zap, Monitor, Tablet, Smartphone,
   ChevronDown, LayoutGrid, FolderOpen,
 } from 'lucide-react'
+import { ErrorBoundary } from '@/components/error-boundary'
 import { useStudioChat } from '@/lib/use-studio-chat'
 import { useGitHub } from '@/lib/use-github'
 import { ChatMessages } from '@/components/chat-messages'
@@ -463,12 +464,14 @@ function BuildContent() {
 
 export default function BuildPage() {
   return (
-    <Suspense fallback={
-      <div className="flex h-screen items-center justify-center bg-bg">
-        <Loader2 className="h-5 w-5 animate-spin text-accent" />
-      </div>
-    }>
-      <BuildContent />
-    </Suspense>
+    <ErrorBoundary>
+      <Suspense fallback={
+        <div className="flex h-screen items-center justify-center bg-bg">
+          <Loader2 className="h-5 w-5 animate-spin text-accent" />
+        </div>
+      }>
+        <BuildContent />
+      </Suspense>
+    </ErrorBoundary>
   )
 }

@@ -16,6 +16,8 @@ import { generateProject, setCurrentProject, getProjectPath } from '@/lib/projec
 import { existsSync } from 'fs'
 import { query, queryOne } from '@/lib/db'
 import { runMigrations } from '@/lib/migrate'
+import { requireSession } from '@/lib/auth-helpers'
+import { checkRateLimit, AI_RATE_LIMITS, rateLimitResponse } from '@/lib/rate-limit'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300
@@ -56,6 +58,12 @@ async function saveSession(
 }
 
 export async function POST(request: Request) {
+  let session
+  try { session = await requireSession() } catch (r) { return r as Response }
+
+  const rateCheck = checkRateLimit(session.user.id, AI_RATE_LIMITS)
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.resetAt)
+
   const body = await request.json()
   const { prompt, sessionId } = body as { prompt?: string; sessionId?: string }
 

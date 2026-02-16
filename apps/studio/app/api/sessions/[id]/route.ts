@@ -8,6 +8,7 @@
 
 import { queryOne, query } from '@/lib/db'
 import { runMigrations } from '@/lib/migrate'
+import { requireSession } from '@/lib/auth-helpers'
 
 export const runtime = 'nodejs'
 
@@ -27,6 +28,7 @@ interface SessionRow {
 type RouteContext = { params: Promise<{ id: string }> }
 
 export async function GET(_request: Request, context: RouteContext) {
+  try { await requireSession() } catch (r) { return r as Response }
   await runMigrations()
   const { id } = await context.params
 
@@ -43,6 +45,7 @@ export async function GET(_request: Request, context: RouteContext) {
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
+  try { await requireSession() } catch (r) { return r as Response }
   await runMigrations()
   const { id } = await context.params
   const body = await request.json()
@@ -83,6 +86,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
+  try { await requireSession() } catch (r) { return r as Response }
   await runMigrations()
   const { id } = await context.params
 

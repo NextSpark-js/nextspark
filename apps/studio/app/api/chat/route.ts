@@ -11,11 +11,19 @@
 
 import { runStudio } from '@nextsparkjs/studio'
 import type { StudioEvent } from '@nextsparkjs/studio'
+import { requireSession } from '@/lib/auth-helpers'
+import { checkRateLimit, AI_RATE_LIMITS, rateLimitResponse } from '@/lib/rate-limit'
 
 export const runtime = 'nodejs'
 export const maxDuration = 120
 
 export async function POST(request: Request) {
+  let session
+  try { session = await requireSession() } catch (r) { return r as Response }
+
+  const rateCheck = checkRateLimit(session.user.id, AI_RATE_LIMITS)
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.resetAt)
+
   const body = await request.json()
   const { prompt } = body as { prompt?: string }
 

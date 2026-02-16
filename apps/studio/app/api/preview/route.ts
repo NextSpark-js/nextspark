@@ -11,10 +11,13 @@
 
 import { startPreview, stopPreview, setupProjectDatabase, getProjectPath } from '@/lib/project-manager'
 import { existsSync } from 'fs'
+import { requireSession } from '@/lib/auth-helpers'
 
 export const runtime = 'nodejs'
 
 export async function POST(request: Request) {
+  try { await requireSession() } catch (r) { return r as Response }
+
   const body = await request.json()
   const { action, slug, port: requestedPort } = body as { action?: string; slug?: string; port?: number }
 

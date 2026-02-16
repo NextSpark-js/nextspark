@@ -7,6 +7,7 @@
 
 import { query, queryOne } from '@/lib/db'
 import { runMigrations } from '@/lib/migrate'
+import { requireSession } from '@/lib/auth-helpers'
 
 export const runtime = 'nodejs'
 
@@ -24,6 +25,7 @@ interface SessionRow {
 }
 
 export async function GET(request: Request) {
+  try { await requireSession() } catch (r) { return r as Response }
   await runMigrations()
 
   const { searchParams } = new URL(request.url)
@@ -43,6 +45,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  try { await requireSession() } catch (r) { return r as Response }
   await runMigrations()
 
   const body = await request.json()

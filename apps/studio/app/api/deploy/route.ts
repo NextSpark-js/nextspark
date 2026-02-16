@@ -12,11 +12,14 @@
 import { DeployManager, type DeployStep } from '@/lib/deploy-manager'
 import { getProjectPath } from '@/lib/project-manager'
 import { existsSync } from 'fs'
+import { requireSession } from '@/lib/auth-helpers'
 
 export const runtime = 'nodejs'
 export const maxDuration = 600 // Build can take up to 10 minutes
 
 export async function POST(request: Request) {
+  try { await requireSession() } catch (r) { return r as Response }
+
   const body = await request.json()
   const { slug } = body as { slug?: string }
 
@@ -80,6 +83,8 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
+  try { await requireSession() } catch (r) { return r as Response }
+
   const { searchParams } = new URL(request.url)
   const slug = searchParams.get('slug')
 
@@ -92,6 +97,8 @@ export async function GET(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  try { await requireSession() } catch (r) { return r as Response }
+
   const { searchParams } = new URL(request.url)
   const slug = searchParams.get('slug')
 

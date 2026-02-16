@@ -10,10 +10,13 @@
 import { existsSync } from 'fs'
 import archiver from 'archiver'
 import { getProjectPath } from '@/lib/project-manager'
+import { requireSession } from '@/lib/auth-helpers'
 
 export const runtime = 'nodejs'
 
 export async function GET(request: Request) {
+  try { await requireSession() } catch (r) { return r as Response }
+
   const { searchParams } = new URL(request.url)
   const slug = searchParams.get('slug')
 

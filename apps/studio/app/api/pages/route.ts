@@ -11,6 +11,7 @@ import { getProjectPath } from '@/lib/project-manager'
 import { existsSync, readFileSync } from 'fs'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
+import { requireSession } from '@/lib/auth-helpers'
 
 export const runtime = 'nodejs'
 
@@ -27,6 +28,8 @@ interface PageDefinition {
 }
 
 export async function POST(request: Request) {
+  try { await requireSession() } catch (r) { return r as Response }
+
   const body = await request.json()
   const { slug, pages } = body as { slug?: string; pages?: PageDefinition[] }
 

@@ -18,6 +18,7 @@ import {
   getDevToken,
   isDevMode,
 } from '@/lib/github-manager'
+import { requireSession } from '@/lib/auth-helpers'
 
 export const runtime = 'nodejs'
 
@@ -41,6 +42,8 @@ async function getToken(): Promise<string | null> {
 }
 
 export async function POST(request: Request) {
+  try { await requireSession() } catch (r) { return r as Response }
+
   const body = await request.json()
   const { action } = body as { action?: string }
 
