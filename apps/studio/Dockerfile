@@ -46,6 +46,9 @@ COPY --from=builder /app/apps/studio/.next/static ./apps/studio/.next/static
 # Copy migrations (needed at runtime for auto-migration)
 COPY --from=builder /app/apps/studio/migrations ./apps/studio/migrations
 
+# Copy Claude Agent SDK CLI (needed at runtime — Next.js standalone doesn't trace child-process binaries)
+COPY --from=builder /app/node_modules/.pnpm/@anthropic-ai+claude-agent-sdk@0.2.42_zod@3.25.76/node_modules/@anthropic-ai/claude-agent-sdk /app/node_modules/.pnpm/@anthropic-ai+claude-agent-sdk@0.2.42_zod@3.25.76/node_modules/@anthropic-ai/claude-agent-sdk
+
 # Create directory for generated projects
 RUN mkdir -p /app/studio-projects
 
