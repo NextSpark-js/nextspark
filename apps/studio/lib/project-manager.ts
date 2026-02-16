@@ -395,6 +395,21 @@ export function startPreview(slug: string, preferredPort?: number): Promise<numb
       // Non-fatal — NMR plugin in next.config.mjs is fallback
     }
 
+    // Patch .ts dynamic imports in @nextsparkjs/core before dev server starts.
+    // The compiled registry.js has `import(`../../messages/${locale}/index.ts`)` which
+    // webpack can't parse. Replace .ts → .js in the import paths.
+    try {
+      const registryFile = path.join(projectPath, 'node_modules/@nextsparkjs/core/dist/lib/translations/registry.js')
+      if (existsSync(registryFile)) {
+        const content = readFileSync(registryFile, 'utf-8')
+        if (content.includes('/index.ts')) {
+          await writeFile(registryFile, content.replace(/\/index\.ts/g, '/index.js'), 'utf-8')
+        }
+      }
+    } catch {
+      // Non-fatal — NMR plugin in next.config.mjs is fallback
+    }
+
     // Read the project's .env and pass values explicitly to the child process.
     // Critical: The nextspark CLI uses dotenvx which traverses parent directories
     // to find .env files. The Studio's parent .env would override the project's .env.

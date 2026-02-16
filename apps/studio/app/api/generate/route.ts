@@ -219,6 +219,25 @@ export async function POST(request: Request) {
           send({ type: 'generate_log', content: `[studio] next-intl patch warning: ${err instanceof Error ? err.message : String(err)}` })
         }
 
+        // Step 2.6: Patch .ts dynamic imports in @nextsparkjs/core
+        // The core package's compiled registry.js has `import(`../../messages/${locale}/index.ts`)`
+        // which webpack can't parse as TypeScript in node_modules. Replace .ts → .js.
+        send({ type: 'generate_log', content: '[studio] Patching core imports...' })
+        try {
+          const coreDir = path.join(projectDir, 'node_modules/@nextsparkjs/core')
+          const registryFile = path.join(coreDir, 'dist/lib/translations/registry.js')
+          if (existsSync(registryFile)) {
+            let content = await readFile(registryFile, 'utf-8')
+            if (content.includes('/index.ts')) {
+              content = content.replace(/\/index\.ts/g, '/index.js')
+              await writeFile(registryFile, content, 'utf-8')
+              send({ type: 'generate_log', content: '[studio] Core imports patched' })
+            }
+          }
+        } catch (err) {
+          send({ type: 'generate_log', content: `[studio] Core patch warning: ${err instanceof Error ? err.message : String(err)}` })
+        }
+
         // Step 3: Build registries
         send({ type: 'generate_log', content: '[studio] Building registries...' })
         const registryScript = path.join(

@@ -106,16 +106,24 @@ const nextConfig = {
       )
     );
 
-    // Resolve explicit .ts/.tsx imports to their compiled .js equivalents.
-    // @nextsparkjs/core/dist has some compiled JS files that use dynamic imports with
-    // explicit .ts extensions (e.g. `import(`../../messages/${locale}/index.ts`)`).
-    // This tells webpack to try .js first when .ts is explicitly requested,
-    // avoiding TypeScript parse errors in node_modules.
-    config.resolve.extensionAlias = {
-      ...config.resolve.extensionAlias,
-      '.ts': ['.js', '.ts'],
-      '.tsx': ['.js', '.jsx', '.tsx'],
-    }
+    // Rewrite explicit .ts/.tsx imports from @nextsparkjs/core to their compiled .js equivalents.
+    // The core package's compiled JS has dynamic imports with explicit .ts extensions
+    // (e.g. `import(`../../messages/${locale}/index.ts`)`), which webpack tries to parse as JS.
+    // This plugin intercepts each module request and rewrites .ts → .js.
+    config.plugins.push(
+      new wp.NormalModuleReplacementPlugin(
+        /\.tsx?$/,
+        (resource) => {
+          if (resource.request && resource.request.includes('@nextsparkjs/core')) {
+            resource.request = resource.request.replace(/\.tsx?$/, '.js')
+          }
+          // Also handle context-relative requests (from within the core package)
+          if (resource.context && resource.context.includes('@nextsparkjs/core') && resource.request) {
+            resource.request = resource.request.replace(/\.ts$/, '.js').replace(/\.tsx$/, '.js')
+          }
+        }
+      )
+    )
 
     // Add alias for @nextsparkjs/registries to fix ChunkLoadError
     config.resolve.alias = {
