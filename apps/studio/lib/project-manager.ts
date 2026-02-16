@@ -512,7 +512,8 @@ export function startPreview(slug: string, preferredPort?: number): Promise<numb
       'DATABASE_URL', 'BETTER_AUTH_SECRET', 'BETTER_AUTH_URL',
       'NEXT_PUBLIC_APP_URL', 'NEXT_PUBLIC_ACTIVE_THEME',
       'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY',
-      'RESEND_API_KEY', 'NODE_ENV',
+      'RESEND_API_KEY',
+      // Note: NODE_ENV is NOT included here — we always force 'development' for preview servers
     ]
 
     try {
@@ -540,6 +541,11 @@ export function startPreview(slug: string, preferredPort?: number): Promise<numb
         PORT: String(port),
         HOSTNAME: '0.0.0.0', // Listen on all interfaces (required in Docker)
         FORCE_COLOR: '0',
+        // Force development mode for preview dev servers.
+        // Studio runs with NODE_ENV=production, but `next dev` MUST run with
+        // NODE_ENV=development — otherwise it tries to read production-only build
+        // artifacts (required-server-files.json, BUILD_ID) and returns 500 on all requests.
+        NODE_ENV: 'development',
         // Limit Node.js heap to prevent OOM kills on small VPS instances.
         // Next.js dev server needs ~1.5GB for first compilation of a full project.
         // 512MB/1024MB cause heap OOM during webpack compilation.
