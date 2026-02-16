@@ -209,6 +209,7 @@ async function copyProjectFiles(
   templatesDir: string
 ): Promise<void> {
   const itemsToCopy = [
+    { src: 'app', dest: 'app', force: true },
     { src: 'public', dest: 'public', force: true },
     { src: 'proxy.ts', dest: 'proxy.ts', force: true },
     { src: 'next.config.mjs', dest: 'next.config.mjs', force: true },
@@ -220,6 +221,7 @@ async function copyProjectFiles(
     { src: 'cypress.d.ts', dest: 'cypress.d.ts', force: false },
     { src: 'eslint.config.mjs', dest: 'eslint.config.mjs', force: false },
     { src: 'scripts/cy-run-prod.cjs', dest: 'scripts/cy-run-prod.cjs', force: false },
+    { src: 'instrumentation.ts', dest: 'instrumentation.ts', force: false },
   ]
 
   for (const item of itemsToCopy) {
