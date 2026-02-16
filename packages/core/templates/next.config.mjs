@@ -106,6 +106,22 @@ const nextConfig = {
       )
     );
 
+    // Transpile .ts/.tsx files from @nextsparkjs/core that weren't compiled to .js
+    // during the package build (e.g. dist/messages/*/index.ts referenced by dynamic imports).
+    config.module.rules.push({
+      test: /\.tsx?$/,
+      include: /node_modules[\\/]@nextsparkjs[\\/]core/,
+      use: [
+        {
+          loader: 'next/dist/compiled/babel-loader',
+          options: {
+            presets: ['next/babel'],
+            cacheDirectory: true,
+          },
+        },
+      ],
+    })
+
     // Add alias for @nextsparkjs/registries to fix ChunkLoadError
     config.resolve.alias = {
       ...config.resolve.alias,
