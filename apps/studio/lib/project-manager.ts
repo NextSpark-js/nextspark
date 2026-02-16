@@ -449,9 +449,9 @@ export function startPreview(slug: string, preferredPort?: number): Promise<numb
         HOSTNAME: '0.0.0.0', // Listen on all interfaces (required in Docker)
         FORCE_COLOR: '0',
         // Limit Node.js heap to prevent OOM kills on small VPS instances.
-        // Next.js dev server can easily consume 2GB+ without a cap.
-        // 512MB is too small (OOM during compilation); 1024MB is the minimum.
-        NODE_OPTIONS: '--max-old-space-size=1024',
+        // Next.js dev server needs ~1.5GB for first compilation of a full project.
+        // 512MB/1024MB cause heap OOM during webpack compilation.
+        NODE_OPTIONS: '--max-old-space-size=2048',
       },
       stdio: 'pipe',
     })
