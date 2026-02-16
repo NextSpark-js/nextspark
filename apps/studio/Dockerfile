@@ -49,8 +49,13 @@ COPY --from=builder /app/apps/studio/migrations ./apps/studio/migrations
 # Copy Claude Agent SDK CLI (needed at runtime — Next.js standalone doesn't trace child-process binaries)
 COPY --from=builder /app/node_modules/.pnpm/@anthropic-ai+claude-agent-sdk@0.2.42_zod@3.25.76/node_modules/@anthropic-ai/claude-agent-sdk /app/node_modules/.pnpm/@anthropic-ai+claude-agent-sdk@0.2.42_zod@3.25.76/node_modules/@anthropic-ai/claude-agent-sdk
 
+# Create non-root user (Agent SDK refuses bypassPermissions as root)
+RUN addgroup -S studio && adduser -S studio -G studio
+
 # Create directory for generated projects
-RUN mkdir -p /app/studio-projects
+RUN mkdir -p /app/studio-projects && chown -R studio:studio /app
+
+USER studio
 
 EXPOSE 4000
 EXPOSE 5100-5999
