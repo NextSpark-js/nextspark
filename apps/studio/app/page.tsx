@@ -4,6 +4,15 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Zap, ArrowRight, FolderOpen, Loader2 } from 'lucide-react'
 
+function generateId(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID()
+  // Fallback for non-secure contexts (HTTP)
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16)
+  })
+}
+
 const EXAMPLES = [
   'A CRM for my gym with clients, memberships and payments',
   'Blog for my photography portfolio',
@@ -38,7 +47,7 @@ export default function HomePage() {
 
     setSubmitting(true)
     try {
-      const id = crypto.randomUUID()
+      const id = generateId()
       const res = await fetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -52,7 +61,7 @@ export default function HomePage() {
       }
     } catch {
       // Fallback
-      const id = crypto.randomUUID()
+      const id = generateId()
       router.push(`/build?session=${id}`)
     }
   }
