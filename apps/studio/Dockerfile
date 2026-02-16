@@ -15,6 +15,10 @@ RUN for d in packages/core packages/cli packages/create-nextspark-app packages/t
 
 # Copy real core templates (needed for direct project generation at runtime)
 COPY packages/core/templates /app/packages/core/templates
+# The app/ directory is gitignored (synced at pack time from apps/dev/app/)
+# Copy it directly from the source of truth, excluding dev-only files
+COPY apps/dev/app /app/packages/core/templates/app
+RUN rm -rf /app/packages/core/templates/app/'(templates)'
 
 # Install dependencies (lockfile needs all workspace entries)
 RUN pnpm install --no-frozen-lockfile

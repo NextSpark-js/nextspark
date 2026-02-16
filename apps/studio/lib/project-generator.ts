@@ -789,6 +789,8 @@ async function writePackageJson(
       'date-fns': '^4.1.0',
       nanoid: '^5.0.9',
       slugify: '^1.6.6',
+      // Build tools (needed by @nextsparkjs/core registry scripts)
+      jiti: '^2.6.1',
     },
     devDependencies: {
       // TypeScript
