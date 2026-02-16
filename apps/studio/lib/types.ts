@@ -16,6 +16,15 @@ export interface ChatMessage {
 
 export type StudioPhase = 'idle' | 'analyzing' | 'generating' | 'setting_up_db' | 'ready' | 'error'
 
+export interface GenerationStep {
+  id: string
+  label: string
+  status: 'pending' | 'active' | 'complete'
+  detail?: string
+  icon?: string
+  count?: number
+}
+
 export type StudioStatus = 'idle' | 'loading' | 'streaming' | 'complete' | 'error'
 
 export interface FileNode {
@@ -31,6 +40,7 @@ export interface ProjectState {
   files: FileNode[]
   previewUrl: string | null
   previewLoading: boolean
+  steps: GenerationStep[]
 }
 
 export interface StudioState {

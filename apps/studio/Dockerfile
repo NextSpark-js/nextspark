@@ -29,7 +29,7 @@ RUN pnpm --filter @nextsparkjs/studio-app build
 # ── Stage 2: Runner ──────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
 
-RUN apk add --no-cache git
+RUN apk add --no-cache git su-exec
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 RUN npm install -g pm2
 
@@ -55,10 +55,13 @@ RUN addgroup -S studio && adduser -S studio -G studio
 # Create directory for generated projects
 RUN mkdir -p /app/studio-projects && chown -R studio:studio /app
 
-USER studio
+# Copy entrypoint (handles volume permissions + drops to studio user)
+COPY apps/studio/docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
 
 EXPOSE 4000
 EXPOSE 5100-5999
 EXPOSE 6000-6999
 
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["node", "apps/studio/server.js"]

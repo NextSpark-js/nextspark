@@ -38,7 +38,6 @@ services:
       - NODE_ENV=production
     volumes:
       - studio_projects:/app/studio-projects
-      - pm2_logs:/root/.pm2/logs
     ports:
       - "127.0.0.1:4000:4000"
       - "5500-5999:5500-5999"
@@ -61,6 +60,5 @@ services:
 volumes:
   pg_data:
   studio_projects:
-  pm2_logs:
   caddy_data:
   caddy_config:

@@ -9,7 +9,7 @@
 'use client'
 
 import { useState, useCallback, useRef } from 'react'
-import type { StudioState, ChatMessage, StudioEvent, StudioResult, ProjectState, PageDefinition } from './types'
+import type { StudioState, ChatMessage, StudioEvent, StudioResult, ProjectState, PageDefinition, GenerationStep } from './types'
 
 let messageIdCounter = 0
 function nextId(): string {
@@ -22,6 +22,76 @@ const INITIAL_PROJECT: ProjectState = {
   files: [],
   previewUrl: null,
   previewLoading: false,
+  steps: [],
+}
+
+function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID()
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16)
+  })
+}
+
+let stepIdCounter = 0
+function nextStepId(): string {
+  return `step-${++stepIdCounter}`
+}
+
+function updateSteps(
+  steps: GenerationStep[],
+  action: 'add' | 'complete_active' | 'complete_all' | 'update_detail',
+  data?: Partial<GenerationStep> & { label?: string }
+): GenerationStep[] {
+  const updated = steps.map((s) => ({ ...s }))
+
+  if (action === 'complete_all') {
+    return updated.map((s) => ({ ...s, status: 'complete' as const }))
+  }
+
+  if (action === 'complete_active') {
+    return updated.map((s) =>
+      s.status === 'active' ? { ...s, status: 'complete' as const } : s
+    )
+  }
+
+  if (action === 'update_detail') {
+    // Update the detail on the last active step
+    const activeIdx = updated.findLastIndex((s) => s.status === 'active')
+    if (activeIdx >= 0 && data?.detail !== undefined) {
+      updated[activeIdx] = { ...updated[activeIdx], detail: data.detail }
+    }
+    return updated
+  }
+
+  if (action === 'add' && data?.label) {
+    // Mark all active as complete, then add new active step
+    const completed = updated.map((s) =>
+      s.status === 'active' ? { ...s, status: 'complete' as const } : s
+    )
+    // Check if a step with this label already exists (for incrementing counts)
+    const existing = completed.findIndex((s) => s.label === data.label)
+    if (existing >= 0) {
+      completed[existing] = {
+        ...completed[existing],
+        status: 'active',
+        count: (completed[existing].count || 1) + 1,
+      }
+      return completed
+    }
+    completed.push({
+      id: nextStepId(),
+      label: data.label,
+      status: 'active',
+      ...(data.count !== undefined ? { count: data.count } : {}),
+      ...(data.icon !== undefined ? { icon: data.icon } : {}),
+    })
+    return completed
+  }
+
+  return updated
 }
 
 export function useStudioChat() {
@@ -119,6 +189,7 @@ export function useStudioChat() {
           files: [],
           previewUrl: null,
           previewLoading: false,
+          steps: [],
         },
         pages,
       })
@@ -175,7 +246,7 @@ export function useStudioChat() {
     abortRef.current = controller
 
     // Use existing session ID or generate a new one
-    const sid = existingSessionId || crypto.randomUUID()
+    const sid = existingSessionId || generateUUID()
     setSessionId(sid)
 
     try {
@@ -272,6 +343,7 @@ export function useStudioChat() {
       let result = prev.result
       let project = { ...prev.project }
       let pages = prev.pages
+      let steps = [...project.steps]
 
       switch (event.type) {
         case 'text': {
@@ -300,6 +372,14 @@ export function useStudioChat() {
             toolName: event.toolName,
             timestamp: Date.now(),
           })
+          // Track steps based on tool name
+          if (event.toolName === 'configure_project') {
+            steps = updateSteps(steps, 'add', { label: 'Configuring project', icon: 'settings' })
+          } else if (event.toolName === 'define_entity') {
+            steps = updateSteps(steps, 'add', { label: 'Defining entities', icon: 'database' })
+          } else if (event.toolName === 'define_page') {
+            steps = updateSteps(steps, 'add', { label: 'Defining pages', icon: 'layout' })
+          }
           break
         }
 
@@ -323,6 +403,18 @@ export function useStudioChat() {
           if (studioResult?.pages && studioResult.pages.length > 0) {
             pages = studioResult.pages
           }
+          // Mark all analysis steps complete, extract counts
+          steps = updateSteps(steps, 'complete_active')
+          const entityCount = studioResult?.entities?.length
+          const pageCount = studioResult?.pages?.length
+          if (entityCount) {
+            const entityStep = steps.find((s) => s.label === 'Defining entities')
+            if (entityStep) entityStep.count = entityCount
+          }
+          if (pageCount) {
+            const pageStep = steps.find((s) => s.label === 'Defining pages')
+            if (pageStep) pageStep.count = pageCount
+          }
           break
         }
 
@@ -335,8 +427,10 @@ export function useStudioChat() {
           })
           if (event.phase === 'generating') {
             project = { ...project, phase: 'generating' }
+            steps = updateSteps(steps, 'add', { label: 'Generating project files', icon: 'code' })
           } else if (event.phase === 'analyzing') {
             project = { ...project, phase: 'analyzing' }
+            steps = updateSteps(steps, 'add', { label: 'Analyzing requirements', icon: 'search' })
           }
           break
         }
@@ -358,6 +452,8 @@ export function useStudioChat() {
               timestamp: Date.now(),
             })
           }
+          // Update detail on active generating step
+          steps = updateSteps(steps, 'update_detail', { detail: event.content || '' })
           break
         }
 
@@ -368,6 +464,7 @@ export function useStudioChat() {
             slug,
             phase: 'ready',
           }
+          steps = updateSteps(steps, 'complete_all')
           messages.push({
             id: nextId(),
             role: 'system',
@@ -378,16 +475,21 @@ export function useStudioChat() {
         }
 
         case 'error': {
+          // Mark current active step with error detail
+          const errorSteps = steps.map((s) =>
+            s.status === 'active' ? { ...s, detail: event.content || 'Error occurred' } : s
+          )
           return {
             ...prev,
             messages,
             error: event.content || 'Unknown error',
-            project: { ...project, phase: 'error' },
+            project: { ...project, phase: 'error', steps: errorSteps },
             pages,
           }
         }
       }
 
+      project = { ...project, steps }
       return { ...prev, messages, result, project, pages }
     })
   }

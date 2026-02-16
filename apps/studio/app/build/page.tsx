@@ -344,6 +344,9 @@ function BuildContent() {
                 viewport={viewport}
                 isProcessing={isProcessing}
                 phase={project.phase}
+                steps={project.steps}
+                slug={project.slug}
+                result={result}
               />
             )}
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import Markdown from 'react-markdown'
-import { Loader2, ChevronRight } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import type { ChatMessage, StudioStatus } from '@/lib/types'
 
 interface ChatMessagesProps {
@@ -44,23 +44,25 @@ export function ChatMessages({ messages, status }: ChatMessagesProps) {
           )
         }
 
-        // Tool usage — compact inline
+        // Tool usage — enhanced with status indicator
         if (msg.role === 'tool') {
           return (
-            <div key={msg.id} className="flex items-center gap-1.5 py-px">
-              <ChevronRight className="h-2 w-2 text-accent/50 flex-shrink-0" />
-              <span className="text-[11px] text-text-muted/70">
+            <div key={msg.id} className="flex items-center gap-2 py-1 animate-in">
+              <div className="flex h-5 w-5 items-center justify-center rounded-md bg-accent/10 flex-shrink-0">
+                <ChevronRight className="h-2.5 w-2.5 text-accent/70" />
+              </div>
+              <span className="text-[11px] text-text-secondary font-medium">
                 {toolDisplayName(msg.toolName)}
               </span>
             </div>
           )
         }
 
-        // System messages — compact log (no truncation)
+        // System messages — terminal-like
         if (msg.role === 'system') {
           return (
-            <div key={msg.id} className="border-l border-border/60 pl-2 py-px">
-              <span className="text-[10px] font-mono text-text-muted/60 leading-relaxed">
+            <div key={msg.id} className="border-l-2 border-accent/20 pl-2.5 py-1 animate-in">
+              <span className="text-[11px] font-mono text-text-muted/80 leading-relaxed">
                 {msg.content}
               </span>
             </div>
@@ -82,9 +84,17 @@ export function ChatMessages({ messages, status }: ChatMessagesProps) {
 
       {/* Thinking indicator */}
       {status === 'loading' && (
-        <div className="flex items-center gap-2 py-1">
-          <Loader2 className="h-3 w-3 animate-spin text-accent" />
-          <span className="text-[10px] text-text-muted">Thinking...</span>
+        <div className="flex items-center gap-2.5 py-2">
+          <div className="flex gap-1">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="h-1.5 w-1.5 rounded-full bg-accent animate-bounce"
+                style={{ animationDelay: `${i * 0.15}s` }}
+              />
+            ))}
+          </div>
+          <span className="text-[11px] text-accent/70 font-medium">Thinking...</span>
         </div>
       )}
 

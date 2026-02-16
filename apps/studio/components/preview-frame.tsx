@@ -1,7 +1,9 @@
 'use client'
 
 import { ExternalLink, Globe, Play, RotateCw, Database, Zap } from 'lucide-react'
-import type { StudioPhase } from '@/lib/types'
+import type { StudioPhase, GenerationStep } from '@/lib/types'
+import type { StudioResult } from '@nextsparkjs/studio'
+import { GenerationProgress } from './generation-progress'
 
 type Viewport = 'desktop' | 'tablet' | 'mobile'
 
@@ -13,6 +15,9 @@ interface PreviewFrameProps {
   viewport?: Viewport
   isProcessing?: boolean
   phase?: StudioPhase
+  steps?: GenerationStep[]
+  slug?: string | null
+  result?: StudioResult | null
 }
 
 const VIEWPORT_WIDTHS: Record<Viewport, string> = {
@@ -65,6 +70,9 @@ export function PreviewFrame({
   viewport = 'desktop',
   isProcessing = false,
   phase,
+  steps,
+  slug,
+  result,
 }: PreviewFrameProps) {
   // Active preview with iframe
   if (url) {
@@ -135,13 +143,14 @@ export function PreviewFrame({
     )
   }
 
-  // Processing — building animation
-  if (isProcessing) {
+  // Processing — step-by-step progress
+  if (isProcessing || (steps && steps.length > 0 && phase !== 'ready')) {
     return (
-      <LoadingState
-        icon={Zap}
-        title="Building your app"
-        subtitle="AI is generating your project..."
+      <GenerationProgress
+        steps={steps || []}
+        phase={phase || 'idle'}
+        slug={slug}
+        result={result}
       />
     )
   }
