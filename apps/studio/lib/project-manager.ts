@@ -179,7 +179,8 @@ function parseDbUrl(url: string): {
 export async function setupProjectDatabase(
   slug: string,
   previewPort: number,
-  onLog?: (line: string) => void
+  onLog?: (line: string) => void,
+  externalHostname?: string
 ): Promise<{ ok: boolean; error?: string }> {
   const log = onLog || (() => {})
 
@@ -214,11 +215,13 @@ export async function setupProjectDatabase(
   try {
     const adminClient = new pg.Client({
       user: dbInfo.user,
-      password: dbInfo.password,
+      password: decodeURIComponent(dbInfo.password),
       host: dbInfo.host,
       port: parseInt(dbInfo.port, 10),
       database: dbInfo.database,
-      ssl: dbInfo.params.includes('sslmode=disable') ? false : { rejectUnauthorized: false },
+      // Default to no SSL for Docker/internal connections.
+      // Only enable SSL if explicitly required in the connection string.
+      ssl: dbInfo.params.includes('sslmode=require') ? { rejectUnauthorized: false } : false,
     })
     await adminClient.connect()
 
@@ -259,6 +262,9 @@ export async function setupProjectDatabase(
     // Use slug as fallback theme name
   }
 
+  const host = externalHostname || 'localhost'
+  const appUrl = `http://${host}:${previewPort}`
+
   const envContent = `# NextSpark Environment Configuration
 # Auto-configured by NextSpark Studio
 
@@ -267,13 +273,13 @@ DATABASE_URL="${projectDbUrl}"
 
 # AUTHENTICATION
 BETTER_AUTH_SECRET="${authSecret}"
-BETTER_AUTH_URL="http://localhost:${previewPort}"
+BETTER_AUTH_URL="${appUrl}"
 
 # THEME
 NEXT_PUBLIC_ACTIVE_THEME="${activeTheme}"
 
 # APPLICATION
-NEXT_PUBLIC_APP_URL="http://localhost:${previewPort}"
+NEXT_PUBLIC_APP_URL="${appUrl}"
 NODE_ENV="development"
 
 # STRIPE (disabled for preview)
@@ -385,7 +391,13 @@ export function startPreview(slug: string, preferredPort?: number): Promise<numb
     const child = spawn('pnpm', ['dev'], {
       cwd: projectPath,
       shell: true,
-      env: { ...process.env, ...projectEnvOverrides, PORT: String(port), FORCE_COLOR: '0' },
+      env: {
+        ...process.env,
+        ...projectEnvOverrides,
+        PORT: String(port),
+        HOSTNAME: '0.0.0.0', // Listen on all interfaces (required in Docker)
+        FORCE_COLOR: '0',
+      },
       stdio: 'pipe',
     })
 
