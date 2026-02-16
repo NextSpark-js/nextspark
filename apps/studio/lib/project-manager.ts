@@ -6,7 +6,7 @@
  */
 
 import { spawn, type ChildProcess } from 'child_process'
-import { readdir, readFile, writeFile, stat, mkdir, symlink } from 'fs/promises'
+import { readdir, readFile, writeFile, stat, mkdir, symlink, rm } from 'fs/promises'
 import path from 'path'
 import { existsSync, readFileSync } from 'fs'
 import { randomBytes } from 'crypto'
@@ -422,6 +422,13 @@ export function startPreview(slug: string, preferredPort?: number): Promise<numb
             `const nextConfig = {\n  basePath: '/p/${port}',`
           )
           await writeFile(nextConfigPath, config, 'utf-8')
+        }
+        // Delete .next cache so dev server picks up the new basePath.
+        // Without this, webpack loaders cache basePath="" from the first build
+        // and ignore the updated config.
+        const dotNextPath = path.join(projectPath, '.next')
+        if (existsSync(dotNextPath)) {
+          await rm(dotNextPath, { recursive: true, force: true })
         }
       } catch {
         // Non-fatal — preview works without basePath, just cookies won't persist in iframe
