@@ -16,6 +16,13 @@ export const runtime = 'nodejs'
 
 const COOKIE_NAME = 'gh_token'
 
+/** Public-facing origin — avoids Docker container hostname in redirects */
+const PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:4000'
+
+function publicUrl(path: string): URL {
+  return new URL(path, PUBLIC_ORIGIN)
+}
+
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get('code')
   const state = request.nextUrl.searchParams.get('state') || ''
@@ -23,7 +30,7 @@ export async function GET(request: NextRequest) {
 
   if (!code) {
     // User denied or error — redirect back
-    const errorUrl = new URL(returnTo, request.url)
+    const errorUrl = publicUrl(returnTo)
     errorUrl.searchParams.set('gh_error', 'no_code')
     return NextResponse.redirect(errorUrl)
   }
@@ -42,14 +49,14 @@ export async function GET(request: NextRequest) {
     })
 
     // Redirect back to the original page with success indicator
-    const successUrl = new URL(returnTo, request.url)
+    const successUrl = publicUrl(returnTo)
     successUrl.searchParams.set('gh_connected', '1')
     return NextResponse.redirect(successUrl)
   } catch (error) {
     const message = error instanceof Error ? error.message : 'OAuth failed'
     console.error('[github/callback] OAuth error:', message)
 
-    const errorUrl = new URL(returnTo, request.url)
+    const errorUrl = publicUrl(returnTo)
     errorUrl.searchParams.set('gh_error', 'token_exchange_failed')
     return NextResponse.redirect(errorUrl)
   }
