@@ -515,16 +515,17 @@ export function startPreview(slug: string, preferredPort?: number): Promise<numb
     }
 
     // Patch auth-client.js for basePath compatibility (needed for proxy setups).
-    // Better Auth treats the URL pathname as the auth route prefix, causing 404s.
+    // When NEXT_PUBLIC_APP_URL includes a basePath, Better Auth treats it as the auth
+    // route prefix. Fix: add explicit basePath: "/api/auth".
     if (isRemote) {
       try {
         const authClientFile = path.join(projectPath, 'node_modules/@nextsparkjs/core/dist/lib/auth-client.js')
         if (existsSync(authClientFile)) {
           const content = readFileSync(authClientFile, 'utf-8')
-          if (content.includes('process.env.NEXT_PUBLIC_APP_URL') && !content.includes('window.location.origin')) {
+          if (content.includes('createAuthClient') && !content.includes('basePath')) {
             const patched = content.replace(
-              /baseURL:\s*process\.env\.NEXT_PUBLIC_APP_URL\s*\|\|\s*["'][^"']+["']/,
-              'baseURL: typeof window !== "undefined" ? window.location.origin : (process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000")'
+              /createAuthClient\(\{/,
+              'createAuthClient({\n  basePath: "/api/auth",'
             )
             await writeFile(authClientFile, patched, 'utf-8')
           }
