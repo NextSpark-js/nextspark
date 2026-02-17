@@ -338,7 +338,7 @@ function BuildContent() {
           </div>
 
           {/* Tab content */}
-          <div className="flex-1 overflow-hidden">
+          <div className={`flex-1 ${activeTab === 'config' ? 'overflow-y-auto' : 'overflow-hidden'}`}>
             {activeTab === 'preview' && (
               <PreviewFrame
                 url={project.previewUrl}
@@ -406,7 +406,7 @@ function BuildContent() {
             )}
 
             {activeTab === 'config' && (
-              <div className="overflow-y-auto p-5 space-y-5">
+              <div className="p-5 space-y-5">
                 {result ? (
                   <>
                     <ConfigPreview result={result} />

@@ -71,12 +71,12 @@ function SortableBlock({
     <div ref={setNodeRef} style={style}>
       {/* Block row */}
       <div
-        className={`flex items-center gap-2 rounded-lg border px-3 py-2 transition-all ${
+        className={`flex items-center gap-2 rounded-lg border px-3 py-2 transition-all duration-150 ${
           isEditing
-            ? 'border-accent/40 bg-accent-muted/10'
+            ? 'border-accent/40 bg-accent-muted/10 shadow-sm shadow-accent/5'
             : isDragging
-            ? 'border-accent/20 bg-bg-elevated shadow-lg'
-            : 'border-border/50 bg-bg/50 hover:border-border'
+            ? 'border-accent/20 bg-bg-elevated shadow-lg scale-[1.02]'
+            : 'border-border/50 bg-bg/50 hover:border-border hover:bg-bg-surface/40'
         }`}
       >
         <button
@@ -136,11 +136,13 @@ function SortableBlock({
       </div>
 
       {/* Inline props editor */}
-      {isEditing && (
-        <div className="ml-6 mt-1 rounded-lg border border-border/50 bg-bg-surface/30 p-3">
-          <BlockEditor props={block.props} onUpdateProp={onUpdateProp} />
+      <div className="collapsible" data-expanded={isEditing}>
+        <div className="collapsible-inner">
+          <div className="ml-6 mt-1 rounded-lg border border-border/50 bg-bg-surface/30 p-3">
+            <BlockEditor props={block.props} onUpdateProp={onUpdateProp} />
+          </div>
         </div>
-      )}
+      </div>
     </div>
   )
 }
@@ -504,14 +506,17 @@ export function PageEditor({ pages, onUpdatePages, slug }: PageEditorProps) {
               </div>
 
               {/* Right — Block picker panel (slide-in) */}
-              {showPicker && (
-                <div className="w-64 flex-shrink-0 border-l border-border">
+              <div
+                className="flex-shrink-0 border-l border-border overflow-hidden slide-panel"
+                style={{ width: showPicker ? 256 : 0, opacity: showPicker ? 1 : 0 }}
+              >
+                <div className="w-64 h-full">
                   <BlockPicker
                     onAddBlock={handleAddBlock}
                     onClose={() => setShowPicker(false)}
                   />
                 </div>
-              )}
+              </div>
             </div>
           </>
         )}

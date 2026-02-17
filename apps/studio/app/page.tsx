@@ -93,13 +93,13 @@ export default function HomePage() {
               }}
               placeholder="Describe the app you want to build..."
               rows={3}
-              className="w-full resize-none rounded-xl border border-border bg-bg-surface p-4 pr-14 text-sm text-text-primary placeholder:text-text-muted/60 focus:border-accent/50 focus:outline-none focus:ring-1 focus:ring-accent/30 transition-colors"
+              className="w-full resize-none rounded-xl border border-border bg-bg-surface p-4 pr-14 text-sm text-text-primary placeholder:text-text-muted/60 focus:border-accent/50 focus:outline-none focus:ring-2 focus:ring-accent/15 transition-all duration-200"
               autoFocus
             />
             <button
               onClick={() => handleSubmit()}
               disabled={!prompt.trim() || submitting}
-              className="absolute bottom-4 right-4 flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-white transition-all hover:bg-accent-hover disabled:opacity-20 disabled:cursor-not-allowed"
+              className="absolute bottom-4 right-4 flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-white transition-all duration-150 hover:bg-accent-hover hover:shadow-lg hover:shadow-accent/25 hover:scale-105 active:scale-95 disabled:opacity-20 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none"
             >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
             </button>
@@ -130,7 +130,7 @@ export default function HomePage() {
                 <button
                   key={s.id}
                   onClick={() => router.push(`/build?session=${s.id}`)}
-                  className="w-full flex items-center gap-3 rounded-lg border border-border bg-bg-surface px-4 py-3 text-left transition-all hover:border-border-strong hover:bg-bg-hover group"
+                  className="w-full flex items-center gap-3 rounded-xl border border-border bg-bg-surface px-4 py-3 text-left transition-all duration-150 hover:border-border-strong hover:bg-bg-hover hover:shadow-sm hover:shadow-black/10 group"
                 >
                   <FolderOpen className="h-4 w-4 text-text-muted/50 group-hover:text-accent transition-colors flex-shrink-0" />
                   <div className="flex-1 min-w-0">

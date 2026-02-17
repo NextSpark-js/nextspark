@@ -169,12 +169,61 @@ body {
   padding: 0.25rem 0.5rem;
   font-size: 0.625rem;
   color: var(--color-text-secondary);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .input-sm:focus {
   outline: none;
   border-color: rgba(109, 92, 255, 0.5);
+  box-shadow: 0 0 0 2px rgba(109, 92, 255, 0.08);
 }
 .input-sm::placeholder {
   color: var(--color-text-muted);
   opacity: 0.4;
+}
+
+/* ── Collapsible sections (grid-rows technique) ── */
+.collapsible {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.2s ease-out;
+}
+.collapsible[data-expanded="true"] {
+  grid-template-rows: 1fr;
+}
+.collapsible > .collapsible-inner {
+  overflow: hidden;
+}
+
+/* ── Slide panel ── */
+.slide-panel {
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.2s ease;
+}
+
+/* ── Staggered card reveal ── */
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-card-in {
+  animation: card-in 0.25s ease-out both;
+}
+
+/* ── Subtle pulse for save indicator ── */
+@keyframes save-ping {
+  0% { opacity: 1; }
+  50% { opacity: 0.4; }
+  100% { opacity: 1; }
+}
+.animate-save-ping {
+  animation: save-ping 1.2s ease-in-out;
+}
+
+/* ── Entity sidebar active indicator ── */
+@keyframes sidebar-select {
+  from { opacity: 0; transform: scaleY(0); }
+  to { opacity: 1; transform: scaleY(1); }
+}
+.animate-sidebar-select {
+  animation: sidebar-select 0.15s ease-out;
 }

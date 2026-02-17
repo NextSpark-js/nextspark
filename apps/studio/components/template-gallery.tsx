@@ -70,7 +70,7 @@ export function TemplateGallery({ onSelectTemplate, disabled }: TemplateGalleryP
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search templates..."
-          className="w-full rounded-lg border border-border bg-bg-surface pl-9 pr-3 py-2 text-xs text-text-secondary placeholder:text-text-muted/40 focus:border-accent/50 focus:outline-none focus:ring-1 focus:ring-accent/30 transition-colors"
+          className="w-full rounded-xl border border-border bg-bg-surface pl-9 pr-3 py-2.5 text-xs text-text-secondary placeholder:text-text-muted/40 focus:border-accent/50 focus:outline-none focus:ring-2 focus:ring-accent/15 transition-all duration-150"
         />
       </div>
 
@@ -78,9 +78,9 @@ export function TemplateGallery({ onSelectTemplate, disabled }: TemplateGalleryP
       <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
         <button
           onClick={() => setActiveCategory('all')}
-          className={`flex-shrink-0 rounded-md px-2.5 py-1 text-[10px] font-medium transition-colors ${
+          className={`flex-shrink-0 rounded-lg px-3 py-1.5 text-[10px] font-medium transition-all duration-150 ${
             activeCategory === 'all'
-              ? 'bg-bg-elevated text-text-primary shadow-sm'
+              ? 'bg-accent/10 text-accent shadow-sm ring-1 ring-accent/20'
               : 'text-text-muted hover:text-text-secondary hover:bg-bg-hover/50'
           }`}
         >
@@ -90,9 +90,9 @@ export function TemplateGallery({ onSelectTemplate, disabled }: TemplateGalleryP
           <button
             key={cat.id}
             onClick={() => setActiveCategory(cat.id)}
-            className={`flex-shrink-0 rounded-md px-2.5 py-1 text-[10px] font-medium transition-colors ${
+            className={`flex-shrink-0 rounded-lg px-3 py-1.5 text-[10px] font-medium transition-all duration-150 ${
               activeCategory === cat.id
-                ? 'bg-bg-elevated text-text-primary shadow-sm'
+                ? 'bg-accent/10 text-accent shadow-sm ring-1 ring-accent/20'
                 : 'text-text-muted hover:text-text-secondary hover:bg-bg-hover/50'
             }`}
           >
@@ -105,21 +105,22 @@ export function TemplateGallery({ onSelectTemplate, disabled }: TemplateGalleryP
       {filteredTemplates.length === 0 ? (
         <p className="text-center text-xs text-text-muted/60 py-4">No templates match your search</p>
       ) : (
-        <div className="grid grid-cols-2 gap-2">
-          {filteredTemplates.map(template => {
+        <div className="grid grid-cols-2 gap-2.5">
+          {filteredTemplates.map((template, i) => {
             const colors = COLOR_CLASSES[template.color] || COLOR_CLASSES.blue
             return (
               <button
                 key={template.id}
                 onClick={() => onSelectTemplate(template.prompt)}
                 disabled={disabled}
-                className={`flex items-start gap-3 rounded-lg border border-border/60 ${colors.border} border-l-2 bg-bg-surface px-3 py-2.5 text-left transition-all hover:border-border-strong hover:shadow-sm hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed group`}
+                className={`animate-card-in flex items-start gap-3 rounded-xl border border-border/60 ${colors.border} border-l-2 bg-bg-surface px-3.5 py-3 text-left transition-all duration-150 hover:border-border-strong hover:shadow-md hover:shadow-black/20 hover:scale-[1.02] hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:translate-y-0 group`}
+                style={{ animationDelay: `${i * 30}ms` }}
               >
-                <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md ${colors.bg} mt-0.5`}>
+                <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg ${colors.bg} mt-0.5 transition-transform duration-150 group-hover:scale-110`}>
                   <TemplateIcon name={template.icon} className={`h-4 w-4 ${colors.text}`} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[11px] font-medium text-text-primary group-hover:text-accent transition-colors">
+                  <div className="text-[11px] font-semibold text-text-primary group-hover:text-accent transition-colors duration-150">
                     {template.title}
                   </div>
                   <div className="text-[10px] text-text-muted/70 line-clamp-2 mt-0.5 leading-relaxed">
@@ -129,7 +130,7 @@ export function TemplateGallery({ onSelectTemplate, disabled }: TemplateGalleryP
                     {template.tags.map(tag => (
                       <span
                         key={tag}
-                        className="rounded px-1.5 py-0.5 text-[8px] bg-bg-elevated text-text-muted/60"
+                        className="rounded-md px-1.5 py-0.5 text-[8px] bg-bg-elevated text-text-muted/60 transition-colors group-hover:text-text-muted/80"
                       >
                         {tag}
                       </span>

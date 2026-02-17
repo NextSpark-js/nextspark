@@ -8,7 +8,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 
 interface BlockEditorProps {
   props: Record<string, unknown>
@@ -84,22 +84,24 @@ export function BlockEditor({ props, onUpdateProp }: BlockEditorProps) {
               onClick={() => toggleSection(cat)}
               className="flex items-center gap-1 text-[9px] font-medium text-text-muted uppercase tracking-wider mb-1 hover:text-text-secondary transition-colors"
             >
-              {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              <ChevronDown className={`h-3 w-3 transition-transform duration-150 ${collapsed ? '-rotate-90' : ''}`} />
               {CATEGORY_LABELS[cat]}
             </button>
 
-            {!collapsed && (
-              <div className="space-y-2 pl-1">
-                {entries.map(([key, value]) => (
-                  <PropField
-                    key={key}
-                    propKey={key}
-                    value={value}
-                    onUpdate={(v) => onUpdateProp(key, v)}
-                  />
-                ))}
+            <div className="collapsible" data-expanded={!collapsed}>
+              <div className="collapsible-inner">
+                <div className="space-y-2 pl-1">
+                  {entries.map(([key, value]) => (
+                    <PropField
+                      key={key}
+                      propKey={key}
+                      value={value}
+                      onUpdate={(v) => onUpdateProp(key, v)}
+                    />
+                  ))}
+                </div>
               </div>
-            )}
+            </div>
           </div>
         )
       })}
@@ -123,12 +125,12 @@ function PropField({ propKey, value, onUpdate }: {
         </label>
         <button
           onClick={() => onUpdate(!value)}
-          className={`relative h-4 w-7 rounded-full transition-colors ${
-            value ? 'bg-accent' : 'bg-border'
+          className={`relative h-4 w-7 rounded-full transition-all duration-200 ${
+            value ? 'bg-accent shadow-sm shadow-accent/30' : 'bg-border'
           }`}
         >
           <span
-            className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform ${
+            className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow-sm transition-all duration-200 ${
               value ? 'left-3.5' : 'left-0.5'
             }`}
           />
@@ -269,23 +271,25 @@ function ObjectField({ propKey, value, onUpdate }: {
     <div>
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-1 text-[9px] font-medium text-text-muted uppercase tracking-wider mb-0.5 hover:text-text-secondary"
+        className="flex items-center gap-1 text-[9px] font-medium text-text-muted uppercase tracking-wider mb-0.5 hover:text-text-secondary transition-colors"
       >
-        {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+        <ChevronDown className={`h-3 w-3 transition-transform duration-150 ${expanded ? '' : '-rotate-90'}`} />
         {propKey}
       </button>
-      {expanded && (
-        <div className="ml-3 pl-2 border-l border-border/30 space-y-1.5">
-          {Object.entries(value).map(([k, v]) => (
-            <PropField
-              key={k}
-              propKey={k}
-              value={v}
-              onUpdate={(newV) => onUpdate({ ...value, [k]: newV })}
-            />
-          ))}
+      <div className="collapsible" data-expanded={expanded}>
+        <div className="collapsible-inner">
+          <div className="ml-3 pl-2 border-l border-border/30 space-y-1.5">
+            {Object.entries(value).map(([k, v]) => (
+              <PropField
+                key={k}
+                propKey={k}
+                value={v}
+                onUpdate={(newV) => onUpdate({ ...value, [k]: newV })}
+              />
+            ))}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   )
 }
@@ -303,25 +307,27 @@ function ArrayField({ propKey, value, onUpdate }: {
     <div>
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-1 text-[9px] font-medium text-text-muted uppercase tracking-wider mb-0.5 hover:text-text-secondary"
+        className="flex items-center gap-1 text-[9px] font-medium text-text-muted uppercase tracking-wider mb-0.5 hover:text-text-secondary transition-colors"
       >
-        {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+        <ChevronDown className={`h-3 w-3 transition-transform duration-150 ${expanded ? '' : '-rotate-90'}`} />
         {propKey} ({value.length} items)
       </button>
-      {expanded && (
-        <textarea
-          value={JSON.stringify(value, null, 2)}
-          onChange={(e) => {
-            try {
-              onUpdate(JSON.parse(e.target.value))
-            } catch {
-              // Invalid JSON, don't update
-            }
-          }}
-          rows={Math.min(10, value.length * 3 + 2)}
-          className="w-full rounded border border-border bg-bg px-2 py-1 text-[10px] font-mono text-text-secondary focus:outline-none focus:border-accent/50 resize-y"
-        />
-      )}
+      <div className="collapsible" data-expanded={expanded}>
+        <div className="collapsible-inner">
+          <textarea
+            value={JSON.stringify(value, null, 2)}
+            onChange={(e) => {
+              try {
+                onUpdate(JSON.parse(e.target.value))
+              } catch {
+                // Invalid JSON, don't update
+              }
+            }}
+            rows={Math.min(10, value.length * 3 + 2)}
+            className="w-full rounded border border-border bg-bg px-2 py-1 text-[10px] font-mono text-text-secondary focus:outline-none focus:border-accent/50 resize-y"
+          />
+        </div>
+      </div>
     </div>
   )
 }

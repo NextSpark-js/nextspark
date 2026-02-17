@@ -2,8 +2,8 @@
 
 import { useState, useCallback, useMemo } from 'react'
 import {
-  Plus, Trash2, ChevronDown, ChevronRight, Database, Save,
-  Loader2, Check, AlertCircle, GripVertical, Copy,
+  Plus, Trash2, ChevronDown, Database, Save,
+  Loader2, Check, AlertCircle, GripVertical,
 } from 'lucide-react'
 import type { StudioResult } from '@/lib/types'
 import type {
@@ -448,7 +448,7 @@ export function EntityEditor({ result, slug, onUpdateResult }: EntityEditorProps
 
         {/* Right — Editor */}
         {selectedEntity && (
-          <div className="flex-1 min-w-0 space-y-3 overflow-y-auto max-h-[600px] pr-1">
+          <div className="flex-1 min-w-0 space-y-3 pr-1">
             {/* Metadata Section */}
             <Section title="Metadata" expanded={expandedSections.metadata} onToggle={() => toggleSection('metadata')}>
               <div className="grid grid-cols-2 gap-2">
@@ -510,7 +510,7 @@ export function EntityEditor({ result, slug, onUpdateResult }: EntityEditorProps
                   const typeColor = FIELD_TYPE_COLORS[field.type] || 'text-text-muted'
 
                   return (
-                    <div key={fi} className="rounded-lg border border-border/50 bg-bg/30">
+                    <div key={fi} className="rounded-lg border border-border/50 bg-bg/30 transition-colors duration-150 hover:border-border-strong/40">
                       {/* Field row */}
                       <div className="flex items-center gap-1.5 px-2 py-1.5">
                         <GripVertical className="h-3 w-3 text-text-muted/20 flex-shrink-0" />
@@ -519,14 +519,14 @@ export function EntityEditor({ result, slug, onUpdateResult }: EntityEditorProps
                           type="text"
                           value={field.name}
                           onChange={(e) => updateField(fi, { name: e.target.value.replace(/[^a-zA-Z0-9]/g, '') })}
-                          className="w-28 rounded border border-border bg-bg px-1.5 py-0.5 text-[10px] font-mono text-text-secondary focus:outline-none focus:border-accent/50"
+                          className="w-36 rounded border border-border bg-bg px-1.5 py-0.5 text-[10px] font-mono text-text-secondary focus:outline-none focus:border-accent/50 transition-colors"
                           placeholder="fieldName"
                         />
 
                         <select
                           value={field.type}
                           onChange={(e) => updateField(fi, { type: e.target.value as EntityFieldType })}
-                          className={`rounded border border-border bg-bg px-1.5 py-0.5 text-[10px] ${typeColor} focus:outline-none focus:border-accent/50`}
+                          className={`rounded border border-border bg-bg px-1.5 py-0.5 text-[10px] ${typeColor} focus:outline-none focus:border-accent/50 transition-colors`}
                         >
                           {FIELD_TYPE_GROUPS.map(group => (
                             <optgroup key={group.label} label={group.label}>
@@ -554,7 +554,7 @@ export function EntityEditor({ result, slug, onUpdateResult }: EntityEditorProps
                           className="flex h-5 w-5 items-center justify-center rounded text-text-muted/40 hover:text-text-secondary transition-colors"
                           title="Expand"
                         >
-                          {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                          <ChevronDown className={`h-3 w-3 transition-transform duration-150 ${isExpanded ? '' : '-rotate-90'}`} />
                         </button>
 
                         <button
@@ -567,7 +567,8 @@ export function EntityEditor({ result, slug, onUpdateResult }: EntityEditorProps
                       </div>
 
                       {/* Expanded field details */}
-                      {isExpanded && (
+                      <div className="collapsible" data-expanded={isExpanded}>
+                        <div className="collapsible-inner">
                         <div className="border-t border-border/30 px-3 py-2 space-y-2">
                           <Field label="Description">
                             <input
@@ -645,7 +646,8 @@ export function EntityEditor({ result, slug, onUpdateResult }: EntityEditorProps
                             </div>
                           )}
                         </div>
-                      )}
+                        </div>
+                      </div>
                     </div>
                   )
                 })}
@@ -692,11 +694,11 @@ export function EntityEditor({ result, slug, onUpdateResult }: EntityEditorProps
 
             {/* Apply Button */}
             {slug && (
-              <div className="sticky bottom-0 bg-bg-surface/80 backdrop-blur-sm border-t border-border pt-3 pb-1">
+              <div className="sticky bottom-0 bg-bg-surface/90 backdrop-blur-md border-t border-border pt-3 pb-1">
                 <button
                   onClick={handleApply}
                   disabled={saving}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-accent py-2 text-xs font-medium text-white hover:bg-accent-hover disabled:opacity-50 transition-colors"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-accent py-2.5 text-xs font-medium text-white hover:bg-accent-hover disabled:opacity-50 transition-all duration-150 hover:shadow-lg hover:shadow-accent/20 active:scale-[0.98]"
                 >
                   {saving ? (
                     <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Applying...</>
@@ -726,19 +728,21 @@ function Section({ title, expanded, onToggle, children }: {
   children: React.ReactNode
 }) {
   return (
-    <div className="rounded-lg border border-border bg-bg-surface">
+    <div className={`rounded-lg border bg-bg-surface transition-colors duration-150 ${expanded ? 'border-border-strong/60' : 'border-border'}`}>
       <button
         onClick={onToggle}
         className="flex w-full items-center justify-between px-3 py-2 text-[11px] font-medium text-text-secondary hover:text-text-primary transition-colors"
       >
         {title}
-        {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+        <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${expanded ? '' : '-rotate-90'}`} />
       </button>
-      {expanded && (
-        <div className="border-t border-border px-3 py-2.5 space-y-2">
-          {children}
+      <div className="collapsible" data-expanded={expanded}>
+        <div className="collapsible-inner">
+          <div className="border-t border-border px-3 py-2.5 space-y-2">
+            {children}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   )
 }
