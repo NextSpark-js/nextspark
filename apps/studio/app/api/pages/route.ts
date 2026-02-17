@@ -12,6 +12,7 @@ import { existsSync, readFileSync } from 'fs'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 import { requireSession } from '@/lib/auth-helpers'
+import { generatePageTemplate, getTemplateFilePath } from '@/lib/page-template-generator'
 
 export const runtime = 'nodejs'
 
@@ -83,6 +84,17 @@ export async function POST(request: Request) {
 
     const filePath = path.join(pagesDir, `${pageSlug}.json`)
     await writeFile(filePath, JSON.stringify(pageConfig, null, 2), 'utf-8')
+
+    // Regenerate the React template file from the block definitions
+    try {
+      const templateContent = generatePageTemplate(page)
+      const templateRelPath = getTemplateFilePath(page.route, activeTheme)
+      const templateAbsPath = path.join(projectPath, templateRelPath)
+      await mkdir(path.dirname(templateAbsPath), { recursive: true })
+      await writeFile(templateAbsPath, templateContent, 'utf-8')
+    } catch {
+      // Non-fatal: template generation failure shouldn't block JSON save
+    }
 
     results.push({
       page: page.pageName,

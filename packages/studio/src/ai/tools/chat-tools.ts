@@ -16,6 +16,7 @@ import { existsSync } from 'fs'
 import { execSync } from 'child_process'
 import path from 'path'
 import type { StudioEventHandler } from '../../types'
+import { generatePageTemplate, getTemplateFilePath } from '../../lib/page-template-generator'
 
 /**
  * Validate that a resolved path is within the project directory.
@@ -846,12 +847,40 @@ export function createChatMcpServer(projectDir: string, onEvent?: StudioEventHan
 
             const relPath = `contents/themes/${resolvedTheme}/pages/${pageSlug}.json`
             onEvent?.({ type: 'tool_result', toolName: 'write_file', content: `Wrote ${relPath} (auto-generated)` })
+
+            // Regenerate the React template file from the block definitions
+            let templateRelPath = ''
+            try {
+              const pageForTemplate = {
+                pageName: args.pageName,
+                route: args.route,
+                blocks: args.blocks.map((block, index) => ({
+                  blockType: block.blockType,
+                  props: block.props,
+                  order: index + 1,
+                })),
+              }
+              const templateContent = generatePageTemplate(pageForTemplate)
+              templateRelPath = getTemplateFilePath(args.route, resolvedTheme)
+              const templateAbsPath = path.join(projectDir, templateRelPath)
+              await mkdir(path.dirname(templateAbsPath), { recursive: true })
+              await writeFile(templateAbsPath, templateContent, 'utf-8')
+              onEvent?.({ type: 'tool_result', toolName: 'write_file', content: `Wrote ${templateRelPath} (template regenerated)` })
+            } catch {
+              // Non-fatal
+            }
+
             onEvent?.({ type: 'tool_result', toolName: 'create_page', content: `Created page "${args.pageName}"` })
+
+            // Report files modified so preview auto-reloads
+            const filesModified = [relPath]
+            if (templateRelPath) filesModified.push(templateRelPath)
+            onEvent?.({ type: 'files_modified', filesModified })
 
             return {
               content: [{
                 type: 'text' as const,
-                text: `Successfully created page "${args.pageName}" at route "${args.route}" with ${args.blocks.length} blocks: ${args.blocks.map(b => b.blockType).join(', ')}.\n\nFile: ${relPath}`,
+                text: `Successfully created page "${args.pageName}" at route "${args.route}" with ${args.blocks.length} blocks: ${args.blocks.map(b => b.blockType).join(', ')}.\n\nFiles:\n  - ${relPath}\n  - ${templateRelPath || '(template generation skipped)'}`,
               }],
             }
           } catch (err) {

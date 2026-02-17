@@ -16,6 +16,7 @@ import { symlink, mkdir, readFile, writeFile, readdir } from 'fs/promises'
 import { runStudio } from '@nextsparkjs/studio'
 import type { StudioEvent } from '@nextsparkjs/studio'
 import { generateProject, setCurrentProject, getProjectPath } from '@/lib/project-manager'
+import { generateAllPageTemplates, getTemplateFilePath } from '@/lib/page-template-generator'
 import { existsSync } from 'fs'
 import { query, queryOne } from '@/lib/db'
 import { runMigrations } from '@/lib/migrate'
@@ -304,6 +305,21 @@ export async function POST(request: Request) {
         } catch (err) {
           // Non-fatal: webpack alias should still work as fallback
           send({ type: 'generate_log', content: `[studio] Registry linking skipped: ${err instanceof Error ? err.message : String(err)}` })
+        }
+
+        // Step 5: Generate page templates from AI-defined pages
+        const pageDefinitions = studioResult?.pages || []
+        if (pageDefinitions.length > 0) {
+          send({ type: 'generate_log', content: `[studio] Generating ${pageDefinitions.length} page template(s)...` })
+          const themeName = wc.projectSlug || slug
+          const templates = generateAllPageTemplates(pageDefinitions)
+          for (const [route, templateContent] of templates) {
+            const relPath = getTemplateFilePath(route, themeName)
+            const absPath = path.join(projectDir, relPath)
+            await mkdir(path.dirname(absPath), { recursive: true })
+            await writeFile(absPath, templateContent, 'utf-8')
+            send({ type: 'generate_log', content: `[studio] Wrote ${relPath}` })
+          }
         }
 
         send({ type: 'generate_log', content: '[studio] Project ready!' })
