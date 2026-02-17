@@ -157,6 +157,7 @@ export type StudioEventType =
   | 'session_init'
   | 'chat_complete'
   | 'files_modified'
+  | 'result_updated'
   | 'error'
 
 export interface StudioEvent {

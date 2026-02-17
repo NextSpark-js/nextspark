@@ -74,10 +74,15 @@ export async function runChat(
 
   // Create MCP server with file tools, wrapping write_file to track modifications
   const mcpServer = createChatMcpServer(options.projectDir, (event) => {
-    // Track file modifications
-    if (event?.type === 'tool_result' && event.toolName === 'write_file' && event.content?.startsWith('Wrote ')) {
-      const filePath = event.content.replace(/^Wrote /, '').replace(/ \(\d+ chars\)$/, '')
-      if (!filesModified.includes(filePath)) {
+    // Track file modifications (writes and deletes)
+    if (event?.type === 'tool_result') {
+      let filePath: string | undefined
+      if (event.toolName === 'write_file' && event.content?.startsWith('Wrote ')) {
+        filePath = event.content.replace(/^Wrote /, '').replace(/ \(\d+ chars\)$/, '')
+      } else if (event.toolName === 'delete_file' && event.content?.startsWith('Deleted ')) {
+        filePath = event.content.replace(/^Deleted /, '')
+      }
+      if (filePath && !filesModified.includes(filePath)) {
         filesModified.push(filePath)
       }
     }

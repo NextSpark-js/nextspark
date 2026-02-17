@@ -13,6 +13,7 @@
 import { runChat } from '@nextsparkjs/studio'
 import type { StudioEvent, StudioResult } from '@nextsparkjs/studio'
 import { getProjectPath } from '@/lib/project-manager'
+import { scanProjectState } from '@/lib/project-scanner'
 import { existsSync, readFileSync } from 'fs'
 import path from 'path'
 import { query, queryOne } from '@/lib/db'
@@ -124,12 +125,34 @@ export async function POST(request: Request) {
           })
         }
 
+        // If entity or config files were modified, re-scan and update session
+        if (filesModified.length > 0 && body.sessionId) {
+          const hasEntityChanges = filesModified.some(f => f.includes('/entities/'))
+          const hasConfigChanges = filesModified.some(f => f.includes('/config/'))
+
+          if (hasEntityChanges || hasConfigChanges) {
+            try {
+              const updatedResult = await scanProjectState(projectDir, themeName)
+              await query(
+                `UPDATE sessions SET result = result || $1::jsonb, updated_at = NOW() WHERE id = $2`,
+                [JSON.stringify(updatedResult), body.sessionId]
+              )
+              send({
+                type: 'result_updated',
+                content: JSON.stringify(updatedResult),
+              })
+            } catch {
+              // Best-effort — chat still works without session sync
+            }
+          }
+        }
+
         send({
           type: 'chat_complete',
           content: response || 'Done',
         })
 
-        // Update session timestamp if sessionId provided
+        // Update session timestamp if sessionId provided (only if not already updated above)
         if (body.sessionId) {
           try {
             await query(

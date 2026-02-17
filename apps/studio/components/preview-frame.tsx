@@ -18,6 +18,8 @@ interface PreviewFrameProps {
   steps?: GenerationStep[]
   slug?: string | null
   result?: StudioResult | null
+  previewStale?: boolean
+  onClearStale?: () => void
 }
 
 const VIEWPORT_WIDTHS: Record<Viewport, string> = {
@@ -73,7 +75,17 @@ export function PreviewFrame({
   steps,
   slug,
   result,
+  previewStale,
+  onClearStale,
 }: PreviewFrameProps) {
+  function handleReload() {
+    const iframe = document.querySelector(
+      'iframe[title="Project Preview"]'
+    ) as HTMLIFrameElement
+    if (iframe) iframe.src = iframe.src
+    onClearStale?.()
+  }
+
   // Active preview with iframe
   if (url) {
     const width = VIEWPORT_WIDTHS[viewport]
@@ -81,6 +93,19 @@ export function PreviewFrame({
 
     return (
       <div className="flex h-full flex-col bg-[#111115]">
+        {/* Files changed banner */}
+        {previewStale && (
+          <div className="flex items-center justify-between px-3 py-1.5 bg-amber-500/10 border-b border-amber-500/20 flex-shrink-0">
+            <span className="text-[11px] text-amber-400">Files changed by chat</span>
+            <button
+              onClick={handleReload}
+              className="flex items-center gap-1 text-[11px] text-amber-400 hover:text-amber-300 transition-colors"
+            >
+              <RotateCw className="h-3 w-3" />
+              Reload preview
+            </button>
+          </div>
+        )}
         {/* Browser chrome bar */}
         <div className="flex h-10 items-center justify-between border-b border-border bg-bg-surface/60 px-3 flex-shrink-0">
           <div className="flex items-center gap-3">

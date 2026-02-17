@@ -40,6 +40,7 @@ export interface ProjectState {
   files: FileNode[]
   previewUrl: string | null
   previewLoading: boolean
+  previewStale: boolean
   steps: GenerationStep[]
 }
 

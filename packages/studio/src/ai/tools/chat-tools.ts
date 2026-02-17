@@ -7,7 +7,7 @@
 
 import { tool, createSdkMcpServer } from '@anthropic-ai/claude-agent-sdk'
 import { z } from 'zod'
-import { readFile, writeFile, readdir, stat, mkdir } from 'fs/promises'
+import { readFile, writeFile, readdir, stat, mkdir, unlink } from 'fs/promises'
 import { existsSync } from 'fs'
 import { execSync } from 'child_process'
 import path from 'path'
@@ -92,6 +92,28 @@ export function createChatMcpServer(projectDir: string, onEvent?: StudioEventHan
           } catch (err) {
             const msg = err instanceof Error ? err.message : String(err)
             return { content: [{ type: 'text' as const, text: `Error writing file: ${msg}` }] }
+          }
+        }
+      ),
+
+      // ── delete_file ────────────────────────────────────────────
+      tool(
+        'delete_file',
+        'Delete a file from the project. Use when removing entities, cleaning up obsolete files, or undoing changes.',
+        { path: z.string().describe('Relative path from project root') },
+        async (args) => {
+          onEvent?.({ type: 'tool_start', toolName: 'delete_file', content: `Deleting ${args.path}` })
+          try {
+            const fullPath = assertWithinProject(args.path, projectDir)
+            if (!existsSync(fullPath)) {
+              return { content: [{ type: 'text' as const, text: `Error: File not found: ${args.path}` }] }
+            }
+            await unlink(fullPath)
+            onEvent?.({ type: 'tool_result', toolName: 'delete_file', content: `Deleted ${args.path}` })
+            return { content: [{ type: 'text' as const, text: `Deleted ${args.path}` }] }
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err)
+            return { content: [{ type: 'text' as const, text: `Error deleting file: ${msg}` }] }
           }
         }
       ),
@@ -244,6 +266,7 @@ export function createChatMcpServer(projectDir: string, onEvent?: StudioEventHan
 export const CHAT_MCP_TOOL_NAMES = [
   'mcp__project__read_file',
   'mcp__project__write_file',
+  'mcp__project__delete_file',
   'mcp__project__list_files',
   'mcp__project__search_files',
   'mcp__project__run_command',
