@@ -31,6 +31,8 @@ interface GitHubState {
   pushStep: PushStep
   pushError: string | null
   pushResult: PushResult | null
+  /** Tracks the last successfully pushed repo (persists across modal opens) */
+  lastRepo: PushResult | null
 }
 
 export function useGitHub() {
@@ -42,6 +44,7 @@ export function useGitHub() {
     pushStep: 'idle',
     pushError: null,
     pushResult: null,
+    lastRepo: null,
   })
 
   // Check auth status on mount
@@ -145,6 +148,7 @@ export function useGitHub() {
         ...prev,
         pushStep: 'done',
         pushResult: data.repo,
+        lastRepo: data.repo,
       }))
     } catch (error) {
       setState((prev) => ({
@@ -154,6 +158,60 @@ export function useGitHub() {
       }))
     }
   }, [])
+
+  const update = useCallback(async (options: {
+    slug: string
+    sanitizeEnv?: boolean
+    addReadme?: boolean
+  }) => {
+    if (!state.lastRepo) return
+
+    setState((prev) => ({
+      ...prev,
+      pushStep: 'pushing',
+      pushError: null,
+      pushResult: null,
+    }))
+
+    try {
+      const res = await fetch('/api/github', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update',
+          slug: options.slug,
+          repoFullName: state.lastRepo.fullName,
+          cloneUrl: state.lastRepo.cloneUrl,
+          sanitizeEnv: options.sanitizeEnv ?? true,
+          addReadme: options.addReadme ?? true,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setState((prev) => ({
+          ...prev,
+          pushStep: 'error',
+          pushError: data.error || 'Update failed',
+        }))
+        return
+      }
+
+      setState((prev) => ({
+        ...prev,
+        pushStep: 'done',
+        pushResult: data.repo,
+        lastRepo: data.repo,
+      }))
+    } catch (error) {
+      setState((prev) => ({
+        ...prev,
+        pushStep: 'error',
+        pushError: error instanceof Error ? error.message : 'Update failed',
+      }))
+    }
+  }, [state.lastRepo])
 
   const resetPush = useCallback(() => {
     setState((prev) => ({
@@ -169,6 +227,7 @@ export function useGitHub() {
     connect,
     disconnect,
     push,
+    update,
     resetPush,
     checkStatus,
   }

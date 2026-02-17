@@ -251,7 +251,7 @@ export async function pushProject(options: PushOptions): Promise<void> {
     log('pushing')
     const authUrl = cloneUrl.replace('https://', `https://x-access-token:${token}@`)
     await runGit(projectPath, ['remote', 'add', 'origin', authUrl])
-    await runGit(projectPath, ['push', '-u', 'origin', 'main'])
+    await runGit(projectPath, ['push', '-u', 'origin', 'main', '--force'])
 
     // Step 8: Clean token from remote URL
     log('cleaning')

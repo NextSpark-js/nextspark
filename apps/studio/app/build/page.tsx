@@ -126,6 +126,14 @@ function BuildContent() {
     github.resetPush()
   }, [github])
 
+  const handleUpdateGitHub = useCallback(() => {
+    if (!project.slug) return
+    github.resetPush()
+    setShowPushModal(true)
+    // Trigger update immediately
+    github.update({ slug: project.slug })
+  }, [project.slug, github])
+
   const handleDeployVPS = useCallback(() => {
     setShowDeployModal(true)
   }, [])
@@ -226,7 +234,9 @@ function BuildContent() {
             authenticated={github.authenticated}
             configured={github.configured}
             user={github.user}
+            lastRepo={github.lastRepo}
             onPushToGitHub={handleOpenPushModal}
+            onUpdateGitHub={handleUpdateGitHub}
             onDownloadZip={handleDownloadZip}
             onConnect={github.connect}
             onDisconnect={github.disconnect}

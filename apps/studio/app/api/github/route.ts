@@ -4,6 +4,7 @@
  * POST /api/github  { action: 'auth-url' }    → Returns OAuth URL
  * POST /api/github  { action: 'status' }       → Returns auth status + user info
  * POST /api/github  { action: 'push', ... }    → Creates repo + pushes project
+ * POST /api/github  { action: 'update', ... }   → Pushes changes to existing repo
  * POST /api/github  { action: 'disconnect' }   → Clears GitHub token
  */
 
@@ -152,6 +153,53 @@ export async function POST(request: Request) {
       })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Push failed'
+      return Response.json({ error: message }, { status: 500 })
+    }
+  }
+
+  // ── update: Push changes to existing repo ──────────────────────────────
+  if (action === 'update') {
+    const { slug, repoFullName, cloneUrl, sanitizeEnv, addReadme } = body as {
+      slug?: string
+      repoFullName?: string
+      cloneUrl?: string
+      sanitizeEnv?: boolean
+      addReadme?: boolean
+    }
+
+    if (!slug || !repoFullName || !cloneUrl) {
+      return Response.json({ error: 'slug, repoFullName, and cloneUrl are required' }, { status: 400 })
+    }
+
+    const token = await getToken()
+    if (!token) {
+      return Response.json({ error: 'Not authenticated with GitHub' }, { status: 401 })
+    }
+
+    try {
+      const steps: string[] = []
+      await pushProject({
+        slug,
+        repoFullName,
+        cloneUrl,
+        token,
+        sanitizeEnv: sanitizeEnv ?? true,
+        addReadme: addReadme ?? true,
+        onLog: (step) => steps.push(step),
+      })
+
+      const repoUrl = `https://github.com/${repoFullName}`
+      return Response.json({
+        ok: true,
+        repo: {
+          url: repoUrl,
+          cloneUrl,
+          fullName: repoFullName,
+        },
+        steps,
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Update failed'
       return Response.json({ error: message }, { status: 500 })
     }
   }

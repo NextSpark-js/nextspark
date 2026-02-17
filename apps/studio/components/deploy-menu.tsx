@@ -5,15 +5,17 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { ChevronDown, Github, Download, ExternalLink, LogOut, Server } from 'lucide-react'
-import type { GitHubUser } from '@/lib/use-github'
+import { ChevronDown, Github, Download, ExternalLink, LogOut, Server, RefreshCw } from 'lucide-react'
+import type { GitHubUser, PushResult } from '@/lib/use-github'
 
 interface DeployMenuProps {
   slug: string | null
   authenticated: boolean
   configured: boolean
   user: GitHubUser | null
+  lastRepo: PushResult | null
   onPushToGitHub: () => void
+  onUpdateGitHub: () => void
   onDownloadZip: () => void
   onConnect: () => void
   onDisconnect: () => void
@@ -25,7 +27,9 @@ export function DeployMenu({
   authenticated,
   configured,
   user,
+  lastRepo,
   onPushToGitHub,
+  onUpdateGitHub,
   onDownloadZip,
   onConnect,
   onDisconnect,
@@ -113,17 +117,42 @@ export function DeployMenu({
                 </button>
               </div>
 
-              {/* Push to GitHub */}
-              <button
-                onClick={() => handleAction(onPushToGitHub)}
-                className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-xs text-text-secondary hover:bg-bg-hover transition-colors"
-              >
-                <Github className="h-4 w-4" />
-                <div>
-                  <div className="font-medium">Push to GitHub</div>
-                  <div className="text-[10px] text-text-muted">Create repo & push code</div>
-                </div>
-              </button>
+              {/* Update or Push to GitHub */}
+              {lastRepo ? (
+                <>
+                  <button
+                    onClick={() => handleAction(onUpdateGitHub)}
+                    className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-xs text-text-secondary hover:bg-bg-hover transition-colors"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    <div>
+                      <div className="font-medium">Update GitHub</div>
+                      <div className="text-[10px] text-text-muted">Push changes to {lastRepo.fullName}</div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => handleAction(onPushToGitHub)}
+                    className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-xs text-text-muted hover:bg-bg-hover transition-colors"
+                  >
+                    <Github className="h-4 w-4" />
+                    <div>
+                      <div className="font-medium">Push to New Repo</div>
+                      <div className="text-[10px] text-text-muted/60">Create a new repository</div>
+                    </div>
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => handleAction(onPushToGitHub)}
+                  className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-xs text-text-secondary hover:bg-bg-hover transition-colors"
+                >
+                  <Github className="h-4 w-4" />
+                  <div>
+                    <div className="font-medium">Push to GitHub</div>
+                    <div className="text-[10px] text-text-muted">Create repo & push code</div>
+                  </div>
+                </button>
+              )}
             </>
           ) : configured ? (
             <button
