@@ -141,6 +141,7 @@ export interface StudioResult {
   pages?: PageDefinition[]
   theme?: ThemeOption
   plugins?: PluginOption[]
+  githubRepo?: { url: string; cloneUrl: string; fullName: string }
 }
 
 export type StudioEventType =

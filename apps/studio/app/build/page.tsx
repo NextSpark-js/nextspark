@@ -9,7 +9,8 @@ import {
 } from 'lucide-react'
 import { ErrorBoundary } from '@/components/error-boundary'
 import { useStudioChat } from '@/lib/use-studio-chat'
-import { useGitHub } from '@/lib/use-github'
+import { useGitHub, type PushResult } from '@/lib/use-github'
+import type { StudioResult } from '@/lib/types'
 import { ChatMessages } from '@/components/chat-messages'
 import { PromptInput } from '@/components/prompt-input'
 import { ConfigPreview } from '@/components/config-preview'
@@ -51,6 +52,26 @@ function BuildContent() {
       github.checkStatus()
     }
   }, [searchParams]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load GitHub repo from session result (on session resume)
+  useEffect(() => {
+    if (result?.githubRepo && !github.lastRepo) {
+      github.setLastRepo(result.githubRepo as PushResult)
+    }
+  }, [result?.githubRepo]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Persist GitHub repo to session after successful push/update
+  useEffect(() => {
+    if (github.pushStep === 'done' && github.lastRepo && sessionId) {
+      const updatedResult = { ...(result || {}), githubRepo: github.lastRepo }
+      updateResult(updatedResult as StudioResult)
+      fetch(`/api/sessions/${encodeURIComponent(sessionId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ result: updatedResult }),
+      }).catch(() => {})
+    }
+  }, [github.pushStep]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load existing session or start new generation from URL params
   useEffect(() => {

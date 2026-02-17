@@ -222,6 +222,10 @@ export function useGitHub() {
     }))
   }, [])
 
+  const setLastRepo = useCallback((repo: PushResult | null) => {
+    setState((prev) => ({ ...prev, lastRepo: repo }))
+  }, [])
+
   return {
     ...state,
     connect,
@@ -230,5 +234,6 @@ export function useGitHub() {
     update,
     resetPush,
     checkStatus,
+    setLastRepo,
   }
 }
