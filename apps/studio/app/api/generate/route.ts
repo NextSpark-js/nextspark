@@ -239,18 +239,21 @@ export async function POST(request: Request) {
         }
 
         // Step 2.7: Patch auth-client.js for basePath compatibility
-        // When NEXT_PUBLIC_APP_URL includes a basePath (e.g., /p/5510), Better Auth treats
-        // the pathname as the auth route prefix, calling /p/5510/sign-in/email instead of
-        // /p/5510/api/auth/sign-in/email. Fix: add explicit basePath: "/api/auth".
+        // Better Auth's withPath() returns baseURL as-is when it has a pathname.
+        // When NEXT_PUBLIC_APP_URL is e.g. "http://host/p/5510", auth calls go to
+        // /p/5510/sign-in/email instead of /p/5510/api/auth/sign-in/email.
+        // Fix: append "/api/auth" to the baseURL so the full auth path is included.
         send({ type: 'generate_log', content: '[studio] Patching auth client...' })
         try {
           const authClientFile = path.join(projectDir, 'node_modules/@nextsparkjs/core/dist/lib/auth-client.js')
           if (existsSync(authClientFile)) {
             let content = await readFile(authClientFile, 'utf-8')
-            if (content.includes('createAuthClient') && !content.includes('basePath')) {
+            if (content.includes('process.env.NEXT_PUBLIC_APP_URL')) {
+              // Replace: baseURL: process.env.NEXT_PUBLIC_APP_URL || "..."
+              // With:    baseURL: (process.env.NEXT_PUBLIC_APP_URL || "...") + "/api/auth"
               content = content.replace(
-                /createAuthClient\(\{/,
-                'createAuthClient({\n  basePath: "/api/auth",'
+                /baseURL:\s*(process\.env\.NEXT_PUBLIC_APP_URL\s*\|\|\s*["'][^"']+["'])/,
+                'baseURL: ($1) + "/api/auth"'
               )
               await writeFile(authClientFile, content, 'utf-8')
               send({ type: 'generate_log', content: '[studio] Auth client patched for basePath' })
