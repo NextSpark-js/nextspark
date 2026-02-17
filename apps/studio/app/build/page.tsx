@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef, useMemo, Suspense } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo, Suspense, type RefObject } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import {
   RotateCcw, RefreshCw, PanelLeftClose, PanelLeft,
@@ -22,6 +22,7 @@ import { DeployMenu } from '@/components/deploy-menu'
 import { DeployModal } from '@/components/deploy-modal'
 import { GitHubPushModal } from '@/components/github-push-modal'
 import { PageEditor } from '@/components/page-editor'
+import { useBlockSelector } from '@/hooks/use-block-selector'
 
 type RightTab = 'preview' | 'pages' | 'code' | 'config'
 type Viewport = 'desktop' | 'tablet' | 'mobile'
@@ -43,6 +44,9 @@ function BuildContent() {
   const [chatOpen, setChatOpen] = useState(true)
   const [viewport, setViewport] = useState<Viewport>('desktop')
   const [errorExpanded, setErrorExpanded] = useState(false)
+  const [selectMode, setSelectMode] = useState(false)
+  const [externalSelection, setExternalSelection] = useState<{ pageIndex: number; blockIndex: number } | null>(null)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
   const autoStartedRef = useRef(false)
   const sessionLoadedRef = useRef(false)
 
@@ -130,6 +134,39 @@ function BuildContent() {
   const handleSelectFile = useCallback((path: string) => {
     setSelectedFile(path)
   }, [])
+
+  // Block selector: map iframe click to page+block index
+  const handleBlockSelected = useCallback((blockSlug: string, blockIndex: number) => {
+    if (pages.length === 0 || blockIndex < 0) return
+
+    // Find which page is currently visible in the preview.
+    // The preview renders one page at a time; blocks are numbered sequentially.
+    // For now, find the page whose block count range contains blockIndex,
+    // or fall back to the first page that has a matching blockType.
+    let cumulative = 0
+    for (let pi = 0; pi < pages.length; pi++) {
+      const page = pages[pi]
+      if (blockIndex < cumulative + page.blocks.length) {
+        const localIndex = blockIndex - cumulative
+        setExternalSelection({ pageIndex: pi, blockIndex: localIndex })
+        setActiveTab('pages')
+        setSelectMode(false)
+        return
+      }
+      cumulative += page.blocks.length
+    }
+
+    // Fallback: match by slug on first page
+    const firstPage = pages[0]
+    const idx = firstPage.blocks.findIndex(b => b.blockType === blockSlug)
+    if (idx >= 0) {
+      setExternalSelection({ pageIndex: 0, blockIndex: idx })
+      setActiveTab('pages')
+      setSelectMode(false)
+    }
+  }, [pages])
+
+  useBlockSelector(iframeRef as RefObject<HTMLIFrameElement | null>, selectMode, handleBlockSelected)
 
   const handleDownloadZip = useCallback(() => {
     if (project.slug) {
@@ -384,11 +421,20 @@ function BuildContent() {
                 result={result}
                 previewStale={project.previewStale}
                 onClearStale={clearPreviewStale}
+                selectMode={selectMode}
+                onToggleSelectMode={() => setSelectMode(prev => !prev)}
+                iframeRef={iframeRef}
               />
             )}
 
             {activeTab === 'pages' && (
-              <PageEditor pages={pages} onUpdatePages={updatePages} slug={project.slug} />
+              <PageEditor
+                pages={pages}
+                onUpdatePages={updatePages}
+                slug={project.slug}
+                externalSelection={externalSelection}
+                onClearExternalSelection={() => setExternalSelection(null)}
+              />
             )}
 
             {activeTab === 'code' && (

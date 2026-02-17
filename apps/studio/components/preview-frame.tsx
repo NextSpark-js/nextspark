@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { ExternalLink, Globe, Play, RotateCw, Database, Zap, Check } from 'lucide-react'
+import { ExternalLink, Globe, Play, RotateCw, Database, Zap, Check, MousePointer2 } from 'lucide-react'
 import type { StudioPhase, GenerationStep } from '@/lib/types'
 import type { StudioResult } from '@nextsparkjs/studio'
 import { GenerationProgress } from './generation-progress'
@@ -21,6 +21,9 @@ interface PreviewFrameProps {
   result?: StudioResult | null
   previewStale?: boolean
   onClearStale?: () => void
+  selectMode?: boolean
+  onToggleSelectMode?: () => void
+  iframeRef?: React.RefObject<HTMLIFrameElement | null>
 }
 
 const VIEWPORT_WIDTHS: Record<Viewport, string> = {
@@ -78,6 +81,9 @@ export function PreviewFrame({
   result,
   previewStale,
   onClearStale,
+  selectMode,
+  onToggleSelectMode,
+  iframeRef: externalIframeRef,
 }: PreviewFrameProps) {
   const autoReloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [reloadState, setReloadState] = useState<'idle' | 'waiting' | 'reloading' | 'done'>('idle')
@@ -181,6 +187,19 @@ export function PreviewFrame({
             >
               <RotateCw className="h-3 w-3" />
             </button>
+            {onToggleSelectMode && (
+              <button
+                onClick={onToggleSelectMode}
+                className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
+                  selectMode
+                    ? 'text-accent bg-accent/10'
+                    : 'text-text-muted/40 hover:text-text-secondary hover:bg-bg-hover'
+                }`}
+                title={selectMode ? 'Exit select mode' : 'Select a block'}
+              >
+                <MousePointer2 className="h-3 w-3" />
+              </button>
+            )}
             <a
               href={url}
               target="_blank"
@@ -208,6 +227,7 @@ export function PreviewFrame({
             }}
           >
             <iframe
+              ref={externalIframeRef}
               src={url}
               className="h-full w-full border-0"
               title="Project Preview"

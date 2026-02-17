@@ -153,9 +153,11 @@ interface PageEditorProps {
   pages: PageDefinition[]
   onUpdatePages: (pages: PageDefinition[]) => void
   slug?: string | null
+  externalSelection?: { pageIndex: number; blockIndex: number } | null
+  onClearExternalSelection?: () => void
 }
 
-export function PageEditor({ pages, onUpdatePages, slug }: PageEditorProps) {
+export function PageEditor({ pages, onUpdatePages, slug, externalSelection, onClearExternalSelection }: PageEditorProps) {
   const [selectedPageIndex, setSelectedPageIndex] = useState(0)
   const [showPicker, setShowPicker] = useState(false)
   const [editingBlock, setEditingBlock] = useState<number | null>(null)
@@ -214,6 +216,25 @@ export function PageEditor({ pages, onUpdatePages, slug }: PageEditorProps) {
       if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
     }
   }, [pages, slug])
+
+  // ── External selection (from block selector in preview) ──
+
+  useEffect(() => {
+    if (!externalSelection) return
+    const { pageIndex, blockIndex } = externalSelection
+
+    if (pageIndex >= 0 && pageIndex < pages.length) {
+      setSelectedPageIndex(pageIndex)
+      setShowPicker(false)
+
+      const page = pages[pageIndex]
+      if (blockIndex >= 0 && blockIndex < page.blocks.length) {
+        setEditingBlock(blockIndex)
+      }
+    }
+
+    onClearExternalSelection?.()
+  }, [externalSelection]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Page operations ──
 
