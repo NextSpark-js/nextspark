@@ -234,6 +234,11 @@ export async function pushProject(options: PushOptions): Promise<void> {
     log('initializing')
     await runGit(projectPath, ['init', '-b', 'main'])
 
+    // Step 4b: Set git author (required inside Docker where no global config exists)
+    const ghUser = repoFullName.split('/')[0] || 'nextspark-studio'
+    await runGit(projectPath, ['config', 'user.email', `${ghUser}@users.noreply.github.com`])
+    await runGit(projectPath, ['config', 'user.name', ghUser])
+
     // Step 5: git add
     log('staging')
     await runGit(projectPath, ['add', '-A'])
