@@ -87,7 +87,7 @@ export async function runChat(
       }
     }
     onEvent?.(event)
-  })
+  }, options.themeName)
 
   for await (const message of query({
     prompt: fullPrompt,

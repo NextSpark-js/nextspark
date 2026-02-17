@@ -694,7 +694,7 @@ async function processI18n(
       }
     }
 
-    // Update common.json in each locale
+    // Update common.json and home.json in each locale
     for (const locale of config.supportedLocales) {
       const commonPath = path.join(messagesDir, locale, 'common.json')
       if (await pathExists(commonPath)) {
@@ -707,6 +707,26 @@ async function processI18n(
             }
           }
           await writeJson(commonPath, content)
+        } catch {
+          // Skip if JSON parsing fails
+        }
+      }
+
+      // Replace "Starter" in home page messages (all locales: en="Welcome to Starter", es="Bienvenido a Starter", etc.)
+      const homePath = path.join(messagesDir, locale, 'home.json')
+      if (await pathExists(homePath)) {
+        try {
+          const homeContent = (await readJson(homePath)) as Record<string, Record<string, string>>
+          if (homeContent.hero) {
+            // Replace "Starter" with project name in the hero title (works for all languages)
+            if (homeContent.hero.title) {
+              homeContent.hero.title = homeContent.hero.title.replace(/Starter/g, config.projectName)
+            }
+            if (homeContent.hero.subtitle) {
+              homeContent.hero.subtitle = config.projectDescription || homeContent.hero.subtitle
+            }
+          }
+          await writeJson(homePath, homeContent)
         } catch {
           // Skip if JSON parsing fails
         }

@@ -1,6 +1,7 @@
 'use client'
 
-import { ExternalLink, Globe, Play, RotateCw, Database, Zap } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { ExternalLink, Globe, Play, RotateCw, Database, Zap, Check } from 'lucide-react'
 import type { StudioPhase, GenerationStep } from '@/lib/types'
 import type { StudioResult } from '@nextsparkjs/studio'
 import { GenerationProgress } from './generation-progress'
@@ -78,13 +79,40 @@ export function PreviewFrame({
   previewStale,
   onClearStale,
 }: PreviewFrameProps) {
+  const autoReloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [reloadState, setReloadState] = useState<'idle' | 'waiting' | 'reloading' | 'done'>('idle')
+
   function handleReload() {
+    if (autoReloadTimerRef.current) {
+      clearTimeout(autoReloadTimerRef.current)
+      autoReloadTimerRef.current = null
+    }
+    setReloadState('reloading')
     const iframe = document.querySelector(
       'iframe[title="Project Preview"]'
     ) as HTMLIFrameElement
     if (iframe) iframe.src = iframe.src
     onClearStale?.()
+    // Brief "done" indicator
+    setTimeout(() => setReloadState('done'), 300)
+    setTimeout(() => setReloadState('idle'), 1800)
   }
+
+  // Auto-reload preview when files change (1.5s debounce for HMR to settle)
+  useEffect(() => {
+    if (previewStale && url) {
+      setReloadState('waiting')
+      autoReloadTimerRef.current = setTimeout(() => {
+        handleReload()
+      }, 1500)
+      return () => {
+        if (autoReloadTimerRef.current) {
+          clearTimeout(autoReloadTimerRef.current)
+          autoReloadTimerRef.current = null
+        }
+      }
+    }
+  }, [previewStale, url]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Active preview with iframe
   if (url) {
@@ -93,17 +121,39 @@ export function PreviewFrame({
 
     return (
       <div className="flex h-full flex-col bg-[#111115]">
-        {/* Files changed banner */}
-        {previewStale && (
-          <div className="flex items-center justify-between px-3 py-1.5 bg-amber-500/10 border-b border-amber-500/20 flex-shrink-0">
-            <span className="text-[11px] text-amber-400">Files changed by chat</span>
-            <button
-              onClick={handleReload}
-              className="flex items-center gap-1 text-[11px] text-amber-400 hover:text-amber-300 transition-colors"
-            >
-              <RotateCw className="h-3 w-3" />
-              Reload preview
-            </button>
+        {/* Auto-reload banner */}
+        {(previewStale || reloadState !== 'idle') && (
+          <div className={`flex items-center justify-between px-3 py-1.5 border-b flex-shrink-0 transition-colors ${
+            reloadState === 'done'
+              ? 'bg-emerald-500/10 border-emerald-500/20'
+              : reloadState === 'reloading'
+                ? 'bg-blue-500/10 border-blue-500/20'
+                : 'bg-amber-500/10 border-amber-500/20'
+          }`}>
+            <span className={`text-[11px] ${
+              reloadState === 'done'
+                ? 'text-emerald-400'
+                : reloadState === 'reloading'
+                  ? 'text-blue-400'
+                  : 'text-amber-400'
+            }`}>
+              {reloadState === 'done' ? 'Preview updated' :
+               reloadState === 'reloading' ? 'Reloading preview...' :
+               'Files changed — reloading shortly...'}
+            </span>
+            {reloadState === 'done' ? (
+              <Check className="h-3 w-3 text-emerald-400" />
+            ) : reloadState === 'reloading' ? (
+              <RotateCw className="h-3 w-3 text-blue-400 animate-spin" />
+            ) : (
+              <button
+                onClick={handleReload}
+                className="flex items-center gap-1 text-[11px] text-amber-400 hover:text-amber-300 transition-colors"
+              >
+                <RotateCw className="h-3 w-3" />
+                Reload now
+              </button>
+            )}
           </div>
         )}
         {/* Browser chrome bar */}

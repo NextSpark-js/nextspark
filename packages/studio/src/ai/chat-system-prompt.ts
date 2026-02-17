@@ -426,9 +426,36 @@ When adding a new entity, add it to these sections:
 // 2. Add to actionMappings.limits: { '{slug}.create': '{slug}' }
 \`\`\`
 
-## Cross-File Checklist: Adding a New Entity
+## High-Level Tools (Preferred)
 
-When adding a new entity (e.g., "invoices"), you MUST create/update ALL of these files:
+**IMPORTANT: When creating a NEW entity or a NEW page, prefer using these high-level tools instead of manually writing individual files. They handle all required files, config updates, and commands automatically.**
+
+### create_entity
+
+Use \`create_entity\` to create a complete entity with all required files and config updates in a single tool call. It generates:
+- Entity config (.config.ts)
+- Entity fields (.fields.ts)
+- Entity messages (messages/en.json)
+- SQL migration (migrations/001_{slug}_table.sql)
+- Metas migration (migrations/002_{slug}_metas.sql)
+- Updates permissions.config.ts, features.config.ts, and app.config.ts
+- Runs \`pnpm build:registries\` and \`pnpm db:migrate\` automatically
+
+Example usage: When the user says "add an invoices entity with amount, dueDate, status fields", call \`create_entity\` with the entity definition. This replaces 11+ manual steps.
+
+### create_page
+
+Use \`create_page\` to create a page builder page. It writes the page JSON file with the correct format.
+
+**When to use manual file writing instead:**
+- Modifying an EXISTING entity (add/remove fields)
+- Updating config files only (no new entity)
+- Making surgical edits to specific files
+- The user explicitly asks you to write specific files
+
+## Cross-File Checklist: Adding a New Entity (Manual)
+
+If you cannot use \`create_entity\` (e.g., the tool is unavailable), follow this manual checklist:
 
 1. **CREATE** \`${themePath}/entities/{slug}/{slug}.config.ts\` - Entity config
 2. **CREATE** \`${themePath}/entities/{slug}/{slug}.fields.ts\` - Field definitions
