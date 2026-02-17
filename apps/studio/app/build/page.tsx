@@ -32,7 +32,7 @@ function BuildContent() {
   const router = useRouter()
   const {
     status, messages, result, error, project, pages, sessionId,
-    sendPrompt, sendChatMessage, reset, fetchFiles, startPreview, updatePages, updateResult, loadSession, clearPreviewStale,
+    sendPrompt, sendChatMessage, reset, fetchFiles, startPreview, updatePages, updateResult, loadSession, clearPreviewStale, markPreviewStale,
   } = useStudioChat()
 
   const github = useGitHub()
@@ -434,6 +434,7 @@ function BuildContent() {
                 slug={project.slug}
                 externalSelection={externalSelection}
                 onClearExternalSelection={() => setExternalSelection(null)}
+                onFilesChanged={markPreviewStale}
               />
             )}
 

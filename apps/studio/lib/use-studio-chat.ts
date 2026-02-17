@@ -810,6 +810,13 @@ export function useStudioChat() {
     }))
   }, [])
 
+  const markPreviewStale = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      project: { ...prev.project, previewStale: true },
+    }))
+  }, [])
+
   const updateResult = useCallback((result: StudioResult) => {
     setState((prev) => ({
       ...prev,
@@ -829,5 +836,6 @@ export function useStudioChat() {
     updateResult,
     loadSession,
     clearPreviewStale,
+    markPreviewStale,
   }
 }

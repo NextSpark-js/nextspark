@@ -155,9 +155,10 @@ interface PageEditorProps {
   slug?: string | null
   externalSelection?: { pageIndex: number; blockIndex: number } | null
   onClearExternalSelection?: () => void
+  onFilesChanged?: () => void
 }
 
-export function PageEditor({ pages, onUpdatePages, slug, externalSelection, onClearExternalSelection }: PageEditorProps) {
+export function PageEditor({ pages, onUpdatePages, slug, externalSelection, onClearExternalSelection, onFilesChanged }: PageEditorProps) {
   const [selectedPageIndex, setSelectedPageIndex] = useState(0)
   const [showPicker, setShowPicker] = useState(false)
   const [editingBlock, setEditingBlock] = useState<number | null>(null)
@@ -201,6 +202,7 @@ export function PageEditor({ pages, onUpdatePages, slug, externalSelection, onCl
         if (res.ok) {
           lastSavedRef.current = serialized
           setAutoSaveStatus('saved')
+          onFilesChanged?.()
           setTimeout(() => setAutoSaveStatus('idle'), 2000)
         } else {
           setAutoSaveStatus('idle')
