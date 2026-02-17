@@ -12,7 +12,7 @@ import { cookies } from 'next/headers'
 import {
   getAuthUrl,
   getUser,
-  createRepo,
+  getOrCreateRepo,
   pushProject,
   decryptToken,
   isConfigured,
@@ -123,8 +123,8 @@ export async function POST(request: Request) {
     }
 
     try {
-      // Create the repo
-      const repo = await createRepo(token, {
+      // Create or re-use existing repo
+      const repo = await getOrCreateRepo(token, {
         name: repoName,
         description,
         isPrivate: isPrivate ?? true,

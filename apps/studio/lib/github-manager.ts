@@ -160,6 +160,33 @@ export async function createRepo(token: string, options: CreateRepoOptions): Pro
   }
 }
 
+/**
+ * Try to create a repo; if it already exists, fetch the existing one.
+ * This enables re-pushing (force push) to the same repo name.
+ */
+export async function getOrCreateRepo(token: string, options: CreateRepoOptions): Promise<RepoResult> {
+  try {
+    return await createRepo(token, options)
+  } catch (error) {
+    // Check if the error is "name already exists"
+    const message = error instanceof Error ? error.message : ''
+    if (message.includes('name already exists')) {
+      const octokit = new Octokit({ auth: token })
+      const { data: user } = await octokit.rest.users.getAuthenticated()
+      const { data: repo } = await octokit.rest.repos.get({
+        owner: user.login,
+        repo: options.name,
+      })
+      return {
+        url: repo.html_url,
+        cloneUrl: repo.clone_url,
+        fullName: repo.full_name,
+      }
+    }
+    throw error
+  }
+}
+
 // ─── Push Project ──────────────────────────────────────────────────────────
 
 export interface PushOptions {
