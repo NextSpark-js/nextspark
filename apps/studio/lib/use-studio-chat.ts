@@ -23,6 +23,7 @@ const INITIAL_PROJECT: ProjectState = {
   files: [],
   previewUrl: null,
   previewLoading: false,
+  previewStale: false,
   steps: [],
 }
 
@@ -190,6 +191,7 @@ export function useStudioChat() {
           files: [],
           previewUrl: null,
           previewLoading: false,
+          previewStale: false,
           steps: [],
         },
         pages,
@@ -513,7 +515,26 @@ export function useStudioChat() {
             content: `Modified files: ${fileList}`,
             timestamp: Date.now(),
           })
-          break
+          return {
+            ...prev,
+            messages,
+            project: { ...prev.project, previewStale: true },
+          }
+        }
+
+        case 'result_updated': {
+          try {
+            const updatedResult = JSON.parse(event.content || '{}')
+            return {
+              ...prev,
+              messages,
+              result: prev.result
+                ? { ...prev.result, ...updatedResult }
+                : updatedResult,
+            }
+          } catch {
+            break
+          }
         }
 
         case 'chat_complete': {
@@ -782,6 +803,20 @@ export function useStudioChat() {
     })
   }, [])
 
+  const clearPreviewStale = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      project: { ...prev.project, previewStale: false },
+    }))
+  }, [])
+
+  const updateResult = useCallback((result: StudioResult) => {
+    setState((prev) => ({
+      ...prev,
+      result,
+    }))
+  }, [])
+
   return {
     ...state,
     sessionId,
@@ -791,6 +826,8 @@ export function useStudioChat() {
     fetchFiles,
     startPreview,
     updatePages,
+    updateResult,
     loadSession,
+    clearPreviewStale,
   }
 }

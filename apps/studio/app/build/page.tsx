@@ -13,7 +13,7 @@ import { useGitHub } from '@/lib/use-github'
 import { ChatMessages } from '@/components/chat-messages'
 import { PromptInput } from '@/components/prompt-input'
 import { ConfigPreview } from '@/components/config-preview'
-import { EntityPreview } from '@/components/entity-preview'
+import { EntityEditor } from '@/components/entity-editor'
 import { FileTree, countFiles } from '@/components/file-tree'
 import { CodeViewer } from '@/components/code-viewer'
 import { PreviewFrame } from '@/components/preview-frame'
@@ -30,7 +30,7 @@ function BuildContent() {
   const router = useRouter()
   const {
     status, messages, result, error, project, pages, sessionId,
-    sendPrompt, sendChatMessage, reset, fetchFiles, startPreview, updatePages, loadSession,
+    sendPrompt, sendChatMessage, reset, fetchFiles, startPreview, updatePages, updateResult, loadSession, clearPreviewStale,
   } = useStudioChat()
 
   const github = useGitHub()
@@ -351,11 +351,13 @@ function BuildContent() {
                 steps={project.steps}
                 slug={project.slug}
                 result={result}
+                previewStale={project.previewStale}
+                onClearStale={clearPreviewStale}
               />
             )}
 
             {activeTab === 'pages' && (
-              <PageEditor pages={pages} onUpdatePages={updatePages} />
+              <PageEditor pages={pages} onUpdatePages={updatePages} slug={project.slug} />
             )}
 
             {activeTab === 'code' && (
@@ -408,7 +410,11 @@ function BuildContent() {
                 {result ? (
                   <>
                     <ConfigPreview result={result} />
-                    <EntityPreview result={result} />
+                    <EntityEditor
+                      result={result}
+                      slug={project.slug}
+                      onUpdateResult={updateResult}
+                    />
                   </>
                 ) : (
                   <div className="flex h-full items-center justify-center pt-20">

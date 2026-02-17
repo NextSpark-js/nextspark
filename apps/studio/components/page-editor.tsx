@@ -2,20 +2,30 @@
  * Page Editor
  *
  * Main page editing interface for the block builder.
- * Left sidebar: page list. Center: block list with reorder/delete.
- * Supports adding blocks via the block picker.
+ * Left sidebar: page list with rename. Center: block list with drag-drop reorder.
+ * Supports adding/duplicating blocks, type-aware prop editing, and auto-save.
  */
 
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import {
-  Plus, ChevronUp, ChevronDown, Trash2, GripVertical, FileText,
+  DndContext, closestCenter, KeyboardSensor, PointerSensor,
+  useSensor, useSensors, type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  arrayMove, SortableContext, sortableKeyboardCoordinates,
+  useSortable, verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import {
+  Plus, Trash2, GripVertical, FileText, Copy,
   Rocket, Maximize2, Video, LayoutGrid, GitBranch, Building2,
   Grid, Quote, TrendingUp, DollarSign, Megaphone, HelpCircle, Zap,
-  ChevronRight, Edit3, LayoutTemplate,
+  ChevronRight, Edit3, LayoutTemplate, Check, Loader2,
 } from 'lucide-react'
 import { BlockPicker } from './block-picker'
+import { BlockEditor } from './block-editor'
 import { getBlockByType, type BlockCatalogItem } from '@/lib/block-catalog'
 import type { PageDefinition, BlockInstance } from '@/lib/types'
 
@@ -30,17 +40,178 @@ function BlockIcon({ name, className }: { name: string; className?: string }) {
   return <Icon className={className} />
 }
 
+// ── Sortable Block Row ──
+
+interface SortableBlockProps {
+  block: BlockInstance
+  index: number
+  isEditing: boolean
+  onToggleEdit: () => void
+  onDuplicate: () => void
+  onDelete: () => void
+  onUpdateProp: (key: string, value: unknown) => void
+}
+
+function SortableBlock({
+  block, index, isEditing, onToggleEdit, onDuplicate, onDelete, onUpdateProp,
+}: SortableBlockProps) {
+  const {
+    attributes, listeners, setNodeRef, transform, transition, isDragging,
+  } = useSortable({ id: `block-${index}` })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  const catalog = getBlockByType(block.blockType)
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      {/* Block row */}
+      <div
+        className={`flex items-center gap-2 rounded-lg border px-3 py-2 transition-all ${
+          isEditing
+            ? 'border-accent/40 bg-accent-muted/10'
+            : isDragging
+            ? 'border-accent/20 bg-bg-elevated shadow-lg'
+            : 'border-border/50 bg-bg/50 hover:border-border'
+        }`}
+      >
+        <button
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing text-text-muted/30 hover:text-text-muted/60 flex-shrink-0 touch-none"
+          title="Drag to reorder"
+        >
+          <GripVertical className="h-3.5 w-3.5" />
+        </button>
+
+        <div className="flex h-7 w-7 items-center justify-center rounded bg-bg-elevated flex-shrink-0">
+          <BlockIcon
+            name={catalog?.icon || 'Grid'}
+            className="h-3.5 w-3.5 text-text-muted"
+          />
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="text-[11px] font-medium text-text-secondary truncate">
+            {catalog?.label || block.blockType}
+          </div>
+          {typeof block.props.title === 'string' && block.props.title && (
+            <div className="text-[9px] text-text-muted/60 truncate">
+              {block.props.title}
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-0.5 flex-shrink-0">
+          <button
+            onClick={onToggleEdit}
+            className={`flex h-6 w-6 items-center justify-center rounded transition-colors ${
+              isEditing
+                ? 'text-accent bg-accent/10'
+                : 'text-text-muted/40 hover:text-text-secondary hover:bg-bg-hover'
+            }`}
+            title="Edit props"
+          >
+            <Edit3 className="h-3 w-3" />
+          </button>
+          <button
+            onClick={onDuplicate}
+            className="flex h-6 w-6 items-center justify-center rounded text-text-muted/40 hover:text-accent hover:bg-accent-muted/20 transition-colors"
+            title="Duplicate block"
+          >
+            <Copy className="h-3 w-3" />
+          </button>
+          <button
+            onClick={onDelete}
+            className="flex h-6 w-6 items-center justify-center rounded text-text-muted/40 hover:text-error hover:bg-error/10 transition-colors"
+            title="Delete block"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
+        </div>
+      </div>
+
+      {/* Inline props editor */}
+      {isEditing && (
+        <div className="ml-6 mt-1 rounded-lg border border-border/50 bg-bg-surface/30 p-3">
+          <BlockEditor props={block.props} onUpdateProp={onUpdateProp} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Main PageEditor ──
+
 interface PageEditorProps {
   pages: PageDefinition[]
   onUpdatePages: (pages: PageDefinition[]) => void
+  slug?: string | null
 }
 
-export function PageEditor({ pages, onUpdatePages }: PageEditorProps) {
+export function PageEditor({ pages, onUpdatePages, slug }: PageEditorProps) {
   const [selectedPageIndex, setSelectedPageIndex] = useState(0)
   const [showPicker, setShowPicker] = useState(false)
   const [editingBlock, setEditingBlock] = useState<number | null>(null)
+  const [renamingPage, setRenamingPage] = useState<number | null>(null)
+  const [renameValue, setRenameValue] = useState('')
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
+  const lastSavedRef = useRef<string>('')
 
   const selectedPage = pages[selectedPageIndex] || null
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
+
+  // ── Auto-save ──
+
+  useEffect(() => {
+    if (!slug || pages.length === 0) return
+
+    const serialized = JSON.stringify(pages)
+    if (serialized === lastSavedRef.current) return
+
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+
+    autoSaveTimer.current = setTimeout(async () => {
+      abortRef.current?.abort()
+      const controller = new AbortController()
+      abortRef.current = controller
+
+      setAutoSaveStatus('saving')
+      try {
+        const res = await fetch('/api/pages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug, pages }),
+          signal: controller.signal,
+        })
+        if (res.ok) {
+          lastSavedRef.current = serialized
+          setAutoSaveStatus('saved')
+          setTimeout(() => setAutoSaveStatus('idle'), 2000)
+        } else {
+          setAutoSaveStatus('idle')
+        }
+      } catch (e) {
+        if ((e as Error).name !== 'AbortError') {
+          setAutoSaveStatus('idle')
+        }
+      }
+    }, 1500)
+
+    return () => {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+    }
+  }, [pages, slug])
 
   // ── Page operations ──
 
@@ -58,6 +229,27 @@ export function PageEditor({ pages, onUpdatePages }: PageEditorProps) {
     onUpdatePages(updated)
     setSelectedPageIndex(Math.min(selectedPageIndex, updated.length - 1))
   }, [pages, onUpdatePages, selectedPageIndex])
+
+  const handleStartRename = useCallback((index: number) => {
+    setRenamingPage(index)
+    setRenameValue(pages[index].pageName)
+  }, [pages])
+
+  const handleFinishRename = useCallback(() => {
+    if (renamingPage === null || !renameValue.trim()) {
+      setRenamingPage(null)
+      return
+    }
+    const updated = [...pages]
+    const newRoute = `/${renameValue.trim().toLowerCase().replace(/\s+/g, '-')}`
+    updated[renamingPage] = {
+      ...updated[renamingPage],
+      pageName: renameValue.trim(),
+      route: newRoute,
+    }
+    onUpdatePages(updated)
+    setRenamingPage(null)
+  }, [pages, onUpdatePages, renamingPage, renameValue])
 
   // ── Block operations ──
 
@@ -77,16 +269,38 @@ export function PageEditor({ pages, onUpdatePages }: PageEditorProps) {
     setShowPicker(false)
   }, [pages, selectedPage, selectedPageIndex, onUpdatePages])
 
-  const handleMoveBlock = useCallback((blockIndex: number, direction: 'up' | 'down') => {
-    if (!selectedPage) return
-    const newIndex = direction === 'up' ? blockIndex - 1 : blockIndex + 1
-    if (newIndex < 0 || newIndex >= selectedPage.blocks.length) return
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || !selectedPage || active.id === over.id) return
 
+    const oldIndex = Number(String(active.id).replace('block-', ''))
+    const newIndex = Number(String(over.id).replace('block-', ''))
+
+    const blocks = arrayMove([...selectedPage.blocks], oldIndex, newIndex)
+    blocks.forEach((b, i) => { b.order = i })
+
+    const updated = [...pages]
+    updated[selectedPageIndex] = { ...selectedPage, blocks }
+    onUpdatePages(updated)
+
+    // Update editing index if needed
+    if (editingBlock === oldIndex) setEditingBlock(newIndex)
+    else if (editingBlock !== null) {
+      if (oldIndex < editingBlock && newIndex >= editingBlock) setEditingBlock(editingBlock - 1)
+      else if (oldIndex > editingBlock && newIndex <= editingBlock) setEditingBlock(editingBlock + 1)
+    }
+  }, [pages, selectedPage, selectedPageIndex, onUpdatePages, editingBlock])
+
+  const handleDuplicateBlock = useCallback((blockIndex: number) => {
+    if (!selectedPage) return
+    const original = selectedPage.blocks[blockIndex]
+    const clone: BlockInstance = {
+      blockType: original.blockType,
+      props: JSON.parse(JSON.stringify(original.props)),
+      order: blockIndex + 1,
+    }
     const blocks = [...selectedPage.blocks]
-    const temp = blocks[blockIndex]
-    blocks[blockIndex] = blocks[newIndex]
-    blocks[newIndex] = temp
-    // Update order
+    blocks.splice(blockIndex + 1, 0, clone)
     blocks.forEach((b, i) => { b.order = i })
 
     const updated = [...pages]
@@ -137,6 +351,8 @@ export function PageEditor({ pages, onUpdatePages }: PageEditorProps) {
     )
   }
 
+  const blockIds = selectedPage?.blocks.map((_, i) => `block-${i}`) || []
+
   return (
     <div className="flex h-full">
       {/* Left — Page list */}
@@ -145,21 +361,29 @@ export function PageEditor({ pages, onUpdatePages }: PageEditorProps) {
           <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-text-muted">
             Pages
           </span>
-          <button
-            onClick={handleAddPage}
-            className="flex h-5 w-5 items-center justify-center rounded text-text-muted/50 hover:text-accent hover:bg-accent-muted/20 transition-colors"
-            title="Add page"
-          >
-            <Plus className="h-3 w-3" />
-          </button>
+          <div className="flex items-center gap-1">
+            {autoSaveStatus === 'saving' && (
+              <Loader2 className="h-3 w-3 text-text-muted/40 animate-spin" />
+            )}
+            {autoSaveStatus === 'saved' && (
+              <Check className="h-3 w-3 text-success/60" />
+            )}
+            <button
+              onClick={handleAddPage}
+              className="flex h-5 w-5 items-center justify-center rounded text-text-muted/50 hover:text-accent hover:bg-accent-muted/20 transition-colors"
+              title="Add page"
+            >
+              <Plus className="h-3 w-3" />
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto py-1">
           {pages.map((page, i) => (
-            <button
+            <div
               key={i}
               onClick={() => { setSelectedPageIndex(i); setShowPicker(false); setEditingBlock(null) }}
-              className={`flex w-full items-center gap-2 px-3 py-1.5 text-left transition-colors ${
+              className={`flex w-full items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors ${
                 i === selectedPageIndex
                   ? 'bg-accent-muted/20 text-accent'
                   : 'text-text-muted hover:text-text-secondary hover:bg-bg-hover/50'
@@ -167,7 +391,29 @@ export function PageEditor({ pages, onUpdatePages }: PageEditorProps) {
             >
               <FileText className="h-3 w-3 flex-shrink-0" />
               <div className="min-w-0 flex-1">
-                <div className="text-[11px] font-medium truncate">{page.pageName}</div>
+                {renamingPage === i ? (
+                  <input
+                    type="text"
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onBlur={handleFinishRename}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleFinishRename()
+                      if (e.key === 'Escape') setRenamingPage(null)
+                    }}
+                    className="w-full bg-transparent border-b border-accent text-[11px] font-medium focus:outline-none"
+                    autoFocus
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                ) : (
+                  <div
+                    className="text-[11px] font-medium truncate"
+                    onDoubleClick={(e) => { e.stopPropagation(); handleStartRename(i) }}
+                    title="Double-click to rename"
+                  >
+                    {page.pageName}
+                  </div>
+                )}
                 <div className="text-[9px] text-text-muted/60 font-mono truncate">{page.route}</div>
               </div>
               {pages.length > 1 && i === selectedPageIndex && (
@@ -178,7 +424,7 @@ export function PageEditor({ pages, onUpdatePages }: PageEditorProps) {
                   <Trash2 className="h-3 w-3" />
                 </button>
               )}
-            </button>
+            </div>
           ))}
         </div>
       </div>
@@ -229,156 +475,37 @@ export function PageEditor({ pages, onUpdatePages }: PageEditorProps) {
                     </div>
                   </div>
                 ) : (
-                  <div className="p-3 space-y-1.5">
-                    {selectedPage.blocks.map((block, i) => {
-                      const catalog = getBlockByType(block.blockType)
-                      const isEditing = editingBlock === i
-
-                      return (
-                        <div key={i}>
-                          {/* Block row */}
-                          <div
-                            className={`flex items-center gap-2 rounded-lg border px-3 py-2 transition-all ${
-                              isEditing
-                                ? 'border-accent/40 bg-accent-muted/10'
-                                : 'border-border/50 bg-bg/50 hover:border-border'
-                            }`}
-                          >
-                            <GripVertical className="h-3.5 w-3.5 text-text-muted/30 flex-shrink-0" />
-
-                            <div className="flex h-7 w-7 items-center justify-center rounded bg-bg-elevated flex-shrink-0">
-                              <BlockIcon
-                                name={catalog?.icon || 'Grid'}
-                                className="h-3.5 w-3.5 text-text-muted"
-                              />
-                            </div>
-
-                            <div className="flex-1 min-w-0">
-                              <div className="text-[11px] font-medium text-text-secondary truncate">
-                                {catalog?.label || block.blockType}
-                              </div>
-                              {typeof block.props.title === 'string' && block.props.title && (
-                                <div className="text-[9px] text-text-muted/60 truncate">
-                                  {block.props.title}
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="flex items-center gap-0.5 flex-shrink-0">
-                              <button
-                                onClick={() => setEditingBlock(isEditing ? null : i)}
-                                className={`flex h-6 w-6 items-center justify-center rounded transition-colors ${
-                                  isEditing
-                                    ? 'text-accent bg-accent/10'
-                                    : 'text-text-muted/40 hover:text-text-secondary hover:bg-bg-hover'
-                                }`}
-                                title="Edit props"
-                              >
-                                <Edit3 className="h-3 w-3" />
-                              </button>
-                              <button
-                                onClick={() => handleMoveBlock(i, 'up')}
-                                disabled={i === 0}
-                                className="flex h-6 w-6 items-center justify-center rounded text-text-muted/40 hover:text-text-secondary hover:bg-bg-hover disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
-                                title="Move up"
-                              >
-                                <ChevronUp className="h-3 w-3" />
-                              </button>
-                              <button
-                                onClick={() => handleMoveBlock(i, 'down')}
-                                disabled={i === selectedPage.blocks.length - 1}
-                                className="flex h-6 w-6 items-center justify-center rounded text-text-muted/40 hover:text-text-secondary hover:bg-bg-hover disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
-                                title="Move down"
-                              >
-                                <ChevronDown className="h-3 w-3" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteBlock(i)}
-                                className="flex h-6 w-6 items-center justify-center rounded text-text-muted/40 hover:text-error hover:bg-error/10 transition-colors"
-                                title="Delete block"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Inline props editor */}
-                          {isEditing && (
-                            <div className="ml-6 mt-1 rounded-lg border border-border/50 bg-bg-surface/30 p-3">
-                              <div className="space-y-2">
-                                {Object.entries(block.props).map(([key, value]) => {
-                                  // Skip complex objects/arrays for now — show as JSON
-                                  if (typeof value === 'object' && value !== null) {
-                                    return (
-                                      <div key={key}>
-                                        <label className="block text-[9px] font-medium text-text-muted uppercase tracking-wider mb-0.5">
-                                          {key}
-                                        </label>
-                                        <textarea
-                                          value={JSON.stringify(value, null, 2)}
-                                          onChange={(e) => {
-                                            try {
-                                              handleUpdateBlockProp(i, key, JSON.parse(e.target.value))
-                                            } catch {
-                                              // Invalid JSON, don't update
-                                            }
-                                          }}
-                                          rows={3}
-                                          className="w-full rounded border border-border bg-bg px-2 py-1 text-[10px] font-mono text-text-secondary focus:outline-none focus:border-accent/50 resize-y"
-                                        />
-                                      </div>
-                                    )
-                                  }
-
-                                  if (typeof value === 'boolean') {
-                                    return (
-                                      <div key={key} className="flex items-center gap-2">
-                                        <label className="text-[9px] font-medium text-text-muted uppercase tracking-wider flex-1">
-                                          {key}
-                                        </label>
-                                        <button
-                                          onClick={() => handleUpdateBlockProp(i, key, !value)}
-                                          className={`relative h-4 w-7 rounded-full transition-colors ${
-                                            value ? 'bg-accent' : 'bg-border'
-                                          }`}
-                                        >
-                                          <span
-                                            className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform ${
-                                              value ? 'left-3.5' : 'left-0.5'
-                                            }`}
-                                          />
-                                        </button>
-                                      </div>
-                                    )
-                                  }
-
-                                  return (
-                                    <div key={key}>
-                                      <label className="block text-[9px] font-medium text-text-muted uppercase tracking-wider mb-0.5">
-                                        {key}
-                                      </label>
-                                      <input
-                                        type="text"
-                                        value={String(value ?? '')}
-                                        onChange={(e) => handleUpdateBlockProp(i, key, e.target.value)}
-                                        className="w-full rounded border border-border bg-bg px-2 py-1 text-[10px] text-text-secondary focus:outline-none focus:border-accent/50"
-                                      />
-                                    </div>
-                                  )
-                                })}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <SortableContext
+                      items={blockIds}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <div className="p-3 space-y-1.5">
+                        {selectedPage.blocks.map((block, i) => (
+                          <SortableBlock
+                            key={`block-${i}`}
+                            block={block}
+                            index={i}
+                            isEditing={editingBlock === i}
+                            onToggleEdit={() => setEditingBlock(editingBlock === i ? null : i)}
+                            onDuplicate={() => handleDuplicateBlock(i)}
+                            onDelete={() => handleDeleteBlock(i)}
+                            onUpdateProp={(key, value) => handleUpdateBlockProp(i, key, value)}
+                          />
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
                 )}
               </div>
 
               {/* Right — Block picker panel (slide-in) */}
               {showPicker && (
-                <div className="w-56 flex-shrink-0 border-l border-border">
+                <div className="w-64 flex-shrink-0 border-l border-border">
                   <BlockPicker
                     onAddBlock={handleAddBlock}
                     onClose={() => setShowPicker(false)}

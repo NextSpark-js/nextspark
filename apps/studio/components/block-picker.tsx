@@ -2,16 +2,16 @@
  * Block Picker Panel
  *
  * Visual panel for browsing and adding blocks to a page.
- * Shows blocks organized by category with icons and descriptions.
+ * Shows blocks organized by category with search and descriptions.
  */
 
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import {
   Rocket, FileText, Maximize2, Video, LayoutGrid, GitBranch,
   Building2, Grid, Quote, TrendingUp, DollarSign, Megaphone,
-  HelpCircle, Zap, X,
+  HelpCircle, Zap, X, Search,
 } from 'lucide-react'
 import { BLOCK_CATALOG, BLOCK_CATEGORIES, type BlockCategory, type BlockCatalogItem } from '@/lib/block-catalog'
 
@@ -33,10 +33,24 @@ interface BlockPickerProps {
 
 export function BlockPicker({ onAddBlock, onClose }: BlockPickerProps) {
   const [activeCategory, setActiveCategory] = useState<BlockCategory | 'all'>('all')
+  const [search, setSearch] = useState('')
 
-  const filteredBlocks = activeCategory === 'all'
-    ? BLOCK_CATALOG
-    : BLOCK_CATALOG.filter(b => b.category === activeCategory)
+  const filteredBlocks = useMemo(() => {
+    let blocks = activeCategory === 'all'
+      ? BLOCK_CATALOG
+      : BLOCK_CATALOG.filter(b => b.category === activeCategory)
+
+    if (search.trim()) {
+      const q = search.toLowerCase().trim()
+      blocks = blocks.filter(b =>
+        b.label.toLowerCase().includes(q) ||
+        b.description.toLowerCase().includes(q) ||
+        b.type.toLowerCase().includes(q)
+      )
+    }
+
+    return blocks
+  }, [activeCategory, search])
 
   const handleAdd = useCallback((block: BlockCatalogItem) => {
     onAddBlock(block)
@@ -55,6 +69,20 @@ export function BlockPicker({ onAddBlock, onClose }: BlockPickerProps) {
         >
           <X className="h-3.5 w-3.5" />
         </button>
+      </div>
+
+      {/* Search */}
+      <div className="px-2 py-1.5 border-b border-border">
+        <div className="relative">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-text-muted/40" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search blocks..."
+            className="w-full rounded-md border border-border bg-bg pl-7 pr-2 py-1 text-[10px] text-text-secondary placeholder:text-text-muted/40 focus:border-accent/50 focus:outline-none transition-colors"
+          />
+        </div>
       </div>
 
       {/* Category tabs */}
@@ -84,24 +112,33 @@ export function BlockPicker({ onAddBlock, onClose }: BlockPickerProps) {
         ))}
       </div>
 
-      {/* Block grid */}
+      {/* Block list */}
       <div className="flex-1 overflow-y-auto p-2">
-        <div className="grid grid-cols-2 gap-1.5">
-          {filteredBlocks.map(block => (
-            <button
-              key={block.type}
-              onClick={() => handleAdd(block)}
-              className="flex flex-col items-center gap-1.5 rounded-lg border border-border/50 bg-bg/50 p-3 text-center hover:border-accent/30 hover:bg-accent-muted/20 transition-all group"
-            >
-              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-bg-elevated text-text-muted group-hover:text-accent transition-colors">
-                <BlockIcon name={block.icon} className="h-4 w-4" />
-              </div>
-              <span className="text-[10px] font-medium text-text-secondary leading-tight">
-                {block.label}
-              </span>
-            </button>
-          ))}
-        </div>
+        {filteredBlocks.length === 0 ? (
+          <p className="text-center text-[10px] text-text-muted/50 py-4">No blocks match</p>
+        ) : (
+          <div className="space-y-1.5">
+            {filteredBlocks.map(block => (
+              <button
+                key={block.type}
+                onClick={() => handleAdd(block)}
+                className="flex w-full items-center gap-2.5 rounded-lg border border-border/50 bg-bg/50 px-3 py-2.5 text-left hover:border-accent/30 hover:bg-accent-muted/20 transition-all group"
+              >
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-bg-elevated text-text-muted group-hover:text-accent transition-colors">
+                  <BlockIcon name={block.icon} className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10px] font-medium text-text-secondary group-hover:text-text-primary transition-colors">
+                    {block.label}
+                  </div>
+                  <div className="text-[9px] text-text-muted/50 truncate leading-relaxed">
+                    {block.description}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Zap, ArrowRight, FolderOpen, Loader2 } from 'lucide-react'
+import { TemplateGallery } from '@/components/template-gallery'
 
 function generateId(): string {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID()
@@ -12,13 +13,6 @@ function generateId(): string {
     return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16)
   })
 }
-
-const EXAMPLES = [
-  'A CRM for my gym with clients, memberships and payments',
-  'Blog for my photography portfolio',
-  'Project management tool for my remote team',
-  'SaaS para gestionar reservas de un restaurante',
-]
 
 interface SessionSummary {
   id: string
@@ -68,7 +62,7 @@ export default function HomePage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-4">
-      <div className="w-full max-w-xl space-y-8">
+      <div className="w-full max-w-3xl space-y-8">
         {/* Logo with gradient glow */}
         <div className="text-center space-y-3">
           <div className="flex items-center justify-center gap-2">
@@ -115,24 +109,11 @@ export default function HomePage() {
           </p>
         </div>
 
-        {/* Examples */}
-        <div className="space-y-3">
-          <p className="text-[11px] text-text-muted text-center uppercase tracking-wider font-medium">
-            Try an example
-          </p>
-          <div className="flex flex-wrap justify-center gap-2">
-            {EXAMPLES.map((example) => (
-              <button
-                key={example}
-                onClick={() => handleSubmit(example)}
-                disabled={submitting}
-                className="rounded-lg border border-border bg-bg-surface px-3 py-1.5 text-xs text-text-secondary transition-all hover:border-border-strong hover:text-text-primary hover:scale-[1.03] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {example}
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* Template Gallery */}
+        <TemplateGallery
+          onSelectTemplate={(prompt) => handleSubmit(prompt)}
+          disabled={submitting}
+        />
 
         {/* Recent projects */}
         {recentSessions.length > 0 && (

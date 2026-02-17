@@ -20,6 +20,8 @@ export type {
   WizardConfig,
   EntityDefinition,
   EntityFieldDefinition,
+  EntityFieldType,
+  EntityAccessMode,
   StudioAnalysis,
   PageDefinition,
   BlockInstance,
