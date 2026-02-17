@@ -19,6 +19,9 @@ const COOKIE_NAME = 'gh_token'
 /** Public-facing origin — avoids Docker container hostname in redirects */
 const PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:4000'
 
+/** Only set secure cookie if the public URL is HTTPS (not bare HTTP like dev/staging VPS) */
+const USE_SECURE_COOKIE = PUBLIC_ORIGIN.startsWith('https://')
+
 function publicUrl(path: string): URL {
   return new URL(path, PUBLIC_ORIGIN)
 }
@@ -42,7 +45,7 @@ export async function GET(request: NextRequest) {
     const cookieStore = await cookies()
     cookieStore.set(COOKIE_NAME, encrypted, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: USE_SECURE_COOKIE,
       sameSite: 'lax',
       path: '/',
       maxAge: 60 * 60 * 24 * 30, // 30 days
