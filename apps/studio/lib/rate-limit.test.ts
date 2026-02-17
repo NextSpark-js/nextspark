@@ -1,4 +1,4 @@
-import { checkRateLimit, _clearForTesting } from './rate-limit'
+import { checkRateLimit, _clearForTesting, rateLimitResponse, AI_RATE_LIMITS } from './rate-limit'
 
 beforeEach(() => {
   _clearForTesting()
@@ -70,5 +70,33 @@ describe('checkRateLimit', () => {
     const rBob = checkRateLimit('bob', WINDOWS)
     expect(rBob.allowed).toBe(true)
     expect(rBob.remaining).toBe(2)
+  })
+})
+
+describe('rateLimitResponse', () => {
+  it('returns 429 with Retry-After header', () => {
+    const futureReset = Date.now() + 30_000 // 30 seconds from now
+    const response = rateLimitResponse(futureReset)
+    expect(response.status).toBe(429)
+    const retryAfter = Number(response.headers.get('Retry-After'))
+    expect(retryAfter).toBeGreaterThanOrEqual(1)
+    expect(retryAfter).toBeLessThanOrEqual(31) // ~30 seconds, with 1s tolerance
+  })
+
+  it('sets Retry-After to at least 1 even with past resetAt', () => {
+    const pastReset = Date.now() - 5000 // 5 seconds ago
+    const response = rateLimitResponse(pastReset)
+    expect(response.status).toBe(429)
+    expect(response.headers.get('Retry-After')).toBe('1')
+  })
+})
+
+describe('AI_RATE_LIMITS', () => {
+  it('defines 2 windows: hourly and daily', () => {
+    expect(AI_RATE_LIMITS).toHaveLength(2)
+    expect(AI_RATE_LIMITS[0].limit).toBe(10)
+    expect(AI_RATE_LIMITS[0].windowMs).toBe(60 * 60 * 1000)
+    expect(AI_RATE_LIMITS[1].limit).toBe(50)
+    expect(AI_RATE_LIMITS[1].windowMs).toBe(24 * 60 * 60 * 1000)
   })
 })
