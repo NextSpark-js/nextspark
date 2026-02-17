@@ -16,10 +16,11 @@ import type { PageDefinition, BlockInstance } from '../types'
 
 function escapeJsx(text: unknown): string {
   if (typeof text !== 'string') return String(text ?? '')
+  // Only escape characters that break JSX: curly braces (interpreted as expressions)
+  // and angle brackets (interpreted as tags). Dollar signs, backticks, etc. are fine in JSX text.
   return text
-    .replace(/\\/g, '\\\\')
-    .replace(/`/g, '\\`')
-    .replace(/\$/g, '\\$')
+    .replace(/\{/g, '&#123;')
+    .replace(/\}/g, '&#125;')
 }
 
 function e(text: unknown): string {
