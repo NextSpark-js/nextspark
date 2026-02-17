@@ -9,7 +9,12 @@
 	# session cookies persist in the iframe (no third-party cookie issues).
 	@preview path_regexp preview ^/p/(\d+)(.*)$
 	handle @preview {
-		reverse_proxy studio:{re.preview.1}
+		reverse_proxy studio:{re.preview.1} {
+			transport http {
+				dial_timeout 120s
+				response_header_timeout 120s
+			}
+		}
 	}
 
 	reverse_proxy studio:4000
