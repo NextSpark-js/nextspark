@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { ExternalLink, Globe, Play, RotateCw, Database, Zap, Check, MousePointer2 } from 'lucide-react'
-import type { StudioPhase, GenerationStep } from '@/lib/types'
+import type { StudioPhase, GenerationStep, PreviewError } from '@/lib/types'
 import type { StudioResult } from '@nextsparkjs/studio'
 import { GenerationProgress } from './generation-progress'
+import { ErrorPanel } from './error-panel'
 
 type Viewport = 'desktop' | 'tablet' | 'mobile'
 
@@ -24,6 +25,9 @@ interface PreviewFrameProps {
   selectMode?: boolean
   onToggleSelectMode?: () => void
   iframeRef?: React.RefObject<HTMLIFrameElement | null>
+  errors?: PreviewError[]
+  onFixError?: (error: PreviewError) => void
+  onFixAll?: () => void
 }
 
 const VIEWPORT_WIDTHS: Record<Viewport, string> = {
@@ -84,9 +88,24 @@ export function PreviewFrame({
   selectMode,
   onToggleSelectMode,
   iframeRef: externalIframeRef,
+  errors,
+  onFixError,
+  onFixAll,
 }: PreviewFrameProps) {
   const autoReloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [reloadState, setReloadState] = useState<'idle' | 'waiting' | 'reloading' | 'done'>('idle')
+  const [errorsDismissed, setErrorsDismissed] = useState(false)
+
+  // Reset dismissed state when errors change (new errors appeared)
+  const errorCount = errors?.length ?? 0
+  const prevErrorCountRef = useRef(errorCount)
+  if (errorCount > 0 && errorCount !== prevErrorCountRef.current) {
+    prevErrorCountRef.current = errorCount
+    if (errorsDismissed) setErrorsDismissed(false)
+  }
+  if (errorCount === 0) {
+    prevErrorCountRef.current = 0
+  }
 
   function handleReload() {
     if (autoReloadTimerRef.current) {
@@ -211,6 +230,16 @@ export function PreviewFrame({
             </a>
           </div>
         </div>
+
+        {/* Error panel — between chrome bar and iframe */}
+        {errors && errors.length > 0 && !errorsDismissed && onFixError && onFixAll && (
+          <ErrorPanel
+            errors={errors}
+            onFixError={onFixError}
+            onFixAll={onFixAll}
+            onDismiss={() => setErrorsDismissed(true)}
+          />
+        )}
 
         {/* Iframe container — responsive viewport */}
         <div className="flex-1 flex items-start justify-center overflow-auto">

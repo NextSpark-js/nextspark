@@ -11,7 +11,7 @@ import { toast } from 'sonner'
 import { ErrorBoundary } from '@/components/error-boundary'
 import { useStudioChat } from '@/lib/use-studio-chat'
 import { useGitHub, type PushResult } from '@/lib/use-github'
-import type { StudioResult } from '@/lib/types'
+import type { StudioResult, PreviewError } from '@/lib/types'
 import { ChatMessages } from '@/components/chat-messages'
 import { PromptInput } from '@/components/prompt-input'
 import { ConfigPreview } from '@/components/config-preview'
@@ -24,6 +24,7 @@ import { DeployModal } from '@/components/deploy-modal'
 import { GitHubPushModal } from '@/components/github-push-modal'
 import { PageEditor } from '@/components/page-editor'
 import { useBlockSelector } from '@/hooks/use-block-selector'
+import { usePreviewErrors } from '@/hooks/use-preview-errors'
 import { useKeyboardShortcuts, type Shortcut } from '@/hooks/use-keyboard-shortcuts'
 import { ShortcutsHelp } from '@/components/shortcuts-help'
 import { useOnboardingTour, type TourStep } from '@/hooks/use-onboarding-tour'
@@ -176,6 +177,29 @@ function BuildContent() {
   }, [pages])
 
   useBlockSelector(iframeRef as RefObject<HTMLIFrameElement | null>, selectMode, handleBlockSelected)
+
+  // Preview error detection — poll every 3s when preview is active
+  const previewErrors = usePreviewErrors(project.previewUrl ? project.slug : null)
+
+  const handleFixError = useCallback((error: PreviewError) => {
+    const prompt = error.file
+      ? `Fix this error in ${error.file}${error.line ? `:${error.line}` : ''}:\n\n${error.message}\n\nFull error output:\n\`\`\`\n${error.fullOutput}\n\`\`\``
+      : `Fix this compilation error:\n\n${error.message}\n\nFull error output:\n\`\`\`\n${error.fullOutput}\n\`\`\``
+
+    if (!chatOpen) setChatOpen(true)
+    sendChatMessage(prompt)
+  }, [sendChatMessage, chatOpen])
+
+  const handleFixAll = useCallback(() => {
+    const errorSummary = previewErrors.map(e =>
+      `- ${e.file || 'Unknown'}${e.line ? `:${e.line}` : ''}: ${e.message}`
+    ).join('\n')
+
+    const prompt = `Fix these ${previewErrors.length} compilation errors:\n\n${errorSummary}\n\nFull output:\n\`\`\`\n${previewErrors.map(e => e.fullOutput).join('\n---\n')}\n\`\`\``
+
+    if (!chatOpen) setChatOpen(true)
+    sendChatMessage(prompt)
+  }, [previewErrors, sendChatMessage, chatOpen])
 
   // Keyboard shortcuts — submit prompt ref for Cmd+Enter
   const promptSubmitRef = useRef<(() => void) | null>(null)
@@ -476,6 +500,11 @@ function BuildContent() {
                   >
                     <Icon className="h-3.5 w-3.5" />
                     {tab.label}
+                    {tab.id === 'preview' && previewErrors.length > 0 && (
+                      <span className="ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 text-[9px] text-white font-bold px-1">
+                        {previewErrors.length}
+                      </span>
+                    )}
                     {tab.id === 'pages' && pages.length > 0 && (
                       <span className="ml-0.5 text-[9px] text-accent font-normal">
                         {pages.length}
@@ -541,6 +570,9 @@ function BuildContent() {
                 selectMode={selectMode}
                 onToggleSelectMode={() => setSelectMode(prev => !prev)}
                 iframeRef={iframeRef}
+                errors={previewErrors}
+                onFixError={handleFixError}
+                onFixAll={handleFixAll}
               />
             )}
 

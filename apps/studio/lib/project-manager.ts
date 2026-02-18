@@ -20,6 +20,95 @@ const PROJECTS_ROOT = path.resolve(process.cwd(), '../../studio-projects')
 // Track running dev servers
 const runningServers = new Map<string, { process: ChildProcess; port: number }>()
 
+// Track preview errors per project (parsed from stderr)
+export interface PreviewError {
+  id: string
+  message: string
+  file?: string
+  line?: number
+  column?: number
+  fullOutput: string
+  timestamp: number
+}
+
+const previewErrors = new Map<string, PreviewError[]>()
+const stderrBuffers = new Map<string, string>()
+
+/** Get current preview errors for a project */
+export function getPreviewErrors(slug: string): PreviewError[] {
+  return previewErrors.get(slug) || []
+}
+
+/** Parse Next.js error output into structured errors */
+function parseNextErrors(output: string): PreviewError[] {
+  const errors: PreviewError[] = []
+  const seen = new Set<string>()
+
+  // Split output by common error markers
+  // Patterns: "⨯ ./path", "Error:", "Type error:", "Module not found:", "SyntaxError:"
+  const errorBlocks = output.split(/(?=⨯\s|(?:^|\n)(?:Type error|Module not found|SyntaxError|Error):)/m)
+
+  for (const block of errorBlocks) {
+    const trimmed = block.trim()
+    if (!trimmed) continue
+
+    // Skip non-error output (warnings, info messages)
+    if (!/⨯|error|Error|Module not found|SyntaxError/i.test(trimmed)) continue
+    // Skip Next.js "wait" / "event" / info lines
+    if (/^(\s*○\s|wait\s|event\s|info\s)/i.test(trimmed)) continue
+
+    let file: string | undefined
+    let line: number | undefined
+    let column: number | undefined
+    let message = trimmed
+
+    // Extract file path and position: ./path/to/file.tsx:LINE:COL
+    const fileMatch = trimmed.match(/\.\/([^\s:]+(?:\.tsx?|\.jsx?|\.css|\.mjs|\.json)):?(\d+)?:?(\d+)?/)
+    if (fileMatch) {
+      file = fileMatch[1]
+      if (fileMatch[2]) line = parseInt(fileMatch[2], 10)
+      if (fileMatch[3]) column = parseInt(fileMatch[3], 10)
+    }
+
+    // Extract message from common patterns
+    const typeErrMatch = trimmed.match(/Type error:\s*(.+?)(?:\n|$)/)
+    const moduleMatch = trimmed.match(/Module not found:\s*(.+?)(?:\n|$)/)
+    const syntaxMatch = trimmed.match(/SyntaxError:\s*(.+?)(?:\n|$)/)
+    const genericMatch = trimmed.match(/Error:\s*(.+?)(?:\n|$)/)
+
+    if (typeErrMatch) {
+      message = `Type error: ${typeErrMatch[1]}`
+    } else if (moduleMatch) {
+      message = `Module not found: ${moduleMatch[1]}`
+    } else if (syntaxMatch) {
+      message = `SyntaxError: ${syntaxMatch[1]}`
+    } else if (genericMatch && !typeErrMatch && !moduleMatch) {
+      message = genericMatch[1]
+    } else {
+      // Use first non-empty line as message
+      const firstLine = trimmed.split('\n').find(l => l.trim())
+      if (firstLine) message = firstLine.replace(/^⨯\s*/, '').trim()
+    }
+
+    // Deduplicate by file+message
+    const dedupKey = `${file || ''}:${message}`
+    if (seen.has(dedupKey)) continue
+    seen.add(dedupKey)
+
+    errors.push({
+      id: `err-${Date.now()}-${errors.length}`,
+      message,
+      file,
+      line,
+      column,
+      fullOutput: trimmed.slice(0, 2000), // Truncate long output
+      timestamp: Date.now(),
+    })
+  }
+
+  return errors
+}
+
 // Track current project slug
 let currentProject: string | null = null
 
@@ -607,6 +696,27 @@ export function startPreview(slug: string, preferredPort?: number): Promise<numb
 
     runningServers.set(slug, { process: child, port })
 
+    // Initialize stderr buffer for error accumulation
+    stderrBuffers.set(slug, '')
+
+    // Capture stderr for error detection
+    child.stderr?.on('data', (data: Buffer) => {
+      const text = data.toString()
+      const current = stderrBuffers.get(slug) || ''
+      const updated = current + text
+
+      // Process buffer when we detect error boundaries (blank line, new compilation, or buffer is large)
+      if (updated.includes('\n\n') || updated.length > 4000) {
+        const errors = parseNextErrors(updated)
+        if (errors.length > 0) {
+          previewErrors.set(slug, errors)
+        }
+        stderrBuffers.set(slug, '')
+      } else {
+        stderrBuffers.set(slug, updated)
+      }
+    })
+
     // Wait for "Ready" message
     let resolved = false
     const timeout = setTimeout(() => {
@@ -619,6 +729,13 @@ export function startPreview(slug: string, preferredPort?: number): Promise<numb
 
     child.stdout?.on('data', (data: Buffer) => {
       const text = data.toString()
+
+      // Clear errors on successful compilation
+      if (text.includes('Compiled') || text.includes('compiled')) {
+        previewErrors.delete(slug)
+        stderrBuffers.set(slug, '')
+      }
+
       if (!resolved && (text.includes('Ready') || text.includes('localhost'))) {
         resolved = true
         clearTimeout(timeout)
@@ -637,6 +754,8 @@ export function startPreview(slug: string, preferredPort?: number): Promise<numb
 
     child.on('close', () => {
       runningServers.delete(slug)
+      previewErrors.delete(slug)
+      stderrBuffers.delete(slug)
     })
   })
 }
@@ -650,6 +769,8 @@ export function stopPreview(slug: string) {
     server.process.kill()
     runningServers.delete(slug)
   }
+  previewErrors.delete(slug)
+  stderrBuffers.delete(slug)
 }
 
 export interface FileNode {

@@ -14,6 +14,16 @@ export interface ChatMessage {
   timestamp: number
 }
 
+export interface PreviewError {
+  id: string
+  message: string
+  file?: string
+  line?: number
+  column?: number
+  fullOutput: string
+  timestamp: number
+}
+
 export type StudioPhase = 'idle' | 'analyzing' | 'generating' | 'setting_up_db' | 'ready' | 'error'
 
 export interface GenerationStep {
