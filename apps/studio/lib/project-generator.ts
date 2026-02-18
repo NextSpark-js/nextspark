@@ -11,7 +11,7 @@
 import { existsSync } from 'fs'
 import { readdir, readFile, writeFile, mkdir, cp, rm, stat } from 'fs/promises'
 import path from 'path'
-import type { WizardConfig } from '@nextsparkjs/studio'
+import type { WizardConfig, EntityDefinition, EntityFieldDefinition } from '@nextsparkjs/studio'
 
 // ============================================================
 // Available locales (mirrors CLI's AVAILABLE_LOCALES)
@@ -115,7 +115,8 @@ export async function generateProjectDirect(
     projectsRoot: string
     templatesDir: string
   },
-  onProgress: (step: string, detail?: string) => void
+  onProgress: (step: string, detail?: string) => void,
+  entities?: EntityDefinition[]
 ): Promise<void> {
   const projectPath = path.join(options.projectsRoot, slug)
   const templatesDir = options.templatesDir
@@ -135,6 +136,12 @@ export async function generateProjectDirect(
 
   // ── Step 1.1: Write not-found page ─────────────────────────
   await writeNotFoundPage(projectPath, config)
+
+  // ── Step 1.2: Write mock preview pages ─────────────────────
+  onProgress('Generating mock preview pages...')
+  await writeMockBanner(projectPath)
+  await writeMockAuthPages(projectPath, config)
+  await writeMockDashboard(projectPath, config, entities)
 
   // ── Step 2: Update globals.css theme import ──────────────────
   onProgress('Configuring theme imports...')
@@ -261,7 +268,7 @@ export default function NotFound() {
           This page is part of the full ${appName} application and is not available in preview mode.
         </p>
         <p className="mt-2 text-sm text-muted-foreground/60">
-          Pages like sign-up, login, and dashboard will work once the app is deployed.
+          Try the mock <a href="/auth/sign-up" className="text-primary hover:underline">sign up</a> or <a href="/dashboard" className="text-primary hover:underline">dashboard</a> to see a preview of the app experience.
         </p>
         <Link
           href="/"
@@ -1029,6 +1036,540 @@ async function copyEnvExampleToEnv(projectPath: string): Promise<void> {
     const content = await readFile(envExamplePath, 'utf-8')
     await writeFile(envPath, content, 'utf-8')
   }
+}
+
+// ============================================================
+// Mock Preview Pages (Auth + Dashboard)
+// ============================================================
+
+const FAKE_NAMES = [
+  'Acme Corp', 'Globex Inc', 'Initech LLC', 'Umbrella Co', 'Wayne Enterprises',
+  'Stark Industries', 'Oscorp', 'Cyberdyne Systems',
+]
+const FAKE_FIRST_NAMES = ['Alice', 'Bob', 'Carol', 'David', 'Eva', 'Frank', 'Grace', 'Henry']
+const FAKE_LAST_NAMES = ['Johnson', 'Smith', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis']
+const FAKE_DOMAINS = ['acme.com', 'globex.io', 'initech.co', 'umbrella.org', 'wayne.dev', 'stark.ai', 'oscorp.net', 'cyberdyne.tech']
+
+function generateMockValue(field: EntityFieldDefinition, rowIndex: number): string {
+  const first = FAKE_FIRST_NAMES[rowIndex % FAKE_FIRST_NAMES.length]
+  const last = FAKE_LAST_NAMES[rowIndex % FAKE_LAST_NAMES.length]
+  switch (field.type) {
+    case 'text':
+    case 'textarea':
+    case 'richtext':
+    case 'markdown':
+      if (field.name.toLowerCase().includes('name')) return `${first} ${last}`
+      if (field.name.toLowerCase().includes('title')) return `${FAKE_NAMES[rowIndex % FAKE_NAMES.length]} Project`
+      if (field.name.toLowerCase().includes('company')) return FAKE_NAMES[rowIndex % FAKE_NAMES.length]
+      return `Sample ${field.name} ${rowIndex + 1}`
+    case 'email':
+      return `${first.toLowerCase()}.${last.toLowerCase()}@${FAKE_DOMAINS[rowIndex % FAKE_DOMAINS.length]}`
+    case 'number':
+      return String((rowIndex + 1) * 42)
+    case 'currency':
+      return `$${((rowIndex + 1) * 199.99).toFixed(2)}`
+    case 'date':
+    case 'datetime':
+      return `2025-${String((rowIndex % 12) + 1).padStart(2, '0')}-${String((rowIndex % 28) + 1).padStart(2, '0')}`
+    case 'boolean':
+      return rowIndex % 2 === 0 ? 'Yes' : 'No'
+    case 'select':
+      return field.options?.[rowIndex % (field.options?.length || 1)]?.label || 'Active'
+    case 'multiselect':
+    case 'tags':
+      return field.options?.slice(0, 2).map(o => o.label).join(', ') || 'Tag A, Tag B'
+    case 'relation':
+      return `${field.relation?.entity || 'Item'} #${rowIndex + 1}`
+    case 'url':
+      return `https://example.com/${rowIndex + 1}`
+    case 'phone':
+      return `+1 555-${String(1000 + rowIndex).slice(-4)}`
+    case 'rating':
+      return String((rowIndex % 5) + 1)
+    case 'image':
+    case 'file':
+      return `file-${rowIndex + 1}.png`
+    case 'country':
+      return ['US', 'UK', 'DE', 'FR', 'JP', 'BR', 'AU', 'CA'][rowIndex % 8]
+    case 'address':
+      return `${100 + rowIndex} Main St`
+    case 'json':
+      return '{...}'
+    default:
+      return `Sample ${rowIndex + 1}`
+  }
+}
+
+function generateMockEntityData(
+  entities: EntityDefinition[]
+): string {
+  const entries: string[] = []
+
+  for (const entity of entities) {
+    const visibleFields = entity.fields.filter(f => f.type !== 'json')
+    const fieldNames = visibleFields.map(f => `'${f.name}'`).join(', ')
+    const fieldTypes: string[] = []
+    for (const f of visibleFields) {
+      fieldTypes.push(`${f.name}: '${f.type}'`)
+    }
+
+    const rows: string[] = []
+    const rowCount = Math.min(6, Math.max(4, entity.fields.length + 2))
+    for (let i = 0; i < rowCount; i++) {
+      const rowFields: string[] = [`id: ${i + 1}`]
+      for (const f of visibleFields) {
+        const val = generateMockValue(f, i)
+        rowFields.push(`${f.name}: '${val.replace(/'/g, "\\'")}'`)
+      }
+      rows.push(`      { ${rowFields.join(', ')} }`)
+    }
+
+    entries.push(`  '${entity.slug}': {
+    name: '${entity.names.plural}',
+    singular: '${entity.names.singular}',
+    description: '${entity.description.replace(/'/g, "\\'")}',
+    fields: [${fieldNames}],
+    fieldTypes: { ${fieldTypes.join(', ')} },
+    count: ${Math.floor(Math.random() * 150) + 10},
+    data: [
+${rows.join(',\n')}
+    ]
+  }`)
+  }
+
+  return `{\n${entries.join(',\n')}\n}`
+}
+
+async function writeMockBanner(projectPath: string): Promise<void> {
+  const bannerPath = path.join(projectPath, 'components', 'mock-banner.tsx')
+  await ensureDir(path.dirname(bannerPath))
+
+  const content = `'use client'
+
+import { useState, useEffect } from 'react'
+
+export function MockBanner() {
+  const [dismissed, setDismissed] = useState(true)
+
+  useEffect(() => {
+    setDismissed(sessionStorage.getItem('ns-banner-dismissed') === 'true')
+  }, [])
+
+  if (dismissed) return null
+
+  return (
+    <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center gap-3 bg-amber-500 px-4 py-2 text-sm font-medium text-amber-950">
+      <span>Preview Mode — Data shown is simulated</span>
+      <button
+        onClick={() => {
+          sessionStorage.setItem('ns-banner-dismissed', 'true')
+          setDismissed(true)
+        }}
+        className="ml-2 rounded-md px-1.5 py-0.5 hover:bg-amber-600/30 transition-colors"
+        aria-label="Dismiss banner"
+      >
+        ✕
+      </button>
+    </div>
+  )
+}
+`
+  await writeFile(bannerPath, content, 'utf-8')
+}
+
+async function writeMockAuthPages(
+  projectPath: string,
+  config: WizardConfig
+): Promise<void> {
+  const appName = config.projectName || 'App'
+
+  // ── Sign Up ──
+  const signUpPath = path.join(projectPath, 'app', 'auth', 'sign-up', 'page.tsx')
+  await ensureDir(path.dirname(signUpPath))
+  const signUpContent = `'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { MockBanner } from '@/components/mock-banner'
+
+export default function SignUp() {
+  const router = useRouter()
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    localStorage.setItem('ns-mock-user', JSON.stringify({ name: name || 'Demo User', email: email || 'demo@example.com', loggedIn: true }))
+    router.push('/dashboard')
+  }
+
+  return (
+    <>
+      <MockBanner />
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="w-full max-w-sm space-y-6">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">${appName}</h1>
+            <p className="mt-2 text-sm text-muted-foreground">Create your account</p>
+          </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-foreground mb-1.5">Name</label>
+              <input
+                id="name" type="text" value={name} onChange={e => setName(e.target.value)}
+                placeholder="Your name"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1.5">Email</label>
+              <input
+                id="email" type="email" value={email} onChange={e => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1.5">Password</label>
+              <input
+                id="password" type="password" value={password} onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
+            >
+              Create Account
+            </button>
+          </form>
+          <p className="text-center text-sm text-muted-foreground">
+            Already have an account?{' '}
+            <Link href="/auth/sign-in" className="font-medium text-primary hover:underline">Sign in</Link>
+          </p>
+        </div>
+      </div>
+    </>
+  )
+}
+`
+  await writeFile(signUpPath, signUpContent, 'utf-8')
+
+  // ── Sign In ──
+  const signInPath = path.join(projectPath, 'app', 'auth', 'sign-in', 'page.tsx')
+  await ensureDir(path.dirname(signInPath))
+  const signInContent = `'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { MockBanner } from '@/components/mock-banner'
+
+export default function SignIn() {
+  const router = useRouter()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    localStorage.setItem('ns-mock-user', JSON.stringify({ name: 'Demo User', email: email || 'demo@example.com', loggedIn: true }))
+    router.push('/dashboard')
+  }
+
+  return (
+    <>
+      <MockBanner />
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="w-full max-w-sm space-y-6">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">${appName}</h1>
+            <p className="mt-2 text-sm text-muted-foreground">Welcome back</p>
+          </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1.5">Email</label>
+              <input
+                id="email" type="email" value={email} onChange={e => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1.5">Password</label>
+              <input
+                id="password" type="password" value={password} onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
+            >
+              Sign In
+            </button>
+          </form>
+          <p className="text-center text-sm text-muted-foreground">
+            Don&apos;t have an account?{' '}
+            <Link href="/auth/sign-up" className="font-medium text-primary hover:underline">Sign up</Link>
+          </p>
+        </div>
+      </div>
+    </>
+  )
+}
+`
+  await writeFile(signInPath, signInContent, 'utf-8')
+}
+
+async function writeMockDashboard(
+  projectPath: string,
+  config: WizardConfig,
+  entities?: EntityDefinition[]
+): Promise<void> {
+  const appName = config.projectName || 'App'
+  const entityList = entities || []
+  const mockEntitiesConst = entityList.length > 0
+    ? generateMockEntityData(entityList)
+    : '{}'
+
+  // Generate sidebar links from entities
+  const sidebarLinks = entityList.map(e =>
+    `          <Link href={\`/dashboard/\${entitySlug === '${e.slug}' ? '' : '${e.slug}'}\`} className={\`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors \${entitySlug === '${e.slug}' ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}\`}>
+            <span className="truncate">${e.names.plural}</span>
+            <span className="ml-auto text-xs opacity-60">{MOCK_ENTITIES['${e.slug}']?.count ?? 0}</span>
+          </Link>`
+  ).join('\n')
+
+  // ── Dashboard Layout ──
+  const layoutPath = path.join(projectPath, 'app', 'dashboard', 'layout.tsx')
+  await ensureDir(path.dirname(layoutPath))
+  const layoutContent = `'use client'
+
+import { useEffect, useState } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
+import Link from 'next/link'
+import { MockBanner } from '@/components/mock-banner'
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+const MOCK_ENTITIES: Record<string, any> = ${mockEntitiesConst}
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const [user, setUser] = useState<{ name: string; email: string } | null>(null)
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    const stored = localStorage.getItem('ns-mock-user')
+    if (stored) {
+      try { setUser(JSON.parse(stored)) } catch { /* ignore */ }
+    }
+    setReady(true)
+  }, [])
+
+  useEffect(() => {
+    if (ready && !user) router.push('/auth/sign-in')
+  }, [ready, user, router])
+
+  if (!ready || !user) return null
+
+  const entitySlug = pathname.split('/dashboard/')?.[1]?.split('/')?.[0] || ''
+
+  function handleLogout() {
+    localStorage.removeItem('ns-mock-user')
+    router.push('/')
+  }
+
+  return (
+    <>
+      <MockBanner />
+      <div className="flex min-h-screen bg-background">
+        {/* Sidebar */}
+        <aside className="sticky top-0 flex h-screen w-60 flex-col border-r border-border bg-card">
+          <div className="flex items-center gap-2 border-b border-border px-4 py-4">
+            <span className="text-sm font-bold text-foreground truncate">${appName}</span>
+          </div>
+          <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-3">
+            <Link href="/dashboard" className={\`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors \${!entitySlug ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}\`}>
+              <span>Overview</span>
+            </Link>
+${sidebarLinks}
+          </nav>
+          <div className="border-t border-border px-2 py-3">
+            <div className="mb-2 px-3 text-xs text-muted-foreground truncate">{user.email}</div>
+            <button
+              onClick={handleLogout}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            >
+              Logout
+            </button>
+          </div>
+        </aside>
+
+        {/* Main */}
+        <main className="flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-5xl p-6">
+            {children}
+          </div>
+        </main>
+      </div>
+    </>
+  )
+}
+`
+  await writeFile(layoutPath, layoutContent, 'utf-8')
+
+  // ── Dashboard Overview ──
+  const overviewPath = path.join(projectPath, 'app', 'dashboard', 'page.tsx')
+  const entityCards = entityList.map(e =>
+    `        <div key="${e.slug}" className="rounded-xl border border-border bg-card p-5">
+          <div className="text-sm font-medium text-muted-foreground">${e.names.plural}</div>
+          <div className="mt-1 text-3xl font-bold text-foreground">{MOCK_ENTITIES['${e.slug}']?.count ?? 0}</div>
+          <Link href="/dashboard/${e.slug}" className="mt-3 inline-block text-xs font-medium text-primary hover:underline">View all →</Link>
+        </div>`
+  ).join('\n')
+
+  const recentActivity = entityList.slice(0, 4).map((e, i) =>
+    `        <div className="flex items-center justify-between py-3 ${i < Math.min(3, entityList.length - 1) ? 'border-b border-border' : ''}">
+          <div>
+            <span className="text-sm font-medium text-foreground">${e.names.singular} updated</span>
+            <span className="ml-2 text-xs text-muted-foreground">${FAKE_NAMES[i % FAKE_NAMES.length]}</span>
+          </div>
+          <span className="text-xs text-muted-foreground">${i + 1}h ago</span>
+        </div>`
+  ).join('\n')
+
+  const overviewContent = `'use client'
+
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+const MOCK_ENTITIES: Record<string, any> = ${mockEntitiesConst}
+
+export default function DashboardOverview() {
+  const [userName, setUserName] = useState('User')
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('ns-mock-user')
+      if (stored) {
+        const user = JSON.parse(stored)
+        setUserName(user.name || 'User')
+      }
+    } catch { /* ignore */ }
+  }, [])
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Welcome back, {userName}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Here&apos;s what&apos;s happening in your ${appName} workspace.</p>
+      </div>
+
+      ${entityList.length > 0 ? `{/* Stats */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-${Math.min(entityList.length, 4)}">
+${entityCards}
+      </div>` : `<div className="rounded-xl border border-dashed border-border bg-card/50 p-8 text-center">
+        <p className="text-muted-foreground">No entities configured yet</p>
+        <p className="mt-1 text-sm text-muted-foreground/60">Define entities in the Studio to see them here.</p>
+      </div>`}
+
+      ${entityList.length > 0 ? `{/* Recent Activity */}
+      <div className="rounded-xl border border-border bg-card p-5">
+        <h2 className="mb-3 text-sm font-semibold text-foreground">Recent Activity</h2>
+${recentActivity}
+      </div>` : ''}
+    </div>
+  )
+}
+`
+  await writeFile(overviewPath, overviewContent, 'utf-8')
+
+  // ── Dynamic Entity Page ──
+  const entityPagePath = path.join(projectPath, 'app', 'dashboard', '[entity]', 'page.tsx')
+  await ensureDir(path.dirname(entityPagePath))
+  const entityPageContent = `'use client'
+
+import { use } from 'react'
+import Link from 'next/link'
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+const MOCK_ENTITIES: Record<string, any> = ${mockEntitiesConst}
+
+export default function EntityPage({ params }: { params: Promise<{ entity: string }> }) {
+  const { entity: slug } = use(params)
+  const entityDef = MOCK_ENTITIES[slug]
+
+  if (!entityDef) {
+    return (
+      <div className="py-12 text-center">
+        <h1 className="text-2xl font-bold text-foreground">Entity not found</h1>
+        <p className="mt-2 text-muted-foreground">The entity &quot;{slug}&quot; is not defined.</p>
+        <Link href="/dashboard" className="mt-4 inline-block text-sm font-medium text-primary hover:underline">
+          ← Back to Dashboard
+        </Link>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">{entityDef.name}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{entityDef.description}</p>
+        </div>
+        <button className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors">
+          + New {entityDef.singular}
+        </button>
+      </div>
+
+      {entityDef.fields.length > 0 ? (
+        <div className="overflow-hidden rounded-xl border border-border">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50">
+              <tr>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">#</th>
+                {entityDef.fields.map((field: string) => (
+                  <th key={field} className="px-4 py-3 text-left font-medium text-muted-foreground capitalize">
+                    {field.replace(/([A-Z])/g, ' $1').trim()}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {entityDef.data.map((row: any) => (
+                <tr key={row.id} className="hover:bg-muted/30 transition-colors">
+                  <td className="px-4 py-3 text-muted-foreground">{row.id}</td>
+                  {entityDef.fields.map((field: string) => (
+                    <td key={field} className="px-4 py-3 text-foreground">
+                      {String(row[field] ?? '-')}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-dashed border-border bg-card/50 p-8 text-center">
+          <p className="text-muted-foreground">No fields defined for this entity.</p>
+        </div>
+      )}
+
+      <div className="text-xs text-muted-foreground/60">
+        Showing {entityDef.data.length} of {entityDef.count} {entityDef.name.toLowerCase()} (simulated data)
+      </div>
+    </div>
+  )
+}
+`
+  await writeFile(entityPagePath, entityPageContent, 'utf-8')
 }
 
 async function updateReadme(

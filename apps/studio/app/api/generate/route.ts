@@ -171,7 +171,7 @@ export async function POST(request: Request) {
         // Step 1: Generate project files directly from templates
         await generateProject(slug, wc, (line: string) => {
           send({ type: 'generate_log', content: line })
-        })
+        }, studioResult?.entities)
 
         // Step 2: Install dependencies
         send({ type: 'generate_log', content: '[studio] Installing dependencies...' })

@@ -11,7 +11,7 @@ import path from 'path'
 import { existsSync, readFileSync } from 'fs'
 import { randomBytes } from 'crypto'
 import pg from 'pg'
-import type { WizardConfig } from '@nextsparkjs/studio'
+import type { WizardConfig, EntityDefinition } from '@nextsparkjs/studio'
 import { generateProjectDirect, resolveTemplatesDir } from './project-generator'
 
 // All generated projects live here
@@ -46,7 +46,8 @@ export function setCurrentProject(slug: string) {
 export async function generateProject(
   slug: string,
   wizardConfig: WizardConfig,
-  onData: (line: string) => void
+  onData: (line: string) => void,
+  entities?: EntityDefinition[]
 ): Promise<void> {
   const templatesDir = resolveTemplatesDir()
 
@@ -58,7 +59,7 @@ export async function generateProject(
     templatesDir,
   }, (step, detail) => {
     onData(`[studio] ${step}${detail ? ': ' + detail : ''}`)
-  })
+  }, entities)
 
   setCurrentProject(slug)
 }
