@@ -5,7 +5,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { ChevronDown, Github, Download, ExternalLink, LogOut, Server, RefreshCw } from 'lucide-react'
+import { ChevronDown, Github, Download, ExternalLink, LogOut, Server, RefreshCw, Triangle, Train } from 'lucide-react'
 import type { GitHubUser, PushResult } from '@/lib/use-github'
 
 interface DeployMenuProps {
@@ -20,6 +20,8 @@ interface DeployMenuProps {
   onConnect: () => void
   onDisconnect: () => void
   onDeployVPS?: () => void
+  onDeployVercel?: () => void
+  onDeployRailway?: () => void
 }
 
 export function DeployMenu({
@@ -34,6 +36,8 @@ export function DeployMenu({
   onConnect,
   onDisconnect,
   onDeployVPS,
+  onDeployVercel,
+  onDeployRailway,
 }: DeployMenuProps) {
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -93,6 +97,35 @@ export function DeployMenu({
               </button>
               <div className="border-t border-border" />
             </>
+          )}
+
+          {/* Cloud deploy (Vercel / Railway) */}
+          {onDeployVercel && (
+            <button
+              onClick={() => handleAction(onDeployVercel)}
+              className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-xs text-text-secondary hover:bg-bg-hover transition-colors"
+            >
+              <Triangle className="h-4 w-4" />
+              <div>
+                <div className="font-medium">Deploy to Vercel</div>
+                <div className="text-[10px] text-text-muted">Import from GitHub repo</div>
+              </div>
+            </button>
+          )}
+          {onDeployRailway && (
+            <button
+              onClick={() => handleAction(onDeployRailway)}
+              className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-xs text-text-secondary hover:bg-bg-hover transition-colors"
+            >
+              <Train className="h-4 w-4" />
+              <div>
+                <div className="font-medium">Deploy to Railway</div>
+                <div className="text-[10px] text-text-muted">Import from GitHub repo</div>
+              </div>
+            </button>
+          )}
+          {(onDeployVercel || onDeployRailway) && (
+            <div className="border-t border-border" />
           )}
 
           {/* GitHub section */}

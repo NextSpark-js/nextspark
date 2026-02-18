@@ -246,6 +246,29 @@ function BuildContent() {
     setShowDeployModal(true)
   }, [])
 
+  const handleDeployVercel = useCallback(() => {
+    if (!github.lastRepo) {
+      toast.error('Push to GitHub first to deploy to Vercel')
+      return
+    }
+    const repo = github.lastRepo.fullName
+    const envKeys = 'DATABASE_URL,BETTER_AUTH_SECRET,BETTER_AUTH_URL,NEXT_PUBLIC_APP_URL'
+    const url = `https://vercel.com/new/import?s=https://github.com/${repo}&project-name=${project.slug || 'my-app'}&env=${envKeys}`
+    window.open(url, '_blank')
+    toast.success('Opening Vercel import...')
+  }, [github.lastRepo, project.slug])
+
+  const handleDeployRailway = useCallback(() => {
+    if (!github.lastRepo) {
+      toast.error('Push to GitHub first to deploy to Railway')
+      return
+    }
+    const repo = github.lastRepo.fullName
+    const url = `https://railway.com/new/github/${repo}`
+    window.open(url, '_blank')
+    toast.success('Opening Railway import...')
+  }, [github.lastRepo])
+
   const tabs: { id: RightTab; label: string; icon: typeof Code2 }[] = [
     { id: 'preview', label: 'Preview', icon: Eye },
     { id: 'pages', label: 'Pages', icon: LayoutGrid },
@@ -349,6 +372,8 @@ function BuildContent() {
             onConnect={github.connect}
             onDisconnect={github.disconnect}
             onDeployVPS={handleDeployVPS}
+            onDeployVercel={handleDeployVercel}
+            onDeployRailway={handleDeployRailway}
           />
 
           <div className="h-4 w-px bg-border" />
