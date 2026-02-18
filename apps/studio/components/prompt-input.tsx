@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ArrowUp } from 'lucide-react'
 
 const CHAT_SUGGESTIONS = [
@@ -15,10 +15,29 @@ interface PromptInputProps {
   disabled?: boolean
   placeholder?: string
   showSuggestions?: boolean
+  /** When set, pre-fills the textarea and focuses it. Reset to '' after consuming. */
+  prefill?: string
+  onPrefillConsumed?: () => void
 }
 
-export function PromptInput({ onSubmit, disabled, placeholder, showSuggestions }: PromptInputProps) {
+export function PromptInput({ onSubmit, disabled, placeholder, showSuggestions, prefill, onPrefillConsumed }: PromptInputProps) {
   const [value, setValue] = useState('')
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    if (prefill) {
+      setValue(prefill)
+      onPrefillConsumed?.()
+      // Focus and place cursor at end
+      setTimeout(() => {
+        textareaRef.current?.focus()
+        if (textareaRef.current) {
+          textareaRef.current.selectionStart = prefill.length
+          textareaRef.current.selectionEnd = prefill.length
+        }
+      }, 50)
+    }
+  }, [prefill, onPrefillConsumed])
 
   function handleSubmit() {
     if (!value.trim() || disabled) return
@@ -50,6 +69,7 @@ export function PromptInput({ onSubmit, disabled, placeholder, showSuggestions }
 
       <div className="relative flex items-end rounded-lg border border-border bg-bg hover:border-border-strong focus-within:border-accent/40 transition-colors">
         <textarea
+          ref={textareaRef}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => {

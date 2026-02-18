@@ -52,6 +52,7 @@ function BuildContent() {
   const [errorExpanded, setErrorExpanded] = useState(false)
   const [selectMode, setSelectMode] = useState(false)
   const [externalSelection, setExternalSelection] = useState<{ pageIndex: number; blockIndex: number } | null>(null)
+  const [promptPrefill, setPromptPrefill] = useState('')
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const autoStartedRef = useRef(false)
   const sessionLoadedRef = useRef(false)
@@ -186,30 +187,30 @@ function BuildContent() {
     switch (zone) {
       case 'entity-nav':
       case 'entity-card':
-        prompt = `I want to modify the "${displayName}" entity. What changes can I make?`
+        prompt = `Modify the "${displayName}" entity: `
         break
       case 'entity-table':
-        prompt = `I want to modify the table view for "${displayName}". I'd like to change the columns, layout, or add features.`
+        prompt = `Modify the "${displayName}" table view: `
         break
       case 'create-button':
-        prompt = `I want to customize the create form for "${displayName}".`
+        prompt = `Customize the "${displayName}" create form: `
         break
       case 'sidebar':
-        prompt = `I want to modify the sidebar navigation layout.`
+        prompt = `Modify the sidebar navigation: `
         break
       case 'recent-activity':
-        prompt = `I want to modify the recent activity section on the dashboard.`
+        prompt = `Modify the recent activity section: `
         break
       case 'search-filter':
-        prompt = `I want to modify the search and filter functionality for "${displayName}".`
+        prompt = `Modify "${displayName}" search and filters: `
         break
       default:
-        prompt = `I want to modify this dashboard section: "${label}".`
+        prompt = `Modify this dashboard section: `
     }
 
     if (!chatOpen) setChatOpen(true)
-    sendChatMessage(prompt)
-  }, [sendChatMessage, chatOpen])
+    setPromptPrefill(prompt)
+  }, [chatOpen])
 
   useBlockSelector(iframeRef as RefObject<HTMLIFrameElement | null>, selectMode, handleBlockSelected, handleDashboardSelected)
 
@@ -510,6 +511,8 @@ function BuildContent() {
               disabled={isProcessing}
               placeholder={projectReady ? 'Modify your project...' : undefined}
               showSuggestions={projectReady && isComplete}
+              prefill={promptPrefill}
+              onPrefillConsumed={() => setPromptPrefill('')}
             />
           </div>
         </div>
