@@ -124,6 +124,8 @@ export function getInjectionScript(): string {
     var blockIndex = info.blocks.indexOf(block);
 
     if (info.mode === 'dashboard') {
+      /* Remove injected label before reading text content */
+      removeLabel();
       window.parent.postMessage({
         type: 'nextspark:dashboard-selected',
         zone: block.getAttribute('data-ns-zone'),

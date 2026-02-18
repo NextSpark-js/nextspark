@@ -179,17 +179,20 @@ function BuildContent() {
   const handleDashboardSelected = useCallback((zone: string, entitySlug: string | null, label: string) => {
     setSelectMode(false)
 
+    // Prefer entitySlug for entity-related zones, fallback to label
+    const displayName = entitySlug || label
+
     let prompt = ''
     switch (zone) {
       case 'entity-nav':
       case 'entity-card':
-        prompt = `I want to modify the "${label}" entity. What changes can I make?`
+        prompt = `I want to modify the "${displayName}" entity. What changes can I make?`
         break
       case 'entity-table':
-        prompt = `I want to modify the table view for "${label}". I'd like to change the columns, layout, or add features.`
+        prompt = `I want to modify the table view for "${displayName}". I'd like to change the columns, layout, or add features.`
         break
       case 'create-button':
-        prompt = `I want to customize the create form for "${label}".`
+        prompt = `I want to customize the create form for "${displayName}".`
         break
       case 'sidebar':
         prompt = `I want to modify the sidebar navigation layout.`
@@ -198,7 +201,7 @@ function BuildContent() {
         prompt = `I want to modify the recent activity section on the dashboard.`
         break
       case 'search-filter':
-        prompt = `I want to modify the search and filter functionality for "${label}".`
+        prompt = `I want to modify the search and filter functionality for "${displayName}".`
         break
       default:
         prompt = `I want to modify this dashboard section: "${label}".`
