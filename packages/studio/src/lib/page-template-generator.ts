@@ -28,6 +28,25 @@ function e(text: unknown): string {
 }
 
 /**
+ * Check if a URL is internal (starts with /).
+ */
+function isInternalLink(href: string): boolean {
+  return href.startsWith('/') && !href.startsWith('//')
+}
+
+/**
+ * Render a link tag — uses <Link> for internal routes (basePath-aware), <a> for external.
+ */
+function renderLink(href: string, className: string, content: string, indent: string): string {
+  const tag = isInternalLink(href) ? 'Link' : 'a'
+  return [
+    `${indent}<${tag} href="${e(href)}" className="${className}">`,
+    `${indent}  ${e(content)}`,
+    `${indent}</${tag}>`,
+  ].join('\n')
+}
+
+/**
  * Render a CTA button pair.
  */
 function renderCta(props: Record<string, unknown>, indent: string): string {
@@ -37,13 +56,19 @@ function renderCta(props: Record<string, unknown>, indent: string): string {
 
   if (cta?.text) {
     lines.push(`${indent}<div className="mt-10 flex flex-wrap gap-4 justify-center">`)
-    lines.push(`${indent}  <a href="${e(cta.link || '/auth/sign-up')}" className="rounded-lg bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors">`)
-    lines.push(`${indent}    ${e(cta.text)}`)
-    lines.push(`${indent}  </a>`)
+    lines.push(renderLink(
+      cta.link || '/auth/sign-up',
+      'rounded-lg bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors',
+      cta.text,
+      `${indent}  `,
+    ))
     if (secondary?.text) {
-      lines.push(`${indent}  <a href="${e(secondary.link || '#')}" className="rounded-lg border border-border px-8 py-3 text-sm font-semibold text-foreground hover:bg-accent transition-colors">`)
-      lines.push(`${indent}    ${e(secondary.text)}`)
-      lines.push(`${indent}  </a>`)
+      lines.push(renderLink(
+        secondary.link || '#',
+        'rounded-lg border border-border px-8 py-3 text-sm font-semibold text-foreground hover:bg-accent transition-colors',
+        secondary.text,
+        `${indent}  `,
+      ))
     }
     lines.push(`${indent}</div>`)
   }
@@ -210,9 +235,7 @@ ${plan.isPopular ? `              <span className="absolute -top-3 left-1/2 -tra
               <ul className="mt-8 space-y-3 flex-1">
 ${features.map(f => `                <li className="flex items-center gap-2 text-sm"><span className="text-primary">✓</span> ${e(f)}</li>`).join('\n')}
               </ul>
-              <a href="${e(plan.ctaUrl || '/auth/sign-up')}" className="mt-8 block rounded-lg ${plan.isPopular ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'border border-border hover:bg-accent'} px-6 py-3 text-center text-sm font-semibold transition-colors">
-                ${e(plan.ctaText || 'Get Started')}
-              </a>
+${(() => { const href = String(plan.ctaUrl || '/auth/sign-up'); const tag = isInternalLink(href) ? 'Link' : 'a'; return `              <${tag} href="${e(href)}" className="mt-8 block rounded-lg ${plan.isPopular ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'border border-border hover:bg-accent'} px-6 py-3 text-center text-sm font-semibold transition-colors">\n                ${e(plan.ctaText || 'Get Started')}\n              </${tag}>`; })()}
             </div>`}).join('\n')}
           </div>
         </div>
@@ -325,7 +348,10 @@ export function generatePageTemplate(page: PageDefinition): string {
     .map((block, i) => renderBlock(block, i))
     .join('\n\n')
 
-  return `export default function ${componentName}() {
+  // Check if any block uses internal links (requiring Link import)
+  const needsLink = blockSections.includes('<Link ')
+
+  return `${needsLink ? "import Link from 'next/link'\n\n" : ''}export default function ${componentName}() {
   return (
     <main className="flex min-h-screen flex-col">
 ${blockSections}
