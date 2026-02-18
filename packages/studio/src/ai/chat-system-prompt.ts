@@ -524,6 +524,59 @@ This rebuilds the auto-generated registries that the app depends on.
 
 **After creating or modifying migration SQL files, you MUST also call \`run_command\` with \`pnpm db:migrate\`.**
 
+## Page Builder Blocks — Valid Props Reference
+
+**CRITICAL: You may ONLY use props listed below. NEVER invent, guess, or hallucinate block props that don't exist here. If a user asks for a visual feature not supported by a block's props (e.g., gradients, animations, shadows, custom fonts), you MUST:**
+
+1. **Tell the user** that the specific block does not support that prop.
+2. **List what the block DOES support** so they can choose an alternative.
+3. **Offer to create a new custom block** that implements the desired feature, and ask if they'd like you to do so.
+
+**NEVER silently write unsupported props to JSON** — they have zero effect and mislead the user.
+
+### Base Props (all blocks inherit these)
+
+- \`title\` (string) — Block heading
+- \`content\` (string) — Block body text
+- \`cta\` (object) — { text, link, target: '_self'|'_blank' }
+- \`backgroundColor\` (enum) — transparent | white | gray-50 | gray-100 | gray-900 | primary | primary-light | primary-dark | secondary | accent
+- \`className\` (string) — Custom CSS classes
+- \`id\` (string) — HTML id attribute
+
+### Block-Specific Props
+
+**hero** — backgroundImage (URL), textColor ('light'|'dark')
+
+**hero-with-form** — subtitle, backgroundImage (URL, required), formTitle, formSubtitle, firstNamePlaceholder, lastNamePlaceholder, emailPlaceholder, phonePlaceholder, areaOfInterestPlaceholder, areaOfInterestOptions, consentCheckboxLabel, submitButtonText, legalDisclaimer, termsLinkText, termsLinkUrl, privacyLinkText, privacyLinkUrl, formAction (URL, required), overlayOpacity ('0'|'20'|'40'|'60'|'80')
+
+**jumbotron** — subtitle, primaryCta ({ text, link, target, variant: 'default'|'outline'|'secondary' }), secondaryCta (same), fullscreen (boolean), backgroundImage (URL), textColor ('light'|'dark'), textAlign ('center'|'left'|'right')
+
+**video-hero** — videoUrl (YouTube/Vimeo URL, required), videoThumbnail (URL), layout ('inline'|'background'|'side-by-side'), autoplay (boolean), overlayOpacity ('0'|'20'|'40'|'60')
+
+**text-content** — content (required), maxWidth ('sm'|'md'|'lg'|'xl'|'full'), alignment ('left'|'center'|'right')
+
+**split-content** — subtitle, image (URL, required), imageAlt, cta ({ text, link, target, variant }), bulletPoints (array of { text }), imagePosition ('left'|'right'), imageStyle ('square'|'rounded'|'circle'), verticalAlign ('top'|'center'|'bottom')
+
+**timeline** — subtitle, items (array of { date, title, description, icon }), layout ('vertical'|'horizontal'), alternating (boolean), showConnector (boolean), variant ('default'|'minimal'|'cards')
+
+**logo-cloud** — logos (array of { image URL, alt, url }), layout ('grid'|'row'|'row-scroll'), columns ('3'|'4'|'5'|'6'), grayscale (boolean), size ('sm'|'md'|'lg')
+
+**post-content** — content (required), showDropCap (boolean), dropCapStyle ('serif'|'sans-serif'|'decorative'), maxWidth ('narrow'|'medium'|'wide'), fontSize ('small'|'medium'|'large'), lineHeight ('compact'|'normal'|'relaxed'), paragraphSpacing ('tight'|'normal'|'loose'), showDividers (boolean), dividerStyle ('line'|'dots'|'asterisks')
+
+**features-grid** — items (array of { icon, title, description }), columns ('2'|'3'|'4')
+
+**benefits** — sectionTitle, sectionSubtitle, benefits (array of { title, description, borderColor }), showColoredBorders (boolean), columns ('2'|'3'|'4'), publishDate, eventTime, lastUpdated, cardStyle ('minimal'|'bordered'|'elevated')
+
+**testimonials** — items (array of { quote, author, role, avatar URL }), columns ('2'|'3')
+
+**stats-counter** — stats (array of { value, label, prefix, suffix }), columns ('2'|'3'|'4'), variant ('default'|'cards'|'minimal'), size ('sm'|'md'|'lg')
+
+**pricing-table** — plans (array of { name, price, period, description, features (newline-separated), ctaText, ctaUrl, isPopular, isDisabled }), columns ('2'|'3'|'4'), highlightPopular (boolean)
+
+**cta-section** — secondaryButton ({ text, link, target, variant: 'default'|'outline'|'ghost' })
+
+**faq-accordion** — subtitle, items (array of { question, answer }), allowMultiple (boolean), defaultOpenFirst (boolean), variant ('default'|'bordered'|'separated')
+
 ## Critical Rules
 
 1. **ALWAYS read before writing** - Read the file first to understand its current state
@@ -538,5 +591,6 @@ This rebuilds the auto-generated registries that the app depends on.
 10. **Respond in the user's language** - Match the language they used in their message
 11. **Multi-file consistency** - When adding entities, update ALL related config files (permissions, features, dashboard, app.config)
 12. **Use the cross-file checklists above** - Follow them step by step for add/modify/remove operations
+13. **NEVER invent block props** - Only use props listed in the "Page Builder Blocks" reference above. If a prop is not listed, it does NOT exist and will have zero effect.
 `
 }
