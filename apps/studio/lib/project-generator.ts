@@ -139,6 +139,7 @@ export async function generateProjectDirect(
 
   // ── Step 1.2: Write mock preview pages ─────────────────────
   onProgress('Generating mock preview pages...')
+  await writeMockSharedUtils(projectPath, entities)
   await writeMockBanner(projectPath)
   await writeMockAuthPages(projectPath, config)
   await writeMockDashboard(projectPath, config, entities)
@@ -1152,12 +1153,12 @@ function generateMockEntityData(
     }
 
     entries.push(`  '${entity.slug}': {
-    name: '${entity.names.plural}',
-    singular: '${entity.names.singular}',
-    description: '${entity.description.replace(/'/g, "\\'")}',
+    name: '${entity.names.plural.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}',
+    singular: '${entity.names.singular.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}',
+    description: '${entity.description.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}',
     fields: [${fieldNames}],
     fieldTypes: { ${fieldTypes.join(', ')} },
-    count: ${Math.floor(Math.random() * 150) + 10},
+    count: ${(entity.slug.charCodeAt(0) * 37 + entity.slug.length * 17) % 150 + 10},
     data: [
 ${rows.join(',\n')}
     ]
@@ -1165,6 +1166,32 @@ ${rows.join(',\n')}
   }
 
   return `{\n${entries.join(',\n')}\n}`
+}
+
+async function writeMockSharedUtils(
+  projectPath: string,
+  entities?: EntityDefinition[]
+): Promise<void> {
+  const entityList = entities || []
+  const mockEntitiesConst = entityList.length > 0
+    ? generateMockEntityData(entityList)
+    : '{}'
+
+  const utilsPath = path.join(projectPath, 'lib', 'mock-data.ts')
+  await ensureDir(path.dirname(utilsPath))
+
+  const content = `/* eslint-disable @typescript-eslint/no-explicit-any */
+
+/** Mock entity data for preview mode */
+export const MOCK_ENTITIES: Record<string, any> = ${mockEntitiesConst}
+
+/** Force full-page navigation — works reliably with basePath proxy */
+export function navTo(e: { preventDefault: () => void; currentTarget: { href: string } }) {
+  e.preventDefault()
+  window.location.href = e.currentTarget.href
+}
+`
+  await writeFile(utilsPath, content, 'utf-8')
 }
 
 async function writeMockBanner(projectPath: string): Promise<void> {
@@ -1219,11 +1246,7 @@ async function writeMockAuthPages(
 import { useState } from 'react'
 import Link from 'next/link'
 import { MockBanner } from '@/components/mock-banner'
-
-function navTo(e: React.MouseEvent<HTMLAnchorElement>) {
-  e.preventDefault()
-  window.location.href = e.currentTarget.href
-}
+import { navTo } from '@/lib/mock-data'
 
 export default function SignUp() {
   const [name, setName] = useState('')
@@ -1308,11 +1331,7 @@ export default function SignUp() {
 import { useState } from 'react'
 import Link from 'next/link'
 import { MockBanner } from '@/components/mock-banner'
-
-function navTo(e: React.MouseEvent<HTMLAnchorElement>) {
-  e.preventDefault()
-  window.location.href = e.currentTarget.href
-}
+import { navTo } from '@/lib/mock-data'
 
 export default function SignIn() {
   const [email, setEmail] = useState('')
@@ -1388,14 +1407,11 @@ async function writeMockDashboard(
 ): Promise<void> {
   const appName = config.projectName || 'App'
   const entityList = entities || []
-  const mockEntitiesConst = entityList.length > 0
-    ? generateMockEntityData(entityList)
-    : '{}'
 
   // SVG icons for sidebar (inline since we can't guarantee lucide-react in preview)
   const iconHome = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`
   const iconEntity = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`
-  const iconLogout = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1-2 2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>`
+  const iconLogout = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>`
 
   // Generate sidebar links from entities
   const sidebarLinks = entityList.map(e =>
@@ -1415,20 +1431,13 @@ import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { MockBanner } from '@/components/mock-banner'
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
-const MOCK_ENTITIES: Record<string, any> = ${mockEntitiesConst}
-
-/** Force full-page navigation — works reliably with basePath proxy */
-function navTo(e: React.MouseEvent<HTMLAnchorElement>) {
-  e.preventDefault()
-  window.location.href = e.currentTarget.href
-}
+import { MOCK_ENTITIES, navTo } from '@/lib/mock-data'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [user, setUser] = useState<{ name: string; email: string } | null>(null)
   const [ready, setReady] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     const stored = localStorage.getItem('ns-mock-user')
@@ -1460,14 +1469,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <>
       <MockBanner />
       <div className="flex min-h-screen bg-muted/30">
+        {/* Mobile hamburger */}
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="fixed top-3 left-3 z-[55] flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card shadow-sm md:hidden"
+          aria-label="Open menu"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+        </button>
+
+        {/* Mobile backdrop */}
+        {sidebarOpen && <div onClick={() => setSidebarOpen(false)} className="fixed inset-0 z-40 bg-black/50 md:hidden" />}
+
         {/* Sidebar */}
-        <aside className="sticky top-0 flex h-screen w-[240px] flex-col border-r border-border bg-card">
+        <aside className={\`fixed inset-y-0 left-0 z-50 flex h-screen w-[260px] flex-col border-r border-border bg-card transition-transform duration-200 ease-in-out md:sticky md:top-0 md:z-auto md:w-[240px] md:translate-x-0 \${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}\`}>
           {/* Logo */}
-          <div className="flex items-center gap-2.5 border-b border-border px-4 py-4">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-xs font-bold shadow-sm">
-              ${appName.charAt(0)}
+          <div className="flex items-center justify-between border-b border-border px-4 py-4">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-xs font-bold shadow-sm">
+                ${appName.charAt(0)}
+              </div>
+              <span className="text-sm font-semibold text-foreground truncate">${appName}</span>
             </div>
-            <span className="text-sm font-semibold text-foreground truncate">${appName}</span>
+            <button onClick={() => setSidebarOpen(false)} className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-muted md:hidden" aria-label="Close menu">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
           </div>
 
           {/* Navigation */}
@@ -1506,7 +1532,7 @@ ${sidebarLinks}
 
         {/* Main content */}
         <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-6xl p-8">
+          <div className="mx-auto max-w-6xl p-4 pt-14 md:p-8">
             {children}
           </div>
         </main>
@@ -1559,14 +1585,7 @@ ${sidebarLinks}
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
-const MOCK_ENTITIES: Record<string, any> = ${mockEntitiesConst}
-
-function navTo(e: React.MouseEvent<HTMLAnchorElement>) {
-  e.preventDefault()
-  window.location.href = e.currentTarget.href
-}
+import { MOCK_ENTITIES, navTo } from '@/lib/mock-data'
 
 export default function DashboardOverview() {
   const [userName, setUserName] = useState('User')
@@ -1617,10 +1636,9 @@ ${recentActivity}
 
 import { use } from 'react'
 import Link from 'next/link'
+import { MOCK_ENTITIES, navTo } from '@/lib/mock-data'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-const MOCK_ENTITIES: Record<string, any> = ${mockEntitiesConst}
-
 const STATUS_COLORS: Record<string, string> = {
   active: 'bg-emerald-500/10 text-emerald-700 border-emerald-200',
   open: 'bg-emerald-500/10 text-emerald-700 border-emerald-200',
@@ -1650,11 +1668,6 @@ function CellValue({ value, type }: { value: string; type: string }) {
   if (type === 'boolean') return <span>{value === 'Yes' ? '✓' : '—'}</span>
   if (type === 'rating') return <span className="tabular-nums">{'★'.repeat(Number(value) || 0)}{'☆'.repeat(5 - (Number(value) || 0))}</span>
   return <span>{value}</span>
-}
-
-function navTo(e: React.MouseEvent<HTMLAnchorElement>) {
-  e.preventDefault()
-  window.location.href = e.currentTarget.href
 }
 
 export default function EntityPage({ params }: { params: Promise<{ entity: string }> }) {
@@ -1705,7 +1718,7 @@ export default function EntityPage({ params }: { params: Promise<{ entity: strin
             disabled
           />
         </div>
-        <button className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-muted-foreground hover:bg-muted transition-colors" disabled>
+        <button className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-muted-foreground hover:bg-muted transition-colors" disabled aria-label="Filter">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
         </button>
       </div>
@@ -1749,11 +1762,11 @@ export default function EntityPage({ params }: { params: Promise<{ entity: strin
               Showing {entityDef.data.length} of {entityDef.count} {entityDef.name.toLowerCase()}
             </span>
             <div className="flex items-center gap-1">
-              <button className="rounded-md border border-border bg-card px-2.5 py-1 text-xs text-muted-foreground" disabled>Previous</button>
-              <button className="rounded-md bg-primary px-2.5 py-1 text-xs text-primary-foreground font-medium">1</button>
-              <button className="rounded-md border border-border bg-card px-2.5 py-1 text-xs text-muted-foreground">2</button>
-              <button className="rounded-md border border-border bg-card px-2.5 py-1 text-xs text-muted-foreground">3</button>
-              <button className="rounded-md border border-border bg-card px-2.5 py-1 text-xs text-muted-foreground" disabled>Next</button>
+              <span className="rounded-md border border-border bg-card px-2.5 py-1 text-xs text-muted-foreground/50">Previous</span>
+              <span className="rounded-md bg-primary px-2.5 py-1 text-xs text-primary-foreground font-medium">1</span>
+              <span className="rounded-md border border-border bg-card px-2.5 py-1 text-xs text-muted-foreground/50">2</span>
+              <span className="rounded-md border border-border bg-card px-2.5 py-1 text-xs text-muted-foreground/50">3</span>
+              <span className="rounded-md border border-border bg-card px-2.5 py-1 text-xs text-muted-foreground/50">Next</span>
             </div>
           </div>
         </div>
