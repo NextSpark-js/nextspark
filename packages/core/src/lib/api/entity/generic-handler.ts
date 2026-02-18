@@ -729,6 +729,19 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
         `
       }
 
+      // Parse sortBy/sortOrder and validate against entity fields to prevent SQL injection
+      const sortByParam = url.searchParams.get('sortBy')
+      const sortOrderParam = url.searchParams.get('sortOrder')?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC'
+      let orderByClause = 't."createdAt" DESC'
+      if (sortByParam) {
+        // Allow sorting by entity fields or common base fields
+        const baseFields = ['id', 'createdAt', 'updatedAt', 'teamId']
+        const isValidField = entityConfig.fields.some((f: EntityField) => f.name === sortByParam) || baseFields.includes(sortByParam)
+        if (isValidField) {
+          orderByClause = `t."${sortByParam}" ${sortOrderParam}`
+        }
+      }
+
       // Use COUNT(*) OVER() window function to get total count in single query
       // This eliminates a separate COUNT query, saving ~230ms per request
       query = `
@@ -736,7 +749,7 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
         FROM "${tableName}" t
         ${joinClause}
         ${whereClause}
-        ORDER BY t."createdAt" DESC
+        ORDER BY ${orderByClause}
         LIMIT $${paramIndex++} OFFSET $${paramIndex++}
       `
       queryParams.push(pagination.limit, pagination.offset)
