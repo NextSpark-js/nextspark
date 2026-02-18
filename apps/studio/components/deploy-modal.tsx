@@ -12,6 +12,7 @@ import {
   X, Loader2, CheckCircle2, AlertCircle, ExternalLink,
   Package, Server, Globe, Rocket, ChevronDown,
 } from 'lucide-react'
+import { toast } from 'sonner'
 
 type DeployStep = 'idle' | 'building' | 'starting' | 'routing' | 'done' | 'error'
 
@@ -83,14 +84,17 @@ export function DeployModal({ slug, onClose }: DeployModalProps) {
             if (step === 'error') {
               setError(message)
               setCurrentStep('error')
+              toast.error('Deploy failed')
             } else if (step === 'done') {
               setCurrentStep('done')
               try {
                 const data = JSON.parse(message)
                 setDeployUrl(data.url)
                 setDeployPort(data.port)
+                toast.success(`Deployed to ${data.url}`)
               } catch {
                 setDeployUrl(message)
+                toast.success('Deploy complete')
               }
             } else {
               setCurrentStep(step)

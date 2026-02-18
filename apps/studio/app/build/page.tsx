@@ -7,6 +7,7 @@ import {
   Code2, Eye, Settings2, Loader2, Zap, Monitor, Tablet, Smartphone,
   ChevronDown, LayoutGrid, FolderOpen,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { ErrorBoundary } from '@/components/error-boundary'
 import { useStudioChat } from '@/lib/use-studio-chat'
 import { useGitHub, type PushResult } from '@/lib/use-github'
@@ -23,6 +24,8 @@ import { DeployModal } from '@/components/deploy-modal'
 import { GitHubPushModal } from '@/components/github-push-modal'
 import { PageEditor } from '@/components/page-editor'
 import { useBlockSelector } from '@/hooks/use-block-selector'
+import { useKeyboardShortcuts, type Shortcut } from '@/hooks/use-keyboard-shortcuts'
+import { ShortcutsHelp } from '@/components/shortcuts-help'
 
 type RightTab = 'preview' | 'pages' | 'code' | 'config'
 type Viewport = 'desktop' | 'tablet' | 'mobile'
@@ -74,6 +77,10 @@ function BuildContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ result: updatedResult }),
       }).catch(() => {})
+      toast.success(`Pushed to GitHub: ${github.lastRepo.fullName}`)
+    }
+    if (github.pushStep === 'error' && github.pushError) {
+      toast.error(`GitHub push failed: ${github.pushError}`)
     }
   }, [github.pushStep]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -168,9 +175,52 @@ function BuildContent() {
 
   useBlockSelector(iframeRef as RefObject<HTMLIFrameElement | null>, selectMode, handleBlockSelected)
 
+  // Keyboard shortcuts — submit prompt ref for Cmd+Enter
+  const promptSubmitRef = useRef<(() => void) | null>(null)
+  promptSubmitRef.current = projectReady ? sendChatMessage.bind(null, '') : sendPrompt.bind(null, '')
+
+  const shortcuts = useMemo<Shortcut[]>(() => [
+    {
+      key: 'Enter',
+      modifiers: ['meta'],
+      label: 'Cmd+Enter',
+      description: 'Submit prompt',
+      action: () => {
+        // Focus the textarea and trigger form submission via Enter
+        const textarea = document.querySelector<HTMLTextAreaElement>('textarea')
+        if (textarea && textarea.value.trim()) {
+          const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })
+          textarea.dispatchEvent(event)
+        }
+      },
+    },
+    {
+      key: 'b',
+      modifiers: ['meta'],
+      label: 'Cmd+B',
+      description: 'Toggle chat panel',
+      action: () => setChatOpen(prev => !prev),
+    },
+    {
+      key: 'E',
+      modifiers: ['meta', 'shift'],
+      label: 'Cmd+Shift+E',
+      description: 'Export ZIP',
+      action: () => {
+        if (project.slug) {
+          window.open(`/api/export?slug=${encodeURIComponent(project.slug)}`, '_blank')
+          toast.success('Downloading ZIP export')
+        }
+      },
+    },
+  ], [project.slug, projectReady]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const { showHelp, setShowHelp } = useKeyboardShortcuts(shortcuts)
+
   const handleDownloadZip = useCallback(() => {
     if (project.slug) {
       window.open(`/api/export?slug=${encodeURIComponent(project.slug)}`, '_blank')
+      toast.success('Downloading ZIP export')
     }
   }, [project.slug])
 
@@ -550,6 +600,18 @@ function BuildContent() {
           onClose={handleClosePushModal}
         />
       )}
+
+      {/* Keyboard shortcuts help */}
+      <ShortcutsHelp open={showHelp} onClose={() => setShowHelp(false)} />
+
+      {/* Shortcuts help toggle button */}
+      <button
+        onClick={() => setShowHelp(prev => !prev)}
+        className="fixed bottom-4 right-4 z-40 flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-bg-surface/80 text-text-muted/50 hover:text-text-secondary hover:bg-bg-elevated transition-all shadow-lg shadow-black/20 backdrop-blur-sm"
+        title="Keyboard shortcuts (Cmd+/)"
+      >
+        <span className="text-[11px] font-mono">?</span>
+      </button>
     </div>
   )
 }

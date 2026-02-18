@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { Copy, Check, FileCode, RotateCw, AlertCircle } from 'lucide-react'
+import { Copy, Check, FileCode, RotateCw, AlertCircle, ChevronRight } from 'lucide-react'
 import { codeToHtml } from 'shiki'
 
 interface CodeViewerProps {
   slug: string
   filePath: string | null
+  onNavigateFolder?: (folderPath: string) => void
 }
 
 const EXT_TO_LANG: Record<string, string> = {
@@ -36,7 +37,36 @@ function getLang(filePath: string): string {
   return EXT_TO_LANG[ext] || 'text'
 }
 
-export function CodeViewer({ slug, filePath }: CodeViewerProps) {
+function Breadcrumbs({ path, onNavigateFolder }: { path: string; onNavigateFolder?: (p: string) => void }) {
+  const segments = path.split('/')
+  const fileName = segments.pop() || ''
+
+  return (
+    <div className="flex items-center gap-0 text-[11px] font-mono truncate min-w-0">
+      {segments.map((segment, i) => {
+        const folderPath = segments.slice(0, i + 1).join('/')
+        return (
+          <span key={folderPath} className="flex items-center flex-shrink-0">
+            {onNavigateFolder ? (
+              <button
+                onClick={() => onNavigateFolder(folderPath)}
+                className="text-text-muted/60 hover:text-accent transition-colors"
+              >
+                {segment}
+              </button>
+            ) : (
+              <span className="text-text-muted/60">{segment}</span>
+            )}
+            <ChevronRight className="h-2.5 w-2.5 text-text-muted/30 mx-0.5 flex-shrink-0" />
+          </span>
+        )
+      })}
+      <span className="text-text-secondary font-medium truncate">{fileName}</span>
+    </div>
+  )
+}
+
+export function CodeViewer({ slug, filePath, onNavigateFolder }: CodeViewerProps) {
   const [content, setContent] = useState<string | null>(null)
   const [highlighted, setHighlighted] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -139,9 +169,9 @@ export function CodeViewer({ slug, filePath }: CodeViewerProps) {
 
   return (
     <div className="flex h-full flex-col">
-      {/* File path header — sticky */}
+      {/* File path header — breadcrumbs */}
       <div className="sticky top-0 z-10 flex h-8 items-center justify-between border-b border-border bg-bg-surface/40 px-3 flex-shrink-0 backdrop-blur-sm">
-        <span className="text-[11px] font-mono text-text-muted truncate">{filePath}</span>
+        <Breadcrumbs path={filePath} onNavigateFolder={onNavigateFolder} />
         <button
           onClick={handleCopy}
           disabled={!content}
