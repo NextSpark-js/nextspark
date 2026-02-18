@@ -1158,17 +1158,18 @@ export function MockBanner() {
   if (dismissed) return null
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center gap-3 bg-amber-500 px-4 py-2 text-sm font-medium text-amber-950">
+    <div className="fixed top-0 left-0 right-0 z-[60] flex items-center justify-center gap-2 bg-amber-500/95 backdrop-blur-sm px-4 py-1.5 text-xs font-medium text-amber-950 shadow-sm">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       <span>Preview Mode — Data shown is simulated</span>
       <button
         onClick={() => {
           sessionStorage.setItem('ns-banner-dismissed', 'true')
           setDismissed(true)
         }}
-        className="ml-2 rounded-md px-1.5 py-0.5 hover:bg-amber-600/30 transition-colors"
+        className="ml-1 rounded px-1 py-0.5 hover:bg-amber-600/20 transition-colors"
         aria-label="Dismiss banner"
       >
-        ✕
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
   )
@@ -1189,66 +1190,80 @@ async function writeMockAuthPages(
   const signUpContent = `'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { MockBanner } from '@/components/mock-banner'
 
+function navTo(e: React.MouseEvent<HTMLAnchorElement>) {
+  e.preventDefault()
+  window.location.href = e.currentTarget.href
+}
+
 export default function SignUp() {
-  const router = useRouter()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setLoading(true)
     localStorage.setItem('ns-mock-user', JSON.stringify({ name: name || 'Demo User', email: email || 'demo@example.com', loggedIn: true }))
-    router.push('/dashboard')
+    setTimeout(() => {
+      const bp = window.location.pathname.split('/auth')[0] || ''
+      window.location.href = bp + '/dashboard'
+    }, 400)
   }
 
   return (
     <>
       <MockBanner />
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <div className="w-full max-w-sm space-y-6">
-          <div className="text-center">
+      <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold text-lg shadow-md">
+              ${appName.charAt(0)}
+            </div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">${appName}</h1>
-            <p className="mt-2 text-sm text-muted-foreground">Create your account</p>
+            <p className="mt-1 text-sm text-muted-foreground">Create your account to get started</p>
           </div>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-foreground mb-1.5">Name</label>
-              <input
-                id="name" type="text" value={name} onChange={e => setName(e.target.value)}
-                placeholder="Your name"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1.5">Email</label>
-              <input
-                id="email" type="email" value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1.5">Password</label>
-              <input
-                id="password" type="password" value={password} onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
-            >
-              Create Account
-            </button>
-          </form>
-          <p className="text-center text-sm text-muted-foreground">
+          <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-foreground mb-1.5">Full name</label>
+                <input
+                  id="name" type="text" value={name} onChange={e => setName(e.target.value)}
+                  placeholder="John Doe"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                />
+              </div>
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1.5">Email address</label>
+                <input
+                  id="email" type="email" value={email} onChange={e => setEmail(e.target.value)}
+                  placeholder="you@company.com"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                />
+              </div>
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1.5">Password</label>
+                <input
+                  id="password" type="password" value={password} onChange={e => setPassword(e.target.value)}
+                  placeholder="Min. 8 characters"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-60 transition-all"
+              >
+                {loading ? 'Creating account...' : 'Create Account'}
+              </button>
+            </form>
+          </div>
+          <p className="mt-4 text-center text-sm text-muted-foreground">
             Already have an account?{' '}
-            <Link href="/auth/sign-in" className="font-medium text-primary hover:underline">Sign in</Link>
+            <Link href="/auth/sign-in" onClick={navTo} className="font-medium text-primary hover:underline">Sign in</Link>
           </p>
         </div>
       </div>
@@ -1264,57 +1279,71 @@ export default function SignUp() {
   const signInContent = `'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { MockBanner } from '@/components/mock-banner'
 
+function navTo(e: React.MouseEvent<HTMLAnchorElement>) {
+  e.preventDefault()
+  window.location.href = e.currentTarget.href
+}
+
 export default function SignIn() {
-  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setLoading(true)
     localStorage.setItem('ns-mock-user', JSON.stringify({ name: 'Demo User', email: email || 'demo@example.com', loggedIn: true }))
-    router.push('/dashboard')
+    setTimeout(() => {
+      const bp = window.location.pathname.split('/auth')[0] || ''
+      window.location.href = bp + '/dashboard'
+    }, 400)
   }
 
   return (
     <>
       <MockBanner />
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <div className="w-full max-w-sm space-y-6">
-          <div className="text-center">
+      <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold text-lg shadow-md">
+              ${appName.charAt(0)}
+            </div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">${appName}</h1>
-            <p className="mt-2 text-sm text-muted-foreground">Welcome back</p>
+            <p className="mt-1 text-sm text-muted-foreground">Welcome back</p>
           </div>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1.5">Email</label>
-              <input
-                id="email" type="email" value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1.5">Password</label>
-              <input
-                id="password" type="password" value={password} onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
-            >
-              Sign In
-            </button>
-          </form>
-          <p className="text-center text-sm text-muted-foreground">
+          <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1.5">Email address</label>
+                <input
+                  id="email" type="email" value={email} onChange={e => setEmail(e.target.value)}
+                  placeholder="you@company.com"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                />
+              </div>
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1.5">Password</label>
+                <input
+                  id="password" type="password" value={password} onChange={e => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-60 transition-all"
+              >
+                {loading ? 'Signing in...' : 'Sign In'}
+              </button>
+            </form>
+          </div>
+          <p className="mt-4 text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{' '}
-            <Link href="/auth/sign-up" className="font-medium text-primary hover:underline">Sign up</Link>
+            <Link href="/auth/sign-up" onClick={navTo} className="font-medium text-primary hover:underline">Sign up</Link>
           </p>
         </div>
       </div>
@@ -1336,12 +1365,18 @@ async function writeMockDashboard(
     ? generateMockEntityData(entityList)
     : '{}'
 
+  // SVG icons for sidebar (inline since we can't guarantee lucide-react in preview)
+  const iconHome = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`
+  const iconEntity = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`
+  const iconLogout = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1-2 2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>`
+
   // Generate sidebar links from entities
   const sidebarLinks = entityList.map(e =>
-    `          <Link href="/dashboard/${e.slug}" className={\`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors \${entitySlug === '${e.slug}' ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}\`}>
-            <span className="truncate">${e.names.plural}</span>
-            <span className="ml-auto text-xs opacity-60">{MOCK_ENTITIES['${e.slug}']?.count ?? 0}</span>
-          </Link>`
+    `            <Link href="/dashboard/${e.slug}" onClick={navTo} className={\`group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all \${entitySlug === '${e.slug}' ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}\`}>
+              <span className="flex-shrink-0 opacity-70" dangerouslySetInnerHTML={{ __html: '${iconEntity}' }} />
+              <span className="truncate">${e.names.plural}</span>
+              <span className="ml-auto rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium tabular-nums">{MOCK_ENTITIES['${e.slug}']?.count ?? 0}</span>
+            </Link>`
   ).join('\n')
 
   // ── Dashboard Layout ──
@@ -1350,15 +1385,20 @@ async function writeMockDashboard(
   const layoutContent = `'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { MockBanner } from '@/components/mock-banner'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const MOCK_ENTITIES: Record<string, any> = ${mockEntitiesConst}
 
+/** Force full-page navigation — works reliably with basePath proxy */
+function navTo(e: React.MouseEvent<HTMLAnchorElement>) {
+  e.preventDefault()
+  window.location.href = e.currentTarget.href
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter()
   const pathname = usePathname()
   const [user, setUser] = useState<{ name: string; email: string } | null>(null)
   const [ready, setReady] = useState(false)
@@ -1372,47 +1412,74 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [])
 
   useEffect(() => {
-    if (ready && !user) router.push('/auth/sign-in')
-  }, [ready, user, router])
+    if (ready && !user) {
+      const bp = window.location.pathname.split('/dashboard')[0] || ''
+      window.location.href = bp + '/auth/sign-in'
+    }
+  }, [ready, user])
 
   if (!ready || !user) return null
 
   const entitySlug = pathname.split('/dashboard/')?.[1]?.split('/')?.[0] || ''
+  const initials = user.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U'
 
   function handleLogout() {
     localStorage.removeItem('ns-mock-user')
-    router.push('/')
+    const bp = window.location.pathname.split('/dashboard')[0] || ''
+    window.location.href = bp + '/'
   }
 
   return (
     <>
       <MockBanner />
-      <div className="flex min-h-screen bg-background">
+      <div className="flex min-h-screen bg-muted/30">
         {/* Sidebar */}
-        <aside className="sticky top-0 flex h-screen w-60 flex-col border-r border-border bg-card">
-          <div className="flex items-center gap-2 border-b border-border px-4 py-4">
-            <span className="text-sm font-bold text-foreground truncate">${appName}</span>
+        <aside className="sticky top-0 flex h-screen w-[240px] flex-col border-r border-border bg-card">
+          {/* Logo */}
+          <div className="flex items-center gap-2.5 border-b border-border px-4 py-4">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-xs font-bold shadow-sm">
+              ${appName.charAt(0)}
+            </div>
+            <span className="text-sm font-semibold text-foreground truncate">${appName}</span>
           </div>
-          <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-3">
-            <Link href="/dashboard" className={\`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors \${!entitySlug ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}\`}>
+
+          {/* Navigation */}
+          <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-3">
+            <div className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Menu</div>
+            <Link href="/dashboard" onClick={navTo} className={\`group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all \${!entitySlug ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}\`}>
+              <span className="flex-shrink-0 opacity-70" dangerouslySetInnerHTML={{ __html: '${iconHome}' }} />
               <span>Overview</span>
             </Link>
+            {Object.keys(MOCK_ENTITIES).length > 0 && (
+              <div className="mt-4 mb-2 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Entities</div>
+            )}
 ${sidebarLinks}
           </nav>
-          <div className="border-t border-border px-2 py-3">
-            <div className="mb-2 px-3 text-xs text-muted-foreground truncate">{user.email}</div>
+
+          {/* User */}
+          <div className="border-t border-border p-3">
+            <div className="flex items-center gap-3 rounded-lg px-2 py-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
+                {initials}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-foreground truncate">{user.name}</div>
+                <div className="text-[11px] text-muted-foreground truncate">{user.email}</div>
+              </div>
+            </div>
             <button
               onClick={handleLogout}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              className="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             >
-              Logout
+              <span className="flex-shrink-0 opacity-70" dangerouslySetInnerHTML={{ __html: '${iconLogout}' }} />
+              <span>Log out</span>
             </button>
           </div>
         </aside>
 
-        {/* Main */}
+        {/* Main content */}
         <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-5xl p-6">
+          <div className="mx-auto max-w-6xl p-8">
             {children}
           </div>
         </main>
@@ -1434,21 +1501,30 @@ ${sidebarLinks}
 
   // ── Dashboard Overview ──
   const overviewPath = path.join(projectPath, 'app', 'dashboard', 'page.tsx')
-  const entityCards = entityList.map(e =>
-    `        <div key="${e.slug}" className="rounded-xl border border-border bg-card p-5">
-          <div className="text-sm font-medium text-muted-foreground">${e.names.plural}</div>
-          <div className="mt-1 text-3xl font-bold text-foreground">{MOCK_ENTITIES['${e.slug}']?.count ?? 0}</div>
-          <Link href="/dashboard/${e.slug}" className="mt-3 inline-block text-xs font-medium text-primary hover:underline">View all →</Link>
-        </div>`
+  const cardColors = ['bg-blue-500/10 text-blue-600', 'bg-emerald-500/10 text-emerald-600', 'bg-violet-500/10 text-violet-600', 'bg-amber-500/10 text-amber-600', 'bg-rose-500/10 text-rose-600', 'bg-cyan-500/10 text-cyan-600']
+  const entityCards = entityList.map((e, idx) =>
+    `        <Link href="/dashboard/${e.slug}" onClick={navTo} key="${e.slug}" className="group rounded-xl border border-border bg-card p-5 hover:shadow-md hover:border-border/80 transition-all">
+          <div className="flex items-center justify-between">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg ${cardColors[idx % cardColors.length]}">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            </div>
+            <span className="text-xs text-muted-foreground group-hover:text-primary transition-colors">View all →</span>
+          </div>
+          <div className="mt-3 text-2xl font-bold text-foreground tabular-nums">{MOCK_ENTITIES['${e.slug}']?.count ?? 0}</div>
+          <div className="mt-0.5 text-sm text-muted-foreground">${e.names.plural}</div>
+        </Link>`
   ).join('\n')
 
-  const recentActivity = entityList.slice(0, 4).map((e, i) =>
-    `        <div className="flex items-center justify-between py-3 ${i < Math.min(3, entityList.length - 1) ? 'border-b border-border' : ''}">
-          <div>
-            <span className="text-sm font-medium text-foreground">${e.names.singular} updated</span>
-            <span className="ml-2 text-xs text-muted-foreground">${FAKE_NAMES[i % FAKE_NAMES.length]}</span>
+  const activityActions = ['created', 'updated', 'reviewed', 'archived']
+  const recentActivity = entityList.slice(0, 5).map((e, i) =>
+    `        <div className="flex items-center gap-3 py-3 ${i < Math.min(4, entityList.length - 1) ? 'border-b border-border' : ''}">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
+            ${FAKE_FIRST_NAMES[i % FAKE_FIRST_NAMES.length].charAt(0)}${FAKE_LAST_NAMES[i % FAKE_LAST_NAMES.length].charAt(0)}
           </div>
-          <span className="text-xs text-muted-foreground">${i + 1}h ago</span>
+          <div className="flex-1 min-w-0">
+            <span className="text-sm text-foreground"><span className="font-medium">${FAKE_FIRST_NAMES[i % FAKE_FIRST_NAMES.length]} ${FAKE_LAST_NAMES[i % FAKE_LAST_NAMES.length]}</span> ${activityActions[i % activityActions.length]} a ${e.names.singular.toLowerCase()}</span>
+          </div>
+          <span className="text-xs text-muted-foreground flex-shrink-0">${i + 1}h ago</span>
         </div>`
   ).join('\n')
 
@@ -1459,6 +1535,11 @@ import Link from 'next/link'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const MOCK_ENTITIES: Record<string, any> = ${mockEntitiesConst}
+
+function navTo(e: React.MouseEvent<HTMLAnchorElement>) {
+  e.preventDefault()
+  window.location.href = e.currentTarget.href
+}
 
 export default function DashboardOverview() {
   const [userName, setUserName] = useState('User')
@@ -1476,12 +1557,12 @@ export default function DashboardOverview() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Welcome back, {userName}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Here&apos;s what&apos;s happening in your ${appName} workspace.</p>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Welcome back, {userName}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Here&apos;s an overview of your ${appName} workspace.</p>
       </div>
 
-      ${entityList.length > 0 ? `{/* Stats */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-${Math.min(entityList.length, 4)}">
+      ${entityList.length > 0 ? `{/* Stats Grid */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-${Math.min(entityList.length, 3)}">
 ${entityCards}
       </div>` : `<div className="rounded-xl border border-dashed border-border bg-card/50 p-8 text-center">
         <p className="text-muted-foreground">No entities configured yet</p>
@@ -1489,8 +1570,11 @@ ${entityCards}
       </div>`}
 
       ${entityList.length > 0 ? `{/* Recent Activity */}
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h2 className="mb-3 text-sm font-semibold text-foreground">Recent Activity</h2>
+      <div className="rounded-xl border border-border bg-card p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold text-foreground">Recent Activity</h2>
+          <span className="text-xs text-muted-foreground">Last 24 hours</span>
+        </div>
 ${recentActivity}
       </div>` : ''}
     </div>
@@ -1510,60 +1594,138 @@ import Link from 'next/link'
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const MOCK_ENTITIES: Record<string, any> = ${mockEntitiesConst}
 
+const STATUS_COLORS: Record<string, string> = {
+  active: 'bg-emerald-500/10 text-emerald-700 border-emerald-200',
+  open: 'bg-emerald-500/10 text-emerald-700 border-emerald-200',
+  placed: 'bg-blue-500/10 text-blue-700 border-blue-200',
+  filled: 'bg-blue-500/10 text-blue-700 border-blue-200',
+  completed: 'bg-blue-500/10 text-blue-700 border-blue-200',
+  passive: 'bg-amber-500/10 text-amber-700 border-amber-200',
+  'on hold': 'bg-amber-500/10 text-amber-700 border-amber-200',
+  pending: 'bg-amber-500/10 text-amber-700 border-amber-200',
+  scheduled: 'bg-violet-500/10 text-violet-700 border-violet-200',
+  unavailable: 'bg-gray-500/10 text-gray-600 border-gray-200',
+  cancelled: 'bg-red-500/10 text-red-700 border-red-200',
+  rejected: 'bg-red-500/10 text-red-700 border-red-200',
+}
+
+function StatusBadge({ value }: { value: string }) {
+  const key = value.toLowerCase()
+  const cls = STATUS_COLORS[key] || 'bg-muted text-muted-foreground border-border'
+  return <span className={\`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium \${cls}\`}>{value}</span>
+}
+
+function CellValue({ value, type }: { value: string; type: string }) {
+  if (type === 'select') return <StatusBadge value={value} />
+  if (type === 'email') return <span className="text-primary">{value}</span>
+  if (type === 'url') return <span className="text-primary truncate max-w-[120px] inline-block">{value}</span>
+  if (type === 'currency') return <span className="tabular-nums">{value}</span>
+  if (type === 'boolean') return <span>{value === 'Yes' ? '✓' : '—'}</span>
+  if (type === 'rating') return <span className="tabular-nums">{'★'.repeat(Number(value) || 0)}{'☆'.repeat(5 - (Number(value) || 0))}</span>
+  return <span>{value}</span>
+}
+
+function navTo(e: React.MouseEvent<HTMLAnchorElement>) {
+  e.preventDefault()
+  window.location.href = e.currentTarget.href
+}
+
 export default function EntityPage({ params }: { params: Promise<{ entity: string }> }) {
   const { entity: slug } = use(params)
   const entityDef = MOCK_ENTITIES[slug]
 
   if (!entityDef) {
     return (
-      <div className="py-12 text-center">
+      <div className="py-16 text-center">
         <h1 className="text-2xl font-bold text-foreground">Entity not found</h1>
         <p className="mt-2 text-muted-foreground">The entity &quot;{slug}&quot; is not defined.</p>
-        <Link href="/dashboard" className="mt-4 inline-block text-sm font-medium text-primary hover:underline">
+        <Link href="/dashboard" onClick={navTo} className="mt-6 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
           ← Back to Dashboard
         </Link>
       </div>
     )
   }
 
+  // Show at most 6 columns to prevent overflow
+  const maxCols = 6
+  const visibleFields = entityDef.fields.slice(0, maxCols)
+  const hiddenCount = Math.max(0, entityDef.fields.length - maxCols)
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">{entityDef.name}</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">{entityDef.name}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{entityDef.description}</p>
         </div>
-        <button className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors">
-          + New {entityDef.singular}
+        <button className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New {entityDef.singular}
         </button>
       </div>
 
-      {entityDef.fields.length > 0 ? (
-        <div className="overflow-hidden rounded-xl border border-border">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">#</th>
-                {entityDef.fields.map((field: string) => (
-                  <th key={field} className="px-4 py-3 text-left font-medium text-muted-foreground capitalize">
-                    {field.replace(/([A-Z])/g, ' $1').trim()}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {entityDef.data.map((row: any) => (
-                <tr key={row.id} className="hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3 text-muted-foreground">{row.id}</td>
-                  {entityDef.fields.map((field: string) => (
-                    <td key={field} className="px-4 py-3 text-foreground">
-                      {String(row[field] ?? '-')}
-                    </td>
+      {/* Search bar placeholder */}
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input
+            type="text"
+            placeholder={\`Search \${entityDef.name.toLowerCase()}...\`}
+            className="w-full rounded-lg border border-border bg-card pl-10 pr-4 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+            disabled
+          />
+        </div>
+        <button className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-muted-foreground hover:bg-muted transition-colors" disabled>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        </button>
+      </div>
+
+      {visibleFields.length > 0 ? (
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/30">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground w-12">#</th>
+                  {visibleFields.map((field: string) => (
+                    <th key={field} className="px-4 py-3 text-left text-xs font-medium text-muted-foreground capitalize whitespace-nowrap">
+                      {field.replace(/([A-Z])/g, ' $1').trim()}
+                    </th>
                   ))}
+                  {hiddenCount > 0 && (
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground/50">+{hiddenCount} more</th>
+                  )}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {entityDef.data.map((row: any) => (
+                  <tr key={row.id} className="hover:bg-muted/20 transition-colors cursor-pointer">
+                    <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums">{row.id}</td>
+                    {visibleFields.map((field: string, i: number) => (
+                      <td key={field} className={\`px-4 py-3 \${i === 0 ? 'font-medium text-foreground' : 'text-muted-foreground'} max-w-[200px] truncate\`}>
+                        <CellValue value={String(row[field] ?? '-')} type={entityDef.fieldTypes?.[field] || 'text'} />
+                      </td>
+                    ))}
+                    {hiddenCount > 0 && <td className="px-4 py-3" />}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination mock */}
+          <div className="flex items-center justify-between border-t border-border px-4 py-3 bg-muted/10">
+            <span className="text-xs text-muted-foreground">
+              Showing {entityDef.data.length} of {entityDef.count} {entityDef.name.toLowerCase()}
+            </span>
+            <div className="flex items-center gap-1">
+              <button className="rounded-md border border-border bg-card px-2.5 py-1 text-xs text-muted-foreground" disabled>Previous</button>
+              <button className="rounded-md bg-primary px-2.5 py-1 text-xs text-primary-foreground font-medium">1</button>
+              <button className="rounded-md border border-border bg-card px-2.5 py-1 text-xs text-muted-foreground">2</button>
+              <button className="rounded-md border border-border bg-card px-2.5 py-1 text-xs text-muted-foreground">3</button>
+              <button className="rounded-md border border-border bg-card px-2.5 py-1 text-xs text-muted-foreground" disabled>Next</button>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="rounded-xl border border-dashed border-border bg-card/50 p-8 text-center">
@@ -1571,9 +1733,7 @@ export default function EntityPage({ params }: { params: Promise<{ entity: strin
         </div>
       )}
 
-      <div className="text-xs text-muted-foreground/60">
-        Showing {entityDef.data.length} of {entityDef.count} {entityDef.name.toLowerCase()} (simulated data)
-      </div>
+      <p className="text-[11px] text-muted-foreground/40 text-center">All data shown is simulated for preview purposes</p>
     </div>
   )
 }
