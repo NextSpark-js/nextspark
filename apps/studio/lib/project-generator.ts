@@ -1042,32 +1042,59 @@ async function copyEnvExampleToEnv(projectPath: string): Promise<void> {
 // Mock Preview Pages (Auth + Dashboard)
 // ============================================================
 
-const FAKE_NAMES = [
+const FAKE_COMPANY_NAMES = [
   'Acme Corp', 'Globex Inc', 'Initech LLC', 'Umbrella Co', 'Wayne Enterprises',
   'Stark Industries', 'Oscorp', 'Cyberdyne Systems',
+]
+const FAKE_TITLES = [
+  'Alpha Initiative', 'Horizon Plan', 'Summit Strategy', 'Vertex Program',
+  'Catalyst Project', 'Apex Blueprint', 'Meridian Ops', 'Pinnacle Drive',
 ]
 const FAKE_FIRST_NAMES = ['Alice', 'Bob', 'Carol', 'David', 'Eva', 'Frank', 'Grace', 'Henry']
 const FAKE_LAST_NAMES = ['Johnson', 'Smith', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis']
 const FAKE_DOMAINS = ['acme.com', 'globex.io', 'initech.co', 'umbrella.org', 'wayne.dev', 'stark.ai', 'oscorp.net', 'cyberdyne.tech']
+const FAKE_STREETS = ['Oak Ave', 'Maple Dr', 'Cedar Ln', 'Elm Blvd', 'Pine St', 'Birch Rd', 'Walnut Way', 'Willow Ct']
+const FAKE_CITIES = ['New York', 'San Francisco', 'Chicago', 'Austin', 'Miami', 'Seattle', 'Denver', 'Boston']
+const FAKE_DESCRIPTIONS = [
+  'High-priority item requiring immediate attention.',
+  'Standard item progressing on schedule.',
+  'Recently reviewed and approved by stakeholders.',
+  'Pending further review before next steps.',
+  'Completed ahead of schedule with great results.',
+  'In progress with minor adjustments needed.',
+  'Flagged for follow-up at end of quarter.',
+  'New addition to the pipeline, looking promising.',
+]
 
 function generateMockValue(field: EntityFieldDefinition, rowIndex: number): string {
   const first = FAKE_FIRST_NAMES[rowIndex % FAKE_FIRST_NAMES.length]
   const last = FAKE_LAST_NAMES[rowIndex % FAKE_LAST_NAMES.length]
+  const n = field.name.toLowerCase()
   switch (field.type) {
     case 'text':
     case 'textarea':
     case 'richtext':
-    case 'markdown':
-      if (field.name.toLowerCase().includes('name')) return `${first} ${last}`
-      if (field.name.toLowerCase().includes('title')) return `${FAKE_NAMES[rowIndex % FAKE_NAMES.length]} Project`
-      if (field.name.toLowerCase().includes('company')) return FAKE_NAMES[rowIndex % FAKE_NAMES.length]
-      return `Sample ${field.name} ${rowIndex + 1}`
+    case 'markdown': {
+      // firstName / lastName split
+      if (n.includes('firstname') || n === 'first_name') return first
+      if (n.includes('lastname') || n === 'last_name') return last
+      if (n.includes('name') && !n.includes('company')) return `${first} ${last}`
+      if (n.includes('title') || n.includes('subject') || n.includes('headline')) return FAKE_TITLES[rowIndex % FAKE_TITLES.length]
+      if (n.includes('company') || n.includes('organization') || n.includes('org')) return FAKE_COMPANY_NAMES[rowIndex % FAKE_COMPANY_NAMES.length]
+      if (n.includes('description') || n.includes('summary') || n.includes('notes') || n.includes('bio') || n.includes('comment')) return FAKE_DESCRIPTIONS[rowIndex % FAKE_DESCRIPTIONS.length]
+      if (n.includes('city') || n.includes('town')) return FAKE_CITIES[rowIndex % FAKE_CITIES.length]
+      if (n.includes('street') || n.includes('address') || n.includes('location')) return `${100 + rowIndex * 15} ${FAKE_STREETS[rowIndex % FAKE_STREETS.length]}, ${FAKE_CITIES[rowIndex % FAKE_CITIES.length]}`
+      if (n.includes('tag') || n.includes('label') || n.includes('category')) return ['Design', 'Development', 'Marketing', 'Sales', 'Support', 'Operations', 'Finance', 'HR'][rowIndex % 8]
+      if (n.includes('color') || n.includes('colour')) return ['Blue', 'Red', 'Green', 'Purple', 'Orange', 'Teal', 'Pink', 'Gold'][rowIndex % 8]
+      if (n.includes('type') || n.includes('kind')) return ['Standard', 'Premium', 'Basic', 'Enterprise', 'Custom', 'Pro', 'Starter', 'Advanced'][rowIndex % 8]
+      return `${(field as any).label || field.name} ${rowIndex + 1}`
+    }
     case 'email':
       return `${first.toLowerCase()}.${last.toLowerCase()}@${FAKE_DOMAINS[rowIndex % FAKE_DOMAINS.length]}`
     case 'number':
       return String((rowIndex + 1) * 42)
     case 'currency':
-      return `$${((rowIndex + 1) * 199.99).toFixed(2)}`
+      return `$${((rowIndex + 1) * 1249.50 + (rowIndex * 317.25)).toFixed(2)}`
     case 'date':
     case 'datetime':
       return `2025-${String((rowIndex % 12) + 1).padStart(2, '0')}-${String((rowIndex % 28) + 1).padStart(2, '0')}`
@@ -1081,9 +1108,9 @@ function generateMockValue(field: EntityFieldDefinition, rowIndex: number): stri
     case 'relation':
       return `${field.relation?.entity || 'Item'} #${rowIndex + 1}`
     case 'url':
-      return `https://example.com/${rowIndex + 1}`
+      return `https://example.com/${field.name.toLowerCase()}/${rowIndex + 1}`
     case 'phone':
-      return `+1 555-${String(1000 + rowIndex).slice(-4)}`
+      return `+1 (555) ${String(100 + rowIndex).padStart(3, '0')}-${String(1000 + rowIndex * 111).slice(-4)}`
     case 'rating':
       return String((rowIndex % 5) + 1)
     case 'image':
@@ -1092,7 +1119,7 @@ function generateMockValue(field: EntityFieldDefinition, rowIndex: number): stri
     case 'country':
       return ['US', 'UK', 'DE', 'FR', 'JP', 'BR', 'AU', 'CA'][rowIndex % 8]
     case 'address':
-      return `${100 + rowIndex} Main St`
+      return `${100 + rowIndex * 15} ${FAKE_STREETS[rowIndex % FAKE_STREETS.length]}, ${FAKE_CITIES[rowIndex % FAKE_CITIES.length]}`
     case 'json':
       return '{...}'
     default:
@@ -1658,7 +1685,10 @@ export default function EntityPage({ params }: { params: Promise<{ entity: strin
           <h1 className="text-2xl font-bold tracking-tight text-foreground">{entityDef.name}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{entityDef.description}</p>
         </div>
-        <button className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all">
+        <button
+          onClick={() => alert('This action is not available in preview mode. Deploy your project to enable full CRUD operations.')}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all"
+        >
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           New {entityDef.singular}
         </button>
