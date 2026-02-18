@@ -6,7 +6,7 @@
  */
 
 import { z } from 'zod'
-import type { Tour } from '../types/walkme.types'
+import type { Tour, TourStep as TourStepType } from '../types/walkme.types'
 
 // ---------------------------------------------------------------------------
 // Schemas
@@ -79,7 +79,10 @@ export function validateTour(
 ): { valid: boolean; errors?: z.ZodError; tour?: Tour } {
   const result = TourSchema.safeParse(tour)
   if (result.success) {
-    return { valid: true, tour: result.data as unknown as Tour }
+    // Zod's output matches our Tour type structurally; functions (onComplete,
+    // onSkip, beforeShow, afterShow, custom) are validated as z.function() but
+    // their signatures aren't preserved in the inferred type, so we cast once here.
+    return { valid: true, tour: result.data as Tour }
   }
   return { valid: false, errors: result.error }
 }
@@ -94,7 +97,7 @@ export function validateTours(
   for (const tour of tours) {
     const result = TourSchema.safeParse(tour)
     if (result.success) {
-      validTours.push(result.data as unknown as Tour)
+      validTours.push(result.data as Tour)
     } else {
       errors.push(result.error)
     }
@@ -110,10 +113,10 @@ export function validateTours(
 /** Validate a single step configuration */
 export function validateStep(
   step: unknown,
-): { valid: boolean; errors?: z.ZodError } {
+): { valid: boolean; errors?: z.ZodError; step?: TourStepType } {
   const result = TourStepSchema.safeParse(step)
   if (result.success) {
-    return { valid: true }
+    return { valid: true, step: result.data as TourStepType }
   }
   return { valid: false, errors: result.error }
 }

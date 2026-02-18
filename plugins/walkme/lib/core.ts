@@ -46,7 +46,14 @@ export function walkmeReducer(state: WalkmeState, action: WalkmeAction): WalkmeS
     }
 
     case 'START_TOUR': {
-      if (state.activeTour) return state
+      if (state.activeTour) {
+        if (state.debug) {
+          console.warn(
+            `[WalkMe] Cannot start tour "${action.tourId}" — tour "${state.activeTour.tourId}" is already active. Complete or skip it first.`,
+          )
+        }
+        return state
+      }
       const tour = state.tours[action.tourId]
       if (!tour) return state
       if (tour.steps.length === 0) return state

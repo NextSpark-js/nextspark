@@ -482,6 +482,35 @@ The plugin ships with English and Spanish translations under `plugins/walkme/mes
 }
 ```
 
+### CSS Variables (Theming)
+
+All walkme components use CSS custom properties for styling. Override them in your global CSS or scoped styles:
+
+```css
+:root {
+  --walkme-bg: #ffffff;
+  --walkme-text: #111827;
+  --walkme-text-muted: #6b7280;
+  --walkme-primary: #3b82f6;
+  --walkme-border: #e5e7eb;
+  --walkme-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --walkme-beacon-color: #3b82f6;
+  --walkme-overlay-color: rgba(0, 0, 0, 0.5);
+}
+
+/* Dark mode */
+.dark {
+  --walkme-bg: #1f2937;
+  --walkme-text: #f9fafb;
+  --walkme-text-muted: #9ca3af;
+  --walkme-primary: #60a5fa;
+  --walkme-border: #374151;
+  --walkme-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  --walkme-beacon-color: #60a5fa;
+  --walkme-overlay-color: rgba(0, 0, 0, 0.7);
+}
+```
+
 ### Keyboard Navigation
 
 When a tour is active:

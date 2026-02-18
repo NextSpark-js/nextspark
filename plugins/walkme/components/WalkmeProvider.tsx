@@ -46,6 +46,16 @@ import { WalkmeBeacon } from './WalkmeBeacon'
  * </WalkmeProvider>
  * ```
  */
+const DEFAULT_LABELS: WalkmeLabels = {
+  next: 'Next',
+  prev: 'Previous',
+  skip: 'Skip',
+  complete: 'Complete',
+  close: 'Close',
+  progress: 'Step {current} of {total}',
+  tourAvailable: 'Tour available',
+}
+
 export function WalkmeProvider({
   tours: rawTours,
   children,
@@ -60,18 +70,9 @@ export function WalkmeProvider({
   conditionContext: externalConditionContext,
   labels: userLabels,
 }: WalkmeProviderProps) {
-  const defaultLabels: WalkmeLabels = {
-    next: 'Next',
-    prev: 'Previous',
-    skip: 'Skip',
-    complete: 'Complete',
-    close: 'Close',
-    progress: 'Step {current} of {total}',
-    tourAvailable: 'Tour available',
-  }
   const labels = useMemo<WalkmeLabels>(
-    () => ({ ...defaultLabels, ...userLabels }),
-    [userLabels], // eslint-disable-line react-hooks/exhaustive-deps
+    () => ({ ...DEFAULT_LABELS, ...userLabels }),
+    [userLabels],
   )
 
   const pathname = usePathname()
@@ -430,6 +431,8 @@ export function WalkmeProvider({
       if (triggerTimeoutRef.current) {
         clearTimeout(triggerTimeoutRef.current)
       }
+      targetElementRef.current = null
+      previousFocusRef.current = null
     }
   }, [])
 

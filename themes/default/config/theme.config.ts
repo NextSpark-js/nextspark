@@ -12,7 +12,7 @@ export const boilerplateThemeConfig: ThemeConfig = {
   description: 'Default neutral theme - black and white',
   author: 'NextSpark Team',
 
-  plugins: ['langchain', 'walkme'],
+  plugins: ['langchain'],
 
   // Styles configuration - colors come from globals.css only
   styles: {
