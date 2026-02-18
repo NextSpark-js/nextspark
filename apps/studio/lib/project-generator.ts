@@ -1338,7 +1338,7 @@ async function writeMockDashboard(
 
   // Generate sidebar links from entities
   const sidebarLinks = entityList.map(e =>
-    `          <Link href={\`/dashboard/\${entitySlug === '${e.slug}' ? '' : '${e.slug}'}\`} className={\`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors \${entitySlug === '${e.slug}' ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}\`}>
+    `          <Link href="/dashboard/${e.slug}" className={\`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors \${entitySlug === '${e.slug}' ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}\`}>
             <span className="truncate">${e.names.plural}</span>
             <span className="ml-auto text-xs opacity-60">{MOCK_ENTITIES['${e.slug}']?.count ?? 0}</span>
           </Link>`
@@ -1422,6 +1422,15 @@ ${sidebarLinks}
 }
 `
   await writeFile(layoutPath, layoutContent, 'utf-8')
+
+  // ── Mock (main) layout — overrides the theme's real (main)/layout to remove double sidebar ──
+  const mainGroupLayoutPath = path.join(projectPath, 'app', 'dashboard', '(main)', 'layout.tsx')
+  await ensureDir(path.dirname(mainGroupLayoutPath))
+  const mainGroupLayoutContent = `export default function MockMainLayout({ children }: { children: React.ReactNode }) {
+  return <>{children}</>
+}
+`
+  await writeFile(mainGroupLayoutPath, mainGroupLayoutContent, 'utf-8')
 
   // ── Dashboard Overview ──
   const overviewPath = path.join(projectPath, 'app', 'dashboard', 'page.tsx')
