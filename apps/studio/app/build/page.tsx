@@ -26,6 +26,8 @@ import { PageEditor } from '@/components/page-editor'
 import { useBlockSelector } from '@/hooks/use-block-selector'
 import { useKeyboardShortcuts, type Shortcut } from '@/hooks/use-keyboard-shortcuts'
 import { ShortcutsHelp } from '@/components/shortcuts-help'
+import { useOnboardingTour, type TourStep } from '@/hooks/use-onboarding-tour'
+import { OnboardingTour } from '@/components/onboarding-tour'
 
 type RightTab = 'preview' | 'pages' | 'code' | 'config'
 type Viewport = 'desktop' | 'tablet' | 'mobile'
@@ -217,6 +219,42 @@ function BuildContent() {
 
   const { showHelp, setShowHelp } = useKeyboardShortcuts(shortcuts)
 
+  // Onboarding tour
+  const tourSteps = useMemo<TourStep[]>(() => [
+    {
+      target: '[data-tour="chat-panel"]',
+      title: 'AI Chat',
+      description: 'Describe your app idea here. AI will generate a full Next.js project with entities, pages, and a live preview.',
+      placement: 'right',
+    },
+    {
+      target: '[data-tour="preview-tab"]',
+      title: 'Live Preview',
+      description: 'See your app running live as it\'s generated. Switch between desktop, tablet, and mobile viewports.',
+      placement: 'bottom',
+    },
+    {
+      target: '[data-tour="tab-bar"]',
+      title: 'Pages, Code & Config',
+      description: 'Switch between the page editor, source code browser, and project configuration to explore and customize your app.',
+      placement: 'bottom',
+    },
+    {
+      target: '[data-tour="deploy-menu"]',
+      title: 'Deploy & Export',
+      description: 'Deploy to VPS, Vercel, or Railway. Push to GitHub or download as a ZIP file — all in one click.',
+      placement: 'bottom',
+    },
+    {
+      target: '[data-tour="shortcuts-btn"]',
+      title: 'Keyboard Shortcuts',
+      description: 'Press Cmd+/ (or Ctrl+/) anytime to see all available keyboard shortcuts. Press ? for quick access.',
+      placement: 'top',
+    },
+  ], [])
+
+  const tour = useOnboardingTour(tourSteps)
+
   const handleDownloadZip = useCallback(() => {
     if (project.slug) {
       window.open(`/api/export?slug=${encodeURIComponent(project.slug)}`, '_blank')
@@ -360,21 +398,23 @@ function BuildContent() {
             </div>
           )}
 
-          <DeployMenu
-            slug={project.slug}
-            authenticated={github.authenticated}
-            configured={github.configured}
-            user={github.user}
-            lastRepo={github.lastRepo}
-            onPushToGitHub={handleOpenPushModal}
-            onUpdateGitHub={handleUpdateGitHub}
-            onDownloadZip={handleDownloadZip}
-            onConnect={github.connect}
-            onDisconnect={github.disconnect}
-            onDeployVPS={handleDeployVPS}
-            onDeployVercel={handleDeployVercel}
-            onDeployRailway={handleDeployRailway}
-          />
+          <div data-tour="deploy-menu">
+            <DeployMenu
+              slug={project.slug}
+              authenticated={github.authenticated}
+              configured={github.configured}
+              user={github.user}
+              lastRepo={github.lastRepo}
+              onPushToGitHub={handleOpenPushModal}
+              onUpdateGitHub={handleUpdateGitHub}
+              onDownloadZip={handleDownloadZip}
+              onConnect={github.connect}
+              onDisconnect={github.disconnect}
+              onDeployVPS={handleDeployVPS}
+              onDeployVercel={handleDeployVercel}
+              onDeployRailway={handleDeployRailway}
+            />
+          </div>
 
           <div className="h-4 w-px bg-border" />
 
@@ -404,7 +444,7 @@ function BuildContent() {
           className="h-full overflow-hidden flex-shrink-0 transition-[width] duration-300 ease-in-out"
           style={{ width: chatOpen ? 340 : 0 }}
         >
-          <div className="flex flex-col w-[340px] h-full border-r border-border bg-bg-surface/20">
+          <div className="flex flex-col w-[340px] h-full border-r border-border bg-bg-surface/20" data-tour="chat-panel">
             <ChatMessages messages={messages} status={status} />
             <PromptInput
               onSubmit={projectReady ? sendChatMessage : sendPrompt}
@@ -419,7 +459,7 @@ function BuildContent() {
         <div className="flex flex-1 flex-col min-w-0">
           {/* Tab bar */}
           <div className="flex h-10 items-center border-b border-border bg-bg-surface/30 px-1 flex-shrink-0">
-            <div className="flex items-center gap-0.5 px-1">
+            <div className="flex items-center gap-0.5 px-1" data-tour="tab-bar">
               {tabs.map((tab) => {
                 const Icon = tab.icon
                 const isActive = activeTab === tab.id
@@ -427,6 +467,7 @@ function BuildContent() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
+                    data-tour={tab.id === 'preview' ? 'preview-tab' : undefined}
                     className={`relative flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[11px] font-medium transition-all ${
                       isActive
                         ? 'bg-bg-elevated text-text-primary shadow-sm'
@@ -632,11 +673,34 @@ function BuildContent() {
       {/* Shortcuts help toggle button */}
       <button
         onClick={() => setShowHelp(prev => !prev)}
+        data-tour="shortcuts-btn"
         className="fixed bottom-4 right-4 z-40 flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-bg-surface/80 text-text-muted/50 hover:text-text-secondary hover:bg-bg-elevated transition-all shadow-lg shadow-black/20 backdrop-blur-sm"
         title="Keyboard shortcuts (Cmd+/)"
       >
         <span className="text-[11px] font-mono">?</span>
       </button>
+
+      {/* Replay tour button (shown after tour is completed) */}
+      {tour.hasCompleted && (
+        <button
+          onClick={tour.start}
+          className="fixed bottom-4 right-14 z-40 flex h-7 items-center gap-1 rounded-lg border border-border bg-bg-surface/80 px-2 text-text-muted/50 hover:text-text-secondary hover:bg-bg-elevated transition-all shadow-lg shadow-black/20 backdrop-blur-sm"
+          title="Replay onboarding tour"
+        >
+          <span className="text-[11px]">Tour</span>
+        </button>
+      )}
+
+      {/* Onboarding tour overlay */}
+      <OnboardingTour
+        isActive={tour.isActive}
+        step={tour.step}
+        currentStep={tour.currentStep}
+        totalSteps={tour.totalSteps}
+        onNext={tour.next}
+        onPrev={tour.prev}
+        onSkip={tour.skip}
+      />
     </div>
   )
 }
