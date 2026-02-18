@@ -335,6 +335,7 @@ function BuildContent() {
               onSubmit={projectReady ? sendChatMessage : sendPrompt}
               disabled={isProcessing}
               placeholder={projectReady ? 'Modify your project...' : undefined}
+              showSuggestions={projectReady && isComplete}
             />
           </div>
         </div>

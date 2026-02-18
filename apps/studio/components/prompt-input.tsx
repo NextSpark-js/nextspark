@@ -3,13 +3,21 @@
 import { useState } from 'react'
 import { ArrowUp } from 'lucide-react'
 
+const CHAT_SUGGESTIONS = [
+  'Add a field to an entity',
+  'Create a new entity',
+  'Add a new page',
+  'Change the billing model',
+]
+
 interface PromptInputProps {
   onSubmit: (prompt: string) => void
   disabled?: boolean
   placeholder?: string
+  showSuggestions?: boolean
 }
 
-export function PromptInput({ onSubmit, disabled, placeholder }: PromptInputProps) {
+export function PromptInput({ onSubmit, disabled, placeholder, showSuggestions }: PromptInputProps) {
   const [value, setValue] = useState('')
 
   function handleSubmit() {
@@ -18,8 +26,28 @@ export function PromptInput({ onSubmit, disabled, placeholder }: PromptInputProp
     setValue('')
   }
 
+  function handleSuggestion(text: string) {
+    if (disabled) return
+    setValue(text)
+  }
+
   return (
     <div className="border-t border-border p-2 flex-shrink-0">
+      {/* Suggestion chips — shown when project is ready and input is empty */}
+      {showSuggestions && !disabled && !value.trim() && (
+        <div className="flex flex-wrap gap-1.5 pb-2">
+          {CHAT_SUGGESTIONS.map((s) => (
+            <button
+              key={s}
+              onClick={() => handleSuggestion(s)}
+              className="rounded-full border border-border bg-bg-surface/50 px-2.5 py-1 text-[10px] text-text-muted hover:text-text-secondary hover:border-accent/30 hover:bg-accent/5 transition-colors"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="relative flex items-end rounded-lg border border-border bg-bg hover:border-border-strong focus-within:border-accent/40 transition-colors">
         <textarea
           value={value}

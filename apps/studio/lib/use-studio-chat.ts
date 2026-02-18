@@ -444,10 +444,16 @@ export function useStudioChat() {
         }
       }
 
-      setState((prev) => ({
-        ...prev,
-        status: 'complete',
-      }))
+      setState((prev) => {
+        // Save messages to session after chat turn completes
+        if (sessionId) {
+          saveMessages(sessionId, prev.messages)
+        }
+        return {
+          ...prev,
+          status: 'complete',
+        }
+      })
 
       // Refresh file tree if files were modified
       if (filesWereModified) {
@@ -464,7 +470,7 @@ export function useStudioChat() {
       }))
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.project.slug, state.messages, sessionId, fetchFiles])
+  }, [state.project.slug, state.messages, sessionId, fetchFiles, saveMessages])
 
   /**
    * Process SSE events from the chat API.
