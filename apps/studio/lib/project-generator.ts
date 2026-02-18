@@ -133,6 +133,9 @@ export async function generateProjectDirect(
   onProgress('Copying project files...')
   await copyProjectFiles(projectPath, templatesDir)
 
+  // ── Step 1.1: Write not-found page ─────────────────────────
+  await writeNotFoundPage(projectPath, config)
+
   // ── Step 2: Update globals.css theme import ──────────────────
   onProgress('Configuring theme imports...')
   await updateGlobalsCss(projectPath, config)
@@ -237,6 +240,42 @@ async function copyProjectFiles(
       }
     }
   }
+}
+
+async function writeNotFoundPage(
+  projectPath: string,
+  config: WizardConfig
+): Promise<void> {
+  const notFoundPath = path.join(projectPath, 'app', 'not-found.tsx')
+  if (await pathExists(notFoundPath)) return
+
+  const appName = config.projectName || 'App'
+  const content = `import Link from 'next/link'
+
+export default function NotFound() {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 text-center">
+      <div className="mx-auto max-w-md">
+        <h1 className="text-6xl font-bold tracking-tight text-foreground">404</h1>
+        <p className="mt-4 text-lg text-muted-foreground">
+          This page is part of the full ${appName} application and is not available in preview mode.
+        </p>
+        <p className="mt-2 text-sm text-muted-foreground/60">
+          Pages like sign-up, login, and dashboard will work once the app is deployed.
+        </p>
+        <Link
+          href="/"
+          className="mt-8 inline-flex items-center rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
+        >
+          Back to Home
+        </Link>
+      </div>
+    </div>
+  )
+}
+`
+  await ensureDir(path.dirname(notFoundPath))
+  await writeFile(notFoundPath, content, 'utf-8')
 }
 
 async function updateGlobalsCss(
