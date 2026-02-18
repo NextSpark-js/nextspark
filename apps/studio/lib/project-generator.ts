@@ -1522,7 +1522,7 @@ ${sidebarLinks}
             ${FAKE_FIRST_NAMES[i % FAKE_FIRST_NAMES.length].charAt(0)}${FAKE_LAST_NAMES[i % FAKE_LAST_NAMES.length].charAt(0)}
           </div>
           <div className="flex-1 min-w-0">
-            <span className="text-sm text-foreground"><span className="font-medium">${FAKE_FIRST_NAMES[i % FAKE_FIRST_NAMES.length]} ${FAKE_LAST_NAMES[i % FAKE_LAST_NAMES.length]}</span> ${activityActions[i % activityActions.length]} a ${e.names.singular.toLowerCase()}</span>
+            <span className="text-sm text-foreground"><span className="font-medium">${FAKE_FIRST_NAMES[i % FAKE_FIRST_NAMES.length]} ${FAKE_LAST_NAMES[i % FAKE_LAST_NAMES.length]}</span> ${activityActions[i % activityActions.length]} ${'aeiou'.includes(e.names.singular.toLowerCase().charAt(0)) ? 'an' : 'a'} ${e.names.singular.toLowerCase()}</span>
           </div>
           <span className="text-xs text-muted-foreground flex-shrink-0">${i + 1}h ago</span>
         </div>`
