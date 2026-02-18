@@ -7,6 +7,13 @@ interface BlockSelectedMessage {
   blockIndex: number
 }
 
+interface DashboardSelectedMessage {
+  type: 'nextspark:dashboard-selected'
+  zone: string
+  entitySlug: string | null
+  label: string
+}
+
 function isBlockSelectedMessage(data: unknown): data is BlockSelectedMessage {
   return (
     typeof data === 'object' &&
@@ -14,6 +21,15 @@ function isBlockSelectedMessage(data: unknown): data is BlockSelectedMessage {
     (data as Record<string, unknown>).type === 'nextspark:block-selected' &&
     typeof (data as Record<string, unknown>).blockSlug === 'string' &&
     typeof (data as Record<string, unknown>).blockIndex === 'number'
+  )
+}
+
+function isDashboardSelectedMessage(data: unknown): data is DashboardSelectedMessage {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    (data as Record<string, unknown>).type === 'nextspark:dashboard-selected' &&
+    typeof (data as Record<string, unknown>).zone === 'string'
   )
 }
 
@@ -27,6 +43,7 @@ export function useBlockSelector(
   iframeRef: RefObject<HTMLIFrameElement | null>,
   enabled: boolean,
   onBlockSelected: (blockSlug: string, blockIndex: number) => void,
+  onDashboardSelected?: (zone: string, entitySlug: string | null, label: string) => void,
 ) {
   // Inject or cleanup script when enabled changes or iframe reloads
   const inject = useCallback(() => {
@@ -94,11 +111,14 @@ export function useBlockSelector(
     if (!enabled) return
 
     const onMessage = (e: MessageEvent) => {
-      if (!isBlockSelectedMessage(e.data)) return
-      onBlockSelected(e.data.blockSlug, e.data.blockIndex)
+      if (isBlockSelectedMessage(e.data)) {
+        onBlockSelected(e.data.blockSlug, e.data.blockIndex)
+      } else if (isDashboardSelectedMessage(e.data) && onDashboardSelected) {
+        onDashboardSelected(e.data.zone, e.data.entitySlug, e.data.label)
+      }
     }
 
     window.addEventListener('message', onMessage)
     return () => window.removeEventListener('message', onMessage)
-  }, [enabled, onBlockSelected])
+  }, [enabled, onBlockSelected, onDashboardSelected])
 }

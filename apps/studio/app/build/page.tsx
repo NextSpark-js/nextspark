@@ -176,7 +176,39 @@ function BuildContent() {
     }
   }, [pages])
 
-  useBlockSelector(iframeRef as RefObject<HTMLIFrameElement | null>, selectMode, handleBlockSelected)
+  const handleDashboardSelected = useCallback((zone: string, entitySlug: string | null, label: string) => {
+    setSelectMode(false)
+
+    let prompt = ''
+    switch (zone) {
+      case 'entity-nav':
+      case 'entity-card':
+        prompt = `I want to modify the "${label}" entity. What changes can I make?`
+        break
+      case 'entity-table':
+        prompt = `I want to modify the table view for "${label}". I'd like to change the columns, layout, or add features.`
+        break
+      case 'create-button':
+        prompt = `I want to customize the create form for "${label}".`
+        break
+      case 'sidebar':
+        prompt = `I want to modify the sidebar navigation layout.`
+        break
+      case 'recent-activity':
+        prompt = `I want to modify the recent activity section on the dashboard.`
+        break
+      case 'search-filter':
+        prompt = `I want to modify the search and filter functionality for "${label}".`
+        break
+      default:
+        prompt = `I want to modify this dashboard section: "${label}".`
+    }
+
+    if (!chatOpen) setChatOpen(true)
+    sendChatMessage(prompt)
+  }, [sendChatMessage, chatOpen])
+
+  useBlockSelector(iframeRef as RefObject<HTMLIFrameElement | null>, selectMode, handleBlockSelected, handleDashboardSelected)
 
   // Preview error detection — poll every 3s when preview is active
   const previewErrors = usePreviewErrors(project.previewUrl ? project.slug : null)

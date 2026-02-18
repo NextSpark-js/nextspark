@@ -1415,7 +1415,7 @@ async function writeMockDashboard(
 
   // Generate sidebar links from entities
   const sidebarLinks = entityList.map(e =>
-    `            <Link href="/dashboard/${e.slug}" onClick={navTo} className={\`group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all \${entitySlug === '${e.slug}' ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}\`}>
+    `            <Link href="/dashboard/${e.slug}" onClick={navTo} data-ns-zone="entity-nav" data-ns-entity="${e.slug}" className={\`group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all \${entitySlug === '${e.slug}' ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}\`}>
               <span className="flex-shrink-0 opacity-70" dangerouslySetInnerHTML={{ __html: '${iconEntity}' }} />
               <span className="truncate">${e.names.plural}</span>
               <span className="ml-auto rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium tabular-nums">{MOCK_ENTITIES['${e.slug}']?.count ?? 0}</span>
@@ -1482,7 +1482,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {sidebarOpen && <div onClick={() => setSidebarOpen(false)} className="fixed inset-0 z-40 bg-black/50 md:hidden" />}
 
         {/* Sidebar */}
-        <aside className={\`fixed inset-y-0 left-0 z-50 flex h-screen w-[260px] flex-col border-r border-border bg-card transition-transform duration-200 ease-in-out md:sticky md:top-0 md:z-auto md:w-[240px] md:translate-x-0 \${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}\`}>
+        <aside data-ns-zone="sidebar" className={\`fixed inset-y-0 left-0 z-50 flex h-screen w-[260px] flex-col border-r border-border bg-card transition-transform duration-200 ease-in-out md:sticky md:top-0 md:z-auto md:w-[240px] md:translate-x-0 \${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}\`}>
           {/* Logo */}
           <div className="flex items-center justify-between border-b border-border px-4 py-4">
             <div className="flex items-center gap-2.5">
@@ -1556,7 +1556,7 @@ ${sidebarLinks}
   const overviewPath = path.join(projectPath, 'app', 'dashboard', 'page.tsx')
   const cardColors = ['bg-blue-500/10 text-blue-600', 'bg-emerald-500/10 text-emerald-600', 'bg-violet-500/10 text-violet-600', 'bg-amber-500/10 text-amber-600', 'bg-rose-500/10 text-rose-600', 'bg-cyan-500/10 text-cyan-600']
   const entityCards = entityList.map((e, idx) =>
-    `        <Link href="/dashboard/${e.slug}" onClick={navTo} key="${e.slug}" className="group rounded-xl border border-border bg-card p-5 hover:shadow-md hover:border-border/80 transition-all">
+    `        <Link href="/dashboard/${e.slug}" onClick={navTo} key="${e.slug}" data-ns-zone="entity-card" data-ns-entity="${e.slug}" className="group rounded-xl border border-border bg-card p-5 hover:shadow-md hover:border-border/80 transition-all">
           <div className="flex items-center justify-between">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg ${cardColors[idx % cardColors.length]}">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
@@ -1616,7 +1616,7 @@ ${entityCards}
       </div>`}
 
       ${entityList.length > 0 ? `{/* Recent Activity */}
-      <div className="rounded-xl border border-border bg-card p-6">
+      <div data-ns-zone="recent-activity" className="rounded-xl border border-border bg-card p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold text-foreground">Recent Activity</h2>
           <span className="text-xs text-muted-foreground">Last 24 hours</span>
@@ -1699,6 +1699,7 @@ export default function EntityPage({ params }: { params: Promise<{ entity: strin
           <p className="mt-1 text-sm text-muted-foreground">{entityDef.description}</p>
         </div>
         <button
+          data-ns-zone="create-button" data-ns-entity={slug}
           onClick={() => alert('This action is not available in preview mode. Deploy your project to enable full CRUD operations.')}
           className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all"
         >
@@ -1708,7 +1709,7 @@ export default function EntityPage({ params }: { params: Promise<{ entity: strin
       </div>
 
       {/* Search bar placeholder */}
-      <div className="flex items-center gap-3">
+      <div data-ns-zone="search-filter" data-ns-entity={slug} className="flex items-center gap-3">
         <div className="relative flex-1">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input
@@ -1724,7 +1725,7 @@ export default function EntityPage({ params }: { params: Promise<{ entity: strin
       </div>
 
       {visibleFields.length > 0 ? (
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <div data-ns-zone="entity-table" data-ns-entity={slug} className="rounded-xl border border-border bg-card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
