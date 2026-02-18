@@ -202,6 +202,16 @@ export function useStudioChat() {
       // Fetch files if project is ready
       if (slug && phase === 'ready') {
         fetchFiles(slug)
+
+        // Regenerate page template files on disk from DB state so the
+        // preview is up-to-date when the dev server starts.
+        if (pages.length > 0) {
+          fetch('/api/pages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug, pages }),
+          }).catch(() => {})
+        }
       }
 
       return id
