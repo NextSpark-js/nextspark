@@ -1490,8 +1490,8 @@ ${recentActivity}
 `
   await writeFile(overviewPath, overviewContent, 'utf-8')
 
-  // ── Dynamic Entity Page ──
-  const entityPagePath = path.join(projectPath, 'app', 'dashboard', '[entity]', 'page.tsx')
+  // ── Dynamic Entity Page (inside (main) route group to avoid conflict) ──
+  const entityPagePath = path.join(projectPath, 'app', 'dashboard', '(main)', '[entity]', 'page.tsx')
   await ensureDir(path.dirname(entityPagePath))
   const entityPageContent = `'use client'
 
