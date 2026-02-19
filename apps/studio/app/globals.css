@@ -6,21 +6,26 @@
  */
 
 @theme {
-  --color-bg: #09090b;
-  --color-bg-surface: #0f0f12;
-  --color-bg-elevated: #18181d;
-  --color-bg-hover: #1f1f26;
-  --color-border: #232329;
-  --color-border-strong: #333340;
-  --color-text-primary: #ededf0;
-  --color-text-secondary: #a1a1ab;
-  --color-text-muted: #5a5a66;
-  --color-accent: #6d5cff;
-  --color-accent-hover: #7d6eff;
-  --color-accent-muted: rgba(109, 92, 255, 0.1);
-  --color-success: #22c55e;
-  --color-warning: #eab308;
-  --color-error: #ef4444;
+  /* 4-level background depth with ~4% OKLCH lightness steps (dark-mode double-distance rule) */
+  --color-bg: oklch(0.135 0.015 280);
+  --color-bg-surface: oklch(0.17 0.013 280);
+  --color-bg-elevated: oklch(0.21 0.012 280);
+  --color-bg-hover: oklch(0.25 0.010 280);
+  --color-border: oklch(0.28 0.012 280);
+  --color-border-strong: oklch(0.34 0.013 280);
+  /* Text hierarchy — 3 levels with clear contrast */
+  --color-text-primary: oklch(0.935 0.008 280);
+  --color-text-secondary: oklch(0.72 0.008 280);
+  --color-text-muted: oklch(0.48 0.008 280);
+  /* Accent — purple-indigo with perceptual uniformity */
+  --color-accent: oklch(0.58 0.24 280);
+  --color-accent-hover: oklch(0.64 0.22 280);
+  --color-accent-muted: oklch(0.58 0.24 280 / 0.1);
+  /* Semantic */
+  --color-success: oklch(0.65 0.19 155);
+  --color-warning: oklch(0.75 0.16 85);
+  --color-error: oklch(0.60 0.22 25);
+  /* Typography */
   --font-family-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --font-family-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
 }
@@ -171,10 +176,9 @@ body {
   color: var(--color-text-secondary);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.input-sm:focus {
-  outline: none;
-  border-color: rgba(109, 92, 255, 0.5);
-  box-shadow: 0 0 0 2px rgba(109, 92, 255, 0.08);
+.input-sm:focus-visible {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px oklch(0.58 0.24 280 / 0.12);
 }
 .input-sm::placeholder {
   color: var(--color-text-muted);
@@ -226,4 +230,32 @@ body {
 }
 .animate-sidebar-select {
   animation: sidebar-select 0.15s ease-out;
+}
+
+/* ── Focus-visible indicators (C2, C5 — WCAG 2.2 AA) ── */
+/* Uses !important to override Tailwind's focus:outline-none utility */
+*:focus-visible {
+  outline: 2px solid var(--color-accent) !important;
+  outline-offset: 2px !important;
+}
+*:focus:not(:focus-visible) {
+  outline: none !important;
+}
+/* Inputs: tighter offset for inline appearance */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline-offset: -1px !important;
+}
+
+/* ── Reduced motion (C3 — accessibility) ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
