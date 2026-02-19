@@ -159,6 +159,15 @@ export interface EntityConfig {
      * Used by the catch-all route to dynamically resolve entity URLs
      */
     basePath?: string
+    /**
+     * Whitelist of field names visible in unauthenticated (public) API responses.
+     * Only applies when access.public is true. When defined, unauthenticated
+     * GET requests will only return these fields, stripping sensitive data like
+     * userId, teamId, email, phone, commissionRate, etc.
+     * Authenticated requests always receive all fields.
+     * If not defined, all fields are returned (backwards compatible).
+     */
+    publicFields?: string[]
   }
 
   // ==========================================
