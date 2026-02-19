@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { TourStep } from '../types/walkme.types'
 import { useStepPositioning, getPlacementFromPosition } from '../lib/positioning'
@@ -48,6 +48,32 @@ export const WalkmeSpotlight = memo(function WalkmeSpotlight({
 }: WalkmeSpotlightProps) {
   const containerRef = useRef<HTMLDivElement>(null)
 
+  // Single source of truth for target position — shared by overlay and glow ring
+  const [targetRect, setTargetRect] = useState<DOMRect | null>(null)
+
+  const updateRect = useCallback(() => {
+    if (!targetElement) {
+      setTargetRect(null)
+      return
+    }
+    setTargetRect(targetElement.getBoundingClientRect())
+  }, [targetElement])
+
+  useEffect(() => {
+    updateRect()
+    if (!targetElement) return
+
+    const timer = setTimeout(updateRect, 100)
+    const handler = () => updateRect()
+    window.addEventListener('scroll', handler, true)
+    window.addEventListener('resize', handler)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('scroll', handler, true)
+      window.removeEventListener('resize', handler)
+    }
+  }, [targetElement, updateRect])
+
   const { refs, floatingStyles, isStable } = useStepPositioning(targetElement, {
     placement: getPlacementFromPosition(step.position ?? 'bottom'),
     offset: 16,
@@ -67,10 +93,11 @@ export const WalkmeSpotlight = memo(function WalkmeSpotlight({
         visible
         spotlightTarget={targetElement}
         spotlightPadding={8}
+        spotlightRect={targetRect}
       />
 
       {/* Glow ring around the spotlighted target */}
-      {targetElement && <SpotlightRing target={targetElement} padding={8} />}
+      {targetRect && <SpotlightRing rect={targetRect} padding={8} />}
 
       {/* Tooltip near the target — only render when target is resolved */}
       {targetElement && createPortal(
@@ -132,30 +159,15 @@ export const WalkmeSpotlight = memo(function WalkmeSpotlight({
 /**
  * Subtle animated glow ring rendered around the spotlighted element.
  * Creates a visual "pulse" that draws the eye to the highlighted area.
- * Dynamically tracks target position on scroll/resize.
+ * Receives pre-computed DOMRect from parent to stay in sync with overlay.
  */
 function SpotlightRing({
-  target,
+  rect,
   padding,
 }: {
-  target: HTMLElement
+  rect: DOMRect
   padding: number
 }) {
-  const [rect, setRect] = useState(() => target.getBoundingClientRect())
-
-  useEffect(() => {
-    const update = () => setRect(target.getBoundingClientRect())
-    // Recalculate after scroll settles
-    const timer = setTimeout(update, 100)
-    window.addEventListener('scroll', update, true)
-    window.addEventListener('resize', update)
-    return () => {
-      clearTimeout(timer)
-      window.removeEventListener('scroll', update, true)
-      window.removeEventListener('resize', update)
-    }
-  }, [target])
-
   return createPortal(
     <div
       data-walkme

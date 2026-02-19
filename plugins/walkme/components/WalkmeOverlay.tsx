@@ -8,6 +8,8 @@ interface WalkmeOverlayProps {
   onClick?: () => void
   spotlightTarget?: HTMLElement | null
   spotlightPadding?: number
+  /** Pre-computed target rect — when provided, skip internal scroll/resize tracking */
+  spotlightRect?: DOMRect | null
 }
 
 /**
@@ -20,31 +22,37 @@ export const WalkmeOverlay = memo(function WalkmeOverlay({
   onClick,
   spotlightTarget,
   spotlightPadding = 8,
+  spotlightRect: externalRect,
 }: WalkmeOverlayProps) {
-  const [clipPath, setClipPath] = useState<string | undefined>(undefined)
+  const [internalClipPath, setInternalClipPath] = useState<string | undefined>(undefined)
+
+  // When parent provides a pre-computed rect, derive clip-path from it directly
+  const externalClipPath = externalRect
+    ? getSpotlightClipPathFromRect(externalRect, spotlightPadding)
+    : undefined
 
   const recalculate = useCallback(() => {
     if (!spotlightTarget) {
-      setClipPath(undefined)
+      setInternalClipPath(undefined)
       return
     }
-    setClipPath(getSpotlightClipPath(spotlightTarget, spotlightPadding))
+    setInternalClipPath(getSpotlightClipPathFromRect(spotlightTarget.getBoundingClientRect(), spotlightPadding))
   }, [spotlightTarget, spotlightPadding])
 
-  // Recalculate on mount and when target changes
+  // Self-tracking mode: only active when no external rect is provided
   useEffect(() => {
+    if (externalRect !== undefined) return
     recalculate()
-  }, [recalculate])
+  }, [recalculate, externalRect])
 
-  // Track target position on scroll/resize (any scrollable container)
   useEffect(() => {
+    if (externalRect !== undefined) return // skip self-tracking when parent provides rect
     if (!spotlightTarget) return
 
-    // Recalculate after a short delay to let any scrollIntoView settle
     const initialTimer = setTimeout(recalculate, 100)
 
     const handler = () => recalculate()
-    window.addEventListener('scroll', handler, true) // capture phase for nested scroll containers
+    window.addEventListener('scroll', handler, true)
     window.addEventListener('resize', handler)
 
     return () => {
@@ -52,7 +60,9 @@ export const WalkmeOverlay = memo(function WalkmeOverlay({
       window.removeEventListener('scroll', handler, true)
       window.removeEventListener('resize', handler)
     }
-  }, [spotlightTarget, recalculate])
+  }, [spotlightTarget, recalculate, externalRect])
+
+  const clipPath = externalRect !== undefined ? externalClipPath : internalClipPath
 
   if (typeof window === 'undefined') return null
   if (!visible) return null
@@ -76,12 +86,11 @@ export const WalkmeOverlay = memo(function WalkmeOverlay({
   )
 })
 
-/** Generate a clip-path that cuts out a rectangle around the target element */
-function getSpotlightClipPath(
-  target: HTMLElement,
+/** Generate a clip-path that cuts out a rectangle from a DOMRect */
+function getSpotlightClipPathFromRect(
+  rect: DOMRect,
   padding: number,
 ): string {
-  const rect = target.getBoundingClientRect()
   const top = Math.max(0, rect.top - padding)
   const left = Math.max(0, rect.left - padding)
   const bottom = Math.min(window.innerHeight, rect.bottom + padding)
