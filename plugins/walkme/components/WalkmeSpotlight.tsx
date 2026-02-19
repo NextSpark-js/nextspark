@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useEffect, useRef } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { TourStep } from '../types/walkme.types'
 import { useStepPositioning, getPlacementFromPosition } from '../lib/positioning'
@@ -30,7 +30,8 @@ interface WalkmeSpotlightProps {
 
 /**
  * Spotlight/highlight that illuminates a specific element
- * with an overlay cutout and a tooltip explanation.
+ * with an overlay cutout, a subtle glow ring, and a tooltip explanation.
+ * Theme-aware with CSS variables for premium dark/light mode.
  */
 export const WalkmeSpotlight = memo(function WalkmeSpotlight({
   step,
@@ -47,15 +48,15 @@ export const WalkmeSpotlight = memo(function WalkmeSpotlight({
 }: WalkmeSpotlightProps) {
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const { refs, floatingStyles } = useStepPositioning(targetElement, {
+  const { refs, floatingStyles, isStable } = useStepPositioning(targetElement, {
     placement: getPlacementFromPosition(step.position ?? 'bottom'),
     offset: 16,
     padding: 8,
   })
 
   useEffect(() => {
-    containerRef.current?.focus()
-  }, [step.id])
+    if (isStable) containerRef.current?.focus()
+  }, [isStable])
 
   if (typeof window === 'undefined') return null
 
@@ -68,8 +69,11 @@ export const WalkmeSpotlight = memo(function WalkmeSpotlight({
         spotlightPadding={8}
       />
 
-      {/* Tooltip near the target */}
-      {createPortal(
+      {/* Glow ring around the spotlighted target */}
+      {targetElement && <SpotlightRing target={targetElement} padding={8} />}
+
+      {/* Tooltip near the target — only render when target is resolved */}
+      {targetElement && createPortal(
         <div
           ref={(el) => {
             refs.setFloating(el)
@@ -81,22 +85,25 @@ export const WalkmeSpotlight = memo(function WalkmeSpotlight({
           aria-label={step.title}
           aria-describedby={`walkme-spotlight-content-${step.id}`}
           tabIndex={-1}
-          className="w-80 max-w-[calc(100vw-2rem)] rounded-lg p-4 shadow-lg outline-none animate-in fade-in-0 zoom-in-95 duration-200"
+          className="w-80 max-w-[calc(100vw-2rem)] rounded-xl p-4 outline-none"
           style={{
             ...floatingStyles,
             zIndex: 9999,
-            backgroundColor: 'var(--walkme-bg, #ffffff)',
-            color: 'var(--walkme-text, #111827)',
-            border: '1px solid var(--walkme-border, #e5e7eb)',
-            boxShadow: 'var(--walkme-shadow, 0 4px 6px -1px rgba(0, 0, 0, 0.1))',
+            backgroundColor: 'var(--walkme-bg)',
+            color: 'var(--walkme-text)',
+            border: '1px solid var(--walkme-border)',
+            boxShadow: 'var(--walkme-shadow)',
+            // Hide until floating-ui has stabilized after scroll
+            opacity: isStable ? 1 : 0,
+            transition: 'opacity 150ms ease-out',
           }}
         >
-          <h3 className="mb-1 text-sm font-semibold">{step.title}</h3>
+          <h3 className="mb-1 text-sm font-semibold tracking-tight">{step.title}</h3>
 
           <p
             id={`walkme-spotlight-content-${step.id}`}
-            className="mb-3 text-sm"
-            style={{ color: 'var(--walkme-text-muted, #6b7280)' }}
+            className="mb-3 text-sm leading-relaxed"
+            style={{ color: 'var(--walkme-text-muted)' }}
           >
             {step.content}
           </p>
@@ -121,3 +128,49 @@ export const WalkmeSpotlight = memo(function WalkmeSpotlight({
     </>
   )
 })
+
+/**
+ * Subtle animated glow ring rendered around the spotlighted element.
+ * Creates a visual "pulse" that draws the eye to the highlighted area.
+ * Dynamically tracks target position on scroll/resize.
+ */
+function SpotlightRing({
+  target,
+  padding,
+}: {
+  target: HTMLElement
+  padding: number
+}) {
+  const [rect, setRect] = useState(() => target.getBoundingClientRect())
+
+  useEffect(() => {
+    const update = () => setRect(target.getBoundingClientRect())
+    // Recalculate after scroll settles
+    const timer = setTimeout(update, 100)
+    window.addEventListener('scroll', update, true)
+    window.addEventListener('resize', update)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('scroll', update, true)
+      window.removeEventListener('resize', update)
+    }
+  }, [target])
+
+  return createPortal(
+    <div
+      data-walkme
+      className="pointer-events-none fixed animate-in fade-in-0 duration-300"
+      style={{
+        zIndex: 9998,
+        top: rect.top - padding,
+        left: rect.left - padding,
+        width: rect.width + padding * 2,
+        height: rect.height + padding * 2,
+        borderRadius: 8,
+        boxShadow: '0 0 0 2px var(--walkme-primary, oklch(0.588 0.243 264.376)), 0 0 16px 4px var(--walkme-primary, oklch(0.588 0.243 264.376 / 0.3))',
+      }}
+      aria-hidden="true"
+    />,
+    document.body,
+  )
+}

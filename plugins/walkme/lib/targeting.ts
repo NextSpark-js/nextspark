@@ -175,7 +175,7 @@ export function scrollToElement(
   if (typeof window === 'undefined') return
 
   element.scrollIntoView({
-    behavior: options.behavior ?? 'smooth',
+    behavior: options.behavior ?? 'instant',
     block: options.block ?? 'center',
   })
 }

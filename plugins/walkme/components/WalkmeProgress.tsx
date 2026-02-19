@@ -11,6 +11,7 @@ interface WalkmeProgressProps {
 
 /**
  * Progress bar indicator showing current step within a tour.
+ * Uses theme-aware CSS variables with smooth transitions.
  */
 export const WalkmeProgress = memo(function WalkmeProgress({
   current,
@@ -23,10 +24,10 @@ export const WalkmeProgress = memo(function WalkmeProgress({
     .replace('{total}', String(total))
 
   return (
-    <div data-cy="walkme-progress" data-walkme className="flex items-center gap-2">
+    <div data-cy="walkme-progress" data-walkme className="flex items-center gap-3">
       <div
-        className="h-1.5 flex-1 overflow-hidden rounded-full"
-        style={{ backgroundColor: 'var(--walkme-border, #e5e7eb)' }}
+        className="h-1 flex-1 overflow-hidden rounded-full"
+        style={{ backgroundColor: 'var(--walkme-border)' }}
         role="progressbar"
         aria-valuenow={current + 1}
         aria-valuemin={1}
@@ -34,16 +35,16 @@ export const WalkmeProgress = memo(function WalkmeProgress({
         aria-label={progressLabel}
       >
         <div
-          className="h-full rounded-full transition-all duration-300 ease-out"
+          className="h-full rounded-full transition-all duration-500 ease-out"
           style={{
             width: `${percentage}%`,
-            backgroundColor: 'var(--walkme-primary, #3b82f6)',
+            backgroundColor: 'var(--walkme-primary)',
           }}
         />
       </div>
       <span
-        className="text-xs whitespace-nowrap"
-        style={{ color: 'var(--walkme-text-muted, #6b7280)' }}
+        className="text-xs tabular-nums whitespace-nowrap"
+        style={{ color: 'var(--walkme-text-muted)' }}
       >
         {current + 1} / {total}
       </span>

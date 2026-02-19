@@ -21,7 +21,7 @@ interface WalkmeControlsProps {
 
 /**
  * Navigation button group for tour steps.
- * Renders only the actions specified in the step configuration.
+ * Premium styling with hover/active states and proper spacing.
  */
 export const WalkmeControls = memo(function WalkmeControls({
   actions,
@@ -51,9 +51,9 @@ export const WalkmeControls = memo(function WalkmeControls({
             data-cy="walkme-btn-skip"
             onClick={onSkip}
             type="button"
-            className="rounded px-3 py-1.5 text-sm transition-colors"
+            className="rounded-lg px-3 py-1.5 text-sm transition-all duration-150 hover:opacity-80 active:scale-95"
             style={{
-              color: 'var(--walkme-text-muted, #6b7280)',
+              color: 'var(--walkme-text-muted)',
               backgroundColor: 'transparent',
             }}
           >
@@ -68,10 +68,10 @@ export const WalkmeControls = memo(function WalkmeControls({
             data-cy="walkme-btn-prev"
             onClick={onPrev}
             type="button"
-            className="rounded px-3 py-1.5 text-sm transition-colors"
+            className="rounded-lg px-3.5 py-1.5 text-sm font-medium transition-all duration-150 hover:opacity-90 active:scale-95"
             style={{
-              color: 'var(--walkme-text, #111827)',
-              backgroundColor: 'var(--walkme-border, #e5e7eb)',
+              color: 'var(--walkme-text)',
+              backgroundColor: 'var(--walkme-border)',
             }}
           >
             {labels?.prev ?? 'Previous'}
@@ -83,9 +83,9 @@ export const WalkmeControls = memo(function WalkmeControls({
             data-cy="walkme-btn-next"
             onClick={onNext}
             type="button"
-            className="rounded px-3 py-1.5 text-sm font-medium text-white transition-colors"
+            className="rounded-lg px-4 py-1.5 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-95"
             style={{
-              backgroundColor: 'var(--walkme-primary, #3b82f6)',
+              backgroundColor: 'var(--walkme-primary)',
             }}
           >
             {labels?.next ?? 'Next'}
@@ -97,9 +97,9 @@ export const WalkmeControls = memo(function WalkmeControls({
             data-cy="walkme-btn-complete"
             onClick={onComplete}
             type="button"
-            className="rounded px-3 py-1.5 text-sm font-medium text-white transition-colors"
+            className="rounded-lg px-4 py-1.5 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-95"
             style={{
-              backgroundColor: 'var(--walkme-primary, #3b82f6)',
+              backgroundColor: 'var(--walkme-primary)',
             }}
           >
             {labels?.complete ?? 'Complete'}

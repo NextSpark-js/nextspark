@@ -7,7 +7,7 @@
 
 'use client'
 
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   useFloating,
   autoUpdate,
@@ -40,6 +40,10 @@ export interface StepPositioningResult {
   isPositioned: boolean
   arrowRef: React.RefObject<HTMLDivElement | null>
   middlewareData: Record<string, unknown>
+  /** Force a position recalculation (useful after scroll/resize settles) */
+  update: () => void
+  /** Whether floating-ui has had time to stabilize after scroll */
+  isStable: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -88,19 +92,25 @@ export function getViewportInfo(): {
 /**
  * Hook for positioning a floating step element relative to a target.
  * Wraps @floating-ui/react with sensible defaults for WalkMe steps.
+ *
+ * IMPORTANT: Does NOT pass targetElement directly to useFloating's
+ * `elements.reference`. Instead, sets the reference imperatively after
+ * a short delay so that any scrollIntoView triggered by the provider
+ * has fully settled. This prevents stale position computation on
+ * backward navigation.
  */
 export function useStepPositioning(
   targetElement: HTMLElement | null,
   config: PositionConfig,
 ): StepPositioningResult {
   const arrowRef = useRef<HTMLDivElement>(null)
+  const [isStable, setIsStable] = useState(false)
 
-  const { refs, floatingStyles, placement, isPositioned, middlewareData } =
+  const { refs, floatingStyles, placement, isPositioned, middlewareData, update } =
     useFloating({
       placement: config.placement,
-      elements: {
-        reference: targetElement,
-      },
+      // DO NOT set elements.reference here — we set it imperatively below
+      // so floating-ui computes position AFTER scroll has settled.
       whileElementsMounted: autoUpdate,
       middleware: [
         offset(config.offset ?? 8),
@@ -113,6 +123,39 @@ export function useStepPositioning(
       ],
     })
 
+  // Set reference imperatively after scroll settles
+  useEffect(() => {
+    setIsStable(false)
+
+    if (!targetElement) {
+      refs.setReference(null)
+      return
+    }
+
+    // Double rAF ensures any scrollIntoView (even 'instant') has
+    // fully reflowed the layout before we hand the element to floating-ui.
+    let cancelled = false
+    const rafOuter = requestAnimationFrame(() => {
+      const rafInner = requestAnimationFrame(() => {
+        if (cancelled) return
+        refs.setReference(targetElement)
+        // One more rAF for floating-ui to compute, then mark stable
+        requestAnimationFrame(() => {
+          if (!cancelled) setIsStable(true)
+        })
+      })
+      // Store inner for cleanup (best-effort)
+      innerRafRef.current = rafInner
+    })
+    const innerRafRef = { current: 0 }
+
+    return () => {
+      cancelled = true
+      cancelAnimationFrame(rafOuter)
+      cancelAnimationFrame(innerRafRef.current)
+    }
+  }, [targetElement, refs])
+
   return {
     refs: {
       setReference: refs.setReference,
@@ -123,5 +166,7 @@ export function useStepPositioning(
     isPositioned,
     arrowRef,
     middlewareData,
+    update,
+    isStable,
   }
 }

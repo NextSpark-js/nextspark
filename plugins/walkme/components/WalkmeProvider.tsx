@@ -5,6 +5,7 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useState,
   type ReactNode,
 } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
@@ -81,7 +82,7 @@ export function WalkmeProvider({
   const customEventsRef = useRef<Set<string>>(new Set())
   const previousFocusRef = useRef<HTMLElement | null>(null)
   const triggerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const targetElementRef = useRef<HTMLElement | null>(null)
+  const [targetElement, setTargetElement] = useState<HTMLElement | null>(null)
 
   // Validate tours on mount
   const validatedTours = useMemo(() => {
@@ -325,7 +326,7 @@ export function WalkmeProvider({
 
     waitForTarget(activeStep.target, { timeout: 5000 }).then((result) => {
       if (result.found && result.element) {
-        targetElementRef.current = result.element
+        setTargetElement(result.element)
         scrollToElement(result.element)
       } else if (debug) {
         console.warn(
@@ -340,34 +341,44 @@ export function WalkmeProvider({
   // ---------------------------------------------------------------------------
 
   useEffect(() => {
+    // Clear stale target so floating tooltip unmounts and remounts fresh
+    setTargetElement(null)
+
     if (!state.activeTour || state.activeTour.status !== 'active') return
 
     const activeStep = getActiveStep(state)
-    if (!activeStep?.target) {
-      targetElementRef.current = null
-      return
+    if (!activeStep?.target) return
+
+    let cancelled = false
+
+    const applyTarget = (element: HTMLElement) => {
+      if (cancelled) return
+      scrollToElement(element)
+      setTargetElement(element)
     }
 
-    // Try finding immediately
-    const result = findTarget(activeStep.target)
-    if (result.found && result.element) {
-      targetElementRef.current = result.element
-      scrollToElement(result.element)
-    } else {
-      // Wait for the element
-      waitForTarget(activeStep.target, { timeout: 5000 }).then((waitResult) => {
-        if (waitResult.found && waitResult.element) {
-          targetElementRef.current = waitResult.element
-          scrollToElement(waitResult.element)
-        } else {
-          targetElementRef.current = null
-          if (debug) {
+    // Short delay lets React flush the null state (unmounts tooltip)
+    const findTimer = setTimeout(() => {
+      if (cancelled) return
+      const result = findTarget(activeStep.target!)
+      if (result.found && result.element) {
+        applyTarget(result.element)
+      } else {
+        waitForTarget(activeStep.target!, { timeout: 5000 }).then((waitResult) => {
+          if (waitResult.found && waitResult.element) {
+            applyTarget(waitResult.element)
+          } else if (debug) {
             console.warn(
               `[WalkMe] Target "${activeStep.target}" not found, step may display without anchor`,
             )
           }
-        }
-      })
+        })
+      }
+    }, 50)
+
+    return () => {
+      cancelled = true
+      clearTimeout(findTimer)
     }
   }, [state.activeTour?.currentStepIndex, state.activeTour?.status]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -423,6 +434,31 @@ export function WalkmeProvider({
   }, [state.activeTour, nextStep, prevStep, skipTour])
 
   // ---------------------------------------------------------------------------
+  // Body Scroll Lock (prevent scrolling during active tour)
+  // ---------------------------------------------------------------------------
+
+  useEffect(() => {
+    const isActive = state.activeTour?.status === 'active'
+    if (!isActive) return
+
+    const { style } = document.body
+    const originalOverflow = style.overflow
+    const originalPaddingRight = style.paddingRight
+
+    // Compensate for scrollbar width to prevent layout shift
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
+    style.overflow = 'hidden'
+    if (scrollbarWidth > 0) {
+      style.paddingRight = `${scrollbarWidth}px`
+    }
+
+    return () => {
+      style.overflow = originalOverflow
+      style.paddingRight = originalPaddingRight
+    }
+  }, [state.activeTour?.status])
+
+  // ---------------------------------------------------------------------------
   // Cleanup
   // ---------------------------------------------------------------------------
 
@@ -431,7 +467,7 @@ export function WalkmeProvider({
       if (triggerTimeoutRef.current) {
         clearTimeout(triggerTimeoutRef.current)
       }
-      targetElementRef.current = null
+      setTargetElement(null)
       previousFocusRef.current = null
     }
   }, [])
@@ -520,7 +556,7 @@ export function WalkmeProvider({
       {showStep && state.activeTour && (
         <StepRenderer
           step={activeStep}
-          targetElement={targetElementRef.current}
+          targetElement={targetElement}
           onNext={nextStep}
           onPrev={prevStep}
           onSkip={skipTour}
@@ -591,7 +627,14 @@ function StepRenderer({
 
     case 'tooltip':
       return (
-        <WalkmeTooltip {...commonProps} targetElement={targetElement} />
+        <>
+          <WalkmeOverlay
+            visible
+            spotlightTarget={targetElement}
+            spotlightPadding={8}
+          />
+          <WalkmeTooltip {...commonProps} targetElement={targetElement} />
+        </>
       )
 
     case 'spotlight':

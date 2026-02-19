@@ -2,7 +2,7 @@
 
 import { memo, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { X } from 'lucide-react'
+import { X } from '@phosphor-icons/react'
 import type { TourStep } from '../types/walkme.types'
 import { WalkmeProgress } from './WalkmeProgress'
 import { WalkmeControls } from './WalkmeControls'
@@ -30,6 +30,7 @@ interface WalkmeModalProps {
 /**
  * Centered modal dialog for tour steps.
  * Includes focus trap and keyboard handling.
+ * Uses theme-aware CSS variables for premium dark/light mode support.
  */
 export const WalkmeModal = memo(function WalkmeModal({
   step,
@@ -85,13 +86,13 @@ export const WalkmeModal = memo(function WalkmeModal({
       aria-label={step.title}
       aria-describedby={`walkme-modal-content-${step.id}`}
       tabIndex={-1}
-      className="fixed left-1/2 top-1/2 w-[28rem] max-w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-xl p-6 shadow-2xl outline-none animate-in fade-in-0 zoom-in-95 duration-200"
+      className="fixed left-1/2 top-1/2 w-[28rem] max-w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl p-6 outline-none animate-in fade-in-0 zoom-in-95 duration-300"
       style={{
         zIndex: 9999,
-        backgroundColor: 'var(--walkme-bg, #ffffff)',
-        color: 'var(--walkme-text, #111827)',
-        border: '1px solid var(--walkme-border, #e5e7eb)',
-        boxShadow: 'var(--walkme-shadow, 0 25px 50px -12px rgba(0, 0, 0, 0.25))',
+        backgroundColor: 'var(--walkme-bg)',
+        color: 'var(--walkme-text)',
+        border: '1px solid var(--walkme-border)',
+        boxShadow: 'var(--walkme-shadow)',
       }}
     >
       {/* Close button */}
@@ -99,21 +100,30 @@ export const WalkmeModal = memo(function WalkmeModal({
         data-cy="walkme-btn-close"
         onClick={onSkip}
         type="button"
-        className="absolute right-3 top-3 rounded-sm p-1 transition-colors"
-        style={{ color: 'var(--walkme-text-muted, #6b7280)' }}
+        className="absolute right-3 top-3 rounded-lg p-1.5 transition-all duration-150 hover:scale-110 active:scale-95"
+        style={{
+          color: 'var(--walkme-text-muted)',
+          backgroundColor: 'transparent',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'var(--walkme-border)'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'transparent'
+        }}
         aria-label={labels?.close ?? 'Close'}
       >
-        <X className="h-4 w-4" />
+        <X size={16} weight="bold" />
       </button>
 
       {/* Title */}
-      <h2 className="mb-2 pr-8 text-lg font-semibold">{step.title}</h2>
+      <h2 className="mb-2 pr-8 text-lg font-semibold tracking-tight">{step.title}</h2>
 
       {/* Content */}
       <p
         id={`walkme-modal-content-${step.id}`}
-        className="mb-4 text-sm leading-relaxed"
-        style={{ color: 'var(--walkme-text-muted, #6b7280)' }}
+        className="mb-5 text-sm leading-relaxed"
+        style={{ color: 'var(--walkme-text-muted)' }}
       >
         {step.content}
       </p>
