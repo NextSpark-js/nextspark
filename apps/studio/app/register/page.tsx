@@ -36,12 +36,12 @@ export default function RegisterPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 bg-bg">
-      <div className="w-full max-w-sm space-y-8">
+      <div className="w-full max-w-sm space-y-8 animate-card-in">
         {/* Logo */}
         <div className="text-center space-y-3">
           <div className="flex items-center justify-center gap-2">
             <div className="relative">
-              <div className="absolute -inset-3 rounded-full bg-accent/20 blur-xl" />
+              <div className="absolute -inset-3 rounded-full bg-accent/20 blur-lg" />
               <Zap className="relative h-7 w-7 text-accent" />
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-text-primary">
@@ -107,7 +107,7 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-accent-hover hover:shadow-lg hover:shadow-accent/20 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Create account

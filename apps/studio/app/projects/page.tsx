@@ -128,17 +128,19 @@ export default function ProjectsPage() {
             <Loader2 className="h-5 w-5 animate-spin text-accent" />
           </div>
         ) : sessions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 space-y-4">
-            <FolderOpen className="h-12 w-12 text-text-muted/30" />
-            <div className="text-center space-y-1">
-              <p className="text-sm text-text-secondary">No projects yet</p>
-              <p className="text-xs text-text-muted">
-                Describe your app on the home page to create your first project
+          <div className="flex flex-col items-center justify-center py-20 space-y-5">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-accent-muted border border-accent/10">
+              <FolderOpen className="h-7 w-7 text-accent/60" />
+            </div>
+            <div className="text-center space-y-1.5">
+              <p className="text-sm font-medium text-text-secondary">No projects yet</p>
+              <p className="text-xs text-text-muted max-w-[260px]">
+                Describe the app you want to build on the home page to create your first project
               </p>
             </div>
             <button
               onClick={() => router.push('/')}
-              className="mt-4 flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-accent-hover"
+              className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2.5 text-xs font-medium text-white transition-all hover:bg-accent-hover hover:shadow-lg hover:shadow-accent/20 active:scale-[0.97]"
             >
               <Zap className="h-3 w-3" />
               Create your first app
@@ -159,7 +161,8 @@ export default function ProjectsPage() {
                 <button
                   key={session.id}
                   onClick={() => router.push(`/build?session=${session.id}`)}
-                  className="group relative flex flex-col rounded-xl border border-border bg-bg-surface p-4 text-left transition-all hover:border-border-strong hover:shadow-md hover:shadow-accent/5"
+                  className="animate-card-in group relative flex flex-col rounded-xl border border-border bg-bg-surface p-4 text-left transition-all hover:border-border-strong hover:shadow-md hover:shadow-accent/5 active:scale-[0.98]"
+                  style={{ animationDelay: `${sessions.indexOf(session) * 50}ms` }}
                 >
                   {/* Delete button */}
                   <div
@@ -167,7 +170,7 @@ export default function ProjectsPage() {
                     tabIndex={0}
                     onClick={(e) => handleDelete(session.id, e)}
                     onKeyDown={(e) => { if (e.key === 'Enter') handleDelete(session.id, e as unknown as React.MouseEvent) }}
-                    className="absolute top-3 right-3 flex h-7 w-7 items-center justify-center rounded-md text-text-muted/0 group-hover:text-text-muted/50 hover:!text-error hover:!bg-error/10 transition-all"
+                    className="absolute top-2.5 right-2.5 flex h-8 w-8 items-center justify-center rounded-lg text-text-muted/0 group-hover:text-text-muted/50 hover:!text-error hover:!bg-error/10 transition-all"
                     title="Delete project"
                   >
                     {deleting === session.id ? (
@@ -193,7 +196,7 @@ export default function ProjectsPage() {
                   </p>
 
                   {/* Meta */}
-                  <div className="mt-auto flex items-center gap-3 text-[10px] text-text-muted/50">
+                  <div className="mt-auto flex items-center gap-3 text-[11px] text-text-muted/50">
                     {entityCount > 0 && (
                       <span className="flex items-center gap-1">
                         <LayoutGrid className="h-3 w-3" />
