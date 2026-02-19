@@ -84,7 +84,7 @@ INSERT INTO "teams" (
     'nextspark',
     'System Administrators - Cross-team access enabled',
     'test-superadmin-001',
-    '{"segment": "enterprise", "industry": "platform", "systemAdmin": true}'::jsonb,
+    '{"segment": "enterprise", "industry": "platform", "systemAdmin": true, "isSeedData": true}'::jsonb,
     NOW(),
     NOW()
   )

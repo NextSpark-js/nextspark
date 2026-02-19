@@ -168,7 +168,7 @@ INSERT INTO "teams" (
     'carlos-mendoza-team',
     'Default workspace',
     'usr-carlos-001',
-    '{}'::jsonb,
+    '{"isSeedData": true}'::jsonb,
     NOW(),
     NOW()
   ),
@@ -178,7 +178,7 @@ INSERT INTO "teams" (
     'james-wilson-team',
     'Default workspace',
     'usr-james-002',
-    '{}'::jsonb,
+    '{"isSeedData": true}'::jsonb,
     NOW(),
     NOW()
   ),
@@ -188,7 +188,7 @@ INSERT INTO "teams" (
     'diego-ramirez-team',
     'Default workspace',
     'usr-diego-003',
-    '{}'::jsonb,
+    '{"isSeedData": true}'::jsonb,
     NOW(),
     NOW()
   ),
@@ -198,7 +198,7 @@ INSERT INTO "teams" (
     'michael-brown-team',
     'Default workspace',
     'usr-michael-004',
-    '{}'::jsonb,
+    '{"isSeedData": true}'::jsonb,
     NOW(),
     NOW()
   ),
@@ -208,7 +208,7 @@ INSERT INTO "teams" (
     'ana-garcia-team',
     'Default workspace',
     'usr-ana-005',
-    '{}'::jsonb,
+    '{"isSeedData": true}'::jsonb,
     NOW(),
     NOW()
   ),
@@ -218,7 +218,7 @@ INSERT INTO "teams" (
     'emily-johnson-team',
     'Default workspace',
     'usr-emily-006',
-    '{}'::jsonb,
+    '{"isSeedData": true}'::jsonb,
     NOW(),
     NOW()
   ),
@@ -228,7 +228,7 @@ INSERT INTO "teams" (
     'sofia-lopez-team',
     'Default workspace',
     'usr-sofia-007',
-    '{}'::jsonb,
+    '{"isSeedData": true}'::jsonb,
     NOW(),
     NOW()
   ),
@@ -238,7 +238,7 @@ INSERT INTO "teams" (
     'sarah-davis-team',
     'Default workspace',
     'usr-sarah-008',
-    '{}'::jsonb,
+    '{"isSeedData": true}'::jsonb,
     NOW(),
     NOW()
   ),
@@ -252,7 +252,7 @@ INSERT INTO "teams" (
     'everpoint-labs',
     'Technology Company - Software development and innovation',
     'usr-carlos-001',
-    '{"segment": "startup", "industry": "technology"}'::jsonb,
+    '{"segment": "startup", "industry": "technology", "isSeedData": true}'::jsonb,
     NOW(),
     NOW()
   ),
@@ -262,7 +262,7 @@ INSERT INTO "teams" (
     'ironvale-global',
     'Consulting Firm - Business strategy and management consulting',
     'usr-ana-005',
-    '{"segment": "enterprise", "industry": "consulting"}'::jsonb,
+    '{"segment": "enterprise", "industry": "consulting", "isSeedData": true}'::jsonb,
     NOW(),
     NOW()
   ),
@@ -272,7 +272,7 @@ INSERT INTO "teams" (
     'riverstone-ventures',
     'Investment Fund - Early-stage startup investments',
     'usr-sofia-007',
-    '{"segment": "startup", "industry": "finance"}'::jsonb,
+    '{"segment": "startup", "industry": "finance", "isSeedData": true}'::jsonb,
     NOW(),
     NOW()
   )

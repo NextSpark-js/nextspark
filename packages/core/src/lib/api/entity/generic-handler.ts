@@ -39,6 +39,45 @@ import type { BlockInstance } from '../../../types/blocks'
 import type { PatternReference } from '../../../types/pattern-reference'
 
 // ==========================================
+// PUBLIC FIELD FILTER
+// ==========================================
+
+/**
+ * Filter entity data to only include publicFields when request is unauthenticated.
+ * If entityConfig.access.publicFields is defined and userId is null (public request),
+ * strips all fields not in the whitelist from the response data.
+ * Authenticated requests (userId !== null) always receive full data.
+ */
+function filterPublicFields<T>(
+  data: T,
+  entityConfig: EntityConfig,
+  userId: string | null
+): T {
+  const publicFields = entityConfig.access?.publicFields
+  if (!publicFields || publicFields.length === 0 || userId !== null) {
+    return data
+  }
+
+  const allowedSet = new Set(publicFields)
+
+  const filterItem = (item: Record<string, unknown>): Record<string, unknown> => {
+    const filtered: Record<string, unknown> = {}
+    for (const key of allowedSet) {
+      if (key in item) {
+        filtered[key] = item[key]
+      }
+    }
+    return filtered
+  }
+
+  if (Array.isArray(data)) {
+    return data.map(item => filterItem(item as Record<string, unknown>)) as T
+  }
+
+  return filterItem(data as Record<string, unknown>) as T
+}
+
+// ==========================================
 // TAXONOMY HELPER FUNCTIONS
 // ==========================================
 
@@ -729,6 +768,19 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
         `
       }
 
+      // Parse sortBy/sortOrder and validate against entity fields to prevent SQL injection
+      const sortByParam = url.searchParams.get('sortBy')
+      const sortOrderParam = url.searchParams.get('sortOrder')?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC'
+      let orderByClause = 't."createdAt" DESC'
+      if (sortByParam) {
+        // Allow sorting by entity fields or common base fields
+        const baseFields = ['id', 'createdAt', 'updatedAt', 'teamId']
+        const isValidField = entityConfig.fields.some((f: EntityField) => f.name === sortByParam) || baseFields.includes(sortByParam)
+        if (isValidField) {
+          orderByClause = `t."${sortByParam}" ${sortOrderParam}`
+        }
+      }
+
       // Use COUNT(*) OVER() window function to get total count in single query
       // This eliminates a separate COUNT query, saving ~230ms per request
       query = `
@@ -736,7 +788,7 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
         FROM "${tableName}" t
         ${joinClause}
         ${whereClause}
-        ORDER BY t."createdAt" DESC
+        ORDER BY ${orderByClause}
         LIMIT $${paramIndex++} OFFSET $${paramIndex++}
       `
       queryParams.push(pagination.limit, pagination.offset)
@@ -789,7 +841,10 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
       )
     }
 
-    const response = createApiResponse(dataWithTaxonomies, paginationMeta)
+    // Filter public fields for unauthenticated requests
+    const finalData = filterPublicFields(dataWithTaxonomies, entityConfig, userId)
+
+    const response = createApiResponse(finalData, paginationMeta)
     return addCorsHeaders(response, request)
 
   } catch (error) {
@@ -1260,7 +1315,10 @@ export async function handleGenericRead(request: NextRequest, { params }: { para
       itemWithTaxonomies = itemsWithTaxonomies[0] || itemWithChild
     }
 
-    const response = createApiResponse(itemWithTaxonomies)
+    // Filter public fields for unauthenticated requests
+    const finalItem = filterPublicFields(itemWithTaxonomies, entityConfig, userId)
+
+    const response = createApiResponse(finalItem)
     return addCorsHeaders(response, request)
 
   } catch (error) {

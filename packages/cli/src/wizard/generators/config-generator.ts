@@ -48,11 +48,14 @@ export async function updateAuthConfig(config: WizardConfig): Promise<void> {
     `$1${config.auth.googleOAuth}`
   )
 
-  // For domain-restricted mode, uncomment allowedDomains
+  // For domain-restricted mode, uncomment allowedDomains with user-provided values
   if (config.auth.registrationMode === 'domain-restricted') {
+    const domains = config.auth.allowedDomains?.length
+      ? config.auth.allowedDomains.map((d) => `'${d}'`).join(', ')
+      : "'yourcompany.com'"
     content = content.replace(
       /\/\/\s*allowedDomains:\s*\['yourcompany\.com'\],\s*\/\/\s*Only for 'domain-restricted' mode/,
-      `allowedDomains: ['yourcompany.com'], // TODO: Replace with your domain(s)`
+      `allowedDomains: [${domains}],`
     )
   }
 
