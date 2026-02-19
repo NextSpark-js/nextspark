@@ -31,7 +31,15 @@ interface GoogleProfile {
 }
 
 const isProd = process.env.NODE_ENV === 'production';
+// Better Auth baseURL: used for internal router path matching (must NOT include Next.js basePath).
+// When behind a reverse proxy with basePath (e.g., Studio preview at /p/{port}), Next.js strips
+// basePath from request.url before the route handler sees it. If BETTER_AUTH_URL includes the
+// basePath path component, Better Auth's router expects /p/5556/api/auth/... but receives
+// /api/auth/... (already stripped by Next.js) → 404 on all auth routes.
 const baseUrl = process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173';
+// Public URL: used for user-facing links (email verification, password reset).
+// Must include the full external URL with basePath so links work through the proxy.
+const publicUrl = process.env.NEXT_PUBLIC_APP_URL || baseUrl;
 
 // Use the email factory to get the appropriate provider
 const emailService = EmailFactory.create();
@@ -117,7 +125,7 @@ export const auth = betterAuth({
   emailVerification: {
     sendVerificationEmail: async ({ user, token }: { user: UserWithEmail; url: string; token: string }) => {
       try {
-        const verifyUrl = `${baseUrl}/api/auth/verify-email?token=${token}`;
+        const verifyUrl = `${publicUrl}/api/auth/verify-email?token=${token}`;
         const template = emailTemplates.verifyEmail({
           userName: user.firstName || '',
           verificationUrl: verifyUrl,

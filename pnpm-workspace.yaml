@@ -1,6 +1,7 @@
 packages:
   - 'packages/*'
   - 'apps/dev'          # Explicit - only dev app
+  - 'apps/studio'       # NextSpark Studio - AI app builder
   - 'plugins/*'
   - 'themes/*'
   # apps/mobile is intentionally OUTSIDE the pnpm workspace
