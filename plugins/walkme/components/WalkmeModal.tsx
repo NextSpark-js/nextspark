@@ -89,10 +89,10 @@ export const WalkmeModal = memo(function WalkmeModal({
       className="fixed left-1/2 top-1/2 w-[28rem] max-w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl p-6 outline-none animate-in fade-in-0 zoom-in-95 duration-300"
       style={{
         zIndex: 9999,
-        backgroundColor: 'var(--walkme-bg)',
-        color: 'var(--walkme-text)',
-        border: '1px solid var(--walkme-border)',
-        boxShadow: 'var(--walkme-shadow)',
+        backgroundColor: 'var(--walkme-bg, #ffffff)',
+        color: 'var(--walkme-text, #111827)',
+        border: '1px solid var(--walkme-border, #e5e7eb)',
+        boxShadow: 'var(--walkme-shadow, 0 20px 25px -5px rgba(0,0,0,.1), 0 8px 10px -6px rgba(0,0,0,.1))',
       }}
     >
       {/* Close button */}
@@ -100,16 +100,10 @@ export const WalkmeModal = memo(function WalkmeModal({
         data-cy="walkme-btn-close"
         onClick={onSkip}
         type="button"
-        className="absolute right-3 top-3 rounded-lg p-1.5 transition-all duration-150 hover:scale-110 active:scale-95"
+        className="absolute right-3 top-3 rounded-lg p-1.5 transition-all duration-150 hover:scale-110 hover:bg-black/5 active:scale-95"
         style={{
-          color: 'var(--walkme-text-muted)',
+          color: 'var(--walkme-text-muted, #6b7280)',
           backgroundColor: 'transparent',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = 'var(--walkme-border)'
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = 'transparent'
         }}
         aria-label={labels?.close ?? 'Close'}
       >
@@ -123,7 +117,7 @@ export const WalkmeModal = memo(function WalkmeModal({
       <p
         id={`walkme-modal-content-${step.id}`}
         className="mb-5 text-sm leading-relaxed"
-        style={{ color: 'var(--walkme-text-muted)' }}
+        style={{ color: 'var(--walkme-text-muted, #6b7280)' }}
       >
         {step.content}
       </p>

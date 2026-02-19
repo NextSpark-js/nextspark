@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { memo, useEffect, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 
 interface WalkmeOverlayProps {
@@ -15,7 +15,7 @@ interface WalkmeOverlayProps {
  * Supports an optional spotlight cutout to highlight a target element.
  * Dynamically tracks target position on scroll/resize.
  */
-export function WalkmeOverlay({
+export const WalkmeOverlay = memo(function WalkmeOverlay({
   visible,
   onClick,
   spotlightTarget,
@@ -74,7 +74,7 @@ export function WalkmeOverlay({
     />,
     document.body,
   )
-}
+})
 
 /** Generate a clip-path that cuts out a rectangle around the target element */
 function getSpotlightClipPath(

@@ -89,10 +89,10 @@ export const WalkmeSpotlight = memo(function WalkmeSpotlight({
           style={{
             ...floatingStyles,
             zIndex: 9999,
-            backgroundColor: 'var(--walkme-bg)',
-            color: 'var(--walkme-text)',
-            border: '1px solid var(--walkme-border)',
-            boxShadow: 'var(--walkme-shadow)',
+            backgroundColor: 'var(--walkme-bg, #ffffff)',
+            color: 'var(--walkme-text, #111827)',
+            border: '1px solid var(--walkme-border, #e5e7eb)',
+            boxShadow: 'var(--walkme-shadow, 0 20px 25px -5px rgba(0,0,0,.1), 0 8px 10px -6px rgba(0,0,0,.1))',
             // Hide until floating-ui has stabilized after scroll
             opacity: isStable ? 1 : 0,
             transition: 'opacity 150ms ease-out',
@@ -103,7 +103,7 @@ export const WalkmeSpotlight = memo(function WalkmeSpotlight({
           <p
             id={`walkme-spotlight-content-${step.id}`}
             className="mb-3 text-sm leading-relaxed"
-            style={{ color: 'var(--walkme-text-muted)' }}
+            style={{ color: 'var(--walkme-text-muted, #6b7280)' }}
           >
             {step.content}
           </p>

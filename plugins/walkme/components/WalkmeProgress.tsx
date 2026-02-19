@@ -27,7 +27,7 @@ export const WalkmeProgress = memo(function WalkmeProgress({
     <div data-cy="walkme-progress" data-walkme className="flex items-center gap-3">
       <div
         className="h-1 flex-1 overflow-hidden rounded-full"
-        style={{ backgroundColor: 'var(--walkme-border)' }}
+        style={{ backgroundColor: 'var(--walkme-border, #e5e7eb)' }}
         role="progressbar"
         aria-valuenow={current + 1}
         aria-valuemin={1}
@@ -38,13 +38,13 @@ export const WalkmeProgress = memo(function WalkmeProgress({
           className="h-full rounded-full transition-all duration-500 ease-out"
           style={{
             width: `${percentage}%`,
-            backgroundColor: 'var(--walkme-primary)',
+            backgroundColor: 'var(--walkme-primary, #3b82f6)',
           }}
         />
       </div>
       <span
         className="text-xs tabular-nums whitespace-nowrap"
-        style={{ color: 'var(--walkme-text-muted)' }}
+        style={{ color: 'var(--walkme-text-muted, #6b7280)' }}
       >
         {current + 1} / {total}
       </span>

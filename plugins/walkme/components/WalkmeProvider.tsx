@@ -434,12 +434,16 @@ export function WalkmeProvider({
   }, [state.activeTour, nextStep, prevStep, skipTour])
 
   // ---------------------------------------------------------------------------
-  // Body Scroll Lock (prevent scrolling during active tour)
+  // Body Scroll Lock (only for modal/floating steps that cover the page)
   // ---------------------------------------------------------------------------
 
+  const activeStepType = getActiveStep(state)?.type
   useEffect(() => {
     const isActive = state.activeTour?.status === 'active'
     if (!isActive) return
+
+    // Only lock scroll for step types that cover the viewport
+    if (activeStepType !== 'modal' && activeStepType !== 'floating') return
 
     const { style } = document.body
     const originalOverflow = style.overflow
@@ -456,7 +460,7 @@ export function WalkmeProvider({
       style.overflow = originalOverflow
       style.paddingRight = originalPaddingRight
     }
-  }, [state.activeTour?.status])
+  }, [state.activeTour?.status, activeStepType])
 
   // ---------------------------------------------------------------------------
   // Cleanup

@@ -135,24 +135,24 @@ export function useStepPositioning(
     // Double rAF ensures any scrollIntoView (even 'instant') has
     // fully reflowed the layout before we hand the element to floating-ui.
     let cancelled = false
-    const rafOuter = requestAnimationFrame(() => {
-      const rafInner = requestAnimationFrame(() => {
+    const rafIds = { outer: 0, inner: 0, stable: 0 }
+
+    rafIds.outer = requestAnimationFrame(() => {
+      rafIds.inner = requestAnimationFrame(() => {
         if (cancelled) return
         refs.setReference(targetElement)
         // One more rAF for floating-ui to compute, then mark stable
-        requestAnimationFrame(() => {
+        rafIds.stable = requestAnimationFrame(() => {
           if (!cancelled) setIsStable(true)
         })
       })
-      // Store inner for cleanup (best-effort)
-      innerRafRef.current = rafInner
     })
-    const innerRafRef = { current: 0 }
 
     return () => {
       cancelled = true
-      cancelAnimationFrame(rafOuter)
-      cancelAnimationFrame(innerRafRef.current)
+      cancelAnimationFrame(rafIds.outer)
+      cancelAnimationFrame(rafIds.inner)
+      cancelAnimationFrame(rafIds.stable)
     }
   }, [targetElement, refs])
 
