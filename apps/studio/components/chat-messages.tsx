@@ -33,7 +33,7 @@ export function ChatMessages({ messages, status }: ChatMessagesProps) {
         // User message
         if (msg.role === 'user') {
           return (
-            <div key={msg.id} className="space-y-0.5">
+            <div key={msg.id} className="space-y-0.5 animate-in">
               <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-text-muted/60">
                 You
               </span>
@@ -71,7 +71,7 @@ export function ChatMessages({ messages, status }: ChatMessagesProps) {
 
         // Assistant message
         return (
-          <div key={msg.id} className="space-y-0.5">
+          <div key={msg.id} className="space-y-0.5 animate-in">
             <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-accent/60">
               AI
             </span>
@@ -82,19 +82,17 @@ export function ChatMessages({ messages, status }: ChatMessagesProps) {
         )
       })}
 
-      {/* Thinking indicator */}
+      {/* Thinking indicator — branded skeleton with accent pulse */}
       {status === 'loading' && (
-        <div className="flex items-center gap-2.5 py-2">
-          <div className="flex gap-1">
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className="h-1.5 w-1.5 rounded-full bg-accent animate-bounce"
-                style={{ animationDelay: `${i * 0.15}s` }}
-              />
-            ))}
+        <div className="space-y-2 py-2 animate-in">
+          <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-accent/60">
+            AI
+          </span>
+          <div className="space-y-2">
+            <div className="h-3 w-3/4 rounded bg-accent/10 animate-pulse" />
+            <div className="h-3 w-1/2 rounded bg-accent/10 animate-pulse" style={{ animationDelay: '0.15s' }} />
+            <div className="h-3 w-2/3 rounded bg-accent/10 animate-pulse" style={{ animationDelay: '0.3s' }} />
           </div>
-          <span className="text-[11px] text-accent/70 font-medium">Thinking...</span>
         </div>
       )}
 

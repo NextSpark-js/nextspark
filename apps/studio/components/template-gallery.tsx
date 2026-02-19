@@ -103,7 +103,16 @@ export function TemplateGallery({ onSelectTemplate, disabled }: TemplateGalleryP
 
       {/* Template grid */}
       {filteredTemplates.length === 0 ? (
-        <p className="text-center text-xs text-text-muted/60 py-4">No templates match your search</p>
+        <div className="flex flex-col items-center py-6 space-y-2">
+          <Search className="h-5 w-5 text-text-muted/30" />
+          <p className="text-xs text-text-muted/60">No templates match &ldquo;{search}&rdquo;</p>
+          <button
+            onClick={() => setSearch('')}
+            className="text-[11px] text-accent hover:text-accent-hover transition-colors"
+          >
+            Clear search
+          </button>
+        </div>
       ) : (
         <div className="grid grid-cols-2 gap-2.5">
           {filteredTemplates.map((template, i) => {

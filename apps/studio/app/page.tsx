@@ -67,7 +67,7 @@ export default function HomePage() {
         <div className="text-center space-y-3">
           <div className="flex items-center justify-center gap-2">
             <div className="relative">
-              <div className="absolute -inset-3 rounded-full bg-accent/20 blur-xl" />
+              <div className="absolute -inset-3 rounded-full bg-accent/20 blur-lg" />
               <Zap className="relative h-7 w-7 text-accent" />
             </div>
             <h1 className="text-2xl font-bold tracking-tight">
@@ -99,7 +99,7 @@ export default function HomePage() {
             <button
               onClick={() => handleSubmit()}
               disabled={!prompt.trim() || submitting}
-              className="absolute bottom-4 right-4 flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-white transition-all duration-150 hover:bg-accent-hover hover:shadow-lg hover:shadow-accent/25 hover:scale-105 active:scale-95 disabled:opacity-20 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none"
+              className="absolute bottom-4 right-4 flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-white transition-all duration-150 hover:bg-accent-hover hover:shadow-lg hover:shadow-accent/25 hover:scale-[1.04] active:scale-95 disabled:opacity-20 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none"
             >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
             </button>
@@ -130,7 +130,8 @@ export default function HomePage() {
                 <button
                   key={s.id}
                   onClick={() => router.push(`/build?session=${s.id}`)}
-                  className="w-full flex items-center gap-3 rounded-xl border border-border bg-bg-surface px-4 py-3 text-left transition-all duration-150 hover:border-border-strong hover:bg-bg-hover hover:shadow-sm hover:shadow-black/10 group"
+                  className="w-full flex items-center gap-3 rounded-xl border border-border bg-bg-surface px-4 py-3 text-left transition-all duration-150 hover:border-border-strong hover:bg-bg-hover hover:shadow-sm hover:shadow-black/10 active:scale-[0.98] group animate-card-in"
+                  style={{ animationDelay: `${recentSessions.indexOf(s) * 60}ms` }}
                 >
                   <FolderOpen className="h-4 w-4 text-text-muted/50 group-hover:text-accent transition-colors flex-shrink-0" />
                   <div className="flex-1 min-w-0">
@@ -166,7 +167,7 @@ export default function HomePage() {
       </div>
 
       {/* Footer */}
-      <div className="fixed bottom-6 text-[11px] text-text-muted/40">
+      <div className="fixed bottom-6 text-[11px] text-text-muted">
         Built with NextSpark &times; Claude
       </div>
     </div>

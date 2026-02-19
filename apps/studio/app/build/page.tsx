@@ -394,7 +394,7 @@ function BuildContent() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setChatOpen(!chatOpen)}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-text-muted hover:text-text-secondary hover:bg-bg-hover transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-text-muted hover:text-text-secondary hover:bg-bg-hover transition-colors"
             title={chatOpen ? 'Collapse chat' : 'Expand chat'}
           >
             {chatOpen ? (
@@ -530,7 +530,7 @@ function BuildContent() {
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     data-tour={tab.id === 'preview' ? 'preview-tab' : undefined}
-                    className={`relative flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[11px] font-medium transition-all ${
+                    className={`relative flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[11px] font-medium transition-all duration-150 ${
                       isActive
                         ? 'bg-bg-elevated text-text-primary shadow-sm'
                         : 'text-text-muted hover:text-text-secondary hover:bg-bg-hover/50'

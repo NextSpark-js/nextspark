@@ -328,9 +328,16 @@ export function PreviewFrame({
   // Idle — no project yet
   return (
     <div className="flex h-full items-center justify-center bg-bg">
-      <div className="text-center space-y-4 opacity-50">
-        <Globe className="h-14 w-14 mx-auto text-text-muted" />
-        <p className="text-sm text-text-muted">Enter a prompt to start building</p>
+      <div className="text-center space-y-5">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-accent-muted border border-accent/10">
+          <Globe className="h-7 w-7 text-accent/60" />
+        </div>
+        <div className="space-y-1.5">
+          <p className="text-sm font-medium text-text-secondary">No project yet</p>
+          <p className="text-xs text-text-muted max-w-[240px] mx-auto">
+            Describe the app you want to build in the chat panel to get started
+          </p>
+        </div>
       </div>
     </div>
   )

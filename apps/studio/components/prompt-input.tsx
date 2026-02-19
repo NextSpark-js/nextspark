@@ -86,9 +86,9 @@ export function PromptInput({ onSubmit, disabled, placeholder, showSuggestions, 
         <button
           onClick={handleSubmit}
           disabled={!value.trim() || disabled}
-          className="m-1.5 flex h-5 w-5 items-center justify-center rounded-md bg-accent text-white transition-all hover:bg-accent-hover disabled:opacity-15 disabled:cursor-not-allowed flex-shrink-0"
+          className="m-1 flex h-7 w-7 items-center justify-center rounded-md bg-accent text-white transition-all hover:bg-accent-hover hover:shadow-lg hover:shadow-accent/20 active:scale-90 disabled:opacity-15 disabled:cursor-not-allowed flex-shrink-0"
         >
-          <ArrowUp className="h-2.5 w-2.5" />
+          <ArrowUp className="h-3 w-3" />
         </button>
       </div>
     </div>
