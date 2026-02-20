@@ -1,0 +1,18 @@
+{
+  "name": "@nextsparkjs/plugin-walkme",
+  "version": "1.0.0",
+  "private": false,
+  "main": "./plugin.config.ts",
+  "requiredPlugins": [],
+  "dependencies": {},
+  "peerDependencies": {
+    "@phosphor-icons/react": "^2.0.0",
+    "next": "^15.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "nextspark": {
+    "type": "plugin",
+    "name": "walkme"
+  }
+}
