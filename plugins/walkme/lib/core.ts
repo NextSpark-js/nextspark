@@ -45,6 +45,14 @@ export function walkmeReducer(state: WalkmeState, action: WalkmeAction): WalkmeS
       return { ...state, tours, initialized: true }
     }
 
+    case 'UPDATE_TOURS': {
+      const tours: Record<string, Tour> = { ...state.tours }
+      for (const tour of action.tours) {
+        tours[tour.id] = tour
+      }
+      return { ...state, tours }
+    }
+
     case 'START_TOUR': {
       if (state.activeTour) {
         if (state.debug) {

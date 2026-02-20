@@ -11,8 +11,13 @@ import type { TourState, StorageSchema } from '../types/walkme.types'
 // Constants
 // ---------------------------------------------------------------------------
 
-const STORAGE_KEY = 'walkme-state'
+const STORAGE_KEY_PREFIX = 'walkme-state'
 const STORAGE_VERSION = 1
+
+/** Build the localStorage key, optionally scoped to a userId */
+function getStorageKey(userId?: string): string {
+  return userId ? `${STORAGE_KEY_PREFIX}-${userId}` : STORAGE_KEY_PREFIX
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -96,15 +101,16 @@ export function migrateStorage(data: unknown): StorageSchema {
 // Factory
 // ---------------------------------------------------------------------------
 
-/** Create a storage adapter backed by localStorage */
-export function createStorageAdapter(): StorageAdapter {
+/** Create a storage adapter backed by localStorage, optionally scoped to a user */
+export function createStorageAdapter(userId?: string): StorageAdapter {
   const available = isStorageAvailable()
+  const storageKey = getStorageKey(userId)
 
   function read(): StorageSchema {
     if (!available) return createDefaultSchema()
 
     try {
-      const raw = window.localStorage.getItem(STORAGE_KEY)
+      const raw = window.localStorage.getItem(storageKey)
       if (!raw) return createDefaultSchema()
 
       const parsed = JSON.parse(raw)
@@ -118,7 +124,7 @@ export function createStorageAdapter(): StorageAdapter {
     if (!available) return
 
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(schema))
+      window.localStorage.setItem(storageKey, JSON.stringify(schema))
     } catch {
       // Storage full or unavailable - silently ignore
     }
@@ -137,7 +143,7 @@ export function createStorageAdapter(): StorageAdapter {
     reset(): void {
       if (!available) return
       try {
-        window.localStorage.removeItem(STORAGE_KEY)
+        window.localStorage.removeItem(storageKey)
       } catch {
         // Ignore
       }

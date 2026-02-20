@@ -8,6 +8,7 @@ import { createStorageAdapter } from '../lib/storage'
 interface UseTourStateOptions {
   persistState: boolean
   debug: boolean
+  userId?: string
 }
 
 /**
@@ -15,11 +16,36 @@ interface UseTourStateOptions {
  * Handles useReducer, localStorage persistence, and initial state loading.
  */
 export function useTourState(tours: Tour[], options: UseTourStateOptions) {
-  const { persistState, debug } = options
+  const { persistState, debug, userId } = options
   const [state, dispatch] = useReducer(walkmeReducer, createInitialState())
-  const storageRef = useRef(createStorageAdapter())
+  const storageRef = useRef(createStorageAdapter(userId))
   const initialized = useRef(false)
+  const prevUserIdRef = useRef(userId)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Re-create storage adapter when userId changes (e.g. session loads async)
+  useEffect(() => {
+    if (prevUserIdRef.current === userId) return
+    prevUserIdRef.current = userId
+    storageRef.current = createStorageAdapter(userId)
+
+    // Re-restore persisted state from the new user-scoped storage
+    if (persistState) {
+      const saved = storageRef.current.load()
+      if (saved) {
+        dispatch({
+          type: 'RESTORE_STATE',
+          completedTours: saved.completedTours,
+          skippedTours: saved.skippedTours,
+          tourHistory: saved.tourHistory,
+          activeTour: saved.activeTour,
+        })
+      } else {
+        // New user with no state — reset to clean slate
+        dispatch({ type: 'RESET_ALL' })
+      }
+    }
+  }, [userId, persistState])
 
   // Initialize tours and restore persisted state on mount
   useEffect(() => {
@@ -55,6 +81,15 @@ export function useTourState(tours: Tour[], options: UseTourStateOptions) {
       }
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-register tour definitions when they change after initialization.
+  // This handles the case where tours arrive asynchronously (e.g. after API fetch)
+  // and the provider was already mounted with an empty tours array.
+  useEffect(() => {
+    if (!initialized.current) return
+    if (tours.length === 0) return
+    dispatch({ type: 'UPDATE_TOURS', tours })
+  }, [tours]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Persist state changes to localStorage (debounced)
   useEffect(() => {

@@ -70,6 +70,7 @@ export function WalkmeProvider({
   onStepChange,
   conditionContext: externalConditionContext,
   labels: userLabels,
+  userId,
 }: WalkmeProviderProps) {
   const labels = useMemo<WalkmeLabels>(
     () => ({ ...DEFAULT_LABELS, ...userLabels }),
@@ -100,6 +101,7 @@ export function WalkmeProvider({
   const { state, dispatch, storage } = useTourState(validatedTours, {
     persistState,
     debug,
+    userId,
   })
 
   // ---------------------------------------------------------------------------
@@ -312,7 +314,7 @@ export function WalkmeProvider({
         dispatch({ type: 'NEXT_STEP' })
       }
     }
-  }, [state.activeTour?.currentStepIndex]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [state.activeTour?.currentStepIndex, Object.keys(state.tours).length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Wait for target after route change
   useEffect(() => {
@@ -334,11 +336,13 @@ export function WalkmeProvider({
         )
       }
     })
-  }, [pathname]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pathname, Object.keys(state.tours).length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------------------------------------------------------------------------
   // Target Element Resolution
   // ---------------------------------------------------------------------------
+
+  const toursCount = Object.keys(state.tours).length
 
   useEffect(() => {
     // Clear stale target so floating tooltip unmounts and remounts fresh
@@ -380,7 +384,7 @@ export function WalkmeProvider({
       cancelled = true
       clearTimeout(findTimer)
     }
-  }, [state.activeTour?.currentStepIndex, state.activeTour?.status]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [state.activeTour?.currentStepIndex, state.activeTour?.status, toursCount]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------------------------------------------------------------------------
   // Step Change Analytics

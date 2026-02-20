@@ -163,6 +163,7 @@ export interface WalkmeState {
 /** Discriminated union of all reducer actions */
 export type WalkmeAction =
   | { type: 'INITIALIZE'; tours: Tour[] }
+  | { type: 'UPDATE_TOURS'; tours: Tour[] }
   | { type: 'START_TOUR'; tourId: string }
   | { type: 'NEXT_STEP' }
   | { type: 'PREV_STEP' }
@@ -264,6 +265,8 @@ export interface WalkmeProviderProps {
   conditionContext?: Omit<ConditionContext, 'completedTourIds' | 'visitCount' | 'firstVisitDate'>
   /** Translated UI labels (defaults to English if not provided) */
   labels?: Partial<WalkmeLabels>
+  /** User ID for scoping localStorage persistence per user */
+  userId?: string
 }
 
 // ---------------------------------------------------------------------------
