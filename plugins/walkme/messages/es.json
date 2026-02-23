@@ -1,0 +1,21 @@
+{
+  "walkme": {
+    "next": "Siguiente",
+    "prev": "Anterior",
+    "skip": "Saltar tour",
+    "complete": "Completar",
+    "close": "Cerrar",
+    "progress": "Paso {current} de {total}",
+    "tourAvailable": "Tour disponible",
+    "beaconLabel": "Haz clic para iniciar el tour guiado",
+    "modalTitle": "Tour Guiado",
+    "tooltipLabel": "Paso del tour",
+    "spotlightLabel": "Elemento destacado",
+    "keyboardHint": "Presiona flecha derecha para siguiente paso, Escape para saltar",
+    "tourCompleted": "Tour completado!",
+    "tourSkipped": "Tour saltado",
+    "errorTargetNotFound": "Elemento no encontrado, saltando paso",
+    "resumeTour": "Reanudar tour",
+    "restartTour": "Reiniciar tour"
+  }
+}

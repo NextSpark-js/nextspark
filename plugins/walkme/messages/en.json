@@ -1,0 +1,21 @@
+{
+  "walkme": {
+    "next": "Next",
+    "prev": "Previous",
+    "skip": "Skip tour",
+    "complete": "Complete",
+    "close": "Close",
+    "progress": "Step {current} of {total}",
+    "tourAvailable": "Tour available",
+    "beaconLabel": "Click to start guided tour",
+    "modalTitle": "Guided Tour",
+    "tooltipLabel": "Tour step",
+    "spotlightLabel": "Highlighted element",
+    "keyboardHint": "Press Arrow Right for next step, Escape to skip",
+    "tourCompleted": "Tour completed!",
+    "tourSkipped": "Tour skipped",
+    "errorTargetNotFound": "Element not found, skipping step",
+    "resumeTour": "Resume tour",
+    "restartTour": "Restart tour"
+  }
+}
