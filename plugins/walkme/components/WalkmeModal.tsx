@@ -100,7 +100,7 @@ export const WalkmeModal = memo(function WalkmeModal({
         data-cy="walkme-btn-close"
         onClick={onSkip}
         type="button"
-        className="absolute right-3 top-3 rounded-lg p-1.5 transition-all duration-150 hover:scale-110 hover:bg-black/5 active:scale-95"
+        className="cursor-pointer absolute right-3 top-3 rounded-lg p-1.5 transition-all duration-150 hover:scale-110 hover:bg-black/5 active:scale-95"
         style={{
           color: 'var(--walkme-text-muted, #6b7280)',
           backgroundColor: 'transparent',

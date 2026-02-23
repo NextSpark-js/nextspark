@@ -42,7 +42,7 @@ export const WalkmeBeacon = memo(function WalkmeBeacon({
       role="button"
       aria-label={step.title || labels?.tourAvailable || 'Tour available'}
       tabIndex={0}
-      className="relative flex h-6 w-6 items-center justify-center rounded-full outline-none"
+      className="cursor-pointer relative flex h-6 w-6 items-center justify-center rounded-full outline-none"
       style={{
         ...floatingStyles,
         zIndex: 9999,

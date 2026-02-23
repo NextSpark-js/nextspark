@@ -51,7 +51,7 @@ export const WalkmeControls = memo(function WalkmeControls({
             data-cy="walkme-btn-skip"
             onClick={onSkip}
             type="button"
-            className="rounded-lg px-3 py-1.5 text-sm transition-all duration-150 hover:opacity-80 active:scale-95"
+            className="cursor-pointer rounded-lg px-3 py-1.5 text-sm transition-all duration-150 hover:opacity-80 active:scale-95"
             style={{
               color: 'var(--walkme-text-muted, #6b7280)',
               backgroundColor: 'transparent',
@@ -68,7 +68,7 @@ export const WalkmeControls = memo(function WalkmeControls({
             data-cy="walkme-btn-prev"
             onClick={onPrev}
             type="button"
-            className="rounded-lg px-3.5 py-1.5 text-sm font-medium transition-all duration-150 hover:opacity-90 active:scale-95"
+            className="cursor-pointer rounded-lg px-3.5 py-1.5 text-sm font-medium transition-all duration-150 hover:opacity-90 active:scale-95"
             style={{
               color: 'var(--walkme-text, #111827)',
               backgroundColor: 'var(--walkme-border, #e5e7eb)',
@@ -83,7 +83,7 @@ export const WalkmeControls = memo(function WalkmeControls({
             data-cy="walkme-btn-next"
             onClick={onNext}
             type="button"
-            className="rounded-lg px-4 py-1.5 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-95"
+            className="cursor-pointer rounded-lg px-4 py-1.5 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-95"
             style={{
               backgroundColor: 'var(--walkme-primary, #3b82f6)',
             }}
@@ -97,7 +97,7 @@ export const WalkmeControls = memo(function WalkmeControls({
             data-cy="walkme-btn-complete"
             onClick={onComplete}
             type="button"
-            className="rounded-lg px-4 py-1.5 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-95"
+            className="cursor-pointer rounded-lg px-4 py-1.5 text-sm font-semibold text-white transition-all duration-150 hover:brightness-110 active:scale-95"
             style={{
               backgroundColor: 'var(--walkme-primary, #3b82f6)',
             }}
