@@ -56,6 +56,16 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
+# Helper: convert path for Node.js on Windows (Git Bash paths like /g/... don't work with require())
+node_require_name() {
+    local p="$1/package.json"
+    # On Windows (MSYS/Git Bash), convert to Windows path then use forward slashes for JS
+    if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "mingw"* || "$OSTYPE" == "cygwin" ]]; then
+        p=$(cygpath -m "$p" 2>/dev/null || echo "$p")
+    fi
+    node -e "console.log(require('$p').name)"
+}
+
 # Default options
 OUTPUT_DIR="$REPO_ROOT/.packages"
 SKIP_BUILD=false
@@ -173,7 +183,7 @@ resolve_package_path() {
 # Build a package
 build_package() {
     local pkg_path="$1"
-    local pkg_name=$(node -e "console.log(require('$pkg_path/package.json').name)")
+    local pkg_name=$(node_require_name "$pkg_path")
 
     echo -e "  Building ${CYAN}$pkg_name${NC}..."
 
@@ -197,7 +207,7 @@ build_package() {
 # Pack a package
 pack_package() {
     local pkg_path="$1"
-    local pkg_name=$(node -e "console.log(require('$pkg_path/package.json').name)")
+    local pkg_name=$(node_require_name "$pkg_path")
 
     echo -e "  Packing ${CYAN}$pkg_name${NC}..."
 
@@ -274,7 +284,7 @@ fi
 
 echo -e "${CYAN}Packages to process:${NC}"
 for pkg in "${FINAL_PACKAGES[@]}"; do
-    pkg_name=$(node -e "console.log(require('$pkg/package.json').name)")
+    pkg_name=$(node_require_name "$pkg")
     echo "  - $pkg_name"
 done
 echo ""
@@ -356,7 +366,7 @@ echo -e "${CYAN}Packing packages...${NC}"
 packed_count=0
 for pkg in "${FINAL_PACKAGES[@]}"; do
     if pack_package "$pkg"; then
-        ((packed_count++))
+        packed_count=$((packed_count + 1))
     fi
 done
 echo ""
