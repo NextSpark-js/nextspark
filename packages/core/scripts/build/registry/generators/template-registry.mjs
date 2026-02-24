@@ -171,9 +171,16 @@ async function hasServerOnlyExports(filePath) {
       /export\s+const\s+dynamic\s*=/,
       /export\s+const\s+fetchCache\s*=/,
       /export\s+const\s+runtime\s*=/,
+      /export\s+const\s+metadata\s*[=:]/,
     ]
 
-    for (const pattern of [...serverFunctionExports, ...serverConstExports]) {
+    // Check for server-only module imports
+    const serverOnlyImports = [
+      /import\s+.*from\s+['"]next\/headers['"]/,
+      /import\s+.*from\s+['"]server-only['"]/,
+    ]
+
+    for (const pattern of [...serverFunctionExports, ...serverConstExports, ...serverOnlyImports]) {
       if (pattern.test(content)) {
         return true
       }
@@ -215,7 +222,7 @@ export async function generateTemplateRegistryClient(templates, config) {
     .filter(([appPath, pathTemplates]) => {
       const template = pathTemplates[0]
       // Only include page templates (not layouts) that can override components
-      return template.templateType === 'page' && canOverrideComponent(appPath)
+      return (template.templateType === 'page' || template.templateType === 'layout') && canOverrideComponent(appPath)
     })
     .map(async ([appPath, pathTemplates]) => {
       const template = pathTemplates[0]

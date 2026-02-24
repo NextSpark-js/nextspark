@@ -4,7 +4,8 @@
  * This file defines the complete type system for the WordPress-like Entity System.
  * It provides interfaces for config-driven architecture with comprehensive feature support.
  */
-import type { LucideIcon } from 'lucide-react';
+/** Generic icon component type - compatible with lucide-react, @phosphor-icons/react, etc. */
+export type EntityIcon = React.ComponentType<{ className?: string }>;
 import type { ZodSchema } from 'zod';
 /**
  * Plan types available in the application
@@ -56,8 +57,8 @@ export interface EntityConfig {
         /** Plural form (e.g., 'Tasks') */
         plural: string;
     };
-    /** Lucide icon for UI display */
-    icon: LucideIcon;
+    /** Icon component for UI display (lucide-react, @phosphor-icons/react, etc.) */
+    icon: EntityIcon;
     /** Database table name (optional - defaults to slug with underscores) */
     tableName?: string;
     access: {

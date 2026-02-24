@@ -7,7 +7,24 @@
 
 'use client'
 
-import type { EntityConfig } from './types'
+import type { EntityConfig, EntityIcon } from './types'
+
+/**
+ * Icon registry - maps entity slug to icon component
+ * Pre-populated by auto-generated entity-registry.client.ts before hydration
+ * This allows non-lucide icons (e.g. Phosphor) to survive server→client serialization
+ */
+const entityIconRegistry = new Map<string, EntityIcon>()
+
+/**
+ * Register an entity icon for client-side use
+ * Called by auto-generated entity-registry.client.ts
+ */
+export function registerEntityIcon(slug: string, icon: EntityIcon): void {
+  if (icon) {
+    entityIconRegistry.set(slug, icon)
+  }
+}
 
 /**
  * Client-only entity registry with minimal functionality
@@ -57,12 +74,19 @@ export const clientEntityRegistry = new ClientEntityRegistry()
 /**
  * Set entities from server-side data
  * Called by EntityProvider when receiving server data
+ * Merges pre-registered icons from entityIconRegistry to preserve non-lucide icons
  */
 export function setServerEntities(entities: EntityConfig[]): void {
   for (const entity of entities) {
+    // If we have a pre-registered icon for this entity (from entity-registry.client.ts),
+    // use it instead of the deserialized one (which falls back to lucide Box for non-lucide icons)
+    const registeredIcon = entityIconRegistry.get(entity.slug)
+    if (registeredIcon) {
+      entity.icon = registeredIcon
+    }
     clientEntityRegistry.register(entity)
   }
-  console.log(`[EntityRegistry] Client-side: registered ${entities.length} entities from server`)
+  console.log(`[EntityRegistry] Client-side: registered ${entities.length} entities from server (${entityIconRegistry.size} icons from registry)`)
 }
 
 /**

@@ -25,6 +25,7 @@ jest.mock('@/core/lib/services/plan.service', () => ({
     getLimit: jest.fn(),
     isUpgrade: jest.fn(),
     getConfig: jest.fn(),
+    getPriceId: jest.fn(),
     getStripePriceId: jest.fn(),
   },
 }))
@@ -567,12 +568,12 @@ describe('SubscriptionService', () => {
         externalSubscriptionId: 'stripe_sub_123',
       })
       mockPlanService.getConfig.mockReturnValue({ slug: 'enterprise', features: [], limits: {} })
-      mockPlanService.getStripePriceId.mockReturnValue(null)
+      mockPlanService.getPriceId.mockReturnValue(null)
 
       const result = await SubscriptionService.changePlan('team-456', 'enterprise')
 
       expect(result.success).toBe(false)
-      expect(result.error).toContain('No Stripe price')
+      expect(result.error).toContain('No price ID configured')
     })
   })
 

@@ -212,7 +212,15 @@ export function generateEntityRegistryClient(entities, config) {
     return `      '${slug}': '${entity.name}'`
   }).join(',\n')
 
-  return `/**
+  // Generate icon registration calls
+  const iconRegistrations = entities
+    .filter(entity => entity.exportName)
+    .map(entity => `registerEntityIcon('${entity.name}', ${entity.exportName}.icon)`)
+    .join('\n')
+
+  return `'use client'
+
+/**
  * Client-Safe Entity Registry
  *
  * Generated at: ${new Date().toISOString()}
@@ -226,6 +234,10 @@ export function generateEntityRegistryClient(entities, config) {
  */
 
 ${imports}
+import { registerEntityIcon } from '${convertCorePath('@/core/lib/entities/registry.client', outputFilePath, config)}'
+
+// Pre-register entity icons so non-lucide icons survive server→client serialization
+${iconRegistrations}
 
 export interface ClientEntityConfig {
   name: string

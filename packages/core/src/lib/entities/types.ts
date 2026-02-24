@@ -5,8 +5,10 @@
  * It provides interfaces for config-driven architecture with comprehensive feature support.
  */
 
-import type { LucideIcon } from 'lucide-react'
 import type { ZodSchema } from 'zod'
+
+/** Generic icon component type - compatible with lucide-react, @phosphor-icons/react, etc. */
+export type EntityIcon = React.ComponentType<{ className?: string }>
 
 // =============================================================================
 // CORE ENTITY TYPES
@@ -135,8 +137,8 @@ export interface EntityConfig {
     plural: string
   }
 
-  /** Lucide icon for UI display */
-  icon: LucideIcon
+  /** Icon component for UI display (lucide-react, @phosphor-icons/react, etc.) */
+  icon: EntityIcon
 
   /** Database table name (optional - defaults to slug with underscores) */
   tableName?: string

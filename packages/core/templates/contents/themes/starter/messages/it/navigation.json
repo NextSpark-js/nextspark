@@ -12,5 +12,6 @@
   "notifications": "Notifiche",
   "search": "Cerca",
   "quickCreate": "Creazione Rapida",
+  "quickCreateNew": "Nuovo {entity}",
   "viewAll": "Vedi Tutto"
 }
