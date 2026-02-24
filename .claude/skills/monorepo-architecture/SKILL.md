@@ -20,6 +20,7 @@ repo/
 ├── plugins/
 │   ├── ai/             # @nextsparkjs/plugin-ai
 │   ├── langchain/      # @nextsparkjs/plugin-langchain
+│   ├── walkme/         # @nextsparkjs/plugin-walkme
 │   └── ...
 └── apps/
     └── dev/            # Development app (monorepo only)

@@ -453,7 +453,7 @@ export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
   roles: { ... },      // Custom roles (e.g., editor)
   teams: [ ... ],      // Team permissions (team.view, team.edit, etc.)
   entities: { ... },   // Entity CRUD permissions
-  features: [ ... ],   // Feature permissions (page-builder, media, etc.)
+  features: [ ... ],   // Feature permissions (page-builder, blog, etc.)
 }
 ```
 
@@ -504,7 +504,7 @@ const adminPerms = PermissionService.getRolePermissions('admin')
 
 The system merges permissions from four sources:
 
-1. **Core System Permissions** (8 base permissions)
+1. **Core System Permissions** (12 base permissions)
 2. **Theme Team Permissions** (`permissions.config.ts → teams`)
 3. **Theme Feature Permissions** (`permissions.config.ts → features`)
 4. **Theme Entity Permissions** (`permissions.config.ts → entities`)

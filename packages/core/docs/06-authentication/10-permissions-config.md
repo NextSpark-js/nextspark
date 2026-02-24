@@ -7,7 +7,7 @@ The `permissions.config.ts` file is the **single source of truth** for all permi
 - **Custom Roles**: Additional roles beyond core (owner, admin, member, viewer)
 - **Team Permissions**: Team-level actions (team.view, team.edit, team.members.invite, etc.)
 - **Entity Permissions**: CRUD permissions for entities (customers, tasks, posts, etc.)
-- **Feature Permissions**: Theme-specific features (page-builder, media, etc.)
+- **Feature Permissions**: Theme-specific features (page-builder, blog, etc.)
 
 All sections use a **unified format**: `{ action: '...', roles: [...] }`
 
@@ -101,21 +101,6 @@ export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
       description: 'Can use the visual page builder',
       category: 'Page Builder',
       roles: ['owner', 'admin', 'editor', 'member'],
-    },
-    {
-      action: 'media.upload',
-      label: 'Upload Media',
-      description: 'Can upload media files',
-      category: 'Media',
-      roles: ['owner', 'admin', 'editor', 'member'],
-    },
-    {
-      action: 'media.delete',
-      label: 'Delete Media',
-      description: 'Can permanently delete media',
-      category: 'Media',
-      roles: ['owner', 'admin'],
-      dangerous: true,
     },
   ],
 
@@ -218,7 +203,7 @@ The system merges permissions from multiple sources:
 
 ### Core System Permissions
 
-8 base permissions always available:
+12 base permissions always available:
 
 | Permission | Description | Default Roles |
 |------------|-------------|---------------|
@@ -230,6 +215,10 @@ The system merges permissions from multiple sources:
 | `settings.billing` | Manage billing | owner, admin |
 | `settings.security` | Manage security | owner, admin |
 | `settings.general` | Manage general settings | owner, admin |
+| `media.read` | View media files | owner, admin, member, viewer |
+| `media.upload` | Upload media files | owner, admin, member |
+| `media.update` | Edit media metadata | owner, admin |
+| `media.delete` | Delete media files | owner, admin |
 
 ## Build-Time Processing
 

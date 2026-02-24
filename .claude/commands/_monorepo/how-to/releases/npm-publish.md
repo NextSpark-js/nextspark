@@ -1,6 +1,6 @@
 # NPM Publish - Complete Guide
 
-Publish ALL 15 NextSpark packages to npm registry.
+Publish ALL 16 NextSpark packages to npm registry.
 
 ---
 
@@ -28,11 +28,11 @@ pnpm pkg:publish →  validates versions + publishes .tgz in correct order
 
 ## Complete Package Registry (15 packages)
 
-See `npm-version.md` for the full list. All 15 packages are:
+See `npm-version.md` for the full list. All 16 packages are:
 
 **Core (7):** core, ui, mobile, testing, cli, create-nextspark-app, ai-workflow
 **Themes (4):** theme-default, theme-blog, theme-crm, theme-productivity
-**Plugins (4):** plugin-ai, plugin-amplitude, plugin-langchain, plugin-social-media-publisher
+**Plugins (5):** plugin-ai, plugin-amplitude, plugin-langchain, plugin-social-media-publisher, plugin-walkme
 
 ---
 
@@ -42,7 +42,7 @@ See `npm-version.md` for the full list. All 15 packages are:
 
 Before publishing, versions MUST be defined. Execute the `npm-version` flow:
 
-1. List all 15 packages with current versions
+1. List all 16 packages with current versions
 2. Ask user interactively: beta bump / release / versions ready / other
 3. If bump needed: update all package.json files and commit
 
@@ -77,7 +77,7 @@ npm view @nextsparkjs/core dist-tags --json 2>/dev/null || echo "Not published y
 # This command does ALL of the following automatically:
 #   1. Syncs templates from apps/dev/ → packages/core/templates/ (CRITICAL)
 #   1b. Syncs .claude/ → packages/ai-workflow/claude/ (CRITICAL)
-#   2. Builds ALL 15 packages in dependency order
+#   2. Builds ALL 16 packages in dependency order
 #   3. Creates .tgz files in .packages/ directory
 #   4. Resolves workspace:* → real version numbers
 pnpm pkg:pack
@@ -153,6 +153,7 @@ npm view @nextsparkjs/plugin-ai dist-tags --json 2>/dev/null
 npm view @nextsparkjs/plugin-amplitude dist-tags --json 2>/dev/null
 npm view @nextsparkjs/plugin-langchain dist-tags --json 2>/dev/null
 npm view @nextsparkjs/plugin-social-media-publisher dist-tags --json 2>/dev/null
+npm view @nextsparkjs/plugin-walkme dist-tags --json 2>/dev/null
 ```
 
 ### Step 6: Test Installation
@@ -191,7 +192,7 @@ The `publish.sh` script publishes in this order:
 > **Fix**: `pnpm pkg:pack` runs sync automatically. Never use `--skip-build`.
 
 ### Version mismatch
-> **Root cause**: Not all 15 packages were bumped.
+> **Root cause**: Not all 16 packages were bumped.
 > **Fix**: Run `/do:npm-version` to align all versions.
 
 ### Not logged in to npm
@@ -207,7 +208,7 @@ npm login
 2. **ALWAYS** use `pnpm pkg:pack` → `pnpm pkg:publish` pipeline
 3. **ALWAYS** run version check (Step 1) before publishing
 4. **ALWAYS** verify npm authentication before attempting publish
-5. **ALWAYS** verify ALL 15 packages were published successfully
+5. **ALWAYS** verify ALL 16 packages were published successfully
 6. **ALWAYS** test installation after publish
 7. **NEVER** skip `pnpm pkg:pack` — it handles template sync + build + workspace resolution
 8. **NEVER** publish without explicit user confirmation

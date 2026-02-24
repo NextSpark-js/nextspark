@@ -7,7 +7,7 @@
  * - roles: Custom roles beyond core (owner, admin, member, viewer)
  * - teams: Team-level permissions (team.view, team.edit, etc.)
  * - entities: Entity CRUD permissions (customers, tasks, etc.)
- * - features: Theme-specific feature permissions (page-builder, blog, media)
+ * - features: Theme-specific feature permissions (page-builder, blog)
  *
  * All sections use unified format: { action: '...', roles: [...] }
  *

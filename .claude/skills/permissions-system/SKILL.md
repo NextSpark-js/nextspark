@@ -288,8 +288,11 @@ export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
   ],
 
   // 5. Override or disable core permissions (optional)
+  // Example: extend core media permissions with theme-specific roles
   overrides: {
-    // Override specific permission config
+    'media.read': { roles: ['owner', 'admin', 'editor', 'member', 'viewer'] },
+    'media.upload': { roles: ['owner', 'admin', 'editor'] },
+    'media.update': { roles: ['owner', 'admin', 'editor'] },
   },
   disabled: [
     // Disable specific core permissions

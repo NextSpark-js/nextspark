@@ -543,6 +543,12 @@ export function ClientDisplay({ result }: { result: string }) {
 - **API**: Post scheduling, media upload
 - **Entities**: `social-posts`, `social-accounts`
 
+**WalkMe Plugin** (`contents/plugins/walkme/`)
+- **Purpose**: Guided tours and onboarding flows
+- **Features**: Step-by-step product tours, contextual tooltips, onboarding checklists
+- **API**: Tour management, progress tracking
+- **Entities**: None
+
 ---
 
 ## Next Steps

@@ -148,7 +148,8 @@ contents/
     │   └── migrations/
     ├── amplitude/           # Analytics
     ├── billing/             # Payments
-    └── social-media-publisher/
+    ├── social-media-publisher/
+    └── walkme/              # Guided tours & onboarding
 ```
 
 **Activation:**

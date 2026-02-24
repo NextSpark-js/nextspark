@@ -19,6 +19,7 @@ WordPress-style media management system with full CRUD API, reusable modal, form
 MEDIA LIBRARY SYSTEM:
 
 Core Layer (packages/core/):
+├── src/lib/permissions/system.ts  # media.read/upload/update/delete (core system permissions)
 ├── src/
 │   ├── components/media/
 │   │   ├── MediaLibrary.tsx      # Main modal (browse, upload, select)

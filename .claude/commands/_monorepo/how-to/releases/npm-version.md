@@ -1,8 +1,8 @@
 # NPM Version - Complete Guide
 
-Increment package versions with semantic versioning across ALL 15 NextSpark packages.
+Increment package versions with semantic versioning across ALL 16 NextSpark packages.
 
-## Complete Package Registry (15 packages)
+## Complete Package Registry (16 packages)
 
 ALL version operations MUST consider these packages:
 
@@ -27,7 +27,7 @@ ALL version operations MUST consider these packages:
 | `@nextsparkjs/theme-crm` | `themes/crm` |
 | `@nextsparkjs/theme-productivity` | `themes/productivity` |
 
-### Plugins (4)
+### Plugins (5)
 
 | Package | Path |
 |---------|------|
@@ -35,6 +35,7 @@ ALL version operations MUST consider these packages:
 | `@nextsparkjs/plugin-amplitude` | `plugins/amplitude` |
 | `@nextsparkjs/plugin-langchain` | `plugins/langchain` |
 | `@nextsparkjs/plugin-social-media-publisher` | `plugins/social-media-publisher` |
+| `@nextsparkjs/plugin-walkme` | `plugins/walkme` |
 
 ---
 
@@ -67,6 +68,7 @@ echo "  @nextsparkjs/plugin-ai:                       $(node -p "require('./plug
 echo "  @nextsparkjs/plugin-amplitude:                $(node -p "require('./plugins/amplitude/package.json').version")"
 echo "  @nextsparkjs/plugin-langchain:                $(node -p "require('./plugins/langchain/package.json').version")"
 echo "  @nextsparkjs/plugin-social-media-publisher:   $(node -p "require('./plugins/social-media-publisher/package.json').version")"
+echo "  @nextsparkjs/plugin-walkme:                   $(node -p "require('./plugins/walkme/package.json').version")"
 echo ""
 echo "=== Git Context ==="
 git describe --tags --abbrev=0 2>/dev/null || echo "No tags found"
@@ -79,8 +81,8 @@ Use `AskUserQuestion` to ask the user what kind of version bump they want:
 
 | Option | Description |
 |--------|-------------|
-| **Beta bump (all aligned)** | Increment pre-release tag on ALL 15 packages (e.g., `beta.85` -> `beta.86`). Default for development. |
-| **Release (all aligned)** | Analyze commits to determine patch/minor/major, apply to ALL 15 packages. Removes pre-release tag. |
+| **Beta bump (all aligned)** | Increment pre-release tag on ALL 16 packages (e.g., `beta.85` -> `beta.86`). Default for development. |
+| **Release (all aligned)** | Analyze commits to determine patch/minor/major, apply to ALL 16 packages. Removes pre-release tag. |
 | **Release (only modified)** | Detect which packages have changes via `git diff`, bump only those. WARNING: this will desynchronize versions across packages. |
 | **Versions are ready** | Do nothing. Only validate that versions are consistent. |
 
@@ -116,7 +118,7 @@ For each package being bumped, update the `version` field in its `package.json`.
 
 **IMPORTANT:** When bumping versions, also update `workspace:*` dependency references in all package.json files that reference other NextSpark packages. In the monorepo these use `workspace:*` protocol, but the versions must still be consistent for when `pnpm pack` resolves them to real versions.
 
-**All 15 package.json paths:**
+**All 16 package.json paths:**
 
 ```
 packages/core/package.json
@@ -134,6 +136,7 @@ plugins/ai/package.json
 plugins/amplitude/package.json
 plugins/langchain/package.json
 plugins/social-media-publisher/package.json
+plugins/walkme/package.json
 ```
 
 ### Step 6: Verify and Commit
@@ -147,7 +150,7 @@ done
 for pkg in themes/default themes/blog themes/crm themes/productivity; do
   echo "  $(node -p "require('./$pkg/package.json').name"): $(node -p "require('./$pkg/package.json').version")"
 done
-for pkg in plugins/ai plugins/amplitude plugins/langchain plugins/social-media-publisher; do
+for pkg in plugins/ai plugins/amplitude plugins/langchain plugins/social-media-publisher plugins/walkme; do
   echo "  $(node -p "require('./$pkg/package.json').name"): $(node -p "require('./$pkg/package.json').version")"
 done
 
@@ -188,9 +191,9 @@ If this command was invoked standalone (not from `npm-publish`):
 ## Important Rules
 
 1. **NEVER** modify package.json files without explicit user confirmation via interactive question
-2. **ALWAYS** list ALL 15 packages with current versions before any operation
+2. **ALWAYS** list ALL 16 packages with current versions before any operation
 3. **ALWAYS** show current vs new version comparison before applying
-4. **ALWAYS** update ALL 15 packages when doing aligned bumps
+4. **ALWAYS** update ALL 16 packages when doing aligned bumps
 5. **ALWAYS** warn when "only modified" would desynchronize versions
 6. **ALWAYS** commit version changes before proceeding to pack/publish
 7. **NEVER** leave packages at inconsistent versions without explicit user acknowledgment
