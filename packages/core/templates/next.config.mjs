@@ -10,6 +10,10 @@ const withNextIntl = createNextIntlPlugin('./i18n.ts');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Allow basePath to be set via environment variable (used by Studio preview proxy).
+  // When previewing behind a reverse proxy (e.g., Caddy at /p/{port}/), this prefix
+  // is injected so all Next.js routes are served under the correct path.
+  ...(process.env.NEXT_BASE_PATH ? { basePath: process.env.NEXT_BASE_PATH } : {}),
   // Ignore TypeScript build errors - needed until DTS generation is enabled for @nextsparkjs/core
   // Without this, production builds fail due to missing declaration files for deep imports
   typescript: {
@@ -78,7 +82,7 @@ const nextConfig = {
       },
     ],
   },
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, webpack: wp }) => {
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
@@ -95,6 +99,35 @@ const nextConfig = {
         dns: false,
       }
     }
+
+    // Force next-intl config resolution — webpack 5 package.json exports field
+    // overrides resolve.alias set by createNextIntlPlugin. This plugin
+    // intercepts the request in beforeResolve and redirects to the project's i18n.ts.
+    config.plugins.push(
+      new wp.NormalModuleReplacementPlugin(
+        /^next-intl\/config$/,
+        path.resolve(__dirname, 'i18n.ts')
+      )
+    );
+
+    // Rewrite explicit .ts/.tsx imports from @nextsparkjs/core to their compiled .js equivalents.
+    // The core package's compiled JS has dynamic imports with explicit .ts extensions
+    // (e.g. `import(`../../messages/${locale}/index.ts`)`), which webpack tries to parse as JS.
+    // This plugin intercepts each module request and rewrites .ts → .js.
+    config.plugins.push(
+      new wp.NormalModuleReplacementPlugin(
+        /\.tsx?$/,
+        (resource) => {
+          if (resource.request && resource.request.includes('@nextsparkjs/core')) {
+            resource.request = resource.request.replace(/\.tsx?$/, '.js')
+          }
+          // Also handle context-relative requests (from within the core package)
+          if (resource.context && resource.context.includes('@nextsparkjs/core') && resource.request) {
+            resource.request = resource.request.replace(/\.ts$/, '.js').replace(/\.tsx$/, '.js')
+          }
+        }
+      )
+    )
 
     // Add alias for @nextsparkjs/registries to fix ChunkLoadError
     config.resolve.alias = {

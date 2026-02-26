@@ -1,0 +1,208 @@
+/**
+ * GitHub API
+ *
+ * POST /api/github  { action: 'auth-url' }    → Returns OAuth URL
+ * POST /api/github  { action: 'status' }       → Returns auth status + user info
+ * POST /api/github  { action: 'push', ... }    → Creates repo + pushes project
+ * POST /api/github  { action: 'update', ... }   → Pushes changes to existing repo
+ * POST /api/github  { action: 'disconnect' }   → Clears GitHub token
+ */
+
+import { cookies } from 'next/headers'
+import {
+  getAuthUrl,
+  getUser,
+  getOrCreateRepo,
+  pushProject,
+  decryptToken,
+  isConfigured,
+  getDevToken,
+  isDevMode,
+} from '@/lib/github-manager'
+import { requireSession } from '@/lib/auth-helpers'
+
+export const runtime = 'nodejs'
+
+const COOKIE_NAME = 'gh_token'
+
+async function getToken(): Promise<string | null> {
+  // Dev mode: use PAT directly (skips OAuth)
+  const devToken = getDevToken()
+  if (devToken) return devToken
+
+  // Production: read encrypted token from cookie
+  const cookieStore = await cookies()
+  const encrypted = cookieStore.get(COOKIE_NAME)?.value
+  if (!encrypted) return null
+
+  try {
+    return decryptToken(encrypted)
+  } catch {
+    return null
+  }
+}
+
+export async function POST(request: Request) {
+  try { await requireSession() } catch (r) { return r as Response }
+
+  const body = await request.json()
+  const { action } = body as { action?: string }
+
+  if (!action) {
+    return Response.json({ error: 'action is required' }, { status: 400 })
+  }
+
+  // ── auth-url: Return GitHub OAuth URL ───────────────────────────────────
+  if (action === 'auth-url') {
+    // Dev mode: PAT is already available, no OAuth needed
+    if (isDevMode()) {
+      return Response.json({ devMode: true })
+    }
+
+    if (!isConfigured()) {
+      return Response.json({
+        error: 'GitHub OAuth not configured. Set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET.',
+      }, { status: 503 })
+    }
+
+    try {
+      const { returnTo } = body as { returnTo?: string }
+      const url = getAuthUrl(returnTo)
+      return Response.json({ url })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to generate auth URL'
+      return Response.json({ error: message }, { status: 500 })
+    }
+  }
+
+  // ── status: Check auth status ───────────────────────────────────────────
+  if (action === 'status') {
+    const configured = isConfigured()
+    const token = await getToken()
+
+    if (!token) {
+      return Response.json({ authenticated: false, configured })
+    }
+
+    try {
+      const user = await getUser(token)
+      return Response.json({ authenticated: true, configured, user })
+    } catch {
+      // Token is invalid — clear cookie
+      const cookieStore = await cookies()
+      cookieStore.delete(COOKIE_NAME)
+      return Response.json({ authenticated: false, configured })
+    }
+  }
+
+  // ── disconnect: Clear token ─────────────────────────────────────────────
+  if (action === 'disconnect') {
+    const cookieStore = await cookies()
+    cookieStore.delete(COOKIE_NAME)
+    return Response.json({ ok: true })
+  }
+
+  // ── push: Create repo + push project ────────────────────────────────────
+  if (action === 'push') {
+    const { slug, repoName, description, isPrivate, sanitizeEnv, addReadme } = body as {
+      slug?: string
+      repoName?: string
+      description?: string
+      isPrivate?: boolean
+      sanitizeEnv?: boolean
+      addReadme?: boolean
+    }
+
+    if (!slug || !repoName) {
+      return Response.json({ error: 'slug and repoName are required' }, { status: 400 })
+    }
+
+    const token = await getToken()
+    if (!token) {
+      return Response.json({ error: 'Not authenticated with GitHub' }, { status: 401 })
+    }
+
+    try {
+      // Create or re-use existing repo
+      const repo = await getOrCreateRepo(token, {
+        name: repoName,
+        description,
+        isPrivate: isPrivate ?? true,
+      })
+
+      // Push the project
+      const steps: string[] = []
+      await pushProject({
+        slug,
+        repoFullName: repo.fullName,
+        cloneUrl: repo.cloneUrl,
+        token,
+        sanitizeEnv: sanitizeEnv ?? true,
+        addReadme: addReadme ?? true,
+        onLog: (step) => steps.push(step),
+      })
+
+      return Response.json({
+        ok: true,
+        repo: {
+          url: repo.url,
+          cloneUrl: repo.cloneUrl,
+          fullName: repo.fullName,
+        },
+        steps,
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Push failed'
+      return Response.json({ error: message }, { status: 500 })
+    }
+  }
+
+  // ── update: Push changes to existing repo ──────────────────────────────
+  if (action === 'update') {
+    const { slug, repoFullName, cloneUrl, sanitizeEnv, addReadme } = body as {
+      slug?: string
+      repoFullName?: string
+      cloneUrl?: string
+      sanitizeEnv?: boolean
+      addReadme?: boolean
+    }
+
+    if (!slug || !repoFullName || !cloneUrl) {
+      return Response.json({ error: 'slug, repoFullName, and cloneUrl are required' }, { status: 400 })
+    }
+
+    const token = await getToken()
+    if (!token) {
+      return Response.json({ error: 'Not authenticated with GitHub' }, { status: 401 })
+    }
+
+    try {
+      const steps: string[] = []
+      await pushProject({
+        slug,
+        repoFullName,
+        cloneUrl,
+        token,
+        sanitizeEnv: sanitizeEnv ?? true,
+        addReadme: addReadme ?? true,
+        onLog: (step) => steps.push(step),
+      })
+
+      const repoUrl = `https://github.com/${repoFullName}`
+      return Response.json({
+        ok: true,
+        repo: {
+          url: repoUrl,
+          cloneUrl,
+          fullName: repoFullName,
+        },
+        steps,
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Update failed'
+      return Response.json({ error: message }, { status: 500 })
+    }
+  }
+
+  return Response.json({ error: 'Invalid action' }, { status: 400 })
+}

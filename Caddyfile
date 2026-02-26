@@ -1,0 +1,21 @@
+{
+	admin :2019
+}
+
+:80 {
+	# Preview proxy: /p/{port}/* routes to the preview dev server
+	# on that port inside the studio container.
+	# This keeps previews on the same origin as Studio, so
+	# session cookies persist in the iframe (no third-party cookie issues).
+	@preview path_regexp preview ^/p/(\d+)(.*)$
+	handle @preview {
+		reverse_proxy studio:{re.preview.1} {
+			transport http {
+				dial_timeout 120s
+				response_header_timeout 120s
+			}
+		}
+	}
+
+	reverse_proxy studio:4000
+}

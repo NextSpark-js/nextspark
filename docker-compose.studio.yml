@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: studio
+      POSTGRES_PASSWORD: StudioDB_2024!
+      POSTGRES_DB: nextspark_studio
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U studio -d nextspark_studio"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  studio:
+    build:
+      context: .
+      dockerfile: apps/studio/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://studio:StudioDB_2024!@postgres:5432/nextspark_studio
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN}
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+      - BETTER_AUTH_URL=http://31.97.168.92
+      - NEXT_PUBLIC_APP_URL=http://31.97.168.92
+      - STUDIO_REGISTRATION=invite
+      - PORT=4000
+      - NODE_ENV=production
+    volumes:
+      - studio_projects:/app/studio-projects
+    ports:
+      - "127.0.0.1:4000:4000"
+      - "5500-5999:5500-5999"
+      - "6000-6999:6000-6999"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - studio
+    ports:
+      - "80:80"
+      - "443:443"
+      - "127.0.0.1:2019:2019"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pg_data:
+  studio_projects:
+  caddy_data:
+  caddy_config:
