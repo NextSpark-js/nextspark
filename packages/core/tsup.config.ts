@@ -121,27 +121,50 @@ async function inlineUiPackage(distDir: string): Promise<void> {
 
   console.log(`🔗 Inlining @nextsparkjs/ui in ${uiFiles.length} files...`)
 
+  let inlinedCount = 0
+  let failedFiles: string[] = []
+
   for (const file of uiFiles) {
     // Only preserve "use client" if the original file had it
     const content = await readFile(file, 'utf-8')
     const hasUseClient = content.startsWith('"use client"') || content.startsWith("'use client'")
 
-    await esbuild({
-      entryPoints: [file],
-      outfile: file,
-      bundle: true,
-      format: 'esm',
-      allowOverwrite: true,
-      jsx: 'automatic',
-      jsxImportSource: 'react',
-      // Only inline @nextsparkjs/ui - keep everything else external
-      external: ['react', 'react/jsx-runtime', 'react-dom', '@radix-ui/*', 'class-variance-authority', 'clsx', 'tailwind-merge', 'lucide-react'],
-      // Preserve "use client" only if original had it
-      ...(hasUseClient && { banner: { js: '"use client";' } }),
-    })
+    try {
+      await esbuild({
+        entryPoints: [file],
+        outfile: file,
+        bundle: true,
+        format: 'esm',
+        allowOverwrite: true,
+        jsx: 'automatic',
+        jsxImportSource: 'react',
+        // Only inline @nextsparkjs/ui - keep everything else external
+        external: ['react', 'react/jsx-runtime', 'react-dom', '@radix-ui/*', 'class-variance-authority', 'clsx', 'tailwind-merge', 'lucide-react'],
+        // Preserve "use client" only if original had it
+        ...(hasUseClient && { banner: { js: '"use client";' } }),
+      })
+
+      // Verify the file no longer contains bare @nextsparkjs/ui imports
+      const result = await readFile(file, 'utf-8')
+      if (result.includes('from "@nextsparkjs/ui"') || result.includes("from '@nextsparkjs/ui'")) {
+        console.log(`  ⚠️  ${file} still contains @nextsparkjs/ui import after inlining`)
+        failedFiles.push(file)
+      } else {
+        inlinedCount++
+      }
+    } catch (err) {
+      console.log(`  ❌ Failed to inline ${file}: ${err}`)
+      failedFiles.push(file)
+    }
   }
 
-  console.log(`✅ Inlined @nextsparkjs/ui in ${uiFiles.length} files`)
+  if (failedFiles.length > 0) {
+    console.log(`⚠️  Failed to inline ${failedFiles.length}/${uiFiles.length} files:`)
+    failedFiles.forEach(f => console.log(`    - ${f}`))
+    throw new Error(`inlineUiPackage: ${failedFiles.length} files failed to inline. Tailwind v4 will not discover their CSS classes.`)
+  }
+
+  console.log(`✅ Inlined @nextsparkjs/ui in ${inlinedCount} files`)
 }
 
 // Normalize paths to forward slashes (Windows compatibility)

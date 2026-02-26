@@ -191,11 +191,20 @@ build_package() {
 
     # Check if build script exists
     if node -e "const pkg = require('./package.json'); process.exit(pkg.scripts && pkg.scripts.build ? 0 : 1)" 2>/dev/null; then
-        if pnpm build > /dev/null 2>&1; then
+        local build_log=$(mktemp)
+        if pnpm build > "$build_log" 2>&1; then
+            # Show key build steps (inlining, asset copying, etc.)
+            grep -E "^(🔗|✅|⚠️|❌)" "$build_log" | while read -r line; do
+                echo -e "    $line"
+            done
             echo -e "    ${GREEN}[OK]${NC} Built $pkg_name"
+            rm -f "$build_log"
             return 0
         else
             echo -e "    ${RED}[FAIL]${NC} Build failed for $pkg_name"
+            echo -e "    ${YELLOW}Build output:${NC}"
+            cat "$build_log" | tail -30
+            rm -f "$build_log"
             return 1
         fi
     else
