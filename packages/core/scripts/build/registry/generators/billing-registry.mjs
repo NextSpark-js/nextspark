@@ -9,7 +9,8 @@
 import { existsSync } from 'fs'
 import { readFileSync } from 'fs'
 import { join } from 'path'
-import { createJiti } from 'jiti'
+import jiti from 'jiti'
+const { createJiti } = jiti
 
 import { log } from '../../../utils/index.mjs'
 import { convertCorePath } from '../config.mjs'

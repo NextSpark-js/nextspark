@@ -3,6 +3,7 @@ import { cp, readFile, writeFile, readdir, stat, mkdir } from 'fs/promises'
 import { join, resolve, dirname } from 'path'
 import { glob } from 'glob'
 import { existsSync } from 'fs'
+import { build as esbuild } from 'esbuild'
 
 /**
  * Safe copy that ensures parent directories exist
@@ -85,6 +86,64 @@ async function fixEsmImports(dir: string): Promise<void> {
   }
 }
 
+/**
+ * Inline @nextsparkjs/ui imports in dist files.
+ *
+ * Since bundle: false leaves `export { X } from '@nextsparkjs/ui'` as bare
+ * re-exports, Tailwind v4 can't discover their CSS classes in npm projects
+ * (where @nextsparkjs/ui is a transitive dep not scanned by @source).
+ *
+ * This post-build step uses esbuild to re-bundle only those files,
+ * inlining the @nextsparkjs/ui code so the Tailwind classes live in core's dist.
+ */
+async function inlineUiPackage(distDir: string): Promise<void> {
+  const uiFiles: string[] = []
+
+  async function findUiImports(dir: string): Promise<void> {
+    const entries = await readdir(dir)
+    for (const entry of entries) {
+      const fullPath = join(dir, entry)
+      const stats = await stat(fullPath)
+      if (stats.isDirectory()) {
+        await findUiImports(fullPath)
+      } else if (entry.endsWith('.js')) {
+        const content = await readFile(fullPath, 'utf-8')
+        if (content.includes('"@nextsparkjs/ui"') || content.includes("'@nextsparkjs/ui'")) {
+          uiFiles.push(fullPath)
+        }
+      }
+    }
+  }
+
+  await findUiImports(distDir)
+
+  if (uiFiles.length === 0) return
+
+  console.log(`🔗 Inlining @nextsparkjs/ui in ${uiFiles.length} files...`)
+
+  for (const file of uiFiles) {
+    // Only preserve "use client" if the original file had it
+    const content = await readFile(file, 'utf-8')
+    const hasUseClient = content.startsWith('"use client"') || content.startsWith("'use client'")
+
+    await esbuild({
+      entryPoints: [file],
+      outfile: file,
+      bundle: true,
+      format: 'esm',
+      allowOverwrite: true,
+      jsx: 'automatic',
+      jsxImportSource: 'react',
+      // Only inline @nextsparkjs/ui - keep everything else external
+      external: ['react', 'react/jsx-runtime', 'react-dom', '@radix-ui/*', 'class-variance-authority', 'clsx', 'tailwind-merge', 'lucide-react'],
+      // Preserve "use client" only if original had it
+      ...(hasUseClient && { banner: { js: '"use client";' } }),
+    })
+  }
+
+  console.log(`✅ Inlined @nextsparkjs/ui in ${uiFiles.length} files`)
+}
+
 // Normalize paths to forward slashes (Windows compatibility)
 const normalizePathSeparators = (paths: string[]): string[] =>
   paths.map(p => p.replace(/\\/g, '/'))
@@ -143,6 +202,9 @@ export default defineConfig({
     console.log('🔧 Fixing ESM imports...')
     await fixEsmImports(distDir)
     console.log('✅ ESM imports fixed')
+
+    // Inline @nextsparkjs/ui code so Tailwind v4 can discover CSS classes in npm projects
+    await inlineUiPackage(distDir)
 
     // Copy messages/ directory
     await cp(
