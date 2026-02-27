@@ -210,10 +210,12 @@ export function validateEnvironment(config) {
   const errors = []
 
   // Check if .env file exists at the project root
+  // Skip this check in CI/Vercel environments where env vars are injected directly
   const envFilePath = join(config.projectRoot, '.env')
   const envExamplePath = join(config.projectRoot, '.env.example')
+  const hasEnvVarsFromProcess = !!process.env.NEXT_PUBLIC_ACTIVE_THEME
 
-  if (!existsSync(envFilePath)) {
+  if (!existsSync(envFilePath) && !hasEnvVarsFromProcess) {
     let fix = `Create a .env file in your project root: ${config.projectRoot}`
     if (existsSync(envExamplePath)) {
       fix = `Copy the example file:\n   cp .env.example .env\n   Then update it with your configuration.`
