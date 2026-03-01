@@ -994,8 +994,8 @@ export async function handleGenericCreate(request: NextRequest): Promise<NextRes
       if (key === 'userId' || key === 'teamId') return
 
       const field = entityConfig.fields.find((f: EntityField) => f.name === key)
-      // Skip fields that should not be in forms (e.g., createdAt, updatedAt with database defaults)
-      if (field && !field.api?.readOnly && field.display.showInForm !== false) {
+      // Skip read-only fields (e.g., createdAt, updatedAt with database defaults)
+      if (field && !field.api?.readOnly) {
         // Always quote column names to handle reserved keywords (e.g., "order", "user", "type")
         const columnName = `"${key}"`
         insertFields.push(columnName)
@@ -1443,8 +1443,8 @@ export async function handleGenericUpdate(request: NextRequest, { params }: { pa
       if (key === 'blocks') return
 
       const field = entityConfig.fields.find((f: EntityField) => f.name === key)
-      // Skip fields that should not be in forms (e.g., createdAt, updatedAt with database defaults)
-      if (field && !field.api?.readOnly && field.display.showInForm !== false) {
+      // Skip read-only fields (e.g., createdAt, updatedAt with database defaults)
+      if (field && !field.api?.readOnly) {
         // Add quotes for camelCase fields (any field with uppercase letters)
         const columnName = `"${key}"`
 
