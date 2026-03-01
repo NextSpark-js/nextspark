@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:execute
 
 Execute the development of the active session.

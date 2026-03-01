@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:fix:bug
 
 Fix a bug with a simplified workflow.

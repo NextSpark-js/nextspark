@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:scope-change
 
 Handle a scope change by creating a new iteration.

@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:doc:feature
 
 Generate comprehensive documentation for a completed feature.

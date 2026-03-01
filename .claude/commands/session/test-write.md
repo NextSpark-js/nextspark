@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:test:write
 
 Write or update Cypress tests (API and UAT) for a feature.

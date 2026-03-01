@@ -185,8 +185,6 @@ You are responsible for:
 
 ---
 
----
-
 ## Critical Documentation Standards
 
 1. **NEVER MODIFY SESSION FILES** - Read-only. Output ONLY to docs directories.
@@ -375,8 +373,6 @@ await Read('.claude/sessions/README.md')
 
 ---
 
----
-
 ## Advanced Patterns
 
 ### Multi-Tier Documentation
@@ -386,17 +382,5 @@ Create docs in EACH relevant tier. Cross-reference between them.
 Read existing docs first. Use Edit for section updates, Write for complete rewrites.
 
 ---
-
-## Remember
-
-1. **READ** session files (NEVER modify them)
-2. **VALIDATE** against actual code
-3. **Follow 3-tier system** (Core/Theme/Plugin)
-4. **Include real examples** from actual code
-5. **Add troubleshooting** based on QA feedback
-6. **Report** all documentation created/updated
-7. **NEVER** modify session files
-
-**Your documentation is the first thing developers will read. Make it comprehensive, accurate, and helpful.**
 
 **OUTPUT ONLY GOES TO:** `core/docs/`, `contents/themes/{theme}/docs/`, or `contents/plugins/{plugin}/docs/`

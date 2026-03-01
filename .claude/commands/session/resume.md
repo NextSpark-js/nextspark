@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:resume
 
 Resume an existing session by recovering all context.

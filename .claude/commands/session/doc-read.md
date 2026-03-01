@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:doc:read
 
 Gain context by reading documentation before working on a task.

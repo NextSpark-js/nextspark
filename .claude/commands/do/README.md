@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # do: Commands
 
 Action-oriented commands that enforce reading skills and how-tos before executing tasks.

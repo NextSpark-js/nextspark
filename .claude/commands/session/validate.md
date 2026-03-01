@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:validate
 
 Validate the current session state and implementation.

@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:* Commands
 
 Unified namespace for development session management.

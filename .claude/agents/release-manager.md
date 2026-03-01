@@ -41,6 +41,7 @@ description: |
   - User has reviewed and approved changes
 model: sonnet
 color: purple
+skills: [github]
 tools: Bash, Glob, Grep, Read, Edit, Write, TodoWrite, BashOutput, KillShell, AskUserQuestion
 ---
 

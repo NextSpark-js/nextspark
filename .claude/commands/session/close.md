@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:close
 
 Close the active session or a specific session.

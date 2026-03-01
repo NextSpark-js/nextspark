@@ -1,5 +1,6 @@
 ---
 description: "Increment package versions with semantic versioning"
+disable-model-invocation: true
 ---
 
 # do:npm-version

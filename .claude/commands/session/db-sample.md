@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:db:sample
 
 Generate coherent sample data for database entities.

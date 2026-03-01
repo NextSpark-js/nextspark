@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:pending
 
 Document pending items discovered during development.

@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:review
 
 Request or perform code review for the session.

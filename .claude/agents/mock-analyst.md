@@ -353,55 +353,5 @@ PM receives mock analysis as context:
 
 ## Examples
 
-### Example 1: BLOCKS Workflow
-
-```
-Input:
-├── mockPath: "blocks/2026-01-12-hero/mocks/"
-├── workflow: "BLOCKS"
-├── mockSource: "stitch"
-├── blockType: "hero"
-└── blockDecision: "new"
-
-Process:
-1. Detect: code.html, screen.png found
-2. Parse HTML: 1 section, hero type
-3. Extract tokens: 5 colors, 2 fonts
-4. Map to theme: 4 mapped, 1 gap
-5. Generate plan: new block "hero-terminal"
-
-Output:
-├── analysis.json
-├── ds-mapping.json
-└── block-plan.json
-```
-
-### Example 2: TASK Workflow
-
-```
-Input:
-├── mockPath: "tasks/2026-01-12-products/mocks/"
-├── workflow: "TASK"
-├── mockSource: "figma"
-├── mockFor: "screens"
-└── mockComplexity: "multiple"
-
-Process:
-1. Detect: screen.png found, no HTML
-2. Skip HTML parsing (not available)
-3. Limited token extraction
-4. Map available values
-5. Skip block plan (not BLOCKS workflow)
-
-Output:
-├── analysis.json (limited)
-└── ds-mapping.json (limited)
-```
-
----
-
-## Version History
-
-| Version | Changes |
-|---------|---------|
-| v1.0 | Initial version - Multi-mode mock analysis agent |
+**BLOCKS workflow:** Mock with HTML → full analysis.json + ds-mapping.json + block-plan.json
+**TASK/STORY workflow:** Mock without HTML → limited analysis.json + ds-mapping.json (no block-plan)

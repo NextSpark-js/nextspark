@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:test:run
 
 Execute Cypress test suite with options for specific tests or full run.

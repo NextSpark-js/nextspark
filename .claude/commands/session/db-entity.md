@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:db:entity
 
 Generate migration for an entity with relations and metadata support.
