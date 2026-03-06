@@ -40,6 +40,7 @@ export function getBillingGateway(): BillingGateway {
       // Future providers:
       // case 'paddle': { ... }
       // case 'lemonsqueezy': { ... }
+      // case 'mercadopago': { ... }
       default:
         throw new Error(
           `Unsupported billing provider: "${provider}". ` +

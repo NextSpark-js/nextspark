@@ -37,7 +37,7 @@ import type {
 export interface CreateSubscriptionOptions {
   billingInterval?: BillingInterval
   trialDays?: number
-  paymentProvider?: 'stripe' | 'paddle' | 'lemonsqueezy'
+  paymentProvider?: 'stripe' | 'polar' | 'paddle' | 'lemonsqueezy' | 'mercadopago'
   externalSubscriptionId?: string
   externalCustomerId?: string
 }
