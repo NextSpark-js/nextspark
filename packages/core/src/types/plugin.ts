@@ -16,6 +16,25 @@ export interface PluginHooks {
 }
 
 /**
+ * A single navigation item contributed by a plugin
+ */
+export interface PluginNavItem {
+  href: string
+  label: string
+  description?: string
+  icon?: string
+  children?: PluginNavItem[]
+}
+
+/**
+ * A navigation section contributed by a plugin for a specific area
+ */
+export interface PluginNavSection {
+  sectionLabel?: string
+  items: PluginNavItem[]
+}
+
+/**
  * Plugin configuration interface
  */
 export interface PluginConfig {
@@ -29,6 +48,10 @@ export interface PluginConfig {
   components?: Record<string, any>
   services?: Record<string, any>
   api?: Record<string, any>
+  navigation?: {
+    devtools?: PluginNavSection
+    superadmin?: PluginNavSection
+  }
 }
 
 /**
@@ -43,6 +66,14 @@ export interface RouteFileEndpoint {
 }
 
 /**
+ * Plugin settings area (e.g. settings/devtools/, settings/superadmin/)
+ */
+export interface PluginSettingsArea {
+  area: string
+  hasMigrations: boolean
+}
+
+/**
  * Plugin registry entry with metadata
  */
 export interface PluginRegistryEntry {
@@ -52,6 +83,7 @@ export interface PluginRegistryEntry {
   apiPath: string | null
   routeFiles?: RouteFileEndpoint[]
   entities?: any[]
+  settings?: PluginSettingsArea[]
   hasMessages?: boolean
   hasAssets?: boolean
 }

@@ -137,11 +137,31 @@ export async function discoverPlugins(config = DEFAULT_CONFIG) {
           // No entities directory in plugin
         }
 
-        // Check for messages, assets
+        // Check for settings areas (settings/<area>/)
+        const settingsPath = join(pluginsDir, pluginName, 'settings')
+        let pluginSettings = []
+
+        try {
+          const settingsDirs = await readdir(settingsPath, { withFileTypes: true })
+          for (const dir of settingsDirs.filter(e => e.isDirectory())) {
+            const area = dir.name
+            const areaPath = join(settingsPath, area)
+            const migrationsPath = join(areaPath, 'migrations')
+            const hasMigrations = existsSync(migrationsPath)
+            pluginSettings.push({ area, hasMigrations })
+            verbose(`Plugin ${pluginName} settings/${area}${hasMigrations ? ' (migrations)' : ''}`)
+          }
+        } catch {
+          // No settings directory
+        }
+
+        // Check for messages, assets, pages server
         const messagesPath = join(pluginsDir, pluginName, 'messages')
         const assetsPath = join(pluginsDir, pluginName, 'assets')
+        const pagesServerPath = join(pluginsDir, pluginName, 'plugin.pages.server.ts')
         const hasMessages = existsSync(messagesPath)
         const hasAssets = existsSync(assetsPath)
+        const hasPagesServer = existsSync(pagesServerPath)
 
         plugins.push({
           name: pluginName,
@@ -151,13 +171,16 @@ export async function discoverPlugins(config = DEFAULT_CONFIG) {
           apiPath: hasAPI ? `@/contents/plugins/${pluginName}/api` : null,
           routeFiles,
           entities: pluginEntities,
+          settings: pluginSettings,
           hasMessages,
-          hasAssets
+          hasAssets,
+          hasPagesServer
         })
 
         const info = [
           hasAPI && `API [${routeFiles.length} routes]`,
           pluginEntities.length > 0 && `${pluginEntities.length} entities`,
+          pluginSettings.length > 0 && `settings [${pluginSettings.map(s => s.area).join(', ')}]`,
           hasMessages && 'messages',
           hasAssets && 'assets'
         ].filter(Boolean).join(', ')

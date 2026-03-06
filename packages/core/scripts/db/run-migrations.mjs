@@ -454,6 +454,19 @@ async function runEntityMigrations() {
     const themeEntitiesDir = path.join(contentsDir, 'themes', ACTIVE_THEME, 'entities');
     allEntityMigrations.push(...collectEntityMigrations(themeEntitiesDir, 'theme', ACTIVE_THEME));
 
+    // Collect theme settings migrations (settings/<area>/migrations/)
+    const themeSettingsDir = path.join(contentsDir, 'themes', ACTIVE_THEME, 'settings');
+    if (fs.existsSync(themeSettingsDir)) {
+      const settingAreas = fs.readdirSync(themeSettingsDir, { withFileTypes: true })
+        .filter(e => e.isDirectory()).map(e => e.name);
+      for (const area of settingAreas) {
+        const settingsMigrationsDir = path.join(themeSettingsDir, area, 'migrations');
+        allContentMigrations.push(...collectContentMigrations(
+          settingsMigrationsDir, 'theme-settings', `${ACTIVE_THEME}/settings/${area}`
+        ));
+      }
+    }
+
     // Collect plugin migrations
     const pluginsDir = path.join(contentsDir, 'plugins');
     if (fs.existsSync(pluginsDir) && activePlugins.length > 0) {
@@ -467,6 +480,19 @@ async function runEntityMigrations() {
         // Plugin entity migrations
         const pluginEntitiesDir = path.join(pluginDir, 'entities');
         allEntityMigrations.push(...collectEntityMigrations(pluginEntitiesDir, 'plugin', pluginName));
+
+        // Plugin settings migrations (settings/<area>/migrations/)
+        const pluginSettingsDir = path.join(pluginDir, 'settings');
+        if (fs.existsSync(pluginSettingsDir)) {
+          const settingAreas = fs.readdirSync(pluginSettingsDir, { withFileTypes: true })
+            .filter(e => e.isDirectory()).map(e => e.name);
+          for (const area of settingAreas) {
+            const settingsMigrationsDir = path.join(pluginSettingsDir, area, 'migrations');
+            allContentMigrations.push(...collectContentMigrations(
+              settingsMigrationsDir, 'plugin-settings', `${pluginName}/settings/${area}`
+            ));
+          }
+        }
       }
     }
 

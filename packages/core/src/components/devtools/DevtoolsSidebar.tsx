@@ -16,12 +16,18 @@ import {
   GitBranch,
   LayoutGrid,
   Tag,
-  Clock
+  Clock,
+  Puzzle,
+  Star,
+  Bell,
+  Globe
 } from "lucide-react";
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { getPluginNavItems } from "@nextsparkjs/registries/plugin-registry.client";
+import type { PluginNavItem } from "../../types/plugin";
 
 interface SidebarItem {
   titleKey: string;
@@ -31,18 +37,23 @@ interface SidebarItem {
   disabled?: boolean;
 }
 
+const PLUGIN_ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  Puzzle, Settings, Star, Code, LayoutGrid, Bell, Globe, Layers, GitBranch, Tag
+};
+
 /**
  * DevTools Sidebar Component
  *
  * Specialized sidebar for developer navigation within the /devtools area.
+ * Reads plugin navigation items from @nextsparkjs/registries automatically.
  * Includes collapsible functionality and purple/violet branding.
- * Based on AdminSidebar pattern but with distinct developer-focused styling.
  */
 export function DevtoolsSidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const t = useTranslations('devtools');
   const tCommon = useTranslations('common');
+  const pluginItems = getPluginNavItems('devtools');
 
   const sidebarItems: SidebarItem[] = [
     {
@@ -107,6 +118,33 @@ export function DevtoolsSidebar() {
     },
   ];
 
+  const renderPluginItem = (item: PluginNavItem) => {
+    const IconComponent = PLUGIN_ICON_MAP[item.icon ?? ''] ?? Puzzle;
+    const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        data-cy={`devtools-plugin-nav-${item.href.split('/').pop()}`}
+        className={cn(
+          "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
+          "hover:bg-accent hover:text-accent-foreground",
+          isActive ? "bg-violet-600 text-white dark:bg-violet-700" : "text-foreground",
+          isCollapsed && "justify-center"
+        )}
+        title={isCollapsed ? item.label : item.description}
+      >
+        <IconComponent className="h-5 w-5 flex-shrink-0" />
+        {!isCollapsed && (
+          <div className="flex-1">
+            <div className="text-sm font-medium">{item.label}</div>
+            {item.description && <p className="text-xs opacity-80">{item.description}</p>}
+          </div>
+        )}
+      </Link>
+    );
+  };
+
   return (
     <div
       className={cn(
@@ -146,72 +184,90 @@ export function DevtoolsSidebar() {
       </div>
 
       {/* Navigation Items */}
-      <div className="flex-1 p-3 space-y-2">
-        {sidebarItems.map((item) => {
-          const IconComponent = item.icon;
-          const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
-          const title = t(item.titleKey);
-          const description = item.descriptionKey ? t(item.descriptionKey) : undefined;
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-3 space-y-1">
+          {sidebarItems.map((item) => {
+            const IconComponent = item.icon;
+            const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+            const title = t(item.titleKey);
+            const description = item.descriptionKey ? t(item.descriptionKey) : undefined;
 
-          if (item.disabled) {
+            if (item.disabled) {
+              return (
+                <div
+                  key={item.titleKey}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground cursor-not-allowed opacity-60",
+                    isCollapsed && "justify-center"
+                  )}
+                  title={isCollapsed ? `${title} (${tCommon('comingSoon')})` : description}
+                >
+                  <IconComponent className="h-5 w-5 flex-shrink-0" />
+                  {!isCollapsed && (
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">{title}</span>
+                        <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">
+                          {tCommon('soon')}
+                        </span>
+                      </div>
+                      {description && (
+                        <p className="text-xs text-muted-foreground">{description}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
             return (
-              <div
+              <Link
                 key={item.titleKey}
+                href={item.href}
+                data-cy={`devtools-nav-${item.titleKey.split('.').pop()?.toLowerCase().replace(/\s+/g, '-')}`}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground cursor-not-allowed opacity-60",
+                  "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
+                  "hover:bg-accent hover:text-accent-foreground",
+                  isActive
+                    ? "bg-violet-600 text-white dark:bg-violet-700"
+                    : "text-foreground",
                   isCollapsed && "justify-center"
                 )}
-                title={isCollapsed ? `${title} (${tCommon('comingSoon')})` : description}
+                title={isCollapsed ? title : description}
               >
                 <IconComponent className="h-5 w-5 flex-shrink-0" />
                 {!isCollapsed && (
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{title}</span>
-                      <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">
-                        {tCommon('soon')}
-                      </span>
-                    </div>
+                    <div className="text-sm font-medium">{title}</div>
                     {description && (
-                      <p className="text-xs text-muted-foreground">{description}</p>
+                      <p className="text-xs opacity-80">{description}</p>
                     )}
                   </div>
                 )}
-              </div>
+              </Link>
             );
-          }
+          })}
 
-          return (
-            <Link
-              key={item.titleKey}
-              href={item.href}
-              data-cy={`devtools-nav-${item.titleKey.split('.').pop()?.toLowerCase().replace(/\s+/g, '-')}`}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
-                "hover:bg-accent hover:text-accent-foreground",
-                isActive
-                  ? "bg-violet-600 text-white dark:bg-violet-700"
-                  : "text-foreground",
-                isCollapsed && "justify-center"
-              )}
-              title={isCollapsed ? title : description}
-            >
-              <IconComponent className="h-5 w-5 flex-shrink-0" />
+          {/* Plugin settings section */}
+          {pluginItems.length > 0 && (
+            <div className="pt-3 space-y-1">
               {!isCollapsed && (
-                <div className="flex-1">
-                  <div className="text-sm font-medium">{title}</div>
-                  {description && (
-                    <p className="text-xs opacity-80">{description}</p>
-                  )}
-                </div>
+                <p
+                  className="px-3 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider"
+                  data-cy="devtools-plugins-section-label"
+                >
+                  Plugins
+                </p>
               )}
-            </Link>
-          );
-        })}
+              {isCollapsed && <div className="my-1 border-t border-border" />}
+              {pluginItems.map(renderPluginItem)}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Exit Section */}
-      <div className="p-3 border-t border-border space-y-2">
+      <div className="p-3 border-t border-border space-y-1">
         {/* Link to Dashboard */}
         <Link
           href="/dashboard"
@@ -256,7 +312,7 @@ export function DevtoolsSidebar() {
 
         {/* Security Notice */}
         {!isCollapsed && (
-          <div className="mt-3 p-2 bg-violet-50 dark:bg-violet-950 border border-violet-200 dark:border-violet-800 rounded-lg">
+          <div className="mt-2 p-2 bg-violet-50 dark:bg-violet-950 border border-violet-200 dark:border-violet-800 rounded-lg">
             <div className="flex items-center gap-2 text-violet-700 dark:text-violet-300">
               <Code className="h-3 w-3" />
               <span className="text-xs font-medium">{t('restrictedArea')}</span>
