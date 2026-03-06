@@ -6,7 +6,6 @@
  */
 
 export { DevtoolsSidebar } from './DevtoolsSidebar'
-export { PluginDevtoolsPage } from './PluginDevtoolsPage'
 export { DevtoolsMobileHeader } from './DevtoolsMobileHeader'
 export { ConfigViewer } from './ConfigViewer'
 export { TestCasesViewer } from './TestCasesViewer'
