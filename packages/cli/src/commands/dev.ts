@@ -6,6 +6,7 @@ import { getCoreDir, getProjectRoot, isMonorepoMode } from '../utils/paths.js';
 interface DevOptions {
   port: string;
   registry: boolean;
+  turbopack: boolean;
 }
 
 export async function devCommand(options: DevOptions): Promise<void> {
@@ -43,9 +44,15 @@ export async function devCommand(options: DevOptions): Promise<void> {
     }
 
     // Start Next.js dev server
-    console.log(chalk.green(`\n[Dev] Starting Next.js dev server on port ${options.port}...`));
+    const nextArgs = ['next', 'dev', '-p', options.port];
+    if (options.turbopack) {
+      nextArgs.splice(2, 0, '--turbopack');
+    }
 
-    const devProcess = spawn('npx', ['next', 'dev', '-p', options.port], {
+    const bundler = options.turbopack ? 'Turbopack' : 'Webpack';
+    console.log(chalk.green(`\n[Dev] Starting Next.js dev server on port ${options.port} (${bundler})...`));
+
+    const devProcess = spawn('npx', nextArgs, {
       cwd: projectRoot,
       stdio: 'inherit',
       shell: true,
