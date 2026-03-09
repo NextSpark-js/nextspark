@@ -48,12 +48,12 @@ const PLUGIN_ICON_MAP: Record<string, React.ComponentType<{ className?: string }
  * Reads plugin navigation items from @nextsparkjs/registries automatically.
  * Includes collapsible functionality and purple/violet branding.
  */
-export function DevtoolsSidebar() {
+export function DevtoolsSidebar({ pluginItems: pluginItemsProp }: { pluginItems?: PluginNavItem[] } = {}) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const t = useTranslations('devtools');
   const tCommon = useTranslations('common');
-  const pluginItems = getPluginNavItems('devtools');
+  const pluginItems = pluginItemsProp ?? getPluginNavItems('devtools');
 
   const sidebarItems: SidebarItem[] = [
     {
