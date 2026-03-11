@@ -219,9 +219,9 @@ export const auth = betterAuth({
             }
           }
 
-          // In 'domain-restricted' mode, validate email domain
+          // In 'domain-restricted' and 'domain-open' modes, validate email domain
           // Empty allowedDomains list = allow all domains (permissive fallback)
-          if (registrationMode === 'domain-restricted') {
+          if (registrationMode === 'domain-restricted' || registrationMode === 'domain-open') {
             const allowedDomains = AUTH_CONFIG?.registration?.allowedDomains ?? [];
             if (allowedDomains.length > 0 && !isDomainAllowed(user.email, allowedDomains)) {
               console.log(`[Auth] Blocked registration for ${user.email}: domain not in allowedDomains (allowed: ${allowedDomains.join(', ')})`);
@@ -283,7 +283,7 @@ export const auth = betterAuth({
         before: async (session: { userId: string; [key: string]: unknown }) => {
           const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open';
 
-          if (registrationMode === 'domain-restricted') {
+          if (registrationMode === 'domain-restricted' || registrationMode === 'domain-open') {
             const allowedDomains = AUTH_CONFIG?.registration?.allowedDomains ?? [];
             if (allowedDomains.length > 0) {
               // Look up user email from DB

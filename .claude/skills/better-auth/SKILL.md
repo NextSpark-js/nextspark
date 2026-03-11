@@ -340,7 +340,8 @@ Registration behavior is configurable at the theme level via `auth` in `app.conf
 | Mode | Email Signup | Google OAuth Signup | Email Login | Google Login | Signup Page |
 |------|-------------|-------------------|-------------|-------------|-------------|
 | `open` (default) | Yes | Yes | Yes | Yes | Visible |
-| `domain-restricted` | No | Only allowed domains | Yes | Yes | Hidden |
+| `domain-restricted` | No | Only allowed domains | No | Only allowed domains | Hidden |
+| `domain-open` | Only allowed domains | Only allowed domains | Only allowed domains | Only allowed domains | Visible |
 | `invitation-only` | Via invite | Via invite | Yes | Configurable | Invite only |
 
 ### Theme Configuration
@@ -353,7 +354,7 @@ auth: {
   registration: { mode: 'open' },
 }
 
-// Option 2: Only Google OAuth for specific domains
+// Option 2: Only Google OAuth for specific domains (no email+password)
 auth: {
   registration: {
     mode: 'domain-restricted',
@@ -361,7 +362,15 @@ auth: {
   },
 }
 
-// Option 3: Invitation-only (integrates with single-tenant teams mode)
+// Option 3: Email+password AND Google OAuth, restricted to specific domains
+auth: {
+  registration: {
+    mode: 'domain-open',
+    allowedDomains: ['nextspark.dev', 'mycompany.com'],
+  },
+}
+
+// Option 4: Invitation-only (integrates with single-tenant teams mode)
 auth: {
   registration: { mode: 'invitation-only' },
 }
@@ -371,12 +380,12 @@ auth: {
 
 ```typescript
 // packages/core/src/lib/config/types.ts
-type RegistrationMode = 'open' | 'domain-restricted' | 'invitation-only'
+type RegistrationMode = 'open' | 'domain-restricted' | 'domain-open' | 'invitation-only'
 
 interface AuthConfig {
   registration: {
     mode: RegistrationMode
-    allowedDomains?: string[]  // For 'domain-restricted' mode
+    allowedDomains?: string[]  // For 'domain-restricted' and 'domain-open' modes
   }
   providers?: {
     google?: { enabled?: boolean }
@@ -399,8 +408,9 @@ import {
 ### Enforcement Points
 
 1. **Route handler** (`app/api/auth/[...all]/route.ts`): Blocks email signup for `domain-restricted` and `invitation-only` modes
-2. **Database hook** (`auth.ts` → `databaseHooks.user.create.before`): Validates email domain for `domain-restricted` mode; blocks signup in `invitation-only` mode when team exists
-3. **Signup page** (`app/(auth)/signup/page.tsx`): Redirects to `/login` for `domain-restricted` and `invitation-only`
+2. **Database hook** (`auth.ts` → `databaseHooks.user.create.before`): Validates email domain for `domain-restricted` and `domain-open` modes; blocks signup in `invitation-only` mode when team exists
+3. **Session hook** (`auth.ts` → `databaseHooks.session.create.before`): Validates email domain on every login for `domain-restricted` and `domain-open` modes
+4. **Signup page** (`app/(auth)/signup/page.tsx`): Redirects to `/login` for `domain-restricted` and `invitation-only`
 4. **LoginForm**: Hides Google OAuth button and signup link based on mode
 5. **SignupForm**: Hides Google button when disabled
 
@@ -411,7 +421,7 @@ Use `PUBLIC_AUTH_CONFIG` (from `config-sync.ts`) in client components. This stri
 ```typescript
 import { PUBLIC_AUTH_CONFIG } from '@/core/lib/config/config-sync'
 
-// PUBLIC_AUTH_CONFIG.registration.mode → 'open' | 'domain-restricted' | 'invitation-only'
+// PUBLIC_AUTH_CONFIG.registration.mode → 'open' | 'domain-restricted' | 'domain-open' | 'invitation-only'
 // PUBLIC_AUTH_CONFIG.providers.google.enabled → boolean
 ```
 
