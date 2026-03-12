@@ -17,27 +17,30 @@ const packageRoot = path.join(__dirname, '..', '..'); // scripts/db/ -> core/
 const isMonorepoMode = fs.existsSync(path.join(projectRoot, 'packages', 'core'));
 const rootDir = projectRoot; // For backward compatibility with code below
 
-// Read .env from the project root (where user runs the command)
+// Read environment variables: prefer .env file if it exists, fallback to process.env (e.g. Vercel/CI)
 const envPath = path.join(projectRoot, '.env');
-const envContent = fs.readFileSync(envPath, 'utf8');
-const envLines = envContent.split('\n');
 
-let DATABASE_URL = null;
-let ACTIVE_THEME = null;
+let DATABASE_URL = process.env.DATABASE_URL ?? null;
+let ACTIVE_THEME = process.env.NEXT_PUBLIC_ACTIVE_THEME ?? null;
 
-envLines.forEach(line => {
-  if (line && !line.startsWith('#')) {
-    const [key, ...valueParts] = line.split('=');
-    const value = valueParts.join('=').replace(/^["']|["']$/g, '').trim();
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf8');
+  const envLines = envContent.split('\n');
 
-    if (key?.trim() === 'DATABASE_URL' && valueParts.length > 0) {
-      DATABASE_URL = value;
+  envLines.forEach(line => {
+    if (line && !line.startsWith('#')) {
+      const [key, ...valueParts] = line.split('=');
+      const value = valueParts.join('=').replace(/^["']|["']$/g, '').trim();
+
+      if (key?.trim() === 'DATABASE_URL' && valueParts.length > 0) {
+        DATABASE_URL = value;
+      }
+      if (key?.trim() === 'NEXT_PUBLIC_ACTIVE_THEME' && valueParts.length > 0) {
+        ACTIVE_THEME = value;
+      }
     }
-    if (key?.trim() === 'NEXT_PUBLIC_ACTIVE_THEME' && valueParts.length > 0) {
-      ACTIVE_THEME = value;
-    }
-  }
-});
+  });
+}
 
 if (!DATABASE_URL) {
   console.error("❌ DATABASE_URL not found in environment variables");
