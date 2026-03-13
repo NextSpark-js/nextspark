@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:fix:test
 
 Fix failing tests automatically.

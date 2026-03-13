@@ -1,5 +1,6 @@
 ---
 description: "Validate page builder blocks"
+disable-model-invocation: true
 ---
 
 # do:validate-blocks

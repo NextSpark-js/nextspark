@@ -1,5 +1,6 @@
 ---
 description: "Test npm package from scratch - fully automated with Playwright verification"
+disable-model-invocation: true
 ---
 
 # do:test-package

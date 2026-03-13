@@ -1,5 +1,6 @@
 ---
 description: "Sync with GitHub PR code review: evaluate, fix, and respond"
+disable-model-invocation: true
 ---
 
 # /do:sync-code-review

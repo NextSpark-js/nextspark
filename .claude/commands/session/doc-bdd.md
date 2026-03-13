@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:doc:bdd
 
 Generate BDD documentation (.bdd.md) from Cypress tests.

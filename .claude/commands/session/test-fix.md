@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:test:fix
 
 Fix failing Cypress tests iteratively until all pass.

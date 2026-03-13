@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:status
 
 View the status of active sessions.

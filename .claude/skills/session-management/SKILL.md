@@ -244,6 +244,56 @@ Cuando el alcance cambia significativamente:
 
 ---
 
+## Agent Development Workflow Pattern
+
+All workflow agents follow this standard pattern when interacting with session files.
+
+### Step 1: Read Session Files
+
+Every agent reads the relevant session files at the start:
+
+| File | Contains | Used By |
+|------|----------|---------|
+| `plan.md` | Technical plan, phase-specific instructions | All agents |
+| `context.md` | Chronological entries from each agent | All agents |
+| `progress.md` | Phase checklists with `[x]` marks | All agents |
+| `requirements.md` | ACs, user stories, PM decisions | Most agents |
+| `tests.md` | Selectors, translations, test results | Testing/frontend agents |
+| `scope.json` | Allowed file paths | Scope-aware agents |
+
+### Step 2: Verify Prerequisite Gate
+
+If your phase requires a prior gate, check `context.md` for the gate's PASSED status. **If the gate did NOT pass, you CANNOT continue.**
+
+### Step 3: Execute Agent-Specific Work
+
+(Defined per agent — follow plan.md for your phase.)
+
+### Step 4: Document Results in context.md
+
+Append a timestamped entry:
+
+```
+### [YYYY-MM-DD HH:MM] - {agent-name}
+**Status:** ✅ GATE PASSED / ⚠️ Completed with notes / 🚫 GATE FAILED
+**Work Done:** Summary of what was accomplished
+**Next Step:** {next-agent} (Phase N)
+```
+
+### Step 5: Update progress.md
+
+Mark completed items with `[x]` in the relevant phase checklist.
+
+### Gate Failure Protocol
+
+When a gate agent's validation fails:
+1. Document all errors in context.md with exact error messages
+2. Update progress.md with FAILED status
+3. Call the responsible developer agent to fix issues
+4. After fix, re-run ALL validations — only proceed when ALL pass
+
+---
+
 ## Integración con Comandos
 
 Esta skill es utilizada por los comandos `/session:*`:

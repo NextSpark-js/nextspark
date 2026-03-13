@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:demo
 
 Run a live visual demo of the implemented feature.

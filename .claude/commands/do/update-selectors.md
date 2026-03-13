@@ -1,5 +1,6 @@
 ---
 description: "Synchronize selectors between components, core definitions, and POM classes"
+disable-model-invocation: true
 ---
 
 # do:update-selectors

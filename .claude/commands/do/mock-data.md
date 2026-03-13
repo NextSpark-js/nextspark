@@ -1,5 +1,6 @@
 ---
 description: "Generate sample/mock data for entities"
+disable-model-invocation: true
 ---
 
 # do:mock-data

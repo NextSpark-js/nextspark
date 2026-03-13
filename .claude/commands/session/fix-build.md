@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:fix:build
 
 Fix build errors automatically.

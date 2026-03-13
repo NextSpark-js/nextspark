@@ -1,5 +1,6 @@
 ---
 description: "Create a new core version release"
+disable-model-invocation: true
 ---
 
 # do:release-version

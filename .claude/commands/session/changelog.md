@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:changelog
 
 Generate a simple, complete changelog for the current feature branch.

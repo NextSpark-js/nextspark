@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:commit
 
 Create a git commit for the current session changes.

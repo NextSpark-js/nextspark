@@ -23,14 +23,9 @@ description: |
 model: sonnet
 color: green
 tools: Read, Bash, mcp__playwright__browser_navigate, mcp__playwright__browser_take_screenshot, mcp__playwright__browser_snapshot, mcp__playwright__browser_wait_for, mcp__playwright__browser_evaluate
----
-
-## Required Skills [v4.3]
-
-**Before starting, read these skills:**
-- `.claude/skills/design-system/SKILL.md` - Token comparison patterns
-- `.claude/skills/tailwind-theming/SKILL.md` - Theme CSS variables
-
+skills:
+  - design-system
+  - tailwind-theming
 ---
 
 You are a Visual Comparator agent. Your expertise is capturing screenshots of rendered blocks and comparing them with original mock sections to validate visual fidelity.

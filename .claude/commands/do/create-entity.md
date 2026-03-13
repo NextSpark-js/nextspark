@@ -1,5 +1,6 @@
 ---
 description: "Create a new entity with all required files"
+disable-model-invocation: true
 ---
 
 # do:create-entity

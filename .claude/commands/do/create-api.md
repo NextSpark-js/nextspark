@@ -1,5 +1,6 @@
 ---
 description: "Create a new API endpoint"
+disable-model-invocation: true
 ---
 
 # do:create-api
