@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, useMemo, useRef } from 'react'
 import { useTranslations } from 'next-intl'
+import { useQuery } from '@tanstack/react-query'
 import { Input } from '../../ui/input'
 import { Textarea } from '../../ui/textarea'
 import { Label } from '../../ui/label'
@@ -15,7 +16,7 @@ import {
 import { ImageUpload } from '../../ui/image-upload'
 import { RichTextEditor } from '../../ui/rich-text-editor'
 import { MediaLibrary } from '../../media/MediaLibrary'
-import { ChevronDown, ChevronRight, CalendarIcon, ImageIcon, X } from 'lucide-react'
+import { ChevronDown, ChevronRight, CalendarIcon, ImageIcon, X, Loader2, Check } from 'lucide-react'
 import { cn } from '../../../lib/utils'
 import { sel } from '../../../lib/test'
 import { Switch } from '../../ui/switch'
@@ -25,6 +26,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../../ui/popover'
 import { Button } from '../../ui/button'
 import { format } from 'date-fns'
 import { ArrayField } from './array-field'
+import { fetchWithTeam } from '../../../lib/api/entities'
 import type { FieldDefinition } from '../../../types/blocks'
 import type { Media } from '../../../lib/media/types'
 
@@ -38,6 +40,31 @@ interface FieldGroup {
   id: string
   label: string
   fields: FieldDefinition[]
+}
+
+/**
+ * Evaluate whether a field should be visible based on its condition
+ */
+function evaluateCondition(
+  condition: FieldDefinition['condition'],
+  values: Record<string, unknown>
+): boolean {
+  if (!condition) return true
+  const fieldValue = values[condition.field]
+  switch (condition.operator) {
+    case 'equals':
+      return fieldValue === condition.value
+    case 'notEquals':
+      return fieldValue !== condition.value
+    case 'contains':
+      return typeof fieldValue === 'string' && fieldValue.includes(String(condition.value))
+    case 'greaterThan':
+      return Number(fieldValue) > Number(condition.value)
+    case 'lessThan':
+      return Number(fieldValue) < Number(condition.value)
+    default:
+      return true
+  }
 }
 
 /**
@@ -143,6 +170,147 @@ function MediaLibraryField({
         allowedTypes={['image']}
       />
     </>
+  )
+}
+
+/**
+ * RelationshipField - Fetches an entity list and renders a select (manyToOne)
+ * or a multi-select checklist (manyToMany) to pick related records.
+ * Stores the `valueField` (default: 'id') for single, or an array of IDs for multi.
+ */
+function RelationshipField({
+  field,
+  value,
+  onChange,
+}: {
+  field: FieldDefinition
+  value: string | string[]
+  onChange: (value: string | string[]) => void
+}) {
+  const displayField = field.displayField || 'name'
+  const valueField = field.valueField || 'id'
+  const isMulti = field.relationshipType === 'manyToMany'
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['relationship-field', field.targetEntity],
+    queryFn: async () => {
+      const url = `/api/v1/${field.targetEntity}?limit=100`
+      const response = await fetchWithTeam(url)
+      if (!response.ok) return []
+      const json = await response.json()
+      return (json.items || json.data || []) as Record<string, unknown>[]
+    },
+    enabled: !!field.targetEntity,
+    staleTime: 1000 * 60 * 5,
+  })
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground h-9">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        <span>Loading {field.targetEntity}...</span>
+      </div>
+    )
+  }
+
+  if (isError || !field.targetEntity) {
+    return (
+      <div className="text-sm text-destructive h-9 flex items-center">
+        Failed to load {field.targetEntity}
+      </div>
+    )
+  }
+
+  const items = data || []
+
+  // ── manyToMany: scrollable checklist ─────────────────────────────────────
+  if (isMulti) {
+    const selectedIds = Array.isArray(value) ? value : []
+
+    const toggleItem = (itemId: string) => {
+      const next = selectedIds.includes(itemId)
+        ? selectedIds.filter((id) => id !== itemId)
+        : [...selectedIds, itemId]
+      onChange(next)
+    }
+
+    return (
+      <div className="space-y-1">
+        {selectedIds.length > 0 && (
+          <p className="text-xs text-muted-foreground">
+            {selectedIds.length} selected
+          </p>
+        )}
+        <div
+          className="border rounded-md max-h-48 overflow-y-auto divide-y"
+          data-cy={sel('blockEditor.blockPropertiesPanel.form.field', { name: field.name })}
+        >
+          {items.length === 0 && (
+            <div className="px-3 py-4 text-sm text-muted-foreground text-center">
+              No {field.targetEntity} found
+            </div>
+          )}
+          {items.map((item) => {
+            const itemValue = String(item[valueField] ?? '')
+            const itemLabel = String(
+              item[displayField] ?? item['title'] ?? item['name'] ?? itemValue
+            )
+            const isChecked = selectedIds.includes(itemValue)
+
+            return (
+              <button
+                key={itemValue}
+                type="button"
+                className="flex items-center gap-2 w-full px-3 py-2 hover:bg-muted/50 text-left"
+                onClick={() => toggleItem(itemValue)}
+              >
+                <div
+                  className={cn(
+                    'w-4 h-4 border rounded flex-shrink-0 flex items-center justify-center',
+                    isChecked ? 'bg-primary border-primary' : 'border-input'
+                  )}
+                >
+                  {isChecked && <Check className="h-3 w-3 text-primary-foreground" />}
+                </div>
+                <span className="text-sm truncate">{itemLabel}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
+  // ── manyToOne: single select ──────────────────────────────────────────────
+  return (
+    <Select
+      value={String(value || '')}
+      onValueChange={(v) => onChange(v)}
+    >
+      <SelectTrigger
+        data-cy={sel('blockEditor.blockPropertiesPanel.form.field', { name: field.name })}
+      >
+        <SelectValue placeholder={field.placeholder || `Select ${field.targetEntity}...`} />
+      </SelectTrigger>
+      <SelectContent>
+        {items.map((item) => {
+          const itemValue = String(item[valueField] ?? '')
+          const itemLabel = String(
+            item[displayField] ?? item['title'] ?? item['name'] ?? itemValue
+          )
+          return (
+            <SelectItem key={itemValue} value={itemValue}>
+              {itemLabel}
+            </SelectItem>
+          )
+        })}
+        {items.length === 0 && (
+          <div className="px-2 py-4 text-sm text-muted-foreground text-center">
+            No {field.targetEntity} found
+          </div>
+        )}
+      </SelectContent>
+    </Select>
   )
 }
 
@@ -442,6 +610,20 @@ export function DynamicForm({ fieldDefinitions, values, onChange }: DynamicFormP
           />
         )
 
+      case 'relationship': {
+        const isMulti = field.relationshipType === 'manyToMany'
+        const relationValue = isMulti
+          ? (Array.isArray(value) ? value as string[] : [])
+          : String(value || '')
+        return (
+          <RelationshipField
+            field={field}
+            value={relationValue}
+            onChange={(newValue) => handleFieldChange(field.name, newValue)}
+          />
+        )
+      }
+
       default:
         return (
           <Input
@@ -571,11 +753,13 @@ export function DynamicForm({ fieldDefinitions, values, onChange }: DynamicFormP
   return (
     <div className="space-y-4" data-cy={sel('blockEditor.blockPropertiesPanel.form.container')}>
       {/* Render ungrouped fields first - array fields get special collapsible treatment */}
-      {ungrouped.map(field =>
-        field.type === 'array'
-          ? renderArrayFieldAsGroup(field)
-          : renderFieldWithLabel(field)
-      )}
+      {ungrouped
+        .filter(field => evaluateCondition(field.condition, formValues))
+        .map(field =>
+          field.type === 'array'
+            ? renderArrayFieldAsGroup(field)
+            : renderFieldWithLabel(field)
+        )}
 
       {/* Render groups */}
       {groups.map(group => renderGroup(group))}

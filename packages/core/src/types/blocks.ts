@@ -323,6 +323,7 @@ export type FieldType =
   | 'date'
   | 'time'
   | 'datetime'
+  | 'relationship'
 
 /**
  * Field definition for dynamic form generation
@@ -368,6 +369,12 @@ export interface FieldDefinition {
   itemFields?: FieldDefinition[] // For complex array items
   minItems?: number
   maxItems?: number
+
+  // Relationship specific
+  targetEntity?: string // Entity slug to query (e.g., 'stories', 'clients')
+  displayField?: string // Field to show in the dropdown (default: 'name' or 'title')
+  valueField?: string // Field to store as the value (default: 'id')
+  relationshipType?: 'manyToOne' | 'manyToMany' // Type of relationship (default: 'manyToOne')
 
   // Conditional display
   condition?: {
