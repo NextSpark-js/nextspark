@@ -1189,10 +1189,15 @@ export function matchPathToEntity(
       return { entity, slug: '', isArchive: true }
     }
 
-    // Case: Root path (basePath = '/') matches single segment paths
+    // Case: Root path (basePath = '/') matches paths below root
     if (basePath === '/') {
-      // Path should be /[anything-without-slashes]
-      const match = path.match(/^\/([^\/]+)$/)
+      // Allow multi-segment slugs only if the entity opts in via allowNestedSlugs.
+      // Without the flag only single-segment paths (/my-page) match, avoiding a DB
+      // round-trip for every unrecognised multi-segment URL (bots, crawlers, etc.).
+      const pattern = entity.access?.allowNestedSlugs
+        ? /^\/(.+)$/          // /qa/block/home-qa-us → slug: 'qa/block/home-qa-us'
+        : /^\/([^/]+)$/       // /my-page only (no slashes in slug)
+      const match = path.match(pattern)
       if (match) {
         return { entity, slug: match[1] }
       }

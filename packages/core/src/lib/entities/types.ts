@@ -169,6 +169,14 @@ export interface EntityConfig {
      */
     basePath?: string
     /**
+     * Allow multi-segment slugs for basePath='/' entities.
+     * When true, paths like /qa/block/home-qa-us match this entity (slug: 'qa/block/home-qa-us').
+     * When false (default), only single-segment paths like /my-page match.
+     * Enabling this means ALL unmatched multi-segment paths will trigger a DB query before 404ing,
+     * so only enable if you intentionally use nested slugs (e.g., QA or campaign landing pages).
+     */
+    allowNestedSlugs?: boolean
+    /**
      * Whitelist of field names visible in unauthenticated (public) API responses.
      * Only applies when access.public is true. When defined, unauthenticated
      * GET requests will only return these fields, stripping sensitive data like
