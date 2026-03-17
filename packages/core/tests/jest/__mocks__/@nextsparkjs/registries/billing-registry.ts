@@ -27,8 +27,10 @@ export interface PlanDefinition {
   visibility: 'public' | 'hidden' | 'invite_only'
   features: string[]
   limits: Record<string, number>
-  stripeProductId?: string
-  stripePriceId?: string
+  providerPriceIds?: {
+    monthly?: string | null
+    yearly?: string | null
+  }
 }
 
 export interface BillingConfig {
@@ -117,8 +119,7 @@ export const BILLING_REGISTRY: BillingConfig = {
       visibility: 'public',
       features: ['api_access'],
       limits: { api_calls: 5000, storage: 5, team_members: 3 },
-      stripeProductId: 'prod_starter',
-      stripePriceId: 'price_starter',
+      providerPriceIds: { monthly: 'price_starter', yearly: null },
     },
     {
       slug: 'pro',
@@ -130,8 +131,7 @@ export const BILLING_REGISTRY: BillingConfig = {
       visibility: 'public',
       features: ['api_access', 'advanced_analytics', 'priority_support'],
       limits: { api_calls: 50000, storage: 50, team_members: 10 },
-      stripeProductId: 'prod_pro',
-      stripePriceId: 'price_pro',
+      providerPriceIds: { monthly: 'price_pro', yearly: null },
     },
     {
       slug: 'business',
@@ -143,8 +143,7 @@ export const BILLING_REGISTRY: BillingConfig = {
       visibility: 'public',
       features: ['api_access', 'advanced_analytics', 'priority_support', 'custom_integrations'],
       limits: { api_calls: 500000, storage: 500, team_members: 50 },
-      stripeProductId: 'prod_business',
-      stripePriceId: 'price_business',
+      providerPriceIds: { monthly: 'price_business', yearly: null },
     },
   ],
   actionMappings: {

@@ -1,7 +1,7 @@
 /**
  * Cancel Subscription Endpoint
  *
- * Allows users to cancel their subscription directly without using Stripe Portal.
+ * Allows users to cancel their subscription directly without going through the billing portal.
  * Supports both soft cancel (at period end) and hard cancel (immediate).
  *
  * P1-4: Cancel subscription directo
@@ -11,11 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { authenticateRequest, createAuthError } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { SubscriptionService, MembershipService } from '@nextsparkjs/core/lib/services'
-import {
-  cancelSubscriptionAtPeriodEnd,
-  cancelSubscriptionImmediately,
-  reactivateSubscription
-} from '@nextsparkjs/core/lib/billing/gateways/stripe'
+import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
 import { queryWithRLS } from '@nextsparkjs/core/lib/db'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
@@ -106,12 +102,12 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     )
   }
 
-  // 6. Cancel via Stripe
+  // 6. Cancel via billing gateway
   try {
     if (immediate) {
-      await cancelSubscriptionImmediately(subscription.externalSubscriptionId)
+      await getBillingGateway().cancelSubscriptionImmediately(subscription.externalSubscriptionId)
     } else {
-      await cancelSubscriptionAtPeriodEnd(subscription.externalSubscriptionId)
+      await getBillingGateway().cancelSubscriptionAtPeriodEnd(subscription.externalSubscriptionId)
     }
 
     // 7. Update local DB
@@ -174,7 +170,7 @@ async function handleReactivation(teamId: string) {
   }
 
   try {
-    await reactivateSubscription(subscription.externalSubscriptionId)
+    await getBillingGateway().reactivateSubscription(subscription.externalSubscriptionId)
 
     // Update local DB
     await queryWithRLS(

@@ -163,8 +163,7 @@ export const billingConfig: BillingConfig = {
         file_uploads: 100,
         webhooks_count: 0,
       },
-      stripePriceIdMonthly: null,
-      stripePriceIdYearly: null,
+      providerPriceIds: { monthly: null, yearly: null },
     },
 
     // Starter Plan - For growing teams
@@ -194,8 +193,7 @@ export const billingConfig: BillingConfig = {
         file_uploads: 500,
         webhooks_count: 3,
       },
-      stripePriceIdMonthly: 'price_starter_monthly',
-      stripePriceIdYearly: 'price_starter_yearly',
+      providerPriceIds: { monthly: 'price_1TAIW6QetGjJvG5hzCCpMwXT', yearly: 'price_1TAIWuQetGjJvG5hkI3aJYTw' },
     },
 
     // Pro Plan - For professional teams
@@ -230,8 +228,7 @@ export const billingConfig: BillingConfig = {
         file_uploads: 2000,
         webhooks_count: 10,
       },
-      stripePriceIdMonthly: 'price_pro_monthly',
-      stripePriceIdYearly: 'price_pro_yearly',
+      providerPriceIds: { monthly: 'price_1TAIZMQetGjJvG5hqDh3dbCv', yearly: 'price_1TAIZMQetGjJvG5haLm28w3H' },
     },
 
     // Business Plan - For larger organizations
@@ -270,8 +267,7 @@ export const billingConfig: BillingConfig = {
         file_uploads: 10000,
         webhooks_count: 50,
       },
-      stripePriceIdMonthly: 'price_business_monthly',
-      stripePriceIdYearly: 'price_business_yearly',
+      providerPriceIds: { monthly: 'price_1TAIaNQetGjJvG5hn6fgXx1n', yearly: 'price_1TAIacQetGjJvG5hVQO6i2UL' },
     },
 
     // Enterprise Plan - Custom unlimited plan
@@ -292,8 +288,7 @@ export const billingConfig: BillingConfig = {
         file_uploads: -1,
         webhooks_count: -1,
       },
-      stripePriceIdMonthly: null,
-      stripePriceIdYearly: null,
+      providerPriceIds: { monthly: null, yearly: null },
     },
   ],
 

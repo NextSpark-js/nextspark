@@ -553,8 +553,8 @@ describe('Billing Schema - Billing Event Validations', () => {
         subscriptionId: 'sub-123',
         type: 'payment' as const,
         amount: 100,
-        invoiceUrl: 'https://stripe.com/invoice/123',
-        receiptUrl: 'https://stripe.com/receipt/123',
+        invoiceUrl: 'https://example.com/invoice/123',
+        receiptUrl: 'https://example.com/receipt/123',
       }
       expect(createBillingEventSchema.safeParse(validEvent).success).toBe(true)
     })

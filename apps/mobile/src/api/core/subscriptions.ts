@@ -1,7 +1,7 @@
 /**
  * Subscriptions API
  *
- * Billing and subscription operations (Stripe integration).
+ * Billing and subscription operations.
  *
  * Methods:
  * - getSubscription()

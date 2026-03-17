@@ -213,7 +213,7 @@ export class SuperadminPOM extends BasePOM {
             plan: cySelector('superadmin.teams.detail.subscription.plan'),
             status: cySelector('superadmin.teams.detail.subscription.status'),
             period: cySelector('superadmin.teams.detail.subscription.period'),
-            stripeLink: cySelector('superadmin.teams.detail.subscription.stripeLink'),
+            providerLink: cySelector('superadmin.teams.detail.subscription.providerLink'),
           },
           billingHistory: {
             container: cySelector('superadmin.teams.detail.billingHistory.container'),
@@ -256,7 +256,7 @@ export class SuperadminPOM extends BasePOM {
           element: cySelector('superadmin.subscriptions.table.element'),
           row: (id: string) => cySelector('superadmin.subscriptions.table.row', { id }),
           viewTeamButton: (id: string) => cySelector('superadmin.subscriptions.table.viewTeamButton', { id }),
-          stripeLink: (id: string) => cySelector('superadmin.subscriptions.table.stripeLink', { id }),
+          providerLink: (id: string) => cySelector('superadmin.subscriptions.table.providerLink', { id }),
         },
         pagination: {
           container: cySelector('superadmin.subscriptions.pagination.container'),

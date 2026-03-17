@@ -10,7 +10,7 @@ import type { Subscription, SubscriptionWithPlan, SubscriptionStatus, QuotaInfo,
 export interface CreateSubscriptionOptions {
     billingInterval?: BillingInterval;
     trialDays?: number;
-    paymentProvider?: 'stripe' | 'paddle' | 'lemonsqueezy';
+    paymentProvider?: 'stripe' | 'polar' | 'paddle' | 'lemonsqueezy' | 'mercadopago';
     externalSubscriptionId?: string;
     externalCustomerId?: string;
 }
@@ -180,7 +180,7 @@ export declare class SubscriptionService {
         offset?: number;
     }): Promise<SubscriptionWithPlan[]>;
     /**
-     * Get subscription by external (Stripe) subscription ID
+     * Get subscription by external subscription ID from payment provider
      *
      * @param externalId - External subscription ID from payment provider
      * @returns Subscription with plan or null

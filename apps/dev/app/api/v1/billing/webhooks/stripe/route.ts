@@ -13,7 +13,8 @@
  */
 
 import { NextRequest } from 'next/server'
-import { verifyWebhookSignature } from '@nextsparkjs/core/lib/billing/gateways/stripe'
+import { StripeGateway } from '@nextsparkjs/core/lib/billing/gateways/stripe'
+import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
 import { query, queryOne } from '@nextsparkjs/core/lib/db'
 import type Stripe from 'stripe'
 import type { InvoiceStatus } from '@nextsparkjs/core/lib/billing/types'
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
   // 2. Verify webhook signature (MANDATORY for security)
   let event: Stripe.Event
   try {
-    event = verifyWebhookSignature(payload, signature)
+    event = new StripeGateway().verifyWebhookSignature(payload, signature) as Stripe.Event
   } catch (error) {
     console.error('[stripe-webhook] Signature verification failed:', error)
     return Response.json({ error: 'Invalid signature' }, { status: 400 })
@@ -277,17 +278,23 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   ]
 
   if (priceId) {
-    // Find plan by Stripe price ID (monthly or yearly)
-    const planResult = await queryOne<{ id: string }>(
-      `SELECT id FROM plans
-       WHERE "stripePriceIdMonthly" = $1 OR "stripePriceIdYearly" = $1
-       LIMIT 1`,
-      [priceId]
+    // Find plan by price ID from billing registry (providerPriceIds)
+    const planConfig = BILLING_REGISTRY.plans.find(p =>
+      p.providerPriceIds?.monthly === priceId || p.providerPriceIds?.yearly === priceId
     )
 
-    if (planResult) {
-      planUpdateClause = ', "planId" = $5'
-      params.push(subscription.id, planResult.id)
+    if (planConfig) {
+      const planResult = await queryOne<{ id: string }>(
+        `SELECT id FROM plans WHERE slug = $1 LIMIT 1`,
+        [planConfig.slug]
+      )
+
+      if (planResult) {
+        planUpdateClause = ', "planId" = $5'
+        params.push(subscription.id, planResult.id)
+      } else {
+        params.push(subscription.id)
+      }
     } else {
       params.push(subscription.id)
     }

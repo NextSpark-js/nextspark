@@ -76,5 +76,4 @@ export interface CreateCustomerParams {
 export interface UpdateSubscriptionParams {
   subscriptionId: string
   newPriceId: string
-  prorationBehavior?: 'create_prorations' | 'none' | 'always_invoice'
 }

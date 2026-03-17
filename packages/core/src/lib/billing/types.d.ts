@@ -25,7 +25,7 @@ export interface Plan {
     updatedAt: Date;
 }
 export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'paused' | 'expired';
-export type PaymentProvider = 'stripe' | 'paddle' | 'lemonsqueezy';
+export type PaymentProvider = 'stripe' | 'polar' | 'paddle' | 'lemonsqueezy' | 'mercadopago';
 export type BillingInterval = 'monthly' | 'yearly';
 export interface Subscription {
     id: string;
@@ -88,7 +88,7 @@ export interface BillingEvent {
 }
 export type InvoiceStatus = 'pending' | 'paid' | 'failed' | 'refunded';
 /**
- * Invoice from Stripe synced to local database
+ * Invoice synced from payment provider to local database
  */
 export interface Invoice {
     id: string;

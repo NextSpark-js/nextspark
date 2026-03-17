@@ -18,7 +18,7 @@ export interface JobResult {
 
 /**
  * Expire trials that have passed their trial end date
- * Trial -> Expired (if no payment method) or Active (if payment processed by Stripe)
+ * Trial -> Expired (if no payment method) or Active (if payment processed by provider)
  */
 export async function expireTrials(): Promise<JobResult> {
   const result: JobResult = { processed: 0, errors: [] }

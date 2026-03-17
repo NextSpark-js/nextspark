@@ -37,6 +37,7 @@ interface SubscriptionResult {
   cancelAtPeriodEnd: boolean;
   externalSubscriptionId: string | null;
   externalCustomerId: string | null;
+  paymentProvider: string | null;
   createdAt: string;
 }
 
@@ -144,6 +145,7 @@ export const GET = withRateLimitTier(async (
         s."cancelAtPeriodEnd",
         s."externalSubscriptionId",
         s."externalCustomerId",
+        s."paymentProvider",
         s."createdAt"
       FROM "subscriptions" s
       LEFT JOIN "plans" p ON s."planId" = p.id
@@ -242,6 +244,7 @@ export const GET = withRateLimitTier(async (
         cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
         externalSubscriptionId: subscription.externalSubscriptionId,
         externalCustomerId: subscription.externalCustomerId,
+        paymentProvider: subscription.paymentProvider,
         createdAt: subscription.createdAt
       } : null,
       billingHistory: billingEventsResult.map((event) => ({

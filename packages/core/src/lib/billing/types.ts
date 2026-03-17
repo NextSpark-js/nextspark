@@ -121,14 +121,14 @@ export interface BillingEvent {
 export type InvoiceStatus = 'pending' | 'paid' | 'failed' | 'refunded'
 
 /**
- * Invoice from Stripe synced to local database
+ * Invoice synced from payment provider to local database
  */
 export interface Invoice {
   id: string
   teamId: string
   invoiceNumber: string
   date: Date
-  amount: number  // In dollars (DECIMAL(10,2) in DB) - converted from Stripe cents
+  amount: number  // In dollars (DECIMAL(10,2) in DB) - converted from provider amount (e.g. cents)
   currency: string
   status: InvoiceStatus
   pdfUrl: string | null

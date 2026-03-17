@@ -14,7 +14,7 @@ export interface JobResult {
 }
 /**
  * Expire trials that have passed their trial end date
- * Trial -> Expired (if no payment method) or Active (if payment processed by Stripe)
+ * Trial -> Expired (if no payment method) or Active (if payment processed by provider)
  */
 export declare function expireTrials(): Promise<JobResult>;
 /**

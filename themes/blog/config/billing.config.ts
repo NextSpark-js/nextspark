@@ -79,8 +79,7 @@ export const billingConfig: BillingConfig = {
         storage_gb: 1,
         authors: 1,
       },
-      stripePriceIdMonthly: null,
-      stripePriceIdYearly: null,
+      providerPriceIds: { monthly: null, yearly: null },
     },
     {
       slug: 'pro',
@@ -100,9 +99,8 @@ export const billingConfig: BillingConfig = {
         storage_gb: 10,
         authors: 5,
       },
-      // Configure these in Stripe Dashboard
-      stripePriceIdMonthly: 'price_blog_pro_monthly',
-      stripePriceIdYearly: 'price_blog_pro_yearly',
+      // Configure price IDs in your payment provider dashboard
+      providerPriceIds: { monthly: 'price_blog_pro_monthly', yearly: 'price_blog_pro_yearly' },
     },
     {
       slug: 'enterprise',
@@ -118,8 +116,7 @@ export const billingConfig: BillingConfig = {
         storage_gb: -1,
         authors: -1,
       },
-      stripePriceIdMonthly: null,
-      stripePriceIdYearly: null,
+      providerPriceIds: { monthly: null, yearly: null },
     },
   ],
 

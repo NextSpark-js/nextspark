@@ -51,7 +51,7 @@ class BillingAPIController extends BaseAPIController {
   }
 
   /**
-   * POST /api/v1/billing/checkout - Create Stripe checkout session
+   * POST /api/v1/billing/checkout - Create payment checkout session
    * @param {Object} checkoutData - Checkout data
    * @param {string} checkoutData.planSlug - Plan slug (e.g., 'pro')
    * @param {string} [checkoutData.billingPeriod='monthly'] - Billing period

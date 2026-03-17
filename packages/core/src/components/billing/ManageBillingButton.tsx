@@ -12,10 +12,10 @@ interface ManageBillingButtonProps {
 }
 
 /**
- * ManageBillingButton - Redirect to Stripe Customer Portal
+ * ManageBillingButton - Redirect to Billing Management Portal
  *
- * Button that opens Stripe's hosted billing portal for subscription management.
- * Only visible for subscriptions with an external Stripe customer ID.
+ * Button that opens the payment provider's hosted billing portal for subscription management.
+ * Only visible for subscriptions with an external customer ID.
  *
  * Features:
  * - Update payment method
@@ -33,7 +33,7 @@ export function ManageBillingButton({ className }: ManageBillingButtonProps) {
   const { subscription } = useSubscription()
   const [isLoading, setIsLoading] = useState(false)
 
-  // Only show if there's a Stripe customer
+  // Only show if there's an external customer (payment provider linked)
   if (!subscription?.externalCustomerId) {
     return null
   }
@@ -55,7 +55,7 @@ export function ManageBillingButton({ className }: ManageBillingButtonProps) {
 
       const data = await response.json()
       if (data.success && data.data?.url) {
-        // Redirect to Stripe Customer Portal
+        // Redirect to billing management portal
         window.location.href = data.data.url
       } else {
         toast.error(data.error || t('error'))

@@ -300,7 +300,6 @@ export class PlanService {
 
   /**
    * Get provider price ID for a plan.
-   * Checks generic providerPriceIds first, falls back to Stripe-specific fields.
    *
    * @param slug - Plan slug
    * @param interval - 'monthly' or 'yearly'
@@ -315,22 +314,12 @@ export class PlanService {
       return null
     }
 
-    // Check generic providerPriceIds first
-    if (config.providerPriceIds) {
-      const id = interval === 'yearly'
-        ? config.providerPriceIds.yearly
-        : config.providerPriceIds.monthly
-      if (id) return id
+    if (!config.providerPriceIds) {
+      return null
     }
 
-    // Fall back to Stripe-specific fields
     return interval === 'yearly'
-      ? config.stripePriceIdYearly || null
-      : config.stripePriceIdMonthly || null
-  }
-
-  /** @deprecated Use getPriceId instead */
-  static getStripePriceId(slug: string, interval: 'monthly' | 'yearly'): string | null {
-    return this.getPriceId(slug, interval)
+      ? config.providerPriceIds.yearly || null
+      : config.providerPriceIds.monthly || null
   }
 }

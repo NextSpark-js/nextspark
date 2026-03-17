@@ -1,8 +1,7 @@
 /**
  * Unit tests for Stripe Payment Gateway Integration
  *
- * Tests the StripeGateway class, deprecated standalone functions,
- * and the getBillingGateway() factory.
+ * Tests the StripeGateway class and the getBillingGateway() factory.
  * Mocks Stripe SDK to avoid actual API calls.
  */
 
@@ -53,8 +52,7 @@ jest.mock('@/core/lib/registries/billing-registry', () => ({
       {
         slug: 'free',
         name: 'Free',
-        stripePriceIdMonthly: null,
-        stripePriceIdYearly: null,
+        providerPriceIds: { monthly: null, yearly: null },
         trialDays: 0,
         limits: {},
         features: []
@@ -62,8 +60,10 @@ jest.mock('@/core/lib/registries/billing-registry', () => ({
       {
         slug: 'pro',
         name: 'Pro',
-        stripePriceIdMonthly: 'price_pro_monthly',
-        stripePriceIdYearly: 'price_pro_yearly',
+        providerPriceIds: {
+          monthly: 'price_pro_monthly',
+          yearly: 'price_pro_yearly',
+        },
         trialDays: 14,
         limits: { projects: 10 },
         features: ['advanced_analytics']
@@ -71,42 +71,21 @@ jest.mock('@/core/lib/registries/billing-registry', () => ({
       {
         slug: 'enterprise',
         name: 'Enterprise',
-        stripePriceIdMonthly: 'price_enterprise_monthly',
-        stripePriceIdYearly: null,
+        providerPriceIds: {
+          monthly: 'price_enterprise_monthly',
+          yearly: null,
+        },
         trialDays: 0,
         limits: { projects: -1 },
         features: ['*']
       },
-      {
-        slug: 'generic',
-        name: 'Generic',
-        providerPriceIds: {
-          monthly: 'generic_monthly_123',
-          yearly: 'generic_yearly_456',
-        },
-        trialDays: 0,
-        limits: {},
-        features: []
-      }
     ],
     limits: {}
   }
 }))
 
 // Import after mocks are set up
-import {
-  StripeGateway,
-  createCheckoutSession,
-  createPortalSession,
-  verifyWebhookSignature,
-  getCustomer,
-  createCustomer,
-  getStripeInstance,
-  cancelSubscriptionAtPeriodEnd,
-  cancelSubscriptionImmediately,
-  reactivateSubscription,
-  updateSubscriptionPlan,
-} from '@/core/lib/billing/gateways/stripe'
+import { StripeGateway } from '@/core/lib/billing/gateways/stripe'
 import { getBillingGateway, resetBillingGateway } from '@/core/lib/billing/gateways/factory'
 
 describe('Stripe Gateway', () => {
@@ -214,7 +193,7 @@ describe('Stripe Gateway', () => {
             successUrl: 'http://localhost:5173/success',
             cancelUrl: 'http://localhost:5173/cancel'
           })
-        ).rejects.toThrow('No Stripe price configured for free monthly')
+        ).rejects.toThrow('No price ID configured for free monthly')
       })
     })
 
@@ -437,369 +416,4 @@ describe('Stripe Gateway', () => {
     })
   })
 
-  // ===========================================
-  // Deprecated standalone function tests (backward compat)
-  // ===========================================
-
-  describe('Deprecated standalone functions', () => {
-    describe('createCheckoutSession', () => {
-      test('should create checkout session for pro plan monthly', async () => {
-        const mockSession = {
-          id: 'cs_test_123',
-          url: 'https://checkout.stripe.com/test',
-          metadata: { teamId: 'team-123', planSlug: 'pro' }
-        }
-        mockCheckoutSessionsCreate.mockResolvedValue(mockSession)
-
-        const result = await createCheckoutSession({
-          teamId: 'team-123',
-          planSlug: 'pro',
-          billingPeriod: 'monthly',
-          successUrl: 'http://localhost:5173/success',
-          cancelUrl: 'http://localhost:5173/cancel',
-          customerEmail: 'user@test.com'
-        })
-
-        expect(result).toEqual({ id: 'cs_test_123', url: 'https://checkout.stripe.com/test' })
-        expect(mockCheckoutSessionsCreate).toHaveBeenCalledWith(
-          expect.objectContaining({
-            mode: 'subscription',
-            payment_method_types: ['card'],
-            line_items: [{ price: 'price_pro_monthly', quantity: 1 }],
-            success_url: 'http://localhost:5173/success',
-            cancel_url: 'http://localhost:5173/cancel',
-            metadata: { teamId: 'team-123', planSlug: 'pro', billingPeriod: 'monthly' },
-            client_reference_id: 'team-123',
-            customer_email: 'user@test.com'
-          })
-        )
-      })
-
-      test('should add trial period for plans with trialDays', async () => {
-        mockCheckoutSessionsCreate.mockResolvedValue({ id: 'cs_test_trial', url: null })
-
-        await createCheckoutSession({
-          teamId: 'team-trial',
-          planSlug: 'pro',
-          billingPeriod: 'monthly',
-          successUrl: 'http://localhost:5173/success',
-          cancelUrl: 'http://localhost:5173/cancel',
-          customerEmail: 'trial@test.com'
-        })
-
-        expect(mockCheckoutSessionsCreate).toHaveBeenCalledWith(
-          expect.objectContaining({
-            subscription_data: {
-              trial_period_days: 14
-            }
-          })
-        )
-      })
-
-      test('should NOT add trial when using existing customer', async () => {
-        mockCheckoutSessionsCreate.mockResolvedValue({ id: 'cs_test_no_trial', url: null })
-
-        await createCheckoutSession({
-          teamId: 'team-no-trial',
-          planSlug: 'pro',
-          billingPeriod: 'monthly',
-          successUrl: 'http://localhost:5173/success',
-          cancelUrl: 'http://localhost:5173/cancel',
-          customerId: 'cus_existing_456'
-        })
-
-        expect(mockCheckoutSessionsCreate).not.toHaveBeenCalledWith(
-          expect.objectContaining({
-            subscription_data: expect.anything()
-          })
-        )
-      })
-
-      test('should throw error for invalid plan slug', async () => {
-        await expect(
-          createCheckoutSession({
-            teamId: 'team-invalid',
-            planSlug: 'nonexistent',
-            billingPeriod: 'monthly',
-            successUrl: 'http://localhost:5173/success',
-            cancelUrl: 'http://localhost:5173/cancel'
-          })
-        ).rejects.toThrow('Plan nonexistent not found in BILLING_REGISTRY')
-      })
-
-      test('should throw error for plan with no Stripe price ID', async () => {
-        await expect(
-          createCheckoutSession({
-            teamId: 'team-free',
-            planSlug: 'free',
-            billingPeriod: 'monthly',
-            successUrl: 'http://localhost:5173/success',
-            cancelUrl: 'http://localhost:5173/cancel'
-          })
-        ).rejects.toThrow('No Stripe price configured for free monthly')
-      })
-    })
-
-    describe('createPortalSession', () => {
-      test('should create portal session with customer ID', async () => {
-        const mockPortalSession = {
-          id: 'bps_test_123',
-          url: 'https://billing.stripe.com/portal/test'
-        }
-        mockBillingPortalSessionsCreate.mockResolvedValue(mockPortalSession)
-
-        const result = await createPortalSession({
-          customerId: 'cus_test_123',
-          returnUrl: 'http://localhost:5173/billing'
-        })
-
-        expect(result).toEqual({ url: 'https://billing.stripe.com/portal/test' })
-        expect(mockBillingPortalSessionsCreate).toHaveBeenCalledWith({
-          customer: 'cus_test_123',
-          return_url: 'http://localhost:5173/billing'
-        })
-      })
-
-      test('should handle Stripe API errors', async () => {
-        mockBillingPortalSessionsCreate.mockRejectedValue(
-          new Error('Customer not found')
-        )
-
-        await expect(
-          createPortalSession({
-            customerId: 'cus_invalid',
-            returnUrl: 'http://localhost:5173/billing'
-          })
-        ).rejects.toThrow('Customer not found')
-      })
-    })
-
-    describe('verifyWebhookSignature', () => {
-      test('should verify valid webhook signature', () => {
-        const mockEvent = {
-          id: 'evt_test_123',
-          type: 'checkout.session.completed',
-          data: { object: {} }
-        }
-
-        mockWebhooksConstructEvent.mockReturnValue(mockEvent)
-
-        const payload = JSON.stringify({ test: 'data' })
-        const signature = 'test_signature_123'
-
-        const result = verifyWebhookSignature(payload, signature)
-
-        expect(result).toEqual({
-          id: 'evt_test_123',
-          type: 'checkout.session.completed',
-          data: { object: {} },
-        })
-        expect(mockWebhooksConstructEvent).toHaveBeenCalledWith(
-          payload,
-          signature,
-          'whsec_mock_secret_123456789'
-        )
-      })
-
-      test('should throw error when webhook secret is not configured', () => {
-        delete process.env.STRIPE_WEBHOOK_SECRET
-
-        expect(() => {
-          verifyWebhookSignature('payload', 'signature')
-        }).toThrow('STRIPE_WEBHOOK_SECRET is not configured')
-      })
-
-      test('should throw error for invalid signature', () => {
-        mockWebhooksConstructEvent.mockImplementation(() => {
-          throw new Error('Invalid signature')
-        })
-
-        expect(() => {
-          verifyWebhookSignature('payload', 'invalid_signature')
-        }).toThrow('Invalid signature')
-      })
-    })
-
-    describe('getCustomer', () => {
-      test('should retrieve customer by ID', async () => {
-        mockCustomersRetrieve.mockResolvedValue({
-          id: 'cus_test_123',
-          email: 'customer@test.com',
-          name: 'Test Customer'
-        })
-
-        const result = await getCustomer('cus_test_123')
-
-        expect(result).toEqual({
-          id: 'cus_test_123',
-          email: 'customer@test.com',
-          name: 'Test Customer',
-        })
-        expect(mockCustomersRetrieve).toHaveBeenCalledWith('cus_test_123')
-      })
-
-      test('should handle customer not found error', async () => {
-        mockCustomersRetrieve.mockRejectedValue(new Error('No such customer'))
-
-        await expect(getCustomer('cus_invalid')).rejects.toThrow(
-          'No such customer'
-        )
-      })
-
-      test('should throw error for deleted customer', async () => {
-        mockCustomersRetrieve.mockResolvedValue({
-          id: 'cus_deleted_456',
-          object: 'customer',
-          deleted: true,
-        })
-
-        await expect(getCustomer('cus_deleted_456')).rejects.toThrow(
-          'Customer cus_deleted_456 has been deleted'
-        )
-      })
-    })
-
-    describe('createCustomer', () => {
-      test('should create customer with email', async () => {
-        mockCustomersCreate.mockResolvedValue({
-          id: 'cus_new_123',
-          email: 'new@test.com',
-          name: null,
-        })
-
-        const result = await createCustomer({
-          email: 'new@test.com'
-        })
-
-        expect(result).toEqual({
-          id: 'cus_new_123',
-          email: 'new@test.com',
-          name: null,
-        })
-        expect(mockCustomersCreate).toHaveBeenCalledWith({
-          email: 'new@test.com'
-        })
-      })
-
-      test('should create customer with email, name, and metadata', async () => {
-        mockCustomersCreate.mockResolvedValue({
-          id: 'cus_new_456',
-          email: 'customer@test.com',
-          name: 'John Doe',
-          metadata: { teamId: 'team-123' }
-        })
-
-        const result = await createCustomer({
-          email: 'customer@test.com',
-          name: 'John Doe',
-          metadata: { teamId: 'team-123' }
-        })
-
-        expect(result).toEqual({
-          id: 'cus_new_456',
-          email: 'customer@test.com',
-          name: 'John Doe',
-        })
-        expect(mockCustomersCreate).toHaveBeenCalledWith({
-          email: 'customer@test.com',
-          name: 'John Doe',
-          metadata: { teamId: 'team-123' }
-        })
-      })
-    })
-
-    describe('cancelSubscriptionAtPeriodEnd', () => {
-      test('should delegate to StripeGateway', async () => {
-        mockSubscriptionsUpdate.mockResolvedValue({
-          id: 'sub_test',
-          status: 'active',
-          cancel_at_period_end: true,
-        })
-
-        const result = await cancelSubscriptionAtPeriodEnd('sub_test')
-        expect(result.cancelAtPeriodEnd).toBe(true)
-      })
-    })
-
-    describe('cancelSubscriptionImmediately', () => {
-      test('should delegate to StripeGateway', async () => {
-        mockSubscriptionsCancel.mockResolvedValue({
-          id: 'sub_test',
-          status: 'canceled',
-          cancel_at_period_end: false,
-        })
-
-        const result = await cancelSubscriptionImmediately('sub_test')
-        expect(result.status).toBe('canceled')
-      })
-    })
-
-    describe('reactivateSubscription', () => {
-      test('should delegate to StripeGateway', async () => {
-        mockSubscriptionsUpdate.mockResolvedValue({
-          id: 'sub_test',
-          status: 'active',
-          cancel_at_period_end: false,
-        })
-
-        const result = await reactivateSubscription('sub_test')
-        expect(result.cancelAtPeriodEnd).toBe(false)
-      })
-    })
-
-    describe('updateSubscriptionPlan', () => {
-      test('should delegate to StripeGateway', async () => {
-        mockSubscriptionsRetrieve.mockResolvedValue({
-          id: 'sub_test',
-          items: { data: [{ id: 'si_test' }] },
-        })
-        mockSubscriptionsUpdate.mockResolvedValue({
-          id: 'sub_test',
-          status: 'active',
-          cancel_at_period_end: false,
-        })
-
-        const result = await updateSubscriptionPlan({
-          subscriptionId: 'sub_test',
-          newPriceId: 'price_new',
-        })
-        expect(result.id).toBe('sub_test')
-      })
-    })
-  })
-
-  describe('getStripeInstance', () => {
-    test('should return Stripe instance', () => {
-      const instance = getStripeInstance()
-      expect(instance).toBeDefined()
-      expect(instance.checkout).toBeDefined()
-      expect(instance.billingPortal).toBeDefined()
-      expect(instance.webhooks).toBeDefined()
-    })
-
-    test('should throw error when STRIPE_SECRET_KEY is not configured', () => {
-      // Reset modules to clear cached Stripe instance
-      jest.resetModules()
-
-      const originalKey = process.env.STRIPE_SECRET_KEY
-      delete process.env.STRIPE_SECRET_KEY
-
-      // Re-import after clearing cache
-      const { getStripeInstance: freshGetStripeInstance } = require('@/core/lib/billing/gateways/stripe')
-
-      try {
-        expect(() => {
-          freshGetStripeInstance()
-        }).toThrow('STRIPE_SECRET_KEY is not configured')
-      } finally {
-        process.env.STRIPE_SECRET_KEY = originalKey
-      }
-    })
-
-    test('should reuse same instance (lazy loading)', () => {
-      const instance1 = getStripeInstance()
-      const instance2 = getStripeInstance()
-      expect(instance1).toBe(instance2)
-    })
-  })
 })

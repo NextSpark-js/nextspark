@@ -590,22 +590,30 @@ function SubscriptionsPage() {
                                 View Team
                               </Link>
                             </Button>
-                            {sub.externalSubscriptionId && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                asChild
-                                className="text-muted-foreground"
-                              >
-                                <a
-                                  href={`https://dashboard.stripe.com/test/subscriptions/${sub.externalSubscriptionId}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
+                            {sub.externalSubscriptionId && (() => {
+                              let providerUrl: string | null = null;
+                              if (sub.paymentProvider === 'stripe') {
+                                providerUrl = `https://dashboard.stripe.com/subscriptions/${sub.externalSubscriptionId}`;
+                              } else if (sub.paymentProvider === 'polar') {
+                                providerUrl = `https://polar.sh/dashboard/subscriptions/${sub.externalSubscriptionId}`;
+                              }
+                              return providerUrl ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  asChild
+                                  className="text-muted-foreground"
                                 >
-                                  <ExternalLink className="h-4 w-4" />
-                                </a>
-                              </Button>
-                            )}
+                                  <a
+                                    href={providerUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    <ExternalLink className="h-4 w-4" />
+                                  </a>
+                                </Button>
+                              ) : null;
+                            })()}
                           </div>
                         </TableCell>
                       </TableRow>

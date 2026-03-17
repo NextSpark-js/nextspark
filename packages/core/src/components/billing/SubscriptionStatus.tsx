@@ -101,7 +101,7 @@ export function SubscriptionStatus({ onUpgrade, className }: SubscriptionStatusP
           </Button>
         )}
 
-        {/* Manage Billing Button (if has Stripe customer) */}
+        {/* Manage Billing Button (if has external customer linked to payment provider) */}
         {subscription.externalCustomerId && (
           <div data-cy="subscription-manage-billing">
             <ManageBillingButton className="w-full" />

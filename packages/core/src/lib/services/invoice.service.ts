@@ -2,7 +2,7 @@
  * Invoice Service
  *
  * Provides invoice management functions for billing operations.
- * Invoices are synced from Stripe and stored locally for fast access.
+ * Invoices are synced from the payment provider and stored locally for fast access.
  *
  * @module InvoiceService
  */
@@ -465,11 +465,11 @@ export class InvoiceService {
    * Update invoice PDF URL
    *
    * @param id - Invoice ID
-   * @param pdfUrl - PDF URL from Stripe
+   * @param pdfUrl - PDF URL from payment provider
    * @returns Updated invoice
    *
    * @example
-   * await InvoiceService.updatePdfUrl('inv-123', 'https://stripe.com/...')
+   * await InvoiceService.updatePdfUrl('inv-123', 'https://example.com/invoice.pdf')
    */
   static async updatePdfUrl(id: string, pdfUrl: string): Promise<Invoice> {
     if (!id || id.trim() === '') {

@@ -26,7 +26,6 @@ jest.mock('@/core/lib/services/plan.service', () => ({
     isUpgrade: jest.fn(),
     getConfig: jest.fn(),
     getPriceId: jest.fn(),
-    getStripePriceId: jest.fn(),
   },
 }))
 
@@ -481,7 +480,7 @@ describe('SubscriptionService', () => {
   })
 
   describe('getByExternalId', () => {
-    it('returns subscription by Stripe ID', async () => {
+    it('returns subscription by external ID', async () => {
       mockQueryOneWithRLS.mockResolvedValue(mockSubscription)
 
       const result = await SubscriptionService.getByExternalId('stripe_sub_123')
@@ -562,7 +561,7 @@ describe('SubscriptionService', () => {
       expect(result.error).toContain('not found')
     })
 
-    it('returns error when no Stripe price available', async () => {
+    it('returns error when no price ID available', async () => {
       mockQueryOneWithRLS.mockResolvedValue({
         ...mockSubscriptionWithPlan,
         externalSubscriptionId: 'stripe_sub_123',

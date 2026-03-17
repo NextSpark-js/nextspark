@@ -231,7 +231,7 @@ export const SUPERADMIN_SELECTORS = {
         plan: 'superadmin-team-plan',
         status: 'superadmin-team-sub-status',
         period: 'superadmin-team-sub-period',
-        stripeLink: 'superadmin-team-stripe-link',
+        providerLink: 'superadmin-team-provider-link',
       },
       billingHistory: {
         container: 'superadmin-team-billing',
@@ -274,7 +274,7 @@ export const SUPERADMIN_SELECTORS = {
       element: 'superadmin-subscriptions-table',
       row: 'superadmin-subscriptions-row-{id}',
       viewTeamButton: 'superadmin-subscriptions-view-team-{id}',
-      stripeLink: 'superadmin-subscriptions-stripe-{id}',
+      providerLink: 'superadmin-subscriptions-provider-{id}',
     },
     pagination: {
       container: 'superadmin-subscriptions-pagination',

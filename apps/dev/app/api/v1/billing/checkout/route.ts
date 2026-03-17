@@ -1,17 +1,15 @@
 /**
- * Stripe Checkout Endpoint
+ * Payment Checkout Endpoint
  *
- * Creates a Stripe Checkout session for subscription upgrade.
- * Redirects user to Stripe-hosted checkout page.
+ * Creates a checkout session for subscription upgrade.
+ * Redirects user to the payment provider's hosted checkout page.
  *
  * Security: Requires team owner/admin permission (team.billing.manage)
- *
- * P2: Stripe Integration
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest, createAuthError } from '@nextsparkjs/core/lib/api/auth/dual-auth'
-import { createCheckoutSession } from '@nextsparkjs/core/lib/billing/gateways/stripe'
+import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
 import { SubscriptionService, MembershipService } from '@nextsparkjs/core/lib/services'
 import { z } from 'zod'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
@@ -94,8 +92,8 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     const successUrl = `${appUrl}/dashboard/settings/billing?success=true`
     const cancelUrl = `${appUrl}/dashboard/settings/billing?canceled=true`
 
-    // Create Stripe Checkout session
-    const session = await createCheckoutSession({
+    // Create checkout session via billing gateway
+    const session = await getBillingGateway().createCheckoutSession({
       teamId,
       planSlug,
       billingPeriod,

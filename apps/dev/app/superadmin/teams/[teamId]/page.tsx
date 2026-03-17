@@ -88,6 +88,7 @@ interface Subscription {
   cancelAtPeriodEnd: boolean;
   externalSubscriptionId: string | null;
   externalCustomerId: string | null;
+  paymentProvider: string | null;
   createdAt: string;
 }
 
@@ -494,22 +495,33 @@ function TeamDetailPage() {
                     </div>
                   </>
                 )}
-                {teamData.subscription.externalSubscriptionId && (
-                  <>
-                    <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                      Stripe
-                    </h4>
-                    <a
-                      href={`https://dashboard.stripe.com/subscriptions/${teamData.subscription.externalSubscriptionId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-                    >
-                      View in Stripe
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </>
-                )}
+                {teamData.subscription.externalSubscriptionId && (() => {
+                  let providerUrl: string | null = null;
+                  let providerLabel = 'Payment Provider';
+                  if (teamData.subscription.paymentProvider === 'stripe') {
+                    providerUrl = `https://dashboard.stripe.com/subscriptions/${teamData.subscription.externalSubscriptionId}`;
+                    providerLabel = 'Stripe';
+                  } else if (teamData.subscription.paymentProvider === 'polar') {
+                    providerUrl = `https://polar.sh/dashboard/subscriptions/${teamData.subscription.externalSubscriptionId}`;
+                    providerLabel = 'Polar';
+                  }
+                  return providerUrl ? (
+                    <>
+                      <h4 className="text-sm font-medium text-muted-foreground mb-2">
+                        {providerLabel}
+                      </h4>
+                      <a
+                        href={providerUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                      >
+                        View in {providerLabel}
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </>
+                  ) : null;
+                })()}
               </div>
             </div>
 

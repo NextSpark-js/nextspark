@@ -39,8 +39,7 @@ jest.mock('@/core/lib/registries/billing-registry', () => ({
         features: ['analytics', 'api_access'],
         limits: { projects: 100, members: 10 },
         price: { monthly: 2900, yearly: 29000 },
-        stripePriceIdMonthly: 'price_pro_monthly',
-        stripePriceIdYearly: 'price_pro_yearly',
+        providerPriceIds: { monthly: 'price_pro_monthly', yearly: 'price_pro_yearly' },
       },
       {
         slug: 'enterprise',
@@ -48,8 +47,7 @@ jest.mock('@/core/lib/registries/billing-registry', () => ({
         features: ['*'],
         limits: { projects: -1, members: -1 },
         price: { monthly: 9900, yearly: 99000 },
-        stripePriceIdMonthly: 'price_ent_monthly',
-        stripePriceIdYearly: 'price_ent_yearly',
+        providerPriceIds: { monthly: 'price_ent_monthly', yearly: 'price_ent_yearly' },
       },
     ],
   },
@@ -355,21 +353,21 @@ describe('PlanService', () => {
     })
   })
 
-  describe('getStripePriceId', () => {
-    it('returns monthly Stripe price ID', () => {
-      expect(PlanService.getStripePriceId('pro', 'monthly')).toBe('price_pro_monthly')
+  describe('getPriceId', () => {
+    it('returns monthly price ID', () => {
+      expect(PlanService.getPriceId('pro', 'monthly')).toBe('price_pro_monthly')
     })
 
-    it('returns yearly Stripe price ID', () => {
-      expect(PlanService.getStripePriceId('pro', 'yearly')).toBe('price_pro_yearly')
+    it('returns yearly price ID', () => {
+      expect(PlanService.getPriceId('pro', 'yearly')).toBe('price_pro_yearly')
     })
 
-    it('returns null for plan without Stripe IDs', () => {
-      expect(PlanService.getStripePriceId('free', 'monthly')).toBeNull()
+    it('returns null for plan without price IDs', () => {
+      expect(PlanService.getPriceId('free', 'monthly')).toBeNull()
     })
 
     it('returns null for non-existent plan', () => {
-      expect(PlanService.getStripePriceId('non-existent', 'monthly')).toBeNull()
+      expect(PlanService.getPriceId('non-existent', 'monthly')).toBeNull()
     })
   })
 })

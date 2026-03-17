@@ -1,7 +1,7 @@
 /**
- * Stripe Customer Portal Endpoint
+ * Billing Management Portal Endpoint
  *
- * Creates a Stripe Customer Portal session for self-service billing management.
+ * Creates a billing portal session for self-service billing management.
  * Users can update payment methods, view invoices, and cancel subscriptions.
  *
  * P6: Customer Portal
@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest, createAuthError } from '@nextsparkjs/core/lib/api/auth/dual-auth'
-import { createPortalSession } from '@nextsparkjs/core/lib/billing/gateways/stripe'
+import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
 import { SubscriptionService, MembershipService } from '@nextsparkjs/core/lib/services'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
@@ -52,7 +52,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     )
   }
 
-  // 4. Get subscription with Stripe customer ID
+  // 4. Get subscription with payment provider customer ID
   try {
     const subscription = await SubscriptionService.getActive(teamId)
 
@@ -69,7 +69,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173'
     const returnUrl = `${appUrl}/dashboard/settings/billing`
 
-    const session = await createPortalSession({
+    const session = await getBillingGateway().createPortalSession({
       customerId: subscription.externalCustomerId,
       returnUrl
     })

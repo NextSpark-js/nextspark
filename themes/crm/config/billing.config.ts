@@ -103,8 +103,7 @@ export const billingConfig: BillingConfig = {
         api_calls: 1000,
         storage_gb: 1,
       },
-      stripePriceIdMonthly: null,
-      stripePriceIdYearly: null,
+      providerPriceIds: { monthly: null, yearly: null },
     },
     {
       slug: 'pro',
@@ -132,9 +131,8 @@ export const billingConfig: BillingConfig = {
         api_calls: 100000,
         storage_gb: 25,
       },
-      // Configure these in Stripe Dashboard
-      stripePriceIdMonthly: 'price_crm_pro_monthly',
-      stripePriceIdYearly: 'price_crm_pro_yearly',
+      // Configure price IDs in your payment provider dashboard
+      providerPriceIds: { monthly: 'price_crm_pro_monthly', yearly: 'price_crm_pro_yearly' },
     },
     {
       slug: 'enterprise',
@@ -152,8 +150,7 @@ export const billingConfig: BillingConfig = {
         api_calls: -1,
         storage_gb: -1,
       },
-      stripePriceIdMonthly: null,
-      stripePriceIdYearly: null,
+      providerPriceIds: { monthly: null, yearly: null },
     },
   ],
 

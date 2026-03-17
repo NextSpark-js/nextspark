@@ -159,16 +159,6 @@ export declare class PlanService {
      * // 2900 (cents)
      */
     static getPrice(slug: string, interval: 'monthly' | 'yearly'): number | null;
-    /**
-     * Get Stripe price ID for a plan
-     *
-     * @param slug - Plan slug
-     * @param interval - 'monthly' or 'yearly'
-     * @returns Stripe price ID or null
-     *
-     * @example
-     * const priceId = PlanService.getStripePriceId('pro', 'monthly')
-     */
-    static getStripePriceId(slug: string, interval: 'monthly' | 'yearly'): string | null;
+    static getPriceId(slug: string, interval: 'monthly' | 'yearly'): string | null;
 }
 //# sourceMappingURL=plan.service.d.ts.map

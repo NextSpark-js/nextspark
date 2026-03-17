@@ -2,7 +2,7 @@
  * Change Plan Endpoint
  *
  * Allows users to upgrade or downgrade their subscription plan.
- * Handles proration via Stripe automatically.
+ * Handles proration via the payment provider automatically.
  *
  * P1-3: Plan Change con Proration
  */

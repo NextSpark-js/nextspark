@@ -273,8 +273,7 @@ function generateBillingPlans(billingModel: string, currency: string): string {
         api_calls: 1000,
         storage_gb: 1,
       },
-      stripePriceIdMonthly: null,
-      stripePriceIdYearly: null,
+      providerPriceIds: { monthly: null, yearly: null },
     },
     // Pro Plan - ${currencySymbol}29/month
     {
@@ -300,8 +299,7 @@ function generateBillingPlans(billingModel: string, currency: string): string {
         api_calls: 100000,
         storage_gb: 50,
       },
-      stripePriceIdMonthly: 'price_pro_monthly',
-      stripePriceIdYearly: 'price_pro_yearly',
+      providerPriceIds: { monthly: 'price_pro_monthly', yearly: 'price_pro_yearly' },
     },
   ]`
   }
@@ -330,8 +328,7 @@ function generateBillingPlans(billingModel: string, currency: string): string {
         api_calls: 10000,
         storage_gb: 10,
       },
-      stripePriceIdMonthly: 'price_starter_monthly',
-      stripePriceIdYearly: 'price_starter_yearly',
+      providerPriceIds: { monthly: 'price_starter_monthly', yearly: 'price_starter_yearly' },
     },
     // Pro Plan - ${currencySymbol}29/month
     {
@@ -357,8 +354,7 @@ function generateBillingPlans(billingModel: string, currency: string): string {
         api_calls: 100000,
         storage_gb: 50,
       },
-      stripePriceIdMonthly: 'price_pro_monthly',
-      stripePriceIdYearly: 'price_pro_yearly',
+      providerPriceIds: { monthly: 'price_pro_monthly', yearly: 'price_pro_yearly' },
     },
     // Business Plan - ${currencySymbol}79/month
     {
@@ -387,8 +383,7 @@ function generateBillingPlans(billingModel: string, currency: string): string {
         api_calls: 500000,
         storage_gb: 200,
       },
-      stripePriceIdMonthly: 'price_business_monthly',
-      stripePriceIdYearly: 'price_business_yearly',
+      providerPriceIds: { monthly: 'price_business_monthly', yearly: 'price_business_yearly' },
     },
   ]`
 }

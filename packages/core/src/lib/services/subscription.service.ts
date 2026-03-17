@@ -28,6 +28,7 @@ import type {
   Usage,
   CanPerformActionResult,
   BillingInterval,
+  PaymentProvider,
 } from '../billing/types'
 
 // ===========================================
@@ -37,7 +38,7 @@ import type {
 export interface CreateSubscriptionOptions {
   billingInterval?: BillingInterval
   trialDays?: number
-  paymentProvider?: 'stripe' | 'polar' | 'paddle' | 'lemonsqueezy' | 'mercadopago'
+  paymentProvider?: PaymentProvider
   externalSubscriptionId?: string
   externalCustomerId?: string
 }
@@ -474,7 +475,6 @@ export class SubscriptionService {
       await getBillingGateway().updateSubscriptionPlan({
         subscriptionId: currentSub.externalSubscriptionId,
         newPriceId,
-        prorationBehavior: 'create_prorations',
       })
 
       // 6. Get local plan ID from DB
@@ -702,7 +702,7 @@ export class SubscriptionService {
   }
 
   /**
-   * Get subscription by external (Stripe) subscription ID
+   * Get subscription by external subscription ID (from payment provider)
    *
    * @param externalId - External subscription ID from payment provider
    * @returns Subscription with plan or null

@@ -58,7 +58,7 @@ export default defineApiEndpoint({
     {
       id: 'open-portal',
       title: 'Open Customer Portal',
-      description: 'Get URL for Stripe customer portal',
+      description: 'Get URL for billing management portal',
       method: 'GET',
       tags: ['read', 'portal']
     },
