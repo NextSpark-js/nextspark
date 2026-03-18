@@ -315,14 +315,42 @@ async function handleOrderPaid(
       )
     }
   } else {
-    // One-time purchase — delegate to project-level extension
+    // One-time purchase — delegate to project-level extension.
+    // Write idempotency record FIRST so Polar retries are deduplicated by the
+    // outer billing_events check, mirroring the subscriptionId branch above.
+    const metadata = (data.metadata as Record<string, string>) ?? {}
+    const teamId = metadata.teamId ?? ''
+    const userId = metadata.userId ?? ''
+
+    const subForIdempotency = teamId
+      ? await queryOne<{ id: string }>(
+          `SELECT id FROM subscriptions WHERE "teamId" = $1 LIMIT 1`,
+          [teamId]
+        )
+      : null
+
+    if (subForIdempotency) {
+      await query(
+        `INSERT INTO "billing_events" ("subscriptionId", type, status, amount, currency, metadata)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT DO NOTHING`,
+        [
+          subForIdempotency.id,
+          'payment',
+          'succeeded',
+          amount ?? 0,
+          currency ?? 'usd',
+          JSON.stringify({ polarEventId: eventId }),
+        ]
+      )
+    } else {
+      console.warn(`[polar-webhook] One-time order ${eventId}: no subscription found for teamId "${teamId}", idempotency record skipped`)
+    }
+
     if (extensions?.onOneTimePaymentCompleted) {
-      const metadata = (data.metadata as Record<string, string>) ?? {}
-      const teamId = metadata.teamId ?? ''
-      const userId = metadata.userId ?? ''
       await extensions.onOneTimePaymentCompleted(
         {
-          id: data.id as string ?? eventId,
+          id: (data.id as string) ?? eventId,
           amount: amount ?? 0,
           currency: currency ?? 'usd',
           metadata,
