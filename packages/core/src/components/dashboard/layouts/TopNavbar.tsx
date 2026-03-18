@@ -166,7 +166,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                 aria-label="Ir a la página principal"
                 data-cy={sel('dashboard.topnav.logo')}
               >
-                Boilerplate
+                {t('appName')}
               </Link>
             )}
 

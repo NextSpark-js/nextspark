@@ -180,7 +180,9 @@ function generateFieldSchema(
             })
             return z.NEVER
           }
-          return null
+          // Return the field's defaultValue (as string) when available,
+          // so NOT NULL DEFAULT '' columns receive '' instead of null.
+          return field.defaultValue !== undefined ? String(field.defaultValue) : null
         }
         // Convert numbers to strings (e.g., year field: 2025 -> "2025")
         const strVal = typeof val === 'number' ? String(val) : val
@@ -624,6 +626,11 @@ function generateFieldSchema(
       break
 
     // Media types
+    case 'media-library':
+      // Stores a media ID (string) from the Media Library
+      schema = z.string().nullable()
+      break
+
     case 'file':
     case 'video':
     case 'audio':
@@ -819,14 +826,19 @@ function generateFieldSchema(
       schema = z.unknown()
   }
 
-  // Apply default value if provided
-  if (field.defaultValue !== undefined) {
-    schema = schema.default(field.defaultValue)
-  }
-
-  // Make optional if not required
+  // Apply optional BEFORE default so that .default() becomes the outer wrapper.
+  // In Zod, the outermost wrapper runs first: .default().optional() means .optional()
+  // intercepts undefined before .default() can fire. With the reversed order
+  // (.optional().default(x)), undefined hits .default() first → fills in the
+  // default value → passes to the inner optional/schema as a real value.
   if (!field.required) {
     schema = schema.optional()
+  }
+
+  // Apply default value AFTER optional so it is the outermost wrapper and fires
+  // for undefined inputs even on optional fields.
+  if (field.defaultValue !== undefined) {
+    schema = schema.default(field.defaultValue)
   }
 
   return schema
@@ -1177,10 +1189,15 @@ export function matchPathToEntity(
       return { entity, slug: '', isArchive: true }
     }
 
-    // Case: Root path (basePath = '/') matches single segment paths
+    // Case: Root path (basePath = '/') matches paths below root
     if (basePath === '/') {
-      // Path should be /[anything-without-slashes]
-      const match = path.match(/^\/([^\/]+)$/)
+      // Allow multi-segment slugs only if the entity opts in via allowNestedSlugs.
+      // Without the flag only single-segment paths (/my-page) match, avoiding a DB
+      // round-trip for every unrecognised multi-segment URL (bots, crawlers, etc.).
+      const pattern = entity.access?.allowNestedSlugs
+        ? /^\/(.+)$/          // /qa/block/home-qa-us → slug: 'qa/block/home-qa-us'
+        : /^\/([^/]+)$/       // /my-page only (no slashes in slug)
+      const match = path.match(pattern)
       if (match) {
         return { entity, slug: match[1] }
       }

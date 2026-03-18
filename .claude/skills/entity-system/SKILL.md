@@ -111,7 +111,7 @@ type EntityFieldType =
   | 'select' | 'multiselect' | 'radio' | 'buttongroup' | 'tags' | 'combobox'
 
   // Media
-  | 'file' | 'image' | 'video' | 'audio'
+  | 'file' | 'image' | 'video' | 'audio' | 'media-library'
 
   // Specialized
   | 'phone' | 'rating' | 'range' | 'doublerange'

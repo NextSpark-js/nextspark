@@ -95,7 +95,7 @@ export function PatternReferencePreview({
   if (isError || !patternData?.data) {
     return (
       <div
-        className="w-full py-12 px-4 bg-destructive/10 border-2 border-dashed border-destructive/20 rounded-lg"
+        className="w-full py-12 px-4 bg-destructive/10 border-2 border-dashed border-destructive/20 rounded-lg cursor-pointer"
         onClick={onSelect}
         data-cy={sel('blockEditor.patternReference.container', { ref: patternRef.ref })}
       >

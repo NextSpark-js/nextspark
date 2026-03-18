@@ -101,7 +101,7 @@ export function LoginForm() {
   // Auth config for conditional rendering
   const registrationMode = PUBLIC_AUTH_CONFIG.registration.mode
   const googleEnabled = PUBLIC_AUTH_CONFIG.providers.google.enabled
-  const signupVisible = registrationMode === 'open'
+  const signupVisible = registrationMode === 'open' || registrationMode === 'domain-open'
   // In dev mode with DevKeyring, always allow email login regardless of registration mode
   const devKeyringActive = process.env.NODE_ENV !== 'production' && !!DEV_CONFIG?.devKeyring?.enabled
   // In domain-restricted mode, hide email login UNLESS DevKeyring is active (dev mode)

@@ -31,13 +31,22 @@ program
   .description('NextSpark CLI - Professional SaaS Boilerplate')
   .version(pkg.version);
 
-// Dev command
+// Dev command (Turbopack, no registry watcher — fast daily development)
 program
   .command('dev')
-  .description('Start development server with registry watcher')
+  .description('Start development server with Turbopack (fast)')
   .option('-p, --port <port>', 'Port to run the dev server on', process.env.PORT || '3000')
-  .option('--no-registry', 'Disable registry watcher')
+  .option('--no-turbopack', 'Disable Turbopack (use Webpack)')
+  .option('--registry', 'Enable registry watcher')
   .action(devCommand);
+
+// Dev with registry watcher (Webpack, auto-detects new entities/templates/blocks)
+program
+  .command('dev:registry')
+  .description('Start dev server with registry watcher (use when creating entities/templates/blocks)')
+  .option('-p, --port <port>', 'Port to run the dev server on', process.env.PORT || '3000')
+  .option('--turbopack', 'Enable Turbopack')
+  .action((opts) => devCommand({ ...opts, registry: true, turbopack: opts.turbopack ?? false }));
 
 // Build command
 program

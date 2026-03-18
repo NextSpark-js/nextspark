@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { cn } from '../../../lib/utils'
 import { useSidebar } from '../../../contexts/sidebar-context'
 import { sel } from '../../../lib/test'
@@ -16,6 +17,8 @@ interface SidebarProps {
 
 export function Sidebar({ className, entities }: SidebarProps) {
   const { isCollapsed } = useSidebar()
+  const t = useTranslations('common')
+  const appName = t('appName')
   const [statusMessage, setStatusMessage] = useState('')
 
   // Focus management for collapsed state
@@ -58,21 +61,21 @@ export function Sidebar({ className, entities }: SidebarProps) {
             <Link
               href="/"
               className="flex items-center gap-2"
-              aria-label={isCollapsed ? 'Ir a la página principal' : 'Boilerplate - Ir a la página principal'}
+              aria-label={isCollapsed ? 'Ir a la página principal' : `${appName} - Ir a la página principal`}
               data-cy={sel('dashboard.sidebar.logo')}
             >
               <div 
                 className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center"
                 role="img"
-                aria-label="Logo de Boilerplate"
+                aria-label={`Logo de ${appName}`}
               >
-                <span className="text-primary-foreground font-bold text-sm" aria-hidden="true">B</span>
+                <span className="text-primary-foreground font-bold text-sm" aria-hidden="true">{appName.charAt(0)}</span>
               </div>
               {!isCollapsed && (
                 <span 
                   className="font-semibold text-lg"
                 >
-                  Boilerplate
+                  {appName}
                 </span>
               )}
             </Link>

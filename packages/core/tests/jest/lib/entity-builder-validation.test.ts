@@ -1456,13 +1456,16 @@ describe('Entity Builder Validation Functions', () => {
     })
 
     describe('No Match', () => {
-      it('should return null for unmatched paths', () => {
+      it('should NOT match /api/test for basePath "/" entity without allowNestedSlugs', () => {
+        // Default: multi-segment paths don't match basePath='/' unless allowNestedSlugs is set
+        // Avoids unnecessary DB queries for bots / random paths at scale
         const result = matchPathToEntity('/api/test', registry)
 
         expect(result).toBeNull()
       })
 
-      it('should return null for multi-segment path when expecting single', () => {
+      it('should NOT match multi-segment paths for basePath "/" entity without allowNestedSlugs', () => {
+        // Default: only single-segment paths like /my-page match basePath='/'
         const result = matchPathToEntity('/about/team', registry)
 
         expect(result).toBeNull()
@@ -1560,6 +1563,45 @@ describe('Entity Builder Validation Functions', () => {
         expect(result).not.toBeNull()
         expect(result?.entity.slug).toBe('posts')
         expect(result?.slug).toBe('my-post')
+      })
+
+      it('should match multi-segment paths when allowNestedSlugs is true', () => {
+        const registryWithNestedSlugs: Record<string, EntityConfig> = {
+          landings: {
+            slug: 'landings',
+            enabled: true,
+            names: { singular: 'Landing', plural: 'Landings' },
+            icon: FileText,
+            access: { public: true, api: true, metadata: false, shared: true, basePath: '/', allowNestedSlugs: true },
+            ui: {
+              dashboard: { showInMenu: true, showInTopbar: true },
+              public: { hasArchivePage: false, hasSinglePage: true },
+              features: {
+                searchable: true,
+                sortable: true,
+                filterable: false,
+                bulkOperations: false,
+                importExport: false
+              }
+            },
+            permissions: { actions: [] },
+            i18n: {
+              fallbackLocale: 'en',
+              loaders: {
+                en: async () => ({}),
+                es: async () => ({})
+              }
+            },
+            builder: { enabled: true },
+            fields: []
+          }
+        }
+
+        const result = matchPathToEntity('/qa/block/home-qa-us', registryWithNestedSlugs)
+
+        expect(result).not.toBeNull()
+        expect(result?.entity.slug).toBe('landings')
+        expect(result?.slug).toBe('qa/block/home-qa-us')
       })
 
       it('should prefer access.basePath over builder.public.basePath', () => {

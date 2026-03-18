@@ -12,10 +12,11 @@ import type { AuthConfig, RegistrationMode, PublicAuthConfig } from '../config/t
  * Check if public registration (self-signup) is allowed.
  *
  * Only 'open' mode allows unrestricted public registration.
+ * 'domain-open' allows registration restricted to specific domains.
  * 'domain-restricted' allows registration only via Google OAuth for allowed domains.
  */
 export function isRegistrationOpen(mode: RegistrationMode): boolean {
-  return mode === 'open'
+  return mode === 'open' || mode === 'domain-open'
 }
 
 /**
@@ -57,14 +58,14 @@ export function isGoogleAuthEnabled(authConfig: AuthConfig): boolean {
  * - 'invitation-only': Only accessible with valid invite params
  */
 export function isSignupPageVisible(mode: RegistrationMode): boolean {
-  return mode === 'open'
+  return mode === 'open' || mode === 'domain-open'
 }
 
 /**
  * Check if email+password signup form should be shown.
  */
 export function isEmailSignupEnabled(mode: RegistrationMode): boolean {
-  return mode === 'open'
+  return mode === 'open' || mode === 'domain-open'
 }
 
 /**
@@ -72,6 +73,7 @@ export function isEmailSignupEnabled(mode: RegistrationMode): boolean {
  *
  * In 'domain-restricted' mode, email+password signup is blocked
  * but Google OAuth may be allowed (with domain check).
+ * In 'domain-open' mode, email+password signup is allowed but domain is validated separately.
  */
 export function shouldBlockSignup(
   mode: RegistrationMode,
@@ -86,6 +88,7 @@ export function shouldBlockSignup(
  *
  * In 'domain-restricted' mode, only Google OAuth is shown — email login is hidden
  * because new users cannot register via email and the UX is simplified to Google-only.
+ * In 'domain-open' mode, email login is visible (domain validation happens server-side).
  */
 export function isEmailLoginVisible(mode: RegistrationMode): boolean {
   return mode !== 'domain-restricted'

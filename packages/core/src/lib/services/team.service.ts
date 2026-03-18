@@ -9,6 +9,7 @@
 
 import { queryOneWithRLS, queryWithRLS, getTransactionClient } from '../db'
 import type { Team, TeamRole } from '../teams/types'
+import { TEAMS_CONFIG } from '../config'
 
 // ===========================================
 // TYPES
@@ -94,10 +95,7 @@ export class TeamService {
    */
   static async getGlobal(): Promise<Team | null> {
     return queryOneWithRLS<Team>(
-      `SELECT * FROM "teams"
-       WHERE (metadata->>'isSeedData')::boolean IS NOT TRUE
-       ORDER BY "createdAt" ASC
-       LIMIT 1`,
+      `SELECT * FROM "teams" WHERE "isGlobal" = TRUE LIMIT 1`,
       []
     )
   }
@@ -154,7 +152,7 @@ export class TeamService {
       LEFT JOIN "team_members" tm2 ON t.id = tm2."teamId"
       WHERE tm."userId" = $1
       GROUP BY t.id, t.name, t.slug, t.description, t."ownerId", t."avatarUrl",
-               t.settings, t."createdAt", t."updatedAt", tm.role, tm."joinedAt"
+               t."isGlobal", t.settings, t."createdAt", t."updatedAt", tm.role, tm."joinedAt"
       ORDER BY
         tm.role = 'owner' DESC,
         t."createdAt" DESC`,
@@ -302,11 +300,12 @@ export class TeamService {
 
     try {
       // 1. Create team
+      const isGlobal = TEAMS_CONFIG.mode === 'single-tenant'
       const team = await tx.queryOne<Team>(
-        `INSERT INTO "teams" (name, slug, "ownerId")
-         VALUES ($1, $2, $3)
+        `INSERT INTO "teams" (name, slug, "ownerId", "isGlobal")
+         VALUES ($1, $2, $3, $4)
          RETURNING *`,
-        [teamName, teamSlug, userId]
+        [teamName, teamSlug, userId, isGlobal]
       )
 
       if (!team) {

@@ -38,7 +38,7 @@ export type TranslationLoader = () => Promise<Record<string, unknown>>;
 /**
  * Field types supported in entity configuration
  */
-export type EntityFieldType = 'text' | 'textarea' | 'number' | 'boolean' | 'date' | 'datetime' | 'email' | 'url' | 'json' | 'select' | 'multiselect' | 'radio' | 'buttongroup' | 'tags' | 'combobox' | 'file' | 'image' | 'video' | 'audio' | 'phone' | 'rating' | 'range' | 'doublerange' | 'markdown' | 'richtext' | 'code' | 'timezone' | 'currency' | 'country' | 'address' | 'relation' | 'relation-multi' | 'relation-prop' | 'relation-prop-multi' | 'reference' | 'user';
+export type EntityFieldType = 'text' | 'textarea' | 'number' | 'boolean' | 'date' | 'datetime' | 'email' | 'url' | 'json' | 'select' | 'multiselect' | 'radio' | 'buttongroup' | 'tags' | 'combobox' | 'file' | 'image' | 'video' | 'audio' | 'media-library' | 'phone' | 'rating' | 'range' | 'doublerange' | 'markdown' | 'richtext' | 'code' | 'timezone' | 'currency' | 'country' | 'address' | 'relation' | 'relation-multi' | 'relation-prop' | 'relation-prop-multi' | 'reference' | 'user';
 /**
  * Main Entity Configuration interface - REFACTORED
  * Defines complete behavior and characteristics of an entity

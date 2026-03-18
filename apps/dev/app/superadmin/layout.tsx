@@ -2,6 +2,7 @@ import { SuperAdminGuard } from "@nextsparkjs/core/components/app/guards/SuperAd
 import { SuperadminSidebar } from "@nextsparkjs/core/components/superadmin/layouts/SuperadminSidebar";
 import { Metadata } from "next";
 import { getTemplateOrDefault, getMetadataOrDefault } from '@nextsparkjs/core/lib/template-resolver'
+import { getPluginNavItems } from '@nextsparkjs/registries/plugin-registry'
 
 const defaultMetadata: Metadata = {
   title: "Super Admin | Super Admin Panel",
@@ -26,12 +27,13 @@ interface SuperadminLayoutProps {
  * Includes responsive design for mobile and desktop.
  */
 function SuperadminLayout({ children }: SuperadminLayoutProps) {
+  const pluginNavItems = getPluginNavItems('superadmin')
   return (
     <SuperAdminGuard>
       <div className="flex h-screen bg-background" data-cy="superadmin-container">
         {/* Sidebar - Hidden on mobile, visible on desktop */}
         <div className="hidden lg:block">
-          <SuperadminSidebar />
+          <SuperadminSidebar pluginItems={pluginNavItems} />
         </div>
 
         {/* Main content area */}

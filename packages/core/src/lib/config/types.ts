@@ -377,10 +377,12 @@ export interface MediaConfig {
  * - 'open': Anyone can register via email+password and Google OAuth (default)
  * - 'domain-restricted': Only Google OAuth for specific email domains. No email+password signup.
  *   Users with allowed domains are auto-created on first Google sign-in.
+ * - 'domain-open': Email+password AND Google OAuth, but restricted to specific email domains.
+ *   Both signup and login require an email from allowedDomains.
  * - 'invitation-only': Registration only via invitation link. First user bootstraps the team;
  *   subsequent users require an invite. Google OAuth is configurable.
  */
-export type RegistrationMode = 'open' | 'domain-restricted' | 'invitation-only'
+export type RegistrationMode = 'open' | 'domain-restricted' | 'domain-open' | 'invitation-only'
 
 /**
  * Auth Registration Configuration

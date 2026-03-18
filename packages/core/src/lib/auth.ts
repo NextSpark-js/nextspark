@@ -6,8 +6,9 @@ import { parseSSLConfig, stripSSLParams } from './db';
 import { EmailFactory, emailTemplates } from './email';
 import { I18N_CONFIG, USER_ROLES_CONFIG, TEAMS_CONFIG, AUTH_CONFIG, APP_CONFIG_MERGED, type UserRole } from './config';
 import { getUserFlags } from './services/user-flags.service';
-// Direct import to avoid circular dependency: auth -> services/index -> middleware.service -> auth
+// Direct imports to avoid circular dependency: auth -> services/index -> middleware.service -> auth
 import { TeamService } from './services/team.service';
+import { TeamMemberService } from './services/team-member.service';
 import { shouldSkipTeamCreation } from './auth-context';
 import {
   isPublicSignupRestricted,
@@ -219,9 +220,9 @@ export const auth = betterAuth({
             }
           }
 
-          // In 'domain-restricted' mode, validate email domain
+          // In 'domain-restricted' and 'domain-open' modes, validate email domain
           // Empty allowedDomains list = allow all domains (permissive fallback)
-          if (registrationMode === 'domain-restricted') {
+          if (registrationMode === 'domain-restricted' || registrationMode === 'domain-open') {
             const allowedDomains = AUTH_CONFIG?.registration?.allowedDomains ?? [];
             if (allowedDomains.length > 0 && !isDomainAllowed(user.email, allowedDomains)) {
               console.log(`[Auth] Blocked registration for ${user.email}: domain not in allowedDomains (allowed: ${allowedDomains.join(', ')})`);
@@ -253,8 +254,9 @@ export const auth = betterAuth({
                 break;
 
               case 'single-tenant':
-                // Only first user creates the global team
-                // Subsequent users must join via invitation
+                // First user creates the global team; subsequent users auto-join it.
+                // Access control is handled by registration.mode (domain-open, invitation-only, etc.)
+                // so any user who passes registration validation should be part of the org.
                 const existingTeam = await TeamService.getGlobal();
                 if (!existingTeam) {
                   // First user - create the global team
@@ -262,8 +264,9 @@ export const auth = betterAuth({
                   await TeamService.create(user.id, teamName);
                   console.log(`[Teams] Global team created for first user ${user.id}`);
                 } else {
-                  // Team exists - user should have been invited
-                  console.warn(`[Teams] User ${user.id} created without team (single-tenant mode)`);
+                  // Subsequent users - auto-join the global team as member
+                  await TeamMemberService.addToGlobal(user.id, 'member');
+                  console.log(`[Teams] User ${user.id} auto-joined global team (single-tenant mode)`);
                 }
                 break;
 
@@ -283,7 +286,7 @@ export const auth = betterAuth({
         before: async (session: { userId: string; [key: string]: unknown }) => {
           const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open';
 
-          if (registrationMode === 'domain-restricted') {
+          if (registrationMode === 'domain-restricted' || registrationMode === 'domain-open') {
             const allowedDomains = AUTH_CONFIG?.registration?.allowedDomains ?? [];
             if (allowedDomains.length > 0) {
               // Look up user email from DB

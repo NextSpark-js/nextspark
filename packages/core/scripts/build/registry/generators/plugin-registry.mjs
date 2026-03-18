@@ -27,7 +27,7 @@ export function generatePluginRegistry(plugins, config) {
   const pagesServerImports = plugins
     .filter(p => p.hasPagesServer)
     .map(plugin =>
-      `import { devtoolsPage as ${plugin.name.replace(/-/g, '_')}DevtoolsPage } from '@/contents/plugins/${plugin.name}/plugin.pages.server'`
+      `import { devtoolsPage as ${plugin.name.replace(/-/g, '_')}DevtoolsPage, superadminPage as ${plugin.name.replace(/-/g, '_')}SuperadminPage } from '@/contents/plugins/${plugin.name}/plugin.pages.server'`
     )
     .join('\n')
 
@@ -153,6 +153,15 @@ export const PLUGIN_DEVTOOLS_PAGES: Record<string, any> = {
 ${plugins.filter(p => p.hasPagesServer).map(p => `  '${p.name}': ${p.name.replace(/-/g, '_')}DevtoolsPage,`).join('\n')}
 }
 
+// Maps plugin names to their superadmin page components.
+// Used by app/superadmin/plugins/[plugin]/page.tsx to render plugin settings pages.
+// Export 'superadminPage' from plugin.pages.server.ts to contribute a superadmin page.
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const PLUGIN_SUPERADMIN_PAGES: Record<string, any> = {
+${plugins.filter(p => p.hasPagesServer).map(p => `  '${p.name}': ${p.name.replace(/-/g, '_')}SuperadminPage,`).join('\n')}
+}
+
 // ==================== Navigation Helpers ====================
 /**
  * Returns all nav items for a given area from all registered plugins.
@@ -218,8 +227,8 @@ export function generatePluginRegistryClient(plugins, config) {
     settings: ${JSON.stringify(plugin.settings || [], null, 4).replace(/^/gm, '    ')},
     hasMessages: ${plugin.hasMessages || false},
     hasAssets: ${plugin.hasAssets || false},
-    navigation: ${plugin.exportName}.navigation,
-  }`
+    get navigation() { return ${plugin.exportName}?.navigation },
+  } as ClientPluginConfig`
   }).join(',\n')
 
   return `/**

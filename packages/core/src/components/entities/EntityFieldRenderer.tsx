@@ -36,6 +36,7 @@ import { SimpleRelationSelect } from '../ui/simple-relation-select'
 import { RelationDisplay } from '../ui/relation-display'
 import { RichTextEditor } from '../ui/rich-text-editor'
 import { UserDisplay } from '../ui/user-display'
+import { MediaSelector } from '../media/MediaSelector'
 
 interface EntityFieldContext {
   parentId?: string
@@ -141,6 +142,9 @@ function formatDisplayValue(value: unknown, field: EntityField): string {
         return addr.fullAddress || [addr.street, addr.city, addr.state, addr.country].filter(Boolean).join(', ')
       }
       return String(value || '')
+
+    case 'media-library':
+      return value ? String(value) : ''
 
     case 'file':
     case 'image':
@@ -479,6 +483,15 @@ function renderFormField(
       )
 
     // Media types
+    case 'media-library':
+      return (
+        <MediaSelector
+          value={value as string | null}
+          onChange={(mediaId) => onChange(mediaId)}
+          disabled={disabled}
+        />
+      )
+
     case 'file':
       return (
         <FileUpload

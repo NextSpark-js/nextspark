@@ -171,7 +171,15 @@
       "emptyArray": "Aucun element ajoute",
       "itemNumber": "Element {number}",
       "addItem": "Ajouter un element",
-      "itemCount": "{current} sur {max} elements"
+      "itemCount": "{current} sur {max} elements",
+      "loadingEntity": "Chargement de {entity}...",
+      "failedToLoad": "Echec du chargement de {entity}",
+      "selectedCount": "{count} selectionnes",
+      "noEntityFound": "Aucun {entity} trouve",
+      "selectEntity": "Selectionner {entity}...",
+      "pickDate": "Choisir une date",
+      "arrayItemsCount": "{count} elements",
+      "configured": "configure"
     }
   },
   "builder": {

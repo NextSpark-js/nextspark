@@ -174,7 +174,15 @@
       "itemCount": "{current} of {max} items",
       "changeImage": "Change",
       "removeImage": "Remove",
-      "browseMedia": "Click to upload or browse images"
+      "browseMedia": "Click to upload or browse images",
+      "loadingEntity": "Loading {entity}...",
+      "failedToLoad": "Failed to load {entity}",
+      "selectedCount": "{count} selected",
+      "noEntityFound": "No {entity} found",
+      "selectEntity": "Select {entity}...",
+      "pickDate": "Pick a date",
+      "arrayItemsCount": "{count} items",
+      "configured": "configured"
     }
   },
   "builder": {

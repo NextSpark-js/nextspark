@@ -6,6 +6,8 @@ import { sel } from '../../../lib/test'
 export function PublicFooter() {
   const currentYear = new Date().getFullYear()
   const t = useTranslations('footer')
+  const tCommon = useTranslations('common')
+  const appName = tCommon('appName')
 
   const footerLinks = {
     product: [
@@ -113,10 +115,10 @@ export function PublicFooter() {
         <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
           <div className="flex items-center space-x-2" data-cy={sel('public.footer.logo')}>
             <div className="w-6 h-6 rounded bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-xs">B</span>
+              <span className="text-primary-foreground font-bold text-xs">{appName.charAt(0)}</span>
             </div>
             <span className="text-sm text-muted-foreground">
-              © {currentYear} Boilerplate. All rights reserved.
+              © {currentYear} {appName}. All rights reserved.
             </span>
           </div>
 

@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS public."teams" (
   description TEXT,
   "ownerId" TEXT NOT NULL REFERENCES public."users"(id) ON DELETE RESTRICT,
   "avatarUrl" TEXT,
+  "isGlobal" BOOLEAN NOT NULL DEFAULT FALSE,
   settings JSONB DEFAULT '{}',
   metadata JSONB DEFAULT '{}',
   "createdAt" TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -48,6 +49,8 @@ CREATE INDEX IF NOT EXISTS idx_teams_owner ON public."teams"("ownerId");
 CREATE INDEX IF NOT EXISTS idx_teams_slug ON public."teams"(slug);
 CREATE INDEX IF NOT EXISTS idx_teams_created ON public."teams"("createdAt" DESC);
 CREATE INDEX IF NOT EXISTS idx_teams_metadata ON public."teams" USING GIN (metadata);
+-- Unique partial index: enforces only one global team can exist (single-tenant mode)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_teams_is_global ON public."teams" ("isGlobal") WHERE "isGlobal" = TRUE;
 
 -- ============================================
 -- TEAMS TRIGGERS

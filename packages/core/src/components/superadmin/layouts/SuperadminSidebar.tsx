@@ -14,11 +14,26 @@ import {
   ChevronRight,
   CreditCard,
   FileText,
+  Puzzle,
+  Star,
+  Bell,
+  Globe,
+  Layers,
+  GitBranch,
+  LayoutGrid,
+  Tag,
+  Code,
 } from "lucide-react";
 import { cn } from '../../../lib/utils';
 import { Button } from '../../ui/button';
 import { sel } from '../../../lib/test';
 import { useState } from "react";
+import { getPluginNavItems } from "@nextsparkjs/registries/plugin-registry.client";
+import type { PluginNavItem } from "../../../types/plugin";
+
+const PLUGIN_ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  Puzzle, Settings, Star, Code, LayoutGrid, Bell, Globe, Layers, GitBranch, Tag
+};
 
 interface SidebarItem {
   title: string;
@@ -35,9 +50,10 @@ interface SidebarItem {
  * Specialized sidebar for super admin navigation within Superadmin Panel.
  * Includes collapsible functionality and clear visual hierarchy.
  */
-export function SuperadminSidebar() {
+export function SuperadminSidebar({ pluginItems: pluginItemsProp }: { pluginItems?: PluginNavItem[] } = {}) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const pluginItems = pluginItemsProp ?? getPluginNavItems('superadmin');
 
   const sidebarItems: SidebarItem[] = [
     {
@@ -196,6 +212,46 @@ export function SuperadminSidebar() {
           );
         })}
       </div>
+
+      {/* Plugin nav items */}
+      {pluginItems.length > 0 && (
+        <div className="px-3 pb-2 space-y-1">
+          {!isCollapsed && (
+            <p className="px-3 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Plugins
+            </p>
+          )}
+          {isCollapsed && <div className="my-1 border-t border-border" />}
+          {pluginItems.map((item) => {
+            const IconComponent = PLUGIN_ICON_MAP[item.icon ?? ''] ?? Puzzle;
+            const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                data-cy={`superadmin-plugin-nav-${item.href.split('/').pop()}`}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
+                  "hover:bg-accent hover:text-accent-foreground",
+                  isActive ? "bg-primary text-primary-foreground" : "text-foreground",
+                  isCollapsed && "justify-center"
+                )}
+                title={isCollapsed ? item.label : item.description}
+              >
+                <IconComponent className="h-5 w-5 flex-shrink-0" />
+                {!isCollapsed && (
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">{item.label}</div>
+                    {item.description && (
+                      <p className="text-xs text-muted-foreground">{item.description}</p>
+                    )}
+                  </div>
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      )}
 
       {/* Exit Section */}
       <div className="p-3 border-t border-border">

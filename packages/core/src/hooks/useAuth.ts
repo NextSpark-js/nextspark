@@ -79,7 +79,7 @@ export function useAuth() {
 
   const handleResetPassword = async (email: string) => {
     try {
-      const { data, error } = await authClient.forgetPassword({
+      const { data, error } = await authClient.requestPasswordReset({
         email,
         redirectTo: `${origin}/reset-password`
       })

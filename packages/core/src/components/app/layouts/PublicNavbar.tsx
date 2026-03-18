@@ -15,6 +15,8 @@ export function PublicNavbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const tNav = useTranslations('navigation')
   const tHome = useTranslations('home')
+  const tCommon = useTranslations('common')
+  const appName = tCommon('appName')
 
   const navigationItems = [
     { name: 'features', href: '/features' },
@@ -37,10 +39,10 @@ export function PublicNavbar() {
             data-cy={sel('public.navbar.logo')}
           >
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">B</span>
+              <span className="text-primary-foreground font-bold text-sm">{appName.charAt(0)}</span>
             </div>
             <span className="hidden font-bold sm:inline-block">
-              Boilerplate
+              {appName}
             </span>
           </Link>
         </div>

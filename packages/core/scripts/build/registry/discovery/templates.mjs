@@ -6,7 +6,7 @@
  * @module core/scripts/build/registry/discovery/templates
  */
 
-import { readdir, stat } from 'fs/promises'
+import { readdir, stat, readFile } from 'fs/promises'
 import { join } from 'path'
 
 import { CONFIG as DEFAULT_CONFIG } from '../config.mjs'
@@ -116,6 +116,29 @@ export async function discoverThemeTemplates(templatesPath, themeName, relativeP
           // Skip adding this template to prevent override
           verbose(`PROTECTED: Skipping ${appPath} - marked as protected`)
           continue
+        }
+
+        // Validate: theme templates must NOT use getTemplateOrDefault(Client)
+        // These wrappers are for app/ files that delegate to themes — a theme template
+        // IS the override, so wrapping it causes webpack chunk splitting issues (TDZ errors).
+        try {
+          const fileContent = await readFile(currentPath, 'utf-8')
+          if (fileContent.includes('getTemplateOrDefaultClient') || fileContent.includes('getTemplateOrDefault(')) {
+            const errorMsg = `ANTI-PATTERN: Theme "${themeName}" template uses getTemplateOrDefault in: ${currentRelativePath}`
+            console.error(`\n╔══════════════════════════════════════════════════════════════╗`)
+            console.error(`║  TEMPLATE ANTI-PATTERN DETECTED                              ║`)
+            console.error(`╚══════════════════════════════════════════════════════════════╝\n`)
+            console.error(`  ${errorMsg}`)
+            console.error(`  Theme templates ARE the override — they must not wrap themselves`)
+            console.error(`  with getTemplateOrDefault or getTemplateOrDefaultClient.`)
+            console.error(`  Use a plain \`export default\` instead.\n`)
+            console.error(`  Fix: Replace the last line with:`)
+            console.error(`    export default YourComponent\n`)
+            throw new Error(errorMsg)
+          }
+        } catch (err) {
+          if (err.message?.startsWith('ANTI-PATTERN:')) throw err
+          // Ignore read errors for non-critical validation
         }
 
         // Extract metadata from template file if it exists

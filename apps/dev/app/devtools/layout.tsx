@@ -2,6 +2,7 @@ import { DeveloperGuard } from "@nextsparkjs/core/components/app/guards/Develope
 import { DevtoolsSidebar, DevtoolsMobileHeader } from "@nextsparkjs/core/components/devtools";
 import { Metadata } from "next";
 import { getTemplateOrDefault, getMetadataOrDefault } from '@nextsparkjs/core/lib/template-resolver'
+import { getPluginNavItems } from '@nextsparkjs/registries/plugin-registry'
 
 const defaultMetadata: Metadata = {
   title: "DevTools",
@@ -27,12 +28,13 @@ interface DevLayoutProps {
  * Uses purple/violet color scheme to differentiate from Admin Panel (red).
  */
 function DevLayout({ children }: DevLayoutProps) {
+  const pluginNavItems = getPluginNavItems('devtools')
   return (
     <DeveloperGuard>
       <div className="flex h-screen bg-background">
         {/* Sidebar - Hidden on mobile, visible on desktop */}
         <div className="hidden lg:block">
-          <DevtoolsSidebar />
+          <DevtoolsSidebar pluginItems={pluginNavItems} />
         </div>
 
         {/* Main content area */}

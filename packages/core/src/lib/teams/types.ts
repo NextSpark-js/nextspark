@@ -76,6 +76,7 @@ export interface Team {
   description: string | null
   ownerId: string
   avatarUrl: string | null
+  isGlobal: boolean
   settings: Record<string, any>
   createdAt: string
   updatedAt: string
