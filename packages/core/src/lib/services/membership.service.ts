@@ -15,12 +15,10 @@ import { TeamMemberService } from './team-member.service'
 import { SubscriptionService } from './subscription.service'
 import { PermissionService } from './permission.service'
 import { PlanService } from './plan.service'
-import { UsageService } from './usage.service'
-import { hasFeature as checkFeatureInList } from '../billing/helpers'
+import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
 import type {
   Permission,
   ActionResult,
-  ActionDeniedReason,
   MembershipSubscription,
   QuotaState,
   TeamMembershipData,
@@ -232,13 +230,36 @@ export class TeamMembership implements TeamMembershipData {
       }
     }
 
-    // 4. Check feature (plan-based)
-    // Note: This would require a mapping of actions to features
-    // For now, we'll skip this unless explicitly needed
+    // 4. Check feature (plan-based) via actionMappings
+    const requiredFeature = BILLING_REGISTRY.actionMappings?.features?.[action]
+    if (requiredFeature && !this.hasFeature(requiredFeature)) {
+      return {
+        allowed: false,
+        reason: 'feature_not_in_plan',
+        message: `Your plan does not include the required feature: ${requiredFeature}`,
+        meta: {
+          requiredFeature,
+          currentPlan: this.subscription?.planSlug,
+        },
+      }
+    }
 
-    // 5. Check quota (if action maps to a limit)
-    // Note: This would require a mapping of actions to limits
-    // For now, we'll skip this unless explicitly needed
+    // 5. Check quota (if action maps to a limit) via actionMappings
+    const consumedLimit = BILLING_REGISTRY.actionMappings?.limits?.[action]
+    if (consumedLimit) {
+      const quotaCheck = this.checkQuota(consumedLimit, options?.incrementQuota ?? 1)
+      if (!quotaCheck.allowed) {
+        return {
+          allowed: false,
+          reason: 'quota_exceeded',
+          message: `Quota exceeded for ${consumedLimit}`,
+          meta: {
+            limitSlug: consumedLimit,
+            remaining: quotaCheck.remaining,
+          },
+        }
+      }
+    }
 
     return { allowed: true }
   }

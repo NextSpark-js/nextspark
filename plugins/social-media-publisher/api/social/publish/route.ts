@@ -338,7 +338,6 @@ const postHandler = async (request: NextRequest) => {
       {
         error: 'Failed to publish content',
         details: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined
       },
       { status: 500 }
     )

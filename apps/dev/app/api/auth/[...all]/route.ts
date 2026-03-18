@@ -7,6 +7,7 @@ import { isPublicSignupRestricted } from "@nextsparkjs/core/lib/teams/helpers";
 // Currently domain validation happens in auth.ts databaseHooks
 import { TeamService } from "@nextsparkjs/core/lib/services";
 import { wrapAuthHandlerWithCors, handleCorsPreflightRequest, addCorsHeaders } from "@nextsparkjs/core/lib/api/helpers";
+import { checkDistributedRateLimit } from "@nextsparkjs/core/lib/api/rate-limit";
 
 const handlers = toNextJsHandler(auth);
 
@@ -45,6 +46,27 @@ export async function GET(req: NextRequest, context: { params: Promise<{ all: st
 
 // Intercept signup requests to validate registration mode
 export async function POST(req: NextRequest) {
+  // Rate limiting: 5 requests per 15 minutes per IP (tier: auth).
+  // Protects login/signup against brute-force and credential stuffing attacks.
+  const clientIp =
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    req.headers.get('x-real-ip') ||
+    req.headers.get('cf-connecting-ip') ||
+    'unknown'
+  const rateLimitResult = await checkDistributedRateLimit(`auth:ip:${clientIp}`, 'auth')
+  if (!rateLimitResult.allowed) {
+    return new NextResponse(JSON.stringify({ error: 'Too many requests' }), {
+      status: 429,
+      headers: {
+        'Content-Type': 'application/json',
+        'Retry-After': '900',
+        'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+        'X-RateLimit-Remaining': '0',
+        'X-RateLimit-Reset': rateLimitResult.resetTime.toString(),
+      },
+    })
+  }
+
   const pathname = req.nextUrl.pathname;
 
   // Determine request type

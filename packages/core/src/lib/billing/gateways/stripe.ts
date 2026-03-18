@@ -21,6 +21,7 @@ import type {
   CreatePortalParams,
   CreateCustomerParams,
   UpdateSubscriptionParams,
+  CreateOneTimeCheckoutParams,
 } from './types'
 
 // Lazy-load Stripe client to avoid initialization during build time
@@ -81,6 +82,29 @@ export class StripeGateway implements BillingGateway {
       sessionParams.subscription_data = {
         trial_period_days: planConfig.trialDays
       }
+    }
+
+    const session = await getStripe().checkout.sessions.create(sessionParams)
+    return { id: session.id, url: session.url }
+  }
+
+  async createOneTimeCheckout(params: CreateOneTimeCheckoutParams): Promise<CheckoutSessionResult> {
+    const { teamId, priceId, quantity = 1, successUrl, cancelUrl, customerEmail, customerId, metadata } = params
+
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
+      mode: 'payment',
+      payment_method_types: ['card'],
+      line_items: [{ price: priceId, quantity }],
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      metadata: { teamId, ...metadata },
+      client_reference_id: teamId,
+    }
+
+    if (customerId) {
+      sessionParams.customer = customerId
+    } else if (customerEmail) {
+      sessionParams.customer_email = customerEmail
     }
 
     const session = await getStripe().checkout.sessions.create(sessionParams)

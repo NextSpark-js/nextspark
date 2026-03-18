@@ -7,7 +7,7 @@
  * @module SubscriptionService
  */
 
-import { queryOneWithRLS, queryWithRLS, mutateWithRLS } from '../db'
+import { queryOneWithRLS, queryWithRLS, mutateWithRLS, getTransactionClient } from '../db'
 import { doAction } from '../plugins/hook-system'
 import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
 import { PlanService } from './plan.service'
@@ -483,41 +483,53 @@ export class SubscriptionService {
         return { success: false, error: 'Plan not found in database' }
       }
 
-      // 7. Update local subscription
-      await queryWithRLS(
-        `
-        UPDATE "subscriptions"
-        SET
-          "planId" = $1,
-          "billingInterval" = $2,
-          metadata = jsonb_set(
-            COALESCE(metadata, '{}'::jsonb),
-            '{previousPlanSlug}',
-            $3::jsonb
-          ),
-          "updatedAt" = NOW()
-        WHERE "teamId" = $4 AND status IN ('active', 'trialing')
-        `,
-        [targetPlan.id, billingInterval, JSON.stringify(currentSub.plan.slug), teamId]
-      )
+      // 7-8. Update local subscription + log billing event in a transaction
+      // This ensures DB consistency if either query fails after Stripe succeeded
+      const tx = await getTransactionClient()
+      try {
+        await tx.query(
+          `
+          UPDATE "subscriptions"
+          SET
+            "planId" = $1,
+            "billingInterval" = $2,
+            metadata = jsonb_set(
+              COALESCE(metadata, '{}'::jsonb),
+              '{previousPlanSlug}',
+              $3::jsonb
+            ),
+            "updatedAt" = NOW()
+          WHERE "teamId" = $4 AND status IN ('active', 'trialing')
+          `,
+          [targetPlan.id, billingInterval, JSON.stringify(currentSub.plan.slug), teamId]
+        )
 
-      // 8. Log billing event
-      await queryWithRLS(
-        `
-        INSERT INTO "billing_events" (id, "subscriptionId", type, status, metadata, "createdAt")
-        VALUES ($1, $2, 'lifecycle', 'succeeded', $3, NOW())
-        `,
-        [
-          crypto.randomUUID(),
-          currentSub.id,
-          JSON.stringify({
-            action: 'plan_change',
-            fromPlan: currentSub.plan.slug,
-            toPlan: targetPlanSlug,
-            billingInterval,
-          }),
-        ]
-      )
+        await tx.query(
+          `
+          INSERT INTO "billing_events" (id, "subscriptionId", type, status, metadata, "createdAt")
+          VALUES ($1, $2, 'lifecycle', 'succeeded', $3, NOW())
+          `,
+          [
+            crypto.randomUUID(),
+            currentSub.id,
+            JSON.stringify({
+              action: 'plan_change',
+              fromPlan: currentSub.plan.slug,
+              toPlan: targetPlanSlug,
+              billingInterval,
+            }),
+          ]
+        )
+
+        await tx.commit()
+      } catch (dbError) {
+        await tx.rollback()
+        console.error('[SubscriptionService.changePlan] DB transaction failed after provider update:', dbError)
+        return {
+          success: false,
+          error: 'Plan changed in payment provider but local DB update failed. Please contact support.',
+        }
+      }
 
       // 9. Get updated subscription
       const updatedSub = await this.getActive(teamId)

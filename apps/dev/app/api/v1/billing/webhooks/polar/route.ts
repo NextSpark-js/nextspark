@@ -20,8 +20,11 @@ import { query, queryOne } from '@nextsparkjs/core/lib/db'
 
 // Polar webhook verification - import from gateway
 import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import type { PolarWebhookExtensions } from '@nextsparkjs/core/lib/billing/polar-webhook'
+import { polarWebhookExtensions } from '@/lib/billing/polar-webhook-extensions'
 
-export async function POST(request: NextRequest) {
+async function handlePolarWebhook(request: NextRequest) {
   // 1. Get raw body and ALL headers (Polar needs full headers for verification)
   const payload = await request.text()
   const headers: Record<string, string> = {}
@@ -83,7 +86,7 @@ export async function POST(request: NextRequest) {
         break
 
       case 'order.paid':
-        await handleOrderPaid(event.data, eventId)
+        await handleOrderPaid(event.data, eventId, polarWebhookExtensions)
         break
 
       default:
@@ -96,6 +99,15 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: 'Handler failed' }, { status: 500 })
   }
 }
+
+/**
+ * Rate limiting: 10 requests/hour per IP (tier: strict).
+ * Polar signature verification is the primary security layer;
+ * rate limiting protects against flood attacks.
+ * NOTE: Rate limiter only reads headers — raw body is NOT consumed here,
+ * so request.text() inside the handler still works correctly.
+ */
+export const POST = withRateLimitTier(handlePolarWebhook, 'strict')
 
 // ===========================================
 // POLAR EVENT HANDLERS
@@ -259,9 +271,15 @@ async function handleSubscriptionCanceled(data: Record<string, unknown>, eventId
 
 /**
  * Handle order.paid
- * Payment was completed for an order (Polar's equivalent of invoice.paid)
+ * Payment was completed for an order (Polar's equivalent of invoice.paid).
+ * - With subscriptionId: recurring subscription payment → mark active, log billing event
+ * - Without subscriptionId: one-time purchase → delegate to extensions.onOneTimePaymentCompleted
  */
-async function handleOrderPaid(data: Record<string, unknown>, eventId: string) {
+async function handleOrderPaid(
+  data: Record<string, unknown>,
+  eventId: string,
+  extensions?: PolarWebhookExtensions
+) {
   const subscriptionId = data.subscriptionId as string | undefined
   const amount = data.amount as number | undefined
   const currency = data.currency as string | undefined
@@ -269,7 +287,7 @@ async function handleOrderPaid(data: Record<string, unknown>, eventId: string) {
   console.log(`[polar-webhook] Order paid: ${eventId}`)
 
   if (subscriptionId) {
-    // Mark subscription as active
+    // Recurring subscription payment — mark active and log
     await query(
       `UPDATE subscriptions
        SET status = 'active',
@@ -278,7 +296,6 @@ async function handleOrderPaid(data: Record<string, unknown>, eventId: string) {
       [subscriptionId]
     )
 
-    // Log billing event for audit trail (recurring payments)
     const sub = await queryOne<{ id: string }>(
       `SELECT id FROM subscriptions WHERE "externalSubscriptionId" = $1 LIMIT 1`,
       [subscriptionId]
@@ -296,6 +313,27 @@ async function handleOrderPaid(data: Record<string, unknown>, eventId: string) {
           JSON.stringify({ polarEventId: eventId })
         ]
       )
+    }
+  } else {
+    // One-time purchase — delegate to project-level extension
+    if (extensions?.onOneTimePaymentCompleted) {
+      const metadata = (data.metadata as Record<string, string>) ?? {}
+      const teamId = metadata.teamId ?? ''
+      const userId = metadata.userId ?? ''
+      await extensions.onOneTimePaymentCompleted(
+        {
+          id: data.id as string ?? eventId,
+          amount: amount ?? 0,
+          currency: currency ?? 'usd',
+          metadata,
+          customerId: data.customerId as string | undefined,
+          externalCustomerId: data.externalCustomerId as string | undefined,
+          productId: data.productId as string | undefined,
+        },
+        { teamId, userId }
+      )
+    } else {
+      console.log(`[polar-webhook] One-time order ${eventId} — no extension handler configured`)
     }
   }
 }

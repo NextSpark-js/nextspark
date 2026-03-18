@@ -349,6 +349,17 @@ const getHandler = async (request: NextRequest) => {
 function renderOAuthError(errorType: string, userMessage: string | null): NextResponse {
   const message = userMessage || 'Authentication failed'
 
+  // Escape for HTML context (content inside tags)
+  const safeHtml = message
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+
+  // Escape for JS string context (inside postMessage call)
+  const safeJs = encodeURIComponent(message)
+
   const html = `
     <!DOCTYPE html>
     <html>
@@ -375,14 +386,14 @@ function renderOAuthError(errorType: string, userMessage: string | null): NextRe
         <div class="container">
           <div class="error-icon">❌</div>
           <h1>Connection Failed</h1>
-          <p>${message.replace(/'/g, "\\'")}. This window will close automatically...</p>
+          <p>${safeHtml}. This window will close automatically...</p>
         </div>
         <script>
           if (window.opener) {
             window.opener.postMessage({
               type: 'oauth-error',
               error: '${errorType}',
-              errorDescription: '${message.replace(/'/g, "\\'")}'
+              errorDescription: decodeURIComponent('${safeJs}')
             }, window.location.origin);
           }
           setTimeout(() => window.close(), 3000);

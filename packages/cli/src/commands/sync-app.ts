@@ -1,4 +1,4 @@
-import { existsSync, statSync, readdirSync, mkdirSync, copyFileSync, readFileSync } from 'node:fs';
+import { existsSync, statSync, readdirSync, mkdirSync, copyFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 import chalk from 'chalk';
 import ora from 'ora';
@@ -260,6 +260,30 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
 
       if (rootUpdated + rootCreated > 0) {
         console.log(chalk.gray(`  Root files: ${rootUpdated} updated, ${rootCreated} created`));
+      }
+
+      // Fix globals.css to use the project's active theme path
+      // The template uses ../../../themes/default (monorepo path) but projects use ../../contents/themes/${theme}
+      const globalsCssPath = join(appDir, 'globals.css');
+      if (existsSync(globalsCssPath)) {
+        const envPath = join(projectRoot, '.env');
+        let activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME;
+        if (!activeTheme && existsSync(envPath)) {
+          const envContent = readFileSync(envPath, 'utf-8');
+          const match = envContent.match(/NEXT_PUBLIC_ACTIVE_THEME=["']?([^"'\s\n]+)["']?/);
+          if (match) activeTheme = match[1];
+        }
+        if (activeTheme && activeTheme !== 'default') {
+          const globalsCss = readFileSync(globalsCssPath, 'utf-8');
+          const fixed = globalsCss.replace(
+            /@import\s+["'][^"']*themes\/[^"']*\/styles\/globals\.css["'];?/,
+            `@import "../contents/themes/${activeTheme}/styles/globals.css";`
+          );
+          if (fixed !== globalsCss) {
+            writeFileSync(globalsCssPath, fixed, 'utf-8');
+            console.log(chalk.gray(`  Fixed globals.css → themes/${activeTheme}`));
+          }
+        }
       }
     }
 

@@ -16,11 +16,13 @@ import type {
   CreatePortalParams,
   CreateCustomerParams,
   UpdateSubscriptionParams,
+  CreateOneTimeCheckoutParams,
 } from './types'
 
 export interface BillingGateway {
   // Checkout
   createCheckoutSession(params: CreateCheckoutParams): Promise<CheckoutSessionResult>
+  createOneTimeCheckout(params: CreateOneTimeCheckoutParams): Promise<CheckoutSessionResult>
   createPortalSession(params: CreatePortalParams): Promise<PortalSessionResult>
 
   // Customers
