@@ -229,9 +229,11 @@ if (!result.allowed) {
 
 Payment provider integration (Stripe, Polar, and more) via the Gateway Factory pattern:
 
-- **Hosted Checkout:** Redirect to provider for payment
+- **Hosted Checkout:** Redirect to provider for recurring subscription payment
+- **One-Time Checkout:** Credit packs, lifetime deals, upsells (via `createOneTimeCheckout`)
+- **Webhook Extensions:** Project-level handlers for one-time payment fulfillment
 - **Customer Portal:** Self-service billing management
-- **Webhooks:** Automatic subscription updates (provider-specific routes)
+- **Webhooks:** Automatic subscription updates (provider-specific routes, rate-limited)
 - **Lifecycle Jobs:** Trial expiration, grace periods
 
 ## Next Steps

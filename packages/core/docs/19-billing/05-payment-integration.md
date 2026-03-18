@@ -46,14 +46,22 @@ All providers implement this contract:
 ```typescript
 // core/lib/billing/gateways/interface.ts
 export interface BillingGateway {
+  // Recurring subscriptions
   createCheckoutSession(params: CreateCheckoutParams): Promise<CheckoutSessionResult>
   createPortalSession(params: CreatePortalParams): Promise<PortalSessionResult>
-  getCustomer(customerId: string): Promise<CustomerResult>
-  createCustomer(params: CreateCustomerParams): Promise<CustomerResult>
   updateSubscriptionPlan(params: UpdateSubscriptionParams): Promise<SubscriptionResult>
   cancelSubscriptionAtPeriodEnd(subscriptionId: string): Promise<SubscriptionResult>
   cancelSubscriptionImmediately(subscriptionId: string): Promise<SubscriptionResult>
   reactivateSubscription(subscriptionId: string): Promise<SubscriptionResult>
+
+  // One-time payments (credit packs, LTD, upsells)
+  createOneTimeCheckout(params: CreateOneTimeCheckoutParams): Promise<CheckoutSessionResult>
+
+  // Customer management
+  getCustomer(customerId: string): Promise<CustomerResult>
+  createCustomer(params: CreateCustomerParams): Promise<CustomerResult>
+
+  // Webhook security
   verifyWebhookSignature(payload: string | Buffer, signatureOrHeaders: string | Record<string, string>): WebhookEventResult
 }
 ```
@@ -199,48 +207,52 @@ export async function POST(request: NextRequest) {
 
 ## Webhooks
 
-Webhook routes are **provider-specific by design** — they need raw provider types for proper event handling and type narrowing.
+Webhook routes are **provider-specific by design** — they need raw provider types for proper event handling and type narrowing. Both routes are protected with **strict rate limiting** (10 req/hour per IP) and mandatory signature verification.
 
 ### Stripe Webhooks
 
+The Stripe webhook handler uses `StripeWebhookExtensions` to delegate one-time payment handling to project-level code:
+
 ```typescript
 // app/api/v1/billing/webhooks/stripe/route.ts
-// NOTE: Webhook routes bypass the gateway factory because they need
-// raw provider types for exhaustive switch type narrowing.
-import Stripe from 'stripe'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { stripeWebhookExtensions } from '@/lib/billing/stripe-webhook-extensions'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+// Rate-limited: 10 requests/hour per IP (strict tier)
+export const POST = withRateLimitTier(handleStripeWebhook, 'strict')
 
-export async function POST(request: NextRequest) {
+async function handleStripeWebhook(request: NextRequest) {
   const payload = await request.text()
   const signature = request.headers.get('stripe-signature')
 
-  // Verify signature using raw Stripe SDK
-  let event: Stripe.Event
+  // Mandatory signature verification
+  let event
   try {
-    event = stripe.webhooks.constructEvent(
-      payload, signature!, process.env.STRIPE_WEBHOOK_SECRET!
-    )
-  } catch (error) {
+    const gateway = getBillingGateway()
+    event = gateway.verifyWebhookSignature(payload, signature!)
+  } catch {
     return Response.json({ error: 'Invalid signature' }, { status: 400 })
   }
 
-  // Handle events with full Stripe types
+  // Idempotency check (deduplicate retries)
+  const existing = await queryOne(
+    `SELECT id FROM "billing_events" WHERE metadata->>'stripeEventId' = $1`,
+    [event.id]
+  )
+  if (existing) return Response.json({ received: true, status: 'duplicate' })
+
   switch (event.type) {
     case 'checkout.session.completed':
-      await handleCheckoutCompleted(event.data.object)
+      await handleCheckoutCompleted(event.data, event.id, stripeWebhookExtensions)
       break
     case 'invoice.paid':
-      await handleInvoicePaid(event.data.object)
-      break
-    case 'invoice.payment_failed':
-      await handlePaymentFailed(event.data.object)
+      await handleInvoicePaid(event.data, event.id)
       break
     case 'customer.subscription.updated':
-      await handleSubscriptionUpdated(event.data.object)
+      await handleSubscriptionUpdated(event.data, event.id)
       break
     case 'customer.subscription.deleted':
-      await handleSubscriptionDeleted(event.data.object)
+      await handleSubscriptionDeleted(event.data, event.id)
       break
   }
 
@@ -255,83 +267,233 @@ Local Development:
 # Install Stripe CLI
 brew install stripe/stripe-cli/stripe
 
-# Forward webhooks
-stripe listen --forward-to localhost:5173/api/v1/billing/webhooks/stripe
+# Forward webhooks to local server
+stripe listen --forward-to localhost:3000/api/v1/billing/webhooks/stripe
 ```
 
 Production:
 1. Go to [Stripe Webhooks](https://dashboard.stripe.com/webhooks)
 2. Add endpoint: `https://your-app.com/api/v1/billing/webhooks/stripe`
-3. Select events: `checkout.session.completed`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.updated`, `customer.subscription.deleted`
+3. Select events: `checkout.session.completed`, `invoice.paid`, `customer.subscription.updated`, `customer.subscription.deleted`
 4. Copy signing secret to `STRIPE_WEBHOOK_SECRET`
 
 ### Polar Webhooks
 
+Polar requires **ALL request headers** for webhook verification (not just a signature header):
+
 ```typescript
 // app/api/v1/billing/webhooks/polar/route.ts
-import { validateEvent, WebhookVerificationError } from '@polar-sh/sdk/webhooks'
+import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { polarWebhookExtensions } from '@/lib/billing/polar-webhook-extensions'
 
-export async function POST(request: NextRequest) {
+// Rate-limited: 10 requests/hour per IP (strict tier)
+export const POST = withRateLimitTier(handlePolarWebhook, 'strict')
+
+async function handlePolarWebhook(request: NextRequest) {
   const payload = await request.text()
-  const headers = Object.fromEntries(request.headers.entries())
+  const headers: Record<string, string> = {}
+  request.headers.forEach((value, key) => { headers[key] = value })
 
-  try {
-    const event = validateEvent(payload, headers, process.env.POLAR_WEBHOOK_SECRET!)
-
-    switch (event.type) {
-      case 'order.paid':
-        await handleOrderPaid(event.data)
-        break
-      case 'subscription.active':
-        await handleSubscriptionActive(event.data)
-        break
-      case 'subscription.canceled':
-        await handleSubscriptionCanceled(event.data)
-        break
-      case 'subscription.revoked':
-        await handleSubscriptionRevoked(event.data)
-        break
-      case 'subscription.uncanceled':
-        await handleSubscriptionUncanceled(event.data)
-        break
-    }
-
-    return NextResponse.json({ received: true })
-  } catch (error) {
-    if (error instanceof WebhookVerificationError) {
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 403 })
-    }
-    throw error
+  // Polar needs all three headers for verification
+  if (!headers['webhook-id'] || !headers['webhook-signature'] || !headers['webhook-timestamp']) {
+    return Response.json({ error: 'Missing required webhook headers' }, { status: 400 })
   }
+
+  // Mandatory signature verification
+  let event
+  try {
+    const gateway = getBillingGateway()
+    event = gateway.verifyWebhookSignature(payload, headers)
+  } catch {
+    return Response.json({ error: 'Invalid signature' }, { status: 400 })
+  }
+
+  // Idempotency check
+  const eventId = event.id || headers['webhook-id']
+  const existing = await queryOne(
+    `SELECT id FROM "billing_events" WHERE metadata->>'polarEventId' = $1`,
+    [eventId]
+  )
+  if (existing) return Response.json({ received: true, status: 'duplicate' })
+
+  switch (event.type) {
+    case 'checkout.updated':
+      await handleCheckoutUpdated(event.data, eventId)
+      break
+    case 'subscription.created':
+    case 'subscription.updated':
+    case 'subscription.canceled':
+      await handleSubscriptionEvent(event.type, event.data, eventId)
+      break
+    case 'order.paid':
+      // Dispatches to polarWebhookExtensions.onOneTimePaymentCompleted
+      // when there's no subscriptionId (one-time purchase)
+      await handleOrderPaid(event.data, eventId, polarWebhookExtensions)
+      break
+  }
+
+  return Response.json({ received: true })
 }
 ```
 
 **Polar Webhook Setup:**
 
-1. Go to your Polar organization settings
-2. Add webhook endpoint: `https://your-app.com/api/v1/billing/webhooks/polar`
-3. Select events: `order.paid`, `subscription.active`, `subscription.canceled`, `subscription.revoked`, `subscription.uncanceled`
+1. Go to your Polar organization settings → Webhooks
+2. Add endpoint: `https://your-app.com/api/v1/billing/webhooks/polar`
+3. Select events: `checkout.updated`, `order.paid`, `subscription.created`, `subscription.updated`, `subscription.canceled`
 4. Copy the webhook secret to `POLAR_WEBHOOK_SECRET`
 
-### Key Webhook Handler: checkout.session.completed (Stripe)
+---
+
+## Webhook Extensions
+
+The extension pattern lets project code handle one-time payment events without modifying the core webhook handler. Both Stripe and Polar support this pattern.
+
+### Extension Files
+
+Two stub files are created for every new project. Override them to add handlers:
+
+```
+lib/billing/
+├── stripe-webhook-extensions.ts   # Handles Stripe one-time checkout.session.completed
+└── polar-webhook-extensions.ts    # Handles Polar one-time order.paid
+```
+
+### Stripe Extension
 
 ```typescript
-async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
-  const teamId = session.metadata?.teamId
-  const subscriptionId = session.subscription as string
-  const customerId = session.customer as string
+// lib/billing/stripe-webhook-extensions.ts
+import type { StripeWebhookExtensions } from '@nextsparkjs/core/lib/billing/stripe-webhook'
 
-  // Update subscription with provider IDs
-  await db.query(`
-    UPDATE subscriptions
-    SET "externalSubscriptionId" = $1,
-        "externalCustomerId" = $2,
-        "paymentProvider" = 'stripe',
-        status = 'active'
-    WHERE "teamId" = $3
-  `, [subscriptionId, customerId, teamId])
+export const stripeWebhookExtensions: StripeWebhookExtensions = {
+  /**
+   * Called for checkout.session.completed where mode === 'payment'
+   * (i.e., a one-time purchase, NOT a recurring subscription).
+   */
+  onOneTimePaymentCompleted: async (session, context) => {
+    const { type } = session.metadata ?? {}
+
+    if (type === 'credit_pack') {
+      await addCreditsToTeam(context.teamId, session.amountTotal ?? 0)
+    }
+
+    if (type === 'lifetime') {
+      await activateLifetimePlan(context.teamId)
+    }
+  }
 }
 ```
+
+### Polar Extension
+
+```typescript
+// lib/billing/polar-webhook-extensions.ts
+import type { PolarWebhookExtensions } from '@nextsparkjs/core/lib/billing/polar-webhook'
+
+export const polarWebhookExtensions: PolarWebhookExtensions = {
+  /**
+   * Called for order.paid events with no subscriptionId
+   * (i.e., a one-time purchase, NOT a recurring subscription payment).
+   */
+  onOneTimePaymentCompleted: async (order, context) => {
+    const { type, credits } = order.metadata
+
+    if (type === 'credit_pack' && credits) {
+      await addCreditsToTeam(context.teamId, parseInt(credits, 10))
+    }
+  }
+}
+```
+
+### Extension Interfaces
+
+```typescript
+// @nextsparkjs/core/lib/billing/stripe-webhook
+export interface StripeWebhookExtensions {
+  onOneTimePaymentCompleted?: (
+    session: StripeSessionData,
+    context: OneTimePaymentContext
+  ) => Promise<void>
+}
+
+// @nextsparkjs/core/lib/billing/polar-webhook
+export interface PolarWebhookExtensions {
+  onOneTimePaymentCompleted?: (
+    order: PolarOrderData,
+    context: OneTimePaymentContext
+  ) => Promise<void>
+}
+
+export interface OneTimePaymentContext {
+  teamId: string
+  userId: string
+}
+```
+
+### When Is the Extension Called?
+
+**Stripe:** When `checkout.session.completed` fires and `session.mode === 'payment'` (one-time checkout, not subscription). Recurring subscription checkouts are handled by the core handler and do NOT trigger the extension.
+
+**Polar:** When `order.paid` fires and the order has **no `subscriptionId`** (one-time purchase). Orders from recurring subscriptions have a `subscriptionId` and are handled by the core handler.
+
+If no extension is configured (empty `{}`), one-time payments are acknowledged (returning 200) but not acted upon — no error is thrown.
+
+---
+
+## One-Time Payments
+
+Use `createOneTimeCheckout` for credit packs, lifetime deals, upsells, or any non-recurring purchase. This is separate from recurring subscription checkout.
+
+### Backend
+
+```typescript
+import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
+
+// In your one-time purchase API route
+const session = await getBillingGateway().createOneTimeCheckout({
+  teamId,                        // Required: stored in checkout metadata
+  priceId: 'prod_xxx',           // Your provider's product/price ID
+  successUrl: `${appUrl}/dashboard/billing?purchase=success`,
+  cancelUrl: `${appUrl}/dashboard/billing`,
+  customerEmail: user.email,
+  customerId: subscription.externalCustomerId,  // Optional: pre-fill customer
+  metadata: {
+    type: 'credit_pack',         // Custom metadata — available in webhook
+    credits: '100',
+    userId,
+  },
+})
+
+return Response.json({ success: true, data: { url: session.url } })
+```
+
+**Provider notes:**
+- **Stripe:** Maps to `mode: 'payment'` checkout session with `payment_method_types`
+- **Polar:** Maps to `checkouts.create` with `allowTrial: false`; product type (one-time vs recurring) is configured in the Polar dashboard, not in code
+
+### Handling the Completed Payment (Webhook Extension)
+
+When the payment completes, the webhook fires an `order.paid` (Polar) or `checkout.session.completed` (Stripe with `mode: 'payment'`) event. Use the **webhook extension** to handle it:
+
+```typescript
+// lib/billing/polar-webhook-extensions.ts  (or stripe-webhook-extensions.ts)
+import type { PolarWebhookExtensions } from '@nextsparkjs/core/lib/billing/polar-webhook'
+
+export const polarWebhookExtensions: PolarWebhookExtensions = {
+  onOneTimePaymentCompleted: async (order, context) => {
+    const { type, credits, userId } = order.metadata
+
+    if (type === 'credit_pack' && credits) {
+      // Add credits to the team's balance
+      await addCredits(context.teamId, parseInt(credits, 10))
+    }
+  }
+}
+```
+
+See the [Webhook Extensions](#webhook-extensions) section for full details.
+
+---
 
 ## Plan Changes (Upgrade/Downgrade)
 
@@ -572,28 +734,44 @@ Configure in `vercel.json`:
 **Always verify webhook signatures regardless of provider:**
 
 ```typescript
-// Via gateway (recommended for consumer code)
+// Via gateway (recommended — provider-agnostic)
 const event = getBillingGateway().verifyWebhookSignature(payload, signatureOrHeaders)
 
-// Stripe verifies against a single 'stripe-signature' header
-// Polar validates against ALL request headers
+// Stripe: verifies against a single 'stripe-signature' header
+// Polar: validates against ALL request headers (webhook-id, webhook-timestamp, webhook-signature)
+```
+
+Never skip signature verification. Unsigned requests should always return 400.
+
+### Rate Limiting on Webhook Endpoints
+
+Both webhook routes are wrapped with `withRateLimitTier('strict')` — 10 requests per hour per IP. This defends against flood attacks while allowing legitimate webhook retries.
+
+Signature verification is the **primary** security layer. Rate limiting is a secondary defense against denial-of-service.
+
+```typescript
+// Both webhook routes follow this pattern
+export const POST = withRateLimitTier(handleWebhook, 'strict')
 ```
 
 ### Idempotency
 
-Handle duplicate webhook events:
+Payment providers retry failed webhooks. Always check for duplicates before processing:
 
 ```typescript
-// Check if event already processed
-const existing = await db.query(
-  `SELECT id FROM "billingEvents"
-   WHERE metadata->>'externalEventId' = $1`,
+// Stripe webhooks store event ID in metadata
+const existing = await queryOne(
+  `SELECT id FROM "billing_events" WHERE metadata->>'stripeEventId' = $1`,
   [event.id]
 )
 
-if (existing.length > 0) {
-  return { received: true, status: 'duplicate' }
-}
+// Polar webhooks use the webhook-id header
+const existing = await queryOne(
+  `SELECT id FROM "billing_events" WHERE metadata->>'polarEventId' = $1`,
+  [eventId]
+)
+
+if (existing) return Response.json({ received: true, status: 'duplicate' })
 ```
 
 ## Testing

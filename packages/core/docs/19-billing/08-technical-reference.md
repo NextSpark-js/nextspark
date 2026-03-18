@@ -13,20 +13,22 @@ This document provides a comprehensive overview of the billing system's file str
 core/
 ├── lib/
 │   └── billing/
-│       ├── types.ts           # TypeScript types
-│       ├── config-types.ts    # Theme configuration interface
-│       ├── schema.ts          # Zod validation schemas
-│       ├── helpers.ts         # Pure utility functions
-│       ├── actions.ts         # Server-side business logic
-│       ├── usage.ts           # Usage tracking functions
-│       ├── enforcement.ts     # Downgrade policy enforcement
-│       ├── jobs.ts            # Lifecycle cron jobs
+│       ├── types.ts              # TypeScript types
+│       ├── config-types.ts       # Theme configuration interface
+│       ├── schema.ts             # Zod validation schemas
+│       ├── helpers.ts            # Pure utility functions
+│       ├── actions.ts            # Server-side business logic
+│       ├── usage.ts              # Usage tracking functions
+│       ├── enforcement.ts        # Downgrade policy enforcement
+│       ├── jobs.ts               # Lifecycle cron jobs
+│       ├── stripe-webhook.ts     # StripeWebhookExtensions interface
+│       ├── polar-webhook.ts      # PolarWebhookExtensions interface
 │       └── gateways/
-│           ├── interface.ts   # BillingGateway contract
-│           ├── types.ts       # Provider-agnostic result types
-│           ├── factory.ts     # getBillingGateway() singleton
-│           ├── stripe.ts      # StripeGateway implementation
-│           └── polar.ts       # PolarGateway implementation
+│           ├── interface.ts      # BillingGateway contract
+│           ├── types.ts          # Provider-agnostic result types
+│           ├── factory.ts        # getBillingGateway() singleton
+│           ├── stripe.ts         # StripeGateway implementation
+│           └── polar.ts          # PolarGateway implementation
 │
 ├── hooks/
 │   ├── useSubscription.ts     # Subscription context hook
@@ -58,6 +60,10 @@ core/
 contents/themes/{theme}/
 └── billing/
     └── billing.config.ts      # Theme configuration
+
+lib/billing/
+├── stripe-webhook-extensions.ts   # Project-level one-time payment handler (Stripe)
+└── polar-webhook-extensions.ts    # Project-level one-time payment handler (Polar)
 
 app/api/
 ├── v1/billing/
@@ -404,6 +410,20 @@ export async function trackUsage(params) {
 |------|-------------|
 | `BillingGateway` | Interface with checkout, portal, subscription, and webhook methods |
 
+**Key methods:**
+
+| Method | Description |
+|--------|-------------|
+| `createCheckoutSession` | Hosted checkout for recurring subscription |
+| `createOneTimeCheckout` | Hosted checkout for one-time purchases (credit packs, LTD) |
+| `createPortalSession` | Customer billing portal |
+| `updateSubscriptionPlan` | Upgrade / downgrade plan |
+| `cancelSubscriptionAtPeriodEnd` | Schedule cancellation at period end |
+| `cancelSubscriptionImmediately` | Revoke access immediately |
+| `reactivateSubscription` | Undo scheduled cancellation |
+| `getCustomer` / `createCustomer` | Customer management |
+| `verifyWebhookSignature` | Validate incoming webhook payload |
+
 ### gateways/types.ts
 
 **Purpose:** Provider-agnostic return types (no Stripe.* or Polar.* types).
@@ -451,6 +471,65 @@ export async function trackUsage(params) {
 |--------|-------------|
 | `PolarGateway` | Class implementing `BillingGateway` with Polar SDK |
 | `getPolarInstance()` | Get lazy-loaded Polar SDK instance |
+
+**Polar-specific notes:**
+- `providerPriceIds` in `billing.config.ts` should contain Polar **product IDs** (not price IDs)
+- `createOneTimeCheckout` sets `allowTrial: false` to prevent accidental trials on one-time purchases
+- `createPortalSession` uses Polar "customer sessions" (no hosted portal page)
+- Webhook verification requires ALL headers (`webhook-id`, `webhook-timestamp`, `webhook-signature`)
+- `cancelSubscriptionImmediately` maps to Polar's `subscriptions.revoke`
+
+---
+
+### stripe-webhook.ts
+
+**Purpose:** Extension interfaces for the Stripe webhook handler.
+
+**Exports:**
+
+| Type | Description |
+|------|-------------|
+| `StripeWebhookExtensions` | Interface with optional `onOneTimePaymentCompleted` handler |
+| `StripeSessionData` | Provider-agnostic Stripe checkout session data |
+| `OneTimePaymentContext` | `{ teamId, userId }` passed to extension handlers |
+
+**Usage:** Import the interface in `lib/billing/stripe-webhook-extensions.ts` to implement one-time payment logic without modifying core webhook handlers.
+
+---
+
+### polar-webhook.ts
+
+**Purpose:** Extension interfaces for the Polar webhook handler.
+
+**Exports:**
+
+| Type | Description |
+|------|-------------|
+| `PolarWebhookExtensions` | Interface with optional `onOneTimePaymentCompleted` handler |
+| `PolarOrderData` | Provider-agnostic Polar order data |
+| `OneTimePaymentContext` | `{ teamId, userId }` passed to extension handlers |
+
+**Usage:** Import the interface in `lib/billing/polar-webhook-extensions.ts` to implement one-time payment logic without modifying core webhook handlers.
+
+---
+
+### lib/billing/stripe-webhook-extensions.ts (project-level)
+
+**Purpose:** Project-level override stub for handling Stripe one-time payment events.
+
+**Default:** Empty `stripeWebhookExtensions = {}` — no one-time payment handling.
+
+**Override to add:** Credit pack fulfillment, lifetime deal activation, upsell processing.
+
+---
+
+### lib/billing/polar-webhook-extensions.ts (project-level)
+
+**Purpose:** Project-level override stub for handling Polar one-time payment events.
+
+**Default:** Empty `polarWebhookExtensions = {}` — no one-time payment handling.
+
+**Override to add:** Same use cases as Stripe extension.
 
 ---
 
