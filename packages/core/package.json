@@ -164,6 +164,14 @@
       "types": "./dist/lib/billing/config-types.d.ts",
       "import": "./dist/lib/billing/config-types.js"
     },
+    "./lib/billing/stripe-webhook": {
+      "types": "./dist/lib/billing/stripe-webhook.d.ts",
+      "import": "./dist/lib/billing/stripe-webhook.js"
+    },
+    "./lib/billing/polar-webhook": {
+      "types": "./dist/lib/billing/polar-webhook.d.ts",
+      "import": "./dist/lib/billing/polar-webhook.js"
+    },
     "./lib/services/index": {
       "types": "./dist/lib/services/index.d.ts",
       "import": "./dist/lib/services/index.js"
