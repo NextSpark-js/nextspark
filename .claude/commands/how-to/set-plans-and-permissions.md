@@ -7,7 +7,7 @@ Interactive guide to configure subscription plans, features, and billing in Next
 ## Required Skills
 
 Before executing, these skills provide deeper context:
-- `.claude/skills/billing-subscriptions/SKILL.md` - Stripe integration and billing patterns
+- `.claude/skills/billing-subscriptions/SKILL.md` - Multi-provider billing and Gateway Factory patterns
 - `.claude/skills/permissions-system/SKILL.md` - Three-layer permission model
 
 ---
@@ -22,7 +22,7 @@ Before executing, these skills provide deeper context:
 
 ## Behavior
 
-Guides the user through configuring subscription plans with features, usage limits, and Stripe integration.
+Guides the user through configuring subscription plans with features, usage limits, and payment provider integration.
 
 ---
 
@@ -43,8 +43,8 @@ Step 3: Define Usage Limits (Quotas)
 Step 4: Configure Plans
         └── Create free, pro, enterprise plans
 
-Step 5: Set Up Stripe
-        └── Create products and prices
+Step 5: Set Up Payment Provider
+        └── Create products and prices (Stripe or Polar)
 
 Step 6: Test the Checkout Flow
         └── Verify the complete flow
@@ -327,8 +327,7 @@ export const billingConfig: BillingConfig = {
         api_calls: 1000,
         email_sends: 100,
       },
-      stripePriceIdMonthly: null,
-      stripePriceIdYearly: null,
+      // No price IDs for free plan
     },
 
     // PRO PLAN
@@ -357,8 +356,10 @@ export const billingConfig: BillingConfig = {
         api_calls: 100000,
         email_sends: 5000,
       },
-      stripePriceIdMonthly: 'price_xxx_monthly',  // From Stripe
-      stripePriceIdYearly: 'price_xxx_yearly',
+      providerPriceIds: {
+        monthly: 'price_xxx_monthly',  // From your payment provider
+        yearly: 'price_xxx_yearly',
+      },
     },
 
     // ENTERPRISE PLAN
@@ -386,7 +387,7 @@ export const billingConfig: BillingConfig = {
 📋 Plan Types:
 
 • 'free'       - No payment required
-• 'paid'       - Requires Stripe subscription
+• 'paid'       - Requires payment subscription
 • 'enterprise' - Custom pricing (contact sales)
 
 📋 Visibility:
@@ -398,27 +399,30 @@ export const billingConfig: BillingConfig = {
 
 What would you like to do?
 
-[1] Continue to Step 5 (Stripe Setup)
+[1] Continue to Step 5 (Payment Provider Setup)
 [2] How do I add more plan tiers?
 [3] Show me the pricing page component
 ```
 
 ---
 
-## Step 5: Set Up Stripe
+## Step 5: Set Up Payment Provider
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-STEP 5 OF 6: Set Up Stripe
+STEP 5 OF 6: Set Up Payment Provider
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1️⃣  Create Stripe Products and Prices:
+1️⃣  Create Products and Prices in your provider:
 
-In Stripe Dashboard (dashboard.stripe.com):
-
+For Stripe (dashboard.stripe.com):
 • Products → Add Product → "Pro Plan"
 • Add Price → $29/month → Copy price_xxx_monthly
 • Add Price → $290/year → Copy price_xxx_yearly
+
+For Polar (polar.sh):
+• Products → Create Product → Set pricing
+• Copy the Product Price ID
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -426,9 +430,16 @@ In Stripe Dashboard (dashboard.stripe.com):
 
 ```env
 # .env.local
+
+# For Stripe:
 STRIPE_SECRET_KEY=sk_test_xxx
 STRIPE_PUBLISHABLE_KEY=pk_test_xxx
 STRIPE_WEBHOOK_SECRET=whsec_xxx
+
+# For Polar:
+POLAR_ACCESS_TOKEN=pat_xxx
+POLAR_WEBHOOK_SECRET=whsec_xxx
+POLAR_SERVER=sandbox
 ```
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -440,8 +451,10 @@ STRIPE_WEBHOOK_SECRET=whsec_xxx
 {
   slug: 'pro',
   // ...
-  stripePriceIdMonthly: 'price_1xxx',  // From Stripe
-  stripePriceIdYearly: 'price_1yyy',
+  providerPriceIds: {
+    monthly: 'price_1xxx',  // From your provider
+    yearly: 'price_1yyy',
+  },
 }
 ```
 
@@ -449,23 +462,17 @@ STRIPE_WEBHOOK_SECRET=whsec_xxx
 
 4️⃣  Set Up Webhook:
 
-In Stripe Dashboard → Webhooks → Add endpoint:
-
+For Stripe: Dashboard → Webhooks → Add endpoint
 URL: https://your-domain.com/api/v1/billing/webhooks/stripe
 
-Events to listen for:
-• checkout.session.completed
-• invoice.paid
-• invoice.payment_failed
-• customer.subscription.updated
-• customer.subscription.deleted
+For Polar: Organization Settings → Webhooks → Add endpoint
+URL: https://your-domain.com/api/v1/billing/webhooks/polar
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-5️⃣  Test with Stripe CLI (development):
+5️⃣  Test locally (Stripe example):
 
 ```bash
-# Install Stripe CLI
 stripe listen --forward-to localhost:3000/api/v1/billing/webhooks/stripe
 ```
 
@@ -474,7 +481,7 @@ stripe listen --forward-to localhost:3000/api/v1/billing/webhooks/stripe
 What would you like to do?
 
 [1] Continue to Step 6 (Test Checkout)
-[2] I have questions about Stripe setup
+[2] I have questions about provider setup
 [3] Help me set up webhook forwarding
 ```
 
@@ -536,7 +543,7 @@ node core/scripts/build/registry.mjs
 
 • Go to /pricing (or /dashboard/settings/billing)
 • Click "Upgrade to Pro"
-• Use Stripe test card: 4242 4242 4242 4242
+• Use test card (Stripe): 4242 4242 4242 4242
 • Complete checkout
 • Verify webhook updates subscription
 • Check features are now available
@@ -557,7 +564,7 @@ You've configured:
 • Feature flags for plan gating
 • Usage limits and quotas
 • Subscription plans with pricing
-• Stripe integration
+• Payment provider integration (Stripe or Polar)
 
 📚 Related tutorials:
    • /how-to:set-user-roles-and-permissions - RBAC configuration

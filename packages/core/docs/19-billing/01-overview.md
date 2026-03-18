@@ -126,7 +126,7 @@ The billing system follows the framework's Core/Theme separation:
 - Plan definitions
 - Feature and limit definitions
 - Action mappings
-- Stripe Price IDs
+- Provider Price IDs
 
 ### Registry Pattern
 
@@ -227,11 +227,11 @@ if (!result.allowed) {
 
 ### Payment Integration
 
-Stripe integration for real payments:
+Payment provider integration (Stripe, Polar, and more) via the Gateway Factory pattern:
 
-- **Hosted Checkout:** Redirect to Stripe for payment
+- **Hosted Checkout:** Redirect to provider for payment
 - **Customer Portal:** Self-service billing management
-- **Webhooks:** Automatic subscription updates
+- **Webhooks:** Automatic subscription updates (provider-specific routes)
 - **Lifecycle Jobs:** Trial expiration, grace periods
 
 ## Next Steps
@@ -239,7 +239,7 @@ Stripe integration for real payments:
 - [Configuration Guide](./02-configuration.md) - Theme billing configuration
 - [Hooks & Context](./03-hooks-context.md) - React integration
 - [API Reference](./04-api-reference.md) - Endpoint documentation
-- [Payment Integration](./05-payment-integration.md) - Stripe setup
+- [Payment Integration](./05-payment-integration.md) - Provider setup
 - [Usage Tracking](./06-usage-tracking.md) - Quota management
 - [Pricing Strategies](./07-pricing-strategies.md) - SaaS examples
 - [Technical Reference](./08-technical-reference.md) - File structure

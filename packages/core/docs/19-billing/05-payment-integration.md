@@ -1,54 +1,109 @@
 ---
-title: Payment Integration
-description: Stripe integration for subscription payments
+title: Payment Provider Integration
+description: Multi-provider payment integration for subscription payments
 ---
 
-# Payment Integration
+# Payment Provider Integration
 
-The billing system integrates with Stripe for payment processing using Hosted Checkout (no embedded forms, simpler PCI compliance).
+The billing system supports multiple payment providers through a **Gateway Factory** pattern. Providers are abstracted behind a unified `BillingGateway` interface, so consumer code never imports from a specific provider.
 
 ## Architecture
 
 ```
-User → Checkout Button → API → Stripe Checkout → Webhook → Database
-         ↓                        ↓                    ↓
-    Creates session         Payment processed    Subscription updated
+User -> Checkout Button -> API -> getBillingGateway() -> Provider SDK -> Webhook -> Database
+                                       |
+                            StripeGateway / PolarGateway
+```
+
+```
+core/lib/billing/gateways/
+├── interface.ts     # BillingGateway contract
+├── types.ts         # Provider-agnostic result types
+├── factory.ts       # getBillingGateway() singleton factory
+├── stripe.ts        # StripeGateway implements BillingGateway
+└── polar.ts         # PolarGateway implements BillingGateway
+```
+
+### Gateway Factory Pattern
+
+Consumer code always uses the factory — never imports from a specific provider:
+
+```typescript
+import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
+
+// Works with any configured provider (Stripe, Polar, etc.)
+const session = await getBillingGateway().createCheckoutSession(params)
+const portal = await getBillingGateway().createPortalSession(params)
+await getBillingGateway().cancelSubscriptionAtPeriodEnd(subscriptionId)
+```
+
+The factory reads `BILLING_REGISTRY.provider` (from `billing.config.ts`) and instantiates the correct gateway class.
+
+### BillingGateway Interface
+
+All providers implement this contract:
+
+```typescript
+// core/lib/billing/gateways/interface.ts
+export interface BillingGateway {
+  createCheckoutSession(params: CreateCheckoutParams): Promise<CheckoutSessionResult>
+  createPortalSession(params: CreatePortalParams): Promise<PortalSessionResult>
+  getCustomer(customerId: string): Promise<CustomerResult>
+  createCustomer(params: CreateCustomerParams): Promise<CustomerResult>
+  updateSubscriptionPlan(params: UpdateSubscriptionParams): Promise<SubscriptionResult>
+  cancelSubscriptionAtPeriodEnd(subscriptionId: string): Promise<SubscriptionResult>
+  cancelSubscriptionImmediately(subscriptionId: string): Promise<SubscriptionResult>
+  reactivateSubscription(subscriptionId: string): Promise<SubscriptionResult>
+  verifyWebhookSignature(payload: string | Buffer, signatureOrHeaders: string | Record<string, string>): WebhookEventResult
+}
+```
+
+Return types are provider-agnostic (no `Stripe.*` or Polar types in consumer code):
+
+```typescript
+// core/lib/billing/gateways/types.ts
+export interface CheckoutSessionResult { id: string; url: string | null }
+export interface PortalSessionResult { url: string }
+export interface SubscriptionResult { id: string; status: string; cancelAtPeriodEnd: boolean }
+export interface CustomerResult { id: string; email: string | null; name: string | null }
+export interface WebhookEventResult { id: string; type: string; data: Record<string, unknown> }
 ```
 
 ## Setup
 
-### 1. Stripe Account
+### 1. Choose Your Provider
 
-1. Create a [Stripe account](https://stripe.com)
-2. Get your API keys from the [Dashboard](https://dashboard.stripe.com/apikeys)
-3. Create products and prices
+Set the provider in your theme's `billing.config.ts`:
+
+```typescript
+export const billingConfig: BillingConfig = {
+  provider: 'stripe',  // or 'polar'
+  // ...
+}
+```
 
 ### 2. Environment Variables
 
+Configure credentials for your chosen provider:
+
 ```env
-# Required for payments
+# === Stripe ===
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_PUBLISHABLE_KEY=pk_test_...
-
-# Required for webhooks
 STRIPE_WEBHOOK_SECRET=whsec_...
 
-# Required for lifecycle cron
+# === Polar ===
+POLAR_ACCESS_TOKEN=pat_...
+POLAR_WEBHOOK_SECRET=whsec_...
+POLAR_SERVER=sandbox   # 'sandbox' or 'production'
+
+# === Cron (required for all providers) ===
 CRON_SECRET=your-secure-secret
 ```
 
-### 3. Products and Prices
+### 3. Configure Price IDs
 
-Create products in Stripe Dashboard:
-
-1. Go to **Products** → **Add Product**
-2. Name: "Pro Plan"
-3. Add **Recurring Prices**:
-   - Monthly: $29.00/month
-   - Yearly: $290.00/year
-4. Copy Price IDs (starts with `price_`)
-
-### 4. Configure billing.config.ts
+Create products/prices in your provider's dashboard, then add the IDs to your plans:
 
 ```typescript
 plans: [
@@ -56,9 +111,10 @@ plans: [
     slug: 'pro',
     name: 'billing.plans.pro.name',
     price: { monthly: 2900, yearly: 29000 },
-    // Add Stripe Price IDs
-    stripePriceIdMonthly: 'price_1ABC123monthly',
-    stripePriceIdYearly: 'price_1ABC123yearly',
+    providerPriceIds: {
+      monthly: 'price_1ABC123monthly',  // From Stripe or Polar dashboard
+      yearly: 'price_1ABC123yearly',
+    },
   }
 ]
 ```
@@ -93,7 +149,7 @@ function UpgradeButton({ planSlug, billingPeriod }) {
       const data = await response.json()
 
       if (data.success) {
-        // Redirect to Stripe Checkout
+        // Redirect to provider's hosted checkout
         window.location.href = data.data.url
       } else {
         toast.error(data.error || 'Failed to start checkout')
@@ -116,55 +172,60 @@ function UpgradeButton({ planSlug, billingPeriod }) {
 ### Backend (Checkout Session)
 
 ```typescript
-// core/lib/billing/gateways/stripe.ts
+// app/api/v1/billing/checkout/route.ts
+import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
 
-export async function createCheckoutSession(
-  params: CreateCheckoutParams
-): Promise<Stripe.Checkout.Session> {
-  const { teamId, planSlug, billingPeriod, successUrl, cancelUrl } = params
+export async function POST(request: NextRequest) {
+  // 1. Authenticate + validate + check permissions
+  // ...
 
-  // Get price ID from config
-  const planConfig = BILLING_REGISTRY.plans.find(p => p.slug === planSlug)
-  const priceId = billingPeriod === 'yearly'
-    ? planConfig.stripePriceIdYearly
-    : planConfig.stripePriceIdMonthly
+  // 2. Create checkout session via gateway (works for any provider)
+  const session = await getBillingGateway().createCheckoutSession({
+    teamId,
+    planSlug,
+    billingPeriod,
+    successUrl: `${appUrl}/dashboard/settings/billing?success=true`,
+    cancelUrl: `${appUrl}/dashboard/settings/billing?canceled=true`,
+    customerEmail: user.email,
+    customerId: existingCustomerId,
+  })
 
-  return getStripe().checkout.sessions.create({
-    mode: 'subscription',
-    payment_method_types: ['card'],
-    line_items: [{ price: priceId, quantity: 1 }],
-    success_url: successUrl,
-    cancel_url: cancelUrl,
-    metadata: { teamId, planSlug, billingPeriod },
-    client_reference_id: teamId,
-    // Add trial if configured
-    subscription_data: planConfig.trialDays > 0
-      ? { trial_period_days: planConfig.trialDays }
-      : undefined
+  return Response.json({
+    success: true,
+    data: { url: session.url, sessionId: session.id }
   })
 }
 ```
 
 ## Webhooks
 
-### Webhook Endpoint
+Webhook routes are **provider-specific by design** — they need raw provider types for proper event handling and type narrowing.
+
+### Stripe Webhooks
 
 ```typescript
 // app/api/v1/billing/webhooks/stripe/route.ts
+// NOTE: Webhook routes bypass the gateway factory because they need
+// raw provider types for exhaustive switch type narrowing.
+import Stripe from 'stripe'
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 export async function POST(request: NextRequest) {
   const payload = await request.text()
   const signature = request.headers.get('stripe-signature')
 
-  // MANDATORY: Verify signature
+  // Verify signature using raw Stripe SDK
   let event: Stripe.Event
   try {
-    event = verifyWebhookSignature(payload, signature)
+    event = stripe.webhooks.constructEvent(
+      payload, signature!, process.env.STRIPE_WEBHOOK_SECRET!
+    )
   } catch (error) {
     return Response.json({ error: 'Invalid signature' }, { status: 400 })
   }
 
-  // Handle events
+  // Handle events with full Stripe types
   switch (event.type) {
     case 'checkout.session.completed':
       await handleCheckoutCompleted(event.data.object)
@@ -187,11 +248,72 @@ export async function POST(request: NextRequest) {
 }
 ```
 
-### Key Webhook Handlers
+**Stripe Webhook Setup:**
 
-#### checkout.session.completed
+Local Development:
+```bash
+# Install Stripe CLI
+brew install stripe/stripe-cli/stripe
 
-User completed payment:
+# Forward webhooks
+stripe listen --forward-to localhost:5173/api/v1/billing/webhooks/stripe
+```
+
+Production:
+1. Go to [Stripe Webhooks](https://dashboard.stripe.com/webhooks)
+2. Add endpoint: `https://your-app.com/api/v1/billing/webhooks/stripe`
+3. Select events: `checkout.session.completed`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.updated`, `customer.subscription.deleted`
+4. Copy signing secret to `STRIPE_WEBHOOK_SECRET`
+
+### Polar Webhooks
+
+```typescript
+// app/api/v1/billing/webhooks/polar/route.ts
+import { validateEvent, WebhookVerificationError } from '@polar-sh/sdk/webhooks'
+
+export async function POST(request: NextRequest) {
+  const payload = await request.text()
+  const headers = Object.fromEntries(request.headers.entries())
+
+  try {
+    const event = validateEvent(payload, headers, process.env.POLAR_WEBHOOK_SECRET!)
+
+    switch (event.type) {
+      case 'order.paid':
+        await handleOrderPaid(event.data)
+        break
+      case 'subscription.active':
+        await handleSubscriptionActive(event.data)
+        break
+      case 'subscription.canceled':
+        await handleSubscriptionCanceled(event.data)
+        break
+      case 'subscription.revoked':
+        await handleSubscriptionRevoked(event.data)
+        break
+      case 'subscription.uncanceled':
+        await handleSubscriptionUncanceled(event.data)
+        break
+    }
+
+    return NextResponse.json({ received: true })
+  } catch (error) {
+    if (error instanceof WebhookVerificationError) {
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 403 })
+    }
+    throw error
+  }
+}
+```
+
+**Polar Webhook Setup:**
+
+1. Go to your Polar organization settings
+2. Add webhook endpoint: `https://your-app.com/api/v1/billing/webhooks/polar`
+3. Select events: `order.paid`, `subscription.active`, `subscription.canceled`, `subscription.revoked`, `subscription.uncanceled`
+4. Copy the webhook secret to `POLAR_WEBHOOK_SECRET`
+
+### Key Webhook Handler: checkout.session.completed (Stripe)
 
 ```typescript
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
@@ -199,7 +321,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const subscriptionId = session.subscription as string
   const customerId = session.customer as string
 
-  // Update subscription with Stripe IDs
+  // Update subscription with provider IDs
   await db.query(`
     UPDATE subscriptions
     SET "externalSubscriptionId" = $1,
@@ -211,51 +333,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 }
 ```
 
-#### invoice.payment_failed
-
-Payment failed:
-
-```typescript
-async function handlePaymentFailed(invoice: Stripe.Invoice) {
-  const subscriptionId = invoice.subscription
-
-  await db.query(`
-    UPDATE subscriptions
-    SET status = 'past_due'
-    WHERE "externalSubscriptionId" = $1
-  `, [subscriptionId])
-}
-```
-
-### Webhook Setup
-
-**Local Development:**
-
-```bash
-# Install Stripe CLI
-brew install stripe/stripe-cli/stripe
-
-# Forward webhooks
-stripe listen --forward-to localhost:5173/api/v1/billing/webhooks/stripe
-```
-
-Copy the webhook signing secret (starts with `whsec_`).
-
-**Production:**
-
-1. Go to [Stripe Webhooks](https://dashboard.stripe.com/webhooks)
-2. Add endpoint: `https://your-app.com/api/v1/billing/webhooks/stripe`
-3. Select events:
-   - `checkout.session.completed`
-   - `invoice.paid`
-   - `invoice.payment_failed`
-   - `customer.subscription.updated`
-   - `customer.subscription.deleted`
-4. Copy signing secret to `STRIPE_WEBHOOK_SECRET`
-
 ## Plan Changes (Upgrade/Downgrade)
-
-Handle plan upgrades and downgrades with automatic proration:
 
 ### Frontend
 
@@ -287,7 +365,6 @@ function ChangePlanButton({ targetPlanSlug, billingInterval = 'monthly' }) {
           data.data.warnings.forEach(warning => toast.warning(warning))
         }
         toast.success('Plan changed successfully')
-        // Refresh subscription context
       } else {
         toast.error(data.error || 'Failed to change plan')
       }
@@ -308,10 +385,10 @@ function ChangePlanButton({ targetPlanSlug, billingInterval = 'monthly' }) {
 
 ### Proration Behavior
 
-Stripe handles proration automatically:
+The payment provider handles proration automatically:
 - **Upgrade:** User is charged the prorated difference immediately
 - **Downgrade:** Credit is applied to the next invoice
-- No manual calculation needed - Stripe's `proration_behavior: 'create_prorations'` handles everything
+- No manual calculation needed
 
 ### Downgrade Warnings
 
@@ -356,23 +433,22 @@ function BillingSettings() {
 ### Backend
 
 ```typescript
-// core/lib/billing/gateways/stripe.ts
+// app/api/v1/billing/portal/route.ts
+import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
 
-export async function createPortalSession(
-  params: CreatePortalParams
-): Promise<Stripe.BillingPortal.Session> {
-  return getStripe().billingPortal.sessions.create({
-    customer: params.customerId,
-    return_url: params.returnUrl
-  })
-}
+const session = await getBillingGateway().createPortalSession({
+  customerId: subscription.externalCustomerId,
+  returnUrl: `${appUrl}/dashboard/settings/billing`,
+})
+
+return Response.json({ success: true, data: { url: session.url } })
 ```
 
 ---
 
 ## Subscription Cancellation
 
-Handle subscription cancellation directly (without Stripe Portal):
+Handle subscription cancellation directly (without provider portal):
 
 ### Frontend
 
@@ -471,40 +547,36 @@ Configure in `vercel.json`:
 
 ### Tasks
 
-1. **Expire Trials:** Subscriptions where `trialEndsAt < now` → status = `expired`
-2. **Handle Past Due:** Subscriptions `past_due` > 3 days → status = `expired`
+1. **Expire Trials:** Subscriptions where `trialEndsAt < now` -> status = `expired`
+2. **Handle Past Due:** Subscriptions `past_due` > 3 days -> status = `expired`
 3. **Reset Usage:** Archive previous month's usage (1st of each month)
 
 ## Status Mapping
 
-| Stripe Status | Our Status |
-|---------------|------------|
+| Provider Status | Our Status |
+|-----------------|------------|
 | `trialing` | `trialing` |
 | `active` | `active` |
 | `past_due` | `past_due` |
 | `canceled` | `canceled` |
-| `unpaid` | `past_due` |
-| `incomplete` | `past_due` |
+| `unpaid` / `incomplete` | `past_due` |
 | `incomplete_expired` | `expired` |
 | `paused` | `paused` |
+
+> Stripe status mapping shown above. Each gateway normalizes its provider-specific statuses to these internal values; raw status names differ per provider (e.g., Polar uses `revoked` instead of `canceled`).
 
 ## Security
 
 ### Webhook Signature Verification
 
-**Always verify webhook signatures:**
+**Always verify webhook signatures regardless of provider:**
 
 ```typescript
-export function verifyWebhookSignature(
-  payload: string | Buffer,
-  signature: string
-): Stripe.Event {
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
-  if (!webhookSecret) {
-    throw new Error('STRIPE_WEBHOOK_SECRET not configured')
-  }
-  return getStripe().webhooks.constructEvent(payload, signature, webhookSecret)
-}
+// Via gateway (recommended for consumer code)
+const event = getBillingGateway().verifyWebhookSignature(payload, signatureOrHeaders)
+
+// Stripe verifies against a single 'stripe-signature' header
+// Polar validates against ALL request headers
 ```
 
 ### Idempotency
@@ -515,7 +587,7 @@ Handle duplicate webhook events:
 // Check if event already processed
 const existing = await db.query(
   `SELECT id FROM "billingEvents"
-   WHERE metadata->>'stripeEventId' = $1`,
+   WHERE metadata->>'externalEventId' = $1`,
   [event.id]
 )
 
@@ -524,30 +596,15 @@ if (existing.length > 0) {
 }
 ```
 
-### Lazy Loading
-
-Stripe SDK is lazy-loaded to avoid initialization during build:
-
-```typescript
-let stripeInstance: Stripe | null = null
-
-function getStripe(): Stripe {
-  if (!stripeInstance) {
-    stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-      apiVersion: '2025-08-27.basil'
-    })
-  }
-  return stripeInstance
-}
-```
-
 ## Testing
 
 ### Test Mode
 
-Use Stripe test mode (API keys starting with `sk_test_` and `pk_test_`).
+Use your provider's test/sandbox mode:
+- **Stripe:** API keys starting with `sk_test_` and `pk_test_`
+- **Polar:** Set `POLAR_SERVER=sandbox`
 
-### Test Cards
+### Test Cards (Stripe-specific)
 
 | Card | Result |
 |------|--------|
@@ -558,15 +615,14 @@ Use Stripe test mode (API keys starting with `sk_test_` and `pk_test_`).
 ### Webhook Testing
 
 ```bash
-# Trigger test event
+# Stripe: Trigger test event
 stripe trigger checkout.session.completed
-
-# View webhook logs
 stripe logs tail
 ```
 
 ## Related
 
-- [Configuration](./02-configuration.md) - Stripe Price IDs
+- [Configuration](./02-configuration.md) - Provider Price IDs
 - [API Reference](./04-api-reference.md) - Endpoints
 - [Lifecycle Management](./06-usage-tracking.md#lifecycle-jobs) - Cron jobs
+- [Technical Reference](./08-technical-reference.md) - File structure

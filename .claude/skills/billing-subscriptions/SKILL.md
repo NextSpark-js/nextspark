@@ -20,7 +20,7 @@ BILLING ARCHITECTURE:
 
 Configuration Layer:
 contents/themes/{theme}/config/billing.config.ts
-├── provider: 'stripe' | 'polar' | 'paddle' | 'lemonsqueezy'
+├── provider: 'stripe' | 'polar'  # (paddle, lemonsqueezy, mercadopago: type defined, not yet implemented)
 ├── currency: 'usd' | 'eur' | ...
 ├── defaultPlan: 'free'
 ├── features: { featureSlug: FeatureDefinition }
@@ -37,7 +37,7 @@ core/lib/billing/
 │   ├── types.ts         # Provider-agnostic result types
 │   ├── interface.ts     # BillingGateway interface (contract)
 │   ├── factory.ts       # getBillingGateway() factory
-│   └── stripe.ts        # StripeGateway implements BillingGateway
+│   ├── stripe.ts        # StripeGateway implements BillingGateway
 │   └── polar.ts         # PolarGateway implements BillingGateway
 ├── queries.ts           # Database queries
 ├── enforcement.ts       # Limit/feature enforcement
@@ -150,23 +150,19 @@ import { createCheckoutSession } from '.../gateways/stripe'  // DEPRECATED
 
 ### Plan Price IDs
 
-Plans support both provider-specific and generic price IDs:
+Plans use `providerPriceIds` for price configuration (works with any provider):
 
 ```typescript
 // PlanDefinition in config-types.ts
 {
   slug: 'pro',
-  // Generic (checked first) - works with any provider
   providerPriceIds: {
     monthly: 'price_xxx_monthly',
     yearly: 'price_xxx_yearly',
   },
-  // Stripe-specific (fallback for backward compat)
-  stripePriceIdMonthly: 'price_pro_monthly',
-  stripePriceIdYearly: 'price_pro_yearly',
 }
 
-// PlanService.getPriceId() checks providerPriceIds first, falls back to stripe-specific
+// PlanService.getPriceId() reads from providerPriceIds
 const priceId = PlanService.getPriceId('pro', 'monthly')
 ```
 
@@ -237,13 +233,16 @@ export class StripeGateway implements BillingGateway {
 // app/api/v1/billing/webhooks/stripe/route.ts
 // NOTE: Webhook routes stay provider-specific by design.
 // They need raw provider types for proper type narrowing.
-import { getStripeInstance } from '@nextsparkjs/core/lib/billing/gateways/stripe'
-import type Stripe from 'stripe'
+import Stripe from 'stripe'
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 export async function POST(request: NextRequest) {
   const payload = await request.text()
   const signature = request.headers.get('stripe-signature')!
-  const event = getStripeInstance().webhooks.constructEvent(payload, signature, secret)
+  const event = stripe.webhooks.constructEvent(
+    payload, signature, process.env.STRIPE_WEBHOOK_SECRET!
+  )
 
   switch (event.type) {
     case 'checkout.session.completed':
@@ -659,15 +658,11 @@ export const billingConfig: BillingConfig = {
       features: ['basic_analytics', 'advanced_analytics', 'api_access'],
       limits: { team_members: 15, tasks: 1000, api_calls: 100000 },
 
-      // Generic price IDs (preferred - works with any provider)
+      // Price IDs from your payment provider dashboard
       providerPriceIds: {
         monthly: 'price_pro_monthly',
         yearly: 'price_pro_yearly',
       },
-
-      // OR Stripe-specific (backward compat)
-      stripePriceIdMonthly: 'price_pro_monthly',
-      stripePriceIdYearly: 'price_pro_yearly',
     },
     {
       slug: 'enterprise',
@@ -784,8 +779,8 @@ CREATE TABLE plans (
   "trialDays" INTEGER DEFAULT 0,
   features JSONB DEFAULT '[]',
   limits JSONB DEFAULT '{}',
-  "stripePriceIdMonthly" TEXT,
-  "stripePriceIdYearly" TEXT,
+  -- Price IDs stored in providerPriceIds (via billing.config.ts)
+  -- Legacy: stripePriceIdMonthly/Yearly columns may exist in older migrations but are unused
   "createdAt" TIMESTAMPTZ DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ DEFAULT NOW()
 );
@@ -829,7 +824,7 @@ POLAR_SERVER=sandbox                  # 'sandbox' or 'production'
 
 ```typescript
 // NEVER: Import from specific provider in consumers
-import { createCheckoutSession } from '.../gateways/stripe'  // DEPRECATED
+import { createCheckoutSession } from '.../gateways/stripe'  // REMOVED
 
 // CORRECT: Use factory
 import { getBillingGateway } from '.../gateways/factory'
@@ -841,7 +836,7 @@ const session: Stripe.Checkout.Session = ...
 // CORRECT: Use provider-agnostic types
 const session: CheckoutSessionResult = ...
 
-// NEVER: Use getStripePriceId (deprecated)
+// NEVER: Use getStripePriceId (removed)
 PlanService.getStripePriceId('pro', 'monthly')
 
 // CORRECT: Use generic getPriceId
@@ -885,7 +880,7 @@ if (current >= limit) return false
 ### General (all providers)
 
 - [ ] Provider selected in `billing.config.ts`
-- [ ] Plans defined with price IDs (providerPriceIds or stripe-specific)
+- [ ] Plans defined with price IDs (providerPriceIds)
 - [ ] Features and limits defined
 - [ ] Action mappings configured
 - [ ] Team-based subscription created on team creation

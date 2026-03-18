@@ -129,9 +129,9 @@ GET /api/v1/teams/{teamId}/usage/{limitSlug}
 
 ---
 
-### Create Checkout Session (Stripe)
+### Create Checkout Session
 
-Create a Stripe Checkout session for upgrading.
+Create a checkout session for upgrading (via the configured payment provider).
 
 ```
 POST /api/v1/billing/checkout
@@ -157,8 +157,8 @@ POST /api/v1/billing/checkout
 {
   "success": true,
   "data": {
-    "url": "https://checkout.stripe.com/c/pay/cs_test_...",
-    "sessionId": "cs_test_..."
+    "url": "https://checkout.provider.com/pay/...",
+    "sessionId": "cs_..."
   }
 }
 ```
@@ -203,7 +203,7 @@ GET /api/v1/billing/plans
 
 ### Create Customer Portal Session
 
-Create a Stripe Customer Portal session for billing management.
+Create a Customer Portal session for billing management (via the configured payment provider).
 
 ```
 POST /api/v1/billing/portal
@@ -220,7 +220,7 @@ POST /api/v1/billing/portal
 {
   "success": true,
   "data": {
-    "url": "https://billing.stripe.com/p/session/..."
+    "url": "https://billing.provider.com/session/..."
   }
 }
 ```
@@ -332,17 +332,17 @@ POST /api/v1/billing/change-plan
 **Behavior:**
 - **Upgrade:** Immediate access to new features, prorated charge
 - **Downgrade:** Allowed with warnings (soft limit policy), prorated credit
-- Stripe handles proration automatically (`proration_behavior: 'create_prorations'`)
+- Payment provider handles proration automatically
 
 **Errors:**
 - `403` - Insufficient permissions (requires `team.billing.manage` - owner only)
-- `400` - No active subscription / Plan not found / No Stripe price configured
+- `400` - No active subscription / Plan not found / No price configured for provider
 
 ---
 
-### Stripe Webhooks
+### Webhooks (Provider-Specific)
 
-Handle Stripe webhook events.
+Handle payment provider webhook events. Each provider has its own webhook route.
 
 ```
 POST /api/v1/billing/webhooks/stripe
@@ -583,6 +583,6 @@ fetch('/api/v1/billing/check-action', {
 
 ## Related
 
-- [Payment Integration](./05-payment-integration.md) - Stripe setup
+- [Payment Integration](./05-payment-integration.md) - Provider setup
 - [Usage Tracking](./06-usage-tracking.md) - Tracking usage
 - [Hooks & Context](./03-hooks-context.md) - Frontend integration

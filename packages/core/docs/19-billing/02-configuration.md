@@ -19,7 +19,7 @@ contents/themes/{your-theme}/config/billing.config.ts
 // core/lib/billing/config-types.ts
 
 interface BillingConfig {
-  /** Payment provider: stripe, paddle, lemonsqueezy */
+  /** Payment provider: stripe | polar (paddle, lemonsqueezy, mercadopago: type defined, not yet implemented) */
   provider: PaymentProvider
 
   /** Default currency (ISO 4217) */
@@ -129,8 +129,7 @@ export const billingConfig: BillingConfig = {
         api_calls: 1000,
         storage_gb: 1,
       },
-      stripePriceIdMonthly: null,
-      stripePriceIdYearly: null,
+      // No price IDs for free plan
     },
     {
       slug: 'pro',
@@ -155,8 +154,10 @@ export const billingConfig: BillingConfig = {
         api_calls: 100000,
         storage_gb: 50,
       },
-      stripePriceIdMonthly: 'price_1234_monthly',
-      stripePriceIdYearly: 'price_1234_yearly',
+      providerPriceIds: {
+        monthly: 'price_1234_monthly',
+        yearly: 'price_1234_yearly',
+      },
     },
     {
       slug: 'enterprise',
@@ -172,8 +173,7 @@ export const billingConfig: BillingConfig = {
         api_calls: -1,
         storage_gb: -1,
       },
-      stripePriceIdMonthly: null,  // Custom pricing
-      stripePriceIdYearly: null,
+      // No price IDs - custom pricing
     },
   ],
 
@@ -266,8 +266,11 @@ interface PlanDefinition {
   trialDays?: number
   features: string[]  // ['*'] for all features
   limits: Record<string, number>  // -1 for unlimited
-  stripePriceIdMonthly?: string | null
-  stripePriceIdYearly?: string | null
+  /** Price IDs for the configured payment provider */
+  providerPriceIds?: {
+    monthly?: string | null
+    yearly?: string | null
+  }
 }
 ```
 
@@ -340,33 +343,39 @@ actionMappings: {
 
 ## Environment Variables
 
-Configure payment provider credentials:
+Configure credentials for your chosen payment provider:
 
 ```env
-# Stripe (required for paid plans)
+# Stripe
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_PUBLISHABLE_KEY=pk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 
-# Cron job protection
+# Polar
+POLAR_ACCESS_TOKEN=pat_...
+POLAR_WEBHOOK_SECRET=whsec_...
+POLAR_SERVER=sandbox   # 'sandbox' or 'production'
+
+# Cron job protection (required for all providers)
 CRON_SECRET=your-secure-cron-secret
 ```
 
-## Stripe Price IDs
+## Provider Price IDs
 
-Get Price IDs from the Stripe Dashboard:
+Get Price IDs from your payment provider's dashboard and add them to `providerPriceIds`:
 
-1. Go to [Stripe Dashboard](https://dashboard.stripe.com/products)
-2. Create a Product for each plan
-3. Add recurring prices (monthly/yearly)
-4. Copy the Price ID (starts with `price_`)
+**Stripe:** Go to [Stripe Dashboard](https://dashboard.stripe.com/products) -> Create Product -> Add recurring prices -> Copy the Price ID (starts with `price_`)
+
+**Polar:** Go to your Polar organization -> Products -> Create Product -> Copy the Product Price ID
 
 ```typescript
 {
   slug: 'pro',
   // ...
-  stripePriceIdMonthly: 'price_1ABC123monthly',
-  stripePriceIdYearly: 'price_1ABC123yearly',
+  providerPriceIds: {
+    monthly: 'price_1ABC123monthly',
+    yearly: 'price_1ABC123yearly',
+  },
 }
 ```
 
@@ -383,5 +392,5 @@ node core/scripts/build/registry.mjs
 ## Related
 
 - [Pricing Strategies](./07-pricing-strategies.md) - SaaS pricing examples
-- [Payment Integration](./05-payment-integration.md) - Stripe setup
+- [Payment Integration](./05-payment-integration.md) - Provider setup
 - [Registry System](../03-registry-system/) - Build-time configuration
