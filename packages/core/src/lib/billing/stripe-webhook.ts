@@ -22,15 +22,27 @@
  */
 
 import { NextRequest } from 'next/server'
-import { StripeGateway } from './gateways/stripe'
+import { getBillingGateway } from './gateways/factory'
 import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
 import { query, queryOne } from '../db'
 import type Stripe from 'stripe'
 import type { InvoiceStatus } from './types'
+import type { OneTimePaymentContext } from './polar-webhook'
 
-export interface OneTimePaymentContext {
-  teamId: string
-  userId: string
+export type { OneTimePaymentContext }
+
+/**
+ * Provider-agnostic representation of a Stripe checkout session.
+ * Avoids leaking `Stripe.Checkout.Session` SDK type to project code.
+ */
+export interface StripeSessionData {
+  id: string
+  amountTotal: number | null
+  currency: string | null
+  customerId: string | null
+  subscriptionId: string | null
+  metadata: Record<string, string>
+  clientReferenceId: string | null
 }
 
 export interface StripeWebhookExtensions {
@@ -40,7 +52,7 @@ export interface StripeWebhookExtensions {
    * Use this for credit packs, one-time purchases, etc.
    */
   onOneTimePaymentCompleted?: (
-    session: Stripe.Checkout.Session,
+    session: StripeSessionData,
     context: OneTimePaymentContext
   ) => Promise<void>
 }
@@ -58,9 +70,14 @@ export async function handleStripeWebhook(
   }
 
   // 2. Verify webhook signature (MANDATORY for security)
+  // We use the factory singleton to avoid creating a new instance per request.
+  // The result is cast to Stripe.Event since this is the Stripe-specific handler
+  // and verifyWebhookSignature internally uses Stripe SDK's constructEvent.
   let event: Stripe.Event
   try {
-    event = new StripeGateway().verifyWebhookSignature(payload, signature) as unknown as Stripe.Event
+    const verified = getBillingGateway().verifyWebhookSignature(payload, signature)
+    // The webhook event data contains the full Stripe event structure
+    event = { id: verified.id, type: verified.type, data: verified.data } as Stripe.Event
   } catch (error) {
     console.error('[stripe-webhook] Signature verification failed:', error)
     return Response.json({ error: 'Invalid signature' }, { status: 400 })
@@ -136,7 +153,16 @@ async function handleCheckoutCompleted(
   if (!planSlug) {
     if (extensions?.onOneTimePaymentCompleted) {
       console.log(`[stripe-webhook] One-time payment for team ${teamId}, delegating to theme extension`)
-      await extensions.onOneTimePaymentCompleted(session, { teamId, userId })
+      const sessionData: StripeSessionData = {
+        id: session.id,
+        amountTotal: session.amount_total,
+        currency: session.currency,
+        customerId: typeof session.customer === 'string' ? session.customer : session.customer?.id ?? null,
+        subscriptionId: typeof session.subscription === 'string' ? session.subscription : null,
+        metadata: (session.metadata ?? {}) as Record<string, string>,
+        clientReferenceId: session.client_reference_id ?? null,
+      }
+      await extensions.onOneTimePaymentCompleted(sessionData, { teamId, userId })
     } else {
       console.log(`[stripe-webhook] One-time payment for team ${teamId} — no handler registered, skipping`)
     }

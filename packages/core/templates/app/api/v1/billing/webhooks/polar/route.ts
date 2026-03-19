@@ -101,13 +101,13 @@ async function handlePolarWebhook(request: NextRequest) {
 }
 
 /**
- * Rate limiting: 10 requests/hour per IP (tier: strict).
+ * Rate limiting: 500 requests/hour per IP (tier: webhook).
  * Polar signature verification is the primary security layer;
- * rate limiting protects against flood attacks.
+ * rate limiting protects against extreme flood attacks.
  * NOTE: Rate limiter only reads headers — raw body is NOT consumed here,
  * so request.text() inside the handler still works correctly.
  */
-export const POST = withRateLimitTier(handlePolarWebhook, 'strict')
+export const POST = withRateLimitTier(handlePolarWebhook, 'webhook')
 
 // ===========================================
 // POLAR EVENT HANDLERS
@@ -330,10 +330,21 @@ async function handleOrderPaid(
       : null
 
     if (subForIdempotency) {
+      // Check for existing billing event with this polarEventId (idempotency guard).
+      // We use an explicit SELECT instead of ON CONFLICT because billing_events
+      // has no unique constraint on metadata->>'polarEventId'.
+      const existingEvent = await queryOne(
+        `SELECT id FROM "billing_events" WHERE "subscriptionId" = $1 AND metadata->>'polarEventId' = $2`,
+        [subForIdempotency.id, eventId]
+      )
+      if (existingEvent) {
+        console.log(`[polar-webhook] One-time order ${eventId} already processed (idempotency), skipping`)
+        return
+      }
+
       await query(
         `INSERT INTO "billing_events" ("subscriptionId", type, status, amount, currency, metadata)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         ON CONFLICT DO NOTHING`,
+         VALUES ($1, $2, $3, $4, $5, $6)`,
         [
           subForIdempotency.id,
           'payment',

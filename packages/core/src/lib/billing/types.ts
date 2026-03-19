@@ -43,7 +43,13 @@ export type SubscriptionStatus =
   | 'paused'
   | 'expired'
 
-export type PaymentProvider = 'stripe' | 'polar' | 'paddle' | 'lemonsqueezy' | 'mercadopago'
+export type PaymentProvider =
+  | 'stripe'
+  | 'polar'
+  // Future providers (type-defined, not yet implemented in gateway factory):
+  // | 'paddle'
+  // | 'lemonsqueezy'
+  // | 'mercadopago'
 export type BillingInterval = 'monthly' | 'yearly'
 
 export interface Subscription {

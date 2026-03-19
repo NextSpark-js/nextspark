@@ -54,6 +54,9 @@ let readRateLimiterInstance: ReturnType<UpstashRatelimit['prototype']['limit']> 
 let writeRateLimiterInstance: ReturnType<UpstashRatelimit['prototype']['limit']> extends Promise<infer R>
   ? { limit: (id: string) => Promise<R> } | null
   : never = null
+let webhookRateLimiterInstance: ReturnType<UpstashRatelimit['prototype']['limit']> extends Promise<infer R>
+  ? { limit: (id: string) => Promise<R> } | null
+  : never = null
 
 /**
  * Load Upstash modules dynamically
@@ -118,6 +121,14 @@ async function loadUpstashModules(): Promise<boolean> {
         prefix: 'ratelimit:write',
         ephemeralCache: new Map(),
       })
+
+      webhookRateLimiterInstance = new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(500, '1 h'),
+        analytics: true,
+        prefix: 'ratelimit:webhook',
+        ephemeralCache: new Map(),
+      })
     }
 
     modulesLoaded = true
@@ -148,7 +159,7 @@ export interface RateLimitCheckResult {
 /**
  * Rate limit tiers available for API endpoints
  */
-export type RateLimitTier = 'auth' | 'api' | 'strict' | 'read' | 'write'
+export type RateLimitTier = 'auth' | 'api' | 'strict' | 'read' | 'write' | 'webhook'
 
 /**
  * Default limits for each tier (used in fallback mode when Redis unavailable)
@@ -159,13 +170,14 @@ const DEFAULT_TIER_LIMITS: Record<RateLimitTier, number> = {
   strict: 10,
   read: 200,
   write: 50,
+  webhook: 500,
 }
 
 /**
  * Check rate limit for a given identifier
  *
  * @param identifier - Unique identifier (e.g., IP address, user ID, or combination)
- * @param type - Rate limit tier: 'auth' (5/15min), 'api' (100/1min), 'strict' (10/1hr), 'read' (200/1min), 'write' (50/1min)
+ * @param type - Rate limit tier: 'auth' (5/15min), 'api' (100/1min), 'strict' (10/1hr), 'read' (200/1min), 'write' (50/1min), 'webhook' (500/1hr)
  * @returns Promise with success status, remaining requests, and reset timestamp
  */
 export async function checkRateLimit(
@@ -182,6 +194,7 @@ export async function checkRateLimit(
     strict: strictRateLimiterInstance,
     read: readRateLimiterInstance,
     write: writeRateLimiterInstance,
+    webhook: webhookRateLimiterInstance,
   }
   const limiter = limiterMap[type]
 

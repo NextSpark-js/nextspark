@@ -292,6 +292,59 @@ describe('Stripe Gateway', () => {
       })
     })
 
+    describe('createOneTimeCheckout', () => {
+      test('should create one-time checkout session with payment mode', async () => {
+        const mockSession = {
+          id: 'cs_onetime_123',
+          url: 'https://checkout.stripe.com/test-onetime',
+        }
+        mockCheckoutSessionsCreate.mockResolvedValue(mockSession)
+
+        const result = await gateway.createOneTimeCheckout({
+          teamId: 'team-123',
+          priceId: 'price_credit_pack',
+          quantity: 5,
+          successUrl: 'http://localhost:5173/success',
+          cancelUrl: 'http://localhost:5173/cancel',
+          customerEmail: 'user@test.com',
+          metadata: { type: 'credit_pack' },
+        })
+
+        expect(result).toEqual({
+          id: 'cs_onetime_123',
+          url: 'https://checkout.stripe.com/test-onetime',
+        })
+
+        expect(mockCheckoutSessionsCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            mode: 'payment',
+            line_items: [{ price: 'price_credit_pack', quantity: 5 }],
+            metadata: expect.objectContaining({ teamId: 'team-123', type: 'credit_pack' }),
+          })
+        )
+      })
+
+      test('should default quantity to 1', async () => {
+        mockCheckoutSessionsCreate.mockResolvedValue({
+          id: 'cs_onetime_456',
+          url: 'https://checkout.stripe.com/test-onetime-2',
+        })
+
+        await gateway.createOneTimeCheckout({
+          teamId: 'team-456',
+          priceId: 'price_single',
+          successUrl: 'http://localhost:5173/success',
+          cancelUrl: 'http://localhost:5173/cancel',
+        })
+
+        expect(mockCheckoutSessionsCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            line_items: [{ price: 'price_single', quantity: 1 }],
+          })
+        )
+      })
+    })
+
     describe('updateSubscriptionPlan', () => {
       test('should update subscription and return provider-agnostic result', async () => {
         mockSubscriptionsRetrieve.mockResolvedValue({
@@ -313,6 +366,51 @@ describe('Stripe Gateway', () => {
           id: 'sub_123',
           status: 'active',
           cancelAtPeriodEnd: false,
+        })
+      })
+
+      test('should use custom proration behavior when provided', async () => {
+        mockSubscriptionsRetrieve.mockResolvedValue({
+          id: 'sub_123',
+          items: { data: [{ id: 'si_123' }] },
+        })
+        mockSubscriptionsUpdate.mockResolvedValue({
+          id: 'sub_123',
+          status: 'active',
+          cancel_at_period_end: false,
+        })
+
+        await gateway.updateSubscriptionPlan({
+          subscriptionId: 'sub_123',
+          newPriceId: 'price_new',
+          prorationBehavior: 'none',
+        })
+
+        expect(mockSubscriptionsUpdate).toHaveBeenCalledWith('sub_123', {
+          items: [{ id: 'si_123', price: 'price_new' }],
+          proration_behavior: 'none',
+        })
+      })
+
+      test('should default to create_prorations proration behavior', async () => {
+        mockSubscriptionsRetrieve.mockResolvedValue({
+          id: 'sub_123',
+          items: { data: [{ id: 'si_123' }] },
+        })
+        mockSubscriptionsUpdate.mockResolvedValue({
+          id: 'sub_123',
+          status: 'active',
+          cancel_at_period_end: false,
+        })
+
+        await gateway.updateSubscriptionPlan({
+          subscriptionId: 'sub_123',
+          newPriceId: 'price_new',
+        })
+
+        expect(mockSubscriptionsUpdate).toHaveBeenCalledWith('sub_123', {
+          items: [{ id: 'si_123', price: 'price_new' }],
+          proration_behavior: 'create_prorations',
         })
       })
 

@@ -5,9 +5,9 @@
  * To add one-time payment handling (credit packs, LTD, upsells),
  * override lib/billing/stripe-webhook-extensions.ts in your project.
  *
- * Rate limiting: 10 requests/hour per IP (tier: strict).
+ * Rate limiting: 500 requests/hour per IP (tier: webhook).
  * Stripe signature verification is the primary security layer;
- * rate limiting protects against flood attacks.
+ * rate limiting protects against extreme flood attacks.
  * NOTE: Rate limiter only reads headers — raw body is NOT consumed here,
  * so Stripe's rawBody requirement is preserved.
  */
@@ -21,5 +21,5 @@ export const POST = withRateLimitTier(
   async (request: NextRequest) => {
     return handleStripeWebhook(request, stripeWebhookExtensions)
   },
-  'strict'
+  'webhook'
 )

@@ -24,7 +24,7 @@ export const subscriptionStatusSchema = z.enum([
   'expired',
 ])
 
-export const paymentProviderSchema = z.enum(['stripe', 'polar', 'paddle', 'lemonsqueezy', 'mercadopago'])
+export const paymentProviderSchema = z.enum(['stripe', 'polar'])
 
 export const billingEventTypeSchema = z.enum(['payment', 'refund', 'invoice', 'credit'])
 

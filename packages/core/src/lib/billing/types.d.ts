@@ -25,7 +25,7 @@ export interface Plan {
     updatedAt: Date;
 }
 export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'paused' | 'expired';
-export type PaymentProvider = 'stripe' | 'polar' | 'paddle' | 'lemonsqueezy' | 'mercadopago';
+export type PaymentProvider = 'stripe' | 'polar';
 export type BillingInterval = 'monthly' | 'yearly';
 export interface Subscription {
     id: string;

@@ -499,10 +499,11 @@ function TeamDetailPage() {
                   let providerUrl: string | null = null;
                   let providerLabel = 'Payment Provider';
                   if (teamData.subscription.paymentProvider === 'stripe') {
-                    providerUrl = `https://dashboard.stripe.com/subscriptions/${teamData.subscription.externalSubscriptionId}`;
+                    const stripePrefix = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.startsWith('pk_live') ? '' : 'test/';
+                    providerUrl = `https://dashboard.stripe.com/${stripePrefix}subscriptions/${teamData.subscription.externalSubscriptionId}`;
                     providerLabel = 'Stripe';
                   } else if (teamData.subscription.paymentProvider === 'polar') {
-                    providerUrl = `https://polar.sh/dashboard/subscriptions/${teamData.subscription.externalSubscriptionId}`;
+                    providerUrl = `https://polar.sh/dashboard/sales/subscriptions`;
                     providerLabel = 'Polar';
                   }
                   return providerUrl ? (

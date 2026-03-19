@@ -10,7 +10,7 @@ import type { Subscription, SubscriptionWithPlan, SubscriptionStatus, QuotaInfo,
 export interface CreateSubscriptionOptions {
     billingInterval?: BillingInterval;
     trialDays?: number;
-    paymentProvider?: 'stripe' | 'polar' | 'paddle' | 'lemonsqueezy' | 'mercadopago';
+    paymentProvider?: 'stripe' | 'polar';
     externalSubscriptionId?: string;
     externalCustomerId?: string;
 }

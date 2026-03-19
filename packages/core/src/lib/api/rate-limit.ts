@@ -93,6 +93,7 @@ export async function checkDistributedRateLimit(
       strict: 10,
       read: 200,
       write: 50,
+      webhook: 500,
     };
 
     return {
@@ -111,6 +112,7 @@ export async function checkDistributedRateLimit(
     strict: { limit: 10, windowMs: 60 * 60 * 1000 },  // 10 requests per hour
     read: { limit: 200, windowMs: 60 * 1000 },        // 200 requests per minute
     write: { limit: 50, windowMs: 60 * 1000 },        // 50 requests per minute
+    webhook: { limit: 500, windowMs: 60 * 60 * 1000 }, // 500 requests per hour
   };
 
   const config = limits[type];
@@ -322,25 +324,25 @@ export function getRateLimitCacheStats() {
 }
 
 /**
- * Get client IP address from request headers
- * Handles various proxy scenarios (X-Forwarded-For, X-Real-IP, etc.)
+ * Get client IP address from request headers.
+ * Strategy: Cloudflare > rightmost x-forwarded-for > x-real-ip > fallback.
+ * Uses rightmost x-forwarded-for entry (last proxy-appended) to prevent spoofing.
  */
 function getClientIp(request: NextRequest): string {
-  // X-Forwarded-For can contain multiple IPs: client, proxy1, proxy2
-  // The first one is the original client IP
+  // Cloudflare sets this header and it cannot be spoofed when behind CF
+  const cfIp = request.headers.get('cf-connecting-ip');
+  if (cfIp) return cfIp;
+
+  // X-Forwarded-For: use rightmost entry (most trustworthy, appended by last proxy)
   const forwardedFor = request.headers.get('x-forwarded-for');
   if (forwardedFor) {
-    const ips = forwardedFor.split(',').map(ip => ip.trim());
-    if (ips[0]) return ips[0];
+    const ips = forwardedFor.split(',').map(ip => ip.trim()).filter(Boolean);
+    if (ips.length > 0) return ips[ips.length - 1];
   }
 
   // X-Real-IP is set by some proxies (nginx)
   const realIp = request.headers.get('x-real-ip');
   if (realIp) return realIp;
-
-  // CF-Connecting-IP is set by Cloudflare
-  const cfIp = request.headers.get('cf-connecting-ip');
-  if (cfIp) return cfIp;
 
   // True-Client-IP is set by some CDNs
   const trueClientIp = request.headers.get('true-client-ip');
@@ -386,6 +388,7 @@ function getUserIdentifier(request: NextRequest): string | null {
  * - 'strict': 10 requests per hour (for sensitive operations)
  * - 'read': 200 requests per minute (for read-only operations like GET)
  * - 'write': 50 requests per minute (for write operations like POST/PUT/DELETE)
+ * - 'webhook': 500 requests per hour (for webhook endpoints - signature verification is the primary security layer)
  *
  * @param handler - The route handler to wrap
  * @param tier - The rate limit tier to apply (default: 'api')

@@ -158,7 +158,7 @@ export class StripeGateway implements BillingGateway {
   }
 
   async updateSubscriptionPlan(params: UpdateSubscriptionParams): Promise<SubscriptionResult> {
-    const { subscriptionId, newPriceId } = params
+    const { subscriptionId, newPriceId, prorationBehavior = 'create_prorations' } = params
     const stripe = getStripe()
 
     // Get current subscription to find the item ID
@@ -174,7 +174,7 @@ export class StripeGateway implements BillingGateway {
         id: itemId,
         price: newPriceId,
       }],
-      proration_behavior: 'create_prorations',
+      proration_behavior: prorationBehavior,
     })
 
     return {

@@ -79,6 +79,7 @@ interface Subscription {
   canceledAt: string | null;
   cancelAtPeriodEnd: boolean;
   externalSubscriptionId: string | null;
+  paymentProvider: string | null;
   createdAt: string;
 }
 
@@ -593,9 +594,10 @@ function SubscriptionsPage() {
                             {sub.externalSubscriptionId && (() => {
                               let providerUrl: string | null = null;
                               if (sub.paymentProvider === 'stripe') {
-                                providerUrl = `https://dashboard.stripe.com/subscriptions/${sub.externalSubscriptionId}`;
+                                const stripePrefix = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.startsWith('pk_live') ? '' : 'test/';
+                                providerUrl = `https://dashboard.stripe.com/${stripePrefix}subscriptions/${sub.externalSubscriptionId}`;
                               } else if (sub.paymentProvider === 'polar') {
-                                providerUrl = `https://polar.sh/dashboard/subscriptions/${sub.externalSubscriptionId}`;
+                                providerUrl = `https://polar.sh/dashboard/sales/subscriptions`;
                               }
                               return providerUrl ? (
                                 <Button

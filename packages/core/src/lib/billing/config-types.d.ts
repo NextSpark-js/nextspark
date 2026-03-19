@@ -61,7 +61,7 @@ export interface ActionMappings {
     limits: Record<string, string>;
 }
 export interface BillingConfig {
-    /** Payment provider: stripe, polar, paddle, lemonsqueezy, mercadopago */
+    /** Payment provider: stripe, polar */
     provider: PaymentProvider;
     /** Default currency (ISO 4217) */
     currency: string;
