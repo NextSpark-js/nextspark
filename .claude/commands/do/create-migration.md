@@ -1,5 +1,6 @@
 ---
 description: "Create a new database migration"
+disable-model-invocation: true
 ---
 
 # do:create-migration

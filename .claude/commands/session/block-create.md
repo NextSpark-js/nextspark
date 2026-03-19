@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:block:create
 
 Create a new page builder block with complete file structure.

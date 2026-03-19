@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:start:blocks
 
 Start a new BLOCKS workflow session for mock-driven block development.

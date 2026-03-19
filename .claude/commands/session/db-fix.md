@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:db:fix
 
 Test and fix database migrations iteratively until success.

@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:block:validate
 
 Validate block structure and consistency.

@@ -1,5 +1,6 @@
 ---
 description: "Reset database and run all migrations"
+disable-model-invocation: true
 ---
 
 # do:reset-db

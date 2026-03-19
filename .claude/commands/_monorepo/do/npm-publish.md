@@ -1,5 +1,6 @@
 ---
 description: "Publish packages to npm registry"
+disable-model-invocation: true
 ---
 
 # do:npm-publish

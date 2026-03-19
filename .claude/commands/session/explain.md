@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:explain
 
 Provide an interactive walkthrough of the implemented code.

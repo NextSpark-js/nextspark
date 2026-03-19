@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:refine
 
 Refine requirements or plan before continuing execution.

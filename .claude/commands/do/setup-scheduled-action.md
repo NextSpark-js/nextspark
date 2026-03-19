@@ -1,5 +1,6 @@
 ---
 description: "Create a new scheduled action handler"
+disable-model-invocation: true
 ---
 
 # do:setup-scheduled-action

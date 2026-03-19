@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:start
 
 Intelligent entry point to start a new development session.

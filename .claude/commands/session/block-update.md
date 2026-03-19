@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:block:update
 
 Modify an existing page builder block.

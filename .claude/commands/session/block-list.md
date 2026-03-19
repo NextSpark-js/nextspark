@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # /session:block:list
 
 List available blocks in the page builder.

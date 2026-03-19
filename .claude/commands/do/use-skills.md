@@ -1,5 +1,6 @@
 ---
 description: "Read and apply relevant skills for the requested task"
+disable-model-invocation: true
 ---
 
 # do:use-skills
