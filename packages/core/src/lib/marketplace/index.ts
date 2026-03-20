@@ -74,3 +74,11 @@ export type {
 // Stripe Connect Webhook
 export { handleStripeConnectWebhook } from './stripe-connect-webhook'
 export type { StripeConnectWebhookExtensions } from './stripe-connect-webhook'
+
+// Token Encryption (for marketplace OAuth tokens at rest)
+export {
+  encryptToken,
+  decryptToken,
+  encryptTokens,
+  decryptTokens,
+} from './token-encryption'

@@ -11,6 +11,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { randomUUID } from 'crypto'
 import { z } from 'zod'
 import { authenticateRequest, createAuthError } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { MembershipService } from '@nextsparkjs/core/lib/services'
@@ -80,10 +81,24 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
   // If account exists but onboarding is incomplete, generate a new link
   if (existing && existing.onboardingStatus !== 'active') {
     try {
+      // Generate a cryptographic state token for OAuth CSRF protection
+      const oauthState = randomUUID()
+      await query(
+        `UPDATE "connectedAccounts"
+         SET metadata = jsonb_set(
+           COALESCE(metadata, '{}'::jsonb),
+           '{oauthState}',
+           to_jsonb($1::text)
+         ),
+         "updatedAt" = NOW()
+         WHERE id = $2`,
+        [oauthState, existing.id]
+      )
+
       const link = await gateway.createOnboardingLink({
-        externalAccountId: existing.externalAccountId,
+        externalAccountId: oauthState,
         refreshUrl: `${appUrl}/dashboard/settings/marketplace?refresh=true`,
-        returnUrl: `${appUrl}/dashboard/settings/marketplace?onboarding=complete`,
+        returnUrl: `${appUrl}/api/v1/marketplace/oauth/callback`,
       })
 
       return NextResponse.json({
@@ -127,13 +142,16 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     }
     const currency = currencyMap[country.toUpperCase()] || 'usd'
 
-    // 7. Save to database
+    // Generate a cryptographic state token for OAuth CSRF protection
+    const oauthState = randomUUID()
+
+    // 7. Save to database (with oauthState in metadata)
     const result = await queryOne<{ id: string }>(
       `INSERT INTO "connectedAccounts" (
         "teamId", provider, "externalAccountId", email, "businessName",
         country, currency, "onboardingStatus", "chargesEnabled", "payoutsEnabled",
-        "commissionRate"
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        "commissionRate", metadata
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING id`,
       [
         teamId,
@@ -147,14 +165,15 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
         account.chargesEnabled,
         account.payoutsEnabled,
         0.15, // Default 15% commission
+        JSON.stringify({ oauthState }),
       ]
     )
 
-    // 8. Generate onboarding link
+    // 8. Generate onboarding link (pass state token, NOT teamId)
     const link = await gateway.createOnboardingLink({
-      externalAccountId: account.id,
+      externalAccountId: oauthState,
       refreshUrl: `${appUrl}/dashboard/settings/marketplace?refresh=true`,
-      returnUrl: `${appUrl}/dashboard/settings/marketplace?onboarding=complete`,
+      returnUrl: `${appUrl}/api/v1/marketplace/oauth/callback`,
     })
 
     return NextResponse.json({

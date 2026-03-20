@@ -151,13 +151,23 @@ function mapMPPaymentStatus(status: string): MarketplacePaymentStatus {
 
 /**
  * Interface for retrieving seller OAuth tokens.
- * Implementations should handle encryption and refresh logic.
+ *
+ * IMPORTANT: Tokens in the database are encrypted at rest using AES-256-GCM.
+ * Implementations that read from the connectedAccounts.metadata JSONB column
+ * MUST decrypt tokens before returning them. Use `decryptToken` from
+ * '@nextsparkjs/core/lib/marketplace/token-encryption' for this purpose.
+ *
+ * Example:
+ *   import { decryptToken } from '@nextsparkjs/core/lib/marketplace/token-encryption'
+ *   const plainToken = decryptToken(row.metadata.mpTokens.accessToken)
  */
 export interface MPTokenProvider {
   getAccessToken(externalAccountId: string): Promise<string>
 }
 
-// Default: reads from environment (for platform-level operations)
+// Default: reads from environment (for platform-level operations).
+// When tokens are loaded from the database, callers must use decryptToken()
+// before passing them to gateway methods.
 let tokenProvider: MPTokenProvider = {
   async getAccessToken(): Promise<string> {
     const token = process.env.MP_ACCESS_TOKEN
