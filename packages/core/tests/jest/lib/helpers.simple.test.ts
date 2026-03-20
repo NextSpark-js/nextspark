@@ -3,6 +3,14 @@
  * Testing basic imports and function definitions
  */
 
+// Mock MetaService to avoid transitive ESM imports (auth -> better-auth/plugins -> rou3)
+jest.mock('@/core/lib/services/meta.service', () => ({
+  MetaService: {
+    getEntityMetas: jest.fn().mockResolvedValue({}),
+    setBulkEntityMetas: jest.fn().mockResolvedValue(undefined),
+  },
+}));
+
 describe('Entity Meta Helpers - Basic Tests', () => {
   test('should import helper functions correctly', () => {
     const helpers = require('@/core/lib/helpers/entity-meta.helpers');
