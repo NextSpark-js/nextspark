@@ -4,7 +4,7 @@ import { emailOTPClient } from "better-auth/client/plugins";
 import type { auth } from "./auth";
 
 export const authClient = createAuthClient({
-  baseURL: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5173",
+  baseURL: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:5173",
   plugins: [
     inferAdditionalFields<typeof auth>(),
     emailOTPClient(),
