@@ -119,7 +119,7 @@ CREATE TABLE IF NOT EXISTS public."marketplacePayments" (
 CREATE INDEX "idx_marketplacePayments_connectedAccountId" ON public."marketplacePayments"("connectedAccountId");
 CREATE INDEX "idx_marketplacePayments_teamId" ON public."marketplacePayments"("teamId");
 CREATE INDEX "idx_marketplacePayments_referenceId" ON public."marketplacePayments"("referenceId");
-CREATE INDEX "idx_marketplacePayments_externalPaymentId" ON public."marketplacePayments"("externalPaymentId");
+CREATE UNIQUE INDEX "idx_marketplacePayments_externalPaymentId" ON public."marketplacePayments"("externalPaymentId");
 CREATE INDEX "idx_marketplacePayments_status" ON public."marketplacePayments"("status");
 
 COMMENT ON TABLE  public."marketplacePayments"                          IS 'Split payments between platform and connected merchant accounts';
