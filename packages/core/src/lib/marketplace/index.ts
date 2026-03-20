@@ -61,3 +61,16 @@ export {
   setMPTokenProvider,
 } from './gateways/mercadopago-split'
 export type { MPTokenProvider } from './gateways/mercadopago-split'
+
+// MercadoPago Marketplace Webhook
+export { handleMPMarketplaceWebhook } from './mercadopago-webhook'
+export type {
+  MPWebhookNotification,
+  MPFullPayment,
+  MPPaymentContext,
+  MPMarketplaceWebhookExtensions,
+} from './mercadopago-webhook'
+
+// Stripe Connect Webhook
+export { handleStripeConnectWebhook } from './stripe-connect-webhook'
+export type { StripeConnectWebhookExtensions } from './stripe-connect-webhook'
