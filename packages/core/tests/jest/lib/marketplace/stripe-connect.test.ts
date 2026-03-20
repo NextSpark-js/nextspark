@@ -301,6 +301,142 @@ describe('StripeConnectGateway', () => {
     })
   })
 
+  describe('createDashboardLink', () => {
+    test('should call stripe.accounts.createLoginLink and return URL', async () => {
+      mockAccountsCreateLoginLink.mockResolvedValue({
+        url: 'https://connect.stripe.com/express/login/acct_salon',
+      })
+
+      const result = await gateway.createDashboardLink('acct_salon')
+
+      expect(result).toEqual({
+        url: 'https://connect.stripe.com/express/login/acct_salon',
+      })
+
+      expect(mockAccountsCreateLoginLink).toHaveBeenCalledWith('acct_salon')
+    })
+  })
+
+  describe('getPaymentStatus', () => {
+    test('should call stripe.paymentIntents.retrieve and map status', async () => {
+      mockPaymentIntentsRetrieve.mockResolvedValue({
+        id: 'pi_test_status',
+        status: 'succeeded',
+        latest_charge: 'ch_abc123',
+      })
+
+      const result = await gateway.getPaymentStatus('pi_test_status')
+
+      expect(result).toEqual({
+        id: 'pi_test_status',
+        status: 'succeeded',
+        chargeId: 'ch_abc123',
+      })
+
+      expect(mockPaymentIntentsRetrieve).toHaveBeenCalledWith('pi_test_status')
+    })
+
+    test('should handle latest_charge as object', async () => {
+      mockPaymentIntentsRetrieve.mockResolvedValue({
+        id: 'pi_test_obj',
+        status: 'processing',
+        latest_charge: { id: 'ch_obj123' },
+      })
+
+      const result = await gateway.getPaymentStatus('pi_test_obj')
+
+      expect(result).toEqual({
+        id: 'pi_test_obj',
+        status: 'processing',
+        chargeId: 'ch_obj123',
+      })
+    })
+
+    test('should handle null latest_charge', async () => {
+      mockPaymentIntentsRetrieve.mockResolvedValue({
+        id: 'pi_test_null',
+        status: 'requires_payment_method',
+        latest_charge: null,
+      })
+
+      const result = await gateway.getPaymentStatus('pi_test_null')
+
+      expect(result).toEqual({
+        id: 'pi_test_null',
+        status: 'pending',
+        chargeId: undefined,
+      })
+    })
+  })
+
+  describe('createPayout', () => {
+    test('should call stripe.payouts.create with stripeAccount param', async () => {
+      mockPayoutsCreate.mockResolvedValue({
+        id: 'po_test_123',
+        amount: 25000,
+        currency: 'usd',
+        status: 'in_transit',
+        arrival_date: 1700000000,
+      })
+
+      const result = await gateway.createPayout({
+        externalAccountId: 'acct_salon',
+        amount: 25000,
+        currency: 'usd',
+        description: 'Weekly payout',
+      })
+
+      expect(result).toEqual({
+        id: 'po_test_123',
+        amount: 25000,
+        currency: 'usd',
+        status: 'in_transit',
+        arrivalDate: new Date(1700000000 * 1000),
+      })
+
+      expect(mockPayoutsCreate).toHaveBeenCalledWith(
+        {
+          amount: 25000,
+          currency: 'usd',
+          description: 'Weekly payout',
+        },
+        { stripeAccount: 'acct_salon' }
+      )
+    })
+  })
+
+  describe('mapPaymentStatus', () => {
+    test.each([
+      ['requires_payment_method', 'pending'],
+      ['requires_action', 'pending'],
+      ['requires_confirmation', 'pending'],
+      ['processing', 'processing'],
+      ['requires_capture', 'processing'],
+      ['succeeded', 'succeeded'],
+      ['canceled', 'canceled'],
+    ])('should map %s to %s', async (stripeStatus, expectedStatus) => {
+      mockPaymentIntentsRetrieve.mockResolvedValue({
+        id: 'pi_map_test',
+        status: stripeStatus,
+        latest_charge: null,
+      })
+
+      const result = await gateway.getPaymentStatus('pi_map_test')
+      expect(result.status).toBe(expectedStatus)
+    })
+
+    test('should map unknown status to failed', async () => {
+      mockPaymentIntentsRetrieve.mockResolvedValue({
+        id: 'pi_unknown',
+        status: 'some_unknown_status',
+        latest_charge: null,
+      })
+
+      const result = await gateway.getPaymentStatus('pi_unknown')
+      expect(result.status).toBe('failed')
+    })
+  })
+
   describe('getAccountStatus', () => {
     test('should map active account correctly', async () => {
       mockAccountsRetrieve.mockResolvedValue({

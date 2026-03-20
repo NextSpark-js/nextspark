@@ -416,6 +416,110 @@ describe('MercadoPagoSplitGateway', () => {
     })
   })
 
+  describe('createDashboardLink', () => {
+    test('should return static MercadoPago activities URL', async () => {
+      const result = await gateway.createDashboardLink('acct_mp_seller')
+
+      expect(result).toEqual({
+        url: 'https://www.mercadopago.com/activities',
+      })
+    })
+  })
+
+  describe('getAccountStatus', () => {
+    test('should call /users/me and map active status', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: 123456,
+          email: 'seller@test.com',
+          nickname: 'test_seller',
+          status: { site_status: 'active' },
+        }),
+      } as Response)
+
+      const result = await gateway.getAccountStatus('acct_mp_seller')
+
+      expect(result).toEqual({
+        id: '123456',
+        email: 'seller@test.com',
+        chargesEnabled: true,
+        payoutsEnabled: true,
+        detailsSubmitted: true,
+        onboardingStatus: 'active',
+      })
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://api.mercadopago.com/users/me',
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'Bearer test-seller-token',
+          }),
+        })
+      )
+    })
+
+    test('should map non-active site_status to restricted', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: 789012,
+          email: 'restricted@test.com',
+          nickname: 'restricted_seller',
+          status: { site_status: 'deactive' },
+        }),
+      } as Response)
+
+      const result = await gateway.getAccountStatus('acct_mp_restricted')
+
+      expect(result).toEqual({
+        id: '789012',
+        email: 'restricted@test.com',
+        chargesEnabled: false,
+        payoutsEnabled: false,
+        detailsSubmitted: true,
+        onboardingStatus: 'restricted',
+      })
+    })
+  })
+
+  describe('mapMPPaymentStatus (via getPaymentStatus)', () => {
+    test.each([
+      ['authorized', 'processing'],
+      ['in_process', 'processing'],
+      ['in_mediation', 'disputed'],
+      ['cancelled', 'canceled'],
+      ['refunded', 'refunded'],
+      ['charged_back', 'disputed'],
+    ])('should map %s to %s', async (mpStatus, expectedStatus) => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: 44556677,
+          status: mpStatus,
+          status_detail: `detail_${mpStatus}`,
+        }),
+      } as Response)
+
+      const result = await gateway.getPaymentStatus('44556677')
+      expect(result.status).toBe(expectedStatus)
+    })
+
+    test('should map unknown status to failed', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: 99999999,
+          status: 'some_unknown_status',
+          status_detail: 'unknown',
+        }),
+      } as Response)
+
+      const result = await gateway.getPaymentStatus('99999999')
+      expect(result.status).toBe('failed')
+    })
+  })
+
   describe('createPayout', () => {
     test('should throw because MercadoPago handles payouts automatically', async () => {
       await expect(

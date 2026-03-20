@@ -186,6 +186,108 @@ describe('Polar Gateway', () => {
       })
     })
 
+    describe('createOneTimeCheckout', () => {
+      test('should create one-time checkout with correct parameters', async () => {
+        mockCheckoutsCreate.mockResolvedValue({
+          id: 'polar_checkout_onetime_123',
+          url: 'https://polar.sh/checkout/onetime',
+        })
+
+        const result = await gateway.createOneTimeCheckout({
+          teamId: 'team-123',
+          priceId: 'polar_product_addon_123',
+          successUrl: 'http://localhost:3000/success',
+          cancelUrl: 'http://localhost:3000/cancel',
+          metadata: { itemType: 'addon', itemId: 'item-456' },
+        })
+
+        expect(result).toEqual({
+          id: 'polar_checkout_onetime_123',
+          url: 'https://polar.sh/checkout/onetime',
+        })
+
+        expect(mockCheckoutsCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            products: ['polar_product_addon_123'],
+            successUrl: 'http://localhost:3000/success',
+            returnUrl: 'http://localhost:3000/cancel',
+            metadata: { teamId: 'team-123', itemType: 'addon', itemId: 'item-456' },
+          })
+        )
+      })
+
+      test('should set allowTrial to false for one-time purchases', async () => {
+        mockCheckoutsCreate.mockResolvedValue({
+          id: 'polar_checkout_no_trial',
+          url: 'https://polar.sh/checkout/no-trial',
+        })
+
+        await gateway.createOneTimeCheckout({
+          teamId: 'team-123',
+          priceId: 'polar_product_onetime_456',
+          successUrl: 'http://localhost:3000/success',
+        })
+
+        const calledWith = mockCheckoutsCreate.mock.calls[0]?.[0] as Record<string, unknown>
+        expect(calledWith.allowTrial).toBe(false)
+      })
+
+      test('should pass customerEmail and customerId when provided', async () => {
+        mockCheckoutsCreate.mockResolvedValue({
+          id: 'polar_checkout_with_customer',
+          url: 'https://polar.sh/checkout/customer',
+        })
+
+        await gateway.createOneTimeCheckout({
+          teamId: 'team-789',
+          priceId: 'polar_product_onetime_789',
+          successUrl: 'http://localhost:3000/success',
+          customerEmail: 'buyer@test.com',
+          customerId: 'polar_cus_existing_123',
+        })
+
+        expect(mockCheckoutsCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            customerEmail: 'buyer@test.com',
+            customerId: 'polar_cus_existing_123',
+          })
+        )
+      })
+
+      test('should not include customerEmail and customerId when not provided', async () => {
+        mockCheckoutsCreate.mockResolvedValue({
+          id: 'polar_checkout_minimal',
+          url: 'https://polar.sh/checkout/minimal',
+        })
+
+        await gateway.createOneTimeCheckout({
+          teamId: 'team-minimal',
+          priceId: 'polar_product_onetime_min',
+          successUrl: 'http://localhost:3000/success',
+        })
+
+        const calledWith = mockCheckoutsCreate.mock.calls[0]?.[0] as Record<string, unknown>
+        expect(calledWith).not.toHaveProperty('customerEmail')
+        expect(calledWith).not.toHaveProperty('customerId')
+        expect(calledWith).not.toHaveProperty('returnUrl')
+      })
+
+      test('should handle null url in response', async () => {
+        mockCheckoutsCreate.mockResolvedValue({
+          id: 'polar_checkout_no_url',
+          url: undefined,
+        })
+
+        const result = await gateway.createOneTimeCheckout({
+          teamId: 'team-no-url',
+          priceId: 'polar_product_no_url',
+          successUrl: 'http://localhost:3000/success',
+        })
+
+        expect(result.url).toBeNull()
+      })
+    })
+
     describe('createPortalSession', () => {
       test('should create customer session and return customerPortalUrl', async () => {
         mockCustomerSessionsCreate.mockResolvedValue({

@@ -6,7 +6,7 @@
  */
 
 import { SubscriptionService } from '@/core/lib/services/subscription.service'
-import { queryOneWithRLS, queryWithRLS, mutateWithRLS } from '@/core/lib/db'
+import { queryOneWithRLS, queryWithRLS, mutateWithRLS, getTransactionClient } from '@/core/lib/db'
 import type { Subscription, Plan, SubscriptionWithPlan } from '@/core/lib/billing/types'
 
 // Mock database functions
@@ -14,6 +14,7 @@ jest.mock('@/core/lib/db', () => ({
   queryOneWithRLS: jest.fn(),
   queryWithRLS: jest.fn(),
   mutateWithRLS: jest.fn(),
+  getTransactionClient: jest.fn(),
 }))
 
 // Mock PlanService
@@ -79,6 +80,19 @@ jest.mock('@/core/lib/billing/gateways/stripe', () => ({
   updateSubscriptionPlan: jest.fn(),
 }))
 
+// Mock billing gateway factory
+const mockUpdateSubscriptionPlan = jest.fn()
+jest.mock('@/core/lib/billing/gateways/factory', () => ({
+  getBillingGateway: jest.fn(() => ({
+    updateSubscriptionPlan: mockUpdateSubscriptionPlan,
+  })),
+}))
+
+// Mock hook system
+jest.mock('@/core/lib/plugins/hook-system', () => ({
+  doAction: jest.fn().mockResolvedValue(undefined),
+}))
+
 // Mock enforcement module
 jest.mock('@/core/lib/billing/enforcement', () => ({
   checkDowngrade: jest.fn().mockResolvedValue({ canDowngrade: true, warnings: [] }),
@@ -91,6 +105,7 @@ import { TeamMemberService } from '@/core/lib/services/team-member.service'
 const mockQueryOneWithRLS = queryOneWithRLS as jest.MockedFunction<typeof queryOneWithRLS>
 const mockQueryWithRLS = queryWithRLS as jest.MockedFunction<typeof queryWithRLS>
 const mockMutateWithRLS = mutateWithRLS as jest.MockedFunction<typeof mutateWithRLS>
+const mockGetTransactionClient = getTransactionClient as jest.MockedFunction<typeof getTransactionClient>
 const mockPlanService = PlanService as jest.Mocked<typeof PlanService>
 const mockUsageService = UsageService as jest.Mocked<typeof UsageService>
 const mockTeamMemberService = TeamMemberService as jest.Mocked<typeof TeamMemberService>
@@ -573,6 +588,124 @@ describe('SubscriptionService', () => {
 
       expect(result.success).toBe(false)
       expect(result.error).toContain('No price ID configured')
+    })
+
+    // Happy path shared setup
+    const targetPlanDb = { id: 'plan-enterprise', slug: 'enterprise' }
+    const mockTx = {
+      query: jest.fn().mockResolvedValue({ rows: [], rowCount: 1 }),
+      commit: jest.fn().mockResolvedValue(undefined),
+      rollback: jest.fn().mockResolvedValue(undefined),
+    }
+
+    function setupChangePlanHappyPath(overrides?: { isUpgrade?: boolean }) {
+      const isUpgrade = overrides?.isUpgrade ?? true
+
+      // getActive (step 1) — returns current sub with plan slug 'pro'
+      mockQueryOneWithRLS
+        .mockResolvedValueOnce({
+          ...mockSubscriptionWithPlan,
+          externalSubscriptionId: 'stripe_sub_123',
+        })
+
+      // PlanService registry lookups (steps 2-3)
+      mockPlanService.getConfig.mockReturnValue({ slug: 'enterprise', features: ['all'], limits: {} })
+      mockPlanService.getPriceId.mockReturnValue('price_enterprise_monthly')
+      mockPlanService.isUpgrade.mockReturnValue(isUpgrade)
+
+      // Provider update (step 5)
+      mockUpdateSubscriptionPlan.mockResolvedValue(undefined)
+
+      // PlanService.getBySlug for local plan ID (step 6)
+      mockPlanService.getBySlug.mockResolvedValue(targetPlanDb as any)
+
+      // Transaction client (steps 7-8)
+      mockGetTransactionClient.mockResolvedValue(mockTx as any)
+
+      // getActive again for updated subscription (step 9)
+      const updatedSub = {
+        ...mockSubscriptionWithPlan,
+        planId: 'plan-enterprise',
+        plan: { ...mockPlan, slug: 'enterprise', id: 'plan-enterprise' },
+        externalSubscriptionId: 'stripe_sub_123',
+      }
+      mockQueryOneWithRLS.mockResolvedValueOnce(updatedSub)
+
+      return { updatedSub }
+    }
+
+    it('successfully upgrades plan via billing gateway and updates DB', async () => {
+      const { updatedSub } = setupChangePlanHappyPath({ isUpgrade: true })
+
+      const result = await SubscriptionService.changePlan('team-456', 'enterprise')
+
+      expect(result.success).toBe(true)
+      expect(result.subscription).toBeDefined()
+      expect(result.downgradeWarnings).toBeUndefined()
+
+      // Verify gateway was called with correct params
+      expect(mockUpdateSubscriptionPlan).toHaveBeenCalledWith({
+        subscriptionId: 'stripe_sub_123',
+        newPriceId: 'price_enterprise_monthly',
+      })
+
+      // Verify DB transaction was committed
+      expect(mockTx.query).toHaveBeenCalledTimes(2) // UPDATE subscription + INSERT billing_event
+      expect(mockTx.commit).toHaveBeenCalled()
+      expect(mockTx.rollback).not.toHaveBeenCalled()
+    })
+
+    it('successfully downgrades plan and returns enforcement warnings', async () => {
+      setupChangePlanHappyPath({ isUpgrade: false })
+
+      // Override the enforcement mock for this test to return warnings
+      const { checkDowngrade } = await import('@/core/lib/billing/enforcement')
+      const mockCheckDowngrade = checkDowngrade as jest.MockedFunction<typeof checkDowngrade>
+      mockCheckDowngrade.mockResolvedValueOnce({
+        canDowngrade: true,
+        warnings: ['You will lose access to advanced analytics', 'Team member limit will decrease'],
+      })
+
+      const result = await SubscriptionService.changePlan('team-456', 'enterprise')
+
+      expect(result.success).toBe(true)
+      expect(result.downgradeWarnings).toEqual([
+        'You will lose access to advanced analytics',
+        'Team member limit will decrease',
+      ])
+
+      // Gateway should still be called even on downgrade
+      expect(mockUpdateSubscriptionPlan).toHaveBeenCalledWith({
+        subscriptionId: 'stripe_sub_123',
+        newPriceId: 'price_enterprise_monthly',
+      })
+      expect(mockTx.commit).toHaveBeenCalled()
+    })
+
+    it('returns error when DB transaction fails after provider update succeeds', async () => {
+      setupChangePlanHappyPath({ isUpgrade: true })
+
+      // Override: make the DB transaction throw
+      mockTx.query.mockRejectedValueOnce(new Error('Connection lost'))
+
+      const result = await SubscriptionService.changePlan('team-456', 'enterprise')
+
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('Plan changed in payment provider but local DB update failed')
+
+      // Provider was called successfully
+      expect(mockUpdateSubscriptionPlan).toHaveBeenCalled()
+      // Transaction was rolled back
+      expect(mockTx.rollback).toHaveBeenCalled()
+      expect(mockTx.commit).not.toHaveBeenCalled()
+    })
+
+    it('passes billingInterval correctly to getPriceId', async () => {
+      setupChangePlanHappyPath({ isUpgrade: true })
+
+      await SubscriptionService.changePlan('team-456', 'enterprise', 'yearly')
+
+      expect(mockPlanService.getPriceId).toHaveBeenCalledWith('enterprise', 'yearly')
     })
   })
 
