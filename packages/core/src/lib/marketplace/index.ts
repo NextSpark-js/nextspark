@@ -75,6 +75,13 @@ export type {
 export { handleStripeConnectWebhook } from './stripe-connect-webhook'
 export type { StripeConnectWebhookExtensions } from './stripe-connect-webhook'
 
+// Scheduled Action: MP Token Refresh
+export {
+  refreshMPTokensHandler,
+  registerRefreshMPTokensHandler,
+} from './handlers/refresh-mp-tokens'
+export type { RefreshMPTokensResult } from './handlers/refresh-mp-tokens'
+
 // Token Encryption (for marketplace OAuth tokens at rest)
 export {
   encryptToken,

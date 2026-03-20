@@ -8,3 +8,4 @@
  */
 
 export { registerPatternCacheInvalidationHandler } from './invalidate-pattern-cache'
+export { registerRefreshMPTokensHandler } from '../../marketplace/handlers/refresh-mp-tokens'
