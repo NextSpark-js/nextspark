@@ -37,7 +37,7 @@ export interface BillingGateway {
 
   // Dashboard
   /** Get the provider dashboard URL for a subscription (e.g., Stripe Dashboard, Polar Dashboard) */
-  getSubscriptionDashboardUrl(externalSubscriptionId: string): string | null
+  getSubscriptionDashboardUrl(externalSubscriptionId: string | null | undefined): string | null
 
   // Webhooks
   verifyWebhookSignature(payload: string | Buffer, signatureOrHeaders: string | Record<string, string>): WebhookEventResult

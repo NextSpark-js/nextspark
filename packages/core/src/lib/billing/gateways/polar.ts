@@ -232,7 +232,8 @@ export class PolarGateway implements BillingGateway {
     }
   }
 
-  getSubscriptionDashboardUrl(_externalSubscriptionId: string): string | null {
+  getSubscriptionDashboardUrl(externalSubscriptionId: string | null | undefined): string | null {
+    if (!externalSubscriptionId) return null
     // Polar doesn't support deep-linking to individual subscriptions.
     // Link to the general sales/subscriptions page instead.
     return 'https://polar.sh/dashboard/sales/subscriptions'

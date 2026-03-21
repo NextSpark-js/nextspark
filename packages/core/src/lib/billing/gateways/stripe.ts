@@ -204,7 +204,8 @@ export class StripeGateway implements BillingGateway {
     }
   }
 
-  getSubscriptionDashboardUrl(externalSubscriptionId: string): string | null {
+  getSubscriptionDashboardUrl(externalSubscriptionId: string | null | undefined): string | null {
+    if (!externalSubscriptionId) return null
     const isLive = process.env.STRIPE_SECRET_KEY?.startsWith('sk_live')
     const prefix = isLive ? '' : 'test/'
     return `https://dashboard.stripe.com/${prefix}subscriptions/${externalSubscriptionId}`
