@@ -246,6 +246,7 @@ export const GET = withRateLimitTier(async (
         externalSubscriptionId: subscription.externalSubscriptionId,
         externalCustomerId: subscription.externalCustomerId,
         paymentProvider: subscription.paymentProvider,
+        providerName: getBillingGateway().getProviderName(),
         providerDashboardUrl: getBillingGateway().getSubscriptionDashboardUrl(subscription.externalSubscriptionId),
         createdAt: subscription.createdAt
       } : null,

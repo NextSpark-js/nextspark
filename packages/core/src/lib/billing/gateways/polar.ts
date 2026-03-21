@@ -232,6 +232,10 @@ export class PolarGateway implements BillingGateway {
     }
   }
 
+  getProviderName(): string {
+    return 'Polar'
+  }
+
   getSubscriptionDashboardUrl(externalSubscriptionId: string | null | undefined): string | null {
     if (!externalSubscriptionId) return null
     // Polar doesn't support deep-linking to individual subscriptions.

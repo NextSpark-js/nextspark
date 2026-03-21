@@ -36,6 +36,9 @@ export interface BillingGateway {
   reactivateSubscription(subscriptionId: string): Promise<SubscriptionResult>
 
   // Dashboard
+  /** Get the human-readable provider name (e.g., "Stripe", "Polar") */
+  getProviderName(): string
+
   /** Get the provider dashboard URL for a subscription (e.g., Stripe Dashboard, Polar Dashboard) */
   getSubscriptionDashboardUrl(externalSubscriptionId: string | null | undefined): string | null
 

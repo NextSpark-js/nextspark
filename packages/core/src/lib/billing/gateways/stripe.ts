@@ -204,6 +204,10 @@ export class StripeGateway implements BillingGateway {
     }
   }
 
+  getProviderName(): string {
+    return 'Stripe'
+  }
+
   getSubscriptionDashboardUrl(externalSubscriptionId: string | null | undefined): string | null {
     if (!externalSubscriptionId) return null
     const isLive = process.env.STRIPE_SECRET_KEY?.startsWith('sk_live')
