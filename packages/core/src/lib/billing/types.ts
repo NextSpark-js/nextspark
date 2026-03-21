@@ -186,6 +186,15 @@ export interface TeamUsageSummary {
 }
 
 // ===========================================
+// WEBHOOK EXTENSION TYPES
+// ===========================================
+
+export interface OneTimePaymentContext {
+  teamId: string
+  userId: string
+}
+
+// ===========================================
 // ACTION RESULT TYPES
 // ===========================================
 

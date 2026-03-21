@@ -17,10 +17,9 @@
  *   }
  */
 
-export interface OneTimePaymentContext {
-  teamId: string
-  userId: string
-}
+import type { OneTimePaymentContext } from './types'
+
+export type { OneTimePaymentContext }
 
 export interface PolarOrderData {
   id: string

@@ -26,8 +26,7 @@ import { getBillingGateway } from './gateways/factory'
 import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
 import { query, queryOne } from '../db'
 import type Stripe from 'stripe'
-import type { InvoiceStatus } from './types'
-import type { OneTimePaymentContext } from './polar-webhook'
+import type { InvoiceStatus, OneTimePaymentContext } from './types'
 
 export type { OneTimePaymentContext }
 
