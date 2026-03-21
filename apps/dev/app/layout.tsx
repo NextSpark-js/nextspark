@@ -63,7 +63,10 @@ export default async function RootLayout({
     <html lang={locale} suppressHydrationWarning>
       <head>
         {getBillingPreconnectDomains().map((domain) => (
-          <link key={domain} rel="preconnect" href={domain} />
+          <link key={`dns-${domain}`} rel="dns-prefetch" href={domain} />
+        ))}
+        {getBillingPreconnectDomains().map((domain) => (
+          <link key={`pre-${domain}`} rel="preconnect" href={domain} crossOrigin="anonymous" />
         ))}
       </head>
       <body
