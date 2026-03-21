@@ -208,6 +208,10 @@ export class StripeGateway implements BillingGateway {
     return 'Stripe'
   }
 
+  getPreconnectDomains(): string[] {
+    return ['https://js.stripe.com', 'https://api.stripe.com']
+  }
+
   getSubscriptionDashboardUrl(externalSubscriptionId: string | null | undefined): string | null {
     if (!externalSubscriptionId) return null
     const isLive = process.env.STRIPE_SECRET_KEY?.startsWith('sk_live')

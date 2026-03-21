@@ -48,6 +48,24 @@ export function getBillingGateway(): BillingGateway {
 }
 
 /**
+ * Get preconnect domains for the configured billing provider.
+ * Use in <head> for performance optimization.
+ *
+ * @example
+ * // In layout.tsx:
+ * {getBillingPreconnectDomains().map(domain => (
+ *   <link key={domain} rel="preconnect" href={domain} />
+ * ))}
+ */
+export function getBillingPreconnectDomains(): string[] {
+  try {
+    return getBillingGateway().getPreconnectDomains()
+  } catch {
+    return []
+  }
+}
+
+/**
  * Reset the cached gateway instance.
  * Useful for testing or when billing config changes at runtime.
  */

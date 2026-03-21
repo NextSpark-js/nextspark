@@ -236,6 +236,10 @@ export class PolarGateway implements BillingGateway {
     return 'Polar'
   }
 
+  getPreconnectDomains(): string[] {
+    return ['https://api.polar.sh', 'https://polar.sh']
+  }
+
   getSubscriptionDashboardUrl(externalSubscriptionId: string | null | undefined): string | null {
     if (!externalSubscriptionId) return null
     // Polar doesn't support deep-linking to individual subscriptions.

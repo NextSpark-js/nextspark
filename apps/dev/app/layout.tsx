@@ -10,6 +10,7 @@ import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
 
 import "./globals.css"
+import { getBillingPreconnectDomains } from "@nextsparkjs/core/lib/billing/gateways/factory"
 import { QueryProvider } from "@nextsparkjs/core/providers/query-provider"
 import { ThemeProvider as NextThemeProvider } from "@nextsparkjs/core/providers/theme-provider"
 import { ThemeProvider as CustomThemeProvider } from "@nextsparkjs/core/lib/theme/ThemeProvider"
@@ -61,7 +62,9 @@ export default async function RootLayout({
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
-        {/* Payment provider preconnect hints can be added here per theme */}
+        {getBillingPreconnectDomains().map((domain) => (
+          <link key={domain} rel="preconnect" href={domain} />
+        ))}
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
