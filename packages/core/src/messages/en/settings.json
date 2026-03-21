@@ -11,7 +11,8 @@
     "billingDescription": "Manage your subscription, payment methods and invoices.",
     "api-keysDescription": "Manage API keys for external integration and access control.",
     "teamsDescription": "Manage your teams, members and invitations.",
-    "plansDescription": "Compare plans and upgrade your subscription."
+    "plansDescription": "Compare plans and upgrade your subscription.",
+    "marketplaceDescription": "Manage marketplace payments and commissions."
   },
   "navigation": {
     "ariaLabel": "Settings navigation",
@@ -24,7 +25,8 @@
     "billing": "Billing",
     "api-keys": "API Keys",
     "teams": "Teams",
-    "plans": "Plans"
+    "plans": "Plans",
+    "marketplace": "Marketplace"
   },
   "layout": {
     "title": "Settings",

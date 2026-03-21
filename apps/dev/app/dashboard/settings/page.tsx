@@ -12,6 +12,7 @@ import {
   Bell,
   CreditCard,
   Key,
+  Store,
   type LucideIcon
 } from 'lucide-react'
 import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
@@ -24,6 +25,7 @@ const SETTINGS_ICONS: Record<string, LucideIcon> = {
   notifications: Bell,
   'api-keys': Key,
   billing: CreditCard,
+  marketplace: Store,
 }
 
 function SettingsPage() {

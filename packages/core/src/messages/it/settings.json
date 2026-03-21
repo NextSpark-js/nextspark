@@ -11,7 +11,8 @@
     "billingDescription": "Gestisci il tuo abbonamento, metodi di pagamento e fatture.",
     "api-keysDescription": "Gestisci le chiavi API per l'integrazione esterna e il controllo degli accessi.",
     "teamsDescription": "Gestisci i tuoi team, membri e inviti.",
-    "plansDescription": "Confronta i piani e aggiorna il tuo abbonamento."
+    "plansDescription": "Confronta i piani e aggiorna il tuo abbonamento.",
+    "marketplaceDescription": "Gestisci i pagamenti e le commissioni del marketplace."
   },
   "navigation": {
     "ariaLabel": "Navigazione impostazioni",
@@ -24,7 +25,8 @@
     "billing": "Fatturazione",
     "api-keys": "Chiavi API",
     "teams": "Team",
-    "plans": "Piani"
+    "plans": "Piani",
+    "marketplace": "Marketplace"
   },
   "layout": {
     "title": "Impostazioni",

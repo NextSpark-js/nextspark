@@ -23,6 +23,7 @@ import {
   LayoutGrid,
   Tag,
   Code,
+  Store,
 } from "lucide-react";
 import { cn } from '../../../lib/utils';
 import { Button } from '../../ui/button';
@@ -41,7 +42,7 @@ interface SidebarItem {
   icon: React.ComponentType<{ className?: string }>;
   description?: string;
   disabled?: boolean;
-  selectorKey?: 'dashboard' | 'users' | 'teams' | 'teamRoles' | 'docs' | 'subscriptions' | 'analytics' | 'config';
+  selectorKey?: 'dashboard' | 'users' | 'teams' | 'teamRoles' | 'docs' | 'subscriptions' | 'marketplace' | 'analytics' | 'config';
 }
 
 /**
@@ -97,6 +98,13 @@ export function SuperadminSidebar({ pluginItems: pluginItemsProp }: { pluginItem
       icon: CreditCard,
       description: "Billing and subscription management",
       selectorKey: "subscriptions"
+    },
+    {
+      title: "Marketplace",
+      href: "/superadmin/marketplace",
+      icon: Store,
+      description: "Connected accounts and payments",
+      selectorKey: "marketplace"
     },
     {
       title: "Analytics",
