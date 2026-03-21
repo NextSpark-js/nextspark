@@ -39,8 +39,19 @@ export interface BillingGateway {
   /** Get the human-readable provider name (e.g., "Stripe", "Polar") */
   getProviderName(): string
 
-  /** Get domains to preconnect for performance (e.g., checkout, CDN, API) */
-  getPreconnectDomains(): string[]
+  /**
+   * Get resource hint domains for the <head>.
+   * - preconnect: domains loaded immediately on page render (DNS + TCP + TLS)
+   * - dnsPrefetch: domains used later after user interaction (DNS only)
+   *
+   * Note: preconnect sockets expire after ~10s, so only use for resources
+   * loaded during initial render. Use dnsPrefetch for domains used after
+   * user interaction (e.g., API calls on form submit).
+   */
+  getResourceHintDomains(): {
+    preconnect: string[]
+    dnsPrefetch: string[]
+  }
 
   /** Get the provider dashboard URL for a subscription (e.g., Stripe Dashboard, Polar Dashboard) */
   getSubscriptionDashboardUrl(externalSubscriptionId: string | null | undefined): string | null

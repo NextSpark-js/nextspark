@@ -236,10 +236,10 @@ export class PolarGateway implements BillingGateway {
     return 'Polar'
   }
 
-  getPreconnectDomains(): string[] {
+  getResourceHintDomains(): { preconnect: string[]; dnsPrefetch: string[] } {
     // Polar uses redirect-based checkout and server-side API calls.
-    // No browser-side requests to preconnect.
-    return []
+    // No browser-side resources to hint.
+    return { preconnect: [], dnsPrefetch: [] }
   }
 
   getSubscriptionDashboardUrl(externalSubscriptionId: string | null | undefined): string | null {

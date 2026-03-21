@@ -48,20 +48,18 @@ export function getBillingGateway(): BillingGateway {
 }
 
 /**
- * Get preconnect domains for the configured billing provider.
+ * Get resource hint domains for the configured billing provider.
  * Use in <head> for performance optimization.
  *
  * @example
  * // In layout.tsx:
- * {getBillingPreconnectDomains().map(domain => (
- *   <link key={domain} rel="preconnect" href={domain} />
- * ))}
+ * const { preconnect, dnsPrefetch } = getBillingResourceHints()
  */
-export function getBillingPreconnectDomains(): string[] {
+export function getBillingResourceHints(): { preconnect: string[]; dnsPrefetch: string[] } {
   try {
-    return getBillingGateway().getPreconnectDomains()
+    return getBillingGateway().getResourceHintDomains()
   } catch {
-    return []
+    return { preconnect: [], dnsPrefetch: [] }
   }
 }
 

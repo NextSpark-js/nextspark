@@ -10,7 +10,7 @@ import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
 
 import "./globals.css"
-import { getBillingPreconnectDomains } from "@nextsparkjs/core/lib/billing/gateways/factory"
+import { getBillingResourceHints } from "@nextsparkjs/core/lib/billing/gateways/factory"
 import { QueryProvider } from "@nextsparkjs/core/providers/query-provider"
 import { ThemeProvider as NextThemeProvider } from "@nextsparkjs/core/providers/theme-provider"
 import { ThemeProvider as CustomThemeProvider } from "@nextsparkjs/core/lib/theme/ThemeProvider"
@@ -62,12 +62,19 @@ export default async function RootLayout({
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
-        {getBillingPreconnectDomains().map((domain) => (
-          <link key={`dns-${domain}`} rel="dns-prefetch" href={domain} />
-        ))}
-        {getBillingPreconnectDomains().map((domain) => (
-          <link key={`pre-${domain}`} rel="preconnect" href={domain} crossOrigin="anonymous" />
-        ))}
+        {(() => {
+          const hints = getBillingResourceHints()
+          return (
+            <>
+              {hints.preconnect.map((domain) => (
+                <link key={`pre-${domain}`} rel="preconnect" href={domain} />
+              ))}
+              {[...hints.preconnect, ...hints.dnsPrefetch].map((domain) => (
+                <link key={`dns-${domain}`} rel="dns-prefetch" href={domain} />
+              ))}
+            </>
+          )
+        })()}
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

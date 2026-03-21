@@ -208,8 +208,13 @@ export class StripeGateway implements BillingGateway {
     return 'Stripe'
   }
 
-  getPreconnectDomains(): string[] {
-    return ['https://js.stripe.com', 'https://api.stripe.com']
+  getResourceHintDomains(): { preconnect: string[]; dnsPrefetch: string[] } {
+    return {
+      // js.stripe.com: Stripe.js SDK loaded on page render
+      preconnect: ['https://js.stripe.com'],
+      // api.stripe.com: called by Stripe.js after user fills payment form (too late for preconnect)
+      dnsPrefetch: ['https://api.stripe.com'],
+    }
   }
 
   getSubscriptionDashboardUrl(externalSubscriptionId: string | null | undefined): string | null {
