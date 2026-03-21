@@ -237,7 +237,9 @@ export class PolarGateway implements BillingGateway {
   }
 
   getPreconnectDomains(): string[] {
-    return ['https://api.polar.sh', 'https://polar.sh']
+    // Polar uses redirect-based checkout and server-side API calls.
+    // No browser-side requests to preconnect.
+    return []
   }
 
   getSubscriptionDashboardUrl(externalSubscriptionId: string | null | undefined): string | null {
