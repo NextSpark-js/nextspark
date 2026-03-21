@@ -325,18 +325,34 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     `[stripe-webhook] Subscription updated ${subscription.id}, status: ${subscription.status} -> ${ourStatus}`
   )
 
+  // Stripe API v2026+ may not include current_period_end directly on the subscription object.
+  // Handle both old and new API versions gracefully.
   const expandedSubscription = subscription as Stripe.Subscription & {
     current_period_end?: number
     current_period_start?: number
   }
 
+  const periodEnd = expandedSubscription.current_period_end ?? null
   const priceId = subscription.items.data[0]?.price.id
-  let planUpdateClause = ''
+
+  // Build dynamic SET clause and params
+  let paramIdx = 1
+  const setClauses: string[] = [
+    `status = $${paramIdx++}`,
+    `"cancelAtPeriodEnd" = $${paramIdx++}`,
+  ]
   const params: (string | number | boolean | null)[] = [
     ourStatus,
     subscription.cancel_at_period_end,
-    expandedSubscription.current_period_end ?? null,
   ]
+
+  // Only update currentPeriodEnd if available (removed in Stripe API v2026)
+  if (periodEnd !== null) {
+    setClauses.push(`"currentPeriodEnd" = to_timestamp($${paramIdx++})`)
+    params.push(periodEnd)
+  }
+
+  setClauses.push(`"updatedAt" = NOW()`)
 
   if (priceId) {
     // Find plan by price ID from billing registry (providerPriceIds)
@@ -351,25 +367,20 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       )
 
       if (planResult) {
-        planUpdateClause = ', "planId" = $5'
-        params.push(subscription.id, planResult.id)
-      } else {
-        params.push(subscription.id)
+        setClauses.push(`"planId" = $${paramIdx++}`)
+        params.push(planResult.id)
       }
-    } else {
-      params.push(subscription.id)
     }
-  } else {
-    params.push(subscription.id)
   }
+
+  // subscriptionId is always the last param for the WHERE clause
+  const subIdIdx = paramIdx++
+  params.push(subscription.id)
 
   await query(
     `UPDATE subscriptions
-     SET status = $1,
-         "cancelAtPeriodEnd" = $2,
-         "currentPeriodEnd" = to_timestamp($3),
-         "updatedAt" = NOW()${planUpdateClause}
-     WHERE "externalSubscriptionId" = $4`,
+     SET ${setClauses.join(', ')}
+     WHERE "externalSubscriptionId" = $${subIdIdx}`,
     params
   )
 }
