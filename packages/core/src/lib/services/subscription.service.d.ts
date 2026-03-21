@@ -41,7 +41,7 @@ export declare class SubscriptionService {
      * const sub = await SubscriptionService.getActive('team-uuid-123')
      * console.log(sub?.plan.name) // 'Pro Plan'
      */
-    static getActive(teamId: string): Promise<SubscriptionWithPlan | null>;
+    static getActive(teamId: string, userId?: string): Promise<SubscriptionWithPlan | null>;
     /**
      * Get subscription by team ID (alias for getActive)
      *
@@ -117,7 +117,7 @@ export declare class SubscriptionService {
      *   console.log('Warnings:', result.downgradeWarnings)
      * }
      */
-    static changePlan(teamId: string, targetPlanSlug: string, billingInterval?: BillingInterval): Promise<ChangePlanResult>;
+    static changePlan(teamId: string, targetPlanSlug: string, billingInterval?: BillingInterval, userId?: string): Promise<ChangePlanResult>;
     /**
      * Pause subscription
      *

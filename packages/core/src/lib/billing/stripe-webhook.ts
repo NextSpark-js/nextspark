@@ -142,7 +142,8 @@ async function handleCheckoutCompleted(
 ) {
   const teamId = session.metadata?.teamId || session.client_reference_id
   if (!teamId) {
-    throw new Error('No team ID in checkout session')
+    console.warn('[stripe-webhook] checkout.session.completed has no teamId in metadata — skipping (likely a test/synthetic event)')
+    return
   }
 
   const planSlug = session.metadata?.planSlug
