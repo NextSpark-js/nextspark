@@ -89,7 +89,7 @@ export class SubscriptionService {
    * const sub = await SubscriptionService.getActive('team-uuid-123')
    * console.log(sub?.plan.name) // 'Pro Plan'
    */
-  static async getActive(teamId: string): Promise<SubscriptionWithPlan | null> {
+  static async getActive(teamId: string, userId?: string): Promise<SubscriptionWithPlan | null> {
     if (!teamId || teamId.trim() === '') {
       throw new Error('Team ID is required')
     }
@@ -106,7 +106,8 @@ export class SubscriptionService {
       ORDER BY s."createdAt" DESC
       LIMIT 1
       `,
-      [teamId]
+      [teamId],
+      userId
     )
 
     if (!result) return null
@@ -431,7 +432,8 @@ export class SubscriptionService {
   static async changePlan(
     teamId: string,
     targetPlanSlug: string,
-    billingInterval: BillingInterval = 'monthly'
+    billingInterval: BillingInterval = 'monthly',
+    userId?: string
   ): Promise<ChangePlanResult> {
     if (!teamId || teamId.trim() === '') {
       return { success: false, error: 'Team ID is required' }
@@ -441,8 +443,8 @@ export class SubscriptionService {
       return { success: false, error: 'Target plan slug is required' }
     }
 
-    // 1. Get current subscription
-    const currentSub = await this.getActive(teamId)
+    // 1. Get current subscription (pass userId for RLS context)
+    const currentSub = await this.getActive(teamId, userId)
     if (!currentSub?.externalSubscriptionId) {
       return { success: false, error: 'No active subscription found' }
     }
@@ -485,6 +487,9 @@ export class SubscriptionService {
 
       // 7-8. Update local subscription + log billing event in a transaction
       // This ensures DB consistency if either query fails after Stripe succeeded
+      // NOTE: Transaction runs WITHOUT userId context so that the
+      // prevent_subscription_field_tampering trigger allows the planId/status update.
+      // Auth + permission checks have already been verified by the API route.
       const tx = await getTransactionClient()
       try {
         await tx.query(
@@ -506,12 +511,14 @@ export class SubscriptionService {
 
         await tx.query(
           `
-          INSERT INTO "billing_events" (id, "subscriptionId", type, status, metadata, "createdAt")
-          VALUES ($1, $2, 'lifecycle', 'succeeded', $3, NOW())
+          INSERT INTO "billing_events" (id, "subscriptionId", type, status, amount, currency, metadata, "createdAt")
+          VALUES ($1, $2, 'lifecycle', 'succeeded', $3, $4, $5, NOW())
           `,
           [
             crypto.randomUUID(),
             currentSub.id,
+            0,
+            'usd',
             JSON.stringify({
               action: 'plan_change',
               fromPlan: currentSub.plan.slug,
@@ -532,7 +539,7 @@ export class SubscriptionService {
       }
 
       // 9. Get updated subscription
-      const updatedSub = await this.getActive(teamId)
+      const updatedSub = await this.getActive(teamId, userId)
 
       // 10. Emit subscription updated hook for plan change
       await doAction('subscription.updated', {

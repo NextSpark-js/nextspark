@@ -82,7 +82,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
   const { planSlug, billingInterval } = parseResult.data
 
   // 5. Execute plan change
-  const result = await SubscriptionService.changePlan(teamId, planSlug, billingInterval)
+  const result = await SubscriptionService.changePlan(teamId, planSlug, billingInterval, authResult.user.id)
 
   if (!result.success) {
     return NextResponse.json({ success: false, error: result.error }, { status: 400 })

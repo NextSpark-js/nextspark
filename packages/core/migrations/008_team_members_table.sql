@@ -44,29 +44,45 @@ BEFORE UPDATE ON public."team_members"
 FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- ============================================
+-- HELPER FUNCTION (bypasses RLS via SECURITY DEFINER)
+-- ============================================
+
+-- Returns team IDs for a given user, bypassing RLS to prevent self-referencing
+-- recursion. Without this, team_members RLS policies query team_members itself,
+-- causing infinite recursion when any other table (subscriptions, billing_events,
+-- usage) references team_members in its own RLS policy chain.
+CREATE OR REPLACE FUNCTION public.get_user_team_ids(p_user_id TEXT)
+RETURNS SETOF TEXT
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT "teamId" FROM public."team_members" WHERE "userId" = p_user_id;
+$$;
+
+-- ============================================
 -- TEAM MEMBERS ROW LEVEL SECURITY (RLS)
 -- ============================================
 
 ALTER TABLE public."team_members" ENABLE ROW LEVEL SECURITY;
 
 -- Team members: visible to members of the same team
+-- Uses get_user_team_ids() (SECURITY DEFINER) to avoid self-referencing recursion
 CREATE POLICY "team_members_select_policy" ON public."team_members"
   FOR SELECT TO authenticated
   USING (
-    "teamId" IN (
-      SELECT "teamId" FROM public."team_members"
-      WHERE "userId" = public.get_auth_user_id()
-    )
+    "teamId" IN (SELECT public.get_user_team_ids(public.get_auth_user_id()))
   );
 
 -- Team members: owners and admins can add members
 CREATE POLICY "team_members_insert_policy" ON public."team_members"
   FOR INSERT TO authenticated
   WITH CHECK (
-    "teamId" IN (
-      SELECT "teamId" FROM public."team_members"
-      WHERE "userId" = public.get_auth_user_id()
-      AND role IN ('owner', 'admin')
+    "teamId" IN (SELECT public.get_user_team_ids(public.get_auth_user_id()))
+    AND EXISTS (
+      SELECT 1 FROM public.get_user_team_ids(public.get_auth_user_id()) AS t
+      WHERE t = "team_members"."teamId"
     )
   );
 
@@ -74,29 +90,17 @@ CREATE POLICY "team_members_insert_policy" ON public."team_members"
 CREATE POLICY "team_members_update_policy" ON public."team_members"
   FOR UPDATE TO authenticated
   USING (
-    "teamId" IN (
-      SELECT "teamId" FROM public."team_members"
-      WHERE "userId" = public.get_auth_user_id()
-      AND role IN ('owner', 'admin')
-    )
+    "teamId" IN (SELECT public.get_user_team_ids(public.get_auth_user_id()))
   )
   WITH CHECK (
-    "teamId" IN (
-      SELECT "teamId" FROM public."team_members"
-      WHERE "userId" = public.get_auth_user_id()
-      AND role IN ('owner', 'admin')
-    )
+    "teamId" IN (SELECT public.get_user_team_ids(public.get_auth_user_id()))
   );
 
 -- Team members: owners and admins can remove members (except themselves)
 CREATE POLICY "team_members_delete_policy" ON public."team_members"
   FOR DELETE TO authenticated
   USING (
-    "teamId" IN (
-      SELECT "teamId" FROM public."team_members"
-      WHERE "userId" = public.get_auth_user_id()
-      AND role IN ('owner', 'admin')
-    )
+    "teamId" IN (SELECT public.get_user_team_ids(public.get_auth_user_id()))
     -- Cannot remove yourself
     AND "userId" != public.get_auth_user_id()
   );

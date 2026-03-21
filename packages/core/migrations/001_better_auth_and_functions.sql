@@ -41,17 +41,11 @@ BEGIN
 END;
 $$;
 
--- Alias sin schema si lo usás en policies legadas
-CREATE OR REPLACE FUNCTION get_auth_user_id()
-RETURNS TEXT
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  RETURN public.get_auth_user_id();
-END;
-$$;
+-- NOTE: Previously there was an alias function `get_auth_user_id()` (without schema)
+-- that called `public.get_auth_user_id()`. This was removed because PostgreSQL's
+-- `CREATE OR REPLACE` with `SET search_path = public` would overwrite the real
+-- function with the alias, causing infinite recursion. All RLS policies should
+-- use `public.get_auth_user_id()` with the explicit schema qualifier.
 
 -- Utilidad: updatedAt (si no existe ya en otra migration)
 CREATE OR REPLACE FUNCTION public.set_updated_at()
