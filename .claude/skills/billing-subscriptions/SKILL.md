@@ -97,6 +97,11 @@ export interface BillingGateway {
 
   // Webhooks (Stripe passes string signature, Polar passes headers Record)
   verifyWebhookSignature(payload: string | Buffer, signatureOrHeaders: string | Record<string, string>): WebhookEventResult
+
+  // Dashboard & Metadata
+  getProviderName(): string
+  getSubscriptionDashboardUrl(externalSubscriptionId: string | null | undefined): string | null
+  getResourceHintDomains(): { preconnect: string[]; dnsPrefetch: string[] }
 }
 ```
 
@@ -143,6 +148,14 @@ import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factor
 const session = await getBillingGateway().createCheckoutSession(params)
 const portal = await getBillingGateway().createPortalSession(params)
 await getBillingGateway().cancelSubscriptionAtPeriodEnd(subId)
+
+// Provider metadata
+const name = getBillingGateway().getProviderName()             // "Stripe" or "Polar"
+const url = getBillingGateway().getSubscriptionDashboardUrl(id) // Dashboard URL or null
+
+// Resource hints (used in layout.tsx automatically)
+import { getBillingResourceHints } from '@nextsparkjs/core/lib/billing/gateways/factory'
+const { preconnect, dnsPrefetch } = getBillingResourceHints()
 
 // WRONG: Import from specific provider
 import { createCheckoutSession } from '.../gateways/stripe'  // DEPRECATED

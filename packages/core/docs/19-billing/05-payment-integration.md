@@ -63,6 +63,11 @@ export interface BillingGateway {
 
   // Webhook security
   verifyWebhookSignature(payload: string | Buffer, signatureOrHeaders: string | Record<string, string>): WebhookEventResult
+
+  // Dashboard & Metadata
+  getProviderName(): string
+  getSubscriptionDashboardUrl(externalSubscriptionId: string | null | undefined): string | null
+  getResourceHintDomains(): { preconnect: string[]; dnsPrefetch: string[] }
 }
 ```
 
@@ -773,6 +778,113 @@ const existing = await queryOne(
 
 if (existing) return Response.json({ received: true, status: 'duplicate' })
 ```
+
+## Dashboard & Metadata Methods
+
+### getProviderName()
+
+Returns the display name of the active payment provider (e.g., `"Stripe"`, `"Polar"`). Used by the superadmin API to show which provider is configured without exposing internal implementation details.
+
+```typescript
+const gateway = getBillingGateway()
+const name = gateway.getProviderName()
+// "Stripe" or "Polar"
+```
+
+### getSubscriptionDashboardUrl()
+
+Returns a direct URL to the subscription in the provider's dashboard, or `null` if the subscription ID is missing. Used by superadmin APIs to give administrators one-click access to the provider's management interface.
+
+```typescript
+const gateway = getBillingGateway()
+
+const url = gateway.getSubscriptionDashboardUrl('sub_1ABC123')
+// Stripe: "https://dashboard.stripe.com/subscriptions/sub_1ABC123"
+// Polar:  "https://dashboard.polar.sh/sales/subscriptions/sub_1ABC123"
+
+const noUrl = gateway.getSubscriptionDashboardUrl(null)
+// null
+```
+
+### getResourceHintDomains()
+
+Returns domain lists for `<link rel="preconnect">` and `<link rel="dns-prefetch">` tags. The root `layout.tsx` calls this method (via `getBillingResourceHints()` from the factory) to automatically inject resource hints into the HTML `<head>`.
+
+```typescript
+const gateway = getBillingGateway()
+const hints = gateway.getResourceHintDomains()
+// Stripe example:
+// {
+//   preconnect: ['https://js.stripe.com'],
+//   dnsPrefetch: ['https://api.stripe.com']
+// }
+```
+
+---
+
+## Resource Hints
+
+The framework automatically generates `<link rel="preconnect">` and `<link rel="dns-prefetch">` tags in the root `layout.tsx` based on the active payment provider. This eliminates cold-start latency for provider SDK loading without hardcoding provider-specific domains.
+
+### How It Works
+
+1. `layout.tsx` calls `getBillingResourceHints()` from the gateway factory
+2. The factory delegates to the active gateway's `getResourceHintDomains()`
+3. The returned domains are rendered as `<link>` tags in `<head>`
+
+```tsx
+// In layout.tsx (simplified)
+const billingHints = getBillingResourceHints()
+
+<head>
+  {billingHints.preconnect.map(href => (
+    <link key={href} rel="preconnect" href={href} />
+  ))}
+  {billingHints.dnsPrefetch.map(href => (
+    <link key={href} rel="dns-prefetch" href={href} />
+  ))}
+</head>
+```
+
+### preconnect vs dns-prefetch
+
+| Hint Type | Purpose | When to Use |
+|-----------|---------|-------------|
+| `preconnect` | Full connection setup (DNS + TCP + TLS) | Domains loaded on page render (e.g., SDK scripts) |
+| `dns-prefetch` | DNS resolution only | Domains used after user interaction (e.g., API calls after form fill) |
+
+**Why the distinction matters:** `preconnect` opens a full socket, which expires after ~10 seconds of idle time. If the connection is not used quickly (e.g., an API domain that is only called after the user fills a form), the socket is wasted. `dns-prefetch` is cheaper — it resolves the domain name early without holding a socket open.
+
+### Stripe Example
+
+```typescript
+// StripeGateway.getResourceHintDomains()
+{
+  preconnect: ['https://js.stripe.com'],    // SDK loaded on render → full connection
+  dnsPrefetch: ['https://api.stripe.com']   // API called after form fill → DNS only
+}
+```
+
+- `js.stripe.com` gets **preconnect** because Stripe.js is loaded immediately when the page renders
+- `api.stripe.com` gets **dns-prefetch** only because it is called after the user fills in payment details — by that time a preconnect socket would have expired
+
+### Adding Hints for New Providers
+
+New payment providers just implement `getResourceHintDomains()` in their gateway class. The layout picks up the hints automatically — no changes to `layout.tsx` needed:
+
+```typescript
+class MyProviderGateway implements BillingGateway {
+  getResourceHintDomains() {
+    return {
+      preconnect: ['https://sdk.myprovider.com'],
+      dnsPrefetch: ['https://api.myprovider.com']
+    }
+  }
+  // ...
+}
+```
+
+---
 
 ## Testing
 

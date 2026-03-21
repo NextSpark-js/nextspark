@@ -423,6 +423,9 @@ export async function trackUsage(params) {
 | `reactivateSubscription` | Undo scheduled cancellation |
 | `getCustomer` / `createCustomer` | Customer management |
 | `verifyWebhookSignature` | Validate incoming webhook payload |
+| `getProviderName` | Return display name of provider (e.g., `"Stripe"`) |
+| `getSubscriptionDashboardUrl` | Return URL to subscription in provider dashboard |
+| `getResourceHintDomains` | Return domains for `preconnect` / `dns-prefetch` resource hints |
 
 ### gateways/types.ts
 
@@ -447,6 +450,7 @@ export async function trackUsage(params) {
 | Function | Description |
 |----------|-------------|
 | `getBillingGateway()` | Get configured BillingGateway (reads `BILLING_REGISTRY.provider`) |
+| `getBillingResourceHints()` | Get resource hint domains from the active gateway (used by `layout.tsx`) |
 | `resetBillingGateway()` | Reset cached instance (testing) |
 
 **Lazy Loading:** Provider SDKs are loaded via `require()` only when first needed, preventing build-time initialization.
