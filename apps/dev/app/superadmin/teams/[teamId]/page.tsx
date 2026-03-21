@@ -89,6 +89,7 @@ interface Subscription {
   externalSubscriptionId: string | null;
   externalCustomerId: string | null;
   paymentProvider: string | null;
+  providerDashboardUrl: string | null;
   createdAt: string;
 }
 
@@ -495,34 +496,23 @@ function TeamDetailPage() {
                     </div>
                   </>
                 )}
-                {teamData.subscription.externalSubscriptionId && (() => {
-                  let providerUrl: string | null = null;
-                  let providerLabel = 'Payment Provider';
-                  if (teamData.subscription.paymentProvider === 'stripe') {
-                    const stripePrefix = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.startsWith('pk_live') ? '' : 'test/';
-                    providerUrl = `https://dashboard.stripe.com/${stripePrefix}subscriptions/${teamData.subscription.externalSubscriptionId}`;
-                    providerLabel = 'Stripe';
-                  } else if (teamData.subscription.paymentProvider === 'polar') {
-                    providerUrl = `https://polar.sh/dashboard/sales/subscriptions`;
-                    providerLabel = 'Polar';
-                  }
-                  return providerUrl ? (
+                {teamData.subscription.providerDashboardUrl && (
                     <>
                       <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                        {providerLabel}
+                        {teamData.subscription.paymentProvider === 'stripe' ? 'Stripe' :
+                         teamData.subscription.paymentProvider === 'polar' ? 'Polar' : 'Payment Provider'}
                       </h4>
                       <a
-                        href={providerUrl}
+                        href={teamData.subscription.providerDashboardUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
                       >
-                        View in {providerLabel}
+                        View in Dashboard
                         <ExternalLink className="h-3 w-3" />
                       </a>
                     </>
-                  ) : null;
-                })()}
+                )}
               </div>
             </div>
 

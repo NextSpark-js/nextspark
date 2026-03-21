@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getTypedSession } from '@nextsparkjs/core/lib/auth';
 import { queryWithRLS } from '@nextsparkjs/core/lib/db';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
+import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory';
 
 interface SubscriptionResult {
   id: string;
@@ -256,6 +257,9 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
       cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
       externalSubscriptionId: sub.externalSubscriptionId,
       paymentProvider: sub.paymentProvider,
+      providerDashboardUrl: sub.externalSubscriptionId
+        ? getBillingGateway().getSubscriptionDashboardUrl(sub.externalSubscriptionId)
+        : null,
       createdAt: sub.createdAt
     }));
 

@@ -204,6 +204,12 @@ export class StripeGateway implements BillingGateway {
     }
   }
 
+  getSubscriptionDashboardUrl(externalSubscriptionId: string): string | null {
+    const isLive = process.env.STRIPE_SECRET_KEY?.startsWith('sk_live')
+    const prefix = isLive ? '' : 'test/'
+    return `https://dashboard.stripe.com/${prefix}subscriptions/${externalSubscriptionId}`
+  }
+
   async reactivateSubscription(subscriptionId: string): Promise<SubscriptionResult> {
     const updated = await getStripe().subscriptions.update(subscriptionId, {
       cancel_at_period_end: false

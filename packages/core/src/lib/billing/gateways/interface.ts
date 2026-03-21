@@ -35,6 +35,10 @@ export interface BillingGateway {
   cancelSubscriptionImmediately(subscriptionId: string): Promise<SubscriptionResult>
   reactivateSubscription(subscriptionId: string): Promise<SubscriptionResult>
 
+  // Dashboard
+  /** Get the provider dashboard URL for a subscription (e.g., Stripe Dashboard, Polar Dashboard) */
+  getSubscriptionDashboardUrl(externalSubscriptionId: string): string | null
+
   // Webhooks
   verifyWebhookSignature(payload: string | Buffer, signatureOrHeaders: string | Record<string, string>): WebhookEventResult
 }

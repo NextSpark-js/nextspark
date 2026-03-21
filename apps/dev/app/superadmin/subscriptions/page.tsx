@@ -80,6 +80,7 @@ interface Subscription {
   cancelAtPeriodEnd: boolean;
   externalSubscriptionId: string | null;
   paymentProvider: string | null;
+  providerDashboardUrl: string | null;
   createdAt: string;
 }
 
@@ -591,15 +592,7 @@ function SubscriptionsPage() {
                                 View Team
                               </Link>
                             </Button>
-                            {sub.externalSubscriptionId && (() => {
-                              let providerUrl: string | null = null;
-                              if (sub.paymentProvider === 'stripe') {
-                                const stripePrefix = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.startsWith('pk_live') ? '' : 'test/';
-                                providerUrl = `https://dashboard.stripe.com/${stripePrefix}subscriptions/${sub.externalSubscriptionId}`;
-                              } else if (sub.paymentProvider === 'polar') {
-                                providerUrl = `https://polar.sh/dashboard/sales/subscriptions`;
-                              }
-                              return providerUrl ? (
+                            {sub.providerDashboardUrl && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -607,15 +600,14 @@ function SubscriptionsPage() {
                                   className="text-muted-foreground"
                                 >
                                   <a
-                                    href={providerUrl}
+                                    href={sub.providerDashboardUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                   >
                                     <ExternalLink className="h-4 w-4" />
                                   </a>
                                 </Button>
-                              ) : null;
-                            })()}
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
