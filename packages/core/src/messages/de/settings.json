@@ -11,7 +11,8 @@
     "billingDescription": "Verwalten Sie Ihr Abonnement, Zahlungsmethoden und Rechnungen.",
     "api-keysDescription": "Verwalten Sie API-Schluessel fuer externe Integration und Zugriffskontrolle.",
     "teamsDescription": "Verwalten Sie Ihre Teams, Mitglieder und Einladungen.",
-    "plansDescription": "Vergleichen Sie Tarife und fuehren Sie ein Upgrade Ihres Abonnements durch."
+    "plansDescription": "Vergleichen Sie Tarife und fuehren Sie ein Upgrade Ihres Abonnements durch.",
+    "marketplaceDescription": "Verwalten Sie Marketplace-Zahlungen und Provisionen."
   },
   "navigation": {
     "ariaLabel": "Einstellungsnavigation",
@@ -24,7 +25,8 @@
     "billing": "Abrechnung",
     "api-keys": "API-Schluessel",
     "teams": "Teams",
-    "plans": "Tarife"
+    "plans": "Tarife",
+    "marketplace": "Marketplace"
   },
   "layout": {
     "title": "Einstellungen",

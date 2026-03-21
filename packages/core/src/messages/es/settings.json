@@ -11,7 +11,8 @@
     "billingDescription": "Administra tu suscripción, métodos de pago y facturas.",
     "api-keysDescription": "Gestiona claves API para integración externa y control de acceso.",
     "teamsDescription": "Administra tus equipos, miembros e invitaciones.",
-    "plansDescription": "Compara planes y mejora tu suscripción."
+    "plansDescription": "Compara planes y mejora tu suscripción.",
+    "marketplaceDescription": "Gestiona pagos y comisiones del marketplace."
   },
   "navigation": {
     "ariaLabel": "Navegación de configuración",
@@ -24,7 +25,8 @@
     "billing": "Facturación",
     "api-keys": "Claves API",
     "teams": "Equipos",
-    "plans": "Planes"
+    "plans": "Planes",
+    "marketplace": "Marketplace"
   },
   "layout": {
     "title": "Configuración",

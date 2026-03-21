@@ -274,6 +274,20 @@ export const DEFAULT_DASHBOARD_CONFIG = {
           planSelection: true,
         },
       },
+
+      marketplace: {
+        enabled: true,
+        label: 'settings.pages.marketplace',
+        description: 'settings.pages.marketplaceDescription',
+        icon: 'store',
+        order: 9,
+        features: {
+          connectedAccounts: true,
+          paymentSplitting: true,
+          commissionManagement: true,
+        },
+        requiredRole: 'admin', // Only admins can manage marketplace settings
+      },
     },
 
     /**

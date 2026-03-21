@@ -11,7 +11,8 @@
     "billingDescription": "Administre sua assinatura, metodos de pagamento e faturas.",
     "api-keysDescription": "Gerencie chaves API para integracao externa e controle de acesso.",
     "teamsDescription": "Administre suas equipes, membros e convites.",
-    "plansDescription": "Compare planos e faca upgrade da sua assinatura."
+    "plansDescription": "Compare planos e faca upgrade da sua assinatura.",
+    "marketplaceDescription": "Gerencie pagamentos e comissoes do marketplace."
   },
   "navigation": {
     "ariaLabel": "Navegacao de configuracoes",
@@ -24,7 +25,8 @@
     "billing": "Faturamento",
     "api-keys": "Chaves API",
     "teams": "Equipes",
-    "plans": "Planos"
+    "plans": "Planos",
+    "marketplace": "Marketplace"
   },
   "layout": {
     "title": "Configuracoes",

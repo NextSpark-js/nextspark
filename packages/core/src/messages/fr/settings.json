@@ -11,7 +11,8 @@
     "billingDescription": "Gerez votre abonnement, methodes de paiement et factures.",
     "api-keysDescription": "Gerez les cles API pour l'integration externe et le controle d'acces.",
     "teamsDescription": "Gerez vos equipes, membres et invitations.",
-    "plansDescription": "Comparez les plans et mettez a niveau votre abonnement."
+    "plansDescription": "Comparez les plans et mettez a niveau votre abonnement.",
+    "marketplaceDescription": "Gerez les paiements et commissions du marketplace."
   },
   "navigation": {
     "ariaLabel": "Navigation des parametres",
@@ -24,7 +25,8 @@
     "billing": "Facturation",
     "api-keys": "Cles API",
     "teams": "Equipes",
-    "plans": "Plans"
+    "plans": "Plans",
+    "marketplace": "Marketplace"
   },
   "layout": {
     "title": "Parametres",

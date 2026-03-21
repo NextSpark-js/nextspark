@@ -15,7 +15,8 @@ import {
   CreditCard,
   Settings,
   Key,
-  Share2
+  Share2,
+  Store
 } from 'lucide-react'
 import { createAriaLabel, sel } from '../../../lib/test'
 import { useTranslations } from 'next-intl'
@@ -32,6 +33,7 @@ const settingsIcons = {
   'social-media': Share2,
   teams: Users,
   plans: CreditCard,
+  marketplace: Store,
 }
 
 interface SettingsSidebarProps {
