@@ -18,10 +18,12 @@ import { useMediaItem } from '../../hooks/useMedia'
 import { cn } from '../../lib/utils'
 import { sel } from '../../lib/selectors'
 import type { Media } from '../../lib/media/types'
+import type { MediaRef } from '../../types/blocks'
+import { resolveMediaUrl } from '../../types/blocks'
 
 interface MediaSelectorProps {
-  value?: string | null
-  onChange?: (mediaId: string | null, media: Media | null) => void
+  value?: MediaRef | null
+  onChange?: (ref: MediaRef | null) => void
   mode?: 'single'
   allowedTypes?: ('image' | 'video')[]
   className?: string
@@ -39,8 +41,11 @@ export function MediaSelector({
   const t = useTranslations('media')
   const [isLibraryOpen, setIsLibraryOpen] = useState(false)
 
+  // Resolve mediaId from either string (legacy) or object format
+  const mediaId = value ? (typeof value === 'string' ? value : value.mediaId) : null
+
   // Fetch media details if value is set
-  const { data: selectedMedia, isLoading, isError } = useMediaItem(value || null)
+  const { data: selectedMedia, isLoading, isError } = useMediaItem(mediaId)
 
   const handleSelect = (media: Media | Media[]) => {
     if (Array.isArray(media)) {
@@ -48,12 +53,12 @@ export function MediaSelector({
       return
     }
 
-    onChange?.(media.id, media)
+    onChange?.({ mediaId: media.id, url: media.url })
     setIsLibraryOpen(false)
   }
 
   const handleRemove = () => {
-    onChange?.(null, null)
+    onChange?.(null)
   }
 
   const handleOpenLibrary = () => {

@@ -7,6 +7,7 @@
 
 import { z } from 'zod'
 import type { EntityConfig, EntityField, ChildEntityDefinition } from './types'
+import { mediaRefSchema } from '../../types/blocks'
 
 export interface SchemaGenerationOptions {
   includeReadOnly?: boolean
@@ -627,8 +628,8 @@ function generateFieldSchema(
 
     // Media types
     case 'media-library':
-      // Stores a media ID (string) from the Media Library
-      schema = z.string().nullable()
+      // Stores { mediaId, url } from the Media Library (also accepts legacy string for backward compat)
+      schema = mediaRefSchema.nullable()
       break
 
     case 'file':
