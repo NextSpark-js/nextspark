@@ -551,21 +551,103 @@ contents/themes/default/templates/
 ├── (public)/
 │   ├── page.tsx              → app/(public)/page.tsx
 │   ├── layout.tsx            → app/(public)/layout.tsx
+│   ├── layout.meta.ts        → metadata for app/(public)/layout.tsx
 │   ├── features/
 │   │   └── page.tsx          → app/(public)/features/page.tsx
 │   ├── pricing/
 │   │   └── page.tsx          → app/(public)/pricing/page.tsx
 │   └── support/
 │       └── page.tsx          → app/(public)/support/page.tsx
+├── (auth)/
+│   └── layout.meta.ts        → metadata-only override for app/(auth)/layout.tsx
 ├── dashboard/
 │   ├── page.tsx              → app/dashboard/page.tsx
 │   └── layout.tsx            → app/dashboard/layout.tsx
+├── layout.meta.ts            → metadata-only override for app/layout.tsx
 ├── error.tsx                 → app/error.tsx
 ├── loading.tsx               → app/loading.tsx
 └── not-found.tsx             → app/not-found.tsx
 ```
 
 **Mapping:** Theme templates mirror the `app/` directory structure.
+
+### Standalone Metadata Files (`.meta.ts`)
+
+Themes can override **only the metadata** (page title, description, robots) of an app route without providing a full component override. This is done via standalone `.meta.ts` files.
+
+**How it works:**
+
+1. The discovery script looks for `.meta.ts` files in the templates directory
+2. If a companion `.tsx` file exists (e.g., `layout.tsx` alongside `layout.meta.ts`), the `.meta.ts` is treated as a **companion** — its metadata is attached to the `.tsx` template entry
+3. If **no companion `.tsx` exists**, the `.meta.ts` is registered as a **standalone metadata-only template** with `component: null`
+
+**Standalone `.meta.ts` file format:**
+
+```typescript
+// contents/themes/my-theme/templates/(auth)/layout.meta.ts
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: {
+    template: '%s | My App',
+    default: 'My App',
+  },
+  description: 'Custom description for auth pages',
+  robots: {
+    index: false,
+    follow: false,
+  },
+}
+```
+
+**Registry entry for standalone `.meta.ts`:**
+
+```typescript
+'app/(auth)/layout.tsx': {
+  appPath: 'app/(auth)/layout.tsx',
+  component: null,  // No component override — only metadata
+  template: {
+    name: '(auth)/layout',
+    themeName: 'my-theme',
+    templateType: 'layout',
+    fileName: 'layout.meta.ts',
+    metadata: {
+      title: { template: '%s | My App', default: 'My App' },
+      description: 'Custom description for auth pages',
+      // ...
+    }
+  }
+}
+```
+
+**How `getMetadataOrDefault` resolves it:**
+
+The auto-generated `app/(auth)/layout.tsx` calls `getMetadataOrDefault('app/(auth)/layout.tsx', defaultMetadata)`. The resolver checks if a template override exists for that path. If it finds one with metadata (even without a component), it returns the theme metadata instead of the default.
+
+```typescript
+// Resolution flow:
+// 1. getMetadataOrDefault('app/(auth)/layout.tsx', { title: 'Boilerplate' })
+// 2. TemplateService.hasOverride('app/(auth)/layout.tsx') → true
+// 3. entry.template.metadata exists → return theme metadata
+// 4. Result: { title: { template: '%s | My App', default: 'My App' } }
+```
+
+**When to use standalone `.meta.ts`:**
+
+| Scenario | Use `.meta.ts` standalone | Use full `.tsx` override |
+|----------|--------------------------|-------------------------|
+| Change page title/description | Yes | Overkill |
+| Change robots/SEO directives | Yes | Overkill |
+| Change layout structure/JSX | No | Yes |
+| Change both metadata and JSX | Use companion `.meta.ts` + `.tsx` | Also works |
+
+**Companion vs standalone summary:**
+
+| File pattern | Behavior |
+|-------------|----------|
+| `layout.tsx` only | Component + inline metadata (if exported) |
+| `layout.tsx` + `layout.meta.ts` | Component from `.tsx`, metadata from `.meta.ts` (companion) |
+| `layout.meta.ts` only | Metadata-only override, `component: null` (standalone) |
 
 ---
 
