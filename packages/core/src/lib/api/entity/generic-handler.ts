@@ -428,7 +428,6 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
     // For public entities, allow read access without authentication
     if (!authResult.success && resolution.entityConfig.access?.public) {
       // userId remains null for public access (no RLS filtering)
-      // Still read x-team-id so team-scoped public queries work (e.g. incognito landing pages)
       teamId = request.headers.get('x-team-id') ?? null
     } else if (!authResult.success) {
       return NextResponse.json(
