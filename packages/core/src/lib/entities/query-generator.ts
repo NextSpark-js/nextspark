@@ -665,7 +665,8 @@ function formatFieldValue(value: unknown, field: EntityField): unknown {
 
   switch (field.type) {
     case 'json':
-      return typeof value === 'string' ? value : JSON.stringify(value)
+    case 'media-library':
+      return typeof value === 'object' ? JSON.stringify(value) : value
     case 'boolean':
       return Boolean(value)
     case 'number':

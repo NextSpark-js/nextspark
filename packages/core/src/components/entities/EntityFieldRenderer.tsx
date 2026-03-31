@@ -50,6 +50,8 @@ import { DoubleRange } from '../ui/double-range'
 
 import type { EntityField } from '../../lib/entities/types'
 import type { Address } from '../ui/address-input'
+import type { MediaRef } from '../../types/blocks'
+import { resolveMediaUrl } from '../../types/blocks'
 
 export interface EntityFieldRendererProps {
   field: EntityField
@@ -144,7 +146,7 @@ function formatDisplayValue(value: unknown, field: EntityField): string {
       return String(value || '')
 
     case 'media-library':
-      return value ? String(value) : ''
+      return resolveMediaUrl(value as MediaRef) || ''
 
     case 'file':
     case 'image':
@@ -486,8 +488,8 @@ function renderFormField(
     case 'media-library':
       return (
         <MediaSelector
-          value={value as string | null}
-          onChange={(mediaId) => onChange(mediaId)}
+          value={value as MediaRef | null}
+          onChange={(ref) => onChange(ref)}
           disabled={disabled}
         />
       )

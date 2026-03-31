@@ -427,8 +427,8 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
 
     // For public entities, allow read access without authentication
     if (!authResult.success && resolution.entityConfig.access?.public) {
-      console.log(`[GenericHandler] Public access allowed for ${resolution.entityConfig.slug} list`)
       // userId remains null for public access (no RLS filtering)
+      teamId = request.headers.get('x-team-id') ?? null
     } else if (!authResult.success) {
       return NextResponse.json(
           { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
@@ -600,7 +600,7 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
 
       // Add team filter if team context provided (Phase 2)
       // Skip for public entities requesting published content (allows cross-team public access)
-      if (teamId && !skipUserFilter) {
+      if (teamId) {
         query += ` AND t."teamId" = $${paramIndex++}`
         queryParams.push(teamId)
       }
@@ -627,7 +627,7 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
 
       // Add team filter if team context provided (Phase 2)
       // Skip for public entities requesting published content
-      if (teamId && !skipUserFilter) {
+      if (teamId) {
         query += ` AND t."teamId" = $${paramIndex++}`
         queryParams.push(teamId)
       }
@@ -663,7 +663,7 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
       // Add team filter if team context provided (Phase 2 - Team Isolation)
       // This is the PRIMARY isolation mechanism - all entities are isolated by team
       // Skip for public entities requesting published content (allows cross-team public access)
-      if (teamId && !skipUserFilter) {
+      if (teamId) {
         whereConditions.push(`t."teamId" = $${paramIndex++}`)
         queryParams.push(teamId)
       }
