@@ -22,7 +22,15 @@ import { query, queryOne } from '@nextsparkjs/core/lib/db'
 import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import type { PolarWebhookExtensions } from '@nextsparkjs/core/lib/billing/polar-webhook'
-import { polarWebhookExtensions } from '@/lib/billing/polar-webhook-extensions'
+
+async function loadExtensions(): Promise<PolarWebhookExtensions> {
+  try {
+    const mod = await import('@/lib/billing/polar-webhook-extensions')
+    return mod.polarWebhookExtensions
+  } catch {
+    return {}
+  }
+}
 
 async function handlePolarWebhook(request: NextRequest) {
   // 1. Get raw body and ALL headers (Polar needs full headers for verification)
@@ -86,7 +94,7 @@ async function handlePolarWebhook(request: NextRequest) {
         break
 
       case 'order.paid':
-        await handleOrderPaid(event.data, eventId, polarWebhookExtensions)
+        await handleOrderPaid(event.data, eventId, await loadExtensions())
         break
 
       default:

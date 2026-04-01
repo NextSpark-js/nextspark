@@ -74,9 +74,10 @@ export interface BuilderEditorViewProps {
   entityConfig: ClientEntityConfig
   id?: string  // undefined = create mode
   mode: 'create' | 'edit'
+  onEntityFieldChange?: (field: string, value: unknown) => void
 }
 
-export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: BuilderEditorViewProps) {
+export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntityFieldChange: onEntityFieldChangeProp }: BuilderEditorViewProps) {
   const router = useRouter()
   const t = useTranslations('admin.builder')
   const queryClient = useQueryClient()
@@ -416,7 +417,8 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode }: Builde
 
   const handleEntityFieldChange = useCallback((field: string, value: unknown) => {
     setEntityFields(prev => ({ ...prev, [field]: value }))
-  }, [])
+    onEntityFieldChangeProp?.(field, value)
+  }, [onEntityFieldChangeProp])
 
   const handleLeftSidebarToggle = useCallback((value: string | number | undefined) => {
     // If no value or clicking the same option, toggle to 'none'

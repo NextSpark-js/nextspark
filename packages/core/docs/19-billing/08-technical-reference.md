@@ -517,23 +517,23 @@ export async function trackUsage(params) {
 
 ---
 
-### lib/billing/stripe-webhook-extensions.ts (project-level)
+### lib/billing/stripe-webhook-extensions.ts (project-level, optional)
 
-**Purpose:** Project-level override stub for handling Stripe one-time payment events.
+**Purpose:** Project-level extension for handling Stripe one-time payment events.
 
-**Default:** Empty `stripeWebhookExtensions = {}` — no one-time payment handling.
+**Optional:** The webhook route loads this file dynamically with a fallback. If it doesn't exist, webhooks work normally without one-time payment handling. Create it only when needed.
 
-**Override to add:** Credit pack fulfillment, lifetime deal activation, upsell processing.
+**Create to add:** Credit pack fulfillment, lifetime deal activation, upsell processing.
 
 ---
 
-### lib/billing/polar-webhook-extensions.ts (project-level)
+### lib/billing/polar-webhook-extensions.ts (project-level, optional)
 
-**Purpose:** Project-level override stub for handling Polar one-time payment events.
+**Purpose:** Project-level extension for handling Polar one-time payment events.
 
-**Default:** Empty `polarWebhookExtensions = {}` — no one-time payment handling.
+**Optional:** Same as Stripe — loaded dynamically with fallback. Create only when needed.
 
-**Override to add:** Same use cases as Stripe extension.
+**Create to add:** Same use cases as Stripe extension.
 
 ---
 

@@ -220,11 +220,23 @@ The Stripe webhook handler uses `StripeWebhookExtensions` to delegate one-time p
 
 ```typescript
 // app/api/v1/billing/webhooks/stripe/route.ts
+import { handleStripeWebhook } from '@nextsparkjs/core/lib/billing/stripe-webhook'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
-import { stripeWebhookExtensions } from '@/lib/billing/stripe-webhook-extensions'
 
-// Rate-limited: 10 requests/hour per IP (strict tier)
-export const POST = withRateLimitTier(handleStripeWebhook, 'strict')
+// Extensions are optional — loaded dynamically with fallback
+async function loadExtensions() {
+  try {
+    const mod = await import('@/lib/billing/stripe-webhook-extensions')
+    return mod.stripeWebhookExtensions
+  } catch {
+    return {}
+  }
+}
+
+export const POST = withRateLimitTier(
+  async (request) => handleStripeWebhook(request, await loadExtensions()),
+  'webhook'
+)
 
 async function handleStripeWebhook(request: NextRequest) {
   const payload = await request.text()
@@ -289,10 +301,19 @@ Polar requires **ALL request headers** for webhook verification (not just a sign
 ```typescript
 // app/api/v1/billing/webhooks/polar/route.ts
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
-import { polarWebhookExtensions } from '@/lib/billing/polar-webhook-extensions'
+import type { PolarWebhookExtensions } from '@nextsparkjs/core/lib/billing/polar-webhook'
 
-// Rate-limited: 10 requests/hour per IP (strict tier)
-export const POST = withRateLimitTier(handlePolarWebhook, 'strict')
+// Extensions are optional — loaded dynamically with fallback
+async function loadExtensions(): Promise<PolarWebhookExtensions> {
+  try {
+    const mod = await import('@/lib/billing/polar-webhook-extensions')
+    return mod.polarWebhookExtensions
+  } catch {
+    return {}
+  }
+}
+
+export const POST = withRateLimitTier(handlePolarWebhook, 'webhook')
 
 async function handlePolarWebhook(request: NextRequest) {
   const payload = await request.text()
@@ -356,7 +377,7 @@ The extension pattern lets project code handle one-time payment events without m
 
 ### Extension Files
 
-Two stub files are created for every new project. Override them to add handlers:
+These files are **optional**. The webhook routes use dynamic imports with a fallback — if the files don't exist, webhooks work normally without one-time payment handling. Create them only when you need to handle one-time purchases (credit packs, LTD, upsells):
 
 ```
 lib/billing/

@@ -68,7 +68,7 @@ function AcceptInvitePage() {
         }
 
         // Check email match
-        if (user.email.toLowerCase() !== data.data.email.toLowerCase()) {
+        if ((user.email ?? '').toLowerCase()  !== data.data.email.toLowerCase()) {
           setStatus('email_mismatch')
           setErrorMessage(`This invitation was sent to ${data.data.email}, but you are logged in as ${user.email}`)
           return
