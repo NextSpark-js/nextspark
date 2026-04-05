@@ -133,7 +133,7 @@ export interface PluginRegistryEntry {
   hasAssets: boolean
 }
 
-export const PLUGIN_REGISTRY = {
+export const PLUGIN_REGISTRY: Record<string, PluginRegistryEntry> = {
 ${registryEntries}
 }
 
