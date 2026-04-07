@@ -8,7 +8,7 @@
  */
 
 import { ComponentType } from 'react'
-import { BLOCK_COMPONENTS, BLOCK_COMPONENTS_SSR, BLOCK_IMPORTS_SSR } from '@nextsparkjs/registries/block-registry'
+import { BLOCK_COMPONENTS, BLOCK_COMPONENTS_SSR } from '@nextsparkjs/registries/block-registry'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type BlockComponent = ComponentType<any>
@@ -34,36 +34,18 @@ export function getBlockComponent(slug: string): BlockComponent | undefined {
 }
 
 /**
- * @deprecated Use loadBlockSSR for async Server Component rendering
+ * Get all SSR block components (direct imports, no React.lazy)
+ * Use for public page rendering where no-JS SSR is required
  */
 export function getBlockComponentsSSR(): Record<string, BlockComponent> {
   return BLOCK_COMPONENTS_SSR
 }
 
 /**
- * @deprecated Use loadBlockSSR for async Server Component rendering
+ * Get a specific SSR block component by slug (direct import, no React.lazy)
  */
 export function getBlockComponentSSR(slug: string): BlockComponent | undefined {
   return BLOCK_COMPONENTS_SSR[slug]
-}
-
-/**
- * Async block loader for RSC streaming.
- *
- * Dynamically imports a block component by slug. Used by PageRenderer
- * (async Server Component) with Suspense for:
- * - Per-block code splitting (only used blocks ship JS to client)
- * - Streaming SSR (server flushes HTML progressively)
- * - Zero CLS (HTML complete before client JS runs)
- *
- * @param slug - Block slug (e.g., 'hero', 'accordion')
- * @returns Resolved block component, or undefined if not found
- */
-export async function loadBlockSSR(slug: string): Promise<BlockComponent | undefined> {
-  const importFn = BLOCK_IMPORTS_SSR[slug]
-  if (!importFn) return undefined
-  const mod = await importFn()
-  return mod.default
 }
 
 /**
@@ -73,7 +55,7 @@ export async function loadBlockSSR(slug: string): Promise<BlockComponent | undef
  * @returns true if block exists
  */
 export function hasBlock(slug: string): boolean {
-  return slug in BLOCK_COMPONENTS || slug in BLOCK_IMPORTS_SSR
+  return slug in BLOCK_COMPONENTS
 }
 
 /**

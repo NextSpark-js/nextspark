@@ -48,11 +48,6 @@ export const BLOCK_CATEGORIES: string[] = []
 export const BLOCK_COMPONENTS: Record<string, React.LazyExoticComponent<React.ComponentType<unknown>>> = {}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type BlockImportFn = () => Promise<{ default: React.ComponentType<any> }>
-export const BLOCK_IMPORTS_SSR: Record<string, BlockImportFn> = {}
-
-/** @deprecated Use BLOCK_IMPORTS_SSR */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const BLOCK_COMPONENTS_SSR: Record<string, React.ComponentType<any>> = {}
 
 export const BLOCK_METADATA = {
@@ -65,22 +60,23 @@ export const BLOCK_METADATA = {
 `
   }
 
-  // Import field definitions and examples (if they exist)
+  // Import field definitions, examples, and components
   const imports = []
+  const ssrImports = []
 
   blocks.forEach(block => {
     const slugVar = block.slug.replace(/-/g, '_')
 
-    // Always import field definitions
     imports.push(`import { fieldDefinitions as ${slugVar}_fields } from '${block.paths.fields}'`)
+    ssrImports.push(`import { default as ${slugVar}_component } from '${block.paths.component}'`)
 
-    // Conditionally import examples if they exist
     if (block.hasExamples) {
       imports.push(`import { examples as ${slugVar}_examples } from '${block.paths.examples}'`)
     }
   })
 
   const fieldImports = imports.join('\n')
+  const ssrComponentImports = ssrImports.join('\n')
 
   const registryEntries = blocks.map(block => {
     const slugVar = block.slug.replace(/-/g, '_')
@@ -132,6 +128,9 @@ import type { BlockConfig, BlockCategory } from '${convertCorePath('@/core/types
 
 ${fieldImports}
 
+// Direct component imports for SSR — zero CLS, synchronous hydration
+${ssrComponentImports}
+
 export const BLOCK_REGISTRY: Record<string, BlockConfig> = {
 ${registryEntries}
 }
@@ -149,31 +148,17 @@ ${blocks.map(block => {
 }
 
 /**
- * Server-side block import functions for RSC streaming.
- *
- * Each entry is an async import function — NOT a resolved component.
- * PageRenderer (async Server Component) calls these per-block with Suspense,
- * enabling:
- * - Per-block code splitting (only used blocks ship JS to client)
- * - Streaming SSR (server flushes HTML progressively as blocks resolve)
- * - Zero CLS (HTML is complete before client JS runs)
- *
- * For admin/client rendering, use BLOCK_COMPONENTS (React.lazy) instead.
+ * Direct-imported block components for SSR rendering.
+ * Static imports ensure synchronous hydration — zero CLS.
+ * HTML is fully visible without client JS (SEO-safe, no-JS compatible).
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type BlockImportFn = () => Promise<{ default: React.ComponentType<any> }>
-export const BLOCK_IMPORTS_SSR: Record<string, BlockImportFn> = {
+export const BLOCK_COMPONENTS_SSR: Record<string, React.ComponentType<any>> = {
 ${blocks.map(block => {
-    return `  '${block.slug}': () => import('${block.paths.component}')`
+    const slugVar = block.slug.replace(/-/g, '_')
+    return `  '${block.slug}': ${slugVar}_component`
   }).join(',\n')}
 }
-
-/**
- * @deprecated Use BLOCK_IMPORTS_SSR with async PageRenderer instead.
- * Kept for backwards compatibility with themes that override PageRenderer.
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const BLOCK_COMPONENTS_SSR: Record<string, React.ComponentType<any>> = {}
 
 /**
  * Block registry metadata

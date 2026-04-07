@@ -1,25 +1,18 @@
 /**
- * PageRenderer Component — Async Server Component with RSC Streaming
+ * PageRenderer Component
  *
- * Renders pages from the Page Builder using async dynamic imports
- * per block, wrapped in Suspense boundaries for streaming SSR.
+ * Renders pages from the Page Builder by iterating over blocks
+ * and directly loading block components from the SSR registry.
  *
- * How it works:
- * 1. Each block is loaded via `loadBlockSSR(slug)` — an async import
- * 2. React Server Components resolve the import on the server
- * 3. Suspense boundaries let React stream HTML progressively
- * 4. Client receives complete HTML (zero CLS, SEO-safe)
- * 5. Only JS chunks for blocks actually on the page are sent to client
- *
- * This gives per-block code splitting WITHOUT the CLS issues of next/dynamic,
- * because the server fully resolves each block before flushing the HTML.
+ * Uses direct imports (BLOCK_COMPONENTS_SSR) for synchronous hydration.
+ * This ensures zero CLS — HTML is fully visible and stable without
+ * waiting for async chunk resolution on the client.
  *
  * @module core/components/public/pageBuilder
  */
 
-import { Suspense } from 'react'
 import type { BlockInstance } from '../../../types/blocks'
-import { loadBlockSSR, normalizeBlockProps } from '../../../lib/blocks/loader'
+import { getBlockComponentSSR, normalizeBlockProps } from '../../../lib/blocks/loader'
 
 // Error display for missing blocks
 function BlockError({ blockSlug }: { blockSlug: string }) {
@@ -37,19 +30,15 @@ function BlockError({ blockSlug }: { blockSlug: string }) {
   )
 }
 
-/**
- * Async Server Component — resolves block import on the server,
- * renders HTML, and streams it to the client via Suspense.
- */
-async function BlockRenderer({ block }: { block: BlockInstance }) {
-  const BlockComponent = await loadBlockSSR(block.blockSlug)
+// Synchronous block renderer — no Suspense, direct component rendering
+function BlockRenderer({ block }: { block: BlockInstance }) {
+  const BlockComponent = getBlockComponentSSR(block.blockSlug)
 
   if (!BlockComponent) {
     console.warn(`Block component not found for slug: ${block.blockSlug}`)
     return <BlockError blockSlug={block.blockSlug} />
   }
 
-  // Normalize props to convert dot-notation to nested objects
   const normalizedProps = normalizeBlockProps(block.props)
 
   return <BlockComponent {...normalizedProps} />
@@ -91,9 +80,7 @@ export function PageRenderer({ page }: PageRendererProps) {
           data-block-id={block.id}
           data-block-slug={block.blockSlug}
         >
-          <Suspense>
-            <BlockRenderer block={block} />
-          </Suspense>
+          <BlockRenderer block={block} />
         </div>
       ))}
     </div>
