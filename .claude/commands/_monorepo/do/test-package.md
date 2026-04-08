@@ -1,5 +1,5 @@
 ---
-description: "Test npm package from scratch - fully automated with Playwright verification"
+description: "Test npm package from scratch - fully automated with agent-browser verification"
 ---
 
 # do:test-package
@@ -403,154 +403,389 @@ done
 
 ---
 
-### Step 12: Playwright MCP Verification
+### Step 12: Browser Verification with agent-browser
 
-Use **mcp__playwright__** tools to verify the app works:
+Use **agent-browser** (CLI browser automation tool) to verify the app works end-to-end.
+Uses accessibility tree snapshots (`snapshot -i`) and element refs (`@eN`) for interaction.
 
-#### 12.1 Homepage
-```
-mcp__playwright__browser_navigate -> http://localhost:3005
-mcp__playwright__browser_snapshot -> Verify page loads (title should be "NextSpark App" or similar)
-```
+**Pre-requisite:** `agent-browser` must be installed (`npm i -g agent-browser`).
 
-#### 12.2 Login Page
-```
-mcp__playwright__browser_navigate -> http://localhost:3005/login
-mcp__playwright__browser_snapshot -> Verify:
-  - Title contains "Sign In" or "Login"
-  - Login form elements visible
-  - "Dev Keyring" button visible (in development)
-```
+#### 12.1 Homepage & Auth Pages (curl pre-check)
 
-#### 12.3 Signup Page
-```
-mcp__playwright__browser_navigate -> http://localhost:3005/signup
-mcp__playwright__browser_snapshot -> Verify signup form renders
-```
+Quick HTTP checks before launching the browser:
+```bash
+# Homepage
+curl -s -o /dev/null -w "HTTP %{http_code}" http://localhost:3005/
 
-#### 12.4 Dashboard (requires login)
-```
-# Click Dev Keyring button
-# Select a test user
-# Verify redirect to /dashboard
+# Login page
+curl -s http://localhost:3005/login | grep -oE '<title>[^<]+</title>'
+
+# Signup page
+curl -s http://localhost:3005/signup | grep -oE '<title>[^<]+</title>'
+
+# Dashboard (should redirect 307 to login when unauthenticated)
+curl -s -o /dev/null -w "HTTP %{http_code}" http://localhost:3005/dashboard
 ```
 
-#### 12.5 Check for Console Errors
-```
-mcp__playwright__browser_console_messages -> Check for errors
-```
+**Expected:** Homepage 200, Login 200 (title "Sign In"), Signup 200 (title "Create Account"), Dashboard 307.
 
-**Acceptable errors:**
-- CSP warnings (if NEXT_PUBLIC_APP_URL doesn't match port)
-- Missing i18n messages (non-critical)
+#### 12.2 Login via agent-browser
 
-**Fail on:**
-- Module not found errors
-- TypeScript errors
-- Build errors
+```bash
+# Navigate to login page
+agent-browser open http://localhost:3005/login
+agent-browser wait --load networkidle
+agent-browser snapshot -i
+# Verify: heading "Sign in", textbox "Email", textbox "Password", button "Sign in", button "Dev Keyring"
 
-#### 12.6 Entity CRUD Test (Tasks)
-
-**CRITICAL:** Test full CRUD operations on an entity to verify the data flow works end-to-end.
-
-##### 12.6.1 Navigate to Tasks
-```
-mcp__playwright__browser_navigate -> http://localhost:3005/dashboard/tasks
-mcp__playwright__browser_snapshot -> Verify:
-  - Page title contains "Tasks"
-  - "Add task" button visible
-  - Table or empty state visible
+# Fill login form with superadmin credentials from dev.config.ts
+agent-browser fill @eEMAIL "superadmin@nextspark.dev"
+agent-browser fill @ePASSWORD "Pandora1234"
+agent-browser click @eSIGNIN   # button "Sign in"
+agent-browser wait --load networkidle
+agent-browser wait 3000
+agent-browser snapshot -i
+# Verify: Dashboard loaded with navigation sidebar (Tasks, Pages, Posts, Media links)
 ```
 
-##### 12.6.2 CREATE - Add New Task
-```
-# Click "Add task" button
-mcp__playwright__browser_click -> ref for "Add task" link
+**IMPORTANT:** After `snapshot -i`, use the actual `ref=eN` values from the output. Refs change between snapshots.
 
-# Wait for create form
-mcp__playwright__browser_snapshot -> Verify form fields:
-  - Title (required)
-  - Description
-  - Status dropdown
-  - Priority dropdown
-  - Due Date
-  - Estimated Hours
+#### 12.3 Entity CRUD Test: Tasks
+
+**CRITICAL:** Test full CRUD operations to verify the data flow works end-to-end.
+
+##### 12.3.1 Navigate to Tasks
+```bash
+agent-browser open http://localhost:3005/dashboard/tasks
+agent-browser wait --load networkidle
+agent-browser wait 3000
+agent-browser snapshot -i
+# Verify: heading "Tasks", link "Add task", heading "No tasks found" or table with data
+```
+
+##### 12.3.2 CREATE - Add New Task
+```bash
+# Click "Add task" link
+agent-browser click @eADDTASK
+agent-browser wait --load networkidle
+agent-browser wait 3000
+agent-browser snapshot -i
+# Verify: heading "Create task", form fields: Title*, Description, Status, Priority, etc.
 
 # Fill the form
-mcp__playwright__browser_type -> Title field: "Playwright Test Task"
-mcp__playwright__browser_type -> Description field: "Task created during NPM package test"
+agent-browser fill @eTITLE "NPM Package Test Task"
+agent-browser fill @eDESCRIPTION "Task created during NPM package test"
 
-# Submit
-mcp__playwright__browser_click -> "Create" button
+# Submit - use JS click on [data-cy="tasks-form-submit"] for reliability
+agent-browser eval '(() => { const b = document.querySelector("[data-cy=\"tasks-form-submit\"]"); if(b){b.click();return "clicked"} return "not found" })()'
+agent-browser wait 5000
 
 # Verify redirect to detail page
-mcp__playwright__browser_snapshot -> Verify:
-  - Title shows "Playwright Test Task"
-  - Detail view renders correctly
-  - Edit and Delete buttons visible
+agent-browser get url   # Should be /dashboard/tasks/<uuid>
+agent-browser snapshot -i
+# Verify: heading "NPM Package Test Task", button "Edit", button "Delete"
 ```
 
-##### 12.6.3 READ - Verify Task Detail
-```
-mcp__playwright__browser_snapshot -> Verify all fields display:
-  - Title: "Playwright Test Task"
-  - Description: "Task created during NPM package test"
-  - Status: "To Do" (default)
-  - Priority: "Medium" (default)
-  - Created/Updated timestamps
+**NOTE:** The `agent-browser click @ref` on form submit buttons may not trigger React form handlers reliably. Use `agent-browser eval` with `document.querySelector('[data-cy="...-form-submit"]').click()` as a fallback.
+
+##### 12.3.3 READ - Verify Task Detail
+```bash
+agent-browser screenshot /tmp/test-task-detail.png
+# Visually verify: Title, Description, Status "To Do", Priority "Medium", timestamps
 ```
 
-##### 12.6.4 UPDATE - Edit Task
-```
-# Click Edit button
-mcp__playwright__browser_click -> "Edit" button
-
-# Verify edit form loads with current data
-mcp__playwright__browser_snapshot -> Verify form pre-filled
+##### 12.3.4 UPDATE - Edit Task
+```bash
+# Navigate directly to edit URL (more reliable than clicking Edit button)
+agent-browser open http://localhost:3005/dashboard/tasks/<TASK_UUID>/edit
+agent-browser wait --load networkidle
+agent-browser wait 3000
+agent-browser snapshot -i
+# Verify: form pre-filled with current values, button "Save Changes"
 
 # Update title
-mcp__playwright__browser_type -> Title field: "Playwright Test Task - UPDATED"
+agent-browser fill @eTITLE "NPM Package Test Task - UPDATED"
+agent-browser wait 500
 
-# Change status dropdown
-mcp__playwright__browser_click -> Status dropdown
-mcp__playwright__browser_click -> "In Progress" option
+# Submit via JS
+agent-browser eval '(() => { const b = document.querySelector("[data-cy=\"tasks-form-submit\"]"); if(b){b.click();return "clicked"} return "not found" })()'
+agent-browser wait 5000
 
-# Save changes
-mcp__playwright__browser_click -> "Save Changes" button
-
-# Verify updates persisted
-mcp__playwright__browser_snapshot -> Verify:
-  - Title: "Playwright Test Task - UPDATED"
-  - Status: "In Progress"
+# Verify redirect to detail page with updated title
+agent-browser get url
+agent-browser snapshot -i
+# Verify: heading "NPM Package Test Task - UPDATED"
 ```
 
-##### 12.6.5 DELETE - Remove Task
-```
-# Click Delete button
-mcp__playwright__browser_click -> "Delete" button
+##### 12.3.5 DELETE - Remove Task
+```bash
+agent-browser snapshot -i
+# Find Delete button ref
+agent-browser click @eDELETE
+agent-browser wait 1000
+agent-browser snapshot -i
+# Verify: confirmation dialog with heading "Delete", buttons "Cancel" and "Delete"
 
-# Confirm in dialog
-mcp__playwright__browser_snapshot -> Verify confirmation dialog appears
-mcp__playwright__browser_click -> Confirm "Delete" button in dialog
+agent-browser click @eCONFIRM_DELETE
+agent-browser wait 5000
 
 # Verify redirect to list
-mcp__playwright__browser_snapshot -> Verify:
-  - Redirected to /dashboard/tasks
-  - Task no longer in list (or empty state shows)
+agent-browser get url   # Should be /dashboard/tasks
+agent-browser snapshot -i
+# Verify: heading "No tasks found" (task was removed)
 ```
 
-##### 12.6.6 CRUD Test Summary
+##### 12.3.6 Tasks CRUD Summary
 All four operations must pass:
-- **CREATE** ✓ - Form submission creates entity
-- **READ** ✓ - Detail page shows correct data
-- **UPDATE** ✓ - Edit form saves changes
-- **DELETE** ✓ - Confirmation removes entity
+- **CREATE** - Form submission creates entity, redirects to detail page
+- **READ** - Detail page shows correct data (title, description, status, priority)
+- **UPDATE** - Edit form saves changes, title updated in detail view
+- **DELETE** - Confirmation dialog removes entity, list shows empty state
 
-**If any CRUD operation fails:**
-1. Check console for API errors: `mcp__playwright__browser_console_messages`
-2. Check network requests: `mcp__playwright__browser_network_requests`
+#### 12.4 Entity CRUD Test: Pages + Page Builder URL
+
+**CRITICAL:** Test Pages entity CRUD AND verify the page builder renders at the public slug URL.
+
+##### 12.4.1 Navigate to Pages
+```bash
+agent-browser open http://localhost:3005/dashboard/pages
+agent-browser wait --load networkidle
+agent-browser wait 3000
+agent-browser snapshot -i
+# Verify: heading "Pages", link "Add page"
+```
+
+##### 12.4.2 CREATE - Add New Page
+```bash
+# Click "Add page" link
+agent-browser click @eADDPAGE
+agent-browser wait --load networkidle
+agent-browser wait 3000
+agent-browser snapshot -i
+# Verify: heading "Create page", form fields: Title*, Slug, Content/Description, Status
+
+# Fill the form
+agent-browser fill @eTITLE "Test Landing Page"
+agent-browser fill @eSLUG "test-landing"   # If slug field exists
+# Note: slug may auto-generate from title. Check the form fields in snapshot.
+# If there is a description/content field, fill it:
+# agent-browser fill @eDESCRIPTION "This is a test landing page"
+
+# Submit via JS
+agent-browser eval '(() => { const b = document.querySelector("[data-cy=\"pages-form-submit\"]"); if(b){b.click();return "clicked"} return "not found" })()'
+agent-browser wait 5000
+
+# Verify redirect to detail page
+agent-browser get url   # Should be /dashboard/pages/<uuid>
+agent-browser snapshot -i
+# Verify: heading "Test Landing Page", Edit and Delete buttons visible
+# Note the slug value from the detail page for the public URL test
+```
+
+##### 12.4.3 READ - Verify Page Detail + PUBLIC URL
+```bash
+# Take screenshot of detail page
+agent-browser screenshot /tmp/test-page-detail.png
+
+# **KEY TEST: Verify the page renders at the public slug URL**
+agent-browser open http://localhost:3005/test-landing
+agent-browser wait --load networkidle
+agent-browser wait 3000
+agent-browser get url
+agent-browser snapshot -i
+# Verify:
+#   - Page loads (NOT a 404)
+#   - URL is http://localhost:3005/test-landing
+#   - Page content renders (may show page builder blocks or basic content)
+agent-browser screenshot /tmp/test-page-public.png
+```
+
+**This validates the full page builder pipeline:**
+1. Entity created in dashboard -> saved to DB
+2. Public route `[...slug]` resolves the page by slug
+3. Page content/blocks render on the public URL
+
+##### 12.4.4 UPDATE - Edit Page
+```bash
+# Navigate to edit page
+agent-browser open http://localhost:3005/dashboard/pages/<PAGE_UUID>/edit
+agent-browser wait --load networkidle
+agent-browser wait 3000
+agent-browser snapshot -i
+
+# Update title
+agent-browser fill @eTITLE "Test Landing Page - UPDATED"
+agent-browser wait 500
+
+# Submit
+agent-browser eval '(() => { const b = document.querySelector("[data-cy=\"pages-form-submit\"]"); if(b){b.click();return "clicked"} return "not found" })()'
+agent-browser wait 5000
+
+# Verify update on detail page
+agent-browser get url
+agent-browser snapshot -i
+# Verify: heading "Test Landing Page - UPDATED"
+
+# **Re-check public URL still works after update**
+agent-browser open http://localhost:3005/test-landing
+agent-browser wait --load networkidle
+agent-browser wait 3000
+# Verify: page still renders (not 404)
+```
+
+##### 12.4.5 DELETE - Remove Page
+```bash
+# Navigate back to detail page
+agent-browser open http://localhost:3005/dashboard/pages/<PAGE_UUID>
+agent-browser wait --load networkidle
+agent-browser wait 2000
+agent-browser snapshot -i
+
+# Click Delete
+agent-browser click @eDELETE
+agent-browser wait 1000
+agent-browser snapshot -i
+# Verify: confirmation dialog
+
+agent-browser click @eCONFIRM_DELETE
+agent-browser wait 5000
+
+# Verify redirect to list
+agent-browser get url   # Should be /dashboard/pages
+agent-browser snapshot -i
+
+# **Verify public URL now returns 404**
+agent-browser open http://localhost:3005/test-landing
+agent-browser wait --load networkidle
+agent-browser wait 2000
+agent-browser get url
+agent-browser snapshot -i
+# Verify: 404 page or "Not Found" (page was deleted)
+```
+
+##### 12.4.6 Pages CRUD + Page Builder Summary
+All operations must pass:
+- **CREATE** - Page created with slug "test-landing"
+- **READ** - Detail page shows data; **PUBLIC URL `localhost:3005/test-landing` loads correctly**
+- **UPDATE** - Title updated; public URL still works
+- **DELETE** - Page removed; **public URL now returns 404**
+
+#### 12.5 Superadmin Panel Verification
+
+**Tests that the superadmin area loads correctly.** This is a core feature that could break silently.
+
+```bash
+agent-browser open http://localhost:3005/superadmin
+agent-browser wait --load networkidle
+agent-browser wait 3000
+agent-browser snapshot -i
+# Verify:
+#   - Page loads (not 403/404/500)
+#   - Heading "Super Admin" or similar admin title visible
+#   - Navigation links visible (Users, Teams, Subscriptions, Docs, etc.)
+agent-browser screenshot /tmp/test-superadmin.png
+```
+
+**Expected elements:** Links to Users, Teams, Subscriptions management. If the page shows "Permission Denied" or a 403, superadmin role detection is broken.
+
+```bash
+# Quick check: navigate to superadmin users list
+agent-browser open http://localhost:3005/superadmin/users
+agent-browser wait --load networkidle
+agent-browser wait 3000
+agent-browser snapshot -i
+# Verify: User list renders with at least the superadmin and developer users
+```
+
+#### 12.6 DevTools Panel Verification
+
+**Tests that the developer tools panel loads.** DevTools is critical for theme developers.
+
+```bash
+agent-browser open http://localhost:3005/devtools
+agent-browser wait --load networkidle
+agent-browser wait 3000
+agent-browser snapshot -i
+# Verify:
+#   - Page loads (not 404/500)
+#   - DevTools navigation visible (Config, Features, Flows, Tags, Tests, Blocks, API)
+#   - Entity list or overview is displayed
+agent-browser screenshot /tmp/test-devtools.png
+```
+
+```bash
+# Check DevTools config page (shows entity configuration)
+agent-browser open http://localhost:3005/devtools/config
+agent-browser wait --load networkidle
+agent-browser wait 3000
+agent-browser snapshot -i
+# Verify: Entity configuration visible (tasks, pages, posts, patterns)
+```
+
+```bash
+# Check DevTools features page (shows feature registry)
+agent-browser open http://localhost:3005/devtools/features
+agent-browser wait --load networkidle
+agent-browser wait 2000
+agent-browser snapshot -i
+# Verify: Feature registry loads without errors
+```
+
+#### 12.7 Search Functionality Test
+
+**Tests that the global search works from the dashboard.**
+
+```bash
+# Navigate back to dashboard
+agent-browser open http://localhost:3005/dashboard
+agent-browser wait --load networkidle
+agent-browser wait 2000
+agent-browser snapshot -i
+
+# Click the search combobox
+agent-browser click @eSEARCH   # combobox "Search"
+agent-browser wait 1000
+agent-browser snapshot -i
+# Verify: Search dialog/dropdown opens
+
+# Type a search query (search for a known entity type)
+agent-browser type @eSEARCH_INPUT "task"
+agent-browser wait 2000
+agent-browser snapshot -i
+# Verify: Search results appear or "No results" message (both are valid - confirms search works)
+
+# Press Escape to close search
+agent-browser press Escape
+```
+
+#### 12.8 Close Browser
+
+```bash
+agent-browser close
+```
+
+#### 12.9 Full Verification Summary
+
+| Test | Area | What it validates |
+|------|------|-------------------|
+| CREATE | Tasks | Entity form submission + API create |
+| READ | Tasks | Detail page rendering + data display |
+| UPDATE | Tasks | Edit form + API update + data persistence |
+| DELETE | Tasks | Confirmation dialog + API delete + redirect |
+| CREATE | Pages | Page creation with slug |
+| READ (dashboard) | Pages | Page detail rendering |
+| READ (public URL) | Pages | **Page builder pipeline: slug -> public render** |
+| UPDATE | Pages | Edit persistence + public URL still works |
+| DELETE | Pages | Deletion + **public URL returns 404** |
+| Superadmin | Admin | Panel loads, users list renders |
+| DevTools | Developer | Config, features, entity overview loads |
+| Search | Dashboard | Global search opens and responds to input |
+
+**If any operation fails:**
+1. Check `agent-browser eval 'JSON.stringify(window._fetchLog)'` for API errors
+2. Check `agent-browser screenshot /tmp/debug.png` for visual state
 3. Verify database connection in .env
-4. Check entity config in `contents/themes/starter/entities/tasks/`
+4. Check entity config in `contents/themes/starter/entities/`
 
 ---
 
@@ -623,18 +858,34 @@ Summarize all results:
 - [ ] Migrations ran successfully (X core + X entity)
 - [ ] Registries built (X files, no path errors)
 
-### Runtime Phase
+### Runtime Phase (agent-browser)
 - [ ] Dev server started on port 3005
 - [ ] Homepage loads (HTTP 200)
-- [ ] Login page renders with form
-- [ ] Signup page renders
-- [ ] No critical console errors
+- [ ] Login page renders with form (title "Sign In")
+- [ ] Signup page renders (title "Create Account")
+- [ ] Login with superadmin credentials succeeds
+- [ ] Dashboard loads with navigation sidebar
 
-### CRUD Test Phase (Tasks Entity)
-- [ ] CREATE: Task created via form
-- [ ] READ: Task detail page renders
-- [ ] UPDATE: Task edited and saved
-- [ ] DELETE: Task removed with confirmation
+### CRUD Test Phase: Tasks Entity
+- [ ] CREATE: Task created via form, redirected to detail
+- [ ] READ: Detail page shows title, description, status, priority
+- [ ] UPDATE: Title edited and persisted
+- [ ] DELETE: Confirmation dialog, task removed
+
+### CRUD Test Phase: Pages Entity + Page Builder
+- [ ] CREATE: Page created with slug "test-landing"
+- [ ] READ (dashboard): Detail page shows page data
+- [ ] READ (public URL): `localhost:3005/test-landing` renders correctly
+- [ ] UPDATE: Title updated, public URL still works
+- [ ] DELETE: Page removed, public URL returns 404
+
+### Admin & DevTools Phase
+- [ ] Superadmin panel loads (`/superadmin`)
+- [ ] Superadmin users list renders (`/superadmin/users`)
+- [ ] DevTools panel loads (`/devtools`)
+- [ ] DevTools config shows entities (`/devtools/config`)
+- [ ] DevTools features page loads (`/devtools/features`)
+- [ ] Global search opens and responds to input
 
 ### Production Phase
 - [ ] Production build passed
@@ -706,10 +957,18 @@ pnpm pkg:publish
 | Registry generation | Yes |
 | Path normalization (Windows) | Yes |
 | Dev server startup | Yes |
-| Page rendering | Yes |
-| Auth system UI | Yes |
-| Entity CRUD (Tasks) | Yes |
-| API endpoints (via CRUD) | Yes |
+| Page rendering (agent-browser) | Yes |
+| Auth system UI (login form) | Yes |
+| Login with credentials | Yes |
+| Dashboard navigation | Yes |
+| Entity CRUD - Tasks | Yes |
+| Entity CRUD - Pages | Yes |
+| Page Builder public URL rendering | Yes |
+| Page Builder URL 404 after delete | Yes |
+| Superadmin panel + users list | Yes |
+| DevTools panel + config + features | Yes |
+| Global search functionality | Yes |
+| API endpoints (via CRUD forms) | Yes |
 | Production build | Yes |
 
 ---
