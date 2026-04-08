@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '../../ui/select'
 import { ImageUpload } from '../../ui/image-upload'
+import { RichTextEditor } from '../../ui/rich-text-editor'
 import { MediaLibrary } from '../../media/MediaLibrary'
 import { Card, CardContent, CardHeader } from '../../ui/card'
 import { ChevronUp, ChevronDown, Trash2, Plus, ImageIcon, X } from 'lucide-react'
@@ -226,6 +227,16 @@ export function ArrayField({ field, value, onChange }: ArrayFieldProps) {
             value={String(fieldValue || '')}
             onChange={(url) => handleItemFieldChange(itemIndex, itemField.name, url)}
             fieldName={`${field.name}-${itemIndex}-${itemField.name}`}
+          />
+        )
+
+      case 'rich-text':
+        return (
+          <RichTextEditor
+            value={String(fieldValue)}
+            onChange={(newValue) => handleItemFieldChange(itemIndex, itemField.name, newValue)}
+            placeholder={itemField.placeholder}
+            data-cy={sel('blockEditor.blockPropertiesPanel.form.arrayField.itemField', { name: field.name, index: itemIndex, field: itemField.name })}
           />
         )
 
