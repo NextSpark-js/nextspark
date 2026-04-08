@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Code, Palette, FileText, Settings } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@nextsparkjs/core/components/ui/card";
@@ -9,7 +10,7 @@ import { getTranslations } from "next-intl/server";
  * Dashboard with quick links to development tools and documentation.
  * Shows overview of available sections in the dev area.
  */
-export default async function DevHomePage() {
+async function DevHomePageContent() {
   const t = await getTranslations('dev');
   const tCommon = await getTranslations('common');
 
@@ -117,5 +118,13 @@ export default async function DevHomePage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function DevHomePage() {
+  return (
+    <Suspense fallback={null}>
+      <DevHomePageContent />
+    </Suspense>
   );
 }

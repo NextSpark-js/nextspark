@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { FeaturesViewer } from "@nextsparkjs/core/components/devtools/FeaturesViewer";
 import { Layers } from "lucide-react";
 import { getTranslations } from "next-intl/server";
@@ -8,7 +9,7 @@ import { getTranslations } from "next-intl/server";
  * Displays all features from the testing registry with coverage information.
  * Provides filtering and search capabilities.
  */
-export default async function DevFeaturesPage() {
+async function DevFeaturesPageContent() {
   const t = await getTranslations("devtools.features");
 
   return (
@@ -27,5 +28,13 @@ export default async function DevFeaturesPage() {
       {/* Features Viewer */}
       <FeaturesViewer />
     </div>
+  );
+}
+
+export default function DevFeaturesPage() {
+  return (
+    <Suspense fallback={null}>
+      <DevFeaturesPageContent />
+    </Suspense>
   );
 }

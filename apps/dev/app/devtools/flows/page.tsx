@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { FlowsViewer } from "@nextsparkjs/core/components/devtools/FlowsViewer";
 import { GitBranch } from "lucide-react";
 import { getTranslations } from "next-intl/server";
@@ -8,7 +9,7 @@ import { getTranslations } from "next-intl/server";
  * Displays all user journey flows from the testing registry with coverage information.
  * Provides filtering and search capabilities.
  */
-export default async function DevFlowsPage() {
+async function DevFlowsPageContent() {
   const t = await getTranslations("devtools.flows");
 
   return (
@@ -27,5 +28,13 @@ export default async function DevFlowsPage() {
       {/* Flows Viewer */}
       <FlowsViewer />
     </div>
+  );
+}
+
+export default function DevFlowsPage() {
+  return (
+    <Suspense fallback={null}>
+      <DevFlowsPageContent />
+    </Suspense>
   );
 }

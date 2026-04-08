@@ -185,6 +185,5 @@ function VerifyEmailPage() {
   );
 }
 
-export const dynamic = 'force-dynamic';
 
 export default getTemplateOrDefaultClient('app/(auth)/verify-email/page.tsx', VerifyEmailPage)

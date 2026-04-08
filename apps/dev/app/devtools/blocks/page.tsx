@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { BlocksViewer } from "@nextsparkjs/core/components/devtools/BlocksViewer";
 import { LayoutGrid } from "lucide-react";
 import { getTranslations } from "next-intl/server";
@@ -8,7 +9,7 @@ import { getTranslations } from "next-intl/server";
  * Displays all page builder blocks with field definitions and coverage info.
  * Provides filtering and search capabilities.
  */
-export default async function DevBlocksPage() {
+async function DevBlocksPageContent() {
   const t = await getTranslations("devtools.blocks");
 
   return (
@@ -27,5 +28,13 @@ export default async function DevBlocksPage() {
       {/* Blocks Viewer */}
       <BlocksViewer />
     </div>
+  );
+}
+
+export default function DevBlocksPage() {
+  return (
+    <Suspense fallback={null}>
+      <DevBlocksPageContent />
+    </Suspense>
   );
 }

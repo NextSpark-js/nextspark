@@ -17,6 +17,9 @@ const nextConfig = {
   },
   transpilePackages: ['@nextsparkjs/core'],
   serverExternalPackages: ['handlebars'],
+  turbopack: {
+    root: __dirname,
+  },
   experimental: {
     externalDir: true,
   },

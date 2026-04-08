@@ -211,6 +211,5 @@ function ForgotPasswordPage() {
 }
 
 // Opt out of static generation due to client-side state
-export const dynamic = 'force-dynamic';
 
 export default getTemplateOrDefaultClient('app/(auth)/forgot-password/page.tsx', ForgotPasswordPage)

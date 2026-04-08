@@ -10,7 +10,7 @@
  */
 
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs'
-import { join } from 'path'
+import { join, dirname } from 'path'
 
 /**
  * Extract supportedLocales from a theme's app.config.ts file
@@ -20,6 +20,72 @@ import { join } from 'path'
  * @param {string} activeTheme - Name of the active theme
  * @returns {string[]} Array of supported locale codes, or empty array if not found
  */
+/**
+ * Extract defaultLocale from a theme's app.config.ts file
+ * @param {string} themesDir
+ * @param {string} activeTheme
+ * @returns {string} Default locale code, or 'en' if not found
+ */
+function getDefaultLocale(themesDir, activeTheme) {
+  if (!activeTheme) return 'en'
+  const appConfigPath = join(themesDir, activeTheme, 'config', 'app.config.ts')
+  if (!existsSync(appConfigPath)) return 'en'
+  try {
+    const content = readFileSync(appConfigPath, 'utf8')
+    const match = content.match(/defaultLocale\s*:\s*['"]([a-zA-Z-]+)['"]/)
+    return match ? match[1] : 'en'
+  } catch {
+    return 'en'
+  }
+}
+
+/**
+ * Extract defaultMode from a theme's theme.config.ts file
+ * @param {string} themesDir
+ * @param {string} activeTheme
+ * @returns {'light' | 'dark' | 'system'} Default theme mode
+ */
+function getDefaultThemeMode(themesDir, activeTheme) {
+  if (!activeTheme) return 'system'
+  const themeConfigPath = join(themesDir, activeTheme, 'config', 'theme.config.ts')
+  if (!existsSync(themeConfigPath)) return 'system'
+  try {
+    const content = readFileSync(themeConfigPath, 'utf8')
+    const match = content.match(/defaultMode\s*:\s*['"]([a-z]+)['"]/)
+    return match ? match[1] : 'system'
+  } catch {
+    return 'system'
+  }
+}
+
+/**
+ * Detect if the project has PPR (Partial Prerendering) enabled
+ * by checking for cacheComponents: true in next.config.{mjs,js,ts}
+ *
+ * When PPR is enabled, the generator produces static exports
+ * (DEFAULT_LOCALE, DEFAULT_THEME_MODE, STATIC_MESSAGES) that
+ * allow the root layout to render a fully static shell.
+ *
+ * @param {string} projectRoot - Path to the project root
+ * @returns {boolean} true if cacheComponents: true is found
+ */
+export function detectPPREnabled(projectRoot) {
+  const configPaths = ['next.config.mjs', 'next.config.js', 'next.config.ts']
+  for (const name of configPaths) {
+    const p = join(projectRoot, name)
+    if (!existsSync(p)) continue
+    try {
+      const content = readFileSync(p, 'utf8')
+      if (content.match(/cacheComponents\s*:\s*true/)) {
+        return true
+      }
+    } catch {
+      // ignore read errors
+    }
+  }
+  return false
+}
+
 function getSupportedLocales(themesDir, activeTheme) {
   if (!activeTheme) {
     return []
@@ -155,8 +221,10 @@ function detectLocales(messagesDir) {
  * @returns {string} Generated TypeScript content
  */
 export function generateTranslationRegistry(themes, config) {
-  // Get supported locales from active theme's app.config.ts
+  // Get supported locales and default locale from active theme's app.config.ts
   const supportedLocales = getSupportedLocales(config.themesDir, config.activeTheme)
+  const defaultLocale = getDefaultLocale(config.themesDir, config.activeTheme)
+  const defaultThemeMode = getDefaultThemeMode(config.themesDir, config.activeTheme)
 
   // Discover all translation files from themes
   const themeTranslations = []
@@ -402,5 +470,48 @@ export const TRANSLATION_METADATA = {
   totalPluginEntitiesWithTranslations: ${uniquePluginEntities.size},
   pluginEntities: [${Array.from(uniquePluginEntities).map(e => `'${e}'`).join(', ')}]
 }
+
+${(() => {
+  // PPR: Generate static imports for the default locale — only when cacheComponents is enabled.
+  // These are used by the root layout's StaticIntlProvider (layout.ppr.tsx) to render
+  // content in the PPR static shell without accessing cookies/headers.
+  //
+  // Projects on Next.js 15 (without cacheComponents) skip this entirely.
+  // To enable: add cacheComponents: true to next.config and use layout.ppr.tsx.
+  const projectRoot = config.projectRoot || (config.themesDir ? dirname(dirname(config.themesDir)) : process.cwd())
+  const pprEnabled = detectPPREnabled(projectRoot)
+
+  if (!pprEnabled) {
+    return `// PPR static exports disabled — cacheComponents: true not found in next.config.
+// To enable PPR, add cacheComponents: true to your next.config and copy
+// layout.ppr.tsx from @nextsparkjs/core/templates/app/ to your app/ directory.
+// See docs/migration-ppr.md for the full migration guide.`
+  }
+
+  const defaultThemeTranslation = themeTranslations.find(
+    t => t.themeName === config.activeTheme && t.locale === defaultLocale
+  )
+  if (!defaultThemeTranslation) return '// PPR: No static messages generated (no theme translation found for default locale)'
+
+  console.log(`[TranslationRegistry] PPR enabled — generating static exports for locale '${defaultLocale}'`)
+
+  return `/**
+ * PPR: Static messages for the default locale (pre-merged at build time)
+ *
+ * Used by the root layout's StaticIntlProvider to render content
+ * in the PPR static shell without accessing cookies/headers.
+ * Core messages are deep-merged with theme messages.
+ */
+import { deepMergeMessages as _deepMerge } from '@nextsparkjs/core/lib/translations/registry'
+import _coreMessages from '@nextsparkjs/core/messages/${defaultLocale}/index.js'
+import _themeMessages from '${defaultThemeTranslation.filePath}'
+
+export const DEFAULT_LOCALE = '${defaultLocale}' as const
+export const DEFAULT_THEME_MODE = '${defaultThemeMode}' as const
+export const STATIC_MESSAGES: Record<string, unknown> = _deepMerge(
+  _coreMessages as unknown as Record<string, unknown>,
+  (_themeMessages as { default?: Record<string, unknown> }).default ?? _themeMessages as unknown as Record<string, unknown>
+)`
+})()}
 `
 }

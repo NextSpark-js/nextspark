@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { ConfigViewer } from "@nextsparkjs/core/components/devtools";
 import { Settings } from "lucide-react";
 import { getTranslations } from "next-intl/server";
@@ -8,7 +9,7 @@ import { getTranslations } from "next-intl/server";
  * Displays theme configuration and entity registry information.
  * Provides read-only view with JSON formatting and copy functionality.
  */
-export default async function DevConfigPage() {
+async function DevConfigPageContent() {
   const t = await getTranslations('dev.config');
 
   return (
@@ -27,5 +28,13 @@ export default async function DevConfigPage() {
       {/* Config Viewer */}
       <ConfigViewer />
     </div>
+  );
+}
+
+export default function DevConfigPage() {
+  return (
+    <Suspense fallback={null}>
+      <DevConfigPageContent />
+    </Suspense>
   );
 }

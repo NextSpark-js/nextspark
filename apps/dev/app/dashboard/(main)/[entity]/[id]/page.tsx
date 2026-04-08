@@ -77,27 +77,9 @@ async function EntityDetailPage({ params }: PageProps) {
   )
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const resolvedParams = await params
-  const entitySlug = resolvedParams.entity
-
-  if (!(entitySlug in getEntityRegistry())) {
-    return {
-      title: 'Not Found - Dashboard'
-    }
-  }
-
-  const entityConfig = getEntity(entitySlug as string)
-  if (!entityConfig || !isEntityConfig(entityConfig)) {
-    return {
-      title: 'Not Found - Dashboard'
-    }
-  }
-
-  return {
-    title: `${entityConfig.names.plural} #${resolvedParams.id} - Dashboard`,
-    description: `View details for ${entityConfig.names.singular}`
-  }
+export const metadata: Metadata = {
+  title: 'Dashboard',
+  description: 'View entity details'
 }
 
 export default EntityDetailPage

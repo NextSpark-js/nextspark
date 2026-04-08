@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { SignupForm } from '@nextsparkjs/core/components/auth/forms/SignupForm'
@@ -15,7 +16,7 @@ export const metadata: Metadata = getMetadataOrDefault(
   defaultMetadata
 )
 
-async function SignupPage() {
+async function SignupPageContent() {
   const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open'
 
   // In invitation-only mode, allow the first user to register
@@ -38,6 +39,13 @@ async function SignupPage() {
   return <SignupForm />
 }
 
-export const dynamic = 'force-dynamic'
+function SignupPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignupPageContent />
+    </Suspense>
+  )
+}
+
 
 export default getTemplateOrDefault('app/(auth)/signup/page.tsx', SignupPage)

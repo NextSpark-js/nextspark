@@ -1,5 +1,5 @@
 ---
-description: "Test npm package from scratch - fully automated with Playwright verification"
+description: "Test npm package from scratch - fully automated with agent-browser verification"
 ---
 
 # do:test-package
@@ -8,9 +8,9 @@ description: "Test npm package from scratch - fully automated with Playwright ve
 
 ---
 
-## Fully Automated NPM Package Test
+## Fully Automated Local Package Test
 
-Tests the **REAL npm user experience** from scratch. Simulates exactly what a new user does when installing NextSpark from npm.
+Tests the **REAL user experience** from scratch using 100% LOCAL code. Simulates exactly what a new user does when running `npx create-nextspark-app`, but using locally built packages instead of npm.
 
 **Usage:**
 ```
@@ -41,41 +41,23 @@ Use `.cmd` extension to invoke the batch file wrappers:
 
 ```bash
 if [ "$IS_WINDOWS" = true ]; then
-  # Windows: Find the actual .cmd location and use it
-  NPM_PATH=$(which npm 2>/dev/null)
-  if [ -n "$NPM_PATH" ]; then
-    NPM_CMD="${NPM_PATH}.cmd"
-    NPX_CMD="${NPM_PATH/npm/npx}.cmd"
-  else
-    # Fallback: try cmd.exe invocation
-    NPM_CMD="cmd.exe /c npm"
-    NPX_CMD="cmd.exe /c npx"
-  fi
+  NPM_CMD="cmd.exe /c npm"
+  NPX_CMD="cmd.exe /c npx"
+  PNPM_CMD="cmd.exe /c pnpm"
 else
-  # Linux/Mac: Use commands directly
   NPM_CMD="npm"
   NPX_CMD="npx"
+  PNPM_CMD="pnpm"
 fi
-```
-
-**Alternative for Claude Code:** Use Bash tool with `cmd.exe /c` wrapper on Windows:
-```bash
-# Windows reliable approach:
-cmd.exe /c "npm pack"
-cmd.exe /c "npx create-next-app@latest ..."
-
-# Linux/Mac:
-npm pack
-npx create-next-app@latest ...
 ```
 
 ### 0.3 Set Project Variables
 
 ```bash
-# Detect repo root (adjust based on where this runs)
-REPO_ROOT=$(cd "$(dirname "$0")/../../../.." && pwd)  # Or use absolute path
+REPO_ROOT="/path/to/nextspark/repo"         # Adjust to actual repo path
 PROJECTS_DIR="${REPO_ROOT}/../projects"
 TEST_DIR="${PROJECTS_DIR}/test-package"
+PACKAGES_DIR="${REPO_ROOT}/.packages"         # Local tarballs directory
 TEST_PORT=3005
 ```
 
@@ -118,70 +100,79 @@ Options:
 
 ```bash
 if [ "$IS_WINDOWS" = true ]; then
-  # Windows: Find PID and kill via cmd.exe
   PID=$(netstat -ano 2>/dev/null | grep ":${TEST_PORT}" | head -1 | awk '{print $5}')
   if [ -n "$PID" ] && [ "$PID" != "0" ]; then
     cmd.exe /c "taskkill /F /PID $PID" 2>/dev/null || true
   fi
 else
-  # Linux/Mac
   lsof -ti:${TEST_PORT} 2>/dev/null | xargs kill -9 2>/dev/null || true
 fi
 ```
 
 ---
 
-### Step 3: Build and Pack ALL Packages
+### Step 3: Build and Pack ALL Packages (100% Local)
 
 **CRITICAL:**
-1. Must do a **CLEAN rebuild** to include latest code changes
+1. Must do a **CLEAN rebuild** (`rm -rf dist`) to include latest code changes
 2. **MUST use `pnpm pack`** (not `npm pack`) to properly resolve `workspace:*` dependencies
+3. Copy ALL tarballs to `$REPO_ROOT/.packages/` so `create-nextspark-app` finds them
 
 ```bash
+# Clean the .packages directory first
+rm -rf "$PACKAGES_DIR"
+mkdir -p "$PACKAGES_DIR"
+
 # UI package (dependency of core)
 cd "${REPO_ROOT}/packages/ui"
-rm -rf dist
-pnpm build
-rm -f *.tgz
-pnpm pack                      # CRITICAL: Use pnpm pack, NOT npm pack
+rm -rf dist && pnpm build && rm -f *.tgz && pnpm pack
+cp *.tgz "$PACKAGES_DIR/"
 
 # Core package
 cd "${REPO_ROOT}/packages/core"
-rm -rf dist
-pnpm build
-rm -f *.tgz
-pnpm pack                      # CRITICAL: Use pnpm pack to resolve workspace:* refs
+rm -rf dist && pnpm build && rm -f *.tgz && pnpm pack
+cp *.tgz "$PACKAGES_DIR/"
 
 # CLI package
 cd "${REPO_ROOT}/packages/cli"
-rm -rf dist
-pnpm build
-rm -f *.tgz
-pnpm pack
+rm -rf dist && pnpm build && rm -f *.tgz && pnpm pack
+cp *.tgz "$PACKAGES_DIR/"
 
 # Testing package
 cd "${REPO_ROOT}/packages/testing"
-rm -rf dist
-pnpm build
-rm -f *.tgz
-pnpm pack
+rm -rf dist && pnpm build && rm -f *.tgz && pnpm pack
+cp *.tgz "$PACKAGES_DIR/"
+
+# create-nextspark-app (THE LOCAL CREATE COMMAND)
+cd "${REPO_ROOT}/packages/create-nextspark-app"
+rm -rf dist && pnpm build && rm -f *.tgz && pnpm pack
+cp *.tgz "$PACKAGES_DIR/"
 ```
 
 **Why pnpm pack is required:** The core package uses `workspace:*` references (e.g., `@nextsparkjs/testing`). When using `pnpm pack`, these are automatically converted to actual version numbers (e.g., `0.1.0-beta.93`). Using `npm pack` leaves them as `workspace:*`, which causes `EUNSUPPORTEDPROTOCOL` errors during installation.
 
 **Why clean builds matter:** Build tools like tsup may cache intermediate results. If source files changed but the cache wasn't invalidated, the packed tarball will contain old code. Always `rm -rf dist` before building to ensure fresh compilation.
 
-**Verify all four `.tgz` files exist:**
+**Verify all tarballs exist in .packages/:**
 ```bash
-UI_TGZ=$(ls "${REPO_ROOT}/packages/ui/"*.tgz 2>/dev/null | head -1)
-CORE_TGZ=$(ls "${REPO_ROOT}/packages/core/"*.tgz 2>/dev/null | head -1)
-CLI_TGZ=$(ls "${REPO_ROOT}/packages/cli/"*.tgz 2>/dev/null | head -1)
-TESTING_TGZ=$(ls "${REPO_ROOT}/packages/testing/"*.tgz 2>/dev/null | head -1)
+ls -la "$PACKAGES_DIR/"*.tgz
 
-if [ -z "$UI_TGZ" ] || [ -z "$CORE_TGZ" ] || [ -z "$CLI_TGZ" ] || [ -z "$TESTING_TGZ" ]; then
-  echo "ERROR: Not all tarballs were created"
+# Should show at minimum:
+#   nextsparkjs-ui-*.tgz
+#   nextsparkjs-core-*.tgz
+#   nextsparkjs-cli-*.tgz
+#   nextsparkjs-testing-*.tgz
+#   create-nextspark-app-*.tgz
+```
+
+**Post-build verification (prevents stale dist bugs):**
+```bash
+# Verify CLI bundle does NOT contain stale PROTECTED_APP_FILES
+if grep -q "PROTECTED_APP_FILES" "${REPO_ROOT}/packages/cli/dist/cli.js" 2>/dev/null; then
+  echo "ERROR: CLI dist contains stale PROTECTED_APP_FILES — dist was not rebuilt properly"
   exit 1
 fi
+echo "CLI dist verification passed"
 ```
 
 ---
@@ -194,117 +185,76 @@ rm -rf "$TEST_DIR"
 
 ---
 
-### Step 5: Create Fresh Next.js App
+### Step 5: Create Project Using Local create-nextspark-app
 
-**This simulates what a real npm user does:**
+**This uses the locally built `create-nextspark-app` which:**
+- Creates a minimal `package.json` (no create-next-app download)
+- Looks for tarballs in `.packages/` directory automatically
+- Installs `@nextsparkjs/core` and `@nextsparkjs/cli` from local tarballs
+- Runs `npx nextspark init` wizard
 
 ```bash
 cd "$PROJECTS_DIR"
 
-if [ "$IS_WINDOWS" = true ]; then
-  cmd.exe /c "npx create-next-app@latest test-package --typescript --tailwind --eslint --app --src-dir=false --import-alias=@/* --turbopack=false --yes"
-else
-  npx create-next-app@latest test-package \
-    --typescript --tailwind --eslint --app \
-    --src-dir=false --import-alias="@/*" \
-    --turbopack=false --yes
-fi
+# Run create-nextspark-app from local tarball with --yes for non-interactive
+# The --theme flag selects the starter theme
+node "${REPO_ROOT}/packages/create-nextspark-app/dist/index.js" test-package \
+  --theme starter \
+  --yes
 ```
 
-**Verify:** `$TEST_DIR/package.json` exists.
+**Alternative (if dist not usable directly):**
+```bash
+cd "$PROJECTS_DIR"
+npx --yes "${PACKAGES_DIR}/create-nextspark-app-"*.tgz test-package \
+  --theme starter \
+  --yes
+```
 
----
+**What this does automatically:**
+1. Creates `test-package/` directory
+2. Writes minimal `package.json`
+3. Finds tarballs in `$REPO_ROOT/.packages/` (via `findLocalTarball`)
+4. Installs `@nextsparkjs/core` + `@nextsparkjs/cli` from local tarballs
+5. Runs `npx nextspark init --theme starter --yes`
 
-### Step 6: Install NextSpark Packages + Peer Dependencies
+**Verify:**
+```bash
+ls "$TEST_DIR/package.json"
+ls "$TEST_DIR/node_modules/@nextsparkjs/core"
+ls "$TEST_DIR/node_modules/@nextsparkjs/cli"
+ls "$TEST_DIR/app/layout.tsx"
+ls "$TEST_DIR/.nextspark/registries/"
+```
 
-**IMPORTANT:** Install UI first (dependency of core), then core+CLI, then testing.
+**If create-nextspark-app doesn't handle all steps**, complete manually:
 
 ```bash
 cd "$TEST_DIR"
 
-# Copy tarballs to project directory (avoids path issues on Windows)
-cp "$UI_TGZ" "$CORE_TGZ" "$CLI_TGZ" "$TESTING_TGZ" ./
+# Install UI (dependency of core) if not already installed
+npm install "${PACKAGES_DIR}/nextsparkjs-ui-"*.tgz 2>/dev/null || true
 
-if [ "$IS_WINDOWS" = true ]; then
-  # Install UI first (dependency of core)
-  cmd.exe /c "npm install ./nextsparkjs-ui-*.tgz"
+# Install testing as devDependency
+npm install -D "${PACKAGES_DIR}/nextsparkjs-testing-"*.tgz
 
-  # Install core and CLI from tarballs
-  cmd.exe /c "npm install ./nextsparkjs-core-*.tgz ./nextsparkjs-cli-*.tgz"
+# Install required peer dependency
+npm install better-auth
 
-  # Install testing as devDependency
-  cmd.exe /c "npm install -D ./nextsparkjs-testing-*.tgz"
+# If init didn't run, do it manually:
+npx nextspark init --registries-only
+npx nextspark sync:app --force
 
-  # Install required peer dependency
-  cmd.exe /c "npm install better-auth"
-else
-  npm install ./nextsparkjs-ui-*.tgz
-  npm install ./nextsparkjs-core-*.tgz ./nextsparkjs-cli-*.tgz
-  npm install -D ./nextsparkjs-testing-*.tgz
-  npm install better-auth
+# Copy starter theme if not already present
+if [ ! -d "contents/themes/starter" ]; then
+  mkdir -p contents/themes
+  cp -r node_modules/@nextsparkjs/core/templates/contents/themes/starter contents/themes/starter
 fi
-```
-
-**Verify:**
-```bash
-ls -la node_modules/@nextsparkjs/ui
-ls -la node_modules/@nextsparkjs/core
-ls -la node_modules/@nextsparkjs/cli
-ls -la node_modules/@nextsparkjs/testing
-ls -la node_modules/better-auth
 ```
 
 ---
 
-### Step 7: Initialize NextSpark (Multi-Step Process)
-
-**IMPORTANT:** The init process has multiple steps due to interactive wizard limitations.
-
-#### 7.1 Initialize registries
-```bash
-cd "$TEST_DIR"
-
-if [ "$IS_WINDOWS" = true ]; then
-  cmd.exe /c "npx nextspark init --registries-only"
-else
-  npx nextspark init --registries-only
-fi
-```
-
-#### 7.2 Sync app folder and root config files
-```bash
-if [ "$IS_WINDOWS" = true ]; then
-  cmd.exe /c "npx nextspark sync:app --force"
-else
-  npx nextspark sync:app --force
-fi
-```
-
-This syncs:
-- All `/app` template files
-- `middleware.ts` - Required for permission validation
-- `next.config.mjs` - Required for webpack aliases and security headers
-- `tsconfig.json` - Required for path aliases and test exclusions
-- `i18n.ts` - Required for next-intl
-
-#### 7.3 Copy starter theme
-```bash
-mkdir -p contents/themes
-cp -r node_modules/@nextsparkjs/core/templates/contents/themes/starter contents/themes/starter
-```
-
-**Verify:**
-```bash
-ls -la contents/themes/starter/
-ls -la .nextspark/registries/
-ls -la next.config.mjs
-ls -la middleware.ts
-ls -la tsconfig.json
-```
-
----
-
-### Step 8: Create .env with User's DATABASE_URL
+### Step 6: Create .env with User's DATABASE_URL
 
 Use **Write tool** to create `$TEST_DIR/.env`:
 
@@ -336,34 +286,24 @@ CYPRESS_OWNER_EMAIL=carlos.mendoza@tmt.dev
 
 ---
 
-### Step 9: Run Database Migrations
+### Step 7: Run Database Migrations
 
 ```bash
 cd "$TEST_DIR"
-
-if [ "$IS_WINDOWS" = true ]; then
-  cmd.exe /c "npx nextspark db:migrate"
-else
-  npx nextspark db:migrate
-fi
+npx nextspark db:migrate
 ```
 
 **Verify:** Command completes without errors. Should show:
-- Phase 1: Core migrations (20 files)
+- Phase 1: Core migrations (20+ files)
 - Phase 2: Entity migrations (varies by theme)
 
 ---
 
-### Step 10: Build Registries
+### Step 8: Build Registries
 
 ```bash
 cd "$TEST_DIR"
-
-if [ "$IS_WINDOWS" = true ]; then
-  cmd.exe /c "npx nextspark registry:build"
-else
-  npx nextspark registry:build
-fi
+npx nextspark registry:build
 ```
 
 **Verify:**
@@ -375,25 +315,19 @@ Should have 20+ registry files. Check for NO path escaping errors (no `\v`, `\t`
 
 ---
 
-### Step 11: Start Dev Server
+### Step 9: Start Dev Server
 
 ```bash
 cd "$TEST_DIR"
 rm -rf .next  # Clean any stale cache
-
-if [ "$IS_WINDOWS" = true ]; then
-  # Start in background - Windows
-  cmd.exe /c "start /B npx next dev -p $TEST_PORT" &
-else
-  npx next dev -p $TEST_PORT &
-fi
+npx next dev -p $TEST_PORT &
 ```
 
 **Wait for server:** Poll until responsive (max 60 seconds):
 ```bash
 for i in {1..60}; do
   HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:${TEST_PORT}/" 2>/dev/null)
-  if [ "$HTTP_CODE" = "200" ]; then
+  if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "307" ]; then
     echo "Server ready!"
     break
   fi
@@ -403,183 +337,300 @@ done
 
 ---
 
-### Step 12: Playwright MCP Verification
+### Step 10: Browser Verification with agent-browser
 
-Use **mcp__playwright__** tools to verify the app works:
+Use **agent-browser** (CLI browser automation tool) to verify the app works end-to-end.
+Uses accessibility tree snapshots (`snapshot -i`) and element refs (`@eN`) for interaction.
 
-#### 12.1 Homepage
-```
-mcp__playwright__browser_navigate -> http://localhost:3005
-mcp__playwright__browser_snapshot -> Verify page loads (title should be "NextSpark App" or similar)
-```
+**Pre-requisite:** `agent-browser` must be installed (`npm i -g agent-browser`).
 
-#### 12.2 Login Page
-```
-mcp__playwright__browser_navigate -> http://localhost:3005/login
-mcp__playwright__browser_snapshot -> Verify:
-  - Title contains "Sign In" or "Login"
-  - Login form elements visible
-  - "Dev Keyring" button visible (in development)
-```
+#### 10.1 Homepage & Auth Pages (curl pre-check)
 
-#### 12.3 Signup Page
-```
-mcp__playwright__browser_navigate -> http://localhost:3005/signup
-mcp__playwright__browser_snapshot -> Verify signup form renders
-```
+Quick HTTP checks before launching the browser:
+```bash
+# Homepage
+curl -s -o /dev/null -w "HTTP %{http_code}" http://localhost:3005/
 
-#### 12.4 Dashboard (requires login)
-```
-# Click Dev Keyring button
-# Select a test user
-# Verify redirect to /dashboard
+# Login page
+curl -s http://localhost:3005/login | grep -oE '<title>[^<]+</title>'
+
+# Signup page
+curl -s http://localhost:3005/signup | grep -oE '<title>[^<]+</title>'
+
+# Dashboard (should redirect 307 to login when unauthenticated)
+curl -s -o /dev/null -w "HTTP %{http_code}" http://localhost:3005/dashboard
 ```
 
-#### 12.5 Check for Console Errors
-```
-mcp__playwright__browser_console_messages -> Check for errors
-```
+**Expected:** Homepage 200, Login 200 (title "Sign In"), Signup 200 (title "Create Account"), Dashboard 307.
 
-**Acceptable errors:**
-- CSP warnings (if NEXT_PUBLIC_APP_URL doesn't match port)
-- Missing i18n messages (non-critical)
-
-**Fail on:**
-- Module not found errors
-- TypeScript errors
-- Build errors
-
-#### 12.6 Entity CRUD Test (Tasks)
-
-**CRITICAL:** Test full CRUD operations on an entity to verify the data flow works end-to-end.
-
-##### 12.6.1 Navigate to Tasks
-```
-mcp__playwright__browser_navigate -> http://localhost:3005/dashboard/tasks
-mcp__playwright__browser_snapshot -> Verify:
-  - Page title contains "Tasks"
-  - "Add task" button visible
-  - Table or empty state visible
-```
-
-##### 12.6.2 CREATE - Add New Task
-```
-# Click "Add task" button
-mcp__playwright__browser_click -> ref for "Add task" link
-
-# Wait for create form
-mcp__playwright__browser_snapshot -> Verify form fields:
-  - Title (required)
-  - Description
-  - Status dropdown
-  - Priority dropdown
-  - Due Date
-  - Estimated Hours
-
-# Fill the form
-mcp__playwright__browser_type -> Title field: "Playwright Test Task"
-mcp__playwright__browser_type -> Description field: "Task created during NPM package test"
-
-# Submit
-mcp__playwright__browser_click -> "Create" button
-
-# Verify redirect to detail page
-mcp__playwright__browser_snapshot -> Verify:
-  - Title shows "Playwright Test Task"
-  - Detail view renders correctly
-  - Edit and Delete buttons visible
-```
-
-##### 12.6.3 READ - Verify Task Detail
-```
-mcp__playwright__browser_snapshot -> Verify all fields display:
-  - Title: "Playwright Test Task"
-  - Description: "Task created during NPM package test"
-  - Status: "To Do" (default)
-  - Priority: "Medium" (default)
-  - Created/Updated timestamps
-```
-
-##### 12.6.4 UPDATE - Edit Task
-```
-# Click Edit button
-mcp__playwright__browser_click -> "Edit" button
-
-# Verify edit form loads with current data
-mcp__playwright__browser_snapshot -> Verify form pre-filled
-
-# Update title
-mcp__playwright__browser_type -> Title field: "Playwright Test Task - UPDATED"
-
-# Change status dropdown
-mcp__playwright__browser_click -> Status dropdown
-mcp__playwright__browser_click -> "In Progress" option
-
-# Save changes
-mcp__playwright__browser_click -> "Save Changes" button
-
-# Verify updates persisted
-mcp__playwright__browser_snapshot -> Verify:
-  - Title: "Playwright Test Task - UPDATED"
-  - Status: "In Progress"
-```
-
-##### 12.6.5 DELETE - Remove Task
-```
-# Click Delete button
-mcp__playwright__browser_click -> "Delete" button
-
-# Confirm in dialog
-mcp__playwright__browser_snapshot -> Verify confirmation dialog appears
-mcp__playwright__browser_click -> Confirm "Delete" button in dialog
-
-# Verify redirect to list
-mcp__playwright__browser_snapshot -> Verify:
-  - Redirected to /dashboard/tasks
-  - Task no longer in list (or empty state shows)
-```
-
-##### 12.6.6 CRUD Test Summary
-All four operations must pass:
-- **CREATE** ✓ - Form submission creates entity
-- **READ** ✓ - Detail page shows correct data
-- **UPDATE** ✓ - Edit form saves changes
-- **DELETE** ✓ - Confirmation removes entity
-
-**If any CRUD operation fails:**
-1. Check console for API errors: `mcp__playwright__browser_console_messages`
-2. Check network requests: `mcp__playwright__browser_network_requests`
-3. Verify database connection in .env
-4. Check entity config in `contents/themes/starter/entities/tasks/`
-
----
-
-### Step 13: Stop Dev Server
+#### 10.2 Login via agent-browser
 
 ```bash
-if [ "$IS_WINDOWS" = true ]; then
-  PID=$(netstat -ano 2>/dev/null | grep ":${TEST_PORT}" | head -1 | awk '{print $5}')
-  if [ -n "$PID" ] && [ "$PID" != "0" ]; then
-    cmd.exe /c "taskkill /F /PID $PID" 2>/dev/null || true
-  fi
-else
-  lsof -ti:${TEST_PORT} 2>/dev/null | xargs kill -9 2>/dev/null || true
-fi
+# Navigate to login page
+agent-browser open http://localhost:3005/login
+agent-browser wait --load networkidle
+agent-browser snapshot -i
+# Verify: heading "Sign in", textbox "Email", textbox "Password", button "Sign in", button "Dev Keyring"
+
+# Fill login form with superadmin credentials from dev.config.ts
+agent-browser fill @eEMAIL "superadmin@nextspark.dev"
+agent-browser fill @ePASSWORD "Pandora1234"
+agent-browser click @eSIGNIN   # button "Sign in"
+agent-browser wait --load networkidle
+agent-browser wait 3000
+agent-browser snapshot -i
+# Verify: Dashboard loaded with navigation sidebar (Tasks, Pages, Posts, Media links)
+```
+
+**IMPORTANT:** After `snapshot -i`, use the actual `ref=eN` values from the output. Refs change between snapshots.
+
+**If login button click doesn't work via ref**, use JS fallback:
+```bash
+agent-browser eval '(() => { document.querySelector("form")?.requestSubmit(); return "submitted" })()'
+```
+
+#### 10.3 Entity CRUD Test: Tasks
+
+**CRITICAL:** Test full CRUD operations to verify the data flow works end-to-end.
+
+##### 10.3.1 Navigate to Tasks
+```bash
+agent-browser open http://localhost:3005/dashboard/tasks
+agent-browser wait --load networkidle
+agent-browser wait 3000
+agent-browser snapshot -i
+# Verify: heading "Tasks", link "Add task", heading "No tasks found" or table with data
+```
+
+##### 10.3.2 CREATE - Add New Task
+```bash
+# Navigate directly to create URL (more reliable than clicking link)
+agent-browser open http://localhost:3005/dashboard/tasks/create
+agent-browser wait --load networkidle
+agent-browser wait 3000
+agent-browser snapshot -i
+# Verify: heading "Create task", form fields: Title*, Description, Status, Priority, etc.
+
+# Fill the form
+agent-browser fill @eTITLE "NPM Package Test Task"
+agent-browser fill @eDESCRIPTION "Task created during NPM package test"
+
+# Submit - use JS click on [data-cy="tasks-form-submit"] for reliability
+agent-browser eval '(() => { const b = document.querySelector("[data-cy=\"tasks-form-submit\"]"); if(b){b.click();return "clicked"} return "not found" })()'
+agent-browser wait 5000
+
+# Verify redirect to detail page
+agent-browser get url   # Should be /dashboard/tasks/<uuid>
+agent-browser snapshot -i
+# Verify: heading "NPM Package Test Task", button "Edit", button "Delete"
+```
+
+##### 10.3.3 READ - Verify Task Detail
+```bash
+agent-browser screenshot /tmp/test-task-detail.png
+# Visually verify: Title, Description, Status "To Do", Priority "Medium", timestamps
+```
+
+##### 10.3.4 UPDATE - Edit Task
+```bash
+# Navigate directly to edit URL (more reliable than clicking Edit button)
+agent-browser open http://localhost:3005/dashboard/tasks/<TASK_UUID>/edit
+agent-browser wait --load networkidle
+agent-browser wait 3000
+agent-browser snapshot -i
+# Verify: form pre-filled with current values
+
+# Update title - clear first, then fill
+agent-browser eval '(() => { const el = document.querySelector("input[name=\"title\"]"); if(el){el.focus();el.value="";el.dispatchEvent(new Event("input",{bubbles:true}));return "cleared"} return "not found" })()'
+agent-browser fill @eTITLE "NPM Package Test Task - UPDATED"
+agent-browser wait 500
+
+# Submit via JS
+agent-browser eval '(() => { const b = document.querySelector("[data-cy=\"tasks-form-submit\"]"); if(b){b.click();return "clicked"} return "not found" })()'
+agent-browser wait 5000
+
+# Verify redirect to detail page with updated title
+agent-browser get url
+agent-browser snapshot -i
+# Verify: heading "NPM Package Test Task - UPDATED"
+```
+
+##### 10.3.5 DELETE - Remove Task
+```bash
+agent-browser snapshot -i
+# Find Delete button ref
+agent-browser click @eDELETE
+agent-browser wait 1000
+agent-browser snapshot -i
+# Verify: confirmation dialog with heading "Delete", buttons "Cancel" and "Delete"
+
+agent-browser click @eCONFIRM_DELETE
+agent-browser wait 5000
+
+# Verify redirect to list
+agent-browser get url   # Should be /dashboard/tasks
+agent-browser snapshot -i
+# Verify: heading "No tasks found" (task was removed)
+```
+
+##### 10.3.6 Tasks CRUD Summary
+All four operations must pass:
+- **CREATE** - Form submission creates entity, redirects to detail page
+- **READ** - Detail page shows correct data (title, description, status, priority)
+- **UPDATE** - Edit form saves changes, title updated in detail view
+- **DELETE** - Confirmation dialog removes entity, list shows empty state
+
+#### 10.4 Entity CRUD Test: Pages + Page Builder URL
+
+**CRITICAL:** Test Pages entity CRUD AND verify the page builder renders at the public slug URL.
+
+##### 10.4.1 CREATE - Add New Page
+```bash
+agent-browser open http://localhost:3005/dashboard/pages/create
+agent-browser wait --load networkidle
+agent-browser wait 3000
+agent-browser snapshot -i
+# Verify: page builder editor with title input, slug input, Publish button
+
+# Fill title (slug auto-generates)
+agent-browser fill @eTITLE "Test Landing Page"
+agent-browser wait 1000
+
+# Check auto-generated slug
+agent-browser eval '(() => { const el = document.querySelector("input[placeholder=\"url-slug\"]"); return el?.value || "no slug" })()'
+# Expected: "test-landing-page"
+
+# Click Publish
+agent-browser click @ePUBLISH
+agent-browser wait 5000
+
+# Verify redirect to edit page
+agent-browser get url   # Should be /dashboard/pages/<uuid>/edit
+```
+
+##### 10.4.2 READ - Verify PUBLIC URL
+```bash
+# Get the slug from the edit page
+SLUG=$(agent-browser eval '(() => { const el = document.querySelector("input[placeholder=\"url-slug\"]"); return el?.value || "" })()')
+
+# **KEY TEST: Verify the page renders at the public slug URL**
+agent-browser open http://localhost:3005/${SLUG}
+agent-browser wait --load networkidle
+agent-browser wait 3000
+agent-browser get url
+agent-browser snapshot -i
+# Verify:
+#   - Page loads (NOT a 404)
+#   - Page content renders (page builder blocks or basic content)
+```
+
+**This validates the full page builder pipeline:**
+1. Entity created in dashboard -> saved to DB
+2. Public route `[...slug]` resolves the page by slug
+3. Page content/blocks render on the public URL
+
+##### 10.4.3 DELETE - Remove Page (via list bulk action)
+```bash
+agent-browser open http://localhost:3005/dashboard/pages
+agent-browser wait --load networkidle
+agent-browser wait 3000
+
+# Select the page row checkbox
+agent-browser eval '(() => { const rows = document.querySelectorAll("tr"); for (const r of rows) { if (r.textContent?.includes("Test Landing")) { const cb = r.querySelector("input[type=checkbox], button[role=checkbox]"); if(cb){cb.click();return "checked"} } } return "not found"; })()'
+agent-browser wait 1000
+
+# Click Delete button (appears after selection)
+agent-browser snapshot -i
+# Find and click Delete button
+agent-browser click @eDELETE
+agent-browser wait 1000
+
+# Confirm deletion dialog
+agent-browser snapshot -i
+agent-browser click @eCONFIRM_DELETE
+agent-browser wait 5000
+
+# **Verify public URL now returns 404**
+agent-browser open http://localhost:3005/${SLUG}
+agent-browser wait --load networkidle
+agent-browser wait 2000
+agent-browser snapshot -i
+# Verify: 404 page or "Not Found" (page was deleted)
+```
+
+##### 10.4.4 Pages Summary
+- **CREATE** - Page created with auto-generated slug
+- **READ (public URL)** - `localhost:3005/<slug>` loads correctly
+- **DELETE** - Page removed, **public URL returns 404**
+
+#### 10.5 Superadmin Panel Verification
+
+```bash
+agent-browser open http://localhost:3005/superadmin
+agent-browser wait --load networkidle
+agent-browser wait 3000
+agent-browser snapshot -i
+# Verify: heading "Super Admin", navigation links (Users, Teams, Subscriptions, etc.)
+
+agent-browser open http://localhost:3005/superadmin/users
+agent-browser wait --load networkidle
+agent-browser wait 3000
+agent-browser snapshot -i
+# Verify: User list renders with at least the superadmin and developer users
+```
+
+#### 10.6 DevTools Panel Verification
+
+```bash
+agent-browser open http://localhost:3005/devtools
+agent-browser wait --load networkidle
+agent-browser wait 3000
+agent-browser snapshot -i
+# Verify: Page loads without errors
+
+agent-browser open http://localhost:3005/devtools/config
+agent-browser wait --load networkidle
+agent-browser wait 3000
+agent-browser snapshot -i
+# Verify: Entity configuration visible
+```
+
+#### 10.7 Close Browser
+
+```bash
+agent-browser close
+```
+
+#### 10.8 Full Verification Summary
+
+| Test | Area | What it validates |
+|------|------|-------------------|
+| CREATE | Tasks | Entity form submission + API create |
+| READ | Tasks | Detail page rendering + data display |
+| UPDATE | Tasks | Edit form + API update + data persistence |
+| DELETE | Tasks | Confirmation dialog + API delete + redirect |
+| CREATE | Pages | Page creation with slug |
+| READ (public URL) | Pages | **Page builder pipeline: slug -> public render** |
+| DELETE | Pages | Deletion + **public URL returns 404** |
+| Superadmin | Admin | Panel loads, users list renders |
+| DevTools | Developer | Config, entity overview loads |
+
+---
+
+### Step 11: Stop Dev Server
+
+```bash
+lsof -ti:${TEST_PORT} 2>/dev/null | xargs kill -9 2>/dev/null || true
 ```
 
 ---
 
-### Step 14: Test Production Build (CRITICAL)
+### Step 12: Test Production Build (CRITICAL)
 
 ```bash
 cd "$TEST_DIR"
 rm -rf .next
-
-if [ "$IS_WINDOWS" = true ]; then
-  cmd.exe /c "npx next build"
-else
-  npx next build
-fi
+npx next build
 ```
 
 **Success criteria:**
@@ -595,46 +646,61 @@ fi
 
 ---
 
-### Step 15: Final Report
+### Step 13: Final Report
 
 Summarize all results:
 
 ```markdown
-## NPM Package Test Results
+## Local Package Test Results
 
-### Build Phase (using pnpm pack)
+### Build Phase (using pnpm pack → .packages/)
 - [ ] UI package built and packed (size: X KB)
 - [ ] Core package built and packed (size: X MB)
 - [ ] CLI package built and packed (size: X KB)
 - [ ] Testing package built and packed (size: X KB)
+- [ ] create-nextspark-app built and packed (size: X KB)
 - [ ] workspace:* references resolved correctly
+- [ ] CLI dist verification passed (no stale code)
+- [ ] All tarballs copied to .packages/
 
-### Installation Phase
-- [ ] create-next-app succeeded (Next.js version: X.X.X)
-- [ ] UI package installed (dependency of core)
-- [ ] Packages installed from tarballs
-- [ ] better-auth peer dependency installed
-- [ ] nextspark init --registries-only completed
-- [ ] nextspark sync:app completed
-- [ ] Starter theme copied
+### Project Creation Phase (create-nextspark-app)
+- [ ] create-nextspark-app ran successfully (100% local)
+- [ ] Found local tarballs in .packages/
+- [ ] @nextsparkjs/core installed from local tarball
+- [ ] @nextsparkjs/cli installed from local tarball
+- [ ] nextspark init completed
+- [ ] sync:app synced all template files
+- [ ] Starter theme available
 
 ### Configuration Phase
 - [ ] .env created with DATABASE_URL
 - [ ] Migrations ran successfully (X core + X entity)
 - [ ] Registries built (X files, no path errors)
 
-### Runtime Phase
+### Runtime Phase (agent-browser)
 - [ ] Dev server started on port 3005
 - [ ] Homepage loads (HTTP 200)
-- [ ] Login page renders with form
-- [ ] Signup page renders
-- [ ] No critical console errors
+- [ ] Login page renders with form (title "Sign In")
+- [ ] Signup page renders (title "Create Account")
+- [ ] Login with superadmin credentials succeeds
+- [ ] Dashboard loads with navigation sidebar
 
-### CRUD Test Phase (Tasks Entity)
-- [ ] CREATE: Task created via form
-- [ ] READ: Task detail page renders
-- [ ] UPDATE: Task edited and saved
-- [ ] DELETE: Task removed with confirmation
+### CRUD Test Phase: Tasks Entity
+- [ ] CREATE: Task created via form, redirected to detail
+- [ ] READ: Detail page shows title, description, status, priority
+- [ ] UPDATE: Title edited and persisted
+- [ ] DELETE: Confirmation dialog, task removed
+
+### CRUD Test Phase: Pages Entity + Page Builder
+- [ ] CREATE: Page created with auto-generated slug
+- [ ] READ (public URL): `localhost:3005/<slug>` renders correctly
+- [ ] DELETE: Page removed, public URL returns 404
+
+### Admin & DevTools Phase
+- [ ] Superadmin panel loads (`/superadmin`)
+- [ ] Superadmin users list renders (`/superadmin/users`)
+- [ ] DevTools panel loads (`/devtools`)
+- [ ] DevTools config loads (`/devtools/config`)
 
 ### Production Phase
 - [ ] Production build passed
@@ -656,6 +722,7 @@ If ANY step fails:
    - Template issue -> Fix in `repo/packages/core/templates/`
    - CLI issue -> Fix in `repo/packages/cli/src/`
    - Core issue -> Fix in `repo/packages/core/src/`
+   - Create-app issue -> Fix in `repo/packages/create-nextspark-app/src/`
 4. **Do NOT continue** to next steps
 
 ### Common Issues & Fixes
@@ -663,15 +730,15 @@ If ANY step fails:
 | Issue | Cause | Fix |
 |-------|-------|-----|
 | `EUNSUPPORTEDPROTOCOL: workspace:*` | Used `npm pack` instead of `pnpm pack` | **Always use `pnpm pack`** - it converts `workspace:*` to real versions |
-| `Module not found: @nextsparkjs/ui` | UI package not installed | Install UI tarball before core: `npm install ./nextsparkjs-ui-*.tgz` |
+| `Module not found: @nextsparkjs/ui` | UI package not installed | Ensure UI tarball is in `.packages/` |
 | `Module not found: better-auth/next-js` | Missing peer dependency | `npm install better-auth` |
 | `Cannot find module 'cypress'` | Tests not excluded | Ensure tsconfig.json has `**/tests/**` in exclude |
 | `@nextsparkjs/registries` not found | Missing webpack alias | Ensure `next.config.mjs` was synced |
 | CSP violation errors | Wrong APP_URL | Update `NEXT_PUBLIC_APP_URL` to match actual port |
-| npm/npx silent on Windows | Git Bash compatibility | Use `cmd.exe /c "npm ..."` wrapper |
 | `.next/dev/lock` error | Stale lock from crashed server | `rm -rf .next` and restart |
-| Root config files not synced (i18n.ts, tsconfig.json, etc.) | Stale CLI build cache | `rm -rf dist && pnpm build` before packing |
-| Tarball contains old code despite source changes | Build cache not invalidated | Always `rm -rf dist` before building each package |
+| Tarball contains old code | Build cache not invalidated | Always `rm -rf dist` before building each package |
+| CLI has stale code in dist | tsup cache | `rm -rf dist && pnpm build` + verify with grep |
+| create-nextspark-app can't find tarballs | Wrong .packages path | Verify tarballs are in `$REPO_ROOT/.packages/` |
 
 ---
 
@@ -687,30 +754,37 @@ pnpm pkg:publish
 
 ---
 
-## What This Tests
+## What This Tests (100% Local)
 
-| Component | Tested |
-|-----------|--------|
-| `@nextsparkjs/ui` build & pack | Yes |
-| `@nextsparkjs/core` build & pack | Yes |
-| `@nextsparkjs/cli` build & pack | Yes |
-| `@nextsparkjs/testing` build & pack | Yes |
-| `workspace:*` resolution (pnpm pack) | Yes |
-| Tarball installation | Yes |
-| `nextspark init` CLI command | Yes |
-| `nextspark sync:app` CLI command | Yes |
-| `nextspark db:migrate` CLI command | Yes |
-| `nextspark registry:build` CLI command | Yes |
-| Theme copying | Yes |
-| Database migrations | Yes |
-| Registry generation | Yes |
-| Path normalization (Windows) | Yes |
-| Dev server startup | Yes |
-| Page rendering | Yes |
-| Auth system UI | Yes |
-| Entity CRUD (Tasks) | Yes |
-| API endpoints (via CRUD) | Yes |
-| Production build | Yes |
+| Component | Tested | Source |
+|-----------|--------|--------|
+| `create-nextspark-app` | Yes | Local build |
+| `@nextsparkjs/ui` build & pack | Yes | Local build |
+| `@nextsparkjs/core` build & pack | Yes | Local build |
+| `@nextsparkjs/cli` build & pack | Yes | Local build |
+| `@nextsparkjs/testing` build & pack | Yes | Local build |
+| `workspace:*` resolution (pnpm pack) | Yes | Local |
+| Local tarball discovery (.packages/) | Yes | Local |
+| `nextspark init` CLI command | Yes | Local CLI |
+| `nextspark sync:app` CLI command | Yes | Local CLI |
+| `nextspark db:migrate` CLI command | Yes | Local CLI |
+| `nextspark registry:build` CLI command | Yes | Local CLI |
+| Theme copying | Yes | Local templates |
+| Database migrations | Yes | Local SQL files |
+| Registry generation | Yes | Local generators |
+| Dev server startup | Yes | Local Next.js |
+| Page rendering (agent-browser) | Yes | Local app |
+| Auth system (login form + credentials) | Yes | Local auth |
+| Entity CRUD - Tasks | Yes | Local API |
+| Entity CRUD - Pages + Page Builder | Yes | Local API |
+| Superadmin panel + users list | Yes | Local admin |
+| DevTools panel + config | Yes | Local devtools |
+| Production build | Yes | Local build |
+
+**External dependencies (NOT from NextSpark):**
+- `next`, `react`, `react-dom` — framework (peer deps, installed via npm)
+- `better-auth` — auth library (peer dep)
+- `tailwindcss`, `eslint` — dev tools (installed by create or init)
 
 ---
 
@@ -722,9 +796,13 @@ After testing, optionally clean up:
 # Remove test project
 rm -rf "$TEST_DIR"
 
-# Remove tarballs (optional - keep for re-testing)
+# Remove .packages tarballs
+rm -rf "$PACKAGES_DIR"
+
+# Remove individual package tarballs
 rm -f "${REPO_ROOT}/packages/ui/"*.tgz
 rm -f "${REPO_ROOT}/packages/core/"*.tgz
 rm -f "${REPO_ROOT}/packages/cli/"*.tgz
 rm -f "${REPO_ROOT}/packages/testing/"*.tgz
+rm -f "${REPO_ROOT}/packages/create-nextspark-app/"*.tgz
 ```

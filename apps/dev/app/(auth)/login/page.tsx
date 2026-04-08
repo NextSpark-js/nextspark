@@ -16,6 +16,5 @@ function LoginPage() {
   return <LoginForm />
 }
 
-export const dynamic = 'force-dynamic'
 
 export default getTemplateOrDefault('app/(auth)/login/page.tsx', LoginPage)

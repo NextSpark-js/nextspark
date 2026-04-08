@@ -301,6 +301,5 @@ function UpdatePasswordPage() {
 }
 
 // Opt out of static generation due to client-side state
-export const dynamic = 'force-dynamic';
 
 export default getTemplateOrDefaultClient('app/dashboard/settings/password/page.tsx', UpdatePasswordPage)

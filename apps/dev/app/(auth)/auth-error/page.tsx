@@ -21,6 +21,5 @@ function AuthErrorPageWrapper() {
   )
 }
 
-export const dynamic = 'force-dynamic'
 
 export default getTemplateOrDefault('app/(auth)/auth-error/page.tsx', AuthErrorPageWrapper)

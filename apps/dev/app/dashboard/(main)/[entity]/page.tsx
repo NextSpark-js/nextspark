@@ -63,28 +63,9 @@ async function EntityListPage({ params }: PageProps) {
   )
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const resolvedParams = await params
-  const entitySlug = resolvedParams.entity
-
-  const registry = getEntityRegistry()
-  if (!(entitySlug in registry)) {
-    return {
-      title: 'Not Found - Dashboard'
-    }
-  }
-
-  const entityConfig = getEntity(entitySlug)
-  if (!entityConfig || !isEntityConfig(entityConfig)) {
-    return {
-      title: 'Not Found - Dashboard'
-    }
-  }
-
-  return {
-    title: `${entityConfig.names.plural} - Dashboard`,
-    description: `Manage ${entityConfig.names.plural.toLowerCase()} in your dashboard`
-  }
+export const metadata: Metadata = {
+  title: 'Dashboard',
+  description: 'Manage entities in your dashboard'
 }
 
 export default getTemplateOrDefault('app/dashboard/(main)/[entity]/page.tsx', EntityListPage)

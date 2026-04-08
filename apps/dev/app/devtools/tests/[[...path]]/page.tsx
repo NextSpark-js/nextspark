@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { TestCasesViewer } from "@nextsparkjs/core/components/devtools";
 import { FileText } from "lucide-react";
 import { getTranslations } from "next-intl/server";
@@ -17,7 +18,7 @@ interface DevTestsPageProps {
  * - /dev/tests/auth/login-logout.bdd.md          → File selected
  * - /dev/tests/page-builder/admin/block-editor.bdd.md → Nested file
  */
-export default async function DevTestsPage({ params }: DevTestsPageProps) {
+async function DevTestsPageContent({ params }: DevTestsPageProps) {
   const { path } = await params;
   const t = await getTranslations("dev.tests");
 
@@ -43,5 +44,13 @@ export default async function DevTestsPage({ params }: DevTestsPageProps) {
       {/* Test Cases Viewer */}
       <TestCasesViewer initialPath={initialPath} />
     </div>
+  );
+}
+
+export default function DevTestsPage({ params }: DevTestsPageProps) {
+  return (
+    <Suspense fallback={null}>
+      <DevTestsPageContent params={params} />
+    </Suspense>
   );
 }

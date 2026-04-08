@@ -32,7 +32,7 @@ function getTranslationCache(): Map<string, Record<string, unknown>> {
  * Deep merge with key preservation
  * Priority: Core < Theme < Entity (later wins)
  */
-function deepMergeMessages(
+export function deepMergeMessages(
   target: Record<string, unknown>,
   source: Record<string, unknown>
 ): Record<string, unknown> {

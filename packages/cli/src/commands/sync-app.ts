@@ -32,6 +32,49 @@ const PROTECTED_ROOT_FILES = [
   'next.config.mjs',    // Projects add custom webpack aliases, plugins, etc.
 ];
 
+/**
+ * Detect if a project has PPR enabled (cacheComponents: true in next.config).
+ * When PPR is enabled, sync:app uses the PPR layout template instead of the default.
+ */
+function isPPREnabled(projectRoot: string): boolean {
+  const configPaths = ['next.config.mjs', 'next.config.js', 'next.config.ts'];
+  for (const name of configPaths) {
+    const p = join(projectRoot, name);
+    if (!existsSync(p)) continue;
+    try {
+      const content = readFileSync(p, 'utf8');
+      if (content.match(/cacheComponents\s*:\s*true/)) {
+        return true;
+      }
+    } catch {
+      // ignore read errors
+    }
+  }
+  return false;
+}
+
+/**
+ * Get the major version of Next.js installed in the project.
+ * Returns 0 if not found.
+ */
+function getNextMajorVersion(projectRoot: string): number {
+  try {
+    const pkgPath = join(projectRoot, 'node_modules', 'next', 'package.json');
+    if (!existsSync(pkgPath)) return 0;
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+    const match = (pkg.version || '').match(/^(\d+)/);
+    return match ? parseInt(match[1], 10) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+// Template files that have PPR-specific variants (layout.tsx -> layout.ppr.tsx)
+// When PPR is enabled, the .ppr.tsx variant is used instead of the default.
+const PPR_TEMPLATE_VARIANTS: Record<string, string> = {
+  'layout.tsx': 'layout.ppr.tsx',
+};
+
 // Display limits for file listings
 const MAX_VERBOSE_FILES = 10;
 const MAX_SUMMARY_FILES = 5;
@@ -136,9 +179,12 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
 
     spinner.text = 'Scanning template files...';
 
-    // Get all template files (excluding auto-generated folders)
+    // Get all template files (excluding auto-generated folders and PPR variants)
+    // PPR variants (e.g., layout.ppr.tsx) are used as substitutes, not synced as separate files
+    const pprVariantFiles = new Set(Object.values(PPR_TEMPLATE_VARIANTS));
     const templateFiles = getAllFiles(templatesDir)
-      .filter(f => !EXCLUDED_TEMPLATE_PATTERNS.some(pattern => f.startsWith(pattern)));
+      .filter(f => !EXCLUDED_TEMPLATE_PATTERNS.some(pattern => f.startsWith(pattern)))
+      .filter(f => !pprVariantFiles.has(f));
 
     // Get all existing app files
     const existingAppFiles = getAllFiles(appDir);
@@ -214,15 +260,35 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
 
     // Perform sync
     if (!options.dryRun) {
+      // Detect PPR mode to choose the right template variants
+      const pprEnabled = isPPREnabled(projectRoot);
+      const nextVersion = getNextMajorVersion(projectRoot);
+
+      if (pprEnabled && nextVersion >= 16) {
+        console.log(chalk.cyan('  PPR detected (cacheComponents: true + Next.js 16) — using PPR templates'));
+      }
+
       spinner.start('Syncing files...');
 
       let updated = 0;
       let created = 0;
 
       for (const file of filesToUpdate) {
-        const sourcePath = join(templatesDir, file);
+        let sourcePath = join(templatesDir, file);
         const targetPath = join(appDir, file);
         const isNew = !existsSync(targetPath);
+
+        // Use PPR variant if available and PPR is enabled
+        const pprVariant = PPR_TEMPLATE_VARIANTS[file];
+        if (pprEnabled && nextVersion >= 16 && pprVariant) {
+          const pprSourcePath = join(templatesDir, pprVariant);
+          if (existsSync(pprSourcePath)) {
+            sourcePath = pprSourcePath;
+            if (options.verbose) {
+              console.log(chalk.cyan(`  ◆ PPR variant: ${file} ← ${pprVariant}`));
+            }
+          }
+        }
 
         copyFile(sourcePath, targetPath);
 

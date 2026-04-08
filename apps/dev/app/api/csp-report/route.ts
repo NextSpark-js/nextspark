@@ -5,15 +5,18 @@ import { NextRequest, NextResponse } from 'next/server';
 let checkDistributedRateLimit: ((id: string, tier: string) => Promise<{ allowed: boolean; limit: number; remaining: number; resetTime: number; retryAfter?: number }>) | null = null;
 let createRateLimitErrorResponse: ((result: { allowed: boolean; limit: number; remaining: number; resetTime: number; retryAfter?: number }) => NextResponse) | null = null;
 
-// Try to load rate limiting functions
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const rateLimitModule = require('@nextsparkjs/core/lib/api');
-  checkDistributedRateLimit = rateLimitModule.checkDistributedRateLimit;
-  createRateLimitErrorResponse = rateLimitModule.createRateLimitErrorResponse;
-} catch {
-  // Rate limiting not available - will skip rate limit checks
-  console.warn('[CSP Report] Rate limiting not available - running without rate limits');
+// Lazy-load rate limiting functions on first request
+let rateLimitLoaded = false;
+async function ensureRateLimitLoaded() {
+  if (rateLimitLoaded) return;
+  rateLimitLoaded = true;
+  try {
+    const rateLimitModule = await import('@nextsparkjs/core/lib/api');
+    checkDistributedRateLimit = rateLimitModule.checkDistributedRateLimit;
+    createRateLimitErrorResponse = rateLimitModule.createRateLimitErrorResponse;
+  } catch {
+    console.warn('[CSP Report] Rate limiting not available - running without rate limits');
+  }
 }
 
 /**
@@ -73,6 +76,7 @@ function getClientIp(request: NextRequest): string {
 }
 
 export async function POST(request: NextRequest) {
+  await ensureRateLimitLoaded();
   const requestId = randomUUID().slice(0, 8);
   let rateLimitHeaders: Record<string, string> = {};
 

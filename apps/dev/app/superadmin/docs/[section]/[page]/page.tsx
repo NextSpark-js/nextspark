@@ -39,12 +39,10 @@ export async function generateMetadata({ params }: SuperadminDocsPageProps): Pro
   const page = section.pages.find(p => p.slug === pageSlug)
   if (!page) return { title: 'Page Not Found' }
 
-  const filePath = path.join(process.cwd(), page.path)
-  const { metadata } = await parseMarkdownFile(filePath)
-
+  const title = page.title || pageSlug.replace(/-/g, ' ')
   return {
-    title: `${metadata.title} | Admin Docs`,
-    description: metadata.description || `Admin documentation for ${metadata.title}`,
+    title: `${title} | Admin Docs`,
+    description: `Admin documentation for ${title}`,
     robots: 'noindex, nofollow'
   }
 }

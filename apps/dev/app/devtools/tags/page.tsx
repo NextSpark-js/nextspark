@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { TagsOverview } from "@nextsparkjs/core/components/devtools/TagsOverview";
 import { Tag } from "lucide-react";
 import { getTranslations } from "next-intl/server";
@@ -8,7 +9,7 @@ import { getTranslations } from "next-intl/server";
  * Displays all test tags organized by category.
  * Provides search and copy-to-clipboard functionality.
  */
-export default async function DevTagsPage() {
+async function DevTagsPageContent() {
   const t = await getTranslations("devtools.tags");
 
   return (
@@ -27,5 +28,13 @@ export default async function DevTagsPage() {
       {/* Tags Overview */}
       <TagsOverview />
     </div>
+  );
+}
+
+export default function DevTagsPage() {
+  return (
+    <Suspense fallback={null}>
+      <DevTagsPageContent />
+    </Suspense>
   );
 }

@@ -207,6 +207,5 @@ function ResetPasswordPage() {
 }
 
 // Opt out of static generation due to client-side state
-export const dynamic = 'force-dynamic';
 
 export default getTemplateOrDefaultClient('app/(auth)/reset-password/page.tsx', ResetPasswordPage)

@@ -128,8 +128,8 @@ async function copyProjectFiles(): Promise<void> {
     { src: 'postcss.config.mjs', dest: 'postcss.config.mjs', force: true },
     { src: 'i18n.ts', dest: 'i18n.ts', force: true },
     { src: 'pnpm-workspace.yaml', dest: 'pnpm-workspace.yaml', force: true }, // Enable workspace for themes/plugins - REQUIRED
-    // Note: .npmrc is NOT copied for web-only projects (not needed, pnpm default hoisting works fine)
-    // For monorepo projects, monorepo-generator.ts creates a specific .npmrc with expo/react-native patterns
+    // Note: .npmrc with shamefully-hoist=true is created by create-nextspark-app
+    // For monorepo projects, monorepo-generator.ts creates a more specific .npmrc with expo/react-native patterns
     { src: 'tsconfig.cypress.json', dest: 'tsconfig.cypress.json', force: false },
     { src: 'cypress.d.ts', dest: 'cypress.d.ts', force: false },
     { src: 'eslint.config.mjs', dest: 'eslint.config.mjs', force: false },
@@ -212,13 +212,16 @@ async function updatePackageJson(config: WizardConfig): Promise<void> {
     '@nextsparkjs/core': 'latest',
     '@nextsparkjs/cli': 'latest',
     // Next.js + React
-    'next': '^15.1.0',
+    'next': '^16.0.0',
     'react': '^19.0.0',
     'react-dom': '^19.0.0',
     // Auth
     'better-auth': '^1.4.0',
+    '@better-fetch/fetch': '^1.1.0',
     // i18n
     'next-intl': '^4.0.2',
+    // Build tools
+    'jiti': '^2.0.0',
     // Database
     'drizzle-orm': '^0.41.0',
     'postgres': '^3.4.5',

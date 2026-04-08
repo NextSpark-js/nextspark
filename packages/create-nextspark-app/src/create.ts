@@ -66,7 +66,15 @@ export async function createProject(options: ProjectOptions): Promise<void> {
   await fs.ensureDir(projectPath)
   dirSpinner.succeed('  Project directory created')
 
-  // Step 2: Create minimal package.json
+  // Step 2: Create .npmrc for proper pnpm hoisting
+  // Required because @nextsparkjs/core has peer dependencies (next, react, etc.)
+  // that must be accessible from within the package's node_modules
+  await fs.writeFile(
+    path.join(projectPath, '.npmrc'),
+    `shamefully-hoist=true\n`
+  )
+
+  // Step 3: Create minimal package.json
   const pkgSpinner = ora('  Initializing package.json...').start()
   const packageJson = {
     name: projectName,
@@ -82,33 +90,50 @@ export async function createProject(options: ProjectOptions): Promise<void> {
   await fs.writeJson(path.join(projectPath, 'package.json'), packageJson, { spaces: 2 })
   pkgSpinner.succeed('  package.json created')
 
-  // Step 3: Install @nextsparkjs/core and @nextsparkjs/cli
-  const cliSpinner = ora('  Installing @nextsparkjs/core and @nextsparkjs/cli...').start()
+  // Step 4: Install @nextsparkjs/core, @nextsparkjs/cli, and essential peer dependencies
+  const cliSpinner = ora('  Installing @nextsparkjs/core, @nextsparkjs/cli, and dependencies...').start()
   try {
     // Check for local tarballs (for development testing)
     const localCoreTarball = findLocalTarball('@nextsparkjs/core')
     const localCliTarball = findLocalTarball('@nextsparkjs/cli')
+    const localUiTarball = findLocalTarball('@nextsparkjs/ui')
 
     let corePackage = '@nextsparkjs/core'
     let cliPackage = '@nextsparkjs/cli'
+    let uiPackage = '@nextsparkjs/ui'
 
     if (localCoreTarball && localCliTarball) {
       corePackage = localCoreTarball
       cliPackage = localCliTarball
-      cliSpinner.text = '  Installing @nextsparkjs/core and @nextsparkjs/cli from local tarballs...'
+      if (localUiTarball) uiPackage = localUiTarball
+      cliSpinner.text = '  Installing from local tarballs...'
     }
 
-    execSync(`pnpm add ${corePackage} ${cliPackage}`, {
+    // Essential runtime dependencies that must be present for Next.js to start
+    const essentialDeps = [
+      corePackage,
+      cliPackage,
+      uiPackage,
+      'next',
+      'react',
+      'react-dom',
+      'next-intl',
+      'better-auth',
+      '@better-fetch/fetch',
+      'jiti',
+    ].join(' ')
+
+    execSync(`pnpm add ${essentialDeps}`, {
       cwd: projectPath,
       stdio: 'pipe',
     })
-    cliSpinner.succeed('  @nextsparkjs/core and @nextsparkjs/cli installed')
+    cliSpinner.succeed('  @nextsparkjs/core, @nextsparkjs/cli, and dependencies installed')
   } catch (error) {
-    cliSpinner.fail('  Failed to install @nextsparkjs/core and @nextsparkjs/cli')
+    cliSpinner.fail('  Failed to install dependencies')
     throw error
   }
 
-  // Step 4: Run wizard (inherits terminal for interactive mode)
+  // Step 5: Run wizard (inherits terminal for interactive mode)
   console.log()
   console.log(chalk.blue('  Starting NextSpark wizard...'))
   console.log()

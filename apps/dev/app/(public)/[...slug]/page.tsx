@@ -13,6 +13,7 @@
  * 2. Falls back to default PageRenderer if no template
  */
 
+import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import { query } from '@nextsparkjs/core/lib/db'
 import { PageRenderer } from '@nextsparkjs/core/components/public/pageBuilder'
@@ -51,6 +52,7 @@ function getEntityConfigs(): Record<string, EntityConfig> {
 }
 
 // Enable ISR with 1 hour revalidation
+// On Next.js 16 with cacheComponents, this is superseded by 'use cache' + cacheLife()
 export const revalidate = 3600
 
 interface PageProps {
@@ -247,9 +249,9 @@ export async function generateMetadata({
 }
 
 /**
- * Main catch-all page component
+ * Main catch-all page content (async, wrapped in Suspense by parent)
  */
-export default async function DynamicPublicPage({
+async function DynamicPublicPageContent({
   params,
   searchParams,
 }: PageProps) {
@@ -375,4 +377,15 @@ export default async function DynamicPublicPage({
 
   // No match found
   notFound()
+}
+
+/**
+ * Main catch-all page component — wraps async content in Suspense for PPR compatibility
+ */
+export default function DynamicPublicPage(props: PageProps) {
+  return (
+    <Suspense fallback={null}>
+      <DynamicPublicPageContent {...props} />
+    </Suspense>
+  )
 }

@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import type { Metadata } from "next"
 import { PublicNavbar } from '@nextsparkjs/core/components/app/layouts/PublicNavbar'
 import { PublicFooter } from '@nextsparkjs/core/components/app/layouts/PublicFooter'
@@ -29,7 +30,9 @@ function PublicLayout({
 
       {/* Main Content */}
       <main className="flex-1">
-        {children}
+        <Suspense fallback={null}>
+          {children}
+        </Suspense>
       </main>
 
       {/* Public Footer */}
