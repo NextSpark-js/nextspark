@@ -187,7 +187,16 @@ function generateFieldSchema(
         }
         // Convert numbers to strings (e.g., year field: 2025 -> "2025")
         const strVal = typeof val === 'number' ? String(val) : val
-        return strict ? strVal.trim() : strVal
+        const trimmed = strict ? strVal.trim() : strVal
+        // Enforce maxLength if defined on field
+        if (field.maxLength && trimmed.length > field.maxLength) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `${field.display.label} cannot exceed ${field.maxLength} characters`
+          })
+          return z.NEVER
+        }
+        return trimmed
       })
       break
 
@@ -327,7 +336,27 @@ function generateFieldSchema(
         }),
         z.null(),
         z.undefined()
-      ]).transform(val => val === undefined ? null : val)
+      ]).transform((val, ctx) => {
+        if (val === undefined) return null
+        // Enforce min/max if defined on field
+        if (typeof val === 'number') {
+          if (field.min !== undefined && val < field.min) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `${field.display.label} must be at least ${field.min}`
+            })
+            return z.NEVER
+          }
+          if (field.max !== undefined && val > field.max) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `${field.display.label} must be at most ${field.max}`
+            })
+            return z.NEVER
+          }
+        }
+        return val
+      })
       break
 
     case 'doublerange':

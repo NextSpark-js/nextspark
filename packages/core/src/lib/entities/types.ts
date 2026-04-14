@@ -445,6 +445,15 @@ export interface EntityField {
   /** Validation schema (optional) */
   validation?: ZodSchema
 
+  /** Minimum value for number fields */
+  min?: number
+
+  /** Maximum value for number fields */
+  max?: number
+
+  /** Maximum length for text/textarea fields */
+  maxLength?: number
+
   /** Display configuration */
   display: FieldDisplay
 
