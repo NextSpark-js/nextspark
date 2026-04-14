@@ -83,6 +83,11 @@ export async function checkDistributedRateLimit(
   identifier: string,
   type: RateLimitTier = 'api'
 ): Promise<RateLimitResult & { retryAfter?: number }> {
+  // Respect DISABLE_RATE_LIMITING env var (dev/testing only)
+  if (isRateLimitingDisabled()) {
+    return { allowed: true, remaining: 999, resetTime: Date.now() + 60000, limit: 999 }
+  }
+
   // Use Redis if configured (check env vars first for fast path)
   if (maybeRedisConfigured()) {
     const result = await checkRedisRateLimit(identifier, type);
