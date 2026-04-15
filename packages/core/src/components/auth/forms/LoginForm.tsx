@@ -285,7 +285,7 @@ export function LoginForm() {
                     type="button"
                     onClick={() => setShowEmailForm(true)}
                     disabled={!!loadingProvider}
-                    className="text-sm text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="text-sm text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] inline-flex items-center"
                                         data-cy={sel('auth.login.showEmail')}
                   >
                     {t('login.form.loginWithEmail', { defaultValue: 'Sign in with Email' })}
@@ -296,7 +296,7 @@ export function LoginForm() {
                   type="button"
                   onClick={() => setShowEmailForm(true)}
                   disabled={!!loadingProvider}
-                  className="text-sm text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="text-sm text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] inline-flex items-center"
                                     data-cy={sel('auth.login.showEmail')}
                 >
                   {t('login.form.loginWithEmail', { defaultValue: 'Sign in with Email' })}
@@ -410,13 +410,13 @@ export function LoginForm() {
               className="flex items-center justify-between"
                             data-cy={sel('auth.login.options')}
             >
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 min-h-[44px]">
                 <Checkbox
                   id="remember"
                                     data-cy={sel('auth.login.rememberCheckbox')}
                 />
-                <Label 
-                  htmlFor="remember" 
+                <Label
+                  htmlFor="remember"
                   className="text-sm font-normal cursor-pointer"
                                   >
                   {t('login.form.rememberMe')}
@@ -424,7 +424,7 @@ export function LoginForm() {
               </div>
               <Link
                 href="/forgot-password"
-                className="text-sm text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-accent"
+                className="text-sm text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] inline-flex items-center"
                 aria-label={t('login.form.forgotPasswordAria')}
                                 data-cy={sel('auth.login.forgotPassword')}
               >
@@ -457,7 +457,7 @@ export function LoginForm() {
                     <button
                       type="button"
                       onClick={() => setShowEmailForm(false)}
-                      className="text-sm text-muted-foreground hover:text-primary focus:outline-none focus:ring-2 focus:ring-accent"
+                      className="text-sm text-muted-foreground hover:text-primary focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] inline-flex items-center"
                                           data-cy={sel('auth.login.hideEmail')}
                     >
                       {t('login.form.backToGoogle', { defaultValue: 'Back to main options' })}
