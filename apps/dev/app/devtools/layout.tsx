@@ -1,4 +1,5 @@
 import { DeveloperGuard } from "@nextsparkjs/core/components/app/guards/DeveloperGuard";
+import { DashboardProviders } from "@nextsparkjs/core/providers/DashboardProviders";
 import { DevtoolsSidebar, DevtoolsMobileHeader } from "@nextsparkjs/core/components/devtools";
 import { Metadata } from "next";
 import { getTemplateOrDefault, getMetadataOrDefault } from '@nextsparkjs/core/lib/template-resolver'
@@ -30,6 +31,7 @@ interface DevLayoutProps {
 function DevLayout({ children }: DevLayoutProps) {
   const pluginNavItems = getPluginNavItems('devtools')
   return (
+    <DashboardProviders>
     <DeveloperGuard>
       <div className="flex h-screen bg-background">
         {/* Sidebar - Hidden on mobile, visible on desktop */}
@@ -54,6 +56,7 @@ function DevLayout({ children }: DevLayoutProps) {
         {/* Could add a mobile drawer/overlay sidebar here if needed */}
       </div>
     </DeveloperGuard>
+    </DashboardProviders>
   );
 }
 

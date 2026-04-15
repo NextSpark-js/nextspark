@@ -20,18 +20,13 @@
  */
 
 import type { Metadata } from "next"
-import { Suspense } from "react"
 import { Geist, Geist_Mono } from "next/font/google"
 
 import "./globals.css"
 import { getBillingResourceHints } from "@nextsparkjs/core/lib/billing/gateways/factory"
 import { StaticIntlProvider } from "@nextsparkjs/core/providers/static-intl-provider"
-import { QueryProvider } from "@nextsparkjs/core/providers/query-provider"
 import { ThemeProvider as NextThemeProvider } from "@nextsparkjs/core/providers/theme-provider"
 import { ThemeProvider as CustomThemeProvider } from "@nextsparkjs/core/lib/theme/ThemeProvider"
-import { TeamProvider } from "@nextsparkjs/core/contexts/TeamContext"
-import { SubscriptionProvider } from "@nextsparkjs/core/contexts/SubscriptionContext"
-import { Toaster } from "@nextsparkjs/core/components/ui/sonner"
 import { getMetadataOrDefault } from '@nextsparkjs/core/lib/template-resolver'
 import { DEFAULT_LOCALE, DEFAULT_THEME_MODE, STATIC_MESSAGES } from '@nextsparkjs/registries/translation-registry'
 
@@ -88,14 +83,7 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <CustomThemeProvider>
-              <QueryProvider>
-                <TeamProvider>
-                  <SubscriptionProvider>
-                    <main>{children}</main>
-                    <Suspense><Toaster position="bottom-left" /></Suspense>
-                  </SubscriptionProvider>
-                </TeamProvider>
-              </QueryProvider>
+              <main>{children}</main>
             </CustomThemeProvider>
           </NextThemeProvider>
         </StaticIntlProvider>

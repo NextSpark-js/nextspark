@@ -1,4 +1,5 @@
 import { SuperAdminGuard } from "@nextsparkjs/core/components/app/guards/SuperAdminGuard";
+import { DashboardProviders } from "@nextsparkjs/core/providers/DashboardProviders";
 import { SuperadminSidebar } from "@nextsparkjs/core/components/superadmin/layouts/SuperadminSidebar";
 import { Metadata } from "next";
 import { getTemplateOrDefault, getMetadataOrDefault } from '@nextsparkjs/core/lib/template-resolver'
@@ -29,6 +30,7 @@ interface SuperadminLayoutProps {
 function SuperadminLayout({ children }: SuperadminLayoutProps) {
   const pluginNavItems = getPluginNavItems('superadmin')
   return (
+    <DashboardProviders>
     <SuperAdminGuard>
       <div className="flex h-screen bg-background" data-cy="superadmin-container">
         {/* Sidebar - Hidden on mobile, visible on desktop */}
@@ -63,6 +65,7 @@ function SuperadminLayout({ children }: SuperadminLayoutProps) {
         {/* Could add a mobile drawer/overlay sidebar here if needed */}
       </div>
     </SuperAdminGuard>
+    </DashboardProviders>
   );
 }
 

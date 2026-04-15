@@ -11,13 +11,9 @@ import { getMessages } from 'next-intl/server'
 
 import "./globals.css"
 import { getBillingResourceHints } from "@nextsparkjs/core/lib/billing/gateways/factory"
-import { QueryProvider } from "@nextsparkjs/core/providers/query-provider"
 import { ThemeProvider as NextThemeProvider } from "@nextsparkjs/core/providers/theme-provider"
 import { ThemeProvider as CustomThemeProvider } from "@nextsparkjs/core/lib/theme/ThemeProvider"
-import { TeamProvider } from "@nextsparkjs/core/contexts/TeamContext"
-import { SubscriptionProvider } from "@nextsparkjs/core/contexts/SubscriptionContext"
 import { getUserLocale } from '@nextsparkjs/core/lib/locale'
-import { Toaster } from "@nextsparkjs/core/components/ui/sonner"
 import { TranslationContextManager } from "@nextsparkjs/core/providers/TranslationContextManager"
 import { PluginService } from '@nextsparkjs/core/lib/services'
 import { getMetadataOrDefault } from '@nextsparkjs/core/lib/template-resolver'
@@ -87,15 +83,8 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             <CustomThemeProvider>
-              <QueryProvider>
-                <TeamProvider>
-                  <SubscriptionProvider>
-                    <TranslationContextManager />
-                    <main>{children}</main>
-                    <Toaster position="bottom-left" />
-                  </SubscriptionProvider>
-                </TeamProvider>
-              </QueryProvider>
+              <TranslationContextManager />
+              <main>{children}</main>
             </CustomThemeProvider>
           </NextThemeProvider>
         </NextIntlClientProvider>

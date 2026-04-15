@@ -4,6 +4,7 @@ import { useAuth } from '@nextsparkjs/core/hooks/useAuth'
 import { useRouter } from 'next/navigation'
 import { useEffect, Suspense } from 'react'
 import { Loader2 } from 'lucide-react'
+import { DashboardProviders } from '@nextsparkjs/core/providers/DashboardProviders'
 import { DashboardTranslationPreloader } from '@nextsparkjs/core/lib/i18n/DashboardTranslationPreloader'
 import { TranslationDebugger } from '@nextsparkjs/core/utils/dev/TranslationDebugger'
 import { useEnsureUserMetadata } from '@nextsparkjs/core/hooks/useEnsureUserMetadata'
@@ -82,5 +83,9 @@ export default function CoreDashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  return <DashboardLayoutContent>{children}</DashboardLayoutContent>
+  return (
+    <DashboardProviders>
+      <DashboardLayoutContent>{children}</DashboardLayoutContent>
+    </DashboardProviders>
+  )
 }
