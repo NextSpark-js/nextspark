@@ -97,7 +97,7 @@ export function MobileBottomNav() {
                       <Icon className="h-6 w-6 text-primary-foreground" aria-hidden="true" />
                     </div>
                   </div>
-                  <span className="text-[10px] font-medium text-foreground mt-8">
+                  <span className="text-xs font-medium text-foreground mt-8">
                     {item.name}
                   </span>
                 </button>
@@ -116,7 +116,7 @@ export function MobileBottomNav() {
                 />
                 <span
                   className={cn(
-                    "text-[10px] font-medium transition-colors",
+                    "text-xs font-medium transition-colors",
                     isActive ? "text-primary" : "text-muted-foreground"
                   )}
                 >
