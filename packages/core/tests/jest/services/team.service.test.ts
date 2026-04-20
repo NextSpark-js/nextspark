@@ -9,6 +9,13 @@ import { TeamService } from '@/core/lib/services/team.service'
 import { queryOneWithRLS, queryWithRLS, getTransactionClient } from '@/core/lib/db'
 import type { Team } from '@/core/lib/teams/types'
 
+// Mock config
+jest.mock('@/core/lib/config', () => ({
+  TEAMS_CONFIG: {
+    mode: 'single-tenant',
+  },
+}))
+
 // Mock database functions
 jest.mock('@/core/lib/db', () => ({
   queryOneWithRLS: jest.fn(),
@@ -96,7 +103,7 @@ describe('TeamService', () => {
 
       expect(result).toEqual(mockTeam)
       expect(mockQueryOneWithRLS).toHaveBeenCalledWith(
-        expect.stringContaining('ORDER BY "createdAt" ASC'),
+        expect.stringContaining('"isGlobal" = TRUE'),
         []
       )
     })
