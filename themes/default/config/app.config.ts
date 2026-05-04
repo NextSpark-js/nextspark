@@ -53,6 +53,21 @@ export const APP_CONFIG_OVERRIDES = {
         enabled: true,
       },
     },
+    /**
+     * Whether Better Auth automatically sends the verification email on signup.
+     *
+     * - `true` (default): users get a "Verify Your Email Address" link email
+     *   immediately when they sign up via `/api/auth/sign-up/email`.
+     * - `false`: suppress the automatic email. Use this when your project
+     *   verifies email ownership through other means (OTP code, invitation
+     *   token, claim-account flow). The `sendVerificationEmail` function
+     *   remains available — you can still trigger link-based verification
+     *   explicitly when you need to.
+     *
+     * `requireEmailVerification: true` is enforced regardless: users with
+     * `emailVerified: false` cannot sign in.
+     */
+    sendVerificationEmailOnSignup: true,
   },
 
   // =============================================================================
