@@ -117,6 +117,7 @@ export const auth = betterAuth({
     },
   },
   emailVerification: {
+    sendOnSignUp: false,
     sendVerificationEmail: async ({ user, token }: { user: UserWithEmail; url: string; token: string }) => {
       try {
         const verifyUrl = `${baseUrl}/api/auth/verify-email?token=${token}`;
