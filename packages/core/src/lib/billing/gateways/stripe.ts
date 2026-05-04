@@ -27,7 +27,16 @@ import type {
 // Lazy-load Stripe client to avoid initialization during build time
 let stripeInstance: Stripe | null = null
 
-function getStripe(): Stripe {
+/**
+ * Lazy accessor for the shared Stripe SDK client. Returns the same instance on
+ * every call. Throws if STRIPE_SECRET_KEY is not configured.
+ *
+ * Exported so theme code can reach the SDK directly for the few cases the
+ * BillingGateway interface does not cover (e.g. updating subscription
+ * `quantity`, which is not part of UpdateSubscriptionParams). Prefer the
+ * BillingGateway interface for everything it already exposes.
+ */
+export function getStripeInstance(): Stripe {
   if (!stripeInstance) {
     if (!process.env.STRIPE_SECRET_KEY) {
       throw new Error('STRIPE_SECRET_KEY is not configured')
@@ -84,7 +93,7 @@ export class StripeGateway implements BillingGateway {
       }
     }
 
-    const session = await getStripe().checkout.sessions.create(sessionParams)
+    const session = await getStripeInstance().checkout.sessions.create(sessionParams)
     return { id: session.id, url: session.url }
   }
 
@@ -107,12 +116,12 @@ export class StripeGateway implements BillingGateway {
       sessionParams.customer_email = customerEmail
     }
 
-    const session = await getStripe().checkout.sessions.create(sessionParams)
+    const session = await getStripeInstance().checkout.sessions.create(sessionParams)
     return { id: session.id, url: session.url }
   }
 
   async createPortalSession(params: CreatePortalParams): Promise<PortalSessionResult> {
-    const session = await getStripe().billingPortal.sessions.create({
+    const session = await getStripeInstance().billingPortal.sessions.create({
       customer: params.customerId,
       return_url: params.returnUrl
     })
@@ -128,7 +137,7 @@ export class StripeGateway implements BillingGateway {
     const signature = typeof signatureOrHeaders === 'string'
       ? signatureOrHeaders
       : signatureOrHeaders['stripe-signature'] || ''
-    const event = getStripe().webhooks.constructEvent(payload, signature, webhookSecret)
+    const event = getStripeInstance().webhooks.constructEvent(payload, signature, webhookSecret)
     return {
       id: event.id,
       type: event.type,
@@ -137,7 +146,7 @@ export class StripeGateway implements BillingGateway {
   }
 
   async getCustomer(customerId: string): Promise<CustomerResult> {
-    const customer = await getStripe().customers.retrieve(customerId)
+    const customer = await getStripeInstance().customers.retrieve(customerId)
     if ('deleted' in customer && customer.deleted) {
       throw new Error(`Customer ${customerId} has been deleted`)
     }
@@ -149,7 +158,7 @@ export class StripeGateway implements BillingGateway {
   }
 
   async createCustomer(params: CreateCustomerParams): Promise<CustomerResult> {
-    const customer = await getStripe().customers.create(params)
+    const customer = await getStripeInstance().customers.create(params)
     return {
       id: customer.id,
       email: customer.email ?? null,
@@ -159,7 +168,7 @@ export class StripeGateway implements BillingGateway {
 
   async updateSubscriptionPlan(params: UpdateSubscriptionParams): Promise<SubscriptionResult> {
     const { subscriptionId, newPriceId, prorationBehavior = 'create_prorations' } = params
-    const stripe = getStripe()
+    const stripe = getStripeInstance()
 
     // Get current subscription to find the item ID
     const subscription = await stripe.subscriptions.retrieve(subscriptionId)
@@ -185,7 +194,7 @@ export class StripeGateway implements BillingGateway {
   }
 
   async cancelSubscriptionAtPeriodEnd(subscriptionId: string): Promise<SubscriptionResult> {
-    const updated = await getStripe().subscriptions.update(subscriptionId, {
+    const updated = await getStripeInstance().subscriptions.update(subscriptionId, {
       cancel_at_period_end: true
     })
     return {
@@ -196,7 +205,7 @@ export class StripeGateway implements BillingGateway {
   }
 
   async cancelSubscriptionImmediately(subscriptionId: string): Promise<SubscriptionResult> {
-    const canceled = await getStripe().subscriptions.cancel(subscriptionId)
+    const canceled = await getStripeInstance().subscriptions.cancel(subscriptionId)
     return {
       id: canceled.id,
       status: canceled.status,
@@ -225,7 +234,7 @@ export class StripeGateway implements BillingGateway {
   }
 
   async reactivateSubscription(subscriptionId: string): Promise<SubscriptionResult> {
-    const updated = await getStripe().subscriptions.update(subscriptionId, {
+    const updated = await getStripeInstance().subscriptions.update(subscriptionId, {
       cancel_at_period_end: false
     })
     return {
