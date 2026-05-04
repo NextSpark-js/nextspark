@@ -391,6 +391,20 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
         enabled: true,
       },
     },
+
+    /**
+     * Whether Better Auth automatically sends the verification email on signup.
+     *
+     * Default: `true` — matches Better Auth's standard behavior. Users get a
+     * "Verify Your Email Address" link email when they sign up via
+     * `/api/auth/sign-up/email`.
+     *
+     * Set this to `false` in your theme's `app.config.ts` if your project
+     * verifies email ownership through other means (OTP code, invitation
+     * token, claim-account flow). The `sendVerificationEmail` function
+     * remains exported and can still be called explicitly when needed.
+     */
+    sendVerificationEmailOnSignup: true,
   },
 
   // =============================================================================
