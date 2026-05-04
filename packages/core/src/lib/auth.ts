@@ -117,7 +117,11 @@ export const auth = betterAuth({
     },
   },
   emailVerification: {
-    sendOnSignUp: false,
+    // Controlled by AUTH_CONFIG.sendVerificationEmailOnSignup (default: true).
+    // Themes opt out by setting `auth.sendVerificationEmailOnSignup: false`
+    // in their app.config.ts when they verify email ownership through other
+    // means (OTP, invitation token, claim-account flow, etc.).
+    sendOnSignUp: AUTH_CONFIG.sendVerificationEmailOnSignup ?? true,
     sendVerificationEmail: async ({ user, token }: { user: UserWithEmail; url: string; token: string }) => {
       try {
         const verifyUrl = `${baseUrl}/api/auth/verify-email?token=${token}`;

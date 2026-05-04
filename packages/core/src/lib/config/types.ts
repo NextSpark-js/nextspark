@@ -432,6 +432,23 @@ export interface AuthConfig {
 
   /** OAuth provider settings */
   providers?: AuthProvidersConfig
+
+  /**
+   * Whether Better Auth should automatically send the built-in
+   * verification email when a user signs up via `/api/auth/sign-up/email`.
+   *
+   * - `true` (default): preserves Better Auth's standard behavior — users
+   *   receive a "Verify Your Email Address" link email immediately on signup.
+   * - `false`: suppresses the automatic email. Use this when the project
+   *   verifies email ownership through other means (OTP code, invitation
+   *   token, claim-account flow, etc.) before or after signup.
+   *
+   * Note: this only controls the AUTOMATIC dispatch on signup.
+   * `requireEmailVerification: true` and the `sendVerificationEmail`
+   * function remain available regardless — projects can still trigger
+   * link-based verification explicitly when they need to.
+   */
+  sendVerificationEmailOnSignup?: boolean
 }
 
 /**
