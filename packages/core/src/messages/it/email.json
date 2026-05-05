@@ -1,0 +1,58 @@
+{
+  "verifyEmail": {
+    "subject": "Benvenuto in {appName} - Verifica la tua email",
+    "headerSubtitle": "Benvenuto nel tuo account",
+    "title": "Verifica il tuo indirizzo email",
+    "greetingPrefix": "Ciao",
+    "intro": "Grazie per esserti registrato! Siamo felici di averti con noi. Verifica il tuo indirizzo email per attivare il tuo account e iniziare.",
+    "buttonLabel": "Verifica email",
+    "helpHeading": "Non riesci a cliccare il pulsante?",
+    "helpInstructions": "Copia e incolla questo link nel tuo browser:",
+    "copyright": "© {year} {appName}. Tutti i diritti riservati.",
+    "footerLine1": "Questa email è stata inviata perché ti sei registrato su {appName}.",
+    "footerLine2": "Se non sei stato tu, ignora questa email."
+  },
+  "resetPassword": {
+    "subject": "Reimposta la tua password - {appName}",
+    "headerSubtitle": "Richiesta di reimpostazione password",
+    "title": "Reimposta la tua password",
+    "greetingPrefix": "Ciao",
+    "intro": "Abbiamo ricevuto una richiesta di reimpostazione della password del tuo account. Clicca il pulsante qui sotto per creare una nuova password:",
+    "buttonLabel": "Reimposta password",
+    "securityNoticeTitle": "⚠️ Informazioni di sicurezza importanti",
+    "securityNoticeExpiry": "Per sicurezza, questo link scade tra {expiresIn}.",
+    "securityNoticeIgnore": "Se non hai richiesto questa reimpostazione, ignora questa email e la tua password rimarrà invariata.",
+    "defaultExpiresIn": "1 ora",
+    "helpHeading": "Non riesci a cliccare il pulsante?",
+    "helpInstructions": "Copia e incolla questo link nel tuo browser:",
+    "copyright": "© {year} {appName}. Tutti i diritti riservati.",
+    "footerLine1": "Questa è un'email di sicurezza automatica di {appName}.",
+    "footerLine2": "Per motivi di sicurezza, non chiediamo mai la tua password via email."
+  },
+  "otpVerification": {
+    "subject": "{otp} è il tuo codice di verifica - {appName}",
+    "headerSubtitle": "Codice di verifica",
+    "title": "Il tuo codice di verifica",
+    "intro": "Inserisci questo codice per verificare la tua identità:",
+    "expiresNotice": "Questo codice scade tra {minutes} minuti.",
+    "ignoreNotice": "Se non hai richiesto questo codice, puoi ignorare questa email.",
+    "copyright": "© {year} {appName}. Tutti i diritti riservati.",
+    "footerLine1": "Questa è un'email automatica di {appName}."
+  },
+  "teamInvitation": {
+    "subject": "Sei stato invitato a unirti a {teamName} su {appName}",
+    "headerSubtitle": "Invito al team",
+    "title": "Sei stato invitato!",
+    "bodyIntro": "{inviterName} ti ha invitato a unirti al team {teamName} come {role}.",
+    "bodyAction": "Clicca il pulsante qui sotto per accettare l'invito e unirti al team:",
+    "buttonLabel": "Accetta invito",
+    "detailsTitle": "⏰ Dettagli dell'invito",
+    "detailsExpiry": "Questo invito scade tra {expiresIn}.",
+    "detailsCreateAccount": "Se non hai ancora un account, potrai crearne uno accettando.",
+    "helpHeading": "Non riesci a cliccare il pulsante?",
+    "helpInstructions": "Copia e incolla questo link nel tuo browser:",
+    "copyright": "© {year} {appName}. Tutti i diritti riservati.",
+    "footerSentTo": "Questo invito è stato inviato a {inviteeEmail}.",
+    "footerUnexpected": "Se non ti aspettavi questo invito, puoi ignorare questa email."
+  }
+}

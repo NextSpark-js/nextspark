@@ -1,0 +1,58 @@
+{
+  "verifyEmail": {
+    "subject": "Willkommen bei {appName} - Bestätige deine E-Mail",
+    "headerSubtitle": "Willkommen in deinem Konto",
+    "title": "E-Mail-Adresse bestätigen",
+    "greetingPrefix": "Hallo",
+    "intro": "Danke für deine Anmeldung! Wir freuen uns, dich an Bord zu haben. Bitte bestätige deine E-Mail-Adresse, um dein Konto zu aktivieren und loszulegen.",
+    "buttonLabel": "E-Mail bestätigen",
+    "helpHeading": "Kannst du den Button nicht klicken?",
+    "helpInstructions": "Kopiere diesen Link und füge ihn in deinen Browser ein:",
+    "copyright": "© {year} {appName}. Alle Rechte vorbehalten.",
+    "footerLine1": "Diese E-Mail wurde an dich gesendet, weil du dich bei {appName} angemeldet hast.",
+    "footerLine2": "Wenn du das nicht angefordert hast, ignoriere diese E-Mail bitte."
+  },
+  "resetPassword": {
+    "subject": "Passwort zurücksetzen - {appName}",
+    "headerSubtitle": "Anfrage zum Zurücksetzen des Passworts",
+    "title": "Passwort zurücksetzen",
+    "greetingPrefix": "Hallo",
+    "intro": "Wir haben eine Anfrage zum Zurücksetzen des Passworts deines Kontos erhalten. Klicke auf den Button, um ein neues Passwort zu erstellen:",
+    "buttonLabel": "Passwort zurücksetzen",
+    "securityNoticeTitle": "⚠️ Wichtiger Sicherheitshinweis",
+    "securityNoticeExpiry": "Aus Sicherheitsgründen läuft dieser Link in {expiresIn} ab.",
+    "securityNoticeIgnore": "Wenn du dieses Zurücksetzen nicht angefordert hast, ignoriere diese E-Mail bitte – dein Passwort bleibt unverändert.",
+    "defaultExpiresIn": "1 Stunde",
+    "helpHeading": "Kannst du den Button nicht klicken?",
+    "helpInstructions": "Kopiere diesen Link und füge ihn in deinen Browser ein:",
+    "copyright": "© {year} {appName}. Alle Rechte vorbehalten.",
+    "footerLine1": "Dies ist eine automatische Sicherheits-E-Mail von {appName}.",
+    "footerLine2": "Aus Sicherheitsgründen fragen wir niemals per E-Mail nach deinem Passwort."
+  },
+  "otpVerification": {
+    "subject": "{otp} ist dein Bestätigungscode - {appName}",
+    "headerSubtitle": "Bestätigungscode",
+    "title": "Dein Bestätigungscode",
+    "intro": "Gib diesen Code ein, um deine Identität zu bestätigen:",
+    "expiresNotice": "Dieser Code läuft in {minutes} Minuten ab.",
+    "ignoreNotice": "Wenn du diesen Code nicht angefordert hast, kannst du diese E-Mail ignorieren.",
+    "copyright": "© {year} {appName}. Alle Rechte vorbehalten.",
+    "footerLine1": "Dies ist eine automatische E-Mail von {appName}."
+  },
+  "teamInvitation": {
+    "subject": "Du wurdest eingeladen, {teamName} bei {appName} beizutreten",
+    "headerSubtitle": "Team-Einladung",
+    "title": "Du bist eingeladen!",
+    "bodyIntro": "{inviterName} hat dich eingeladen, dem Team {teamName} als {role} beizutreten.",
+    "bodyAction": "Klicke auf den Button, um die Einladung anzunehmen und dem Team beizutreten:",
+    "buttonLabel": "Einladung annehmen",
+    "detailsTitle": "⏰ Einladungsdetails",
+    "detailsExpiry": "Diese Einladung läuft in {expiresIn} ab.",
+    "detailsCreateAccount": "Wenn du noch kein Konto hast, kannst du beim Annehmen eines erstellen.",
+    "helpHeading": "Kannst du den Button nicht klicken?",
+    "helpInstructions": "Kopiere diesen Link und füge ihn in deinen Browser ein:",
+    "copyright": "© {year} {appName}. Alle Rechte vorbehalten.",
+    "footerSentTo": "Diese Einladung wurde an {inviteeEmail} gesendet.",
+    "footerUnexpected": "Wenn du diese Einladung nicht erwartet hast, kannst du diese E-Mail ignorieren."
+  }
+}

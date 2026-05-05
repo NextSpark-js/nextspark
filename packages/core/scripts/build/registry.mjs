@@ -51,6 +51,7 @@ import { discoverPlugins } from './registry/discovery/plugins.mjs'
 import { discoverThemes } from './registry/discovery/themes.mjs'
 import { discoverMiddlewares } from './registry/discovery/middlewares.mjs'
 import { discoverTemplates } from './registry/discovery/templates.mjs'
+import { discoverEmails } from './registry/discovery/emails.mjs'
 import { discoverBlocks } from './registry/discovery/blocks.mjs'
 import { discoverCoreRoutes } from './registry/discovery/core-routes.mjs'
 import { discoverApiPresets } from './registry/discovery/api-presets.mjs'
@@ -60,6 +61,7 @@ import { generateEntityRegistry, generateEntityRegistryClient } from './registry
 import { generateEntityTypes } from './registry/generators/entity-types.mjs'
 import { generateThemeRegistry } from './registry/generators/theme-registry.mjs'
 import { generateTemplateRegistry, generateTemplateRegistryClient } from './registry/generators/template-registry.mjs'
+import { generateEmailRegistry } from './registry/generators/email-registry.mjs'
 import { generateBlockRegistry } from './registry/generators/block-registry.mjs'
 import { generateMiddlewareRegistry } from './registry/generators/middleware-registry.mjs'
 import { generateRouteHandlersRegistry } from './registry/generators/route-handlers.mjs'
@@ -87,7 +89,7 @@ import { syncAppGlobalsCss } from './theme.mjs'
 
 // ==================== Registry File Generation ====================
 
-async function generateRegistryFiles(CONFIG, plugins, entities, themes, templates, middlewares, blocks, permissionsConfig, coreRoutes, apiPresetsData) {
+async function generateRegistryFiles(CONFIG, plugins, entities, themes, templates, middlewares, blocks, permissionsConfig, coreRoutes, apiPresetsData, emails) {
   log('Generating registry files...', 'build')
 
   try {
@@ -109,6 +111,7 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, template
       { name: 'translation-registry.ts', content: generateTranslationRegistry(themes, CONFIG) },
       { name: 'template-registry.ts', content: generateTemplateRegistry(templates, CONFIG) },
       { name: 'template-registry.client.ts', content: templateRegistryClientContent },
+      { name: 'email-registry.ts', content: generateEmailRegistry(emails, CONFIG) },
       { name: 'block-registry.ts', content: generateBlockRegistry(blocks, CONFIG) },
       { name: 'billing-registry.ts', content: await generateBillingRegistry(CONFIG.activeTheme, CONFIG.contentsDir, CONFIG) },
       { name: 'middleware-registry.ts', content: generateMiddlewareRegistry(middlewares, CONFIG) },
@@ -188,7 +191,7 @@ export async function buildRegistries(projectRoot = null) {
     await discoverParentChildRelations(CONFIG)
 
     // Discover all content types in parallel (pass CONFIG to each)
-    const [plugins, coreEntities, themes, templates, middlewares, blocks, permissionsConfig, coreRoutes, apiPresetsData] = await Promise.all([
+    const [plugins, coreEntities, themes, templates, middlewares, blocks, permissionsConfig, coreRoutes, apiPresetsData, emails] = await Promise.all([
       discoverPlugins(CONFIG),
       discoverCoreEntities(CONFIG),
       discoverThemes(CONFIG),
@@ -197,7 +200,8 @@ export async function buildRegistries(projectRoot = null) {
       discoverBlocks(CONFIG),
       discoverPermissionsConfig(CONFIG),
       discoverCoreRoutes(CONFIG),
-      discoverApiPresets(CONFIG)
+      discoverApiPresets(CONFIG),
+      discoverEmails(CONFIG)
     ])
 
     // Aggregate all entities with proper priority: plugin < core < theme
@@ -256,7 +260,7 @@ export async function buildRegistries(projectRoot = null) {
 
     // Hoist plugin dependencies to root workspace for proper resolution
     // Generate all registry files (use aggregated entities for entity registry + blocks)
-    await generateRegistryFiles(CONFIG, plugins, allEntities, themes, templates, middlewares, blocks, permissionsConfig, coreRoutes, apiPresetsData)
+    await generateRegistryFiles(CONFIG, plugins, allEntities, themes, templates, middlewares, blocks, permissionsConfig, coreRoutes, apiPresetsData, emails)
 
     // Generate missing pages for templates that don't have core app pages
     await generateMissingPages(templates, CONFIG)

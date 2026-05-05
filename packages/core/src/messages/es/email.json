@@ -1,0 +1,58 @@
+{
+  "verifyEmail": {
+    "subject": "Bienvenido a {appName} - Verifica tu correo",
+    "headerSubtitle": "Bienvenido a tu cuenta",
+    "title": "Verifica tu dirección de correo",
+    "greetingPrefix": "Hola",
+    "intro": "¡Gracias por registrarte! Nos alegra tenerte con nosotros. Verifica tu dirección de correo para activar tu cuenta y empezar.",
+    "buttonLabel": "Verificar correo",
+    "helpHeading": "¿No puedes pulsar el botón?",
+    "helpInstructions": "Copia y pega este enlace en tu navegador:",
+    "copyright": "© {year} {appName}. Todos los derechos reservados.",
+    "footerLine1": "Este correo se ha enviado porque te registraste en {appName}.",
+    "footerLine2": "Si no fuiste tú, puedes ignorar este mensaje."
+  },
+  "resetPassword": {
+    "subject": "Restablece tu contraseña - {appName}",
+    "headerSubtitle": "Solicitud de restablecimiento",
+    "title": "Restablece tu contraseña",
+    "greetingPrefix": "Hola",
+    "intro": "Hemos recibido una solicitud para restablecer la contraseña de tu cuenta. Pulsa el botón para crear una nueva contraseña:",
+    "buttonLabel": "Restablecer contraseña",
+    "securityNoticeTitle": "⚠️ Información de seguridad importante",
+    "securityNoticeExpiry": "Por seguridad, este enlace caduca en {expiresIn}.",
+    "securityNoticeIgnore": "Si no solicitaste este cambio, ignora este correo y tu contraseña no se modificará.",
+    "defaultExpiresIn": "1 hora",
+    "helpHeading": "¿No puedes pulsar el botón?",
+    "helpInstructions": "Copia y pega este enlace en tu navegador:",
+    "copyright": "© {year} {appName}. Todos los derechos reservados.",
+    "footerLine1": "Este es un correo automático de seguridad de {appName}.",
+    "footerLine2": "Por seguridad, nunca pedimos tu contraseña por correo."
+  },
+  "otpVerification": {
+    "subject": "{otp} es tu código de verificación - {appName}",
+    "headerSubtitle": "Código de verificación",
+    "title": "Tu código de verificación",
+    "intro": "Introduce este código para verificar tu identidad:",
+    "expiresNotice": "Este código caduca en {minutes} minutos.",
+    "ignoreNotice": "Si no solicitaste este código, puedes ignorar este correo.",
+    "copyright": "© {year} {appName}. Todos los derechos reservados.",
+    "footerLine1": "Este es un correo automático de {appName}."
+  },
+  "teamInvitation": {
+    "subject": "Te han invitado a unirte a {teamName} en {appName}",
+    "headerSubtitle": "Invitación a equipo",
+    "title": "¡Te han invitado!",
+    "bodyIntro": "{inviterName} te ha invitado a unirte al equipo {teamName} con el rol de {role}.",
+    "bodyAction": "Pulsa el botón para aceptar la invitación y unirte al equipo:",
+    "buttonLabel": "Aceptar invitación",
+    "detailsTitle": "⏰ Detalles de la invitación",
+    "detailsExpiry": "Esta invitación caduca en {expiresIn}.",
+    "detailsCreateAccount": "Si todavía no tienes cuenta, podrás crear una al aceptar.",
+    "helpHeading": "¿No puedes pulsar el botón?",
+    "helpInstructions": "Copia y pega este enlace en tu navegador:",
+    "copyright": "© {year} {appName}. Todos los derechos reservados.",
+    "footerSentTo": "Esta invitación se envió a {inviteeEmail}.",
+    "footerUnexpected": "Si no esperabas esta invitación, puedes ignorar este correo."
+  }
+}
