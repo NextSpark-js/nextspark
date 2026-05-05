@@ -16,7 +16,8 @@ import { inviteMemberSchema, memberListQuerySchema } from '@nextsparkjs/core/lib
 import { TeamMemberService, MembershipService } from '@nextsparkjs/core/lib/services'
 import type { TeamMember, TeamInvitation, TeamRole, Team } from '@nextsparkjs/core/lib/teams/types'
 import { EmailFactory } from '@nextsparkjs/core/lib/email/factory'
-import { createTeamInvitationEmail } from '@nextsparkjs/core/lib/email/templates'
+import { sendTeamInvitationEmail } from '@nextsparkjs/core/lib/email/send'
+import { I18N_CONFIG } from '@nextsparkjs/core/lib/config'
 
 // Role hierarchy for invite validation (higher number = more power)
 const ROLE_HIERARCHY: Record<TeamRole, number> = {
@@ -310,14 +311,15 @@ export const POST = withRateLimitTier(withApiLogging(
       try {
         const emailProvider = EmailFactory.getInstance()
         const inviterName = authResult.user!.email // Use email as inviter name
-        const emailContent = createTeamInvitationEmail(
-          validatedData.email,
+        const emailContent = await sendTeamInvitationEmail({
+          inviteeEmail: validatedData.email,
           inviterName,
-          team.name,
-          validatedData.role,
+          teamName: team.name,
+          role: validatedData.role,
           acceptUrl,
-          '7 days'
-        )
+          expiresIn: '7 days',
+          appName: process.env.NEXT_PUBLIC_APP_NAME || 'Your App',
+        }, I18N_CONFIG.defaultLocale)
 
         await emailProvider.send({
           to: validatedData.email,

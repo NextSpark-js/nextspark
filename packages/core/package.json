@@ -188,6 +188,10 @@
       "types": "./dist/lib/*.d.ts",
       "import": "./dist/lib/*.js"
     },
+    "./emails/*": {
+      "types": "./dist/emails/*.d.ts",
+      "import": "./dist/emails/*.js"
+    },
     "./hooks": {
       "types": "./dist/hooks/index.d.ts",
       "import": "./dist/hooks/index.js"

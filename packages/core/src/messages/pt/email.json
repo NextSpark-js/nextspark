@@ -1,0 +1,58 @@
+{
+  "verifyEmail": {
+    "subject": "Bem-vindo a {appName} - Verifique seu e-mail",
+    "headerSubtitle": "Bem-vindo à sua conta",
+    "title": "Verifique seu endereço de e-mail",
+    "greetingPrefix": "Olá",
+    "intro": "Obrigado por se cadastrar! Estamos felizes em tê-lo conosco. Verifique seu endereço de e-mail para ativar sua conta e começar.",
+    "buttonLabel": "Verificar e-mail",
+    "helpHeading": "Não consegue clicar no botão?",
+    "helpInstructions": "Copie e cole este link no seu navegador:",
+    "copyright": "© {year} {appName}. Todos os direitos reservados.",
+    "footerLine1": "Este e-mail foi enviado porque você se cadastrou em {appName}.",
+    "footerLine2": "Se não foi você, pode ignorar esta mensagem."
+  },
+  "resetPassword": {
+    "subject": "Redefina sua senha - {appName}",
+    "headerSubtitle": "Solicitação de redefinição de senha",
+    "title": "Redefina sua senha",
+    "greetingPrefix": "Olá",
+    "intro": "Recebemos uma solicitação para redefinir a senha da sua conta. Clique no botão abaixo para criar uma nova senha:",
+    "buttonLabel": "Redefinir senha",
+    "securityNoticeTitle": "⚠️ Informação de segurança importante",
+    "securityNoticeExpiry": "Por segurança, este link expira em {expiresIn}.",
+    "securityNoticeIgnore": "Se não foi você quem solicitou, ignore este e-mail; sua senha continuará a mesma.",
+    "defaultExpiresIn": "1 hora",
+    "helpHeading": "Não consegue clicar no botão?",
+    "helpInstructions": "Copie e cole este link no seu navegador:",
+    "copyright": "© {year} {appName}. Todos os direitos reservados.",
+    "footerLine1": "Este é um e-mail de segurança automático de {appName}.",
+    "footerLine2": "Por segurança, nunca pedimos sua senha por e-mail."
+  },
+  "otpVerification": {
+    "subject": "{otp} é seu código de verificação - {appName}",
+    "headerSubtitle": "Código de verificação",
+    "title": "Seu código de verificação",
+    "intro": "Insira este código para verificar sua identidade:",
+    "expiresNotice": "Este código expira em {minutes} minutos.",
+    "ignoreNotice": "Se não foi você quem solicitou, pode ignorar este e-mail.",
+    "copyright": "© {year} {appName}. Todos os direitos reservados.",
+    "footerLine1": "Este é um e-mail automático de {appName}."
+  },
+  "teamInvitation": {
+    "subject": "Você foi convidado para entrar em {teamName} no {appName}",
+    "headerSubtitle": "Convite para a equipe",
+    "title": "Você foi convidado!",
+    "bodyIntro": "{inviterName} convidou você para entrar na equipe {teamName} como {role}.",
+    "bodyAction": "Clique no botão abaixo para aceitar o convite e entrar na equipe:",
+    "buttonLabel": "Aceitar convite",
+    "detailsTitle": "⏰ Detalhes do convite",
+    "detailsExpiry": "Este convite expira em {expiresIn}.",
+    "detailsCreateAccount": "Se ainda não tem uma conta, poderá criar uma ao aceitar.",
+    "helpHeading": "Não consegue clicar no botão?",
+    "helpInstructions": "Copie e cole este link no seu navegador:",
+    "copyright": "© {year} {appName}. Todos os direitos reservados.",
+    "footerSentTo": "Este convite foi enviado para {inviteeEmail}.",
+    "footerUnexpected": "Se você não esperava este convite, pode ignorar este e-mail."
+  }
+}

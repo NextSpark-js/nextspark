@@ -1,0 +1,58 @@
+{
+  "verifyEmail": {
+    "subject": "Bienvenue sur {appName} - Vérifiez votre e-mail",
+    "headerSubtitle": "Bienvenue dans votre compte",
+    "title": "Vérifiez votre adresse e-mail",
+    "greetingPrefix": "Bonjour",
+    "intro": "Merci de votre inscription ! Nous sommes ravis de vous compter parmi nous. Veuillez vérifier votre adresse e-mail pour activer votre compte et commencer.",
+    "buttonLabel": "Vérifier l'e-mail",
+    "helpHeading": "Le bouton ne fonctionne pas ?",
+    "helpInstructions": "Copiez et collez ce lien dans votre navigateur :",
+    "copyright": "© {year} {appName}. Tous droits réservés.",
+    "footerLine1": "Cet e-mail vous a été envoyé parce que vous vous êtes inscrit·e sur {appName}.",
+    "footerLine2": "Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail."
+  },
+  "resetPassword": {
+    "subject": "Réinitialisez votre mot de passe - {appName}",
+    "headerSubtitle": "Demande de réinitialisation",
+    "title": "Réinitialisez votre mot de passe",
+    "greetingPrefix": "Bonjour",
+    "intro": "Nous avons reçu une demande de réinitialisation du mot de passe de votre compte. Cliquez sur le bouton ci-dessous pour créer un nouveau mot de passe :",
+    "buttonLabel": "Réinitialiser le mot de passe",
+    "securityNoticeTitle": "⚠️ Information de sécurité importante",
+    "securityNoticeExpiry": "Pour votre sécurité, ce lien expire dans {expiresIn}.",
+    "securityNoticeIgnore": "Si vous n'avez pas demandé cette réinitialisation, ignorez cet e-mail ; votre mot de passe restera inchangé.",
+    "defaultExpiresIn": "1 heure",
+    "helpHeading": "Le bouton ne fonctionne pas ?",
+    "helpInstructions": "Copiez et collez ce lien dans votre navigateur :",
+    "copyright": "© {year} {appName}. Tous droits réservés.",
+    "footerLine1": "Ceci est un e-mail de sécurité automatique de {appName}.",
+    "footerLine2": "Pour des raisons de sécurité, nous ne vous demandons jamais votre mot de passe par e-mail."
+  },
+  "otpVerification": {
+    "subject": "{otp} est votre code de vérification - {appName}",
+    "headerSubtitle": "Code de vérification",
+    "title": "Votre code de vérification",
+    "intro": "Saisissez ce code pour vérifier votre identité :",
+    "expiresNotice": "Ce code expire dans {minutes} minutes.",
+    "ignoreNotice": "Si vous n'avez pas demandé ce code, vous pouvez ignorer cet e-mail.",
+    "copyright": "© {year} {appName}. Tous droits réservés.",
+    "footerLine1": "Ceci est un e-mail automatique de {appName}."
+  },
+  "teamInvitation": {
+    "subject": "Vous avez été invité·e à rejoindre {teamName} sur {appName}",
+    "headerSubtitle": "Invitation à rejoindre une équipe",
+    "title": "Vous êtes invité·e !",
+    "bodyIntro": "{inviterName} vous a invité·e à rejoindre l'équipe {teamName} en tant que {role}.",
+    "bodyAction": "Cliquez sur le bouton ci-dessous pour accepter l'invitation et rejoindre l'équipe :",
+    "buttonLabel": "Accepter l'invitation",
+    "detailsTitle": "⏰ Détails de l'invitation",
+    "detailsExpiry": "Cette invitation expire dans {expiresIn}.",
+    "detailsCreateAccount": "Si vous n'avez pas encore de compte, vous pourrez en créer un en acceptant.",
+    "helpHeading": "Le bouton ne fonctionne pas ?",
+    "helpInstructions": "Copiez et collez ce lien dans votre navigateur :",
+    "copyright": "© {year} {appName}. Tous droits réservés.",
+    "footerSentTo": "Cette invitation a été envoyée à {inviteeEmail}.",
+    "footerUnexpected": "Si vous n'attendiez pas cette invitation, vous pouvez ignorer cet e-mail."
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "verifyEmail": {
+    "subject": "Welcome to {appName} - Verify Your Email",
+    "headerSubtitle": "Welcome to Your Account",
+    "title": "Verify Your Email Address",
+    "greetingPrefix": "Hi",
+    "intro": "Thank you for signing up! We're excited to have you on board. Please verify your email address to activate your account and get started.",
+    "buttonLabel": "Verify Email Address",
+    "helpHeading": "Can't click the button?",
+    "helpInstructions": "Copy and paste this link into your browser:",
+    "copyright": "© {year} {appName}. All rights reserved.",
+    "footerLine1": "This email was sent to you because you signed up for {appName}.",
+    "footerLine2": "If you didn't request this, please ignore this email."
+  },
+  "resetPassword": {
+    "subject": "Reset Your Password - {appName}",
+    "headerSubtitle": "Password Reset Request",
+    "title": "Reset Your Password",
+    "greetingPrefix": "Hi",
+    "intro": "We received a request to reset your password for your account. Click the button below to create a new password:",
+    "buttonLabel": "Reset Password",
+    "securityNoticeTitle": "⚠️ Important Security Information",
+    "securityNoticeExpiry": "This link will expire in {expiresIn} for your security.",
+    "securityNoticeIgnore": "If you didn't request this password reset, please ignore this email and your password will remain unchanged.",
+    "defaultExpiresIn": "1 hour",
+    "helpHeading": "Can't click the button?",
+    "helpInstructions": "Copy and paste this link into your browser:",
+    "copyright": "© {year} {appName}. All rights reserved.",
+    "footerLine1": "This is an automated security email from {appName}.",
+    "footerLine2": "For security reasons, we never ask for your password via email."
+  },
+  "otpVerification": {
+    "subject": "{otp} is your verification code - {appName}",
+    "headerSubtitle": "Verification Code",
+    "title": "Your verification code",
+    "intro": "Enter this code to verify your identity:",
+    "expiresNotice": "This code expires in {minutes} minutes.",
+    "ignoreNotice": "If you didn't request this code, you can safely ignore this email.",
+    "copyright": "© {year} {appName}. All rights reserved.",
+    "footerLine1": "This is an automated email from {appName}."
+  },
+  "teamInvitation": {
+    "subject": "You've been invited to join {teamName} on {appName}",
+    "headerSubtitle": "Team Invitation",
+    "title": "You're Invited!",
+    "bodyIntro": "{inviterName} has invited you to join the team {teamName} as a {role}.",
+    "bodyAction": "Click the button below to accept the invitation and join the team:",
+    "buttonLabel": "Accept Invitation",
+    "detailsTitle": "⏰ Invitation Details",
+    "detailsExpiry": "This invitation will expire in {expiresIn}.",
+    "detailsCreateAccount": "If you don't have an account yet, you'll be able to create one when you accept.",
+    "helpHeading": "Can't click the button?",
+    "helpInstructions": "Copy and paste this link into your browser:",
+    "copyright": "© {year} {appName}. All rights reserved.",
+    "footerSentTo": "This invitation was sent to {inviteeEmail}.",
+    "footerUnexpected": "If you didn't expect this invitation, you can safely ignore this email."
+  }
+}

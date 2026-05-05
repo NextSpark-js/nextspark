@@ -3,7 +3,12 @@ import { Pool } from "pg";
 import { nextCookies } from "better-auth/next-js";
 import { emailOTP } from "better-auth/plugins";
 import { parseSSLConfig, stripSSLParams } from './db';
-import { EmailFactory, emailTemplates } from './email';
+import { EmailFactory } from './email';
+import {
+  sendVerifyEmail,
+  sendResetPasswordEmail,
+  sendOtpVerificationEmail,
+} from './email/send';
 import { I18N_CONFIG, USER_ROLES_CONFIG, TEAMS_CONFIG, AUTH_CONFIG, APP_CONFIG_MERGED, type UserRole } from './config';
 import { getUserFlags } from './services/user-flags.service';
 // Direct imports to avoid circular dependency: auth -> services/index -> middleware.service -> auth
@@ -93,12 +98,12 @@ export const auth = betterAuth({
     sendResetPassword: async ({ user, url, token }: { user: UserWithEmail; url: string; token: string }) => {
       try {
         const resetUrl = `${url}?token=${token}`;
-        const template = emailTemplates.resetPassword({
+        const template = await sendResetPasswordEmail({
           userName: user.firstName || '',
           resetUrl: resetUrl,
           appName: process.env.NEXT_PUBLIC_APP_NAME || 'Your App',
           expiresIn: '1 hour'
-        });
+        }, I18N_CONFIG.defaultLocale);
         
         const response = await emailService.send({
           to: user.email,
@@ -125,11 +130,11 @@ export const auth = betterAuth({
     sendVerificationEmail: async ({ user, token }: { user: UserWithEmail; url: string; token: string }) => {
       try {
         const verifyUrl = `${baseUrl}/api/auth/verify-email?token=${token}`;
-        const template = emailTemplates.verifyEmail({
+        const template = await sendVerifyEmail({
           userName: user.firstName || '',
           verificationUrl: verifyUrl,
           appName: process.env.NEXT_PUBLIC_APP_NAME || 'Your App'
-        });
+        }, I18N_CONFIG.defaultLocale);
         
         const response = await emailService.send({
           to: user.email,
@@ -181,12 +186,12 @@ export const auth = betterAuth({
     registrationGuardPlugin(), // Intercept OAuth signup attempts
     emailOTP({
       async sendVerificationOTP({ email, otp, type }) {
-        const template = emailTemplates.otpVerification({
+        const template = await sendOtpVerificationEmail({
           email,
           otp,
           type,
           appName: process.env.NEXT_PUBLIC_APP_NAME || 'Your App',
-        });
+        }, I18N_CONFIG.defaultLocale);
         await emailService.send({ to: email, ...template });
       },
       otpLength: 6,
