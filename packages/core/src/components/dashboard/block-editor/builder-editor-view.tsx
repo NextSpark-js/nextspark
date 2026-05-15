@@ -750,7 +750,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
           </div>
 
           {/* Settings Mode */}
-          <div className={cn(viewMode !== 'settings' && "hidden")}>
+          <div className={cn("h-full", viewMode !== 'settings' && "hidden")}>
             <ConfigPanel
               entityConfig={entityConfig}
               entityFields={entityFields}
