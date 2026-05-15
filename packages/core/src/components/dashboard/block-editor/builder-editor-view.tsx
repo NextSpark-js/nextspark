@@ -680,17 +680,6 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
               <Save className="h-4 w-4 ml-2" />
             </Button>
 
-            <Separator orientation="vertical" className="h-8" />
-
-            {/* Settings Button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9"
-              data-cy={sel('blockEditor.header.settingsButton')}
-            >
-              <Settings className="h-4 w-4" />
-            </Button>
           </div>
         </div>
       </header>
