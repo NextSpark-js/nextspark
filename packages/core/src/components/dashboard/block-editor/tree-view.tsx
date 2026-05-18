@@ -30,6 +30,9 @@ interface TreeViewProps {
   selectedBlockId: string | null
   onSelectBlock: (id: string) => void
   onReorder: (blocks: (BlockInstance | PatternReference)[]) => void
+  onCopy?: (id: string) => void
+  onDuplicate?: (id: string) => void
+  onRemove?: (id: string) => void
   emptyMessage?: string
 }
 
@@ -43,6 +46,9 @@ export function TreeView({
   selectedBlockId,
   onSelectBlock,
   onReorder,
+  onCopy,
+  onDuplicate,
+  onRemove,
   emptyMessage
 }: TreeViewProps) {
   const t = useTranslations('admin.builder')
@@ -147,6 +153,9 @@ export function TreeView({
                 block={item.block}
                 isSelected={selectedBlockId === item.id}
                 onSelect={() => handleSelectBlock(item.id)}
+                onCopy={onCopy ? () => onCopy(item.id) : undefined}
+                onDuplicate={onDuplicate ? () => onDuplicate(item.id) : undefined}
+                onRemove={onRemove ? () => onRemove(item.id) : undefined}
                 isPartOfPattern={false}
               />
             ))}

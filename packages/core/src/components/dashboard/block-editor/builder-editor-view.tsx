@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { v4 as uuidv4 } from 'uuid'
+import { copyBlockToClipboard, getBlockFromClipboard, hasBlockInClipboard } from '../../../lib/blocks/clipboard'
 import { Button } from '../../ui/button'
 import { ButtonGroup } from '../../ui/button-group'
 import { Input } from '../../ui/input'
@@ -367,6 +368,44 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
     }
   }, [selectedBlockId])
 
+  const [clipboardHasBlock, setClipboardHasBlock] = useState(() => hasBlockInClipboard())
+
+  const handleCopyBlock = useCallback((blockId: string) => {
+    const block = blocks.find(b => b.id === blockId)
+    if (block) {
+      copyBlockToClipboard(block)
+      setClipboardHasBlock(true)
+      toast.success(t('messages.blockCopied'))
+    }
+  }, [blocks, t])
+
+  const handlePasteBlock = useCallback(() => {
+    const clipboardData = getBlockFromClipboard()
+    if (!clipboardData) return
+
+    const newBlock: BlockInstance = {
+      id: uuidv4(),
+      blockSlug: clipboardData.blockSlug,
+      props: { ...clipboardData.props },
+    }
+
+    if (selectedBlockId) {
+      const index = blocks.findIndex(b => b.id === selectedBlockId)
+      if (index !== -1) {
+        const newBlocks = [...blocks]
+        newBlocks.splice(index + 1, 0, newBlock)
+        setBlocks(newBlocks)
+        setSelectedBlockId(newBlock.id)
+        toast.success(t('messages.blockPasted'))
+        return
+      }
+    }
+
+    setBlocks(prev => [...prev, newBlock])
+    setSelectedBlockId(newBlock.id)
+    toast.success(t('messages.blockPasted'))
+  }, [blocks, selectedBlockId, t])
+
   const handleDuplicateBlock = useCallback((blockId: string) => {
     const block = blocks.find(b => b.id === blockId)
     if (block) {
@@ -702,6 +741,11 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
             selectedBlockId={selectedBlockId}
             onSelectBlock={setSelectedBlockId}
             onReorderBlocks={handleReorderBlocks}
+            onCopyBlock={handleCopyBlock}
+            onDuplicateBlock={handleDuplicateBlock}
+            onRemoveBlock={handleRemoveBlock}
+            onPasteBlock={handlePasteBlock}
+            hasClipboardBlock={clipboardHasBlock}
           />
         </div>
 
@@ -731,6 +775,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
                   onSelectBlock={setSelectedBlockId}
                   onMoveUp={handleMoveBlockUp}
                   onMoveDown={handleMoveBlockDown}
+                  onCopy={handleCopyBlock}
                   onDuplicate={handleDuplicateBlock}
                   onRemove={handleRemoveBlock}
                 />

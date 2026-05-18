@@ -256,6 +256,7 @@
     },
     "floatingToolbar": {
       "drag": "Drag to reorder",
+      "copy": "Copy block",
       "duplicate": "Duplicate block",
       "delete": "Delete block"
     },
@@ -304,11 +305,14 @@
       "loading": "Loading preview..."
     },
     "layout": {
-      "empty": "No blocks added yet"
+      "empty": "No blocks added yet",
+      "pasteBlock": "Paste block"
     },
     "messages": {
       "saved": "Saved successfully",
-      "created": "Created successfully"
+      "created": "Created successfully",
+      "blockCopied": "Block copied to clipboard",
+      "blockPasted": "Block pasted"
     }
   },
   "patterns": {

@@ -169,6 +169,8 @@ export interface EntityTableProps<T extends { id: string } = { id: string }> {
   // Callbacks
   /** Callback when item is deleted */
   onDelete?: (id: string) => Promise<void>
+  /** Callback when item is duplicated */
+  onDuplicate?: (id: string) => Promise<void>
   /** Get public URL for item (for builder entities) */
   getPublicUrl?: (item: T) => string | null
 

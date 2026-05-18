@@ -264,11 +264,11 @@ export class EntityApiClient {
   /**
    * Create new entity
    */
-  async create(entityType: string, data: EntityData): Promise<EntityData> {
+  async create(entityType: string, data: EntityData, extraHeaders: Record<string, string> = {}): Promise<EntityData> {
     const endpointPath = await this.getEndpointPath(entityType)
     const response = await fetch(`${this.baseUrl}/${endpointPath}`, {
       method: 'POST',
-      headers: buildHeaders(),
+      headers: buildHeaders(extraHeaders),
       credentials: 'include', // Include cookies for session auth
       body: JSON.stringify(data),
     })
@@ -576,6 +576,26 @@ export class EntityApiClient {
   }
 
   /**
+   * Duplicate an entity — fetches the original, strips identity fields, and creates a copy
+   */
+  async duplicate(entityType: string, id: string): Promise<EntityData> {
+    const original = await this.get(entityType, id, true)
+
+    const copyData: EntityData = {
+      ...original,
+      title: `${(original as Record<string, unknown>).title || ''} (Copy)`,
+      slug: `${(original as Record<string, unknown>).slug || ''}-copy-${Date.now().toString(36)}`,
+      status: 'draft',
+    }
+    delete copyData.id
+    delete copyData.createdAt
+    delete copyData.updatedAt
+
+    const hasBlocks = 'blocks' in copyData && Array.isArray(copyData.blocks)
+    return this.create(entityType, copyData, hasBlocks ? { 'x-builder-source': 'true' } : {})
+  }
+
+  /**
    * Detect if entity has custom override (client-side detection)
    */
   private detectEntityOverride(entityType: string): boolean {
@@ -607,6 +627,10 @@ export const getEntityData = async (entityType: string, id: string, includeMeta 
 
 export const listEntityData = async (entityType: string, params: EntityListParams = {}) => {
   return entityApi.list(entityType, params)
+}
+
+export const duplicateEntityData = async (entityType: string, id: string) => {
+  return entityApi.duplicate(entityType, id)
 }
 
 /**

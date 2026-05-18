@@ -66,6 +66,7 @@ import {
   Search,
   Eye,
   Edit,
+  Copy,
   Trash2,
   ExternalLink,
   Loader2,
@@ -109,6 +110,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
   emptyState,
   loading = false,
   onDelete,
+  onDuplicate,
   getPublicUrl,
   className,
   teamId,
@@ -261,6 +263,18 @@ export function EntityTable<T extends { id: string } = { id: string }>({
       })
     }
 
+    if (canUpdate && onDuplicate) {
+      actions.push({
+        id: 'duplicate',
+        label: 'Duplicate',
+        icon: <Copy className="h-4 w-4" />,
+        onClick: (item) => {
+          onDuplicate(item.id)
+        },
+        dataCySuffix: 'duplicate',
+      })
+    }
+
     // View Public in dropdown - only for non-published items that have a public URL
     // (Published items show as quick action instead)
     if (publicBasePath) {
@@ -298,7 +312,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
     }
 
     return actions
-  }, [useDefaultActions, canUpdate, canDelete, onDelete, basePath, slug, router, entityConfig.names.singular, getItemName, publicBasePath, getPublicUrlForItem, isPublished])
+  }, [useDefaultActions, canUpdate, canDelete, onDelete, onDuplicate, basePath, slug, router, entityConfig.names.singular, getItemName, publicBasePath, getPublicUrlForItem, isPublished])
 
   // Merge default and custom actions
   const quickActions = useMemo(() => {

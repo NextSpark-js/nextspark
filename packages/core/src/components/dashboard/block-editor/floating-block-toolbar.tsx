@@ -1,6 +1,6 @@
 'use client'
 
-import { Copy, Trash2 } from 'lucide-react'
+import { Copy, ClipboardCopy, Trash2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Button } from '../../ui/button'
 import { cn } from '../../../lib/utils'
@@ -11,6 +11,7 @@ interface FloatingBlockToolbarProps {
   blockId: string
   blockSlug: string
   isVisible: boolean
+  onCopy: () => void
   onDuplicate: () => void
   onRemove: () => void
 }
@@ -23,6 +24,7 @@ export function FloatingBlockToolbar({
   blockId,
   blockSlug,
   isVisible,
+  onCopy,
   onDuplicate,
   onRemove,
 }: FloatingBlockToolbarProps) {
@@ -59,6 +61,20 @@ export function FloatingBlockToolbar({
       />
 
       {/* Actions */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-5 w-5 hover:bg-primary-foreground/20 text-primary-foreground"
+        onClick={(e) => {
+          e.stopPropagation()
+          onCopy()
+        }}
+        data-cy={sel('blockEditor.previewCanvas.floatingToolbar.duplicateBtn', { id: blockId })}
+        title={t('copy')}
+      >
+        <ClipboardCopy className="h-3 w-3" />
+      </Button>
+
       <Button
         variant="ghost"
         size="icon"
