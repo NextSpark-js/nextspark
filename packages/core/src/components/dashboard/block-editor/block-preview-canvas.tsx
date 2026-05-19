@@ -31,6 +31,7 @@ interface BlockPreviewCanvasProps {
   onSelectBlock: (id: string) => void
   onMoveUp?: (id: string) => void
   onMoveDown?: (id: string) => void
+  onCopy?: (id: string) => void
   onDuplicate?: (id: string) => void
   onRemove?: (id: string) => void
 }
@@ -41,6 +42,7 @@ export function BlockPreviewCanvas({
   onSelectBlock,
   onMoveUp,
   onMoveDown,
+  onCopy,
   onDuplicate,
   onRemove,
 }: BlockPreviewCanvasProps) {
@@ -81,6 +83,7 @@ export function BlockPreviewCanvas({
           isLast={index === blocks.length - 1}
           onMoveUp={onMoveUp}
           onMoveDown={onMoveDown}
+          onCopy={onCopy}
           onDuplicate={onDuplicate}
           onRemove={onRemove}
         />
@@ -101,6 +104,7 @@ interface SelectableBlockPreviewProps {
   isLast?: boolean
   onMoveUp?: (id: string) => void
   onMoveDown?: (id: string) => void
+  onCopy?: (id: string) => void
   onDuplicate?: (id: string) => void
   onRemove?: (id: string) => void
 }
@@ -117,6 +121,7 @@ const SelectableBlockPreview = memo(function SelectableBlockPreview({
   isLast = false,
   onMoveUp,
   onMoveDown,
+  onCopy,
   onDuplicate,
   onRemove,
 }: SelectableBlockPreviewProps) {
@@ -133,6 +138,7 @@ const SelectableBlockPreview = memo(function SelectableBlockPreview({
     e.stopPropagation()
     onMoveDown?.(blockId)
   }, [onMoveDown, blockId])
+  const handleCopy = useCallback(() => onCopy?.(blockId), [onCopy, blockId])
   const handleDuplicate = useCallback(() => onDuplicate?.(blockId), [onDuplicate, blockId])
   const handleRemove = useCallback(() => onRemove?.(blockId), [onRemove, blockId])
 
@@ -226,6 +232,7 @@ const SelectableBlockPreview = memo(function SelectableBlockPreview({
           blockId={block.id}
           blockSlug={block.blockSlug}
           isVisible={isHovered || isSelected}
+          onCopy={handleCopy}
           onDuplicate={handleDuplicate}
           onRemove={handleRemove}
         />

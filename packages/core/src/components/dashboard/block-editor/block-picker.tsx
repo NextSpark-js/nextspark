@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { useQuery } from '@tanstack/react-query'
-import { Search, Plus, LayoutGrid, LayoutList, Layers } from 'lucide-react'
+import { Search, Plus, LayoutGrid, LayoutList, Layers, ClipboardPaste } from 'lucide-react'
 import { Input } from '../../ui/input'
 import { Button } from '../../ui/button'
 import { Badge } from '../../ui/badge'
@@ -52,6 +52,11 @@ interface BlockPickerProps {
   selectedBlockId: string | null
   onSelectBlock: (id: string) => void
   onReorderBlocks: (blocks: (BlockInstance | PatternReference)[]) => void
+  onCopyBlock?: (id: string) => void
+  onDuplicateBlock?: (id: string) => void
+  onRemoveBlock?: (id: string) => void
+  onPasteBlock?: () => void
+  hasClipboardBlock?: boolean
 }
 
 export function BlockPicker({
@@ -68,6 +73,11 @@ export function BlockPicker({
   selectedBlockId,
   onSelectBlock,
   onReorderBlocks,
+  onCopyBlock,
+  onDuplicateBlock,
+  onRemoveBlock,
+  onPasteBlock,
+  hasClipboardBlock,
 }: BlockPickerProps) {
   const t = useTranslations('admin.builder')
   const tPatterns = useTranslations('patterns')
@@ -375,13 +385,30 @@ export function BlockPicker({
         </>
       ) : (
         // Layout Tab - Tree View
-        <TreeView
-          blocks={pageBlocks}
-          selectedBlockId={selectedBlockId}
-          onSelectBlock={onSelectBlock}
-          onReorder={onReorderBlocks}
-          emptyMessage={t('layout.empty')}
-        />
+        <div className="flex flex-col h-full">
+          {hasClipboardBlock && onPasteBlock && (
+            <div className="p-3 border-b border-border">
+              <button
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer"
+                onClick={onPasteBlock}
+                data-cy={sel('blockEditor.blockPicker.pasteBlock')}
+              >
+                <ClipboardPaste className="h-4 w-4" />
+                {t('layout.pasteBlock')}
+              </button>
+            </div>
+          )}
+          <TreeView
+            blocks={pageBlocks}
+            selectedBlockId={selectedBlockId}
+            onSelectBlock={onSelectBlock}
+            onReorder={onReorderBlocks}
+            onCopy={onCopyBlock}
+            onDuplicate={onDuplicateBlock}
+            onRemove={onRemoveBlock}
+            emptyMessage={t('layout.empty')}
+          />
+        </div>
       )}
     </div>
   )

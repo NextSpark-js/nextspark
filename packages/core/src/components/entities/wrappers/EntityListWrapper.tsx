@@ -19,6 +19,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Plus, Loader2 } from 'lucide-react'
 import { EntityTable } from '../EntityTable'
 import { EntityBulkActions } from '../EntityBulkActions'
@@ -29,7 +30,7 @@ import { SearchInput } from '../../shared/SearchInput'
 import { MultiSelectFilter } from '../../shared/MultiSelectFilter'
 import { useEntityConfig } from '../../../hooks/useEntityConfig'
 import { useUrlFilters, type FilterSchema, type EntityFiltersReturn } from '../../../hooks/useUrlFilters'
-import { listEntityData, deleteEntityData } from '../../../lib/api/entities'
+import { listEntityData, deleteEntityData, duplicateEntityData } from '../../../lib/api/entities'
 import { useTeam } from '../../../hooks/useTeam'
 import { usePermission } from '../../../lib/permissions/hooks'
 import type { Permission } from '../../../lib/permissions/types'
@@ -47,6 +48,8 @@ export function EntityListWrapper({
   className,
   headerActions
 }: EntityListWrapperProps) {
+  const router = useRouter()
+
   // Use the new centralized hook for entity configuration
   const { config: entityConfig, isLoading, error: configError, isOverride } = useEntityConfig(entityType)
 
@@ -249,6 +252,23 @@ export function EntityListWrapper({
     }
   }, [entityType, entityConfig?.names.singular, entityConfig?.names.plural, loadData])
 
+  const handleDuplicate = useCallback(async (id: string) => {
+    try {
+      const created = await duplicateEntityData(entityType, id)
+      toast.success(`${entityConfig?.names.singular || 'Item'} duplicated successfully`)
+      await loadData(false)
+
+      const newId = (created as Record<string, unknown>)?.id
+      if (newId) {
+        router.push(`/dashboard/${entityType}/${newId}/edit`)
+      }
+    } catch (err) {
+      console.error(`[EntityListWrapper] Error duplicating ${entityType}:`, err)
+      toast.error(`Error duplicating: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      throw err
+    }
+  }, [entityType, entityConfig?.names.singular, loadData, router])
+
   // Handle select all (for bulk actions bar)
   const handleSelectAll = useCallback(() => {
     const allIds = new Set(data.map(item => String(item.id)))
@@ -378,6 +398,7 @@ export function EntityListWrapper({
         searchQuery={searchValue}
         onSearch={handleSearch}
         onDelete={handleDelete}
+        onDuplicate={entityConfig.builder ? handleDuplicate : undefined}
         getItemName={getItemName}
         className={className}
         teamId={teamId}

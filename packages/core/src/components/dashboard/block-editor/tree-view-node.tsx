@@ -2,7 +2,7 @@
 
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical } from 'lucide-react'
+import { GripVertical, ClipboardCopy, Copy, Trash2 } from 'lucide-react'
 import { cn } from '../../../lib/utils'
 import { sel } from '../../../lib/test'
 import { BlockService } from '../../../lib/services/block.service'
@@ -14,6 +14,9 @@ interface TreeViewNodeProps {
   block: BlockInstance | PatternReference
   isSelected: boolean
   onSelect: () => void
+  onCopy?: () => void
+  onDuplicate?: () => void
+  onRemove?: () => void
   isPartOfPattern?: boolean
 }
 
@@ -21,6 +24,9 @@ export function TreeViewNode({
   block,
   isSelected,
   onSelect,
+  onCopy,
+  onDuplicate,
+  onRemove,
   isPartOfPattern = false
 }: TreeViewNodeProps) {
   const {
@@ -97,6 +103,54 @@ export function TreeViewNode({
       >
         {blockName}
       </span>
+
+      {/* Actions - visible on hover */}
+      {(onCopy || onDuplicate || onRemove) && (
+        <div
+          className={cn(
+            'flex items-center gap-0.5 shrink-0 transition-opacity',
+            'opacity-0 group-hover:opacity-100',
+            isSelected && 'opacity-100'
+          )}
+        >
+          {onCopy && (
+            <button
+              data-cy={sel('blockEditor.treeView.nodeCopy', { id: block.id })}
+              className="p-1 rounded hover:bg-muted-foreground/20 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation()
+                onCopy()
+              }}
+            >
+              <ClipboardCopy className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {onDuplicate && (
+            <button
+              data-cy={sel('blockEditor.treeView.nodeDuplicate', { id: block.id })}
+              className="p-1 rounded hover:bg-muted-foreground/20 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation()
+                onDuplicate()
+              }}
+            >
+              <Copy className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {onRemove && (
+            <button
+              data-cy={sel('blockEditor.treeView.nodeRemove', { id: block.id })}
+              className="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation()
+                onRemove()
+              }}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }

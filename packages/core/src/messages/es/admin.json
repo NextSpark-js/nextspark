@@ -256,6 +256,7 @@
     },
     "floatingToolbar": {
       "drag": "Arrastra para reordenar",
+      "copy": "Copiar bloque",
       "duplicate": "Duplicar bloque",
       "delete": "Eliminar bloque"
     },
@@ -304,11 +305,14 @@
       "loading": "Cargando vista previa..."
     },
     "layout": {
-      "empty": "Aún no hay bloques agregados"
+      "empty": "Aún no hay bloques agregados",
+      "pasteBlock": "Pegar bloque"
     },
     "messages": {
       "saved": "Guardado exitosamente",
-      "created": "Creado exitosamente"
+      "created": "Creado exitosamente",
+      "blockCopied": "Bloque copiado al portapapeles",
+      "blockPasted": "Bloque pegado"
     }
   },
   "patterns": {
