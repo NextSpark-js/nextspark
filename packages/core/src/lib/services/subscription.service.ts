@@ -839,12 +839,12 @@ export class SubscriptionService {
    * @example
    * const hasAnalytics = await SubscriptionService.hasFeature('team-123', 'advanced_analytics')
    */
-  static async hasFeature(teamId: string, featureSlug: string): Promise<boolean> {
+  static async hasFeature(teamId: string, featureSlug: string, userId?: string): Promise<boolean> {
     if (!teamId || !featureSlug) {
       return false
     }
 
-    const subscription = await this.getActive(teamId)
+    const subscription = await this.getActive(teamId, userId)
     if (!subscription || !isSubscriptionActive(subscription.status)) {
       return false
     }
@@ -869,7 +869,7 @@ export class SubscriptionService {
    *   console.log('Quota exceeded:', quota.current, '/', quota.max)
    * }
    */
-  static async checkQuota(teamId: string, limitSlug: string): Promise<QuotaInfo> {
+  static async checkQuota(teamId: string, limitSlug: string, userId?: string): Promise<QuotaInfo> {
     if (!teamId || !limitSlug) {
       return {
         allowed: false,
@@ -880,7 +880,7 @@ export class SubscriptionService {
       }
     }
 
-    const subscription = await this.getActive(teamId)
+    const subscription = await this.getActive(teamId, userId)
 
     if (!subscription || !isSubscriptionActive(subscription.status)) {
       return {
@@ -1019,7 +1019,7 @@ export class SubscriptionService {
     // 2. Feature Check - Verify plan feature
     const requiredFeature = BILLING_REGISTRY.actionMappings.features[action]
     if (requiredFeature) {
-      const hasFeatureAccess = await this.hasFeature(teamId, requiredFeature)
+      const hasFeatureAccess = await this.hasFeature(teamId, requiredFeature, userId)
       if (!hasFeatureAccess) {
         return { allowed: false, reason: 'feature_not_in_plan' }
       }
@@ -1028,7 +1028,7 @@ export class SubscriptionService {
     // 3. Quota Check - Verify available limit
     const consumedLimit = BILLING_REGISTRY.actionMappings.limits[action]
     if (consumedLimit) {
-      const quota = await this.checkQuota(teamId, consumedLimit)
+      const quota = await this.checkQuota(teamId, consumedLimit, userId)
       if (!quota.allowed) {
         return { allowed: false, reason: 'quota_exceeded', quota }
       }

@@ -261,9 +261,9 @@ print_success "package.json configured"
 
 # Step 7: Install dependencies
 print_step "7" "Installing dependencies..."
-# Remove package-lock.json to force fresh install of local .tgz packages
-rm -f package-lock.json
-npm install
+# Remove lockfiles to force fresh install of local .tgz packages
+rm -f package-lock.json pnpm-lock.yaml
+pnpm install --no-frozen-lockfile
 print_success "Dependencies installed"
 
 # Step 8: Verify installation

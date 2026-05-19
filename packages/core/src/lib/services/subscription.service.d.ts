@@ -220,7 +220,7 @@ export declare class SubscriptionService {
      * @example
      * const hasAnalytics = await SubscriptionService.hasFeature('team-123', 'advanced_analytics')
      */
-    static hasFeature(teamId: string, featureSlug: string): Promise<boolean>;
+    static hasFeature(teamId: string, featureSlug: string, userId?: string): Promise<boolean>;
     /**
      * Check quota for a specific limit
      *
@@ -234,7 +234,7 @@ export declare class SubscriptionService {
      *   console.log('Quota exceeded:', quota.current, '/', quota.max)
      * }
      */
-    static checkQuota(teamId: string, limitSlug: string): Promise<QuotaInfo>;
+    static checkQuota(teamId: string, limitSlug: string, userId?: string): Promise<QuotaInfo>;
     /**
      * Check if action is allowed (RBAC + feature + quota)
      *
