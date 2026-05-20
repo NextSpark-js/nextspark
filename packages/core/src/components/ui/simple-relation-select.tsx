@@ -653,6 +653,7 @@ export function SimpleRelationSelect({
                   <CommandItem
                     key={option.id}
                     value={option.id}
+                    keywords={[option.title, option.subtitle || '']}
                     onSelect={() => handleSelect(option.id)}
                   >
                     <div className="flex items-center space-x-2 w-full">
