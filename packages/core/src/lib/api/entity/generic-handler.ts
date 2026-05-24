@@ -44,6 +44,49 @@ import type { BlockInstance } from '../../../types/blocks'
 import type { PatternReference } from '../../../types/pattern-reference'
 
 // ==========================================
+// NAME FIELD XSS GUARD
+// ==========================================
+
+/**
+ * Regexp that detects the presence of an HTML tag angle bracket in a string.
+ * Matching either `<` or `>` is sufficient to catch all tag variants:
+ * - opening tags:            <script>
+ * - closing tags:            </script>
+ * - self-closing tags:       <br/>
+ * - attribute-only payloads: <img src=x onerror=alert(1)>
+ * - broken/partial tags:     <b
+ */
+const HTML_TAG_CHARS_RE = /[<>]/
+
+/**
+ * Field names that are checked for HTML injection on POST / PATCH.
+ * Add more names here if other free-text display fields need protecting.
+ */
+const SAFE_TEXT_FIELDS = new Set(['name', 'title'])
+
+/**
+ * Validate that no `name` / `title` field in the validated data contains HTML.
+ *
+ * Returns the offending field name if a violation is found, or `null` if clean.
+ * Applies to any entity whose field config declares one of SAFE_TEXT_FIELDS
+ * as a text / textarea type.
+ */
+function checkNameFieldXss(
+  entityConfig: EntityConfig,
+  validatedData: Record<string, unknown>
+): string | null {
+  for (const field of entityConfig.fields) {
+    if (!SAFE_TEXT_FIELDS.has(field.name)) continue
+    if (field.type !== 'text' && field.type !== 'textarea') continue
+    const value = validatedData[field.name]
+    if (typeof value === 'string' && HTML_TAG_CHARS_RE.test(value)) {
+      return field.name
+    }
+  }
+  return null
+}
+
+// ==========================================
 // PUBLIC FIELD FILTER
 // ==========================================
 
@@ -325,6 +368,75 @@ function getTeamIdFromRequest(request: NextRequest): string | null {
  */
 function isBuilderRequest(request: NextRequest): boolean {
   return request.headers.get('x-builder-source') === 'true'
+}
+
+// ==========================================
+// OWNERSHIP FILTER (role-based record scoping)
+// ==========================================
+
+/**
+ * Result of ownership filter resolution.
+ *
+ * - `{ applies: false }` — the current user's role is NOT restricted; they see
+ *   all records.
+ * - `{ applies: true, field, value }` — the query must add `WHERE field = value`
+ *   to scope results to the user's own records.
+ * - `{ applies: true, field, value: null }` — the user has a restricted role but
+ *   no linked record was found; return an empty result set to avoid leaking data.
+ */
+type OwnershipFilterResult =
+  | { applies: false }
+  | { applies: true; field: string; value: string | null }
+
+/**
+ * Resolve the ownership filter for the current request.
+ *
+ * Checks whether the authenticated user's team role is one of the roles listed
+ * in `entityConfig.access.ownershipFilter.roles`.  If so, looks up the linked
+ * record (resolved via `linkedBy` config where `userField = userId`) and
+ * returns the filter value to append to the query.
+ *
+ * Only runs for session-authenticated users with a real teamId.  API-key auth
+ * and admin-bypass paths are deliberately left unrestricted.
+ */
+async function resolveOwnershipFilter(
+  entityConfig: EntityConfig,
+  userId: string,
+  teamId: string,
+  isBypass: boolean,
+  authType: 'session' | 'api-key' | 'none'
+): Promise<OwnershipFilterResult> {
+  const ownershipFilter = entityConfig.access?.ownershipFilter
+  if (!ownershipFilter) return { applies: false }
+
+  // Admin bypass or API-key auth: no role-based restriction
+  if (isBypass || authType === 'api-key') return { applies: false }
+
+  // Get the user's team role
+  const memberRow = await queryOneWithRLS<{ role: string }>(
+    'SELECT role FROM "team_members" WHERE "teamId" = $1 AND "userId" = $2',
+    [teamId, userId],
+    userId
+  )
+
+  if (!memberRow) return { applies: false }
+
+  const userRole = memberRow.role
+  if (!ownershipFilter.roles.includes(userRole)) {
+    // Role is not restricted — unrestricted access
+    return { applies: false }
+  }
+
+  // Resolve the linked record to find the filter value
+  const { table, userField, valueField } = ownershipFilter.linkedBy
+  const linkedRow = await queryOneWithRLS<Record<string, string>>(
+    `SELECT "${valueField}" FROM "${table}" WHERE "${userField}" = $1 AND "teamId" = $2 AND "deletedAt" IS NULL`,
+    [userId, teamId],
+    userId
+  )
+
+  const filterValue = linkedRow ? linkedRow[valueField] ?? null : null
+  return { applies: true, field: ownershipFilter.field, value: filterValue }
 }
 
 /**
@@ -628,6 +740,27 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
     // Parse taxonomy filter early so it's available for all query branches
     const taxonomyFilter = parseTaxonomyFilterParams(url, entityConfig)
 
+    // Resolve ownership filter early so it's available for all query branches.
+    // Only applies when userId and teamId are both present (authenticated, non-bypass).
+    let ownershipFilter: OwnershipFilterResult = { applies: false }
+    if (userId && teamId) {
+      ownershipFilter = await resolveOwnershipFilter(
+        entityConfig,
+        userId,
+        teamId,
+        isBypass,
+        authResult.type
+      )
+    }
+
+    // If ownership filter applies but no linked record exists, return empty list immediately
+    // to avoid leaking records that belong to other linked entities.
+    if (ownershipFilter.applies && ownershipFilter.value === null) {
+      const paginationMeta = createPaginationMeta(pagination.page, pagination.limit, 0)
+      const response = createApiResponse([], paginationMeta)
+      return addCorsHeaders(response, request)
+    }
+
     if (specificIds && specificIds.length > 0) {
       // Query specific IDs - for getting details of selected items
       const idPlaceholders = specificIds.map(() => `$${paramIndex++}`).join(', ')
@@ -647,6 +780,12 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
       if (userId && !entityConfig.access?.shared && !skipUserFilter && !isBypass) {
         query += ` AND t."userId" = $${paramIndex++}`
         queryParams.push(userId)
+      }
+
+      // Apply role-based ownership filter if configured
+      if (ownershipFilter.applies && ownershipFilter.value !== null) {
+        query += ` AND t."${ownershipFilter.field}" = $${paramIndex++}`
+        queryParams.push(ownershipFilter.value)
       }
 
       // Soft delete filter: hide deleted rows for non-bypass users
@@ -683,6 +822,12 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
         queryParams.push(userId)
       }
 
+      // Apply role-based ownership filter if configured
+      if (ownershipFilter.applies && ownershipFilter.value !== null) {
+        query += ` AND t."${ownershipFilter.field}" = $${paramIndex++}`
+        queryParams.push(ownershipFilter.value)
+      }
+
       // Soft delete filter: hide deleted rows for non-bypass users
       if (entityConfig.table?.softDelete && !isBypass) {
         query += ` AND t."deletedAt" IS NULL`
@@ -715,6 +860,12 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
       }
       // else: CASE 2/3 - Public or shared, no user filter (but still team-filtered)
       // else: CASE 4 - Admin bypass active, no user filter (see all records)
+
+      // Apply role-based ownership filter if configured
+      if (ownershipFilter.applies && ownershipFilter.value !== null) {
+        whereConditions.push(`t."${ownershipFilter.field}" = $${paramIndex++}`)
+        queryParams.push(ownershipFilter.value)
+      }
 
       // Soft delete filter: hide deleted rows for non-bypass users
       if (entityConfig.table?.softDelete && !isBypass) {
@@ -983,6 +1134,18 @@ export async function handleGenericCreate(request: NextRequest): Promise<NextRes
     }
 
     const validatedData = validation.data
+
+    // Reject HTML markup in name/title fields (stored-XSS prevention)
+    const xssField = checkNameFieldXss(entityConfig, validatedData as Record<string, unknown>)
+    if (xssField) {
+      const xssResponse = createApiError(
+        `Field '${xssField}' must not contain HTML markup`,
+        400,
+        undefined,
+        'INVALID_FIELD_VALUE'
+      )
+      return addCorsHeaders(xssResponse, request)
+    }
 
     // Determine ID generation strategy (default: uuid)
     const idStrategy = entityConfig.idStrategy?.type || 'uuid'
@@ -1388,6 +1551,26 @@ export async function handleGenericRead(request: NextRequest, { params }: { para
       queryParams.push(userId)
     }
 
+    // Apply role-based ownership filter if configured
+    if (userId && teamId) {
+      const readOwnershipFilter = await resolveOwnershipFilter(
+        entityConfig,
+        userId,
+        teamId,
+        isBypass,
+        authResult.type
+      )
+      if (readOwnershipFilter.applies) {
+        if (readOwnershipFilter.value === null) {
+          // No linked record found → deny access
+          const response = createApiError('Item not found', 404)
+          return addCorsHeaders(response, request)
+        }
+        query += ` AND t."${readOwnershipFilter.field}" = $${paramIndex++}`
+        queryParams.push(readOwnershipFilter.value)
+      }
+    }
+
     // Soft delete filter: hide deleted rows for non-bypass users
     if (entityConfig.table?.softDelete && !isBypass) {
       query += ` AND t."deletedAt" IS NULL`
@@ -1525,6 +1708,32 @@ export async function handleGenericUpdate(request: NextRequest, { params }: { pa
 
     // Generate validation schema from entity configuration
     const entityConfig = resolution.entityConfig
+
+    // Apply field guards based on team role if configured
+    const fieldGuards = entityConfig.access?.ownershipFilter?.fieldGuards
+    if (fieldGuards && fieldGuards.length > 0 && authResult.type === 'session') {
+      const guardMemberRow = await queryOneWithRLS<{ role: string }>(
+        'SELECT role FROM "team_members" WHERE "teamId" = $1 AND "userId" = $2',
+        [teamId, authResult.user!.id],
+        authResult.user!.id
+      )
+      if (guardMemberRow) {
+        for (const guard of fieldGuards) {
+          if (guard.roles.includes(guardMemberRow.role)) {
+            const forbidden = guard.denyFields.filter(f => f in entityData)
+            if (forbidden.length > 0) {
+              const response = createApiError(
+                `Role '${guardMemberRow.role}' is not allowed to modify field(s): ${forbidden.join(', ')}`,
+                403,
+                undefined,
+                'FIELD_MODIFICATION_DENIED'
+              )
+              return addCorsHeaders(response, request)
+            }
+          }
+        }
+      }
+    }
     const tableName = getTableName(entityConfig)
     const schemas = generateEntitySchemas(entityConfig)
     const validation = schemas.update.safeParse(entityData)
@@ -1540,6 +1749,18 @@ export async function handleGenericUpdate(request: NextRequest, { params }: { pa
     }
 
     const validatedData = validation.data
+
+    // Reject HTML markup in name/title fields (stored-XSS prevention)
+    const updateXssField = checkNameFieldXss(entityConfig, validatedData as Record<string, unknown>)
+    if (updateXssField) {
+      const updateXssResponse = createApiError(
+        `Field '${updateXssField}' must not contain HTML markup`,
+        400,
+        undefined,
+        'INVALID_FIELD_VALUE'
+      )
+      return addCorsHeaders(updateXssResponse, request)
+    }
 
     // Build dynamic UPDATE query
     const updates: string[] = []
@@ -1669,6 +1890,24 @@ export async function handleGenericUpdate(request: NextRequest, { params }: { pa
       if (!entityConfig.access?.shared) {
         whereConditions.push(`"userId" = $${paramCount++}`)
         values.push(authResult.user!.id)
+      }
+
+      // Apply role-based ownership filter if configured
+      const updateOwnershipFilter = await resolveOwnershipFilter(
+        entityConfig,
+        authResult.user!.id,
+        teamId,
+        teamValidation.isBypass,
+        authResult.type
+      )
+      if (updateOwnershipFilter.applies) {
+        if (updateOwnershipFilter.value === null) {
+          // No linked record found for this user → treat as not found
+          const response = createApiError('Item not found', 404)
+          return addCorsHeaders(response, request)
+        }
+        whereConditions.push(`"${updateOwnershipFilter.field}" = $${paramCount++}`)
+        values.push(updateOwnershipFilter.value)
       }
 
       const updateQuery = `

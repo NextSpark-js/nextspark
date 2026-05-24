@@ -185,6 +185,38 @@ export interface EntityConfig {
      * If not defined, all fields are returned (backwards compatible).
      */
     publicFields?: string[]
+
+    /**
+     * Role-based ownership filter for shared entities.
+     *
+     * When a user's team role matches one of the listed roles, the generic
+     * CRUD handler scopes LIST/READ/UPDATE queries to only the records that
+     * belong to the user's linked record (resolved via `linkedBy`).
+     *
+     * Roles NOT listed in `roles` see all records unfiltered.
+     */
+    ownershipFilter?: {
+      /** Team roles that trigger ownership filtering */
+      roles: string[]
+      /** Column in the entity table to filter by */
+      field: string
+      /** Lookup to resolve the filter value from the current user */
+      linkedBy: {
+        /** Table to query for the linked record */
+        table: string
+        /** Column in that table referencing the current user's id */
+        userField: string
+        /** Column whose value becomes the filter value */
+        valueField: string
+      }
+      /** Per-role field write restrictions on PATCH */
+      fieldGuards?: Array<{
+        /** Team roles subject to this guard */
+        roles: string[]
+        /** Fields these roles cannot include in a PATCH body */
+        denyFields: string[]
+      }>
+    }
   }
 
   // ==========================================
