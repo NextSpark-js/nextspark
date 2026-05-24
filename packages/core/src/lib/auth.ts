@@ -88,6 +88,18 @@ export const auth = betterAuth({
         defaultValue: USER_ROLES_CONFIG.defaultRole, // Default role from config
       },
     },
+    // Enable Better Auth's change-email endpoint so `POST /api/auth/change-email`
+    // is accepted. Without this the endpoint returns 400
+    // `{"message":"Change email is disabled"}` and any theme-level
+    // post-success handlers (e.g. notifying the old address that the email
+    // was changed) cannot fire end-to-end.
+    //
+    // We intentionally omit `sendChangeEmailVerification` — the change is
+    // processed immediately on POST, and themes can extend their own
+    // post-success hooks for double-opt-in or notification flows.
+    changeEmail: {
+      enabled: true,
+    },
   },
   emailAndPassword: {
     enabled: true,
