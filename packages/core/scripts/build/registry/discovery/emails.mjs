@@ -40,13 +40,22 @@ function slugToIdentifier(slug) {
 }
 
 /**
- * Walk a directory and return its email entries (one per .ts/.tsx file at the
+ * Walk a directory and return its email entries (one per template file at the
  * top level — emails are not nested).
  *
+ * Source files are `.ts`/`.tsx` (monorepo mode + theme overrides). Compiled
+ * npm distributions ship `.js` + `.d.ts` only — the `.d.ts` carries the
+ * canonical slug list (one per template, paired with the `.js` runtime),
+ * so we accept `.d.ts` files as slug markers when `acceptCompiled` is true.
+ * The generator's import path stays the same (`@nextsparkjs/core/emails/<slug>`)
+ * and the bundler resolves to the `.js` runtime at build time.
+ *
  * @param {string} dir
+ * @param {{ acceptCompiled?: boolean }} [options]
  * @returns {Promise<Array<{ slug: string, fileName: string }>>}
  */
-async function listEmailFiles(dir) {
+async function listEmailFiles(dir, options = {}) {
+  const { acceptCompiled = false } = options
   let entries
   try {
     entries = await readdir(dir, { withFileTypes: true })
@@ -55,17 +64,30 @@ async function listEmailFiles(dir) {
     return []
   }
 
+  const seen = new Set()
   const out = []
   for (const entry of entries) {
     if (!entry.isFile()) continue
-    if (!entry.name.endsWith('.ts') && !entry.name.endsWith('.tsx')) continue
     // Skip barrel files and underscore-prefixed (README/notes)
-    if (entry.name === 'index.ts' || entry.name === 'index.tsx') continue
     if (entry.name.startsWith('_')) continue
-    if (entry.name.endsWith('.d.ts')) continue
+    if (entry.name === 'index.ts' || entry.name === 'index.tsx') continue
+    if (entry.name === 'index.js' || entry.name === 'index.d.ts') continue
     if (entry.name.endsWith('.test.ts') || entry.name.endsWith('.test.tsx')) continue
+    if (entry.name.endsWith('.d.ts.map')) continue
 
-    const slug = entry.name.replace(/\.(tsx|ts)$/, '')
+    let slug = null
+    if (entry.name.endsWith('.tsx')) {
+      slug = entry.name.slice(0, -4)
+    } else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.d.ts')) {
+      slug = entry.name.slice(0, -3)
+    } else if (acceptCompiled && entry.name.endsWith('.d.ts')) {
+      // Compiled dist directory — the .d.ts is the slug marker for the
+      // matching .js runtime that the bundler will resolve via the package
+      // exports field at consumer build time.
+      slug = entry.name.slice(0, -5)
+    }
+    if (!slug || seen.has(slug)) continue
+    seen.add(slug)
     out.push({ slug, fileName: entry.name })
   }
   return out
@@ -98,8 +120,12 @@ export async function discoverEmails(config = DEFAULT_CONFIG) {
   /** @type {Map<string, DiscoveredEmail>} */
   const merged = new Map()
 
-  // Core defaults
-  const coreFiles = await listEmailFiles(coreEmailsDir)
+  // Core defaults — in npm mode the package ships `.d.ts` + `.js` only, so
+  // accept `.d.ts` as slug markers there. Monorepo mode keeps the original
+  // `.ts`-only contract since the source tree has the uncompiled files.
+  const coreFiles = await listEmailFiles(coreEmailsDir, {
+    acceptCompiled: !!config.isNpmMode,
+  })
   if (coreFiles.length > 0) {
     verbose(`Found ${coreFiles.length} core email template(s) in: ${coreEmailsDir}`)
     for (const { slug } of coreFiles) {
