@@ -230,6 +230,32 @@ export function canManageRole(
 }
 
 /**
+ * Check if a role can invite another role to the team
+ *
+ * Reads hierarchy from the merged permissions registry, so any roles added
+ * by consumers via additional config are supported automatically.
+ *
+ * Semantics: invitation is allowed when the actor's hierarchy level is
+ * greater than or equal to the target's hierarchy level. Peers can invite
+ * peers (e.g. admin → admin); a lower-ranked actor cannot invite a
+ * higher-ranked target.
+ *
+ * Missing hierarchy entries are treated as 0, mirroring canManageRole.
+ *
+ * @param actorRole - The role of the user issuing the invitation
+ * @param targetRole - The role the invitee would receive
+ * @returns True if the invitation is allowed, false otherwise
+ */
+export function canInviteToRole(
+  actorRole: string,
+  targetRole: string
+): boolean {
+  const hierarchy = getHierarchyFromRegistry()
+
+  return (hierarchy[actorRole] ?? 0) >= (hierarchy[targetRole] ?? 0)
+}
+
+/**
  * Get human-readable role description
  *
  * Reads from merged config, supporting custom role descriptions.

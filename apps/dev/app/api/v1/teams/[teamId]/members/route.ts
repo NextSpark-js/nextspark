@@ -14,23 +14,11 @@ import { checkRateLimit, withRateLimitTier } from '@nextsparkjs/core/lib/api/rat
 import { RATE_LIMITS } from '@nextsparkjs/core/lib/api/keys'
 import { inviteMemberSchema, memberListQuerySchema } from '@nextsparkjs/core/lib/teams/schema'
 import { TeamMemberService, MembershipService } from '@nextsparkjs/core/lib/services'
+import { canInviteToRole } from '@nextsparkjs/core/lib/teams/permissions'
 import type { TeamMember, TeamInvitation, TeamRole, Team } from '@nextsparkjs/core/lib/teams/types'
 import { EmailFactory } from '@nextsparkjs/core/lib/email/factory'
 import { sendTeamInvitationEmail } from '@nextsparkjs/core/lib/email/send'
 import { I18N_CONFIG } from '@nextsparkjs/core/lib/config'
-
-// Role hierarchy for invite validation (higher number = more power)
-const ROLE_HIERARCHY: Record<TeamRole, number> = {
-  owner: 4,
-  admin: 3,
-  member: 2,
-  viewer: 1,
-}
-
-// Check if a user can invite to a specific role (same level or below)
-function canInviteToRole(actorRole: TeamRole, targetRole: TeamRole): boolean {
-  return ROLE_HIERARCHY[actorRole] >= ROLE_HIERARCHY[targetRole]
-}
 
 // Handle CORS preflight
 export async function OPTIONS() {
@@ -226,7 +214,8 @@ export const POST = withRateLimitTier(withApiLogging(
       const body = await req.json()
       const validatedData = inviteMemberSchema.parse(body)
 
-      // Check role hierarchy - users can only invite to same role or below
+      // Check role hierarchy via the merged permissions registry — users can
+      // only invite to roles at the same level or below their own
       if (!canInviteToRole(userRole, validatedData.role)) {
         const response = createApiError(
           `You cannot invite members to a role higher than your own. Your role: ${userRole}, requested role: ${validatedData.role}`,
