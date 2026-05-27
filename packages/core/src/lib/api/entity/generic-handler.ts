@@ -1246,10 +1246,20 @@ export async function handleGenericCreate(request: NextRequest): Promise<NextRes
           placeholders.push(`$${paramCount++}`)
           values.push(relationId)
         }
-        // Handle relation-multi fields - value should already be JSON string from Zod
+        // Handle relation-multi fields. Value may arrive as a JSON string
+        // (historical Zod transform path) OR as a raw JS array when the
+        // field declared `defaultValue: []` and the client omitted the key
+        // from the payload. Normalize so the JSONB cast always receives a
+        // valid JSON string — passing a raw `[]` JS array to pg-node casts
+        // to the Postgres array literal `{}::jsonb`, which then breaks every
+        // downstream consumer that assumes `Array.isArray(row.field) === true`.
         else if (field.type === 'relation-multi') {
           placeholders.push(`$${paramCount++}::jsonb`)
-          values.push(value) // Value should already be JSON string from Zod schema
+          values.push(
+            typeof value === 'string'
+              ? value
+              : JSON.stringify(Array.isArray(value) ? value : []),
+          )
         }
         // Handle tags as JSONB (consistent with database schema)
         else if (field.type === 'tags') {
@@ -1818,10 +1828,16 @@ export async function handleGenericUpdate(request: NextRequest, { params }: { pa
           updates.push(`${columnName} = $${paramCount++}`)
           values.push(relationId)
         }
-        // Handle relation-multi fields - value should already be JSON string from Zod
+        // Handle relation-multi fields. Same normalization as the INSERT
+        // path above: string passthrough; raw JS array → JSON.stringify so
+        // the JSONB cast receives `[]` not the Postgres array literal `{}`.
         else if (field.type === 'relation-multi') {
           updates.push(`${columnName} = $${paramCount++}::jsonb`)
-          values.push(value) // Value should already be JSON string from Zod schema
+          values.push(
+            typeof value === 'string'
+              ? value
+              : JSON.stringify(Array.isArray(value) ? value : []),
+          )
         }
         // Handle tags as JSONB (consistent with database schema)
         else if (field.type === 'tags') {
