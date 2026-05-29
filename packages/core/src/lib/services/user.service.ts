@@ -81,7 +81,7 @@ export class UserService {
           "emailVerified",
           "createdAt",
           "updatedAt"
-        FROM "user"
+        FROM "users"
         WHERE id = $1 OR email = $1`,
         [identifier],
         currentUserId
@@ -134,7 +134,7 @@ export class UserService {
           "emailVerified",
           "createdAt",
           "updatedAt"
-        FROM "user"
+        FROM "users"
         WHERE email = $1`,
         [email],
         currentUserId
@@ -187,7 +187,7 @@ export class UserService {
           "emailVerified",
           "createdAt",
           "updatedAt"
-        FROM "user"
+        FROM "users"
         WHERE id = $1`,
         [userId],
         currentUserId
@@ -243,7 +243,7 @@ export class UserService {
           "emailVerified",
           "createdAt",
           "updatedAt"
-        FROM "user"
+        FROM "users"
         WHERE id IN (${placeholders})`,
         userIds,
         currentUserId
@@ -327,7 +327,7 @@ export class UserService {
       values.push(userId)
 
       const query = `
-        UPDATE "user"
+        UPDATE "users"
         SET ${updateFields.join(', ')}
         WHERE id = $${paramCount}
         RETURNING
