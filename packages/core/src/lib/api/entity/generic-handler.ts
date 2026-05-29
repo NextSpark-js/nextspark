@@ -1156,11 +1156,37 @@ export async function handleGenericCreate(request: NextRequest): Promise<NextRes
     let values: unknown[]
     let paramCount: number
 
-    // Determine userId to use: for shared entities, allow userId from request body (before validation)
+    // Determine the userId stored on the new row.
+    //
+    // For NON-shared entities the row is owned by its creator, so we always
+    // stamp the authenticated user's id.
+    //
+    // For SHARED (team-scoped) entities the `userId` column is not an
+    // ownership marker — callers may link the row to a *different* user, or to
+    // no user at all (an unlinked / walk-in row). The legacy behaviour
+    // (`isSharedEntity && rawUserId`) coerced an explicit `null` back to the
+    // creator's id, which made it impossible to insert an unlinked row — fatal
+    // for shared entities carrying a UNIQUE constraint on (teamId, userId),
+    // where every creator-stamped row after the first collides.
+    //
+    // The change here is deliberately minimal and backward compatible — only
+    // the explicit-`null` case changes:
+    //   • userId absent           → creator  (legacy, unchanged)
+    //   • userId === null         → null     (NEW: explicit unlinked row)
+    //   • userId is non-empty str → that id  (legacy, unchanged)
+    //   • userId === "" / falsy   → creator  (legacy, unchanged — never a
+    //                                          deliberate value, kept as-is to
+    //                                          avoid inserting an empty FK)
     const isSharedEntity = entityConfig.access?.shared === true
-    const userIdToUse = isSharedEntity && rawUserId
-        ? rawUserId
-        : authResult.user!.id
+    let userIdToUse: string | null = authResult.user!.id
+    if (isSharedEntity && Object.prototype.hasOwnProperty.call(entityData, 'userId')) {
+      if (rawUserId === null) {
+        userIdToUse = null
+      } else if (typeof rawUserId === 'string' && rawUserId.trim() !== '') {
+        userIdToUse = rawUserId
+      }
+      // any other value (empty string, etc.) keeps the creator fallback
+    }
 
     // Validate team context with admin bypass support
     // Note: CREATE always requires teamId (even with bypass) to know where to store the entity
