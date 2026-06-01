@@ -382,9 +382,23 @@ export const auth = betterAuth({
   },
   // Removed additionalFields - will use standard name and image fields
   advanced: {
-    crossSubDomainCookies: {
-      enabled: false,
-    },
+    // Cross-subdomain session cookies (opt-in via env).
+    //
+    // When an app serves tenants on subdomains (e.g. `<tenant>.example.com`)
+    // but runs OAuth on the apex, Google/social `redirect_uri` can only point
+    // at the apex (providers don't allow wildcard redirect URIs), so the
+    // session is established on the apex callback. For that session to be
+    // readable back on the tenant subdomain, the cookie must be scoped to the
+    // shared base domain rather than a single host.
+    //
+    // Off by default (cookies stay host-scoped). Set COOKIE_BASE_DOMAIN to the
+    // shared base domain WITH a leading dot (e.g. ".example.com") to enable it.
+    // The domain is passed explicitly because Better Auth's default derivation
+    // uses the full hostname (e.g. `www.example.com`), which does not span
+    // sibling subdomains.
+    crossSubDomainCookies: process.env.COOKIE_BASE_DOMAIN
+      ? { enabled: true, domain: process.env.COOKIE_BASE_DOMAIN }
+      : { enabled: false },
     useSecureCookies: isProd,
     defaultCookieAttributes: {
       httpOnly: true,

@@ -119,6 +119,51 @@ Request 4 (0:06): Cache expired → Database lookup
 - Faster response times for authenticated requests
 - Automatic cache invalidation every 5 minutes
 
+### Cross-Subdomain Cookies (multi-tenant)
+
+By default the session cookie is scoped to the host that issued it, so a session
+created on `app.example.com` is not sent on `tenant.example.com`. Multi-tenant
+apps that serve tenants on subdomains need the session to be shared across all
+`*.example.com` hosts. This is **opt-in via the `COOKIE_BASE_DOMAIN`
+environment variable**:
+
+```bash
+# Share the session cookie across every subdomain of example.com
+COOKIE_BASE_DOMAIN=.example.com
+```
+
+When set, Better Auth's `advanced.crossSubDomainCookies` is enabled with that
+base domain:
+
+```ts
+advanced: {
+  crossSubDomainCookies: process.env.COOKIE_BASE_DOMAIN
+    ? { enabled: true, domain: process.env.COOKIE_BASE_DOMAIN }
+    : { enabled: false },
+}
+```
+
+The domain is passed **explicitly** (with a leading dot) rather than relying on
+Better Auth's default derivation, which uses the full hostname (e.g.
+`www.example.com`) and therefore would not span sibling subdomains.
+
+**Why this matters for OAuth.** Social providers (Google, etc.) don't allow
+wildcard `redirect_uri`s, so OAuth must run on a single registered host — the
+apex. The session is therefore established on the apex callback. For a booking
+or app flow living on `tenant.example.com` to see that session after the
+provider redirects back, the cookie must be scoped to `.example.com`. Pair this
+with a wildcard in `CORS_ADDITIONAL_ORIGINS` so the subdomain `callbackURL`
+passes Better Auth's trusted-origin check:
+
+```bash
+COOKIE_BASE_DOMAIN=.example.com
+CORS_ADDITIONAL_ORIGINS=https://*.example.com
+```
+
+> Email/OTP flows that complete entirely on one host don't need this — they're
+> already same-origin. Cross-subdomain cookies are specifically for sessions
+> that are established on one host and consumed on a sibling subdomain.
+
 ## Accessing Sessions
 
 ### In Server Components

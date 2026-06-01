@@ -5,6 +5,18 @@ All notable changes to `@nextsparkjs/core` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Cross-subdomain session cookies** (`COOKIE_BASE_DOMAIN`): opt-in env var that
+  scopes the auth session cookie to a shared base domain (e.g. `.example.com`) so
+  the session is readable across sibling subdomains. Enables OAuth running on the
+  apex to carry the session back to tenant subdomains in multi-tenant setups
+  (social providers don't allow wildcard `redirect_uri`s, so OAuth can't run on
+  the subdomain itself). Off by default — cookies stay host-scoped unless
+  `COOKIE_BASE_DOMAIN` is set; pair it with a wildcard in `CORS_ADDITIONAL_ORIGINS`
+  (e.g. `https://*.example.com`). See `docs/06-authentication/05-session-management.md`.
+
 ## [0.1.0-beta.147] - 2026-04-19
 
 ### Fixed
