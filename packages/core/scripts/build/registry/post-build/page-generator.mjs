@@ -31,11 +31,59 @@ function toPascalCase(str) {
 }
 
 /**
+ * Next.js route-level exports that only take effect when exported from the
+ * route file itself. If a theme template defines any of these, the generated
+ * route file MUST re-export them — otherwise Next.js silently ignores them
+ * (e.g. generateMetadata never runs so the page has no <title>/<meta>,
+ * generateStaticParams never prerenders so PPR pages stream the hero).
+ */
+const ROUTE_LEVEL_EXPORTS = [
+  'generateMetadata',
+  'generateStaticParams',
+  'generateViewport',
+  'metadata',
+  'viewport',
+  'revalidate',
+  'dynamic',
+  'dynamicParams',
+  'fetchCache',
+  'runtime',
+  'preferredRegion',
+  'maxDuration',
+]
+
+/**
+ * Detect which route-level exports a template file defines, so the generated
+ * route file can re-export them.
+ */
+async function detectRouteLevelExports(templatePath) {
+  try {
+    const baseTemplatePath = templatePath
+      .replace('@/', rootDir + '/')
+      .replace(/\.(tsx|ts)$/, '')
+    const absoluteTemplatePath = existsSync(baseTemplatePath + '.tsx')
+      ? baseTemplatePath + '.tsx'
+      : baseTemplatePath + '.ts'
+    const templateContent = await readFile(absoluteTemplatePath, 'utf8')
+    return ROUTE_LEVEL_EXPORTS.filter(name =>
+      new RegExp(`export\\s+(?:async\\s+)?(?:function|const|let|var)\\s+${name}\\b`).test(templateContent)
+    )
+  } catch {
+    return []
+  }
+}
+
+/**
  * Generate content for a regular page (page.tsx, error.tsx, etc.)
  */
-function generateRegularPageContent(appPath, templatePath) {
+async function generateRegularPageContent(appPath, templatePath) {
   // Remove .tsx/.ts extension from import path (TypeScript doesn't allow file extensions in imports)
   const templatePathWithoutExtension = templatePath.replace(/\.(tsx|ts)$/, '')
+
+  const routeExports = await detectRouteLevelExports(templatePath)
+  const routeExportsBlock = routeExports.length > 0
+    ? `\n// Re-export Next.js route-level exports from the theme template\nexport { ${routeExports.join(', ')} } from '${templatePathWithoutExtension}'\n`
+    : ''
 
   return `/**
  * Template page - directly imports from theme
@@ -46,7 +94,7 @@ import TemplateComponent from '${templatePathWithoutExtension}'
 
 // Direct export of the theme template (no fallback)
 export default TemplateComponent
-`
+${routeExportsBlock}`
 }
 
 /**
@@ -324,7 +372,7 @@ export async function generateTemplatePage(template, outputPath) {
   if (templateType === 'layout') {
     content = await generateLayoutPageContent(appPath, componentName, templatePath)
   } else {
-    content = generateRegularPageContent(appPath, templatePath)
+    content = await generateRegularPageContent(appPath, templatePath)
   }
 
   // Write the file
@@ -414,7 +462,7 @@ export async function generateMissingPages(templates, config = null) {
     if (templateType === 'layout') {
       expectedContent = await generateLayoutPageContent(appPath, componentName, templatePath)
     } else {
-      expectedContent = generateRegularPageContent(appPath, templatePath)
+      expectedContent = await generateRegularPageContent(appPath, templatePath)
     }
 
     // Check if file exists and compare content
