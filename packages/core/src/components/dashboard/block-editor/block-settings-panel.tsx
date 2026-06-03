@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { Button } from '../../ui/button'
 import { Card, CardContent } from '../../ui/card'
 import { Badge } from '../../ui/badge'
-import { Trash2, RotateCcw, FileText, Palette, Settings2, X, SlidersHorizontal, Layers, Lock } from 'lucide-react'
+import { Trash2, RotateCcw, FileText, Palette, Settings2, X, SlidersHorizontal, Layers, Lock, CheckSquare } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '../../../lib/utils'
 import { sel } from '../../../lib/test'
@@ -17,6 +17,7 @@ import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry'
 
 interface BlockSettingsPanelProps {
   block: BlockInstance | PatternReference | undefined
+  selectedCount?: number
   onUpdateProps: (props: Record<string, unknown>) => void
   onRemove: () => void
   onClose?: () => void
@@ -44,11 +45,13 @@ type SettingsTab = 'content' | 'design' | 'advanced'
 
 export function BlockSettingsPanel({
   block,
+  selectedCount = 0,
   onUpdateProps,
   onRemove,
   onClose,
 }: BlockSettingsPanelProps) {
   const t = useTranslations('admin.builder.settingsPanel')
+  const tMulti = useTranslations('admin.builder.multiSelect')
   const [activeTab, setActiveTab] = useState<SettingsTab>('content')
 
   // Memoize grouped fields (only for regular blocks, not pattern references)
@@ -58,6 +61,20 @@ export function BlockSettingsPanel({
     if (!blockConfig?.fieldDefinitions) return null
     return groupFieldsByTab(blockConfig.fieldDefinitions)
   }, [block])
+
+  if (selectedCount > 1) {
+    return (
+      <div className="flex h-full items-center justify-center p-8 bg-muted/10" data-cy={sel('blockEditor.blockPropertiesPanel.multiSelect')}>
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+            <CheckSquare className="h-6 w-6 text-primary" />
+          </div>
+          <p className="text-foreground font-medium">{tMulti('selected', { count: selectedCount })}</p>
+          <p className="text-sm text-muted-foreground mt-1">{tMulti('settingsHint')}</p>
+        </div>
+      </div>
+    )
+  }
 
   if (!block) {
     return (

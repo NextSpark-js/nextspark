@@ -306,13 +306,32 @@
     },
     "layout": {
       "empty": "Aún no hay bloques agregados",
-      "pasteBlock": "Pegar bloque"
+      "pasteBlock": "Pegar bloque",
+      "pasteBlocks": "Pegar {count} bloques"
     },
     "messages": {
       "saved": "Guardado exitosamente",
       "created": "Creado exitosamente",
       "blockCopied": "Bloque copiado al portapapeles",
       "blockPasted": "Bloque pegado"
+    },
+    "multiSelect": {
+      "selected": "{count} bloques seleccionados",
+      "selectAll": "Seleccionar todos",
+      "deselectAll": "Deseleccionar todos",
+      "copy": "Copiar",
+      "copied": "{count} bloques copiados",
+      "paste": "Pegar",
+      "pasted": "{count} bloques pegados",
+      "pastedPartial": "{pasted} de {total} bloques pegados ({skipped} incompatibles)",
+      "duplicate": "Duplicar",
+      "duplicated": "{count} bloques duplicados",
+      "delete": "Eliminar",
+      "deleteConfirm": "¿Eliminar {count} bloques?",
+      "deleted": "{count} bloques eliminados",
+      "patternSkipped": "Las referencias a patterns fueron excluidas de la selección",
+      "clipboardEmpty": "El portapapeles está vacío",
+      "settingsHint": "Usa la barra de acciones para gestionar los bloques seleccionados"
     }
   },
   "patterns": {

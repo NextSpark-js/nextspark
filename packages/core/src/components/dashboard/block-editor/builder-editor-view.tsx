@@ -5,7 +5,15 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { v4 as uuidv4 } from 'uuid'
-import { copyBlockToClipboard, getBlockFromClipboard, hasBlockInClipboard } from '../../../lib/blocks/clipboard'
+import {
+  copyBlockToClipboard,
+  getBlockFromClipboard,
+  hasBlockInClipboard,
+  copyBlocksToClipboard,
+  getBlocksFromClipboard,
+  getClipboardBlockCount,
+  hasClipboardBlocks,
+} from '../../../lib/blocks/clipboard'
 import { Button } from '../../ui/button'
 import { ButtonGroup } from '../../ui/button-group'
 import { Input } from '../../ui/input'
@@ -20,6 +28,7 @@ import { BlockPicker } from './block-picker'
 import { BlockCanvas } from './block-canvas'
 import { BlockPreviewCanvas } from './block-preview-canvas'
 import { BlockSettingsPanel } from './block-settings-panel'
+import { BatchActionBar } from './batch-action-bar'
 import { PageSettingsPanel, type PageSettings } from './page-settings-panel'
 import { EntityFieldsSidebar } from './entity-fields-sidebar'
 import { StatusSelector, type StatusOption } from './status-selector'
@@ -29,7 +38,7 @@ import { ConfigPanel } from './config-panel'
 import { useSidebar } from '../../../contexts/sidebar-context'
 import { cn } from '../../../lib/utils'
 import type { BlockInstance } from '../../../types/blocks'
-import type { PatternReference } from '../../../types/pattern-reference'
+import { isPatternReference, type PatternReference } from '../../../types/pattern-reference'
 import type { ClientEntityConfig } from '@nextsparkjs/registries/entity-registry.client'
 
 type ViewMode = 'preview' | 'settings'
@@ -85,7 +94,8 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
   const { isCollapsed } = useSidebar()
 
   const [blocks, setBlocks] = useState<BlockInstance[]>([])
-  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)
+  const [selectedBlockIds, setSelectedBlockIds] = useState<Set<string>>(new Set())
+  const lastSelectedIdRef = useRef<string | null>(null)
   const [title, setTitle] = useState('')
   const [slug, setSlug] = useState('')
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false)
@@ -324,6 +334,69 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
     saveMutation.mutate(data)
   }, [title, slug, blocks, pageSettings, entityFields, saveMutation, validateFields])
 
+  // --- Multi-selection helpers ---
+  const selectedBlockId = useMemo(() => {
+    if (selectedBlockIds.size === 1) return Array.from(selectedBlockIds)[0]
+    return null
+  }, [selectedBlockIds])
+
+  const setSelectedBlockId = useCallback((id: string | null) => {
+    if (id) {
+      setSelectedBlockIds(new Set([id]))
+      lastSelectedIdRef.current = id
+    } else {
+      setSelectedBlockIds(new Set())
+      lastSelectedIdRef.current = null
+    }
+  }, [])
+
+  const handleSelectBlock = useCallback((blockId: string, event?: { metaKey?: boolean; shiftKey?: boolean; ctrlKey?: boolean }) => {
+    if (event?.metaKey || event?.ctrlKey) {
+      // Cmd/Ctrl+click: toggle
+      setSelectedBlockIds(prev => {
+        const next = new Set(prev)
+        if (next.has(blockId)) {
+          next.delete(blockId)
+        } else {
+          next.add(blockId)
+        }
+        lastSelectedIdRef.current = blockId
+        return next
+      })
+    } else if (event?.shiftKey && lastSelectedIdRef.current) {
+      // Shift+click: range select
+      const anchorIdx = blocks.findIndex(b => b.id === lastSelectedIdRef.current)
+      const targetIdx = blocks.findIndex(b => b.id === blockId)
+      if (anchorIdx !== -1 && targetIdx !== -1) {
+        const start = Math.min(anchorIdx, targetIdx)
+        const end = Math.max(anchorIdx, targetIdx)
+        const rangeIds = blocks.slice(start, end + 1).map(b => b.id)
+        setSelectedBlockIds(prev => {
+          const next = new Set(prev)
+          rangeIds.forEach(id => next.add(id))
+          return next
+        })
+      }
+    } else {
+      // Plain click: single select
+      setSelectedBlockIds(new Set([blockId]))
+      lastSelectedIdRef.current = blockId
+    }
+  }, [blocks])
+
+  const handleSelectAll = useCallback(() => {
+    const nonPatternIds = blocks
+      .filter(b => !isPatternReference(b))
+      .map(b => b.id)
+    setSelectedBlockIds(new Set(nonPatternIds))
+  }, [blocks])
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedBlockIds(new Set())
+  }, [])
+
+  const [clipboardCount, setClipboardCount] = useState(() => getClipboardBlockCount())
+
   // Block operations
   const handleAddBlock = useCallback((blockSlug: string) => {
     const newBlock: BlockInstance = {
@@ -332,49 +405,48 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
       props: {}
     }
 
-    // Insert after selected block, or at end if none selected
-    if (selectedBlockId) {
-      const index = blocks.findIndex(b => b.id === selectedBlockId)
-      if (index !== -1) {
+    // Insert after last selected block, or at end
+    if (selectedBlockIds.size > 0) {
+      const lastIdx = Math.max(...Array.from(selectedBlockIds).map(id => blocks.findIndex(b => b.id === id)))
+      if (lastIdx !== -1) {
         const newBlocks = [...blocks]
-        newBlocks.splice(index + 1, 0, newBlock)
+        newBlocks.splice(lastIdx + 1, 0, newBlock)
         setBlocks(newBlocks)
         setSelectedBlockId(newBlock.id)
         return
       }
     }
 
-    // No selection or not found - add to end
     setBlocks(prev => [...prev, newBlock])
     setSelectedBlockId(newBlock.id)
-  }, [blocks, selectedBlockId])
+  }, [blocks, selectedBlockIds, setSelectedBlockId])
 
   // Pattern operations
   const handleAddPattern = useCallback((patternId: string) => {
     const patternRef = {
       type: 'pattern' as const,
       ref: patternId,
-      id: uuidv4(),  // Unique instance ID
+      id: uuidv4(),
     }
-    // Insert as if it were a block
     setBlocks(prev => [...prev, patternRef as unknown as BlockInstance])
     setSelectedBlockId(patternRef.id)
-  }, [])
+  }, [setSelectedBlockId])
 
   const handleRemoveBlock = useCallback((blockId: string) => {
     setBlocks(prev => prev.filter(b => b.id !== blockId))
-    if (selectedBlockId === blockId) {
-      setSelectedBlockId(null)
-    }
-  }, [selectedBlockId])
+    setSelectedBlockIds(prev => {
+      const next = new Set(prev)
+      next.delete(blockId)
+      return next
+    })
+  }, [])
 
-  const [clipboardHasBlock, setClipboardHasBlock] = useState(() => hasBlockInClipboard())
-
+  // Single-block clipboard (backward compat)
   const handleCopyBlock = useCallback((blockId: string) => {
     const block = blocks.find(b => b.id === blockId)
     if (block) {
       copyBlockToClipboard(block)
-      setClipboardHasBlock(true)
+      setClipboardCount(1)
       toast.success(t('messages.blockCopied'))
     }
   }, [blocks, t])
@@ -404,7 +476,85 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
     setBlocks(prev => [...prev, newBlock])
     setSelectedBlockId(newBlock.id)
     toast.success(t('messages.blockPasted'))
-  }, [blocks, selectedBlockId, t])
+  }, [blocks, selectedBlockId, t, setSelectedBlockId])
+
+  // --- Batch operations ---
+  const handleCopySelected = useCallback(() => {
+    const selected = blocks.filter(b => selectedBlockIds.has(b.id) && !isPatternReference(b))
+    if (selected.length === 0) return
+    copyBlocksToClipboard(selected, entitySlug)
+    setClipboardCount(selected.length)
+    toast.success(t('multiSelect.copied', { count: selected.length }))
+  }, [blocks, selectedBlockIds, entitySlug, t])
+
+  const handleDeleteSelected = useCallback(() => {
+    const idsToDelete = selectedBlockIds
+    setBlocks(prev => prev.filter(b => !idsToDelete.has(b.id)))
+    setSelectedBlockIds(new Set())
+    toast.success(t('multiSelect.deleted', { count: idsToDelete.size }))
+  }, [selectedBlockIds, t])
+
+  const handleDuplicateSelected = useCallback(() => {
+    const selectedOrdered = blocks.filter(b => selectedBlockIds.has(b.id) && !isPatternReference(b))
+    if (selectedOrdered.length === 0) return
+
+    const lastIdx = blocks.findIndex(b => b.id === selectedOrdered[selectedOrdered.length - 1].id)
+    const duplicates = selectedOrdered.map(b => ({
+      ...b,
+      id: uuidv4(),
+      props: { ...b.props },
+    }))
+
+    const newBlocks = [...blocks]
+    newBlocks.splice(lastIdx + 1, 0, ...duplicates)
+    setBlocks(newBlocks)
+    setSelectedBlockIds(new Set(duplicates.map(d => d.id)))
+    toast.success(t('multiSelect.duplicated', { count: duplicates.length }))
+  }, [blocks, selectedBlockIds, t])
+
+  const handlePasteBlocks = useCallback(() => {
+    const clipData = getBlocksFromClipboard()
+    if (!clipData || clipData.blocks.length === 0) {
+      // Fallback to v1 single block paste
+      handlePasteBlock()
+      return
+    }
+
+    const allowedSlugs = new Set(BlockService.getForScope(entitySlug).map(b => b.slug))
+    const compatible = clipData.blocks.filter(b => allowedSlugs.has(b.blockSlug))
+    const skipped = clipData.blocks.length - compatible.length
+
+    if (compatible.length === 0) {
+      toast.error(t('multiSelect.clipboardEmpty'))
+      return
+    }
+
+    const newBlocks: BlockInstance[] = compatible.map(b => ({
+      id: uuidv4(),
+      blockSlug: b.blockSlug,
+      props: { ...b.props },
+    }))
+
+    // Insert after last selected block, or at end
+    const insertIdx = selectedBlockIds.size > 0
+      ? Math.max(...Array.from(selectedBlockIds).map(id => blocks.findIndex(b => b.id === id)))
+      : blocks.length - 1
+
+    const updatedBlocks = [...blocks]
+    updatedBlocks.splice(insertIdx + 1, 0, ...newBlocks)
+    setBlocks(updatedBlocks)
+    setSelectedBlockIds(new Set(newBlocks.map(b => b.id)))
+
+    if (skipped > 0) {
+      toast.warning(t('multiSelect.pastedPartial', {
+        pasted: compatible.length,
+        total: clipData.blocks.length,
+        skipped,
+      }))
+    } else {
+      toast.success(t('multiSelect.pasted', { count: newBlocks.length }))
+    }
+  }, [blocks, selectedBlockIds, entitySlug, t, handlePasteBlock])
 
   const handleDuplicateBlock = useCallback((blockId: string) => {
     const block = blocks.find(b => b.id === blockId)
@@ -420,7 +570,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
       setBlocks(newBlocks)
       setSelectedBlockId(duplicated.id)
     }
-  }, [blocks])
+  }, [blocks, setSelectedBlockId])
 
   const handleUpdateBlockProps = useCallback((blockId: string, props: Record<string, unknown>) => {
     setBlocks(prev => prev.map(block =>
@@ -429,8 +579,6 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
   }, [])
 
   const handleReorderBlocks = useCallback((newBlocks: (BlockInstance | PatternReference)[]) => {
-    // For now we only support BlockInstance in state, filter out PatternReferences
-    // TODO: Add full pattern reference support when implementing pattern expansion
     setBlocks(newBlocks.filter((b): b is BlockInstance => !('ref' in b)))
   }, [])
 
@@ -454,6 +602,41 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
     })
   }, [])
 
+  // --- Keyboard shortcuts ---
+  useEffect(() => {
+    if (viewMode !== 'preview') return
+
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement
+      const isInputFocused = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
+      if (isInputFocused) return
+
+      const isMod = e.metaKey || e.ctrlKey
+
+      if (isMod && e.key === 'a') {
+        e.preventDefault()
+        handleSelectAll()
+      } else if (e.key === 'Escape') {
+        handleClearSelection()
+      } else if (isMod && e.key === 'c' && selectedBlockIds.size > 0) {
+        e.preventDefault()
+        handleCopySelected()
+      } else if (isMod && e.key === 'v') {
+        e.preventDefault()
+        handlePasteBlocks()
+      } else if (isMod && e.key === 'd' && selectedBlockIds.size > 0) {
+        e.preventDefault()
+        handleDuplicateSelected()
+      } else if ((e.key === 'Delete' || e.key === 'Backspace') && selectedBlockIds.size > 0) {
+        e.preventDefault()
+        handleDeleteSelected()
+      }
+    }
+
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [viewMode, selectedBlockIds, handleSelectAll, handleClearSelection, handleCopySelected, handlePasteBlocks, handleDuplicateSelected, handleDeleteSelected])
+
   const handleEntityFieldChange = useCallback((field: string, value: unknown) => {
     setEntityFields(prev => ({ ...prev, [field]: value }))
     onEntityFieldChangeProp?.(field, value)
@@ -472,9 +655,9 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
   const handleViewModeChange = useCallback((mode: ViewMode) => {
     setViewMode(mode)
     if (mode === 'settings') {
-      setSelectedBlockId(null)
+      handleClearSelection()
     }
-  }, [])
+  }, [handleClearSelection])
 
   const selectedBlock = selectedBlockId ? blocks.find(b => b.id === selectedBlockId) : undefined
 
@@ -739,18 +922,19 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
             // TreeView props for Layout tab
             pageBlocks={blocks}
             selectedBlockId={selectedBlockId}
-            onSelectBlock={setSelectedBlockId}
+            selectedBlockIds={selectedBlockIds}
+            onSelectBlock={handleSelectBlock}
             onReorderBlocks={handleReorderBlocks}
             onCopyBlock={handleCopyBlock}
             onDuplicateBlock={handleDuplicateBlock}
             onRemoveBlock={handleRemoveBlock}
-            onPasteBlock={handlePasteBlock}
-            hasClipboardBlock={clipboardHasBlock}
+            onPasteBlock={handlePasteBlocks}
+            clipboardCount={clipboardCount}
           />
         </div>
 
         {/* Center - Preview or Settings */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden relative">
           {/* Preview Mode - Single canvas with variable width for viewport simulation */}
           <div
             className={cn(
@@ -771,8 +955,8 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
               <div className="min-h-full bg-background">
                 <BlockPreviewCanvas
                   blocks={blocks}
-                  selectedBlockId={selectedBlockId}
-                  onSelectBlock={setSelectedBlockId}
+                  selectedBlockIds={selectedBlockIds}
+                  onSelectBlock={handleSelectBlock}
                   onMoveUp={handleMoveBlockUp}
                   onMoveDown={handleMoveBlockDown}
                   onCopy={handleCopyBlock}
@@ -782,6 +966,19 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
               </div>
             </div>
           </div>
+
+          {/* Batch Action Bar */}
+          {viewMode === 'preview' && selectedBlockIds.size > 1 && (
+            <BatchActionBar
+              selectedCount={selectedBlockIds.size}
+              onCopy={handleCopySelected}
+              onDuplicate={handleDuplicateSelected}
+              onDelete={handleDeleteSelected}
+              onClearSelection={handleClearSelection}
+              clipboardCount={clipboardCount}
+              onPaste={handlePasteBlocks}
+            />
+          )}
 
           {/* Settings Mode */}
           <div className={cn("h-full", viewMode !== 'settings' && "hidden")}>
@@ -799,6 +996,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
         <div className="w-96 border-l overflow-hidden shadow-sm">
           <BlockSettingsPanel
             block={selectedBlock}
+            selectedCount={selectedBlockIds.size}
             onUpdateProps={(props) => {
               if (selectedBlockId) {
                 handleUpdateBlockProps(selectedBlockId, props)
@@ -809,7 +1007,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
                 handleRemoveBlock(selectedBlockId)
               }
             }}
-            onClose={() => setSelectedBlockId(null)}
+            onClose={handleClearSelection}
           />
         </div>
       </div>
