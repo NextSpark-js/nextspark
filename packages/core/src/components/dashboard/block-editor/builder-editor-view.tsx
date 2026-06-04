@@ -8,11 +8,9 @@ import { v4 as uuidv4 } from 'uuid'
 import {
   copyBlockToClipboard,
   getBlockFromClipboard,
-  hasBlockInClipboard,
   copyBlocksToClipboard,
   getBlocksFromClipboard,
   getClipboardBlockCount,
-  hasClipboardBlocks,
 } from '../../../lib/blocks/clipboard'
 import { Button } from '../../ui/button'
 import { ButtonGroup } from '../../ui/button-group'
@@ -441,7 +439,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
     })
   }, [])
 
-  // Single-block clipboard (backward compat)
+  // Single-block clipboard
   const handleCopyBlock = useCallback((blockId: string) => {
     const block = blocks.find(b => b.id === blockId)
     if (block) {
@@ -515,7 +513,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
   const handlePasteBlocks = useCallback(() => {
     const clipData = getBlocksFromClipboard()
     if (!clipData || clipData.blocks.length === 0) {
-      // Fallback to v1 single block paste
+      // Fallback to single block paste
       handlePasteBlock()
       return
     }
