@@ -306,13 +306,32 @@
     },
     "layout": {
       "empty": "Aún no hay bloques agregados",
-      "pasteBlock": "Pegar bloque"
+      "pasteBlock": "Pegar bloque",
+      "pasteBlocks": "Pegar {count} bloques"
     },
     "messages": {
       "saved": "Guardado exitosamente",
       "created": "Creado exitosamente",
       "blockCopied": "Bloque copiado al portapapeles",
       "blockPasted": "Bloque pegado"
+    },
+    "multiSelect": {
+      "selected": "{count, plural, one {# bloque seleccionado} other {# bloques seleccionados}}",
+      "selectAll": "Seleccionar todos",
+      "deselectAll": "Deseleccionar todos",
+      "copy": "Copiar",
+      "copied": "{count, plural, one {Bloque copiado} other {# bloques copiados}}",
+      "paste": "Pegar",
+      "pasted": "{count, plural, one {Bloque pegado} other {# bloques pegados}}",
+      "pastedPartial": "{pasted} de {total} bloques pegados ({skipped} incompatibles)",
+      "duplicate": "Duplicar",
+      "duplicated": "{count, plural, one {Bloque duplicado} other {# bloques duplicados}}",
+      "delete": "Eliminar",
+      "deleteConfirm": "{count, plural, one {¿Eliminar este bloque?} other {¿Eliminar # bloques?}}",
+      "deleted": "{count, plural, one {Bloque eliminado} other {# bloques eliminados}}",
+      "patternSkipped": "Las referencias a patterns fueron excluidas de la selección",
+      "clipboardEmpty": "El portapapeles está vacío",
+      "settingsHint": "Usa la barra de acciones para gestionar los bloques seleccionados"
     }
   },
   "patterns": {

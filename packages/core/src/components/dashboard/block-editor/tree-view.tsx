@@ -28,7 +28,8 @@ import type { BlockInstance } from '../../../types/blocks'
 interface TreeViewProps {
   blocks: (BlockInstance | PatternReference)[]
   selectedBlockId: string | null
-  onSelectBlock: (id: string) => void
+  selectedBlockIds?: Set<string>
+  onSelectBlock: (id: string, event?: { metaKey?: boolean; shiftKey?: boolean; ctrlKey?: boolean }) => void
   onReorder: (blocks: (BlockInstance | PatternReference)[]) => void
   onCopy?: (id: string) => void
   onDuplicate?: (id: string) => void
@@ -44,6 +45,7 @@ interface TreeViewProps {
 export function TreeView({
   blocks,
   selectedBlockId,
+  selectedBlockIds,
   onSelectBlock,
   onReorder,
   onCopy,
@@ -112,9 +114,11 @@ export function TreeView({
     }
   }, [selectedBlockId])
 
-  // Handle block selection
-  const handleSelectBlock = useCallback((blockId: string) => {
-    onSelectBlock(blockId)
+  const isMultiSelect = (selectedBlockIds?.size ?? 0) > 1
+
+  // Handle block selection with event forwarding
+  const handleSelectBlock = useCallback((blockId: string, event?: { metaKey?: boolean; shiftKey?: boolean; ctrlKey?: boolean }) => {
+    onSelectBlock(blockId, event)
   }, [onSelectBlock])
 
   // Empty state
@@ -151,8 +155,9 @@ export function TreeView({
               <TreeViewNode
                 key={item.id}
                 block={item.block}
-                isSelected={selectedBlockId === item.id}
-                onSelect={() => handleSelectBlock(item.id)}
+                isSelected={selectedBlockIds ? selectedBlockIds.has(item.id) : selectedBlockId === item.id}
+                isMultiSelect={isMultiSelect}
+                onSelect={(event) => handleSelectBlock(item.id, event)}
                 onCopy={onCopy ? () => onCopy(item.id) : undefined}
                 onDuplicate={onDuplicate ? () => onDuplicate(item.id) : undefined}
                 onRemove={onRemove ? () => onRemove(item.id) : undefined}

@@ -27,8 +27,8 @@ function BlockSkeleton() {
 
 interface BlockPreviewCanvasProps {
   blocks: BlockInstance[]
-  selectedBlockId: string | null
-  onSelectBlock: (id: string) => void
+  selectedBlockIds: Set<string>
+  onSelectBlock: (id: string, event?: { metaKey?: boolean; shiftKey?: boolean; ctrlKey?: boolean }) => void
   onMoveUp?: (id: string) => void
   onMoveDown?: (id: string) => void
   onCopy?: (id: string) => void
@@ -38,7 +38,7 @@ interface BlockPreviewCanvasProps {
 
 export function BlockPreviewCanvas({
   blocks,
-  selectedBlockId,
+  selectedBlockIds,
   onSelectBlock,
   onMoveUp,
   onMoveDown,
@@ -48,6 +48,7 @@ export function BlockPreviewCanvas({
 }: BlockPreviewCanvasProps) {
   const t = useTranslations('admin.builder')
   const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null)
+  const isMultiSelect = selectedBlockIds.size > 1
 
   // Memoized callbacks to prevent re-renders of child components
   const handleHover = useCallback((id: string) => setHoveredBlockId(id), [])
@@ -73,7 +74,8 @@ export function BlockPreviewCanvas({
         <SelectableBlockPreview
           key={block.id || `block-${index}`}
           block={block}
-          isSelected={selectedBlockId === block.id}
+          isSelected={selectedBlockIds.has(block.id)}
+          isMultiSelect={isMultiSelect}
           isHovered={hoveredBlockId === block.id}
           onSelect={onSelectBlock}
           blockId={block.id}
@@ -96,8 +98,9 @@ interface SelectableBlockPreviewProps {
   block: BlockInstance
   blockId: string
   isSelected: boolean
+  isMultiSelect: boolean
   isHovered: boolean
-  onSelect: (id: string) => void
+  onSelect: (id: string, event?: { metaKey?: boolean; shiftKey?: boolean; ctrlKey?: boolean }) => void
   onHover: (id: string) => void
   onLeave: () => void
   isFirst?: boolean
@@ -113,6 +116,7 @@ const SelectableBlockPreview = memo(function SelectableBlockPreview({
   block,
   blockId,
   isSelected,
+  isMultiSelect,
   isHovered,
   onSelect,
   onHover,
@@ -127,8 +131,10 @@ const SelectableBlockPreview = memo(function SelectableBlockPreview({
 }: SelectableBlockPreviewProps) {
   const t = useTranslations('admin.builder')
 
-  // Memoized handlers to prevent re-renders
-  const handleSelect = useCallback(() => onSelect(blockId), [onSelect, blockId])
+  // Forward click event modifiers for multi-select
+  const handleSelect = useCallback((e: React.MouseEvent) => {
+    onSelect(blockId, { metaKey: e.metaKey, shiftKey: e.shiftKey, ctrlKey: e.ctrlKey })
+  }, [onSelect, blockId])
   const handleHover = useCallback(() => onHover(blockId), [onHover, blockId])
   const handleMoveUp = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
@@ -183,7 +189,7 @@ const SelectableBlockPreview = memo(function SelectableBlockPreview({
         <PatternReferencePreview
           patternRef={block}
           isSelected={isSelected}
-          onSelect={handleSelect}
+          onSelect={() => onSelect(blockId)}
           onRemove={handleRemove}
         />
       </div>
@@ -219,15 +225,16 @@ const SelectableBlockPreview = memo(function SelectableBlockPreview({
         'relative cursor-pointer transition-[border-color] duration-150 group @container',
         'border-2 border-transparent',
         'hover:border-primary/50',
-        isSelected && 'border-primary'
+        isSelected && !isMultiSelect && 'border-primary',
+        isSelected && isMultiSelect && 'border-primary/70 bg-primary/5'
       )}
       onClick={handleSelect}
       onMouseEnter={handleHover}
       onMouseLeave={onLeave}
       data-cy={sel('blockEditor.previewCanvas.block', { id: block.id })}
     >
-      {/* Floating Toolbar - visible on hover or selection */}
-      {(onDuplicate && onRemove) && (
+      {/* Floating Toolbar - visible on hover or single selection */}
+      {(onDuplicate && onRemove) && !isMultiSelect && (
         <FloatingBlockToolbar
           blockId={block.id}
           blockSlug={block.blockSlug}
@@ -238,13 +245,18 @@ const SelectableBlockPreview = memo(function SelectableBlockPreview({
         />
       )}
 
-      {/* Editing Badge - visible only when selected */}
+      {/* Editing Badge / Multi-select check */}
       {isSelected && (
         <div
-          className="absolute top-2 right-2 z-20 bg-primary text-primary-foreground text-xs px-2 py-1 rounded shadow-md"
+          className={cn(
+            "absolute top-2 right-2 z-20 text-xs px-2 py-1 rounded shadow-md",
+            isMultiSelect
+              ? "bg-primary/80 text-primary-foreground"
+              : "bg-primary text-primary-foreground"
+          )}
           data-cy={sel('blockEditor.previewCanvas.editingBadge', { id: block.id })}
         >
-          {t('canvas.editingBadge')}
+          {isMultiSelect ? '✓' : t('canvas.editingBadge')}
         </div>
       )}
 
