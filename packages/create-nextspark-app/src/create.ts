@@ -121,6 +121,11 @@ export async function createProject(options: ProjectOptions): Promise<void> {
       'better-auth',
       '@better-fetch/fetch',
       'jiti',
+      // Imported directly by shipped app routes (devtools docs/tests + media upload).
+      // Must be direct project deps, not phantom-hoisted from @nextsparkjs/core,
+      // otherwise `next build` fails to resolve them under pnpm.
+      'gray-matter',
+      '@vercel/blob',
     ].join(' ')
 
     execSync(`pnpm add ${essentialDeps}`, {

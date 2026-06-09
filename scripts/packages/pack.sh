@@ -315,6 +315,21 @@ if [ "$SKIP_BUILD" = false ]; then
         fi
     fi
 
+    # Sync mobile templates from apps/mobile before building mobile
+    # packages/mobile/templates/app/ is gitignored (synced at pack time).
+    # Without this, the published tarball is missing app/ and `nextspark init`
+    # for web-mobile projects fails REQUIRED_MOBILE_TEMPLATE_FILES validation.
+    if [[ " ${FINAL_PACKAGES[*]} " =~ " $REPO_ROOT/packages/mobile " ]]; then
+        echo -e "  ${CYAN}Syncing templates from apps/mobile...${NC}"
+        cd "$REPO_ROOT"
+        if pnpm sync:mobile-templates --sync > /dev/null 2>&1; then
+            echo -e "    ${GREEN}[OK]${NC} Mobile templates synced"
+        else
+            echo -e "    ${RED}[FAIL]${NC} Mobile template sync failed"
+            exit 1
+        fi
+    fi
+
     # Sync .claude/ into ai-workflow package before building
     # This ensures agents, commands, skills, etc. are up-to-date
     if [[ " ${FINAL_PACKAGES[*]} " =~ " $REPO_ROOT/packages/ai-workflow " ]]; then

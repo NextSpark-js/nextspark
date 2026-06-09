@@ -71,32 +71,28 @@ export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
     ],
 
     // ------------------------------------------
-    // PAGES ENTITY (uncommented by CLI if pages feature enabled)
+    // PAGES ENTITY (bundled with the starter theme by default)
     // ------------------------------------------
-    // __PAGES_PERMISSIONS_START__
-    // pages: [
-    //   { action: 'create', label: 'Create Pages', description: 'Can create new pages', roles: ['owner', 'admin'] },
-    //   { action: 'read', label: 'View Pages', description: 'Can view page details', roles: ['owner', 'admin', 'member', 'viewer'] },
-    //   { action: 'list', label: 'List Pages', description: 'Can see the pages list', roles: ['owner', 'admin', 'member', 'viewer'] },
-    //   { action: 'update', label: 'Edit Pages', description: 'Can modify page content', roles: ['owner', 'admin'] },
-    //   { action: 'delete', label: 'Delete Pages', description: 'Can delete pages', roles: ['owner', 'admin'], dangerous: true },
-    //   { action: 'publish', label: 'Publish Pages', description: 'Can publish pages to make them public', roles: ['owner', 'admin'] },
-    // ],
-    // __PAGES_PERMISSIONS_END__
+    pages: [
+      { action: 'create', label: 'Create Pages', description: 'Can create new pages', roles: ['owner', 'admin'] },
+      { action: 'read', label: 'View Pages', description: 'Can view page details', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'list', label: 'List Pages', description: 'Can see the pages list', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'update', label: 'Edit Pages', description: 'Can modify page content', roles: ['owner', 'admin'] },
+      { action: 'delete', label: 'Delete Pages', description: 'Can delete pages', roles: ['owner', 'admin'], dangerous: true },
+      { action: 'publish', label: 'Publish Pages', description: 'Can publish pages to make them public', roles: ['owner', 'admin'] },
+    ],
 
     // ------------------------------------------
-    // POSTS ENTITY (uncommented by CLI if blog feature enabled)
+    // POSTS ENTITY (bundled with the starter theme by default)
     // ------------------------------------------
-    // __POSTS_PERMISSIONS_START__
-    // posts: [
-    //   { action: 'create', label: 'Create Posts', description: 'Can create new blog posts', roles: ['owner', 'admin', 'member'] },
-    //   { action: 'read', label: 'View Posts', description: 'Can view post details', roles: ['owner', 'admin', 'member', 'viewer'] },
-    //   { action: 'list', label: 'List Posts', description: 'Can see the posts list', roles: ['owner', 'admin', 'member', 'viewer'] },
-    //   { action: 'update', label: 'Edit Posts', description: 'Can modify post content', roles: ['owner', 'admin', 'member'] },
-    //   { action: 'delete', label: 'Delete Posts', description: 'Can delete posts', roles: ['owner', 'admin'], dangerous: true },
-    //   { action: 'publish', label: 'Publish Posts', description: 'Can publish posts to make them public', roles: ['owner', 'admin'] },
-    // ],
-    // __POSTS_PERMISSIONS_END__
+    posts: [
+      { action: 'create', label: 'Create Posts', description: 'Can create new blog posts', roles: ['owner', 'admin', 'member'] },
+      { action: 'read', label: 'View Posts', description: 'Can view post details', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'list', label: 'List Posts', description: 'Can see the posts list', roles: ['owner', 'admin', 'member', 'viewer'] },
+      { action: 'update', label: 'Edit Posts', description: 'Can modify post content', roles: ['owner', 'admin', 'member'] },
+      { action: 'delete', label: 'Delete Posts', description: 'Can delete posts', roles: ['owner', 'admin'], dangerous: true },
+      { action: 'publish', label: 'Publish Posts', description: 'Can publish posts to make them public', roles: ['owner', 'admin'] },
+    ],
   },
 }
 

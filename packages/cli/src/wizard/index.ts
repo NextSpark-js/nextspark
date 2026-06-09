@@ -216,7 +216,10 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
     }
 
     // AI Workflow setup (optional)
-    const aiChoice = await promptAIWorkflowSetup(config)
+    // Skip the interactive prompt in non-interactive mode (--yes): it would
+    // otherwise throw on a missing TTY and abort the wizard after the project
+    // has already been generated.
+    const aiChoice = options.yes ? 'skip' : await promptAIWorkflowSetup(config)
 
     // Show next steps
     showNextSteps(config, selectedTheme, aiChoice)

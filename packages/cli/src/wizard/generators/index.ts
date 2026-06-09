@@ -121,6 +121,10 @@ async function copyProjectFiles(): Promise<void> {
   // Files and directories to copy
   const itemsToCopy = [
     { src: 'app', dest: 'app', force: true },
+    // lib/ ships project-local modules imported by app routes (e.g.
+    // @/lib/billing/{stripe,polar}-webhook-extensions). Without it `next build`
+    // fails to resolve those dynamic imports.
+    { src: 'lib', dest: 'lib', force: true },
     { src: 'public', dest: 'public', force: true },
     { src: 'proxy.ts', dest: 'proxy.ts', force: true }, // Next.js 16+ proxy (formerly middleware.ts)
     { src: 'next.config.mjs', dest: 'next.config.mjs', force: true },
@@ -242,6 +246,11 @@ async function updatePackageJson(config: WizardConfig): Promise<void> {
     'date-fns': '^4.1.0',
     'nanoid': '^5.0.9',
     'slugify': '^1.6.6',
+    // Imported directly by shipped app routes (devtools docs/tests + media upload).
+    // Declared as direct deps so `next build` can resolve them under pnpm
+    // (they would otherwise only exist as transitive @nextsparkjs/core deps).
+    'gray-matter': '^4.0.3',
+    '@vercel/blob': '^2.0.0',
   }
 
   for (const [name, version] of Object.entries(depsToAdd)) {
