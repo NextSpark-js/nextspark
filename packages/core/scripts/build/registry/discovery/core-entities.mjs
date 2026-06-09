@@ -93,8 +93,8 @@ export async function discoverCoreEntities(config) {
       try {
         // Extract export name from config file
         const exportName = await extractExportName(configPath, [
-          /export\s+const\s+([a-zA-Z]+EntityConfig)\s*[:=]/,
-          /export\s+const\s+([a-zA-Z]+ChildConfig)\s*[:=]/
+          /export\s+const\s+([a-zA-Z_$][\w$]*EntityConfig)\s*[:=]/,
+          /export\s+const\s+([a-zA-Z_$][\w$]*ChildConfig)\s*[:=]/
         ])
 
         if (!exportName) {

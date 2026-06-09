@@ -42,7 +42,7 @@ export async function discoverThemes(config = DEFAULT_CONFIG) {
 
           // Extract theme config export name and plugin dependencies
           const configContent = await readFile(configPath, 'utf8')
-          const exportMatch = configContent.match(/export\s+const\s+([a-zA-Z]+ThemeConfig)\s*[:=]/)
+          const exportMatch = configContent.match(/export\s+const\s+([a-zA-Z_$][\w$]*ThemeConfig)\s*[:=]/)
           const exportName = exportMatch ? exportMatch[1] : null
 
           // Extract plugin dependencies from theme config
@@ -215,7 +215,7 @@ export async function discoverThemes(config = DEFAULT_CONFIG) {
 
       // Extract theme config export name and plugin dependencies
       const configContent = await readFile(configPath, 'utf8')
-      const exportMatch = configContent.match(/export\s+const\s+([a-zA-Z]+ThemeConfig)\s*[:=]/)
+      const exportMatch = configContent.match(/export\s+const\s+([a-zA-Z_$][\w$]*ThemeConfig)\s*[:=]/)
       const exportName = exportMatch ? exportMatch[1] : null
 
       // Extract plugin dependencies from theme config

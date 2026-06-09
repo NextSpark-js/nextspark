@@ -42,8 +42,8 @@ export async function discoverNestedEntities(config, basePath, relativePath = ''
 
         try {
           const exportName = await extractExportName(configPath, [
-            /export\s+const\s+([a-zA-Z]+EntityConfig)\s*[:=]/,
-            /export\s+const\s+([a-zA-Z]+ChildConfig)\s*[:=]/
+            /export\s+const\s+([a-zA-Z_$][\w$]*EntityConfig)\s*[:=]/,
+            /export\s+const\s+([a-zA-Z_$][\w$]*ChildConfig)\s*[:=]/
           ])
 
           if (!exportName) {
@@ -163,8 +163,8 @@ export async function discoverNestedEntities(config, basePath, relativePath = ''
 
       try {
         const exportName = await extractExportName(configPath, [
-          /export\s+const\s+([a-zA-Z]+EntityConfig)\s*[:=]/,
-          /export\s+const\s+([a-zA-Z]+ChildConfig)\s*[:=]/
+          /export\s+const\s+([a-zA-Z_$][\w$]*EntityConfig)\s*[:=]/,
+          /export\s+const\s+([a-zA-Z_$][\w$]*ChildConfig)\s*[:=]/
         ])
 
         if (!exportName) {
