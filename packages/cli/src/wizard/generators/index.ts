@@ -153,6 +153,33 @@ async function copyProjectFiles(): Promise<void> {
 }
 
 /**
+ * Point Turbopack's root at the monorepo root (parent of web/).
+ *
+ * The shared next.config.mjs template sets `turbopack.root: __dirname`, which is
+ * correct for flat projects (node_modules lives alongside the config). In a
+ * monorepo (web/ + mobile/), pnpm hoists dependencies to the repo root, so the
+ * `next` package is symlinked from a store OUTSIDE web/. Turbopack refuses to
+ * compile files outside its root, so it must be raised to the parent directory.
+ *
+ * Must be called from within the web directory (process.cwd() === webDir).
+ */
+async function patchTurbopackRootForMonorepo(): Promise<void> {
+  const configPath = path.resolve(process.cwd(), 'next.config.mjs')
+  if (!await fs.pathExists(configPath)) {
+    return
+  }
+  const content = await fs.readFile(configPath, 'utf-8')
+  // Only rewrite the default `root: __dirname` produced by the template.
+  const patched = content.replace(
+    /(turbopack:\s*\{\s*root:\s*)__dirname(\s*,?\s*\})/,
+    "$1path.resolve(__dirname, '..')$2"
+  )
+  if (patched !== content) {
+    await fs.writeFile(configPath, patched, 'utf-8')
+  }
+}
+
+/**
  * Update or create package.json with required scripts and dependencies
  */
 async function updatePackageJson(config: WizardConfig): Promise<void> {
@@ -377,6 +404,14 @@ export async function generateProject(config: WizardConfig): Promise<void> {
   try {
     // 1. Copy core project files
     await copyProjectFiles()
+
+    // 1.05 In a monorepo, dependencies are hoisted to the repo root, so
+    // Turbopack's root must point at the parent (repo root) — otherwise the
+    // build fails with "couldn't find next/package.json" because the hoisted
+    // node_modules live outside web/.
+    if (isMonorepoProject(config)) {
+      await patchTurbopackRootForMonorepo()
+    }
 
     // 1.1 Update globals.css to use the correct theme path
     await updateGlobalsCss(config)

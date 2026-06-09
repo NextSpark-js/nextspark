@@ -185,8 +185,15 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
       })
       installSpinner.succeed('Dependencies installed!')
     } catch (error) {
-      installSpinner.fail('Failed to install dependencies')
-      console.log(chalk.yellow('  Run "pnpm install" manually to install dependencies'))
+      // pnpm v10.1+/v11 exits non-zero on unapproved native build scripts
+      // (ERR_PNPM_IGNORED_BUILDS) even though the install succeeds. Treat as
+      // success if node_modules was populated; only warn on genuine failures.
+      if (existsSync(join(projectRoot, 'node_modules'))) {
+        installSpinner.succeed('Dependencies installed!')
+      } else {
+        installSpinner.fail('Failed to install dependencies')
+        console.log(chalk.yellow('  Run "pnpm install" manually to install dependencies'))
+      }
     }
 
     // Build registries using the core's registry builder
@@ -619,6 +626,13 @@ async function installCore(): Promise<boolean> {
     spinner.succeed(chalk.green('@nextsparkjs/core installed successfully!'))
     return true
   } catch (error) {
+    // pnpm v10.1+/v11 exits non-zero on unapproved native build scripts
+    // (ERR_PNPM_IGNORED_BUILDS) even though packages are installed correctly.
+    // Treat as success if @nextsparkjs/core actually landed in node_modules.
+    if (isCoreInstalled()) {
+      spinner.succeed(chalk.green('@nextsparkjs/core installed successfully!'))
+      return true
+    }
     spinner.fail(chalk.red('Failed to install @nextsparkjs/core'))
     if (error instanceof Error) {
       console.log(chalk.red(`  Error: ${error.message}`))
@@ -704,6 +718,13 @@ async function installMobile(): Promise<boolean> {
     spinner.succeed(chalk.green('@nextsparkjs/mobile installed successfully!'))
     return true
   } catch (error) {
+    // pnpm v10.1+/v11 exits non-zero on unapproved native build scripts
+    // (ERR_PNPM_IGNORED_BUILDS) even though packages are installed correctly.
+    // Treat as success if @nextsparkjs/mobile actually landed in node_modules.
+    if (isMobileInstalled()) {
+      spinner.succeed(chalk.green('@nextsparkjs/mobile installed successfully!'))
+      return true
+    }
     spinner.fail(chalk.red('Failed to install @nextsparkjs/mobile'))
     if (error instanceof Error) {
       console.log(chalk.red(`  Error: ${error.message}`))

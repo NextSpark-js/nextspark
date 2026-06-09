@@ -134,8 +134,19 @@ export async function createProject(options: ProjectOptions): Promise<void> {
     })
     cliSpinner.succeed('  @nextsparkjs/core, @nextsparkjs/cli, and dependencies installed')
   } catch (error) {
-    cliSpinner.fail('  Failed to install dependencies')
-    throw error
+    // pnpm v10.1+/v11 exits non-zero on unapproved native build scripts
+    // (ERR_PNPM_IGNORED_BUILDS) even though the install actually succeeds.
+    // Treat as success if @nextsparkjs/core landed in node_modules; only fail
+    // for genuine install errors.
+    const coreInstalled = fs.existsSync(
+      path.join(projectPath, 'node_modules', '@nextsparkjs', 'core')
+    )
+    if (coreInstalled) {
+      cliSpinner.succeed('  @nextsparkjs/core, @nextsparkjs/cli, and dependencies installed')
+    } else {
+      cliSpinner.fail('  Failed to install dependencies')
+      throw error
+    }
   }
 
   // Step 5: Run wizard (inherits terminal for interactive mode)

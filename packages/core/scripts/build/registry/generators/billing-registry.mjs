@@ -9,7 +9,14 @@
 import { existsSync } from 'fs'
 import { readFileSync } from 'fs'
 import { join } from 'path'
-import { createJiti } from 'jiti'
+import { createRequire } from 'module'
+// Resolve jiti via createRequire (its CommonJS build) instead of a static ESM
+// `import { createJiti } from 'jiti'`. Depending on the node_modules layout
+// (e.g. pnpm monorepo hoisting) Node may resolve jiti's CJS build, where the
+// named ESM export isn't statically detectable ("Named export 'createJiti' not
+// found"). The CJS entry reliably exposes createJiti across all layouts.
+const require = createRequire(import.meta.url)
+const { createJiti } = require('jiti')
 
 import { log } from '../../../utils/index.mjs'
 import { convertCorePath } from '../config.mjs'
