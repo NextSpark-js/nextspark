@@ -9,8 +9,23 @@ import chalk from 'chalk'
 import ora from 'ora'
 import { confirm, select } from '@inquirer/prompts'
 import { execSync } from 'child_process'
-import { existsSync, readdirSync } from 'fs'
+import { existsSync, readdirSync, readFileSync } from 'fs'
 import { join, resolve } from 'path'
+
+/**
+ * Resolve the CLI's own version so @nextsparkjs/* installs can be pinned to the
+ * exact matching version. Requesting an exact version bypasses the `latest`
+ * dist-tag (and any stale pnpm packument cache pointing at an old `latest`),
+ * which otherwise causes mismatched installs like mobile@<old> + core@<new>.
+ */
+function getCliVersion(): string {
+  try {
+    const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf-8'))
+    return pkg.version || 'latest'
+  } catch {
+    return 'latest'
+  }
+}
 import { showBanner, showSection, showSuccess, showError, showInfo, showWarning } from './banner.js'
 import { runAllPrompts, runQuickPrompts, runExpertPrompts } from './prompts/index.js'
 import { generateProject, isMonorepoProject, getWebDir } from './generators/index.js'
@@ -597,7 +612,9 @@ async function installCore(): Promise<boolean> {
     // Check for local tarball first
     const localTarball = findLocalCoreTarball()
 
-    let packageSpec = '@nextsparkjs/core'
+    // Pin to the CLI's exact version (not the `latest` dist-tag) so the install
+    // is deterministic regardless of npm dist-tags or a stale pnpm cache.
+    let packageSpec = `@nextsparkjs/core@${getCliVersion()}`
     if (localTarball) {
       packageSpec = localTarball
       spinner.text = 'Installing @nextsparkjs/core from local tarball...'
@@ -690,7 +707,10 @@ async function installMobile(): Promise<boolean> {
     // Check for local tarball first
     const localTarball = findLocalMobileTarball()
 
-    let packageSpec = '@nextsparkjs/mobile'
+    // Pin to the CLI's exact version (not the `latest` dist-tag) so the install
+    // is deterministic regardless of npm dist-tags or a stale pnpm cache. This
+    // prevents mobile@<old> being pulled while core/cli are <new>.
+    let packageSpec = `@nextsparkjs/mobile@${getCliVersion()}`
     if (localTarball) {
       packageSpec = localTarball
       spinner.text = 'Installing @nextsparkjs/mobile from local tarball...'
