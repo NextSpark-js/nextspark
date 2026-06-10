@@ -33,7 +33,7 @@ export function useUpdateCustomer() {
       customersApi.update(id, data),
     onSuccess: (response) => {
       // Update the specific customer in cache
-      queryClient.setQueryData([...CUSTOMERS_QUERY_KEY, response.data.id], response)
+      queryClient.setQueryData([...CUSTOMERS_QUERY_KEY, response.id], response)
       // Invalidate list to refetch
       queryClient.invalidateQueries({ queryKey: CUSTOMERS_QUERY_KEY })
     },

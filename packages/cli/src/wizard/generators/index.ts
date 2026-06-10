@@ -44,6 +44,24 @@ import { generateMonorepoStructure, isMonorepoProject, getWebDir } from './monor
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
+/**
+ * Resolve the version to pin @nextsparkjs/* dependencies to.
+ *
+ * All NextSpark packages are released in lockstep, so the generated project
+ * pins every @nextsparkjs/* dependency to the exact version of the CLI that
+ * generated it. This avoids the "version Frankenstein" where `latest` resolves
+ * to different versions at different moments (e.g. across the web/ and mobile/
+ * installs of a monorepo). Falls back to 'latest' if the version can't be read.
+ */
+function getNextSparkVersion(): string {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json'), 'utf-8'))
+    return pkg.version || 'latest'
+  } catch {
+    return 'latest'
+  }
+}
+
 export {
   copyStarterTheme,
   updateThemeConfig,
@@ -237,11 +255,14 @@ async function updatePackageJson(config: WizardConfig): Promise<void> {
   // Ensure dependencies object exists
   packageJson.dependencies = packageJson.dependencies || {}
 
+  // Pin all @nextsparkjs/* packages to the CLI's version for a coherent install
+  const nsVersion = getNextSparkVersion()
+
   // Core dependencies (required for Next.js + NextSpark)
   const depsToAdd: Record<string, string> = {
     // NextSpark
-    '@nextsparkjs/core': 'latest',
-    '@nextsparkjs/cli': 'latest',
+    '@nextsparkjs/core': nsVersion,
+    '@nextsparkjs/cli': nsVersion,
     // Next.js + React
     'next': '^16.0.0',
     'react': '^19.0.0',
@@ -281,9 +302,8 @@ async function updatePackageJson(config: WizardConfig): Promise<void> {
   }
 
   for (const [name, version] of Object.entries(depsToAdd)) {
-    // Always set our core packages to 'latest' for consistency
-    // pnpm may have resolved to specific versions during initial install,
-    // but we want package.json to use 'latest' semantic versioning
+    // Always (re)pin our packages to the CLI version for a coherent install;
+    // pnpm may have resolved a different version during the initial install.
     if (name.startsWith('@nextsparkjs/')) {
       packageJson.dependencies[name] = version
     } else if (!packageJson.dependencies[name]) {
@@ -326,12 +346,12 @@ async function updatePackageJson(config: WizardConfig): Promise<void> {
     'webpack': '^5.97.0',
     'allure-cypress': '^3.0.0',
     'allure-commandline': '^2.27.0',
-    // NextSpark Testing
-    '@nextsparkjs/testing': 'latest',
+    // NextSpark Testing (pinned to CLI version for a coherent install)
+    '@nextsparkjs/testing': nsVersion,
   }
 
   for (const [name, version] of Object.entries(devDepsToAdd)) {
-    // Always set our core packages to 'latest' for consistency
+    // Always (re)pin our packages to the CLI version for a coherent install
     if (name.startsWith('@nextsparkjs/')) {
       packageJson.devDependencies[name] = version
     } else if (!packageJson.devDependencies[name]) {

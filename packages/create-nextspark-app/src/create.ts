@@ -98,9 +98,23 @@ export async function createProject(options: ProjectOptions): Promise<void> {
     const localCliTarball = findLocalTarball('@nextsparkjs/cli')
     const localUiTarball = findLocalTarball('@nextsparkjs/ui')
 
-    let corePackage = '@nextsparkjs/core'
-    let cliPackage = '@nextsparkjs/cli'
-    let uiPackage = '@nextsparkjs/ui'
+    // Pin @nextsparkjs/* to create-nextspark-app's own version (all NextSpark
+    // packages release in lockstep). Without this, the unversioned names resolve
+    // to `latest` independently for web/ and mobile/, producing an incoherent
+    // "version Frankenstein" install.
+    let ownVersion = 'latest'
+    try {
+      const ownPkg = JSON.parse(
+        fs.readFileSync(new URL('../package.json', import.meta.url), 'utf-8')
+      )
+      if (ownPkg.version) ownVersion = ownPkg.version
+    } catch {
+      // fall back to latest
+    }
+
+    let corePackage = `@nextsparkjs/core@${ownVersion}`
+    let cliPackage = `@nextsparkjs/cli@${ownVersion}`
+    let uiPackage = `@nextsparkjs/ui@${ownVersion}`
 
     if (localCoreTarball && localCliTarball) {
       corePackage = localCoreTarball

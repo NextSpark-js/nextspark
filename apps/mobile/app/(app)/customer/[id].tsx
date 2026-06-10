@@ -33,7 +33,7 @@ export default function EditCustomerScreen() {
     )
   }
 
-  if (error || !data?.data) {
+  if (error || !data) {
     return (
       <View style={styles.centered}>
         <Text style={styles.errorText}>
@@ -46,7 +46,7 @@ export default function EditCustomerScreen() {
   return (
     <CustomerForm
       mode="edit"
-      initialData={data.data}
+      initialData={data}
       onSubmit={handleSubmit}
       onDelete={handleDelete}
       isLoading={updateCustomer.isPending || deleteCustomer.isPending}

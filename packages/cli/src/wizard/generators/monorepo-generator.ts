@@ -54,6 +54,8 @@ const MOBILE_TEMPLATE_FILES = [
   'tsconfig.json',
   'jest.config.js',
   'eas.json',
+  // NativeWind types — without it `className` on RN View/Text fails typecheck
+  'nativewind-env.d.ts',
 ] as const
 
 // ============================================================================
@@ -61,13 +63,28 @@ const MOBILE_TEMPLATE_FILES = [
 // ============================================================================
 
 /**
+ * Resolve the version to pin @nextsparkjs/* packages to (the CLI's own version).
+ * All NextSpark packages release in lockstep, so pinning to the CLI version
+ * keeps the web/ and mobile/ installs of a monorepo coherent instead of letting
+ * `latest` resolve to different versions at different moments.
+ */
+function getNextSparkVersion(): string {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json'), 'utf-8'))
+    return pkg.version || 'latest'
+  } catch {
+    return 'latest'
+  }
+}
+
+/**
  * Centralized package versions for mobile dependencies.
  * Update these when releasing new versions of NextSpark packages.
  */
 const VERSIONS = {
-  // NextSpark packages - use 'latest' for consistency with web packages
-  NEXTSPARK_MOBILE: 'latest',
-  NEXTSPARK_UI: 'latest',
+  // NextSpark packages - pinned to the CLI version for a coherent install
+  NEXTSPARK_MOBILE: getNextSparkVersion(),
+  NEXTSPARK_UI: getNextSparkVersion(),
 
   // Core dependencies
   TANSTACK_QUERY: '^5.62.0',
@@ -95,6 +112,10 @@ const VERSIONS = {
   NATIVEWIND: '^4.2.1',
   TAILWINDCSS: '^3',
   TAILWIND_MERGE: '^3.4.0',
+  // Used by the mobile template's UI components (src/components/ui/text.tsx
+  // via cva, src/lib/utils.ts via clsx) — must be declared or typecheck fails.
+  CLSX: '^2.1.1',
+  CLASS_VARIANCE_AUTHORITY: '^0.7.1',
   LUCIDE_RN: '^0.563.0',
 
   // Dev dependencies
@@ -410,13 +431,16 @@ async function createMobilePackageJson(mobileDir: string, config: WizardConfig):
       'react-native-screens': VERSIONS.RN_SCREENS,
       'react-native-svg': VERSIONS.RN_SVG,
       'tailwind-merge': VERSIONS.TAILWIND_MERGE,
-      'tailwindcss': VERSIONS.TAILWINDCSS
+      'tailwindcss': VERSIONS.TAILWINDCSS,
+      'clsx': VERSIONS.CLSX,
+      'class-variance-authority': VERSIONS.CLASS_VARIANCE_AUTHORITY
     },
     devDependencies: {
       '@babel/core': VERSIONS.BABEL_CORE,
       '@testing-library/jest-native': VERSIONS.TESTING_LIBRARY_JEST_NATIVE,
       '@testing-library/react-native': VERSIONS.TESTING_LIBRARY_RN,
       '@types/jest': '^29.5.0',
+      '@types/node': '^22.10.7',
       '@types/react': '^19',
       'jest': VERSIONS.JEST,
       'jest-expo': VERSIONS.JEST_EXPO,

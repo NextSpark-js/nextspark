@@ -46,7 +46,7 @@ export default function EditTaskScreen() {
   return (
     <TaskForm
       mode="edit"
-      initialData={data.data}
+      initialData={data}
       onSubmit={handleSubmit}
       onDelete={handleDelete}
       isLoading={updateTask.isPending || deleteTask.isPending}

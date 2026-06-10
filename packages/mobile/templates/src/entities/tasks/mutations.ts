@@ -33,8 +33,8 @@ export function useUpdateTask() {
     mutationFn: ({ id, data }: { id: string; data: UpdateTaskInput }) =>
       tasksApi.update(id, data),
     onSuccess: (response) => {
-      // Update the specific task in cache
-      queryClient.setQueryData([...TASKS_QUERY_KEY, response.data.id], response)
+      // update() returns the entity directly (createEntityApi unwraps SingleResponse)
+      queryClient.setQueryData([...TASKS_QUERY_KEY, response.id], response)
       // Invalidate list to refetch
       queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY })
     },
