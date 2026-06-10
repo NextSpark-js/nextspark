@@ -534,10 +534,23 @@ async function promptAIWorkflowSetup(config: WizardConfig): Promise<string> {
   // All generated projects use pnpm workspaces (web-only for themes/plugins,
   // monorepo for web/ + mobile/), so -w flag is always required
   try {
-    execSync('pnpm add -D -w @nextsparkjs/ai-workflow', {
-      cwd: projectRoot,
-      stdio: 'inherit',
-    })
+    // Pin to the CLI's exact version (not `latest`) so it matches the rest of
+    // the install and isn't pulled to an old version by a stale pnpm cache.
+    try {
+      execSync(`pnpm add -D -w @nextsparkjs/ai-workflow@${getCliVersion()}`, {
+        cwd: projectRoot,
+        stdio: 'inherit',
+      })
+    } catch (installErr) {
+      // pnpm v10.1+/v11 exits non-zero on unapproved native build scripts even
+      // when the install succeeds. Only treat it as a real failure if the
+      // package didn't actually land in node_modules.
+      const rootPkg = join(projectRoot, 'node_modules', '@nextsparkjs', 'ai-workflow')
+      const webPkg = join(projectRoot, 'web', 'node_modules', '@nextsparkjs', 'ai-workflow')
+      if (!existsSync(rootPkg) && !existsSync(webPkg)) {
+        throw installErr
+      }
+    }
 
     // Find setup script — check root node_modules first, then web/ for monorepo hoisting
     let setupScript = join(projectRoot, 'node_modules', '@nextsparkjs', 'ai-workflow', 'scripts', 'setup.mjs')

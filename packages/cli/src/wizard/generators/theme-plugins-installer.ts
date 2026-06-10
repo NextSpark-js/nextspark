@@ -190,23 +190,44 @@ async function updateTsConfigPaths(name: string, type: 'theme' | 'plugin'): Prom
  * Install a theme using direct import (same package)
  */
 async function installThemeViaCli(packageSpec: string): Promise<boolean> {
-  try {
-    await addTheme(packageSpec, {});
-    return true;
-  } catch {
-    return false;
-  }
+  return withWebCwd(async () => {
+    try {
+      await addTheme(packageSpec, {});
+      return true;
+    } catch {
+      return false;
+    }
+  });
 }
 
 /**
  * Install a plugin using direct import (same package)
  */
 async function installPluginViaCli(packageSpec: string): Promise<boolean> {
+  return withWebCwd(async () => {
+    try {
+      await addPlugin(packageSpec, {});
+      return true;
+    } catch {
+      return false;
+    }
+  });
+}
+
+/**
+ * Run a callback with the cwd set to web/ in a monorepo, so the cwd-relative
+ * logic in addTheme/addPlugin (which look for ./contents) targets the web app.
+ * In a flat project (no web/ subdir) the cwd is left unchanged.
+ */
+async function withWebCwd<T>(fn: () => Promise<T>): Promise<T> {
+  const originalCwd = process.cwd()
+  const webDir = join(originalCwd, 'web')
+  const useWeb = existsSync(webDir) && existsSync(join(webDir, 'contents'))
+  if (useWeb) process.chdir(webDir)
   try {
-    await addPlugin(packageSpec, {});
-    return true;
-  } catch {
-    return false;
+    return await fn()
+  } finally {
+    if (useWeb) process.chdir(originalCwd)
   }
 }
 
