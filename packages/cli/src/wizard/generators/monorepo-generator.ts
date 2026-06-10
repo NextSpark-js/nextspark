@@ -253,8 +253,14 @@ async function createRootPackageJson(targetDir: string, config: WizardConfig): P
  * Create the pnpm-workspace.yaml file
  */
 async function createPnpmWorkspace(targetDir: string): Promise<void> {
+  // Include the web app's themes/plugins as workspace members so their own
+  // package.json dependencies (e.g. an AI plugin's @ai-sdk/* packages) get
+  // installed. Without these globs the plugin is copied but its deps never
+  // install, and `next build` fails with "Module not found".
   const workspaceContent = `packages:
   - '${DIRS.WEB}'
+  - '${DIRS.WEB}/contents/themes/*'
+  - '${DIRS.WEB}/contents/plugins/*'
   - '${DIRS.MOBILE}'
 `
   await fs.writeFile(path.join(targetDir, FILES.PNPM_WORKSPACE), workspaceContent)
