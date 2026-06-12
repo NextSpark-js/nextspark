@@ -43,13 +43,22 @@ const baseUrl = process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL |
 // Use the email factory to get the appropriate provider
 const emailService = EmailFactory.create();
 
-// Supabase transaction pooler (port 6543) requires pgbouncer parameter for Better Auth compatibility
+// Better Auth reads users/account/session/verification WITHOUT a user GUC during
+// login/verification (the user is not authenticated yet). Under real RLS those
+// tables are locked down (migration 002), so Better Auth must run on the SERVICE
+// connection (bypass). Falls back to DATABASE_URL when DATABASE_SERVICE_URL is
+// unset (pre-cutover: same owner connection, unchanged behavior).
 // Strip sslmode from URL to prevent pg-connection-string from overriding our explicit ssl config
-const databaseUrl = process.env.DATABASE_URL!;
+const databaseUrl = process.env.DATABASE_SERVICE_URL || process.env.DATABASE_URL!;
 const cleanUrl = stripSSLParams(databaseUrl);
-const connectionString = cleanUrl.includes('?')
-  ? `${cleanUrl}&pgbouncer=true`
-  : `${cleanUrl}?pgbouncer=true`;
+// Supabase transaction pooler (port 6543) requires the pgbouncer parameter for
+// Better Auth compatibility. Append it ONLY for pooler URLs — a direct
+// connection (typical for the service/owner role) must NOT carry pgbouncer=true,
+// which would alter prepared-statement behavior.
+const isPoolerUrl = /:6543(\/|$|\?)/.test(databaseUrl) || /pooler/i.test(databaseUrl);
+const connectionString = isPoolerUrl
+  ? (cleanUrl.includes('?') ? `${cleanUrl}&pgbouncer=true` : `${cleanUrl}?pgbouncer=true`)
+  : cleanUrl;
 
 const pool = new Pool({
   connectionString,

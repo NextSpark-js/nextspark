@@ -6,19 +6,20 @@
  */
 
 import { TeamService } from '@/core/lib/services/team.service'
-import { queryOneWithRLS, queryWithRLS, getTransactionClient } from '@/core/lib/db'
+import { queryOneWithRLS, queryWithRLS, getServiceTransactionClient } from '@/core/lib/db'
 import type { Team } from '@/core/lib/teams/types'
 
 // Mock database functions
 jest.mock('@/core/lib/db', () => ({
   queryOneWithRLS: jest.fn(),
   queryWithRLS: jest.fn(),
-  getTransactionClient: jest.fn(),
+  // Team creation runs on the SERVICE transaction (RLS bypass) — see TeamService.create
+  getServiceTransactionClient: jest.fn(),
 }))
 
 const mockQueryOneWithRLS = queryOneWithRLS as jest.MockedFunction<typeof queryOneWithRLS>
 const mockQueryWithRLS = queryWithRLS as jest.MockedFunction<typeof queryWithRLS>
-const mockGetTransactionClient = getTransactionClient as jest.MockedFunction<typeof getTransactionClient>
+const mockGetServiceTransactionClient = getServiceTransactionClient as jest.MockedFunction<typeof getServiceTransactionClient>
 
 // Sample team data
 const mockTeam: Team = {
@@ -214,7 +215,7 @@ describe('TeamService', () => {
     }
 
     beforeEach(() => {
-      mockGetTransactionClient.mockResolvedValue(mockTx as any)
+      mockGetServiceTransactionClient.mockResolvedValue(mockTx as any)
     })
 
     it('creates team with owner membership and subscription', async () => {

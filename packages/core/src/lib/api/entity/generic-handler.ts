@@ -427,10 +427,20 @@ async function resolveOwnershipFilter(
     return { applies: false }
   }
 
-  // Resolve the linked record to find the filter value
-  const { table, userField, valueField } = ownershipFilter.linkedBy
+  // Direct-field ownership: the entity row already carries the owner id, so the
+  // filter value is simply the current user's id — no linked lookup needed.
+  if (!ownershipFilter.linkedBy) {
+    return { applies: true, field: ownershipFilter.field, value: userId }
+  }
+
+  // Linked ownership: resolve the filter value from a linked record.
+  // `deletedAt IS NULL` is only appended when the linked table is soft-deletable
+  // (softDelete !== false). Entities without a `deletedAt` column set
+  // `softDelete: false` to avoid a 42703 (undefined column) error.
+  const { table, userField, valueField, softDelete } = ownershipFilter.linkedBy
+  const softDeleteClause = softDelete === false ? '' : ' AND "deletedAt" IS NULL'
   const linkedRow = await queryOneWithRLS<Record<string, string>>(
-    `SELECT "${valueField}" FROM "${table}" WHERE "${userField}" = $1 AND "teamId" = $2 AND "deletedAt" IS NULL`,
+    `SELECT "${valueField}" FROM "${table}" WHERE "${userField}" = $1 AND "teamId" = $2${softDeleteClause}`,
     [userId, teamId],
     userId
   )
@@ -470,9 +480,20 @@ async function checkSessionPermission(
       )
       return addCorsHeaders(response, request)
     }
-  } catch {
-    // If permission check fails (e.g., permission not registered), allow
-    // This maintains backward compatibility for entities without permissions
+  } catch (error) {
+    // FAIL CLOSED. A thrown error here is a genuine failure (e.g. a DB outage):
+    // `checkPermission` returns `false` (it does not throw) for unregistered
+    // permissions, so this catch only fires on real errors — which must NEVER
+    // grant access. Surface a 500-class code so a transient DB failure is not
+    // mislabeled as a clean authorization denial.
+    console.error(`[GenericHandler] Permission check errored for ${entitySlug}.${action}:`, error)
+    const response = createApiError(
+      `Permission check failed for ${entitySlug}.${action}`,
+      500,
+      undefined,
+      'PERMISSION_CHECK_FAILED'
+    )
+    return addCorsHeaders(response, request)
   }
   return null
 }
@@ -603,6 +624,14 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
       }
       teamId = teamValidation.teamId
       isBypass = teamValidation.isBypass
+
+      // Entity-level permission check for session users (api-key uses scopes
+      // above). Skipped for admin bypass (superadmin/developer), who are
+      // authorized at the platform level. A member without `entity.list` → 403.
+      if (!isBypass && teamId) {
+        const permDenied = await checkSessionPermission(authResult, resolution.entityConfig.slug, 'list', teamId, request)
+        if (permDenied) return permDenied
+      }
     }
 
     // Parse request parameters
@@ -1529,6 +1558,13 @@ export async function handleGenericRead(request: NextRequest, { params }: { para
       }
       teamId = teamValidation.teamId
       isBypass = teamValidation.isBypass
+
+      // Entity-level permission check for session users (api-key uses scopes).
+      // Skipped for admin bypass; a member without `entity.read` → 403.
+      if (!isBypass && teamId) {
+        const permDenied = await checkSessionPermission(authResult, resolution.entityConfig.slug, 'read', teamId, request)
+        if (permDenied) return permDenied
+      }
     }
 
     // Build dynamic query (include all fields for read operations)

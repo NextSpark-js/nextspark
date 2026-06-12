@@ -171,7 +171,11 @@ Define el alcance y disponibilidad de la entidad.
 }
 ```
 
-**Nota:** Si es `true`, debes configurar policies RLS para `anon` role en PostgreSQL.
+**Nota:** con `public: true`, las lecturas públicas/no autenticadas entran con
+`userId = null` → **conexión de servicio (RLS-bypass)** y se filtran en SQL en el handler
+(p.ej. `status = 'published'`). **No** dependen del rol `anon`: las policies `TO anon`
+solo aplican si exponés la Data API / PostgREST de Supabase directamente (ver
+[RLS → Enforcement Layer](../10-backend/03-rls-policies.md#enforcement-layer-beta167)).
 
 ### `access.api`
 

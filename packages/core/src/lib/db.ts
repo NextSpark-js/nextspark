@@ -107,6 +107,35 @@ const pool = new Pool({
 });
 
 /**
+ * Service connection pool (RLS bypass for system operations).
+ *
+ * After the runtime cutover the app connects DATABASE_URL as the non-owner role
+ * `nextspark_app` (RLS evaluated). System operations that legitimately run
+ * WITHOUT a user context — Better Auth login/verification, the in-request
+ * scheduler, the scheduled-actions processor, payment-provider webhooks, the
+ * superadmin/developer bypass check, and the privileged team/subscription
+ * bootstrap — must run on a connection that bypasses RLS. That connection is
+ * chosen by CREDENTIAL (DATABASE_SERVICE_URL), never by a GUC derivable from
+ * request input: on Supabase the `service_role` connection string (BYPASSRLS of
+ * factory); on self-hosted Postgres a dedicated owner/bypass role.
+ *
+ * Backward-compatible: if DATABASE_SERVICE_URL is unset it falls back to
+ * DATABASE_URL and reuses the same `pool` — so before the cutover (where
+ * DATABASE_URL is still the owner) nothing changes.
+ */
+const serviceDatabaseUrl = process.env.DATABASE_SERVICE_URL || databaseUrl;
+const servicePool: Pool =
+  serviceDatabaseUrl === databaseUrl
+    ? pool
+    : new Pool({
+        connectionString: stripSSLParams(serviceDatabaseUrl),
+        ssl: parseSSLConfig(serviceDatabaseUrl),
+        max: 20,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 10000,
+      });
+
+/**
  * Validate userId format to prevent SQL injection in SET LOCAL commands
  *
  * Security behavior:
@@ -158,14 +187,32 @@ export function validateUserId(userId: string): void {
  * Note: Counter is incremented AFTER successful connection to avoid drift
  * if pool.connect() fails.
  */
-async function acquireClient() {
+async function acquireClient(useService = false) {
   if (isShuttingDown) {
     throw new Error('Database pool is shutting down. Cannot acquire new connections.');
   }
   // FIX: Increment counter AFTER successful connection to prevent drift on failure
-  const client = await pool.connect();
+  const client = await (useService ? servicePool : pool).connect();
   activeConnections++;
   return client;
+}
+
+/**
+ * Decide whether a *WithRLS call should run on the service (bypass) pool.
+ *
+ * Rule: a call with NO userId is a system read/write by definition → service.
+ * A call with a userId runs on the app pool with the GUC → RLS evaluated.
+ * `options.service === true` FORCES the service pool even when a userId is
+ * present — used by privileged system bootstraps (e.g. team/subscription
+ * creation) that carry a userId but must bypass RLS.
+ */
+function shouldUseService(userId?: string | null, options?: { service?: boolean }): boolean {
+  return options?.service === true || !userId;
+}
+
+export interface RLSOptions {
+  /** Force the service (RLS-bypass) pool even if a userId is provided. */
+  service?: boolean;
 }
 
 /**
@@ -189,16 +236,19 @@ function releaseClient(client: PoolClient) {
 export async function queryWithRLS<T = unknown>(
   query: string,
   params: unknown[] = [],
-  userId?: string | null
+  userId?: string | null,
+  options?: RLSOptions
 ): Promise<T[]> {
-  const client = await acquireClient();
+  const useService = shouldUseService(userId, options);
+  const client = await acquireClient(useService);
 
   try {
     // Start transaction
     await client.query('BEGIN');
 
-    // Set the user ID for RLS policies if provided
-    if (userId) {
+    // Set the user ID for RLS policies only on the app pool. On the service pool
+    // RLS is bypassed, so the GUC is irrelevant (and must not gate the query).
+    if (userId && !useService) {
       // Validate userId format before using in SET LOCAL
       validateUserId(userId);
       // PostgreSQL doesn't accept parameters in SET LOCAL, must use string interpolation
@@ -230,9 +280,10 @@ export async function queryWithRLS<T = unknown>(
 export async function queryOneWithRLS<T = unknown>(
   query: string,
   params: unknown[] = [],
-  userId?: string | null
+  userId?: string | null,
+  options?: RLSOptions
 ): Promise<T | null> {
-  const rows = await queryWithRLS<T>(query, params, userId);
+  const rows = await queryWithRLS<T>(query, params, userId, options);
   return rows[0] || null;
 }
 
@@ -243,14 +294,16 @@ export async function queryOneWithRLS<T = unknown>(
 export async function mutateWithRLS<T = unknown>(
   query: string,
   params: unknown[] = [],
-  userId?: string | null
+  userId?: string | null,
+  options?: RLSOptions
 ): Promise<{ rows: T[], rowCount: number }> {
-  const client = await acquireClient();
+  const useService = shouldUseService(userId, options);
+  const client = await acquireClient(useService);
 
   try {
     await client.query('BEGIN');
 
-    if (userId) {
+    if (userId && !useService) {
       // Validate userId format before using in SET LOCAL
       validateUserId(userId);
       // PostgreSQL doesn't accept parameters in SET LOCAL, must use string interpolation
@@ -289,14 +342,15 @@ export async function mutateWithRLS<T = unknown>(
  *   throw error;
  * }
  */
-export async function getTransactionClient(userId?: string | null) {
-  const client = await acquireClient();
+export async function getTransactionClient(userId?: string | null, options?: RLSOptions) {
+  const useService = shouldUseService(userId, options);
+  const client = await acquireClient(useService);
 
   // FIX: Wrap BEGIN/SET LOCAL in try-catch to release client on failure
   try {
     await client.query('BEGIN');
 
-    if (userId) {
+    if (userId && !useService) {
       // Validate userId format before using in SET LOCAL
       validateUserId(userId);
       // PostgreSQL doesn't accept parameters in SET LOCAL, must use string interpolation
@@ -327,6 +381,18 @@ export async function getTransactionClient(userId?: string | null) {
   };
 }
 
+/**
+ * Get a transaction client on the SERVICE (RLS-bypass) pool.
+ *
+ * Use for privileged system bootstraps that carry a userId but must bypass RLS
+ * because they create the FIRST membership/subscription of a brand-new team
+ * (which no membership-based policy can satisfy). Authorization for these
+ * operations is enforced at the API/action layer, not by RLS.
+ */
+export function getServiceTransactionClient() {
+  return getTransactionClient(null, { service: true });
+}
+
 // Direct query functions (without RLS) for Better Auth tables
 /**
  * Execute a direct query without RLS context
@@ -340,7 +406,9 @@ export async function query<T = unknown>(
   text: string,
   params?: unknown[]
 ): Promise<{ rows: T[]; rowCount: number }> {
-  const result = await pool.query(text, params);
+  // No-RLS-context calls are system operations by definition → service pool
+  // (bypass). Pre-cutover this is the same target as `pool` (owner).
+  const result = await servicePool.query(text, params);
   return {
     rows: result.rows,
     rowCount: result.rowCount || 0
@@ -355,7 +423,7 @@ export async function queryRows<T = unknown>(
   text: string,
   params?: unknown[]
 ): Promise<T[]> {
-  const result = await pool.query(text, params);
+  const result = await servicePool.query(text, params);
   return result.rows;
 }
 
@@ -367,12 +435,13 @@ export async function queryOne<T = unknown>(
   text: string,
   params?: unknown[]
 ): Promise<T | null> {
-  const result = await pool.query(text, params);
+  const result = await servicePool.query(text, params);
   return result.rows[0] || null;
 }
 
-// Export the pool for Better Auth (it needs direct access without RLS)
-export { pool };
+// Export the pools. `pool` = app (RLS) pool; `servicePool` = service (bypass)
+// pool. Better Auth and other system paths use the service connection.
+export { pool, servicePool };
 
 /**
  * Get the shared database pool
@@ -471,6 +540,10 @@ export async function gracefulShutdown(timeoutMs: number = 30000): Promise<void>
 
         try {
           await pool.end();
+          // Close the service pool too when it's a distinct instance.
+          if (servicePool !== pool) {
+            await servicePool.end();
+          }
           console.log('[DB] Database pool closed successfully.');
         } catch (error) {
           console.error('[DB] Error closing database pool:', error);

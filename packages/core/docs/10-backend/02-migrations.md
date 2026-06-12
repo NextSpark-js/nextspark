@@ -223,7 +223,9 @@ CREATE POLICY "users_metas_owner_or_admin_all" ON "users_metas"
     )
   );
 
--- Public read for public metadata
+-- Public read for public metadata.
+-- NOTE: `TO anon` only matters if you expose the Supabase Data API / PostgREST.
+-- The app serves public reads via the service connection (userId=null), not `anon`.
 CREATE POLICY users_metas_public_read ON "users_metas"
   FOR SELECT
   TO anon

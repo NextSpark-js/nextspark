@@ -1,11 +1,12 @@
 ---
 name: database-migrations
 description: |
-  PostgreSQL migration patterns with RLS, Better Auth integration, and TIMESTAMPTZ.
+  PostgreSQL migration patterns: writing RLS policy SQL, Better Auth integration, and TIMESTAMPTZ.
   Covers main tables, meta tables, child entities, and sample data.
   Use this skill when creating migrations, validating SQL, or generating sample data.
+  For the RUNTIME RLS model (service pool, nextspark_app cutover, fail-closed) see rls-enforcement.
 allowed-tools: Read, Glob, Grep, Bash(python:*)
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Database Migrations Skill
@@ -110,6 +111,15 @@ REFERENCES public."Parent"(id) ON DELETE CASCADE
 
 ## RLS Patterns (4 Cases)
 
+> **Before writing core-table policies (beta.167):**
+> - RLS primitives (`can_bypass_rls`, `auth_user_can_see_user`, `is_superadmin`) live in
+>   migration **`001`** — a policy on an early table (e.g. `002`) that references a function
+>   or table defined later fails at `CREATE POLICY` time. Wrap forward-dependent logic in a
+>   `SECURITY DEFINER` helper in `001` (table refs resolve at call time).
+> - **`team_role` is `TEXT`** (not an ENUM): `role TEXT NOT NULL DEFAULT 'member'`. Never
+>   `ALTER TYPE team_role`.
+> - For the runtime model (service pool, `nextspark_app`, cutover) see the **rls-enforcement** skill.
+
 ### Case 1: Private to Owner
 ```sql
 CREATE POLICY "Entity owner can do all"
@@ -144,19 +154,24 @@ WITH CHECK (true);
 
 ### Case 4: Public Read with Auth Write
 ```sql
--- Anonymous can read published
-CREATE POLICY "Entity public can select"
-ON public."Entity"
-FOR SELECT TO anon
-USING (published = TRUE);
-
 -- Authenticated can manage all
 CREATE POLICY "Entity auth can do all"
 ON public."Entity"
 FOR ALL TO authenticated
 USING (true)
 WITH CHECK (true);
+
+-- (Supabase Data API ONLY) anonymous can read published rows
+CREATE POLICY "Entity public can select"
+ON public."Entity"
+FOR SELECT TO anon
+USING (published = TRUE);
 ```
+> ⚠️ The **app does NOT use the `anon` role**. Public/unauthenticated reads enter with
+> `userId = null` → **service pool (bypass)** and are filtered in SQL by the handler
+> (e.g. `published = TRUE`). The `TO anon` policy above only matters if you expose the
+> **Supabase PostgREST / Data API** (migration `022` revokes `anon` as defense for that
+> surface). Don't rely on it for the app's public-read path.
 
 ## Meta Tables Pattern
 

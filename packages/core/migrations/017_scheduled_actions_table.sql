@@ -116,12 +116,14 @@ ALTER TABLE public."scheduled_actions" ENABLE ROW LEVEL SECURITY;
 -- Cleanup existing policies
 DROP POLICY IF EXISTS "scheduled_actions auth can select" ON public."scheduled_actions";
 DROP POLICY IF EXISTS "scheduled_actions system can do all" ON public."scheduled_actions";
+DROP POLICY IF EXISTS "Scheduled actions service all" ON public."scheduled_actions";
 
--- Authenticated users can view all actions (for DevTools)
-CREATE POLICY "scheduled_actions auth can select"
+-- Service-only under real RLS. Payloads may carry provisioning PII, so the
+-- previous `USING(true)` SELECT is removed. Reads go to bypass (DevTools runs as
+-- the developer role -> can_bypass_rls()); the in-request scheduler and the
+-- processor INSERT/UPDATE under the SERVICE connection (DATABASE_SERVICE_URL).
+CREATE POLICY "Scheduled actions service all"
 ON public."scheduled_actions"
-FOR SELECT TO authenticated
-USING (true);
-
--- No INSERT/UPDATE/DELETE policies for regular users
--- System operations are handled via service role or direct API with CRON_SECRET
+FOR ALL TO authenticated
+USING (public.can_bypass_rls())
+WITH CHECK (public.can_bypass_rls());

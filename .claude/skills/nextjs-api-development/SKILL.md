@@ -5,7 +5,7 @@ description: |
   Dual authentication (API Key + Session), dynamic entities, metadata system.
   Use this skill to create endpoints, validate APIs, or understand API patterns.
 allowed-tools: Read, Glob, Grep, Bash(python:*)
-version: 1.1.0
+version: 1.2.0
 ---
 
 # Next.js API Development Skill
@@ -310,6 +310,11 @@ describe('Products API - CRUD Operations', {
 ## Security Best Practices
 
 ### SQL Injection Prevention
+
+> **RLS routing (beta.167):** `queryWithRLS(..., userId)` runs on the app pool (RLS evaluated).
+> The bare `query()`/`queryOne()` family routes to the **service pool (bypass)** — never use it
+> for a user-scoped read. See the **rls-enforcement** skill for the service-pool model and the
+> LIST/READ fail-closed enforcement now applied in the generic handler.
 
 ```typescript
 // ✅ CORRECT - Parameterized queries with queryWithRLS

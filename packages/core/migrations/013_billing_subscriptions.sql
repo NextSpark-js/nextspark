@@ -90,59 +90,89 @@ WHERE status IN ('active', 'trialing', 'past_due');
 -- ============================================
 ALTER TABLE public."subscriptions" ENABLE ROW LEVEL SECURITY;
 
--- Cleanup existing policies
-DROP POLICY IF EXISTS "Subscriptions team read"      ON public."subscriptions";
-DROP POLICY IF EXISTS "Subscriptions team write"     ON public."subscriptions";
-DROP POLICY IF EXISTS "Subscriptions superadmin"     ON public."subscriptions";
+-- ============================================================================
+-- Per-user RLS on subscriptions (hardened).
+--
+-- WHY: a team's "team read" let ANY team member read the team's subscriptions.
+-- When subscriptions are per (userId, teamId) and a team holds many users,
+-- team-wide read means every user reads every other user's membership row.
+-- Uses ONLY core primitives: can_bypass_rls() (superadmin/developer/service
+-- bypass), get_auth_user_id(), team_members. Elevated tier = ('owner','admin').
+--
+-- NOTE on subscriptions."userId": NULLable by design (team-level subscriptions).
+-- The own-row branch evaluates NULL -> false, so team-level subscriptions are
+-- visible only to the elevated tier. Correct and intended.
+-- ============================================================================
 
--- Team members can read their team's subscription
-CREATE POLICY "Subscriptions team read"
+-- Cleanup existing policies
+DROP POLICY IF EXISTS "Subscriptions team read"        ON public."subscriptions";
+DROP POLICY IF EXISTS "Subscriptions team write"       ON public."subscriptions";
+DROP POLICY IF EXISTS "Subscriptions superadmin"       ON public."subscriptions";
+DROP POLICY IF EXISTS "Subscriptions per-user select"  ON public."subscriptions";
+DROP POLICY IF EXISTS "Subscriptions elevated insert"  ON public."subscriptions";
+DROP POLICY IF EXISTS "Subscriptions elevated update"  ON public."subscriptions";
+DROP POLICY IF EXISTS "Subscriptions elevated delete"  ON public."subscriptions";
+
+CREATE POLICY "Subscriptions per-user select"
 ON public."subscriptions"
 FOR SELECT TO authenticated
 USING (
-  EXISTS (
+  public.can_bypass_rls()
+  OR "userId" = public.get_auth_user_id()
+  OR EXISTS (
     SELECT 1 FROM public."team_members" tm
-    WHERE tm."teamId" = "subscriptions"."teamId"
+    WHERE tm."teamId" = public."subscriptions"."teamId"
       AND tm."userId" = public.get_auth_user_id()
+      AND tm.role IN ('owner','admin')
   )
 );
 
--- Team owner/admin can modify subscription
-CREATE POLICY "Subscriptions team write"
+-- Writes: elevated tier or bypass only — NEVER an own-row branch (a user must
+-- not be able to grant themselves a membership).
+CREATE POLICY "Subscriptions elevated insert"
 ON public."subscriptions"
-FOR ALL TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM public."team_members" tm
-    WHERE tm."teamId" = "subscriptions"."teamId"
-      AND tm."userId" = public.get_auth_user_id()
-      AND tm.role IN ('owner', 'admin')
-  )
-)
+FOR INSERT TO authenticated
 WITH CHECK (
-  EXISTS (
+  public.can_bypass_rls()
+  OR EXISTS (
     SELECT 1 FROM public."team_members" tm
-    WHERE tm."teamId" = "subscriptions"."teamId"
+    WHERE tm."teamId" = public."subscriptions"."teamId"
       AND tm."userId" = public.get_auth_user_id()
-      AND tm.role IN ('owner', 'admin')
+      AND tm.role IN ('owner','admin')
   )
 );
 
--- Superadmin has full access
-CREATE POLICY "Subscriptions superadmin"
+CREATE POLICY "Subscriptions elevated update"
 ON public."subscriptions"
-FOR ALL TO authenticated
+FOR UPDATE TO authenticated
 USING (
-  EXISTS (
-    SELECT 1 FROM public."users" u
-    WHERE u.id = public.get_auth_user_id()
-      AND u.role = 'superadmin'
+  public.can_bypass_rls()
+  OR EXISTS (
+    SELECT 1 FROM public."team_members" tm
+    WHERE tm."teamId" = public."subscriptions"."teamId"
+      AND tm."userId" = public.get_auth_user_id()
+      AND tm.role IN ('owner','admin')
   )
 )
 WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM public."users" u
-    WHERE u.id = public.get_auth_user_id()
-      AND u.role = 'superadmin'
+  public.can_bypass_rls()
+  OR EXISTS (
+    SELECT 1 FROM public."team_members" tm
+    WHERE tm."teamId" = public."subscriptions"."teamId"
+      AND tm."userId" = public.get_auth_user_id()
+      AND tm.role IN ('owner','admin')
+  )
+);
+
+CREATE POLICY "Subscriptions elevated delete"
+ON public."subscriptions"
+FOR DELETE TO authenticated
+USING (
+  public.can_bypass_rls()
+  OR EXISTS (
+    SELECT 1 FROM public."team_members" tm
+    WHERE tm."teamId" = public."subscriptions"."teamId"
+      AND tm."userId" = public.get_auth_user_id()
+      AND tm.role IN ('owner','admin')
   )
 );

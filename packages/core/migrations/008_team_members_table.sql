@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS public."team_members" (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
   "teamId" TEXT NOT NULL REFERENCES public."teams"(id) ON DELETE CASCADE,
   "userId" TEXT NOT NULL REFERENCES public."users"(id) ON DELETE CASCADE,
-  role team_role NOT NULL DEFAULT 'member',
+  role TEXT NOT NULL DEFAULT 'member',  -- TEXT (not ENUM) so themes extend roles via config; see 007
   "invitedBy" TEXT REFERENCES public."users"(id),
   "joinedAt" TIMESTAMPTZ DEFAULT now(),
   "createdAt" TIMESTAMPTZ NOT NULL DEFAULT now(),

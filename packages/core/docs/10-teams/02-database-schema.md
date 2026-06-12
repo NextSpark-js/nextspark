@@ -18,13 +18,21 @@ The schema is split across four migration files:
 | `009_team_invitations_table.sql` | Invitation system |
 | `010_teams_functions_triggers.sql` | Helper functions and RLS policies |
 
-## ENUM Types
+## Roles & ENUM Types
+
+> **Changed in beta.167:** team roles are stored as **`TEXT`**, not a Postgres ENUM.
+> Themes extend team roles purely via config (`availableTeamRoles` in `app.config.ts` +
+> `permissions.config.ts`) — no `ALTER TYPE`. No privilege boundary is lost: RLS policies
+> compare against explicit literals (`'owner'`, `'admin'`, …) and an unknown role fails
+> closed. Value integrity is enforced at the app layer (zod + the permissions registry),
+> so no DB `CHECK` constraint is added (it would block theme roles). The base roles are
+> `'owner'`, `'admin'`, `'member'`, `'viewer'`.
 
 ```sql
--- Team member roles
-CREATE TYPE team_role AS ENUM ('owner', 'admin', 'member', 'viewer');
+-- Team member roles: stored as TEXT (see note above). NOT a Postgres ENUM.
+-- team_members.role / team_invitations.role are: TEXT NOT NULL DEFAULT 'member'
 
--- Invitation status lifecycle
+-- Invitation status lifecycle (still an ENUM)
 CREATE TYPE invitation_status AS ENUM ('pending', 'accepted', 'declined', 'expired');
 ```
 
@@ -69,7 +77,7 @@ CREATE TABLE IF NOT EXISTS public."team_members" (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
   "teamId" TEXT NOT NULL REFERENCES public."teams"(id) ON DELETE CASCADE,
   "userId" TEXT NOT NULL REFERENCES public."users"(id) ON DELETE CASCADE,
-  role team_role NOT NULL DEFAULT 'member',
+  role TEXT NOT NULL DEFAULT 'member',  -- TEXT (not ENUM); themes extend roles via config
   "invitedBy" TEXT REFERENCES public."users"(id),
   "joinedAt" TIMESTAMPTZ DEFAULT now(),
   "createdAt" TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -99,7 +107,7 @@ CREATE TABLE IF NOT EXISTS public."team_invitations" (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
   "teamId" TEXT NOT NULL REFERENCES public."teams"(id) ON DELETE CASCADE,
   email TEXT NOT NULL,
-  role team_role NOT NULL DEFAULT 'member',
+  role TEXT NOT NULL DEFAULT 'member',  -- TEXT (not ENUM); themes extend roles via config
   status invitation_status NOT NULL DEFAULT 'pending',
   token TEXT UNIQUE NOT NULL DEFAULT gen_random_uuid()::text,
   "invitedBy" TEXT NOT NULL REFERENCES public."users"(id),
