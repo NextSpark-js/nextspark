@@ -137,7 +137,8 @@ describe('TeamMemberService', () => {
       expect(mockMutateWithRLS).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO "team_members"'),
         ['team-456', 'user-789', 'member', null],
-        'user-789'
+        'user-789',
+        { service: true } // bootstrap/membership insert runs on the service pool (bypass)
       )
     })
 
@@ -150,7 +151,8 @@ describe('TeamMemberService', () => {
       expect(mockMutateWithRLS).toHaveBeenCalledWith(
         expect.any(String),
         ['team-456', 'user-789', 'member', 'user-000'],
-        'user-789'
+        'user-789',
+        { service: true } // bootstrap/membership insert runs on the service pool (bypass)
       )
     })
 

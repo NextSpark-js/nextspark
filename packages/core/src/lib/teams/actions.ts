@@ -18,7 +18,7 @@
  * This file will be removed in a future version.
  */
 
-import { queryWithRLS, queryOneWithRLS, getTransactionClient } from '../db'
+import { queryWithRLS, queryOneWithRLS, getServiceTransactionClient } from '../db'
 import type { Team, TeamMember, TeamRole } from './types'
 
 /**
@@ -45,8 +45,11 @@ export async function createTeam(userId: string, name?: string): Promise<Team> {
   const teamSlug = `team-${timestamp}-${userId.substring(0, 4).toLowerCase()}`
   const teamName = name || (user.name ? `${user.name}'s Team` : 'My Team')
 
-  // Use transaction to ensure atomicity
-  const tx = await getTransactionClient(userId)
+  // Use a SERVICE transaction (RLS bypass): this bootstrap creates the first
+  // team_members (owner) row + first subscription, which the membership-based
+  // RLS insert policies cannot satisfy (user not yet a member). See db.ts
+  // getServiceTransactionClient and TeamService.create for rationale.
+  const tx = await getServiceTransactionClient()
 
   try {
     // 1. Create team
@@ -151,12 +154,15 @@ export async function addUserToGlobalTeam(
     return
   }
 
-  // Add as member
+  // Add as member via the SERVICE pool (bypass): the joining user is not yet a
+  // member, so the membership-based team_members insert policy cannot authorize
+  // this self-join under their own GUC. This onboarding write is a system op.
   await queryWithRLS(
     `INSERT INTO "team_members" ("teamId", "userId", role, "invitedBy", "joinedAt")
      VALUES ($1, $2, $3, $4, NOW())`,
     [team.id, userId, role, invitedBy || null],
-    userId
+    userId,
+    { service: true }
   )
 
   console.log(`User ${userId} added to global team ${team.id} as ${role}`)

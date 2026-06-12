@@ -7,7 +7,7 @@
  * @module TeamService
  */
 
-import { queryOneWithRLS, queryWithRLS, getTransactionClient } from '../db'
+import { queryOneWithRLS, queryWithRLS, getServiceTransactionClient } from '../db'
 import type { Team, TeamRole } from '../teams/types'
 import { TEAMS_CONFIG } from '../config'
 
@@ -295,8 +295,12 @@ export class TeamService {
     const teamSlug = `team-${timestamp}-${userId.substring(0, 4).toLowerCase()}`
     const teamName = name || (user.name ? `${user.name}'s Team` : 'My Team')
 
-    // Use transaction to ensure atomicity
-    const tx = await getTransactionClient(userId)
+    // Use a SERVICE transaction (RLS bypass) to ensure atomicity. This bootstrap
+    // creates the FIRST team_members (owner) row and the team's first
+    // subscription — neither can satisfy the membership-based RLS insert policies
+    // (the user is not yet a member). Authorization that this user may create a
+    // team is enforced by the caller; `ownerId`/membership are fixed to `userId`.
+    const tx = await getServiceTransactionClient()
 
     try {
       // 1. Create team

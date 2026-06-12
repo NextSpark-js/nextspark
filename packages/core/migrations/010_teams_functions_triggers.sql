@@ -13,7 +13,7 @@ RETURNS TABLE (
   team_id TEXT,
   team_name TEXT,
   team_slug TEXT,
-  user_role team_role,
+  user_role TEXT,  -- team roles are TEXT (not ENUM); see 007
   joined_at TIMESTAMPTZ,
   member_count BIGINT
 ) AS $$
@@ -39,11 +39,11 @@ $$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 CREATE OR REPLACE FUNCTION has_team_permission(
   user_id_param TEXT,
   team_id_param TEXT,
-  required_roles team_role[]
+  required_roles TEXT[]  -- team roles are TEXT (not ENUM); see 007
 )
 RETURNS BOOLEAN AS $$
 DECLARE
-  user_role team_role;
+  user_role TEXT;
 BEGIN
   SELECT role INTO user_role
   FROM public."team_members"
@@ -108,51 +108,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 
--- Check if current user can bypass RLS (Row Level Security)
--- Returns true if user is superadmin OR developer in System Admin Team
--- Used for RLS policies to grant elevated users full cross-team access
--- Matches app-level bypass logic in dual-auth.ts
-CREATE OR REPLACE FUNCTION public.can_bypass_rls()
-RETURNS BOOLEAN AS $$
-DECLARE
-  current_user_id TEXT;
-  user_role TEXT;
-  is_system_admin_member BOOLEAN;
-BEGIN
-  current_user_id := public.get_auth_user_id();
-
-  -- Get user role
-  SELECT role INTO user_role
-  FROM public."users"
-  WHERE id = current_user_id;
-
-  -- Superadmin always bypasses
-  IF user_role = 'superadmin' THEN
-    RETURN TRUE;
-  END IF;
-
-  -- Developer can bypass if member of System Admin Team (team-nextspark-001)
-  IF user_role = 'developer' THEN
-    SELECT EXISTS(
-      SELECT 1 FROM public."team_members"
-      WHERE "userId" = current_user_id
-        AND "teamId" = 'team-nextspark-001'
-    ) INTO is_system_admin_member;
-
-    RETURN is_system_admin_member;
-  END IF;
-
-  RETURN FALSE;
-END;
-$$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
-
--- Alias for backward compatibility (deprecated, use can_bypass_rls)
-CREATE OR REPLACE FUNCTION public.is_superadmin()
-RETURNS BOOLEAN AS $$
-BEGIN
-  RETURN public.can_bypass_rls();
-END;
-$$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
+-- NOTE: public.can_bypass_rls() and public.is_superadmin() are defined in
+-- migration 001 (foundational RLS primitives) so that the auth/identity table
+-- policies in 002 can use them. They are intentionally NOT redefined here.
 
 -- ============================================
 -- TEAMS RLS POLICIES

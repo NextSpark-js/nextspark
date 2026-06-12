@@ -96,16 +96,96 @@ ALTER TABLE "verification" ENABLE ROW LEVEL SECURITY;
 -- POLICIES
 -- ============================================
 
--- Mantener comportamiento actual (abierto). No es lo ideal, pero respeta "que siga funcionando".
-CREATE POLICY "users_allow_all"        ON "users"        FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "session_allow_all"      ON "session"      FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "account_allow_all"      ON "account"      FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "verification_allow_all" ON "verification" FOR ALL USING (true) WITH CHECK (true);
+-- ============================================================================
+-- Per-user RLS on the auth/identity tables (hardened defaults).
+--
+-- Uses ONLY core primitives: public.can_bypass_rls() (010) and
+-- public.get_auth_user_id() (001), and public."team_members". "Staff of a team"
+-- is the base elevated set the core enum knows: ('owner','admin'). A theme that
+-- extends team roles widens the staff set through its own config-derived
+-- mechanism; the core ships the base elevated set only.
+--
+-- WHY: under real RLS, the previous `USING(true)` let ANY authenticated user read
+-- every row of users (PII), account (Better Auth credentials/providers) and
+-- session (other users' sessions/tokens).
+--
+-- SERVICE DEPENDENCY (not a data hole): Better Auth reads these tables WITHOUT a
+-- user GUC during login/verification, so it runs under the SERVICE connection
+-- (DATABASE_SERVICE_URL, bypass). With it, login works AND these policies stay
+-- active.
+-- ============================================================================
 
--- VERSIÓN MÁS SEGURA (recomendada) – comentar lo de arriba y descomentar esto cuando ordenes acceso:
--- Nota: el role service_role bypassa RLS. Si solo accede backend, podrías no necesitar policies.
--- CREATE POLICY "auth_tables_readonly_auth" ON "users" FOR SELECT TO authenticated USING (true);
--- Repite granular por tabla según necesidad real.
+-- ----------------------------------------------------------------------------
+-- users — self + staff visibility (no user sees unrelated users)
+-- ----------------------------------------------------------------------------
+DROP POLICY IF EXISTS "users_allow_all"           ON "users";
+DROP POLICY IF EXISTS "Users self and staff read" ON "users";
+DROP POLICY IF EXISTS "Users service insert"      ON "users";
+DROP POLICY IF EXISTS "Users self update"         ON "users";
+DROP POLICY IF EXISTS "Users service delete"      ON "users";
+
+-- Staff visibility is resolved by public.auth_user_can_see_user() (defined in
+-- 001) so this policy has no create-time dependency on team_members (created in
+-- a later migration).
+CREATE POLICY "Users self and staff read"
+ON "users"
+FOR SELECT TO authenticated
+USING (
+  public.can_bypass_rls()
+  OR id = public.get_auth_user_id()
+  OR public.auth_user_can_see_user(id)
+);
+
+-- Identity is created/managed by the auth service; a user may edit ITS OWN row.
+CREATE POLICY "Users service insert" ON "users"
+FOR INSERT TO authenticated WITH CHECK (public.can_bypass_rls());
+CREATE POLICY "Users self update" ON "users"
+FOR UPDATE TO authenticated
+USING (public.can_bypass_rls() OR id = public.get_auth_user_id())
+WITH CHECK (public.can_bypass_rls() OR id = public.get_auth_user_id());
+CREATE POLICY "Users service delete" ON "users"
+FOR DELETE TO authenticated USING (public.can_bypass_rls());
+
+-- ----------------------------------------------------------------------------
+-- account — only the owner sees/uses its own auth accounts; writes are service
+-- ----------------------------------------------------------------------------
+DROP POLICY IF EXISTS "account_allow_all"      ON "account";
+DROP POLICY IF EXISTS "Account self read"      ON "account";
+DROP POLICY IF EXISTS "Account service write"  ON "account";
+
+CREATE POLICY "Account self read" ON "account"
+FOR SELECT TO authenticated
+USING (public.can_bypass_rls() OR "userId" = public.get_auth_user_id());
+CREATE POLICY "Account service write" ON "account"
+FOR ALL TO authenticated
+USING (public.can_bypass_rls())
+WITH CHECK (public.can_bypass_rls());
+
+-- ----------------------------------------------------------------------------
+-- session — only the owner sees its own sessions; writes are service (login)
+-- ----------------------------------------------------------------------------
+DROP POLICY IF EXISTS "session_allow_all"      ON "session";
+DROP POLICY IF EXISTS "Session self read"      ON "session";
+DROP POLICY IF EXISTS "Session service write"  ON "session";
+
+CREATE POLICY "Session self read" ON "session"
+FOR SELECT TO authenticated
+USING (public.can_bypass_rls() OR "userId" = public.get_auth_user_id());
+CREATE POLICY "Session service write" ON "session"
+FOR ALL TO authenticated
+USING (public.can_bypass_rls())
+WITH CHECK (public.can_bypass_rls());
+
+-- ----------------------------------------------------------------------------
+-- verification — email/reset tokens (no userId); service-only under RLS
+-- ----------------------------------------------------------------------------
+DROP POLICY IF EXISTS "verification_allow_all"  ON "verification";
+DROP POLICY IF EXISTS "Verification service all" ON "verification";
+
+CREATE POLICY "Verification service all" ON "verification"
+FOR ALL TO authenticated
+USING (public.can_bypass_rls())
+WITH CHECK (public.can_bypass_rls());
 
 -- ============================================
 -- CONSTRAINTS

@@ -7,10 +7,16 @@
 -- ENUM TYPES (must be defined first)
 -- ============================================
 
--- Team member roles: owner (creator), admin, member, viewer
-DO $$ BEGIN
-  CREATE TYPE team_role AS ENUM ('owner', 'admin', 'member', 'viewer');
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+-- Team member roles are stored as TEXT (NOT a Postgres ENUM).
+--
+-- WHY: themes extend team roles via config (app.config.availableTeamRoles /
+-- permissions.config.ts). A Postgres ENUM would force every theme to patch the
+-- type with `ALTER TYPE team_role ADD VALUE ...`. Using TEXT lets a theme store
+-- any role string without DB DDL. No privilege boundary is lost: RLS policies
+-- compare against explicit literals ('owner','admin') and an unknown role fails
+-- closed (matches no elevated tier). Value integrity is enforced at the app
+-- layer (zod derived from availableTeamRoles + the permissions registry), so no
+-- CHECK constraint is added (a CHECK with the base set would block theme roles).
 
 -- Invitation status lifecycle
 DO $$ BEGIN

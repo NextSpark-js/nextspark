@@ -21,6 +21,11 @@ const rootDir = projectRoot; // For backward compatibility with code below
 const envPath = path.join(projectRoot, '.env');
 
 let DATABASE_URL = process.env.DATABASE_URL ?? null;
+// Migrations and seeds run as the table OWNER. After the runtime cutover the app
+// connects DATABASE_URL as the non-owner `nextspark_app` role, so the owner
+// credential for migrations is provided separately via MIGRATE_DATABASE_URL.
+// Falls back to DATABASE_URL when unset (pre-cutover: same owner connection).
+let MIGRATE_DATABASE_URL = process.env.MIGRATE_DATABASE_URL ?? null;
 let ACTIVE_THEME = process.env.NEXT_PUBLIC_ACTIVE_THEME ?? null;
 
 if (fs.existsSync(envPath)) {
@@ -35,6 +40,9 @@ if (fs.existsSync(envPath)) {
       if (key?.trim() === 'DATABASE_URL' && valueParts.length > 0) {
         DATABASE_URL = value;
       }
+      if (key?.trim() === 'MIGRATE_DATABASE_URL' && valueParts.length > 0) {
+        MIGRATE_DATABASE_URL = value;
+      }
       if (key?.trim() === 'NEXT_PUBLIC_ACTIVE_THEME' && valueParts.length > 0) {
         ACTIVE_THEME = value;
       }
@@ -47,6 +55,9 @@ if (!DATABASE_URL) {
   process.exit(1);
 }
 
+// The URL used for the actual migration connection (owner credential).
+const MIGRATION_URL = MIGRATE_DATABASE_URL || DATABASE_URL;
+
 if (!ACTIVE_THEME) {
   console.error("❌ NEXT_PUBLIC_ACTIVE_THEME not found in environment variables");
   process.exit(1);
@@ -54,7 +65,7 @@ if (!ACTIVE_THEME) {
 
 async function runMigrations() {
   const client = new Client({
-    connectionString: DATABASE_URL,
+    connectionString: MIGRATION_URL,
     ssl: { 
       rejectUnauthorized: false,
       require: true
@@ -359,7 +370,7 @@ async function executeEntityMigration(client, migration) {
 // Entity migrations runner - WordPress-like architecture with sample_data deferred execution
 async function runEntityMigrations() {
   const client = new Client({
-    connectionString: DATABASE_URL,
+    connectionString: MIGRATION_URL,
     ssl: {
       rejectUnauthorized: false,
       require: true
