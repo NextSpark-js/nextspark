@@ -2,10 +2,12 @@
 name: permissions-system
 description: |
   Three-layer permission system (Team Roles + Plans + Quotas) for this Next.js application.
-  Covers user roles, team roles, theme extensions, permission checking, and RLS integration.
+  Covers user roles, team roles (stored as TEXT), theme role extensions, permission checking,
+  and LIST/READ fail-closed enforcement at the entity handler.
   Use this skill when implementing or modifying access control features.
+  For the runtime RLS model (service pool, nextspark_app cutover) see rls-enforcement.
 allowed-tools: Read, Glob, Grep
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Permissions System Skill
@@ -552,6 +554,13 @@ const customers = await queryWithRLS(
   userId  // Sets app.user_id
 )
 ```
+
+**Enforcement at the entity handler (beta.167):** the generic handler now checks the session
+permission on **LIST and READ** too (previously only create/update/delete) — a member without
+`entity.list`/`entity.read` gets **403**. A permission check that **throws** returns
+`500 PERMISSION_CHECK_FAILED` (**fail-closed**, never "allow"). Themes must declare `list`/`read`
+per entity (`default`/`starter` already do). Note `team_role` is stored as **TEXT** (themes add
+roles via config, not `ALTER TYPE`). For the runtime RLS model see the **rls-enforcement** skill.
 
 ## Build-Time Registry
 

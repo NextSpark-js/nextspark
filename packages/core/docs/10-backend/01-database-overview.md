@@ -30,9 +30,9 @@ The application maintains a conceptual separation between two types of data:
 
 **1. Authentication Data (Better Auth)**
 - Managed entirely by Better Auth library
-- Tables: `user`, `session`, `account`, `verification`
-- Permissive RLS policies (Better Auth handles its own security)
-- Direct access via Better Auth API only
+- Tables: `users`, `session`, `account`, `verification`
+- Hardened per-user / service-only RLS policies (beta.167; see [RLS Policies](./03-rls-policies.md#enforcement-layer-beta167)). Better Auth reads these via the **service connection** (RLS-bypass) during login/verification.
+- User-facing access is RLS-scoped (self + staff); writes are managed by Better Auth on the service connection
 
 **2. Application Data**
 - Business logic tables and entities
@@ -43,7 +43,7 @@ The application maintains a conceptual separation between two types of data:
 **Benefits of Separation:**
 ```text
 ┌─────────────────────────────────────────┐
-│ Better Auth Tables (Permissive RLS)    │
+│ Better Auth Tables (Hardened RLS)      │
 │ ├─ user                                 │
 │ ├─ session                              │
 │ ├─ account                              │
@@ -86,7 +86,7 @@ CREATE TABLE "user" (
 
 **Purpose:** Core user authentication and profile data.
 
-**RLS:** Permissive policies (Better Auth managed).
+**RLS:** Hardened per-user / service-only policies (beta.167). Better Auth reads via the service connection during login.
 
 #### 2. Session Table (Better Auth)
 ```sql
@@ -103,7 +103,7 @@ CREATE TABLE "session" (
 
 **Purpose:** Active user sessions for dashboard access.
 
-**RLS:** Permissive policies (Better Auth managed).
+**RLS:** Hardened per-user / service-only policies (beta.167). Better Auth reads via the service connection during login.
 
 #### 3. User Metadata Table
 ```sql

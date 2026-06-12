@@ -159,41 +159,50 @@ CREATE POLICY "users_can_view_own_tasks" ON "tasks"
 
 ## RLS Policy Types
 
-### Permissive Policies (Better Auth Tables)
+### Auth / identity tables (hardened — `users`, `account`, `session`, `verification`)
 
-Better Auth tables use permissive policies because the library handles its own security:
+> ⚠️ **Changed in beta.167.** These tables used to ship `USING (true) WITH CHECK (true)`
+> (fully permissive). Under real RLS that was a **PII leak**: any authenticated user
+> could read every row of `users` (names/emails), `account` (Better Auth
+> credentials/providers) and `session` (other users' sessions/tokens). The core now
+> ships **per-user / staff / service-only** policies in `migrations/002_auth_tables.sql`.
+> Do **not** reintroduce `USING (true)` on these tables.
 
 ```sql
--- User table - Better Auth manages access
-CREATE POLICY "allow_all_operations_on_user" ON "user"
-  FOR ALL
-  USING (true)
-  WITH CHECK (true);
+-- users: a user sees ITSELF + the staff of teams it shares, plus bypass roles.
+-- (auth_user_can_see_user / can_bypass_rls are defined in migration 001.)
+CREATE POLICY "Users self and staff read" ON "users"
+  FOR SELECT TO authenticated
+  USING (
+    public.can_bypass_rls()
+    OR id = public.get_auth_user_id()
+    OR public.auth_user_can_see_user(id)
+  );
+-- writes: identity is managed by the auth service; a user may edit ITS OWN row.
+CREATE POLICY "Users service insert" ON "users"
+  FOR INSERT TO authenticated WITH CHECK (public.can_bypass_rls());
+CREATE POLICY "Users self update" ON "users"
+  FOR UPDATE TO authenticated
+  USING (public.can_bypass_rls() OR id = public.get_auth_user_id())
+  WITH CHECK (public.can_bypass_rls() OR id = public.get_auth_user_id());
 
--- Session table - Better Auth manages sessions
-CREATE POLICY "allow_all_operations_on_session" ON "session"
-  FOR ALL
-  USING (true)
-  WITH CHECK (true);
+-- account / session: only the owner reads its own rows; writes are service-only.
+CREATE POLICY "Account self read" ON "account"
+  FOR SELECT TO authenticated
+  USING (public.can_bypass_rls() OR "userId" = public.get_auth_user_id());
+CREATE POLICY "Account service write" ON "account"
+  FOR ALL TO authenticated USING (public.can_bypass_rls()) WITH CHECK (public.can_bypass_rls());
 
--- Account table - OAuth provider accounts
-CREATE POLICY "allow_all_operations_on_account" ON "account"
-  FOR ALL
-  USING (true)
-  WITH CHECK (true);
-
--- Verification table - Email verification tokens
-CREATE POLICY "allow_all_operations_on_verification" ON "verification"
-  FOR ALL
-  USING (true)
-  WITH CHECK (true);
+-- verification (no userId — email/reset tokens): service-only.
+CREATE POLICY "Verification service all" ON "verification"
+  FOR ALL TO authenticated USING (public.can_bypass_rls()) WITH CHECK (public.can_bypass_rls());
 ```
 
-**Why Permissive?**
-- Better Auth operates at system level
-- Library has its own authentication and authorization
-- Needs unrestricted access to manage users and sessions
-- Application trusts Better Auth to handle security
+**How does login still work if these are locked down?** Better Auth reads/writes
+these tables **without a user GUC** during login/verification (the user isn't
+authenticated yet), so it runs on the **service connection** (`DATABASE_SERVICE_URL`,
+RLS-bypass) — see [Enforcement Layer (beta.167+)](#enforcement-layer-beta167). With it,
+login works **and** the hardened policies stay active for normal user requests.
 
 ### Restrictive Policies (Application Tables)
 
@@ -321,13 +330,20 @@ CREATE POLICY "policy" ON "table"
   USING (...);
 ```
 
-**TO anon** - Applies to anonymous users
+**TO anon** - Applies to the PostgreSQL `anon` role
 ```sql
 CREATE POLICY "policy" ON "table"
   FOR SELECT
   TO anon
   USING (...);
 ```
+> ⚠️ **The NextSpark app does NOT use the `anon` role.** Public/unauthenticated reads
+> enter the app with `userId = null`, which routes to the **service connection
+> (RLS-bypass)** and is filtered in SQL by the handler (e.g. `status = 'published'`) —
+> not by an `anon` RLS policy. `TO anon` policies only matter if you expose the
+> **Supabase PostgREST / Data API** directly. Migration `022` deliberately **revokes**
+> `anon` as defense-in-depth for that surface. See
+> [Enforcement Layer (beta.167+)](#enforcement-layer-beta167).
 
 **TO public** - Applies to all users (authenticated + anonymous)
 ```sql
@@ -907,6 +923,87 @@ USING ("userId" = public.get_auth_user_id())
 
 ---
 
+## Enforcement Layer (beta.167+)
+
+RLS is only *evaluated* when the app connects to Postgres as a **non-owner** role
+(the table owner bypasses RLS unless `FORCE`). beta.167 ships the machinery to run
+RLS for real. **It is backward-compatible and opt-in**: an install that keeps
+connecting as the owner behaves exactly as before; the "cutover" is enabled via env.
+
+### Two connection pools (`src/lib/db.ts`)
+
+| Pool | Env var | Used for | RLS |
+|---|---|---|---|
+| **app** | `DATABASE_URL` | user requests (carry a `userId`) | evaluated (`SET LOCAL app.user_id`) |
+| **service** | `DATABASE_SERVICE_URL` (falls back to `DATABASE_URL`) | system ops without a user | **bypass** |
+
+Routing is by **presence of `userId`**:
+
+- `queryWithRLS / queryOneWithRLS / mutateWithRLS / getTransactionClient` **with** a
+  `userId` → app pool + GUC (RLS applies). **Without** a `userId` → service pool (bypass).
+- The no-context family **`query` / `queryOne` / `queryRows` ALWAYS routes to the
+  service pool (bypass)** — they are system operations by definition. Never use them
+  for a user-scoped read that must be RLS-filtered.
+- Force the service pool even when a `userId` is present with
+  `mutateWithRLS(sql, params, userId, { service: true })` or `getServiceTransactionClient()`.
+
+### When you MUST force the service pool
+
+Privileged **bootstrap** writes that create the **first** membership/subscription of a
+team can't satisfy the membership-based RLS insert policies under the user's own GUC
+(the user isn't a member yet). These run on the service pool: `TeamService.create`,
+`teams/actions.ts:createTeam`, `addUserToGlobalTeam`, `TeamMemberService.add`.
+Authorization for them is enforced at the API/action layer, not by RLS.
+
+### Runtime role + cutover
+
+- Migration `022_rls_runtime_roles.sql` creates `nextspark_app` (non-owner, member of
+  `authenticated`, **no** `BYPASSRLS`) + grants + an `anon` lockdown.
+- **Migrations run as the OWNER**; the runtime runs as `nextspark_app`. Provide the
+  owner credential via **`MIGRATE_DATABASE_URL`** (falls back to `DATABASE_URL`).
+- **Gotcha:** post-cutover `DATABASE_URL` is a non-owner role — any operation that
+  assumed owner (e.g. raw DDL, seeds) behaves differently. Keep those on the
+  migrate/service connection.
+
+**Cutover runbook (opt-in):**
+1. Run migrations (creates `nextspark_app`): `pnpm db:reset` (in-place migration edits
+   require a fresh DB — the runner tracks by filename, not content hash).
+2. Set `DATABASE_SERVICE_URL` (Supabase: the `service_role` string, which has
+   `BYPASSRLS`; self-hosted: a dedicated owner/bypass role).
+3. Point `DATABASE_URL` at the `nextspark_app` role (deploy-time LOGIN credential).
+4. Set `MIGRATE_DATABASE_URL` to the owner connection for future migrations.
+5. Verify: login works (Better Auth via service); a plain member's LIST/READ is
+   team-scoped; cross-tenant access is denied.
+
+### Fail-closed permission enforcement (`generic-handler.ts`)
+
+- LIST and READ now check the session entity permission (previously only
+  create/update/delete). A member without `entity.list` / `entity.read` gets **403**.
+  Admin-bypass and API-key (scope-based) paths are unaffected.
+- A **thrown error** during the permission check returns **`500 PERMISSION_CHECK_FAILED`**
+  (fail-closed) — never "allow". Themes must declare `list`/`read` permissions per
+  entity (the convention `default`/`starter` already follow).
+
+### `ownershipFilter` (entity access config)
+
+`ownershipFilter.linkedBy` is **optional**: omit it for **direct-field** ownership (the
+entity row already carries the owner id — filtered against the current user). When
+present, `linkedBy.softDelete` makes the `deletedAt IS NULL` clause conditional (set
+`false` for tables without a `deletedAt` column).
+
+### Extending core RLS from a theme
+
+`team_role` is **`TEXT`** (not an ENUM) — themes add roles via config
+(`availableTeamRoles` + `permissions.config.ts`), never `ALTER TYPE`. A theme that needs
+a different tier on a **core** table (e.g. `users`/`subscriptions`) ships a phase-2
+override migration that **drops the core policy by name and re-creates its own** — and
+it must drop **both** the legacy and current core policy names, or the policies coexist
+(RLS combines them with OR, loosening the restriction).
+
+> **For agents:** the `rls-enforcement` skill is the operational companion to this page.
+
+---
+
 ## Summary
 
 **Key Concepts:**
@@ -916,7 +1013,7 @@ USING ("userId" = public.get_auth_user_id())
 - Protection against developer errors
 
 **Policy Types:**
-- Permissive (Better Auth tables)
+- Hardened per-user (auth/identity tables — `users`/`account`/`session`/`verification`)
 - Restrictive (Application tables)
 - Role-based (Admin access)
 - Public/Private hybrid
@@ -937,6 +1034,6 @@ USING ("userId" = public.get_auth_user_id())
 
 ---
 
-**Last Updated**: 2025-01-19
-**Version**: 1.0.0
+**Last Updated**: 2026-06-12 (beta.167 — RLS Enforcement Layer)
+**Version**: 1.1.0
 **Status**: Complete

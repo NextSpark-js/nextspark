@@ -2,10 +2,11 @@
 name: service-layer
 description: |
   Service layer patterns for this Next.js application.
-  Covers static class pattern, RLS integration, standard method signatures, and BaseEntityService.
+  Covers static class pattern, passing the RLS userId context (queryWithRLS), standard method signatures, and BaseEntityService.
   Use this skill when implementing business logic or data access services.
+  For the runtime RLS model (service pool vs app pool, when to force service) see rls-enforcement.
 allowed-tools: Read, Glob, Grep
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Service Layer Skill
@@ -202,6 +203,15 @@ export async function mutateWithRLS<T>(
 - Functions set PostgreSQL `app.user_id` session variable
 - RLS policies use this to filter/restrict data access
 - Always pass `userId` parameter for proper isolation
+
+**Dual-pool routing (beta.167) — see the `rls-enforcement` skill:**
+- `*WithRLS` **with** a `userId` → app pool (RLS evaluated). **Without** a `userId` → **service
+  pool (bypass)**. The bare `query`/`queryOne`/`queryRows` family is **always** service/bypass.
+- **System/bootstrap writes** that create the first team membership/subscription must force the
+  service pool: `mutateWithRLS(sql, params, userId, { service: true })` or
+  `getServiceTransactionClient()` (they can't satisfy membership-based insert policies under the
+  new member's own GUC). This is why `TeamService.create` / `TeamMemberService.add` use the
+  service path.
 
 ### Service Implementation with RLS
 
@@ -585,3 +595,4 @@ Before finalizing service implementation:
 - `entity-api` - API endpoint patterns
 - `permissions-system` - Permission checking
 - `database-migrations` - Migration patterns
+- `rls-enforcement` - Runtime RLS: service pool vs app pool, when to force service, cutover

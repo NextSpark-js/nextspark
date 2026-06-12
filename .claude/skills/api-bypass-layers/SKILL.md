@@ -1,11 +1,12 @@
 ---
 name: api-bypass-layers
 description: |
-  Multi-layer security architecture for API bypass (superadmin/developer).
-  Covers authentication layers, authorization, team context, RLS policies, and three-layer bypass validation.
+  Multi-layer security architecture for API bypass (superadmin/developer): can_bypass_rls(),
+  three-layer bypass validation, team context, and the RLS final-defense layer.
   Use this skill when implementing admin bypass features or validating security architecture.
+  For the runtime RLS plumbing (service connection pool, nextspark_app cutover) see rls-enforcement.
 allowed-tools: Read, Glob, Grep
-version: 1.1.0
+version: 1.2.0
 ---
 
 # API Bypass Layers Skill
@@ -18,8 +19,9 @@ Security architecture for superadmin and developer bypass access in the API laye
 |------|---------|
 | `packages/core/src/lib/api/auth/dual-auth.ts` | App-level bypass (canBypassTeamContext) |
 | `packages/core/src/lib/api/entity/generic-handler.ts` | CRUD handler (validateTeamContextWithBypass) |
-| `packages/core/migrations/001_better_auth_and_functions.sql` | get_auth_user_id() function |
-| `packages/core/migrations/010_teams_functions_triggers.sql` | can_bypass_rls(), get_user_team_ids(), RLS policies |
+| `packages/core/migrations/001_better_auth_and_functions.sql` | get_auth_user_id(), **can_bypass_rls(), is_superadmin(), auth_user_can_see_user()** (moved here in beta.167) |
+| `packages/core/migrations/010_teams_functions_triggers.sql` | get_user_team_ids(), teams RLS policies |
+| `packages/core/src/lib/db.ts` | service connection pool (RLS-bypass) for system ops — see rls-enforcement |
 | `packages/core/migrations/090_sample_data.sql` | System Admin Team (team-nextspark-001) |
 
 ## Architecture Overview
@@ -79,6 +81,16 @@ Security architecture for superadmin and developer bypass access in the API laye
 │  can_bypass_rls() OR teamId = ANY(get_user_team_ids())          │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+> **beta.167 additions (see the `rls-enforcement` skill):**
+> - **Service connection (RLS-bypass):** system operations without a user GUC (Better Auth,
+>   scheduler/processor, webhooks, the `checkSystemAdminMembership` bypass check, team/
+>   subscription bootstrap) run on a separate pool (`DATABASE_SERVICE_URL`). This is the
+>   plumbing that keeps the bypass paths working once the app connects as the non-owner
+>   `nextspark_app` role.
+> - **Fail-closed permission check:** in `generic-handler.ts`, LIST/READ now enforce session
+>   permissions and a thrown permission check returns `500 PERMISSION_CHECK_FAILED` (never
+>   "allow"). Admin-bypass and api-key paths are skipped.
 
 ## When to Use This Skill
 
@@ -210,7 +222,7 @@ if (userId && !entityConfig.access?.shared && !skipUserFilter && !isBypass) {
 
 ## Database-Level Bypass: can_bypass_rls()
 
-**File:** `packages/core/migrations/010_teams_functions_triggers.sql:115-147`
+**File:** `packages/core/migrations/001_better_auth_and_functions.sql` (moved here in beta.167 so the hardened auth-table policies in `002` can use it; it was previously in `010`)
 
 **CRITICAL DIFFERENCE from App-Level:**
 - **Superadmin:** ALWAYS bypasses RLS (no team membership check)
@@ -418,7 +430,7 @@ const headers = {
 │  LAYER 4: Query Building (generic-handler.ts:509+)                       │
 │  └─ Add teamId/userId filters based on isBypass flag                     │
 │                                                                           │
-│  LAYER 5: Database RLS (010_teams_functions_triggers.sql:115-147)        │
+│  LAYER 5: Database RLS (can_bypass_rls() defined in 001, beta.167)       │
 │  └─ can_bypass_rls() OR teamId = ANY(get_user_team_ids())                │
 │                                                                           │
 └──────────────────────────────────────────────────────────────────────────┘
@@ -546,5 +558,6 @@ Before finalizing bypass implementation:
 - `better-auth` - Authentication patterns and session management
 - `permissions-system` - RBAC + Features + Quotas permission model
 - `database-migrations` - PostgreSQL RLS policies
+- `rls-enforcement` - Runtime RLS: service connection pool, nextspark_app cutover, fail-closed
 - `nextjs-api-development` - API route patterns with dual auth
 - `cypress-api` - API testing with bypass scenarios
