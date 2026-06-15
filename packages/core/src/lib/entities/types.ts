@@ -191,7 +191,14 @@ export interface EntityConfig {
      *
      * When a user's team role matches one of the listed roles, the generic
      * CRUD handler scopes LIST/READ/UPDATE queries to only the records that
-     * belong to the user's linked record (resolved via `linkedBy`).
+     * belong to the user.
+     *
+     * Two modes:
+     * - **Direct field** (omit `linkedBy`): the entity row already carries the
+     *   owner id, so `field` is matched directly against the current user's id
+     *   (e.g. `field: 'userId'`). Works for entities WITHOUT a `deletedAt` column.
+     * - **Linked lookup** (provide `linkedBy`): the filter value is resolved from
+     *   a related table.
      *
      * Roles NOT listed in `roles` see all records unfiltered.
      */
@@ -200,14 +207,24 @@ export interface EntityConfig {
       roles: string[]
       /** Column in the entity table to filter by */
       field: string
-      /** Lookup to resolve the filter value from the current user */
-      linkedBy: {
+      /**
+       * Lookup to resolve the filter value from a linked record. Omit for
+       * direct-field ownership (the entity row carries the owner id; the filter
+       * value is the current user's id).
+       */
+      linkedBy?: {
         /** Table to query for the linked record */
         table: string
         /** Column in that table referencing the current user's id */
         userField: string
         /** Column whose value becomes the filter value */
         valueField: string
+        /**
+         * Whether the linked table is soft-deletable. When true (default), the
+         * lookup appends `AND "deletedAt" IS NULL`. Set `false` for tables
+         * without a `deletedAt` column to avoid an undefined-column error.
+         */
+        softDelete?: boolean
       }
       /** Per-role field write restrictions on PATCH */
       fieldGuards?: Array<{

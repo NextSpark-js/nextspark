@@ -56,10 +56,11 @@ FIELD_TYPE_MAP = {
     'select': 'VARCHAR(100)',
     'multiselect': 'TEXT[]',
     'tags': 'TEXT[]',
-    'relation': 'UUID',
-    'relation-multi': 'UUID[]',
-    'reference': 'UUID',
-    'user': 'UUID',
+    # FKs are TEXT: NextSpark ids are TEXT (Better Auth + gen_random_uuid()::text), not UUID
+    'relation': 'TEXT',
+    'relation-multi': 'TEXT[]',
+    'reference': 'TEXT',
+    'user': 'TEXT',
     'phone': 'VARCHAR(50)',
     'rating': 'INTEGER',
     'range': 'DECIMAL',
@@ -124,16 +125,19 @@ def parse_fields_file(fields_path: Path) -> List[Dict]:
 
 def generate_column_sql(field: Dict) -> str:
     """Generate SQL column definition from field."""
-    name = to_snake_case(field['name'])
+    # NextSpark column names are camelCase (e.g. "firstName"), even though table
+    # names are snake_case (e.g. "team_members"). Field names from config may be
+    # camelCase already (no-op) or kebab-case (converted).
+    name = to_camel_case(field['name'])
     field_type = field['type']
     required = field['required']
 
     sql_type = FIELD_TYPE_MAP.get(field_type, 'TEXT')
 
-    # Handle select fields with CHECK constraint
+    # Handle select fields with CHECK constraint (quote the camelCase column)
     if field_type == 'select' and 'options' in field:
         options = ', '.join(f"'{v}'" for v in field['options'])
-        sql_type = f"VARCHAR(100) CHECK ({name} IN ({options}))"
+        sql_type = f'VARCHAR(100) CHECK ("{name}" IN ({options}))'
 
     nullable = '' if required else ''
     not_null = ' NOT NULL' if required else ''
@@ -146,10 +150,10 @@ def generate_table_migration(entity_slug: str, fields: List[Dict], options: Dict
     table_name = to_snake_case(entity_slug)
     timestamp = datetime.now().isoformat()
 
-    # Build column definitions
+    # Build column definitions (NextSpark: TEXT ids, camelCase columns, "users" table)
     columns = [
-        '  "id" UUID PRIMARY KEY DEFAULT gen_random_uuid()',
-        '  "user_id" UUID NOT NULL REFERENCES "user"(id) ON DELETE CASCADE',
+        '  "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text',
+        '  "userId" TEXT NOT NULL REFERENCES "users"(id) ON DELETE CASCADE',
     ]
 
     for field in fields:
@@ -157,15 +161,15 @@ def generate_table_migration(entity_slug: str, fields: List[Dict], options: Dict
 
     # Timestamps
     columns.extend([
-        '  "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP',
-        '  "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP',
+        '  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT now()',
+        '  "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT now()',
     ])
 
     # Soft delete
     if options.get('soft_delete'):
         columns.extend([
-            '  "deleted_at" TIMESTAMPTZ',
-            '  "deleted_by" UUID REFERENCES "user"(id)',
+            '  "deletedAt" TIMESTAMPTZ',
+            '  "deletedBy" TEXT REFERENCES "users"(id)',
         ])
 
     # Build SQL
@@ -186,19 +190,19 @@ CREATE TABLE "{table_name}" (
     if options.get('with_indexes', True):
         sql += f'''
 -- Indexes
-CREATE INDEX "idx_{table_name}_user_id" ON "{table_name}" ("user_id");
-CREATE INDEX "idx_{table_name}_created_at" ON "{table_name}" ("created_at" DESC);
+CREATE INDEX "idx_{table_name}_userId" ON "{table_name}" ("userId");
+CREATE INDEX "idx_{table_name}_createdAt" ON "{table_name}" ("createdAt" DESC);
 '''
-        # Add indexes for searchable/sortable fields
+        # Add indexes for searchable/sortable fields (camelCase column names)
         for field in fields:
-            name = to_snake_case(field['name'])
+            name = to_camel_case(field['name'])
             if field['type'] in ['text', 'textarea']:
-                sql += f'CREATE INDEX "idx_{table_name}_{name}_search" ON "{table_name}" USING gin(to_tsvector(\'english\', {name}));\n'
+                sql += f'CREATE INDEX "idx_{table_name}_{name}_search" ON "{table_name}" USING gin(to_tsvector(\'english\', "{name}"));\n'
             elif field['type'] == 'select':
                 sql += f'CREATE INDEX "idx_{table_name}_{name}" ON "{table_name}" ("{name}");\n'
 
         if options.get('soft_delete'):
-            sql += f'CREATE INDEX "idx_{table_name}_deleted_at" ON "{table_name}" ("deleted_at");\n'
+            sql += f'CREATE INDEX "idx_{table_name}_deletedAt" ON "{table_name}" ("deletedAt");\n'
 
     # RLS
     if options.get('with_rls', True):
@@ -206,22 +210,21 @@ CREATE INDEX "idx_{table_name}_created_at" ON "{table_name}" ("created_at" DESC)
 -- Enable Row Level Security
 ALTER TABLE "{table_name}" ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies
+-- RLS Policies (NextSpark model: app.user_id GUC via public.get_auth_user_id();
+-- bypass tier via public.can_bypass_rls(). System ops run on the SERVICE connection
+-- which bypasses RLS by credential — no `TO service_role` policy is needed.)
 CREATE POLICY "{table_name}_owner_access" ON "{table_name}"
-  FOR ALL
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "{table_name}_service_role_access" ON "{table_name}"
-  FOR ALL TO service_role
-  USING (TRUE);
+  FOR ALL TO authenticated
+  USING (public.can_bypass_rls() OR "userId" = public.get_auth_user_id())
+  WITH CHECK (public.can_bypass_rls() OR "userId" = public.get_auth_user_id());
 '''
 
     sql += f'''
--- Trigger for updated_at
-CREATE TRIGGER update_{table_name}_updated_at
+-- Trigger for updatedAt (uses the core helper public.set_updated_at from migration 001)
+CREATE TRIGGER {table_name}_set_updated_at
   BEFORE UPDATE ON "{table_name}"
   FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+  EXECUTE FUNCTION public.set_updated_at();
 
 COMMIT;
 
@@ -246,45 +249,52 @@ def generate_metas_migration(entity_slug: str) -> str:
 -- Up Migration
 BEGIN;
 
--- Create {table_name}_metas table
+-- Create {table_name}_metas table (NextSpark meta convention: TEXT ids, camelCase,
+-- entityId / metaKey / metaValue / isPublic)
 CREATE TABLE "{table_name}_metas" (
-  "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  "entity_id" UUID NOT NULL REFERENCES "{table_name}"(id) ON DELETE CASCADE,
-  "key" VARCHAR(255) NOT NULL,
-  "value" JSONB,
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE("entity_id", "key")
+  "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  "entityId" TEXT NOT NULL REFERENCES "{table_name}"(id) ON DELETE CASCADE,
+  "metaKey" VARCHAR(255) NOT NULL,
+  "metaValue" JSONB,
+  "isPublic" BOOLEAN NOT NULL DEFAULT false,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE("entityId", "metaKey")
 );
 
 -- Indexes
-CREATE INDEX "idx_{table_name}_metas_entity_id" ON "{table_name}_metas" ("entity_id");
-CREATE INDEX "idx_{table_name}_metas_key" ON "{table_name}_metas" ("key");
-CREATE INDEX "idx_{table_name}_metas_value" ON "{table_name}_metas" USING gin("value");
+CREATE INDEX "idx_{table_name}_metas_entityId" ON "{table_name}_metas" ("entityId");
+CREATE INDEX "idx_{table_name}_metas_metaKey" ON "{table_name}_metas" ("metaKey");
+CREATE INDEX "idx_{table_name}_metas_metaValue" ON "{table_name}_metas" USING gin("metaValue");
 
 -- Enable Row Level Security
 ALTER TABLE "{table_name}_metas" ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies
+-- RLS Policies (access inherited from the parent row's ownership; public metas readable)
 CREATE POLICY "{table_name}_metas_owner_access" ON "{table_name}_metas"
-  FOR ALL
+  FOR ALL TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM "{table_name}"
-      WHERE "{table_name}".id = entity_id
-      AND "{table_name}".user_id = auth.uid()
+    public.can_bypass_rls()
+    OR EXISTS (
+      SELECT 1 FROM "{table_name}" p
+      WHERE p.id = "{table_name}_metas"."entityId"
+        AND p."userId" = public.get_auth_user_id()
+    )
+  )
+  WITH CHECK (
+    public.can_bypass_rls()
+    OR EXISTS (
+      SELECT 1 FROM "{table_name}" p
+      WHERE p.id = "{table_name}_metas"."entityId"
+        AND p."userId" = public.get_auth_user_id()
     )
   );
 
-CREATE POLICY "{table_name}_metas_service_role_access" ON "{table_name}_metas"
-  FOR ALL TO service_role
-  USING (TRUE);
-
--- Trigger for updated_at
-CREATE TRIGGER update_{table_name}_metas_updated_at
+-- Trigger for updatedAt (uses the core helper public.set_updated_at from migration 001)
+CREATE TRIGGER {table_name}_metas_set_updated_at
   BEFORE UPDATE ON "{table_name}_metas"
   FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+  EXECUTE FUNCTION public.set_updated_at();
 
 COMMIT;
 

@@ -1,0 +1,56 @@
+{
+  "skill_name": "rls-enforcement",
+  "notes": "Autonomous eval. Each case is a realistic NextSpark developer task whose CORRECT answer depends on knowledge in the rls-enforcement skill. We compare with-skill vs no-skill (baseline), grade against objective assertions, then improve and re-run to measure pass-rate delta.",
+  "evals": [
+    {
+      "id": 0,
+      "name": "bootstrap-service-pool",
+      "prompt": "In @nextsparkjs/core I'm adding a server action `createOrganization(userId, name)` that, in one DB transaction, inserts a new row in `teams` (ownerId = userId), inserts the creator's `team_members` row with role 'owner', and inserts a default `subscriptions` row for the team. The app will run with RLS enabled (DATABASE_URL connects as the non-owner role). Write the data-access code (which db.ts helper do you use and why).",
+      "assertions": [
+        {"text": "Uses the SERVICE pool (getServiceTransactionClient or { service: true } or a non-userId service path), NOT getTransactionClient(userId)/app pool"},
+        {"text": "Explains the reason: it creates the FIRST team_members/subscription so it cannot satisfy the membership-based RLS insert policy under the user's own GUC"},
+        {"text": "Notes that authorization is enforced at the app/action layer, not by RLS, for this bootstrap"}
+      ]
+    },
+    {
+      "id": 1,
+      "name": "bare-query-bypass",
+      "prompt": "A teammate wrote this helper to list the current user's own invoices in @nextsparkjs/core:\n\nimport { query } from '@/core/lib/db'\nexport async function listMyInvoices(userId: string) {\n  return (await query('SELECT * FROM \"invoices\" WHERE \"userId\" = $1', [userId])).rows\n}\n\nUnder the RLS runtime, is this correct? If not, fix it and explain.",
+      "assertions": [
+        {"text": "Identifies that the bare query()/queryOne()/queryRows() family routes to the SERVICE pool and BYPASSES RLS"},
+        {"text": "Recommends queryWithRLS(sql, params, userId) so the query runs on the app pool with the GUC / RLS evaluated"},
+        {"text": "Frames it as a real risk (RLS not enforced) rather than a style nit"}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "team-role-text-extension",
+      "prompt": "Our theme needs a new team role called 'reviewer'. How do I make it real so it can be stored in team_members.role and recognized by permission checks? Do I need a migration?",
+      "assertions": [
+        {"text": "States that team_role is TEXT (not a Postgres ENUM), so no ALTER TYPE / no DB migration is needed to add the value"},
+        {"text": "Says to declare the role via config (availableTeamRoles in app.config + permissions.config.ts)"},
+        {"text": "Explicitly warns against ALTER TYPE team_role ADD VALUE"}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "policy-primitive-ordering",
+      "prompt": "I'm hardening the RLS policy on the `account` table by editing migration 002_auth_tables.sql to use `public.can_bypass_rls()`. On a fresh db:reset it fails with: ERROR: function public.can_bypass_rls() does not exist. Why, and how do I fix it without an incremental migration?",
+      "assertions": [
+        {"text": "Explains the cause: can_bypass_rls (and friends) must exist BEFORE migration 002 runs; defining them later (e.g. 010) is a forward dependency that fails at CREATE POLICY time"},
+        {"text": "Fix: define the primitive in migration 001 (the foundational functions) so 002 can use it"},
+        {"text": "Notes that a SECURITY DEFINER function's table refs resolve at call time, so it can be defined before those tables exist"}
+      ]
+    },
+    {
+      "id": 4,
+      "name": "theme-override-coexistence",
+      "prompt": "My theme ships a phase-2 migration that overrides the core `subscriptions` SELECT policy with a stricter campus-specific one. But after db:reset, a plain team member can still read the team's subscriptions as if the core policy were still active. What's wrong and how do I fix the override?",
+      "assertions": [
+        {"text": "Explains that RLS combines multiple permissive policies with OR, so the core policy and the theme policy COEXIST (the looser core one still grants access)"},
+        {"text": "Fix: the theme override must DROP the core policy by name — and drop BOTH the legacy AND the current (beta.167) core policy names — before creating its own"},
+        {"text": "Mentions the theme override runs in phase 2 (after core) which is why it must drop the core's policies"}
+      ]
+    }
+  ]
+}

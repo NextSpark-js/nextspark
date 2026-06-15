@@ -80,8 +80,22 @@ USING (
   )
 );
 
--- System can write (webhooks from payment providers)
-CREATE POLICY "Billing events system write"
+-- INSERT: bypass or team owner/admin only. Payment-provider webhooks insert via
+-- the SERVICE connection (DATABASE_SERVICE_URL, bypass). The previous
+-- WITH CHECK (true) let ANY authenticated user forge billing events.
+DROP POLICY IF EXISTS "Billing events elevated insert" ON public."billing_events";
+CREATE POLICY "Billing events elevated insert"
 ON public."billing_events"
 FOR INSERT TO authenticated
-WITH CHECK (true);
+WITH CHECK (
+  public.can_bypass_rls()
+  OR "subscriptionId" IN (
+    SELECT s.id FROM public."subscriptions" s
+    WHERE EXISTS (
+      SELECT 1 FROM public."team_members" tm
+      WHERE tm."teamId" = s."teamId"
+        AND tm."userId" = public.get_auth_user_id()
+        AND tm.role IN ('owner','admin')
+    )
+  )
+);

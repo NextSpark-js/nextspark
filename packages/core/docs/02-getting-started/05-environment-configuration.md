@@ -71,6 +71,34 @@ DATABASE_URL="postgresql://postgres.xxxxx:password@aws-0-us-east-1.pooler.supaba
 - ❌ Don't use direct connection (port `:5432`)
 - URL-encode special characters in password
 - Get from: Supabase Dashboard → Settings → Database → Connection pooling
+- After the **RLS cutover** (beta.167), this connects as the non-owner role
+  `nextspark_app`. Before the cutover it stays the owner/admin connection.
+
+### DATABASE_SERVICE_URL (optional)
+
+**Purpose:** Service connection that **bypasses RLS** for system operations (Better Auth
+login/verification, the scheduler/processor, payment webhooks, the superadmin bypass
+check, and the privileged team/subscription bootstrap).
+
+**Format:** typically a **direct** (non-pooler) connection.
+```bash
+# Supabase: the service_role connection string (has BYPASSRLS)
+DATABASE_SERVICE_URL="postgresql://postgres:password@db.xxxxx.supabase.co:5432/postgres"
+```
+
+- Optional — **falls back to `DATABASE_URL`** when unset (pre-cutover behavior unchanged).
+- Setting it is part of the RLS cutover. See
+  [Backend → RLS Policies → Enforcement Layer](../10-backend/03-rls-policies.md#enforcement-layer-beta167).
+
+### MIGRATE_DATABASE_URL (optional)
+
+**Purpose:** Connection used to **run migrations and seeds** (must be the table **owner**).
+After the cutover `DATABASE_URL` is the non-owner `nextspark_app`, so migrations need the
+owner credential here.
+```bash
+MIGRATE_DATABASE_URL="postgresql://owner:password@host:5432/database"
+```
+- Optional — **falls back to `DATABASE_URL`** when unset.
 
 **See:** [Database Setup Guide](./02-database-setup.md)
 

@@ -275,7 +275,9 @@ async function updatePackageJson(config: WizardConfig): Promise<void> {
     // Build tools
     'jiti': '^2.0.0',
     // Database
-    'drizzle-orm': '^0.41.0',
+    // drizzle-orm >= 0.45.2 fixes GHSA-gpj5-g38j-94v9 (SQL injection via mis-escaped
+    // SQL identifiers, HIGH). better-auth 1.6.x already prefers ^0.45.2 as peer.
+    'drizzle-orm': '^0.45.2',
     'postgres': '^3.4.5',
     // State & Data
     '@tanstack/react-query': '^5.64.2',

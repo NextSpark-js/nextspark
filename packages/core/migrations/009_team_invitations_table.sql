@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS public."team_invitations" (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
   "teamId" TEXT NOT NULL REFERENCES public."teams"(id) ON DELETE CASCADE,
   email TEXT NOT NULL,
-  role team_role NOT NULL DEFAULT 'member',
+  role TEXT NOT NULL DEFAULT 'member',  -- TEXT (not ENUM) so themes extend roles via config; see 007
   status invitation_status NOT NULL DEFAULT 'pending',
   token TEXT UNIQUE NOT NULL DEFAULT gen_random_uuid()::text,
   "invitedBy" TEXT NOT NULL REFERENCES public."users"(id),

@@ -5,7 +5,7 @@ description: |
   Includes: config, fields, types, service, messages (i18n), migrations.
   Use this skill to create, modify, or understand system entities.
 allowed-tools: Read, Glob, Grep, Bash(python:*)
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Entity System Skill
@@ -313,7 +313,7 @@ interface ActionConfig {
 2. **Team**: teamId from httpOnly cookie `activeTeamId`
 3. **Permissions**: Verified against `permissions.config.ts`
 4. **Validation**: Fields validated against entity schema
-5. **RLS**: Queries executed with Row-Level Security
+5. **RLS**: Queries executed with Row-Level Security (user-scoped reads pass `userId` → app pool; see the `rls-enforcement` skill for the runtime service-pool model and LIST/READ fail-closed enforcement)
 6. **Team Isolation**: All operations filter by active teamId (prevents cross-team access for multi-team users)
 
 ### Team Isolation (Multi-Team Users)

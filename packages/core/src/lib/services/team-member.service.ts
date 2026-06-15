@@ -166,12 +166,18 @@ export class TeamMemberService {
       throw new Error('User is already a member of this team')
     }
 
+    // Insert via the SERVICE pool (bypass). The GUC here is the TARGET member
+    // being added (not the actor), and the new member is not yet part of the
+    // team, so the membership-based team_members insert policy would deny every
+    // add under real RLS. The actor's authorization to add members is enforced
+    // at the API/action layer (verifyTeamPermission), not by RLS.
     const result = await mutateWithRLS<TeamMember>(
       `INSERT INTO "team_members" ("teamId", "userId", role, "invitedBy", "joinedAt")
        VALUES ($1, $2, $3, $4, NOW())
        RETURNING *`,
       [teamId, userId, role, options.invitedBy || null],
-      userId
+      userId,
+      { service: true }
     )
 
     if (!result.rows[0]) {

@@ -53,9 +53,23 @@ NEXT_PUBLIC_APP_URL=https://stg-app.yourdomain.com
 ### Database
 
 ```bash
-# Supabase PostgreSQL connection
+# Runtime connection for USER requests. After the RLS cutover (beta.167) this
+# connects as the non-owner role `nextspark_app` so RLS is actually evaluated.
 DATABASE_URL=postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres
+
+# Optional — SERVICE connection (RLS-bypass) for system operations: Better Auth,
+# scheduler/processor, payment webhooks, superadmin bypass, team/subscription
+# bootstrap. Supabase: the service_role string. Falls back to DATABASE_URL if unset.
+# DATABASE_SERVICE_URL=postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres
+
+# Optional — connection used to RUN MIGRATIONS/seeds (must be the table OWNER).
+# Falls back to DATABASE_URL if unset.
+# MIGRATE_DATABASE_URL=postgresql://owner:[PASSWORD]@[HOST]:5432/postgres
 ```
+
+> The RLS cutover is **opt-in and backward-compatible**: leave `DATABASE_SERVICE_URL`
+> unset and the app behaves as before. See
+> [Backend → RLS Policies → Enforcement Layer](../10-backend/03-rls-policies.md#enforcement-layer-beta167).
 
 ### Authentication
 
