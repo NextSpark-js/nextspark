@@ -34,6 +34,12 @@ export interface SignupContext {
    * Should create the global work team.
    */
   isFirstUserSingleTenant?: boolean
+
+  /**
+   * Optional signup intent for the current request. The user.create hook maps it
+   * to an initial team role via AUTH_CONFIG.signupIntent.
+   */
+  signupIntent?: string
 }
 
 /**

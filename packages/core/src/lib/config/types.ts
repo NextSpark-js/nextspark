@@ -426,6 +426,22 @@ export interface AuthProvidersConfig {
  * Controls authentication behavior including registration modes
  * and provider visibility. Configured at theme level.
  */
+/**
+ * Signup intent → initial team role mapping.
+ *
+ * When enabled, a signup request can carry an intent (the `x-signup-intent`
+ * header). After the user's team is auto-created, the intent is looked up in
+ * `roleMap`; if it names a configured team role, the user's membership in that
+ * team is set to that role. The mapping is app-controlled: only `roleMap` entries
+ * that name a configured team role take effect.
+ */
+export interface SignupIntentConfig {
+  /** Accept the `intent` field at signup and apply the role mapping. Default: false. */
+  enabled?: boolean
+  /** intent value → initial team_member role (must be a configured team role). */
+  roleMap?: Record<string, string>
+}
+
 export interface AuthConfig {
   /** Registration settings */
   registration: AuthRegistrationConfig
@@ -449,6 +465,9 @@ export interface AuthConfig {
    * link-based verification explicitly when they need to.
    */
   sendVerificationEmailOnSignup?: boolean
+
+  /** Map a signup `intent` to the initial team role of the user's auto-created team. */
+  signupIntent?: SignupIntentConfig
 }
 
 /**

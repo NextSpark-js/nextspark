@@ -36,15 +36,20 @@ export function useAuth() {
     return data
   }
 
-  const handleSignUp = async ({ email, password, firstName, lastName }: { email: string; password: string; firstName?: string; lastName?: string }) => {
+  const handleSignUp = async ({ email, password, firstName, lastName, intent }: { email: string; password: string; firstName?: string; lastName?: string; intent?: string }) => {
     // Now Better Auth supports additional fields directly
-    const { data, error } = await authClient.signUp.email({
-      email,
-      password,
-      name: `${firstName || ''} ${lastName || ''}`.trim() || email.split('@')[0],
-      firstName,
-      lastName,
-    })
+    const { data, error } = await authClient.signUp.email(
+      {
+        email,
+        password,
+        name: `${firstName || ''} ${lastName || ''}`.trim() || email.split('@')[0],
+        firstName,
+        lastName,
+      },
+      // Optional signup intent, sent as the `x-signup-intent` header. The signup
+      // route maps it to an initial team role (AUTH_CONFIG.signupIntent).
+      intent ? { headers: { 'x-signup-intent': intent } } : undefined
+    )
 
     if (error) {
       throw new Error(error.message || 'Failed to create account')

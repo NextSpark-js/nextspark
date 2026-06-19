@@ -14,7 +14,7 @@ import { getUserFlags } from './services/user-flags.service';
 // Direct imports to avoid circular dependency: auth -> services/index -> middleware.service -> auth
 import { TeamService } from './services/team.service';
 import { TeamMemberService } from './services/team-member.service';
-import { shouldSkipTeamCreation } from './auth-context';
+import { shouldSkipTeamCreation, getSignupContext } from './auth-context';
 import {
   isPublicSignupRestricted,
 } from './teams/helpers';
@@ -67,6 +67,39 @@ const pool = new Pool({
   idleTimeoutMillis: 30000,
   max: 20,
 });
+
+/**
+ * Applies AUTH_CONFIG.signupIntent: maps the current request's signup intent to
+ * an initial team role for the user's newly created team. Runs after the team is
+ * created. The intent comes from request-scoped context; the role comes from the
+ * app-configured roleMap and must name one of the configured team roles.
+ */
+async function applySignupIntentRole(
+  user: { id: string; [key: string]: unknown },
+  teamId: string
+): Promise<void> {
+  const cfg = AUTH_CONFIG.signupIntent;
+  if (!cfg?.enabled) return;
+  // The intent for the current request, set by the signup route into context.
+  const intent = getSignupContext()?.signupIntent;
+  if (!intent) return;
+  const mappedRole = cfg.roleMap?.[intent];
+  if (!mappedRole) return;
+  // Apply only a configured team role that differs from the creator's default 'owner'.
+  const validTeamRoles = APP_CONFIG_MERGED.teamRoles?.availableTeamRoles ?? [];
+  if (!validTeamRoles.includes(mappedRole) || mappedRole === 'owner') return;
+  try {
+    // Set the membership role directly (service connection; this hook has no user
+    // GUC). TeamMemberService.updateRole would reject changing the creator's owner role.
+    await pool.query(
+      `UPDATE "team_members" SET role = $1, "updatedAt" = NOW() WHERE "teamId" = $2 AND "userId" = $3`,
+      [mappedRole, teamId, user.id]
+    );
+    console.log(`[Teams] Applied signup intent '${intent}' -> role '${mappedRole}' for user ${user.id} on team ${teamId}`);
+  } catch (error) {
+    console.error(`[Teams] Failed to apply signup intent role for user ${user.id}:`, error);
+  }
+}
 
 export const auth = betterAuth({
   database: pool,
@@ -278,11 +311,14 @@ export const auth = betterAuth({
             // Handle team creation based on mode
             switch (teamsMode) {
               case 'single-user':
-              case 'multi-tenant':
+              case 'multi-tenant': {
                 // Create team for the user
-                await TeamService.create(user.id);
+                const createdTeam = await TeamService.create(user.id);
                 console.log(`[Teams] Team created for user ${user.id} (mode: ${teamsMode})`);
+                // Apply the signup-intent → initial team role mapping (if configured).
+                await applySignupIntentRole(user, createdTeam.id);
                 break;
+              }
 
               case 'single-tenant':
                 // First user creates the global team; subsequent users auto-join it.

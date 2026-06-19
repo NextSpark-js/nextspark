@@ -8,6 +8,7 @@ import { isPublicSignupRestricted } from "@nextsparkjs/core/lib/teams/helpers";
 import { TeamService } from "@nextsparkjs/core/lib/services";
 import { wrapAuthHandlerWithCors, handleCorsPreflightRequest, addCorsHeaders } from "@nextsparkjs/core/lib/api/helpers";
 import { checkDistributedRateLimit } from "@nextsparkjs/core/lib/api/rate-limit";
+import { withSignupContext } from "@nextsparkjs/core/lib/auth-context";
 
 const handlers = toNextJsHandler(auth);
 
@@ -137,6 +138,18 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Read the optional signup intent (`x-signup-intent` header) and run the signup
+  // within request-scoped context so the user.create.after hook can map it to an
+  // initial team role (AUTH_CONFIG.signupIntent).
+  const signupIntent = isSignupAttempt
+    ? (req.headers.get('x-signup-intent') || undefined)
+    : undefined;
+
   // Wrap with CORS headers for cross-origin requests (mobile apps, etc.)
-  return wrapAuthHandlerWithCors(() => handlers.POST(req), req);
+  return wrapAuthHandlerWithCors(
+    signupIntent
+      ? () => withSignupContext({ signupIntent }, () => handlers.POST(req))
+      : () => handlers.POST(req),
+    req
+  );
 }

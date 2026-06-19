@@ -405,6 +405,15 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
      * remains exported and can still be called explicitly when needed.
      */
     sendVerificationEmailOnSignup: true,
+
+    /**
+     * Signup intent → initial team role mapping. Disabled by default; an app
+     * enables it and maps intent values to team roles in its app.config.ts.
+     */
+    signupIntent: {
+      enabled: false,
+      roleMap: {} as Record<string, string>,
+    },
   },
 
   // =============================================================================
