@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@nextsparkjs/core/lib/auth";
-import { mutateWithRLS } from "@nextsparkjs/core/lib/db";
 import { withRateLimitTier } from "@nextsparkjs/core/lib/api/rate-limit";
-import { TeamService } from "@nextsparkjs/core/lib/services";
+import { UserService } from "@nextsparkjs/core/lib/services";
 
 export const DELETE = withRateLimitTier(async (req: NextRequest) => {
   try {
@@ -18,35 +17,37 @@ export const DELETE = withRateLimitTier(async (req: NextRequest) => {
     const userId = session.user.id;
 
     try {
-      // Sign out the user first (while the user still exists)
+      // Anonymize the account: scrubs user metadata, frees the UNIQUE email,
+      // strips PII, and revokes every session + stored credential. A hard
+      // DELETE fails under foreign-key constraints; anonymizing preserves
+      // referential integrity. Throws code 'OWNS_TEAMS' if the user still
+      // owns teams (ownership must be transferred or those teams deleted first).
+      await UserService.anonymizeAccount(userId);
+
+      // Sessions are already revoked server-side; clear the current session
+      // cookie on this device too.
       try {
-        await auth.api.signOut({
-          headers: req.headers,
-        });
+        await auth.api.signOut({ headers: req.headers });
       } catch (signOutError) {
-        console.warn("Sign out failed (user may already be signed out):", signOutError);
+        console.warn("Sign out after account deletion failed (already revoked):", signOutError);
       }
 
-      // Delete user account and all associated data
-      // RLS policies will ensure only the user's own data is deleted
-      await mutateWithRLS(
-        'DELETE FROM "users" WHERE id = $1',
-        [userId],
-        userId
-      );
-
-      return NextResponse.json({ 
-        message: "Account deleted successfully" 
+      return NextResponse.json({
+        message: "Account deleted successfully",
       });
-
     } catch (dbError) {
+      if ((dbError as { code?: string })?.code === "OWNS_TEAMS") {
+        return NextResponse.json(
+          { error: (dbError as Error).message },
+          { status: 409 }
+        );
+      }
       console.error("Failed to delete user account:", dbError);
       return NextResponse.json(
         { error: "Failed to delete account" },
         { status: 500 }
       );
     }
-
   } catch (error) {
     console.error("Delete account error:", error);
     return NextResponse.json(

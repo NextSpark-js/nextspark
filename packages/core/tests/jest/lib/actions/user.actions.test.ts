@@ -17,6 +17,7 @@ jest.mock('@/core/lib/services/user.service', () => ({
   UserService: {
     updateUser: jest.fn(),
     deleteAllUserMetas: jest.fn(),
+    anonymizeAccount: jest.fn(),
   },
 }))
 
@@ -344,29 +345,22 @@ describe('User Server Actions', () => {
 
   describe('deleteAccount', () => {
     it('deletes account successfully when user owns no teams', async () => {
-      const { TeamService } = require('@/core/lib/services/team.service')
-      const { mutateWithRLS } = require('@/core/lib/db')
-
-      TeamService.getByOwnerId.mockResolvedValue([])
-      mockUserService.deleteAllUserMetas.mockResolvedValue(undefined)
-      mutateWithRLS.mockResolvedValue({ rowCount: 1 })
+      mockUserService.anonymizeAccount.mockResolvedValue(undefined)
 
       const result = await deleteAccount()
 
       expect(result.success).toBe(true)
-      expect(TeamService.getByOwnerId).toHaveBeenCalledWith('user-123')
-      expect(mockUserService.deleteAllUserMetas).toHaveBeenCalledWith('user-123', 'user-123')
-      expect(mutateWithRLS).toHaveBeenCalledWith(
-        'DELETE FROM "users" WHERE id = $1',
-        ['user-123'],
-        'user-123'
-      )
+      expect(mockUserService.anonymizeAccount).toHaveBeenCalledWith('user-123')
     })
 
     it('returns error when user owns teams', async () => {
-      const { TeamService } = require('@/core/lib/services/team.service')
-
-      TeamService.getByOwnerId.mockResolvedValue([{ id: 'team-1', name: 'My Team' }])
+      const ownsTeamsError = Object.assign(
+        new Error(
+          'Cannot delete account while owning teams. Transfer ownership or delete teams first.'
+        ),
+        { code: 'OWNS_TEAMS' }
+      )
+      mockUserService.anonymizeAccount.mockRejectedValue(ownsTeamsError)
 
       const result = await deleteAccount()
 
@@ -377,12 +371,7 @@ describe('User Server Actions', () => {
     })
 
     it('returns error when user not found in database', async () => {
-      const { TeamService } = require('@/core/lib/services/team.service')
-      const { mutateWithRLS } = require('@/core/lib/db')
-
-      TeamService.getByOwnerId.mockResolvedValue([])
-      mockUserService.deleteAllUserMetas.mockResolvedValue(undefined)
-      mutateWithRLS.mockResolvedValue({ rowCount: 0 })
+      mockUserService.anonymizeAccount.mockRejectedValue(new Error('User not found'))
 
       const result = await deleteAccount()
 
@@ -394,12 +383,7 @@ describe('User Server Actions', () => {
 
     it('revalidates root path after deletion', async () => {
       const { revalidatePath } = require('next/cache')
-      const { TeamService } = require('@/core/lib/services/team.service')
-      const { mutateWithRLS } = require('@/core/lib/db')
-
-      TeamService.getByOwnerId.mockResolvedValue([])
-      mockUserService.deleteAllUserMetas.mockResolvedValue(undefined)
-      mutateWithRLS.mockResolvedValue({ rowCount: 1 })
+      mockUserService.anonymizeAccount.mockResolvedValue(undefined)
 
       await deleteAccount()
 
@@ -407,9 +391,7 @@ describe('User Server Actions', () => {
     })
 
     it('handles errors gracefully', async () => {
-      const { TeamService } = require('@/core/lib/services/team.service')
-
-      TeamService.getByOwnerId.mockRejectedValue(new Error('Database error'))
+      mockUserService.anonymizeAccount.mockRejectedValue(new Error('Database error'))
 
       const result = await deleteAccount()
 

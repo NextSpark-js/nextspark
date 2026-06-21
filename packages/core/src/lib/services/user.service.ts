@@ -680,6 +680,76 @@ export class UserService {
   }
 
   /**
+   * Anonymize (soft-delete) a user account.
+   *
+   * A hard DELETE of the users row fails under foreign-key constraints (other
+   * tables reference the user) and would orphan that history. Anonymizing
+   * instead frees the UNIQUE email for re-registration, strips PII, revokes
+   * every session and purges stored credentials, while preserving referential
+   * integrity. `userId` must come from the caller's session — a user may only
+   * anonymize their own account.
+   *
+   * Throws an Error with `.code === 'OWNS_TEAMS'` when the user still owns
+   * teams; the caller must surface that so ownership is transferred first.
+   *
+   * @param userId - ID of the account to anonymize (own account only)
+   */
+  static async anonymizeAccount(userId: string): Promise<void> {
+    if (!userId || userId.trim() === '') {
+      throw new Error('User ID is required')
+    }
+
+    // 1. Block while the user still owns teams. Dynamic import avoids a
+    //    circular dependency between the user and team services.
+    const { TeamService } = await import('./team.service')
+    const ownedTeams = await TeamService.getByOwnerId(userId)
+    if (ownedTeams.length > 0) {
+      const error = new Error(
+        'Cannot delete account while owning teams. Transfer ownership or delete teams first.'
+      ) as Error & { code?: string }
+      error.code = 'OWNS_TEAMS'
+      throw error
+    }
+
+    // 2. Scrub user metadata (phone and any other PII stored as metas).
+    await UserService.deleteAllUserMetas(userId, userId)
+
+    // 3. Anonymize the row. The sync_user_name BEFORE-UPDATE trigger recomputes
+    //    `name` from firstName/lastName whenever those columns are in the SET
+    //    list, so set them to neutral placeholders (=> name 'Deleted account')
+    //    rather than NULL (which the trigger would collapse to an empty name).
+    //    Self-scoped via RLS (a user may only update their own row).
+    const result = await mutateWithRLS(
+      `UPDATE "users"
+         SET email = 'deleted+' || id || '@deleted.invalid',
+             "emailVerified" = false,
+             "firstName" = 'Deleted',
+             "lastName" = 'account',
+             image = NULL
+       WHERE id = $1`,
+      [userId],
+      userId
+    )
+    if (result.rowCount === 0) {
+      throw new Error('User not found')
+    }
+
+    // 4. Revoke every session and purge stored credentials so the account is
+    //    logged out on all devices and no password hash / OAuth token lingers.
+    //    The old hard-DELETE relied on ON DELETE CASCADE, which no longer fires
+    //    on an UPDATE; the session and account tables are service-write-only
+    //    under RLS, so these run on the service (RLS-bypass) pool. A deployment
+    //    whose app role is RLS-enforced MUST therefore set DATABASE_SERVICE_URL
+    //    (the same prerequisite as the team/subscription bootstrap) — otherwise
+    //    the service pool falls back to the app pool and these deletes silently
+    //    match zero rows. This method is idempotent and safe to re-run: the
+    //    email sentinel embeds the id (no UNIQUE conflict) and every step repeats
+    //    cleanly, so a caller may retry after a transient mid-sequence failure.
+    await mutateWithRLS('DELETE FROM "session" WHERE "userId" = $1', [userId], userId, { service: true })
+    await mutateWithRLS('DELETE FROM "account" WHERE "userId" = $1', [userId], userId, { service: true })
+  }
+
+  /**
    * Get metadata for multiple users in bulk (solves N+1 query problem)
    *
    * @param userIds - Array of user IDs

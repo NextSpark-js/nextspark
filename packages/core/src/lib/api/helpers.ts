@@ -493,6 +493,9 @@ export async function addCorsHeaders(response: NextResponse, request?: NextReque
   }
 
   response.headers.set('Access-Control-Allow-Origin', allowedOrigin);
+  // Credentialed CORS echoes a per-request origin, so the response varies by
+  // Origin — tell caches to key on it (prevents serving origin A's grant to B).
+  response.headers.append('Vary', 'Origin');
   response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key, x-team-id, x-builder-source');
   response.headers.set('Access-Control-Allow-Credentials', 'true');
@@ -568,6 +571,8 @@ export async function wrapAuthHandlerWithCors(
 
     newResponse.headers.set('Access-Control-Allow-Origin', allowedOrigin)
     newResponse.headers.set('Access-Control-Allow-Credentials', 'true')
+    // Vary on Origin since ACAO is per-request (cache-key correctness).
+    newResponse.headers.append('Vary', 'Origin')
   }
 
   return newResponse

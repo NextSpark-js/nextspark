@@ -297,50 +297,20 @@ export async function deleteAccount(): Promise<EntityActionVoidResult> {
 
     const userId = session.user.id
 
-    // 2. Check if user owns any teams
-    // Import TeamService dynamically to avoid circular dependency
-    const { TeamService } = await import('../services/team.service')
-    const ownedTeams = await TeamService.getByOwnerId(userId)
+    // 2. Anonymize the account: scrubs user metadata, frees the UNIQUE email,
+    // strips PII, and revokes every session + stored credential. Throws an
+    // Error with code 'OWNS_TEAMS' if the user still owns teams (ownership must
+    // be transferred or those teams deleted first).
+    await UserService.anonymizeAccount(userId)
 
-    if (ownedTeams.length > 0) {
-      return {
-        success: false,
-        error: 'Cannot delete account while owning teams. Transfer ownership or delete teams first.',
-      }
-    }
-
-    // 3. Delete user metadata first
-    await UserService.deleteAllUserMetas(userId, userId)
-
-    // 4. Anonymize the user row instead of deleting it. A hard DELETE fails
-    // under foreign-key constraints (rows in other tables reference the user)
-    // and would orphan that history; anonymizing frees the UNIQUE email for
-    // re-registration and strips PII (name, image) while preserving referential
-    // integrity. Self-scoped via RLS — a user can only anonymize their own row.
-    const { mutateWithRLS } = await import('../db')
-
-    const result = await mutateWithRLS(
-      `UPDATE "users"
-         SET email = 'deleted+' || id || '@deleted.invalid',
-             "emailVerified" = false,
-             name = 'Deleted account',
-             "firstName" = NULL,
-             "lastName" = NULL,
-             image = NULL
-       WHERE id = $1`,
-      [userId],
-      userId
-    )
-
-    if (result.rowCount === 0) {
-      return { success: false, error: 'User not found' }
-    }
-
-    // 5. Revalidate paths (user will be logged out anyway)
+    // 3. Revalidate; the user's sessions are now revoked on every device.
     revalidatePath('/')
 
     return { success: true }
   } catch (error) {
+    if ((error as { code?: string })?.code === 'OWNS_TEAMS') {
+      return { success: false, error: (error as Error).message }
+    }
     console.error('[deleteAccount] Error:', error)
     return {
       success: false,

@@ -209,9 +209,16 @@ export function isOriginAllowed(
       continue
     }
 
-    // Build an anchored regex: escape the whole entry, then turn each escaped
-    // `\*` back into a single-label matcher (`[^.]+` — non-dot, so one label).
-    const pattern = '^' + escapeRegExp(entry).replace(/\\\*/g, '[^.]+') + '$'
+    // Wildcard entry. Require a scheme so a bare `*` (or other scheme-less junk)
+    // can't compile to `^[^.]+$` and match dotless origins like http://localhost.
+    if (!entry.includes('://')) continue
+
+    // Build an anchored regex: escape the whole entry, then turn each RUN of
+    // escaped `\*` into a SINGLE single-label matcher (`[^.]+` — non-dot, so one
+    // label). Collapsing consecutive `*` (e.g. a typo'd `**`) into one matcher
+    // avoids adjacent unbounded quantifiers, which would otherwise cause
+    // catastrophic backtracking (ReDoS) on the attacker-controlled origin.
+    const pattern = '^' + escapeRegExp(entry).replace(/(?:\\\*)+/g, '[^.]+') + '$'
     try {
       if (new RegExp(pattern).test(requestOrigin)) return requestOrigin
     } catch {
