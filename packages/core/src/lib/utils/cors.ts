@@ -168,3 +168,56 @@ export function getCorsOrigins(
 
   return origins
 }
+
+/**
+ * Escape a string for safe literal use inside a RegExp.
+ */
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/**
+ * Check whether a request origin is allowed, supporting wildcard-pattern entries
+ * in the allow-list. A `*` in an entry matches exactly ONE host label (no dots),
+ * so `https://*.example.app` matches `https://tenant.example.app` but NOT
+ * `https://a.b.example.app`, `https://example.app`, or look-alikes like
+ * `https://evil-example.app`. Entries without `*` are matched exactly.
+ *
+ * Returns the CONCRETE request origin to echo back (never the pattern or `*`) so
+ * credentialed responses — which cannot use `*` for Access-Control-Allow-Origin —
+ * send a valid concrete origin; returns null when nothing matches.
+ *
+ * Why wildcards: multi-tenant apps serve dynamic per-tenant subdomains that can't
+ * be enumerated in config. A single `https://*.<apex>` entry lets a session on
+ * the apex be recognized cross-subdomain without listing every tenant origin.
+ *
+ * @param requestOrigin - The (already normalized) incoming Origin to validate.
+ * @param allowedOrigins - The allow-list from getCorsOrigins() (may contain patterns).
+ * @returns The origin to echo (the requestOrigin on match), or null on no match.
+ */
+export function isOriginAllowed(
+  requestOrigin: string,
+  allowedOrigins: string[]
+): string | null {
+  if (!requestOrigin) return null
+
+  for (const entry of allowedOrigins) {
+    if (!entry) continue
+
+    if (!entry.includes('*')) {
+      if (entry === requestOrigin) return requestOrigin
+      continue
+    }
+
+    // Build an anchored regex: escape the whole entry, then turn each escaped
+    // `\*` back into a single-label matcher (`[^.]+` — non-dot, so one label).
+    const pattern = '^' + escapeRegExp(entry).replace(/\\\*/g, '[^.]+') + '$'
+    try {
+      if (new RegExp(pattern).test(requestOrigin)) return requestOrigin
+    } catch {
+      // Malformed pattern → skip (fail closed).
+    }
+  }
+
+  return null
+}

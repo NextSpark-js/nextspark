@@ -116,21 +116,15 @@ export const GET = withRateLimitTier(withApiLogging(async (
     // Get user metadata value using UserService
     const metaValue = await UserService.getUserMeta(id, key, authResult.user.id)
 
-    // Return 404 if metadata key doesn't exist
-    if (metaValue === null || metaValue === undefined) {
-      const response = createApiError(
-        `Metadata key '${key}' not found for user`,
-        404,
-        null,
-        'META_NOT_FOUND'
-      )
-      return addCorsHeaders(response)
-    }
-
-    // Return metadata value
+    // Return 200 with value:null for an unset-but-valid key. A missing optional
+    // meta value is a normal state, not an error — a 404 here forces every
+    // client that reads an optional key to swallow a network 4xx (which the
+    // browser still logs as a failed request). The key itself was already
+    // validated above (INVALID_META_KEY), so reaching here means the key is
+    // valid and simply has no stored value yet.
     const response = createApiResponse({
       key,
-      value: metaValue,
+      value: metaValue ?? null,
     })
     return addCorsHeaders(response)
   } catch (error) {

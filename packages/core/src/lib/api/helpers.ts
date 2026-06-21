@@ -9,7 +9,7 @@ import { ScopeService } from '../services/scope.service';
 import { getEntityConfig } from '../entities/registry';
 import { getChildEntities, getEntity } from '../entities/queries';
 import { CreateMetaPayload } from '../../types/meta.types';
-import { getCorsOrigins, normalizeOrigin } from '../utils/cors';
+import { getCorsOrigins, normalizeOrigin, isOriginAllowed } from '../utils/cors';
 
 // Types for session-based auth
 interface SessionAuth {
@@ -475,10 +475,13 @@ export async function addCorsHeaders(response: NextResponse, request?: NextReque
       }
       // En producción o desarrollo con restricciones, verificar lista permitida
       else {
-        // Use unified origin list from getCorsOrigins() (already normalized)
+        // Use unified origin list from getCorsOrigins() (already normalized).
+        // isOriginAllowed supports wildcard-pattern entries and echoes the
+        // concrete origin (credentialed responses can't use '*').
         const allowedOrigins = getCorsOrigins(config, env);
-        if (allowedOrigins.includes(normalizedOrigin)) {
-          allowedOrigin = normalizedOrigin;
+        const matched = isOriginAllowed(normalizedOrigin, allowedOrigins);
+        if (matched) {
+          allowedOrigin = matched;
         }
       }
     }
@@ -554,10 +557,12 @@ export async function wrapAuthHandlerWithCors(
     if (env === 'development' && corsConfig.allowAllOrigins.development) {
       allowedOrigin = normalizedOrigin
     } else {
-      // Check against allowed origins list (already normalized)
+      // Check against allowed origins list (already normalized). isOriginAllowed
+      // supports wildcard-pattern entries and echoes the concrete origin.
       const allowedOrigins = getCorsOrigins(config, env)
-      if (allowedOrigins.includes(normalizedOrigin)) {
-        allowedOrigin = normalizedOrigin
+      const matched = isOriginAllowed(normalizedOrigin, allowedOrigins)
+      if (matched) {
+        allowedOrigin = matched
       }
     }
 
