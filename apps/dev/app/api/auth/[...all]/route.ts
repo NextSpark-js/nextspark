@@ -41,8 +41,27 @@ export async function GET(req: NextRequest, context: { params: Promise<{ all: st
     }
   }
 
+  // OAuth callbacks (e.g. Google) are browser GET redirects from the provider,
+  // so they cannot carry the `x-signup-intent` header that header-based signup
+  // uses. For first-time social signups, the client sets a short-lived
+  // `signup-intent` cookie before initiating the OAuth flow; the cookie survives
+  // the round-trip and is read here so the callback runs within signup context
+  // and the user.create.after hook maps it to the initial team role
+  // (AUTH_CONFIG.signupIntent), exactly as header-based signup does. Trust model
+  // matches the header: the value only maps to an app-configured role via
+  // roleMap (never an arbitrary role), so it cannot be used to escalate.
+  const isOAuthCallback = pathname.includes('/api/auth/callback/');
+  const signupIntent = isOAuthCallback
+    ? (req.cookies.get('signup-intent')?.value || undefined)
+    : undefined;
+
   // Wrap with CORS headers for cross-origin requests (mobile apps, etc.)
-  return wrapAuthHandlerWithCors(() => handlers.GET(req), req);
+  return wrapAuthHandlerWithCors(
+    signupIntent
+      ? () => withSignupContext({ signupIntent }, () => handlers.GET(req))
+      : () => handlers.GET(req),
+    req
+  );
 }
 
 // Intercept signup requests to validate registration mode
@@ -138,12 +157,17 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Read the optional signup intent (`x-signup-intent` header) and run the signup
-  // within request-scoped context so the user.create.after hook can map it to an
-  // initial team role (AUTH_CONFIG.signupIntent).
+  // Read the optional signup intent and run the signup within request-scoped
+  // context so the user.create.after hook can map it to an initial team role
+  // (AUTH_CONFIG.signupIntent). Header-based signup carries it in the
+  // `x-signup-intent` header; OAuth callbacks (incl. form_post-mode providers
+  // that POST the callback) can't, so they fall back to the `signup-intent`
+  // cookie set by the client before the OAuth flow (see the GET handler).
   const signupIntent = isSignupAttempt
-    ? (req.headers.get('x-signup-intent') || undefined)
-    : undefined;
+    ? (req.headers.get('x-signup-intent') || req.cookies.get('signup-intent')?.value || undefined)
+    : isOAuthCallback
+      ? (req.cookies.get('signup-intent')?.value || undefined)
+      : undefined;
 
   // Wrap with CORS headers for cross-origin requests (mobile apps, etc.)
   return wrapAuthHandlerWithCors(
