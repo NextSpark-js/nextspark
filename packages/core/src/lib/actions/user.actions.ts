@@ -312,14 +312,22 @@ export async function deleteAccount(): Promise<EntityActionVoidResult> {
     // 3. Delete user metadata first
     await UserService.deleteAllUserMetas(userId, userId)
 
-    // 4. Delete user account
-    // Note: Team memberships should cascade delete via foreign key
-    // The actual user deletion requires direct database access
-    // For now, we'll use a raw query through the db module
+    // 4. Anonymize the user row instead of deleting it. A hard DELETE fails
+    // under foreign-key constraints (rows in other tables reference the user)
+    // and would orphan that history; anonymizing frees the UNIQUE email for
+    // re-registration and strips PII (name, image) while preserving referential
+    // integrity. Self-scoped via RLS — a user can only anonymize their own row.
     const { mutateWithRLS } = await import('../db')
 
     const result = await mutateWithRLS(
-      'DELETE FROM "users" WHERE id = $1',
+      `UPDATE "users"
+         SET email = 'deleted+' || id || '@deleted.invalid',
+             "emailVerified" = false,
+             name = 'Deleted account',
+             "firstName" = NULL,
+             "lastName" = NULL,
+             image = NULL
+       WHERE id = $1`,
       [userId],
       userId
     )

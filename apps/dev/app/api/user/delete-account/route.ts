@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@nextsparkjs/core/lib/auth";
 import { mutateWithRLS } from "@nextsparkjs/core/lib/db";
 import { withRateLimitTier } from "@nextsparkjs/core/lib/api/rate-limit";
+import { TeamService } from "@nextsparkjs/core/lib/services";
 
 export const DELETE = withRateLimitTier(async (req: NextRequest) => {
   try {
