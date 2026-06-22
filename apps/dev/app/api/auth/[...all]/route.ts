@@ -115,6 +115,13 @@ export async function POST(req: NextRequest) {
   const isOAuthCallback = pathname.includes('/api/auth/callback/');
   const isSignupRequest = isSignupAttempt || isOAuthCallback;
 
+  // A first-time OTP sign-in (emailOTP plugin with disableSignUp:false) auto-creates
+  // the user, so it is an implicit signup that can also carry an intent. It is a
+  // sign-in endpoint, so it is deliberately NOT part of `isSignupRequest` above
+  // (no registration-mode gating) — it only participates in the intent wrapping
+  // below, exactly like header/OAuth signup.
+  const isOtpSignin = pathname.includes('/sign-in/email-otp');
+
   if (isSignupRequest) {
     const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open';
     const teamsMode = TEAMS_CONFIG.mode;
@@ -160,10 +167,15 @@ export async function POST(req: NextRequest) {
   // Read the optional signup intent and run the signup within request-scoped
   // context so the user.create.after hook can map it to an initial team role
   // (AUTH_CONFIG.signupIntent). Header-based signup carries it in the
-  // `x-signup-intent` header; OAuth callbacks (incl. form_post-mode providers
-  // that POST the callback) can't, so they fall back to the `signup-intent`
-  // cookie set by the client before the OAuth flow (see the GET handler).
-  const signupIntent = isSignupAttempt
+  // `x-signup-intent` header; a first-time OTP sign-in carries it the same way
+  // (header preferred, `signup-intent` cookie fallback); OAuth callbacks (incl.
+  // form_post-mode providers that POST the callback) can't send a header, so
+  // they fall back to the cookie set by the client before the OAuth flow (see
+  // the GET handler). The value only ever maps to an app-configured role via
+  // roleMap (never an arbitrary role) and the user.create.after hook runs only
+  // when a user is actually created, so wrapping an existing-user sign-in is a
+  // no-op — there is no escalation surface.
+  const signupIntent = (isSignupAttempt || isOtpSignin)
     ? (req.headers.get('x-signup-intent') || req.cookies.get('signup-intent')?.value || undefined)
     : isOAuthCallback
       ? (req.cookies.get('signup-intent')?.value || undefined)
