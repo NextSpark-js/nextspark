@@ -1,6 +1,6 @@
 {
   "name": "@nextsparkjs/theme-blog",
-  "version": "0.1.0-beta.171",
+  "version": "0.1.0-beta.172",
   "private": false,
   "type": "module",
   "main": "./config/theme.config.ts",
