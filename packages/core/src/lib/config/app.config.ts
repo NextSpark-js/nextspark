@@ -413,6 +413,7 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
     signupIntent: {
       enabled: false,
       roleMap: {} as Record<string, string>,
+      skipTeamForNonOwnerIntents: false,
     },
   },
 

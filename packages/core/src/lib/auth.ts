@@ -69,25 +69,56 @@ const pool = new Pool({
 });
 
 /**
+ * Resolves the current signup request's intent to a configured NON-owner team
+ * role, or null. Returns null when signup-intent mapping is disabled, the request
+ * carries no intent, the intent is unmapped, or it maps to the creator's default
+ * 'owner' role. Single source of truth for both the team-less-signup decision and
+ * the post-create role assignment below.
+ */
+function resolveNonOwnerSignupRole(): string | null {
+  const cfg = AUTH_CONFIG.signupIntent;
+  if (!cfg?.enabled) return null;
+  // The intent for the current request, set by the signup route into context.
+  const intent = getSignupContext()?.signupIntent;
+  if (!intent) return null;
+  const mappedRole = cfg.roleMap?.[intent];
+  if (!mappedRole) return null;
+  // Only a configured team role that differs from the creator's default 'owner'.
+  const validTeamRoles = APP_CONFIG_MERGED.teamRoles?.availableTeamRoles ?? [];
+  if (!validTeamRoles.includes(mappedRole) || mappedRole === 'owner') return null;
+  return mappedRole;
+}
+
+/**
+ * Records the resolved signup intent on the user's metadata so the application can
+ * recognise a deliberately team-less account (vs a half-finished owner). Uses the
+ * privileged pool — this hook runs with no user GUC. Best-effort; the caller's
+ * try/catch keeps a failure here from aborting user creation.
+ */
+async function recordSignupIntentMeta(userId: string, intent: string): Promise<void> {
+  // metaValue is jsonb — encode the plain intent string as a JSON string
+  // (to_jsonb('client') -> "client"), matching how the rest of users_metas is stored.
+  await pool.query(
+    `INSERT INTO "users_metas" ("userId", "metaKey", "metaValue", "dataType", "updatedAt")
+     VALUES ($1, 'signup_intent', to_jsonb($2::text), 'string', CURRENT_TIMESTAMP)
+     ON CONFLICT ("userId", "metaKey")
+     DO UPDATE SET "metaValue" = EXCLUDED."metaValue", "updatedAt" = CURRENT_TIMESTAMP`,
+    [userId, intent]
+  );
+}
+
+/**
  * Applies AUTH_CONFIG.signupIntent: maps the current request's signup intent to
  * an initial team role for the user's newly created team. Runs after the team is
- * created. The intent comes from request-scoped context; the role comes from the
- * app-configured roleMap and must name one of the configured team roles.
+ * created. No-ops unless the intent maps to a configured non-owner team role.
  */
 async function applySignupIntentRole(
   user: { id: string; [key: string]: unknown },
   teamId: string
 ): Promise<void> {
-  const cfg = AUTH_CONFIG.signupIntent;
-  if (!cfg?.enabled) return;
-  // The intent for the current request, set by the signup route into context.
-  const intent = getSignupContext()?.signupIntent;
-  if (!intent) return;
-  const mappedRole = cfg.roleMap?.[intent];
+  const mappedRole = resolveNonOwnerSignupRole();
   if (!mappedRole) return;
-  // Apply only a configured team role that differs from the creator's default 'owner'.
-  const validTeamRoles = APP_CONFIG_MERGED.teamRoles?.availableTeamRoles ?? [];
-  if (!validTeamRoles.includes(mappedRole) || mappedRole === 'owner') return;
+  const intent = getSignupContext()?.signupIntent;
   try {
     // Set the membership role directly (service connection; this hook has no user
     // GUC). TeamMemberService.updateRole would reject changing the creator's owner role.
@@ -312,6 +343,20 @@ export const auth = betterAuth({
             switch (teamsMode) {
               case 'single-user':
               case 'multi-tenant': {
+                // A signup whose intent maps to a non-owner role can be configured
+                // (signupIntent.skipTeamForNonOwnerIntents) to create NO team at
+                // all: the account is intentionally team-less and operates as a
+                // plain authenticated user. The intent is recorded in users_metas
+                // so the app can tell a deliberate team-less account from a
+                // half-finished owner. Opt-in; with the flag off (default) every
+                // signup gets a team and the non-owner role is applied to it.
+                const nonOwnerRole = resolveNonOwnerSignupRole();
+                if (nonOwnerRole && AUTH_CONFIG.signupIntent?.skipTeamForNonOwnerIntents) {
+                  const intent = getSignupContext()?.signupIntent ?? nonOwnerRole;
+                  await recordSignupIntentMeta(user.id, intent);
+                  console.log(`[Teams] Skipping auto-team for user ${user.id} (non-owner signup intent '${intent}')`);
+                  break;
+                }
                 // Create team for the user
                 const createdTeam = await TeamService.create(user.id);
                 console.log(`[Teams] Team created for user ${user.id} (mode: ${teamsMode})`);

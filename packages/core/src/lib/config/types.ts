@@ -440,6 +440,16 @@ export interface SignupIntentConfig {
   enabled?: boolean
   /** intent value → initial team_member role (must be a configured team role). */
   roleMap?: Record<string, string>
+  /**
+   * When true, a signup whose intent maps (via `roleMap`) to a NON-owner team
+   * role creates NO auto-team at all: the account is intentionally team-less and
+   * operates as a plain authenticated user (e.g. a consumer who books but runs no
+   * team of their own). The resolved intent is recorded in `users_metas` under the
+   * `signup_intent` key so the application can distinguish a deliberately
+   * team-less account from a half-finished owner. Default: false — every signup
+   * gets a team and the non-owner role is applied to it (the prior behavior).
+   */
+  skipTeamForNonOwnerIntents?: boolean
 }
 
 export interface AuthConfig {
