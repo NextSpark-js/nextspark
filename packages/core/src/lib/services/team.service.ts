@@ -563,9 +563,16 @@ export class TeamService {
       throw new Error('User ID and Team ID are required')
     }
 
-    // Verify user is a member of the team
+    // Verify the user is a member of the team AND the team is not soft-deleted.
+    // A soft-deleted team must never become the active context: its members (e.g.
+    // a former owner of a discarded personal team) still have a team_members row,
+    // so a membership-only check would let a stale active-team pointer to a deleted
+    // team be re-selected.
     const member = await queryOneWithRLS<{ id: string }>(
-      'SELECT id FROM "team_members" WHERE "teamId" = $1 AND "userId" = $2',
+      `SELECT tm.id
+         FROM "team_members" tm
+         INNER JOIN "teams" t ON t.id = tm."teamId"
+        WHERE tm."teamId" = $1 AND tm."userId" = $2 AND t."deletedAt" IS NULL`,
       [teamId, userId],
       userId
     )

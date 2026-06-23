@@ -66,8 +66,13 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
     }
 
     // Build WHERE clause based on filters
-    // If scope=all (superadmin), don't filter by user
-    let whereClause = requestAllTeams ? 'WHERE 1=1' : 'WHERE tm."userId" = $1'
+    // If scope=all (superadmin), don't filter by user.
+    // For a user's own list, exclude soft-deleted teams: a member (e.g. the former
+    // owner of a discarded personal team) keeps their team_members row, so without
+    // this filter a stale active-team pointer to a deleted team resurfaces in the
+    // list and the client team resolver (which matches on membership, not deletedAt)
+    // re-selects it. scope=all stays unfiltered so admins can still see deleted teams.
+    let whereClause = requestAllTeams ? 'WHERE 1=1' : 'WHERE tm."userId" = $1 AND t."deletedAt" IS NULL'
     const queryValues: unknown[] = requestAllTeams ? [] : [authResult.user!.id]
     let paramCount = requestAllTeams ? 1 : 2
 
