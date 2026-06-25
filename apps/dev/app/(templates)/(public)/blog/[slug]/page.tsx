@@ -7,3 +7,6 @@ import TemplateComponent from '@/contents/themes/default/templates/(public)/blog
 
 // Direct export of the theme template (no fallback)
 export default TemplateComponent
+
+// Re-export Next.js route-level exports from the theme template
+export { generateMetadata, revalidate } from '@/contents/themes/default/templates/(public)/blog/[slug]/page'

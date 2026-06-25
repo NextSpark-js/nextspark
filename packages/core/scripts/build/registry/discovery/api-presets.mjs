@@ -439,75 +439,84 @@ async function discoverEntityFolders(config, results, processedEndpoints) {
  */
 async function discoverThemeRoutes(config, results, processedEndpoints) {
   const themeName = config.activeTheme
-  const themeApiDir = join(config.themesDir, themeName, 'app', 'api')
 
-  if (!existsSync(themeApiDir)) {
-    verbose(`No theme API routes found for "${themeName}"`)
-    return
-  }
+  // Process every docs.md / presets.ts under `baseDir`, mapping each route
+  // directory to an endpoint via `endpointForDir(routeDir)`.
+  const processTree = async (baseDir, endpointForDir) => {
+    if (!existsSync(baseDir)) return
 
-  // Find all docs.md files in theme routes
-  const docFiles = await findFilesRecursive(themeApiDir, 'docs.md')
-  const presetFiles = await findFilesRecursive(themeApiDir, 'presets.ts')
+    const docFiles = await findFilesRecursive(baseDir, 'docs.md')
+    const presetFiles = await findFilesRecursive(baseDir, 'presets.ts')
 
-  // Process docs
-  for (const docsPath of docFiles) {
-    try {
-      const routeDir = dirname(docsPath)
-      const relativeDir = relative(join(config.themesDir, themeName, 'app'), routeDir)
-      const endpoint = '/' + normalizePath(relativeDir)
+    for (const docsPath of docFiles) {
+      try {
+        const routeDir = dirname(docsPath)
+        const endpoint = endpointForDir(routeDir)
+        if (processedEndpoints.has(endpoint)) continue
 
-      const content = await readFile(docsPath, 'utf-8')
-      const title = extractMarkdownTitle(content)
+        const content = await readFile(docsPath, 'utf-8')
+        const title = extractMarkdownTitle(content)
+        const slug = basename(routeDir)
 
-      // Extract slug from endpoint
-      const slug = basename(routeDir)
+        results.docs.push({
+          slug,
+          title,
+          endpoint,
+          filePath: getStoragePath(docsPath, config),
+          source: 'route',
+          themeName
+        })
+        verbose(`  Theme route doc discovered: ${endpoint}`)
 
-      results.docs.push({
-        slug,
-        title,
-        endpoint,
-        filePath: getStoragePath(docsPath, config),
-        source: 'route',
-        themeName
-      })
-      verbose(`  Theme route doc discovered: ${endpoint}`)
+        processedEndpoints.add(endpoint)
+      } catch (error) {
+        log(`  ERROR: Failed to read theme route doc: ${error.message}`, 'error')
+      }
+    }
 
-      processedEndpoints.add(endpoint)
-    } catch (error) {
-      log(`  ERROR: Failed to read theme route doc: ${error.message}`, 'error')
+    for (const presetsPath of presetFiles) {
+      try {
+        const routeDir = dirname(presetsPath)
+        const endpoint = endpointForDir(routeDir)
+
+        const content = await readFile(presetsPath, 'utf-8')
+        const presetConfig = parsePresetFile(content)
+
+        const slug = basename(routeDir)
+        const finalEndpoint = presetConfig?.endpoint || endpoint
+        if (processedEndpoints.has(finalEndpoint)) continue
+
+        results.presets.push({
+          slug,
+          endpoint: finalEndpoint,
+          summary: presetConfig?.summary || '',
+          presets: presetConfig?.presets || [],
+          sourcePath: getStoragePath(presetsPath, config),
+          source: 'route',
+          themeName
+        })
+        verbose(`  Theme route presets discovered: ${finalEndpoint} (${presetConfig?.presets?.length || 0} presets)`)
+
+        processedEndpoints.add(finalEndpoint)
+      } catch (error) {
+        log(`  ERROR: Failed to parse theme route presets: ${error.message}`, 'error')
+      }
     }
   }
 
-  // Process presets
-  for (const presetsPath of presetFiles) {
-    try {
-      const routeDir = dirname(presetsPath)
-      const relativeDir = relative(join(config.themesDir, themeName, 'app'), routeDir)
-      const endpoint = '/' + normalizePath(relativeDir)
+  // Legacy tree: {theme}/app/api/** — the docs path mirrors the full request URL
+  // under `app/` (e.g. app/api/v1/theme/{theme}/foo -> /api/v1/theme/{theme}/foo).
+  const appDir = join(config.themesDir, themeName, 'app')
+  await processTree(join(appDir, 'api'), (routeDir) =>
+    '/' + normalizePath(relative(appDir, routeDir))
+  )
 
-      const content = await readFile(presetsPath, 'utf-8')
-      const presetConfig = parsePresetFile(content)
-
-      const slug = basename(routeDir)
-      const finalEndpoint = presetConfig?.endpoint || endpoint
-
-      results.presets.push({
-        slug,
-        endpoint: finalEndpoint,
-        summary: presetConfig?.summary || '',
-        presets: presetConfig?.presets || [],
-        sourcePath: getStoragePath(presetsPath, config),
-        source: 'route',
-        themeName
-      })
-      verbose(`  Theme route presets discovered: ${finalEndpoint} (${presetConfig?.presets?.length || 0} presets)`)
-
-      processedEndpoints.add(finalEndpoint)
-    } catch (error) {
-      log(`  ERROR: Failed to parse theme route presets: ${error.message}`, 'error')
-    }
-  }
+  // Colocated tree: {theme}/api/** — docs/presets live next to the route handler,
+  // mapped the same way the handlers are (api/foo -> /api/v1/theme/{theme}/foo).
+  const apiDir = join(config.themesDir, themeName, 'api')
+  await processTree(apiDir, (routeDir) =>
+    '/api/v1/theme/' + themeName + '/' + normalizePath(relative(apiDir, routeDir))
+  )
 }
 
 /**

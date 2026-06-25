@@ -24,8 +24,10 @@ import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 const VALID_PATH_PATTERNS = [
   // Entity folders
   /^(contents\/)?themes\/[\w-]+\/entities\/[\w-]+\/api\/docs\.md$/,
-  // Theme routes
+  // Theme routes (legacy: docs mirrored under app/api)
   /^(contents\/)?themes\/[\w-]+\/app\/api\/.*\/docs\.md$/,
+  // Theme routes (colocated next to the handler under api/)
+  /^(contents\/)?themes\/[\w-]+\/api\/.*\/docs\.md$/,
   // Core routes (monorepo mode)
   /^packages\/core\/templates\/app\/api\/.*\/docs\.md$/,
   // Core routes (NPM mode)
