@@ -170,15 +170,24 @@ export const POST = withRateLimitTier(withApiLogging(
         return addCorsHeaders(response)
       }
 
+      // Steps 3-4 run via the service pool (RLS bypass). This is a trusted
+      // server flow: the invite token was validated above and the account was
+      // just created, so there is no invitee session to drive RLS — and a
+      // `SET LOCAL app.user_id` context does not reliably propagate to the
+      // membership INSERT over a pooled (PgBouncer) connection, which makes the
+      // team_members self-join policy intermittently reject it. Writing as the
+      // service role sidesteps that; every row carries explicit ids.
+
       // Step 3: Mark email as verified (skip email verification since invitation proves email ownership)
       await mutateWithRLS(
         'UPDATE "users" SET "emailVerified" = true, "updatedAt" = CURRENT_TIMESTAMP WHERE id = $1',
         [userId],
-        userId
+        undefined,
+        { service: true }
       )
 
       // Step 4: Accept the invitation (add user to team)
-      const tx = await getTransactionClient(userId)
+      const tx = await getTransactionClient(userId, { service: true })
 
       try {
         // Add user as team member
