@@ -62,11 +62,16 @@ export const POST = withRateLimitTier(withApiLogging(
         return addCorsHeaders(response)
       }
 
-      // Step 1: Validate invitation token (without RLS since user doesn't exist yet)
+      // Step 1: Validate the invitation token via the service pool (RLS bypass).
+      // The invitee has no session yet, so the unguessable token IS the
+      // credential. Passing a 'system' string as the userId does NOT bypass RLS
+      // — it sets a bogus RLS context on the gated pool, so under enforced RLS
+      // the row is invisible and the lookup returns null (false "not found").
       const invitation = await queryOneWithRLS<TeamInvitation>(
         'SELECT * FROM "team_invitations" WHERE token = $1',
         [inviteToken],
-        'system' // Use system context for initial validation
+        undefined,
+        { service: true }
       )
 
       if (!invitation) {
