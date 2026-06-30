@@ -44,6 +44,8 @@ import { TeamService, type UpdateTeamPayload } from '../services/team.service'
 import { TeamMemberService } from '../services/team-member.service'
 import type { Team, TeamRole, TeamMember } from '../teams/types'
 import type { EntityActionResult, EntityActionVoidResult } from './types'
+import { getInvitableRoles } from '../teams/permissions'
+import { APP_CONFIG_MERGED } from '../config/config-sync'
 
 // ============================================================================
 // TYPES
@@ -229,7 +231,7 @@ export async function updateTeam(
 export async function inviteMember(
   teamId: string,
   email: string,
-  role: TeamRole = 'member'
+  role: TeamRole = APP_CONFIG_MERGED.teamRoles.defaultTeamRole as TeamRole
 ): Promise<EntityActionResult<InviteMemberResult>> {
   try {
     // 1. Validate inputs
@@ -241,10 +243,11 @@ export async function inviteMember(
       return { success: false, error: 'Email is required' }
     }
 
-    // Validate role (cannot invite as owner)
-    const validRoles: TeamRole[] = ['admin', 'member', 'viewer']
+    // Validate role against the registry-derived invitable set (excludes 'owner';
+    // honors theme removeTeamRoles and additionalTeamRoles). Cannot invite as owner.
+    const validRoles = getInvitableRoles()
     if (!validRoles.includes(role)) {
-      return { success: false, error: 'Invalid role. Must be admin, member, or viewer' }
+      return { success: false, error: `Invalid role. Must be one of: ${validRoles.join(', ')}` }
     }
 
     // 2. Get auth context
@@ -433,10 +436,11 @@ export async function updateMemberRole(
       return { success: false, error: 'Member ID is required' }
     }
 
-    // Validate role (cannot set to owner via this action)
-    const validRoles: TeamRole[] = ['admin', 'member', 'viewer']
+    // Validate role against the registry-derived invitable set (excludes 'owner';
+    // honors theme removeTeamRoles and additionalTeamRoles).
+    const validRoles = getInvitableRoles()
     if (!validRoles.includes(role)) {
-      return { success: false, error: 'Invalid role. Must be admin, member, or viewer. Use transferOwnership for owner.' }
+      return { success: false, error: `Invalid role. Must be one of: ${validRoles.join(', ')}. Use transferOwnership for owner.` }
     }
 
     // 2. Get auth context

@@ -6,6 +6,7 @@
  */
 
 export const AVAILABLE_ROLES = ['owner', 'admin', 'editor', 'member', 'viewer'] as const
+export const DEFAULT_TEAM_ROLE = 'member'
 export const ROLE_HIERARCHY: Record<string, number> = {
   owner: 100,
   admin: 50,

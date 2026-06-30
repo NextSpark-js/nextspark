@@ -67,23 +67,25 @@ export function PermissionsMatrix({
 }: PermissionsMatrixProps) {
   const t = useTranslations('permissions')
 
-  const { permissions, matrix } = useMemo(() => {
+  const { permissions, matrix, roles: allRoles } = useMemo(() => {
     const data = PermissionService.getMatrix()
 
     if (category) {
       return {
         permissions: data.permissions.filter(p => p.category === category),
         matrix: data.matrix,
+        roles: data.roles,
       }
     }
 
     return data
   }, [category])
 
-  // Roles to display (compact mode hides owner)
-  const roles: TeamRole[] = compact
-    ? ['admin', 'member', 'viewer']
-    : ['owner', 'admin', 'member', 'viewer']
+  // Roles to display, derived from the registry (AVAILABLE_ROLES) so theme-removed
+  // roles disappear and theme-added roles appear automatically. Compact hides owner.
+  const roles = (compact
+    ? allRoles.filter((role) => role !== 'owner')
+    : allRoles) as TeamRole[]
 
   // Group permissions by category
   const groupedPermissions = useMemo(() => {
@@ -110,8 +112,8 @@ export function PermissionsMatrix({
               </TableHead>
               {roles.map(role => (
                 <TableHead key={role} className="text-center w-[100px]">
-                  <Badge variant="outline" className={ROLE_COLORS[role]}>
-                    {t(`roles.${role}.title`)}
+                  <Badge variant="outline" className={ROLE_COLORS[role] ?? 'text-muted-foreground bg-muted dark:bg-muted'}>
+                    {t.has(`roles.${role}.title`) ? t(`roles.${role}.title`) : role.charAt(0).toUpperCase() + role.slice(1)}
                   </Badge>
                 </TableHead>
               ))}

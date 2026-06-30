@@ -223,6 +223,132 @@ function parseActionArrayFromConfig(content, sectionName) {
   return results
 }
 
+function parseStringArrayFromBlock(content, key) {
+  const match = content.match(new RegExp(`${key}:\\s*\\[([^\\]]*)\\]`))
+  if (!match) return null
+
+  return match[1]
+    .split(',')
+    .map((value) => value.trim().replace(/['"]/g, '').replace(/\s+as\s+const/g, ''))
+    .filter(Boolean)
+}
+
+function parseNumberMapFromBlock(content, key) {
+  const match = content.match(new RegExp(`${key}:\\s*\\{([^}]*)\\}`))
+  if (!match) return null
+
+  const result = {}
+  const pairs = match[1].match(/['"]?([\w-]+)['"]?:\s*(\d+)/g)
+  if (!pairs) return null
+
+  for (const pair of pairs) {
+    const pairMatch = pair.match(/['"]?([\w-]+)['"]?:\s*(\d+)/)
+    if (!pairMatch) continue
+    result[pairMatch[1]] = parseInt(pairMatch[2], 10)
+  }
+
+  return Object.keys(result).length > 0 ? result : null
+}
+
+function parseStringMapFromBlock(content, key) {
+  const match = content.match(new RegExp(`${key}:\\s*\\{([^}]*)\\}`))
+  if (!match) return null
+
+  const result = {}
+  const pairs = match[1].match(/['"]?([\w-]+)['"]?:\s*['"]([^'"]+)['"]/g)
+  if (!pairs) return null
+
+  for (const pair of pairs) {
+    const pairMatch = pair.match(/['"]?([\w-]+)['"]?:\s*['"]([^'"]+)['"]/)
+    if (!pairMatch) continue
+    result[pairMatch[1]] = pairMatch[2]
+  }
+
+  return Object.keys(result).length > 0 ? result : null
+}
+
+/**
+ * Parse teamRoles from app.config.ts
+ *
+ * `teamRoles` is the AUTHORITATIVE, declarative set of NON-OWNER team roles.
+ * 'owner' is always force-included by the generator and is stripped here if listed.
+ *
+ *   Array form (preferred) — exactly these roles (+ owner):
+ *     teamRoles: ['admin', 'member', 'viewer']
+ *
+ *   Object form (optional explicit default / inline metadata):
+ *     teamRoles: {
+ *       roles: [...] | availableTeamRoles: [...],  // the authoritative non-owner set
+ *       defaultTeamRole?: string,
+ *       hierarchy?: Record<string, number>,
+ *       displayNames?: Record<string, string>,
+ *       descriptions?: Record<string, string>,
+ *     }
+ *
+ * When teamRoles is ABSENT, the generator uses the default set: base roles
+ * (owner/admin/member/viewer) + theme custom roles from permissions.config.
+ *
+ * @param {string} content - app.config.ts content
+ * @returns {Object|null} Parsed team roles config ({ teamRoles?, defaultTeamRole?, ... })
+ */
+export function parseTeamRolesFromAppConfig(content) {
+  // Array form: the authoritative non-owner role set ('owner' is always forced).
+  const directArrayMatch = content.match(/teamRoles:\s*\[([^\]]*)\]/)
+  if (directArrayMatch) {
+    const roles = directArrayMatch[1]
+      .split(',')
+      .map((value) => value.trim().replace(/['"]/g, '').replace(/\s+as\s+const/g, ''))
+      .filter((role) => role && role !== 'owner')
+
+    return { teamRoles: Array.from(new Set(roles)) }
+  }
+
+  // Object form: explicit set (roles / availableTeamRoles) + optional default & metadata.
+  const keyIndex = content.indexOf('teamRoles:')
+  if (keyIndex === -1) return null
+
+  const objectStart = content.indexOf('{', keyIndex)
+  if (objectStart === -1) return null
+
+  let depth = 0
+  let objectEnd = -1
+  for (let i = objectStart; i < content.length; i++) {
+    const ch = content[i]
+    if (ch === '{') depth += 1
+    if (ch === '}') {
+      depth -= 1
+      if (depth === 0) {
+        objectEnd = i
+        break
+      }
+    }
+  }
+
+  if (objectEnd === -1) return null
+
+  const block = content.slice(objectStart + 1, objectEnd)
+  const result = {}
+
+  const roleSet =
+    parseStringArrayFromBlock(block, 'roles') ??
+    parseStringArrayFromBlock(block, 'availableTeamRoles')
+  if (roleSet) {
+    result.teamRoles = Array.from(new Set(roleSet.filter((role) => role && role !== 'owner')))
+  }
+
+  const defaultMatch = block.match(/defaultTeamRole:\s*['"]([^'"]+)['"]/)
+  if (defaultMatch) result.defaultTeamRole = defaultMatch[1]
+
+  const hierarchy = parseNumberMapFromBlock(block, 'hierarchy')
+  if (hierarchy) result.hierarchy = hierarchy
+  const displayNames = parseStringMapFromBlock(block, 'displayNames')
+  if (displayNames) result.displayNames = displayNames
+  const descriptions = parseStringMapFromBlock(block, 'descriptions')
+  if (descriptions) result.descriptions = descriptions
+
+  return Object.keys(result).length > 0 ? result : null
+}
+
 /**
  * Discover permissions configuration from active theme
  * Returns null if theme doesn't have a permissions.config.ts
@@ -250,6 +376,7 @@ export async function discoverPermissionsConfig(config = DEFAULT_CONFIG) {
   let roles = null
   let teams = []
   let features = []
+  let teamRoles = null
   try {
     const content = readFileSync(permissionsPath, 'utf8')
     entities = parseEntitiesFromConfig(content)
@@ -271,6 +398,18 @@ export async function discoverPermissionsConfig(config = DEFAULT_CONFIG) {
     if (roles && roles.additionalRoles) {
       log(`  👥 Parsed ${roles.additionalRoles.length} custom roles: ${roles.additionalRoles.join(', ')}`, 'info')
     }
+
+    const appConfigPath = join(config.themesDir, themeName, 'config', 'app.config.ts')
+    if (existsSync(appConfigPath)) {
+      const appConfigContent = readFileSync(appConfigPath, 'utf8')
+      teamRoles = parseTeamRolesFromAppConfig(appConfigContent)
+
+      if (teamRoles) {
+        const declared = teamRoles.teamRoles?.length
+        const detail = typeof declared === 'number' ? ` (${declared} roles declared)` : ''
+        log(`  🧩 Parsed teamRoles from app.config.ts${detail}`, 'info')
+      }
+    }
   } catch (err) {
     log(`Error parsing permissions.config.ts: ${err.message}`, 'warning')
   }
@@ -282,6 +421,7 @@ export async function discoverPermissionsConfig(config = DEFAULT_CONFIG) {
     entities,
     roles,
     teams,
-    features
+    features,
+    teamRoles,
   }
 }

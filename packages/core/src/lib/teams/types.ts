@@ -62,7 +62,9 @@ export function isValidTeamRole(role: string): role is TeamRole {
  * Get all available team roles from merged config
  */
 export function getAvailableTeamRoles(): readonly string[] {
-  return APP_CONFIG_MERGED.teamRoles?.availableTeamRoles ?? ['owner', 'admin', 'member', 'viewer']
+  // Last-resort fallback only if the merged config is missing; never resurrect non-owner
+  // roles ('owner' is the only forced invariant). config-sync always populates this in practice.
+  return APP_CONFIG_MERGED.teamRoles?.availableTeamRoles ?? ['owner']
 }
 
 // Invitation status enum

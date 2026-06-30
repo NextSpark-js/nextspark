@@ -18,13 +18,14 @@ import { DEFAULT_APP_CONFIG } from './app.config'
 import { DEFAULT_DASHBOARD_CONFIG } from './dashboard.config'
 import { ThemeService, type ThemeName } from '../services/theme.service'
 import { mergeConfigs } from '../utils/config-merge'
-import { mergeRolesConfig, mergeTeamRolesConfig } from './roles-merge'
+import { mergeRolesConfig } from './roles-merge'
 // Import team roles from permissions-registry (single source of truth)
 import {
   AVAILABLE_ROLES as REGISTRY_AVAILABLE_ROLES,
   ROLE_HIERARCHY as REGISTRY_ROLE_HIERARCHY,
   ROLE_DISPLAY_NAMES as REGISTRY_ROLE_DISPLAY_NAMES,
   ROLE_DESCRIPTIONS as REGISTRY_ROLE_DESCRIPTIONS,
+  DEFAULT_TEAM_ROLE as REGISTRY_DEFAULT_TEAM_ROLE,
 } from '@nextsparkjs/registries/permissions-registry'
 // import { safeValidateDashboardConfig } from './dashboard-schema' // Not used for now
 
@@ -93,14 +94,15 @@ function loadAppConfigInternal() {
     )
   }
 
-  // Team roles configuration now comes from permissions-registry (single source of truth)
-  // The registry reads from permissions.config.ts which defines roles, hierarchy, etc.
-  // This replaces the old merge from app.config.ts teamRoles
+  // Team roles are 100% resolved from the generated permissions registry, which is
+  // computed from the theme's declarative `teamRoles` set (REPLACE model). Only
+  // `coreTeamRoles` ('owner') is kept from the core defaults — it is the forced
+  // invariant and is never theme-controlled.
   if (DEFAULT_APP_CONFIG.teamRoles) {
     mergedConfig.teamRoles = {
-      ...DEFAULT_APP_CONFIG.teamRoles,
-      // Override with values from permissions-registry
+      coreTeamRoles: DEFAULT_APP_CONFIG.teamRoles.coreTeamRoles,
       availableTeamRoles: REGISTRY_AVAILABLE_ROLES as readonly string[],
+      defaultTeamRole: REGISTRY_DEFAULT_TEAM_ROLE,
       hierarchy: REGISTRY_ROLE_HIERARCHY,
       displayNames: REGISTRY_ROLE_DISPLAY_NAMES,
       descriptions: REGISTRY_ROLE_DESCRIPTIONS,

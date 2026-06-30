@@ -7,6 +7,7 @@
  * @module TeamMemberService
  */
 
+import { APP_CONFIG_MERGED } from '../config/config-sync'
 import { queryOneWithRLS, queryWithRLS, mutateWithRLS } from '../db'
 import { TeamService } from './team.service'
 import type { TeamMember, TeamRole } from '../teams/types'
@@ -191,15 +192,15 @@ export class TeamMemberService {
    * Add user to the global team (for single-tenant invite flow)
    *
    * @param userId - User ID to add
-   * @param role - Role to assign (default: 'member')
+   * @param role - Role to assign (default: APP_CONFIG_MERGED.teamRoles.defaultTeamRole)
    * @param invitedBy - User ID who invited them
    *
    * @example
-   * await TeamMemberService.addToGlobal('user-123', 'member', 'owner-id')
+   * await TeamMemberService.addToGlobal('user-123', undefined, 'owner-id')
    */
   static async addToGlobal(
     userId: string,
-    role: TeamRole = 'member',
+    role: TeamRole = APP_CONFIG_MERGED.teamRoles.defaultTeamRole as TeamRole,
     invitedBy?: string
   ): Promise<void> {
     if (!userId || userId.trim() === '') {

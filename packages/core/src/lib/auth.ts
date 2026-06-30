@@ -376,8 +376,8 @@ export const auth = betterAuth({
                   await TeamService.create(user.id, teamName);
                   console.log(`[Teams] Global team created for first user ${user.id}`);
                 } else {
-                  // Subsequent users - auto-join the global team as member
-                  await TeamMemberService.addToGlobal(user.id, 'member');
+                  // Subsequent users - auto-join the global team with the configured default role
+                  await TeamMemberService.addToGlobal(user.id);
                   console.log(`[Teams] User ${user.id} auto-joined global team (single-tenant mode)`);
                 }
                 break;

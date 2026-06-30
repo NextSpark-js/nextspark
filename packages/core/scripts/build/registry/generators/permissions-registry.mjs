@@ -19,6 +19,83 @@ const rootDir = join(__dirname, '../../../../../..')
 
 import { convertCorePath } from '../config.mjs'
 
+const BASE_TEAM_ROLES = ['owner', 'admin', 'member', 'viewer']
+const NON_REMOVABLE_TEAM_ROLES = ['owner'] // The only core team role; never removable
+const BASE_TEAM_ROLE_HIERARCHY = { owner: 100, admin: 50, member: 10, viewer: 1 }
+const BASE_TEAM_ROLE_DISPLAY_NAMES = {
+  owner: 'common.teamRoles.owner',
+  admin: 'common.teamRoles.admin',
+  member: 'common.teamRoles.member',
+  viewer: 'common.teamRoles.viewer',
+}
+const BASE_TEAM_ROLE_DESCRIPTIONS = {
+  owner: 'Full team control, cannot be removed',
+  admin: 'Manage team members and settings',
+  member: 'Standard team access',
+  viewer: 'Read-only access to team resources',
+}
+
+/**
+ * Compute the effective team-role configuration at build time.
+ *
+ * Pure (no I/O) so it can be unit-tested directly and emitted as literals.
+ * Doctrine: `teamRoles` (app.config) is the AUTHORITATIVE, declarative set of
+ * non-owner roles. When provided it REPLACES the defaults; when absent the set is
+ * the base roles + theme custom roles (permissions.config). 'owner' is ALWAYS
+ * force-included and can never be removed. Hierarchy/displayNames/descriptions are
+ * merged (base <- permissions.config <- app.config) and restricted to the effective
+ * set; the default role can never resolve to a role outside the set.
+ *
+ * @param {{ rolesConfig?: object|null, teamRolesConfig?: object|null }} opts
+ * @returns {{ coreTeamRoles: string[], availableRoles: string[], hierarchy: Record<string,number>, displayNames: Record<string,string>, descriptions: Record<string,string>, defaultTeamRole: string, customRolesCount: number }}
+ */
+export function computeTeamRoleConfig({ rolesConfig = null, teamRolesConfig = null } = {}) {
+  const legacyAdditionalRoles = Array.isArray(rolesConfig?.additionalRoles) ? rolesConfig.additionalRoles : []
+  // `teamRoles` (app.config) is the AUTHORITATIVE, declarative non-owner set when present.
+  // When absent, the default set is the base non-owner roles + theme custom roles
+  // (permissions.config.additionalRoles). Either way 'owner' is always force-included.
+  const declaredSet = Array.isArray(teamRolesConfig?.teamRoles) ? teamRolesConfig.teamRoles : null
+  const source = declaredSet ?? [...BASE_TEAM_ROLES.filter((role) => role !== 'owner'), ...legacyAdditionalRoles]
+
+  const nonOwner = []
+  for (const role of source) {
+    if (role && role !== 'owner' && !nonOwner.includes(role)) nonOwner.push(role)
+  }
+  const availableRoles = ['owner', ...nonOwner]
+
+  // hierarchy: base <- permissions.config <- app.config teamRoles; owner pinned at 100
+  const hierarchy = {
+    ...BASE_TEAM_ROLE_HIERARCHY,
+    ...(rolesConfig?.hierarchy ?? {}),
+    ...(teamRolesConfig?.hierarchy ?? {}),
+  }
+  hierarchy.owner = 100
+  for (const role of availableRoles) {
+    if (!(role in hierarchy)) hierarchy[role] = 1
+    if (role !== 'owner' && hierarchy[role] >= 100) hierarchy[role] = 99
+  }
+
+  const displayNames = { ...BASE_TEAM_ROLE_DISPLAY_NAMES, ...(rolesConfig?.displayNames ?? {}), ...(teamRolesConfig?.displayNames ?? {}) }
+  const descriptions = { ...BASE_TEAM_ROLE_DESCRIPTIONS, ...(rolesConfig?.descriptions ?? {}), ...(teamRolesConfig?.descriptions ?? {}) }
+
+  const onlyAvailable = (obj) => Object.fromEntries(Object.entries(obj).filter(([role]) => availableRoles.includes(role)))
+
+  const configuredDefault = teamRolesConfig?.defaultTeamRole
+  const defaultTeamRole = (typeof configuredDefault === 'string' && availableRoles.includes(configuredDefault))
+    ? configuredDefault
+    : (availableRoles.includes('member') ? 'member' : (availableRoles.find((role) => role !== 'owner') ?? 'owner'))
+
+  return {
+    coreTeamRoles: [...NON_REMOVABLE_TEAM_ROLES],
+    availableRoles,
+    hierarchy: onlyAvailable(hierarchy),
+    displayNames: onlyAvailable(displayNames),
+    descriptions: onlyAvailable(descriptions),
+    defaultTeamRole,
+    customRolesCount: availableRoles.filter((role) => !BASE_TEAM_ROLES.includes(role)).length,
+  }
+}
+
 /**
  * Generate pre-computed permissions registry
  * Merges core permissions + theme permissions + entity permissions at build time
@@ -187,13 +264,16 @@ export async function generatePermissionsRegistry(permissionsConfig, entities, c
 
   // Extract roles configuration
   const rolesConfig = hasThemeConfig && permissionsConfig.roles ? permissionsConfig.roles : null
+  const teamRolesConfig = hasThemeConfig && permissionsConfig.teamRoles ? permissionsConfig.teamRoles : null
+
+  // Effective team-role set, computed once at build time (base + extras − removals; owner kept)
+  const teamRoleConfig = computeTeamRoleConfig({ rolesConfig, teamRolesConfig })
 
   // Build imports (convert @/core/ paths based on NPM mode)
   const outputFilePath = join(config.outputDir, 'permissions-registry.ts')
 
   const imports = [
     `import { CORE_PERMISSIONS_CONFIG } from '${convertCorePath('@/core/lib/permissions/system', outputFilePath, config)}'`,
-    `import { APP_CONFIG_MERGED } from '${convertCorePath('@/core/lib/config/config-sync', outputFilePath, config)}'`
   ]
 
   if (hasThemeConfig) {
@@ -242,6 +322,9 @@ const FEATURE_PERMISSIONS = ${JSON.stringify(featurePermissions, null, 2)} as un
 /** Custom roles defined in permissions.config.ts */
 export const CUSTOM_ROLES: RolesConfig = ${rolesConfig ? JSON.stringify(rolesConfig, null, 2) : '{}'}
 
+/** Default role assigned to new team members (never resolves to a removed role) */
+export const DEFAULT_TEAM_ROLE: string = ${JSON.stringify(teamRoleConfig.defaultTeamRole)}
+
 // ============================================================================
 // TEAM PERMISSIONS EXPORTS
 // ============================================================================
@@ -262,44 +345,21 @@ export const TEAM_PERMISSIONS_BY_ROLE: Record<string, string[]> = (() => {
 })()
 
 // ============================================================================
-// RUNTIME MERGED PERMISSIONS (computed once on module load)
+// TEAM ROLES (effective set, computed at build time)
+// base roles + theme extras − theme removals; 'owner' is the only non-removable core role
 // ============================================================================
 
-// Core team roles
-const CORE_TEAM_ROLES = ['owner', 'admin', 'member', 'viewer'] as const
+/** Effective team roles (base + extras − removals; 'owner' always present) */
+export const AVAILABLE_ROLES: readonly string[] = ${JSON.stringify(teamRoleConfig.availableRoles)}
 
-// Get available roles: core + custom from permissions.config.ts
-export const AVAILABLE_ROLES: readonly string[] = [
-  ...CORE_TEAM_ROLES,
-  ...(CUSTOM_ROLES.additionalRoles ?? [])
-]
+/** Team role hierarchy (restricted to AVAILABLE_ROLES) */
+export const ROLE_HIERARCHY: Record<string, number> = ${JSON.stringify(teamRoleConfig.hierarchy, null, 2)}
 
-// Role hierarchy (merged)
-export const ROLE_HIERARCHY: Record<string, number> = {
-  owner: 100,
-  admin: 50,
-  member: 10,
-  viewer: 1,
-  ...(CUSTOM_ROLES.hierarchy ?? {})
-}
+/** Team role display names (restricted to AVAILABLE_ROLES) */
+export const ROLE_DISPLAY_NAMES: Record<string, string> = ${JSON.stringify(teamRoleConfig.displayNames, null, 2)}
 
-// Role display names (merged)
-export const ROLE_DISPLAY_NAMES: Record<string, string> = {
-  owner: 'common.teamRoles.owner',
-  admin: 'common.teamRoles.admin',
-  member: 'common.teamRoles.member',
-  viewer: 'common.teamRoles.viewer',
-  ...(CUSTOM_ROLES.displayNames ?? {})
-}
-
-// Role descriptions (merged)
-export const ROLE_DESCRIPTIONS: Record<string, string> = {
-  owner: 'Full team control, cannot be removed',
-  admin: 'Manage team members and settings',
-  member: 'Standard team access',
-  viewer: 'Read-only access to team resources',
-  ...(CUSTOM_ROLES.descriptions ?? {})
-}
+/** Team role descriptions (restricted to AVAILABLE_ROLES) */
+export const ROLE_DESCRIPTIONS: Record<string, string> = ${JSON.stringify(teamRoleConfig.descriptions, null, 2)}
 
 // Merge all permissions: core + teams + features + entities
 function buildAllPermissions(): ResolvedPermission[] {
@@ -438,7 +498,7 @@ export const PERMISSIONS_METADATA = {
   teamPermissions: TEAM_PERMISSIONS.length,
   featurePermissions: FEATURE_PERMISSIONS.length,
   entityPermissions: ENTITY_PERMISSIONS.length,
-  customRoles: CUSTOM_ROLES.additionalRoles?.length ?? 0,
+  customRoles: ${teamRoleConfig.customRolesCount},
   availableRoles: AVAILABLE_ROLES.length,
   categories: Object.keys(PERMISSIONS_BY_CATEGORY).length,
   generatedAt: '${new Date().toISOString()}',
