@@ -84,7 +84,7 @@ function resolveNonOwnerSignupRole(): string | null {
   const mappedRole = cfg.roleMap?.[intent];
   if (!mappedRole) return null;
   // Only a configured team role that differs from the creator's default 'owner'.
-  const validTeamRoles = APP_CONFIG_MERGED.teamRoles?.availableTeamRoles ?? [];
+  const validTeamRoles = APP_CONFIG_MERGED.teams?.roles?.availableTeamRoles ?? [];
   if (!validTeamRoles.includes(mappedRole) || mappedRole === 'owner') return null;
   return mappedRole;
 }

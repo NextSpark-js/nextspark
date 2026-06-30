@@ -364,7 +364,7 @@ export class MembershipService {
    * @private
    */
   private static getHierarchyForRole(role: string): number {
-    const hierarchyConfig = APP_CONFIG_MERGED.teamRoles?.hierarchy
+    const hierarchyConfig = APP_CONFIG_MERGED.teams?.roles?.hierarchy
 
     if (!hierarchyConfig) {
       // Fallback to default hierarchy

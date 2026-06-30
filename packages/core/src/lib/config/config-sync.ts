@@ -95,17 +95,20 @@ function loadAppConfigInternal() {
   }
 
   // Team roles are 100% resolved from the generated permissions registry, which is
-  // computed from the theme's declarative `teamRoles` set (REPLACE model). Only
+  // computed from the theme's declarative `teams.roles` set (REPLACE model). Only
   // `coreTeamRoles` ('owner') is kept from the core defaults — it is the forced
   // invariant and is never theme-controlled.
-  if (DEFAULT_APP_CONFIG.teamRoles) {
-    mergedConfig.teamRoles = {
-      coreTeamRoles: DEFAULT_APP_CONFIG.teamRoles.coreTeamRoles,
-      availableTeamRoles: REGISTRY_AVAILABLE_ROLES as readonly string[],
-      defaultTeamRole: REGISTRY_DEFAULT_TEAM_ROLE,
-      hierarchy: REGISTRY_ROLE_HIERARCHY,
-      displayNames: REGISTRY_ROLE_DISPLAY_NAMES,
-      descriptions: REGISTRY_ROLE_DESCRIPTIONS,
+  if (DEFAULT_APP_CONFIG.teams?.roles) {
+    mergedConfig.teams = {
+      ...mergedConfig.teams,
+      roles: {
+        coreTeamRoles: DEFAULT_APP_CONFIG.teams.roles.coreTeamRoles,
+        availableTeamRoles: REGISTRY_AVAILABLE_ROLES as readonly string[],
+        defaultTeamRole: REGISTRY_DEFAULT_TEAM_ROLE,
+        hierarchy: REGISTRY_ROLE_HIERARCHY,
+        displayNames: REGISTRY_ROLE_DISPLAY_NAMES,
+        descriptions: REGISTRY_ROLE_DESCRIPTIONS,
+      },
     }
   }
 

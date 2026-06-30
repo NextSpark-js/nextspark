@@ -29,7 +29,7 @@ import { getInvitableRoles } from '../../lib/teams/permissions'
 // Get roles that a user can invite to (same level or below)
 // Uses dynamic config to support theme-defined additional roles
 function getAvailableRolesForInvite(userRole: TeamRole): TeamRole[] {
-  const hierarchy = APP_CONFIG_MERGED.teamRoles.hierarchy
+  const hierarchy = APP_CONFIG_MERGED.teams.roles.hierarchy
   const userLevel = hierarchy[userRole] ?? 0
   const invitableRoles = getInvitableRoles()
 

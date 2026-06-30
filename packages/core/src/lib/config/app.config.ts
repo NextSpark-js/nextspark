@@ -149,68 +149,68 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
 
   // =============================================================================
   // TEAM ROLES CONFIGURATION
-  // Team-specific roles (per team_members table)
-  // These are separate from global user roles (users.role)
+  // Team-specific roles live under `teams.roles` (per team_members table).
+  // These are separate from global user roles (users.role).
   // =============================================================================
-  teamRoles: {
-    /**
-     * Protected core team role - CANNOT be removed by themes
-     *
-     * The 'owner' role is critical for team creation logic:
-     * - When a user creates a team, they automatically become 'owner'
-     * - The owner has full control over the team
-     * - This role cannot be removed, renamed, or modified by themes
-     */
-    coreTeamRoles: ['owner'] as const,
+  teams: {
+    roles: {
+      /**
+       * Protected core team role - CANNOT be removed by themes
+       *
+       * The 'owner' role is critical for team creation logic:
+       * - When a user creates a team, they automatically become 'owner'
+       * - The owner has full control over the team
+       * - This role cannot be removed, renamed, or modified by themes
+       */
+      coreTeamRoles: ['owner'] as const,
 
-    /**
-     * Default team role for new members
-     */
-    defaultTeamRole: 'member',
+      /**
+       * Default team role for new members
+       */
+      defaultTeamRole: 'member',
 
-    /**
-     * Default available team roles
-     * - owner: Team owner (PROTECTED - cannot be removed)
-     * - admin: Team administrator
-     * - member: Regular team member
-     * - viewer: Read-only access
-     *
-     * Themes can:
-     * - Add new roles via `additionalTeamRoles`
-     * - Remove or rename 'admin', 'member', 'viewer'
-     * - CANNOT remove 'owner'
-     */
-    availableTeamRoles: ['owner', 'admin', 'member', 'viewer'] as const,
+      /**
+       * Default available team roles
+       * - owner: Team owner (PROTECTED - cannot be removed)
+       * - admin: Team administrator
+       * - member: Regular team member
+       * - viewer: Read-only access
+       *
+       * Themes declare the active set via `teams.roles` in their app.config
+       * (REPLACE model); 'owner' is always force-included and never removable.
+       */
+      availableTeamRoles: ['owner', 'admin', 'member', 'viewer'] as const,
 
-    /**
-     * Team role hierarchy (higher number = higher permissions within the team)
-     * owner (100) > admin (50) > member (10) > viewer (1)
-     */
-    hierarchy: {
-      owner: 100,   // Full team control (PROTECTED)
-      admin: 50,    // Team management
-      member: 10,   // Standard access
-      viewer: 1,    // Read-only
-    },
+      /**
+       * Team role hierarchy (higher number = higher permissions within the team)
+       * owner (100) > admin (50) > member (10) > viewer (1)
+       */
+      hierarchy: {
+        owner: 100,   // Full team control (PROTECTED)
+        admin: 50,    // Team management
+        member: 10,   // Standard access
+        viewer: 1,    // Read-only
+      },
 
-    /**
-     * Team role display names (translation keys)
-     */
-    displayNames: {
-      owner: 'common.teamRoles.owner',
-      admin: 'common.teamRoles.admin',
-      member: 'common.teamRoles.member',
-      viewer: 'common.teamRoles.viewer',
-    },
+      /**
+       * Team role display names (translation keys)
+       */
+      displayNames: {
+        owner: 'common.teamRoles.owner',
+        admin: 'common.teamRoles.admin',
+        member: 'common.teamRoles.member',
+        viewer: 'common.teamRoles.viewer',
+      },
 
-    /**
-     * Team role descriptions
-     */
-    descriptions: {
-      owner: 'Full team control, cannot be removed',
-      admin: 'Manage team members and settings',
-      member: 'Standard team access',
-      viewer: 'Read-only access to team resources',
+      /**
+       * Team role descriptions
+       */
+      descriptions: {
+        owner: 'Full team control, cannot be removed',
+        admin: 'Manage team members and settings',
+        member: 'Standard team access',
+        viewer: 'Read-only access to team resources',
+      },
     },
 
     // =========================================================================

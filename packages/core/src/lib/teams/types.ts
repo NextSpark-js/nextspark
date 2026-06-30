@@ -22,7 +22,8 @@ export type CoreTeamRole = 'owner' | 'admin' | 'member' | 'viewer'
 /**
  * Team member role - extensible type
  *
- * Themes can add custom roles via app.config.ts additionalTeamRoles.
+ * Themes declare which team roles exist via app.config.ts teams.roles
+ * (REPLACE model); role definitions live in permissions.config.ts.
  * The `& {}` trick allows string literals while maintaining autocomplete
  * for the core roles.
  *
@@ -54,7 +55,7 @@ export type TeamRole = CoreTeamRole | (string & {})
  * ```
  */
 export function isValidTeamRole(role: string): role is TeamRole {
-  const availableRoles = APP_CONFIG_MERGED.teamRoles?.availableTeamRoles ?? []
+  const availableRoles = APP_CONFIG_MERGED.teams?.roles?.availableTeamRoles ?? []
   return availableRoles.includes(role)
 }
 
@@ -64,7 +65,7 @@ export function isValidTeamRole(role: string): role is TeamRole {
 export function getAvailableTeamRoles(): readonly string[] {
   // Last-resort fallback only if the merged config is missing; never resurrect non-owner
   // roles ('owner' is the only forced invariant). config-sync always populates this in practice.
-  return APP_CONFIG_MERGED.teamRoles?.availableTeamRoles ?? ['owner']
+  return APP_CONFIG_MERGED.teams?.roles?.availableTeamRoles ?? ['owner']
 }
 
 // Invitation status enum

@@ -45,6 +45,12 @@ export interface TeamsConfig {
   mode: TeamsMode
   /** Additional options */
   options?: TeamsConfigOptions
+  /**
+   * Resolved team-role system (set, hierarchy, labels) for team_members.role.
+   * Themes declare the active set declaratively via `teams.roles` in app.config
+   * (REPLACE model); the merged value here is the fully resolved object.
+   */
+  roles?: TeamRolesConfig
 }
 
 /**
@@ -545,9 +551,6 @@ export interface AppConfig {
    * Use DEV_CONFIG from config-sync.ts instead.
    */
   devKeyring?: DevKeyringConfig
-
-  /** Team roles configuration (for team_members.role) */
-  teamRoles?: TeamRolesConfig
 
   /** Scheduled actions system configuration */
   scheduledActions?: ScheduledActionsConfig

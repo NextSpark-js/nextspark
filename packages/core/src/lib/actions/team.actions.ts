@@ -231,7 +231,7 @@ export async function updateTeam(
 export async function inviteMember(
   teamId: string,
   email: string,
-  role: TeamRole = APP_CONFIG_MERGED.teamRoles.defaultTeamRole as TeamRole
+  role: TeamRole = APP_CONFIG_MERGED.teams.roles.defaultTeamRole as TeamRole
 ): Promise<EntityActionResult<InviteMemberResult>> {
   try {
     // 1. Validate inputs
@@ -244,7 +244,7 @@ export async function inviteMember(
     }
 
     // Validate role against the registry-derived invitable set (excludes 'owner';
-    // honors theme removeTeamRoles and additionalTeamRoles). Cannot invite as owner.
+    // reflects the theme's declarative teams.roles set). Cannot invite as owner.
     const validRoles = getInvitableRoles()
     if (!validRoles.includes(role)) {
       return { success: false, error: `Invalid role. Must be one of: ${validRoles.join(', ')}` }
@@ -437,7 +437,7 @@ export async function updateMemberRole(
     }
 
     // Validate role against the registry-derived invitable set (excludes 'owner';
-    // honors theme removeTeamRoles and additionalTeamRoles).
+    // reflects the theme's declarative teams.roles set).
     const validRoles = getInvitableRoles()
     if (!validRoles.includes(role)) {
       return { success: false, error: `Invalid role. Must be one of: ${validRoles.join(', ')}. Use transferOwnership for owner.` }

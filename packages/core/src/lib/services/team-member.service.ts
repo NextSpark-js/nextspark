@@ -192,7 +192,7 @@ export class TeamMemberService {
    * Add user to the global team (for single-tenant invite flow)
    *
    * @param userId - User ID to add
-   * @param role - Role to assign (default: APP_CONFIG_MERGED.teamRoles.defaultTeamRole)
+   * @param role - Role to assign (default: APP_CONFIG_MERGED.teams.roles.defaultTeamRole)
    * @param invitedBy - User ID who invited them
    *
    * @example
@@ -200,7 +200,7 @@ export class TeamMemberService {
    */
   static async addToGlobal(
     userId: string,
-    role: TeamRole = APP_CONFIG_MERGED.teamRoles.defaultTeamRole as TeamRole,
+    role: TeamRole = APP_CONFIG_MERGED.teams.roles.defaultTeamRole as TeamRole,
     invitedBy?: string
   ): Promise<void> {
     if (!userId || userId.trim() === '') {

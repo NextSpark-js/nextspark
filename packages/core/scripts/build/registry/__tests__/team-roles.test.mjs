@@ -1,13 +1,13 @@
 /**
  * Tests for the declarative team-role model at the build layer.
  *
- * Model: `teamRoles` (app.config) is the AUTHORITATIVE, declarative set of NON-OWNER
+ * Model: `teams.roles` (app.config) is the AUTHORITATIVE, declarative set of NON-OWNER
  * roles. When present it REPLACES the defaults; when absent the set is base roles +
  * theme custom roles (permissions.config). 'owner' is ALWAYS force-included.
  *
  * Covers the real production code paths:
  *  - computeTeamRoleConfig() : the pure build-time role-set computation
- *  - parseTeamRolesFromAppConfig() : the app.config.ts teamRoles parser
+ *  - parseTeamRolesFromAppConfig() : the app.config.ts teams.roles parser
  *  - generatePermissionsRegistry() : asserts the EMITTED literals
  *
  * Run: node --test packages/core/scripts/build/registry/__tests__/team-roles.test.mjs
@@ -106,17 +106,43 @@ test('non-owner hierarchy is capped below 100; owner pinned at 100', () => {
 // parseTeamRolesFromAppConfig — the app.config.ts parser
 // ---------------------------------------------------------------------------
 
-test('array form → authoritative teamRoles set', () => {
-  const parsed = parseTeamRolesFromAppConfig(`teamRoles: ['admin', 'editor']`)
+test('teams.roles array form → authoritative teamRoles set', () => {
+  const parsed = parseTeamRolesFromAppConfig(`teams: { mode: 'multi-tenant', roles: ['admin', 'editor'] }`)
   assert.deepEqual(parsed, { teamRoles: ['admin', 'editor'] })
 })
 
-test('array form strips owner (always forced by the generator)', () => {
-  const parsed = parseTeamRolesFromAppConfig(`teamRoles: ['owner', 'admin']`)
+test('teams.roles array form strips owner (always forced by the generator)', () => {
+  const parsed = parseTeamRolesFromAppConfig(`teams: { roles: ['owner', 'admin'] }`)
   assert.deepEqual(parsed, { teamRoles: ['admin'] })
 })
 
-test('a config with only teams.availableTeamRoles does NOT match teamRoles (case-sensitive)', () => {
+test('teams.roles array form + sibling defaultTeamRole (Campus shape, options nested)', () => {
+  const content = `
+  teams: {
+    mode: 'multi-tenant' as const,
+    options: {
+      maxMembersPerTeam: 100000,
+      allowLeaveTeam: false,
+      allowCreateTeams: false,
+    },
+    roles: ['admin', 'teacher', 'coach', 'student'],
+    defaultTeamRole: 'student',
+  },`
+  const parsed = parseTeamRolesFromAppConfig(content)
+  assert.deepEqual(parsed.teamRoles, ['admin', 'teacher', 'coach', 'student'])
+  assert.equal(parsed.defaultTeamRole, 'student')
+})
+
+test('teams without a roles key → null (generator uses the default set)', () => {
+  const content = `
+  teams: {
+    mode: 'multi-tenant' as const,
+    options: { maxMembersPerTeam: 50 },
+  },`
+  assert.equal(parseTeamRolesFromAppConfig(content), null)
+})
+
+test('a teams.availableTeamRoles sibling (not teams.roles) does NOT match (case-sensitive)', () => {
   const content = `
   teams: {
     mode: 'multi-tenant',
@@ -125,11 +151,14 @@ test('a config with only teams.availableTeamRoles does NOT match teamRoles (case
   assert.equal(parseTeamRolesFromAppConfig(content), null)
 })
 
-test('object form parses the set + defaultTeamRole', () => {
+test('teams.roles object form parses the set + defaultTeamRole', () => {
   const content = `
-  teamRoles: {
-    availableTeamRoles: ['admin', 'editor'],
-    defaultTeamRole: 'editor',
+  teams: {
+    mode: 'multi-tenant',
+    roles: {
+      availableTeamRoles: ['admin', 'editor'],
+      defaultTeamRole: 'editor',
+    },
   },`
   const parsed = parseTeamRolesFromAppConfig(content)
   assert.deepEqual(parsed.teamRoles, ['admin', 'editor'])

@@ -32,6 +32,15 @@ export const APP_CONFIG_OVERRIDES = {
       allowLeaveTeam: true,
       allowCreateTeams: true,
     },
+
+    // Declarative, AUTHORITATIVE set of non-owner team roles (REPLACE model).
+    // 'owner' is always force-included and cannot be removed. Whatever you list
+    // here is exactly the active set — omitting `roles` entirely falls back to the
+    // core base (admin/member/viewer) + custom roles from permissions.config.
+    // Role DEFINITIONS (hierarchy, labels, permissions) live in permissions.config.ts;
+    // here you declare which of them are ACTIVE. 'editor' is a theme custom role.
+    roles: ['admin', 'member', 'viewer', 'editor'],
+    defaultTeamRole: 'member',
   },
 
   // =============================================================================
@@ -177,16 +186,20 @@ export const APP_CONFIG_OVERRIDES = {
   },
 
   // =============================================================================
-  // TEAM ROLES - NOW IN permissions.config.ts
+  // TEAM ROLES - TWO LAYERS
   // =============================================================================
-  // Team roles (additionalRoles, hierarchy, displayNames, descriptions) are now
-  // defined in permissions.config.ts under the `roles` section.
-  // This is the SINGLE SOURCE OF TRUTH for all permissions and roles.
+  // 1. ACTIVE SET: declared above in `teams.roles` (REPLACE model). This decides
+  //    which team roles exist besides 'owner' (which is always force-included).
+  // 2. DEFINITIONS: hierarchy, display names, descriptions and per-action
+  //    permissions live in permissions.config.ts under the `roles`/`teams` sections.
+  //    This is the SINGLE SOURCE OF TRUTH for permissions.
   //
   // See: contents/themes/default/config/permissions.config.ts
   //
-  // To add custom roles, edit permissions.config.ts:
+  // To add a custom role: DEFINE it in permissions.config.ts AND list it in
+  // `teams.roles` above so it becomes active.
   // ```
+  // // permissions.config.ts
   // roles: {
   //   additionalRoles: ['editor'],
   //   hierarchy: { editor: 5 },

@@ -268,85 +268,107 @@ function parseStringMapFromBlock(content, key) {
 }
 
 /**
- * Parse teamRoles from app.config.ts
+ * Extract the inner text of a brace-delimited object for a given key.
+ * Brace-matches so nested objects (e.g. `options: { ... }`) are handled correctly.
  *
- * `teamRoles` is the AUTHORITATIVE, declarative set of NON-OWNER team roles.
- * 'owner' is always force-included by the generator and is stripped here if listed.
- *
- *   Array form (preferred) — exactly these roles (+ owner):
- *     teamRoles: ['admin', 'member', 'viewer']
- *
- *   Object form (optional explicit default / inline metadata):
- *     teamRoles: {
- *       roles: [...] | availableTeamRoles: [...],  // the authoritative non-owner set
- *       defaultTeamRole?: string,
- *       hierarchy?: Record<string, number>,
- *       displayNames?: Record<string, string>,
- *       descriptions?: Record<string, string>,
- *     }
- *
- * When teamRoles is ABSENT, the generator uses the default set: base roles
- * (owner/admin/member/viewer) + theme custom roles from permissions.config.
- *
- * @param {string} content - app.config.ts content
- * @returns {Object|null} Parsed team roles config ({ teamRoles?, defaultTeamRole?, ... })
+ * @param {string} content - Source text
+ * @param {string} key - Object key to locate (e.g. 'teams', 'roles')
+ * @returns {string|null} The text between the matching braces, or null if not found
  */
-export function parseTeamRolesFromAppConfig(content) {
-  // Array form: the authoritative non-owner role set ('owner' is always forced).
-  const directArrayMatch = content.match(/teamRoles:\s*\[([^\]]*)\]/)
-  if (directArrayMatch) {
-    const roles = directArrayMatch[1]
-      .split(',')
-      .map((value) => value.trim().replace(/['"]/g, '').replace(/\s+as\s+const/g, ''))
-      .filter((role) => role && role !== 'owner')
-
-    return { teamRoles: Array.from(new Set(roles)) }
-  }
-
-  // Object form: explicit set (roles / availableTeamRoles) + optional default & metadata.
-  const keyIndex = content.indexOf('teamRoles:')
+function extractObjectBlock(content, key) {
+  const keyIndex = content.search(new RegExp(`\\b${key}:`))
   if (keyIndex === -1) return null
 
   const objectStart = content.indexOf('{', keyIndex)
   if (objectStart === -1) return null
 
   let depth = 0
-  let objectEnd = -1
   for (let i = objectStart; i < content.length; i++) {
     const ch = content[i]
     if (ch === '{') depth += 1
-    if (ch === '}') {
+    else if (ch === '}') {
       depth -= 1
-      if (depth === 0) {
-        objectEnd = i
-        break
-      }
+      if (depth === 0) return content.slice(objectStart + 1, i)
     }
   }
 
-  if (objectEnd === -1) return null
+  return null
+}
 
-  const block = content.slice(objectStart + 1, objectEnd)
+/**
+ * Parse team roles from app.config.ts.
+ *
+ * Team roles are declared INSIDE the `teams` block (REPLACE model). `teams.roles`
+ * is the AUTHORITATIVE, declarative set of NON-OWNER team roles. 'owner' is always
+ * force-included by the generator and is stripped here if listed.
+ *
+ *   Array form (preferred) — exactly these roles (+ owner):
+ *     teams: {
+ *       mode: 'multi-tenant',
+ *       roles: ['admin', 'member', 'viewer'],
+ *       defaultTeamRole?: 'member',
+ *     }
+ *
+ *   Object form (optional inline metadata):
+ *     teams: {
+ *       roles: {
+ *         roles: [...] | availableTeamRoles: [...],  // the authoritative non-owner set
+ *         defaultTeamRole?: string,
+ *         hierarchy?: Record<string, number>,
+ *         displayNames?: Record<string, string>,
+ *         descriptions?: Record<string, string>,
+ *       },
+ *     }
+ *
+ * When `teams.roles` is ABSENT, the generator uses the default set: base roles
+ * (owner/admin/member/viewer) + theme custom roles from permissions.config.
+ *
+ * @param {string} content - app.config.ts content
+ * @returns {Object|null} Parsed team roles config ({ teamRoles?, defaultTeamRole?, ... })
+ */
+export function parseTeamRolesFromAppConfig(content) {
+  const teamsBlock = extractObjectBlock(content, 'teams')
+  if (!teamsBlock) return null
+
   const result = {}
 
-  const roleSet =
-    parseStringArrayFromBlock(block, 'roles') ??
-    parseStringArrayFromBlock(block, 'availableTeamRoles')
-  if (roleSet) {
-    result.teamRoles = Array.from(new Set(roleSet.filter((role) => role && role !== 'owner')))
+  // Array form: teams.roles is the authoritative non-owner set ('owner' is forced).
+  const arrayRoles = parseStringArrayFromBlock(teamsBlock, 'roles')
+  if (arrayRoles) {
+    result.teamRoles = Array.from(
+      new Set(arrayRoles.filter((role) => role && role !== 'owner'))
+    )
+    const defaultMatch = teamsBlock.match(/defaultTeamRole:\s*['"]([^'"]+)['"]/)
+    if (defaultMatch) result.defaultTeamRole = defaultMatch[1]
+    return Object.keys(result).length > 0 ? result : null
   }
 
-  const defaultMatch = block.match(/defaultTeamRole:\s*['"]([^'"]+)['"]/)
-  if (defaultMatch) result.defaultTeamRole = defaultMatch[1]
+  // Object form: teams.roles = { roles | availableTeamRoles: [...], defaultTeamRole?, ... }
+  const rolesBlock = extractObjectBlock(teamsBlock, 'roles')
+  if (rolesBlock) {
+    const roleSet =
+      parseStringArrayFromBlock(rolesBlock, 'roles') ??
+      parseStringArrayFromBlock(rolesBlock, 'availableTeamRoles')
+    if (roleSet) {
+      result.teamRoles = Array.from(
+        new Set(roleSet.filter((role) => role && role !== 'owner'))
+      )
+    }
 
-  const hierarchy = parseNumberMapFromBlock(block, 'hierarchy')
-  if (hierarchy) result.hierarchy = hierarchy
-  const displayNames = parseStringMapFromBlock(block, 'displayNames')
-  if (displayNames) result.displayNames = displayNames
-  const descriptions = parseStringMapFromBlock(block, 'descriptions')
-  if (descriptions) result.descriptions = descriptions
+    const defaultMatch = rolesBlock.match(/defaultTeamRole:\s*['"]([^'"]+)['"]/)
+    if (defaultMatch) result.defaultTeamRole = defaultMatch[1]
 
-  return Object.keys(result).length > 0 ? result : null
+    const hierarchy = parseNumberMapFromBlock(rolesBlock, 'hierarchy')
+    if (hierarchy) result.hierarchy = hierarchy
+    const displayNames = parseStringMapFromBlock(rolesBlock, 'displayNames')
+    if (displayNames) result.displayNames = displayNames
+    const descriptions = parseStringMapFromBlock(rolesBlock, 'descriptions')
+    if (descriptions) result.descriptions = descriptions
+
+    return Object.keys(result).length > 0 ? result : null
+  }
+
+  return null
 }
 
 /**

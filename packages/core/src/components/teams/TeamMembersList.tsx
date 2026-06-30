@@ -164,7 +164,7 @@ export function TeamMembersList({ teamId: propTeamId, readOnly = false }: TeamMe
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             {/* Dynamic role options from merged config */}
-                            {APP_CONFIG_MERGED.teamRoles.availableTeamRoles
+                            {APP_CONFIG_MERGED.teams.roles.availableTeamRoles
                               .filter((role: string) =>
                                 role !== 'owner' && // Cannot assign owner role
                                 role !== memberRole && // Don't show current role

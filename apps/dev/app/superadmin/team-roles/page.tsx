@@ -40,7 +40,7 @@ import { getTemplateOrDefaultClient } from "@nextsparkjs/registries/template-reg
  * Both use pre-computed data for O(1) runtime lookups.
  */
 function TeamRolesPage() {
-  const teamRolesConfig = APP_CONFIG_MERGED.teamRoles;
+  const teamRolesConfig = APP_CONFIG_MERGED.teams.roles;
   const roles = teamRolesConfig.availableTeamRoles;
   const hierarchy = teamRolesConfig.hierarchy;
 
@@ -258,7 +258,7 @@ function TeamRolesPage() {
                 <p>
                   <strong>Roles config:</strong>{" "}
                   <code className="bg-background px-1 rounded">
-                    APP_CONFIG_MERGED.teamRoles
+                    APP_CONFIG_MERGED.teams.roles
                   </code>
                 </p>
                 <p>
