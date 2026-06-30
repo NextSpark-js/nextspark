@@ -152,3 +152,5 @@ export function LogoCloudBlock({
     </section>
   )
 }
+
+export default LogoCloudBlock

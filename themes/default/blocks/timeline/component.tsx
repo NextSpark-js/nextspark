@@ -265,3 +265,5 @@ function TimelineItemContent({
     </div>
   )
 }
+
+export default TimelineBlock

@@ -98,3 +98,5 @@ export function BenefitsBlock({
     </section>
   )
 }
+
+export default BenefitsBlock

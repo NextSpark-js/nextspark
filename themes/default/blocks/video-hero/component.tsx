@@ -268,3 +268,5 @@ export function VideoHeroBlock({
     </section>
   )
 }
+
+export default VideoHeroBlock

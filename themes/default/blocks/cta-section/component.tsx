@@ -98,3 +98,5 @@ export function CTASectionBlock({
     </section>
   )
 }
+
+export default CTASectionBlock

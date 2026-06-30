@@ -154,3 +154,5 @@ export function FaqAccordionBlock({
     </section>
   )
 }
+
+export default FaqAccordionBlock

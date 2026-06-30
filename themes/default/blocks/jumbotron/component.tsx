@@ -134,3 +134,5 @@ export function JumbotronBlock({
     </section>
   )
 }
+
+export default JumbotronBlock

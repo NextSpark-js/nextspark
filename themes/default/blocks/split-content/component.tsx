@@ -133,3 +133,5 @@ export function SplitContentBlock({
     </section>
   )
 }
+
+export default SplitContentBlock

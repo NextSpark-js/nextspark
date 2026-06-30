@@ -98,3 +98,5 @@ export function HeroBlock({
     </section>
   )
 }
+
+export default HeroBlock

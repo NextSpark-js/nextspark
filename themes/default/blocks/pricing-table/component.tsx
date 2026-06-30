@@ -152,3 +152,5 @@ export function PricingTableBlock({
     </section>
   )
 }
+
+export default PricingTableBlock

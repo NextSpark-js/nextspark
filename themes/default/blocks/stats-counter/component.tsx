@@ -122,3 +122,5 @@ export function StatsCounterBlock({
     </section>
   )
 }
+
+export default StatsCounterBlock

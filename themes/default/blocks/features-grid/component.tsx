@@ -110,3 +110,5 @@ export function FeaturesGridBlock({
     </section>
   )
 }
+
+export default FeaturesGridBlock

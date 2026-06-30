@@ -195,3 +195,5 @@ export function PostContentBlock({
     </section>
   )
 }
+
+export default PostContentBlock

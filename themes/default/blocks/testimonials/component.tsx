@@ -112,3 +112,5 @@ export function TestimonialsBlock({
     </section>
   )
 }
+
+export default TestimonialsBlock

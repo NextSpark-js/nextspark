@@ -230,3 +230,5 @@ export function HeroWithFormBlock({
     </section>
   )
 }
+
+export default HeroWithFormBlock
