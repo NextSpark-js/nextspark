@@ -101,6 +101,16 @@ export default defineFeatures({
     docs: [],
   },
 
+  'media-library': {
+    name: 'Media Library',
+    description: 'Media upload, storage, and asset management',
+    category: 'content',
+    icon: 'image',
+    entities: ['media'],
+    permissions: ['media.*'],
+    docs: ['21-media-library/*'],
+  },
+
   // ===========================================================================
   // CORE FEATURES
   // Platform-level features that exist in all themes
