@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import { LoginForm } from '@nextsparkjs/core/components/auth/forms/LoginForm'
 import { getTemplateOrDefault, getMetadataOrDefault } from '@nextsparkjs/core/lib/template-resolver'
 
+export const dynamic = 'force-dynamic'
+
 const defaultMetadata: Metadata = {
   title: 'Sign In',
   description: 'Sign in to your account to access the platform',

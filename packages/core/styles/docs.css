@@ -80,3 +80,18 @@
 .docs-content hr {
   @apply my-8 border-border;
 }
+
+/* Mermaid diagrams: rendered client-side from a <pre class="mermaid"> marker */
+.docs-content pre.mermaid {
+  @apply my-6 p-0 bg-transparent border-0 text-center overflow-x-auto;
+  line-height: normal;
+}
+
+.docs-content pre.mermaid svg {
+  @apply max-w-full h-auto;
+}
+
+/* Raw source shown briefly before the client render replaces it */
+.docs-content pre.mermaid:not([data-processed="true"]) {
+  @apply text-sm text-muted-foreground;
+}

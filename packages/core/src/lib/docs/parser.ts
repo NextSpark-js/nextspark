@@ -12,6 +12,7 @@ import remarkGfm from 'remark-gfm'
 import remarkRehype from 'remark-rehype'
 import rehypeShiki from '@shikijs/rehype'
 import rehypeStringify from 'rehype-stringify'
+import { remarkMermaid } from './remark-mermaid'
 
 // Re-export utility functions
 export {
@@ -69,6 +70,7 @@ export async function parseMarkdownFile(filePath: string): Promise<{
 
   const processedContent = await remark()
     .use(remarkGfm) // GitHub Flavored Markdown (tables, strikethrough, etc.)
+    .use(remarkMermaid) // Route ```mermaid fences to a diagram marker (skip highlighting)
     .use(remarkRehype, { allowDangerousHtml: true }) // Convert to rehype AST
     .use(rehypeShiki, { theme: 'github-dark' }) // Syntax highlighting
     .use(rehypeStringify, { allowDangerousHtml: true }) // Serialize to HTML

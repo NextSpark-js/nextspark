@@ -18,11 +18,20 @@ import type { HttpMethod, AuthType, KeyValuePair, PathParam } from '../api-teste
 import type { ApiPreset } from '../../../types/api-presets'
 import { ApiPresetsService } from '../../../lib/services/api-presets.service'
 import { ApiDocsService } from '../../../lib/services/api-docs.service'
+import { loadState, saveState, draftKey } from './explorer-storage'
 
 interface SelectedEndpoint {
   path: string
   method: HttpMethod
   route: ApiRouteEntry
+}
+
+/** Per-endpoint request inputs persisted so switching endpoints keeps your work. */
+interface EndpointDraft {
+  pathParams?: PathParam[]
+  queryParams?: KeyValuePair[]
+  headers?: KeyValuePair[]
+  body?: string
 }
 
 interface ApiExplorerProps {
@@ -53,8 +62,8 @@ function createEmptyRows(count = 2): KeyValuePair[] {
 }
 
 export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
-  // Sidebar state
-  const [isCollapsed, setIsCollapsed] = useState(false)
+  // Sidebar state (collapse persisted)
+  const [isCollapsed, setIsCollapsed] = useState(() => loadState<boolean>('sidebarCollapsed') ?? false)
   const [mobileOpen, setMobileOpen] = useState(false)
 
   // Selected endpoint
@@ -65,16 +74,21 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
   const [pathParams, setPathParams] = useState<PathParam[]>([])
   const [queryParams, setQueryParams] = useState<KeyValuePair[]>(() => createEmptyRows())
   const [headers, setHeaders] = useState<KeyValuePair[]>(() => createEmptyRows())
-  const [authType, setAuthType] = useState<AuthType>('session')
-  const [apiKey, setApiKey] = useState('')
-  const [bypassMode, setBypassMode] = useState(false)
+  // Session/auth config is persisted (see effect below) so it survives reloads.
+  const [authType, setAuthType] = useState<AuthType>(() => loadState<AuthType>('authType') ?? 'session')
+  const [apiKey, setApiKey] = useState(() => loadState<string>('apiKey') ?? '')
+  const [bypassMode, setBypassMode] = useState(() => loadState<boolean>('bypassMode') ?? false)
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(() => {
+    const saved = loadState<string>('selectedTeamId')
+    if (saved) return saved
     if (typeof window !== 'undefined') {
       return localStorage.getItem('activeTeamId')
     }
     return null
   })
   const [body, setBody] = useState('')
+  // Optional act-as-user override for the request (persisted; the server strictly gates it)
+  const [actAsUserId, setActAsUserId] = useState(() => loadState<string>('actAsUserId') ?? '')
 
   // Track which tabs were modified by a preset (for visual indicator)
   const [tabsModifiedByPreset, setTabsModifiedByPreset] = useState<Set<'params' | 'headers' | 'body'>>(
@@ -102,6 +116,30 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
   const { selectedMethod: urlMethod, selectedPath: urlPath, navigateToEndpoint } =
     useApiExplorerNavigation({ basePath: '/devtools/api' })
 
+  // Load an endpoint's persisted request draft (or sensible defaults) into state.
+  const applyEndpointState = useCallback((endpointMethod: HttpMethod, path: string) => {
+    const draft = loadState<EndpointDraft>(draftKey(endpointMethod, path))
+    setPathParams(draft?.pathParams ?? extractPathParams(path))
+    setQueryParams(draft?.queryParams ?? createEmptyRows())
+    setHeaders(draft?.headers ?? createEmptyRows())
+    setBody(draft?.body ?? '')
+    setTabsModifiedByPreset(new Set())
+  }, [])
+
+  // Persist session/auth config so it survives reloads.
+  useEffect(() => {
+    saveState('authType', authType)
+    saveState('apiKey', apiKey)
+    saveState('bypassMode', bypassMode)
+    saveState('selectedTeamId', selectedTeamId)
+    saveState('actAsUserId', actAsUserId)
+  }, [authType, apiKey, bypassMode, selectedTeamId, actAsUserId])
+
+  // Persist whether the sidebar is collapsed.
+  useEffect(() => {
+    saveState('sidebarCollapsed', isCollapsed)
+  }, [isCollapsed])
+
   // Handle endpoint selection - updates URL and local state
   const handleSelectEndpoint = useCallback(
     (path: string, selectedMethod: HttpMethod, route: ApiRouteEntry) => {
@@ -114,16 +152,14 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
       // Update local state immediately for responsiveness
       setSelectedEndpoint({ path, method: selectedMethod, route })
       setMethod(selectedMethod)
-      setPathParams(extractPathParams(path))
-      setQueryParams(createEmptyRows())
-      setHeaders(createEmptyRows())
-      setBody('')
-      setTabsModifiedByPreset(new Set()) // Clear preset indicators
+      // Restore this endpoint's saved draft (or defaults)
+      applyEndpointState(selectedMethod, path)
+      saveState('lastEndpoint', { method: selectedMethod, path })
 
       // Close mobile sidebar after selection
       setMobileOpen(false)
     },
-    [reset, navigateToEndpoint]
+    [reset, navigateToEndpoint, applyEndpointState]
   )
 
   // Handle send request
@@ -149,6 +185,12 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
       }
     }
 
+    // Optional act-as-user override (the Core auth layer gates it strictly —
+    // developer role + non-prod + flag). No-op otherwise.
+    if (actAsUserId.trim()) {
+      customHeaders['x-act-as-user'] = actAsUserId.trim()
+    }
+
     // User-defined headers can override the auto-injected ones
     for (const h of headers) {
       if (h.enabled && h.key) {
@@ -164,7 +206,7 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
       authType,
       apiKey: authType === 'apiKey' ? apiKey : undefined,
     })
-  }, [selectedEndpoint, pathParams, queryParams, headers, method, body, authType, apiKey, bypassMode, selectedTeamId, execute])
+  }, [selectedEndpoint, pathParams, queryParams, headers, method, body, authType, apiKey, bypassMode, selectedTeamId, actAsUserId, execute])
 
   // Handle applying a preset
   const handleApplyPreset = useCallback((preset: ApiPreset) => {
@@ -244,19 +286,26 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
     if (urlPath && urlMethod) {
       const route = findRouteByPath(routes, urlPath)
       if (route && (selectedEndpoint?.path !== urlPath || selectedEndpoint?.method !== urlMethod)) {
-        // URL changed, update local state
+        // URL changed, update local state (restoring this endpoint's draft)
         setSelectedEndpoint({ path: urlPath, method: urlMethod, route })
         setMethod(urlMethod)
-        setPathParams(extractPathParams(urlPath))
-        setQueryParams(createEmptyRows())
-        setHeaders(createEmptyRows())
-        setBody('')
-        setTabsModifiedByPreset(new Set()) // Clear preset indicators
+        applyEndpointState(urlMethod, urlPath)
       }
     }
-  }, [urlPath, urlMethod, routes, selectedEndpoint])
+  }, [urlPath, urlMethod, routes, selectedEndpoint, applyEndpointState])
 
-  // Initialize from URL, initialEndpoint prop, or first endpoint
+  // Persist the current endpoint's request draft.
+  useEffect(() => {
+    if (!selectedEndpoint) return
+    saveState(draftKey(selectedEndpoint.method, selectedEndpoint.path), {
+      pathParams,
+      queryParams,
+      headers,
+      body,
+    })
+  }, [selectedEndpoint, pathParams, queryParams, headers, body])
+
+  // Initialize from URL, initialEndpoint prop, last-used endpoint, or first endpoint
   useEffect(() => {
     if (hasInitialized.current) return
 
@@ -267,7 +316,7 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
         hasInitialized.current = true
         setSelectedEndpoint({ path: urlPath, method: urlMethod, route })
         setMethod(urlMethod)
-        setPathParams(extractPathParams(urlPath))
+        applyEndpointState(urlMethod, urlPath)
         return
       }
     }
@@ -280,7 +329,7 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
         const endpointMethod = initialEndpoint.method as HttpMethod
         setSelectedEndpoint({ path: initialEndpoint.path, method: endpointMethod, route })
         setMethod(endpointMethod)
-        setPathParams(extractPathParams(initialEndpoint.path))
+        applyEndpointState(endpointMethod, initialEndpoint.path)
         // Navigate to update URL if not already there
         if (!urlPath) {
           navigateToEndpoint(endpointMethod, initialEndpoint.path)
@@ -289,7 +338,22 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
       }
     }
 
-    // 3. Fall back to first available endpoint
+    // 3. Restore the last-used endpoint (persisted) on a fresh visit
+    const last = loadState<{ method: string; path: string }>('lastEndpoint')
+    if (last) {
+      const route = findRouteByPath(routes, last.path)
+      if (route) {
+        hasInitialized.current = true
+        const lastMethod = last.method as HttpMethod
+        setSelectedEndpoint({ path: last.path, method: lastMethod, route })
+        setMethod(lastMethod)
+        applyEndpointState(lastMethod, last.path)
+        navigateToEndpoint(lastMethod, last.path)
+        return
+      }
+    }
+
+    // 4. Fall back to first available endpoint
     const categories: RouteCategory[] = ['core', 'entity', 'theme', 'plugin']
     for (const category of categories) {
       const categoryRoutes = routes[category]
@@ -299,12 +363,12 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
         const firstMethod = (firstRoute.methods[0] || 'GET') as HttpMethod
         setSelectedEndpoint({ path: firstRoute.path, method: firstMethod, route: firstRoute })
         setMethod(firstMethod)
-        setPathParams(extractPathParams(firstRoute.path))
+        applyEndpointState(firstMethod, firstRoute.path)
         navigateToEndpoint(firstMethod, firstRoute.path)
         break
       }
     }
-  }, [routes, initialEndpoint, urlPath, urlMethod, navigateToEndpoint])
+  }, [routes, initialEndpoint, urlPath, urlMethod, navigateToEndpoint, applyEndpointState])
 
   const totalRoutes = Object.values(routes).reduce((sum, arr) => sum + arr.length, 0)
 
@@ -375,6 +439,7 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
                 apiKey={apiKey}
                 bypassMode={bypassMode}
                 selectedTeamId={selectedTeamId}
+                actAsUserId={actAsUserId}
                 body={body}
                 status={status}
                 onMethodChange={setMethod}
@@ -385,6 +450,7 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
                 onApiKeyChange={setApiKey}
                 onBypassModeChange={setBypassMode}
                 onTeamChange={setSelectedTeamId}
+                onActAsUserChange={setActAsUserId}
                 onBodyChange={setBody}
                 onSend={handleSend}
                 onCancel={cancel}

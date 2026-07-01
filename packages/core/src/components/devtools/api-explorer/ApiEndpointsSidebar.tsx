@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Search, ChevronRight, ChevronDown, Code, Database, Layers, Puzzle, PanelLeftClose, PanelLeft, Folder, FolderOpen } from 'lucide-react'
+import { loadState, saveState } from './explorer-storage'
 import { Input } from '../../ui/input'
 import { Badge } from '../../ui/badge'
 import { Button } from '../../ui/button'
@@ -75,10 +76,24 @@ export function ApiEndpointsSidebar({
   onToggleCollapse,
 }: ApiEndpointsSidebarProps) {
   const [searchQuery, setSearchQuery] = useState('')
-  const [expandedCategories, setExpandedCategories] = useState<Set<RouteCategory>>(
-    new Set(['core', 'entity', 'theme', 'plugin'])
-  )
-  const [expandedPrefixes, setExpandedPrefixes] = useState<Set<string>>(new Set())
+  // Expand/collapse state is persisted, so the chosen layout
+  // (e.g. Core/Entities collapsed but Theme open) survives reloads.
+  const [expandedCategories, setExpandedCategories] = useState<Set<RouteCategory>>(() => {
+    const saved = loadState<RouteCategory[]>('sidebar:expandedCategories')
+    return new Set(saved ?? ['core', 'entity', 'theme', 'plugin'])
+  })
+  const [expandedPrefixes, setExpandedPrefixes] = useState<Set<string>>(() => {
+    const saved = loadState<string[]>('sidebar:expandedPrefixes')
+    return new Set(saved ?? [])
+  })
+
+  useEffect(() => {
+    saveState('sidebar:expandedCategories', Array.from(expandedCategories))
+  }, [expandedCategories])
+
+  useEffect(() => {
+    saveState('sidebar:expandedPrefixes', Array.from(expandedPrefixes))
+  }, [expandedPrefixes])
 
   // Filter routes by search query
   const filteredRoutes = useMemo(() => {

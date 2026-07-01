@@ -27,6 +27,16 @@ export const ADMIN_BYPASS_HEADER = 'x-admin-bypass'
 export const ADMIN_BYPASS_VALUE = 'confirm-cross-team-access'
 
 /**
+ * Development-only override header: a developer caller can resolve the request
+ * AS a different user by sending `x-act-as-user: <userId>`. Useful for
+ * exercising session-scoped ("me"/personal) endpoints as any user without
+ * switching sessions. Strictly non-production and developer-role gated (see
+ * applyActAsOverride). Core-level and theme-agnostic — every endpoint that
+ * authenticates via authenticateRequest honors it.
+ */
+export const ACT_AS_USER_HEADER = 'x-act-as-user'
+
+/**
  * Roles that can potentially bypass team context (if other conditions are met)
  */
 const ELEVATED_ROLES = ['superadmin', 'developer'] as const
@@ -45,6 +55,8 @@ export interface DualAuthResult {
   user: DualAuthUser | null
   scopes?: string[]
   rateLimitResponse?: Response
+  /** Set when a dev-only x-act-as-user override replaced the real caller. */
+  actingAs?: { originalUserId: string; originalRole: string }
 }
 
 /**
@@ -73,19 +85,99 @@ export async function authenticateRequest(request: NextRequest): Promise<DualAut
   // First try API Key authentication
   const apiKeyResult = await tryApiKeyAuth(request)
   if (apiKeyResult.success) {
-    return apiKeyResult
+    return applyActAsOverride(request, apiKeyResult)
   }
 
   // Then try Session authentication
   const sessionResult = await trySessionAuth(request)
   if (sessionResult.success) {
-    return sessionResult
+    return applyActAsOverride(request, sessionResult)
   }
 
   return {
     success: false,
     type: 'none',
     user: null
+  }
+}
+
+/**
+ * True when running in a production runtime. On Vercel this keys on VERCEL_ENV
+ * (which separates production from preview); elsewhere it falls back to
+ * NODE_ENV. Act-as is hard-blocked whenever this is true.
+ */
+function isProductionRuntime(): boolean {
+  if (process.env.VERCEL_ENV) return process.env.VERCEL_ENV === 'production'
+  return process.env.NODE_ENV === 'production'
+}
+
+/**
+ * Development-only override: resolve the request AS a different user when the
+ * real (already-authenticated) caller is a developer and sends x-act-as-user.
+ *
+ * Hard gates (ALL required, checked in order):
+ *   1. NODE_ENV !== 'production' — never active in production.
+ *   2. The x-act-as-user header carries a target user id.
+ *   3. The real caller has an elevated role (superadmin/developer).
+ *   4. The target user id exists.
+ *
+ * Core-level and theme-agnostic: any endpoint that authenticates via
+ * authenticateRequest (core, entity, theme, plugin) transparently resolves to
+ * the target user — including session-bound "me" endpoints.
+ */
+async function applyActAsOverride(
+  request: NextRequest,
+  authResult: DualAuthResult
+): Promise<DualAuthResult> {
+  // GATE 1a: hard block on a production runtime. On Vercel this keys on
+  // VERCEL_ENV (which separates production from preview — NODE_ENV is
+  // 'production' on previews too), so a preview deploy can still opt in while
+  // production is always blocked. Off Vercel it falls back to NODE_ENV.
+  if (isProductionRuntime()) return authResult
+  // GATE 1b: explicit opt-in flag. Enable only in non-production environments,
+  // never in production. Even if it leaked to prod, GATE 1a still blocks
+  // (defense in depth).
+  if (process.env.ALLOW_ACT_AS_USER !== 'true') return authResult
+
+  // GATE 2: header must be present (cheap check first)
+  const targetUserId = request.headers.get(ACT_AS_USER_HEADER)
+  if (!targetUserId) return authResult
+
+  // GATE 3: the real caller must be a developer (devtools is developer-gated)
+  if (!authResult.user || authResult.user.role !== 'developer') return authResult
+
+  // The override itself is fully wrapped: on ANY error it falls back to the
+  // real caller, so act-as can never break authentication.
+  try {
+    // GATE 4: the target user must exist; otherwise ignore the override
+    const target = await queryOne<{ email: string; role: string; name: string }>(
+      'SELECT email, role, name FROM "users" WHERE id = $1',
+      [targetUserId]
+    )
+    if (!target) return authResult
+
+    const defaultTeamId = await getUserDefaultTeamId(targetUserId)
+    console.warn(
+      `[dual-auth] ACT-AS (dev only): ${authResult.user.email} (${authResult.user.role}) -> acting as user ${targetUserId}`
+    )
+
+    return {
+      ...authResult,
+      user: {
+        id: targetUserId,
+        email: target.email || '',
+        role: target.role || 'user',
+        name: target.name,
+        defaultTeamId,
+      },
+      actingAs: {
+        originalUserId: authResult.user.id,
+        originalRole: authResult.user.role,
+      },
+    }
+  } catch (error) {
+    console.error('[dual-auth] act-as override failed; ignoring:', error)
+    return authResult
   }
 }
 

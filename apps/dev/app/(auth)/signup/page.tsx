@@ -6,6 +6,10 @@ import { getTemplateOrDefault, getMetadataOrDefault } from '@nextsparkjs/core/li
 import { AUTH_CONFIG } from '@nextsparkjs/core/lib/config'
 import { TeamService } from '@nextsparkjs/core/lib/services'
 
+// This page reads DB state (TeamService.hasGlobal) and redirect()s during render,
+// so it must render per-request and never be statically prerendered at build time.
+export const dynamic = 'force-dynamic'
+
 const defaultMetadata: Metadata = {
   title: 'Create Account',
   description: 'Create your account to start using our platform',

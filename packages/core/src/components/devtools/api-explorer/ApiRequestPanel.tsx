@@ -42,6 +42,7 @@ interface ApiRequestPanelProps {
   apiKey: string
   bypassMode: boolean
   selectedTeamId: string | null
+  actAsUserId: string
   body: string
   status: RequestStatus
   onMethodChange: (method: HttpMethod) => void
@@ -52,6 +53,7 @@ interface ApiRequestPanelProps {
   onApiKeyChange: (key: string) => void
   onBypassModeChange: (enabled: boolean) => void
   onTeamChange: (teamId: string | null) => void
+  onActAsUserChange: (userId: string) => void
   onBodyChange: (body: string) => void
   onSend: () => void
   onCancel: () => void
@@ -75,6 +77,7 @@ export function ApiRequestPanel({
   apiKey,
   bypassMode,
   selectedTeamId,
+  actAsUserId,
   body,
   status,
   onMethodChange,
@@ -85,6 +88,7 @@ export function ApiRequestPanel({
   onApiKeyChange,
   onBypassModeChange,
   onTeamChange,
+  onActAsUserChange,
   onBodyChange,
   onSend,
   onCancel,
@@ -196,10 +200,12 @@ export function ApiRequestPanel({
           apiKey={apiKey}
           bypassMode={bypassMode}
           selectedTeamId={selectedTeamId}
+          actAsUserId={actAsUserId}
           onAuthTypeChange={onAuthTypeChange}
           onApiKeyChange={onApiKeyChange}
           onBypassModeChange={onBypassModeChange}
           onTeamChange={onTeamChange}
+          onActAsUserChange={onActAsUserChange}
         />
       </div>
 

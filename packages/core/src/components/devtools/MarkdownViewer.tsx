@@ -5,6 +5,7 @@ import remarkGfm from "remark-gfm";
 import { useEffect, useState, memo } from "react";
 import { codeToHtml } from "shiki";
 import { cn } from '../../lib/utils';
+import { MermaidDiagram } from '../docs/mermaid-diagram';
 
 interface MarkdownViewerProps {
   content: string;
@@ -117,6 +118,11 @@ export function MarkdownViewer({ content, className }: MarkdownViewerProps) {
             const match = /language-(\w+)/.exec(className || "");
             const language = match ? match[1] : "";
             const isInline = !match;
+
+            if (!isInline && language === "mermaid") {
+              const chart = String(children).replace(/\n$/, "");
+              return <MermaidDiagram chart={chart} />;
+            }
 
             if (!isInline && language) {
               const code = String(children).replace(/\n$/, "");

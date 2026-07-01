@@ -83,7 +83,16 @@ export function useApiExplorerNavigation(
       // Convert /api/v1/customers to api/v1/customers
       const pathSegments = path.replace(/^\//, '')
       const newUrl = `${basePath}/${method}/${pathSegments}`
-      router.push(newUrl)
+      // Update the URL for deep-linking / back-forward WITHOUT a server
+      // round-trip. router.push() would re-run the [[...endpoint]] Server
+      // Component and remount <ApiExplorer>, wiping its state (auth type, API
+      // key, team, body). The App Router keeps usePathname() in sync with
+      // history.pushState, so selection and deep-links still work.
+      if (typeof window !== 'undefined') {
+        window.history.pushState(null, '', newUrl)
+      } else {
+        router.push(newUrl)
+      }
     },
     [basePath, router]
   )
