@@ -442,64 +442,74 @@ async function discoverThemeRoutes(config, results, processedEndpoints) {
 
   // Process every docs.md / presets.ts under `baseDir`, mapping each route
   // directory to an endpoint via `endpointForDir(routeDir)`.
+  //
+  // A route directory can carry BOTH a docs.md AND a presets.ts at once —
+  // they are two independent artifacts (results.docs vs results.presets),
+  // not competing claims on the same slot. `processedEndpoints` gates
+  // CROSS-SOURCE priority (theme routes > entity folders > core routes),
+  // checked once per directory, before either file is read — never gated
+  // per-file, or the first file found for a directory silently blocks the
+  // second (this exact bug: the docs.md pass used to mark an endpoint
+  // processed before the presets.ts pass for the SAME directory ever ran,
+  // so any directory with both files always lost its presets). Mirrors
+  // `discoverEntityFolders`'s already-correct pattern below.
   const processTree = async (baseDir, endpointForDir) => {
     if (!existsSync(baseDir)) return
 
     const docFiles = await findFilesRecursive(baseDir, 'docs.md')
     const presetFiles = await findFilesRecursive(baseDir, 'presets.ts')
+    const routeDirs = new Set([...docFiles.map(dirname), ...presetFiles.map(dirname)])
 
-    for (const docsPath of docFiles) {
-      try {
-        const routeDir = dirname(docsPath)
-        const endpoint = endpointForDir(routeDir)
-        if (processedEndpoints.has(endpoint)) continue
+    for (const routeDir of routeDirs) {
+      const endpoint = endpointForDir(routeDir)
+      if (processedEndpoints.has(endpoint)) continue
 
-        const content = await readFile(docsPath, 'utf-8')
-        const title = extractMarkdownTitle(content)
-        const slug = basename(routeDir)
+      const slug = basename(routeDir)
+      const docsPath = join(routeDir, 'docs.md')
+      const presetsPath = join(routeDir, 'presets.ts')
 
-        results.docs.push({
-          slug,
-          title,
-          endpoint,
-          filePath: getStoragePath(docsPath, config),
-          source: 'route',
-          themeName
-        })
-        verbose(`  Theme route doc discovered: ${endpoint}`)
+      if (existsSync(docsPath)) {
+        try {
+          const content = await readFile(docsPath, 'utf-8')
+          const title = extractMarkdownTitle(content)
 
-        processedEndpoints.add(endpoint)
-      } catch (error) {
-        log(`  ERROR: Failed to read theme route doc: ${error.message}`, 'error')
+          results.docs.push({
+            slug,
+            title,
+            endpoint,
+            filePath: getStoragePath(docsPath, config),
+            source: 'route',
+            themeName
+          })
+          verbose(`  Theme route doc discovered: ${endpoint}`)
+        } catch (error) {
+          log(`  ERROR: Failed to read theme route doc: ${error.message}`, 'error')
+        }
       }
-    }
 
-    for (const presetsPath of presetFiles) {
-      try {
-        const routeDir = dirname(presetsPath)
-        const endpoint = endpointForDir(routeDir)
+      if (existsSync(presetsPath)) {
+        try {
+          const content = await readFile(presetsPath, 'utf-8')
+          const presetConfig = parsePresetFile(content)
+          const finalEndpoint = presetConfig?.endpoint || endpoint
 
-        const content = await readFile(presetsPath, 'utf-8')
-        const presetConfig = parsePresetFile(content)
+          results.presets.push({
+            slug,
+            endpoint: finalEndpoint,
+            summary: presetConfig?.summary || '',
+            presets: presetConfig?.presets || [],
+            sourcePath: getStoragePath(presetsPath, config),
+            source: 'route',
+            themeName
+          })
+          verbose(`  Theme route presets discovered: ${finalEndpoint} (${presetConfig?.presets?.length || 0} presets)`)
 
-        const slug = basename(routeDir)
-        const finalEndpoint = presetConfig?.endpoint || endpoint
-        if (processedEndpoints.has(finalEndpoint)) continue
-
-        results.presets.push({
-          slug,
-          endpoint: finalEndpoint,
-          summary: presetConfig?.summary || '',
-          presets: presetConfig?.presets || [],
-          sourcePath: getStoragePath(presetsPath, config),
-          source: 'route',
-          themeName
-        })
-        verbose(`  Theme route presets discovered: ${finalEndpoint} (${presetConfig?.presets?.length || 0} presets)`)
-
-        processedEndpoints.add(finalEndpoint)
-      } catch (error) {
-        log(`  ERROR: Failed to parse theme route presets: ${error.message}`, 'error')
+          processedEndpoints.add(finalEndpoint)
+        } catch (error) {
+          log(`  ERROR: Failed to parse theme route presets: ${error.message}`, 'error')
+        }
+      } else if (existsSync(docsPath)) {
+        processedEndpoints.add(endpoint)
       }
     }
   }
