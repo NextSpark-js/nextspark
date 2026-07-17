@@ -77,3 +77,4 @@ apps/mobile/dist/
 *.tsbuildinfo
 /.claude/plans
 memory/MEMORY.md
+/docs/superpowers
