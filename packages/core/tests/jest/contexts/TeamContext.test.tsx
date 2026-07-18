@@ -148,4 +148,30 @@ describe('TeamProvider self-heal', () => {
     const query = queryClient.getQueryCache().find({ queryKey: TEAMS_QUERY_KEY })
     expect(query?.options.refetchOnWindowFocus).toBe(true)
   })
+
+  it('clears currentTeam and localStorage when the user has zero team memberships', async () => {
+    localStorage.setItem('activeTeamId', 'team-a')
+    let call = 0
+    ;(global.fetch as jest.Mock).mockImplementation((url: string) => {
+      if (url === '/api/v1/teams') {
+        call += 1
+        // First resolution: team-a is a valid member. Second (simulated
+        // post-membership-change refetch): the user has been removed from
+        // every team — the query resolves to an empty list.
+        const rows = call === 1 ? [membershipRow(TEAM_A)] : []
+        return Promise.resolve({ ok: true, json: async () => ({ data: rows }) })
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) })
+    })
+
+    const queryClient = renderWithProviders()
+    await waitFor(() => expect(screen.getByTestId('current-team').textContent).toBe('team-a'))
+
+    await act(async () => {
+      await queryClient.invalidateQueries({ queryKey: TEAMS_QUERY_KEY })
+    })
+
+    await waitFor(() => expect(screen.getByTestId('current-team').textContent).toBe('none'))
+    expect(localStorage.getItem('activeTeamId')).toBeNull()
+  })
 })

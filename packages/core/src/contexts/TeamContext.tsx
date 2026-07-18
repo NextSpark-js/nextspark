@@ -96,7 +96,25 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   // Initialize current team when teams data loads
   useEffect(() => {
     // Guard: don't run during logout (user null but stale TanStack cache)
-    if (!user || !userTeams.length) return
+    if (!user) return
+
+    // User has genuinely zero team memberships (query resolved, not just
+    // still loading) — clear any stale currentTeam/localStorage instead of
+    // leaving them pointing at a team the user no longer belongs to. Without
+    // this, a user removed from EVERY team (not just their active one) never
+    // self-heals: getCurrentTeamId() keeps returning a dead team forever.
+    if (!teamsLoading && userTeams.length === 0) {
+      if (currentTeam) {
+        setCurrentTeam(null)
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('activeTeamId')
+        }
+      }
+      return
+    }
+
+    // Still loading (or genuinely nothing to do yet) — nothing to heal.
+    if (!userTeams.length) return
 
     // Nothing to heal if the team we're already tracking is still a real,
     // current membership. Re-evaluated every time userTeams changes (not
@@ -134,7 +152,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         }).catch(err => console.error('Failed to sync team cookie:', err))
       }
     }
-  }, [user, userTeams, currentTeam])
+  }, [user, userTeams, currentTeam, teamsLoading])
 
   // Clear localStorage and TanStack Query cache when user logs out
   // IMPORTANT: Only run when auth has finished loading (!authLoading) to distinguish
