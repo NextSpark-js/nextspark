@@ -46,6 +46,20 @@ export async function hasPendingInvitationForEmail(email: string): Promise<boole
   return !!row
 }
 
+/**
+ * Should this signup skip automatic team creation?
+ *
+ * True if either the request came through the dedicated invite-flow context
+ * (shouldSkipTeamCreation(), set by signup-with-invite), OR this email
+ * already has a pending, unexpired invitation waiting from any other signup
+ * path (hasPendingInvitationForEmail — see its own doc comment for why this
+ * second check exists). Short-circuits on the first true so a signup that's
+ * already known to be invite-flow never pays for the extra query.
+ */
+export async function shouldSkipTeamCreationForUser(email: string): Promise<boolean> {
+  return shouldSkipTeamCreation() || (await hasPendingInvitationForEmail(email))
+}
+
 interface UserWithEmail {
   email: string;
   id?: string;
@@ -358,7 +372,7 @@ export const auth = betterAuth({
             // Check if we should skip team creation (e.g., user created via
             // invite, or this email already has a pending invitation from
             // any other signup path)
-            if (shouldSkipTeamCreation() || (await hasPendingInvitationForEmail(user.email as string))) {
+            if (await shouldSkipTeamCreationForUser(user.email as string)) {
               console.log(`[Teams] Skipping team creation for user ${user.id} (invite flow or pending invitation)`);
               return;
             }

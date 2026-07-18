@@ -26,8 +26,15 @@ jest.mock('better-auth/next-js', () => ({
   nextCookies: jest.fn(),
 }))
 
+jest.mock('@/core/lib/auth-context', () => ({
+  shouldSkipTeamCreation: jest.fn(),
+}))
+
 // Import after all mocks are set up
-import { hasPendingInvitationForEmail } from '@/core/lib/auth'
+import { hasPendingInvitationForEmail, shouldSkipTeamCreationForUser } from '@/core/lib/auth'
+import { shouldSkipTeamCreation } from '@/core/lib/auth-context'
+
+const mockShouldSkipTeamCreation = shouldSkipTeamCreation as jest.MockedFunction<typeof shouldSkipTeamCreation>
 
 describe('hasPendingInvitationForEmail', () => {
   beforeEach(() => jest.clearAllMocks())
@@ -46,5 +53,30 @@ describe('hasPendingInvitationForEmail', () => {
     mockQueryOne.mockResolvedValueOnce(null)
 
     await expect(hasPendingInvitationForEmail('nobody@example.com')).resolves.toBe(false)
+  })
+})
+
+describe('shouldSkipTeamCreationForUser', () => {
+  beforeEach(() => jest.clearAllMocks())
+
+  it('returns true when shouldSkipTeamCreation() is true, without querying invitations', async () => {
+    mockShouldSkipTeamCreation.mockReturnValueOnce(true)
+
+    await expect(shouldSkipTeamCreationForUser('invitee@example.com')).resolves.toBe(true)
+    expect(mockQueryOne).not.toHaveBeenCalled()
+  })
+
+  it('returns true when shouldSkipTeamCreation() is false but the email has a pending invitation', async () => {
+    mockShouldSkipTeamCreation.mockReturnValueOnce(false)
+    mockQueryOne.mockResolvedValueOnce({ id: 'inv-1' })
+
+    await expect(shouldSkipTeamCreationForUser('person@example.com')).resolves.toBe(true)
+  })
+
+  it('returns false when shouldSkipTeamCreation() is false and there is no pending invitation (normal signup still gets a team)', async () => {
+    mockShouldSkipTeamCreation.mockReturnValueOnce(false)
+    mockQueryOne.mockResolvedValueOnce(null)
+
+    await expect(shouldSkipTeamCreationForUser('newuser@example.com')).resolves.toBe(false)
   })
 })
