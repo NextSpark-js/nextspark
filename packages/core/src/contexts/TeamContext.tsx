@@ -57,7 +57,6 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const [currentTeam, setCurrentTeam] = useState<Team | null>(null)
   const [isSwitching, setIsSwitching] = useState(false)
-  const [initialSyncDone, setInitialSyncDone] = useState(false)
 
   // Modal state for team switching animation
   const [switchModalOpen, setSwitchModalOpen] = useState(false)
@@ -75,7 +74,11 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     enabled: !!user && !authLoading,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes - prevents refetch on navigation
     gcTime: 1000 * 60 * 60, // Keep in cache for 1 hour
-    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    // Automatic safety net for the self-heal above: if a membership change
+    // happened while this tab was unfocused (removed from a team, a team
+    // soft-deleted elsewhere), returning focus re-fetches userTeams without
+    // depending on whatever mutated it remembering to call refreshTeams().
+    refetchOnWindowFocus: true,
     refetchOnMount: false, // Don't refetch if data exists and is not stale
   })
 
@@ -93,7 +96,20 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   // Initialize current team when teams data loads
   useEffect(() => {
     // Guard: don't run during logout (user null but stale TanStack cache)
-    if (!user || !userTeams.length || initialSyncDone) return
+    if (!user || !userTeams.length) return
+
+    // Nothing to heal if the team we're already tracking is still a real,
+    // current membership. Re-evaluated every time userTeams changes (not
+    // just once) — this is what makes the self-heal re-entrant instead of
+    // one-shot: a later out-of-band membership change (someone removed from
+    // a team, a team soft-deleted) that updates userTeams triggers this
+    // effect again and gets corrected, instead of being silently ignored
+    // for the rest of the session. Deliberately keyed off `currentTeam`
+    // (the state we've actually synced), not the raw localStorage value —
+    // on the very first run currentTeam is still null even when a stored
+    // id already resolves to a valid membership, so gating on the stored
+    // id here would skip the initial sync entirely.
+    if (currentTeam && userTeams.some(t => t.team.id === currentTeam.id)) return
 
     // Determine active team (priority: localStorage > user's teams)
     const storedTeamId = typeof window !== 'undefined' ? localStorage.getItem('activeTeamId') : null
@@ -109,7 +125,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('activeTeamId', activeTeam.team.id)
       }
 
-      // Sync cookie via API for server-side access (only once on initial load)
+      // Sync cookie via API for server-side access
       if (typeof window !== 'undefined') {
         fetch('/api/v1/teams/switch', {
           method: 'POST',
@@ -117,12 +133,10 @@ export function TeamProvider({ children }: { children: ReactNode }) {
           body: JSON.stringify({ teamId: activeTeam.team.id })
         }).catch(err => console.error('Failed to sync team cookie:', err))
       }
-
-      setInitialSyncDone(true)
     }
-  }, [user, userTeams, initialSyncDone])
+  }, [user, userTeams, currentTeam])
 
-  // Reset sync flag, clear localStorage and TanStack Query cache when user logs out
+  // Clear localStorage and TanStack Query cache when user logs out
   // IMPORTANT: Only run when auth has finished loading (!authLoading) to distinguish
   // actual logout (user=null, authLoading=false) from initial page load (user=null, authLoading=true).
   // Without the authLoading guard, this effect fires on every page reload/navigation,
@@ -131,7 +145,6 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user && !authLoading) {
       setCurrentTeam(null)
-      setInitialSyncDone(false)
       // Clear team context to prevent leaking to next user session
       if (typeof window !== 'undefined') {
         localStorage.removeItem('activeTeamId')
@@ -199,7 +212,16 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     }
   }, [userTeams, currentTeam])
 
-  // Refresh teams list - invalidate and refetch
+  // Refresh teams list - invalidate and refetch.
+  //
+  // Convention: any endpoint that mutates a team_members row or a team's
+  // deletedAt outside the standard switchTeam() flow (removing a member,
+  // soft-deleting a team, etc.) should call this — or force a hard
+  // navigation — immediately after, so any open tab with that team active
+  // doesn't wait out the query's staleTime or a window-focus event to
+  // notice. Not the only mechanism: the self-heal effect above and
+  // refetchOnWindowFocus on the userTeams query both self-correct on their
+  // own even if a call-site forgets this.
   const refreshTeams = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: TEAMS_QUERY_KEY })
     await refetchTeams()
