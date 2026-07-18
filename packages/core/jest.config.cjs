@@ -48,6 +48,7 @@ module.exports = {
     // Mock ESM modules that cause import issues
     '^better-auth$': '<rootDir>/tests/jest/__mocks__/better-auth.js',
     '^better-auth/next-js$': '<rootDir>/tests/jest/__mocks__/better-auth-next.js',
+    '^better-auth/plugins$': '<rootDir>/tests/jest/__mocks__/better-auth-plugins.js',
     '^next-intl/server$': '<rootDir>/tests/jest/__mocks__/next-intl-server.js',
   },
   setupFilesAfterEnv: ['<rootDir>/tests/jest/setup.ts'],

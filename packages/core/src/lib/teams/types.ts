@@ -83,6 +83,7 @@ export interface Team {
   settings: Record<string, any>
   createdAt: string
   updatedAt: string
+  deletedAt?: string | null
 }
 
 // Team Member interface

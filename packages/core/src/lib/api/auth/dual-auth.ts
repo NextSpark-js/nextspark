@@ -10,6 +10,7 @@ import { auth } from '../../auth'
 import { validateApiKey } from '../auth'
 import { queryOne } from '../../db'
 import { TeamMemberService } from '../../services/team-member.service'
+import { TeamService } from '../../services/team.service'
 
 // ==========================================
 // ADMIN BYPASS CONSTANTS
@@ -314,10 +315,27 @@ export async function resolveTeamContext(
     )
   }
 
+  // Deliberately NO userId arg: TeamService.getById(teamId, userId) is
+  // queryOneWithRLS-scoped, and the "teams" RLS policy only lets a user see
+  // teams they're a member of — passing the current user's id here would
+  // make a real, active team they're just not a member of look IDENTICAL
+  // to a deleted/nonexistent one (both resolve to null), which is exactly
+  // the ambiguity this check exists to remove. Omitting userId routes
+  // through the service (RLS-bypass) pool — safe here because we only ever
+  // branch on existence/deletedAt to pick an error CODE, never return the
+  // row's contents to the client.
+  const team = await TeamService.getById(teamId)
+  if (!team || team.deletedAt) {
+    return NextResponse.json(
+      { success: false, error: 'Team not found', code: 'TEAM_NOT_FOUND' },
+      { status: 403 },
+    )
+  }
+
   const isMember = await TeamMemberService.isMember(teamId, authResult.user!.id)
   if (!isMember) {
     return NextResponse.json(
-      { success: false, error: 'Access denied: You are not a member of this team' },
+      { success: false, error: 'Access denied: You are not a member of this team', code: 'NOT_A_MEMBER' },
       { status: 403 }
     )
   }
