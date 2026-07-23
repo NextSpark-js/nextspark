@@ -5,10 +5,9 @@ import { emailOTP } from "better-auth/plugins";
 import { parseSSLConfig, stripSSLParams, queryOne } from './db';
 import { EmailFactory } from './email';
 import {
-  sendVerifyEmail,
-  sendResetPasswordEmail,
   sendOtpVerificationEmail,
 } from './email/send';
+import { sendResetPasswordCallback, sendVerificationEmailCallback } from './auth-email-callbacks';
 import { I18N_CONFIG, USER_ROLES_CONFIG, TEAMS_CONFIG, AUTH_CONFIG, APP_CONFIG_MERGED, type UserRole } from './config';
 import { getUserFlags } from './services/user-flags.service';
 // Direct imports to avoid circular dependency: auth -> services/index -> middleware.service -> auth
@@ -60,7 +59,7 @@ export async function shouldSkipTeamCreationForUser(email: string): Promise<bool
   return shouldSkipTeamCreation() || (await hasPendingInvitationForEmail(email))
 }
 
-interface UserWithEmail {
+export interface UserWithEmail {
   email: string;
   id?: string;
   firstName?: string;
@@ -218,31 +217,8 @@ export const auth = betterAuth({
     minPasswordLength: 8,
     maxPasswordLength: 128,
     resetPasswordTokenExpiresIn: 60 * 60, // 1 hour
-    sendResetPassword: async ({ user, url, token }: { user: UserWithEmail; url: string; token: string }) => {
-      try {
-        const resetUrl = `${url}?token=${token}`;
-        const template = await sendResetPasswordEmail({
-          userName: user.firstName || '',
-          resetUrl: resetUrl,
-          appName: process.env.NEXT_PUBLIC_APP_NAME || 'Your App',
-          expiresIn: '1 hour'
-        }, I18N_CONFIG.defaultLocale);
-        
-        const response = await emailService.send({
-          to: user.email,
-          ...template
-        });
-        
-        if (!response.success) {
-          console.error('Failed to send reset password email:', response.error);
-          throw new Error('Failed to send reset password email');
-        }
-        
-      } catch (error) {
-        console.error('Error sending reset password email:', error);
-        throw error;
-      }
-    },
+    sendResetPassword: (params: { user: UserWithEmail; url: string; token: string }) =>
+      sendResetPasswordCallback(params, emailService),
   },
   emailVerification: {
     // Controlled by AUTH_CONFIG.sendVerificationEmailOnSignup (default: true).
@@ -250,30 +226,8 @@ export const auth = betterAuth({
     // in their app.config.ts when they verify email ownership through other
     // means (OTP, invitation token, claim-account flow, etc.).
     sendOnSignUp: AUTH_CONFIG.sendVerificationEmailOnSignup ?? true,
-    sendVerificationEmail: async ({ user, token }: { user: UserWithEmail; url: string; token: string }) => {
-      try {
-        const verifyUrl = `${baseUrl}/api/auth/verify-email?token=${token}`;
-        const template = await sendVerifyEmail({
-          userName: user.firstName || '',
-          verificationUrl: verifyUrl,
-          appName: process.env.NEXT_PUBLIC_APP_NAME || 'Your App'
-        }, I18N_CONFIG.defaultLocale);
-        
-        const response = await emailService.send({
-          to: user.email,
-          ...template
-        });
-        
-        if (!response.success) {
-          console.error('Failed to send verification email:', response.error);
-          throw new Error('Failed to send verification email');
-        }
-        
-      } catch (error) {
-        console.error('Error sending verification email:', error);
-        throw error;
-      }
-    },
+    sendVerificationEmail: (params: { user: UserWithEmail; url: string; token: string }) =>
+      sendVerificationEmailCallback(params, emailService),
     verifyTokenExpiresIn: 60 * 60 * 24, // 24 hours
   },
   socialProviders: {
