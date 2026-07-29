@@ -82,9 +82,16 @@ export function ApiEndpointsSidebar({
     const saved = loadState<RouteCategory[]>('sidebar:expandedCategories')
     return new Set(saved ?? ['core', 'entity', 'theme', 'plugin'])
   })
+  // The theme's own groups start OPEN, and only the theme's: they are what someone opens this
+  // screen to reach, while core and entity routes are the framework's furniture. Closed by
+  // default they read as empty — the endpoint is two clicks down a group whose name gives no
+  // hint that it is hiding anything, which is where people gave up looking.
   const [expandedPrefixes, setExpandedPrefixes] = useState<Set<string>>(() => {
     const saved = loadState<string[]>('sidebar:expandedPrefixes')
-    return new Set(saved ?? [])
+    if (saved) return new Set(saved)
+    return new Set(
+      groupByPathPrefix(routes.theme ?? []).map((group) => `theme:${group.prefix}`)
+    )
   })
 
   useEffect(() => {

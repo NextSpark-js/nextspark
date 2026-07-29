@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { Play, Eye, BookOpen } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Play, Eye, BookOpen, RefreshCw } from 'lucide-react'
 import { Button } from '../../ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card'
 import { Badge } from '../../ui/badge'
@@ -17,6 +17,46 @@ import { ScrollArea } from '../../ui/scroll-area'
 import { sel } from '../../../lib/test'
 import type { ApiEndpointPresets, ApiPreset } from '../../../types/api-presets'
 import type { HttpMethod } from '../api-tester/types'
+import { readPresetRunToken, regeneratePresetRunToken } from './preset-placeholders'
+
+/**
+ * The run token, shown only where some preset of this endpoint actually names it. It is the
+ * value every `{{RUN}}` on the endpoint resolves to, so whoever is testing can see which run
+ * they are in, and start a new one when they want values nothing has used before.
+ */
+function RunTokenBar({ presets }: { presets: ApiPreset[] }) {
+  const [token, setToken] = useState<string | null>(null)
+
+  // Read after mount: the token lives in localStorage, which the server render cannot see, and
+  // rendering a different value on each side is a hydration mismatch.
+  useEffect(() => {
+    setToken(readPresetRunToken())
+  }, [])
+
+  const usesRunToken = presets.some((preset) => JSON.stringify(preset).includes('{{RUN}}'))
+  if (!usesRunToken || !token) return null
+
+  return (
+    <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
+      <span className="text-xs text-muted-foreground">Run</span>
+      <code className="font-mono text-xs text-foreground">{token}</code>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-6 px-2"
+        onClick={() => setToken(regeneratePresetRunToken())}
+        data-cy={sel('devtools.apiExplorer.presets.regenerateRunToken')}
+      >
+        <RefreshCw className="h-3 w-3 mr-1" />
+        New run
+      </Button>
+      <span className="text-xs text-muted-foreground">
+        Every {'{{RUN}}'} in these presets resolves to this. Start a new run to send values
+        nothing has used before.
+      </span>
+    </div>
+  )
+}
 
 interface PresetsTabProps {
   endpointPresets: ApiEndpointPresets | null
@@ -58,6 +98,8 @@ export function PresetsTab({ endpointPresets, currentMethod, onApplyPreset }: Pr
       {endpointPresets.summary && (
         <p className="text-sm text-muted-foreground">{endpointPresets.summary}</p>
       )}
+
+      <RunTokenBar presets={endpointPresets.presets} />
 
       {filteredPresets.length === 0 ? (
         <div className="text-sm text-muted-foreground p-4 bg-muted/30 rounded-lg">

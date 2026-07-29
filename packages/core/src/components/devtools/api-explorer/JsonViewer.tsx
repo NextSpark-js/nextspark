@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { JsonView, allExpanded, collapseAllNested, defaultStyles, darkStyles } from 'react-json-view-lite'
 import 'react-json-view-lite/dist/index.css'
 import { useTheme } from 'next-themes'
@@ -33,13 +33,20 @@ export function JsonViewer({ data, className, initialExpanded = 2 }: JsonViewerP
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
 
-  // Determine expansion function based on prop
-  const shouldExpandNode =
-    initialExpanded === 'all'
-      ? allExpanded
-      : initialExpanded === 'none'
-        ? collapseAllNested
-        : (level: number) => level < (initialExpanded as number)
+  // Memoised, and that is load-bearing rather than an optimisation: react-json-view-lite
+  // re-applies this function to EVERY node whenever its identity changes
+  // (`useEffect(..., [shouldExpandNode])` inside ExpandableObject). Rebuilt inline, any
+  // re-render of a parent — a keystroke elsewhere, applying a preset — would throw away
+  // whatever the reader had opened.
+  const shouldExpandNode = useMemo(
+    () =>
+      initialExpanded === 'all'
+        ? allExpanded
+        : initialExpanded === 'none'
+          ? collapseAllNested
+          : (level: number) => level < (initialExpanded as number),
+    [initialExpanded]
+  )
 
   return (
     <div className={cn('font-mono text-sm', className)}>
@@ -78,19 +85,20 @@ export function JsonViewerWithControls({
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
 
-  // State to control expansion - using a key to force re-render
   const [expandState, setExpandState] = useState<ExpandState>(initialExpanded)
-  const [viewKey, setViewKey] = useState(0)
+  // Bumped by the buttons so pressing Expand twice still expands everything, even though the
+  // state value did not change. It belongs in the dependency list below, NOT in a `key`:
+  // remounting the tree also loses the scroll position.
+  const [applyNonce, setApplyNonce] = useState(0)
 
-  // Handlers for expand/collapse all
   const handleExpandAll = useCallback(() => {
     setExpandState('all')
-    setViewKey((k) => k + 1) // Force re-render
+    setApplyNonce((n) => n + 1)
   }, [])
 
   const handleCollapseAll = useCallback(() => {
     setExpandState('none')
-    setViewKey((k) => k + 1) // Force re-render
+    setApplyNonce((n) => n + 1)
   }, [])
 
   // Copy to clipboard
@@ -98,13 +106,18 @@ export function JsonViewerWithControls({
     navigator.clipboard.writeText(JSON.stringify(data, null, 2))
   }, [data])
 
-  // Determine expansion function based on state
-  const shouldExpandNode =
-    expandState === 'all'
-      ? allExpanded
-      : expandState === 'none'
-        ? collapseAllNested
-        : (level: number) => level < (expandState as number)
+  // See the note in JsonViewer above: a fresh function identity resets every node the reader
+  // opened by hand. It may only change when they actually ask for it — a button press, or a
+  // different initial depth.
+  const shouldExpandNode = useMemo(
+    () =>
+      expandState === 'all'
+        ? allExpanded
+        : expandState === 'none'
+          ? collapseAllNested
+          : (level: number) => level < (expandState as number),
+    [expandState, applyNonce]
+  )
 
   return (
     <div className={cn('flex flex-col', className)}>
@@ -145,7 +158,6 @@ export function JsonViewerWithControls({
       )}
       <div className="font-mono text-sm flex-1 overflow-auto">
         <JsonView
-          key={viewKey}
           data={data as object | unknown[]}
           shouldExpandNode={shouldExpandNode}
           style={isDark ? darkStyles : defaultStyles}

@@ -186,6 +186,7 @@ export const DEVTOOLS_SELECTORS = {
     container: 'devtools-api-explorer',
     mobileToggle: 'devtools-api-explorer-mobile-toggle',
     docsBtn: 'devtools-api-explorer-docs-btn',
+    panelDivider: 'devtools-api-explorer-panel-divider',
     // Sidebar - endpoint navigation
     sidebar: {
       container: 'devtools-api-sidebar',
@@ -227,6 +228,7 @@ export const DEVTOOLS_SELECTORS = {
       tabHeaders: 'devtools-api-request-tab-headers',
       tabBody: 'devtools-api-request-tab-body',
       tabPresets: 'devtools-api-request-tab-presets',
+      toggleSession: 'devtools-api-request-toggle-session',
     },
     // Response panel
     response: {
@@ -248,6 +250,7 @@ export const DEVTOOLS_SELECTORS = {
       card: 'devtools-api-presets-card-{id}',
       viewBtn: 'devtools-api-presets-view-{id}',
       applyBtn: 'devtools-api-presets-apply-{id}',
+      regenerateRunToken: 'devtools-api-presets-regenerate-run-token',
     },
   },
 } as const

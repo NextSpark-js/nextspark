@@ -50,7 +50,25 @@ export interface ApiPreset {
   queryParams?: Record<string, string | number | boolean>
   /** Custom headers */
   headers?: Record<string, string>
-  /** Request body (for POST/PATCH/PUT) */
+  /**
+   * Request body (for POST/PATCH/PUT).
+   *
+   * String values here — and in `params`, `headers`, `pathParams` and `sessionConfig` — may carry
+   * placeholders, resolved when the preset is applied (see `preset-placeholders.ts`):
+   *
+   * - `{{UNIQUE}}`   fresh on every apply — the default for anything that creates. Press play,
+   *                  get values nobody has used; press play again, get another set. Two people
+   *                  testing at once never collide either. A preset can still prove an idempotent
+   *                  replay with it: apply once, then send twice.
+   * - `{{RUN}}`      stable until someone starts a new run, and shared by every preset of the
+   *                  endpoint. For the rarer case where two DIFFERENT presets have to meet on
+   *                  the same value.
+   * - `{{TIMESTAMP}}` / `{{UUID}}`  the raw forms, when the shape of the value matters.
+   * - `{{FIRST_TEAM_ID}}`  the browser's first/active team.
+   *
+   * An unrecognised token is left as written rather than blanked, so a preset naming something
+   * this version does not provide says so in the editor instead of sending an empty string.
+   */
   payload?: Record<string, unknown>
   /** Session/auth configuration */
   sessionConfig?: PresetSessionConfig

@@ -1,7 +1,7 @@
 'use client'
 
-import { useMemo } from 'react'
-import { Send, X } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { ChevronRight, Send, X } from 'lucide-react'
 import { Button } from '../../ui/button'
 import { Badge } from '../../ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs'
@@ -21,6 +21,7 @@ import type { ApiRouteEntry } from '../../../lib/services/api-routes.service'
 import type { ApiEndpointPresets, ApiPreset } from '../../../types/api-presets'
 import { PresetsTab } from './PresetsTab'
 import { ApiDocsModal } from './ApiDocsModal'
+import { loadState, saveState } from './explorer-storage'
 
 const methodColors: Record<string, string> = {
   GET: 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
@@ -115,6 +116,25 @@ export function ApiRequestPanel({
 
   const showPayloadEditor = ['POST', 'PATCH', 'PUT'].includes(method)
 
+  // Folded state of the session block, remembered: someone who works with it closed should not
+  // reopen it on every visit. Read after mount so the server render matches the client's.
+  const [sessionOpen, setSessionOpen] = useState(true)
+  useEffect(() => {
+    setSessionOpen(loadState<boolean>('sessionOpen') ?? true)
+  }, [])
+  useEffect(() => {
+    saveState('sessionOpen', sessionOpen)
+  }, [sessionOpen])
+
+  /** What the folded block is hiding, so closing it does not hide whether a request is scoped. */
+  const sessionSummary = useMemo(() => {
+    const parts = [authType === 'apiKey' ? 'API key' : 'session']
+    if (bypassMode) parts.push('cross-team')
+    if (selectedTeamId) parts.push(selectedTeamId)
+    if (actAsUserId.trim()) parts.push(`as ${actAsUserId.trim()}`)
+    return parts.join(' · ')
+  }, [authType, bypassMode, selectedTeamId, actAsUserId])
+
   // Handlers that clear preset indicators when user modifies manually
   const handlePathParamsChange = (params: PathParam[]) => {
     onPathParamsChange(params)
@@ -194,7 +214,20 @@ export function ApiRequestPanel({
           <code className="font-mono text-xs break-all text-foreground">{previewUrl}</code>
         </div>
 
-        {/* Auth Options - Always visible */}
+        {/* Session options, foldable: they are set once and then read as a summary, but they
+            were costing 200px of a panel whose whole job is the part underneath. */}
+        <button
+          type="button"
+          onClick={() => setSessionOpen((open) => !open)}
+          className="flex w-full items-center gap-2 pt-2 border-t text-left text-xs text-muted-foreground hover:text-foreground"
+          aria-expanded={sessionOpen}
+          data-cy={sel('devtools.apiExplorer.request.toggleSession')}
+        >
+          <ChevronRight className={cn('h-3.5 w-3.5 transition-transform', sessionOpen && 'rotate-90')} />
+          <span className="font-medium">Session</span>
+          {!sessionOpen && <span className="truncate">{sessionSummary}</span>}
+        </button>
+        <div className={cn(!sessionOpen && 'hidden')}>
         <AuthSelector
           authType={authType}
           apiKey={apiKey}
@@ -207,11 +240,12 @@ export function ApiRequestPanel({
           onTeamChange={onTeamChange}
           onActAsUserChange={onActAsUserChange}
         />
+        </div>
       </div>
 
       {/* Tabs for params/headers/body */}
       <div className="flex-1 min-h-0 flex flex-col">
-        <Tabs defaultValue="params" className="flex-1 flex flex-col">
+        <Tabs defaultValue="params" className="flex-1 flex flex-col min-h-0">
           <div className="border-b px-4">
             <TabsList className="h-9 bg-transparent p-0 border-0">
               <TabsTrigger
@@ -271,7 +305,7 @@ export function ApiRequestPanel({
             </TabsList>
           </div>
 
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 min-h-0">
             <TabsContent value="params" className="m-0 p-4 space-y-4">
               {pathParams.length > 0 && (
                 <div>

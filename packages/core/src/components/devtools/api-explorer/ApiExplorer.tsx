@@ -9,6 +9,7 @@ import { sel } from '../../../lib/test'
 import { ApiEndpointsSidebar } from './ApiEndpointsSidebar'
 import { ApiRequestPanel } from './ApiRequestPanel'
 import { ApiResponsePanel } from './ApiResponsePanel'
+import { PanelDivider } from './PanelDivider'
 
 import { useApiRequest } from '../api-tester/hooks/useApiRequest'
 import { useApiExplorerNavigation } from '../../../hooks/useApiExplorerNavigation'
@@ -19,6 +20,12 @@ import type { ApiPreset } from '../../../types/api-presets'
 import { ApiPresetsService } from '../../../lib/services/api-presets.service'
 import { ApiDocsService } from '../../../lib/services/api-docs.service'
 import { loadState, saveState, draftKey } from './explorer-storage'
+import {
+  createPresetPlaceholderValues,
+  readPresetRunToken,
+  regeneratePresetRunToken,
+  resolvePresetPlaceholders,
+} from './preset-placeholders'
 
 interface SelectedEndpoint {
   path: string
@@ -89,6 +96,30 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
   const [body, setBody] = useState('')
   // Optional act-as-user override for the request (persisted; the server strictly gates it)
   const [actAsUserId, setActAsUserId] = useState(() => loadState<string>('actAsUserId') ?? '')
+
+  // How the request/response split is divided, as a percentage of the row. Persisted, because a
+  // layout someone chose for the work they are doing should survive a reload of that same work.
+  const [splitPercent, setSplitPercent] = useState(55)
+  const splitRowRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    const saved = loadState<number>('splitPercent')
+    if (typeof saved === 'number') setSplitPercent(saved)
+  }, [])
+  const handleSplitChange = useCallback((percent: number) => {
+    setSplitPercent(percent)
+    saveState('splitPercent', percent)
+  }, [])
+  // The split only exists side by side. Below `lg` the panels stack, where a width would mean
+  // nothing and a flex-basis would silently become a height. Tracked in JS rather than through a
+  // utility class because the value is inline, and an inline style cannot carry a media query.
+  const [isSideBySide, setIsSideBySide] = useState(false)
+  useEffect(() => {
+    const query = window.matchMedia('(min-width: 1024px)')
+    const sync = () => setIsSideBySide(query.matches)
+    sync()
+    query.addEventListener('change', sync)
+    return () => query.removeEventListener('change', sync)
+  }, [])
 
   // Track which tabs were modified by a preset (for visual indicator)
   const [tabsModifiedByPreset, setTabsModifiedByPreset] = useState<Set<'params' | 'headers' | 'body'>>(
@@ -209,7 +240,20 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
   }, [selectedEndpoint, pathParams, queryParams, headers, method, body, authType, apiKey, bypassMode, selectedTeamId, actAsUserId, execute])
 
   // Handle applying a preset
-  const handleApplyPreset = useCallback((preset: ApiPreset) => {
+  const handleApplyPreset = useCallback((rawPreset: ApiPreset) => {
+    // Placeholders resolve HERE, not on send: the values land in the editor, where they can be
+    // read and edited before anything is dispatched. One set of values per apply, so a token
+    // used in two fields of the same payload resolves to the same thing in both.
+    const values = createPresetPlaceholderValues()
+    const preset: ApiPreset = {
+      ...rawPreset,
+      pathParams: resolvePresetPlaceholders(rawPreset.pathParams, values),
+      params: resolvePresetPlaceholders(rawPreset.params, values),
+      headers: resolvePresetPlaceholders(rawPreset.headers, values),
+      payload: resolvePresetPlaceholders(rawPreset.payload, values),
+      sessionConfig: resolvePresetPlaceholders(rawPreset.sessionConfig, values),
+    }
+
     // Track which tabs will be modified
     const modifiedTabs = new Set<'params' | 'headers' | 'body'>()
 
@@ -265,12 +309,8 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
         setBypassMode(preset.sessionConfig.crossTeam)
       }
       if (preset.sessionConfig.teamId) {
-        // Handle placeholder replacement
-        let teamId = preset.sessionConfig.teamId
-        if (teamId === '{{FIRST_TEAM_ID}}' && typeof window !== 'undefined') {
-          teamId = localStorage.getItem('firstTeamId') || localStorage.getItem('activeTeamId') || ''
-        }
-        setSelectedTeamId(teamId)
+        // Already resolved above, along with every other placeholder.
+        setSelectedTeamId(preset.sessionConfig.teamId)
       }
       if (preset.sessionConfig.authType) {
         setAuthType(preset.sessionConfig.authType)
@@ -373,7 +413,7 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
   const totalRoutes = Object.values(routes).reduce((sum, arr) => sum + arr.length, 0)
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] w-full overflow-hidden" data-cy={sel('devtools.apiExplorer.container')}>
+    <div className="flex h-full w-full overflow-hidden" data-cy={sel('devtools.apiExplorer.container')}>
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-background border-b flex items-center px-4 gap-3">
         <Button
@@ -423,11 +463,15 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col lg:flex-row min-w-0 pt-14 lg:pt-0">
+      <div ref={splitRowRef} className="flex-1 flex flex-col lg:flex-row min-w-0 pt-14 lg:pt-0">
         {selectedEndpoint ? (
           <>
             {/* Request Panel - Top on mobile, Left on desktop */}
-            <div className="flex-1 lg:flex-[1.2] min-h-0 border-b lg:border-b-0 lg:border-r overflow-hidden">
+            <div
+              className="flex-1 min-h-0 min-w-0 border-b lg:border-b-0 overflow-hidden"
+              style={isSideBySide ? { flex: `0 0 ${splitPercent}%` } : undefined}
+              data-split-panel="request"
+            >
               <ApiRequestPanel
                 route={selectedEndpoint.route}
                 basePath={selectedEndpoint.path}
@@ -468,8 +512,14 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
               />
             </div>
 
+            <PanelDivider
+              value={splitPercent}
+              onChange={handleSplitChange}
+              containerRef={splitRowRef}
+            />
+
             {/* Response Panel - Bottom on mobile, Right on desktop */}
-            <div className="h-[40vh] lg:h-auto lg:flex-1 min-h-[200px] overflow-hidden">
+            <div className="h-[40vh] lg:h-auto lg:flex-1 min-h-[200px] min-w-0 overflow-hidden">
               <ApiResponsePanel
                 status={status}
                 response={response}
