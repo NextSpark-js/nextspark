@@ -1,44 +1,23 @@
 /**
  * API Explorer Layout
  *
- * Full-width layout for the API Explorer page.
- * Uses negative margins to break out of the parent container's padding
- * and centering (mx-auto).
+ * The Explorer is a tool, not a document: it wants the whole content area, while every other
+ * DevTools page sits inside the parent layout's centered, padded, max-width container.
  *
- * The parent layout has: container mx-auto p-6 max-w-7xl
- * We need to break out of ALL these constraints to use the full available width.
+ * It escapes that container by filling the scroll area it lives in — `absolute inset-0` against
+ * the `relative <main>` of the parent layout. What it must NOT do is compute its own size from
+ * the viewport: the previous `calc(100vw - 16rem)` assumed the DevTools sidebar is always
+ * 16rem, so collapsing that sidebar to a rail left the Explorer 192px narrower than the space
+ * it had, and the centering split the difference into dead margins on both sides — the layout
+ * got worse exactly when someone made room for it.
  *
- * Structure:
- * - DevTools sidebar: w-64 (256px / 16rem)
- * - Main content: flex-1 (fills remaining space)
- *   - Container: mx-auto p-6 max-w-7xl (centered, padded, max 1280px)
- *     - This layout: breaks out to fill full main content area
+ * Filling the parent has no such assumption: the sidebar's width, the container's padding and
+ * its max-width all stop being this file's business.
  */
 export default function ApiExplorerLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  // Use relative positioning to break out of the centered container
-  // margin-left: -50vw + 50% + sidebar/2 adjustment positions at the left edge
-  // width: calc(100vw - sidebar) fills to the right edge
-  return (
-    <div
-      className="h-[calc(100vh-4rem)]"
-      style={{
-        // Position at the left edge of the main content area (right after sidebar)
-        position: 'relative',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: 'calc(100vw - 16rem)', // 100vw minus DevTools sidebar (w-64 = 16rem)
-        maxWidth: 'none',
-        marginLeft: 0,
-        marginRight: 0,
-        marginTop: '-1.5rem', // Negate top padding
-        marginBottom: '-1.5rem', // Negate bottom padding
-      }}
-    >
-      {children}
-    </div>
-  )
+  return <div className="absolute inset-0">{children}</div>
 }

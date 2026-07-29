@@ -45,7 +45,9 @@ function DevLayout({ children }: DevLayoutProps) {
           <DevtoolsMobileHeader />
 
           {/* Content area with scrolling */}
-          <main className="flex-1 overflow-y-auto overflow-x-hidden">
+          {/* `relative` so a full-bleed child route (the API Explorer) can fill this area
+              without measuring the sidebar itself. */}
+          <main className="relative flex-1 overflow-y-auto overflow-x-hidden">
             <div className="container mx-auto p-6 max-w-7xl">
               {children}
             </div>
