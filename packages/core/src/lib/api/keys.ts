@@ -1,3 +1,5 @@
+import { API_CONFIG } from '../config/config-sync';
+
 /**
  * Gestión de API Keys para acceso externo
  */
@@ -63,7 +65,7 @@ export class ApiKeyManager {
    * Valida que los scopes sean válidos
    */
   static validateScopes(scopes: string[]): { valid: boolean; invalidScopes: string[] } {
-    const validScopes = Object.keys(API_SCOPES);
+    const validScopes = Object.keys(getApiScopes());
     const invalidScopes = scopes.filter(scope => !validScopes.includes(scope));
     
     return {
@@ -119,6 +121,30 @@ export const API_SCOPES = {
 } as const;
 
 export type ApiScope = keyof typeof API_SCOPES;
+
+/**
+ * Every scope this deployment understands: the ones core enforces, plus the ones the app declared
+ * in `api.scopes`.
+ *
+ * A function and not a const because the app's config is merged at load time — and because the
+ * ONLY correct answer to "is this scope valid?" is one that includes the app's own. Validating
+ * against core's list alone let an app guard a route with a scope no key could ever carry, which
+ * does not fail loudly: it quietly makes the wildcard the only key that works.
+ *
+ * Core's entries win a name collision. An app extends the vocabulary; it does not redefine what
+ * `admin:api-keys` means.
+ */
+export function getApiScopes(): Record<string, string> {
+  const appScopes = (API_CONFIG as { scopes?: Record<string, string> } | undefined)?.scopes ?? {};
+  return { ...appScopes, ...API_SCOPES };
+}
+
+/** The scopes an app added, for a UI that wants to group them apart from core's. */
+export function getAppApiScopes(): Record<string, string> {
+  const appScopes = (API_CONFIG as { scopes?: Record<string, string> } | undefined)?.scopes ?? {};
+  const coreNames = Object.keys(API_SCOPES);
+  return Object.fromEntries(Object.entries(appScopes).filter(([name]) => !coreNames.includes(name)));
+}
 
 /**
  * Categorías de scopes para organización en UI

@@ -60,6 +60,65 @@ describe('ApiKeyManager', () => {
     });
   });
 
+  describe('scopes an app declares for its own routes', () => {
+    // The gap this closes: an app can guard a route with its own scope, but validateScopes only
+    // knew core's list — so the scope its own gate demanded could never be minted, and the only
+    // key that satisfied the gate was a wildcard. A narrow credential being unavailable is how
+    // people end up handing out broad ones.
+    test('a scope the app declared in api.scopes is valid', () => {
+      jest.isolateModules(() => {
+        jest.doMock('@/core/lib/config/config-sync', () => ({
+          API_CONFIG: { scopes: { 'integrations:write': 'Provision from an external system' } },
+        }));
+        const { ApiKeyManager: Manager } = require('@/core/lib/api/keys');
+
+        expect(Manager.validateScopes(['integrations:write'])).toEqual({
+          valid: true,
+          invalidScopes: [],
+        });
+      });
+    });
+
+    test('core scopes keep working, and an unknown one is still refused', () => {
+      jest.isolateModules(() => {
+        jest.doMock('@/core/lib/config/config-sync', () => ({
+          API_CONFIG: { scopes: { 'integrations:write': 'Provision from an external system' } },
+        }));
+        const { ApiKeyManager: Manager } = require('@/core/lib/api/keys');
+
+        expect(Manager.validateScopes(['users:read', 'integrations:write'])).toEqual({
+          valid: true,
+          invalidScopes: [],
+        });
+        expect(Manager.validateScopes(['nadie:declaro-esto'])).toEqual({
+          valid: false,
+          invalidScopes: ['nadie:declaro-esto'],
+        });
+      });
+    });
+
+    test('an app cannot redefine what a core scope means', () => {
+      jest.isolateModules(() => {
+        jest.doMock('@/core/lib/config/config-sync', () => ({
+          API_CONFIG: { scopes: { 'admin:api-keys': 'Something else entirely' } },
+        }));
+        const { getApiScopes } = require('@/core/lib/api/keys');
+
+        expect(getApiScopes()['admin:api-keys']).toBe('Gestionar API keys');
+      });
+    });
+
+    test('no declared scopes leaves the catalogue exactly as core ships it', () => {
+      jest.isolateModules(() => {
+        jest.doMock('@/core/lib/config/config-sync', () => ({ API_CONFIG: {} }));
+        const { getApiScopes, getAppApiScopes, API_SCOPES } = require('@/core/lib/api/keys');
+
+        expect(getApiScopes()).toEqual(API_SCOPES);
+        expect(getAppApiScopes()).toEqual({});
+      });
+    });
+  });
+
   test('should suggest appropriate key names', () => {
     expect(ApiKeyManager.suggestKeyName(['*'])).toBe('Full Access Key');
     expect(ApiKeyManager.suggestKeyName(['users:read', 'users:write'])).toBe('users Access Key');

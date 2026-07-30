@@ -229,6 +229,13 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
   // API CONFIGURATION
   // =============================================================================
   api: {
+    /**
+     * Extra scopes THIS app enforces, beyond the ones core ships (`API_SCOPES`). A theme adds its
+     * own here so `ApiKeyManager.validateScopes` accepts them and the key-creation UI offers them:
+     * a route that guards itself with `integrations:write` needs that scope to be mintable, or the
+     * only key its own gate accepts is a wildcard.
+     */
+    scopes: {},
     cors: {
       /**
        * Allowed origins for CORS

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
@@ -26,7 +26,7 @@ import { Badge } from '../../ui/badge';
 import { Separator } from '../../ui/separator';
 import { AlertTriangle, Info } from 'lucide-react';
 import { toast } from 'sonner';
-import { API_SCOPES, SCOPE_CATEGORIES } from '../../../lib/api/keys';
+import { SCOPE_CATEGORIES, getApiScopes, getAppApiScopes } from '../../../lib/api/keys';
 import { sel } from '../../../lib/test';
 
 interface CreateApiKeyDialogProps {
@@ -35,9 +35,32 @@ interface CreateApiKeyDialogProps {
   onSuccess: (apiKey: { id: string; name: string; key: string; scopes: string[]; warning: string }) => void;
 }
 
+/**
+ * The scope catalogue this dialog offers: core's categories, plus one for whatever the app
+ * declared in `api.scopes`. Without that last group an app-declared scope validated fine on the
+ * server and was simply unreachable from the only screen that creates keys — so the person
+ * creating one picked the wildcard instead.
+ */
+function useScopeCatalogue() {
+  return useMemo(() => {
+    const appScopes = Object.keys(getAppApiScopes());
+    if (appScopes.length === 0) return SCOPE_CATEGORIES;
+    return {
+      ...SCOPE_CATEGORIES,
+      app: {
+        name: 'Aplicación',
+        description: 'Scopes que esta aplicación define para sus propias rutas',
+        scopes: appScopes,
+      },
+    };
+  }, []);
+}
+
 export function CreateApiKeyDialog({ open, onClose, onSuccess }: CreateApiKeyDialogProps) {
   const [name, setName] = useState('');
   const [selectedScopes, setSelectedScopes] = useState<string[]>([]);
+  const scopeCatalogue = useScopeCatalogue();
+  const scopeLabels = useMemo(() => getApiScopes(), []);
   const [expiresAt, setExpiresAt] = useState('');
   const [expiryOption, setExpiryOption] = useState<'never' | '30d' | '90d' | '1y' | 'custom'>('never');
 
@@ -210,7 +233,7 @@ export function CreateApiKeyDialog({ open, onClose, onSuccess }: CreateApiKeyDia
             </Alert>
 
             <div className="space-y-4">
-              {Object.entries(SCOPE_CATEGORIES).map(([categoryKey, category]) => {
+              {Object.entries(scopeCatalogue).map(([categoryKey, category]) => {
                 const isFullySelected = isCategoryFullySelected(category.scopes);
                 const isPartiallySelected = isCategoryPartiallySelected(category.scopes);
 
@@ -255,7 +278,7 @@ export function CreateApiKeyDialog({ open, onClose, onSuccess }: CreateApiKeyDia
                             <code className="text-xs bg-muted px-1 py-0.5 rounded mr-2">
                               {scope}
                             </code>
-                            {API_SCOPES[scope as keyof typeof API_SCOPES]}
+                            {scopeLabels[scope]}
                           </Label>
                         </div>
                       ))}

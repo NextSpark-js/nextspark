@@ -46,6 +46,18 @@ export interface FeaturesConfig {
 }
 
 export interface ApiConfig {
+  /**
+   * Extra API-key scopes this app understands, as `scope: human description`.
+   *
+   * Core ships the scopes core itself enforces (see `API_SCOPES`). An app that guards its own
+   * routes with its own scope has to be able to REGISTER that scope, or it ends up in the one
+   * place worth avoiding: a gate that demands `something:write` while the key system refuses to
+   * mint it, so the only key that satisfies the gate is a wildcard — the broadest possible
+   * credential, handed out because the narrow one was unavailable.
+   *
+   * Additive only: an app can add scopes, never remove or redefine core's.
+   */
+  scopes?: Record<string, string>
   cors: {
     allowedOrigins: {
       development: string[]
