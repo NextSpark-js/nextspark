@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
@@ -90,12 +90,14 @@ function getErrorCodeFromMessage(message: string): AuthErrorCode {
   return 'UNKNOWN_ERROR'
 }
 
-const loginSchema = z.object({
-  email: z.string().email({ message: 'Invalid email' }),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-})
+function buildLoginSchema(t: (key: string, options?: any) => string) {
+  return z.object({
+    email: z.string().email({ message: t('login.errors.invalidEmail', { defaultValue: 'Invalid email' }) }),
+    password: z.string().min(6, t('login.errors.passwordTooShort', { defaultValue: 'Password must be at least 6 characters' })),
+  })
+}
 
-type LoginFormData = z.infer<typeof loginSchema>
+type LoginFormData = z.infer<ReturnType<typeof buildLoginSchema>>
 
 export function LoginForm() {
   // Auth config for conditional rendering
@@ -116,6 +118,7 @@ export function LoginForm() {
   const { signIn, googleSignIn } = useAuth()
   const { lastMethod, isReady } = useLastAuthMethod()
   const t = useTranslations('auth')
+  const loginSchema = useMemo(() => buildLoginSchema(t), [t])
 
   // Read invitation-related params from URL
   const searchParams = useSearchParams()
