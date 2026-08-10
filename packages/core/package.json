@@ -64,6 +64,10 @@
       "types": "./dist/lib/services/index.d.ts",
       "import": "./dist/lib/services/index.js"
     },
+    "./lib/mcp": {
+      "types": "./dist/lib/mcp/index.d.ts",
+      "import": "./dist/lib/mcp/index.js"
+    },
     "./lib/config": {
       "types": "./dist/lib/config/index.d.ts",
       "import": "./dist/lib/config/index.js"
@@ -414,6 +418,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@hookform/resolvers": "^5.2.1",
     "@inquirer/prompts": "^7.2.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@nextsparkjs/testing": "workspace:*",
     "@nextsparkjs/ui": "^0.1.0-beta.2",
     "@polar-sh/sdk": "^0.43.1",

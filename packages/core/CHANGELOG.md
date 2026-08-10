@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Registry-driven MCP (Model Context Protocol) server engine (`@nextsparkjs/core/lib/mcp`, #98).**
+  Every `access.api`-enabled entity in the entity registry now gets a working MCP tool
+  surface for free — `list`/`get`/`create`/`update`/`delete` tools generated from each
+  entity's field definitions, with zero per-entity code. See
+  [docs/05-api/20-mcp-server.md](./docs/05-api/20-mcp-server.md).
+  - **Engine** (`engine.ts`, `tool-generator.ts`, `schema-builder.ts`) builds a JSON-Schema
+    presentation layer from `EntityField[]` (the core's own `generateEntitySchemas` output
+    can't back `tools/list` — some field types use a `z.union([..., z.undefined()]).transform()`
+    shape `z.toJSONSchema()` rejects). The presentation layer also hardens the generated
+    `list` tool against known silent-failure modes of the generic list endpoint: strict
+    unknown-key rejection, a `sortBy` enum restricted to sortable fields, `datetime` fields
+    excluded from `filters` (equality against a timestamptz silently returns `[]`), a
+    `dateField`/`from`/`to` cross-field rule, and `distinct` never exposed.
+  - **Executor** (`executor.ts`) invokes the real `handleGenericList/Create/Read/Update/Delete`
+    handlers in-process with a synthesized request — the exact same code path
+    `/api/v1/{entity}` uses, so every tool call inherits the fixed scope + team-role
+    permission + ownership/field-guard enforcement (#94, #95) automatically. No separate
+    authorization layer is re-implemented in the MCP engine.
+  - **Transport** (`transport.ts`) is a ~80 LOC stateless in-memory `Transport` adapter,
+    since the SDK's `StreamableHTTPServerTransport` requires Node's
+    `IncomingMessage`/`ServerResponse`, unavailable in the Next.js App Router request model.
+  - **Registry discovery**: a theme customizes one entity's MCP surface by adding
+    `entities/<slug>/mcp.ts` (`McpEntityOverride` — exclude, excludeOperations,
+    relaxRequired, describe, errorHints, transformInput/transformOutput, extraTools),
+    auto-discovered by a new `mcp-overrides` registry generator the same way
+    `entities/<slug>/api/presets.ts` is discovered today — no manual import list to maintain.
+  - **Audit**: every tool call, success or failure, is written to `api_audit_log` with an
+    `mcp:<tool>` endpoint prefix.
+  - New dependency: `@modelcontextprotocol/sdk` (`zod` was already in core's dependency tree).
+  - New package export: `@nextsparkjs/core/lib/mcp`.
+
 ### Security
 
 - **API-key scope minting now matches scope enforcement (#94).** `validateScopesForUser`
