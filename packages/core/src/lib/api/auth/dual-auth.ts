@@ -267,6 +267,13 @@ async function trySessionAuth(request: NextRequest): Promise<DualAuthResult> {
 
 /**
  * Check if user has required scope (for API Key auth)
+ *
+ * `admin:all` was previously accepted as an implicit full-access scope here,
+ * but it was never in `API_SCOPES`, never mintable via `validateScopesForUser`,
+ * and undocumented — a full-access string nothing legitimately produced.
+ * Removed rather than formalized: the wildcard `*` (mintable only by a real
+ * superadmin, see `validateScopesForUser`) already covers the "this key has
+ * full access" case in a documented, auditable way.
  */
 export function hasRequiredScope(authResult: DualAuthResult, requiredScope: string): boolean {
   if (authResult.type === 'session') {
@@ -274,8 +281,7 @@ export function hasRequiredScope(authResult: DualAuthResult, requiredScope: stri
   }
 
   if (authResult.type === 'api-key' && authResult.scopes) {
-    return authResult.scopes.includes(requiredScope) || 
-           authResult.scopes.includes('admin:all') || 
+    return authResult.scopes.includes(requiredScope) ||
            authResult.scopes.includes('*')
   }
 

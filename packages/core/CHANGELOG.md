@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **API-key scope minting now matches scope enforcement (#94).** `validateScopesForUser`
+  — the gate deciding which scopes a user may mint into an API key — previously checked
+  a hardcoded map keyed by the caller's **global** `users.role`, referencing a
+  nonexistent role (`colaborator`) and missing `owner`/`viewer` entirely. Independently,
+  the scope-registry generator that was supposed to back this was dead code: it read
+  entity properties (`entity.api.endpoints`, `entity.features`) that don't exist on the
+  real entity-discovery shape, so `SCOPE_CONFIG.roles` was 100% hardcoded, wrong JSON
+  referencing a nonexistent `products` entity. Net effect: **no non-superadmin user
+  could ever mint a working API key for their own theme's entities.**
+  - The scope-registry generator (`scope-registry.mjs`) now emits a file that computes
+    `SCOPE_CONFIG.roles` at import time, deriving `<slug>:read/write/delete` per
+    API-exposed entity from the same team-role permission matrix
+    (`PERMISSIONS_BY_ROLE`) the request-time authorization check uses — scope minting
+    and scope enforcement can no longer drift apart.
+  - `validateScopesForUser(userId, teamId, requestedScopes)` now takes an explicit
+    `teamId` and resolves the caller's real **team** role via `TeamMemberService`,
+    with an explicit bypass for the global `superadmin` role (which is not a team role
+    and never appears in `AVAILABLE_ROLES`).
+  - `POST /api/v1/api-keys` now resolves team context (`x-team-id` header / cookie /
+    default team) before validating requested scopes, for any non-superadmin caller.
+  - Fixed a satellite bug: `handleGenericDelete` checked the entity's `:write` scope
+    instead of `:delete` — a write-scoped key could delete, and the `:delete` scope was
+    pure decoration.
+  - Removed the undocumented, unmintable `admin:all` scope from `hasRequiredScope` —
+    dead code (nothing could mint it) and a latent, undocumented full-access string.
+    Use `*` instead.
+
+- **API-key authentication no longer bypasses team-role permission checks, field
+  guards, or ownership-based row filtering on the generic entity routes (#95).**
+  `/api/v1/[entity]` previously ran three authorization layers — a team-role
+  permission check, per-role field write guards, and ownership-scoped row
+  filtering — only for session-authenticated requests, explicitly skipping all
+  three for API-key auth on the stated assumption that scopes alone governed
+  API-key requests. Scopes only ever expressed entity+operation granularity, so a
+  scoped key could read/write outside its owner's team role, ownership scope, or
+  field restrictions — broader access than the same user's own session. All three
+  checks now run identically for both auth types.
+
+### Known Limitations
+
+- Requests against the generic entity routes (`/api/v1/[entity]`) — session or
+  API-key — are still not written to `api_audit_log`; that table's `apiKeyId`
+  column is `NOT NULL`, so closing this gap needs a migration and a new logging
+  path, tracked separately from the fixes above.
+
 ## [0.1.0-beta.167]
 
 ### Security — RLS Enforcement Layer
