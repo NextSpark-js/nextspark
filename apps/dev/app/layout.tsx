@@ -5,6 +5,7 @@
  */
 
 import type { Metadata } from "next"
+import { Suspense } from "react"
 import { Geist, Geist_Mono } from "next/font/google"
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
@@ -13,6 +14,7 @@ import "./globals.css"
 import { getBillingResourceHints } from "@nextsparkjs/core/lib/billing/gateways/factory"
 import { ThemeProvider as NextThemeProvider } from "@nextsparkjs/core/providers/theme-provider"
 import { ThemeProvider as CustomThemeProvider } from "@nextsparkjs/core/lib/theme/ThemeProvider"
+import { Toaster } from "@nextsparkjs/core/components/ui/sonner"
 import { getUserLocale } from '@nextsparkjs/core/lib/locale'
 import { TranslationContextManager } from "@nextsparkjs/core/providers/TranslationContextManager"
 import { PluginService } from '@nextsparkjs/core/lib/services'
@@ -85,6 +87,7 @@ export default async function RootLayout({
             <CustomThemeProvider>
               <TranslationContextManager />
               <main>{children}</main>
+              <Suspense><Toaster position="bottom-left" /></Suspense>
             </CustomThemeProvider>
           </NextThemeProvider>
         </NextIntlClientProvider>
