@@ -10,7 +10,8 @@ import {
   useCallback,
   type ReactNode,
 } from 'react'
-import { apiClient, ApiError } from '../api/client'
+import { apiClient } from '../api/client'
+import { ApiError } from '../api/client.types'
 import { authApi, teamsApi } from '../api/core'
 import type { User, Team } from '../api/core/types'
 
@@ -110,11 +111,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       // Login to get token
       const loginResponse = await authApi.login(email, password)
-      setUser(loginResponse.user)
 
       // Get user's teams
       const teamsResponse = await teamsApi.getTeams()
-      setTeams(teamsResponse.data)
 
       if (teamsResponse.data.length === 0) {
         throw new ApiError('No teams available', 400)
@@ -123,6 +122,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Select first team
       const firstTeam = teamsResponse.data[0]
       await teamsApi.switchTeam(firstTeam.id)
+
+      // Commit user, teams and team together, once everything succeeded: no
+      // render ever pairs the new user with the previous session's team, and a
+      // failed login leaves the previous state untouched.
+      setUser(loginResponse.user)
+      setTeams(teamsResponse.data)
       setTeam(firstTeam)
     } finally {
       setIsLoading(false)

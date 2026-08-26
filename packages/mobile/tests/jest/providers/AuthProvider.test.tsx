@@ -70,4 +70,63 @@ describe('AuthProvider', () => {
     expect(result.current.user).toBeNull()
     expect(result.current.isAuthenticated).toBe(false)
   })
+
+  describe('login while another session is active', () => {
+    const userA = { id: 'user-a', name: 'A', email: 'a@example.com' }
+    const teamA = { id: 'team-a', name: 'Team A', role: 'member' }
+    const userB = { id: 'user-b', name: 'B', email: 'b@example.com' }
+    const teamB = { id: 'team-b', name: 'Team B', role: 'member' }
+
+    beforeEach(() => {
+      ;(apiClient.getToken as jest.Mock).mockReturnValue('token-a')
+      ;(apiClient.getStoredUser as jest.Mock).mockReturnValue(userA)
+      ;(authApi.getSession as jest.Mock).mockResolvedValue({ user: userA })
+      ;(teamsApi.getTeams as jest.Mock).mockResolvedValue({ data: [teamA] })
+      ;(apiClient.getTeamId as jest.Mock).mockReturnValue('team-a')
+      ;(teamsApi.switchTeam as jest.Mock).mockResolvedValue(undefined)
+    })
+
+    it('never renders the new user paired with the previous team', async () => {
+      const renders: Array<{ user: string | undefined; team: string | undefined }> = []
+      const { result } = renderHook(
+        () => {
+          const auth = useAuth()
+          renders.push({ user: auth.user?.id, team: auth.team?.id })
+          return auth
+        },
+        { wrapper }
+      )
+      await waitFor(() => expect(result.current.isAuthenticated).toBe(true))
+
+      ;(authApi.login as jest.Mock).mockResolvedValue({ user: userB })
+      ;(teamsApi.getTeams as jest.Mock).mockResolvedValue({ data: [teamB] })
+
+      await act(async () => {
+        await result.current.login('b@example.com', 'password')
+      })
+
+      expect(result.current.user).toEqual(userB)
+      expect(result.current.team).toEqual(teamB)
+      expect(renders).not.toContainEqual({ user: 'user-b', team: 'team-a' })
+    })
+
+    it('leaves the previous session untouched when the login fails', async () => {
+      const { result } = renderHook(() => useAuth(), { wrapper })
+      await waitFor(() => expect(result.current.isAuthenticated).toBe(true))
+
+      ;(authApi.login as jest.Mock).mockResolvedValue({ user: userB })
+      ;(teamsApi.getTeams as jest.Mock).mockResolvedValue({ data: [] })
+
+      await act(async () => {
+        await expect(result.current.login('b@example.com', 'password')).rejects.toThrow(
+          'No teams available'
+        )
+      })
+
+      expect(result.current.user).toEqual(userA)
+      expect(result.current.team).toEqual(teamA)
+      expect(result.current.isAuthenticated).toBe(true)
+      expect(result.current.isLoading).toBe(false)
+    })
+  })
 })
