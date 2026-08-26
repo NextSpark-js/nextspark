@@ -3,6 +3,7 @@ import { renderHook, act, waitFor } from '@testing-library/react-native'
 import { AuthProvider, useAuth } from '../../../src/providers/AuthProvider'
 import { apiClient } from '../../../src/api/client'
 import { authApi, teamsApi } from '../../../src/api/core'
+import { ApiError } from '../../../src/api/client.types'
 
 // Mock the API modules
 jest.mock('../../../src/api/client')
@@ -18,6 +19,8 @@ describe('AuthProvider', () => {
     ;(apiClient.init as jest.Mock).mockResolvedValue(undefined)
     ;(apiClient.getToken as jest.Mock).mockReturnValue(null)
     ;(apiClient.getStoredUser as jest.Mock).mockReturnValue(null)
+    ;(apiClient.getStoredTeam as jest.Mock).mockReturnValue(null)
+    ;(apiClient.setTeam as jest.Mock).mockResolvedValue(undefined)
   })
 
   it('provides auth context', async () => {
@@ -69,5 +72,120 @@ describe('AuthProvider', () => {
 
     expect(result.current.user).toBeNull()
     expect(result.current.isAuthenticated).toBe(false)
+  })
+
+  describe('session restore', () => {
+    const storedUser = { id: 'user-1', name: 'Stored User', email: 'stored@example.com' }
+    const storedTeam = { id: 'team-1', name: 'Stored Team', role: 'member' }
+
+    beforeEach(() => {
+      ;(apiClient.getToken as jest.Mock).mockReturnValue('stored-token')
+      ;(apiClient.getStoredUser as jest.Mock).mockReturnValue(storedUser)
+      ;(apiClient.getStoredTeam as jest.Mock).mockReturnValue(storedTeam)
+    })
+
+    it('restores user and team from the server when it answers', async () => {
+      const freshUser = { ...storedUser, name: 'Fresh User' }
+      ;(authApi.getSession as jest.Mock).mockResolvedValue({ user: freshUser })
+      ;(teamsApi.getTeams as jest.Mock).mockResolvedValue({ data: [storedTeam] })
+      ;(apiClient.getTeamId as jest.Mock).mockReturnValue('team-1')
+
+      const { result } = renderHook(() => useAuth(), { wrapper })
+      await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+      expect(result.current.user).toEqual(freshUser)
+      expect(result.current.team).toEqual(storedTeam)
+      expect(result.current.isAuthenticated).toBe(true)
+      expect(apiClient.setTeam).toHaveBeenCalledWith(storedTeam)
+    })
+
+    it('keeps user AND team from storage when the server is unreachable', async () => {
+      ;(authApi.getSession as jest.Mock).mockRejectedValue(new TypeError('Network request failed'))
+
+      const { result } = renderHook(() => useAuth(), { wrapper })
+      await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+      expect(result.current.user).toEqual(storedUser)
+      expect(result.current.team).toEqual(storedTeam)
+      expect(result.current.teams).toEqual([storedTeam])
+      expect(result.current.isAuthenticated).toBe(true)
+      expect(apiClient.clearAuth).not.toHaveBeenCalled()
+    })
+
+    it('stays unauthenticated offline when no team was ever stored', async () => {
+      ;(apiClient.getStoredTeam as jest.Mock).mockReturnValue(null)
+      ;(authApi.getSession as jest.Mock).mockRejectedValue(new TypeError('Network request failed'))
+
+      const { result } = renderHook(() => useAuth(), { wrapper })
+      await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+      expect(result.current.user).toEqual(storedUser)
+      expect(result.current.team).toBeNull()
+      expect(result.current.isAuthenticated).toBe(false)
+    })
+
+    it('clears everything on a 401', async () => {
+      ;(authApi.getSession as jest.Mock).mockRejectedValue(new ApiError('Unauthorized', 401))
+      ;(apiClient.clearAuth as jest.Mock).mockResolvedValue(undefined)
+
+      const { result } = renderHook(() => useAuth(), { wrapper })
+      await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+      expect(apiClient.clearAuth).toHaveBeenCalled()
+      expect(result.current.user).toBeNull()
+      expect(result.current.team).toBeNull()
+      expect(result.current.isAuthenticated).toBe(false)
+    })
+
+    it('refreshSession confirms an offline-restored session once the server answers', async () => {
+      ;(authApi.getSession as jest.Mock).mockRejectedValueOnce(new TypeError('Network request failed'))
+
+      const { result } = renderHook(() => useAuth(), { wrapper })
+      await waitFor(() => expect(result.current.isLoading).toBe(false))
+      expect(result.current.isAuthenticated).toBe(true)
+
+      const otherTeam = { id: 'team-2', name: 'Other Team', role: 'member' }
+      ;(authApi.getSession as jest.Mock).mockResolvedValue({ user: storedUser })
+      ;(teamsApi.getTeams as jest.Mock).mockResolvedValue({ data: [storedTeam, otherTeam] })
+      ;(apiClient.getTeamId as jest.Mock).mockReturnValue('team-1')
+
+      await act(async () => {
+        await result.current.refreshSession()
+      })
+
+      expect(result.current.teams).toEqual([storedTeam, otherTeam])
+      expect(result.current.team).toEqual(storedTeam)
+      expect(result.current.isLoading).toBe(false)
+    })
+
+    it('refreshSession drops the restored team when the server says there is none', async () => {
+      ;(authApi.getSession as jest.Mock).mockRejectedValueOnce(new TypeError('Network request failed'))
+
+      const { result } = renderHook(() => useAuth(), { wrapper })
+      await waitFor(() => expect(result.current.isAuthenticated).toBe(true))
+
+      ;(authApi.getSession as jest.Mock).mockResolvedValue({ user: storedUser })
+      ;(teamsApi.getTeams as jest.Mock).mockResolvedValue({ data: [] })
+
+      await act(async () => {
+        await result.current.refreshSession()
+      })
+
+      expect(result.current.team).toBeNull()
+      expect(result.current.isAuthenticated).toBe(false)
+    })
+  })
+
+  it('persists the selected team as a full record', async () => {
+    const newTeam = { id: 'team-9', name: 'Nine', role: 'owner' }
+    const { result } = renderHook(() => useAuth(), { wrapper })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    await act(async () => {
+      await result.current.selectTeam(newTeam)
+    })
+
+    expect(apiClient.setTeam).toHaveBeenCalledWith(newTeam)
+    expect(result.current.team).toEqual(newTeam)
   })
 })
