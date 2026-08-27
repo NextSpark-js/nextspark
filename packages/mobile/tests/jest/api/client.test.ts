@@ -42,6 +42,35 @@ describe('ApiClient', () => {
       expect(apiClient.getTeamId()).toBe(mockTeamId)
       expect(apiClient.getStoredUser()).toEqual(mockUser)
     })
+
+    it('loads the stored team record', async () => {
+      const mockTeam = { id: 'team-1', name: 'Team One', role: 'member' }
+
+      ;(SecureStore.getItemAsync as jest.Mock)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce('team-1')
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(JSON.stringify(mockTeam))
+
+      await apiClient.init()
+
+      expect(apiClient.getStoredTeam()).toEqual(mockTeam)
+    })
+  })
+
+  describe('setTeam', () => {
+    it('stores the team id and the full record', async () => {
+      const team = { id: 'team-1', name: 'Team One', role: 'member' }
+      await apiClient.setTeam(team)
+
+      expect(SecureStore.setItemAsync).toHaveBeenCalledWith('nextspark.auth.teamId', 'team-1')
+      expect(SecureStore.setItemAsync).toHaveBeenCalledWith(
+        'nextspark.auth.team',
+        JSON.stringify(team)
+      )
+      expect(apiClient.getTeamId()).toBe('team-1')
+      expect(apiClient.getStoredTeam()).toEqual(team)
+    })
   })
 
   describe('setToken', () => {
@@ -93,13 +122,15 @@ describe('ApiClient', () => {
   describe('clearAuth', () => {
     it('clears all stored credentials', async () => {
       await apiClient.setToken('token')
-      await apiClient.setTeamId('team-id')
+      await apiClient.setTeam({ id: 'team-id', name: 'Team', role: 'member' })
 
       await apiClient.clearAuth()
 
       expect(apiClient.getToken()).toBeNull()
       expect(apiClient.getTeamId()).toBeNull()
       expect(apiClient.getStoredUser()).toBeNull()
+      expect(apiClient.getStoredTeam()).toBeNull()
+      expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('nextspark.auth.team')
     })
   })
 })

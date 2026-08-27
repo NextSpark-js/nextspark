@@ -12,7 +12,7 @@
 import Constants from 'expo-constants'
 import * as Storage from '../lib/storage'
 import { ApiError, type RequestConfig } from './client.types'
-import type { User } from './core/types'
+import type { Team, User } from './core/types'
 
 /**
  * Resolve API URL from configuration
@@ -60,11 +60,13 @@ const API_URL = getApiUrl()
 const TOKEN_KEY = 'nextspark.auth.token'
 const TEAM_ID_KEY = 'nextspark.auth.teamId'
 const USER_KEY = 'nextspark.auth.user'
+const TEAM_KEY = 'nextspark.auth.team'
 
 export class ApiClient {
   private token: string | null = null
   private teamId: string | null = null
   private storedUser: User | null = null
+  private storedTeam: Team | null = null
 
   /**
    * Initialize client by loading stored credentials
@@ -78,6 +80,14 @@ export class ApiClient {
         this.storedUser = JSON.parse(userJson)
       } catch {
         this.storedUser = null
+      }
+    }
+    const teamJson = await Storage.getItemAsync(TEAM_KEY)
+    if (teamJson) {
+      try {
+        this.storedTeam = JSON.parse(teamJson)
+      } catch {
+        this.storedTeam = null
       }
     }
   }
@@ -117,6 +127,23 @@ export class ApiClient {
   }
 
   /**
+   * Get the stored active team (the full record, for offline session restore)
+   */
+  getStoredTeam(): Team | null {
+    return this.storedTeam
+  }
+
+  /**
+   * Set the active team: persists the id (sent as x-team-id) and the full
+   * record, so a session can be restored without reaching the server.
+   */
+  async setTeam(team: Team): Promise<void> {
+    this.storedTeam = team
+    await this.setTeamId(team.id)
+    await Storage.setItemAsync(TEAM_KEY, JSON.stringify(team))
+  }
+
+  /**
    * Get stored user info
    */
   getStoredUser(): User | null {
@@ -138,9 +165,11 @@ export class ApiClient {
     this.token = null
     this.teamId = null
     this.storedUser = null
+    this.storedTeam = null
     await Storage.deleteItemAsync(TOKEN_KEY)
     await Storage.deleteItemAsync(TEAM_ID_KEY)
     await Storage.deleteItemAsync(USER_KEY)
+    await Storage.deleteItemAsync(TEAM_KEY)
   }
 
   // ==========================================
