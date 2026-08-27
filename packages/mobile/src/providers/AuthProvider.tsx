@@ -45,13 +45,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isLoading, setIsLoading] = useState(true)
 
   /**
-   * Persist the active team as a full record: the id travels as `x-team-id`
-   * on every request, the record is what an offline start restores from.
+   * Persist the active team as a full record (id + record) so an offline
+   * start can restore it. Split from `applyTeam` so callers that need to
+   * commit several state setters in the same render (e.g. `login`) can await
+   * the persistence first and batch the `setState` calls together after.
    */
-  const applyTeam = useCallback(async (nextTeam: Team) => {
+  const persistTeam = useCallback(async (nextTeam: Team) => {
     await apiClient.setTeam(nextTeam)
-    setTeam(nextTeam)
   }, [])
+
+  const applyTeam = useCallback(
+    async (nextTeam: Team) => {
+      await persistTeam(nextTeam)
+      setTeam(nextTeam)
+    },
+    [persistTeam]
+  )
 
   /**
    * Restore the session from storage and validate it with the server.
@@ -144,22 +153,29 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       // Login to get token
       const loginResponse = await authApi.login(email, password)
-      setUser(loginResponse.user)
 
       // Get user's teams
       const teamsResponse = await teamsApi.getTeams()
-      setTeams(teamsResponse.data)
 
       if (teamsResponse.data.length === 0) {
         throw new ApiError('No teams available', 400)
       }
 
       // Select first team
-      await applyTeam(teamsResponse.data[0])
+      const firstTeam = teamsResponse.data[0]
+      await teamsApi.switchTeam(firstTeam.id)
+      await persistTeam(firstTeam)
+
+      // Commit user, teams and team together, once everything succeeded: no
+      // render ever pairs the new user with the previous session's team, and a
+      // failed login leaves the previous state untouched.
+      setUser(loginResponse.user)
+      setTeams(teamsResponse.data)
+      setTeam(firstTeam)
     } finally {
       setIsLoading(false)
     }
-  }, [applyTeam])
+  }, [persistTeam])
 
   const logout = useCallback(async () => {
     await authApi.logout()
