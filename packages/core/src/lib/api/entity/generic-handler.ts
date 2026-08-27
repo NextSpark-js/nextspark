@@ -391,26 +391,28 @@ type OwnershipFilterResult =
 /**
  * Resolve the ownership filter for the current request.
  *
- * Checks whether the authenticated user's team role is one of the roles listed
- * in `entityConfig.access.ownershipFilter.roles`.  If so, looks up the linked
- * record (resolved via `linkedBy` config where `userField = userId`) and
- * returns the filter value to append to the query.
+ * Checks whether the authenticated identity's team role is one of the roles
+ * listed in `entityConfig.access.ownershipFilter.roles`.  If so, looks up the
+ * linked record (resolved via `linkedBy` config where `userField = userId`)
+ * and returns the filter value to append to the query.
  *
- * Only runs for session-authenticated users with a real teamId.  API-key auth
- * and admin-bypass paths are deliberately left unrestricted.
+ * Runs identically for session and API-key auth — both resolve to a real
+ * `team_members` role for `userId`/`teamId`, and there is nothing
+ * auth-type-specific about the ownership check itself. Only an admin bypass
+ * skips it (a superadmin/service-context request is not scoped by any single
+ * team role).
  */
 async function resolveOwnershipFilter(
   entityConfig: EntityConfig,
   userId: string,
   teamId: string,
-  isBypass: boolean,
-  authType: 'session' | 'api-key' | 'none'
+  isBypass: boolean
 ): Promise<OwnershipFilterResult> {
   const ownershipFilter = entityConfig.access?.ownershipFilter
   if (!ownershipFilter) return { applies: false }
 
-  // Admin bypass or API-key auth: no role-based restriction
-  if (isBypass || authType === 'api-key') return { applies: false }
+  // Admin bypass: no role-based restriction.
+  if (isBypass) return { applies: false }
 
   // Get the user's team role
   const memberRow = await queryOneWithRLS<{ role: string }>(
@@ -454,19 +456,22 @@ async function resolveOwnershipFilter(
  * Returns true if user is a member, false otherwise
  */
 /**
- * Check entity-level permissions for session-authenticated users.
- * API key auth uses scopes; session auth needs role-based permission checks.
+ * Check entity-level, team-role-based permissions for the authenticated
+ * identity — session user, or API-key owner (API keys carry the same real
+ * `users.id` a session would, resolved to a `team_members` role the same
+ * way). This runs IN ADDITION to the coarse `<slug>:read/write/delete` scope
+ * check `hasRequiredScope` already performs earlier in each handler — API-key
+ * auth now gets both layers, matching what session auth always had.
  * Returns null if allowed, or a NextResponse with 403 if denied.
  */
-async function checkSessionPermission(
+async function checkAuthPermission(
   authResult: DualAuthResult,
   entitySlug: string,
   action: string,
   teamId: string,
   request: NextRequest
 ): Promise<NextResponse | null> {
-  // Only check for session auth — API key auth uses scopes
-  if (authResult.type !== 'session' || !authResult.user?.id) return null
+  if (!authResult.user?.id) return null
 
   const permission = `${entitySlug}.${action}` as Permission
   try {
@@ -625,11 +630,13 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
       teamId = teamValidation.teamId
       isBypass = teamValidation.isBypass
 
-      // Entity-level permission check for session users (api-key uses scopes
-      // above). Skipped for admin bypass (superadmin/developer), who are
-      // authorized at the platform level. A member without `entity.list` → 403.
+      // Entity-level, team-role-based permission check — runs for both
+      // session and API-key auth, in addition to the coarse `:read` scope
+      // check above. Skipped for admin bypass (superadmin/developer), who
+      // are authorized at the platform level. A member without `entity.list`
+      // → 403.
       if (!isBypass && teamId) {
-        const permDenied = await checkSessionPermission(authResult, resolution.entityConfig.slug, 'list', teamId, request)
+        const permDenied = await checkAuthPermission(authResult, resolution.entityConfig.slug, 'list', teamId, request)
         if (permDenied) return permDenied
       }
     }
@@ -777,8 +784,7 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
         entityConfig,
         userId,
         teamId,
-        isBypass,
-        authResult.type
+        isBypass
       )
     }
 
@@ -1230,8 +1236,9 @@ export async function handleGenericCreate(request: NextRequest): Promise<NextRes
       return addCorsHeaders(response, request)
     }
 
-    // Check entity-level permissions for session auth
-    const permDenied = await checkSessionPermission(authResult, entityConfig.slug, 'create', teamId, request)
+    // Entity-level, team-role-based permission check — runs for both session
+    // and API-key auth, in addition to the coarse `:write` scope check above.
+    const permDenied = await checkAuthPermission(authResult, entityConfig.slug, 'create', teamId, request)
     if (permDenied) return permDenied
 
     if (idStrategy === 'serial') {
@@ -1559,10 +1566,11 @@ export async function handleGenericRead(request: NextRequest, { params }: { para
       teamId = teamValidation.teamId
       isBypass = teamValidation.isBypass
 
-      // Entity-level permission check for session users (api-key uses scopes).
-      // Skipped for admin bypass; a member without `entity.read` → 403.
+      // Entity-level, team-role-based permission check — runs for both
+      // session and API-key auth, in addition to the coarse `:read` scope check
+      // above. Skipped for admin bypass; a member without `entity.read` → 403.
       if (!isBypass && teamId) {
-        const permDenied = await checkSessionPermission(authResult, resolution.entityConfig.slug, 'read', teamId, request)
+        const permDenied = await checkAuthPermission(authResult, resolution.entityConfig.slug, 'read', teamId, request)
         if (permDenied) return permDenied
       }
     }
@@ -1629,8 +1637,7 @@ export async function handleGenericRead(request: NextRequest, { params }: { para
         entityConfig,
         userId,
         teamId,
-        isBypass,
-        authResult.type
+        isBypass
       )
       if (readOwnershipFilter.applies) {
         if (readOwnershipFilter.value === null) {
@@ -1762,8 +1769,9 @@ export async function handleGenericUpdate(request: NextRequest, { params }: { pa
       return addCorsHeaders(response, request)
     }
 
-    // Check entity-level permissions for session auth
-    const permDenied = await checkSessionPermission(authResult, resolution.entityConfig.slug, 'update', teamId, request)
+    // Entity-level, team-role-based permission check — runs for both session
+    // and API-key auth, in addition to the coarse `:write` scope check above.
+    const permDenied = await checkAuthPermission(authResult, resolution.entityConfig.slug, 'update', teamId, request)
     if (permDenied) return permDenied
 
     // Parse request body
@@ -1781,9 +1789,11 @@ export async function handleGenericUpdate(request: NextRequest, { params }: { pa
     // Generate validation schema from entity configuration
     const entityConfig = resolution.entityConfig
 
-    // Apply field guards based on team role if configured
+    // Apply field guards based on team role if configured. Runs for both
+    // session and API-key auth — the guard is keyed on the identity's real
+    // team role, same as checkAuthPermission/resolveOwnershipFilter above.
     const fieldGuards = entityConfig.access?.ownershipFilter?.fieldGuards
-    if (fieldGuards && fieldGuards.length > 0 && authResult.type === 'session') {
+    if (fieldGuards && fieldGuards.length > 0 && authResult.user?.id) {
       const guardMemberRow = await queryOneWithRLS<{ role: string }>(
         'SELECT role FROM "team_members" WHERE "teamId" = $1 AND "userId" = $2',
         [teamId, authResult.user!.id],
@@ -1975,8 +1985,7 @@ export async function handleGenericUpdate(request: NextRequest, { params }: { pa
         entityConfig,
         authResult.user!.id,
         teamId,
-        teamValidation.isBypass,
-        authResult.type
+        teamValidation.isBypass
       )
       if (updateOwnershipFilter.applies) {
         if (updateOwnershipFilter.value === null) {
@@ -2125,8 +2134,12 @@ export async function handleGenericDelete(request: NextRequest, { params }: { pa
       return authResult.rateLimitResponse as NextResponse
     }
 
-    // Check required permissions for all auth types
-    if (!hasRequiredScope(authResult, `${resolution.entityConfig.slug}:write`)) {
+    // Check required permissions for all auth types. Delete is its own
+    // scope (`<slug>:delete`, distinct from `:write`) — API_SCOPES already
+    // defines it per entity; this previously checked `:write` instead, which
+    // made a write-scoped key able to delete and made the `:delete` scope
+    // itself pure decoration.
+    if (!hasRequiredScope(authResult, `${resolution.entityConfig.slug}:delete`)) {
       const response = createApiError('Insufficient permissions', 403)
       return addCorsHeaders(response, request)
     }
@@ -2144,8 +2157,9 @@ export async function handleGenericDelete(request: NextRequest, { params }: { pa
       return addCorsHeaders(response, request)
     }
 
-    // Check entity-level permissions for session auth
-    const permDenied = await checkSessionPermission(authResult, resolution.entityConfig.slug, 'delete', teamId, request)
+    // Entity-level, team-role-based permission check — runs for both session
+    // and API-key auth, in addition to the coarse `:delete` scope check above.
+    const permDenied = await checkAuthPermission(authResult, resolution.entityConfig.slug, 'delete', teamId, request)
     if (permDenied) return permDenied
 
     // Delete the item

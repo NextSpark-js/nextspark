@@ -3,111 +3,81 @@
  *
  * Generates scope-registry.ts
  *
+ * IMPORTANT: unlike most registry generators, the role→scope computation does
+ * NOT happen here at generation time. It happens at IMPORT TIME inside the
+ * emitted TypeScript, by statically importing the sibling generated
+ * `entity-registry.ts` (for which entities are API-exposed, via
+ * `access.api`) and `permissions-registry.ts` (for which team roles can
+ * perform which action on each entity, via `PERMISSIONS_BY_ROLE`).
+ *
+ * Why: this generator previously computed scopes from the raw `entities`
+ * discovery array (filesystem-scan metadata only — `{name, exportName,
+ * configPath, ...}`), which never carried `.api`/`.features`/`.fields`
+ * properties. Those properties don't exist on that shape, nor on the real
+ * `EntityConfig` type, so the computation silently produced `base: []` and a
+ * hardcoded, wrong `roles` object every time. Reading the REAL entity config
+ * (`access.api`, `slug`, `fields`) and the REAL per-role permission matrix
+ * requires resolving imports, which can only happen once the generated files
+ * are imported by app code — not synchronously inside this generation
+ * script. Doing the computation at import time also guarantees scope
+ * minting and scope enforcement can never diverge again: both read the same
+ * `PERMISSIONS_BY_ROLE` source of truth `checkPermission()` uses at request
+ * time.
+ *
  * @module core/scripts/build/registry/generators/scope-registry
  */
+
+// Flag-based scopes and restriction rules are orthogonal to team roles/entity
+// permissions (they're driven by user flags like `beta_tester`/`vip`, not by
+// what a role can do to which entity) — kept as static literals, unrelated to
+// the role/entity computation this generator used to get wrong.
+const FLAG_SCOPES = {
+  'beta_tester': ['beta:features'],
+  'vip': ['vip:features', 'advanced:export'],
+  'early_adopter': ['early:features'],
+  'power_user': ['advanced:features', 'bulk:operations']
+}
+
+const SCOPE_RESTRICTIONS = {
+  'restricted': {
+    remove: ['delete', 'admin']
+  },
+  'limited_access': {
+    allow_only: ['read', 'tasks:write']
+  }
+}
 
 /**
  * Generate the scope registry file
  *
- * @param {Array} entities - Discovered entities
+ * @param {Array} entities - Discovered entities (unused for scope computation
+ *   today — kept in the signature for call-site consistency with the other
+ *   generators; the real per-entity data used below comes from the generated
+ *   `entity-registry.ts` this file imports, not from this parameter)
  * @param {object} config - Configuration object from getConfig()
  * @returns {string} Generated TypeScript content
  */
 export function generateScopeRegistry(entities, config) {
-  // Generate base scopes from entities
-  const baseScopes = []
-  const entityPaths = []
-
-  for (const entity of entities) {
-    if (entity.api && entity.features?.enabled) {
-      const entityName = entity.name
-      baseScopes.push(`${entityName}:read`)
-
-      // Add write scope if entity supports creation
-      if (entity.api.endpoints && entity.api.endpoints.create) {
-        baseScopes.push(`${entityName}:write`)
-      }
-
-      // Add delete scope for entities that support deletion
-      if (entity.api.endpoints && entity.api.endpoints.delete) {
-        baseScopes.push(`${entityName}:delete`)
-      }
-
-      // Collect entity paths for routing
-      if (entity.api.apiPath) {
-        entityPaths.push(entity.api.apiPath)
-      }
-    }
-  }
-
-  // Define role-based scopes
-  const roleScopes = {
-    'superadmin': ['admin:users', 'tasks:delete', 'products:write', 'products:delete', ...baseScopes.filter(s => s.includes(':delete'))],
-    'admin': ['admin:users', 'tasks:delete', 'products:write', 'products:delete', ...baseScopes.filter(s => s.includes(':delete'))],
-    'manager': baseScopes.filter(s => s.includes(':write') || s.includes(':read')),
-    'member': baseScopes.filter(s => s.includes(':read') || s === 'tasks:write')
-  }
-
-  // Define flag-based scopes
-  const flagScopes = {
-    'beta_tester': ['beta:features'],
-    'vip': ['vip:features', 'advanced:export'],
-    'early_adopter': ['early:features'],
-    'power_user': ['advanced:features', 'bulk:operations']
-  }
-
-  // Define allowed filters based on entities
-  const allowedFilters = ['status', 'role', 'completed', 'userId']
-
-  // Add entity-specific filters
-  for (const entity of entities) {
-    if (entity.api && entity.features?.enabled) {
-      allowedFilters.push(`${entity.name}Id`)
-
-      // Add common entity filters
-      if (entity.fields) {
-        const fields = Object.keys(entity.fields)
-        if (fields.includes('status')) allowedFilters.push(`${entity.name}Status`)
-        if (fields.includes('type')) allowedFilters.push(`${entity.name}Type`)
-        if (fields.includes('category')) allowedFilters.push(`${entity.name}Category`)
-      }
-    }
-  }
-
-  const scopeConfig = {
-    base: [...new Set(baseScopes)],
-    roles: roleScopes,
-    flags: flagScopes,
-    restrictions: {
-      'restricted': {
-        remove: ['delete', 'admin']
-      },
-      'limited_access': {
-        allow_only: ['read', 'tasks:write']
-      }
-    }
-  }
-
-  const apiConfig = {
-    filters: {
-      allowed: [...new Set(allowedFilters)]
-    },
-    entityPaths: [...new Set(entityPaths)]
-  }
-
   return `/**
  * Auto-generated API Scope Registry
  *
  * Generated at: ${new Date().toISOString()}
- * Base scopes: ${scopeConfig.base.length}
- * Role configurations: ${Object.keys(scopeConfig.roles).length}
- * Flag configurations: ${Object.keys(scopeConfig.flags).length}
- * Allowed filters: ${apiConfig.filters.allowed.length}
+ *
+ * Role→scope mapping is computed below at import time from
+ * \`entity-registry.ts\` (which entities are API-exposed) and
+ * \`permissions-registry.ts\` (which team roles can do what to each entity),
+ * so scope MINTING (this file) and scope ENFORCEMENT
+ * (\`checkPermission\`/\`hasRequiredScope\`) can never drift apart.
  *
  * This file replaces hardcoded scope configurations in helpers.ts
  *
  * DO NOT EDIT - This file is auto-generated by scripts/build-registry.mjs
  */
+
+import { ENTITY_REGISTRY } from './entity-registry'
+import { AVAILABLE_ROLES, PERMISSIONS_BY_ROLE } from './permissions-registry'
+import type { Permission } from '@/core/lib/permissions/types'
+import type { EntityConfig } from '@/core/lib/entities/types'
 
 export interface ScopeConfig {
   base: string[]
@@ -123,9 +93,84 @@ export interface ApiConfig {
   entityPaths: string[]
 }
 
-export const SCOPE_CONFIG: ScopeConfig = ${JSON.stringify(scopeConfig, null, 2)}
+interface ScopeApiEntity {
+  slug: string
+  apiPath: string
+  fieldNames: string[]
+}
 
-export const API_CONFIG: ApiConfig = ${JSON.stringify(apiConfig, null, 2)}
+// Entities exposed via the external API (access.api === true). ENTITY_REGISTRY
+// entries can be a full EntityConfig or a ChildEntityDefinition (which has no
+// \`access\`/\`slug\` at all) — guard defensively rather than assume every
+// registry entry is a root entity.
+const SCOPE_API_ENTITIES: ScopeApiEntity[] = Object.values(ENTITY_REGISTRY)
+  .map((entry) => {
+    const cfg = entry.config as Partial<EntityConfig>
+    if (!cfg?.access?.api || !cfg.slug) return null
+    return {
+      slug: cfg.slug,
+      apiPath: cfg.access.basePath || \`/api/v1/\${cfg.slug}\`,
+      fieldNames: Array.isArray(cfg.fields) ? cfg.fields.map((field) => field.name) : []
+    }
+  })
+  .filter((entity): entity is ScopeApiEntity => entity !== null)
+
+// For each API-exposed entity, grant \`<slug>:read/write/delete\` to any team
+// role whose PERMISSIONS_BY_ROLE set includes the corresponding
+// \`<slug>.<action>\` permission — the SAME set checkAuthPermission() consults
+// at request time. Superadmin is a GLOBAL role (never in AVAILABLE_ROLES) and
+// is intentionally NOT represented here; it's handled as an explicit bypass
+// in validateScopesForUser().
+function computeRoleScopes(): Record<string, string[]> {
+  const roleScopes: Record<string, string[]> = {}
+  for (const role of AVAILABLE_ROLES) {
+    const perms = PERMISSIONS_BY_ROLE[role]
+    const scopes: string[] = []
+    for (const { slug } of SCOPE_API_ENTITIES) {
+      if (perms?.has(\`\${slug}.list\` as Permission) || perms?.has(\`\${slug}.read\` as Permission)) {
+        scopes.push(\`\${slug}:read\`)
+      }
+      if (perms?.has(\`\${slug}.create\` as Permission) || perms?.has(\`\${slug}.update\` as Permission)) {
+        scopes.push(\`\${slug}:write\`)
+      }
+      if (perms?.has(\`\${slug}.delete\` as Permission)) {
+        scopes.push(\`\${slug}:delete\`)
+      }
+    }
+    roleScopes[role] = [...new Set(scopes)]
+  }
+  return roleScopes
+}
+
+function computeAllowedFilters(): string[] {
+  const allowedFilters = new Set<string>(['status', 'role', 'completed', 'userId'])
+  for (const { slug, fieldNames } of SCOPE_API_ENTITIES) {
+    allowedFilters.add(\`\${slug}Id\`)
+    if (fieldNames.includes('status')) allowedFilters.add(\`\${slug}Status\`)
+    if (fieldNames.includes('type')) allowedFilters.add(\`\${slug}Type\`)
+    if (fieldNames.includes('category')) allowedFilters.add(\`\${slug}Category\`)
+  }
+  return [...allowedFilters]
+}
+
+export const SCOPE_CONFIG: ScopeConfig = {
+  // Nothing is granted irrespective of role — every entity scope flows
+  // through computeRoleScopes() above, sourced from the real permission
+  // matrix. Kept as an empty array (rather than removed) so a future,
+  // deliberate "these scopes belong to every authenticated key" need has a
+  // place to live without re-deriving this decision.
+  base: [],
+  roles: computeRoleScopes(),
+  flags: ${JSON.stringify(FLAG_SCOPES, null, 2).split('\n').join('\n  ')},
+  restrictions: ${JSON.stringify(SCOPE_RESTRICTIONS, null, 2).split('\n').join('\n  ')}
+}
+
+export const API_CONFIG: ApiConfig = {
+  filters: {
+    allowed: computeAllowedFilters()
+  },
+  entityPaths: SCOPE_API_ENTITIES.map((entity) => entity.apiPath)
+}
 
 // ==================== Service Layer ====================
 // Query functions have been moved to: @nextsparkjs/core/lib/services/scope.service

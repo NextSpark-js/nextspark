@@ -441,7 +441,6 @@ export function hasRequiredScope(authResult: DualAuthResult, requiredScope: stri
   // API Keys check scopes
   if (authResult.type === 'api-key' && authResult.scopes) {
     return authResult.scopes.includes(requiredScope) ||
-           authResult.scopes.includes('admin:all') ||
            authResult.scopes.includes('*')
   }
 
@@ -820,7 +819,7 @@ function hasAllScopes(authResult: DualAuthResult, scopes: string[]): boolean {
 }
 
 // Usage:
-if (!hasAnyScope(authResult, ['products:read', 'admin:all'])) {
+if (!hasAnyScope(authResult, ['products:read', '*'])) {
   return createAuthError('Insufficient permissions', 403)
 }
 
