@@ -920,4 +920,125 @@ describe('API Keys API - CRUD Operations', {
       })
     })
   })
+
+  // ============================================
+  // #94 / #95 regression — non-superadmin scope minting and enforcement
+  // ============================================
+  //
+  // Before the fix, `validateScopesForUser` checked a hardcoded map keyed by
+  // the caller's GLOBAL role, so no non-superadmin user could ever mint a
+  // working scope for a real theme entity. It's now team-role based, derived
+  // from the same permissions matrix `checkAuthPermission` enforces at
+  // request time. Uses a real seeded team member (not the superadmin key)
+  // to exercise the actual end-user path the bug blocked.
+  //
+  // Seed data (themes/default/migrations/090_demo_users_teams.sql):
+  // - emily.johnson@nextspark.dev / Testing1234 — `member` role in
+  //   `team-everpoint-001` (Everpoint Labs).
+  // - `tasks` permissions for `member` (themes/default/config/permissions.config.ts):
+  //   create/read/list/update allowed, delete is owner/admin only.
+  describe('#94/#95 — non-superadmin scope minting matches real team-role permissions', () => {
+    const MEMBER_EMAIL = 'emily.johnson@nextspark.dev'
+    const MEMBER_PASSWORD = 'Testing1234'
+    const MEMBER_TEAM_ID = 'team-everpoint-001'
+    const createdKeys: string[] = []
+
+    before(() => {
+      cy.login(MEMBER_EMAIL, MEMBER_PASSWORD)
+    })
+
+    afterEach(() => {
+      createdKeys.forEach((id) => {
+        cy.request({
+          method: 'DELETE',
+          url: `${BASE_URL}/api/v1/api-keys/${id}`,
+          failOnStatusCode: false
+        })
+      })
+      createdKeys.length = 0
+    })
+
+    it('APIKEY_120: a member can mint tasks:read — their role legitimately has it (previously impossible for any non-superadmin)', () => {
+      cy.request({
+        method: 'POST',
+        url: `${BASE_URL}/api/v1/api-keys`,
+        headers: { 'x-team-id': MEMBER_TEAM_ID },
+        body: { name: 'Cypress Member Read Key APIKEY_120', scopes: ['tasks:read'] },
+        failOnStatusCode: false
+      }).then((response: any) => {
+        expect(response.status).to.eq(201)
+        expect(response.body.data.scopes).to.deep.eq(['tasks:read'])
+        createdKeys.push(response.body.data.id)
+      })
+    })
+
+    it('APIKEY_121: a member is denied tasks:delete — their team role does not have it', () => {
+      cy.request({
+        method: 'POST',
+        url: `${BASE_URL}/api/v1/api-keys`,
+        headers: { 'x-team-id': MEMBER_TEAM_ID },
+        body: { name: 'Cypress Member Delete Key APIKEY_121', scopes: ['tasks:delete'] },
+        failOnStatusCode: false
+      }).then((response: any) => {
+        expect(response.status).to.eq(403)
+        expect(response.body).to.have.property('code', 'INSUFFICIENT_SCOPE_PERMISSIONS')
+        expect(response.body.details.deniedScopes).to.include('tasks:delete')
+      })
+    })
+
+    it('APIKEY_122: a legitimately-scoped member key can read tasks — checkAuthPermission does not spuriously block it', () => {
+      cy.request({
+        method: 'POST',
+        url: `${BASE_URL}/api/v1/api-keys`,
+        headers: { 'x-team-id': MEMBER_TEAM_ID },
+        body: { name: 'Cypress Member Read Key APIKEY_122', scopes: ['tasks:read'] },
+        failOnStatusCode: false
+      }).then((createResponse: any) => {
+        expect(createResponse.status).to.eq(201)
+        const memberKey = createResponse.body.data.key
+        createdKeys.push(createResponse.body.data.id)
+
+        cy.request({
+          method: 'GET',
+          url: `${BASE_URL}/api/v1/tasks`,
+          headers: {
+            Authorization: `Bearer ${memberKey}`,
+            'x-team-id': MEMBER_TEAM_ID
+          },
+          failOnStatusCode: false
+        }).then((listResponse: any) => {
+          expect(listResponse.status).to.eq(200)
+        })
+      })
+    })
+
+    it('APIKEY_123: a tasks:write-only member key can no longer delete tasks (the exact escalation this fix closes)', () => {
+      cy.request({
+        method: 'POST',
+        url: `${BASE_URL}/api/v1/api-keys`,
+        headers: { 'x-team-id': MEMBER_TEAM_ID },
+        body: { name: 'Cypress Member Write Key APIKEY_123', scopes: ['tasks:write'] },
+        failOnStatusCode: false
+      }).then((createResponse: any) => {
+        expect(createResponse.status).to.eq(201)
+        const memberKey = createResponse.body.data.key
+        createdKeys.push(createResponse.body.data.id)
+
+        // Before the fix, handleGenericDelete checked the `:write` scope
+        // instead of `:delete`, so this exact key would have been able to
+        // delete — regardless of the member role never holding `tasks.delete`.
+        cy.request({
+          method: 'DELETE',
+          url: `${BASE_URL}/api/v1/tasks/00000000-0000-0000-0000-000000000000`,
+          headers: {
+            Authorization: `Bearer ${memberKey}`,
+            'x-team-id': MEMBER_TEAM_ID
+          },
+          failOnStatusCode: false
+        }).then((deleteResponse: any) => {
+          expect(deleteResponse.status).to.eq(403)
+        })
+      })
+    })
+  })
 })

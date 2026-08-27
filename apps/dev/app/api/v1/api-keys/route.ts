@@ -7,7 +7,7 @@ import {
   handleCorsPreflightRequest,
   addCorsHeaders
 } from '@nextsparkjs/core/lib/api/helpers';
-import { authenticateRequest, hasRequiredScope } from '@nextsparkjs/core/lib/api/auth/dual-auth';
+import { authenticateRequest, hasRequiredScope, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth';
 import { ApiKeyManager, API_SCOPES, API_KEY_LIMITS } from '@nextsparkjs/core/lib/api/keys';
 import { validateScopesForUser } from '@nextsparkjs/core/lib/api/auth';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
@@ -177,8 +177,20 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
       return addCorsHeaders(response);
     }
 
-    // Validar que el usuario pueda crear API keys con estos scopes
-    const userScopeValidation = await validateScopesForUser(authResult.user!.id, validatedData.scopes);
+    // Validar que el usuario pueda crear API keys con estos scopes.
+    // Scope minting is TEAM-role based (see validateScopesForUser) — resolve
+    // the team this key is being minted for, unless the caller is a global
+    // superadmin, which validateScopesForUser bypasses regardless of team.
+    let teamId: string | null = null;
+    if (authResult.user!.role !== 'superadmin') {
+      const teamResult = await resolveTeamContext(req, authResult);
+      if (teamResult instanceof NextResponse) {
+        return teamResult;
+      }
+      teamId = teamResult;
+    }
+
+    const userScopeValidation = await validateScopesForUser(authResult.user!.id, teamId, validatedData.scopes);
     if (!userScopeValidation.valid) {
       const response = createApiError(
         'You do not have permission to create API keys with these scopes', 

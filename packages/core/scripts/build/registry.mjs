@@ -55,6 +55,7 @@ import { discoverEmails } from './registry/discovery/emails.mjs'
 import { discoverBlocks } from './registry/discovery/blocks.mjs'
 import { discoverCoreRoutes } from './registry/discovery/core-routes.mjs'
 import { discoverApiPresets } from './registry/discovery/api-presets.mjs'
+import { discoverMcpOverrides } from './registry/discovery/mcp-overrides.mjs'
 import { validateEntityConfigurations } from './registry/validation/entity-validator.mjs'
 import { generatePluginRegistry, generatePluginRegistryClient } from './registry/generators/plugin-registry.mjs'
 import { generateEntityRegistry, generateEntityRegistryClient } from './registry/generators/entity-registry.mjs'
@@ -76,6 +77,7 @@ import { generatePermissionsRegistry } from './registry/generators/permissions-r
 import { generateScheduledActionsRegistry } from './registry/generators/scheduled-actions-registry.mjs'
 import { generateDocsRegistry } from './registry/generators/docs-registry.mjs'
 import { generateApiPresetsRegistry, generateApiDocsRegistry } from './registry/generators/api-presets-registry.mjs'
+import { generateMcpRegistry } from './registry/generators/mcp-registry.mjs'
 import {
   generateMissingPages,
   displayTreeStructure,
@@ -89,7 +91,7 @@ import { syncAppGlobalsCss } from './theme.mjs'
 
 // ==================== Registry File Generation ====================
 
-async function generateRegistryFiles(CONFIG, plugins, entities, themes, templates, middlewares, blocks, permissionsConfig, coreRoutes, apiPresetsData, emails) {
+async function generateRegistryFiles(CONFIG, plugins, entities, themes, templates, middlewares, blocks, permissionsConfig, coreRoutes, apiPresetsData, emails, mcpOverridesData) {
   log('Generating registry files...', 'build')
 
   try {
@@ -122,6 +124,7 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, template
       { name: 'docs-registry.ts', content: generateDocsRegistry() },
       { name: 'api-presets-registry.ts', content: generateApiPresetsRegistry(apiPresetsData, CONFIG) },
       { name: 'api-docs-registry.ts', content: generateApiDocsRegistry(apiPresetsData, CONFIG) },
+      { name: 'mcp-registry.ts', content: generateMcpRegistry(mcpOverridesData, CONFIG) },
       { name: 'index.ts', content: generateUnifiedRegistry(plugins, entities, themes, templates, middlewares, CONFIG) }
     ]
 
@@ -191,7 +194,7 @@ export async function buildRegistries(projectRoot = null) {
     await discoverParentChildRelations(CONFIG)
 
     // Discover all content types in parallel (pass CONFIG to each)
-    const [plugins, coreEntities, themes, templates, middlewares, blocks, permissionsConfig, coreRoutes, apiPresetsData, emails] = await Promise.all([
+    const [plugins, coreEntities, themes, templates, middlewares, blocks, permissionsConfig, coreRoutes, apiPresetsData, emails, mcpOverridesData] = await Promise.all([
       discoverPlugins(CONFIG),
       discoverCoreEntities(CONFIG),
       discoverThemes(CONFIG),
@@ -201,7 +204,8 @@ export async function buildRegistries(projectRoot = null) {
       discoverPermissionsConfig(CONFIG),
       discoverCoreRoutes(CONFIG),
       discoverApiPresets(CONFIG),
-      discoverEmails(CONFIG)
+      discoverEmails(CONFIG),
+      discoverMcpOverrides(CONFIG)
     ])
 
     // Aggregate all entities with proper priority: plugin < core < theme
@@ -260,7 +264,7 @@ export async function buildRegistries(projectRoot = null) {
 
     // Hoist plugin dependencies to root workspace for proper resolution
     // Generate all registry files (use aggregated entities for entity registry + blocks)
-    await generateRegistryFiles(CONFIG, plugins, allEntities, themes, templates, middlewares, blocks, permissionsConfig, coreRoutes, apiPresetsData, emails)
+    await generateRegistryFiles(CONFIG, plugins, allEntities, themes, templates, middlewares, blocks, permissionsConfig, coreRoutes, apiPresetsData, emails, mcpOverridesData)
 
     // Generate missing pages for templates that don't have core app pages
     await generateMissingPages(templates, CONFIG)

@@ -41,6 +41,7 @@ NextSpark is a complete, production-ready SaaS framework built on Next.js 15. It
 - **Teams** — Multi-tenant team management with roles and invitations
 - **Permissions** — Granular role-based access control system
 - **Entities** — Dynamic CRUD with automatic API generation and validation
+- **MCP Server** — Every API-exposed entity gets LLM tool-calling (Claude, etc.) for free via the Model Context Protocol
 - **Themes** — Multiple theme support with easy customization
 - **Plugins** — Extensible plugin architecture for adding features
 - **i18n** — Full internationalization with [next-intl](https://next-intl-docs.vercel.app/)
