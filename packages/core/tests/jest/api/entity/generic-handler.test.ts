@@ -113,6 +113,7 @@ jest.mock('@/core/lib/api/helpers', () => ({
 
 import {
   handleGenericList,
+  handleGenericCreate,
   handleGenericUpdate,
   handleGenericDelete,
 } from '@/core/lib/api/entity/generic-handler';
@@ -312,6 +313,67 @@ describe('handleGenericUpdate — fieldGuards now apply to API-key auth', () => 
     const response = await handleGenericUpdate(request, { params: Promise.resolve({ entity: 'pets', id: 'pet-1' }) });
 
     expect((response as { status: number }).status).not.toBe(403);
+  });
+});
+
+describe('handleGenericCreate & handleGenericUpdate — a :write scope does not imply create AND update independently', () => {
+  // scope-registry.mjs mints ':write' to any team role with EITHER 'create' OR
+  // 'update' permission (see computeRoleScopes) — a role holding only 'update'
+  // can legitimately end up with a working ':write'-scoped key. That's only
+  // safe because checkAuthPermission re-checks the SPECIFIC action
+  // ('<slug>.create' vs '<slug>.update') independently of the scope that got
+  // the request past the coarse gate above it. These two tests fail if that
+  // per-action recheck is ever weakened back into a scope-only gate.
+  beforeEach(() => {
+    mockGenerateEntitySchemas.mockReturnValue({
+      create: { safeParse: (data: unknown) => ({ success: true, data }) },
+      update: { safeParse: (data: unknown) => ({ success: true, data }) },
+    });
+  });
+
+  it('denies create for a :write-scoped key whose team role can update but not create', async () => {
+    mockAuthenticateRequest.mockResolvedValue(API_KEY_AUTH(['pets:write']));
+    routeQueryOneWithRLS('member');
+    // This role has every permission EXCEPT 'pets.create' — modeling a role
+    // whose only write capability is 'update', which is enough to mint ':write'.
+    mockCheckPermission.mockImplementation(async (_userId: string, _teamId: string, permission: string) =>
+      permission !== 'pets.create'
+    );
+
+    const request = makeRequest({
+      method: 'POST',
+      url: 'http://localhost/api/v1/pets',
+      headers: { 'x-team-id': 'team-1' },
+      body: { name: 'Rex' },
+    });
+    const response = await handleGenericCreate(request);
+
+    expect((response as { status: number }).status).toBe(403);
+    expect(mockCheckPermission).toHaveBeenCalledWith('key-owner-1', 'team-1', 'pets.create');
+    expect(mockMutateWithRLS).not.toHaveBeenCalled();
+  });
+
+  it('allows update for the SAME :write-scoped key, since that role does hold update permission', async () => {
+    mockAuthenticateRequest.mockResolvedValue(API_KEY_AUTH(['pets:write']));
+    mockCheckPermission.mockImplementation(async (_userId: string, _teamId: string, permission: string) =>
+      permission !== 'pets.create'
+    );
+    mockQueryOneWithRLS.mockImplementation(async (sql: string) => {
+      if (sql.includes('SELECT role FROM "team_members"')) return { role: 'member' };
+      return { id: 'pet-1', name: 'Rex' };
+    });
+    mockMutateWithRLS.mockResolvedValue({ rows: [{ id: 'pet-1', name: 'Rex Updated' }] });
+
+    const request = makeRequest({
+      method: 'PATCH',
+      url: 'http://localhost/api/v1/pets/pet-1',
+      headers: { 'x-team-id': 'team-1' },
+      body: { name: 'Rex Updated' },
+    });
+    const response = await handleGenericUpdate(request, { params: Promise.resolve({ entity: 'pets', id: 'pet-1' }) });
+
+    expect((response as { status: number }).status).not.toBe(403);
+    expect(mockCheckPermission).toHaveBeenCalledWith('key-owner-1', 'team-1', 'pets.update');
   });
 });
 
