@@ -123,16 +123,22 @@ export async function createProject(options: ProjectOptions): Promise<void> {
       cliSpinner.text = '  Installing from local tarballs...'
     }
 
-    // Essential runtime dependencies that must be present for Next.js to start
+    // Essential runtime dependencies that must be present for Next.js to start.
+    // next/next-intl/better-auth are pinned (not left to float to npm "latest")
+    // because unpinned installs bypass whatever security/compatibility vetting
+    // this monorepo's own pnpm.overrides did -- in particular, better-auth >=1.7.0
+    // has a breaking Account table schema change (accountId -> providerAccountId)
+    // this app's migrations don't account for. Bump these deliberately, in lockstep
+    // with the monorepo's own pnpm.overrides in package.json, not automatically.
     const essentialDeps = [
       corePackage,
       cliPackage,
       uiPackage,
-      'next',
+      'next@15.5.24',
       'react',
       'react-dom',
-      'next-intl',
-      'better-auth',
+      'next-intl@4.11.0',
+      'better-auth@~1.6.30',
       '@better-fetch/fetch',
       'jiti',
       // Imported directly by shipped app routes (devtools docs/tests + media upload).
