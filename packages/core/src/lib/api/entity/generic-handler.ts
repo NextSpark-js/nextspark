@@ -31,7 +31,7 @@ import {
   addCorsHeaders,
   handleCorsPreflightRequest
 } from '../helpers'
-import { afterEntityCreate, afterEntityUpdate, afterEntityDelete } from '../../entities/entity-hooks'
+import { beforeEntityCreate, afterEntityCreate, afterEntityUpdate, afterEntityDelete } from '../../entities/entity-hooks'
 import { checkPermission } from '../../permissions/check'
 import type { Permission } from '../../permissions/types'
 import { extractPatternIds } from '../../blocks/pattern-resolver'
@@ -1162,7 +1162,23 @@ export async function handleGenericCreate(request: NextRequest): Promise<NextRes
       return addCorsHeaders(response, request)
     }
 
-    const validatedData = validation.data
+    let validatedData = validation.data
+
+    // Fire the pre-create hook so plugins can validate or transform the
+    // payload before it is persisted (mirrors afterEntityCreate below, but
+    // runs before the INSERT instead of after). Throwing from the hook
+    // aborts the create; the returned value replaces the data used to
+    // build the INSERT, so a hook may also sanitize/transform the payload.
+    try {
+      validatedData = await beforeEntityCreate(entityConfig.slug, validatedData, authResult.user!.id)
+    } catch (hookError) {
+      console.error(`[generic-handler] Error in beforeEntityCreate hook for ${entityConfig.slug}:`, hookError)
+      const message = hookError instanceof Error
+        ? hookError.message
+        : `Entity creation rejected by ${entityConfig.slug}.before_create hook`
+      const response = createApiError(message, 400, undefined, 'HOOK_REJECTED')
+      return addCorsHeaders(response, request)
+    }
 
     // Reject HTML markup in name/title fields (stored-XSS prevention)
     const xssField = checkNameFieldXss(entityConfig, validatedData as Record<string, unknown>)

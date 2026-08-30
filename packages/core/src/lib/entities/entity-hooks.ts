@@ -50,9 +50,12 @@ export class EntityHookManager {
       operation: 'create'
     }
 
-    // Apply filters to modify the data before creation
-    const filteredData = await this.hooks.applyFilters(
-      `entity.${entityName}.before_create`, 
+    // Apply filters to modify the data before creation. Uses the strict
+    // variant (propagates callback errors) instead of applyFilters: a
+    // before_create filter is a validation hook, and a validation hook
+    // that can't reject a payload isn't actually enforcing anything.
+    const filteredData = await this.hooks.applyFiltersStrict(
+      `entity.${entityName}.before_create`,
       hookData
     )
 
