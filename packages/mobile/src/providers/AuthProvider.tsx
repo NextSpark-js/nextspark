@@ -161,9 +161,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
         throw new ApiError('No teams available', 400)
       }
 
-      // Select first team
+      // Select first team. persistTeam() already sets the team id (it wraps
+      // apiClient.setTeam, which calls setTeamId internally) — teamsApi.switchTeam()
+      // would only repeat that same write, widening the failure window for no benefit.
       const firstTeam = teamsResponse.data[0]
-      await teamsApi.switchTeam(firstTeam.id)
       await persistTeam(firstTeam)
 
       // Commit user, teams and team together, once everything succeeded: no
