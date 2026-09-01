@@ -39,6 +39,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `mcp:<tool>` endpoint prefix.
   - New dependency: `@modelcontextprotocol/sdk` (`zod` was already in core's dependency tree).
   - New package export: `@nextsparkjs/core/lib/mcp`.
+- **Audit logging for the generic entity routes (#105).** Every authenticated
+  request to `/api/v1/[entity]` and `/api/v1/[entity]/[id]` — session or
+  API-key — now writes an `api_audit_log` row (endpoint, method, status code,
+  IP, user agent, response time; `apiKeyId` for API keys, `NULL` for
+  sessions). Logging is fire-and-forget and never affects the response. The
+  request body is not stored.
+  - **Migration `025_api_audit_log_nullable_api_key.sql`** drops the `NOT NULL`
+    on `api_audit_log."apiKeyId"` (the FK is unchanged). Run `db:migrate`.
+  - `DualAuthResult` gains `keyId` (the authenticating `api_key.id`) so the
+    audit row can be attributed without an extra lookup.
+  - MCP tool calls now produce two rows: the existing `mcp:<tool>` row and the
+    underlying API call's row.
 
 ### Security
 
@@ -120,13 +132,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     with the constraint name; `23503` on create/update → `422
     FOREIGN_KEY_VIOLATION` (was: opaque `500`). `23505` → `409` and delete
     `23503` → `409` are unchanged.
-
-### Known Limitations
-
-- Requests against the generic entity routes (`/api/v1/[entity]`) — session or
-  API-key — are still not written to `api_audit_log`; that table's `apiKeyId`
-  column is `NOT NULL`, so closing this gap needs a migration and a new logging
-  path, tracked separately from the fixes above.
 
 ## [0.1.0-beta.167]
 

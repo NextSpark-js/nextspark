@@ -32,6 +32,7 @@ import {
   handleCorsPreflightRequest
 } from '../helpers'
 import { beforeEntityCreate, afterEntityCreate, afterEntityUpdate, afterEntityDelete } from '../../entities/entity-hooks'
+import { logGenericHandlerUsage, type AuditContext } from './audit-log'
 import { checkPermission } from '../../permissions/check'
 import type { Permission } from '../../permissions/types'
 import { extractPatternIds } from '../../blocks/pattern-resolver'
@@ -754,10 +755,48 @@ async function validateTeamContextWithBypass(
   return { valid: true, teamId, isBypass: false }
 }
 
+// ==========================================
+// AUDIT LOGGING (#105)
+// ==========================================
+
+/**
+ * Run a handler implementation and record the outcome in api_audit_log.
+ *
+ * The implementation receives a mutable AuditContext and stores the
+ * DualAuthResult in it as soon as the request is authenticated; whatever
+ * status the handler ends up returning (200, 403, 429, 500…) is logged against
+ * that principal. Unauthenticated requests are not logged (no principal).
+ *
+ * Logging is fire-and-forget: it is started before the response is returned
+ * but never awaited, and logGenericHandlerUsage swallows its own errors, so a
+ * failing audit write can never turn a successful response into an error.
+ */
+async function runWithAuditLog(
+  request: NextRequest,
+  run: (audit: AuditContext) => Promise<NextResponse>
+): Promise<NextResponse> {
+  const startedAt = Date.now()
+  const audit: AuditContext = { auth: null }
+  let statusCode = 500
+  try {
+    const response = await run(audit)
+    statusCode = response.status
+    return response
+  } finally {
+    logGenericHandlerUsage(audit.auth, request, statusCode, Date.now() - startedAt).catch(error => {
+      console.error('[generic-handler:audit] unexpected audit failure:', error)
+    })
+  }
+}
+
 /**
  * Generic LIST handler (GET /api/v1/[entity])
  */
 export async function handleGenericList(request: NextRequest): Promise<NextResponse> {
+  return runWithAuditLog(request, audit => handleGenericListImpl(request, audit))
+}
+
+async function handleGenericListImpl(request: NextRequest, audit: AuditContext): Promise<NextResponse> {
   try {
     // Resolve entity from URL
     const resolution = await resolveEntityFromUrl(request.nextUrl.pathname)
@@ -775,6 +814,7 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
 
     // Authenticate request
     const authResult = await authenticateRequest(request)
+    audit.auth = authResult
     let userId: string | null = null
     let teamId: string | null = null
     let isBypass = false  // Track if admin bypass is active (skip userId filter)
@@ -1334,6 +1374,10 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
  * Generic CREATE handler (POST /api/v1/[entity])
  */
 export async function handleGenericCreate(request: NextRequest): Promise<NextResponse> {
+  return runWithAuditLog(request, audit => handleGenericCreateImpl(request, audit))
+}
+
+async function handleGenericCreateImpl(request: NextRequest, audit: AuditContext): Promise<NextResponse> {
   try {
     // Resolve entity from URL
     const resolution = await resolveEntityFromUrl(request.nextUrl.pathname)
@@ -1351,6 +1395,7 @@ export async function handleGenericCreate(request: NextRequest): Promise<NextRes
 
     // Authenticate request
     const authResult = await authenticateRequest(request)
+    audit.auth = authResult
 
     if (!authResult.success) {
       return NextResponse.json(
@@ -1766,6 +1811,10 @@ export async function handleGenericCreate(request: NextRequest): Promise<NextRes
  * Generic READ handler (GET /api/v1/[entity]/[id])
  */
 export async function handleGenericRead(request: NextRequest, { params }: { params: Promise<{ entity: string; id: string }> }): Promise<NextResponse> {
+  return runWithAuditLog(request, audit => handleGenericReadImpl(request, audit, { params }))
+}
+
+async function handleGenericReadImpl(request: NextRequest, audit: AuditContext, { params }: { params: Promise<{ entity: string; id: string }> }): Promise<NextResponse> {
   try {
     const { id } = await params
 
@@ -1785,6 +1834,7 @@ export async function handleGenericRead(request: NextRequest, { params }: { para
 
     // Authenticate request
     const authResult = await authenticateRequest(request)
+    audit.auth = authResult
     let userId: string | null = null
     let teamId: string | null = null
     let isBypass = false  // Track if admin bypass is active (skip userId filter)
@@ -1973,6 +2023,10 @@ export async function handleGenericRead(request: NextRequest, { params }: { para
  * Generic UPDATE handler (PATCH /api/v1/[entity]/[id])
  */
 export async function handleGenericUpdate(request: NextRequest, { params }: { params: Promise<{ entity: string; id: string }> }): Promise<NextResponse> {
+  return runWithAuditLog(request, audit => handleGenericUpdateImpl(request, audit, { params }))
+}
+
+async function handleGenericUpdateImpl(request: NextRequest, audit: AuditContext, { params }: { params: Promise<{ entity: string; id: string }> }): Promise<NextResponse> {
   try {
     const { id } = await params
 
@@ -1992,6 +2046,7 @@ export async function handleGenericUpdate(request: NextRequest, { params }: { pa
 
     // Authenticate request
     const authResult = await authenticateRequest(request)
+    audit.auth = authResult
 
     if (!authResult.success) {
       return NextResponse.json(
@@ -2355,6 +2410,10 @@ export async function handleGenericUpdate(request: NextRequest, { params }: { pa
  * Generic DELETE handler (DELETE /api/v1/[entity]/[id])
  */
 export async function handleGenericDelete(request: NextRequest, { params }: { params: Promise<{ entity: string; id: string }> }): Promise<NextResponse> {
+  return runWithAuditLog(request, audit => handleGenericDeleteImpl(request, audit, { params }))
+}
+
+async function handleGenericDeleteImpl(request: NextRequest, audit: AuditContext, { params }: { params: Promise<{ entity: string; id: string }> }): Promise<NextResponse> {
   try {
     const { id } = await params
 
@@ -2374,6 +2433,7 @@ export async function handleGenericDelete(request: NextRequest, { params }: { pa
 
     // Authenticate request
     const authResult = await authenticateRequest(request)
+    audit.auth = authResult
 
     if (!authResult.success) {
       return NextResponse.json(

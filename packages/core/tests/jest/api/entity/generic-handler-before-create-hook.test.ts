@@ -13,6 +13,12 @@ const { mocks } = harness
 
 type Res = { status: number; body: { code?: string; error?: string; data?: unknown } }
 
+/** No INSERT into the entity table (audit-log INSERTs from #105 don't count). */
+function expectNoEntityWrite() {
+  const entityWrites = mocks.mutateWithRLS.mock.calls.filter(([sql]: [string]) => !sql.includes('api_audit_log'))
+  expect(entityWrites).toHaveLength(0)
+}
+
 function createRequest(body: Record<string, unknown>) {
   return makeRequest({
     method: 'POST',
@@ -70,7 +76,7 @@ describe('handleGenericCreate — #118 beforeEntityCreate hook', () => {
     expect(response.status).toBe(400)
     expect(response.body.code).toBe('BEFORE_CREATE_REJECTED')
     expect(response.body.error).toContain('ownerId does not belong to this team')
-    expect(mocks.mutateWithRLS).not.toHaveBeenCalled()
+    expectNoEntityWrite()
     expect(mocks.afterEntityCreate).not.toHaveBeenCalled()
   })
 
@@ -82,7 +88,7 @@ describe('handleGenericCreate — #118 beforeEntityCreate hook', () => {
 
     expect(response.status).toBe(403)
     expect(response.body.code).toBe('BEFORE_CREATE_REJECTED')
-    expect(mocks.mutateWithRLS).not.toHaveBeenCalled()
+    expectNoEntityWrite()
   })
 
   it('still fires afterEntityCreate once the row is written', async () => {

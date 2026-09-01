@@ -204,9 +204,9 @@ export function routeQueryOneWithRLS(teamRole: string | null, memberExists = tru
   })
 }
 
-/** Flush pending microtasks (for fire-and-forget side effects). */
+/** Flush pending microtasks (for fire-and-forget side effects). jsdom has no setImmediate. */
 export async function flushPromises() {
-  await new Promise(resolve => setImmediate(resolve))
+  await new Promise(resolve => setTimeout(resolve, 0))
 }
 
 function reset() {
