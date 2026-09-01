@@ -118,7 +118,7 @@ export const PATCH = withRateLimitTier(withApiLogging(
 
       // Check if user has permission to edit team using MembershipService
       const membership = await MembershipService.get(authResult.user!.id, teamId)
-      const actionResult = membership.canPerformAction('teams.update')
+      const actionResult = membership.canPerformAction('team.edit')
 
       if (!actionResult.allowed) {
         const response = NextResponse.json(

@@ -36,3 +36,26 @@ export const TEAM_PERMISSIONS_BY_ROLE: Record<string, string[]> = {
   member: ['team.view', 'team.members.view'],
   viewer: ['team.view'],
 }
+
+// Entity permissions used by service tests (mirrors the default theme's customers entity)
+const ENTITY_PERMISSIONS_BY_ROLE: Record<string, string[]> = {
+  owner: ['customers.create', 'customers.read', 'customers.list', 'customers.update', 'customers.delete'],
+  admin: ['customers.create', 'customers.read', 'customers.list', 'customers.update'],
+  editor: ['customers.read', 'customers.list'],
+  member: ['customers.read', 'customers.list'],
+  viewer: [],
+}
+
+export const ROLE_PERMISSIONS_ARRAY: Record<string, string[]> = Object.fromEntries(
+  AVAILABLE_ROLES.map((role) => [
+    role,
+    [...(TEAM_PERMISSIONS_BY_ROLE[role] ?? []), ...(ENTITY_PERMISSIONS_BY_ROLE[role] ?? [])],
+  ])
+)
+
+export const PERMISSIONS_BY_ROLE: Record<string, Set<string>> = Object.fromEntries(
+  Object.entries(ROLE_PERMISSIONS_ARRAY).map(([role, perms]) => [role, new Set(perms)])
+)
+
+export const ALL_PERMISSIONS: string[] = Array.from(new Set(Object.values(ROLE_PERMISSIONS_ARRAY).flat()))
+export const ALL_PERMISSIONS_SET: Set<string> = new Set(ALL_PERMISSIONS)
