@@ -31,7 +31,7 @@ import {
   addCorsHeaders,
   handleCorsPreflightRequest
 } from '../helpers'
-import { afterEntityCreate, afterEntityUpdate, afterEntityDelete } from '../../entities/entity-hooks'
+import { beforeEntityCreate, afterEntityCreate, afterEntityUpdate, afterEntityDelete } from '../../entities/entity-hooks'
 import { checkPermission } from '../../permissions/check'
 import type { Permission } from '../../permissions/types'
 import { extractPatternIds } from '../../blocks/pattern-resolver'
@@ -319,6 +319,24 @@ function getTableName(entityConfig: EntityConfig): string {
  */
 function isEntityField(entityConfig: EntityConfig, fieldName: string): boolean {
   return entityConfig.fields.some((field: EntityField) => field.name === fieldName)
+}
+
+/**
+ * HTTP status to use when a `before_*` entity hook rejects a write by
+ * throwing. A hook may attach a numeric 4xx `status` (or `statusCode`) to the
+ * error to pick the response code (e.g. 403 for an ownership violation);
+ * anything else is reported as a 400 — never a 500, since a hook rejection is
+ * a validation outcome the caller can act on, not a server fault.
+ */
+function hookRejectionStatus(error: unknown): number {
+  if (error && typeof error === 'object') {
+    const candidate = (error as { status?: unknown; statusCode?: unknown }).status
+      ?? (error as { statusCode?: unknown }).statusCode
+    if (typeof candidate === 'number' && candidate >= 400 && candidate < 500) {
+      return candidate
+    }
+  }
+  return 400
 }
 
 // ==========================================
@@ -1191,7 +1209,7 @@ export async function handleGenericCreate(request: NextRequest): Promise<NextRes
       return addCorsHeaders(response, request)
     }
 
-    const validatedData = validation.data
+    let validatedData = validation.data as Record<string, unknown>
 
     // Reject HTML markup in name/title fields (stored-XSS prevention)
     const xssField = checkNameFieldXss(entityConfig, validatedData as Record<string, unknown>)
@@ -1263,6 +1281,31 @@ export async function handleGenericCreate(request: NextRequest): Promise<NextRes
     // and API-key auth, in addition to the coarse `:write` scope check above.
     const permDenied = await checkAuthPermission(authResult, entityConfig.slug, 'create', teamId, request)
     if (permDenied) return permDenied
+
+    // #118: pre-write extension point, mirroring the beforeEntityUpdate
+    // contract. Plugins registered on `entity.<slug>.before_create` receive the
+    // validated payload — plus the resolved `userId`/`teamId` for context (both
+    // are stamped by the handler below and ignored if the hook changes them) —
+    // and may return a modified payload, or throw to reject the create before
+    // anything is persisted.
+    try {
+      validatedData = await beforeEntityCreate(
+        entityConfig.slug,
+        { ...validatedData, userId: userIdToUse, teamId },
+        authResult.user!.id
+      )
+    } catch (hookError) {
+      console.error(`[generic-handler] beforeEntityCreate rejected ${entityConfig.slug} create:`, hookError)
+      const response = createApiError(
+        hookError instanceof Error && hookError.message
+          ? hookError.message
+          : `Create rejected by ${entityConfig.slug} before_create hook`,
+        hookRejectionStatus(hookError),
+        undefined,
+        'BEFORE_CREATE_REJECTED'
+      )
+      return addCorsHeaders(response, request)
+    }
 
     if (idStrategy === 'serial') {
       // SERIAL: Let database generate ID via DEFAULT/SERIAL

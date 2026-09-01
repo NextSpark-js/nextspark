@@ -88,6 +88,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   validated first (`400 INVALID_FIELD`) through the same `isEntityField` check
   both branches share.
 
+### Fixed
+
+- **`beforeEntityCreate` is now invoked by the generic create handler (#118).**
+  `POST /api/v1/{entity}` only fired `afterEntityCreate`, so the
+  `entity.<slug>.before_create` filter could neither reshape nor reject a
+  payload before the INSERT. The hook now runs after authorization and before
+  the write; a thrown error rejects the create with `400
+  BEFORE_CREATE_REJECTED` (or the 4xx `status` the error carries).
+
 ### Known Limitations
 
 - Requests against the generic entity routes (`/api/v1/[entity]`) — session or
