@@ -97,6 +97,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the write; a thrown error rejects the create with `400
   BEFORE_CREATE_REJECTED` (or the 4xx `status` the error carries).
 
+- **Generic entity handler no longer fails silently on bad list parameters,
+  unknown body keys, or CHECK-constraint violations (#97).** Each of these used
+  to return a plausible-looking wrong answer instead of an error the caller
+  could act on:
+  - `?search=` on an entity with none of `name`/`title`/`slug`/`content` → `400
+    SEARCH_NOT_SUPPORTED` (was: every row, unfiltered).
+  - A custom filter whose key is not an entity field (`?statuz=active`) → `400
+    INVALID_FILTER` naming the key(s) (was: filter silently dropped). Legacy
+    client params (`includeMeta`, `userId`, `sort`/`order`, `userFiltered`)
+    stay accepted; `sort`/`order` now work as aliases of `sortBy`/`sortOrder`.
+  - An invalid `?sortBy=` → `400 INVALID_SORT_FIELD` (was: silent default sort).
+  - `?dateField=2026-01-15` on a `date`/`datetime` field matches the whole
+    day (`>= day AND < day + 1`) instead of an equality that never matched a
+    timestamp; values with a time component keep exact equality.
+  - Create/update schemas from `generateEntitySchemas` are now `.strict()`:
+    an unknown body key (`notes` for `note`) → `400 VALIDATION_ERROR` with an
+    `unrecognized_keys` issue (was: silently stripped, `201`). Keys the handler
+    consumes itself (`metas`, `userId`, `teamId`, taxonomy relation arrays,
+    builder `blocks`/`settings`) are unaffected.
+  - PostgreSQL `23514` CHECK violations → `422 CHECK_CONSTRAINT_VIOLATION`
+    with the constraint name; `23503` on create/update → `422
+    FOREIGN_KEY_VIOLATION` (was: opaque `500`). `23505` → `409` and delete
+    `23503` → `409` are unchanged.
+
 ### Known Limitations
 
 - Requests against the generic entity routes (`/api/v1/[entity]`) — session or

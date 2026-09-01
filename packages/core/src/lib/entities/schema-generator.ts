@@ -71,11 +71,20 @@ export function generateEntitySchemas(
       })),
       z.unknown(), // Fallback for flexibility
     ]).optional()
+    // The builder editor also sends page `settings` (SEO, custom fields)
+    // alongside `blocks`. Accepted here so the strict schema does not reject
+    // builder saves; the generic handler only persists declared columns.
+    createFields.settings = z.unknown().optional()
   }
 
-  const createSchema = z.object(createFields)
-  
-  // Update schema (all fields optional except id)
+  // #97: strict — z.object() silently STRIPS unknown keys by default, so a
+  // typo'd key (`notes` for `note`) was accepted with a 201 and the value
+  // quietly discarded. Unknown keys now fail validation (`unrecognized_keys`)
+  // and the handlers answer 400 VALIDATION_ERROR naming them.
+  const createSchema = z.object(createFields).strict()
+
+  // Update schema (all fields optional except id). `.partial()` preserves the
+  // strict unknown-keys policy.
   const updateSchema = createSchema.partial()
   
   // Response schema (includes all fields including read-only)
@@ -926,7 +935,8 @@ function generateChildEntitySchema(
     }
   })
 
-  return z.object(fields)
+  // Same unknown-keys policy as the parent create/update schemas (#97)
+  return z.object(fields).strict()
 }
 
 /**

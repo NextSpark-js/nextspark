@@ -321,6 +321,156 @@ function isEntityField(entityConfig: EntityConfig, fieldName: string): boolean {
   return entityConfig.fields.some((field: EntityField) => field.name === fieldName)
 }
 
+// ==========================================
+// LIST PARAMETER VALIDATION (#97)
+// ==========================================
+
+/**
+ * Query-string keys the list handler (or the helpers it delegates to)
+ * consumes itself. Anything else is treated as a custom field filter and MUST
+ * name a declared entity field — unknown keys are rejected with 400 instead
+ * of being silently dropped.
+ *
+ * Legacy / client-side keys that existing callers send and that this handler
+ * does not act on — reserved so they keep working instead of becoming 400s:
+ * - `meta`, `includeMeta`, `userId`: sent by EntityApiClient.list
+ *   (lib/api/entities.ts) and older clients; metadata is requested via `metas`.
+ * - `userFiltered`: sent by SimpleRelationSelect for distinct lookups.
+ * - `sort` / `order`: aliases of `sortBy` / `sortOrder` (PublicEntityGrid).
+ */
+const LIST_RESERVED_PARAMS = new Set([
+  'page', 'limit', 'fields', 'distinct', 'ids', 'parentId', 'search',
+  'sortBy', 'sortOrder', 'sort', 'order', 'child', 'meta', 'metas',
+  'includeMeta', 'userId', 'from', 'to', 'dateField', 'userFiltered',
+])
+
+/** Taxonomy filter params, accepted only when the entity has taxonomies enabled. */
+const TAXONOMY_FILTER_PARAMS = ['categoryId', 'taxonomyId', 'taxonomyType']
+
+/** Fields `?search=` matches against (any that the entity declares). */
+const SEARCHABLE_FIELDS = ['name', 'title', 'slug', 'content']
+
+/** Base columns every entity table has that may be used for `?sortBy=`. */
+const SORTABLE_BASE_FIELDS = ['id', 'createdAt', 'updatedAt', 'teamId']
+
+/** A bare calendar day (no time component), e.g. `2026-01-15`. */
+const BARE_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+
+// ==========================================
+// BODY HANDLING (#97)
+// ==========================================
+
+/**
+ * Keys of a create/update body that the handler consumes itself rather than
+ * through the entity schema: the row owner/team (stamped from auth), and the
+ * taxonomy relation arrays (persisted via processTaxonomyRelations). They are
+ * removed before Zod validation so the strict entity schema only judges the
+ * caller's field payload.
+ */
+function omitHandlerManagedKeys(
+  entityConfig: EntityConfig,
+  data: Record<string, unknown>
+): Record<string, unknown> {
+  const managed = new Set(['userId', 'teamId'])
+  if (entityConfig.taxonomies?.enabled) {
+    for (const taxonomyType of entityConfig.taxonomies.types ?? []) {
+      managed.add(taxonomyType.field)
+    }
+  }
+  return Object.fromEntries(Object.entries(data).filter(([key]) => !managed.has(key)))
+}
+
+/**
+ * Human-readable summary for a failed body validation. Unknown keys get
+ * called out by name so a typo'd field is obvious from the message alone.
+ */
+function validationErrorMessage(issues: Array<{ code: string; keys?: string[] }>): string {
+  const unknownKeys = issues
+    .filter(issue => issue.code === 'unrecognized_keys')
+    .flatMap(issue => issue.keys ?? [])
+  return unknownKeys.length > 0
+    ? `Unknown field(s): ${unknownKeys.join(', ')}`
+    : 'Validation error'
+}
+
+// ==========================================
+// DATABASE CONSTRAINT ERRORS (#97)
+// ==========================================
+
+interface PgConstraintError {
+  code: string
+  constraint?: string
+  detail?: string
+  table?: string
+}
+
+function asPgError(error: unknown): PgConstraintError | null {
+  if (error && typeof error === 'object' && 'code' in error && typeof (error as { code: unknown }).code === 'string') {
+    return error as PgConstraintError
+  }
+  return null
+}
+
+/**
+ * Map a PostgreSQL integrity-constraint error (SQLSTATE class 23) to a
+ * client-facing response, or null when the error is not one of those.
+ *
+ * - 23505 unique_violation      → 409 UNIQUE_CONSTRAINT_VIOLATION
+ * - 23514 check_violation       → 422 CHECK_CONSTRAINT_VIOLATION
+ * - 23503 foreign_key_violation → 409 on delete (row still referenced),
+ *                                 422 on create/update (dangling reference)
+ *
+ * Anything else falls through to the generic 500 in the caller. A CHECK
+ * violation is an application-level rule the caller can satisfy by changing
+ * the input, so it must not be reported as a server fault.
+ */
+function mapConstraintViolation(
+  error: unknown,
+  operation: 'create' | 'update' | 'delete'
+): ReturnType<typeof createApiError> | null {
+  const pgError = asPgError(error)
+  if (!pgError) return null
+  const { constraint, detail, table } = pgError
+
+  switch (pgError.code) {
+    case '23505':
+      return createApiError(
+        'A record with this value already exists',
+        409,
+        { constraint, detail },
+        'UNIQUE_CONSTRAINT_VIOLATION'
+      )
+    case '23514':
+      // `detail` for a CHECK violation echoes the whole failing row; only the
+      // constraint identity is useful (and safe) to return.
+      return createApiError(
+        constraint
+          ? `Value rejected by check constraint "${constraint}"`
+          : 'Value rejected by a database check constraint',
+        422,
+        { constraint, table },
+        'CHECK_CONSTRAINT_VIOLATION'
+      )
+    case '23503':
+      if (operation === 'delete') {
+        return createApiError(
+          detail || 'Cannot delete: this record is referenced by other records',
+          409,
+          { constraint },
+          'FOREIGN_KEY_VIOLATION'
+        )
+      }
+      return createApiError(
+        detail ? `Referenced record does not exist: ${detail}` : 'Referenced record does not exist',
+        422,
+        { constraint, detail },
+        'FOREIGN_KEY_VIOLATION'
+      )
+    default:
+      return null
+  }
+}
+
 /**
  * HTTP status to use when a `before_*` entity hook rejects a write by
  * throwing. A hook may attach a numeric 4xx `status` (or `statusCode`) to the
@@ -689,10 +839,9 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
 
     // Parse custom filters (any searchParam that isn't a known param)
     // Supports both repeated params (?status=a&status=b) and comma-separated (?status=a,b)
-    const knownParams = new Set(['page', 'limit', 'fields', 'distinct', 'ids', 'parentId', 'search', 'sortBy', 'sortOrder', 'child', 'meta', 'from', 'to', 'dateField'])
     const customFilters: Record<string, string[]> = {}
     url.searchParams.forEach((value, key) => {
-      if (!knownParams.has(key) && value) {
+      if (!LIST_RESERVED_PARAMS.has(key) && value) {
         if (!customFilters[key]) {
           customFilters[key] = []
         }
@@ -704,6 +853,57 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
 
     // Build dynamic query from entity configuration
     const entityConfig = resolution.entityConfig
+
+    // ── #97: reject unknown / unsupported list parameters up front ─────────
+    // Each of these used to degrade silently into a plausible-looking 200
+    // (filter dropped, search ignored, default sort) — indistinguishable from
+    // a correct answer for an automated caller.
+
+    // Custom filter keys must be declared entity fields (or, for
+    // taxonomy-enabled entities, the taxonomy filter params).
+    const taxonomyFilterParams = entityConfig.taxonomies?.enabled ? TAXONOMY_FILTER_PARAMS : []
+    const invalidFilterKeys = Object.keys(customFilters).filter(
+      key => !isEntityField(entityConfig, key) && !taxonomyFilterParams.includes(key)
+    )
+    if (invalidFilterKeys.length > 0) {
+      const response = createApiError(
+        `Unknown filter parameter(s) for ${entityConfig.slug}: ${invalidFilterKeys.join(', ')}`,
+        400,
+        {
+          invalidKeys: invalidFilterKeys,
+          allowedKeys: [...entityConfig.fields.map((f: EntityField) => f.name), ...taxonomyFilterParams],
+        },
+        'INVALID_FILTER'
+      )
+      return addCorsHeaders(response, request)
+    }
+
+    // `search` only works against name/title/slug/content; an entity with none
+    // of them cannot honour it, so say so instead of returning every row.
+    const searchParam = url.searchParams.get('search')
+    const searchableFields = SEARCHABLE_FIELDS.filter(name => isEntityField(entityConfig, name))
+    if (searchParam && searchParam.trim() !== '' && searchableFields.length === 0) {
+      const response = createApiError(
+        `Entity ${entityConfig.slug} has no searchable field (${SEARCHABLE_FIELDS.join(', ')}); the search parameter is not supported`,
+        400,
+        { searchableFields: SEARCHABLE_FIELDS },
+        'SEARCH_NOT_SUPPORTED'
+      )
+      return addCorsHeaders(response, request)
+    }
+
+    // `sortBy` (alias `sort`) must be an entity field or a base column — it is
+    // interpolated as an identifier, so this check is also the SQL-injection guard.
+    const sortByParam = url.searchParams.get('sortBy') || url.searchParams.get('sort')
+    if (sortByParam && !isEntityField(entityConfig, sortByParam) && !SORTABLE_BASE_FIELDS.includes(sortByParam)) {
+      const response = createApiError(
+        `Invalid sortBy field for ${entityConfig.slug}: ${sortByParam}`,
+        400,
+        { allowedFields: [...SORTABLE_BASE_FIELDS, ...entityConfig.fields.map((f: EntityField) => f.name)] },
+        'INVALID_SORT_FIELD'
+      )
+      return addCorsHeaders(response, request)
+    }
 
     // Determine which fields to select
     let fields: string
@@ -782,9 +982,6 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
     let query: string
     let queryParams: unknown[]
     let paramIndex = 1
-
-    // Extract search parameter early so it's available for both main query and count query
-    const searchParam = url.searchParams.get('search')
 
     // Extract date range parameters early so they're available for both main query and count query
     const fromDate = url.searchParams.get('from')
@@ -948,33 +1145,14 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
         whereConditions.push(`t."deletedAt" IS NULL`)
       }
 
-      // Add search filter (searches in name, title, slug, and content fields)
-      if (searchParam && searchParam.trim() !== '') {
+      // Add search filter (searches in name, title, slug, and content fields).
+      // Support for the entity was validated above (SEARCH_NOT_SUPPORTED).
+      if (searchParam && searchParam.trim() !== '' && searchableFields.length > 0) {
         const searchTerm = searchParam.trim()
-        // Search in common text fields if they exist
-        const hasName = entityConfig.fields.some((f: EntityField) => f.name === 'name')
-        const hasTitle = entityConfig.fields.some((f: EntityField) => f.name === 'title')
-        const hasSlug = entityConfig.fields.some((f: EntityField) => f.name === 'slug')
-        const hasContent = entityConfig.fields.some((f: EntityField) => f.name === 'content')
-
-        if (hasName || hasTitle || hasSlug || hasContent) {
-          const searchConditions: string[] = []
-          if (hasName) {
-            searchConditions.push(`t.name ILIKE $${paramIndex}`)
-          }
-          if (hasTitle) {
-            searchConditions.push(`t.title ILIKE $${paramIndex}`)
-          }
-          if (hasSlug) {
-            searchConditions.push(`t.slug ILIKE $${paramIndex}`)
-          }
-          if (hasContent) {
-            searchConditions.push(`t.content ILIKE $${paramIndex}`)
-          }
-          whereConditions.push(`(${searchConditions.join(' OR ')})`)
-          queryParams.push(`%${searchTerm}%`)
-          paramIndex++
-        }
+        const searchConditions = searchableFields.map(name => `t.${name} ILIKE $${paramIndex}`)
+        whereConditions.push(`(${searchConditions.join(' OR ')})`)
+        queryParams.push(`%${searchTerm}%`)
+        paramIndex++
       }
 
       // Add date range filters (from/to) for specified date field
@@ -994,9 +1172,9 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
         }
       }
 
-      // Add custom filters
+      // Add custom filters (keys were validated against entityConfig.fields
+      // above; taxonomy params are not fields and are handled separately)
       Object.entries(customFilters).forEach(([key, values]) => {
-        // Validate that the field exists in the entity config
         const field = entityConfig.fields.find((f: EntityField) => f.name === key)
         if (field && values.length > 0) {
           // Use quoted column name for camelCase fields
@@ -1011,6 +1189,23 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
             })
             values.forEach(value => {
               queryParams.push(JSON.stringify([value]))
+            })
+            whereConditions.push(`(${orConditions.join(' OR ')})`)
+          } else if (field.type === 'date' || field.type === 'datetime') {
+            // #97: a bare calendar day compared with `=` against a
+            // timestamp(tz) column never matches (the column carries a
+            // time-of-day). Treat `?field=YYYY-MM-DD` as the whole day:
+            // `>= day AND < day + 1`. Values with a time component keep
+            // exact equality — the caller asked for a precise instant.
+            const orConditions = values.map(value => {
+              if (BARE_DATE_RE.test(value)) {
+                const lower = paramIndex++
+                const upper = paramIndex++
+                queryParams.push(value, value)
+                return `(t.${columnName} >= $${lower}::date AND t.${columnName} < $${upper}::date + 1)`
+              }
+              queryParams.push(value)
+              return `t.${columnName} = $${paramIndex++}`
             })
             whereConditions.push(`(${orConditions.join(' OR ')})`)
           } else {
@@ -1054,18 +1249,13 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
         `
       }
 
-      // Parse sortBy/sortOrder and validate against entity fields to prevent SQL injection
-      const sortByParam = url.searchParams.get('sortBy')
-      const sortOrderParam = url.searchParams.get('sortOrder')?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC'
-      let orderByClause = 't."createdAt" DESC'
-      if (sortByParam) {
-        // Allow sorting by entity fields or common base fields
-        const baseFields = ['id', 'createdAt', 'updatedAt', 'teamId']
-        const isValidField = entityConfig.fields.some((f: EntityField) => f.name === sortByParam) || baseFields.includes(sortByParam)
-        if (isValidField) {
-          orderByClause = `t."${sortByParam}" ${sortOrderParam}`
-        }
-      }
+      // sortBy was validated against entity fields / base columns above
+      // (INVALID_SORT_FIELD) — that check is what makes this interpolation safe.
+      const sortOrderRaw = url.searchParams.get('sortOrder') || url.searchParams.get('order')
+      const sortOrderParam = sortOrderRaw?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC'
+      const orderByClause = sortByParam
+        ? `t."${sortByParam}" ${sortOrderParam}`
+        : 't."createdAt" DESC'
 
       // Use COUNT(*) OVER() window function to get total count in single query
       // This eliminates a separate COUNT query, saving ~230ms per request
@@ -1198,14 +1388,19 @@ export async function handleGenericCreate(request: NextRequest): Promise<NextRes
     const entityConfig = resolution.entityConfig
     const tableName = getTableName(entityConfig)
     const schemas = generateEntitySchemas(entityConfig)
-    const validation = schemas.create.safeParse(entityData)
+    const validation = schemas.create.safeParse(omitHandlerManagedKeys(entityConfig, entityData))
 
     if (!validation.success) {
       console.error(`[${entityConfig.slug}] Validation failed:`, {
         entityData,
         errors: validation.error.issues
       })
-      const response = createApiError('Validation error', 400, validation.error.issues, 'VALIDATION_ERROR')
+      const response = createApiError(
+        validationErrorMessage(validation.error.issues),
+        400,
+        validation.error.issues,
+        'VALIDATION_ERROR'
+      )
       return addCorsHeaders(response, request)
     }
 
@@ -1556,17 +1751,10 @@ export async function handleGenericCreate(request: NextRequest): Promise<NextRes
   } catch (error) {
     console.error('Error in generic create handler:', error)
 
-    // PostgreSQL unique constraint violation → 409 Conflict
-    if (error && typeof error === 'object' && 'code' in error && (error as { code: string }).code === '23505') {
-      const detail = 'detail' in error ? (error as { detail: string }).detail : undefined
-      const constraint = 'constraint' in error ? (error as { constraint: string }).constraint : undefined
-      const response = createApiError(
-        'A record with this value already exists',
-        409,
-        { constraint, detail },
-        'UNIQUE_CONSTRAINT_VIOLATION'
-      )
-      return addCorsHeaders(response, request)
+    // Unique / check / foreign-key violations are caller-fixable → 4xx
+    const constraintResponse = mapConstraintViolation(error, 'create')
+    if (constraintResponse) {
+      return addCorsHeaders(constraintResponse, request)
     }
 
     const response = createApiError('Internal server error', 500)
@@ -1884,7 +2072,7 @@ export async function handleGenericUpdate(request: NextRequest, { params }: { pa
     }
     const tableName = getTableName(entityConfig)
     const schemas = generateEntitySchemas(entityConfig)
-    const validation = schemas.update.safeParse(entityData)
+    const validation = schemas.update.safeParse(omitHandlerManagedKeys(entityConfig, entityData))
 
     if (!validation.success) {
       // Debug logging for validation errors
@@ -1892,7 +2080,12 @@ export async function handleGenericUpdate(request: NextRequest, { params }: { pa
         entityData,
         errors: validation.error.issues
       })
-      const response = createApiError('Validation error', 400, validation.error.issues, 'VALIDATION_ERROR')
+      const response = createApiError(
+        validationErrorMessage(validation.error.issues),
+        400,
+        validation.error.issues,
+        'VALIDATION_ERROR'
+      )
       return addCorsHeaders(response, request)
     }
 
@@ -2147,17 +2340,10 @@ export async function handleGenericUpdate(request: NextRequest, { params }: { pa
   } catch (error) {
     console.error('Error in generic update handler:', error)
 
-    // PostgreSQL unique constraint violation → 409 Conflict
-    if (error && typeof error === 'object' && 'code' in error && (error as { code: string }).code === '23505') {
-      const detail = 'detail' in error ? (error as { detail: string }).detail : undefined
-      const constraint = 'constraint' in error ? (error as { constraint: string }).constraint : undefined
-      const response = createApiError(
-        'A record with this value already exists',
-        409,
-        { constraint, detail },
-        'UNIQUE_CONSTRAINT_VIOLATION'
-      )
-      return addCorsHeaders(response, request)
+    // Unique / check / foreign-key violations are caller-fixable → 4xx
+    const constraintResponse = mapConstraintViolation(error, 'update')
+    if (constraintResponse) {
+      return addCorsHeaders(constraintResponse, request)
     }
 
     const response = createApiError('Internal server error', 500)
@@ -2305,17 +2491,10 @@ export async function handleGenericDelete(request: NextRequest, { params }: { pa
   } catch (error) {
     console.error('Error in generic delete handler:', error)
 
-    // PostgreSQL foreign key violation → 409 Conflict (entity is referenced by other records)
-    if (error && typeof error === 'object' && 'code' in error && (error as { code: string }).code === '23503') {
-      const detail = 'detail' in error ? (error as { detail: string }).detail : undefined
-      const constraint = 'constraint' in error ? (error as { constraint: string }).constraint : undefined
-      const response = createApiError(
-        detail || 'Cannot delete: this record is referenced by other records',
-        409,
-        { constraint },
-        'FOREIGN_KEY_VIOLATION'
-      )
-      return addCorsHeaders(response, request)
+    // Foreign key violation → 409 Conflict (entity is referenced by other records)
+    const constraintResponse = mapConstraintViolation(error, 'delete')
+    if (constraintResponse) {
+      return addCorsHeaders(constraintResponse, request)
     }
 
     const response = createApiError('Internal server error', 500)
