@@ -134,6 +134,20 @@ describe('TeamMemberService', () => {
 
       expect(result).toBeNull()
     })
+
+    it('TM_088: only resolves roles in active (non soft-deleted) teams', async () => {
+      // Same gap as getByTeamAndUser: team_members rows outlive teams."deletedAt" (issue #88)
+      mockQueryOneWithRLS.mockResolvedValue(null)
+
+      await TeamMemberService.getRole('team-456', 'user-789')
+
+      const [sql, params, rlsUserId] = mockQueryOneWithRLS.mock.calls[0]
+      const normalized = (sql as string).replace(/\s+/g, ' ')
+      expect(normalized).toContain('INNER JOIN "teams" t ON t.id = tm."teamId"')
+      expect(normalized).toContain('t."deletedAt" IS NULL')
+      expect(params).toEqual(['team-456', 'user-789'])
+      expect(rlsUserId).toBe('user-789')
+    })
   })
 
   // ===========================================
@@ -312,6 +326,20 @@ describe('TeamMemberService', () => {
       const result = await TeamMemberService.isMember('team-456', 'non-member')
 
       expect(result).toBe(false)
+    })
+
+    it('TM_088: only counts membership in active (non soft-deleted) teams', async () => {
+      // Same gap as getByTeamAndUser: team_members rows outlive teams."deletedAt" (issue #88)
+      mockQueryOneWithRLS.mockResolvedValue(null)
+
+      await TeamMemberService.isMember('team-456', 'user-789')
+
+      const [sql, params, rlsUserId] = mockQueryOneWithRLS.mock.calls[0]
+      const normalized = (sql as string).replace(/\s+/g, ' ')
+      expect(normalized).toContain('INNER JOIN "teams" t ON t.id = tm."teamId"')
+      expect(normalized).toContain('t."deletedAt" IS NULL')
+      expect(params).toEqual(['team-456', 'user-789'])
+      expect(rlsUserId).toBe('user-789')
     })
   })
 
