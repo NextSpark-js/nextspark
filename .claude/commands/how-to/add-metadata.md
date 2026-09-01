@@ -499,15 +499,23 @@ Expose metadata through your API endpoints.
 
 ```typescript
 // In your API route handler
+import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
+
 export async function GET(request: NextRequest) {
-  const auth = await authenticateRequest(request)
+  // Declares the scope this route needs; an API key without it is
+  // rejected here (fails closed, #93)
+  const auth = await authenticateRequest(request, { requiredScope: 'tasks:read' })
+  if (!auth.success) {
+    return createAuthFailureResponse(auth)
+  }
+
   const { searchParams } = new URL(request.url)
   const includeMeta = searchParams.get('include_meta') === 'true'
 
-  const tasks = await TaskService.list(auth.teamId)
+  const tasks = await TaskService.list(auth.user!.defaultTeamId)
 
   if (includeMeta) {
-    const tasksWithMeta = await withMeta(tasks, 'task', auth.userId)
+    const tasksWithMeta = await withMeta(tasks, 'task', auth.user!.id)
     return createApiResponse({ data: tasksWithMeta })
   }
 
@@ -521,13 +529,18 @@ export async function GET(request: NextRequest) {
 **📋 Metadata CRUD Endpoints:**
 
 ```typescript
+import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
+
 // GET /api/v1/tasks/:id/meta
 export async function GET(request, { params }) {
   const { id } = params
-  const auth = await authenticateRequest(request)
+  const auth = await authenticateRequest(request, { requiredScope: 'tasks:read' })
+  if (!auth.success) {
+    return createAuthFailureResponse(auth)
+  }
 
   const metas = await MetaService.getEntityMetas(
-    'task', id, auth.userId
+    'task', id, auth.user!.id
   )
 
   return createApiResponse({ data: metas })
@@ -536,7 +549,10 @@ export async function GET(request, { params }) {
 // POST /api/v1/tasks/:id/meta
 export async function POST(request, { params }) {
   const { id } = params
-  const auth = await authenticateRequest(request)
+  const auth = await authenticateRequest(request, { requiredScope: 'tasks:write' })
+  if (!auth.success) {
+    return createAuthFailureResponse(auth)
+  }
   const body = await request.json()
 
   await MetaService.setEntityMeta('task', id, {
@@ -552,7 +568,10 @@ export async function POST(request, { params }) {
 // DELETE /api/v1/tasks/:id/meta/:key
 export async function DELETE(request, { params }) {
   const { id, key } = params
-  const auth = await authenticateRequest(request)
+  const auth = await authenticateRequest(request, { requiredScope: 'tasks:delete' })
+  if (!auth.success) {
+    return createAuthFailureResponse(auth)
+  }
 
   await MetaService.deleteEntityMeta('task', id, key)
 

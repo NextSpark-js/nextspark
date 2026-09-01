@@ -24,11 +24,13 @@ One of the most common and proven use cases for the AI plugin is **automated con
 import { NextRequest, NextResponse } from 'next/server'
 import { generateText } from 'ai'
 import { selectModel, calculateCost, extractTokens } from '@/contents/plugins/ai/lib/core-utils'
-import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 
 export async function POST(request: NextRequest) {
-  const auth = await authenticateRequest(request)
-  if (!auth.success) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  // Declares the ai:write scope added by the AI plugin's app.config.ts —
+  // an API key without it is rejected here (fails closed, #93)
+  const auth = await authenticateRequest(request, { requiredScope: 'ai:write' })
+  if (!auth.success) return createAuthFailureResponse(auth)
 
   const { productName, features, targetAudience = 'general consumers' } = await request.json()
 

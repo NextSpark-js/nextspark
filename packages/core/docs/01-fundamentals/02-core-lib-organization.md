@@ -109,12 +109,13 @@ const tasks = await EntityApiClient.list('tasks', {
   limit: 20
 })
 
-// Dual authentication
-import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'
+// Dual authentication — the route declares the scope it needs; an API key
+// without it is rejected here (fails closed, #93)
+import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 
-const authResult = await authenticateRequest(request)
-if (!authResult.authenticated) {
-  return createAuthError('Unauthorized', 401)
+const authResult = await authenticateRequest(request, { requiredScope: 'tasks:read' })
+if (!authResult.success) {
+  return createAuthFailureResponse(authResult)
 }
 
 // Response formatting
@@ -460,14 +461,14 @@ const config = await import(`@/contents/${path}`)
 ### Pattern 1: Protected API Route
 
 ```typescript
-import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
 import { EntityApiClient } from '@/core/lib/api/entities'
 
 export async function GET(request: NextRequest) {
-  const authResult = await authenticateRequest(request)
-  if (!authResult.authenticated) {
-    return createAuthError('Unauthorized', 401)
+  const authResult = await authenticateRequest(request, { requiredScope: 'tasks:read' })
+  if (!authResult.success) {
+    return createAuthFailureResponse(authResult)
   }
 
   const tasks = await EntityApiClient.list('tasks', {

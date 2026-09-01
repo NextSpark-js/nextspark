@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { authenticateRequest, hasRequiredScope, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
 import { API_ERROR_CODES } from '@nextsparkjs/core/lib/api/api-error'
 import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
@@ -25,13 +25,11 @@ export const GET = withRateLimitTier(async (
   { params }: { params: Promise<{ id: string }> }
 ) => {
   try {
-    const authResult = await authenticateRequest(request)
+    // Authenticate; the API-key scope is declared at the entry point, which
+    // fails closed for keys that lack it (#93).
+    const authResult = await authenticateRequest(request, { requiredScope: 'media:read' })
     if (!authResult.success) {
-      return createApiError('Unauthorized', 401)
-    }
-
-    if (!hasRequiredScope(authResult, 'media:read')) {
-      return createApiError('Insufficient permissions', 403, undefined, API_ERROR_CODES.INSUFFICIENT_SCOPE)
+      return createAuthFailureResponse(authResult)
     }
 
     const teamResult = await resolveTeamContext(request, authResult)
@@ -70,13 +68,11 @@ export const POST = withRateLimitTier(async (
   { params }: { params: Promise<{ id: string }> }
 ) => {
   try {
-    const authResult = await authenticateRequest(request)
+    // Authenticate; the API-key scope is declared at the entry point, which
+    // fails closed for keys that lack it (#93).
+    const authResult = await authenticateRequest(request, { requiredScope: 'media:write' })
     if (!authResult.success) {
-      return createApiError('Unauthorized', 401)
-    }
-
-    if (!hasRequiredScope(authResult, 'media:write')) {
-      return createApiError('Insufficient permissions', 403, undefined, API_ERROR_CODES.INSUFFICIENT_SCOPE)
+      return createAuthFailureResponse(authResult)
     }
 
     const teamResult = await resolveTeamContext(request, authResult)
@@ -124,13 +120,11 @@ export const PUT = withRateLimitTier(async (
   { params }: { params: Promise<{ id: string }> }
 ) => {
   try {
-    const authResult = await authenticateRequest(request)
+    // Authenticate; the API-key scope is declared at the entry point, which
+    // fails closed for keys that lack it (#93).
+    const authResult = await authenticateRequest(request, { requiredScope: 'media:write' })
     if (!authResult.success) {
-      return createApiError('Unauthorized', 401)
-    }
-
-    if (!hasRequiredScope(authResult, 'media:write')) {
-      return createApiError('Insufficient permissions', 403, undefined, API_ERROR_CODES.INSUFFICIENT_SCOPE)
+      return createAuthFailureResponse(authResult)
     }
 
     const teamResult = await resolveTeamContext(request, authResult)
@@ -178,13 +172,11 @@ export const DELETE = withRateLimitTier(async (
   { params }: { params: Promise<{ id: string }> }
 ) => {
   try {
-    const authResult = await authenticateRequest(request)
+    // Authenticate; the API-key scope is declared at the entry point, which
+    // fails closed for keys that lack it (#93).
+    const authResult = await authenticateRequest(request, { requiredScope: 'media:write' })
     if (!authResult.success) {
-      return createApiError('Unauthorized', 401)
-    }
-
-    if (!hasRequiredScope(authResult, 'media:write')) {
-      return createApiError('Insufficient permissions', 403, undefined, API_ERROR_CODES.INSUFFICIENT_SCOPE)
+      return createAuthFailureResponse(authResult)
     }
 
     const teamResult = await resolveTeamContext(request, authResult)

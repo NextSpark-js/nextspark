@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validatePlugin, handleAIError } from '../../lib/core-utils'
 import { getServerPluginConfig } from '../../lib/server-env'
-import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { embed } from 'ai'
 import { openai } from '@ai-sdk/openai'
@@ -21,10 +21,11 @@ const EmbeddingRequestSchema = z.object({
 
 const postHandler = async (request: NextRequest) => {
   try {
-    // 1. Authentication
-    const authResult = await authenticateRequest(request)
+    // 1. Authentication; the API-key scope is declared at the entry point,
+    // which fails closed for keys that lack it (#93).
+    const authResult = await authenticateRequest(request, { requiredScope: 'ai:write' })
     if (!authResult.success) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+      return createAuthFailureResponse(authResult)
     }
 
     // 2. Validate plugin

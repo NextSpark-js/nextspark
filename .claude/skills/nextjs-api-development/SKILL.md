@@ -60,7 +60,7 @@ import {
   handleCorsPreflightRequest,
   addCorsHeaders,
 } from '@/core/lib/api/helpers'
-import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 
 // Handle CORS preflight
 export async function OPTIONS() {
@@ -70,14 +70,14 @@ export async function OPTIONS() {
 // GET /api/v1/[endpoint] - List resources
 export const GET = withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
   try {
-    // 1. Authenticate (API Key OR Session)
-    const authResult = await authenticateRequest(req)
+    // 1. Authenticate (API Key OR Session). Declare the scope this route
+    // needs — e.g. '<entity>:read' — an API key without it is rejected
+    // here (fails closed, #93). See the `better-auth` skill for the full
+    // scope-enforcement contract.
+    const authResult = await authenticateRequest(req, { requiredScope: '<entity>:read' })
 
     if (!authResult.success) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-        { status: 401 }
-      )
+      return createAuthFailureResponse(authResult)
     }
 
     if (authResult.rateLimitResponse) {
@@ -177,7 +177,10 @@ For special business logic. Use `(contents)/` folder.
 ```typescript
 // app/api/v1/(contents)/tasks/route.ts
 export const POST = withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
-  const authResult = await authenticateRequest(req)
+  const authResult = await authenticateRequest(req, { requiredScope: 'tasks:write' })
+  if (!authResult.success) {
+    return createAuthFailureResponse(authResult)
+  }
 
   // Custom logic: Admin can create for other users
   if (authResult.user?.role === 'admin' && body.userId) {
@@ -348,7 +351,7 @@ export async function GET(request: NextRequest) {
 
 // ✅ CORRECT: Full pattern
 export const GET = withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
-  const authResult = await authenticateRequest(req)
+  const authResult = await authenticateRequest(req, { requiredScope: 'products:read' })
   // ...
   const response = createApiResponse(data)
   return addCorsHeaders(response)
@@ -361,6 +364,7 @@ export const GET = withApiLogging(async (req: NextRequest): Promise<NextResponse
 - [ ] Has `OPTIONS` handler using `handleCorsPreflightRequest()`
 - [ ] All responses wrapped with `addCorsHeaders()`
 - [ ] Dual authentication implemented
+- [ ] `authenticateRequest` call declares `{ requiredScope }` (or `{ allowAnyScope: true }` with a comment) — undeclared routes reject API keys with 403 `SCOPE_NOT_DECLARED` (#93)
 - [ ] Input validation with Zod schema
 - [ ] Response helpers used (`createApiResponse`, `createApiError`)
 - [ ] Proper error handling with try/catch

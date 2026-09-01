@@ -22,7 +22,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { TokenEncryption } from '@nextsparkjs/core/lib/oauth/encryption'
 import { FacebookAPI } from '../../../../lib/providers/facebook'
@@ -92,15 +92,21 @@ const getHandler = async (request: NextRequest) => {
       )
     }
 
-    // 4. Authentication (user must be logged in)
-    const authResult = await authenticateRequest(request)
+    // 4. Authentication (user must be logged in); this callback creates the
+    // connection, so the API-key scope is declared at the entry point, which
+    // fails closed for keys that lack it (#93). The browser-redirect shape is
+    // kept for session/no-credential failures; an API key rejected for scope
+    // gets the standard 403 instead.
+    const authResult = await authenticateRequest(request, { requiredScope: 'social:write' })
     if (!authResult.success) {
-      return NextResponse.redirect(
-        new URL(
-          `/auth/login?error=authentication_required&redirect=/dashboard`,
-          request.url
-        )
-      )
+      return authResult.type === 'api-key'
+        ? createAuthFailureResponse(authResult)
+        : NextResponse.redirect(
+            new URL(
+              `/auth/login?error=authentication_required&redirect=/dashboard`,
+              request.url
+            )
+          )
     }
 
     const userId = authResult.user!.id

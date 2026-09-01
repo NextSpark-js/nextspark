@@ -87,6 +87,18 @@ describe('Admin API Authentication', () => {
       expect(hasAdminPermission(authResult)).toBe(true)
     })
 
+    it('should reject a superadmin API key when the caller names no scope (fail closed, #93)', () => {
+      const authResult: DualAuthResult = {
+        success: true,
+        type: 'api-key',
+        user: { id: '1', role: 'superadmin', email: 'admin@test.com' },
+        scopes: ['users:read']
+      }
+      // Forgetting the scope argument must not silently grant an API key the
+      // owner's full superadmin permissions.
+      expect(hasAdminPermission(authResult)).toBe(false)
+    })
+
     it('should reject normal user session', () => {
       const authResult: DualAuthResult = {
         success: true,

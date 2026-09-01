@@ -10,6 +10,13 @@ import { getEntityConfig } from '../entities/registry';
 import { getChildEntities, getEntity } from '../entities/queries';
 import { CreateMetaPayload } from '../../types/meta.types';
 import { getCorsOrigins, normalizeOrigin, isOriginAllowed } from '../utils/cors';
+import {
+  type AuthenticateOptions,
+  describeRoute,
+  normalizeRequiredScopes,
+  resolveApiKeyScopeFailure,
+  scopesSatisfy,
+} from './auth/scope-policy';
 
 // Types for session-based auth
 interface SessionAuth {
@@ -30,10 +37,22 @@ type Auth = ApiKeyAuth | SessionAuth;
  * request (#112). Routes are expected to branch on `auth` and answer 401
  * themselves; a throw here would be swallowed by the generic try/catch most
  * routes wrap around their body and surface as a 500 instead.
+ *
+ * API-key scope enforcement fails closed here (#93), with the same rule as
+ * `authenticateRequest`: declare `{ requiredScope }` (or, explicitly,
+ * `{ allowAnyScope: true }`). A key rejected on scope resolves to
+ * `{ auth: null, errorResponse }` where `errorResponse` is the ready-made
+ * 403 — return it. Session auth keeps its role-derived scopes and is not
+ * gated here; use `checkScope` for explicit per-branch checks.
  */
-export async function validateAndAuthenticateRequest(request: NextRequest): Promise<{
+export async function validateAndAuthenticateRequest(
+  request: NextRequest,
+  options: AuthenticateOptions = {}
+): Promise<{
   auth: Auth | null;
   rateLimitResponse?: NextResponse;
+  /** Set (403) when a valid API key was rejected by scope enforcement. */
+  errorResponse?: NextResponse;
 }> {
   // First try session-based authentication
   const cookieHeader = request.headers.get("cookie");
@@ -75,6 +94,17 @@ export async function validateAndAuthenticateRequest(request: NextRequest): Prom
 
   if (!apiKeyAuth) {
     return { auth: null };
+  }
+
+  const scopeFailure = resolveApiKeyScopeFailure(apiKeyAuth.scopes, options, describeRoute(request));
+  if (scopeFailure) {
+    return {
+      auth: null,
+      errorResponse: NextResponse.json(
+        { success: false, error: scopeFailure.message, code: scopeFailure.code },
+        { status: scopeFailure.status }
+      ),
+    };
   }
 
   return applyApiKeyRateLimit(apiKeyAuth);
@@ -243,21 +273,24 @@ export function getApiAuth(request: NextRequest): ApiKeyAuth {
 /**
  * Verifica que la autenticación tenga el scope requerido
  * Retorna un NextResponse de error si no tiene permisos, null si está autorizado
+ *
+ * Applies to both session auth (role-derived scopes) and API-key auth, with
+ * the same matching rule as `hasRequiredScope`: the wildcard `*` satisfies
+ * any scope, and an array is satisfied by any one of its entries.
  */
-export function checkScope(auth: Auth, requiredScope: string): NextResponse | null {
-  // Check scopes for both session and API key auth
-  const hasRequiredScope = auth.scopes.includes(requiredScope);
-  
-  if (!hasRequiredScope) {
+export function checkScope(auth: Auth, requiredScope: string | string[]): NextResponse | null {
+  if (!scopesSatisfy(auth.scopes, requiredScope)) {
+    const required = normalizeRequiredScopes(requiredScope);
+    const label = required.join("' or '");
     return NextResponse.json(
-      { 
+      {
         success: false,
         error: 'Insufficient permissions',
-        message: `This operation requires the '${requiredScope}' scope`,
-        required_scope: requiredScope,
+        message: `This operation requires the '${label}' scope`,
+        required_scope: required.length === 1 ? required[0] : required,
         your_scopes: auth.scopes,
         code: 'INSUFFICIENT_PERMISSIONS'
-      }, 
+      },
       { status: 403 }
     );
   }

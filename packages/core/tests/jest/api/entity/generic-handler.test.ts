@@ -19,22 +19,70 @@ jest.mock('@/core/lib/api/entity/resolver', () => ({
 
 // Full mock (not a partial jest.requireActual) — the real dual-auth.ts
 // transitively loads lib/auth.ts (Better Auth + DB connection setup), which
-// isn't available in this package-level test context. hasRequiredScope below
-// mirrors the real, already-separately-tested post-#94 implementation
-// (dual-auth.ts:271-283) exactly, so callers here see real behavior.
+// isn't available in this package-level test context. The pieces below mirror
+// the real, separately-tested implementations (hasRequiredScope post-#94, the
+// fail-closed scope rule of authenticateRequest post-#93 — see
+// tests/jest/lib/api/auth/scope-enforcement.test.ts) so callers here see real
+// behavior: `mockAuthenticateRequest` supplies the raw auth result a test
+// wants, and the mirror applies the entry point's scope rule to it using the
+// `requiredScope`/`allowAnyScope` options the handler actually passed.
+type MockAuthResult = {
+  success: boolean;
+  type: string;
+  scopes?: string[];
+  user: unknown;
+  error?: { code: string; status: number; message: string };
+};
 const mockAuthenticateRequest = jest.fn();
 const mockCanBypassTeamContext = jest.fn();
-jest.mock('@/core/lib/api/auth/dual-auth', () => ({
-  authenticateRequest: (...args: unknown[]) => mockAuthenticateRequest(...args),
-  canBypassTeamContext: (...args: unknown[]) => mockCanBypassTeamContext(...args),
-  hasRequiredScope: (authResult: { type: string; scopes?: string[] }, requiredScope: string) => {
+jest.mock('@/core/lib/api/auth/dual-auth', () => {
+  const hasRequiredScope = (authResult: MockAuthResult, requiredScope: string | string[]) => {
     if (authResult.type === 'session') return true;
+    const required = Array.isArray(requiredScope) ? requiredScope : [requiredScope];
+    if (required.length === 0) return false;
     if (authResult.type === 'api-key' && authResult.scopes) {
-      return authResult.scopes.includes(requiredScope) || authResult.scopes.includes('*');
+      const scopes = authResult.scopes;
+      return scopes.includes('*') || required.some((scope) => scopes.includes(scope));
     }
     return false;
-  },
-}));
+  };
+  const reject = (result: MockAuthResult, code: string, message: string): MockAuthResult => ({
+    success: false,
+    type: 'api-key',
+    user: null,
+    scopes: result.scopes,
+    error: { code, status: 403, message },
+  });
+  return {
+    authenticateRequest: async (
+      request: unknown,
+      options: { requiredScope?: string | string[]; allowAnyScope?: boolean } = {},
+    ) => {
+      const result = (await mockAuthenticateRequest(request, options)) as MockAuthResult;
+      if (!result?.success || result.type !== 'api-key') return result;
+      const declared =
+        options.requiredScope !== undefined &&
+        (Array.isArray(options.requiredScope) ? options.requiredScope.length > 0 : true);
+      if (declared) {
+        return hasRequiredScope(result, options.requiredScope!)
+          ? result
+          : reject(result, 'INSUFFICIENT_SCOPE', 'API key lacks required scope');
+      }
+      if (options.allowAnyScope) return result;
+      return reject(result, 'SCOPE_NOT_DECLARED', 'Route did not declare a required scope');
+    },
+    canBypassTeamContext: (...args: unknown[]) => mockCanBypassTeamContext(...args),
+    hasRequiredScope,
+    createAuthFailureResponse: (authResult: MockAuthResult) => {
+      const failure = authResult.error ?? { code: 'AUTHENTICATION_FAILED', status: 401, message: 'Authentication required' };
+      return {
+        status: failure.status,
+        body: { success: false, error: failure.message, code: failure.code },
+        async json() { return this.body; },
+      };
+    },
+  };
+});
 
 const mockCheckPermission = jest.fn();
 jest.mock('@/core/lib/permissions/check', () => ({
@@ -114,6 +162,7 @@ jest.mock('@/core/lib/api/helpers', () => ({
 import {
   handleGenericList,
   handleGenericCreate,
+  handleGenericRead,
   handleGenericUpdate,
   handleGenericDelete,
 } from '@/core/lib/api/entity/generic-handler';
@@ -413,5 +462,63 @@ describe('handleGenericDelete — #94 satellite fix: checks :delete scope, not :
     // depending on how much of the delete flow this fixture models, but a
     // 403 here specifically would mean the scope check regressed.
     expect((response as { status: number }).status).not.toBe(403);
+  });
+});
+
+describe('#93 — generic handlers declare the entity scope at the auth entry point (fail closed)', () => {
+  const idParams = { params: Promise.resolve({ entity: 'pets', id: 'pet-1' }) };
+
+  it.each([
+    ['list', 'pets:read', () => handleGenericList(makeRequest({ headers: { 'x-team-id': 'team-1' } }))],
+    ['create', 'pets:write', () => handleGenericCreate(makeRequest({ method: 'POST', headers: { 'x-team-id': 'team-1' }, body: { name: 'Rex' } }))],
+    ['read', 'pets:read', () => handleGenericRead(makeRequest({ url: 'http://localhost/api/v1/pets/pet-1', headers: { 'x-team-id': 'team-1' } }), idParams)],
+    ['update', 'pets:write', () => handleGenericUpdate(makeRequest({ method: 'PATCH', url: 'http://localhost/api/v1/pets/pet-1', headers: { 'x-team-id': 'team-1' }, body: { name: 'Rex' } }), idParams)],
+    ['delete', 'pets:delete', () => handleGenericDelete(makeRequest({ method: 'DELETE', url: 'http://localhost/api/v1/pets/pet-1', headers: { 'x-team-id': 'team-1' } }), idParams)],
+  ])('%s passes requiredScope %s to authenticateRequest', async (_op, scope, run) => {
+    mockAuthenticateRequest.mockResolvedValue(API_KEY_AUTH(['*']));
+    routeQueryOneWithRLS('owner');
+    mockCheckPermission.mockResolvedValue(true);
+
+    await run();
+
+    expect(mockAuthenticateRequest).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ requiredScope: scope }));
+  });
+
+  it('answers a key rejected on scope with the entry point\'s 403 (not a generic 401)', async () => {
+    mockAuthenticateRequest.mockResolvedValue(API_KEY_AUTH(['tasks:read']));
+
+    const response = await handleGenericList(makeRequest({ headers: { 'x-team-id': 'team-1' } }));
+
+    expect((response as { status: number }).status).toBe(403);
+    await expect((response as { json(): Promise<{ code: string }> }).json()).resolves.toMatchObject({ code: 'INSUFFICIENT_SCOPE' });
+  });
+
+  it('does not let a key rejected on scope fall through to public access on a public entity', async () => {
+    mockResolveEntityFromUrl.mockResolvedValue({
+      isValidEntity: true,
+      entityConfig: { ...PETS_ENTITY, access: { ...PETS_ENTITY.access, public: true } },
+      entityName: 'pets',
+      hasCustomOverride: false,
+    });
+    mockAuthenticateRequest.mockResolvedValue(API_KEY_AUTH(['tasks:read']));
+
+    const response = await handleGenericList(makeRequest({}));
+
+    expect((response as { status: number }).status).toBe(403);
+    expect(mockQueryWithRLS).not.toHaveBeenCalled();
+  });
+
+  it('still serves a public entity to a plain anonymous request', async () => {
+    mockResolveEntityFromUrl.mockResolvedValue({
+      isValidEntity: true,
+      entityConfig: { ...PETS_ENTITY, access: { ...PETS_ENTITY.access, public: true } },
+      entityName: 'pets',
+      hasCustomOverride: false,
+    });
+    mockAuthenticateRequest.mockResolvedValue({ success: false, type: 'none', user: null, error: { code: 'AUTHENTICATION_FAILED', status: 401, message: 'Authentication required' } });
+
+    const response = await handleGenericList(makeRequest({}));
+
+    expect((response as { status: number }).status).toBe(200);
   });
 });

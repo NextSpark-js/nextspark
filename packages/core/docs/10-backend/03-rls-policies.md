@@ -521,13 +521,14 @@ await mutateWithRLS(
 // app/api/v1/tasks/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { queryWithRLS, mutateWithRLS } from '@/core/lib/db'
-import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 
 export async function GET(request: NextRequest) {
-  // Authenticate request
-  const authResult = await authenticateRequest(request)
-  if (!authResult.authenticated) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  // Authenticate request — declares the scope it needs; a key without it
+  // is rejected here, before RLS is ever consulted (fails closed, #93)
+  const authResult = await authenticateRequest(request, { requiredScope: 'tasks:read' })
+  if (!authResult.success) {
+    return createAuthFailureResponse(authResult)
   }
 
   // Query with RLS - automatically filtered by userId
@@ -541,9 +542,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const authResult = await authenticateRequest(request)
-  if (!authResult.authenticated) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const authResult = await authenticateRequest(request, { requiredScope: 'tasks:write' })
+  if (!authResult.success) {
+    return createAuthFailureResponse(authResult)
   }
 
   const { title, description } = await request.json()

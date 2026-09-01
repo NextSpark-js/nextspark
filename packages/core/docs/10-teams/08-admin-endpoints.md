@@ -50,17 +50,20 @@ El endpoint `/api/v1/api-keys` **NO es admin-only**. Cada usuario gestiona sus p
 ### Helper Function
 
 ```typescript
+import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 import { hasAdminPermission } from '@/core/lib/api/auth/permissions'
 
 // En el endpoint:
 export async function GET(request: NextRequest) {
-  const authResult = await authenticateRequest(request)
+  // El scope declarado es 'admin:users'; una key sin ese scope es rechazada
+  // dentro de authenticateRequest (falla cerrado, #93)
+  const authResult = await authenticateRequest(request, { requiredScope: 'admin:users' })
 
   if (!authResult.success) {
-    return createApiError('Authentication required', 401)
+    return createAuthFailureResponse(authResult)
   }
 
-  // Validar permisos de superadmin
+  // Chequeo adicional de rol (superadmin), independiente del scope declarado
   if (!hasAdminPermission(authResult, 'users:read')) {
     return createApiError('Insufficient permissions. Superadmin access required.', 403)
   }

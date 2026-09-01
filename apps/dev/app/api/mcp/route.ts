@@ -106,7 +106,10 @@ async function handleMcpPost(request: NextRequest): Promise<NextResponse> {
     return jsonRpcError(403, -32000, 'Origin not allowed')
   }
 
-  const authResult = await authenticateRequest(request)
+  // Transport-level auth only: per-tool scopes (`<entity>:read/write/delete`)
+  // are enforced by the generic entity handlers the executor invokes for each
+  // tool call, so this entry point accepts any valid key explicitly (#93).
+  const authResult = await authenticateRequest(request, { allowAnyScope: true })
   if (!authResult.success || authResult.type !== 'api-key' || !authResult.user) {
     return jsonRpcError(401, -32001, API_KEY_HELP)
   }

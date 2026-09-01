@@ -96,14 +96,16 @@ x-team-id: team-tmt-001
 All `/api/v1/` endpoints support both authentication methods.
 
 ```typescript
-import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 
 export async function GET(request: NextRequest) {
-  // Tries API Key first, then Session
-  const authResult = await authenticateRequest(request)
+  // Tries API Key first, then Session. Declares the scope this route
+  // needs — an API key without it is rejected here, fails closed (#93).
+  // See "API Key Scopes" below for the full contract.
+  const authResult = await authenticateRequest(request, { requiredScope: 'users:read' })
 
   if (!authResult.success) {
-    return createAuthError('Unauthorized', 401)
+    return createAuthFailureResponse(authResult)
   }
 
   // authResult contains:
@@ -289,17 +291,39 @@ function SettingsPage() {
 ```typescript
 // Scope format: {entity}:{action}
 // Examples:
-// - tasks:read     → Read tasks
-// - tasks:write    → Create/update tasks
-// - tasks:delete   → Delete tasks
-// - tasks:*        → Full tasks access
-// - *              → Superadmin full access
-
-// Check scopes in API
-const hasAccess = authResult.scopes?.includes('tasks:read') ||
-                  authResult.scopes?.includes('tasks:*') ||
-                  authResult.scopes?.includes('*')
+// - tasks:read | tasks:write | tasks:delete
+// - teams:read | teams:write | teams:delete
+// - billing:read | billing:write
+// - admin:api-keys | admin:users | admin:devtools
+// - *              → Superadmin full access, satisfies any required scope
 ```
+
+### Scope enforcement fails closed (#93)
+
+`authenticateRequest` / `validateAndAuthenticateRequest` enforce scopes at
+the entry point, not per-handler:
+
+- `{ requiredScope: 'tasks:read' }` (string, or an array meaning "any of") —
+  a key missing it gets rejected with 403 `INSUFFICIENT_SCOPE`.
+- `{ allowAnyScope: true }` — explicit opt-out for a route that's genuinely
+  scope-agnostic. Say why in a one-line comment.
+- Neither declared — 403 `SCOPE_NOT_DECLARED`, and the route is named in
+  the server log.
+- Session auth is never scope-gated.
+
+```typescript
+const authResult = await authenticateRequest(request, { requiredScope: 'tasks:read' })
+if (!authResult.success) {
+  return createAuthFailureResponse(authResult) // picks 401 vs 403 and the right code
+}
+```
+
+`hasRequiredScope(authResult, scope)` still exists for an optional, *second*
+check inside a handler — don't use it to re-check the exact scope already
+passed as `requiredScope`, that's always true by construction.
+
+Themes and plugins add their own scopes via `app.config.ts` → `api.scopes`
+(the default theme adds `ai:read`, `ai:write`, `social:read`, `social:write`).
 
 ## Test Users
 
@@ -601,7 +625,9 @@ export default async function DashboardPage() {
 | `INVALID_CREDENTIALS` | 401 | Wrong email/password |
 | `EMAIL_NOT_VERIFIED` | 401 | User hasn't verified email |
 | `SIGNUP_RESTRICTED` | 403 | Invitation-only / single-tenant mode (registration requires invite) |
-| `INSUFFICIENT_PERMISSIONS` | 403 | User lacks required scope |
+| `INSUFFICIENT_PERMISSIONS` | 403 | User lacks required role/permission (generic) |
+| `INSUFFICIENT_SCOPE` | 403 | Valid API key, but missing the route's declared `requiredScope` (#93) |
+| `SCOPE_NOT_DECLARED` | 403 | Valid API key, but the route declared no `requiredScope`/`allowAnyScope` — fails closed (#93) |
 | `TEAM_CONTEXT_REQUIRED` | 400 | Missing x-team-id header |
 | `SESSION_EXPIRED` | 401 | Session no longer valid |
 
@@ -736,7 +762,8 @@ headers: { 'x-team-id': teamId }
 const userId = request.body.userId // User can fake this!
 
 // CORRECT: Get user from authenticated session
-const { user } = await authenticateRequest(request)
+// (a real route would pass { requiredScope } here — see "API Key Scopes" above)
+const { user } = await authenticateRequest(request, { requiredScope: 'users:read' })
 ```
 
 ## Checklist
@@ -748,6 +775,7 @@ Before finalizing authentication code:
 - [ ] Email verification required for email/password
 - [ ] Password meets minimum requirements (8+ chars)
 - [ ] API endpoints use dual auth pattern
+- [ ] `authenticateRequest`/`validateAndAuthenticateRequest` calls declare `{ requiredScope }` or `{ allowAnyScope: true }` — undeclared routes fail closed with 403 `SCOPE_NOT_DECLARED` (#93)
 - [ ] Protected routes redirect unauthenticated users
 - [ ] Error responses use proper status codes
 - [ ] Rate limiting implemented for sensitive endpoints

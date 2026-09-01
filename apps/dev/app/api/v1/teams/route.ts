@@ -8,7 +8,7 @@ import {
   handleCorsPreflightRequest,
   addCorsHeaders,
 } from '@nextsparkjs/core/lib/api/helpers'
-import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { isSuperAdmin } from '@nextsparkjs/core/lib/api/auth/permissions'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { createTeamSchema, teamListQuerySchema } from '@nextsparkjs/core/lib/teams/schema'
@@ -24,14 +24,12 @@ export async function OPTIONS() {
 // GET /api/v1/teams - List user's teams
 export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
   try {
-    // Authenticate using dual auth
-    const authResult = await authenticateRequest(req)
+    // Authenticate using dual auth; the API-key scope is declared at the entry
+    // point, which fails closed for keys that lack it (#93).
+    const authResult = await authenticateRequest(req, { requiredScope: 'teams:read' })
 
     if (!authResult.success) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-        { status: 401 }
-      )
+      return createAuthFailureResponse(authResult)
     }
 
     if (authResult.rateLimitResponse) {
@@ -171,14 +169,12 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
 // POST /api/v1/teams - Create new team
 export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
   try {
-    // Authenticate using dual auth
-    const authResult = await authenticateRequest(req)
+    // Authenticate using dual auth; the API-key scope is declared at the entry
+    // point, which fails closed for keys that lack it (#93).
+    const authResult = await authenticateRequest(req, { requiredScope: 'teams:write' })
 
     if (!authResult.success) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-        { status: 401 }
-      )
+      return createAuthFailureResponse(authResult)
     }
 
     if (authResult.rateLimitResponse) {

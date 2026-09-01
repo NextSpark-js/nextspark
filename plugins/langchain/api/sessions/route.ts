@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { dbMemoryStore, CONVERSATION_LIMITS } from '../../lib/db-memory-store'
 import { config } from '../../plugin.config'
@@ -38,13 +38,11 @@ function toApiConversationInfo(conv: {
  * With id: returns single conversation details
  */
 const getHandler = async (req: NextRequest) => {
-    // 1. Auth
-    const authResult = await authenticateRequest(req)
+    // 1. Auth; the API-key scope is declared at the entry point, which fails
+    // closed for keys that lack it (#93).
+    const authResult = await authenticateRequest(req, { requiredScope: 'ai:read' })
     if (!authResult.success || !authResult.user) {
-        return NextResponse.json(
-            { success: false, error: 'Unauthorized' },
-            { status: 401 }
-        )
+        return createAuthFailureResponse(authResult)
     }
 
     const userId = authResult.user.id
@@ -113,13 +111,11 @@ export const GET = withRateLimitTier(getHandler, 'read')
  * - name: Optional name for the conversation
  */
 const postHandler = async (req: NextRequest) => {
-    // 1. Auth
-    const authResult = await authenticateRequest(req)
+    // 1. Auth; the API-key scope is declared at the entry point, which fails
+    // closed for keys that lack it (#93).
+    const authResult = await authenticateRequest(req, { requiredScope: 'ai:write' })
     if (!authResult.success || !authResult.user) {
-        return NextResponse.json(
-            { success: false, error: 'Unauthorized' },
-            { status: 401 }
-        )
+        return createAuthFailureResponse(authResult)
     }
 
     const userId = authResult.user.id
@@ -197,13 +193,11 @@ export const POST = withRateLimitTier(postHandler, 'write')
  * - isPinned: New pin status (optional)
  */
 const patchHandler = async (req: NextRequest) => {
-    // 1. Auth
-    const authResult = await authenticateRequest(req)
+    // 1. Auth; the API-key scope is declared at the entry point, which fails
+    // closed for keys that lack it (#93).
+    const authResult = await authenticateRequest(req, { requiredScope: 'ai:write' })
     if (!authResult.success || !authResult.user) {
-        return NextResponse.json(
-            { success: false, error: 'Unauthorized' },
-            { status: 401 }
-        )
+        return createAuthFailureResponse(authResult)
     }
 
     const userId = authResult.user.id
@@ -276,13 +270,11 @@ export const PATCH = withRateLimitTier(patchHandler, 'write')
  * - sessionId: Session ID to delete (required)
  */
 const deleteHandler = async (req: NextRequest) => {
-    // 1. Auth
-    const authResult = await authenticateRequest(req)
+    // 1. Auth; the API-key scope is declared at the entry point, which fails
+    // closed for keys that lack it (#93).
+    const authResult = await authenticateRequest(req, { requiredScope: 'ai:write' })
     if (!authResult.success || !authResult.user) {
-        return NextResponse.json(
-            { success: false, error: 'Unauthorized' },
-            { status: 401 }
-        )
+        return createAuthFailureResponse(authResult)
     }
 
     const userId = authResult.user.id

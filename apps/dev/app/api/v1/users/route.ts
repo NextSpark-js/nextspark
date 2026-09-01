@@ -14,7 +14,7 @@ import {
   handleEntityMetadataInResponse,
   processEntityMetadata
 } from '@nextsparkjs/core/lib/api/helpers';
-import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth';
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth';
 import { hasAdminPermission } from '@nextsparkjs/core/lib/api/auth/permissions';
 import { z } from 'zod';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
@@ -41,14 +41,12 @@ export async function OPTIONS() {
 // GET /api/v1/users - List users with dual auth
 export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
   try {
-    // Authenticate using dual auth
-    const authResult = await authenticateRequest(req);
-    
+    // Authenticate using dual auth; the API-key scope is declared at the entry
+    // point, which fails closed for keys that lack it (#93).
+    const authResult = await authenticateRequest(req, { requiredScope: 'users:read' });
+
     if (!authResult.success) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-        { status: 401 }
-      );
+      return createAuthFailureResponse(authResult);
     }
 
     if (authResult.rateLimitResponse) {
@@ -114,14 +112,12 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
 // POST /api/v1/users - Create user with dual auth
 export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
   try {
-    // Authenticate using dual auth
-    const authResult = await authenticateRequest(req);
-    
+    // Authenticate using dual auth; the API-key scope is declared at the entry
+    // point, which fails closed for keys that lack it (#93).
+    const authResult = await authenticateRequest(req, { requiredScope: 'users:write' });
+
     if (!authResult.success) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-        { status: 401 }
-      );
+      return createAuthFailureResponse(authResult);
     }
 
     if (authResult.rateLimitResponse) {

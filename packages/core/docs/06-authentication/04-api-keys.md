@@ -265,21 +265,14 @@ APIs support both session-based and API key authentication:
 
 ```typescript
 // core/lib/api/auth/dual-auth.ts
-export async function authenticateRequest(request: NextRequest) {
-  // Try session authentication first
-  const sessionAuth = await trySessionAuth(request)
-  if (sessionAuth.success) {
-    return sessionAuth
-  }
-  
-  // Fall back to API key authentication
-  const apiKeyAuth = await tryApiKeyAuth(request)
-  if (apiKeyAuth.success) {
-    return apiKeyAuth
-  }
-  
-  // No valid authentication
-  return { success: false, type: 'none' }
+export async function authenticateRequest(
+  request: NextRequest,
+  options: AuthenticateOptions = {}
+) {
+  // API key attempts are checked against options.requiredScope /
+  // options.allowAnyScope and fail closed — see "Scope Enforcement Fails
+  // Closed" below (#93). Session auth is never scope-gated.
+  // ... resolves to a session or an API-key result, or a failure ...
 }
 ```
 
@@ -287,6 +280,57 @@ export async function authenticateRequest(request: NextRequest) {
 - **Dashboard**: Uses session authentication
 - **External APIs**: Uses API key authentication
 - **Hybrid**: Some endpoints support both
+
+## Scope Enforcement Fails Closed
+
+Since #93, every route calling `authenticateRequest` (or
+`validateAndAuthenticateRequest`) must declare what it needs from an API
+key, and enforcement happens inside the entry point — not left to each
+handler to remember:
+
+- **`{ requiredScope: 'tasks:read' }`** — the key must hold that scope, or
+  the wildcard `*`. An array (`{ requiredScope: ['tasks:read', 'tasks:write'] }`)
+  is satisfied by any one of the listed scopes.
+- **`{ allowAnyScope: true }`** — explicit opt-out for a route that is
+  genuinely scope-agnostic (a health check, an endpoint that only enriches
+  its response when a caller happens to be authenticated). Say why in a
+  one-line comment.
+- **Neither declared** — the key is rejected with `SCOPE_NOT_DECLARED`, and
+  the route is named in the server log, so the gap is visible instead of
+  silently letting any key through.
+
+**Session authentication is unaffected** — a session always carries full
+access, exactly as before this change.
+
+```typescript
+import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
+
+export async function GET(request: NextRequest) {
+  const authResult = await authenticateRequest(request, { requiredScope: 'tasks:read' })
+  if (!authResult.success) {
+    return createAuthFailureResponse(authResult) // 401 or 403, correct code included
+  }
+  // ...
+}
+```
+
+**Failure responses:**
+
+| Situation | `code` | Status |
+|---|---|---|
+| No credential presented | `AUTHENTICATION_FAILED` | 401 |
+| Valid key, missing the declared scope | `INSUFFICIENT_SCOPE` | 403 |
+| Valid key, route declared no scope | `SCOPE_NOT_DECLARED` | 403 |
+
+New core scopes added alongside this change: `teams:read`, `teams:write`,
+`teams:delete`, `billing:read`, `billing:write`, `admin:devtools`. Themes and
+plugins can add their own by declaring `api.scopes` in `app.config.ts` — the
+default theme adds `ai:read`, `ai:write`, `social:read`, `social:write` this
+way.
+
+`hasRequiredScope(authResult, scope)` still exists for a second, finer check
+inside a handler — it's optional, and redundant if the scope it checks is
+exactly the one already passed as `requiredScope`.
 
 ## Managing API Keys
 
@@ -456,12 +500,22 @@ CREATE TABLE "api_audit_log" (
 const isValid = /^sk_(live|test)_[A-Za-z0-9_-]{40}$/.test(apiKey)
 ```
 
-**Issue**: "Insufficient permissions"
+**Issue**: "Insufficient permissions" (403 `INSUFFICIENT_SCOPE`)
+
+The key is valid but doesn't hold the scope the route requires.
 
 ```typescript
 // Verify scopes
 const hasScope = auth.scopes.includes('tasks:write')
 ```
+
+**Issue**: 403 `SCOPE_NOT_DECLARED`
+
+This means the *route* forgot to declare a scope — not a problem with the
+caller's key. Fix it by adding `{ requiredScope: '<scope>' }` (or
+`{ allowAnyScope: true }` if the route is genuinely scope-agnostic) to its
+`authenticateRequest` call. See [Scope Enforcement Fails
+Closed](#scope-enforcement-fails-closed).
 
 **Issue**: "API key expired"
 

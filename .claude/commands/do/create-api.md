@@ -36,7 +36,7 @@ From the skill, remember:
 
 1. **Wrapper:** Use `withApiLogging`
 2. **CORS:** Always use `addCorsHeaders(response)`
-3. **Auth:** Use `authenticateRequest(req)` for dual auth
+3. **Auth:** Use `authenticateRequest(req, { requiredScope: '<entity>:<action>' })` for dual auth — undeclared routes reject API keys with 403 `SCOPE_NOT_DECLARED` (#93); use `createAuthFailureResponse(authResult)` on failure
 4. **Response:** Use `createApiResponse()` and `createApiError()`
 5. **Validation:** Use Zod schemas
 

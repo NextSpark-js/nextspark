@@ -112,9 +112,19 @@ export const API_SCOPES = {
   'media:write': 'Subir y actualizar archivos',
   'media:delete': 'Eliminar archivos',
 
+  // Teams (equipos, miembros e invitaciones)
+  'teams:read': 'Leer equipos, miembros e invitaciones',
+  'teams:write': 'Crear y actualizar equipos, miembros e invitaciones',
+  'teams:delete': 'Eliminar equipos',
+
+  // Billing (suscripciones, facturas, uso y planes)
+  'billing:read': 'Leer suscripciones, facturas y uso',
+  'billing:write': 'Gestionar suscripciones, checkout, cambios de plan y uso',
+
   // Administración
   'admin:api-keys': 'Gestionar API keys',
   'admin:users': 'Administración completa de usuarios',
+  'admin:devtools': 'Acceso a las APIs de DevTools (registries, testing, scheduled actions)',
 
   // Comodín (solo para superadmins)
   '*': 'Acceso completo (solo superadmin)'
@@ -160,10 +170,20 @@ export const SCOPE_CATEGORIES = {
     description: 'Gestión de tareas y TODOs',
     scopes: ['tasks:read', 'tasks:write', 'tasks:delete'] as ApiScope[]
   },
+  teams: {
+    name: 'Teams',
+    description: 'Equipos, miembros e invitaciones',
+    scopes: ['teams:read', 'teams:write', 'teams:delete'] as ApiScope[]
+  },
+  billing: {
+    name: 'Billing',
+    description: 'Suscripciones, facturas, uso y planes',
+    scopes: ['billing:read', 'billing:write'] as ApiScope[]
+  },
   admin: {
     name: 'Administración',
     description: 'Funciones administrativas',
-    scopes: ['admin:api-keys', 'admin:users'] as ApiScope[]
+    scopes: ['admin:api-keys', 'admin:users', 'admin:devtools'] as ApiScope[]
   },
   system: {
     name: 'Sistema',

@@ -116,6 +116,14 @@ export const APP_CONFIG_OVERRIDES = {
   // API CONFIGURATION OVERRIDES
   // =============================================================================
   api: {
+    // API-key scopes this theme's routes enforce (#93). Core merges them into the
+    // scope vocabulary so keys can be minted with them and the key UI offers them.
+    scopes: {
+      'ai:read': 'Read AI conversations and usage',
+      'ai:write': 'Run AI chat/agents and manage conversations',
+      'social:read': 'Read connected social accounts',
+      'social:write': 'Connect, assign and publish to social accounts',
+    },
     cors: {
       // Theme-specific CORS origins (extends core defaults, does not replace)
       // Core already includes: localhost:3000, localhost:5173, and their 127.0.0.1 variants

@@ -218,10 +218,12 @@ CREATE POLICY "policy_name" ON public."your_table"
 
 1. **Missing authentication:**
 ```typescript
-// Ensure dual auth is implemented
-const authResult = await authenticateRequest(req)
+// Ensure dual auth is implemented and declares the scope it needs
+import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
+
+const authResult = await authenticateRequest(req, { requiredScope: 'teams:read' })
 if (!authResult.success) {
-  return createApiError('Unauthorized', 401)
+  return createAuthFailureResponse(authResult)
 }
 ```
 
@@ -235,9 +237,16 @@ if (!authResult.success) {
 
 ### Problem: 403 Forbidden When Managing Members
 
-**Cause:** User doesn't have required role.
+**Two distinct causes now return 403, check `code` to tell them apart:**
 
-**Solution:** Verify user has `owner` or `admin` role:
+1. **`INSUFFICIENT_SCOPE` / `SCOPE_NOT_DECLARED`** — the API-key scope check
+   inside `authenticateRequest` rejected the request before your handler ran
+   (fails closed, #93). Fix the route's `{ requiredScope }` declaration, or
+   get a key with the right scope. See [API
+   Authentication](../05-api/02-authentication.md#scope-enforcement-fails-closed).
+
+2. **A plain `Forbidden`** — the caller authenticated fine but doesn't have
+   the required team role. Verify user has `owner` or `admin` role:
 
 ```typescript
 const member = await getTeamMember(userId, teamId)

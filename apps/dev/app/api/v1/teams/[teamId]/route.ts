@@ -7,7 +7,7 @@ import {
   handleCorsPreflightRequest,
   addCorsHeaders,
 } from '@nextsparkjs/core/lib/api/helpers'
-import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { updateTeamSchema } from '@nextsparkjs/core/lib/teams/schema'
 import { TeamService, MembershipService } from '@nextsparkjs/core/lib/services'
@@ -22,14 +22,12 @@ export async function OPTIONS() {
 export const GET = withRateLimitTier(withApiLogging(
   async (req: NextRequest, { params }: { params: Promise<{ teamId: string }> }): Promise<NextResponse> => {
     try {
-      // Authenticate using dual auth
-      const authResult = await authenticateRequest(req)
+      // Authenticate using dual auth; the API-key scope is declared at the entry
+      // point, which fails closed for keys that lack it (#93).
+      const authResult = await authenticateRequest(req, { requiredScope: 'teams:read' })
 
       if (!authResult.success) {
-        return NextResponse.json(
-          { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-          { status: 401 }
-        )
+        return createAuthFailureResponse(authResult)
       }
 
       if (authResult.rateLimitResponse) {
@@ -94,14 +92,12 @@ export const GET = withRateLimitTier(withApiLogging(
 export const PATCH = withRateLimitTier(withApiLogging(
   async (req: NextRequest, { params }: { params: Promise<{ teamId: string }> }): Promise<NextResponse> => {
     try {
-      // Authenticate using dual auth
-      const authResult = await authenticateRequest(req)
+      // Authenticate using dual auth; the API-key scope is declared at the entry
+      // point, which fails closed for keys that lack it (#93).
+      const authResult = await authenticateRequest(req, { requiredScope: 'teams:write' })
 
       if (!authResult.success) {
-        return NextResponse.json(
-          { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-          { status: 401 }
-        )
+        return createAuthFailureResponse(authResult)
       }
 
       if (authResult.rateLimitResponse) {
@@ -235,14 +231,12 @@ export const PATCH = withRateLimitTier(withApiLogging(
 export const DELETE = withRateLimitTier(withApiLogging(
   async (req: NextRequest, { params }: { params: Promise<{ teamId: string }> }): Promise<NextResponse> => {
     try {
-      // Authenticate using dual auth
-      const authResult = await authenticateRequest(req)
+      // Authenticate using dual auth; the API-key scope is declared at the entry
+      // point, which fails closed for keys that lack it (#93).
+      const authResult = await authenticateRequest(req, { requiredScope: 'teams:delete' })
 
       if (!authResult.success) {
-        return NextResponse.json(
-          { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-          { status: 401 }
-        )
+        return createAuthFailureResponse(authResult)
       }
 
       if (authResult.rateLimitResponse) {

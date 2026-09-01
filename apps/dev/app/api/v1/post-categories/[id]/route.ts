@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { query as dbQuery } from '@nextsparkjs/core/lib/db'
 import { z } from 'zod'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
@@ -52,10 +52,11 @@ export const PUT = withRateLimitTier(async (
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> => {
   try {
-    // Dual authentication: API key or session
-    const authResult = await authenticateRequest(request)
+    // Dual authentication: API key or session; the API-key scope is declared
+    // at the entry point, which fails closed for keys that lack it (#93).
+    const authResult = await authenticateRequest(request, { requiredScope: 'posts:write' })
     if (!authResult.success || !authResult.user) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+      return createAuthFailureResponse(authResult)
     }
 
     const body = await request.json()
@@ -192,10 +193,11 @@ export const DELETE = withRateLimitTier(async (
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> => {
   try {
-    // Dual authentication: API key or session
-    const authResult = await authenticateRequest(request)
+    // Dual authentication: API key or session; the API-key scope is declared
+    // at the entry point, which fails closed for keys that lack it (#93).
+    const authResult = await authenticateRequest(request, { requiredScope: 'posts:delete' })
     if (!authResult.success || !authResult.user) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+      return createAuthFailureResponse(authResult)
     }
 
     const { id } = await params

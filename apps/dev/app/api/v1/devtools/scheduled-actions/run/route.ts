@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import {
   canAccessDevtoolsApi,
   createDevtoolsAccessDeniedResponse,
@@ -20,11 +20,12 @@ import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { executeAction } from '@nextsparkjs/core/lib/scheduled-actions/processor'
 
 export const POST = withRateLimitTier(async (request: NextRequest) => {
-  // Authenticate request
-  const authResult = await authenticateRequest(request)
+  // Authenticate request; the API-key scope is declared at the entry point,
+  // which fails closed for keys that lack it (#93).
+  const authResult = await authenticateRequest(request, { requiredScope: 'admin:devtools' })
 
   if (!authResult.success) {
-    return createDevtoolsUnauthorizedResponse()
+    return authResult.type === 'api-key' ? createAuthFailureResponse(authResult) : createDevtoolsUnauthorizedResponse()
   }
 
   // Check DevTools access permission

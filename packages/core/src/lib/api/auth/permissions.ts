@@ -28,22 +28,27 @@ export function isSuperAdmin(authResult: DualAuthResult): boolean {
  * Verifica si el usuario tiene permisos para operaciones administrativas
  * Combina validacion de superadmin + scopes de API key
  *
+ * Fail closed for API keys (#93): a key is only granted admin access when the
+ * caller names the scope the operation needs and the key holds it. Omitting
+ * `requiredScope` used to hand a narrowly-scoped key its superadmin owner's
+ * full permissions; now it denies the key instead. Sessions are unaffected.
+ *
  * @param authResult - Resultado de autenticacion
- * @param requiredScope - Scope requerido para API keys (opcional)
+ * @param requiredScope - Scope requerido para API keys (obligatorio para que una API key pase)
  * @returns true si tiene permisos de admin
  */
 export function hasAdminPermission(
   authResult: DualAuthResult,
-  requiredScope?: string
+  requiredScope?: string | string[]
 ): boolean {
   // Primero verificar que es superadmin
   if (!isSuperAdmin(authResult)) {
     return false
   }
 
-  // Si es API key y se requiere scope, verificar scope
-  if (authResult.type === 'api-key' && requiredScope) {
-    return hasRequiredScope(authResult, requiredScope)
+  // Si es API key, exigir el scope: sin scope declarado, la key no pasa
+  if (authResult.type === 'api-key') {
+    return requiredScope !== undefined && hasRequiredScope(authResult, requiredScope)
   }
 
   return true

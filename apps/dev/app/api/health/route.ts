@@ -24,8 +24,10 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     timestamp: new Date().toISOString(),
   };
 
-  // Check if caller is authenticated for detailed info
-  const authResult = await authenticateRequest(request);
+  // Check if caller is authenticated for detailed info. Public endpoint: any
+  // valid API key (whatever its scopes) may see the detailed status, so the
+  // scope-agnostic opt-out is explicit here (#93).
+  const authResult = await authenticateRequest(request, { allowAnyScope: true });
   const isAuthenticated = authResult.success && authResult.user;
 
   if (!isAuthenticated) {
