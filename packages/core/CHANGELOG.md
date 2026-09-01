@@ -80,6 +80,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   field restrictions — broader access than the same user's own session. All three
   checks now run identically for both auth types.
 
+- **SQL identifier injection in the generic list `distinct` query (#96).**
+  `GET /api/v1/{entity}?fields=X&distinct=true` interpolated the raw `fields`
+  value as a quoted SQL identifier without validating it against the entity's
+  fields — unlike the sibling non-distinct branch — so any caller with
+  `<slug>:read` could inject SQL into the SELECT list. The name is now
+  validated first (`400 INVALID_FIELD`) through the same `isEntityField` check
+  both branches share.
+
 ### Known Limitations
 
 - Requests against the generic entity routes (`/api/v1/[entity]`) — session or

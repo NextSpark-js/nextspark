@@ -309,6 +309,18 @@ function getTableName(entityConfig: EntityConfig): string {
   return entityConfig.tableName || entityConfig.slug
 }
 
+/**
+ * Whether `fieldName` is a declared field of the entity.
+ *
+ * Every place that turns a caller-supplied name into a SQL identifier
+ * (`?fields=`, `?fields=X&distinct=true`, `?sortBy=`, custom filters) MUST go
+ * through this check first — an unvalidated name lands inside a quoted
+ * identifier position and becomes a SQL injection vector (#96).
+ */
+function isEntityField(entityConfig: EntityConfig, fieldName: string): boolean {
+  return entityConfig.fields.some((field: EntityField) => field.name === fieldName)
+}
+
 // ==========================================
 // PATTERN REFERENCE HELPER FUNCTIONS
 // ==========================================
@@ -680,6 +692,19 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
     if (fieldsParam && distinctParam) {
       // For distinct field queries (like relation-prop), handle specially
       const fieldName = fieldsParam
+
+      // #96: the name is interpolated as a SQL identifier below (and inside
+      // handleDistinctJsonbField), so it must be a declared entity field.
+      if (!isEntityField(entityConfig, fieldName)) {
+        const response = createApiError(
+          `Invalid field for distinct query: ${fieldName}`,
+          400,
+          undefined,
+          'INVALID_FIELD'
+        )
+        return addCorsHeaders(response, request)
+      }
+
       const isJsonbField = fieldName === 'contentLanguages' || fieldName === 'brandValues' || fieldName === 'hashtags'
 
       if (isJsonbField) {
@@ -692,9 +717,7 @@ export async function handleGenericList(request: NextRequest): Promise<NextRespo
     } else if (fieldsParam) {
       // Specific fields requested
       const requestedFields = fieldsParam.split(',').map(f => f.trim())
-      const validFields = requestedFields.filter(fieldName =>
-          entityConfig.fields.some(field => field.name === fieldName)
-      )
+      const validFields = requestedFields.filter(fieldName => isEntityField(entityConfig, fieldName))
 
       fields = ['id', ...validFields]
           .map(fieldName => {
