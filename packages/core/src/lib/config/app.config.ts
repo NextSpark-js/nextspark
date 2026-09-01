@@ -422,6 +422,29 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
       roleMap: {} as Record<string, string>,
       skipTeamForNonOwnerIntents: false,
     },
+
+    /**
+     * Built-in security email notifications (issue #75).
+     *
+     * Better Auth does not send new-device / password-changed / email-changed
+     * emails on its own. With this enabled, core dispatches them best-effort
+     * after a successful sign-in / change-password / change-email — every app on
+     * the platform gets the same baseline security emails without patching the
+     * auth route in its theme.
+     *
+     * Opt out entirely with `enabled: false`, or disable individual events.
+     * Brand/localize the emails from a theme via `registerSecurityEmailTemplate`.
+     */
+    securityNotifications: {
+      enabled: true,
+      events: {
+        newDeviceLogin: true,
+        passwordChanged: true,
+        emailChanged: true,
+      },
+      // null = fingerprints never expire (one alert per device, ever).
+      fingerprintTtlDays: null as number | null,
+    },
   },
 
   // =============================================================================

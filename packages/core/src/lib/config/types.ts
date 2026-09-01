@@ -458,12 +458,47 @@ export interface SignupIntentConfig {
   skipTeamForNonOwnerIntents?: boolean
 }
 
+/**
+ * Built-in security email notifications (issue #75).
+ *
+ * Better Auth does not ship new-device / password-changed / email-changed
+ * emails. When enabled, the core auth route dispatches them best-effort after a
+ * successful sign-in / change-password / change-email. Themes brand or localize
+ * the emails via `registerSecurityEmailTemplate(type, locale, builder)` without
+ * forking core.
+ */
+export interface SecurityNotificationsConfig {
+  /** Master switch. When false the dispatcher is a complete no-op. */
+  enabled: boolean
+
+  /** Per-event switches (all default on). */
+  events: {
+    /** Email on a sign-in from a never-seen device fingerprint. */
+    newDeviceLogin: boolean
+    /** Email confirming a password change. */
+    passwordChanged: boolean
+    /** Email to the OLD address when the account email is being changed. */
+    emailChanged: boolean
+  }
+
+  /**
+   * How long a device fingerprint stays "known" before a re-login from it is
+   * treated as new again.
+   * - `null` (default): fingerprints never expire — one alert per device, ever.
+   * - a positive number of days: re-alert if the last matching login is older.
+   */
+  fingerprintTtlDays: number | null
+}
+
 export interface AuthConfig {
   /** Registration settings */
   registration: AuthRegistrationConfig
 
   /** OAuth provider settings */
   providers?: AuthProvidersConfig
+
+  /** Built-in security email notifications (new-device / password / email changed). */
+  securityNotifications?: SecurityNotificationsConfig
 
   /**
    * Whether Better Auth should automatically send the built-in
