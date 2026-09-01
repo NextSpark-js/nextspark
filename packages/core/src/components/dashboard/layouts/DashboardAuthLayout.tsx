@@ -3,7 +3,7 @@
 import { useAuth } from '../../../hooks/useAuth'
 import { useRouter } from 'next/navigation'
 import { useEffect, Suspense } from 'react'
-import { Loader2 } from 'lucide-react'
+import { DashboardAuthSkeleton } from './DashboardAuthSkeleton'
 import { DashboardTranslationPreloader } from '../../../lib/i18n/DashboardTranslationPreloader'
 import { TranslationDebugger } from '../../../utils/dev/TranslationDebugger'
 import { useEnsureUserMetadata } from '../../../hooks/useEnsureUserMetadata'
@@ -40,11 +40,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   }, [user, isLoading, router])
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    )
+    return <DashboardAuthSkeleton />
   }
 
   if (!user) {
