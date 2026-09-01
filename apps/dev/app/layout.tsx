@@ -55,7 +55,7 @@ export default async function RootLayout({
 
   const locale = await getUserLocale()
   const messages = await getMessages({ locale })
-  const { defaultMode, allowUserToggle } = await getThemeSettings()
+  const { defaultMode, allowUserToggle, forcedThemeRoutes } = await getThemeSettings()
 
   return (
     <html lang={locale} suppressHydrationWarning>
@@ -85,6 +85,8 @@ export default async function RootLayout({
             forcedTheme={!allowUserToggle ? defaultMode : undefined}
             // Only detect OS preference when theme configures defaultMode: 'system' AND user can toggle
             enableSystem={allowUserToggle && defaultMode === 'system'}
+            // Force a theme on the routes declared in theme.config.ts (forcedThemeRoutes)
+            forcedThemeRoutes={forcedThemeRoutes}
             disableTransitionOnChange
           >
             <CustomThemeProvider>

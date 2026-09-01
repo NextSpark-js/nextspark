@@ -23,6 +23,12 @@ export const starterThemeConfig: ThemeConfig = {
   plugins: [],
 
   // ==========================================
+  // THEME MODE (Optional)
+  // ==========================================
+  // defaultMode: 'system',                    // 'light' | 'dark' | 'system'
+  // forcedThemeRoutes: { '/login': 'light' }, // force a theme on route prefixes (longest wins)
+
+  // ==========================================
   // STYLES CONFIGURATION
   // ==========================================
   styles: {

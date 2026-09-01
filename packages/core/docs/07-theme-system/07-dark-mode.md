@@ -36,17 +36,23 @@ CSS Variables (.dark class applied to <html>)
 
 ```typescript
 import { ThemeProvider as NextThemeProvider } from '@/core/providers/theme-provider'
+import { getThemeSettings } from '@/core/lib/theme/get-default-theme-mode'
 
 export default async function RootLayout({ children }) {
-  const defaultTheme = await getDefaultThemeMode()
-  
+  const { defaultMode, allowUserToggle, forcedThemeRoutes } = await getThemeSettings()
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
         <NextThemeProvider
           attribute="class"
-          defaultTheme={defaultTheme}
-          enableSystem
+          defaultTheme={defaultMode}
+          // When allowUserToggle is false, force the theme and ignore localStorage/system
+          forcedTheme={!allowUserToggle ? defaultMode : undefined}
+          // Only detect OS preference when theme configures defaultMode: 'system' AND user can toggle
+          enableSystem={allowUserToggle && defaultMode === 'system'}
+          // Force a theme on the routes declared in theme.config.ts
+          forcedThemeRoutes={forcedThemeRoutes}
           disableTransitionOnChange
         >
           {children}
@@ -62,9 +68,13 @@ export default async function RootLayout({ children }) {
 | Prop | Value | Purpose |
 |------|-------|---------|
 | `attribute` | `"class"` | Use `.dark` class for styling |
-| `defaultTheme` | `"light"` \| `"dark"` \| `"system"` | Initial theme |
-| `enableSystem` | `true` | Detect system preference |
+| `defaultTheme` | `defaultMode` | Initial theme from `theme.config.ts` (or the user's saved preference) |
+| `forcedTheme` | `defaultMode` when `allowUserToggle` is `false` | Lock the theme, ignoring localStorage and OS preference |
+| `enableSystem` | `allowUserToggle && defaultMode === 'system'` | Detect OS preference only when the theme asks for it |
+| `forcedThemeRoutes` | `theme.config.ts` → `forcedThemeRoutes` | Force a theme on specific routes (see [Forcing a Theme per Route](#forcing-a-theme-per-route)) |
 | `disableTransitionOnChange` | `true` | Prevent jarring animations |
+
+> **Never hardcode `enableSystem`.** With `defaultMode: 'light'` and `enableSystem` always on, any visitor whose stored theme is `system` (or whose profile says so) keeps following the OS and sees dark mode. This regressed once already (#37 → #79).
 
 ### Preventing FOUC
 
@@ -297,32 +307,66 @@ async function handleThemeChange(newTheme: string) {
 
 ### Server-Side Detection
 
-**Function:** `getDefaultThemeMode()`
+**Function:** `getThemeSettings()`
 
 **Location:** `core/lib/theme/get-default-theme-mode.ts`
 
 ```typescript
-export async function getDefaultThemeMode(): Promise<ThemeMode> {
-  // 1. Check user preference (logged in users)
-  const session = await auth.api.getSession({ headers: await headers() })
-  
-  if (session?.user?.id) {
-    const profile = await getUserProfile(session.user.id)
-    if (profile.meta?.uiPreferences?.theme) {
-      return profile.meta.uiPreferences.theme
-    }
+export async function getThemeSettings(): Promise<ThemeSettings> {
+  const themeConfig = ThemeService.getByName(activeThemeName)
+  const appConfig = ThemeService.getAppConfig(activeThemeName)
+
+  // 1. app.config.ts → ui.theme.allowUserToggle (default: true)
+  const allowUserToggle = appConfig?.ui?.theme?.allowUserToggle ?? true
+
+  // 2. theme.config.ts → defaultMode (default: 'system') and forcedThemeRoutes
+  const configDefaultMode = themeConfig?.defaultMode || 'system'
+  const forcedThemeRoutes = themeConfig?.forcedThemeRoutes
+
+  // 3. Logged-in users who may toggle: their saved preference wins
+  if (allowUserToggle) {
+    const userTheme = await getUserThemePreference()
+    if (userTheme) return { defaultMode: userTheme, allowUserToggle, forcedThemeRoutes }
   }
-  
-  // 2. Fallback to theme config
-  const themeConfig = getTheme(process.env.NEXT_PUBLIC_ACTIVE_THEME)
-  return themeConfig?.defaultMode || 'system'
+
+  return { defaultMode: configDefaultMode, allowUserToggle, forcedThemeRoutes }
 }
 ```
 
-**Priority:**
-1. User preference (from profile metadata)
+**Priority for `defaultMode`:**
+1. User preference (from profile metadata), only when `allowUserToggle` is `true`
 2. Theme config `defaultMode`
 3. Fallback to `'system'`
+
+`getDefaultThemeMode()` still exists but is **deprecated**: it returns only `defaultMode` and drops `allowUserToggle`, which is how the root layout once ended up hardcoding `enableSystem` (#79).
+
+## Forcing a Theme per Route
+
+Some routes should always render in one theme no matter what the visitor prefers: auth and marketing pages in light, an embeddable widget in dark. Declare them in `theme.config.ts`:
+
+```typescript
+export const myThemeConfig: ThemeConfig = {
+  // ...
+  forcedThemeRoutes: {
+    '/login': 'light',
+    '/signup': 'light',
+    '/embed': 'dark',
+  },
+}
+```
+
+**Matching rules:**
+
+- Keys are route prefixes matched at segment boundaries: `'/login'` covers `/login` and `/login/verify`, but not `/login-help`.
+- `'/'` matches every route.
+- The longest matching prefix wins, so `'/embed/preview': 'light'` can override `'/embed': 'dark'`.
+- Query strings, hashes and trailing slashes are ignored.
+
+**How it works:** `getThemeSettings()` reads the map from the active theme and the root layout passes it to `NextThemeProvider` as `forcedThemeRoutes`. The provider (`core/providers/theme-provider.tsx`) resolves it against `usePathname()` on every render and feeds the result to next-themes' `forcedTheme` on the **single root instance**. Because the same provider renders the blocking script and hydrates, there is no light → dark → light flash, and client-side navigations into or out of a forced route switch themes without a reload.
+
+Do **not** nest a second `ThemeProvider` or inject your own `<script>` in a nested layout for this: both fight the root provider over the same `<html>` element and produce exactly that flash.
+
+On a forced route `useTheme().forcedTheme` is set; `setTheme()` still stores the user's choice, which applies again once they reach a non-forced route.
 
 ## useTheme Hook
 

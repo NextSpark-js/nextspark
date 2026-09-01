@@ -14,6 +14,10 @@ export const boilerplateThemeConfig: ThemeConfig = {
 
   plugins: ['langchain'],
 
+  // Force a theme on specific routes (prefix match at segment boundaries, longest wins).
+  // Useful for auth/marketing pages that must ignore the visitor's dark mode.
+  // forcedThemeRoutes: { '/login': 'light', '/signup': 'light' },
+
   // Styles configuration - colors come from globals.css only
   styles: {
     globals: 'globals.css',
