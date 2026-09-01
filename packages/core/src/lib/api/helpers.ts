@@ -24,9 +24,15 @@ type Auth = ApiKeyAuth | SessionAuth;
 /**
  * Validates authentication using session or API key
  * Prefers session auth if available, falls back to API key
+ *
+ * Resolves to `{ auth: null }` when the request carries neither a valid
+ * session nor a valid API key — it never throws for an unauthenticated
+ * request (#112). Routes are expected to branch on `auth` and answer 401
+ * themselves; a throw here would be swallowed by the generic try/catch most
+ * routes wrap around their body and surface as a 500 instead.
  */
 export async function validateAndAuthenticateRequest(request: NextRequest): Promise<{
-  auth: Auth;
+  auth: Auth | null;
   rateLimitResponse?: NextResponse;
 }> {
   // First try session-based authentication
@@ -61,9 +67,17 @@ export async function validateAndAuthenticateRequest(request: NextRequest): Prom
     }
   }
 
-  // Fallback to API key authentication
+  // Fallback to API key authentication. `validateApiKey` already resolves to
+  // null (never throws) for a missing or invalid key; keep that contract here
+  // instead of delegating to the strict, throwing API-key-only variant.
   console.log(`[Auth] Falling back to API key authentication`);
-  return validateAndAuthenticateApiRequest(request);
+  const apiKeyAuth = await validateApiKey(request);
+
+  if (!apiKeyAuth) {
+    return { auth: null };
+  }
+
+  return applyApiKeyRateLimit(apiKeyAuth);
 }
 
 /**
@@ -147,6 +161,11 @@ function applyRestrictionRulesFromRegistry(scopes: string[], flags: import('../e
 /**
  * Valida la API key y aplica rate limiting
  * Esta función debe ser llamada al inicio de cada endpoint API v1
+ *
+ * API-key-only and strict: throws when no valid key is present. Endpoints
+ * that also accept sessions (or want to treat anonymous callers as a normal
+ * 401 branch) should use `validateAndAuthenticateRequest`, which resolves to
+ * a null auth instead.
  */
 export async function validateAndAuthenticateApiRequest(request: NextRequest): Promise<{
   auth: ApiKeyAuth;
@@ -154,14 +173,24 @@ export async function validateAndAuthenticateApiRequest(request: NextRequest): P
 }> {
   // Validar API key completa (con DB)
   const auth = await validateApiKey(request);
-  
+
   if (!auth) {
     throw new Error('Invalid API key');
   }
-  
-  // Aplicar rate limiting
+
+  return applyApiKeyRateLimit(auth);
+}
+
+/**
+ * Aplica rate limiting a una API key ya validada.
+ * Devuelve la respuesta 429 lista para retornar cuando se excede el límite.
+ */
+function applyApiKeyRateLimit(auth: ApiKeyAuth): {
+  auth: ApiKeyAuth;
+  rateLimitResponse?: NextResponse;
+} {
   const rateLimitResult = checkRateLimit(auth.keyId);
-  
+
   if (!rateLimitResult.allowed) {
     const response = NextResponse.json(
       {

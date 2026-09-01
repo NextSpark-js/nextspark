@@ -14,16 +14,9 @@ import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 export const GET = withRateLimitTier(async (request: NextRequest) => {
   // Plans list is partially public (public plans visible to all, hidden plans only to superadmin)
-  let includeHidden = false
-
-  try {
-    const { auth } = await validateAndAuthenticateRequest(request)
-    // Check if user is superadmin (for full access including hidden plans)
-    includeHidden = auth.scopes.includes('*') || auth.scopes.includes('superadmin:all')
-  } catch {
-    // Not authenticated, only show public plans
-    includeHidden = false
-  }
+  // Anonymous callers resolve to a null auth (#112) and only see public plans.
+  const { auth } = await validateAndAuthenticateRequest(request)
+  const includeHidden = !!auth && (auth.scopes.includes('*') || auth.scopes.includes('superadmin:all'))
 
   try {
     const plans = await PlanService.list({ includeHidden })
@@ -38,6 +31,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
   // Authenticate request
   const { auth, rateLimitResponse } = await validateAndAuthenticateRequest(request)
   if (rateLimitResponse) return rateLimitResponse
+  if (!auth) return createApiError('Authentication required', 401, undefined, 'AUTHENTICATION_REQUIRED')
 
   // Check superadmin permission
   if (!auth.scopes.includes('*') && !auth.scopes.includes('superadmin:all')) {

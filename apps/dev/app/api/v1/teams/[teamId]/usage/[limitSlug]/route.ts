@@ -19,6 +19,7 @@ export const GET = withRateLimitTier(async function GET(request: NextRequest, pr
   // Authenticate request
   const { auth, rateLimitResponse } = await validateAndAuthenticateRequest(request)
   if (rateLimitResponse) return rateLimitResponse
+  if (!auth) return createApiError('Authentication required', 401, undefined, 'AUTHENTICATION_REQUIRED')
 
   const { teamId, limitSlug } = await props.params
 
@@ -51,6 +52,7 @@ export const POST = withRateLimitTier(async function POST(request: NextRequest, 
   // Authenticate request
   const { auth, rateLimitResponse } = await validateAndAuthenticateRequest(request)
   if (rateLimitResponse) return rateLimitResponse
+  if (!auth) return createApiError('Authentication required', 401, undefined, 'AUTHENTICATION_REQUIRED')
 
   const { teamId, limitSlug } = await props.params
 

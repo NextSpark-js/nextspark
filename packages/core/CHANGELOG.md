@@ -80,6 +80,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   field restrictions — broader access than the same user's own session. All three
   checks now run identically for both auth types.
 
+### Fixed
+
+- **`validateAndAuthenticateRequest()` no longer throws for anonymous requests (#112).**
+  The session-or-API-key helper in `lib/api/helpers.ts` fell back to the strict
+  API-key-only variant when no session was found, which threw `Invalid API key` when
+  no key was present either. Routes that wrap the call in a generic try/catch (the
+  usual pattern for a stable JSON error envelope) therefore answered a plain
+  unauthenticated request with a **500** instead of the 401 their own `!auth` branch
+  produces. The helper now resolves to `{ auth: null }` — matching its own
+  session-lookup failure behaviour — so routes' existing 401 branches work as
+  written. `validateAndAuthenticateApiRequest` (API-key-only) keeps its throwing
+  contract; a shared internal applies rate limiting for both.
+  - **Type change:** the resolved `auth` is now `Auth | null`; callers must branch on
+    it before reading `auth.userId` / `auth.scopes`.
+
 ### Known Limitations
 
 - Requests against the generic entity routes (`/api/v1/[entity]`) — session or
