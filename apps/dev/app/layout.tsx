@@ -19,7 +19,7 @@ import { getUserLocale } from '@nextsparkjs/core/lib/locale'
 import { TranslationContextManager } from "@nextsparkjs/core/providers/TranslationContextManager"
 import { PluginService } from '@nextsparkjs/core/lib/services'
 import { getMetadataOrDefault } from '@nextsparkjs/core/lib/template-resolver'
-import { getDefaultThemeMode } from '@nextsparkjs/core/lib/theme/get-default-theme-mode'
+import { getThemeSettings } from '@nextsparkjs/core/lib/theme/get-default-theme-mode'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -55,7 +55,7 @@ export default async function RootLayout({
 
   const locale = await getUserLocale()
   const messages = await getMessages({ locale })
-  const defaultTheme = await getDefaultThemeMode()
+  const { defaultMode, allowUserToggle } = await getThemeSettings()
 
   return (
     <html lang={locale} suppressHydrationWarning>
@@ -80,8 +80,11 @@ export default async function RootLayout({
         <NextIntlClientProvider locale={locale} messages={messages}>
           <NextThemeProvider
             attribute="class"
-            defaultTheme={defaultTheme}
-            enableSystem
+            defaultTheme={defaultMode}
+            // When allowUserToggle is false, force the theme and ignore localStorage/system
+            forcedTheme={!allowUserToggle ? defaultMode : undefined}
+            // Only detect OS preference when theme configures defaultMode: 'system' AND user can toggle
+            enableSystem={allowUserToggle && defaultMode === 'system'}
             disableTransitionOnChange
           >
             <CustomThemeProvider>
