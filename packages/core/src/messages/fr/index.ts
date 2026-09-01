@@ -6,6 +6,7 @@ import common from './common.json'
 import dashboard from './dashboard.json'
 import devtools from './devtools.json'
 import docs from './docs.json'
+import email from './email.json'
 import entities from './entities.json'
 import footer from './footer.json'
 import home from './home.json'
@@ -27,6 +28,7 @@ export default {
   dashboard,
   devtools,
   docs,
+  email,
   entities,
   footer,
   home,
