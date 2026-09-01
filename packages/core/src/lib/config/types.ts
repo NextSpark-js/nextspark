@@ -458,9 +458,55 @@ export interface SignupIntentConfig {
   skipTeamForNonOwnerIntents?: boolean
 }
 
+/**
+ * Session lifetime configuration (all values in seconds).
+ *
+ * Maps 1:1 to Better Auth's `session` options so a theme can tune session
+ * duration and renewal from its `app.config.ts` without patching the core:
+ *
+ * ```ts
+ * auth: {
+ *   session: {
+ *     expiresIn: 60 * 60 * 24 * 90, // 90 days — long-lived sessions for an installed PWA
+ *     updateAge: 60 * 60 * 24 * 7,  // extend the session (and re-issue the cookie) weekly
+ *   },
+ * }
+ * ```
+ *
+ * Invalid values (non-positive, NaN) fall back to the core defaults with a
+ * warning; `updateAge` is clamped to `expiresIn`. See
+ * `lib/auth/session-config.ts` for the resolution rules.
+ */
+export interface AuthSessionConfig {
+  /** Total session lifetime. Default: 7 days. */
+  expiresIn?: number
+  /**
+   * How often a session that is actively used gets its expiration extended
+   * (rolling session). Default: 1 day, or `expiresIn / 2` when `expiresIn` is
+   * shorter than 2 days. Must be <= `expiresIn`.
+   */
+  updateAge?: number
+  /**
+   * Cookie cache: serve the session from a short-lived signed cookie instead
+   * of hitting the database on every request.
+   */
+  cookieCache?: {
+    /** Default: true */
+    enabled?: boolean
+    /** Cache lifetime. Default: 5 minutes. */
+    maxAge?: number
+  }
+}
+
 export interface AuthConfig {
   /** Registration settings */
   registration: AuthRegistrationConfig
+
+  /**
+   * Session duration / renewal. Optional — every field falls back to the core
+   * defaults (7 days, renewed daily, 5-minute cookie cache).
+   */
+  session?: AuthSessionConfig
 
   /** OAuth provider settings */
   providers?: AuthProvidersConfig

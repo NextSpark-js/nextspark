@@ -422,6 +422,29 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
       roleMap: {} as Record<string, string>,
       skipTeamForNonOwnerIntents: false,
     },
+
+    /**
+     * Session duration and renewal (seconds). Passed straight to Better Auth's
+     * `session` options, so a theme can ship long-lived sessions (e.g. for an
+     * installed PWA) by overriding these in its own app.config.ts:
+     *
+     *   auth: { session: { expiresIn: 60 * 60 * 24 * 90, updateAge: 60 * 60 * 24 * 7 } }
+     *
+     * The session is "rolling": every `updateAge` seconds of activity the
+     * expiration is pushed `expiresIn` seconds into the future and the cookie
+     * is re-issued. NOTE: that cookie re-issue only happens when the session is
+     * read from a Route Handler or Server Action — Server Component renders
+     * cannot write cookies (see `lib/auth/session-refresh.ts` and
+     * `useSessionCookieRefresh`).
+     */
+    session: {
+      expiresIn: 60 * 60 * 24 * 7, // 7 days
+      updateAge: 60 * 60 * 24, // 1 day
+      cookieCache: {
+        enabled: true,
+        maxAge: 60 * 5, // 5 minutes
+      },
+    },
   },
 
   // =============================================================================

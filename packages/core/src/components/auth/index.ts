@@ -12,5 +12,8 @@ export { SignupForm } from './forms/SignupForm'
 export { AuthWrapper } from './layouts/AuthWrapper'
 export { AuthWrapperWithPreload } from './layouts/AuthWrapperWithPreload'
 
+// Session
+export { SessionCookieRefresher } from './SessionCookieRefresher'
+
 // Dev Tools
 export { DevKeyring } from './DevKeyring'

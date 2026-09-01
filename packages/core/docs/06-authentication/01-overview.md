@@ -40,8 +40,8 @@ User flags loaded and attached to session
 ```
 
 **Key Features:**
-- 7-day session expiration
-- Automatic renewal every 24 hours
+- 7-day session expiration (configurable per theme via `auth.session`)
+- Automatic renewal every 24 hours (configurable; see Session Management for the PWA cookie-refresh path)
 - 5-minute cookie cache for performance
 - User flags integration
 - Secure cookie configuration

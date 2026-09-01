@@ -17,6 +17,7 @@ import { ThemeProvider as CustomThemeProvider } from "@nextsparkjs/core/lib/them
 import { Toaster } from "@nextsparkjs/core/components/ui/sonner"
 import { getUserLocale } from '@nextsparkjs/core/lib/locale'
 import { TranslationContextManager } from "@nextsparkjs/core/providers/TranslationContextManager"
+import { SessionCookieRefresher } from "@nextsparkjs/core/components/auth/SessionCookieRefresher"
 import { PluginService } from '@nextsparkjs/core/lib/services'
 import { getMetadataOrDefault } from '@nextsparkjs/core/lib/template-resolver'
 import { getDefaultThemeMode } from '@nextsparkjs/core/lib/theme/get-default-theme-mode'
@@ -86,6 +87,11 @@ export default async function RootLayout({
           >
             <CustomThemeProvider>
               <TranslationContextManager />
+              {/* Real session-cookie renewal for installed PWAs: the render-time
+                  session reads above (getUserLocale/getDefaultThemeMode) cannot
+                  write cookies, so the rolling refresh is triggered from the
+                  client through the auth Route Handler instead. */}
+              <SessionCookieRefresher />
               <main>{children}</main>
               <Suspense><Toaster position="bottom-left" /></Suspense>
             </CustomThemeProvider>

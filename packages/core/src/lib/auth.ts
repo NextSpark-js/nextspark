@@ -19,6 +19,7 @@ import {
 } from './teams/helpers';
 import { isDomainAllowed } from './auth/registration-helpers';
 import { registrationGuardPlugin } from './auth/registration-guard-plugin';
+import { resolveSessionConfig } from './auth/session-config';
 import { getCorsOrigins } from './utils/cors';
 
 /**
@@ -104,6 +105,11 @@ const pool = new Pool({
   idleTimeoutMillis: 30000,
   max: 20,
 });
+
+// Session duration/renewal comes from the merged app config (core defaults +
+// theme `auth.session` overrides), validated and clamped by resolveSessionConfig.
+// Themes no longer need to patch the core to get long-lived (PWA) sessions.
+const sessionConfig = resolveSessionConfig(AUTH_CONFIG);
 
 /**
  * Resolves the current signup request's intent to a configured NON-owner team
@@ -279,11 +285,13 @@ export const auth = betterAuth({
     nextCookies(), // MUST be the last plugin for Next.js cookie handling
   ],
   session: {
-    expiresIn: 60 * 60 * 24 * 7, // 1 week
-    updateAge: 60 * 60 * 24, // 1 day
+    // Configurable per theme via `auth.session` in app.config.ts (defaults:
+    // 7 days / renewed daily / 5-minute cookie cache).
+    expiresIn: sessionConfig.expiresIn,
+    updateAge: sessionConfig.updateAge,
     cookieCache: {
-      enabled: true,
-      maxAge: 60 * 5, // 5 minutes
+      enabled: sessionConfig.cookieCache.enabled,
+      maxAge: sessionConfig.cookieCache.maxAge,
     },
   },
   // Database hooks for user lifecycle events (Better Auth API)
