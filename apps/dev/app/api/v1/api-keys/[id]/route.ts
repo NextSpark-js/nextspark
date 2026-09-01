@@ -21,6 +21,7 @@ import {
   addCorsHeaders
 } from '@nextsparkjs/core/lib/api/helpers';
 import { authenticateRequest, hasRequiredScope } from '@nextsparkjs/core/lib/api/auth/dual-auth';
+import { invalidateApiKeyCache } from '@nextsparkjs/core/lib/api/auth';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 
 // Handle CORS preflight
@@ -209,7 +210,7 @@ export const PATCH = withRateLimitTier(withApiLogging(async (
       UPDATE "api_key" 
       SET ${updates.join(", ")}
       WHERE id = $${paramCount} AND "userId" = $${paramCount + 1}
-      RETURNING id, "keyPrefix", name, scopes, status, "lastUsedAt", "expiresAt", "createdAt", "updatedAt"
+      RETURNING id, "keyPrefix", "keyHash", name, scopes, status, "lastUsedAt", "expiresAt", "createdAt", "updatedAt"
     `;
 
     const result = await mutateWithRLS(query, values, authResult.user!.id);
@@ -219,7 +220,13 @@ export const PATCH = withRateLimitTier(withApiLogging(async (
       return addCorsHeaders(response, req);
     }
 
-    const response = createApiResponse(result.rows[0]);
+    // A status change must take effect immediately: drop the cached validation
+    // entry so the next request re-reads the row (see #92). keyHash is only
+    // used for the invalidation and never returned to the client.
+    const { keyHash, ...updatedApiKey } = result.rows[0] as { keyHash: string } & Record<string, unknown>;
+    invalidateApiKeyCache(keyHash);
+
+    const response = createApiResponse(updatedApiKey);
     return addCorsHeaders(response, req);
   } catch (error) {
     console.error('Error updating API key:', error);
@@ -280,7 +287,7 @@ export const DELETE = withRateLimitTier(withApiLogging(async (
       `UPDATE "api_key" 
        SET status = 'inactive', "updatedAt" = CURRENT_TIMESTAMP
        WHERE id = $1 AND "userId" = $2
-       RETURNING id, name`,
+       RETURNING id, name, "keyHash"`,
       [id, authResult.user!.id],
       authResult.user!.id
     );
@@ -290,10 +297,15 @@ export const DELETE = withRateLimitTier(withApiLogging(async (
       return addCorsHeaders(response, req);
     }
 
+    const revokedRow = result.rows[0] as { name: string; keyHash: string };
+
+    // Revocation must be effective right away, not after the 5 min cache TTL (see #92)
+    invalidateApiKeyCache(revokedRow.keyHash);
+
     const response = createApiResponse({ 
       revoked: true, 
       id,
-      name: (result.rows[0] as { name: string }).name
+      name: revokedRow.name
     });
     return addCorsHeaders(response, req);
   } catch (error) {
