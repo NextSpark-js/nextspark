@@ -64,11 +64,25 @@ describe('TeamMemberService', () => {
       const result = await TeamMemberService.getByTeamAndUser('team-456', 'user-789')
 
       expect(result).toEqual(mockMember)
-      expect(mockQueryOneWithRLS).toHaveBeenCalledWith(
-        'SELECT * FROM "team_members" WHERE "teamId" = $1 AND "userId" = $2',
-        ['team-456', 'user-789'],
-        'user-789'
-      )
+      expect(mockQueryOneWithRLS).toHaveBeenCalledTimes(1)
+      const [sql, params, rlsUserId] = mockQueryOneWithRLS.mock.calls[0]
+      expect(sql).toMatch(/FROM "team_members" tm/)
+      expect(params).toEqual(['team-456', 'user-789'])
+      expect(rlsUserId).toBe('user-789')
+    })
+
+    it('TM_088: only resolves memberships of active (non soft-deleted) teams', async () => {
+      // Team deletion is a soft delete (UPDATE teams SET "deletedAt"), which never
+      // fires ON DELETE CASCADE, so team_members rows outlive the team. The lookup
+      // must join teams and exclude soft-deleted ones (issue #88).
+      mockQueryOneWithRLS.mockResolvedValue(null)
+
+      await TeamMemberService.getByTeamAndUser('team-456', 'user-789')
+
+      const [sql] = mockQueryOneWithRLS.mock.calls[0]
+      const normalized = (sql as string).replace(/\s+/g, ' ')
+      expect(normalized).toContain('INNER JOIN "teams" t ON t.id = tm."teamId"')
+      expect(normalized).toContain('t."deletedAt" IS NULL')
     })
 
     it('returns null when not found', async () => {
