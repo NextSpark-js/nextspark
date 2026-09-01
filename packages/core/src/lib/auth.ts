@@ -20,6 +20,7 @@ import {
 import { isDomainAllowed } from './auth/registration-helpers';
 import { registrationGuardPlugin } from './auth/registration-guard-plugin';
 import { resolveSessionConfig } from './auth/session-config';
+import { isPasswordLoginEnabled } from './auth/auth-methods';
 import { getCorsOrigins } from './utils/cors';
 
 /**
@@ -218,7 +219,11 @@ export const auth = betterAuth({
     },
   },
   emailAndPassword: {
-    enabled: true,
+    // Enabled by default even under the passwordless preset (AUTH_CONFIG.methods
+    // only shapes the login UI) so password accounts, seeded test users and
+    // API logins keep working. A theme hard-disables it with
+    // `auth.emailAndPassword.enabled: false`.
+    enabled: isPasswordLoginEnabled(AUTH_CONFIG),
     requireEmailVerification: true,
     minPasswordLength: 8,
     maxPasswordLength: 128,
@@ -267,6 +272,10 @@ export const auth = betterAuth({
   },
   plugins: [
     registrationGuardPlugin(), // Intercept OAuth signup attempts
+    // Passwordless preset: one-time code by email (AUTH_CONFIG.methods
+    // 'email-otp', on by default). Always registered so a theme can switch
+    // presets without touching the server; the code travels through the
+    // configured email provider (Resend in the default setup).
     emailOTP({
       async sendVerificationOTP({ email, otp, type }) {
         const template = await sendOtpVerificationEmail({

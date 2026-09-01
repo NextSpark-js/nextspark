@@ -63,6 +63,14 @@ export const APP_CONFIG_OVERRIDES = {
       },
     },
     /**
+     * Login methods. The core default is the passwordless preset
+     * (['email-otp', 'google']). This theme is the regression test-bed for the
+     * classic flow (Cypress + DevKeyring log in with email + password), so it
+     * keeps the password form first and exposes the one-time-code form as the
+     * secondary option.
+     */
+    methods: ['email-password', 'email-otp', 'google'],
+    /**
      * Whether Better Auth automatically sends the verification email on signup.
      *
      * - `true` (default): users get a "Verify Your Email Address" link email

@@ -7,6 +7,7 @@
  */
 
 import type { AuthConfig, RegistrationMode, PublicAuthConfig } from '../config/types'
+import { resolveAuthMethods } from './auth-methods'
 
 /**
  * Check if public registration (self-signup) is allowed.
@@ -44,10 +45,28 @@ export function isDomainAllowed(email: string, allowedDomains: string[]): boolea
  *
  * Google is disabled when:
  * - providers.google.enabled is explicitly false
+ * - 'google' is not one of the configured login `methods`
  * - GOOGLE_CLIENT_ID env var is not set (runtime check, not done here)
  */
 export function isGoogleAuthEnabled(authConfig: AuthConfig): boolean {
-  return authConfig.providers?.google?.enabled !== false
+  return (
+    authConfig.providers?.google?.enabled !== false &&
+    resolveAuthMethods(authConfig).includes('google')
+  )
+}
+
+/**
+ * Check if the email+password SIGNUP flow (the /signup page and its form) is
+ * available: the registration mode must allow self-signup AND
+ * 'email-password' must be one of the configured login methods. Under the
+ * passwordless preset the first OTP sign-in creates the account, so there is
+ * no separate signup page.
+ */
+export function isPasswordSignupAvailable(authConfig: AuthConfig): boolean {
+  return (
+    isEmailSignupEnabled(authConfig.registration.mode) &&
+    resolveAuthMethods(authConfig).includes('email-password')
+  )
 }
 
 /**
@@ -108,5 +127,6 @@ export function getPublicAuthConfig(authConfig: AuthConfig): PublicAuthConfig {
         enabled: isGoogleAuthEnabled(authConfig),
       },
     },
+    methods: resolveAuthMethods(authConfig),
   }
 }

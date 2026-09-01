@@ -8,7 +8,7 @@
  * allowing themes to override only the values they need to change.
  */
 
-import type { AppConfig } from './types'
+import type { AppConfig, AuthLoginMethod } from './types'
 
 // =============================================================================
 // DEFAULT APPLICATION CONFIGURATION
@@ -397,6 +397,32 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
       google: {
         enabled: true,
       },
+    },
+
+    /**
+     * Login methods offered by the app, in priority order — the PASSWORDLESS
+     * preset by default: a one-time code by email + Google OAuth, no password
+     * field ("the smoothest possible flow for forgetful users").
+     *
+     * Themes override the list in their app.config.ts (arrays replace, they
+     * don't merge):
+     *   methods: ['email-password', 'google']               // classic preset
+     *   methods: ['email-otp', 'email-password', 'google']  // both, code first
+     *
+     * Requirements: an email provider for the code (RESEND_API_KEY +
+     * RESEND_FROM_EMAIL) and GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET for Google.
+     * See docs/06-authentication/12-passwordless-preset.md.
+     */
+    methods: ['email-otp', 'google'] as AuthLoginMethod[],
+
+    /**
+     * Better Auth's email + password endpoints stay enabled by default (even
+     * under the passwordless preset) so password accounts, seeded test users
+     * and API-based logins keep working. Set `enabled: false` in a theme to
+     * hard-disable password auth server-side.
+     */
+    emailAndPassword: {
+      enabled: true,
     },
 
     /**

@@ -70,6 +70,42 @@ export function useAuth() {
     router.push('/login')
   }
 
+  /**
+   * Passwordless step 1: email a 6-digit sign-in code (Better Auth emailOTP
+   * plugin). A first sign-in creates the account, so this doubles as signup.
+   */
+  const handleSendOtp = async (email: string) => {
+    const { data, error } = await authClient.emailOtp.sendVerificationOtp({
+      email,
+      type: 'sign-in',
+    })
+
+    if (error) {
+      throw new Error(error.message || 'Failed to send the sign-in code')
+    }
+
+    return data
+  }
+
+  /**
+   * Passwordless step 2: exchange the emailed code for a session.
+   */
+  const handleOtpSignIn = async ({ email, otp, redirectTo }: { email: string; otp: string; redirectTo?: string }) => {
+    const { data, error } = await authClient.signIn.emailOtp({ email, otp })
+
+    if (error) {
+      throw new Error(error.message || 'Invalid or expired code')
+    }
+
+    if (data) {
+      // OTP is an email-based method for the "last used" badge purposes
+      saveAuthMethod('email')
+      router.push(redirectTo || '/dashboard')
+    }
+
+    return data
+  }
+
   const handleGoogleSignIn = async (redirectTo?: string) => {
     // For OAuth, Better Auth handles the redirect automatically
     // The method will be saved on the dashboard page after successful redirect
@@ -217,6 +253,8 @@ export function useAuth() {
     signUp: handleSignUp,
     signOut: handleSignOut,
     googleSignIn: handleGoogleSignIn,
+    sendOtp: handleSendOtp,
+    signInWithOtp: handleOtpSignIn,
     resetPassword: handleResetPassword,
     updatePassword: handleUpdatePassword,
     changePassword: handleChangePassword,
