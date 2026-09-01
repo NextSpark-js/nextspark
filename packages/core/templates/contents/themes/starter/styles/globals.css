@@ -200,8 +200,12 @@
 /* =============================================
    BASE STYLES
    ============================================= */
-* {
-  border-color: var(--border);
+/* Must live in @layer base: un-layered rules beat every Tailwind v4 utility
+   (border-primary, border-destructive, ...) regardless of specificity. */
+@layer base {
+  * {
+    border-color: var(--border);
+  }
 }
 
 body {
