@@ -15,6 +15,9 @@ import { getBillingResourceHints } from "@nextsparkjs/core/lib/billing/gateways/
 import { ThemeProvider as NextThemeProvider } from "@nextsparkjs/core/providers/theme-provider"
 import { ThemeProvider as CustomThemeProvider } from "@nextsparkjs/core/lib/theme/ThemeProvider"
 import { Toaster } from "@nextsparkjs/core/components/ui/sonner"
+import { QueryProvider } from "@nextsparkjs/core/providers/query-provider"
+import { TeamProvider } from "@nextsparkjs/core/contexts/TeamContext"
+import { SubscriptionProvider } from "@nextsparkjs/core/contexts/SubscriptionContext"
 import { getUserLocale } from '@nextsparkjs/core/lib/locale'
 import { TranslationContextManager } from "@nextsparkjs/core/providers/TranslationContextManager"
 import { PluginService } from '@nextsparkjs/core/lib/services'
@@ -90,9 +93,18 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             <CustomThemeProvider>
-              <TranslationContextManager />
-              <main>{children}</main>
-              <Suspense><Toaster position="bottom-left" /></Suspense>
+              {/* Team providers live here (not only in DashboardProviders) so the activeTeamId
+                  cookie is synced from any route, matching layout.ppr.tsx — see #115.
+                  DashboardProviders skips re-mounting them when already present. */}
+              <QueryProvider>
+                <TeamProvider>
+                  <SubscriptionProvider>
+                    <TranslationContextManager />
+                    <main>{children}</main>
+                    <Suspense><Toaster position="bottom-left" /></Suspense>
+                  </SubscriptionProvider>
+                </TeamProvider>
+              </QueryProvider>
             </CustomThemeProvider>
           </NextThemeProvider>
         </NextIntlClientProvider>
