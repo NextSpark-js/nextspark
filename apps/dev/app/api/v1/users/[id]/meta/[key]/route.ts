@@ -41,8 +41,8 @@ const metadataValueSchema = z.object({
 })
 
 // Handle CORS preflight
-export async function OPTIONS() {
-  return handleCorsPreflightRequest()
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request)
 }
 
 /**
@@ -86,7 +86,7 @@ export const GET = withRateLimitTier(withApiLogging(async (
         'Insufficient permissions. Admin access required for user metadata.',
         403
       )
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
 
     const { id, key } = await params
@@ -94,12 +94,12 @@ export const GET = withRateLimitTier(withApiLogging(async (
     // Validate parameters
     if (!id || id.trim() === '') {
       const response = createApiError('User ID is required', 400, null, 'MISSING_USER_ID')
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
 
     if (!key || key.trim() === '') {
       const response = createApiError('Metadata key is required', 400, null, 'MISSING_META_KEY')
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
 
     // Validate key length
@@ -110,7 +110,7 @@ export const GET = withRateLimitTier(withApiLogging(async (
         null,
         'INVALID_META_KEY'
       )
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
 
     // Get user metadata value using UserService
@@ -126,14 +126,14 @@ export const GET = withRateLimitTier(withApiLogging(async (
       key,
       value: metaValue ?? null,
     })
-    return addCorsHeaders(response)
+    return addCorsHeaders(response, req)
   } catch (error) {
     const response = createApiError(
       'Failed to fetch user metadata',
       500,
       error instanceof Error ? error.message : undefined
     )
-    return addCorsHeaders(response)
+    return addCorsHeaders(response, req)
   }
 }), 'read');
 
@@ -183,7 +183,7 @@ export const PUT = withRateLimitTier(withApiLogging(async (
         'Insufficient permissions. Admin access required for user metadata.',
         403
       )
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
 
     const { id, key } = await params
@@ -191,12 +191,12 @@ export const PUT = withRateLimitTier(withApiLogging(async (
     // Validate parameters
     if (!id || id.trim() === '') {
       const response = createApiError('User ID is required', 400, null, 'MISSING_USER_ID')
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
 
     if (!key || key.trim() === '') {
       const response = createApiError('Metadata key is required', 400, null, 'MISSING_META_KEY')
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
 
     // Validate key length
@@ -207,7 +207,7 @@ export const PUT = withRateLimitTier(withApiLogging(async (
         null,
         'INVALID_META_KEY'
       )
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
 
     // Parse and validate request body
@@ -223,7 +223,7 @@ export const PUT = withRateLimitTier(withApiLogging(async (
         null,
         'VALUE_TOO_LARGE'
       )
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
 
     // Update metadata using UserService
@@ -245,7 +245,7 @@ export const PUT = withRateLimitTier(withApiLogging(async (
       value: validatedData.value,
       updated: true,
     })
-    return addCorsHeaders(response)
+    return addCorsHeaders(response, req)
   } catch (error) {
     // Handle validation errors
     if (error instanceof z.ZodError) {
@@ -255,7 +255,7 @@ export const PUT = withRateLimitTier(withApiLogging(async (
         error.issues,
         'VALIDATION_ERROR'
       )
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
 
     const response = createApiError(
@@ -263,7 +263,7 @@ export const PUT = withRateLimitTier(withApiLogging(async (
       500,
       error instanceof Error ? error.message : undefined
     )
-    return addCorsHeaders(response)
+    return addCorsHeaders(response, req)
   }
 }), 'write');
 
@@ -311,7 +311,7 @@ export const DELETE = withRateLimitTier(withApiLogging(async (
         'Insufficient permissions. Admin access required for user metadata.',
         403
       )
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
 
     const { id, key } = await params
@@ -319,12 +319,12 @@ export const DELETE = withRateLimitTier(withApiLogging(async (
     // Validate parameters
     if (!id || id.trim() === '') {
       const response = createApiError('User ID is required', 400, null, 'MISSING_USER_ID')
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
 
     if (!key || key.trim() === '') {
       const response = createApiError('Metadata key is required', 400, null, 'MISSING_META_KEY')
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
 
     // Validate key length
@@ -335,7 +335,7 @@ export const DELETE = withRateLimitTier(withApiLogging(async (
         null,
         'INVALID_META_KEY'
       )
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
 
     // Delete metadata using UserService
@@ -346,13 +346,13 @@ export const DELETE = withRateLimitTier(withApiLogging(async (
       key,
       deleted: true,
     })
-    return addCorsHeaders(response)
+    return addCorsHeaders(response, req)
   } catch (error) {
     const response = createApiError(
       'Failed to delete user metadata',
       500,
       error instanceof Error ? error.message : undefined
     )
-    return addCorsHeaders(response)
+    return addCorsHeaders(response, req)
   }
 }), 'write');

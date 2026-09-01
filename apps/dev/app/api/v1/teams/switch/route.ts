@@ -16,8 +16,8 @@ const switchTeamSchema = z.object({
 })
 
 // Handle CORS preflight
-export async function OPTIONS() {
-  return handleCorsPreflightRequest()
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request)
 }
 
 // POST /api/v1/teams/switch - Switch active team context
@@ -61,7 +61,7 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
         maxAge: 60 * 60 * 24 * 365  // 1 year
       })
 
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     } catch (error) {
       if (error instanceof Error && error.message === 'User is not a member of this team') {
         const response = createApiError(
@@ -70,7 +70,7 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
           null,
           'NOT_TEAM_MEMBER'
         )
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       throw error
@@ -79,11 +79,11 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
     if (error instanceof Error && error.name === 'ZodError') {
       const zodError = error as { issues?: unknown[] }
       const response = createApiError('Validation error', 400, zodError.issues, 'VALIDATION_ERROR')
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
 
     console.error('Error switching team:', error)
     const response = createApiError('Internal server error', 500)
-    return addCorsHeaders(response)
+    return addCorsHeaders(response, req)
   }
 }), 'write')

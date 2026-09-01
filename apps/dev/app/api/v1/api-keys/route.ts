@@ -20,8 +20,8 @@ const createApiKeySchema = z.object({
 });
 
 // Handle CORS preflight
-export async function OPTIONS() {
-  return handleCorsPreflightRequest();
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request);
 }
 
 // GET /api/v1/api-keys - List user's API keys with dual auth
@@ -47,7 +47,7 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
 
     if (!hasPermission) {
       const response = createApiError('Insufficient permissions. Admin access required for API key management.', 403);
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
 
     const apiKeys = await queryWithRLS<{
@@ -125,11 +125,11 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
     }));
 
     const response = createApiResponse(keysWithStats);
-    return addCorsHeaders(response);
+    return addCorsHeaders(response, req);
   } catch (error) {
     console.error('Error fetching API keys:', error);
     const response = createApiError('Internal server error', 500);
-    return addCorsHeaders(response);
+    return addCorsHeaders(response, req);
   }
 }), 'strict');
 
@@ -156,7 +156,7 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
 
     if (!hasPermission) {
       const response = createApiError('Insufficient permissions. Admin access required for API key management.', 403);
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
 
     const body = await req.json();
@@ -174,7 +174,7 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
         },
         'INVALID_SCOPES'
       );
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
 
     // Validar que el usuario pueda crear API keys con estos scopes.
@@ -201,7 +201,7 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
         },
         'INSUFFICIENT_SCOPE_PERMISSIONS'
       );
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
 
     // Verificar límite de API keys por usuario (máximo 10)
@@ -218,7 +218,7 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
         null,
         'API_KEY_LIMIT_REACHED'
       );
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
 
     // Generar API key
@@ -249,15 +249,15 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
     };
 
     const response = createApiResponse(responseData, { created: true }, 201);
-    return addCorsHeaders(response);
+    return addCorsHeaders(response, req);
   } catch (error) {
     if (error instanceof z.ZodError) {
       const response = createApiError('Validation error', 400, error.issues, 'VALIDATION_ERROR');
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
     
     console.error('Error creating API key:', error);
     const response = createApiError('Internal server error', 500);
-    return addCorsHeaders(response);
+    return addCorsHeaders(response, req);
   }
 }), 'strict');

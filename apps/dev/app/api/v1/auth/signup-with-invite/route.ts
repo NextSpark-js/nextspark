@@ -14,8 +14,8 @@ import { withSignupContext } from '@nextsparkjs/core/lib/auth-context'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 // Handle CORS preflight
-export async function OPTIONS() {
-  return handleCorsPreflightRequest()
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request)
 }
 
 interface SignupWithInviteBody {
@@ -41,14 +41,14 @@ export const POST = withRateLimitTier(withApiLogging(
           null,
           'MISSING_FIELDS'
         )
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (!emailRegex.test(email)) {
         const response = createApiError('Invalid email format', 400, null, 'INVALID_EMAIL')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Validate password length (min 8 characters as per Better Auth config)
@@ -59,7 +59,7 @@ export const POST = withRateLimitTier(withApiLogging(
           null,
           'INVALID_PASSWORD'
         )
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Step 1: Validate the invitation token via the service pool (RLS bypass).
@@ -76,7 +76,7 @@ export const POST = withRateLimitTier(withApiLogging(
 
       if (!invitation) {
         const response = createApiError('Invitation not found', 404, null, 'INVITATION_NOT_FOUND')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Verify invitation is for the correct email
@@ -87,7 +87,7 @@ export const POST = withRateLimitTier(withApiLogging(
           null,
           'EMAIL_MISMATCH'
         )
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Check if invitation is pending
@@ -98,14 +98,14 @@ export const POST = withRateLimitTier(withApiLogging(
           null,
           'INVITATION_NOT_PENDING'
         )
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Check if invitation has expired
       const expiresAt = new Date(invitation.expiresAt)
       if (expiresAt < new Date()) {
         const response = createApiError('Invitation has expired', 410, null, 'INVITATION_EXPIRED')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Step 2: Create user using Better Auth's internal API
@@ -144,7 +144,7 @@ export const POST = withRateLimitTier(withApiLogging(
             null,
             'USER_ALREADY_EXISTS'
           )
-          return addCorsHeaders(response)
+          return addCorsHeaders(response, req)
         }
 
         const response = createApiError(
@@ -153,7 +153,7 @@ export const POST = withRateLimitTier(withApiLogging(
           null,
           'SIGNUP_FAILED'
         )
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Parse response to get user data
@@ -167,7 +167,7 @@ export const POST = withRateLimitTier(withApiLogging(
           null,
           'SIGNUP_FAILED'
         )
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Steps 3-4 run via the service pool (RLS bypass). This is a trusted
@@ -228,7 +228,7 @@ export const POST = withRateLimitTier(withApiLogging(
           { created: true },
           201
         )
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       } catch (error) {
         await tx.rollback()
         throw error
@@ -236,7 +236,7 @@ export const POST = withRateLimitTier(withApiLogging(
     } catch (error) {
       console.error('Error in signup-with-invite:', error)
       const response = createApiError('Internal server error', 500)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
   }
 ), 'auth')
