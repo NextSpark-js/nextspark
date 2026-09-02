@@ -447,6 +447,7 @@ function renderFormField(
     case 'timezone':
       return (
         <TimezoneSelect
+          id={baseProps.id}
           value={value as string | undefined}
           onChange={onChange}
           placeholder={field.display.placeholder}
@@ -457,6 +458,7 @@ function renderFormField(
     case 'currency':
       return (
         <CurrencySelect
+          id={baseProps.id}
           value={value as string | undefined}
           onChange={onChange}
           placeholder={field.display.placeholder}
@@ -467,6 +469,7 @@ function renderFormField(
     case 'country':
       return (
         <CountrySelect
+          id={baseProps.id}
           value={value as string | undefined}
           onChange={onChange}
           placeholder={field.display.placeholder}

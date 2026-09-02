@@ -66,8 +66,11 @@ function isValidThemeMode(value: unknown): value is ThemeMode {
  */
 async function getUserThemePreference(): Promise<ThemeMode | null> {
   try {
+    // Render-time read (root layout): never let it consume the rolling session
+    // renewal, since cookies cannot be written here. See lib/locale.ts.
     const session = await auth.api.getSession({
-      headers: await headers()
+      headers: await headers(),
+      query: { disableRefresh: true },
     })
 
     if (session?.user?.id) {

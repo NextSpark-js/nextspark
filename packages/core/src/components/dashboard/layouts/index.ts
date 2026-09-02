@@ -1,5 +1,6 @@
 export { AuthGuard } from './AuthGuard'
 export { DashboardAuthLayout } from './DashboardAuthLayout'
+export { DashboardAuthSkeleton } from './DashboardAuthSkeleton'
 export { DashboardShell } from './DashboardShell'
 export { Sidebar } from './Sidebar'
 export { TopNavbar } from './TopNavbar'

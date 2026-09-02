@@ -302,7 +302,9 @@ export function getInvitableRoles(): string[] {
 
 /**
  * Validate role transition
- * Check if changing from one role to another is allowed
+ * Check if changing from one role to another is allowed.
+ *
+ * The actor must strictly outrank BOTH the current role and the new role.
  *
  * @param fromRole - Current role
  * @param toRole - New role
@@ -330,11 +332,21 @@ export function validateRoleTransition(
     }
   }
 
-  // Check if actor can manage the target role
+  // Check if actor can manage the target's CURRENT role
   if (!canManageRole(actorRole, fromRole)) {
     return {
       allowed: false,
       reason: 'You do not have permission to change this user\'s role.',
+    }
+  }
+
+  // Check if actor outranks the DESTINATION role as well. Without this an
+  // actor could promote anyone below them to any level, including above the
+  // actor's own (issue #89).
+  if (!canManageRole(actorRole, toRole)) {
+    return {
+      allowed: false,
+      reason: 'You cannot assign a role equal to or higher than your own.',
     }
   }
 

@@ -19,6 +19,7 @@ import { DEFAULT_DASHBOARD_CONFIG } from './dashboard.config'
 import { ThemeService, type ThemeName } from '../services/theme.service'
 import { mergeConfigs } from '../utils/config-merge'
 import { mergeRolesConfig } from './roles-merge'
+import { resolveAuthMethods } from '../auth/auth-methods'
 // Import team roles from permissions-registry (single source of truth)
 import {
   AVAILABLE_ROLES as REGISTRY_AVAILABLE_ROLES,
@@ -259,6 +260,10 @@ export const AUTH_CONFIG = APP_CONFIG_MERGED.auth
  * Public auth config safe for client-side consumption.
  * Strips allowedDomains and other sensitive data.
  */
+// Login methods offered by the app (passwordless preset by default), resolved
+// once here so server and client components agree on the same list.
+const RESOLVED_AUTH_METHODS = resolveAuthMethods(APP_CONFIG_MERGED.auth)
+
 export const PUBLIC_AUTH_CONFIG = {
   registration: {
     mode: (APP_CONFIG_MERGED.auth?.registration?.mode ?? 'open') as import('./types').RegistrationMode,
@@ -266,9 +271,13 @@ export const PUBLIC_AUTH_CONFIG = {
   },
   providers: {
     google: {
-      enabled: APP_CONFIG_MERGED.auth?.providers?.google?.enabled !== false,
+      // Offered only when listed in `methods` AND not disabled in `providers`.
+      enabled:
+        APP_CONFIG_MERGED.auth?.providers?.google?.enabled !== false &&
+        RESOLVED_AUTH_METHODS.includes('google'),
     },
   },
+  methods: RESOLVED_AUTH_METHODS,
 } satisfies import('./types').PublicAuthConfig
 
 // Re-export dashboard configuration sections

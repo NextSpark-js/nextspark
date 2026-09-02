@@ -382,6 +382,8 @@ auth: {
 // packages/core/src/lib/config/types.ts
 type RegistrationMode = 'open' | 'domain-restricted' | 'domain-open' | 'invitation-only'
 
+type AuthLoginMethod = 'email-otp' | 'google' | 'email-password'
+
 interface AuthConfig {
   registration: {
     mode: RegistrationMode
@@ -390,8 +392,29 @@ interface AuthConfig {
   providers?: {
     google?: { enabled?: boolean }
   }
+  // Login methods offered by the templates, in priority order.
+  // DEFAULT = passwordless preset ['email-otp', 'google'] (no password field).
+  methods?: AuthLoginMethod[]
+  // Server-side switch for Better Auth's password endpoints (default true,
+  // even under the passwordless preset). `{ enabled: false }` hard-disables them.
+  emailAndPassword?: { enabled?: boolean }
+  // Session duration/renewal in seconds (defaults: 7d / 1d / 5-min cookie cache)
+  session?: { expiresIn?: number; updateAge?: number; cookieCache?: { enabled?: boolean; maxAge?: number } }
 }
 ```
+
+### Login Presets (`auth.methods`)
+
+| Preset | `methods` | Login UI |
+|--------|-----------|----------|
+| `passwordless` (default) | `['email-otp', 'google']` | Google button + email → 6-digit code. No password field, no /signup page (first OTP sign-in creates the account). |
+| `classic` | `['email-password', 'google']` | Google button + email/password form, signup + reset flows. |
+| both | `['email-otp', 'email-password', 'google']` | First email method is shown first; the user can switch. |
+
+Helpers: `resolveAuthMethods`, `isPasswordlessPreset`, `getPrimaryEmailMethod`,
+`AUTH_PRESETS` in `lib/auth/auth-methods.ts`. Client side use
+`PUBLIC_AUTH_CONFIG.methods`. The OTP email goes through the configured email
+provider (Resend by default) — see `docs/06-authentication/12-passwordless-preset.md`.
 
 ### Helper Functions
 

@@ -20,6 +20,7 @@ import { TeamProvider } from "@nextsparkjs/core/contexts/TeamContext"
 import { SubscriptionProvider } from "@nextsparkjs/core/contexts/SubscriptionContext"
 import { getUserLocale } from '@nextsparkjs/core/lib/locale'
 import { TranslationContextManager } from "@nextsparkjs/core/providers/TranslationContextManager"
+import { SessionCookieRefresher } from "@nextsparkjs/core/components/auth/SessionCookieRefresher"
 import { PluginService } from '@nextsparkjs/core/lib/services'
 import { getMetadataOrDefault } from '@nextsparkjs/core/lib/template-resolver'
 import { getThemeSettings } from '@nextsparkjs/core/lib/theme/get-default-theme-mode'
@@ -59,23 +60,17 @@ export default async function RootLayout({
   const locale = await getUserLocale()
   const messages = await getMessages({ locale })
   const { defaultMode, allowUserToggle, forcedThemeRoutes } = await getThemeSettings()
+  const billingHints = await getBillingResourceHints()
 
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
-        {(() => {
-          const hints = getBillingResourceHints()
-          return (
-            <>
-              {hints.preconnect.map((domain) => (
-                <link key={`pre-${domain}`} rel="preconnect" href={domain} />
-              ))}
-              {[...hints.preconnect, ...hints.dnsPrefetch].map((domain) => (
-                <link key={`dns-${domain}`} rel="dns-prefetch" href={domain} />
-              ))}
-            </>
-          )
-        })()}
+        {billingHints.preconnect.map((domain) => (
+          <link key={`pre-${domain}`} rel="preconnect" href={domain} />
+        ))}
+        {[...billingHints.preconnect, ...billingHints.dnsPrefetch].map((domain) => (
+          <link key={`dns-${domain}`} rel="dns-prefetch" href={domain} />
+        ))}
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
@@ -100,6 +95,11 @@ export default async function RootLayout({
                 <TeamProvider>
                   <SubscriptionProvider>
                     <TranslationContextManager />
+                    {/* Real session-cookie renewal for installed PWAs: the render-time
+                        session reads above (getUserLocale/getThemeSettings) cannot
+                        write cookies, so the rolling refresh is triggered from the
+                        client through the auth Route Handler instead. */}
+                    <SessionCookieRefresher />
                     <main>{children}</main>
                     <Suspense><Toaster position="bottom-left" /></Suspense>
                   </SubscriptionProvider>

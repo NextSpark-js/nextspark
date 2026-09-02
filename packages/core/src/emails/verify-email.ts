@@ -18,6 +18,7 @@ export default async function verifyEmail(
   data: VerificationEmailData,
   locale?: string,
 ): Promise<EmailContent> {
+  // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
   const t = await getTranslations({ locale, namespace: 'email.verifyEmail' });
   const appName = data.appName || APP_NAME_FALLBACK;
   const year = new Date().getFullYear();

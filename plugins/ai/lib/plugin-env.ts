@@ -10,6 +10,8 @@ import { getPluginEnv } from '@nextsparkjs/core/lib/plugins/env-loader'
 interface AIPluginEnvConfig {
   // AI provider credentials
   ANTHROPIC_API_KEY?: string
+  /** Claude Code OAuth token (sk-ant-oat01-…). Development only — see getAnthropicAuth(). */
+  CLAUDE_CODE_OAUTH_TOKEN?: string
   OPENAI_API_KEY?: string
 
   // Ollama configuration
@@ -63,6 +65,7 @@ class PluginEnvironment {
       this.config = {
         // AI provider credentials
         ANTHROPIC_API_KEY: env.ANTHROPIC_API_KEY,
+        CLAUDE_CODE_OAUTH_TOKEN: env.CLAUDE_CODE_OAUTH_TOKEN,
         OPENAI_API_KEY: env.OPENAI_API_KEY,
 
         // Ollama configuration
@@ -99,6 +102,7 @@ class PluginEnvironment {
       console.log('[AI Plugin] ℹ️  Plugin Environment Configuration:')
       console.log('  → AI Provider Credentials:')
       console.log(`    - ANTHROPIC_API_KEY: ${this.config.ANTHROPIC_API_KEY ? '✓ set' : '✗ not set'}`)
+      console.log(`    - CLAUDE_CODE_OAUTH_TOKEN (dev only): ${this.config.CLAUDE_CODE_OAUTH_TOKEN ? '✓ set' : '✗ not set'}`)
       console.log(`    - OPENAI_API_KEY: ${this.config.OPENAI_API_KEY ? '✓ set' : '✗ not set'}`)
       console.log('  → AI Provider Selection:')
       console.log(`    - USE_LOCAL_AI: ${this.config.USE_LOCAL_AI}`)
@@ -132,6 +136,18 @@ class PluginEnvironment {
   // Helper methods
   public getAnthropicApiKey(): string | undefined {
     return this.getConfig().ANTHROPIC_API_KEY
+  }
+
+  /**
+   * Anthropic credential for the OAuth/Agent SDK path used by core-utils
+   * (`isOAuthMode`, `generateTextViaAgentSDK`). Only honoured in development:
+   * a Claude Code OAuth token is a personal dev credential, never a deploy
+   * secret. Returns undefined otherwise so callers fall back to the API key
+   * (`config.anthropicAuth ?? config.anthropicApiKey`).
+   */
+  public getAnthropicAuth(): string | undefined {
+    if (process.env.NODE_ENV !== 'development') return undefined
+    return this.getConfig().CLAUDE_CODE_OAUTH_TOKEN || undefined
   }
 
   public getOpenAiApiKey(): string | undefined {
@@ -209,8 +225,8 @@ class PluginEnvironment {
     const config = this.getConfig()
 
     if (!config.USE_LOCAL_AI || config.USE_LOCAL_AI === 'false') {
-      if (!config.ANTHROPIC_API_KEY && !config.OPENAI_API_KEY) {
-        errors.push('Cloud AI is enabled but no API keys are configured (ANTHROPIC_API_KEY or OPENAI_API_KEY required)')
+      if (!config.ANTHROPIC_API_KEY && !config.OPENAI_API_KEY && !this.getAnthropicAuth()) {
+        errors.push('Cloud AI is enabled but no API keys are configured (ANTHROPIC_API_KEY or OPENAI_API_KEY required; in development CLAUDE_CODE_OAUTH_TOKEN also works)')
       }
     }
 
@@ -234,6 +250,7 @@ export const pluginEnv = PluginEnvironment.getInstance()
 
 // Convenience exports
 export const getAnthropicApiKey = () => pluginEnv.getAnthropicApiKey()
+export const getAnthropicAuth = () => pluginEnv.getAnthropicAuth()
 export const getOpenAiApiKey = () => pluginEnv.getOpenAiApiKey()
 export const getOllamaBaseUrl = () => pluginEnv.getOllamaBaseUrl()
 export const getOllamaDefaultModel = () => pluginEnv.getOllamaDefaultModel()

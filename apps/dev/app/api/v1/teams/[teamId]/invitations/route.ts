@@ -14,8 +14,8 @@ import { TeamMemberService, MembershipService } from '@nextsparkjs/core/lib/serv
 import type { TeamInvitation } from '@nextsparkjs/core/lib/teams/types'
 
 // Handle CORS preflight
-export async function OPTIONS() {
-  return handleCorsPreflightRequest()
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request)
 }
 
 // GET /api/v1/teams/:teamId/invitations - List pending invitations for a team
@@ -41,7 +41,7 @@ export const GET = withRateLimitTier(withApiLogging(
       // Validate that teamId is not empty
       if (!teamId || teamId.trim() === '') {
         const response = createApiError('Team ID is required', 400, null, 'MISSING_TEAM_ID')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Check if user is a member of the team
@@ -49,7 +49,7 @@ export const GET = withRateLimitTier(withApiLogging(
 
       if (!isMember) {
         const response = createApiError('Team not found or access denied', 404, null, 'TEAM_NOT_FOUND')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Parse query parameters
@@ -92,11 +92,11 @@ export const GET = withRateLimitTier(withApiLogging(
       const paginationMeta = createPaginationMeta(page, limit, total)
 
       const response = createApiResponse(invitations, paginationMeta)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     } catch (error) {
       console.error('Error fetching team invitations:', error)
       const response = createApiError('Internal server error', 500)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
   }
 ), 'read')
@@ -127,12 +127,12 @@ export const DELETE = withRateLimitTier(withApiLogging(
 
       if (!invitationId) {
         const response = createApiError('Invitation ID is required', 400, null, 'MISSING_INVITATION_ID')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Check if user has permission to manage invitations using MembershipService
       const membership = await MembershipService.get(authResult.user!.id, teamId)
-      const actionResult = membership.canPerformAction('members.invite')
+      const actionResult = membership.canPerformAction('team.members.invite')
 
       if (!actionResult.allowed) {
         const response = NextResponse.json(
@@ -144,7 +144,7 @@ export const DELETE = withRateLimitTier(withApiLogging(
           },
           { status: 403 }
         )
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Update invitation status to 'cancelled' (or delete it)
@@ -158,15 +158,15 @@ export const DELETE = withRateLimitTier(withApiLogging(
 
       if (result.rowCount === 0) {
         const response = createApiError('Invitation not found or already processed', 404, null, 'INVITATION_NOT_FOUND')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       const response = createApiResponse({ deleted: true, id: invitationId })
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     } catch (error) {
       console.error('Error cancelling invitation:', error)
       const response = createApiError('Internal server error', 500)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
   }
 ), 'write')

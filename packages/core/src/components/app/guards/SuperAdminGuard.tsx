@@ -30,6 +30,7 @@ export function SuperAdminGuard({ children, fallback }: SuperAdminGuardProps) {
 
   // Auto-redirect users without superadmin or developer access
   useEffect(() => {
+    // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
     if (!isPending && session && session.user?.role !== 'superadmin' && session.user?.role !== 'developer') {
       router.push('/dashboard?error=access_denied');
     }
@@ -72,6 +73,7 @@ export function SuperAdminGuard({ children, fallback }: SuperAdminGuardProps) {
   }
 
   // Not a superadmin or developer - show access denied
+  // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
   if (session.user?.role !== 'superadmin' && session.user?.role !== 'developer') {
     // Use custom fallback if provided
     if (fallback) {
@@ -127,6 +129,7 @@ export function SuperAdminGuard({ children, fallback }: SuperAdminGuardProps) {
  */
 export function useIsSuperAdmin(): boolean {
   const { data: session } = useSession();
+  // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
   return session?.user?.role === 'superadmin';
 }
 
@@ -138,5 +141,6 @@ export function useIsSuperAdmin(): boolean {
  */
 export function useCanAccessAdmin(): boolean {
   const { data: session } = useSession();
+  // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
   return session?.user?.role === 'superadmin' || session?.user?.role === 'developer';
 }

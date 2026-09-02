@@ -16,7 +16,6 @@ module.exports = {
     // These tests work correctly in the context of a generated project
     'tests/jest/services/block.service.test.ts',
     'tests/jest/services/entity-type.service.test.ts',
-    'tests/jest/services/membership.service.test.ts',
     'tests/jest/services/namespace.service.test.ts',
     'tests/jest/services/permission.service.test.ts',
     'tests/jest/services/theme.service.test.ts',

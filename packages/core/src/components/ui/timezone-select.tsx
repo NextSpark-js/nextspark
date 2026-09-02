@@ -45,6 +45,8 @@ interface TimezoneSelectProps {
   disabled?: boolean
   className?: string
   clearable?: boolean
+  /** Forwarded to the combobox trigger so `<label for>` resolves (see #90) */
+  id?: string
 }
 
 export function TimezoneSelect({
@@ -54,6 +56,7 @@ export function TimezoneSelect({
   disabled = false,
   className,
   clearable = true,
+  id,
 }: TimezoneSelectProps) {
   return (
     <div className="relative">
@@ -67,6 +70,7 @@ export function TimezoneSelect({
         emptyMessage="No se encontraron zonas horarias."
         disabled={disabled}
         clearable={clearable}
+        id={id}
         className={cn("pl-10", className)}
       />
     </div>

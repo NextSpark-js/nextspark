@@ -15,6 +15,7 @@ export default async function otpVerification(
   data: OtpVerificationEmailData,
   locale?: string,
 ): Promise<EmailContent> {
+  // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
   const t = await getTranslations({ locale, namespace: 'email.otpVerification' });
   const appName = data.appName || APP_NAME_FALLBACK;
   const year = new Date().getFullYear();

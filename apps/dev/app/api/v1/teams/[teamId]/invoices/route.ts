@@ -15,8 +15,8 @@ import { invoiceQuerySchema } from '@nextsparkjs/core/lib/validation/invoices'
 import type { InvoiceResponse } from '@nextsparkjs/core/lib/validation/invoices'
 
 // Handle CORS preflight
-export async function OPTIONS() {
-  return handleCorsPreflightRequest()
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request)
 }
 
 // GET /api/v1/teams/:teamId/invoices - List team invoices (owner only)
@@ -42,12 +42,12 @@ export const GET = withRateLimitTier(withApiLogging(
       // Validate that teamId is not empty
       if (!teamId || teamId.trim() === '') {
         const response = createApiError('Team ID is required', 400, null, 'MISSING_TEAM_ID')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Check if user has permission to view invoices using MembershipService
       const membership = await MembershipService.get(authResult.user!.id, teamId)
-      const actionResult = membership.canPerformAction('billing.invoices')
+      const actionResult = membership.canPerformAction('team.billing.view')
 
       if (!actionResult.allowed) {
         const response = NextResponse.json(
@@ -59,7 +59,7 @@ export const GET = withRateLimitTier(withApiLogging(
           },
           { status: 403 }
         )
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Parse query parameters for pagination
@@ -110,17 +110,17 @@ export const GET = withRateLimitTier(withApiLogging(
       const paginationMeta = createPaginationMeta(page, limit, total)
 
       const response = createApiResponse(invoices, paginationMeta)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     } catch (error) {
       if (error instanceof Error && error.name === 'ZodError') {
         const zodError = error as { issues?: unknown[] }
         const response = createApiError('Validation error', 400, zodError.issues, 'VALIDATION_ERROR')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       console.error('Error fetching invoices:', error)
       const response = createApiError('Internal server error', 500)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
   }
 ), 'read')

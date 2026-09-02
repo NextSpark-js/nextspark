@@ -495,21 +495,27 @@ describe('Stripe Gateway', () => {
   // ===========================================
 
   describe('getBillingGateway() factory', () => {
-    test('should return a StripeGateway when provider is stripe', () => {
-      const gw = getBillingGateway()
+    test('should return a StripeGateway when provider is stripe', async () => {
+      const gw = await getBillingGateway()
       expect(gw).toBeInstanceOf(StripeGateway)
     })
 
-    test('should return the same singleton instance', () => {
-      const gw1 = getBillingGateway()
-      const gw2 = getBillingGateway()
+    test('should return the same singleton instance', async () => {
+      const gw1 = await getBillingGateway()
+      const gw2 = await getBillingGateway()
       expect(gw1).toBe(gw2)
     })
 
-    test('should return a new instance after reset', () => {
-      const gw1 = getBillingGateway()
+    test('should share one instance across concurrent first calls', async () => {
       resetBillingGateway()
-      const gw2 = getBillingGateway()
+      const [gw1, gw2] = await Promise.all([getBillingGateway(), getBillingGateway()])
+      expect(gw1).toBe(gw2)
+    })
+
+    test('should return a new instance after reset', async () => {
+      const gw1 = await getBillingGateway()
+      resetBillingGateway()
+      const gw2 = await getBillingGateway()
       expect(gw1).not.toBe(gw2)
     })
   })

@@ -204,6 +204,7 @@ export const GET = withRateLimitTier(async (
     const subscription = subscriptionResult[0] || null;
 
     // Prepare response data
+    const billingGateway = subscription ? await getBillingGateway() : null
     const responseData = {
       team: {
         id: team.id,
@@ -225,7 +226,7 @@ export const GET = withRateLimitTier(async (
         role: member.role,
         joinedAt: member.joinedAt
       })),
-      subscription: subscription ? {
+      subscription: subscription && billingGateway ? {
         id: subscription.id,
         plan: {
           id: subscription.planId,
@@ -246,8 +247,8 @@ export const GET = withRateLimitTier(async (
         externalSubscriptionId: subscription.externalSubscriptionId,
         externalCustomerId: subscription.externalCustomerId,
         paymentProvider: subscription.paymentProvider,
-        providerName: getBillingGateway().getProviderName(),
-        providerDashboardUrl: getBillingGateway().getSubscriptionDashboardUrl(subscription.externalSubscriptionId),
+        providerName: billingGateway.getProviderName(),
+        providerDashboardUrl: billingGateway.getSubscriptionDashboardUrl(subscription.externalSubscriptionId),
         createdAt: subscription.createdAt
       } : null,
       billingHistory: billingEventsResult.map((event) => ({

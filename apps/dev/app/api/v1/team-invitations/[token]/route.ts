@@ -11,8 +11,8 @@ import type { TeamInvitation } from '@nextsparkjs/core/lib/teams/types'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 // Handle CORS preflight
-export async function OPTIONS() {
-  return handleCorsPreflightRequest()
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request)
 }
 
 // GET /api/v1/team-invitations/:token - Get invitation details (public endpoint for preview)
@@ -24,7 +24,7 @@ export const GET = withRateLimitTier(withApiLogging(
       // Validate that token is not empty
       if (!token || token.trim() === '') {
         const response = createApiError('Invitation token is required', 400, null, 'MISSING_TOKEN')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Get invitation by token with team and inviter details
@@ -49,14 +49,14 @@ export const GET = withRateLimitTier(withApiLogging(
 
       if (!invitation) {
         const response = createApiError('Invitation not found', 404, null, 'INVITATION_NOT_FOUND')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Check if invitation has expired
       const expiresAt = new Date(invitation.expiresAt)
       if (expiresAt < new Date()) {
         const response = createApiError('Invitation has expired', 410, null, 'INVITATION_EXPIRED')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Check if invitation is still pending
@@ -67,7 +67,7 @@ export const GET = withRateLimitTier(withApiLogging(
           null,
           `INVITATION_${invitation.status.toUpperCase()}`
         )
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Return public invitation details (don't expose sensitive data)
@@ -80,11 +80,11 @@ export const GET = withRateLimitTier(withApiLogging(
       }
 
       const response = createApiResponse(publicDetails)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     } catch (error) {
       console.error('Error fetching invitation:', error)
       const response = createApiError('Internal server error', 500)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
   }
 ), 'read');
