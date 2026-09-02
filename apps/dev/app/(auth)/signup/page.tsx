@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { SignupForm } from '@nextsparkjs/core/components/auth/forms/SignupForm'
 import { getTemplateOrDefault, getMetadataOrDefault } from '@nextsparkjs/core/lib/template-resolver'
 import { AUTH_CONFIG } from '@nextsparkjs/core/lib/config'
+import { resolveAuthMethods } from '@nextsparkjs/core/lib/auth/auth-methods'
 import { TeamService } from '@nextsparkjs/core/lib/services'
 
 // This page reads DB state (TeamService.hasGlobal) and redirect()s during render,
@@ -22,6 +23,13 @@ export const metadata: Metadata = getMetadataOrDefault(
 
 async function SignupPageContent() {
   const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open'
+
+  // Passwordless preset (no 'email-password' in auth.methods): the account is
+  // created by the first one-time-code sign-in, so there is no password signup
+  // form to show — send people to /login instead.
+  if (!resolveAuthMethods(AUTH_CONFIG).includes('email-password')) {
+    redirect('/login')
+  }
 
   // In invitation-only mode, allow the first user to register
   // (when no global team exists yet). Subsequent users need invitations.

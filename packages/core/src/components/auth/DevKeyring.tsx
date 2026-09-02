@@ -148,13 +148,22 @@ export function DevKeyring({ config }: DevKeyringProps) {
     // First, check if email form needs to be expanded
     const showEmailButton = document.querySelector('[data-cy="login-show-email"]') as HTMLButtonElement
 
+    // Under the passwordless preset the email form opens in one-time-code mode;
+    // the keyring fills email + password, so switch to the password form first.
+    const usePasswordToggle = () =>
+      (document.querySelector('[data-cy="login-use-password"]') as HTMLButtonElement | null)?.click()
+
     if (showEmailButton) {
       // Click to show email form, then fill after brief delay
       showEmailButton.click()
-      setTimeout(() => fillInputs(email, password), 100)
+      setTimeout(() => {
+        usePasswordToggle()
+        setTimeout(() => fillInputs(email, password), 50)
+      }, 100)
     } else {
       // Form already visible, fill immediately
-      fillInputs(email, password)
+      usePasswordToggle()
+      setTimeout(() => fillInputs(email, password), 50)
     }
 
     setIsOpen(false)

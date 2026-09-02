@@ -57,6 +57,37 @@ describe('AuthProvider', () => {
     expect(result.current.isAuthenticated).toBe(true)
   })
 
+  it('handles passwordless login (request code, then sign in with it)', async () => {
+    const mockUser = { id: 'user-2', name: 'Ada', email: 'ada@example.com' }
+    const mockTeam = { id: 'team-2', name: 'Ada Team' }
+
+    ;(authApi.sendOtp as jest.Mock).mockResolvedValue(undefined)
+    ;(authApi.loginWithOtp as jest.Mock).mockResolvedValue({ user: mockUser, token: 'tok' })
+    ;(teamsApi.getTeams as jest.Mock).mockResolvedValue({ data: [mockTeam] })
+
+    const { result } = renderHook(() => useAuth(), { wrapper })
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+    })
+
+    await act(async () => {
+      await result.current.requestOtp('ada@example.com')
+    })
+    expect(authApi.sendOtp).toHaveBeenCalledWith('ada@example.com')
+    expect(result.current.isAuthenticated).toBe(false)
+
+    await act(async () => {
+      await result.current.loginWithOtp('ada@example.com', '123456')
+    })
+
+    expect(authApi.loginWithOtp).toHaveBeenCalledWith('ada@example.com', '123456')
+    expect(result.current.user).toEqual(mockUser)
+    expect(result.current.team).toEqual(mockTeam)
+    expect(result.current.isAuthenticated).toBe(true)
+    expect(apiClient.setTeam).toHaveBeenCalledWith(mockTeam)
+  })
+
   it('handles logout', async () => {
     ;(authApi.logout as jest.Mock).mockResolvedValue({})
 

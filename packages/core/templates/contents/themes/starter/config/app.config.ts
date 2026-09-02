@@ -116,6 +116,25 @@ export const APP_CONFIG_OVERRIDES = {
       },
     },
     /**
+     * Login methods, in priority order. Core default = passwordless preset:
+     * a one-time code by email + Google, no password field (needs an email
+     * provider — RESEND_API_KEY — and GOOGLE_CLIENT_ID/SECRET for Google).
+     *
+     * Uncomment to switch to the classic email + password preset, or list both
+     * (the first email method is the form shown first):
+     */
+    // methods: ['email-password', 'google'],
+    // methods: ['email-otp', 'email-password', 'google'],
+
+    /**
+     * Session duration / renewal in seconds (defaults: 7 days, renewed daily).
+     * Long-lived sessions for an installed PWA, for example:
+     */
+    // session: {
+    //   expiresIn: 60 * 60 * 24 * 90, // 90 days
+    //   updateAge: 60 * 60 * 24 * 7,  // renew weekly
+    // },
+    /**
      * Whether Better Auth automatically sends the verification email on signup.
      *
      * - `true` (default): users get a "Verify Your Email Address" link email

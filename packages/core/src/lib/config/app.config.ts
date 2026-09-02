@@ -8,7 +8,7 @@
  * allowing themes to override only the values they need to change.
  */
 
-import type { AppConfig } from './types'
+import type { AppConfig, AuthLoginMethod } from './types'
 
 // =============================================================================
 // DEFAULT APPLICATION CONFIGURATION
@@ -400,6 +400,32 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
     },
 
     /**
+     * Login methods offered by the app, in priority order — the PASSWORDLESS
+     * preset by default: a one-time code by email + Google OAuth, no password
+     * field ("the smoothest possible flow for forgetful users").
+     *
+     * Themes override the list in their app.config.ts (arrays replace, they
+     * don't merge):
+     *   methods: ['email-password', 'google']               // classic preset
+     *   methods: ['email-otp', 'email-password', 'google']  // both, code first
+     *
+     * Requirements: an email provider for the code (RESEND_API_KEY +
+     * RESEND_FROM_EMAIL) and GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET for Google.
+     * See docs/06-authentication/12-passwordless-preset.md.
+     */
+    methods: ['email-otp', 'google'] as AuthLoginMethod[],
+
+    /**
+     * Better Auth's email + password endpoints stay enabled by default (even
+     * under the passwordless preset) so password accounts, seeded test users
+     * and API-based logins keep working. Set `enabled: false` in a theme to
+     * hard-disable password auth server-side.
+     */
+    emailAndPassword: {
+      enabled: true,
+    },
+
+    /**
      * Whether Better Auth automatically sends the verification email on signup.
      *
      * Default: `true` — matches Better Auth's standard behavior. Users get a
@@ -421,6 +447,29 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
       enabled: false,
       roleMap: {} as Record<string, string>,
       skipTeamForNonOwnerIntents: false,
+    },
+
+    /**
+     * Session duration and renewal (seconds). Passed straight to Better Auth's
+     * `session` options, so a theme can ship long-lived sessions (e.g. for an
+     * installed PWA) by overriding these in its own app.config.ts:
+     *
+     *   auth: { session: { expiresIn: 60 * 60 * 24 * 90, updateAge: 60 * 60 * 24 * 7 } }
+     *
+     * The session is "rolling": every `updateAge` seconds of activity the
+     * expiration is pushed `expiresIn` seconds into the future and the cookie
+     * is re-issued. NOTE: that cookie re-issue only happens when the session is
+     * read from a Route Handler or Server Action — Server Component renders
+     * cannot write cookies (see `lib/auth/session-refresh.ts` and
+     * `useSessionCookieRefresh`).
+     */
+    session: {
+      expiresIn: 60 * 60 * 24 * 7, // 7 days
+      updateAge: 60 * 60 * 24, // 1 day
+      cookieCache: {
+        enabled: true,
+        maxAge: 60 * 5, // 5 minutes
+      },
     },
   },
 

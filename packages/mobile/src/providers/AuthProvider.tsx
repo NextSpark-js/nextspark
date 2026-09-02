@@ -22,6 +22,10 @@ interface AuthContextValue {
   isLoading: boolean
   isAuthenticated: boolean
   login: (email: string, password: string) => Promise<void>
+  /** Passwordless step 1: email a one-time sign-in code. */
+  requestOtp: (email: string) => Promise<void>
+  /** Passwordless step 2: sign in with the emailed code (creates the account on first use). */
+  loginWithOtp: (email: string, otp: string) => Promise<void>
   logout: () => Promise<void>
   selectTeam: (team: Team) => Promise<void>
   /**
@@ -147,13 +151,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     await restoreSession()
   }, [restoreSession])
 
-  const login = useCallback(async (email: string, password: string) => {
-    setIsLoading(true)
-
-    try {
-      // Login to get token
-      const loginResponse = await authApi.login(email, password)
-
+  /**
+   * Shared tail of every sign-in method: load the teams, persist the first
+   * one and commit user + teams + team together once everything succeeded, so
+   * no render ever pairs the new user with the previous session's team and a
+   * failed login leaves the previous state untouched.
+   */
+  const completeSignIn = useCallback(
+    async (signedInUser: User) => {
       // Get user's teams
       const teamsResponse = await teamsApi.getTeams()
 
@@ -167,16 +172,45 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const firstTeam = teamsResponse.data[0]
       await persistTeam(firstTeam)
 
-      // Commit user, teams and team together, once everything succeeded: no
-      // render ever pairs the new user with the previous session's team, and a
-      // failed login leaves the previous state untouched.
-      setUser(loginResponse.user)
+      setUser(signedInUser)
       setTeams(teamsResponse.data)
       setTeam(firstTeam)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [persistTeam])
+    },
+    [persistTeam]
+  )
+
+  const login = useCallback(
+    async (email: string, password: string) => {
+      setIsLoading(true)
+
+      try {
+        // Login to get token
+        const loginResponse = await authApi.login(email, password)
+        await completeSignIn(loginResponse.user)
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [completeSignIn]
+  )
+
+  const requestOtp = useCallback(async (email: string) => {
+    await authApi.sendOtp(email)
+  }, [])
+
+  const loginWithOtp = useCallback(
+    async (email: string, otp: string) => {
+      setIsLoading(true)
+
+      try {
+        const otpResponse = await authApi.loginWithOtp(email, otp)
+        await completeSignIn(otpResponse.user)
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [completeSignIn]
+  )
 
   const logout = useCallback(async () => {
     await authApi.logout()
@@ -199,6 +233,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isLoading,
     isAuthenticated: !!user && !!team,
     login,
+    requestOtp,
+    loginWithOtp,
     logout,
     selectTeam,
     refreshSession,

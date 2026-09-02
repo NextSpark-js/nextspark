@@ -19,6 +19,8 @@ import {
 } from './teams/helpers';
 import { isDomainAllowed } from './auth/registration-helpers';
 import { registrationGuardPlugin } from './auth/registration-guard-plugin';
+import { resolveSessionConfig } from './auth/session-config';
+import { isPasswordLoginEnabled } from './auth/auth-methods';
 import { getCorsOrigins } from './utils/cors';
 
 /**
@@ -104,6 +106,11 @@ const pool = new Pool({
   idleTimeoutMillis: 30000,
   max: 20,
 });
+
+// Session duration/renewal comes from the merged app config (core defaults +
+// theme `auth.session` overrides), validated and clamped by resolveSessionConfig.
+// Themes no longer need to patch the core to get long-lived (PWA) sessions.
+const sessionConfig = resolveSessionConfig(AUTH_CONFIG);
 
 /**
  * Resolves the current signup request's intent to a configured NON-owner team
@@ -212,7 +219,11 @@ export const auth = betterAuth({
     },
   },
   emailAndPassword: {
-    enabled: true,
+    // Enabled by default even under the passwordless preset (AUTH_CONFIG.methods
+    // only shapes the login UI) so password accounts, seeded test users and
+    // API logins keep working. A theme hard-disables it with
+    // `auth.emailAndPassword.enabled: false`.
+    enabled: isPasswordLoginEnabled(AUTH_CONFIG),
     requireEmailVerification: true,
     minPasswordLength: 8,
     maxPasswordLength: 128,
@@ -261,6 +272,10 @@ export const auth = betterAuth({
   },
   plugins: [
     registrationGuardPlugin(), // Intercept OAuth signup attempts
+    // Passwordless preset: one-time code by email (AUTH_CONFIG.methods
+    // 'email-otp', on by default). Always registered so a theme can switch
+    // presets without touching the server; the code travels through the
+    // configured email provider (Resend in the default setup).
     emailOTP({
       async sendVerificationOTP({ email, otp, type }) {
         const template = await sendOtpVerificationEmail({
@@ -279,11 +294,13 @@ export const auth = betterAuth({
     nextCookies(), // MUST be the last plugin for Next.js cookie handling
   ],
   session: {
-    expiresIn: 60 * 60 * 24 * 7, // 1 week
-    updateAge: 60 * 60 * 24, // 1 day
+    // Configurable per theme via `auth.session` in app.config.ts (defaults:
+    // 7 days / renewed daily / 5-minute cookie cache).
+    expiresIn: sessionConfig.expiresIn,
+    updateAge: sessionConfig.updateAge,
     cookieCache: {
-      enabled: true,
-      maxAge: 60 * 5, // 5 minutes
+      enabled: sessionConfig.cookieCache.enabled,
+      maxAge: sessionConfig.cookieCache.maxAge,
     },
   },
   // Database hooks for user lifecycle events (Better Auth API)

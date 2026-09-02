@@ -17,7 +17,17 @@ export type { EntityApi, EntityListParams } from './api/entities/types'
 // Core API Services
 export { authApi } from './api/core/auth'
 export { teamsApi } from './api/core/teams'
-export type { User, Team, AuthSession, LoginResponse, SessionResponse, TeamsResponse } from './api/core/types'
+export type {
+  User,
+  Team,
+  AuthSession,
+  AuthLoginMethod,
+  LoginResponse,
+  OtpLoginResponse,
+  SocialSignInResponse,
+  SessionResponse,
+  TeamsResponse,
+} from './api/core/types'
 
 // Providers
 export { AuthProvider, useAuth } from './providers/AuthProvider'

@@ -13,9 +13,14 @@ NextSpark implements a comprehensive authentication system powered by Better Aut
 
 ### Authentication Methods
 
-- **Email/Password** - Traditional authentication with email verification
-- **Google OAuth** - Social authentication with automatic profile mapping
+- **Email one-time code (OTP)** - Passwordless sign-in with a 6-digit code sent by email; part of the default preset
+- **Google OAuth** - Social authentication with automatic profile mapping; part of the default preset
+- **Email/Password** - Traditional authentication with email verification (opt-in via `auth.methods`)
 - **API Keys** - Scope-based authentication for external API clients
+
+The login methods a project offers are configured per theme with `auth.methods`
+(default: the **passwordless preset** `['email-otp', 'google']` — no password
+field). See [Passwordless Preset](./12-passwordless-preset.md).
 
 ## Dual Authentication Architecture
 
@@ -40,8 +45,8 @@ User flags loaded and attached to session
 ```
 
 **Key Features:**
-- 7-day session expiration
-- Automatic renewal every 24 hours
+- 7-day session expiration (configurable per theme via `auth.session`)
+- Automatic renewal every 24 hours (configurable; see Session Management for the PWA cookie-refresh path)
 - 5-minute cookie cache for performance
 - User flags integration
 - Secure cookie configuration
