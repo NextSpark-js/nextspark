@@ -68,6 +68,36 @@ export class HookSystem {
   }
 
   /**
+   * Apply filter hooks to data, propagating callback errors instead of
+   * swallowing them.
+   *
+   * `applyFilters` isolates each registered callback so one misbehaving
+   * plugin can't break the others — the right default for cosmetic /
+   * best-effort filters. It is the wrong default for a *validation*
+   * filter: a callback that throws to reject a payload must actually stop
+   * the pipeline, or the hook can never reject anything. Use this variant
+   * for filters where a thrown error is meant to abort the caller.
+   */
+  async applyFiltersStrict<T>(hookName: string, data: T, ...args: unknown[]): Promise<T> {
+    const startTime = performance.now()
+
+    const hooks = this.filters.get(hookName) || []
+    let result = data
+
+    console.log(`[Hooks] Applying ${hooks.length} filter hooks (strict) for: ${hookName}`)
+
+    for (const callback of hooks) {
+      const hookResult = await callback(result as Record<string, unknown>, ...args)
+      if (hookResult !== undefined) {
+        result = hookResult as T
+      }
+    }
+
+    this.recordHookStats(hookName, startTime)
+    return result
+  }
+
+  /**
    * Add an action hook
    * Actions allow plugins to execute code at specific points
    */
@@ -267,6 +297,9 @@ export const addFilter = (hookName: string, callback: HookCallback, priority = 1
 
 export const applyFilters = <T>(hookName: string, data: T, ...args: unknown[]) => 
   hooks.applyFilters(hookName, data, ...args)
+
+export const applyFiltersStrict = <T>(hookName: string, data: T, ...args: unknown[]) =>
+  hooks.applyFiltersStrict(hookName, data, ...args)
 
 export const addAction = (hookName: string, callback: HookCallbackVoid, priority = 10) => 
   hooks.addAction(hookName, callback, priority)
