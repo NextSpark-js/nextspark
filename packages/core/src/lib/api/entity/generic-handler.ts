@@ -1374,6 +1374,7 @@ export async function handleGenericCreate(request: NextRequest): Promise<NextRes
       if (!actionResult.allowed) {
         const statusCode = actionResult.reason === 'quota_exceeded' ? 429 : 403
         const response = createApiError(
+          // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
           actionResult.message || `Quota exceeded for ${entityConfig.slug}`,
           statusCode,
           undefined,

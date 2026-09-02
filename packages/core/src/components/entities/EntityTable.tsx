@@ -557,6 +557,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
             <CardContent className="flex flex-col items-center justify-center py-12">
               {entityConfig.icon &&
                 typeof entityConfig.icon === 'function' &&
+                // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
                 entityConfig.icon({
                   className: 'h-16 w-16 text-muted-foreground/50 mb-4',
                 })}

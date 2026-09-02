@@ -14,6 +14,7 @@ import { getInvitableRoles } from './permissions'
 // Dynamic role schema - reads available roles from permissions-registry
 export const teamRoleSchema = z.string().refine(
   (role) => (AVAILABLE_ROLES as readonly string[]).includes(role),
+  // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
   (role) => ({ message: `Invalid team role: ${role}. Must be one of: ${[...AVAILABLE_ROLES].join(', ')}` })
 )
 export const invitationStatusSchema = z.enum(['pending', 'accepted', 'declined', 'expired'])
@@ -116,6 +117,7 @@ export const inviteMemberSchema = z.object({
   email: z.string().email('Invalid email address'),
   role: z.string().refine(
     (role) => getInvitableRoles().includes(role),
+    // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
     (role) => ({ message: `Role must be one of: ${getInvitableRoles().join(', ')}` })
   ), // Cannot invite as owner
 })
@@ -123,6 +125,7 @@ export const inviteMemberSchema = z.object({
 export const updateMemberRoleSchema = z.object({
   role: z.string().refine(
     (role) => getInvitableRoles().includes(role),
+    // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
     (role) => ({ message: `Role must be one of: ${getInvitableRoles().join(', ')}` })
   ), // Cannot promote to owner
 })

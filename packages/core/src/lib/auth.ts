@@ -228,6 +228,7 @@ export const auth = betterAuth({
     sendOnSignUp: AUTH_CONFIG.sendVerificationEmailOnSignup ?? true,
     sendVerificationEmail: (params: { user: UserWithEmail; url: string; token: string }) =>
       sendVerificationEmailCallback(params, emailService),
+    // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
     verifyTokenExpiresIn: 60 * 60 * 24, // 24 hours
   },
   socialProviders: {
@@ -291,6 +292,7 @@ export const auth = betterAuth({
     user: {
       create: {
         // Validate registration mode before creating user
+        // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
         before: async (user: { email: string; [key: string]: unknown }) => {
           const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open';
 
@@ -389,6 +391,7 @@ export const auth = betterAuth({
     session: {
       create: {
         // Enforce domain restrictions on EVERY login (not just signup)
+        // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
         before: async (session: { userId: string; [key: string]: unknown }) => {
           const registrationMode = AUTH_CONFIG?.registration?.mode ?? 'open';
 

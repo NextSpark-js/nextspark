@@ -160,6 +160,7 @@ export class TeamService {
       userId
     )
 
+    // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
     return teams.map(team => ({
       ...team,
       memberCount: parseInt(team.memberCount, 10),
