@@ -21,8 +21,8 @@ import { sendTeamInvitationEmail } from '@nextsparkjs/core/lib/email/send'
 import { I18N_CONFIG } from '@nextsparkjs/core/lib/config'
 
 // Handle CORS preflight
-export async function OPTIONS() {
-  return handleCorsPreflightRequest()
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request)
 }
 
 // GET /api/v1/teams/:teamId/members - List team members
@@ -48,7 +48,7 @@ export const GET = withRateLimitTier(withApiLogging(
       // Validate that teamId is not empty
       if (!teamId || teamId.trim() === '') {
         const response = createApiError('Team ID is required', 400, null, 'MISSING_TEAM_ID')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Superadmins can view members of any team
@@ -60,7 +60,7 @@ export const GET = withRateLimitTier(withApiLogging(
 
         if (!isMember) {
           const response = createApiError('Team not found or access denied', 404, null, 'TEAM_NOT_FOUND')
-          return addCorsHeaders(response)
+          return addCorsHeaders(response, req)
         }
       }
 
@@ -141,11 +141,11 @@ export const GET = withRateLimitTier(withApiLogging(
       const paginationMeta = createPaginationMeta(page, limit, total)
 
       const response = createApiResponse(members, paginationMeta)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     } catch (error) {
       console.error('Error fetching team members:', error)
       const response = createApiError('Internal server error', 500)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
   }
 ), 'read')
@@ -180,7 +180,7 @@ export const POST = withRateLimitTier(withApiLogging(
           { retryAfter: Math.ceil((rateLimit.resetTime - Date.now()) / 1000) },
           'RATE_LIMIT_EXCEEDED'
         )
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       const { teamId } = await params
@@ -188,7 +188,7 @@ export const POST = withRateLimitTier(withApiLogging(
       // Validate that teamId is not empty
       if (!teamId || teamId.trim() === '') {
         const response = createApiError('Team ID is required', 400, null, 'MISSING_TEAM_ID')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Check if user has permission to invite members using MembershipService
@@ -205,7 +205,7 @@ export const POST = withRateLimitTier(withApiLogging(
           },
           { status: 403 }
         )
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Get user's role for role hierarchy validation
@@ -223,7 +223,7 @@ export const POST = withRateLimitTier(withApiLogging(
           null,
           'ROLE_HIERARCHY_VIOLATION'
         )
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Check if user already exists and is already a member
@@ -243,7 +243,7 @@ export const POST = withRateLimitTier(withApiLogging(
 
         if (existingMember) {
           const response = createApiError('User is already a member of this team', 409, null, 'ALREADY_MEMBER')
-          return addCorsHeaders(response)
+          return addCorsHeaders(response, req)
         }
       }
 
@@ -262,7 +262,7 @@ export const POST = withRateLimitTier(withApiLogging(
           null,
           'INVITATION_EXISTS'
         )
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Get team info for email
@@ -274,7 +274,7 @@ export const POST = withRateLimitTier(withApiLogging(
 
       if (!team) {
         const response = createApiError('Team not found', 404, null, 'TEAM_NOT_FOUND')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Create invitation
@@ -333,17 +333,17 @@ export const POST = withRateLimitTier(withApiLogging(
       }
 
       const response = createApiResponse(invitation, { created: true }, 201)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     } catch (error) {
       if (error instanceof Error && error.name === 'ZodError') {
         const zodError = error as { issues?: unknown[] }
         const response = createApiError('Validation error', 400, zodError.issues, 'VALIDATION_ERROR')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       console.error('Error creating invitation:', error)
       const response = createApiError('Internal server error', 500)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
   }
 ), 'write')

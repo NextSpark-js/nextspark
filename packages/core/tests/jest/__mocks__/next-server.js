@@ -9,6 +9,14 @@ class MockNextRequest {
     this.method = options.method || 'GET'
     this.headers = new Map(Object.entries(options.headers || {}))
     this._body = options.body
+    // Minimal nextUrl (pathname/origin/searchParams/clone) for proxy/middleware tests
+    try {
+      const parsed = new URL(url, 'http://localhost')
+      parsed.clone = () => new URL(parsed.toString())
+      this.nextUrl = parsed
+    } catch {
+      this.nextUrl = undefined
+    }
   }
 
   async json() {
@@ -47,6 +55,22 @@ class MockNextResponse {
       ...options,
       headers: { 'Content-Type': 'application/json', ...options.headers }
     })
+  }
+
+  // Pass-through response. Keeps the forwarded request headers (if any) so
+  // middleware/proxy tests can assert what reaches the app.
+  static next(init = {}) {
+    const response = new MockNextResponse(null, { status: 200, headers: init.headers })
+    response.type = 'next'
+    response.requestHeaders = init.request && init.request.headers ? init.request.headers : null
+    return response
+  }
+
+  static redirect(url, status = 307) {
+    const response = new MockNextResponse(null, { status, headers: { Location: String(url) } })
+    response.type = 'redirect'
+    response.redirectUrl = String(url)
+    return response
   }
 }
 

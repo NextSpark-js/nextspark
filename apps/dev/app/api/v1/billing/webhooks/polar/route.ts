@@ -52,7 +52,7 @@ async function handlePolarWebhook(request: NextRequest): Promise<NextResponse> {
   // 2. Verify webhook signature (MANDATORY for security)
   let event: { id: string; type: string; data: Record<string, unknown> }
   try {
-    const gateway = getBillingGateway()
+    const gateway = await getBillingGateway()
     event = gateway.verifyWebhookSignature(payload, headers)
   } catch (error) {
     console.error('[polar-webhook] Signature verification failed:', error)

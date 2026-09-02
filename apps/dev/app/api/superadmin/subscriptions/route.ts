@@ -230,6 +230,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
     const totalPages = Math.ceil(total / limit);
 
     // Format subscriptions
+    const billingGateway = await getBillingGateway()
     const subscriptions = subscriptionsResult.map(sub => ({
       id: sub.id,
       team: {
@@ -257,7 +258,7 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
       cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
       externalSubscriptionId: sub.externalSubscriptionId,
       paymentProvider: sub.paymentProvider,
-      providerDashboardUrl: getBillingGateway().getSubscriptionDashboardUrl(sub.externalSubscriptionId),
+      providerDashboardUrl: billingGateway.getSubscriptionDashboardUrl(sub.externalSubscriptionId),
       createdAt: sub.createdAt
     }));
 

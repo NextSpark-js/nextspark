@@ -56,23 +56,17 @@ export default async function RootLayout({
   const locale = await getUserLocale()
   const messages = await getMessages({ locale })
   const defaultTheme = await getDefaultThemeMode()
+  const billingHints = await getBillingResourceHints()
 
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
-        {(() => {
-          const hints = getBillingResourceHints()
-          return (
-            <>
-              {hints.preconnect.map((domain) => (
-                <link key={`pre-${domain}`} rel="preconnect" href={domain} />
-              ))}
-              {[...hints.preconnect, ...hints.dnsPrefetch].map((domain) => (
-                <link key={`dns-${domain}`} rel="dns-prefetch" href={domain} />
-              ))}
-            </>
-          )
-        })()}
+        {billingHints.preconnect.map((domain) => (
+          <link key={`pre-${domain}`} rel="preconnect" href={domain} />
+        ))}
+        {[...billingHints.preconnect, ...billingHints.dnsPrefetch].map((domain) => (
+          <link key={`dns-${domain}`} rel="dns-prefetch" href={domain} />
+        ))}
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

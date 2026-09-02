@@ -52,6 +52,33 @@ const DEFAULT_METADATA: UserMetadata = {
   }
 }
 
+type MetadataBlock = keyof UserMetadata
+
+const METADATA_BLOCKS = Object.keys(DEFAULT_METADATA) as MetadataBlock[]
+
+/**
+ * Returns the default blocks (uiPreferences, securityPreferences,
+ * notificationsPreferences) that are still missing from the user's meta.
+ *
+ * Each block is checked independently: other flows (onboarding progress, tours,
+ * active team pointer, ...) write their own keys into `meta` early, so an
+ * "is meta empty?" guard would almost never fire for real users (see #119).
+ * Only the missing blocks are returned so existing preferences are never
+ * overwritten.
+ */
+export function getMissingMetadataDefaults(
+  meta: UserMetadata | null | undefined
+): Partial<UserMetadata> {
+  const missing: Partial<UserMetadata> = {}
+  for (const block of METADATA_BLOCKS) {
+    const current = meta?.[block]
+    if (current === null || current === undefined) {
+      missing[block] = DEFAULT_METADATA[block] as never
+    }
+  }
+  return missing
+}
+
 /**
  * Hook to ensure user has default metadata
  * Uses TanStack Query for proper caching and deduplication
@@ -80,9 +107,9 @@ export function useEnsureUserMetadata() {
     gcTime: 30 * 60 * 1000, // 30 minutes cache
   })
 
-  // Mutation to create default metadata
+  // Mutation to create the missing default metadata blocks
   const createMetadataMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (metadata: Partial<UserMetadata>) => {
       const response = await fetch('/api/internal/user-metadata', {
         method: 'POST',
         headers: {
@@ -90,7 +117,7 @@ export function useEnsureUserMetadata() {
         },
         body: JSON.stringify({
           userId,
-          metadata: DEFAULT_METADATA
+          metadata
         })
       })
       if (!response.ok) {
@@ -111,12 +138,13 @@ export function useEnsureUserMetadata() {
   useEffect(() => {
     if (!isFetched || !userData || hasCreatedMetadata.current) return
 
-    const needsMetadata = !userData.meta || Object.keys(userData.meta).length === 0
+    const missingDefaults = getMissingMetadataDefaults(userData.meta)
+    const needsMetadata = Object.keys(missingDefaults).length > 0
 
     if (needsMetadata && !createMetadataMutation.isPending) {
       hasCreatedMetadata.current = true
-      console.log('Creating default metadata for user:', userId)
-      createMetadataMutation.mutate()
+      console.log('Creating default metadata for user:', userId, Object.keys(missingDefaults))
+      createMetadataMutation.mutate(missingDefaults)
     }
   }, [isFetched, userData, userId, createMetadataMutation])
 }

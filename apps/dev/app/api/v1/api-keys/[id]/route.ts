@@ -21,11 +21,12 @@ import {
   addCorsHeaders
 } from '@nextsparkjs/core/lib/api/helpers';
 import { authenticateRequest, hasRequiredScope } from '@nextsparkjs/core/lib/api/auth/dual-auth';
+import { invalidateApiKeyCache } from '@nextsparkjs/core/lib/api/auth';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 
 // Handle CORS preflight
-export async function OPTIONS() {
-  return handleCorsPreflightRequest();
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request);
 }
 
 // GET /api/v1/api-keys/:id - Get specific API key details
@@ -54,14 +55,14 @@ export const GET = withRateLimitTier(withApiLogging(async (
 
     if (!hasPermission) {
       const response = createApiError('Insufficient permissions. Admin access required for API key management.', 403);
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
 
     const { id } = await params;
 
     if (!id || id.trim() === '') {
       const response = createApiError('API key ID is required', 400, null, 'MISSING_API_KEY_ID');
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
 
     const apiKey = await queryOneWithRLS(
@@ -74,7 +75,7 @@ export const GET = withRateLimitTier(withApiLogging(async (
 
     if (!apiKey) {
       const response = createApiError('API key not found', 404, null, 'API_KEY_NOT_FOUND');
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
 
     // Get detailed usage statistics
@@ -129,11 +130,11 @@ export const GET = withRateLimitTier(withApiLogging(async (
         success_rate: null
       }
     });
-    return addCorsHeaders(response);
+    return addCorsHeaders(response, req);
   } catch (error) {
     console.error('Error fetching API key:', error);
     const response = createApiError('Internal server error', 500);
-    return addCorsHeaders(response);
+    return addCorsHeaders(response, req);
   }
 }), 'strict');
 
@@ -163,14 +164,14 @@ export const PATCH = withRateLimitTier(withApiLogging(async (
 
     if (!hasPermission) {
       const response = createApiError('Insufficient permissions. Admin access required for API key management.', 403);
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
 
     const { id } = await params;
 
     if (!id || id.trim() === '') {
       const response = createApiError('API key ID is required', 400, null, 'MISSING_API_KEY_ID');
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
 
     const body = await req.json();
@@ -185,11 +186,11 @@ export const PATCH = withRateLimitTier(withApiLogging(async (
       if (body[field] !== undefined) {
         if (field === 'name' && typeof body[field] !== 'string') {
           const response = createApiError('Name must be a string', 400, null, 'INVALID_NAME_TYPE');
-          return addCorsHeaders(response);
+          return addCorsHeaders(response, req);
         }
         if (field === 'status' && !['active', 'inactive', 'expired'].includes(body[field])) {
           const response = createApiError('status must be active, inactive, or expired', 400, null, 'INVALID_STATUS_TYPE');
-          return addCorsHeaders(response);
+          return addCorsHeaders(response, req);
         }
         
         updates.push(`"${field}" = $${paramCount++}`);
@@ -199,7 +200,7 @@ export const PATCH = withRateLimitTier(withApiLogging(async (
 
     if (updates.length === 0) {
       const response = createApiError('No valid fields to update', 400, null, 'NO_FIELDS');
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
 
     updates.push(`"updatedAt" = CURRENT_TIMESTAMP`);
@@ -209,22 +210,28 @@ export const PATCH = withRateLimitTier(withApiLogging(async (
       UPDATE "api_key" 
       SET ${updates.join(", ")}
       WHERE id = $${paramCount} AND "userId" = $${paramCount + 1}
-      RETURNING id, "keyPrefix", name, scopes, status, "lastUsedAt", "expiresAt", "createdAt", "updatedAt"
+      RETURNING id, "keyPrefix", "keyHash", name, scopes, status, "lastUsedAt", "expiresAt", "createdAt", "updatedAt"
     `;
 
     const result = await mutateWithRLS(query, values, authResult.user!.id);
 
     if (result.rows.length === 0) {
       const response = createApiError('API key not found', 404, null, 'API_KEY_NOT_FOUND');
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
 
-    const response = createApiResponse(result.rows[0]);
-    return addCorsHeaders(response);
+    // A status change must take effect immediately: drop the cached validation
+    // entry so the next request re-reads the row (see #92). keyHash is only
+    // used for the invalidation and never returned to the client.
+    const { keyHash, ...updatedApiKey } = result.rows[0] as { keyHash: string } & Record<string, unknown>;
+    invalidateApiKeyCache(keyHash);
+
+    const response = createApiResponse(updatedApiKey);
+    return addCorsHeaders(response, req);
   } catch (error) {
     console.error('Error updating API key:', error);
     const response = createApiError('Internal server error', 500);
-    return addCorsHeaders(response);
+    return addCorsHeaders(response, req);
   }
 }), 'strict');
 
@@ -254,14 +261,14 @@ export const DELETE = withRateLimitTier(withApiLogging(async (
 
     if (!hasPermission) {
       const response = createApiError('Insufficient permissions. Admin access required for API key management.', 403);
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
 
     const { id } = await params;
 
     if (!id || id.trim() === '') {
       const response = createApiError('API key ID is required', 400, null, 'MISSING_API_KEY_ID');
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
 
     // For API key auth, prevent deletion of the current API key being used
@@ -272,7 +279,7 @@ export const DELETE = withRateLimitTier(withApiLogging(async (
         null, 
         'SELF_REVOKE_FORBIDDEN'
       );
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
 
     // Soft delete - just mark as inactive
@@ -280,25 +287,30 @@ export const DELETE = withRateLimitTier(withApiLogging(async (
       `UPDATE "api_key" 
        SET status = 'inactive', "updatedAt" = CURRENT_TIMESTAMP
        WHERE id = $1 AND "userId" = $2
-       RETURNING id, name`,
+       RETURNING id, name, "keyHash"`,
       [id, authResult.user!.id],
       authResult.user!.id
     );
 
     if (result.rows.length === 0) {
       const response = createApiError('API key not found', 404, null, 'API_KEY_NOT_FOUND');
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
+
+    const revokedRow = result.rows[0] as { name: string; keyHash: string };
+
+    // Revocation must be effective right away, not after the 5 min cache TTL (see #92)
+    invalidateApiKeyCache(revokedRow.keyHash);
 
     const response = createApiResponse({ 
       revoked: true, 
       id,
-      name: (result.rows[0] as { name: string }).name
+      name: revokedRow.name
     });
-    return addCorsHeaders(response);
+    return addCorsHeaders(response, req);
   } catch (error) {
     console.error('Error revoking API key:', error);
     const response = createApiError('Internal server error', 500);
-    return addCorsHeaders(response);
+    return addCorsHeaders(response, req);
   }
 }), 'strict');

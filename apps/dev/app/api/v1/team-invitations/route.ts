@@ -14,8 +14,8 @@ import type { TeamInvitation } from '@nextsparkjs/core/lib/teams/types'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 // Handle CORS preflight
-export async function OPTIONS() {
-  return handleCorsPreflightRequest()
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request)
 }
 
 // GET /api/v1/team-invitations - List pending invitations for current user
@@ -106,10 +106,10 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
     const paginationMeta = createPaginationMeta(page, limit, total)
 
     const response = createApiResponse(invitations, paginationMeta)
-    return addCorsHeaders(response)
+    return addCorsHeaders(response, req)
   } catch (error) {
     console.error('Error fetching invitations:', error)
     const response = createApiError('Internal server error', 500)
-    return addCorsHeaders(response)
+    return addCorsHeaders(response, req)
   }
 }), 'read');
