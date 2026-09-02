@@ -42,6 +42,7 @@ export async function validateAndAuthenticateRequest(request: NextRequest): Prom
 
       if (session?.user?.id) {
         // Create session auth object with appropriate scopes based on user role
+        // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
         const userRole = session.user.role || 'member';
         const userFlags = ((session.user as { flags?: unknown[] }).flags || []) as import('../entities/types').UserFlag[];
         

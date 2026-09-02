@@ -50,6 +50,8 @@ interface CurrencySelectProps {
   disabled?: boolean
   className?: string
   clearable?: boolean
+  /** Forwarded to the combobox trigger so `<label for>` resolves (see #90) */
+  id?: string
 }
 
 export function CurrencySelect({
@@ -59,6 +61,7 @@ export function CurrencySelect({
   disabled = false,
   className,
   clearable = true,
+  id,
 }: CurrencySelectProps) {
   return (
     <div className="relative">
@@ -72,6 +75,7 @@ export function CurrencySelect({
         emptyMessage="No se encontraron monedas."
         disabled={disabled}
         clearable={clearable}
+        id={id}
         className={cn("pl-10", className)}
       />
     </div>

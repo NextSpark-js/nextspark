@@ -121,7 +121,8 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     const successUrl = `${appUrl}/dashboard/settings/billing?success=true`
     const cancelUrl = `${appUrl}/dashboard/settings/billing?canceled=true`
 
-    const session = await getBillingGateway().createCheckoutSession({
+    const gateway = await getBillingGateway()
+    const session = await gateway.createCheckoutSession({
       teamId,
       planSlug,
       billingPeriod,

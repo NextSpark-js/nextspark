@@ -34,6 +34,13 @@ interface ComboboxProps {
   disabled?: boolean
   clearable?: boolean
   className?: string
+  /**
+   * Id applied to the focusable trigger (role="combobox") so a `<label for>`
+   * can target it. Without it the label points at nothing (see #90).
+   */
+  id?: string
+  /** Accessible name for the clear control. */
+  clearLabel?: string
 }
 
 export function Combobox({
@@ -46,10 +53,13 @@ export function Combobox({
   disabled = false,
   clearable = false,
   className,
+  id,
+  clearLabel = "Limpiar selección",
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
 
   const selectedOption = options.find((option) => option.value === value)
+  const showClear = clearable && !disabled && !!selectedOption
 
   const handleSelect = (optionValue: string | number) => {
     if (disabled) return
@@ -59,55 +69,52 @@ export function Combobox({
     setOpen(false)
   }
 
-  const handleClear = (e: React.MouseEvent) => {
-    e.stopPropagation()
+  const handleClear = () => {
     if (disabled) return
     onChange(undefined)
   }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className={cn(
-            "w-full justify-between",
-            disabled && "opacity-50 cursor-not-allowed",
-            className
-          )}
-          disabled={disabled}
-        >
-          <span className="truncate">
-            {selectedOption ? selectedOption.label : placeholder}
-          </span>
-          <div className="flex items-center gap-1">
-            {clearable && selectedOption && (
-              <span
-                role="button"
-                tabIndex={0}
-                onClick={handleClear}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault()
-                    // Create a synthetic mouse event for handleClear
-                    const syntheticEvent = {
-                      preventDefault: () => {},
-                      stopPropagation: () => {}
-                    } as React.MouseEvent<HTMLSpanElement>
-                    handleClear(syntheticEvent)
-                  }
-                }}
-                className="h-4 w-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer"
-              >
-                <X className="h-3 w-3" />
-              </span>
+      {/*
+        The clear control is a real <button> rendered as a SIBLING of the
+        trigger (nesting interactive elements inside the trigger button is
+        invalid). It is absolutely positioned over the trigger's right edge
+        with a 44x44px hit area (touch-target minimum) — see #90.
+      */}
+      <div className="relative w-full">
+        <PopoverTrigger asChild>
+          <Button
+            id={id}
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className={cn(
+              "w-full justify-between",
+              showClear && "pr-14",
+              disabled && "opacity-50 cursor-not-allowed",
+              className
             )}
+            disabled={disabled}
+          >
+            <span className="truncate">
+              {selectedOption ? selectedOption.label : placeholder}
+            </span>
             <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
-          </div>
-        </Button>
-      </PopoverTrigger>
+          </Button>
+        </PopoverTrigger>
+        {showClear && (
+          <button
+            type="button"
+            aria-label={clearLabel}
+            title={clearLabel}
+            onClick={handleClear}
+            className="absolute right-7 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+          >
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        )}
+      </div>
       <PopoverContent
         className="p-0"
         align="start"

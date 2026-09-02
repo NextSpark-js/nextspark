@@ -38,9 +38,15 @@ export class TeamMemberService {
   /**
    * Get team member by team and user ID
    *
+   * Only resolves memberships of active teams. Team deletion is a soft delete
+   * (UPDATE "teams" SET "deletedAt"), which never fires the ON DELETE CASCADE
+   * on team_members, so membership rows outlive the team. A member of a
+   * soft-deleted team is reported as "not a member" (null), the same shape
+   * callers already handle for users who were never on the team (issue #88).
+   *
    * @param teamId - Team ID
    * @param userId - User ID
-   * @returns Team member or null if not found
+   * @returns Team member or null if not found (or if the team is soft-deleted)
    *
    * @example
    * const member = await TeamMemberService.getByTeamAndUser('team-123', 'user-456')
@@ -54,7 +60,10 @@ export class TeamMemberService {
     }
 
     return queryOneWithRLS<TeamMember>(
-      'SELECT * FROM "team_members" WHERE "teamId" = $1 AND "userId" = $2',
+      `SELECT tm.*
+         FROM "team_members" tm
+         INNER JOIN "teams" t ON t.id = tm."teamId"
+        WHERE tm."teamId" = $1 AND tm."userId" = $2 AND t."deletedAt" IS NULL`,
       [teamId, userId],
       userId
     )
@@ -104,9 +113,12 @@ export class TeamMemberService {
   /**
    * Get user's role in a team
    *
+   * Only resolves roles in active teams: a member of a soft-deleted team
+   * (teams."deletedAt" set) is reported as not a member (issue #88).
+   *
    * @param teamId - Team ID
    * @param userId - User ID
-   * @returns The user's role or null if not a member
+   * @returns The user's role or null if not a member (or if the team is soft-deleted)
    *
    * @example
    * const role = await TeamMemberService.getRole('team-123', 'user-456')
@@ -117,7 +129,10 @@ export class TeamMemberService {
     }
 
     const member = await queryOneWithRLS<{ role: TeamRole }>(
-      'SELECT role FROM "team_members" WHERE "teamId" = $1 AND "userId" = $2',
+      `SELECT tm.role
+         FROM "team_members" tm
+         INNER JOIN "teams" t ON t.id = tm."teamId"
+        WHERE tm."teamId" = $1 AND tm."userId" = $2 AND t."deletedAt" IS NULL`,
       [teamId, userId],
       userId
     )
@@ -390,9 +405,12 @@ export class TeamMemberService {
   /**
    * Check if user is a member of a team
    *
+   * Only counts membership in active teams: a member of a soft-deleted team
+   * (teams."deletedAt" set) is reported as not a member (issue #88).
+   *
    * @param teamId - Team ID
    * @param userId - User ID
-   * @returns True if user is a member
+   * @returns True if user is a member of an active team
    *
    * @example
    * const isMember = await TeamMemberService.isMember('team-123', 'user-456')
@@ -403,7 +421,10 @@ export class TeamMemberService {
     }
 
     const member = await queryOneWithRLS<{ id: string }>(
-      'SELECT id FROM "team_members" WHERE "teamId" = $1 AND "userId" = $2',
+      `SELECT tm.id
+         FROM "team_members" tm
+         INNER JOIN "teams" t ON t.id = tm."teamId"
+        WHERE tm."teamId" = $1 AND tm."userId" = $2 AND t."deletedAt" IS NULL`,
       [teamId, userId],
       userId
     )

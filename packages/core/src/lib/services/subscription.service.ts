@@ -474,7 +474,8 @@ export class SubscriptionService {
 
     // 5. Update via payment provider
     try {
-      await getBillingGateway().updateSubscriptionPlan({
+      const gateway = await getBillingGateway()
+      await gateway.updateSubscriptionPlan({
         subscriptionId: currentSub.externalSubscriptionId,
         newPriceId,
       })

@@ -1,15 +1,16 @@
--- Migration: 025_login_events.sql
+-- Migration: 026_login_events.sql
 -- Description: login_events — per-user device/login history for built-in
 --              security email notifications (new-device login alerts).
 -- Date: 2026-09-01
 -- Issue: #75
 --
--- Why 025 (and not 022 as the issue text proposed):
+-- Why 026 (and not 022 as the issue text proposed, nor 025):
 --   The issue was written when the migration sequence ended earlier. By the
---   time this ships the sequence already goes through 024_teams_soft_delete.sql
---   (022 and 023 are taken by rls_runtime_roles and the invitations index).
---   The next free number is 025 — using the literal 022 from the issue would
---   collide and never run.
+--   time this branch was authored the sequence already went through
+--   024_teams_soft_delete.sql (022 and 023 are taken by rls_runtime_roles and
+--   the invitations index), so this migration was originally 025. It was
+--   renumbered to 026 when merging to main, because 025 had in the meantime
+--   been taken by 025_api_audit_log_nullable_api_key.sql (issue #105).
 --
 -- What this backs:
 --   The security-notifications dispatcher records one row per successful sign-in

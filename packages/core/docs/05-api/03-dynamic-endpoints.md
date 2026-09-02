@@ -164,6 +164,27 @@ export const OPTIONS = handleGenericOptions // CORS
 | `child` | LIST, READ | Include child entities |
 | `{field}={value}` | LIST | Custom field filtering |
 
+### Parameter validation
+
+Unsupported list parameters are **rejected with `400`** rather than silently
+ignored, so a typo never produces a plausible-looking but wrong result:
+
+| Situation | Status | `code` |
+|-----------|--------|--------|
+| `{field}` is not a declared entity field (e.g. `?statuz=active`) | 400 | `INVALID_FILTER` — `details.invalidKeys` lists the offending keys |
+| `sortBy` is neither an entity field nor `id`/`createdAt`/`updatedAt`/`teamId` | 400 | `INVALID_SORT_FIELD` |
+| `search` on an entity with none of `name`/`title`/`slug`/`content` | 400 | `SEARCH_NOT_SUPPORTED` |
+| `fields=X&distinct=true` where `X` is not an entity field | 400 | `INVALID_FIELD` |
+
+Filtering a `date`/`datetime` field with a bare calendar day
+(`?publishedAt=2026-01-15`) matches the **whole day** (`>= 2026-01-15 AND
+< 2026-01-16`). A value with a time component is compared for exact equality.
+Use `dateField`/`from`/`to` for arbitrary ranges.
+
+Create/update bodies are validated with **strict** schemas: an unknown key
+(e.g. `notes` when the field is `note`) returns `400 VALIDATION_ERROR` with an
+`unrecognized_keys` issue instead of being dropped.
+
 ---
 
 ## LIST Operation (GET)
@@ -827,6 +848,16 @@ X-API-Key: sk_live_abc123...  (alternative to Authorization)
   }
 }
 ```
+
+Database integrity errors on write operations are mapped to client errors
+instead of a generic `500`:
+
+| PostgreSQL error | Status | `code` |
+|------------------|--------|--------|
+| `23505` unique violation | 409 | `UNIQUE_CONSTRAINT_VIOLATION` |
+| `23514` CHECK constraint violation | 422 | `CHECK_CONSTRAINT_VIOLATION` — `details.constraint` names the constraint |
+| `23503` foreign key violation on create/update (dangling reference) | 422 | `FOREIGN_KEY_VIOLATION` |
+| `23503` foreign key violation on delete (row still referenced) | 409 | `FOREIGN_KEY_VIOLATION` |
 
 ---
 

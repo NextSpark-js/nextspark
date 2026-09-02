@@ -7,7 +7,17 @@ export async function getUserLocale(): Promise<SupportedLocale> {
   // 1. Check user profile from database first (highest priority)
   try {
     const sessionHeaders = await headers()
-    const session = await auth.api.getSession({ headers: sessionHeaders })
+    // `disableRefresh`: this runs while rendering Server Components (root
+    // layout / i18n request config), where Next.js cannot write cookies. Without
+    // it Better Auth's rolling renewal would extend `expiresAt` in the DB but the
+    // re-issued cookie would be silently dropped (nextCookies swallows the
+    // error) — consuming the renewal window so the browser cookie expires N days
+    // after login even for daily users. Real renewal happens from a Route
+    // Handler: see `lib/auth/session-refresh.ts` / `useSessionCookieRefresh`.
+    const session = await auth.api.getSession({
+      headers: sessionHeaders,
+      query: { disableRefresh: true },
+    })
 
     if (session?.user?.id) {
       const user = await queryOne<{ language: string }>(

@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod'
+import { SYSTEM_FIELD_NAMES } from './system-fields'
 import type { EntityConfig, EntityField, ChildEntityDefinition } from './types'
 import { mediaRefSchema } from '../../types/blocks'
 
@@ -71,12 +72,35 @@ export function generateEntitySchemas(
       })),
       z.unknown(), // Fallback for flexibility
     ]).optional()
+    // The builder editor also sends page `settings` (SEO, custom fields)
+    // alongside `blocks`. Accepted here so the strict schema does not reject
+    // builder saves; the generic handler only persists declared columns.
+    createFields.settings = z.unknown().optional()
   }
 
-  const createSchema = z.object(createFields)
-  
-  // Update schema (all fields optional except id)
-  const updateSchema = createSchema.partial()
+  // #97: strict — z.object() silently STRIPS unknown keys by default, so a
+  // typo'd key (`notes` for `note`) was accepted with a 201 and the value
+  // quietly discarded. Unknown keys now fail validation (`unrecognized_keys`)
+  // and the handlers answer 400 VALIDATION_ERROR naming them.
+  const createSchema = z.object(createFields).strict()
+
+  // Update schema (all fields optional). `.partial()` preserves the strict
+  // unknown-keys policy for real typos, but the record a client fetched and
+  // PATCHes back legitimately carries the read-only/system columns (`id`,
+  // `createdAt`, `updatedAt`, soft-delete markers, read-only fields). The edit
+  // form does exactly that, so those keys are stripped before validation
+  // instead of failing the whole update as "unknown" (#97 follow-up).
+  const readOnlyKeys = new Set<string>([
+    ...SYSTEM_FIELD_NAMES,
+    ...(entityConfig.table?.softDelete ? ['deletedAt', 'deletedBy'] : []),
+    ...entityConfig.fields
+      .filter(field => field.api.readOnly && !includeReadOnly)
+      .map(field => field.name),
+  ])
+  const updateSchema = z.preprocess(
+    (data) => stripKeys(data, readOnlyKeys),
+    createSchema.partial()
+  )
   
   // Response schema (includes all fields including read-only)
   const responseFields = entityConfig.fields.reduce((acc, field) => {
@@ -125,6 +149,17 @@ export function generateEntitySchemas(
     list: listSchema,
     childSchemas
   }
+}
+
+/**
+ * Drop the given keys from a plain object before validation. Non-object input
+ * is returned untouched so the schema itself reports the type error.
+ */
+function stripKeys(data: unknown, keys: Set<string>): unknown {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return data
+  return Object.fromEntries(
+    Object.entries(data as Record<string, unknown>).filter(([key]) => !keys.has(key))
+  )
 }
 
 /**
@@ -926,7 +961,8 @@ function generateChildEntitySchema(
     }
   })
 
-  return z.object(fields)
+  // Same unknown-keys policy as the parent create/update schemas (#97)
+  return z.object(fields).strict()
 }
 
 /**

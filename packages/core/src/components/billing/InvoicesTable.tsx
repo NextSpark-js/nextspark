@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { ExternalLink } from 'lucide-react'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import {
   Table,
   TableBody,
@@ -43,13 +43,15 @@ export function InvoicesTable({
   onPageChange,
 }: InvoicesTableProps) {
   const t = useTranslations('settings.billing.invoices')
+  // Active next-intl locale so dates/amounts follow the app language (see #85)
+  const locale = useLocale()
 
   const currentPage = Math.floor(offset / limit) + 1
   const totalPages = Math.ceil(total / limit)
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
-    return new Intl.DateTimeFormat('en-US', {
+    return new Intl.DateTimeFormat(locale, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -57,7 +59,7 @@ export function InvoicesTable({
   }
 
   const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
       currency: currency,
     }).format(amount)

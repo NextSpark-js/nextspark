@@ -3,7 +3,7 @@
 import { useAuth } from '@nextsparkjs/core/hooks/useAuth'
 import { useRouter } from 'next/navigation'
 import { useEffect, Suspense } from 'react'
-import { Loader2 } from 'lucide-react'
+import { DashboardAuthSkeleton } from '@nextsparkjs/core/components/dashboard/layouts/DashboardAuthSkeleton'
 import { DashboardProviders } from '@nextsparkjs/core/providers/DashboardProviders'
 import { DashboardTranslationPreloader } from '@nextsparkjs/core/lib/i18n/DashboardTranslationPreloader'
 import { TranslationDebugger } from '@nextsparkjs/core/utils/dev/TranslationDebugger'
@@ -35,11 +35,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   }, [user, isLoading, router])
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    )
+    return <DashboardAuthSkeleton />
   }
 
   if (!user) {

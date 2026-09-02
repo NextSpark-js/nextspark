@@ -1,13 +1,17 @@
 /**
  * MCP audit trail.
  *
- * The core's api_audit_log exists but the generic entity handlers never write
- * to it directly for in-process invocations (logApiUsage only runs inside
- * withApiAuth, which the MCP executor's synthesized requests don't go
- * through). Every MCP tool call is recorded here so destructive actions by an
+ * Every MCP tool call is recorded here so destructive actions by an
  * autonomous agent are at least reconstructable — same insert shape as
  * `logApiUsage` (packages/core/src/lib/api/helpers.ts), including passing the
  * caller's userId as RLS context.
+ *
+ * Since #105 the generic entity handlers also write their own row per
+ * request (endpoint `/api/v1/...`, see lib/api/entity/audit-log.ts), so an
+ * MCP tool call produces two rows: this one (`mcp:<tool>`, with the tool
+ * arguments) and the underlying API call's. They are complementary, not
+ * duplicates — this row carries what the agent asked for, the other what
+ * the API answered.
  *
  * Note for operators: revoking an API key can take up to 5 minutes to become
  * effective (core apiKeyCache TTL) — the audit log covers that window.

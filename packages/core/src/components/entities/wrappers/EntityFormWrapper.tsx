@@ -54,6 +54,9 @@ export function EntityFormWrapper({
 
   const [initialData, setInitialData] = useState<Record<string, unknown>>(propsInitialData || {})
   const [isLoadingData, setIsLoadingData] = useState(false)
+  // Last failed save, shown inside the form (#97 follow-up). Before, a 400 from
+  // the API only reached console.error/onError and the Save button looked inert.
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   // Load initial data for edit mode or use provided initialData for create mode
   useEffect(() => {
@@ -91,6 +94,7 @@ export function EntityFormWrapper({
   }, [mode, id, entityType, entityConfig, onError, isOverride, propsInitialData])
 
   const handleSubmit = useCallback(async (data: Record<string, unknown>) => {
+    setSubmitError(null)
     try {
       console.log(`${mode === 'create' ? 'Creating' : 'Updating'} ${entityType}:`, data)
 
@@ -104,8 +108,10 @@ export function EntityFormWrapper({
         onSuccess?.(id)
       }
     } catch (error) {
-      console.error(`❌ Failed to ${mode} ${entityType}:`, error)
-      onError?.(error instanceof Error ? error : new Error(`Failed to ${mode} ${entityType}`))
+      const failure = error instanceof Error ? error : new Error(`Failed to ${mode} ${entityType}`)
+      console.error(`❌ Failed to ${mode} ${entityType}:`, failure)
+      setSubmitError(failure.message)
+      onError?.(failure)
     }
   }, [entityType, mode, id, onSuccess, onError])
 
@@ -162,6 +168,7 @@ export function EntityFormWrapper({
           mode={mode}
           initialData={initialData}
           onSubmit={handleSubmit}
+          error={submitError}
           className={className}
           teamId={teamId}
         />
