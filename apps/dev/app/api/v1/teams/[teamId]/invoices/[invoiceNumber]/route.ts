@@ -54,7 +54,7 @@ export const GET = withRateLimitTier(withApiLogging(
 
       // Check if user has permission to view invoices using MembershipService
       const membership = await MembershipService.get(authResult.user!.id, teamId)
-      const actionResult = membership.canPerformAction('billing.invoices')
+      const actionResult = membership.canPerformAction('team.billing.view')
 
       if (!actionResult.allowed) {
         const response = NextResponse.json(

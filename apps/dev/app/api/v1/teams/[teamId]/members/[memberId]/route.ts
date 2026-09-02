@@ -55,7 +55,7 @@ export const PATCH = withRateLimitTier(withApiLogging(
 
       // Check if user has permission to update member roles using MembershipService
       const membership = await MembershipService.get(authResult.user!.id, teamId)
-      const actionResult = membership.canPerformAction('members.update_role')
+      const actionResult = membership.canPerformAction('team.members.update_role')
 
       if (!actionResult.allowed) {
         const response = NextResponse.json(
@@ -194,7 +194,7 @@ export const DELETE = withRateLimitTier(withApiLogging(
 
       // Check if user has permission to remove members using MembershipService
       const membership = await MembershipService.get(authResult.user!.id, teamId)
-      const actionResult = membership.canPerformAction('members.remove')
+      const actionResult = membership.canPerformAction('team.members.remove')
 
       if (!actionResult.allowed) {
         const response = NextResponse.json(

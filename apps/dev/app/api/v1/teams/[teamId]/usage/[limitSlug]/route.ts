@@ -25,7 +25,7 @@ export const GET = withRateLimitTier(async function GET(request: NextRequest, pr
   try {
     // Check if user has permission to view usage using MembershipService
     const membership = await MembershipService.get(auth.userId, teamId)
-    const actionResult = membership.canPerformAction('billing.view')
+    const actionResult = membership.canPerformAction('team.billing.view')
 
     if (!actionResult.allowed) {
       return NextResponse.json(
@@ -57,7 +57,7 @@ export const POST = withRateLimitTier(async function POST(request: NextRequest, 
   try {
     // Check if user has permission to track usage using MembershipService
     const membership = await MembershipService.get(auth.userId, teamId)
-    const actionResult = membership.canPerformAction('billing.manage')
+    const actionResult = membership.canPerformAction('team.billing.manage')
 
     if (!actionResult.allowed) {
       return NextResponse.json(

@@ -193,7 +193,7 @@ export const POST = withRateLimitTier(withApiLogging(
 
       // Check if user has permission to invite members using MembershipService
       const membership = await MembershipService.get(authResult.user!.id, teamId)
-      const actionResult = membership.canPerformAction('members.invite')
+      const actionResult = membership.canPerformAction('team.members.invite')
 
       if (!actionResult.allowed) {
         const response = NextResponse.json(
