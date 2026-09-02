@@ -2,6 +2,12 @@
  * Scope Registry Generator
  *
  * Generates scope-registry.ts
+ */
+
+import { join } from 'path'
+import { convertCorePath } from '../config.mjs'
+
+/**
  *
  * IMPORTANT: unlike most registry generators, the role→scope computation does
  * NOT happen here at generation time. It happens at IMPORT TIME inside the
@@ -58,6 +64,7 @@ const SCOPE_RESTRICTIONS = {
  * @returns {string} Generated TypeScript content
  */
 export function generateScopeRegistry(entities, config) {
+  const outputFilePath = config.outputDir ? join(config.outputDir, 'scope-registry.ts') : 'scope-registry.ts'
   return `/**
  * Auto-generated API Scope Registry
  *
@@ -76,8 +83,8 @@ export function generateScopeRegistry(entities, config) {
 
 import { ENTITY_REGISTRY } from './entity-registry'
 import { AVAILABLE_ROLES, PERMISSIONS_BY_ROLE } from './permissions-registry'
-import type { Permission } from '@/core/lib/permissions/types'
-import type { EntityConfig } from '@/core/lib/entities/types'
+import type { Permission } from '${convertCorePath('@/core/lib/permissions/types', outputFilePath, config)}'
+import type { EntityConfig } from '${convertCorePath('@/core/lib/entities/types', outputFilePath, config)}'
 
 export interface ScopeConfig {
   base: string[]

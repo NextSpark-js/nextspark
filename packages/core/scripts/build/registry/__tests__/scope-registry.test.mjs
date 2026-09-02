@@ -86,3 +86,21 @@ test('is a pure function of its output shape — always emits both SCOPE_CONFIG 
   assert.match(out, /export const SCOPE_CONFIG: ScopeConfig = \{/)
   assert.match(out, /export const API_CONFIG: ApiConfig = \{/)
 })
+
+// Regression for the npm-mode bug: this generator hardcoded the two `@/core/*`
+// type-only imports instead of routing them through convertCorePath() like
+// every sibling generator does, so a scaffolded (non-monorepo) app's tsconfig
+// — which maps `@/*` to its own `./*`, not to core — failed `tsc --noEmit`
+// with TS2307 on both. See https://github.com/NextSpark-js/nextspark/issues/133
+test('monorepo mode (isNpmMode: false or unset): @/core/* type imports are left as-is', () => {
+  const out = generateScopeRegistry([], { isNpmMode: false })
+  assert.match(out, /import type \{ Permission \} from '@\/core\/lib\/permissions\/types'/)
+  assert.match(out, /import type \{ EntityConfig \} from '@\/core\/lib\/entities\/types'/)
+})
+
+test('npm mode: @/core/* type imports are converted to @nextsparkjs/core/*, like every sibling generator', () => {
+  const out = generateScopeRegistry([], { isNpmMode: true, outputDir: '/project/.nextspark/registries' })
+  assert.match(out, /import type \{ Permission \} from '@nextsparkjs\/core\/lib\/permissions\/types'/)
+  assert.match(out, /import type \{ EntityConfig \} from '@nextsparkjs\/core\/lib\/entities\/types'/)
+  assert.doesNotMatch(out, /from '@\/core\//)
+})
