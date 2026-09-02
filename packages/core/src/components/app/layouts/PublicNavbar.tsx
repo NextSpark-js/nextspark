@@ -9,14 +9,14 @@ import { useState } from 'react'
 import { sel } from '../../../lib/test'
 
 import { useTranslations } from 'next-intl'
+import { APP_NAME } from '../../../lib/config'
 
 export function PublicNavbar() {
   const { user, isLoading } = useAuth()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const tNav = useTranslations('navigation')
   const tHome = useTranslations('home')
-  const tCommon = useTranslations('common')
-  const appName = tCommon('appName')
+  const appName = APP_NAME
 
   const navigationItems = [
     { name: 'features', href: '/features' },

@@ -12,6 +12,7 @@ import {
   type ThemeRegistryEntry
 } from '@nextsparkjs/registries/theme-registry'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { validateAndAuthenticateRequest } from '@nextsparkjs/core/lib/api/helpers'
 
 export const GET = withRateLimitTier(async (
   request: NextRequest,
@@ -111,6 +112,12 @@ async function handleThemeRequest(
       console.log(`[Theme API] No route found for ${requestPath}, method: ${method}`)
     }
 
+    // The endpoint catalog is only disclosed to authenticated callers.
+    // Anonymous requests still get theme info / 404, but never the route map.
+    const endpointCatalog = (await isAuthenticatedRequest(request))
+      ? { availableEndpoints: getThemeEndpoints(themeName) }
+      : {}
+
     // Default theme info endpoint
     if (!endpointPath && method === 'GET') {
       return NextResponse.json({
@@ -124,7 +131,7 @@ async function handleThemeRequest(
           entities: themeEntry.entities?.length || 0,
           routeFiles: themeEntry.routeFiles?.length || 0,
           plugins: themeEntry.plugins || [],
-          availableEndpoints: getThemeEndpoints(themeName)
+          ...endpointCatalog
         }
       })
     }
@@ -136,7 +143,7 @@ async function handleThemeRequest(
         theme: themeName,
         path: endpointPath,
         method,
-        availableEndpoints: getThemeEndpoints(themeName)
+        ...endpointCatalog
       },
       { status: 404 }
     )
@@ -151,6 +158,20 @@ async function handleThemeRequest(
       },
       { status: 500 }
     )
+  }
+}
+
+/**
+ * Check whether the request carries a valid session or API key.
+ * Used to gate the endpoint catalog (see #104 / #109): the list of registered
+ * theme routes must not be enumerable by anonymous callers.
+ */
+async function isAuthenticatedRequest(request: NextRequest): Promise<boolean> {
+  try {
+    const { auth, rateLimitResponse } = await validateAndAuthenticateRequest(request)
+    return !rateLimitResponse && Boolean(auth?.userId)
+  } catch {
+    return false
   }
 }
 

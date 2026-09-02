@@ -17,8 +17,8 @@ import type { Team } from '@nextsparkjs/core/lib/teams/types'
 import { APP_CONFIG_MERGED } from '@nextsparkjs/core/lib/config/config-sync'
 
 // Handle CORS preflight
-export async function OPTIONS() {
-  return handleCorsPreflightRequest()
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request)
 }
 
 // GET /api/v1/teams - List user's teams
@@ -60,7 +60,7 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
         'Insufficient permissions. Superadmin access required for scope=all.',
         403
       )
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
 
     // Build WHERE clause based on filters
@@ -158,11 +158,11 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
     }))
 
     const response = createApiResponse(teamsWithMembers, paginationMeta)
-    return addCorsHeaders(response)
+    return addCorsHeaders(response, req)
   } catch (error) {
     console.error('Error fetching teams:', error)
     const response = createApiError('Internal server error', 500)
-    return addCorsHeaders(response)
+    return addCorsHeaders(response, req)
   }
 }), 'read')
 
@@ -195,7 +195,7 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
         null,
         'TEAM_CREATION_DISABLED'
       )
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
 
     // Validate allowCreateTeams option
@@ -216,7 +216,7 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
           null,
           'MAX_TEAMS_REACHED'
         )
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
     }
 
@@ -224,7 +224,7 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
     const slugAvailable = await TeamService.isSlugAvailable(validatedData.slug)
     if (!slugAvailable) {
       const response = createApiError('Team slug already exists', 409, null, 'SLUG_EXISTS')
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
 
     // Use transaction to ensure atomicity
@@ -276,7 +276,7 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
       }
 
       const response = createApiResponse(responseData, { created: true }, 201)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     } catch (error) {
       await tx.rollback()
       throw error
@@ -285,11 +285,11 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
     if (error instanceof Error && error.name === 'ZodError') {
       const zodError = error as { issues?: unknown[] }
       const response = createApiError('Validation error', 400, zodError.issues, 'VALIDATION_ERROR')
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
 
     console.error('Error creating team:', error)
     const response = createApiError('Internal server error', 500)
-    return addCorsHeaders(response)
+    return addCorsHeaders(response, req)
   }
 }), 'write')

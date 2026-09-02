@@ -13,8 +13,8 @@ import { RATE_LIMITS } from '@nextsparkjs/core/lib/api/keys'
 import type { TeamInvitation } from '@nextsparkjs/core/lib/teams/types'
 
 // Handle CORS preflight
-export async function OPTIONS() {
-  return handleCorsPreflightRequest()
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request)
 }
 
 // POST /api/v1/team-invitations/:token/decline - Decline invitation
@@ -45,7 +45,7 @@ export const POST = withRateLimitTier(withApiLogging(
           { retryAfter: Math.ceil((rateLimit.resetTime - Date.now()) / 1000) },
           'RATE_LIMIT_EXCEEDED'
         )
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       const { token } = await params
@@ -53,7 +53,7 @@ export const POST = withRateLimitTier(withApiLogging(
       // Validate that token is not empty
       if (!token || token.trim() === '') {
         const response = createApiError('Invitation token is required', 400, null, 'MISSING_TOKEN')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Get invitation by token
@@ -65,7 +65,7 @@ export const POST = withRateLimitTier(withApiLogging(
 
       if (!invitation) {
         const response = createApiError('Invitation not found', 404, null, 'INVITATION_NOT_FOUND')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Verify invitation is for the current user's email
@@ -76,7 +76,7 @@ export const POST = withRateLimitTier(withApiLogging(
           null,
           'EMAIL_MISMATCH'
         )
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Check if invitation is pending
@@ -87,7 +87,7 @@ export const POST = withRateLimitTier(withApiLogging(
           null,
           'INVITATION_NOT_PENDING'
         )
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Update invitation status to declined
@@ -102,17 +102,17 @@ export const POST = withRateLimitTier(withApiLogging(
 
       if (result.rows.length === 0) {
         const response = createApiError('Invitation not found', 404, null, 'INVITATION_NOT_FOUND')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       const declinedInvitation = result.rows[0]
 
       const response = createApiResponse(declinedInvitation)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     } catch (error) {
       console.error('Error declining invitation:', error)
       const response = createApiError('Internal server error', 500)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
   }
 ), 'write');

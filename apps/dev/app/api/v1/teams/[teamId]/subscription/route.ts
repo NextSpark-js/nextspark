@@ -25,7 +25,7 @@ export const GET = withRateLimitTier(async function GET(request: NextRequest, pr
   try {
     // Check if user has permission to view subscription using MembershipService
     const membership = await MembershipService.get(auth.userId, teamId)
-    const actionResult = membership.canPerformAction('billing.view')
+    const actionResult = membership.canPerformAction('team.billing.view')
 
     if (!actionResult.allowed) {
       return NextResponse.json(

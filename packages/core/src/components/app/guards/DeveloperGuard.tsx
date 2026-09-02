@@ -30,6 +30,7 @@ export function DeveloperGuard({ children, fallback }: DeveloperGuardProps) {
 
   // Auto-redirect non-developer users
   useEffect(() => {
+    // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
     if (!isPending && session && session.user?.role !== 'developer') {
       router.push('/dashboard?error=access_denied');
     }
@@ -72,6 +73,7 @@ export function DeveloperGuard({ children, fallback }: DeveloperGuardProps) {
   }
 
   // Not a developer - show access denied
+  // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
   if (session.user?.role !== 'developer') {
     // Use custom fallback if provided
     if (fallback) {
@@ -130,5 +132,6 @@ export function DeveloperGuard({ children, fallback }: DeveloperGuardProps) {
  */
 export function useIsDeveloper(): boolean {
   const { data: session } = useSession();
+  // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
   return session?.user?.role === 'developer';
 }

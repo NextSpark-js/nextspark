@@ -3,7 +3,8 @@
 
 CREATE TABLE IF NOT EXISTS "api_audit_log" (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  "apiKeyId" TEXT NOT NULL REFERENCES public."api_key"(id) ON DELETE CASCADE,
+  -- NULL for session-authenticated requests (see 025_api_audit_log_nullable_api_key.sql)
+  "apiKeyId" TEXT REFERENCES public."api_key"(id) ON DELETE CASCADE,
   "userId"   TEXT NOT NULL REFERENCES public."users"(id) ON DELETE CASCADE,
   endpoint   TEXT NOT NULL,
   method     TEXT NOT NULL,

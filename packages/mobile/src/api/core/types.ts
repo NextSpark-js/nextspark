@@ -34,13 +34,40 @@ export interface AuthSession {
 }
 
 /**
- * Login response from Better Auth
+ * Login methods the mobile login screen can offer (mirrors the web
+ * `AUTH_CONFIG.methods`). Configure them in `src/config/app.config.ts`.
+ * Default preset: passwordless — `['email-otp', 'google']`.
+ */
+export type AuthLoginMethod = 'email-otp' | 'google' | 'email-password'
+
+/**
+ * Login response from Better Auth (`/sign-in/email`).
+ * Better Auth returns the session token at the top level (`token`); the
+ * nested `session.token` shape is kept for backwards compatibility.
  */
 export interface LoginResponse {
   user: User
-  session: {
+  token?: string
+  session?: {
     token: string
-  }
+  } | null
+}
+
+/**
+ * Passwordless login response from Better Auth (`/sign-in/email-otp`)
+ */
+export interface OtpLoginResponse {
+  user: User
+  token: string
+}
+
+/**
+ * Social sign-in bootstrap response (`/sign-in/social` with disableRedirect):
+ * the provider's authorization URL to open in a browser.
+ */
+export interface SocialSignInResponse {
+  url: string
+  redirect: boolean
 }
 
 /**

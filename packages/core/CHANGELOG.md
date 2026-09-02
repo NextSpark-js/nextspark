@@ -39,6 +39,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `mcp:<tool>` endpoint prefix.
   - New dependency: `@modelcontextprotocol/sdk` (`zod` was already in core's dependency tree).
   - New package export: `@nextsparkjs/core/lib/mcp`.
+- **Audit logging for the generic entity routes (#105).** Every authenticated
+  request to `/api/v1/[entity]` and `/api/v1/[entity]/[id]` — session or
+  API-key — now writes an `api_audit_log` row (endpoint, method, status code,
+  IP, user agent, response time; `apiKeyId` for API keys, `NULL` for
+  sessions). Logging is fire-and-forget and never affects the response. The
+  request body is not stored.
+  - **Migration `025_api_audit_log_nullable_api_key.sql`** drops the `NOT NULL`
+    on `api_audit_log."apiKeyId"` (the FK is unchanged). Run `db:migrate`.
+  - `DualAuthResult` gains `keyId` (the authenticating `api_key.id`) so the
+    audit row can be attributed without an extra lookup.
+  - MCP tool calls now produce two rows: the existing `mcp:<tool>` row and the
+    underlying API call's row.
 
 ### Security
 
@@ -124,6 +136,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     superadmin can mint them; minting rules for non-superadmins are unchanged).
     Anonymous and session behaviour is unchanged.
 
+- **SQL identifier injection in the generic list `distinct` query (#96).**
+  `GET /api/v1/{entity}?fields=X&distinct=true` interpolated the raw `fields`
+  value as a quoted SQL identifier without validating it against the entity's
+  fields — unlike the sibling non-distinct branch — so any caller with
+  `<slug>:read` could inject SQL into the SELECT list. The name is now
+  validated first (`400 INVALID_FIELD`) through the same `isEntityField` check
+  both branches share.
+
 ### Fixed
 
 - **`validateAndAuthenticateRequest()` no longer throws for anonymous requests (#112).**
@@ -139,12 +159,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Type change:** the resolved `auth` is now `Auth | null`; callers must branch on
     it before reading `auth.userId` / `auth.scopes`.
 
-### Known Limitations
+- **`beforeEntityCreate` is now invoked by the generic create handler (#118).**
+  `POST /api/v1/{entity}` only fired `afterEntityCreate`, so the
+  `entity.<slug>.before_create` filter could neither reshape nor reject a
+  payload before the INSERT. The hook now runs after authorization and before
+  the write; a thrown error rejects the create with `400
+  BEFORE_CREATE_REJECTED` (or the 4xx `status` the error carries).
 
-- Requests against the generic entity routes (`/api/v1/[entity]`) — session or
-  API-key — are still not written to `api_audit_log`; that table's `apiKeyId`
-  column is `NOT NULL`, so closing this gap needs a migration and a new logging
-  path, tracked separately from the fixes above.
+- **Generic entity handler no longer fails silently on bad list parameters,
+  unknown body keys, or CHECK-constraint violations (#97).** Each of these used
+  to return a plausible-looking wrong answer instead of an error the caller
+  could act on:
+  - `?search=` on an entity with none of `name`/`title`/`slug`/`content` → `400
+    SEARCH_NOT_SUPPORTED` (was: every row, unfiltered).
+  - A custom filter whose key is not an entity field (`?statuz=active`) → `400
+    INVALID_FILTER` naming the key(s) (was: filter silently dropped). Legacy
+    client params (`includeMeta`, `userId`, `sort`/`order`, `userFiltered`)
+    stay accepted; `sort`/`order` now work as aliases of `sortBy`/`sortOrder`.
+  - An invalid `?sortBy=` → `400 INVALID_SORT_FIELD` (was: silent default sort).
+  - `?dateField=2026-01-15` on a `date`/`datetime` field matches the whole
+    day (`>= day AND < day + 1`) instead of an equality that never matched a
+    timestamp; values with a time component keep exact equality.
+  - Create/update schemas from `generateEntitySchemas` are now `.strict()`:
+    an unknown body key (`notes` for `note`) → `400 VALIDATION_ERROR` with an
+    `unrecognized_keys` issue (was: silently stripped, `201`). Keys the handler
+    consumes itself (`metas`, `userId`, `teamId`, taxonomy relation arrays,
+    builder `blocks`/`settings`) are unaffected — and neither are read-only
+    system columns (`id`, `createdAt`, `updatedAt`, and any field marked
+    `api.readOnly`): the update schema strips them with `z.preprocess()`
+    before the `.strict()` check runs, since the dashboard's edit form submits
+    the full record it fetched, system fields included. Without this, saving
+    any edit from the dashboard UI failed with a silent `400` (only logged to
+    the console). `EntityFormWrapper` now surfaces a save error in the form
+    instead of swallowing it.
+  - PostgreSQL `23514` CHECK violations → `422 CHECK_CONSTRAINT_VIOLATION`
+    with the constraint name; `23503` on create/update → `422
+    FOREIGN_KEY_VIOLATION` (was: opaque `500`). `23505` → `409` and delete
+    `23503` → `409` are unchanged.
 
 ## [0.1.0-beta.167]
 

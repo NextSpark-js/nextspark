@@ -221,6 +221,16 @@ const PETS_ENTITY: EntityConfig = {
   },
 } as unknown as EntityConfig;
 
+/**
+ * Assert no entity row was written. Since #105 every authenticated request
+ * also INSERTs an api_audit_log row through mutateWithRLS, so "not called at
+ * all" is no longer the right check for a denied write.
+ */
+function expectNoEntityWrite() {
+  const entityWrites = mockMutateWithRLS.mock.calls.filter(([sql]: [string]) => !sql.includes('api_audit_log'));
+  expect(entityWrites).toHaveLength(0);
+}
+
 function routeQueryOneWithRLS(teamRole: string | null, memberExists = true) {
   mockQueryOneWithRLS.mockImplementation(async (sql: string) => {
     if (sql.includes('SELECT id FROM "team_members"')) {
@@ -340,7 +350,7 @@ describe('handleGenericUpdate — fieldGuards now apply to API-key auth', () => 
     const response = await handleGenericUpdate(request, { params: Promise.resolve({ entity: 'pets', id: 'pet-1' }) });
 
     expect((response as { status: number }).status).toBe(403);
-    expect(mockMutateWithRLS).not.toHaveBeenCalled();
+    expectNoEntityWrite();
   });
 
   it('allows an API-key PATCH that does not touch a guarded field', async () => {
@@ -399,7 +409,7 @@ describe('handleGenericCreate & handleGenericUpdate — a :write scope does not 
 
     expect((response as { status: number }).status).toBe(403);
     expect(mockCheckPermission).toHaveBeenCalledWith('key-owner-1', 'team-1', 'pets.create');
-    expect(mockMutateWithRLS).not.toHaveBeenCalled();
+    expectNoEntityWrite();
   });
 
   it('allows update for the SAME :write-scoped key, since that role does hold update permission', async () => {

@@ -13,8 +13,8 @@ import { RATE_LIMITS } from '@nextsparkjs/core/lib/api/keys'
 import type { TeamInvitation, TeamMember } from '@nextsparkjs/core/lib/teams/types'
 
 // Handle CORS preflight
-export async function OPTIONS() {
-  return handleCorsPreflightRequest()
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request)
 }
 
 // POST /api/v1/team-invitations/:token/accept - Accept invitation and become member
@@ -45,7 +45,7 @@ export const POST = withRateLimitTier(withApiLogging(
           { retryAfter: Math.ceil((rateLimit.resetTime - Date.now()) / 1000) },
           'RATE_LIMIT_EXCEEDED'
         )
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       const { token } = await params
@@ -53,7 +53,7 @@ export const POST = withRateLimitTier(withApiLogging(
       // Validate that token is not empty
       if (!token || token.trim() === '') {
         const response = createApiError('Invitation token is required', 400, null, 'MISSING_TOKEN')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Get invitation by token
@@ -65,7 +65,7 @@ export const POST = withRateLimitTier(withApiLogging(
 
       if (!invitation) {
         const response = createApiError('Invitation not found', 404, null, 'INVITATION_NOT_FOUND')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Verify invitation is for the current user's email
@@ -76,7 +76,7 @@ export const POST = withRateLimitTier(withApiLogging(
           null,
           'EMAIL_MISMATCH'
         )
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Check if invitation is pending
@@ -87,7 +87,7 @@ export const POST = withRateLimitTier(withApiLogging(
           null,
           'INVITATION_NOT_PENDING'
         )
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Check if invitation has expired
@@ -101,7 +101,7 @@ export const POST = withRateLimitTier(withApiLogging(
         )
 
         const response = createApiError('Invitation has expired', 410, null, 'INVITATION_EXPIRED')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Check if user is already a member
@@ -113,7 +113,7 @@ export const POST = withRateLimitTier(withApiLogging(
 
       if (existingMember) {
         const response = createApiError('You are already a member of this team', 409, null, 'ALREADY_MEMBER')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Use transaction to ensure atomicity
@@ -163,7 +163,7 @@ export const POST = withRateLimitTier(withApiLogging(
         )
 
         const response = createApiResponse(memberWithUser, { created: true }, 201)
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       } catch (error) {
         await tx.rollback()
         throw error
@@ -171,7 +171,7 @@ export const POST = withRateLimitTier(withApiLogging(
     } catch (error) {
       console.error('Error accepting invitation:', error)
       const response = createApiError('Internal server error', 500)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
   }
 ), 'write');

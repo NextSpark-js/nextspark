@@ -105,7 +105,7 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
 
   // 6. Cancel via billing gateway
   try {
-    const gateway = getBillingGateway()
+    const gateway = await getBillingGateway()
     if (immediate) {
       await gateway.cancelSubscriptionImmediately(subscription.externalSubscriptionId)
     } else {
@@ -172,7 +172,7 @@ async function handleReactivation(teamId: string) {
   }
 
   try {
-    const gateway = getBillingGateway()
+    const gateway = await getBillingGateway()
     await gateway.reactivateSubscription(subscription.externalSubscriptionId)
 
     // Update local DB

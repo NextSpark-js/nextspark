@@ -124,7 +124,7 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyAuth |
     // Verificar expiración y actualizar status si es necesario
     if (keyData.expiresAt && new Date(keyData.expiresAt) < new Date()) {
       // Marcar como expirada de forma asíncrona
-      markAsExpired(keyData.id).catch(console.error);
+      markAsExpired(keyData.id, keyHash).catch(console.error);
       await constantTimeDelay(startTime);
       return null;
     }
@@ -181,18 +181,44 @@ async function resetFailedAttempts(keyId: string): Promise<void> {
 /**
  * Marca una API key como expirada
  */
-async function markAsExpired(keyId: string): Promise<void> {
+async function markAsExpired(keyId: string, keyHash: string): Promise<void> {
   try {
     await queryOne(
       'UPDATE "api_key" SET status = $1 WHERE id = $2',
       ['expired', keyId]
     );
     
-    // Invalidar cache
-    const cacheKey = getCacheKey('api_key', keyId);
-    apiKeyCache.delete(cacheKey);
+    // Invalidar cache (la entrada está indexada por hash, no por id)
+    invalidateApiKeyCache(keyHash);
   } catch (error) {
     console.error('Failed to mark API key as expired:', error);
+  }
+}
+
+/**
+ * Elimina del cache la entrada de una API key (indexada por keyHash).
+ *
+ * Debe llamarse cada vez que cambia el `status` de una key (revocación,
+ * desactivación, expiración): validateApiKey() consulta el cache ANTES que la
+ * base de datos, así que sin esta invalidación una key revocada sigue
+ * autenticando hasta que vence el TTL (5 min). Ver #92.
+ */
+export function invalidateApiKeyCache(keyHash: string): void {
+  apiKeyCache.delete(getCacheKey('api_key', keyHash));
+}
+
+/**
+ * Variante por id para los call sites que no tienen el hash a mano.
+ * Hace una lectura extra; preferí invalidateApiKeyCache(keyHash) cuando el
+ * hash ya viene en la fila (por ejemplo vía RETURNING "keyHash").
+ */
+export async function invalidateApiKeyCacheById(keyId: string): Promise<void> {
+  const row = await queryOne<{ keyHash: string }>(
+    'SELECT "keyHash" FROM "api_key" WHERE id = $1',
+    [keyId]
+  );
+  if (row?.keyHash) {
+    invalidateApiKeyCache(row.keyHash);
   }
 }
 

@@ -14,8 +14,8 @@ import { TeamService, MembershipService } from '@nextsparkjs/core/lib/services'
 import type { Team, TeamRole } from '@nextsparkjs/core/lib/teams/types'
 
 // Handle CORS preflight
-export async function OPTIONS() {
-  return handleCorsPreflightRequest()
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request)
 }
 
 // GET /api/v1/teams/:teamId - Get team details
@@ -39,7 +39,7 @@ export const GET = withRateLimitTier(withApiLogging(
       // Validate that teamId is not empty
       if (!teamId || teamId.trim() === '') {
         const response = createApiError('Team ID is required', 400, null, 'MISSING_TEAM_ID')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Check if user is a member of the team
@@ -51,7 +51,7 @@ export const GET = withRateLimitTier(withApiLogging(
 
       if (!userRole) {
         const response = createApiError('Team not found or access denied', 404, null, 'TEAM_NOT_FOUND')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Fetch team with member count
@@ -70,7 +70,7 @@ export const GET = withRateLimitTier(withApiLogging(
 
       if (!team) {
         const response = createApiError('Team not found', 404, null, 'TEAM_NOT_FOUND')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       const responseData = {
@@ -79,11 +79,11 @@ export const GET = withRateLimitTier(withApiLogging(
       }
 
       const response = createApiResponse(responseData)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     } catch (error) {
       console.error('Error fetching team:', error)
       const response = createApiError('Internal server error', 500)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
   }
 ), 'read')
@@ -109,12 +109,12 @@ export const PATCH = withRateLimitTier(withApiLogging(
       // Validate that teamId is not empty
       if (!teamId || teamId.trim() === '') {
         const response = createApiError('Team ID is required', 400, null, 'MISSING_TEAM_ID')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Check if user has permission to edit team using MembershipService
       const membership = await MembershipService.get(authResult.user!.id, teamId)
-      const actionResult = membership.canPerformAction('teams.update')
+      const actionResult = membership.canPerformAction('team.edit')
 
       if (!actionResult.allowed) {
         const response = NextResponse.json(
@@ -126,7 +126,7 @@ export const PATCH = withRateLimitTier(withApiLogging(
           },
           { status: 403 }
         )
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       const body = await req.json()
@@ -137,7 +137,7 @@ export const PATCH = withRateLimitTier(withApiLogging(
         const slugAvailable = await TeamService.isSlugAvailable(validatedData.slug, teamId)
         if (!slugAvailable) {
           const response = createApiError('Team slug already exists', 409, null, 'SLUG_EXISTS')
-          return addCorsHeaders(response)
+          return addCorsHeaders(response, req)
         }
       }
 
@@ -173,7 +173,7 @@ export const PATCH = withRateLimitTier(withApiLogging(
 
       if (updates.length === 0) {
         const response = createApiError('No fields to update', 400, null, 'NO_FIELDS')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       updates.push(`"updatedAt" = CURRENT_TIMESTAMP`)
@@ -190,7 +190,7 @@ export const PATCH = withRateLimitTier(withApiLogging(
 
       if (result.rows.length === 0) {
         const response = createApiError('Team not found', 404, null, 'TEAM_NOT_FOUND')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Fetch team with member count
@@ -212,17 +212,17 @@ export const PATCH = withRateLimitTier(withApiLogging(
       }
 
       const response = createApiResponse(responseData)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     } catch (error) {
       if (error instanceof Error && error.name === 'ZodError') {
         const zodError = error as { issues?: unknown[] }
         const response = createApiError('Validation error', 400, zodError.issues, 'VALIDATION_ERROR')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       console.error('Error updating team:', error)
       const response = createApiError('Internal server error', 500)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
   }
 ), 'write')
@@ -248,7 +248,7 @@ export const DELETE = withRateLimitTier(withApiLogging(
       // Validate that teamId is not empty
       if (!teamId || teamId.trim() === '') {
         const response = createApiError('Team ID is required', 400, null, 'MISSING_TEAM_ID')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Use the TeamService.delete (handles owner check and personal team protection)
@@ -256,7 +256,7 @@ export const DELETE = withRateLimitTier(withApiLogging(
         await TeamService.delete(teamId, authResult.user!.id)
 
         const response = createApiResponse({ deleted: true, id: teamId })
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       } catch (error) {
         if (error instanceof Error && error.message === 'Only team owner can delete the team') {
           const response = createApiError(
@@ -265,17 +265,17 @@ export const DELETE = withRateLimitTier(withApiLogging(
             null,
             'INSUFFICIENT_PERMISSIONS'
           )
-          return addCorsHeaders(response)
+          return addCorsHeaders(response, req)
         }
 
         if (error instanceof Error && error.message === 'Team not found') {
           const response = createApiError('Team not found', 404, null, 'TEAM_NOT_FOUND')
-          return addCorsHeaders(response)
+          return addCorsHeaders(response, req)
         }
 
         if (error instanceof Error && error.message === 'Personal teams cannot be deleted') {
           const response = createApiError('Personal teams cannot be deleted', 403, null, 'PERSONAL_TEAM_DELETE_FORBIDDEN')
-          return addCorsHeaders(response)
+          return addCorsHeaders(response, req)
         }
 
         throw error
@@ -283,7 +283,7 @@ export const DELETE = withRateLimitTier(withApiLogging(
     } catch (error) {
       console.error('Error deleting team:', error)
       const response = createApiError('Internal server error', 500)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
   }
 ), 'write')

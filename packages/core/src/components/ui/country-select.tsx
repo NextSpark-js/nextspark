@@ -121,6 +121,8 @@ interface CountrySelectProps {
   disabled?: boolean
   className?: string
   clearable?: boolean
+  /** Forwarded to the combobox trigger so `<label for>` resolves (see #90) */
+  id?: string
 }
 
 export function CountrySelect({
@@ -130,6 +132,7 @@ export function CountrySelect({
   disabled = false,
   className,
   clearable = true,
+  id,
 }: CountrySelectProps) {
   return (
     <div className="relative">
@@ -143,6 +146,7 @@ export function CountrySelect({
         emptyMessage="No se encontraron países."
         disabled={disabled}
         clearable={clearable}
+        id={id}
         className={cn("pl-10", className)}
       />
     </div>

@@ -45,10 +45,54 @@ NextSpark uses [Better Auth](https://better-auth.com) for authentication. The mo
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `/api/auth/sign-in/email` | POST | Login with email/password |
+| `/api/auth/email-otp/send-verification-otp` | POST | Passwordless step 1: email a 6-digit sign-in code (`{ email, type: 'sign-in' }`) |
+| `/api/auth/sign-in/email-otp` | POST | Passwordless step 2: exchange the code for a session (`{ email, otp }`) |
+| `/api/auth/sign-in/social` | POST | Get the Google authorization URL (`{ provider, callbackURL, disableRedirect: true }`) |
+| `/api/auth/sign-in/email` | POST | Login with email/password (classic preset) |
 | `/api/auth/get-session` | GET | Validate current session |
 | `/api/auth/sign-out` | POST | Logout and invalidate session |
 | `/api/v1/teams` | GET | Get user's teams |
+
+## Login Methods (passwordless preset by default)
+
+The login screen (`app/login.tsx`) renders whatever `APP_CONFIG.auth.methods`
+lists (`src/config/app.config.ts`), in priority order. The default is the
+portfolio's **passwordless preset** — no password field:
+
+```ts
+auth: {
+  methods: ['email-otp', 'google'],              // default
+  // methods: ['email-password', 'google'],      // classic
+  // methods: ['email-otp', 'email-password', 'google'], // both, code first
+}
+```
+
+The backend always serves every method; this list only shapes the UI. Keep it in
+sync with the web app's `auth.methods`.
+
+### One-time code by email
+
+```ts
+const { requestOtp, loginWithOtp } = useAuth()
+
+await requestOtp('user@example.com')          // emails a 6-digit code (5-minute expiry)
+await loginWithOtp('user@example.com', '123456') // creates the session; first sign-in creates the account
+```
+
+`loginWithOtp` stores the user and the Bearer token and loads the teams exactly
+like `login()`. The code is delivered through the backend's email provider
+(Resend in the default setup — `RESEND_API_KEY` / `RESEND_FROM_EMAIL`).
+
+### Google
+
+`authApi.getSocialSignInUrl('google', callbackURL)` returns the provider URL and
+the login screen opens it with `expo-linking`. On **Expo web** the browser shares
+cookies with the app, so the session created by the OAuth callback is picked up
+on return. On a **native device** the browser session is not handed back to the
+app by itself — wire Better Auth's Expo plugin (`@better-auth/expo`, server +
+client with SecureStore) for a complete native flow; the button is the
+integration point. Requires `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` on the
+backend.
 
 ## API Client Implementation
 

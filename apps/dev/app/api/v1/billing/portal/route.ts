@@ -70,7 +70,8 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173'
     const returnUrl = `${appUrl}/dashboard/settings/billing`
 
-    const session = await getBillingGateway().createPortalSession({
+    const gateway = await getBillingGateway()
+    const session = await gateway.createPortalSession({
       customerId: subscription.externalCustomerId,
       returnUrl
     })

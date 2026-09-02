@@ -28,8 +28,8 @@ import { PatternUsageService } from '@nextsparkjs/core/lib/services'
 import { queryOneWithRLS } from '@nextsparkjs/core/lib/db'
 
 // Handle CORS preflight
-export async function OPTIONS() {
-  return handleCorsPreflightRequest()
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request)
 }
 
 // GET /api/v1/patterns/:id/usages - Get pattern usages
@@ -54,7 +54,7 @@ export const GET = withApiLogging(
       // Validate that patternId is not empty
       if (!patternId || patternId.trim() === '') {
         const response = createApiError('Pattern ID is required', 400, null, 'MISSING_PATTERN_ID')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Verify pattern exists and user has access
@@ -66,7 +66,7 @@ export const GET = withApiLogging(
 
       if (!pattern) {
         const response = createApiError('Pattern not found', 404, null, 'PATTERN_NOT_FOUND')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Parse query parameters
@@ -98,11 +98,11 @@ export const GET = withApiLogging(
         entityType: entityType || 'all',
       })
 
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     } catch (error) {
       console.error('Error fetching pattern usages:', error)
       const response = createApiError('Internal server error', 500)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
   }
 )

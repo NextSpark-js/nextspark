@@ -48,25 +48,38 @@ interface Session {
 
 ## Session Configuration
 
-### Better Auth Settings
+### Configurable per theme (`auth.session`)
+
+Session duration and renewal are read from the merged app config, so a theme
+tunes them from its own `app.config.ts` — no need to patch the core:
 
 ```typescript
-// core/lib/auth.ts
-session: {
-  expiresIn: 60 * 60 * 24 * 7, // 7 days (604800 seconds)
-  updateAge: 60 * 60 * 24,     // 1 day (86400 seconds)
-  cookieCache: {
-    enabled: true,
-    maxAge: 60 * 5,            // 5 minutes (300 seconds)
+// contents/themes/my-theme/config/app.config.ts
+auth: {
+  session: {
+    expiresIn: 60 * 60 * 24 * 90, // 90 days — long-lived sessions for an installed PWA
+    updateAge: 60 * 60 * 24 * 7,  // extend the session (and re-issue the cookie) weekly
+    cookieCache: {
+      enabled: true,
+      maxAge: 60 * 5,             // 5 minutes
+    },
   },
 }
 ```
 
-**Settings Explained:**
+Every field is optional and falls back to the core defaults:
 
-- **expiresIn**: Total session lifetime before requiring re-authentication
-- **updateAge**: How often to refresh the session expiration
-- **cookieCache**: Client-side caching to reduce database queries
+| Field | Default | Meaning |
+|-------|---------|---------|
+| `expiresIn` | 7 days | Total session lifetime before re-authentication |
+| `updateAge` | 1 day (or `expiresIn / 2` for sessions shorter than 2 days) | How often an active session gets its expiration extended (rolling session) |
+| `cookieCache.enabled` | `true` | Serve the session from a short-lived signed cookie instead of a DB lookup |
+| `cookieCache.maxAge` | 5 minutes | Cookie-cache lifetime |
+
+Values are validated by `resolveSessionConfig()` (`lib/auth/session-config.ts`):
+non-positive or non-numeric durations fall back to the default with a warning,
+and `updateAge` / `cookieCache.maxAge` are clamped to `expiresIn`. The resolved
+values are what `lib/auth.ts` hands to Better Auth's `session` option.
 
 ### Session Renewal
 
@@ -80,6 +93,53 @@ Day 2: Session accessed, expiration extended to Day 9
 ```
 
 **Benefit**: Active users stay logged in; inactive sessions expire.
+
+### Cookie renewal, Server Components and PWAs
+
+Renewal has two halves: Better Auth extends `expiresAt` **in the database** and
+re-issues the session cookie with a fresh `Max-Age`. The cookie half only works
+where cookies can be written — **Route Handlers and Server Actions**. When the
+session is read while *rendering* a Server Component (root layout, i18n request
+config, theme mode), Next.js forbids `cookies().set()`; the `nextCookies` plugin
+swallows the error, the DB row is renewed, but the browser keeps the old cookie
+and drops it `expiresIn` after login — even for daily users. An installed PWA
+hits exactly this, because it is only ever opened through server-rendered pages.
+
+The core handles it in two steps:
+
+1. **Render-time reads never consume the renewal.** `getUserLocale()`
+   (`lib/locale.ts`) and `getDefaultThemeMode()` call
+   `auth.api.getSession({ headers, query: { disableRefresh: true } })`. Do the
+   same in any Server Component / layout of your own that reads the session.
+2. **The real refresh runs through the auth Route Handler.** The root layout
+   template mounts `<SessionCookieRefresher />`, which calls
+   `refreshSessionCookie()` (`lib/auth-client.ts`) — Better Auth's own
+   `GET /api/auth/get-session` with the cookie cache bypassed — on app open,
+   when the tab becomes visible again and when the device comes back online,
+   throttled to once every 5 minutes. Served by `app/api/auth/[...all]`, that
+   request can set cookies, so the renewed cookie actually reaches the browser.
+
+```tsx
+// app/layout.tsx (template) — already included
+import { SessionCookieRefresher } from '@nextsparkjs/core/components/auth/SessionCookieRefresher'
+
+<SessionCookieRefresher />
+// Options: minIntervalMs (default 5 min), refreshOnMount (default true), enabled
+
+// Or use the hook directly in your PWA shell
+import { useSessionCookieRefresh } from '@nextsparkjs/core/hooks'
+useSessionCookieRefresh({ minIntervalMs: 60 * 60 * 1000 })
+```
+
+Need your own endpoint (custom path, service worker, native shell)? Return
+`refreshSessionResponse(request.headers)` from any Route Handler:
+
+```ts
+// app/api/session/refresh/route.ts
+import { refreshSessionResponse } from '@nextsparkjs/core/lib/auth/session-refresh'
+
+export const GET = (req: Request) => refreshSessionResponse(req.headers)
+```
 
 ## Cookie Configuration
 

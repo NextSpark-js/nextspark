@@ -458,12 +458,149 @@ export interface SignupIntentConfig {
   skipTeamForNonOwnerIntents?: boolean
 }
 
+/**
+ * Built-in security email notifications (issue #75).
+ *
+ * Better Auth does not ship new-device / password-changed / email-changed
+ * emails. When enabled, the core auth route dispatches them best-effort after a
+ * successful sign-in / change-password / change-email. Themes brand or localize
+ * the emails via `registerSecurityEmailTemplate(type, locale, builder)` without
+ * forking core.
+ */
+export interface SecurityNotificationsConfig {
+  /** Master switch. When false the dispatcher is a complete no-op. */
+  enabled: boolean
+
+  /** Per-event switches (all default on). */
+  events: {
+    /** Email on a sign-in from a never-seen device fingerprint. */
+    newDeviceLogin: boolean
+    /** Email confirming a password change. */
+    passwordChanged: boolean
+    /** Email to the OLD address when the account email is being changed. */
+    emailChanged: boolean
+  }
+
+  /**
+   * How long a device fingerprint stays "known" before a re-login from it is
+   * treated as new again.
+   * - `null` (default): fingerprints never expire — one alert per device, ever.
+   * - a positive number of days: re-alert if the last matching login is older.
+   */
+  fingerprintTtlDays: number | null
+}
+
+/**
+ * Session lifetime configuration (all values in seconds).
+ *
+ * Maps 1:1 to Better Auth's `session` options so a theme can tune session
+ * duration and renewal from its `app.config.ts` without patching the core:
+ *
+ * ```ts
+ * auth: {
+ *   session: {
+ *     expiresIn: 60 * 60 * 24 * 90, // 90 days — long-lived sessions for an installed PWA
+ *     updateAge: 60 * 60 * 24 * 7,  // extend the session (and re-issue the cookie) weekly
+ *   },
+ * }
+ * ```
+ *
+ * Invalid values (non-positive, NaN) fall back to the core defaults with a
+ * warning; `updateAge` is clamped to `expiresIn`. See
+ * `lib/auth/session-config.ts` for the resolution rules.
+ */
+export interface AuthSessionConfig {
+  /** Total session lifetime. Default: 7 days. */
+  expiresIn?: number
+  /**
+   * How often a session that is actively used gets its expiration extended
+   * (rolling session). Default: 1 day, or `expiresIn / 2` when `expiresIn` is
+   * shorter than 2 days. Must be <= `expiresIn`.
+   */
+  updateAge?: number
+  /**
+   * Cookie cache: serve the session from a short-lived signed cookie instead
+   * of hitting the database on every request.
+   */
+  cookieCache?: {
+    /** Default: true */
+    enabled?: boolean
+    /** Cache lifetime. Default: 5 minutes. */
+    maxAge?: number
+  }
+}
+
+/**
+ * Login methods an app can offer.
+ *
+ * - `'email-otp'`: passwordless — a 6-digit one-time code is emailed to the
+ *   user (Better Auth `emailOTP` plugin, sent through the configured email
+ *   provider — Resend in the default setup). A first sign-in creates the
+ *   account, so no separate signup form is needed.
+ * - `'google'`: Google OAuth (needs GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET;
+ *   also gated by `providers.google.enabled`).
+ * - `'email-password'`: classic email + password, with signup and
+ *   forgot/reset-password flows.
+ */
+export type AuthLoginMethod = 'email-otp' | 'google' | 'email-password'
+
+/**
+ * Named bundles of login methods (see `AUTH_PRESETS` in
+ * `lib/auth/auth-methods.ts`):
+ * - `'passwordless'`: `['email-otp', 'google']` — the DEFAULT. No password field.
+ * - `'classic'`: `['email-password', 'google']`.
+ */
+export type AuthPreset = 'passwordless' | 'classic'
+
 export interface AuthConfig {
   /** Registration settings */
   registration: AuthRegistrationConfig
 
+  /**
+   * Login methods offered by the app, in priority order.
+   *
+   * Drives the login templates (web `LoginForm`, mobile login screen) and
+   * `PUBLIC_AUTH_CONFIG.methods`. The first email method in the list
+   * (`'email-otp'` or `'email-password'`) is the one the login form opens
+   * with; when both are listed the user can switch between them.
+   *
+   * Default: the passwordless preset `['email-otp', 'google']` — the login has
+   * no password field at all. Themes override it in their app.config.ts:
+   *
+   * ```ts
+   * auth: { methods: ['email-password', 'google'] }              // classic
+   * auth: { methods: ['email-otp', 'email-password', 'google'] } // both, OTP first
+   * ```
+   *
+   * This only shapes the UI and the signup page. Better Auth's password
+   * endpoints stay enabled unless `emailAndPassword.enabled` is set to false.
+   */
+  methods?: AuthLoginMethod[]
+
+  /**
+   * Server-side switch for Better Auth's email + password endpoints
+   * (`sign-in/email`, `sign-up/email`, forget/reset/change-password).
+   *
+   * Default: `true` — even under the passwordless preset — so existing
+   * password accounts, seeded test users and API-based logins keep working
+   * when a theme only changes the login UI. Set `{ enabled: false }` to
+   * hard-disable password auth for a strictly passwordless app.
+   */
+  emailAndPassword?: {
+    enabled?: boolean
+  }
+
+  /**
+   * Session duration / renewal. Optional — every field falls back to the core
+   * defaults (7 days, renewed daily, 5-minute cookie cache).
+   */
+  session?: AuthSessionConfig
+
   /** OAuth provider settings */
   providers?: AuthProvidersConfig
+
+  /** Built-in security email notifications (new-device / password / email changed). */
+  securityNotifications?: SecurityNotificationsConfig
 
   /**
    * Whether Better Auth should automatically send the built-in
@@ -498,9 +635,12 @@ export interface PublicAuthConfig {
   }
   providers: {
     google: {
+      /** Google is offered: listed in `methods` AND not disabled in `providers`. */
       enabled: boolean
     }
   }
+  /** Resolved login methods, in priority order (see `AuthConfig.methods`). */
+  methods: AuthLoginMethod[]
 }
 
 /**

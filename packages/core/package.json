@@ -112,6 +112,14 @@
       "types": "./dist/lib/scheduled-actions/index.d.ts",
       "import": "./dist/lib/scheduled-actions/index.js"
     },
+    "./lib/scheduled-actions/handlers": {
+      "types": "./dist/lib/scheduled-actions/handlers/index.d.ts",
+      "import": "./dist/lib/scheduled-actions/handlers/index.js"
+    },
+    "./lib/auth/security-notifications": {
+      "types": "./dist/lib/auth/security-notifications/index.d.ts",
+      "import": "./dist/lib/auth/security-notifications/index.js"
+    },
     "./lib/permissions": {
       "types": "./dist/lib/permissions/index.d.ts",
       "import": "./dist/lib/permissions/index.js"

@@ -12,6 +12,11 @@ export async function getServerAnthropicApiKey(): Promise<string | undefined> {
   return pluginEnv.getAnthropicApiKey()
 }
 
+/** Dev-only Claude Code OAuth token for the Agent SDK path (see plugin-env getAnthropicAuth). */
+export async function getServerAnthropicAuth(): Promise<string | undefined> {
+  return pluginEnv.getAnthropicAuth()
+}
+
 export async function getServerOpenAiApiKey(): Promise<string | undefined> {
   return pluginEnv.getOpenAiApiKey()
 }
@@ -84,6 +89,7 @@ export async function validateServerPluginEnvironment(): Promise<{ valid: boolea
 export async function getServerPluginConfig() {
   return {
     anthropicApiKey: await getServerAnthropicApiKey(),
+    anthropicAuth: await getServerAnthropicAuth(),
     openaiApiKey: await getServerOpenAiApiKey(),
     ollamaBaseUrl: await getServerOllamaBaseUrl(),
     ollamaDefaultModel: await getServerOllamaDefaultModel(),
