@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import { queryOne } from '../db';
 import { ApiKeyManager } from './keys';
 import { apiKeyCache, getCacheKey } from './cache';
+import { TeamMemberService } from '../services/team-member.service';
+import { ScopeService } from '../services/scope.service';
 
 /**
  * Información de autenticación de API Key
@@ -122,7 +124,7 @@ export async function validateApiKey(request: NextRequest): Promise<ApiKeyAuth |
     // Verificar expiración y actualizar status si es necesario
     if (keyData.expiresAt && new Date(keyData.expiresAt) < new Date()) {
       // Marcar como expirada de forma asíncrona
-      markAsExpired(keyData.id).catch(console.error);
+      markAsExpired(keyData.id, keyHash).catch(console.error);
       await constantTimeDelay(startTime);
       return null;
     }
@@ -179,18 +181,44 @@ async function resetFailedAttempts(keyId: string): Promise<void> {
 /**
  * Marca una API key como expirada
  */
-async function markAsExpired(keyId: string): Promise<void> {
+async function markAsExpired(keyId: string, keyHash: string): Promise<void> {
   try {
     await queryOne(
       'UPDATE "api_key" SET status = $1 WHERE id = $2',
       ['expired', keyId]
     );
     
-    // Invalidar cache
-    const cacheKey = getCacheKey('api_key', keyId);
-    apiKeyCache.delete(cacheKey);
+    // Invalidar cache (la entrada está indexada por hash, no por id)
+    invalidateApiKeyCache(keyHash);
   } catch (error) {
     console.error('Failed to mark API key as expired:', error);
+  }
+}
+
+/**
+ * Elimina del cache la entrada de una API key (indexada por keyHash).
+ *
+ * Debe llamarse cada vez que cambia el `status` de una key (revocación,
+ * desactivación, expiración): validateApiKey() consulta el cache ANTES que la
+ * base de datos, así que sin esta invalidación una key revocada sigue
+ * autenticando hasta que vence el TTL (5 min). Ver #92.
+ */
+export function invalidateApiKeyCache(keyHash: string): void {
+  apiKeyCache.delete(getCacheKey('api_key', keyHash));
+}
+
+/**
+ * Variante por id para los call sites que no tienen el hash a mano.
+ * Hace una lectura extra; preferí invalidateApiKeyCache(keyHash) cuando el
+ * hash ya viene en la fila (por ejemplo vía RETURNING "keyHash").
+ */
+export async function invalidateApiKeyCacheById(keyId: string): Promise<void> {
+  const row = await queryOne<{ keyHash: string }>(
+    'SELECT "keyHash" FROM "api_key" WHERE id = $1',
+    [keyId]
+  );
+  if (row?.keyHash) {
+    invalidateApiKeyCache(row.keyHash);
   }
 }
 
@@ -257,7 +285,13 @@ export async function getApiKeyUser(auth: ApiKeyAuth) {
 }
 
 /**
- * Verifica si un usuario puede crear API keys
+ * Verifica si un usuario puede crear API keys.
+ *
+ * Superadmin is a GLOBAL role (`users.role`) and is always allowed. Any
+ * other user is allowed only if they hold a team role that itself grants
+ * `admin:api-keys`/`admin:users`-equivalent scopes for at least one team —
+ * i.e. the same source of truth `validateScopesForUser` uses, checked
+ * without a specific team in mind (any qualifying membership is enough).
  */
 export async function canCreateApiKeys(userId: string): Promise<boolean> {
   try {
@@ -265,13 +299,20 @@ export async function canCreateApiKeys(userId: string): Promise<boolean> {
       'SELECT role FROM "users" WHERE id = $1',
       [userId]
     );
-    
+
     if (!user) {
       return false;
     }
-    
-    // Solo admins y superadmins pueden crear API keys
-    return ['admin', 'superadmin'].includes(user.role);
+
+    if (user.role === 'superadmin') {
+      return true;
+    }
+
+    const memberships = await TeamMemberService.listByUser(userId);
+    return memberships.some(({ role }) => {
+      const scopes = ScopeService.getRoleScopes(role);
+      return scopes.includes('*') || scopes.includes('admin:api-keys');
+    });
   } catch (error) {
     console.error('Error checking API key creation permissions:', error);
     return false;
@@ -279,9 +320,24 @@ export async function canCreateApiKeys(userId: string): Promise<boolean> {
 }
 
 /**
- * Valida que los scopes solicitados sean permitidos para el usuario
+ * Valida que los scopes solicitados sean permitidos para el usuario, en el
+ * contexto de un team específico.
+ *
+ * Superadmin is a GLOBAL role (`users.role`) — it never appears in
+ * `AVAILABLE_ROLES` (team roles), so it's special-cased here rather than
+ * inside the scope registry. Every other user is resolved through their
+ * TEAM role for `teamId` (not their global `users.role` — NextSpark's
+ * entity authorization model is team-scoped, see `app.config.ts`), and the
+ * allowed-scope set comes from the same registry-backed
+ * `ScopeService.getRoleScopes()` that session auth's implicit scopes
+ * (`generateScopesForRole` in `helpers.ts`) and `checkPermission()` both
+ * ultimately derive from — so minting and enforcement can't diverge again.
  */
-export async function validateScopesForUser(userId: string, requestedScopes: string[]): Promise<{
+export async function validateScopesForUser(
+  userId: string,
+  teamId: string | null,
+  requestedScopes: string[]
+): Promise<{
   valid: boolean;
   allowedScopes: string[];
   deniedScopes: string[];
@@ -291,7 +347,7 @@ export async function validateScopesForUser(userId: string, requestedScopes: str
       'SELECT role FROM "users" WHERE id = $1',
       [userId]
     );
-    
+
     if (!user) {
       return {
         valid: false,
@@ -299,21 +355,39 @@ export async function validateScopesForUser(userId: string, requestedScopes: str
         deniedScopes: requestedScopes
       };
     }
-    
-    // Definir scopes permitidos por rol
-    const scopesByRole: Record<string, string[]> = {
-      member: ['tasks:read', 'tasks:write'],
-      colaborator: ['tasks:read', 'tasks:write', 'tasks:delete', 'users:read'],
-      admin: [
-        'users:read', 'users:write', 'users:delete',
-        'tasks:read', 'tasks:write', 'tasks:delete',
-        'admin:api-keys', 'admin:users'
-      ],
-      superadmin: ['*'] // Acceso completo
-    };
-    
-    const allowedScopes = scopesByRole[user.role] || [];
-    
+
+    if (user.role === 'superadmin') {
+      return {
+        valid: true,
+        allowedScopes: requestedScopes,
+        deniedScopes: []
+      };
+    }
+
+    if (!teamId) {
+      // Non-superadmin with no resolvable team context cannot mint any
+      // team-scoped API key — there is no role to check scopes against.
+      return {
+        valid: false,
+        allowedScopes: [],
+        deniedScopes: requestedScopes
+      };
+    }
+
+    const teamRole = await TeamMemberService.getRole(teamId, userId);
+    if (!teamRole) {
+      return {
+        valid: false,
+        allowedScopes: [],
+        deniedScopes: requestedScopes
+      };
+    }
+
+    const allowedScopes = [
+      ...ScopeService.getBaseScopes(),
+      ...ScopeService.getRoleScopes(teamRole)
+    ];
+
     // Si tiene acceso completo, permitir todo
     if (allowedScopes.includes('*')) {
       return {
@@ -322,11 +396,11 @@ export async function validateScopesForUser(userId: string, requestedScopes: str
         deniedScopes: []
       };
     }
-    
+
     // Filtrar scopes permitidos y denegados
     const validScopes = requestedScopes.filter(scope => allowedScopes.includes(scope));
     const deniedScopes = requestedScopes.filter(scope => !allowedScopes.includes(scope));
-    
+
     return {
       valid: deniedScopes.length === 0,
       allowedScopes: validScopes,

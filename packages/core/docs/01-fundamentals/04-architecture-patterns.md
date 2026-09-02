@@ -454,15 +454,15 @@ The application supports two authentication modes simultaneously:
 import { auth } from '@/core/lib/auth/auth'
 import { validateApiKey } from '@/core/lib/services/api-key.service'
 
-export async function authenticateRequest(request: NextRequest) {
-  // Try session auth first (Better Auth)
+export async function authenticateRequest(request: NextRequest, options: AuthenticateOptions = {}) {
+  // Try session auth first (Better Auth) — sessions are never scope-gated
   const session = await auth.api.getSession({
     headers: request.headers
   })
 
   if (session?.user) {
     return {
-      authenticated: true,
+      success: true,
       user: session.user,
       type: 'session'
     }
@@ -475,8 +475,16 @@ export async function authenticateRequest(request: NextRequest) {
     const validation = await validateApiKey(apiKey)
 
     if (validation.valid) {
+      // Fails closed (#93): a key that doesn't satisfy options.requiredScope
+      // — or whose route passed neither requiredScope nor allowAnyScope —
+      // is rejected right here, not left for the caller to check.
+      const failure = resolveApiKeyScopeFailure(validation.scopes, options, describeRoute(request))
+      if (failure) {
+        return { success: false, type: 'api-key', error: failure }
+      }
+
       return {
-        authenticated: true,
+        success: true,
         user: validation.user,
         type: 'api-key',
         scopes: validation.scopes
@@ -484,27 +492,21 @@ export async function authenticateRequest(request: NextRequest) {
     }
   }
 
-  return { authenticated: false }
+  return { success: false, type: 'none', error: authenticationFailed() }
 }
 ```
 
 **API Route Usage:**
 ```typescript
 // app/api/v1/tasks/route.ts
-import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 
 export async function GET(request: NextRequest) {
-  const authResult = await authenticateRequest(request)
+  // The scope is declared here; a key without it never reaches the checks below
+  const authResult = await authenticateRequest(request, { requiredScope: 'tasks:read' })
 
-  if (!authResult.authenticated) {
-    return createAuthError('Unauthorized', 401)
-  }
-
-  // Check API key scopes if applicable
-  if (authResult.type === 'api-key') {
-    if (!authResult.scopes?.includes('tasks:read')) {
-      return createAuthError('Insufficient permissions', 403)
-    }
+  if (!authResult.success) {
+    return createAuthFailureResponse(authResult)
   }
 
   // Proceed with request
@@ -741,13 +743,13 @@ export class TaskService {
 ```typescript
 // app/api/v1/tasks/route.ts
 import { TaskService } from '@/core/lib/services/task.service'
-import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 
 export async function GET(request: NextRequest) {
-  const authResult = await authenticateRequest(request)
+  const authResult = await authenticateRequest(request, { requiredScope: 'tasks:read' })
 
-  if (!authResult.authenticated) {
-    return createAuthError('Unauthorized', 401)
+  if (!authResult.success) {
+    return createAuthFailureResponse(authResult)
   }
 
   const { searchParams } = new URL(request.url)
@@ -762,10 +764,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const authResult = await authenticateRequest(request)
+  const authResult = await authenticateRequest(request, { requiredScope: 'tasks:write' })
 
-  if (!authResult.authenticated) {
-    return createAuthError('Unauthorized', 401)
+  if (!authResult.success) {
+    return createAuthFailureResponse(authResult)
   }
 
   const data = await request.json()

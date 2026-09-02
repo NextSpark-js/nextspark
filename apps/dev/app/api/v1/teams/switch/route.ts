@@ -6,7 +6,7 @@ import {
   handleCorsPreflightRequest,
   addCorsHeaders,
 } from '@nextsparkjs/core/lib/api/helpers'
-import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { TeamService } from '@nextsparkjs/core/lib/services'
 import { z } from 'zod'
@@ -16,21 +16,19 @@ const switchTeamSchema = z.object({
 })
 
 // Handle CORS preflight
-export async function OPTIONS() {
-  return handleCorsPreflightRequest()
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request)
 }
 
 // POST /api/v1/teams/switch - Switch active team context
 export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
   try {
-    // Authenticate using dual auth
-    const authResult = await authenticateRequest(req)
+    // Authenticate using dual auth. Only teams:read: this endpoint changes
+    // which team the caller sees, it never writes team data (#93).
+    const authResult = await authenticateRequest(req, { requiredScope: 'teams:read' })
 
     if (!authResult.success) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-        { status: 401 }
-      )
+      return createAuthFailureResponse(authResult)
     }
 
     if (authResult.rateLimitResponse) {
@@ -61,7 +59,7 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
         maxAge: 60 * 60 * 24 * 365  // 1 year
       })
 
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     } catch (error) {
       if (error instanceof Error && error.message === 'User is not a member of this team') {
         const response = createApiError(
@@ -70,7 +68,7 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
           null,
           'NOT_TEAM_MEMBER'
         )
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       throw error
@@ -79,11 +77,11 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
     if (error instanceof Error && error.name === 'ZodError') {
       const zodError = error as { issues?: unknown[] }
       const response = createApiError('Validation error', 400, zodError.issues, 'VALIDATION_ERROR')
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
 
     console.error('Error switching team:', error)
     const response = createApiError('Internal server error', 500)
-    return addCorsHeaders(response)
+    return addCorsHeaders(response, req)
   }
 }), 'write')

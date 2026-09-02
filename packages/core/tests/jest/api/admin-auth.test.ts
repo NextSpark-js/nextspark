@@ -4,7 +4,6 @@ jest.mock('@/core/lib/api/auth/dual-auth', () => ({
     if (authResult.type === 'session') return true
     if (authResult.scopes?.includes(requiredScope)) return true
     if (authResult.scopes?.includes('*')) return true
-    if (authResult.scopes?.includes('admin:all')) return true
     return false
   })
 }))
@@ -88,6 +87,18 @@ describe('Admin API Authentication', () => {
       expect(hasAdminPermission(authResult)).toBe(true)
     })
 
+    it('should reject a superadmin API key when the caller names no scope (fail closed, #93)', () => {
+      const authResult: DualAuthResult = {
+        success: true,
+        type: 'api-key',
+        user: { id: '1', role: 'superadmin', email: 'admin@test.com' },
+        scopes: ['users:read']
+      }
+      // Forgetting the scope argument must not silently grant an API key the
+      // owner's full superadmin permissions.
+      expect(hasAdminPermission(authResult)).toBe(false)
+    })
+
     it('should reject normal user session', () => {
       const authResult: DualAuthResult = {
         success: true,
@@ -138,14 +149,14 @@ describe('Admin API Authentication', () => {
       expect(hasAdminPermission(authResult, 'users:read')).toBe(true)
     })
 
-    it('should allow superadmin API key with admin:all scope', () => {
+    it('should deny an API key carrying the removed admin:all scope (not a real scope — #94/#95)', () => {
       const authResult: DualAuthResult = {
         success: true,
         type: 'api-key',
         user: { id: '1', role: 'superadmin', email: 'admin@test.com' },
         scopes: ['admin:all']
       }
-      expect(hasAdminPermission(authResult, 'users:read')).toBe(true)
+      expect(hasAdminPermission(authResult, 'users:read')).toBe(false)
     })
 
     it('should reject failed authentication', () => {

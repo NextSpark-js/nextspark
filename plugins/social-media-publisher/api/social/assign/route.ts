@@ -17,7 +17,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { TokenEncryption } from '@nextsparkjs/core/lib/oauth/encryption'
 import { mutateWithRLS } from '@nextsparkjs/core/lib/db'
@@ -41,13 +41,11 @@ interface AssignRequest {
 
 const postHandler = async (request: NextRequest) => {
   try {
-    // 1. Authentication
-    const authResult = await authenticateRequest(request)
+    // 1. Authentication; the API-key scope is declared at the entry point,
+    // which fails closed for keys that lack it (#93).
+    const authResult = await authenticateRequest(request, { requiredScope: 'social:write' })
     if (!authResult.success) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
+      return createAuthFailureResponse(authResult)
     }
 
     const userId = authResult.user!.id

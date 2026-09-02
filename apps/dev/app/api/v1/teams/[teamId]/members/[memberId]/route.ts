@@ -7,7 +7,7 @@ import {
   handleCorsPreflightRequest,
   addCorsHeaders,
 } from '@nextsparkjs/core/lib/api/helpers'
-import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { updateMemberRoleSchema } from '@nextsparkjs/core/lib/teams/schema'
 import { MembershipService } from '@nextsparkjs/core/lib/services'
@@ -15,8 +15,8 @@ import { validateRoleTransition, canManageRole } from '@nextsparkjs/core/lib/tea
 import type { TeamMember, TeamRole } from '@nextsparkjs/core/lib/teams/types'
 
 // Handle CORS preflight
-export async function OPTIONS() {
-  return handleCorsPreflightRequest()
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request)
 }
 
 // PATCH /api/v1/teams/:teamId/members/:memberId - Update member role
@@ -26,14 +26,12 @@ export const PATCH = withRateLimitTier(withApiLogging(
     { params }: { params: Promise<{ teamId: string; memberId: string }> }
   ): Promise<NextResponse> => {
     try {
-      // Authenticate using dual auth
-      const authResult = await authenticateRequest(req)
+      // Authenticate using dual auth; the API-key scope is declared at the entry
+      // point, which fails closed for keys that lack it (#93).
+      const authResult = await authenticateRequest(req, { requiredScope: 'teams:write' })
 
       if (!authResult.success) {
-        return NextResponse.json(
-          { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-          { status: 401 }
-        )
+        return createAuthFailureResponse(authResult)
       }
 
       if (authResult.rateLimitResponse) {
@@ -45,17 +43,17 @@ export const PATCH = withRateLimitTier(withApiLogging(
       // Validate parameters
       if (!teamId || teamId.trim() === '') {
         const response = createApiError('Team ID is required', 400, null, 'MISSING_TEAM_ID')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       if (!memberId || memberId.trim() === '') {
         const response = createApiError('Member ID is required', 400, null, 'MISSING_MEMBER_ID')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Check if user has permission to update member roles using MembershipService
       const membership = await MembershipService.get(authResult.user!.id, teamId)
-      const actionResult = membership.canPerformAction('members.update_role')
+      const actionResult = membership.canPerformAction('team.members.update_role')
 
       if (!actionResult.allowed) {
         const response = NextResponse.json(
@@ -67,7 +65,7 @@ export const PATCH = withRateLimitTier(withApiLogging(
           },
           { status: 403 }
         )
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Get user's role for role hierarchy validation
@@ -82,7 +80,7 @@ export const PATCH = withRateLimitTier(withApiLogging(
 
       if (!targetMember) {
         const response = createApiError('Member not found', 404, null, 'MEMBER_NOT_FOUND')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       const body = await req.json()
@@ -93,7 +91,7 @@ export const PATCH = withRateLimitTier(withApiLogging(
 
       if (!transitionValidation.allowed) {
         const response = createApiError(transitionValidation.reason || 'Invalid role transition', 403, null, 'INVALID_ROLE_TRANSITION')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Check if actor can manage the target role
@@ -104,7 +102,7 @@ export const PATCH = withRateLimitTier(withApiLogging(
           null,
           'INSUFFICIENT_PERMISSIONS'
         )
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Update member role
@@ -119,7 +117,7 @@ export const PATCH = withRateLimitTier(withApiLogging(
 
       if (result.rows.length === 0) {
         const response = createApiError('Member not found', 404, null, 'MEMBER_NOT_FOUND')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Fetch member with user details
@@ -143,17 +141,17 @@ export const PATCH = withRateLimitTier(withApiLogging(
       )
 
       const response = createApiResponse(memberWithUser)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     } catch (error) {
       if (error instanceof Error && error.name === 'ZodError') {
         const zodError = error as { issues?: unknown[] }
         const response = createApiError('Validation error', 400, zodError.issues, 'VALIDATION_ERROR')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       console.error('Error updating member role:', error)
       const response = createApiError('Internal server error', 500)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
   }
 ), 'write')
@@ -165,14 +163,12 @@ export const DELETE = withRateLimitTier(withApiLogging(
     { params }: { params: Promise<{ teamId: string; memberId: string }> }
   ): Promise<NextResponse> => {
     try {
-      // Authenticate using dual auth
-      const authResult = await authenticateRequest(req)
+      // Authenticate using dual auth; the API-key scope is declared at the entry
+      // point, which fails closed for keys that lack it (#93).
+      const authResult = await authenticateRequest(req, { requiredScope: 'teams:write' })
 
       if (!authResult.success) {
-        return NextResponse.json(
-          { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-          { status: 401 }
-        )
+        return createAuthFailureResponse(authResult)
       }
 
       if (authResult.rateLimitResponse) {
@@ -184,17 +180,17 @@ export const DELETE = withRateLimitTier(withApiLogging(
       // Validate parameters
       if (!teamId || teamId.trim() === '') {
         const response = createApiError('Team ID is required', 400, null, 'MISSING_TEAM_ID')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       if (!memberId || memberId.trim() === '') {
         const response = createApiError('Member ID is required', 400, null, 'MISSING_MEMBER_ID')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Check if user has permission to remove members using MembershipService
       const membership = await MembershipService.get(authResult.user!.id, teamId)
-      const actionResult = membership.canPerformAction('members.remove')
+      const actionResult = membership.canPerformAction('team.members.remove')
 
       if (!actionResult.allowed) {
         const response = NextResponse.json(
@@ -206,7 +202,7 @@ export const DELETE = withRateLimitTier(withApiLogging(
           },
           { status: 403 }
         )
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Get user's role for role hierarchy validation
@@ -221,13 +217,13 @@ export const DELETE = withRateLimitTier(withApiLogging(
 
       if (!targetMember) {
         const response = createApiError('Member not found', 404, null, 'MEMBER_NOT_FOUND')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Cannot remove the owner
       if (targetMember.role === 'owner') {
         const response = createApiError('Cannot remove the team owner', 403, null, 'CANNOT_REMOVE_OWNER')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Check if actor can manage the target role
@@ -238,7 +234,7 @@ export const DELETE = withRateLimitTier(withApiLogging(
           null,
           'INSUFFICIENT_PERMISSIONS'
         )
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Remove member
@@ -250,15 +246,15 @@ export const DELETE = withRateLimitTier(withApiLogging(
 
       if (result.rows.length === 0) {
         const response = createApiError('Member not found', 404, null, 'MEMBER_NOT_FOUND')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       const response = createApiResponse({ deleted: true, id: memberId })
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     } catch (error) {
       console.error('Error removing member:', error)
       const response = createApiError('Internal server error', 500)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
   }
 ), 'write')

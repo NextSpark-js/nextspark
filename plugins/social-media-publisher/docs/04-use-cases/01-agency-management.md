@@ -531,10 +531,14 @@ export async function generateClientReport(
 **Export All Activity:**
 ```typescript
 // app/api/v1/custom/export-audit-log/route.ts
+import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
+
 export async function GET(request: NextRequest) {
-  const authResult = await authenticateRequest(request)
+  // Declares the social:read scope added by this plugin's app.config.ts —
+  // an API key without it is rejected here (fails closed, #93)
+  const authResult = await authenticateRequest(request, { requiredScope: 'social:read' })
   if (!authResult.success) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return createAuthFailureResponse(authResult)
   }
 
   const { searchParams } = new URL(request.url)

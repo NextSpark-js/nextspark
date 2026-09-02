@@ -7,14 +7,14 @@ import {
   handleCorsPreflightRequest,
   addCorsHeaders,
 } from '@nextsparkjs/core/lib/api/helpers'
-import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { MembershipService } from '@nextsparkjs/core/lib/services'
 import type { InvoiceResponse } from '@nextsparkjs/core/lib/validation/invoices'
 
 // Handle CORS preflight
-export async function OPTIONS() {
-  return handleCorsPreflightRequest()
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request)
 }
 
 // GET /api/v1/teams/:teamId/invoices/:invoiceNumber - Get single invoice (owner only)
@@ -24,14 +24,13 @@ export const GET = withRateLimitTier(withApiLogging(
     { params }: { params: Promise<{ teamId: string; invoiceNumber: string }> }
   ): Promise<NextResponse> => {
     try {
-      // Authenticate using dual auth (API key OR session)
-      const authResult = await authenticateRequest(req)
+      // Authenticate using dual auth (API key OR session); the API-key scope
+      // is declared at the entry point, which fails closed for keys that
+      // lack it (#93).
+      const authResult = await authenticateRequest(req, { requiredScope: 'billing:read' })
 
       if (!authResult.success) {
-        return NextResponse.json(
-          { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-          { status: 401 }
-        )
+        return createAuthFailureResponse(authResult)
       }
 
       if (authResult.rateLimitResponse) {
@@ -43,18 +42,18 @@ export const GET = withRateLimitTier(withApiLogging(
       // Validate that teamId is not empty
       if (!teamId || teamId.trim() === '') {
         const response = createApiError('Team ID is required', 400, null, 'MISSING_TEAM_ID')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Validate that invoiceNumber is not empty
       if (!invoiceNumber || invoiceNumber.trim() === '') {
         const response = createApiError('Invoice number is required', 400, null, 'MISSING_INVOICE_NUMBER')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Check if user has permission to view invoices using MembershipService
       const membership = await MembershipService.get(authResult.user!.id, teamId)
-      const actionResult = membership.canPerformAction('billing.invoices')
+      const actionResult = membership.canPerformAction('team.billing.view')
 
       if (!actionResult.allowed) {
         const response = NextResponse.json(
@@ -66,7 +65,7 @@ export const GET = withRateLimitTier(withApiLogging(
           },
           { status: 403 }
         )
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Query single invoice by invoiceNumber
@@ -92,15 +91,15 @@ export const GET = withRateLimitTier(withApiLogging(
 
       if (invoices.length === 0) {
         const response = createApiError('Invoice not found', 404, null, 'INVOICE_NOT_FOUND')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       const response = createApiResponse(invoices[0])
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     } catch (error) {
       console.error('Error fetching invoice:', error)
       const response = createApiError('Internal server error', 500)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
   }
 ), 'read')

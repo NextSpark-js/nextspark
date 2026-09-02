@@ -14,16 +14,18 @@ interface RouteParams {
 }
 
 export const GET = withRateLimitTier(async function GET(request: NextRequest, props: RouteParams) {
-  // Authenticate request
-  const { auth, rateLimitResponse } = await validateAndAuthenticateRequest(request)
+  // Authenticate request; the API-key scope is declared at the entry point,
+  // which fails closed for keys that lack it (#93).
+  const { auth, rateLimitResponse, errorResponse } = await validateAndAuthenticateRequest(request, { requiredScope: 'billing:read' })
   if (rateLimitResponse) return rateLimitResponse
+  if (!auth) return errorResponse ?? createApiError('Authentication required', 401, undefined, 'AUTHENTICATION_REQUIRED')
 
   const { teamId } = await props.params
 
   try {
     // Check if user has permission to view subscription using MembershipService
     const membership = await MembershipService.get(auth.userId, teamId)
-    const actionResult = membership.canPerformAction('billing.view')
+    const actionResult = membership.canPerformAction('team.billing.view')
 
     if (!actionResult.allowed) {
       return NextResponse.json(

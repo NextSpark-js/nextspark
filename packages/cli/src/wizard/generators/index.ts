@@ -264,14 +264,19 @@ async function updatePackageJson(config: WizardConfig): Promise<void> {
     '@nextsparkjs/core': nsVersion,
     '@nextsparkjs/cli': nsVersion,
     // Next.js + React
-    'next': '^16.0.0',
+    // next/better-auth/next-intl vetted floors, kept in lockstep with this
+    // monorepo's own pnpm.overrides in package.json -- see create-nextspark-app's
+    // create.ts for the full rationale. better-auth is deliberately tilde-ranged
+    // (not caret): 1.7.0 introduces a breaking Account table schema change
+    // (accountId -> providerAccountId) this app's migrations don't account for.
+    'next': '^15.5.24',
     'react': '^19.0.0',
     'react-dom': '^19.0.0',
     // Auth
-    'better-auth': '^1.4.0',
+    'better-auth': '~1.6.30',
     '@better-fetch/fetch': '^1.1.0',
     // i18n
-    'next-intl': '^4.0.2',
+    'next-intl': '^4.11.0',
     // Build tools
     'jiti': '^2.0.0',
     // Database

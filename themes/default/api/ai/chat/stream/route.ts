@@ -25,7 +25,7 @@
 
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
-import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { streamChat } from '@/plugins/langchain/lib/agent-factory'
 import { createSSEEncoder } from '@/plugins/langchain/lib/streaming'
@@ -49,16 +49,11 @@ const StreamChatRequestSchema = z.object({
  */
 const postHandler = async (request: NextRequest) => {
     try {
-        // 1. Authentication
-        const authResult = await authenticateRequest(request)
+        // 1. Authentication; the API-key scope is declared at the entry point,
+        // which fails closed for keys that lack it (#93).
+        const authResult = await authenticateRequest(request, { requiredScope: 'ai:write' })
         if (!authResult.success || !authResult.user) {
-            return new Response(
-                JSON.stringify({ success: false, error: 'Unauthorized' }),
-                {
-                    status: 401,
-                    headers: { 'Content-Type': 'application/json' },
-                }
-            ) as any
+            return createAuthFailureResponse(authResult) as any
         }
 
         // 2. Team context

@@ -12,6 +12,7 @@
 - [Session Authentication](#session-authentication)
 - [Dual Authentication Flow](#dual-authentication-flow)
 - [Scope System](#scope-system)
+- [Scope Enforcement Fails Closed](#scope-enforcement-fails-closed)
 - [Generating API Keys](#generating-api-keys)
 - [Using API Keys](#using-api-keys)
 - [Using Sessions](#using-sessions)
@@ -304,24 +305,36 @@ return { success: false, type: 'none', user: null }
 
 ```typescript
 // core/lib/api/auth/dual-auth.ts
-export async function authenticateRequest(request: NextRequest): Promise<DualAuthResult> {
+export async function authenticateRequest(
+  request: NextRequest,
+  options: AuthenticateOptions = {}
+): Promise<DualAuthResult> {
   // First try API Key authentication
   const apiKeyResult = await tryApiKeyAuth(request)
   if (apiKeyResult.success) {
+    // Fail-closed scope enforcement (#93) — see "Scope Enforcement Fails
+    // Closed" below. A key that doesn't hold `options.requiredScope` (or
+    // whose route passed neither `requiredScope` nor `allowAnyScope`) is
+    // rejected here, before the caller sees it as authenticated.
+    const failure = resolveApiKeyScopeFailure(apiKeyResult.scopes, options, describeRoute(request))
+    if (failure) {
+      return { success: false, type: 'api-key', user: null, scopes: apiKeyResult.scopes, error: failure }
+    }
     return apiKeyResult
   }
 
-  // Then try Session authentication
+  // Then try Session authentication (never gated by scope)
   const sessionResult = await trySessionAuth(request)
   if (sessionResult.success) {
     return sessionResult
   }
 
-  // Both failed
+  // Neither credential was usable
   return {
     success: false,
     type: 'none',
-    user: null
+    user: null,
+    error: authenticationFailed() // 401 AUTHENTICATION_FAILED
   }
 }
 ```
@@ -330,19 +343,16 @@ export async function authenticateRequest(request: NextRequest): Promise<DualAut
 
 ```typescript
 // app/api/v1/[entity]/route.ts
-import { authenticateRequest, createAuthError, hasRequiredScope } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 
 export async function GET(request: NextRequest) {
-  // Authenticate (API Key OR Session)
-  const authResult = await authenticateRequest(request)
+  // Authenticate (API Key OR Session) and declare the scope this route
+  // needs. A key without it is rejected inside authenticateRequest — see
+  // "Scope Enforcement Fails Closed" below.
+  const authResult = await authenticateRequest(request, { requiredScope: 'products:read' })
 
   if (!authResult.success) {
-    return createAuthError('Authentication required', 401)
-  }
-
-  // Check permissions
-  if (!hasRequiredScope(authResult, 'products:read')) {
-    return createAuthError('Insufficient permissions', 403)
+    return createAuthFailureResponse(authResult)
   }
 
   // Use auth info
@@ -376,14 +386,29 @@ export const API_SCOPES = {
   'media:write': 'Upload and update files',
   'media:delete': 'Delete files',
 
+  // Teams
+  'teams:read': 'Read team information and membership',
+  'teams:write': 'Create and update teams',
+  'teams:delete': 'Delete teams',
+
+  // Billing
+  'billing:read': 'Read billing and subscription information',
+  'billing:write': 'Manage billing and subscriptions',
+
   // Administration
   'admin:api-keys': 'Manage API keys',
   'admin:users': 'Full user administration',
+  'admin:devtools': 'Access developer tools endpoints',
 
   // Wildcard (superadmin only)
   '*': 'Full access (superadmin only)'
 }
 ```
+
+Themes and plugins can declare their own scopes under `api.scopes` in
+`app.config.ts` (for example, the default theme adds `ai:read`, `ai:write`,
+`social:read`, `social:write`) — see [Scope Enforcement Fails
+Closed](#scope-enforcement-fails-closed).
 
 ### Scope Categories
 
@@ -399,10 +424,20 @@ export const SCOPE_CATEGORIES = {
     description: 'Task and TODO management',
     scopes: ['tasks:read', 'tasks:write', 'tasks:delete']
   },
+  teams: {
+    name: 'Teams',
+    description: 'Team management',
+    scopes: ['teams:read', 'teams:write', 'teams:delete']
+  },
+  billing: {
+    name: 'Billing',
+    description: 'Billing and subscriptions',
+    scopes: ['billing:read', 'billing:write']
+  },
   admin: {
     name: 'Administration',
     description: 'Administrative functions',
-    scopes: ['admin:api-keys', 'admin:users']
+    scopes: ['admin:api-keys', 'admin:users', 'admin:devtools']
   },
   system: {
     name: 'System',
@@ -432,17 +467,15 @@ export const SCOPE_CATEGORIES = {
 
 ```typescript
 // core/lib/api/auth/dual-auth.ts
-export function hasRequiredScope(authResult: DualAuthResult, requiredScope: string): boolean {
+export function hasRequiredScope(authResult: DualAuthResult, requiredScope: string | string[]): boolean {
   // Sessions have full access
   if (authResult.type === 'session') {
     return true
   }
 
-  // API Keys check scopes
-  if (authResult.type === 'api-key' && authResult.scopes) {
-    return authResult.scopes.includes(requiredScope) ||
-           authResult.scopes.includes('admin:all') ||
-           authResult.scopes.includes('*')
+  // API Keys check scopes — an array is satisfied by any one entry
+  if (authResult.type === 'api-key') {
+    return scopesSatisfy(authResult.scopes, requiredScope)
   }
 
   return false
@@ -469,6 +502,67 @@ export class ApiKeyManager {
 const validation = ApiKeyManager.validateScopes(['products:read', 'invalid:scope'])
 // { valid: false, invalidScopes: ['invalid:scope'] }
 ```
+
+---
+
+## Scope Enforcement Fails Closed
+
+Every route that authenticates via `authenticateRequest` (or
+`validateAndAuthenticateRequest`) must say, up front, which API-key scope it
+needs. This is enforced by `authenticateRequest` itself, not left to each
+handler to remember (#93):
+
+- **`{ requiredScope: 'products:read' }`** — the key must hold that scope
+  (or the wildcard `*`). Pass an array to accept any one of several scopes,
+  e.g. `{ requiredScope: ['products:read', 'products:write'] }`.
+- **`{ allowAnyScope: true }`** — explicit opt-out for routes that are
+  genuinely scope-agnostic (a public route that only *enriches* its response
+  for authenticated callers, an MCP transport whose tools enforce scopes
+  themselves). Use this only with a one-line comment explaining why.
+- **Neither option passed** — the key is rejected with `SCOPE_NOT_DECLARED`
+  and the route is named in the server log, so a forgotten declaration shows
+  up as a visible 403 on an integration instead of a silently
+  over-privileged credential.
+
+**Session authentication is never gated by this rule** — sessions always
+carry full access, exactly as before.
+
+**Failure responses:**
+
+| Situation | `type` | `code` | Status |
+|---|---|---|---|
+| No credential at all | `'none'` | `AUTHENTICATION_FAILED` | 401 |
+| Valid key, missing the declared scope | `'api-key'` | `INSUFFICIENT_SCOPE` | 403 |
+| Valid key, route declared no scope | `'api-key'` | `SCOPE_NOT_DECLARED` | 403 |
+
+Use `createAuthFailureResponse(authResult)` in the `!authResult.success`
+branch — it reads `authResult.error` and returns the right status and code,
+so scope rejections are never mislabeled as a generic 401:
+
+```typescript
+import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
+
+export async function GET(request: NextRequest) {
+  const authResult = await authenticateRequest(request, { requiredScope: 'products:read' })
+  if (!authResult.success) {
+    return createAuthFailureResponse(authResult)
+  }
+  // ...
+}
+```
+
+`hasRequiredScope(authResult, scope)` still exists for a *second*, finer
+check inside a handler (for example, branching between a read-only and a
+read-write code path after the entry point already required
+`products:read`). It's optional and secondary — don't re-check the exact
+scope the route already declared in `requiredScope`, that check is always
+true by construction.
+
+New core scopes added for this: `teams:read`, `teams:write`, `teams:delete`,
+`billing:read`, `billing:write`, `admin:devtools` (see [Available
+Scopes](#scope-system) above). A theme or plugin can add its own scopes by
+declaring them in `app.config.ts` under `api.scopes` — the default theme
+adds `ai:read`, `ai:write`, `social:read`, `social:write` this way.
 
 ---
 
@@ -788,20 +882,19 @@ export async function createProduct(formData: FormData) {
 
 ### Basic Permission Check
 
+The route declares the scope it needs at the entry point; `authenticateRequest`
+enforces it and fails closed, so there's nothing left to re-check by hand
+(see [Scope Enforcement Fails Closed](#scope-enforcement-fails-closed)):
+
 ```typescript
 // app/api/v1/products/route.ts
-import { authenticateRequest, hasRequiredScope, createAuthError } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 
 export async function GET(request: NextRequest) {
-  const authResult = await authenticateRequest(request)
+  const authResult = await authenticateRequest(request, { requiredScope: 'products:read' })
 
   if (!authResult.success) {
-    return createAuthError('Authentication required', 401)
-  }
-
-  // Check read permission
-  if (!hasRequiredScope(authResult, 'products:read')) {
-    return createAuthError('Missing required scope: products:read', 403)
+    return createAuthFailureResponse(authResult)
   }
 
   // Process request...
@@ -809,6 +902,10 @@ export async function GET(request: NextRequest) {
 ```
 
 ### Multiple Scope Check
+
+`hasRequiredScope` is still useful for a *second*, finer check inside a
+handler — for example, branching between two code paths that need different
+scopes beyond the one already required at the entry point:
 
 ```typescript
 function hasAnyScope(authResult: DualAuthResult, scopes: string[]): boolean {
@@ -820,7 +917,7 @@ function hasAllScopes(authResult: DualAuthResult, scopes: string[]): boolean {
 }
 
 // Usage:
-if (!hasAnyScope(authResult, ['products:read', 'admin:all'])) {
+if (!hasAnyScope(authResult, ['products:read', '*'])) {
   return createAuthError('Insufficient permissions', 403)
 }
 
@@ -1055,14 +1152,29 @@ console.log('Session:', session)  // null = expired
 
 ### Issue 2: "Insufficient permissions" (403)
 
-**Symptoms:**
+**Symptoms — key doesn't hold the scope the route requires:**
 ```json
 {
   "success": false,
-  "error": "Insufficient permissions",
-  "code": "FORBIDDEN"
+  "error": "API key lacks required scope 'products:write'",
+  "code": "INSUFFICIENT_SCOPE"
 }
 ```
+
+**Symptoms — route declared no scope at all (a bug on the server side, not
+the caller's):**
+```json
+{
+  "success": false,
+  "error": "API key access is not enabled for this route: it declares no required scope",
+  "code": "SCOPE_NOT_DECLARED"
+}
+```
+If you see `SCOPE_NOT_DECLARED`, the fix is on the route: add
+`{ requiredScope: '<scope>' }` (or `{ allowAnyScope: true }` if the route is
+genuinely scope-agnostic) to its `authenticateRequest` call — see [Scope
+Enforcement Fails Closed](#scope-enforcement-fails-closed). Check the server
+log too; the route is named there.
 
 **Causes & Solutions:**
 

@@ -7,7 +7,7 @@ import {
   handleCorsPreflightRequest,
   addCorsHeaders
 } from '@nextsparkjs/core/lib/api/helpers';
-import { authenticateRequest, hasRequiredScope } from '@nextsparkjs/core/lib/api/auth/dual-auth';
+import { authenticateRequest, createAuthFailureResponse, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth';
 import { ApiKeyManager, API_SCOPES, API_KEY_LIMITS } from '@nextsparkjs/core/lib/api/keys';
 import { validateScopesForUser } from '@nextsparkjs/core/lib/api/auth';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
@@ -20,34 +20,23 @@ const createApiKeySchema = z.object({
 });
 
 // Handle CORS preflight
-export async function OPTIONS() {
-  return handleCorsPreflightRequest();
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request);
 }
 
 // GET /api/v1/api-keys - List user's API keys with dual auth
 export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
   try {
-    // Authenticate using dual auth
-    const authResult = await authenticateRequest(req);
-    
+    // Authenticate using dual auth. Session users have admin access; API keys
+    // need the scope declared here, enforced at the entry point (#93).
+    const authResult = await authenticateRequest(req, { requiredScope: 'admin:api-keys' });
+
     if (!authResult.success) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-        { status: 401 }
-      );
+      return createAuthFailureResponse(authResult);
     }
 
     if (authResult.rateLimitResponse) {
       return authResult.rateLimitResponse as NextResponse;
-    }
-
-    // Check required permissions - session users have admin access, API key users need specific scope
-    const hasPermission = authResult.type === 'session' || 
-      (authResult.type === 'api-key' && hasRequiredScope(authResult, 'admin:api-keys'));
-
-    if (!hasPermission) {
-      const response = createApiError('Insufficient permissions. Admin access required for API key management.', 403);
-      return addCorsHeaders(response);
     }
 
     const apiKeys = await queryWithRLS<{
@@ -125,38 +114,27 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
     }));
 
     const response = createApiResponse(keysWithStats);
-    return addCorsHeaders(response);
+    return addCorsHeaders(response, req);
   } catch (error) {
     console.error('Error fetching API keys:', error);
     const response = createApiError('Internal server error', 500);
-    return addCorsHeaders(response);
+    return addCorsHeaders(response, req);
   }
 }), 'strict');
 
 // POST /api/v1/api-keys - Create new API key with dual auth
 export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
   try {
-    // Authenticate using dual auth
-    const authResult = await authenticateRequest(req);
-    
+    // Authenticate using dual auth. Session users have admin access; API keys
+    // need the scope declared here, enforced at the entry point (#93).
+    const authResult = await authenticateRequest(req, { requiredScope: 'admin:api-keys' });
+
     if (!authResult.success) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-        { status: 401 }
-      );
+      return createAuthFailureResponse(authResult);
     }
 
     if (authResult.rateLimitResponse) {
       return authResult.rateLimitResponse as NextResponse;
-    }
-
-    // Check required permissions - session users have admin access, API key users need specific scope
-    const hasPermission = authResult.type === 'session' || 
-      (authResult.type === 'api-key' && hasRequiredScope(authResult, 'admin:api-keys'));
-
-    if (!hasPermission) {
-      const response = createApiError('Insufficient permissions. Admin access required for API key management.', 403);
-      return addCorsHeaders(response);
     }
 
     const body = await req.json();
@@ -174,11 +152,23 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
         },
         'INVALID_SCOPES'
       );
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
 
-    // Validar que el usuario pueda crear API keys con estos scopes
-    const userScopeValidation = await validateScopesForUser(authResult.user!.id, validatedData.scopes);
+    // Validar que el usuario pueda crear API keys con estos scopes.
+    // Scope minting is TEAM-role based (see validateScopesForUser) — resolve
+    // the team this key is being minted for, unless the caller is a global
+    // superadmin, which validateScopesForUser bypasses regardless of team.
+    let teamId: string | null = null;
+    if (authResult.user!.role !== 'superadmin') {
+      const teamResult = await resolveTeamContext(req, authResult);
+      if (teamResult instanceof NextResponse) {
+        return teamResult;
+      }
+      teamId = teamResult;
+    }
+
+    const userScopeValidation = await validateScopesForUser(authResult.user!.id, teamId, validatedData.scopes);
     if (!userScopeValidation.valid) {
       const response = createApiError(
         'You do not have permission to create API keys with these scopes', 
@@ -189,7 +179,7 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
         },
         'INSUFFICIENT_SCOPE_PERMISSIONS'
       );
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
 
     // Verificar límite de API keys por usuario (máximo 10)
@@ -206,7 +196,7 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
         null,
         'API_KEY_LIMIT_REACHED'
       );
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
 
     // Generar API key
@@ -237,15 +227,15 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
     };
 
     const response = createApiResponse(responseData, { created: true }, 201);
-    return addCorsHeaders(response);
+    return addCorsHeaders(response, req);
   } catch (error) {
     if (error instanceof z.ZodError) {
       const response = createApiError('Validation error', 400, error.issues, 'VALIDATION_ERROR');
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
     
     console.error('Error creating API key:', error);
     const response = createApiError('Internal server error', 500);
-    return addCorsHeaders(response);
+    return addCorsHeaders(response, req);
   }
 }), 'strict');

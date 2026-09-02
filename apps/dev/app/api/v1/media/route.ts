@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { authenticateRequest, hasRequiredScope, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { createApiResponse, createApiError } from '@nextsparkjs/core/lib/api/helpers'
 import { API_ERROR_CODES } from '@nextsparkjs/core/lib/api/api-error'
 import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
@@ -26,15 +26,11 @@ import { mediaListQuerySchema } from '@nextsparkjs/core/lib/media/schemas'
  */
 export const GET = withRateLimitTier(async (request: NextRequest) => {
   try {
-    // 1. Authenticate
-    const authResult = await authenticateRequest(request)
+    // 1. Authenticate; the API-key scope is declared at the entry point,
+    // which fails closed for keys that lack it (#93).
+    const authResult = await authenticateRequest(request, { requiredScope: 'media:read' })
     if (!authResult.success) {
-      return createApiError('Unauthorized', 401)
-    }
-
-    // 2. Check permissions
-    if (!hasRequiredScope(authResult, 'media:read')) {
-      return createApiError('Insufficient permissions', 403, undefined, API_ERROR_CODES.INSUFFICIENT_SCOPE)
+      return createAuthFailureResponse(authResult)
     }
 
     // 3. Resolve and validate team context

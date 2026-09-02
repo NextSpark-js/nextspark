@@ -8,3 +8,4 @@
  */
 
 export { registerPatternCacheInvalidationHandler } from './invalidate-pattern-cache'
+export { registerSecurityNotificationAction } from './security-notification'

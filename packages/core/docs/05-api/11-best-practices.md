@@ -273,20 +273,23 @@ export async function POST(request: NextRequest) {
 
 ### 5. Implement Scope-Based Permissions
 
-**✅ DO: Check scopes before operations**
+**✅ DO: Declare the required scope at the entry point**
+
+`authenticateRequest` fails closed for API keys: declare
+`{ requiredScope }` and a key without it is rejected before your handler
+runs, so there's no separate scope check to write by hand (see
+[Scope Enforcement Fails Closed](./02-authentication.md#scope-enforcement-fails-closed)).
+
 ```typescript
+import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
+
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const auth = await authenticateRequest(request)
-
-  // Check for delete scope
-  if (!auth.scopes.includes('delete')) {
-    return NextResponse.json(
-      { success: false, error: 'Insufficient permissions', code: 'INVALID_SCOPE' },
-      { status: 403 }
-    )
+  const auth = await authenticateRequest(request, { requiredScope: 'tasks:delete' })
+  if (!auth.success) {
+    return createAuthFailureResponse(auth)
   }
 
   // Proceed with delete
@@ -351,7 +354,7 @@ interface ApiError {
 ```typescript
 export async function GET(request: NextRequest) {
   try {
-    const auth = await authenticateRequest(request)
+    const auth = await authenticateRequest(request, { requiredScope: 'tasks:read' })
     const tasks = await getTasks(auth.user.id)
 
     return NextResponse.json({

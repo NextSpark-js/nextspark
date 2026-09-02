@@ -11,7 +11,7 @@ import {
   handleEntityMetadataInResponse,
   processEntityMetadata
 } from '@nextsparkjs/core/lib/api/helpers';
-import { authenticateRequest, hasRequiredScope } from '@nextsparkjs/core/lib/api/auth/dual-auth';
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth';
 import { z } from 'zod';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 
@@ -24,8 +24,8 @@ const updateUserSchema = z.object({
 });
 
 // Handle CORS preflight
-export async function OPTIONS() {
-  return handleCorsPreflightRequest();
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request);
 }
 
 // GET /api/v1/users/:id - Get specific user
@@ -34,27 +34,16 @@ export const GET = withRateLimitTier(withApiLogging(async (
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> => {
   try {
-    // Authenticate using dual auth
-    const authResult = await authenticateRequest(req);
-    
+    // Authenticate using dual auth; the API-key scope is declared at the entry
+    // point, which fails closed for keys that lack it (#93).
+    const authResult = await authenticateRequest(req, { requiredScope: 'users:read' });
+
     if (!authResult.success) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-        { status: 401 }
-      );
+      return createAuthFailureResponse(authResult);
     }
 
     if (authResult.rateLimitResponse) {
       return authResult.rateLimitResponse as NextResponse;
-    }
-
-    // Check required permissions - session users need admin role, API key users need specific scope
-    const hasPermission = authResult.type === 'session' || 
-      (authResult.type === 'api-key' && hasRequiredScope(authResult, 'users:read'));
-
-    if (!hasPermission) {
-      const response = createApiError('Insufficient permissions. Admin access required for user management.', 403);
-      return addCorsHeaders(response);
     }
 
     const { id } = await params;
@@ -62,7 +51,7 @@ export const GET = withRateLimitTier(withApiLogging(async (
     // Validate that id is not empty
     if (!id || id.trim() === '') {
       const response = createApiError('User ID or email is required', 400, null, 'MISSING_IDENTIFIER');
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
 
     // Search by ID or email
@@ -74,7 +63,7 @@ export const GET = withRateLimitTier(withApiLogging(async (
 
     if (!user) {
       const response = createApiError('User not found', 404, null, 'USER_NOT_FOUND');
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
 
     // Handle metadata if requested (usando helper compartido)
@@ -82,11 +71,11 @@ export const GET = withRateLimitTier(withApiLogging(async (
     const userWithMeta = await includeEntityMetadataForSingle('user', user as { id: string }, metaParams, authResult.user!.id);
 
     const response = createApiResponse(userWithMeta);
-    return addCorsHeaders(response);
+    return addCorsHeaders(response, req);
   } catch (error) {
     console.error('Error fetching user:', error);
     const response = createApiError('Internal server error', 500);
-    return addCorsHeaders(response);
+    return addCorsHeaders(response, req);
   }
 }), 'read');
 
@@ -96,27 +85,16 @@ export const PATCH = withRateLimitTier(withApiLogging(async (
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> => {
   try {
-    // Authenticate using dual auth
-    const authResult = await authenticateRequest(req);
-    
+    // Authenticate using dual auth; the API-key scope is declared at the entry
+    // point, which fails closed for keys that lack it (#93).
+    const authResult = await authenticateRequest(req, { requiredScope: 'users:write' });
+
     if (!authResult.success) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-        { status: 401 }
-      );
+      return createAuthFailureResponse(authResult);
     }
 
     if (authResult.rateLimitResponse) {
       return authResult.rateLimitResponse as NextResponse;
-    }
-
-    // Check required permissions - session users need admin role, API key users need specific scope
-    const hasPermission = authResult.type === 'session' || 
-      (authResult.type === 'api-key' && hasRequiredScope(authResult, 'users:write'));
-
-    if (!hasPermission) {
-      const response = createApiError('Insufficient permissions. Admin access required for user management.', 403);
-      return addCorsHeaders(response);
     }
 
     const { id } = await params;
@@ -124,7 +102,7 @@ export const PATCH = withRateLimitTier(withApiLogging(async (
     // Validate that id is not empty
     if (!id || id.trim() === '') {
       const response = createApiError('User ID or email is required', 400, null, 'MISSING_IDENTIFIER');
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
 
     const body = await req.json();
@@ -162,7 +140,7 @@ export const PATCH = withRateLimitTier(withApiLogging(async (
     
     if (!hasEntityFieldsToUpdate && !hasMetadataToUpdate) {
       const response = createApiError('No fields to update', 400, null, 'NO_FIELDS');
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
 
     let updatedUser;
@@ -183,7 +161,7 @@ export const PATCH = withRateLimitTier(withApiLogging(async (
 
       if (result.rows.length === 0) {
         const response = createApiError('User not found', 404, null, 'USER_NOT_FOUND');
-        return addCorsHeaders(response);
+        return addCorsHeaders(response, req);
       }
 
       updatedUser = result.rows[0];
@@ -197,7 +175,7 @@ export const PATCH = withRateLimitTier(withApiLogging(async (
 
       if (!user) {
         const response = createApiError('User not found', 404, null, 'USER_NOT_FOUND');
-        return addCorsHeaders(response);
+        return addCorsHeaders(response, req);
       }
 
       updatedUser = user;
@@ -214,16 +192,16 @@ export const PATCH = withRateLimitTier(withApiLogging(async (
     const responseData = await handleEntityMetadataInResponse('user', updatedUser as { id: string }, metadataWasProvided, authResult.user!.id);
 
     const response = createApiResponse(responseData);
-    return addCorsHeaders(response);
+    return addCorsHeaders(response, req);
   } catch (error) {
     if (error instanceof z.ZodError) {
       const response = createApiError('Validation error', 400, error.issues, 'VALIDATION_ERROR');
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
     
     console.error('Error updating user:', error);
     const response = createApiError('Internal server error', 500);
-    return addCorsHeaders(response);
+    return addCorsHeaders(response, req);
   }
 }), 'write');
 
@@ -233,27 +211,16 @@ export const DELETE = withRateLimitTier(withApiLogging(async (
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> => {
   try {
-    // Authenticate using dual auth
-    const authResult = await authenticateRequest(req);
-    
+    // Authenticate using dual auth; the API-key scope is declared at the entry
+    // point, which fails closed for keys that lack it (#93).
+    const authResult = await authenticateRequest(req, { requiredScope: 'users:delete' });
+
     if (!authResult.success) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-        { status: 401 }
-      );
+      return createAuthFailureResponse(authResult);
     }
 
     if (authResult.rateLimitResponse) {
       return authResult.rateLimitResponse as NextResponse;
-    }
-
-    // Check required permissions - session users need admin role, API key users need specific scope
-    const hasPermission = authResult.type === 'session' || 
-      (authResult.type === 'api-key' && hasRequiredScope(authResult, 'users:delete'));
-
-    if (!hasPermission) {
-      const response = createApiError('Insufficient permissions. Admin access required for user management.', 403);
-      return addCorsHeaders(response);
     }
 
     const { id } = await params;
@@ -261,7 +228,7 @@ export const DELETE = withRateLimitTier(withApiLogging(async (
     // Validate that id is not empty
     if (!id || id.trim() === '') {
       const response = createApiError('User ID or email is required', 400, null, 'MISSING_IDENTIFIER');
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
 
     // First, get the user to check if it exists and prevent self-deletion
@@ -273,13 +240,13 @@ export const DELETE = withRateLimitTier(withApiLogging(async (
 
     if (!targetUser) {
       const response = createApiError('User not found', 404, null, 'USER_NOT_FOUND');
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
 
     // Prevent self-deletion
     if ((targetUser as Record<string, unknown>).id === authResult.user!.id) {
       const response = createApiError('Cannot delete your own account via API', 403, null, 'SELF_DELETE_FORBIDDEN');
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
 
     const result = await mutateWithRLS(
@@ -290,14 +257,14 @@ export const DELETE = withRateLimitTier(withApiLogging(async (
 
     if (result.rows.length === 0) {
       const response = createApiError('User not found', 404, null, 'USER_NOT_FOUND');
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
 
     const response = createApiResponse({ deleted: true, id });
-    return addCorsHeaders(response);
+    return addCorsHeaders(response, req);
   } catch (error) {
     console.error('Error deleting user:', error);
     const response = createApiError('Internal server error', 500);
-    return addCorsHeaders(response);
+    return addCorsHeaders(response, req);
   }
 }), 'write');

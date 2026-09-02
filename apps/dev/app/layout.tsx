@@ -15,11 +15,15 @@ import { getBillingResourceHints } from "@nextsparkjs/core/lib/billing/gateways/
 import { ThemeProvider as NextThemeProvider } from "@nextsparkjs/core/providers/theme-provider"
 import { ThemeProvider as CustomThemeProvider } from "@nextsparkjs/core/lib/theme/ThemeProvider"
 import { Toaster } from "@nextsparkjs/core/components/ui/sonner"
+import { QueryProvider } from "@nextsparkjs/core/providers/query-provider"
+import { TeamProvider } from "@nextsparkjs/core/contexts/TeamContext"
+import { SubscriptionProvider } from "@nextsparkjs/core/contexts/SubscriptionContext"
 import { getUserLocale } from '@nextsparkjs/core/lib/locale'
 import { TranslationContextManager } from "@nextsparkjs/core/providers/TranslationContextManager"
+import { SessionCookieRefresher } from "@nextsparkjs/core/components/auth/SessionCookieRefresher"
 import { PluginService } from '@nextsparkjs/core/lib/services'
 import { getMetadataOrDefault } from '@nextsparkjs/core/lib/template-resolver'
-import { getDefaultThemeMode } from '@nextsparkjs/core/lib/theme/get-default-theme-mode'
+import { getThemeSettings } from '@nextsparkjs/core/lib/theme/get-default-theme-mode'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -55,24 +59,18 @@ export default async function RootLayout({
 
   const locale = await getUserLocale()
   const messages = await getMessages({ locale })
-  const defaultTheme = await getDefaultThemeMode()
+  const { defaultMode, allowUserToggle, forcedThemeRoutes } = await getThemeSettings()
+  const billingHints = await getBillingResourceHints()
 
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
-        {(() => {
-          const hints = getBillingResourceHints()
-          return (
-            <>
-              {hints.preconnect.map((domain) => (
-                <link key={`pre-${domain}`} rel="preconnect" href={domain} />
-              ))}
-              {[...hints.preconnect, ...hints.dnsPrefetch].map((domain) => (
-                <link key={`dns-${domain}`} rel="dns-prefetch" href={domain} />
-              ))}
-            </>
-          )
-        })()}
+        {billingHints.preconnect.map((domain) => (
+          <link key={`pre-${domain}`} rel="preconnect" href={domain} />
+        ))}
+        {[...billingHints.preconnect, ...billingHints.dnsPrefetch].map((domain) => (
+          <link key={`dns-${domain}`} rel="dns-prefetch" href={domain} />
+        ))}
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
@@ -80,14 +78,33 @@ export default async function RootLayout({
         <NextIntlClientProvider locale={locale} messages={messages}>
           <NextThemeProvider
             attribute="class"
-            defaultTheme={defaultTheme}
-            enableSystem
+            defaultTheme={defaultMode}
+            // When allowUserToggle is false, force the theme and ignore localStorage/system
+            forcedTheme={!allowUserToggle ? defaultMode : undefined}
+            // Only detect OS preference when theme configures defaultMode: 'system' AND user can toggle
+            enableSystem={allowUserToggle && defaultMode === 'system'}
+            // Force a theme on the routes declared in theme.config.ts (forcedThemeRoutes)
+            forcedThemeRoutes={forcedThemeRoutes}
             disableTransitionOnChange
           >
             <CustomThemeProvider>
-              <TranslationContextManager />
-              <main>{children}</main>
-              <Suspense><Toaster position="bottom-left" /></Suspense>
+              {/* Team providers live here (not only in DashboardProviders) so the activeTeamId
+                  cookie is synced from any route, matching layout.ppr.tsx — see #115.
+                  DashboardProviders skips re-mounting them when already present. */}
+              <QueryProvider>
+                <TeamProvider>
+                  <SubscriptionProvider>
+                    <TranslationContextManager />
+                    {/* Real session-cookie renewal for installed PWAs: the render-time
+                        session reads above (getUserLocale/getThemeSettings) cannot
+                        write cookies, so the rolling refresh is triggered from the
+                        client through the auth Route Handler instead. */}
+                    <SessionCookieRefresher />
+                    <main>{children}</main>
+                    <Suspense><Toaster position="bottom-left" /></Suspense>
+                  </SubscriptionProvider>
+                </TeamProvider>
+              </QueryProvider>
             </CustomThemeProvider>
           </NextThemeProvider>
         </NextIntlClientProvider>

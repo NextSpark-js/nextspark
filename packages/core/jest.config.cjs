@@ -16,10 +16,8 @@ module.exports = {
     // These tests work correctly in the context of a generated project
     'tests/jest/services/block.service.test.ts',
     'tests/jest/services/entity-type.service.test.ts',
-    'tests/jest/services/membership.service.test.ts',
     'tests/jest/services/namespace.service.test.ts',
     'tests/jest/services/permission.service.test.ts',
-    'tests/jest/services/scope.service.test.ts',
     'tests/jest/services/theme.service.test.ts',
     'tests/jest/services/translation.service.test.ts',
     // Billing tests that expect specific registry configuration

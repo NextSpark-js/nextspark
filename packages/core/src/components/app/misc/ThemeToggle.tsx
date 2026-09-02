@@ -16,7 +16,7 @@ import { useTranslations } from 'next-intl'
 import { useAuth } from '../../../hooks/useAuth'
 
 export function ThemeToggle() {
-  const { setTheme, theme } = useTheme()
+  const { setTheme, theme, forcedTheme } = useTheme()
   const { user } = useAuth()
   const [mounted, setMounted] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
@@ -56,6 +56,15 @@ export function ThemeToggle() {
       }
     }
   }, [setTheme, t, user])
+
+  // When the theme is forced — `ui.theme.allowUserToggle: false` or a route
+  // listed in `forcedThemeRoutes` — next-themes ignores setTheme, so a toggle
+  // would only promise a change it cannot deliver. Hide it instead.
+  // `forcedTheme` comes straight from the provider props, so it is identical on
+  // the server and the client and safe to read before `mounted`.
+  if (forcedTheme) {
+    return null
+  }
 
   if (!mounted) {
     return (

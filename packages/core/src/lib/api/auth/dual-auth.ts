@@ -11,6 +11,16 @@ import { validateApiKey } from '../auth'
 import { queryOne } from '../../db'
 import { TeamMemberService } from '../../services/team-member.service'
 import { TeamService } from '../../services/team.service'
+import {
+  type AuthenticateOptions,
+  type DualAuthFailure,
+  authenticationFailed,
+  describeRoute,
+  resolveApiKeyScopeFailure,
+  scopesSatisfy,
+} from './scope-policy'
+
+export type { AuthenticateOptions, DualAuthFailure, DualAuthFailureCode } from './scope-policy'
 
 // ==========================================
 // ADMIN BYPASS CONSTANTS
@@ -52,12 +62,21 @@ export interface DualAuthUser {
 
 export interface DualAuthResult {
   success: boolean
+  /**
+   * How the caller authenticated. On a failed result, `'api-key'` means a
+   * valid key WAS presented but rejected by scope enforcement (see `error`);
+   * `'none'` means no usable credential was found.
+   */
   type: 'api-key' | 'session' | 'none'
   user: DualAuthUser | null
   scopes?: string[]
+  /** `api_key.id` of the key that authenticated the request (type 'api-key' only). Used for audit logging (#105). */
+  keyId?: string
   rateLimitResponse?: Response
   /** Set when a dev-only x-act-as-user override replaced the real caller. */
   actingAs?: { originalUserId: string; originalRole: string }
+  /** Why the request was rejected. Only present when `success` is false. */
+  error?: DualAuthFailure
 }
 
 /**
@@ -80,12 +99,38 @@ async function getUserDefaultTeamId(userId: string): Promise<string | undefined>
 }
 
 /**
- * Try to authenticate request using either API Key or Session
+ * Try to authenticate request using either API Key or Session.
+ *
+ * API-key scope enforcement happens HERE and fails closed (#93): a route
+ * declares the scope it needs via `options.requiredScope`, or explicitly
+ * accepts any valid key via `options.allowAnyScope`. A key hitting a route
+ * that declared neither is rejected (403 `SCOPE_NOT_DECLARED`) and the route
+ * is named in the log, so a forgotten declaration is visible instead of a
+ * silently over-privileged credential. Session auth is unaffected.
+ *
+ * @example
+ * const authResult = await authenticateRequest(request, { requiredScope: 'users:read' })
+ * if (!authResult.success || !authResult.user) return createAuthFailureResponse(authResult)
  */
-export async function authenticateRequest(request: NextRequest): Promise<DualAuthResult> {
+export async function authenticateRequest(
+  request: NextRequest,
+  options: AuthenticateOptions = {}
+): Promise<DualAuthResult> {
   // First try API Key authentication
   const apiKeyResult = await tryApiKeyAuth(request)
   if (apiKeyResult.success) {
+    const failure = resolveApiKeyScopeFailure(apiKeyResult.scopes, options, describeRoute(request))
+    if (failure) {
+      // A presented key that fails scope enforcement is rejected outright —
+      // it must never silently degrade to cookie auth or to anonymous access.
+      return {
+        success: false,
+        type: 'api-key',
+        user: null,
+        scopes: apiKeyResult.scopes,
+        error: failure,
+      }
+    }
     return applyActAsOverride(request, apiKeyResult)
   }
 
@@ -98,7 +143,8 @@ export async function authenticateRequest(request: NextRequest): Promise<DualAut
   return {
     success: false,
     type: 'none',
-    user: null
+    user: null,
+    error: authenticationFailed(),
   }
 }
 
@@ -221,7 +267,8 @@ async function tryApiKeyAuth(request: NextRequest): Promise<DualAuthResult> {
         name: userInfo?.name,
         defaultTeamId
       },
-      scopes: apiAuth.scopes || []
+      scopes: apiAuth.scopes || [],
+      keyId: apiAuth.keyId
     }
   } catch (error) {
     console.error('API Key auth failed:', error)
@@ -253,6 +300,7 @@ async function trySessionAuth(request: NextRequest): Promise<DualAuthResult> {
       user: {
         id: session.user.id,
         email: session.user.email,
+        // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
         role: session.user.role || 'user',
         name: session.user.name,
         defaultTeamId
@@ -267,16 +315,26 @@ async function trySessionAuth(request: NextRequest): Promise<DualAuthResult> {
 
 /**
  * Check if user has required scope (for API Key auth)
+ *
+ * Since #93 the entry point already enforces the route's declared scope;
+ * this remains for routes that branch on a *second*, finer scope after
+ * authenticating (e.g. read-vs-write within one handler). An array is
+ * satisfied by any one of its scopes; an empty array by none.
+ *
+ * `admin:all` was previously accepted as an implicit full-access scope here,
+ * but it was never in `API_SCOPES`, never mintable via `validateScopesForUser`,
+ * and undocumented — a full-access string nothing legitimately produced.
+ * Removed rather than formalized: the wildcard `*` (mintable only by a real
+ * superadmin, see `validateScopesForUser`) already covers the "this key has
+ * full access" case in a documented, auditable way.
  */
-export function hasRequiredScope(authResult: DualAuthResult, requiredScope: string): boolean {
+export function hasRequiredScope(authResult: DualAuthResult, requiredScope: string | string[]): boolean {
   if (authResult.type === 'session') {
     return true // Sessions have full access
   }
 
-  if (authResult.type === 'api-key' && authResult.scopes) {
-    return authResult.scopes.includes(requiredScope) || 
-           authResult.scopes.includes('admin:all') || 
-           authResult.scopes.includes('*')
+  if (authResult.type === 'api-key') {
+    return scopesSatisfy(authResult.scopes, requiredScope)
   }
 
   return false
@@ -407,5 +465,24 @@ export function createAuthError(message: string = 'Authentication required', sta
       code: 'AUTHENTICATION_FAILED'
     },
     { status }
+  )
+}
+
+/**
+ * Turn a failed `authenticateRequest` result into the right HTTP response:
+ * 401 `AUTHENTICATION_FAILED` when nothing usable was presented, 403
+ * `INSUFFICIENT_SCOPE` / `SCOPE_NOT_DECLARED` when a valid API key was
+ * rejected by scope enforcement. Use it in the `!authResult.success` branch
+ * instead of a hand-written 401, so scope rejections are not mislabeled.
+ */
+export function createAuthFailureResponse(authResult: DualAuthResult): NextResponse {
+  const failure = authResult.error ?? authenticationFailed()
+  return NextResponse.json(
+    {
+      success: false,
+      error: failure.message,
+      code: failure.code,
+    },
+    { status: failure.status }
   )
 }

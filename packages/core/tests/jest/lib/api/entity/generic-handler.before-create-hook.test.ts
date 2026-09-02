@@ -63,6 +63,8 @@ jest.mock('@nextsparkjs/core/lib/api/helpers', () => ({
 jest.mock('@nextsparkjs/core/lib/permissions/check', () => ({
   checkPermission: jest.fn(),
 }))
+import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
+const mockCheckPermission = checkPermission as jest.Mock
 
 jest.mock('@nextsparkjs/core/lib/blocks/pattern-resolver', () => ({
   extractPatternIds: jest.fn(),
@@ -176,6 +178,12 @@ describe('handleGenericCreate - beforeEntityCreate hook wiring', () => {
     })
     mockHasRequiredScope.mockReturnValue(true)
     mockCanBypassTeamContext.mockResolvedValue(true)
+    // generic-handler.ts now runs checkAuthPermission() (entity-level,
+    // team-role permission check) before firing beforeEntityCreate — that
+    // wasn't true when this test was first written, since the hook used to
+    // fire earlier in the pipeline. Must resolve truthy or every request
+    // in this file 403s before ever reaching the hook under test.
+    mockCheckPermission.mockResolvedValue(true)
 
     // Pass-through "validator" — real Zod schema generation is exercised by
     // schema-generator's own tests, not by this handler-level suite.
@@ -248,9 +256,14 @@ describe('handleGenericCreate - beforeEntityCreate hook wiring', () => {
     const response = await handleGenericCreate(request)
 
     expect(response.status).toBe(201)
-    expect(mockMutateWithRLS).toHaveBeenCalledTimes(1)
 
-    const insertValues = mockMutateWithRLS.mock.calls[0][1]
+    // #105's audit-log wrapper also calls mutateWithRLS (INSERT INTO
+    // api_audit_log) for every request, success or failure — filter it out
+    // to isolate the actual entity-table INSERT this test cares about.
+    const entityWrites = mockMutateWithRLS.mock.calls.filter(([sql]: [string]) => !sql.includes('api_audit_log'))
+    expect(entityWrites).toHaveLength(1)
+
+    const insertValues = entityWrites[0][1]
     expect(insertValues).toContain('Espacio Zen (validated)')
     expect(insertValues).not.toContain('Espacio Zen')
   })
@@ -272,8 +285,12 @@ describe('handleGenericCreate - beforeEntityCreate hook wiring', () => {
 
     expect(response.status).toBe(400)
     expect(json.success).toBe(false)
-    expect(json.code).toBe('HOOK_REJECTED')
+    expect(json.code).toBe('BEFORE_CREATE_REJECTED')
     expect(json.error).toBe('referenced resource belongs to another tenant')
-    expect(mockMutateWithRLS).not.toHaveBeenCalled()
+
+    // #105's audit-log wrapper still logs the (denied) request — that INSERT
+    // is expected. What must not happen is an entity-table write.
+    const entityWrites = mockMutateWithRLS.mock.calls.filter(([sql]: [string]) => !sql.includes('api_audit_log'))
+    expect(entityWrites).toHaveLength(0)
   })
 })

@@ -63,6 +63,14 @@ export const APP_CONFIG_OVERRIDES = {
       },
     },
     /**
+     * Login methods. The core default is the passwordless preset
+     * (['email-otp', 'google']). This theme is the regression test-bed for the
+     * classic flow (Cypress + DevKeyring log in with email + password), so it
+     * keeps the password form first and exposes the one-time-code form as the
+     * secondary option.
+     */
+    methods: ['email-password', 'email-otp', 'google'],
+    /**
      * Whether Better Auth automatically sends the verification email on signup.
      *
      * - `true` (default): users get a "Verify Your Email Address" link email
@@ -116,6 +124,14 @@ export const APP_CONFIG_OVERRIDES = {
   // API CONFIGURATION OVERRIDES
   // =============================================================================
   api: {
+    // API-key scopes this theme's routes enforce (#93). Core merges them into the
+    // scope vocabulary so keys can be minted with them and the key UI offers them.
+    scopes: {
+      'ai:read': 'Read AI conversations and usage',
+      'ai:write': 'Run AI chat/agents and manage conversations',
+      'social:read': 'Read connected social accounts',
+      'social:write': 'Connect, assign and publish to social accounts',
+    },
     cors: {
       // Theme-specific CORS origins (extends core defaults, does not replace)
       // Core already includes: localhost:3000, localhost:5173, and their 127.0.0.1 variants

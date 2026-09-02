@@ -1,6 +1,6 @@
 {
   "name": "@nextsparkjs/core",
-  "version": "0.1.0-beta.184",
+  "version": "0.1.0-beta.185",
   "description": "NextSpark - The complete SaaS framework for Next.js",
   "license": "MIT",
   "author": "NextSpark <hello@nextspark.dev>",
@@ -64,6 +64,10 @@
       "types": "./dist/lib/services/index.d.ts",
       "import": "./dist/lib/services/index.js"
     },
+    "./lib/mcp": {
+      "types": "./dist/lib/mcp/index.d.ts",
+      "import": "./dist/lib/mcp/index.js"
+    },
     "./lib/config": {
       "types": "./dist/lib/config/index.d.ts",
       "import": "./dist/lib/config/index.js"
@@ -107,6 +111,14 @@
     "./lib/scheduled-actions": {
       "types": "./dist/lib/scheduled-actions/index.d.ts",
       "import": "./dist/lib/scheduled-actions/index.js"
+    },
+    "./lib/scheduled-actions/handlers": {
+      "types": "./dist/lib/scheduled-actions/handlers/index.d.ts",
+      "import": "./dist/lib/scheduled-actions/handlers/index.js"
+    },
+    "./lib/auth/security-notifications": {
+      "types": "./dist/lib/auth/security-notifications/index.d.ts",
+      "import": "./dist/lib/auth/security-notifications/index.js"
     },
     "./lib/permissions": {
       "types": "./dist/lib/permissions/index.d.ts",
@@ -414,6 +426,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@hookform/resolvers": "^5.2.1",
     "@inquirer/prompts": "^7.2.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@nextsparkjs/testing": "workspace:*",
     "@nextsparkjs/ui": "^0.1.0-beta.2",
     "@polar-sh/sdk": "^0.43.1",
@@ -449,7 +462,7 @@
     "@upstash/ratelimit": "^2.0.3",
     "@upstash/redis": "^1.20.6",
     "@vercel/blob": "^2.0.0",
-    "better-auth": "^1.3.5",
+    "better-auth": "~1.6.30",
     "chalk": "^5.4.1",
     "jiti": "^2.7.0",
     "kysely": "0.28.17",

@@ -9,12 +9,15 @@
 import { auth } from '../auth'
 import { ThemeService } from '../services/theme.service'
 import { headers } from 'next/headers'
+import type { ForcedThemeRoutes } from './forced-theme'
 
 type ThemeMode = 'light' | 'dark' | 'system'
 
 export interface ThemeSettings {
   defaultMode: ThemeMode
   allowUserToggle: boolean
+  /** Route prefixes whose theme is forced (theme.config.ts → forcedThemeRoutes) */
+  forcedThemeRoutes?: ForcedThemeRoutes
 }
 
 /**
@@ -34,15 +37,19 @@ export async function getThemeSettings(): Promise<ThemeSettings> {
   // Get base defaultMode from theme.config.ts
   const configDefaultMode = (themeConfig?.defaultMode as ThemeMode) || 'system'
 
+  // Per-route forced themes from theme.config.ts. Resolved against the current
+  // pathname by the root ThemeProvider (see lib/theme/forced-theme.ts).
+  const forcedThemeRoutes = themeConfig?.forcedThemeRoutes
+
   // If user can toggle, try to get their preference
   if (allowUserToggle) {
     const userTheme = await getUserThemePreference()
     if (userTheme) {
-      return { defaultMode: userTheme, allowUserToggle }
+      return { defaultMode: userTheme, allowUserToggle, forcedThemeRoutes }
     }
   }
 
-  return { defaultMode: configDefaultMode, allowUserToggle }
+  return { defaultMode: configDefaultMode, allowUserToggle, forcedThemeRoutes }
 }
 
 const VALID_THEME_MODES: ThemeMode[] = ['light', 'dark', 'system']
@@ -59,8 +66,11 @@ function isValidThemeMode(value: unknown): value is ThemeMode {
  */
 async function getUserThemePreference(): Promise<ThemeMode | null> {
   try {
+    // Render-time read (root layout): never let it consume the rolling session
+    // renewal, since cookies cannot be written here. See lib/locale.ts.
     const session = await auth.api.getSession({
-      headers: await headers()
+      headers: await headers(),
+      query: { disableRefresh: true },
     })
 
     if (session?.user?.id) {

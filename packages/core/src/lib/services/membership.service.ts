@@ -176,12 +176,20 @@ export class TeamMembership implements TeamMembershipData {
    * 4. Quota is available
    * 5. Subscription is active
    *
-   * @param action - Action slug to check
+   * The action id IS the permission id as registered in the permissions
+   * registry (e.g. 'team.members.update_role', 'customers.create',
+   * 'page-builder.access'). Ids may have any number of dot-separated segments.
+   *
+   * Fails closed: an action whose id is not a registered permission is denied
+   * (and logged) instead of silently allowed, so a typo or a renamed permission
+   * surfaces as a visible 403 rather than an unguarded endpoint (issue #89).
+   *
+   * @param action - Action slug to check (must be a registered permission id)
    * @param options - Options for quota increment
    * @returns ActionResult with allowed status and details
    *
    * @example
-   * const result = membership.canPerformAction('projects.create')
+   * const result = membership.canPerformAction('team.members.update_role')
    * if (!result.allowed) {
    *   console.log(result.message, result.reason)
    * }
@@ -211,22 +219,39 @@ export class TeamMembership implements TeamMembershipData {
       }
     }
 
-    // Parse action (e.g., 'customers.create' -> permission check)
-    const [entity, actionType] = action.split('.')
-    const permission = `${entity}.${actionType}` as Permission
-
     // 3. Check permission (RBAC)
-    if (PermissionService.isValid(permission)) {
-      if (!this.hasPermission(permission)) {
-        return {
-          allowed: false,
-          reason: 'permission_denied',
-          message: `You do not have permission: ${permission}`,
-          meta: {
-            requiredPermission: permission,
-            userRole: this.role,
-          },
-        }
+    //
+    // The full action id is the permission id. Do NOT rebuild it from the first
+    // two segments: 'team.members.update_role' must not collapse into
+    // 'team.members' (which is not a registered id).
+    const permission = action as Permission
+
+    // Fail closed: an unregistered permission id is denied, never allowed.
+    if (!PermissionService.isValid(permission)) {
+      console.warn(
+        `[MembershipService] canPerformAction('${action}') denied: '${permission}' is not a registered permission id`
+      )
+      return {
+        allowed: false,
+        reason: 'permission_denied',
+        message: `Unknown permission: ${permission}`,
+        meta: {
+          requiredPermission: permission,
+          userRole: this.role,
+          unregistered: true,
+        },
+      }
+    }
+
+    if (!this.hasPermission(permission)) {
+      return {
+        allowed: false,
+        reason: 'permission_denied',
+        message: `You do not have permission: ${permission}`,
+        meta: {
+          requiredPermission: permission,
+          userRole: this.role,
+        },
       }
     }
 
@@ -235,6 +260,7 @@ export class TeamMembership implements TeamMembershipData {
     if (requiredFeature && !this.hasFeature(requiredFeature)) {
       return {
         allowed: false,
+        // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
         reason: 'feature_not_in_plan',
         message: `Your plan does not include the required feature: ${requiredFeature}`,
         meta: {

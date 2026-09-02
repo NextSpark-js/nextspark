@@ -9,6 +9,7 @@ import { TeamService } from "@nextsparkjs/core/lib/services";
 import { wrapAuthHandlerWithCors, handleCorsPreflightRequest, addCorsHeaders } from "@nextsparkjs/core/lib/api/helpers";
 import { checkDistributedRateLimit } from "@nextsparkjs/core/lib/api/rate-limit";
 import { withSignupContext } from "@nextsparkjs/core/lib/auth-context";
+import { dispatchSecurityNotificationsForRequest } from "@nextsparkjs/core/lib/auth/security-notifications";
 
 const handlers = toNextJsHandler(auth);
 
@@ -181,11 +182,32 @@ export async function POST(req: NextRequest) {
       ? (req.cookies.get('signup-intent')?.value || undefined)
       : undefined;
 
+  // Clone the request BEFORE the handler consumes its body. The
+  // security-notifications dispatcher (below) needs the original request's
+  // headers (UA/IP) and, for change-email, its body (newEmail) — but
+  // handlers.POST(req) reads req's body exactly once.
+  const securityReq = req.clone() as NextRequest;
+
   // Wrap with CORS headers for cross-origin requests (mobile apps, etc.)
-  return wrapAuthHandlerWithCors(
+  const response = await wrapAuthHandlerWithCors(
     signupIntent
       ? () => withSignupContext({ signupIntent }, () => handlers.POST(req))
       : () => handlers.POST(req),
     req
   );
+
+  // Built-in security email notifications (issue #75): after a successful
+  // sign-in / change-password / change-email, queue the matching security
+  // email. Guarded by AUTH_CONFIG.securityNotifications.enabled and wrapped in
+  // try/catch — a notification failure must NEVER change the auth response
+  // status (the dispatcher is itself best-effort, this is defense in depth).
+  if (AUTH_CONFIG.securityNotifications?.enabled) {
+    try {
+      await dispatchSecurityNotificationsForRequest(securityReq, response);
+    } catch (error) {
+      console.error("[auth] security-notifications dispatch error:", error);
+    }
+  }
+
+  return response;
 }

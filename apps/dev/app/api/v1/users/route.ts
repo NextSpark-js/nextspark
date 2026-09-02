@@ -14,7 +14,7 @@ import {
   handleEntityMetadataInResponse,
   processEntityMetadata
 } from '@nextsparkjs/core/lib/api/helpers';
-import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth';
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth';
 import { hasAdminPermission } from '@nextsparkjs/core/lib/api/auth/permissions';
 import { z } from 'zod';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
@@ -34,21 +34,19 @@ const createUserSchema = z.object({
 
 
 // Handle CORS preflight
-export async function OPTIONS() {
-  return handleCorsPreflightRequest();
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request);
 }
 
 // GET /api/v1/users - List users with dual auth
 export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
   try {
-    // Authenticate using dual auth
-    const authResult = await authenticateRequest(req);
-    
+    // Authenticate using dual auth; the API-key scope is declared at the entry
+    // point, which fails closed for keys that lack it (#93).
+    const authResult = await authenticateRequest(req, { requiredScope: 'users:read' });
+
     if (!authResult.success) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-        { status: 401 }
-      );
+      return createAuthFailureResponse(authResult);
     }
 
     if (authResult.rateLimitResponse) {
@@ -58,7 +56,7 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
     // SECURITY: Only superadmins can list all users
     if (!hasAdminPermission(authResult, 'users:read')) {
       const response = createApiError('Insufficient permissions. Superadmin access required.', 403);
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
 
     const metaParams = parseMetaParams(req);
@@ -103,25 +101,23 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
     const usersWithMeta = await includeEntityMetadata('user', users as { id: string }[], metaParams, authResult.user!.id);
 
     const response = createApiResponse(usersWithMeta, paginationMeta);
-    return addCorsHeaders(response);
+    return addCorsHeaders(response, req);
   } catch (error) {
     console.error('Error fetching users:', error);
     const response = createApiError('Internal server error', 500);
-    return addCorsHeaders(response);
+    return addCorsHeaders(response, req);
   }
 }), 'read');
 
 // POST /api/v1/users - Create user with dual auth
 export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
   try {
-    // Authenticate using dual auth
-    const authResult = await authenticateRequest(req);
-    
+    // Authenticate using dual auth; the API-key scope is declared at the entry
+    // point, which fails closed for keys that lack it (#93).
+    const authResult = await authenticateRequest(req, { requiredScope: 'users:write' });
+
     if (!authResult.success) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-        { status: 401 }
-      );
+      return createAuthFailureResponse(authResult);
     }
 
     if (authResult.rateLimitResponse) {
@@ -131,7 +127,7 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
     // SECURITY: Only superadmins can create users
     if (!hasAdminPermission(authResult, 'users:write')) {
       const response = createApiError('Insufficient permissions. Superadmin access required.', 403);
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
 
     const body = await req.json();
@@ -147,7 +143,7 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
 
     if (existingUser.length > 0) {
       const response = createApiError('Email already exists', 409, null, 'EMAIL_EXISTS');
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
 
     const newUserId = globalThis.crypto.randomUUID();
@@ -183,16 +179,16 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
     const responseData = await handleEntityMetadataInResponse('user', createdUser as { id: string }, metadataWasProvided, authResult.user!.id);
     
     const response = createApiResponse(responseData, { created: true }, 201);
-    return addCorsHeaders(response);
+    return addCorsHeaders(response, req);
   } catch (error) {
     if (error instanceof z.ZodError) {
       const response = createApiError('Validation error', 400, error.issues, 'VALIDATION_ERROR');
-      return addCorsHeaders(response);
+      return addCorsHeaders(response, req);
     }
     
     console.error('Error creating user:', error);
     const response = createApiError('Internal server error', 500);
-    return addCorsHeaders(response);
+    return addCorsHeaders(response, req);
   }
 }), 'write');
 

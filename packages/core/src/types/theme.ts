@@ -19,6 +19,15 @@ export interface ThemeConfig {
   enabled?: boolean
   /** Default theme mode - controls next-themes behavior */
   defaultMode?: 'light' | 'dark' | 'system'
+  /**
+   * Force a theme on specific routes, ignoring user and system preference.
+   * Keys are route prefixes matched at segment boundaries (the longest match
+   * wins); values are the theme to force. The root ThemeProvider passes the
+   * resolved value to next-themes' `forcedTheme`, so the route renders with
+   * that theme from the first paint and on client-side navigations.
+   * @example { '/login': 'light', '/signup': 'light', '/embed': 'dark' }
+   */
+  forcedThemeRoutes?: Record<string, 'light' | 'dark'>
   dependencies?: string[]
   plugins?: string[]
   styles?: {

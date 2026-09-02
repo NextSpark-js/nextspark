@@ -13,7 +13,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { createAgent } from '@/plugins/langchain/lib/agent-factory'
 import {
@@ -77,13 +77,11 @@ function convertToApiMessages(
  */
 const postHandler = async (req: NextRequest) => {
     try {
-        // 1. Authentication
-        const authResult = await authenticateRequest(req)
+        // 1. Authentication; the API-key scope is declared at the entry point,
+        // which fails closed for keys that lack it (#93).
+        const authResult = await authenticateRequest(req, { requiredScope: 'ai:write' })
         if (!authResult.success || !authResult.user) {
-            return NextResponse.json(
-                { success: false, error: 'Unauthorized' },
-                { status: 401 }
-            )
+            return createAuthFailureResponse(authResult)
         }
 
         // 2. Team context
@@ -215,10 +213,11 @@ const getHandler = async (req: NextRequest) => {
         })
     }
 
-    // Auth
-    const authResult = await authenticateRequest(req)
+    // Auth; the API-key scope is declared at the entry point, which fails
+    // closed for keys that lack it (#93).
+    const authResult = await authenticateRequest(req, { requiredScope: 'ai:read' })
     if (!authResult.success || !authResult.user) {
-        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+        return createAuthFailureResponse(authResult)
     }
 
     const teamId = req.headers.get('x-team-id')
@@ -261,9 +260,11 @@ export const GET = withRateLimitTier(getHandler, 'read')
  * DELETE - Clear conversation
  */
 const deleteHandler = async (req: NextRequest) => {
-    const authResult = await authenticateRequest(req)
+    // The API-key scope is declared at the entry point, which fails closed
+    // for keys that lack it (#93).
+    const authResult = await authenticateRequest(req, { requiredScope: 'ai:write' })
     if (!authResult.success || !authResult.user) {
-        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+        return createAuthFailureResponse(authResult)
     }
 
     const teamId = req.headers.get('x-team-id')

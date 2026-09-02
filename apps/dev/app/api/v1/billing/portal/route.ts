@@ -8,17 +8,18 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest, createAuthError } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
 import { SubscriptionService, MembershipService } from '@nextsparkjs/core/lib/services'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 export const POST = withRateLimitTier(async (request: NextRequest) => {
-  // 1. Dual authentication
-  const authResult = await authenticateRequest(request)
+  // 1. Dual authentication; the API-key scope is declared at the entry
+  // point, which fails closed for keys that lack it (#93).
+  const authResult = await authenticateRequest(request, { requiredScope: 'billing:write' })
 
   if (!authResult.success || !authResult.user) {
-    return createAuthError('Unauthorized', 401)
+    return createAuthFailureResponse(authResult)
   }
 
   // 2. Get team context
@@ -69,7 +70,8 @@ export const POST = withRateLimitTier(async (request: NextRequest) => {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173'
     const returnUrl = `${appUrl}/dashboard/settings/billing`
 
-    const session = await getBillingGateway().createPortalSession({
+    const gateway = await getBillingGateway()
+    const session = await gateway.createPortalSession({
       customerId: subscription.externalCustomerId,
       returnUrl
     })

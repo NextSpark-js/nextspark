@@ -7,6 +7,196 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Registry-driven MCP (Model Context Protocol) server engine (`@nextsparkjs/core/lib/mcp`, #98).**
+  Every `access.api`-enabled entity in the entity registry now gets a working MCP tool
+  surface for free — `list`/`get`/`create`/`update`/`delete` tools generated from each
+  entity's field definitions, with zero per-entity code. See
+  [docs/05-api/20-mcp-server.md](./docs/05-api/20-mcp-server.md).
+  - **Engine** (`engine.ts`, `tool-generator.ts`, `schema-builder.ts`) builds a JSON-Schema
+    presentation layer from `EntityField[]` (the core's own `generateEntitySchemas` output
+    can't back `tools/list` — some field types use a `z.union([..., z.undefined()]).transform()`
+    shape `z.toJSONSchema()` rejects). The presentation layer also hardens the generated
+    `list` tool against known silent-failure modes of the generic list endpoint: strict
+    unknown-key rejection, a `sortBy` enum restricted to sortable fields, `datetime` fields
+    excluded from `filters` (equality against a timestamptz silently returns `[]`), a
+    `dateField`/`from`/`to` cross-field rule, and `distinct` never exposed.
+  - **Executor** (`executor.ts`) invokes the real `handleGenericList/Create/Read/Update/Delete`
+    handlers in-process with a synthesized request — the exact same code path
+    `/api/v1/{entity}` uses, so every tool call inherits the fixed scope + team-role
+    permission + ownership/field-guard enforcement (#94, #95) automatically. No separate
+    authorization layer is re-implemented in the MCP engine.
+  - **Transport** (`transport.ts`) is a ~80 LOC stateless in-memory `Transport` adapter,
+    since the SDK's `StreamableHTTPServerTransport` requires Node's
+    `IncomingMessage`/`ServerResponse`, unavailable in the Next.js App Router request model.
+  - **Registry discovery**: a theme customizes one entity's MCP surface by adding
+    `entities/<slug>/mcp.ts` (`McpEntityOverride` — exclude, excludeOperations,
+    relaxRequired, describe, errorHints, transformInput/transformOutput, extraTools),
+    auto-discovered by a new `mcp-overrides` registry generator the same way
+    `entities/<slug>/api/presets.ts` is discovered today — no manual import list to maintain.
+  - **Audit**: every tool call, success or failure, is written to `api_audit_log` with an
+    `mcp:<tool>` endpoint prefix.
+  - New dependency: `@modelcontextprotocol/sdk` (`zod` was already in core's dependency tree).
+  - New package export: `@nextsparkjs/core/lib/mcp`.
+- **Audit logging for the generic entity routes (#105).** Every authenticated
+  request to `/api/v1/[entity]` and `/api/v1/[entity]/[id]` — session or
+  API-key — now writes an `api_audit_log` row (endpoint, method, status code,
+  IP, user agent, response time; `apiKeyId` for API keys, `NULL` for
+  sessions). Logging is fire-and-forget and never affects the response. The
+  request body is not stored.
+  - **Migration `025_api_audit_log_nullable_api_key.sql`** drops the `NOT NULL`
+    on `api_audit_log."apiKeyId"` (the FK is unchanged). Run `db:migrate`.
+  - `DualAuthResult` gains `keyId` (the authenticating `api_key.id`) so the
+    audit row can be attributed without an extra lookup.
+  - MCP tool calls now produce two rows: the existing `mcp:<tool>` row and the
+    underlying API call's row.
+
+### Security
+
+- **API-key scope minting now matches scope enforcement (#94).** `validateScopesForUser`
+  — the gate deciding which scopes a user may mint into an API key — previously checked
+  a hardcoded map keyed by the caller's **global** `users.role`, referencing a
+  nonexistent role (`colaborator`) and missing `owner`/`viewer` entirely. Independently,
+  the scope-registry generator that was supposed to back this was dead code: it read
+  entity properties (`entity.api.endpoints`, `entity.features`) that don't exist on the
+  real entity-discovery shape, so `SCOPE_CONFIG.roles` was 100% hardcoded, wrong JSON
+  referencing a nonexistent `products` entity. Net effect: **no non-superadmin user
+  could ever mint a working API key for their own theme's entities.**
+  - The scope-registry generator (`scope-registry.mjs`) now emits a file that computes
+    `SCOPE_CONFIG.roles` at import time, deriving `<slug>:read/write/delete` per
+    API-exposed entity from the same team-role permission matrix
+    (`PERMISSIONS_BY_ROLE`) the request-time authorization check uses — scope minting
+    and scope enforcement can no longer drift apart.
+  - `validateScopesForUser(userId, teamId, requestedScopes)` now takes an explicit
+    `teamId` and resolves the caller's real **team** role via `TeamMemberService`,
+    with an explicit bypass for the global `superadmin` role (which is not a team role
+    and never appears in `AVAILABLE_ROLES`).
+  - `POST /api/v1/api-keys` now resolves team context (`x-team-id` header / cookie /
+    default team) before validating requested scopes, for any non-superadmin caller.
+  - Fixed a satellite bug: `handleGenericDelete` checked the entity's `:write` scope
+    instead of `:delete` — a write-scoped key could delete, and the `:delete` scope was
+    pure decoration.
+  - Removed the undocumented, unmintable `admin:all` scope from `hasRequiredScope` —
+    dead code (nothing could mint it) and a latent, undocumented full-access string.
+    Use `*` instead.
+
+- **API-key authentication no longer bypasses team-role permission checks, field
+  guards, or ownership-based row filtering on the generic entity routes (#95).**
+  `/api/v1/[entity]` previously ran three authorization layers — a team-role
+  permission check, per-role field write guards, and ownership-scoped row
+  filtering — only for session-authenticated requests, explicitly skipping all
+  three for API-key auth on the stated assumption that scopes alone governed
+  API-key requests. Scopes only ever expressed entity+operation granularity, so a
+  scoped key could read/write outside its owner's team role, ownership scope, or
+  field restrictions — broader access than the same user's own session. All three
+  checks now run identically for both auth types.
+
+- **API-key scope enforcement now fails closed at the auth entry points (#93).**
+  Scopes were validated on creation, stored and returned, but nothing in the
+  request path required a route to check them: `authenticateRequest` handed back a
+  populated `scopes` array nobody was obliged to look at, so a key minted as
+  `tasks:read` authenticated on every route that only gated on its owner's role —
+  with that owner's full permissions (team management, invoices, DevTools, ...).
+  Scopes looked like an access control and behaved like a label. The default is
+  now the secure one:
+  - `authenticateRequest(request, { requiredScope })` declares the scope(s) an API
+    key must hold (a string, or an array satisfied by any one entry; `*` always
+    passes). A key without it is rejected with **403 `INSUFFICIENT_SCOPE`**.
+  - A route that declares nothing rejects API keys with **403 `SCOPE_NOT_DECLARED`**
+    and names the route in the server log — forgetting is now visible instead of
+    silently over-privileged. Routes that genuinely accept any valid key say so with
+    `{ allowAnyScope: true }` (explicit and self-documenting). Session auth has no
+    scopes and is unaffected.
+  - A key rejected on scope never falls back to cookie auth nor degrades to
+    public/anonymous access on public entities.
+  - `createAuthFailureResponse(authResult)` turns a failed result into the right
+    response (401 `AUTHENTICATION_FAILED` vs 403 scope codes); `DualAuthResult`
+    gains `error: { code, status, message }` on failures. `hasRequiredScope` accepts
+    an array (any-of) for finer, secondary checks.
+  - The same rule applies to the helpers entry point:
+    `validateAndAuthenticateRequest(request, { requiredScope | allowAnyScope })`
+    resolves `{ auth: null, errorResponse }` (a ready-made 403) for a rejected key.
+    `checkScope` now honours the `*` wildcard and any-of arrays.
+  - `hasAdminPermission(authResult)` without a `requiredScope` now denies API keys
+    instead of granting a narrow key its superadmin owner's full permissions.
+  - The generic entity handlers declare `<slug>:read|write|delete` at the entry
+    point (the in-handler `hasRequiredScope` checks they duplicated are gone), and
+    every route in `apps/dev`, the default theme and the social-media-publisher
+    plugin declares its scope.
+  - New core scopes for routes that had none to declare: `teams:read|write|delete`,
+    `billing:read|write`, `admin:devtools`. Themes declare their own in
+    `app.config.ts` → `api.scopes`, which `getApiScopes()` merges into the mintable
+    vocabulary (the default theme adds `ai:read|write` and `social:read|write` for
+    its AI routes and the social-media-publisher plugin).
+  - **Upgrade notes:** every custom route calling `authenticateRequest` /
+    `validateAndAuthenticateRequest` must declare `requiredScope` (or
+    `allowAnyScope`) or its API-key callers get 403 `SCOPE_NOT_DECLARED`. Existing
+    keys used against teams/billing/DevTools routes need the new scopes (a
+    superadmin can mint them; minting rules for non-superadmins are unchanged).
+    Anonymous and session behaviour is unchanged.
+
+- **SQL identifier injection in the generic list `distinct` query (#96).**
+  `GET /api/v1/{entity}?fields=X&distinct=true` interpolated the raw `fields`
+  value as a quoted SQL identifier without validating it against the entity's
+  fields — unlike the sibling non-distinct branch — so any caller with
+  `<slug>:read` could inject SQL into the SELECT list. The name is now
+  validated first (`400 INVALID_FIELD`) through the same `isEntityField` check
+  both branches share.
+
+### Fixed
+
+- **`validateAndAuthenticateRequest()` no longer throws for anonymous requests (#112).**
+  The session-or-API-key helper in `lib/api/helpers.ts` fell back to the strict
+  API-key-only variant when no session was found, which threw `Invalid API key` when
+  no key was present either. Routes that wrap the call in a generic try/catch (the
+  usual pattern for a stable JSON error envelope) therefore answered a plain
+  unauthenticated request with a **500** instead of the 401 their own `!auth` branch
+  produces. The helper now resolves to `{ auth: null }` — matching its own
+  session-lookup failure behaviour — so routes' existing 401 branches work as
+  written. `validateAndAuthenticateApiRequest` (API-key-only) keeps its throwing
+  contract; a shared internal applies rate limiting for both.
+  - **Type change:** the resolved `auth` is now `Auth | null`; callers must branch on
+    it before reading `auth.userId` / `auth.scopes`.
+
+- **`beforeEntityCreate` is now invoked by the generic create handler (#118).**
+  `POST /api/v1/{entity}` only fired `afterEntityCreate`, so the
+  `entity.<slug>.before_create` filter could neither reshape nor reject a
+  payload before the INSERT. The hook now runs after authorization and before
+  the write; a thrown error rejects the create with `400
+  BEFORE_CREATE_REJECTED` (or the 4xx `status` the error carries).
+
+- **Generic entity handler no longer fails silently on bad list parameters,
+  unknown body keys, or CHECK-constraint violations (#97).** Each of these used
+  to return a plausible-looking wrong answer instead of an error the caller
+  could act on:
+  - `?search=` on an entity with none of `name`/`title`/`slug`/`content` → `400
+    SEARCH_NOT_SUPPORTED` (was: every row, unfiltered).
+  - A custom filter whose key is not an entity field (`?statuz=active`) → `400
+    INVALID_FILTER` naming the key(s) (was: filter silently dropped). Legacy
+    client params (`includeMeta`, `userId`, `sort`/`order`, `userFiltered`)
+    stay accepted; `sort`/`order` now work as aliases of `sortBy`/`sortOrder`.
+  - An invalid `?sortBy=` → `400 INVALID_SORT_FIELD` (was: silent default sort).
+  - `?dateField=2026-01-15` on a `date`/`datetime` field matches the whole
+    day (`>= day AND < day + 1`) instead of an equality that never matched a
+    timestamp; values with a time component keep exact equality.
+  - Create/update schemas from `generateEntitySchemas` are now `.strict()`:
+    an unknown body key (`notes` for `note`) → `400 VALIDATION_ERROR` with an
+    `unrecognized_keys` issue (was: silently stripped, `201`). Keys the handler
+    consumes itself (`metas`, `userId`, `teamId`, taxonomy relation arrays,
+    builder `blocks`/`settings`) are unaffected — and neither are read-only
+    system columns (`id`, `createdAt`, `updatedAt`, and any field marked
+    `api.readOnly`): the update schema strips them with `z.preprocess()`
+    before the `.strict()` check runs, since the dashboard's edit form submits
+    the full record it fetched, system fields included. Without this, saving
+    any edit from the dashboard UI failed with a silent `400` (only logged to
+    the console). `EntityFormWrapper` now surfaces a save error in the form
+    instead of swallowing it.
+  - PostgreSQL `23514` CHECK violations → `422 CHECK_CONSTRAINT_VIOLATION`
+    with the constraint name; `23503` on create/update → `422
+    FOREIGN_KEY_VIOLATION` (was: opaque `500`). `23505` → `409` and delete
+    `23503` → `409` are unchanged.
+
 ## [0.1.0-beta.167]
 
 ### Security — RLS Enforcement Layer

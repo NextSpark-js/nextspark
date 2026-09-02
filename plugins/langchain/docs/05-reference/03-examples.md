@@ -651,16 +651,22 @@ export async function processWithOrchestrator(
 ```typescript
 // api/ai/chat/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest } from '@/core/lib/auth/server'
+import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 import { processWithOrchestrator } from '@/themes/default/lib/langchain/orchestrator'
 import { memoryStore } from '@/contents/plugins/langchain/lib/memory-store'
 
 export async function POST(request: NextRequest) {
     try {
-        // Authenticate
-        const { user, teamId } = await authenticateRequest(request)
-        if (!user || !teamId) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        // Authenticate — declares the ai:write scope; an API key without
+        // it is rejected here (fails closed, #93)
+        const authResult = await authenticateRequest(request, { requiredScope: 'ai:write' })
+        if (!authResult.success) {
+            return createAuthFailureResponse(authResult)
+        }
+        const { user } = authResult
+        const teamId = user!.defaultTeamId
+        if (!teamId) {
+            return NextResponse.json({ error: 'Team context required' }, { status: 400 })
         }
 
         const { message, sessionId: providedSessionId, mode = 'orchestrator' } = await request.json()
@@ -701,9 +707,14 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
     try {
-        const { user, teamId } = await authenticateRequest(request)
-        if (!user || !teamId) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        const authResult = await authenticateRequest(request, { requiredScope: 'ai:read' })
+        if (!authResult.success) {
+            return createAuthFailureResponse(authResult)
+        }
+        const { user } = authResult
+        const teamId = user!.defaultTeamId
+        if (!teamId) {
+            return NextResponse.json({ error: 'Team context required' }, { status: 400 })
         }
 
         const sessionId = request.nextUrl.searchParams.get('sessionId')
@@ -712,7 +723,7 @@ export async function GET(request: NextRequest) {
         }
 
         const messages = await memoryStore.getMessages(sessionId, {
-            userId: user.id,
+            userId: user!.id,
             teamId,
         })
 

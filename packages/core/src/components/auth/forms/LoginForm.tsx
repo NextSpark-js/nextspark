@@ -16,21 +16,34 @@ import { Checkbox } from '../../ui/checkbox'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../ui/card'
 import { Separator } from '../../ui/separator'
 import { LastUsedBadge } from '../../ui/last-used-badge'
-import { Mail, Lock, Loader2, AlertCircle, Users } from 'lucide-react'
+import { Mail, Lock, Loader2, AlertCircle, Users, KeyRound } from 'lucide-react'
 import { GoogleIcon } from '../../ui/google-icon'
 import { sel } from '../../../lib/test'
 import { useTranslations } from 'next-intl'
 import { AuthTranslationPreloader } from '../../../lib/i18n/AuthTranslationPreloader'
 import { DevKeyring } from '../DevKeyring'
 import { DEV_CONFIG, PUBLIC_AUTH_CONFIG } from '../../../lib/config/config-sync'
+import { getPrimaryEmailMethod } from '../../../lib/auth/auth-methods'
 import type { AuthProviderWithNull, AuthErrorCode, AuthError } from '../../../types/auth'
 
 /**
  * Maps error codes to internationalization keys for better user experience
  */
-function getErrorMessageFromCode(error: Error | AuthError, t: (key: string, options?: any) => string, context: 'email' | 'google'): string {
+function getErrorMessageFromCode(error: Error | AuthError, t: (key: string, options?: any) => string, context: 'email' | 'google' | 'otp'): string {
   const authError = error as AuthError
   const errorCode = authError.code || getErrorCodeFromMessage(error.message)
+
+  if (context === 'otp') {
+    const lower = (error.message || '').toLowerCase()
+    if (lower.includes('expired')) return t('login.errors.otpExpired', { defaultValue: error.message })
+    if (lower.includes('too many') || lower.includes('rate') || lower.includes('attempts')) {
+      return t('login.errors.otpTooMany', { defaultValue: error.message })
+    }
+    if (lower.includes('invalid') || lower.includes('otp') || lower.includes('code')) {
+      return t('login.errors.otpInvalid', { defaultValue: error.message })
+    }
+    return error.message || t('login.messages.otpVerifyFailed')
+  }
 
   const baseKey = context === 'email' ? 'login.errors' : 'login.errors.google'
 
@@ -99,26 +112,68 @@ function buildLoginSchema(t: (key: string, options?: any) => string) {
 
 type LoginFormData = z.infer<ReturnType<typeof buildLoginSchema>>
 
+const OTP_CODE_LENGTH = 6
+
+function buildOtpEmailSchema(t: (key: string, options?: any) => string) {
+  return z.string().trim().email({ message: t('login.errors.invalidEmail', { defaultValue: 'Invalid email' }) })
+}
+
+function buildOtpCodeSchema(t: (key: string, options?: any) => string) {
+  return z
+    .string()
+    .trim()
+    .regex(new RegExp(`^\\d{${OTP_CODE_LENGTH}}$`), {
+      message: t('login.errors.otpInvalidCode', { defaultValue: `Enter the ${OTP_CODE_LENGTH}-digit code` }),
+    })
+}
+
+type EmailMode = 'otp' | 'password'
+
 export function LoginForm() {
   // Auth config for conditional rendering
   const registrationMode = PUBLIC_AUTH_CONFIG.registration.mode
   const googleEnabled = PUBLIC_AUTH_CONFIG.providers.google.enabled
-  const signupVisible = registrationMode === 'open' || registrationMode === 'domain-open'
+  // Login methods (AUTH_CONFIG.methods) — passwordless preset by default:
+  // one-time code by email + Google, no password field.
+  const methods = PUBLIC_AUTH_CONFIG.methods
+  const otpEnabled = methods.includes('email-otp')
   // In dev mode with DevKeyring, always allow email login regardless of registration mode
   const devKeyringActive = process.env.NODE_ENV !== 'production' && !!DEV_CONFIG?.devKeyring?.enabled
+  // DevKeyring autofills email + password, so it keeps the password form reachable in dev
+  const passwordEnabled = methods.includes('email-password') || devKeyringActive
+  // The signup page only exists for the password flow (OTP creates the account on first sign-in)
+  const signupVisible =
+    (registrationMode === 'open' || registrationMode === 'domain-open') && methods.includes('email-password')
   // In domain-restricted mode, hide email login UNLESS DevKeyring is active (dev mode)
-  const emailLoginAllowed = registrationMode !== 'domain-restricted' || devKeyringActive
+  const emailLoginAllowed =
+    (registrationMode !== 'domain-restricted' || devKeyringActive) && (otpEnabled || passwordEnabled)
+  // Which email form opens first: the first email method in the configured order
+  const primaryEmailMode: EmailMode = (() => {
+    const primary = getPrimaryEmailMethod(methods)
+    if (primary === 'email-otp' && otpEnabled) return 'otp'
+    if (primary === 'email-password') return 'password'
+    return otpEnabled ? 'otp' : 'password'
+  })()
 
   const [loadingProvider, setLoadingProvider] = useState<AuthProviderWithNull>(null)
   const [error, setError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState('')
   // Show email form by default when Google is disabled
   const [showEmailForm, setShowEmailForm] = useState(!googleEnabled)
+  const [emailMode, setEmailMode] = useState<EmailMode>(primaryEmailMode)
+  // Passwordless (one-time code) state
+  const [otpStep, setOtpStep] = useState<'email' | 'code'>('email')
+  const [otpEmail, setOtpEmail] = useState('')
+  const [otpCode, setOtpCode] = useState('')
+  const [otpEmailError, setOtpEmailError] = useState<string | null>(null)
+  const [otpCodeError, setOtpCodeError] = useState<string | null>(null)
   const isProcessingRef = useRef(false)
-  const { signIn, googleSignIn } = useAuth()
+  const { signIn, googleSignIn, sendOtp, signInWithOtp } = useAuth()
   const { lastMethod, isReady } = useLastAuthMethod()
   const t = useTranslations('auth')
   const loginSchema = useMemo(() => buildLoginSchema(t), [t])
+  const otpEmailSchema = useMemo(() => buildOtpEmailSchema(t), [t])
+  const otpCodeSchema = useMemo(() => buildOtpCodeSchema(t), [t])
 
   // Read invitation-related params from URL
   const searchParams = useSearchParams()
@@ -130,8 +185,87 @@ export function LoginForm() {
   useEffect(() => {
     if (fromInvite && inviteEmail) {
       setShowEmailForm(true)
+      setOtpEmail(inviteEmail)
     }
   }, [fromInvite, inviteEmail])
+
+  const switchEmailMode = useCallback((mode: EmailMode) => {
+    setEmailMode(mode)
+    setError(null)
+    setOtpEmailError(null)
+    setOtpCodeError(null)
+    setOtpStep('email')
+    setOtpCode('')
+  }, [])
+
+  /**
+   * Passwordless step 1: validate the email and send the one-time code.
+   * Also used by "Resend code".
+   */
+  const handleSendOtp = useCallback(async (event?: React.FormEvent) => {
+    event?.preventDefault()
+    if (loadingProvider) return
+
+    const parsed = otpEmailSchema.safeParse(otpEmail)
+    if (!parsed.success) {
+      setOtpEmailError(parsed.error.issues[0]?.message ?? t('login.errors.invalidEmail'))
+      return
+    }
+    setOtpEmailError(null)
+    setOtpCodeError(null)
+    setError(null)
+    setLoadingProvider('email')
+    setStatusMessage(t('login.messages.otpSending'))
+
+    try {
+      await sendOtp(parsed.data)
+      setOtpEmail(parsed.data)
+      setOtpCode('')
+      setOtpStep('code')
+      setStatusMessage(t('login.messages.otpSent'))
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(t('login.messages.otpSendFailed'))
+      const errorMessage = error.message || t('login.messages.otpSendFailed')
+      setError(errorMessage)
+      setStatusMessage(t('login.messages.signInError', { error: errorMessage }))
+    } finally {
+      setLoadingProvider(null)
+    }
+  }, [loadingProvider, otpEmail, otpEmailSchema, sendOtp, t])
+
+  /**
+   * Passwordless step 2: exchange the emailed code for a session.
+   */
+  const handleVerifyOtp = useCallback(async (event?: React.FormEvent) => {
+    event?.preventDefault()
+    if (loadingProvider) return
+
+    const parsed = otpCodeSchema.safeParse(otpCode)
+    if (!parsed.success) {
+      setOtpCodeError(parsed.error.issues[0]?.message ?? t('login.errors.otpInvalidCode'))
+      return
+    }
+    setOtpCodeError(null)
+    setError(null)
+    setLoadingProvider('email')
+    setStatusMessage(t('login.messages.otpVerifying'))
+
+    try {
+      await signInWithOtp({
+        email: otpEmail,
+        otp: parsed.data,
+        redirectTo: callbackUrl || undefined,
+      })
+      setStatusMessage(t('login.messages.signInSuccess'))
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(t('login.messages.otpVerifyFailed'))
+      const errorMessage = getErrorMessageFromCode(error, t, 'otp')
+      setError(errorMessage)
+      setStatusMessage(t('login.messages.signInError', { error: errorMessage }))
+    } finally {
+      setLoadingProvider(null)
+    }
+  }, [loadingProvider, otpCode, otpCodeSchema, otpEmail, signInWithOtp, callbackUrl, t])
 
   const {
     register,
@@ -311,17 +445,206 @@ export function LoginForm() {
           {/* Email Form - Shown when requested (hidden in domain-restricted mode, unless DevKeyring is active) */}
           {showEmailForm && emailLoginAllowed && (
             <>
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <Separator className="w-full" />
+              {googleEnabled && (
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <Separator className="w-full" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                      {t('login.form.orContinueWith')}
+                    </span>
+                  </div>
                 </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">
-                    {t('login.form.orContinueWith')}
-                  </span>
-                </div>
-              </div>
+              )}
 
+              {/* Passwordless: one-time code by email (AUTH_CONFIG.methods 'email-otp') */}
+              {emailMode === 'otp' && otpEnabled && (
+                <form
+                  onSubmit={otpStep === 'email' ? handleSendOtp : handleVerifyOtp}
+                  className="space-y-4"
+                  aria-labelledby="login-heading"
+                  noValidate
+                  data-cy={sel('auth.login.otpForm')}
+                >
+                  {otpStep === 'email' ? (
+                    <div className="space-y-2">
+                      <Label htmlFor="otp-email">{t('login.form.email')}</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                        <Input
+                          id="otp-email"
+                          type="email"
+                          autoComplete="email"
+                          inputMode="email"
+                          value={otpEmail}
+                          onChange={(e) => setOtpEmail(e.target.value)}
+                          placeholder={t('login.form.emailPlaceholder')}
+                          className={`pl-9 ${fromInvite ? 'bg-muted cursor-not-allowed' : ''}`}
+                          readOnly={fromInvite}
+                          aria-required="true"
+                          aria-describedby={otpEmailError ? 'otp-email-error' : 'otp-email-help'}
+                          aria-invalid={otpEmailError ? 'true' : 'false'}
+                          data-cy={sel('auth.login.otpEmailInput')}
+                        />
+                      </div>
+                      <p id="otp-email-help" className="text-xs text-muted-foreground">
+                        {t('login.form.otp.emailHelp')}
+                      </p>
+                      {otpEmailError && (
+                        <p
+                          id="otp-email-error"
+                          className="text-sm text-destructive"
+                          role="alert"
+                          aria-live="assertive"
+                          data-cy={sel('auth.login.otpEmailError')}
+                        >
+                          {otpEmailError}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Alert data-cy={sel('auth.login.otpSentNotice')}>
+                        <Mail className="h-4 w-4" aria-hidden="true" />
+                        <AlertDescription>
+                          {t('login.form.otp.codeSent', { email: otpEmail })}
+                        </AlertDescription>
+                      </Alert>
+                      <Label htmlFor="otp-code">{t('login.form.otp.codeLabel')}</Label>
+                      <div className="relative">
+                        <KeyRound className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                        <Input
+                          id="otp-code"
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="one-time-code"
+                          pattern="[0-9]*"
+                          maxLength={OTP_CODE_LENGTH}
+                          value={otpCode}
+                          onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, OTP_CODE_LENGTH))}
+                          placeholder={t('login.form.otp.codePlaceholder')}
+                          className="pl-9 tracking-widest"
+                          autoFocus
+                          aria-required="true"
+                          aria-describedby={otpCodeError ? 'otp-code-error' : undefined}
+                          aria-invalid={otpCodeError ? 'true' : 'false'}
+                          data-cy={sel('auth.login.otpCodeInput')}
+                        />
+                      </div>
+                      {otpCodeError && (
+                        <p
+                          id="otp-code-error"
+                          className="text-sm text-destructive"
+                          role="alert"
+                          aria-live="assertive"
+                          data-cy={sel('auth.login.otpCodeError')}
+                        >
+                          {otpCodeError}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {error && (
+                    <Alert
+                      variant="destructive"
+                      role="alert"
+                      aria-live="assertive"
+                      data-cy={sel('auth.login.errorAlert')}
+                    >
+                      <AlertCircle className="h-4 w-4" aria-hidden="true" />
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  {otpStep === 'email' ? (
+                    <Button
+                      type="submit"
+                      disabled={!!loadingProvider}
+                      className="w-full"
+                      data-cy={sel('auth.login.otpSend')}
+                    >
+                      {loadingProvider === 'email' ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                          {t('login.form.otp.sendingCode')}
+                        </>
+                      ) : (
+                        t('login.form.otp.sendCode')
+                      )}
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        type="submit"
+                        disabled={!!loadingProvider}
+                        className="w-full"
+                        data-cy={sel('auth.login.otpSubmit')}
+                      >
+                        {loadingProvider === 'email' ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                            {t('login.form.otp.verifyingCode')}
+                          </>
+                        ) : (
+                          t('login.form.otp.verifyCode')
+                        )}
+                      </Button>
+                      <div className="flex items-center justify-between text-sm">
+                        <button
+                          type="button"
+                          onClick={() => void handleSendOtp()}
+                          disabled={!!loadingProvider}
+                          className="text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50 min-h-[44px] inline-flex items-center"
+                          data-cy={sel('auth.login.otpResend')}
+                        >
+                          {t('login.form.otp.resendCode')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setOtpStep('email'); setOtpCode(''); setOtpCodeError(null); setError(null) }}
+                          disabled={!!loadingProvider}
+                          className="text-muted-foreground hover:text-primary focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50 min-h-[44px] inline-flex items-center"
+                          data-cy={sel('auth.login.otpChangeEmail')}
+                        >
+                          {t('login.form.otp.changeEmail')}
+                        </button>
+                      </div>
+                    </>
+                  )}
+
+                  {passwordEnabled && (
+                    <div className="text-center">
+                      <button
+                        type="button"
+                        onClick={() => switchEmailMode('password')}
+                        disabled={!!loadingProvider}
+                        className="text-sm text-muted-foreground hover:text-primary focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] inline-flex items-center"
+                        data-cy={sel('auth.login.usePassword')}
+                      >
+                        {t('login.form.usePassword')}
+                      </button>
+                    </div>
+                  )}
+
+                  {googleEnabled && (
+                    <div className="text-center">
+                      <button
+                        type="button"
+                        onClick={() => setShowEmailForm(false)}
+                        className="text-sm text-muted-foreground hover:text-primary focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] inline-flex items-center"
+                        data-cy={sel('auth.login.hideEmail')}
+                      >
+                        {t('login.form.backToGoogle', { defaultValue: 'Back to main options' })}
+                      </button>
+                    </div>
+                  )}
+                </form>
+              )}
+
+              {/* Classic: email + password (AUTH_CONFIG.methods 'email-password') */}
+              {(emailMode === 'password' || !otpEnabled) && passwordEnabled && (
               <form
             onSubmit={handleSubmit(onSubmit)}
             className="space-y-4"
@@ -455,6 +778,20 @@ export function LoginForm() {
               {t('login.form.submitHelp')}
             </div>
 
+                {otpEnabled && (
+                  <div className="text-center mt-4">
+                    <button
+                      type="button"
+                      onClick={() => switchEmailMode('otp')}
+                      disabled={!!loadingProvider}
+                      className="text-sm text-muted-foreground hover:text-primary focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] inline-flex items-center"
+                      data-cy={sel('auth.login.useOtp')}
+                    >
+                      {t('login.form.useOtp')}
+                    </button>
+                  </div>
+                )}
+
                 {googleEnabled && (
                   <div className="text-center mt-4">
                     <button
@@ -468,6 +805,7 @@ export function LoginForm() {
                   </div>
                 )}
               </form>
+              )}
             </>
           )}
         </CardContent>

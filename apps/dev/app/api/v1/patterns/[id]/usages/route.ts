@@ -23,37 +23,29 @@ import {
   handleCorsPreflightRequest,
   addCorsHeaders,
 } from '@nextsparkjs/core/lib/api/helpers'
-import { authenticateRequest, hasRequiredScope } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { PatternUsageService } from '@nextsparkjs/core/lib/services'
 import { queryOneWithRLS } from '@nextsparkjs/core/lib/db'
 
 // Handle CORS preflight
-export async function OPTIONS() {
-  return handleCorsPreflightRequest()
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request)
 }
 
 // GET /api/v1/patterns/:id/usages - Get pattern usages
 export const GET = withApiLogging(
   async (req: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
     try {
-      // Authenticate using dual auth
-      const authResult = await authenticateRequest(req)
+      // Authenticate using dual auth; the required API-key scope is declared
+      // at the entry point (fail closed, #93).
+      const authResult = await authenticateRequest(req, { requiredScope: 'patterns:read' })
 
       if (!authResult.success) {
-        return NextResponse.json(
-          { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-          { status: 401 }
-        )
+        return createAuthFailureResponse(authResult)
       }
 
       if (authResult.rateLimitResponse) {
         return authResult.rateLimitResponse as NextResponse
-      }
-
-      // Check required permissions
-      if (!hasRequiredScope(authResult, 'patterns:read')) {
-        const response = createApiError('Insufficient permissions', 403)
-        return addCorsHeaders(response)
       }
 
       const { id: patternId } = await params
@@ -62,7 +54,7 @@ export const GET = withApiLogging(
       // Validate that patternId is not empty
       if (!patternId || patternId.trim() === '') {
         const response = createApiError('Pattern ID is required', 400, null, 'MISSING_PATTERN_ID')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Verify pattern exists and user has access
@@ -74,7 +66,7 @@ export const GET = withApiLogging(
 
       if (!pattern) {
         const response = createApiError('Pattern not found', 404, null, 'PATTERN_NOT_FOUND')
-        return addCorsHeaders(response)
+        return addCorsHeaders(response, req)
       }
 
       // Parse query parameters
@@ -106,11 +98,11 @@ export const GET = withApiLogging(
         entityType: entityType || 'all',
       })
 
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     } catch (error) {
       console.error('Error fetching pattern usages:', error)
       const response = createApiError('Internal server error', 500)
-      return addCorsHeaders(response)
+      return addCorsHeaders(response, req)
     }
   }
 )

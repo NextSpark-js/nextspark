@@ -26,7 +26,7 @@ import { useTranslations } from 'next-intl'
 import { useIsSuperAdmin } from '../../app/guards/SuperAdminGuard'
 import { useIsDeveloper } from '../../app/guards/DeveloperGuard'
 import { DynamicNavigation } from '../navigation/DynamicNavigation'
-import { isTopbarFeatureEnabled, getTopbarFeatureConfig, TOPBAR_CONFIG } from '../../../lib/config'
+import { isTopbarFeatureEnabled, getTopbarFeatureConfig, TOPBAR_CONFIG, APP_NAME } from '../../../lib/config'
 
 import type { SerializableEntityConfig } from '../../../lib/entities/serialization'
 
@@ -166,7 +166,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                 aria-label="Ir a la página principal"
                 data-cy={sel('dashboard.topnav.logo')}
               >
-                {t('appName')}
+                {APP_NAME}
               </Link>
             )}
 

@@ -48,29 +48,82 @@ const sheetVariants = cva(
   }
 )
 
+/**
+ * Registration channel between `SheetContent` and `SheetDescription`.
+ *
+ * Radix warns at runtime when a Dialog content has `aria-describedby` but no
+ * matching `Description` element in the DOM. `SheetContent` renders a visually
+ * hidden fallback description by default and drops it as soon as a real
+ * `SheetDescription` registers itself, so consumers get an accessible Sheet
+ * out of the box without duplicating descriptions when they do provide one.
+ */
+type UnregisterDescription = () => void
+const SheetDescriptionContext = React.createContext<(() => UnregisterDescription) | null>(null)
+
+// useLayoutEffect on the client so the fallback is swapped before paint;
+// useEffect on the server where layout effects are a no-op.
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect
+
+/**
+ * Close button: 44x44px hit area (WCAG 2.5.5 / platform tap-target minimum)
+ * around a 16px glyph. `right-0.5 top-0.5` + `h-11 w-11` keeps the glyph at the
+ * same visual spot as the previous `right-4 top-4` 16px button.
+ */
+const sheetCloseButtonClassName =
+  "absolute right-0.5 top-0.5 inline-flex h-11 w-11 items-center justify-center rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent"
+
 interface SheetContentProps
   extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>,
-    VariantProps<typeof sheetVariants> {}
+    VariantProps<typeof sheetVariants> {
+  /**
+   * Extra classes merged onto the built-in close button (position, size,
+   * colors...). The default already meets the 44x44px touch target.
+   */
+  closeButtonClassName?: string
+}
 
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({ side = "right", className, children, ...props }, ref) => (
-  <SheetPortal>
-    <SheetOverlay />
-    <SheetPrimitive.Content
-      ref={ref}
-      className={cn(sheetVariants({ side }), className)}
-      {...props}
-    >
-      <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent">
-        <Cross2Icon className="h-4 w-4" />
-        <span className="sr-only">Close</span>
-      </SheetPrimitive.Close>
-      {children}
-    </SheetPrimitive.Content>
-  </SheetPortal>
-))
+>(({ side = "right", className, closeButtonClassName, children, ...props }, ref) => {
+  const [hasDescription, setHasDescription] = React.useState(false)
+  const descriptionCount = React.useRef(0)
+
+  const registerDescription = React.useCallback((): UnregisterDescription => {
+    descriptionCount.current += 1
+    setHasDescription(true)
+    return () => {
+      descriptionCount.current -= 1
+      if (descriptionCount.current === 0) setHasDescription(false)
+    }
+  }, [])
+
+  return (
+    <SheetPortal>
+      <SheetOverlay />
+      <SheetPrimitive.Content
+        ref={ref}
+        className={cn(sheetVariants({ side }), className)}
+        {...props}
+      >
+        <SheetDescriptionContext.Provider value={registerDescription}>
+          <SheetPrimitive.Close className={cn(sheetCloseButtonClassName, closeButtonClassName)}>
+            <Cross2Icon className="h-4 w-4" aria-hidden="true" />
+            <span className="sr-only">Close</span>
+          </SheetPrimitive.Close>
+          {children}
+          {/*
+            Fallback description (see SheetDescriptionContext). Rendered after
+            `children` so, during the single commit where both can coexist,
+            the consumer's description wins the `aria-describedby` lookup.
+          */}
+          {!hasDescription && <SheetPrimitive.Description className="sr-only" />}
+        </SheetDescriptionContext.Provider>
+      </SheetPrimitive.Content>
+    </SheetPortal>
+  )
+})
 SheetContent.displayName = SheetPrimitive.Content.displayName
 
 const SheetHeader = ({
@@ -116,13 +169,21 @@ SheetTitle.displayName = SheetPrimitive.Title.displayName
 const SheetDescription = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Description>,
   React.ComponentPropsWithoutRef<typeof SheetPrimitive.Description>
->(({ className, ...props }, ref) => (
-  <SheetPrimitive.Description
-    ref={ref}
-    className={cn("text-sm text-muted-foreground", className)}
-    {...props}
-  />
-))
+>(({ className, ...props }, ref) => {
+  const registerDescription = React.useContext(SheetDescriptionContext)
+
+  // Tell the enclosing SheetContent a real description exists so it drops
+  // its visually hidden fallback. No-op when used outside SheetContent.
+  useIsomorphicLayoutEffect(() => registerDescription?.(), [registerDescription])
+
+  return (
+    <SheetPrimitive.Description
+      ref={ref}
+      className={cn("text-sm text-muted-foreground", className)}
+      {...props}
+    />
+  )
+})
 SheetDescription.displayName = SheetPrimitive.Description.displayName
 
 export {

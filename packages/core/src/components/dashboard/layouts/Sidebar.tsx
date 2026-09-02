@@ -2,13 +2,13 @@
 
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
-import { useTranslations } from 'next-intl'
 import { cn } from '../../../lib/utils'
 import { useSidebar } from '../../../contexts/sidebar-context'
 import { sel } from '../../../lib/test'
 import { DynamicNavigation } from '../navigation/DynamicNavigation'
 import { TeamSwitcherCompact } from '../../teams/TeamSwitcherCompact'
 import type { SerializableEntityConfig } from '../../../lib/entities/serialization'
+import { APP_NAME } from '../../../lib/config'
 
 interface SidebarProps {
   className?: string
@@ -17,8 +17,7 @@ interface SidebarProps {
 
 export function Sidebar({ className, entities }: SidebarProps) {
   const { isCollapsed } = useSidebar()
-  const t = useTranslations('common')
-  const appName = t('appName')
+  const appName = APP_NAME
   const [statusMessage, setStatusMessage] = useState('')
 
   // Focus management for collapsed state

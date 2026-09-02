@@ -19,6 +19,7 @@
  * - MEMB_008: TeamMembership.canPerformAction() - not_member
  * - MEMB_009: TeamMembership.canPerformAction() - permission_denied
  * - MEMB_010: TeamMembership.canPerformAction() - subscription_inactive
+ * - MEMB_089_x: TeamMembership.canPerformAction() - fail closed on unregistered permission ids (#89)
  */
 
 // Mock server-only to allow testing server components
@@ -399,24 +400,74 @@ describe('TeamMembership Class', () => {
       }
     })
 
-    it('should allow action for invalid permission format', () => {
-      const membership = createMembership({
-        role: 'admin',
-        permissions: ['customers.create'] as Permission[],
-        subscription: {
-          id: 'sub-123',
-          planSlug: 'professional',
-          planName: 'Professional',
-          status: 'active',
-          trialEndsAt: null,
-          currentPeriodEnd: new Date(),
-        },
+    describe('permission registry lookup (issue #89 - fail closed)', () => {
+      let warnSpy: jest.SpyInstance
+
+      beforeEach(() => {
+        warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
       })
 
-      // Action without dot notation (not a valid permission)
-      const result = membership.canPerformAction('invalid_action')
+      afterEach(() => {
+        warnSpy.mockRestore()
+      })
 
-      expect(result.allowed).toBe(true)
+      it('MEMB_089_1: should deny an unregistered permission id instead of falling through', () => {
+        // 'members.update_role' is NOT a registered id (the registry has 'team.members.update_role')
+        const membership = createMembership({
+          role: 'member',
+          permissions: ['team.view', 'team.members.view'] as Permission[],
+        })
+
+        const result = membership.canPerformAction('members.update_role')
+
+        expect(result.allowed).toBe(false)
+        if (!result.allowed) {
+          expect(result.reason).toBe('permission_denied')
+          expect(result.meta?.requiredPermission).toBe('members.update_role')
+          expect(result.meta?.userRole).toBe('member')
+        }
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('members.update_role'))
+      })
+
+      it('MEMB_089_2: should deny a registered three-segment permission the role does not hold', () => {
+        const membership = createMembership({
+          role: 'member',
+          permissions: ['team.view', 'team.members.view'] as Permission[],
+        })
+
+        const result = membership.canPerformAction('team.members.update_role')
+
+        expect(result.allowed).toBe(false)
+        if (!result.allowed) {
+          expect(result.reason).toBe('permission_denied')
+          expect(result.meta?.requiredPermission).toBe('team.members.update_role')
+          expect(result.meta?.userRole).toBe('member')
+        }
+      })
+
+      it('MEMB_089_3: should allow a registered three-segment permission the role holds', () => {
+        const membership = createMembership({
+          role: 'admin',
+          permissions: ['team.members.update_role', 'team.members.remove'] as Permission[],
+        })
+
+        expect(membership.canPerformAction('team.members.update_role')).toEqual({ allowed: true })
+        expect(membership.canPerformAction('team.members.remove')).toEqual({ allowed: true })
+      })
+
+      it('MEMB_089_4: should deny an action without dot notation (not a registered permission)', () => {
+        const membership = createMembership({
+          role: 'admin',
+          permissions: ['customers.create'] as Permission[],
+        })
+
+        const result = membership.canPerformAction('invalid_action')
+
+        expect(result.allowed).toBe(false)
+        if (!result.allowed) {
+          expect(result.reason).toBe('permission_denied')
+        }
+      })
     })
 
     it('should allow action when subscription is null', () => {

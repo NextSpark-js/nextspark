@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { queryWithRLS } from '@nextsparkjs/core/lib/db'
 
@@ -26,13 +26,11 @@ const PERIOD_HOURS: Record<string, number> = {
 }
 
 const getHandler = async (req: NextRequest) => {
-  // 1. Authenticate (superadmin only)
-  const authResult = await authenticateRequest(req)
+  // 1. Authenticate (superadmin only); the API-key scope is declared at the
+  // entry point, which fails closed for keys that lack it (#93).
+  const authResult = await authenticateRequest(req, { requiredScope: 'ai:read' })
   if (!authResult.success || !authResult.user) {
-    return NextResponse.json(
-      { success: false, error: 'Unauthorized' },
-      { status: 401 }
-    )
+    return createAuthFailureResponse(authResult)
   }
 
   // Check if user has admin-level access (superadmin or developer)

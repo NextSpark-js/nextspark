@@ -64,8 +64,47 @@ function isPublicPath(pathname: string): boolean {
   )
 }
 
+/**
+ * Identity headers this proxy injects for downstream server code.
+ *
+ * SECURITY (#87): these headers are trusted by RSC layouts and permission
+ * checks, so an inbound value must NEVER reach the app. They are stripped from
+ * every request before any path branching and re-added only from the verified
+ * session. Gating the strip on protected prefixes is not enough: Next.js
+ * dispatches Server Actions by the `Next-Action` header, not by the URL, so an
+ * action can be POSTed to a public path with a forged `x-user-id`.
+ */
+const TRUSTED_IDENTITY_HEADERS = ['x-user-id', 'x-user-email', 'x-pathname'] as const
+
+/**
+ * Build the request headers forwarded to the app: inbound copy minus every
+ * trusted identity header, plus the real pathname.
+ */
+function sanitizeRequestHeaders(request: NextRequest): Headers {
+  const headers = new Headers(request.headers)
+  for (const name of TRUSTED_IDENTITY_HEADERS) {
+    headers.delete(name)
+  }
+  headers.set('x-pathname', request.nextUrl.pathname)
+  return headers
+}
+
+/**
+ * Continue to the app with the (sanitized) request headers.
+ * Every pass-through in this proxy MUST go through here so the strip applies
+ * to public paths, /api/v1 and unmatched routes alike.
+ */
+function passThrough(requestHeaders: Headers): NextResponse {
+  return NextResponse.next({
+    request: { headers: requestHeaders },
+  })
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // 0. Strip forgeable identity headers before ANY branching (see #87)
+  const requestHeaders = sanitizeRequestHeaders(request)
 
   // 1. Check for theme middleware override
   const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME
@@ -114,17 +153,17 @@ export async function proxy(request: NextRequest) {
         return NextResponse.redirect(loginUrl)
       }
     }
-    return NextResponse.next()
+    return passThrough(requestHeaders)
   }
 
   // 4. Allow public paths
   if (isPublicPath(pathname)) {
-    return NextResponse.next()
+    return passThrough(requestHeaders)
   }
 
   // 5. API v1 routes handle their own dual authentication
   if (pathname.startsWith('/api/v1')) {
-    return NextResponse.next()
+    return passThrough(requestHeaders)
   }
 
   // 6. Protected routes - require authentication and inject user headers
@@ -162,20 +201,17 @@ export async function proxy(request: NextRequest) {
         }
       }
 
-      // Inject user headers for downstream use
+      // Inject user headers for downstream use, ONLY from the verified session
+      // (requestHeaders already had any inbound values stripped).
       // IMPORTANT: EntityPermissionLayout depends on these headers
-      const requestHeaders = new Headers(request.headers)
       if (session.user?.id) {
         requestHeaders.set('x-user-id', session.user.id)
       }
       if (session.user?.email) {
         requestHeaders.set('x-user-email', session.user.email)
       }
-      requestHeaders.set('x-pathname', pathname)
 
-      return NextResponse.next({
-        request: { headers: requestHeaders },
-      })
+      return passThrough(requestHeaders)
     } catch (error) {
       console.error('Proxy error:', error)
       const loginUrl = new URL('/login', request.url)
@@ -184,7 +220,7 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  return NextResponse.next()
+  return passThrough(requestHeaders)
 }
 
 export const config = {

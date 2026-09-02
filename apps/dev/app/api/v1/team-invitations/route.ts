@@ -8,27 +8,25 @@ import {
   handleCorsPreflightRequest,
   addCorsHeaders,
 } from '@nextsparkjs/core/lib/api/helpers'
-import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { invitationListQuerySchema } from '@nextsparkjs/core/lib/teams/schema'
 import type { TeamInvitation } from '@nextsparkjs/core/lib/teams/types'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 // Handle CORS preflight
-export async function OPTIONS() {
-  return handleCorsPreflightRequest()
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request)
 }
 
 // GET /api/v1/team-invitations - List pending invitations for current user
 export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
   try {
-    // Authenticate using dual auth
-    const authResult = await authenticateRequest(req)
+    // Authenticate using dual auth; the API-key scope is declared at the entry
+    // point, which fails closed for keys that lack it (#93).
+    const authResult = await authenticateRequest(req, { requiredScope: 'teams:read' })
 
     if (!authResult.success) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-        { status: 401 }
-      )
+      return createAuthFailureResponse(authResult)
     }
 
     if (authResult.rateLimitResponse) {
@@ -106,10 +104,10 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
     const paginationMeta = createPaginationMeta(page, limit, total)
 
     const response = createApiResponse(invitations, paginationMeta)
-    return addCorsHeaders(response)
+    return addCorsHeaders(response, req)
   } catch (error) {
     console.error('Error fetching invitations:', error)
     const response = createApiError('Internal server error', 500)
-    return addCorsHeaders(response)
+    return addCorsHeaders(response, req)
   }
 }), 'read');

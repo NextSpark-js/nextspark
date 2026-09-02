@@ -10,6 +10,7 @@ import { DashboardTranslationPreloader } from '@nextsparkjs/core/lib/i18n/Dashbo
 import { TranslationDebugger } from '@nextsparkjs/core/utils/dev/TranslationDebugger'
 import { useEnsureUserMetadata } from '@nextsparkjs/core/hooks/useEnsureUserMetadata'
 import { useAuthMethodDetector } from '@nextsparkjs/core/hooks/useAuthMethodDetector'
+import { DashboardProviders } from '@nextsparkjs/core/providers/DashboardProviders'
 
 /**
  * Auth Method Detector Wrapper (uses useSearchParams internally)
@@ -84,7 +85,17 @@ function CoreDashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  return <DashboardLayoutContent>{children}</DashboardLayoutContent>
+  // This (templates) route tree does not pass through app/dashboard/layout.tsx,
+  // so it must mount its own client providers: DashboardLayoutContent calls
+  // useEnsureUserMetadata() (TanStack Query) before the auth gate, and without
+  // a QueryClientProvider above it every /dashboard/* template page failed at
+  // prerender and at runtime with "No QueryClient set". Same pattern as
+  // app/dashboard/layout.tsx.
+  return (
+    <DashboardProviders>
+      <DashboardLayoutContent>{children}</DashboardLayoutContent>
+    </DashboardProviders>
+  )
 }
 
 export default getTemplateOrDefaultClient('app/dashboard/layout.tsx', CoreDashboardLayout)

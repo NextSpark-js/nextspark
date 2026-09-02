@@ -340,17 +340,15 @@ import {
   extractTokens,
   handleAIError
 } from '@/contents/plugins/ai/lib/core-utils'
-import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. Authenticate
-    const authResult = await authenticateRequest(request)
+    // 1. Authenticate — declares the ai:write scope; an API key without it
+    // is rejected here (fails closed, #93)
+    const authResult = await authenticateRequest(request, { requiredScope: 'ai:write' })
     if (!authResult.success) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
+      return createAuthFailureResponse(authResult)
     }
 
     // 2. Validate plugin
