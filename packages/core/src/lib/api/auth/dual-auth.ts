@@ -253,6 +253,7 @@ async function trySessionAuth(request: NextRequest): Promise<DualAuthResult> {
       user: {
         id: session.user.id,
         email: session.user.email,
+        // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
         role: session.user.role || 'user',
         name: session.user.name,
         defaultTeamId

@@ -56,6 +56,10 @@
   ],
   "exclude": [
     "node_modules",
+    // PPR template variants (layout.ppr.tsx) are copied over layout.tsx when a project
+    // enables cacheComponents; in place they import registry exports that only exist
+    // in PPR mode, so they are never type-checked as-is.
+    "**/*.ppr.tsx",
     "**/*.test.ts",
     "**/*.test.tsx",
     "**/*.spec.ts",

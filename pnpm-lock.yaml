@@ -704,22 +704,25 @@ importers:
     dependencies:
       '@ai-sdk/anthropic':
         specifier: ^2.0.17
-        version: 2.0.57(zod@4.3.4)
+        version: 2.0.57(zod@4.4.3)
       '@ai-sdk/openai':
         specifier: ^2.0.32
-        version: 2.0.89(zod@4.3.4)
+        version: 2.0.89(zod@4.4.3)
       '@ai-sdk/openai-compatible':
         specifier: ^1.0.18
-        version: 1.0.30(zod@4.3.4)
+        version: 1.0.30(zod@4.4.3)
+      '@anthropic-ai/claude-agent-sdk':
+        specifier: ^0.3.258
+        version: 0.3.258(@anthropic-ai/sdk@0.71.2(zod@4.4.3))(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(zod@4.4.3)
       '@nextsparkjs/core':
         specifier: '*'
-        version: 0.1.0-beta.184(@codemirror/autocomplete@6.20.0)(@codemirror/language@6.12.1)(@codemirror/lint@6.9.2)(@codemirror/search@6.5.11)(@codemirror/state@6.5.3)(@codemirror/theme-one-dark@6.1.3)(@codemirror/view@6.39.9)(@opentelemetry/api@1.9.0)(@swc/helpers@0.5.15)(@types/node@22.19.3)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(codemirror@6.0.2)(cypress@15.8.2)(next@15.5.24(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-native-reanimated@4.2.1(react-native-worklets@0.7.2(@babel/core@7.28.5)(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.18)(typescript@5.9.3)
+        version: 0.1.0-beta.185(@cfworker/json-schema@4.1.1)(@codemirror/autocomplete@6.20.0)(@codemirror/language@6.12.1)(@codemirror/lint@6.9.2)(@codemirror/search@6.5.11)(@codemirror/state@6.5.3)(@codemirror/theme-one-dark@6.1.3)(@codemirror/view@6.39.9)(@opentelemetry/api@1.9.0)(@swc/helpers@0.5.15)(@types/node@22.19.3)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(codemirror@6.0.2)(cypress@15.8.2)(next@15.5.24(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-native-reanimated@4.2.1(react-native-worklets@0.7.2(@babel/core@7.28.5)(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.18)(typescript@5.9.3)
       '@tanstack/react-query':
         specifier: ^5.0.0
         version: 5.90.16(react@19.1.0)
       ai:
         specifier: ^5.0.46
-        version: 5.0.117(zod@4.3.4)
+        version: 5.0.117(zod@4.4.3)
       lucide-react:
         specifier: ^0.539.0
         version: 0.539.0(react@19.1.0)
@@ -728,7 +731,7 @@ importers:
         version: 15.5.24(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       ollama-ai-provider:
         specifier: ^1.2.0
-        version: 1.2.0(zod@4.3.4)
+        version: 1.2.0(zod@4.4.3)
       react:
         specifier: ^19.0.0
         version: 19.1.0
@@ -737,13 +740,13 @@ importers:
         version: 19.1.0(react@19.1.0)
       zod:
         specifier: ^4.0.0
-        version: 4.3.4
+        version: 4.4.3
 
   plugins/amplitude:
     dependencies:
       '@nextsparkjs/core':
         specifier: '*'
-        version: 0.1.0-beta.184(@codemirror/autocomplete@6.20.0)(@codemirror/language@6.12.1)(@codemirror/lint@6.9.2)(@codemirror/search@6.5.11)(@codemirror/state@6.5.3)(@codemirror/theme-one-dark@6.1.3)(@codemirror/view@6.39.9)(@opentelemetry/api@1.9.0)(@swc/helpers@0.5.15)(@types/node@22.19.3)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(codemirror@6.0.2)(cypress@15.8.2)(next@15.5.24(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-native-reanimated@4.2.1(react-native-worklets@0.7.2(@babel/core@7.28.5)(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.18)(typescript@5.9.3)
+        version: 0.1.0-beta.185(@cfworker/json-schema@4.1.1)(@codemirror/autocomplete@6.20.0)(@codemirror/language@6.12.1)(@codemirror/lint@6.9.2)(@codemirror/search@6.5.11)(@codemirror/state@6.5.3)(@codemirror/theme-one-dark@6.1.3)(@codemirror/view@6.39.9)(@opentelemetry/api@1.9.0)(@swc/helpers@0.5.15)(@types/node@22.19.3)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(codemirror@6.0.2)(cypress@15.8.2)(next@15.5.24(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-native-reanimated@4.2.1(react-native-worklets@0.7.2(@babel/core@7.28.5)(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.18)(typescript@5.9.3)
       next:
         specifier: 15.5.24
         version: 15.5.24(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -782,7 +785,7 @@ importers:
         version: 0.3.17(@langchain/core@0.3.80(@opentelemetry/api@1.9.0)(openai@6.15.0(ws@8.18.3)(zod@4.3.4)))(ws@8.18.3)
       '@nextsparkjs/core':
         specifier: '*'
-        version: 0.1.0-beta.184(@codemirror/autocomplete@6.20.0)(@codemirror/language@6.12.1)(@codemirror/lint@6.9.2)(@codemirror/search@6.5.11)(@codemirror/state@6.5.3)(@codemirror/theme-one-dark@6.1.3)(@codemirror/view@6.39.9)(@opentelemetry/api@1.9.0)(@swc/helpers@0.5.15)(@types/node@22.19.3)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(codemirror@6.0.2)(cypress@15.8.2)(next@15.5.24(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-native-reanimated@4.2.1(react-native-worklets@0.7.2(@babel/core@7.28.5)(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.18)(typescript@5.9.3)
+        version: 0.1.0-beta.185(@cfworker/json-schema@4.1.1)(@codemirror/autocomplete@6.20.0)(@codemirror/language@6.12.1)(@codemirror/lint@6.9.2)(@codemirror/search@6.5.11)(@codemirror/state@6.5.3)(@codemirror/theme-one-dark@6.1.3)(@codemirror/view@6.39.9)(@opentelemetry/api@1.9.0)(@swc/helpers@0.5.15)(@types/node@22.19.3)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(codemirror@6.0.2)(cypress@15.8.2)(next@15.5.24(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-native-reanimated@4.2.1(react-native-worklets@0.7.2(@babel/core@7.28.5)(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.18)(typescript@5.9.3)
       '@tanstack/react-query':
         specifier: ^5.0.0
         version: 5.90.16(react@19.1.0)
@@ -815,7 +818,7 @@ importers:
     dependencies:
       '@nextsparkjs/core':
         specifier: '*'
-        version: 0.1.0-beta.184(@codemirror/autocomplete@6.20.0)(@codemirror/language@6.12.1)(@codemirror/lint@6.9.2)(@codemirror/search@6.5.11)(@codemirror/state@6.5.3)(@codemirror/theme-one-dark@6.1.3)(@codemirror/view@6.39.9)(@opentelemetry/api@1.9.0)(@swc/helpers@0.5.15)(@types/node@22.19.3)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(codemirror@6.0.2)(cypress@15.8.2)(next@15.5.24(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-native-reanimated@4.2.1(react-native-worklets@0.7.2(@babel/core@7.28.5)(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.18)(typescript@5.9.3)
+        version: 0.1.0-beta.185(@cfworker/json-schema@4.1.1)(@codemirror/autocomplete@6.20.0)(@codemirror/language@6.12.1)(@codemirror/lint@6.9.2)(@codemirror/search@6.5.11)(@codemirror/state@6.5.3)(@codemirror/theme-one-dark@6.1.3)(@codemirror/view@6.39.9)(@opentelemetry/api@1.9.0)(@swc/helpers@0.5.15)(@types/node@22.19.3)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(codemirror@6.0.2)(cypress@15.8.2)(next@15.5.24(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-native-reanimated@4.2.1(react-native-worklets@0.7.2(@babel/core@7.28.5)(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.18)(typescript@5.9.3)
       next:
         specifier: 15.5.24
         version: 15.5.24(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -831,6 +834,9 @@ importers:
 
   plugins/walkme:
     dependencies:
+      '@floating-ui/react':
+        specifier: ^0.27.20
+        version: 0.27.20(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@phosphor-icons/react':
         specifier: ^2.0.0
         version: 2.1.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -839,19 +845,19 @@ importers:
         version: 15.5.24(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       react:
         specifier: ^19.0.0
-        version: 19.1.0
+        version: 19.2.4
       react-dom:
         specifier: ^19.0.0
-        version: 19.1.0(react@19.1.0)
+        version: 19.2.4(react@19.2.4)
 
   themes/blog:
     dependencies:
       '@nextsparkjs/core':
         specifier: '*'
-        version: 0.1.0-beta.184(@codemirror/autocomplete@6.20.0)(@codemirror/language@6.12.1)(@codemirror/lint@6.9.2)(@codemirror/search@6.5.11)(@codemirror/state@6.5.3)(@codemirror/theme-one-dark@6.1.3)(@codemirror/view@6.39.9)(@opentelemetry/api@1.9.0)(@swc/helpers@0.5.15)(@types/node@22.19.3)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(codemirror@6.0.2)(cypress@15.8.2)(next@15.5.24(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-native-reanimated@4.2.1(react-native-worklets@0.7.2(@babel/core@7.28.5)(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.18)(typescript@5.9.3)
+        version: 0.1.0-beta.185(@cfworker/json-schema@4.1.1)(@codemirror/autocomplete@6.20.0)(@codemirror/language@6.12.1)(@codemirror/lint@6.9.2)(@codemirror/search@6.5.11)(@codemirror/state@6.5.3)(@codemirror/theme-one-dark@6.1.3)(@codemirror/view@6.39.9)(@opentelemetry/api@1.9.0)(@swc/helpers@0.5.15)(@types/node@22.19.3)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(codemirror@6.0.2)(cypress@15.8.2)(next@15.5.24(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-native-reanimated@4.2.1(react-native-worklets@0.7.2(@babel/core@7.28.5)(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.18)(typescript@5.9.3)
       '@nextsparkjs/testing':
         specifier: '*'
-        version: 0.1.0-beta.184(cypress@15.8.2)
+        version: 0.1.0-beta.185(cypress@15.8.2)
       lucide-react:
         specifier: ^0.539.0
         version: 0.539.0(react@19.1.0)
@@ -875,10 +881,10 @@ importers:
     dependencies:
       '@nextsparkjs/core':
         specifier: '*'
-        version: 0.1.0-beta.184(@codemirror/autocomplete@6.20.0)(@codemirror/language@6.12.1)(@codemirror/lint@6.9.2)(@codemirror/search@6.5.11)(@codemirror/state@6.5.3)(@codemirror/theme-one-dark@6.1.3)(@codemirror/view@6.39.9)(@opentelemetry/api@1.9.0)(@swc/helpers@0.5.15)(@types/node@22.19.3)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(codemirror@6.0.2)(cypress@15.8.2)(next@15.5.24(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-native-reanimated@4.2.1(react-native-worklets@0.7.2(@babel/core@7.28.5)(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.18)(typescript@5.9.3)
+        version: 0.1.0-beta.185(@cfworker/json-schema@4.1.1)(@codemirror/autocomplete@6.20.0)(@codemirror/language@6.12.1)(@codemirror/lint@6.9.2)(@codemirror/search@6.5.11)(@codemirror/state@6.5.3)(@codemirror/theme-one-dark@6.1.3)(@codemirror/view@6.39.9)(@opentelemetry/api@1.9.0)(@swc/helpers@0.5.15)(@types/node@22.19.3)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(codemirror@6.0.2)(cypress@15.8.2)(next@15.5.24(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-native-reanimated@4.2.1(react-native-worklets@0.7.2(@babel/core@7.28.5)(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.18)(typescript@5.9.3)
       '@nextsparkjs/testing':
         specifier: '*'
-        version: 0.1.0-beta.184(cypress@15.8.2)
+        version: 0.1.0-beta.185(cypress@15.8.2)
       lucide-react:
         specifier: ^0.539.0
         version: 0.539.0(react@19.1.0)
@@ -902,10 +908,10 @@ importers:
     dependencies:
       '@nextsparkjs/core':
         specifier: '*'
-        version: 0.1.0-beta.184(@codemirror/autocomplete@6.20.0)(@codemirror/language@6.12.1)(@codemirror/lint@6.9.2)(@codemirror/search@6.5.11)(@codemirror/state@6.5.3)(@codemirror/theme-one-dark@6.1.3)(@codemirror/view@6.39.9)(@opentelemetry/api@1.9.0)(@swc/helpers@0.5.15)(@types/node@22.19.3)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(codemirror@6.0.2)(cypress@15.8.2)(next@15.5.24(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-native-reanimated@4.2.1(react-native-worklets@0.7.2(@babel/core@7.28.5)(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.18)(typescript@5.9.3)
+        version: 0.1.0-beta.185(@cfworker/json-schema@4.1.1)(@codemirror/autocomplete@6.20.0)(@codemirror/language@6.12.1)(@codemirror/lint@6.9.2)(@codemirror/search@6.5.11)(@codemirror/state@6.5.3)(@codemirror/theme-one-dark@6.1.3)(@codemirror/view@6.39.9)(@opentelemetry/api@1.9.0)(@swc/helpers@0.5.15)(@types/node@22.19.3)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(codemirror@6.0.2)(cypress@15.8.2)(next@15.5.24(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-native-reanimated@4.2.1(react-native-worklets@0.7.2(@babel/core@7.28.5)(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.18)(typescript@5.9.3)
       '@nextsparkjs/testing':
         specifier: '*'
-        version: 0.1.0-beta.184(cypress@15.8.2)
+        version: 0.1.0-beta.185(cypress@15.8.2)
       '@tanstack/react-query':
         specifier: ^5.0.0
         version: 5.90.16(react@19.1.0)
@@ -935,10 +941,10 @@ importers:
     dependencies:
       '@nextsparkjs/core':
         specifier: '*'
-        version: 0.1.0-beta.184(@codemirror/autocomplete@6.20.0)(@codemirror/language@6.12.1)(@codemirror/lint@6.9.2)(@codemirror/search@6.5.11)(@codemirror/state@6.5.3)(@codemirror/theme-one-dark@6.1.3)(@codemirror/view@6.39.9)(@opentelemetry/api@1.9.0)(@swc/helpers@0.5.15)(@types/node@22.19.3)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(codemirror@6.0.2)(cypress@15.8.2)(next@15.5.24(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-native-reanimated@4.2.1(react-native-worklets@0.7.2(@babel/core@7.28.5)(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.18)(typescript@5.9.3)
+        version: 0.1.0-beta.185(@cfworker/json-schema@4.1.1)(@codemirror/autocomplete@6.20.0)(@codemirror/language@6.12.1)(@codemirror/lint@6.9.2)(@codemirror/search@6.5.11)(@codemirror/state@6.5.3)(@codemirror/theme-one-dark@6.1.3)(@codemirror/view@6.39.9)(@opentelemetry/api@1.9.0)(@swc/helpers@0.5.15)(@types/node@22.19.3)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(codemirror@6.0.2)(cypress@15.8.2)(next@15.5.24(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-native-reanimated@4.2.1(react-native-worklets@0.7.2(@babel/core@7.28.5)(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.18)(typescript@5.9.3)
       '@nextsparkjs/testing':
         specifier: '*'
-        version: 0.1.0-beta.184(cypress@15.8.2)
+        version: 0.1.0-beta.185(cypress@15.8.2)
       lucide-react:
         specifier: ^0.539.0
         version: 0.539.0(react@19.1.0)
@@ -1018,6 +1024,54 @@ packages:
 
   '@antfu/install-pkg@1.1.0':
     resolution: {integrity: sha512-MGQsmw10ZyI+EJo45CdSER4zEb+p31LpDAFp2Z3gkSd1yqVZGi0Ebx++YTEMonJy4oChEMLsxZ64j8FH6sSqtQ==}
+
+  '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.258':
+    resolution: {integrity: sha512-Hrhzc9WVGSid+DghdTcpVr/8fyXnTD6KeSlDpKx6Wru47J/Nq7RTYiZJt+cex+O2ehaHMEcuYEgoqJ3K/X9NlA==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.258':
+    resolution: {integrity: sha512-AVqxGX4988J5cS+TMqIzH85+sbsLhJu5Ou9TIALcO/v2Z9ze8GK4vX2ydAYvU/SRnjTvEaiITX+Xcm5afP1IbQ==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.258':
+    resolution: {integrity: sha512-I/BLt2vdvqK2B2px526U1lw7Rv+SI+Ld22+wLwu8gLRQk5SYhSW9dmMYEO+GCeF7vQzfzJvMQ4IzbbY+aSGACg==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.258':
+    resolution: {integrity: sha512-Jj3K1Ip7WpyMouZCjd7kgV3KswUBF62WAnyG0iaYvKZJvXgYKbIAkjcQ2F2Rx5ZuRUNWAVncE9LeHmdIdx78VQ==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.258':
+    resolution: {integrity: sha512-sM7GzRyrOpFhwMn2Ng8nLiWK6cc04uCEu3Zh9mrJS2r3iQu1TryHKoPTjc2Ip0N75sHmwhNodgoRs8NtG1Gkkw==}
+    cpu: [x64]
+    os: [linux]
+
+  '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.258':
+    resolution: {integrity: sha512-2MJeFVJM/3xwZASP3yn2OuQ9RHIoS30DC/B7oG1XPYcbToPLH4QIfCPLWbSQfqCdp+NEBupLMM9BWpDz4s8Q0g==}
+    cpu: [x64]
+    os: [linux]
+
+  '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.258':
+    resolution: {integrity: sha512-n/Vf6oXAo9EZVSSM5+9d+8dFrUrX9cbgSHK/1njkvykWAN5xsfBbikJYqwhbW84GCYkpXYM+gGNZe23h0fHldw==}
+    cpu: [arm64]
+    os: [win32]
+
+  '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.258':
+    resolution: {integrity: sha512-UDbXE6n37ZMUogVVYEWX901NNmbyXUv1VvGYN/vfOiIWKUJXCAypam71dBlYFhlAhVX28qCd64w+pTZDYQfYQA==}
+    cpu: [x64]
+    os: [win32]
+
+  '@anthropic-ai/claude-agent-sdk@0.3.258':
+    resolution: {integrity: sha512-RxJ5fSPCGCxX5qO/b4IPXhldvtLHeYBAzTUJ4eOzO+gTrepZQSDmwSlQD6nnoEquKGJzOMHCjhdEtBfDjbDWUg==}
+    engines: {node: '>=18.0.0'}
+    peerDependencies:
+      '@anthropic-ai/sdk': '>=0.93.0'
+      '@modelcontextprotocol/sdk': ^1.29.0
+      zod: ^4.0.0
 
   '@anthropic-ai/sdk@0.27.3':
     resolution: {integrity: sha512-IjLt0gd3L4jlOfilxVXTifn42FnVffMgDC04RJK1KDZpmkBWLv0XC92MVVmkxrFZNS/7l3xWgP/I3nqtX1sQHw==}
@@ -2256,8 +2310,14 @@ packages:
   '@floating-ui/core@1.7.3':
     resolution: {integrity: sha512-sGnvb5dmrJaKEZ+LDIpguvdX3bDlEllmv4/ClQ9awcmCZrlx5jQyyMWFM5kBI+EyNOCDDiKk8il0zeuX3Zlg/w==}
 
+  '@floating-ui/core@1.8.0':
+    resolution: {integrity: sha512-0CIZ5itps/8x7BG8dEIhs53BvCUH2PCoogtakwRTut+Arm58sJooJ0AuZhLw2HJYIR5cMLNPBSS728sPho2khQ==}
+
   '@floating-ui/dom@1.7.4':
     resolution: {integrity: sha512-OOchDgh4F2CchOX94cRVqhvy7b3AFb+/rQXyswmzmGakRfkMgoWVjfnLWkRirfLEfuD4ysVW16eXzwt3jHIzKA==}
+
+  '@floating-ui/dom@1.8.0':
+    resolution: {integrity: sha512-yXSrzeHZBTZadLOlfyhCkJHNeLJnHRnRInwdZ40L7ZiaAtrBwoYlsDrX3v5zB1Utk7CLfzcOVnVVWoXEky7Ceg==}
 
   '@floating-ui/react-dom@2.1.6':
     resolution: {integrity: sha512-4JX6rEatQEvlmgU80wZyq9RT96HZJa88q8hp0pBd+LrczeDI4o6uA2M+uvxngVHo4Ihr8uibXxH6+70zhAFrVw==}
@@ -2265,8 +2325,23 @@ packages:
       react: '>=16.8.0'
       react-dom: '>=16.8.0'
 
+  '@floating-ui/react-dom@2.1.9':
+    resolution: {integrity: sha512-JDjEFGCpImxDCA7JJKviA0M9+RtmJdj0m/NVU5IMgBK+AmZouAQQ7/+2GLH0GXXY0YMw9oXPB8hKdbPYg5QLYg==}
+    peerDependencies:
+      react: '>=16.8.0'
+      react-dom: '>=16.8.0'
+
+  '@floating-ui/react@0.27.20':
+    resolution: {integrity: sha512-CMqMy7OaXl9W0eq1Uy7L7i2Y/anPvHmFmESd2CEw0t5YvZhcVCeo4MBevAmswRllX7Y2dEidA4ozGPunLSTQpw==}
+    peerDependencies:
+      react: '>=17.0.0'
+      react-dom: '>=17.0.0'
+
   '@floating-ui/utils@0.2.10':
     resolution: {integrity: sha512-aGTxbpbg8/b5JfU1HXSrbH3wXZuLPJcNEcZQFMxLs3oSzgtVu6nFPkbbGGUvBcUjKV2YyB9Wxxabo+HEH9tcRQ==}
+
+  '@floating-ui/utils@0.2.12':
+    resolution: {integrity: sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==}
 
   '@formatjs/fast-memoize@3.1.3':
     resolution: {integrity: sha512-Ocd1vPuD68rW6BJDuAOtnnc1GPeVepY5kZXML1psGVFQ+1Q8CfkftT3Tnam+Mxx97Pz08jIEDCotl/GV+Naccg==}
@@ -3422,8 +3497,8 @@ packages:
   '@nextsparkjs/ai-workflow@0.1.0-beta.92':
     resolution: {integrity: sha512-9w4WCFx139rzU+uSgcX8YOCaSypk8k/AjAaz6Qefkt/XPS9cVhWNlQmlFOMTjaNzGWd0qpUg1aTOBP5mNO8xBQ==}
 
-  '@nextsparkjs/core@0.1.0-beta.184':
-    resolution: {integrity: sha512-0fLfm285DnH9kmQ8FwnigGAIDXPywtVWSS76/h7uZyCy2Fq99GvbqKyI1ZjeyVmgu7NZS9fCGb0y1YX14AiA0g==}
+  '@nextsparkjs/core@0.1.0-beta.185':
+    resolution: {integrity: sha512-UvtIfhn6CcHTW1PA/w999+TeyDmFMLpUDWckBFtlMR1wIYaiMG93NXfFhA4VtScntcnjiuhAYLmqtN1rN7CQaQ==}
     peerDependencies:
       next: 15.5.24
       react: '>=18.0.0'
@@ -3436,8 +3511,8 @@ packages:
       react: '>=18.0.0'
       react-dom: '>=18.0.0'
 
-  '@nextsparkjs/testing@0.1.0-beta.184':
-    resolution: {integrity: sha512-B7WaKqEeTyL3Sdx/L6Drf3I1Ly8RaC8Y92OGyzZeabhydqiD0Q3+8C0ShMpWmhdnHtv4m1Geov/ouvzcw2KPIA==}
+  '@nextsparkjs/testing@0.1.0-beta.185':
+    resolution: {integrity: sha512-Db9wO2zvEDpe54q97fgegWDMNFSZicI/fU2CTR2P2E8cwB18GYwYKHZinJF/yWbr9Zf9lDGJ0AzI2C31rpNJiQ==}
     peerDependencies:
       cypress: '>=13.0.0'
     peerDependenciesMeta:
@@ -10054,6 +10129,9 @@ packages:
     os: [darwin, linux, win32, freebsd, openbsd, netbsd, sunos, android]
     hasBin: true
 
+  tabbable@6.5.0:
+    resolution: {integrity: sha512-wieBHXygIm7OyQOu5hQlkk62/WyCFYGlWg7L6/ZCUZwx0o398Zkn4pVmMyfYhfMG8kGrj/Krt8eIk6UKC6VzwA==}
+
   tailwind-merge@3.4.0:
     resolution: {integrity: sha512-uSaO4gnW+b3Y2aWoWfFpX62vn2sR3skfhbjsEnaBI81WD1wBLlHZe5sWf0AqjksNdYTbGBEd0UasQMT3SNV15g==}
 
@@ -10708,44 +10786,44 @@ snapshots:
 
   '@adobe/css-tools@4.4.4': {}
 
-  '@ai-sdk/anthropic@2.0.57(zod@4.3.4)':
+  '@ai-sdk/anthropic@2.0.57(zod@4.4.3)':
     dependencies:
       '@ai-sdk/provider': 2.0.1
-      '@ai-sdk/provider-utils': 3.0.20(zod@4.3.4)
-      zod: 4.3.4
+      '@ai-sdk/provider-utils': 3.0.20(zod@4.4.3)
+      zod: 4.4.3
 
-  '@ai-sdk/gateway@2.0.24(zod@4.3.4)':
+  '@ai-sdk/gateway@2.0.24(zod@4.4.3)':
     dependencies:
       '@ai-sdk/provider': 2.0.1
-      '@ai-sdk/provider-utils': 3.0.20(zod@4.3.4)
+      '@ai-sdk/provider-utils': 3.0.20(zod@4.4.3)
       '@vercel/oidc': 3.0.5
-      zod: 4.3.4
+      zod: 4.4.3
 
-  '@ai-sdk/openai-compatible@1.0.30(zod@4.3.4)':
+  '@ai-sdk/openai-compatible@1.0.30(zod@4.4.3)':
     dependencies:
       '@ai-sdk/provider': 2.0.1
-      '@ai-sdk/provider-utils': 3.0.20(zod@4.3.4)
-      zod: 4.3.4
+      '@ai-sdk/provider-utils': 3.0.20(zod@4.4.3)
+      zod: 4.4.3
 
-  '@ai-sdk/openai@2.0.89(zod@4.3.4)':
+  '@ai-sdk/openai@2.0.89(zod@4.4.3)':
     dependencies:
       '@ai-sdk/provider': 2.0.1
-      '@ai-sdk/provider-utils': 3.0.20(zod@4.3.4)
-      zod: 4.3.4
+      '@ai-sdk/provider-utils': 3.0.20(zod@4.4.3)
+      zod: 4.4.3
 
-  '@ai-sdk/provider-utils@2.2.8(zod@4.3.4)':
+  '@ai-sdk/provider-utils@2.2.8(zod@4.4.3)':
     dependencies:
       '@ai-sdk/provider': 1.1.3
       nanoid: 3.3.11
       secure-json-parse: 2.7.0
-      zod: 4.3.4
+      zod: 4.4.3
 
-  '@ai-sdk/provider-utils@3.0.20(zod@4.3.4)':
+  '@ai-sdk/provider-utils@3.0.20(zod@4.4.3)':
     dependencies:
       '@ai-sdk/provider': 2.0.1
       '@standard-schema/spec': 1.1.0
       eventsource-parser: 3.0.6
-      zod: 4.3.4
+      zod: 4.4.3
 
   '@ai-sdk/provider@1.1.3':
     dependencies:
@@ -10761,6 +10839,45 @@ snapshots:
     dependencies:
       package-manager-detector: 1.7.0
       tinyexec: 1.2.4
+
+  '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.258':
+    optional: true
+
+  '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.258':
+    optional: true
+
+  '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.258':
+    optional: true
+
+  '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.258':
+    optional: true
+
+  '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.258':
+    optional: true
+
+  '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.258':
+    optional: true
+
+  '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.258':
+    optional: true
+
+  '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.258':
+    optional: true
+
+  '@anthropic-ai/claude-agent-sdk@0.3.258(@anthropic-ai/sdk@0.71.2(zod@4.4.3))(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(zod@4.4.3)':
+    dependencies:
+      '@anthropic-ai/sdk': 0.71.2(zod@4.4.3)
+      '@modelcontextprotocol/sdk': 1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3)
+      zod: 4.4.3
+    optionalDependencies:
+      '@anthropic-ai/claude-agent-sdk-darwin-arm64': 0.3.258
+      '@anthropic-ai/claude-agent-sdk-darwin-x64': 0.3.258
+      '@anthropic-ai/claude-agent-sdk-linux-arm64': 0.3.258
+      '@anthropic-ai/claude-agent-sdk-linux-arm64-musl': 0.3.258
+      '@anthropic-ai/claude-agent-sdk-linux-x64': 0.3.258
+      '@anthropic-ai/claude-agent-sdk-linux-x64-musl': 0.3.258
+      '@anthropic-ai/claude-agent-sdk-win32-arm64': 0.3.258
+      '@anthropic-ai/claude-agent-sdk-win32-x64': 0.3.258
 
   '@anthropic-ai/sdk@0.27.3':
     dependencies:
@@ -10785,6 +10902,12 @@ snapshots:
       json-schema-to-ts: 3.1.1
     optionalDependencies:
       zod: 4.3.4
+
+  '@anthropic-ai/sdk@0.71.2(zod@4.4.3)':
+    dependencies:
+      json-schema-to-ts: 3.1.1
+    optionalDependencies:
+      zod: 4.4.3
 
   '@babel/code-frame@7.10.4':
     dependencies:
@@ -12383,10 +12506,19 @@ snapshots:
     dependencies:
       '@floating-ui/utils': 0.2.10
 
+  '@floating-ui/core@1.8.0':
+    dependencies:
+      '@floating-ui/utils': 0.2.12
+
   '@floating-ui/dom@1.7.4':
     dependencies:
       '@floating-ui/core': 1.7.3
       '@floating-ui/utils': 0.2.10
+
+  '@floating-ui/dom@1.8.0':
+    dependencies:
+      '@floating-ui/core': 1.8.0
+      '@floating-ui/utils': 0.2.12
 
   '@floating-ui/react-dom@2.1.6(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
     dependencies:
@@ -12400,7 +12532,23 @@ snapshots:
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
 
+  '@floating-ui/react-dom@2.1.9(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
+    dependencies:
+      '@floating-ui/dom': 1.8.0
+      react: 19.2.4
+      react-dom: 19.2.4(react@19.2.4)
+
+  '@floating-ui/react@0.27.20(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
+    dependencies:
+      '@floating-ui/react-dom': 2.1.9(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@floating-ui/utils': 0.2.12
+      react: 19.2.4
+      react-dom: 19.2.4(react@19.2.4)
+      tabbable: 6.5.0
+
   '@floating-ui/utils@0.2.10': {}
+
+  '@floating-ui/utils@0.2.12': {}
 
   '@formatjs/fast-memoize@3.1.3': {}
 
@@ -13309,6 +13457,30 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  '@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3)':
+    dependencies:
+      '@hono/node-server': 2.1.0(hono@4.13.1)
+      ajv: 8.20.0
+      ajv-formats: 3.0.1(ajv@8.20.0)
+      content-type: 1.0.5
+      cors: 2.8.6
+      cross-spawn: 7.0.6
+      eventsource: 3.0.7
+      eventsource-parser: 3.0.6
+      express: 5.2.1
+      express-rate-limit: 8.6.2(express@5.2.1)
+      hono: 4.13.1
+      jose: 6.2.8
+      json-schema-typed: 8.0.2
+      pkce-challenge: 5.0.1
+      raw-body: 3.0.2
+      zod: 4.4.3
+      zod-to-json-schema: 3.25.1(zod@4.4.3)
+    optionalDependencies:
+      '@cfworker/json-schema': 4.1.1
+    transitivePeerDependencies:
+      - supports-color
+
   '@napi-rs/wasm-runtime@0.2.12':
     dependencies:
       '@emnapi/core': 1.7.1
@@ -13374,7 +13546,7 @@ snapshots:
 
   '@nextsparkjs/ai-workflow@0.1.0-beta.92': {}
 
-  '@nextsparkjs/core@0.1.0-beta.184(@codemirror/autocomplete@6.20.0)(@codemirror/language@6.12.1)(@codemirror/lint@6.9.2)(@codemirror/search@6.5.11)(@codemirror/state@6.5.3)(@codemirror/theme-one-dark@6.1.3)(@codemirror/view@6.39.9)(@opentelemetry/api@1.9.0)(@swc/helpers@0.5.15)(@types/node@22.19.3)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(codemirror@6.0.2)(cypress@15.8.2)(next@15.5.24(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-native-reanimated@4.2.1(react-native-worklets@0.7.2(@babel/core@7.28.5)(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.18)(typescript@5.9.3)':
+  '@nextsparkjs/core@0.1.0-beta.185(@cfworker/json-schema@4.1.1)(@codemirror/autocomplete@6.20.0)(@codemirror/language@6.12.1)(@codemirror/lint@6.9.2)(@codemirror/search@6.5.11)(@codemirror/state@6.5.3)(@codemirror/theme-one-dark@6.1.3)(@codemirror/view@6.39.9)(@opentelemetry/api@1.9.0)(@swc/helpers@0.5.15)(@types/node@22.19.3)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(codemirror@6.0.2)(cypress@15.8.2)(next@15.5.24(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-native-reanimated@4.2.1(react-native-worklets@0.7.2(@babel/core@7.28.5)(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.18)(typescript@5.9.3)':
     dependencies:
       '@babel/runtime': 7.28.4
       '@codemirror/lang-json': 6.0.2
@@ -13383,7 +13555,8 @@ snapshots:
       '@dnd-kit/utilities': 3.2.2(react@19.1.0)
       '@hookform/resolvers': 5.2.2(react-hook-form@7.69.0(react@19.1.0))
       '@inquirer/prompts': 7.10.1(@types/node@22.19.3)
-      '@nextsparkjs/testing': 0.1.0-beta.184(cypress@15.8.2)
+      '@modelcontextprotocol/sdk': 1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3)
+      '@nextsparkjs/testing': 0.1.0-beta.185(cypress@15.8.2)
       '@nextsparkjs/ui': 0.1.0-beta.79(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.1.0(react@19.1.0))(react-native-reanimated@4.2.1(react-native-worklets@0.7.2(@babel/core@7.28.5)(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.2.7)(react@19.1.0))(react@19.1.0)
       '@polar-sh/sdk': 0.43.1
       '@radix-ui/react-accordion': 1.2.12(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -13455,6 +13628,7 @@ snapshots:
       uuid: 13.0.0
       zod: 4.4.3
     transitivePeerDependencies:
+      - '@cfworker/json-schema'
       - '@cloudflare/workers-types'
       - '@codemirror/autocomplete'
       - '@codemirror/language'
@@ -13607,7 +13781,7 @@ snapshots:
       - vitest
       - vue
 
-  '@nextsparkjs/testing@0.1.0-beta.184(cypress@15.8.2)':
+  '@nextsparkjs/testing@0.1.0-beta.185(cypress@15.8.2)':
     optionalDependencies:
       cypress: 15.8.2
 
@@ -16334,13 +16508,13 @@ snapshots:
       clean-stack: 2.2.0
       indent-string: 4.0.0
 
-  ai@5.0.117(zod@4.3.4):
+  ai@5.0.117(zod@4.4.3):
     dependencies:
-      '@ai-sdk/gateway': 2.0.24(zod@4.3.4)
+      '@ai-sdk/gateway': 2.0.24(zod@4.4.3)
       '@ai-sdk/provider': 2.0.1
-      '@ai-sdk/provider-utils': 3.0.20(zod@4.3.4)
+      '@ai-sdk/provider-utils': 3.0.20(zod@4.4.3)
       '@opentelemetry/api': 1.9.0
-      zod: 4.3.4
+      zod: 4.4.3
 
   ajv-formats@3.0.1(ajv@8.20.0):
     optionalDependencies:
@@ -21037,13 +21211,13 @@ snapshots:
       define-properties: 1.2.1
       es-object-atoms: 1.1.1
 
-  ollama-ai-provider@1.2.0(zod@4.3.4):
+  ollama-ai-provider@1.2.0(zod@4.4.3):
     dependencies:
       '@ai-sdk/provider': 1.1.3
-      '@ai-sdk/provider-utils': 2.2.8(zod@4.3.4)
+      '@ai-sdk/provider-utils': 2.2.8(zod@4.4.3)
       partial-json: 0.1.7
     optionalDependencies:
-      zod: 4.3.4
+      zod: 4.4.3
 
   ollama@0.5.18:
     dependencies:
@@ -22774,6 +22948,8 @@ snapshots:
 
   systeminformation@5.30.2: {}
 
+  tabbable@6.5.0: {}
+
   tailwind-merge@3.4.0: {}
 
   tailwindcss@4.1.18: {}
@@ -23430,6 +23606,10 @@ snapshots:
   zod-to-json-schema@3.25.1(zod@4.3.4):
     dependencies:
       zod: 4.3.4
+
+  zod-to-json-schema@3.25.1(zod@4.4.3):
+    dependencies:
+      zod: 4.4.3
 
   zod@3.25.76: {}
 

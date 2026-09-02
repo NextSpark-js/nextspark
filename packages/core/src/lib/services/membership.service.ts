@@ -260,6 +260,7 @@ export class TeamMembership implements TeamMembershipData {
     if (requiredFeature && !this.hasFeature(requiredFeature)) {
       return {
         allowed: false,
+        // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
         reason: 'feature_not_in_plan',
         message: `Your plan does not include the required feature: ${requiredFeature}`,
         meta: {

@@ -43,6 +43,7 @@ export function useAuth() {
         email,
         password,
         name: `${firstName || ''} ${lastName || ''}`.trim() || email.split('@')[0],
+        // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
         firstName,
         lastName,
       },

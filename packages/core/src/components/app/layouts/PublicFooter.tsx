@@ -2,12 +2,12 @@ import Link from 'next/link'
 import { Separator } from '../../ui/separator'
 import { useTranslations } from 'next-intl'
 import { sel } from '../../../lib/test'
+import { APP_NAME } from '../../../lib/config'
 
 export function PublicFooter() {
   const currentYear = new Date().getFullYear()
   const t = useTranslations('footer')
-  const tCommon = useTranslations('common')
-  const appName = tCommon('appName')
+  const appName = APP_NAME
 
   const footerLinks = {
     product: [

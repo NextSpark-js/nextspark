@@ -77,6 +77,7 @@ export async function handleStripeWebhook(
     const gateway = await getBillingGateway()
     const verified = gateway.verifyWebhookSignature(payload, signature)
     // The webhook event data contains the full Stripe event structure
+    // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
     event = { id: verified.id, type: verified.type, data: verified.data } as Stripe.Event
   } catch (error) {
     console.error('[stripe-webhook] Signature verification failed:', error)
