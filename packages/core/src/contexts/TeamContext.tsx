@@ -275,3 +275,12 @@ export function useTeamContext() {
   }
   return context
 }
+
+/**
+ * Like useTeamContext(), but returns undefined instead of throwing when no
+ * TeamProvider is mounted above. Lets wrappers such as DashboardProviders skip
+ * mounting a second TeamProvider when the root layout already provides one.
+ */
+export function useOptionalTeamContext(): TeamContextValue | undefined {
+  return useContext(TeamContext)
+}
