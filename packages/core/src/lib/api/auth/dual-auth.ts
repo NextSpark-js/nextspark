@@ -55,6 +55,8 @@ export interface DualAuthResult {
   type: 'api-key' | 'session' | 'none'
   user: DualAuthUser | null
   scopes?: string[]
+  /** `api_key.id` of the key that authenticated the request (type 'api-key' only). Used for audit logging (#105). */
+  keyId?: string
   rateLimitResponse?: Response
   /** Set when a dev-only x-act-as-user override replaced the real caller. */
   actingAs?: { originalUserId: string; originalRole: string }
@@ -221,7 +223,8 @@ async function tryApiKeyAuth(request: NextRequest): Promise<DualAuthResult> {
         name: userInfo?.name,
         defaultTeamId
       },
-      scopes: apiAuth.scopes || []
+      scopes: apiAuth.scopes || [],
+      keyId: apiAuth.keyId
     }
   } catch (error) {
     console.error('API Key auth failed:', error)
