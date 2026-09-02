@@ -100,6 +100,21 @@ describe('dispatchSecurityNotificationsForRequest', () => {
         headers: { 'user-agent': 'Chrome/120.0.6099.1', 'x-forwarded-for': '203.0.113.5' },
       })
 
+    test('regression: a cloned NextRequest whose `nextUrl` getter throws is still classified via req.url', async () => {
+      mockQuery.mockResolvedValue([]) // never seen
+      const req = signInReq()
+      Object.defineProperty(req, 'nextUrl', {
+        get() {
+          throw new TypeError('Cannot create proxy with a non-object as target or handler')
+        },
+      })
+
+      await dispatchSecurityNotificationsForRequest(req, signInRes)
+
+      expect(mockMutate).toHaveBeenCalledTimes(1)
+      expect(mockSchedule).toHaveBeenCalledTimes(1)
+    })
+
     test('unknown fingerprint → logs event (isNew=true) AND queues email', async () => {
       mockQuery.mockResolvedValue([]) // never seen
 

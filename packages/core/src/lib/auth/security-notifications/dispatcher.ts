@@ -52,9 +52,19 @@ interface AuthResponseBody {
 }
 
 function getPathname(req: NextRequest): string {
+  // The auth route hands us `req.clone()`. On a cloned NextRequest (Next 15)
+  // merely reading `nextUrl` throws ("Cannot create proxy with a non-object as
+  // target or handler"), so it gets its own try: a throw here must fall back to
+  // `req.url`, which clones do keep. Otherwise every event classified as ''
+  // and the dispatcher silently did nothing in production (integration E2E).
   try {
-    // Prefer nextUrl when present; fall back to parsing req.url (clones may lack nextUrl).
-    return req.nextUrl?.pathname ?? new URL(req.url).pathname
+    const pathname = req.nextUrl?.pathname
+    if (pathname) return pathname
+  } catch {
+    // fall through to req.url
+  }
+  try {
+    return new URL(req.url).pathname
   } catch {
     return ''
   }
