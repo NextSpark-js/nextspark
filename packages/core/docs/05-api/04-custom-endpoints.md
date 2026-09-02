@@ -121,17 +121,15 @@ DELETE /api/v1/tasks/:id
 ```typescript
 // app/api/v1/custom-route/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 
 export async function GET(request: NextRequest) {
   try {
-    // 1. Authenticate
-    const auth = await authenticateRequest(request)
+    // 1. Authenticate — declare the scope this route needs; a key without
+    // it is rejected inside authenticateRequest (fails closed, #93)
+    const auth = await authenticateRequest(request, { requiredScope: 'custom:read' })
     if (!auth.success) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized', code: 'UNAUTHORIZED' },
-        { status: 401 }
-      )
+      return createAuthFailureResponse(auth)
     }
 
     // 2. Execute custom logic
@@ -153,12 +151,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const auth = await authenticateRequest(request)
+    const auth = await authenticateRequest(request, { requiredScope: 'custom:write' })
     if (!auth.success) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized', code: 'UNAUTHORIZED' },
-        { status: 401 }
-      )
+      return createAuthFailureResponse(auth)
     }
 
     // Parse request body
@@ -399,16 +394,13 @@ export async function GET(request: NextRequest) {
 
 **Use dual auth middleware:**
 ```typescript
-import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 
 export async function GET(request: NextRequest) {
-  const auth = await authenticateRequest(request)
+  const auth = await authenticateRequest(request, { requiredScope: 'users:read' })
 
   if (!auth.success) {
-    return NextResponse.json(
-      { success: false, error: 'Unauthorized', code: 'UNAUTHORIZED' },
-      { status: 401 }
-    )
+    return createAuthFailureResponse(auth)
   }
 
   // auth.type: 'api-key' | 'session'
@@ -431,7 +423,7 @@ export async function GET(request: NextRequest) {
 import { checkRateLimit } from '@/core/lib/api/rate-limit'
 
 export async function POST(request: NextRequest) {
-  const auth = await authenticateRequest(request)
+  const auth = await authenticateRequest(request, { requiredScope: 'ai:write' })
 
   // Apply rate limit
   const rateLimit = await checkRateLimit(auth.user.id, 'ai/generate', {
@@ -562,14 +554,10 @@ export function createErrorResponse(
 ```typescript
 export async function GET(request: NextRequest) {
   try {
-    const auth = await authenticateRequest(request)
+    const auth = await authenticateRequest(request, { requiredScope: 'tasks:read' })
 
     if (!auth.success) {
-      return createErrorResponse(
-        'Unauthorized',
-        'UNAUTHORIZED',
-        401
-      )
+      return createAuthFailureResponse(auth)
     }
 
     const data = await getData()
@@ -603,7 +591,7 @@ export async function GET(request: NextRequest) {
 ```typescript
 // app/api/v1/ai/generate/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 import { checkRateLimit } from '@/core/lib/api/rate-limit'
 import { z } from 'zod'
 import OpenAI from 'openai'
@@ -618,13 +606,11 @@ const generateSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. Authenticate
-    const auth = await authenticateRequest(request)
+    // 1. Authenticate — this route needs the ai:write scope; a key without
+    // it is rejected inside authenticateRequest (fails closed, #93)
+    const auth = await authenticateRequest(request, { requiredScope: 'ai:write' })
     if (!auth.success) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized', code: 'UNAUTHORIZED' },
-        { status: 401 }
-      )
+      return createAuthFailureResponse(auth)
     }
 
     // 2. Rate limit (20 requests/hour)
@@ -769,7 +755,7 @@ async function handleSubscriptionUpdate(subscription: any) {
 ```typescript
 // app/api/v1/import/tasks/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 import { z } from 'zod'
 import { db } from '@/lib/db'
 
@@ -788,12 +774,9 @@ const importSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const auth = await authenticateRequest(request)
+    const auth = await authenticateRequest(request, { requiredScope: 'tasks:write' })
     if (!auth.success) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized', code: 'UNAUTHORIZED' },
-        { status: 401 }
-      )
+      return createAuthFailureResponse(auth)
     }
 
     const body = await request.json()

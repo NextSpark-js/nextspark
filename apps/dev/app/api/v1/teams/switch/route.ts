@@ -6,7 +6,7 @@ import {
   handleCorsPreflightRequest,
   addCorsHeaders,
 } from '@nextsparkjs/core/lib/api/helpers'
-import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { TeamService } from '@nextsparkjs/core/lib/services'
 import { z } from 'zod'
@@ -23,14 +23,12 @@ export async function OPTIONS(request: NextRequest) {
 // POST /api/v1/teams/switch - Switch active team context
 export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
   try {
-    // Authenticate using dual auth
-    const authResult = await authenticateRequest(req)
+    // Authenticate using dual auth. Only teams:read: this endpoint changes
+    // which team the caller sees, it never writes team data (#93).
+    const authResult = await authenticateRequest(req, { requiredScope: 'teams:read' })
 
     if (!authResult.success) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-        { status: 401 }
-      )
+      return createAuthFailureResponse(authResult)
     }
 
     if (authResult.rateLimitResponse) {

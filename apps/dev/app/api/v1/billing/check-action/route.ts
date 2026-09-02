@@ -10,7 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest, createAuthError } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { SubscriptionService } from '@nextsparkjs/core/lib/services'
 import { z } from 'zod'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
@@ -21,11 +21,13 @@ const checkActionSchema = z.object({
 })
 
 export const POST = withRateLimitTier(async (request: NextRequest) => {
-  // 1. Dual authentication (API Key OR Session)
-  const authResult = await authenticateRequest(request)
+  // 1. Dual authentication (API Key OR Session); the API-key scope is
+  // declared at the entry point, which fails closed for keys that lack it
+  // (#93).
+  const authResult = await authenticateRequest(request, { requiredScope: 'billing:read' })
 
   if (!authResult.success || !authResult.user) {
-    return createAuthError('Unauthorized', 401)
+    return createAuthFailureResponse(authResult)
   }
 
   // 2. Parse and validate request body

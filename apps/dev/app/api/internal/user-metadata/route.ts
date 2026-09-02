@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { MetaService } from '@nextsparkjs/core/lib/services/meta.service'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
-import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 
 // Endpoint interno para crear metadata default después del signup
 export const POST = withRateLimitTier(async (req: NextRequest) => {
   try {
-    const authResult = await authenticateRequest(req)
+    // The API-key scope is declared at the entry point, which fails closed
+    // for keys that lack it (#93).
+    const authResult = await authenticateRequest(req, { requiredScope: 'users:write' })
     if (!authResult.success || !authResult.user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+      return createAuthFailureResponse(authResult)
     }
 
     const body = await req.json()

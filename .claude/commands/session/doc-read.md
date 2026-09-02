@@ -70,11 +70,12 @@ Key patterns:
 - Dual auth: both methods per endpoint
 
 ```typescript
-// Dual auth pattern
-const { user, team } = await authenticateRequest(req, {
-  allowApiKey: true,
-  allowSession: true
-});
+// Dual auth pattern — declare the scope an API key needs, or the key is
+// rejected even if valid (fails closed, #93)
+const authResult = await authenticateRequest(req, { requiredScope: 'tasks:read' });
+if (!authResult.success) {
+  return createAuthFailureResponse(authResult);
+}
 ```
 
 Anti-patterns:
@@ -122,7 +123,7 @@ core/lib/auth/
 📌 SUMMARY FOR DEVELOPMENT
 
 When implementing auth-related features:
-1. Use authenticateRequest() helper
+1. Use authenticateRequest() helper, declaring { requiredScope } (or { allowAnyScope: true }) — undeclared routes fail closed with 403 SCOPE_NOT_DECLARED (#93)
 2. Enable both session AND API key
 3. Always validate team context
 4. RLS handles data isolation

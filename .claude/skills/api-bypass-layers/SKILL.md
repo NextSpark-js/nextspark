@@ -419,7 +419,8 @@ const headers = {
 ├──────────────────────────────────────────────────────────────────────────┤
 │                                                                           │
 │  LAYER 1: Authentication (dual-auth.ts:71-89)                            │
-│  └─ authenticateRequest() → DualAuthResult                               │
+│  └─ authenticateRequest(req, { requiredScope }) → DualAuthResult         │
+│     (fails closed for API keys missing the declared scope, #93)          │
 │                                                                           │
 │  LAYER 2: Authorization (dual-auth.ts:205-226)                           │
 │  └─ canBypassTeamContext() → role + header + team check                  │

@@ -187,7 +187,9 @@ describe('authenticateRequest', () => {
       }
     })
 
-    const result = await authenticateRequest(request)
+    // The route declares the scope it needs — a key without it is rejected
+    // even though it's otherwise valid (fails closed, #93)
+    const result = await authenticateRequest(request, { requiredScope: 'tasks:read' })
 
     expect(result.success).toBe(true)
     expect(result.type).toBe('api_key')
@@ -201,7 +203,8 @@ describe('authenticateRequest', () => {
       }
     })
 
-    const result = await authenticateRequest(request)
+    // Sessions are never gated by requiredScope
+    const result = await authenticateRequest(request, { requiredScope: 'tasks:read' })
 
     expect(result.success).toBe(true)
     expect(result.type).toBe('session')
@@ -215,24 +218,39 @@ describe('authenticateRequest', () => {
       }
     })
 
-    const result = await authenticateRequest(request)
+    const result = await authenticateRequest(request, { requiredScope: 'tasks:read' })
 
     expect(result.success).toBe(false)
     expect(result.type).toBe('none')
   })
 
-  it('validates API key scopes', async () => {
+  it('rejects an API key missing the required scope', async () => {
     const request = new NextRequest('http://localhost/api/v1/tasks', {
       method: 'DELETE',
       headers: {
-        'Authorization': 'Bearer sk_test_readonly'
+        'Authorization': 'Bearer sk_test_readonly' // only holds tasks:read
       }
     })
 
+    const result = await authenticateRequest(request, { requiredScope: 'tasks:delete' })
+
+    expect(result.success).toBe(false)
+    expect(result.type).toBe('api_key')
+    expect(result.error?.code).toBe('INSUFFICIENT_SCOPE')
+  })
+
+  it('rejects a valid API key when the route declares no scope', async () => {
+    const request = new NextRequest('http://localhost/api/v1/tasks', {
+      headers: {
+        'Authorization': 'Bearer sk_test_abc123'
+      }
+    })
+
+    // Neither requiredScope nor allowAnyScope passed — fails closed
     const result = await authenticateRequest(request)
 
     expect(result.success).toBe(false)
-    expect(result.error).toContain('insufficient permissions')
+    expect(result.error?.code).toBe('SCOPE_NOT_DECLARED')
   })
 })
 ```

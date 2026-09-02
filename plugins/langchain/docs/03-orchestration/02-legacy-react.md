@@ -387,20 +387,27 @@ export async function processWithOrchestrator(
 ```typescript
 // api/ai/chat/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest } from '@/core/lib/auth/server'
+import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 import { processWithOrchestrator } from '@/themes/default/lib/langchain/orchestrator'
 
 export async function POST(request: NextRequest) {
     try {
-        const { user, teamId } = await authenticateRequest(request)
-        if (!user || !teamId) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        // Declares the ai:write scope; an API key without it is rejected
+        // here (fails closed, #93)
+        const authResult = await authenticateRequest(request, { requiredScope: 'ai:write' })
+        if (!authResult.success) {
+            return createAuthFailureResponse(authResult)
+        }
+        const { user } = authResult
+        const teamId = user!.defaultTeamId
+        if (!teamId) {
+            return NextResponse.json({ error: 'Team context required' }, { status: 400 })
         }
 
         const { message, sessionId } = await request.json()
 
         const response = await processWithOrchestrator(message, {
-            userId: user.id,
+            userId: user!.id,
             teamId,
             sessionId: sessionId || `session-${Date.now()}`,
         })

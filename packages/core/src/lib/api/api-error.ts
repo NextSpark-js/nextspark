@@ -7,8 +7,10 @@
 export const API_ERROR_CODES = {
   /** Role-based permission check failed (checkPermission) */
   PERMISSION_DENIED: 'PERMISSION_DENIED',
-  /** API key scope check failed (hasRequiredScope) */
+  /** API key lacks the scope the route declared (authenticateRequest / hasRequiredScope) */
   INSUFFICIENT_SCOPE: 'INSUFFICIENT_SCOPE',
+  /** Route declared no required API key scope, so API keys are rejected (fail closed, #93) */
+  SCOPE_NOT_DECLARED: 'SCOPE_NOT_DECLARED',
 } as const
 
 export type ApiErrorCode = typeof API_ERROR_CODES[keyof typeof API_ERROR_CODES]

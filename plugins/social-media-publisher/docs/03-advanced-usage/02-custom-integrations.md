@@ -21,15 +21,17 @@ Create a custom endpoint with additional business logic:
 ```typescript
 // app/api/v1/custom/publish-with-approval/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 import { InstagramAPI, FacebookAPI } from '@/contents/plugins/social-media-publisher/lib/providers'
 import { TokenEncryption } from '@/core/lib/oauth/encryption'
 import { query } from '@/core/lib/db'
 
 export async function POST(request: NextRequest) {
-  const authResult = await authenticateRequest(request)
+  // Declares the social:write scope added by this plugin's app.config.ts —
+  // an API key without it is rejected here (fails closed, #93)
+  const authResult = await authenticateRequest(request, { requiredScope: 'social:write' })
   if (!authResult.success) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return createAuthFailureResponse(authResult)
   }
 
   const { accountId, imageUrl, caption, requireApproval } = await request.json()
@@ -83,9 +85,12 @@ export async function POST(
   { params }: { params: Promise<{ postId: string }> }
 ) {
   const { postId } = await params
-  const authResult = await authenticateRequest(request)
+  const authResult = await authenticateRequest(request, { requiredScope: 'social:write' })
+  if (!authResult.success) {
+    return createAuthFailureResponse(authResult)
+  }
 
-  // Check if user has approval permission
+  // Check if user has approval permission (separate from the API-key scope above)
   if (!hasApprovalPermission(authResult.user!.id)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
@@ -157,9 +162,9 @@ CREATE INDEX "idx_scheduled_posts_scheduledFor"
 ```typescript
 // app/api/v1/custom/schedule-post/route.ts
 export async function POST(request: NextRequest) {
-  const authResult = await authenticateRequest(request)
+  const authResult = await authenticateRequest(request, { requiredScope: 'social:write' })
   if (!authResult.success) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return createAuthFailureResponse(authResult)
   }
 
   const { accountId, imageUrl, caption, scheduledFor } = await request.json()
@@ -314,9 +319,9 @@ async function publishScheduledPost(post: any) {
 ```typescript
 // app/api/v1/custom/cross-post/route.ts
 export async function POST(request: NextRequest) {
-  const authResult = await authenticateRequest(request)
+  const authResult = await authenticateRequest(request, { requiredScope: 'social:write' })
   if (!authResult.success) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return createAuthFailureResponse(authResult)
   }
 
   const { accountIds, imageUrl, caption } = await request.json()
@@ -393,9 +398,9 @@ export async function POST(request: NextRequest) {
 ```typescript
 // app/api/v1/custom/analytics/summary/route.ts
 export async function GET(request: NextRequest) {
-  const authResult = await authenticateRequest(request)
+  const authResult = await authenticateRequest(request, { requiredScope: 'social:read' })
   if (!authResult.success) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return createAuthFailureResponse(authResult)
   }
 
   const { searchParams } = new URL(request.url)
@@ -475,9 +480,9 @@ export async function GET(request: NextRequest) {
 ```typescript
 // app/api/v1/custom/analytics/publish-history/route.ts
 export async function GET(request: NextRequest) {
-  const authResult = await authenticateRequest(request)
+  const authResult = await authenticateRequest(request, { requiredScope: 'social:read' })
   if (!authResult.success) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return createAuthFailureResponse(authResult)
   }
 
   const { searchParams } = new URL(request.url)
@@ -514,9 +519,9 @@ export async function GET(request: NextRequest) {
 ```typescript
 // app/api/v1/custom/templates/save/route.ts
 export async function POST(request: NextRequest) {
-  const authResult = await authenticateRequest(request)
+  const authResult = await authenticateRequest(request, { requiredScope: 'social:write' })
   if (!authResult.success) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return createAuthFailureResponse(authResult)
   }
 
   const { name, caption, imageUrl, tags } = await request.json()
@@ -544,7 +549,10 @@ export async function POST(
   { params }: { params: Promise<{ templateId: string }> }
 ) {
   const { templateId } = await params
-  const authResult = await authenticateRequest(request)
+  const authResult = await authenticateRequest(request, { requiredScope: 'social:write' })
+  if (!authResult.success) {
+    return createAuthFailureResponse(authResult)
+  }
   const { accountId, customCaption } = await request.json()
 
   // Get template

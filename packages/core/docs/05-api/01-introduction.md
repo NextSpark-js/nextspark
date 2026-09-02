@@ -277,14 +277,12 @@ API v1 supports **two authentication methods** that work seamlessly together:
 // 2. If no session, check Authorization header → If valid, use API key
 // 3. If both fail → Return 401 Unauthorized
 
-// Example authentication flow:
-const authResult = await authenticateRequest(request)
+// Example authentication flow. The route declares the scope it needs; an
+// API key without it is rejected here — sessions are never scope-gated.
+const authResult = await authenticateRequest(request, { requiredScope: 'products:read' })
 
 if (!authResult.success) {
-  return NextResponse.json(
-    { success: false, error: 'Unauthorized' },
-    { status: 401 }
-  )
+  return createAuthFailureResponse(authResult)
 }
 
 // authResult contains:

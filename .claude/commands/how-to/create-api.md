@@ -135,7 +135,7 @@ Create a new API route in Next.js App Router:
 ```typescript
 // app/api/v1/reports/sales/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest } from '@/core/lib/auth/authenticateRequest'
+import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 import { checkPermission } from '@/core/lib/permissions/check'
 import { createApiResponse, createApiError } from '@/core/lib/api/response'
 import { SalesReportService } from '@/core/lib/services/sales-report.service'
@@ -150,13 +150,15 @@ const QuerySchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    // 1. Authenticate (supports both session and API key)
-    const auth = await authenticateRequest(request)
-    if (!auth.isAuthenticated) {
-      return createApiError('Unauthorized', 401)
+    // 1. Authenticate (supports both session and API key). Declares the
+    // scope this route needs — an API key without it is rejected here
+    // (fails closed, #93)
+    const auth = await authenticateRequest(request, { requiredScope: 'reports:read' })
+    if (!auth.success) {
+      return createAuthFailureResponse(auth)
     }
 
-    const { userId, teamId } = auth
+    const { id: userId, defaultTeamId: teamId } = auth.user!
 
     // 2. Check permissions
     const canViewReports = await checkPermission(userId, teamId, 'reports.view')
@@ -231,20 +233,31 @@ NextSpark supports dual authentication:
 **📋 Auth Result Type:**
 
 ```typescript
-// core/lib/auth/authenticateRequest.ts
+// core/lib/api/auth/dual-auth.ts
+
+interface AuthenticateOptions {
+  requiredScope?: string | string[]  // API key must hold one of these (or '*')
+  allowAnyScope?: boolean            // opt-out for scope-agnostic routes
+}
 
 type AuthResult = {
-  isAuthenticated: boolean
-  userId?: string
-  teamId?: string
-  authMethod: 'session' | 'api_key' | null
-  apiKeyScopes?: string[]  // For API key auth
+  success: boolean
+  type: 'session' | 'api-key' | 'none'
+  user: { id: string; email: string; role: string; defaultTeamId?: string } | null
+  scopes?: string[]  // For API key auth
+  error?: { code: string; status: 401 | 403; message: string }  // set when success is false
 }
 
 export async function authenticateRequest(
-  request: NextRequest
+  request: NextRequest,
+  options?: AuthenticateOptions
 ): Promise<AuthResult>
 ```
+
+Since #93, `authenticateRequest` **fails closed** for API keys: the route
+must declare `{ requiredScope }` (or explicitly opt out with
+`{ allowAnyScope: true }`), or a valid key is rejected anyway with 403
+`SCOPE_NOT_DECLARED`. Sessions are never scope-gated.
 
 **📋 Authentication Methods:**
 
@@ -254,8 +267,8 @@ User is logged in via browser. Session cookie sent automatically.
 
 ```typescript
 // Request from browser (automatic)
-const auth = await authenticateRequest(request)
-// auth.authMethod === 'session'
+const auth = await authenticateRequest(request, { requiredScope: 'reports:read' })
+// auth.type === 'session' (requiredScope is ignored for sessions)
 ```
 
 **2. API Key Authentication (External)**
@@ -265,32 +278,28 @@ For server-to-server or external integrations.
 ```typescript
 // Request with API key header
 // Authorization: Bearer sk_xxx
-const auth = await authenticateRequest(request)
-// auth.authMethod === 'api_key'
-// auth.apiKeyScopes === ['reports:read', 'entities:read']
+const auth = await authenticateRequest(request, { requiredScope: 'reports:read' })
+// auth.type === 'api-key'
+// auth.scopes === ['reports:read', 'entities:read']
 ```
 
 **📋 Using Authentication in Your Endpoint:**
 
 ```typescript
-export async function GET(request: NextRequest) {
-  const auth = await authenticateRequest(request)
+import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 
-  // Check if authenticated
-  if (!auth.isAuthenticated) {
-    return createApiError('Unauthorized', 401)
+export async function GET(request: NextRequest) {
+  // Declare the scope this route needs; a key without it is rejected
+  // inside authenticateRequest, before this line returns (fails closed, #93)
+  const auth = await authenticateRequest(request, { requiredScope: 'reports:read' })
+
+  // Check if authenticated (covers both "no credential" and "scope rejected")
+  if (!auth.success) {
+    return createAuthFailureResponse(auth) // 401 or 403 with the right code
   }
 
   // Destructure common values
-  const { userId, teamId, authMethod } = auth
-
-  // Optional: Check API key scopes
-  if (authMethod === 'api_key') {
-    const hasScope = auth.apiKeyScopes?.includes('reports:read')
-    if (!hasScope) {
-      return createApiError('Insufficient scope', 403)
-    }
-  }
+  const { id: userId, defaultTeamId: teamId } = auth.user!
 
   // Continue with authenticated request...
 }
@@ -300,12 +309,14 @@ export async function GET(request: NextRequest) {
 
 Scopes control what an API key can access:
 
-- `entities:read` - Read entity data
-- `entities:write` - Create/update entities
-- `entities:delete` - Delete entities
+- `entities:read` / `entities:write` / `entities:delete`
 - `reports:read` - View reports
-- `billing:manage` - Manage subscriptions
-- `team:manage` - Manage team members
+- `teams:read` / `teams:write` / `teams:delete`
+- `billing:read` / `billing:write`
+- `admin:api-keys` / `admin:users` / `admin:devtools`
+- `*` - Full access (superadmin only)
+
+Themes and plugins can add their own scopes via `app.config.ts` → `api.scopes`.
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

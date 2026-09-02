@@ -10,6 +10,13 @@ import { getEntityConfig } from '../entities/registry';
 import { getChildEntities, getEntity } from '../entities/queries';
 import { CreateMetaPayload } from '../../types/meta.types';
 import { getCorsOrigins, normalizeOrigin, isOriginAllowed } from '../utils/cors';
+import {
+  type AuthenticateOptions,
+  describeRoute,
+  normalizeRequiredScopes,
+  resolveApiKeyScopeFailure,
+  scopesSatisfy,
+} from './auth/scope-policy';
 
 // Types for session-based auth
 interface SessionAuth {
@@ -24,10 +31,28 @@ type Auth = ApiKeyAuth | SessionAuth;
 /**
  * Validates authentication using session or API key
  * Prefers session auth if available, falls back to API key
+ *
+ * Resolves to `{ auth: null }` when the request carries neither a valid
+ * session nor a valid API key — it never throws for an unauthenticated
+ * request (#112). Routes are expected to branch on `auth` and answer 401
+ * themselves; a throw here would be swallowed by the generic try/catch most
+ * routes wrap around their body and surface as a 500 instead.
+ *
+ * API-key scope enforcement fails closed here (#93), with the same rule as
+ * `authenticateRequest`: declare `{ requiredScope }` (or, explicitly,
+ * `{ allowAnyScope: true }`). A key rejected on scope resolves to
+ * `{ auth: null, errorResponse }` where `errorResponse` is the ready-made
+ * 403 — return it. Session auth keeps its role-derived scopes and is not
+ * gated here; use `checkScope` for explicit per-branch checks.
  */
-export async function validateAndAuthenticateRequest(request: NextRequest): Promise<{
-  auth: Auth;
+export async function validateAndAuthenticateRequest(
+  request: NextRequest,
+  options: AuthenticateOptions = {}
+): Promise<{
+  auth: Auth | null;
   rateLimitResponse?: NextResponse;
+  /** Set (403) when a valid API key was rejected by scope enforcement. */
+  errorResponse?: NextResponse;
 }> {
   // First try session-based authentication
   const cookieHeader = request.headers.get("cookie");
@@ -62,9 +87,28 @@ export async function validateAndAuthenticateRequest(request: NextRequest): Prom
     }
   }
 
-  // Fallback to API key authentication
+  // Fallback to API key authentication. `validateApiKey` already resolves to
+  // null (never throws) for a missing or invalid key; keep that contract here
+  // instead of delegating to the strict, throwing API-key-only variant.
   console.log(`[Auth] Falling back to API key authentication`);
-  return validateAndAuthenticateApiRequest(request);
+  const apiKeyAuth = await validateApiKey(request);
+
+  if (!apiKeyAuth) {
+    return { auth: null };
+  }
+
+  const scopeFailure = resolveApiKeyScopeFailure(apiKeyAuth.scopes, options, describeRoute(request));
+  if (scopeFailure) {
+    return {
+      auth: null,
+      errorResponse: NextResponse.json(
+        { success: false, error: scopeFailure.message, code: scopeFailure.code },
+        { status: scopeFailure.status }
+      ),
+    };
+  }
+
+  return applyApiKeyRateLimit(apiKeyAuth);
 }
 
 /**
@@ -148,6 +192,11 @@ function applyRestrictionRulesFromRegistry(scopes: string[], flags: import('../e
 /**
  * Valida la API key y aplica rate limiting
  * Esta función debe ser llamada al inicio de cada endpoint API v1
+ *
+ * API-key-only and strict: throws when no valid key is present. Endpoints
+ * that also accept sessions (or want to treat anonymous callers as a normal
+ * 401 branch) should use `validateAndAuthenticateRequest`, which resolves to
+ * a null auth instead.
  */
 export async function validateAndAuthenticateApiRequest(request: NextRequest): Promise<{
   auth: ApiKeyAuth;
@@ -155,14 +204,24 @@ export async function validateAndAuthenticateApiRequest(request: NextRequest): P
 }> {
   // Validar API key completa (con DB)
   const auth = await validateApiKey(request);
-  
+
   if (!auth) {
     throw new Error('Invalid API key');
   }
-  
-  // Aplicar rate limiting
+
+  return applyApiKeyRateLimit(auth);
+}
+
+/**
+ * Aplica rate limiting a una API key ya validada.
+ * Devuelve la respuesta 429 lista para retornar cuando se excede el límite.
+ */
+function applyApiKeyRateLimit(auth: ApiKeyAuth): {
+  auth: ApiKeyAuth;
+  rateLimitResponse?: NextResponse;
+} {
   const rateLimitResult = checkRateLimit(auth.keyId);
-  
+
   if (!rateLimitResult.allowed) {
     const response = NextResponse.json(
       {
@@ -215,21 +274,24 @@ export function getApiAuth(request: NextRequest): ApiKeyAuth {
 /**
  * Verifica que la autenticación tenga el scope requerido
  * Retorna un NextResponse de error si no tiene permisos, null si está autorizado
+ *
+ * Applies to both session auth (role-derived scopes) and API-key auth, with
+ * the same matching rule as `hasRequiredScope`: the wildcard `*` satisfies
+ * any scope, and an array is satisfied by any one of its entries.
  */
-export function checkScope(auth: Auth, requiredScope: string): NextResponse | null {
-  // Check scopes for both session and API key auth
-  const hasRequiredScope = auth.scopes.includes(requiredScope);
-  
-  if (!hasRequiredScope) {
+export function checkScope(auth: Auth, requiredScope: string | string[]): NextResponse | null {
+  if (!scopesSatisfy(auth.scopes, requiredScope)) {
+    const required = normalizeRequiredScopes(requiredScope);
+    const label = required.join("' or '");
     return NextResponse.json(
-      { 
+      {
         success: false,
         error: 'Insufficient permissions',
-        message: `This operation requires the '${requiredScope}' scope`,
-        required_scope: requiredScope,
+        message: `This operation requires the '${label}' scope`,
+        required_scope: required.length === 1 ? required[0] : required,
         your_scopes: auth.scopes,
         code: 'INSUFFICIENT_PERMISSIONS'
-      }, 
+      },
       { status: 403 }
     );
   }

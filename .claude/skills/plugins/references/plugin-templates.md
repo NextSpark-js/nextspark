@@ -244,7 +244,7 @@ export function useMyPluginMutation() {
 // contents/plugins/my-plugin/api/process/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { authenticateRequest } from '@/core/lib/auth/authenticateRequest'
+import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 
 const ProcessInputSchema = z.object({
   data: z.string().min(1).max(10000),
@@ -255,13 +255,12 @@ const ProcessInputSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    // Authentication
-    const auth = await authenticateRequest(request)
-    if (!auth.isAuthenticated) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
+    // Authentication. Declare the scope this plugin route needs (declared
+    // by the plugin under `api.scopes` in its config) — a key without it
+    // is rejected here, fails closed (#93)
+    const auth = await authenticateRequest(request, { requiredScope: 'my-plugin:write' })
+    if (!auth.success) {
+      return createAuthFailureResponse(auth)
     }
 
     // Validation
@@ -301,16 +300,13 @@ export async function POST(request: NextRequest) {
 ```typescript
 // contents/plugins/my-plugin/api/data/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest } from '@/core/lib/auth/authenticateRequest'
+import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await authenticateRequest(request)
-    if (!auth.isAuthenticated) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
+    const auth = await authenticateRequest(request, { requiredScope: 'my-plugin:read' })
+    if (!auth.success) {
+      return createAuthFailureResponse(auth)
     }
 
     // Parse query params

@@ -12,7 +12,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest, hasRequiredScope, canBypassTeamContext, type DualAuthResult } from '../auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse, canBypassTeamContext, type DualAuthResult } from '../auth/dual-auth'
 import type { EntityField, EntityConfig, TaxonomyTypeConfig } from '../../entities/types'
 import { resolveEntityFromUrl, validateEntityOperation } from './resolver'
 import { generateEntitySchemas } from '../../entities/schema-generator'
@@ -641,8 +641,10 @@ async function resolveOwnershipFilter(
  * identity — session user, or API-key owner (API keys carry the same real
  * `users.id` a session would, resolved to a `team_members` role the same
  * way). This runs IN ADDITION to the coarse `<slug>:read/write/delete` scope
- * check `hasRequiredScope` already performs earlier in each handler — API-key
- * auth now gets both layers, matching what session auth always had.
+ * check the auth entry point already performs — each handler declares the
+ * entity scope via `authenticateRequest(request, { requiredScope })`, which
+ * fails closed for API keys (#93) — so API-key auth gets both layers,
+ * matching what session auth always had.
  * Returns null if allowed, or a NextResponse with 403 if denied.
  */
 async function checkAuthPermission(
@@ -812,32 +814,30 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
       return addCorsHeaders(response, request)
     }
 
-    // Authenticate request
-    const authResult = await authenticateRequest(request)
+    // Authenticate request. The entity's `:read` scope is declared at the entry
+    // point, which rejects an API key lacking it (fail closed, #93).
+    const authResult = await authenticateRequest(request, { requiredScope: `${resolution.entityConfig.slug}:read` })
     audit.auth = authResult
     let userId: string | null = null
     let teamId: string | null = null
     let isBypass = false  // Track if admin bypass is active (skip userId filter)
+
+    // A presented API key that failed scope enforcement never degrades to
+    // public access — it gets the entry point's 403.
+    if (!authResult.success && authResult.type === 'api-key') {
+      return addCorsHeaders(createAuthFailureResponse(authResult), request)
+    }
 
     // For public entities, allow read access without authentication
     if (!authResult.success && resolution.entityConfig.access?.public) {
       // userId remains null for public access (no RLS filtering)
       teamId = request.headers.get('x-team-id') ?? null
     } else if (!authResult.success) {
-      return NextResponse.json(
-          { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-          { status: 401 }
-      )
+      return createAuthFailureResponse(authResult)
     } else {
-      // Authenticated request - check rate limits and permissions
+      // Authenticated request - check rate limits
       if (authResult.rateLimitResponse) {
         return authResult.rateLimitResponse as NextResponse
-      }
-
-      // Check required permissions for authenticated access
-      if (!hasRequiredScope(authResult, `${resolution.entityConfig.slug}:read`)) {
-        const response = createApiError('Insufficient permissions', 403)
-        return addCorsHeaders(response, request)
       }
 
       userId = authResult.user!.id
@@ -1393,25 +1393,17 @@ async function handleGenericCreateImpl(request: NextRequest, audit: AuditContext
       return addCorsHeaders(response, request)
     }
 
-    // Authenticate request
-    const authResult = await authenticateRequest(request)
+    // Authenticate request. The entity's `:write` scope is declared at the
+    // entry point, which rejects an API key lacking it (fail closed, #93).
+    const authResult = await authenticateRequest(request, { requiredScope: `${resolution.entityConfig.slug}:write` })
     audit.auth = authResult
 
     if (!authResult.success) {
-      return NextResponse.json(
-          { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-          { status: 401 }
-      )
+      return createAuthFailureResponse(authResult)
     }
 
     if (authResult.rateLimitResponse) {
       return authResult.rateLimitResponse as NextResponse
-    }
-
-    // Check required permissions for all auth types
-    if (!hasRequiredScope(authResult, `${resolution.entityConfig.slug}:write`)) {
-      const response = createApiError('Insufficient permissions', 403)
-      return addCorsHeaders(response, request)
     }
 
     // Parse request body
@@ -1833,32 +1825,30 @@ async function handleGenericReadImpl(request: NextRequest, audit: AuditContext, 
       return addCorsHeaders(response, request)
     }
 
-    // Authenticate request
-    const authResult = await authenticateRequest(request)
+    // Authenticate request. The entity's `:read` scope is declared at the entry
+    // point, which rejects an API key lacking it (fail closed, #93).
+    const authResult = await authenticateRequest(request, { requiredScope: `${resolution.entityConfig.slug}:read` })
     audit.auth = authResult
     let userId: string | null = null
     let teamId: string | null = null
     let isBypass = false  // Track if admin bypass is active (skip userId filter)
+
+    // A presented API key that failed scope enforcement never degrades to
+    // public access — it gets the entry point's 403.
+    if (!authResult.success && authResult.type === 'api-key') {
+      return addCorsHeaders(createAuthFailureResponse(authResult), request)
+    }
 
     // For public entities, allow read access without authentication
     if (!authResult.success && resolution.entityConfig.access?.public) {
       console.log(`[GenericHandler] Public access allowed for ${resolution.entityConfig.slug} read`)
       // userId remains null for public access (no RLS filtering)
     } else if (!authResult.success) {
-      return NextResponse.json(
-          { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-          { status: 401 }
-      )
+      return createAuthFailureResponse(authResult)
     } else {
-      // Authenticated request - check rate limits and permissions
+      // Authenticated request - check rate limits
       if (authResult.rateLimitResponse) {
         return authResult.rateLimitResponse as NextResponse
-      }
-
-      // Check required permissions for authenticated access
-      if (!hasRequiredScope(authResult, `${resolution.entityConfig.slug}:read`)) {
-        const response = createApiError('Insufficient permissions', 403)
-        return addCorsHeaders(response, request)
       }
 
       userId = authResult.user!.id
@@ -2045,25 +2035,17 @@ async function handleGenericUpdateImpl(request: NextRequest, audit: AuditContext
       return addCorsHeaders(response, request)
     }
 
-    // Authenticate request
-    const authResult = await authenticateRequest(request)
+    // Authenticate request. The entity's `:write` scope is declared at the
+    // entry point, which rejects an API key lacking it (fail closed, #93).
+    const authResult = await authenticateRequest(request, { requiredScope: `${resolution.entityConfig.slug}:write` })
     audit.auth = authResult
 
     if (!authResult.success) {
-      return NextResponse.json(
-          { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-          { status: 401 }
-      )
+      return createAuthFailureResponse(authResult)
     }
 
     if (authResult.rateLimitResponse) {
       return authResult.rateLimitResponse as NextResponse
-    }
-
-    // Check required permissions for all auth types
-    if (!hasRequiredScope(authResult, `${resolution.entityConfig.slug}:write`)) {
-      const response = createApiError('Insufficient permissions', 403)
-      return addCorsHeaders(response, request)
     }
 
     // Validate team context with admin bypass support
@@ -2432,29 +2414,18 @@ async function handleGenericDeleteImpl(request: NextRequest, audit: AuditContext
       return addCorsHeaders(response, request)
     }
 
-    // Authenticate request
-    const authResult = await authenticateRequest(request)
+    // Authenticate request. Delete is its own scope (`<slug>:delete`, distinct
+    // from `:write` — a write-scoped key must not be able to delete), declared
+    // at the entry point, which rejects an API key lacking it (fail closed, #93).
+    const authResult = await authenticateRequest(request, { requiredScope: `${resolution.entityConfig.slug}:delete` })
     audit.auth = authResult
 
     if (!authResult.success) {
-      return NextResponse.json(
-          { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-          { status: 401 }
-      )
+      return createAuthFailureResponse(authResult)
     }
 
     if (authResult.rateLimitResponse) {
       return authResult.rateLimitResponse as NextResponse
-    }
-
-    // Check required permissions for all auth types. Delete is its own
-    // scope (`<slug>:delete`, distinct from `:write`) — API_SCOPES already
-    // defines it per entity; this previously checked `:write` instead, which
-    // made a write-scoped key able to delete and made the `:delete` scope
-    // itself pure decoration.
-    if (!hasRequiredScope(authResult, `${resolution.entityConfig.slug}:delete`)) {
-      const response = createApiError('Insufficient permissions', 403)
-      return addCorsHeaders(response, request)
     }
 
     // Validate team context with admin bypass support

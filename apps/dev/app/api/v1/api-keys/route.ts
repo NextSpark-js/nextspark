@@ -7,7 +7,7 @@ import {
   handleCorsPreflightRequest,
   addCorsHeaders
 } from '@nextsparkjs/core/lib/api/helpers';
-import { authenticateRequest, hasRequiredScope, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth';
+import { authenticateRequest, createAuthFailureResponse, resolveTeamContext } from '@nextsparkjs/core/lib/api/auth/dual-auth';
 import { ApiKeyManager, API_SCOPES, API_KEY_LIMITS } from '@nextsparkjs/core/lib/api/keys';
 import { validateScopesForUser } from '@nextsparkjs/core/lib/api/auth';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
@@ -27,27 +27,16 @@ export async function OPTIONS(request: NextRequest) {
 // GET /api/v1/api-keys - List user's API keys with dual auth
 export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
   try {
-    // Authenticate using dual auth
-    const authResult = await authenticateRequest(req);
-    
+    // Authenticate using dual auth. Session users have admin access; API keys
+    // need the scope declared here, enforced at the entry point (#93).
+    const authResult = await authenticateRequest(req, { requiredScope: 'admin:api-keys' });
+
     if (!authResult.success) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-        { status: 401 }
-      );
+      return createAuthFailureResponse(authResult);
     }
 
     if (authResult.rateLimitResponse) {
       return authResult.rateLimitResponse as NextResponse;
-    }
-
-    // Check required permissions - session users have admin access, API key users need specific scope
-    const hasPermission = authResult.type === 'session' || 
-      (authResult.type === 'api-key' && hasRequiredScope(authResult, 'admin:api-keys'));
-
-    if (!hasPermission) {
-      const response = createApiError('Insufficient permissions. Admin access required for API key management.', 403);
-      return addCorsHeaders(response, req);
     }
 
     const apiKeys = await queryWithRLS<{
@@ -136,27 +125,16 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
 // POST /api/v1/api-keys - Create new API key with dual auth
 export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): Promise<NextResponse> => {
   try {
-    // Authenticate using dual auth
-    const authResult = await authenticateRequest(req);
-    
+    // Authenticate using dual auth. Session users have admin access; API keys
+    // need the scope declared here, enforced at the entry point (#93).
+    const authResult = await authenticateRequest(req, { requiredScope: 'admin:api-keys' });
+
     if (!authResult.success) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-        { status: 401 }
-      );
+      return createAuthFailureResponse(authResult);
     }
 
     if (authResult.rateLimitResponse) {
       return authResult.rateLimitResponse as NextResponse;
-    }
-
-    // Check required permissions - session users have admin access, API key users need specific scope
-    const hasPermission = authResult.type === 'session' || 
-      (authResult.type === 'api-key' && hasRequiredScope(authResult, 'admin:api-keys'));
-
-    if (!hasPermission) {
-      const response = createApiError('Insufficient permissions. Admin access required for API key management.', 403);
-      return addCorsHeaders(response, req);
     }
 
     const body = await req.json();

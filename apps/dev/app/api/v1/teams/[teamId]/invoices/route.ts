@@ -8,7 +8,7 @@ import {
   handleCorsPreflightRequest,
   addCorsHeaders,
 } from '@nextsparkjs/core/lib/api/helpers'
-import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { MembershipService } from '@nextsparkjs/core/lib/services'
 import { invoiceQuerySchema } from '@nextsparkjs/core/lib/validation/invoices'
@@ -23,14 +23,13 @@ export async function OPTIONS(request: NextRequest) {
 export const GET = withRateLimitTier(withApiLogging(
   async (req: NextRequest, { params }: { params: Promise<{ teamId: string }> }): Promise<NextResponse> => {
     try {
-      // Authenticate using dual auth (API key OR session)
-      const authResult = await authenticateRequest(req)
+      // Authenticate using dual auth (API key OR session); the API-key scope
+      // is declared at the entry point, which fails closed for keys that
+      // lack it (#93).
+      const authResult = await authenticateRequest(req, { requiredScope: 'billing:read' })
 
       if (!authResult.success) {
-        return NextResponse.json(
-          { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-          { status: 401 }
-        )
+        return createAuthFailureResponse(authResult)
       }
 
       if (authResult.rateLimitResponse) {

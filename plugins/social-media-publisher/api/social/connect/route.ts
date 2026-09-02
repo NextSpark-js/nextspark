@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest } from '@nextsparkjs/core/lib/api/auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { TokenEncryption } from '@nextsparkjs/core/lib/oauth/encryption'
 import { FacebookAPI } from '../../../lib/providers/facebook'
@@ -105,13 +105,12 @@ export const GET = withRateLimitTier(getHandler, 'read')
  */
 const postHandler = async (request: NextRequest) => {
   try {
-    // 1. Authentication
-    const authResult = await authenticateRequest(request)
+    // 1. Authentication; this deprecated callback creates connections, so the
+    // API-key scope is declared at the entry point, which fails closed for
+    // keys that lack it (#93).
+    const authResult = await authenticateRequest(request, { requiredScope: 'social:write' })
     if (!authResult.success) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
+      return createAuthFailureResponse(authResult)
     }
 
     // 2. Parse and validate request body

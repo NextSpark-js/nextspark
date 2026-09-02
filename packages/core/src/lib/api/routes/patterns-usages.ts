@@ -19,7 +19,7 @@ import {
   handleCorsPreflightRequest,
   addCorsHeaders,
 } from '../helpers'
-import { authenticateRequest, hasRequiredScope } from '../auth/dual-auth'
+import { authenticateRequest, createAuthFailureResponse } from '../auth/dual-auth'
 import { PatternUsageService } from '../../services'
 import { queryOneWithRLS } from '../../db'
 
@@ -48,24 +48,16 @@ export function createPatternUsagesHandlers() {
   const GET = withApiLogging(
     async (req: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
       try {
-        // Authenticate using dual auth
-        const authResult = await authenticateRequest(req)
+        // Authenticate using dual auth; the required API-key scope is declared
+        // at the entry point (fail closed, #93).
+        const authResult = await authenticateRequest(req, { requiredScope: 'patterns:read' })
 
         if (!authResult.success) {
-          return NextResponse.json(
-            { success: false, error: 'Authentication required', code: 'AUTHENTICATION_FAILED' },
-            { status: 401 }
-          )
+          return createAuthFailureResponse(authResult)
         }
 
         if (authResult.rateLimitResponse) {
           return authResult.rateLimitResponse as NextResponse
-        }
-
-        // Check required permissions
-        if (!hasRequiredScope(authResult, 'patterns:read')) {
-          const response = createApiError('Insufficient permissions', 403)
-          return addCorsHeaders(response)
         }
 
         const { id: patternId } = await params

@@ -92,6 +92,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   field restrictions — broader access than the same user's own session. All three
   checks now run identically for both auth types.
 
+- **API-key scope enforcement now fails closed at the auth entry points (#93).**
+  Scopes were validated on creation, stored and returned, but nothing in the
+  request path required a route to check them: `authenticateRequest` handed back a
+  populated `scopes` array nobody was obliged to look at, so a key minted as
+  `tasks:read` authenticated on every route that only gated on its owner's role —
+  with that owner's full permissions (team management, invoices, DevTools, ...).
+  Scopes looked like an access control and behaved like a label. The default is
+  now the secure one:
+  - `authenticateRequest(request, { requiredScope })` declares the scope(s) an API
+    key must hold (a string, or an array satisfied by any one entry; `*` always
+    passes). A key without it is rejected with **403 `INSUFFICIENT_SCOPE`**.
+  - A route that declares nothing rejects API keys with **403 `SCOPE_NOT_DECLARED`**
+    and names the route in the server log — forgetting is now visible instead of
+    silently over-privileged. Routes that genuinely accept any valid key say so with
+    `{ allowAnyScope: true }` (explicit and self-documenting). Session auth has no
+    scopes and is unaffected.
+  - A key rejected on scope never falls back to cookie auth nor degrades to
+    public/anonymous access on public entities.
+  - `createAuthFailureResponse(authResult)` turns a failed result into the right
+    response (401 `AUTHENTICATION_FAILED` vs 403 scope codes); `DualAuthResult`
+    gains `error: { code, status, message }` on failures. `hasRequiredScope` accepts
+    an array (any-of) for finer, secondary checks.
+  - The same rule applies to the helpers entry point:
+    `validateAndAuthenticateRequest(request, { requiredScope | allowAnyScope })`
+    resolves `{ auth: null, errorResponse }` (a ready-made 403) for a rejected key.
+    `checkScope` now honours the `*` wildcard and any-of arrays.
+  - `hasAdminPermission(authResult)` without a `requiredScope` now denies API keys
+    instead of granting a narrow key its superadmin owner's full permissions.
+  - The generic entity handlers declare `<slug>:read|write|delete` at the entry
+    point (the in-handler `hasRequiredScope` checks they duplicated are gone), and
+    every route in `apps/dev`, the default theme and the social-media-publisher
+    plugin declares its scope.
+  - New core scopes for routes that had none to declare: `teams:read|write|delete`,
+    `billing:read|write`, `admin:devtools`. Themes declare their own in
+    `app.config.ts` → `api.scopes`, which `getApiScopes()` merges into the mintable
+    vocabulary (the default theme adds `ai:read|write` and `social:read|write` for
+    its AI routes and the social-media-publisher plugin).
+  - **Upgrade notes:** every custom route calling `authenticateRequest` /
+    `validateAndAuthenticateRequest` must declare `requiredScope` (or
+    `allowAnyScope`) or its API-key callers get 403 `SCOPE_NOT_DECLARED`. Existing
+    keys used against teams/billing/DevTools routes need the new scopes (a
+    superadmin can mint them; minting rules for non-superadmins are unchanged).
+    Anonymous and session behaviour is unchanged.
+
 - **SQL identifier injection in the generic list `distinct` query (#96).**
   `GET /api/v1/{entity}?fields=X&distinct=true` interpolated the raw `fields`
   value as a quoted SQL identifier without validating it against the entity's
@@ -101,6 +145,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   both branches share.
 
 ### Fixed
+
+- **`validateAndAuthenticateRequest()` no longer throws for anonymous requests (#112).**
+  The session-or-API-key helper in `lib/api/helpers.ts` fell back to the strict
+  API-key-only variant when no session was found, which threw `Invalid API key` when
+  no key was present either. Routes that wrap the call in a generic try/catch (the
+  usual pattern for a stable JSON error envelope) therefore answered a plain
+  unauthenticated request with a **500** instead of the 401 their own `!auth` branch
+  produces. The helper now resolves to `{ auth: null }` — matching its own
+  session-lookup failure behaviour — so routes' existing 401 branches work as
+  written. `validateAndAuthenticateApiRequest` (API-key-only) keeps its throwing
+  contract; a shared internal applies rate limiting for both.
+  - **Type change:** the resolved `auth` is now `Auth | null`; callers must branch on
+    it before reading `auth.userId` / `auth.scopes`.
 
 - **`beforeEntityCreate` is now invoked by the generic create handler (#118).**
   `POST /api/v1/{entity}` only fired `afterEntityCreate`, so the
@@ -127,7 +184,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     an unknown body key (`notes` for `note`) → `400 VALIDATION_ERROR` with an
     `unrecognized_keys` issue (was: silently stripped, `201`). Keys the handler
     consumes itself (`metas`, `userId`, `teamId`, taxonomy relation arrays,
-    builder `blocks`/`settings`) are unaffected.
+    builder `blocks`/`settings`) are unaffected — and neither are read-only
+    system columns (`id`, `createdAt`, `updatedAt`, and any field marked
+    `api.readOnly`): the update schema strips them with `z.preprocess()`
+    before the `.strict()` check runs, since the dashboard's edit form submits
+    the full record it fetched, system fields included. Without this, saving
+    any edit from the dashboard UI failed with a silent `400` (only logged to
+    the console). `EntityFormWrapper` now surfaces a save error in the form
+    instead of swallowing it.
   - PostgreSQL `23514` CHECK violations → `422 CHECK_CONSTRAINT_VIOLATION`
     with the constraint name; `23503` on create/update → `422
     FOREIGN_KEY_VIOLATION` (was: opaque `500`). `23505` → `409` and delete

@@ -417,7 +417,9 @@ await client.enqueue(() => fetch('/api/v1/users'))
 **Admins bypass rate limits:**
 ```typescript
 export async function checkRateLimit(request: NextRequest) {
-  const auth = await authenticateRequest(request)
+  // Only used to read the caller's identity for the bypass decision below,
+  // not to authorize any specific action — any valid credential is fine.
+  const auth = await authenticateRequest(request, { allowAnyScope: true })
 
   // Bypass for admins
   if (auth.user?.role === 'admin') {

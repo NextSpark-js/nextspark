@@ -14,16 +14,10 @@ import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 export const GET = withRateLimitTier(async (request: NextRequest) => {
   // Plans list is partially public (public plans visible to all, hidden plans only to superadmin)
-  let includeHidden = false
-
-  try {
-    const { auth } = await validateAndAuthenticateRequest(request)
-    // Check if user is superadmin (for full access including hidden plans)
-    includeHidden = auth.scopes.includes('*') || auth.scopes.includes('superadmin:all')
-  } catch {
-    // Not authenticated, only show public plans
-    includeHidden = false
-  }
+  // Anonymous callers resolve to a null auth (#112) and only see public plans.
+  // Public listing: any valid API key may call this; only the `*` scope unlocks hidden plans, decided below (#93).
+  const { auth } = await validateAndAuthenticateRequest(request, { allowAnyScope: true })
+  const includeHidden = !!auth && (auth.scopes.includes('*') || auth.scopes.includes('superadmin:all'))
 
   try {
     const plans = await PlanService.list({ includeHidden })
@@ -35,9 +29,11 @@ export const GET = withRateLimitTier(async (request: NextRequest) => {
 }, 'read');
 
 export const POST = withRateLimitTier(async (request: NextRequest) => {
-  // Authenticate request
-  const { auth, rateLimitResponse } = await validateAndAuthenticateRequest(request)
+  // Authenticate request; the API-key scope is declared at the entry point,
+  // which fails closed for keys that lack it (#93).
+  const { auth, rateLimitResponse, errorResponse } = await validateAndAuthenticateRequest(request, { requiredScope: 'billing:write' })
   if (rateLimitResponse) return rateLimitResponse
+  if (!auth) return errorResponse ?? createApiError('Authentication required', 401, undefined, 'AUTHENTICATION_REQUIRED')
 
   // Check superadmin permission
   if (!auth.scopes.includes('*') && !auth.scopes.includes('superadmin:all')) {
