@@ -19,6 +19,7 @@
  * fixtures, so the "not requested" branches are what's exercised).
  */
 
+import { NextResponse } from 'next/server'
 import type { EntityConfig } from '@/core/lib/entities/types'
 
 // ---------------------------------------------------------------------------
@@ -33,7 +34,13 @@ jest.mock('@/core/lib/api/entity/resolver', () => ({
 }))
 
 // Full mock — the real dual-auth.ts transitively loads lib/auth.ts (Better
-// Auth + DB bootstrapping). hasRequiredScope mirrors the real implementation.
+// Auth + DB bootstrapping). hasRequiredScope and createAuthFailureResponse
+// mirror the real implementation (lib/api/auth/dual-auth.ts) — generic-handler
+// calls createAuthFailureResponse(authResult) on any scope-enforcement
+// rejection (#93) and the real one falls back to a 401 AUTHENTICATION_FAILED
+// when the result carries no specific `error`; without that fallback here,
+// accessing a missing mock export throws inside the handler's try/catch and
+// masks the intended 401 behind a 500.
 const mockAuthenticateRequest = jest.fn()
 const mockCanBypassTeamContext = jest.fn()
 jest.mock('@/core/lib/api/auth/dual-auth', () => ({
@@ -45,6 +52,13 @@ jest.mock('@/core/lib/api/auth/dual-auth', () => ({
       return authResult.scopes.includes(requiredScope) || authResult.scopes.includes('*')
     }
     return false
+  },
+  createAuthFailureResponse: (authResult: { error?: { code: string; status: number; message: string } }) => {
+    const failure = authResult.error ?? { code: 'AUTHENTICATION_FAILED', status: 401, message: 'Authentication required' }
+    return NextResponse.json(
+      { success: false, error: failure.message, code: failure.code },
+      { status: failure.status }
+    )
   },
 }))
 
