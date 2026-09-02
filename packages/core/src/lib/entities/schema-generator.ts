@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod'
+import { SYSTEM_FIELD_NAMES } from './system-fields'
 import type { EntityConfig, EntityField, ChildEntityDefinition } from './types'
 import { mediaRefSchema } from '../../types/blocks'
 
@@ -83,9 +84,23 @@ export function generateEntitySchemas(
   // and the handlers answer 400 VALIDATION_ERROR naming them.
   const createSchema = z.object(createFields).strict()
 
-  // Update schema (all fields optional except id). `.partial()` preserves the
-  // strict unknown-keys policy.
-  const updateSchema = createSchema.partial()
+  // Update schema (all fields optional). `.partial()` preserves the strict
+  // unknown-keys policy for real typos, but the record a client fetched and
+  // PATCHes back legitimately carries the read-only/system columns (`id`,
+  // `createdAt`, `updatedAt`, soft-delete markers, read-only fields). The edit
+  // form does exactly that, so those keys are stripped before validation
+  // instead of failing the whole update as "unknown" (#97 follow-up).
+  const readOnlyKeys = new Set<string>([
+    ...SYSTEM_FIELD_NAMES,
+    ...(entityConfig.table?.softDelete ? ['deletedAt', 'deletedBy'] : []),
+    ...entityConfig.fields
+      .filter(field => field.api.readOnly && !includeReadOnly)
+      .map(field => field.name),
+  ])
+  const updateSchema = z.preprocess(
+    (data) => stripKeys(data, readOnlyKeys),
+    createSchema.partial()
+  )
   
   // Response schema (includes all fields including read-only)
   const responseFields = entityConfig.fields.reduce((acc, field) => {
@@ -134,6 +149,17 @@ export function generateEntitySchemas(
     list: listSchema,
     childSchemas
   }
+}
+
+/**
+ * Drop the given keys from a plain object before validation. Non-object input
+ * is returned untouched so the schema itself reports the type error.
+ */
+function stripKeys(data: unknown, keys: Set<string>): unknown {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return data
+  return Object.fromEntries(
+    Object.entries(data as Record<string, unknown>).filter(([key]) => !keys.has(key))
+  )
 }
 
 /**

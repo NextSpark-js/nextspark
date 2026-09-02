@@ -114,3 +114,55 @@ describe('generateEntitySchemas — #97 strict object schemas', () => {
     expect(result.success).toBe(false)
   })
 })
+
+describe('generateEntitySchemas — update schema tolerates the record a client PATCHes back (#97 follow-up)', () => {
+  const fullRecord = {
+    id: 'row-1',
+    userId: 'user-1',
+    teamId: 'team-1',
+    createdAt: '2026-09-01T22:24:55.058Z',
+    updatedAt: '2026-09-01T22:24:55.058Z',
+    title: 'Edited from the form',
+    note: null,
+  }
+
+  it('strips the system/read-only columns instead of rejecting them as unknown keys', () => {
+    const { update } = generateEntitySchemas(makeConfig())
+
+    const result = update.safeParse(fullRecord)
+
+    expect(result.success).toBe(true)
+    expect(result.success && result.data).toEqual({ title: 'Edited from the form', note: null })
+  })
+
+  it('also strips soft-delete markers and entity fields flagged api.readOnly', () => {
+    const { update } = generateEntitySchemas(makeConfig({
+      table: { softDelete: true },
+      fields: [
+        ...makeConfig().fields,
+        {
+          name: 'computedScore',
+          type: 'number',
+          required: false,
+          display: { label: 'Score', description: '', showInList: true, showInDetail: true, showInForm: false, order: 3 },
+          validation: {},
+          api: { searchable: false, sortable: true, readOnly: true },
+        },
+      ],
+    } as unknown as Partial<EntityConfig>))
+
+    const result = update.safeParse({ ...fullRecord, deletedAt: null, deletedBy: null, computedScore: 42 })
+
+    expect(result.success).toBe(true)
+    expect(result.success && result.data).toEqual({ title: 'Edited from the form', note: null })
+  })
+
+  it('still rejects a genuinely unknown key alongside the system columns', () => {
+    const { update } = generateEntitySchemas(makeConfig())
+
+    const result = update.safeParse({ ...fullRecord, notes: 'typo' })
+
+    expect(result.success).toBe(false)
+    expect(result.success || result.error.issues.map(issue => issue.code)).toContain('unrecognized_keys')
+  })
+})
