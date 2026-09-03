@@ -85,13 +85,19 @@ const mockBeforeEntityCreate = jest.fn()
 const mockAfterEntityCreate = jest.fn()
 const mockBeforeEntityUpdate = jest.fn()
 const mockAfterEntityUpdate = jest.fn()
+const mockBeforeEntityDelete = jest.fn()
 const mockAfterEntityDelete = jest.fn()
+const mockBeforeEntityRead = jest.fn()
+const mockAfterEntityRead = jest.fn()
 jest.mock('@/core/lib/entities/entity-hooks', () => ({
   beforeEntityCreate: (...args: unknown[]) => mockBeforeEntityCreate(...args),
   afterEntityCreate: (...args: unknown[]) => mockAfterEntityCreate(...args),
   beforeEntityUpdate: (...args: unknown[]) => mockBeforeEntityUpdate(...args),
   afterEntityUpdate: (...args: unknown[]) => mockAfterEntityUpdate(...args),
+  beforeEntityDelete: (...args: unknown[]) => mockBeforeEntityDelete(...args),
   afterEntityDelete: (...args: unknown[]) => mockAfterEntityDelete(...args),
+  beforeEntityRead: (...args: unknown[]) => mockBeforeEntityRead(...args),
+  afterEntityRead: (...args: unknown[]) => mockAfterEntityRead(...args),
 }))
 
 jest.mock('@nextsparkjs/registries/billing-registry', () => ({
@@ -239,6 +245,9 @@ function reset() {
   // Pass-through hooks by default (mirrors the real no-plugin behaviour)
   mockBeforeEntityCreate.mockImplementation(async (_slug: string, data: unknown) => data)
   mockBeforeEntityUpdate.mockImplementation(async (_slug: string, _id: string, changes: unknown) => changes)
+  mockBeforeEntityDelete.mockResolvedValue(true)
+  mockBeforeEntityRead.mockImplementation(async (_slug: string, query: unknown) => query)
+  mockAfterEntityRead.mockImplementation(async (_slug: string, results: unknown) => results)
   mockGenerateEntitySchemas.mockReturnValue({
     create: { safeParse: (data: unknown) => ({ success: true, data }) },
     update: { safeParse: (data: unknown) => ({ success: true, data }) },
@@ -261,6 +270,9 @@ export const harness = {
     afterEntityCreate: mockAfterEntityCreate,
     beforeEntityUpdate: mockBeforeEntityUpdate,
     afterEntityUpdate: mockAfterEntityUpdate,
+    beforeEntityDelete: mockBeforeEntityDelete,
     afterEntityDelete: mockAfterEntityDelete,
+    beforeEntityRead: mockBeforeEntityRead,
+    afterEntityRead: mockAfterEntityRead,
   },
 }

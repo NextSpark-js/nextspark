@@ -104,9 +104,14 @@ jest.mock('@/core/lib/entities/schema-generator', () => ({
 }));
 
 jest.mock('@/core/lib/entities/entity-hooks', () => ({
+  beforeEntityCreate: jest.fn(async (_slug: string, data: unknown) => data),
   afterEntityCreate: jest.fn(),
+  beforeEntityUpdate: jest.fn(async (_slug: string, _id: string, changes: unknown) => changes),
   afterEntityUpdate: jest.fn(),
+  beforeEntityDelete: jest.fn(async () => true),
   afterEntityDelete: jest.fn(),
+  beforeEntityRead: jest.fn(async (_slug: string, query: unknown) => query),
+  afterEntityRead: jest.fn(async (_slug: string, results: unknown) => results),
 }));
 
 jest.mock('@nextsparkjs/registries/billing-registry', () => ({

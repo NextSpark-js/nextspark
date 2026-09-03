@@ -315,6 +315,18 @@ export interface EntityConfig {
   taxonomies?: TaxonomiesConfig
 
   // ==========================================
+  // 8. LIFECYCLE HOOKS
+  // ==========================================
+  /**
+   * Declarative lifecycle hooks (see docs/04-entities/08-hooks-and-lifecycle.md).
+   * Registered once into the global hook system on first use and dispatched
+   * through the same `entity.<slug>.*` events plugins use via `addFilter`/
+   * `addAction` — a hook declared here and one registered imperatively by a
+   * plugin for the same entity both fire.
+   */
+  hooks?: EntityHooks
+
+  // ==========================================
   // AUTOMATIC SYSTEM DERIVATIONS
   // ==========================================
   // The following properties are automatically derived from the slug:

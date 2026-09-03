@@ -31,7 +31,7 @@ import {
   addCorsHeaders,
   handleCorsPreflightRequest
 } from '../helpers'
-import { beforeEntityCreate, afterEntityCreate, afterEntityUpdate, afterEntityDelete } from '../../entities/entity-hooks'
+import { beforeEntityCreate, afterEntityCreate, beforeEntityUpdate, afterEntityUpdate, beforeEntityDelete, afterEntityDelete, beforeEntityRead, afterEntityRead } from '../../entities/entity-hooks'
 import { logGenericHandlerUsage, type AuditContext } from './audit-log'
 import { checkPermission } from '../../permissions/check'
 import type { Permission } from '../../permissions/types'
@@ -894,6 +894,16 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
     // Build dynamic query from entity configuration
     const entityConfig = resolution.entityConfig
 
+    // #114: let plugins / declared EntityConfig.hooks add extra filter
+    // key/value pairs to the effective query (e.g. a business-rule scoping
+    // filter) before the parameter validation below runs. Read hooks shape
+    // the query rather than reject it, so any key one adds flows through the
+    // SAME isEntityField/INVALID_FILTER validation as a user-supplied param.
+    const shapedQuery = await beforeEntityRead(entityConfig.slug, { ...customFilters }, userId ?? undefined)
+    for (const [key, value] of Object.entries(shapedQuery)) {
+      customFilters[key] = Array.isArray(value) ? value.map(String) : [String(value)]
+    }
+
     // ── #97: reject unknown / unsupported list parameters up front ─────────
     // Each of these used to degrade silently into a plausible-looking 200
     // (filter dropped, search ignored, default sort) — indistinguishable from
@@ -1360,7 +1370,11 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
     // Filter public fields for unauthenticated requests
     const finalData = filterPublicFields(dataWithTaxonomies, entityConfig, userId)
 
-    const response = createApiResponse(finalData, paginationMeta)
+    // #114: let plugins / declared EntityConfig.hooks shape or redact the
+    // final result set before it's returned.
+    const shapedData = await afterEntityRead(entityConfig.slug, finalData, { ...customFilters }, userId ?? undefined)
+
+    const response = createApiResponse(shapedData, paginationMeta)
     return addCorsHeaders(response, request)
 
   } catch (error) {
@@ -2000,7 +2014,10 @@ async function handleGenericReadImpl(request: NextRequest, audit: AuditContext, 
     // Filter public fields for unauthenticated requests
     const finalItem = filterPublicFields(itemWithTaxonomies, entityConfig, userId)
 
-    const response = createApiResponse(finalItem)
+    // #114: let plugins / declared EntityConfig.hooks shape or redact the item.
+    const [shapedItem] = await afterEntityRead(entityConfig.slug, [finalItem], { id }, userId ?? undefined)
+
+    const response = createApiResponse(shapedItem ?? finalItem)
     return addCorsHeaders(response, request)
 
   } catch (error) {
@@ -2127,7 +2144,7 @@ async function handleGenericUpdateImpl(request: NextRequest, audit: AuditContext
       return addCorsHeaders(response, request)
     }
 
-    const validatedData = validation.data
+    let validatedData = validation.data
 
     // Reject HTML markup in name/title fields (stored-XSS prevention)
     const updateXssField = checkNameFieldXss(entityConfig, validatedData as Record<string, unknown>)
@@ -2139,6 +2156,31 @@ async function handleGenericUpdateImpl(request: NextRequest, audit: AuditContext
         'INVALID_FIELD_VALUE'
       )
       return addCorsHeaders(updateXssResponse, request)
+    }
+
+    // #114: pre-write extension point, mirroring beforeEntityCreate. Plugins
+    // registered on `entity.<slug>.before_update` (or a declared
+    // EntityConfig.hooks.beforeUpdate) receive the validated changes and may
+    // return modified values for fields already present in the payload, or
+    // throw to reject the update before anything is persisted.
+    try {
+      validatedData = await beforeEntityUpdate(
+        entityConfig.slug,
+        id,
+        validatedData as Record<string, unknown>,
+        authResult.user!.id
+      ) as typeof validatedData
+    } catch (hookError) {
+      console.error(`[generic-handler] beforeEntityUpdate rejected ${entityConfig.slug} update:`, hookError)
+      const response = createApiError(
+        hookError instanceof Error && hookError.message
+          ? hookError.message
+          : `Update rejected by ${entityConfig.slug} before_update hook`,
+        hookRejectionStatus(hookError),
+        undefined,
+        'BEFORE_UPDATE_REJECTED'
+      )
+      return addCorsHeaders(response, request)
     }
 
     // Build dynamic UPDATE query
@@ -2449,6 +2491,34 @@ async function handleGenericDeleteImpl(request: NextRequest, audit: AuditContext
     // Delete the item
     const entityConfig = resolution.entityConfig
     const tableName = getTableName(entityConfig)
+
+    // #114: pre-delete extension point. Plugins registered on
+    // `entity.<slug>.before_delete` (or a declared EntityConfig.hooks.beforeDelete)
+    // may block the delete — either by returning `{continue: false}` or by
+    // throwing — before anything is removed.
+    try {
+      const allowDelete = await beforeEntityDelete(entityConfig.slug, id, authResult.user!.id)
+      if (!allowDelete) {
+        const response = createApiError(
+          `Delete rejected by ${entityConfig.slug} before_delete hook`,
+          403,
+          undefined,
+          'BEFORE_DELETE_REJECTED'
+        )
+        return addCorsHeaders(response, request)
+      }
+    } catch (hookError) {
+      console.error(`[generic-handler] beforeEntityDelete rejected ${entityConfig.slug} delete:`, hookError)
+      const response = createApiError(
+        hookError instanceof Error && hookError.message
+          ? hookError.message
+          : `Delete rejected by ${entityConfig.slug} before_delete hook`,
+        hookRejectionStatus(hookError),
+        undefined,
+        'BEFORE_DELETE_REJECTED'
+      )
+      return addCorsHeaders(response, request)
+    }
 
     // Build DELETE query with team and user filtering
     const whereConditions: string[] = ['id = $1']

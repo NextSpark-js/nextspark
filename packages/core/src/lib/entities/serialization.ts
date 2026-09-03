@@ -2,12 +2,21 @@ import type { EntityConfig, ChildEntityDefinition, SupportedLocale, TranslationL
 import type { LucideIcon } from 'lucide-react'
 import * as Icons from 'lucide-react'
 
-export interface SerializableEntityConfig extends Omit<EntityConfig, 'icon' | 'i18n'> {
+// `hooks` is excluded from both serializable shapes below: it holds live
+// functions (EntityConfig.hooks / ChildEntityDefinition.hooks), and this
+// config crosses a Server -> Client Component boundary (DashboardShell etc.)
+// on every request. React can't serialize a function prop — passing one
+// through crashes rendering for every entity, not just the one that
+// declared hooks, since callers pass the whole entity list as one array.
+// Hooks are a server-only lifecycle concern anyway: the real firing path
+// (ensureConfigHooksRegistered in entity-hooks.ts) reads the server-side
+// registry directly, never this serialized/deserialized round-trip.
+export interface SerializableEntityConfig extends Omit<EntityConfig, 'icon' | 'i18n' | 'hooks'> {
   iconName: string
   i18nFallbackLocale: string
 }
 
-export interface SerializableChildEntityConfig extends Omit<ChildEntityDefinition, 'icon' | 'i18n'> {
+export interface SerializableChildEntityConfig extends Omit<ChildEntityDefinition, 'icon' | 'i18n' | 'hooks'> {
   iconName: string
   i18nFallbackLocale: string
 }
@@ -27,7 +36,7 @@ export function serializeEntityConfig(config: EntityConfig): SerializableEntityC
     ([, icon]) => icon === config.icon
   )?.[0] || 'Box'
 
-  const { icon, i18n, ...rest } = config
+  const { icon, i18n, hooks, ...rest } = config
 
   return {
     ...rest,
@@ -37,10 +46,12 @@ export function serializeEntityConfig(config: EntityConfig): SerializableEntityC
 }
 
 export function serializeChildEntityConfig(config: ChildEntityDefinition): SerializableChildEntityConfig {
-  // ChildEntityDefinition doesn't have icon or i18n properties
-  // Return the config as-is since it's already serializable
+  // ChildEntityDefinition doesn't have icon or i18n properties, but may
+  // declare `hooks` — stripped for the same reason as serializeEntityConfig.
+  const { hooks, ...rest } = config
+
   return {
-    ...config,
+    ...rest,
     iconName: 'Box', // Default icon for child entities
     i18nFallbackLocale: 'en' // Default locale
   } as SerializableChildEntityConfig

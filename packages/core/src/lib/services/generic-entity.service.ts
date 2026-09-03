@@ -26,8 +26,15 @@
 
 import { queryWithRLS, queryOneWithRLS, mutateWithRLS } from '../db'
 import { entityRegistry } from '../entities/registry'
-import { executeBeforeHooks, executeAfterHooks } from '../entities/hooks'
-import type { EntityConfig, EntityField, HookContext, TeamRole } from '../entities/types'
+import {
+  beforeEntityCreate,
+  afterEntityCreate,
+  beforeEntityUpdate,
+  afterEntityUpdate,
+  beforeEntityDelete,
+  afterEntityDelete,
+} from '../entities/entity-hooks'
+import type { EntityConfig, EntityField } from '../entities/types'
 
 // ============================================
 // TYPES
@@ -343,27 +350,6 @@ export function validateEntityData(
   return { valid: errors.length === 0, errors }
 }
 
-/**
- * Create a hook context with minimal required fields
- * The actual role/permissions checking is done at the Server Action level
- */
-function createHookContext(
-  entitySlug: string,
-  operation: 'create' | 'update' | 'delete' | 'read' | 'query',
-  userId: string,
-  data?: unknown,
-  previousData?: unknown,
-  role: TeamRole = 'member'
-): HookContext {
-  return {
-    entityName: entitySlug,
-    operation,
-    data,
-    previousData,
-    user: { id: userId, role },
-  }
-}
-
 // ============================================
 // GENERIC ENTITY SERVICE
 // ============================================
@@ -535,15 +521,8 @@ export class GenericEntityService {
       throw new Error(`Entity "${entitySlug}" not found in registry`)
     }
 
-    // Execute beforeCreate hooks (can modify data or cancel operation)
-    const beforeContext = createHookContext(entitySlug, 'create', userId, data)
-    const beforeResult = await executeBeforeHooks(entitySlug, 'create', beforeContext)
-    if (!beforeResult.continue) {
-      throw new Error(beforeResult.error || 'Operation cancelled by hook')
-    }
-
-    // Use potentially modified data from hooks
-    const finalData = (beforeResult.data as Record<string, unknown>) ?? data
+    // Execute beforeCreate hooks (can modify data, or throw to cancel the operation)
+    const finalData = await beforeEntityCreate(entitySlug, data, userId)
 
     // Validate data against entity schema
     const validation = validateEntityData(entityConfig, finalData, false)
@@ -587,8 +566,7 @@ export class GenericEntityService {
     const createdEntity = mapRowToEntity<T>(result.rows[0])
 
     // Execute afterCreate hooks (fire-and-forget, don't block response)
-    const afterContext = createHookContext(entitySlug, 'create', userId, createdEntity)
-    executeAfterHooks(entitySlug, 'create', afterContext).catch(err => {
+    afterEntityCreate(entitySlug, createdEntity, userId).catch(err => {
       console.error(`[GenericEntityService] afterCreate hook error for ${entitySlug}:`, err)
     })
 
@@ -645,15 +623,8 @@ export class GenericEntityService {
       throw new Error('Entity not found or not authorized')
     }
 
-    // Execute beforeUpdate hooks (can modify data or cancel operation)
-    const beforeContext = createHookContext(entitySlug, 'update', userId, data, currentEntity)
-    const beforeResult = await executeBeforeHooks(entitySlug, 'update', beforeContext)
-    if (!beforeResult.continue) {
-      throw new Error(beforeResult.error || 'Operation cancelled by hook')
-    }
-
-    // Use potentially modified data from hooks
-    const finalData = (beforeResult.data as Record<string, unknown>) ?? data
+    // Execute beforeUpdate hooks (can modify data, or throw to cancel the operation)
+    const finalData = await beforeEntityUpdate(entitySlug, id, data, userId)
 
     // Validate data against entity schema (isUpdate=true allows partial data)
     const validation = validateEntityData(entityConfig, finalData, true)
@@ -708,8 +679,7 @@ export class GenericEntityService {
     const updatedEntity = mapRowToEntity<T>(result.rows[0])
 
     // Execute afterUpdate hooks (fire-and-forget)
-    const afterContext = createHookContext(entitySlug, 'update', userId, updatedEntity, currentEntity)
-    executeAfterHooks(entitySlug, 'update', afterContext).catch(err => {
+    afterEntityUpdate<Record<string, unknown>>(entitySlug, id, updatedEntity as Record<string, unknown>, data, userId).catch(err => {
       console.error(`[GenericEntityService] afterUpdate hook error for ${entitySlug}:`, err)
     })
 
@@ -764,11 +734,10 @@ export class GenericEntityService {
       return false // Entity not found or not accessible
     }
 
-    // Execute beforeDelete hooks (can cancel operation)
-    const beforeContext = createHookContext(entitySlug, 'delete', userId, undefined, entityToDelete)
-    const beforeResult = await executeBeforeHooks(entitySlug, 'delete', beforeContext)
-    if (!beforeResult.continue) {
-      throw new Error(beforeResult.error || 'Operation cancelled by hook')
+    // Execute beforeDelete hooks (can cancel operation, via return value or by throwing)
+    const allowDelete = await beforeEntityDelete(entitySlug, id, userId)
+    if (!allowDelete) {
+      throw new Error('Operation cancelled by hook')
     }
 
     const result = await mutateWithRLS(
@@ -781,8 +750,7 @@ export class GenericEntityService {
 
     if (deleted) {
       // Execute afterDelete hooks (fire-and-forget)
-      const afterContext = createHookContext(entitySlug, 'delete', userId, undefined, entityToDelete)
-      executeAfterHooks(entitySlug, 'delete', afterContext).catch(err => {
+      afterEntityDelete(entitySlug, id, userId).catch(err => {
         console.error(`[GenericEntityService] afterDelete hook error for ${entitySlug}:`, err)
       })
     }

@@ -45,9 +45,13 @@ export class HookSystem {
    * Apply filter hooks to data
    */
   async applyFilters<T>(hookName: string, data: T, ...args: unknown[]): Promise<T> {
+    const hooks = this.filters.get(hookName)
+    // No callback registered for this name — the overwhelmingly common case
+    // for entities/events nobody has hooked into. Skip the timer, the log
+    // line, and the stats write: they cost more than the no-op loop below.
+    if (!hooks || hooks.length === 0) return data
+
     const startTime = performance.now()
-    
-    const hooks = this.filters.get(hookName) || []
     let result = data
 
     console.log(`[Hooks] Applying ${hooks.length} filter hooks for: ${hookName}`)
@@ -79,9 +83,10 @@ export class HookSystem {
    * for filters where a thrown error is meant to abort the caller.
    */
   async applyFiltersStrict<T>(hookName: string, data: T, ...args: unknown[]): Promise<T> {
-    const startTime = performance.now()
+    const hooks = this.filters.get(hookName)
+    if (!hooks || hooks.length === 0) return data
 
-    const hooks = this.filters.get(hookName) || []
+    const startTime = performance.now()
     let result = data
 
     console.log(`[Hooks] Applying ${hooks.length} filter hooks (strict) for: ${hookName}`)
@@ -126,9 +131,10 @@ export class HookSystem {
    * Execute action hooks
    */
   async doAction<T>(hookName: string, data: T, ...args: unknown[]): Promise<void> {
+    const hooks = this.actions.get(hookName)
+    if (!hooks || hooks.length === 0) return
+
     const startTime = performance.now()
-    
-    const hooks = this.actions.get(hookName) || []
 
     console.log(`[Hooks] Executing ${hooks.length} action hooks for: ${hookName}`)
 
