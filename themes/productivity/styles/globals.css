@@ -27,7 +27,20 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @plugin "@tailwindcss/container-queries";
-@import "@nextsparkjs/core/styles/ui.css";
+/* @nextsparkjs/core/styles/ui.css is intentionally NOT imported here: it is
+   pre-compiled by packages/core/scripts/build/build-ui-css.mjs with a plain
+   `@import "tailwindcss"` that has no knowledge of this theme's
+   `@custom-variant dark` override above, so it bakes every dark: utility it
+   contains (including ThemeToggle's own dark:-rotate-90/scale-0 icon
+   classes) using Tailwind's default `@media (prefers-color-scheme: dark)`
+   strategy. Importing that already-compiled CSS re-declares the same
+   classes with that conflicting strategy, so they stop following
+   next-themes' `.dark`/`.light` class and instead silently track the
+   visitor's OS/browser color-scheme preference (issue #110). The @source
+   globs below already scan core's source (monorepo) and its compiled dist
+   output (npm) directly into THIS compilation, so they pick up the same
+   classes correctly scoped to `@custom-variant dark` — the separate ui.css
+   import is redundant. */
 @import "@nextsparkjs/core/styles/utilities.css";
 @import "@nextsparkjs/core/styles/docs.css";
 @source "../../../**/*.{js,ts,jsx,tsx}";
