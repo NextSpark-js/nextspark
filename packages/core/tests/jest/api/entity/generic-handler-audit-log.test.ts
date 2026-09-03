@@ -77,6 +77,26 @@ describe('generic handlers — #105 audit logging', () => {
     expect(auditCalls()[0][1][4]).toBe(403)
   })
 
+  it('logs a scope-rejected API key (#128 — a real, identified key denied before it ever reached the handler)', async () => {
+    mocks.authenticateRequest.mockResolvedValue({
+      success: false,
+      type: 'api-key',
+      user: { id: 'key-owner-1', email: 'owner@test.com', role: 'user' },
+      scopes: ['pets:write'],
+      keyId: 'key-1',
+      error: { code: 'INSUFFICIENT_SCOPE', status: 403, message: 'Insufficient scope' },
+    })
+
+    const response = await handleGenericList(makeRequest({ headers: TEAM_HEADERS })) as unknown as Res
+    await flushPromises()
+
+    expect(response.status).toBe(403)
+    expect(auditCalls()).toHaveLength(1)
+    const [, params, rlsUserId] = auditCalls()[0]
+    expect(params.slice(0, 5)).toEqual(['key-1', 'key-owner-1', '/api/v1/pets', 'GET', 403])
+    expect(rlsUserId).toBe('key-owner-1')
+  })
+
   it('does not log unauthenticated requests (nothing to attribute the row to)', async () => {
     mocks.authenticateRequest.mockResolvedValue({ success: false, type: 'none', user: null })
 

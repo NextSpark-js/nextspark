@@ -87,7 +87,11 @@ describe('authenticateRequest — API-key scope enforcement fails closed (#93)',
     const result = await authenticateRequest(makeRequest(KEY_HEADERS));
 
     expect(result.success).toBe(false);
-    expect(result.user).toBeNull();
+    // #128: the key is real and identified even though the request is denied —
+    // `user`/`keyId` are carried over (not nulled) so a denial like this one
+    // can still be attributed in the audit log, instead of looking anonymous.
+    expect(result.user?.id).toBe('user-sa');
+    expect(result.keyId).toBe('key-1');
     expect(result.type).toBe('api-key');
     expect(result.error).toMatchObject({ code: 'SCOPE_NOT_DECLARED', status: 403 });
   });
@@ -126,7 +130,8 @@ describe('authenticateRequest — API-key scope enforcement fails closed (#93)',
     const result = await authenticateRequest(makeRequest(KEY_HEADERS), { requiredScope: 'teams:write' });
 
     expect(result.success).toBe(false);
-    expect(result.user).toBeNull();
+    // #128: identity is preserved on a scope denial (see previous test).
+    expect(result.user?.id).toBe('user-sa');
     expect(result.error).toMatchObject({ code: 'INSUFFICIENT_SCOPE', status: 403 });
     expect(result.error?.message).toContain('teams:write');
   });
