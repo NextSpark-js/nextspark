@@ -28,8 +28,8 @@ jest.mock('next-intl', () => ({
 const TEAM_A = { id: 'team-a', name: 'Team A', slug: 'team-a', description: null, owner_id: 'user-1', avatar_url: null, settings: {}, created_at: '2026-01-01', updated_at: '2026-01-01' }
 const TEAM_B = { id: 'team-b', name: 'Team B', slug: 'team-b', description: null, owner_id: 'user-2', avatar_url: null, settings: {}, created_at: '2026-01-01', updated_at: '2026-01-01' }
 
-function membershipRow(team: typeof TEAM_A, role = 'owner') {
-  return { ...team, userRole: role }
+function membershipRow(team: typeof TEAM_A, role = 'owner', joinedAt = '2026-01-01T00:00:00Z') {
+  return { ...team, userRole: role, joined_at: joinedAt }
 }
 
 function Probe() {
@@ -67,6 +67,32 @@ describe('TeamProvider self-heal', () => {
     renderWithProviders()
 
     await waitFor(() => expect(screen.getByTestId('current-team').textContent).toBe('team-b'))
+  })
+
+  it('#115: with no stored team, picks the earliest-joined team, not whichever the API listed first', async () => {
+    // team-b joined first (earlier joinedAt) but is listed SECOND in the API
+    // response — a naive `userTeams[0]` pick would land on team-a instead,
+    // disagreeing with the server's own default (dual-auth.ts's
+    // getUserDefaultTeamId(): earliest "joinedAt").
+    ;(global.fetch as jest.Mock).mockImplementation((url: string) => {
+      if (url === '/api/v1/teams') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            data: [
+              membershipRow(TEAM_A, 'owner', '2026-03-01T00:00:00Z'),
+              membershipRow(TEAM_B, 'member', '2026-01-01T00:00:00Z'),
+            ],
+          }),
+        })
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) })
+    })
+
+    renderWithProviders()
+
+    await waitFor(() => expect(screen.getByTestId('current-team').textContent).toBe('team-b'))
+    expect(localStorage.getItem('activeTeamId')).toBe('team-b')
   })
 
   it('re-heals when the active team drops out of userTeams after a later refetch — not just once', async () => {
