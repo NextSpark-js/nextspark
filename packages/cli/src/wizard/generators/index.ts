@@ -198,6 +198,18 @@ async function patchTurbopackRootForMonorepo(): Promise<void> {
 }
 
 /**
+ * True when a package.json dependency spec is an explicit local reference
+ * (`file:`, `link:`, or `workspace:`) rather than something pnpm/npm resolved
+ * from a registry. Used to protect a deliberately-local `@nextsparkjs/*`
+ * install (e.g. from the /do:test-package validation flow) from being
+ * silently repinned to a published version by the "coherent install" step
+ * below (#130).
+ */
+function isLocalPackageRef(spec: string | undefined): boolean {
+  return typeof spec === 'string' && /^(file:|link:|workspace:)/.test(spec)
+}
+
+/**
  * Update or create package.json with required scripts and dependencies
  */
 async function updatePackageJson(config: WizardConfig): Promise<void> {
@@ -311,8 +323,17 @@ async function updatePackageJson(config: WizardConfig): Promise<void> {
   for (const [name, version] of Object.entries(depsToAdd)) {
     // Always (re)pin our packages to the CLI version for a coherent install;
     // pnpm may have resolved a different version during the initial install.
+    // EXCEPT when the existing spec is already an explicit local reference
+    // (file:/link:/workspace:) — that's never something pnpm "resolved", it's
+    // someone deliberately pointing this dependency at a local tarball or
+    // workspace package (the /do:test-package validation flow installs one
+    // before running `nextspark init`), and clobbering it back to a published
+    // npm version silently invalidates the whole point of testing local
+    // changes before publishing them (#130).
     if (name.startsWith('@nextsparkjs/')) {
-      packageJson.dependencies[name] = version
+      if (!isLocalPackageRef(packageJson.dependencies[name])) {
+        packageJson.dependencies[name] = version
+      }
     } else if (!packageJson.dependencies[name]) {
       packageJson.dependencies[name] = version
     }
@@ -358,9 +379,12 @@ async function updatePackageJson(config: WizardConfig): Promise<void> {
   }
 
   for (const [name, version] of Object.entries(devDepsToAdd)) {
-    // Always (re)pin our packages to the CLI version for a coherent install
+    // Always (re)pin our packages to the CLI version for a coherent install —
+    // same local-reference exception as the dependencies loop above (#130).
     if (name.startsWith('@nextsparkjs/')) {
-      packageJson.devDependencies[name] = version
+      if (!isLocalPackageRef(packageJson.devDependencies[name])) {
+        packageJson.devDependencies[name] = version
+      }
     } else if (!packageJson.devDependencies[name]) {
       packageJson.devDependencies[name] = version
     }
