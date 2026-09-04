@@ -50,10 +50,6 @@
     },
     "./globals.css": "./globals.css",
     "./theme-styles.css": "./theme-styles.css",
-    "./styles/ui.css": {
-      "style": "./dist/styles/ui.css",
-      "default": "./dist/styles/ui.css"
-    },
     "./styles/utilities.css": "./styles/utilities.css",
     "./styles/docs.css": "./styles/docs.css",
     "./lib/middleware": {
@@ -382,10 +378,9 @@
   ],
   "scripts": {
     "postinstall": "node scripts/postinstall.mjs || true",
-    "build": "tsup && pnpm build:dts && pnpm build:ui-css",
+    "build": "tsup && pnpm build:dts",
     "build:js": "tsup",
     "build:dts": "tsc -p tsconfig.dts.json || echo '⚠️  DTS generation completed with some type errors (partial coverage)'",
-    "build:ui-css": "node scripts/build/build-ui-css.mjs",
     "dev": "tsup --watch",
     "test": "jest",
     "test:watch": "jest --watch",
