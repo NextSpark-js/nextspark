@@ -129,11 +129,25 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     // id here would skip the initial sync entirely.
     if (currentTeam && userTeams.some(t => t.team.id === currentTeam.id)) return
 
-    // Determine active team (priority: localStorage > user's teams)
+    // Determine active team (priority: localStorage > earliest-joined team).
     const storedTeamId = typeof window !== 'undefined' ? localStorage.getItem('activeTeamId') : null
     // Only use stored team if user is actually a member of it
     const storedTeam = storedTeamId ? userTeams.find(t => t.team.id === storedTeamId) : null
-    const activeTeam = storedTeam || userTeams[0]
+    // #115: falling back to `userTeams[0]` picked whatever order the API
+    // response happened to return — for a multi-team user that's effectively
+    // random, and since this choice gets written to the server-side cookie
+    // below, it silently overrides resolveTeamContext()'s own fallback
+    // (dual-auth.ts's getUserDefaultTeamId(): the team with the EARLIEST
+    // "joinedAt"). Sorting by the same joinedAt field client-side — already
+    // present on every UserTeamMembership — matches that definition exactly,
+    // instead of letting the client and server independently improvise two
+    // different tie-breaks that can disagree.
+    const defaultTeam = storedTeam
+      ? undefined
+      : [...userTeams].sort(
+          (a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime()
+        )[0]
+    const activeTeam = storedTeam || defaultTeam
 
     if (activeTeam) {
       setCurrentTeam(activeTeam.team)
