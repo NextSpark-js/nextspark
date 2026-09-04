@@ -60,7 +60,7 @@ jest.mock('@/core/components/dashboard/block-editor/tree-view-node', () => ({
     <div
       data-testid={`tree-node-${block.id}`}
       data-selected={isSelected}
-      onClick={onSelect}
+      onClick={(e: React.MouseEvent) => onSelect({ metaKey: e.metaKey, shiftKey: e.shiftKey, ctrlKey: e.ctrlKey })}
     >
       {block.blockSlug || block.ref}
     </div>
@@ -139,7 +139,7 @@ describe('TreeView', () => {
       const block1 = screen.getByTestId('tree-node-block-1')
       fireEvent.click(block1)
 
-      expect(onSelectBlock).toHaveBeenCalledWith('block-1')
+      expect(onSelectBlock).toHaveBeenCalledWith('block-1', { metaKey: false, shiftKey: false, ctrlKey: false })
     })
   })
 })
