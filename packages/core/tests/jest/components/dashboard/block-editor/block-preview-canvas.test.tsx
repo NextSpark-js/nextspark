@@ -78,7 +78,7 @@ describe('BlockPreviewCanvas', () => {
 
   const defaultProps = {
     blocks: mockBlocks,
-    selectedBlockId: null,
+    selectedBlockIds: new Set<string>(),
     onSelectBlock: jest.fn(),
     onMoveUp: jest.fn(),
     onMoveDown: jest.fn(),
@@ -117,7 +117,7 @@ describe('BlockPreviewCanvas', () => {
   describe('Selection', () => {
     test('passes isSelected=true to selected block', () => {
       const { container } = render(
-        <BlockPreviewCanvas {...defaultProps} selectedBlockId="block-2" />
+        <BlockPreviewCanvas {...defaultProps} selectedBlockIds={new Set(["block-2"])} />
       )
 
       const selectedBlock = container.querySelector('[data-cy="blockEditor-previewCanvas-block-block-2"]')
@@ -131,17 +131,17 @@ describe('BlockPreviewCanvas', () => {
       const firstBlock = screen.getByTestId('block-hero-section')
       fireEvent.click(firstBlock)
 
-      expect(onSelectBlock).toHaveBeenCalledWith('block-1')
+      expect(onSelectBlock).toHaveBeenCalledWith('block-1', { metaKey: false, shiftKey: false, ctrlKey: false })
     })
 
     test('shows Editing badge when isSelected is true', () => {
-      render(<BlockPreviewCanvas {...defaultProps} selectedBlockId="block-1" />)
+      render(<BlockPreviewCanvas {...defaultProps} selectedBlockIds={new Set(["block-1"])} />)
 
       expect(screen.getByText('Editing')).toBeInTheDocument()
     })
 
     test('does not show Editing badge when block is not selected', () => {
-      render(<BlockPreviewCanvas {...defaultProps} selectedBlockId={null} />)
+      render(<BlockPreviewCanvas {...defaultProps} selectedBlockIds={new Set<string>()} />)
 
       expect(screen.queryByText('Editing')).not.toBeInTheDocument()
     })
@@ -151,7 +151,7 @@ describe('BlockPreviewCanvas', () => {
     test('calls onMoveUp when up button clicked', () => {
       const onMoveUp = jest.fn()
       const { container } = render(
-        <BlockPreviewCanvas {...defaultProps} onMoveUp={onMoveUp} selectedBlockId="block-2" />
+        <BlockPreviewCanvas {...defaultProps} onMoveUp={onMoveUp} selectedBlockIds={new Set(["block-2"])} />
       )
 
       const upButton = container.querySelector('[data-cy="blockEditor-previewCanvas-moveUp-block-2"]')
@@ -164,7 +164,7 @@ describe('BlockPreviewCanvas', () => {
     test('calls onMoveDown when down button clicked', () => {
       const onMoveDown = jest.fn()
       const { container } = render(
-        <BlockPreviewCanvas {...defaultProps} onMoveDown={onMoveDown} selectedBlockId="block-2" />
+        <BlockPreviewCanvas {...defaultProps} onMoveDown={onMoveDown} selectedBlockIds={new Set(["block-2"])} />
       )
 
       const downButton = container.querySelector('[data-cy="blockEditor-previewCanvas-moveDown-block-2"]')
@@ -176,7 +176,7 @@ describe('BlockPreviewCanvas', () => {
 
     test('disables up button for first block', () => {
       const { container } = render(
-        <BlockPreviewCanvas {...defaultProps} selectedBlockId="block-1" />
+        <BlockPreviewCanvas {...defaultProps} selectedBlockIds={new Set(["block-1"])} />
       )
 
       const upButton = container.querySelector('[data-cy="blockEditor-previewCanvas-moveUp-block-1"]')
@@ -185,7 +185,7 @@ describe('BlockPreviewCanvas', () => {
 
     test('disables down button for last block', () => {
       const { container } = render(
-        <BlockPreviewCanvas {...defaultProps} selectedBlockId="block-3" />
+        <BlockPreviewCanvas {...defaultProps} selectedBlockIds={new Set(["block-3"])} />
       )
 
       const downButton = container.querySelector('[data-cy="blockEditor-previewCanvas-moveDown-block-3"]')
@@ -194,7 +194,7 @@ describe('BlockPreviewCanvas', () => {
 
     test('does not disable up button for middle block', () => {
       const { container } = render(
-        <BlockPreviewCanvas {...defaultProps} selectedBlockId="block-2" />
+        <BlockPreviewCanvas {...defaultProps} selectedBlockIds={new Set(["block-2"])} />
       )
 
       const upButton = container.querySelector('[data-cy="blockEditor-previewCanvas-moveUp-block-2"]')
@@ -203,7 +203,7 @@ describe('BlockPreviewCanvas', () => {
 
     test('does not disable down button for middle block', () => {
       const { container } = render(
-        <BlockPreviewCanvas {...defaultProps} selectedBlockId="block-2" />
+        <BlockPreviewCanvas {...defaultProps} selectedBlockIds={new Set(["block-2"])} />
       )
 
       const downButton = container.querySelector('[data-cy="blockEditor-previewCanvas-moveDown-block-2"]')
@@ -229,14 +229,14 @@ describe('BlockPreviewCanvas', () => {
     })
 
     test('keeps floating toolbar visible when block is selected', () => {
-      render(<BlockPreviewCanvas {...defaultProps} selectedBlockId="block-1" />)
+      render(<BlockPreviewCanvas {...defaultProps} selectedBlockIds={new Set(["block-1"])} />)
 
       expect(screen.getByTestId('toolbar-block-1')).toBeInTheDocument()
     })
 
     test('calls onDuplicate when duplicate button in toolbar clicked', () => {
       const onDuplicate = jest.fn()
-      render(<BlockPreviewCanvas {...defaultProps} onDuplicate={onDuplicate} selectedBlockId="block-1" />)
+      render(<BlockPreviewCanvas {...defaultProps} onDuplicate={onDuplicate} selectedBlockIds={new Set(["block-1"])} />)
 
       const duplicateBtn = screen.getByTestId('duplicate-block-1')
       fireEvent.click(duplicateBtn)
@@ -246,7 +246,7 @@ describe('BlockPreviewCanvas', () => {
 
     test('calls onRemove when remove button in toolbar clicked', () => {
       const onRemove = jest.fn()
-      render(<BlockPreviewCanvas {...defaultProps} onRemove={onRemove} selectedBlockId="block-1" />)
+      render(<BlockPreviewCanvas {...defaultProps} onRemove={onRemove} selectedBlockIds={new Set(["block-1"])} />)
 
       const removeBtn = screen.getByTestId('remove-block-1')
       fireEvent.click(removeBtn)

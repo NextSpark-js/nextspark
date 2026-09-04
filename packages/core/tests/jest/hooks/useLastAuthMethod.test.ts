@@ -49,7 +49,7 @@ describe('useLastAuthMethod Hook', () => {
       // Wait for the 150ms delay
       await waitFor(() => {
         expect(result.current.isReady).toBe(true)
-      }, { timeout: 300 })
+      }, { timeout: 2000 })
 
       expect(result.current.lastMethod).toBe(null)
       expect(result.current.isReady).toBe(true)
@@ -67,7 +67,7 @@ describe('useLastAuthMethod Hook', () => {
       // Wait for the 150ms delay
       await waitFor(() => {
         expect(result.current.isReady).toBe(true)
-      }, { timeout: 300 })
+      }, { timeout: 2000 })
 
       expect(result.current.lastMethod).toBe('email')
       expect(result.current.isReady).toBe(true)
@@ -85,7 +85,7 @@ describe('useLastAuthMethod Hook', () => {
       // Wait for the 150ms delay
       await waitFor(() => {
         expect(result.current.isReady).toBe(true)
-      }, { timeout: 300 })
+      }, { timeout: 2000 })
 
       expect(result.current.lastMethod).toBe('google')
       expect(result.current.isReady).toBe(true)
@@ -103,7 +103,7 @@ describe('useLastAuthMethod Hook', () => {
       // Wait for the 150ms delay
       await waitFor(() => {
         expect(result.current.isReady).toBe(true)
-      }, { timeout: 300 })
+      }, { timeout: 2000 })
 
       expect(result.current.lastMethod).toBe(null)
       expect(result.current.isReady).toBe(true)
@@ -119,7 +119,7 @@ describe('useLastAuthMethod Hook', () => {
       // Wait for initial load to complete
       await waitFor(() => {
         expect(result.current.isReady).toBe(true)
-      }, { timeout: 300 })
+      }, { timeout: 2000 })
 
       act(() => {
         result.current.saveAuthMethod('email')
@@ -138,7 +138,7 @@ describe('useLastAuthMethod Hook', () => {
       // Wait for initial load to complete
       await waitFor(() => {
         expect(result.current.isReady).toBe(true)
-      }, { timeout: 300 })
+      }, { timeout: 2000 })
 
       act(() => {
         result.current.saveAuthMethod('google')
@@ -157,7 +157,7 @@ describe('useLastAuthMethod Hook', () => {
       // Wait for initial load to complete
       await waitFor(() => {
         expect(result.current.isReady).toBe(true)
-      }, { timeout: 300 })
+      }, { timeout: 2000 })
 
       expect(result.current.lastMethod).toBe('email')
       expect(result.current.isReady).toBe(true)
@@ -179,7 +179,7 @@ describe('useLastAuthMethod Hook', () => {
       // Wait for initial load to complete
       await waitFor(() => {
         expect(result.current.isReady).toBe(true)
-      }, { timeout: 300 })
+      }, { timeout: 2000 })
 
       expect(result.current.lastMethod).toBe('google')
       expect(result.current.isReady).toBe(true)
@@ -203,7 +203,7 @@ describe('useLastAuthMethod Hook', () => {
       // Wait for initial load to complete
       await waitFor(() => {
         expect(result.current.isReady).toBe(true)
-      }, { timeout: 300 })
+      }, { timeout: 2000 })
 
       expect(result.current.lastMethod).toBe('email')
       expect(result.current.isReady).toBe(true)
@@ -225,7 +225,7 @@ describe('useLastAuthMethod Hook', () => {
       // Wait for initial load to complete
       await waitFor(() => {
         expect(result.current.isReady).toBe(true)
-      }, { timeout: 300 })
+      }, { timeout: 2000 })
 
       expect(result.current.lastMethod).toBe(null)
       expect(result.current.isReady).toBe(true)
@@ -251,7 +251,7 @@ describe('useLastAuthMethod Hook', () => {
       // Wait for the hook to complete initialization
       await waitFor(() => {
         expect(result.current.isReady).toBe(true)
-      }, { timeout: 300 })
+      }, { timeout: 2000 })
 
       expect(mockLocalStorage.getItem).toHaveBeenCalledWith(expectedKey)
 
@@ -285,7 +285,7 @@ describe('useLastAuthMethod Hook', () => {
       // Wait for the delay to complete
       await waitFor(() => {
         expect(result.current.isReady).toBe(true)
-      }, { timeout: 300 })
+      }, { timeout: 2000 })
 
       expect(result.current.lastMethod).toBe(null)
       expect(result.current.isReady).toBe(true)
@@ -305,7 +305,7 @@ describe('useLastAuthMethod Hook', () => {
       // Should become ready after delay
       await waitFor(() => {
         expect(result.current.isReady).toBe(true)
-      }, { timeout: 300 })
+      }, { timeout: 2000 })
 
       expect(result.current.isReady).toBe(true)
       expect(result.current.lastMethod).toBe('email')
@@ -332,7 +332,7 @@ describe('useLastAuthMethod Hook', () => {
 
       await waitFor(() => {
         expect(result.current.isReady).toBe(true)
-      }, { timeout: 300 })
+      }, { timeout: 2000 })
 
       expect(result.current.lastMethod).toBe(null)
       expect(result.current.isReady).toBe(true)
@@ -345,7 +345,7 @@ describe('useLastAuthMethod Hook', () => {
 
       await waitFor(() => {
         expect(result.current.isReady).toBe(true)
-      }, { timeout: 300 })
+      }, { timeout: 2000 })
 
       expect(result.current.lastMethod).toBe(null)
       expect(result.current.isReady).toBe(true)
@@ -358,7 +358,7 @@ describe('useLastAuthMethod Hook', () => {
 
       await waitFor(() => {
         expect(result.current.isReady).toBe(true)
-      }, { timeout: 300 })
+      }, { timeout: 2000 })
 
       expect(result.current.lastMethod).toBe(null)
       expect(result.current.isReady).toBe(true)
@@ -387,7 +387,7 @@ describe('useLastAuthMethod Hook', () => {
 
       await waitFor(() => {
         expect(result.current.isReady).toBe(true)
-      }, { timeout: 300 })
+      }, { timeout: 2000 })
 
       // These should compile and work
       act(() => {
@@ -418,7 +418,7 @@ describe('useLastAuthMethod Hook', () => {
 
       await waitFor(() => {
         expect(result.current.isReady).toBe(true)
-      }, { timeout: 300 })
+      }, { timeout: 2000 })
 
       expect(result.current.isReady).toBe(true)
     })

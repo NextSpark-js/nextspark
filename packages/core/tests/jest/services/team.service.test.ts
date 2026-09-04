@@ -90,14 +90,14 @@ describe('TeamService', () => {
   })
 
   describe('getGlobal', () => {
-    it('returns first team for single-tenant mode', async () => {
+    it('returns the team flagged isGlobal for single-tenant mode', async () => {
       mockQueryOneWithRLS.mockResolvedValue(mockTeam)
 
       const result = await TeamService.getGlobal()
 
       expect(result).toEqual(mockTeam)
       expect(mockQueryOneWithRLS).toHaveBeenCalledWith(
-        expect.stringContaining('ORDER BY "createdAt" ASC'),
+        expect.stringContaining('"isGlobal" = TRUE'),
         []
       )
     })
