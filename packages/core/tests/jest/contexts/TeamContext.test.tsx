@@ -28,8 +28,14 @@ jest.mock('next-intl', () => ({
 const TEAM_A = { id: 'team-a', name: 'Team A', slug: 'team-a', description: null, owner_id: 'user-1', avatar_url: null, settings: {}, created_at: '2026-01-01', updated_at: '2026-01-01' }
 const TEAM_B = { id: 'team-b', name: 'Team B', slug: 'team-b', description: null, owner_id: 'user-2', avatar_url: null, settings: {}, created_at: '2026-01-01', updated_at: '2026-01-01' }
 
+// `joinedAt` (camelCase), matching apps/dev/app/api/v1/teams/route.ts's real
+// `tm."joinedAt" as "joinedAt"` column alias — NOT `joined_at`. A prior
+// version of this fixture used the snake_case fallback field instead of the
+// one the real endpoint actually sends, which is exactly how the #157 fix
+// shipped as a no-op in production: the mock exercised a code path the real
+// API response never took. See #157's follow-up fix in that route.
 function membershipRow(team: typeof TEAM_A, role = 'owner', joinedAt = '2026-01-01T00:00:00Z') {
-  return { ...team, userRole: role, joined_at: joinedAt }
+  return { ...team, userRole: role, joinedAt }
 }
 
 function Probe() {
