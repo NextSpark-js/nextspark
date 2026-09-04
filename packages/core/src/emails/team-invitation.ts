@@ -7,6 +7,7 @@
 
 import { getTranslations } from 'next-intl/server';
 import type { EmailContent, TeamInvitationEmailData } from '../lib/email/types';
+import { escapeHtml } from '../lib/auth/security-notifications/templates/shared';
 
 const APP_NAME_FALLBACK = process.env.NEXT_PUBLIC_APP_NAME || 'Your App';
 
@@ -47,7 +48,7 @@ export default async function teamInvitation(
                       <h2 style="color: #333333; font-size: 24px; margin: 0 0 20px 0; font-weight: 600;">${t('title')}</h2>
 
                       <p style="color: #666666; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                        ${t('bodyIntro', { inviterName: data.inviterName, teamName: data.teamName, role: data.role })}
+                        ${t('bodyIntro', { inviterName: escapeHtml(data.inviterName), teamName: escapeHtml(data.teamName), role: data.role })}
                       </p>
 
                       <p style="color: #666666; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
@@ -89,7 +90,7 @@ export default async function teamInvitation(
                         ${t('copyright', { year, appName })}
                       </p>
                       <p style="color: #999999; font-size: 12px; margin: 0;">
-                        ${t('footerSentTo', { inviteeEmail: data.inviteeEmail })}<br>
+                        ${t('footerSentTo', { inviteeEmail: escapeHtml(data.inviteeEmail) })}<br>
                         ${t('footerUnexpected')}
                       </p>
                     </td>
