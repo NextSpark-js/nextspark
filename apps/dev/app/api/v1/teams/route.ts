@@ -91,7 +91,7 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
     // Add pagination params
     queryValues.push(limit, offset)
 
-    let teams: (Team & { userRole: string | null; memberCount: string })[]
+    let teams: (Team & { userRole: string | null; joinedAt?: string; memberCount: string })[]
     let totalResult: { count: string }[]
 
     if (requestAllTeams) {
@@ -120,17 +120,27 @@ export const GET = withRateLimitTier(withApiLogging(async (req: NextRequest): Pr
       )
     } else {
       // Regular user query: filter by membership
-      teams = await queryWithRLS<Team & { userRole: string; memberCount: string }>(
+      // tm."joinedAt" is unambiguous here (not an aggregation concern): the
+      // WHERE clause already pins tm."userId" = the caller, so tm is exactly
+      // this user's own membership row in each team — the same "joinedAt"
+      // dual-auth.ts's getUserDefaultTeamId() uses to pick a default team.
+      // Its absence here (never selected, even though the client sorted by
+      // it) made TeamContext's #115 fix a no-op in production: every
+      // `joinedAt` came back undefined, so `new Date(undefined).getTime()`
+      // compared NaN to NaN and the client silently kept the API's row
+      // order instead of the earliest-joined team.
+      teams = await queryWithRLS<Team & { userRole: string; joinedAt: string; memberCount: string }>(
         `SELECT
           t.*,
           tm.role as "userRole",
+          tm."joinedAt" as "joinedAt",
           COUNT(DISTINCT tm2.id) as "memberCount"
         FROM "teams" t
         INNER JOIN "team_members" tm ON t.id = tm."teamId"
         LEFT JOIN "team_members" tm2 ON t.id = tm2."teamId"
         ${whereClause}
         GROUP BY t.id, t.name, t.slug, t.description, t."ownerId", t."avatarUrl",
-                 t.settings, t.metadata, t."createdAt", t."updatedAt", tm.role
+                 t.settings, t.metadata, t."createdAt", t."updatedAt", tm.role, tm."joinedAt"
         ORDER BY ${orderByClause}
         LIMIT $${paramCount++} OFFSET $${paramCount++}`,
         queryValues,
