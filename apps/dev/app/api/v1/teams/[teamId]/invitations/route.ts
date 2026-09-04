@@ -10,7 +10,7 @@ import {
 } from '@nextsparkjs/core/lib/api/helpers'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
-import { TeamMemberService, MembershipService } from '@nextsparkjs/core/lib/services'
+import { MembershipService } from '@nextsparkjs/core/lib/services'
 import type { TeamInvitation } from '@nextsparkjs/core/lib/teams/types'
 
 // Handle CORS preflight
@@ -42,10 +42,17 @@ export const GET = withRateLimitTier(withApiLogging(
         return addCorsHeaders(response, req)
       }
 
-      // Check if user is a member of the team
-      const isMember = await TeamMemberService.isMember(teamId, authResult.user!.id)
+      // Listing invitations — including who invited whom, to what role, and
+      // when it expires — is gated by the same 'team.members.invite'
+      // permission that already protects creating/cancelling one, not bare
+      // membership: an invitation's raw acceptance token grants whoever holds
+      // it the invitee's role, so a low-privilege member (member/viewer, who
+      // typically lack 'team.members.invite') must not be able to read it
+      // (see GHSA-rw2j-9mxg-rx98).
+      const membership = await MembershipService.get(authResult.user!.id, teamId)
+      const actionResult = membership.canPerformAction('team.members.invite')
 
-      if (!isMember) {
+      if (!actionResult.allowed) {
         const response = createApiError('Team not found or access denied', 404, null, 'TEAM_NOT_FOUND')
         return addCorsHeaders(response, req)
       }
@@ -57,15 +64,21 @@ export const GET = withRateLimitTier(withApiLogging(
       const status = searchParams.get('status') || 'pending'
       const offset = (page - 1) * limit
 
-      // Fetch team invitations
+      // Fetch team invitations — explicit column list, deliberately excluding
+      // "token": it is a bearer credential that grants the invitee's role to
+      // whoever holds it, and has no business leaving this endpoint at all
+      // (see GHSA-rw2j-9mxg-rx98). The accept flow re-derives it server-side
+      // from the URL param it already has; nothing legitimate reads it back
+      // from this list response.
       const invitations = await queryWithRLS<
-        TeamInvitation & {
+        Omit<TeamInvitation, 'token'> & {
           inviterName: string | null
           inviterEmail: string
         }
       >(
         `SELECT
-          ti.*,
+          ti.id, ti."teamId", ti.email, ti.role, ti.status, ti."invitedBy",
+          ti."expiresAt", ti."acceptedAt", ti."declinedAt", ti."createdAt", ti."updatedAt",
           u.name as "inviterName",
           u.email as "inviterEmail"
         FROM "team_invitations" ti

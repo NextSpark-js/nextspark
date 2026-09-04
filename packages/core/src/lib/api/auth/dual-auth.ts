@@ -123,11 +123,18 @@ export async function authenticateRequest(
     if (failure) {
       // A presented key that fails scope enforcement is rejected outright —
       // it must never silently degrade to cookie auth or to anonymous access.
+      // `user`/`keyId` are carried over (not nulled) even though `success` is
+      // false: this is a REAL, identified key being denied, not an anonymous
+      // caller — #128 relies on that identity to audit-log the denial. Every
+      // consumer of DualAuthResult already gates on `success` before reading
+      // `user` (see canAccessDevtoolsApi, every generic-handler route), so
+      // this can't be mistaken for a granted request anywhere.
       return {
         success: false,
         type: 'api-key',
-        user: null,
+        user: apiKeyResult.user,
         scopes: apiKeyResult.scopes,
+        keyId: apiKeyResult.keyId,
         error: failure,
       }
     }
@@ -439,13 +446,22 @@ export async function canBypassTeamContext(
 }
 
 /**
- * Check if user is member of System Admin Team
+ * Check if user is a member of the deployment's System Admin Team.
+ *
+ * Resolved by `teams.metadata.systemAdmin = true` (#108), the same
+ * resolution `can_bypass_rls()` uses at the RLS layer — not the
+ * `SYSTEM_ADMIN_TEAM_ID` literal, so this app-level check and the DB-level
+ * one can't drift onto two different teams in a deployment that flags a
+ * team other than the seeded `team-nextspark-001`.
  */
 async function checkSystemAdminMembership(userId: string): Promise<boolean> {
   try {
     const member = await queryOne<{ id: string }>(
-      'SELECT id FROM "team_members" WHERE "teamId" = $1 AND "userId" = $2',
-      [SYSTEM_ADMIN_TEAM_ID, userId]
+      `SELECT tm.id FROM "team_members" tm
+       JOIN "teams" t ON t.id = tm."teamId"
+       WHERE tm."userId" = $1 AND (t.metadata->>'systemAdmin')::boolean IS TRUE
+       LIMIT 1`,
+      [userId]
     )
     return !!member
   } catch (error) {

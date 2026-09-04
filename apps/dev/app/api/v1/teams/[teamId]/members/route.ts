@@ -52,11 +52,15 @@ export const GET = withRateLimitTier(withApiLogging(
       // Superadmins can view members of any team
       const userIsSuperAdmin = isSuperAdmin(authResult)
 
-      // Check if user is a member of the team (unless superadmin)
+      // Listing the roster is gated by the 'team.members.view' permission, not
+      // bare membership — membership only proves you belong to the team, not
+      // that your role is allowed to see who else does (a theme may grant
+      // 'team.members.view' to a subset of roles; see GHSA-rw2j-9mxg-rx98).
       if (!userIsSuperAdmin) {
-        const isMember = await TeamMemberService.isMember(teamId, authResult.user!.id)
+        const membership = await MembershipService.get(authResult.user!.id, teamId)
+        const actionResult = membership.canPerformAction('team.members.view')
 
-        if (!isMember) {
+        if (!actionResult.allowed) {
           const response = createApiError('Team not found or access denied', 404, null, 'TEAM_NOT_FOUND')
           return addCorsHeaders(response, req)
         }
