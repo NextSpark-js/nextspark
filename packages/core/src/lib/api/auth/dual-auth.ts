@@ -123,11 +123,18 @@ export async function authenticateRequest(
     if (failure) {
       // A presented key that fails scope enforcement is rejected outright —
       // it must never silently degrade to cookie auth or to anonymous access.
+      // `user`/`keyId` are carried over (not nulled) even though `success` is
+      // false: this is a REAL, identified key being denied, not an anonymous
+      // caller — #128 relies on that identity to audit-log the denial. Every
+      // consumer of DualAuthResult already gates on `success` before reading
+      // `user` (see canAccessDevtoolsApi, every generic-handler route), so
+      // this can't be mistaken for a granted request anywhere.
       return {
         success: false,
         type: 'api-key',
-        user: null,
+        user: apiKeyResult.user,
         scopes: apiKeyResult.scopes,
+        keyId: apiKeyResult.keyId,
         error: failure,
       }
     }
