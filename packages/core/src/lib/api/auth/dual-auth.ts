@@ -446,13 +446,22 @@ export async function canBypassTeamContext(
 }
 
 /**
- * Check if user is member of System Admin Team
+ * Check if user is a member of the deployment's System Admin Team.
+ *
+ * Resolved by `teams.metadata.systemAdmin = true` (#108), the same
+ * resolution `can_bypass_rls()` uses at the RLS layer — not the
+ * `SYSTEM_ADMIN_TEAM_ID` literal, so this app-level check and the DB-level
+ * one can't drift onto two different teams in a deployment that flags a
+ * team other than the seeded `team-nextspark-001`.
  */
 async function checkSystemAdminMembership(userId: string): Promise<boolean> {
   try {
     const member = await queryOne<{ id: string }>(
-      'SELECT id FROM "team_members" WHERE "teamId" = $1 AND "userId" = $2',
-      [SYSTEM_ADMIN_TEAM_ID, userId]
+      `SELECT tm.id FROM "team_members" tm
+       JOIN "teams" t ON t.id = tm."teamId"
+       WHERE tm."userId" = $1 AND (t.metadata->>'systemAdmin')::boolean IS TRUE
+       LIMIT 1`,
+      [userId]
     )
     return !!member
   } catch (error) {
