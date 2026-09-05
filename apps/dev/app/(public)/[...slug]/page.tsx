@@ -13,7 +13,6 @@
  * 2. Falls back to default PageRenderer if no template
  */
 
-import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import { query } from '@nextsparkjs/core/lib/db'
 import { PageRenderer } from '@nextsparkjs/core/components/public/pageBuilder'
@@ -249,9 +248,16 @@ export async function generateMetadata({
 }
 
 /**
- * Main catch-all page content (async, wrapped in Suspense by parent)
+ * Main catch-all page component
+ *
+ * Not wrapped in Suspense: this route's entire content depends on whether the
+ * slug resolves to a published item, so notFound() must be able to run before
+ * any part of the response commits to a 200. A Suspense boundary here would
+ * let Next.js flush the (null) fallback with a 200 status ahead of the
+ * DB-backed lookup, so a later notFound() inside the boundary could no longer
+ * change the status code — see #129.
  */
-async function DynamicPublicPageContent({
+export default async function DynamicPublicPage({
   params,
   searchParams,
 }: PageProps) {
@@ -377,15 +383,4 @@ async function DynamicPublicPageContent({
 
   // No match found
   notFound()
-}
-
-/**
- * Main catch-all page component — wraps async content in Suspense for PPR compatibility
- */
-export default function DynamicPublicPage(props: PageProps) {
-  return (
-    <Suspense fallback={null}>
-      <DynamicPublicPageContent {...props} />
-    </Suspense>
-  )
 }
