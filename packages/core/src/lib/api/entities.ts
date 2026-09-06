@@ -479,7 +479,7 @@ export class EntityApiClient {
       const entities = clientMetaSystemAdapter.getAllEntityConfigs()
       const entityConfig = entities.find(config => config.name === entityType)
 
-      if (!entityConfig?.features.enabled) {
+      if (!entityConfig?.features?.enabled) {
         return []
       }
 

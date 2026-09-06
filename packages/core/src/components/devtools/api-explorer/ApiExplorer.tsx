@@ -128,13 +128,13 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
 
   // Get presets and docs for selected endpoint
   const endpointPresets = useMemo(() => {
-    if (!selectedEndpoint) return null
-    return ApiPresetsService.getByEndpoint(selectedEndpoint.path) ?? null
+    if (!selectedEndpoint) return undefined
+    return ApiPresetsService.getByEndpoint(selectedEndpoint.path)
   }, [selectedEndpoint?.path])
 
   const endpointDoc = useMemo(() => {
-    if (!selectedEndpoint) return null
-    return ApiDocsService.getByEndpoint(selectedEndpoint.path) ?? null
+    if (!selectedEndpoint) return undefined
+    return ApiDocsService.getByEndpoint(selectedEndpoint.path)
   }, [selectedEndpoint?.path])
 
   // Track if we've initialized from URL/initialEndpoint

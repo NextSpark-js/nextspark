@@ -715,6 +715,16 @@ export interface ChildEntityDefinition {
     /** Whether to auto-generate ID (default: true) */
     autoGenerate?: boolean
   }
+
+  /**
+   * Child entities never carry their own independent access rules — they
+   * inherit isolation from the parent entity. Optional and always absent in
+   * practice; exists only so code that reads `EntityConfig | ChildEntityDefinition`
+   * generically (e.g. shouldFilterByUserId) can access `.access?.shared`
+   * without a type error, correctly falling through to the default "shared"
+   * behavior when it's undefined (#131).
+   */
+  access?: { shared?: boolean; [key: string]: unknown }
 }
 
 /**
