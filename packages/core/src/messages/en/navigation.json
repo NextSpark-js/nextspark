@@ -8,5 +8,7 @@
   "logout": "Logout",
   "features": "Features",
   "pricing": "Pricing",
-  "support": "Support"
+  "support": "Support",
+  "quickCreate": "Quick Create",
+  "quickCreateNew": "New {entity}"
 }

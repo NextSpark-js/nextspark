@@ -7,5 +7,7 @@
   "logout": "Abmelden",
   "features": "Funktionen",
   "pricing": "Preise",
-  "support": "Support"
+  "support": "Support",
+  "quickCreate": "Schnellerstellung",
+  "quickCreateNew": "Neu: {entity}"
 }

@@ -7,5 +7,7 @@
   "logout": "Esci",
   "features": "Funzionalita",
   "pricing": "Prezzi",
-  "support": "Supporto"
+  "support": "Supporto",
+  "quickCreate": "Creazione Rapida",
+  "quickCreateNew": "Nuovo {entity}"
 }

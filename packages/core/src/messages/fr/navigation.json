@@ -7,5 +7,7 @@
   "logout": "Deconnexion",
   "features": "Fonctionnalites",
   "pricing": "Tarifs",
-  "support": "Support"
+  "support": "Support",
+  "quickCreate": "Création Rapide",
+  "quickCreateNew": "Nouveau {entity}"
 }
