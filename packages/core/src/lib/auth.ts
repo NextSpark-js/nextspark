@@ -21,7 +21,7 @@ import { isDomainAllowed } from './auth/registration-helpers';
 import { registrationGuardPlugin } from './auth/registration-guard-plugin';
 import { resolveSessionConfig } from './auth/session-config';
 import { isPasswordLoginEnabled } from './auth/auth-methods';
-import { getCorsOrigins } from './utils/cors';
+import { getCorsOrigins, isPrivateLanOrigin, normalizeCorsEnvironment } from './utils/cors';
 
 /**
  * Does this email have a pending, unexpired team invitation waiting?
@@ -265,8 +265,29 @@ export const auth = betterAuth({
     },
   },
   baseURL: baseUrl,
-  // Use unified CORS configuration from app.config.ts + theme extensions + env vars
-  trustedOrigins: getCorsOrigins(APP_CONFIG_MERGED),
+  // Use unified CORS configuration from app.config.ts + theme extensions + env vars.
+  // A function (rather than a static array) so dev-like environments can also
+  // trust the request's OWN origin when it's a private LAN address — #163's
+  // client fix made the browser call back to whatever origin the page was
+  // loaded from (LAN IP, phone, etc.), but the static origin list could never
+  // enumerate that address in advance, so the server still rejected it with
+  // "Invalid origin" (#170). Scoped to private/LAN addresses and non-production
+  // only: never trusts an arbitrary public origin, and never applies in prod.
+  // Public-internet cases (Vercel previews, tenant subdomains) are covered by
+  // adding a wildcard entry (e.g. "https://*.vercel.app") to
+  // api.cors.additionalOrigins — better-auth's own trustedOrigins matching
+  // already supports the same wildcard syntax as isOriginAllowed() above.
+  trustedOrigins: async (request?: Request) => {
+    const origins = getCorsOrigins(APP_CONFIG_MERGED);
+    if (normalizeCorsEnvironment(process.env.NODE_ENV || 'development') === 'production') {
+      return origins;
+    }
+    const requestOrigin = request?.headers.get('origin');
+    if (requestOrigin && isPrivateLanOrigin(requestOrigin)) {
+      return [...origins, requestOrigin];
+    }
+    return origins;
+  },
   // Redirect auth errors to our custom error page instead of Better Auth's default
   onAPIError: {
     errorURL: '/auth-error',
