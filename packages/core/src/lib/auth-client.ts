@@ -4,7 +4,17 @@ import { emailOTPClient } from "better-auth/client/plugins";
 import type { auth } from "./auth";
 
 export const authClient = createAuthClient({
-  baseURL: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5173",
+  // In the browser, always talk to the origin the page was actually served
+  // from — better-auth falls back to `window.location.origin` when baseURL
+  // is undefined (see its getBaseURL()). NEXT_PUBLIC_APP_URL is inlined at
+  // build time to one fixed origin, so using it unconditionally breaks any
+  // request from a different-but-valid origin: LAN/device testing, Vercel
+  // preview deployments, and tenant subdomains (#163). Server-side (no
+  // window), keep the env var since there's no request origin to infer from
+  // on the very first render before hydration.
+  baseURL: typeof window === "undefined"
+    ? (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5173")
+    : undefined,
   plugins: [
     inferAdditionalFields<typeof auth>(),
     emailOTPClient(),
