@@ -79,7 +79,12 @@ export default async function RootLayout({
           <NextThemeProvider
             attribute="class"
             defaultTheme={DEFAULT_THEME_MODE}
-            enableSystem={DEFAULT_THEME_MODE === 'system'}
+            // Always true here: this layout never passes forcedTheme, so
+            // ThemeToggle is unconditionally visible and offers "System" as one
+            // of its 3 choices — gating on DEFAULT_THEME_MODE === 'system' had
+            // the same bug as the non-PPR layout (see #175): a build-time
+            // default of 'light'/'dark' silently broke the "System" option.
+            enableSystem
             disableTransitionOnChange
           >
             <CustomThemeProvider>
