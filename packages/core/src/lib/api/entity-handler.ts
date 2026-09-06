@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { CRUDOperation, EntityConfig } from '../entities/types';
 // Permission system removed - using basic auth now
-import { auth } from '../auth';
+import { getTypedSession } from '../auth';
 import { entityRegistry, ensureInitialized } from '../entities/registry';
 import {
   createApiResponse,
@@ -53,7 +53,7 @@ export interface EntityHandlerOptions {
  */
 async function checkBasicAuth(request: NextRequest, entityName: string) {
   try {
-    const session = await auth.api.getSession({ headers: request.headers });
+    const session = await getTypedSession(request.headers);
     
     if (!session) {
       return {
