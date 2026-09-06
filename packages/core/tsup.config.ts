@@ -299,7 +299,7 @@ export default defineConfig({
 
     // Copy registry type declarations
     await cp(
-      join(process.cwd(), 'nextspark-registries.d.ts'),
+      join(process.cwd(), 'src', 'nextspark-registries.d.ts'),
       join(distDir, 'nextspark-registries.d.ts')
     ).catch(() => console.log('No registry declarations to copy'))
 
