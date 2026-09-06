@@ -8,7 +8,7 @@
  * - Debug logging
  */
 
-import { getCorsOrigins, normalizeCorsEnvironment, normalizeOrigin, type CorsEnvironment } from '@/core/lib/utils/cors'
+import { getCorsOrigins, normalizeCorsEnvironment, normalizeOrigin, isPrivateLanOrigin, type CorsEnvironment } from '@/core/lib/utils/cors'
 import type { ApplicationConfig } from '@/core/lib/config/config-types'
 
 // =============================================================================
@@ -610,5 +610,51 @@ describe('normalizeOrigin', () => {
     // Falls back to lowercase + remove trailing slashes
     expect(normalizeOrigin('not-a-valid-url/')).toBe('not-a-valid-url')
     expect(normalizeOrigin('INVALID/')).toBe('invalid')
+  })
+})
+
+describe('isPrivateLanOrigin', () => {
+  it('should accept RFC 1918 ranges', () => {
+    expect(isPrivateLanOrigin('http://10.0.0.1:3000')).toBe(true)
+    expect(isPrivateLanOrigin('http://10.255.255.255:3000')).toBe(true)
+    expect(isPrivateLanOrigin('http://172.16.0.1:3000')).toBe(true)
+    expect(isPrivateLanOrigin('http://172.31.255.255:3000')).toBe(true)
+    expect(isPrivateLanOrigin('http://192.168.0.1:3000')).toBe(true)
+    expect(isPrivateLanOrigin('http://192.168.68.107:3005')).toBe(true)
+  })
+
+  it('should accept link-local addresses', () => {
+    expect(isPrivateLanOrigin('http://169.254.1.1:3000')).toBe(true)
+  })
+
+  it('should accept mDNS .local hostnames', () => {
+    expect(isPrivateLanOrigin('http://my-laptop.local:3000')).toBe(true)
+  })
+
+  it('should reject the 172.x range outside 16-31', () => {
+    expect(isPrivateLanOrigin('http://172.15.0.1:3000')).toBe(false)
+    expect(isPrivateLanOrigin('http://172.32.0.1:3000')).toBe(false)
+  })
+
+  it('should reject public IPs', () => {
+    expect(isPrivateLanOrigin('http://8.8.8.8')).toBe(false)
+    expect(isPrivateLanOrigin('http://1.1.1.1')).toBe(false)
+    expect(isPrivateLanOrigin('https://93.184.216.34')).toBe(false)
+  })
+
+  it('should reject public hostnames, including look-alikes', () => {
+    expect(isPrivateLanOrigin('https://example.com')).toBe(false)
+    expect(isPrivateLanOrigin('https://192.168.0.1.evil.com')).toBe(false)
+    expect(isPrivateLanOrigin('https://vercel.app')).toBe(false)
+  })
+
+  it('should reject loopback (already covered by the static allow-list)', () => {
+    expect(isPrivateLanOrigin('http://localhost:3000')).toBe(false)
+    expect(isPrivateLanOrigin('http://127.0.0.1:3000')).toBe(false)
+  })
+
+  it('should reject malformed input instead of throwing', () => {
+    expect(isPrivateLanOrigin('not-a-url')).toBe(false)
+    expect(isPrivateLanOrigin('')).toBe(false)
   })
 })

@@ -177,6 +177,41 @@ function escapeRegExp(value: string): string {
 }
 
 /**
+ * True when `origin`'s hostname is a private/local-network address — RFC 1918
+ * ranges (10/8, 172.16/12, 192.168/16), link-local (169.254/16), or mDNS
+ * `.local` — i.e. reachable only from the same physical/local network, never
+ * from the public internet.
+ *
+ * Used to auto-trust a request's own origin for LAN/device testing (#170)
+ * without hand-listing every developer's IP: a private-network address is a
+ * meaningfully different trust boundary than an arbitrary public origin, so
+ * this stays safe even though it's dynamic. Never call this to decide
+ * production trust — pair with an environment check.
+ */
+export function isPrivateLanOrigin(origin: string): boolean {
+  let hostname: string
+  try {
+    hostname = new URL(origin).hostname
+  } catch {
+    return false
+  }
+
+  if (hostname.endsWith('.local')) return true
+
+  const octets = hostname.split('.')
+  if (octets.length !== 4) return false
+  const nums = octets.map(Number)
+  if (nums.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return false
+
+  const [a, b] = nums
+  if (a === 10) return true
+  if (a === 172 && b >= 16 && b <= 31) return true
+  if (a === 192 && b === 168) return true
+  if (a === 169 && b === 254) return true
+  return false
+}
+
+/**
  * Check whether a request origin is allowed, supporting wildcard-pattern entries
  * in the allow-list. A `*` in an entry matches exactly ONE host label (no dots),
  * so `https://*.example.app` matches `https://tenant.example.app` but NOT
