@@ -4,6 +4,7 @@
  * Generates and updates configuration files based on wizard responses.
  */
 
+import crypto from 'crypto'
 import fs from 'fs-extra'
 import path from 'path'
 import type { WizardConfig } from '../types.js'
@@ -417,6 +418,14 @@ export async function updateReadme(config: WizardConfig): Promise<void> {
 /**
  * Copy .env.example to .env for immediate use
  * This allows the project to compile out-of-the-box
+ *
+ * The placeholder BETTER_AUTH_SECRET in .env.example is intentional (it's a
+ * template meant to be read), but copying it verbatim into .env leaves every
+ * generated project signing sessions with the same public, well-known
+ * string — including in the non-interactive/preset path CI and automation
+ * actually use, where nothing else ever prompts for or generates a real one
+ * (#165). Generate a real secret for .env specifically; .env.example keeps
+ * the placeholder as documentation.
  */
 export async function copyEnvExampleToEnv(): Promise<void> {
   const projectRoot = process.cwd()
@@ -425,6 +434,14 @@ export async function copyEnvExampleToEnv(): Promise<void> {
 
   if (await fs.pathExists(envExamplePath) && !await fs.pathExists(envPath)) {
     await fs.copy(envExamplePath, envPath)
+
+    const secret = crypto.randomBytes(32).toString('hex')
+    let content = await fs.readFile(envPath, 'utf-8')
+    content = content.replace(
+      /^BETTER_AUTH_SECRET=.*$/m,
+      `BETTER_AUTH_SECRET="${secret}"`
+    )
+    await fs.writeFile(envPath, content, 'utf-8')
   }
 }
 
