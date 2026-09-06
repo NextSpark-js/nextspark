@@ -2,23 +2,35 @@
  * Patterns Create Page
  *
  * Wrapper that delegates to the generic entity create page.
- * Uses useEntityConfig hook for entity configuration.
+ * Reads entity config from the generated client registry — see
+ * PatternEditPage.tsx for why (#131 follow-up).
  */
 
 'use client'
 
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { getEntityBySlug, type ClientEntityConfig } from '@nextsparkjs/registries/entity-registry.client'
 import { EntityFormWrapper } from '../../entities/wrappers/EntityFormWrapper'
 import { BuilderEditorView } from '../../dashboard/block-editor/builder-editor-view'
 import { Alert, AlertDescription } from '../../ui/alert'
-import { useEntityConfig } from '../../../hooks/useEntityConfig'
 
 export default function PatternsCreatePage() {
   const router = useRouter()
   const entitySlug = 'patterns'
+  const [entityConfig, setEntityConfig] = useState<ClientEntityConfig | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
-  // Use the centralized hook for entity configuration
-  const { config: entityConfig, isLoading } = useEntityConfig(entitySlug)
+  useEffect(() => {
+    try {
+      setEntityConfig(getEntityBySlug(entitySlug))
+    } catch (error) {
+      console.error('Error loading patterns entity config:', error)
+      setEntityConfig(null)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
 
   if (isLoading) {
     return (
@@ -28,7 +40,7 @@ export default function PatternsCreatePage() {
     )
   }
 
-  if (!entityConfig || !entityConfig.enabled) {
+  if (!entityConfig || !entityConfig.features?.enabled) {
     return (
       <Alert>
         <AlertDescription>

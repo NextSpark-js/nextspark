@@ -245,20 +245,25 @@ declare module '@nextsparkjs/registries/entity-registry.client' {
   }
 
   export interface ClientEntityConfig {
-    slug: string
-    label: string
-    labelPlural: string
-    icon?: string
-    enabled: boolean
-    showInMenu: boolean
-    permissions?: Record<string, string[]>
-    fields?: Array<{
-      name: string
-      label: string
-      type: string
-      tab?: string
-      required?: boolean
-    }>
+    // Matches the REAL shape apps/dev's registry:build actually generates
+    // (packages/cli's entity-registry.client.ts template) — verified against
+    // a live-regenerated apps/dev/.nextspark/registries/entity-registry.client.ts,
+    // not guessed. A prior version of this ambient declaration invented a
+    // flat slug/label/labelPlural/enabled/showInMenu shape that never existed
+    // anywhere; it went uncaught because none of this package's own
+    // ClientEntityConfig consumers happened to read those particular fields
+    // (#131 follow-up).
+    name: string
+    apiPath: string
+    displayName: string
+    features: {
+      enabled: boolean
+      showInMenu?: boolean
+      canCreate?: boolean
+      canEdit?: boolean
+      canDelete?: boolean
+      searchable?: boolean
+    }
     builder?: {
       enabled?: boolean
       sidebarFields?: string[]
