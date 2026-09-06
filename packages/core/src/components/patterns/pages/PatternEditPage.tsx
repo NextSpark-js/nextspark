@@ -2,7 +2,11 @@
  * Patterns Edit Page
  *
  * Wrapper that delegates to the BuilderEditorView for pattern editing.
- * Uses useEntityConfig hook for entity configuration.
+ * Reads entity config from the generated client registry (getEntityBySlug),
+ * the same source BuilderEditorView itself and the generic [entity]/[id]/edit
+ * page use — instead of the runtime-hydrated useEntityConfig() hook, whose
+ * EntityConfig shape (names.singular/plural, full field configs, functions)
+ * never structurally matched ClientEntityConfig (#131 follow-up).
  */
 
 'use client'
@@ -10,10 +14,10 @@
 import { notFound, useRouter } from 'next/navigation'
 import { useParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { getEntityBySlug, type ClientEntityConfig } from '@nextsparkjs/registries/entity-registry.client'
 import { EntityFormWrapper } from '../../entities/wrappers/EntityFormWrapper'
 import { BuilderEditorView } from '../../dashboard/block-editor/builder-editor-view'
 import { Alert, AlertDescription } from '../../ui/alert'
-import { useEntityConfig } from '../../../hooks/useEntityConfig'
 import { getEntityData } from '../../../lib/api/entities'
 
 export default function PatternEditPage() {
@@ -21,12 +25,22 @@ export default function PatternEditPage() {
   const router = useRouter()
   const [initialData, setInitialData] = useState<Record<string, unknown> | null>(null)
   const [dataLoading, setDataLoading] = useState(true)
+  const [entityConfig, setEntityConfig] = useState<ClientEntityConfig | null>(null)
+  const [configLoading, setConfigLoading] = useState(true)
 
   const entitySlug = 'patterns'
   const entityId = params.id as string
 
-  // Use the centralized hook for entity configuration
-  const { config: entityConfig, isLoading: configLoading } = useEntityConfig(entitySlug)
+  useEffect(() => {
+    try {
+      setEntityConfig(getEntityBySlug(entitySlug))
+    } catch (error) {
+      console.error('Error loading patterns entity config:', error)
+      setEntityConfig(null)
+    } finally {
+      setConfigLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     async function loadEntityData() {
@@ -63,7 +77,7 @@ export default function PatternEditPage() {
     )
   }
 
-  if (!entityConfig || !entityConfig.enabled) {
+  if (!entityConfig || !entityConfig.features?.enabled) {
     return (
       <Alert>
         <AlertDescription>
