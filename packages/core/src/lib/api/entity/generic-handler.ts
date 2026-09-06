@@ -1058,6 +1058,17 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
       console.log(`[GenericHandler] Public access mode: skipping userId filter for ${entityConfig.slug} (status=published)`)
     }
 
+    // Anonymous requests to a public entity have no userId to gate on (the
+    // filter above only ever applies `if (userId && ...)`), so requestingPublishedOnly
+    // was never actually enforced server-side — it only decided whether to skip
+    // an ownership filter that already didn't apply. An unauthenticated caller
+    // could omit `status=published` entirely (or ask for `status=draft`) and see
+    // every row regardless of status, team, or owner (#171). Force the
+    // constraint here instead of trusting the caller's own filter intent.
+    const forcePublishedOnly = isPublicEntity
+      && userId === null
+      && entityConfig.fields.some((f: EntityField) => f.name === 'status')
+
     // Get table name (uses tableName if specified, otherwise slug)
     const tableName = getTableName(entityConfig)
 
@@ -1095,6 +1106,11 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
       if (teamId) {
         query += ` AND t."teamId" = $${paramIndex++}`
         queryParams.push(teamId)
+      }
+
+      // Anonymous public access: force published-only regardless of caller's filters (#171)
+      if (forcePublishedOnly) {
+        query += ` AND t."status" = 'published'`
       }
 
       // Add user filter if authenticated and not shared (CASE 1 only)
@@ -1156,6 +1172,11 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
         query += ` AND t."deletedAt" IS NULL`
       }
 
+      // Anonymous public access: force published-only regardless of caller's filters (#171)
+      if (forcePublishedOnly) {
+        query += ` AND t."status" = 'published'`
+      }
+
       query += ` ORDER BY "${fieldName}" ASC LIMIT $${paramIndex++}`
       queryParams.push(pagination.limit)
     } else {
@@ -1193,6 +1214,11 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
       // Soft delete filter: hide deleted rows for non-bypass users
       if (entityConfig.table?.softDelete && !isBypass) {
         whereConditions.push(`t."deletedAt" IS NULL`)
+      }
+
+      // Anonymous public access: force published-only regardless of caller's filters (#171)
+      if (forcePublishedOnly) {
+        whereConditions.push(`t."status" = 'published'`)
       }
 
       // Add search filter (searches in name, title, slug, and content fields).
@@ -1914,6 +1940,14 @@ async function handleGenericReadImpl(request: NextRequest, audit: AuditContext, 
 
     const fields = [...systemFieldsFormatted, ...configFields].join(', ')
 
+    // Anonymous requests to a public entity have no userId to gate on below (the
+    // ownership filter only ever applies `if (userId && ...)`), so nothing was
+    // enforcing published-only for a direct-by-ID read — an unauthenticated
+    // caller who knew/guessed a draft's id could read it in full (#171).
+    const forcePublishedOnly = entityConfig.access?.public === true
+      && userId === null
+      && entityConfig.fields.some((f: EntityField) => f.name === 'status')
+
     // Build query based on access type and team context
     let query: string
     let queryParams: unknown[]
@@ -1962,6 +1996,12 @@ async function handleGenericReadImpl(request: NextRequest, audit: AuditContext, 
     // Soft delete filter: hide deleted rows for non-bypass users
     if (entityConfig.table?.softDelete && !isBypass) {
       query += ` AND t."deletedAt" IS NULL`
+    }
+
+    // Anonymous public access: force published-only, ignoring nothing the
+    // caller sent since there's no filter param on a by-id read to trust (#171)
+    if (forcePublishedOnly) {
+      query += ` AND t."status" = 'published'`
     }
 
     const items = await queryWithRLS(query, queryParams, userId)
