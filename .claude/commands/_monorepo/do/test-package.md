@@ -344,6 +344,39 @@ Uses accessibility tree snapshots (`snapshot -i`) and element refs (`@eN`) for i
 
 **Pre-requisite:** `agent-browser` must be installed (`npm i -g agent-browser`).
 
+#### Known agent-browser limitations — read before trusting the results
+
+Two defects have been independently confirmed across multiple validation runs. Both make
+agent-browser silently look like it worked when it didn't — always validate a new failure mode
+with a canary before trusting a "0 errors" or "click succeeded" result at face value.
+
+1. **`agent-browser console` does not reliably capture output in this environment.** Confirmed
+   by injecting a canary (`console.warn(...)`/`console.error(...)`) and observing that neither
+   `agent-browser console` nor its errors variant reported it. Any past "0 console errors"
+   claim in a validation report that relied on a bare `agent-browser console` call — without
+   first proving the capture path works with a canary — is unverified, not confirmed.
+   - **Preferred fix:** if Playwright MCP is available in the session, use
+     `mcp__plugin_playwright_playwright__browser_console_messages` instead — it has proper
+     CDP-backed capture and was confirmed working when enabled.
+   - **Fallback:** wire your own CDP listener (`Runtime.consoleAPICalled` +
+     `Runtime.exceptionThrown` + `Log.entryAdded` + `Network.loadingFailed`) and validate it
+     with a canary (inject a `console.error` via `agent-browser eval` and confirm your listener
+     actually caught it) before trusting "0 errors" for the real check.
+
+2. **Click coordinates are computed via `getBoundingClientRect()` without scroll-into-view**, so
+   clicking a ref inside a scrollable/`overflow-y-auto` container (a long dialog, a dropdown
+   list) can land on the wrong element underneath — e.g. a Dialog's backdrop overlay, triggering
+   an unintended dismiss that looks like "the click did nothing" (root-caused during the #154
+   investigation this way; a native `.click()` completed the same flow correctly).
+   - **Fix:** prefer `agent-browser eval` with a real DOM `.click()`
+     (`document.querySelector(...).click()`, or find-by-text as in the login fallback below) over
+     a ref-based `click @eN` for anything inside a scrollable container or a long dropdown/menu.
+     Playwright MCP's `browser_click` auto-scrolls the target into view first and doesn't have
+     this failure mode, so prefer it when available for click-heavy flows.
+
+Everything else in this skill (`open`, `snapshot -i`, `fill`, `wait`, `get url`) has not shown
+this kind of silent failure — the two items above are the specific, confirmed exceptions.
+
 #### 10.1 Homepage & Auth Pages (curl pre-check)
 
 Quick HTTP checks before launching the browser:
@@ -734,6 +767,8 @@ If ANY step fails:
 | `Module not found: better-auth/next-js` | Missing peer dependency | `npm install better-auth` |
 | `Cannot find module 'cypress'` | Tests not excluded | Ensure tsconfig.json has `**/tests/**` in exclude |
 | `@nextsparkjs/registries` not found | Missing webpack alias | Ensure `next.config.mjs` was synced |
+| "0 console errors" but you never validated the capture | `agent-browser console` doesn't reliably capture output here | Prove it with a canary first, or use Playwright MCP's `browser_console_messages` — see Step 10 |
+| A click seems to do nothing / a dialog closes unexpectedly | agent-browser click lands on the wrong element in a scrollable container (no scroll-into-view) | Use `agent-browser eval` with a real `.click()`, or Playwright MCP's `browser_click` — see Step 10 |
 | CSP violation errors | Wrong APP_URL | Update `NEXT_PUBLIC_APP_URL` to match actual port |
 | `.next/dev/lock` error | Stale lock from crashed server | `rm -rf .next` and restart |
 | Tarball contains old code | Build cache not invalidated | Always `rm -rf dist` before building each package |
