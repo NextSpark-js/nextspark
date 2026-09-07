@@ -81,8 +81,17 @@ export default async function RootLayout({
             defaultTheme={defaultMode}
             // When allowUserToggle is false, force the theme and ignore localStorage/system
             forcedTheme={!allowUserToggle ? defaultMode : undefined}
-            // Only detect OS preference when theme configures defaultMode: 'system' AND user can toggle
-            enableSystem={allowUserToggle && defaultMode === 'system'}
+            // Detect OS preference whenever the user can toggle at all. ThemeToggle
+            // always offers "System" as one of its 3 choices when toggling is
+            // allowed, so the provider must be able to resolve it whenever that's
+            // true — gating on `defaultMode === 'system'` looks equivalent at
+            // first render, but defaultMode is the user's last SAVED preference
+            // for a logged-in user (see getThemeSettings), not a static "is
+            // system-matching enabled" flag. That made "System" silently write a
+            // literal, unmatched `class="system"` for anyone whose saved
+            // preference (or the theme's own config default) wasn't already
+            // 'system' — see #175.
+            enableSystem={allowUserToggle}
             // Force a theme on the routes declared in theme.config.ts (forcedThemeRoutes)
             forcedThemeRoutes={forcedThemeRoutes}
             disableTransitionOnChange

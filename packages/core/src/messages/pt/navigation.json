@@ -7,5 +7,7 @@
   "logout": "Sair",
   "features": "Recursos",
   "pricing": "Precos",
-  "support": "Suporte"
+  "support": "Suporte",
+  "quickCreate": "Criação Rápida",
+  "quickCreateNew": "Novo {entity}"
 }

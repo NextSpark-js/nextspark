@@ -8,5 +8,7 @@
   "logout": "Cerrar Sesión",
   "features": "Características",
   "pricing": "Precios",
-  "support": "Soporte"
+  "support": "Soporte",
+  "quickCreate": "Creación Rápida",
+  "quickCreateNew": "Nuevo {entity}"
 }

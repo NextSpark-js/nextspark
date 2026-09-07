@@ -2,7 +2,7 @@
 
 import { useSession } from '../../../lib/auth-client';
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
 import { AlertTriangle, ArrowLeft } from "lucide-react";
 import { Button } from '../../ui/button';
@@ -27,17 +27,26 @@ export function SuperAdminGuard({ children, fallback }: SuperAdminGuardProps) {
   const { data: session, isPending } = useSession();
   const router = useRouter();
   const t = useTranslations();
+  // See DeveloperGuard.tsx for why: SSR always renders the loading state below
+  // (it can never resolve the session), but the client's first render may
+  // already have it resolved, so gate on `mounted` to keep both renders
+  // identical until after hydration (#176).
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Auto-redirect users without superadmin or developer access
   useEffect(() => {
     // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
-    if (!isPending && session && session.user?.role !== 'superadmin' && session.user?.role !== 'developer') {
+    if (mounted && !isPending && session && session.user?.role !== 'superadmin' && session.user?.role !== 'developer') {
       router.push('/dashboard?error=access_denied');
     }
-  }, [session, isPending, router]);
+  }, [mounted, session, isPending, router]);
 
   // Show loading state while checking session
-  if (isPending) {
+  if (!mounted || isPending) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-pulse">

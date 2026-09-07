@@ -2,7 +2,7 @@
 
 import { useSession } from '../../../lib/auth-client';
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
 import { AlertTriangle, ArrowLeft } from "lucide-react";
 import { Button } from '../../ui/button';
@@ -27,17 +27,30 @@ export function DeveloperGuard({ children, fallback }: DeveloperGuardProps) {
   const { data: session, isPending } = useSession();
   const router = useRouter();
   const t = useTranslations();
+  // SSR can never actually resolve the session, so the server always renders
+  // the loading state below — but by the time the client hydrates, useSession()
+  // may have already resolved (isPending: false), so the client's first render
+  // would try to paint the real content immediately and mismatch the server's
+  // HTML. Gate on `mounted` (false on the server and on the client's first
+  // render, flipped by the effect below only after hydration) so both sides
+  // render the identical loading state first, matching the pattern
+  // ThemeToggle.tsx already uses for the same reason (#176).
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Auto-redirect non-developer users
   useEffect(() => {
     // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
-    if (!isPending && session && session.user?.role !== 'developer') {
+    if (mounted && !isPending && session && session.user?.role !== 'developer') {
       router.push('/dashboard?error=access_denied');
     }
-  }, [session, isPending, router]);
+  }, [mounted, session, isPending, router]);
 
   // Show loading state while checking session
-  if (isPending) {
+  if (!mounted || isPending) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-pulse">
