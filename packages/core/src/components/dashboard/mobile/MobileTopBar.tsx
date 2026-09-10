@@ -11,7 +11,16 @@ import { sel } from '../../../lib/test'
 import { isTopbarFeatureEnabled } from '../../../lib/config'
 import { useTranslations } from 'next-intl'
 
-export function MobileTopBar() {
+interface MobileTopBarProps {
+  /**
+   * Se reenvía al `<Link>` del perfil. Sin valor, decide Next (prefetch automático al entrar en
+   * viewport). La barra se monta en toda página del dashboard en mobile, así que `false` ahorra
+   * una request RSC por carga en apps donde casi nadie navega al perfil.
+   */
+  prefetch?: boolean
+}
+
+export function MobileTopBar({ prefetch }: MobileTopBarProps = {}) {
   const { user } = useAuth()
   const t = useTranslations()
 
@@ -52,6 +61,7 @@ export function MobileTopBar() {
         {/* Left: User Avatar + Name */}
         <Link
           href="/dashboard/settings/profile"
+          prefetch={prefetch}
           className="flex items-center gap-3 hover:opacity-80 transition-opacity"
           aria-label={`Ir al perfil de ${user.firstName || user.email}`}
           data-cy={sel('dashboard.mobile.topbar.userProfile')}
