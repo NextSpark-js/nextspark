@@ -16,6 +16,18 @@ import { ICON_REGISTRY } from '@nextsparkjs/registries/icon-registry'
  * A name outside the registry resolves to the fallback rather than throwing:
  * missing from the registry means no config referenced it.
  */
+/**
+ * Both spellings are in use: entity configs name an icon by its lucide export
+ * (`CheckSquare`), while a theme's sidebar and block configs write it in
+ * kebab-case (`pie-chart`). The registry is keyed by the export name.
+ */
+function toPascalCase(name: string): string {
+  return name
+    .split(/[-_\s]+/)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join('')
+}
+
 export function resolveIcon(
   name: string | undefined | null,
   fallback: LucideIcon = Box
@@ -23,7 +35,7 @@ export function resolveIcon(
   if (!name) {
     return fallback
   }
-  return ICON_REGISTRY[name] ?? fallback
+  return ICON_REGISTRY[name] ?? ICON_REGISTRY[toPascalCase(name)] ?? fallback
 }
 
 /**

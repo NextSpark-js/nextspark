@@ -12,6 +12,11 @@ describe('resolveIcon', () => {
     expect(resolveIcon('NotAnIcon', Home)).toBe(Home)
   })
 
+  it('resolves a kebab-case name to the same icon', () => {
+    // a theme's sidebar and block configs spell icons 'check-square'
+    expect(resolveIcon('check-square')).toBe(CheckSquare)
+  })
+
   it('falls back on an empty name', () => {
     expect(resolveIcon(undefined, Home)).toBe(Home)
     expect(resolveIcon('', Home)).toBe(Home)

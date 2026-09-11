@@ -5,10 +5,15 @@
  * runtime, so the generated icon registry can import exactly those and let
  * the bundler drop the rest of the icon set.
  *
- * Sources, all of them source files (never the database):
+ * Sources are exactly what resolveIcon can be handed, and all of them are
+ * source files (never the database):
  * - entity configs (`icon: Users` — an identifier imported from lucide-react)
- * - the active theme's app.config (`customSidebarSections[].icon` — a string)
- * - block configs (`icon: 'Grid'` — already extracted by block discovery)
+ * - a theme's app.config (`customSidebarSections[].icon` — a string)
+ * - block configs (`icon: 'Grid'` — the block's own icon in the editor)
+ *
+ * What a block RENDERS is not here: page content names those icons in the page
+ * builder, so they live in the database. Those blocks keep resolving through
+ * the lucide namespace — deliberately, see themes' features-grid component.
  *
  * @module core/scripts/build/registry/discovery/icons
  */
@@ -117,7 +122,7 @@ async function collectConfigFiles(dir, matcher, found = []) {
     if (entry.isDirectory()) {
       if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue
       await collectConfigFiles(entryPath, matcher, found)
-    } else if (matcher(entry.name)) {
+    } else if (matcher(entryPath)) {
       found.push(entryPath)
     }
   }
@@ -144,13 +149,20 @@ function coreEntitiesDir(config) {
 export async function discoverIcons(blocks, config) {
   const candidates = new Set(FALLBACK_ICONS)
 
-  const entityConfigs = [
-    ...(await collectConfigFiles(coreEntitiesDir(config), name => name.endsWith('.config.ts'))),
-    ...(await collectConfigFiles(config.themesDir, name => name.endsWith('.config.ts'))),
-    ...(await collectConfigFiles(config.pluginsDir, name => name.endsWith('.config.ts')))
+  // Only the configs whose icons reach resolveIcon. Widening this would put
+  // icons in the dashboard bundle that nothing can ask for.
+  const isIconSource = filePath =>
+    (filePath.includes('/entities/') && filePath.endsWith('.config.ts')) ||
+    (filePath.includes('/blocks/') && filePath.endsWith('config.ts')) ||
+    filePath.endsWith('/config/app.config.ts')
+
+  const iconSources = [
+    ...(await collectConfigFiles(coreEntitiesDir(config), isIconSource)),
+    ...(await collectConfigFiles(config.themesDir, isIconSource)),
+    ...(await collectConfigFiles(config.pluginsDir, isIconSource))
   ]
 
-  for (const configPath of entityConfigs) {
+  for (const configPath of iconSources) {
     try {
       const content = await readFile(configPath, 'utf8')
       for (const name of extractIconNames(content)) {
@@ -173,16 +185,34 @@ export async function discoverIcons(blocks, config) {
     return [...candidates].sort()
   }
 
+  // Configs spell icons both ways: `CheckSquare` in entity configs, `pie-chart`
+  // in a theme's sidebar and block configs. The registry is keyed by the export
+  // name, so kebab-case names are folded into it rather than dropped.
+  const toPascalCase = name =>
+    name
+      .split(/[-_\s]+/)
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+      .join('')
+
   const valid = []
   const unknown = []
   for (const name of candidates) {
-    (known.has(name) ? valid : unknown).push(name)
+    if (known.has(name)) {
+      valid.push(name)
+      continue
+    }
+    const pascalCased = toPascalCase(name)
+    if (known.has(pascalCased)) {
+      valid.push(pascalCased)
+      continue
+    }
+    unknown.push(name)
   }
 
   if (unknown.length > 0) {
-    log(`Icons not exported by lucide-react, skipped: ${unknown.sort().join(', ')}`, 'warning')
+    log(`Icons not exported by lucide-react, skipped: ${[...new Set(unknown)].sort().join(', ')}`, 'warning')
   }
 
   verbose(`[icons] ${valid.length} icon(s) referenced by name`)
-  return valid.sort()
+  return [...new Set(valid)].sort()
 }
