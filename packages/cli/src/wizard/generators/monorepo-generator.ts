@@ -9,6 +9,7 @@ import fs from 'fs-extra'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import type { WizardConfig } from '../types.js'
+import { setPackageEntries } from './workspace-yaml.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -257,13 +258,23 @@ async function createPnpmWorkspace(targetDir: string): Promise<void> {
   // package.json dependencies (e.g. an AI plugin's @ai-sdk/* packages) get
   // installed. Without these globs the plugin is copied but its deps never
   // install, and `next build` fails with "Module not found".
-  const workspaceContent = `packages:
-  - '${DIRS.WEB}'
-  - '${DIRS.WEB}/contents/themes/*'
-  - '${DIRS.WEB}/contents/plugins/*'
-  - '${DIRS.MOBILE}'
-`
-  await fs.writeFile(path.join(targetDir, FILES.PNPM_WORKSPACE), workspaceContent)
+  const entries = [
+    DIRS.WEB,
+    `${DIRS.WEB}/contents/themes/*`,
+    `${DIRS.WEB}/contents/plugins/*`,
+    DIRS.MOBILE,
+  ]
+
+  // The file already exists: create-nextspark-app writes it before the install
+  // to carry `allowBuilds`. The monorepo dictates the package list, but writing
+  // the whole file would take that allowlist — and any overrides or catalogs —
+  // with it, leaving the install without its build scripts.
+  const workspacePath = path.join(targetDir, FILES.PNPM_WORKSPACE)
+  const existing = await fs.pathExists(workspacePath)
+    ? await fs.readFile(workspacePath, 'utf-8')
+    : ''
+
+  await fs.writeFile(workspacePath, setPackageEntries(existing, entries))
 }
 
 /**
