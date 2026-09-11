@@ -17,6 +17,15 @@ describe('resolveIcon', () => {
     expect(resolveIcon('check-square')).toBe(CheckSquare)
   })
 
+  it.each(['constructor', 'toString', 'valueOf', 'hasOwnProperty', '__proto__'])(
+    'falls back on %s instead of returning an Object.prototype member',
+    (name) => {
+      // A plain index would hand back a function that is not a component, and
+      // React would fail on an invalid element type rather than render the icon
+      expect(resolveIcon(name, Home)).toBe(Home)
+    }
+  )
+
   it('falls back on an empty name', () => {
     expect(resolveIcon(undefined, Home)).toBe(Home)
     expect(resolveIcon('', Home)).toBe(Home)

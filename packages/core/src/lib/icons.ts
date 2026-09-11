@@ -28,6 +28,19 @@ function toPascalCase(name: string): string {
     .join('')
 }
 
+/**
+ * Registry lookup by own property only.
+ *
+ * A plain index would resolve `constructor`, `toString` and friends to members
+ * of Object.prototype — truthy values that are not components, so React would
+ * fail on an invalid element type instead of falling back.
+ */
+function lookupIcon(name: string): LucideIcon | undefined {
+  return Object.prototype.hasOwnProperty.call(ICON_REGISTRY, name)
+    ? ICON_REGISTRY[name]
+    : undefined
+}
+
 export function resolveIcon(
   name: string | undefined | null,
   fallback: LucideIcon = Box
@@ -35,7 +48,7 @@ export function resolveIcon(
   if (!name) {
     return fallback
   }
-  return ICON_REGISTRY[name] ?? ICON_REGISTRY[toPascalCase(name)] ?? fallback
+  return lookupIcon(name) ?? lookupIcon(toPascalCase(name)) ?? fallback
 }
 
 /**
