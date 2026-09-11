@@ -15,6 +15,22 @@
         "status",
         "priority"
       ]
+    },
+    "pages": {
+      "slug": "pages",
+      "singular": "page",
+      "plural": "Pages",
+      "tableName": "pages",
+      "fields": [
+        "title",
+        "slug",
+        "status",
+        "locale"
+      ],
+      "filters": [
+        "status"
+      ],
+      "source": "theme"
     }
   },
   "tasks": {

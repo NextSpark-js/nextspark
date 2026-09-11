@@ -6,8 +6,8 @@
  * - API Key with tasks:read, tasks:write scopes (or superadmin with *)
  * - x-team-id header for team context
  */
-const BaseAPIController = require('../../src/controllers/BaseAPIController')
-const entitiesConfig = require('../../fixtures/entities.json')
+const BaseAPIController = require('../../../../src/controllers/BaseAPIController')
+const entitiesConfig = require('../../../../fixtures/entities.json')
 
 const { slug } = entitiesConfig.entities.tasks
 
