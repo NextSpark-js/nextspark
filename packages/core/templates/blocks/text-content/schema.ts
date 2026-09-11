@@ -25,6 +25,6 @@ export const textContentSpecificSchema = z.object({
  * Complete Text Content Block Schema
  * Note: textContentSpecificSchema.content overrides baseBlockSchema.content
  */
-export const schema = baseBlockSchema.merge(textContentSpecificSchema)
+export const schema = baseBlockSchema.extend(textContentSpecificSchema.shape)
 
 export type TextContentBlockProps = z.infer<typeof schema>

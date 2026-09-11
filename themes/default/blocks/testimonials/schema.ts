@@ -36,6 +36,6 @@ export const testimonialsSpecificSchema = z.object({
 /**
  * Complete Testimonials Block Schema
  */
-export const schema = baseBlockSchema.merge(testimonialsSpecificSchema)
+export const schema = baseBlockSchema.extend(testimonialsSpecificSchema.shape)
 
 export type TestimonialsBlockProps = z.infer<typeof schema>

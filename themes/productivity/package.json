@@ -1,6 +1,6 @@
 {
   "name": "@nextsparkjs/theme-productivity",
-  "version": "0.1.0-beta.188",
+  "version": "0.1.0-beta.189",
   "private": false,
   "type": "module",
   "main": "./config/theme.config.ts",

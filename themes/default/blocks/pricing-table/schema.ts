@@ -45,6 +45,6 @@ export const pricingTableSpecificSchema = z.object({
 /**
  * Complete Pricing Table Block Schema
  */
-export const schema = baseBlockSchema.merge(pricingTableSpecificSchema)
+export const schema = baseBlockSchema.extend(pricingTableSpecificSchema.shape)
 
 export type PricingTableBlockProps = z.infer<typeof schema>

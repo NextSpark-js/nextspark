@@ -120,8 +120,8 @@ export type BaseAdvancedProps = z.infer<typeof baseAdvancedSchema>
  * Merges all three tab schemas for complete block props
  */
 export const baseBlockSchema = baseContentSchema
-  .merge(baseDesignSchema)
-  .merge(baseAdvancedSchema)
+  .extend(baseDesignSchema.shape)
+  .extend(baseAdvancedSchema.shape)
 
 export type BaseBlockProps = z.infer<typeof baseBlockSchema>
 

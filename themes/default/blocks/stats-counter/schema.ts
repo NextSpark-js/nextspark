@@ -42,6 +42,6 @@ export const statsCounterSpecificSchema = z.object({
 /**
  * Complete Stats Counter Block Schema
  */
-export const schema = baseBlockSchema.merge(statsCounterSpecificSchema)
+export const schema = baseBlockSchema.extend(statsCounterSpecificSchema.shape)
 
 export type StatsCounterBlockProps = z.infer<typeof schema>

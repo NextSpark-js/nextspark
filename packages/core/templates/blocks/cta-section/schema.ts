@@ -27,6 +27,6 @@ export const ctaSectionSpecificSchema = z.object({
 /**
  * Complete CTA Section Block Schema
  */
-export const schema = baseBlockSchema.merge(ctaSectionSpecificSchema)
+export const schema = baseBlockSchema.extend(ctaSectionSpecificSchema.shape)
 
 export type CTASectionBlockProps = z.infer<typeof schema>

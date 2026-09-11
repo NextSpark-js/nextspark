@@ -50,6 +50,6 @@ export const jumbotronSpecificSchema = z.object({
 /**
  * Complete Jumbotron Block Schema
  */
-export const schema = baseBlockSchema.merge(jumbotronSpecificSchema)
+export const schema = baseBlockSchema.extend(jumbotronSpecificSchema.shape)
 
 export type JumbotronBlockProps = z.infer<typeof schema>

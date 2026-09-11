@@ -31,7 +31,7 @@ export const videoHeroSpecificSchema = z.object({
  * Complete Video Hero Block Schema
  * Combines base fields + video-hero-specific fields
  */
-export const schema = baseBlockSchema.merge(videoHeroSpecificSchema)
+export const schema = baseBlockSchema.extend(videoHeroSpecificSchema.shape)
 
 export type VideoHeroBlockProps = z.infer<typeof schema>
 

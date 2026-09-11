@@ -41,6 +41,6 @@ export const postContentSpecificSchema = z.object({
  * Complete Post Content Block Schema
  * Note: postContentSpecificSchema.content overrides baseBlockSchema.content
  */
-export const schema = baseBlockSchema.merge(postContentSpecificSchema)
+export const schema = baseBlockSchema.extend(postContentSpecificSchema.shape)
 
 export type PostContentBlockProps = z.infer<typeof schema>

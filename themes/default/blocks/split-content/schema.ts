@@ -59,7 +59,7 @@ export const splitContentSpecificSchema = z.object({
  */
 export const schema = baseBlockSchema
   .omit({ cta: true }) // Remove base cta
-  .merge(splitContentSpecificSchema)
+  .extend(splitContentSpecificSchema.shape)
 
 export type SplitContentBlockProps = z.infer<typeof schema>
 

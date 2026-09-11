@@ -46,7 +46,7 @@ export const heroWithFormSpecificSchema = z.object({
  * Complete Hero With Form Block Schema
  * Combines base fields + hero-with-form-specific fields
  */
-export const schema = baseBlockSchema.merge(heroWithFormSpecificSchema)
+export const schema = baseBlockSchema.extend(heroWithFormSpecificSchema.shape)
 
 export type HeroWithFormBlockProps = z.infer<typeof schema>
 

@@ -44,6 +44,6 @@ export const timelineSpecificSchema = z.object({
 /**
  * Complete Timeline Block Schema
  */
-export const schema = baseBlockSchema.merge(timelineSpecificSchema)
+export const schema = baseBlockSchema.extend(timelineSpecificSchema.shape)
 
 export type TimelineBlockProps = z.infer<typeof schema>

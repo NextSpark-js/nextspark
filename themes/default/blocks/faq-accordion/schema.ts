@@ -40,6 +40,6 @@ export const faqAccordionSpecificSchema = z.object({
 /**
  * Complete FAQ Accordion Block Schema
  */
-export const schema = baseBlockSchema.merge(faqAccordionSpecificSchema)
+export const schema = baseBlockSchema.extend(faqAccordionSpecificSchema.shape)
 
 export type FaqAccordionBlockProps = z.infer<typeof schema>

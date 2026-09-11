@@ -35,6 +35,6 @@ export const featuresGridSpecificSchema = z.object({
 /**
  * Complete Features Grid Block Schema
  */
-export const schema = baseBlockSchema.merge(featuresGridSpecificSchema)
+export const schema = baseBlockSchema.extend(featuresGridSpecificSchema.shape)
 
 export type FeaturesGridBlockProps = z.infer<typeof schema>

@@ -25,7 +25,7 @@ export const heroSpecificSchema = z.object({
  * Complete Hero Block Schema
  * Combines base fields + hero-specific fields
  */
-export const schema = baseBlockSchema.merge(heroSpecificSchema)
+export const schema = baseBlockSchema.extend(heroSpecificSchema.shape)
 
 export type HeroBlockProps = z.infer<typeof schema>
 

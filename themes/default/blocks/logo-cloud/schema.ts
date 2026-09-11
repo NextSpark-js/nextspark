@@ -41,6 +41,6 @@ export const logoCloudSpecificSchema = z.object({
 /**
  * Complete Logo Cloud Block Schema
  */
-export const schema = baseBlockSchema.merge(logoCloudSpecificSchema)
+export const schema = baseBlockSchema.extend(logoCloudSpecificSchema.shape)
 
 export type LogoCloudBlockProps = z.infer<typeof schema>

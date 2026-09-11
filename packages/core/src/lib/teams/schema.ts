@@ -111,7 +111,7 @@ export const adminUpdateTeamSchema = z.object({
  * @note For internal use, prefer ownerUpdateTeamSchema or adminUpdateTeamSchema
  * based on the user's role and the fields being updated
  */
-export const updateTeamSchema = ownerUpdateTeamSchema.merge(adminUpdateTeamSchema)
+export const updateTeamSchema = ownerUpdateTeamSchema.extend(adminUpdateTeamSchema.shape)
 
 export const inviteMemberSchema = z.object({
   email: z.string().email('Invalid email address'),
