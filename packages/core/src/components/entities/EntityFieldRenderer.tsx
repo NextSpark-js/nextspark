@@ -183,6 +183,20 @@ function formatDisplayValue(value: unknown, field: EntityField): string {
 /**
  * Render form input based on field type
  */
+/**
+ * Test hook for one choice of a select / radio field.
+ *
+ * The field's own hook only exists on the trigger, and the options are mounted
+ * in a portal when the list opens — without a hook of their own a test can only
+ * reach them by visible text, which breaks under translation.
+ *
+ * Returns undefined when the field has no test id, so nothing emits an
+ * attribute built from "undefined".
+ */
+function optionTestId(fieldTestId: string | undefined, value: unknown): string | undefined {
+  return fieldTestId ? `${fieldTestId}-option-${String(value)}` : undefined
+}
+
 function renderFormField(
   field: EntityField,
   value: unknown,
@@ -324,6 +338,7 @@ function renderFormField(
                 key={String(option.value)}
                 value={String(option.value)}
                 disabled={option.disabled}
+                data-cy={optionTestId(testId, option.value)}
               >
                 {option.label}
               </SelectItem>
@@ -355,6 +370,7 @@ function renderFormField(
               <RadioGroupItem
                 value={String(option.value)}
                 disabled={option.disabled}
+                data-cy={optionTestId(testId, option.value)}
               />
               <Label className="text-sm">{option.label}</Label>
             </div>

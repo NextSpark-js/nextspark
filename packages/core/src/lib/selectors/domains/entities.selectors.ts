@@ -312,6 +312,8 @@ export const ENTITIES_SELECTORS = {
   form: {
     container: '{slug}-form',
     field: '{slug}-field-{name}',
+    /** One choice of a select / radio field, once its list is open. */
+    fieldOption: '{slug}-field-{name}-option-{value}',
     submitButton: '{slug}-form-submit',
   },
 
