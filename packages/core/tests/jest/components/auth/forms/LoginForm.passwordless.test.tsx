@@ -47,6 +47,7 @@ jest.mock('next-intl', () => ({
   useTranslations: () => (key: string, options?: Record<string, unknown>) => {
     if (options && typeof options.defaultValue === 'string' && !key.startsWith('login.form')) return options.defaultValue
     if (options && typeof options.email === 'string') return `${key}:${options.email}`
+    if (options && typeof options.time === 'string') return `${key}:${options.time}`
     return key
   },
 }))
@@ -70,6 +71,7 @@ const mockConfig: { PUBLIC_AUTH_CONFIG: any; DEV_CONFIG: any } = {
     registration: { mode: 'open' },
     providers: { google: { enabled: true } },
     methods: ['email-otp', 'google'],
+    otp: { expiresIn: 300, otpLength: 6 },
   },
   DEV_CONFIG: undefined,
 }
@@ -91,6 +93,7 @@ function setPreset(methods: string[], extra: Partial<typeof mockConfig.PUBLIC_AU
     registration: { mode: 'open' },
     providers: { google: { enabled: methods.includes('google') } },
     methods,
+    otp: { expiresIn: 300, otpLength: 6 },
     ...extra,
   }
 }
@@ -157,6 +160,34 @@ describe('LoginForm — passwordless preset (default: email OTP + Google)', () =
     await waitFor(() =>
       expect(mockSignInWithOtp).toHaveBeenCalledWith({ email: 'ada@example.com', otp: '123456', redirectTo: undefined })
     )
+  })
+
+  test('the notice counts the code down and reports it expired (#186)', async () => {
+    jest.useFakeTimers()
+    try {
+      render(<LoginForm />)
+      fireEvent.click(byCy('auth.login.showEmail')!)
+      fireEvent.change(byCy('auth.login.otpEmailInput')!, { target: { value: 'ada@example.com' } })
+      fireEvent.click(byCy('auth.login.otpSend')!)
+
+      await waitFor(() => expect(byCy('auth.login.otpCountdown')).toBeInTheDocument())
+
+      // The 300s lifetime is rendered, not spelled out in the sentence
+      expect(byCy('auth.login.otpCountdown')).toHaveTextContent('login.form.otp.expiresIn:5:00')
+
+      act(() => { jest.advanceTimersByTime(60_000) })
+      expect(byCy('auth.login.otpCountdown')).toHaveTextContent('login.form.otp.expiresIn:4:00')
+
+      act(() => { jest.advanceTimersByTime(239_000) })
+      expect(byCy('auth.login.otpCountdown')).toHaveTextContent('login.form.otp.expiresIn:1')
+
+      // At the deadline it stops promising time it no longer has
+      act(() => { jest.advanceTimersByTime(2_000) })
+      expect(byCy('auth.login.otpCountdown')).toHaveTextContent('login.form.otp.expired')
+      expect(byCy('auth.login.otpCountdown')?.getAttribute('aria-live')).toBe('polite')
+    } finally {
+      jest.useRealTimers()
+    }
   })
 
   test('shows the server error when the code is wrong and allows resending', async () => {

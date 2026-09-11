@@ -24,6 +24,7 @@ import { AuthTranslationPreloader } from '../../../lib/i18n/AuthTranslationPrelo
 import { DevKeyring } from '../DevKeyring'
 import { DEV_CONFIG, PUBLIC_AUTH_CONFIG } from '../../../lib/config/config-sync'
 import { getPrimaryEmailMethod } from '../../../lib/auth/auth-methods'
+import { formatOtpCountdown, getOtpSecondsRemaining } from '../../../lib/auth/otp-config'
 import type { AuthProviderWithNull, AuthErrorCode, AuthError } from '../../../types/auth'
 
 /**
@@ -112,18 +113,19 @@ function buildLoginSchema(t: (key: string, options?: any) => string) {
 
 type LoginFormData = z.infer<ReturnType<typeof buildLoginSchema>>
 
-const OTP_CODE_LENGTH = 6
-
 function buildOtpEmailSchema(t: (key: string, options?: any) => string) {
   return z.string().trim().email({ message: t('login.errors.invalidEmail', { defaultValue: 'Invalid email' }) })
 }
 
-function buildOtpCodeSchema(t: (key: string, options?: any) => string) {
+function buildOtpCodeSchema(t: (key: string, options?: any) => string, length: number) {
   return z
     .string()
     .trim()
-    .regex(new RegExp(`^\\d{${OTP_CODE_LENGTH}}$`), {
-      message: t('login.errors.otpInvalidCode', { defaultValue: `Enter the ${OTP_CODE_LENGTH}-digit code` }),
+    .regex(new RegExp(`^\\d{${length}}$`), {
+      message: t('login.errors.otpInvalidCode', {
+        length,
+        defaultValue: `Enter the ${length}-digit code`,
+      }),
     })
 }
 
@@ -137,6 +139,11 @@ export function LoginForm() {
   // one-time code by email + Google, no password field.
   const methods = PUBLIC_AUTH_CONFIG.methods
   const otpEnabled = methods.includes('email-otp')
+  // Code length and lifetime come from the same resolved config Better Auth
+  // runs with, so the input size and the countdown can't drift from what the
+  // server actually issues.
+  const otpLength = PUBLIC_AUTH_CONFIG.otp.otpLength
+  const otpExpiresIn = PUBLIC_AUTH_CONFIG.otp.expiresIn
   // In dev mode with DevKeyring, always allow email login regardless of registration mode
   const devKeyringActive = process.env.NODE_ENV !== 'production' && !!DEV_CONFIG?.devKeyring?.enabled
   // DevKeyring autofills email + password, so it keeps the password form reachable in dev
@@ -167,13 +174,16 @@ export function LoginForm() {
   const [otpCode, setOtpCode] = useState('')
   const [otpEmailError, setOtpEmailError] = useState<string | null>(null)
   const [otpCodeError, setOtpCodeError] = useState<string | null>(null)
+  // When the current code was requested, so the notice can count it down.
+  const [otpSentAt, setOtpSentAt] = useState<number | null>(null)
+  const [otpSecondsLeft, setOtpSecondsLeft] = useState(otpExpiresIn)
   const isProcessingRef = useRef(false)
   const { signIn, googleSignIn, sendOtp, signInWithOtp } = useAuth()
   const { lastMethod, isReady } = useLastAuthMethod()
   const t = useTranslations('auth')
   const loginSchema = useMemo(() => buildLoginSchema(t), [t])
   const otpEmailSchema = useMemo(() => buildOtpEmailSchema(t), [t])
-  const otpCodeSchema = useMemo(() => buildOtpCodeSchema(t), [t])
+  const otpCodeSchema = useMemo(() => buildOtpCodeSchema(t, otpLength), [t, otpLength])
 
   // Read invitation-related params from URL
   const searchParams = useSearchParams()
@@ -189,6 +199,19 @@ export function LoginForm() {
     }
   }, [fromInvite, inviteEmail])
 
+  // Tick the countdown while a code is outstanding. Recomputed from the sent-at
+  // timestamp rather than decremented, so a throttled background tab or a
+  // sleeping machine resumes with the real remaining time instead of a stale one.
+  useEffect(() => {
+    if (otpSentAt === null) return
+
+    const tick = () => setOtpSecondsLeft(getOtpSecondsRemaining(otpSentAt, otpExpiresIn))
+    tick()
+
+    const interval = setInterval(tick, 1000)
+    return () => clearInterval(interval)
+  }, [otpSentAt, otpExpiresIn])
+
   const switchEmailMode = useCallback((mode: EmailMode) => {
     setEmailMode(mode)
     setError(null)
@@ -196,6 +219,7 @@ export function LoginForm() {
     setOtpCodeError(null)
     setOtpStep('email')
     setOtpCode('')
+    setOtpSentAt(null)
   }, [])
 
   /**
@@ -222,6 +246,7 @@ export function LoginForm() {
       setOtpEmail(parsed.data)
       setOtpCode('')
       setOtpStep('code')
+      setOtpSentAt(Date.now())
       setStatusMessage(t('login.messages.otpSent'))
     } catch (err) {
       const error = err instanceof Error ? err : new Error(t('login.messages.otpSendFailed'))
@@ -508,7 +533,19 @@ export function LoginForm() {
                       <Alert data-cy={sel('auth.login.otpSentNotice')}>
                         <Mail className="h-4 w-4" aria-hidden="true" />
                         <AlertDescription>
-                          {t('login.form.otp.codeSent', { email: otpEmail })}
+                          {t('login.form.otp.codeSent', { email: otpEmail, length: otpLength })}{' '}
+                          <span
+                            data-cy={sel('auth.login.otpCountdown')}
+                            // Announced on expiry only: a per-second countdown
+                            // read aloud would drown out the rest of the form.
+                            aria-live={otpSecondsLeft > 0 ? 'off' : 'polite'}
+                          >
+                            {otpSecondsLeft > 0
+                              ? t('login.form.otp.expiresIn', {
+                                  time: formatOtpCountdown(otpSecondsLeft),
+                                })
+                              : t('login.form.otp.expired')}
+                          </span>
                         </AlertDescription>
                       </Alert>
                       <Label htmlFor="otp-code">{t('login.form.otp.codeLabel')}</Label>
@@ -520,9 +557,9 @@ export function LoginForm() {
                           inputMode="numeric"
                           autoComplete="one-time-code"
                           pattern="[0-9]*"
-                          maxLength={OTP_CODE_LENGTH}
+                          maxLength={otpLength}
                           value={otpCode}
-                          onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, OTP_CODE_LENGTH))}
+                          onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, otpLength))}
                           placeholder={t('login.form.otp.codePlaceholder')}
                           className="pl-9 tracking-widest"
                           autoFocus

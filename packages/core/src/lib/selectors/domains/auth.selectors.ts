@@ -42,6 +42,7 @@ export const AUTH_SELECTORS = {
     otpEmailError: 'login-otp-email-error',
     otpSend: 'login-otp-send',
     otpSentNotice: 'login-otp-sent-notice',
+    otpCountdown: 'login-otp-countdown',
     otpCodeInput: 'login-otp-code-input',
     otpCodeError: 'login-otp-code-error',
     otpSubmit: 'login-otp-submit',

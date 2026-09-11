@@ -20,6 +20,7 @@ import { ThemeService, type ThemeName } from '../services/theme.service'
 import { mergeConfigs } from '../utils/config-merge'
 import { mergeRolesConfig } from './roles-merge'
 import { resolveAuthMethods } from '../auth/auth-methods'
+import { resolveOtpConfig } from '../auth/otp-config'
 // Import team roles from permissions-registry (single source of truth)
 import {
   AVAILABLE_ROLES as REGISTRY_AVAILABLE_ROLES,
@@ -264,6 +265,10 @@ export const AUTH_CONFIG = APP_CONFIG_MERGED.auth
 // once here so server and client components agree on the same list.
 const RESOLVED_AUTH_METHODS = resolveAuthMethods(APP_CONFIG_MERGED.auth)
 
+// Code lifetime and length, resolved once so the server (Better Auth's emailOTP
+// plugin) and the login form's countdown read the same numbers.
+const RESOLVED_OTP_CONFIG = resolveOtpConfig(APP_CONFIG_MERGED.auth)
+
 export const PUBLIC_AUTH_CONFIG = {
   registration: {
     mode: (APP_CONFIG_MERGED.auth?.registration?.mode ?? 'open') as import('./types').RegistrationMode,
@@ -278,6 +283,7 @@ export const PUBLIC_AUTH_CONFIG = {
     },
   },
   methods: RESOLVED_AUTH_METHODS,
+  otp: RESOLVED_OTP_CONFIG,
 } satisfies import('./types').PublicAuthConfig
 
 // Re-export dashboard configuration sections

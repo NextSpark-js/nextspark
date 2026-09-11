@@ -8,6 +8,7 @@
 
 import type { AuthConfig, RegistrationMode, PublicAuthConfig } from '../config/types'
 import { resolveAuthMethods } from './auth-methods'
+import { resolveOtpConfig } from './otp-config'
 
 /**
  * Check if public registration (self-signup) is allowed.
@@ -128,5 +129,6 @@ export function getPublicAuthConfig(authConfig: AuthConfig): PublicAuthConfig {
       },
     },
     methods: resolveAuthMethods(authConfig),
+    otp: resolveOtpConfig(authConfig),
   }
 }

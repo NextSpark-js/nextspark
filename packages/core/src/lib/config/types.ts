@@ -531,6 +531,24 @@ export interface AuthSessionConfig {
 }
 
 /**
+ * Email OTP settings (`auth.otp`).
+ *
+ * Both values reach the client through `PUBLIC_AUTH_CONFIG.otp`: the login
+ * form counts the code down and sizes its input from them, so they stay a
+ * single source of truth rather than a literal repeated in the UI and in six
+ * translation files.
+ *
+ * Invalid values (non-positive, NaN, out-of-range length) fall back to the
+ * core defaults with a warning. See `lib/auth/otp-config.ts`.
+ */
+export interface AuthOtpConfig {
+  /** Lifetime of an emailed code, in seconds. Default: 300 (5 minutes). */
+  expiresIn?: number
+  /** Digits per code, between 4 and 10. Default: 6. */
+  otpLength?: number
+}
+
+/**
  * Login methods an app can offer.
  *
  * - `'email-otp'`: passwordless — a 6-digit one-time code is emailed to the
@@ -596,6 +614,12 @@ export interface AuthConfig {
    */
   session?: AuthSessionConfig
 
+  /**
+   * Email OTP code lifetime / length. Optional — every field falls back to the
+   * core defaults (5 minutes, 6 digits).
+   */
+  otp?: AuthOtpConfig
+
   /** OAuth provider settings */
   providers?: AuthProvidersConfig
 
@@ -641,6 +665,16 @@ export interface PublicAuthConfig {
   }
   /** Resolved login methods, in priority order (see `AuthConfig.methods`). */
   methods: AuthLoginMethod[]
+  /**
+   * Resolved email-OTP settings. The login form needs both: the deadline it
+   * counts down to, and the number of digits its input accepts.
+   */
+  otp: {
+    /** Lifetime of an emailed code, in seconds. */
+    expiresIn: number
+    /** Digits per code. */
+    otpLength: number
+  }
 }
 
 /**

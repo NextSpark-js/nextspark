@@ -20,6 +20,7 @@ import {
 import { isDomainAllowed } from './auth/registration-helpers';
 import { registrationGuardPlugin } from './auth/registration-guard-plugin';
 import { resolveSessionConfig } from './auth/session-config';
+import { resolveOtpConfig } from './auth/otp-config';
 import { isPasswordLoginEnabled } from './auth/auth-methods';
 import { getCorsOrigins, isPrivateLanOrigin, normalizeCorsEnvironment } from './utils/cors';
 
@@ -111,6 +112,11 @@ const pool = new Pool({
 // theme `auth.session` overrides), validated and clamped by resolveSessionConfig.
 // Themes no longer need to patch the core to get long-lived (PWA) sessions.
 const sessionConfig = resolveSessionConfig(AUTH_CONFIG);
+
+// Code lifetime/length for the emailOTP plugin. The login form reads the same
+// resolved values through PUBLIC_AUTH_CONFIG.otp, so the countdown it shows is
+// derived from what the server enforces instead of restating it.
+const otpConfig = resolveOtpConfig(AUTH_CONFIG);
 
 /**
  * Resolves the current signup request's intent to a configured NON-owner team
@@ -308,8 +314,8 @@ export const auth = betterAuth({
         }, I18N_CONFIG.defaultLocale);
         await emailService.send({ to: email, ...template });
       },
-      otpLength: 6,
-      expiresIn: 300, // 5 minutes
+      otpLength: otpConfig.otpLength,
+      expiresIn: otpConfig.expiresIn,
       sendVerificationOnSignUp: false,
       disableSignUp: false, // auto-create user on first OTP sign-in
     }),
