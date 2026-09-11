@@ -33,6 +33,59 @@ function findLocalTarball(packageName: string): string | null {
   return null
 }
 
+/**
+ * Packages whose install scripts the project needs to run. pnpm 10 stopped
+ * running dependency build scripts unless they are listed, and a blocked one
+ * installs without its binary: esbuild, @swc/core and cypress ship theirs that
+ * way, and @nextsparkjs/core syncs app/ from its own postinstall.
+ */
+const PACKAGES_ALLOWED_TO_BUILD = [
+  '@nextsparkjs/core',
+  '@nextsparkjs/ai-workflow',
+  '@parcel/watcher',
+  '@swc/core',
+  'cypress',
+  'esbuild',
+  'unrs-resolver',
+]
+
+/**
+ * Major version of the pnpm that will install this project, or null when pnpm
+ * isn't callable.
+ *
+ * It decides where the build-script allowlist goes: pnpm 11 reads `allowBuilds`
+ * from pnpm-workspace.yaml and ignores the `pnpm` field in package.json
+ * entirely (warning about it on every command), while 10 and older read
+ * `pnpm.onlyBuiltDependencies` from package.json and know nothing about the new
+ * key. Writing the wrong one leaves every native dependency without its binary.
+ */
+function getPnpmMajorVersion(): number | null {
+  try {
+    const version = execSync('pnpm --version', { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
+    const major = Number.parseInt(version.split('.')[0], 10)
+    return Number.isNaN(major) ? null : major
+  } catch {
+    return null
+  }
+}
+
+/**
+ * On pnpm 11 the build-script allowlist lives in pnpm-workspace.yaml.
+ *
+ * Deliberately without a `packages:` key: that is what turns a directory into a
+ * workspace root, and then the install below would need `-w` to add anything.
+ * `nextspark init` adds the theme and plugin packages afterwards, merging into
+ * this file rather than replacing it.
+ */
+function buildWorkspaceYaml(): string {
+  const allowed = PACKAGES_ALLOWED_TO_BUILD.map(name => `  '${name}': true`).join('\n')
+  return `# Dependencies allowed to run their install scripts (pnpm 11 spelling;
+# older pnpm reads pnpm.onlyBuiltDependencies from package.json instead)
+allowBuilds:
+${allowed}
+`
+}
+
 export interface ProjectOptions {
   projectName: string
   projectPath: string
@@ -76,18 +129,23 @@ export async function createProject(options: ProjectOptions): Promise<void> {
 
   // Step 3: Create minimal package.json
   const pkgSpinner = ora('  Initializing package.json...').start()
-  const packageJson = {
+  const pnpmMajor = getPnpmMajorVersion()
+  const packageJson: Record<string, unknown> = {
     name: projectName,
     version: '0.1.0',
     private: true,
-    pnpm: {
-      onlyBuiltDependencies: [
-        '@nextsparkjs/core',
-        '@nextsparkjs/ai-workflow',
-      ],
-    },
+  }
+  // pnpm 11 ignores this field (and warns about it on every command); there the
+  // allowlist travels in pnpm-workspace.yaml instead.
+  if (pnpmMajor === null || pnpmMajor < 11) {
+    packageJson.pnpm = { onlyBuiltDependencies: PACKAGES_ALLOWED_TO_BUILD }
   }
   await fs.writeJson(path.join(projectPath, 'package.json'), packageJson, { spaces: 2 })
+
+  // Written before the install so the allowlist is in place for it
+  if (pnpmMajor !== null && pnpmMajor >= 11) {
+    await fs.writeFile(path.join(projectPath, 'pnpm-workspace.yaml'), buildWorkspaceYaml())
+  }
   pkgSpinner.succeed('  package.json created')
 
   // Step 4: Install @nextsparkjs/core, @nextsparkjs/cli, and essential peer dependencies

@@ -149,7 +149,7 @@ async function copyProjectFiles(): Promise<void> {
     { src: 'tsconfig.json', dest: 'tsconfig.json', force: true },
     { src: 'postcss.config.mjs', dest: 'postcss.config.mjs', force: true },
     { src: 'i18n.ts', dest: 'i18n.ts', force: true },
-    { src: 'pnpm-workspace.yaml', dest: 'pnpm-workspace.yaml', force: true }, // Enable workspace for themes/plugins - REQUIRED
+    // pnpm-workspace.yaml is merged, not copied: see mergeWorkspaceYaml below
     // Note: .npmrc with shamefully-hoist=true is created by create-nextspark-app
     // For monorepo projects, monorepo-generator.ts creates a more specific .npmrc with expo/react-native patterns
     { src: 'tsconfig.cypress.json', dest: 'tsconfig.cypress.json', force: false },
@@ -168,6 +168,53 @@ async function copyProjectFiles(): Promise<void> {
       }
     }
   }
+
+  await mergeWorkspaceYaml(
+    path.join(templatesDir, 'pnpm-workspace.yaml'),
+    path.join(projectDir, 'pnpm-workspace.yaml')
+  )
+}
+
+/**
+ * Ensure pnpm-workspace.yaml declares the theme and plugin packages, without
+ * discarding what the file already holds.
+ *
+ * Overwriting it wholesale used to drop the rest of the file — on pnpm 11 that
+ * includes `allowBuilds`, the allowlist create-nextspark-app writes so
+ * dependency install scripts run at all, and it can also hold the user's own
+ * overrides or catalogs.
+ */
+async function mergeWorkspaceYaml(templatePath: string, destPath: string): Promise<void> {
+  if (!await fs.pathExists(templatePath)) {
+    return
+  }
+
+  if (!await fs.pathExists(destPath)) {
+    await fs.copy(templatePath, destPath)
+    return
+  }
+
+  const existing = await fs.readFile(destPath, 'utf-8')
+  const requiredPackages = ["'contents/themes/*'", "'contents/plugins/*'"]
+  const missing = requiredPackages.filter(entry => !existing.includes(entry))
+
+  if (missing.length === 0) {
+    return
+  }
+
+  const lines = existing.split('\n')
+  const packagesIndex = lines.findIndex(line => /^packages:\s*$/.test(line))
+
+  if (packagesIndex === -1) {
+    // No packages list at all: prepend one, keeping the existing content below
+    const block = ['packages:', ...missing.map(entry => `  - ${entry}`), '']
+    await fs.writeFile(destPath, [...block, ...lines].join('\n'), 'utf-8')
+    return
+  }
+
+  // Insert the missing entries into the existing list
+  lines.splice(packagesIndex + 1, 0, ...missing.map(entry => `  - ${entry}`))
+  await fs.writeFile(destPath, lines.join('\n'), 'utf-8')
 }
 
 /**

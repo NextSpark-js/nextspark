@@ -2,7 +2,10 @@
 
 import { memo, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { X } from '@phosphor-icons/react'
+// Deep import on purpose: the package barrel declares one module per icon
+// (~3000 of them), and pulling it in for a single glyph loads every one of
+// those declarations into any tsc program that reaches this file.
+import { X } from '@phosphor-icons/react/dist/csr/X'
 import type { TourStep } from '../types/walkme.types'
 import { WalkmeProgress } from './WalkmeProgress'
 import { WalkmeControls } from './WalkmeControls'

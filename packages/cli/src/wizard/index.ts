@@ -10,7 +10,7 @@ import ora from 'ora'
 import { confirm, select } from '@inquirer/prompts'
 import { execSync } from 'child_process'
 import { existsSync, readdirSync, readFileSync } from 'fs'
-import { join, resolve } from 'path'
+import { basename, join, resolve } from 'path'
 
 /**
  * Resolve the CLI's own version so @nextsparkjs/* installs can be pinned to the
@@ -48,7 +48,12 @@ interface ProjectInfo {
 
 /**
  * Get project info from CLI options for non-interactive mode
- * Returns null if any required field is missing
+ *
+ * With --yes the missing fields are derived rather than prompted for: there is
+ * nobody to answer, and requiring all three (the old behaviour) sent
+ * `init --preset saas --yes` to a prompt that could only fail.
+ *
+ * Returns null only when the run is interactive and the flags are incomplete.
  */
 function getProjectInfoFromOptions(options: CLIOptions): ProjectInfo | null {
   if (options.name && options.slug && options.description) {
@@ -58,7 +63,28 @@ function getProjectInfoFromOptions(options: CLIOptions): ProjectInfo | null {
       projectDescription: options.description,
     }
   }
-  return null
+
+  if (!options.yes) {
+    return null
+  }
+
+  const projectName = options.name || basename(process.cwd())
+  const projectSlug = options.slug || slugify(projectName)
+
+  return {
+    projectName,
+    projectSlug,
+    projectDescription: options.description || `${projectName} - built with NextSpark`,
+  }
+}
+
+/** Directory names are the fallback source for a project name, so normalise them. */
+function slugify(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'nextspark-app'
 }
 
 /**
@@ -249,6 +275,15 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
     if (error instanceof Error) {
       if (error.message.includes('User force closed')) {
         console.log('')
+        // Without a TTY nobody cancelled anything: the prompt had no one to ask.
+        // That is a bad invocation, and exiting 0 made it pass for success in CI.
+        if (!process.stdin.isTTY) {
+          showError(
+            'This run is not interactive, and the wizard still needed input. ' +
+            'Pass --yes (and optionally --name/--slug/--description), or run it in a terminal.'
+          )
+          process.exit(1)
+        }
         showInfo('Wizard cancelled. No changes were made.')
         process.exit(0)
       }
