@@ -47,9 +47,18 @@ test('server registry defers the import instead of hoisting a static one', () =>
 
   assert.match(
     out,
-    /component: lazyTemplate\(\(\) => import\('@\/contents\/themes\/default\/templates\/\(public\)\/page'\)\)/
+    /component: lazyTemplate\('app\/\(public\)\/page\.tsx', \(\) => import\('@\/contents\/themes\/default\/templates\/\(public\)\/page'\)\)/
   )
   assert.doesNotMatch(out, /^import Template_\d+ from/m)
+})
+
+test('names the template in the error when it has no default export', () => {
+  const out = generateTemplateRegistry([pageTemplate], config)
+
+  // Without the module loaded up front, React would otherwise fail with a bare
+  // "invalid element type" and no clue which template is at fault
+  assert.match(out, /has no default export/)
+  assert.match(out, /if \(!templateModule\.default\)/)
 })
 
 test('server registry loads templates without a Suspense boundary', () => {

@@ -8,13 +8,37 @@ export type Bundler = 'webpack' | 'turbopack';
  * Major version of the Next.js resolved from the project, or null when it
  * can't be determined (Next not installed yet, unreadable package.json).
  */
+function majorOf(version: string | undefined): number | null {
+  // Handles '15.5.24' as well as the ranges a package.json declares
+  // ('^15.5.0', '~15.5', '>=14.0.0')
+  const match = String(version).match(/(\d+)/);
+  if (!match) return null;
+  const major = Number.parseInt(match[1], 10);
+  return Number.isNaN(major) ? null : major;
+}
+
 export function getNextMajorVersion(projectRoot: string): number | null {
+  const projectPackageJson = join(projectRoot, 'package.json');
+
+  // Installed version first: it is what will actually run
   try {
-    const requireFromProject = createRequire(join(projectRoot, 'package.json'));
+    const requireFromProject = createRequire(projectPackageJson);
     const pkgPath = requireFromProject.resolve('next/package.json');
     const { version } = JSON.parse(readFileSync(pkgPath, 'utf-8')) as { version?: string };
-    const major = Number.parseInt(String(version).split('.')[0], 10);
-    return Number.isNaN(major) ? null : major;
+    const major = majorOf(version);
+    if (major !== null) return major;
+  } catch {
+    // Not installed yet — fall through to what the project declares
+  }
+
+  // Declared version: lets `build --webpack` still spell the flag correctly
+  // before an install, rather than passing a flag the project's Next rejects
+  try {
+    const pkg = JSON.parse(readFileSync(projectPackageJson, 'utf-8')) as {
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+    return majorOf(pkg.dependencies?.next ?? pkg.devDependencies?.next);
   } catch {
     return null;
   }
@@ -27,9 +51,10 @@ export function getNextMajorVersion(projectRoot: string): number | null {
  * The spelling flipped with the default: up to Next 15 `next build`/`next dev`
  * run Webpack unless `--turbopack` is passed and reject an unknown `--webpack`;
  * from Next 16 Turbopack is the default and `--webpack` is the documented
- * escape hatch. Passing the user's flag through verbatim would therefore break
- * on one major or the other, so the choice is expressed here and spelled per
- * version. With the version unknown the flag is passed as written.
+ * escape hatch. Turbopack's own flag was `--turbo` before Next 15. Passing the
+ * user's flag through verbatim would therefore break on one major or another,
+ * so the choice is expressed here and spelled per version. With the version
+ * unknown the flag is passed as written.
  */
 export function resolveBundlerArgs(
   bundler: Bundler | undefined,
@@ -49,7 +74,12 @@ export function resolveBundlerArgs(
     return bundler === 'webpack' ? ['--webpack'] : [];
   }
 
-  return bundler === 'turbopack' ? ['--turbopack'] : [];
+  if (bundler === 'webpack') {
+    return [];
+  }
+
+  // Turbopack's flag was '--turbo' until Next 15 renamed it
+  return major >= 15 ? ['--turbopack'] : ['--turbo'];
 }
 
 /**

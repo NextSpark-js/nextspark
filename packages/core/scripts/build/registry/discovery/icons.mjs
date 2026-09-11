@@ -72,7 +72,7 @@ export function isIconSourcePath(filePath) {
   const normalised = filePath.replace(/\\/g, '/')
   return (
     (normalised.includes('/entities/') && normalised.endsWith('.config.ts')) ||
-    (normalised.includes('/blocks/') && normalised.endsWith('config.ts')) ||
+    (normalised.includes('/blocks/') && normalised.endsWith('/config.ts')) ||
     normalised.endsWith('/config/app.config.ts')
   )
 }
@@ -106,8 +106,9 @@ export function extractIconNames(content) {
   const lucideImports = parseLucideImports(content)
   const names = []
 
-  // `icon: Users` — only counts when the identifier came from lucide-react
-  for (const match of content.matchAll(/\bicon:\s*([A-Za-z_$][\w$]*)/g)) {
+  // `icon: Users` or `'icon': Users` — only counts when the identifier came
+  // from lucide-react
+  for (const match of content.matchAll(/(?:\bicon|['"]icon['"])\s*:\s*([A-Za-z_$][\w$]*)/g)) {
     const exported = lucideImports.get(match[1])
     if (exported) {
       names.push(exported)
@@ -117,7 +118,7 @@ export function extractIconNames(content) {
   // `icon: 'Users'` or `icon: 'pie-chart'` — a theme's sidebar sections and
   // block configs use both spellings; the caller folds kebab-case into the
   // lucide export name and validates the result against lucide's export list.
-  for (const match of content.matchAll(/\bicon:\s*['"]([A-Za-z][\w$-]*)['"]/g)) {
+  for (const match of content.matchAll(/(?:\bicon|['"]icon['"])\s*:\s*['"]([A-Za-z][\w$-]*)['"]/g)) {
     names.push(match[1])
   }
 
@@ -195,8 +196,12 @@ export async function discoverIcons(blocks, config) {
 
   const known = await readLucideExportNames(config)
   if (!known) {
-    log('Could not read lucide-react exports; icon registry will include every discovered name', 'warning')
-    return [...candidates].sort()
+    // Every name becomes a named import, so a kebab-case one would emit
+    // `import { pie-chart }` and break the build. Without lucide's list there
+    // is nothing to fold them against, so they are dropped instead.
+    const importable = [...candidates].filter(name => /^[A-Za-z_$][\w$]*$/.test(name))
+    log('Could not read lucide-react exports; icon registry will include every importable name found', 'warning')
+    return importable.sort()
   }
 
   // Configs spell icons both ways: `CheckSquare` in entity configs, `pie-chart`

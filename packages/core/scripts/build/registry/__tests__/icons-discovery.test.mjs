@@ -32,6 +32,18 @@ test('ignores configs whose icons never reach resolveIcon', () => {
   assert.equal(isIconSourcePath('/p/themes/default/entities/tasks/messages/en.ts'), false)
 })
 
+test('does not match a file that merely ends in config.ts', () => {
+  assert.equal(isIconSourcePath('/p/themes/default/blocks/hero/notconfig.ts'), false)
+})
+
+test('reads an icon under a quoted key', () => {
+  const source = `
+    import { Users } from 'lucide-react'
+    export const config = { 'icon': Users }
+  `
+  assert.deepEqual(extractIconNames(source), ['Users'])
+})
+
 test('reads an icon declared as a lucide import', () => {
   const source = `
     import { Users, CheckSquare } from 'lucide-react'

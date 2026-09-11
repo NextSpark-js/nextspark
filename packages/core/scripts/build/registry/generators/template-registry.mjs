@@ -62,7 +62,7 @@ export function generateTemplateRegistry(templates, config) {
       const isMetaOnly = highestPriorityTemplate.fileName?.endsWith('.meta.ts')
       const componentRef = (!canOverrideComponent(appPath) || isMetaOnly)
         ? 'null'
-        : `lazyTemplate(() => import('${templatePath}'))`
+        : `lazyTemplate('${appPath}', () => import('${templatePath}'))`
 
       return `  '${appPath}': {
     appPath: '${appPath}',
@@ -106,9 +106,20 @@ import React from 'react'
  * notFound() could run (#129). An async component has no such boundary — it
  * awaits exactly like the data fetching these routes already do.
  */
-function lazyTemplate(loader: () => Promise<{ default: any }>) {
+function lazyTemplate(appPath: string, loader: () => Promise<{ default: any }>) {
   return async function TemplateOverride(props: any) {
     const templateModule = await loader()
+
+    // A template with no default export used to fall back to the app's own
+    // component; now that the module is only read at render time, name the
+    // template that is wrong instead of failing as an invalid element type.
+    if (!templateModule.default) {
+      throw new Error(
+        'Template override for "' + appPath + '" has no default export. ' +
+        'Add a default export to the template, or remove it from the theme.'
+      )
+    }
+
     return React.createElement(templateModule.default, props)
   }
 }
