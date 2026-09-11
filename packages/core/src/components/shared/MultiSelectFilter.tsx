@@ -30,6 +30,8 @@ export interface MultiSelectFilterProps {
   onChange: (values: string[]) => void
   /** Additional class names for the trigger button */
   className?: string
+  /** Label for the button that clears the whole field */
+  clearLabel?: string
   /** data-cy attribute for E2E testing */
   'data-cy'?: string
 }
@@ -65,6 +67,7 @@ export function MultiSelectFilter({
   values,
   onChange,
   className,
+  clearLabel = 'Clear',
   'data-cy': dataCy = 'multi-select-filter',
 }: MultiSelectFilterProps) {
   const [open, setOpen] = useState(false)
@@ -171,19 +174,20 @@ export function MultiSelectFilter({
               </button>
             </span>
           ))}
-          {selectedOptions.length > 1 && (
-            <button
-              onClick={handleClearAll}
-              className={cn(
-                'text-xs text-muted-foreground hover:text-foreground',
-                'px-1.5 py-1 transition-colors'
-              )}
-              aria-label="Clear all filters"
-              data-cy={`${dataCy}-clear-all`}
-            >
-              Clear
-            </button>
-          )}
+          {/* Shown for a single selection too: one applied filter is still a
+              filter to drop, and gating this on two hid the only control that
+              clears the field in one go — the per-badge X removes one value. */}
+          <button
+            onClick={handleClearAll}
+            className={cn(
+              'text-xs text-muted-foreground hover:text-foreground',
+              'px-1.5 py-1 transition-colors'
+            )}
+            aria-label={`Clear ${label} filter`}
+            data-cy={`${dataCy}-clear-all`}
+          >
+            {clearLabel}
+          </button>
         </div>
       )}
     </div>
