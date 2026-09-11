@@ -38,6 +38,13 @@ export const taskEntityConfig: EntityConfig = {
     dashboard: {
       showInMenu: true,
       showInTopbar: true,
+      // `filterable` below turns the feature on; this says what to filter by.
+      // Without it the list renders no filter controls at all, which is what
+      // the UAT specs (and the cypress entities fixture) already expect.
+      filters: [
+        { field: 'status', type: 'multiSelect' },
+        { field: 'priority', type: 'multiSelect' },
+      ],
     },
     public: {
       hasArchivePage: false,
