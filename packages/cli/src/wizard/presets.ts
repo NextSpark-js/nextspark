@@ -188,6 +188,15 @@ export const PRESETS: Record<PresetName, PresetConfig> = {
 }
 
 /**
+ * The preset `--yes` runs with when none is named.
+ *
+ * `--yes` promises defaults rather than prompts, so it needs a concrete set of
+ * them: without one the wizard opens Step 1 and, with no TTY to answer it,
+ * aborts after the dependency install has already run.
+ */
+export const DEFAULT_PRESET: PresetName = 'saas'
+
+/**
  * Preset descriptions for display
  */
 export const PRESET_DESCRIPTIONS: Record<PresetName, string> = {

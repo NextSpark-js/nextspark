@@ -29,7 +29,7 @@ function getCliVersion(): string {
 import { showBanner, showSection, showSuccess, showError, showInfo, showWarning } from './banner.js'
 import { runAllPrompts, runQuickPrompts, runExpertPrompts } from './prompts/index.js'
 import { generateProject, isMonorepoProject, getWebDir } from './generators/index.js'
-import { getPreset, applyPreset, PRESET_DESCRIPTIONS } from './presets.js'
+import { getPreset, applyPreset, PRESET_DESCRIPTIONS, DEFAULT_PRESET } from './presets.js'
 import type { WizardConfig, CLIOptions } from './types.js'
 import { promptProjectInfo } from './prompts/project-info.js'
 // Theme & Plugin Selection
@@ -102,9 +102,18 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
     let selectedPlugins: PluginChoice[] = []
     let config: WizardConfig
 
-    if (options.preset) {
+    // `--yes` means "use defaults", so it cannot fall through to prompts that
+    // have no TTY to answer them. The default preset is what those defaults
+    // are; an explicit --preset still wins, and --type/--theme/--plugins keep
+    // overriding individual choices.
+    const preset = options.preset ?? (options.yes ? DEFAULT_PRESET : undefined)
+
+    if (preset) {
       // Preset mode: get project info then apply preset
-      config = await runPresetMode(options.preset, options)
+      if (!options.preset) {
+        showInfo(`No preset given with --yes; using the default preset: ${preset}`)
+      }
+      config = await runPresetMode(preset, options)
     } else {
       // Run prompts based on mode
       // Order: 1. Type, 2. Info, 3-10. Config options
@@ -128,7 +137,7 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
       // Non-interactive mode: use CLI flags
       selectedTheme = options.theme === 'none' ? null : options.theme as ThemeChoice
       showInfo(`Reference theme: ${selectedTheme || 'None'}`)
-    } else if (!options.preset && options.mode !== 'quick') {
+    } else if (!preset && options.mode !== 'quick') {
       // Interactive mode: prompt user (only if not using preset)
       selectedTheme = await promptThemeSelection()
     }
@@ -139,7 +148,7 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
       if (selectedPlugins.length > 0) {
         showInfo(`Selected plugins: ${selectedPlugins.join(', ')}`)
       }
-    } else if (!options.preset && options.mode !== 'quick' && !options.yes) {
+    } else if (!preset && options.mode !== 'quick' && !options.yes) {
       // Interactive mode: prompt user (skip in --yes mode or preset mode)
       selectedPlugins = await promptPluginsSelection(selectedTheme)
     } else if (selectedTheme) {
@@ -280,7 +289,8 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
         if (!process.stdin.isTTY) {
           showError(
             'This run is not interactive, and the wizard still needed input. ' +
-            'Pass --yes (and optionally --name/--slug/--description), or run it in a terminal.'
+            'Pass --yes to take the defaults (optionally with --name/--slug/--description, ' +
+            '--preset, --type, --theme, --plugins), or run it in a terminal.'
           )
           process.exit(1)
         }
