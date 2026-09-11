@@ -32,6 +32,7 @@ core/lib/registries/
 ├── translation-registry.ts  # TRANSLATION_REGISTRY - i18n configs
 ├── testing-registry.ts      # TESTING_REGISTRY - Test fixtures
 ├── docs-registry.ts         # DOCS_REGISTRY - Documentation index
+├── icon-registry.ts         # ICON_REGISTRY - Icons referenced by name
 └── index.ts                 # Unified exports
 
 Build script: node core/scripts/build/registry.mjs
@@ -129,6 +130,24 @@ const { ENTITY_REGISTRY } = await import('@/core/lib/registries/entity-registry'
 | `BILLING_REGISTRY` | planSlug | `PlanConfig` | Billing plans |
 | `MIDDLEWARE_REGISTRY` | name | `MiddlewareConfig` | Route middlewares |
 | `ROUTE_HANDLERS` | path | `RouteHandler` | API route handlers |
+| `ICON_REGISTRY` | icon name | `LucideIcon` | Icons a config names by string |
+
+### Registries that hold components
+
+`TEMPLATE_REGISTRY` and `BLOCK_COMPONENTS` bind their components through a
+deferred import, not a static one: a barrel of static imports puts every
+template (or block) in the bundle of any route that touches the registry. The
+registry module itself is still imported statically — the data stays O(1) —
+only the component behind each key is loaded when it renders.
+
+`ICON_REGISTRY` is the opposite case: icons are small and there are many
+lookups per render, so it imports them statically, and the generator emits
+only the names `resolveIcon` can actually be handed — entity configs, a
+theme's sidebar sections, block configs (see `discovery/icons.mjs`). Icons
+named by page content are outside it by design: that set lives in the
+database, and the only thing that resolves it is lucide's by-name loader,
+which declares a chunk per icon and so charges every route in the app for the
+few that render a block.
 
 ## Registry Structure
 

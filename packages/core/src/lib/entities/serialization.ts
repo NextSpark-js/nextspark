@@ -1,6 +1,6 @@
 import type { EntityConfig, ChildEntityDefinition, SupportedLocale, TranslationLoader } from './types'
 import type { LucideIcon } from 'lucide-react'
-import * as Icons from 'lucide-react'
+import { getIconName, resolveIcon } from '../icons'
 
 // `hooks` is excluded from both serializable shapes below: it holds live
 // functions (EntityConfig.hooks / ChildEntityDefinition.hooks), and this
@@ -32,9 +32,7 @@ function isChildEntityConfig(config: EntityConfig | ChildEntityDefinition): conf
 }
 
 export function serializeEntityConfig(config: EntityConfig): SerializableEntityConfig {
-  const iconName = Object.entries(Icons).find(
-    ([, icon]) => icon === config.icon
-  )?.[0] || 'Box'
+  const iconName = getIconName(config.icon)
 
   const { icon, i18n, hooks, ...rest } = config
 
@@ -66,7 +64,7 @@ export function serializeConfig(config: EntityConfig | ChildEntityDefinition): S
 }
 
 export function deserializeEntityConfig(config: SerializableEntityConfig): EntityConfig {
-  const icon = (Icons[config.iconName as keyof typeof Icons] || Icons.Box) as LucideIcon
+  const icon = resolveIcon(config.iconName) as LucideIcon
   const { iconName, i18nFallbackLocale, ...rest } = config
 
   return {

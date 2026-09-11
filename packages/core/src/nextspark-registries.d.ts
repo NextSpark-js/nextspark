@@ -871,3 +871,24 @@ declare module '@nextsparkjs/registries/scheduled-actions-registry' {
 
   export const SCHEDULED_ACTIONS_REGISTRY: Record<string, ScheduledActionsModule | undefined>
 }
+
+// ============================================================================
+// Icon Registry
+//
+// Generated from every config that names an icon by string (entity configs,
+// a theme's sidebar sections, block configs) so the app can resolve those
+// names without a namespace import of lucide-react, which would keep the
+// whole icon set in the bundle (#182). Inline `import(...)` type query for
+// the same reason as middleware-registry below: this file must stay free of
+// file-level imports.
+// ============================================================================
+declare module '@nextsparkjs/registries/icon-registry' {
+  export const ICON_REGISTRY: Record<string, import('lucide-react').LucideIcon>
+
+  export type IconName = string
+
+  export const ICON_METADATA: {
+    totalIcons: number
+    generatedAt: string
+  }
+}

@@ -35,25 +35,38 @@ program
 program
   .command('dev')
   .description('Start development server with Turbopack (fast)')
+  .argument('[nextArgs...]', 'Extra arguments forwarded to `next dev`')
   .option('-p, --port <port>', 'Port to run the dev server on', process.env.PORT || '3000')
   .option('--no-turbopack', 'Disable Turbopack (use Webpack)')
+  .option('--webpack', 'Use Webpack instead of Turbopack (same as --no-turbopack)')
   .option('--registry', 'Enable registry watcher')
-  .action(devCommand);
+  .allowUnknownOption()
+  .action((nextArgs, opts) =>
+    devCommand({ ...opts, turbopack: opts.webpack ? false : opts.turbopack, nextArgs })
+  );
 
 // Dev with registry watcher (Webpack, auto-detects new entities/templates/blocks)
 program
   .command('dev:registry')
   .description('Start dev server with registry watcher (use when creating entities/templates/blocks)')
+  .argument('[nextArgs...]', 'Extra arguments forwarded to `next dev`')
   .option('-p, --port <port>', 'Port to run the dev server on', process.env.PORT || '3000')
   .option('--turbopack', 'Enable Turbopack')
-  .action((opts) => devCommand({ ...opts, registry: true, turbopack: opts.turbopack ?? false }));
+  .allowUnknownOption()
+  .action((nextArgs, opts) =>
+    devCommand({ ...opts, registry: true, turbopack: opts.turbopack ?? false, nextArgs })
+  );
 
 // Build command
 program
   .command('build')
   .description('Build for production')
+  .argument('[nextArgs...]', 'Extra arguments forwarded to `next build`')
   .option('--no-registry', 'Skip registry generation before build')
-  .action(buildCommand);
+  .option('--webpack', 'Build with Webpack (Next 16 requires it when next.config defines webpack())')
+  .option('--turbopack', 'Build with Turbopack')
+  .allowUnknownOption()
+  .action((nextArgs, opts) => buildCommand({ ...opts, nextArgs }));
 
 // Generate command
 program

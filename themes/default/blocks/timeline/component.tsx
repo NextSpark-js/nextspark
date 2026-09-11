@@ -1,4 +1,9 @@
 import React from 'react'
+// Icon names come from page content, so there is no build-time set to import
+// from the way entity and sidebar icons have (see core's lib/icons). lucide's
+// by-name loader resolves them, but it declares a chunk per icon and that map
+// lands in webpack's runtime, which every route in the app pays for — to spare
+// the few that render this block.
 import * as Icons from 'lucide-react'
 import { cn } from '@nextsparkjs/core/lib/utils'
 import { buildSectionClasses } from '@nextsparkjs/core/types/blocks'
