@@ -3,6 +3,7 @@ import { join, dirname, relative } from 'node:path';
 import chalk from 'chalk';
 import ora from 'ora';
 import { getCoreDir, getProjectRoot } from '../utils/paths.js';
+import { writeProxyFile } from '../utils/proxy-file.js';
 
 interface SyncAppOptions {
   dryRun?: boolean;
@@ -18,7 +19,8 @@ const EXCLUDED_TEMPLATE_PATTERNS = ['(templates)'];
 // Root template files that should be synced to project root (not /app)
 // These are critical files that must stay in sync with core
 const ROOT_TEMPLATE_FILES = [
-  'proxy.ts',           // Next.js 16+ proxy (formerly middleware.ts) - required for auth/permission validation
+  // proxy.ts is handled by writeProxyFile: Next 15 only loads it under its old
+  // name (middleware.ts), so the file name follows the project's Next version
   'next.config.mjs',    // Required for webpack aliases, transpilePackages, security headers
   'tsconfig.json',      // Required for proper path aliases and test file exclusions
   'i18n.ts',            // Required for next-intl configuration
@@ -305,8 +307,13 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
 
       spinner.succeed(`Synced ${filesToUpdate.length} files (${updated} updated, ${created} created)`);
 
-      // Sync root template files (proxy.ts, next.config.mjs, etc.)
+      // Sync root template files (next.config.mjs, tsconfig.json, etc.)
       const rootTemplatesDir = join(coreDir, 'templates');
+
+      const proxyFile = await writeProxyFile(rootTemplatesDir, projectRoot);
+      if (proxyFile && options.verbose) {
+        console.log(chalk.gray(`  ✓ Request interception: ${proxyFile}`));
+      }
       let rootUpdated = 0;
       let rootCreated = 0;
 

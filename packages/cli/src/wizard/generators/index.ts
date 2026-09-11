@@ -40,6 +40,8 @@ import { setupEnvironment } from './env-setup.js'
 import { setupGit } from './git-init.js'
 // Monorepo generator
 import { generateMonorepoStructure, isMonorepoProject, getWebDir } from './monorepo-generator.js'
+import { addPackageEntries } from './workspace-yaml.js'
+import { writeProxyFile } from '../../utils/proxy-file.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -144,7 +146,8 @@ async function copyProjectFiles(): Promise<void> {
     // fails to resolve those dynamic imports.
     { src: 'lib', dest: 'lib', force: true },
     { src: 'public', dest: 'public', force: true },
-    { src: 'proxy.ts', dest: 'proxy.ts', force: true }, // Next.js 16+ proxy (formerly middleware.ts)
+    // proxy.ts is written by writeProxyFile below: Next 15 only loads it under
+    // its old name, so the file name depends on the project's Next version
     { src: 'next.config.mjs', dest: 'next.config.mjs', force: true },
     { src: 'tsconfig.json', dest: 'tsconfig.json', force: true },
     { src: 'postcss.config.mjs', dest: 'postcss.config.mjs', force: true },
@@ -168,6 +171,8 @@ async function copyProjectFiles(): Promise<void> {
       }
     }
   }
+
+  await writeProxyFile(templatesDir, projectDir)
 
   await mergeWorkspaceYaml(
     path.join(templatesDir, 'pnpm-workspace.yaml'),
@@ -195,84 +200,11 @@ export async function mergeWorkspaceYaml(templatePath: string, destPath: string)
   }
 
   const existing = await fs.readFile(destPath, 'utf-8')
-  const required = ['contents/themes/*', 'contents/plugins/*']
-  const lines = existing.split('\n')
+  const merged = addPackageEntries(existing, ['contents/themes/*', 'contents/plugins/*'])
 
-  // The list can be written three ways, and each needs different surgery.
-  // Editing text rather than re-serialising the parsed document is deliberate:
-  // the file carries comments (create-nextspark-app explains `allowBuilds`
-  // there) that a round-trip through a YAML parser would drop.
-  const blockIndex = lines.findIndex(line => /^packages:\s*$/.test(line))
-  const inlineIndex = lines.findIndex(line => /^packages:\s*\[.*\]\s*$/.test(line))
-
-  const declared = new Set(
-    blockIndex !== -1
-      ? collectBlockEntries(lines, blockIndex)
-      : inlineIndex !== -1
-        ? parseInlineEntries(lines[inlineIndex])
-        : []
-  )
-  const missing = required.filter(entry => !declared.has(entry))
-
-  if (missing.length === 0) {
-    return
+  if (merged !== existing) {
+    await fs.writeFile(destPath, merged, 'utf-8')
   }
-
-  if (inlineIndex !== -1) {
-    // `packages: ['apps/*']` — prepending a second `packages:` would leave the
-    // key duplicated and the file unparseable, so rewrite this one line as a
-    // block list holding what it had plus what it lacks.
-    const merged = [...declared, ...missing]
-    lines.splice(inlineIndex, 1, 'packages:', ...merged.map(entry => `  - '${entry}'`))
-    await fs.writeFile(destPath, lines.join('\n'), 'utf-8')
-    return
-  }
-
-  if (blockIndex === -1) {
-    // No packages list at all: prepend one, keeping the existing content below
-    const block = ['packages:', ...missing.map(entry => `  - '${entry}'`), '']
-    await fs.writeFile(destPath, [...block, ...lines].join('\n'), 'utf-8')
-    return
-  }
-
-  // Insert the missing entries into the existing list
-  lines.splice(blockIndex + 1, 0, ...missing.map(entry => `  - '${entry}'`))
-  await fs.writeFile(destPath, lines.join('\n'), 'utf-8')
-}
-
-/** Strip the quotes a YAML scalar may or may not carry. */
-function unquote(value: string): string {
-  return value.trim().replace(/^['"]|['"]$/g, '')
-}
-
-/**
- * The entries of a block list, read from the line after `packages:` until the
- * first line that is not one of its items.
- */
-function collectBlockEntries(lines: string[], packagesIndex: number): string[] {
-  const entries: string[] = []
-
-  for (const line of lines.slice(packagesIndex + 1)) {
-    const item = line.match(/^\s+-\s*(.+?)\s*$/)
-    if (item) {
-      entries.push(unquote(item[1]))
-      continue
-    }
-    // Blank lines and comments sit inside the list; anything else ends it.
-    if (line.trim() === '' || line.trim().startsWith('#')) continue
-    break
-  }
-
-  return entries
-}
-
-/** The entries of an inline list: `packages: ['apps/*', "web"]`. */
-function parseInlineEntries(line: string): string[] {
-  const inside = line.slice(line.indexOf('[') + 1, line.lastIndexOf(']'))
-  return inside
-    .split(',')
-    .map(unquote)
-    .filter(entry => entry.length > 0)
 }
 
 /**
