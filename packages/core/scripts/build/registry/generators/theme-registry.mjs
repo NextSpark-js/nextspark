@@ -15,6 +15,8 @@ import { convertCorePath } from '../config.mjs'
  * @param {object} config - Configuration object from getConfig()
  * @returns {string} Generated TypeScript content
  */
+import { toSafeIdentifier } from './identifier.mjs'
+
 export function generateThemeRegistry(themes, config) {
   const outputFilePath = join(config.outputDir, 'theme-registry.ts')
   // Generate theme config imports
@@ -28,8 +30,7 @@ export function generateThemeRegistry(themes, config) {
   const dashboardImports = themes
     .filter(theme => theme.hasDashboardConfig)
     .map(theme => {
-      // Convert theme name to valid JavaScript identifier
-      const safeThemeName = theme.name.replace(/-/g, '_')
+      const safeThemeName = toSafeIdentifier(theme.name)
       return `import { ${theme.dashboardConfigExportName || 'DASHBOARD_CONFIG'} as ${safeThemeName}DashboardConfig } from '${theme.dashboardConfigPath}'`
     }).join('\n')
 
@@ -37,8 +38,7 @@ export function generateThemeRegistry(themes, config) {
   const appImports = themes
     .filter(theme => theme.hasAppConfig)
     .map(theme => {
-      // Convert theme name to valid JavaScript identifier
-      const safeThemeName = theme.name.replace(/-/g, '_')
+      const safeThemeName = toSafeIdentifier(theme.name)
       return `import { ${theme.appConfigExportName || 'APP_CONFIG_OVERRIDES'} as ${safeThemeName}AppConfig } from '${theme.appConfigPath}'`
     }).join('\n')
 
@@ -46,8 +46,7 @@ export function generateThemeRegistry(themes, config) {
   const devImports = themes
     .filter(theme => theme.hasDevConfig)
     .map(theme => {
-      // Convert theme name to valid JavaScript identifier
-      const safeThemeName = theme.name.replace(/-/g, '_')
+      const safeThemeName = toSafeIdentifier(theme.name)
       return `import { ${theme.devConfigExportName || 'DEV_CONFIG_OVERRIDES'} as ${safeThemeName}DevConfig } from '${theme.devConfigPath}'`
     }).join('\n')
 
@@ -59,7 +58,7 @@ export function generateThemeRegistry(themes, config) {
 
   const registryEntries = themes.map(theme => {
     const configName = theme.exportName || `${theme.name}ThemeConfig`
-    const safeThemeName = theme.name.replace(/-/g, '_')
+    const safeThemeName = toSafeIdentifier(theme.name)
     const dashboardConfigName = theme.hasDashboardConfig ? `${safeThemeName}DashboardConfig` : 'null'
     const appConfigName = theme.hasAppConfig ? `${safeThemeName}AppConfig` : 'null'
     const devConfigName = theme.hasDevConfig ? `${safeThemeName}DevConfig` : 'null'

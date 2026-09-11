@@ -7,6 +7,7 @@
  */
 
 import { join } from 'path'
+import { toSafeIdentifier } from './identifier.mjs'
 import { convertCorePath } from '../config.mjs'
 
 /**
@@ -80,7 +81,7 @@ export const BLOCK_METADATA = {
   const ssrImports = []
 
   blocks.forEach(block => {
-    const slugVar = block.slug.replace(/-/g, '_')
+    const slugVar = toSafeIdentifier(block.slug)
 
     imports.push(`import { fieldDefinitions as ${slugVar}_fields } from '${block.paths.fields}'`)
     ssrImports.push(`import { default as ${slugVar}_component } from '${block.paths.component}'`)
@@ -94,7 +95,7 @@ export const BLOCK_METADATA = {
   const ssrComponentImports = ssrImports.join('\n')
 
   const registryEntries = blocks.map(block => {
-    const slugVar = block.slug.replace(/-/g, '_')
+    const slugVar = toSafeIdentifier(block.slug)
     const scopeValue = block.scope
       ? `[${block.scope.map(s => `'${s}'`).join(', ')}]`
       : 'undefined'
@@ -170,7 +171,7 @@ ${blocks.map(block => {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const BLOCK_COMPONENTS_SSR: Record<string, React.ComponentType<any>> = {
 ${blocks.map(block => {
-    const slugVar = block.slug.replace(/-/g, '_')
+    const slugVar = toSafeIdentifier(block.slug)
     return `  '${block.slug}': ${slugVar}_component`
   }).join(',\n')}
 }

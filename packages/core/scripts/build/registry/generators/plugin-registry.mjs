@@ -7,6 +7,7 @@
  */
 
 import { join } from 'path'
+import { toSafeIdentifier } from './identifier.mjs'
 import { convertCorePath } from '../config.mjs'
 
 /**
@@ -27,7 +28,7 @@ export function generatePluginRegistry(plugins, config) {
   const pagesServerImports = plugins
     .filter(p => p.hasPagesServer)
     .map(plugin =>
-      `import { devtoolsPage as ${plugin.name.replace(/-/g, '_')}DevtoolsPage, superadminPage as ${plugin.name.replace(/-/g, '_')}SuperadminPage } from '@/contents/plugins/${plugin.name}/plugin.pages.server'`
+      `import { devtoolsPage as ${toSafeIdentifier(plugin.name)}DevtoolsPage, superadminPage as ${toSafeIdentifier(plugin.name)}SuperadminPage } from '@/contents/plugins/${plugin.name}/plugin.pages.server'`
     )
     .join('\n')
 
@@ -150,7 +151,7 @@ export type PluginName = keyof typeof PLUGIN_REGISTRY
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const PLUGIN_DEVTOOLS_PAGES: Record<string, any> = {
-${plugins.filter(p => p.hasPagesServer).map(p => `  '${p.name}': ${p.name.replace(/-/g, '_')}DevtoolsPage,`).join('\n')}
+${plugins.filter(p => p.hasPagesServer).map(p => `  '${p.name}': ${toSafeIdentifier(p.name)}DevtoolsPage,`).join('\n')}
 }
 
 // Maps plugin names to their superadmin page components.
@@ -159,7 +160,7 @@ ${plugins.filter(p => p.hasPagesServer).map(p => `  '${p.name}': ${p.name.replac
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const PLUGIN_SUPERADMIN_PAGES: Record<string, any> = {
-${plugins.filter(p => p.hasPagesServer).map(p => `  '${p.name}': ${p.name.replace(/-/g, '_')}SuperadminPage,`).join('\n')}
+${plugins.filter(p => p.hasPagesServer).map(p => `  '${p.name}': ${toSafeIdentifier(p.name)}SuperadminPage,`).join('\n')}
 }
 
 // ==================== Navigation Helpers ====================

@@ -105,13 +105,13 @@ export async function updateThemeConfig(config: WizardConfig): Promise<void> {
   // Update variable name
   content = content.replace(
     /export const starterThemeConfig/g,
-    `export const ${toCamelCase(config.projectSlug)}ThemeConfig`
+    `export const ${toIdentifier(config.projectSlug)}ThemeConfig`
   )
 
   // Update default export reference (if it exists)
   content = content.replace(
     /export default starterThemeConfig/g,
-    `export default ${toCamelCase(config.projectSlug)}ThemeConfig`
+    `export default ${toIdentifier(config.projectSlug)}ThemeConfig`
   )
 
   await fs.writeFile(themeConfigPath, content, 'utf-8')
@@ -454,6 +454,24 @@ export async function updateTestFiles(config: WizardConfig): Promise<void> {
   }
 
   await processDir(testsDir)
+}
+
+/**
+ * A camelCase identifier that is always valid TypeScript.
+ *
+ * The slug reaches this from a directory name or `--slug`, so it can start
+ * with a digit or carry characters an identifier cannot: `7startups` would
+ * emit `export const 7startupsThemeConfig`, and the generated theme would not
+ * compile. Prefixing is enough to make it legal, and keeps the slug readable
+ * in the name.
+ */
+function toIdentifier(str: string): string {
+  const camel = toCamelCase(str).replace(/[^A-Za-z0-9_$]/g, '')
+
+  if (camel === '') return 'themeConfig'
+  if (/^[0-9]/.test(camel)) return `theme${camel.charAt(0).toUpperCase()}${camel.slice(1)}`
+
+  return camel
 }
 
 /**

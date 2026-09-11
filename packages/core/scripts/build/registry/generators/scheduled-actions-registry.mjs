@@ -22,13 +22,13 @@ export function generateScheduledActionsRegistry(themes, config) {
 
   // Generate imports for each theme with scheduled actions
   const imports = themesWithScheduledActions.map(theme => {
-    const safeThemeName = theme.name.replace(/-/g, '_')
+    const safeThemeName = toSafeIdentifier(theme.name)
     return `import * as ${safeThemeName}ScheduledActions from '${theme.scheduledActionsPath}'`
   }).join('\n')
 
   // Generate the registry entries
   const registryEntries = themesWithScheduledActions.map(theme => {
-    const safeThemeName = theme.name.replace(/-/g, '_')
+    const safeThemeName = toSafeIdentifier(theme.name)
     return `  '${theme.name}': {
     registerAllHandlers: ${safeThemeName}ScheduledActions.registerAllHandlers,
     registerRecurringActions: ${safeThemeName}ScheduledActions.registerRecurringActions,
@@ -52,6 +52,7 @@ export function generateScheduledActionsRegistry(themes, config) {
  */
 
 import 'server-only'
+import { toSafeIdentifier } from './identifier.mjs'
 
 ${imports ? imports + '\n' : ''}
 /**
