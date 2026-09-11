@@ -6,18 +6,19 @@ import { describe, test, expect, jest } from '@jest/globals'
 import { render, screen } from '@testing-library/react'
 import { DynamicIcon } from '@/core/components/ui/dynamic-icon'
 
-// Mock lucide-react icons module
-jest.mock('lucide-react', () => {
+// DynamicIcon resolves names through the generated icon registry, so that is
+// what the test stands in for.
+jest.mock('@nextsparkjs/registries/icon-registry', () => {
+  const React = require('react')
   const mockIcon = (name: string) => {
-    const Icon = ({ className }: { className?: string }) => (
-      <svg data-testid={`icon-${name}`} className={className} />
-    )
+    const Icon = ({ className }: { className?: string }) =>
+      React.createElement('svg', { 'data-testid': `icon-${name}`, className })
     Icon.displayName = name
     return Icon
   }
 
   return {
-    icons: {
+    ICON_REGISTRY: {
       LayoutGrid: mockIcon('LayoutGrid'),
       Home: mockIcon('Home'),
       Search: mockIcon('Search'),

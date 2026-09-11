@@ -53,6 +53,7 @@ import { discoverMiddlewares } from './registry/discovery/middlewares.mjs'
 import { discoverTemplates } from './registry/discovery/templates.mjs'
 import { discoverEmails } from './registry/discovery/emails.mjs'
 import { discoverBlocks } from './registry/discovery/blocks.mjs'
+import { discoverIcons } from './registry/discovery/icons.mjs'
 import { discoverCoreRoutes } from './registry/discovery/core-routes.mjs'
 import { discoverApiPresets } from './registry/discovery/api-presets.mjs'
 import { discoverMcpOverrides } from './registry/discovery/mcp-overrides.mjs'
@@ -64,6 +65,7 @@ import { generateThemeRegistry } from './registry/generators/theme-registry.mjs'
 import { generateTemplateRegistry, generateTemplateRegistryClient } from './registry/generators/template-registry.mjs'
 import { generateEmailRegistry } from './registry/generators/email-registry.mjs'
 import { generateBlockRegistry } from './registry/generators/block-registry.mjs'
+import { generateIconRegistry } from './registry/generators/icon-registry.mjs'
 import { generateMiddlewareRegistry } from './registry/generators/middleware-registry.mjs'
 import { generateRouteHandlersRegistry } from './registry/generators/route-handlers.mjs'
 import { generateTranslationRegistry } from './registry/generators/translation-registry.mjs'
@@ -101,6 +103,9 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, template
     // Generate client template registry (async - needs to check for server exports)
     const templateRegistryClientContent = await generateTemplateRegistryClient(templates, CONFIG)
 
+    // Collect the icon names configs can ask for by string (async - reads configs)
+    const iconNames = await discoverIcons(blocks, CONFIG)
+
     // Generate individual registries (pass CONFIG to all generators)
     const files = [
       { name: 'plugin-registry.ts', content: generatePluginRegistry(plugins, CONFIG) },
@@ -115,6 +120,7 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, template
       { name: 'template-registry.client.ts', content: templateRegistryClientContent },
       { name: 'email-registry.ts', content: generateEmailRegistry(emails, CONFIG) },
       { name: 'block-registry.ts', content: generateBlockRegistry(blocks, CONFIG) },
+      { name: 'icon-registry.ts', content: generateIconRegistry(iconNames, CONFIG) },
       { name: 'billing-registry.ts', content: await generateBillingRegistry(CONFIG.activeTheme, CONFIG.contentsDir, CONFIG) },
       { name: 'middleware-registry.ts', content: generateMiddlewareRegistry(middlewares, CONFIG) },
       { name: 'scope-registry.ts', content: generateScopeRegistry(entities, CONFIG) },
