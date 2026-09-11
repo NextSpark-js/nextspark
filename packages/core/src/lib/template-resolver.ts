@@ -59,8 +59,9 @@ export function getTemplateOrDefault<T = any>(
   appPath: string,
   defaultComponent: T
 ): T {
-  // DEBUG: Always log to trace execution
-  console.log(`[getTemplateOrDefault] Called for: ${appPath}`)
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[getTemplateOrDefault] Called for: ${appPath}`)
+  }
 
   // SECURITY: Check if component override is allowed at this protection level
   if (!canOverrideComponent(appPath)) {
