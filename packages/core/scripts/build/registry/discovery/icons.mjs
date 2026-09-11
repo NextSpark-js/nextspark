@@ -61,6 +61,23 @@ async function readLucideExportNames(config) {
 }
 
 /**
+ * Which config files hold icons resolveIcon can be handed. Exported for tests.
+ *
+ * Separators are normalised first: the generator also runs on Windows, where
+ * join() produces '\\' and a '/'-shaped match would silently find nothing —
+ * leaving a registry with only its fallbacks, and every entity icon rendering
+ * as a Box.
+ */
+export function isIconSourcePath(filePath) {
+  const normalised = filePath.replace(/\\/g, '/')
+  return (
+    (normalised.includes('/entities/') && normalised.endsWith('.config.ts')) ||
+    (normalised.includes('/blocks/') && normalised.endsWith('config.ts')) ||
+    normalised.endsWith('/config/app.config.ts')
+  )
+}
+
+/**
  * Map of local name -> exported lucide name for a file's lucide imports.
  * `import { Home as HouseIcon }` means the config's `icon: HouseIcon` is
  * lucide's `Home`.
@@ -83,9 +100,9 @@ function parseLucideImports(content) {
 }
 
 /**
- * Icon names referenced by a single config file.
+ * Icon names referenced by a single config file. Exported for tests.
  */
-function extractIconNames(content) {
+export function extractIconNames(content) {
   const lucideImports = parseLucideImports(content)
   const names = []
 
@@ -97,8 +114,10 @@ function extractIconNames(content) {
     }
   }
 
-  // `icon: 'Users'` — validated against lucide's export list by the caller
-  for (const match of content.matchAll(/\bicon:\s*['"]([A-Za-z_$][\w$]*)['"]/g)) {
+  // `icon: 'Users'` or `icon: 'pie-chart'` — a theme's sidebar sections and
+  // block configs use both spellings; the caller folds kebab-case into the
+  // lucide export name and validates the result against lucide's export list.
+  for (const match of content.matchAll(/\bicon:\s*['"]([A-Za-z][\w$-]*)['"]/g)) {
     names.push(match[1])
   }
 
@@ -151,15 +170,10 @@ export async function discoverIcons(blocks, config) {
 
   // Only the configs whose icons reach resolveIcon. Widening this would put
   // icons in the dashboard bundle that nothing can ask for.
-  const isIconSource = filePath =>
-    (filePath.includes('/entities/') && filePath.endsWith('.config.ts')) ||
-    (filePath.includes('/blocks/') && filePath.endsWith('config.ts')) ||
-    filePath.endsWith('/config/app.config.ts')
-
   const iconSources = [
-    ...(await collectConfigFiles(coreEntitiesDir(config), isIconSource)),
-    ...(await collectConfigFiles(config.themesDir, isIconSource)),
-    ...(await collectConfigFiles(config.pluginsDir, isIconSource))
+    ...(await collectConfigFiles(coreEntitiesDir(config), isIconSourcePath)),
+    ...(await collectConfigFiles(config.themesDir, isIconSourcePath)),
+    ...(await collectConfigFiles(config.pluginsDir, isIconSourcePath))
   ]
 
   for (const configPath of iconSources) {
