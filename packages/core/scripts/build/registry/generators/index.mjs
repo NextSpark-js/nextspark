@@ -12,6 +12,7 @@ export { generateEntityRegistry, generateEntityRegistryClient } from './entity-r
 export { generateThemeRegistry } from './theme-registry.mjs'
 export { generateTemplateRegistry, generateTemplateRegistryClient } from './template-registry.mjs'
 export { generateBlockRegistry } from './block-registry.mjs'
+export { generateIconRegistry } from './icon-registry.mjs'
 export { generateMiddlewareRegistry } from './middleware-registry.mjs'
 export { generateTranslationRegistry } from './translation-registry.mjs'
 export { generateRouteHandlersRegistry } from './route-handlers.mjs'

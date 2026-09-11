@@ -6,8 +6,8 @@ import { useMemo } from 'react'
 import { cn } from '../../../lib/utils'
 import { useTranslations } from 'next-intl'
 import { sel } from '../../../lib/test'
-import { Home, Camera, FileText, LucideIcon, ChevronDown } from 'lucide-react'
-import * as Icons from 'lucide-react'
+import { Home, Camera, FileText, LucideIcon, ChevronDown, Box, Circle, Folder } from 'lucide-react'
+import { resolveIcon } from '../../../lib/icons'
 import type { SerializableEntityConfig } from '../../../lib/entities/serialization'
 import { THEME_REGISTRY } from '@nextsparkjs/registries/theme-registry'
 import { usePermission } from '../../../lib/permissions/hooks'
@@ -108,7 +108,7 @@ function NavItemWithPermission({
     return null
   }
 
-  const ItemIcon = (Icons[item.icon as keyof typeof Icons] || Icons.Circle) as LucideIcon
+  const ItemIcon = resolveIcon(item.icon, Circle)
   const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
 
   // Get item label using translation with fallback to static mapping
@@ -163,7 +163,7 @@ function SectionWithPermission({
     return null
   }
 
-  const SectionIcon = (Icons[section.icon as keyof typeof Icons] || Icons.Folder) as LucideIcon
+  const SectionIcon = resolveIcon(section.icon, Folder)
 
   // Helper to strip 'common.' prefix from labelKey since we're using useTranslations('common')
   const normalizeKey = (key: string) => key.startsWith('common.') ? key.slice(7) : key
@@ -226,7 +226,7 @@ export function DynamicNavigation({
 
   const entityItems: NavigationItem[] = useMemo(() =>
     enabledEntities.map(entity => {
-      const icon = (Icons[entity.iconName as keyof typeof Icons] || Icons.Box) as LucideIcon
+      const icon = resolveIcon(entity.iconName, Box)
       return {
         name: entity.names?.plural || entity.slug,
         href: `/dashboard/${entity.slug}`,

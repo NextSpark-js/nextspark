@@ -1,0 +1,188 @@
+/**
+ * Icon Discovery
+ *
+ * Collects every lucide-react icon name the app can ask for by string at
+ * runtime, so the generated icon registry can import exactly those and let
+ * the bundler drop the rest of the icon set.
+ *
+ * Sources, all of them source files (never the database):
+ * - entity configs (`icon: Users` — an identifier imported from lucide-react)
+ * - the active theme's app.config (`customSidebarSections[].icon` — a string)
+ * - block configs (`icon: 'Grid'` — already extracted by block discovery)
+ *
+ * @module core/scripts/build/registry/discovery/icons
+ */
+
+import { readdir, readFile } from 'fs/promises'
+import { existsSync } from 'fs'
+import { createRequire } from 'module'
+import { join, dirname } from 'path'
+
+import { verbose, log } from '../../../utils/index.mjs'
+
+/**
+ * Icons the resolver falls back to when a name doesn't resolve. They are
+ * referenced from core components, not from any config, so nothing would
+ * discover them.
+ */
+const FALLBACK_ICONS = ['Box', 'Circle', 'Folder', 'LayoutGrid']
+
+/**
+ * Names lucide-react actually exports, read from its own barrel.
+ * A name that isn't there would become a broken named import in the
+ * generated registry, so unknown names are dropped with a warning instead.
+ * @param {object} config
+ * @returns {Set<string>|null} null when lucide-react can't be resolved
+ */
+async function readLucideExportNames(config) {
+  try {
+    const requireFromProject = createRequire(join(config.projectRoot, 'package.json'))
+    const pkgPath = requireFromProject.resolve('lucide-react/package.json')
+    const barrelPath = join(dirname(pkgPath), 'dist/esm/lucide-react.js')
+
+    if (!existsSync(barrelPath)) {
+      return null
+    }
+
+    const barrel = await readFile(barrelPath, 'utf8')
+    const names = new Set()
+    for (const match of barrel.matchAll(/default as ([A-Za-z_$][\w$]*)/g)) {
+      names.add(match[1])
+    }
+    return names.size > 0 ? names : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Map of local name -> exported lucide name for a file's lucide imports.
+ * `import { Home as HouseIcon }` means the config's `icon: HouseIcon` is
+ * lucide's `Home`.
+ */
+function parseLucideImports(content) {
+  const imports = new Map()
+
+  for (const match of content.matchAll(/import\s*(?:type\s*)?\{([^}]*)\}\s*from\s*['"]lucide-react['"]/g)) {
+    for (const specifier of match[1].split(',')) {
+      const parts = specifier.trim().replace(/^type\s+/, '').split(/\s+as\s+/)
+      const exported = parts[0]?.trim()
+      const local = (parts[1] || parts[0])?.trim()
+      if (exported && local) {
+        imports.set(local, exported)
+      }
+    }
+  }
+
+  return imports
+}
+
+/**
+ * Icon names referenced by a single config file.
+ */
+function extractIconNames(content) {
+  const lucideImports = parseLucideImports(content)
+  const names = []
+
+  // `icon: Users` — only counts when the identifier came from lucide-react
+  for (const match of content.matchAll(/\bicon:\s*([A-Za-z_$][\w$]*)/g)) {
+    const exported = lucideImports.get(match[1])
+    if (exported) {
+      names.push(exported)
+    }
+  }
+
+  // `icon: 'Users'` — validated against lucide's export list by the caller
+  for (const match of content.matchAll(/\bicon:\s*['"]([A-Za-z_$][\w$]*)['"]/g)) {
+    names.push(match[1])
+  }
+
+  return names
+}
+
+async function collectConfigFiles(dir, matcher, found = []) {
+  if (!existsSync(dir)) {
+    return found
+  }
+
+  let entries
+  try {
+    entries = await readdir(dir, { withFileTypes: true })
+  } catch {
+    return found
+  }
+
+  for (const entry of entries) {
+    const entryPath = join(dir, entry.name)
+    if (entry.isDirectory()) {
+      if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue
+      await collectConfigFiles(entryPath, matcher, found)
+    } else if (matcher(entry.name)) {
+      found.push(entryPath)
+    }
+  }
+
+  return found
+}
+
+function coreEntitiesDir(config) {
+  if (config.isNpmMode) {
+    return join(config.projectRoot, 'node_modules/@nextsparkjs/core/src/entities')
+  }
+  if (config.isMonorepoMode && config.monorepoRoot) {
+    return join(config.monorepoRoot, 'packages/core/src/entities')
+  }
+  return join(config.projectRoot, 'packages/core/src/entities')
+}
+
+/**
+ * Discover every icon name the runtime can look up by string.
+ * @param {Array} blocks - Blocks from block discovery (each with an `icon` name)
+ * @param {object} config - Configuration object from getConfig()
+ * @returns {Promise<string[]>} Sorted, de-duplicated, validated icon names
+ */
+export async function discoverIcons(blocks, config) {
+  const candidates = new Set(FALLBACK_ICONS)
+
+  const entityConfigs = [
+    ...(await collectConfigFiles(coreEntitiesDir(config), name => name.endsWith('.config.ts'))),
+    ...(await collectConfigFiles(config.themesDir, name => name.endsWith('.config.ts'))),
+    ...(await collectConfigFiles(config.pluginsDir, name => name.endsWith('.config.ts')))
+  ]
+
+  for (const configPath of entityConfigs) {
+    try {
+      const content = await readFile(configPath, 'utf8')
+      for (const name of extractIconNames(content)) {
+        candidates.add(name)
+      }
+    } catch {
+      verbose(`[icons] Could not read ${configPath}`)
+    }
+  }
+
+  for (const block of blocks || []) {
+    if (block.icon) {
+      candidates.add(block.icon)
+    }
+  }
+
+  const known = await readLucideExportNames(config)
+  if (!known) {
+    log('Could not read lucide-react exports; icon registry will include every discovered name', 'warning')
+    return [...candidates].sort()
+  }
+
+  const valid = []
+  const unknown = []
+  for (const name of candidates) {
+    (known.has(name) ? valid : unknown).push(name)
+  }
+
+  if (unknown.length > 0) {
+    log(`Icons not exported by lucide-react, skipped: ${unknown.sort().join(', ')}`, 'warning')
+  }
+
+  verbose(`[icons] ${valid.length} icon(s) referenced by name`)
+  return valid.sort()
+}
