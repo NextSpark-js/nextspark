@@ -39,13 +39,20 @@ const SUPERADMIN_PASSWORD = Cypress.env('SUPERADMIN_PASSWORD') || 'Pandora1234'
 const TEST_PASSWORD = Cypress.env('TEST_PASSWORD') || 'Test1234'
 
 /**
- * Default Theme Test Users
- * Teams: Everpoint Labs, Ironvale Global, Riverstone Ventures
+ * Team-role test users.
  *
- * Note: These are fallback demo users. For selector tests, use CORE_USER (developer).
+ * The starter seeds exactly two users (core migration 090): superadmin and
+ * developer. The names below come from the default theme's richer sample data,
+ * and every one of them has to be pointed at a real user through the matching
+ * env var before the specs that use it can run.
+ *
+ * OWNER is the exception, and it matters: it is what the CRUD specs log in as,
+ * so its fallback is the user the starter actually creates — superadmin owns
+ * the initial team. Leaving it on a name with no row made the whole UAT suite
+ * fail in session setup, before a single assertion.
  */
 export const DEFAULT_THEME_USERS = {
-  OWNER: Cypress.env('OWNER_EMAIL') || 'carlos.mendoza@nextspark.dev',
+  OWNER: Cypress.env('OWNER_EMAIL') || 'superadmin@nextspark.dev',
   ADMIN: Cypress.env('ADMIN_EMAIL') || 'james.wilson@nextspark.dev',
   MEMBER: Cypress.env('MEMBER_EMAIL') || 'emily.johnson@nextspark.dev',
   EDITOR: Cypress.env('EDITOR_EMAIL') || 'diego.ramirez@nextspark.dev',
