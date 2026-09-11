@@ -2,11 +2,14 @@ import { spawn, ChildProcess } from 'node:child_process';
 import chalk from 'chalk';
 import ora from 'ora';
 import { getCoreDir, getProjectRoot, isMonorepoMode } from '../utils/paths.js';
+import { resolveBundlerArgs, type Bundler } from '../utils/next-bundler.js';
 
 interface DevOptions {
   port: string;
   registry: boolean;
   turbopack: boolean;
+  /** Extra flags forwarded verbatim to `next dev` */
+  nextArgs?: string[];
 }
 
 export async function devCommand(options: DevOptions): Promise<void> {
@@ -44,13 +47,18 @@ export async function devCommand(options: DevOptions): Promise<void> {
     }
 
     // Start Next.js dev server
-    const nextArgs = ['next', 'dev', '-p', options.port];
-    if (options.turbopack) {
-      nextArgs.splice(2, 0, '--turbopack');
-    }
+    const bundler: Bundler = options.turbopack ? 'turbopack' : 'webpack';
+    const nextArgs = [
+      'next',
+      'dev',
+      ...resolveBundlerArgs(bundler, projectRoot),
+      '-p',
+      options.port,
+      ...(options.nextArgs ?? []),
+    ];
 
-    const bundler = options.turbopack ? 'Turbopack' : 'Webpack';
-    console.log(chalk.green(`\n[Dev] Starting Next.js dev server on port ${options.port} (${bundler})...`));
+    const bundlerLabel = options.turbopack ? 'Turbopack' : 'Webpack';
+    console.log(chalk.green(`\n[Dev] Starting Next.js dev server on port ${options.port} (${bundlerLabel})...`));
 
     const devProcess = spawn('npx', nextArgs, {
       cwd: projectRoot,

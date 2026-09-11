@@ -35,6 +35,25 @@ nextspark build     # Production build
 nextspark registry  # Build component registries
 ```
 
+#### Choosing the bundler
+
+`dev` and `build` both accept `--webpack` and `--turbopack`. The choice is
+spelled for the project's Next.js version, so the same flag works across
+majors: on Next 15 Webpack is the default and Turbopack is opt-in, on Next 16
+it is the other way round. `nextspark build --webpack` is what a Next 16
+project with a custom `webpack()` in `next.config` needs in order to build.
+
+```bash
+nextspark build --webpack     # Force Webpack
+nextspark dev --turbopack     # Force Turbopack
+```
+
+Any other flag is forwarded verbatim to `next dev` / `next build`:
+
+```bash
+nextspark build --debug --profile
+```
+
 ### Database
 
 ```bash
