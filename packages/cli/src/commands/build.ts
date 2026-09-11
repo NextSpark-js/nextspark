@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import chalk from 'chalk';
 import ora from 'ora';
 import { getCoreDir, getProjectRoot } from '../utils/paths.js';
+import { pickBundler, resolveBundlerArgs } from '../utils/next-bundler.js';
 
 /**
  * Load environment variables from project root .env file
@@ -36,12 +37,17 @@ function loadProjectEnv(projectRoot: string): Record<string, string> {
 
 interface BuildOptions {
   registry: boolean;
+  webpack?: boolean;
+  turbopack?: boolean;
+  /** Extra flags forwarded verbatim to `next build` */
+  nextArgs?: string[];
 }
 
 export async function buildCommand(options: BuildOptions): Promise<void> {
   const spinner = ora('Preparing production build...').start();
 
   try {
+    const bundler = pickBundler(options);
     const coreDir = getCoreDir();
     const projectRoot = getProjectRoot();
 
@@ -86,9 +92,15 @@ export async function buildCommand(options: BuildOptions): Promise<void> {
     }
 
     // Step 2: Run Next.js build
-    spinner.start('Building for production...');
+    const bundlerArgs = resolveBundlerArgs(bundler, projectRoot);
+    const nextArgs = ['next', 'build', ...bundlerArgs, ...(options.nextArgs ?? [])];
 
-    const buildProcess = spawn('npx', ['next', 'build'], {
+    spinner.start('Building for production...');
+    if (bundler) {
+      console.log(chalk.blue(`[Build] Bundler: ${bundler === 'webpack' ? 'Webpack' : 'Turbopack'}`));
+    }
+
+    const buildProcess = spawn('npx', nextArgs, {
       cwd: projectRoot,
       stdio: 'inherit',
       shell: true,
