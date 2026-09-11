@@ -60,6 +60,19 @@ export const DEFAULT_THEME_USERS = {
 } as const
 
 /**
+ * Whether a non-owner team role points at a user that exists.
+ *
+ * Only OWNER has a seeded fallback. The other four keep the default theme's
+ * names, which resolve to nothing here until the theme seeds them and sets the
+ * matching env var. A spec that needs one guards on this instead of failing in
+ * session setup, where the error is a ten-second timeout on the Dev Keyring
+ * rather than "this user does not exist".
+ */
+export function hasSeededTeamRoleUser(role: 'ADMIN' | 'MEMBER' | 'EDITOR' | 'VIEWER'): boolean {
+  return Boolean(Cypress.env(`${role}_EMAIL`))
+}
+
+/**
  * Core System Users (from core/migrations/090_sample_data.sql)
  * These users have special global roles, not team-based roles
  *
@@ -396,22 +409,22 @@ export function getThemeUsers() {
  */
 export const BILLING_TEAMS = {
   FREE: {
-    teamId: 'team-personal-carlos-001',
+    teamId: Cypress.env('BILLING_FREE_TEAM_ID') || 'team-personal-carlos-001',
     name: 'Carlos Personal',
     planSlug: 'free',
-    owner: 'carlos.mendoza@nextspark.dev'
+    owner: Cypress.env('BILLING_FREE_OWNER') || 'carlos.mendoza@nextspark.dev'
   },
   PRO: {
-    teamId: 'team-everpoint-001',
+    teamId: Cypress.env('BILLING_PRO_TEAM_ID') || 'team-everpoint-001',
     name: 'Everpoint Labs',
     planSlug: 'pro',
-    owner: 'carlos.mendoza@nextspark.dev'
+    owner: Cypress.env('BILLING_PRO_OWNER') || 'carlos.mendoza@nextspark.dev'
   },
   ENTERPRISE: {
-    teamId: 'team-ironvale-002',
+    teamId: Cypress.env('BILLING_ENTERPRISE_TEAM_ID') || 'team-ironvale-002',
     name: 'Ironvale Global',
     planSlug: 'enterprise',
-    owner: 'ana.garcia@nextspark.dev'
+    owner: Cypress.env('BILLING_ENTERPRISE_OWNER') || 'ana.garcia@nextspark.dev'
   }
 } as const
 

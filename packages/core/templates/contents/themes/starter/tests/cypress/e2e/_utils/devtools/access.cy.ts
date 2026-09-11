@@ -6,6 +6,7 @@ import {
   loginAsDefaultDeveloper,
   loginAsDefaultSuperadmin,
   loginAsDefaultMember,
+  hasSeededTeamRoleUser,
   CORE_USERS
 } from '../../../src/session-helpers'
 
@@ -145,7 +146,14 @@ describe('DevTools - Access Control', {
     })
   })
 
-  describe('ACCESS-007: Member is BLOCKED from /devtools', { tags: '@smoke' }, () => {
+  // Needs a user with a plain team role, which the starter does not seed — it
+  // creates superadmin and developer only. ACCESS-006 above already covers a
+  // non-developer being blocked, using a user that does exist, so skipping this
+  // leaves no path untested. A theme that seeds team members sets MEMBER_EMAIL
+  // and it runs.
+  const memberSuite = hasSeededTeamRoleUser('MEMBER') ? describe : describe.skip
+
+  memberSuite('ACCESS-007: Member is BLOCKED from /devtools', { tags: '@smoke' }, () => {
     it('should redirect member to /dashboard when attempting to access /devtools', { tags: '@smoke' }, () => {
       allure.severity('critical')
 

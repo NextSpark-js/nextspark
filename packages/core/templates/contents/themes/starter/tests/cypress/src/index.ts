@@ -85,4 +85,5 @@ export {
   loginAsViewer,
   loginAsDefaultDeveloper,
   loginAsDefaultSuperadmin,
+  hasSeededTeamRoleUser,
 } from './session-helpers'
