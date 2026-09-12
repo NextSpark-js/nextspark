@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import chalk from 'chalk';
 import ora from 'ora';
+import { spawnNext } from '../utils/spawn-next.js';
 import { getCoreDir, getProjectRoot } from '../utils/paths.js';
 import { pickBundler, resolveBundlerArgs } from '../utils/next-bundler.js';
 
@@ -100,10 +101,9 @@ export async function buildCommand(options: BuildOptions): Promise<void> {
       console.log(chalk.blue(`[Build] Bundler: ${bundler === 'webpack' ? 'Webpack' : 'Turbopack'}`));
     }
 
-    const buildProcess = spawn('npx', nextArgs, {
+    const buildProcess = spawnNext(nextArgs, {
       cwd: projectRoot,
       stdio: 'inherit',
-      shell: true,
       env: {
         ...projectEnv,
         ...process.env,

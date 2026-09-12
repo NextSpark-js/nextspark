@@ -60,6 +60,17 @@ export const DEFAULT_THEME_USERS = {
 } as const
 
 /**
+ * The password that goes with OWNER.
+ *
+ * OWNER falls back to the seeded superadmin, and that user's password is the
+ * superadmin one, not the demo-user one. A theme that points OWNER at a user of
+ * its own sets OWNER_EMAIL, and then the demo password is the right default.
+ */
+const OWNER_PASSWORD =
+  Cypress.env('OWNER_PASSWORD') ||
+  (Cypress.env('OWNER_EMAIL') ? TEST_PASSWORD : SUPERADMIN_PASSWORD)
+
+/**
  * Whether a non-owner team role points at a user that exists.
  *
  * Only OWNER has a seeded fallback. The other four keep the default theme's
@@ -184,7 +195,7 @@ function apiLogin(email: string, password: string = TEST_PASSWORD): Cypress.Chai
  */
 export function loginAsDefaultOwner() {
   cy.session('default-owner-session', () => {
-    apiLogin(DEFAULT_THEME_USERS.OWNER).then((apiLoginSucceeded) => {
+    apiLogin(DEFAULT_THEME_USERS.OWNER, OWNER_PASSWORD).then((apiLoginSucceeded) => {
       // If API login succeeded, we need to visit a page before setting localStorage
       if (apiLoginSucceeded) {
         cy.visit('/dashboard', { timeout: 60000 })

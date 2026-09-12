@@ -4,7 +4,7 @@ import { cn } from '../../lib/utils'
 import { Input } from '../ui/input'
 import { Search, X } from 'lucide-react'
 import type { ReactNode, InputHTMLAttributes } from 'react'
-import { forwardRef, useImperativeHandle, useRef } from 'react'
+import { forwardRef, useImperativeHandle, useRef, useState } from 'react'
 
 // ============================================================================
 // Types
@@ -52,8 +52,22 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
     const innerRef = useRef<HTMLInputElement>(null)
     useImperativeHandle(ref, () => innerRef.current as HTMLInputElement)
 
-    const hasValue = props.value !== undefined && props.value !== null && String(props.value) !== ''
+    /**
+     * The native clear affordance is hidden below, so this button has to appear
+     * whenever the field has text — including uncontrolled use, where the value
+     * lives in the DOM and never reaches props.
+     */
+    const isControlled = props.value !== undefined
+    const [typedValue, setTypedValue] = useState(() => String(props.defaultValue ?? ''))
+    const currentValue = isControlled ? props.value : typedValue
+
+    const hasValue = currentValue !== null && currentValue !== undefined && String(currentValue) !== ''
     const showClear = hasValue && !props.disabled && !props.readOnly
+
+    const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+      if (!isControlled) setTypedValue(event.target.value)
+      props.onChange?.(event)
+    }
 
     /**
      * Clear through the input itself rather than by calling onChange with a
@@ -71,6 +85,7 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
       )?.set
       setValue?.call(input, '')
       input.dispatchEvent(new Event('input', { bubbles: true }))
+      if (!isControlled) setTypedValue('')
       input.focus()
     }
 
@@ -98,6 +113,7 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
           )}
           data-cy={`${dataCy}-input`}
           {...props}
+          onChange={handleChange}
         />
         {showClear && (
           <button

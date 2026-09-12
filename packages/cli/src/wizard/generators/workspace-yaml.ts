@@ -18,14 +18,21 @@ function unquote(value: string): string {
   return value.trim().replace(/^['"]|['"]$/g, '')
 }
 
+/**
+ * A trailing `# comment` is part of neither form's value. Not allowing for it
+ * meant the key went unrecognised and a second `packages:` was prepended,
+ * leaving a YAML file pnpm refuses to load for a duplicated mapping key.
+ */
+const TRAILING_COMMENT = /\s*(#.*)?$/
+
 /** `packages:` on its own line, opening a block list. */
 function findBlockIndex(lines: string[]): number {
-  return lines.findIndex(line => /^packages:\s*$/.test(line))
+  return lines.findIndex(line => new RegExp(`^packages:${TRAILING_COMMENT.source}`).test(line))
 }
 
 /** `packages: ['a', 'b']`, the whole list on one line. */
 function findInlineIndex(lines: string[]): number {
-  return lines.findIndex(line => /^packages:\s*\[.*\]\s*$/.test(line))
+  return lines.findIndex(line => new RegExp(`^packages:\\s*\\[.*\\]${TRAILING_COMMENT.source}`).test(line))
 }
 
 /**

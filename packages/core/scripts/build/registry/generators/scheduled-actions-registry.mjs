@@ -10,6 +10,8 @@
  * @module core/scripts/build/registry/generators/scheduled-actions-registry
  */
 
+import { toSafeIdentifier } from './identifier.mjs'
+
 /**
  * Generate the scheduled actions registry file
  * @param {Array} themes - Discovered themes with hasScheduledActions property
@@ -52,7 +54,6 @@ export function generateScheduledActionsRegistry(themes, config) {
  */
 
 import 'server-only'
-import { toSafeIdentifier } from './identifier.mjs'
 
 ${imports ? imports + '\n' : ''}
 /**

@@ -118,7 +118,9 @@ export class DevKeyringPOM extends BasePOM {
     this.submitLogin()
 
     // 3. Wait for login to complete
-    cy.url().should('include', '/dashboard', { timeout: 10000 })
+    // No explicit timeout: an inline one wins over the run's configuration, so a
+    // slow dev server could not be waited out with `--config defaultCommandTimeout`.
+    cy.url().should('include', '/dashboard')
 
     return this
   }

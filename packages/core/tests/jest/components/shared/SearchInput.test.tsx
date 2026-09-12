@@ -70,6 +70,43 @@ describe('SearchInput', () => {
     expect(screen.getByRole('button', { name: 'Limpiar búsqueda' })).toBeInTheDocument()
   })
 
+  it('offers the clear button to an uncontrolled field too', () => {
+    render(<SearchInput defaultValue="abc" data-cy="tasks-search" />)
+
+    expect(byCy('tasks-search-clear')).not.toBeNull()
+  })
+
+  it('an uncontrolled field gains the clear button as soon as it is typed in', () => {
+    render(<SearchInput data-cy="tasks-search" />)
+    expect(byCy('tasks-search-clear')).toBeNull()
+
+    fireEvent.change(byCy('tasks-search-input') as HTMLInputElement, { target: { value: 'ab' } })
+
+    expect(byCy('tasks-search-clear')).not.toBeNull()
+  })
+
+  it('clearing an uncontrolled field empties it and takes the button away', () => {
+    render(<SearchInput defaultValue="abc" data-cy="tasks-search" />)
+
+    fireEvent.click(byCy('tasks-search-clear') as HTMLElement)
+
+    expect((byCy('tasks-search-input') as HTMLInputElement).value).toBe('')
+    expect(byCy('tasks-search-clear')).toBeNull()
+  })
+
+  it('does not submit a form it happens to sit in', () => {
+    const onSubmit = jest.fn((e: React.FormEvent) => e.preventDefault())
+    render(
+      <form onSubmit={onSubmit}>
+        <SearchInput defaultValue="abc" data-cy="tasks-search" />
+      </form>
+    )
+
+    fireEvent.click(byCy('tasks-search-clear') as HTMLElement)
+
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
+
   it('stays out of the way when the field cannot be edited', () => {
     const { rerender } = render(<SearchInput value="x" onChange={() => {}} disabled data-cy="tasks-search" />)
     expect(byCy('tasks-search-clear')).not.toBeInTheDocument()

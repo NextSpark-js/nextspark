@@ -310,9 +310,17 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       // Sync root template files (next.config.mjs, tsconfig.json, etc.)
       const rootTemplatesDir = join(coreDir, 'templates');
 
-      const proxyFile = await writeProxyFile(rootTemplatesDir, projectRoot);
-      if (proxyFile && options.verbose) {
-        console.log(chalk.gray(`  ✓ Request interception: ${proxyFile}`));
+      const proxyResult = await writeProxyFile(rootTemplatesDir, projectRoot);
+      if (proxyResult?.written && options.verbose) {
+        console.log(chalk.gray(`  ✓ Request interception: ${proxyResult.fileName}`));
+      }
+      // Not verbose-gated: the project keeping its own file changes what runs,
+      // and this can run unattended from core's postinstall.
+      for (const file of proxyResult?.preserved ?? []) {
+        console.log(chalk.yellow(`  ⚠ Kept your ${file} — it differs from the template, so it was not replaced.`));
+        if (file === proxyResult?.fileName) {
+          console.log(chalk.gray(`    Next loads ${file} in this project; merge the template by hand if you want core's version.`));
+        }
       }
       let rootUpdated = 0;
       let rootCreated = 0;

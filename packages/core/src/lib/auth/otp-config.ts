@@ -45,7 +45,9 @@ function isPositiveNumber(value: unknown): value is number {
  */
 function resolveNumber(value: unknown, fallback: number, field: string): number {
   if (value === undefined) return fallback
-  if (!isPositiveNumber(value)) {
+  // Whole seconds is what reaches Better Auth, so a positive fraction like 0.5
+  // is not a short expiry — it floors to zero, an OTP that is dead on arrival.
+  if (!isPositiveNumber(value) || Math.floor(value) < 1) {
     console.warn(
       `[Auth] Ignoring invalid auth.otp.${field} (${String(value)}); using default ${fallback}`
     )

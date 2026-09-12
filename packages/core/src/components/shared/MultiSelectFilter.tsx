@@ -130,6 +130,7 @@ export function MultiSelectFilter({
               return (
                 <button
                   key={option.value}
+                  type="button"
                   onClick={() => handleToggle(option.value)}
                   className={cn(
                     'w-full text-left px-3 py-2 text-sm rounded-md',
@@ -165,6 +166,7 @@ export function MultiSelectFilter({
             >
               {option.label}
               <button
+                type="button"
                 onClick={(e) => handleRemove(option.value, e)}
                 className="hover:bg-primary/20 rounded-sm p-0.5 transition-colors"
                 aria-label={`Remove ${option.label}`}
@@ -178,6 +180,7 @@ export function MultiSelectFilter({
               filter to drop, and gating this on two hid the only control that
               clears the field in one go — the per-badge X removes one value. */}
           <button
+            type="button"
             onClick={handleClearAll}
             className={cn(
               'text-xs text-muted-foreground hover:text-foreground',
