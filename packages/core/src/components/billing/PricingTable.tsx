@@ -19,7 +19,7 @@ interface PricingTableProps {
 
 /**
  * Skeleton card shown while subscription data loads.
- * Prevents flash of "Seleccionar Plan" on all buttons before
+ * Prevents flash of billing.selectPlan on all buttons before
  * the current plan is known.
  */
 function PricingCardSkeleton() {

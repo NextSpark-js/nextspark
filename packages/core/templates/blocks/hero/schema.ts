@@ -3,7 +3,7 @@ import {
   baseBlockSchema,
   mediaRefSchema,
   type BaseBlockProps,
-} from '@/core/types/blocks'
+} from '@nextsparkjs/core/types/blocks'
 
 /**
  * Hero Block Schema

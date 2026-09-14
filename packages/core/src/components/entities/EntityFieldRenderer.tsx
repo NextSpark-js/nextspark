@@ -619,8 +619,8 @@ function renderFormField(
           disabled={disabled || (dependsOnParent && !parentValue)}
           placeholder={
             dependsOnParent && !parentValue
-              ? `Selecciona ${parentFieldName?.replace('Id', '').toLowerCase()} primero`
-              : field.display.placeholder || `Seleccionar ${field.display.label?.toLowerCase() || relationEntityType}...`
+              ? `Select ${parentFieldName?.replace('Id', '').toLowerCase()} first`
+              : field.display.placeholder || `Select ${field.display.label?.toLowerCase() || relationEntityType}...`
           }
           parentId={parentIdForRelation}
           userFiltered={relationConfig.userFiltered}
@@ -699,8 +699,8 @@ function renderFormField(
           disabled={disabled || (propDependsOnParent && !propParentValue)}
           placeholder={
             propDependsOnParent && !propParentValue
-              ? `Selecciona ${propParentFieldName?.replace('Id', '').toLowerCase()} primero`
-              : field.display.placeholder || `Seleccionar ${field.display.label?.toLowerCase()}...`
+              ? `Select ${propParentFieldName?.replace('Id', '').toLowerCase()} first`
+              : field.display.placeholder || `Select ${field.display.label?.toLowerCase()}...`
           }
           parentId={propParentIdForRelation}
           userFiltered={propRelationConfig.userFiltered}

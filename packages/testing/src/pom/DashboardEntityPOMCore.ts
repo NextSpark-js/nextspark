@@ -392,11 +392,16 @@ export abstract class DashboardEntityPOMCore extends BasePOMCore {
   }
 
   /**
-   * Clear all selected options for a specific filter
-   * NOTE: Clear button only appears when >1 option is selected
+   * Clear all selected options for a specific filter.
+   *
+   * The assertion is what makes the click land: selecting an option refetches
+   * the list, and the re-render between resolving the button and clicking it
+   * leaves a detached node, whose click does nothing and reports nothing.
+   * Asserting first makes Cypress re-query until the button it clicks is the
+   * one currently mounted.
    */
   clearFilter(field: string) {
-    cy.get(this.selectors.filterClearAll(field)).click()
+    cy.get(this.selectors.filterClearAll(field)).should('be.visible').click()
     return this
   }
 

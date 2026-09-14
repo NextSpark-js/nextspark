@@ -1,4 +1,4 @@
-import type { BlockConfig } from '@/core/types/blocks'
+import type { BlockConfig } from '@nextsparkjs/core/types/blocks'
 
 export const config: Omit<BlockConfig, 'schema' | 'fieldDefinitions' | 'Component' | 'examples'> = {
   slug: 'testimonials',
@@ -6,5 +6,6 @@ export const config: Omit<BlockConfig, 'schema' | 'fieldDefinitions' | 'Componen
   description: 'Display customer testimonials with quotes, authors, and avatars',
   category: 'testimonials',
   icon: 'Quote',
-  thumbnail: '/theme/blocks/testimonials/thumbnail.png'
+  thumbnail: '/theme/blocks/testimonials/thumbnail.png',
+  scope: ['pages']
 }

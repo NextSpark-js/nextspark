@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { baseBlockSchema } from '@/core/types/blocks'
+import { baseBlockSchema } from '@nextsparkjs/core/types/blocks'
 
 /**
  * Feature Item Schema

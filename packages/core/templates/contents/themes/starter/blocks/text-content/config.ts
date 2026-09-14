@@ -6,5 +6,6 @@ export const config: Omit<BlockConfig, 'schema' | 'fieldDefinitions' | 'Componen
   description: 'Rich text content block for paragraphs, lists, and formatted text',
   category: 'content',
   icon: 'FileText',
-  thumbnail: '/theme/blocks/text-content/thumbnail.png'
+  thumbnail: '/theme/blocks/text-content/thumbnail.png',
+  scope: ['pages']
 }

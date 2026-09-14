@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { baseBlockSchema, mediaRefSchema } from '@/core/types/blocks'
+import { baseBlockSchema, mediaRefSchema } from '@nextsparkjs/core/types/blocks'
 
 /**
  * Testimonial Item Schema

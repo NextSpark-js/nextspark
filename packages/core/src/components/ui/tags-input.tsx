@@ -20,7 +20,7 @@ interface TagsInputProps {
 export function TagsInput({
   value = [],
   onChange,
-  placeholder = "Agregar tags...",
+  placeholder = "Add tags...",
   maxTags,
   disabled = false,
   className,

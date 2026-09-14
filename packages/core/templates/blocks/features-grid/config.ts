@@ -1,4 +1,4 @@
-import type { BlockConfig } from '@/core/types/blocks'
+import type { BlockConfig } from '@nextsparkjs/core/types/blocks'
 
 export const config: Omit<BlockConfig, 'schema' | 'fieldDefinitions' | 'Component' | 'examples'> = {
   slug: 'features-grid',
@@ -6,5 +6,6 @@ export const config: Omit<BlockConfig, 'schema' | 'fieldDefinitions' | 'Componen
   description: 'Grid layout displaying multiple features with icons, titles, and descriptions',
   category: 'content',
   icon: 'Grid',
-  thumbnail: '/theme/blocks/features-grid/thumbnail.png'
+  thumbnail: '/theme/blocks/features-grid/thumbnail.png',
+  scope: ['pages']
 }

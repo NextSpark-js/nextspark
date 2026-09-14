@@ -47,7 +47,7 @@ export function Sidebar({ className, entities }: SidebarProps) {
           className
         )}
         role="complementary"
-        aria-label={isCollapsed ? 'Sidebar de navegación contraído' : 'Sidebar de navegación expandido'}
+        aria-label={isCollapsed ? t('a11y.sidebarCollapsed') : t('a11y.sidebarExpanded')}
         data-cy={sel('dashboard.sidebar.container')}
         data-collapsed={isCollapsed}
       >
@@ -62,13 +62,13 @@ export function Sidebar({ className, entities }: SidebarProps) {
             <Link
               href="/"
               className="flex items-center gap-2"
-              aria-label={isCollapsed ? 'Ir a la página principal' : `${appName} - Ir a la página principal`}
+              aria-label={isCollapsed ? t('a11y.goHome') : t('a11y.goHomeNamed', { appName })}
               data-cy={sel('dashboard.sidebar.logo')}
             >
               <div 
                 className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center"
                 role="img"
-                aria-label={`Logo de ${appName}`}
+                aria-label={t('a11y.logoOf', { appName })}
               >
                 <span className="text-primary-foreground font-bold text-sm" aria-hidden="true">{appName.charAt(0)}</span>
               </div>

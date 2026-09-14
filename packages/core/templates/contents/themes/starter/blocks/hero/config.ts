@@ -6,5 +6,6 @@ export const config: Omit<BlockConfig, 'schema' | 'fieldDefinitions' | 'Componen
   description: 'Full-width hero section with title, subtitle, CTA button, and background image',
   category: 'hero',
   icon: 'Rocket',
-  thumbnail: '/theme/blocks/hero/thumbnail.png'
+  thumbnail: '/theme/blocks/hero/thumbnail.png',
+  scope: ['pages', 'posts']
 }

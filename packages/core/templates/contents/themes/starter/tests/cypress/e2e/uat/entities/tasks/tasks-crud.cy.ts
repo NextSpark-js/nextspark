@@ -38,24 +38,13 @@ describe('Tasks CRUD', { tags: ['@uat', '@tasks', '@crud'] }, () => {
   })
 
   afterEach(() => {
-    // Cleanup: Delete any tasks created during tests
-    if (createdTaskIds.length > 0) {
-      cy.window().then((win) => {
-        const teamId = win.localStorage.getItem('activeTeamId')
-        createdTaskIds.forEach((id) => {
-          cy.request({
-            method: 'DELETE',
-            url: `/api/v1/tasks/${id}`,
-            headers: {
-              'Content-Type': 'application/json',
-              'x-team-id': teamId || ''
-            },
-            failOnStatusCode: false
-          })
-        })
-        createdTaskIds = []
-      })
-    }
+    // Through the command rather than a request built here: it resolves the
+    // team the API requires even before a dashboard visit has put it in
+    // localStorage. Sending an empty `x-team-id` gets a 400 that nothing
+    // reports, and the tasks survive into the next test, where a count of rows
+    // then measures the leftovers instead of what that test created.
+    createdTaskIds.forEach((id) => cy.deleteTask(id))
+    createdTaskIds = []
   })
 
   // ============================================================
@@ -327,8 +316,9 @@ describe('Tasks CRUD', { tags: ['@uat', '@tasks', '@crud'] }, () => {
         })
       })
 
-      // Refresh list to see new tasks
-      cy.reload()
+      // The list, not a reload: `cy.reload()` keeps the current URL, so a filter
+      // the previous test left in the query string is still applied here.
+      tasks.visitList()
       tasks.waitForList()
     })
 
@@ -359,15 +349,16 @@ describe('Tasks CRUD', { tags: ['@uat', '@tasks', '@crud'] }, () => {
     })
 
     it('should clear filters', () => {
-      // Apply filter
       tasks.filterByStatus('todo')
-      cy.wait(500)
+      // The filter travels in the URL, and waiting on that is what settles the
+      // list — a fixed wait counts rows mid-refetch and sees a partial table.
+      cy.url().should('include', 'status=todo')
 
-      // Clear filter
       tasks.clearStatusFilter()
-      cy.wait(500)
+      cy.url().should('not.include', 'status=')
 
-      // Should show all tasks again
+      // The three the beforeEach created: the starter seeds no tasks, so any
+      // higher number would be counting on a previous run's leftovers.
       cy.get(tasks.selectors.rowGeneric).should('have.length.at.least', 3)
     })
   })
@@ -403,8 +394,9 @@ describe('Tasks CRUD', { tags: ['@uat', '@tasks', '@crud'] }, () => {
         }
       })
 
-      // Refresh list
-      cy.reload()
+      // The list, not a reload: a search or filter left in the query string by
+      // the previous test would still be applied.
+      tasks.visitList()
       tasks.waitForList()
     })
 

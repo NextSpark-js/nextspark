@@ -52,7 +52,7 @@ interface TimezoneSelectProps {
 export function TimezoneSelect({
   value,
   onChange,
-  placeholder = "Seleccionar zona horaria...",
+  placeholder = "Select time zone...",
   disabled = false,
   className,
   clearable = true,
@@ -66,8 +66,8 @@ export function TimezoneSelect({
         value={value}
         onChange={(value) => onChange(value as string | undefined)}
         placeholder={placeholder}
-        searchPlaceholder="Buscar zona horaria..."
-        emptyMessage="No se encontraron zonas horarias."
+        searchPlaceholder="Search time zone..."
+        emptyMessage="No time zones found."
         disabled={disabled}
         clearable={clearable}
         id={id}

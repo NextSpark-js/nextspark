@@ -140,18 +140,37 @@ Cypress.Commands.add('logout', () => {
 })
 
 /**
+ * The headers an entity API call needs, `x-team-id` included.
+ *
+ * The app writes `activeTeamId` into localStorage while the dashboard loads, so
+ * a command that runs before any dashboard visit — a `beforeEach` seeding data,
+ * typically — finds nothing there. Without the header the API answers 400
+ * TEAM_CONTEXT_REQUIRED, and since these requests do not fail on status the
+ * seed silently does nothing: the failure only surfaces later, as an assertion
+ * about data that was never created. Asking the API for the team is what makes
+ * the command work from any starting point.
+ */
+function apiHeaders(): Cypress.Chainable<Record<string, string>> {
+  const base: Record<string, string> = { 'Content-Type': 'application/json' }
+
+  return cy.window().then((win) => {
+    const stored = win.localStorage.getItem('activeTeamId')
+    if (stored) return cy.wrap({ ...base, 'x-team-id': stored })
+
+    return cy
+      .request({ method: 'GET', url: '/api/v1/teams', failOnStatusCode: false })
+      .then((response) => {
+        const teamId = response.body?.data?.[0]?.id
+        return cy.wrap(teamId ? { ...base, 'x-team-id': teamId } : base)
+      })
+  })
+}
+
+/**
  * Create a task via API
  */
 Cypress.Commands.add('createTask', (data) => {
-  return cy.window().then((win) => {
-    const teamId = win.localStorage.getItem('activeTeamId')
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    }
-    if (teamId) {
-      headers['x-team-id'] = teamId
-    }
-
+  return apiHeaders().then((headers) => {
     return cy.request({
       method: 'POST',
       url: '/api/v1/tasks',
@@ -171,15 +190,7 @@ Cypress.Commands.add('createTask', (data) => {
  * Delete a task via API
  */
 Cypress.Commands.add('deleteTask', (id: string) => {
-  return cy.window().then((win) => {
-    const teamId = win.localStorage.getItem('activeTeamId')
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    }
-    if (teamId) {
-      headers['x-team-id'] = teamId
-    }
-
+  return apiHeaders().then((headers) => {
     return cy.request({
       method: 'DELETE',
       url: `/api/v1/tasks/${id}`,

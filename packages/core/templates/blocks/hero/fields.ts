@@ -1,9 +1,9 @@
-import type { FieldDefinition } from '@/core/types/blocks'
+import type { FieldDefinition } from '@nextsparkjs/core/types/blocks'
 import {
   baseContentFields,
   baseDesignFields,
   baseAdvancedFields,
-} from '@/core/types/blocks'
+} from '@nextsparkjs/core/types/blocks'
 
 /**
  * Hero Block Field Definitions

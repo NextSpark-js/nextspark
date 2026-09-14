@@ -47,8 +47,8 @@ export function UserSelect({
   maxUsers,
   disabled = false,
   className,
-  placeholder = "Seleccionar usuarios...",
-  searchPlaceholder = "Buscar usuarios...",
+  placeholder = "Select users...",
+  searchPlaceholder = "Search users...",
   onSearch,
   onCreate,
   allowCreate = false,
@@ -416,7 +416,7 @@ export function UserSelect({
                 ))
               ) : (
                 <div className="text-center text-muted-foreground py-4">
-                  {searchQuery ? "No se encontraron usuarios" : "No hay usuarios disponibles"}
+                  {searchQuery ? "No users found" : "No users available"}
                 </div>
               )}
             </div>

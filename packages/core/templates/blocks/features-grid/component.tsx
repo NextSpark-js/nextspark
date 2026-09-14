@@ -5,8 +5,8 @@ import React from 'react'
 // lands in webpack's runtime, which every route in the app pays for — to spare
 // the few that render this block.
 import * as Icons from 'lucide-react'
-import { cn } from '@/core/lib/utils'
-import { buildSectionClasses } from '@/core/types/blocks'
+import { cn } from '@nextsparkjs/core/lib/utils'
+import { buildSectionClasses } from '@nextsparkjs/core/types/blocks'
 import type { FeaturesGridBlockProps, FeatureItem } from './schema'
 
 /**

@@ -56,6 +56,7 @@ export interface SimpleRelationSelectProps {
   filter?: Record<string, string>
   /** HTML id for the trigger button (enables label[for] association) */
   id?: string
+  searchPlaceholder?: string
 }
 
 export function SimpleRelationSelect({
@@ -64,7 +65,8 @@ export function SimpleRelationSelect({
   entityType,
   titleField,
   multiple = false,
-  placeholder = "Seleccionar...",
+  placeholder = "Select...",
+  searchPlaceholder = "Search...",
   disabled = false,
   parentId,
   propField,
@@ -596,10 +598,10 @@ export function SimpleRelationSelect({
       </PopoverTrigger>
       <PopoverContent className="w-full p-0">
         <Command>
-          <CommandInput placeholder="Buscar..." />
+          <CommandInput placeholder={searchPlaceholder} />
           <CommandList>
             <CommandEmpty>
-              {loading ? "Cargando..." : "No se encontraron opciones."}
+              {loading ? "Loading..." : "No options found."}
             </CommandEmpty>
             <CommandGroup>
               {usePropertyMode ? (

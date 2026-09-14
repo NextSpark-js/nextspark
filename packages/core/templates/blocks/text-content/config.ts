@@ -1,4 +1,4 @@
-import type { BlockConfig } from '@/core/types/blocks'
+import type { BlockConfig } from '@nextsparkjs/core/types/blocks'
 
 export const config: Omit<BlockConfig, 'schema' | 'fieldDefinitions' | 'Component' | 'examples'> = {
   slug: 'text-content',
@@ -6,5 +6,6 @@ export const config: Omit<BlockConfig, 'schema' | 'fieldDefinitions' | 'Componen
   description: 'Rich text content block for paragraphs, lists, and formatted text',
   category: 'content',
   icon: 'FileText',
-  thumbnail: '/theme/blocks/text-content/thumbnail.png'
+  thumbnail: '/theme/blocks/text-content/thumbnail.png',
+  scope: ['pages']
 }

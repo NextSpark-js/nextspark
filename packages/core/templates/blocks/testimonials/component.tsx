@@ -1,8 +1,8 @@
 import React from 'react'
 import { Quote } from 'lucide-react'
-import { Avatar, AvatarFallback, AvatarImage } from '@/core/components/ui/avatar'
-import { cn } from '@/core/lib/utils'
-import { buildSectionClasses, resolveMediaUrl } from '@/core/types/blocks'
+import { Avatar, AvatarFallback, AvatarImage } from '@nextsparkjs/core/components/ui/avatar'
+import { cn } from '@nextsparkjs/core/lib/utils'
+import { buildSectionClasses, resolveMediaUrl } from '@nextsparkjs/core/types/blocks'
 import type { TestimonialsBlockProps, TestimonialItem } from './schema'
 
 /**

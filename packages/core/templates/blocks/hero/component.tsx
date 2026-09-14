@@ -1,7 +1,7 @@
 import React from 'react'
-import { Button } from '@/core/components/ui/button'
-import { cn } from '@/core/lib/utils'
-import { buildSectionClasses, resolveMediaUrl } from '@/core/types/blocks'
+import { Button } from '@nextsparkjs/core/components/ui/button'
+import { cn } from '@nextsparkjs/core/lib/utils'
+import { buildSectionClasses, resolveMediaUrl } from '@nextsparkjs/core/types/blocks'
 import type { HeroBlockProps } from './schema'
 
 /**

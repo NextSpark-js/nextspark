@@ -57,7 +57,7 @@ interface CurrencySelectProps {
 export function CurrencySelect({
   value,
   onChange,
-  placeholder = "Seleccionar moneda...",
+  placeholder = "Select currency...",
   disabled = false,
   className,
   clearable = true,
@@ -71,8 +71,8 @@ export function CurrencySelect({
         value={value}
         onChange={(value) => onChange(value as string | undefined)}
         placeholder={placeholder}
-        searchPlaceholder="Buscar moneda..."
-        emptyMessage="No se encontraron monedas."
+        searchPlaceholder="Search currency..."
+        emptyMessage="No currencies found."
         disabled={disabled}
         clearable={clearable}
         id={id}

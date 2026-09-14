@@ -128,7 +128,7 @@ interface CountrySelectProps {
 export function CountrySelect({
   value,
   onChange,
-  placeholder = "Seleccionar país...",
+  placeholder = "Select country...",
   disabled = false,
   className,
   clearable = true,
@@ -142,8 +142,8 @@ export function CountrySelect({
         value={value}
         onChange={(value) => onChange(value as string | undefined)}
         placeholder={placeholder}
-        searchPlaceholder="Buscar país..."
-        emptyMessage="No se encontraron países."
+        searchPlaceholder="Search country..."
+        emptyMessage="No countries found."
         disabled={disabled}
         clearable={clearable}
         id={id}

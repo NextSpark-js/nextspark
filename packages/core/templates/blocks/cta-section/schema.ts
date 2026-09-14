@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { baseBlockSchema, ctaSchema } from '@/core/types/blocks'
+import { baseBlockSchema, ctaSchema } from '@nextsparkjs/core/types/blocks'
 
 /**
  * Secondary Button Schema (CTA-specific)

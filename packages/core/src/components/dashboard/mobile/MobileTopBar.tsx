@@ -63,7 +63,7 @@ export function MobileTopBar({ prefetch }: MobileTopBarProps = {}) {
           href="/dashboard/settings/profile"
           prefetch={prefetch}
           className="flex items-center gap-3 hover:opacity-80 transition-opacity"
-          aria-label={`Ir al perfil de ${user.firstName || user.email}`}
+          aria-label={t('common.a11y.goToProfileOf', { name: user.firstName || user.email })}
           data-cy={sel('dashboard.mobile.topbar.userProfile')}
         >
           {/* Avatar */}

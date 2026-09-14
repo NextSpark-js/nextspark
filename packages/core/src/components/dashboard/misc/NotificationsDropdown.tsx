@@ -62,6 +62,7 @@ interface NotificationItemProps {
 }
 
 function NotificationItem({ notification, onMarkAsRead, onDelete }: NotificationItemProps) {
+  const t = useTranslations('common')
   const handleClick = useCallback(() => {
     if (!notification.isRead) {
       onMarkAsRead(notification.id)
@@ -131,7 +132,7 @@ function NotificationItem({ notification, onMarkAsRead, onDelete }: Notification
                 size="sm"
                 className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={handleDelete}
-                aria-label={`Eliminar notificación: ${notification.title}`}
+                aria-label={t('a11y.deleteNotification', { title: notification.title })}
               >
                 <X className="h-3 w-3" aria-hidden="true" />
               </Button>

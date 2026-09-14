@@ -30,6 +30,7 @@ interface MultiSelectProps {
   value: (string | number)[]
   onChange: (value: (string | number)[]) => void
   placeholder?: string
+  searchPlaceholder?: string
   maxSelected?: number
   disabled?: boolean
   className?: string
@@ -39,7 +40,8 @@ export function MultiSelect({
   options,
   value = [],
   onChange,
-  placeholder = "Seleccionar opciones...",
+  placeholder = "Select options...",
+  searchPlaceholder = "Search options...",
   maxSelected,
   disabled = false,
   className,
@@ -120,7 +122,7 @@ export function MultiSelect({
         </PopoverTrigger>
         <PopoverContent className="p-0" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
           <Command>
-            <CommandInput placeholder="Buscar opciones..." />
+            <CommandInput placeholder={searchPlaceholder} />
             <CommandEmpty>No se encontraron opciones.</CommandEmpty>
             <CommandGroup className="max-h-64 overflow-auto">
               {availableOptions.map((option) => (
