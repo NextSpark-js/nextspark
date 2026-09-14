@@ -16,7 +16,7 @@
   "scripts": {
     "build": "tsup src/cli.ts --format esm --dts --outDir dist",
     "dev": "tsup src/cli.ts --format esm --watch",
-    "test": "tsx --test tests/*.test.ts"
+    "test": "npx tsx --test tests/*.test.ts"
   },
   "dependencies": {
     "@inquirer/prompts": "^7.2.0",
