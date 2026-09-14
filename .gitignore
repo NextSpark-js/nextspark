@@ -78,3 +78,4 @@ apps/mobile/dist/
 /.claude/plans
 memory/MEMORY.md
 /docs/superpowers
+/.playwright-mcp
