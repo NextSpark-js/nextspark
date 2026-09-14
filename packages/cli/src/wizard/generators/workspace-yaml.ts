@@ -25,14 +25,59 @@ function unquote(value: string): string {
  */
 const TRAILING_COMMENT = /\s*(#.*)?$/
 
+/** A YAML anchor or tag on the key line: `packages: &workspace`. */
+const ANCHOR_OR_TAG = /(\s+[&*!][^\s#]+)?/
+
 /** `packages:` on its own line, opening a block list. */
 function findBlockIndex(lines: string[]): number {
-  return lines.findIndex(line => new RegExp(`^packages:${TRAILING_COMMENT.source}`).test(line))
+  const key = new RegExp(`^packages:${ANCHOR_OR_TAG.source}${TRAILING_COMMENT.source}`)
+  return lines.findIndex(line => key.test(line))
 }
 
-/** `packages: ['a', 'b']`, the whole list on one line. */
+/** `packages: ['a', 'b']`, whether or not the list closes on the same line. */
 function findInlineIndex(lines: string[]): number {
-  return lines.findIndex(line => new RegExp(`^packages:\\s*\\[.*\\]${TRAILING_COMMENT.source}`).test(line))
+  return lines.findIndex(line => /^packages:\s*\[/.test(line))
+}
+
+/**
+ * The line the inline list closes on. A flow sequence may be written across
+ * several lines; treating only the first one as the list left the rest behind
+ * as stray text under a second `packages:` key.
+ */
+function inlineEndIndex(lines: string[], packagesIndex: number): number {
+  for (let end = packagesIndex; end < lines.length; end++) {
+    if (lines[end].includes(']')) return end
+  }
+
+  return packagesIndex
+}
+
+/**
+ * Split a flow sequence on its own commas.
+ *
+ * A brace expansion is one entry: `packages/{a,b}` split naively becomes
+ * `packages/{a` and `b}`, two globs that match nothing.
+ */
+function splitTopLevel(inside: string): string[] {
+  const entries: string[] = []
+  let depth = 0
+  let current = ''
+
+  for (const character of inside) {
+    if (character === '{' || character === '[') depth++
+    else if (character === '}' || character === ']') depth--
+
+    if (character === ',' && depth === 0) {
+      entries.push(current)
+      current = ''
+      continue
+    }
+
+    current += character
+  }
+
+  entries.push(current)
+  return entries
 }
 
 /**
@@ -53,10 +98,11 @@ function blockEndIndex(lines: string[], packagesIndex: number): number {
 }
 
 /** The entries of an inline list: `packages: ['apps/*', "web"]`. */
-function parseInlineEntries(line: string): string[] {
-  const inside = line.slice(line.indexOf('[') + 1, line.lastIndexOf(']'))
-  return inside
-    .split(',')
+function parseInlineEntries(lines: string[], packagesIndex: number): string[] {
+  const text = lines.slice(packagesIndex, inlineEndIndex(lines, packagesIndex) + 1).join(' ')
+  const inside = text.slice(text.indexOf('[') + 1, text.lastIndexOf(']'))
+
+  return splitTopLevel(inside)
     .map(unquote)
     .filter(entry => entry.length > 0)
 }
@@ -80,7 +126,7 @@ export function readPackageEntries(content: string): string[] {
   if (blockIndex !== -1) return parseBlockEntries(lines, blockIndex)
 
   const inlineIndex = findInlineIndex(lines)
-  if (inlineIndex !== -1) return parseInlineEntries(lines[inlineIndex])
+  if (inlineIndex !== -1) return parseInlineEntries(lines, inlineIndex)
 
   return []
 }
@@ -104,8 +150,9 @@ export function addPackageEntries(content: string, required: string[]): string {
 
   if (inlineIndex !== -1) {
     // Prepending a second `packages:` would leave the key duplicated and the
-    // file unparseable, so this one line becomes a block list holding both.
-    lines.splice(inlineIndex, 1, ...renderBlock([...declared, ...missing]))
+    // file unparseable, so the inline list becomes a block one holding both.
+    const span = inlineEndIndex(lines, inlineIndex) - inlineIndex + 1
+    lines.splice(inlineIndex, span, ...renderBlock([...declared, ...missing]))
     return lines.join('\n')
   }
 
@@ -136,7 +183,7 @@ export function setPackageEntries(content: string, entries: string[]): string {
   const inlineIndex = findInlineIndex(lines)
 
   if (inlineIndex !== -1) {
-    lines.splice(inlineIndex, 1, ...block)
+    lines.splice(inlineIndex, inlineEndIndex(lines, inlineIndex) - inlineIndex + 1, ...block)
     return lines.join('\n')
   }
 

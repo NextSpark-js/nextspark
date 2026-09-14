@@ -68,3 +68,39 @@ test('setting entries replaces the list and keeps the rest', () => {
   assert.match(out, /- 'mobile'/)
   assert.match(out, /allowBuilds:/)
 })
+
+// Every shape below is a file pnpm accepts today, so none of them may come back
+// with a second `packages:` key — the one thing pnpm refuses outright.
+test('a YAML anchor on the key does not hide it', () => {
+  const out = addPackageEntries("packages: &workspace\n  - 'apps/*'\n", ['contents/themes/*'])
+
+  assert.equal(packageKeys(out), 1)
+  assert.match(out, /- 'apps\/\*'/)
+})
+
+test('a flow sequence written across lines is one list', () => {
+  const out = addPackageEntries("packages: [\n  'apps/*',\n  'web'\n]\n", ['contents/themes/*'])
+
+  assert.equal(packageKeys(out), 1)
+  assert.match(out, /- 'apps\/\*'/)
+  assert.match(out, /- 'web'/)
+  assert.doesNotMatch(out, /\[/)
+})
+
+// `packages/{a,b}` is one glob. Splitting it on the comma yields two that match
+// nothing, and the workspace quietly loses those packages.
+test('a brace expansion survives as a single entry', () => {
+  const out = addPackageEntries("packages: ['packages/{a,b}']\n", ['contents/themes/*'])
+
+  assert.match(out, /- 'packages\/\{a,b\}'/)
+  assert.doesNotMatch(out, /- 'b\}'/)
+})
+
+test('setting entries replaces a multi-line flow sequence whole', () => {
+  const out = setPackageEntries("packages: [\n  'apps/*'\n]\n\nallowBuilds:\n  'x': true\n", ['web'])
+
+  assert.equal(packageKeys(out), 1)
+  assert.doesNotMatch(out, /apps\/\*/)
+  assert.doesNotMatch(out, /\[/)
+  assert.match(out, /allowBuilds:/)
+})

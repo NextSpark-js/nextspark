@@ -4,7 +4,7 @@ import { cn } from '../../lib/utils'
 import { Input } from '../ui/input'
 import { Search, X } from 'lucide-react'
 import type { ReactNode, InputHTMLAttributes } from 'react'
-import { forwardRef, useImperativeHandle, useRef, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 
 // ============================================================================
 // Types
@@ -68,6 +68,18 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
       if (!isControlled) setTypedValue(event.target.value)
       props.onChange?.(event)
     }
+
+    /**
+     * A value can reach the field without passing through props or an event:
+     * react-hook-form writes it straight to the input through the ref. Reading
+     * the DOM back on every render is what keeps the button honest about what
+     * is actually in the field.
+     */
+    useEffect(() => {
+      if (isControlled) return
+      const inDom = innerRef.current?.value ?? ''
+      setTypedValue(current => (current === inDom ? current : inDom))
+    })
 
     /**
      * Clear through the input itself rather than by calling onChange with a

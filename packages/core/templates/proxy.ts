@@ -1,4 +1,10 @@
 /**
+ * @nextspark-generated
+ *
+ * `nextspark sync:app` replaces this file while that tag is present, which is
+ * how a release ships changes to it. Delete the tag line to own the file: from
+ * then on sync reports it and leaves it alone.
+ *
  * NextSpark Proxy (Next.js 16+)
  *
  * Handles authentication, route protection, and user context injection.

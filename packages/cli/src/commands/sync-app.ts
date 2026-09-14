@@ -317,9 +317,9 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       // Not verbose-gated: the project keeping its own file changes what runs,
       // and this can run unattended from core's postinstall.
       for (const file of proxyResult?.preserved ?? []) {
-        console.log(chalk.yellow(`  ⚠ Kept your ${file} — it differs from the template, so it was not replaced.`));
+        console.log(chalk.yellow(`  ⚠ Kept your ${file} — it is not tagged @nextspark-generated, so it was not replaced.`));
         if (file === proxyResult?.fileName) {
-          console.log(chalk.gray(`    Next loads ${file} in this project; merge the template by hand if you want core's version.`));
+          console.log(chalk.gray(`    Next loads ${file} in this project. To take core's version, delete the file and run sync:app again.`));
         }
       }
       let rootUpdated = 0;

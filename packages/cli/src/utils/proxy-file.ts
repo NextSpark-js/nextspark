@@ -34,17 +34,30 @@ export function adaptProxySource(source: string, fileName: string): string {
 }
 
 /**
- * Whether a file in the project is the template's own output, under either
- * name, rather than something the project wrote.
+ * The tag the template carries, and the project's way of taking the file over:
+ * delete the line and sync stops replacing it.
+ */
+const GENERATED_TAG = '@nextspark-generated';
+
+/**
+ * Whether a file in the project is NextSpark's to replace.
  *
  * `middleware.ts` is the conventional Next file name, so a project may well
  * have its own there. Overwriting or deleting it is silent code loss, and this
  * runs unattended: core's postinstall calls `sync:app --force`.
+ *
+ * The tag is what makes a release able to ship changes to this file at all:
+ * matching the current template byte for byte would freeze anything an earlier
+ * release generated, since it no longer equals what ships today.
  */
 async function isGeneratedFile(path: string, source: string): Promise<boolean> {
   if (!await fs.pathExists(path)) return false;
 
   const existing = await fs.readFile(path, 'utf-8');
+  if (existing.includes(GENERATED_TAG)) return true;
+
+  // A file from a release that predates the tag: only recognisable by being
+  // exactly what that template produced.
   return existing === adaptProxySource(source, 'proxy.ts')
     || existing === adaptProxySource(source, 'middleware.ts');
 }

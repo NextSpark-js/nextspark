@@ -10,6 +10,7 @@
 import { describe, it, expect, jest } from '@jest/globals'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { useState } from 'react'
+import { useForm } from 'react-hook-form'
 
 import { SearchInput } from '@/core/components/shared/SearchInput'
 
@@ -28,6 +29,12 @@ function Controlled({ initial = '', onChange }: { initial?: string; onChange?: (
       data-cy="tasks-search"
     />
   )
+}
+
+/** A consumer that registers the field with react-hook-form. */
+function WithReactHookForm({ initial = '' }: { initial?: string }) {
+  const { register } = useForm({ defaultValues: { q: initial } })
+  return <SearchInput {...register('q')} data-cy="tasks-search" />
 }
 
 describe('SearchInput', () => {
@@ -113,5 +120,25 @@ describe('SearchInput', () => {
 
     rerender(<SearchInput value="x" onChange={() => {}} readOnly data-cy="tasks-search" />)
     expect(byCy('tasks-search-clear')).not.toBeInTheDocument()
+  })
+})
+
+// react-hook-form owns the value through the ref, so it reaches the field
+// without ever passing through props or a change event.
+describe('SearchInput with react-hook-form', () => {
+  it('offers the clear button for a value that came from the form defaults', () => {
+    render(<WithReactHookForm initial="preloaded" />)
+
+    expect((byCy('tasks-search-input') as HTMLInputElement).value).toBe('preloaded')
+    expect(byCy('tasks-search-clear')).not.toBeNull()
+  })
+
+  it('offers it as soon as the field is typed in', () => {
+    render(<WithReactHookForm />)
+    expect(byCy('tasks-search-clear')).toBeNull()
+
+    fireEvent.change(byCy('tasks-search-input') as HTMLInputElement, { target: { value: 'ab' } })
+
+    expect(byCy('tasks-search-clear')).not.toBeNull()
   })
 })

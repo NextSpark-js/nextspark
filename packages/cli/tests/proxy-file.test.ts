@@ -7,7 +7,7 @@ import { join } from 'node:path'
 
 import { proxyFileNameFor, adaptProxySource, writeProxyFile } from '../src/utils/proxy-file.js'
 
-const TEMPLATE = `export async function proxy(request: NextRequest) {\n  return NextResponse.next()\n}\n`
+const TEMPLATE = `/**\n * @nextspark-generated\n */\nexport async function proxy(request: NextRequest) {\n  return NextResponse.next()\n}\n`
 
 /** A project root with a templates dir beside it, and a pinned Next version. */
 async function project(nextVersion: string | null) {
@@ -89,5 +89,30 @@ test('nothing to copy is not an error', async () => {
   const { root, cleanup } = await project('15.5.24')
 
   assert.equal(await writeProxyFile(join(root, 'no-templates'), root), null)
+  await cleanup()
+})
+
+// A release has to be able to ship changes to this file. Recognising only the
+// current template would freeze whatever an earlier release generated.
+test('a file an earlier release generated is still ours to replace', async () => {
+  const { root, templates, cleanup } = await project('15.5.24')
+  await writeFile(join(root, 'middleware.ts'), '/**\n * @nextspark-generated\n */\nexport function middleware() { /* from an older release */ }\n')
+
+  const result = await writeProxyFile(templates, root)
+
+  assert.equal(result?.written, true)
+  assert.match(await readFile(join(root, 'middleware.ts'), 'utf-8'), /export async function middleware\(/)
+  await cleanup()
+})
+
+test('deleting the tag is how a project takes the file over', async () => {
+  const { root, templates, cleanup } = await project('15.5.24')
+  const mine = 'export function middleware() { return new Response("mine") }\n'
+  await writeFile(join(root, 'middleware.ts'), mine)
+
+  const result = await writeProxyFile(templates, root)
+
+  assert.equal(await readFile(join(root, 'middleware.ts'), 'utf-8'), mine)
+  assert.equal(result?.written, false)
   await cleanup()
 })
