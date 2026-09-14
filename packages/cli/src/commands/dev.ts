@@ -1,4 +1,6 @@
 import { spawn, ChildProcess } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import chalk from 'chalk';
 import ora from 'ora';
 import { getCoreDir, getProjectRoot, isMonorepoMode } from '../utils/paths.js';
@@ -14,12 +16,44 @@ interface DevOptions {
 }
 
 /**
- * Build the registries once, before Next starts.
+ * Registries core declares a module for but the project does not have.
  *
- * Failure is reported and not fatal: whatever is already on disk may well be
- * enough to boot, and refusing to start the dev server helps nobody.
+ * Core's ambient declarations are the list of registries this version expects,
+ * so a release that adds one is detectable without naming any of them here.
+ * Reading it fails open: with no list, nothing looks missing.
+ */
+function missingRegistries(coreDir: string, projectRoot: string): string[] {
+  const declarations = join(coreDir, 'dist', 'nextspark-registries.d.ts');
+  if (!existsSync(declarations)) return [];
+
+  const declared = readFileSync(declarations, 'utf-8')
+    .matchAll(/declare module '@nextsparkjs\/registries\/([^']+)'/g);
+
+  return [...declared]
+    .map(match => match[1])
+    .filter(name => !existsSync(join(projectRoot, '.nextspark', 'registries', `${name}.ts`)));
+}
+
+/**
+ * Build the registries before Next starts, but only when one is missing.
+ *
+ * Core imports some of them unconditionally, so a missing one is not a degraded
+ * feature — it is a module the app cannot resolve, which is what an upgrade
+ * leaves behind when a release adds a registry.
+ *
+ * Only when one is missing: a registry build also prunes `app/(templates)/` of
+ * files that no longer match a template, and a dev server starting is no reason
+ * to delete anything. `--registry` and `nextspark build` still rebuild in full.
+ *
+ * Failure is reported and not fatal: what is already on disk may well be enough
+ * to boot, and refusing to start the dev server helps nobody.
  */
 async function ensureRegistries(coreDir: string, projectRoot: string): Promise<void> {
+  const missing = missingRegistries(coreDir, projectRoot);
+  if (missing.length === 0) return;
+
+  console.log(chalk.blue(`[Registry] Generating ${missing.length} missing registr${missing.length === 1 ? 'y' : 'ies'} (${missing.join(', ')})...`));
+
   await new Promise<void>((resolve) => {
     const build = spawn('node', ['scripts/build/registry.mjs'], {
       cwd: coreDir,
@@ -57,10 +91,6 @@ export async function devCommand(options: DevOptions): Promise<void> {
 
     const processes: ChildProcess[] = [];
 
-    // Registries the project has not generated yet. Core imports some of them
-    // unconditionally, so a missing one is not a degraded feature — it is a
-    // module the app cannot resolve, which is what an upgrade leaves behind
-    // when a release adds a registry. The build takes a few hundred ms.
     await ensureRegistries(coreDir, projectRoot);
 
     // Start registry watcher if enabled
