@@ -58,9 +58,9 @@ export abstract class BlockEditorBasePOM extends BasePOM {
     return {
       // Editor main
       container: cySelector('blockEditor.container'),
-      titleInput: cySelector('blockEditor.titleInput'),
-      slugInput: cySelector('blockEditor.slugInput'),
-      saveButton: cySelector('blockEditor.saveButton'),
+      titleInput: cySelector('blockEditor.header.titleInput'),
+      slugInput: cySelector('blockEditor.header.slugInput'),
+      saveButton: cySelector('blockEditor.header.saveButton'),
       statusBadge: cySelector('blockEditor.statusBadge'),
       leftSidebarToggle: cySelector('blockEditor.leftSidebarToggle'),
       viewModeToggle: cySelector('blockEditor.viewModeToggle'),
