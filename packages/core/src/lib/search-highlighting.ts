@@ -126,18 +126,27 @@ export interface HighlightedTextProps {
 }
 
 /**
- * Escapes HTML in text before highlighting
+ * Escapes HTML so that text carrying markup is shown rather than rendered.
+ *
+ * Exported because a caller that skips highlighting still hands its string to
+ * dangerouslySetInnerHTML, and needs the same escaping.
  */
-export function highlightSearchMatchesSafe(text: string, searchQuery: string): string {
-  // Escape HTML first
-  const escapedText = text
+export function escapeHtml(text: string | undefined | null): string {
+  if (!text) return ''
+
+  return text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
+}
 
-  return highlightSearchMatches(escapedText, searchQuery)
+/**
+ * Escapes HTML in text before highlighting
+ */
+export function highlightSearchMatchesSafe(text: string, searchQuery: string): string {
+  return highlightSearchMatches(escapeHtml(text), searchQuery)
 }
 
 /**

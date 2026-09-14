@@ -12,6 +12,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowLeft, Calendar, Clock, Loader2, Share2, Bookmark } from 'lucide-react'
 import { use, useEffect, useState } from 'react'
+import DOMPurify from 'dompurify'
 import { ReadingProgress } from '@/themes/blog/components/public/ReadingProgress'
 import { AuthorBio } from '@/themes/blog/components/public/AuthorBio'
 import { RelatedPosts } from '@/themes/blog/components/public/RelatedPosts'
@@ -109,6 +110,22 @@ function calculateReadTime(content: string): number {
   const text = content.replace(/<[^>]*>/g, '')
   const words = text.split(/\s+/).filter(Boolean).length
   return Math.max(1, Math.ceil(words / wordsPerMinute))
+}
+
+/**
+ * The post body, reduced to markup that only formats.
+ *
+ * renderContent hands back whatever was stored when it already looks like HTML,
+ * and a post is written by anyone who can create one — a team member, not only
+ * an owner. Sanitising here is what stops that markup from scripting.
+ *
+ * DOMPurify needs a DOM. This page fetches the post from an effect, so the body
+ * only ever renders in the browser, where there is one; returning '' in the
+ * server pass is the fail-closed answer rather than the raw string.
+ */
+function sanitizePostHtml(html: string): string {
+  if (!DOMPurify.isSupported) return ''
+  return DOMPurify.sanitize(html)
 }
 
 function renderContent(content: string): string {
@@ -294,7 +311,7 @@ export default function PostPage({ params }: PageProps) {
 
         {/* Article Content */}
         <div className="article-content">
-          <div dangerouslySetInnerHTML={{ __html: renderContent(post.content) }} />
+          <div dangerouslySetInnerHTML={{ __html: sanitizePostHtml(renderContent(post.content)) }} />
         </div>
 
         {/* Divider */}

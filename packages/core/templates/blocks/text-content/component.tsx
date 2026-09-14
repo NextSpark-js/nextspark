@@ -1,6 +1,7 @@
 import React from 'react'
 import { cn } from '@nextsparkjs/core/lib/utils'
 import { buildSectionClasses } from '@nextsparkjs/core/types/blocks'
+import { sanitizeBlockHtml } from '@nextsparkjs/core/lib/blocks/sanitize-html'
 import type { TextContentBlockProps } from './schema'
 
 /**
@@ -70,7 +71,7 @@ export function TextContentBlock({
             maxWidthClasses[maxWidth],
             alignmentClasses[alignment]
           )}
-          dangerouslySetInnerHTML={{ __html: content }}
+          dangerouslySetInnerHTML={{ __html: sanitizeBlockHtml(content) }}
         />
 
         {/* Optional CTA */}

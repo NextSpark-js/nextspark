@@ -16,7 +16,7 @@ import {
   ArrowRight
 } from 'lucide-react'
 import { useEntitySearch, type EntitySearchResult } from '../../../hooks/useEntitySearch'
-import { formatSearchResult } from '../../../lib/search-highlighting'
+import { formatSearchResult, escapeHtml } from '../../../lib/search-highlighting'
 import { cn } from '../../../lib/utils'
 import { sel, createAriaLabel } from '../../../lib/test'
 import { useTranslations } from 'next-intl'
@@ -146,7 +146,7 @@ function SearchResultItem({ result, onSelect, searchQuery }: SearchResultItemPro
           {result.description && (
             <p 
               className="text-xs text-muted-foreground line-clamp-2"
-              dangerouslySetInnerHTML={{ __html: highlightedDescription || result.description }}
+              dangerouslySetInnerHTML={{ __html: highlightedDescription ?? escapeHtml(result.description) }}
             />
           )}
           

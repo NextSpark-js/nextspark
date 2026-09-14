@@ -5,7 +5,9 @@
   "type": "module",
   "main": "./config/theme.config.ts",
   "requiredPlugins": [],
-  "dependencies": {},
+  "dependencies": {
+    "dompurify": "^3.2.7"
+  },
   "peerDependencies": {
     "@nextsparkjs/core": "*",
     "@nextsparkjs/testing": "*",
@@ -19,5 +21,8 @@
   "nextspark": {
     "type": "theme",
     "name": "blog"
+  },
+  "devDependencies": {
+    "@types/dompurify": "^3.2.0"
   }
 }

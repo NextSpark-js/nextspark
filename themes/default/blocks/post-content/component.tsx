@@ -1,6 +1,7 @@
 import React from 'react'
 import { cn } from '@nextsparkjs/core/lib/utils'
 import { buildSectionClasses } from '@nextsparkjs/core/types/blocks'
+import { sanitizeBlockHtml } from '@nextsparkjs/core/lib/blocks/sanitize-html'
 import { sel } from '../../lib/selectors'
 import type { PostContentBlockProps } from './schema'
 
@@ -171,7 +172,7 @@ export function PostContentBlock({
             // Em/italic
             'prose-em:italic'
           )}
-          dangerouslySetInnerHTML={{ __html: content }}
+          dangerouslySetInnerHTML={{ __html: sanitizeBlockHtml(content) }}
         />
 
         {/* Optional Divider after content */}
