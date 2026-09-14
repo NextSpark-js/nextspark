@@ -58,8 +58,15 @@ function stringifyWithIndent(obj, baseIndent = 2) {
  * @returns {Object} Map of slug -> { slug, name }
  */
 function loadBlockSlugs(registryDir) {
-  const registryPath = join(registryDir, 'block-registry.ts')
-  if (!existsSync(registryPath)) {
+  // The entries live in the client half; the server one re-exports them. The
+  // fallback is for a project generated before the split, whose server file
+  // still holds them inline.
+  const registryPath = [
+    join(registryDir, 'block-registry.client.ts'),
+    join(registryDir, 'block-registry.ts'),
+  ].find(existsSync)
+
+  if (!registryPath) {
     return {}
   }
 

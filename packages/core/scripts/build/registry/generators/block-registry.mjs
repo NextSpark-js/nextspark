@@ -1,7 +1,14 @@
 /**
  * Block Registry Generator
  *
- * Generates block-registry.ts
+ * Generates block-registry.ts and block-registry.client.ts
+ *
+ * The split is what keeps block components out of the browser bundle. A block
+ * component is a server component and may import server-only code; the editor,
+ * the picker and the devtools viewers are client components that only ever read
+ * the configs. Importing both from one module drags every component — and
+ * whatever it imports — into the client build, which fails outright when one of
+ * them is server-only.
  *
  * @module core/scripts/build/registry/generators/block-registry
  */
@@ -9,6 +16,45 @@
 import { join } from 'path'
 import { toSafeIdentifier } from './identifier.mjs'
 import { convertCorePath } from '../config.mjs'
+
+/**
+ * The registry entries both halves emit, so the configs cannot drift apart.
+ *
+ * @param {Array} blocks - Discovered blocks
+ * @returns {string} The entries, ready to sit inside the object literal
+ */
+function buildRegistryEntries(blocks) {
+  return blocks.map(block => {
+
+    const slugVar = toSafeIdentifier(block.slug)
+    const scopeValue = block.scope
+      ? `[${block.scope.map(s => `'${s}'`).join(', ')}]`
+      : 'undefined'
+    const examplesValue = block.hasExamples ? `${slugVar}_examples` : '[]'
+    const allowInPatternsValue = block.allowInPatterns !== undefined
+      ? block.allowInPatterns.toString()
+      : 'undefined'
+
+    return `  '${block.slug}': {
+    slug: '${block.slug}',
+    name: '${block.name}',
+    description: '${block.description}',
+    category: '${block.category}' as BlockCategory,
+    icon: '${block.icon}',
+    componentPath: '${block.paths.component}',
+    schemaPath: '${block.paths.schema}',
+    fieldsPath: '${block.paths.fields}',
+    thumbnail: ${block.paths.thumbnail ? `'${block.paths.thumbnail}'` : 'undefined'},
+    fieldDefinitions: ${slugVar}_fields,
+    examples: ${examplesValue},
+    scope: ${scopeValue},
+    allowInPatterns: ${allowInPatternsValue},
+    isCore: false,
+    source: 'theme' as const,
+    sourceId: '${block.themeName}'
+  }`
+  }).join(',\n')
+}
 
 /**
  * Generate the block registry file
@@ -57,9 +103,7 @@ type BlockConfig = {
   replacedBy?: string
 }
 
-export const BLOCK_REGISTRY: Record<string, BlockConfig> = {}
-
-export const BLOCK_CATEGORIES: string[] = []
+export * from './block-registry.client'
 
 export const BLOCK_COMPONENTS: Record<string, React.LazyExoticComponent<React.ComponentType<unknown>>> = {}
 
@@ -94,35 +138,7 @@ export const BLOCK_METADATA = {
   const fieldImports = imports.join('\n')
   const ssrComponentImports = ssrImports.join('\n')
 
-  const registryEntries = blocks.map(block => {
-    const slugVar = toSafeIdentifier(block.slug)
-    const scopeValue = block.scope
-      ? `[${block.scope.map(s => `'${s}'`).join(', ')}]`
-      : 'undefined'
-    const examplesValue = block.hasExamples ? `${slugVar}_examples` : '[]'
-    const allowInPatternsValue = block.allowInPatterns !== undefined
-      ? block.allowInPatterns.toString()
-      : 'undefined'
-
-    return `  '${block.slug}': {
-    slug: '${block.slug}',
-    name: '${block.name}',
-    description: '${block.description}',
-    category: '${block.category}' as BlockCategory,
-    icon: '${block.icon}',
-    componentPath: '${block.paths.component}',
-    schemaPath: '${block.paths.schema}',
-    fieldsPath: '${block.paths.fields}',
-    thumbnail: ${block.paths.thumbnail ? `'${block.paths.thumbnail}'` : 'undefined'},
-    fieldDefinitions: ${slugVar}_fields,
-    examples: ${examplesValue},
-    scope: ${scopeValue},
-    allowInPatterns: ${allowInPatternsValue},
-    isCore: false,
-    source: 'theme' as const,
-    sourceId: '${block.themeName}'
-  }`
-  }).join(',\n')
+  const registryEntries = buildRegistryEntries(blocks)
 
   const categories = [...new Set(blocks.map(b => b.category))]
 
@@ -140,18 +156,13 @@ export const BLOCK_METADATA = {
  */
 
 import React from 'react'
-import type { BlockConfig, BlockCategory } from '${convertCorePath('@/core/types', outputFilePath, config)}'
 
-${fieldImports}
+// Configs live in the client half so a client component can read them without
+// pulling in a single block component.
+export * from './block-registry.client'
 
 // Direct component imports for SSR — zero CLS, synchronous hydration
 ${ssrComponentImports}
-
-export const BLOCK_REGISTRY: Record<string, BlockConfig> = {
-${registryEntries}
-}
-
-export const BLOCK_CATEGORIES: BlockCategory[] = [${categories.map(c => `'${c}'`).join(', ')}]
 
 /**
  * Lazy-loaded block components for client-side rendering (admin UI, block picker).
@@ -187,6 +198,111 @@ ${categories.map(cat => {
     const count = blocks.filter(b => b.category === cat).length
     return `    '${cat}': ${count}`
   }).join(',\n')}
+  },
+  generatedAt: '${new Date().toISOString()}',
+  blocks: [${blocks.map(b => `'${b.slug}'`).join(', ')}]
+}
+`
+}
+
+/**
+ * Generate the client-safe half: block configs, with no component imports.
+ *
+ * This is what a client component reads. Keeping it free of component imports
+ * is the whole point — a block component is a server component, and pulling one
+ * into the client build fails the build when it imports server-only code.
+ *
+ * @param {Array} blocks - Discovered blocks
+ * @param {object} config - Configuration object from getConfig()
+ * @returns {string} Generated TypeScript content
+ */
+export function generateBlockRegistryClient(blocks, config) {
+  const outputFilePath = join(config.outputDir, 'block-registry.client.ts')
+  const header = `/**
+ * Auto-generated Block Registry (client-safe)
+ *
+ * Generated at: ${new Date().toISOString()}
+ * Blocks discovered: ${blocks.length}
+ *
+ * Block configs only: no component imports, so a client component can read the
+ * registry without the block components reaching the browser bundle.
+ *
+ * DO NOT EDIT - This file is auto-generated by scripts/build-registry.mjs
+ */
+`
+
+  if (blocks.length === 0) {
+    return `${header}
+// Inline type definition for empty registry (avoids import issues in npm mode)
+type BlockConfig = {
+  slug: string
+  name: string
+  description?: string
+  category: string
+  icon?: string
+  componentPath?: string
+  schemaPath?: string
+  fieldsPath?: string
+  thumbnail?: string
+  fieldDefinitions: unknown[]
+  examples: unknown[]
+  scope?: string[]
+  allowInPatterns?: boolean
+  schemaType?: string
+  tags?: string[]
+  isCore?: boolean
+  source?: string
+  sourceId?: string
+  version?: string
+  deprecated?: boolean
+  replacedBy?: string
+}
+
+export const BLOCK_REGISTRY: Record<string, BlockConfig> = {}
+
+export const BLOCK_CATEGORIES: string[] = []
+
+export const BLOCK_METADATA = {
+  totalBlocks: 0,
+  categories: [],
+  blocksByCategory: {},
+  generatedAt: '${new Date().toISOString()}',
+  blocks: []
+}
+`
+  }
+
+  const imports = []
+  blocks.forEach(block => {
+    const slugVar = toSafeIdentifier(block.slug)
+    imports.push(`import { fieldDefinitions as ${slugVar}_fields } from '${block.paths.fields}'`)
+    if (block.hasExamples) {
+      imports.push(`import { examples as ${slugVar}_examples } from '${block.paths.examples}'`)
+    }
+  })
+
+  const registryEntries = buildRegistryEntries(blocks)
+  const categories = [...new Set(blocks.map(b => b.category))]
+
+  return `${header}
+import type { BlockConfig, BlockCategory } from '${convertCorePath('@/core/types', outputFilePath, config)}'
+
+${imports.join('\n')}
+
+export const BLOCK_REGISTRY: Record<string, BlockConfig> = {
+${registryEntries}
+}
+
+export const BLOCK_CATEGORIES: BlockCategory[] = [${categories.map(c => `'${c}'`).join(', ')}]
+
+/**
+ * Block registry metadata
+ */
+export const BLOCK_METADATA = {
+  totalBlocks: ${blocks.length},
+  categories: [${categories.map(c => `'${c}'`).join(', ')}],
+  blocksByCategory: {
+${categories.map(cat => `    '${cat}': ${blocks.filter(b => b.category === cat).length}`).join(',\n')}
   },
   generatedAt: '${new Date().toISOString()}',
   blocks: [${blocks.map(b => `'${b.slug}'`).join(', ')}]

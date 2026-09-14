@@ -64,7 +64,7 @@ import { generateEntityTypes } from './registry/generators/entity-types.mjs'
 import { generateThemeRegistry } from './registry/generators/theme-registry.mjs'
 import { generateTemplateRegistry, generateTemplateRegistryClient } from './registry/generators/template-registry.mjs'
 import { generateEmailRegistry } from './registry/generators/email-registry.mjs'
-import { generateBlockRegistry } from './registry/generators/block-registry.mjs'
+import { generateBlockRegistry, generateBlockRegistryClient } from './registry/generators/block-registry.mjs'
 import { generateIconRegistry } from './registry/generators/icon-registry.mjs'
 import { generateMiddlewareRegistry } from './registry/generators/middleware-registry.mjs'
 import { generateRouteHandlersRegistry } from './registry/generators/route-handlers.mjs'
@@ -120,6 +120,7 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, template
       { name: 'template-registry.client.ts', content: templateRegistryClientContent },
       { name: 'email-registry.ts', content: generateEmailRegistry(emails, CONFIG) },
       { name: 'block-registry.ts', content: generateBlockRegistry(blocks, CONFIG) },
+      { name: 'block-registry.client.ts', content: generateBlockRegistryClient(blocks, CONFIG) },
       { name: 'icon-registry.ts', content: generateIconRegistry(iconNames, CONFIG) },
       { name: 'billing-registry.ts', content: await generateBillingRegistry(CONFIG.activeTheme, CONFIG.contentsDir, CONFIG) },
       { name: 'middleware-registry.ts', content: generateMiddlewareRegistry(middlewares, CONFIG) },

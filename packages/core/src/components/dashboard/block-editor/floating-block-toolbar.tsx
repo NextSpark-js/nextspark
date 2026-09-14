@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { Button } from '../../ui/button'
 import { cn } from '../../../lib/utils'
 import { sel } from '../../../lib/test'
-import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry'
+import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry.client'
 
 interface FloatingBlockToolbarProps {
   blockId: string

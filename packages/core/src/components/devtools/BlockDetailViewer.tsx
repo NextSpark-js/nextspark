@@ -16,7 +16,7 @@ import {
 } from '../ui/table';
 import { ArrowLeft, LayoutGrid, TestTube2, CheckCircle2, XCircle, Eye, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry';
+import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry.client';
 import { TAGS_REGISTRY } from '@nextsparkjs/registries/testing-registry';
 import { getBlockComponent } from '../../lib/blocks/loader';
 import { sel } from '../../lib/test';

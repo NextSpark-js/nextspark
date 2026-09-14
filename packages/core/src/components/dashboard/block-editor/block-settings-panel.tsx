@@ -13,7 +13,7 @@ import { DynamicForm } from './dynamic-form'
 import type { BlockInstance, FieldDefinition, FieldTab } from '../../../types/blocks'
 import type { PatternReference } from '../../../types/pattern-reference'
 import { isPatternReference } from '../../../types/pattern-reference'
-import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry'
+import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry.client'
 
 interface BlockSettingsPanelProps {
   block: BlockInstance | PatternReference | undefined

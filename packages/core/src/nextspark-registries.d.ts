@@ -188,6 +188,35 @@ declare module '@nextsparkjs/registries/block-registry' {
 }
 
 // ============================================================================
+// Block Registry (client-safe) — the configs, with no component imports.
+//
+// A block component is a server component and may import server-only code, so
+// a client component reading the registry has to take this half: importing the
+// other one pulls every block component into the browser build, which fails as
+// soon as one of them is server-only.
+// ============================================================================
+declare module '@nextsparkjs/registries/block-registry.client' {
+  export type {
+    FieldType,
+    FieldTab,
+    BlockCategory,
+    FieldDefinition,
+    BlockExample,
+    BlockConfig,
+  } from '@nextsparkjs/registries/block-registry'
+
+  export const BLOCK_REGISTRY: Record<string, import('@nextsparkjs/registries/block-registry').BlockConfig>
+  export const BLOCK_CATEGORIES: import('@nextsparkjs/registries/block-registry').BlockCategory[]
+  export const BLOCK_METADATA: {
+    totalBlocks: number
+    categories: string[]
+    blocksByCategory: Record<string, number>
+    generatedAt: string
+    blocks: string[]
+  }
+}
+
+// ============================================================================
 // Entity Registry (Server) — declared for completeness; no direct import
 // found in packages/core/src today, but kept in case a consumer-facing
 // contract still expects it.

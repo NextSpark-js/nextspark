@@ -385,7 +385,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:node": "npx tsx --conditions=react-server --test tests/node/*.test.ts",
+    "test:node": "npx tsx --test tests/node/*.test.ts",
     "test:all": "pnpm test && pnpm test:node"
   },
   "peerDependencies": {

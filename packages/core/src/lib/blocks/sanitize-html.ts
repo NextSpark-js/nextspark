@@ -13,14 +13,15 @@
  * still the raw input, so a consumer reading the API directly gets what was
  * written, not this.
  *
- * Server-only: `sanitize-html` parses with htmlparser2 rather than a DOM, and
- * blocks are server components. A block that declares 'use client' and calls
- * this fails at build time, which is the loud way to find out.
+ * Not marked server-only, though blocks are server components: devtools
+ * previews a block in the browser, through the lazy half of the block registry,
+ * so this module has to survive being bundled for the client. It does —
+ * sanitize-html parses with htmlparser2, not a DOM — and that preview is the
+ * only route that pays for it.
  *
  * @module core/lib/blocks/sanitize-html
  */
 
-import 'server-only'
 import sanitizeHtmlLib from 'sanitize-html'
 
 /**

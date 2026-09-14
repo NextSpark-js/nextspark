@@ -8,7 +8,7 @@ import { Card, CardContent } from '../../ui/card'
 import { Badge } from '../../ui/badge'
 import { GripVertical, Copy, Trash2 } from 'lucide-react'
 import type { BlockInstance } from '../../../types/blocks'
-import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry'
+import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry.client'
 import { cn } from '../../../lib/utils'
 import { sel } from '../../../lib/test'
 

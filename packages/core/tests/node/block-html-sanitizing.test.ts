@@ -7,8 +7,7 @@
  * an author actually writes survives.
  *
  * node:test rather than jest: the module reaches htmlparser2, which ships as
- * ESM only, and jest runs CommonJS. `--conditions=react-server` is what makes
- * the `server-only` import resolve to its no-op outside Next.
+ * ESM only, and jest runs CommonJS.
  */
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'

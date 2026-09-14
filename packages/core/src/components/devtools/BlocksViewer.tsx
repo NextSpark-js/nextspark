@@ -8,7 +8,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Copy, Check, Search, TestTube2, CheckCircle2, XCircle, ArrowRight, LayoutGrid, Image as ImageIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry';
+import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry.client';
 import { TAGS_REGISTRY } from '@nextsparkjs/registries/testing-registry';
 import { sel } from '../../lib/test';
 import type { BlockConfig, BlockCategory } from '../../types/blocks';
