@@ -195,3 +195,6 @@ export function PostContentBlock({
     </section>
   )
 }
+
+// The generated block registry imports this as the module's default.
+export default PostContentBlock

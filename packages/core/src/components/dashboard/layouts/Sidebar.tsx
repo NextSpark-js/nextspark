@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { cn } from '../../../lib/utils'
 import { useSidebar } from '../../../contexts/sidebar-context'
 import { sel } from '../../../lib/test'
@@ -16,6 +17,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ className, entities }: SidebarProps) {
+  const t = useTranslations('common')
   const { isCollapsed } = useSidebar()
   const appName = APP_NAME
   const [statusMessage, setStatusMessage] = useState('')
@@ -86,7 +88,7 @@ export function Sidebar({ className, entities }: SidebarProps) {
           className="flex-1 px-2 pb-4 overflow-y-auto"
           id="sidebar-navigation"
           role="navigation"
-          aria-label="Navegación principal del dashboard"
+          aria-label={t('a11y.dashboardNavigation')}
           data-cy={sel('dashboard.sidebar.content')}
         >
           <div>

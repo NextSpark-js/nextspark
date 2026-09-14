@@ -107,7 +107,7 @@ export function SettingsSidebar({ className }: SettingsSidebarProps) {
       <nav
         className={cn("space-y-2", className)}
         role="navigation"
-        aria-label="Navegación de configuración"
+        aria-label={t('a11y.settingsNavigation')}
                 data-cy={sel('settings.sidebar.container')}
       >
         <div className="px-3 py-2">

@@ -69,7 +69,7 @@ export function MobileBottomNav() {
       <nav
         className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background border-t border-border safe-area-bottom"
         role="navigation"
-        aria-label="Navegación móvil principal"
+        aria-label={t('common.a11y.mobileMainNavigation')}
         data-cy={sel('dashboard.mobile.bottomNav.container')}
       >
         <div className="flex items-end justify-around px-2 pb-2 pt-1">

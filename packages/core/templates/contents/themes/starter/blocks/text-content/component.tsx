@@ -1,6 +1,6 @@
 import React from 'react'
-import { cn } from '@/core/lib/utils'
-import { buildSectionClasses } from '@/core/types/blocks'
+import { cn } from '@nextsparkjs/core/lib/utils'
+import { buildSectionClasses } from '@nextsparkjs/core/types/blocks'
 import type { TextContentBlockProps } from './schema'
 
 /**

@@ -113,3 +113,6 @@ export function HeroBlock({
     </section>
   )
 }
+
+// The generated block registry imports this as the module's default.
+export default HeroBlock

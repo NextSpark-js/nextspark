@@ -21,7 +21,7 @@ import { NotificationsDropdown } from '../misc/NotificationsDropdown'
 import { SearchDropdown } from '../misc/SearchDropdown'
 import { QuickCreateDropdown } from '../misc/QuickCreateDropdown'
 import { cn } from '../../../lib/utils'
-import { sel, createAriaLabel } from '../../../lib/test'
+import { sel } from '../../../lib/test'
 import { useTranslations } from 'next-intl'
 import { useIsSuperAdmin } from '../../app/guards/SuperAdminGuard'
 import { useIsDeveloper } from '../../app/guards/DeveloperGuard'
@@ -151,7 +151,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
           className
         )}
         role="banner"
-        aria-label="Navegación principal"
+        aria-label={t('a11y.mainNavigation')}
         data-cy={sel('dashboard.topnav.container')}
       >
       <div className="w-full pl-2.5 pr-4 sm:pr-6 lg:pr-8">
@@ -163,7 +163,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
               <Link
                 href="/"
                 className="text-xl font-bold text-foreground lg:hidden"
-                aria-label="Ir a la página principal"
+                aria-label={t('a11y.goHome')}
                 data-cy={sel('dashboard.topnav.logo')}
               >
                 {APP_NAME}
@@ -179,7 +179,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                   size="icon"
                   onClick={handleToggleSidebar}
                   className="hidden lg:flex h-8 w-8"
-                  aria-label={isCollapsed ? 'Expandir sidebar' : 'Contraer sidebar'}
+                  aria-label={isCollapsed ? t('a11y.expandSidebar') : t('a11y.collapseSidebar')}
                   aria-expanded={!isCollapsed}
                   aria-controls="sidebar-navigation"
                   data-cy={sel('dashboard.topnav.sidebarToggle')}
@@ -203,7 +203,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                   <div
                     className="hidden lg:flex items-center min-w-0 max-w-sm"
                     role="search"
-                    aria-label="Búsqueda de tareas"
+                    aria-label={t('a11y.taskSearch')}
                     data-cy={sel('dashboard.topnav.search.container')}
                   >
                     <SearchDropdown />
@@ -218,7 +218,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
           <div
             className="flex items-center space-x-4 flex-shrink-0"
             role="toolbar"
-            aria-label="Acciones y configuración"
+            aria-label={t('a11y.actionsAndSettings')}
             data-cy={sel('dashboard.topnav.actions')}
           >
             {/* Notifications - Solo visible cuando hay usuario autenticado */}
@@ -238,10 +238,10 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                   href="/support" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  aria-label="Abrir centro de ayuda en nueva pestaña"
+                  aria-label={t('a11y.openHelpCenterNewTab')}
                 >
                   <HelpCircle className="h-4 w-4" aria-hidden="true" />
-                  <span className="sr-only">Ayuda</span>
+                  <span className="sr-only">{t('a11y.help')}</span>
                 </Link>
               </Button>
             )}
@@ -265,11 +265,11 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
               >
                 <Link
                   href="/superadmin"
-                  aria-label="Acceder a Super Admin - Área de super administrador"
-                  title="Super Admin - Super Admin Area"
+                  aria-label={t('a11y.accessSuperAdminArea')}
+                  title={t('a11y.superAdminAreaTitle')}
                 >
                   <Shield className="h-4 w-4" aria-hidden="true" />
-                  <span className="sr-only">Área de super administrador</span>
+                  <span className="sr-only">{t('a11y.superAdminArea')}</span>
                 </Link>
               </Button>
             )}
@@ -284,11 +284,11 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
               >
                 <Link
                   href="/devtools"
-                  aria-label="Acceder a DevTools - Área de desarrolladores"
-                  title="DevTools - Developer Area"
+                  aria-label={t('a11y.accessDeveloperArea')}
+                  title={t('a11y.developerAreaTitle')}
                 >
                   <Code className="h-4 w-4 text-violet-600 dark:text-violet-400" aria-hidden="true" />
-                  <span className="sr-only">Área de desarrolladores</span>
+                  <span className="sr-only">{t('a11y.developerArea')}</span>
                 </Link>
               </Button>
             )}
@@ -341,10 +341,10 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
               <div 
                 className="h-8 w-20 bg-muted animate-pulse rounded"
                 role="status"
-                aria-label="Cargando información del usuario"
+                aria-label={t('a11y.loadingUserInfo')}
                 data-cy={sel('dashboard.topnav.userLoading')}
               >
-                <span className="sr-only">Cargando...</span>
+                <span className="sr-only">{t('a11y.loading')}</span>
               </div>
             ) : user ? (
               TOPBAR_CONFIG.userMenu.enabled ? (
@@ -356,10 +356,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                   <Button 
                     variant="ghost" 
                     className="flex items-center gap-3 h-auto p-2"
-                    aria-label={createAriaLabel(
-                      'Menú de usuario. Cuenta: {name}',
-                      { name: user.firstName || user.email }
-                    )}
+                    aria-label={t('a11y.userMenuForName', { name: user.firstName || user.email })}
                     aria-haspopup="menu"
                     aria-expanded="false"
                   >
@@ -375,7 +372,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                       <div 
                         className={`h-8 w-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${getAvatarColor(user.email)}`}
                         role="img"
-                        aria-label={`Avatar de ${user.firstName || user.email}`}
+                        aria-label={t('a11y.avatarForName', { name: user.firstName || user.email })}
                                               >
                         {getUserInitials(user)}
                       </div>
@@ -395,7 +392,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                       <div 
                         className="flex flex-col space-y-1"
                         role="group"
-                        aria-label="Información del usuario"
+                        aria-label={t('a11y.userInfo')}
                       >
                         {TOPBAR_CONFIG.userMenu.showAvatar && (
                           <p className="text-sm font-medium">{user.firstName || 'Usuario'}</p>
@@ -470,7 +467,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                   ) : (
                     <div
                       className={`h-8 w-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${getAvatarColor(user.email)}`}
-                      aria-label={`Avatar de ${user.firstName || user.email}`}
+                      aria-label={t('a11y.avatarForName', { name: user.firstName || user.email })}
                     >
                       {getUserInitials(user)}
                     </div>
@@ -489,7 +486,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                   <Button 
                     variant="ghost" 
                     size="sm"
-                    aria-label="Iniciar sesión"
+                    aria-label={t('a11y.signIn')}
                   >
                     {t('buttons.signIn')}
                   </Button>
@@ -500,7 +497,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                 >
                   <Button 
                     size="sm"
-                    aria-label="Registrarse"
+                    aria-label={t('a11y.signUp')}
                   >
                     {t('buttons.signUp')}
                   </Button>
@@ -512,7 +509,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
           <div 
             className="lg:hidden flex items-center space-x-2"
             role="group"
-            aria-label="Acciones móviles"
+            aria-label={t('a11y.mobileActions')}
                         data-cy={sel('dashboard.topnav.mobileMenu.actions')}
           >
             {isTopbarFeatureEnabled('themeToggle') && (
@@ -525,7 +522,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
               <button
                 onClick={handleMenuToggle}
                 className="text-foreground/70 hover:text-foreground"
-                aria-label={isMenuOpen ? 'Cerrar menú de navegación' : 'Abrir menú de navegación'}
+                aria-label={isMenuOpen ? t('a11y.closeNavigationMenu') : t('a11y.openNavigationMenu')}
                 aria-expanded={isMenuOpen}
                 aria-controls="mobile-menu"
                                                     data-cy={sel('dashboard.topnav.mobileMenu.toggle')}
@@ -546,7 +543,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
           className="lg:hidden border-t border-border"
           id="mobile-menu"
           role="navigation"
-          aria-label="Menú de navegación móvil"
+          aria-label={t('a11y.mobileNavigationMenu')}
                     data-cy={sel('dashboard.topnav.mobileMenu.container')}
         >
           <div className="px-2 pt-2 pb-3 space-y-1">
@@ -556,7 +553,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                 <div 
                   className="mb-4"
                   role="group"
-                  aria-label="Navegación principal"
+                  aria-label={t('a11y.mainNavigation')}
                 >
                   <DynamicNavigation
                     entities={entities}
@@ -575,11 +572,11 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                           : "text-red-600"
                       )}
                       onClick={handleMenuClose}
-                      aria-label="Ir a Super Admin - Área de super administrador"
+                      aria-label={t('a11y.goToSuperAdminArea')}
                                             data-cy={sel('dashboard.topnav.mobileMenu.superadmin')}
                     >
                       <Shield className="h-4 w-4" aria-hidden="true" />
-                      <span className="sr-only">Área de super administrador</span>
+                      <span className="sr-only">{t('a11y.superAdminArea')}</span>
                     </Link>
                   )}
 
@@ -594,11 +591,11 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                           : "text-violet-600 dark:text-violet-400"
                       )}
                       onClick={handleMenuClose}
-                      aria-label="Ir a DevTools - Área de desarrolladores"
+                      aria-label={t('a11y.goToDeveloperArea')}
                                             data-cy={sel('dashboard.topnav.mobileMenu.devtools')}
                     >
                       <Code className="h-4 w-4" aria-hidden="true" />
-                      <span className="sr-only">Área de desarrolladores</span>
+                      <span className="sr-only">{t('a11y.developerArea')}</span>
                     </Link>
                   )}
                 </div>
@@ -607,7 +604,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                 <div 
                   className="flex items-center gap-3 px-3 py-2 border-t border-border pt-4"
                   role="group"
-                  aria-label="Información del usuario"
+                  aria-label={t('a11y.userInfo')}
                                     data-cy={sel('dashboard.topnav.mobileMenu.userInfo')}
                 >
                   {user.image ? (
@@ -622,7 +619,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                     <div 
                       className={`h-8 w-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${getAvatarColor(user.email)}`}
                       role="img"
-                      aria-label={`Avatar de ${user.firstName || user.email}`}
+                      aria-label={t('a11y.avatarForName', { name: user.firstName || user.email })}
                     >
                       {getUserInitials(user)}
                     </div>
@@ -640,7 +637,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                   href="/dashboard/settings/profile"
                   className="block px-3 py-2 rounded-md text-base font-medium text-foreground hover:bg-accent"
                   onClick={handleMenuClose}
-                  aria-label="Ir a perfil"
+                  aria-label={t('a11y.goToProfile')}
                                     data-cy={sel('dashboard.topnav.mobileMenu.linkProfile')}
                 >
                   <User className="inline mr-2 h-4 w-4" aria-hidden="true" />
@@ -650,7 +647,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                   href="/dashboard/settings"
                   className="block px-3 py-2 rounded-md text-base font-medium text-foreground hover:bg-accent"
                   onClick={handleMenuClose}
-                  aria-label="Ir a configuración"
+                  aria-label={t('a11y.goToSettings')}
                                     data-cy={sel('dashboard.topnav.mobileMenu.linkSettings')}
                 >
                   <Settings className="inline mr-2 h-4 w-4" aria-hidden="true" />
@@ -660,7 +657,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                   href="/dashboard/settings/billing"
                   className="block px-3 py-2 rounded-md text-base font-medium text-foreground hover:bg-accent"
                   onClick={handleMenuClose}
-                  aria-label="Ir a facturación"
+                  aria-label={t('a11y.goToBilling')}
                                     data-cy={sel('dashboard.topnav.mobileMenu.linkBilling')}
                 >
                   <CreditCard className="inline mr-2 h-4 w-4" aria-hidden="true" />
@@ -672,7 +669,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                     handleMenuClose()
                   }}
                   className="w-full text-left px-3 py-2 rounded-md text-base font-medium text-red-600 hover:bg-accent"
-                  aria-label="Cerrar sesión"
+                  aria-label={t('a11y.signOut')}
                                     data-cy={sel('dashboard.topnav.mobileMenu.signout')}
                 >
                   <LogOut className="inline mr-2 h-4 w-4" aria-hidden="true" />
@@ -685,7 +682,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                   href="/login"
                   className="block px-3 py-2 rounded-md text-base font-medium text-foreground hover:bg-accent"
                   onClick={handleMenuClose}
-                  aria-label="Iniciar sesión"
+                  aria-label={t('a11y.signIn')}
                                     data-cy={sel('dashboard.topnav.signin')}
                 >
                   Sign in
@@ -694,7 +691,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                   href="/signup"
                   className="block px-3 py-2 rounded-md text-base font-medium text-foreground hover:bg-accent"
                   onClick={handleMenuClose}
-                  aria-label="Registrarse"
+                  aria-label={t('a11y.signUp')}
                                     data-cy={sel('dashboard.topnav.signup')}
                 >
                   Sign up

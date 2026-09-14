@@ -54,7 +54,7 @@ export function MobileTopBar({ prefetch }: MobileTopBarProps = {}) {
     <header
       className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-background border-b border-border"
       role="banner"
-      aria-label="Barra de navegación móvil superior"
+      aria-label={t('common.a11y.mobileTopBar')}
       data-cy={sel('dashboard.mobile.topbar.container')}
     >
       <div className="flex items-center justify-between px-4 h-14">

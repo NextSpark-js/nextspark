@@ -668,8 +668,12 @@ export interface PublicAuthConfig {
   /**
    * Resolved email-OTP settings. The login form needs both: the deadline it
    * counts down to, and the number of digits its input accepts.
+   *
+   * Optional because this is a published type: a config written against an
+   * earlier release still type-checks, and a reader without it falls back to
+   * DEFAULT_OTP_CONFIG.
    */
-  otp: {
+  otp?: {
     /** Lifetime of an emailed code, in seconds. */
     expiresIn: number
     /** Digits per code. */

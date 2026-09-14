@@ -12,7 +12,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { extractIconNames, isIconSourcePath } from '../discovery/icons.mjs'
+import { findUnresolvedIconRefs, extractIconNames, isIconSourcePath } from '../discovery/icons.mjs'
 
 test('matches entity, block and app configs', () => {
   assert.ok(isIconSourcePath('/p/contents/themes/default/entities/tasks/tasks.config.ts'))
@@ -98,4 +98,33 @@ test('never yields anything but a bare name, so nothing can be injected', () => 
       assert.match(name, /^[A-Za-z][\w$-]*$/, `unsafe name from: ${source}`)
     }
   }
+})
+
+// Only a direct lucide import or a string literal reaches the registry, so
+// every other shape has to be reported rather than silently rendering a Box.
+test('reports an icon reference the build cannot resolve', () => {
+  assert.deepEqual(
+    findUnresolvedIconRefs("import * as I from 'lucide-react'\nexport default { icon: I.Users }"),
+    ['I.Users']
+  )
+  assert.deepEqual(
+    findUnresolvedIconRefs("import { Users } from './icons'\nexport default { icon: Users }"),
+    ['Users']
+  )
+  assert.deepEqual(
+    findUnresolvedIconRefs("import { Users } from 'lucide-react'\nconst Mine = Users\nexport default { icon: Mine }"),
+    ['Mine']
+  )
+})
+
+test('says nothing about a reference it can resolve', () => {
+  assert.deepEqual(
+    findUnresolvedIconRefs("import { Users } from 'lucide-react'\nexport default { icon: Users }"),
+    []
+  )
+  assert.deepEqual(
+    findUnresolvedIconRefs("import { Home as HouseIcon } from 'lucide-react'\nexport default { icon: HouseIcon }"),
+    []
+  )
+  assert.deepEqual(findUnresolvedIconRefs("export default { icon: 'pie-chart' }"), [])
 })

@@ -125,6 +125,32 @@ export function extractIconNames(content) {
   return names
 }
 
+/**
+ * Icon references in a config file that this build cannot turn into a name.
+ * Exported for tests.
+ *
+ * Only a direct named import of lucide-react and a string literal reach the
+ * registry. Anything else — a namespace access (`I.Users`), an identifier
+ * aliased through another module, a component of the project's own — is not
+ * resolvable by reading this file, so it never enters the registry and
+ * resolveIcon falls back. That is silent, hence the warning.
+ */
+export function findUnresolvedIconRefs(content) {
+  const lucideImports = parseLucideImports(content)
+  const unresolved = []
+
+  for (const match of content.matchAll(/(?:\bicon|['"]icon['"])\s*:\s*([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)/g)) {
+    const reference = match[1]
+    const isMember = reference.includes('.')
+
+    if (isMember || !lucideImports.has(reference)) {
+      unresolved.push(reference)
+    }
+  }
+
+  return unresolved
+}
+
 async function collectConfigFiles(dir, matcher, found = []) {
   if (!existsSync(dir)) {
     return found
@@ -177,15 +203,27 @@ export async function discoverIcons(blocks, config) {
     ...(await collectConfigFiles(config.pluginsDir, isIconSourcePath))
   ]
 
+  const unresolved = []
+
   for (const configPath of iconSources) {
     try {
       const content = await readFile(configPath, 'utf8')
       for (const name of extractIconNames(content)) {
         candidates.add(name)
       }
+      for (const reference of findUnresolvedIconRefs(content)) {
+        unresolved.push({ configPath, reference })
+      }
     } catch {
       verbose(`[icons] Could not read ${configPath}`)
     }
+  }
+
+  for (const { configPath, reference } of unresolved) {
+    log(
+      `[icons] ${configPath.replace(config.projectRoot, '')}: cannot resolve \`icon: ${reference}\` at build time, so it is not in the registry and will render the fallback. Name it with a string, or import it directly from lucide-react.`,
+      'warning'
+    )
   }
 
   for (const block of blocks || []) {

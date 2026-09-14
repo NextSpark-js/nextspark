@@ -24,7 +24,7 @@ import { AuthTranslationPreloader } from '../../../lib/i18n/AuthTranslationPrelo
 import { DevKeyring } from '../DevKeyring'
 import { DEV_CONFIG, PUBLIC_AUTH_CONFIG } from '../../../lib/config/config-sync'
 import { getPrimaryEmailMethod } from '../../../lib/auth/auth-methods'
-import { formatOtpCountdown, getOtpSecondsRemaining } from '../../../lib/auth/otp-config'
+import { DEFAULT_OTP_CONFIG, formatOtpCountdown, getOtpSecondsRemaining } from '../../../lib/auth/otp-config'
 import type { AuthProviderWithNull, AuthErrorCode, AuthError } from '../../../types/auth'
 
 /**
@@ -142,8 +142,9 @@ export function LoginForm() {
   // Code length and lifetime come from the same resolved config Better Auth
   // runs with, so the input size and the countdown can't drift from what the
   // server actually issues.
-  const otpLength = PUBLIC_AUTH_CONFIG.otp.otpLength
-  const otpExpiresIn = PUBLIC_AUTH_CONFIG.otp.expiresIn
+  const otpConfig = PUBLIC_AUTH_CONFIG.otp ?? DEFAULT_OTP_CONFIG
+  const otpLength = otpConfig.otpLength
+  const otpExpiresIn = otpConfig.expiresIn
   // In dev mode with DevKeyring, always allow email login regardless of registration mode
   const devKeyringActive = process.env.NODE_ENV !== 'production' && !!DEV_CONFIG?.devKeyring?.enabled
   // DevKeyring autofills email + password, so it keeps the password form reachable in dev

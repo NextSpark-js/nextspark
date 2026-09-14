@@ -1,6 +1,6 @@
 import React from 'react'
-import { Button } from '@/core/components/ui/button'
-import { buildSectionClasses } from '@/core/types/blocks'
+import { Button } from '@nextsparkjs/core/components/ui/button'
+import { buildSectionClasses } from '@nextsparkjs/core/types/blocks'
 import type { CTASectionBlockProps } from './schema'
 
 /**

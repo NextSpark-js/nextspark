@@ -75,7 +75,9 @@ describe('Tasks CRUD', { tags: ['@uat', '@tasks', '@crud'] }, () => {
       tasks.fillTaskForm(taskData)
       tasks.submitForm()
 
-      // Should redirect to list and show new task
+      // Saving lands on the detail page, so reaching the list is a separate
+      // visit. What this test is about is the task existing and showing there.
+      tasks.visitList()
       tasks.waitForList()
       tasks.assertTaskInList(taskData.title)
     })
@@ -93,6 +95,7 @@ describe('Tasks CRUD', { tags: ['@uat', '@tasks', '@crud'] }, () => {
       tasks.fillTaskForm(taskData)
       tasks.submitForm()
 
+      tasks.visitList()
       tasks.waitForList()
       tasks.assertTaskInList(taskData.title)
     })
@@ -141,6 +144,9 @@ describe('Tasks CRUD', { tags: ['@uat', '@tasks', '@crud'] }, () => {
 
     it('should navigate to task detail page', () => {
       cy.then(() => {
+        tasks.visitList()
+        tasks.waitForList()
+
         tasks.clickRow(testTaskId)
         tasks.waitForDetail()
 
@@ -195,7 +201,10 @@ describe('Tasks CRUD', { tags: ['@uat', '@tasks', '@crud'] }, () => {
         tasks.fillTextField('title', newTitle)
         tasks.submitForm()
 
+        tasks.waitForDetail()
+
         // Verify update
+        tasks.visitList()
         tasks.waitForList()
         tasks.assertTaskInList(newTitle)
         tasks.assertTaskNotInList(originalTitle)
@@ -211,6 +220,9 @@ describe('Tasks CRUD', { tags: ['@uat', '@tasks', '@crud'] }, () => {
         tasks.selectOption('status', 'done')
         tasks.submitForm()
 
+        tasks.waitForDetail()
+
+        tasks.visitList()
         tasks.waitForList()
         // Task should now show as done
         tasks.assertTaskInList(originalTitle)
@@ -226,6 +238,9 @@ describe('Tasks CRUD', { tags: ['@uat', '@tasks', '@crud'] }, () => {
         tasks.selectOption('priority', 'urgent')
         tasks.submitForm()
 
+        tasks.waitForDetail()
+
+        tasks.visitList()
         tasks.waitForList()
         tasks.assertTaskInList(originalTitle)
       })
@@ -318,28 +333,28 @@ describe('Tasks CRUD', { tags: ['@uat', '@tasks', '@crud'] }, () => {
     })
 
     it('should filter tasks by status', () => {
-      // Filter by "todo" status
       tasks.filterByStatus('todo')
 
-      // Wait for filter to apply
-      cy.wait(500)
+      // The filter travels in the URL, and waiting on that is what settles the
+      // list: asserting row by row while the table is still refetching detaches
+      // the very rows being checked.
+      cy.url().should('include', 'status=todo')
+      cy.get(tasks.selectors.rowGeneric).should('have.length.greaterThan', 0)
 
-      // Should show only todo tasks
+      // A row shows the option's label, never the stored value.
       cy.get(tasks.selectors.rowGeneric).each(($row) => {
-        cy.wrap($row).should('contain.text', 'todo')
+        cy.wrap($row).should('contain.text', 'To Do')
       })
     })
 
     it('should filter tasks by priority', () => {
-      // Filter by "high" priority
       tasks.filterByPriority('high')
 
-      // Wait for filter to apply
-      cy.wait(500)
+      cy.url().should('include', 'priority=high')
+      cy.get(tasks.selectors.rowGeneric).should('have.length.greaterThan', 0)
 
-      // Should show only high priority tasks
       cy.get(tasks.selectors.rowGeneric).each(($row) => {
-        cy.wrap($row).should('contain.text', 'high')
+        cy.wrap($row).should('contain.text', 'High')
       })
     })
 
