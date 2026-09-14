@@ -123,7 +123,7 @@ export function MultiSelect({
         <PopoverContent className="p-0" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
           <Command>
             <CommandInput placeholder={searchPlaceholder} />
-            <CommandEmpty>No se encontraron opciones.</CommandEmpty>
+            <CommandEmpty>No options found.</CommandEmpty>
             <CommandGroup className="max-h-64 overflow-auto">
               {availableOptions.map((option) => (
                 <CommandItem

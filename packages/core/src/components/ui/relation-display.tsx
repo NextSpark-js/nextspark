@@ -158,7 +158,7 @@ export function RelationDisplay({
   }
 
   if (loading && Object.keys(titles).length === 0) {
-    return <span className="text-muted-foreground">Cargando...</span>
+    return <span className="text-muted-foreground">Loading...</span>
   }
 
   const displayValues = ids.map(id => titles[id] || id)

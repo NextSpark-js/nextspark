@@ -317,7 +317,7 @@ export function UserSelect({
             {isLoadingMembers ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Cargando...
+                Loading...
               </>
             ) : (
               <>
@@ -332,7 +332,7 @@ export function UserSelect({
         </DialogTrigger>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Seleccionar Usuarios</DialogTitle>
+            <DialogTitle>Select Users</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">

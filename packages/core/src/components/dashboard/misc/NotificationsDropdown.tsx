@@ -182,8 +182,8 @@ export function NotificationsDropdown() {
 
   const handleMarkAllAsRead = useCallback(() => {
     markAllAsRead()
-    setStatusMessage('Todas las notificaciones marcadas como leídas')
-  }, [markAllAsRead])
+    setStatusMessage(t('a11y.allNotificationsMarkedRead'))
+  }, [markAllAsRead, t])
 
   return (
     <>

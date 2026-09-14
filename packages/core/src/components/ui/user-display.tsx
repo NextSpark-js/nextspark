@@ -120,7 +120,7 @@ export function UserDisplay({
 
   // Loading state
   if (loading) {
-    return <span className={cn("text-muted-foreground", className)}>Cargando...</span>
+    return <span className={cn("text-muted-foreground", className)}>Loading...</span>
   }
 
   // Error state - show user ID as fallback

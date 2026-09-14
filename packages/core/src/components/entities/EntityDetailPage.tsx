@@ -70,7 +70,7 @@ export function EntityDetailPage({
       <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto space-y-6">
           <Alert>
-            <AlertDescription>Cargando datos...</AlertDescription>
+            <AlertDescription>Loading data...</AlertDescription>
           </Alert>
         </div>
       </div>

@@ -75,19 +75,19 @@ export function SettingsPageSkeleton({
   )
 }
 
-// Skeleton específico para página de notificaciones
+// Skeleton for the notifications page
 export function NotificationsPageSkeleton() {
   return (
     <SettingsPageSkeleton
-      title="Notificaciones"
-      description="Configura cómo y cuándo quieres recibir notificaciones."
+      title="Notifications"
+      description="Choose how and when you want to be notified."
       sectionsCount={3}
       itemsPerSection={3}
     />
   )
 }
 
-// Skeleton específico para página de seguridad
+// Skeleton for the security page
 export function SecurityPageSkeleton() {
   return (
     <div className="container mx-auto p-6 max-w-4xl">
@@ -95,9 +95,9 @@ export function SecurityPageSkeleton() {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight">Seguridad</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Security</h1>
             <p className="text-muted-foreground">
-              Mantén tu cuenta segura con estas configuraciones de seguridad.
+              Keep your account safe with these security settings.
             </p>
           </div>
           <Skeleton className="h-10 w-32" /> {/* Save button skeleton */}

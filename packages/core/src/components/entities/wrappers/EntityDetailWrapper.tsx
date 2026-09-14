@@ -420,7 +420,7 @@ export function EntityDetailWrapper({
     return (
       <Alert>
         <AlertDescription>
-          No se encontraron datos para esta entidad.
+          No data found for this entity.
         </AlertDescription>
       </Alert>
     )

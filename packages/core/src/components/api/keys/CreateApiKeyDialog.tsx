@@ -221,7 +221,7 @@ export function CreateApiKeyDialog({ open, onClose, onSuccess }: CreateApiKeyDia
             <div>
               <Label>Permisos (Scopes)</Label>
               <p className="text-xs text-muted-foreground">
-                Selecciona los permisos que tendrá esta API key
+                Choose the permissions this API key will have
               </p>
             </div>
 
