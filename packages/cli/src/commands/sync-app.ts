@@ -83,8 +83,11 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
     }
 
     const replacing = new Set(actions.filter(({ backup }) => backup).map(({ path }) => path));
+    const blocked = new Set(actions.filter(({ blockedBy }) => blockedBy).map(({ path }) => path));
     for (const path of input.overwrite) {
-      if (!replacing.has(path)) {
+      if (blocked.has(path)) {
+        console.log(chalk.yellow(`  ⚠ --overwrite ${path}: core's version of it can't be worked out for this project, so it is left as it is`));
+      } else if (!replacing.has(path)) {
         console.log(chalk.yellow(`  ⚠ --overwrite ${path}: not a customized file sync:app manages, so there is nothing to replace`));
       }
     }

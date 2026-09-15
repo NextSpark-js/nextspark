@@ -23,7 +23,7 @@ test('a tagged file reads back as intact, with the version that wrote it and the
   const tagged = withGeneratedTag('app/page.tsx', content, '0.1.0-beta.190')
 
   const [first, second] = tagged.toString().split('\n')
-  assert.match(first, /^\/\/ @nextspark-generated core@0\.1\.0-beta\.190 sha256=[0-9a-f]{64}$/)
+  assert.match(first, /^\/\/ @nextspark-generated core@0\.1\.0-beta\.190 path=app\/page\.tsx sha256=[0-9a-f]{64}$/)
   assert.equal(second, "'use client'", 'the directive comes right after the tag')
 
   const tag = readGeneratedTag(tagged)
@@ -42,7 +42,7 @@ test('an edit below the tag leaves it not intact, while converting line endings 
 test('CSS carries the tag as a block comment', () => {
   const tagged = withGeneratedTag('app/globals.css', Buffer.from('@import "../contents/themes/acme/styles/globals.css";\n'), '1.0.0')
 
-  assert.match(tagged.toString().split('\n')[0], /^\/\* @nextspark-generated core@1\.0\.0 sha256=[0-9a-f]{64} \*\/$/)
+  assert.match(tagged.toString().split('\n')[0], /^\/\* @nextspark-generated core@1\.0\.0 path=app\/globals\.css sha256=[0-9a-f]{64} \*\/$/)
   assert.equal(readGeneratedTag(tagged)?.intact, true)
 })
 

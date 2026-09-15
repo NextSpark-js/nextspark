@@ -34,24 +34,23 @@ export function adaptProxySource(source: string, fileName: string): string {
 }
 
 /**
- * The tag the template carries, and the project's way of taking the file over:
- * delete the line and sync stops replacing it.
+ * The comment the proxy.ts template opened with in 0.1.0-beta.189, the one
+ * release that marked it this way, and so every file generated from it:
+ * `/**`, then ` * @nextspark-generated` on the next line. The bare tag counts
+ * only there. Anywhere else in a file it is text in the project's own code.
  */
-const GENERATED_TAG = '@nextspark-generated';
+const PUBLISHED_TAG_HEADER = /^\/\*\*\r?\n \* @nextspark-generated\r?\n/;
 
 /**
- * Whether a file in the project is NextSpark's to replace.
+ * Whether a file in the project is NextSpark's to replace, judged the way
+ * releases before the generated tag with a hash marked it.
  *
  * `middleware.ts` is the conventional Next file name, so a project may well
  * have its own there. Overwriting or deleting it is silent code loss, and this
  * runs unattended: core's postinstall calls `sync:app --force`.
- *
- * The tag is what makes a release able to ship changes to this file at all:
- * matching the current template byte for byte would freeze anything an earlier
- * release generated, since it no longer equals what ships today.
  */
 export function isGeneratedProxySource(existing: string, source: string): boolean {
-  if (existing.includes(GENERATED_TAG)) return true;
+  if (PUBLISHED_TAG_HEADER.test(existing)) return true;
 
   // A file from a release that predates the tag: only recognisable by being
   // exactly what that template produced.

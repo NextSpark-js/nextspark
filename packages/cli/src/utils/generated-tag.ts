@@ -1,21 +1,24 @@
 import { createHash } from 'node:crypto';
 
 /**
- * The marker `sync:app` and `init` put in each file they generate, with the
- * core version that wrote it and a hash of the rest of the file:
+ * The marker `sync:app` and `init` put in each file they generate, naming the
+ * core version that wrote it, the path it was written for, and a hash of the
+ * rest of the file:
  *
- *   // @nextspark-generated core@0.1.0 sha256=<hash of everything but this line>
+ *   // @nextspark-generated core@0.1.0 path=app/layout.tsx sha256=<hash of everything but this line>
  *
- * It is the file's first line, or its second when the first is a shebang.
- * While the hash matches, the file is core's to update. Once it doesn't, the
- * project changed the file and sync leaves it alone; deleting the line hands
- * the file over the same way.
+ * It is the file's first line, or its second when the first is a shebang. While
+ * the file sits at that path and the hash matches, the file is core's to update.
+ * Once the hash doesn't match, the project changed the file and sync leaves it
+ * alone; deleting the line hands the file over the same way. A copy of the file
+ * at any other path is the project's: the tag says where core wrote it.
  */
 export const GENERATED_TAG = '@nextspark-generated';
 
 export type TagStyle = 'line' | 'block';
 
-const TAG_LINE = /^(?:\/\/|\/\*) @nextspark-generated core@(\S+) sha256=([0-9a-f]{64})(?: \*\/)?$/;
+/** The tag line; tags written before the path was recorded have no `path=`. */
+const TAG_LINE = /^(?:\/\/|\/\*) @nextspark-generated core@(\S+)(?: path=(\S+))? sha256=([0-9a-f]{64})(?: \*\/)?$/;
 
 const UTF8 = new TextDecoder('utf-8', { fatal: true });
 
@@ -74,7 +77,7 @@ function shebangLength(text: string): number {
 }
 
 /**
- * `content` with the tag for `coreVersion` on a line of its own:
+ * `content` with the tag for `path` and `coreVersion` on a line of its own:
  * right after a shebang, which has to stay the first line, or at the top.
  * Content with no tag style, or that is only a shebang, is returned unchanged.
  */
@@ -86,7 +89,7 @@ export function withGeneratedTag(path: string, content: Buffer, coreVersion: str
   const head = shebangLength(text);
   if (head === text.length && head > 0 && !text.endsWith('\n')) return content;
 
-  const marker = `${GENERATED_TAG} core@${coreVersion} sha256=${generatedHash(content)}`;
+  const marker = `${GENERATED_TAG} core@${coreVersion} path=${path} sha256=${generatedHash(content)}`;
   const line = style === 'line' ? `// ${marker}` : `/* ${marker} */`;
   return Buffer.from(`${text.slice(0, head)}${line}\n${text.slice(head)}`);
 }
@@ -94,6 +97,8 @@ export function withGeneratedTag(path: string, content: Buffer, coreVersion: str
 export interface GeneratedTag {
   /** The core version that wrote the file. */
   coreVersion: string;
+  /** The path the file was generated for, or null for a tag written before paths were recorded. */
+  path: string | null;
   /** The file without the tag line. */
   body: Buffer;
   /** Whether the file without the tag line still hashes to what the tag recorded. */
@@ -112,5 +117,16 @@ export function readGeneratedTag(content: Buffer): GeneratedTag | null {
   if (!match) return null;
 
   const body = Buffer.from(text.slice(0, head) + (newline === -1 ? '' : text.slice(newline + 1)));
-  return { coreVersion: match[1], body, intact: generatedHash(body) === match[2] };
+  return { coreVersion: match[1], path: match[2] ?? null, body, intact: generatedHash(body) === match[3] };
+}
+
+/**
+ * The tag of the file at `path`: null when the file has none, and also when its
+ * tag names another path, since a copy of a generated file is the project's
+ * wherever it lands. A tag with no path is returned as it is; the caller decides
+ * how far to trust it.
+ */
+export function readGeneratedTagAt(path: string, content: Buffer): GeneratedTag | null {
+  const tag = readGeneratedTag(content);
+  return tag && (tag.path === null || tag.path === path) ? tag : null;
 }

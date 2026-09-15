@@ -80,7 +80,7 @@ test('an untagged file is tagged when identical to core, and kept as customized 
 
   const layout = actionFor(actions, 'app/layout.tsx')
   assert.equal(layout.kind, 'adopt')
-  assert.match(layout.content!.toString(), /^\/\/ @nextspark-generated core@0\.2\.0 sha256=[0-9a-f]{64}\nlayout\r\n$/)
+  assert.match(layout.content!.toString(), /^\/\/ @nextspark-generated core@0\.2\.0 path=app\/layout\.tsx sha256=[0-9a-f]{64}\nlayout\r\n$/)
 
   const page = actionFor(actions, 'app/page.tsx')
   assert.equal(page.kind, 'keep')
@@ -112,7 +112,7 @@ test('globals.css is compared after the active theme\'s import is put in', () =>
 
   const globals = actionFor(actions, 'app/globals.css')
   assert.equal(globals.kind, 'adopt')
-  assert.match(globals.content!.toString(), /^\/\* @nextspark-generated core@0\.2\.0 sha256=[0-9a-f]{64} \*\/\n@import "\.\.\/contents\/themes\/default\/styles\/globals\.css";\n$/)
+  assert.match(globals.content!.toString(), /^\/\* @nextspark-generated core@0\.2\.0 path=app\/globals\.css sha256=[0-9a-f]{64} \*\/\n@import "\.\.\/contents\/themes\/default\/styles\/globals\.css";\n$/)
 })
 
 test('a project that uses PPR has its layout.tsx compared with the PPR variant', () => {
@@ -173,7 +173,7 @@ test('a proxy file an earlier release generated is migrated to the tag; a projec
 
   const migrated = actionFor(planSync(input({ rootTemplates, projectRootFiles: files({ 'middleware.ts': PROXY_FROM_AN_EARLIER_RELEASE }) })), 'middleware.ts')
   assert.equal(migrated.kind, 'update')
-  assert.match(migrated.content!.toString(), /^\/\/ @nextspark-generated core@0\.2\.0 sha256=[0-9a-f]{64}\nexport async function middleware\(request\)/)
+  assert.match(migrated.content!.toString(), /^\/\/ @nextspark-generated core@0\.2\.0 path=middleware\.ts sha256=[0-9a-f]{64}\nexport async function middleware\(request\)/)
 
   const own = actionFor(planSync(input({ rootTemplates, projectRootFiles: files({ 'middleware.ts': 'export function middleware() {}\n' }) })), 'middleware.ts')
   assert.equal(own.kind, 'keep')
@@ -214,4 +214,48 @@ test('a dry run reports in the future tense, with every file core would write na
     'Would tag 1 file(s) identical to core, so later releases can update them',
     "Left 1 file(s) in app/ that core doesn't ship",
   ])
+})
+
+test('a middleware.ts of the project\'s own that mentions the generated tag in its code is kept', () => {
+  const own = "import { NextResponse } from 'next/server'\nconst note = '@nextspark-generated files are replaced by sync'\nexport function middleware() { return NextResponse.next() }\n"
+
+  const action = actionFor(planSync(input({ rootTemplates: files({ 'proxy.ts': PROXY }), projectRootFiles: files({ 'middleware.ts': own }) })), 'middleware.ts')
+
+  assert.equal(action.kind, 'keep')
+  assert.equal(action.content, undefined)
+})
+
+test('a proxy file with the header an earlier release published is migrated, and backed up first', () => {
+  const published = '/**\n * @nextspark-generated\n *\n * `nextspark sync:app` replaces this file while that tag is present.\n */\nexport async function middleware(request) {\n  return request\n}\n'
+
+  const action = actionFor(planSync(input({ rootTemplates: files({ 'proxy.ts': PROXY }), projectRootFiles: files({ 'middleware.ts': published }) })), 'middleware.ts')
+
+  assert.equal(action.kind, 'update')
+  assert.equal(action.backup, true)
+})
+
+test('a generated file copied to another path is the project\'s there, and never removed', () => {
+  const layout = tagged('app/layout.tsx', 'layout')
+  const actions = planSync(input({
+    appTemplates: files({ 'layout.tsx': 'layout', 'layout.ppr.tsx': 'ppr layout' }),
+    projectApp: files({ 'layout.tsx': layout, 'custom-copy/page.tsx': Buffer.from(layout), 'layout.ppr.tsx': Buffer.from(layout) }),
+  }))
+
+  assert.equal(actionFor(actions, 'app/layout.tsx').kind, 'unchanged')
+  assert.equal(actionFor(actions, 'app/custom-copy/page.tsx').kind, 'keep')
+  assert.equal(actionFor(actions, 'app/custom-copy/page.tsx').category, 'project')
+  assert.notEqual(actionFor(actions, 'app/layout.ppr.tsx').kind, 'delete')
+})
+
+test('globals.css is left alone when the active theme it has to import is unknown, and the report says why', () => {
+  const themed = tagged('app/globals.css', '@import "../contents/themes/acme/styles/globals.css";\n')
+  const actions = planSync(input({
+    appTemplates: files({ 'globals.css': '@import "../../../themes/default/styles/globals.css";\n' }),
+    projectApp: files({ 'globals.css': themed }),
+  }))
+
+  const globals = actionFor(actions, 'app/globals.css')
+  assert.equal(globals.kind, 'keep')
+  assert.equal(globals.content, undefined)
+  assert.ok(describeSyncPlan(actions).some(({ text }) => text.includes('app/globals.css') && text.includes('NEXT_PUBLIC_ACTIVE_THEME')))
 })

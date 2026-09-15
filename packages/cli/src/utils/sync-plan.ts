@@ -5,18 +5,21 @@
  * written - or, with --dry-run, only described.
  *
  * Which files are core's to replace:
- * - A file with the generated tag (generated-tag.ts) whose content still matches
- *   the tag is core's: it is updated when core's version changed.
+ * - A file whose generated tag (generated-tag.ts) names the path it is at and
+ *   still matches its content is core's: it is updated when core's version
+ *   changed. A copy of it at another path is the project's.
  * - A tagged file that no longer matches was changed by the project: it is kept
  *   and reported, and replaced - after a backup - only with --overwrite.
  * - A file without a tag is tagged when it is identical to what core would
  *   write, and otherwise treated as changed by the project.
- * - A file whose type can't hold a comment (binaries, JSON, Markdown) is core's
- *   while it is identical to core's version or to what the last sync on this
- *   machine wrote.
+ * - A file that can't hold the tag (JSON, Markdown, anything that isn't text)
+ *   is core's while it is identical to core's version or to what the last sync
+ *   on this machine wrote.
+ * - A file whose content for this project can't be worked out - app/globals.css
+ *   while the active theme is unknown - is left as it is, and the report says why.
  */
 
-import { readGeneratedTag, sameText, tagStyleFor, withGeneratedTag } from './generated-tag.js';
+import { readGeneratedTag, readGeneratedTagAt, sameText, tagStyleFor, withGeneratedTag } from './generated-tag.js';
 import { adaptProxySource, isGeneratedProxySource, proxyFileNameFor, type ProxyFileName } from './proxy-file.js';
 import { contentHash, type SyncState, type SyncStateEntry } from './sync-state.js';
 
@@ -60,6 +63,8 @@ export interface SyncAction {
   customized?: boolean;
   /** For a kept customized file: whether core's version changed since the last sync on this machine, or there is no record. */
   coreChanged?: boolean;
+  /** For a file left as it is because what core writes there can't be worked out for this project: why. */
+  blockedBy?: string;
   /** Hash of core's version of the file, recorded in the sync state. */
   coreHash?: string;
   /** For a file with no generated tag that ends up with core's content: the hash of that content. */
@@ -109,15 +114,20 @@ export function withActiveThemeStyles(css: string, activeTheme: string): string 
   );
 }
 
-/** What core writes at app/<file>, after the substitutions this project needs. */
-function appFileContent(file: string, template: Buffer, input: SyncInput): { content: Buffer; reason: string } {
+type AppFileContent = { content: Buffer; reason: string } | { blockedBy: string };
+
+/** What core writes at app/<file>, after the substitutions this project needs, or why one of them can't be worked out. */
+function appFileContent(file: string, template: Buffer, input: SyncInput): AppFileContent {
   const variant = PPR_TEMPLATE_VARIANTS[file];
   const variantContent = variant ? input.appTemplates.get(variant) : undefined;
   if (input.usePprVariants && variantContent) {
     return { content: variantContent, reason: `core's ${variant}, since the project uses PPR` };
   }
 
-  if (file === 'globals.css' && input.activeTheme) {
+  if (file === 'globals.css') {
+    if (!input.activeTheme) {
+      return { blockedBy: "the theme whose styles it imports is unknown: NEXT_PUBLIC_ACTIVE_THEME is set neither in the environment nor in .env" };
+    }
     return {
       content: Buffer.from(withActiveThemeStyles(template.toString('utf-8'), input.activeTheme)),
       reason: `core's file, importing the ${input.activeTheme} theme's styles`,
@@ -152,19 +162,24 @@ function planManagedFile(file: ManagedFile, input: SyncInput): SyncAction {
     return { path, category, coreHash, writtenHash, kind: 'create', reason, content };
   }
 
-  const tag = taggable ? readGeneratedTag(current) : null;
+  // A tag naming another path came with a copy of that file, and says nothing about this one
+  const tag = taggable ? readGeneratedTagAt(path, current) : null;
 
   if (taggable) {
     if (tag?.intact) {
-      return sameText(tag.body, expected)
-        ? { path, category, coreHash, kind: 'unchanged', reason }
-        : { path, category, coreHash, kind: 'update', reason: `${reason}, changed by core`, content };
+      // A tag without a path can't show the file was generated here, so what it holds is backed up before it is replaced
+      if (!sameText(tag.body, expected)) {
+        return { path, category, coreHash, kind: 'update', reason: `${reason}, changed by core`, content, ...(tag.path === null ? { backup: true } : {}) };
+      }
+      return tag.path === null
+        ? { path, category, coreHash, kind: 'adopt', reason: 'identical to core; tagged again, with its path', content }
+        : { path, category, coreHash, kind: 'unchanged', reason };
     }
     if (!tag && sameText(current, expected)) {
       return { path, category, coreHash, kind: 'adopt', reason: 'identical to core; tagged so later releases can update it', content };
     }
     if (!tag && generatedEarlier?.(current)) {
-      return { path, category, coreHash, kind: 'update', reason: `${reason}, generated by an earlier release`, content };
+      return { path, category, coreHash, kind: 'update', reason: `${reason}, generated by an earlier release`, content, backup: true };
     }
   } else {
     if (current.equals(expected)) {
@@ -196,21 +211,22 @@ function planManagedFile(file: ManagedFile, input: SyncInput): SyncAction {
 }
 
 /**
- * A file in the project's app/ that core doesn't ship. Core's once - tagged,
- * or with no tag style and still what the last sync wrote - and untouched, it
- * is removed; changed by the project, it is kept and reported. Anything else is
- * the project's own file.
+ * A file in the project's app/ that core doesn't ship. Core's once - tagged for
+ * this path, or with no tag style and still what the last sync wrote - and
+ * untouched, it is removed; changed by the project, it is kept and reported.
+ * Anything else, a copy of a generated file included, is the project's own file.
  */
 function planRetiredFile(path: string, current: Buffer, input: SyncInput): SyncAction {
   const entry = input.state?.files[path];
   const tag = tagStyleFor(path, current) ? readGeneratedTag(current) : null;
+  const ownTag = tag?.path === path ? tag : null;
   const writtenBySync = entry?.written !== undefined && entry.written === contentHash(current);
 
-  if (!tag && !writtenBySync) {
+  if (!ownTag && !writtenBySync) {
     return { path, kind: 'keep', category: 'project', reason: "core doesn't ship it" };
   }
 
-  if (writtenBySync || tag?.intact) {
+  if (writtenBySync || ownTag?.intact) {
     return { path, kind: 'delete', category: 'app', reason: 'core no longer ships it' };
   }
 
@@ -230,17 +246,18 @@ function planRetiredFile(path: string, current: Buffer, input: SyncInput): SyncA
 
 /**
  * A PPR variant in the project's app/, which sync:app reads from core instead:
- * removed when it is what core ships or what sync wrote, kept and reported when
- * the project changed it.
+ * removed when it is what core ships or what sync wrote at that path, kept and
+ * reported otherwise.
  */
 function planVariant(file: string, current: Buffer, input: SyncInput): SyncAction {
   const path = `app/${file}`;
   const core = input.appTemplates.get(file);
   const coreHash = core ? contentHash(core) : undefined;
   const tag = readGeneratedTag(current);
+  const ownTag = tag?.path === path ? tag : null;
   const reason = "PPR variants stay in core, where sync:app reads them when a project uses PPR";
 
-  if (tag ? tag.intact : core !== undefined && sameText(current, core)) {
+  if (ownTag ? ownTag.intact : !tag && core !== undefined && sameText(current, core)) {
     return { path, kind: 'delete', category: 'variant', reason };
   }
 
@@ -266,8 +283,13 @@ function planAppFiles(input: SyncInput): SyncAction[] {
   for (const [file, template] of input.appTemplates) {
     if (isGenerated(file) || isVariant(file)) continue;
     synced.add(file);
-    const { content, reason } = appFileContent(file, template, input);
-    actions.push(planManagedFile({ path: `app/${file}`, category: 'app', current: input.projectApp.get(file), expected: content, reason }, input));
+    const path = `app/${file}`;
+    const planned = appFileContent(file, template, input);
+    actions.push(
+      'blockedBy' in planned
+        ? { path, kind: 'keep', category: 'app', reason: 'left as it is', blockedBy: planned.blockedBy }
+        : planManagedFile({ path, category: 'app', current: input.projectApp.get(file), expected: planned.content, reason: planned.reason }, input)
+    );
   }
 
   for (const [file, current] of input.projectApp) {
@@ -321,9 +343,10 @@ function planProxy(input: SyncInput): SyncAction[] {
 
   const otherContent = input.projectRootFiles.get(other);
   if (otherContent !== undefined) {
-    const tag = readGeneratedTag(otherContent);
+    const tag = readGeneratedTagAt(other, otherContent);
     if (tag ? tag.intact : generatedEarlier(otherContent)) {
-      actions.push({ path: other, kind: 'delete', category: 'proxy', reason: `Next loads ${fileName} in this project instead` });
+      // Only a tag naming this path shows sync wrote exactly this file here; anything else is backed up first
+      actions.push({ path: other, kind: 'delete', category: 'proxy', reason: `Next loads ${fileName} in this project instead`, ...(tag?.path ? {} : { backup: true }) });
     } else {
       actions.push({
         path: other,
@@ -339,11 +362,20 @@ function planProxy(input: SyncInput): SyncAction[] {
   return actions;
 }
 
-/** The state to record after applying `actions`: what core had for each file it manages, and what sync left of it. */
+/**
+ * The state to record after applying `actions`: what core had for each file it
+ * manages, and what sync left of it. A file left as it is because core's
+ * version couldn't be worked out keeps what was recorded before.
+ */
 export function nextSyncState(actions: readonly SyncAction[], input: SyncInput): SyncState {
   const files: Record<string, SyncStateEntry> = {};
 
   for (const action of actions) {
+    if (action.blockedBy) {
+      const previous = input.state?.files[action.path];
+      if (previous) files[action.path] = previous;
+      continue;
+    }
     if (!action.coreHash || action.kind === 'delete') continue;
     const written = action.kind === 'keep' ? input.state?.files[action.path]?.written : action.writtenHash;
     files[action.path] = written ? { core: action.coreHash, written } : { core: action.coreHash };
@@ -359,11 +391,11 @@ export interface ReportLine {
 
 /**
  * The report of a plan, one line per category: what core wrote or would write,
- * what was tagged, what was removed, what the project changed, and what sync
- * left to others. Under a line, the files that changed are named. A customized
- * file is named only when core changed it since the last sync on this machine,
- * so running sync again with the same core doesn't repeat the list; --verbose
- * names every file.
+ * what was tagged, what was removed, what couldn't be worked out, what the
+ * project changed, and what sync left to others. Under a
+ * line, the files that changed are named. A customized file is named only when
+ * core changed it since the last sync on this machine, so running sync again
+ * with the same core doesn't repeat the list; --verbose names every file.
  */
 export function describeSyncPlan(
   actions: readonly SyncAction[],
@@ -376,6 +408,7 @@ export function describeSyncPlan(
   const adopted = actions.filter(({ kind }) => kind === 'adopt');
   const unchanged = actions.filter(({ kind }) => kind === 'unchanged');
   const removed = actions.filter(({ kind }) => kind === 'delete');
+  const blocked = actions.filter(({ blockedBy }) => blockedBy);
   const customized = actions.filter(({ kind, customized }) => kind === 'keep' && customized);
   const project = actions.filter(({ category }) => category === 'project');
   const generated = actions.filter(({ category }) => category === 'generated');
@@ -401,6 +434,11 @@ export function describeSyncPlan(
   if (removed.length > 0) {
     lines.push({ tone: 'change', text: `${say('Removed', 'Would remove')} ${removed.length} file(s)` });
     for (const action of removed) lines.push({ tone: 'change', text: `  - ${action.path} (${action.reason})` });
+  }
+
+  if (blocked.length > 0) {
+    lines.push({ tone: 'warning', text: `${say('Left', 'Would leave')} ${blocked.length} file(s) untouched: core's version of them can't be worked out for this project` });
+    for (const action of blocked) lines.push({ tone: 'warning', text: `  ! ${action.path} (${action.blockedBy})` });
   }
 
   if (customized.length > 0) {

@@ -8,6 +8,7 @@ import crypto from 'crypto'
 import fs from 'fs-extra'
 import path from 'path'
 import type { WizardConfig } from '../types.js'
+import { withActiveThemeStyles } from '../../utils/sync-plan.js'
 
 /**
  * Get the target themes directory in the user's project
@@ -458,11 +459,9 @@ export async function updateGlobalsCss(config: WizardConfig): Promise<void> {
 
   let content = await fs.readFile(globalsCssPath, 'utf-8')
 
-  // Replace the default theme import with the project's theme
-  content = content.replace(
-    /@import\s+["']\.\.\/contents\/themes\/[^/]+\/styles\/globals\.css["'];?/,
-    `@import "../contents/themes/${config.projectSlug}/styles/globals.css";`
-  )
+  // Point the theme stylesheet import at the project's theme the way sync:app
+  // does, so the file is what sync:app writes there and gets its generated tag
+  content = withActiveThemeStyles(content, config.projectSlug)
 
   await fs.writeFile(globalsCssPath, content, 'utf-8')
 }

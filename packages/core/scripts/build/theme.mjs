@@ -16,6 +16,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import dotenv from 'dotenv'
 import { getConfig } from './registry/config.mjs'
+import { rewriteBelowGeneratedTag } from '../utils/generated-tag.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -84,10 +85,11 @@ ${expectedImport}
         return false // Already correct, no update needed
       }
 
-      // Update only the import line, preserving any custom comments
-      const updatedContent = currentContent.replace(
-        /@import\s+["'][^"']+["'];?/,
-        expectedImport
+      // Update only the import line, preserving any custom comments. A generated
+      // tag sync:app put on the file keeps telling the truth: rehashed when the
+      // file still matched it, left as it was when the project had changed it.
+      const updatedContent = rewriteBelowGeneratedTag(currentContent, body =>
+        body.replace(/@import\s+["'][^"']+["'];?/, expectedImport)
       )
 
       fs.writeFileSync(appGlobalsCssPath, updatedContent)

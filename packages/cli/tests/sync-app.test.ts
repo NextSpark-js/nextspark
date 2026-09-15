@@ -75,7 +75,7 @@ async function runSync(root: string, options: { dryRun?: boolean; force?: boolea
   return printed.join('\n').replace(/\x1b\[[0-9;]*m/g, '')
 }
 
-const TAG_LINE = new RegExp(`^// @nextspark-generated core@${CORE_VERSION.replace(/\./g, '\\.')} sha256=[0-9a-f]{64}\n`)
+const TAG_LINE = new RegExp(`^// @nextspark-generated core@${CORE_VERSION.replace(/\./g, '\\.')} path=\\S+ sha256=[0-9a-f]{64}\n`)
 
 test('--dry-run writes nothing and names each file it would write, remove or keep, root files included', async () => {
   const { root, cleanup } = await project()
