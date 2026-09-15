@@ -7,10 +7,12 @@
   "requiredPlugins": [
     "@nextsparkjs/plugin-langchain"
   ],
-  "dependencies": {},
+  "dependencies": {
+    "@tailwindcss/container-queries": "^0.1.1"
+  },
   "peerDependencies": {
-    "@nextsparkjs/core": "*",
-    "@nextsparkjs/testing": "*",
+    "@nextsparkjs/core": ">=0.1.0-0",
+    "@nextsparkjs/testing": ">=0.1.0-0",
     "@tanstack/react-query": "^5.0.0",
     "lucide-react": "^0.539.0",
     "next": "^15.0.0",

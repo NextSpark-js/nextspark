@@ -229,6 +229,16 @@ for pkg in "${PACKAGES[@]}"; do
 const fs = require('fs');
 const pkg = JSON.parse(fs.readFileSync('$pkg_json', 'utf8'));
 pkg.version = '$NEW_VERSION';
+// An @nextsparkjs range written >=X.Y.Z-0 follows the release it ships in: a
+// range admits prereleases only for its own X.Y.Z, so 0.1.1-beta.0 needs >=0.1.1-0.
+const base = '$NEW_VERSION'.split('-')[0];
+for (const section of ['dependencies', 'peerDependencies', 'devDependencies']) {
+  for (const [name, range] of Object.entries(pkg[section] || {})) {
+    if (name.startsWith('@nextsparkjs/') && /^>=\d+\.\d+\.\d+-0$/.test(range)) {
+      pkg[section][name] = '>=' + base + '-0';
+    }
+  }
+}
 fs.writeFileSync('$pkg_json', JSON.stringify(pkg, null, 2) + '\n');
 "
 
@@ -239,6 +249,22 @@ fs.writeFileSync('$pkg_json', JSON.stringify(pkg, null, 2) + '\n');
         echo -e "  ${RED}[FAIL]${NC} $pkg_name"
     fi
 done
+
+# The lockfile records each importer's specifier, so a range rewritten above has
+# to change there too, or `pnpm install --frozen-lockfile` rejects the lockfile.
+LOCKFILE="$REPO_ROOT/pnpm-lock.yaml"
+if [ -f "$LOCKFILE" ]; then
+    node -e "
+const fs = require('fs');
+const file = '$LOCKFILE';
+const base = '$NEW_VERSION'.split('-')[0];
+const specifier = /^(\s+'@nextsparkjs\/[^']+':\n\s+specifier: )'>=\d+\.\d+\.\d+-0'/gm;
+const text = fs.readFileSync(file, 'utf8');
+const updated = text.replace(specifier, (_, head) => head + \"'>=\" + base + \"-0'\");
+if (updated !== text) fs.writeFileSync(file, updated);
+console.log('  pnpm-lock.yaml: ' + (text.match(specifier) || []).length + ' @nextsparkjs specifiers at >=' + base + '-0');
+"
+fi
 
 echo ""
 echo -e "${GREEN}========================================${NC}"
