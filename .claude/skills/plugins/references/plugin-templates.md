@@ -243,7 +243,7 @@ export function useMyPluginMutation() {
 ```typescript
 // contents/plugins/my-plugin/api/process/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
+import * as z from 'zod'
 import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 
 const ProcessInputSchema = z.object({

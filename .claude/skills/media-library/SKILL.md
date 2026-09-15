@@ -391,7 +391,7 @@ Media library fields also work inside array (repeatable) items:
 
 ```typescript
 // contents/themes/{theme}/blocks/hero/schema.ts
-import { z } from 'zod'
+import * as z from 'zod'
 import { baseBlockSchema } from '@/core/types/blocks'
 
 export const schema = baseBlockSchema.merge(z.object({

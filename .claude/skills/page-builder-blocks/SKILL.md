@@ -61,7 +61,7 @@ export const config: Omit<BlockConfig, 'schema' | 'fieldDefinitions' | 'Componen
 ### File 2: schema.ts
 
 ```typescript
-import { z } from 'zod'
+import * as z from 'zod'
 import { baseBlockSchema } from '@/core/types/blocks'
 
 // For array fields, define item schema first

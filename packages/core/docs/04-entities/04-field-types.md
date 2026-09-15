@@ -1147,7 +1147,7 @@ Specific user selector.
 You can add additional validation using Zod:
 
 ```typescript
-import { z } from 'zod'
+import * as z from 'zod'
 
 {
   name: 'email',

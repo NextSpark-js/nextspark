@@ -1,5 +1,5 @@
 import { DynamicStructuredTool } from '@langchain/core/tools'
-import { z } from 'zod'
+import * as z from 'zod'
 
 export interface ToolDefinition<T extends z.ZodObject<z.ZodRawShape>> {
     name: string

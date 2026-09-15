@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import * as z from 'zod'
 import { baseBlockSchema } from '@nextsparkjs/core/types/blocks'
 
 const benefitItemSchema = z.object({

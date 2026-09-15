@@ -126,7 +126,7 @@ export const config: Omit<BlockConfig, 'schema' | 'fieldDefinitions' | 'Componen
 def generate_schema(slug: str) -> str:
     """Generate schema.ts content."""
     pascal = to_pascal_case(slug)
-    return f'''import {{ z }} from 'zod'
+    return f'''import * as z from 'zod'
 import {{ baseBlockSchema }} from '@/core/types/blocks'
 
 // Extend baseBlockSchema with block-specific fields

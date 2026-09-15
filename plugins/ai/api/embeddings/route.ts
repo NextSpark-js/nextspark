@@ -12,7 +12,7 @@ import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/cor
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { embed } from 'ai'
 import { openai } from '@ai-sdk/openai'
-import { z } from 'zod'
+import * as z from 'zod'
 
 // Request validation schema
 const EmbeddingRequestSchema = z.object({

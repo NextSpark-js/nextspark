@@ -142,7 +142,7 @@ Result: No conflicts, optimized bundle
 Every plugin MUST have a `plugin.config.ts` file:
 
 ```typescript
-import { z } from 'zod'
+import * as z from 'zod'
 import type { PluginConfig } from '@/core/types/plugin'
 
 const MyPluginConfigSchema = z.object({

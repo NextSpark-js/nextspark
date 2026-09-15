@@ -54,6 +54,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **zod is imported as a namespace: `import * as z from 'zod'` (#192).** Turbopack, the
+  default bundler in Next 16, doesn't tree-shake the named `z` import, so a client
+  component that imports it ships all of zod with its 63 locales. Core, its templates and
+  the bundled themes and plugins changed; code that uses `z` stays the same.
+  - `sync:app` doesn't touch `contents/`. In a project, replace the import in your theme
+    and plugin files, starting with the block schemas
+    (`contents/themes/<theme>/blocks/*/schema.ts`): `import { z } from 'zod'` →
+    `import * as z from 'zod'`, and `import type { z } from 'zod'` →
+    `import type * as z from 'zod'`.
+  - New projects get an `eslint.config.mjs` with a `no-restricted-syntax` rule that rejects
+    the named import. An existing project keeps its own config; add the same rule to it.
 - **`generateTemplateRegistry()` returns `Promise<string>` (#197).** It reads each theme
   template's syntax tree to tell a component override from a metadata-only one, and the
   TypeScript parser loads asynchronously. Code importing it from

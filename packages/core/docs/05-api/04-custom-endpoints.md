@@ -478,7 +478,7 @@ export async function POST(request: NextRequest) {
 
 **Define schemas:**
 ```typescript
-import { z } from 'zod'
+import * as z from 'zod'
 
 const generateAISchema = z.object({
   prompt: z.string().min(1).max(1000),
@@ -593,7 +593,7 @@ export async function GET(request: NextRequest) {
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
 import { checkRateLimit } from '@/core/lib/api/rate-limit'
-import { z } from 'zod'
+import * as z from 'zod'
 import OpenAI from 'openai'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -756,7 +756,7 @@ async function handleSubscriptionUpdate(subscription: any) {
 // app/api/v1/import/tasks/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/auth/dual-auth'
-import { z } from 'zod'
+import * as z from 'zod'
 import { db } from '@/lib/db'
 
 const taskSchema = z.object({

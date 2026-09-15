@@ -307,7 +307,7 @@ Define validation schema with Zod:
 
 ```typescript
 // contents/themes/default/blocks/pricing-table/schema.ts
-import { z } from 'zod'
+import * as z from 'zod'
 import { baseBlockSchema, type BaseBlockProps } from '@/core/types/blocks'
 
 // Define plan schema

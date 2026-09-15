@@ -24,7 +24,7 @@
  */
 
 import { NextRequest } from 'next/server'
-import { z } from 'zod'
+import * as z from 'zod'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { streamChat } from '@/plugins/langchain/lib/agent-factory'

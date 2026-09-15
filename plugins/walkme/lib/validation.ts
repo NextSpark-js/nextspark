@@ -5,7 +5,7 @@
  * Ensures tour definitions are well-formed before they're used.
  */
 
-import { z } from 'zod'
+import * as z from 'zod'
 import type { Tour, TourStep as TourStepType } from '../types/walkme.types'
 
 // ---------------------------------------------------------------------------

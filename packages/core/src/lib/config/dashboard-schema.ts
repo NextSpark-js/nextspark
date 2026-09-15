@@ -5,7 +5,7 @@
  * This schema is used during build time and development to catch configuration errors early.
  */
 
-import { z } from 'zod'
+import * as z from 'zod'
 
 // =============================================================================
 // TOPBAR SCHEMAS

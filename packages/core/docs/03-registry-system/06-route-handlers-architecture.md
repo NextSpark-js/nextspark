@@ -694,7 +694,7 @@ export async function GET() {
 // contents/plugins/notifications/api/send/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'
-import { z } from 'zod'
+import * as z from 'zod'
 
 const SendNotificationSchema = z.object({
   userId: z.string().uuid(),

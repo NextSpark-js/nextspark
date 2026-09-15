@@ -8,7 +8,7 @@
  * MCP_OVERRIDES registry.
  */
 
-import type { z } from 'zod'
+import type * as z from 'zod'
 import type { EntityConfig } from '../entities/types'
 
 export type McpOperation = 'list' | 'get' | 'create' | 'update' | 'delete'

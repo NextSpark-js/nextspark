@@ -19,7 +19,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js'
-import { z } from 'zod'
+import * as z from 'zod'
 import type { EntityConfig } from '../entities/types'
 import { StatelessJsonRpcTransport } from './transport'
 import { generateEntityTools, normalizeDateFields } from './tool-generator'

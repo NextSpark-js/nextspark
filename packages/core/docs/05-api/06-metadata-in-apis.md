@@ -811,7 +811,7 @@ export async function getTaskMetadata(taskId: string, userId: string) {
 
 **Schema validation:**
 ```typescript
-import { z } from 'zod'
+import * as z from 'zod'
 
 const taskMetadataSchema = z.object({
   priority: z.enum(['low', 'medium', 'high']).optional(),

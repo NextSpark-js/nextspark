@@ -14,7 +14,7 @@
  * call surfaces as a normal API error, translated via errors.ts.
  */
 
-import { z } from 'zod'
+import * as z from 'zod'
 import type { EntityConfig } from '../entities/types'
 import { buildEntitySchemas } from './schema-builder'
 import { translateApiError } from './errors'

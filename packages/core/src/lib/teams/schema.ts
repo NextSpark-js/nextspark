@@ -7,7 +7,7 @@
  * @module core/lib/teams/schema
  */
 
-import { z } from 'zod'
+import * as z from 'zod'
 import { AVAILABLE_ROLES } from '@nextsparkjs/registries/permissions-registry'
 import { getInvitableRoles } from './permissions'
 

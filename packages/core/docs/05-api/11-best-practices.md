@@ -241,7 +241,7 @@ export async function checkRateLimit(
 
 **✅ DO: Validate and sanitize**
 ```typescript
-import { z } from 'zod'
+import * as z from 'zod'
 
 const createTaskSchema = z.object({
   title: z.string().min(1).max(200).trim(),

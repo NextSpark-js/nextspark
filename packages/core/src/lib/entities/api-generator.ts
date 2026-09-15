@@ -12,7 +12,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
+import * as z from 'zod'
 import type { EntityConfig, ChildEntityDefinition, HookContext } from './types'
 import { getEntityConfig } from './registry'
 import { executeEntityHooks } from './hooks'

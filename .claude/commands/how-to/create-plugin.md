@@ -208,7 +208,7 @@ Define your plugin's configuration:
 ```typescript
 // plugins/my-plugin/plugin.config.ts
 import type { PluginConfig } from '@/core/types/plugin'
-import { z } from 'zod'
+import * as z from 'zod'
 
 // Configuration schema
 const MyPluginConfigSchema = z.object({

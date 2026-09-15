@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry'
-import { z } from 'zod'
+import * as z from 'zod'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 const requestSchema = z.object({

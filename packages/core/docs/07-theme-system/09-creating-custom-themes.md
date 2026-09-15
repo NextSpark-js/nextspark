@@ -718,7 +718,7 @@ export const projectsConfig: EntityConfig = {
 ```typescript
 // contents/themes/my-theme/entities/projects/projects.fields.ts
 import type { FieldDefinitions } from '@/core/lib/entities/types'
-import { z } from 'zod'
+import * as z from 'zod'
 
 export const projectsFields: FieldDefinitions = {
   name: {

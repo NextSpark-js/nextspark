@@ -473,7 +473,7 @@ export const config = {
 ### schema.ts Template
 
 ```typescript
-import { z } from 'zod'
+import * as z from 'zod'
 import { baseBlockSchema } from '@/core/types/blocks'
 
 export const schema = baseBlockSchema.merge(z.object({

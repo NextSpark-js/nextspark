@@ -12,7 +12,7 @@ import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/cor
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { generateText } from 'ai'
 import { saveExampleSafely } from '../../lib/save-example'
-import { z } from 'zod'
+import * as z from 'zod'
 
 // Simple, generic system prompt
 const SYSTEM_PROMPT = `You are a helpful AI assistant. Provide accurate, helpful, and well-structured responses. Be concise but thorough, and always aim to be useful to the person asking.`

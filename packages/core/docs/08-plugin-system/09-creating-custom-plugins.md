@@ -387,7 +387,7 @@ export default weatherPluginConfig
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'
 import { usePlugin } from '@/core/lib/registries/plugin-registry'
-import { z } from 'zod'
+import * as z from 'zod'
 
 const WeatherQuerySchema = z.object({
   city: z.string().min(1).max(100),

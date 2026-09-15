@@ -154,7 +154,7 @@ export const config: BlockConfig = {
 
 ```typescript
 import { baseBlockSchema } from '@/core/block-system/schemas';
-import { z } from 'zod';
+import * as z from 'zod';
 
 export const schema = baseBlockSchema.extend({
   title: z.string().default('Welcome'),

@@ -64,7 +64,7 @@ Our form management uses a battle-tested stack:
 
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
+import * as z from 'zod'
 import { Button } from '@/core/components/ui/button'
 import { Input } from '@/core/components/ui/input'
 import { Label } from '@/core/components/ui/label'
@@ -194,7 +194,7 @@ useForm<FormData>({
 
 ```typescript
 // core/lib/validation.ts
-import { z } from 'zod'
+import * as z from 'zod'
 
 // String validation
 export const emailSchema = z.object({

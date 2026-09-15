@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { query as dbQuery } from '@nextsparkjs/core/lib/db'
-import { z } from 'zod'
+import * as z from 'zod'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 const updateCategorySchema = z.object({

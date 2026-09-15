@@ -203,7 +203,7 @@ try {
 }
 
 // Validate data before sending
-import { z } from 'zod'
+import * as z from 'zod'
 
 const taskSchema = z.object({
   title: z.string().min(1).max(200),

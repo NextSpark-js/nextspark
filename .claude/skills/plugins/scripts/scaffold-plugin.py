@@ -88,7 +88,7 @@ def create_plugin(name: str, plugin_type: str, features: list) -> None:
     created_files = []
 
     # 1. plugin.config.ts
-    config_content = f"""import {{ z }} from 'zod'
+    config_content = f"""import * as z from 'zod'
 import type {{ PluginConfig }} from '@/core/types/plugin'
 
 const {P}ConfigSchema = z.object({{
@@ -346,7 +346,7 @@ export function {P}Widget({{ title = '{P}', onAction }}: {P}WidgetProps) {{
         api_dir = plugin_path / "api" / "process"
         api_dir.mkdir(parents=True, exist_ok=True)
         api_content = f"""import {{ NextRequest, NextResponse }} from 'next/server'
-import {{ z }} from 'zod'
+import * as z from 'zod'
 import {{ authenticateRequest }} from '@/core/lib/auth/authenticateRequest'
 import {{ {P}Core }} from '../../lib/core'
 

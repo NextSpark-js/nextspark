@@ -15,7 +15,7 @@
  * These tests validate that permission checks occur in the correct order.
  */
 
-import { z } from 'zod'
+import * as z from 'zod'
 
 describe('PATCH /api/v1/teams/:teamId - Permission Check Order (Issue #2)', () => {
   describe('Current Permission Check Flow (PROBLEMATIC)', () => {

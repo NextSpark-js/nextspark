@@ -168,7 +168,7 @@ export const themeConfigPlugin: PluginConfig = {
 }
 
 // schemas/settings.schema.ts
-import { z } from 'zod'
+import * as z from 'zod'
 
 export const ThemeSettingsSchema = z.object({
   primaryColor: z.string().regex(/^#[0-9A-F]{6}$/i),

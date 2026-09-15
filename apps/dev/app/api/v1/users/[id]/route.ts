@@ -12,7 +12,7 @@ import {
   processEntityMetadata
 } from '@nextsparkjs/core/lib/api/helpers';
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth';
-import { z } from 'zod';
+import * as z from 'zod';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
 
 const updateUserSchema = z.object({

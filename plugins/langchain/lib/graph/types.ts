@@ -12,7 +12,7 @@
 
 import type { BaseMessage } from '@langchain/core/messages'
 import type { AgentContext, SessionConfig, LLMProvider } from '../../types/langchain.types'
-import type { z } from 'zod'
+import type * as z from 'zod'
 
 // ============================================
 // AGENT TOOL INTERFACE (NEW - GENERIC)

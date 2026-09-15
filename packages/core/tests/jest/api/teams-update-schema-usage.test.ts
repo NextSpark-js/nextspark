@@ -14,7 +14,7 @@
  * These tests validate that the correct schema is selected based on payload content.
  */
 
-import { z } from 'zod'
+import * as z from 'zod'
 
 describe('PATCH /api/v1/teams/:teamId - Schema Usage (Issue #3)', () => {
   // Mock schemas (match actual schemas)

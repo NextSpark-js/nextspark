@@ -9,7 +9,7 @@
  * Focus on validation logic WITHOUT database calls.
  */
 
-import { z } from 'zod'
+import * as z from 'zod'
 
 // Copy schemas from API route to test in isolation
 const createCategorySchema = z.object({

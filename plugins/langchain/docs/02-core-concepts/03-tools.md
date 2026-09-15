@@ -25,7 +25,7 @@ interface ToolDefinition<T extends z.ZodObject<any>> {
 ### Basic Tool
 
 ```typescript
-import { z } from 'zod'
+import * as z from 'zod'
 import type { ToolDefinition } from '@/contents/plugins/langchain/lib/tools-builder'
 
 const listItemsTool: ToolDefinition<typeof schema> = {
@@ -46,7 +46,7 @@ const listItemsTool: ToolDefinition<typeof schema> = {
 The recommended pattern is to create a factory function that receives context:
 
 ```typescript
-import { z } from 'zod'
+import * as z from 'zod'
 import type { ToolDefinition } from '@/contents/plugins/langchain/lib/tools-builder'
 
 interface ToolContext {
@@ -164,7 +164,7 @@ z.object({
 
 ```typescript
 // tools/tasks.ts
-import { z } from 'zod'
+import * as z from 'zod'
 import { TasksService } from '@/themes/default/entities/tasks/tasks.service'
 import type { ToolDefinition } from '@/contents/plugins/langchain/lib/tools-builder'
 
@@ -307,7 +307,7 @@ export function createTaskTools(context: TaskToolContext): ToolDefinition<any>[]
 
 ```typescript
 // tools/customers.ts
-import { z } from 'zod'
+import * as z from 'zod'
 import { CustomersService } from '@/themes/default/entities/customers/customers.service'
 import type { ToolDefinition } from '@/contents/plugins/langchain/lib/tools-builder'
 
@@ -473,7 +473,7 @@ Orchestrator tools are special - they route requests to other agents:
 
 ```typescript
 // tools/orchestrator.ts
-import { z } from 'zod'
+import * as z from 'zod'
 import type { ToolDefinition } from '@/contents/plugins/langchain/lib/tools-builder'
 
 export interface RoutingResult {

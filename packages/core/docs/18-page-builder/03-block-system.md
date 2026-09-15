@@ -313,7 +313,7 @@ export const fieldDefinitions: FieldDefinition[] = [
 ### schema.ts
 
 ```typescript
-import { z } from 'zod'
+import * as z from 'zod'
 import { baseBlockSchema } from '@/core/types/blocks'
 
 export const heroSpecificSchema = z.object({

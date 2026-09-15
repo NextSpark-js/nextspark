@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import * as z from 'zod'
 import { ToolDefinition } from '@/plugins/langchain/lib/tools-builder'
 import { TasksService } from '@/themes/default/entities/tasks/tasks.service'
 import { TaskStatus, TaskPriority } from '@/themes/default/entities/tasks/tasks.types'

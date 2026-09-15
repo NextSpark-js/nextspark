@@ -5,7 +5,7 @@
  * Supports WordPress/Webflow-style page building with reusable blocks.
  */
 
-import { z } from 'zod'
+import * as z from 'zod'
 
 // ============================================================================
 // MEDIA REFERENCE - For image/media fields in blocks

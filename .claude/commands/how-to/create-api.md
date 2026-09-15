@@ -139,7 +139,7 @@ import { authenticateRequest, createAuthFailureResponse } from '@/core/lib/api/a
 import { checkPermission } from '@/core/lib/permissions/check'
 import { createApiResponse, createApiError } from '@/core/lib/api/response'
 import { SalesReportService } from '@/core/lib/services/sales-report.service'
-import { z } from 'zod'
+import * as z from 'zod'
 
 // Query parameters schema
 const QuerySchema = z.object({

@@ -11,7 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { getBillingGateway } from '@nextsparkjs/core/lib/billing/gateways/factory'
 import { SubscriptionService, MembershipService } from '@nextsparkjs/core/lib/services'
-import { z } from 'zod'
+import * as z from 'zod'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 const checkoutSchema = z.object({

@@ -208,7 +208,7 @@ System endpoints that cannot be overridden.
 ## Input Validation
 
 ```typescript
-import { z } from 'zod'
+import * as z from 'zod'
 
 const CreateProductSchema = z.object({
   title: z.string().min(1).max(255),

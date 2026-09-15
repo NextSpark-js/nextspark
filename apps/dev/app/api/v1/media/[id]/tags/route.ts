@@ -5,7 +5,7 @@ import { API_ERROR_CODES } from '@nextsparkjs/core/lib/api/api-error'
 import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { MediaService } from '@nextsparkjs/core/lib/services/media.service'
-import { z } from 'zod'
+import * as z from 'zod'
 
 const addTagSchema = z.object({
   tagId: z.string().min(1),

@@ -53,7 +53,7 @@ Add `teamId` to your Zod schema:
 
 ```typescript
 // entities/your-entity/schema.ts
-import { z } from 'zod'
+import * as z from 'zod'
 
 export const yourEntitySchema = z.object({
   id: z.string(),

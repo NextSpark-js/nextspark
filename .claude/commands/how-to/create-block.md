@@ -170,7 +170,7 @@ The schema.ts file validates block data with Zod:
 
 ```typescript
 // contents/themes/default/blocks/hero-banner/schema.ts
-import { z } from 'zod'
+import * as z from 'zod'
 import { baseBlockSchema } from '@/core/lib/blocks/base-schema'
 
 // CRITICAL: Always extend baseBlockSchema

@@ -106,7 +106,7 @@ export const AGENTS = {
 
 ```typescript
 // tools/orchestrator.ts
-import { z } from 'zod'
+import * as z from 'zod'
 
 export interface RoutingResult {
     agent: 'task' | 'customer' | 'page'

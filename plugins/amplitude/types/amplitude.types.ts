@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod';
 
 export type AmplitudeAPIKey = string & { __brand: 'AmplitudeAPIKey' };
 export type UserId = string & { __brand: 'UserId' };

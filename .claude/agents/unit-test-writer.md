@@ -178,7 +178,7 @@ await Read('app/hooks/useProducts.ts')
 ```typescript
 // __tests__/api/products/validation.test.ts
 
-import { z } from 'zod'
+import * as z from 'zod'
 import {
   createProductSchema,
   updateProductSchema,

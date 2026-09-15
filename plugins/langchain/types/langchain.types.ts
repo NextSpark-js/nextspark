@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import * as z from 'zod'
 import { BaseMessage } from '@langchain/core/messages'
 import type { GuardrailsConfig } from '../lib/guardrails'
 import type { ObservabilityConfig } from './observability.types'

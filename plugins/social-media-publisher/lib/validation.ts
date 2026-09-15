@@ -5,7 +5,7 @@
  * Uses platform constants from social.types.ts for consistency.
  */
 
-import { z } from 'zod'
+import * as z from 'zod'
 import {
   IMPLEMENTED_PLATFORMS,
   IMAGE_REQUIRED_PLATFORMS,

@@ -66,7 +66,7 @@ def generate_list_route(name: str, methods: list, auth_type: str) -> str:
         imports.append("import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'")
 
     if 'POST' in methods or 'PATCH' in methods:
-        imports.append("import { z } from 'zod'")
+        imports.append("import * as z from 'zod'")
 
     # Build endpoint comments
     endpoint_lines = []
@@ -215,7 +215,7 @@ def generate_id_route(name: str, methods: list, auth_type: str) -> str:
         imports.append("import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'")
 
     if 'PATCH' in methods:
-        imports.append("import { z } from 'zod'")
+        imports.append("import * as z from 'zod'")
 
     code = f'''/**
  * {pascal} Single Resource API Route

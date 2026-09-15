@@ -596,7 +596,7 @@ export async function DELETE(
 
 ```typescript
 // ✅ CORRECT - Validate request body
-import { z } from 'zod'
+import * as z from 'zod'
 
 const createTaskSchema = z.object({
   title: z.string().min(3).max(255),

@@ -9,7 +9,7 @@
  * - Schema: ownerUpdateTeamSchema validation
  */
 
-import { z } from 'zod';
+import * as z from 'zod';
 
 describe('PATCH /api/v1/teams/:teamId - Owner Title/Description Update', () => {
 

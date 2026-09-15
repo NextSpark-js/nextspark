@@ -16,7 +16,7 @@ Tools are defined with a name, description, schema, and function:
 ```typescript
 // contents/themes/default/lib/langchain/tools/my-entity.ts
 
-import { z } from 'zod'
+import * as z from 'zod'
 import type { ToolDefinition } from '@/contents/plugins/langchain/types/langchain.types'
 import type { ToolContext } from '@/contents/plugins/langchain/types/langchain.types'
 import { MyEntityService } from '@/contents/themes/default/entities/my-entity/my-entity.service'

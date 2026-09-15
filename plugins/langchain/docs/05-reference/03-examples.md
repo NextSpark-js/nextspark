@@ -77,7 +77,7 @@ When the user asks you to "suggest X for task Y" or "add recommendations to task
 
 ```typescript
 // tools/tasks.ts
-import { z } from 'zod'
+import * as z from 'zod'
 import { TasksService } from '@/themes/default/entities/tasks/tasks.service'
 import type { ToolDefinition } from '@/contents/plugins/langchain/lib/tools-builder'
 
@@ -296,7 +296,7 @@ A customer management agent with contextual updates.
 
 ```typescript
 // tools/customers.ts
-import { z } from 'zod'
+import * as z from 'zod'
 import { CustomersService } from '@/themes/default/entities/customers/customers.service'
 import type { DayOfWeek } from '@/themes/default/entities/customers/customers.types'
 
@@ -747,7 +747,7 @@ Agent for managing pages and blocks.
 
 ```typescript
 // tools/pages.ts (simplified)
-import { z } from 'zod'
+import * as z from 'zod'
 import { PagesManagementService } from '@/themes/default/entities/pages/pages-management.service'
 import { BLOCK_REGISTRY } from '@/core/lib/registries/block-registry'
 

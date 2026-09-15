@@ -8,7 +8,7 @@
  * Focus on business logic validation WITHOUT database calls.
  */
 
-import { z } from 'zod'
+import * as z from 'zod'
 
 // Copy schemas from API route to test in isolation
 const createPostSchema = z.object({

@@ -51,7 +51,7 @@ Block Layer:
 ### Basic Schemas
 
 ```typescript
-import { z } from 'zod'
+import * as z from 'zod'
 
 // Simple object schema
 const userSchema = z.object({
@@ -184,7 +184,7 @@ type UserName = z.infer<typeof userSchema.pick({ name: true })>
 ### Standard Pattern (safeParse)
 
 ```typescript
-import { z } from 'zod'
+import * as z from 'zod'
 import { NextRequest } from 'next/server'
 import { createApiError, createApiResponse } from '@/core/lib/api/helpers'
 
@@ -262,7 +262,7 @@ export async function GET(request: NextRequest) {
 
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
+import * as z from 'zod'
 
 // 1. Define schema
 const loginSchema = z.object({
@@ -406,7 +406,7 @@ const formatted = result.error.format()
 ### Using baseBlockSchema
 
 ```typescript
-import { z } from 'zod'
+import * as z from 'zod'
 import { baseBlockSchema } from '@/core/types/blocks'
 
 // baseBlockSchema provides:

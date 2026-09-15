@@ -14,7 +14,7 @@ import {
   ACTIVE_TEAM_COOKIE_MAX_AGE,
   activeTeamCookieValue,
 } from '@nextsparkjs/core/lib/teams/active-team-cookie'
-import { z } from 'zod'
+import * as z from 'zod'
 
 const switchTeamSchema = z.object({
   teamId: z.string().min(1, 'Team ID is required'),

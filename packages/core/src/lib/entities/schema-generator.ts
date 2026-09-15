@@ -5,7 +5,7 @@
  * Supports create, update, and response schemas with child entities.
  */
 
-import { z } from 'zod'
+import * as z from 'zod'
 import { SYSTEM_FIELD_NAMES } from './system-fields'
 import type { EntityConfig, EntityField, ChildEntityDefinition } from './types'
 import { mediaRefSchema } from '../../types/blocks'

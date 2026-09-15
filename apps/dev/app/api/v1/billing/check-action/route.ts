@@ -12,7 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { SubscriptionService } from '@nextsparkjs/core/lib/services'
-import { z } from 'zod'
+import * as z from 'zod'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 const checkActionSchema = z.object({

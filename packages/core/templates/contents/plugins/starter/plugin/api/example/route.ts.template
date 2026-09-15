@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
+import * as z from 'zod'
 import { getAuthContext } from '@/core/lib/api/auth'
 import { usePlugin } from '@/core/lib/registries/plugin-registry'
 

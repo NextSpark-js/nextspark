@@ -2,7 +2,7 @@
  * Tasks API Basic Tests - Simplified version that focuses on business logic
  */
 
-import { z } from 'zod';
+import * as z from 'zod';
 
 describe('Tasks API Basic Validation', () => {
   const createTaskSchema = z.object({

@@ -120,7 +120,7 @@ The config.ts file defines your entity's structure:
 ```typescript
 // contents/themes/default/entities/products/config.ts
 import type { EntityConfig } from '@/core/types/entity'
-import { z } from 'zod'
+import * as z from 'zod'
 import { Package } from 'lucide-react'
 
 export const productsEntity: EntityConfig = {

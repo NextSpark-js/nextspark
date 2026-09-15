@@ -11,7 +11,7 @@ import { authenticateRequest, createAuthFailureResponse, resolveTeamContext } fr
 import { ApiKeyManager, API_SCOPES, API_KEY_LIMITS } from '@nextsparkjs/core/lib/api/keys';
 import { validateScopesForUser } from '@nextsparkjs/core/lib/api/auth';
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit';
-import { z } from 'zod';
+import * as z from 'zod';
 
 const createApiKeySchema = z.object({
   name: z.string().min(1, 'Name is required').max(API_KEY_LIMITS.maxKeyNameLength, 'Name too long'),

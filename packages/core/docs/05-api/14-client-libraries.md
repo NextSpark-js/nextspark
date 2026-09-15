@@ -1018,7 +1018,7 @@ print(f"Created: {result['created']}, Failed: {result['failed']}")
 
 ```typescript
 // scripts/generate-sdk-types.ts
-import { z } from 'zod'
+import * as z from 'zod'
 import { zodToTs } from 'zod-to-ts'
 import { writeFileSync } from 'fs'
 

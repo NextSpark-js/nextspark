@@ -11,6 +11,21 @@ const compat = new FlatCompat({
 
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
+    rules: {
+      // `no-restricted-imports` with `importNames: ["z"]` also rejects `import * as z`, so the
+      // named specifier is matched by syntax instead.
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            "ImportDeclaration[source.value='zod'] > ImportSpecifier[imported.name='z']",
+          message:
+            "Use `import * as z from 'zod'`. Turbopack doesn't tree-shake the named `z` import and bundles all of zod, its 63 locales included.",
+        },
+      ],
+    },
+  },
 ];
 
 export default eslintConfig;

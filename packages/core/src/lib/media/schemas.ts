@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import * as z from 'zod'
 
 export const createMediaSchema = z.object({
   url: z.string().url('Invalid URL format'),

@@ -5,7 +5,7 @@
  * Used for type-safe API validation.
  */
 
-import { z } from 'zod'
+import * as z from 'zod'
 
 // ===========================================
 // ENUM SCHEMAS

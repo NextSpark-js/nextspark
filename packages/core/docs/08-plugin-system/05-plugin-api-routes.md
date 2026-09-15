@@ -178,7 +178,7 @@ const response = await fetch('/api/v1/plugin/my-plugin/process', {
 **Define Schema**:
 ```typescript
 // contents/plugins/my-plugin/lib/validation.ts
-import { z } from 'zod'
+import * as z from 'zod'
 
 export const ProcessInputSchema = z.object({
   input: z.string().min(1).max(10000),
@@ -366,7 +366,7 @@ return NextResponse.json(
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@/core/lib/api/auth/dual-auth'
 import { usePlugin } from '@/core/lib/registries/plugin-registry'
-import { z } from 'zod'
+import * as z from 'zod'
 
 const GenerateSchema = z.object({
   prompt: z.string().min(1).max(10000),

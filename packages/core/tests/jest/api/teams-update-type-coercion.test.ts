@@ -14,7 +14,7 @@
  * These tests validate that ALL falsy values are correctly caught by owner-only check.
  */
 
-import { z } from 'zod'
+import * as z from 'zod'
 
 describe('PATCH /api/v1/teams/:teamId - Type Coercion Security (Issue #1)', () => {
   // Mock schema validation (matches actual schema)

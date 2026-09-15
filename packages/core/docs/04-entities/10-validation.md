@@ -57,7 +57,7 @@ Each field type has automatic validation:
 ### In EntityField
 
 ```typescript
-import { z } from 'zod'
+import * as z from 'zod'
 
 {
   name: 'email',
@@ -229,7 +229,7 @@ const taskSchema = z.object({
 
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
+import * as z from 'zod'
 
 const taskSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters'),
@@ -287,7 +287,7 @@ export function TaskForm() {
 
 ```typescript
 // app/api/v1/tasks/route.ts
-import { z } from 'zod'
+import * as z from 'zod'
 
 const createTaskSchema = z.object({
   title: z.string().min(1).max(255),

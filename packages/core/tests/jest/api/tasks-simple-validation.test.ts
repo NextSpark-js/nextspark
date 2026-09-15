@@ -3,7 +3,7 @@
  * Basic schema and validation testing without complex mocks
  */
 
-import { z } from 'zod';
+import * as z from 'zod';
 
 // Test the schemas used in the API
 describe('Tasks API Schema Validation', () => {

@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
+import * as z from 'zod'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { SubscriptionService, MembershipService } from '@nextsparkjs/core/lib/services'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'

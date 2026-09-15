@@ -126,7 +126,7 @@ Create a handler to define what the action does:
 ```typescript
 // core/lib/actions/handlers/send-reminder-email.handler.ts
 import type { ActionHandler, ActionResult } from '@/core/types/actions'
-import { z } from 'zod'
+import * as z from 'zod'
 import { EmailService } from '@/core/lib/services/email.service'
 
 // Define payload schema

@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getTypedSession } from '@nextsparkjs/core/lib/auth'
 import { getUserPlanAndFlags, updateUserPlan, updateUserFlags } from '@nextsparkjs/core/lib/user-data'
-import { z } from 'zod'
+import * as z from 'zod'
 import type { UserRole } from '@nextsparkjs/core/types/user.types'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 

@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import * as z from 'zod'
 import { ToolDefinition } from '@/plugins/langchain/lib/tools-builder'
 import { PagesManagementService } from '@/themes/default/entities/pages/pages-management.service'
 import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry'

@@ -21,7 +21,7 @@
  * - `distinct` NEVER exposed (identifier interpolation risk in the core)
  */
 
-import { z } from 'zod'
+import * as z from 'zod'
 import type { EntityConfig, EntityField } from '../entities/types'
 import type { McpEntityOverride, McpShape } from './types'
 
