@@ -22,3 +22,5 @@ export const mockAuthApi = {
 
 export const useAuth = jest.fn(() => mockUseAuth)
 export const authApi = mockAuthApi
+
+export const clearNativeCookies = jest.fn(async () => undefined)

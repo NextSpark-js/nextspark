@@ -105,6 +105,35 @@ describe('AuthProvider', () => {
     expect(result.current.isAuthenticated).toBe(false)
   })
 
+  it('clears the session state even when signing out fails', async () => {
+    const mockUser = { id: 'user-1', name: 'Test User', email: 'test@example.com' }
+    const mockTeam = { id: 'team-1', name: 'Test Team' }
+
+    ;(authApi.login as jest.Mock).mockResolvedValue({ user: mockUser })
+    ;(teamsApi.getTeams as jest.Mock).mockResolvedValue({ data: [mockTeam] })
+    ;(authApi.logout as jest.Mock).mockRejectedValue(new Error('SecureStore unavailable'))
+
+    const { result } = renderHook(() => useAuth(), { wrapper })
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+    })
+
+    await act(async () => {
+      await result.current.login('test@example.com', 'password')
+    })
+    expect(result.current.isAuthenticated).toBe(true)
+
+    await act(async () => {
+      await expect(result.current.logout()).rejects.toThrow('SecureStore unavailable')
+    })
+
+    expect(result.current.user).toBeNull()
+    expect(result.current.team).toBeNull()
+    expect(result.current.teams).toEqual([])
+    expect(result.current.isAuthenticated).toBe(false)
+  })
+
   describe('session restore', () => {
     const storedUser = { id: 'user-1', name: 'Stored User', email: 'stored@example.com' }
     const storedTeam = { id: 'team-1', name: 'Stored Team', role: 'member' }

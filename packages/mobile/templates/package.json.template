@@ -17,6 +17,7 @@
   "dependencies": {
     "@nextsparkjs/mobile": "^0.1.0",
     "@nextsparkjs/ui": "^0.1.0-beta.1",
+    "@preeternal/react-native-cookie-manager": "6.4.1",
     "@tanstack/react-query": "^5.62.0",
     "expo": "^54.0.0",
     "expo-constants": "~18.0.13",

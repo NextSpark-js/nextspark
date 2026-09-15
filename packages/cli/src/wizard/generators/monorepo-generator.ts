@@ -108,6 +108,9 @@ const VERSIONS = {
   RN_SCREENS: '~4.16.0',
   RN_SVG: '15.12.1',
   RN_WEB: '^0.21.0',
+  // Lets @nextsparkjs/mobile empty the native cookie store on sign-out.
+  // Exact version: the package has a single maintainer.
+  RN_COOKIE_MANAGER: '6.4.1',
 
   // Styling
   NATIVEWIND: '^4.2.1',
@@ -429,6 +432,7 @@ async function createMobilePackageJson(mobileDir: string, config: WizardConfig):
     dependencies: {
       '@nextsparkjs/mobile': VERSIONS.NEXTSPARK_MOBILE,
       '@nextsparkjs/ui': VERSIONS.NEXTSPARK_UI,
+      '@preeternal/react-native-cookie-manager': VERSIONS.RN_COOKIE_MANAGER,
       '@tanstack/react-query': VERSIONS.TANSTACK_QUERY,
       'expo': VERSIONS.EXPO,
       'expo-constants': VERSIONS.EXPO_CONSTANTS,

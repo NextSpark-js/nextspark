@@ -117,6 +117,47 @@ describe('ApiClient', () => {
 
       await expect(apiClient.get('/test')).rejects.toThrow(ApiError)
     })
+
+    it('does not declare a JSON Content-Type on a bodyless POST', async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ success: true }),
+      })
+
+      await apiClient.post('/api/auth/sign-out')
+
+      const [, init] = (global.fetch as jest.Mock).mock.calls[0]
+      expect(init.headers).not.toHaveProperty('Content-Type')
+      expect(init.body).toBeUndefined()
+    })
+
+    it('declares a JSON Content-Type when the POST has a body', async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ success: true }),
+      })
+
+      await apiClient.post('/test', { foo: 'bar' })
+
+      const [, init] = (global.fetch as jest.Mock).mock.calls[0]
+      expect(init.headers).toMatchObject({ 'Content-Type': 'application/json' })
+      expect(init.body).toBe(JSON.stringify({ foo: 'bar' }))
+    })
+
+    it('does not declare a JSON Content-Type when the body is null', async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ success: true }),
+      })
+
+      await apiClient.request('/api/auth/sign-out', { method: 'POST', body: null })
+
+      const [, init] = (global.fetch as jest.Mock).mock.calls[0]
+      expect(init.headers).not.toHaveProperty('Content-Type')
+    })
   })
 
   describe('clearAuth', () => {

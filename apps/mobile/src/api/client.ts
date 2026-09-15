@@ -7,6 +7,7 @@
 
 import * as Storage from '../lib/storage'
 import Constants from 'expo-constants'
+import { clearNativeCookies } from '@nextsparkjs/mobile'
 import { ApiError, type RequestConfig } from './client.types'
 import type { User } from './core/types'
 
@@ -93,15 +94,29 @@ class ApiClient {
   }
 
   /**
-   * Clear authentication
+   * Clear authentication: the stored credentials and the native cookie store,
+   * where fetch keeps the server's session cookie.
+   *
+   * Best effort, never rejects: every step runs even when another one fails,
+   * so a SecureStore error (offline, keychain locked) cannot leave the session
+   * cookie behind. Failures are logged.
    */
   async clearAuth(): Promise<void> {
     this.token = null
     this.teamId = null
     this.storedUser = null
-    await Storage.deleteItemAsync(TOKEN_KEY)
-    await Storage.deleteItemAsync(TEAM_ID_KEY)
-    await Storage.deleteItemAsync(USER_KEY)
+    const steps: Array<() => Promise<void>> = [
+      () => Storage.deleteItemAsync(TOKEN_KEY),
+      () => Storage.deleteItemAsync(TEAM_ID_KEY),
+      () => Storage.deleteItemAsync(USER_KEY),
+      clearNativeCookies,
+    ]
+    const results = await Promise.allSettled(steps.map(async (step) => step()))
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        console.warn('[ApiClient] Failed to clear part of the stored session:', result.reason)
+      }
+    }
   }
 
   // ==========================================
@@ -135,7 +150,10 @@ class ApiClient {
     const url = this.buildUrl(endpoint, params)
 
     const headers: HeadersInit = {
-      'Content-Type': 'application/json',
+      // Only declare a JSON payload when there is one (fetch sends no payload for
+      // a null body): a server that parses the body by its Content-Type rejects
+      // an application/json request with an empty body as invalid JSON.
+      ...(fetchOptions.body != null ? { 'Content-Type': 'application/json' } : {}),
       ...fetchOptions.headers,
     }
 
@@ -186,7 +204,7 @@ class ApiClient {
   async post<T>(endpoint: string, data?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'POST',
-      body: data ? JSON.stringify(data) : undefined,
+      body: data !== undefined ? JSON.stringify(data) : undefined,
     })
   }
 
@@ -196,7 +214,7 @@ class ApiClient {
   async patch<T>(endpoint: string, data?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PATCH',
-      body: data ? JSON.stringify(data) : undefined,
+      body: data !== undefined ? JSON.stringify(data) : undefined,
     })
   }
 

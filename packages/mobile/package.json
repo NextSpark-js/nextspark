@@ -59,12 +59,18 @@
     "clean": "rm -rf dist"
   },
   "peerDependencies": {
+    "@preeternal/react-native-cookie-manager": ">=6.3.0",
     "@tanstack/react-query": "^5.0.0",
     "expo": ">=54.0.0",
     "expo-constants": ">=18.0.0",
     "expo-secure-store": ">=15.0.0",
     "react": ">=18.0.0",
     "react-native": ">=0.75.0"
+  },
+  "peerDependenciesMeta": {
+    "@preeternal/react-native-cookie-manager": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@babel/core": "^7.25.0",

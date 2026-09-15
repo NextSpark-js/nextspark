@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@preeternal/react-native-cookie-manager':
+        specifier: 6.4.1
+        version: 6.4.1(react-native@0.81.5(@babel/core@7.28.6)(@types/react@19.3.0)(react@19.1.0))(react@19.1.0)
       '@tanstack/react-query':
         specifier: ^5.62.0
         version: 5.90.20(react@19.1.0)
@@ -935,6 +938,12 @@ packages:
   '@nodelib/fs.walk@1.2.8':
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
+
+  '@preeternal/react-native-cookie-manager@6.4.1':
+    resolution: {integrity: sha512-RuVvkOxlR2qmZMYOHr5FRFSaGDA0QGSF/wL+OFlYQ5ih2e4vkjbrlobsYJaZTkt/ABGV5T5TCgkRACFC2heLQw==}
+    peerDependencies:
+      react: '*'
+      react-native: '*'
 
   '@radix-ui/primitive@1.1.7':
     resolution: {integrity: sha512-rqWnm76nYT8HoNNqEjpgJ7Pw/DrBj5iBTrmEPo6HTX5+VJyBNOqTdv4g89G63HuR5g0AaENoAcH7Is5fF2kZ8Q==}
@@ -5538,6 +5547,11 @@ snapshots:
     dependencies:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.20.1
+
+  '@preeternal/react-native-cookie-manager@6.4.1(react-native@0.81.5(@babel/core@7.28.6)(@types/react@19.3.0)(react@19.1.0))(react@19.1.0)':
+    dependencies:
+      react: 19.1.0
+      react-native: 0.81.5(@babel/core@7.28.6)(@types/react@19.3.0)(react@19.1.0)
 
   '@radix-ui/primitive@1.1.7': {}
 

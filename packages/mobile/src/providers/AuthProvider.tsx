@@ -213,10 +213,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   )
 
   const logout = useCallback(async () => {
-    await authApi.logout()
-    setUser(null)
-    setTeam(null)
-    setTeams([])
+    try {
+      await authApi.logout()
+    } finally {
+      // The app is signed out even if something on the way failed
+      setUser(null)
+      setTeam(null)
+      setTeams([])
+    }
   }, [])
 
   const selectTeam = useCallback(

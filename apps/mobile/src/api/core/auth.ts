@@ -22,9 +22,11 @@ export const authApi = {
     // Store user info for session restoration
     await apiClient.setUser(response.user)
 
-    // Store token if provided (Better Auth may return it for mobile clients)
-    if (response.session?.token) {
-      await apiClient.setToken(response.session.token)
+    // Store the token for Bearer auth. Better Auth returns it at the top level
+    // of sign-in responses (`token`); older shapes nested it under `session`.
+    const token = response.token ?? response.session?.token
+    if (token) {
+      await apiClient.setToken(token)
     }
 
     return response
@@ -35,8 +37,10 @@ export const authApi = {
    */
   async logout(): Promise<void> {
     try {
-      // Call server signout endpoint to invalidate session
-      await apiClient.post('/api/auth/sign-out')
+      // Call server signout endpoint to invalidate session. Better Auth only
+      // accepts this POST with a JSON body (an empty one is invalid JSON, and
+      // no Content-Type at all is rejected), so an empty object is sent.
+      await apiClient.post('/api/auth/sign-out', {})
     } catch (error) {
       // Log error for debugging but continue with local cleanup
       // Server session may remain active if this fails (network issues)

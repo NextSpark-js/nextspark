@@ -24,7 +24,7 @@ NextSpark uses [Better Auth](https://better-auth.com) for authentication. The mo
 │                    │                                             │
 │                    ▼                                             │
 │  3. Server validates credentials                                 │
-│     Returns: { user, session: { token } }                       │
+│     Returns: { redirect, token, user }                          │
 │                    │                                             │
 │                    ▼                                             │
 │  4. Store token in SecureStore                                  │
@@ -106,11 +106,11 @@ class ApiClient {
   private teamId: string | null = null
   private storedUser: User | null = null
 
-  // Initialize from storage on app start
+  // Initialize from storage on app start (keys in "Storage Keys" below)
   async init(): Promise<void> {
-    this.token = await Storage.getItemAsync('auth_token')
-    this.teamId = await Storage.getItemAsync('team_id')
-    const userJson = await Storage.getItemAsync('user_data')
+    this.token = await Storage.getItemAsync(TOKEN_KEY)
+    this.teamId = await Storage.getItemAsync(TEAM_ID_KEY)
+    const userJson = await Storage.getItemAsync(USER_KEY)
     if (userJson) {
       this.storedUser = JSON.parse(userJson)
     }
@@ -119,7 +119,9 @@ class ApiClient {
   // Make authenticated request with proper headers
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const headers: HeadersInit = {
-      'Content-Type': 'application/json',
+      // JSON only when there is a body: Better Auth rejects an
+      // application/json request with an empty body as invalid JSON
+      ...(options.body != null ? { 'Content-Type': 'application/json' } : {}),
     }
 
     // Add Bearer token (Better Auth mobile flow)
@@ -144,31 +146,42 @@ class ApiClient {
 
     return response.json()
   }
+}
+```
 
-  // Login implementation
+Signing in lives in `authApi`, which stores what the response carries through
+the client:
+
+```typescript
+// src/api/core/auth.ts
+
+export const authApi = {
   async login(email: string, password: string): Promise<LoginResponse> {
-    const response = await this.request<LoginResponse>('/api/auth/sign-in/email', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
+    const response = await apiClient.post<LoginResponse>('/api/auth/sign-in/email', {
+      email,
+      password,
     })
 
-    // Store credentials
-    await this.setUser(response.user)
-    if (response.session?.token) {
-      await this.setToken(response.session.token)
+    // Better Auth returns the session token at the top level of sign-in
+    // responses (`token`); older shapes nested it under `session`.
+    await apiClient.setUser(response.user)
+    const token = response.token ?? response.session?.token
+    if (token) {
+      await apiClient.setToken(token)
     }
 
     return response
-  }
+  },
 }
 ```
 
 ## AuthProvider Context
 
-The `AuthProvider` manages authentication state for the entire app:
+The `AuthProvider` manages authentication state for the entire app. `app/_layout.tsx`
+mounts the one from `@nextsparkjs/mobile`, and screens read it with `useAuth()`:
 
 ```typescript
-// src/providers/AuthProvider.tsx
+// @nextsparkjs/mobile: src/providers/AuthProvider.tsx
 
 interface AuthContextValue {
   user: User | null
@@ -177,58 +190,79 @@ interface AuthContextValue {
   isLoading: boolean
   isAuthenticated: boolean
   login: (email: string, password: string) => Promise<void>
+  requestOtp: (email: string) => Promise<void>
+  loginWithOtp: (email: string, otp: string) => Promise<void>
   logout: () => Promise<void>
   selectTeam: (team: Team) => Promise<void>
+  refreshSession: () => Promise<void>
 }
 ```
 
 ### Session Restoration
 
-On app launch, the provider attempts to restore the previous session:
+On app launch, the provider attempts to restore the previous session. The
+session and the teams come from `authApi` and `teamsApi`; `apiClient` only holds
+the stored credentials:
 
 ```typescript
-useEffect(() => {
-  const initAuth = async () => {
-    try {
-      await apiClient.init()
+const restoreSession = useCallback(async () => {
+  try {
+    await apiClient.init()
 
-      const hasToken = apiClient.getToken()
-      const storedUser = apiClient.getStoredUser()
+    const hasToken = apiClient.getToken()
+    const storedUser = apiClient.getStoredUser()
+    if (!hasToken && !storedUser) return
 
-      if (hasToken || storedUser) {
-        // Validate session with server
-        const sessionResponse = await apiClient.getSession()
+    // Validate the session with the server (null when it answers 401)
+    const sessionResponse = await authApi.getSession()
 
-        if (sessionResponse?.user) {
-          // Session valid - use fresh data
-          setUser(sessionResponse.user)
-        } else if (storedUser) {
-          // Session invalid but have stored user (offline mode)
-          setUser(storedUser)
-        } else {
-          // No valid session
-          await apiClient.clearAuth()
-          return
-        }
-
-        // Restore team selection
-        const teamsResponse = await apiClient.getTeams()
-        setTeams(teamsResponse.data)
-
-        const storedTeamId = apiClient.getTeamId()
-        const storedTeam = teamsResponse.data.find(t => t.id === storedTeamId)
-        setTeam(storedTeam || teamsResponse.data[0])
-      }
-    } catch (error) {
+    if (sessionResponse?.user) {
+      // Session valid - use fresh data
+      setUser(sessionResponse.user)
+    } else if (storedUser) {
+      setUser(storedUser)
+    } else {
       await apiClient.clearAuth()
-    } finally {
-      setIsLoading(false)
+      return
+    }
+
+    // Restore team selection: the stored team if still a member, else the first
+    const teamsResponse = await teamsApi.getTeams()
+    setTeams(teamsResponse.data)
+
+    if (teamsResponse.data.length > 0) {
+      const storedTeamId = apiClient.getTeamId()
+      const storedTeam = teamsResponse.data.find(t => t.id === storedTeamId)
+      await applyTeam(storedTeam ?? teamsResponse.data[0])
+    } else {
+      setTeam(null)
+    }
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      // Only an authentication failure clears the credentials
+      await apiClient.clearAuth()
+      setUser(null)
+      setTeam(null)
+      setTeams([])
+    } else {
+      // Offline or server error: keep the stored user and team
+      const storedUser = apiClient.getStoredUser()
+      const storedTeam = apiClient.getStoredTeam()
+      if (storedUser) {
+        setUser(storedUser)
+        if (storedTeam) setTeam(storedTeam)
+      }
     }
   }
+}, [applyTeam])
 
-  initAuth()
-}, [])
+useEffect(() => {
+  restoreSession().finally(() => setIsLoading(false))
+}, [restoreSession])
 ```
+
+`refreshSession()` runs the same validation later (connectivity back, app in the
+foreground) without toggling `isLoading`.
 
 ## Route Protection
 
@@ -257,11 +291,15 @@ export default function AppLayout() {
 
 ## Storage Keys
 
+Namespaced, because SecureStore only allows alphanumerics, `.`, `-` and `_`
+(on web the same keys go to `localStorage`):
+
 | Key | Purpose | Storage |
 |-----|---------|---------|
-| `auth_token` | Bearer token for API calls | SecureStore |
-| `team_id` | Currently selected team | SecureStore |
-| `user_data` | User info for offline access | SecureStore |
+| `nextspark.auth.token` | Bearer token for API calls | SecureStore |
+| `nextspark.auth.teamId` | Currently selected team id (sent as `x-team-id`) | SecureStore |
+| `nextspark.auth.user` | User info for offline access | SecureStore |
+| `nextspark.auth.team` | Full record of the selected team, for an offline start (`@nextsparkjs/mobile`) | SecureStore |
 
 ## Request Headers
 
@@ -270,24 +308,35 @@ All authenticated API calls include:
 ```
 Authorization: Bearer {session-token}
 x-team-id: {team-uuid}
-Content-Type: application/json
 ```
+
+Requests with a body (`post`/`patch` with data) also send
+`Content-Type: application/json`. Bodyless requests do not: Better Auth answers
+an `application/json` request with an empty body with 400 (invalid JSON), which
+is also why sign-out sends `{}`.
 
 ## Logout Flow
 
 ```typescript
 async logout(): Promise<void> {
   try {
-    // Server-side session invalidation
-    await this.request('/api/auth/sign-out', { method: 'POST' })
+    // Server-side session invalidation. Better Auth only accepts this POST
+    // with a JSON body, so an empty object is sent.
+    await apiClient.post('/api/auth/sign-out', {})
   } catch {
     // Continue even if server call fails
   }
 
-  // Clear local auth state
-  await this.clearAuth()
+  // Clear local auth state (best effort, never rejects)
+  await apiClient.clearAuth()
 }
 ```
+
+`clearAuth()` deletes the stored token, team and user and empties the native
+cookie store (`clearNativeCookies()` from `@nextsparkjs/mobile`, which needs a
+development build: see "Sign-out and native cookies" in
+`packages/mobile/README.md`). Every step runs even if another fails, so a
+SecureStore error while offline still clears the session cookie.
 
 ## Test Credentials
 

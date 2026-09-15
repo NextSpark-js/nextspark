@@ -38,9 +38,10 @@ export interface AuthSession {
  */
 export interface LoginResponse {
   user: User
-  session: {
+  token?: string
+  session?: {
     token: string
-  }
+  } | null
 }
 
 /**

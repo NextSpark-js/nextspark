@@ -67,3 +67,10 @@ export { alert, confirm, confirmDestructive, Alert } from './lib/alert'
  */
 export { OTP_MIN_LENGTH, OTP_MAX_LENGTH, validateOtpCode } from './lib/otp'
 export type { OtpCodeError } from './lib/otp'
+
+/**
+ * Empty the app's native cookie store, as apiClient.clearAuth() does on sign-out.
+ * Needs @preeternal/react-native-cookie-manager and a development build; without
+ * them it warns once and does nothing. Never rejects.
+ */
+export { clearNativeCookies } from './lib/cookies'

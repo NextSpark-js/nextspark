@@ -93,8 +93,10 @@ export const authApi = {
    */
   async logout(): Promise<void> {
     try {
-      // Call server signout endpoint to invalidate session
-      await apiClient.post('/api/auth/sign-out')
+      // Call server signout endpoint to invalidate session. Better Auth only
+      // accepts this POST with a JSON body (an empty one is invalid JSON, and
+      // no Content-Type at all is rejected), so an empty object is sent.
+      await apiClient.post('/api/auth/sign-out', {})
     } catch (error) {
       // Log error for debugging but continue with local cleanup
       // Server session may remain active if this fails (network issues)

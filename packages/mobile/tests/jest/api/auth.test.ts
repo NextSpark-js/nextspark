@@ -60,6 +60,15 @@ describe('authApi (passwordless preset)', () => {
     expect(apiClient.setToken).toHaveBeenCalledWith('nested-token')
   })
 
+  it('logout sends a body the server accepts, so the session is actually revoked', async () => {
+    mockPost.mockResolvedValue({ success: true })
+
+    await authApi.logout()
+
+    expect(mockPost).toHaveBeenCalledWith('/api/auth/sign-out', {})
+    expect(apiClient.clearAuth).toHaveBeenCalled()
+  })
+
   it('getSocialSignInUrl returns the provider authorization URL', async () => {
     mockPost.mockResolvedValue({ url: 'https://accounts.google.com/o/oauth2/auth?x=1', redirect: true })
 
