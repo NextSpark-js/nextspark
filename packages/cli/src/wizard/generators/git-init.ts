@@ -9,6 +9,7 @@ import fs from 'fs-extra'
 import path from 'path'
 import type { GitSetupAnswers } from '../prompts/git-config.js'
 import type { WizardConfig } from '../types.js'
+import { ensureTemplatesIgnored } from '../../utils/templates-gitignore.js'
 
 /**
  * NextSpark .gitignore content
@@ -118,6 +119,7 @@ async function createGitignore(projectPath: string): Promise<void> {
       const separator = currentContent.endsWith('\n') ? '' : '\n'
       await fs.appendFile(gitignorePath, `${separator}\n# NextSpark additions\n.nextspark/\n`)
     }
+    ensureTemplatesIgnored(projectPath)
   } else {
     // Create new .gitignore
     await fs.writeFile(gitignorePath, GITIGNORE_CONTENT)

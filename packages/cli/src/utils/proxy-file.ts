@@ -50,16 +50,62 @@ const GENERATED_TAG = '@nextspark-generated';
  * matching the current template byte for byte would freeze anything an earlier
  * release generated, since it no longer equals what ships today.
  */
-async function isGeneratedFile(path: string, source: string): Promise<boolean> {
-  if (!await fs.pathExists(path)) return false;
-
-  const existing = await fs.readFile(path, 'utf-8');
+export function isGeneratedProxySource(existing: string, source: string): boolean {
   if (existing.includes(GENERATED_TAG)) return true;
 
   // A file from a release that predates the tag: only recognisable by being
   // exactly what that template produced.
   return existing === adaptProxySource(source, 'proxy.ts')
     || existing === adaptProxySource(source, 'middleware.ts');
+}
+
+export type ProxyFileName = 'proxy.ts' | 'middleware.ts';
+
+export interface ProxyFilePlan {
+  /** The file name that Next will load for this project. */
+  fileName: ProxyFileName;
+  /** What to write under that name, or null when the project's own file stays. */
+  content: string | null;
+  /** The other spelling, when the project has it and it is ours to remove. */
+  remove: ProxyFileName | null;
+  /** Files left alone because their content is not ours to replace. */
+  preserved: ProxyFileName[];
+}
+
+/**
+ * Decide what the project's request-interception file becomes: the template
+ * under the name the project's Next loads, with the other spelling removed so a
+ * project that changed Next major does not end up with both. A file that is not
+ * ours stays where it is and is listed in `preserved`, so the caller can say so.
+ *
+ * @param source - The template's proxy.ts.
+ * @param nextMajor - The project's Next major version, or null when unknown.
+ * @param existing - The project's current proxy.ts and middleware.ts, when present.
+ */
+export function planProxyFile(
+  source: string,
+  nextMajor: number | null,
+  existing: Partial<Record<ProxyFileName, string>>
+): ProxyFilePlan {
+  const fileName = proxyFileNameFor(nextMajor);
+  const preserved: ProxyFileName[] = [];
+
+  const current = existing[fileName];
+  const targetIsOurs = current === undefined || isGeneratedProxySource(current, source);
+  if (!targetIsOurs) preserved.push(fileName);
+
+  const stale: ProxyFileName = fileName === 'proxy.ts' ? 'middleware.ts' : 'proxy.ts';
+  const staleContent = existing[stale];
+  let remove: ProxyFileName | null = null;
+  if (staleContent !== undefined) {
+    if (isGeneratedProxySource(staleContent, source)) {
+      remove = stale;
+    } else {
+      preserved.push(stale);
+    }
+  }
+
+  return { fileName, content: targetIsOurs ? adaptProxySource(source, fileName) : null, remove, preserved };
 }
 
 export interface ProxyFileResult {
@@ -90,28 +136,19 @@ export async function writeProxyFile(
   const sourcePath = join(templatesDir, 'proxy.ts');
   if (!await fs.pathExists(sourcePath)) return null;
 
-  const fileName = proxyFileNameFor(getNextMajorVersion(projectRoot));
-  const source = await fs.readFile(sourcePath, 'utf-8');
-  const preserved: string[] = [];
-
-  const targetPath = join(projectRoot, fileName);
-  const targetIsOurs = !await fs.pathExists(targetPath) || await isGeneratedFile(targetPath, source);
-
-  if (targetIsOurs) {
-    await fs.writeFile(targetPath, adaptProxySource(source, fileName), 'utf-8');
-  } else {
-    preserved.push(fileName);
+  const existing: Partial<Record<ProxyFileName, string>> = {};
+  for (const name of ['proxy.ts', 'middleware.ts'] as const) {
+    const path = join(projectRoot, name);
+    if (await fs.pathExists(path)) existing[name] = await fs.readFile(path, 'utf-8');
   }
 
-  const stale = fileName === 'proxy.ts' ? 'middleware.ts' : 'proxy.ts';
-  const stalePath = join(projectRoot, stale);
-  if (await fs.pathExists(stalePath)) {
-    if (await isGeneratedFile(stalePath, source)) {
-      await fs.remove(stalePath);
-    } else {
-      preserved.push(stale);
-    }
+  const plan = planProxyFile(await fs.readFile(sourcePath, 'utf-8'), getNextMajorVersion(projectRoot), existing);
+  if (plan.content !== null) {
+    await fs.writeFile(join(projectRoot, plan.fileName), plan.content, 'utf-8');
+  }
+  if (plan.remove) {
+    await fs.remove(join(projectRoot, plan.remove));
   }
 
-  return { fileName, written: targetIsOurs, preserved };
+  return { fileName: plan.fileName, written: plan.content !== null, preserved: plan.preserved };
 }

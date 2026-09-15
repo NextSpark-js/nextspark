@@ -1,11 +1,10 @@
 import { spawn, ChildProcess } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import chalk from 'chalk';
 import ora from 'ora';
 import { getCoreDir, getProjectRoot, isMonorepoMode } from '../utils/paths.js';
 import { resolveBundlerArgs, type Bundler } from '../utils/next-bundler.js';
 import { spawnNext } from '../utils/spawn-next.js';
+import { runRegistryBuild, templatesTreeLines } from '../utils/registry-build.js';
 
 interface DevOptions {
   port: string;
@@ -16,67 +15,34 @@ interface DevOptions {
 }
 
 /**
- * Registries core declares a module for but the project does not have.
+ * Build the registries before Next starts.
  *
- * Core's ambient declarations are the list of registries this version expects,
- * so a release that adds one is detectable without naming any of them here.
- * Reading it fails open: with no list, nothing looks missing.
- */
-function missingRegistries(coreDir: string, projectRoot: string): string[] {
-  const declarations = join(coreDir, 'dist', 'nextspark-registries.d.ts');
-  if (!existsSync(declarations)) return [];
-
-  const declared = readFileSync(declarations, 'utf-8')
-    .matchAll(/declare module '@nextsparkjs\/registries\/([^']+)'/g);
-
-  return [...declared]
-    .map(match => match[1])
-    .filter(name => !existsSync(join(projectRoot, '.nextspark', 'registries', `${name}.ts`)));
-}
-
-/**
- * Build the registries before Next starts, but only when one is missing.
- *
- * Core imports some of them unconditionally, so a missing one is not a degraded
- * feature — it is a module the app cannot resolve, which is what an upgrade
- * leaves behind when a release adds a registry.
- *
- * Only when one is missing: a registry build also prunes `app/(templates)/` of
- * files that no longer match a template, and a dev server starting is no reason
- * to delete anything. `--registry` and `nextspark build` still rebuild in full.
+ * On every start, not only when a registry is missing: the build also
+ * regenerates `app/(templates)/`, which has to follow the app layouts and theme
+ * templates the project has now. Whatever it replaces or removes there is backed
+ * up, and the lines saying so are printed.
  *
  * Failure is reported and not fatal: what is already on disk may well be enough
  * to boot, and refusing to start the dev server helps nobody.
  */
-async function ensureRegistries(coreDir: string, projectRoot: string): Promise<void> {
-  const missing = missingRegistries(coreDir, projectRoot);
-  if (missing.length === 0) return;
+async function buildRegistries(coreDir: string, projectRoot: string): Promise<void> {
+  console.log(chalk.blue('[Registry] Building registries...'));
+  const result = await runRegistryBuild(coreDir, projectRoot);
 
-  console.log(chalk.blue(`[Registry] Generating ${missing.length} missing registr${missing.length === 1 ? 'y' : 'ies'} (${missing.join(', ')})...`));
+  if (result.status === 'skipped') {
+    console.warn(chalk.yellow(`[Registry] Skipped: ${result.reason}.`));
+    return;
+  }
 
-  await new Promise<void>((resolve) => {
-    const build = spawn('node', ['scripts/build/registry.mjs'], {
-      cwd: coreDir,
-      stdio: 'pipe',
-      env: { ...process.env, NEXTSPARK_PROJECT_ROOT: projectRoot },
-    });
+  for (const line of templatesTreeLines(result.output)) {
+    console.log(chalk.gray(`[Registry] ${line}`));
+  }
 
-    let stderr = '';
-    build.stderr?.on('data', (chunk) => { stderr += chunk.toString(); });
-
-    build.on('error', (err) => {
-      console.warn(chalk.yellow(`[Registry] Could not build registries: ${err.message}`));
-      resolve();
-    });
-
-    build.on('close', (code) => {
-      if (code !== 0) {
-        console.warn(chalk.yellow('[Registry] Registry build failed; starting anyway.'));
-        if (stderr.trim()) console.warn(chalk.gray(stderr.trim().split('\n').slice(-5).join('\n')));
-      }
-      resolve();
-    });
-  });
+  if (result.status === 'failed') {
+    console.warn(chalk.yellow('[Registry] Registry build failed; starting anyway.'));
+    const tail = result.output.trim().split('\n').slice(-5).join('\n');
+    if (tail) console.warn(chalk.gray(tail));
+  }
 }
 
 export async function devCommand(options: DevOptions): Promise<void> {
@@ -91,7 +57,10 @@ export async function devCommand(options: DevOptions): Promise<void> {
 
     const processes: ChildProcess[] = [];
 
-    await ensureRegistries(coreDir, projectRoot);
+    // With --registry the watcher builds on start, before it starts watching
+    if (!options.registry) {
+      await buildRegistries(coreDir, projectRoot);
+    }
 
     // Start registry watcher if enabled
     if (options.registry) {

@@ -86,8 +86,7 @@ import {
   displayTreeStructure,
   generateTestEntitiesJson,
   generateTestBlocksJson,
-  cleanupOldRouteFiles,
-  cleanupOrphanedTemplates
+  cleanupOldRouteFiles
 } from './registry/post-build/index.mjs'
 import { watchContents } from './registry/watch.mjs'
 import { syncAppGlobalsCss } from './theme.mjs'
@@ -273,9 +272,6 @@ export async function buildRegistries(projectRoot = null) {
 
     // Clean up old generated route files first
     await cleanupOldRouteFiles(CONFIG)
-
-    // Clean up orphaned template files from previous theme builds
-    await cleanupOrphanedTemplates(templates, CONFIG)
 
     // Hoist plugin dependencies to root workspace for proper resolution
     // Generate all registry files (use aggregated entities for entity registry + blocks)

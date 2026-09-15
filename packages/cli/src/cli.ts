@@ -189,6 +189,7 @@ program
   .option('--dry-run', 'Preview changes without applying')
   .option('-f, --force', 'Skip confirmation prompt')
   .option('--backup', 'Backup existing files before overwriting')
+  .option('--overwrite <paths...>', "Replace these customized files with core's version, backing each one up first")
   .option('-v, --verbose', 'Show detailed file operations')
   .action(syncAppCommand);
 

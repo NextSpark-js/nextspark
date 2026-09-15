@@ -1,9 +1,8 @@
 /**
- * @nextspark-generated
- *
- * `nextspark sync:app` replaces this file while that tag is present, which is
- * how a release ships changes to it. Delete the tag line to own the file: from
- * then on sync reports it and leaves it alone.
+ * `nextspark sync:app` keeps this file up to date while its first line is the
+ * generated tag sync writes and the rest of the file is unchanged since then,
+ * which is how a release ships changes to it. Edit the file, or delete that
+ * line, to own it: from then on sync reports it and leaves it alone.
  *
  * NextSpark Proxy (Next.js 16+)
  *
