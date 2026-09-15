@@ -9,7 +9,7 @@
 import { createRequire } from 'node:module'
 import { constants, existsSync } from 'fs'
 import { copyFile, mkdtemp, readdir, readFile, rmdir, unlink, writeFile, mkdir } from 'fs/promises'
-import { join, dirname, relative } from 'path'
+import { join, dirname, relative, sep } from 'path'
 import { fileURLToPath } from 'url'
 
 import { log, verbose } from '../../../utils/index.mjs'
@@ -634,10 +634,11 @@ function layoutCopyHeader(layoutPath) {
  * The content of the copy of an app/ layout in app/(templates)/. A layout that
  * can't be read is replaced by a pass-through, which keeps the hierarchy.
  */
-async function layoutCopyContent(layoutPath) {
-  try {
-    return layoutCopyHeader(layoutPath) + (await readFile(join(rootDir, layoutPath), 'utf8'))
-  } catch {
+async function layoutCopyContent(layoutPath, appFiles) {
+  const layout = await projectFileContent(layoutPath, appFiles)
+  if (layout !== null) {
+    return layoutCopyHeader(layoutPath) + layout
+  } else {
     const componentName = `PassThroughLayout${toPascalCase(layoutPath.replace(/[^\w]/g, '_'))}`
     return `/**
  * Basic layout wrapper - maintains Next.js structure
@@ -661,18 +662,33 @@ export default function ${componentName}({ children }: ${componentName}Props) {
  *
  * @param {string} directory - App directory of a route (e.g. 'app/dashboard/(main)/posts')
  */
-function requiredLayoutPaths(directory) {
+function requiredLayoutPaths(directory, appFiles) {
   const layoutPaths = []
   let currentPath = ''
   for (const part of directory.replace(/^app\/?/, '').split('/')) {
     if (!part) continue
     currentPath = currentPath ? `${currentPath}/${part}` : part
     const layoutPath = `app/${currentPath}/layout.tsx`
-    if (existsSync(join(rootDir, layoutPath))) {
+    const exists = appFiles?.has(layoutPath) ? appFiles.get(layoutPath) !== null : existsSync(join(rootDir, layoutPath))
+    if (exists) {
       layoutPaths.push(layoutPath)
     }
   }
   return layoutPaths
+}
+
+/**
+ * A file's content, by path from the project root: what `appFiles` gives when
+ * it has the path - null standing for a file that is gone - and otherwise what
+ * is on disk; null when there is no such file.
+ */
+async function projectFileContent(path, appFiles) {
+  if (appFiles?.has(path)) return appFiles.get(path)
+  try {
+    return await readFile(join(rootDir, path), 'utf8')
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -869,6 +885,32 @@ export async function generateMissingPages(templates, config = null, analysis = 
 }
 
 /**
+ * What `generateMissingPages` would change in app/(templates), worked out
+ * without writing anything: the files it would create, the ones it would
+ * replace and the ones it would remove - backing up both of those first - as
+ * paths from the project root.
+ *
+ * @param {Array} templates - List of template definitions
+ * @param {Object} config - Configuration object with projectRoot
+ * @param {Map} [analysis] - What `analyzeTemplates` read from these templates; taken for this call when omitted
+ * @param {Map<string, string | null>} [appFiles] - Files under app/, by path from the project root, to take as
+ *   having this content instead of what is on disk (null: removed), to plan against changes not written yet
+ * @returns {Promise<{ create: string[], replace: string[], remove: string[] }>}
+ */
+export async function planMissingPages(templates, config = null, analysis = null, appFiles = undefined) {
+  if (config?.projectRoot) {
+    rootDir = config.projectRoot
+  }
+  const templatesDir = join(rootDir, 'app', '(templates)')
+
+  analysis = analysis ?? (await analyzeTemplates(templates, config))
+  const { create, replace, remove } = await diffTemplatesTree(templatesDir, await planTemplatesTree(templates, analysis, appFiles))
+
+  const fromRoot = path => relative(rootDir, path).split(sep).join('/')
+  return { create: create.map(fromRoot), replace: replace.map(fromRoot), remove: remove.map(fromRoot) }
+}
+
+/**
  * The route file generated from a template, with its component named after the
  * last static segment of the template's route.
  */
@@ -894,15 +936,15 @@ function templatesTreePath(appPath) {
  * file of each template that gets one. A layout template's route file takes the
  * place of the copy of the app layout at the same path.
  */
-async function planTemplatesTree(templates, analysis) {
+async function planTemplatesTree(templates, analysis, appFiles) {
   const files = new Map()
 
   const directories = new Set(templates.map(({ appPath }) => appPath.replace(/\/[^\/]+$/, '')))
   for (const directory of directories) {
-    for (const layoutPath of requiredLayoutPaths(directory)) {
+    for (const layoutPath of requiredLayoutPaths(directory, appFiles)) {
       const copyPath = templatesTreePath(layoutPath)
       if (!files.has(copyPath)) {
-        files.set(copyPath, await layoutCopyContent(layoutPath))
+        files.set(copyPath, await layoutCopyContent(layoutPath, appFiles))
       }
     }
   }

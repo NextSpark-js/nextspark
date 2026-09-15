@@ -52,7 +52,10 @@ async function project() {
 }
 
 /** Run sync:app from the project root, returning what it printed without colors. */
-async function runSync(root: string, options: { dryRun?: boolean; force?: boolean; verbose?: boolean; overwrite?: string[] }) {
+async function runSync(
+  root: string,
+  options: { dryRun?: boolean; force?: boolean; verbose?: boolean; overwrite?: string[]; confirm?: (message: string) => Promise<boolean> }
+) {
   const printed: string[] = []
   const original = { log: console.log, warn: console.warn, error: console.error }
   const capture = (...args: unknown[]) => { printed.push(args.map(String).join(' ')) }
@@ -163,6 +166,81 @@ test('a file identical to core is tagged once, and not rewritten after that', as
     await runSync(root, { force: true })
 
     assert.equal((await stat(join(root, 'app/layout.tsx'))).mtimeMs, before)
+  } finally {
+    await cleanup()
+  }
+})
+
+/**
+ * A stand-in for core's templates-plan.mjs: the registry build would remove
+ * app/(templates)/no-confirm.txt, and replace the copy of app/layout.tsx when
+ * the sync about to run writes that layout.
+ */
+const TEMPLATES_PLAN = `let input = ''
+process.stdin.on('data', (chunk) => { input += chunk })
+process.stdin.on('end', () => {
+  const appFiles = JSON.parse(input)
+  console.log('Discovering template overrides...')
+  console.log('nextspark-templates-plan:' + JSON.stringify({
+    create: [],
+    replace: 'app/layout.tsx' in appFiles ? ['app/(templates)/layout.tsx'] : [],
+    remove: ['app/(templates)/no-confirm.txt'],
+  }))
+})
+`
+
+async function withTemplatesTree(root: string) {
+  await write(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
+  await write(root, `${CORE}/scripts/build/templates-plan.mjs`, TEMPLATES_PLAN)
+  await write(root, 'app/(templates)/no-confirm.txt', 'mine\n')
+}
+
+test('--dry-run names what the registry build would replace or remove in app/(templates), planned on what the sync writes', async () => {
+  const { root, cleanup } = await project()
+  try {
+    await withTemplatesTree(root)
+
+    const printed = await runSync(root, { dryRun: true })
+
+    assert.match(printed, /Would regenerate app\/\(templates\) with the registry build, which would write or remove 2 file\(s\)/)
+    assert.match(printed, /~ app\/\(templates\)\/layout\.tsx \(replaced; what it holds is backed up first\)/)
+    assert.match(printed, /- app\/\(templates\)\/no-confirm\.txt \(removed; backed up first\)/)
+    assert.equal(await readFile(join(root, 'app/(templates)/no-confirm.txt'), 'utf-8'), 'mine\n')
+  } finally {
+    await cleanup()
+  }
+})
+
+test('without --force, a sync whose only change is in app/(templates) still asks first, and counts those files', async () => {
+  const { root, cleanup } = await project()
+  try {
+    await runSync(root, { force: true })
+    await withTemplatesTree(root)
+
+    const asked: string[] = []
+    const printed = await runSync(root, { confirm: async (message) => { asked.push(message); return true } })
+
+    assert.equal(asked.length, 1)
+    assert.match(printed, /This will have the registry build write or remove 1 file\(s\) in app\/\(templates\), backing up the 1 it replaces or removes\./)
+  } finally {
+    await cleanup()
+  }
+})
+
+test('in a clone with no sync state, a tsconfig.json that differs from core is kept, and reported as undecidable once', async () => {
+  const { root, cleanup } = await project()
+  try {
+    const own = '{ "compilerOptions": { "strict": false } }\n'
+    await write(root, 'tsconfig.json', own)
+
+    const first = await runSync(root, { force: true })
+    assert.equal(await readFile(join(root, 'tsconfig.json'), 'utf-8'), own)
+    assert.match(first, /sync can't tell whether each is an older version of core's or the project's own change/)
+    assert.match(first, /\? tsconfig\.json \(to take core's version, backing this one up first: nextspark sync:app --overwrite tsconfig\.json\)/)
+
+    const second = await runSync(root, { force: true })
+    assert.equal(await readFile(join(root, 'tsconfig.json'), 'utf-8'), own)
+    assert.doesNotMatch(second, /tsconfig\.json/)
   } finally {
     await cleanup()
   }

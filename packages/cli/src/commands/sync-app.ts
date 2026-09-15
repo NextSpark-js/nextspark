@@ -3,10 +3,16 @@ import { join, dirname, relative } from 'node:path';
 import chalk from 'chalk';
 import ora from 'ora';
 import { getCoreDir, getProjectRoot } from '../utils/paths.js';
-import { runRegistryBuild, templatesTreeLines } from '../utils/registry-build.js';
+import {
+  describeTemplatesChanges,
+  planTemplatesChanges,
+  runRegistryBuild,
+  templatesTreeLines,
+  type TemplatesPlanResult,
+} from '../utils/registry-build.js';
 import { ensureGeneratedPathsIgnored, missingGitignoreEntries, trackedTemplatesFiles } from '../utils/templates-gitignore.js';
 import { applySyncPlan, readCoreVersion, readSyncInput, readTree } from '../utils/sync-files.js';
-import { describeSyncPlan, nextSyncState, planSync, type ReportLine } from '../utils/sync-plan.js';
+import { describeSyncPlan, nextSyncState, plannedAppFiles, planSync, type ReportLine } from '../utils/sync-plan.js';
 import { writeSyncState } from '../utils/sync-state.js';
 
 interface SyncAppOptions {
@@ -16,6 +22,8 @@ interface SyncAppOptions {
   verbose?: boolean;
   /** Customized files to replace with core's version, from the project root. */
   overwrite?: string[];
+  /** Asks whether to go ahead; the interactive prompt when absent. */
+  confirm?: (message: string) => Promise<boolean>;
 }
 
 const REPORT_TONES: Record<ReportLine['tone'], (text: string) => string> = {
@@ -33,6 +41,36 @@ function backupDirectory(source: string, target: string): void {
     mkdirSync(dirname(targetPath), { recursive: true });
     writeFileSync(targetPath, content);
   }
+}
+
+/**
+ * What the confirmation prompt says a sync is about to change, or null when it
+ * changes nothing: the files sync writes or removes, and what the registry build
+ * run right after does to app/(templates), where it can replace and remove files
+ * too.
+ */
+export function confirmationMessage(writeCount: number, templatesPlan: TemplatesPlanResult | null): string | null {
+  const parts: string[] = [];
+  if (writeCount > 0) {
+    parts.push(`write or remove ${writeCount} file(s) to match core`);
+  }
+
+  if (templatesPlan?.status === 'planned' && templatesPlan.changes) {
+    const { create, replace, remove } = templatesPlan.changes;
+    const count = create.length + replace.length + remove.length;
+    if (count > 0) {
+      parts.push(`have the registry build write or remove ${count} file(s) in app/(templates), backing up the ${replace.length + remove.length} it replaces or removes`);
+    }
+  } else if (templatesPlan?.status === 'failed') {
+    parts.push("have the registry build regenerate app/(templates), whose changes couldn't be worked out beforehand");
+  }
+
+  return parts.length > 0 ? `This will ${parts.join(', and ')}.` : null;
+}
+
+async function promptToConfirm(): Promise<boolean> {
+  const { confirm } = await import('@inquirer/prompts');
+  return confirm({ message: 'Proceed with sync?', default: true });
 }
 
 export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
@@ -70,6 +108,11 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
     const actions = planSync(input);
     const writes = actions.filter(({ kind }) => kind !== 'unchanged' && kind !== 'keep');
 
+    // What the registry build then changes in app/(templates), for the dry run to name and the prompt to count
+    const templatesPlan = options.dryRun || !options.force
+      ? await planTemplatesChanges(coreDir, projectRoot, plannedAppFiles(actions))
+      : null;
+
     spinner.succeed('Scan complete');
 
     console.log(chalk.cyan(`\n  Syncing /app with @nextsparkjs/core@${coreVersion}...\n`));
@@ -93,24 +136,22 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
     }
 
     // Confirmation prompt (unless --force or --dry-run)
-    if (!options.force && !options.dryRun && writes.length > 0) {
-      console.log(chalk.yellow(`\n  This will write or remove ${writes.length} file(s) to match core.`));
+    const confirmation = confirmationMessage(writes.length, templatesPlan);
+    if (!options.force && !options.dryRun && confirmation) {
+      console.log(chalk.yellow(`\n  ${confirmation}`));
       console.log(chalk.gray('  Run with --dry-run to preview changes, or --force to skip this prompt.\n'));
 
+      let confirmed: boolean;
       try {
-        const { confirm } = await import('@inquirer/prompts');
-        const confirmed = await confirm({
-          message: 'Proceed with sync?',
-          default: true,
-        });
-
-        if (!confirmed) {
-          console.log(chalk.yellow('\n  Sync cancelled.\n'));
-          process.exit(0);
-        }
-      } catch (promptError) {
+        confirmed = options.confirm ? await options.confirm('Proceed with sync?') : await promptToConfirm();
+      } catch {
         console.error(chalk.red('\n  Failed to load confirmation prompt. Use --force to skip.\n'));
         process.exit(1);
+      }
+
+      if (!confirmed) {
+        console.log(chalk.yellow('\n  Sync cancelled.\n'));
+        process.exit(0);
       }
     }
 
@@ -148,7 +189,21 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       if (missingEntries.length > 0) {
         console.log(chalk.gray(`  Would add ${missingEntries.join(', ')} to .gitignore`));
       }
-      console.log(chalk.gray('  Would regenerate app/(templates) with the registry build'));
+
+      if (templatesPlan?.status === 'planned' && templatesPlan.changes) {
+        const lines = describeTemplatesChanges(templatesPlan.changes);
+        console.log(chalk.gray(
+          lines.length > 0
+            ? `  Would regenerate app/(templates) with the registry build, which would write or remove ${lines.length} file(s)`
+            : '  Would regenerate app/(templates) with the registry build, which would leave it as it is'
+        ));
+        for (const line of lines) console.log(chalk.white(`    ${line}`));
+      } else if (templatesPlan?.status === 'skipped') {
+        console.log(chalk.gray(`  Would skip regenerating app/(templates): ${templatesPlan.reason}`));
+      } else {
+        const why = templatesPlan?.reason ? ` (${templatesPlan.reason})` : '';
+        console.log(chalk.yellow(`  Would regenerate app/(templates) with the registry build, but what it would change there couldn't be worked out${why}; run "nextspark registry:build" to see why`));
+      }
     } else {
       const addedEntries = ensureGeneratedPathsIgnored(projectRoot);
       if (addedEntries.length > 0) {

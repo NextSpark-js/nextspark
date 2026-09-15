@@ -2,7 +2,8 @@
  * What `sync:app` does to a project, decided from file contents alone. The
  * command reads core's templates and the project's files into a SyncInput,
  * planSync turns them into one action per file, and only then is anything
- * written - or, with --dry-run, only described.
+ * written - or, with --dry-run, only described. app/(templates) is the registry
+ * build's, and core plans it apart (registry-build.ts).
  *
  * Which files are core's to replace:
  * - A file whose generated tag (generated-tag.ts) names the path it is at and
@@ -14,7 +15,9 @@
  *   write, and otherwise treated as changed by the project.
  * - A file that can't hold the tag (JSON, Markdown, anything that isn't text)
  *   is core's while it is identical to core's version or to what the last sync
- *   on this machine wrote.
+ *   on this machine wrote. With no record of that sync, one that differs may be
+ *   an older version of core's as much as the project's change: it is kept, and
+ *   the report says so until a sync is recorded.
  * - A file whose content for this project can't be worked out - app/globals.css
  *   while the active theme is unknown - is left as it is, and the report says why.
  */
@@ -63,6 +66,12 @@ export interface SyncAction {
   customized?: boolean;
   /** For a kept customized file: whether core's version changed since the last sync on this machine, or there is no record. */
   coreChanged?: boolean;
+  /**
+   * A kept file with no generated tag that differs from core's, and no record
+   * of an earlier sync on this machine: an older version of core's and the
+   * project's own change look the same.
+   */
+  undecided?: boolean;
   /** For a file left as it is because what core writes there can't be worked out for this project: why. */
   blockedBy?: string;
   /** Hash of core's version of the file, recorded in the sync state. */
@@ -198,6 +207,15 @@ function planManagedFile(file: ManagedFile, input: SyncInput): SyncAction {
       content,
       backup: true,
       customized: true,
+    };
+  }
+
+  if (!taggable && entry === undefined) {
+    return {
+      path, category, coreHash,
+      kind: 'keep',
+      reason: 'differs from core, with no record of an earlier sync on this machine',
+      undecided: true,
     };
   }
 
@@ -384,6 +402,25 @@ export function nextSyncState(actions: readonly SyncAction[], input: SyncInput):
   return { coreVersion: input.coreVersion, files };
 }
 
+/**
+ * The files under app/ that applying `actions` writes or removes, by path from
+ * the project root: the content written, or null for a file removed.
+ */
+export function plannedAppFiles(actions: readonly SyncAction[]): Record<string, string | null> {
+  const files: Record<string, string | null> = {};
+
+  for (const { path, kind, content } of actions) {
+    if (!path.startsWith('app/')) continue;
+    if (kind === 'delete') {
+      files[path] = null;
+    } else if (content && (kind === 'create' || kind === 'update' || kind === 'adopt')) {
+      files[path] = content.toString('utf-8');
+    }
+  }
+
+  return files;
+}
+
 export interface ReportLine {
   text: string;
   tone: 'change' | 'warning' | 'muted';
@@ -391,8 +428,8 @@ export interface ReportLine {
 
 /**
  * The report of a plan, one line per category: what core wrote or would write,
- * what was tagged, what was removed, what couldn't be worked out, what the
- * project changed, and what sync left to others. Under a
+ * what was tagged, what was removed, what couldn't be worked out, what can't be
+ * told apart, what the project changed, and what sync left to others. Under a
  * line, the files that changed are named. A customized file is named only when
  * core changed it since the last sync on this machine, so running sync again
  * with the same core doesn't repeat the list; --verbose names every file.
@@ -409,6 +446,7 @@ export function describeSyncPlan(
   const unchanged = actions.filter(({ kind }) => kind === 'unchanged');
   const removed = actions.filter(({ kind }) => kind === 'delete');
   const blocked = actions.filter(({ blockedBy }) => blockedBy);
+  const undecided = actions.filter(({ undecided }) => undecided);
   const customized = actions.filter(({ kind, customized }) => kind === 'keep' && customized);
   const project = actions.filter(({ category }) => category === 'project');
   const generated = actions.filter(({ category }) => category === 'generated');
@@ -439,6 +477,16 @@ export function describeSyncPlan(
   if (blocked.length > 0) {
     lines.push({ tone: 'warning', text: `${say('Left', 'Would leave')} ${blocked.length} file(s) untouched: core's version of them can't be worked out for this project` });
     for (const action of blocked) lines.push({ tone: 'warning', text: `  ! ${action.path} (${action.blockedBy})` });
+  }
+
+  if (undecided.length > 0) {
+    lines.push({
+      tone: 'warning',
+      text: `${say('Kept', 'Would keep')} ${undecided.length} file(s) that differ from core, with no record of an earlier sync on this machine: sync can't tell whether each is an older version of core's or the project's own change`,
+    });
+    for (const action of undecided) {
+      lines.push({ tone: 'warning', text: `  ? ${action.path} (to take core's version, backing this one up first: nextspark sync:app --overwrite ${action.path})` });
+    }
   }
 
   if (customized.length > 0) {

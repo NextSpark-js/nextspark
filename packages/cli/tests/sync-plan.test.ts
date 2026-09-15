@@ -259,3 +259,17 @@ test('globals.css is left alone when the active theme it has to import is unknow
   assert.equal(globals.content, undefined)
   assert.ok(describeSyncPlan(actions).some(({ text }) => text.includes('app/globals.css') && text.includes('NEXT_PUBLIC_ACTIVE_THEME')))
 })
+
+test('with no record of an earlier sync, a file that cannot carry the tag and differs from core is reported once as undecidable', () => {
+  const rootTemplates = files({ 'tsconfig.json': '{ "compilerOptions": { "strict": true } }\n' })
+  const projectRootFiles = files({ 'tsconfig.json': '{ "compilerOptions": {} }\n' })
+
+  const fresh = input({ rootTemplates, projectRootFiles })
+  const firstReport = describeSyncPlan(planSync(fresh)).map(({ text }) => text).join('\n')
+  assert.match(firstReport, /tsconfig\.json/)
+  assert.match(firstReport, /can't tell/)
+  assert.match(firstReport, /--overwrite tsconfig\.json/)
+
+  const afterFirstSync = input({ rootTemplates, projectRootFiles, state: nextSyncState(planSync(fresh), fresh) })
+  assert.doesNotMatch(describeSyncPlan(planSync(afterFirstSync)).map(({ text }) => text).join('\n'), /tsconfig\.json/)
+})
