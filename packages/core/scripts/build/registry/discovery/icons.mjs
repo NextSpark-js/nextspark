@@ -24,6 +24,12 @@
  * registry rather than guessed; that is the same limit that makes the
  * unresolved-reference warning below necessary for config files.
  *
+ * Every source is read as a syntax tree (core's own TypeScript, #195), not as
+ * raw text: a name that only exists inside a comment or a docblock is not
+ * code the app can run, so it must not reach the registry either. Test files
+ * are skipped for the same reason from the other direction — an icon named
+ * only inside a test is never rendered in production.
+ *
  * @module core/scripts/build/registry/discovery/icons
  */
 
@@ -33,6 +39,7 @@ import { createRequire } from 'module'
 import { join, dirname } from 'path'
 
 import { verbose, log } from '../../../utils/index.mjs'
+import { loadTypeScriptFor } from '../shared/typescript-compiler.mjs'
 
 /**
  * Icons the resolver falls back to when a name doesn't resolve. They are
@@ -40,6 +47,10 @@ import { verbose, log } from '../../../utils/index.mjs'
  * discover them.
  */
 const FALLBACK_ICONS = ['Box', 'Circle', 'Folder', 'LayoutGrid']
+
+/** A bare identifier-shaped name, the only shape the generated registry can
+ * safely turn into a named import or a lucide-react lookup key. */
+const SAFE_NAME = /^[A-Za-z][\w$-]*$/
 
 /**
  * Names lucide-react actually exports, read from its own barrel.
@@ -101,48 +112,105 @@ export function isIconCallSourcePath(filePath) {
 }
 
 /**
+ * Whether a path is test code rather than the app's own source. Exported for
+ * tests. A name that a test hands to resolveIcon or DynamicIcon to exercise a
+ * component is never reached by a real request, so it would only bloat the
+ * registry with icons nothing in production resolves.
+ */
+export function isTestFilePath(filePath) {
+  const normalised = filePath.replace(/\\/g, '/')
+  return /\.(test|spec)\.tsx?$/.test(normalised) || /(^|\/)(__tests__|tests|cypress)\//.test(normalised)
+}
+
+/**
+ * Parse a source file into a TypeScript syntax tree. Exported for tests, so a
+ * test can build a tree once and hand it to more than one extractor.
+ *
+ * Parsed as its own kind of file: a TSX parse reads TypeScript-only syntax in
+ * a .ts file (`<T>(props) => ...`) as JSX and loses what follows, so the
+ * script kind is derived from `filePath` rather than assumed.
+ */
+export async function parseIconSource(content, filePath, projectRoot = process.cwd()) {
+  const ts = await loadTypeScriptFor(projectRoot)
+  const sourceFile = ts.createSourceFile(filePath, content, ts.ScriptTarget.Latest, true, ts.getScriptKindFromFileName(filePath))
+  return { ts, sourceFile }
+}
+
+/** The property key of a `PropertyAssignment` node, whether written bare
+ * (`icon: X`) or quoted (`'icon': X`); anything else has no static name. */
+function propertyKeyName(nameNode, ts) {
+  if (ts.isIdentifier(nameNode) || ts.isStringLiteralLike(nameNode)) {
+    return nameNode.text
+  }
+  return null
+}
+
+/**
  * Map of local name -> exported lucide name for a file's lucide imports.
  * `import { Home as HouseIcon }` means the config's `icon: HouseIcon` is
- * lucide's `Home`.
+ * lucide's `Home`. Read from the syntax tree, so an import mentioned only in
+ * a comment is not a real import.
  */
-function parseLucideImports(content) {
+function parseLucideImports(sourceFile, ts) {
   const imports = new Map()
 
-  for (const match of content.matchAll(/import\s*(?:type\s*)?\{([^}]*)\}\s*from\s*['"]lucide-react['"]/g)) {
-    for (const specifier of match[1].split(',')) {
-      const parts = specifier.trim().replace(/^type\s+/, '').split(/\s+as\s+/)
-      const exported = parts[0]?.trim()
-      const local = (parts[1] || parts[0])?.trim()
-      if (exported && local) {
-        imports.set(local, exported)
-      }
+  for (const statement of sourceFile.statements) {
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteralLike(statement.moduleSpecifier)) continue
+    if (statement.moduleSpecifier.text !== 'lucide-react') continue
+
+    const namedBindings = statement.importClause?.namedBindings
+    if (!namedBindings || !ts.isNamedImports(namedBindings)) continue
+
+    for (const element of namedBindings.elements) {
+      if (element.isTypeOnly) continue
+      imports.set(element.name.text, (element.propertyName ?? element.name).text)
     }
   }
 
   return imports
 }
 
+/** Every `icon: <expr>` property assignment in the tree, wherever it is nested. */
+function findIconPropertyAssignments(sourceFile, ts) {
+  const assignments = []
+
+  const visit = node => {
+    if (ts.isPropertyAssignment(node) && propertyKeyName(node.name, ts) === 'icon') {
+      assignments.push(node)
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(sourceFile)
+
+  return assignments
+}
+
 /**
  * Icon names referenced by a single config file. Exported for tests.
  */
-export function extractIconNames(content) {
-  const lucideImports = parseLucideImports(content)
+export async function extractIconNames(content, filePath = 'icons.config.ts', projectRoot) {
+  const { ts, sourceFile } = await parseIconSource(content, filePath, projectRoot)
+  const lucideImports = parseLucideImports(sourceFile, ts)
   const names = []
 
-  // `icon: Users` or `'icon': Users` — only counts when the identifier came
-  // from lucide-react
-  for (const match of content.matchAll(/(?:\bicon|['"]icon['"])\s*:\s*([A-Za-z_$][\w$]*)/g)) {
-    const exported = lucideImports.get(match[1])
-    if (exported) {
-      names.push(exported)
-    }
-  }
+  for (const assignment of findIconPropertyAssignments(sourceFile, ts)) {
+    const initializer = assignment.initializer
 
-  // `icon: 'Users'` or `icon: 'pie-chart'` — a theme's sidebar sections and
-  // block configs use both spellings; the caller folds kebab-case into the
-  // lucide export name and validates the result against lucide's export list.
-  for (const match of content.matchAll(/(?:\bicon|['"]icon['"])\s*:\s*['"]([A-Za-z][\w$-]*)['"]/g)) {
-    names.push(match[1])
+    // `icon: Users` — only counts when the identifier came from lucide-react
+    if (ts.isIdentifier(initializer)) {
+      const exported = lucideImports.get(initializer.text)
+      if (exported) names.push(exported)
+      continue
+    }
+
+    // `icon: 'Users'` or `icon: 'pie-chart'` — a theme's sidebar sections and
+    // block configs use both spellings; the caller folds kebab-case into the
+    // lucide export name and validates the result against lucide's export
+    // list. The generated registry is TypeScript built from this string, so
+    // anything not shaped like a name is dropped rather than trusted.
+    if (ts.isStringLiteralLike(initializer) && SAFE_NAME.test(initializer.text)) {
+      names.push(initializer.text)
+    }
   }
 
   return names
@@ -158,20 +226,31 @@ export function extractIconNames(content) {
  * resolvable by reading this file, so it never enters the registry and
  * resolveIcon falls back. That is silent, hence the warning.
  */
-export function findUnresolvedIconRefs(content) {
-  const lucideImports = parseLucideImports(content)
+export async function findUnresolvedIconRefs(content, filePath = 'icons.config.ts', projectRoot) {
+  const { ts, sourceFile } = await parseIconSource(content, filePath, projectRoot)
+  const lucideImports = parseLucideImports(sourceFile, ts)
   const unresolved = []
 
-  for (const match of content.matchAll(/(?:\bicon|['"]icon['"])\s*:\s*([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)/g)) {
-    const reference = match[1]
-    const isMember = reference.includes('.')
+  for (const assignment of findIconPropertyAssignments(sourceFile, ts)) {
+    const initializer = assignment.initializer
 
-    if (isMember || !lucideImports.has(reference)) {
-      unresolved.push(reference)
+    if (ts.isPropertyAccessExpression(initializer)) {
+      unresolved.push(initializer.getText(sourceFile))
+    } else if (ts.isIdentifier(initializer) && !lucideImports.has(initializer.text)) {
+      unresolved.push(initializer.text)
     }
   }
 
   return unresolved
+}
+
+/** The string literal an expression evaluates to, unwrapping a JSX
+ * expression container (`{'pie-chart'}`) around it, or null when the
+ * expression isn't a literal — a runtime value that resolveIcon or
+ * DynamicIcon reads at render time, not a name this build can see. */
+function literalTextOf(expression, ts) {
+  const unwrapped = ts.isJsxExpression(expression) ? expression.expression : expression
+  return unwrapped && ts.isStringLiteralLike(unwrapped) ? unwrapped.text : null
 }
 
 /**
@@ -182,23 +261,26 @@ export function findUnresolvedIconRefs(content) {
  * way to render a value that came from the database) — that call is left
  * alone, since there is no name in it to register.
  */
-export function extractLiteralIconCallNames(content) {
+export async function extractLiteralIconCallNames(content, filePath = 'icons.tsx', projectRoot) {
+  const { ts, sourceFile } = await parseIconSource(content, filePath, projectRoot)
   const names = []
-  // Same bare-name shape as extractIconNames' string branch: whatever isn't
-  // exactly this can't be a real icon name, so it is never captured — the
-  // generated registry is TypeScript built from these strings.
-  const quoted = /(?:"([A-Za-z][\w$-]*)"|'([A-Za-z][\w$-]*)'|\{\s*(?:"([A-Za-z][\w$-]*)"|'([A-Za-z][\w$-]*)')\s*\})/
 
-  for (const match of content.matchAll(/<DynamicIcon\b([^>]*)>/g)) {
-    const nameProp = match[1].match(new RegExp(`\\bname\\s*=\\s*${quoted.source}`))
-    const name = nameProp && nameProp.slice(1).find(group => group !== undefined)
-    if (name) names.push(name)
-  }
+  const visit = node => {
+    if ((ts.isJsxSelfClosingElement(node) || ts.isJsxOpeningElement(node)) && ts.isIdentifier(node.tagName) && node.tagName.text === 'DynamicIcon') {
+      for (const attribute of node.attributes.properties) {
+        if (!ts.isJsxAttribute(attribute) || attribute.name.text !== 'name' || !attribute.initializer) continue
+        const name = literalTextOf(attribute.initializer, ts)
+        if (name && SAFE_NAME.test(name)) names.push(name)
+      }
+    } else if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'resolveIcon') {
+      const [firstArgument] = node.arguments
+      const name = firstArgument && literalTextOf(firstArgument, ts)
+      if (name && SAFE_NAME.test(name)) names.push(name)
+    }
 
-  for (const match of content.matchAll(/\bresolveIcon\s*\(\s*(?:"([A-Za-z][\w$-]*)"|'([A-Za-z][\w$-]*)')/g)) {
-    const name = match[1] ?? match[2]
-    if (name) names.push(name)
+    ts.forEachChild(node, visit)
   }
+  visit(sourceFile)
 
   return names
 }
@@ -250,11 +332,14 @@ export async function discoverIcons(blocks, config) {
   // Only the configs whose icons reach resolveIcon: entity configs (core,
   // themes and plugins), block configs, and every theme's or plugin's
   // config/*.config.ts. Widening this further would put icons in the
-  // dashboard bundle that nothing can ask for.
+  // dashboard bundle that nothing can ask for. Test files are excluded even
+  // though a config rarely lives under one, for the same reason call sources
+  // exclude them below.
+  const isIconSource = filePath => isIconSourcePath(filePath) && !isTestFilePath(filePath)
   const iconSources = [
-    ...(await collectConfigFiles(coreEntitiesDir(config), isIconSourcePath)),
-    ...(await collectConfigFiles(config.themesDir, isIconSourcePath)),
-    ...(await collectConfigFiles(config.pluginsDir, isIconSourcePath))
+    ...(await collectConfigFiles(coreEntitiesDir(config), isIconSource)),
+    ...(await collectConfigFiles(config.themesDir, isIconSource)),
+    ...(await collectConfigFiles(config.pluginsDir, isIconSource))
   ]
 
   const unresolved = []
@@ -262,10 +347,10 @@ export async function discoverIcons(blocks, config) {
   for (const configPath of iconSources) {
     try {
       const content = await readFile(configPath, 'utf8')
-      for (const name of extractIconNames(content)) {
+      for (const name of await extractIconNames(content, configPath, config.projectRoot)) {
         candidates.add(name)
       }
-      for (const reference of findUnresolvedIconRefs(content)) {
+      for (const reference of await findUnresolvedIconRefs(content, configPath, config.projectRoot)) {
         unresolved.push({ configPath, reference })
       }
     } catch {
@@ -284,15 +369,18 @@ export async function discoverIcons(blocks, config) {
   // code rather than through a config, so its trees are scanned for that too.
   // Core is not: every core call site resolves a runtime value (item.icon,
   // config.iconName), never a literal, so there is nothing to add here.
+  // Test files are excluded: a spec exercising DynamicIcon or resolveIcon
+  // with a literal name isn't a real call site the production bundle needs.
+  const isIconCallSource = filePath => isIconCallSourcePath(filePath) && !isTestFilePath(filePath)
   const callSources = [
-    ...(await collectConfigFiles(config.themesDir, isIconCallSourcePath)),
-    ...(await collectConfigFiles(config.pluginsDir, isIconCallSourcePath))
+    ...(await collectConfigFiles(config.themesDir, isIconCallSource)),
+    ...(await collectConfigFiles(config.pluginsDir, isIconCallSource))
   ]
 
   for (const sourcePath of callSources) {
     try {
       const content = await readFile(sourcePath, 'utf8')
-      for (const name of extractLiteralIconCallNames(content)) {
+      for (const name of await extractLiteralIconCallNames(content, sourcePath, config.projectRoot)) {
         candidates.add(name)
       }
     } catch {

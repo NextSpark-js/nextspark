@@ -14,6 +14,9 @@ import { fileURLToPath } from 'url'
 
 import { log, verbose } from '../../../utils/index.mjs'
 import { getProtectionLevel, ProtectionLevel } from '../../../../dist/config/protected-paths.js'
+import { selectTypeScriptModule, loadTypeScriptFor } from '../shared/typescript-compiler.mjs'
+
+export { selectTypeScriptModule }
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -77,68 +80,6 @@ const SEGMENT_CONFIG_VALIDATORS = {
   experimental_ppr: value => typeof value === 'boolean',
   runtime: value => ['edge', 'nodejs'].includes(value),
   maxDuration: value => typeof value === 'number' && Number.isInteger(value) && value >= 0,
-}
-
-// Loaded lazily (and only once) since not every consumer of this module needs
-// to parse a template - npm-mode builds without a template needing this path
-// shouldn't pay for loading a TypeScript compiler up front.
-let typescriptModulePromise = null
-
-/** The TypeScript 5/6 compiler API this generator parses templates with. TypeScript 7's
- * native port doesn't ship it - its package exports are `./lib/version.cjs` plus
- * `./unstable/*` - so a candidate module is checked for these, not just for existing. */
-function hasCompilerApi(ts) {
-  return Boolean(ts && typeof ts.createSourceFile === 'function' && typeof ts.getScriptKindFromFileName === 'function' && ts.ScriptKind)
-}
-
-/**
- * Try each TypeScript candidate in order and return the first module whose API this
- * generator needs. A candidate that loads but lacks the API is recorded and the next
- * one is tried, rather than failing on the first hit - the point of trying more than
- * one candidate at all.
- */
-export async function selectTypeScriptModule(candidates) {
-  const rejected = []
-
-  for (const candidate of candidates) {
-    let loaded
-    try {
-      loaded = await candidate.load()
-    } catch (error) {
-      rejected.push(`${candidate.label}: could not be loaded (${error.message})`)
-      continue
-    }
-
-    const ts = loaded?.default ?? loaded
-    if (hasCompilerApi(ts)) {
-      return ts
-    }
-    rejected.push(
-      `${candidate.label}: found TypeScript ${ts?.version ?? 'of an unknown version'}, which does not export the TypeScript 5/6 ` +
-        'compiler API (createSourceFile, getScriptKindFromFileName, ScriptKind) the registry build needs'
-    )
-  }
-
-  throw new Error(
-    'Parsing route-level exports out of a theme template requires the TypeScript 5 or 6 compiler API, but no candidate provided it:\n' +
-      rejected.map(reason => `  - ${reason}`).join('\n')
-  )
-}
-
-/**
- * The TypeScript compiler, resolved from core first and then from the project: it is
- * a dependency of core, so it is always found there regardless of the TypeScript
- * version the project itself has installed; the project is a fallback for setups
- * where core's own copy is not reachable from this file's location on disk.
- */
-function loadTypeScript() {
-  if (!typescriptModulePromise) {
-    typescriptModulePromise = selectTypeScriptModule([
-      { label: '@nextsparkjs/core', load: () => import('typescript') },
-      { label: `the project at ${rootDir}`, load: async () => createRequire(join(rootDir, 'package.json'))('typescript') },
-    ])
-  }
-  return typescriptModulePromise
 }
 
 let nextParseModulePromise = null
@@ -245,7 +186,7 @@ function declaresDefaultExport(sourceFile, ts) {
  * source phase import, for one).
  */
 async function parseTemplateSource(source, filePath) {
-  const ts = await loadTypeScript()
+  const ts = await loadTypeScriptFor(rootDir)
   // Parsed as its own kind of file: a TSX parse reads TypeScript-only syntax in a
   // .ts template (`<T>(props) => ...`, `<Props>value`) as JSX and loses what follows
   const sourceFile = ts.createSourceFile(filePath, source, ts.ScriptTarget.Latest, true, ts.getScriptKindFromFileName(filePath))
