@@ -4,7 +4,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { getCoreDir, getProjectRoot } from '../utils/paths.js';
 import { runRegistryBuild, templatesTreeLines } from '../utils/registry-build.js';
-import { ensureTemplatesIgnored, isTemplatesIgnored, trackedTemplatesFiles } from '../utils/templates-gitignore.js';
+import { ensureGeneratedPathsIgnored, missingGitignoreEntries, trackedTemplatesFiles } from '../utils/templates-gitignore.js';
 import { applySyncPlan, readCoreVersion, readSyncInput, readTree } from '../utils/sync-files.js';
 import { describeSyncPlan, nextSyncState, planSync, type ReportLine } from '../utils/sync-plan.js';
 import { writeSyncState } from '../utils/sync-state.js';
@@ -120,16 +120,16 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
     }
 
     let backedUp: string[] = [];
-    const replacedFilesBackupDir = join(projectRoot, '.nextspark', 'backups', new Date().toISOString().replace(/[:.]/g, '-'));
+    let replacedFilesBackupDir: string | null = null;
     if (!options.dryRun) {
-      backedUp = applySyncPlan(projectRoot, actions, replacedFilesBackupDir);
+      ({ backedUp, backupDir: replacedFilesBackupDir } = applySyncPlan(projectRoot, actions, join(projectRoot, '.nextspark', 'backups')));
       writeSyncState(projectRoot, nextSyncState(actions, input));
     }
 
     for (const line of describeSyncPlan(actions, { dryRun: options.dryRun, verbose: options.verbose })) {
       console.log(REPORT_TONES[line.tone](`  ${line.text}`));
     }
-    if (backedUp.length > 0) {
+    if (backedUp.length > 0 && replacedFilesBackupDir) {
       console.log(chalk.gray(`  Backed up ${backedUp.join(', ')} to ${relative(projectRoot, replacedFilesBackupDir)}`));
     }
 
@@ -141,13 +141,15 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
     }
 
     if (options.dryRun) {
-      if (!isTemplatesIgnored(projectRoot)) {
-        console.log(chalk.gray('  Would add app/(templates)/ to .gitignore'));
+      const missingEntries = missingGitignoreEntries(projectRoot);
+      if (missingEntries.length > 0) {
+        console.log(chalk.gray(`  Would add ${missingEntries.join(', ')} to .gitignore`));
       }
       console.log(chalk.gray('  Would regenerate app/(templates) with the registry build'));
     } else {
-      if (ensureTemplatesIgnored(projectRoot)) {
-        console.log(chalk.gray('  Added app/(templates)/ to .gitignore'));
+      const addedEntries = ensureGeneratedPathsIgnored(projectRoot);
+      if (addedEntries.length > 0) {
+        console.log(chalk.gray(`  Added ${addedEntries.join(', ')} to .gitignore`));
       }
 
       spinner.start('Regenerating app/(templates)...');

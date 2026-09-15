@@ -7,8 +7,8 @@
  */
 
 import { createRequire } from 'node:module'
-import { existsSync } from 'fs'
-import { copyFile, readdir, readFile, rmdir, unlink, writeFile, mkdir } from 'fs/promises'
+import { constants, existsSync } from 'fs'
+import { copyFile, mkdtemp, readdir, readFile, rmdir, unlink, writeFile, mkdir } from 'fs/promises'
 import { join, dirname, relative } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -918,15 +918,16 @@ async function planTemplatesTree(templates, analysis) {
 }
 
 /**
- * Every file under a directory, recursively; none when it doesn't exist.
- * Dotfiles such as .DS_Store are nobody's output and are left alone.
+ * Every file under a directory, recursively, dotfiles included; none when it
+ * doesn't exist. Finder's .DS_Store is nobody's output and nobody's edit, and
+ * is left alone.
  */
 async function listFiles(directory) {
   if (!existsSync(directory)) return []
 
   const files = []
   for (const entry of await readdir(directory, { withFileTypes: true })) {
-    if (entry.name.startsWith('.')) continue
+    if (entry.name === '.DS_Store') continue
     const path = join(directory, entry.name)
     if (entry.isDirectory()) {
       files.push(...(await listFiles(path)))
@@ -952,47 +953,66 @@ async function removeEmptyDirectories(directory) {
 }
 
 /**
+ * How app/(templates) differs from `files`, as absolute paths: the files
+ * `files` has that don't exist yet, the ones that exist with other content, and
+ * the files in the tree that `files` doesn't have.
+ */
+async function diffTemplatesTree(templatesDir, files) {
+  const create = []
+  const replace = []
+  for (const [path, content] of files) {
+    if (!existsSync(path)) {
+      create.push(path)
+    } else if ((await readFile(path, 'utf8')) !== content) {
+      replace.push(path)
+    }
+  }
+
+  const remove = (await listFiles(templatesDir)).filter(path => !files.has(path))
+  return { create, replace, remove }
+}
+
+/**
  * Make app/(templates) hold exactly `files`. The registry build owns that tree,
  * but a file about to be replaced with different content, or removed because
- * this build didn't produce it, may hold someone's edit: it is copied to
- * .nextspark/backups/<time>/ first and named in the output.
+ * this build didn't produce it, may hold someone's edit: it is first copied into
+ * a directory under .nextspark/backups/ that belongs to this run alone - the
+ * time, and a suffix no other run gets - and named in the output. A backup is
+ * never written over.
  */
 async function reconcileTemplatesTree(templatesDir, files) {
-  let created = 0
-  let updated = 0
-  let removed = 0
+  const { create, replace, remove } = await diffTemplatesTree(templatesDir, files)
   let backupDir = null
 
   const backUp = async absolutePath => {
-    backupDir ??= join(rootDir, '.nextspark', 'backups', new Date().toISOString().replace(/[:.]/g, '-'))
+    if (!backupDir) {
+      const backupsRoot = join(rootDir, '.nextspark', 'backups')
+      await mkdir(backupsRoot, { recursive: true })
+      backupDir = await mkdtemp(join(backupsRoot, `${new Date().toISOString().replace(/[:.]/g, '-')}-`))
+    }
     const relativePath = relative(rootDir, absolutePath)
     const backupPath = join(backupDir, relativePath)
     await mkdir(dirname(backupPath), { recursive: true })
-    await copyFile(absolutePath, backupPath)
+    await copyFile(absolutePath, backupPath, constants.COPYFILE_EXCL)
     log(`app/(templates): backed up ${relativePath} to ${relative(rootDir, backupPath)}`, 'warning')
   }
 
-  for (const [path, content] of files) {
-    if (!existsSync(path)) {
-      await mkdir(dirname(path), { recursive: true })
-      await writeFile(path, content, 'utf8')
-      created++
-    } else if ((await readFile(path, 'utf8')) !== content) {
-      await backUp(path)
-      await writeFile(path, content, 'utf8')
-      updated++
-    }
+  for (const path of create) {
+    await mkdir(dirname(path), { recursive: true })
+    await writeFile(path, files.get(path), 'utf8')
   }
 
-  for (const path of await listFiles(templatesDir)) {
-    if (!files.has(path)) {
-      await backUp(path)
-      await unlink(path)
-      removed++
-    }
+  for (const path of replace) {
+    await backUp(path)
+    await writeFile(path, files.get(path), 'utf8')
+  }
+
+  for (const path of remove) {
+    await backUp(path)
+    await unlink(path)
   }
 
   await removeEmptyDirectories(templatesDir)
 
-  return { created, updated, removed, backupDir }
+  return { created: create.length, updated: replace.length, removed: remove.length, backupDir }
 }

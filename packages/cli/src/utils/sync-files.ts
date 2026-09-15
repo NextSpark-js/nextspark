@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { constants, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, sep } from 'node:path';
 import { parse } from 'dotenv';
 import { getNextMajorVersion } from './next-bundler.js';
@@ -95,20 +95,32 @@ export function readSyncInput(coreDir: string, projectRoot: string, { env = proc
 
 /**
  * Write and remove what a plan says, and nothing else. A file an action marks
- * for backup is first copied under `backupDir`, at its path from the project root.
+ * for backup is first copied, at its path from the project root, into a
+ * directory under `backupsRoot` that belongs to this run alone - the time, and
+ * a suffix no other run gets - created when the first file is backed up. A
+ * backup is never written over.
  *
- * @returns The paths that were backed up.
+ * @returns The paths that were backed up, and the directory they went to (null when none was).
  */
-export function applySyncPlan(projectRoot: string, actions: readonly SyncAction[], backupDir: string): string[] {
+export function applySyncPlan(
+  projectRoot: string,
+  actions: readonly SyncAction[],
+  backupsRoot: string
+): { backedUp: string[]; backupDir: string | null } {
   const backedUp: string[] = [];
+  let backupDir: string | null = null;
 
   for (const action of actions) {
     const target = join(projectRoot, action.path);
 
     if (action.backup && existsSync(target)) {
+      if (backupDir === null) {
+        mkdirSync(backupsRoot, { recursive: true });
+        backupDir = mkdtempSync(join(backupsRoot, `${new Date().toISOString().replace(/[:.]/g, '-')}-`));
+      }
       const backupPath = join(backupDir, action.path);
       mkdirSync(dirname(backupPath), { recursive: true });
-      copyFileSync(target, backupPath);
+      copyFileSync(target, backupPath, constants.COPYFILE_EXCL);
       backedUp.push(action.path);
     }
 
@@ -120,7 +132,7 @@ export function applySyncPlan(projectRoot: string, actions: readonly SyncAction[
     }
   }
 
-  return backedUp;
+  return { backedUp, backupDir };
 }
 
 /**

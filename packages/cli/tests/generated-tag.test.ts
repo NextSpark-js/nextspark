@@ -1,5 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { execFileSync } from 'node:child_process'
+import { mkdtemp, writeFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 import { readGeneratedTag, sameText, tagStyleFor, withGeneratedTag } from '../src/utils/generated-tag.js'
 
@@ -53,4 +57,27 @@ test('a file with no tag style is written as it is, and a file whose first line 
 test('text compares equal across line endings, and only across line endings', () => {
   assert.equal(sameText(Buffer.from('a\r\nb\r\n'), Buffer.from('a\nb\n')), true)
   assert.equal(sameText(Buffer.from('a\nb\n'), Buffer.from('a\nc\n')), false)
+})
+
+test('a script with a shebang keeps it on the first line, and still runs', async () => {
+  const script = Buffer.from("#!/usr/bin/env node\nconsole.log('ran')\n")
+  const tagged = withGeneratedTag('scripts/run.js', script, '1.0.0')
+
+  const lines = tagged.toString().split('\n')
+  assert.equal(lines[0], '#!/usr/bin/env node')
+  assert.match(lines[1], /^\/\/ @nextspark-generated core@1\.0\.0 /)
+  assert.equal(readGeneratedTag(tagged)?.intact, true)
+
+  const dir = await mkdtemp(join(tmpdir(), 'nextspark-generated-tag-'))
+  try {
+    await writeFile(join(dir, 'run.js'), tagged)
+    assert.equal(execFileSync(process.execPath, [join(dir, 'run.js')], { encoding: 'utf-8' }), 'ran\n')
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('content that is not text gets no tag, whatever its extension', () => {
+  const binary = Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00])
+  assert.ok(withGeneratedTag('app/wasm-shim.ts', binary, '1.0.0').equals(binary))
 })

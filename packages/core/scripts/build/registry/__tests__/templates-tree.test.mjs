@@ -140,3 +140,43 @@ test('regenerating a tree that is already up to date writes nothing and backs no
     await rm(root, { recursive: true, force: true })
   }
 })
+
+test('two builds in the same millisecond keep both backups', async () => {
+  const root = await createProject()
+  const toISOString = Date.prototype.toISOString
+  Date.prototype.toISOString = () => '2026-01-01T00:00:00.000Z'
+  try {
+    await writeProjectFile(root, 'app/dashboard/layout.tsx', DASHBOARD_LAYOUT)
+    const page = await writeTemplate(root, 'dashboard/reports/page.tsx', 'page', PAGE)
+
+    await writeProjectFile(root, 'app/(templates)/dashboard/layout.tsx', '// first hand edit\n')
+    await generateMissingPages([page], { projectRoot: root })
+    await writeProjectFile(root, 'app/(templates)/dashboard/layout.tsx', '// second hand edit\n')
+    await generateMissingPages([page], { projectRoot: root })
+
+    assert.deepEqual(
+      (await backedUpFiles(root)).map(({ content }) => content).sort(),
+      ['// first hand edit\n', '// second hand edit\n']
+    )
+  } finally {
+    Date.prototype.toISOString = toISOString
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('a dotfile left in app/(templates) is removed like any other file, and backed up', async () => {
+  const root = await createProject()
+  try {
+    await writeProjectFile(root, 'app/(templates)/dashboard/.user-note', 'remember to check the layout\n')
+    const page = await writeTemplate(root, 'pricing/page.tsx', 'page', PAGE)
+
+    await generateMissingPages([page], { projectRoot: root })
+
+    assert.equal(existsSync(join(root, 'app/(templates)/dashboard/.user-note')), false)
+    assert.deepEqual(await backedUpFiles(root), [
+      { path: 'app/(templates)/dashboard/.user-note', content: 'remember to check the layout\n' }
+    ])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})

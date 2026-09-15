@@ -43,7 +43,7 @@ import { setupGit } from './git-init.js'
 import { generateMonorepoStructure, isMonorepoProject, getWebDir } from './monorepo-generator.js'
 import { addPackageEntries } from './workspace-yaml.js'
 import { writeProxyFile } from '../../utils/proxy-file.js'
-import { ensureTemplatesIgnored, TEMPLATES_GITIGNORE_ENTRY } from '../../utils/templates-gitignore.js'
+import { ensureGeneratedPathsIgnored, TEMPLATES_GITIGNORE_ENTRY } from '../../utils/templates-gitignore.js'
 import { tagGeneratedFiles } from '../../utils/sync-files.js'
 import { PPR_TEMPLATE_VARIANTS } from '../../utils/sync-plan.js'
 
@@ -440,8 +440,8 @@ contents/themes/*/tests/jest/coverage
     if (!currentContent.includes('.nextspark/')) {
       await fs.appendFile(gitignorePath, entriesToAdd)
     }
-    // A .gitignore with the NextSpark entries may still lack this one
-    ensureTemplatesIgnored(path.dirname(gitignorePath))
+    // A .gitignore with the NextSpark entries may still lack some of these
+    ensureGeneratedPathsIgnored(path.dirname(gitignorePath))
   } else {
     await fs.writeFile(gitignorePath, entriesToAdd.trim())
   }

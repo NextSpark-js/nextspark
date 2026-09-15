@@ -91,7 +91,7 @@ test('--dry-run writes nothing and names each file it would write, remove or kee
     assert.match(printed, /- app\/layout\.ppr\.tsx \(PPR variants stay in core/)
     assert.match(printed, /! i18n\.ts \(differs from core\)/)
     assert.match(printed, /! app\/dashboard\/page\.tsx \(differs from core\)/)
-    assert.match(printed, /Would add app\/\(templates\)\/ to \.gitignore/)
+    assert.match(printed, /Would add app\/\(templates\)\/, \.nextspark\/backups\/, \.nextspark\/sync-state\.json to \.gitignore/)
   } finally {
     await cleanup()
   }

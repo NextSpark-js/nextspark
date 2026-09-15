@@ -144,7 +144,7 @@ function planManagedFile(file: ManagedFile, input: SyncInput): SyncAction {
   const { path, category, current, expected, reason, generatedEarlier } = file;
   const coreHash = contentHash(expected);
   const entry: SyncStateEntry | undefined = input.state?.files[path];
-  const taggable = tagStyleFor(path) !== null;
+  const taggable = tagStyleFor(path, expected) !== null;
   const content = withGeneratedTag(path, expected, input.coreVersion);
   const writtenHash = taggable ? undefined : coreHash;
 
@@ -203,7 +203,7 @@ function planManagedFile(file: ManagedFile, input: SyncInput): SyncAction {
  */
 function planRetiredFile(path: string, current: Buffer, input: SyncInput): SyncAction {
   const entry = input.state?.files[path];
-  const tag = tagStyleFor(path) ? readGeneratedTag(current) : null;
+  const tag = tagStyleFor(path, current) ? readGeneratedTag(current) : null;
   const writtenBySync = entry?.written !== undefined && entry.written === contentHash(current);
 
   if (!tag && !writtenBySync) {
