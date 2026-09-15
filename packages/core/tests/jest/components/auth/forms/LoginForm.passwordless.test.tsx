@@ -179,12 +179,85 @@ describe('LoginForm — passwordless preset (default: email OTP + Google)', () =
       expect(byCy('auth.login.otpCountdown')).toHaveTextContent('login.form.otp.expiresIn:4:00')
 
       act(() => { jest.advanceTimersByTime(239_000) })
-      expect(byCy('auth.login.otpCountdown')).toHaveTextContent('login.form.otp.expiresIn:1')
+      expect(byCy('auth.login.otpCountdown')).toHaveTextContent('login.form.otp.expiresIn:0:01')
 
       // At the deadline it stops promising time it no longer has
       act(() => { jest.advanceTimersByTime(2_000) })
       expect(byCy('auth.login.otpCountdown')).toHaveTextContent('login.form.otp.expired')
       expect(byCy('auth.login.otpCountdown')?.getAttribute('aria-live')).toBe('polite')
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  test('the countdown interval stops ticking once the code expires (#186)', async () => {
+    jest.useFakeTimers()
+    const clearIntervalSpy = jest.spyOn(global, 'clearInterval')
+    try {
+      render(<LoginForm />)
+      fireEvent.click(byCy('auth.login.showEmail')!)
+      fireEvent.change(byCy('auth.login.otpEmailInput')!, { target: { value: 'ada@example.com' } })
+      fireEvent.click(byCy('auth.login.otpSend')!)
+      await waitFor(() => expect(byCy('auth.login.otpCountdown')).toBeInTheDocument())
+
+      clearIntervalSpy.mockClear()
+      act(() => { jest.advanceTimersByTime(300_000) })
+
+      expect(byCy('auth.login.otpCountdown')).toHaveTextContent('login.form.otp.expired')
+      // Cleared as soon as the tick hits zero, not only on unmount.
+      expect(clearIntervalSpy).toHaveBeenCalled()
+    } finally {
+      clearIntervalSpy.mockRestore()
+      jest.useRealTimers()
+    }
+  })
+
+  test('resending after expiry restarts the countdown from the full lifetime (#186)', async () => {
+    jest.useFakeTimers()
+    try {
+      render(<LoginForm />)
+      fireEvent.click(byCy('auth.login.showEmail')!)
+      fireEvent.change(byCy('auth.login.otpEmailInput')!, { target: { value: 'ada@example.com' } })
+      fireEvent.click(byCy('auth.login.otpSend')!)
+      await waitFor(() => expect(byCy('auth.login.otpCountdown')).toBeInTheDocument())
+
+      act(() => { jest.advanceTimersByTime(300_000) })
+      expect(byCy('auth.login.otpCountdown')).toHaveTextContent('login.form.otp.expired')
+
+      await act(async () => {
+        fireEvent.click(byCy('auth.login.otpResend')!)
+      })
+
+      expect(mockSendOtp).toHaveBeenCalledTimes(2)
+      expect(byCy('auth.login.otpCountdown')).toHaveTextContent('login.form.otp.expiresIn:5:00')
+      expect(byCy('auth.login.otpCountdown')).not.toHaveTextContent('login.form.otp.expired')
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  test('the countdown starts from when the request was sent, not when it resolved (#186)', async () => {
+    jest.useFakeTimers()
+    try {
+      // A slow round trip: the server already persisted (and started the
+      // clock on) the code well before the client hears back.
+      mockSendOtp.mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve({ success: true }), 5_000)),
+      )
+
+      render(<LoginForm />)
+      fireEvent.click(byCy('auth.login.showEmail')!)
+      fireEvent.change(byCy('auth.login.otpEmailInput')!, { target: { value: 'ada@example.com' } })
+      fireEvent.click(byCy('auth.login.otpSend')!)
+
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(5_000)
+      })
+
+      // 5s of the 300s lifetime were already spent in flight — the notice
+      // must not restart the clock as if the code had just been issued.
+      await waitFor(() => expect(byCy('auth.login.otpCountdown')).toBeInTheDocument())
+      expect(byCy('auth.login.otpCountdown')).toHaveTextContent('login.form.otp.expiresIn:4:55')
     } finally {
       jest.useRealTimers()
     }

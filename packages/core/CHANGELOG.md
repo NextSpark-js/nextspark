@@ -67,6 +67,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     (`useTeam`, `usePermission`, `PermissionGate`, `useSubscription`, …) has to
     wrap its layout in `DashboardProviders`; otherwise those hooks throw
     `must be used within TeamProvider`.
+- **The one-time code email states the expiry the code really has (#186).** It
+  said 5 minutes whatever `auth.otp.expiresIn` was. It now receives the
+  configured expiry (`OtpVerificationEmailData.expiresIn`) and pluralizes it in
+  the six locales, rounded down so it never promises more time than the code
+  has ("less than a minute" under 60 seconds). The login form's countdown always
+  reads `m:ss`, counts from the moment the code was requested, never shows more
+  than the code's lifetime and stops at zero. The mobile app accepts codes of 4
+  to 10 digits, the lengths `auth.otp.otpLength` allows.
 ### Security
 
 - **The generated proxy enforces the roles `/superadmin` and `/devtools` need.**

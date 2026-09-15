@@ -34,7 +34,7 @@
     "headerSubtitle": "Code de vérification",
     "title": "Votre code de vérification",
     "intro": "Saisissez ce code pour vérifier votre identité :",
-    "expiresNotice": "Ce code expire dans {minutes} minutes.",
+    "expiresNotice": "Ce code expire dans {minutes, plural, =0 {moins d'une minute} one {# minute} other {# minutes}}.",
     "ignoreNotice": "Si vous n'avez pas demandé ce code, vous pouvez ignorer cet e-mail.",
     "copyright": "© {year} {appName}. Tous droits réservés.",
     "footerLine1": "Ceci est un e-mail automatique de {appName}."

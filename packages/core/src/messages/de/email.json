@@ -34,7 +34,7 @@
     "headerSubtitle": "Bestätigungscode",
     "title": "Dein Bestätigungscode",
     "intro": "Gib diesen Code ein, um deine Identität zu bestätigen:",
-    "expiresNotice": "Dieser Code läuft in {minutes} Minuten ab.",
+    "expiresNotice": "Dieser Code läuft in {minutes, plural, =0 {weniger als einer Minute} one {# Minute} other {# Minuten}} ab.",
     "ignoreNotice": "Wenn du diesen Code nicht angefordert hast, kannst du diese E-Mail ignorieren.",
     "copyright": "© {year} {appName}. Alle Rechte vorbehalten.",
     "footerLine1": "Dies ist eine automatische E-Mail von {appName}."

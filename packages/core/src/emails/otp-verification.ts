@@ -7,9 +7,9 @@
 
 import { getTranslations } from 'next-intl/server';
 import type { EmailContent, OtpVerificationEmailData } from '../lib/email/types';
+import { DEFAULT_OTP_CONFIG } from '../lib/auth/otp-config';
 
 const APP_NAME_FALLBACK = process.env.NEXT_PUBLIC_APP_NAME || 'Your App';
-const OTP_EXPIRES_MINUTES = 5;
 
 export default async function otpVerification(
   data: OtpVerificationEmailData,
@@ -19,6 +19,9 @@ export default async function otpVerification(
   const t = await getTranslations({ locale, namespace: 'email.otpVerification' });
   const appName = data.appName || APP_NAME_FALLBACK;
   const year = new Date().getFullYear();
+  // Rounded down so the email never promises more time than the code has: 90s
+  // reads as "1 minute", and a code under a minute has its own wording (=0).
+  const expiresInMinutes = Math.floor((data.expiresIn ?? DEFAULT_OTP_CONFIG.expiresIn) / 60);
 
   return {
     subject: t('subject', { otp: data.otp, appName }),
@@ -56,7 +59,7 @@ export default async function otpVerification(
                       </div>
 
                       <p style="color: #999999; font-size: 14px; line-height: 1.6; margin: 0;">
-                        ${t('expiresNotice', { minutes: OTP_EXPIRES_MINUTES })}<br>
+                        ${t('expiresNotice', { minutes: expiresInMinutes })}<br>
                         ${t('ignoreNotice')}
                       </p>
                     </td>

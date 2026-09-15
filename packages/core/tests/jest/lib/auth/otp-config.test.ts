@@ -92,7 +92,7 @@ describe('getOtpSecondsRemaining', () => {
   })
 
   test('a clock that jumped backwards never reports more than the lifetime', () => {
-    expect(getOtpSecondsRemaining(sentAt, 300, sentAt - 60_000)).toBe(360)
+    expect(getOtpSecondsRemaining(sentAt, 300, sentAt - 60_000)).toBe(300)
   })
 })
 
@@ -102,14 +102,14 @@ describe('formatOtpCountdown', () => {
     [299, '4:59'],
     [61, '1:01'],
     [60, '1:00'],
-    [59, '59'],
-    [5, '5'],
-    [0, '0'],
+    [59, '0:59'],
+    [5, '0:05'],
+    [0, '0:00'],
   ])('formats %p seconds as %p', (seconds, expected) => {
     expect(formatOtpCountdown(seconds)).toBe(expected)
   })
 
   test('never renders a negative time', () => {
-    expect(formatOtpCountdown(-30)).toBe('0')
+    expect(formatOtpCountdown(-30)).toBe('0:00')
   })
 })

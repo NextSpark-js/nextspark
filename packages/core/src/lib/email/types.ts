@@ -103,4 +103,10 @@ export interface OtpVerificationEmailData extends EmailTemplateData {
   otp: string;
   type: string;
   appName: string;
+  /**
+   * Code lifetime in seconds, from the same `resolveOtpConfig` result the
+   * emailOTP plugin runs with. Falls back to `DEFAULT_OTP_CONFIG.expiresIn`
+   * when omitted, so callers that predate this field keep working.
+   */
+  expiresIn?: number;
 }

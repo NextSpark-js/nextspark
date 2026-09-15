@@ -27,7 +27,10 @@ import { Button } from '@/src/components/ui'
 
 type EmailMode = 'otp' | 'password'
 
-const OTP_CODE_LENGTH = 6
+// Better Auth issues codes of 4 to 10 digits (`auth.otp.otpLength` on the
+// server), so the app accepts that whole range instead of assuming one length.
+const OTP_MIN_LENGTH = 4
+const OTP_MAX_LENGTH = 10
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 function resolveMethods(): AuthLoginMethod[] {
@@ -81,7 +84,7 @@ export default function LoginScreen() {
       setEmail(trimmed)
       setOtpCode('')
       setOtpStep('code')
-      setNotice(`Te enviamos un código de ${OTP_CODE_LENGTH} dígitos a ${trimmed}. Vence en 5 minutos.`)
+      setNotice(`Te enviamos un código a ${trimmed}.`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No pudimos enviar el código. Intenta de nuevo.')
     } finally {
@@ -91,12 +94,13 @@ export default function LoginScreen() {
 
   const handleVerifyOtp = async () => {
     setError(null)
-    if (otpCode.trim().length !== OTP_CODE_LENGTH) {
-      setError(`Ingresa el código de ${OTP_CODE_LENGTH} dígitos de tu email`)
+    const code = otpCode.trim()
+    if (code.length < OTP_MIN_LENGTH || code.length > OTP_MAX_LENGTH) {
+      setError('Ingresa el código que te enviamos por email')
       return
     }
     try {
-      await loginWithOtp(email.trim(), otpCode.trim())
+      await loginWithOtp(email.trim(), code)
       router.replace('/(app)')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Código inválido o vencido. Pide uno nuevo.')
@@ -229,13 +233,13 @@ export default function LoginScreen() {
                     <TextInput
                       style={[styles.input, styles.codeInput]}
                       value={otpCode}
-                      onChangeText={(value) => setOtpCode(value.replace(/\D/g, '').slice(0, OTP_CODE_LENGTH))}
+                      onChangeText={(value) => setOtpCode(value.replace(/\D/g, '').slice(0, OTP_MAX_LENGTH))}
                       placeholder="123456"
                       placeholderTextColor={Colors.foregroundMuted}
                       keyboardType="number-pad"
                       autoComplete="one-time-code"
                       textContentType="oneTimeCode"
-                      maxLength={OTP_CODE_LENGTH}
+                      maxLength={OTP_MAX_LENGTH}
                       editable={!busy}
                       autoFocus
                       testID="login-otp-code"

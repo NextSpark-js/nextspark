@@ -82,7 +82,9 @@ export function resolveOtpConfig(
 }
 
 /**
- * Seconds left before a code sent at `sentAt` expires, floored at 0.
+ * Seconds left before a code sent at `sentAt` expires, between 0 and the code's
+ * lifetime: a clock set back after the request would otherwise count more time
+ * than the server gives the code.
  *
  * @param sentAt - Epoch milliseconds of the moment the code was requested.
  * @param expiresIn - Code lifetime in seconds.
@@ -94,11 +96,13 @@ export function getOtpSecondsRemaining(
   now: number = Date.now()
 ): number {
   const elapsed = Math.floor((now - sentAt) / 1000)
-  return Math.max(0, expiresIn - elapsed)
+  return Math.min(expiresIn, Math.max(0, expiresIn - elapsed))
 }
 
 /**
- * Format a remaining-seconds count as `m:ss` (or `s` under a minute).
+ * Format a remaining-seconds count as `m:ss`, always with both parts so the
+ * value reads as a duration on its own (a bare "45" needs a unit the
+ * surrounding sentence does not supply).
  *
  * Digits and a colon read the same in every locale this ships with, so the
  * value can be interpolated into a translated sentence without each locale
@@ -106,8 +110,6 @@ export function getOtpSecondsRemaining(
  */
 export function formatOtpCountdown(secondsRemaining: number): string {
   const total = Math.max(0, Math.floor(secondsRemaining))
-  if (total < 60) return String(total)
-
   const minutes = Math.floor(total / 60)
   const seconds = total % 60
   return `${minutes}:${String(seconds).padStart(2, '0')}`

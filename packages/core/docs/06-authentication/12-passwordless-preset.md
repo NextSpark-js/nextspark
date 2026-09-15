@@ -42,9 +42,34 @@ auth: {
 
 | Value | Login UI | Notes |
 |-------|----------|-------|
-| `'email-otp'` | Email → 6-digit code | Better Auth `emailOTP` plugin. Code expires in 5 minutes. First sign-in auto-creates the user (registration mode and domain rules still apply through the `user.create.before` hook). |
+| `'email-otp'` | Email → 6-digit code | Better Auth `emailOTP` plugin. Code lifetime and length are configurable (see `auth.otp` below), 5 minutes / 6 digits by default. First sign-in auto-creates the user (registration mode and domain rules still apply through the `user.create.before` hook). |
 | `'google'` | "Continue with Google" | Also gated by `providers.google.enabled` and `GOOGLE_CLIENT_ID`. |
 | `'email-password'` | Email + password form | Enables the `/signup` page, the signup link and forgot/reset password. |
+
+### Code lifetime and length: `auth.otp`
+
+`resolveOtpConfig` (`lib/auth/otp-config.ts`) turns `auth.otp` into the values
+the `emailOTP` plugin runs with. It is the single source these three read from,
+so they cannot drift apart:
+
+- the plugin itself (how long a code stays valid server-side),
+- the login form's countdown and code input (`PUBLIC_AUTH_CONFIG.otp`),
+- the OTP email's "this code expires in …" notice, in whole minutes rounded
+  down ("less than a minute" under 60 seconds) so it never promises more time
+  than the code has.
+
+```typescript
+auth: {
+  otp: {
+    expiresIn: 60 * 10, // seconds — default: 300 (5 minutes)
+    otpLength: 6,       // digits — default: 6 (Better Auth allows 4-10)
+  },
+}
+```
+
+Both fields are optional and fall back independently; an invalid value (not a
+positive number, or an `otpLength` outside 4-10) is rejected with a
+`console.warn` and falls back to its default rather than breaking the plugin.
 
 Named presets are exported from `lib/auth/auth-methods.ts`:
 
@@ -112,7 +137,9 @@ minutes per IP) to every `POST /api/auth/*`, OTP requests included.
   `/login` under the passwordless preset.
 - **Mobile**: `apps/mobile/app/login.tsx` reads `APP_CONFIG.auth.methods`
   (`src/config/app.config.ts`) and uses `useAuth().requestOtp` /
-  `loginWithOtp`; Google opens the provider URL from
+  `loginWithOtp`. The code input accepts 4 to 10 digits, every length
+  `auth.otp.otpLength` allows, since the app does not read the web config.
+  Google opens the provider URL from
   `authApi.getSocialSignInUrl`. Native Google needs `@better-auth/expo` to hand
   the browser session back to the app — see the mobile docs.
 - **DevKeyring** (dev only) switches the email form to password mode before
@@ -126,4 +153,12 @@ minutes per IP) to every `POST /api/auth/*`, OTP requests included.
   overrides them.
 - `tests/jest/components/auth/forms/LoginForm.passwordless.test.tsx` — the
   login renders OTP + Google with no password field under the preset, and the
-  classic form when a theme picks `'email-password'`.
+  classic form when a theme picks `'email-password'`; also the countdown's
+  tick/expiry/resend behavior.
+- `tests/jest/lib/auth/otp-config.test.ts` — `resolveOtpConfig` resolution
+  rules and the countdown helpers.
+- `tests/jest/emails/otp-verification-expiry.test.ts` — the OTP email states
+  the actual `expiresIn` it was sent, rounded down to whole minutes and
+  pluralized correctly in every locale.
+- `tests/jest/lib/auth-otp-email-expiry.test.ts` — the emailOTP plugin forwards
+  the resolved `expiresIn` to the email template, not a hardcoded value.

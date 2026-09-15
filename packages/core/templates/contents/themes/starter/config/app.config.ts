@@ -134,6 +134,14 @@ export const APP_CONFIG_OVERRIDES = {
     //   expiresIn: 60 * 60 * 24 * 90, // 90 days
     //   updateAge: 60 * 60 * 24 * 7,  // renew weekly
     // },
+
+    /**
+     * Email OTP code lifetime (seconds) and length (digits) — defaults: 300
+     * (5 minutes) / 6. Drives the `emailOTP` plugin, the login form's
+     * countdown, and the OTP email's "expires in" notice together, so they
+     * can't drift apart:
+     */
+    // otp: { expiresIn: 60 * 10, otpLength: 6 },
     /**
      * Whether Better Auth automatically sends the verification email on signup.
      *

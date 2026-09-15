@@ -3,8 +3,10 @@
  *
  * Loads the corresponding `messages/<locale>/<root>.json` file directly and
  * resolves keys inside `namespace` (which can be dotted, e.g. `email.verifyEmail`).
- * Supports ICU-style `{var}` placeholders in values — replaced naively, no
- * pluralization. Sufficient for email template snapshot tests.
+ * Supports ICU-style `{var}` placeholders, replaced naively, plus the `plural`
+ * argument type (`{var, plural, one {...} other {...}}`) resolved through
+ * `Intl.PluralRules` — the subset the email templates actually use. Sufficient
+ * for email template snapshot tests, not a general ICU MessageFormat parser.
  */
 
 const path = require('path')
@@ -28,9 +30,87 @@ function loadNamespace(locale, namespace) {
   return obj
 }
 
-function format(template, params) {
+/**
+ * Resolves every `{varName, plural, category {text} ...}` block in `template`,
+ * picking the branch via `Intl.PluralRules` (falling back to an explicit
+ * `=<n>` match, then to `other`) and substituting `#` with the value.
+ * Parses by brace-depth rather than regex so a category's text may itself
+ * contain other `{placeholder}` tokens.
+ */
+function resolveIcuPlural(template, params, locale) {
+  const marker = ', plural,'
+  let result = ''
+  let i = 0
+
+  while (i < template.length) {
+    if (template[i] !== '{') {
+      result += template[i]
+      i++
+      continue
+    }
+
+    const commaIndex = template.indexOf(',', i)
+    if (commaIndex === -1 || template.slice(commaIndex, commaIndex + marker.length) !== marker) {
+      result += template[i]
+      i++
+      continue
+    }
+
+    const varName = template.slice(i + 1, commaIndex).trim()
+    let cursor = commaIndex + marker.length
+    const categories = {}
+
+    while (cursor < template.length) {
+      while (/\s/.test(template[cursor])) cursor++
+      if (template[cursor] === '}') {
+        cursor++
+        break
+      }
+      const catStart = cursor
+      while (template[cursor] !== '{') cursor++
+      const catName = template.slice(catStart, cursor).trim()
+      cursor++ // skip the category's opening '{'
+      let subDepth = 1
+      const subStart = cursor
+      while (subDepth > 0) {
+        if (template[cursor] === '{') subDepth++
+        else if (template[cursor] === '}') subDepth--
+        if (subDepth > 0) cursor++
+      }
+      categories[catName] = template.slice(subStart, cursor)
+      cursor++ // skip the category's closing '}'
+      while (/\s/.test(template[cursor])) cursor++
+      if (template[cursor] === '}') {
+        cursor++
+        break
+      }
+    }
+
+    const value = params ? params[varName] : undefined
+    const numValue = Number(value)
+    let category = categories[`=${numValue}`] !== undefined ? `=${numValue}` : undefined
+    if (category === undefined) {
+      try {
+        category = new Intl.PluralRules(locale || 'en').select(numValue)
+      } catch {
+        category = 'other'
+      }
+      if (categories[category] === undefined) category = 'other'
+    }
+
+    result += (categories[category] ?? '').replace(/#/g, String(numValue))
+    i = cursor
+  }
+
+  return result
+}
+
+function format(template, params, locale) {
   if (!params) return template
-  return template.replace(/\{(\w+)\}/g, (_, key) =>
+  const resolved = template.includes(', plural,')
+    ? resolveIcuPlural(template, params, locale)
+    : template
+  return resolved.replace(/\{(\w+)\}/g, (_, key) =>
     params[key] === undefined ? `{${key}}` : String(params[key]),
   )
 }
@@ -45,7 +125,7 @@ async function getTranslations(opts) {
     if (value === undefined) {
       throw new Error(`next-intl mock: missing key "${key}" in namespace "${namespace}"`)
     }
-    return format(value, params)
+    return format(value, params, locale)
   }
 }
 

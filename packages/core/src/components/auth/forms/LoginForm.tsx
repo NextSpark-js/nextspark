@@ -207,11 +207,16 @@ export function LoginForm() {
   useEffect(() => {
     if (otpSentAt === null) return
 
-    const tick = () => setOtpSecondsLeft(getOtpSecondsRemaining(otpSentAt, otpExpiresIn))
+    const tick = () => {
+      const remaining = getOtpSecondsRemaining(otpSentAt, otpExpiresIn)
+      setOtpSecondsLeft(remaining)
+      if (remaining <= 0) clearInterval(intervalId)
+    }
+
+    const intervalId = setInterval(tick, 1000)
     tick()
 
-    const interval = setInterval(tick, 1000)
-    return () => clearInterval(interval)
+    return () => clearInterval(intervalId)
   }, [otpSentAt, otpExpiresIn])
 
   const switchEmailMode = useCallback((mode: EmailMode) => {
@@ -243,12 +248,21 @@ export function LoginForm() {
     setLoadingProvider('email')
     setStatusMessage(t('login.messages.otpSending'))
 
+    // Captured before the request goes out: the server persists the code
+    // (and starts its own clock on it) before it awaits the email send, so
+    // timing this after the request resolves would count down from later
+    // than the code is actually valid from.
+    const sentAt = Date.now()
     try {
       await sendOtp(parsed.data)
       setOtpEmail(parsed.data)
       setOtpCode('')
       setOtpStep('code')
-      setOtpSentAt(Date.now())
+      setOtpSentAt(sentAt)
+      // Set alongside otpSentAt rather than left to the countdown effect:
+      // on a resend after expiry, otherwise the "expired" notice would still
+      // be showing (stale otpSecondsLeft) for the render before the effect re-runs.
+      setOtpSecondsLeft(getOtpSecondsRemaining(sentAt, otpExpiresIn))
       setStatusMessage(t('login.messages.otpSent'))
     } catch (err) {
       const error = err instanceof Error ? err : new Error(t('login.messages.otpSendFailed'))
@@ -258,7 +272,7 @@ export function LoginForm() {
     } finally {
       setLoadingProvider(null)
     }
-  }, [loadingProvider, otpEmail, otpEmailSchema, sendOtp, t])
+  }, [loadingProvider, otpEmail, otpEmailSchema, otpExpiresIn, sendOtp, t])
 
   /**
    * Passwordless step 2: exchange the emailed code for a session.

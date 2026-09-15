@@ -311,6 +311,7 @@ export const auth = betterAuth({
           otp,
           type,
           appName: process.env.NEXT_PUBLIC_APP_NAME || 'Your App',
+          expiresIn: otpConfig.expiresIn,
         }, I18N_CONFIG.defaultLocale);
         await emailService.send({ to: email, ...template });
       },
