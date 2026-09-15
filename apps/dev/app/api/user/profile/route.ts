@@ -3,7 +3,7 @@ import { auth } from '@nextsparkjs/core/lib/auth'
 import { headers } from 'next/headers'
 import { queryOneWithRLS, mutateWithRLS, queryOne } from '@nextsparkjs/core/lib/db'
 import { profileSchema } from '@nextsparkjs/core/lib/validation'
-import { MetaService } from '@nextsparkjs/core/lib/services/meta.service'
+import { MetaService, MetaValueTooLargeError } from '@nextsparkjs/core/lib/services/meta.service'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 
 export const GET = withRateLimitTier(async (request: NextRequest) => {
@@ -68,15 +68,12 @@ export const PATCH = withRateLimitTier(async (request: NextRequest) => {
     const body = await request.json()
     const { meta, ...profileData } = body
     
-    // Handle metadata-only updates (formato anidado)
+    // Handle metadata-only updates (nested format)
     if (meta && Object.keys(profileData).length === 0) {
-      // Procesar cada grupo de metadata por separado
-      for (const [metaKey, metaValue] of Object.entries(meta)) {
-        if (metaValue && typeof metaValue === 'object') {
-          await MetaService.setEntityMeta('user', session.user.id, metaKey, metaValue, session.user.id)
-        }
-      }
-      
+      // Each group (uiPreferences, ...) is merged into the stored one: the
+      // theme toggle sends only `theme`, the sidebar only `sidebarCollapsed`.
+      await MetaService.mergeEntityMetaGroups('user', session.user.id, meta, session.user.id)
+
       return NextResponse.json({ 
         message: 'Settings updated successfully',
         success: true
@@ -113,21 +110,19 @@ export const PATCH = withRateLimitTier(async (request: NextRequest) => {
       }
     }
 
-    // Handle metadata updates if provided (formato anidado)
+    // Handle metadata updates if provided (nested format), merged like above
     if (meta) {
-      // Procesar cada grupo de metadata por separado
-      for (const [metaKey, metaValue] of Object.entries(meta)) {
-        if (metaValue && typeof metaValue === 'object') {
-          await MetaService.setEntityMeta('user', session.user.id, metaKey, metaValue, session.user.id)
-        }
-      }
+      await MetaService.mergeEntityMetaGroups('user', session.user.id, meta, session.user.id)
     }
-    
+
     return NextResponse.json({
       message: 'Profile updated successfully',
       success: true
     })
   } catch (error) {
+    if (error instanceof MetaValueTooLargeError) {
+      return NextResponse.json({ error: error.message }, { status: 413 })
+    }
     console.error('Error updating user profile:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

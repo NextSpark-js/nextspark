@@ -28,16 +28,14 @@ export const POST = withRateLimitTier(async (req: NextRequest) => {
       return NextResponse.json({ error: 'Metadata is required' }, { status: 400 })
     }
 
-    // Crear cada grupo de metadata por separado
-    for (const [metaKey, metaValue] of Object.entries(metadata)) {
-      if (metaValue && typeof metaValue === 'object') {
-        await MetaService.setEntityMeta('user', userId, metaKey, metaValue, userId)
-      }
-    }
+    // Defaults only fill in what is missing. The caller picks them from a read
+    // of the user's meta that may be stale by now, so a preference saved in
+    // between (a theme change, a collapsed sidebar) is kept.
+    await MetaService.mergeEntityMetaGroups('user', userId, metadata, userId, { defaults: true })
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
-      message: 'Default metadata created successfully' 
+      message: 'Default metadata created successfully'
     })
   } catch (error) {
     // Log error for debugging but don't expose details to client

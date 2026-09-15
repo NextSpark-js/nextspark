@@ -8,7 +8,6 @@ module.exports = {
     '/node_modules/',
     // Tests that require generated project files (@/app, @/contents)
     'tests/jest/api/ai-generate.test.ts',
-    'tests/jest/api/internal-user-metadata.test.ts',
     'tests/jest/lib/ai-sanitize.test.ts',
     // Tests that require @testing-library/user-event (not installed)
     'tests/jest/components/auth/forms/LoginForm.test.tsx',

@@ -7,6 +7,16 @@ import {
   CreateMetaPayload
 } from '../../types/meta.types';
 
+const MAX_META_VALUE_BYTES = 1048576;
+
+/** A meta value over the 1 MiB limit, on its own or once merged with the stored value. */
+export class MetaValueTooLargeError extends Error {
+  constructor(message = 'Meta value too large (max 1MB)') {
+    super(message);
+    this.name = 'MetaValueTooLargeError';
+  }
+}
+
 export class MetaService {
   /**
    * Obtener configuración de entidad
@@ -199,22 +209,11 @@ export class MetaService {
   }
 
   /**
-   * Establecer un meta dato
-   *
-   * NOTE: Metas tables do NOT have teamId column - security is inherited from parent entity via RLS.
-   * This follows the CRM theme pattern where metadata access is controlled through the parent entity.
+   * Validations that were previously in the stored procedure, shared by every
+   * method that writes a meta value. Returns the JSON string for the `::jsonb`
+   * cast so callers don't serialize `metaValue` twice.
    */
-  static async setEntityMeta(
-    entityType: EntityType,
-    entityId: string,
-    metaKey: string,
-    metaValue: unknown,
-    userId: string,
-    options: Partial<CreateMetaPayload> = {}
-  ): Promise<void> {
-    const config = this.getEntityConfig(entityType);
-
-    // Validations that were previously in the stored procedure
+  private static validateMetaWrite(config: EntityConfig, metaKey: string, metaValue: unknown): string {
     // Validate table name ends with _metas for security
     if (!config.metaTableName.endsWith('_metas')) {
       throw new Error(`Invalid meta table name: ${config.metaTableName}`);
@@ -232,16 +231,60 @@ export class MetaService {
 
     // Validate JSON size (max 1MB for performance)
     const jsonString = JSON.stringify(metaValue);
-    if (new TextEncoder().encode(jsonString).length > 1048576) {
-      throw new Error('Meta value too large (max 1MB)');
+    if (new TextEncoder().encode(jsonString).length > MAX_META_VALUE_BYTES) {
+      throw new MetaValueTooLargeError();
     }
+
+    return jsonString;
+  }
+
+  /**
+   * SQL condition: a jsonb value is within the limit as Postgres stores it.
+   * jsonb is normalized when stored, and its text form puts a space after
+   * every `:` and `,`, so a value within the limit as compact JSON can exceed
+   * it once stored. The limit is measured on that text form.
+   */
+  private static fitsMetaLimit(jsonbExpression: string): string {
+    return `octet_length((${jsonbExpression})::text) <= ${MAX_META_VALUE_BYTES}`;
+  }
+
+  /**
+   * The INSERT of one meta row, $1-$6 being id, key, value, data type, public
+   * and searchable. It inserts nothing when the value is over the limit as
+   * stored; the caller appends its ON CONFLICT clause and checks rowCount.
+   */
+  private static insertMetaRowSql(config: EntityConfig): string {
+    return `
+      INSERT INTO "${config.metaTableName}"
+        ("${config.idColumn}", "metaKey", "metaValue", "dataType", "isPublic", "isSearchable")
+      SELECT $1, $2, incoming.value, $4, $5, $6
+        FROM (SELECT $3::jsonb AS value) incoming
+       WHERE ${this.fitsMetaLimit('incoming.value')}`;
+  }
+
+  /**
+   * Establecer un meta dato
+   *
+   * NOTE: Metas tables do NOT have teamId column - security is inherited from parent entity via RLS.
+   * This follows the CRM theme pattern where metadata access is controlled through the parent entity.
+   *
+   * Throws MetaValueTooLargeError, writing nothing, when the value is over
+   * 1 MiB as Postgres stores it.
+   */
+  static async setEntityMeta(
+    entityType: EntityType,
+    entityId: string,
+    metaKey: string,
+    metaValue: unknown,
+    userId: string,
+    options: Partial<CreateMetaPayload> = {}
+  ): Promise<void> {
+    const config = this.getEntityConfig(entityType);
+    const jsonString = this.validateMetaWrite(config, metaKey, metaValue);
 
     // Standard query - no teamId column in metas tables
     // Security is handled by RLS policies that check parent entity team membership
-    const query = `
-      INSERT INTO "${config.metaTableName}"
-        ("${config.idColumn}", "metaKey", "metaValue", "dataType", "isPublic", "isSearchable")
-      VALUES ($1, $2, $3::jsonb, $4, $5, $6)
+    const query = `${this.insertMetaRowSql(config)}
       ON CONFLICT ("${config.idColumn}", "metaKey")
       DO UPDATE SET
         "metaValue" = EXCLUDED."metaValue",
@@ -259,7 +302,123 @@ export class MetaService {
       options.isSearchable || false
     ];
 
-    await mutateWithRLS(query, params, userId);
+    const result = await mutateWithRLS(query, params, userId);
+    if (result.rowCount === 0) {
+      throw new MetaValueTooLargeError();
+    }
+  }
+
+  /**
+   * Upserts a meta value merged with the stored one in a single statement, so
+   * concurrent writes to the same key can't drop each other's keys the way a
+   * read-merge-write in application code can. When both values are jsonb
+   * objects they are merged shallowly and `precedence` decides which side
+   * wins a key present in both; otherwise the winning side is kept whole.
+   *
+   * The 1 MiB limit applies to what gets stored, inside the same statement:
+   * to the inserted value and to the merged one. When either is over it,
+   * nothing is written and MetaValueTooLargeError is thrown.
+   */
+  private static async upsertMergedMeta(
+    entityType: EntityType,
+    entityId: string,
+    metaKey: string,
+    metaValue: unknown,
+    userId: string,
+    options: Partial<CreateMetaPayload>,
+    precedence: 'incoming' | 'stored'
+  ): Promise<void> {
+    const config = this.getEntityConfig(entityType);
+    const jsonString = this.validateMetaWrite(config, metaKey, metaValue);
+
+    const stored = `"${config.metaTableName}"."metaValue"`;
+    const incoming = 'EXCLUDED."metaValue"';
+    const [loser, winner] = precedence === 'incoming' ? [stored, incoming] : [incoming, stored];
+    const merged = `CASE
+          WHEN jsonb_typeof(${stored}) = 'object' AND jsonb_typeof(${incoming}) = 'object'
+          THEN ${loser} || ${winner}
+          ELSE ${winner}
+        END`;
+
+    const query = `${this.insertMetaRowSql(config)}
+      ON CONFLICT ("${config.idColumn}", "metaKey")
+      DO UPDATE SET
+        "metaValue" = ${merged},
+        "dataType" = EXCLUDED."dataType",
+        "isPublic" = EXCLUDED."isPublic",
+        "isSearchable" = EXCLUDED."isSearchable",
+        "updatedAt" = CURRENT_TIMESTAMP
+      WHERE ${this.fitsMetaLimit(merged)}
+    `;
+    const params = [
+      entityId,
+      metaKey,
+      jsonString,
+      options.dataType || 'json',
+      options.isPublic || false,
+      options.isSearchable || false
+    ];
+
+    const result = await mutateWithRLS(query, params, userId);
+    if (result.rowCount === 0) {
+      throw new MetaValueTooLargeError();
+    }
+  }
+
+  /**
+   * Sets a meta value merged into the stored one: between two jsonb objects the
+   * incoming keys win and the other stored keys are kept, so a request that
+   * only carries `theme` leaves `sidebarCollapsed` in place. A non-object value
+   * on either side replaces the stored value, as in setEntityMeta.
+   */
+  static async mergeEntityMeta(
+    entityType: EntityType,
+    entityId: string,
+    metaKey: string,
+    metaValue: unknown,
+    userId: string,
+    options: Partial<CreateMetaPayload> = {}
+  ): Promise<void> {
+    await this.upsertMergedMeta(entityType, entityId, metaKey, metaValue, userId, options, 'incoming');
+  }
+
+  /**
+   * Fills in default values without overwriting stored ones: between two jsonb
+   * objects the stored keys win and only the missing keys are added, and a
+   * stored non-object value is kept as it is. Defaults picked from a read that
+   * is already stale therefore can't undo a value saved after that read.
+   */
+  static async mergeEntityMetaDefaults(
+    entityType: EntityType,
+    entityId: string,
+    metaKey: string,
+    metaValue: unknown,
+    userId: string,
+    options: Partial<CreateMetaPayload> = {}
+  ): Promise<void> {
+    await this.upsertMergedMeta(entityType, entityId, metaKey, metaValue, userId, options, 'stored');
+  }
+
+  /**
+   * Writes each group of a nested meta payload (`{ uiPreferences: {...}, ... }`)
+   * with mergeEntityMeta, or with mergeEntityMetaDefaults when `defaults` is
+   * set. Entries whose value is not an object are skipped.
+   */
+  static async mergeEntityMetaGroups(
+    entityType: EntityType,
+    entityId: string,
+    groups: Record<string, unknown>,
+    userId: string,
+    { defaults = false }: { defaults?: boolean } = {}
+  ): Promise<void> {
+    for (const [metaKey, metaValue] of Object.entries(groups)) {
+      if (!metaValue || typeof metaValue !== 'object') continue;
+      if (defaults) {
+        await this.mergeEntityMetaDefaults(entityType, entityId, metaKey, metaValue, userId);
+      } else {
+        await this.mergeEntityMeta(entityType, entityId, metaKey, metaValue, userId);
+      }
+    }
   }
 
   /**
