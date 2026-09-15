@@ -8,7 +8,7 @@
  */
 
 import type { BlockConfig, BlockCategory } from '../../types/blocks'
-import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry'
+import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry.client'
 
 /**
  * Block Service - Provides runtime block queries

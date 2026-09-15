@@ -216,6 +216,10 @@ declare module '@nextsparkjs/registries/block-registry.client' {
   }
 }
 
+declare module '@nextsparkjs/registries/block-registry.lazy' {
+  export const BLOCK_COMPONENTS: Record<string, React.LazyExoticComponent<React.ComponentType<any>> | React.ComponentType<any>>
+}
+
 // ============================================================================
 // Entity Registry (Server) — declared for completeness; no direct import
 // found in packages/core/src today, but kept in case a consumer-facing

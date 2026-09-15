@@ -12,7 +12,8 @@
  */
 
 import type { BlockInstance } from '../../../types/blocks'
-import { getBlockComponentSSR, normalizeBlockProps } from '../../../lib/blocks/loader'
+import { normalizeBlockProps } from '../../../lib/blocks/loader'
+import { getBlockComponentSSR } from '../../../lib/blocks/loader.server'
 
 // Error display for missing blocks
 function BlockError({ blockSlug }: { blockSlug: string }) {
