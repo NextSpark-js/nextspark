@@ -315,6 +315,26 @@ if [ "$SKIP_BUILD" = false ]; then
         fi
     fi
 
+    # Verify apps/mobile and the template assembled from it (typecheck + tests)
+    # before syncing its screens into the templates. apps/mobile lives outside
+    # the pnpm workspace, so this is the only place they get checked before
+    # they ship in the tarball. Set SKIP_MOBILE_VERIFY=1 to skip (e.g. it was
+    # already run in CI).
+    if [[ " ${FINAL_PACKAGES[*]} " =~ " $REPO_ROOT/packages/mobile " ]]; then
+        cd "$REPO_ROOT"
+        if [ "$SKIP_MOBILE_VERIFY" = "1" ]; then
+            echo -e "  ${YELLOW}[SKIP]${NC} apps/mobile verify skipped (SKIP_MOBILE_VERIFY=1)"
+        else
+            echo -e "  ${CYAN}Verifying apps/mobile and the mobile template (typecheck + tests)...${NC}"
+            if pnpm mobile:verify; then
+                echo -e "    ${GREEN}[OK]${NC} apps/mobile and the mobile template verified"
+            else
+                echo -e "    ${RED}[FAIL]${NC} apps/mobile verify failed (see the output above)"
+                exit 1
+            fi
+        fi
+    fi
+
     # Sync mobile templates from apps/mobile before building mobile
     # packages/mobile/templates/app/ is gitignored (synced at pack time).
     # Without this, the published tarball is missing app/ and `nextspark init`

@@ -6,7 +6,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { tasksApi } from './api'
 import { TASKS_QUERY_KEY } from './constants.internal'
 import type { Task, CreateTaskInput, UpdateTaskInput } from './types'
-import type { PaginatedResponse } from '../../api/client.types'
+import type { PaginatedResponse } from '@nextsparkjs/mobile'
 
 /**
  * Hook to create a new task
@@ -33,7 +33,7 @@ export function useUpdateTask() {
     mutationFn: ({ id, data }: { id: string; data: UpdateTaskInput }) =>
       tasksApi.update(id, data),
     onSuccess: (response) => {
-      // Update the specific task in cache
+      // update() returns the entity directly (createEntityApi unwraps SingleResponse)
       queryClient.setQueryData([...TASKS_QUERY_KEY, response.id], response)
       // Invalidate list to refetch
       queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY })

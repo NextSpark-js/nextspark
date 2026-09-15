@@ -9,7 +9,10 @@ module.exports = {
   testPathIgnorePatterns: ['/node_modules/', '/dist/', '/.expo/'],
 
   // Module resolution - redirect Platform import to our mock
+  // Screens under app/ import via '@/src/...', other modules via '@/...' (both
+  // resolve to src/); the more specific pattern must come first.
   moduleNameMapper: {
+    '^@/src/(.*)$': '<rootDir>/src/$1',
     '^@/(.*)$': '<rootDir>/src/$1',
     '^react-native/Libraries/Utilities/Platform$':
       '<rootDir>/tests/jest/__mocks__/platform.ts',

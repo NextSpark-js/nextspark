@@ -7,7 +7,7 @@ import React from 'react'
 import { renderHook, waitFor } from '@testing-library/react-native'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { Customer } from '@/entities/customers/types'
-import type { PaginatedResponse, SingleResponse } from '@/api/client.types'
+import type { PaginatedResponse } from '@nextsparkjs/mobile'
 
 // Import the mock from our __mocks__ folder
 import { mockCustomersApi } from '../../__mocks__/entities-customers-api'
@@ -169,8 +169,8 @@ describe('Customer queries', () => {
 
   describe('useCustomer', () => {
     it('should fetch single customer by id', async () => {
-      const response: SingleResponse<Customer> = { data: testCustomers[0] }
-      mockCustomersApi.get.mockResolvedValueOnce(response)
+      // createEntityApi's get() resolves with the entity itself
+      mockCustomersApi.get.mockResolvedValueOnce(testCustomers[0])
 
       const { result } = renderHook(() => useCustomer('cust-1'), {
         wrapper: createWrapper(),
@@ -181,8 +181,8 @@ describe('Customer queries', () => {
       })
 
       expect(mockCustomersApi.get).toHaveBeenCalledWith('cust-1')
-      expect(result.current.data?.data.id).toBe('cust-1')
-      expect(result.current.data?.data.name).toBe('Customer One')
+      expect(result.current.data?.id).toBe('cust-1')
+      expect(result.current.data?.name).toBe('Customer One')
     })
 
     it('should not fetch if id is undefined', async () => {

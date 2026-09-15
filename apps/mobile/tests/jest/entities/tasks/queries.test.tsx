@@ -7,7 +7,7 @@ import React from 'react'
 import { renderHook, waitFor } from '@testing-library/react-native'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { Task } from '@/entities/tasks/types'
-import type { PaginatedResponse, SingleResponse } from '@/api/client.types'
+import type { PaginatedResponse } from '@nextsparkjs/mobile'
 
 // Import the mock from our __mocks__ folder
 import { mockTasksApi } from '../../__mocks__/entities-tasks-api'
@@ -167,8 +167,8 @@ describe('Task queries', () => {
 
   describe('useTask', () => {
     it('should fetch single task by id', async () => {
-      const response: SingleResponse<Task> = { data: testTasks[0] }
-      mockTasksApi.get.mockResolvedValueOnce(response)
+      // createEntityApi's get() resolves with the entity itself
+      mockTasksApi.get.mockResolvedValueOnce(testTasks[0])
 
       const { result } = renderHook(() => useTask('task-1'), {
         wrapper: createWrapper(),
@@ -179,7 +179,7 @@ describe('Task queries', () => {
       })
 
       expect(mockTasksApi.get).toHaveBeenCalledWith('task-1')
-      expect(result.current.data?.data.id).toBe('task-1')
+      expect(result.current.data?.id).toBe('task-1')
     })
 
     it('should not fetch if id is undefined', async () => {

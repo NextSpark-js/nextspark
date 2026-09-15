@@ -20,18 +20,26 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import * as Linking from 'expo-linking'
-import { useAuth, authApi, type AuthLoginMethod } from '@nextsparkjs/mobile'
+import {
+  useAuth,
+  authApi,
+  validateOtpCode,
+  OTP_MAX_LENGTH,
+  type AuthLoginMethod,
+  type OtpCodeError,
+} from '@nextsparkjs/mobile'
 import { APP_CONFIG } from '@/src/config/app.config'
 import { Colors } from '@/src/constants/colors'
 import { Button } from '@/src/components/ui'
 
 type EmailMode = 'otp' | 'password'
 
-// Better Auth issues codes of 4 to 10 digits (`auth.otp.otpLength` on the
-// server), so the app accepts that whole range instead of assuming one length.
-const OTP_MIN_LENGTH = 4
-const OTP_MAX_LENGTH = 10
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+const OTP_CODE_ERRORS: Record<OtpCodeError, string> = {
+  length: 'Ingresa el código que te enviamos por email',
+  format: 'El código sólo puede tener números',
+}
 
 function resolveMethods(): AuthLoginMethod[] {
   const configured = APP_CONFIG.auth?.methods ?? []
@@ -95,8 +103,9 @@ export default function LoginScreen() {
   const handleVerifyOtp = async () => {
     setError(null)
     const code = otpCode.trim()
-    if (code.length < OTP_MIN_LENGTH || code.length > OTP_MAX_LENGTH) {
-      setError('Ingresa el código que te enviamos por email')
+    const validationError = validateOtpCode(code)
+    if (validationError) {
+      setError(OTP_CODE_ERRORS[validationError])
       return
     }
     try {

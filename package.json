@@ -36,7 +36,8 @@
     "db:reset": "cd apps/dev && node scripts/drop-all-tables.mjs && node ../../packages/core/scripts/db/run-migrations.mjs",
     "mobile:install": "cd apps/mobile && pnpm install",
     "mobile:start": "cd apps/mobile && pnpm start",
-    "mobile:web": "cd apps/mobile && pnpm run web"
+    "mobile:web": "cd apps/mobile && pnpm run web",
+    "mobile:verify": "node scripts/packages/mobile-verify.mjs"
   },
   "devDependencies": {
     "@cypress/grep": "^5.0.1",

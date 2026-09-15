@@ -7,7 +7,6 @@ import React from 'react'
 import { renderHook, act, waitFor } from '@testing-library/react-native'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { Customer, CreateCustomerInput, UpdateCustomerInput } from '@/entities/customers/types'
-import type { SingleResponse } from '@/api/client.types'
 
 // Import the mock from our __mocks__ folder
 import { mockCustomersApi } from '../../__mocks__/entities-customers-api'
@@ -21,6 +20,7 @@ import {
   useUpdateCustomer,
   useDeleteCustomer,
 } from '@/entities/customers/mutations'
+import { CUSTOMERS_QUERY_KEY } from '@/entities/customers/queries'
 
 // Test data matching actual Customer type
 const testCustomer: Customer = {
@@ -50,14 +50,17 @@ const updateInput: UpdateCustomerInput = {
   phone: '555-9999',
 }
 
-// Helper to create wrapper with QueryClient
-function createWrapper() {
-  const queryClient = new QueryClient({
+function createQueryClient() {
+  return new QueryClient({
     defaultOptions: {
       queries: { retry: false },
       mutations: { retry: false },
     },
   })
+}
+
+// Helper to create wrapper with QueryClient
+function createWrapper(queryClient = createQueryClient()) {
   return function Wrapper({ children }: { children: React.ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
@@ -67,6 +70,8 @@ function createWrapper() {
   }
 }
 
+// customersApi comes from createEntityApi, which resolves create/update with
+// the entity itself (it unwraps the API's { data } envelope).
 describe('Customer mutations', () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -74,10 +79,7 @@ describe('Customer mutations', () => {
 
   describe('useCreateCustomer', () => {
     it('should call customersApi.create with data', async () => {
-      const response: SingleResponse<Customer> = {
-        data: { ...testCustomer, ...createInput, id: 'cust-new' },
-      }
-      mockCustomersApi.create.mockResolvedValueOnce(response)
+      mockCustomersApi.create.mockResolvedValueOnce({ ...testCustomer, ...createInput, id: 'cust-new' })
 
       const { result } = renderHook(() => useCreateCustomer(), {
         wrapper: createWrapper(),
@@ -97,20 +99,19 @@ describe('Customer mutations', () => {
         name: 'New Customer',
         account: 67890,
       }
-      const response: SingleResponse<Customer> = { data: createdCustomer }
-      mockCustomersApi.create.mockResolvedValueOnce(response)
+      mockCustomersApi.create.mockResolvedValueOnce(createdCustomer)
 
       const { result } = renderHook(() => useCreateCustomer(), {
         wrapper: createWrapper(),
       })
 
-      let mutationResult: SingleResponse<Customer> | undefined
+      let mutationResult: Customer | undefined
       await act(async () => {
         mutationResult = await result.current.mutateAsync(createInput)
       })
 
-      expect(mutationResult?.data.name).toBe('New Customer')
-      expect(mutationResult?.data.account).toBe(67890)
+      expect(mutationResult?.name).toBe('New Customer')
+      expect(mutationResult?.account).toBe(67890)
     })
 
     it('should handle error correctly', async () => {
@@ -131,9 +132,7 @@ describe('Customer mutations', () => {
 
   describe('useUpdateCustomer', () => {
     it('should call customersApi.update with id and data', async () => {
-      const updatedCustomer: Customer = { ...testCustomer, ...updateInput }
-      const response: SingleResponse<Customer> = { data: updatedCustomer }
-      mockCustomersApi.update.mockResolvedValueOnce(response)
+      mockCustomersApi.update.mockResolvedValueOnce({ ...testCustomer, ...updateInput })
 
       const { result } = renderHook(() => useUpdateCustomer(), {
         wrapper: createWrapper(),
@@ -152,20 +151,35 @@ describe('Customer mutations', () => {
         name: 'Updated Customer',
         phone: '555-9999',
       }
-      const response: SingleResponse<Customer> = { data: updatedCustomer }
-      mockCustomersApi.update.mockResolvedValueOnce(response)
+      mockCustomersApi.update.mockResolvedValueOnce(updatedCustomer)
 
       const { result } = renderHook(() => useUpdateCustomer(), {
         wrapper: createWrapper(),
       })
 
-      let mutationResult: SingleResponse<Customer> | undefined
+      let mutationResult: Customer | undefined
       await act(async () => {
         mutationResult = await result.current.mutateAsync({ id: 'cust-1', data: updateInput })
       })
 
-      expect(mutationResult?.data.name).toBe('Updated Customer')
-      expect(mutationResult?.data.phone).toBe('555-9999')
+      expect(mutationResult?.name).toBe('Updated Customer')
+      expect(mutationResult?.phone).toBe('555-9999')
+    })
+
+    it('should cache the updated customer under its id', async () => {
+      const updatedCustomer: Customer = { ...testCustomer, ...updateInput }
+      mockCustomersApi.update.mockResolvedValueOnce(updatedCustomer)
+      const queryClient = createQueryClient()
+
+      const { result } = renderHook(() => useUpdateCustomer(), {
+        wrapper: createWrapper(queryClient),
+      })
+
+      await act(async () => {
+        await result.current.mutateAsync({ id: 'cust-1', data: updateInput })
+      })
+
+      expect(queryClient.getQueryData([...CUSTOMERS_QUERY_KEY, 'cust-1'])).toEqual(updatedCustomer)
     })
   })
 

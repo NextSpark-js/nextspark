@@ -55,3 +55,15 @@ export * as Storage from './lib/storage'
  * ```
  */
 export { alert, confirm, confirmDestructive, Alert } from './lib/alert'
+
+/**
+ * One-time sign-in code validation (Better Auth's 4-10 digit range)
+ * @example
+ * ```ts
+ * import { validateOtpCode } from '@nextsparkjs/mobile'
+ * validateOtpCode('123456') // null
+ * validateOtpCode('12a4')   // 'format'
+ * ```
+ */
+export { OTP_MIN_LENGTH, OTP_MAX_LENGTH, validateOtpCode } from './lib/otp'
+export type { OtpCodeError } from './lib/otp'

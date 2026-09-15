@@ -32,7 +32,7 @@ export function useUpdateCustomer() {
     mutationFn: ({ id, data }: { id: string; data: UpdateCustomerInput }) =>
       customersApi.update(id, data),
     onSuccess: (response) => {
-      // Update the specific customer in cache
+      // update() returns the entity directly (createEntityApi unwraps SingleResponse)
       queryClient.setQueryData([...CUSTOMERS_QUERY_KEY, response.id], response)
       // Invalidate list to refetch
       queryClient.invalidateQueries({ queryKey: CUSTOMERS_QUERY_KEY })
