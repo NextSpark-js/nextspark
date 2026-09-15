@@ -81,6 +81,7 @@ import { generateDocsRegistry } from './registry/generators/docs-registry.mjs'
 import { generateApiPresetsRegistry, generateApiDocsRegistry } from './registry/generators/api-presets-registry.mjs'
 import { generateMcpRegistry } from './registry/generators/mcp-registry.mjs'
 import {
+  analyzeTemplates,
   generateMissingPages,
   displayTreeStructure,
   generateTestEntitiesJson,
@@ -93,7 +94,7 @@ import { syncAppGlobalsCss } from './theme.mjs'
 
 // ==================== Registry File Generation ====================
 
-async function generateRegistryFiles(CONFIG, plugins, entities, themes, templates, middlewares, blocks, permissionsConfig, coreRoutes, apiPresetsData, emails, mcpOverridesData) {
+async function generateRegistryFiles(CONFIG, plugins, entities, themes, templates, templateAnalysis, middlewares, blocks, permissionsConfig, coreRoutes, apiPresetsData, emails, mcpOverridesData) {
   log('Generating registry files...', 'build')
 
   try {
@@ -101,7 +102,7 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, template
     await mkdir(CONFIG.outputDir, { recursive: true })
 
     // Generate client template registry (async - needs to check for server exports)
-    const templateRegistryClientContent = await generateTemplateRegistryClient(templates, CONFIG)
+    const templateRegistryClientContent = await generateTemplateRegistryClient(templates, CONFIG, templateAnalysis)
 
     // Collect the icon names configs can ask for by string (async - reads configs)
     const iconNames = await discoverIcons(blocks, CONFIG)
@@ -116,7 +117,7 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, template
       { name: 'theme-registry.ts', content: generateThemeRegistry(themes, CONFIG) },
       { name: 'route-handlers.ts', content: generateRouteHandlersRegistry(plugins, themes, coreRoutes, entities, CONFIG) },
       { name: 'translation-registry.ts', content: generateTranslationRegistry(themes, CONFIG) },
-      { name: 'template-registry.ts', content: generateTemplateRegistry(templates, CONFIG) },
+      { name: 'template-registry.ts', content: await generateTemplateRegistry(templates, CONFIG, templateAnalysis) },
       { name: 'template-registry.client.ts', content: templateRegistryClientContent },
       { name: 'email-registry.ts', content: generateEmailRegistry(emails, CONFIG) },
       { name: 'block-registry.ts', content: generateBlockRegistry(blocks, CONFIG) },
@@ -264,6 +265,12 @@ export async function buildRegistries(projectRoot = null) {
     // Display beautiful tree structure
     displayTreeStructure(plugins, themes, coreEntities)
 
+    // Parse every theme template once, before anything is written. Both template
+    // registries and the page generator take what they need to know about a
+    // template from this, so a template saved while a build runs (watch mode)
+    // can't look one way to one of them and another way to the next.
+    const templateAnalysis = await analyzeTemplates(templates, CONFIG)
+
     // Clean up old generated route files first
     await cleanupOldRouteFiles(CONFIG)
 
@@ -272,10 +279,10 @@ export async function buildRegistries(projectRoot = null) {
 
     // Hoist plugin dependencies to root workspace for proper resolution
     // Generate all registry files (use aggregated entities for entity registry + blocks)
-    await generateRegistryFiles(CONFIG, plugins, allEntities, themes, templates, middlewares, blocks, permissionsConfig, coreRoutes, apiPresetsData, emails, mcpOverridesData)
+    await generateRegistryFiles(CONFIG, plugins, allEntities, themes, templates, templateAnalysis, middlewares, blocks, permissionsConfig, coreRoutes, apiPresetsData, emails, mcpOverridesData)
 
     // Generate missing pages for templates that don't have core app pages
-    await generateMissingPages(templates, CONFIG)
+    await generateMissingPages(templates, CONFIG, templateAnalysis)
 
     // Generate test fixtures for the active theme
     await generateTestEntitiesJson(allEntities, themes)

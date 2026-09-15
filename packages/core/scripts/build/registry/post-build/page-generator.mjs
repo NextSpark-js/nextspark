@@ -13,6 +13,7 @@ import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
 import { log, verbose } from '../../../utils/index.mjs'
+import { getProtectionLevel, ProtectionLevel } from '../../../../dist/config/protected-paths.js'
 import { cleanupOrphanedTemplates } from './route-cleanup.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -236,32 +237,20 @@ function declaresDefaultExport(sourceFile, ts) {
 }
 
 /**
- * Parse a theme template's source and split its route-level exports into:
- * - `segmentConfig`: segment config keys that resolve to a literal value the
- *   generated route file can re-declare (`{ name: value }`).
- * - `moduleExports`: exported names (functions, `metadata`, etc.) the
- *   generated route file can safely forward with `export { ... } from`.
- * - `hasDefaultExport`: whether it exports a component as default, read from
- *   the syntax tree so a comment or string mentioning `export default` doesn't
- *   count and `export { Layout as default }` does.
+ * Parse a theme template's source into a TypeScript AST.
  *
- * A segment config key that IS exported but not as a literal `export const`
- * (an expression, an identifier, `let`/`var`, a re-export, or a value the
- * Next.js schema rejects) throws instead of silently dropping it - Next.js
- * would otherwise ignore the value and fall back to its default, and nothing
- * in the build would say so beyond a console warning.
+ * The parser recovers from a syntax error by skipping code, exports included. A
+ * template Next.js cannot parse either is reported rather than read in part. One
+ * it can is read from what TypeScript recovered, with a warning: Next.js compiles
+ * templates with SWC, which may know syntax the installed TypeScript does not (a
+ * source phase import, for one).
  */
-export async function extractRouteExports(source, filePath) {
+async function parseTemplateSource(source, filePath) {
   const ts = await loadTypeScript()
   // Parsed as its own kind of file: a TSX parse reads TypeScript-only syntax in a
   // .ts template (`<T>(props) => ...`, `<Props>value`) as JSX and loses what follows
   const sourceFile = ts.createSourceFile(filePath, source, ts.ScriptTarget.Latest, true, ts.getScriptKindFromFileName(filePath))
 
-  // The parser recovers from a syntax error by skipping code, exports included. A
-  // template Next.js cannot parse either is reported rather than read in part. One
-  // it can is read from what TypeScript recovered, with a warning: Next.js compiles
-  // templates with SWC, which may know syntax the installed TypeScript does not (a
-  // source phase import, for one).
   const [parseError] = sourceFile.parseDiagnostics ?? []
   if (parseError) {
     const { line } = sourceFile.getLineAndCharacterOfPosition(parseError.start ?? 0)
@@ -275,6 +264,29 @@ export async function extractRouteExports(source, filePath) {
     )
   }
 
+  return { ts, sourceFile }
+}
+
+/**
+ * Split a parsed theme template's route-level exports into:
+ * - `segmentConfig`: segment config keys that resolve to a literal value the
+ *   generated route file can re-declare (`{ name: value }`).
+ * - `moduleExports`: exported names (functions, `metadata`, etc.) the
+ *   generated route file can safely forward with `export { ... } from`.
+ * - `hasDefaultExport`: whether it exports a component as default, read from
+ *   the syntax tree so a comment or string mentioning `export default` doesn't
+ *   count and `export { Layout as default }` does.
+ *
+ * - `errors`: one per segment config key that IS exported but not as a
+ *   literal `export const` (an expression, an identifier, `let`/`var`, a
+ *   re-export, or a value the Next.js schema rejects). Next.js would ignore
+ *   such a value and fall back to its default, and nothing in the build would
+ *   say so beyond a console warning, so a route file generated from the
+ *   template must not be written with it. They are returned rather than
+ *   thrown because a template whose app route already exists gets no route
+ *   file, and nothing reads its segment config.
+ */
+function collectRouteExports(sourceFile, ts, filePath) {
   const segmentConfig = {}
   const moduleExports = []
   const seenModuleExports = new Set()
@@ -359,41 +371,55 @@ export async function extractRouteExports(source, filePath) {
     }
   }
 
+  return { segmentConfig, moduleExports, hasDefaultExport: declaresDefaultExport(sourceFile, ts), errors }
+}
+
+/**
+ * Parse a theme template's source and return its route-level exports as
+ * `collectRouteExports` splits them, throwing on segment config Next.js
+ * wouldn't read.
+ */
+export async function extractRouteExports(source, filePath) {
+  const { ts, sourceFile } = await parseTemplateSource(source, filePath)
+  const { errors, ...routeExports } = collectRouteExports(sourceFile, ts, filePath)
+
   if (errors.length > 0) {
     throw new Error(errors.join('\n'))
   }
 
-  return { segmentConfig, moduleExports, hasDefaultExport: declaresDefaultExport(sourceFile, ts) }
+  return routeExports
 }
 
 /**
  * Resolve a `@/contents/...` template import path to its file on disk,
  * trying both TSX and TS extensions.
  */
-function resolveTemplateFilePath(templatePath) {
+function resolveTemplateFilePath(templatePath, root) {
   const baseTemplatePath = templatePath
-    .replace('@/', rootDir + '/')
+    .replace('@/', root + '/')
     .replace(/\.(tsx|ts)$/, '')
   return existsSync(baseTemplatePath + '.tsx') ? baseTemplatePath + '.tsx' : baseTemplatePath + '.ts'
 }
 
 /**
- * Read a template file and extract its route-level exports. A missing file
- * is treated as having none, since a build-time override may point at a
- * template that hasn't been generated yet; a template that fails to parse
- * its segment config is not swallowed the same way, and propagates instead.
+ * Read a template file and collect its route-level exports. A missing file
+ * is treated as having none and as having a default export - a build-time
+ * override may point at a template that hasn't been generated yet, and
+ * assuming a component exists there keeps that case importing it rather than
+ * silently downgrading to metadata-only.
  */
-async function readRouteExports(templatePath) {
-  const absoluteTemplatePath = resolveTemplateFilePath(templatePath)
+async function readTemplateExports(templatePath, root) {
+  const absoluteTemplatePath = resolveTemplateFilePath(templatePath, root)
 
   let templateContent
   try {
     templateContent = await readFile(absoluteTemplatePath, 'utf8')
   } catch {
-    return { segmentConfig: {}, moduleExports: [], hasDefaultExport: false }
+    return { segmentConfig: {}, moduleExports: [], hasDefaultExport: true, errors: [] }
   }
 
-  return extractRouteExports(templateContent, absoluteTemplatePath)
+  const { ts, sourceFile } = await parseTemplateSource(templateContent, absoluteTemplatePath)
+  return collectRouteExports(sourceFile, ts, absoluteTemplatePath)
 }
 
 /**
@@ -417,11 +443,9 @@ function renderModuleExportsBlock(moduleExports, templatePathWithoutExtension) {
 /**
  * Generate content for a regular page (page.tsx, error.tsx, etc.)
  */
-async function generateRegularPageContent(appPath, templatePath) {
+function generateRegularPageContent(appPath, templatePath, { segmentConfig, moduleExports }) {
   // Remove .tsx/.ts extension from import path (TypeScript doesn't allow file extensions in imports)
   const templatePathWithoutExtension = templatePath.replace(/\.(tsx|ts)$/, '')
-
-  const { segmentConfig, moduleExports } = await readRouteExports(templatePath)
 
   const segmentConfigBlock = renderSegmentConfigBlock(segmentConfig)
   const segmentConfigSection = segmentConfigBlock
@@ -448,27 +472,14 @@ ${segmentConfigSection}${moduleExportsSection}`
 /**
  * Generate content for a layout page
  */
-async function generateLayoutPageContent(appPath, componentName, templatePath) {
+function generateLayoutPageContent(appPath, componentName, templatePath, routeExports) {
   if (templatePath) {
     // Remove .tsx/.ts extension from import path (TypeScript doesn't allow file extensions in imports)
     const templatePathWithoutExtension = templatePath.replace(/\.(tsx|ts)$/, '')
-    const absoluteTemplatePath = resolveTemplateFilePath(templatePath)
 
-    // Check if template file has a default export (component), and what
+    // Whether the template has a default export (component), and what
     // route-level exports it defines alongside (or instead of) it
-    let templateContent = null
-    try {
-      templateContent = await readFile(absoluteTemplatePath, 'utf8')
-    } catch {
-      // Can't read the file - fall through to the default-export assumption below
-    }
-
-    let hasDefaultExport = true
-    let segmentConfig = {}
-    let moduleExports = []
-    if (templateContent !== null) {
-      ;({ segmentConfig, moduleExports, hasDefaultExport } = await extractRouteExports(templateContent, absoluteTemplatePath))
-    }
+    const { hasDefaultExport, segmentConfig, moduleExports } = routeExports
 
     const segmentConfigBlock = renderSegmentConfigBlock(segmentConfig)
     const moduleExportsBlock = renderModuleExportsBlock(moduleExports, templatePathWithoutExtension)
@@ -491,9 +502,17 @@ export default TemplateComponent
 ${forwardedExportsSection}`
     } else if (segmentConfigBlock || moduleExportsBlock) {
       // No component, but the template still defines segment config and/or metadata -
-      // re-export those and provide a pass-through component
+      // re-export those and provide a pass-through component. Only a PROTECTED_RENDER
+      // path is labeled as one; anywhere else the template simply has no default export.
+      const renderProtected = getProtectionLevel(appPath) === ProtectionLevel.PROTECTED_RENDER
+      const description = renderProtected
+        ? 'metadata-only (PROTECTED_RENDER)'
+        : 'route-level exports only (the theme template has no default export)'
+      const passThroughNote = renderProtected
+        ? 'actual rendering blocked by PROTECTED_RENDER'
+        : 'the theme template exports no component, so this layout renders its children'
       return `/**
- * Layout template - metadata-only (PROTECTED_RENDER)
+ * Layout template - ${description}
  * Template: ${appPath}
  * Generated by: scripts/build-registry.mjs
  */
@@ -501,7 +520,7 @@ import type { ReactNode } from 'react'
 
 // Re-export Next.js route-level exports from the theme template
 ${segmentConfigBlock}${moduleExportsBlock}
-// Pass-through component (actual rendering blocked by PROTECTED_RENDER)
+// Pass-through component (${passThroughNote})
 interface ${componentName}Props {
   children: ReactNode
 }
@@ -608,8 +627,9 @@ function addTemplateResolverToLayout(content, layoutPath) {
  * @param {string} targetPath - Path to write in app/(templates)/
  * @param {string} layoutPath - Relative layout path (e.g., 'app/dashboard/layout.tsx')
  * @param {Array} templates - All discovered templates (for build-time override check)
+ * @param {Map} analysis - What `analyzeTemplates` read from those templates
  */
-async function duplicateLayoutDirect(sourcePath, targetPath, layoutPath, templates) {
+async function duplicateLayoutDirect(sourcePath, targetPath, layoutPath, templates, analysis) {
   // Create target directory if it doesn't exist
   const targetDir = dirname(targetPath)
   await mkdir(targetDir, { recursive: true })
@@ -624,7 +644,7 @@ async function duplicateLayoutDirect(sourcePath, targetPath, layoutPath, templat
     const templatePathWithoutExtension = layoutOverride.templatePath.replace(/\.(tsx|ts)$/, '')
     const componentName = `Layout${toPascalCase(layoutPath.replace(/[^\w]/g, '_'))}`
 
-    const { segmentConfig, moduleExports } = await readRouteExports(layoutOverride.templatePath)
+    const { segmentConfig, moduleExports } = templateAnalysisFor(analysis, layoutOverride)
     const segmentConfigBlock = renderSegmentConfigBlock(segmentConfig)
     const moduleExportsBlock = renderModuleExportsBlock(moduleExports, templatePathWithoutExtension)
     const forwardedExportsSection = segmentConfigBlock || moduleExportsBlock
@@ -679,8 +699,9 @@ export default function ${componentName}({ children }: ${componentName}Props) {
  * @param {string} appPath - App path (e.g., 'app/dashboard/(main)/posts/page.tsx')
  * @param {string} templatesDir - Output directory for (templates)
  * @param {Array} templates - All discovered templates (for build-time override check)
+ * @param {Map} analysis - What `analyzeTemplates` read from those templates
  */
-async function generateRequiredLayouts(appPath, templatesDir, templates) {
+async function generateRequiredLayouts(appPath, templatesDir, templates, analysis) {
   let layoutsGenerated = 0
 
   // Extract the directory path from app path (remove filename)
@@ -700,7 +721,7 @@ async function generateRequiredLayouts(appPath, templatesDir, templates) {
     // Check if core layout exists and template layout doesn't
     if (existsSync(coreLayoutPath) && !existsSync(templateLayoutPath)) {
       // Pass templates for build-time override resolution
-      await duplicateLayoutDirect(coreLayoutPath, templateLayoutPath, layoutPath, templates)
+      await duplicateLayoutDirect(coreLayoutPath, templateLayoutPath, layoutPath, templates, analysis)
       layoutsGenerated++
     }
   }
@@ -710,9 +731,16 @@ async function generateRequiredLayouts(appPath, templatesDir, templates) {
 
 /**
  * Generate a single template page with template override system
+ *
+ * @param {Object} template - The template to generate a route file from
+ * @param {string} outputPath - Where to write it
+ * @param {Map} [analysis] - What `analyzeTemplates` read from the build's templates. Without it,
+ *   the template is read for this call and checked the way `analyzeTemplates` checks it, with its
+ *   segment config checked even where the app already has a route, since this writes one there.
  */
-export async function generateTemplatePage(template, outputPath) {
+export async function generateTemplatePage(template, outputPath, analysis = null) {
   const { appPath, templateType, name, templatePath } = template
+  const routeExports = analysis ? templateAnalysisFor(analysis, template) : await analyzeTemplate(template, rootDir, true)
 
   // Create directory if it doesn't exist
   const dir = dirname(outputPath)
@@ -726,14 +754,115 @@ export async function generateTemplatePage(template, outputPath) {
   let content
 
   if (templateType === 'layout') {
-    content = await generateLayoutPageContent(appPath, componentName, templatePath)
+    content = generateLayoutPageContent(appPath, componentName, templatePath, routeExports)
   } else {
-    content = await generateRegularPageContent(appPath, templatePath)
+    content = generateRegularPageContent(appPath, templatePath, routeExports)
   }
 
   // Write the file
   await writeFile(outputPath, content, 'utf8')
   verbose(`Generated: ${outputPath.replace(rootDir, '')}`)
+}
+
+/**
+ * Whether `generateMissingPages` will write a route file at `appPath` -
+ * importing the template's default export - rather than leaving the app's
+ * own file in place and letting the override resolve at runtime through
+ * `getTemplateOrDefault`. A layout is always written, since build-time
+ * override resolution duplicates it into `app/(templates)/` regardless of
+ * whether the app already has one; anything else is only written when the
+ * app doesn't already have that route.
+ */
+export function willGenerateRoute(appPath, templateType, root = rootDir) {
+  return templateType === 'layout' || !existsSync(join(root, appPath))
+}
+
+/**
+ * Parse each template once and record what it contributes to the build: its
+ * route-level exports, whether it has a default export, and whether the page
+ * generator writes a route file for it (`generatesRoute`). The server template
+ * registry, the client template registry and the page generator all take
+ * these from the result instead of reading the template themselves, so a
+ * template that changes while a build runs can't look one way to one of them
+ * and another way to the next.
+ *
+ * Throws for a template the page generator writes a route file for when that
+ * file can't work: segment config Next.js wouldn't read, or a page (or any
+ * other non-layout route) with no default export to import - a plain .tsx/.ts
+ * as much as a standalone .meta.ts, which never has one. A layout with no
+ * default export gets a pass-through component instead. A template whose app
+ * route already exists gets no route file, so neither applies to it: the
+ * override resolves at runtime, metadata included.
+ *
+ * @param {Array} templates - List of template definitions
+ * @param {Object} config - Configuration object with projectRoot
+ * @returns {Promise<Map<string, Object>>} Each template's analysis, keyed by its templatePath
+ */
+export async function analyzeTemplates(templates, config = null) {
+  if (config?.projectRoot) {
+    rootDir = config.projectRoot
+  }
+
+  const analysis = new Map()
+
+  for (const template of templates) {
+    if (!analysis.has(template.templatePath)) {
+      analysis.set(template.templatePath, await analyzeTemplate(template, rootDir))
+    }
+  }
+
+  return analysis
+}
+
+/**
+ * Parse one template, collect what `analyzeTemplates` records for it, and reject
+ * it when the route file the page generator writes from it can't work: segment
+ * config Next.js wouldn't read, or a page (or any other non-layout route) with
+ * no default export where the app has no route of its own - a plain .tsx/.ts as
+ * much as a standalone .meta.ts, which never has one. Every path that reads a
+ * template for the generators goes through here, with an analysis or without.
+ *
+ * @param {Object} template - The template to read
+ * @param {string} root - The project root its path resolves against
+ * @param {boolean} [checkSegmentConfig] - Check segment config even where the page
+ *   generator writes no route file, for a caller that writes one there anyway
+ */
+async function analyzeTemplate(template, root, checkSegmentConfig = false) {
+  const { appPath, templateType, templatePath } = template
+  const generatesRoute = willGenerateRoute(appPath, templateType, root)
+  const { errors, ...routeExports } = await readTemplateExports(templatePath, root)
+
+  if ((generatesRoute || checkSegmentConfig) && errors.length > 0) {
+    throw new Error(errors.join('\n'))
+  }
+
+  if (generatesRoute && templateType !== 'layout' && !routeExports.hasDefaultExport) {
+    throw new Error(
+      `${templatePath} has no default export, and the app has no existing route at "${appPath}" ` +
+        `for a metadata-only override to attach to - the registry build generates "${appPath}" importing this ` +
+        `template's default export, which doesn't exist. A page template needs a default export. For a ` +
+        `metadata-only override, add one to an app page that already exists at "${appPath}" (a ".meta.ts" file, ` +
+        `or a template with no default export, next to it).`
+    )
+  }
+
+  return { ...routeExports, generatesRoute }
+}
+
+/**
+ * The analysis `analyzeTemplates` recorded for a template. Missing means the
+ * caller is generating from templates other than the ones it analyzed, and
+ * reading the template here would bring back a second, possibly different,
+ * answer - so it fails instead.
+ */
+export function templateAnalysisFor(analysis, template) {
+  const entry = analysis?.get(template.templatePath)
+  if (!entry) {
+    throw new Error(
+      `${template.templatePath} was not read by analyzeTemplates() - pass the analysis of the same templates being generated.`
+    )
+  }
+  return entry
 }
 
 /**
@@ -743,13 +872,20 @@ export async function generateTemplatePage(template, outputPath) {
  *
  * @param {Array} templates - List of template definitions
  * @param {Object} config - Configuration object with projectRoot
+ * @param {Map} [analysis] - What `analyzeTemplates` read from these templates; taken for this call when omitted
  */
-export async function generateMissingPages(templates, config = null) {
+export async function generateMissingPages(templates, config = null, analysis = null) {
   // Use config.projectRoot if provided, otherwise fall back to default rootDir
   if (config?.projectRoot) {
     rootDir = config.projectRoot
   }
   const templatesDir = join(rootDir, 'app', '(templates)')
+
+  // Every template has to be generatable before anything is deleted
+  analysis = analysis ?? (await analyzeTemplates(templates, config))
+  for (const template of templates) {
+    templateAnalysisFor(analysis, template)
+  }
 
   // First, clean up orphaned files before generating new ones
   // Note: This is also called in registry.mjs before generateMissingPages,
@@ -770,16 +906,15 @@ export async function generateMissingPages(templates, config = null) {
   const templatesByPath = new Map()
 
   for (const template of templates) {
-    const { appPath, templateType } = template
+    const { appPath } = template
     const templatePagePath = join(rootDir, 'app', '(templates)', appPath.replace('app/', ''))
 
     // Track the directory path for layout generation
     layoutPathsNeeded.add(appPath)
 
-    // Check if core page exists (skip generation if it does)
-    // IMPORTANT: Always generate layouts, even if core layout exists
-    const corePagePath = join(rootDir, appPath)
-    if (existsSync(corePagePath) && templateType !== 'layout') {
+    // Skip generation when the app already has this route (layouts are always
+    // (re)generated regardless, for build-time override resolution)
+    if (!templateAnalysisFor(analysis, template).generatesRoute) {
       continue
     }
 
@@ -800,7 +935,7 @@ export async function generateMissingPages(templates, config = null) {
 
   for (const dirPath of uniqueDirectories) {
     // Pass templates for build-time override resolution
-    const layoutsGenerated = await generateRequiredLayouts(`${dirPath}/page.tsx`, templatesDir, templates)
+    const layoutsGenerated = await generateRequiredLayouts(`${dirPath}/page.tsx`, templatesDir, templates, analysis)
     layoutsDuplicated += layoutsGenerated
   }
 
@@ -808,6 +943,7 @@ export async function generateMissingPages(templates, config = null) {
   let updated = 0
   for (const [appPath, { template, templatePagePath }] of templatesByPath) {
     const { templateType, name, templatePath } = template
+    const routeExports = templateAnalysisFor(analysis, template)
 
     // Generate expected content
     const routeSegments = name.split('/').filter(segment => !segment.startsWith('[') && !segment.endsWith(']'))
@@ -816,9 +952,9 @@ export async function generateMissingPages(templates, config = null) {
 
     let expectedContent
     if (templateType === 'layout') {
-      expectedContent = await generateLayoutPageContent(appPath, componentName, templatePath)
+      expectedContent = generateLayoutPageContent(appPath, componentName, templatePath, routeExports)
     } else {
-      expectedContent = await generateRegularPageContent(appPath, templatePath)
+      expectedContent = generateRegularPageContent(appPath, templatePath, routeExports)
     }
 
     // Check if file exists and compare content
@@ -835,12 +971,12 @@ export async function generateMissingPages(templates, config = null) {
         verbose(`Updated (theme changed): ${templatePagePath.replace(rootDir, '')}`)
       } catch (error) {
         // Error reading, regenerate
-        await generateTemplatePage(template, templatePagePath)
+        await generateTemplatePage(template, templatePagePath, analysis)
         generated++
       }
     } else {
       // File doesn't exist, generate
-      await generateTemplatePage(template, templatePagePath)
+      await generateTemplatePage(template, templatePagePath, analysis)
       generated++
     }
   }

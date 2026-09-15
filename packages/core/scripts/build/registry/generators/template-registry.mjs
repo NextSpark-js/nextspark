@@ -15,6 +15,7 @@ import {
   canOverrideComponent
 } from '../../../../dist/config/protected-paths.js'
 import { convertCorePath } from '../config.mjs'
+import { analyzeTemplates, templateAnalysisFor } from '../post-build/page-generator.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -23,13 +24,22 @@ const __dirname = dirname(__filename)
 const rootDir = join(__dirname, '../../../../../..')
 
 /**
- * Generate the template registry file
- * @param {Array} templates - Discovered templates
- * @param {object} config - Configuration object from getConfig()
- * @returns {string} Generated TypeScript content
+ * The analysis a generator works from: the one the registry build passes in,
+ * or - for a caller using the signature without it - one taken for this call,
+ * against the project root template files are resolved from here.
  */
-export function generateTemplateRegistry(templates, config) {
-  // Group templates by app path to handle multiple themes overriding the same path
+async function analysisFor(templates, config, analysis) {
+  return analysis ?? analyzeTemplates(templates, { projectRoot: config?.projectRoot || rootDir })
+}
+
+/**
+ * Group templates by app path (highest priority first), each with whether its
+ * highest-priority template has a default export. That answer comes from
+ * `analyzeTemplates`, which parsed the template once for the whole build: the
+ * server registry, the client registry and the page generator all take it
+ * from there, so none of them can see a different version of the file.
+ */
+function resolveTemplateEntries(templates, analysis) {
   const templatesByPath = {}
 
   templates.forEach(template => {
@@ -39,16 +49,31 @@ export function generateTemplateRegistry(templates, config) {
     templatesByPath[template.appPath].push(template)
   })
 
-  // Sort templates by priority (higher priority first)
   Object.keys(templatesByPath).forEach(appPath => {
     templatesByPath[appPath].sort((a, b) => b.priority - a.priority)
   })
 
+  return Object.entries(templatesByPath).map(([appPath, pathTemplates]) => {
+    const highestPriorityTemplate = pathTemplates[0]
+    const { hasDefaultExport } = templateAnalysisFor(analysis, highestPriorityTemplate)
+    return { appPath, pathTemplates, highestPriorityTemplate, hasDefaultExport }
+  })
+}
+
+/**
+ * Generate the template registry file
+ * @param {Array} templates - Discovered templates
+ * @param {object} config - Configuration object from getConfig()
+ * @param {Map} [analysis] - What `analyzeTemplates` read from these templates; taken for this call when omitted
+ * @returns {Promise<string>} Generated TypeScript content
+ */
+export async function generateTemplateRegistry(templates, config, analysis = null) {
+  const entries = resolveTemplateEntries(templates, await analysisFor(templates, config, analysis))
+
   // Generate registry entries. Each component is a deferred import, so a route
   // pulls in the template it renders and no others.
-  const registryEntries = Object.entries(templatesByPath)
-    .map(([appPath, pathTemplates]) => {
-      const highestPriorityTemplate = pathTemplates[0]
+  const registryEntries = entries
+    .map(({ appPath, pathTemplates, highestPriorityTemplate, hasDefaultExport }) => {
       // Strip .tsx/.ts extension - Next.js resolves extensions automatically on all platforms
       let templatePath = highestPriorityTemplate.templatePath
       if (templatePath.endsWith('.tsx')) {
@@ -57,12 +82,12 @@ export function generateTemplateRegistry(templates, config) {
         templatePath = templatePath.slice(0, -3)
       }
 
-      // Metadata-only templates (PROTECTED_RENDER or standalone .meta.ts) have
-      // no component to load
+      // Metadata-only templates (PROTECTED_RENDER, standalone .meta.ts, or a
+      // template with no default export) have no component to load
       const isMetaOnly = highestPriorityTemplate.fileName?.endsWith('.meta.ts')
-      const componentRef = (!canOverrideComponent(appPath) || isMetaOnly)
-        ? 'null'
-        : `lazyTemplate('${appPath}', () => import('${templatePath}'))`
+      const componentRef = canOverrideComponent(appPath) && !isMetaOnly && hasDefaultExport
+        ? `lazyTemplate('${appPath}', () => import('${templatePath}'))`
+        : 'null'
 
       return `  '${appPath}': {
     appPath: '${appPath}',
@@ -74,7 +99,7 @@ export function generateTemplateRegistry(templates, config) {
     .join(',\n')
 
   // Generate utility functions for template resolution
-  const templatePaths = Object.keys(templatesByPath)
+  const templatePaths = entries.map(({ appPath }) => appPath)
   const templateTypeMap = {}
 
   templates.forEach(template => {
@@ -220,40 +245,27 @@ async function hasServerOnlyExports(filePath) {
  * Excludes templates with server-only exports (generateMetadata, revalidate, etc.)
  * @param {Array} templates - Discovered templates
  * @param {object} config - Configuration object from getConfig()
+ * @param {Map} [analysis] - What `analyzeTemplates` read from these templates; taken for this call when omitted
  * @returns {Promise<string>} Generated TypeScript content
  */
-export async function generateTemplateRegistryClient(templates, config) {
+export async function generateTemplateRegistryClient(templates, config, analysis = null) {
   const outputFilePath = join(config.outputDir, 'template-registry.client.ts')
-  // Group templates by app path
-  const templatesByPath = {}
+  const projectRoot = config.projectRoot || rootDir
+  const entries = resolveTemplateEntries(templates, await analysisFor(templates, config, analysis))
 
-  templates.forEach(template => {
-    if (!templatesByPath[template.appPath]) {
-      templatesByPath[template.appPath] = []
-    }
-    templatesByPath[template.appPath].push(template)
-  })
-
-  // Sort templates by priority (higher priority first)
-  Object.keys(templatesByPath).forEach(appPath => {
-    templatesByPath[appPath].sort((a, b) => b.priority - a.priority)
-  })
-
-  // Filter for client-compatible templates (pages only, not layouts)
-  // Also exclude templates with server-only exports
-  const clientCompatibleTemplatesPromises = Object.entries(templatesByPath)
-    .filter(([appPath, pathTemplates]) => {
-      const template = pathTemplates[0]
-      // Only include page templates (not layouts) that can override components
-      return (template.templateType === 'page' || template.templateType === 'layout') && canOverrideComponent(appPath)
-    })
-    .map(async ([appPath, pathTemplates]) => {
-      const template = pathTemplates[0]
+  // Filter for client-compatible templates: pages and layouts, not protected,
+  // with a default export according to the build's analysis - the same answer
+  // the server registry uses. Also exclude templates with server-only exports.
+  const clientCompatibleTemplatesPromises = entries
+    .filter(({ appPath, highestPriorityTemplate, hasDefaultExport }) =>
+      (highestPriorityTemplate.templateType === 'page' || highestPriorityTemplate.templateType === 'layout') &&
+      canOverrideComponent(appPath) &&
+      hasDefaultExport
+    )
+    .map(async ({ appPath, highestPriorityTemplate }) => {
       // Get actual file path from template path
       // Template paths may or may not have extension, ensure we check the .tsx file
-      // In npm mode, use config.projectRoot instead of rootDir (which is relative to script)
-      const projectRoot = config.projectRoot || rootDir
-      let actualFilePath = template.templatePath.replace('@/', projectRoot + '/')
+      let actualFilePath = highestPriorityTemplate.templatePath.replace('@/', projectRoot + '/')
       // If path doesn't end with .tsx or .ts, add .tsx
       if (!actualFilePath.endsWith('.tsx') && !actualFilePath.endsWith('.ts')) {
         actualFilePath += '.tsx'
@@ -265,7 +277,7 @@ export async function generateTemplateRegistryClient(templates, config) {
         verbose(`Excluding ${appPath} from client registry (has server-only exports)`)
         return null
       }
-      return [appPath, pathTemplates]
+      return { appPath, highestPriorityTemplate }
     })
 
   const clientCompatibleTemplatesResults = await Promise.all(clientCompatibleTemplatesPromises)
@@ -274,10 +286,9 @@ export async function generateTemplateRegistryClient(templates, config) {
   // Generate registry entries as deferred imports, so a route loads the
   // template it renders and no others
   const registryEntries = clientCompatibleTemplates
-    .map(([appPath, pathTemplates]) => {
-      const template = pathTemplates[0]
+    .map(({ appPath, highestPriorityTemplate }) => {
       // Strip .tsx/.ts extension - Next.js resolves extensions automatically on all platforms
-      let templatePath = template.templatePath
+      let templatePath = highestPriorityTemplate.templatePath
       if (templatePath.endsWith('.tsx')) {
         templatePath = templatePath.slice(0, -4)
       } else if (templatePath.endsWith('.ts')) {

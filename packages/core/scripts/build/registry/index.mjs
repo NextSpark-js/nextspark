@@ -29,7 +29,6 @@ export {
 
 // Generators
 export {
-  generateAll,
   generatePluginRegistry,
   generatePluginRegistryClient,
   generateEntityRegistry,
@@ -52,7 +51,7 @@ export {
 
 // Post-build tasks
 export {
-  runPostBuild,
+  analyzeTemplates,
   generateMissingPages,
   generateTemplatePage,
   displayTreeStructure,

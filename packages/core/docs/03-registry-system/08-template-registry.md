@@ -579,7 +579,7 @@ Themes can override **only the metadata** (page title, description, robots) of a
 
 1. The discovery script looks for `.meta.ts` files in the templates directory
 2. If a companion `.tsx` file exists (e.g., `layout.tsx` alongside `layout.meta.ts`), the `.meta.ts` is treated as a **companion** — its metadata is attached to the `.tsx` template entry
-3. If **no companion `.tsx` exists**, the `.meta.ts` is registered as a **standalone metadata-only template** with `component: null`
+3. If **no companion `.tsx` exists**, the `.meta.ts` is registered as a **standalone metadata-only template** with `component: null` - for a page (or any other non-layout route), this only works when the app already has its own file at that route; see [A `.tsx`/`.ts` Template With No Default Export](#a-tsxts-template-with-no-default-export) below, which applies to a standalone `.meta.ts` the same way (it never has a default export either)
 
 **Standalone `.meta.ts` file format:**
 
@@ -645,9 +645,40 @@ The auto-generated `app/(auth)/layout.tsx` calls `getMetadataOrDefault('app/(aut
 
 | File pattern | Behavior |
 |-------------|----------|
-| `layout.tsx` only | Component + inline metadata (if exported) |
+| `layout.tsx` only, with a default export | Component + inline metadata (if exported) |
+| `layout.tsx` only, with no default export | Metadata-only override, `component: null` (same as standalone `.meta.ts`) |
 | `layout.tsx` + `layout.meta.ts` | Component from `.tsx`, metadata from `.meta.ts` (companion) |
 | `layout.meta.ts` only | Metadata-only override, `component: null` (standalone) |
+
+### A `.tsx`/`.ts` Template With No Default Export
+
+A template with no default component doesn't have to be a standalone `.meta.ts` file — a regular `layout.tsx` or `page.tsx` with no default export is registered the same way, with `component: null`: the registry has no theme component for that route. Everything below applies to a standalone `.meta.ts` too, since it never has a default export either. What renders instead depends on whether the template is a layout or a page, and on whether the app already has a file at that route:
+
+| Template with no default export | The app already has that route | The app doesn't have that route |
+|---|---|---|
+| **Layout** | The app's own layout component renders, if it resolves through `getTemplateOrDefault`; `getMetadataOrDefault` returns the template's static `metadata`. The generated `app/(templates)/<path>/layout.tsx` is also written, as below. | No app component is involved: the generated `app/(templates)/<path>/layout.tsx` renders its children through a pass-through component and re-exports the template's route-level exports. |
+| **Page** | The app's own page renders; `getMetadataOrDefault` returns the template's static `metadata`, and nothing else in the template has an effect. | The registry build fails, naming the template and the route. |
+
+```typescript
+// contents/themes/my-theme/templates/(public)/docs/layout.tsx
+export const metadata = { title: 'Docs' }
+export const viewport = { themeColor: '#0f172a' }
+// No default export
+```
+
+The registry build parses each template once per build and decides from that syntax tree whether it has a runtime default export (a function, a class, or `default` named in an export clause), not from the file's extension or a naming convention. The server registry, the client registry and the page generator all take that one answer: the client registry never generates `dynamic(() => import(...))` for a template the server registry registered as `component: null`, and the page generator never imports a default export the registries decided isn't there.
+
+**Layouts** work whether or not the app has a layout at that path. The page generator writes `app/(templates)/<path>/layout.tsx` for every layout template, and for one with no default export it emits a pass-through component instead of importing one. What takes effect:
+
+- **In the generated `app/(templates)/<path>/layout.tsx`**, the layout of the theme routes the page generator writes under that path: every route-level export of the template. Module-level exports (`metadata`, `generateMetadata`, `viewport`, `generateViewport`, `generateStaticParams`) are re-exported from the template, and segment config (`revalidate`, `dynamic`, ...) is re-declared as literals. With the example above, that file re-exports `metadata` and `viewport`.
+- **In the app's own `app/<path>/layout.tsx`**, if there is one and it resolves through `getTemplateOrDefault` / `getMetadataOrDefault`: the app's component renders, and `getMetadataOrDefault` returns the template's static `metadata` object. Nothing else from the template reaches that file.
+
+**Pages** (and any other non-layout route) only work over a page the app already has at that path:
+
+- When the app **has** that page, the page generator writes no route file for it, and the override only resolves at runtime: the app's own page renders, and `getMetadataOrDefault` returns the template's static `metadata` object. Nothing else in the template has any effect — not `generateMetadata()`, not `viewport`, not segment config.
+- When the app **has no** page there, the registry build fails with an error naming the template and the path, instead of registering a silent `component: null`. The page generator would otherwise write `app/(templates)/<appPath>` importing a default export the template doesn't have, and the project's `tsc` would fail on that file (`error TS1192: Module ... has no default export`) even though `next build` passes. A page route needs a default export.
+
+The metadata `getMetadataOrDefault` returns in both cases is only a static `export const metadata = { ... }` (or `export const metadata: Metadata = { ... }`), read when the registry is built. A template whose only metadata is a `generateMetadata()` function registers with `metadata: null`, and `getMetadataOrDefault` returns the app's own metadata.
 
 ---
 

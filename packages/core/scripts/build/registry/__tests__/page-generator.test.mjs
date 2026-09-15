@@ -20,10 +20,11 @@ import { join, dirname } from 'node:path'
 import {
   SEGMENT_CONFIG_EXPORTS,
   MODULE_LEVEL_EXPORTS,
+  analyzeTemplates,
   extractRouteExports,
   generateTemplatePage,
-  generateMissingPages,
   selectTypeScriptModule,
+  willGenerateRoute,
 } from '../post-build/page-generator.mjs'
 
 const FIXTURE_FILE = '/virtual/theme/templates/(public)/page.tsx'
@@ -35,13 +36,11 @@ async function createProjectRoot() {
   return mkdtemp(join(tmpdir(), 'nextspark-page-generator-test-'))
 }
 
-// generateTemplatePage resolves '@/...' template paths against the
-// generator's module-level rootDir, which is only ever set as a side effect
-// of generateMissingPages. Templates being empty makes it a no-op beyond
-// that assignment (cleanupOrphanedTemplates returns early when app/(templates)
-// doesn't exist yet under the given root).
-async function useProjectRoot(root) {
-  await generateMissingPages([], { projectRoot: root })
+// The registry build parses templates once, with analyzeTemplates, and the page
+// generator renders from that analysis. Generating a single page does the same.
+async function generatePage(template, outputPath, root) {
+  const analysis = await analyzeTemplates([template], { projectRoot: root })
+  await generateTemplatePage(template, outputPath, analysis)
 }
 
 async function writeThemeTemplate(root, relativePath, content) {
@@ -199,7 +198,6 @@ test('the error names the line the bad export is declared on', async () => {
 test('the generated page re-declares segment config as a literal and forwards module exports separately', async () => {
   const root = await createProjectRoot()
   try {
-    await useProjectRoot(root)
     const templatePath = await writeThemeTemplate(
       root,
       '(public)/blog/[slug]/page.tsx',
@@ -207,9 +205,10 @@ test('the generated page re-declares segment config as a literal and forwards mo
     )
 
     const outputPath = join(root, 'app/(templates)/(public)/blog/[slug]/page.tsx')
-    await generateTemplatePage(
+    await generatePage(
       { appPath: 'app/(public)/blog/[slug]/page.tsx', templateType: 'page', name: '(public)/blog/[slug]/page', templatePath },
-      outputPath
+      outputPath,
+      root
     )
 
     const generated = await readFile(outputPath, 'utf8')
@@ -229,13 +228,13 @@ test('the generated page re-declares segment config as a literal and forwards mo
 test('a page with no route-level exports is generated unchanged (no forwarded-exports section)', async () => {
   const root = await createProjectRoot()
   try {
-    await useProjectRoot(root)
     const templatePath = await writeThemeTemplate(root, 'plain/page.tsx', 'export default function Page() { return null }\n')
 
     const outputPath = join(root, 'app/(templates)/plain/page.tsx')
-    await generateTemplatePage(
+    await generatePage(
       { appPath: 'app/plain/page.tsx', templateType: 'page', name: 'plain/page', templatePath },
-      outputPath
+      outputPath,
+      root
     )
 
     const generated = await readFile(outputPath, 'utf8')
@@ -250,7 +249,6 @@ test('a page with no route-level exports is generated unchanged (no forwarded-ex
 test('an invalid segment config value fails page generation instead of being silently dropped', async () => {
   const root = await createProjectRoot()
   try {
-    await useProjectRoot(root)
     const templatePath = await writeThemeTemplate(
       root,
       'broken/page.tsx',
@@ -260,9 +258,10 @@ test('an invalid segment config value fails page generation instead of being sil
     const outputPath = join(root, 'app/(templates)/broken/page.tsx')
     await assert.rejects(
       () =>
-        generateTemplatePage(
+        generatePage(
           { appPath: 'app/broken/page.tsx', templateType: 'page', name: 'broken/page', templatePath },
-          outputPath
+          outputPath,
+          root
         ),
       /"revalidate"/
     )
@@ -274,7 +273,6 @@ test('an invalid segment config value fails page generation instead of being sil
 test('a layout with a default export and metadata forwards both, unlike the previous component-only behavior', async () => {
   const root = await createProjectRoot()
   try {
-    await useProjectRoot(root)
     const templatePath = await writeThemeTemplate(
       root,
       'dashboard/layout.tsx',
@@ -282,9 +280,10 @@ test('a layout with a default export and metadata forwards both, unlike the prev
     )
 
     const outputPath = join(root, 'app/(templates)/dashboard/layout.tsx')
-    await generateTemplatePage(
+    await generatePage(
       { appPath: 'app/dashboard/layout.tsx', templateType: 'layout', name: 'dashboard/layout', templatePath },
-      outputPath
+      outputPath,
+      root
     )
 
     const generated = await readFile(outputPath, 'utf8')
@@ -298,13 +297,13 @@ test('a layout with a default export and metadata forwards both, unlike the prev
 test('a layout template with no exports at all still gets the plain pass-through wrapper', async () => {
   const root = await createProjectRoot()
   try {
-    await useProjectRoot(root)
     const templatePath = await writeThemeTemplate(root, 'empty/layout.tsx', '')
 
     const outputPath = join(root, 'app/(templates)/empty/layout.tsx')
-    await generateTemplatePage(
+    await generatePage(
       { appPath: 'app/empty/layout.tsx', templateType: 'layout', name: 'empty/layout', templatePath },
-      outputPath
+      outputPath,
+      root
     )
 
     const generated = await readFile(outputPath, 'utf8')
@@ -336,7 +335,6 @@ for (const [label, source, expected] of [
 test('a metadata-only layout whose comment mentions export default gets the pass-through, not an import of a missing default', async () => {
   const root = await createProjectRoot()
   try {
-    await useProjectRoot(root)
     const templatePath = await writeThemeTemplate(
       root,
       'docs/layout.tsx',
@@ -344,15 +342,52 @@ test('a metadata-only layout whose comment mentions export default gets the pass
     )
 
     const outputPath = join(root, 'app/(templates)/docs/layout.tsx')
-    await generateTemplatePage(
+    await generatePage(
       { appPath: 'app/docs/layout.tsx', templateType: 'layout', name: 'docs/layout', templatePath },
-      outputPath
+      outputPath,
+      root
     )
 
     const generated = await readFile(outputPath, 'utf8')
-    assert.match(generated, /Layout template - metadata-only/)
+    assert.match(generated, /Pass-through component/)
     assert.doesNotMatch(generated, /import TemplateComponent from/)
     assert.match(generated, /export \{ metadata \} from/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('a pass-through layout on an unprotected path does not claim to be PROTECTED_RENDER', async () => {
+  const root = await createProjectRoot()
+  try {
+    const templatePath = await writeThemeTemplate(root, '(public)/docs/layout.tsx', "export const viewport = { themeColor: 'black' }\n")
+
+    const outputPath = join(root, 'app/(templates)/(public)/docs/layout.tsx')
+    await generatePage(
+      { appPath: 'app/(public)/docs/layout.tsx', templateType: 'layout', name: '(public)/docs/layout', templatePath },
+      outputPath,
+      root
+    )
+
+    const generated = await readFile(outputPath, 'utf8')
+    assert.match(generated, /Pass-through component \(the theme template exports no component/)
+    assert.doesNotMatch(generated, /PROTECTED_RENDER/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('a pass-through layout on a PROTECTED_RENDER path is labeled as one', async () => {
+  const root = await createProjectRoot()
+  try {
+    const templatePath = await writeThemeTemplate(root, 'layout.tsx', "export const metadata = { title: 'App' }\n")
+
+    const outputPath = join(root, 'app/(templates)/layout.tsx')
+    await generatePage({ appPath: 'app/layout.tsx', templateType: 'layout', name: 'layout', templatePath }, outputPath, root)
+
+    const generated = await readFile(outputPath, 'utf8')
+    assert.match(generated, /Layout template - metadata-only \(PROTECTED_RENDER\)/)
+    assert.match(generated, /Pass-through component \(actual rendering blocked by PROTECTED_RENDER\)/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -361,7 +396,6 @@ test('a metadata-only layout whose comment mentions export default gets the pass
 test('a layout exported through `export { X as default }` imports the theme component instead of a pass-through', async () => {
   const root = await createProjectRoot()
   try {
-    await useProjectRoot(root)
     const templatePath = await writeThemeTemplate(
       root,
       'dashboard/layout.tsx',
@@ -369,9 +403,10 @@ test('a layout exported through `export { X as default }` imports the theme comp
     )
 
     const outputPath = join(root, 'app/(templates)/dashboard/layout.tsx')
-    await generateTemplatePage(
+    await generatePage(
       { appPath: 'app/dashboard/layout.tsx', templateType: 'layout', name: 'dashboard/layout', templatePath },
-      outputPath
+      outputPath,
+      root
     )
 
     const generated = await readFile(outputPath, 'utf8')
@@ -393,7 +428,6 @@ test('a .ts template is parsed as TypeScript, so syntax a TSX parse reads as JSX
 test('a .ts layout with TypeScript-only syntax imports the theme component instead of a pass-through', async () => {
   const root = await createProjectRoot()
   try {
-    await useProjectRoot(root)
     const templatePath = await writeThemeTemplate(
       root,
       'reports/layout.ts',
@@ -401,9 +435,10 @@ test('a .ts layout with TypeScript-only syntax imports the theme component inste
     )
 
     const outputPath = join(root, 'app/(templates)/reports/layout.ts')
-    await generateTemplatePage(
+    await generatePage(
       { appPath: 'app/reports/layout.ts', templateType: 'layout', name: 'reports/layout', templatePath },
-      outputPath
+      outputPath,
+      root
     )
 
     const generated = await readFile(outputPath, 'utf8')
@@ -485,4 +520,78 @@ test('no candidate providing the compiler API fails with a message naming each c
       return true
     }
   )
+})
+
+// --- willGenerateRoute: whether the page generator writes a route file importing the template (#197) --
+
+test('willGenerateRoute is always true for a layout, whether or not the app already has one', async () => {
+  const root = await createProjectRoot()
+  try {
+    assert.equal(willGenerateRoute('app/dashboard/layout.tsx', 'layout', root), true)
+
+    await mkdir(join(root, 'app/dashboard'), { recursive: true })
+    await writeFile(join(root, 'app/dashboard/layout.tsx'), 'export default function Layout({ children }) { return children }\n', 'utf8')
+    assert.equal(willGenerateRoute('app/dashboard/layout.tsx', 'layout', root), true)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+// --- analyzeTemplates: what the build reads from each template, and generates from (#197) --
+
+test('analyzeTemplates records, per template path, its route-level exports, whether it has a default export and whether a route file is generated', async () => {
+  const root = await createProjectRoot()
+  try {
+    const layoutPath = await writeThemeTemplate(root, 'docs/layout.tsx', "export const revalidate = 60\nexport const viewport = { themeColor: 'black' }\n")
+    const pagePath = await writeThemeTemplate(root, 'pricing/page.tsx', 'export default function Page() { return null }\n')
+    await mkdir(join(root, 'app/pricing'), { recursive: true })
+    await writeFile(join(root, 'app/pricing/page.tsx'), 'export default function Page() { return null }\n', 'utf8')
+    const layout = { appPath: 'app/docs/layout.tsx', templateType: 'layout', name: 'docs/layout', templatePath: layoutPath }
+    const page = { appPath: 'app/pricing/page.tsx', templateType: 'page', name: 'pricing/page', templatePath: pagePath }
+
+    const analysis = await analyzeTemplates([layout, page, { ...page }], { projectRoot: root })
+
+    assert.deepEqual([...analysis.keys()], [layoutPath, pagePath])
+    assert.deepEqual(analysis.get(layoutPath), {
+      segmentConfig: { revalidate: 60 },
+      moduleExports: ['viewport'],
+      hasDefaultExport: false,
+      generatesRoute: true,
+    })
+    assert.deepEqual(analysis.get(pagePath), { segmentConfig: {}, moduleExports: [], hasDefaultExport: true, generatesRoute: false })
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('generating a page from an analysis that never read its template fails instead of reading the template', async () => {
+  const root = await createProjectRoot()
+  try {
+    const templatePath = await writeThemeTemplate(root, 'plain/page.tsx', 'export default function Page() { return null }\n')
+
+    await assert.rejects(
+      () =>
+        generateTemplatePage(
+          { appPath: 'app/plain/page.tsx', templateType: 'page', name: 'plain/page', templatePath },
+          join(root, 'app/(templates)/plain/page.tsx'),
+          new Map()
+        ),
+      /was not read by analyzeTemplates/
+    )
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('willGenerateRoute is true for a page only when the app has no file there yet', async () => {
+  const root = await createProjectRoot()
+  try {
+    assert.equal(willGenerateRoute('app/docs/page.tsx', 'page', root), true)
+
+    await mkdir(join(root, 'app/docs'), { recursive: true })
+    await writeFile(join(root, 'app/docs/page.tsx'), 'export default function Page() { return null }\n', 'utf8')
+    assert.equal(willGenerateRoute('app/docs/page.tsx', 'page', root), false)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
 })
