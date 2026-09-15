@@ -8,12 +8,21 @@
  * Sources are exactly what resolveIcon can be handed, and all of them are
  * source files (never the database):
  * - entity configs (`icon: Users` — an identifier imported from lucide-react)
- * - a theme's app.config (`customSidebarSections[].icon` — a string)
+ * - any `config/*.config.ts` of a theme or a plugin (`icon: 'Grid'`,
+ *   `iconName: Users` — sidebar sections, dashboard menus, feature and flow
+ *   definitions, all of a theme's or plugin's config surface)
  * - block configs (`icon: 'Grid'` — the block's own icon in the editor)
+ * - a literal name handed to DynamicIcon's `name` prop or to resolveIcon's
+ *   first argument in a theme's or plugin's own component code
  *
  * What a block RENDERS is not here: page content names those icons in the page
  * builder, so they live in the database. Those blocks keep resolving through
  * the lucide namespace — deliberately, see themes' features-grid component.
+ *
+ * A name that is not a string literal — a variable, a prop, a template
+ * expression — cannot be resolved while building, so it is left out of the
+ * registry rather than guessed; that is the same limit that makes the
+ * unresolved-reference warning below necessary for config files.
  *
  * @module core/scripts/build/registry/discovery/icons
  */
@@ -63,6 +72,10 @@ async function readLucideExportNames(config) {
 /**
  * Which config files hold icons resolveIcon can be handed. Exported for tests.
  *
+ * Every file directly under a `config/` directory and named `*.config.ts`
+ * counts, not only `app.config.ts`: a theme's dashboard, features and flows
+ * configs name icons by string the same way its app config does.
+ *
  * Separators are normalised first: the generator also runs on Windows, where
  * join() produces '\\' and a '/'-shaped match would silently find nothing —
  * leaving a registry with only its fallbacks, and every entity icon rendering
@@ -73,8 +86,18 @@ export function isIconSourcePath(filePath) {
   return (
     (normalised.includes('/entities/') && normalised.endsWith('.config.ts')) ||
     (normalised.includes('/blocks/') && normalised.endsWith('/config.ts')) ||
-    normalised.endsWith('/config/app.config.ts')
+    /\/config\/[^/]+\.config\.ts$/.test(normalised)
   )
+}
+
+/**
+ * Whether a file is component source a theme or plugin could name an icon
+ * from at runtime — anything DynamicIcon or resolveIcon could be called
+ * from. Exported for tests. Same Windows-separator normalisation as
+ * isIconSourcePath, for the same reason.
+ */
+export function isIconCallSourcePath(filePath) {
+  return /\.tsx?$/.test(filePath.replace(/\\/g, '/'))
 }
 
 /**
@@ -151,6 +174,35 @@ export function findUnresolvedIconRefs(content) {
   return unresolved
 }
 
+/**
+ * Icon names passed as a string literal to DynamicIcon's `name` prop or to
+ * resolveIcon's first argument. Exported for tests.
+ *
+ * Both accept a runtime variable too (`resolveIcon(item.icon)`, the normal
+ * way to render a value that came from the database) — that call is left
+ * alone, since there is no name in it to register.
+ */
+export function extractLiteralIconCallNames(content) {
+  const names = []
+  // Same bare-name shape as extractIconNames' string branch: whatever isn't
+  // exactly this can't be a real icon name, so it is never captured — the
+  // generated registry is TypeScript built from these strings.
+  const quoted = /(?:"([A-Za-z][\w$-]*)"|'([A-Za-z][\w$-]*)'|\{\s*(?:"([A-Za-z][\w$-]*)"|'([A-Za-z][\w$-]*)')\s*\})/
+
+  for (const match of content.matchAll(/<DynamicIcon\b([^>]*)>/g)) {
+    const nameProp = match[1].match(new RegExp(`\\bname\\s*=\\s*${quoted.source}`))
+    const name = nameProp && nameProp.slice(1).find(group => group !== undefined)
+    if (name) names.push(name)
+  }
+
+  for (const match of content.matchAll(/\bresolveIcon\s*\(\s*(?:"([A-Za-z][\w$-]*)"|'([A-Za-z][\w$-]*)')/g)) {
+    const name = match[1] ?? match[2]
+    if (name) names.push(name)
+  }
+
+  return names
+}
+
 async function collectConfigFiles(dir, matcher, found = []) {
   if (!existsSync(dir)) {
     return found
@@ -195,8 +247,10 @@ function coreEntitiesDir(config) {
 export async function discoverIcons(blocks, config) {
   const candidates = new Set(FALLBACK_ICONS)
 
-  // Only the configs whose icons reach resolveIcon. Widening this would put
-  // icons in the dashboard bundle that nothing can ask for.
+  // Only the configs whose icons reach resolveIcon: entity configs (core,
+  // themes and plugins), block configs, and every theme's or plugin's
+  // config/*.config.ts. Widening this further would put icons in the
+  // dashboard bundle that nothing can ask for.
   const iconSources = [
     ...(await collectConfigFiles(coreEntitiesDir(config), isIconSourcePath)),
     ...(await collectConfigFiles(config.themesDir, isIconSourcePath)),
@@ -224,6 +278,26 @@ export async function discoverIcons(blocks, config) {
       `[icons] ${configPath.replace(config.projectRoot, '')}: cannot resolve \`icon: ${reference}\` at build time, so it is not in the registry and will render the fallback. Name it with a string, or import it directly from lucide-react.`,
       'warning'
     )
+  }
+
+  // A theme or plugin can also name an icon directly in its own component
+  // code rather than through a config, so its trees are scanned for that too.
+  // Core is not: every core call site resolves a runtime value (item.icon,
+  // config.iconName), never a literal, so there is nothing to add here.
+  const callSources = [
+    ...(await collectConfigFiles(config.themesDir, isIconCallSourcePath)),
+    ...(await collectConfigFiles(config.pluginsDir, isIconCallSourcePath))
+  ]
+
+  for (const sourcePath of callSources) {
+    try {
+      const content = await readFile(sourcePath, 'utf8')
+      for (const name of extractLiteralIconCallNames(content)) {
+        candidates.add(name)
+      }
+    } catch {
+      verbose(`[icons] Could not read ${sourcePath}`)
+    }
   }
 
   for (const block of blocks || []) {

@@ -12,7 +12,13 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { findUnresolvedIconRefs, extractIconNames, isIconSourcePath } from '../discovery/icons.mjs'
+import {
+  findUnresolvedIconRefs,
+  extractIconNames,
+  isIconSourcePath,
+  isIconCallSourcePath,
+  extractLiteralIconCallNames
+} from '../discovery/icons.mjs'
 
 test('matches entity, block and app configs', () => {
   assert.ok(isIconSourcePath('/p/contents/themes/default/entities/tasks/tasks.config.ts'))
@@ -26,9 +32,19 @@ test('matches the same paths with Windows separators', () => {
   assert.ok(isIconSourcePath('C:\\p\\themes\\default\\config\\app.config.ts'))
 })
 
-test('ignores configs whose icons never reach resolveIcon', () => {
-  assert.equal(isIconSourcePath('/p/themes/crm/config/features.config.ts'), false)
-  assert.equal(isIconSourcePath('/p/themes/default/config/theme.config.ts'), false)
+test('matches every config/*.config.ts of a theme or plugin, not only app.config.ts', () => {
+  assert.ok(isIconSourcePath('/p/themes/crm/config/dashboard.config.ts'))
+  assert.ok(isIconSourcePath('/p/themes/crm/config/features.config.ts'))
+  assert.ok(isIconSourcePath('/p/themes/crm/config/flows.config.ts'))
+  assert.ok(isIconSourcePath('/p/themes/default/config/theme.config.ts'))
+  assert.ok(isIconSourcePath('C:\\p\\themes\\crm\\config\\features.config.ts'))
+})
+
+test('ignores a config.ts nested deeper than a direct child of config/', () => {
+  assert.equal(isIconSourcePath('/p/themes/default/config/sub/nested.config.ts'), false)
+})
+
+test('ignores files outside entities, blocks and config directories', () => {
   assert.equal(isIconSourcePath('/p/themes/default/entities/tasks/messages/en.ts'), false)
 })
 
@@ -127,4 +143,50 @@ test('says nothing about a reference it can resolve', () => {
     []
   )
   assert.deepEqual(findUnresolvedIconRefs("export default { icon: 'pie-chart' }"), [])
+})
+
+test('matches .ts and .tsx component files, with Windows separators too', () => {
+  assert.ok(isIconCallSourcePath('/p/themes/default/components/wallet-badge.tsx'))
+  assert.ok(isIconCallSourcePath('/p/themes/default/lib/format.ts'))
+  assert.ok(isIconCallSourcePath('C:\\p\\themes\\default\\components\\wallet-badge.tsx'))
+  assert.equal(isIconCallSourcePath('/p/themes/default/messages/en.json'), false)
+  assert.equal(isIconCallSourcePath('/p/themes/default/README.md'), false)
+})
+
+test('extracts a literal name from DynamicIcon, either quoting style', () => {
+  assert.deepEqual(
+    extractLiteralIconCallNames('<DynamicIcon name="Wallet" className="h-4 w-4" />'),
+    ['Wallet']
+  )
+  assert.deepEqual(
+    extractLiteralIconCallNames("<DynamicIcon name={'pie-chart'} />"),
+    ['pie-chart']
+  )
+})
+
+test('extracts a literal name from resolveIcon, with or without a fallback argument', () => {
+  assert.deepEqual(extractLiteralIconCallNames("resolveIcon('receipt')"), ['receipt'])
+  assert.deepEqual(
+    extractLiteralIconCallNames('resolveIcon("receipt", Box)'),
+    ['receipt']
+  )
+})
+
+test('ignores a runtime value handed to DynamicIcon or resolveIcon', () => {
+  assert.deepEqual(extractLiteralIconCallNames('<DynamicIcon name={item.icon} />'), [])
+  assert.deepEqual(extractLiteralIconCallNames('resolveIcon(item.icon, Box)'), [])
+  assert.deepEqual(extractLiteralIconCallNames('resolveIcon(iconName)'), [])
+})
+
+test('never yields anything but a bare name from a call, so nothing can be injected', () => {
+  const sources = [
+    '<DynamicIcon name="X&quot;; process.exit(1); //" />',
+    'resolveIcon(\'Users } from "x"; import evil from "y"; //\')'
+  ]
+
+  for (const source of sources) {
+    for (const name of extractLiteralIconCallNames(source)) {
+      assert.match(name, /^[A-Za-z][\w$-]*$/, `unsafe name from: ${source}`)
+    }
+  }
 })
