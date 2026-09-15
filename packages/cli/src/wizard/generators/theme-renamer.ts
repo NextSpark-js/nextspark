@@ -6,38 +6,8 @@
 
 import fs from 'fs-extra'
 import path from 'path'
-import { fileURLToPath } from 'url'
 import type { WizardConfig } from '../types.js'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-
-/**
- * Get the templates directory path from @nextsparkjs/core
- */
-function getTemplatesDir(): string {
-  const rootDir = process.cwd()
-
-  // Check multiple possible paths for templates directory
-  // Priority: installed package in node_modules > development monorepo paths
-  const possiblePaths = [
-    // From project root node_modules (most common for installed packages)
-    path.resolve(rootDir, 'node_modules/@nextsparkjs/core/templates'),
-    // From CLI dist folder for development
-    path.resolve(__dirname, '../../core/templates'),
-    // Legacy paths for different build structures
-    path.resolve(__dirname, '../../../../../core/templates'),
-    path.resolve(__dirname, '../../../../core/templates'),
-  ];
-
-  for (const p of possiblePaths) {
-    if (fs.existsSync(p)) {
-      return p;
-    }
-  }
-
-  throw new Error(`Could not find @nextsparkjs/core templates directory. Searched: ${possiblePaths.join(', ')}`);
-}
+import { getTemplatesDir } from './templates-dir.js'
 
 /**
  * Get the target themes directory in the user's project
@@ -48,9 +18,15 @@ function getTargetThemesDir(): string {
 
 /**
  * Copy starter theme to new location with new name
+ *
+ * @param templatesDir - The core templates to copy from. The default looks from
+ *   the current directory, which a web + mobile project has already moved into
+ *   web/ by the time its theme is copied, so the generator passes the root's.
  */
-export async function copyStarterTheme(config: WizardConfig): Promise<void> {
-  const templatesDir = getTemplatesDir()
+export async function copyStarterTheme(
+  config: WizardConfig,
+  templatesDir: string = getTemplatesDir()
+): Promise<void> {
   const starterThemePath = path.join(templatesDir, 'contents', 'themes', 'starter')
   const targetThemesDir = getTargetThemesDir()
   const newThemePath = path.join(targetThemesDir, config.projectSlug)

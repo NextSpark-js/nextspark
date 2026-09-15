@@ -9,44 +9,14 @@
 
 import fs from 'fs-extra'
 import path from 'path'
-import { fileURLToPath } from 'url'
 import type { WizardConfig } from '../types.js'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-
-/**
- * Get the templates directory path from @nextsparkjs/core
- */
-function getTemplatesDir(): string {
-  const rootDir = process.cwd()
-
-  // Check multiple possible paths for templates directory
-  // Priority: installed package in node_modules > development monorepo paths
-  const possiblePaths = [
-    // From project root node_modules (most common for installed packages)
-    path.resolve(rootDir, 'node_modules/@nextsparkjs/core/templates'),
-    // From CLI dist folder for development
-    path.resolve(__dirname, '../../core/templates'),
-    // Legacy paths for different build structures
-    path.resolve(__dirname, '../../../../../core/templates'),
-    path.resolve(__dirname, '../../../../core/templates'),
-  ];
-
-  for (const p of possiblePaths) {
-    if (fs.existsSync(p)) {
-      return p;
-    }
-  }
-
-  throw new Error(`Could not find @nextsparkjs/core templates directory. Searched: ${possiblePaths.join(', ')}`);
-}
+import { getTemplatesDir } from './templates-dir.js'
 
 /**
  * Get the features directory path
  */
-function getFeaturesDir(): string {
-  return path.join(getTemplatesDir(), 'features')
+function getFeaturesDir(templatesDir: string): string {
+  return path.join(templatesDir, 'features')
 }
 
 /**
@@ -59,8 +29,8 @@ function getTargetThemeDir(projectSlug: string): string {
 /**
  * Copy pages feature (pages entity + hero block)
  */
-async function copyPagesFeature(config: WizardConfig): Promise<void> {
-  const featuresDir = getFeaturesDir()
+async function copyPagesFeature(config: WizardConfig, templatesDir: string): Promise<void> {
+  const featuresDir = getFeaturesDir(templatesDir)
   const targetThemeDir = getTargetThemeDir(config.projectSlug)
 
   // Copy pages entity
@@ -87,8 +57,8 @@ async function copyPagesFeature(config: WizardConfig): Promise<void> {
 /**
  * Copy blog feature (posts entity + post-content block)
  */
-async function copyBlogFeature(config: WizardConfig): Promise<void> {
-  const featuresDir = getFeaturesDir()
+async function copyBlogFeature(config: WizardConfig, templatesDir: string): Promise<void> {
+  const featuresDir = getFeaturesDir(templatesDir)
   const targetThemeDir = getTargetThemeDir(config.projectSlug)
 
   // Copy posts entity
@@ -120,20 +90,25 @@ async function copyBlogFeature(config: WizardConfig): Promise<void> {
  * - Pages only: pages entity + hero block copied
  * - Blog only: posts entity + post-content block copied
  * - Both: pages entity + hero block + posts entity + post-content block copied
+ *
+ * @param templatesDir - The core templates to copy from; see copyStarterTheme
+ *   for why the generator passes it.
  */
-export async function copyContentFeatures(config: WizardConfig): Promise<void> {
+export async function copyContentFeatures(config: WizardConfig, templatesDir?: string): Promise<void> {
   // Skip if no content features are enabled
   if (!config.contentFeatures.pages && !config.contentFeatures.blog) {
     return
   }
 
+  const sourceTemplatesDir = templatesDir ?? getTemplatesDir()
+
   // Copy pages feature if enabled
   if (config.contentFeatures.pages) {
-    await copyPagesFeature(config)
+    await copyPagesFeature(config, sourceTemplatesDir)
   }
 
   // Copy blog feature if enabled
   if (config.contentFeatures.blog) {
-    await copyBlogFeature(config)
+    await copyBlogFeature(config, sourceTemplatesDir)
   }
 }

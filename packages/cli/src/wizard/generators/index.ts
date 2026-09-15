@@ -33,6 +33,7 @@ import {
 } from './config-generator.js'
 import { processI18n } from './messages-generator.js'
 import { copyContentFeatures } from './content-features-generator.js'
+import { getTemplatesDir } from './templates-dir.js'
 // Theme & Plugin installation
 import { installThemeAndPlugins } from './theme-plugins-installer.js'
 // DX improvement generators
@@ -94,34 +95,6 @@ export {
   generateMonorepoStructure,
   isMonorepoProject,
   getWebDir,
-}
-
-/**
- * Get the templates directory path from @nextsparkjs/core
- * @param projectRoot - The original project root directory (important for monorepo where CWD may change)
- */
-function getTemplatesDir(projectRoot?: string): string {
-  const rootDir = projectRoot || process.cwd()
-
-  // Check multiple possible paths for templates directory
-  // Priority: installed package in node_modules > development monorepo paths
-  const possiblePaths = [
-    // From project root node_modules (most common for installed packages)
-    path.resolve(rootDir, 'node_modules/@nextsparkjs/core/templates'),
-    // From CLI dist folder for development
-    path.resolve(__dirname, '../../core/templates'),
-    // Legacy paths for different build structures
-    path.resolve(__dirname, '../../../../../core/templates'),
-    path.resolve(__dirname, '../../../../core/templates'),
-  ];
-
-  for (const p of possiblePaths) {
-    if (fs.existsSync(p)) {
-      return p;
-    }
-  }
-
-  throw new Error(`Could not find @nextsparkjs/core templates directory. Searched: ${possiblePaths.join(', ')}`);
 }
 
 // Cache the templates directory to avoid recalculating after chdir
@@ -473,7 +446,8 @@ export async function generateProject(config: WizardConfig): Promise<void> {
 
   // IMPORTANT: Cache templates directory BEFORE changing directories
   // This ensures we can find templates even after chdir for monorepo
-  cachedTemplatesDir = getTemplatesDir(projectDir)
+  const templatesDir = getTemplatesDir(projectDir)
+  cachedTemplatesDir = templatesDir
 
   // Determine the web directory based on project type
   const webDir = getWebDir(projectDir, config)
@@ -505,13 +479,13 @@ export async function generateProject(config: WizardConfig): Promise<void> {
     await updateGlobalsCss(config)
 
     // 2. Copy and rename starter theme
-    await copyStarterTheme(config)
+    await copyStarterTheme(config, templatesDir)
 
     // 2.1 Ensure contents/plugins/ directory exists (even without plugins selected)
     await fs.ensureDir(path.join(process.cwd(), 'contents', 'plugins'))
 
     // 3. Copy optional content features (pages entity, blog entity + block)
-    await copyContentFeatures(config)
+    await copyContentFeatures(config, templatesDir)
 
     // 4. Update theme configuration files
     await updateThemeConfig(config)

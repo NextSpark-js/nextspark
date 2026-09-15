@@ -98,10 +98,10 @@ function getLocalPackageDir(type: 'theme' | 'plugin', name: string): string | nu
  * Copy a local theme directly (monorepo mode)
  */
 async function copyLocalTheme(name: string, sourceDir: string): Promise<boolean> {
-  const targetDir = join(process.cwd(), 'contents', 'themes', name)
+  const targetDir = join(appDir(), 'contents', 'themes', name)
 
   // Ensure target parent directory exists
-  const themesDir = join(process.cwd(), 'contents', 'themes')
+  const themesDir = join(appDir(), 'contents', 'themes')
   if (!existsSync(themesDir)) {
     mkdirSync(themesDir, { recursive: true })
   }
@@ -125,10 +125,10 @@ async function copyLocalTheme(name: string, sourceDir: string): Promise<boolean>
  * Copy a local plugin directly (monorepo mode)
  */
 async function copyLocalPlugin(name: string, sourceDir: string): Promise<boolean> {
-  const targetDir = join(process.cwd(), 'contents', 'plugins', name)
+  const targetDir = join(appDir(), 'contents', 'plugins', name)
 
   // Ensure target parent directory exists
-  const pluginsDir = join(process.cwd(), 'contents', 'plugins')
+  const pluginsDir = join(appDir(), 'contents', 'plugins')
   if (!existsSync(pluginsDir)) {
     mkdirSync(pluginsDir, { recursive: true })
   }
@@ -152,7 +152,7 @@ async function copyLocalPlugin(name: string, sourceDir: string): Promise<boolean
  * Update tsconfig.json with paths for the installed theme/plugin
  */
 async function updateTsConfigPaths(name: string, type: 'theme' | 'plugin'): Promise<void> {
-  const tsconfigPath = join(process.cwd(), 'tsconfig.json')
+  const tsconfigPath = join(appDir(), 'tsconfig.json')
 
   if (!existsSync(tsconfigPath)) {
     return
@@ -219,19 +219,29 @@ async function installPluginViaCli(packageSpec: string): Promise<boolean> {
 }
 
 /**
- * Run a callback with the cwd set to web/ in a monorepo, so the cwd-relative
- * logic in addTheme/addPlugin (which look for ./contents) targets the web app.
- * In a flat project (no web/ subdir) the cwd is left unchanged.
+ * The app themes and plugins go into: web/ in a web + mobile project, the
+ * current directory otherwise. Checking for an existing theme or plugin anywhere
+ * else would miss the one installed there and install it a second time.
+ */
+function appDir(): string {
+  const cwd = process.cwd()
+  const webDir = join(cwd, 'web')
+  return existsSync(webDir) && existsSync(join(webDir, 'contents')) ? webDir : cwd
+}
+
+/**
+ * Run a callback with the cwd set to the app directory (see appDir), so the
+ * cwd-relative logic in addTheme/addPlugin (which look for ./contents) targets
+ * the web app.
  */
 async function withWebCwd<T>(fn: () => Promise<T>): Promise<T> {
   const originalCwd = process.cwd()
-  const webDir = join(originalCwd, 'web')
-  const useWeb = existsSync(webDir) && existsSync(join(webDir, 'contents'))
-  if (useWeb) process.chdir(webDir)
+  const targetDir = appDir()
+  if (targetDir !== originalCwd) process.chdir(targetDir)
   try {
     return await fn()
   } finally {
-    if (useWeb) process.chdir(originalCwd)
+    if (targetDir !== originalCwd) process.chdir(originalCwd)
   }
 }
 
@@ -250,7 +260,7 @@ export async function installTheme(theme: ThemeChoice): Promise<boolean> {
 
   try {
     // Check if already installed
-    const targetDir = join(process.cwd(), 'contents', 'themes', theme)
+    const targetDir = join(appDir(), 'contents', 'themes', theme)
     if (existsSync(targetDir)) {
       spinner.info(chalk.gray(`Reference theme ${theme} already exists`))
       return true
@@ -319,7 +329,7 @@ export async function installPlugins(plugins: PluginChoice[]): Promise<boolean> 
 
     try {
       // Check if already installed
-      const pluginDir = join(process.cwd(), 'contents', 'plugins', plugin)
+      const pluginDir = join(appDir(), 'contents', 'plugins', plugin)
       if (existsSync(pluginDir)) {
         spinner.info(chalk.gray(`Plugin ${plugin} already installed`))
         continue
