@@ -10,7 +10,7 @@
  * - Auth is obtained from session/cookies (NOT from client parameters)
  * - Permissions are checked against the permissions registry
  * - userId comes from getTypedSession()
- * - teamId comes from httpOnly cookie 'activeTeamId'
+ * - teamId comes from the httpOnly 'activeTeamId' cookie, when this session wrote it
  *
  * Benefits over fetch/hooks:
  * - Zero JavaScript sent to client for mutation logic
@@ -37,6 +37,7 @@
 
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { headers, cookies } from 'next/headers'
+import { ACTIVE_TEAM_COOKIE, activeTeamIdForSession } from '../teams/active-team-cookie'
 import { redirect } from 'next/navigation'
 import { GenericEntityService } from '../services/generic-entity.service'
 import { entityRegistry } from '../entities/registry'
@@ -74,9 +75,9 @@ async function getAuthContext(): Promise<
     return { success: false, error: 'Authentication required' }
   }
 
-  // 2. Get teamId from httpOnly cookie
+  // 2. Get teamId from the httpOnly cookie, when this session wrote it
   const cookieStore = await cookies()
-  const teamId = cookieStore.get('activeTeamId')?.value
+  const teamId = activeTeamIdForSession(cookieStore.get(ACTIVE_TEAM_COOKIE)?.value, session.session?.id)
 
   if (!teamId) {
     return { success: false, error: 'No active team selected' }

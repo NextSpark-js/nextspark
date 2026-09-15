@@ -177,7 +177,7 @@ describe('TeamProvider self-heal', () => {
     const queryClient = renderWithProviders()
     await waitFor(() => expect(screen.getByTestId('current-team').textContent).toBe('team-a'))
 
-    const query = queryClient.getQueryCache().find({ queryKey: TEAMS_QUERY_KEY })
+    const query = queryClient.getQueryCache().find({ queryKey: [...TEAMS_QUERY_KEY, 'user-1'] })
     expect(query?.options.refetchOnWindowFocus).toBe(true)
   })
 
@@ -205,5 +205,27 @@ describe('TeamProvider self-heal', () => {
 
     await waitFor(() => expect(screen.getByTestId('current-team').textContent).toBe('none'))
     expect(localStorage.getItem('activeTeamId')).toBeNull()
+  })
+
+  it('reads every page of teams, so the earliest-joined team counts even when it is not on the first', async () => {
+    const recent = Array.from({ length: 20 }, (_, i) =>
+      membershipRow({ ...TEAM_A, id: `team-recent-${i}`, name: `Recent ${i}`, slug: `recent-${i}` }, 'member', '2026-06-01T00:00:00Z')
+    )
+    ;(global.fetch as jest.Mock).mockImplementation((url: string) => {
+      if (url === '/api/v1/teams') {
+        return Promise.resolve({ ok: true, json: async () => ({ data: recent, info: { page: 1, hasNextPage: true } }) })
+      }
+      if (url === '/api/v1/teams?page=2') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ data: [membershipRow(TEAM_B, 'member', '2026-01-01T00:00:00Z')], info: { page: 2, hasNextPage: false } }),
+        })
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) })
+    })
+
+    renderWithProviders()
+
+    await waitFor(() => expect(screen.getByTestId('current-team').textContent).toBe('team-b'))
   })
 })

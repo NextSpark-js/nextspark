@@ -28,6 +28,7 @@ const FORGED = {
   'x-user-id': 'attacker-controlled-id',
   'x-user-email': 'attacker@example.com',
   'x-pathname': '/admin',
+  'x-active-team-id': 'attacker-team',
 }
 
 function makeRequest(path: string, extraHeaders: Record<string, string> = {}) {
@@ -64,6 +65,7 @@ describe('proxy identity headers (#87)', () => {
     expect(forwarded).toBeTruthy()
     expect(forwarded.get('x-user-id')).toBeNull()
     expect(forwarded.get('x-user-email')).toBeNull()
+    expect(forwarded.get('x-active-team-id')).toBeNull()
     // x-pathname is always the real pathname, never the inbound value
     expect(forwarded.get('x-pathname')).toBe(path)
     // Unrelated headers still pass through
@@ -229,5 +231,36 @@ describe('proxy path boundaries and redirect targets', () => {
 
     expect(response.type).toBe('redirect')
     expect(response.redirectUrl).toContain('/base/es/dashboard?error=access_denied')
+  })
+})
+
+describe('proxy active team header', () => {
+  beforeEach(() => {
+    mockedFetch.mockReset()
+    delete process.env.NEXT_PUBLIC_ACTIVE_THEME
+  })
+
+  const session = { data: { user: { id: 'user-1', email: 'user-1@example.com', role: 'member' }, session: { id: 'session-1' } } }
+
+  test('forwards the team from a cookie this session wrote', async () => {
+    mockedFetch.mockResolvedValue(session)
+
+    const response = (await proxy(makeRequest('/dashboard/tasks', { cookie: 'activeTeamId=session-1%3Ateam-a' }))) as unknown as PassThrough
+
+    expect(response.type).toBe('next')
+    expect(response.requestHeaders?.get('x-active-team-id')).toBe('team-a')
+  })
+
+  test.each([
+    ['belongs to another session', 'activeTeamId=session-2%3Ateam-a'],
+    ['carries no session', 'activeTeamId=team-a'],
+    ['is missing', ''],
+  ])('forwards no team, whatever the request claims, when the cookie %s', async (_label, cookie) => {
+    mockedFetch.mockResolvedValue(session)
+
+    const response = (await proxy(makeRequest('/dashboard/tasks', { cookie }))) as unknown as PassThrough
+
+    expect(response.type).toBe('next')
+    expect(response.requestHeaders?.get('x-active-team-id')).toBeNull()
   })
 })

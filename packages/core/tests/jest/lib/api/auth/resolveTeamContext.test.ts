@@ -77,3 +77,31 @@ describe('resolveTeamContext', () => {
     expect(result).toBe('team-real')
   })
 })
+
+describe('resolveTeamContext active team cookie', () => {
+  const sessionAuth = { user: { id: 'user-1', defaultTeamId: 'team-default' }, sessionId: 'session-1' } as Parameters<typeof resolveTeamContext>[1]
+
+  function withCookie(cookie: string): NextRequest {
+    return new (NextRequest as unknown as { new (url: string, init?: RequestInit): NextRequest })(
+      'http://localhost/api/v1/some-entity',
+      { headers: { cookie } },
+    )
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockGetById.mockImplementation(async (id: string) => ({ id, deletedAt: null }) as never)
+    mockIsMember.mockResolvedValue(true)
+  })
+
+  it('takes the team from a cookie this session wrote', async () => {
+    expect(await resolveTeamContext(withCookie('activeTeamId=session-1%3Ateam-cookie'), sessionAuth)).toBe('team-cookie')
+  })
+
+  it.each([
+    ['another session', 'activeTeamId=session-2%3Ateam-cookie'],
+    ['no session in its value', 'activeTeamId=team-cookie'],
+  ])('falls back to the default team when the cookie has %s', async (_label, cookie) => {
+    expect(await resolveTeamContext(withCookie(cookie), sessionAuth)).toBe('team-default')
+  })
+})

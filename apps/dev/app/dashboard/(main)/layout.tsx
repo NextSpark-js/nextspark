@@ -9,7 +9,7 @@
  * IMPORTANT: Permission checking MUST be in this layout (not in [entity]/layout.tsx)
  * because (templates) routes with specific paths take precedence over dynamic [entity] routes.
  */
-import { headers, cookies } from 'next/headers'
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@nextsparkjs/core/components/dashboard/layouts/DashboardShell'
 import { serializeEntityConfig, type SerializableEntityConfig } from '@nextsparkjs/core/lib/entities/serialization'
@@ -17,6 +17,7 @@ import { setEntityRegistry } from '@nextsparkjs/core/lib/entities/queries'
 import { getTemplateOrDefault } from '@nextsparkjs/core/lib/template-resolver'
 import type { EntityConfig, ChildEntityDefinition } from '@nextsparkjs/core/lib/entities/types'
 import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
+import { getDashboardTeamId } from '@nextsparkjs/core/lib/teams/dashboard-team'
 import { isValidPermission } from '@nextsparkjs/core/lib/permissions/init'
 import type { Permission } from '@nextsparkjs/core/lib/permissions/types'
 // Import registry directly - webpack resolves @nextsparkjs/registries alias at compile time
@@ -64,11 +65,11 @@ async function DefaultMainDashboardLayout({
 
   // === PERMISSION CHECK ===
   const headersList = await headers()
-  const cookieStore = await cookies()
 
   const pathname = headersList.get('x-pathname') || ''
   const userId = headersList.get('x-user-id')
-  const teamId = cookieStore.get('activeTeamId')?.value
+  // The team this session chose, or the user's default team until it has one
+  const teamId = userId ? await getDashboardTeamId(headersList, userId) : null
 
   if (userId && teamId && pathname) {
     const parsed = parseEntityFromPathname(pathname)

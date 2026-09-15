@@ -21,6 +21,28 @@ class MockNextRequest {
     }
   }
 
+  // The Cookie header parsed on each access, so a test can replace `headers`
+  // after construction; assigning `cookies` overrides it.
+  get cookies() {
+    if (this._cookies) return this._cookies
+    const header = (this.headers && typeof this.headers.get === 'function' && this.headers.get('cookie')) || ''
+    const jar = new Map(
+      header.split(';').map(part => part.trim()).filter(Boolean).map(part => {
+        const index = part.indexOf('=')
+        return index === -1 ? [part, ''] : [part.slice(0, index), decodeURIComponent(part.slice(index + 1))]
+      })
+    )
+    return {
+      get: name => (jar.has(name) ? { name, value: jar.get(name) } : undefined),
+      has: name => jar.has(name),
+      getAll: () => [...jar].map(([name, value]) => ({ name, value })),
+    }
+  }
+
+  set cookies(value) {
+    this._cookies = value
+  }
+
   async json() {
     if (!this._body) return {}
     try {

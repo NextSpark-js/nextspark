@@ -288,25 +288,17 @@ ALTER COLUMN "teamId" SET NOT NULL;
 
 ### Include Team Context in Requests
 
-The middleware automatically adds `x-team-id` header:
-
-```typescript
-// middleware.ts adds this header
-headers.set('x-team-id', activeTeamId)
-```
-
-For client-side requests, the team context is included automatically by the fetch wrapper.
+Client-side requests carry the active team in the `x-team-id` header, which the fetch wrapper (`lib/api/entities.ts`) adds from `localStorage.activeTeamId`. API routes resolve it with `resolveTeamContext`: `x-team-id`, then the `activeTeamId` cookie when this session wrote it, then the user's default team.
 
 ### Create Forms
 
 When creating records, teamId is set automatically:
 
 ```typescript
-// In API handler
-const teamId = req.headers.get('x-team-id')
-
-// Or from auth context
-const teamId = authResult.activeTeamId
+// In an API handler
+const teamResult = await resolveTeamContext(request, authResult)
+if (teamResult instanceof NextResponse) return teamResult
+const teamId = teamResult
 ```
 
 ### Data Fetching

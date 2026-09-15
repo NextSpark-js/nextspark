@@ -106,19 +106,10 @@ If you need team switching, change your mode to `multi-tenant`.
 
 **Symptom:** After refreshing, you're back to the previous team.
 
-**Solution:** Verify localStorage and cookie are being set:
+**Solution:** Check the two places the active team is kept, in browser DevTools:
 
-```typescript
-// In TeamContext.tsx
-localStorage.setItem('activeTeamId', teamId)
-
-// Middleware should read from cookie
-const activeTeamId = cookies.get('activeTeamId')?.value
-```
-
-Check browser DevTools:
-- Application > Local Storage > `activeTeamId`
-- Application > Cookies > `activeTeamId`
+- Application > Local Storage > `activeTeamId`: the team id `TeamContext` restores on load.
+- Application > Cookies > `activeTeamId`: `<session id>:<team id>`, written by `POST /api/v1/teams/switch`. Server code uses it only while the session id is the current session's; after signing in again `TeamContext` writes it anew, and until then the dashboard layouts check permissions in the user's default team.
 
 ### Problem: Team Context Not Available
 
@@ -526,11 +517,7 @@ const { canUpdate, canDelete } = usePermissions({
    - Check if third-party cookies are blocked
    - Verify SameSite policy allows the cookie
 
-**Manual cookie debug:**
-```typescript
-// In browser console
-document.cookie.includes('activeTeamId') // Should be true
-```
+**Manual cookie debug:** the cookie is httpOnly, so `document.cookie` never shows it. Look in DevTools > Application > Cookies, or in the `Set-Cookie` header of the `POST /api/v1/teams/switch` response: its value is `<session id>:<team id>`.
 
 ## Debugging Tips
 

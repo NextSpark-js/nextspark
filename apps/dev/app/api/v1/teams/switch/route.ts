@@ -9,6 +9,11 @@ import {
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { TeamService } from '@nextsparkjs/core/lib/services'
+import {
+  ACTIVE_TEAM_COOKIE,
+  ACTIVE_TEAM_COOKIE_MAX_AGE,
+  activeTeamCookieValue,
+} from '@nextsparkjs/core/lib/teams/active-team-cookie'
 import { z } from 'zod'
 
 const switchTeamSchema = z.object({
@@ -35,6 +40,19 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
       return authResult.rateLimitResponse as NextResponse
     }
 
+    // The active team is remembered per browser session, in the activeTeamId
+    // cookie. An API key chooses the team on each request with x-team-id, so for
+    // it there is nothing to switch.
+    if (authResult.type !== 'session' || !authResult.sessionId) {
+      const response = createApiError(
+        'API keys choose the team on each request with the x-team-id header',
+        400,
+        null,
+        'SESSION_REQUIRED'
+      )
+      return addCorsHeaders(response, req)
+    }
+
     const body = await req.json()
     const validatedData = switchTeamSchema.parse(body)
 
@@ -48,15 +66,16 @@ export const POST = withRateLimitTier(withApiLogging(async (req: NextRequest): P
         message: 'Active team switched successfully',
       })
 
-      // Set cookie for server-side access (layouts, server components)
-      // This enables permission validation in [entity]/layout.tsx
+      // Remember the team for server-side reads (the dashboard layouts through
+      // the proxy, server actions, resolveTeamContext), bound to this session so
+      // a later session on the same browser does not inherit it.
       // SECURITY: httpOnly prevents client-side JS manipulation
-      response.cookies.set('activeTeamId', validatedData.teamId, {
+      response.cookies.set(ACTIVE_TEAM_COOKIE, activeTeamCookieValue(authResult.sessionId, validatedData.teamId), {
         path: '/',
-        httpOnly: true,  // Security: prevent client-side manipulation
+        httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 365  // 1 year
+        maxAge: ACTIVE_TEAM_COOKIE_MAX_AGE,
       })
 
       return addCorsHeaders(response, req)

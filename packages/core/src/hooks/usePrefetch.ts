@@ -10,6 +10,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
 import { TEAMS_QUERY_KEY, fetchUserTeams } from '../contexts/TeamContext'
+import { useAuth } from './useAuth'
 
 // Query keys (matching the hooks)
 const USER_PROFILE_QUERY_KEY = ['user-profile'] as const
@@ -46,6 +47,7 @@ async function fetchUserProfile() {
  */
 export function usePrefetchSettings() {
   const queryClient = useQueryClient()
+  const { user } = useAuth()
 
   const prefetchProfile = useCallback(() => {
     queryClient.prefetchQuery({
@@ -56,12 +58,14 @@ export function usePrefetchSettings() {
   }, [queryClient])
 
   const prefetchTeams = useCallback(() => {
+    if (!user) return
     queryClient.prefetchQuery({
-      queryKey: TEAMS_QUERY_KEY,
+      // The key TeamProvider reads: the teams of this user
+      queryKey: [...TEAMS_QUERY_KEY, user.id],
       queryFn: fetchUserTeams,
       staleTime: 1000 * 60 * 5, // 5 minutes
     })
-  }, [queryClient])
+  }, [queryClient, user])
 
   return {
     prefetchProfile,

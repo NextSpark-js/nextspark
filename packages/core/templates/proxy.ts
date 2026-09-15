@@ -14,7 +14,7 @@
  * 1. Theme middleware override support
  * 2. Documentation access control
  * 3. Protected route authentication, and the roles /superadmin and /devtools need
- * 4. User header injection for downstream use (x-user-id, x-pathname)
+ * 4. User header injection for downstream use (x-user-id, x-pathname, x-active-team-id)
  *
  * IMPORTANT: The EntityPermissionLayout depends on x-user-id and x-pathname
  * headers being set here for server-side permission validation.
@@ -26,6 +26,7 @@ import {
   executeThemeMiddleware,
   getThemeAppConfig
 } from '@nextsparkjs/core/lib/middleware'
+import { ACTIVE_TEAM_COOKIE, activeTeamIdForSession } from '@nextsparkjs/core/lib/teams/active-team-cookie'
 
 /**
  * Session type for proxy (inline definition)
@@ -127,7 +128,7 @@ function getSession(request: NextRequest) {
  * dispatches Server Actions by the `Next-Action` header, not by the URL, so an
  * action can be POSTed to a public path with a forged `x-user-id`.
  */
-const TRUSTED_IDENTITY_HEADERS = ['x-user-id', 'x-user-email', 'x-pathname'] as const
+const TRUSTED_IDENTITY_HEADERS = ['x-user-id', 'x-user-email', 'x-pathname', 'x-active-team-id'] as const
 
 /**
  * Build the request headers forwarded to the app: inbound copy minus every
@@ -257,6 +258,12 @@ export async function proxy(request: NextRequest) {
       }
       if (session.user?.email) {
         requestHeaders.set('x-user-email', session.user.email)
+      }
+      // The team this session chose, for the dashboard layouts' permission
+      // checks; a cookie another session left behind names no team here.
+      const activeTeamId = activeTeamIdForSession(request.cookies.get(ACTIVE_TEAM_COOKIE)?.value, session.session?.id)
+      if (activeTeamId) {
+        requestHeaders.set('x-active-team-id', activeTeamId)
       }
 
       return passThrough(requestHeaders)

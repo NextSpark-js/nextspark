@@ -96,6 +96,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the callback's query percent-encoded, since Better Auth rejects a relative
   callback whose query holds a `:` (a timestamp, a filter).
 
+- **The `activeTeamId` cookie only counts for the session that wrote it.** It lives
+  for a year, so after a sign-out the next person to sign in on the same browser
+  was checked against the previous user's team: a dashboard deep link answered
+  with a false permission denial, and server actions acted in that team.
+  `/api/v1/teams/switch` now writes it as `<session id>:<team id>`, and readers
+  take the team only for their own session (`activeTeamIdForSession`,
+  `lib/teams/active-team-cookie`): the proxy forwards it to the dashboard layouts
+  as `x-active-team-id`, and server actions and `resolveTeamContext` check it
+  themselves. The cookie stays host-only, so each subdomain of a multi-tenant
+  app keeps its own team.
+  - A cookie written before this release carries no session and names no team
+    until `TeamContext` writes it again, which it does when the dashboard mounts.
+  - The dashboard layouts check permissions in that team while the user still
+    belongs to it and it is not deleted, and in the user's default team (the
+    earliest joined) otherwise (`getDashboardTeamId`, `lib/teams/dashboard-team`);
+    `sync:app` updates them. A failed lookup stops the render instead of reading
+    as a user in no team, whose permissions are not checked, and the dashboard
+    layout and the entity layout under it share one query per request.
+  - TeamProvider reads every page of `/api/v1/teams`, so the default team the
+    server falls back to is always among the ones it chooses from, retries a
+    cookie write that fails, and sends one switch request at a time, aborting one
+    that has not answered in 10 seconds, so a late answer for a team chosen
+    earlier cannot leave the cookie on it.
+  - API-key requests no longer fall back to a browser's `activeTeamId` cookie;
+    they send `x-team-id` or get the user's default team, and
+    `POST /api/v1/teams/switch` answers an API key with `400 SESSION_REQUIRED`.
+  - Signing in or out empties the query cache, and TeamProvider keys the teams
+    it caches by user, so the next user on the same page never sees the
+    previous one's teams.
+
 - **API-key scope minting now matches scope enforcement (#94).** `validateScopesForUser`
   — the gate deciding which scopes a user may mint into an API key — previously checked
   a hardcoded map keyed by the caller's **global** `users.role`, referencing a

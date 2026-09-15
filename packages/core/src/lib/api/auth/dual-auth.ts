@@ -5,6 +5,8 @@
  * Used by the unified /api/v1/ endpoints.
  */
 
+import { ACTIVE_TEAM_COOKIE, activeTeamIdForSession } from '../../teams/active-team-cookie'
+import { getUserDefaultTeamId } from '../../teams/dashboard-team'
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '../../auth'
 import { validateApiKey } from '../auth'
@@ -72,30 +74,13 @@ export interface DualAuthResult {
   scopes?: string[]
   /** `api_key.id` of the key that authenticated the request (type 'api-key' only). Used for audit logging (#105). */
   keyId?: string
+  /** The session's id (type 'session' only): the active team cookie counts only for it. */
+  sessionId?: string
   rateLimitResponse?: Response
   /** Set when a dev-only x-act-as-user override replaced the real caller. */
   actingAs?: { originalUserId: string; originalRole: string }
   /** Why the request was rejected. Only present when `success` is false. */
   error?: DualAuthFailure
-}
-
-/**
- * Get user's default team ID (first team they're a member of)
- */
-async function getUserDefaultTeamId(userId: string): Promise<string | undefined> {
-  try {
-    const result = await queryOne<{ teamId: string }>(
-      `SELECT "teamId" FROM "team_members"
-       WHERE "userId" = $1
-       ORDER BY "joinedAt" ASC
-       LIMIT 1`,
-      [userId]
-    )
-    return result?.teamId
-  } catch (error) {
-    console.error('[dual-auth] Failed to get default team:', error)
-    return undefined
-  }
 }
 
 /**
@@ -304,6 +289,7 @@ async function trySessionAuth(request: NextRequest): Promise<DualAuthResult> {
     return {
       success: true,
       type: 'session',
+      sessionId: session.session?.id,
       user: {
         id: session.user.id,
         email: session.user.email,
@@ -354,7 +340,8 @@ export function hasRequiredScope(authResult: DualAuthResult, requiredScope: stri
 /**
  * Resolve and validate team context from request.
  *
- * Resolution priority: x-team-id header > activeTeamId cookie > user's defaultTeamId
+ * Resolution priority: x-team-id header > the activeTeamId cookie this session wrote >
+ * user's defaultTeamId
  *
  * Returns the validated teamId string on success, or a NextResponse error if:
  * - No team context can be resolved (400)
@@ -370,7 +357,7 @@ export async function resolveTeamContext(
   authResult: DualAuthResult
 ): Promise<string | NextResponse> {
   const teamId = request.headers.get('x-team-id')
-    || request.cookies.get('activeTeamId')?.value
+    || activeTeamIdForSession(request.cookies.get(ACTIVE_TEAM_COOKIE)?.value, authResult.sessionId)
     || authResult.user!.defaultTeamId
 
   if (!teamId) {

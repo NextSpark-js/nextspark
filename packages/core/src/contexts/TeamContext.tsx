@@ -21,29 +21,130 @@ interface TeamContextValue {
 
 const TeamContext = createContext<TeamContextValue | undefined>(undefined)
 
-// Query key for teams data
+// Query key for teams data, followed by the user's id
 export const TEAMS_QUERY_KEY = ['user-teams'] as const
 
 /**
- * The team whose id each query client's page has already written to the
- * activeTeamId cookie. The dashboard, superadmin and devtools layouts each mount
- * their own TeamProvider over the root layout's query client, so moving between
- * those areas remounts the provider; by then the cookie already names the team,
- * and posting the switch again would only repeat the write.
+ * The write of the activeTeamId cookie each query client's page has made or is
+ * making, for `<session>:<team>`. The dashboard, superadmin and devtools layouts
+ * each mount their own TeamProvider over the root layout's query client, so
+ * moving between those areas remounts the provider; by then the cookie already
+ * names the team, and posting the switch again would only repeat the write. A
+ * new session counts as unwritten even for the same team: the cookie is bound
+ * to the session that wrote it, and readers ignore it for any other (see
+ * lib/teams/active-team-cookie). The write and its retries belong to the page,
+ * not to a provider, so remounting one while a write is pending loses neither.
  */
-const cookieSyncedTeam = new WeakMap<QueryClient, string>()
+interface ActiveTeamCookieWrite {
+  key: string
+  failed: boolean
+  result: Promise<boolean>
+  retryTimer?: ReturnType<typeof setTimeout>
+}
 
-// Fetch function for teams (can be reused for prefetching)
+const activeTeamCookieWrites = new WeakMap<QueryClient, ActiveTeamCookieWrite>()
+
+/**
+ * The switch request each query client's page sent last. A response sets the
+ * cookie when it arrives, so two requests on the wire at once could answer in
+ * either order and leave the cookie on the team chosen first: each request waits
+ * for the one before it to answer.
+ */
+const activeTeamCookieRequests = new WeakMap<QueryClient, Promise<unknown>>()
+
+/** A failed write is tried this many more times, one second further apart each time. */
+const ACTIVE_TEAM_COOKIE_RETRIES = 3
+
+/**
+ * A request that never answers would hold back every later one, so it is
+ * aborted after this long. The browser discards the response of an aborted
+ * request, cookie included, so its late answer cannot overwrite a later choice.
+ */
+const ACTIVE_TEAM_REQUEST_TIMEOUT_MS = 10_000
+
+function postActiveTeam(teamId: string): Promise<boolean> {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), ACTIVE_TEAM_REQUEST_TIMEOUT_MS)
+  return fetch('/api/v1/teams/switch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ teamId }),
+    signal: controller.signal
+  })
+    .then(response => response.ok, error => {
+      console.error('Failed to sync team cookie:', error)
+      return false
+    })
+    .finally(() => clearTimeout(timeout))
+}
+
+/**
+ * Write `teamId` to this session's activeTeamId cookie through the API, or join
+ * the write already made or in progress for them. Resolves to whether it
+ * succeeded.
+ */
+function writeActiveTeamCookie(queryClient: QueryClient, sessionKey: string, teamId: string): Promise<boolean> {
+  const key = `${sessionKey}:${teamId}`
+  const previous = activeTeamCookieWrites.get(queryClient)
+  if (previous?.key === key && !previous.failed) return previous.result
+  clearTimeout(previous?.retryTimer)
+
+  const write: ActiveTeamCookieWrite = { key, failed: false, result: Promise.resolve(false) }
+  const isCurrent = () => activeTeamCookieWrites.get(queryClient) === write
+  const attempt = (retry: number): Promise<boolean> => {
+    const request = (activeTeamCookieRequests.get(queryClient) ?? Promise.resolve())
+      // Replaced while waiting: the newer write sends its own team
+      .then(() => (isCurrent() ? postActiveTeam(teamId) : false))
+    activeTeamCookieRequests.set(queryClient, request)
+    return request.then(ok => {
+      // Done, or replaced by a write for another session or team
+      if (ok || !isCurrent()) return ok
+      if (retry >= ACTIVE_TEAM_COOKIE_RETRIES) {
+        write.failed = true
+        return false
+      }
+      return new Promise<boolean>(resolve => {
+        write.retryTimer = setTimeout(() => resolve(attempt(retry + 1)), 1000 * (retry + 1))
+      })
+    })
+  }
+  activeTeamCookieWrites.set(queryClient, write)
+  write.result = attempt(0)
+  return write.result
+}
+
+/** Drop the write a page made for a session that ended, and any retry it had pending. */
+function forgetActiveTeamCookieWrite(queryClient: QueryClient) {
+  clearTimeout(activeTeamCookieWrites.get(queryClient)?.retryTimer)
+  activeTeamCookieWrites.delete(queryClient)
+}
+
+/** Every page the teams API lists is read, up to this many. */
+const MAX_TEAM_PAGES = 50
+
+// Fetch function for teams (can be reused for prefetching). It reads every page:
+// the team a user joined first, which the server falls back to, need not be on
+// the first one.
 export async function fetchUserTeams(): Promise<UserTeamMembership[]> {
-  const response = await fetch('/api/v1/teams')
-  const data = await response.json()
+  const rows: any[] = []
+  for (let page = 1; page <= MAX_TEAM_PAGES; page++) {
+    const response = await fetch(page === 1 ? '/api/v1/teams' : `/api/v1/teams?page=${page}`)
+    const data = await response.json()
 
-  if (!response.ok || !data.data) {
-    throw new Error('Failed to fetch teams')
+    if (!response.ok || !data.data) {
+      throw new Error('Failed to fetch teams')
+    }
+
+    rows.push(...data.data)
+    if (!data.info?.hasNextPage || data.data.length === 0) break
   }
 
+  // A team created while paging can shift the pages and list another twice
+  const seen = new Set<string>()
+  const uniqueRows: any = rows.filter((t: any) => !seen.has(t.id) && Boolean(seen.add(t.id)))
+
   // Transform API response to UserTeamMembership format
-  return data.data.map((t: any) => ({
+  return uniqueRows.map((t: any) => ({
     team: {
       id: t.id,
       name: t.name,
@@ -61,7 +162,9 @@ export async function fetchUserTeams(): Promise<UserTeamMembership[]> {
 }
 
 export function TeamProvider({ children }: { children: ReactNode }) {
-  const { user, isLoading: authLoading } = useAuth()
+  const { user, session, isLoading: authLoading } = useAuth()
+  // The session the cookie write belongs to (see activeTeamCookieWrites)
+  const sessionKey = session?.session?.id ?? user?.id ?? ''
   const router = useRouter()
   const queryClient = useQueryClient()
   const [currentTeam, setCurrentTeam] = useState<Team | null>(null)
@@ -78,7 +181,9 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     isLoading: teamsLoading,
     refetch: refetchTeams
   } = useQuery<UserTeamMembership[]>({
-    queryKey: TEAMS_QUERY_KEY,
+    // Per user: the root layout's query client outlives a sign-out that happens
+    // while no TeamProvider is mounted, and one user's teams must not reach the next.
+    queryKey: [...TEAMS_QUERY_KEY, user?.id ?? null],
     queryFn: fetchUserTeams,
     enabled: !!user && !authLoading,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes - prevents refetch on navigation
@@ -106,6 +211,12 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Guard: don't run during logout (user null but stale TanStack cache)
     if (!user) return
+
+    // Write the team to this session's activeTeamId cookie, unless this page
+    // already did (see activeTeamCookieWrites)
+    const syncCookie = (teamId: string) => {
+      if (typeof window !== 'undefined') void writeActiveTeamCookie(queryClient, sessionKey, teamId)
+    }
 
     // User has genuinely zero team memberships (query resolved, not just
     // still loading) — clear any stale currentTeam/localStorage instead of
@@ -136,7 +247,13 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     // on the very first run currentTeam is still null even when a stored
     // id already resolves to a valid membership, so gating on the stored
     // id here would skip the initial sync entirely.
-    if (currentTeam && userTeams.some(t => t.team.id === currentTeam.id)) return
+    if (currentTeam && userTeams.some(t => t.team.id === currentTeam.id)) {
+      // The cookie is bound to the session that wrote it, so a new session (a
+      // sign-in, a password change that revoked the others) writes it again for
+      // the same team.
+      syncCookie(currentTeam.id)
+      return
+    }
 
     // Determine active team (priority: localStorage > earliest-joined team).
     const storedTeamId = typeof window !== 'undefined' ? localStorage.getItem('activeTeamId') : null
@@ -166,26 +283,10 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('activeTeamId', activeTeam.team.id)
       }
 
-      // Sync cookie via API for server-side access, unless this page already
-      // wrote this team to it (see cookieSyncedTeam)
-      if (typeof window !== 'undefined' && cookieSyncedTeam.get(queryClient) !== activeTeam.team.id) {
-        const teamId = activeTeam.team.id
-        cookieSyncedTeam.set(queryClient, teamId)
-        fetch('/api/v1/teams/switch', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ teamId })
-        })
-          .then(response => {
-            if (!response.ok && cookieSyncedTeam.get(queryClient) === teamId) cookieSyncedTeam.delete(queryClient)
-          })
-          .catch(err => {
-            if (cookieSyncedTeam.get(queryClient) === teamId) cookieSyncedTeam.delete(queryClient)
-            console.error('Failed to sync team cookie:', err)
-          })
-      }
+      // Sync cookie via API for server-side access
+      syncCookie(activeTeam.team.id)
     }
-  }, [user, userTeams, currentTeam, teamsLoading, queryClient])
+  }, [user, userTeams, currentTeam, teamsLoading, queryClient, sessionKey])
 
   // Clear localStorage and TanStack Query cache when user logs out
   // IMPORTANT: Only run when auth has finished loading (!authLoading) to distinguish
@@ -201,15 +302,19 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem('activeTeamId')
       }
       // Clear all TanStack Query cache to prevent stale data leaking to next user
-      cookieSyncedTeam.delete(queryClient)
+      forgetActiveTeamCookieWrite(queryClient)
       queryClient.clear()
     }
   }, [user, authLoading, queryClient])
 
   // Handle modal completion - refresh router and invalidate cache
-  const handleSwitchComplete = useCallback(() => {
+  const handleSwitchComplete = useCallback(async () => {
     setSwitchModalOpen(false)
     setIsSwitching(false)
+
+    // Reload once the cookie names the new team; reloading earlier renders the
+    // page on the server in the previous one
+    await activeTeamCookieWrites.get(queryClient)?.result
 
     // Clear all TanStack Query cache to ensure fresh data for the new team
     queryClient.clear()
@@ -252,18 +357,12 @@ export function TeamProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('activeTeamId', teamId)
     }
 
-    // Update session on server
-    try {
-      await fetch('/api/v1/teams/switch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ teamId })
-      })
-      cookieSyncedTeam.set(queryClient, teamId)
-    } catch (error) {
-      console.error('Failed to update team context on server:', error)
+    // Update the team on the server. The sync effect that runs as currentTeam
+    // changes joins this same write instead of posting it again.
+    if (!(await writeActiveTeamCookie(queryClient, sessionKey, teamId))) {
+      console.error('Failed to update team context on server')
     }
-  }, [userTeams, currentTeam, queryClient])
+  }, [userTeams, currentTeam, queryClient, sessionKey])
 
   // Refresh teams list - invalidate and refetch.
   //

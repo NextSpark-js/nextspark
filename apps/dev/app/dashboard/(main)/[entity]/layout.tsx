@@ -8,14 +8,17 @@
  *
  * Flow:
  * 1. User navigates to /dashboard/companies/create
- * 2. Browser sends activeTeamId cookie automatically
- * 3. This layout reads cookie and checks permission via checkPermission()
+ * 2. The proxy forwards the session's active team, taken from the
+ *    activeTeamId cookie only when this session wrote it; without one, the
+ *    user's default team is checked
+ * 3. This layout takes that team (getDashboardTeamId) and checks permission via checkPermission()
  * 4. If denied, redirects to /dashboard/permission-denied
  * 5. If allowed, renders the page (children)
  */
-import { headers, cookies } from 'next/headers'
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { checkPermission } from '@nextsparkjs/core/lib/permissions/check'
+import { getDashboardTeamId } from '@nextsparkjs/core/lib/teams/dashboard-team'
 import { isValidPermission } from '@nextsparkjs/core/lib/permissions/init'
 import type { Permission } from '@nextsparkjs/core/lib/permissions/types'
 
@@ -59,7 +62,6 @@ export default async function EntityPermissionLayout({
 }: EntityLayoutProps) {
   const { entity } = await params
   const headersList = await headers()
-  const cookieStore = await cookies()
 
   // Get pathname from middleware header
   const pathname = headersList.get('x-pathname') || ''
@@ -67,12 +69,12 @@ export default async function EntityPermissionLayout({
   // Get userId from middleware header (set for all authenticated routes)
   const userId = headersList.get('x-user-id')
 
-  // Get teamId from cookie (set by TeamContext and /api/v1/teams/switch)
-  const teamId = cookieStore.get('activeTeamId')?.value
+  // The team this session chose, or the user's default team until it has one
+  const teamId = userId ? await getDashboardTeamId(headersList, userId) : null
 
   // Skip validation if missing required data
   // - No userId: middleware will redirect to login (shouldn't happen for dashboard routes)
-  // - No teamId: user hasn't selected a team yet, let page handle it
+  // - No teamId: the user belongs to no team, let page handle it
   if (!userId || !teamId) {
     console.log('[EntityPermissionLayout] Skipping validation - missing data:', {
       entity,

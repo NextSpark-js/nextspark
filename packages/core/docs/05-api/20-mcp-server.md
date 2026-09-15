@@ -132,8 +132,7 @@ only**; session cookies are rejected.
 2. Configure your MCP client (e.g. Claude Desktop's `claude_desktop_config.json`, or a custom
    `mcp remote` connector) to POST to `https://your-app.com/api/mcp` with:
    - `Authorization: Bearer sk_live_...`
-   - `x-team-id: <team-id>` (optional — falls back to the `activeTeamId` cookie or the user's
-     default team; required if the key's user belongs to more than one team and you want a
+   - `x-team-id: <team-id>` (optional — falls back to the user's default team; required if the key's user belongs to more than one team and you want a
      specific one).
 
 `GET` and `DELETE` on `/api/mcp` return `405` — this server never had a session to resume or

@@ -1,6 +1,8 @@
 'use client'
 
+import { useContext } from 'react'
 import { useRouter } from 'next/navigation'
+import { QueryClientContext } from '@tanstack/react-query'
 import { authClient } from '../lib/auth-client'
 import type { SessionUser } from '../lib/auth'
 import { useOrigin } from './useOrigin'
@@ -32,6 +34,12 @@ export function useAuth() {
   const session = authClient.useSession()
   const origin = useOrigin()
   const { saveAuthMethod } = useLastAuthMethod()
+  const queryClient = useContext(QueryClientContext)
+
+  // Cached queries (teams, entity lists, the subscription) belong to whoever was
+  // signed in. The root layout's query client outlives the dashboard that used
+  // to clear it on logout, so it is emptied whenever someone signs in or out.
+  const forgetSignedInData = () => queryClient?.clear()
   
   const handleSignIn = async ({ email, password, redirectTo }: { email: string; password: string; redirectTo?: string }) => {
     const { data, error } = await authClient.signIn.email({
@@ -46,6 +54,7 @@ export function useAuth() {
     if (data) {
       // Save auth method only when login is truly successful
       saveAuthMethod('email')
+      forgetSignedInData()
       router.push(safeCallbackPath(redirectTo) ?? '/dashboard')
     }
 
@@ -84,6 +93,7 @@ export function useAuth() {
       localStorage.removeItem('activeTeamId')
     }
     await authClient.signOut()
+    forgetSignedInData()
     router.push('/login')
   }
 
@@ -117,6 +127,7 @@ export function useAuth() {
     if (data) {
       // OTP is an email-based method for the "last used" badge purposes
       saveAuthMethod('email')
+      forgetSignedInData()
       router.push(safeCallbackPath(redirectTo) ?? '/dashboard')
     }
 

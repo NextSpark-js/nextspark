@@ -113,7 +113,7 @@ const mockSession = {
 function setupAuthenticatedUser() {
   mockHeaders.mockReturnValue(new Headers())
   mockCookies.mockReturnValue({
-    get: jest.fn().mockReturnValue({ value: 'team-789' }),
+    get: jest.fn().mockReturnValue({ value: 'session-123:team-789' }),
   })
   mockGetTypedSession.mockResolvedValue(mockSession)
   mockCheckPermission.mockResolvedValue(true)
@@ -138,7 +138,7 @@ function setupNoTeamSelected() {
 function setupPermissionDenied() {
   mockHeaders.mockReturnValue(new Headers())
   mockCookies.mockReturnValue({
-    get: jest.fn().mockReturnValue({ value: 'team-789' }),
+    get: jest.fn().mockReturnValue({ value: 'session-123:team-789' }),
   })
   mockGetTypedSession.mockResolvedValue(mockSession)
   mockCheckPermission.mockResolvedValue(false)
@@ -635,5 +635,22 @@ describe('Entity Server Actions', () => {
       )
       consoleSpy.mockRestore()
     })
+  })
+})
+
+describe('entity actions active team cookie', () => {
+  it.each([
+    ['another session', 'session-other:team-789'],
+    ['no session in its value', 'team-789'],
+  ])('select no team when the cookie has %s', async (_label, value) => {
+    mockHeaders.mockReturnValue(new Headers())
+    mockCookies.mockReturnValue({ get: jest.fn().mockReturnValue({ value }) })
+    mockGetTypedSession.mockResolvedValue(mockSession)
+    mockCheckPermission.mockResolvedValue(true)
+
+    const result = await listEntities('test_entities')
+
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toBe('No active team selected')
   })
 })

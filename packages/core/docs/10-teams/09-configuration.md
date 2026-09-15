@@ -295,15 +295,11 @@ export const themeAppConfig: DeepPartial<AppConfig> = {
 
 ### Session Context
 
-The middleware adds team context to requests:
+Server code learns the active team from the `activeTeamId` cookie, which `POST /api/v1/teams/switch` sets to `<session id>:<team id>` for a signed-in browser (an API key gets `400 SESSION_REQUIRED` and sends `x-team-id` instead):
 
-```typescript
-// middleware.ts
-const activeTeamId = cookies.get('activeTeamId')?.value
-
-// Add to headers for API routes
-headers.set('x-team-id', activeTeamId)
-```
+- On protected routes the proxy forwards it as `x-active-team-id`, only when the cookie belongs to the verified session. The dashboard layouts check permissions in that team, or in the user's default team (the earliest joined) while the session has none (`getDashboardTeamId`).
+- API routes use `resolveTeamContext`: the `x-team-id` header, then the cookie of this session, then the default team.
+- Server actions use the cookie of this session, and answer "No active team selected" without it.
 
 ## Mobile Navigation
 
