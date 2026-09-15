@@ -6,10 +6,12 @@
  * 1. app.config.ts extra.apiUrl
  * 2. EXPO_PUBLIC_API_URL environment variable
  * 3. Auto-detect from Expo dev server
- * 4. Fallback to localhost:3000
+ * 4. Fallback to localhost:3000 (10.0.2.2 on the Android emulator, which
+ *    routes that address to the host machine's localhost)
  */
 
 import Constants from 'expo-constants'
+import { Platform } from 'react-native'
 import * as Storage from '../lib/storage'
 import { clearNativeCookies } from '../lib/cookies'
 import { ApiError, type RequestConfig } from './client.types'
@@ -22,7 +24,7 @@ import type { Team, User } from './core/types'
  * 1. app.config.ts > extra > apiUrl (explicit configuration)
  * 2. EXPO_PUBLIC_API_URL environment variable
  * 3. Auto-detect from Expo dev server hostUri (development)
- * 4. Fallback to http://localhost:3000
+ * 4. Fallback to http://localhost:3000 (http://10.0.2.2:3000 on Android)
  *
  * @returns The resolved API URL
  * @example
@@ -50,8 +52,10 @@ export function getApiUrl(): string {
     return `http://${host}:3000`
   }
 
-  // 4. Fallback for local development
-  return 'http://localhost:3000'
+  // 4. Fallback for local development. The Android emulator's own
+  // 'localhost' is the emulator itself, not the host machine: 10.0.2.2 is
+  // the alias the emulator maps to the host's loopback interface.
+  return `http://${Platform.OS === 'android' ? '10.0.2.2' : 'localhost'}:3000`
 }
 
 const API_URL = getApiUrl()

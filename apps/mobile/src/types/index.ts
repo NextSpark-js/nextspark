@@ -4,11 +4,11 @@
  * Re-exports all types from their canonical locations for backward compatibility.
  */
 
-// Re-export API types
-export type { PaginatedResponse, SingleResponse } from '../api/client.types'
-export { ApiError } from '../api/client.types'
+// Re-export API types from package
+export type { PaginatedResponse, SingleResponse } from '@nextsparkjs/mobile'
+export { ApiError } from '@nextsparkjs/mobile'
 
-// Re-export core types (auth, user, team)
+// Re-export core types (auth, user, team) from package
 export type {
   User,
   Team,
@@ -16,7 +16,7 @@ export type {
   LoginResponse,
   SessionResponse,
   TeamsResponse,
-} from '../api/core/types'
+} from '@nextsparkjs/mobile'
 
 // Re-export entity types
 export type {

@@ -8,11 +8,15 @@
  * does not ship, so a pass on apps/mobile alone says nothing about the
  * template. This script:
  *
- *   1. installs apps/mobile on its own (it is outside the pnpm workspace),
- *   2. type-checks apps/mobile,
- *   3. assembles the template in a temp directory, checks its dependency
+ *   1. compares apps/mobile/src against packages/mobile/templates/src file
+ *      by file, so the copy cannot drift from the package silently again,
+ *   2. installs apps/mobile on its own (it is outside the pnpm workspace),
+ *   3. type-checks apps/mobile,
+ *   4. assembles the template in a temp directory, checks its dependency
  *      declarations and type-checks it, side-effect imports included,
- *   4. runs the apps/mobile Jest suite.
+ *   5. runs the packages/mobile Jest suite (the client, the entity factory,
+ *      the providers - what apps/mobile only re-exports),
+ *   6. runs the apps/mobile Jest suite.
  *
  * Both type-checks compile packages/mobile and packages/ui from source, and
  * their imports resolve from the root install, so `pnpm install` has to run at
@@ -48,6 +52,13 @@ const MOBILE_APP_DIR = join(REPO_ROOT, 'apps/mobile')
 const MOBILE_PACKAGE_DIR = join(REPO_ROOT, 'packages/mobile')
 const UI_PACKAGE_DIR = join(REPO_ROOT, 'packages/ui')
 const TEMPLATES_DIR = join(MOBILE_PACKAGE_DIR, 'templates')
+const MOBILE_SRC_DIR = join(MOBILE_APP_DIR, 'src')
+const TEMPLATE_SRC_DIR = join(TEMPLATES_DIR, 'src')
+
+// Paths (relative to src/) where apps/mobile/src is allowed to keep its own
+// copy instead of importing @nextsparkjs/mobile. Empty: apps/mobile/src
+// ships identical to the template today.
+const MOBILE_SRC_EXCEPTIONS = new Set([])
 
 // What sync-mobile-templates.ts leaves out when it copies apps/mobile/app.
 const SYNC_EXCLUDES = new Set(['.DS_Store', 'node_modules', '.expo', '.turbo'])
@@ -197,6 +208,61 @@ function templateDependencyProblems(dir, ts) {
   return problems
 }
 
+/** Which of these absolute paths git ignores (untracked build output, .DS_Store, ...). */
+function gitIgnoredPaths(absolutePaths) {
+  if (absolutePaths.length === 0) return new Set()
+  const result = spawnSync('git', ['check-ignore', '--stdin'], {
+    cwd: REPO_ROOT,
+    input: absolutePaths.join('\n'),
+    encoding: 'utf8',
+  })
+  return new Set(result.stdout.split('\n').filter(Boolean))
+}
+
+function relativeFiles(dir) {
+  const absolutePaths = []
+  const walk = (current) => {
+    for (const entry of readdirSync(current, { withFileTypes: true })) {
+      const path = join(current, entry.name)
+      if (entry.isDirectory()) walk(path)
+      else absolutePaths.push(path)
+    }
+  }
+  walk(dir)
+  const ignored = gitIgnoredPaths(absolutePaths)
+  const files = new Set()
+  for (const path of absolutePaths) {
+    if (!ignored.has(path)) files.add(relative(dir, path))
+  }
+  return files
+}
+
+/**
+ * apps/mobile/src is the development app's own copy of what
+ * @nextsparkjs/mobile ships (see the file header). Comparing both trees file
+ * by file keeps that copy from drifting from the package silently.
+ */
+function verifyMobileSrcMatchesTemplate() {
+  const appFiles = relativeFiles(MOBILE_SRC_DIR)
+  const templateFiles = relativeFiles(TEMPLATE_SRC_DIR)
+  const problems = []
+
+  for (const file of new Set([...appFiles, ...templateFiles])) {
+    if (MOBILE_SRC_EXCEPTIONS.has(file)) continue
+    const inApp = appFiles.has(file)
+    const inTemplate = templateFiles.has(file)
+    if (inApp && !inTemplate) {
+      problems.push(`apps/mobile/src/${file} has no counterpart in packages/mobile/templates/src`)
+    } else if (!inApp && inTemplate) {
+      problems.push(`packages/mobile/templates/src/${file} has no counterpart in apps/mobile/src`)
+    } else if (readFileSync(join(MOBILE_SRC_DIR, file), 'utf8') !== readFileSync(join(TEMPLATE_SRC_DIR, file), 'utf8')) {
+      problems.push(`apps/mobile/src/${file} differs from packages/mobile/templates/src/${file}`)
+    }
+  }
+  for (const problem of problems) console.log(`  ${RED}${problem}${NC}`)
+  return problems.length === 0
+}
+
 function verifyTemplate() {
   const ts = createRequire(join(MOBILE_APP_DIR, 'package.json'))('typescript')
   const dir = mkdtempSync(join(tmpdir(), 'nextspark-mobile-template-'))
@@ -230,10 +296,12 @@ function main() {
   }
 
   const steps = [
+    ['apps/mobile/src matches packages/mobile/templates/src', verifyMobileSrcMatchesTemplate],
     ['Install apps/mobile (isolated, frozen lockfile)', () =>
       exec('pnpm', ['install', '--ignore-workspace', '--frozen-lockfile'], MOBILE_APP_DIR)],
     ['Typecheck apps/mobile', () => exec('pnpm', ['run', 'typecheck'], MOBILE_APP_DIR)],
     ['Typecheck the shipped template (packages/mobile/templates + apps/mobile/app)', verifyTemplate],
+    ['Test @nextsparkjs/mobile (jest)', () => exec('pnpm', ['run', 'test'], MOBILE_PACKAGE_DIR)],
     ['Test apps/mobile (jest)', () => exec('pnpm', ['run', 'test'], MOBILE_APP_DIR)],
   ]
   for (const [label, run] of steps) {

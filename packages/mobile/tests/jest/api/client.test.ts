@@ -175,3 +175,26 @@ describe('ApiClient', () => {
     })
   })
 })
+
+// Overrides the expo-constants/react-native mocks for the rest of the file,
+// so these run last.
+describe('getApiUrl fallback host', () => {
+  it('falls back to localhost when there is no dev server host', () => {
+    jest.resetModules()
+    jest.doMock('expo-constants', () => ({ expoConfig: { extra: {}, hostUri: null } }))
+    const { getApiUrl: getApiUrlWithoutHost } = require('../../../src/api/client') as typeof import('../../../src/api/client')
+
+    expect(getApiUrlWithoutHost()).toBe('http://localhost:3000')
+  })
+
+  it('falls back to the Android emulator alias for the host machine when there is no dev server host', () => {
+    jest.resetModules()
+    jest.doMock('expo-constants', () => ({ expoConfig: { extra: {}, hostUri: null } }))
+    jest.doMock('react-native', () => ({
+      Platform: { OS: 'android', select: (obj: { android?: unknown }) => obj.android },
+    }))
+    const { getApiUrl: getApiUrlAndroid } = require('../../../src/api/client') as typeof import('../../../src/api/client')
+
+    expect(getApiUrlAndroid()).toBe('http://10.0.2.2:3000')
+  })
+})

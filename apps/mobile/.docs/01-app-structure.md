@@ -114,7 +114,7 @@ apps/mobile-dev/
 │  apiClient singleton with auth headers                          │
 ├─────────────────────────────────────────────────────────────────┤
 │                    NEXTSPARK BACKEND                            │
-│  http://localhost:5173/api/v1/*                                 │
+│  http://localhost:3000/api/v1/*                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -167,12 +167,12 @@ The app uses Expo Router's file-based routing with route groups:
 
 ```bash
 # .env
-EXPO_PUBLIC_API_URL=http://localhost:5173
+EXPO_PUBLIC_API_URL=http://localhost:3000
 ```
 
 For physical device testing, use your machine's IP:
 ```bash
-EXPO_PUBLIC_API_URL=http://192.168.x.x:5173
+EXPO_PUBLIC_API_URL=http://192.168.x.x:3000
 ```
 
 ## Color Scheme

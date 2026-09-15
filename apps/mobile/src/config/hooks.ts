@@ -3,7 +3,7 @@
  */
 
 import { useMemo } from 'react'
-import { useAuth } from '../providers/AuthProvider'
+import { useAuth } from '@nextsparkjs/mobile'
 import { canDoAction, PERMISSIONS_CONFIG } from './permissions.config'
 
 /**

@@ -14,7 +14,7 @@ import {
   ScrollView,
 } from 'react-native'
 import { Colors } from '../../constants/colors'
-import { useAuth } from '../../providers/AuthProvider'
+import { useAuth } from '@nextsparkjs/mobile'
 import { Button } from '../ui'
 import type { Team } from '../../types'
 

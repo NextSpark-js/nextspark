@@ -1,17 +1,15 @@
 /**
  * API Configuration
+ *
+ * baseUrl reuses the client's own host resolution (see getApiUrl in
+ * @nextsparkjs/mobile), so a custom call made through this config hits the
+ * same host as every entity API call.
  */
 
-import Constants from 'expo-constants'
-
-const API_URL =
-  Constants.expoConfig?.extra?.apiUrl ||
-  (Constants.expoConfig?.hostUri
-    ? `http://${Constants.expoConfig.hostUri.split(':')[0]}:5173`
-    : 'http://localhost:5173')
+import { getApiUrl } from '@nextsparkjs/mobile'
 
 export const API_CONFIG = {
-  baseUrl: API_URL,
+  baseUrl: getApiUrl(),
   endpoints: {
     auth: '/api/auth',
     tasks: '/api/v1/tasks',

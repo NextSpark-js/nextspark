@@ -50,7 +50,7 @@ In `app.config.ts`:
 export default {
   // ...
   extra: {
-    apiUrl: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5173',
+    apiUrl: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000',
   },
 }
 ```
@@ -275,12 +275,12 @@ The API URL is resolved in this order:
 1. **app.config.ts** `extra.apiUrl`
 2. **Environment variable** `EXPO_PUBLIC_API_URL`
 3. **Auto-detect** from Expo dev server
-4. **Fallback** to `http://localhost:5173`
+4. **Fallback** to `http://localhost:3000` (`http://10.0.2.2:3000` on the Android emulator)
 
 **Development:**
 ```bash
 # .env
-EXPO_PUBLIC_API_URL=http://localhost:5173
+EXPO_PUBLIC_API_URL=http://localhost:3000
 ```
 
 **Production (EAS Build):**
@@ -357,8 +357,8 @@ export function useCreateTask() {
 1. Check API URL configuration in `app.config.ts`
 2. Verify backend is running
 3. Check network connectivity
-4. On iOS simulator, use `http://localhost:5173`
-5. On Android emulator, use `http://10.0.2.2:5173`
+4. On iOS simulator, use `http://localhost:3000`
+5. On Android emulator, use `http://10.0.2.2:3000`
 
 ### Authentication not persisting
 

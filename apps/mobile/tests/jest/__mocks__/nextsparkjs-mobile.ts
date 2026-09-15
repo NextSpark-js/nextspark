@@ -1,13 +1,15 @@
 /**
- * Mock for @nextsparkjs/mobile
+ * Partial mock for @nextsparkjs/mobile
  *
- * apps/mobile is installed outside the pnpm workspace, so the real package
- * is not resolvable from its Jest run. Screens only need the auth surface,
- * which is mocked, and the one-time code validation, which has no native
- * dependencies and comes from the package source as is.
+ * Screens render standalone in these tests, outside the real AuthProvider,
+ * so only the auth surface is mocked; everything else (one-time code
+ * validation included) comes from the real package, resolved through the
+ * same moduleNameMapper Jest uses for the real module.
  */
 
-export { OTP_MIN_LENGTH, OTP_MAX_LENGTH, validateOtpCode } from '../../../../../packages/mobile/src/lib/otp'
+const actual = jest.requireActual('@nextsparkjs/mobile')
+
+export const { OTP_MIN_LENGTH, OTP_MAX_LENGTH, validateOtpCode } = actual
 
 export const mockUseAuth = {
   login: jest.fn(),

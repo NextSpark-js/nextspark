@@ -7,7 +7,7 @@
 import { View, Pressable } from "react-native";
 import { router } from "expo-router";
 import { Bell, Moon } from "lucide-react-native";
-import { useAuth } from "../../providers/AuthProvider";
+import { useAuth } from "@nextsparkjs/mobile";
 import {
   Text,
   Avatar,

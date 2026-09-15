@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from "react";
 import { View, ScrollView } from "react-native";
-import { Alert } from "@/src/lib/alert";
+import { Alert } from "@nextsparkjs/mobile";
 import type {
   Task,
   TaskStatus,
