@@ -698,9 +698,21 @@ export interface AppConfig {
   i18n: {
     supportedLocales: string[]
     defaultLocale: string
+    /**
+     * Pick each request's locale from the locale cookie, the signed-in user's
+     * language and the Accept-Language header. Default: true. With `false`, or
+     * with a single supported locale, every page renders `defaultLocale` and
+     * nothing is read from the request, so pages can be prerendered.
+     */
+    localeDetection?: boolean
     cookie: {
       name: string
       maxAge: number
+      /**
+       * Not applied: the locale cookie is always written readable, since client
+       * code rewrites it (a language switch, a sign-in, the account's language)
+       * and a script cannot replace a cookie written HttpOnly.
+       */
       httpOnly: boolean
       secure: string | boolean
       sameSite: 'lax' | 'strict' | 'none'

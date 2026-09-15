@@ -1,14 +1,15 @@
 /**
- * Get Default Theme Mode (Server-Side)
+ * Theme Settings (Server-Side)
  *
- * Priority:
- * 1. User logged in → use uiPreferences.theme from user meta
- * 2. User not logged in → use defaultMode from theme.config
+ * The theme mode the root layout starts from, taken from configuration alone:
+ * `defaultMode` and `forcedThemeRoutes` from theme.config.ts, `allowUserToggle`
+ * from app.config.ts. Nothing is read from the request, so the pages that use it
+ * can be prerendered. A visitor's own choice is next-themes' to apply from
+ * localStorage before first paint; a signed-in user's saved choice reaches a
+ * browser that has none through SessionCookieRefresher.
  */
 
-import { auth } from '../auth'
 import { ThemeService } from '../services/theme.service'
-import { headers } from 'next/headers'
 import type { ForcedThemeRoutes } from './forced-theme'
 
 type ThemeMode = 'light' | 'dark' | 'system'
@@ -35,68 +36,13 @@ export async function getThemeSettings(): Promise<ThemeSettings> {
   const allowUserToggle = appConfig?.ui?.theme?.allowUserToggle ?? true
 
   // Get base defaultMode from theme.config.ts
-  const configDefaultMode = (themeConfig?.defaultMode as ThemeMode) || 'system'
+  const defaultMode = (themeConfig?.defaultMode as ThemeMode) || 'system'
 
   // Per-route forced themes from theme.config.ts. Resolved against the current
   // pathname by the root ThemeProvider (see lib/theme/forced-theme.ts).
   const forcedThemeRoutes = themeConfig?.forcedThemeRoutes
 
-  // If user can toggle, try to get their preference
-  if (allowUserToggle) {
-    const userTheme = await getUserThemePreference()
-    if (userTheme) {
-      return { defaultMode: userTheme, allowUserToggle, forcedThemeRoutes }
-    }
-  }
-
-  return { defaultMode: configDefaultMode, allowUserToggle, forcedThemeRoutes }
-}
-
-const VALID_THEME_MODES: ThemeMode[] = ['light', 'dark', 'system']
-
-/**
- * Validate if a value is a valid ThemeMode
- */
-function isValidThemeMode(value: unknown): value is ThemeMode {
-  return typeof value === 'string' && VALID_THEME_MODES.includes(value as ThemeMode)
-}
-
-/**
- * Get user's theme preference from their profile metadata
- */
-async function getUserThemePreference(): Promise<ThemeMode | null> {
-  try {
-    // Render-time read (root layout): never let it consume the rolling session
-    // renewal, since cookies cannot be written here. See lib/locale.ts.
-    const session = await auth.api.getSession({
-      headers: await headers(),
-      query: { disableRefresh: true },
-    })
-
-    if (session?.user?.id) {
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173'
-      const response = await fetch(`${baseUrl}/api/user/profile?includeMeta=true`, {
-        headers: {
-          cookie: (await headers()).get('cookie') || '',
-        },
-        cache: 'no-store'
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        const theme = data.meta?.uiPreferences?.theme
-        if (isValidThemeMode(theme)) {
-          return theme
-        }
-      }
-    }
-  } catch (error) {
-    // Silently fail during static generation
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('[getThemeSettings] Failed to fetch user preference:', error)
-    }
-  }
-  return null
+  return { defaultMode, allowUserToggle, forcedThemeRoutes }
 }
 
 /**

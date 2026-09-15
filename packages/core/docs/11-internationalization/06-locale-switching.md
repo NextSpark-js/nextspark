@@ -10,78 +10,35 @@ The locale switching system integrates with the authentication system, database 
 
 ## Locale Detection Priority
 
-The application determines the active locale using a **cascading detection strategy** with the following priority order:
+The application determines the active locale once per request, with `getUserLocale()` in `core/lib/locale.ts`:
 
 ```text
-1. Database User Preference (authenticated users)
+0. Fixed locale: a single supported locale, or i18n.localeDetection: false
+   → always defaultLocale, and nothing is read from the request
    ↓
-2. Cookie (NEXT_LOCALE)
+1. Locale cookie (I18N_CONFIG.cookie.name, `locale` by default)
    ↓
-3. Accept-Language Header (browser preference)
+2. Signed-in user's language, read from the session
+   (only when the request carries a session cookie)
    ↓
-4. Default Locale (fallback: 'en')
+3. Accept-Language header (by quality, full tag before language)
+   ↓
+4. Default locale
 ```
 
-### Detection Implementation
+What this buys:
 
-Located in `core/lib/locale.ts`:
+- **A page an anonymous visitor opens reads neither the session nor the database.** The session is only read when the request carries a session cookie, and the user's language comes from the session itself (`language` is a Better Auth user field), not from a separate query.
+- **One resolution per request.** `getUserLocale()` is wrapped in React `cache()`; the root layout, the i18n request config and every server translation share the result.
+- **An app with a fixed locale can be prerendered.** With one supported locale, or `i18n.localeDetection: false` in `app.config.ts`, nothing is read from the request.
 
-```typescript
-import { cookies, headers } from 'next/headers'
-import { I18N_CONFIG, type SupportedLocale } from '@/core/lib/config'
-import { auth } from '@/core/lib/auth'
-import { queryOne } from '@/core/lib/db'
+### Keeping the cookie in line with the account
 
-export async function getUserLocale(): Promise<SupportedLocale> {
-  // 1. Check user profile from database (highest priority)
-  try {
-    const sessionHeaders = await headers()
-    const session = await auth.api.getSession({ headers: sessionHeaders })
+The cookie comes first, so it has to follow the account:
 
-    if (session?.user?.id) {
-      const user = await queryOne<{ language: string }>(
-        'SELECT language FROM "users" WHERE id = $1',
-        [session.user.id]
-      )
-
-      if (user?.language && I18N_CONFIG.supportedLocales.includes(user.language as SupportedLocale)) {
-        return user.language as SupportedLocale
-      }
-    }
-  } catch (error) {
-    // Silently fail and continue to next detection method
-  }
-
-  // 2. Check cookie
-  try {
-    const cookieStore = await cookies()
-    const cookieLocale = cookieStore.get(I18N_CONFIG.cookie.name)?.value
-
-    if (cookieLocale && I18N_CONFIG.supportedLocales.includes(cookieLocale as SupportedLocale)) {
-      return cookieLocale as SupportedLocale
-    }
-  } catch (error) {
-    // Silently fail during static generation
-  }
-
-  // 3. Check Accept-Language header
-  try {
-    const headersList = await headers()
-    const acceptLanguage = headersList.get('accept-language')
-    if (acceptLanguage) {
-      const preferredLocale = acceptLanguage.split(',')[0].split('-')[0] as SupportedLocale
-      if (I18N_CONFIG.supportedLocales.includes(preferredLocale)) {
-        return preferredLocale
-      }
-    }
-  } catch (error) {
-    // Silently fail during static generation
-  }
-
-  // 4. Default to configured default locale
-  return I18N_CONFIG.defaultLocale
-}
-```
+- Changing the language in the profile writes it (`setUserLocaleClient`) and reloads.
+- Signing in with email or a one-time code writes it with the account's language (`useAuth`).
+- `<SessionCookieRefresher />` (root layout) compares every session it reads with the cookie. When the account's language changed elsewhere (another device, an admin), it rewrites the cookie and refreshes the page if it was rendered in another language.
 
 ---
 
@@ -105,7 +62,8 @@ export async function setUserLocale(locale: string) {
   
   cookieStore.set(cookieConfig.name, locale, {
     expires: new Date(Date.now() + cookieConfig.maxAge),
-    httpOnly: cookieConfig.httpOnly,
+    // Always readable: client code rewrites this cookie
+    httpOnly: false,
     secure: cookieConfig.secure === 'auto' 
       ? process.env.NODE_ENV === 'production' 
       : cookieConfig.secure,

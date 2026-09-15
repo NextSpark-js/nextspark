@@ -37,7 +37,8 @@ const mockUseAuth = {
 }
 
 jest.mock('@/core/hooks/useAuth', () => ({
-  useAuth: () => mockUseAuth
+  useAuth: () => mockUseAuth,
+  useAuthActions: () => mockUseAuth,
 }))
 
 // Mock useLastAuthMethod hook

@@ -1,7 +1,7 @@
 "use client";
 
 import { newPasswordSchema, type NewPasswordFormData } from "@nextsparkjs/core/lib/validation";
-import { useAuth } from "@nextsparkjs/core/hooks/useAuth";
+import { useAuthActions } from "@nextsparkjs/core/hooks/useAuth";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   AlertCircle,
@@ -24,7 +24,7 @@ import { sel } from '@nextsparkjs/core/selectors'
 function ResetPasswordContent() {
   const searchParams = useSearchParams()!;
   const token = searchParams.get("token") || "";
-  const { updatePassword } = useAuth();
+  const { updatePassword } = useAuthActions();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

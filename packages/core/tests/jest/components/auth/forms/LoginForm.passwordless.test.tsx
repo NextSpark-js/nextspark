@@ -13,8 +13,7 @@ const mockGoogleSignIn = jest.fn<(...args: any[]) => Promise<any>>()
 const mockSendOtp = jest.fn<(...args: any[]) => Promise<any>>()
 const mockSignInWithOtp = jest.fn<(...args: any[]) => Promise<any>>()
 
-jest.mock('@/core/hooks/useAuth', () => ({
-  useAuth: () => ({
+const mockAuthHook = () => ({
     signIn: mockSignIn,
     googleSignIn: mockGoogleSignIn,
     sendOtp: mockSendOtp,
@@ -22,7 +21,11 @@ jest.mock('@/core/hooks/useAuth', () => ({
     user: null,
     session: null,
     isLoading: false,
-  }),
+  })
+
+jest.mock('@/core/hooks/useAuth', () => ({
+  useAuth: () => mockAuthHook(),
+  useAuthActions: () => mockAuthHook(),
 }))
 
 jest.mock('@/core/hooks/useLastAuthMethod', () => ({

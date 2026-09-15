@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useAuth } from '../../../hooks/useAuth'
+import { useSessionHint } from '../../../hooks/useSessionHint'
 import { Button } from '../../ui/button'
 import { ThemeToggle } from '../misc/ThemeToggle'
 import { Menu, X } from 'lucide-react'
@@ -11,11 +12,96 @@ import { sel } from '../../../lib/test'
 import { useTranslations } from 'next-intl'
 import { APP_NAME } from '../../../lib/config'
 
-export function PublicNavbar() {
+type AuthActionsLayout = 'desktop' | 'mobile'
+
+interface AuthActionsProps {
+  layout: AuthActionsLayout
+  onNavigate?: () => void
+}
+
+function AuthActionsSkeleton({ layout }: { layout: AuthActionsLayout }) {
+  return layout === 'desktop' ? (
+    <div className="flex gap-2">
+      <div className="h-9 w-16 bg-muted animate-pulse rounded-md"></div>
+      <div className="h-9 w-20 bg-muted animate-pulse rounded-md"></div>
+    </div>
+  ) : (
+    <div className="flex flex-col space-y-2">
+      <div className="h-9 bg-muted animate-pulse rounded-md"></div>
+      <div className="h-9 bg-muted animate-pulse rounded-md"></div>
+    </div>
+  )
+}
+
+function SignedOutActions({ layout, onNavigate }: AuthActionsProps) {
+  const tHome = useTranslations('home')
+  return layout === 'desktop' ? (
+    <>
+      <Button variant="ghost" asChild data-cy={sel('public.navbar.loginButton')}>
+        <Link href="/login">
+          {tHome('auth.signIn')}
+        </Link>
+      </Button>
+      <Button asChild data-cy={sel('public.navbar.signupButton')}>
+        <Link href="/signup">
+          {tHome('auth.createAccount')}
+        </Link>
+      </Button>
+    </>
+  ) : (
+    <>
+      <Button variant="ghost" asChild className="w-full">
+        <Link href="/login" onClick={onNavigate}>
+          {tHome('auth.signIn')}
+        </Link>
+      </Button>
+      <Button asChild className="w-full">
+        <Link href="/signup" onClick={onNavigate}>
+          {tHome('auth.createAccount')}
+        </Link>
+      </Button>
+    </>
+  )
+}
+
+/** The actions for a browser that may be signed in: they depend on the session. */
+function SessionActions({ layout, onNavigate }: AuthActionsProps) {
   const { user, isLoading } = useAuth()
+  const tHome = useTranslations('home')
+
+  if (isLoading) return <AuthActionsSkeleton layout={layout} />
+  if (!user) return <SignedOutActions layout={layout} onNavigate={onNavigate} />
+
+  return layout === 'desktop' ? (
+    <Button asChild>
+      <Link href="/dashboard">
+        {tHome('auth.goToDashboard')}
+      </Link>
+    </Button>
+  ) : (
+    <Button asChild className="w-full">
+      <Link href="/dashboard" onClick={onNavigate}>
+        {tHome('auth.goToDashboard')}
+      </Link>
+    </Button>
+  )
+}
+
+/**
+ * Sign-in and sign-up links, or the dashboard link for a signed-in user. The
+ * session is only asked for in a browser last seen signed in (see
+ * lib/auth/session-hint), so an anonymous visitor's page makes no session request.
+ */
+function AuthActions(props: AuthActionsProps) {
+  const { ready, signedIn } = useSessionHint()
+
+  if (!ready) return <AuthActionsSkeleton layout={props.layout} />
+  return signedIn ? <SessionActions {...props} /> : <SignedOutActions {...props} />
+}
+
+export function PublicNavbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const tNav = useTranslations('navigation')
-  const tHome = useTranslations('home')
   const appName = APP_NAME
 
   const navigationItems = [
@@ -71,32 +157,7 @@ export function PublicNavbar() {
           {/* Desktop Auth Buttons */}
           <div className="hidden md:flex items-center gap-2">
             <ThemeToggle />
-            
-            {isLoading ? (
-              <div className="flex gap-2">
-                <div className="h-9 w-16 bg-muted animate-pulse rounded-md"></div>
-                <div className="h-9 w-20 bg-muted animate-pulse rounded-md"></div>
-              </div>
-                          ) : user ? (
-              <Button asChild>
-                <Link href="/dashboard">
-                  {tHome('auth.goToDashboard')}
-                </Link>
-              </Button>
-            ) : (
-              <>
-                <Button variant="ghost" asChild data-cy={sel('public.navbar.loginButton')}>
-                  <Link href="/login">
-                    {tHome('auth.signIn')}
-                  </Link>
-                </Button>
-                <Button asChild data-cy={sel('public.navbar.signupButton')}>
-                  <Link href="/signup">
-                    {tHome('auth.createAccount')}
-                  </Link>
-                </Button>
-              </>
-            )}
+            <AuthActions layout="desktop" />
           </div>
 
           {/* Mobile Menu Button */}
@@ -133,31 +194,7 @@ export function PublicNavbar() {
 
             {/* Mobile Auth Buttons */}
             <div className="flex flex-col space-y-2 pt-4 border-t border-border">
-              {isLoading ? (
-                <div className="flex flex-col space-y-2">
-                  <div className="h-9 bg-muted animate-pulse rounded-md"></div>
-                  <div className="h-9 bg-muted animate-pulse rounded-md"></div>
-                </div>
-              ) : user ? (
-                <Button asChild className="w-full">
-                  <Link href="/dashboard" onClick={() => setIsMenuOpen(false)}>
-                    {tHome('auth.goToDashboard')}
-                  </Link>
-                </Button>
-              ) : (
-                <>
-                  <Button variant="ghost" asChild className="w-full">
-                    <Link href="/login" onClick={() => setIsMenuOpen(false)}>
-                      {tHome('auth.signIn')}
-                    </Link>
-                  </Button>
-                  <Button asChild className="w-full">
-                    <Link href="/signup" onClick={() => setIsMenuOpen(false)}>
-                      {tHome('auth.createAccount')}
-                    </Link>
-                  </Button>
-                </>
-              )}
+              <AuthActions layout="mobile" onNavigate={() => setIsMenuOpen(false)} />
             </div>
           </div>
         </div>

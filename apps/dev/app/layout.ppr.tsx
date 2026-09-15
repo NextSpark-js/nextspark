@@ -27,6 +27,7 @@ import "./globals.css"
 import { getBillingResourceHints } from "@nextsparkjs/core/lib/billing/gateways/factory"
 import { StaticIntlProvider } from "@nextsparkjs/core/providers/static-intl-provider"
 import { QueryProvider } from "@nextsparkjs/core/providers/query-provider"
+import { SessionCookieRefresher } from "@nextsparkjs/core/components/auth/SessionCookieRefresher"
 import { ThemeProvider as NextThemeProvider } from "@nextsparkjs/core/providers/theme-provider"
 import { ThemeProvider as CustomThemeProvider } from "@nextsparkjs/core/lib/theme/ThemeProvider"
 import { Toaster } from "@nextsparkjs/core/components/ui/sonner"
@@ -92,6 +93,7 @@ export default async function RootLayout({
                   activeTeamId cookie for nothing. */}
               <QueryProvider>
                 <main>{children}</main>
+                <SessionCookieRefresher />
                 <Suspense><Toaster position="bottom-left" /></Suspense>
               </QueryProvider>
             </CustomThemeProvider>

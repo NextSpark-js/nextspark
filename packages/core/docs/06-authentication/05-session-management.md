@@ -108,9 +108,10 @@ hits exactly this, because it is only ever opened through server-rendered pages.
 The core handles it in two steps:
 
 1. **Render-time reads never consume the renewal.** `getUserLocale()`
-   (`lib/locale.ts`) and `getDefaultThemeMode()` call
-   `auth.api.getSession({ headers, query: { disableRefresh: true } })`. Do the
-   same in any Server Component / layout of your own that reads the session.
+   (`lib/locale.ts`) calls
+   `auth.api.getSession({ headers, query: { disableRefresh: true } })`, and only
+   when the request carries a session cookie. Do the same in any Server
+   Component / layout of your own that reads the session.
 2. **The real refresh runs through the auth Route Handler.** The root layout
    template mounts `<SessionCookieRefresher />`, which calls
    `refreshSessionCookie()` (`lib/auth-client.ts`) — Better Auth's own
@@ -118,6 +119,15 @@ The core handles it in two steps:
    when the tab becomes visible again and when the device comes back online,
    throttled to once every 5 minutes. Served by `app/api/auth/[...all]`, that
    request can set cookies, so the renewed cookie actually reaches the browser.
+   It only asks in a browser last seen signed in: the readable
+   `nextspark.signed_in` cookie (`lib/auth/session-hint.ts`) records that, so an
+   anonymous visitor makes no session request. It follows the hint as it
+   changes (`subscribeSessionHint`): a sign-in or sign-out on the page starts or
+   stops the requests without a reload, and a hint a response set is noticed
+   when the tab comes back into view. `useSessionHint()` gives components the
+   same answer. Each answer also brings the
+   locale cookie and, in a browser with no stored theme, the theme in line with
+   the account.
 
 ```tsx
 // app/layout.tsx (template) — already included

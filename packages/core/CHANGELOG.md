@@ -67,6 +67,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     (`useTeam`, `usePermission`, `PermissionGate`, `useSubscription`, …) has to
     wrap its layout in `DashboardProviders`; otherwise those hooks throw
     `must be used within TeamProvider`.
+- **Rendering a page reads from the request only what it needs (#188, #189, #190).**
+  The root layout used to read the session, query the user's language and make
+  an HTTP request back to `/api/user/profile` for the theme on every render, and
+  the i18n request config read `headers()` for a pathname it never used, so no
+  page of any project could be prerendered.
+  - `getUserLocale()` resolves the locale once per request (React `cache`): the
+    locale cookie, then the signed-in user's language from the session, read
+    only when the request carries a session cookie and without a separate query,
+    then `Accept-Language` by quality, then the default locale. An anonymous
+    visitor's page reads no session and runs no query.
+  - An app with a single locale, or with the new `i18n.localeDetection: false`,
+    renders its default locale without reading the request.
+  - The next-intl request config reads nothing from the request and takes the
+    locale its caller passes. `NAMESPACE_GROUPS` and `getPageNamespaces` are
+    deprecated: they never decided what a request loads.
+  - `getThemeSettings()` reads configuration only. A signed-in user's saved
+    theme is applied in the browser, once per tab for each user, where no theme
+    is stored yet; a profile request that fails is tried again with the next
+    session read, and an answer that arrives after a sign-out is dropped.
+  - The locale cookie now decides before the account: it is written on sign-in
+    with email or a one-time code, and `SessionCookieRefresher` rewrites it,
+    refreshing the page, when the account's language changed elsewhere. It is
+    always written readable, since client code rewrites it: `setUserLocale` no
+    longer applies `i18n.cookie.httpOnly`. A page that stays in another language
+    is refreshed once per language, not on every session read. No flow in core
+    wrote the cookie HttpOnly; a browser holding one a project's own server code
+    wrote keeps it until `setUserLocale` replaces it or it expires.
+- **An anonymous visitor's page makes no session request (#187).** Better Auth's
+  session cookie is httpOnly, so a readable `nextspark.signed_in` cookie
+  (`lib/auth/session-hint`) records whether the browser was last seen signed in.
+  `SessionCookieRefresher`, `PublicNavbar`, `ThemeToggle` and the default theme's
+  home ask for the session only then, following the hint as a sign-in or
+  sign-out on the page changes it (`subscribeSessionHint`, `useSessionHint`); a
+  session read still on the wire when the user signs out is discarded, and the
+  PPR root layout (`layout.ppr.tsx`) mounts `SessionCookieRefresher` as well.
+  `useAuthActions()` offers the auth actions
+  without subscribing to the session; the login and signup forms and the
+  password reset pages use it.
 - **The one-time code email states the expiry the code really has (#186).** It
   said 5 minutes whatever `auth.otp.expiresIn` was. It now receives the
   configured expiry (`OtpVerificationEmailData.expiresIn`) and pluralizes it in

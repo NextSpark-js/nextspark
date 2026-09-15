@@ -112,6 +112,10 @@
       "types": "./dist/lib/scheduled-actions/handlers/index.d.ts",
       "import": "./dist/lib/scheduled-actions/handlers/index.js"
     },
+    "./lib/auth/*": {
+      "types": "./dist/lib/auth/*.d.ts",
+      "import": "./dist/lib/auth/*.js"
+    },
     "./lib/auth/security-notifications": {
       "types": "./dist/lib/auth/security-notifications/index.d.ts",
       "import": "./dist/lib/auth/security-notifications/index.js"

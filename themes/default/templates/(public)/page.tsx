@@ -6,11 +6,33 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@next
 import { Badge } from '@nextsparkjs/core/components/ui/badge'
 
 import { useAuth } from '@nextsparkjs/core/hooks/useAuth'
+import { useSessionHint } from '@nextsparkjs/core/hooks/useSessionHint'
 import { useTranslations } from 'next-intl'
 import { CheckCircle2, Code2, Database, Lock, Mail, Palette, Zap, Server, Shield, Layers } from 'lucide-react'
 
-function Home() {
+interface HomeContentProps {
+  user: { email?: string | null } | null
+  isLoading: boolean
+}
+
+/** The home of a browser that may be signed in: it depends on the session. */
+function SessionHome() {
   const { user, isLoading } = useAuth()
+  return <HomeContent user={user} isLoading={isLoading} />
+}
+
+/**
+ * The session is only asked for in a browser last seen signed in (see
+ * @nextsparkjs/core/lib/auth/session-hint), so an anonymous visitor's home makes
+ * no session request.
+ */
+function Home() {
+  const { ready, signedIn } = useSessionHint()
+  if (ready && signedIn) return <SessionHome />
+  return <HomeContent user={null} isLoading={!ready} />
+}
+
+function HomeContent({ user, isLoading }: HomeContentProps) {
   const t = useTranslations('home')
 
   const techStack = [

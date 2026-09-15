@@ -49,8 +49,8 @@ export default async function RootLayout({ children }) {
           defaultTheme={defaultMode}
           // When allowUserToggle is false, force the theme and ignore localStorage/system
           forcedTheme={!allowUserToggle ? defaultMode : undefined}
-          // Only detect OS preference when theme configures defaultMode: 'system' AND user can toggle
-          enableSystem={allowUserToggle && defaultMode === 'system'}
+          // Resolve "System" whenever the user can toggle: ThemeToggle always offers it (#175)
+          enableSystem={allowUserToggle}
           // Force a theme on the routes declared in theme.config.ts
           forcedThemeRoutes={forcedThemeRoutes}
           disableTransitionOnChange
@@ -68,13 +68,13 @@ export default async function RootLayout({ children }) {
 | Prop | Value | Purpose |
 |------|-------|---------|
 | `attribute` | `"class"` | Use `.dark` class for styling |
-| `defaultTheme` | `defaultMode` | Initial theme from `theme.config.ts` (or the user's saved preference) |
+| `defaultTheme` | `defaultMode` | Initial theme from `theme.config.ts` |
 | `forcedTheme` | `defaultMode` when `allowUserToggle` is `false` | Lock the theme, ignoring localStorage and OS preference |
-| `enableSystem` | `allowUserToggle && defaultMode === 'system'` | Detect OS preference only when the theme asks for it |
+| `enableSystem` | `allowUserToggle` | Resolve the "System" choice whenever users can toggle |
 | `forcedThemeRoutes` | `theme.config.ts` → `forcedThemeRoutes` | Force a theme on specific routes (see [Forcing a Theme per Route](#forcing-a-theme-per-route)) |
 | `disableTransitionOnChange` | `true` | Prevent jarring animations |
 
-> **Never hardcode `enableSystem`.** With `defaultMode: 'light'` and `enableSystem` always on, any visitor whose stored theme is `system` (or whose profile says so) keeps following the OS and sees dark mode. This regressed once already (#37 → #79).
+> **Tie `enableSystem` to `allowUserToggle`.** With the toggle allowed, ThemeToggle offers "System", and without `enableSystem` that choice writes a literal `class="system"` that matches nothing (#175). With the toggle disallowed the theme is forced, and `enableSystem` must be off so the OS cannot override it (#79).
 
 ### Preventing FOUC
 
@@ -285,7 +285,7 @@ For logged-in users, theme preference is also saved to their profile:
 async function handleThemeChange(newTheme: string) {
   setTheme(newTheme)
   
-  if (user?.id) {
+  if (hasSessionHint()) { // a browser last seen signed in (lib/auth/session-hint)
     await fetch('/api/user/profile', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -301,11 +301,11 @@ async function handleThemeChange(newTheme: string) {
 }
 ```
 
-**Benefit:** Theme preference syncs across devices for logged-in users.
+**Across devices:** the root layout renders the configured `defaultMode` and never reads the account. In a browser with no stored theme (a new device), `<SessionCookieRefresher />` reads the saved preference once and applies it with `setTheme()`, which also stores it locally from then on.
 
 ## Default Theme Mode
 
-### Server-Side Detection
+### Server-Side Settings
 
 **Function:** `getThemeSettings()`
 
@@ -316,27 +316,25 @@ export async function getThemeSettings(): Promise<ThemeSettings> {
   const themeConfig = ThemeService.getByName(activeThemeName)
   const appConfig = ThemeService.getAppConfig(activeThemeName)
 
-  // 1. app.config.ts → ui.theme.allowUserToggle (default: true)
+  // app.config.ts → ui.theme.allowUserToggle (default: true)
   const allowUserToggle = appConfig?.ui?.theme?.allowUserToggle ?? true
 
-  // 2. theme.config.ts → defaultMode (default: 'system') and forcedThemeRoutes
-  const configDefaultMode = themeConfig?.defaultMode || 'system'
+  // theme.config.ts → defaultMode (default: 'system') and forcedThemeRoutes
+  const defaultMode = themeConfig?.defaultMode || 'system'
   const forcedThemeRoutes = themeConfig?.forcedThemeRoutes
 
-  // 3. Logged-in users who may toggle: their saved preference wins
-  if (allowUserToggle) {
-    const userTheme = await getUserThemePreference()
-    if (userTheme) return { defaultMode: userTheme, allowUserToggle, forcedThemeRoutes }
-  }
-
-  return { defaultMode: configDefaultMode, allowUserToggle, forcedThemeRoutes }
+  return { defaultMode, allowUserToggle, forcedThemeRoutes }
 }
 ```
 
-**Priority for `defaultMode`:**
-1. User preference (from profile metadata), only when `allowUserToggle` is `true`
-2. Theme config `defaultMode`
-3. Fallback to `'system'`
+It reads configuration only: no session, no request data, no request back to the app. That keeps the root layout from making every page dynamic, and it costs nothing per render.
+
+**Where the rendered theme comes from:**
+1. A route in `forcedThemeRoutes`, or `defaultMode` when `allowUserToggle` is `false` (forced)
+2. The visitor's stored choice (`localStorage`, applied by next-themes before first paint)
+3. Theme config `defaultMode`, falling back to `'system'`
+
+A signed-in user's saved preference is not read while rendering: see [User Profile](#user-profile).
 
 `getDefaultThemeMode()` still exists but is **deprecated**: it returns only `defaultMode` and drops `allowUserToggle`, which is how the root layout once ended up hardcoding `enableSystem` (#79).
 

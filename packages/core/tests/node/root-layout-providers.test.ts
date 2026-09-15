@@ -3,6 +3,8 @@
  * on them. TeamProvider and SubscriptionProvider fetch a signed-in visitor's
  * teams and subscription and re-sync the activeTeamId cookie, which only the
  * authenticated areas need, and those get both through DashboardProviders.
+ * Both root layouts mount SessionCookieRefresher, which renews the session and
+ * keeps the locale cookie and the theme in line with the account.
  * apps/dev/app is the source packages/core/templates/app is synced from.
  */
 import { test } from 'node:test'
@@ -33,6 +35,12 @@ test('the root layouts mount no team or subscription provider', () => {
     for (const provider of ['TeamProvider', 'SubscriptionProvider']) {
       assert.equal(elements.has(provider), false, `${layout} renders ${provider}`)
     }
+  }
+})
+
+test('both root layouts mount SessionCookieRefresher', () => {
+  for (const layout of ['layout.tsx', 'layout.ppr.tsx']) {
+    assert.ok(renderedElements(path.join(APP, layout)).has('SessionCookieRefresher'), layout)
   }
 })
 

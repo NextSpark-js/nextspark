@@ -13,11 +13,10 @@ import {
 import { useEffect, useState, useCallback } from "react"
 import { createAriaLabel, sel } from '../../../lib/test'
 import { useTranslations } from 'next-intl'
-import { useAuth } from '../../../hooks/useAuth'
+import { hasSessionHint } from '../../../lib/auth/session-hint'
 
 export function ThemeToggle() {
   const { setTheme, theme, forcedTheme } = useTheme()
-  const { user } = useAuth()
   const [mounted, setMounted] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
   const t = useTranslations('common')
@@ -35,8 +34,10 @@ export function ThemeToggle() {
     }
     setStatusMessage(`${t('theme.changed')} ${themeNames[newTheme as keyof typeof themeNames]}`)
 
-    // If user is logged in, save theme preference to user meta
-    if (user?.id) {
+    // Save the choice to a signed-in user's account. The session hint answers
+    // "signed in?" without subscribing every toggle on a public page to the
+    // session; a stale hint only costs a request the API rejects.
+    if (hasSessionHint()) {
       try {
         await fetch('/api/user/profile', {
           method: 'PATCH',
@@ -55,7 +56,7 @@ export function ThemeToggle() {
         console.error('[ThemeToggle] Failed to save theme preference:', error)
       }
     }
-  }, [setTheme, t, user])
+  }, [setTheme, t])
 
   // When the theme is forced — `ui.theme.allowUserToggle: false` or a route
   // listed in `forcedThemeRoutes` — next-themes ignores setTheme, so a toggle

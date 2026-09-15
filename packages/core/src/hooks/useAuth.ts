@@ -1,6 +1,6 @@
 'use client'
 
-import { useContext } from 'react'
+import { useContext, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { QueryClientContext } from '@tanstack/react-query'
 import { authClient } from '../lib/auth-client'
@@ -8,6 +8,9 @@ import type { SessionUser } from '../lib/auth'
 import { useOrigin } from './useOrigin'
 import { useLastAuthMethod } from './useLastAuthMethod'
 import { safeCallbackPath } from '../lib/auth/callback-url'
+import { setSessionHint } from '../lib/auth/session-hint'
+import { setUserLocaleClient } from '../lib/locale-client'
+import { I18N_CONFIG, type SupportedLocale } from '../lib/config'
 
 // Esta función ya no se usa directamente aquí
 // La creación de metadata se maneja en:
@@ -29,9 +32,26 @@ function googleCallbackURL(redirectTo?: string): string {
   return `${url.pathname}${url.search.replace(/\*/g, '%2A')}`
 }
 
-export function useAuth() {
+/**
+ * After signing in: remember that the browser has a session (see
+ * lib/auth/session-hint) and render the next page in the account's language,
+ * which the locale cookie decides before anything else.
+ */
+function rememberSignedIn(user: unknown) {
+  setSessionHint(true)
+  const language = (user as { language?: unknown } | null | undefined)?.language
+  const localeDetected = I18N_CONFIG.supportedLocales.length > 1 && I18N_CONFIG.localeDetection !== false
+  if (localeDetected && typeof language === 'string' && I18N_CONFIG.supportedLocales.includes(language as SupportedLocale)) {
+    setUserLocaleClient(language)
+  }
+}
+
+/**
+ * Sign-in, sign-up and account actions, without subscribing to the session: a
+ * page that only acts, like the login and signup forms, makes no session request.
+ */
+export function useAuthActions() {
   const router = useRouter()
-  const session = authClient.useSession()
   const origin = useOrigin()
   const { saveAuthMethod } = useLastAuthMethod()
   const queryClient = useContext(QueryClientContext)
@@ -40,7 +60,8 @@ export function useAuth() {
   // signed in. The root layout's query client outlives the dashboard that used
   // to clear it on logout, so it is emptied whenever someone signs in or out.
   const forgetSignedInData = () => queryClient?.clear()
-  
+
+
   const handleSignIn = async ({ email, password, redirectTo }: { email: string; password: string; redirectTo?: string }) => {
     const { data, error } = await authClient.signIn.email({
       email,
@@ -55,6 +76,7 @@ export function useAuth() {
       // Save auth method only when login is truly successful
       saveAuthMethod('email')
       forgetSignedInData()
+      rememberSignedIn(data.user)
       router.push(safeCallbackPath(redirectTo) ?? '/dashboard')
     }
 
@@ -93,6 +115,7 @@ export function useAuth() {
       localStorage.removeItem('activeTeamId')
     }
     await authClient.signOut()
+    setSessionHint(false)
     forgetSignedInData()
     router.push('/login')
   }
@@ -128,6 +151,7 @@ export function useAuth() {
       // OTP is an email-based method for the "last used" badge purposes
       saveAuthMethod('email')
       forgetSignedInData()
+      rememberSignedIn(data.user)
       router.push(safeCallbackPath(redirectTo) ?? '/dashboard')
     }
 
@@ -271,9 +295,6 @@ export function useAuth() {
   }
 
   return {
-    user: session.data?.user as SessionUser | null,
-    session: session.data,
-    isLoading: session.isPending,
     signIn: handleSignIn,
     signUp: handleSignUp,
     signOut: handleSignOut,
@@ -284,6 +305,24 @@ export function useAuth() {
     updatePassword: handleUpdatePassword,
     changePassword: handleChangePassword,
     resendVerificationEmail: handleResendVerificationEmail,
+  }
+}
+
+/** The session (user, loading state) and the auth actions. */
+export function useAuth() {
+  const session = authClient.useSession()
+  const actions = useAuthActions()
+
+  // Whatever answer the session gives, the hint follows it; a failed request says nothing
+  useEffect(() => {
+    if (!session.isPending && !session.error) setSessionHint(Boolean(session.data))
+  }, [session.isPending, session.error, session.data])
+
+  return {
+    user: session.data?.user as SessionUser | null,
+    session: session.data,
+    isLoading: session.isPending,
+    ...actions,
     isSigningIn: false, // BetterAuth doesn't provide this directly
     isSigningUp: false, // BetterAuth doesn't provide this directly
     signInError: null,

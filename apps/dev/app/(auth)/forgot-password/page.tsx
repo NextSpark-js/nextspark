@@ -1,7 +1,7 @@
 'use client';
 
 import { resetPasswordSchema, type ResetPasswordFormData } from '@nextsparkjs/core/lib/validation';
-import { useAuth } from '@nextsparkjs/core/hooks/useAuth';
+import { useAuthActions } from '@nextsparkjs/core/hooks/useAuth';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertCircle, ArrowLeft, CheckCircle, Loader2, Mail } from 'lucide-react';
 import Link from 'next/link';
@@ -18,7 +18,7 @@ import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-reg
 
 
 function ForgotPasswordPage() {
-  const { resetPassword } = useAuth();
+  const { resetPassword } = useAuthActions();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);

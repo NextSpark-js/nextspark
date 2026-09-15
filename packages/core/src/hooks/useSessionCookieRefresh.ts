@@ -17,6 +17,20 @@ export interface UseSessionCookieRefreshOptions {
   refreshOnMount?: boolean
   /** Set to false to turn the hook off (e.g. on public/auth pages). Default: true. */
   enabled?: boolean
+  /**
+   * Called with each refresh's answer: the session, or `data: null` when there is
+   * none. `session.isCurrent()` turns false once the hook is turned off (a
+   * sign-out), so work the answer starts can drop what arrives after that.
+   */
+  onRefresh?: (result: SessionRefreshResult, session: SessionRefreshContext) => void
+}
+
+/** What `refreshSessionCookie()` answers. */
+export type SessionRefreshResult = { data?: unknown; error?: unknown } | null | undefined
+
+/** Passed with each answer: whether the session it belongs to is still the page's. */
+export interface SessionRefreshContext {
+  isCurrent: () => boolean
 }
 
 export const DEFAULT_SESSION_REFRESH_INTERVAL_MS = 5 * 60 * 1000
@@ -36,7 +50,9 @@ export const DEFAULT_SESSION_REFRESH_INTERVAL_MS = 5 * 60 * 1000
  *
  * Calls are throttled by `minIntervalMs`; a failed call (offline, server
  * down) does not count towards the throttle, so the next trigger retries.
- * Anonymous visitors just get a cheap `null` session response.
+ * Anonymous visitors just get a cheap `null` session response. Turning the
+ * hook off (a sign-out) drops the answer of a call still on the wire, and
+ * turning it on again reads the session at once, whatever the throttle says.
  */
 export function useSessionCookieRefresh(options: UseSessionCookieRefreshOptions = {}) {
   const {
@@ -47,26 +63,40 @@ export function useSessionCookieRefresh(options: UseSessionCookieRefreshOptions 
 
   const lastRefreshAtRef = useRef(0)
   const inFlightRef = useRef(false)
+  // Moves on each time the hook is turned off, so a call sent before then
+  // neither applies its session nor holds back the next call
+  const generationRef = useRef(0)
+  const onRefreshRef = useRef(options.onRefresh)
+  onRefreshRef.current = options.onRefresh
 
   useEffect(() => {
-    if (!enabled || typeof window === 'undefined') return
+    if (typeof window === 'undefined') return
+    if (!enabled) {
+      generationRef.current++
+      inFlightRef.current = false
+      lastRefreshAtRef.current = 0
+      return
+    }
 
     const refresh = async () => {
       if (inFlightRef.current) return
       const now = Date.now()
       if (now - lastRefreshAtRef.current < minIntervalMs) return
 
+      const generation = generationRef.current
+      const current = () => generation === generationRef.current
       inFlightRef.current = true
       lastRefreshAtRef.current = now
       try {
-        await refreshSessionCookie()
+        const result = await refreshSessionCookie()
+        if (current()) onRefreshRef.current?.(result, { isCurrent: current })
       } catch {
         // Offline / server unreachable: forget this attempt so the next
         // trigger (e.g. `online`) retries immediately instead of waiting out
         // the throttle window.
-        lastRefreshAtRef.current = 0
+        if (current()) lastRefreshAtRef.current = 0
       } finally {
-        inFlightRef.current = false
+        if (current()) inFlightRef.current = false
       }
     }
 

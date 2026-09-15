@@ -1,9 +1,14 @@
 'use client'
 
+import { useSyncExternalStore } from 'react'
 import {
   useSessionCookieRefresh,
   type UseSessionCookieRefreshOptions,
 } from '../../hooks/useSessionCookieRefresh'
+import { useAccountPreferencesSync } from '../../hooks/useAccountPreferencesSync'
+import { hasSessionHint, subscribeSessionHint } from '../../lib/auth/session-hint'
+
+const signedOutOnServer = () => false
 
 /**
  * Drop-in client component that keeps the session cookie renewed for
@@ -15,6 +20,11 @@ import {
  * `useSessionCookieRefresh` for the options and `lib/auth/session-refresh.ts`
  * for why render-time session reads cannot do this themselves.
  *
+ * It only asks while the browser is signed in (see `lib/auth/session-hint`),
+ * following the hint as a sign-in or sign-out on the page changes it, so an
+ * anonymous visitor makes no request; and each answer brings the locale cookie
+ * and the theme in line with the account (`useAccountPreferencesSync`).
+ *
  * @example
  * ```tsx
  * // app/layout.tsx
@@ -24,6 +34,10 @@ import {
  * ```
  */
 export function SessionCookieRefresher(props: UseSessionCookieRefreshOptions = {}) {
-  useSessionCookieRefresh(props)
+  // The server render has no cookie to read and renders nothing either way
+  const signedIn = useSyncExternalStore(subscribeSessionHint, hasSessionHint, signedOutOnServer)
+  const onRefresh = useAccountPreferencesSync()
+
+  useSessionCookieRefresh({ ...props, enabled: (props.enabled ?? true) && signedIn, onRefresh })
   return null
 }

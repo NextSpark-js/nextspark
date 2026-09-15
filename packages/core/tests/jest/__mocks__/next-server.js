@@ -63,6 +63,14 @@ class MockNextResponse {
     this.status = options.status || 200
     this.statusText = options.statusText || 'OK'
     this.headers = new Map(Object.entries(options.headers || {}))
+    // Cookies set on the response, in order, as { name, value, ...options }
+    this.setCookies = []
+    this.cookies = {
+      set: (name, value, cookieOptions = {}) => {
+        this.setCookies.push({ name, value, ...cookieOptions })
+      },
+      get: name => this.setCookies.filter(cookie => cookie.name === name).pop(),
+    }
   }
 
   async json() {

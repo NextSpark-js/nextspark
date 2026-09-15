@@ -22,7 +22,7 @@ import { getThemeAppConfig } from '@nextsparkjs/core/lib/middleware'
 import { NextRequest } from 'next/server'
 import { proxy } from '../../../templates/proxy'
 
-type PassThrough = { type?: string; requestHeaders?: Headers | null; redirectUrl?: string }
+type PassThrough = { type?: string; requestHeaders?: Headers | null; redirectUrl?: string; setCookies?: Array<{ name: string; value: string; maxAge?: number }> }
 
 const FORGED = {
   'x-user-id': 'attacker-controlled-id',
@@ -262,5 +262,38 @@ describe('proxy active team header', () => {
 
     expect(response.type).toBe('next')
     expect(response.requestHeaders?.get('x-active-team-id')).toBeNull()
+  })
+})
+
+describe('proxy session hint', () => {
+  beforeEach(() => {
+    mockedFetch.mockReset()
+    delete process.env.NEXT_PUBLIC_ACTIVE_THEME
+  })
+
+  const hintCookie = (response: PassThrough) => response.setCookies?.find(cookie => cookie.name === 'nextspark.signed_in')
+
+  test.each([
+    ['better-auth.session_token=abc.def'],
+    ['__Secure-better-auth.session_token=abc.def'],
+  ])('a request with a session cookie (%s) and no hint gets the hint', async cookie => {
+    const response = (await proxy(makeRequest('/', { cookie }))) as unknown as PassThrough
+
+    expect(hintCookie(response)).toEqual(expect.objectContaining({ value: '1', path: '/', maxAge: 60 * 60 * 24 * 400 }))
+  })
+
+  test('a request with the hint and no session cookie loses the hint', async () => {
+    const response = (await proxy(makeRequest('/pricing', { cookie: 'nextspark.signed_in=1' }))) as unknown as PassThrough
+
+    expect(hintCookie(response)).toEqual(expect.objectContaining({ value: '', maxAge: 0 }))
+  })
+
+  test.each([
+    ['both', 'better-auth.session_token=abc; nextspark.signed_in=1'],
+    ['neither', 'theme=dark'],
+  ])('a request with %s leaves the hint as it is', async (_label, cookie) => {
+    const response = (await proxy(makeRequest('/', { cookie }))) as unknown as PassThrough
+
+    expect(hintCookie(response)).toBeUndefined()
   })
 })

@@ -127,7 +127,7 @@ Cookie settings for persisting user locale preference:
 cookie: {
   name: 'locale',                         // Cookie name
   maxAge: 365 * 24 * 60 * 60 * 1000,     // 1 year in milliseconds
-  httpOnly: false,                        // Allow client-side JavaScript access
+  httpOnly: false,                        // Not applied: the cookie is always readable
   secure: 'auto',                         // HTTPS only in production
   sameSite: 'lax',                        // CSRF protection
   path: '/',                              // Cookie available on all paths
@@ -140,7 +140,7 @@ cookie: {
 |----------|------|-------------|
 | `name` | string | Cookie identifier (default: `'locale'`) |
 | `maxAge` | number | Cookie lifetime in milliseconds |
-| `httpOnly` | boolean | Prevent JavaScript access (false for client-side locale switching) |
+| `httpOnly` | boolean | Not applied: the locale cookie is always written readable, because client code rewrites it (a language switch, a sign-in, the account's language) |
 | `secure` | 'auto' \| boolean | Require HTTPS (auto enables in production only) |
 | `sameSite` | 'strict' \| 'lax' \| 'none' | CSRF protection level |
 | `path` | string | Cookie scope (default: `'/'`) |
@@ -242,29 +242,27 @@ The i18n system integrates with next-intl through `core/i18n.ts`:
 
 ```typescript
 import { getRequestConfig } from 'next-intl/server'
-import { I18N_CONFIG } from '@/core/lib/config'
-import { loadAllI18nTranslations } from '@/core/lib/translations/i18n-integration'
+import { I18N_CONFIG } from './lib/config'
+import { loadMergedTranslations } from './lib/translations/registry'
 import { getUserLocale } from './lib/locale'
-import type { SupportedLocale } from '@/core/lib/entities/types'
 
-export default getRequestConfig(async () => {
-  // Detect user locale (database → cookie → header → default)
-  const locale = await getUserLocale()
+export default getRequestConfig(async ({ locale: requestedLocale }) => {
+  // getMessages({ locale }) and the root layout pass the locale they resolved
+  const locale = I18N_CONFIG.supportedLocales.includes(requestedLocale)
+    ? requestedLocale
+    : await getUserLocale()
 
-  // Load all translations for the detected locale
-  const messages = await loadAllI18nTranslations(locale as SupportedLocale)
+  // Core → theme → entity translations for the locale
+  const messages = await loadMergedTranslations(locale)
 
-  return {
-    locale,
-    messages
-  }
+  return { locale, messages }
 })
 ```
 
 **How It Works**:
 
-1. **Locale Detection**: Calls `getUserLocale()` to determine the user's preferred locale
-2. **Translation Loading**: Loads all translations (core + theme + plugin) for the locale
+1. **Locale**: Uses the locale the caller passes, or `getUserLocale()`. The config reads nothing from the request itself (no `headers()`), so it never makes a page dynamic on its own.
+2. **Translation Loading**: Loads the merged translations (core + theme + entities) for the locale
 3. **next-intl Configuration**: Returns locale and messages to next-intl
 
 ### next.config.js Configuration
@@ -292,106 +290,29 @@ export default withNextIntl(nextConfig)
 
 ## Locale Detection Strategy
 
-The system employs a 4-tier locale detection strategy with clear priority:
-
-### Priority Order
+`getUserLocale()` (`core/lib/locale.ts`) resolves the locale once per request (React `cache()`), in this order:
 
 ```text
-1. Database User Preference (authenticated users)
-       ↓
-2. Cookie (NEXT_LOCALE)
-       ↓
-3. Accept-Language Header (browser preference)
-       ↓
-4. Default Locale (fallback)
+0. Fixed locale → defaultLocale, without reading the request
+1. Locale cookie
+2. Signed-in user's language (session, only with a session cookie)
+3. Accept-Language header
+4. Default locale
 ```
 
-### Implementation
+#### 0. Fixed Locale
 
-**Location**: `core/lib/locale.ts`
+**When**: `supportedLocales` has a single entry, or `app.config.ts` sets `i18n.localeDetection: false`.
+**Effect**: Every page renders `defaultLocale`, and nothing is read from the request, so pages can be prerendered.
 
-```typescript
-export async function getUserLocale(): Promise<SupportedLocale> {
-  // 1. Check user profile from database (highest priority)
-  try {
-    const session = await auth.api.getSession({ headers: await headers() })
-
-    if (session?.user?.id) {
-      const user = await queryOne<{ language: string }>(
-        'SELECT language FROM "users" WHERE id = $1',
-        [session.user.id]
-      )
-
-      if (user?.language && I18N_CONFIG.supportedLocales.includes(user.language as SupportedLocale)) {
-        return user.language as SupportedLocale
-      }
-    }
-  } catch (error) {
-    // Continue to next detection method
-  }
-
-  // 2. Check cookie
-  try {
-    const cookieStore = await cookies()
-    const cookieLocale = cookieStore.get(I18N_CONFIG.cookie.name)?.value
-
-    if (cookieLocale && I18N_CONFIG.supportedLocales.includes(cookieLocale as SupportedLocale)) {
-      return cookieLocale as SupportedLocale
-    }
-  } catch (error) {
-    // Continue to next detection method
-  }
-
-  // 3. Check Accept-Language header
-  try {
-    const headersList = await headers()
-    const acceptLanguage = headersList.get('accept-language')
-
-    if (acceptLanguage) {
-      const preferredLocale = acceptLanguage.split(',')[0].split('-')[0] as SupportedLocale
-      if (I18N_CONFIG.supportedLocales.includes(preferredLocale)) {
-        return preferredLocale
-      }
-    }
-  } catch (error) {
-    // Continue to fallback
-  }
-
-  // 4. Default to configured default locale
-  return I18N_CONFIG.defaultLocale
-}
-```
-
-### Detection Method Details
-
-#### 1. Database User Preference
-
-**Source**: `users` table, `language` column
-**Scope**: Authenticated users only
-**Persistence**: Permanent (stored in database)
-
-**When Used**:
-- User is logged in
-- User has set a language preference in their profile
-- Language value is in `supportedLocales`
-
-**Example**:
-```sql
-SELECT language FROM users WHERE id = 'user_123'
--- Returns: 'es' (Spanish)
-```
-
-#### 2. Cookie Preference
+#### 1. Locale Cookie
 
 **Source**: Cookie named `locale` (configurable via `I18N_CONFIG.cookie.name`)
 **Scope**: Anonymous and authenticated users
 **Persistence**: 1 year (configurable via `I18N_CONFIG.cookie.maxAge`)
 
-**When Used**:
-- No database preference (user not logged in OR no preference set)
-- Cookie exists and contains valid locale
+It is written when the language changes in the profile, when a user signs in with email or a one-time code, and by `<SessionCookieRefresher />` when the account's language changed elsewhere (see [Locale Switching](./06-locale-switching.md)).
 
-**Cookie Structure**:
 ```text
 Name:     locale
 Value:    es
@@ -401,41 +322,25 @@ SameSite: lax
 Secure:   true (production only)
 ```
 
+#### 2. Signed-in User's Language
+
+**Source**: `session.user.language` (a Better Auth user field, stored in `users.language`)
+**When Used**: No locale cookie, and the request carries a Better Auth session cookie (`better-auth.session_token`, `__Secure-` prefixed over HTTPS). A request without one reads no session at all.
+
 #### 3. Accept-Language Header
 
 **Source**: Browser `Accept-Language` HTTP header
-**Scope**: All users (browser setting)
-**Persistence**: Browser-level (not application-controlled)
+**Matching**: Ranges are ranked by quality, then order; a full tag (`pt-BR`) matches before its language (`pt`).
 
-**When Used**:
-- No database or cookie preference
-- Browser sends `Accept-Language` header
-- First language in header is supported
-
-**Example Header**:
 ```text
-Accept-Language: es-AR,es;q=0.9,en-US;q=0.8,en;q=0.7
-```
-
-**Parsing Logic**:
-```typescript
-// Extract: 'es-AR,es;q=0.9,en-US;q=0.8,en;q=0.7'
-const preferredLocale = acceptLanguage.split(',')[0].split('-')[0]
-// Result: 'es'
+Accept-Language: fr;q=0.9, es-AR, es;q=0.8
+→ es (es-AR has the highest quality; es-AR is not supported, es is)
 ```
 
 #### 4. Default Locale Fallback
 
 **Source**: `I18N_CONFIG.defaultLocale`
-**Scope**: All users
-**Persistence**: Application configuration
-
-**When Used**:
-- All detection methods fail
-- User preference is not in `supportedLocales`
-- Static site generation (no request context)
-
-**Always Returns**: `'en'` (or configured default)
+**When Used**: Nothing above matched, or there is no request (static generation).
 
 ### Setting User Locale
 
@@ -483,87 +388,11 @@ export function LocaleSelector() {
 
 ---
 
-## Namespace Optimization Strategy
+## Namespace Groups (not applied)
 
-The i18n system includes intelligent namespace loading based on the current route to minimize initial bundle size.
+`core/i18n.ts` still exports `NAMESPACE_GROUPS` and `getPageNamespaces(pathname)`, and `loadOptimizedTranslations(locale, pathname)` exists in `core/lib/translations/i18n-integration.ts`, but none of them decides what a request loads: every request gets the merged catalog (core → theme → entities) for its locale, and the root layout passes it to `NextIntlClientProvider`. They are deprecated and kept only for code that imports them.
 
-### Namespace Groups
-
-**Location**: `core/i18n.ts`
-
-```typescript
-const NAMESPACE_GROUPS = {
-  // Public pages: includes auth for login/signup buttons
-  PUBLIC_INITIAL: ['common', 'public', 'auth'],
-
-  // Dashboard: authenticated users don't need auth namespace
-  DASHBOARD_AUTHENTICATED: ['common', 'dashboard', 'settings', 'public'],
-
-  // Auth pages: focused on authentication flows
-  AUTH_ONLY: ['common', 'auth', 'validation'],
-
-  // Fallback: all namespaces for edge cases
-  ALL: ['common', 'dashboard', 'settings', 'auth', 'public', 'validation']
-}
-```
-
-### Route-Based Loading
-
-**Function**: `getPageNamespaces(pathname: string)`
-
-Determines which namespaces to load based on the current route:
-
-```typescript
-function getPageNamespaces(pathname: string): string[] {
-  // Dashboard pages - authenticated users
-  if (pathname.startsWith('/dashboard')) {
-    return NAMESPACE_GROUPS.DASHBOARD_AUTHENTICATED
-    // Loads: common, dashboard, settings, public
-  }
-
-  // Auth pages - login, signup, password reset
-  if (pathname === '/login' || pathname === '/signup' ||
-      pathname.includes('auth')) {
-    return NAMESPACE_GROUPS.AUTH_ONLY
-    // Loads: common, auth, validation
-  }
-
-  // Public pages - landing, pricing, docs
-  if (pathname === '/' || pathname.startsWith('/pricing') ||
-      pathname.startsWith('/docs')) {
-    return NAMESPACE_GROUPS.PUBLIC_INITIAL
-    // Loads: common, public, auth (for login/signup buttons)
-  }
-
-  // Unknown routes - public fallback
-  return NAMESPACE_GROUPS.PUBLIC_INITIAL
-}
-```
-
-### Performance Impact
-
-**Without Optimization** (loading all namespaces):
-```text
-Initial bundle: ~37KB (all 6 namespaces)
-Parse time:     ~15ms
-```
-
-**With Optimization** (route-based loading):
-```text
-Landing page:  ~18KB (common + public + auth)
-Dashboard:     ~25KB (common + dashboard + settings + public)
-Auth pages:    ~16KB (common + auth + validation)
-
-Average savings: ~40-50% bundle size reduction
-```
-
-**Benefits**:
-- Faster initial page load
-- Reduced JavaScript parse time
-- Lower memory footprint
-- Better Core Web Vitals scores
-
----
+Choosing namespaces from the request's pathname would mean reading request headers, which makes every page dynamic, so the request config does not do it.
 
 ## Middleware Integration
 
@@ -901,7 +730,7 @@ Warning: Missing translation key "auth.login.title" for locale "es"
 
 **Solution**:
 1. Check cookie configuration in `I18N_CONFIG.cookie`
-2. Verify `httpOnly: false` for client-side access
+2. Check that nothing else writes a `locale` cookie with `HttpOnly`: client code cannot replace it
 3. Check browser cookie settings
 4. Verify `secure` setting matches environment (HTTPS in production)
 
@@ -910,7 +739,7 @@ Warning: Missing translation key "auth.login.title" for locale "es"
 **Symptom**: User sees unexpected locale
 
 **Solution**:
-1. Check locale detection priority (database > cookie > header > default)
+1. Check locale detection priority (cookie > account language > Accept-Language > default)
 2. Verify user profile `language` column
 3. Clear cookies and test
 4. Check `Accept-Language` header
@@ -941,7 +770,7 @@ console.log('[i18n] Pathname:', pathname)
 ❌ **DON'T**:
 - Change `supportedLocales` without adding translation files
 - Use abbreviations in namespace names
-- Set `httpOnly: true` if using client-side locale switching
+- Write the locale cookie `HttpOnly` from your own code: client code keeps it in line with the account and cannot replace it
 - Add too many namespaces (increases complexity)
 
 ### Locale Detection

@@ -27,6 +27,7 @@ import {
   getThemeAppConfig
 } from '@nextsparkjs/core/lib/middleware'
 import { ACTIVE_TEAM_COOKIE, activeTeamIdForSession } from '@nextsparkjs/core/lib/teams/active-team-cookie'
+import { SESSION_HINT_COOKIE, SESSION_HINT_MAX_AGE, hasSessionCookie } from '@nextsparkjs/core/lib/auth/session-hint'
 
 /**
  * Session type for proxy (inline definition)
@@ -144,14 +145,37 @@ function sanitizeRequestHeaders(request: NextRequest): Headers {
 }
 
 /**
+ * Keep the readable session hint (lib/auth/session-hint) in line with the
+ * session cookie, so client code knows whether to ask for the session. A browser
+ * that got its session without client code seeing it (before the hint existed,
+ * or through OAuth) gets the hint on its next request, and one whose session
+ * cookie is gone loses it. The session itself is not checked here.
+ */
+function syncSessionHint(request: NextRequest, response: NextResponse): NextResponse {
+  const hasSession = hasSessionCookie(request.headers.get('cookie'))
+  const hinted = request.cookies.get(SESSION_HINT_COOKIE)?.value === '1'
+  if (hasSession && !hinted) {
+    response.cookies.set(SESSION_HINT_COOKIE, '1', {
+      path: '/',
+      maxAge: SESSION_HINT_MAX_AGE,
+      sameSite: 'lax',
+      secure: request.nextUrl.protocol === 'https:',
+    })
+  } else if (!hasSession && hinted) {
+    response.cookies.set(SESSION_HINT_COOKIE, '', { path: '/', maxAge: 0 })
+  }
+  return response
+}
+
+/**
  * Continue to the app with the (sanitized) request headers.
  * Every pass-through in this proxy MUST go through here so the strip applies
  * to public paths, /api/v1 and unmatched routes alike.
  */
-function passThrough(requestHeaders: Headers): NextResponse {
-  return NextResponse.next({
+function passThrough(request: NextRequest, requestHeaders: Headers): NextResponse {
+  return syncSessionHint(request, NextResponse.next({
     request: { headers: requestHeaders },
-  })
+  }))
 }
 
 export async function proxy(request: NextRequest) {
@@ -197,17 +221,17 @@ export async function proxy(request: NextRequest) {
         return redirectToLogin(request)
       }
     }
-    return passThrough(requestHeaders)
+    return passThrough(request, requestHeaders)
   }
 
   // 4. Allow public paths
   if (isPublicPath(pathname)) {
-    return passThrough(requestHeaders)
+    return passThrough(request, requestHeaders)
   }
 
   // 5. API v1 routes handle their own dual authentication
   if (pathname.startsWith('/api/v1')) {
-    return passThrough(requestHeaders)
+    return passThrough(request, requestHeaders)
   }
 
   // 6. Protected routes - require authentication and inject user headers.
@@ -266,14 +290,14 @@ export async function proxy(request: NextRequest) {
         requestHeaders.set('x-active-team-id', activeTeamId)
       }
 
-      return passThrough(requestHeaders)
+      return passThrough(request, requestHeaders)
     } catch (error) {
       console.error('Proxy error:', error)
       return redirectToLogin(request)
     }
   }
 
-  return passThrough(requestHeaders)
+  return passThrough(request, requestHeaders)
 }
 
 /**

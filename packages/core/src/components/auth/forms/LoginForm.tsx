@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useAuth } from '../../../hooks/useAuth'
+import { useAuthActions } from '../../../hooks/useAuth'
 import { safeCallbackPath } from '../../../lib/auth/callback-url'
 import { useLastAuthMethod } from '../../../hooks/useLastAuthMethod'
 import { Button } from '../../ui/button'
@@ -180,7 +180,7 @@ export function LoginForm() {
   const [otpSentAt, setOtpSentAt] = useState<number | null>(null)
   const [otpSecondsLeft, setOtpSecondsLeft] = useState(otpExpiresIn)
   const isProcessingRef = useRef(false)
-  const { signIn, googleSignIn, sendOtp, signInWithOtp } = useAuth()
+  const { signIn, googleSignIn, sendOtp, signInWithOtp } = useAuthActions()
   const { lastMethod, isReady } = useLastAuthMethod()
   const t = useTranslations('auth')
   const loginSchema = useMemo(() => buildLoginSchema(t), [t])

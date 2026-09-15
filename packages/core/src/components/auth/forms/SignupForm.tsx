@@ -6,7 +6,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useAuth } from '../../../hooks/useAuth'
+import { useAuthActions } from '../../../hooks/useAuth'
 import { safeCallbackPath } from '../../../lib/auth/callback-url'
 import { Button } from '../../ui/button'
 import { Input } from '../../ui/input'
@@ -37,7 +37,7 @@ export function SignupForm() {
   const [registeredEmail, setRegisteredEmail] = useState('')
   const [resendingEmail, setResendingEmail] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
-  const { signUp, googleSignIn, resendVerificationEmail } = useAuth()
+  const { signUp, googleSignIn, resendVerificationEmail } = useAuthActions()
   const t = useTranslations('auth')
 
   // Read invitation-related params from URL

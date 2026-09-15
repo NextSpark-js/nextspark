@@ -1,6 +1,5 @@
 import {getRequestConfig} from 'next-intl/server';
 import {I18N_CONFIG} from './lib/config';
-import {headers} from 'next/headers';
 import { loadMergedTranslations } from './lib/translations/registry';
 import { getUserLocale } from './lib/locale';
 import type { SupportedLocale } from './lib/entities/types';
@@ -8,8 +7,10 @@ import type { SupportedLocale } from './lib/entities/types';
 // Debug flag - only log if explicitly enabled
 const DEBUG_I18N = process.env.NEXTSPARK_DEBUG_I18N === 'true';
 
-// Configuración de grupos de namespaces optimizada por contexto de usuario
-// Estrategia: carga inteligente según el estado y navegación del usuario
+/**
+ * @deprecated Not used to load translations: every request gets the merged
+ * catalog. Kept for code that imports it.
+ */
 const NAMESPACE_GROUPS = {
   // Páginas públicas iniciales: incluye auth para login/signup
   PUBLIC_INITIAL: ['common', 'public', 'auth'],
@@ -24,7 +25,10 @@ const NAMESPACE_GROUPS = {
   ALL: ['common', 'dashboard', 'settings', 'auth', 'public', 'validation', 'teams']
 };
 
-// Estrategia de namespaces optimizada por contexto de usuario
+/**
+ * @deprecated Not used to load translations: every request gets the merged
+ * catalog. Kept for code that imports it.
+ */
 function getPageNamespaces(pathname: string): string[] {
   if (DEBUG_I18N) {
     console.log(`[i18n] Analyzing pathname: "${pathname}"`);
@@ -107,44 +111,19 @@ async function getServerLocale() {
   }
 }
 
-export default getRequestConfig(async () => {
-  // Safe locale detection que no rompe en el cliente
-  let locale: string;
+/**
+ * The request config next-intl builds translations from. It reads nothing from
+ * the request itself: a page rendered with request data is dynamic, and the
+ * locale already comes from getUserLocale, resolved once per request.
+ */
+export default getRequestConfig(async ({ locale: requestedLocale }) => {
+  // A caller that already resolved the locale (getMessages({ locale }), the root
+  // layout) passes it; anything else resolves it here.
+  const locale: string = I18N_CONFIG.supportedLocales.includes(requestedLocale as SupportedLocale)
+    ? (requestedLocale as string)
+    : await getServerLocale();
 
   try {
-    // Intentar obtener locale del servidor
-    locale = await getServerLocale();
-  } catch {
-    // Fallback para contextos de cliente
-    locale = I18N_CONFIG.defaultLocale;
-  }
-
-  try {
-    // Get current pathname for optimized loading
-    let pathname = '';
-    try {
-      const headersList = await headers();
-      pathname = headersList.get('x-pathname') || headersList.get('x-url') || '';
-
-      // If still empty, try to extract from referrer or other headers
-      if (!pathname) {
-        const referer = headersList.get('referer') || '';
-        if (referer) {
-          try {
-            const url = new URL(referer);
-            pathname = url.pathname;
-            if (DEBUG_I18N) {
-              console.log(`[i18n] Extracted pathname from referer: "${pathname}"`);
-            }
-          } catch {
-            // Ignore URL parsing errors
-          }
-        }
-      }
-    } catch {
-      // Headers might not be available in all contexts, fallback gracefully
-    }
-
     // Load translations using registry-based system with built-in fallback chain
     // Note: loadMergedTranslations already handles Core -> Theme -> Entity merge
     // and has internal locale fallback (es-MX -> es -> en)
