@@ -86,31 +86,6 @@ ${allowed}
 `
 }
 
-/**
- * The part of a failed `execSync` that says what actually went wrong.
- *
- * Prefers stderr, falls back to stdout (pnpm puts some failures there), and
- * keeps only the tail: the useful lines are last, and a full install log would
- * bury them.
- */
-function describeInstallFailure(error: unknown, maxLines = 20): string {
-  const err = error as { stderr?: Buffer | string; stdout?: Buffer | string }
-  const read = (value: Buffer | string | undefined): string =>
-    value ? value.toString().trim() : ''
-
-  const output = read(err?.stderr) || read(err?.stdout)
-  if (!output) return ''
-
-  const lines = output.split('\n')
-  return lines.length > maxLines
-    ? ['…', ...lines.slice(-maxLines)].join('\n')
-    : output
-}
-
-function indentDetails(details: string): string {
-  return details.split('\n').map(line => `    ${line}`).join('\n')
-}
-
 export interface ProjectOptions {
   projectName: string
   projectPath: string
@@ -231,37 +206,30 @@ export async function createProject(options: ProjectOptions): Promise<void> {
       '@vercel/blob',
     ].join(' ')
 
+    // pnpm writes its progress and any error straight to the terminal, so the
+    // cause of a failure is on screen as pnpm printed it and nothing captured
+    // is printed again.
+    cliSpinner.stopAndPersist({ symbol: chalk.gray('›'), text: '  Installing @nextsparkjs/core, @nextsparkjs/cli, and dependencies...' })
     execSync(`pnpm add ${essentialDeps}`, {
       cwd: projectPath,
-      stdio: 'pipe',
+      stdio: 'inherit',
     })
     cliSpinner.succeed('  @nextsparkjs/core, @nextsparkjs/cli, and dependencies installed')
   } catch (error) {
-    // execSync captures the subprocess output instead of printing it, so the
-    // reason for the failure lives in `stderr` — never in `error.message`,
-    // which is only "Command failed: pnpm add …". Reporting the message alone
-    // left the user with a command and no cause.
-    const details = describeInstallFailure(error)
-
     // pnpm v10.1+/v11 exits non-zero on unapproved native build scripts
     // (ERR_PNPM_IGNORED_BUILDS) even though the install actually succeeds.
-    // Treat as success if @nextsparkjs/core landed in node_modules; only fail
-    // for genuine install errors.
+    // Whether @nextsparkjs/core landed in node_modules decides between a warning
+    // and a failure; what went wrong is in pnpm's own output above.
+    const status = (error as { status?: number | null }).status ?? 'unknown'
     const coreInstalled = fs.existsSync(
       path.join(projectPath, 'node_modules', '@nextsparkjs', 'core')
     )
     if (coreInstalled) {
       cliSpinner.succeed('  @nextsparkjs/core, @nextsparkjs/cli, and dependencies installed')
-      // The packages landed, so the project is usable — but anything other than
-      // the ignored-builds exit means part of the install did not finish, and
-      // saying nothing is how a project ships without its native binaries.
-      if (details && !/ERR_PNPM_IGNORED_BUILDS/.test(details)) {
-        console.log(chalk.yellow('  Warning: the installer reported a problem:'))
-        console.log(indentDetails(details))
-      }
+      console.log(chalk.yellow(`  Warning: pnpm exited with code ${status}. If its output above reports more than ignored build scripts, part of the install did not finish.`))
     } else {
       cliSpinner.fail('  Failed to install dependencies')
-      throw new Error(details ? `${(error as Error).message}\n\n${indentDetails(details)}` : String(error))
+      throw new Error(`pnpm add exited with code ${status}; its output above says why.`)
     }
   }
 
