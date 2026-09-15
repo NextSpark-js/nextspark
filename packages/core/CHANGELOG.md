@@ -127,6 +127,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pass-through. Each template is parsed as its own kind of file (`.ts` or
   `.tsx`), and one that does not parse fails the build with its file and line.
   Parsing templates needs `typescript`, resolved from core or from the project.
+- **`TASK_CATEGORIES` and `TASK_PRIORITIES` (`@nextsparkjs/core/types`) are in English.**
+  The categories are `'Design'`, `'Development'`, `'Meetings'` and `'Documentation'`
+  (were `'Diseño'`, `'Desarrollo'`, `'Reuniones'` and `'Documentación'`), and the
+  `TaskCategoryType` union follows them; the priority labels are `High`, `Medium`
+  and `Low` (were `Alta`, `Media` and `Baja`). Nothing in core reads or stores
+  them. A project that compares against or persists the Spanish values has to
+  update them.
+
 ### Security
 
 - **The generated proxy enforces the roles `/superadmin` and `/devtools` need.**
