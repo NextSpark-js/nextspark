@@ -75,7 +75,7 @@ export function buildEntitySchemas(
   const updateShape = buildInputShape(entityConfig, 'update', context)
   const listShape = buildListShape(entityConfig, context)
   const getShape: McpShape = {
-    id: z.string().min(1).describe(`ID del registro de ${entityConfig.names.singular} (uuid)`),
+    id: z.string().min(1).describe(`ID of the ${entityConfig.names.singular} record (uuid)`),
   }
 
   const dateFields = entityConfig.fields.filter((f) => f.type === 'date').map((f) => f.name)
@@ -192,10 +192,10 @@ function buildListShape(entityConfig: EntityConfig, context: SchemaBuilderContex
   // deliberately terse — anything longer than a clause belongs in the tool
   // description, not in every shared param.
   const shape: McpShape = {
-    page: z.number().int().min(1).optional().describe('Página (1)'),
-    limit: z.number().int().min(1).max(100).optional().describe('Por página (10, máx 100)'),
-    sortBy: z.enum(sortableValues as [string, ...string[]]).optional().describe('Ordenar por'),
-    sortOrder: z.enum(['ASC', 'DESC']).optional().describe('Orden (DESC)'),
+    page: z.number().int().min(1).optional().describe('Page (1)'),
+    limit: z.number().int().min(1).max(100).optional().describe('Per page (10, max 100)'),
+    sortBy: z.enum(sortableValues as [string, ...string[]]).optional().describe('Sort by'),
+    sortOrder: z.enum(['ASC', 'DESC']).optional().describe('Order (DESC)'),
   }
 
   const searchField = SEARCHED_FIELDS.find((name) =>
@@ -206,16 +206,16 @@ function buildListShape(entityConfig: EntityConfig, context: SchemaBuilderContex
       .string()
       .min(1)
       .optional()
-      .describe(`Busca SOLO en "${searchField}"`)
+      .describe(`Searches ONLY in "${searchField}"`)
   }
 
   if (dateFieldNames.length) {
     shape.dateField = z
       .enum(dateFieldNames as [string, ...string[]])
       .optional()
-      .describe('Campo de fecha del rango (obligatorio con from/to)')
-    shape.from = z.string().optional().describe('Desde (YYYY-MM-DD)')
-    shape.to = z.string().optional().describe('Hasta (YYYY-MM-DD)')
+      .describe('Date field for the range (required with from/to)')
+    shape.from = z.string().optional().describe('From (YYYY-MM-DD)')
+    shape.to = z.string().optional().describe('To (YYYY-MM-DD)')
   }
 
   // Typed filters: only real, filterable, non-date fields.
@@ -233,7 +233,7 @@ function buildListShape(entityConfig: EntityConfig, context: SchemaBuilderContex
       .object(filterShape)
       .strict()
       .optional()
-      .describe('Filtros exactos. Fechas NO acá: usá dateField/from/to.')
+      .describe('Exact filters. Dates NOT here: use dateField/from/to.')
   }
 
   const projectable = entityConfig.fields.map((f) => f.name)
@@ -242,7 +242,7 @@ function buildListShape(entityConfig: EntityConfig, context: SchemaBuilderContex
       .array(z.enum(projectable as [string, ...string[]]))
       .min(1)
       .optional()
-      .describe('Devolver solo estos campos (achica la respuesta)')
+      .describe('Return only these fields (shrinks the response)')
   }
 
   return shape
@@ -259,7 +259,7 @@ function buildListStrict(listShape: McpShape): z.ZodTypeAny {
         ctx.addIssue({
           code: 'custom',
           path: ['dateField'],
-          message: 'from/to requieren dateField — sin él la API los ignora en silencio',
+          message: 'from/to require dateField — without it the API silently ignores them',
         })
       }
     })
@@ -310,20 +310,20 @@ function describeField(
     }
     case 'relation':
       if (field.relation?.entity) {
-        parts.push(`uuid de ${field.relation.entity} (usá su tool de list)`)
+        parts.push(`uuid of ${field.relation.entity} (use its list tool)`)
       }
       break
     case 'user':
-      parts.push('uuid de un miembro del team')
+      parts.push('uuid of a team member')
       break
     case 'date':
       parts.push('YYYY-MM-DD')
       break
     case 'datetime':
-      parts.push('ISO 8601 con offset, ej. 2026-08-05T10:00:00-03:00')
+      parts.push('ISO 8601 with offset, e.g. 2026-08-05T10:00:00-03:00')
       break
     case 'boolean':
-      parts.push('true/false (booleano, no string)')
+      parts.push('true/false (boolean, not string)')
       break
     default:
       break

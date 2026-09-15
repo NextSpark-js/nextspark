@@ -93,30 +93,30 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
   const handleMenuToggle = useCallback(() => {
     const newState = !isMenuOpen
     setIsMenuOpen(newState)
-    setStatusMessage(newState ? 'Menú móvil abierto' : 'Menú móvil cerrado')
-  }, [isMenuOpen])
+    setStatusMessage(newState ? t('a11y.mobileMenuOpenedAnnouncement') : t('a11y.mobileMenuClosedAnnouncement'))
+  }, [isMenuOpen, t])
 
   const handleSignOut = useCallback(async () => {
     try {
-      setStatusMessage('Cerrando sesión...')
+      setStatusMessage(t('a11y.signingOut'))
       await signOut()
-      setStatusMessage('Sesión cerrada exitosamente')
+      setStatusMessage(t('a11y.signOutSuccess'))
     } catch {
-      setStatusMessage('Error al cerrar sesión')
+      setStatusMessage(t('a11y.signOutError'))
     }
-  }, [signOut])
+  }, [signOut, t])
 
   const handleMenuClose = useCallback(() => {
     setIsMenuOpen(false)
-    setStatusMessage('Menú cerrado')
-  }, [])
+    setStatusMessage(t('a11y.menuClosedAnnouncement'))
+  }, [t])
 
   // Handler for sidebar toggle
   const handleToggleSidebar = useCallback(() => {
     toggleSidebar()
     const newState = !isCollapsed
-    setStatusMessage(newState ? 'Sidebar expandido' : 'Sidebar contraído')
-  }, [isCollapsed, toggleSidebar])
+    setStatusMessage(newState ? t('a11y.sidebarToggleExpanded') : t('a11y.sidebarToggleCollapsed'))
+  }, [isCollapsed, toggleSidebar, t])
 
   // Keyboard navigation for mobile menu
   useEffect(() => {
@@ -395,7 +395,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                         aria-label={t('a11y.userInfo')}
                       >
                         {TOPBAR_CONFIG.userMenu.showAvatar && (
-                          <p className="text-sm font-medium">{user.firstName || 'Usuario'}</p>
+                          <p className="text-sm font-medium">{user.firstName || t('common.user')}</p>
                         )}
                         {TOPBAR_CONFIG.userMenu.showEmail && (
                           <p className="text-xs text-muted-foreground">{user.email}</p>
@@ -459,7 +459,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                   {user.image ? (
                     <Image
                       src={user.image}
-                      alt={`Avatar de ${user.firstName || user.email}`}
+                      alt={t('a11y.avatarForName', { name: user.firstName || user.email })}
                       width={32}
                       height={32}
                       className="h-8 w-8 rounded-full object-cover border border-border"
@@ -626,7 +626,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                   )}
                   <div>
                     <div className="text-sm font-medium text-foreground">
-                      {user.firstName || 'Usuario'}
+                      {user.firstName || t('common.user')}
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {user.email}

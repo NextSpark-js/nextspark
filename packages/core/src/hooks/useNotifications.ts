@@ -16,8 +16,8 @@ export interface Notification {
 const EXAMPLE_NOTIFICATIONS: Notification[] = [
   {
     id: '1',
-    title: 'Bienvenido al Dashboard',
-    message: 'Tu cuenta ha sido configurada exitosamente. Explora todas las funcionalidades disponibles.',
+    title: 'Welcome to the Dashboard',
+    message: 'Your account has been set up successfully. Explore all the available features.',
     type: 'success',
     timestamp: new Date(Date.now() - 2 * 60 * 1000), // 2 minutos atrás
     isRead: false,
@@ -25,8 +25,8 @@ const EXAMPLE_NOTIFICATIONS: Notification[] = [
   },
   {
     id: '2',
-    title: 'Nueva tarea pendiente',
-    message: 'Tienes 3 tareas sin completar. ¿Quieres revisarlas ahora?',
+    title: 'New pending task',
+    message: 'You have 3 incomplete tasks. Want to review them now?',
     type: 'info',
     timestamp: new Date(Date.now() - 15 * 60 * 1000), // 15 minutos atrás
     isRead: false,
@@ -34,8 +34,8 @@ const EXAMPLE_NOTIFICATIONS: Notification[] = [
   },
   {
     id: '3',
-    title: 'Configuración de seguridad',
-    message: 'Te recomendamos activar la autenticación de dos factores para mayor seguridad.',
+    title: 'Security settings',
+    message: 'We recommend enabling two-factor authentication for extra security.',
     type: 'warning',
     timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 horas atrás
     isRead: true,
@@ -43,8 +43,8 @@ const EXAMPLE_NOTIFICATIONS: Notification[] = [
   },
   {
     id: '4',
-    title: 'Perfil actualizado',
-    message: 'Tu información de perfil ha sido actualizada correctamente.',
+    title: 'Profile updated',
+    message: 'Your profile information has been updated successfully.',
     type: 'success',
     timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 día atrás
     isRead: true,
@@ -52,16 +52,16 @@ const EXAMPLE_NOTIFICATIONS: Notification[] = [
   },
   {
     id: '5',
-    title: 'Nuevo login detectado',
-    message: 'Se detectó un nuevo inicio de sesión desde Chrome en Ciudad de México.',
+    title: 'New login detected',
+    message: 'A new sign-in was detected from Chrome in Mexico City.',
     type: 'info',
     timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 días atrás
     isRead: true
   },
   {
     id: '6',
-    title: 'Backup completado',
-    message: 'Se ha realizado una copia de seguridad de tus datos exitosamente.',
+    title: 'Backup completed',
+    message: 'Your data has been backed up successfully.',
     type: 'success',
     timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 1 semana atrás
     isRead: true

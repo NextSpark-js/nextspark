@@ -64,6 +64,10 @@
       "countryPlaceholder": "Land auswaehlen",
       "timezone": "Zeitzone",
       "timezonePlaceholder": "Zeitzone auswaehlen",
+      "countrySearchPlaceholder": "Land suchen...",
+      "countryNotFound": "Keine Laender gefunden.",
+      "timezoneSearchPlaceholder": "Zeitzone suchen...",
+      "timezoneNotFound": "Keine Zeitzonen gefunden.",
       "memberSince": "Mitglied seit",
       "updateButton": "Profil aktualisieren",
       "updating": "Aktualisieren...",
@@ -390,6 +394,7 @@
     "yourTeam": "Ihr Team",
     "yourTeams": "Ihre Teams",
     "yourTeamsDescription": "Teams, in denen Sie Mitglied sind. Waehlen Sie eines aus, um die Details anzuzeigen.",
+    "singleUserDescription": "Ihr persönlicher Arbeitsbereich.",
     "noTeams": "Sie gehoeren noch keinem Team an.",
     "manageTeamMembers": "Verwalten Sie die Mitglieder und Einstellungen des Teams."
   },

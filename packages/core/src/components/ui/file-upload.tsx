@@ -51,7 +51,7 @@ export function FileUpload({
 
   const validateFile = (file: File): string | null => {
     if (maxSize && file.size > maxSize * 1024 * 1024) {
-      return `El archivo es muy grande. Máximo ${maxSize}MB.`
+      return `File is too large. Maximum ${maxSize}MB.`
     }
 
     if (acceptedTypes.length > 0 && !acceptedTypes.includes("*")) {
@@ -65,7 +65,7 @@ export function FileUpload({
       )
 
       if (!isValid) {
-        return `Tipo de archivo no permitido. Tipos aceptados: ${acceptedTypes.join(", ")}`
+        return `File type not allowed. Accepted types: ${acceptedTypes.join(", ")}`
       }
     }
 
@@ -80,7 +80,7 @@ export function FileUpload({
 
     Array.from(files).forEach((file) => {
       if (value.length + newFiles.length >= maxFiles) {
-        errors.push(`Máximo ${maxFiles} archivos permitidos`)
+        errors.push(`Maximum ${maxFiles} files allowed`)
         return
       }
 
@@ -168,12 +168,12 @@ export function FileUpload({
       >
         <Upload className="mx-auto h-8 w-8 text-muted-foreground" />
         <p className="mt-2 text-sm text-muted-foreground">
-          {dragDrop ? "Arrastra archivos aquí o " : ""}
-          <span className="font-medium text-primary">haz clic para seleccionar</span>
+          {dragDrop ? "Drag files here or " : ""}
+          <span className="font-medium text-primary">click to select</span>
         </p>
         <p className="text-xs text-muted-foreground mt-1">
-          {maxFiles > 1 ? `Hasta ${maxFiles} archivos` : "Un archivo"} 
-          {maxSize && `, máximo ${maxSize}MB cada uno`}
+          {maxFiles > 1 ? `Up to ${maxFiles} files` : "One file"}
+          {maxSize && `, maximum ${maxSize}MB each`}
         </p>
         
         <input

@@ -62,7 +62,7 @@ import {
 import { profileSchema, ProfileFormData } from '@nextsparkjs/core/lib/validation'
 import { countries, timezones } from '@nextsparkjs/core/lib/countries-timezones'
 import { sel } from '@nextsparkjs/core/selectors'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
 
 // Language options
@@ -82,6 +82,7 @@ function ProfilePage() {
   const [timezoneOpen, setTimezoneOpen] = useState(false)
   const [countryOpen, setCountryOpen] = useState(false)
   const t = useTranslations('settings')
+  const locale = useLocale()
 
   // Form setup
   const {
@@ -450,9 +451,9 @@ function ProfilePage() {
                     </PopoverTrigger>
                     <PopoverContent className="w-[400px] p-0">
                       <Command>
-                        <CommandInput placeholder="Buscar país..." className="h-9" />
+                        <CommandInput placeholder={t('profile.form.countrySearchPlaceholder')} className="h-9" />
                         <CommandList>
-                          <CommandEmpty>No se encontraron países.</CommandEmpty>
+                          <CommandEmpty>{t('profile.form.countryNotFound')}</CommandEmpty>
                           <CommandGroup>
                             {countries.map((country) => (
                               <CommandItem
@@ -502,9 +503,9 @@ function ProfilePage() {
                     </PopoverTrigger>
                     <PopoverContent className="w-[400px] p-0">
                       <Command>
-                        <CommandInput placeholder="Buscar timezone..." className="h-9" />
+                        <CommandInput placeholder={t('profile.form.timezoneSearchPlaceholder')} className="h-9" />
                         <CommandList>
-                          <CommandEmpty>No se encontraron timezones.</CommandEmpty>
+                          <CommandEmpty>{t('profile.form.timezoneNotFound')}</CommandEmpty>
                           <CommandGroup>
                             {timezones.map((timezone) => (
                               <CommandItem
@@ -540,7 +541,7 @@ function ProfilePage() {
                   <Calendar className="h-4 w-4" />
                   <span className="font-medium">{t('profile.form.memberSince')}:</span>
                   <span>
-                    {profile && new Date(profile.createdAt).toLocaleDateString('es-ES', {
+                    {profile && new Date(profile.createdAt).toLocaleDateString(locale, {
                       month: 'long',
                       day: 'numeric',
                       year: 'numeric'

@@ -24,26 +24,26 @@ export function useTranslationPreload(context: 'dashboard' | 'auth' | 'auto' = '
   useEffect(() => {
     // Función para precargar namespaces específicos
     const preloadNamespaces = async (namespaces: string[], contextName: string) => {
-      console.log(`[TranslationPreload] 🚀 Iniciando precarga ${contextName} para ${locale}:`, namespaces);
-      
+      console.log(`[TranslationPreload] 🚀 Starting ${contextName} preload for ${locale}:`, namespaces);
+
       const promises = namespaces.map(async (namespace) => {
         try {
           // Usar dynamic import para precargar sin bloquear
           await import(`../messages/${locale}/${namespace}.json`);
-          console.log(`[TranslationPreload] ✓ Precargado: ${namespace}`);
+          console.log(`[TranslationPreload] ✓ Preloaded: ${namespace}`);
           return { namespace, success: true };
         } catch (error) {
-          console.warn(`[TranslationPreload] ⚠️ Error precargando ${namespace}:`, error);
+          console.warn(`[TranslationPreload] ⚠️ Error preloading ${namespace}:`, error);
           return { namespace, success: false, error };
         }
       });
 
       const results = await Promise.allSettled(promises);
-      const successful = results.filter(result => 
+      const successful = results.filter(result =>
         result.status === 'fulfilled' && result.value.success
       ).length;
-      
-      console.log(`[TranslationPreload] ✅ Precarga ${contextName} completa: ${successful}/${namespaces.length} namespaces`);
+
+      console.log(`[TranslationPreload] ✅ ${contextName} preload complete: ${successful}/${namespaces.length} namespaces`);
     };
 
     // Estrategia de precarga inteligente por contexto
@@ -114,7 +114,7 @@ export function useNavigationPreload() {
       namespacesToLoad = PUBLIC_NAMESPACES;
     }
 
-    console.log(`[NavigationPreload] Precargando para ${pathname}:`, namespacesToLoad);
+    console.log(`[NavigationPreload] Preloading for ${pathname}:`, namespacesToLoad);
 
     const promises = namespacesToLoad.map(namespace =>
       import(`../messages/${locale}/${namespace}.json`).catch(error => {
@@ -124,7 +124,7 @@ export function useNavigationPreload() {
     );
 
     await Promise.all(promises);
-    console.log(`[NavigationPreload] ✅ Listo para navegar a ${pathname}`);
+    console.log(`[NavigationPreload] ✅ Ready to navigate to ${pathname}`);
   };
 
   return { preloadForRoute };

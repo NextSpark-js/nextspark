@@ -56,18 +56,18 @@ export function VideoUpload({
   const validateVideo = (file: File): Promise<string | null> => {
     return new Promise((resolve) => {
       if (maxSize && file.size > maxSize * 1024 * 1024) {
-        resolve(`El video es muy grande. Máximo ${maxSize}MB.`)
+        resolve(`Video is too large. Maximum ${maxSize}MB.`)
         return
       }
 
       if (!file.type.startsWith("video/")) {
-        resolve("El archivo debe ser un video.")
+        resolve("The file must be a video.")
         return
       }
 
       const fileExtension = file.name.split(".").pop()?.toLowerCase()
       if (fileExtension && !acceptedFormats.includes(fileExtension)) {
-        resolve(`Formato no soportado. Formatos aceptados: ${acceptedFormats.join(", ")}`)
+        resolve(`Unsupported format. Accepted formats: ${acceptedFormats.join(", ")}`)
         return
       }
 
@@ -111,7 +111,7 @@ export function VideoUpload({
 
     for (const file of Array.from(files)) {
       if (value.length + newVideos.length >= maxVideos) {
-        errors.push(`Máximo ${maxVideos} videos permitidos`)
+        errors.push(`Maximum ${maxVideos} videos allowed`)
         break
       }
 
@@ -199,15 +199,15 @@ export function VideoUpload({
       >
         <Video className="mx-auto h-8 w-8 text-muted-foreground" />
         <p className="mt-2 text-sm text-muted-foreground">
-          Arrastra videos aquí o{" "}
-          <span className="font-medium text-primary">haz clic para seleccionar</span>
+          Drag videos here or{" "}
+          <span className="font-medium text-primary">click to select</span>
         </p>
         <p className="text-xs text-muted-foreground mt-1">
-          {maxVideos > 1 ? `Hasta ${maxVideos} videos` : "Un video"} 
-          {maxSize && `, máximo ${maxSize}MB cada uno`}
+          {maxVideos > 1 ? `Up to ${maxVideos} videos` : "One video"}
+          {maxSize && `, maximum ${maxSize}MB each`}
         </p>
         <p className="text-xs text-muted-foreground">
-          Formatos: {acceptedFormats.join(", ")}
+          Formats: {acceptedFormats.join(", ")}
         </p>
         
         <input

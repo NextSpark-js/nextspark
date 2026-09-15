@@ -37,20 +37,20 @@ const getTypeIcon = (result: EntitySearchResult) => {
   }
 }
 
-const getTypeLabel = (result: EntitySearchResult, locale: 'en' | 'es' = 'es') => {
+const getTypeLabel = (result: EntitySearchResult, t: ReturnType<typeof useTranslations>) => {
   if (result.type === 'entity') {
-    return locale === 'en' ? 'Entity' : 'Entidad'
+    return t('search.entityLabel')
   }
-  
+
   switch (result.category) {
     case 'Settings':
-      return locale === 'en' ? 'Setting' : 'Configuración'
+      return t('search.settingLabel')
     case 'Navigation':
-      return locale === 'en' ? 'Page' : 'Página'
+      return t('search.pageLabel')
     case 'Entities':
-      return locale === 'en' ? 'Entity' : 'Entidad'
+      return t('search.entityLabel')
     default:
-      return locale === 'en' ? 'Result' : 'Resultado'
+      return t('search.resultLabel')
   }
 }
 
@@ -74,6 +74,7 @@ interface SearchResultItemProps {
 }
 
 function SearchResultItem({ result, onSelect, searchQuery }: SearchResultItemProps) {
+  const t = useTranslations('common')
   const handleSelect = useCallback(() => {
     onSelect()
   }, [onSelect])
@@ -94,7 +95,7 @@ function SearchResultItem({ result, onSelect, searchQuery }: SearchResultItemPro
       aria-label={createAriaLabel(
         '{type}: {title}{description}{limits}',
         {
-          type: getTypeLabel(result, 'es'),
+          type: getTypeLabel(result, t),
           title: result.title,
           description: result.description ? ` - ${result.description}` : '',
           limits: result.limitInfo ? ` (${result.limitInfo.current}/${result.limitInfo.max})` : ''
@@ -152,7 +153,7 @@ function SearchResultItem({ result, onSelect, searchQuery }: SearchResultItemPro
           
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="text-xs">
-              {getTypeLabel(result)}
+              {getTypeLabel(result, t)}
             </Badge>
             {result.category && (
               <Badge variant="outline" className="text-xs">
@@ -216,8 +217,8 @@ export function SearchDropdown() {
     setIsOpen(false)
     setSelectedIndex(-1)
     clearSearch()
-    setStatusMessage('Búsqueda cerrada')
-  }, [clearSearch])
+    setStatusMessage(t('search.closedAnnouncement'))
+  }, [clearSearch, t])
 
   // Manejar navegación con teclado
   useEffect(() => {
@@ -258,12 +259,12 @@ export function SearchDropdown() {
     setSelectedIndex(-1)
     if (value.trim().length > 0) {
       setIsOpen(true)
-      setStatusMessage(`Buscando: ${value}`)
+      setStatusMessage(t('search.searchingFor', { value }))
     } else {
       setIsOpen(false)
       setStatusMessage('')
     }
-  }, [setQuery])
+  }, [setQuery, t])
 
   const showDropdown = isOpen && (hasResults || isSearching || (!isEmpty && !hasResults))
 
@@ -371,11 +372,11 @@ export function SearchDropdown() {
           {hasResults && (
             <div className="border-t border-border p-2">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{results.length} resultado{results.length !== 1 ? 's' : ''}</span>
+                <span>{t('search.resultsCount', { count: results.length })}</span>
                 <div className="flex items-center gap-2">
-                  <span>↑↓ navegar</span>
-                  <span>↵ seleccionar</span>
-                  <span>esc cerrar</span>
+                  <span>{t('search.keyboardNavigate')}</span>
+                  <span>{t('search.keyboardSelect')}</span>
+                  <span>{t('search.keyboardClose')}</span>
                 </div>
               </div>
             </div>

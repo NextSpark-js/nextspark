@@ -75,7 +75,8 @@
     "active": "Activo",
     "inactive": "Inactivo",
     "on": "Activado",
-    "off": "Desactivado"
+    "off": "Desactivado",
+    "user": "Usuario"
   },
   "theme": {
     "selector": "Selector de tema",
@@ -93,11 +94,14 @@
   "notifications": {
     "title": "Notificaciones",
     "unread": "sin leer",
+    "unreadStatus": "sin leer",
     "new": "nueva",
     "markAllAsRead": "Marcar todas las notificaciones como leídas",
     "markAll": "Marcar todas",
     "empty": "No tienes notificaciones",
-    "configure": "Configurar notificaciones"
+    "configure": "Configurar notificaciones",
+    "read": "leída",
+    "markAsRead": "Marcar leído"
   },
   "search": {
     "placeholder": "Buscar páginas, configuraciones...",
@@ -106,7 +110,17 @@
     "results": "Resultados de búsqueda",
     "searching": "Buscando...",
     "noResults": "No se encontraron resultados para \"{query}\"",
-    "tryDifferent": "Intenta con otras palabras clave"
+    "tryDifferent": "Intenta con otras palabras clave",
+    "entityLabel": "Entidad",
+    "settingLabel": "Configuración",
+    "pageLabel": "Página",
+    "resultLabel": "Resultado",
+    "closedAnnouncement": "Búsqueda cerrada",
+    "searchingFor": "Buscando: {value}",
+    "resultsCount": "{count, plural, one {# resultado} other {# resultados}}",
+    "keyboardNavigate": "↑↓ navegar",
+    "keyboardSelect": "↵ seleccionar",
+    "keyboardClose": "esc cerrar"
   },
   "userRoles": {
     "member": "Miembro",
@@ -123,6 +137,7 @@
     "avatarForName": "Avatar de {name}",
     "closeNavigationMenu": "Cerrar menú de navegación",
     "collapseSidebar": "Contraer barra lateral",
+    "currentPageSuffix": " (página actual)",
     "dashboardNavigation": "Navegación principal del dashboard",
     "deleteNotification": "Eliminar notificación: {title}",
     "developerArea": "Área de desarrolladores",
@@ -141,18 +156,29 @@
     "loadingUserInfo": "Cargando información del usuario",
     "logoOf": "Logo de {appName}",
     "mainNavigation": "Navegación principal",
+    "markNotificationAsRead": "Marcar como leída: {title}",
+    "menuClosedAnnouncement": "Menú cerrado",
     "mobileActions": "Acciones móviles",
     "mobileMainNavigation": "Navegación móvil principal",
+    "mobileMenuClosedAnnouncement": "Menú móvil cerrado",
+    "mobileMenuOpenedAnnouncement": "Menú móvil abierto",
     "mobileNavigationMenu": "Menú de navegación móvil",
     "mobileTopBar": "Barra de navegación móvil superior",
+    "navigatingToAnnouncement": "Navegando a {name} - {description}",
     "openHelpCenterNewTab": "Abrir centro de ayuda en una nueva pestaña",
     "openNavigationMenu": "Abrir menú de navegación",
     "settingsNavigation": "Navegación de configuración",
     "sidebarCollapsed": "Barra lateral de navegación contraída",
+    "sidebarCollapsedHint": "Barra lateral contraída. Usa Tab para navegar.",
     "sidebarExpanded": "Barra lateral de navegación expandida",
+    "sidebarToggleCollapsed": "Barra lateral contraída",
+    "sidebarToggleExpanded": "Barra lateral expandida",
     "signIn": "Iniciar sesión",
     "signOut": "Cerrar sesión",
+    "signOutError": "Error al cerrar sesión",
+    "signOutSuccess": "Sesión cerrada correctamente",
     "signUp": "Registrarse",
+    "signingOut": "Cerrando sesión...",
     "superAdminArea": "Área de Super Admin",
     "superAdminAreaTitle": "Área de Super Admin",
     "taskSearch": "Búsqueda de tareas",
@@ -214,5 +240,15 @@
     "reactivateTask": "Reactivar tarea: {title}",
     "completedDate": "Completada el {date}",
     "deleteCompletedTask": "Eliminar tarea completada: {title}"
+  },
+  "relativeTime": {
+    "justNow": "Hace un momento",
+    "minutesAgo": "Hace {minutes} min",
+    "hoursAgo": "Hace {hours}h",
+    "daysAgo": "Hace {days}d"
+  },
+  "debug": {
+    "hidePrefix": "Para ocultar: remueve ",
+    "hideSuffix": " de la URL"
   }
 }

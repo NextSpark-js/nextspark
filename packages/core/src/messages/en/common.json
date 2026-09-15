@@ -75,7 +75,8 @@
     "active": "Active",
     "inactive": "Inactive",
     "on": "On",
-    "off": "Off"
+    "off": "Off",
+    "user": "User"
   },
   "theme": {
     "selector": "Theme selector",
@@ -93,11 +94,14 @@
   "notifications": {
     "title": "Notifications",
     "unread": "unread",
+    "unreadStatus": "unread",
     "new": "new",
     "markAllAsRead": "Mark all notifications as read",
     "markAll": "Mark all",
     "empty": "You have no notifications",
-    "configure": "Configure notifications"
+    "configure": "Configure notifications",
+    "read": "read",
+    "markAsRead": "Mark as read"
   },
   "search": {
     "placeholder": "Search pages, settings...",
@@ -106,7 +110,17 @@
     "results": "Search results",
     "searching": "Searching...",
     "noResults": "No results found for \"{query}\"",
-    "tryDifferent": "Try different keywords"
+    "tryDifferent": "Try different keywords",
+    "entityLabel": "Entity",
+    "settingLabel": "Setting",
+    "pageLabel": "Page",
+    "resultLabel": "Result",
+    "closedAnnouncement": "Search closed",
+    "searchingFor": "Searching: {value}",
+    "resultsCount": "{count, plural, one {# result} other {# results}}",
+    "keyboardNavigate": "↑↓ navigate",
+    "keyboardSelect": "↵ select",
+    "keyboardClose": "esc close"
   },
   "userRoles": {
     "member": "Member",
@@ -123,6 +137,7 @@
     "avatarForName": "Avatar for {name}",
     "closeNavigationMenu": "Close navigation menu",
     "collapseSidebar": "Collapse sidebar",
+    "currentPageSuffix": " (current page)",
     "dashboardNavigation": "Dashboard main navigation",
     "deleteNotification": "Delete notification: {title}",
     "developerArea": "Developer area",
@@ -141,18 +156,29 @@
     "loadingUserInfo": "Loading user information",
     "logoOf": "Logo of {appName}",
     "mainNavigation": "Main navigation",
+    "markNotificationAsRead": "Mark as read: {title}",
+    "menuClosedAnnouncement": "Menu closed",
     "mobileActions": "Mobile actions",
     "mobileMainNavigation": "Main mobile navigation",
+    "mobileMenuClosedAnnouncement": "Mobile menu closed",
+    "mobileMenuOpenedAnnouncement": "Mobile menu opened",
     "mobileNavigationMenu": "Mobile navigation menu",
     "mobileTopBar": "Mobile top navigation bar",
+    "navigatingToAnnouncement": "Navigating to {name} - {description}",
     "openHelpCenterNewTab": "Open Help Center in a new tab",
     "openNavigationMenu": "Open navigation menu",
     "settingsNavigation": "Settings navigation",
     "sidebarCollapsed": "Collapsed navigation sidebar",
+    "sidebarCollapsedHint": "Sidebar collapsed. Use Tab to navigate.",
     "sidebarExpanded": "Expanded navigation sidebar",
+    "sidebarToggleCollapsed": "Sidebar collapsed",
+    "sidebarToggleExpanded": "Sidebar expanded",
     "signIn": "Sign in",
     "signOut": "Sign out",
+    "signOutError": "Error signing out",
+    "signOutSuccess": "Signed out successfully",
     "signUp": "Sign up",
+    "signingOut": "Signing out...",
     "superAdminArea": "Super Admin area",
     "superAdminAreaTitle": "Super Admin area",
     "taskSearch": "Task search",
@@ -214,5 +240,15 @@
     "reactivateTask": "Reactivate task: {title}",
     "completedDate": "Completed on {date}",
     "deleteCompletedTask": "Delete completed task: {title}"
+  },
+  "relativeTime": {
+    "justNow": "Just now",
+    "minutesAgo": "{minutes} min ago",
+    "hoursAgo": "{hours}h ago",
+    "daysAgo": "{days}d ago"
+  },
+  "debug": {
+    "hidePrefix": "To hide: remove ",
+    "hideSuffix": " from the URL"
   }
 }

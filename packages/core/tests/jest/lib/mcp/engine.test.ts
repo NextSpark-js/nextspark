@@ -312,7 +312,7 @@ describe('createMcpEngine', () => {
     });
     const result = await callTool(engine, 'acme_explode', {});
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain('Error inesperado: boom');
+    expect(result.content[0].text).toContain('Unexpected error: boom');
   });
 
   it('a tool handler that throws a non-Error value is still stringified safely at the engine catch', async () => {

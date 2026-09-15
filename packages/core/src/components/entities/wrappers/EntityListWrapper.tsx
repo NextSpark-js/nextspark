@@ -120,7 +120,7 @@ export function EntityListWrapper({
   const loadData = useCallback(async (isInitial = false) => {
     if (!entityConfig) return
     if (!entityConfig.enabled) {
-      setDataError(`Entidad "${entityType}" está deshabilitada`)
+      setDataError(`Entity "${entityType}" is disabled`)
       return
     }
 
@@ -147,7 +147,7 @@ export function EntityListWrapper({
       setDataError(null)
     } catch (err) {
       console.error(`[EntityListWrapper] Error loading data for "${entityType}":`, err)
-      setDataError(`Error cargando datos: ${err instanceof Error ? err.message : 'Error desconocido'}`)
+      setDataError(`Error loading data: ${err instanceof Error ? err.message : 'Unknown error'}`)
       setData([])
     } finally {
       setIsInitialLoad(false)
@@ -293,7 +293,7 @@ export function EntityListWrapper({
     return (
       <Alert>
         <AlertDescription>
-          {configError || `No se pudo cargar la configuración para la entidad "${entityType}".`}
+          {configError || `Could not load the configuration for entity "${entityType}".`}
         </AlertDescription>
       </Alert>
     )

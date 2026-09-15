@@ -104,7 +104,7 @@ describe('ApiKeyManager', () => {
         }));
         const { getApiScopes } = require('@/core/lib/api/keys');
 
-        expect(getApiScopes()['admin:api-keys']).toBe('Gestionar API keys');
+        expect(getApiScopes()['admin:api-keys']).toBe('Manage API keys');
       });
     });
 

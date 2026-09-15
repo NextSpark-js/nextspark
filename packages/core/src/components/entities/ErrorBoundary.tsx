@@ -150,33 +150,32 @@ export class EntityErrorBoundary extends React.Component<
 
   private getErrorMessage = (error: Error, entityType?: string): { title: string; description: string } => {
     const errorType = this.getErrorType(error)
-    const entityName = entityType ? ` de ${entityType}` : ''
 
     switch (errorType) {
       case 'network':
         return {
-          title: 'Error de Conexión',
-          description: `No se pudo conectar con el servidor para cargar los datos${entityName}. Verifica tu conexión a internet.`
+          title: 'Connection Error',
+          description: `Could not connect to the server${entityType ? ` to load ${entityType}` : ''}. Check your internet connection.`
         }
       case 'permission':
         return {
-          title: 'Sin Permisos',
-          description: `No tienes los permisos necesarios para acceder a estos datos${entityName}.`
+          title: 'No Permissions',
+          description: `You don't have the necessary permissions to access ${entityType || 'this data'}.`
         }
       case 'not-found':
         return {
-          title: 'Recurso No Encontrado',
-          description: `Los datos${entityName} que solicitas no están disponibles o han sido eliminados.`
+          title: 'Resource Not Found',
+          description: `What you requested${entityType ? ` from ${entityType}` : ''} is not available or has been deleted.`
         }
       case 'configuration':
         return {
-          title: 'Error de Configuración',
-          description: `Hay un problema con la configuración${entityName}. Contacta al administrador.`
+          title: 'Configuration Error',
+          description: `There is a problem with the configuration${entityType ? ` of ${entityType}` : ''}. Contact the administrator.`
         }
       default:
         return {
-          title: 'Error Inesperado',
-          description: `Ha ocurrido un error inesperado${entityName}. Nuestro equipo ha sido notificado.`
+          title: 'Unexpected Error',
+          description: `An unexpected error occurred${entityType ? ` while loading ${entityType}` : ''}. Our team has been notified.`
         }
     }
   }
@@ -220,35 +219,35 @@ export class EntityErrorBoundary extends React.Component<
                     className="inline-flex items-center"
                   >
                     <RefreshCw className="h-4 w-4 mr-2" />
-                    Reintentar ({this.maxRetries - this.retryCount} intentos restantes)
+                    Retry ({this.maxRetries - this.retryCount} attempts remaining)
                   </Button>
                 )}
-                
-                <Button 
-                  onClick={this.handleReset} 
+
+                <Button
+                  onClick={this.handleReset}
                   variant="outline"
                   className="inline-flex items-center"
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
-                  Restablecer
+                  Reset
                 </Button>
 
-                <Button 
-                  onClick={this.handleGoHome} 
+                <Button
+                  onClick={this.handleGoHome}
                   variant="outline"
                   className="inline-flex items-center"
                 >
                   <Home className="h-4 w-4 mr-2" />
-                  Ir al Dashboard
+                  Go to Dashboard
                 </Button>
 
-                <Button 
-                  onClick={this.handleReload} 
+                <Button
+                  onClick={this.handleReload}
                   variant="ghost"
                   className="inline-flex items-center"
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
-                  Recargar Página
+                  Reload Page
                 </Button>
               </div>
 
@@ -256,20 +255,20 @@ export class EntityErrorBoundary extends React.Component<
               {(showDetails || process.env.NODE_ENV === 'development') && errorInfo && (
                 <Alert>
                   <Bug className="h-4 w-4" />
-                  <AlertTitle>Detalles del Error (Desarrollo)</AlertTitle>
+                  <AlertTitle>Error Details (Development)</AlertTitle>
                   <AlertDescription className="mt-2">
                     <div className="space-y-2 text-sm font-mono">
                       <div>
                         <strong>Error ID:</strong> {errorId}
                       </div>
                       <div>
-                        <strong>Tipo:</strong> {errorType}
+                        <strong>Type:</strong> {errorType}
                       </div>
                       <div>
-                        <strong>Entidad:</strong> {entityType || 'N/A'}
+                        <strong>Entity:</strong> {entityType || 'N/A'}
                       </div>
                       <div>
-                        <strong>Mensaje:</strong> {error.message}
+                        <strong>Message:</strong> {error.message}
                       </div>
                       {error.stack && (
                         <details className="mt-2">
@@ -294,7 +293,7 @@ export class EntityErrorBoundary extends React.Component<
 
               {/* Help Text */}
               <div className="text-center text-sm text-gray-500">
-                Si el problema persiste, contacta al soporte técnico con el ID: <code className="bg-gray-100 px-1 rounded">{errorId}</code>
+                If the problem persists, contact technical support with the ID: <code className="bg-gray-100 px-1 rounded">{errorId}</code>
               </div>
             </CardContent>
           </Card>

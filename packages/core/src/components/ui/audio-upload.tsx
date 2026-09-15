@@ -60,18 +60,18 @@ export function AudioUpload({
   const validateAudio = (file: File): Promise<string | null> => {
     return new Promise((resolve) => {
       if (maxSize && file.size > maxSize * 1024 * 1024) {
-        resolve(`El audio es muy grande. Máximo ${maxSize}MB.`)
+        resolve(`Audio file is too large. Maximum ${maxSize}MB.`)
         return
       }
 
       if (!file.type.startsWith("audio/")) {
-        resolve("El archivo debe ser un audio.")
+        resolve("The file must be an audio file.")
         return
       }
 
       const fileExtension = file.name.split(".").pop()?.toLowerCase()
       if (fileExtension && !acceptedFormats.includes(fileExtension)) {
-        resolve(`Formato no soportado. Formatos aceptados: ${acceptedFormats.join(", ")}`)
+        resolve(`Unsupported format. Accepted formats: ${acceptedFormats.join(", ")}`)
         return
       }
 
@@ -104,7 +104,7 @@ export function AudioUpload({
 
     for (const file of Array.from(files)) {
       if (value.length + newAudios.length >= maxAudios) {
-        errors.push(`Máximo ${maxAudios} audios permitidos`)
+        errors.push(`Maximum ${maxAudios} audio files allowed`)
         break
       }
 
@@ -235,15 +235,15 @@ export function AudioUpload({
       >
         <Music className="mx-auto h-8 w-8 text-muted-foreground" />
         <p className="mt-2 text-sm text-muted-foreground">
-          Arrastra audios aquí o{" "}
-          <span className="font-medium text-primary">haz clic para seleccionar</span>
+          Drag audio files here or{" "}
+          <span className="font-medium text-primary">click to select</span>
         </p>
         <p className="text-xs text-muted-foreground mt-1">
-          {maxAudios > 1 ? `Hasta ${maxAudios} audios` : "Un audio"} 
-          {maxSize && `, máximo ${maxSize}MB cada uno`}
+          {maxAudios > 1 ? `Up to ${maxAudios} audio files` : "One audio file"}
+          {maxSize && `, maximum ${maxSize}MB each`}
         </p>
         <p className="text-xs text-muted-foreground">
-          Formatos: {acceptedFormats.join(", ")}
+          Formats: {acceptedFormats.join(", ")}
         </p>
         
         <input

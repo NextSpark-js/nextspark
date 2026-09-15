@@ -22,8 +22,7 @@ import {
 } from 'lucide-react'
 import type { EntityConfig } from '../../lib/entities/types'
 import { deleteEntityData } from '../../lib/api/entities'
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { useLocale } from 'next-intl'
 import { EntityPageHeader } from './EntityPageHeader'
 
 export interface EntityDetailPageProps {
@@ -42,10 +41,14 @@ export function EntityDetailPage({
   className
 }: EntityDetailPageProps) {
   const router = useRouter()
+  const locale = useLocale()
   const [isDeleting, setIsDeleting] = useState(false)
 
+  const formatDateTime = (value: string) =>
+    new Date(value).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })
+
   const handleDelete = async () => {
-    if (!confirm(`¿Estás seguro de que quieres eliminar este ${entityConfig.names.singular.toLowerCase()}?`)) {
+    if (!confirm(`Are you sure you want to delete this ${entityConfig.names.singular.toLowerCase()}?`)) {
       return
     }
 
@@ -55,7 +58,7 @@ export function EntityDetailPage({
       router.push(`/dashboard/${entityConfig.slug}`)
     } catch (error) {
       console.error('Error deleting entity:', error)
-      alert('Error al eliminar. Por favor, intenta nuevamente.')
+      alert('Error deleting. Please try again.')
     } finally {
       setIsDeleting(false)
     }
@@ -93,22 +96,22 @@ export function EntityDetailPage({
     <>
       <Button variant="outline" size="sm" onClick={handleCopyId}>
         <Copy className="h-4 w-4 mr-2" />
-        Copiar ID
+        Copy ID
       </Button>
       <Link href={`/dashboard/${entityConfig.slug}/${data.id}/edit`}>
         <Button variant="outline" size="sm">
           <Edit className="h-4 w-4 mr-2" />
-          Editar
+          Edit
         </Button>
       </Link>
-      <Button 
-        variant="destructive" 
-        size="sm" 
+      <Button
+        variant="destructive"
+        size="sm"
         onClick={handleDelete}
         disabled={isDeleting}
       >
         <Trash2 className="h-4 w-4 mr-2" />
-        {isDeleting ? 'Eliminando...' : 'Eliminar'}
+        {isDeleting ? 'Deleting...' : 'Delete'}
       </Button>
     </>
   )
@@ -128,9 +131,9 @@ export function EntityDetailPage({
         <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Detalles</CardTitle>
+              <CardTitle>Details</CardTitle>
               <CardDescription>
-                Información principal del {entityConfig.names.singular.toLowerCase()}
+                Main information for the {entityConfig.names.singular.toLowerCase()}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -147,15 +150,15 @@ export function EntityDetailPage({
                       </dt>
                       <dd className="text-sm">
                         {field.type === 'date' || field.type === 'datetime' ? (
-                          value ? format(new Date(value as string), 'PPp', { locale: es }) : 'No especificado'
+                          value ? formatDateTime(value as string) : 'Not specified'
                         ) : field.type === 'boolean' ? (
                           <Badge variant={value ? 'default' : 'secondary'}>
-                            {value ? 'Sí' : 'No'}
+                            {value ? 'Yes' : 'No'}
                           </Badge>
                         ) : field.type === 'number' && field.name === 'price' ? (
                           `$${value}`
                         ) : (
-                          String(value) || 'No especificado'
+                          String(value) || 'Not specified'
                         )}
                       </dd>
                     </div>
@@ -176,23 +179,23 @@ export function EntityDetailPage({
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Calendar className="h-4 w-4" />
                 <div>
-                  <div className="font-medium">Creado</div>
+                  <div className="font-medium">Created</div>
                   <div>
                     {data.createdAt && typeof data.createdAt === 'string'
-                      ? format(new Date(data.createdAt), 'PPp', { locale: es })
-                      : 'No disponible'
+                      ? formatDateTime(data.createdAt)
+                      : 'Not available'
                     }
                   </div>
                 </div>
               </div>
-              
+
               {data.updatedAt && typeof data.updatedAt === 'string' ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Clock className="h-4 w-4" />
                   <div>
-                    <div className="font-medium">Última actualización</div>
+                    <div className="font-medium">Last updated</div>
                     <div>
-                      {format(new Date(data.updatedAt), 'PPp', { locale: es })}
+                      {formatDateTime(data.updatedAt)}
                     </div>
                   </div>
                 </div>

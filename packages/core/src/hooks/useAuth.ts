@@ -24,7 +24,7 @@ export function useAuth() {
     })
 
     if (error) {
-      throw new Error(error.message || 'Error al iniciar sesión')
+      throw new Error(error.message || 'Failed to sign in')
     }
 
     if (data) {

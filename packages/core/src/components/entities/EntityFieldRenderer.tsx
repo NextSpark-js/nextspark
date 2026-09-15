@@ -94,7 +94,7 @@ function formatDisplayValue(value: unknown, field: EntityField): string {
       return typeof value === 'number' ? value.toLocaleString() : String(value || '')
 
     case 'boolean':
-      return value ? 'Sí' : 'No'
+      return value ? 'Yes' : 'No'
 
     case 'date':
       return value ? new Date(value as string).toLocaleDateString() : ''
@@ -153,7 +153,7 @@ function formatDisplayValue(value: unknown, field: EntityField): string {
     case 'video':
     case 'audio':
       if (Array.isArray(value)) {
-        return `${value.length} archivo${value.length !== 1 ? 's' : ''}`
+        return `${value.length} file${value.length !== 1 ? 's' : ''}`
       }
       return String(value || '')
 
@@ -442,7 +442,7 @@ function renderFormField(
             step={1}
           />
           <div className="text-xs text-muted-foreground text-center">
-            Valor: {typeof value === 'number' ? value : 0}
+            Value: {typeof value === 'number' ? value : 0}
           </div>
         </div>
       )
@@ -752,7 +752,7 @@ function renderFormField(
           {...baseProps}
           value={String(value || '')}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={field.display.placeholder || `Ingresa ${field.type}...`}
+          placeholder={field.display.placeholder || `Enter ${field.type}...`}
           required={required}
           className={field.type === 'code' ? "min-h-[150px] font-mono text-sm" : "min-h-[150px]"}
         />

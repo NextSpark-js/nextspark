@@ -81,17 +81,17 @@ export function SettingsSidebar({ className }: SettingsSidebarProps) {
 
   // Enhanced navigation handler with accessibility feedback
   const handleNavigation = useCallback((itemName: string, itemDescription: string) => {
-    setStatusMessage(`Navegando a ${itemName} - ${itemDescription}`)
-  }, [])
+    setStatusMessage(t('a11y.navigatingToAnnouncement', { name: itemName, description: itemDescription }))
+  }, [t])
 
   // Keyboard navigation handler
   const handleKeyDown = useCallback((e: React.KeyboardEvent, href: string, itemName: string, itemDescription: string) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
-      setStatusMessage(`Navegando a ${itemName} - ${itemDescription}`)
+      setStatusMessage(t('a11y.navigatingToAnnouncement', { name: itemName, description: itemDescription }))
       // Navigation will be handled by the Link component
     }
-  }, [])
+  }, [t])
 
   return (
     <>
@@ -153,7 +153,7 @@ export function SettingsSidebar({ className }: SettingsSidebarProps) {
                       { 
                         name: tSettings(`navigation.${item.name}`),
                         description: tSettings(`overview.${item.name}Description`),
-                        current: isActive ? ' (página actual)' : ''
+                        current: isActive ? t('a11y.currentPageSuffix') : ''
                       }
                     )}
                     className={cn(

@@ -82,7 +82,7 @@ export function AddressInput({
           <div className="relative">
             <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Dirección completa..."
+              placeholder="Full address..."
               value={value.fullAddress || ""}
               onChange={(e) => handleFullAddressChange(e.target.value)}
               disabled={disabled}
@@ -90,36 +90,36 @@ export function AddressInput({
             />
           </div>
         )}
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           <Input
-            placeholder="Calle"
+            placeholder="Street"
             value={value.street}
             onChange={(e) => updateField('street', e.target.value)}
             disabled={disabled}
           />
           <Input
-            placeholder="Ciudad"
+            placeholder="City"
             value={value.city}
             onChange={(e) => updateField('city', e.target.value)}
             disabled={disabled}
           />
           <Input
-            placeholder="Estado/Provincia"
+            placeholder="State/Province"
             value={value.state}
             onChange={(e) => updateField('state', e.target.value)}
             disabled={disabled}
           />
           <Input
-            placeholder="Código Postal"
+            placeholder="Zip Code"
             value={value.zipCode}
             onChange={(e) => updateField('zipCode', e.target.value)}
             disabled={disabled}
           />
         </div>
-        
+
         <Input
-          placeholder="País"
+          placeholder="Country"
           value={value.country}
           onChange={(e) => updateField('country', e.target.value)}
           disabled={disabled}
@@ -133,12 +133,12 @@ export function AddressInput({
       <CardContent className="p-4 space-y-4">
         {showFullAddress && (
           <div className="space-y-2">
-            <Label htmlFor="full-address">Dirección Completa</Label>
+            <Label htmlFor="full-address">Full Address</Label>
             <div className="relative">
               <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="full-address"
-                placeholder="Ingresa la dirección completa..."
+                placeholder="Enter the full address..."
                 value={value.fullAddress || ""}
                 onChange={(e) => handleFullAddressChange(e.target.value)}
                 disabled={disabled}
@@ -150,54 +150,54 @@ export function AddressInput({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="street">Calle y Número</Label>
+            <Label htmlFor="street">Street and Number</Label>
             <Input
               id="street"
-              placeholder="Ej: Av. Corrientes 1234"
+              placeholder="E.g.: 123 Main St"
               value={value.street}
               onChange={(e) => updateField('street', e.target.value)}
               disabled={disabled}
             />
           </div>
-          
+
           <div className="space-y-2">
-            <Label htmlFor="city">Ciudad</Label>
+            <Label htmlFor="city">City</Label>
             <Input
               id="city"
-              placeholder="Ej: Buenos Aires"
+              placeholder="E.g.: New York"
               value={value.city}
               onChange={(e) => updateField('city', e.target.value)}
               disabled={disabled}
             />
           </div>
-          
+
           <div className="space-y-2">
-            <Label htmlFor="state">Estado/Provincia</Label>
+            <Label htmlFor="state">State/Province</Label>
             <Input
               id="state"
-              placeholder="Ej: CABA"
+              placeholder="E.g.: NY"
               value={value.state}
               onChange={(e) => updateField('state', e.target.value)}
               disabled={disabled}
             />
           </div>
-          
+
           <div className="space-y-2">
-            <Label htmlFor="zipCode">Código Postal</Label>
+            <Label htmlFor="zipCode">Zip Code</Label>
             <Input
               id="zipCode"
-              placeholder="Ej: C1043"
+              placeholder="E.g.: 10001"
               value={value.zipCode}
               onChange={(e) => updateField('zipCode', e.target.value)}
               disabled={disabled}
             />
           </div>
-          
+
           <div className="space-y-2">
-            <Label htmlFor="country">País</Label>
+            <Label htmlFor="country">Country</Label>
             <Input
               id="country"
-              placeholder="Ej: Argentina"
+              placeholder="E.g.: United States"
               value={value.country}
               onChange={(e) => updateField('country', e.target.value)}
               disabled={disabled}

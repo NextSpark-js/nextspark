@@ -40,25 +40,25 @@ export function NoPermission({
   const getActionText = () => {
     switch (action) {
       case 'list':
-        return 'ver la lista de'
+        return 'view the list of'
       case 'read':
-        return 'ver los detalles de'
+        return 'view the details of'
       case 'create':
-        return 'crear'
+        return 'create'
       case 'update':
-        return 'editar'
+        return 'edit'
       case 'delete':
-        return 'eliminar'
+        return 'delete'
       default:
-        return 'acceder a'
+        return 'access'
     }
   }
 
-  const defaultTitle = title || 'Acceso denegado'
+  const defaultTitle = title || 'Access denied'
   const defaultDescription = description || (
     entityName
-      ? `No tienes permisos para ${getActionText()} ${entityName}. Contacta a tu administrador si necesitas acceso.`
-      : 'No tienes permisos para acceder a esta sección. Contacta a tu administrador si necesitas acceso.'
+      ? `You don't have permission to ${getActionText()} ${entityName}. Contact your administrator if you need access.`
+      : "You don't have permission to access this section. Contact your administrator if you need access."
   )
 
   return (
@@ -85,14 +85,14 @@ export function NoPermission({
                 className="w-full"
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Volver atrás
+                Go back
               </Button>
             )}
             {showHomeButton && (
               <Button asChild className="w-full">
                 <Link href={redirectPath}>
                   <Home className="mr-2 h-4 w-4" />
-                  Ir al Dashboard
+                  Go to Dashboard
                 </Link>
               </Button>
             )}

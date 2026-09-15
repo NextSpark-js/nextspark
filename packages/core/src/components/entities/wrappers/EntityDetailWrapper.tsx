@@ -136,7 +136,7 @@ export function EntityDetailWrapper({
     if (dataLoadedRef.current) return // Prevent re-fetching if already loaded
 
     if (!entityConfig.enabled) {
-      const error = new Error(`Entidad "${entityType}" está deshabilitada`)
+      const error = new Error(`Entity "${entityType}" is disabled`)
       setDataError(error.message)
       onError?.(error)
       return
@@ -195,7 +195,7 @@ export function EntityDetailWrapper({
         dataLoadedRef.current = true // Mark as loaded
       } catch (err) {
         console.error(`[EntityDetailWrapper] Error loading data for "${entityType}" ${id}:`, err)
-        const errorMessage = `Error cargando datos: ${err instanceof Error ? err.message : 'Error desconocido'}`
+        const errorMessage = `Error loading data: ${err instanceof Error ? err.message : 'Unknown error'}`
         setDataError(errorMessage)
         setData(null)
 
@@ -277,7 +277,7 @@ export function EntityDetailWrapper({
       setDataError(null)
     } catch (err) {
       console.error(`[EntityDetailWrapper] Error reloading data:`, err)
-      const errorMessage = `Error recargando datos: ${err instanceof Error ? err.message : 'Error desconocido'}`
+      const errorMessage = `Error reloading data: ${err instanceof Error ? err.message : 'Unknown error'}`
       setDataError(errorMessage)
     } finally {
       setIsLoadingData(false)
@@ -393,7 +393,7 @@ export function EntityDetailWrapper({
     return (
       <Alert>
         <AlertDescription>
-          {configError || `No se pudo cargar la configuración para la entidad "${entityType}".`}
+          {configError || `Could not load the configuration for entity "${entityType}".`}
         </AlertDescription>
       </Alert>
     )

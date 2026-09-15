@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from 'react';
+import { useLocale } from 'next-intl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@nextsparkjs/core/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@nextsparkjs/core/components/ui/card';
@@ -66,6 +67,7 @@ function ApiKeysPage() {
   const [newApiKey, setNewApiKey] = useState<NewApiKeyResponse | null>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const locale = useLocale();
 
   // Fetch API keys
   const { data: apiKeys, isLoading, error } = useQuery<ApiKey[]>({
@@ -138,7 +140,7 @@ function ApiKeysPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
+    return new Date(dateString).toLocaleDateString(locale, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -162,7 +164,7 @@ function ApiKeysPage() {
         <div>
           <h1 className="text-2xl font-bold">API Keys</h1>
           <p className="text-muted-foreground">
-            Gestiona las API keys para integración externa
+            Manage API keys for external integration
           </p>
         </div>
         <Alert variant={isPermissionError ? "default" : "destructive"}>
@@ -170,10 +172,10 @@ function ApiKeysPage() {
           <AlertDescription>
             {isPermissionError ? (
               <div>
-                <strong>Acceso restringido</strong>
+                <strong>Restricted access</strong>
                 <p className="mt-1">
-                  Solo los administradores pueden gestionar API keys.
-                  Contacta a un administrador si necesitas acceso a esta funcionalidad.
+                  Only administrators can manage API keys.
+                  Contact an administrator if you need access to this feature.
                 </p>
               </div>
             ) : (
@@ -191,12 +193,12 @@ function ApiKeysPage() {
         <div>
           <h1 className="text-2xl font-bold" data-cy={sel('settings.apiKeys.header')}>API Keys</h1>
           <p className="text-muted-foreground">
-            Gestiona las API keys para integración externa
+            Manage API keys for external integration
           </p>
         </div>
         <Button onClick={() => setShowCreateDialog(true)} data-cy={sel('settings.apiKeys.createButton')}>
           <Plus className="h-4 w-4 mr-2" />
-          Crear API Key
+          Create API Key
         </Button>
       </div>
 
@@ -239,11 +241,11 @@ function ApiKeysPage() {
               <Key className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">No API Keys</h3>
               <p className="text-muted-foreground text-center mb-4">
-                No tienes API keys creadas. Crea una para empezar a usar la API externa.
+                You don&apos;t have any API keys yet. Create one to start using the external API.
               </p>
               <Button onClick={() => setShowCreateDialog(true)} data-cy={sel('settings.apiKeys.createButton')}>
                 <Plus className="h-4 w-4 mr-2" />
-                Crear primera API Key
+                Create first API Key
               </Button>
             </CardContent>
           </Card>
@@ -257,7 +259,7 @@ function ApiKeysPage() {
                       {apiKey.name}
                       {apiKey.status !== 'active' && (
                         <Badge variant="secondary" data-cy={sel('settings.apiKeys.row.status', { id: apiKey.id })}>
-                          {apiKey.status === 'inactive' ? 'Inactiva' : 'Expirada'}
+                          {apiKey.status === 'inactive' ? 'Inactive' : 'Expired'}
                         </Badge>
                       )}
                     </CardTitle>
@@ -276,7 +278,7 @@ function ApiKeysPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant={apiKey.status === 'active' ? "default" : "secondary"} data-cy={sel('settings.apiKeys.row.status', { id: apiKey.id })}>
-                      {apiKey.status === 'active' ? 'Activa' : apiKey.status === 'inactive' ? 'Inactiva' : 'Expirada'}
+                      {apiKey.status === 'active' ? 'Active' : apiKey.status === 'inactive' ? 'Inactive' : 'Expired'}
                     </Badge>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -290,7 +292,7 @@ function ApiKeysPage() {
                           data-cy={sel('settings.apiKeys.row.menu.viewDetails', { id: apiKey.id })}
                         >
                           <Eye className="h-4 w-4 mr-2" />
-                          Ver detalles
+                          View details
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => toggleApiKey.mutate({
@@ -303,12 +305,12 @@ function ApiKeysPage() {
                           {apiKey.status === 'active' ? (
                             <>
                               <EyeOff className="h-4 w-4 mr-2" />
-                              Desactivar
+                              Deactivate
                             </>
                           ) : (
                             <>
                               <Eye className="h-4 w-4 mr-2" />
-                              Activar
+                              Activate
                             </>
                           )}
                         </DropdownMenuItem>
@@ -319,7 +321,7 @@ function ApiKeysPage() {
                           data-cy={sel('settings.apiKeys.row.menu.revoke', { id: apiKey.id })}
                         >
                           <Trash2 className="h-4 w-4 mr-2" />
-                          Revocar
+                          Revoke
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -330,7 +332,7 @@ function ApiKeysPage() {
                 <div className="space-y-4">
                   {/* Scopes */}
                   <div data-cy={sel('settings.apiKeys.row.scopes', { id: apiKey.id })}>
-                    <strong className="text-sm">Permisos:</strong>
+                    <strong className="text-sm">Permissions:</strong>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {apiKey.scopes.map((scope) => (
                         <Badge
@@ -352,11 +354,11 @@ function ApiKeysPage() {
                       <div className="font-semibold">{apiKey.usage_stats.total_requests.toLocaleString()}</div>
                     </div>
                     <div data-cy={sel('settings.apiKeys.row.stats.last24h', { id: apiKey.id })}>
-                      <div className="text-muted-foreground">Últimas 24h</div>
+                      <div className="text-muted-foreground">Last 24h</div>
                       <div className="font-semibold">{apiKey.usage_stats.last_24h.toLocaleString()}</div>
                     </div>
                     <div data-cy={sel('settings.apiKeys.row.stats.avgTime', { id: apiKey.id })}>
-                      <div className="text-muted-foreground">Tiempo promedio</div>
+                      <div className="text-muted-foreground">Avg time</div>
                       <div className="font-semibold">
                         {apiKey.usage_stats.avg_response_time
                           ? `${Math.round(apiKey.usage_stats.avg_response_time)}ms`
@@ -368,12 +370,12 @@ function ApiKeysPage() {
 
                   {/* Metadata */}
                   <div className="text-sm text-muted-foreground space-y-1" data-cy={sel('settings.apiKeys.row.metadata.container', { id: apiKey.id })}>
-                    <div data-cy={sel('settings.apiKeys.row.metadata.createdAt', { id: apiKey.id })}>Creada: {formatDate(apiKey.createdAt)}</div>
+                    <div data-cy={sel('settings.apiKeys.row.metadata.createdAt', { id: apiKey.id })}>Created: {formatDate(apiKey.createdAt)}</div>
                     {apiKey.lastUsedAt && (
-                      <div data-cy={sel('settings.apiKeys.row.metadata.lastUsed', { id: apiKey.id })}>Ultimo uso: {formatDate(apiKey.lastUsedAt)}</div>
+                      <div data-cy={sel('settings.apiKeys.row.metadata.lastUsed', { id: apiKey.id })}>Last used: {formatDate(apiKey.lastUsedAt)}</div>
                     )}
                     {apiKey.expiresAt && (
-                      <div data-cy={sel('settings.apiKeys.row.metadata.expiresAt', { id: apiKey.id })}>Expira: {formatDate(apiKey.expiresAt)}</div>
+                      <div data-cy={sel('settings.apiKeys.row.metadata.expiresAt', { id: apiKey.id })}>Expires: {formatDate(apiKey.expiresAt)}</div>
                     )}
                   </div>
                 </div>
@@ -427,9 +429,9 @@ function ApiKeyDetailsDialog({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl" data-cy={sel('settings.apiKeys.detailsDialog.container')}>
         <DialogHeader>
-          <DialogTitle data-cy={sel('settings.apiKeys.detailsDialog.title')}>Detalles de API Key</DialogTitle>
+          <DialogTitle data-cy={sel('settings.apiKeys.detailsDialog.title')}>API Key Details</DialogTitle>
           <DialogDescription>
-            Estadísticas de uso y configuración
+            Usage statistics and configuration
           </DialogDescription>
         </DialogHeader>
 
@@ -443,17 +445,17 @@ function ApiKeyDetailsDialog({
           <div className="space-y-6" data-cy={sel('settings.apiKeys.detailsDialog.content')}>
             {/* Basic Info */}
             <div data-cy={sel('settings.apiKeys.detailsDialog.basicInfo.container')}>
-              <h4 className="font-semibold mb-2">Información básica</h4>
+              <h4 className="font-semibold mb-2">Basic information</h4>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-muted-foreground">Nombre:</span>
+                  <span className="text-muted-foreground">Name:</span>
                   <div className="font-medium" data-cy={sel('settings.apiKeys.detailsDialog.basicInfo.name')}>{keyDetails.name}</div>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Estado:</span>
+                  <span className="text-muted-foreground">Status:</span>
                   <div>
                     <Badge variant={keyDetails.status === 'active' ? "default" : "secondary"} data-cy={sel('settings.apiKeys.detailsDialog.basicInfo.status')}>
-                      {keyDetails.status === 'active' ? 'Activa' : keyDetails.status === 'inactive' ? 'Inactiva' : 'Expirada'}
+                      {keyDetails.status === 'active' ? 'Active' : keyDetails.status === 'inactive' ? 'Inactive' : 'Expired'}
                     </Badge>
                   </div>
                 </div>
@@ -464,27 +466,27 @@ function ApiKeyDetailsDialog({
             <div data-cy={sel('settings.apiKeys.detailsDialog.stats.container')}>
               <h4 className="font-semibold mb-2 flex items-center gap-2">
                 <Activity className="h-4 w-4" />
-                Estadísticas de uso
+                Usage statistics
               </h4>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-muted-foreground">Total de requests:</span>
+                  <span className="text-muted-foreground">Total requests:</span>
                   <div className="font-medium" data-cy={sel('settings.apiKeys.detailsDialog.stats.totalRequests')}>{keyDetails.usage_stats.total_requests.toLocaleString()}</div>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Ultimas 24 horas:</span>
+                  <span className="text-muted-foreground">Last 24 hours:</span>
                   <div className="font-medium" data-cy={sel('settings.apiKeys.detailsDialog.stats.last24h')}>{keyDetails.usage_stats.last_24h.toLocaleString()}</div>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Ultimos 7 dias:</span>
+                  <span className="text-muted-foreground">Last 7 days:</span>
                   <div className="font-medium" data-cy={sel('settings.apiKeys.detailsDialog.stats.last7d')}>{keyDetails.usage_stats.last_7d.toLocaleString()}</div>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Ultimos 30 dias:</span>
+                  <span className="text-muted-foreground">Last 30 days:</span>
                   <div className="font-medium" data-cy={sel('settings.apiKeys.detailsDialog.stats.last30d')}>{keyDetails.usage_stats.last_30d.toLocaleString()}</div>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Tiempo promedio:</span>
+                  <span className="text-muted-foreground">Avg response time:</span>
                   <div className="font-medium" data-cy={sel('settings.apiKeys.detailsDialog.stats.avgTime')}>
                     {keyDetails.usage_stats.avg_response_time
                       ? `${Math.round(keyDetails.usage_stats.avg_response_time)}ms`
@@ -493,7 +495,7 @@ function ApiKeyDetailsDialog({
                   </div>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Tasa de exito:</span>
+                  <span className="text-muted-foreground">Success rate:</span>
                   <div className="font-medium" data-cy={sel('settings.apiKeys.detailsDialog.stats.successRate')}>
                     {keyDetails.usage_stats.success_rate
                       ? `${Math.round(keyDetails.usage_stats.success_rate)}%`

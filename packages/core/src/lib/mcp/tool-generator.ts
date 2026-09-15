@@ -81,7 +81,7 @@ export function generateEntityTools(
       const parsed = strictSchema.safeParse(rawArgs ?? {})
       if (!parsed.success) {
         return errorResult(
-          `Argumentos inválidos para ${name}: ${formatZodIssues(parsed.error)}. Revisá el schema de la tool.`
+          `Invalid arguments for ${name}: ${formatZodIssues(parsed.error)}. Check the tool's schema.`
         )
       }
       try {
@@ -90,7 +90,7 @@ export function generateEntityTools(
         if (error instanceof McpToolError) return errorResult(error.message)
         console.error(`[mcp] unexpected error in ${name}:`, error)
         return errorResult(
-          `Error inesperado ejecutando ${name}: ${error instanceof Error ? error.message : String(error)}`
+          `Unexpected error executing ${name}: ${error instanceof Error ? error.message : String(error)}`
         )
       }
     },
@@ -108,7 +108,7 @@ export function generateEntityTools(
         'list',
         `${deps.toolPrefix}_list_${plural}`,
         `List ${entityConfig.names.plural}`,
-        `Lista ${entityConfig.names.plural} con paginación, orden y filtros. ${entityDescription}${presetExamples(deps.presets, 'GET')}`,
+        `Lists ${entityConfig.names.plural} with pagination, sorting and filters. ${entityDescription}${presetExamples(deps.presets, 'GET')}`,
         schemas.listShape,
         schemas.listStrict,
         { readOnlyHint: true },
@@ -125,7 +125,7 @@ export function generateEntityTools(
             content: [
               {
                 type: 'text',
-                text: `${String(total)} ${entityConfig.names.plural} (página ${String(page)}/${String(totalPages)})`,
+                text: `${String(total)} ${entityConfig.names.plural} (page ${String(page)}/${String(totalPages)})`,
               },
             ],
             structuredContent: { data, info } as Record<string, unknown>,
@@ -142,7 +142,7 @@ export function generateEntityTools(
         'get',
         `${deps.toolPrefix}_get_${singular}`,
         `Get ${entityConfig.names.singular}`,
-        `Obtiene un registro de ${entityConfig.names.singular} por ID. ${entityDescription}`,
+        `Gets a ${entityConfig.names.singular} record by ID. ${entityDescription}`,
         schemas.getShape,
         schemas.getStrict,
         { readOnlyHint: true },
@@ -154,7 +154,7 @@ export function generateEntityTools(
           if (!result.body.success) return apiError(result, 'get')
           const data = normalizeOutput(result.body.data)
           return {
-            content: [{ type: 'text', text: `${entityConfig.names.singular} encontrado.` }],
+            content: [{ type: 'text', text: `${entityConfig.names.singular} found.` }],
             structuredContent: { data } as Record<string, unknown>,
           }
         }
@@ -169,7 +169,7 @@ export function generateEntityTools(
         'create',
         `${deps.toolPrefix}_create_${singular}`,
         `Create ${entityConfig.names.singular}`,
-        `Crea un registro de ${entityConfig.names.singular}. ${entityDescription}${presetExamples(deps.presets, 'POST')}`,
+        `Creates a ${entityConfig.names.singular} record. ${entityDescription}${presetExamples(deps.presets, 'POST')}`,
         schemas.createShape,
         schemas.createStrict,
         {},
@@ -183,7 +183,7 @@ export function generateEntityTools(
           const id = extractId(data)
           return {
             content: [
-              { type: 'text', text: `${entityConfig.names.singular} creado${id ? ` (id: ${id})` : ''}.` },
+              { type: 'text', text: `${entityConfig.names.singular} created${id ? ` (id: ${id})` : ''}.` },
             ],
             structuredContent: { data } as Record<string, unknown>,
           }
@@ -195,7 +195,7 @@ export function generateEntityTools(
   // ── UPDATE ──────────────────────────────────────────────────────────────
   if (operations.includes('update')) {
     const updateShape: McpShape = {
-      id: z.string().min(1).describe(`ID del registro de ${entityConfig.names.singular} a modificar (uuid)`),
+      id: z.string().min(1).describe(`ID of the ${entityConfig.names.singular} record to modify (uuid)`),
       ...schemas.updateShape,
     }
     tools.push(
@@ -203,14 +203,14 @@ export function generateEntityTools(
         'update',
         `${deps.toolPrefix}_update_${singular}`,
         `Update ${entityConfig.names.singular}`,
-        `Modifica campos de un registro de ${entityConfig.names.singular} (PATCH parcial: solo enviá los campos a cambiar). ${entityDescription}`,
+        `Modifies fields of a ${entityConfig.names.singular} record (partial PATCH: only send the fields to change). ${entityDescription}`,
         updateShape,
         z.object(updateShape).strict(),
         { idempotentHint: true },
         async (args, ctx) => {
           const { id, ...fields } = args as { id: string } & Record<string, unknown>
           if (!Object.keys(fields).length) {
-            return errorResult('No enviaste ningún campo a modificar.')
+            return errorResult('No fields to modify were sent.')
           }
           const input = override?.transformInput
             ? await override.transformInput('update', fields, ctx)
@@ -222,7 +222,7 @@ export function generateEntityTools(
           if (!result.body.success) return apiError(result, 'update')
           const data = normalizeOutput(result.body.data)
           return {
-            content: [{ type: 'text', text: `${entityConfig.names.singular} actualizado.` }],
+            content: [{ type: 'text', text: `${entityConfig.names.singular} updated.` }],
             structuredContent: { data } as Record<string, unknown>,
           }
         }
@@ -233,22 +233,22 @@ export function generateEntityTools(
   // ── DELETE ──────────────────────────────────────────────────────────────
   if (operations.includes('delete')) {
     const deleteShape: McpShape = {
-      id: z.string().min(1).describe(`ID del registro de ${entityConfig.names.singular} a eliminar (uuid)`),
-      confirm: z.boolean().describe('true SOLO tras confirmación explícita del usuario'),
+      id: z.string().min(1).describe(`ID of the ${entityConfig.names.singular} record to delete (uuid)`),
+      confirm: z.boolean().describe('true ONLY after explicit user confirmation'),
     }
     tools.push(
       make(
         'delete',
         `${deps.toolPrefix}_delete_${singular}`,
         `Delete ${entityConfig.names.singular}`,
-        `Elimina un ${entityConfig.names.singular}. DESTRUCTIVO: mostrale al usuario qué vas a borrar y pedile confirmación antes.${deleteWarning(override)}`,
+        `Deletes a ${entityConfig.names.singular}. DESTRUCTIVE: show the user what you're about to delete and ask for confirmation first.${deleteWarning(override)}`,
         deleteShape,
         z.object(deleteShape).strict(),
         { destructiveHint: true },
         async (args, ctx) => {
           if (args.confirm !== true) {
             return errorResult(
-              'Eliminación no confirmada: pedile al usuario confirmación explícita y reintentá con confirm: true.'
+              'Deletion not confirmed: ask the user for explicit confirmation and retry with confirm: true.'
             )
           }
           const result = await deps.executor(
@@ -257,7 +257,7 @@ export function generateEntityTools(
           )
           if (!result.body.success) return apiError(result, 'delete')
           return {
-            content: [{ type: 'text', text: `${entityConfig.names.singular} eliminado (id: ${String(args.id)}).` }],
+            content: [{ type: 'text', text: `${entityConfig.names.singular} deleted (id: ${String(args.id)}).` }],
           }
         }
       )
@@ -294,7 +294,7 @@ function presetExamples(presets: EntityPresetInfo | undefined, method: 'GET' | '
   if (!example) return ''
   const body = method === 'POST' ? example.payload : example.params
   const label = example.description || example.title || example.id
-  return ` Ejemplo (${label}): ${JSON.stringify(body)}`
+  return ` Example (${label}): ${JSON.stringify(body)}`
 }
 
 function deleteWarning(override: McpEntityOverride | undefined): string {

@@ -182,14 +182,14 @@ export class EntityApiClient {
       const errorData = await response.json().catch(() => ({}))
 
       // Create user-friendly error messages
-      let userMessage = `Error al cargar ${entityType}`
+      let userMessage = `Failed to load ${entityType}`
 
       if (response.status === 401) {
-        userMessage = 'No tienes permisos para acceder a estos datos. Por favor, inicia sesión nuevamente.'
+        userMessage = 'You do not have permission to access this data. Please sign in again.'
       } else if (response.status === 403) {
-        userMessage = 'No tienes los permisos necesarios para realizar esta acción.'
+        userMessage = 'You do not have the necessary permissions to perform this action.'
       } else if (response.status === 404) {
-        userMessage = 'Los datos solicitados no fueron encontrados.'
+        userMessage = 'The requested data was not found.'
       } else if (response.status === 400 && errorData.code === 'TEAM_CONTEXT_REQUIRED') {
         // Team context not yet loaded - this is expected during initial load
         // Return empty response to allow UI to show loading state
@@ -208,7 +208,7 @@ export class EntityApiClient {
           }
         } as EntityListResponse
       } else if (response.status >= 500) {
-        userMessage = 'Error interno del servidor. Por favor, intenta más tarde.'
+        userMessage = 'Internal server error. Please try again later.'
       } else if (errorData.message && !errorData.message.includes('API key')) {
         userMessage = errorData.message
       }
@@ -240,20 +240,20 @@ export class EntityApiClient {
       const errorData = await response.json().catch(() => ({}))
       
       // Create user-friendly error messages
-      let userMessage = `Error al cargar ${entityType}`
-      
+      let userMessage = `Failed to load ${entityType}`
+
       if (response.status === 401) {
-        userMessage = 'No tienes permisos para acceder a estos datos. Por favor, inicia sesión nuevamente.'
+        userMessage = 'You do not have permission to access this data. Please sign in again.'
       } else if (response.status === 403) {
-        userMessage = 'No tienes los permisos necesarios para realizar esta acción.'
+        userMessage = 'You do not have the necessary permissions to perform this action.'
       } else if (response.status === 404) {
-        userMessage = 'El elemento solicitado no fue encontrado.'
+        userMessage = 'The requested item was not found.'
       } else if (response.status >= 500) {
-        userMessage = 'Error interno del servidor. Por favor, intenta más tarde.'
+        userMessage = 'Internal server error. Please try again later.'
       } else if (errorData.message && !errorData.message.includes('API key')) {
         userMessage = errorData.message
       }
-      
+
       throw new Error(userMessage)
     }
 
@@ -277,20 +277,20 @@ export class EntityApiClient {
       const errorData = await response.json().catch(() => ({}))
       
       // Create user-friendly error messages
-      let userMessage = `Error al crear ${entityType}`
-      
+      let userMessage = `Failed to create ${entityType}`
+
       if (response.status === 401) {
-        userMessage = 'No tienes permisos para crear este elemento. Por favor, inicia sesión nuevamente.'
+        userMessage = 'You do not have permission to create this item. Please sign in again.'
       } else if (response.status === 403) {
-        userMessage = 'No tienes los permisos necesarios para crear este elemento.'
+        userMessage = 'You do not have the necessary permissions to create this item.'
       } else if (response.status === 400) {
-        userMessage = 'Los datos proporcionados no son válidos. Por favor, revisa el formulario.'
+        userMessage = 'The provided data is not valid. Please review the form.'
       } else if (response.status >= 500) {
-        userMessage = 'Error interno del servidor. Por favor, intenta más tarde.'
+        userMessage = 'Internal server error. Please try again later.'
       } else if (errorData.message && !errorData.message.includes('API key')) {
         userMessage = errorData.message
       }
-      
+
       throw new Error(userMessage)
     }
 
@@ -314,22 +314,22 @@ export class EntityApiClient {
       const errorData = await response.json().catch(() => ({}))
       
       // Create user-friendly error messages
-      let userMessage = `Error al actualizar ${entityType}`
-      
+      let userMessage = `Failed to update ${entityType}`
+
       if (response.status === 401) {
-        userMessage = 'No tienes permisos para actualizar este elemento. Por favor, inicia sesión nuevamente.'
+        userMessage = 'You do not have permission to update this item. Please sign in again.'
       } else if (response.status === 403) {
-        userMessage = 'No tienes los permisos necesarios para actualizar este elemento.'
+        userMessage = 'You do not have the necessary permissions to update this item.'
       } else if (response.status === 404) {
-        userMessage = 'El elemento que intentas actualizar no fue encontrado.'
+        userMessage = 'The item you are trying to update was not found.'
       } else if (response.status === 400) {
-        userMessage = 'Los datos proporcionados no son válidos. Por favor, revisa el formulario.'
+        userMessage = 'The provided data is not valid. Please review the form.'
       } else if (response.status >= 500) {
-        userMessage = 'Error interno del servidor. Por favor, intenta más tarde.'
+        userMessage = 'Internal server error. Please try again later.'
       } else if (errorData.message && !errorData.message.includes('API key')) {
         userMessage = errorData.message
       }
-      
+
       throw new Error(userMessage)
     }
 
@@ -352,20 +352,20 @@ export class EntityApiClient {
       const errorData = await response.json().catch(() => ({}))
       
       // Create user-friendly error messages
-      let userMessage = `Error al eliminar ${entityType}`
-      
+      let userMessage = `Failed to delete ${entityType}`
+
       if (response.status === 401) {
-        userMessage = 'No tienes permisos para eliminar este elemento. Por favor, inicia sesión nuevamente.'
+        userMessage = 'You do not have permission to delete this item. Please sign in again.'
       } else if (response.status === 403) {
-        userMessage = 'No tienes los permisos necesarios para eliminar este elemento.'
+        userMessage = 'You do not have the necessary permissions to delete this item.'
       } else if (response.status === 404) {
-        userMessage = 'El elemento que intentas eliminar no fue encontrado.'
+        userMessage = 'The item you are trying to delete was not found.'
       } else if (response.status >= 500) {
-        userMessage = 'Error interno del servidor. Por favor, intenta más tarde.'
+        userMessage = 'Internal server error. Please try again later.'
       } else if (errorData.message && !errorData.message.includes('API key')) {
         userMessage = errorData.message
       }
-      
+
       throw new Error(userMessage)
     }
 
@@ -489,8 +489,8 @@ export class EntityApiClient {
       if (entityConfig.features.canDelete) {
         operations.push({
           id: 'bulk-delete',
-          name: 'Eliminar Seleccionados',
-          description: 'Eliminar múltiples elementos a la vez',
+          name: 'Delete Selected',
+          description: 'Delete multiple items at once',
           icon: 'trash',
           requiresConfirmation: true
         })
@@ -499,8 +499,8 @@ export class EntityApiClient {
       if (entityConfig.features.canEdit) {
         operations.push({
           id: 'bulk-edit',
-          name: 'Editar Seleccionados',
-          description: 'Actualizar múltiples elementos a la vez',
+          name: 'Edit Selected',
+          description: 'Update multiple items at once',
           icon: 'edit'
         })
       }
@@ -508,8 +508,8 @@ export class EntityApiClient {
       // Add export operation if entity supports it
       operations.push({
         id: 'bulk-export',
-        name: 'Exportar',
-        description: 'Exportar datos seleccionados',
+        name: 'Export',
+        description: 'Export selected data',
         icon: 'download'
       })
 
@@ -543,7 +543,7 @@ export class EntityApiClient {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.message || `Error ejecutando operación ${operationId}`)
+      throw new Error(errorData.message || `Error executing operation ${operationId}`)
     }
 
     const result = await response.json()

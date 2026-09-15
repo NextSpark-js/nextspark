@@ -64,6 +64,10 @@
       "countryPlaceholder": "Selecione seu pais",
       "timezone": "Fuso Horario",
       "timezonePlaceholder": "Selecione seu fuso horario",
+      "countrySearchPlaceholder": "Buscar pais...",
+      "countryNotFound": "Nenhum pais encontrado.",
+      "timezoneSearchPlaceholder": "Buscar fuso horario...",
+      "timezoneNotFound": "Nenhum fuso horario encontrado.",
       "memberSince": "Membro desde",
       "updateButton": "Atualizar Perfil",
       "updating": "Atualizando...",
@@ -390,6 +394,7 @@
     "yourTeam": "Sua Equipe",
     "yourTeams": "Suas Equipes",
     "yourTeamsDescription": "Equipes das quais voce e membro. Selecione uma para ver seus detalhes.",
+    "singleUserDescription": "Seu espaço de trabalho pessoal.",
     "noTeams": "Voce ainda nao pertence a nenhuma equipe.",
     "manageTeamMembers": "Gerencie os membros e configuracao da equipe."
   },

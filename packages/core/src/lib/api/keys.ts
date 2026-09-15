@@ -98,36 +98,36 @@ export class ApiKeyManager {
  */
 export const API_SCOPES = {
   // Usuarios
-  'users:read': 'Leer información de usuarios',
-  'users:write': 'Crear y actualizar usuarios',
-  'users:delete': 'Eliminar usuarios',
+  'users:read': 'Read user information',
+  'users:write': 'Create and update users',
+  'users:delete': 'Delete users',
 
   // Tasks
-  'tasks:read': 'Leer tasks',
-  'tasks:write': 'Crear y actualizar tasks',
-  'tasks:delete': 'Eliminar tasks',
+  'tasks:read': 'Read tasks',
+  'tasks:write': 'Create and update tasks',
+  'tasks:delete': 'Delete tasks',
 
   // Media (archivos, imágenes, videos)
-  'media:read': 'Leer información de archivos y media',
-  'media:write': 'Subir y actualizar archivos',
-  'media:delete': 'Eliminar archivos',
+  'media:read': 'Read file and media information',
+  'media:write': 'Upload and update files',
+  'media:delete': 'Delete files',
 
   // Teams (equipos, miembros e invitaciones)
-  'teams:read': 'Leer equipos, miembros e invitaciones',
-  'teams:write': 'Crear y actualizar equipos, miembros e invitaciones',
-  'teams:delete': 'Eliminar equipos',
+  'teams:read': 'Read teams, members and invitations',
+  'teams:write': 'Create and update teams, members and invitations',
+  'teams:delete': 'Delete teams',
 
   // Billing (suscripciones, facturas, uso y planes)
-  'billing:read': 'Leer suscripciones, facturas y uso',
-  'billing:write': 'Gestionar suscripciones, checkout, cambios de plan y uso',
+  'billing:read': 'Read subscriptions, invoices and usage',
+  'billing:write': 'Manage subscriptions, checkout, plan changes and usage',
 
   // Administración
-  'admin:api-keys': 'Gestionar API keys',
-  'admin:users': 'Administración completa de usuarios',
-  'admin:devtools': 'Acceso a las APIs de DevTools (registries, testing, scheduled actions)',
+  'admin:api-keys': 'Manage API keys',
+  'admin:users': 'Full user administration',
+  'admin:devtools': 'Access to DevTools APIs (registries, testing, scheduled actions)',
 
   // Comodín (solo para superadmins)
-  '*': 'Acceso completo (solo superadmin)'
+  '*': 'Full access (superadmin only)'
 } as const;
 
 export type ApiScope = keyof typeof API_SCOPES;
@@ -161,33 +161,33 @@ export function getAppApiScopes(): Record<string, string> {
  */
 export const SCOPE_CATEGORIES = {
   users: {
-    name: 'Usuarios',
-    description: 'Gestión de usuarios del sistema',
+    name: 'Users',
+    description: 'System user management',
     scopes: ['users:read', 'users:write', 'users:delete'] as ApiScope[]
   },
   tasks: {
     name: 'Tasks',
-    description: 'Gestión de tareas y TODOs',
+    description: 'Task and TODO management',
     scopes: ['tasks:read', 'tasks:write', 'tasks:delete'] as ApiScope[]
   },
   teams: {
     name: 'Teams',
-    description: 'Equipos, miembros e invitaciones',
+    description: 'Teams, members and invitations',
     scopes: ['teams:read', 'teams:write', 'teams:delete'] as ApiScope[]
   },
   billing: {
     name: 'Billing',
-    description: 'Suscripciones, facturas, uso y planes',
+    description: 'Subscriptions, invoices, usage and plans',
     scopes: ['billing:read', 'billing:write'] as ApiScope[]
   },
   admin: {
-    name: 'Administración',
-    description: 'Funciones administrativas',
+    name: 'Administration',
+    description: 'Administrative functions',
     scopes: ['admin:api-keys', 'admin:users', 'admin:devtools'] as ApiScope[]
   },
   system: {
-    name: 'Sistema',
-    description: 'Acceso completo al sistema',
+    name: 'System',
+    description: 'Full system access',
     scopes: ['*'] as ApiScope[]
   }
 } as const;

@@ -166,7 +166,7 @@ export function TranslationDebugger() {
         borderRadius: '4px',
         fontSize: '10px'
       }}>
-        Para ocultar: remueve <code>?debug-i18n=true</code> de la URL
+        {tCommon('debug.hidePrefix')}<code>?debug-i18n=true</code>{tCommon('debug.hideSuffix')}
       </div>
     </div>
   );

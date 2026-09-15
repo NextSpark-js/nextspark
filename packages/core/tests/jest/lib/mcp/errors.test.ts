@@ -11,7 +11,7 @@ describe('translateApiError', () => {
       slug: 'customers',
       operation: 'list',
     });
-    expect(msg).toContain('API key inválida');
+    expect(msg).toContain('API key invalid');
   });
 
   it('maps TEAM_ACCESS_DENIED', () => {
@@ -19,7 +19,7 @@ describe('translateApiError', () => {
       slug: 'customers',
       operation: 'list',
     });
-    expect(msg).toContain('no es miembro del team');
+    expect(msg).toContain('not a member of the specified team');
   });
 
   it('maps INVALID_FIELD_VALUE, including the API detail when present', () => {
@@ -27,7 +27,7 @@ describe('translateApiError', () => {
       slug: 'customers',
       operation: 'create',
     });
-    expect(msg).toContain('valor no permitido');
+    expect(msg).toContain('value that is not allowed');
     expect(msg).toContain('bad enum');
   });
 
@@ -41,7 +41,7 @@ describe('translateApiError', () => {
 
   it('429 without a matching code falls back to the plain rate-limit status message', () => {
     const msg = translateApiError(result(429), { slug: 'customers', operation: 'list' });
-    expect(msg).toContain('Límite de requests alcanzado');
+    expect(msg).toContain('Request limit reached');
     expect(msg).not.toContain('batch');
   });
 
@@ -50,7 +50,7 @@ describe('translateApiError', () => {
       result(400, { code: 'VALIDATION_ERROR', details: { reason: 'bad' } }),
       { slug: 'customers', operation: 'create' }
     );
-    expect(msg).toContain('Detalle:');
+    expect(msg).toContain('Detail:');
     expect(msg).toContain('"reason":"bad"');
   });
 
@@ -70,12 +70,12 @@ describe('translateApiError', () => {
     expect(msg).toContain('x-team-id');
   });
 
-  it('VALIDATION_ERROR with no details omits the "Problemas"/"Detalle" suffix entirely', () => {
+  it('VALIDATION_ERROR with no details omits the "Issues"/"Detail" suffix entirely', () => {
     const msg = translateApiError(result(400, { code: 'VALIDATION_ERROR' }), {
       slug: 'customers',
       operation: 'create',
     });
-    expect(msg).toBe('Datos inválidos para customers. Corregí los campos y reintentá.');
+    expect(msg).toBe('Invalid data for customers. Fix the fields and retry.');
   });
 
   it('a validation issue with no path renders as a bare message, and falls back to JSON when message is missing', () => {
@@ -108,7 +108,7 @@ describe('translateApiError', () => {
       operation: 'create',
     });
     expect(msg).toContain('invoices');
-    expect(msg.toLowerCase()).toContain('ya existe');
+    expect(msg.toLowerCase()).toContain('already exists');
   });
 
   it('scopeFor delete resolves to :delete (post #94/#95 fix), not :write', () => {
@@ -129,7 +129,7 @@ describe('translateApiError', () => {
 
   it('401 with no matching code falls back to the plain not-authenticated status message', () => {
     const msg = translateApiError(result(401), { slug: 'customers', operation: 'list' });
-    expect(msg).toContain('No autenticado');
+    expect(msg).toContain('Not authenticated');
   });
 
   it('404 mentions the entity and suggests using list', () => {
@@ -154,9 +154,9 @@ describe('translateApiError', () => {
     expect(msg).toContain('weekStart must be a Monday');
   });
 
-  it('500 without hints omits the "posibles causas" clause', () => {
+  it('500 without hints omits the "known possible causes" clause', () => {
     const msg = translateApiError(result(500), { slug: 'customers', operation: 'create' });
-    expect(msg).not.toContain('Posibles causas');
+    expect(msg).not.toContain('Known possible causes');
   });
 
   it('unknown status/code falls back to a generic message with the code', () => {

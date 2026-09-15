@@ -89,7 +89,7 @@ export function useEntityConfig(
       const foundEntity = allEntities.find(entity => entity.slug === entityType)
 
       if (!foundEntity) {
-        const error = `Entidad "${entityType}" no encontrada en el registry`
+        const error = `Entity "${entityType}" not found in the registry`
         setState({
           config: null,
           isLoading: false,
@@ -130,7 +130,7 @@ export function useEntityConfig(
       }
 
     } catch (err) {
-      const error = err instanceof Error ? err.message : 'Error desconocido al cargar configuración de entidad'
+      const error = err instanceof Error ? err.message : 'Unknown error loading entity configuration'
       setState({
         config: null,
         isLoading: false,

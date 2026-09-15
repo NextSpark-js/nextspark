@@ -25,9 +25,9 @@ export function Sidebar({ className, entities }: SidebarProps) {
   // Focus management for collapsed state
   useEffect(() => {
     if (isCollapsed) {
-      setStatusMessage('Sidebar en modo contraído. Use Tab para navegar.')
+      setStatusMessage(t('a11y.sidebarCollapsedHint'))
     }
-  }, [isCollapsed])
+  }, [isCollapsed, t])
 
   return (
     <>

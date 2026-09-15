@@ -54,12 +54,12 @@ export function ImageUpload({
   const validateImage = (file: File): Promise<string | null> => {
     return new Promise((resolve) => {
       if (maxSize && file.size > maxSize * 1024 * 1024) {
-        resolve(`La imagen es muy grande. Máximo ${maxSize}MB.`)
+        resolve(`Image is too large. Maximum ${maxSize}MB.`)
         return
       }
 
       if (!file.type.startsWith("image/")) {
-        resolve("El archivo debe ser una imagen.")
+        resolve("The file must be an image.")
         return
       }
 
@@ -70,7 +70,7 @@ export function ImageUpload({
         resolve(null)
       }
       img.onerror = () => {
-        resolve("No se pudo cargar la imagen.")
+        resolve("Could not load the image.")
       }
       img.src = URL.createObjectURL(file)
     })
@@ -84,7 +84,7 @@ export function ImageUpload({
 
     for (const file of Array.from(files)) {
       if (value.length + newImages.length >= maxImages) {
-        errors.push(`Máximo ${maxImages} imágenes permitidas`)
+        errors.push(`Maximum ${maxImages} images allowed`)
         break
       }
 
@@ -182,12 +182,12 @@ export function ImageUpload({
           {/* eslint-disable-next-line jsx-a11y/alt-text */}
           <Image className="h-8 w-8 text-muted-foreground" />
           <p className="mt-2 text-sm text-muted-foreground">
-            Arrastra imágenes aquí o{" "}
-            <span className="font-medium text-primary">haz clic para seleccionar</span>
+            Drag images here or{" "}
+            <span className="font-medium text-primary">click to select</span>
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            {maxImages > 1 ? `Hasta ${maxImages} imágenes` : "Una imagen"} 
-            {maxSize && `, máximo ${maxSize}MB cada una`}
+            {maxImages > 1 ? `Up to ${maxImages} images` : "One image"}
+            {maxSize && `, maximum ${maxSize}MB each`}
           </p>
         </div>
         

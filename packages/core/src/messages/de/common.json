@@ -75,7 +75,8 @@
     "active": "Aktiv",
     "inactive": "Inaktiv",
     "on": "An",
-    "off": "Aus"
+    "off": "Aus",
+    "user": "Benutzer"
   },
   "theme": {
     "selector": "Theme-Auswahl",
@@ -93,11 +94,14 @@
   "notifications": {
     "title": "Benachrichtigungen",
     "unread": "ungelesen",
+    "unreadStatus": "ungelesen",
     "new": "neu",
     "markAllAsRead": "Alle Benachrichtigungen als gelesen markieren",
     "markAll": "Alle markieren",
     "empty": "Sie haben keine Benachrichtigungen",
-    "configure": "Benachrichtigungen konfigurieren"
+    "configure": "Benachrichtigungen konfigurieren",
+    "read": "gelesen",
+    "markAsRead": "Als gelesen markieren"
   },
   "search": {
     "placeholder": "Seiten, Einstellungen suchen...",
@@ -106,7 +110,17 @@
     "results": "Suchergebnisse",
     "searching": "Suche...",
     "noResults": "Keine Ergebnisse gefunden fuer \"{query}\"",
-    "tryDifferent": "Versuchen Sie andere Suchbegriffe"
+    "tryDifferent": "Versuchen Sie andere Suchbegriffe",
+    "entityLabel": "Entität",
+    "settingLabel": "Einstellung",
+    "pageLabel": "Seite",
+    "resultLabel": "Ergebnis",
+    "closedAnnouncement": "Suche geschlossen",
+    "searchingFor": "Suche: {value}",
+    "resultsCount": "{count, plural, one {# Ergebnis} other {# Ergebnisse}}",
+    "keyboardNavigate": "↑↓ navigieren",
+    "keyboardSelect": "↵ auswählen",
+    "keyboardClose": "esc schließen"
   },
   "userRoles": {
     "member": "Mitglied",
@@ -179,6 +193,7 @@
     "avatarForName": "Avatar von {name}",
     "closeNavigationMenu": "Navigationsmenü schließen",
     "collapseSidebar": "Seitenleiste einklappen",
+    "currentPageSuffix": " (aktuelle Seite)",
     "dashboardNavigation": "Hauptnavigation des Dashboards",
     "deleteNotification": "Benachrichtigung löschen: {title}",
     "developerArea": "Entwicklerbereich",
@@ -197,22 +212,43 @@
     "loadingUserInfo": "Benutzerinformationen werden geladen",
     "logoOf": "Logo von {appName}",
     "mainNavigation": "Hauptnavigation",
+    "markNotificationAsRead": "Als gelesen markieren: {title}",
+    "menuClosedAnnouncement": "Menü geschlossen",
     "mobileActions": "Mobile Aktionen",
     "mobileMainNavigation": "Mobile Hauptnavigation",
+    "mobileMenuClosedAnnouncement": "Mobiles Menü geschlossen",
+    "mobileMenuOpenedAnnouncement": "Mobiles Menü geöffnet",
     "mobileNavigationMenu": "Mobiles Navigationsmenü",
     "mobileTopBar": "Obere mobile Navigationsleiste",
+    "navigatingToAnnouncement": "Navigiere zu {name} - {description}",
     "openHelpCenterNewTab": "Hilfe-Center in neuem Tab öffnen",
     "openNavigationMenu": "Navigationsmenü öffnen",
     "settingsNavigation": "Einstellungsnavigation",
     "sidebarCollapsed": "Eingeklappte Navigationsleiste",
+    "sidebarCollapsedHint": "Seitenleiste eingeklappt. Mit Tab navigieren.",
     "sidebarExpanded": "Ausgeklappte Navigationsleiste",
+    "sidebarToggleCollapsed": "Seitenleiste eingeklappt",
+    "sidebarToggleExpanded": "Seitenleiste ausgeklappt",
     "signIn": "Anmelden",
     "signOut": "Abmelden",
+    "signOutError": "Fehler beim Abmelden",
+    "signOutSuccess": "Erfolgreich abgemeldet",
     "signUp": "Registrieren",
+    "signingOut": "Abmelden...",
     "superAdminArea": "Bereich für Superadministratoren",
     "superAdminAreaTitle": "Super Admin – Bereich für Superadministratoren",
     "taskSearch": "Aufgabensuche",
     "userInfo": "Benutzerinformationen",
     "userMenuForName": "Benutzermenü. Konto: {name}"
+  },
+  "relativeTime": {
+    "justNow": "Gerade eben",
+    "minutesAgo": "Vor {minutes} Min.",
+    "hoursAgo": "Vor {hours} Std.",
+    "daysAgo": "Vor {days} Tg."
+  },
+  "debug": {
+    "hidePrefix": "Zum Ausblenden: entferne ",
+    "hideSuffix": " aus der URL"
   }
 }

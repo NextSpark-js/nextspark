@@ -78,36 +78,36 @@ export function useEntitySearch(): EntitySearchHookResult {
       {
         id: 'dashboard',
         title: 'Dashboard',
-        description: 'Panel principal con estadísticas y acciones rápidas',
+        description: 'Main panel with statistics and quick actions',
         url: '/dashboard',
         category: 'Navigation'
       },
       {
         id: 'profile',
-        title: 'Configuración de Perfil',
-        description: 'Actualizar información personal y preferencias',
+        title: 'Profile Settings',
+        description: 'Update personal information and preferences',
         url: '/dashboard/settings/profile',
         category: 'Settings'
       },
       {
         id: 'security',
-        title: 'Configuración de Seguridad', 
-        description: 'Autenticación de dos factores y sesiones activas',
+        title: 'Security Settings',
+        description: 'Two-factor authentication and active sessions',
         url: '/dashboard/settings/security',
         category: 'Settings'
       },
       {
         id: 'notifications',
-        title: 'Configuración de Notificaciones',
-        description: 'Preferencias de emails y notificaciones push',
+        title: 'Notification Settings',
+        description: 'Email and push notification preferences',
         url: '/dashboard/settings/notifications',
         category: 'Settings'
       },
       {
         id: 'billing',
-        title: 'Facturación',
-        description: 'Planes, métodos de pago y historial de facturación',
-        url: '/dashboard/settings/billing', 
+        title: 'Billing',
+        description: 'Plans, payment methods and billing history',
+        url: '/dashboard/settings/billing',
         category: 'Settings'
       }
     ]
@@ -127,7 +127,7 @@ export function useEntitySearch(): EntitySearchHookResult {
     return availableEntities.map(entity => ({
       id: `entity-${entity.slug}`,
       title: entity.names.singular,
-      description: `Gestionar ${entity.names.plural.toLowerCase()}`,
+      description: `Manage ${entity.names.plural.toLowerCase()}`,
       entityType: entity.slug,
       type: 'entity' as const,
       url: `/dashboard/${entity.slug}`,

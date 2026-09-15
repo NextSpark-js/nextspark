@@ -72,7 +72,7 @@ describe('generateEntityTools', () => {
     const [deleteTool] = tools(executor, ['delete']);
     const result = await deleteTool.handler({ id: 'rec-1', confirm: false }, CTX);
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain('no confirmada');
+    expect(result.content[0].text).toContain('not confirmed');
     expect(executor).not.toHaveBeenCalled();
   });
 
@@ -99,7 +99,7 @@ describe('generateEntityTools', () => {
     // "name" is required per the fixture's field config.
     const result = await createTool.handler({}, CTX);
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain('Argumentos inválidos');
+    expect(result.content[0].text).toContain('Invalid arguments');
     expect(executor).not.toHaveBeenCalled();
   });
 
@@ -108,7 +108,7 @@ describe('generateEntityTools', () => {
     const [updateTool] = tools(executor, ['update']);
     const result = await updateTool.handler({ id: 'rec-1' }, CTX);
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain('ningún campo');
+    expect(result.content[0].text).toContain('No fields to modify');
     expect(executor).not.toHaveBeenCalled();
   });
 
@@ -117,7 +117,7 @@ describe('generateEntityTools', () => {
     const [, , createTool] = tools(executor, ['list', 'get', 'create']);
     const result = await createTool.handler({ name: 'Acme' }, CTX);
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain('Sin permiso');
+    expect(result.content[0].text).toContain('No permission');
     expect(result.content[0].text).toContain('customers:write');
   });
 
@@ -152,7 +152,7 @@ describe('generateEntityTools', () => {
     const executor: EntityExecutor = jest.fn().mockResolvedValue(ok({ weird: 'shape' }, {}));
     const [listTool] = tools(executor, ['list']);
     const result = await listTool.handler({}, CTX);
-    expect(result.content[0].text).toBe('? Customers (página 1/1)');
+    expect(result.content[0].text).toBe('? Customers (page 1/1)');
   });
 
   it('update surfaces a failed executor result as a translated apiError', async () => {
@@ -166,13 +166,13 @@ describe('generateEntityTools', () => {
     const executor: EntityExecutor = jest.fn().mockResolvedValue(ok([{ id: '1' }, { id: '2' }], {}));
     const [listTool] = tools(executor, ['list']);
     const result = await listTool.handler({}, CTX);
-    expect(result.content[0].text).toBe('2 Customers (página 1/1)');
+    expect(result.content[0].text).toBe('2 Customers (page 1/1)');
   });
 
   it('an entity with neither an override description nor presets has an empty entity description', () => {
     const result = tools(jest.fn(), ['get']);
-    // "Obtiene un registro de customer por ID. " with nothing appended after it.
-    expect(result[0].description.trim().endsWith('por ID.')).toBe(true);
+    // "Gets a customer record by ID. " with nothing appended after it.
+    expect(result[0].description.trim().endsWith('by ID.')).toBe(true);
   });
 
   it('override.describe.entity is used as the entity description in every generated tool', () => {
@@ -202,7 +202,7 @@ describe('generateEntityTools', () => {
       toolPrefix: 'acme',
       presets: { summary: 'Customers', presets: [{ id: 'default-method', params: { limit: 5 } }] },
     });
-    expect(result[0].description).toContain('Ejemplo (default-method)');
+    expect(result[0].description).toContain('Example (default-method)');
   });
 
   it('presetExamples falls back to the preset id when it has neither description nor title', () => {
@@ -211,7 +211,7 @@ describe('generateEntityTools', () => {
       toolPrefix: 'acme',
       presets: { summary: 'Customers', presets: [{ id: 'bare-example', method: 'POST', payload: { name: 'x' } }] },
     });
-    expect(result[0].description).toContain('Ejemplo (bare-example)');
+    expect(result[0].description).toContain('Example (bare-example)');
   });
 
   it('presets with no example for the relevant HTTP method add no example text', () => {
@@ -220,7 +220,7 @@ describe('generateEntityTools', () => {
       toolPrefix: 'acme',
       presets: { summary: 'Customers', presets: [{ id: 'list-only', method: 'GET', params: { limit: 10 } }] },
     });
-    expect(result[0].description).not.toContain('Ejemplo');
+    expect(result[0].description).not.toContain('Example');
   });
 
   it('override.describe.tools.delete replaces the entire delete tool description (not just an appended hint)', () => {
@@ -238,7 +238,7 @@ describe('generateEntityTools', () => {
       executor: jest.fn(),
       toolPrefix: 'acme',
     });
-    expect(result[0].description).toContain('DESTRUCTIVO');
+    expect(result[0].description).toContain('DESTRUCTIVE');
   });
 
   it('override.describe.tools overrides the default tool description', () => {
@@ -293,7 +293,7 @@ describe('generateEntityTools', () => {
     const executor: EntityExecutor = jest.fn().mockResolvedValue(ok({ name: 'Acme' }));
     const [, , createTool] = tools(executor, ['list', 'get', 'create']);
     const result = await createTool.handler({ name: 'Acme' }, CTX);
-    expect(result.content[0].text).toBe('customer creado.');
+    expect(result.content[0].text).toBe('customer created.');
   });
 
   it('a thrown McpToolError from transformInput is surfaced as its own message, not a generic error', async () => {
@@ -334,7 +334,7 @@ describe('generateEntityTools', () => {
     const [, , createTool] = tools(executor, ['list', 'get', 'create']);
     const result = await createTool.handler({ name: 'Acme' }, CTX);
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain('Error inesperado');
+    expect(result.content[0].text).toContain('Unexpected error');
     expect(result.content[0].text).toContain('db exploded');
     expect(errorSpy).toHaveBeenCalled();
     errorSpy.mockRestore();

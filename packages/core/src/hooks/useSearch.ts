@@ -41,10 +41,10 @@ const generateEntitySearchResults = (): SearchResult[] => {
     return {
       id: `entity-${entry.name}`,
       title: displayName,
-      description: `Gestión de ${config.names?.plural?.toLowerCase() || displayName.toLowerCase()}`,
+      description: `Manage ${config.names?.plural?.toLowerCase() || displayName.toLowerCase()}`,
       type: entry.name as any, // Map to specific entity types
       url: `/dashboard/${config.slug || entry.name}`,
-      category: 'Entidades',
+      category: 'Entities',
       entityType: entry.name,
       priority: 'medium' as const
     }
@@ -64,43 +64,43 @@ const getSearchableFields = (entityConfig: EntityConfig): string[] => {
 const SYSTEM_PAGES: Omit<SearchResult, 'id'>[] = [
   {
     title: 'Dashboard',
-    description: 'Panel principal con estadísticas y acciones rápidas',
+    description: 'Main panel with statistics and quick actions',
     type: 'page',
     url: '/dashboard'
   },
   {
-    title: 'Gestión de Tareas',
-    description: 'Crear, editar y organizar tus tareas',
+    title: 'Task Management',
+    description: 'Create, edit and organize your tasks',
     type: 'page',
     url: '/dashboard/tasks'
   },
   {
-    title: 'Configuración de Perfil',
-    description: 'Actualizar información personal y preferencias',
+    title: 'Profile Settings',
+    description: 'Update personal information and preferences',
     type: 'setting',
     url: '/dashboard/settings/profile'
   },
   {
-    title: 'Configuración de Seguridad',
-    description: 'Autenticación de dos factores y sesiones activas',
+    title: 'Security Settings',
+    description: 'Two-factor authentication and active sessions',
     type: 'setting',
     url: '/dashboard/settings/security'
   },
   {
-    title: 'Configuración de Notificaciones',
-    description: 'Preferencias de emails y notificaciones push',
+    title: 'Notification Settings',
+    description: 'Email and push notification preferences',
     type: 'setting',
     url: '/dashboard/settings/notifications'
   },
   {
-    title: 'Configuración de Contraseña',
-    description: 'Cambiar contraseña y opciones de seguridad',
+    title: 'Password Settings',
+    description: 'Change password and security options',
     type: 'setting',
     url: '/dashboard/settings/password'
   },
   {
-    title: 'Facturación',
-    description: 'Planes, métodos de pago y historial de facturación',
+    title: 'Billing',
+    description: 'Plans, payment methods and billing history',
     type: 'setting',
     url: '/dashboard/settings/billing'
   }

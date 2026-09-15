@@ -69,7 +69,7 @@ export function EntityFormWrapper({
     const loadInitialData = async () => {
       if (mode === 'edit' && id && entityConfig) {
         if (!entityConfig.enabled) {
-          onError?.(new Error(`Entidad "${entityType}" está deshabilitada`))
+          onError?.(new Error(`Entity "${entityType}" is disabled`))
           return
         }
         
@@ -136,7 +136,7 @@ export function EntityFormWrapper({
     return (
       <Alert>
         <AlertDescription>
-          {configError || `No se pudo cargar la configuración para la entidad "${entityType}".`}
+          {configError || `Could not load the configuration for entity "${entityType}".`}
         </AlertDescription>
       </Alert>
     )

@@ -289,11 +289,11 @@ describe('buildEntitySchemas', () => {
       field({ name: 'active', type: 'boolean' }),
     ]);
     const { createShape } = buildEntitySchemas(config);
-    expect(createShape.ownerId.description).toContain('uuid de users');
-    expect(createShape.assignedTo.description).toContain('uuid de un miembro del team');
+    expect(createShape.ownerId.description).toContain('uuid of users');
+    expect(createShape.assignedTo.description).toContain('uuid of a team member');
     expect(createShape.dueDate.description).toContain('YYYY-MM-DD');
     expect(createShape.dueAt.description).toContain('ISO 8601');
-    expect(createShape.active.description).toContain('booleano');
+    expect(createShape.active.description).toContain('boolean');
   });
 
   it('filterable: false excludes a field from filters but not from create/update', () => {

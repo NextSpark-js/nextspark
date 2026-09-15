@@ -17,7 +17,7 @@ import { useNotifications, type Notification } from '../../../hooks/useNotificat
 import { cn } from '../../../lib/utils'
 import { useState, useCallback } from 'react'
 import { sel, createAriaLabel } from '../../../lib/test'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 
 const getNotificationIcon = (type: Notification['type']) => {
   switch (type) {
@@ -32,25 +32,25 @@ const getNotificationIcon = (type: Notification['type']) => {
   }
 }
 
-const formatTimeAgo = (date: Date, locale: 'en' | 'es' = 'es'): string => {
+const formatTimeAgo = (date: Date, t: ReturnType<typeof useTranslations>, locale: string): string => {
   const now = new Date()
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-  
+
   if (diffInSeconds < 60) {
-    return locale === 'en' ? 'Just now' : 'Hace un momento'
+    return t('relativeTime.justNow')
   } else if (diffInSeconds < 3600) {
     const minutes = Math.floor(diffInSeconds / 60)
-    return locale === 'en' ? `${minutes} min ago` : `Hace ${minutes} min`
+    return t('relativeTime.minutesAgo', { minutes })
   } else if (diffInSeconds < 86400) {
     const hours = Math.floor(diffInSeconds / 3600)
-    return locale === 'en' ? `${hours}h ago` : `Hace ${hours}h`
+    return t('relativeTime.hoursAgo', { hours })
   } else if (diffInSeconds < 604800) {
     const days = Math.floor(diffInSeconds / 86400)
-    return locale === 'en' ? `${days}d ago` : `Hace ${days}d`
+    return t('relativeTime.daysAgo', { days })
   } else {
-    return date.toLocaleDateString(locale === 'en' ? 'en-US' : 'es-ES', { 
-      day: 'numeric', 
-      month: 'short' 
+    return date.toLocaleDateString(locale, {
+      day: 'numeric',
+      month: 'short'
     })
   }
 }
@@ -63,6 +63,7 @@ interface NotificationItemProps {
 
 function NotificationItem({ notification, onMarkAsRead, onDelete }: NotificationItemProps) {
   const t = useTranslations('common')
+  const locale = useLocale()
   const handleClick = useCallback(() => {
     if (!notification.isRead) {
       onMarkAsRead(notification.id)
@@ -101,8 +102,8 @@ function NotificationItem({ notification, onMarkAsRead, onDelete }: Notification
         {
           title: notification.title,
           message: notification.message,
-          time: formatTimeAgo(notification.timestamp),
-          status: notification.isRead ? 'leída' : 'no leída'
+          time: formatTimeAgo(notification.timestamp, t, locale),
+          status: notification.isRead ? t('notifications.read') : t('notifications.unreadStatus')
         }
       )}
       data-notification-id={notification.id}
@@ -142,10 +143,10 @@ function NotificationItem({ notification, onMarkAsRead, onDelete }: Notification
         <p className="text-xs text-muted-foreground line-clamp-2">
           {notification.message}
         </p>
-        
+
         <div className="flex items-center justify-between">
           <span className="text-xs text-muted-foreground">
-            {formatTimeAgo(notification.timestamp)}
+            {formatTimeAgo(notification.timestamp, t, locale)}
           </span>
           {!notification.isRead && (
               <Button
@@ -153,10 +154,10 @@ function NotificationItem({ notification, onMarkAsRead, onDelete }: Notification
                 size="sm"
                 className="h-6 px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={handleMarkAsRead}
-                aria-label={`Marcar como leída: ${notification.title}`}
+                aria-label={t('a11y.markNotificationAsRead', { title: notification.title })}
               >
                 <Check className="h-3 w-3 mr-1" aria-hidden="true" />
-                Marcar leído
+                {t('notifications.markAsRead')}
               </Button>
           )}
         </div>

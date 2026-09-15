@@ -19,8 +19,8 @@ interface PhoneInputProps {
 const countryCodes = [
   { code: "+54", country: "AR", name: "Argentina" },
   { code: "+1", country: "US", name: "United States" },
-  { code: "+34", country: "ES", name: "España" },
-  { code: "+52", country: "MX", name: "México" },
+  { code: "+34", country: "ES", name: "Spain" },
+  { code: "+52", country: "MX", name: "Mexico" },
   { code: "+44", country: "GB", name: "United Kingdom" },
   { code: "+33", country: "FR", name: "France" },
   { code: "+49", country: "DE", name: "Germany" },
@@ -32,7 +32,7 @@ const countryCodes = [
 export function PhoneInput({
   value = "",
   onChange,
-  placeholder = "Número de teléfono",
+  placeholder = "Phone number",
   disabled = false,
   className,
   showCountryCode = true,

@@ -62,15 +62,15 @@ export interface TaskCreatePayload {
  */
 export const TASK_PRIORITIES: Record<TaskPriority['level'], Omit<TaskPriority, 'level'>> = {
   high: {
-    label: 'Alta',
+    label: 'High',
     color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
   },
   medium: {
-    label: 'Media', 
+    label: 'Medium',
     color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
   },
   low: {
-    label: 'Baja',
+    label: 'Low',
     color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
   }
 }
@@ -79,10 +79,10 @@ export const TASK_PRIORITIES: Record<TaskPriority['level'], Omit<TaskPriority, '
  * Available task categories
  */
 export const TASK_CATEGORIES = [
-  'Diseño',
-  'Desarrollo', 
-  'Reuniones',
-  'Documentación',
+  'Design',
+  'Development',
+  'Meetings',
+  'Documentation',
   'Testing',
   'General'
 ] as const

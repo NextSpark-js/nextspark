@@ -48,8 +48,8 @@ function useScopeCatalogue() {
     return {
       ...SCOPE_CATEGORIES,
       app: {
-        name: 'Aplicación',
-        description: 'Scopes que esta aplicación define para sus propias rutas',
+        name: 'Application',
+        description: 'Scopes this application defines for its own routes',
         scopes: appScopes,
       },
     };
@@ -167,42 +167,42 @@ export function CreateApiKeyDialog({ open, onClose, onSuccess }: CreateApiKeyDia
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-cy={sel('settings.apiKeys.createDialog.container')}>
         <DialogHeader>
-          <DialogTitle>Crear nueva API Key</DialogTitle>
+          <DialogTitle>Create new API Key</DialogTitle>
           <DialogDescription>
-            Crea una API key para acceder a los endpoints externos de forma segura.
+            Create an API key to securely access the external endpoints.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Name Input */}
           <div className="space-y-2">
-            <Label htmlFor="name">Nombre de la API Key</Label>
+            <Label htmlFor="name">API Key Name</Label>
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="ej. Mi aplicación móvil"
+              placeholder="e.g. My mobile app"
               maxLength={100}
               data-cy={sel('settings.apiKeys.createDialog.nameInput')}
             />
             <p className="text-xs text-muted-foreground">
-              Un nombre descriptivo para identificar esta API key
+              A descriptive name to identify this API key
             </p>
           </div>
 
           {/* Expiry Options */}
           <div className="space-y-2">
-            <Label>Expiración</Label>
+            <Label>Expiration</Label>
             <Select value={expiryOption} onValueChange={(value: typeof expiryOption) => setExpiryOption(value)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="never">Nunca expira</SelectItem>
-                <SelectItem value="30d">30 días</SelectItem>
-                <SelectItem value="90d">90 días</SelectItem>
-                <SelectItem value="1y">1 año</SelectItem>
-                <SelectItem value="custom">Fecha personalizada</SelectItem>
+                <SelectItem value="never">Never expires</SelectItem>
+                <SelectItem value="30d">30 days</SelectItem>
+                <SelectItem value="90d">90 days</SelectItem>
+                <SelectItem value="1y">1 year</SelectItem>
+                <SelectItem value="custom">Custom date</SelectItem>
               </SelectContent>
             </Select>
 
@@ -219,7 +219,7 @@ export function CreateApiKeyDialog({ open, onClose, onSuccess }: CreateApiKeyDia
           {/* Scopes Selection */}
           <div className="space-y-4" data-cy={sel('settings.apiKeys.createDialog.scopesContainer')}>
             <div>
-              <Label>Permisos (Scopes)</Label>
+              <Label>Permissions (Scopes)</Label>
               <p className="text-xs text-muted-foreground">
                 Choose the permissions this API key will have
               </p>
@@ -228,7 +228,7 @@ export function CreateApiKeyDialog({ open, onClose, onSuccess }: CreateApiKeyDia
             <Alert>
               <Info className="h-4 w-4" />
               <AlertDescription>
-                Solo puedes asignar permisos que tu rol actual permite. Los permisos no se pueden cambiar después de crear la API key.
+                You can only assign permissions that your current role allows. Permissions cannot be changed after creating the API key.
               </AlertDescription>
             </Alert>
 
@@ -293,7 +293,7 @@ export function CreateApiKeyDialog({ open, onClose, onSuccess }: CreateApiKeyDia
             {/* Selected Scopes Summary */}
             {selectedScopes.length > 0 && (
               <div className="space-y-2">
-                <Label>Permisos seleccionados ({selectedScopes.length})</Label>
+                <Label>Selected permissions ({selectedScopes.length})</Label>
                 <div className="flex flex-wrap gap-1">
                   {selectedScopes.map((scope) => (
                     <Badge key={scope} variant="secondary" className="text-xs">
@@ -309,22 +309,22 @@ export function CreateApiKeyDialog({ open, onClose, onSuccess }: CreateApiKeyDia
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              <strong>Importante:</strong> La API key se mostrará solo una vez después de crearla.
-              Guárdala en un lugar seguro ya que no podrás verla nuevamente.
+              <strong>Important:</strong> The API key will only be shown once after creation.
+              Store it somewhere safe, as you won't be able to see it again.
             </AlertDescription>
           </Alert>
         </form>
 
         <DialogFooter data-cy={sel('settings.apiKeys.createDialog.footer')}>
           <Button variant="outline" onClick={handleClose} disabled={createApiKey.isPending}>
-            Cancelar
+            Cancel
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={createApiKey.isPending || selectedScopes.length === 0 || !name.trim()}
             data-cy={sel('settings.apiKeys.createDialog.submitButton')}
           >
-            {createApiKey.isPending ? 'Creando...' : 'Crear API Key'}
+            {createApiKey.isPending ? 'Creating...' : 'Create API Key'}
           </Button>
         </DialogFooter>
       </DialogContent>

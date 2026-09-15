@@ -423,7 +423,7 @@ export function EntityChildManager({
         <Alert>
           <Loader2 className="h-4 w-4 animate-spin" />
           <AlertDescription>
-            {submissionMode === 'create' ? 'Creando' : 'Actualizando'} {childEntityConfig.display.title.slice(0, -1).toLowerCase()}...
+            {submissionMode === 'create' ? 'Creating' : 'Updating'} {childEntityConfig.display.title.slice(0, -1).toLowerCase()}...
           </AlertDescription>
         </Alert>
       )}
@@ -720,24 +720,24 @@ export function EntityChildManager({
           <DialogHeader>
             <DialogTitle>Confirm Delete</DialogTitle>
             <DialogDescription>
-              ¿Estás seguro de que quieres eliminar este {childEntityConfig.display.title.slice(0, -1).toLowerCase()}? Esta acción no se puede deshacer.
+              Are you sure you want to delete this {childEntityConfig.display.title.slice(0, -1).toLowerCase()}? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          
+
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={handleCancelDelete}
               disabled={false}
             >
-              Cancelar
+              Cancel
             </Button>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={handleConfirmedDelete}
               disabled={false}
             >
-              Eliminar
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>

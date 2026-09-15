@@ -96,15 +96,15 @@ export function UserDisplay({
               loadedRef.current = { userId: value, teamId: effectiveTeamId }
             } else {
               // User not found in team members - show ID as fallback
-              setError('Usuario no encontrado')
+              setError('User not found')
             }
           }
         } else {
-          setError('Error al cargar usuario')
+          setError('Error loading user')
         }
       } catch (err) {
         console.error('[UserDisplay] Error fetching user:', err)
-        setError('Error al cargar usuario')
+        setError('Error loading user')
       } finally {
         setLoading(false)
       }

@@ -33,9 +33,9 @@ export function EntityPageHeader({
   const getTitle = (): string => {
     switch (mode) {
       case 'create':
-        return `Crear ${entityConfig.names.singular}`
+        return `Create ${entityConfig.names.singular}`
       case 'edit':
-        return (typeof data?.title === 'string' ? data.title : typeof data?.name === 'string' ? data.name : `Editar ${entityConfig.names.singular}`)
+        return (typeof data?.title === 'string' ? data.title : typeof data?.name === 'string' ? data.name : `Edit ${entityConfig.names.singular}`)
       case 'view':
       default:
         return (typeof data?.title === 'string' ? data.title : typeof data?.name === 'string' ? data.name : entityConfig.names.singular)
@@ -46,9 +46,9 @@ export function EntityPageHeader({
   const getSubtitle = (): string => {
     switch (mode) {
       case 'create':
-        return `Nuevo ${entityConfig.names.singular.toLowerCase()}`
+        return `New ${entityConfig.names.singular.toLowerCase()}`
       case 'edit':
-        return `Editando ${entityConfig.names.singular.toLowerCase()} • ID: ${typeof data?.id === 'string' ? data.id : 'N/A'}`
+        return `Editing ${entityConfig.names.singular.toLowerCase()} • ID: ${typeof data?.id === 'string' ? data.id : 'N/A'}`
       case 'view':
       default:
         return `${entityConfig.names.singular} • ID: ${typeof data?.id === 'string' ? data.id : 'N/A'}`
@@ -62,7 +62,7 @@ export function EntityPageHeader({
         <Link href={`/dashboard/${entityConfig.slug}`}>
           <Button variant="ghost" size="sm">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Volver a {entityConfig.names.plural}
+            Back to {entityConfig.names.plural}
           </Button>
         </Link>
       </div>

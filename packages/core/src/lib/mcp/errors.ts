@@ -21,42 +21,42 @@ export function translateApiError(result: EntityApiResult, context: ErrorContext
 
   switch (code) {
     case 'AUTHENTICATION_FAILED':
-      return 'API key inválida, expirada o revocada. Generá una nueva en Settings → API Keys y actualizá la configuración del cliente MCP.'
+      return 'API key invalid, expired, or revoked. Generate a new one in Settings → API Keys and update the MCP client configuration.'
     case 'TEAM_CONTEXT_REQUIRED':
-      return 'Falta el contexto de equipo (team). Verificá que tu API key pertenezca a un usuario con un team activo, o enviá el header x-team-id.'
+      return 'Missing team context. Verify that your API key belongs to a user with an active team, or send the x-team-id header.'
     case 'TEAM_ACCESS_DENIED':
-      return 'El usuario de la API key no es miembro del team indicado. Verificá el x-team-id o usá el team por defecto.'
+      return 'The API key user is not a member of the specified team. Check x-team-id or use the default team.'
     case 'VALIDATION_ERROR':
-      return `Datos inválidos para ${context.slug}.${formatDetails(body.details)} Corregí los campos y reintentá.`
+      return `Invalid data for ${context.slug}.${formatDetails(body.details)} Fix the fields and retry.`
     case 'INVALID_FIELD_VALUE':
-      return `Un campo tiene un valor no permitido${detail}. Revisá los valores del schema de la tool y reintentá.`
+      return `A field has a value that is not allowed${detail}. Check the tool's schema values and retry.`
     case 'UNIQUE_CONSTRAINT_VIOLATION':
-      return `Ya existe un registro de ${context.slug} con ese valor único${detail}. Buscalo con la tool de list y actualizalo en vez de crearlo.`
+      return `A record for ${context.slug} already exists with that unique value${detail}. Look it up with the list tool and update it instead of creating it.`
     case 'RATE_LIMIT_EXCEEDED':
-      return 'Límite de requests alcanzado. Esperá un minuto antes de reintentar; para cargas grandes usá las tools de batch si el entity las expone.'
+      return 'Request limit reached. Wait a minute before retrying; for large loads use the batch tools if the entity exposes them.'
     default:
       break
   }
 
   switch (status) {
     case 401:
-      return 'No autenticado: la API key no fue aceptada. Generá una nueva en Settings → API Keys.'
+      return 'Not authenticated: the API key was not accepted. Generate a new one in Settings → API Keys.'
     case 403:
-      return `Sin permiso para ${context.operation} en ${context.slug}. Si es un problema de scope, tu API key necesita el scope ${context.slug}:${scopeFor(context.operation)}. Si es un problema de rol, tu rol en el team no permite esta acción.`
+      return `No permission for ${context.operation} on ${context.slug}. If it's a scope issue, your API key needs the ${context.slug}:${scopeFor(context.operation)} scope. If it's a role issue, your role in the team does not allow this action.`
     case 404:
-      return `No se encontró el registro de ${context.slug}. El ID puede ser incorrecto o el registro fue eliminado — usá la tool de list para encontrar el ID correcto.`
+      return `Record for ${context.slug} not found. The ID may be incorrect or the record may have been deleted — use the list tool to find the correct ID.`
     case 409:
-      return `No se puede completar: el registro de ${context.slug} tiene registros relacionados que dependen de él${detail}. Eliminá o reasigná los registros dependientes primero.`
+      return `Cannot complete: the record for ${context.slug} has related records that depend on it${detail}. Delete or reassign the dependent records first.`
     case 429:
-      return 'Límite de requests alcanzado. Esperá un minuto antes de reintentar.'
+      return 'Request limit reached. Wait a minute before retrying.'
     case 500: {
       const hints = context.hints?.length
-        ? ` Posibles causas conocidas: ${context.hints.join(' · ')}.`
+        ? ` Known possible causes: ${context.hints.join(' · ')}.`
         : ''
-      return `Error interno de la API al ejecutar ${context.operation} en ${context.slug}.${hints} Si persiste, reportalo.`
+      return `Internal API error while executing ${context.operation} on ${context.slug}.${hints} If it persists, report it.`
     }
     default:
-      return `Error ${status} (${code}) al ejecutar ${context.operation} en ${context.slug}${detail}.`
+      return `Error ${status} (${code}) while executing ${context.operation} on ${context.slug}${detail}.`
   }
 }
 
@@ -81,7 +81,7 @@ function formatDetails(details: unknown): string {
         return String(issue)
       })
       .slice(0, 8)
-    return ` Problemas: ${lines.join(' · ')}.`
+    return ` Issues: ${lines.join(' · ')}.`
   }
-  return ` Detalle: ${JSON.stringify(details).slice(0, 300)}.`
+  return ` Detail: ${JSON.stringify(details).slice(0, 300)}.`
 }

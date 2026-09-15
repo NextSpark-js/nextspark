@@ -10,7 +10,7 @@ import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-reg
 
 function ForbiddenContent() {
   const searchParams = useSearchParams()!
-  const reason = searchParams.get('reason') || 'No tienes permisos para acceder a este recurso'
+  const reason = searchParams.get('reason') || 'You do not have permission to access this resource'
   const upgrade = searchParams.get('upgrade') === 'true'
 
   return (
@@ -21,7 +21,7 @@ function ForbiddenContent() {
             <AlertTriangle className="h-8 w-8 text-yellow-600" />
           </div>
           <CardTitle className="text-2xl">
-            ⚠️ Ups, no tienes permisos para hacer esto
+            ⚠️ Oops, you do not have permission to do this
           </CardTitle>
           <CardDescription className="text-gray-600">
             {reason}
@@ -32,11 +32,11 @@ function ForbiddenContent() {
           {upgrade && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-800">
-                Esta funcionalidad requiere una mejora de tu plan actual.
+                This feature requires an upgrade to your current plan.
               </p>
               <Link href="/dashboard/settings/billing" className="block mt-2">
                 <Button variant="outline" size="sm" className="w-full">
-                  Ver planes
+                  View plans
                 </Button>
               </Link>
             </div>
@@ -49,7 +49,7 @@ function ForbiddenContent() {
               onClick={() => window.history.back()}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Volver
+              Back
             </Button>
 
             <Link href="/dashboard" className="flex-1">
@@ -75,7 +75,7 @@ function ForbiddenPage() {
               <AlertTriangle className="h-8 w-8 text-yellow-600" />
             </div>
             <CardTitle className="text-2xl">
-              ⚠️ Ups, no tienes permisos para hacer esto
+              ⚠️ Oops, you do not have permission to do this
             </CardTitle>
           </CardHeader>
         </Card>

@@ -57,13 +57,13 @@ function ResetPasswordContent() {
 
   const onSubmit = useCallback(async (data: NewPasswordFormData) => {
     if (!token) {
-      setError("Token de recuperación inválido");
+      setError("Invalid recovery token");
       return;
     }
 
     setLoading(true);
     setError(null);
-    console.log('Actualizando contraseña...');
+    console.log('Updating password...');
 
     try {
       const result = await updatePassword(data.password, token);
@@ -73,10 +73,10 @@ function ResetPasswordContent() {
         setError(errorMsg);
       } else {
         setSuccess(true);
-        console.log('Contraseña actualizada exitosamente');
+        console.log('Password updated successfully');
       }
     } catch {
-      setError('Error inesperado al actualizar contraseña');
+      setError('Unexpected error updating password');
     } finally {
       setLoading(false);
     }

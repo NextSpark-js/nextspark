@@ -30,6 +30,7 @@
     "avatarForName": "Avatar di {name}",
     "closeNavigationMenu": "Chiudi il menu di navigazione",
     "collapseSidebar": "Comprimi la barra laterale",
+    "currentPageSuffix": " (pagina corrente)",
     "dashboardNavigation": "Navigazione principale della dashboard",
     "deleteNotification": "Elimina notifica: {title}",
     "developerArea": "Area sviluppatori",
@@ -48,18 +49,29 @@
     "loadingUserInfo": "Caricamento delle informazioni utente",
     "logoOf": "Logo di {appName}",
     "mainNavigation": "Navigazione principale",
+    "markNotificationAsRead": "Segna come letta: {title}",
+    "menuClosedAnnouncement": "Menu chiuso",
     "mobileActions": "Azioni mobili",
     "mobileMainNavigation": "Navigazione mobile principale",
+    "mobileMenuClosedAnnouncement": "Menu mobile chiuso",
+    "mobileMenuOpenedAnnouncement": "Menu mobile aperto",
     "mobileNavigationMenu": "Menu di navigazione mobile",
     "mobileTopBar": "Barra di navigazione mobile superiore",
+    "navigatingToAnnouncement": "Navigazione verso {name} - {description}",
     "openHelpCenterNewTab": "Apri il centro assistenza in una nuova scheda",
     "openNavigationMenu": "Apri il menu di navigazione",
     "settingsNavigation": "Navigazione impostazioni",
     "sidebarCollapsed": "Barra laterale di navigazione compressa",
+    "sidebarCollapsedHint": "Barra laterale compressa. Usa Tab per navigare.",
     "sidebarExpanded": "Barra laterale di navigazione espansa",
+    "sidebarToggleCollapsed": "Barra laterale compressa",
+    "sidebarToggleExpanded": "Barra laterale espansa",
     "signIn": "Accedi",
     "signOut": "Esci",
+    "signOutError": "Errore durante la disconnessione",
+    "signOutSuccess": "Disconnessione riuscita",
     "signUp": "Registrati",
+    "signingOut": "Disconnessione...",
     "superAdminArea": "Area amministratore",
     "superAdminAreaTitle": "Super Admin - Area amministratore",
     "taskSearch": "Ricerca delle attività",
@@ -119,7 +131,8 @@
     "active": "Attivo",
     "inactive": "Inattivo",
     "on": "Attivato",
-    "off": "Disattivato"
+    "off": "Disattivato",
+    "user": "Utente"
   },
   "theme": {
     "selector": "Selettore tema",
@@ -137,11 +150,14 @@
   "notifications": {
     "title": "Notifiche",
     "unread": "non lette",
+    "unreadStatus": "non letta",
     "new": "nuova",
     "markAllAsRead": "Segna tutte le notifiche come lette",
     "markAll": "Segna tutte",
     "empty": "Non hai notifiche",
-    "configure": "Configura notifiche"
+    "configure": "Configura notifiche",
+    "read": "letta",
+    "markAsRead": "Segna come letta"
   },
   "search": {
     "placeholder": "Cerca pagine, impostazioni...",
@@ -150,7 +166,17 @@
     "results": "Risultati di ricerca",
     "searching": "Ricerca in corso...",
     "noResults": "Nessun risultato trovato per \"{query}\"",
-    "tryDifferent": "Prova con altre parole chiave"
+    "tryDifferent": "Prova con altre parole chiave",
+    "entityLabel": "Entità",
+    "settingLabel": "Impostazione",
+    "pageLabel": "Pagina",
+    "resultLabel": "Risultato",
+    "closedAnnouncement": "Ricerca chiusa",
+    "searchingFor": "Ricerca: {value}",
+    "resultsCount": "{count, plural, one {# risultato} other {# risultati}}",
+    "keyboardNavigate": "↑↓ naviga",
+    "keyboardSelect": "↵ seleziona",
+    "keyboardClose": "esc chiudi"
   },
   "userRoles": {
     "member": "Membro",
@@ -214,5 +240,15 @@
     "reactivateTask": "Riattiva task: {title}",
     "completedDate": "Completato il {date}",
     "deleteCompletedTask": "Elimina task completato: {title}"
+  },
+  "relativeTime": {
+    "justNow": "Proprio ora",
+    "minutesAgo": "{minutes} min fa",
+    "hoursAgo": "{hours}h fa",
+    "daysAgo": "{days}g fa"
+  },
+  "debug": {
+    "hidePrefix": "Per nascondere: rimuovi ",
+    "hideSuffix": " dall'URL"
   }
 }

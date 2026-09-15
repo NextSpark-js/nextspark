@@ -170,7 +170,7 @@ export function createMcpEngine(
               content: [
                 {
                   type: 'text',
-                  text: `Error inesperado: ${error instanceof Error ? error.message : String(error)}`,
+                  text: `Unexpected error: ${error instanceof Error ? error.message : String(error)}`,
                 },
               ],
               isError: true,

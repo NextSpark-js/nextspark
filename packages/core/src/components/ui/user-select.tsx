@@ -323,7 +323,7 @@ export function UserSelect({
               <>
                 <User className="mr-2 h-4 w-4" />
                 {resolvedValue.length > 0
-                  ? `${resolvedValue.length} usuario${resolvedValue.length > 1 ? 's' : ''} seleccionado${resolvedValue.length > 1 ? 's' : ''}`
+                  ? `${resolvedValue.length} user${resolvedValue.length > 1 ? 's' : ''} selected`
                   : placeholder
                 }
               </>
@@ -350,7 +350,7 @@ export function UserSelect({
             {/* Role Filter Info */}
             {stableRoleFilter.length > 0 && (
               <div className="text-xs text-muted-foreground">
-                Filtrando por roles: {stableRoleFilter.join(", ")}
+                Filtering by roles: {stableRoleFilter.join(", ")}
               </div>
             )}
 
@@ -362,7 +362,7 @@ export function UserSelect({
                 onClick={onCreate}
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Invitar nuevo usuario
+                Invite new user
               </Button>
             )}
 
@@ -371,7 +371,7 @@ export function UserSelect({
               {isSearching ? (
                 <div className="text-center text-muted-foreground py-4">
                   <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
-                  Buscando usuarios...
+                  Searching users...
                 </div>
               ) : displayUsers.length > 0 ? (
                 displayUsers.map((user) => (

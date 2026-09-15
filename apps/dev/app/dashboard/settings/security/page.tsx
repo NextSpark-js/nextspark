@@ -39,6 +39,7 @@ import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-reg
 
 function SecurityPage() {
   const t = useTranslations('settings')
+  const tCommon = useTranslations('common')
   
   // Hook para manejar user metadata con autenticación de sesión
   const { 
@@ -79,7 +80,7 @@ function SecurityPage() {
       browser: 'Chrome 120',
       location: 'Buenos Aires, Argentina',
       ip: '192.168.1.100',
-      lastActive: '2 minutos atrás',
+      lastActive: tCommon('relativeTime.minutesAgo', { minutes: 2 }),
       current: true,
       icon: <Monitor className="h-4 w-4" />
     },
@@ -89,7 +90,7 @@ function SecurityPage() {
       browser: 'Safari Mobile',
       location: 'Buenos Aires, Argentina',
       ip: '192.168.1.101',
-      lastActive: '1 hora atrás',
+      lastActive: tCommon('relativeTime.hoursAgo', { hours: 1 }),
       current: false,
       icon: <Smartphone className="h-4 w-4" />
     },
@@ -99,7 +100,7 @@ function SecurityPage() {
       browser: 'Chrome 119',
       location: 'Córdoba, Argentina',
       ip: '200.45.123.45',
-      lastActive: '3 días atrás',
+      lastActive: tCommon('relativeTime.daysAgo', { days: 3 }),
       current: false,
       icon: <Globe className="h-4 w-4" />
     }
@@ -126,7 +127,7 @@ function SecurityPage() {
     {
       id: '3',
       success: false,
-      location: 'Madrid, España',
+      location: 'Madrid, Spain',
       device: 'Unknown - Chrome',
       timestamp: '2024-01-14 22:15:00',
       ip: '85.123.45.67'

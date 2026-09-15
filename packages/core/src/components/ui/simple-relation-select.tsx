@@ -513,7 +513,7 @@ export function SimpleRelationSelect({
         if (selectedPropertyValues.length > 0) {
           return selectedPropertyValues.map(opt => opt.label).join(', ')
         }
-        return `${selectedValues.length} seleccionado${selectedValues.length !== 1 ? 's' : ''}`
+        return `${selectedValues.length} selected`
       }
 
       // For single select property, show label if available, otherwise show value
@@ -524,7 +524,7 @@ export function SimpleRelationSelect({
         if (selectedOptions.length > 0) {
           return selectedOptions.map(opt => opt.title).join(', ')
         }
-        return `${selectedValues.length} seleccionado${selectedValues.length !== 1 ? 's' : ''}`
+        return `${selectedValues.length} selected`
       }
 
       // For single select, show title if available, otherwise show ID
@@ -639,7 +639,7 @@ export function SimpleRelationSelect({
                         <div className="flex-1">
                           <div className="font-medium">{option.label}</div>
                           {!option.isStatic && (
-                            <div className="text-sm text-muted-foreground">Dinámico</div>
+                            <div className="text-sm text-muted-foreground">Dynamic</div>
                           )}
                         </div>
                         {selectedValues.includes(option.value) && (

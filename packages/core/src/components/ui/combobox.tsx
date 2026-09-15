@@ -54,7 +54,7 @@ export function Combobox({
   clearable = false,
   className,
   id,
-  clearLabel = "Limpiar selección",
+  clearLabel = "Clear selection",
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
 
