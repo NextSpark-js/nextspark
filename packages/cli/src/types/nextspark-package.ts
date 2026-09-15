@@ -58,6 +58,16 @@ export interface InstallOptions {
 }
 
 /**
+ * A theme or plugin copied into the project, with the dependencies its own
+ * package.json declares.
+ */
+export interface DependencyOwner {
+  name: string
+  dir: string
+  dependencies?: Record<string, string>
+}
+
+/**
  * Result from fetching a package from npm registry
  */
 export interface FetchResult {
@@ -106,4 +116,9 @@ export interface PostinstallContext {
   coreVersion: string
   timestamp: number
   installingPlugins: Set<string>
+  /**
+   * Present when an outer command installs dependencies once for everything it
+   * adds; a nested add records its own here instead of installing.
+   */
+  pendingDependencies?: DependencyOwner[]
 }

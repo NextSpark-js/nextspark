@@ -5,12 +5,18 @@ import { validatePlugin } from '../lib/validator.js'
 import { installPlugin } from '../lib/installer.js'
 import { runPostinstall } from '../lib/postinstall/index.js'
 import { detectActiveTheme } from '../lib/theme-detector.js'
+import { installWorkspaceDependencies, dependencyInstallNotice } from '../lib/workspace-dependencies.js'
 import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
-import type { InstallOptions, PostinstallContext } from '../types/nextspark-package.js'
+import type { DependencyOwner, InstallOptions, PostinstallContext } from '../types/nextspark-package.js'
 
 interface AddPluginOptions extends InstallOptions {
   installingPlugins?: Set<string>
+  /**
+   * Given by a caller that installs dependencies once for everything it adds;
+   * this call then records its own there instead of installing them.
+   */
+  pendingDependencies?: DependencyOwner[]
 }
 
 export async function addPlugin(
@@ -20,6 +26,7 @@ export async function addPlugin(
   const spinner = ora(`Adding plugin ${packageSpec}`).start()
 
   let cleanup: (() => void) | null = null
+  const pendingDependencies = options.pendingDependencies ?? []
 
   try {
     // Pre-checks
@@ -66,10 +73,25 @@ export async function addPlugin(
         pluginName: result.name,
         coreVersion,
         timestamp: Date.now(),
-        installingPlugins: options.installingPlugins || new Set([packageSpec])
+        installingPlugins: options.installingPlugins || new Set([packageSpec]),
+        pendingDependencies
       }
 
       await runPostinstall(packageJson, result.installedPath, context)
+    }
+
+    if (!options.dryRun) {
+      pendingDependencies.push({
+        name: result.name,
+        dir: result.installedPath,
+        dependencies: packageJson.dependencies,
+      })
+      if (!options.pendingDependencies) {
+        const notice = dependencyInstallNotice(
+          installWorkspaceDependencies(pendingDependencies, { skipDeps: options.skipDeps })
+        )
+        if (notice) console.log(chalk.yellow(`\n  ⚠ ${notice}`))
+      }
     }
 
     console.log(chalk.green(`\n  ✓ Plugin ${result.name} installed successfully!`))
@@ -102,7 +124,8 @@ function getCoreVersion(): string {
 export function addPluginCommand(packageSpec: string, options: Record<string, unknown>): Promise<void> {
   return addPlugin(packageSpec, {
     force: options.force as boolean,
-    skipDeps: options.noDeps as boolean,
+    // commander exposes --no-deps as `deps: false`
+    skipDeps: options.deps === false,
     dryRun: options.dryRun as boolean,
     skipPostinstall: options.skipPostinstall as boolean,
     version: options.version as string

@@ -35,7 +35,10 @@ export async function runPostinstall(
 
         // Importar dinamicamente para evitar dependencia circular
         const { addPlugin } = await import('../../commands/add-plugin.js')
-        await addPlugin(plugin, { installingPlugins: context.installingPlugins })
+        await addPlugin(plugin, {
+          installingPlugins: context.installingPlugins,
+          pendingDependencies: context.pendingDependencies
+        })
       }
     }
   }

@@ -5,17 +5,27 @@ import { validateTheme } from '../lib/validator.js'
 import { installTheme } from '../lib/installer.js'
 import { runPostinstall } from '../lib/postinstall/index.js'
 import { addPlugin } from './add-plugin.js'
+import { installWorkspaceDependencies, dependencyInstallNotice } from '../lib/workspace-dependencies.js'
 import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
-import type { InstallOptions, PostinstallContext } from '../types/nextspark-package.js'
+import type { DependencyOwner, InstallOptions, PostinstallContext } from '../types/nextspark-package.js'
+
+interface AddThemeOptions extends InstallOptions {
+  /**
+   * Given by a caller that installs dependencies once for everything it adds;
+   * this call then records its own there instead of installing them.
+   */
+  pendingDependencies?: DependencyOwner[]
+}
 
 export async function addTheme(
   packageSpec: string,
-  options: InstallOptions = {}
+  options: AddThemeOptions = {}
 ): Promise<void> {
   const spinner = ora(`Adding theme ${packageSpec}`).start()
 
   let cleanup: (() => void) | null = null
+  const pendingDependencies = options.pendingDependencies ?? []
 
   try {
     // Pre-checks
@@ -55,7 +65,7 @@ export async function addTheme(
       const installingPlugins = new Set<string>()
       for (const plugin of packageJson.requiredPlugins) {
         if (!checkPluginExists(plugin)) {
-          await addPlugin(plugin, { installingPlugins })
+          await addPlugin(plugin, { installingPlugins, pendingDependencies })
         }
       }
     }
@@ -75,10 +85,25 @@ export async function addTheme(
         themeName: result.name,
         coreVersion,
         timestamp: Date.now(),
-        installingPlugins: new Set()
+        installingPlugins: new Set(),
+        pendingDependencies
       }
 
       await runPostinstall(packageJson, result.installedPath, context)
+    }
+
+    if (!options.dryRun) {
+      pendingDependencies.push({
+        name: result.name,
+        dir: result.installedPath,
+        dependencies: packageJson.dependencies,
+      })
+      if (!options.pendingDependencies) {
+        const notice = dependencyInstallNotice(
+          installWorkspaceDependencies(pendingDependencies, { skipDeps: options.skipDeps })
+        )
+        if (notice) console.log(chalk.yellow(`\n  ⚠ ${notice}`))
+      }
     }
 
     console.log(chalk.green(`\n  ✓ Theme ${result.name} installed successfully!`))
@@ -121,7 +146,8 @@ function getCoreVersion(): string {
 export function addThemeCommand(packageSpec: string, options: Record<string, unknown>): Promise<void> {
   return addTheme(packageSpec, {
     force: options.force as boolean,
-    skipDeps: options.noDeps as boolean,
+    // commander exposes --no-deps as `deps: false`
+    skipDeps: options.deps === false,
     dryRun: options.dryRun as boolean,
     skipPostinstall: options.skipPostinstall as boolean,
     version: options.version as string

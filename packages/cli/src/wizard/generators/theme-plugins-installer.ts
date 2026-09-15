@@ -192,7 +192,9 @@ async function updateTsConfigPaths(name: string, type: 'theme' | 'plugin'): Prom
 async function installThemeViaCli(packageSpec: string): Promise<boolean> {
   return withWebCwd(async () => {
     try {
-      await addTheme(packageSpec, {});
+      // The wizard installs the whole project once afterwards, so the add only
+      // records the theme's dependencies.
+      await addTheme(packageSpec, { pendingDependencies: [] });
       return true;
     } catch {
       return false;
@@ -206,7 +208,9 @@ async function installThemeViaCli(packageSpec: string): Promise<boolean> {
 async function installPluginViaCli(packageSpec: string): Promise<boolean> {
   return withWebCwd(async () => {
     try {
-      await addPlugin(packageSpec, {});
+      // The wizard installs the whole project once afterwards, so the add only
+      // records the plugin's dependencies.
+      await addPlugin(packageSpec, { pendingDependencies: [] });
       return true;
     } catch {
       return false;

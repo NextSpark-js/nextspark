@@ -80,6 +80,9 @@ export async function installTheme(
   if (options.dryRun) {
     console.log(chalk.cyan('\n  [Dry Run] Would perform:'))
     console.log(`    - Copy to: contents/themes/${themeName}/`)
+    if (packageJson.dependencies && Object.keys(packageJson.dependencies).length > 0) {
+      console.log(`    - Install deps: ${Object.keys(packageJson.dependencies).join(', ')}`)
+    }
     if (packageJson.requiredPlugins?.length) {
       console.log(`    - Install required plugins: ${packageJson.requiredPlugins.join(', ')}`)
     }
