@@ -14,7 +14,7 @@
     "templates"
   ],
   "scripts": {
-    "build": "tsup src/cli.ts --format esm --dts --outDir dist",
+    "build": "tsup src/cli.ts --format esm --dts --clean --outDir dist",
     "dev": "tsup src/cli.ts --format esm --watch",
     "test": "npx tsx --test tests/*.test.ts"
   },
