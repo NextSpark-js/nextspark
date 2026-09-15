@@ -54,6 +54,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`generateTemplateRegistry()` returns `Promise<string>` (#197).** It reads each theme
+  template's syntax tree to tell a component override from a metadata-only one, and the
+  TypeScript parser loads asynchronously. Code importing it from
+  `@nextsparkjs/core/scripts/*` needs to `await` it, as `scripts/build/registry.mjs` does;
+  `generateTemplateRegistryClient()` was already asynchronous. The generated registry is
+  still a static file written at build time, and a template with no default export is now
+  registered with `component: null` instead of a deferred import.
 - **The root layout no longer mounts `TeamProvider` and `SubscriptionProvider` (#187).**
   On a public page they fetched a signed-in visitor's teams and subscription and
   re-synced the `activeTeamId` cookie with `POST /api/v1/teams/switch`; a role

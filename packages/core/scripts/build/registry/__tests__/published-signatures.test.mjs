@@ -121,9 +121,6 @@ test('generateTemplatePage(template, outputPath) still rejects segment config Ne
   const root = await createProject()
   try {
     await generateMissingPages([], { projectRoot: root })
-    // An app page already exists at this route: a caller writing a route file
-    // here directly still gets the file's segment config checked.
-    await writeProjectFile(root, 'app/broken/page.tsx', PAGE_WITH_COMPONENT)
     const page = await writeTemplate(root, 'broken/page.tsx', 'page', `export const revalidate = 60 * 60\n${PAGE_WITH_COMPONENT}`)
     const outputPath = join(root, 'app/(templates)/broken/page.tsx')
 

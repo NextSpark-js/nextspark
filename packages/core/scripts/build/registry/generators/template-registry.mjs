@@ -15,7 +15,7 @@ import {
   canOverrideComponent
 } from '../../../../dist/config/protected-paths.js'
 import { convertCorePath } from '../config.mjs'
-import { analyzeTemplates, templateAnalysisFor } from '../post-build/page-generator.mjs'
+import { analyzeTemplates, routeFileAction, templateAnalysisFor } from '../post-build/page-generator.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -52,6 +52,11 @@ function resolveTemplateEntries(templates, analysis) {
   Object.keys(templatesByPath).forEach(appPath => {
     templatesByPath[appPath].sort((a, b) => b.priority - a.priority)
   })
+
+  // A template whose route file would break is rejected here too, whoever built the analysis
+  for (const template of templates) {
+    routeFileAction(template, templateAnalysisFor(analysis, template))
+  }
 
   return Object.entries(templatesByPath).map(([appPath, pathTemplates]) => {
     const highestPriorityTemplate = pathTemplates[0]

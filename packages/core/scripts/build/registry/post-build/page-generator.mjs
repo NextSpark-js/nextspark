@@ -678,18 +678,27 @@ function requiredLayoutPaths(directory) {
 /**
  * Generate a single template page with template override system
  *
+ * What `routeFileAction` decides applies: a template over a route the app
+ * already has gets no file, and the result says so; one whose route file would
+ * break is rejected before anything is written.
+ *
  * @param {Object} template - The template to generate a route file from
  * @param {string} outputPath - Where to write it
- * @param {Map} [analysis] - What `analyzeTemplates` read from the build's templates. Without it,
- *   the template is read for this call and checked the way `analyzeTemplates` checks it, with its
- *   segment config checked even where the app already has a route, since this writes one there.
+ * @param {Map} [analysis] - What `analyzeTemplates` read from the build's templates; taken for this
+ *   template when omitted
+ * @returns {Promise<{ written: boolean, reason?: string }>}
  */
 export async function generateTemplatePage(template, outputPath, analysis = null) {
-  const routeExports = analysis ? templateAnalysisFor(analysis, template) : await analyzeTemplate(template, rootDir, true)
+  const routeExports = analysis ? templateAnalysisFor(analysis, template) : await analyzeTemplate(template, rootDir)
+
+  if (routeFileAction(template, routeExports) === 'skip') {
+    return { written: false, reason: `the app already has ${template.appPath}, so no route file is generated for this template` }
+  }
 
   await mkdir(dirname(outputPath), { recursive: true })
   await writeFile(outputPath, routeFileContent(template, routeExports), 'utf8')
   verbose(`Generated: ${outputPath.replace(rootDir, '')}`)
+  return { written: true }
 }
 
 /**
@@ -743,28 +752,53 @@ export async function analyzeTemplates(templates, config = null) {
 }
 
 /**
- * Parse one template, collect what `analyzeTemplates` records for it, and reject
- * it when the route file the page generator writes from it can't work: segment
- * config Next.js wouldn't read, or a page (or any other non-layout route) with
- * no default export where the app has no route of its own - a plain .tsx/.ts as
- * much as a standalone .meta.ts, which never has one. Every path that reads a
- * template for the generators goes through here, with an analysis or without.
+ * Parse one template and collect what `analyzeTemplates` records for it,
+ * rejecting it when the route file generated from it can't work: segment
+ * config Next.js wouldn't read, or what `routeFileAction` rejects. Every
+ * generator that has no analysis to hand reads a template through here.
  *
  * @param {Object} template - The template to read
  * @param {string} root - The project root its path resolves against
- * @param {boolean} [checkSegmentConfig] - Check segment config even where the page
- *   generator writes no route file, for a caller that writes one there anyway
  */
-async function analyzeTemplate(template, root, checkSegmentConfig = false) {
+async function analyzeTemplate(template, root) {
   const { appPath, templateType, templatePath } = template
   const generatesRoute = willGenerateRoute(appPath, templateType, root)
   const { errors, ...routeExports } = await readTemplateExports(templatePath, root)
 
-  if ((generatesRoute || checkSegmentConfig) && errors.length > 0) {
+  if (generatesRoute && errors.length > 0) {
     throw new Error(errors.join('\n'))
   }
 
-  if (generatesRoute && templateType !== 'layout' && !routeExports.hasDefaultExport) {
+  const entry = { ...routeExports, generatesRoute }
+  routeFileAction(template, entry)
+  return entry
+}
+
+/**
+ * What becomes of a template's route file, decided from its analysis in this
+ * one place for every generator that writes route files or registers template
+ * components:
+ * - 'write': a route file is generated for it in app/(templates)
+ * - 'skip': the app already has that route, which stays; the override resolves
+ *   at runtime, and nothing is written for it
+ *
+ * A page (or any other non-layout route) whose route file would import a default
+ * export it doesn't have - a plain .tsx/.ts as much as a standalone .meta.ts,
+ * which never has one - is rejected. A layout with no default export gets a
+ * pass-through component instead.
+ *
+ * @param {Object} template - The template
+ * @param {Object} entry - Its analysis, as `analyzeTemplates` records it
+ * @returns {'write' | 'skip'}
+ */
+export function routeFileAction(template, entry) {
+  const { appPath, templateType, templatePath } = template
+
+  if (!entry.generatesRoute) {
+    return 'skip'
+  }
+
+  if (templateType !== 'layout' && !entry.hasDefaultExport) {
     throw new Error(
       `${templatePath} has no default export, and the app has no existing route at "${appPath}" ` +
         `for a metadata-only override to attach to - the registry build generates "${appPath}" importing this ` +
@@ -774,7 +808,7 @@ async function analyzeTemplate(template, root, checkSegmentConfig = false) {
     )
   }
 
-  return { ...routeExports, generatesRoute }
+  return 'write'
 }
 
 /**
@@ -801,6 +835,8 @@ export function templateAnalysisFor(analysis, template) {
  * @param {Array} templates - List of template definitions
  * @param {Object} config - Configuration object with projectRoot
  * @param {Map} [analysis] - What `analyzeTemplates` read from these templates; taken for this call when omitted
+ * @returns {Promise<{ created: number, updated: number, removed: number, backupDir: string | null, skipped: string[] }>}
+ *   What changed in app/(templates), and the app paths of the templates that got no route file
  */
 export async function generateMissingPages(templates, config = null, analysis = null) {
   // Use config.projectRoot if provided, otherwise fall back to default rootDir
@@ -809,11 +845,11 @@ export async function generateMissingPages(templates, config = null, analysis = 
   }
   const templatesDir = join(rootDir, 'app', '(templates)')
 
-  // Every template has to be generatable before anything is deleted
+  // Every template has to pass routeFileAction before anything is written or deleted
   analysis = analysis ?? (await analyzeTemplates(templates, config))
-  for (const template of templates) {
-    templateAnalysisFor(analysis, template)
-  }
+  const skipped = templates
+    .filter(template => routeFileAction(template, templateAnalysisFor(analysis, template)) === 'skip')
+    .map(({ appPath }) => appPath)
 
   const { created, updated, removed, backupDir } = await reconcileTemplatesTree(
     templatesDir,
@@ -828,6 +864,8 @@ export async function generateMissingPages(templates, config = null, analysis = 
   if (backupDir) {
     log(`app/(templates): what was replaced or removed is backed up in ${relative(rootDir, backupDir)}`, 'warning')
   }
+
+  return { created, updated, removed, backupDir, skipped }
 }
 
 /**
@@ -871,7 +909,7 @@ async function planTemplatesTree(templates, analysis) {
 
   for (const template of templates) {
     const routeExports = templateAnalysisFor(analysis, template)
-    if (routeExports.generatesRoute) {
+    if (routeFileAction(template, routeExports) === 'write') {
       files.set(templatesTreePath(template.appPath), routeFileContent(template, routeExports))
     }
   }
