@@ -23,6 +23,7 @@ import {
   extractRouteExports,
   generateTemplatePage,
   generateMissingPages,
+  selectTypeScriptModule,
 } from '../post-build/page-generator.mjs'
 
 const FIXTURE_FILE = '/virtual/theme/templates/(public)/page.tsx'
@@ -427,4 +428,61 @@ test('syntax Next.js parses but the installed TypeScript does not (a source phas
     assert.deepEqual(segmentConfig, { runtime: 'edge' }, file)
     assert.equal(hasDefaultExport, true, file)
   }
+})
+
+// --- selectTypeScriptModule: picking a candidate with the TS 5/6 compiler API (#195) --
+
+// A stand-in for TypeScript 7's native port: it has a version but none of the
+// compiler API (`createSourceFile`, `getScriptKindFromFileName`, `ScriptKind`)
+// this generator parses templates with.
+const fakeTypeScript7 = { version: '7.0.2' }
+
+const fakeTypeScript5 = {
+  version: '5.9.3',
+  createSourceFile: () => ({}),
+  getScriptKindFromFileName: () => 1,
+  ScriptKind: { TSX: 4 },
+}
+
+test('a candidate with the compiler API is used', async () => {
+  const ts = await selectTypeScriptModule([{ label: 'only candidate', load: async () => fakeTypeScript5 }])
+  assert.equal(ts, fakeTypeScript5)
+})
+
+test('a candidate module shaped like an ESM default export is unwrapped', async () => {
+  const ts = await selectTypeScriptModule([{ label: 'only candidate', load: async () => ({ default: fakeTypeScript5 }) }])
+  assert.equal(ts, fakeTypeScript5)
+})
+
+test('a TypeScript 7 candidate without the compiler API is skipped in favor of the next candidate that has it', async () => {
+  const ts = await selectTypeScriptModule([
+    { label: '@nextsparkjs/core', load: async () => fakeTypeScript7 },
+    { label: 'the project', load: async () => fakeTypeScript5 },
+  ])
+  assert.equal(ts, fakeTypeScript5)
+})
+
+test('a candidate whose load() rejects is skipped in favor of the next candidate', async () => {
+  const ts = await selectTypeScriptModule([
+    { label: '@nextsparkjs/core', load: async () => { throw new Error('Cannot find module \'typescript\'') } },
+    { label: 'the project', load: async () => fakeTypeScript5 },
+  ])
+  assert.equal(ts, fakeTypeScript5)
+})
+
+test('no candidate providing the compiler API fails with a message naming each candidate and what was found', async () => {
+  await assert.rejects(
+    () =>
+      selectTypeScriptModule([
+        { label: '@nextsparkjs/core', load: async () => fakeTypeScript7 },
+        { label: 'the project at /virtual/project', load: async () => { throw new Error('Cannot find module \'typescript\'') } },
+      ]),
+    error => {
+      assert.match(error.message, /TypeScript 5 or 6 compiler API/)
+      assert.match(error.message, /@nextsparkjs\/core.*TypeScript 7\.0\.2/)
+      assert.match(error.message, /the project at \/virtual\/project.*could not be loaded/)
+      assert.doesNotMatch(error.message, /createSourceFile is not a function/)
+      return true
+    }
+  )
 })

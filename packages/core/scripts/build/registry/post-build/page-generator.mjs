@@ -84,24 +84,59 @@ const SEGMENT_CONFIG_VALIDATORS = {
 // shouldn't pay for loading a TypeScript compiler up front.
 let typescriptModulePromise = null
 
+/** The TypeScript 5/6 compiler API this generator parses templates with. TypeScript 7's
+ * native port doesn't ship it - its package exports are `./lib/version.cjs` plus
+ * `./unstable/*` - so a candidate module is checked for these, not just for existing. */
+function hasCompilerApi(ts) {
+  return Boolean(ts && typeof ts.createSourceFile === 'function' && typeof ts.getScriptKindFromFileName === 'function' && ts.ScriptKind)
+}
+
 /**
- * The TypeScript compiler, resolved from core first and then from the project:
- * it is a devDependency of core, so an installed core finds it through the
- * project that builds it, which has it to compile its own `.tsx` files.
+ * Try each TypeScript candidate in order and return the first module whose API this
+ * generator needs. A candidate that loads but lacks the API is recorded and the next
+ * one is tried, rather than failing on the first hit - the point of trying more than
+ * one candidate at all.
+ */
+export async function selectTypeScriptModule(candidates) {
+  const rejected = []
+
+  for (const candidate of candidates) {
+    let loaded
+    try {
+      loaded = await candidate.load()
+    } catch (error) {
+      rejected.push(`${candidate.label}: could not be loaded (${error.message})`)
+      continue
+    }
+
+    const ts = loaded?.default ?? loaded
+    if (hasCompilerApi(ts)) {
+      return ts
+    }
+    rejected.push(
+      `${candidate.label}: found TypeScript ${ts?.version ?? 'of an unknown version'}, which does not export the TypeScript 5/6 ` +
+        'compiler API (createSourceFile, getScriptKindFromFileName, ScriptKind) the registry build needs'
+    )
+  }
+
+  throw new Error(
+    'Parsing route-level exports out of a theme template requires the TypeScript 5 or 6 compiler API, but no candidate provided it:\n' +
+      rejected.map(reason => `  - ${reason}`).join('\n')
+  )
+}
+
+/**
+ * The TypeScript compiler, resolved from core first and then from the project: it is
+ * a dependency of core, so it is always found there regardless of the TypeScript
+ * version the project itself has installed; the project is a fallback for setups
+ * where core's own copy is not reachable from this file's location on disk.
  */
 function loadTypeScript() {
   if (!typescriptModulePromise) {
-    typescriptModulePromise = import('typescript')
-      .catch(() => createRequire(join(rootDir, 'package.json'))('typescript'))
-      .then(
-        module => module.default ?? module,
-        error => {
-          throw new Error(
-            'Parsing route-level exports out of a theme template requires the "typescript" package, but it could not be loaded ' +
-              `from @nextsparkjs/core or from the project at ${rootDir}. Add "typescript" to the project's devDependencies. (${error.message})`
-          )
-        }
-      )
+    typescriptModulePromise = selectTypeScriptModule([
+      { label: '@nextsparkjs/core', load: () => import('typescript') },
+      { label: `the project at ${rootDir}`, load: async () => createRequire(join(rootDir, 'package.json'))('typescript') },
+    ])
   }
   return typescriptModulePromise
 }

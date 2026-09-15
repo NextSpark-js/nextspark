@@ -417,8 +417,7 @@
     "jest-environment-jsdom": "^29.7.0",
     "tailwindcss": "^4",
     "ts-jest": "^29.2.5",
-    "tsup": "^8.5.1",
-    "typescript": "^5"
+    "tsup": "^8.5.1"
   },
   "dependencies": {
     "@babel/runtime": "^7.0.0",
@@ -497,6 +496,7 @@
     "sonner": "^2.0.7",
     "stripe": "^18.5.0",
     "tailwind-merge": "^3.3.1",
+    "typescript": "^5 || ^6",
     "uuid": "^13.0.0",
     "zod": "^4.3.6"
   }
