@@ -75,6 +75,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reads `m:ss`, counts from the moment the code was requested, never shows more
   than the code's lifetime and stops at zero. The mobile app accepts codes of 4
   to 10 digits, the lengths `auth.otp.otpLength` allows.
+- **Theme pages keep their route segment config (#191).** The registry generator
+  forwarded `revalidate`, `dynamic` and the rest with `export { … } from`, which
+  Next.js ignores, so a theme page could not declare them. It now re-declares
+  `revalidate`, `dynamic`, `dynamicParams`, `fetchCache`, `runtime`,
+  `preferredRegion`, `maxDuration` and `experimental_ppr` as literals in the
+  generated route file, forwards functions and `metadata` as before, and does
+  the same for layouts. A template that declares one of those keys as anything
+  but a literal fails the registry build, naming the file, key and line.
+  Whether a layout template exports a component is read from the same syntax
+  tree, so a comment that mentions `export default` no longer imports a missing
+  default and `export { Layout as default }` no longer falls back to a
+  pass-through. Each template is parsed as its own kind of file (`.ts` or
+  `.tsx`), and one that does not parse fails the build with its file and line.
+  Parsing templates needs `typescript`, resolved from core or from the project.
 ### Security
 
 - **The generated proxy enforces the roles `/superadmin` and `/devtools` need.**

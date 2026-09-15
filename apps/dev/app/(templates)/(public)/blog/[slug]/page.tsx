@@ -8,5 +8,8 @@ import TemplateComponent from '@/contents/themes/default/templates/(public)/blog
 // Direct export of the theme template (no fallback)
 export default TemplateComponent
 
+// Segment config re-declared as literals: Next.js only reads these when they're declared directly in the route file, not re-exported
+export const revalidate = 3600
+
 // Re-export Next.js route-level exports from the theme template
-export { generateMetadata, revalidate } from '@/contents/themes/default/templates/(public)/blog/[slug]/page'
+export { generateMetadata } from '@/contents/themes/default/templates/(public)/blog/[slug]/page'

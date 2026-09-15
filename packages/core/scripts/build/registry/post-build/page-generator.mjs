@@ -6,6 +6,7 @@
  * @module core/scripts/build/registry/post-build/page-generator
  */
 
+import { createRequire } from 'node:module'
 import { existsSync } from 'fs'
 import { readFile, writeFile, mkdir } from 'fs/promises'
 import { join, dirname } from 'path'
@@ -31,46 +32,351 @@ function toPascalCase(str) {
 }
 
 /**
- * Next.js route-level exports that only take effect when exported from the
- * route file itself. If a theme template defines any of these, the generated
- * route file MUST re-export them — otherwise Next.js silently ignores them
- * (e.g. generateMetadata never runs so the page has no <title>/<meta>,
- * generateStaticParams never prerenders so PPR pages stream the hero).
+ * Next.js route segment config keys (the `AppSegmentConfigSchema` keys from
+ * `next/dist/build/segment-config/app/app-segment-config`). Next.js only
+ * reads these when they're declared as a literal `export const` directly in
+ * the route file — a re-export doesn't work, so the generated route file
+ * must re-declare the value itself rather than forward it.
  */
-const ROUTE_LEVEL_EXPORTS = [
+export const SEGMENT_CONFIG_EXPORTS = [
+  'revalidate',
+  'dynamicParams',
+  'dynamic',
+  'fetchCache',
+  'preferredRegion',
+  'experimental_ppr',
+  'runtime',
+  'maxDuration',
+]
+
+/**
+ * Next.js module-level route exports that Next.js is happy to pick up
+ * through a re-export (`export { x } from '...'`), unlike segment config.
+ */
+export const MODULE_LEVEL_EXPORTS = [
   'generateMetadata',
   'generateStaticParams',
   'generateViewport',
   'metadata',
   'viewport',
-  'revalidate',
-  'dynamic',
-  'dynamicParams',
-  'fetchCache',
-  'runtime',
-  'preferredRegion',
-  'maxDuration',
 ]
 
 /**
- * Detect which route-level exports a template file defines, so the generated
- * route file can re-export them.
+ * Per-key validators for the segment config schema. A value that parses as a
+ * literal but doesn't match here would still make Next.js throw at build
+ * time (via `parseAppSegmentConfig`), just later and with less context about
+ * which theme template caused it.
  */
-async function detectRouteLevelExports(templatePath) {
-  try {
-    const baseTemplatePath = templatePath
-      .replace('@/', rootDir + '/')
-      .replace(/\.(tsx|ts)$/, '')
-    const absoluteTemplatePath = existsSync(baseTemplatePath + '.tsx')
-      ? baseTemplatePath + '.tsx'
-      : baseTemplatePath + '.ts'
-    const templateContent = await readFile(absoluteTemplatePath, 'utf8')
-    return ROUTE_LEVEL_EXPORTS.filter(name =>
-      new RegExp(`export\\s+(?:async\\s+)?(?:function|const|let|var)\\s+${name}\\b`).test(templateContent)
-    )
-  } catch {
-    return []
+const SEGMENT_CONFIG_VALIDATORS = {
+  revalidate: value => value === false || (typeof value === 'number' && Number.isInteger(value) && value >= 0),
+  dynamicParams: value => typeof value === 'boolean',
+  dynamic: value => ['auto', 'error', 'force-static', 'force-dynamic'].includes(value),
+  fetchCache: value =>
+    ['auto', 'default-cache', 'only-cache', 'force-cache', 'force-no-store', 'default-no-store', 'only-no-store'].includes(value),
+  preferredRegion: value => typeof value === 'string' || (Array.isArray(value) && value.every(item => typeof item === 'string')),
+  experimental_ppr: value => typeof value === 'boolean',
+  runtime: value => ['edge', 'nodejs'].includes(value),
+  maxDuration: value => typeof value === 'number' && Number.isInteger(value) && value >= 0,
+}
+
+// Loaded lazily (and only once) since not every consumer of this module needs
+// to parse a template - npm-mode builds without a template needing this path
+// shouldn't pay for loading a TypeScript compiler up front.
+let typescriptModulePromise = null
+
+/**
+ * The TypeScript compiler, resolved from core first and then from the project:
+ * it is a devDependency of core, so an installed core finds it through the
+ * project that builds it, which has it to compile its own `.tsx` files.
+ */
+function loadTypeScript() {
+  if (!typescriptModulePromise) {
+    typescriptModulePromise = import('typescript')
+      .catch(() => createRequire(join(rootDir, 'package.json'))('typescript'))
+      .then(
+        module => module.default ?? module,
+        error => {
+          throw new Error(
+            'Parsing route-level exports out of a theme template requires the "typescript" package, but it could not be loaded ' +
+              `from @nextsparkjs/core or from the project at ${rootDir}. Add "typescript" to the project's devDependencies. (${error.message})`
+          )
+        }
+      )
   }
+  return typescriptModulePromise
+}
+
+let nextParseModulePromise = null
+
+/**
+ * Next.js's own module parser (SWC), resolved from the project and then from
+ * core, or null when neither has Next.js.
+ */
+function loadNextParseModule() {
+  if (!nextParseModulePromise) {
+    const path = 'next/dist/build/analysis/parse-module'
+    nextParseModulePromise = Promise.resolve()
+      .then(() => createRequire(join(rootDir, 'package.json'))(path))
+      .catch(() => createRequire(import.meta.url)(path))
+      .then(module => module.parseModule, () => null)
+  }
+  return nextParseModulePromise
+}
+
+/** Whether Next.js parses `source`; its parser answers null for a module it cannot. */
+async function nextParses(filePath, source) {
+  const parseModule = await loadNextParseModule()
+  return Boolean(parseModule && (await parseModule(filePath, source)))
+}
+
+/**
+ * Unwrap the syntactic wrappers around a literal that don't change its
+ * runtime value: parentheses, `as const`, and `satisfies`.
+ */
+function unwrapExpression(expression, ts) {
+  let current = expression
+  while (true) {
+    if (ts.isParenthesizedExpression(current)) {
+      current = current.expression
+    } else if (ts.isAsExpression(current) || ts.isSatisfiesExpression(current)) {
+      current = current.expression
+    } else {
+      return current
+    }
+  }
+}
+
+/**
+ * Evaluate an expression node as a JSON-compatible literal. Returns
+ * `{ ok: false }` for anything that isn't a literal Next.js could read
+ * statically - an expression, an identifier reference, a call, etc.
+ */
+function evaluateLiteral(expression, ts) {
+  const node = unwrapExpression(expression, ts)
+
+  if (node.kind === ts.SyntaxKind.TrueKeyword) return { ok: true, value: true }
+  if (node.kind === ts.SyntaxKind.FalseKeyword) return { ok: true, value: false }
+  if (ts.isNumericLiteral(node)) return { ok: true, value: Number(node.text.replace(/_/g, '')) }
+  if (ts.isStringLiteralLike(node)) return { ok: true, value: node.text }
+
+  if (ts.isPrefixUnaryExpression(node) && node.operator === ts.SyntaxKind.MinusToken) {
+    const operand = evaluateLiteral(node.operand, ts)
+    return operand.ok && typeof operand.value === 'number' ? { ok: true, value: -operand.value } : { ok: false }
+  }
+
+  if (ts.isArrayLiteralExpression(node)) {
+    const values = []
+    for (const element of node.elements) {
+      const item = evaluateLiteral(element, ts)
+      if (!item.ok) return { ok: false }
+      values.push(item.value)
+    }
+    return { ok: true, value: values }
+  }
+
+  return { ok: false }
+}
+
+function isExported(node, ts) {
+  return Boolean(node.modifiers?.some(modifier => modifier.kind === ts.SyntaxKind.ExportKeyword))
+}
+
+/**
+ * Whether a module has a runtime default export: `export default <expr>`,
+ * `export default function`/`class`, or `default` named in an export clause
+ * (`export { Layout as default }`, `export { default } from './shell'`).
+ * Type-only exports give the route no component.
+ */
+function declaresDefaultExport(sourceFile, ts) {
+  return sourceFile.statements.some(statement => {
+    if (ts.isExportAssignment(statement)) return !statement.isExportEquals
+    if (ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) {
+      return isExported(statement, ts) && Boolean(statement.modifiers?.some(modifier => modifier.kind === ts.SyntaxKind.DefaultKeyword))
+    }
+    if (ts.isExportDeclaration(statement) && !statement.isTypeOnly && statement.exportClause && ts.isNamedExports(statement.exportClause)) {
+      return statement.exportClause.elements.some(element => !element.isTypeOnly && element.name.text === 'default')
+    }
+    return false
+  })
+}
+
+/**
+ * Parse a theme template's source and split its route-level exports into:
+ * - `segmentConfig`: segment config keys that resolve to a literal value the
+ *   generated route file can re-declare (`{ name: value }`).
+ * - `moduleExports`: exported names (functions, `metadata`, etc.) the
+ *   generated route file can safely forward with `export { ... } from`.
+ * - `hasDefaultExport`: whether it exports a component as default, read from
+ *   the syntax tree so a comment or string mentioning `export default` doesn't
+ *   count and `export { Layout as default }` does.
+ *
+ * A segment config key that IS exported but not as a literal `export const`
+ * (an expression, an identifier, `let`/`var`, a re-export, or a value the
+ * Next.js schema rejects) throws instead of silently dropping it - Next.js
+ * would otherwise ignore the value and fall back to its default, and nothing
+ * in the build would say so beyond a console warning.
+ */
+export async function extractRouteExports(source, filePath) {
+  const ts = await loadTypeScript()
+  // Parsed as its own kind of file: a TSX parse reads TypeScript-only syntax in a
+  // .ts template (`<T>(props) => ...`, `<Props>value`) as JSX and loses what follows
+  const sourceFile = ts.createSourceFile(filePath, source, ts.ScriptTarget.Latest, true, ts.getScriptKindFromFileName(filePath))
+
+  // The parser recovers from a syntax error by skipping code, exports included. A
+  // template Next.js cannot parse either is reported rather than read in part. One
+  // it can is read from what TypeScript recovered, with a warning: Next.js compiles
+  // templates with SWC, which may know syntax the installed TypeScript does not (a
+  // source phase import, for one).
+  const [parseError] = sourceFile.parseDiagnostics ?? []
+  if (parseError) {
+    const { line } = sourceFile.getLineAndCharacterOfPosition(parseError.start ?? 0)
+    const where = `${filePath}:${line + 1}`
+    const reason = ts.flattenDiagnosticMessageText(parseError.messageText, ' ')
+    if (!(await nextParses(filePath, source))) {
+      throw new Error(`${where}: the template does not parse (${reason}), so its route-level exports cannot be read.`)
+    }
+    console.warn(
+      `${where}: TypeScript cannot parse the template (${reason}) but Next.js can; its route-level exports are read from what TypeScript parsed.`
+    )
+  }
+
+  const segmentConfig = {}
+  const moduleExports = []
+  const seenModuleExports = new Set()
+  const errors = []
+
+  const lineOf = node => sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1
+
+  const addModuleExport = name => {
+    if (!seenModuleExports.has(name)) {
+      seenModuleExports.add(name)
+      moduleExports.push(name)
+    }
+  }
+
+  const recordSegmentError = (name, node, reason) => {
+    errors.push(
+      `${filePath}:${lineOf(node)}: segment config export "${name}" ${reason}. ` +
+        `Next.js only reads segment config when it's a literal declared directly in the route file ` +
+        `(\`export const ${name} = ...\`) - anything else is silently ignored and the default is used instead. ` +
+        `Use a literal.`
+    )
+  }
+
+  for (const statement of sourceFile.statements) {
+    if (ts.isVariableStatement(statement) && isExported(statement, ts)) {
+      const isConst = (statement.declarationList.flags & ts.NodeFlags.Const) !== 0
+
+      for (const declaration of statement.declarationList.declarations) {
+        if (!ts.isIdentifier(declaration.name)) continue
+        const name = declaration.name.text
+
+        if (SEGMENT_CONFIG_EXPORTS.includes(name)) {
+          if (!isConst) {
+            recordSegmentError(name, declaration, 'is declared with "let" or "var"')
+            continue
+          }
+          if (!declaration.initializer) {
+            recordSegmentError(name, declaration, 'has no initializer')
+            continue
+          }
+
+          const literal = evaluateLiteral(declaration.initializer, ts)
+          if (!literal.ok) {
+            recordSegmentError(name, declaration, 'is not a literal (an expression or identifier)')
+            continue
+          }
+
+          const validate = SEGMENT_CONFIG_VALIDATORS[name]
+          if (!validate(literal.value)) {
+            recordSegmentError(name, declaration, `has a value (${JSON.stringify(literal.value)}) outside what Next.js accepts for "${name}"`)
+            continue
+          }
+
+          segmentConfig[name] = literal.value
+        } else if (MODULE_LEVEL_EXPORTS.includes(name)) {
+          addModuleExport(name)
+        }
+      }
+    } else if (ts.isFunctionDeclaration(statement) && statement.name && isExported(statement, ts)) {
+      const name = statement.name.text
+      if (SEGMENT_CONFIG_EXPORTS.includes(name)) {
+        recordSegmentError(name, statement, 'is declared as a function, not a literal')
+      } else if (MODULE_LEVEL_EXPORTS.includes(name)) {
+        addModuleExport(name)
+      }
+    } else if (ts.isExportDeclaration(statement) && statement.exportClause && ts.isNamedExports(statement.exportClause)) {
+      for (const element of statement.exportClause.elements) {
+        const exportedName = element.name.text
+
+        if (SEGMENT_CONFIG_EXPORTS.includes(exportedName)) {
+          recordSegmentError(
+            exportedName,
+            element,
+            statement.moduleSpecifier
+              ? 'is re-exported from another module'
+              : 'is exported via `export { }` instead of an inline `export const`'
+          )
+        } else if (MODULE_LEVEL_EXPORTS.includes(exportedName)) {
+          addModuleExport(exportedName)
+        }
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new Error(errors.join('\n'))
+  }
+
+  return { segmentConfig, moduleExports, hasDefaultExport: declaresDefaultExport(sourceFile, ts) }
+}
+
+/**
+ * Resolve a `@/contents/...` template import path to its file on disk,
+ * trying both TSX and TS extensions.
+ */
+function resolveTemplateFilePath(templatePath) {
+  const baseTemplatePath = templatePath
+    .replace('@/', rootDir + '/')
+    .replace(/\.(tsx|ts)$/, '')
+  return existsSync(baseTemplatePath + '.tsx') ? baseTemplatePath + '.tsx' : baseTemplatePath + '.ts'
+}
+
+/**
+ * Read a template file and extract its route-level exports. A missing file
+ * is treated as having none, since a build-time override may point at a
+ * template that hasn't been generated yet; a template that fails to parse
+ * its segment config is not swallowed the same way, and propagates instead.
+ */
+async function readRouteExports(templatePath) {
+  const absoluteTemplatePath = resolveTemplateFilePath(templatePath)
+
+  let templateContent
+  try {
+    templateContent = await readFile(absoluteTemplatePath, 'utf8')
+  } catch {
+    return { segmentConfig: {}, moduleExports: [], hasDefaultExport: false }
+  }
+
+  return extractRouteExports(templateContent, absoluteTemplatePath)
+}
+
+/**
+ * Render the segment config keys a template exports as re-declared literals.
+ */
+function renderSegmentConfigBlock(segmentConfig) {
+  return Object.entries(segmentConfig)
+    .map(([name, value]) => `export const ${name} = ${JSON.stringify(value)}\n`)
+    .join('')
+}
+
+/**
+ * Render the module-level exports a template exports as a re-export from it.
+ */
+function renderModuleExportsBlock(moduleExports, templatePathWithoutExtension) {
+  return moduleExports.length > 0
+    ? `export { ${moduleExports.join(', ')} } from '${templatePathWithoutExtension}'\n`
+    : ''
 }
 
 /**
@@ -80,9 +386,16 @@ async function generateRegularPageContent(appPath, templatePath) {
   // Remove .tsx/.ts extension from import path (TypeScript doesn't allow file extensions in imports)
   const templatePathWithoutExtension = templatePath.replace(/\.(tsx|ts)$/, '')
 
-  const routeExports = await detectRouteLevelExports(templatePath)
-  const routeExportsBlock = routeExports.length > 0
-    ? `\n// Re-export Next.js route-level exports from the theme template\nexport { ${routeExports.join(', ')} } from '${templatePathWithoutExtension}'\n`
+  const { segmentConfig, moduleExports } = await readRouteExports(templatePath)
+
+  const segmentConfigBlock = renderSegmentConfigBlock(segmentConfig)
+  const segmentConfigSection = segmentConfigBlock
+    ? `\n// Segment config re-declared as literals: Next.js only reads these when they're declared directly in the route file, not re-exported\n${segmentConfigBlock}`
+    : ''
+
+  const moduleExportsBlock = renderModuleExportsBlock(moduleExports, templatePathWithoutExtension)
+  const moduleExportsSection = moduleExportsBlock
+    ? `\n// Re-export Next.js route-level exports from the theme template\n${moduleExportsBlock}`
     : ''
 
   return `/**
@@ -94,7 +407,7 @@ import TemplateComponent from '${templatePathWithoutExtension}'
 
 // Direct export of the theme template (no fallback)
 export default TemplateComponent
-${routeExportsBlock}`
+${segmentConfigSection}${moduleExportsSection}`
 }
 
 /**
@@ -104,32 +417,33 @@ async function generateLayoutPageContent(appPath, componentName, templatePath) {
   if (templatePath) {
     // Remove .tsx/.ts extension from import path (TypeScript doesn't allow file extensions in imports)
     const templatePathWithoutExtension = templatePath.replace(/\.(tsx|ts)$/, '')
+    const absoluteTemplatePath = resolveTemplateFilePath(templatePath)
 
-    // Convert import path alias to absolute file system path
-    // @/contents/themes/... → /absolute/path/contents/themes/...
-    // Try both .tsx and .ts extensions
-    const baseTemplatePath = templatePath
-      .replace('@/', rootDir + '/')
-      .replace(/\.(tsx|ts)$/, '')
-    const absoluteTemplatePath = existsSync(baseTemplatePath + '.tsx')
-      ? baseTemplatePath + '.tsx'
-      : baseTemplatePath + '.ts'
-
-    // Check if template file has a default export (component) or just metadata
-    let hasDefaultExport = false
-    let hasMetadata = false
-
+    // Check if template file has a default export (component), and what
+    // route-level exports it defines alongside (or instead of) it
+    let templateContent = null
     try {
-      const templateContent = await readFile(absoluteTemplatePath, 'utf8')
-      hasDefaultExport = /export\s+default/.test(templateContent)
-      hasMetadata = /export\s+const\s+metadata\s*=/.test(templateContent)
-    } catch (error) {
-      // If we can't read the file, assume it has a default export
-      hasDefaultExport = true
+      templateContent = await readFile(absoluteTemplatePath, 'utf8')
+    } catch {
+      // Can't read the file - fall through to the default-export assumption below
     }
 
+    let hasDefaultExport = true
+    let segmentConfig = {}
+    let moduleExports = []
+    if (templateContent !== null) {
+      ;({ segmentConfig, moduleExports, hasDefaultExport } = await extractRouteExports(templateContent, absoluteTemplatePath))
+    }
+
+    const segmentConfigBlock = renderSegmentConfigBlock(segmentConfig)
+    const moduleExportsBlock = renderModuleExportsBlock(moduleExports, templatePathWithoutExtension)
+
     if (hasDefaultExport) {
-      // Template has a component - import and re-export it
+      // Template has a component - import and re-export it, plus any route-level exports it defines
+      const forwardedExportsSection = segmentConfigBlock || moduleExportsBlock
+        ? `\n// Re-export Next.js route-level exports from the theme template\n${segmentConfigBlock}${moduleExportsBlock}`
+        : ''
+
       return `/**
  * Layout template - directly imports from theme
  * Template: ${appPath}
@@ -139,9 +453,10 @@ import TemplateComponent from '${templatePathWithoutExtension}'
 
 // Direct export of the theme template (no fallback)
 export default TemplateComponent
-`
-    } else if (hasMetadata) {
-      // Metadata-only template - re-export metadata and provide pass-through component
+${forwardedExportsSection}`
+    } else if (segmentConfigBlock || moduleExportsBlock) {
+      // No component, but the template still defines segment config and/or metadata -
+      // re-export those and provide a pass-through component
       return `/**
  * Layout template - metadata-only (PROTECTED_RENDER)
  * Template: ${appPath}
@@ -149,9 +464,8 @@ export default TemplateComponent
  */
 import type { ReactNode } from 'react'
 
-// Re-export metadata from theme template
-export { metadata } from '${templatePathWithoutExtension}'
-
+// Re-export Next.js route-level exports from the theme template
+${segmentConfigBlock}${moduleExportsBlock}
 // Pass-through component (actual rendering blocked by PROTECTED_RENDER)
 interface ${componentName}Props {
   children: ReactNode
@@ -275,6 +589,13 @@ async function duplicateLayoutDirect(sourcePath, targetPath, layoutPath, templat
     const templatePathWithoutExtension = layoutOverride.templatePath.replace(/\.(tsx|ts)$/, '')
     const componentName = `Layout${toPascalCase(layoutPath.replace(/[^\w]/g, '_'))}`
 
+    const { segmentConfig, moduleExports } = await readRouteExports(layoutOverride.templatePath)
+    const segmentConfigBlock = renderSegmentConfigBlock(segmentConfig)
+    const moduleExportsBlock = renderModuleExportsBlock(moduleExports, templatePathWithoutExtension)
+    const forwardedExportsSection = segmentConfigBlock || moduleExportsBlock
+      ? `\n// Re-export Next.js route-level exports from the theme template\n${segmentConfigBlock}${moduleExportsBlock}`
+      : ''
+
     const content = `/**
  * Layout with template override - directly imports from theme
  * Template: ${layoutPath}
@@ -284,7 +605,7 @@ async function duplicateLayoutDirect(sourcePath, targetPath, layoutPath, templat
 import TemplateLayout from '${templatePathWithoutExtension}'
 
 export default TemplateLayout
-`
+${forwardedExportsSection}`
     await writeFile(targetPath, content, 'utf8')
     verbose(`Generated layout with template override: ${layoutPath}`)
     return
