@@ -8,6 +8,7 @@ import type { SessionUser } from '../lib/auth'
 import { useOrigin } from './useOrigin'
 import { useLastAuthMethod } from './useLastAuthMethod'
 import { safeCallbackPath } from '../lib/auth/callback-url'
+import { withBasePath } from '../lib/base-path'
 import { setSessionHint } from '../lib/auth/session-hint'
 import { setUserLocaleClient } from '../lib/locale-client'
 import { I18N_CONFIG, type SupportedLocale } from '../lib/config'
@@ -29,7 +30,7 @@ import { I18N_CONFIG, type SupportedLocale } from '../lib/config'
 function googleCallbackURL(redirectTo?: string): string {
   const url = new URL(safeCallbackPath(redirectTo) ?? '/dashboard', 'http://callback.invalid')
   url.searchParams.set('auth_method', 'google')
-  return `${url.pathname}${url.search.replace(/\*/g, '%2A')}`
+  return withBasePath(`${url.pathname}${url.search.replace(/\*/g, '%2A')}`)
 }
 
 /**
@@ -171,7 +172,7 @@ export function useAuthActions() {
     try {
       const { data, error } = await authClient.requestPasswordReset({
         email,
-        redirectTo: `${origin}/reset-password`
+        redirectTo: `${origin}${withBasePath('/reset-password')}`
       })
       
       if (error) {

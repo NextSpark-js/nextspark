@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import type { SessionUser } from '../auth'
+import { withBasePath } from '../base-path'
 import {
   MIDDLEWARE_REGISTRY,
   MIDDLEWARE_METADATA,
@@ -92,7 +93,7 @@ export class MiddlewareService {
     targetPath: string = '/login'
   ): NextResponse {
     const { pathname } = request.nextUrl
-    const loginUrl = new URL(targetPath, request.url)
+    const loginUrl = new URL(withBasePath(targetPath), request.url)
     loginUrl.searchParams.set('callbackUrl', pathname)
     return NextResponse.redirect(loginUrl)
   }
@@ -106,7 +107,7 @@ export class MiddlewareService {
     request: NextRequest,
     targetPath: string = '/dashboard'
   ): NextResponse {
-    return NextResponse.redirect(new URL(targetPath, request.url))
+    return NextResponse.redirect(new URL(withBasePath(targetPath), request.url))
   }
 
   /**

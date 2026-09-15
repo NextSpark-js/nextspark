@@ -10,6 +10,8 @@ import { wrapAuthHandlerWithCors, handleCorsPreflightRequest, addCorsHeaders } f
 import { checkDistributedRateLimit } from "@nextsparkjs/core/lib/api/rate-limit";
 import { withSignupContext } from "@nextsparkjs/core/lib/auth-context";
 import { dispatchSecurityNotificationsForRequest } from "@nextsparkjs/core/lib/auth/security-notifications";
+import { verifyEmailPageUrl } from "@nextsparkjs/core/lib/auth/verify-email-link";
+import { withBasePathRequest } from "@nextsparkjs/core/lib/base-path";
 
 const handlers = toNextJsHandler(auth);
 
@@ -28,16 +30,9 @@ export async function GET(req: NextRequest, context: { params: Promise<{ all: st
   const isFromUI = req.headers.get('x-verify-from-ui') === 'true';
 
   if (pathname === '/api/auth/verify-email' && !isFromUI) {
-    const token = req.nextUrl.searchParams.get('token');
-    const callbackURL = req.nextUrl.searchParams.get('callbackURL');
-
-    if (token) {
-      // This is from an email link, redirect to the UI verification page
-      const redirectUrl = new URL('/verify-email', req.url);
-      redirectUrl.searchParams.set('token', token);
-      if (callbackURL) {
-        redirectUrl.searchParams.set('callbackURL', callbackURL);
-      }
+    // This is from an email link, redirect to the UI verification page
+    const redirectUrl = verifyEmailPageUrl(req.url);
+    if (redirectUrl) {
       return NextResponse.redirect(redirectUrl);
     }
   }
@@ -56,11 +51,14 @@ export async function GET(req: NextRequest, context: { params: Promise<{ all: st
     ? (req.cookies.get('signup-intent')?.value || undefined)
     : undefined;
 
+  // Better Auth matches its routes with the base path in the URL
+  const authReq = withBasePathRequest(req);
+
   // Wrap with CORS headers for cross-origin requests (mobile apps, etc.)
   return wrapAuthHandlerWithCors(
     signupIntent
-      ? () => withSignupContext({ signupIntent }, () => handlers.GET(req))
-      : () => handlers.GET(req),
+      ? () => withSignupContext({ signupIntent }, () => handlers.GET(authReq))
+      : () => handlers.GET(authReq),
     req
   );
 }
@@ -188,11 +186,14 @@ export async function POST(req: NextRequest) {
   // handlers.POST(req) reads req's body exactly once.
   const securityReq = req.clone() as NextRequest;
 
+  // Better Auth matches its routes with the base path in the URL
+  const authReq = withBasePathRequest(req);
+
   // Wrap with CORS headers for cross-origin requests (mobile apps, etc.)
   const response = await wrapAuthHandlerWithCors(
     signupIntent
-      ? () => withSignupContext({ signupIntent }, () => handlers.POST(req))
-      : () => handlers.POST(req),
+      ? () => withSignupContext({ signupIntent }, () => handlers.POST(authReq))
+      : () => handlers.POST(authReq),
     req
   );
 

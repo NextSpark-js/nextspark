@@ -12,6 +12,7 @@ import type { TeamInvitation, TeamMember } from '@nextsparkjs/core/lib/teams/typ
 import { I18N_CONFIG } from '@nextsparkjs/core/lib/config'
 import { withSignupContext } from '@nextsparkjs/core/lib/auth-context'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 // Handle CORS preflight
 export async function OPTIONS(request: NextRequest) {
@@ -111,7 +112,7 @@ export const POST = withRateLimitTier(withApiLogging(
       // Step 2: Create user using Better Auth's internal API
       // Wrap in signup context to skip automatic team creation
       // (user will be added to the invited team instead)
-      const signUpRequest = new Request(`${process.env.NEXT_PUBLIC_APP_URL}/api/auth/sign-up/email`, {
+      const signUpRequest = new Request(`${process.env.NEXT_PUBLIC_APP_URL}${withBasePath('/api/auth/sign-up/email')}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

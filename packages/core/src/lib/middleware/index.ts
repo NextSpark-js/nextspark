@@ -17,6 +17,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { withBasePath } from '../base-path'
 
 // Import directly from registry (edge-compatible, pure data)
 import {
@@ -100,7 +101,7 @@ export function redirectWithoutSession(
   targetPath: string = '/login'
 ): NextResponse {
   const { pathname } = request.nextUrl
-  const loginUrl = new URL(targetPath, request.url)
+  const loginUrl = new URL(withBasePath(targetPath), request.url)
   loginUrl.searchParams.set('callbackUrl', pathname)
   return NextResponse.redirect(loginUrl)
 }
@@ -114,7 +115,7 @@ export function redirectWithSession(
   request: NextRequest,
   targetPath: string = '/dashboard'
 ): NextResponse {
-  return NextResponse.redirect(new URL(targetPath, request.url))
+  return NextResponse.redirect(new URL(withBasePath(targetPath), request.url))
 }
 
 /**

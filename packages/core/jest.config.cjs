@@ -34,11 +34,14 @@ module.exports = {
   moduleNameMapper: {
     // Workspace packages
     '^@nextsparkjs/ui$': '<rootDir>/../ui/src/index.ts',
+    '^@nextsparkjs/core/selectors$': '<rootDir>/src/lib/selectors',
     '^@nextsparkjs/core/(.*)$': '<rootDir>/src/$1',
     '^@nextsparkjs/core$': '<rootDir>/src',
     '^@/core/lib/registries/(.*)$': '<rootDir>/tests/jest/__mocks__/@nextsparkjs/registries/$1',
     '^@/core/(.*)$': '<rootDir>/src/$1',
     '^@/core$': '<rootDir>/src',
+    // apps/dev routes and pages (the source of a generated project's app/)
+    '^@/app/(.*)$': '<rootDir>/../../apps/dev/app/$1',
     '^@nextsparkjs/registries/(.*)$': '<rootDir>/tests/jest/__mocks__/@nextsparkjs/registries/$1',
     '^next/server$': '<rootDir>/tests/jest/__mocks__/next-server.js',
     '^server-only$': '<rootDir>/tests/jest/__mocks__/server-only.js',

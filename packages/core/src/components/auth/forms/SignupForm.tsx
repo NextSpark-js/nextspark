@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuthActions } from '../../../hooks/useAuth'
 import { safeCallbackPath } from '../../../lib/auth/callback-url'
+import { withBasePath } from '../../../lib/base-path'
 import { Button } from '../../ui/button'
 import { Input } from '../../ui/input'
 import { Label } from '../../ui/label'
@@ -76,7 +77,7 @@ export function SignupForm() {
       // If there's an invite token, use the special signup-with-invite endpoint
       // This skips email verification since the invitation proves email ownership
       if (inviteToken) {
-        const response = await fetch('/api/v1/auth/signup-with-invite', {
+        const response = await fetch(withBasePath('/api/v1/auth/signup-with-invite'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

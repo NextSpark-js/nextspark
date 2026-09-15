@@ -2,6 +2,7 @@ import { createAuthClient } from "better-auth/react";
 import { inferAdditionalFields } from "better-auth/client/plugins";
 import { emailOTPClient } from "better-auth/client/plugins";
 import type { auth } from "./auth";
+import { withBasePath } from "./base-path";
 
 export const authClient = createAuthClient({
   // In the browser, always talk to the origin the page was actually served
@@ -15,6 +16,9 @@ export const authClient = createAuthClient({
   baseURL: typeof window === "undefined"
     ? (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5173")
     : undefined,
+  // Appended to that origin. Under a Next.js basePath the auth routes are only
+  // served at `/base/api/auth`.
+  basePath: withBasePath("/api/auth"),
   plugins: [
     inferAdditionalFields<typeof auth>(),
     emailOTPClient(),

@@ -10,6 +10,7 @@ import { toast } from 'sonner'
 import Link from 'next/link'
 import { sel } from '@nextsparkjs/core/selectors'
 import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 type InvitationStatus = 'loading' | 'valid' | 'accepting' | 'accepted' | 'error' | 'expired' | 'not_found' | 'email_mismatch' | 'already_member' | 'requires_auth'
 
@@ -38,7 +39,7 @@ function AcceptInvitePage() {
     async function validateAndAccept() {
       try {
         // First validate the invitation
-        const response = await fetch(`/api/v1/team-invitations/${token}`)
+        const response = await fetch(withBasePath(`/api/v1/team-invitations/${token}`))
         const data = await response.json()
 
         if (!response.ok) {
@@ -80,7 +81,7 @@ function AcceptInvitePage() {
 
         setStatus('accepting')
 
-        const acceptResponse = await fetch(`/api/v1/team-invitations/${token}/accept`, {
+        const acceptResponse = await fetch(withBasePath(`/api/v1/team-invitations/${token}/accept`), {
           method: 'POST',
           credentials: 'include'
         })
@@ -125,7 +126,7 @@ function AcceptInvitePage() {
     setStatus('accepting')
 
     try {
-      const response = await fetch(`/api/v1/team-invitations/${token}/accept`, {
+      const response = await fetch(withBasePath(`/api/v1/team-invitations/${token}/accept`), {
         method: 'POST',
         credentials: 'include'
       })

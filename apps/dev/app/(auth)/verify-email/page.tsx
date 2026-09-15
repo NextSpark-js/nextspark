@@ -7,6 +7,7 @@ import { Button } from '@nextsparkjs/core/components/ui/button';
 import { Alert, AlertDescription } from '@nextsparkjs/core/components/ui/alert';
 import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
 import { sel } from '@nextsparkjs/core/selectors'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams()!;
@@ -26,7 +27,7 @@ function VerifyEmailContent() {
 
       try {
         // Call the Better Auth verify endpoint with special header to avoid redirect loop
-        const response = await fetch(`/api/auth/verify-email?token=${token}`, {
+        const response = await fetch(withBasePath(`/api/auth/verify-email?token=${token}`), {
           method: 'GET',
           credentials: 'include',
           headers: {
@@ -43,7 +44,7 @@ function VerifyEmailContent() {
           
           // Create default metadata after successful verification
           try {
-            const response = await fetch('/api/auth/session', {
+            const response = await fetch(withBasePath('/api/auth/get-session'), {
               method: 'GET',
               credentials: 'include'
             });
@@ -52,7 +53,7 @@ function VerifyEmailContent() {
               const session = await response.json();
               if (session?.user?.id) {
                 // Create default metadata for the newly verified user
-                await fetch('/api/internal/user-metadata', {
+                await fetch(withBasePath('/api/internal/user-metadata'), {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',

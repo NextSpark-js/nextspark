@@ -19,6 +19,7 @@ import type { TeamMember, TeamInvitation, TeamRole, Team } from '@nextsparkjs/co
 import { EmailFactory } from '@nextsparkjs/core/lib/email/factory'
 import { sendTeamInvitationEmail } from '@nextsparkjs/core/lib/email/send'
 import { I18N_CONFIG } from '@nextsparkjs/core/lib/config'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 // Handle CORS preflight
 export async function OPTIONS(request: NextRequest) {
@@ -294,7 +295,7 @@ export const POST = withRateLimitTier(withApiLogging(
 
       // Build accept URL
       const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173').replace(/\/$/, '')
-      const acceptUrl = `${baseUrl}/accept-invite/${token}`
+      const acceptUrl = `${baseUrl}${withBasePath(`/accept-invite/${token}`)}`
 
       // Send invitation email
       try {

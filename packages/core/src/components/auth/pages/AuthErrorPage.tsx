@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { ShieldAlert, ArrowLeft } from 'lucide-react'
 import { Button } from '../../ui/button'
+import { withBasePath } from '../../../lib/base-path'
 
 export function AuthErrorPage() {
   const searchParams = useSearchParams()
@@ -46,7 +47,7 @@ export function AuthErrorPage() {
           className="w-full"
           data-cy="auth-error-back-to-login"
         >
-          <a href="/login">
+          <a href={withBasePath('/login')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             {t('backToLogin')}
           </a>

@@ -23,6 +23,7 @@ import { resolveSessionConfig } from './auth/session-config';
 import { resolveOtpConfig } from './auth/otp-config';
 import { isPasswordLoginEnabled } from './auth/auth-methods';
 import { getCorsOrigins, isPrivateLanOrigin, normalizeCorsEnvironment } from './utils/cors';
+import { withBasePath } from './base-path';
 
 /**
  * Does this email have a pending, unexpired team invitation waiting?
@@ -271,6 +272,12 @@ export const auth = betterAuth({
     },
   },
   baseURL: baseUrl,
+  // Better Auth serves its routes, and builds its OAuth redirect_uri and email
+  // links, under baseURL + basePath. Under a Next.js basePath that is
+  // `/base/api/auth`, so the auth route handler passes requests on with the
+  // base path in their URL (withBasePathRequest). A BETTER_AUTH_URL that
+  // already has a path is used as-is and this option is ignored.
+  basePath: withBasePath('/api/auth'),
   // Use unified CORS configuration from app.config.ts + theme extensions + env vars.
   // A function (rather than a static array) so dev-like environments can also
   // trust the request's OWN origin when it's a private LAN address — #163's
@@ -294,9 +301,10 @@ export const auth = betterAuth({
     }
     return origins;
   },
-  // Redirect auth errors to our custom error page instead of Better Auth's default
+  // Redirect auth errors to our custom error page instead of Better Auth's default.
+  // Better Auth redirects to this path as-is, outside the Next.js router.
   onAPIError: {
-    errorURL: '/auth-error',
+    errorURL: withBasePath('/auth-error'),
   },
   plugins: [
     registrationGuardPlugin(), // Intercept OAuth signup attempts
