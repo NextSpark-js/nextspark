@@ -17,8 +17,11 @@ const packageRoot = path.join(__dirname, '..', '..'); // scripts/db/ -> core/
 const isMonorepoMode = fs.existsSync(path.join(projectRoot, 'packages', 'core'));
 const rootDir = projectRoot; // For backward compatibility with code below
 
-// Read environment variables: prefer .env file if it exists, fallback to process.env (e.g. Vercel/CI)
+// Read environment variables: prefer .env file if it exists, fallback to process.env (e.g. Vercel/CI).
+// `--no-env-file` skips the .env file, so the connection and theme come only from the
+// environment this process was started with (db:verify-theme runs it that way).
 const envPath = path.join(projectRoot, '.env');
+const readEnvFile = !process.argv.includes('--no-env-file');
 
 let DATABASE_URL = process.env.DATABASE_URL ?? null;
 // Migrations and seeds run as the table OWNER. After the runtime cutover the app
@@ -28,7 +31,7 @@ let DATABASE_URL = process.env.DATABASE_URL ?? null;
 let MIGRATE_DATABASE_URL = process.env.MIGRATE_DATABASE_URL ?? null;
 let ACTIVE_THEME = process.env.NEXT_PUBLIC_ACTIVE_THEME ?? null;
 
-if (fs.existsSync(envPath)) {
+if (readEnvFile && fs.existsSync(envPath)) {
   const envContent = fs.readFileSync(envPath, 'utf8');
   const envLines = envContent.split('\n');
 

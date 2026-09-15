@@ -533,11 +533,11 @@ INSERT INTO public."subscriptions" (
   "externalSubscriptionId", "externalCustomerId", "createdAt"
 ) VALUES
   -- Product Team → Pro Plan $29/mo (active, monthly)
-  ('sub-prod-product', 'team-prod-product', 'plan_pro', 'active',
+  ('sub-prod-product', 'team-prod-product', (SELECT id FROM public."plans" WHERE slug = 'pro'), 'active',
    NOW() - INTERVAL '20 days', NOW() + INTERVAL '10 days', 'monthly', 'stripe',
    'sub_stripe_product', 'cus_product', NOW() - INTERVAL '6 months'),
   -- Marketing Hub → Pro Plan $29/mo (active, monthly)
-  ('sub-prod-marketing', 'team-prod-marketing', 'plan_pro', 'active',
+  ('sub-prod-marketing', 'team-prod-marketing', (SELECT id FROM public."plans" WHERE slug = 'pro'), 'active',
    NOW() - INTERVAL '10 days', NOW() + INTERVAL '20 days', 'monthly', 'stripe',
    'sub_stripe_marketing', 'cus_marketing', NOW() - INTERVAL '6 months')
 ON CONFLICT (id) DO NOTHING;
@@ -743,61 +743,61 @@ INSERT INTO public."subscriptions" (
   "paymentProvider", "externalSubscriptionId", "externalCustomerId", "createdAt"
 ) VALUES
   -- Lambda Labs: Enterprise, yearly, active (18 months history)
-  ('sub-lambda', 'team-lambda', 'plan_enterprise', 'active',
+  ('sub-lambda', 'team-lambda', (SELECT id FROM public."plans" WHERE slug = 'enterprise'), 'active',
    NOW() - INTERVAL '6 months', NOW() + INTERVAL '6 months', 'yearly',
    NULL, NULL, false,
    'stripe', 'sub_stripe_lambda', 'cus_lambda', NOW() - INTERVAL '18 months'),
 
   -- Mu Ventures: Enterprise, yearly, active (14 months history)
-  ('sub-mu', 'team-mu', 'plan_enterprise', 'active',
+  ('sub-mu', 'team-mu', (SELECT id FROM public."plans" WHERE slug = 'enterprise'), 'active',
    NOW() - INTERVAL '2 months', NOW() + INTERVAL '10 months', 'yearly',
    NULL, NULL, false,
    'stripe', 'sub_stripe_mu', 'cus_mu', NOW() - INTERVAL '14 months'),
 
   -- Nu Digital: Pro, yearly, active (10 months history)
-  ('sub-nu', 'team-nu', 'plan_pro', 'active',
+  ('sub-nu', 'team-nu', (SELECT id FROM public."plans" WHERE slug = 'pro'), 'active',
    NOW() - INTERVAL '10 months', NOW() + INTERVAL '2 months', 'yearly',
    NULL, NULL, false,
    'stripe', 'sub_stripe_nu', 'cus_nu', NOW() - INTERVAL '10 months'),
 
   -- Xi Consulting: Pro, monthly, active (8 months history)
-  ('sub-xi', 'team-xi', 'plan_pro', 'active',
+  ('sub-xi', 'team-xi', (SELECT id FROM public."plans" WHERE slug = 'pro'), 'active',
    NOW() - INTERVAL '15 days', NOW() + INTERVAL '15 days', 'monthly',
    NULL, NULL, false,
    'stripe', 'sub_stripe_xi', 'cus_xi', NOW() - INTERVAL '8 months'),
 
   -- Omicron Tech: Pro, monthly, trialing (10 days old, trial ends in 4 days)
-  ('sub-omicron', 'team-omicron', 'plan_pro', 'trialing',
+  ('sub-omicron', 'team-omicron', (SELECT id FROM public."plans" WHERE slug = 'pro'), 'trialing',
    NOW() - INTERVAL '10 days', NOW() + INTERVAL '20 days', 'monthly',
    NOW() + INTERVAL '4 days', NULL, false,
    'stripe', 'sub_stripe_omicron', 'cus_omicron', NOW() - INTERVAL '10 days'),
 
   -- Pi Systems: Pro, monthly, past_due (payment failed 5 days ago)
-  ('sub-pi', 'team-pi', 'plan_pro', 'past_due',
+  ('sub-pi', 'team-pi', (SELECT id FROM public."plans" WHERE slug = 'pro'), 'past_due',
    NOW() - INTERVAL '35 days', NOW() - INTERVAL '5 days', 'monthly',
    NULL, NULL, false,
    'stripe', 'sub_stripe_pi', 'cus_pi', NOW() - INTERVAL '5 months'),
 
   -- Rho Analytics: Pro, monthly, canceled (voluntary, 8 months paid then canceled)
-  ('sub-rho', 'team-rho', 'plan_pro', 'canceled',
+  ('sub-rho', 'team-rho', (SELECT id FROM public."plans" WHERE slug = 'pro'), 'canceled',
    NOW() - INTERVAL '2 months', NOW() - INTERVAL '1 month', 'monthly',
    NULL, NOW() - INTERVAL '1 month', false,
    'stripe', 'sub_stripe_rho', 'cus_rho', NOW() - INTERVAL '12 months'),
 
   -- Sigma Media: Pro, yearly, canceled (payment failed after 1 year)
-  ('sub-sigma', 'team-sigma', 'plan_pro', 'canceled',
+  ('sub-sigma', 'team-sigma', (SELECT id FROM public."plans" WHERE slug = 'pro'), 'canceled',
    NOW() - INTERVAL '4 months', NOW() - INTERVAL '2 weeks', 'yearly',
    NULL, NOW() - INTERVAL '2 weeks', false,
    'stripe', 'sub_stripe_sigma', 'cus_sigma', NOW() - INTERVAL '16 months'),
 
   -- Tau Engineering: Free, monthly, active
-  ('sub-tau', 'team-tau', 'plan_free', 'active',
+  ('sub-tau', 'team-tau', (SELECT id FROM public."plans" WHERE slug = 'free'), 'active',
    NOW() - INTERVAL '2 months', NOW() + INTERVAL '28 days', 'monthly',
    NULL, NULL, false,
    NULL, NULL, NULL, NOW() - INTERVAL '2 months'),
 
   -- Upsilon Studios: Enterprise, monthly, active (6 months history)
-  ('sub-upsilon', 'team-upsilon', 'plan_enterprise', 'active',
+  ('sub-upsilon', 'team-upsilon', (SELECT id FROM public."plans" WHERE slug = 'enterprise'), 'active',
    NOW() - INTERVAL '10 days', NOW() + INTERVAL '20 days', 'monthly',
    NULL, NULL, false,
    'stripe', 'sub_stripe_upsilon', 'cus_upsilon', NOW() - INTERVAL '6 months')

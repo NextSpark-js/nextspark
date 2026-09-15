@@ -412,7 +412,7 @@ INSERT INTO public."subscriptions" (
   "externalSubscriptionId", "externalCustomerId", "createdAt"
 ) VALUES
   -- Ventas Pro S.A. → Enterprise Plan $499/mo (active, monthly)
-  ('sub-crm-company', 'team-crm-company', 'plan_enterprise', 'active',
+  ('sub-crm-company', 'team-crm-company', (SELECT id FROM public."plans" WHERE slug = 'enterprise'), 'active',
    NOW() - INTERVAL '15 days', NOW() + INTERVAL '15 days', 'monthly', 'stripe',
    'sub_stripe_ventaspro', 'cus_ventaspro', NOW() - INTERVAL '6 months')
 ON CONFLICT (id) DO NOTHING;

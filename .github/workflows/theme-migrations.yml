@@ -1,0 +1,64 @@
+name: Theme migrations
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/core/migrations/**'
+      - 'packages/core/scripts/db/**'
+      - 'themes/**/migrations/**'
+      - 'themes/**/entities/**/migrations/**'
+  pull_request:
+    paths:
+      - 'packages/core/migrations/**'
+      - 'packages/core/scripts/db/**'
+      - 'themes/**/migrations/**'
+      - 'themes/**/entities/**/migrations/**'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        theme: [blog, crm, default, productivity, starter]
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: dbuser
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: nextspark_verify
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        env:
+          CYPRESS_INSTALL_BINARY: 0
+
+      - name: Verify ${{ matrix.theme }} theme migrations against a fresh database
+        run: pnpm db:verify-theme ${{ matrix.theme }}
+        env:
+          VERIFY_THEME_DATABASE_URL: postgresql://dbuser:postgres@localhost:5432/nextspark_verify?sslmode=disable

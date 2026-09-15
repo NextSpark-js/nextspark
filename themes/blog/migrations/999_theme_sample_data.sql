@@ -662,15 +662,15 @@ INSERT INTO public."subscriptions" (
   "externalSubscriptionId", "externalCustomerId", "createdAt"
 ) VALUES
   -- Marcos Tech → Pro Plan $29/mo (active, monthly)
-  ('sub-blog-marcos', 'team-blog-marcos', 'usr-blog-marcos', 'plan_pro', 'active',
+  ('sub-blog-marcos', 'team-blog-marcos', 'usr-blog-marcos', (SELECT id FROM public."plans" WHERE slug = 'pro'), 'active',
    NOW() - INTERVAL '30 days', NOW() + INTERVAL '30 days', 'monthly', 'stripe',
    'sub_stripe_marcos', 'cus_marcos', NOW() - INTERVAL '6 months'),
   -- Lucia Lifestyle → Pro Plan $29/mo (active, monthly)
-  ('sub-blog-lucia', 'team-blog-lucia', 'usr-blog-lucia', 'plan_pro', 'active',
+  ('sub-blog-lucia', 'team-blog-lucia', 'usr-blog-lucia', (SELECT id FROM public."plans" WHERE slug = 'pro'), 'active',
    NOW() - INTERVAL '15 days', NOW() + INTERVAL '15 days', 'monthly', 'stripe',
    'sub_stripe_lucia', 'cus_lucia', NOW() - INTERVAL '5 months'),
   -- Carlos Finance → Pro Plan (trialing, monthly)
-  ('sub-blog-carlos', 'team-blog-carlos', 'usr-blog-carlos', 'plan_pro', 'trialing',
+  ('sub-blog-carlos', 'team-blog-carlos', 'usr-blog-carlos', (SELECT id FROM public."plans" WHERE slug = 'pro'), 'trialing',
    NOW(), NOW() + INTERVAL '14 days', 'monthly', NULL, NULL, NULL, NOW() - INTERVAL '4 months')
 ON CONFLICT (id) DO NOTHING;
 
@@ -843,64 +843,64 @@ INSERT INTO public."subscriptions" (
   "createdAt", "canceledAt", "cancelAtPeriodEnd", metadata
 ) VALUES
   -- 1. Diana Design - Pro Monthly ACTIVE (8 months customer)
-  ('sub-blog-diana', 'team-blog-diana', 'usr-blog-diana', 'plan_pro', 'active',
+  ('sub-blog-diana', 'team-blog-diana', 'usr-blog-diana', (SELECT id FROM public."plans" WHERE slug = 'pro'), 'active',
    NOW() - INTERVAL '25 days', NOW() + INTERVAL '5 days', 'monthly',
    'stripe', 'sub_stripe_diana', 'cus_diana',
    NOW() - INTERVAL '8 months', NULL, false, '{}'::jsonb),
 
   -- 2. Elena Eco - Pro Monthly ACTIVE (7 months customer)
-  ('sub-blog-elena', 'team-blog-elena', 'usr-blog-elena', 'plan_pro', 'active',
+  ('sub-blog-elena', 'team-blog-elena', 'usr-blog-elena', (SELECT id FROM public."plans" WHERE slug = 'pro'), 'active',
    NOW() - INTERVAL '20 days', NOW() + INTERVAL '10 days', 'monthly',
    'stripe', 'sub_stripe_elena', 'cus_elena',
    NOW() - INTERVAL '7 months', NULL, false, '{}'::jsonb),
 
   -- 3. Felix Fitness - Pro Yearly ACTIVE (14 months = 2nd year)
-  ('sub-blog-felix', 'team-blog-felix', 'usr-blog-felix', 'plan_pro', 'active',
+  ('sub-blog-felix', 'team-blog-felix', 'usr-blog-felix', (SELECT id FROM public."plans" WHERE slug = 'pro'), 'active',
    NOW() - INTERVAL '60 days', NOW() + INTERVAL '305 days', 'yearly',
    'stripe', 'sub_stripe_felix', 'cus_felix',
    NOW() - INTERVAL '14 months', NULL, false, '{}'::jsonb),
 
   -- 4. Gloria Gourmet - Pro Yearly ACTIVE (12 months)
-  ('sub-blog-gloria', 'team-blog-gloria', 'usr-blog-gloria', 'plan_pro', 'active',
+  ('sub-blog-gloria', 'team-blog-gloria', 'usr-blog-gloria', (SELECT id FROM public."plans" WHERE slug = 'pro'), 'active',
    NOW() - INTERVAL '30 days', NOW() + INTERVAL '335 days', 'yearly',
    'stripe', 'sub_stripe_gloria', 'cus_gloria',
    NOW() - INTERVAL '12 months', NULL, false, '{}'::jsonb),
 
   -- 5. Hugo Health - Pro Monthly ACTIVE (6 months customer)
-  ('sub-blog-hugo', 'team-blog-hugo', 'usr-blog-hugo', 'plan_pro', 'active',
+  ('sub-blog-hugo', 'team-blog-hugo', 'usr-blog-hugo', (SELECT id FROM public."plans" WHERE slug = 'pro'), 'active',
    NOW() - INTERVAL '18 days', NOW() + INTERVAL '12 days', 'monthly',
    'stripe', 'sub_stripe_hugo', 'cus_hugo',
    NOW() - INTERVAL '6 months', NULL, false, '{}'::jsonb),
 
   -- 6. Iris Inspire - Pro Monthly PAST_DUE (failed payment)
-  ('sub-blog-iris', 'team-blog-iris', 'usr-blog-iris', 'plan_pro', 'past_due',
+  ('sub-blog-iris', 'team-blog-iris', 'usr-blog-iris', (SELECT id FROM public."plans" WHERE slug = 'pro'), 'past_due',
    NOW() - INTERVAL '35 days', NOW() - INTERVAL '5 days', 'monthly',
    'stripe', 'sub_stripe_iris', 'cus_iris',
    NOW() - INTERVAL '5 months', NULL, false,
    '{"lastPaymentAttempt": "failed", "retryCount": 2}'::jsonb),
 
   -- 7. Jorge Journey - Pro Monthly CANCELED (voluntary - user decided to cancel)
-  ('sub-blog-jorge', 'team-blog-jorge', 'usr-blog-jorge', 'plan_pro', 'canceled',
+  ('sub-blog-jorge', 'team-blog-jorge', 'usr-blog-jorge', (SELECT id FROM public."plans" WHERE slug = 'pro'), 'canceled',
    NOW() - INTERVAL '45 days', NOW() - INTERVAL '15 days', 'monthly',
    'stripe', 'sub_stripe_jorge', 'cus_jorge',
    NOW() - INTERVAL '9 months', NOW() - INTERVAL '15 days', false,
    '{"cancelReason": "voluntary", "canceledBy": "user", "feedback": "taking a break"}'::jsonb),
 
   -- 8. Karen Kitchen - Pro Yearly CANCELED (payment failed 4 times)
-  ('sub-blog-karen', 'team-blog-karen', 'usr-blog-karen', 'plan_pro', 'canceled',
+  ('sub-blog-karen', 'team-blog-karen', 'usr-blog-karen', (SELECT id FROM public."plans" WHERE slug = 'pro'), 'canceled',
    NOW() - INTERVAL '400 days', NOW() - INTERVAL '35 days', 'yearly',
    'stripe', 'sub_stripe_karen', 'cus_karen',
    NOW() - INTERVAL '15 months', NOW() - INTERVAL '35 days', false,
    '{"cancelReason": "payment_failed", "failedAttempts": 4, "lastCardEnding": "4242"}'::jsonb),
 
   -- 9. Leo Learn - Free Plan ACTIVE (no billing)
-  ('sub-blog-leo', 'team-blog-leo', 'usr-blog-leo', 'plan_free', 'active',
+  ('sub-blog-leo', 'team-blog-leo', 'usr-blog-leo', (SELECT id FROM public."plans" WHERE slug = 'free'), 'active',
    NOW() - INTERVAL '2 months', NOW() + INTERVAL '100 years', 'monthly',
    NULL, NULL, NULL,
    NOW() - INTERVAL '2 months', NULL, false, '{}'::jsonb),
 
   -- 10. Maria Music - Pro Monthly TRIALING (5 days in)
-  ('sub-blog-maria', 'team-blog-maria', 'usr-blog-maria', 'plan_pro', 'trialing',
+  ('sub-blog-maria', 'team-blog-maria', 'usr-blog-maria', (SELECT id FROM public."plans" WHERE slug = 'pro'), 'trialing',
    NOW() - INTERVAL '5 days', NOW() + INTERVAL '25 days', 'monthly',
    NULL, NULL, NULL,
    NOW() - INTERVAL '5 days', NULL, false, '{}'::jsonb)
