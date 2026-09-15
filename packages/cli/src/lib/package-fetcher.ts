@@ -98,15 +98,24 @@ async function fetchNpmPackage(
   } catch (error) {
     rmSync(tempDir, { recursive: true, force: true })
 
-    // Mejorar mensaje de error
-    if (error instanceof Error) {
-      if (error.message.includes('404') || error.message.includes('not found')) {
+    // npm's output stays captured and is never printed or passed on in the
+    // error: it can carry the registry URL with its credentials. It is only
+    // read to tell a missing package or a network failure from anything else.
+    if (isSubprocessError(error)) {
+      const output = `${error.stderr ?? ''}\n${error.stdout ?? ''}`
+      if (/\b404\b|not found/i.test(output)) {
         throw new Error(`Package not found: ${spec}. Verify the package name exists on npm.`)
       }
-      if (error.message.includes('ENETUNREACH') || error.message.includes('ENOTFOUND')) {
+      if (/ENETUNREACH|ENOTFOUND|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN/.test(output)) {
         throw new Error(`Network error. Check your internet connection.`)
       }
+      throw new Error(`npm pack ${spec} exited with code ${error.status ?? 'unknown'}. Run it yourself to see npm's output.`)
     }
     throw error
   }
+}
+
+/** A failed execSync, which carries the exit status and the output it captured. */
+function isSubprocessError(error: unknown): error is Error & { status?: number | null; stderr?: string; stdout?: string } {
+  return error instanceof Error && 'status' in error
 }
