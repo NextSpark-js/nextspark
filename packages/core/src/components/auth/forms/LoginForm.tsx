@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuth } from '../../../hooks/useAuth'
+import { safeCallbackPath } from '../../../lib/auth/callback-url'
 import { useLastAuthMethod } from '../../../hooks/useLastAuthMethod'
 import { Button } from '../../ui/button'
 import { Input } from '../../ui/input'
@@ -190,7 +191,7 @@ export function LoginForm() {
   const searchParams = useSearchParams()
   const inviteEmail = searchParams.get('email')
   const fromInvite = searchParams.get('fromInvite') === 'true'
-  const callbackUrl = searchParams.get('callbackUrl')
+  const callbackUrl = safeCallbackPath(searchParams.get('callbackUrl'))
 
   // Auto-show email form when coming from invitation
   useEffect(() => {

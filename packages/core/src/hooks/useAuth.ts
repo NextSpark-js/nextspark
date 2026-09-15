@@ -5,11 +5,27 @@ import { authClient } from '../lib/auth-client'
 import type { SessionUser } from '../lib/auth'
 import { useOrigin } from './useOrigin'
 import { useLastAuthMethod } from './useLastAuthMethod'
+import { safeCallbackPath } from '../lib/auth/callback-url'
 
 // Esta función ya no se usa directamente aquí
 // La creación de metadata se maneja en:
 // 1. Email verification: app/(auth)/verify-email/page.tsx
 // 2. Dashboard load: useEnsureUserMetadata hook
+
+/**
+ * The page Google sign-in returns to, marked with `auth_method=google`.
+ *
+ * Better Auth accepts a relative callbackURL only when its query is made of
+ * word characters and `-.+/=&%@`, and no hash, so the query is written back
+ * percent-encoded: a `:` in a timestamp or a filter would otherwise stop the
+ * sign-in with INVALID_CALLBACK_URL. Setting the marker replaces one already in
+ * the query rather than adding a second.
+ */
+function googleCallbackURL(redirectTo?: string): string {
+  const url = new URL(safeCallbackPath(redirectTo) ?? '/dashboard', 'http://callback.invalid')
+  url.searchParams.set('auth_method', 'google')
+  return `${url.pathname}${url.search.replace(/\*/g, '%2A')}`
+}
 
 export function useAuth() {
   const router = useRouter()
@@ -30,7 +46,7 @@ export function useAuth() {
     if (data) {
       // Save auth method only when login is truly successful
       saveAuthMethod('email')
-      router.push(redirectTo || '/dashboard')
+      router.push(safeCallbackPath(redirectTo) ?? '/dashboard')
     }
 
     return data
@@ -101,7 +117,7 @@ export function useAuth() {
     if (data) {
       // OTP is an email-based method for the "last used" badge purposes
       saveAuthMethod('email')
-      router.push(redirectTo || '/dashboard')
+      router.push(safeCallbackPath(redirectTo) ?? '/dashboard')
     }
 
     return data
@@ -110,12 +126,9 @@ export function useAuth() {
   const handleGoogleSignIn = async (redirectTo?: string) => {
     // For OAuth, Better Auth handles the redirect automatically
     // The method will be saved on the dashboard page after successful redirect
-    const callbackURL = redirectTo
-      ? `${redirectTo}${redirectTo.includes('?') ? '&' : '?'}auth_method=google`
-      : '/dashboard?auth_method=google'
     await authClient.signIn.social({
       provider: 'google',
-      callbackURL
+      callbackURL: googleCallbackURL(redirectTo)
     })
   }
 

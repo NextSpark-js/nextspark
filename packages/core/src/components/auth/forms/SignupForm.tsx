@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuth } from '../../../hooks/useAuth'
+import { safeCallbackPath } from '../../../lib/auth/callback-url'
 import { Button } from '../../ui/button'
 import { Input } from '../../ui/input'
 import { Label } from '../../ui/label'
@@ -43,7 +44,7 @@ export function SignupForm() {
   const searchParams = useSearchParams()
   const inviteEmail = searchParams.get('email')
   const fromInvite = searchParams.get('fromInvite') === 'true'
-  const callbackUrl = searchParams.get('callbackUrl')
+  const callbackUrl = safeCallbackPath(searchParams.get('callbackUrl'))
   const inviteToken = searchParams.get('inviteToken')
 
   const {

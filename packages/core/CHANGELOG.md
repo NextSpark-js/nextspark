@@ -72,6 +72,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     so signing in now returns to the document instead of the dashboard.
   - `proxy.ts` / `middleware.ts` is rewritten by `sync:app`.
 
+- **Signing in only returns to a page on this app.** The login and signup forms
+  followed `callbackUrl` wherever it pointed, so a link such as
+  `/login?callbackUrl=//evil.example` sent the user to another site right after
+  they signed in with a password or a one-time code. Only a path on this origin
+  is followed now (`safeCallbackPath`, `lib/auth/callback-url`); anything else
+  falls back to `/dashboard`. Google sign-in applies the same check, and writes
+  the callback's query percent-encoded, since Better Auth rejects a relative
+  callback whose query holds a `:` (a timestamp, a filter).
+
 - **API-key scope minting now matches scope enforcement (#94).** `validateScopesForUser`
   — the gate deciding which scopes a user may mint into an API key — previously checked
   a hardcoded map keyed by the caller's **global** `users.role`, referencing a
