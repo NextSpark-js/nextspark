@@ -14,10 +14,11 @@ jest.mock('@better-fetch/fetch', () => ({
 jest.mock('@nextsparkjs/core/lib/middleware', () => ({
   hasThemeMiddleware: () => false,
   executeThemeMiddleware: jest.fn(),
-  getThemeAppConfig: () => undefined,
+  getThemeAppConfig: jest.fn(() => undefined),
 }))
 
 import { betterFetch } from '@better-fetch/fetch'
+import { getThemeAppConfig } from '@nextsparkjs/core/lib/middleware'
 import { NextRequest } from 'next/server'
 import { proxy } from '../../../templates/proxy'
 
@@ -91,5 +92,142 @@ describe('proxy identity headers (#87)', () => {
 
     expect(response.type).toBe('redirect')
     expect(response.redirectUrl).toContain('/login')
+  })
+})
+
+describe('proxy role-gated areas', () => {
+  beforeEach(() => {
+    mockedFetch.mockReset()
+    delete process.env.NEXT_PUBLIC_ACTIVE_THEME
+  })
+
+  const signedInAs = (role: string) => ({ data: { user: { id: 'user-1', email: 'user-1@example.com', role } } })
+
+  test.each(['/superadmin', '/superadmin/users', '/devtools', '/devtools/config'])(
+    'sends a visitor without a session on %s to login',
+    async path => {
+      mockedFetch.mockResolvedValue({ data: null })
+
+      const response = (await proxy(makeRequest(path))) as unknown as PassThrough
+
+      expect(response.type).toBe('redirect')
+      expect(response.redirectUrl).toContain('/login')
+      expect(response.redirectUrl).toContain(`callbackUrl=${encodeURIComponent(path)}`)
+    }
+  )
+
+  test.each([
+    ['/superadmin/users', 'superadmin', 'next'],
+    ['/superadmin/users', 'developer', 'next'],
+    ['/superadmin/users', 'member', 'redirect'],
+    ['/devtools/config', 'developer', 'next'],
+    ['/devtools/config', 'superadmin', 'redirect'],
+    ['/devtools/config', 'member', 'redirect'],
+  ])('%s signed in as %s: %s', async (path, role, outcome) => {
+    mockedFetch.mockResolvedValue(signedInAs(role))
+
+    const response = (await proxy(makeRequest(path))) as unknown as PassThrough
+
+    expect(response.type).toBe(outcome)
+    if (outcome === 'redirect') {
+      expect(response.redirectUrl).toContain('/dashboard?error=access_denied')
+    } else {
+      expect((response.requestHeaders as Headers).get('x-user-id')).toBe('user-1')
+    }
+  })
+
+  test('a path that only starts like a gated area is not gated', async () => {
+    const response = (await proxy(makeRequest('/devtools-guide'))) as unknown as PassThrough
+
+    expect(response.type).toBe('next')
+    expect(mockedFetch).not.toHaveBeenCalled()
+  })
+})
+
+describe('proxy path boundaries and redirect targets', () => {
+  const mockedAppConfig = getThemeAppConfig as unknown as jest.Mock
+
+  beforeEach(() => {
+    mockedFetch.mockReset()
+    mockedAppConfig.mockReset()
+    mockedAppConfig.mockReturnValue(undefined)
+    delete process.env.NEXT_PUBLIC_ACTIVE_THEME
+  })
+
+  test.each(['/administrator', '/dashboard-guide', '/settings-icon.svg', '/profile-photo.jpg', '/update-password-help.png'])(
+    '%s only starts like a protected area and passes without a session check',
+    async path => {
+      const response = (await proxy(makeRequest(path))) as unknown as PassThrough
+
+      expect(response.type).toBe('next')
+      expect(mockedFetch).not.toHaveBeenCalled()
+    }
+  )
+
+  test('with private docs, /docs-logo.png is not docs, but /docs/intro is', async () => {
+    mockedAppConfig.mockReturnValue({ docs: { public: false } })
+    mockedFetch.mockResolvedValue({ data: null })
+
+    const asset = (await proxy(makeRequest('/docs-logo.png'))) as unknown as PassThrough
+    const page = (await proxy(makeRequest('/docs/intro?section=install'))) as unknown as PassThrough
+
+    expect(asset.type).toBe('next')
+    expect(page.type).toBe('redirect')
+    // LoginForm returns to `callbackUrl` after signing in, and reads no other parameter.
+    expect(page.redirectUrl).toContain(`/login?callbackUrl=${encodeURIComponent('/docs/intro?section=install')}`)
+  })
+
+  test('a redirect to login carries the query of the page asked for', async () => {
+    mockedFetch.mockResolvedValue({ data: null })
+
+    const response = (await proxy(makeRequest('/dashboard/settings/billing?plan=pro&cycle=annual'))) as unknown as PassThrough
+
+    expect(response.type).toBe('redirect')
+    expect(response.redirectUrl).toContain(`callbackUrl=${encodeURIComponent('/dashboard/settings/billing?plan=pro&cycle=annual')}`)
+  })
+
+  test("the session is asked of the app's own auth route", async () => {
+    mockedFetch.mockResolvedValue({ data: null })
+
+    await proxy(makeRequest('/dashboard'))
+
+    expect(mockedFetch).toHaveBeenCalledWith('/api/auth/get-session', expect.objectContaining({ baseURL: 'http://localhost:3000' }))
+  })
+
+  function underBasePath(path: string) {
+    const { NextURL } = jest.requireActual('next/dist/server/web/next-url') as {
+      NextURL: new (url: string, options: object) => unknown
+    }
+    const request = makeRequest(path)
+    ;(request as unknown as { nextUrl: unknown }).nextUrl = new NextURL(`http://localhost:3000/base/es${path}`, {
+      nextConfig: { basePath: '/base', i18n: { locales: ['en', 'es'], defaultLocale: 'en' } },
+    })
+    return request
+  }
+
+  test('a redirect to login keeps the base path and locale the request came in with', async () => {
+    mockedFetch.mockResolvedValue({ data: null })
+
+    const response = (await proxy(underBasePath('/superadmin'))) as unknown as PassThrough
+
+    expect(response.type).toBe('redirect')
+    expect(response.redirectUrl).toContain('/base/es/login?callbackUrl=%2Fsuperadmin')
+  })
+
+  test('under a base path, the session is asked of the auth route under it', async () => {
+    mockedFetch.mockResolvedValue({ data: null })
+
+    await proxy(underBasePath('/dashboard'))
+
+    expect(mockedFetch).toHaveBeenCalledWith('/api/auth/get-session', expect.objectContaining({ baseURL: 'http://localhost:3000/base' }))
+  })
+
+  test('an access-denied redirect keeps the base path and locale too', async () => {
+    mockedFetch.mockResolvedValue({ data: { user: { id: 'user-1', email: 'user-1@example.com', role: 'member' } } })
+
+    const response = (await proxy(underBasePath('/devtools/config'))) as unknown as PassThrough
+
+    expect(response.type).toBe('redirect')
+    expect(response.redirectUrl).toContain('/base/es/dashboard?error=access_denied')
   })
 })

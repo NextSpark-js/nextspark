@@ -13,6 +13,8 @@ class MockNextRequest {
     try {
       const parsed = new URL(url, 'http://localhost')
       parsed.clone = () => new URL(parsed.toString())
+      // The app is served at the root unless next.config sets a basePath.
+      parsed.basePath = ''
       this.nextUrl = parsed
     } catch {
       this.nextUrl = undefined

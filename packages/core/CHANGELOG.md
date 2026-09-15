@@ -54,6 +54,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **The generated proxy enforces the roles `/superadmin` and `/devtools` need.**
+  Both areas were guarded only in the browser, by `SuperAdminGuard` and
+  `DeveloperGuard`, after the page had been served. The proxy now sends a visitor
+  without a session to login, and a signed-in user without the role
+  (`superadmin` or `developer` for `/superadmin`, `developer` for `/devtools`) to
+  `/dashboard?error=access_denied`.
+  - Its matcher no longer skips paths that end in an image extension, which let
+    `/superadmin/users/alice.png` bypass the session check with forged identity
+    headers intact; only `_next/static/`, `_next/image` and `favicon.ico` stay out.
+  - Protected areas are matched by path segment, so `/dashboard-guide` or a
+    public `profile-photo.jpg` no longer requires a session.
+  - Redirects keep the base path and locale, and the session is looked up at the
+    auth route under the base path.
+  - The redirect to login always sets `callbackUrl` to the page asked for, query
+    included. Private docs used `redirect`, which the login form does not read,
+    so signing in now returns to the document instead of the dashboard.
+  - `proxy.ts` / `middleware.ts` is rewritten by `sync:app`.
+
 - **API-key scope minting now matches scope enforcement (#94).** `validateScopesForUser`
   — the gate deciding which scopes a user may mint into an API key — previously checked
   a hardcoded map keyed by the caller's **global** `users.role`, referencing a

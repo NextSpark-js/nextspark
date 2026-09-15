@@ -13,7 +13,7 @@
  * Key responsibilities:
  * 1. Theme middleware override support
  * 2. Documentation access control
- * 3. Protected route authentication
+ * 3. Protected route authentication, and the roles /superadmin and /devtools need
  * 4. User header injection for downstream use (x-user-id, x-pathname)
  *
  * IMPORTANT: The EntityPermissionLayout depends on x-user-id and x-pathname
@@ -68,6 +68,53 @@ function isPublicPath(pathname: string): boolean {
   return publicPaths.some(
     (path) => pathname === path || pathname.startsWith(`${path}/`)
   )
+}
+
+/**
+ * Whether `pathname` is `prefix` or a path under it: `/devtools/config` is,
+ * `/devtools-guide` and `/profile-photo.jpg` are not.
+ */
+function isUnder(pathname: string, prefix: string): boolean {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`)
+}
+
+/**
+ * A URL on this app at `pathname`, keeping the base path and locale the request
+ * came in with; one built from `request.url` would lose both.
+ */
+function appUrl(request: NextRequest, pathname: string): NextRequest['nextUrl'] {
+  const url = request.nextUrl.clone()
+  url.pathname = pathname
+  url.search = ''
+  return url
+}
+
+/**
+ * Send a visitor without a session to login. LoginForm reads `callbackUrl` and
+ * returns them to the page they asked for, query included, once signed in.
+ */
+function redirectToLogin(request: NextRequest): NextResponse {
+  const loginUrl = appUrl(request, '/login')
+  loginUrl.searchParams.set('callbackUrl', `${request.nextUrl.pathname}${request.nextUrl.search}`)
+  return NextResponse.redirect(loginUrl)
+}
+
+/** Send a signed-in user without the role an area needs back to the dashboard. */
+function redirectAccessDenied(request: NextRequest): NextResponse {
+  const dashboardUrl = appUrl(request, '/dashboard')
+  dashboardUrl.searchParams.set('error', 'access_denied')
+  return NextResponse.redirect(dashboardUrl)
+}
+
+/**
+ * The session the request's cookies carry, asked of this app's own auth route,
+ * which is served under the base path like every other route.
+ */
+function getSession(request: NextRequest) {
+  return betterFetch<Session>('/api/auth/get-session', {
+    baseURL: `${request.nextUrl.origin}${request.nextUrl.basePath}`,
+    headers: { cookie: request.headers.get('cookie') || '' },
+  })
 }
 
 /**
@@ -135,28 +182,18 @@ export async function proxy(request: NextRequest) {
   }
 
   // 3. Documentation access control
-  if (pathname.startsWith('/docs')) {
+  if (isUnder(pathname, '/docs')) {
     const appConfig = getThemeAppConfig(activeTheme as string)
 
     if (appConfig?.docs?.public === false) {
       try {
-        const { data: session } = await betterFetch<Session>(
-          '/api/auth/get-session',
-          {
-            baseURL: request.nextUrl.origin,
-            headers: { cookie: request.headers.get('cookie') || '' },
-          }
-        )
+        const { data: session } = await getSession(request)
 
         if (!session) {
-          const loginUrl = new URL('/login', request.url)
-          loginUrl.searchParams.set('redirect', pathname)
-          return NextResponse.redirect(loginUrl)
+          return redirectToLogin(request)
         }
       } catch (error) {
-        const loginUrl = new URL('/login', request.url)
-        loginUrl.searchParams.set('redirect', pathname)
-        return NextResponse.redirect(loginUrl)
+        return redirectToLogin(request)
       }
     }
     return passThrough(requestHeaders)
@@ -172,39 +209,44 @@ export async function proxy(request: NextRequest) {
     return passThrough(requestHeaders)
   }
 
-  // 6. Protected routes - require authentication and inject user headers
-  const isAdminRoute = pathname.startsWith('/admin')
+  // 6. Protected routes - require authentication and inject user headers.
+  // Areas are matched by path segment, so /dashboard-guide is not /dashboard.
+  // /superadmin and /devtools also need a role, the same ones SuperAdminGuard
+  // and DeveloperGuard let in. The guards decide it again in the browser, but
+  // only after the page has been served, so it is decided here first.
+  const isAdminRoute = isUnder(pathname, '/admin')
+  const isSuperadminRoute = isUnder(pathname, '/superadmin')
+  const isDevtoolsRoute = isUnder(pathname, '/devtools')
   const isProtectedRoute =
-    pathname.startsWith('/dashboard') ||
-    pathname.startsWith('/admin') ||
-    pathname.startsWith('/settings') ||
-    pathname.startsWith('/profile') ||
-    pathname.startsWith('/update-password') ||
-    isAdminRoute
+    isUnder(pathname, '/dashboard') ||
+    isUnder(pathname, '/settings') ||
+    isUnder(pathname, '/profile') ||
+    isUnder(pathname, '/update-password') ||
+    isAdminRoute ||
+    isSuperadminRoute ||
+    isDevtoolsRoute
 
   if (isProtectedRoute) {
     try {
-      const { data: session } = await betterFetch<Session>(
-        '/api/auth/get-session',
-        {
-          baseURL: request.nextUrl.origin,
-          headers: { cookie: request.headers.get('cookie') || '' },
-        }
-      )
+      const { data: session } = await getSession(request)
 
       if (!session) {
-        const loginUrl = new URL('/login', request.url)
-        loginUrl.searchParams.set('callbackUrl', pathname)
-        return NextResponse.redirect(loginUrl)
+        return redirectToLogin(request)
       }
 
+      const role = session.user?.role
+
       // Admin Panel superadmin-only check
-      if (isAdminRoute) {
-        if (!session.user?.role || session.user.role !== 'superadmin') {
-          const dashboardUrl = new URL('/dashboard', request.url)
-          dashboardUrl.searchParams.set('error', 'access_denied')
-          return NextResponse.redirect(dashboardUrl)
-        }
+      if (isAdminRoute && role !== 'superadmin') {
+        return redirectAccessDenied(request)
+      }
+
+      if (isSuperadminRoute && role !== 'superadmin' && role !== 'developer') {
+        return redirectAccessDenied(request)
+      }
+
+      if (isDevtoolsRoute && role !== 'developer') {
+        return redirectAccessDenied(request)
       }
 
       // Inject user headers for downstream use, ONLY from the verified session
@@ -220,17 +262,23 @@ export async function proxy(request: NextRequest) {
       return passThrough(requestHeaders)
     } catch (error) {
       console.error('Proxy error:', error)
-      const loginUrl = new URL('/login', request.url)
-      loginUrl.searchParams.set('callbackUrl', pathname)
-      return NextResponse.redirect(loginUrl)
+      return redirectToLogin(request)
     }
   }
 
   return passThrough(requestHeaders)
 }
 
+/**
+ * Everything runs through the proxy except the exact paths of Next's own
+ * output: `_next/static/`, the `_next/image` endpoint and `favicon.ico`.
+ * Excluding by file extension, or by a prefix without its boundary, would let a
+ * dynamic segment such as `alice.png` or `favicon.icoevil` reach the app without
+ * the session check and with forged identity headers intact. Files under
+ * public/ simply pass through.
+ */
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static/|_next/image$|favicon\\.ico$).*)',
   ],
 }
