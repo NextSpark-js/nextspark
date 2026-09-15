@@ -13,27 +13,20 @@ The `TeamContext` provides global team state and switching functionality.
 
 ### Setup
 
-The `TeamProvider` should be placed inside `QueryClientProvider` in your root layout:
+`TeamProvider` and `SubscriptionProvider` are mounted by `DashboardProviders` in the layouts of the areas that work with a team: `dashboard/`, `superadmin/` and `devtools/`. The root layout provides `QueryProvider` and `Toaster` to every route but no team providers, so public pages never fetch a signed-in visitor's teams or re-sync the `activeTeamId` cookie.
+
+A route group of your own that uses team hooks mounts them the same way:
 
 ```tsx
-// app/layout.tsx
-import { TeamProvider } from '@/core/contexts/TeamContext'
-import { QueryProvider } from '@/core/providers/QueryProvider'
+// app/my-area/layout.tsx
+import { DashboardProviders } from '@nextsparkjs/core/providers/DashboardProviders'
 
-export default function RootLayout({ children }) {
-  return (
-    <html>
-      <body>
-        <QueryProvider>
-          <TeamProvider>
-            {children}
-          </TeamProvider>
-        </QueryProvider>
-      </body>
-    </html>
-  )
+export default function MyAreaLayout({ children }: { children: React.ReactNode }) {
+  return <DashboardProviders>{children}</DashboardProviders>
 }
 ```
+
+Under the root layout's `QueryProvider`, `DashboardProviders` adds only the team and subscription providers, so the app keeps a single query cache and a single `Toaster`.
 
 ### Context Value
 

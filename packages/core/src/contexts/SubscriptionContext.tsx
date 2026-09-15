@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useTeam } from '../hooks/useTeam'
 import { SubscriptionWithPlan } from '../lib/billing/types'
 import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
+import { ApiError } from '../lib/api/api-error'
 
 interface LimitInfo {
   max: number
@@ -72,7 +73,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       const response = await fetch(`/api/v1/teams/${team.id}/subscription`)
       if (!response.ok) {
         if (response.status === 404) return null
-        throw new Error('Failed to fetch subscription')
+        throw new ApiError('Failed to fetch subscription', { status: response.status })
       }
 
       const data = await response.json()
@@ -80,6 +81,11 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       return data.data?.subscription ?? data.data
     },
     enabled: !!team && BILLING_REGISTRY.plans.length > 0,
+    // A 4xx, such as the 403 a role without billing access gets, comes back the
+    // same on every attempt, so only other failures are retried.
+    retry: (failureCount, error) =>
+      !(error instanceof ApiError && error.status !== undefined && error.status >= 400 && error.status < 500) &&
+      failureCount < 3,
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false
   })

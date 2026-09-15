@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { Team, UserTeamMembership } from '../lib/teams/types'
 import { useAuth } from '../hooks/useAuth'
 import { TeamSwitchModal } from '../components/teams/TeamSwitchModal'
@@ -23,6 +23,15 @@ const TeamContext = createContext<TeamContextValue | undefined>(undefined)
 
 // Query key for teams data
 export const TEAMS_QUERY_KEY = ['user-teams'] as const
+
+/**
+ * The team whose id each query client's page has already written to the
+ * activeTeamId cookie. The dashboard, superadmin and devtools layouts each mount
+ * their own TeamProvider over the root layout's query client, so moving between
+ * those areas remounts the provider; by then the cookie already names the team,
+ * and posting the switch again would only repeat the write.
+ */
+const cookieSyncedTeam = new WeakMap<QueryClient, string>()
 
 // Fetch function for teams (can be reused for prefetching)
 export async function fetchUserTeams(): Promise<UserTeamMembership[]> {
@@ -157,16 +166,26 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('activeTeamId', activeTeam.team.id)
       }
 
-      // Sync cookie via API for server-side access
-      if (typeof window !== 'undefined') {
+      // Sync cookie via API for server-side access, unless this page already
+      // wrote this team to it (see cookieSyncedTeam)
+      if (typeof window !== 'undefined' && cookieSyncedTeam.get(queryClient) !== activeTeam.team.id) {
+        const teamId = activeTeam.team.id
+        cookieSyncedTeam.set(queryClient, teamId)
         fetch('/api/v1/teams/switch', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ teamId: activeTeam.team.id })
-        }).catch(err => console.error('Failed to sync team cookie:', err))
+          body: JSON.stringify({ teamId })
+        })
+          .then(response => {
+            if (!response.ok && cookieSyncedTeam.get(queryClient) === teamId) cookieSyncedTeam.delete(queryClient)
+          })
+          .catch(err => {
+            if (cookieSyncedTeam.get(queryClient) === teamId) cookieSyncedTeam.delete(queryClient)
+            console.error('Failed to sync team cookie:', err)
+          })
       }
     }
-  }, [user, userTeams, currentTeam, teamsLoading])
+  }, [user, userTeams, currentTeam, teamsLoading, queryClient])
 
   // Clear localStorage and TanStack Query cache when user logs out
   // IMPORTANT: Only run when auth has finished loading (!authLoading) to distinguish
@@ -182,6 +201,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem('activeTeamId')
       }
       // Clear all TanStack Query cache to prevent stale data leaking to next user
+      cookieSyncedTeam.delete(queryClient)
       queryClient.clear()
     }
   }, [user, authLoading, queryClient])
@@ -239,10 +259,11 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ teamId })
       })
+      cookieSyncedTeam.set(queryClient, teamId)
     } catch (error) {
       console.error('Failed to update team context on server:', error)
     }
-  }, [userTeams, currentTeam])
+  }, [userTeams, currentTeam, queryClient])
 
   // Refresh teams list - invalidate and refetch.
   //

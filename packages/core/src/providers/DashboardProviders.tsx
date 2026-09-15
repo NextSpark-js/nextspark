@@ -1,6 +1,7 @@
 'use client'
 
-import { Suspense } from 'react'
+import { Suspense, useContext } from 'react'
+import { QueryClientContext } from '@tanstack/react-query'
 import { QueryProvider } from './query-provider'
 import { TeamProvider, useOptionalTeamContext } from '../contexts/TeamContext'
 import { SubscriptionProvider } from '../contexts/SubscriptionContext'
@@ -9,25 +10,39 @@ import { Toaster } from '../components/ui/sonner'
 /**
  * DashboardProviders — Client providers needed by authenticated routes.
  *
- * Since #115 the generated root layout mounts QueryProvider, TeamProvider,
- * SubscriptionProvider and Toaster itself (matching layout.ppr.tsx) so the
- * activeTeamId cookie is synced from any route, not only from the dashboard.
- * When a TeamProvider is already mounted above, this component renders its
- * children as-is: nesting a second TeamProvider would duplicate the teams
- * fetch, the cookie sync and the TeamSwitchModal, and a second Toaster would
- * show every toast twice.
+ * TeamProvider and SubscriptionProvider live here rather than in the root
+ * layout, so public pages never fetch a signed-in visitor's teams or
+ * subscription, nor re-sync the activeTeamId cookie. The areas that need a
+ * team (dashboard, superadmin, devtools) mount them through this component,
+ * which also keeps that cookie in sync.
  *
- * The full provider stack is kept as a fallback for apps whose generated root
- * layout predates that change (it originally lived here to keep ~500KB of
- * client JS off public landing pages).
+ * What gets mounted depends on the root layout above:
+ * - A root layout that provides QueryProvider and Toaster: only the team and
+ *   subscription providers, so the app keeps one query cache and toasts are
+ *   not shown twice.
+ * - An older root layout that already mounts TeamProvider: nothing, since a
+ *   second TeamProvider would duplicate the teams fetch, the cookie sync and
+ *   the TeamSwitchModal.
+ * - A root layout with no providers at all: the full stack, Toaster included.
  *
  * Used by: dashboard/layout.tsx, superadmin/layout.tsx, devtools/layout.tsx
  */
 export function DashboardProviders({ children }: { children: React.ReactNode }) {
   const rootTeamContext = useOptionalTeamContext()
+  const rootQueryClient = useContext(QueryClientContext)
 
   if (rootTeamContext) {
     return <>{children}</>
+  }
+
+  const teamProviders = (
+    <TeamProvider>
+      <SubscriptionProvider>{children}</SubscriptionProvider>
+    </TeamProvider>
+  )
+
+  if (rootQueryClient) {
+    return teamProviders
   }
 
   return (

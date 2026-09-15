@@ -29,8 +29,6 @@ import { StaticIntlProvider } from "@nextsparkjs/core/providers/static-intl-prov
 import { QueryProvider } from "@nextsparkjs/core/providers/query-provider"
 import { ThemeProvider as NextThemeProvider } from "@nextsparkjs/core/providers/theme-provider"
 import { ThemeProvider as CustomThemeProvider } from "@nextsparkjs/core/lib/theme/ThemeProvider"
-import { TeamProvider } from "@nextsparkjs/core/contexts/TeamContext"
-import { SubscriptionProvider } from "@nextsparkjs/core/contexts/SubscriptionContext"
 import { Toaster } from "@nextsparkjs/core/components/ui/sonner"
 import { getMetadataOrDefault } from '@nextsparkjs/core/lib/template-resolver'
 import { DEFAULT_LOCALE, DEFAULT_THEME_MODE, STATIC_MESSAGES } from '@nextsparkjs/registries/translation-registry'
@@ -88,13 +86,13 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             <CustomThemeProvider>
+              {/* TeamProvider and SubscriptionProvider are mounted by DashboardProviders in the
+                  dashboard, superadmin and devtools layouts, not here: on a public page they
+                  would fetch a signed-in visitor's teams and subscription and re-sync the
+                  activeTeamId cookie for nothing. */}
               <QueryProvider>
-                <TeamProvider>
-                  <SubscriptionProvider>
-                    <main>{children}</main>
-                    <Suspense><Toaster position="bottom-left" /></Suspense>
-                  </SubscriptionProvider>
-                </TeamProvider>
+                <main>{children}</main>
+                <Suspense><Toaster position="bottom-left" /></Suspense>
               </QueryProvider>
             </CustomThemeProvider>
           </NextThemeProvider>

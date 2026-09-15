@@ -16,8 +16,6 @@ import { ThemeProvider as NextThemeProvider } from "@nextsparkjs/core/providers/
 import { ThemeProvider as CustomThemeProvider } from "@nextsparkjs/core/lib/theme/ThemeProvider"
 import { Toaster } from "@nextsparkjs/core/components/ui/sonner"
 import { QueryProvider } from "@nextsparkjs/core/providers/query-provider"
-import { TeamProvider } from "@nextsparkjs/core/contexts/TeamContext"
-import { SubscriptionProvider } from "@nextsparkjs/core/contexts/SubscriptionContext"
 import { getUserLocale } from '@nextsparkjs/core/lib/locale'
 import { TranslationContextManager } from "@nextsparkjs/core/providers/TranslationContextManager"
 import { SessionCookieRefresher } from "@nextsparkjs/core/components/auth/SessionCookieRefresher"
@@ -97,22 +95,19 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             <CustomThemeProvider>
-              {/* Team providers live here (not only in DashboardProviders) so the activeTeamId
-                  cookie is synced from any route, matching layout.ppr.tsx — see #115.
-                  DashboardProviders skips re-mounting them when already present. */}
+              {/* TeamProvider and SubscriptionProvider are mounted by DashboardProviders in the
+                  dashboard, superadmin and devtools layouts, not here: on a public page they
+                  would fetch a signed-in visitor's teams and subscription and re-sync the
+                  activeTeamId cookie for nothing. */}
               <QueryProvider>
-                <TeamProvider>
-                  <SubscriptionProvider>
-                    <TranslationContextManager />
-                    {/* Real session-cookie renewal for installed PWAs: the render-time
-                        session reads above (getUserLocale/getThemeSettings) cannot
-                        write cookies, so the rolling refresh is triggered from the
-                        client through the auth Route Handler instead. */}
-                    <SessionCookieRefresher />
-                    <main>{children}</main>
-                    <Suspense><Toaster position="bottom-left" /></Suspense>
-                  </SubscriptionProvider>
-                </TeamProvider>
+                <TranslationContextManager />
+                {/* Real session-cookie renewal for installed PWAs: the render-time
+                    session reads above (getUserLocale/getThemeSettings) cannot
+                    write cookies, so the rolling refresh is triggered from the
+                    client through the auth Route Handler instead. */}
+                <SessionCookieRefresher />
+                <main>{children}</main>
+                <Suspense><Toaster position="bottom-left" /></Suspense>
               </QueryProvider>
             </CustomThemeProvider>
           </NextThemeProvider>

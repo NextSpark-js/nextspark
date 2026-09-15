@@ -16,7 +16,7 @@ The `SubscriptionContext` provides subscription data to all child components.
 The provider should wrap your authenticated routes:
 
 ```tsx
-// Already included in the default layout
+// Already mounted by DashboardProviders in the dashboard, superadmin and devtools layouts
 import { SubscriptionProvider } from '@/core/contexts/SubscriptionContext'
 
 function AuthenticatedLayout({ children }) {

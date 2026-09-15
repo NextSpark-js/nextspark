@@ -124,15 +124,15 @@ Check browser DevTools:
 
 **Symptom:** `useTeamContext` throws "must be used within TeamProvider"
 
-**Solution:** Ensure TeamProvider is in your component tree:
+**Solution:** Render the component inside an area that mounts the team providers. The root layout does not mount them; the `dashboard/`, `superadmin/` and `devtools/` layouts do, through `DashboardProviders`. For another route group, wrap its layout:
 
 ```tsx
-// app/layout.tsx
-<QueryProvider>
-  <TeamProvider>
-    {children}
-  </TeamProvider>
-</QueryProvider>
+// app/my-area/layout.tsx
+import { DashboardProviders } from '@nextsparkjs/core/providers/DashboardProviders'
+
+export default function MyAreaLayout({ children }: { children: React.ReactNode }) {
+  return <DashboardProviders>{children}</DashboardProviders>
+}
 ```
 
 ### Problem: "Create Team" Button Missing
