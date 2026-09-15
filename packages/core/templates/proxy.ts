@@ -191,22 +191,7 @@ export async function proxy(request: NextRequest) {
     if (themeResponse) return themeResponse
   }
 
-  // 2. Redirect old docs URLs to new structure (2-level -> 3-level)
-  const oldDocsPattern = /^\/docs\/([^\/]+)\/([^\/]+)$/
-  const oldDocsMatch = pathname.match(oldDocsPattern)
-
-  if (oldDocsMatch) {
-    const [, sectionSlug, pageSlug] = oldDocsMatch
-    const themeSections = ['theme-overview', 'theme-features']
-    const category = themeSections.includes(sectionSlug) ? 'theme' : 'core'
-    const cleanSection = sectionSlug.replace(/^theme-/, '')
-
-    const newUrl = request.nextUrl.clone()
-    newUrl.pathname = `/docs/${category}/${cleanSection}/${pageSlug}`
-    return NextResponse.redirect(newUrl, 301)
-  }
-
-  // 3. Documentation access control
+  // 2. Documentation access control
   if (isUnder(pathname, '/docs')) {
     const appConfig = getThemeAppConfig(activeTheme as string)
 
@@ -224,17 +209,17 @@ export async function proxy(request: NextRequest) {
     return passThrough(request, requestHeaders)
   }
 
-  // 4. Allow public paths
+  // 3. Allow public paths
   if (isPublicPath(pathname)) {
     return passThrough(request, requestHeaders)
   }
 
-  // 5. API v1 routes handle their own dual authentication
+  // 4. API v1 routes handle their own dual authentication
   if (pathname.startsWith('/api/v1')) {
     return passThrough(request, requestHeaders)
   }
 
-  // 6. Protected routes - require authentication and inject user headers.
+  // 5. Protected routes - require authentication and inject user headers.
   // Areas are matched by path segment, so /dashboard-guide is not /dashboard.
   // /superadmin and /devtools also need a role, the same ones SuperAdminGuard
   // and DeveloperGuard let in. The guards decide it again in the browser, but

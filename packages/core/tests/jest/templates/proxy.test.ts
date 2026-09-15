@@ -179,6 +179,18 @@ describe('proxy path boundaries and redirect targets', () => {
     expect(page.redirectUrl).toContain(`/login?callbackUrl=${encodeURIComponent('/docs/intro?section=install')}`)
   })
 
+  // The docs pages live at /docs/[section]/[page] — a two-segment path — so a
+  // real page link such as /docs/overview/customization must reach the app
+  // unredirected. A stale 2-level -> 3-level rewrite here would send it to a
+  // /docs/core/overview/customization that no route answers.
+  test('a docs page link passes through, not redirected to a 3-level path', async () => {
+    mockedFetch.mockResolvedValue({ data: null })
+
+    const response = (await proxy(makeRequest('/docs/overview/customization'))) as unknown as PassThrough
+
+    expect(response.type).toBe('next')
+  })
+
   test('a redirect to login carries the query of the page asked for', async () => {
     mockedFetch.mockResolvedValue({ data: null })
 
