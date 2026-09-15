@@ -6,12 +6,15 @@
  * A rich text editor built with native contentEditable.
  * Provides formatting, markdown shortcuts, and a clean interface.
  *
- * No external dependencies - uses document.execCommand for formatting.
+ * Formatting uses document.execCommand. Stored HTML, and markup pasted or
+ * dropped in, is sanitised before it reaches the DOM, in the editable area and
+ * in the preview.
  */
 
 import { useRef, useCallback, useEffect, useState } from 'react'
 import { cn } from '@nextsparkjs/core/lib/utils'
 import { Button } from '@nextsparkjs/core/components/ui/button'
+import { postHtmlHasUnsafeMarkup, sanitizePostHtml } from '@/themes/blog/lib/sanitize-post-html'
 import {
   Bold,
   Italic,
@@ -78,6 +81,22 @@ const TOOLBAR_GROUPS: ToolbarButton[][] = [
   ],
 ]
 
+/** The caret position under a point, so a drop lands where the pointer is. */
+function rangeAtPoint(x: number, y: number): Range | null {
+  const doc = document as Document & {
+    caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null
+    caretRangeFromPoint?: (x: number, y: number) => Range | null
+  }
+  const position = doc.caretPositionFromPoint?.(x, y)
+  if (position) {
+    const range = document.createRange()
+    range.setStart(position.offsetNode, position.offset)
+    range.collapse(true)
+    return range
+  }
+  return doc.caretRangeFromPoint?.(x, y) ?? null
+}
+
 export function WysiwygEditor({
   value,
   onChange,
@@ -91,15 +110,18 @@ export function WysiwygEditor({
   const [isFocused, setIsFocused] = useState(false)
   const isComposing = useRef(false)
 
-  // Initialize content
+  // Fill the editable area. A value from outside (a loaded post) always goes in
+  // sanitised, and so does the value when leaving the preview mounts a new,
+  // empty area. One the area produced itself (typing, a paste, a command) is
+  // replaced only when sanitising would change it: rewriting it for a mere
+  // re-serialisation would move the caret to the start.
   useEffect(() => {
     if (editorRef.current && !isComposing.current) {
-      const currentContent = editorRef.current.innerHTML
-      if (currentContent !== value) {
-        editorRef.current.innerHTML = value || ''
+      if (editorRef.current.innerHTML !== value || postHtmlHasUnsafeMarkup(value)) {
+        editorRef.current.innerHTML = sanitizePostHtml(value)
       }
     }
-  }, [value])
+  }, [value, isPreview])
 
   // Auto focus
   useEffect(() => {
@@ -114,6 +136,31 @@ export function WysiwygEditor({
       onChange(html)
     }
   }, [onChange])
+
+  // Markup pasted or dropped in that sanitising would change goes in sanitised,
+  // in place of the browser's own insertion. Replacing it once it is in the
+  // editable area is too late: an attribute such as onerror fires as soon as
+  // the element is in the document. Anything else keeps the browser's paste
+  // and drop, which is also how text moves within the editor.
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const html = e.clipboardData.getData('text/html')
+    if (!postHtmlHasUnsafeMarkup(html)) return
+    e.preventDefault()
+    document.execCommand('insertHTML', false, sanitizePostHtml(html))
+  }, [])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    const html = e.dataTransfer.getData('text/html')
+    if (!postHtmlHasUnsafeMarkup(html)) return
+    e.preventDefault()
+    const range = rangeAtPoint(e.clientX, e.clientY)
+    if (range) {
+      const selection = window.getSelection()
+      selection?.removeAllRanges()
+      selection?.addRange(range)
+    }
+    document.execCommand('insertHTML', false, sanitizePostHtml(html))
+  }, [])
 
   const execCommand = useCallback((command: string, value?: string) => {
     if (command === 'createLink') {
@@ -275,7 +322,7 @@ export function WysiwygEditor({
         <div
           className="flex-1 min-h-0 prose prose-sm max-w-none p-4 overflow-auto"
           style={{ minHeight }}
-          dangerouslySetInnerHTML={{ __html: value || '<p class="text-muted-foreground">Nothing to preview...</p>' }}
+          dangerouslySetInnerHTML={{ __html: value ? sanitizePostHtml(value) : '<p class="text-muted-foreground">Nothing to preview...</p>' }}
           data-cy="wysiwyg-preview"
         />
       ) : (
@@ -302,6 +349,8 @@ export function WysiwygEditor({
             )}
             style={{ minHeight }}
             onInput={handleInput}
+            onPaste={handlePaste}
+            onDrop={handleDrop}
             onKeyDown={handleKeyDown}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}

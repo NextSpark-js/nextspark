@@ -48,6 +48,8 @@ const moduleNameMapper = isNpmMode
       // Monorepo mode: resolve from packages/core/src (rootDir is apps/dev)
       '^@nextsparkjs/core/(.*)$': '<rootDir>/../../packages/core/src/$1',
       '^@nextsparkjs/core$': '<rootDir>/../../packages/core/src',
+      // core's components import the UI package, resolved from source as core's own jest config does
+      '^@nextsparkjs/ui$': '<rootDir>/../../packages/ui/src/index.ts',
       '^@/contents/(.*)$': '<rootDir>/contents/$1',
       '^@/entities/(.*)$': '<rootDir>/contents/entities/$1',
       '^@/plugins/(.*)$': '<rootDir>/contents/plugins/$1',
@@ -97,10 +99,25 @@ module.exports = {
   // Setup files
   setupFilesAfterEnv,
 
-  // Transform configuration
+  // In npm mode, use project's tsconfig with jsx override
+  // In monorepo, use the local tsconfig.jest.json
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', {
-      tsconfig: path.join(projectRoot, 'tsconfig.json'),
+      tsconfig: isNpmMode
+        ? {
+            jsx: 'react-jsx',
+            esModuleInterop: true,
+            allowSyntheticDefaultImports: true,
+            module: 'ESNext',
+            moduleResolution: 'bundler',
+            strict: true,
+            baseUrl: projectRoot,
+            paths: {
+              '@/*': ['./*'],
+              '@/contents/*': ['./contents/*'],
+            },
+          }
+        : path.join(themeTestsRoot, 'tsconfig.jest.json'),
     }],
   },
 
