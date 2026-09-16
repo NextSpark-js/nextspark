@@ -185,9 +185,15 @@ function offendersIn(file: string): string[] {
   const pathVariables = new Map<string, string>()
   const found: string[] = []
 
+  // packages/core/templates/app holds the copy sync writes from apps/dev/app, so an exception
+  // named on the file under apps/dev/app covers that copy as well.
+  const isAllowedFile = (allowedFile: string) =>
+    allowedFile === relativePath ||
+    allowedFile.replace(/^apps\/dev\/app\//, 'packages/core/templates/app/') === relativePath
+
   const report = (node: ts.Node, kind: string, text: string) => {
     const shown = text.replace(/\s+/g, ' ').slice(0, 90)
-    if (ALLOWED.some(allowed => allowed.file === relativePath && node.getText(source).includes(allowed.text))) return
+    if (ALLOWED.some(allowed => isAllowedFile(allowed.file) && node.getText(source).includes(allowed.text))) return
     const { line } = source.getLineAndCharacterOfPosition(node.getStart(source))
     found.push(`${relativePath}:${line + 1}  ${kind}  ${shown}`)
   }
