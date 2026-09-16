@@ -8,7 +8,7 @@
     "dev:webpack": "dotenv -e .env -- sh -c 'next dev -p $PORT'",
     "build": "next build",
     "start": "dotenv -e .env -- sh -c 'next start -p $PORT'",
-    "lint": "next lint"
+    "lint": "eslint ."
   },
   "dependencies": {
     "@nextsparkjs/core": "workspace:*",
@@ -29,10 +29,10 @@
     "date-fns": "^4.1.0",
     "gray-matter": "^4.0.3",
     "lucide-react": "^0.539.0",
-    "next": "15.5.10",
+    "next": "16.3.5",
     "next-intl": "^4.3.4",
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
     "react-hook-form": "^7.62.0",
     "sonner": "^2.0.7",
     "stripe": "^18.5.0",
@@ -46,7 +46,7 @@
     "@types/react-dom": "^19",
     "@types/react-syntax-highlighter": "^15.5.13",
     "eslint": "^9",
-    "eslint-config-next": "15.5.10",
+    "eslint-config-next": "16.3.5",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
