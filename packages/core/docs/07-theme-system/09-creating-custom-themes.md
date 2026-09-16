@@ -642,7 +642,7 @@ Add to `package.json`:
 
 ```bash
 # Rebuild registry to discover new theme
-pnpm registry:build
+pnpm build:registries
 
 # Build theme CSS and copy assets
 pnpm theme:build
@@ -785,7 +785,7 @@ export const projectsFields: FieldDefinitions = {
 **Solutions:**
 1. Check `NEXT_PUBLIC_ACTIVE_THEME` environment variable
 2. Verify theme name matches directory name exactly
-3. Run `pnpm registry:build` to regenerate registry
+3. Run `pnpm build:registries` to regenerate registry
 4. Clear browser cache (Ctrl+Shift+R / Cmd+Shift+R)
 5. Restart development server
 
@@ -807,7 +807,7 @@ export const projectsFields: FieldDefinitions = {
 **Solutions:**
 1. Verify `theme.config.ts` exists
 2. Check file exports `default` or named export
-3. Run `pnpm registry:build`
+3. Run `pnpm build:registries`
 4. Check console for build errors
 5. Restart dev server
 

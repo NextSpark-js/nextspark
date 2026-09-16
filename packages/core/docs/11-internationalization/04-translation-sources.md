@@ -984,7 +984,7 @@ core/messages/es/[namespace].json
 
 **4. Rebuild Registry**:
 ```bash
-pnpm registry:build
+pnpm build:registries
 ```
 
 **5. Use in Components**:

@@ -97,7 +97,7 @@ supportedLocales: ['en', 'es', 'fr', 'de']
 2. Create translation files for the locale:
    - `core/messages/{locale}/` - Core namespaces
    - `contents/themes/{theme}/messages/{locale}.json` - Theme translations
-3. Rebuild the registry: `pnpm registry:build`
+3. Rebuild the registry: `pnpm build:registries`
 
 ### Default Locale
 
@@ -671,7 +671,7 @@ touch core/messages/fr/validation.json
 
 **5. Rebuild Registry**:
 ```bash
-pnpm registry:build
+pnpm build:registries
 ```
 
 **6. Update Locale Selector**:
@@ -709,7 +709,7 @@ Error: Locale 'fr' not found in supported locales
 **Solution**:
 1. Verify locale is in `I18N_CONFIG.supportedLocales`
 2. Check spelling matches exactly (`'fr'` not `'FR'`)
-3. Rebuild registry: `pnpm registry:build`
+3. Rebuild registry: `pnpm build:registries`
 
 #### Issue: Missing Translations
 

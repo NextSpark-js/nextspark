@@ -169,11 +169,11 @@ pnpm dev
 Use backticks for inline code:
 
 ```markdown
-The `DOCS_REGISTRY` constant provides access to all documentation metadata.
+The `DOCS_REGISTRY` constant provides access to active-theme documentation metadata.
 
-Run `nextspark registry build` to regenerate the registry.
+Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` from the repository root to regenerate all registries.
 
-Import from `@/core/lib/registries/docs-registry`.
+Import from `@nextsparkjs/registries/docs-registry`.
 ```
 
 ### Lists
@@ -480,20 +480,20 @@ View [Next.js documentation](https://nextjs.org/docs)
 
 ### Regenerating Registry
 
-After adding or modifying documentation:
+For published documentation, add or modify markdown under the active theme's `docs/public/` or `docs/superadmin/` directory. Then regenerate every registry:
 
 ```bash
-nextspark registry build
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
-This regenerates `core/lib/registries/docs-registry.ts` with updated metadata.
+The generated documentation module is written to the consuming project's `.nextspark/registries/docs-registry.ts` and imported as `@nextsparkjs/registries/docs-registry`. Core and plugin documentation are internal reference material and are not registry sources.
 
 ### Development Workflow
 
-1. Create/edit markdown files
-2. Run `nextspark registry build`
-3. Start dev server: `pnpm dev`
-4. Navigate to `/docs` to preview
+1. Create or edit active-theme public or superadmin markdown files
+2. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
+3. Start the development server: `pnpm dev`
+4. Navigate to the corresponding documentation route
 5. Verify navigation and rendering
 
 ### Validation

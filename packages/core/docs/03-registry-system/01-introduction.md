@@ -472,7 +472,7 @@ const tree = getEntityTree()
 
 ```bash
 # Force rebuild
-pnpm registry:build
+pnpm build:registries
 
 # Output:
 # 🔍 Discovering content...
@@ -607,7 +607,7 @@ core/lib/registries/
 **To make changes:**
 1. Edit source files in `contents/` directory
 2. Or modify `core/scripts/build/registry.mjs` logic
-3. Run `pnpm registry:build` to regenerate
+3. Run `pnpm build:registries` to regenerate
 4. Restart dev server to apply
 
 ---

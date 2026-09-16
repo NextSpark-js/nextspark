@@ -338,8 +338,8 @@ never reach a route in the first place:
 ```typescript
 export const appConfig = {
   docs: {
-    enabled: true,           // Turn the whole documentation system on/off
-    publicAccess: true,      // Serve /docs without requiring a session
+    enabled: true,
+    publicAccess: true,      // false: /docs asks for a session
     searchEnabled: true,
     breadcrumbs: true,
 
@@ -353,11 +353,11 @@ export const appConfig = {
 ```
 
 **Best Practices:**
-- **`public.enabled: true`** - Keep the theme's user-facing docs visible
-- **`superadmin.enabled`** - Usually `true` for the team that runs the
-  instance; irrelevant to anonymous visitors, since `/superadmin/docs`
-  already sits behind the superadmin guard
-- Use a descriptive `label` for `public` in production (e.g. "Help Center")
+- **`publicAccess`** - `false` when `/docs` is for signed-in users only;
+  `/superadmin/docs` already sits behind the superadmin guard either way
+- **`public.enabled: true`** - Keep the `/docs` sidebar rendered
+- Use a descriptive `public.label` in production (e.g. "Help Center"): it is
+  the heading of the `/docs` sidebar
 
 ### Theme Documentation
 

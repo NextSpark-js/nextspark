@@ -155,7 +155,7 @@ Brief description of what the plugin does.
 
 3. Rebuild registry:
    ```bash
-   pnpm registry:build
+   pnpm build:registries
    ```
 
 ## Usage

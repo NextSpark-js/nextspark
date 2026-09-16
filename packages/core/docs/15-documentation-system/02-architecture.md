@@ -138,22 +138,22 @@ means for cross-referencing between them.
 
 ### Documentation Configuration
 
-Documentation visibility and behavior is controlled via the `docs` block of
-`app.config.ts` (`DocsConfig` in `core/lib/config/types.ts`):
+Documentation access and the public sidebar are configured in the `docs` block
+of `app.config.ts` (`DocsConfig` in `core/lib/config/types.ts`):
 
 ```typescript
 export const appConfig = {
   docs: {
-    enabled: true,           // Turn the whole documentation system on/off
-    publicAccess: true,      // Serve /docs without requiring a session
-    searchEnabled: true,     // Enable search in the sidebar
-    breadcrumbs: true,       // Show breadcrumbs navigation
+    enabled: true,
+    publicAccess: true,      // false: /docs asks for a session
+    searchEnabled: true,
+    breadcrumbs: true,
 
-    // /docs - the active theme's docs/public/
+    // Sidebar settings of /docs - the active theme's docs/public/
     public: {
-      enabled: true,           // Show/hide in the sidebar
-      open: true,              // Expand section by default on page load
-      label: "Documentation",  // Custom label for the sidebar
+      enabled: true,           // false: the /docs sidebar renders nothing
+      open: true,
+      label: "Documentation",  // Heading of the /docs sidebar
     },
 
     // /superadmin/docs - the active theme's docs/superadmin/
@@ -166,13 +166,41 @@ export const appConfig = {
 }
 ```
 
-**Configuration Properties (`DocsCategoryConfig`):**
+#### Who can read /docs
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `enabled` | boolean | Show/hide this category in the sidebar |
-| `open` | boolean | Whether the category is expanded by default on page load |
-| `label` | string | Custom label displayed in the sidebar for the category |
+`docs.publicAccess` is the only access setting. The generated proxy
+(`proxy.ts`, from `core/templates/proxy.ts`) reads it through `isDocsPublic()`
+in `core/lib/docs/access.ts` on every request under `/docs`:
+
+| `docs` block | `/docs` without a session |
+|--------------|---------------------------|
+| `publicAccess: false` | Redirects to `/login?callbackUrl=...` |
+| `publicAccess: true`, or no `publicAccess` | Served |
+| no `docs` block | Served |
+
+`docs.public` is not an access setting: it holds the sidebar settings of the
+public category, and hiding that category (`public.enabled: false`) does not
+make `/docs` private.
+
+`/superadmin/docs` is not affected by `publicAccess`: like every `/superadmin`
+route, it needs a signed-in user with the `superadmin` or `developer` role.
+
+**Older app configs.** Before `publicAccess` existed, an app config said
+`public: false` for private docs. That boolean still means
+`publicAccess: false`, and the proxy logs once per server process what to
+write instead. Either one set to `false` keeps `/docs` private, so a leftover
+`public: false` next to `publicAccess: true` still asks for a session. To
+migrate, write `publicAccess: false` and turn `public` into its
+`{ enabled, open, label }` settings.
+
+#### What each property does today
+
+| Property | Read by | Effect |
+|----------|---------|--------|
+| `publicAccess` | proxy | Whether `/docs` needs a session (see above) |
+| `public.enabled` | `DocsSidebar` | `false` renders no `/docs` sidebar |
+| `public.label` | `DocsSidebar` | Heading of the `/docs` sidebar |
+| `enabled`, `searchEnabled`, `breadcrumbs`, `public.open`, `superadmin.*` | nothing yet | Declared in `DocsConfig`; no component or route reads them, so setting them changes nothing |
 
 ## Routing System
 
@@ -355,7 +383,7 @@ docs served at all:
 
 - **Location:** `contents/themes/[ACTIVE_THEME]/docs/public/` and `docs/superadmin/`
 - **Detection:** Via `NEXT_PUBLIC_ACTIVE_THEME` environment variable
-- **Visibility:** Controlled via the `docs.public`/`docs.superadmin` configuration (`enabled`, `open`, `label` properties)
+- **Access and sidebar:** `docs.publicAccess`, `docs.public.enabled` and `docs.public.label` - see [Documentation Configuration](#documentation-configuration)
 
 ### Core and Plugin Docs
 

@@ -77,7 +77,7 @@ Update all scripts that reference `core/`:
 // AFTER
 {
   "scripts": {
-    "build:registries": "node packages/core/scripts/build/registry.mjs",
+    "build:registries": "nextspark registry:build",
     "db:migrate": "node packages/core/scripts/db/run-migrations.mjs"
   }
 }

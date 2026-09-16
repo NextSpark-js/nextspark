@@ -569,7 +569,7 @@ export function LoginForm() {
 
 ```typescript
 // core/components/docs/navigation/DocsSidebar.tsx
-import { DOCS_REGISTRY } from '@/core/lib/registries/docs-registry'
+import { DOCS_REGISTRY } from '@nextsparkjs/registries/docs-registry'
 import { cn } from '@/core/lib/utils'
 
 interface DocsSidebarProps {
@@ -577,7 +577,7 @@ interface DocsSidebarProps {
 }
 
 export function DocsSidebar({ currentPath }: DocsSidebarProps) {
-  const sections = DOCS_REGISTRY.sections
+  const sections = DOCS_REGISTRY.public
 
   return (
     <nav className="w-64 border-r p-4 space-y-6">

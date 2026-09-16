@@ -307,13 +307,13 @@ All required tables exist!
 
 **Generate static registries:**
 ```bash
-pnpm registry:build
+pnpm build:registries
 ```
 
 **What happens:**
 - Scans `contents/themes/` for entities, messages, configs
 - Scans `contents/plugins/` for plugin configs
-- Generates static registry files in `core/lib/registries/`
+- Generates static registry files in `.nextspark/registries/`
 - Creates server and client versions
 - Builds route handlers for dynamic routes
 
@@ -330,7 +330,8 @@ Building registries...
 ✓ Generating theme-registry.ts
 ✓ Generating translation-registry.ts
 ✓ Generating route-handlers.ts
-✓ Generating config-registry.ts
+✓ Generating permissions-registry.ts
+✓ Generating docs-registry.ts in .nextspark/registries/
 
 Registry build completed in 5.2s
 ```
@@ -367,28 +368,25 @@ Building theme: default
 Theme build completed in 1.8s
 ```
 
-### Step 7: Build Documentation Index
+### Step 7: Build Documentation Registry
 
-**Index markdown documentation:**
+**Generate documentation metadata with every registry:**
 ```bash
-nextspark registry build
+pnpm build:registries
 ```
 
 **What happens:**
-- Scans `core/docs/**/*.md`
-- Parses frontmatter and headings
-- Creates searchable index
-- Generates navigation structure
-- Outputs to `core/lib/registries/docs-registry.ts`
+- Reads the active theme's `docs/public/` and `docs/superadmin/` directories
+- Derives navigation metadata from numbered sections and markdown files
+- Outputs `.nextspark/registries/docs-registry.ts`
+- Supports imports through `@nextsparkjs/registries/docs-registry`
 
 **Expected output:**
 ```text
-Building documentation index...
-✓ Scanning core/docs/
-✓ Indexing 123 markdown files
+Building registries...
 ✓ Generating docs-registry.ts
 
-Docs build completed in 1.2s
+Registry build completed
 ```
 
 ### Step 8: Start Development Server
@@ -403,7 +401,7 @@ pnpm dev
 ```text
 1. [THEME]    Building theme CSS... ✓ (2.1s)
 2. [REGISTRY] Building registries... ✓ (5.4s)
-3. [DOCS]     Building docs index... ✓ (1.1s)
+3. [DOCS]     Generating active-theme docs registry... ✓ (1.1s)
 4. [PLUGINS]  Starting plugin dev servers... ✓ (1.8s)
 5. [APP]      Starting Next.js with Turbopack... ✓ (3.2s)
 
@@ -480,8 +478,9 @@ pnpm db:verify
 
 ```bash
 # Check registries generated
-test -d core/lib/registries && echo "✅ Registries directory exists" || echo "❌ Registries missing"
-test -f core/lib/registries/entity-registry.ts && echo "✅ Entity registry exists" || echo "❌ Entity registry missing"
+test -d .nextspark/registries && echo "✅ Registries directory exists" || echo "❌ Registries missing"
+test -f .nextspark/registries/entity-registry.ts && echo "✅ Entity registry exists" || echo "❌ Entity registry missing"
+test -f .nextspark/registries/docs-registry.ts && echo "✅ Docs registry exists" || echo "❌ Docs registry missing"
 
 # Check theme CSS generated
 test -f app/theme-styles.css && echo "✅ Theme CSS exists" || echo "❌ Theme CSS missing"
@@ -685,8 +684,8 @@ node core/scripts/build/registry.mjs --build --verbose
 pnpm type-check
 
 # Clear and rebuild
-rm -rf core/lib/registries/*
-pnpm registry:build
+rm -rf .nextspark/registries
+pnpm build:registries
 ```
 
 ### "Theme not found: default"

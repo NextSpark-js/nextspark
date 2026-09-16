@@ -42,9 +42,10 @@ pnpm dev
 - Copies: `public/theme/` assets
 - Triggers: Browser hot reload
 
-**2. REGISTRY (build-registry.mjs --watch)**
-- Watches: `contents/themes/`, `contents/plugins/`, `core/docs/**/*.md`
-- Rebuilds: `core/lib/registries/*.ts`, `core/lib/registries/docs-registry.ts` included
+**2. REGISTRY (`nextspark registry:watch`)**
+- Watches: `CONFIG.pluginsDir`, `<contentsDir>/entities`, `CONFIG.themesDir`, and `<contentsDir>/config`
+- Rebuilds: `.nextspark/registries/*.ts`, including `docs-registry.ts`
+- Documentation metadata comes from the active theme's `docs/public/` and `docs/superadmin/` directories
 - Triggers: Server restart needed
 
 **3. PLUGINS (turbo dev)**
@@ -105,19 +106,15 @@ contents/themes/default/styles/
 
 **Watches:**
 ```text
-contents/themes/default/
-├── config/
-│   ├── theme.config.ts
-│   └── app.config.ts
-└── entities/*/
-
-contents/plugins/*/
-└── plugin.config.ts
+CONFIG.pluginsDir
+<contentsDir>/entities
+CONFIG.themesDir
+<contentsDir>/config
 ```
 
 **On change:**
 1. Regenerates registries
-2. Outputs to `core/lib/registries/`
+2. Outputs to `.nextspark/registries/`
 3. **Requires server restart**
 
 **Why restart needed:**
@@ -142,7 +139,7 @@ pnpm dev                   # All processes
 
 **Build manually:**
 ```bash
-pnpm registry:build        # Registries only, including docs
+pnpm build:registries  # Registries only, including docs
 pnpm theme:build           # Theme CSS only
 ```
 
@@ -203,8 +200,8 @@ pnpm type-check            # TypeScript
 **Registry changes not detected:**
 ```bash
 # Stop server
-rm -rf core/lib/registries/*
-pnpm registry:build
+rm -rf .nextspark/registries
+pnpm build:registries
 pnpm dev
 ```
 
@@ -237,9 +234,6 @@ pnpm dev
 [REGISTRY] Scanning entities...
 [REGISTRY] ✓ Registry build completed (5.4s)
 
-[DOCS]     Indexing 123 markdown files
-[DOCS]     ✓ Docs indexed (1.1s)
-
 [PLUGINS]  Starting workspace dev servers
 [PLUGINS]  ✓ Plugins ready (1.8s)
 
@@ -264,7 +258,7 @@ pnpm dev
 
 ```text
 .next/                    # Next.js cache
-core/lib/registries/      # All registry files
+.nextspark/registries/     # All registry files
 app/theme-styles.css      # Compiled theme CSS
 public/theme/             # Theme assets
 ```
@@ -353,13 +347,13 @@ pnpm dev
 - Next.js: Hot module replacement
 
 **Manual commands:**
-- `pnpm registry:build` - Rebuild registries
+- `pnpm build:registries` - Rebuild registries
 - `pnpm theme:build` - Rebuild theme
 - `pnpm lint` - Check code quality
 
 **Never edit:**
 - `.next/`
-- `core/lib/registries/`
+- `.nextspark/registries/`
 - `app/theme-styles.css`
 - `public/theme/`
 

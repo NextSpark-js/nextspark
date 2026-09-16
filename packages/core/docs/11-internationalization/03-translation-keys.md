@@ -990,7 +990,7 @@ t('login.title')
 
 **3. Run validation**:
 ```bash
-pnpm registry:build
+pnpm build:registries
 # Check for missing key warnings
 ```
 

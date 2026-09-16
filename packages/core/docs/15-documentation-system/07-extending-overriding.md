@@ -147,25 +147,25 @@ it will be scanned and served like any other theme page.
 
 ### Production Visibility
 
-Control documentation visibility via the `docs` block of `app.config.ts`
-(`DocsConfig` in `core/lib/config/types.ts`) - it only configures the two
-categories that actually get served, `public` (`/docs`) and `superadmin`
-(`/superadmin/docs`):
+Control who can read `/docs` and how its sidebar is titled via the `docs`
+block of `app.config.ts` (`DocsConfig` in `core/lib/config/types.ts`) - it
+only knows the two categories that actually get served, `public` (`/docs`)
+and `superadmin` (`/superadmin/docs`):
 
 ```typescript
 // contents/themes/my-theme/config/app.config.ts
 export const appConfig = {
   docs: {
-    enabled: true,           // Turn the whole documentation system on/off
-    publicAccess: true,      // Serve /docs without requiring a session
-    searchEnabled: true,     // Control search functionality in sidebar
-    breadcrumbs: true,       // Show/hide breadcrumbs navigation
+    enabled: true,
+    publicAccess: true,      // false: /docs asks for a session
+    searchEnabled: true,
+    breadcrumbs: true,
 
-    // /docs - this theme's docs/public/
+    // Sidebar settings of /docs - this theme's docs/public/
     public: {
-      enabled: true,        // Show/hide in the sidebar
-      open: true,           // Expand section by default
-      label: "User Guide",  // Custom label for sidebar
+      enabled: true,        // false: the /docs sidebar renders nothing
+      open: true,
+      label: "User Guide",  // Heading of the /docs sidebar
     },
 
     // /superadmin/docs - this theme's docs/superadmin/
@@ -177,6 +177,9 @@ export const appConfig = {
   }
 }
 ```
+
+Only `publicAccess`, `public.enabled` and `public.label` change anything
+today; see [What each property does today](./02-architecture.md#what-each-property-does-today).
 
 **Configuration Properties (`DocsCategoryConfig`):**
 
@@ -350,14 +353,14 @@ above) - written for someone reading the plugin's source, not for an end user.
 
 ## Conditional Documentation
 
-### Development vs Production
+### Public or Private Docs
 
-Documentation visibility can be configured independently for `public`
-(`/docs`) and `superadmin` (`/superadmin/docs`) using the `docs` block of
-`app.config.ts` - there is no third category, since core and plugin docs are
-never served regardless of configuration:
+`docs.publicAccess` decides whether `/docs` needs a session. `/superadmin/docs`
+always needs a `superadmin` or `developer` session, whatever this block says,
+and there is no third category, since core and plugin docs are never served
+regardless of configuration.
 
-**End-user focused:**
+**Open to visitors:**
 ```typescript
 export const appConfig = {
   docs: {
@@ -369,22 +372,21 @@ export const appConfig = {
 }
 ```
 
-**Admin docs hidden entirely:**
+**Signed-in users only:**
 ```typescript
 export const appConfig = {
   docs: {
     enabled: true,
-    publicAccess: true,
+    publicAccess: false,
     public: { enabled: true, open: true, label: "Documentation" },
-    superadmin: { enabled: false, open: false, label: "Admin Docs" },
+    superadmin: { enabled: true, open: false, label: "Admin Docs" },
   }
 }
 ```
 
-**Benefits:**
-- Independent control over `/docs` and `/superadmin/docs`
-- Different labels for different audiences
-- Control default expansion state per category
+An app config written before `publicAccess` existed may say `public: false`
+instead. It still keeps `/docs` private, and the proxy logs what to write in
+its place; see [Who can read /docs](./02-architecture.md#who-can-read-docs).
 
 ## Rebuilding Documentation
 
@@ -424,7 +426,7 @@ pnpm dev
 **Strategy:** Write end-user customization and feature guides directly into
 the active theme's `docs/public/` (feature guides that happen to cover a
 plugin's functionality belong here too, since that is the only place
-they'll ever be read). Keep `docs.public.enabled: true`.
+they'll ever be read). Keep `docs.publicAccess: true` and `docs.public.enabled: true`.
 
 **Example Navigation:**
 ```text

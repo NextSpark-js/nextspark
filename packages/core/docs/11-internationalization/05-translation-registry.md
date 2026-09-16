@@ -47,10 +47,10 @@ The registry is generated automatically during the build process:
 
 ```bash
 # Generate registry
-pnpm registry:build
+pnpm build:registries
 
 # Watch mode (development)
-pnpm registry:build-watch
+nextspark registry:watch
 ```
 
 ### Generation Process
@@ -350,7 +350,7 @@ const messages = await loadThemeTranslation('default', 'en')
 **2. Rebuild Registry After Changes**:
 ```bash
 # After adding/modifying translations
-pnpm registry:build
+pnpm build:registries
 ```
 
 **3. Use Type-Safe Imports**:
@@ -365,7 +365,7 @@ function loadMessages(locale: SupportedLocale) {
 **4. Leverage Build-Time Validation**:
 ```bash
 # Registry build catches errors early
-pnpm registry:build
+pnpm build:registries
 # Error: Missing translation file for locale 'es'
 ```
 
@@ -409,7 +409,7 @@ const messages = await loadThemeTranslation('default', 'en')
 
 # ✅ GOOD
 # Add new translation file
-pnpm registry:build
+pnpm build:registries
 # Commit both translation file AND regenerated registry
 ```
 
@@ -436,7 +436,7 @@ const messages = await loadThemeTranslation('default', locale)
 **Solution**:
 ```bash
 # Rebuild registry
-pnpm registry:build
+pnpm build:registries
 
 # Verify generation
 ls -la core/lib/registries/translation-registry.ts
@@ -457,7 +457,7 @@ supportedLocales: ['en', 'es', 'fr']
 
 2. Rebuild registry:
 ```bash
-pnpm registry:build
+pnpm build:registries
 ```
 
 3. Restart TypeScript server in IDE
@@ -478,7 +478,7 @@ touch contents/themes/default/messages/fr.json
 echo '{}' > contents/themes/default/messages/fr.json
 
 # Rebuild registry
-pnpm registry:build
+pnpm build:registries
 ```
 
 #### Issue: Slow Translation Loading
@@ -505,10 +505,10 @@ console.timeEnd('translation-load')
 
 ```bash
 # Watch mode - auto-rebuild on changes
-pnpm registry:build-watch
+nextspark registry:watch
 
 # Manual rebuild
-pnpm registry:build
+pnpm build:registries
 ```
 
 ### CI/CD Integration
@@ -530,7 +530,7 @@ jobs:
         run: pnpm install
 
       - name: Build registry
-        run: pnpm registry:build
+        run: pnpm build:registries
 
       - name: Validate translations
         run: pnpm lint:i18n
@@ -548,7 +548,7 @@ jobs:
 # Check if translation files changed
 if git diff --cached --name-only | grep -q "messages/.*\.json"; then
   echo "Translation files changed - rebuilding registry..."
-  pnpm registry:build
+  pnpm build:registries
 
   # Stage regenerated registry
   git add core/lib/registries/translation-registry.ts

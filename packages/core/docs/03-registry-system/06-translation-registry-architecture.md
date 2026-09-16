@@ -626,7 +626,7 @@ const activeTranslations = await loadThemeTranslation('default', activeLocale)
 **Solutions:**
 1. Check `messages/fr.json` exists in theme
 2. Verify JSON is valid
-3. Run `pnpm registry:build` to regenerate
+3. Run `pnpm build:registries` to regenerate
 4. Restart dev server
 
 ### Wrong Locale Loaded

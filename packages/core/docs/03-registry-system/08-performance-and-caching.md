@@ -282,7 +282,7 @@ pnpm build
 
 ```bash
 # Rebuild all registries
-pnpm registry:build
+pnpm build:registries
 
 # Output:
 🔍 Discovering content...
@@ -368,7 +368,7 @@ const entity = ENTITY_REGISTRY.tasks  // Always valid, no staleness
 ```typescript
 // Content change flow
 1. Edit: contents/themes/default/entities/tasks/tasks.config.ts
-2. Rebuild: pnpm registry:build (or auto in watch mode)
+2. Rebuild: pnpm build:registries (or auto in watch mode)
 3. Restart: pnpm dev (restart dev server)
 4. Access: ENTITY_REGISTRY.tasks (now up-to-date)
 
@@ -626,7 +626,7 @@ console.log(`  Heap Used: ${(used.heapUsed / 1024 / 1024).toFixed(2)} MB`)
 
 ```bash
 # Track build time over time
-pnpm registry:build --verbose
+time pnpm build:registries
 
 # Output:
 🔍 Discovering content... (2.1s)

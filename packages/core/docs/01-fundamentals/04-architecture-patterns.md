@@ -93,7 +93,7 @@ import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
 2. **ALWAYS** use registries for content access
 3. **ONLY** `core/scripts/build/registry.mjs` can import from `@/contents`
 4. **Server vs Client** - Use appropriate registry version
-5. **Regenerate** - Run `pnpm registry:build` after content changes
+5. **Regenerate** - Run `pnpm build:registries` after content changes
 
 ---
 
@@ -107,15 +107,16 @@ The build-time generation pattern pre-compiles all dynamic content into static c
 
 **1. Registries** (`core/scripts/build/registry.mjs`)
 ```bash
-# Input: Contents from themes/plugins/entities, and markdown documentation
+# Input: Contents from themes/plugins/entities and active-theme documentation
 contents/themes/default/entities/tasks/tasks.config.ts
 contents/plugins/ai/plugin.config.ts
-core/docs/**/*.md
+contents/themes/default/docs/public/**/*.md
+contents/themes/default/docs/superadmin/**/*.md
 
 # Output: Static registries
-core/lib/registries/entity-registry.ts
-core/lib/registries/plugin-registry.ts
-core/lib/registries/docs-registry.ts
+.nextspark/registries/entity-registry.ts
+.nextspark/registries/plugin-registry.ts
+.nextspark/registries/docs-registry.ts
 ```
 
 **2. Theme CSS** (`core/scripts/build/theme.mjs`)
@@ -154,7 +155,7 @@ public/theme/images/
 **Watch Mode:**
 ```bash
 # Development - auto-rebuild on changes
-pnpm registry:build-watch  # Rebuilds registries on content changes
+nextspark registry:watch  # Rebuilds registries on content changes
 pnpm theme:build-watch     # Rebuilds theme CSS on style changes
 pnpm dev                   # Runs all watchers + Next.js dev server
 ```

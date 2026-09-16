@@ -497,10 +497,10 @@ export async function POST() {
 **Build Commands**:
 ```bash
 # Rebuild registry
-pnpm registry:build
+pnpm build:registries
 
 # Rebuild in watch mode (development)
-pnpm registry:build-watch
+nextspark registry:watch
 
 # Full build (includes registry)
 pnpm build
@@ -655,7 +655,7 @@ if (hasPluginFunction('ai', 'generateText')) {
 ls contents/plugins/my-plugin/plugin.config.ts
 
 # Rebuild registry
-pnpm registry:build
+pnpm build:registries
 
 # Verify plugin in generated registry
 cat core/lib/registries/plugin-registry.ts | grep "'my-plugin'"

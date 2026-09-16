@@ -802,7 +802,7 @@ DELETE /api/v1/projects/:id   - Delete project
 
 ```bash
 # Stop dev server (Ctrl+C)
-pnpm registry:build
+pnpm build:registries
 
 # Restart dev server
 pnpm dev
@@ -1199,7 +1199,7 @@ export const appConfig = {
 **Rebuild registries and restart:**
 
 ```bash
-pnpm registry:build
+pnpm build:registries
 # Restart pnpm dev
 ```
 
@@ -1530,7 +1530,7 @@ projects.fields.ts  |   100   |   100    |   100   |   100   |
 # Stop dev server (Ctrl+C)
 
 # Rebuild registries
-pnpm registry:build
+pnpm build:registries
 ```
 
 **Verify projects entity registered:**
@@ -1782,7 +1782,7 @@ DROP TABLE IF EXISTS projects CASCADE;
 3. **Clear registry cache:**
 ```bash
 rm -rf .next
-pnpm registry:build
+pnpm build:registries
 ```
 
 4. **Restart services**
@@ -1900,8 +1900,8 @@ Then re-run migration.
 
 **Solution:**
 ```bash
-rm -rf core/lib/registries/*
-pnpm registry:build
+rm -rf .nextspark/registries
+pnpm build:registries
 # Restart dev server
 ```
 

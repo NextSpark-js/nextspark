@@ -440,7 +440,7 @@ features: {
 
 ```bash
 # Ctrl+C to stop server
-pnpm registry:build   # Rebuild registries
+pnpm build:registries   # Rebuild registries
 pnpm dev              # Restart server
 ```
 
@@ -714,7 +714,7 @@ export function useCustomFeature() {
 4. Check `tsconfig.json` paths
 
 **Build errors:**
-1. Check registry build: `pnpm registry:build`
+1. Check registry build: `pnpm build:registries`
 2. Verify entity config syntax
 3. Check for circular imports
 4. Clear build cache: `rm -rf .next`
@@ -839,7 +839,7 @@ export default function Page() {
 ### Step 5: Rebuild and Restart
 
 ```bash
-pnpm registry:build
+pnpm build:registries
 pnpm dev
 ```
 
@@ -1482,7 +1482,7 @@ module.exports = {
 
 - [ ] Environment variables configured
 - [ ] Database migrations run
-- [ ] Registry built (`pnpm registry:build`)
+- [ ] Registry built (`pnpm build:registries`)
 - [ ] Tests passing (`pnpm test`)
 - [ ] Build successful (`pnpm build`)
 - [ ] Bundle size checked (`ANALYZE=true pnpm build`)

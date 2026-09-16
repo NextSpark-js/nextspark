@@ -726,7 +726,7 @@ Fetch and display weather data from OpenWeather API.
 
 4. Rebuild registry:
    ```bash
-   pnpm registry:build
+   pnpm build:registries
    ```
 
 ## Usage
@@ -787,7 +787,7 @@ MIT
 
 ```bash
 # Rebuild plugin registry
-pnpm registry:build
+pnpm build:registries
 ```
 
 **Registry will generate**:

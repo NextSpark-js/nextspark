@@ -638,7 +638,7 @@ const handler = getPluginRouteHandler('ai/generate', 'POST')
 **Solutions:**
 1. Check route file exists: `contents/plugins/[plugin]/api/[path]/route.ts`
 2. Verify POST method is exported in route file
-3. Run `pnpm registry:build` to regenerate
+3. Run `pnpm build:registries` to regenerate
 4. Restart dev server
 
 ### Wrong HTTP Method

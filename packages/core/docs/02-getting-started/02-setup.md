@@ -702,7 +702,7 @@ RUNTIME (every request):
 
 **Build registries manually:**
 ```bash
-pnpm registry:build
+pnpm build:registries
 ```
 
 **Expected output:**
@@ -745,7 +745,7 @@ head -20 core/lib/registries/entity-registry.ts
 **Start registry watch mode:**
 ```bash
 # In a separate terminal
-pnpm registry:build-watch
+nextspark registry:watch
 ```
 
 **What happens:**
@@ -771,7 +771,7 @@ pnpm registry:build-watch
 - Must stop `pnpm dev` and restart
 
 **Workflow:**
-1. Run `pnpm registry:build-watch` in terminal 1
+1. Run `nextspark registry:watch` in terminal 1
 2. Run `pnpm dev` in terminal 2
 3. Edit entity/plugin/theme files
 4. Registry rebuilds automatically
@@ -898,7 +898,7 @@ pnpm dev
 
 **Terminal 2 - Registry Watch (Optional):**
 ```bash
-pnpm registry:build-watch
+nextspark registry:watch
 # Automatically rebuilds registries on content changes
 # Use when actively developing entities/plugins
 ```
@@ -930,7 +930,7 @@ Ctrl+b "
 Ctrl+b arrow-keys
 
 # Pane 1: pnpm dev
-# Pane 2: pnpm registry:build-watch
+# Pane 2: nextspark registry:watch
 # Pane 3: commands
 ```
 
@@ -947,7 +947,7 @@ Ctrl+a n (next)
 Ctrl+a p (previous)
 
 # Window 1: pnpm dev
-# Window 2: pnpm registry:build-watch
+# Window 2: nextspark registry:watch
 # Window 3: commands
 ```
 
@@ -1246,9 +1246,9 @@ Go through this checklist to verify everything is set up correctly:
 - [ ] TypeScript server working (autocomplete functional)
 
 ### Registry System
-- [ ] Registry build successful (`pnpm registry:build` completes)
+- [ ] Registry build successful (`pnpm build:registries` completes)
 - [ ] All 16 registry files created
-- [ ] Registry watch mode works (`pnpm registry:build-watch`)
+- [ ] Registry watch mode works (`nextspark registry:watch`)
 - [ ] Understand registry rebuild requires server restart
 
 ### Theme
@@ -1369,10 +1369,10 @@ Error: Cannot find module '@/contents/themes/default/entities/tasks/tasks.config
 # Stop dev server
 # Clear build artifacts
 rm -rf .next
-rm -rf core/lib/registries/*
+rm -rf .nextspark/registries
 
 # Rebuild from scratch
-pnpm registry:build
+pnpm build:registries
 
 # Restart dev server
 pnpm dev

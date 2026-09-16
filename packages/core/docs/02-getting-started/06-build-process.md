@@ -14,7 +14,7 @@ When you run `pnpm dev`, these processes execute in order:
 1. TypeScript Config  (2-3s)   → update-tsconfig.mjs
 2. Theme Build        (2-3s)   → build-theme.mjs
 3. Registry Build     (5-10s)  → build-registry.mjs
-4. Docs Index         (1-2s)   → registry.mjs (docs-registry generator)
+4. Docs Registry      (1-2s)   → registry.mjs (active-theme docs)
 5. Plugin Dev         (1-2s)   → turbo dev
 6. Next.js Dev        (2-3s)   → next dev --turbopack
 
@@ -89,7 +89,7 @@ public/theme/                 # Copied assets
 **What it does:**
 1. Scans `contents/themes/` for entities, configs
 2. Scans `contents/plugins/` for plugin configs
-3. Generates static registries in `core/lib/registries/`
+3. Generates static registries in `.nextspark/registries/`
 
 **Performance:**
 - **Runtime loading:** ~140ms per entity
@@ -98,16 +98,34 @@ public/theme/                 # Copied assets
 
 **Generated files:**
 ```text
-core/lib/registries/
-├── entity-registry.ts           # Server-only
-├── entity-registry.client.ts    # Client-safe
-├── plugin-registry.ts           # Server-only
-├── plugin-registry.client.ts    # Client-safe
-├── theme-registry.ts
-├── translation-registry.ts
+.nextspark/registries/
+├── api-docs-registry.ts
+├── api-presets-registry.ts
+├── billing-registry.ts
+├── block-registry.client.ts
+├── block-registry.lazy.ts
+├── block-registry.ts
+├── docs-registry.ts
+├── email-registry.ts
+├── entity-registry.client.ts
+├── entity-registry.ts
+├── entity-types.ts
+├── icon-registry.ts
+├── index.ts
+├── mcp-registry.ts
+├── middleware-registry.ts
+├── namespace-registry.ts
+├── permissions-registry.ts
+├── plugin-registry.client.ts
+├── plugin-registry.ts
 ├── route-handlers.ts
-├── config-registry.ts
-└── docs-registry.ts
+├── scheduled-actions-registry.ts
+├── scope-registry.ts
+├── template-registry.client.ts
+├── template-registry.ts
+├── testing-registry.ts
+├── theme-registry.ts
+└── translation-registry.ts
 ```
 
 **Why this is critical:**
@@ -127,25 +145,24 @@ core/lib/registries/
 
 ---
 
-## Step 4: Documentation Index
+## Step 4: Documentation Registry
 
-**Script:** `core/scripts/build/registry.mjs` (docs-registry generator, runs together with Step 3)
+**Script:** `core/scripts/build/registry.mjs` (calls `generateDocsRegistry()` with Step 3)
 
 **What it does:**
-- Scans `core/docs/**/*.md`
-- Parses frontmatter and headings
-- Creates searchable index
-- Generates navigation
+- Reads the active theme's `docs/public/` and `docs/superadmin/` directories
+- Derives sections and pages from numbered directories and markdown files
+- Generates navigation metadata for the public and superadmin documentation routes
 
 **Output:**
 ```text
-core/lib/registries/docs-registry.ts
+.nextspark/registries/docs-registry.ts
 ```
 
 **Enables:**
-- Fast documentation search
-- Auto-generated navigation
-- Metadata indexing
+- In-memory navigation metadata
+- Static documentation routes
+- Package imports through `@nextsparkjs/registries/docs-registry`
 
 ---
 
@@ -195,7 +212,7 @@ turbo dev --filter='@nextspark/plugin-*'
 ```text
 1. TypeScript Config  → update-tsconfig.mjs
 2. Theme Build        → build-theme.mjs
-3. Registry Build     → build-registry.mjs --build (docs index included)
+3. Registry Build     → registry.mjs (includes active-theme docs)
 4. Next.js Build      → next build
 
 Total: 2-3 minutes
@@ -226,7 +243,7 @@ Total: 2-3 minutes
 .next/
 
 # Registry files
-core/lib/registries/*.ts
+.nextspark/registries/*.ts
 
 # Theme CSS
 app/theme-styles.css
@@ -239,7 +256,7 @@ public/theme/
 - **Entities:** Edit in `contents/themes/*/entities/`
 - **Plugins:** Edit in `contents/plugins/`
 - **Theme:** Edit in `contents/themes/*/styles/`
-- **Rebuild:** Run `pnpm registry:build` or restart `pnpm dev`
+- **Rebuild:** Run `pnpm build:registries` or restart `pnpm dev`
 
 ---
 
@@ -247,8 +264,8 @@ public/theme/
 
 **Registry:**
 ```bash
-pnpm registry:build         # One-time build
-pnpm registry:build-watch   # Watch mode
+pnpm build:registries          # One-time build
+nextspark registry:watch       # Watch mode
 ```
 
 **Theme:**
@@ -258,7 +275,7 @@ pnpm theme:build            # One-time build
 
 **Docs:**
 ```bash
-nextspark registry build    # Rebuilds every registry, including docs
+pnpm build:registries  # Rebuilds every registry, including docs
 ```
 
 **All:**
@@ -292,7 +309,7 @@ pnpm build                  # Production build
 1. TypeScript config (excludes inactive themes)
 2. Theme build (CSS + assets)
 3. **Registry build** (CRITICAL - ~17,255x faster)
-4. Docs index (searchable docs)
+4. Docs registry (active-theme public and superadmin docs)
 5. Plugin dev (monorepo coordination)
 6. Next.js dev (Turbopack)
 

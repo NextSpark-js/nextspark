@@ -65,8 +65,8 @@ export const APP_CONFIG_OVERRIDES = {
   // Documentation
   docs: {
     enabled: true,
-    public: true,
-    showPluginsDocsInProd: false,
+    publicAccess: true, // false sends visitors without a session to login
+    public: { enabled: true, open: true, label: 'Documentation' }, // /docs sidebar
   },
 
   // Mobile navigation

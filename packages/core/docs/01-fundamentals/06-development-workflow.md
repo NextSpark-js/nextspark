@@ -223,7 +223,7 @@ cp .env.example .env.local
 pnpm db:migrate
 
 # Build registries (REQUIRED before dev)
-pnpm registry:build
+pnpm build:registries
 ```
 
 ### Development
@@ -236,10 +236,10 @@ pnpm dev
 pnpm dev:watch
 
 # Build registries (manually)
-pnpm registry:build
+pnpm build:registries
 
 # Build registries (watch mode)
-pnpm registry:build-watch
+nextspark registry:watch
 
 # Build theme CSS
 pnpm theme:build
@@ -326,7 +326,7 @@ await TodoWrite({
     { content: "Define field definitions with validation", status: "pending", activeForm: "Defining fields" },
     { content: "Create database migration", status: "pending", activeForm: "Creating migration" },
     { content: "Add translations (en.json + es.json)", status: "pending", activeForm: "Adding translations" },
-    { content: "Rebuild registries (pnpm registry:build)", status: "pending", activeForm: "Rebuilding registries" },
+    { content: "Rebuild registries (pnpm build:registries)", status: "pending", activeForm: "Rebuilding registries" },
     { content: "Test CRUD operations via API", status: "pending", activeForm: "Testing CRUD" },
     { content: "Write unit tests for service layer", status: "pending", activeForm: "Writing unit tests" },
     { content: "Write E2E tests for dashboard", status: "pending", activeForm: "Writing E2E tests" }
@@ -746,7 +746,7 @@ jobs:
         run: pnpm install
 
       - name: Build registries
-        run: pnpm registry:build
+        run: pnpm build:registries
 
       - name: Type check
         run: pnpm type-check

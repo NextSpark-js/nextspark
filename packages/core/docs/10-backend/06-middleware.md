@@ -100,7 +100,7 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith("/docs")) {
     const appConfig = getThemeAppConfig(activeTheme as any);
 
-    if (appConfig?.docs?.public === false) {
+    if (!isDocsPublic(appConfig?.docs)) {
       try {
         const { data: session } = await betterFetch<Session>(
           "/api/auth/get-session",
@@ -221,10 +221,11 @@ if (themeResponse) return themeResponse;
 
 ### 2. Documentation Access Control
 
-Controls public/private documentation access:
+Controls public/private documentation access. `docs.publicAccess` decides it,
+read through `isDocsPublic()` from `@nextsparkjs/core/lib/docs/access`:
 
 ```typescript
-if (appConfig?.docs?.public === false) {
+if (!isDocsPublic(appConfig?.docs)) {
   // Require authentication for docs
   if (!session) {
     return NextResponse.redirect(loginUrl);
@@ -237,10 +238,14 @@ if (appConfig?.docs?.public === false) {
 // contents/themes/[theme]/app.config.ts
 export const appConfig = {
   docs: {
-    public: false // Require auth for docs
+    publicAccess: false // Require auth for docs
   }
 };
 ```
+
+`public: false`, what app configs wrote before `publicAccess` existed, still
+keeps `/docs` private; see
+[Who can read /docs](../15-documentation-system/02-architecture.md#who-can-read-docs).
 
 ### 3. Role-Based Access Control
 

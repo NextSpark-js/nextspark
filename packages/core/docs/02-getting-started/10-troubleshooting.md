@@ -297,7 +297,7 @@ PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 pnpm install
 
 ### Registry Build Fails
 
-**Problem:** `pnpm registry:build` fails with errors
+**Problem:** `pnpm build:registries` fails with errors
 
 **Common Causes:**
 
@@ -318,7 +318,7 @@ code contents/themes/default/entities/tasks/tasks.config.ts
 pnpm type-check
 
 # Fix syntax errors and rebuild
-pnpm registry:build
+pnpm build:registries
 ```
 
 **Common syntax errors:**
@@ -347,7 +347,7 @@ code contents/plugins/ai/plugin.config.ts
 # - enabled (boolean)
 
 # Fix and rebuild
-pnpm registry:build
+pnpm build:registries
 ```
 
 #### 3. Missing required fields
@@ -575,8 +575,8 @@ ls contents/themes/
 
 ```bash
 # Clear and rebuild
-rm -rf core/lib/registries/*
-pnpm registry:build
+rm -rf .nextspark/registries
+pnpm build:registries
 ```
 
 #### 4. Restart dev server
@@ -615,7 +615,7 @@ ls contents/themes/default/entities/tasks/
 
 ```bash
 # Registry may be out of sync
-pnpm registry:build
+pnpm build:registries
 
 # Restart dev server
 pnpm dev
@@ -649,7 +649,7 @@ Module not found: core/lib/registries/entity-registry
 
 ```bash
 # Registries may not have been built
-pnpm registry:build
+pnpm build:registries
 ```
 
 #### 2. Check registries directory
@@ -672,7 +672,7 @@ ls core/lib/registries/
 rm -rf .next
 
 # Rebuild registries
-pnpm registry:build
+pnpm build:registries
 
 # Restart dev server
 pnpm dev
@@ -906,10 +906,10 @@ htop  # If installed
 # Clear all caches
 rm -rf .next
 rm -rf node_modules/.cache
-rm -rf core/lib/registries/*
+rm -rf .nextspark/registries
 
 # Rebuild
-pnpm registry:build
+pnpm build:registries
 pnpm dev
 ```
 

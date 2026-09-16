@@ -623,7 +623,7 @@ const theme = getTheme(themeName)
 **Solutions:**
 1. Check theme exists in `contents/themes/my-theme/`
 2. Verify `theme.config.ts` file exists
-3. Run `pnpm registry:build` to regenerate
+3. Run `pnpm build:registries` to regenerate
 4. Restart dev server
 
 ### Theme Changes Not Reflected
@@ -631,7 +631,7 @@ const theme = getTheme(themeName)
 **Problem:** Updated theme config but changes don't appear
 
 **Solutions:**
-1. Run `pnpm registry:build` to regenerate registry
+1. Run `pnpm build:registries` to regenerate registry
 2. Restart dev server (registry can't hot reload)
 3. Check browser console for errors
 4. Verify active theme in `.env.local`
@@ -643,7 +643,7 @@ const theme = getTheme(themeName)
 **Solutions:**
 1. Check if `dashboard.config.ts` exists in theme
 2. Verify export name is `DASHBOARD_CONFIG`
-3. Regenerate registry: `pnpm registry:build`
+3. Regenerate registry: `pnpm build:registries`
 
 ## Type Safety
 

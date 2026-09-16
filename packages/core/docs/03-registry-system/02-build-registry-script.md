@@ -64,12 +64,12 @@ Phase 4: Post-Build & Watch (core/scripts/build/registry/post-build/, watch.mjs)
 
 ```bash
 # One-time build
-pnpm registry:build
+pnpm build:registries
 # or
 node core/scripts/build/registry.mjs
 
 # Watch mode (automatic rebuild)
-pnpm registry:build-watch
+nextspark registry:watch
 # or
 node core/scripts/build/registry.mjs --watch
 
@@ -1082,10 +1082,10 @@ if (CONFIG.activeTheme) {
 
 ## Debugging
 
-### Verbose Mode
+### Run a Registry Build
 
 ```bash
-pnpm registry:build --verbose
+pnpm build:registries
 ```
 
 **Output:**

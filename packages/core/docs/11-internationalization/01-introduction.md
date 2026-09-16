@@ -801,10 +801,10 @@ contents/plugins/[plugin]/messages/es.json
 **4. Rebuild Registry**:
 ```bash
 # Regenerate translation registry
-pnpm registry:build
+pnpm build:registries
 
 # Or watch mode during development
-pnpm registry:build-watch
+nextspark registry:watch
 ```
 
 ### Translation Validation

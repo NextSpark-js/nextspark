@@ -885,7 +885,7 @@ import { PLUGIN_REGISTRY_CLIENT } from '@/core/lib/registries/plugin-registry.cl
 **Solutions:**
 1. Check plugin exists in `contents/plugins/my-plugin/`
 2. Verify `plugin.config.ts` file exists
-3. Run `pnpm registry:build` to regenerate
+3. Run `pnpm build:registries` to regenerate
 4. Restart dev server
 
 ### Function Not Available

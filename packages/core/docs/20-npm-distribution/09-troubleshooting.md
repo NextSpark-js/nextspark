@@ -350,7 +350,7 @@ If none of these solutions work:
 
 1. **Check logs:**
 ```bash
-pnpm build:registries --verbose
+pnpm build:registries
 ```
 
 2. **Open an issue:** Include:
