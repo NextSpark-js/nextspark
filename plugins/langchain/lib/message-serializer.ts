@@ -36,7 +36,7 @@ export function serializeMessages(messages: BaseMessage[]): SerializedMessage[] 
             : JSON.stringify(msg.content)
 
         const serialized: SerializedMessage = {
-            type: msg._getType() as SerializedMessage['type'],
+            type: msg.getType() as SerializedMessage['type'],
             content,
         }
 
@@ -49,12 +49,12 @@ export function serializeMessages(messages: BaseMessage[]): SerializedMessage[] 
         }
 
         // AIMessage has response_metadata
-        if (msg._getType() === 'ai' && (msg as AIMessage).response_metadata) {
+        if (msg.getType() === 'ai' && (msg as AIMessage).response_metadata) {
             serialized.response_metadata = (msg as AIMessage).response_metadata
         }
 
         // ToolMessage has tool_call_id
-        if (msg._getType() === 'tool' && (msg as ToolMessage).tool_call_id) {
+        if (msg.getType() === 'tool' && (msg as ToolMessage).tool_call_id) {
             serialized.tool_call_id = (msg as ToolMessage).tool_call_id
         }
 

@@ -20,6 +20,24 @@ interface ToolBindableChatModel {
     bind(options: { tools: unknown }): BaseChatModel
 }
 
+interface StreamableAgent {
+    streamEvents(input: never, options: never): AsyncIterable<unknown>
+    invoke(input: never, options?: never): Promise<unknown>
+}
+
+interface AgentChatResponse {
+    content: string
+    sessionId: string
+    messages: BaseMessage[]
+    traceId?: string
+}
+
+interface CreatedAgent {
+    chat(message: string): Promise<AgentChatResponse>
+    getHistory(): Promise<BaseMessage[]>
+    getAgent(): StreamableAgent
+}
+
 type ToolCallMessage = BaseMessage & { tool_calls?: unknown; tool_call_id?: unknown }
 type UsageMessage = BaseMessage & { usage_metadata?: TokenUsage; response_metadata?: { usage?: TokenUsage } }
 type TokenUsage = { input_tokens?: number; output_tokens?: number; total_tokens?: number }
@@ -78,7 +96,7 @@ interface CreateAgentOptions {
     recursionLimit?: number
 }
 
-export const createAgent = async (options: CreateAgentOptions) => {
+export const createAgent = async (options: CreateAgentOptions): Promise<CreatedAgent> => {
     const {
         sessionId,
         agentName,
@@ -133,7 +151,7 @@ export const createAgent = async (options: CreateAgentOptions) => {
     const agent = createReactAgent({
         llm: boundModel,
         tools: langChainTools,
-        messageModifier: systemPrompt,
+        prompt: systemPrompt,
     })
 
     // Log recursion limit for debugging
@@ -189,14 +207,14 @@ export const createAgent = async (options: CreateAgentOptions) => {
                 )
 
                 if (config.debug) {
-                    console.log('[Agent] Result messages:', JSON.stringify(result.messages.map(m => ({ type: m._getType(), content: m.content })), null, 2))
+                    console.log('[Agent] Result messages:', JSON.stringify(result.messages.map(m => ({ type: m.getType(), content: m.content })), null, 2))
                 }
 
                 const newMessages = result.messages.slice(currentHistory.length)
                 try {
                     await logger.info('AGENT_RESPONSE', {
                         messages: newMessages.map(m => ({
-                            type: m._getType(),
+                            type: m.getType(),
                             content: m.content,
                             tool_calls: (m as ToolCallMessage).tool_calls,
                             tool_call_id: (m as ToolCallMessage).tool_call_id
@@ -301,7 +319,7 @@ export const createAgent = async (options: CreateAgentOptions) => {
         /**
          * Get the underlying agent for advanced use cases (e.g., streaming)
          */
-        getAgent: () => agent,
+        getAgent: (): StreamableAgent => agent as unknown as StreamableAgent,
     }
 }
 

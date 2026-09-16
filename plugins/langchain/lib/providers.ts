@@ -1,5 +1,5 @@
 import { ChatOllama } from '@langchain/ollama'
-import { ChatOpenAI } from '@langchain/openai'
+import { ChatOpenAICompletions } from '@langchain/openai'
 import { ChatAnthropic } from '@langchain/anthropic'
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models'
 import { config, validateProviderConfig, isProviderAvailable, getAvailableProviders } from '../plugin.config'
@@ -30,7 +30,7 @@ import type { ModelConfig, LLMProvider } from '../types/langchain.types'
  *     }
  * })
  */
-export function createOpenAIModel(modelConfig?: Partial<ModelConfig>): ChatOpenAI {
+export function createOpenAIModel(modelConfig?: Partial<ModelConfig>): ChatOpenAICompletions {
     // Determine baseUrl:
     // - If options.baseUrl is explicitly set to undefined, force real OpenAI API
     // - If options.baseUrl is set to a string, use that
@@ -44,9 +44,9 @@ export function createOpenAIModel(modelConfig?: Partial<ModelConfig>): ChatOpenA
         validateProviderConfig('openai')
     }
 
-    const chatOpenAI = new ChatOpenAI({
-        openAIApiKey: modelConfig?.options?.apiKey || config.providers.openai.apiKey || 'lm-studio',
-        modelName: modelConfig?.model || config.providers.openai.model,
+    const chatOpenAI = new ChatOpenAICompletions({
+        apiKey: modelConfig?.options?.apiKey || config.providers.openai.apiKey || 'lm-studio',
+        model: modelConfig?.model || config.providers.openai.model,
         temperature: modelConfig?.temperature ?? config.providers.openai.temperature,
         maxTokens: modelConfig?.maxTokens,
         configuration: baseUrl ? { baseURL: baseUrl } : undefined,
@@ -76,8 +76,8 @@ export function createAnthropicModel(modelConfig?: Partial<ModelConfig>): ChatAn
     validateProviderConfig('anthropic')
 
     return new ChatAnthropic({
-        anthropicApiKey: modelConfig?.options?.apiKey || config.providers.anthropic.apiKey,
-        modelName: modelConfig?.model || config.providers.anthropic.model,
+        apiKey: modelConfig?.options?.apiKey || config.providers.anthropic.apiKey,
+        model: modelConfig?.model || config.providers.anthropic.model,
         temperature: modelConfig?.temperature ?? config.providers.anthropic.temperature,
         maxTokens: modelConfig?.maxTokens,
     })

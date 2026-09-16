@@ -14,6 +14,8 @@ import path from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import type { AddressInfo } from 'node:net'
+import { buildTools } from '../../../../plugins/langchain/lib/tools-builder'
+import { createOpenAIModel } from '../../../../plugins/langchain/lib/providers'
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..')
 const requireFromPlugin = createRequire(path.join(REPO, 'plugins/langchain/package.json'))
@@ -24,6 +26,7 @@ const { DynamicStructuredTool } = requireFromPlugin('@langchain/core/tools') as 
 const { HumanMessage } = requireFromPlugin('@langchain/core/messages') as typeof import('@langchain/core/messages')
 
 type ChatRequest = {
+  path?: string
   tools?: { function: { parameters: Record<string, unknown> } }[]
   response_format?: { json_schema?: { schema: Record<string, unknown> } }
 }
@@ -35,7 +38,7 @@ async function fakeOpenAI(message: Record<string, unknown>) {
     let body = ''
     req.on('data', (chunk) => (body += chunk))
     req.on('end', () => {
-      requests.push(JSON.parse(body))
+      requests.push({ ...JSON.parse(body), path: req.url })
       res.setHeader('content-type', 'application/json')
       res.end(JSON.stringify({
         id: 'chatcmpl-test',
@@ -57,14 +60,37 @@ async function fakeOpenAI(message: Record<string, unknown>) {
     maxRetries: 0,
   })
 
-  return { model, requests, close: () => new Promise<void>((resolve) => server.close(() => resolve())) }
+  return {
+    model,
+    baseUrl: `http://127.0.0.1:${port}/v1`,
+    requests,
+    close: () => new Promise<void>((resolve) => server.close(() => resolve())),
+  }
 }
 
 const INTENTS = '{"intents":[{"type":"task","action":"list"}]}'
 
 const routerSchema = () => z.object({
-  intents: z.array(z.object({ type: z.enum(['task', 'customer']), action: z.string() })),
+  intents: z.array(z.object({
+    type: z.enum(['task', 'customer']).describe('Intent category'),
+    action: z.string().describe('Requested operation'),
+  })).describe('Classified intents'),
 })
+
+function collectDescriptions(value: unknown, descriptions = new Set<string>()): Set<string> {
+  if (!value || typeof value !== 'object') return descriptions
+
+  const schema = value as Record<string, unknown>
+  if (typeof schema.description === 'string') descriptions.add(schema.description)
+  for (const nestedValue of Object.values(schema)) {
+    if (Array.isArray(nestedValue)) {
+      nestedValue.forEach((item) => collectDescriptions(item, descriptions))
+    } else {
+      collectDescriptions(nestedValue, descriptions)
+    }
+  }
+  return descriptions
+}
 
 test('a tool built from a zod 4 schema reaches OpenAI with its parameters', async () => {
   const openai = await fakeOpenAI({ role: 'assistant', content: 'ok' })
@@ -72,14 +98,21 @@ test('a tool built from a zod 4 schema reaches OpenAI with its parameters', asyn
     const tool = new DynamicStructuredTool({
       name: 'search',
       description: 'Search records',
-      schema: z.object({ query: z.string(), limit: z.number().optional() }),
+      schema: z.object({
+        query: z.string().describe('Terms to search for'),
+        limit: z.number().optional().describe('Maximum rows'),
+      }),
       func: async ({ query }) => `found ${query}`,
     })
 
     await openai.model.bindTools([tool]).invoke([new HumanMessage('find cats')])
 
+    assert.equal(openai.requests[0].path, '/v1/chat/completions')
     const parameters = openai.requests[0].tools?.[0].function.parameters
-    assert.deepEqual(parameters?.properties, { query: { type: 'string' }, limit: { type: 'number' } }, JSON.stringify(parameters))
+    assert.deepEqual(parameters?.properties, {
+      query: { type: 'string', description: 'Terms to search for' },
+      limit: { type: 'number', description: 'Maximum rows' },
+    }, JSON.stringify(parameters))
     assert.deepEqual(parameters?.required, ['query'])
   } finally {
     await openai.close()
@@ -102,9 +135,41 @@ test('structured output with a zod 4 schema sends that schema, through function 
       const request = openai.requests[0]
       const sent = method === 'functionCalling' ? request.tools?.[0].function.parameters : request.response_format?.json_schema?.schema
       assert.ok(sent && 'properties' in sent && 'intents' in (sent.properties as object), `${method} sent ${JSON.stringify(sent)}`)
+      assert.deepEqual([...collectDescriptions(sent)].sort(), ['Classified intents', 'Intent category', 'Requested operation'])
       assert.deepEqual(result, JSON.parse(INTENTS))
     } finally {
       await openai.close()
     }
+  }
+})
+
+
+test('tools built by the langchain plugin preserve zod 4 descriptions for OpenAI', async () => {
+  const openai = await fakeOpenAI({ role: 'assistant', content: 'ok' })
+  try {
+    const [tool] = buildTools([{
+      name: 'search_records',
+      description: 'Search project records',
+      schema: z.object({
+        terms: z.string().describe('Terms to search for'),
+        maxRows: z.number().optional().describe('Maximum rows'),
+      }),
+      func: async () => 'ok',
+    }])
+
+    const pluginModel = createOpenAIModel({
+      provider: 'openai',
+      model: 'gpt-5-mini',
+      options: { apiKey: 'test', baseUrl: openai.baseUrl },
+    })
+    await pluginModel.bindTools([tool]).invoke([new HumanMessage('find records')])
+
+    assert.equal(openai.requests[0].path, '/v1/chat/completions')
+
+    const properties = openai.requests[0].tools?.[0].function.parameters.properties as Record<string, Record<string, unknown>>
+    assert.equal(properties.terms.description, 'Terms to search for')
+    assert.equal(properties.maxRows.description, 'Maximum rows')
+  } finally {
+    await openai.close()
   }
 })
