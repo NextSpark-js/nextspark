@@ -94,3 +94,35 @@ test('the copy of an app layout the sync is about to change is planned as replac
     await rm(root, { recursive: true, force: true })
   }
 })
+
+test('a route the sync is about to create takes the template route file out of the plan as removed', async () => {
+  const root = await createProject()
+  try {
+    await generateMissingPages([pricingTemplate], { projectRoot: root })
+
+    assert.deepEqual(plan(root, { 'app/shop/pricing/page.tsx': PAGE }), {
+      create: [],
+      replace: [],
+      remove: ['app/(templates)/shop/pricing/page.tsx']
+    })
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('a route the sync is about to remove puts the template route file back in the plan as created', async () => {
+  const root = await createProject()
+  try {
+    await writeProjectFile(root, 'app/shop/pricing/page.tsx', PAGE)
+    await generateMissingPages([pricingTemplate], { projectRoot: root })
+
+    assert.deepEqual(plan(root), { create: [], replace: [], remove: [] })
+    assert.deepEqual(plan(root, { 'app/shop/pricing/page.tsx': null }), {
+      create: ['app/(templates)/shop/pricing/page.tsx'],
+      replace: [],
+      remove: []
+    })
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})

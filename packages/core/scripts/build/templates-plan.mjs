@@ -32,7 +32,7 @@ try {
   const appFiles = await readAppFiles()
   const config = getConfig()
   const templates = await discoverTemplates(config)
-  const changes = await planMissingPages(templates, config, null, appFiles)
+  const changes = await planMissingPages(templates, config, appFiles)
   console.log(`${RESULT_MARKER}${JSON.stringify(changes)}`)
 } catch (error) {
   console.error(error.message)

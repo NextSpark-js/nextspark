@@ -666,9 +666,14 @@ export async function generateTemplatePage(template, outputPath, analysis = null
  * override resolution duplicates it into `app/(templates)/` regardless of
  * whether the app already has one; anything else is only written when the
  * app doesn't already have that route.
+ *
+ * @param {Map<string, string | null>} [appFiles] - Files under app/, by path from the project root, to take as
+ *   having this content instead of what is on disk (null: removed)
  */
-export function willGenerateRoute(appPath, templateType, root = rootDir) {
-  return templateType === 'layout' || !existsSync(join(root, appPath))
+export function willGenerateRoute(appPath, templateType, root = rootDir, appFiles = undefined) {
+  if (templateType === 'layout') return true
+  if (appFiles?.has(appPath)) return appFiles.get(appPath) === null
+  return !existsSync(join(root, appPath))
 }
 
 /**
@@ -690,9 +695,12 @@ export function willGenerateRoute(appPath, templateType, root = rootDir) {
  *
  * @param {Array} templates - List of template definitions
  * @param {Object} config - Configuration object with projectRoot
+ * @param {Map<string, string | null>} [appFiles] - Files under app/, by path from the project root, to take as
+ *   having this content instead of what is on disk (null: removed), so `generatesRoute` answers for the app as
+ *   a sync about to run leaves it rather than for the app the analysis runs against
  * @returns {Promise<Map<string, Object>>} Each template's analysis, keyed by its templatePath
  */
-export async function analyzeTemplates(templates, config = null) {
+export async function analyzeTemplates(templates, config = null, appFiles = undefined) {
   if (config?.projectRoot) {
     rootDir = config.projectRoot
   }
@@ -701,7 +709,7 @@ export async function analyzeTemplates(templates, config = null) {
 
   for (const template of templates) {
     if (!analysis.has(template.templatePath)) {
-      analysis.set(template.templatePath, await analyzeTemplate(template, rootDir))
+      analysis.set(template.templatePath, await analyzeTemplate(template, rootDir, appFiles))
     }
   }
 
@@ -716,10 +724,12 @@ export async function analyzeTemplates(templates, config = null) {
  *
  * @param {Object} template - The template to read
  * @param {string} root - The project root its path resolves against
+ * @param {Map<string, string | null>} [appFiles] - Files under app/ to take as having this content, as for
+ *   `analyzeTemplates`
  */
-async function analyzeTemplate(template, root) {
+async function analyzeTemplate(template, root, appFiles) {
   const { appPath, templateType, templatePath } = template
-  const generatesRoute = willGenerateRoute(appPath, templateType, root)
+  const generatesRoute = willGenerateRoute(appPath, templateType, root, appFiles)
   const { errors, ...routeExports } = await readTemplateExports(templatePath, root)
 
   if (generatesRoute && errors.length > 0) {
@@ -831,20 +841,23 @@ export async function generateMissingPages(templates, config = null, analysis = 
  * replace and the ones it would remove - backing up both of those first - as
  * paths from the project root.
  *
+ * `appFiles` reaches the analysis too: whether a template gets a route file at
+ * all turns on whether the app has one at that path, so a route the sync is
+ * about to write - or remove - decides the plan the same way it decides the run.
+ *
  * @param {Array} templates - List of template definitions
  * @param {Object} config - Configuration object with projectRoot
- * @param {Map} [analysis] - What `analyzeTemplates` read from these templates; taken for this call when omitted
  * @param {Map<string, string | null>} [appFiles] - Files under app/, by path from the project root, to take as
  *   having this content instead of what is on disk (null: removed), to plan against changes not written yet
  * @returns {Promise<{ create: string[], replace: string[], remove: string[] }>}
  */
-export async function planMissingPages(templates, config = null, analysis = null, appFiles = undefined) {
+export async function planMissingPages(templates, config = null, appFiles = undefined) {
   if (config?.projectRoot) {
     rootDir = config.projectRoot
   }
   const templatesDir = join(rootDir, 'app', '(templates)')
 
-  analysis = analysis ?? (await analyzeTemplates(templates, config))
+  const analysis = await analyzeTemplates(templates, config, appFiles)
   const { create, replace, remove } = await diffTemplatesTree(templatesDir, await planTemplatesTree(templates, analysis, appFiles))
 
   const fromRoot = path => relative(rootDir, path).split(sep).join('/')
