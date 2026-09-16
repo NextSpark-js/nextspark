@@ -50,7 +50,9 @@ In `app.config.ts`:
 export default {
   // ...
   extra: {
-    apiUrl: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000',
+    // Leave EXPO_PUBLIC_API_URL unset to auto-detect the local backend; only
+    // set it to override that detection (see "Environment Configuration").
+    apiUrl: process.env.EXPO_PUBLIC_API_URL,
   },
 }
 ```
@@ -274,7 +276,7 @@ The API URL is resolved in this order:
 
 1. **app.config.ts** `extra.apiUrl`
 2. **Environment variable** `EXPO_PUBLIC_API_URL`
-3. **Auto-detect** from Expo dev server (on a physical Android device, this assumes an `adb reverse` tunnel and uses `localhost` instead of the LAN host reported by Expo)
+3. **Auto-detect** from Expo dev server: uses the LAN host Expo reports as-is on every platform, including a physical Android device on the same network. The Android emulator is the one exception — a loopback host there (Metro bound to `localhost`, which is what a physical device tunnels with `adb reverse`) is translated to its `10.0.2.2` alias for the host machine
 4. **Fallback** to `http://localhost:3000` (`http://10.0.2.2:3000` on the Android emulator)
 
 **Development:**

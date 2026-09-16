@@ -55,8 +55,8 @@ NextSpark uses [Better Auth](https://better-auth.com) for authentication. The mo
 
 ## Login Methods (passwordless preset by default)
 
-The login screen (`app/login.tsx`) renders whatever `APP_CONFIG.auth.methods`
-lists (`src/config/app.config.ts`), in priority order. The default is the
+The login screen (`apps/mobile/app/login.tsx`) renders whatever `APP_CONFIG.auth.methods`
+lists (`apps/mobile/src/config/app.config.ts`), in priority order. The default is the
 portfolio's **passwordless preset** — no password field:
 
 ```ts
@@ -153,7 +153,7 @@ Signing in lives in `authApi`, which stores what the response carries through
 the client:
 
 ```typescript
-// src/api/core/auth.ts
+// packages/mobile/src/api/core/auth.ts
 
 export const authApi = {
   async login(email: string, password: string): Promise<LoginResponse> {
@@ -177,7 +177,7 @@ export const authApi = {
 
 ## AuthProvider Context
 
-The `AuthProvider` manages authentication state for the entire app. `app/_layout.tsx`
+The `AuthProvider` manages authentication state for the entire app. `apps/mobile/app/_layout.tsx`
 mounts the one from `@nextsparkjs/mobile`, and screens read it with `useAuth()`:
 
 ```typescript
@@ -269,7 +269,7 @@ foreground) without toggling `isLoading`.
 The app layout guards authenticated routes:
 
 ```typescript
-// app/(app)/_layout.tsx
+// apps/mobile/app/(app)/_layout.tsx
 
 export default function AppLayout() {
   const { isAuthenticated, isLoading } = useAuth()

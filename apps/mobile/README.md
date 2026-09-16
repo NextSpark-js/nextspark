@@ -79,7 +79,7 @@ apps/mobile/
 │   ├── login.tsx           # Login screen
 │   └── (app)/              # Authenticated routes
 │       ├── _layout.tsx     # Auth guard + stack
-│       ├── index.tsx       # Tasks list
+│       ├── tasks.tsx       # Tasks list
 │       └── task/
 │           ├── create.tsx  # Create task
 │           └── [id].tsx    # Edit task

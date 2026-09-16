@@ -44,26 +44,18 @@ apps/mobile/
 │   │   ├── ui/                   # shadcn-style UI primitives
 │   │   │   ├── index.ts          # Barrel exports
 │   │   │   ├── text.tsx          # Text with variants
-│   │   │   ├── button.tsx        # Button with CVA variants
-│   │   │   ├── input.tsx         # TextInput styled
-│   │   │   ├── textarea.tsx      # Multiline TextInput
-│   │   │   ├── card.tsx          # Card compound component
-│   │   │   ├── badge.tsx         # Badge with status variants
-│   │   │   ├── avatar.tsx        # Avatar with fallback
-│   │   │   ├── separator.tsx     # Horizontal/vertical line
-│   │   │   ├── switch.tsx        # Toggle switch
-│   │   │   ├── checkbox.tsx      # Checkbox
-│   │   │   ├── select.tsx        # Select with modal
-│   │   │   ├── dialog.tsx        # Modal dialog
-│   │   │   └── skeleton.tsx      # Loading skeleton
-│   │   ├── TopBar.tsx            # Top navigation bar
-│   │   ├── BottomTabBar.tsx      # Bottom tab navigation
-│   │   ├── MoreSheet.tsx         # "More options" bottom sheet
-│   │   ├── CreateSheet.tsx       # "Create entity" bottom sheet
-│   │   ├── TaskCard.tsx          # Task list item
-│   │   ├── TaskForm.tsx          # Task create/edit form
-│   │   ├── CustomerCard.tsx      # Customer list item
-│   │   └── CustomerForm.tsx      # Customer create/edit form
+│   │   ├── navigation/
+│   │   │   ├── TopBar.tsx        # Top navigation bar
+│   │   │   ├── BottomTabBar.tsx  # Bottom tab navigation
+│   │   │   ├── MoreSheet.tsx     # "More options" bottom sheet
+│   │   │   └── CreateSheet.tsx   # "Create entity" bottom sheet
+│   │   └── entities/
+│   │       ├── tasks/
+│   │       │   ├── TaskCard.tsx  # Task list item
+│   │       │   └── TaskForm.tsx  # Task create/edit form
+│   │       └── customers/
+│   │           ├── CustomerCard.tsx # Customer list item
+│   │           └── CustomerForm.tsx # Customer create/edit form
 │   ├── constants/
 │   │   └── colors.ts             # Color theme constants (legacy)
 │   ├── data/
@@ -77,8 +69,8 @@ apps/mobile/
 │   │   └── globals.css           # CSS variables + Tailwind
 │   └── types/
 │       └── index.ts              # TypeScript type definitions
-├── .env                          # Environment variables
-├── app.json                      # Expo configuration
+├── .env.example                  # Environment variables
+├── app.config.js                 # Expo configuration
 ├── babel.config.js               # Babel + NativeWind preset
 ├── metro.config.js               # Metro + NativeWind wrapper
 ├── tailwind.config.js            # Tailwind + NativeWind config
@@ -169,7 +161,7 @@ The app uses Expo Router's file-based routing with route groups:
 
 ## Color Scheme
 
-The app uses a black/white monochrome theme via CSS variables in `src/styles/globals.css`:
+The app uses a black/white monochrome theme via CSS variables in `apps/mobile/src/styles/globals.css`:
 
 ```css
 :root {
@@ -181,7 +173,7 @@ The app uses a black/white monochrome theme via CSS variables in `src/styles/glo
 }
 ```
 
-These are mapped to Tailwind classes via `tailwind.config.js`:
+These are mapped to Tailwind classes via `apps/mobile/tailwind.config.js`:
 
 ```tsx
 // Usage in components

@@ -46,7 +46,7 @@ This document explains how the mobile app achieves **near-identical DX** to Next
 ### Web Component (shadcn/ui)
 
 ```tsx
-// repo/packages/core/src/components/ui/button.tsx
+// packages/core/src/components/ui/button.tsx
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from '../../lib/utils'
@@ -83,11 +83,10 @@ function Button({ className, variant, size, asChild = false, ...props }) {
 ### Mobile Component (NativeWind)
 
 ```tsx
-// apps/mobile/src/components/ui/button.tsx
-import { Pressable, ActivityIndicator } from "react-native"
+// packages/ui/src/components/Button.native.tsx
+import { Pressable, ActivityIndicator, Text } from "react-native"
 import { cva, type VariantProps } from "class-variance-authority"
-import { cn } from "@/src/lib/utils"
-import { Text } from "./text"
+import { cn } from "../utils"
 
 const buttonVariants = cva(
   "flex-row items-center justify-center rounded-lg active:opacity-80",
@@ -140,7 +139,7 @@ function Button({ className, variant, size, children, isLoading, ...props }) {
 Both platforms use **identical** `cn()` function:
 
 ```tsx
-// src/lib/utils.ts (same on both platforms)
+// packages/ui/src/utils.ts (same on both platforms)
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 
@@ -163,7 +162,7 @@ This allows conditional and merged classes:
 
 ## Theming System
 
-### Web (OKLCH in globals.css)
+### Web (OKLCH in packages/core/globals.css)
 
 ```css
 /* NextSpark Web uses OKLCH for precise color control */
@@ -173,7 +172,7 @@ This allows conditional and merged classes:
 }
 ```
 
-### Mobile (Hex in globals.css)
+### Mobile (Hex in apps/mobile/src/styles/globals.css)
 
 ```css
 /* React Native doesn't support OKLCH, so we convert to hex */
@@ -203,7 +202,7 @@ This allows conditional and merged classes:
 ### Tailwind Config (Mobile)
 
 ```js
-// tailwind.config.js
+// apps/mobile/tailwind.config.js
 module.exports = {
   presets: [require("nativewind/preset")],
   theme: {
@@ -427,7 +426,7 @@ The Accordion is a compound component that shows/hides content. On web, it uses 
 #### Web Implementation (shadcn/ui + Radix)
 
 ```tsx
-// repo/packages/core/src/components/ui/accordion.tsx
+// packages/core/src/components/ui/accordion.tsx
 "use client"
 
 import * as React from "react"
@@ -478,12 +477,11 @@ export { Accordion, AccordionItem, AccordionTrigger, AccordionContent }
 #### Mobile Implementation (NativeWind + Animated)
 
 ```tsx
-// apps/mobile/src/components/ui/accordion.tsx
+// packages/ui/src/components/Accordion.native.tsx
 import { useState } from "react"
-import { View, Pressable, LayoutAnimation } from "react-native"
+import { View, Pressable, LayoutAnimation, Text } from "react-native"
 import { ChevronDown } from "lucide-react-native"
-import { cn } from "@/src/lib/utils"
-import { Text } from "./text"
+import { cn } from "../utils"
 
 interface AccordionItemData {
   value: string

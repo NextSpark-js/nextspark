@@ -120,7 +120,7 @@ private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T
 The team selector is in the "Más Opciones" bottom sheet:
 
 ```typescript
-// src/components/MoreSheet.tsx
+// src/components/navigation/MoreSheet.tsx
 
 export function MoreSheet({
   visible,
