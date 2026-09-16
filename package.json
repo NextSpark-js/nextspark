@@ -8,7 +8,7 @@
     "build": "pnpm --filter @nextsparkjs/dev build",
     "build:core": "pnpm --filter @nextsparkjs/core build",
     "build:cli": "pnpm --filter @nextsparkjs/cli build",
-    "lint": "pnpm --filter @nextsparkjs/dev lint",
+    "lint": "eslint .",
     "clean": "pnpm -r exec rm -rf node_modules dist .next",
     "setup:local": "./scripts/setup/local.sh",
     "setup:npm": "./scripts/setup/npm.sh",

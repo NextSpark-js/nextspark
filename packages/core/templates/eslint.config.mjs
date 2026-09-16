@@ -1,16 +1,19 @@
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
+import coreWebVitals from "eslint-config-next/core-web-vitals";
+import typescript from "eslint-config-next/typescript";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
-
+// `eslint .` walks the whole project, so the block schemas under
+// contents/themes/<theme>/blocks/*/schema.ts are linted like any other source. The `next lint`
+// this replaces only ever walked app, pages, components, lib and src, which left every schema --
+// the files the zod rule below exists for -- unchecked.
+//
+// eslint-config-next 16 publishes flat config arrays on its subpaths. Reaching them through
+// FlatCompat instead throws `Converting circular structure to JSON` before a single file is read.
 const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  ...coreWebVitals,
+  ...typescript,
+  {
+    ignores: [".next/**", ".nextspark/**"],
+  },
   {
     rules: {
       // `no-restricted-imports` with `importNames: ["z"]` also rejects `import * as z`, so the

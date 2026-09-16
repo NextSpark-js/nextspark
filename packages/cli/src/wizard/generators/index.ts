@@ -370,7 +370,6 @@ async function updatePackageJson(config: WizardConfig): Promise<void> {
     // ESLint
     'eslint': '^9.18.0',
     'eslint-config-next': '^16.3.5',
-    '@eslint/eslintrc': '^3.2.0',
     // Database
     'drizzle-kit': '^0.31.4',
     // Jest
