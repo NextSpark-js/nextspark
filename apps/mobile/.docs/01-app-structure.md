@@ -151,12 +151,19 @@ The app uses Expo Router's file-based routing with route groups:
 ## Environment Variables
 
 ```bash
-# Leave this unset: the client auto-detects it from the Expo dev server
-# (and picks 10.0.2.2 on the Android emulator, localhost everywhere else,
-# including a physical Android device reached through `adb reverse`).
+# Leave this unset: the client auto-detects it from the Expo dev server's own
+# address (10.0.2.2 on the Android emulator, that address as reported on
+# every other platform, physical Android devices on the same Wi-Fi included).
 # Only set it to override that detection, e.g. a backend that isn't the
 # local dev server:
 # EXPO_PUBLIC_API_URL=http://192.168.x.x:3000
+#
+# A physical Android device reached only through `adb reverse tcp:3000
+# tcp:3000` (backend port tunneled, Metro still in its default LAN mode)
+# needs this set explicitly to http://localhost:3000 - the client cannot
+# tell that tunnel apart from a plain LAN device. It only detects the tunnel
+# automatically when Metro's own port is tunneled too (`adb reverse tcp:8081
+# tcp:8081` with Expo started `--localhost`); see apps/mobile/README.md.
 ```
 
 ## Color Scheme
