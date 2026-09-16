@@ -21,8 +21,10 @@ const eslintConfig = [
       "no-restricted-syntax": [
         "error",
         {
+          // `imported` is an Identifier for `{ z }` and a Literal for `{ "z" as zod }`, so the
+          // name lives under a different property in each.
           selector:
-            "ImportDeclaration[source.value='zod'] > ImportSpecifier[imported.name='z']",
+            "ImportDeclaration[source.value='zod'] > ImportSpecifier:matches([imported.name='z'], [imported.value='z'])",
           message:
             "Use `import * as z from 'zod'`. Turbopack doesn't tree-shake the named `z` import and bundles all of zod, its 63 locales included.",
         },
