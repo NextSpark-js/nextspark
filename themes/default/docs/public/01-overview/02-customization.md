@@ -673,4 +673,4 @@ plugins: []  // No plugins
 
 - **[Components](../02-features/01-components.md)** - Explore available components
 - **[Styling](../02-features/02-styling.md)** - Deep dive into styling system
-- **[Core Theme System](/docs/core/theme-system/introduction)** - Complete theme documentation
+- **Theme System** - The theme's routing, layouts and configuration are covered throughout this Overview and the Features section

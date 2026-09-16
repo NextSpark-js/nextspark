@@ -13,6 +13,7 @@ import remarkRehype from 'remark-rehype'
 import rehypeShiki from '@shikijs/rehype'
 import rehypeStringify from 'rehype-stringify'
 import { remarkMermaid } from './remark-mermaid'
+import { remarkDocLinks } from './remark-doc-links'
 
 // Re-export utility functions
 export {
@@ -70,6 +71,7 @@ export async function parseMarkdownFile(filePath: string): Promise<{
 
   const processedContent = await remark()
     .use(remarkGfm) // GitHub Flavored Markdown (tables, strikethrough, etc.)
+    .use(remarkDocLinks, filePath) // Route this page's own relative .md links to their served path
     .use(remarkMermaid) // Route ```mermaid fences to a diagram marker (skip highlighting)
     .use(remarkRehype, { allowDangerousHtml: true }) // Convert to rehype AST
     .use(rehypeShiki, { theme: 'github-dark' }) // Syntax highlighting

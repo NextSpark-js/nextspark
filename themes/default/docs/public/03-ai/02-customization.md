@@ -436,6 +436,6 @@ Clear descriptions help the LLM choose correctly:
 
 ## Related Documentation
 
-- [Plugin Tools Guide](../../../plugins/langchain/docs/06-tools.md)
-- [Graph Orchestrator](../../../plugins/langchain/docs/11-graph-orchestrator.md)
-- [Agent Configuration](../../../plugins/langchain/docs/04-configuration.md)
+- Plugin Tools Guide - the tools an agent can call during a conversation
+- Graph Orchestrator - how a multi-step agent flow is orchestrated
+- Agent Configuration - the plugin's environment variables and provider setup

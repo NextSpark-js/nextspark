@@ -125,7 +125,6 @@ The layout adapts automatically to different screen sizes:
 
 Images can be added to documentation by placing them in the appropriate directory:
 
-**For theme documentation:**
 ```bash
 # 1. Place image in theme's public/docs/ directory
 contents/themes/default/public/docs/your-image.png
@@ -136,20 +135,10 @@ npm run theme:build
 # 3. Image is automatically copied to public/theme/docs/
 ```
 
-**For core documentation:**
-```bash
-# Place directly in public directory (no build step needed)
-public/docs/core/assets/your-image.png
-```
-
-Then reference them in markdown using absolute paths:
+Then reference it in markdown using its absolute path:
 
 ```markdown
-# Theme docs
 ![Alt text description](/theme/docs/your-image.png)
-
-# Core docs
-![Alt text description](/docs/core/assets/your-image.png)
 ```
 
 **Important:** All theme public assets (including documentation images) must stay within `contents/themes/[THEME]/public/`. The build system automatically copies the entire `public/` directory to `/theme/`. This ensures all assets are theme-specific and change when switching themes.

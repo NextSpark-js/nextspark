@@ -407,6 +407,6 @@ access: {
 
 ## Next Steps
 
-- **[Entity System](/docs/core/entities/introduction)** - Complete entity documentation
-- **[API System](/docs/core/api/introduction)** - API reference
-- **[Permissions](/docs/core/authentication/permissions-and-roles)** - Permission system
+- **Entity System** - The config-driven entity system this Tasks entity is built on
+- **API System** - The REST endpoints this entity exposes under `/api/v1`
+- **Permissions** - How roles and permissions gate what a user can do with this entity

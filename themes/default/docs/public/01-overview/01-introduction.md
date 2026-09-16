@@ -337,4 +337,4 @@ The default theme can be customized in several ways:
 - **[Customization](./02-customization.md)** - Learn how to customize the theme
 - **[Components](../02-features/01-components.md)** - Explore theme components
 - **[Styling](../02-features/02-styling.md)** - Understand the styling system
-- **[Core Documentation](/docs/core/theme-system/introduction)** - Deep dive into theme system
+- **Theme System** - The theme's routing, layouts and configuration are covered throughout this Overview and the Features section

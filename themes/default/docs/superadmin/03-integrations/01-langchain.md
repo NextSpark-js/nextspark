@@ -135,5 +135,5 @@ View AI usage statistics in the Superadmin dashboard:
 
 ## Related Documentation
 
-- [Plugin System](/docs/plugins/overview)
-- [API Authentication](/docs/api/authentication)
+- Plugin System - how this and other plugins register with the theme
+- API Authentication - session and API key authentication for `/api/v1`

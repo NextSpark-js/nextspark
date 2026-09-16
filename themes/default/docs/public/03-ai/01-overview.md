@@ -211,6 +211,6 @@ All data is isolated by user and team through Row-Level Security (RLS).
 
 ## Related Documentation
 
-- [Plugin Overview](../../../plugins/langchain/docs/01-overview.md)
-- [Graph Orchestrator](../../../plugins/langchain/docs/11-graph-orchestrator.md)
-- [Configuration](../../../plugins/langchain/docs/04-configuration.md)
+- Plugin Overview - the langchain plugin's own architecture and concepts
+- Graph Orchestrator - how a multi-step agent flow is orchestrated
+- Configuration - the plugin's environment variables and provider setup
