@@ -276,7 +276,7 @@ The API URL is resolved in this order:
 
 1. **app.config.ts** `extra.apiUrl`
 2. **Environment variable** `EXPO_PUBLIC_API_URL`
-3. **Auto-detect** from Expo dev server: uses the LAN host Expo reports as-is on every platform, including a physical Android device on the same network. The Android emulator is the one exception — a loopback host there (Metro bound to `localhost`, which is what a physical device tunnels with `adb reverse`) is translated to its `10.0.2.2` alias for the host machine
+3. **Auto-detect** from Expo dev server: uses the LAN host Expo reports as-is on every platform, including a physical Android device on the same network. The Android emulator is the one exception — a loopback host there (Expo started with `--localhost`, which a physical device reaches through `adb reverse tcp:8081 tcp:8081`; the tunnel alone leaves the host as the LAN address) is translated to its `10.0.2.2` alias for the host machine
 4. **Fallback** to `http://localhost:3000` (`http://10.0.2.2:3000` on the Android emulator)
 
 **Development:**

@@ -33,10 +33,11 @@ function hostFromHostUri(hostUri: string): string {
 
 /**
  * Whether a hostUri host names the loopback interface, which is what Metro
- * reports when Expo binds the dev server to the machine it runs on (an
- * `adb reverse` tunnel on a physical device, or the iOS simulator/web
- * sharing the host's network). The Android emulator is a separate machine
- * from that loopback's point of view, so it alone needs a translated host.
+ * reports when Expo is started with `--localhost` (reached from a physical
+ * device through `adb reverse tcp:8081 tcp:8081`, and directly from the iOS
+ * simulator or web, which share the host's network). The Android emulator is
+ * a separate machine from that loopback's point of view, so it alone needs a
+ * translated host.
  */
 function isLoopbackHost(host: string): boolean {
   return host === 'localhost' || host === '127.0.0.1' || host === '[::1]'
@@ -77,13 +78,14 @@ export function getApiUrl(): string {
   // device on the same network reaches that address directly, and so does
   // the iOS simulator or web, which share the host's network; only the
   // Android emulator is a separate machine from that address's point of
-  // view. A loopback host there (Metro bound to `localhost`, which is what a
-  // physical device tunnels with `adb reverse` on Metro's own port) is
+  // view. A loopback host there (Expo started with `--localhost`, which a
+  // physical device reaches through `adb reverse` on Metro's own port) is
   // translated to the emulator's 10.0.2.2 alias for the host machine; every
   // other host, loopback or not, is used as-is.
   //
-  // This only recognizes an `adb reverse` tunnel when it also covers Metro's
-  // port (hostUri itself reports loopback): a physical device that reaches
+  // An `adb reverse` tunnel only shows here when Expo runs with
+  // `--localhost`, which is what makes hostUri report loopback; the tunnel
+  // alone leaves hostUri the LAN host. So a physical device that reaches
   // Metro over LAN normally, with a separate `adb reverse tcp:3000 tcp:3000`
   // forwarding only the backend port, still gets the LAN host here, because
   // nothing observable from hostUri distinguishes that device from one with

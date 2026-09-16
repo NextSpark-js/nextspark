@@ -256,7 +256,7 @@ describe('getApiUrl fallback host', () => {
     expect(getApiUrlAndroidDeviceWithHost()).toBe('http://192.168.1.2:3000')
   })
 
-  it('keeps localhost on a physical Android device when hostUri itself is loopback (Metro\'s own port tunneled with adb reverse)', () => {
+  it('keeps localhost on a physical Android device when hostUri itself is loopback (Expo started with --localhost, reached through adb reverse)', () => {
     jest.resetModules()
     jest.doMock('expo-constants', () => ({ expoConfig: { extra: {}, hostUri: 'localhost:8081' } }))
     jest.doMock('expo-device', () => ({ isDevice: true }))
