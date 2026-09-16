@@ -33,7 +33,7 @@
  *   1: a step failed, or the root install is missing
  */
 
-import { spawnSync } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import {
   copyFileSync,
   cpSync,
@@ -74,9 +74,9 @@ const NC = '\x1b[0m'
 
 const readJson = (file) => JSON.parse(readFileSync(file, 'utf8'))
 
-function step(label, run) {
+async function step(label, run) {
   console.log(`${CYAN}→ ${label}${NC}`)
-  const passed = run()
+  const passed = await run()
   console.log(passed ? `${GREEN}✓ ${label} passed${NC}` : `${RED}✗ ${label} failed${NC}`)
   return passed
 }
@@ -87,21 +87,59 @@ function step(label, run) {
 // never returns. A step's own subprocess (a stalled network call from `expo
 // export`, an unresponsive Metro/Watchman crawl) can still hang the whole check
 // forever, so every step is bounded here and reported as failed instead.
+//
+// `expo export` alone runs Watchman's initial crawl plus Metro's cold bundle,
+// which measured ~233s (169.7s + 63.7s) on a clean clone against every other
+// step's few seconds, so it gets its own, longer budget instead of sharing the
+// default with steps two orders of magnitude faster.
 const STEP_TIMEOUT_MS = 5 * 60 * 1000
+const EXPORT_STEP_TIMEOUT_MS = 15 * 60 * 1000
 
-function exec(command, args, cwd, env) {
-  const result = spawnSync(command, args, {
-    cwd,
-    stdio: 'inherit',
-    env: env ? { ...process.env, ...env } : process.env,
-    timeout: STEP_TIMEOUT_MS,
-    killSignal: 'SIGKILL',
-  })
-  if (result.error) console.log(`${RED}${result.error.message}${NC}`)
-  if (result.signal) {
-    console.log(`${RED}Timed out after ${STEP_TIMEOUT_MS / 1000}s and was killed with ${result.signal}${NC}`)
+/**
+ * SIGKILL to the negative pid targets the whole process group `detached: true`
+ * made this child the leader of, so descendants a hung Jest or Metro spawned
+ * (workers, the Watchman crawl, a bound port) die with it instead of being
+ * reparented to init and outliving the script.
+ */
+function killProcessGroup(pid) {
+  try {
+    process.kill(-pid, 'SIGKILL')
+  } catch (error) {
+    if (error.code !== 'ESRCH') throw error
   }
-  return result.status === 0
+}
+
+function exec(command, args, cwd, { env, timeoutMs = STEP_TIMEOUT_MS } = {}) {
+  return new Promise((resolve) => {
+    const child = spawn(command, args, {
+      cwd,
+      stdio: 'inherit',
+      env: env ? { ...process.env, ...env } : process.env,
+      detached: true,
+    })
+
+    let timedOut = false
+    const timer = setTimeout(() => {
+      timedOut = true
+      killProcessGroup(child.pid)
+    }, timeoutMs)
+
+    child.on('error', (error) => {
+      clearTimeout(timer)
+      console.log(`${RED}${error.message}${NC}`)
+      resolve(false)
+    })
+
+    child.on('exit', (code, signal) => {
+      clearTimeout(timer)
+      if (timedOut) {
+        console.log(`${RED}Timed out after ${timeoutMs / 1000}s and its process group was killed${NC}`)
+      } else if (signal) {
+        console.log(`${RED}Killed with ${signal}${NC}`)
+      }
+      resolve(code === 0)
+    })
+  })
 }
 
 /**
@@ -110,11 +148,14 @@ function exec(command, args, cwd, env) {
  * before it was fixed to bundle straight from source: type-checking alone
  * resolves imports through tsconfig paths and never notices.
  */
-function exportAndroid() {
+async function exportAndroid() {
   const exportDir = join(MOBILE_APP_DIR, 'dist')
   rmSync(exportDir, { recursive: true, force: true })
   try {
-    return exec('pnpm', ['exec', 'expo', 'export', '--platform', 'android'], MOBILE_APP_DIR, { CI: '1' })
+    return await exec('pnpm', ['exec', 'expo', 'export', '--platform', 'android'], MOBILE_APP_DIR, {
+      env: { CI: '1' },
+      timeoutMs: EXPORT_STEP_TIMEOUT_MS,
+    })
   } finally {
     rmSync(exportDir, { recursive: true, force: true })
   }
@@ -299,7 +340,7 @@ function verifyMobileSrcMatchesTemplate() {
   return problems.length === 0
 }
 
-function verifyTemplate() {
+async function verifyTemplate() {
   const ts = createRequire(join(MOBILE_APP_DIR, 'package.json'))('typescript')
   const dir = mkdtempSync(join(tmpdir(), 'nextspark-mobile-template-'))
   try {
@@ -308,13 +349,13 @@ function verifyTemplate() {
     for (const problem of problems) console.log(`  ${RED}${problem}${NC}`)
     if (problems.length > 0) return false
     const tsc = join(MOBILE_APP_DIR, 'node_modules/typescript/bin/tsc')
-    return exec(process.execPath, [tsc, '--noEmit', '-p', 'tsconfig.verify.json'], dir)
+    return await exec(process.execPath, [tsc, '--noEmit', '-p', 'tsconfig.verify.json'], dir)
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
 }
 
-function main() {
+async function main() {
   console.log()
   console.log(`${CYAN}========================================${NC}`)
   console.log(`${CYAN}  NextSpark - Mobile Verify${NC}`)
@@ -342,7 +383,7 @@ function main() {
     ['Test apps/mobile (jest)', () => exec('pnpm', ['run', 'test'], MOBILE_APP_DIR)],
   ]
   for (const [label, run] of steps) {
-    if (!step(label, run)) return false
+    if (!(await step(label, run))) return false
   }
 
   console.log()
@@ -350,4 +391,5 @@ function main() {
   return true
 }
 
-process.exitCode = main() ? 0 : 1
+const ok = await main()
+process.exitCode = ok ? 0 : 1
