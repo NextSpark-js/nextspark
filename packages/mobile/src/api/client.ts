@@ -78,9 +78,18 @@ export function getApiUrl(): string {
   // the iOS simulator or web, which share the host's network; only the
   // Android emulator is a separate machine from that address's point of
   // view. A loopback host there (Metro bound to `localhost`, which is what a
-  // physical device tunnels with `adb reverse`) is translated to the
-  // emulator's 10.0.2.2 alias for the host machine; every other host,
-  // loopback or not, is used as-is.
+  // physical device tunnels with `adb reverse` on Metro's own port) is
+  // translated to the emulator's 10.0.2.2 alias for the host machine; every
+  // other host, loopback or not, is used as-is.
+  //
+  // This only recognizes an `adb reverse` tunnel when it also covers Metro's
+  // port (hostUri itself reports loopback): a physical device that reaches
+  // Metro over LAN normally, with a separate `adb reverse tcp:3000 tcp:3000`
+  // forwarding only the backend port, still gets the LAN host here, because
+  // nothing observable from hostUri distinguishes that device from one with
+  // no tunnel at all. There is no reliable client-side signal for a
+  // port-specific tunnel, so that combination needs an explicit
+  // EXPO_PUBLIC_API_URL=http://localhost:3000 (see apps/mobile/README.md).
   if (Constants.expoConfig?.hostUri) {
     const host = hostFromHostUri(Constants.expoConfig.hostUri)
     if (Platform.OS === 'android' && !Device.isDevice && isLoopbackHost(host)) {

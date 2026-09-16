@@ -18,13 +18,20 @@ pnpm install
 ```
 
 2. No API URL configuration is needed by default. Leave `EXPO_PUBLIC_API_URL`
-unset: the client auto-detects it from the Expo dev server (and picks
-`10.0.2.2` on the Android emulator, `localhost` everywhere else, including a
-physical Android device reached through `adb reverse`). Only set it to override
-that detection, e.g. a backend that isn't the local dev server:
+unset: the client auto-detects it from the Expo dev server's own address
+(the Android emulator alone is translated to its `10.0.2.2` host alias; every
+other platform, physical Android devices on the same Wi-Fi included, uses
+that address as reported). Only set it to override that detection:
 ```bash
 # EXPO_PUBLIC_API_URL=http://192.168.x.x:3000
 ```
+If a physical Android device instead reaches Metro through `adb reverse`
+(Metro started with `--localhost`, or `adb reverse tcp:8081 tcp:8081`), the
+client notices the dev server's own address is loopback and uses `localhost`
+automatically. But if Metro stays in its default LAN mode and only the
+backend port is tunneled (`adb reverse tcp:3000 tcp:3000`), nothing tells the
+client that tunnel exists — set `EXPO_PUBLIC_API_URL=http://localhost:3000`
+explicitly in that case (see "Network request failed" below).
 
 3. Make sure the NextSpark backend is running:
 ```bash
@@ -97,7 +104,8 @@ apps/mobile/
 ### "Network request failed"
 - Check that the backend is running on port 3000
 - No manual API URL configuration is needed in most cases; the client auto-detects it from the Expo dev server
-- If a physical Android device does not share a network with the development machine, use `adb reverse`; the client automatically uses `localhost` for that tunnel (see `packages/mobile/README.md`)
+- If a physical Android device does not share a network with the development machine, tunnel both ports with `adb reverse tcp:8081 tcp:8081` and `adb reverse tcp:3000 tcp:3000`, and start Expo with `--localhost` so Metro's own address is loopback too - the client detects that and uses `localhost` automatically (see `packages/mobile/README.md`)
+- If only the backend port is tunneled (`adb reverse tcp:3000 tcp:3000`) while Metro stays in its default LAN mode, the client cannot tell that tunnel apart from a plain LAN device and still resolves the LAN address: set `EXPO_PUBLIC_API_URL=http://localhost:3000` explicitly
 
 ### "Unauthorized" errors
 - Token may have expired, try logging out and back in
