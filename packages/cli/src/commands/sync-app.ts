@@ -1,9 +1,10 @@
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 import chalk from 'chalk';
 import ora from 'ora';
 import { getCoreDir, getProjectRoot } from '../utils/paths.js';
 import {
+  buildFailureLines,
   describeTemplatesChanges,
   planTemplatesChanges,
   runRegistryBuild,
@@ -33,14 +34,26 @@ const REPORT_TONES: Record<ReportLine['tone'], (text: string) => string> = {
 };
 
 /**
- * Copy a directory's files into another, keeping their relative paths
+ * Copy a directory's files into another, keeping their relative paths. Nothing
+ * already there is written over: a backup that can be overwritten is no backup.
  */
 function backupDirectory(source: string, target: string): void {
   for (const [file, content] of readTree(source)) {
     const targetPath = join(target, file);
     mkdirSync(dirname(targetPath), { recursive: true });
-    writeFileSync(targetPath, content);
+    writeFileSync(targetPath, content, { flag: 'wx' });
   }
+}
+
+/**
+ * A directory of this run's own for the copy of app/ that --backup takes, named
+ * after the core version and the time. The suffix mkdtemp adds is what keeps two
+ * runs apart when the clock doesn't: a second one within the same millisecond
+ * would otherwise land on the first one's directory.
+ */
+function createBackupDirectory(projectRoot: string, coreVersion: string): string {
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  return mkdtempSync(join(projectRoot, `app.backup.v${coreVersion}.${stamp}-`));
 }
 
 /**
@@ -155,10 +168,14 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       }
     }
 
+    // The .gitignore comes before anything this run writes, so the backups and
+    // the regenerated tree are ignored from the moment they exist
+    const addedGitignoreEntries = options.dryRun ? [] : ensureGeneratedPathsIgnored(projectRoot);
+
     // Perform backup if requested
     if (options.backup && !options.dryRun) {
-      const backupDir = join(projectRoot, `app.backup.v${coreVersion}.${Date.now()}`);
       spinner.start('Creating backup...');
+      const backupDir = createBackupDirectory(projectRoot, coreVersion);
       backupDirectory(appDir, backupDir);
       spinner.succeed(`Backup created: ${relative(projectRoot, backupDir)}`);
     }
@@ -205,9 +222,8 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
         console.log(chalk.yellow(`  Would regenerate app/(templates) with the registry build, but what it would change there couldn't be worked out${why}; run "nextspark registry:build" to see why`));
       }
     } else {
-      const addedEntries = ensureGeneratedPathsIgnored(projectRoot);
-      if (addedEntries.length > 0) {
-        console.log(chalk.gray(`  Added ${addedEntries.join(', ')} to .gitignore`));
+      if (addedGitignoreEntries.length > 0) {
+        console.log(chalk.gray(`  Added ${addedGitignoreEntries.join(', ')} to .gitignore`));
       }
 
       spinner.start('Regenerating app/(templates)...');
@@ -217,10 +233,23 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       } else if (registry.status === 'skipped') {
         spinner.warn(`Skipped regenerating app/(templates): ${registry.reason}. Run "nextspark registry:build" once it is set.`);
       } else {
-        spinner.warn('Could not regenerate app/(templates); run "nextspark registry:build" to see why.');
+        spinner.fail('Could not regenerate app/(templates)');
       }
       for (const line of templatesTreeLines(registry.output)) {
         console.log(chalk.gray(`    ${line}`));
+      }
+
+      // app/(templates) is the registry build's half of the sync: with it stale,
+      // reporting success would leave the project's routes behind core's under a
+      // zero exit code, which is what core's postinstall and CI both read.
+      if (registry.status === 'failed') {
+        for (const line of buildFailureLines(registry.output)) {
+          console.error(chalk.red(`    ${line}`));
+        }
+        console.error(chalk.red('\n  Sync incomplete: /app now matches core, but app/(templates) was not regenerated.'));
+        console.error(chalk.red('  Fix what the registry build reports above and run "nextspark registry:build".\n'));
+        process.exitCode = 1;
+        return;
       }
     }
 

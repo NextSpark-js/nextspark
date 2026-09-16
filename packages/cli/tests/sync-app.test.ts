@@ -1,5 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { execFileSync } from 'node:child_process'
 import { mkdtemp, mkdir, writeFile, readFile, readdir, rm, stat } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -51,31 +52,49 @@ async function project() {
   return { root, cleanup: () => rm(root, { recursive: true, force: true }) }
 }
 
-/** Run sync:app from the project root, returning what it printed without colors. */
-async function runSync(
-  root: string,
-  options: { dryRun?: boolean; force?: boolean; verbose?: boolean; overwrite?: string[]; confirm?: (message: string) => Promise<boolean> }
-) {
+interface SyncOptions {
+  dryRun?: boolean
+  force?: boolean
+  verbose?: boolean
+  overwrite?: string[]
+  confirm?: (message: string) => Promise<boolean>
+}
+
+/**
+ * Run sync:app from the project root, returning what it printed without colors
+ * and the code it would leave the process with (0 when it sets none).
+ */
+async function runSyncForExit(root: string, options: SyncOptions) {
   const printed: string[] = []
   const original = { log: console.log, warn: console.warn, error: console.error }
   const capture = (...args: unknown[]) => { printed.push(args.map(String).join(' ')) }
   const previousCwd = process.cwd()
   const previousTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME
+  const previousExitCode = process.exitCode
   delete process.env.NEXT_PUBLIC_ACTIVE_THEME
+  process.exitCode = 0
 
   console.log = capture
   console.warn = capture
   console.error = capture
   process.chdir(root)
+  let exitCode: number
   try {
     await syncAppCommand(options)
   } finally {
+    exitCode = Number(process.exitCode ?? 0)
+    process.exitCode = previousExitCode
     process.chdir(previousCwd)
     Object.assign(console, original)
     if (previousTheme !== undefined) process.env.NEXT_PUBLIC_ACTIVE_THEME = previousTheme
   }
 
-  return printed.join('\n').replace(/\x1b\[[0-9;]*m/g, '')
+  return { printed: printed.join('\n').replace(/\x1b\[[0-9;]*m/g, ''), exitCode }
+}
+
+/** Run sync:app from the project root, returning what it printed without colors. */
+async function runSync(root: string, options: SyncOptions) {
+  return (await runSyncForExit(root, options)).printed
 }
 
 const TAG_LINE = new RegExp(`^// @nextspark-generated core@${CORE_VERSION.replace(/\./g, '\\.')} path=\\S+ sha256=[0-9a-f]{64}\n`)
@@ -94,7 +113,7 @@ test('--dry-run writes nothing and names each file it would write, remove or kee
     assert.match(printed, /- app\/layout\.ppr\.tsx \(PPR variants stay in core/)
     assert.match(printed, /! i18n\.ts \(differs from core\)/)
     assert.match(printed, /! app\/dashboard\/page\.tsx \(differs from core\)/)
-    assert.match(printed, /Would add app\/\(templates\)\/, \.nextspark\/backups\/, \.nextspark\/sync-state\.json to \.gitignore/)
+    assert.match(printed, /Would add app\/\(templates\)\/, \.nextspark\/backups\/, \.nextspark\/sync-state\.json, app\.backup\.v\*\/ to \.gitignore/)
   } finally {
     await cleanup()
   }
@@ -242,6 +261,84 @@ test('in a clone with no sync state, a tsconfig.json that differs from core is k
     assert.equal(await readFile(join(root, 'tsconfig.json'), 'utf-8'), own)
     assert.doesNotMatch(second, /tsconfig\.json/)
   } finally {
+    await cleanup()
+  }
+})
+
+/** A stand-in for core's registry build that fails the way a template with no default export makes it fail. */
+const FAILING_REGISTRY_BUILD = `console.log('Discovering template overrides...')
+console.error('@/contents/themes/acme/templates/shop/page.tsx has no default export, and the app has no existing route at "app/shop/page.tsx"')
+process.exit(1)
+`
+
+test('a registry build that fails is reported as such, with a non-zero exit code and no success message', async () => {
+  const { root, cleanup } = await project()
+  try {
+    await withTemplatesTree(root)
+    await write(root, `${CORE}/scripts/build/registry.mjs`, FAILING_REGISTRY_BUILD)
+
+    const { printed, exitCode } = await runSyncForExit(root, { force: true })
+
+    assert.equal(exitCode, 1)
+    assert.doesNotMatch(printed, /Sync complete/)
+    assert.match(printed, /has no default export/)
+    assert.match(printed, /Sync incomplete: \/app now matches core, but app\/\(templates\) was not regenerated\./)
+  } finally {
+    await cleanup()
+  }
+})
+
+test('a registry build that is skipped for want of a theme leaves the sync complete, and its exit code zero', async () => {
+  const { root, cleanup } = await project()
+  try {
+    const { printed, exitCode } = await runSyncForExit(root, { force: true })
+
+    assert.equal(exitCode, 0)
+    assert.match(printed, /Sync complete/)
+  } finally {
+    await cleanup()
+  }
+})
+
+/** Whether git ignores `path` in the repository at `root`. */
+function gitIgnores(root: string, path: string): boolean {
+  try {
+    execFileSync('git', ['check-ignore', '-q', '--', path], { cwd: root, stdio: 'ignore' })
+    return true
+  } catch {
+    return false
+  }
+}
+
+test('--backup gives each run a backup of its own, never written over, and adds it to .gitignore', async () => {
+  const { root, cleanup } = await project()
+  const realNow = Date.now
+  // A frozen clock is what two runs within the same millisecond look like
+  Date.now = () => 1_700_000_000_000
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
+    await write(root, 'app/own.tsx', 'export default function Own() { return null }\n')
+
+    await runSync(root, { force: true, backup: true })
+    await write(root, 'app/own.tsx', 'export default function Changed() { return null }\n')
+    await runSync(root, { force: true, backup: true })
+
+    const backups = (await readdir(root)).filter((name) => name.startsWith('app.backup.')).sort()
+    assert.equal(backups.length, 2)
+    assert.equal(
+      await readFile(join(root, backups[0], 'own.tsx'), 'utf-8'),
+      'export default function Own() { return null }\n'
+    )
+    assert.equal(
+      await readFile(join(root, backups[1], 'own.tsx'), 'utf-8'),
+      'export default function Changed() { return null }\n'
+    )
+
+    for (const backup of backups) {
+      assert.ok(gitIgnores(root, `${backup}/`), `git does not ignore ${backup}`)
+    }
+  } finally {
+    Date.now = realNow
     await cleanup()
   }
 })

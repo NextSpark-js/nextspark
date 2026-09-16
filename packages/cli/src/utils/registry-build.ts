@@ -136,6 +136,19 @@ export function describeTemplatesChanges(changes: TemplatesChanges): string[] {
 }
 
 /**
+ * What a failed registry build printed, as the lines worth repeating: the tail
+ * of its output, where the error that stopped it lands. Without them the
+ * failure is a sentence with no cause in it.
+ */
+export function buildFailureLines(output: string, limit = 12): string[] {
+  return output
+    .split('\n')
+    .map((line) => line.trimEnd())
+    .filter((line) => line.trim() !== '')
+    .slice(-limit);
+}
+
+/**
  * The lines of a registry build's output that report what it did to
  * `app/(templates)`: files written, replaced or removed, and where anything it
  * replaced or removed was backed up. The rest of the output is not worth

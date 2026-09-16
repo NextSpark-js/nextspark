@@ -13,10 +13,11 @@ const NEXTSPARK_DIR = ['.nextspark', '.nextspark/', '/.nextspark', '/.nextspark/
 
 /**
  * What sync:app and the registry build leave in a project that has no place in
- * git, grouped under a comment each: the regenerated app/(templates), and under
+ * git, grouped under a comment each: the regenerated app/(templates); under
  * .nextspark/ the backups - which can hold a middleware or a config the project
- * never meant to commit - and this machine's sync state. `ignoredBy` lists the
- * lines that already ignore each path.
+ * never meant to commit - and this machine's sync state; and the copy of app/
+ * that --backup takes, one directory per run. `ignoredBy` lists the lines that
+ * already ignore each path.
  */
 const GENERATED_PATHS = [
   {
@@ -33,6 +34,14 @@ const GENERATED_PATHS = [
     comment: '# Backups and state that nextspark sync:app keeps on this machine',
     entry: '.nextspark/sync-state.json',
     ignoredBy: [...NEXTSPARK_DIR, '.nextspark/sync-state.json', '/.nextspark/sync-state.json'],
+  },
+  {
+    comment: '# Backups and state that nextspark sync:app keeps on this machine',
+    entry: 'app.backup.v*/',
+    ignoredBy: [
+      'app.backup.v*', 'app.backup.v*/', '/app.backup.v*', '/app.backup.v*/',
+      'app.backup.*', 'app.backup.*/', '/app.backup.*', '/app.backup.*/',
+    ],
   },
 ];
 
