@@ -48,14 +48,14 @@ export const EXISTING_OBJECTS_SQL = `
    LIMIT 5
 `;
 
-export function connect(connectionString, timeouts = TIMEOUTS) {
-  return timeLimitedClient(connectionString, timeouts);
+export function connect(connectionString, timeouts = TIMEOUTS, target = {}) {
+  return timeLimitedClient(connectionString, timeouts, target);
 }
 
 // `end()` drops the socket when a query is still active, so a connection whose
 // query timed out closes instead of waiting for a server that is not answering.
-async function withClient(connectionString, timeouts, work) {
-  const client = connect(connectionString, timeouts);
+async function withClient(connectionString, timeouts, work, target = {}) {
+  const client = connect(connectionString, timeouts, target);
   await client.connect();
   try {
     return await work(client);
@@ -81,6 +81,11 @@ export function inspectTarget(connectionString, timeouts = TIMEOUTS) {
  * connections that only need the server, and a project whose own schema lives
  * there looks, from the outside, like a server with nothing on it.
  *
+ * The connection goes to the server and user the database URL names, as pg
+ * reads them, with only the database changed. The target database is compared
+ * the way pg resolves it too, so a URL with no database whose user is
+ * `postgres` is already the maintenance database.
+ *
  * A server that refuses the connection, or the query, or does not answer it in
  * time, is reported as unreachable rather than as empty: not being able to look
  * is what a managed cluster looks like, and reading it as "nothing there" is
@@ -88,11 +93,14 @@ export function inspectTarget(connectionString, timeouts = TIMEOUTS) {
  * allowed to inspect.
  */
 export async function inspectMaintenanceDatabase(databaseUrl, timeouts = TIMEOUTS) {
-  const url = new URL(databaseUrl);
-  if (url.pathname === `/${MAINTENANCE_DATABASE}`) return { objects: [] };
-  url.pathname = `/${MAINTENANCE_DATABASE}`;
+  if (connect(databaseUrl, timeouts).database === MAINTENANCE_DATABASE) return { objects: [] };
   try {
-    const result = await withClient(url.toString(), timeouts, client => client.query(EXISTING_OBJECTS_SQL));
+    const result = await withClient(
+      databaseUrl,
+      timeouts,
+      client => client.query(EXISTING_OBJECTS_SQL),
+      { database: MAINTENANCE_DATABASE }
+    );
     return { objects: result.rows };
   } catch (error) {
     return { unreachable: true, reason: error.message };

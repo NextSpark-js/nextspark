@@ -23,7 +23,7 @@
 // Without a limit the URL's parameters apply as pg reads them.
 
 import pg from 'pg';
-import { timeLimitedClient, withoutTimeLimitParameters } from './connection-time-limits.mjs';
+import { timeLimitedClient, connectionSettings } from './connection-time-limits.mjs';
 
 const { Client } = pg;
 
@@ -66,7 +66,7 @@ export function migrationClient(connectionString, limit) {
  */
 export function ignoredParametersNotice(connectionString, limit) {
   if (!limit) return null;
-  const { ignored } = withoutTimeLimitParameters(connectionString);
+  const { ignored } = connectionSettings(connectionString);
   if (ignored.length === 0) return null;
   return (
     `The database URL sets ${ignored.join(' and ')}, which migrations do not use: ` +
