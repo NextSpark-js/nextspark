@@ -63,7 +63,7 @@ interface Team {
 The `AuthProvider` manages teams state:
 
 ```typescript
-// src/providers/AuthProvider.tsx
+// packages/mobile/src/providers/AuthProvider.tsx (exported as @nextsparkjs/mobile)
 
 interface AuthContextValue {
   user: User | null

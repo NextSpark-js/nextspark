@@ -40,8 +40,6 @@ apps/mobile-dev/
 │           ├── create.tsx        # Create customer (modal)
 │           └── [id].tsx          # Edit customer
 ├── src/
-│   ├── api/
-│   │   └── client.ts             # API client singleton
 │   ├── components/
 │   │   ├── ui/                   # shadcn-style UI primitives
 │   │   │   ├── index.ts          # Barrel exports
@@ -74,12 +72,7 @@ apps/mobile-dev/
 │   │   ├── useTasks.ts           # Tasks CRUD hooks
 │   │   └── useCustomers.ts       # Customers CRUD hooks
 │   ├── lib/
-│   │   ├── utils.ts              # cn() utility (clsx + tailwind-merge)
-│   │   ├── storage.ts            # Cross-platform storage abstraction
-│   │   └── alert.ts              # Cross-platform Alert polyfill
-│   ├── providers/
-│   │   ├── AuthProvider.tsx      # Authentication context
-│   │   └── QueryProvider.tsx     # TanStack Query provider
+│   │   └── utils.ts              # cn() utility (clsx + tailwind-merge)
 │   ├── styles/
 │   │   └── globals.css           # CSS variables + Tailwind
 │   └── types/
@@ -107,10 +100,10 @@ apps/mobile-dev/
 │                        HOOKS (src/hooks/)                       │
 │  useTasks, useCustomers (TanStack Query)                        │
 ├─────────────────────────────────────────────────────────────────┤
-│                     PROVIDERS (src/providers/)                  │
+│               PROVIDERS (@nextsparkjs/mobile)                   │
 │  AuthProvider, QueryProvider                                    │
 ├─────────────────────────────────────────────────────────────────┤
-│                      API CLIENT (src/api/)                      │
+│                 API CLIENT (@nextsparkjs/mobile)                │
 │  apiClient singleton with auth headers                          │
 ├─────────────────────────────────────────────────────────────────┤
 │                    NEXTSPARK BACKEND                            │

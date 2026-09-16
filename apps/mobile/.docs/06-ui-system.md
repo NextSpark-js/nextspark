@@ -298,7 +298,7 @@ import { Button, Card, CardContent, Badge, Input } from "@/src/components/ui"
 React Native's `Alert.alert` doesn't work on web. We created a cross-platform utility:
 
 ```tsx
-// src/lib/alert.ts
+// packages/mobile/src/lib/alert.ts (exported as @nextsparkjs/mobile)
 import { Alert as RNAlert, Platform } from "react-native"
 
 export function confirmDestructive(

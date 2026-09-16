@@ -84,12 +84,12 @@ apps/mobile-dev/
 │           ├── create.tsx  # Create task
 │           └── [id].tsx    # Edit task
 ├── src/
-│   ├── api/client.ts       # API client
 │   ├── components/         # Reusable components
 │   ├── hooks/              # TanStack Query hooks
-│   ├── providers/          # Context providers
 │   └── types/              # TypeScript types
 └── assets/                 # App icons
+
+# API client and context providers come from @nextsparkjs/mobile
 ```
 
 ## Troubleshooting

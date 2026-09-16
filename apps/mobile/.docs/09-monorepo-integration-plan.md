@@ -171,7 +171,7 @@ android/
 
 ```env
 # API Configuration
-EXPO_PUBLIC_API_URL=http://localhost:5173
+EXPO_PUBLIC_API_URL=http://localhost:3000
 
 # Optional: Enable debug logging
 # EXPO_PUBLIC_DEBUG=true
