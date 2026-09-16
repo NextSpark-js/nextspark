@@ -192,7 +192,7 @@ export async function createProject(options: ProjectOptions): Promise<void> {
       corePackage,
       cliPackage,
       uiPackage,
-      'next@15.5.24',
+      'next@16.3.5',
       'react',
       'react-dom',
       'next-intl@4.11.0',

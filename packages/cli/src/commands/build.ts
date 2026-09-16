@@ -5,7 +5,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { spawnNext } from '../utils/spawn-next.js';
 import { getCoreDir, getProjectRoot } from '../utils/paths.js';
-import { pickBundler, resolveBundlerArgs } from '../utils/next-bundler.js';
+import { effectiveBundler, pickBundler, resolveBundlerArgs } from '../utils/next-bundler.js';
 
 /**
  * Load environment variables from project root .env file
@@ -97,9 +97,8 @@ export async function buildCommand(options: BuildOptions): Promise<void> {
     const nextArgs = ['next', 'build', ...bundlerArgs, ...(options.nextArgs ?? [])];
 
     spinner.start('Building for production...');
-    if (bundler) {
-      console.log(chalk.blue(`[Build] Bundler: ${bundler === 'webpack' ? 'Webpack' : 'Turbopack'}`));
-    }
+    const running = effectiveBundler(bundler, projectRoot);
+    console.log(chalk.blue(`[Build] Bundler: ${running === 'webpack' ? 'Webpack' : 'Turbopack'}`));
 
     const buildProcess = spawnNext(nextArgs, {
       cwd: projectRoot,

@@ -98,3 +98,20 @@ export function pickBundler(options: {
   if (options.turbopack) return 'turbopack';
   return undefined;
 }
+
+/**
+ * The bundler Next will actually run, including when no flag is passed and it
+ * falls back to its own default: Webpack up to Next 15, Turbopack from 16.
+ * With the version unknown, Webpack is the safer guess — it is what every major
+ * before 16 runs.
+ */
+export function effectiveBundler(
+  bundler: Bundler | undefined,
+  projectRoot: string
+): Bundler {
+  if (bundler) return bundler;
+
+  const major = getNextMajorVersion(projectRoot);
+
+  return major !== null && major >= 16 ? 'turbopack' : 'webpack';
+}

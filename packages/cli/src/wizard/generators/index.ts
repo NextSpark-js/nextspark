@@ -261,7 +261,7 @@ async function updatePackageJson(config: WizardConfig): Promise<void> {
     'dev': 'nextspark dev',
     'build': 'nextspark build',
     'start': 'next start',
-    'lint': 'next lint',
+    'lint': 'eslint .',
     'build:registries': 'nextspark registry:build',
     'db:migrate': 'nextspark db:migrate',
     'db:seed': 'nextspark db:seed',
@@ -297,7 +297,7 @@ async function updatePackageJson(config: WizardConfig): Promise<void> {
     // create.ts for the full rationale. better-auth is deliberately tilde-ranged
     // (not caret): 1.7.0 introduces a breaking Account table schema change
     // (accountId -> providerAccountId) this app's migrations don't account for.
-    'next': '^15.5.24',
+    'next': '^16.3.5',
     'react': '^19.0.0',
     'react-dom': '^19.0.0',
     // Auth
@@ -369,7 +369,7 @@ async function updatePackageJson(config: WizardConfig): Promise<void> {
     '@tailwindcss/postcss': '^4.0.0',
     // ESLint
     'eslint': '^9.18.0',
-    'eslint-config-next': '^15.1.0',
+    'eslint-config-next': '^16.3.5',
     '@eslint/eslintrc': '^3.2.0',
     // Database
     'drizzle-kit': '^0.31.4',

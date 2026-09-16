@@ -216,7 +216,7 @@ const pkg = {
     dev: 'next dev',
     build: 'nextspark build',
     start: 'next start',
-    lint: 'next lint',
+    lint: 'eslint .',
     test: 'echo \"No tests configured\"'
   },
   dependencies: {
