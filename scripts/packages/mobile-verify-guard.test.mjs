@@ -167,6 +167,12 @@ const entrypoints = [
   }, POSIX_ONLY],
 ]
 
+test('mobile:verify runs every node:test suite next to it as a step', async () => {
+  const { output, suites } = await run(process.execPath, [script])
+  const expected = readdirSync(HERE).filter((name) => name.endsWith('.test.mjs'))
+  assert.deepEqual([...suites].sort(), [...expected].sort(), output)
+})
+
 for (const [name, entrypoint, skip = false] of entrypoints) {
   test(`mobile:verify runs its steps when invoked through ${name}`, { skip }, async () => {
     const [command, args] = entrypoint()

@@ -8,18 +8,22 @@
  * does not ship, so a pass on apps/mobile alone says nothing about the
  * template. This script:
  *
- *   1. compares apps/mobile/src against packages/mobile/templates/src file
- *      by file, so the copy cannot drift from the package silently again,
- *   2. installs apps/mobile on its own (it is outside the pnpm workspace),
- *   3. type-checks apps/mobile,
- *   4. exports apps/mobile for Android, the only step that actually asks
+ *   1. runs every node:test suite next to it, one step each: this script's
+ *      own process-group teardown and entrypoint guard, and the check that
+ *      sync:all-templates copies apps/dev/app and apps/mobile/app into the
+ *      generated templates,
+ *   2. compares apps/mobile/src against packages/mobile/templates/src file
+ *      by file, so the copy cannot drift from the package silently,
+ *   3. installs apps/mobile on its own (it is outside the pnpm workspace),
+ *   4. type-checks apps/mobile,
+ *   5. exports apps/mobile for Android, the only step that actually asks
  *      Metro to bundle @nextsparkjs/ui and @nextsparkjs/mobile the way the
  *      app or a device build would,
- *   5. assembles the template in a temp directory, checks its dependency
+ *   6. assembles the template in a temp directory, checks its dependency
  *      declarations and type-checks it, side-effect imports included,
- *   6. runs the packages/mobile Jest suite (the client, the entity factory,
+ *   7. runs the packages/mobile Jest suite (the client, the entity factory,
  *      the providers - what apps/mobile only re-exports),
- *   7. runs the apps/mobile Jest suite.
+ *   8. runs the apps/mobile Jest suite.
  *
  * Both type-checks compile packages/mobile and packages/ui from source, and
  * their imports resolve from the root install, so `pnpm install` has to run at
@@ -610,9 +614,15 @@ async function main() {
     return false
   }
 
+  // mobile-verify-guard.test.mjs runs copies of this script, which is safe as
+  // a step of it: the copies run from a throwaway root whose suites are
+  // stand-ins, so none of them reaches a step that runs that file again.
+  const nodeTest = (suite) => () =>
+    exec(process.execPath, ['--test', join(REPO_ROOT, 'scripts/packages', suite)], REPO_ROOT)
   const steps = [
-    ['This script\'s process-group teardown (node:test)', () =>
-      exec(process.execPath, ['--test', join(REPO_ROOT, 'scripts/packages/mobile-verify.test.mjs')], REPO_ROOT)],
+    ['This script\'s process-group teardown (node:test)', nodeTest('mobile-verify.test.mjs')],
+    ['This script\'s entrypoint guard (node:test)', nodeTest('mobile-verify-guard.test.mjs')],
+    ['sync:all-templates fills both generated template directories (node:test)', nodeTest('sync-all-templates.test.mjs')],
     ['apps/mobile/src matches packages/mobile/templates/src', verifyMobileSrcMatchesTemplate],
     ['Install apps/mobile (isolated, frozen lockfile)', () =>
       exec('pnpm', ['install', '--ignore-workspace', '--frozen-lockfile'], MOBILE_APP_DIR)],

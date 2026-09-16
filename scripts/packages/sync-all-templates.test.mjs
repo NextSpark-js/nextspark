@@ -20,11 +20,9 @@ function countFiles(dir) {
 /**
  * packages/core/templates/app and packages/mobile/templates/app are
  * gitignored, generated at pack time from apps/dev/app and apps/mobile/app
- * (see .gitignore). sync:all-templates ran its steps without --sync, each
- * script's dry-run mode: it printed the diff, exited 0, and still created
- * the target directory empty (the "target not found" warning does that
- * regardless of mode) - a "target not found" pass that copied nothing looks
- * identical to a real sync unless something counts the files that landed.
+ * (see .gitignore). Without --sync each sync script runs in dry-run mode: it
+ * prints the diff, exits 0 and still creates a missing target directory
+ * empty, so a run that copied nothing only shows in how many files landed.
  */
 test('sync:all-templates copies files into both generated template directories', () => {
   const coreTarget = join(REPO_ROOT, 'packages/core/templates/app')
