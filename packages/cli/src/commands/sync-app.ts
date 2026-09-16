@@ -1,4 +1,3 @@
-import { randomInt } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { basename, join, dirname, relative } from 'node:path';
 import chalk from 'chalk';
@@ -19,8 +18,8 @@ import {
   ensureBackupsGitignore,
   ensureGeneratedPathsIgnored,
   generatedPathsOnDisk,
-  gitignoreIsSymlink,
-  missingGitignoreEntries,
+  planGitignore,
+  TEMPLATES_GITIGNORE_ENTRY,
   trackedTemplatesFiles,
   unsafeWritePlaces,
   unignoredPaths,
@@ -63,13 +62,6 @@ function backupStamp(): string {
   return new Date().toISOString().replace(/[:.]/g, '-');
 }
 
-const MKDTEMP_SUFFIX_CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-
-/** A suffix of the length and characters mkdtemp adds to a directory name, drawn at random. */
-function mkdtempSuffix(): string {
-  return Array.from({ length: 6 }, () => MKDTEMP_SUFFIX_CHARACTERS[randomInt(MKDTEMP_SUFFIX_CHARACTERS.length)]).join('');
-}
-
 /**
  * The start of the name of the directory for the copy of app/ that --backup
  * takes: the core version and the time. The suffix mkdtemp adds is what keeps two
@@ -102,7 +94,11 @@ function shownPath(path: string): string {
 /** How many of the paths git still picks up are named without --verbose, past which they are counted. */
 const UNIGNORED_SHOWN = 10;
 
-const SYMLINKED_GITIGNORE = 'the project\'s .gitignore is a symlink, which git does not read, so sync:app leaves it as it is';
+/** The copy of app/ that --backup takes, whose directory the .gitignore entry covers whatever it is named. */
+const APP_BACKUP_ENTRY = 'app.backup.v*/';
+
+/** The backups under .nextspark/backups, which the .gitignore sync:app keeps in that directory covers whatever the rest reads. */
+const BACKUPS_ENTRY = '.nextspark/backups/';
 
 /**
  * What the confirmation prompt says a sync is about to change, or null when it
@@ -184,23 +180,14 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       return;
     }
 
-    // --backup's copy of app/ counts as ignored only through a line of the
-    // project's .gitignore, which git does not read when it is a symlink
-    if (options.backup && gitignoreIsSymlink(projectRoot)) {
-      spinner.fail("Sync not started: --backup's copy of app/ would be left for git");
-      console.error(chalk.red("\n  The project's .gitignore is a symlink, which git does not read, so no line there keeps app.backup.v*/ out of git."));
-      console.error(chalk.yellow('  Make .gitignore a file of its own, or run sync:app without --backup.\n'));
-      process.exitCode = 1;
-      return;
-    }
-
     // The backups sync and the registry build take under .nextspark/backups are
     // kept out of git by that directory's own .gitignore, put in place before
     // the first one is written, whatever each is named or holds. One already
     // there that is a symlink, which git does not read, or that has patterns
     // other than `*`, which can take a backup back, is the project's: nothing is
     // written until it is fixed
-    const backsUpUnderNextspark = registryBuildBlocker(projectRoot) === null
+    const buildRuns = registryBuildBlocker(projectRoot) === null;
+    const backsUpUnderNextspark = buildRuns
       || actions.some(({ path, backup }) => backup && existsSync(join(projectRoot, path)));
     const backupsGitignore = backsUpUnderNextspark ? backupsGitignoreState(projectRoot) : null;
     if (backupsGitignore === 'symlink' || backupsGitignore === 'other') {
@@ -212,6 +199,26 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       process.exitCode = 1;
       return;
     }
+
+    // What sync:app writes is kept out of git by .gitignore files as git reads
+    // them, decided before anything is written: the lines it adds go at the
+    // end of the project's .gitignore, and a place it writes this run that git
+    // would still pick up with them in - taken back by a .gitignore further
+    // down, or under a project .gitignore that is a symlink - stops the run
+    // here, in a dry run too. The backups are left to their own .gitignore
+    const gitignorePlan = planGitignore(projectRoot);
+    const writtenThisRun = (entry: string) =>
+      entry === TEMPLATES_GITIGNORE_ENTRY ? buildRuns : entry === APP_BACKUP_ENTRY ? options.backup === true : entry !== BACKUPS_ENTRY;
+    const leftForGit = gitignorePlan.leftForGit.filter(({ entry }) => writtenThisRun(entry));
+    if (leftForGit.length > 0) {
+      spinner.fail('Sync not started: git would pick up what sync:app writes');
+      console.error(chalk.red('\n  With the lines sync:app adds to .gitignore, git would still pick up what goes under:'));
+      for (const { entry, why } of leftForGit) console.error(chalk.red(`    ${entry}: ${shownPath(why)}`));
+      console.error(chalk.yellow('  Make git leave each one out - drop the rule that takes it back, or make .gitignore a file of its own - and run sync:app again.\n'));
+      process.exitCode = 1;
+      return;
+    }
+    const notAdded = gitignorePlan.leftForGit.filter(({ entry }) => !writtenThisRun(entry) && entry !== BACKUPS_ENTRY);
 
     // What the registry build then changes in app/(templates), for the dry run to name and the prompt to count
     const templatesPlan = options.dryRun || !options.force
@@ -260,34 +267,18 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       }
     }
 
-    // --backup's directory is created before the .gitignore is written, and
-    // stays empty until the lines are in; a dry run names one of the same core
-    // version and time, with a suffix drawn as mkdtemp draws one
-    const appBackupDir = !options.backup
-      ? null
-      : options.dryRun
-        ? `${appBackupPrefix(coreVersion)}${mkdtempSuffix()}`
-        : basename(mkdtempSync(join(projectRoot, appBackupPrefix(coreVersion))));
-
-    // The .gitignore comes before what this run is known to write: the copy of
-    // app/, which counts only once a line ignores its directory whatever it is
-    // named and holds, and, when the registry build is planned - in a dry run, or
-    // in a run without --force - the files it adds. What the build adds unplanned
-    // is left to the check a run makes after the build
-    const pathsBeforeWriting = [
-      ...generatedPathsOnDisk(projectRoot),
-      ...(templatesPlan?.changes?.create ?? []),
-      ...(appBackupDir ? [...input.projectApp.keys()].map((file) => `${appBackupDir}/${file}`) : []),
-    ];
-    const addedGitignoreEntries = options.dryRun ? [] : ensureGeneratedPathsIgnored(projectRoot, pathsBeforeWriting);
+    // The .gitignore lines come before anything they keep out is written
+    const addedGitignoreEntries = options.dryRun ? [] : ensureGeneratedPathsIgnored(projectRoot);
 
     const addsBackupsGitignore = backupsGitignore === 'missing';
     if (addsBackupsGitignore && !options.dryRun) {
       ensureBackupsGitignore(projectRoot);
     }
 
-    if (appBackupDir && !options.dryRun) {
+    let appBackupDir: string | null = null;
+    if (options.backup && !options.dryRun) {
       spinner.start('Creating backup...');
+      appBackupDir = basename(mkdtempSync(join(projectRoot, appBackupPrefix(coreVersion))));
       backupDirectory(appDir, join(projectRoot, appBackupDir));
       spinner.succeed(`Backup created: ${appBackupDir}`);
     }
@@ -313,12 +304,13 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       console.log(chalk.gray('    To stop tracking it: git rm -r --cached "app/(templates)"'));
     }
 
+    for (const { entry, why } of notAdded) {
+      console.log(chalk.yellow(`  ⚠ ${options.dryRun ? 'Would not add' : 'Did not add'} ${entry} to .gitignore, and git would pick up what goes under it: ${shownPath(why)}`));
+    }
+
     if (options.dryRun) {
-      const missingEntries = missingGitignoreEntries(projectRoot, pathsBeforeWriting);
-      if (missingEntries.length > 0 && gitignoreIsSymlink(projectRoot)) {
-        console.log(chalk.yellow(`  ⚠ Would not add ${missingEntries.join(', ')} to .gitignore: ${SYMLINKED_GITIGNORE}`));
-      } else if (missingEntries.length > 0) {
-        console.log(chalk.gray(`  Would add ${missingEntries.join(', ')} to .gitignore`));
+      if (gitignorePlan.add.length > 0) {
+        console.log(chalk.gray(`  Would add ${gitignorePlan.add.join(', ')} to .gitignore`));
       }
       if (addsBackupsGitignore) {
         console.log(chalk.gray(`  Would add ${BACKUPS_GITIGNORE}, which keeps every backup there out of git`));
@@ -352,26 +344,30 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
         console.log(chalk.gray(`    ${line}`));
       }
 
-      // The files the registry build adds without a plan are only known now:
-      // git is asked about every file on disk under the entries, however many
-      // there are
-      const written = generatedPathsOnDisk(projectRoot);
-      addedGitignoreEntries.push(...ensureGeneratedPathsIgnored(projectRoot, written));
       if (addedGitignoreEntries.length > 0) {
-        console.log(chalk.gray(`  Added ${[...new Set(addedGitignoreEntries)].join(', ')} to .gitignore`));
+        console.log(chalk.gray(`  Added ${addedGitignoreEntries.join(', ')} to .gitignore`));
       }
       if (addsBackupsGitignore) {
         console.log(chalk.gray(`  Added ${BACKUPS_GITIGNORE}, which keeps every backup there out of git`));
       }
+
+      // Git is asked about every file this run left on disk under the entries,
+      // however many there are. The rules as they stood before anything was
+      // written leave them all out, so one git picks up now means a .gitignore
+      // changed while the sync ran, and the sync has not done its part
+      const written = generatedPathsOnDisk(projectRoot).filter((path) => path.startsWith('app.backup.v')
+        ? appBackupDir !== null && path.startsWith(`${appBackupDir}/`)
+        : !path.startsWith('app/(templates)/') || registry.status !== 'skipped');
       const unignored = unignoredPaths(projectRoot, written);
       if (unignored.length > 0) {
-        const why = gitignoreIsSymlink(projectRoot) ? SYMLINKED_GITIGNORE : 'a .gitignore further down the tree un-ignores them';
-        console.log(chalk.yellow(`  ⚠ git still picks up ${unignored.length} file(s) sync:app wrote: ${why}`));
+        console.error(chalk.red(`\n  Sync incomplete: git picks up ${unignored.length} file(s) sync:app and the registry build wrote, which the .gitignore files left out before the sync wrote anything:`));
         const shown = options.verbose ? unignored : unignored.slice(0, UNIGNORED_SHOWN);
-        for (const path of shown) console.log(chalk.gray(`    ${shownPath(path)}`));
+        for (const path of shown) console.error(chalk.red(`    ${shownPath(path)}`));
         if (unignored.length > shown.length) {
-          console.log(chalk.gray(`    ... and ${unignored.length - shown.length} more; --verbose names every one`));
+          console.error(chalk.red(`    ... and ${unignored.length - shown.length} more; --verbose names every one`));
         }
+        console.error(chalk.yellow('  A .gitignore changed while the sync ran. Make git leave them out, and run sync:app again.\n'));
+        process.exitCode = 1;
       }
 
       // app/(templates) is the registry build's half of the sync: with it stale,
@@ -386,6 +382,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
         process.exitCode = 1;
         return;
       }
+      if (unignored.length > 0) return;
     }
 
     // Success message

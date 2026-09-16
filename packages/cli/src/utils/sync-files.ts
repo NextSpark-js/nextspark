@@ -1,4 +1,4 @@
-import { constants, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { constants, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, sep } from 'node:path';
 import { parse } from 'dotenv';
 import { getNextMajorVersion } from './next-bundler.js';
@@ -32,11 +32,12 @@ export function readTree(root: string): Map<string, Buffer> {
   return files;
 }
 
+/** The files among `names` in `dir`, by name. A directory with one of the names is no file, and is left to the check for what is in the way. */
 function readNamedFiles(dir: string, names: readonly string[]): Map<string, Buffer> {
   const files = new Map<string, Buffer>();
   for (const name of names) {
     const path = join(dir, name);
-    if (existsSync(path)) files.set(name, readFileSync(path));
+    if (existsSync(path) && statSync(path).isFile()) files.set(name, readFileSync(path));
   }
   return files;
 }

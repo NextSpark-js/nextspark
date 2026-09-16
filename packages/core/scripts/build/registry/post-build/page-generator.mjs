@@ -8,7 +8,7 @@
 
 import { createRequire } from 'node:module'
 import { constants, existsSync } from 'fs'
-import { copyFile, mkdtemp, readdir, readFile, rmdir, unlink, writeFile, mkdir } from 'fs/promises'
+import { copyFile, lstat, mkdtemp, readdir, readFile, rmdir, unlink, writeFile, mkdir } from 'fs/promises'
 import { join, dirname, relative, sep } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -935,6 +935,22 @@ async function listFiles(directory) {
   return files
 }
 
+/**
+ * Remove a directory the tree needs a file in place of, once the files in it
+ * are backed up and removed: the directories left in it, and any .DS_Store.
+ */
+async function removeDirectoryInTheWay(directory) {
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const path = join(directory, entry.name)
+    if (entry.isDirectory()) {
+      await removeDirectoryInTheWay(path)
+    } else if (entry.name === '.DS_Store') {
+      await unlink(path)
+    }
+  }
+  await rmdir(directory)
+}
+
 /** Remove the empty directories under `directory`, deepest first, keeping `directory` itself. */
 async function removeEmptyDirectories(directory) {
   if (!existsSync(directory)) return
@@ -951,14 +967,15 @@ async function removeEmptyDirectories(directory) {
 
 /**
  * How app/(templates) differs from `files`, as absolute paths: the files
- * `files` has that don't exist yet, the ones that exist with other content, and
- * the files in the tree that `files` doesn't have.
+ * `files` has that don't exist yet - a directory where one goes counts as none,
+ * since the files in it are removed - the ones that exist with other content,
+ * and the files in the tree that `files` doesn't have.
  */
 async function diffTemplatesTree(templatesDir, files) {
   const create = []
   const replace = []
   for (const [path, content] of files) {
-    if (!existsSync(path)) {
+    if (!existsSync(path) || (await lstat(path)).isDirectory()) {
       create.push(path)
     } else if ((await readFile(path, 'utf8')) !== content) {
       replace.push(path)
@@ -1002,7 +1019,22 @@ async function reconcileTemplatesTree(templatesDir, files) {
     log(`app/(templates): backed up ${relativePath} to ${relative(rootDir, backupPath)}`, 'warning')
   }
 
+  // What stands where a file goes - a file where the tree needs a directory,
+  // or the files of a directory where it needs a file - is backed up and
+  // removed before anything is created, and new files still come before the
+  // rest is replaced or removed
+  const inTheWay = new Set(remove.filter(path =>
+    create.some(created => created.startsWith(`${path}${sep}`) || path.startsWith(`${created}${sep}`))
+  ))
+  for (const path of inTheWay) {
+    await backUp(path)
+    await unlink(path)
+  }
+
   for (const path of create) {
+    if (existsSync(path)) {
+      await removeDirectoryInTheWay(path)
+    }
     await mkdir(dirname(path), { recursive: true })
     await writeFile(path, files.get(path), 'utf8')
   }
@@ -1012,7 +1044,7 @@ async function reconcileTemplatesTree(templatesDir, files) {
     await writeFile(path, files.get(path), 'utf8')
   }
 
-  for (const path of remove) {
+  for (const path of remove.filter(path => !inTheWay.has(path))) {
     await backUp(path)
     await unlink(path)
   }

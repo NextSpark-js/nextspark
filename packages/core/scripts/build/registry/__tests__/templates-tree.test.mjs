@@ -14,7 +14,7 @@ import { execFileSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join, dirname, relative, sep } from 'node:path'
 
-import { generateMissingPages } from '../post-build/page-generator.mjs'
+import { generateMissingPages, planMissingPages } from '../post-build/page-generator.mjs'
 
 const DASHBOARD_LAYOUT = "'use client'\n\nexport default function DashboardLayout({ children }) { return children }\n"
 const PAGE = 'export default function Page() { return null }\n'
@@ -295,6 +295,37 @@ test('a .gitignore already in .nextspark/backups with * as its only pattern is k
 
     assert.equal(await readFile(join(root, '.nextspark/backups/.gitignore'), 'utf8'), '# ours\r\n* \r\n')
     assert.deepEqual(await backedUpFiles(root), [{ path: 'app/(templates)/old/layout.tsx', content: DASHBOARD_LAYOUT }])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('a file where the tree needs a directory, or a directory where it needs a file, is planned, backed up and removed before the build writes there', async () => {
+  const root = await createProject()
+  try {
+    await writeProjectFile(root, 'app/dashboard/layout.tsx', DASHBOARD_LAYOUT)
+    await writeProjectFile(root, 'app/(templates)/dashboard', '// a file where a directory goes\n')
+    await writeProjectFile(root, 'app/(templates)/pricing/page.tsx/note.md', 'a directory where a file goes\n')
+    await writeProjectFile(root, 'app/(templates)/pricing/page.tsx/.DS_Store', '')
+    await mkdir(join(root, 'app/(templates)/pricing/page.tsx/empty'), { recursive: true })
+    const reports = await writeTemplate(root, 'dashboard/reports/page.tsx', 'page', PAGE)
+    const pricing = await writeTemplate(root, 'pricing/page.tsx', 'page', PAGE)
+
+    assert.deepEqual(await planMissingPages([reports, pricing], { projectRoot: root }), {
+      create: ['app/(templates)/dashboard/layout.tsx', 'app/(templates)/dashboard/reports/page.tsx', 'app/(templates)/pricing/page.tsx'],
+      replace: [],
+      remove: ['app/(templates)/dashboard', 'app/(templates)/pricing/page.tsx/note.md'],
+    })
+
+    await generateMissingPages([reports, pricing], { projectRoot: root })
+
+    for (const file of ['dashboard/layout.tsx', 'dashboard/reports/page.tsx', 'pricing/page.tsx']) {
+      assert.ok((await stat(join(root, 'app/(templates)', file))).isFile(), `${file} is written`)
+    }
+    assert.deepEqual((await backedUpFiles(root)).sort((a, b) => a.path.localeCompare(b.path)), [
+      { path: 'app/(templates)/dashboard', content: '// a file where a directory goes\n' },
+      { path: 'app/(templates)/pricing/page.tsx/note.md', content: 'a directory where a file goes\n' },
+    ])
   } finally {
     await rm(root, { recursive: true, force: true })
   }

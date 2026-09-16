@@ -13,6 +13,7 @@ import {
   ensureGeneratedPathsIgnored,
   generatedPathsOnDisk,
   missingGitignoreEntries,
+  planGitignore,
   trackedTemplatesFiles,
   unsafeWritePlaces,
 } from '../src/utils/templates-gitignore.js'
@@ -202,32 +203,40 @@ test('app/(templates) counts as ignored only when every file of the tree is, not
   }
 })
 
-test('every path a run wrote is asked about, however many there are and whatever they are named', async () => {
-  const { root, cleanup } = await project()
-  try {
-    execFileSync('git', ['init', '-q'], { cwd: root })
-    // Rules for a file of each shape and for all but the last few of the tree's
-    // files, and rules for the rest that only git, not the text, reads as done
-    await writeFile(
-      join(root, '.gitignore'),
-      'app/(templates)/middleware.ts\napp/(templates)/dashboard/layout.tsx\napp/(templates)/(public)/page.tsx\n' +
-        'app/(templates)/covered/\n.nextspark/*\napp.backup.v*/**\n'
-    )
-    const covered = Array.from({ length: 20_000 }, (_, i) => `app/(templates)/covered/(group ${i % 50})/page ${i}.tsx`)
-    const left = [
-      'app/(templates)/deep/with spaces/área/"quoted" (1)/page.tsx',
-      "app/(templates)/it's [locale]/*?/page.tsx",
-      'app/(templates)/new\nline/page.tsx',
-    ]
+test('app/(templates) counts as ignored only as a directory git leaves out whole, whatever rules name the files under it', async () => {
+  const cases: { name: string; rules: string; missing: boolean }[] = [
+    { name: 'every file under it', rules: 'app/(templates)/**\n', missing: true },
+    { name: 'what is right under it and deeper', rules: 'app/(templates)/*\napp/(templates)/*/**\n', missing: true },
+    { name: 'a file of each shape', rules: 'app/(templates)/middleware.ts\napp/(templates)/dashboard/layout.tsx\napp/(templates)/(public)/page.tsx\n', missing: true },
+    { name: 'the directory, at any depth', rules: '**/(templates)/\n', missing: false },
+    { name: 'everything in app', rules: 'app/*\n', missing: false },
+  ]
+  const files = ['app/(templates)/custom/new.tsx', 'app/(templates)/deep/with spaces/área/"quoted" (1)/page.tsx', 'app/(templates)/new\nline/page.tsx']
 
-    assert.deepEqual(missingGitignoreEntries(root, [...covered, ...left]), ['app/(templates)/'])
-    assert.deepEqual(ensureGeneratedPathsIgnored(root, [...covered, ...left]), ['app/(templates)/'])
-    for (const file of left) {
-      assert.equal(gitIgnores(root, file), true, `git ignores ${JSON.stringify(file)}`)
+  // Every case runs before anything is asserted, so a failure names each one
+  const wrong: string[] = []
+  for (const { name, rules, missing } of cases) {
+    const { root, cleanup } = await project()
+    try {
+      execFileSync('git', ['init', '-q'], { cwd: root })
+      await writeFile(join(root, '.gitignore'), `${rules}.nextspark/\napp.backup.v*/\n`)
+
+      const got = ensureGeneratedPathsIgnored(root)
+      if (JSON.stringify(got) !== JSON.stringify(missing ? ['app/(templates)/'] : [])) wrong.push(`${name}: added ${JSON.stringify(got)}`)
+      // What the build writes, with a .gitignore of its own in the tree that takes all of it back
+      for (const file of [...files, 'app/(templates)/.gitignore']) {
+        await mkdir(join(root, file, '..'), { recursive: true })
+        await writeFile(join(root, file), file.endsWith('.gitignore') ? '!*\n!*/\n' : '')
+      }
+      for (const file of files) {
+        if (!gitIgnores(root, file)) wrong.push(`${name}: git does not ignore ${JSON.stringify(file)}`)
+      }
+    } finally {
+      await cleanup()
     }
-  } finally {
-    await cleanup()
   }
+
+  assert.deepEqual(wrong, [])
 })
 
 test("a backup a run wrote counts, not a file of each shape under another run's", async () => {
@@ -278,7 +287,13 @@ test('a .gitignore that is a symlink is not written through', async () => {
     await writeFile(join(root, 'rules'), 'node_modules/\n')
     await symlink('rules', join(root, '.gitignore'))
 
-    assert.equal(missingGitignoreEntries(root).length, 4)
+    assert.deepEqual(planGitignore(root), {
+      add: [],
+      leftForGit: ['app/(templates)/', '.nextspark/backups/', '.nextspark/sync-state.json', 'app.backup.v*/'].map((entry) => ({
+        entry,
+        why: "the project's .gitignore is a symlink, which git does not read, so no line there keeps it out of git",
+      })),
+    })
     assert.deepEqual(ensureGeneratedPathsIgnored(root), [])
     assert.equal(await readFile(join(root, 'rules'), 'utf-8'), 'node_modules/\n')
   } finally {
@@ -535,6 +550,88 @@ test('without git to ask, a line counts only below the .gitignore\'s last negati
   assert.deepEqual(wrong, [])
 })
 
+test('without git to ask, a negation takes back only what it matches, as git reads it once the project is a repository', async () => {
+  const files = [
+    'app/(templates)/dashboard/layout.tsx',
+    '.nextspark/backups/2026-09-16T00-00-00-000Z-q1w2e3/i18n.ts',
+    '.nextspark/sync-state.json',
+    'app.backup.v0.1.0-beta.190.2026-09-16T00-00-00-000Z-x1y2z3/layout.tsx',
+  ]
+  const lines = 'app/(templates)/\n.nextspark/backups/\n.nextspark/sync-state.json\napp.backup.v*/\n'
+  const cases: { name: string; gitignore: string; added: string[] }[] = [
+    { name: 'a negation of another file', gitignore: `${lines}!README.keep\n`, added: [] },
+    { name: 'negations of files under the places, which git never looks into', gitignore: `${lines}!app/(templates)/keep.tsx\n!.nextspark/backups/**\n!app.backup.v*/**\n`, added: [] },
+    { name: 'a negation of the templates directory by a glob', gitignore: `${lines}!app/(templ*)/\n`, added: ['app/(templates)/'] },
+    { name: 'a negation of the sync state by its name', gitignore: `${lines}!sync-state.json\n`, added: ['.nextspark/sync-state.json'] },
+    { name: 'a negation of some copies of app/', gitignore: `${lines}!app.backup.v1*/\n`, added: ['app.backup.v*/'] },
+    { name: 'a negation of the copies with a bracket', gitignore: `${lines}![a]pp.backup.*\n`, added: ['app.backup.v*/'] },
+    { name: 'a negation of copies with a name no copy has', gitignore: `${lines}!app.backup.x*/\n`, added: [] },
+  ]
+
+  // Every case runs in both modes before anything is asserted, so a failure names each one
+  const wrong: string[] = []
+  for (const mode of ['outside a repository', 'without git on PATH'] as const) {
+    for (const { name, gitignore, added } of cases) {
+      const { root, cleanup } = await project()
+      try {
+        await writeFile(join(root, '.gitignore'), gitignore)
+
+        const got = await withoutGitToAsk(root, mode, () => ensureGeneratedPathsIgnored(root))
+        if (JSON.stringify(got) !== JSON.stringify(added)) wrong.push(`${mode}, ${name}: added ${JSON.stringify(got)}`)
+
+        execFileSync('git', ['init', '-q'], { cwd: root })
+        for (const file of files) {
+          if (!gitIgnores(root, file)) wrong.push(`${mode}, ${name}: git does not ignore ${file}`)
+        }
+      } finally {
+        await cleanup()
+      }
+    }
+  }
+
+  assert.deepEqual(wrong, [])
+})
+
+test('the rules git reads from outside the project count: its exclude file, core.excludesFile, the .gitignore files above the project, and core.ignorecase', async () => {
+  const { root: top, cleanup } = await project()
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: top })
+    const root = join(top, 'apps/web')
+    await mkdir(join(root, 'app'), { recursive: true })
+    // The project's own .gitignore is a symlink, so nothing can be added there
+    await writeFile(join(top, 'rules'), 'app/(templates)/\n')
+    await symlink(join(top, 'rules'), join(root, '.gitignore'))
+
+    await writeFile(join(top, '.git/info/exclude'), 'apps/web/app/(templates)/\n')
+    await writeFile(join(top, 'excluded'), '.nextspark/\n')
+    execFileSync('git', ['config', 'core.excludesFile', join(top, 'excluded')], { cwd: top })
+    await writeFile(join(top, 'apps/.gitignore'), 'app.backup.*/\n')
+    execFileSync('git', ['config', 'core.ignorecase', 'false'], { cwd: top })
+
+    assert.deepEqual(planGitignore(root), { add: [], leftForGit: [] })
+
+    // A negation in app/.gitignore under the case git doesn't fold
+    await writeFile(join(root, 'app/.gitignore'), '!(TEMPLATES)/\n')
+    assert.deepEqual(planGitignore(root).leftForGit, [])
+    execFileSync('git', ['config', 'core.ignorecase', 'true'], { cwd: top })
+    assert.deepEqual(planGitignore(root).leftForGit, [{
+      entry: 'app/(templates)/',
+      why: "the project's .gitignore is a symlink, which git does not read, so no line there keeps it out of git",
+    }])
+
+    await rm(join(root, '.gitignore'))
+    assert.deepEqual(planGitignore(root), {
+      add: [],
+      leftForGit: [{ entry: 'app/(templates)/', why: "app/.gitignore line 1 (!(TEMPLATES)/) takes it back, and git reads that over a line the project's .gitignore adds" }],
+    })
+    await mkdir(join(root, 'app/(templates)'))
+    await writeFile(join(root, 'app/(templates)/page.tsx'), '')
+    assert.equal(gitIgnores(root, 'app/(templates)/page.tsx'), false, 'git takes it back')
+  } finally {
+    await cleanup()
+  }
+})
+
 test('a symlink where sync:app writes, or something else in the way, is found, and a symlink is listed as the file git sees, not gone through', async () => {
   const { root, cleanup } = await project()
   const outside = await project()
@@ -574,6 +671,25 @@ test('a symlink where sync:app writes, or something else in the way, is found, a
     await mkdir(join(root, '.nextspark/registries'))
     await symlink(join(outside.root, 'index.ts'), join(root, '.nextspark/registries/index.ts'))
     assert.ok(unsafeWritePlaces(root).some(({ path }) => path === '.nextspark/registries/index.ts'), 'a symlink in the registries is found')
+
+    await rm(join(root, '.nextspark/registries/index.ts'))
+    await mkdir(join(root, '.nextspark/registries/index.ts'))
+    await mkdir(join(root, 'app/(templates)/(public)/page.tsx'), { recursive: true })
+    await rm(join(root, 'app/dashboard'))
+    await writeFile(join(root, 'app/dashboard'), '')
+    await mkdir(join(root, 'i18n.ts'))
+    await mkdir(join(root, '.gitignore'))
+    assert.deepEqual(unsafeWritePlaces(root, ['app/dashboard/page.tsx', 'app/layout.tsx', 'i18n.ts']), [
+      { path: '.nextspark/sync-state.json', problem: 'is a symlink' },
+      { path: '.gitignore', problem: 'is not a file' },
+      { path: 'app/dashboard', problem: 'is not a directory' },
+      { path: 'i18n.ts', problem: 'is not a file' },
+      { path: 'app/(templates)/(public)/dashboard', problem: 'is a symlink' },
+      { path: '.nextspark/registries/index.ts', problem: 'is not a file' },
+    ], 'a directory in app/(templates) where a file goes is left to the registry build')
+    await rm(join(root, '.gitignore'), { recursive: true })
+    await symlink(join(outside.root, 'rules'), join(root, '.gitignore'))
+    assert.ok(!unsafeWritePlaces(root).some(({ path }) => path === '.gitignore'), "the project's .gitignore may be a symlink")
 
     await rm(join(root, '.nextspark'), { recursive: true })
     await writeFile(join(root, '.nextspark'), '')
