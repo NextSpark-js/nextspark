@@ -1,5 +1,22 @@
-import coreWebVitals from "eslint-config-next/core-web-vitals";
-import typescript from "eslint-config-next/typescript";
+/**
+ * eslint-config-next 16 publishes flat config arrays on these subpaths. Version 15 declares no
+ * `exports` at all, so importing them throws ERR_MODULE_NOT_FOUND and takes the whole lint run
+ * with it -- which is what a Next 15 project gets when `nextspark init` drops this file next to
+ * its existing eslint-config-next. Losing Next's presets there is better than losing every rule,
+ * so the project still lints, with the zod rule below.
+ */
+async function nextPresets() {
+  try {
+    const [coreWebVitals, typescript] = await Promise.all([
+      import("eslint-config-next/core-web-vitals"),
+      import("eslint-config-next/typescript"),
+    ]);
+
+    return [...coreWebVitals.default, ...typescript.default];
+  } catch {
+    return [];
+  }
+}
 
 // `eslint .` walks the whole project, so the block schemas under
 // contents/themes/<theme>/blocks/*/schema.ts are linted like any other source. The `next lint`
@@ -9,8 +26,7 @@ import typescript from "eslint-config-next/typescript";
 // eslint-config-next 16 publishes flat config arrays on its subpaths. Reaching them through
 // FlatCompat instead throws `Converting circular structure to JSON` before a single file is read.
 const eslintConfig = [
-  ...coreWebVitals,
-  ...typescript,
+  ...(await nextPresets()),
   {
     ignores: [".next/**", ".nextspark/**"],
   },
@@ -20,6 +36,9 @@ const eslintConfig = [
     rules: { "@typescript-eslint/no-require-imports": "off" },
   },
   {
+    // Spelled out rather than inherited: without Next's presets there is no other block naming
+    // these extensions, and ESLint would then leave every .ts file unlinted.
+    files: ["**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}"],
     rules: {
       // `no-restricted-imports` with `importNames: ["z"]` also rejects `import * as z`, so the
       // named specifier is matched by syntax instead.
