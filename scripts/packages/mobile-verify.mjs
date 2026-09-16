@@ -326,7 +326,7 @@ function exec(command, args, cwd, {
       giveUpTimer = setTimeout(() => {
         release()
         const reason = delivered
-          ? `still running ${killFallbackMs / 1000}s after its process group was killed`
+          ? `still running ${killFallbackMs / 1000}s after a kill was sent to it`
           : 'its kill signal was never confirmed delivered'
         settle(false, `Gave up waiting for pid ${child.pid} (${commandLine}): ${reason}; left running`)
       }, killFallbackMs)

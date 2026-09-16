@@ -188,10 +188,9 @@ test('killProcessGroup on win32 fails and names only the leader pid when it is s
   )
 })
 
-// The decision behind this shape: a walk of Win32_Process can always miss a
-// grandchild spawned after it queried its parent, so no enumeration this
-// script could write proves the tree taskkill was asked to end is actually
-// empty (round 14 of #196). killProcessGroup therefore never enumerates
+// A walk of Win32_Process can always miss a grandchild spawned after it
+// queried its parent, so no enumeration this script could write proves the
+// tree taskkill was asked to end is actually empty. killProcessGroup therefore never enumerates
 // descendants and never turns one into a kill target; it only confirms the
 // leader and always says plainly that the rest of the tree is unconfirmed.
 test('killProcessGroup on win32 always reports descendants as unconfirmed, without enumerating or naming one to kill', () => {
@@ -346,16 +345,20 @@ test('exec gives up on a step whose process is still running after its kill was 
     assert.equal(result, false)
     assert.ok(elapsed < 5_000, `exec must give up about killFallbackMs after the timeout, not wait for the child (${elapsed}ms)`)
     assert.ok(logs.some((line) => line.includes(`Gave up waiting for pid ${unkilledPid}`) && line.includes('left running')))
+    // A kill reported as delivered confirms the leader at most; on Windows the
+    // rest of its tree is never confirmed, so the message cannot say it died.
+    assert.ok(
+      !logs.some((line) => /group was killed|tree was killed|was killed/.test(line)),
+      `a delivered kill must not be phrased as the process group having died:\n${logs.join('\n')}`,
+    )
   } finally {
     await killForReal(unkilledPid)
   }
 })
 
-// Guards the call site itself, not just killProcessGroup's own handling of a
-// killLeader it is given: an injected killProcessGroup like the tests above
-// only proves exec() calls *some* function, not that it threads the timed-out
-// child's own handle through. A killLeader silently dropped from this call
-// site would still pass every test above.
+// exec() has to hand killProcessGroup the timed-out child's own handle as
+// killLeader, so the leader can still be ended when a pid-based kill cannot.
+// The fake below captures what exec() passes and calls it.
 test('exec passes the timed-out child\'s own handle as killLeader, not just its pid', async () => {
   let capturedPid
   let capturedKillLeader
@@ -476,9 +479,8 @@ test('cancelActiveChildrenAndExit names the children it could not kill before ex
   }
 })
 
-// Same gap as the exec test above, for the other real call site: an injected
-// killProcessGroup only proves cancelActiveChildrenAndExit calls it, not that
-// it threads each active child's own handle through as killLeader.
+// cancelActiveChildrenAndExit has to hand killProcessGroup each active child's
+// own handle as killLeader. The fake below captures what it passes and calls it.
 test("cancelActiveChildrenAndExit passes each active child's own handle as killLeader, not just its pid", async () => {
   let capturedPid
   let capturedKillLeader
