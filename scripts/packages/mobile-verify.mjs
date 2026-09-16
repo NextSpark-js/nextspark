@@ -48,7 +48,7 @@ import {
 import { builtinModules, createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { dirname, join, relative, sep } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..')
 const MOBILE_APP_DIR = join(REPO_ROOT, 'apps/mobile')
@@ -102,6 +102,14 @@ async function step(label, run) {
 const STEP_TIMEOUT_MS = 5 * 60 * 1000
 const EXPORT_STEP_TIMEOUT_MS = 15 * 60 * 1000
 
+// How long exec() waits for a child's `exit` event after a kill signal that
+// killProcessGroup could not confirm was delivered (taskkill missing or
+// refused) before giving up on the step instead of hanging forever, and how
+// long cancelActiveChildrenAndExit waits for the active step's own cleanup
+// (a stuck `finally`) before exiting anyway.
+const KILL_FALLBACK_MS = 10 * 1000
+const CLEANUP_TIMEOUT_MS = 10 * 1000
+
 /**
  * SIGKILL to the negative pid targets the whole process group `detached: true`
  * made this child the leader of, so descendants a hung Jest or Metro spawned
@@ -111,17 +119,32 @@ const EXPORT_STEP_TIMEOUT_MS = 15 * 60 * 1000
  * Windows has no such thing as a process group signal: `detached: true` there
  * only frees the child from the parent's console, and a negative pid is not a
  * valid target for kill(2). `taskkill /T` walks the same process tree instead.
+ *
+ * Returns whether the kill signal was actually delivered. taskkill can fail
+ * to run at all (missing from PATH) or run and refuse (access denied on a
+ * more-privileged process) - in both cases the child never receives it and
+ * its `exit` event never comes, so a caller waiting on that event needs to
+ * know not to wait forever.
  */
 function killProcessGroup(pid, { platform = process.platform, kill = process.kill, spawnTaskkill = spawnSync } = {}) {
   if (platform === 'win32') {
-    spawnTaskkill('taskkill', ['/pid', String(pid), '/T', '/F'])
-    return
+    const result = spawnTaskkill('taskkill', ['/pid', String(pid), '/T', '/F'])
+    if (result.error) {
+      console.log(`${RED}taskkill did not run for pid ${pid}: ${result.error.message}${NC}`)
+      return false
+    }
+    if (result.status !== 0) {
+      console.log(`${RED}taskkill exited ${result.status} for pid ${pid}: ${String(result.stderr ?? '').trim()}${NC}`)
+      return false
+    }
+    return true
   }
   try {
     kill(-pid, 'SIGKILL')
   } catch (error) {
     if (error.code !== 'ESRCH') throw error
   }
+  return true
 }
 
 // A step's subprocess is the leader of its own detached process group (see
@@ -134,7 +157,12 @@ const activeChildPids = new Set()
 // (see step below) before the process exits instead of racing it.
 let activeStepPromise = null
 
-function exec(command, args, cwd, { env, timeoutMs = STEP_TIMEOUT_MS } = {}) {
+function exec(command, args, cwd, {
+  env,
+  timeoutMs = STEP_TIMEOUT_MS,
+  killFallbackMs = KILL_FALLBACK_MS,
+  killProcessGroup: killGroup = killProcessGroup,
+} = {}) {
   return new Promise((resolve) => {
     const child = spawn(command, args, {
       cwd,
@@ -145,16 +173,32 @@ function exec(command, args, cwd, { env, timeoutMs = STEP_TIMEOUT_MS } = {}) {
     activeChildPids.add(child.pid)
 
     let timedOut = false
+    let settled = false
+    const settle = (value) => {
+      if (settled) return
+      settled = true
+      resolve(value)
+    }
+
     const timer = setTimeout(() => {
       timedOut = true
-      killProcessGroup(child.pid)
+      if (!killGroup(child.pid)) {
+        // The signal was not confirmed delivered, so `exit` below may never
+        // fire - give up on this step instead of hanging the whole run.
+        setTimeout(() => {
+          if (activeChildPids.delete(child.pid)) {
+            console.log(`${RED}Gave up waiting for pid ${child.pid}: its kill signal was never confirmed delivered${NC}`)
+            settle(false)
+          }
+        }, killFallbackMs)
+      }
     }, timeoutMs)
 
     child.on('error', (error) => {
       clearTimeout(timer)
       activeChildPids.delete(child.pid)
       console.log(`${RED}${error.message}${NC}`)
-      resolve(false)
+      settle(false)
     })
 
     child.on('exit', (code, signal) => {
@@ -165,7 +209,7 @@ function exec(command, args, cwd, { env, timeoutMs = STEP_TIMEOUT_MS } = {}) {
       } else if (signal) {
         console.log(`${RED}Killed with ${signal}${NC}`)
       }
-      resolve(code === 0)
+      settle(code === 0)
     })
   })
 }
@@ -180,10 +224,27 @@ function exec(command, args, cwd, { env, timeoutMs = STEP_TIMEOUT_MS } = {}) {
  * step's own finally (exportAndroid's dist cleanup) still runs after that, on
  * a later microtask, so exiting has to wait for the step promise too - a bare
  * process.exit() right after the kill would cut that finally off mid-run.
+ *
+ * That wait is itself bounded: a stuck finally (a filesystem call that never
+ * returns) would otherwise leave the supervisor process, and whatever it did
+ * not get to remove, running forever past the signal that was meant to stop it.
  */
-async function cancelActiveChildrenAndExit(exitCode, { exit = process.exit } = {}) {
+async function cancelActiveChildrenAndExit(exitCode, { exit = process.exit, cleanupTimeoutMs = CLEANUP_TIMEOUT_MS } = {}) {
   for (const pid of activeChildPids) killProcessGroup(pid)
-  if (activeStepPromise) await activeStepPromise.catch(() => {})
+  if (activeStepPromise) {
+    let cleanupTimer
+    // Cleared on whichever branch settles first: left running, the losing
+    // side's timer would keep the process alive for cleanupTimeoutMs even
+    // after a fast cleanup already resolved the race.
+    const cleanedUp = await Promise.race([
+      activeStepPromise.then(() => true, () => true),
+      new Promise((resolve) => { cleanupTimer = setTimeout(() => resolve(false), cleanupTimeoutMs) }),
+    ])
+    clearTimeout(cleanupTimer)
+    if (!cleanedUp) {
+      console.log(`${RED}Gave up waiting for the active step's cleanup after ${cleanupTimeoutMs / 1000}s; it may not have finished${NC}`)
+    }
+  }
   exit(exitCode)
 }
 process.on('SIGTERM', () => cancelActiveChildrenAndExit(143))
@@ -440,11 +501,24 @@ async function main() {
   return true
 }
 
-export { exec, step, killProcessGroup, cancelActiveChildrenAndExit }
+/**
+ * Whether this module was invoked directly (`node mobile-verify.mjs`), as
+ * opposed to only imported by mobile-verify.test.mjs. import.meta.url is
+ * always a percent-encoded file: URL with forward slashes; process.argv[1]
+ * is a plain OS path, so a naive `file://${argv1}` comparison breaks for any
+ * path with a space (encoded on one side only) and on Windows (backslashes,
+ * and a bare drive letter instead of a leading slash). pathToFileURL applies
+ * the same normalization to argv1 that import.meta.url already went through.
+ */
+function isMainModule(moduleUrl, argv1, { toFileURL = pathToFileURL } = {}) {
+  return moduleUrl === toFileURL(argv1).href
+}
+
+export { exec, step, killProcessGroup, cancelActiveChildrenAndExit, isMainModule }
 
 // Guards the run below so mobile-verify.test.mjs can import the functions
 // above without kicking off the whole verify pipeline as a side effect.
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMainModule(import.meta.url, process.argv[1])) {
   const ok = await main()
   process.exitCode = ok ? 0 : 1
 }
