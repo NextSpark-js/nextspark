@@ -58,6 +58,24 @@ export function withBasePathIfInApp(url: string): string {
 }
 
 /**
+ * The same URL without the base path, when it is one this app serves and
+ * carries it; any other URL comes back as it went in. For what Next.js puts the
+ * base path on by itself, such as a `<Link>`'s href, which given a URL that
+ * already carries it would carry it twice.
+ *
+ * As in withBasePathIfInApp(), the base path counts only as a whole segment:
+ * under `/base`, `/base/contact` becomes `/contact`, `/base` and `/base?x=1`
+ * become `/` and `/?x=1`, and `/baseline` stays.
+ */
+export function withoutBasePath(url: string): string {
+  if (!url.startsWith('/') || url.startsWith('//')) return url
+  const base = basePath()
+  if (!base || !carriesBasePath(url, base)) return url
+  const rest = url.slice(base.length)
+  return rest.startsWith('/') ? rest : `/${rest}`
+}
+
+/**
  * Whether the URL starts with the base path as a whole segment: followed by
  * nothing, by the rest of a path, or by a query or fragment (`/base?x=1`,
  * `/base#pricing`).

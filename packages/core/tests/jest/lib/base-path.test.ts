@@ -5,7 +5,7 @@
  * once too. withBasePathRequest — the URL a route handler receives gets the
  * base path back, with the rest of the request intact.
  */
-import { withBasePath, withBasePathIfInApp, withBasePathInSrcset, withBasePathRequest } from '@/core/lib/base-path'
+import { withBasePath, withBasePathIfInApp, withBasePathInSrcset, withBasePathRequest, withoutBasePath } from '@/core/lib/base-path'
 
 const ORIGINAL_BASE_PATH = process.env.__NEXT_ROUTER_BASEPATH
 
@@ -104,6 +104,43 @@ describe('withBasePathIfInApp — where the base path ends', () => {
     process.env.__NEXT_ROUTER_BASEPATH = '/base/'
     expect(withBasePath('/contact')).toBe('/base/contact')
     expect(withBasePath('/')).toBe('/base')
+  })
+})
+
+describe('withoutBasePath', () => {
+  test('leaves every URL as-is when the app has no base path', () => {
+    delete process.env.__NEXT_ROUTER_BASEPATH
+    expect(withoutBasePath('/base/contact')).toBe('/base/contact')
+    expect(withoutBasePath('/contact')).toBe('/contact')
+  })
+
+  test.each([
+    ['/base', '/base/contact', '/contact'],
+    ['/base', '/base', '/'],
+    ['/base', '/base/', '/'],
+    ['/base', '/base?x=1', '/?x=1'],
+    ['/base', '/base#pricing', '/#pricing'],
+    ['/base', '/base/contact?x=1#form', '/contact?x=1#form'],
+    // a URL without the base path, or with a segment that only starts like it
+    ['/base', '/contact', '/contact'],
+    ['/base', '/baseline', '/baseline'],
+    // another origin
+    ['/base', '//cdn.example.com/base/x.png', '//cdn.example.com/base/x.png'],
+    ['/base', 'https://example.com/base/contact', 'https://example.com/base/contact'],
+    // a base path given with a trailing slash, or of more than one segment
+    ['/base/', '/base/contact', '/contact'],
+    ['/a/b', '/a/b/contact', '/contact'],
+    ['/a/b', '/a/contact', '/a/contact'],
+  ])('under base path %s, %s becomes %s', (base, url, expected) => {
+    process.env.__NEXT_ROUTER_BASEPATH = base
+    expect(withoutBasePath(url)).toBe(expected)
+  })
+
+  test('puts back exactly what withBasePathIfInApp adds', () => {
+    process.env.__NEXT_ROUTER_BASEPATH = '/base'
+    for (const url of ['/contact', '/contact?x=1', '/base/contact', '/baseline']) {
+      expect(withBasePathIfInApp(withoutBasePath(url))).toBe(withBasePathIfInApp(url))
+    }
   })
 })
 

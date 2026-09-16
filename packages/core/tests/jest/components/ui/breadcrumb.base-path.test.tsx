@@ -94,6 +94,31 @@ describe('BreadcrumbLink under a base path', () => {
     ).toBe('/base/dashboard')
   })
 
+  test.each([
+    ['its own href', <BreadcrumbLink asChild><Link href="/base/dashboard">Dashboard</Link></BreadcrumbLink>, '/base/dashboard'],
+    [
+      "the link's href",
+      <BreadcrumbLink asChild href="/base/dashboard">
+        {/* @ts-expect-error the href reaches the <Link> through the Slot */}
+        <Link>Dashboard</Link>
+      </BreadcrumbLink>,
+      '/base/dashboard',
+    ],
+    [
+      'its own href, over the link’s',
+      <BreadcrumbLink asChild href="/base/settings"><Link href="/base/dashboard">Dashboard</Link></BreadcrumbLink>,
+      '/base/dashboard',
+    ],
+    ['a URL object', <BreadcrumbLink asChild><Link href={{ pathname: '/base/dashboard', query: { tab: 'a' } }}>Dashboard</Link></BreadcrumbLink>, '/base/dashboard?tab=a'],
+    ['its as', <BreadcrumbLink asChild><Link href="/dashboard" as="/base/dashboard">Dashboard</Link></BreadcrumbLink>, '/base/dashboard'],
+    ['the base path alone', <BreadcrumbLink asChild><Link href="/base">Dashboard</Link></BreadcrumbLink>, '/base'],
+    ['the base path and a query', <BreadcrumbLink asChild href="/base?tab=a"><Link>Dashboard</Link></BreadcrumbLink>, '/base?tab=a'],
+    ['a path that only starts like the base path', <BreadcrumbLink asChild><Link href="/baseline">Dashboard</Link></BreadcrumbLink>, '/base/baseline'],
+    ['another origin', <BreadcrumbLink asChild><Link href="https://docs.example.com/base/guide">Dashboard</Link></BreadcrumbLink>, 'https://docs.example.com/base/guide'],
+  ])('with asChild, a <Link> child given an href that already carries the base path gets it once: %s', (_, link, expected) => {
+    expect(linkTarget(link)).toBe(expected)
+  })
+
   test('with asChild, a <Link> child puts the base path on once, whichever of the two carries the href', () => {
     expect(
       linkTarget(

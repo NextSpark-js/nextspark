@@ -2,7 +2,7 @@ import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import Link from "next/link"
 import { cn } from '../../lib/utils'
-import { withBasePathIfInApp } from '../../lib/base-path'
+import { withBasePathIfInApp, withoutBasePath } from '../../lib/base-path'
 import { ChevronRightIcon, DotsHorizontalIcon } from "@radix-ui/react-icons"
 
 const Breadcrumb = React.forwardRef<
@@ -40,18 +40,30 @@ const BreadcrumbItem = React.forwardRef<
 ))
 BreadcrumbItem.displayName = "BreadcrumbItem"
 
+type LinkProps = React.ComponentProps<typeof Link>
+
 /**
- * A breadcrumb's link, with the base path on an in-app `href`: Next.js adds it
- * to a <Link> and not to an <a>.
+ * A <Link> href without the base path the <Link> puts on by itself: a path, or
+ * the pathname of a URL object that names no other host.
+ */
+function withoutLinkBasePath(href: LinkProps["href"]): LinkProps["href"] {
+  if (typeof href === "string") return withoutBasePath(href)
+  if (typeof href.pathname !== "string" || href.host || href.hostname || href.protocol) return href
+  return { ...href, pathname: withoutBasePath(href.pathname) }
+}
+
+/**
+ * A breadcrumb's link, with the base path on an in-app `href` once: Next.js
+ * adds it to a <Link> and not to an <a>, and a URL may be written with it or
+ * without it.
  *
  * With `asChild` the props go to the child, and a child `href` of its own wins
  * over the link's. An <a> child gets the base path on whichever of the two it
- * ends up with. A <Link> child puts the base path on by itself, so it gets the
- * link's href as written; given it with the base path already on, it would put
- * it on twice. Any other child gets the link's href with the base path on and
- * keeps an href of its own untouched, since what it renders is not known here:
- * a component that wraps <Link> and takes its href from the link puts the base
- * path on twice.
+ * ends up with. A <Link> child puts the base path on by itself, so whichever it
+ * ends up with, and its `as`, reach it without the base path. Any other child
+ * gets the link's href with the base path on and keeps an href of its own
+ * untouched, since what it renders is not known here: a component that wraps
+ * <Link> and takes its href from the link puts the base path on twice.
  */
 const BreadcrumbLink = React.forwardRef<
   HTMLAnchorElement,
@@ -69,9 +81,21 @@ const BreadcrumbLink = React.forwardRef<
     )
   }
 
-  const child = React.isValidElement<React.ComponentPropsWithoutRef<"a">>(children) ? children : undefined
-  const slotProps = { ...props, href: child?.type === Link ? href : href && withBasePathIfInApp(href) }
+  if (React.isValidElement<LinkProps>(children) && children.type === Link) {
+    const { href: ownHref, as: ownAs } = children.props
+    const slotProps = { ...props, href: href && withoutBasePath(href) }
+    return (
+      <Slot ref={ref} className={linkClassName} {...slotProps}>
+        {React.cloneElement(children, {
+          ...(ownHref !== undefined && { href: withoutLinkBasePath(ownHref) }),
+          ...(ownAs !== undefined && { as: withoutLinkBasePath(ownAs) }),
+        })}
+      </Slot>
+    )
+  }
 
+  const child = React.isValidElement<React.ComponentPropsWithoutRef<"a">>(children) ? children : undefined
+  const slotProps = { ...props, href: href && withBasePathIfInApp(href) }
   return (
     <Slot ref={ref} className={linkClassName} {...slotProps}>
       {child?.type === "a" && typeof child.props.href === "string"
