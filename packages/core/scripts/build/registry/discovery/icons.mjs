@@ -147,16 +147,23 @@ function propertyKeyName(nameNode, ts) {
 
 /**
  * Peel off the TypeScript wrappers that change nothing about which value an
- * expression is at runtime — `(expr)`, `expr as T`, `expr satisfies T`,
- * `expr!` — so `icon: 'Wallet' as const` and `icon: Wallet!` are read the same
- * as `icon: 'Wallet'` and `icon: Wallet`. A regex-based scanner never saw
- * these wrappers in the first place; reading syntax does, so it has to strip
- * them explicitly instead of failing to match and dropping the icon silently.
+ * expression is at runtime — `(expr)`, `expr as T`, `<T>expr`,
+ * `expr satisfies T`, `expr!` — so `icon: 'Wallet' as const`, `icon: <any>Wallet`
+ * and `icon: Wallet!` are read the same as `icon: 'Wallet'` and `icon: Wallet`.
+ * A regex-based scanner never saw these wrappers in the first place; reading
+ * syntax does, so it has to strip them explicitly instead of failing to match
+ * and dropping the icon silently.
  */
 function unwrapTransparentExpression(expression, ts) {
   let current = expression
   while (current) {
-    if (ts.isParenthesizedExpression(current) || ts.isAsExpression(current) || ts.isSatisfiesExpression(current) || ts.isNonNullExpression(current)) {
+    if (
+      ts.isParenthesizedExpression(current) ||
+      ts.isAsExpression(current) ||
+      ts.isTypeAssertionExpression(current) ||
+      ts.isSatisfiesExpression(current) ||
+      ts.isNonNullExpression(current)
+    ) {
       current = current.expression
       continue
     }
@@ -242,9 +249,11 @@ export async function extractIconNames(content, filePath = 'icons.config.ts', pr
  *
  * Only a direct named import of lucide-react and a string literal reach the
  * registry. Anything else — a namespace access (`I.Users`), an identifier
- * aliased through another module, a component of the project's own — is not
- * resolvable by reading this file, so it never enters the registry and
- * resolveIcon falls back. That is silent, hence the warning.
+ * aliased through another module, a call (`chooseIcon()`), a component of the
+ * project's own — is not resolvable by reading this file, so it never enters
+ * the registry and resolveIcon falls back. That is silent, hence the warning:
+ * whatever isn't one of the two resolvable shapes is reported, whatever kind
+ * of expression it is, rather than allowlisting the shapes worth warning about.
  */
 export async function findUnresolvedIconRefs(content, filePath = 'icons.config.ts', projectRoot) {
   const { ts, sourceFile } = await parseIconSource(content, filePath, projectRoot)
@@ -256,19 +265,13 @@ export async function findUnresolvedIconRefs(content, filePath = 'icons.config.t
     const initializer = unwrapTransparentExpression(original, ts)
 
     // A wrapper that resolved to a usable literal or a known lucide import is
-    // not unresolved — extractIconNames already has it. Only report what is
-    // still opaque once the wrapper is stripped, quoting the source as written
-    // (wrapper included) so the warning points at what a developer would grep for.
-    if (ts.isStringLiteralLike(initializer) && SAFE_NAME.test(initializer.text)) {
-      continue
-    }
-    if (ts.isIdentifier(initializer) && lucideImports.has(initializer.text)) {
-      continue
-    }
+    // not unresolved — extractIconNames already has it. Quoting the source as
+    // written (wrapper included) so the warning points at what a developer
+    // would grep for.
+    const resolvedAsLiteral = ts.isStringLiteralLike(initializer) && SAFE_NAME.test(initializer.text)
+    const resolvedAsLucideImport = ts.isIdentifier(initializer) && lucideImports.has(initializer.text)
 
-    if (ts.isPropertyAccessExpression(initializer)) {
-      unresolved.push(original.getText(sourceFile))
-    } else if (ts.isIdentifier(initializer)) {
+    if (!resolvedAsLiteral && !resolvedAsLucideImport) {
       unresolved.push(original.getText(sourceFile))
     }
   }
@@ -288,8 +291,16 @@ function literalTextOf(expression, ts) {
 
 /** Where a theme or plugin actually gets DynamicIcon and resolveIcon from —
  * every subpath core publishes them under, via its `./lib/*` and
- * `./components/*` export wildcards. */
+ * `./components/*` export wildcards. Matched as a whole package name, not a
+ * string prefix: `@nextsparkjs/core-fake/lib/icons` starts with this string
+ * but is a different package entirely. */
 const CORE_PACKAGE_PREFIX = '@nextsparkjs/core'
+
+/** Whether a module specifier is core itself or one of its subpaths — the
+ * whole `@nextsparkjs/core` package segment, not merely a string prefix of it. */
+function isCorePackageSpecifier(moduleSpecifierText) {
+  return moduleSpecifierText === CORE_PACKAGE_PREFIX || moduleSpecifierText.startsWith(`${CORE_PACKAGE_PREFIX}/`)
+}
 
 /**
  * Local bindings for whatever a file imports from core, so a call site is
@@ -304,7 +315,7 @@ function parseCoreImports(sourceFile, ts) {
 
   for (const statement of sourceFile.statements) {
     if (!ts.isImportDeclaration(statement) || !ts.isStringLiteralLike(statement.moduleSpecifier)) continue
-    if (!statement.moduleSpecifier.text.startsWith(CORE_PACKAGE_PREFIX)) continue
+    if (!isCorePackageSpecifier(statement.moduleSpecifier.text)) continue
 
     const namedBindings = statement.importClause?.namedBindings
     if (!namedBindings) continue
@@ -322,20 +333,55 @@ function parseCoreImports(sourceFile, ts) {
   return { named, namespaces }
 }
 
+/** The bare names a node declares in its own lexical scope: a function's
+ * parameters, a `let`/`const`/`var` declaration's bindings, a catch clause's
+ * binding. Destructured names are collected too, so `function f({ resolveIcon })`
+ * shadows the same as `function f(resolveIcon)`. */
+function collectBindingNames(name, ts, into) {
+  if (ts.isIdentifier(name)) {
+    into.add(name.text)
+  } else if (ts.isObjectBindingPattern(name) || ts.isArrayBindingPattern(name)) {
+    for (const element of name.elements) {
+      if (ts.isBindingElement(element)) collectBindingNames(element.name, ts, into)
+    }
+  }
+}
+
+/** The names `node` introduces into its own scope, or an empty set when it
+ * introduces none. Used while walking the tree to track which imported names
+ * are shadowed by a closer local declaration. */
+function ownScopeBindingNames(node, ts) {
+  const names = new Set()
+
+  if (ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node) || ts.isArrowFunction(node) || ts.isMethodDeclaration(node)) {
+    for (const parameter of node.parameters) collectBindingNames(parameter.name, ts, names)
+  } else if (ts.isVariableDeclarationList(node)) {
+    for (const declaration of node.declarations) collectBindingNames(declaration.name, ts, names)
+  } else if (ts.isCatchClause(node) && node.variableDeclaration) {
+    collectBindingNames(node.variableDeclaration.name, ts, names)
+  }
+
+  return names
+}
+
 /**
  * Whether `expression` — a JSX tag name or a call's callee — is the given
  * core export, resolved through the file's own imports rather than by
- * comparing text: `import { resolveIcon as ri }` still matches `ri(...)`,
- * `import * as Core from '@nextsparkjs/core/lib/icons'` still matches
- * `Core.resolveIcon(...)`, and a same-named local that was never imported
- * from core — a theme's own `resolveIcon` helper, say — does not.
+ * comparing text: `import { resolveIcon as ri }` still matches `ri(...)` and
+ * `ri!(...)`, `import * as Core from '@nextsparkjs/core/lib/icons'` still
+ * matches `Core.resolveIcon(...)`, and a same-named local that was never
+ * imported from core — a theme's own `resolveIcon` helper, or a function
+ * parameter that shadows the import — does not.
  */
-function referencesCoreExport(expression, exportName, imports, ts) {
-  if (ts.isIdentifier(expression)) {
-    return imports.named.get(expression.text) === exportName
+function referencesCoreExport(expression, exportName, imports, ts, shadowStack) {
+  const unwrapped = unwrapTransparentExpression(expression, ts)
+  const isShadowed = name => shadowStack.some(scope => scope.has(name))
+
+  if (ts.isIdentifier(unwrapped)) {
+    return !isShadowed(unwrapped.text) && imports.named.get(unwrapped.text) === exportName
   }
-  if (ts.isPropertyAccessExpression(expression) && ts.isIdentifier(expression.expression)) {
-    return imports.namespaces.has(expression.expression.text) && expression.name.text === exportName
+  if (ts.isPropertyAccessExpression(unwrapped) && ts.isIdentifier(unwrapped.expression)) {
+    return !isShadowed(unwrapped.expression.text) && imports.namespaces.has(unwrapped.expression.text) && unwrapped.name.text === exportName
   }
   return false
 }
@@ -353,22 +399,29 @@ export async function extractLiteralIconCallNames(content, filePath = 'icons.tsx
   const imports = parseCoreImports(sourceFile, ts)
   const names = []
 
-  const visit = node => {
-    if ((ts.isJsxSelfClosingElement(node) || ts.isJsxOpeningElement(node)) && referencesCoreExport(node.tagName, 'DynamicIcon', imports, ts)) {
+  // A local declaration (a function parameter, a `let`/`const`, a catch
+  // binding) shadows an import of the same name for the rest of its scope,
+  // the same way it would at runtime — so the stack of scopes entered so far
+  // travels with the walk instead of imports being looked up by name alone.
+  const visit = (node, shadowStack) => {
+    const ownNames = ownScopeBindingNames(node, ts)
+    const nextStack = ownNames.size > 0 ? [...shadowStack, ownNames] : shadowStack
+
+    if ((ts.isJsxSelfClosingElement(node) || ts.isJsxOpeningElement(node)) && referencesCoreExport(node.tagName, 'DynamicIcon', imports, ts, nextStack)) {
       for (const attribute of node.attributes.properties) {
         if (!ts.isJsxAttribute(attribute) || attribute.name.text !== 'name' || !attribute.initializer) continue
         const name = literalTextOf(attribute.initializer, ts)
         if (name && SAFE_NAME.test(name)) names.push(name)
       }
-    } else if (ts.isCallExpression(node) && referencesCoreExport(node.expression, 'resolveIcon', imports, ts)) {
+    } else if (ts.isCallExpression(node) && referencesCoreExport(node.expression, 'resolveIcon', imports, ts, nextStack)) {
       const [firstArgument] = node.arguments
       const name = firstArgument && literalTextOf(firstArgument, ts)
       if (name && SAFE_NAME.test(name)) names.push(name)
     }
 
-    ts.forEachChild(node, visit)
+    ts.forEachChild(node, child => visit(child, nextStack))
   }
-  visit(sourceFile)
+  visit(sourceFile, [])
 
   return names
 }

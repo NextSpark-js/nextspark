@@ -21,10 +21,9 @@ import {
   extractLiteralIconCallNames
 } from '../discovery/icons.mjs'
 
-// extractLiteralIconCallNames now matches a call site by its real import
-// binding (#200 review), so every snippet exercising a real DynamicIcon or
-// resolveIcon call needs one of these in scope, the same way real theme and
-// plugin source does.
+// extractLiteralIconCallNames matches a call site by its real import binding,
+// so every snippet exercising a real DynamicIcon or resolveIcon call needs
+// one of these in scope, the same way real theme and plugin source does.
 const DYNAMIC_ICON_IMPORT = "import { DynamicIcon } from '@nextsparkjs/core/components/ui/dynamic-icon'\n"
 const RESOLVE_ICON_IMPORT = "import { resolveIcon } from '@nextsparkjs/core/lib/icons'\n"
 
@@ -60,7 +59,7 @@ test('does not match a file that merely ends in config.ts', () => {
   assert.equal(isIconSourcePath('/p/themes/default/blocks/hero/notconfig.ts'), false)
 })
 
-// --- isTestFilePath: test code is excluded from discovery entirely (#200 review) --
+// --- isTestFilePath: test code is excluded from discovery entirely --------
 
 test('flags .test. and .spec. files, ts and tsx', () => {
   assert.ok(isTestFilePath('/p/themes/default/components/wallet-badge.test.tsx'))
@@ -172,12 +171,12 @@ test('says nothing about a reference it can resolve', async () => {
   assert.deepEqual(await findUnresolvedIconRefs("export default { icon: 'pie-chart' }"), [])
 })
 
-// --- Transparent TypeScript wrappers (#200 review round 2) ---------------
+// --- Transparent TypeScript wrappers ---------------------------------------
 //
-// `as`, `satisfies` and `!` change nothing about the value at runtime, so a
-// config or call site written with one of them must resolve exactly like the
-// bare form — and still be reported as unresolved when the wrapped value
-// itself doesn't resolve, rather than disappearing silently.
+// `as`, `<T>x`, `satisfies` and `!` change nothing about the value at
+// runtime, so a config or call site written with one of them must resolve
+// exactly like the bare form — and still be reported as unresolved when the
+// wrapped value itself doesn't resolve, rather than disappearing silently.
 
 test('reads a string icon name through `as const`', async () => {
   const source = `export const config = { icon: 'Wallet' as const }`
@@ -200,6 +199,14 @@ test('reads a string icon name through `satisfies` and through parentheses', asy
   assert.deepEqual(await extractIconNames(`export const config = { icon: ('Wallet') }`), ['Wallet'])
 })
 
+test('reads a lucide identifier through an angle-bracket type assertion', async () => {
+  const source = `
+    import { Wallet } from 'lucide-react'
+    export const config = { icon: <any>Wallet }
+  `
+  assert.deepEqual(await extractIconNames(source), ['Wallet'])
+})
+
 test('reports a wrapped reference that still does not resolve, instead of dropping it silently', async () => {
   assert.deepEqual(
     await findUnresolvedIconRefs("export default { icon: Wallet! }"),
@@ -211,8 +218,24 @@ test('reports a wrapped reference that still does not resolve, instead of droppi
   )
 })
 
+test('reports a call result assigned to icon, instead of staying silent', async () => {
+  // Neither a string literal nor a lucide identifier - `chooseIcon()` cannot
+  // be resolved at build time, and unlike a bare identifier or a property
+  // access it must still be reported, not just left out of both lists.
+  assert.deepEqual(await extractIconNames('export default { icon: chooseIcon() as LucideIcon }'), [])
+  assert.deepEqual(
+    await findUnresolvedIconRefs('export default { icon: chooseIcon() as LucideIcon }'),
+    ['chooseIcon() as LucideIcon']
+  )
+})
+
 test('extracts a literal name through `satisfies` in a call argument', async () => {
   const source = `${RESOLVE_ICON_IMPORT}resolveIcon('Wallet' satisfies string)`
+  assert.deepEqual(await extractLiteralIconCallNames(source), ['Wallet'])
+})
+
+test('extracts a literal name through a non-null-asserted callee', async () => {
+  const source = `${RESOLVE_ICON_IMPORT}resolveIcon!('Wallet')`
   assert.deepEqual(await extractLiteralIconCallNames(source), ['Wallet'])
 })
 
@@ -262,11 +285,12 @@ test('never yields anything but a bare name from a call, so nothing can be injec
   }
 })
 
-// --- Import-binding resolution (#200 review round 2) --------------------
+// --- Import-binding resolution --------------------------------------------
 //
-// A call site is now matched through the file's own imports rather than by
-// comparing the identifier's text, so aliasing and namespacing resolve, and a
-// same-named local that never came from core does not.
+// A call site is matched through the file's own imports and lexical scope
+// rather than by comparing the identifier's text, so aliasing and namespacing
+// resolve, a same-named local that never came from core does not, and a
+// closer declaration of the same name shadows the import for its scope.
 
 test('resolves resolveIcon through an aliased import', async () => {
   const source = "import { resolveIcon as ri } from '@nextsparkjs/core/lib/icons'\nri('Wallet')"
@@ -293,6 +317,23 @@ test('ignores a same-named local that was never imported from core', async () =>
 
 test('ignores resolveIcon imported from somewhere other than core', async () => {
   const source = "import { resolveIcon } from './local-icons'\nresolveIcon('Wallet')"
+  assert.deepEqual(await extractLiteralIconCallNames(source), [])
+})
+
+test('ignores a call through a parameter that shadows the real core import', async () => {
+  // The module does import resolveIcon from core, but the call inside f()
+  // goes through f's own parameter of the same name, not the import.
+  const source = `${RESOLVE_ICON_IMPORT}function f(resolveIcon) { resolveIcon('Wallet') }`
+  assert.deepEqual(await extractLiteralIconCallNames(source), [])
+})
+
+test('still resolves the real import once the shadowing parameter goes out of scope', async () => {
+  const source = `${RESOLVE_ICON_IMPORT}function f(resolveIcon) { resolveIcon('Wallet') }\nresolveIcon('Receipt')`
+  assert.deepEqual(await extractLiteralIconCallNames(source), ['Receipt'])
+})
+
+test('ignores a call imported from a same-prefixed package that is not core', async () => {
+  const source = "import { resolveIcon } from '@nextsparkjs/core-fake/lib/icons'\nresolveIcon('Wallet')"
   assert.deepEqual(await extractLiteralIconCallNames(source), [])
 })
 
