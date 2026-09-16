@@ -158,3 +158,58 @@ export function Aliased({ cover }: { cover: string }) {
     </>
   )
 }
+
+import { Slot } from '@radix-ui/react-slot'
+
+const RequiredAvatarImage = require('@radix-ui/react-avatar').Image
+const RequiredByKey = require('next/image')['default']
+
+export function RequiredMembers({ avatar }: { avatar: string }) {
+  return (
+    <>
+      <RequiredAvatarImage src={avatar} />
+      <RequiredByKey src={avatar} alt="" width={10} height={10} />
+    </>
+  )
+}
+
+export const ChosenAnchor = ({ asChild, ...props }: { asChild?: boolean } & React.ComponentProps<'a'>) => {
+  const Comp = asChild ? Slot : 'a'
+  return <Comp {...props} />
+}
+
+export function ChosenMedia({ as: Tag = 'img', cover, ...props }: { as?: 'img' | 'video'; cover: string }) {
+  const Picture = cover.endsWith('.svg') ? 'img' : NextImage
+  return (
+    <>
+      <Tag src={cover} {...props} />
+      <Picture src={cover} alt="" width={10} height={10} />
+    </>
+  )
+}
+
+export function ChosenWithFallback({ as, href }: { as?: 'a' | 'span'; href: string }) {
+  const Tag = as ?? 'a'
+  const LocalRequired = require('@radix-ui/react-avatar').Image
+  return (
+    <>
+      <Tag href={href}>Docs</Tag>
+      <LocalRequired src={href} />
+    </>
+  )
+}
+
+export function ChosenButton({ asChild, ...props }: { asChild?: boolean } & React.ComponentProps<'button'>) {
+  const Comp = asChild ? Slot : 'button'
+  return <Comp {...props} />
+}
+
+export function Shadowed({ NextImage }: { NextImage: React.ComponentType<{ src: string }> }) {
+  return <NextImage src="/brand/logo.png" />
+}
+
+export function Reassigned({ external }: { external: boolean }) {
+  let Comp: 'a' | 'span' = 'span'
+  if (external) Comp = 'a'
+  return <Comp href="/pricing">Pricing</Comp>
+}

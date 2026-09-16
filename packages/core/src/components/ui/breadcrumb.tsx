@@ -1,6 +1,7 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cn } from '../../lib/utils'
+import { withBasePathIfInApp } from '../../lib/base-path'
 import { ChevronRightIcon, DotsHorizontalIcon } from "@radix-ui/react-icons"
 
 const Breadcrumb = React.forwardRef<
@@ -38,12 +39,19 @@ const BreadcrumbItem = React.forwardRef<
 ))
 BreadcrumbItem.displayName = "BreadcrumbItem"
 
+/**
+ * A breadcrumb's link, with the base path on an in-app `href`: Next.js adds it
+ * to a <Link> and not to the <a> this renders. With `asChild` the href goes to
+ * the child, and a child that carries an href of its own keeps that one
+ * untouched: a <Link> puts the base path on it, and would put it on twice if it
+ * were given the href with the base path already on.
+ */
 const BreadcrumbLink = React.forwardRef<
   HTMLAnchorElement,
   React.ComponentPropsWithoutRef<"a"> & {
     asChild?: boolean
   }
->(({ asChild, className, ...props }, ref) => {
+>(({ asChild, className, href, ...props }, ref) => {
   const Comp = asChild ? Slot : "a"
 
   return (
@@ -51,6 +59,7 @@ const BreadcrumbLink = React.forwardRef<
       ref={ref}
       className={cn("transition-colors hover:text-foreground", className)}
       {...props}
+      href={href && withBasePathIfInApp(href)}
     />
   )
 })
