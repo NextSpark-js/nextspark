@@ -5,6 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
 import { Button } from '../ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { AlertTriangle, RefreshCw, Home, Bug } from 'lucide-react'
+import { withBasePath } from '../../lib/base-path'
 
 interface EntityErrorBoundaryState {
   hasError: boolean
@@ -128,7 +129,7 @@ export class EntityErrorBoundary extends React.Component<
 
   private handleGoHome = () => {
     if (typeof window !== 'undefined') {
-      window.location.href = '/dashboard'
+      window.location.href = withBasePath('/dashboard')
     }
   }
 

@@ -8,6 +8,7 @@ import * as Icons from 'lucide-react'
 import { cn } from '@nextsparkjs/core/lib/utils'
 import { buildSectionClasses } from '@nextsparkjs/core/types/blocks'
 import type { FeaturesGridBlockProps, FeatureItem } from './schema'
+import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 
 /**
  * Features Grid Block Component
@@ -101,7 +102,7 @@ export function FeaturesGridBlock({
         {cta && (
           <div className="mt-12 text-center">
             <a
-              href={cta.link}
+              href={withBasePathIfInApp(cta.link)}
               target={cta.target}
               rel={cta.target === '_blank' ? 'noopener noreferrer' : undefined}
               className="inline-flex items-center justify-center rounded-md bg-primary px-8 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"

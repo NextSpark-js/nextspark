@@ -22,13 +22,14 @@ import { ChevronDownIcon, ChevronRightIcon, RotateCcwIcon, PlayIcon } from 'luci
 import { sel } from '../../../lib/test'
 import type { ScheduledAction } from '../../../lib/scheduled-actions/types'
 import { toast } from 'sonner'
+import { withBasePath } from '../../../lib/base-path'
 
 interface ActionsTableProps {
   actions: ScheduledAction[]
 }
 
 async function retryAction(actionId: string): Promise<{ newActionId: string }> {
-  const response = await fetch('/api/v1/devtools/scheduled-actions', {
+  const response = await fetch(withBasePath('/api/v1/devtools/scheduled-actions'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -46,7 +47,7 @@ async function retryAction(actionId: string): Promise<{ newActionId: string }> {
 }
 
 async function runAction(actionId: string): Promise<{ success: boolean }> {
-  const response = await fetch('/api/v1/devtools/scheduled-actions/run', {
+  const response = await fetch(withBasePath('/api/v1/devtools/scheduled-actions/run'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

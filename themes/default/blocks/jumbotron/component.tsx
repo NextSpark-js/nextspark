@@ -4,6 +4,7 @@ import { cn } from '@nextsparkjs/core/lib/utils'
 import { buildSectionClasses } from '@nextsparkjs/core/types/blocks'
 import { sel } from '../../lib/selectors'
 import type { JumbotronBlockProps } from './schema'
+import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 
 /**
  * Jumbotron Block Component
@@ -103,7 +104,7 @@ export function JumbotronBlock({
                 className="text-lg px-8 py-6"
               >
                 <a
-                  href={primaryCta.link || '#'}
+                  href={withBasePathIfInApp(primaryCta.link || '#')}
                   target={primaryCta.target || '_self'}
                   rel={primaryCta.target === '_blank' ? 'noopener noreferrer' : undefined}
                 >
@@ -120,7 +121,7 @@ export function JumbotronBlock({
                 className="text-lg px-8 py-6"
               >
                 <a
-                  href={secondaryCta.link || '#'}
+                  href={withBasePathIfInApp(secondaryCta.link || '#')}
                   target={secondaryCta.target || '_self'}
                   rel={secondaryCta.target === '_blank' ? 'noopener noreferrer' : undefined}
                 >

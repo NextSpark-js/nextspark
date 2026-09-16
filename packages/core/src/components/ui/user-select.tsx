@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Avatar, AvatarFallback, AvatarImage } from './avatar'
 import { cn } from '../../lib/utils'
 import { useTeam } from '../../hooks/useTeam'
+import { withBasePath } from '../../lib/base-path'
 
 export interface SelectedUser {
   id: string | number
@@ -77,7 +78,7 @@ export function UserSelect({
     setIsLoadingMembers(true)
     const fetchTeamMembers = async () => {
       try {
-        const response = await fetch(`/api/v1/teams/${effectiveTeamId}/members`)
+        const response = await fetch(withBasePath(`/api/v1/teams/${effectiveTeamId}/members`))
         if (!response.ok) {
           console.error('Failed to fetch team members')
           return

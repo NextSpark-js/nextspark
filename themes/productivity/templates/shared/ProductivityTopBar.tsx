@@ -37,6 +37,7 @@ import {
 import { useState, useCallback, useEffect } from 'react'
 import { cn } from '@nextsparkjs/core/lib/utils'
 import { useTheme } from 'next-themes'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 interface Board {
     id: string
@@ -60,7 +61,7 @@ export function ProductivityTopBar() {
         const fetchBoard = async () => {
             if (boardId) {
                 try {
-                    const response = await fetch(`/api/v1/boards/${boardId}`)
+                    const response = await fetch(withBasePath(`/api/v1/boards/${boardId}`))
                     if (response.ok) {
                         const data = await response.json()
                         setCurrentBoard(data.data)

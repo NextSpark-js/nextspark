@@ -13,6 +13,7 @@ import Image from 'next/image'
 import { Twitter, Linkedin, Globe, User } from 'lucide-react'
 import { PostCard } from '@/themes/blog/components/public/PostCard'
 import { cn } from '@nextsparkjs/core/lib/utils'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 interface Author {
   id: string
@@ -60,7 +61,7 @@ export default function AuthorPage({ params }: PageProps) {
         setLoading(true)
         setError(null)
 
-        const response = await fetch(`/api/v1/theme/blog/authors/${username}`, {
+        const response = await fetch(withBasePath(`/api/v1/theme/blog/authors/${username}`), {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

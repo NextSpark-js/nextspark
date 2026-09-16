@@ -23,6 +23,7 @@ import { PermissionGate } from '@nextsparkjs/core/components/permissions/Permiss
 import { useToast } from '@nextsparkjs/core/hooks/useToast'
 import { cn } from '@nextsparkjs/core/lib/utils'
 import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 interface Board {
   id: string
@@ -74,7 +75,7 @@ export default function BoardsPage() {
   const fetchBoards = useCallback(async (teamId: string) => {
     try {
       setIsLoading(true)
-      const response = await fetch('/api/v1/boards?limit=50', {
+      const response = await fetch(withBasePath('/api/v1/boards?limit=50'), {
         headers: {
           'Content-Type': 'application/json',
           'x-team-id': teamId,
@@ -113,7 +114,7 @@ export default function BoardsPage() {
   const handleArchive = async (boardId: string) => {
     if (!currentTeam?.id) return
     try {
-      await fetch(`/api/v1/boards/${boardId}`, {
+      await fetch(withBasePath(`/api/v1/boards/${boardId}`), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -137,7 +138,7 @@ export default function BoardsPage() {
     if (!confirm('Are you sure you want to delete this board? This action cannot be undone.')) return
 
     try {
-      await fetch(`/api/v1/boards/${boardId}`, {
+      await fetch(withBasePath(`/api/v1/boards/${boardId}`), {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

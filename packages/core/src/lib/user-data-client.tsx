@@ -10,6 +10,7 @@
 import * as React from 'react'
 import type { PlanType, UserFlag } from './entities/types'
 import type { SessionUser } from './auth'
+import { withBasePath } from './base-path'
 
 // Default values for client-side fallbacks
 const DEFAULT_PLAN: PlanType = 'free' // Hardcoded until plan/team system
@@ -115,7 +116,7 @@ export function cacheUserPlanData(userId: string, plan: PlanType, flags: UserFla
  */
 export async function fetchUserFlags(userId: string): Promise<ClientUserFlagsData> {
   try {
-    const response = await fetch(`/api/user/flags?userId=${userId}`)
+    const response = await fetch(withBasePath(`/api/user/flags?userId=${userId}`))
     
     if (!response.ok) {
       throw new Error(`Failed to fetch user flags: ${response.statusText}`)
@@ -192,7 +193,7 @@ export async function updateUserPlanClient(userId: string, plan: PlanType): Prom
  */
 export async function updateUserFlagsClient(userId: string, flags: UserFlag[]): Promise<boolean> {
   try {
-    const response = await fetch('/api/user/flags', {
+    const response = await fetch(withBasePath('/api/user/flags'), {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',

@@ -4,6 +4,7 @@ import { cn } from '@nextsparkjs/core/lib/utils'
 import { buildSectionClasses } from '@nextsparkjs/core/types/blocks'
 import { sel } from '../../lib/selectors'
 import type { VideoHeroBlockProps } from './schema'
+import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 
 /**
  * Video Hero Block Component
@@ -165,7 +166,7 @@ export function VideoHeroBlock({
           {cta && (
             <Button asChild size="lg" className="text-lg px-8 py-6">
               <a
-                href={cta.link}
+                href={withBasePathIfInApp(cta.link)}
                 target={cta.target}
                 rel={cta.target === '_blank' ? 'noopener noreferrer' : undefined}
               >
@@ -205,7 +206,7 @@ export function VideoHeroBlock({
               {cta && (
                 <Button asChild size="lg" className="text-lg px-8 py-6">
                   <a
-                    href={cta.link}
+                    href={withBasePathIfInApp(cta.link)}
                     target={cta.target}
                     rel={cta.target === '_blank' ? 'noopener noreferrer' : undefined}
                   >
@@ -250,7 +251,7 @@ export function VideoHeroBlock({
           {cta && (
             <Button asChild size="lg" className="text-lg px-8 py-6">
               <a
-                href={cta.link}
+                href={withBasePathIfInApp(cta.link)}
                 target={cta.target}
                 rel={cta.target === '_blank' ? 'noopener noreferrer' : undefined}
               >

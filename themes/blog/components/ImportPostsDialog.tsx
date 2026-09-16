@@ -16,6 +16,7 @@ import { Badge } from '@nextsparkjs/core/components/ui/badge'
 import { ScrollArea } from '@nextsparkjs/core/components/ui/scroll-area'
 import { Upload, FileJson, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
 import { useToast } from '@nextsparkjs/core/hooks/useToast'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 interface PostImport {
   title: string
@@ -108,7 +109,7 @@ export function ImportPostsDialog({ className, onImportComplete }: ImportPostsDi
       const post = posts[i]
       
       try {
-        const response = await fetch('/api/v1/posts', {
+        const response = await fetch(withBasePath('/api/v1/posts'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

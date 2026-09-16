@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
 import { calculateTaskStats, type TaskStats } from '../utils'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 interface Task {
   id: string
@@ -32,7 +33,7 @@ export function useTaskStats(): UseTaskStatsReturn {
   } = useQuery({
     queryKey: ['tasks', currentTeam?.id, 'stats'],
     queryFn: async (): Promise<Task[]> => {
-      const response = await fetch(`/api/v1/tasks?teamId=${currentTeam?.id}&limit=1000`)
+      const response = await fetch(withBasePath(`/api/v1/tasks?teamId=${currentTeam?.id}&limit=1000`))
       if (!response.ok) {
         throw new Error('Failed to fetch tasks')
       }

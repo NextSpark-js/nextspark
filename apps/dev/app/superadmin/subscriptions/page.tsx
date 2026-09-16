@@ -43,6 +43,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
+import { withBasePath } from "@nextsparkjs/core/lib/base-path";
 import { getTemplateOrDefaultClient } from "@nextsparkjs/registries/template-registry.client";
 import {
   SearchInput,
@@ -229,7 +230,7 @@ function SubscriptionsPage() {
     queryFn: async () => {
       const queryString = getQueryParams();
       const url = `/api/superadmin/subscriptions${queryString ? `?${queryString}` : ""}`;
-      const response = await fetch(url);
+      const response = await fetch(withBasePath(url));
       if (!response.ok) {
         throw new Error("Failed to fetch subscriptions data");
       }

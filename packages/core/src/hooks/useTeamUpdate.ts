@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTeamContext } from '../contexts/TeamContext'
+import { withBasePath } from '../lib/base-path'
 
 interface TeamUpdatePayload {
   name?: string
@@ -34,7 +35,7 @@ export function useTeamUpdate(teamId: string) {
 
   return useMutation<TeamUpdateResponse, Error, TeamUpdatePayload>({
     mutationFn: async (payload) => {
-      const response = await fetch(`/api/v1/teams/${teamId}`, {
+      const response = await fetch(withBasePath(`/api/v1/teams/${teamId}`), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

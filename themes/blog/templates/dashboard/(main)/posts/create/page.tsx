@@ -29,6 +29,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@nextsparkjs/core/comp
 import { Switch } from '@nextsparkjs/core/components/ui/switch'
 import { WysiwygEditor } from '@/themes/blog/components/editor/WysiwygEditor'
 import { FeaturedImageUpload } from '@/themes/blog/components/editor/FeaturedImageUpload'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 interface PostData {
   title: string
@@ -122,7 +123,7 @@ export default function CreatePostPage() {
 
     try {
       const headers = buildHeaders()
-      const response = await fetch('/api/v1/posts', {
+      const response = await fetch(withBasePath('/api/v1/posts'), {
         method: 'POST',
         headers,
         credentials: 'include',

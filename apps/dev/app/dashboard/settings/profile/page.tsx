@@ -64,6 +64,7 @@ import { countries, timezones } from '@nextsparkjs/core/lib/countries-timezones'
 import { sel } from '@nextsparkjs/core/selectors'
 import { useLocale, useTranslations } from 'next-intl'
 import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 // Language options
 const languages = [
@@ -119,7 +120,7 @@ function ProfilePage() {
   // Update profile mutation
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormData) => {
-      const response = await fetch('/api/user/profile', {
+      const response = await fetch(withBasePath('/api/user/profile'), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -151,7 +152,7 @@ function ProfilePage() {
   // Delete account mutation
   const deleteAccountMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch('/api/user/delete-account', {
+      const response = await fetch(withBasePath('/api/user/delete-account'), {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

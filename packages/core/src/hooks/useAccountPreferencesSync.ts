@@ -7,6 +7,7 @@ import { I18N_CONFIG, type SupportedLocale } from '../lib/config'
 import { setUserLocaleClient } from '../lib/locale-client'
 import { setSessionHint } from '../lib/auth/session-hint'
 import type { SessionRefreshContext, SessionRefreshResult } from './useSessionCookieRefresh'
+import { withBasePath } from '../lib/base-path'
 
 /** next-themes keeps the visitor's own choice under this localStorage key. */
 const THEME_STORAGE_KEY = 'theme'
@@ -114,7 +115,7 @@ export function useAccountPreferencesSync() {
 
     const userId = typeof user.id === 'string' ? user.id : 'signed-in'
     if (!forcedTheme && !hasStoredTheme() && claimAccountThemeCheck(userId)) {
-      fetch('/api/user/profile?includeMeta=true')
+      fetch(withBasePath('/api/user/profile?includeMeta=true'))
         .then(response => {
           // No answer about the theme: look again with the next session read
           if (!response.ok) throw new Error(`Profile request failed with status ${response.status}`)

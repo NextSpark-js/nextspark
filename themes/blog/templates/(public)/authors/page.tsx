@@ -10,6 +10,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { User } from 'lucide-react'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 interface Author {
   id: string
@@ -31,7 +32,7 @@ export default function AuthorsPage() {
         setLoading(true)
         setError(null)
 
-        const response = await fetch('/api/v1/theme/blog/authors', {
+        const response = await fetch(withBasePath('/api/v1/theme/blog/authors'), {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

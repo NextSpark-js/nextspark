@@ -29,6 +29,7 @@ import {
   Eye,
   MoreHorizontal
 } from 'lucide-react'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 interface PostStats {
   total: number
@@ -65,7 +66,7 @@ async function fetchPosts(): Promise<{ stats: PostStats; recent: RecentPost[] }>
     const headers = buildHeaders()
 
     // Fetch all posts to get stats
-    const response = await fetch('/api/v1/posts?limit=100&sortBy=updatedAt&sortOrder=desc', {
+    const response = await fetch(withBasePath('/api/v1/posts?limit=100&sortBy=updatedAt&sortOrder=desc'), {
       credentials: 'include',
       headers,
     })

@@ -21,6 +21,7 @@ import { sel } from '../../lib/selectors'
 import { useMediaUpload } from '../../hooks/useMediaUpload'
 import { useToast } from '../../hooks/useToast'
 import type { Media } from '../../lib/media/types'
+import { withBasePath } from '../../lib/base-path'
 
 interface DuplicateInfo {
   filename: string
@@ -54,7 +55,7 @@ export function MediaUploadZone({
 
   const checkForDuplicates = async (files: File[]): Promise<DuplicateInfo[]> => {
     try {
-      const res = await fetch('/api/v1/media/check-duplicates', {
+      const res = await fetch(withBasePath('/api/v1/media/check-duplicates'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

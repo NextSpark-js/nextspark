@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from './useAuth'
+import { withBasePath } from '../lib/base-path'
 
 export interface UserProfile {
   id: string
@@ -25,7 +26,7 @@ export function useUserProfile() {
   const { data: profile, isLoading: profileLoading, error } = useQuery<UserProfile>({
     queryKey: ['user-profile'],
     queryFn: async () => {
-      const response = await fetch('/api/user/profile')
+      const response = await fetch(withBasePath('/api/user/profile'))
       if (!response.ok) {
         throw new Error('Failed to fetch profile')
       }
@@ -48,7 +49,7 @@ export function useUserProfile() {
   // Update profile mutation
   const updateProfileMutation = useMutation({
     mutationFn: async (data: Partial<UserProfile>) => {
-      const response = await fetch('/api/user/profile', {
+      const response = await fetch(withBasePath('/api/user/profile'), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

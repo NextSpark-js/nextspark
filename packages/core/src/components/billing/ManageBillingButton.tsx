@@ -6,6 +6,7 @@ import { CreditCard, ExternalLink, Loader2 } from 'lucide-react'
 import { Button } from '../ui/button'
 import { useSubscription } from '../../hooks/useSubscription'
 import { toast } from 'sonner'
+import { withBasePath } from '../../lib/base-path'
 
 interface ManageBillingButtonProps {
   className?: string
@@ -41,7 +42,7 @@ export function ManageBillingButton({ className }: ManageBillingButtonProps) {
   const handleClick = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch('/api/v1/billing/portal', {
+      const response = await fetch(withBasePath('/api/v1/billing/portal'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       })

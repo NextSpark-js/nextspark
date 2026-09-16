@@ -1,6 +1,7 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { withBasePath } from '../lib/base-path'
 
 /**
  * Hook to manage team invitations
@@ -11,7 +12,7 @@ export function useTeamInvitations() {
   const { data: invitations = [], isLoading } = useQuery({
     queryKey: ['team-invitations'],
     queryFn: async () => {
-      const response = await fetch('/api/v1/team-invitations')
+      const response = await fetch(withBasePath('/api/v1/team-invitations'))
       if (!response.ok) throw new Error('Failed to fetch invitations')
       const data = await response.json()
       return data.invitations || []
@@ -21,7 +22,7 @@ export function useTeamInvitations() {
 
   const acceptInvitationMutation = useMutation({
     mutationFn: async (token: string) => {
-      const response = await fetch(`/api/v1/team-invitations/${token}/accept`, {
+      const response = await fetch(withBasePath(`/api/v1/team-invitations/${token}/accept`), {
         method: 'POST'
       })
 
@@ -40,7 +41,7 @@ export function useTeamInvitations() {
 
   const declineInvitationMutation = useMutation({
     mutationFn: async (token: string) => {
-      const response = await fetch(`/api/v1/team-invitations/${token}/decline`, {
+      const response = await fetch(withBasePath(`/api/v1/team-invitations/${token}/decline`), {
         method: 'POST'
       })
 

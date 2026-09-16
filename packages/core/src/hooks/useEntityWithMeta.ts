@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from './useAuth'
 import { getEntityMetaConfig, EntityType } from '../types/meta.types'
+import { withBasePath } from '../lib/base-path'
 
 interface UseEntityWithMetaOptions {
   includeMeta?: string[] | boolean
@@ -62,7 +63,7 @@ export function useEntityWithMeta<T = Record<string, unknown>>(
         params.toString() ? `?${params.toString()}` : ''
       }`
 
-      const response = await fetch(url, {
+      const response = await fetch(withBasePath(url), {
         headers: { 'Content-Type': 'application/json' },
       })
 
@@ -97,7 +98,7 @@ export function useEntityWithMeta<T = Record<string, unknown>>(
         payload.meta = metaUpdates
       }
 
-      const response = await fetch(`/api/v1/${config.apiPath}/${entityId}`, {
+      const response = await fetch(withBasePath(`/api/v1/${config.apiPath}/${entityId}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

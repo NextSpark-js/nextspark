@@ -38,6 +38,7 @@ import {
   FilterDropdown,
 } from "@nextsparkjs/core/components/superadmin/filters";
 import { sel } from "@nextsparkjs/core/selectors";
+import { withBasePath } from "@nextsparkjs/core/lib/base-path"
 
 interface UsersData {
   regularUsers: User[];
@@ -119,7 +120,7 @@ function UsersPage() {
     queryKey: ["superadmin-users", search, roleFilter, statusFilter, activeTab, page, limit],
     queryFn: async () => {
       const queryString = getQueryParams();
-      const response = await fetch(`/api/superadmin/users?${queryString}`);
+      const response = await fetch(withBasePath(`/api/superadmin/users?${queryString}`));
       if (!response.ok) {
         throw new Error("Failed to fetch users data");
       }

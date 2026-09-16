@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 export interface OrchestratorMessage {
     id: string
@@ -44,7 +45,7 @@ export function useOrchestratorChat() {
                 headers['x-team-id'] = currentTeam.id
             }
 
-            const response = await fetch('/api/v1/theme/default/ai/orchestrator', {
+            const response = await fetch(withBasePath('/api/v1/theme/default/ai/orchestrator'), {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({ message, sessionId })

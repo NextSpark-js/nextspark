@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTeam } from './useTeam'
 import { InviteMemberRequest, UpdateMemberRoleRequest } from '../lib/teams/types'
+import { withBasePath } from '../lib/base-path'
 
 interface UseTeamMembersOptions {
   /**
@@ -27,7 +28,7 @@ export function useTeamMembers(options?: UseTeamMembersOptions) {
     queryKey: ['team-members', teamId],
     queryFn: async () => {
       if (!teamId) return []
-      const response = await fetch(`/api/v1/teams/${teamId}/members`)
+      const response = await fetch(withBasePath(`/api/v1/teams/${teamId}/members`))
       if (!response.ok) throw new Error('Failed to fetch members')
       const json = await response.json()
       // API returns { success: true, data: [...] } with flat properties
@@ -50,7 +51,7 @@ export function useTeamMembers(options?: UseTeamMembersOptions) {
 
   const inviteMemberMutation = useMutation({
     mutationFn: async (request: InviteMemberRequest) => {
-      const response = await fetch(`/api/v1/teams/${teamId}/members`, {
+      const response = await fetch(withBasePath(`/api/v1/teams/${teamId}/members`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(request)
@@ -71,7 +72,7 @@ export function useTeamMembers(options?: UseTeamMembersOptions) {
 
   const updateMemberRoleMutation = useMutation({
     mutationFn: async ({ memberId, role }: { memberId: string; role: UpdateMemberRoleRequest['role'] }) => {
-      const response = await fetch(`/api/v1/teams/${teamId}/members/${memberId}`, {
+      const response = await fetch(withBasePath(`/api/v1/teams/${teamId}/members/${memberId}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role })
@@ -87,7 +88,7 @@ export function useTeamMembers(options?: UseTeamMembersOptions) {
 
   const removeMemberMutation = useMutation({
     mutationFn: async (memberId: string) => {
-      const response = await fetch(`/api/v1/teams/${teamId}/members/${memberId}`, {
+      const response = await fetch(withBasePath(`/api/v1/teams/${teamId}/members/${memberId}`), {
         method: 'DELETE'
       })
 

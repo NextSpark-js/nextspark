@@ -4,6 +4,7 @@ import { cn } from '@nextsparkjs/core/lib/utils'
 import { buildSectionClasses } from '@nextsparkjs/core/types/blocks'
 import { sel } from '../../lib/selectors'
 import type { LogoCloudBlockProps, LogoItem } from './schema'
+import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 
 /**
  * Logo Cloud Block Component
@@ -117,7 +118,7 @@ export function LogoCloudBlock({
               >
                 {logo.url ? (
                   <a
-                    href={logo.url}
+                    href={withBasePathIfInApp(logo.url)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="block"
@@ -139,7 +140,7 @@ export function LogoCloudBlock({
         {cta && (
           <div className="mt-10 text-center">
             <a
-              href={cta.link}
+              href={withBasePathIfInApp(cta.link)}
               target={cta.target}
               rel={cta.target === '_blank' ? 'noopener noreferrer' : undefined}
               className="inline-flex items-center justify-center rounded-md bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"

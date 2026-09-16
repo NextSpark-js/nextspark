@@ -5,6 +5,7 @@
  */
 
 import { clientMetaSystemAdapter } from '@nextsparkjs/registries/entity-registry.client'
+import { withBasePath, withBasePathIfInApp } from '../base-path'
 
 export interface EntityData {
   id?: string
@@ -110,7 +111,7 @@ export class EntityApiClient {
   private baseUrl: string
 
   constructor(baseUrl = '/api/v1') {
-    this.baseUrl = baseUrl
+    this.baseUrl = withBasePathIfInApp(baseUrl)
   }
 
   /**
@@ -647,7 +648,7 @@ export const getEntityChildren = async (
   const apiPath = clientMetaSystemAdapter.getApiPath(parentEntityType)
   const endpointPath = apiPath || (parentEntityType.endsWith('s') ? parentEntityType : `${parentEntityType}s`)
 
-  const baseUrl = '/api/v1'
+  const baseUrl = withBasePath('/api/v1')
   // Correct URL: /api/v1/orders/{id}/child/items (not /api/v1/orders/{id}/items)
   const url = new URL(`${baseUrl}/${endpointPath}/${parentId}/child/${childEntityName}`, getApiBaseUrl())
 
@@ -703,7 +704,7 @@ export async function fetchWithTeam(
     headers.set('x-team-id', activeTeamId)
   }
 
-  return fetch(url, {
+  return fetch(withBasePathIfInApp(url), {
     ...options,
     headers,
     credentials: 'include',

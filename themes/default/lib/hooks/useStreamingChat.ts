@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react'
 import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 interface StreamChunk {
     type: 'token' | 'done' | 'error' | 'tool_start' | 'tool_end'
@@ -52,7 +53,7 @@ export function useStreamingChat(options: UseStreamingChatOptions) {
                 headers['x-team-id'] = currentTeam.id
             }
 
-            const response = await fetch('/api/ai/chat/stream', {
+            const response = await fetch(withBasePath('/api/ai/chat/stream'), {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({ message, agentName, sessionId }),

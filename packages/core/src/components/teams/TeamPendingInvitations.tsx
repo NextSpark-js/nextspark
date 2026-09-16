@@ -28,6 +28,7 @@ import { toast } from 'sonner'
 import type { TeamInvitation, TeamRole } from '../../lib/teams/types'
 import { useTeamMembers } from '../../hooks/useTeamMembers'
 import { useAuth } from '../../hooks/useAuth'
+import { withBasePath } from '../../lib/base-path'
 
 // Role icons map - core roles only, custom roles use fallback
 const roleIconsMap: Record<string, typeof Crown | null> = {
@@ -73,7 +74,7 @@ export function TeamPendingInvitations({ teamId }: TeamPendingInvitationsProps) 
   const { data: invitations = [], isLoading } = useQuery<InvitationWithInviter[]>({
     queryKey: ['team-invitations', teamId],
     queryFn: async () => {
-      const response = await fetch(`/api/v1/teams/${teamId}/invitations?status=pending`)
+      const response = await fetch(withBasePath(`/api/v1/teams/${teamId}/invitations?status=pending`))
       if (!response.ok) throw new Error('Failed to fetch invitations')
       const json = await response.json()
       return json.data || []
@@ -84,7 +85,7 @@ export function TeamPendingInvitations({ teamId }: TeamPendingInvitationsProps) 
   // Cancel invitation mutation
   const cancelMutation = useMutation({
     mutationFn: async (invitationId: string) => {
-      const response = await fetch(`/api/v1/teams/${teamId}/invitations?id=${invitationId}`, {
+      const response = await fetch(withBasePath(`/api/v1/teams/${teamId}/invitations?id=${invitationId}`), {
         method: 'DELETE'
       })
       if (!response.ok) {

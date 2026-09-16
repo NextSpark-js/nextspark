@@ -20,6 +20,7 @@ import type {
   AdminTeamsParams,
   CreateTeamRequest,
 } from './types'
+import { withBasePath } from '../base-path'
 
 /**
  * API response format from /api/v1/teams
@@ -52,7 +53,7 @@ export class TeamsAPI {
    * const teams = await TeamsAPI.getUserTeams()
    */
   static async getUserTeams(): Promise<Team[]> {
-    const response = await fetch('/api/v1/teams')
+    const response = await fetch(withBasePath('/api/v1/teams'))
 
     if (!response.ok) {
       throw new Error('Failed to fetch teams')
@@ -72,7 +73,7 @@ export class TeamsAPI {
    * @throws Error if request fails
    */
   static async createTeam(data: CreateTeamRequest): Promise<Team> {
-    const response = await fetch('/api/v1/teams', {
+    const response = await fetch(withBasePath('/api/v1/teams'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -132,7 +133,7 @@ export class TeamsAPI {
     const queryString = searchParams.toString()
     const url = `/api/superadmin/teams${queryString ? `?${queryString}` : ''}`
 
-    const response = await fetch(url)
+    const response = await fetch(withBasePath(url))
 
     if (!response.ok) {
       if (response.status === 403) {

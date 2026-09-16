@@ -38,6 +38,7 @@ import { cn } from '../../../lib/utils'
 import type { BlockInstance } from '../../../types/blocks'
 import { isPatternReference, type PatternReference } from '../../../types/pattern-reference'
 import type { ClientEntityConfig } from '@nextsparkjs/registries/entity-registry.client'
+import { withBasePath } from '../../../lib/base-path'
 
 type ViewMode = 'preview' | 'settings'
 
@@ -147,7 +148,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
   const { data: entityData, isLoading } = useQuery({
     queryKey: [entitySlug, id],
     queryFn: async () => {
-      const response = await fetch(`/api/v1/${entitySlug}/${id}`, {
+      const response = await fetch(withBasePath(`/api/v1/${entitySlug}/${id}`), {
         headers: buildApiHeaders(),
       })
       if (!response.ok) throw new Error(`Failed to fetch ${entitySlug}`)
@@ -232,7 +233,7 @@ export function BuilderEditorView({ entitySlug, entityConfig, id, mode, onEntity
         ? `/api/v1/${entitySlug}`
         : `/api/v1/${entitySlug}/${id}`
 
-      const response = await fetch(url, {
+      const response = await fetch(withBasePath(url), {
         method: mode === 'create' ? 'POST' : 'PATCH',
         headers: buildApiHeaders(true),
         body: JSON.stringify(data),

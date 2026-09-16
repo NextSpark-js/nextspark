@@ -46,6 +46,7 @@ import {
     Trash2,
     Archive
 } from 'lucide-react'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 interface Board {
     id: string
@@ -96,7 +97,7 @@ function CreateBoardDialog({
 
         setIsCreating(true)
         try {
-            const response = await fetch('/api/v1/boards', {
+            const response = await fetch(withBasePath('/api/v1/boards'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -196,7 +197,7 @@ function BoardItem({
         if (!confirm('Delete this board? This cannot be undone.')) return
 
         try {
-            await fetch(`/api/v1/boards/${board.id}`, {
+            await fetch(withBasePath(`/api/v1/boards/${board.id}`), {
                 method: 'DELETE',
                 headers: { 'x-team-id': currentTeam?.id || '' },
             })
@@ -283,7 +284,7 @@ export function ProductivitySidebar() {
         }
         try {
             setIsLoading(true)
-            const response = await fetch('/api/v1/boards?limit=100', {
+            const response = await fetch(withBasePath('/api/v1/boards?limit=100'), {
                 headers: {
                     'Content-Type': 'application/json',
                     'x-team-id': currentTeam.id

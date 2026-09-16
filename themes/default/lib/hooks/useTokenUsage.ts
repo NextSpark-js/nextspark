@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 type Period = 'today' | '7d' | '30d' | 'all'
 
@@ -47,7 +48,7 @@ export function useTokenUsage(period: Period = '30d', type: 'user' | 'team' = 'u
                 headers['x-team-id'] = currentTeam.id
             }
 
-            const response = await fetch(`/api/v1/theme/default/ai/usage?period=${period}&type=${type}`, {
+            const response = await fetch(withBasePath(`/api/v1/theme/default/ai/usage?period=${period}&type=${type}`), {
                 headers
             })
 

@@ -54,6 +54,7 @@ import type { UserRole } from '../../../types/user.types';
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { sel } from '../../../lib/test';
+import { withBasePath } from '../../../lib/base-path'
 
 interface User {
   id: string;
@@ -103,7 +104,7 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
   // Mutation for user actions (suspend, unsuspend, verify-email)
   const actionMutation = useMutation({
     mutationFn: async ({ userId, action, role }: { userId: string; action: string; role?: string }) => {
-      const response = await fetch(`/api/superadmin/users/${userId}`, {
+      const response = await fetch(withBasePath(`/api/superadmin/users/${userId}`), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, role }),
@@ -134,7 +135,7 @@ export function UsersTable({ users, isLoading, onRefresh }: UsersTableProps) {
   // Mutation for deleting users
   const deleteMutation = useMutation({
     mutationFn: async (userId: string) => {
-      const response = await fetch(`/api/superadmin/users/${userId}`, {
+      const response = await fetch(withBasePath(`/api/superadmin/users/${userId}`), {
         method: "DELETE",
       });
       if (!response.ok) {

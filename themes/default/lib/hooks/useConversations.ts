@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
 import { authClient } from '@nextsparkjs/core/lib/auth-client'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 /**
  * Conversation info from the API
@@ -128,7 +129,7 @@ export function useConversations() {
                 'x-team-id': teamId,
             }
 
-            const response = await fetch('/api/v1/plugin/langchain/sessions', {
+            const response = await fetch(withBasePath('/api/v1/plugin/langchain/sessions'), {
                 method: 'GET',
                 headers,
             })
@@ -183,7 +184,7 @@ export function useConversations() {
                 'x-team-id': teamId,
             }
 
-            const response = await fetch('/api/v1/plugin/langchain/sessions', {
+            const response = await fetch(withBasePath('/api/v1/plugin/langchain/sessions'), {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({ name }),
@@ -219,7 +220,7 @@ export function useConversations() {
                 'x-team-id': teamId,
             }
 
-            const response = await fetch('/api/v1/plugin/langchain/sessions', {
+            const response = await fetch(withBasePath('/api/v1/plugin/langchain/sessions'), {
                 method: 'DELETE',
                 headers,
                 body: JSON.stringify({ sessionId }),
@@ -260,7 +261,7 @@ export function useConversations() {
                 'x-team-id': teamId,
             }
 
-            const response = await fetch('/api/v1/plugin/langchain/sessions', {
+            const response = await fetch(withBasePath('/api/v1/plugin/langchain/sessions'), {
                 method: 'PATCH',
                 headers,
                 body: JSON.stringify({ sessionId, name }),
@@ -296,7 +297,7 @@ export function useConversations() {
                 'x-team-id': teamId,
             }
 
-            const response = await fetch('/api/v1/plugin/langchain/sessions', {
+            const response = await fetch(withBasePath('/api/v1/plugin/langchain/sessions'), {
                 method: 'PATCH',
                 headers,
                 body: JSON.stringify({ sessionId, isPinned: !conversation.isPinned }),

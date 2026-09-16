@@ -10,6 +10,7 @@
 import * as React from 'react'
 import type { PlanType, UserFlag } from './entities/types'
 import type { SessionUser } from './auth'
+import { withBasePath } from './base-path'
 
 // Default values for client-side fallbacks
 const DEFAULT_PLAN: PlanType = 'free'
@@ -74,7 +75,7 @@ export function cacheUserPlanData(userId: string, plan: PlanType, flags: UserFla
  */
 export async function fetchUserPlanData(userId: string): Promise<ClientUserPlanData> {
   try {
-    const response = await fetch(`/api/user/plan-flags?userId=${userId}`)
+    const response = await fetch(withBasePath(`/api/user/plan-flags?userId=${userId}`))
     
     if (!response.ok) {
       throw new Error(`Failed to fetch user plan data: ${response.statusText}`)
@@ -130,7 +131,7 @@ export async function getUserPlanDataWithCache(userId: string): Promise<ClientUs
  */
 export async function updateUserPlanClient(userId: string, plan: PlanType): Promise<boolean> {
   try {
-    const response = await fetch('/api/user/plan-flags', {
+    const response = await fetch(withBasePath('/api/user/plan-flags'), {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -163,7 +164,7 @@ export async function updateUserPlanClient(userId: string, plan: PlanType): Prom
  */
 export async function updateUserFlagsClient(userId: string, flags: UserFlag[]): Promise<boolean> {
   try {
-    const response = await fetch('/api/user/plan-flags', {
+    const response = await fetch(withBasePath('/api/user/plan-flags'), {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',

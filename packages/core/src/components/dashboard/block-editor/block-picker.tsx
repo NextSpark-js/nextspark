@@ -17,6 +17,7 @@ import type { BlockConfig, BlockInstance } from '../../../types/blocks'
 import type { PatternReference } from '../../../types/pattern-reference'
 import type { ClientEntityConfig } from '@nextsparkjs/registries/entity-registry.client'
 import type { Pattern } from '../../../types/pattern-reference'
+import { withBasePath } from '../../../lib/base-path'
 
 type TabValue = 'blocks' | 'patterns' | 'layout'
 
@@ -91,7 +92,7 @@ export function BlockPicker({
   const { data: patternsData, isLoading: patternsLoading } = useQuery<{ data: Pattern[] }>({
     queryKey: ['patterns', 'published'],
     queryFn: async () => {
-      const response = await fetch('/api/v1/patterns?status=published', {
+      const response = await fetch(withBasePath('/api/v1/patterns?status=published'), {
         headers: buildApiHeaders(),
       })
       if (!response.ok) throw new Error('Failed to fetch patterns')

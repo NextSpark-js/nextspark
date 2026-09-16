@@ -14,6 +14,7 @@ import {
 import { codeToHtml } from "shiki";
 import { useTranslations } from "next-intl";
 import { sel } from '../../lib/test';
+import { withBasePath } from '../../lib/base-path'
 
 interface EntityInfo {
   slug: string;
@@ -132,7 +133,7 @@ export function ConfigViewer() {
     async function loadThemeConfig() {
       try {
         setIsLoadingTheme(true);
-        const response = await fetch('/api/devtools/config/theme');
+        const response = await fetch(withBasePath('/api/devtools/config/theme'));
         const data = await response.json();
 
         if (!response.ok) {
@@ -155,7 +156,7 @@ export function ConfigViewer() {
     async function loadEntities() {
       try {
         setIsLoadingEntities(true);
-        const response = await fetch('/api/devtools/config/entities');
+        const response = await fetch(withBasePath('/api/devtools/config/entities'));
         const data = await response.json();
 
         if (!response.ok) {

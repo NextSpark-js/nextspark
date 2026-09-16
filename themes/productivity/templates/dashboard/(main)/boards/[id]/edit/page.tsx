@@ -28,6 +28,7 @@ import { useToast } from '@nextsparkjs/core/hooks/useToast'
 import { PermissionGate } from '@nextsparkjs/core/components/permissions/PermissionGate'
 import { usePermission } from '@nextsparkjs/core/lib/permissions/hooks'
 import { NoPermission } from '@nextsparkjs/core/components/permissions/NoPermission'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 /**
  * Get headers with x-team-id for API calls
@@ -93,7 +94,7 @@ export default function EditBoardPage({ params }: PageProps) {
 
     try {
       setIsLoading(true)
-      const response = await fetch(`/api/v1/boards/${boardId}`, {
+      const response = await fetch(withBasePath(`/api/v1/boards/${boardId}`), {
         headers: getTeamHeaders(),
       })
       if (!response.ok) {
@@ -139,7 +140,7 @@ export default function EditBoardPage({ params }: PageProps) {
     setIsSubmitting(true)
 
     try {
-      const response = await fetch(`/api/v1/boards/${boardId}`, {
+      const response = await fetch(withBasePath(`/api/v1/boards/${boardId}`), {
         method: 'PATCH',
         headers: getTeamHeaders(),
         body: JSON.stringify({
@@ -177,7 +178,7 @@ export default function EditBoardPage({ params }: PageProps) {
     setIsSubmitting(true)
 
     try {
-      const response = await fetch(`/api/v1/boards/${boardId}`, {
+      const response = await fetch(withBasePath(`/api/v1/boards/${boardId}`), {
         method: 'DELETE',
         headers: getTeamHeaders(),
       })

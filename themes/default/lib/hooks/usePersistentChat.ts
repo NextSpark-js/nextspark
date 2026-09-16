@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
 import { authClient } from '@nextsparkjs/core/lib/auth-client'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 export interface Message {
     id: string
@@ -133,7 +134,7 @@ export function usePersistentChat(externalSessionId?: string | null) {
             }
 
             const response = await fetch(
-                `/api/v1/theme/default/ai/single-agent?sessionId=${encodeURIComponent(sid)}`,
+                withBasePath(`/api/v1/theme/default/ai/single-agent?sessionId=${encodeURIComponent(sid)}`),
                 { method: 'GET', headers }
             )
 
@@ -179,7 +180,7 @@ export function usePersistentChat(externalSessionId?: string | null) {
                 headers['x-team-id'] = teamId
             }
 
-            const response = await fetch('/api/v1/theme/default/ai/single-agent', {
+            const response = await fetch(withBasePath('/api/v1/theme/default/ai/single-agent'), {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({ message, sessionId }),
@@ -243,7 +244,7 @@ export function usePersistentChat(externalSessionId?: string | null) {
                 headers['x-team-id'] = teamId
             }
 
-            const response = await fetch('/api/v1/theme/default/ai/single-agent', {
+            const response = await fetch(withBasePath('/api/v1/theme/default/ai/single-agent'), {
                 method: 'DELETE',
                 headers,
                 body: JSON.stringify({ sessionId }),

@@ -1,6 +1,7 @@
 import { useSubscription } from './useSubscription'
 import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
 import type { QuotaInfo } from '../lib/billing/types'
+import { withBasePath } from '../lib/base-path'
 
 /**
  * Unified hook providing subscription, features, limits, and canDo() method
@@ -82,7 +83,7 @@ export function useMembership() {
 
       try {
         const response = await fetch(
-          `/api/v1/teams/${subscriptionContext.subscription.teamId}/usage/${limitSlug}`
+          withBasePath(`/api/v1/teams/${subscriptionContext.subscription.teamId}/usage/${limitSlug}`)
         )
 
         if (!response.ok) return null
@@ -110,7 +111,7 @@ export function useMembership() {
 
         // Call server-side check-action endpoint (FIX1)
         // This endpoint verifies: RBAC permission + Feature + Quota
-        const response = await fetch('/api/v1/billing/check-action', {
+        const response = await fetch(withBasePath('/api/v1/billing/check-action'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action })

@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { authClient } from '../lib/auth-client'
 import { USER_PROFILE_WITH_META_QUERY_KEY } from './useUserSettings'
+import { withBasePath } from '../lib/base-path'
 
 interface UserMetadata {
   uiPreferences?: {
@@ -94,7 +95,7 @@ export function useEnsureUserMetadata() {
   const { data: userData, isFetched } = useQuery<UserProfileWithMeta>({
     queryKey: USER_PROFILE_WITH_META_QUERY_KEY(userId),
     queryFn: async () => {
-      const response = await fetch('/api/user/profile?includeMeta=true', {
+      const response = await fetch(withBasePath('/api/user/profile?includeMeta=true'), {
         credentials: 'include'
       })
       if (!response.ok) {
@@ -110,7 +111,7 @@ export function useEnsureUserMetadata() {
   // Mutation to create the missing default metadata blocks
   const createMetadataMutation = useMutation({
     mutationFn: async (metadata: Partial<UserMetadata>) => {
-      const response = await fetch('/api/internal/user-metadata', {
+      const response = await fetch(withBasePath('/api/internal/user-metadata'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

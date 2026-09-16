@@ -18,6 +18,7 @@ import { Button } from '../ui/button';
 import { Loader2, FileText, AlertCircle, ArrowLeft, LayoutDashboard } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useTreeNavigation } from '../../hooks/useTreeNavigation';
+import { withBasePath } from "../../lib/base-path"
 
 interface TestFileContent {
   path: string;
@@ -85,7 +86,7 @@ export function TestCasesViewer({ initialPath }: TestCasesViewerProps) {
     async function loadTree() {
       try {
         setIsLoadingTree(true);
-        const response = await fetch("/api/devtools/tests");
+        const response = await fetch(withBasePath("/api/devtools/tests"));
         const data = await response.json();
 
         if (!response.ok) {
@@ -115,7 +116,7 @@ export function TestCasesViewer({ initialPath }: TestCasesViewerProps) {
       setError(null);
 
       try {
-        const response = await fetch(`/api/devtools/tests/${selectedPath}`);
+        const response = await fetch(withBasePath(`/api/devtools/tests/${selectedPath}`));
         const data = await response.json();
 
         if (!response.ok) {

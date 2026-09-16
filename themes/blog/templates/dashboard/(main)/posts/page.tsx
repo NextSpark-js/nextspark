@@ -63,6 +63,7 @@ import {
   Send,
   ImageIcon,
 } from 'lucide-react'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 interface Post {
   id: string
@@ -174,7 +175,7 @@ export default function PostsListPage() {
         sortOrder,
       })
 
-      const response = await fetch(`/api/v1/posts?${params}`, {
+      const response = await fetch(withBasePath(`/api/v1/posts?${params}`), {
         credentials: 'include',
         headers,
       })
@@ -246,7 +247,7 @@ export default function PostsListPage() {
     setActionLoading(post.id)
     try {
       const headers = buildHeaders()
-      const response = await fetch(`/api/v1/posts/${post.id}`, {
+      const response = await fetch(withBasePath(`/api/v1/posts/${post.id}`), {
         method: 'PATCH',
         headers,
         credentials: 'include',
@@ -269,7 +270,7 @@ export default function PostsListPage() {
     setActionLoading(post.id)
     try {
       const headers = buildHeaders()
-      const response = await fetch(`/api/v1/posts/${post.id}`, {
+      const response = await fetch(withBasePath(`/api/v1/posts/${post.id}`), {
         method: 'PATCH',
         headers,
         credentials: 'include',
@@ -291,7 +292,7 @@ export default function PostsListPage() {
     setActionLoading(postToDelete.id)
     try {
       const headers = buildHeaders()
-      const response = await fetch(`/api/v1/posts/${postToDelete.id}`, {
+      const response = await fetch(withBasePath(`/api/v1/posts/${postToDelete.id}`), {
         method: 'DELETE',
         headers,
         credentials: 'include',

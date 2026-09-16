@@ -37,6 +37,7 @@ import {
     Check,
     ChevronRight
 } from 'lucide-react'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 interface Board {
     id: string
@@ -92,7 +93,7 @@ export function ProductivityMobileNav() {
         }
         try {
             setIsLoading(true)
-            const response = await fetch('/api/v1/boards?limit=100', {
+            const response = await fetch(withBasePath('/api/v1/boards?limit=100'), {
                 headers: {
                     'Content-Type': 'application/json',
                     'x-team-id': currentTeam.id
@@ -118,7 +119,7 @@ export function ProductivityMobileNav() {
 
         setIsCreating(true)
         try {
-            const response = await fetch('/api/v1/boards', {
+            const response = await fetch(withBasePath('/api/v1/boards'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

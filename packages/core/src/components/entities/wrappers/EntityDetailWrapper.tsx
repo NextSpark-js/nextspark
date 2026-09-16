@@ -20,6 +20,7 @@ import { useRouter } from 'next/navigation'
 import { getEntityData, deleteEntityData, fetchWithTeam } from '../../../lib/api/entities'
 import { TeamDetailSection } from '../../teams/TeamDetailSection'
 import type { EntityConfig } from '../../../lib/entities/types'
+import { withBasePath } from '../../../lib/base-path'
 
 export interface EntityDetailWrapperProps {
   entityType: string
@@ -154,7 +155,7 @@ export function EntityDetailWrapper({
         if (hasChildEntities) {
           // Use parent+child API for entities that have child entities
           const endpointPath = entityConfig.slug || `${entityType}s`
-          const url = new URL(`/api/v1/${endpointPath}/${id}`, window.location.origin)
+          const url = new URL(withBasePath(`/api/v1/${endpointPath}/${id}`), window.location.origin)
           url.searchParams.set('child', 'all')
           url.searchParams.set('metas', 'all')
 
@@ -248,7 +249,7 @@ export function EntityDetailWrapper({
       if (hasChildEntities) {
         // Use parent+child API for entities that have child entities
         const endpointPath = entityConfig.slug || `${entityType}s`
-        const url = new URL(`/api/v1/${endpointPath}/${id}`, window.location.origin)
+        const url = new URL(withBasePath(`/api/v1/${endpointPath}/${id}`), window.location.origin)
         url.searchParams.set('child', 'all')
         url.searchParams.set('metas', 'all')
         

@@ -17,6 +17,7 @@ import { ReadingProgress } from '@/themes/blog/components/public/ReadingProgress
 import { AuthorBio } from '@/themes/blog/components/public/AuthorBio'
 import { RelatedPosts } from '@/themes/blog/components/public/RelatedPosts'
 import { Button } from '@nextsparkjs/core/components/ui/button'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 interface Post {
   id: string
@@ -58,7 +59,7 @@ async function fetchPost(identifier: string): Promise<Post | null> {
   try {
     const headers = buildHeaders()
 
-    const byIdResponse = await fetch(`/api/v1/posts?ids=${encodeURIComponent(identifier)}&status=published&limit=1`, {
+    const byIdResponse = await fetch(withBasePath(`/api/v1/posts?ids=${encodeURIComponent(identifier)}&status=published&limit=1`), {
       credentials: 'include',
       headers,
     })
@@ -70,7 +71,7 @@ async function fetchPost(identifier: string): Promise<Post | null> {
       }
     }
 
-    const bySlugResponse = await fetch(`/api/v1/posts?slug=${encodeURIComponent(identifier)}&status=published&limit=1`, {
+    const bySlugResponse = await fetch(withBasePath(`/api/v1/posts?slug=${encodeURIComponent(identifier)}&status=published&limit=1`), {
       credentials: 'include',
       headers,
     })
@@ -146,7 +147,7 @@ async function fetchRelatedPosts(currentPostId: string): Promise<RelatedPost[]> 
     const headers = buildHeaders()
 
     // Fetch latest published posts
-    const response = await fetch('/api/v1/posts?status=published&limit=4&sortBy=publishedAt&sortOrder=desc', {
+    const response = await fetch(withBasePath('/api/v1/posts?status=published&limit=4&sortBy=publishedAt&sortOrder=desc'), {
       credentials: 'include',
       headers,
     })

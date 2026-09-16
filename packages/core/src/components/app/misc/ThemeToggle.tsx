@@ -14,6 +14,7 @@ import { useEffect, useState, useCallback } from "react"
 import { createAriaLabel, sel } from '../../../lib/test'
 import { useTranslations } from 'next-intl'
 import { hasSessionHint } from '../../../lib/auth/session-hint'
+import { withBasePath } from '../../../lib/base-path'
 
 export function ThemeToggle() {
   const { setTheme, theme, forcedTheme } = useTheme()
@@ -39,7 +40,7 @@ export function ThemeToggle() {
     // session; a stale hint only costs a request the API rejects.
     if (hasSessionHint()) {
       try {
-        await fetch('/api/user/profile', {
+        await fetch(withBasePath('/api/user/profile'), {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',

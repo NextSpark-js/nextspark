@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from './avatar'
 import { Badge } from './badge'
 import { cn } from '../../lib/utils'
 import { useTeam } from '../../hooks/useTeam'
+import { withBasePath } from '../../lib/base-path'
 
 interface UserDisplayProps {
   value: string | null | undefined
@@ -65,7 +66,7 @@ export function UserDisplay({
       setError(null)
 
       try {
-        const response = await fetch(`/api/v1/teams/${effectiveTeamId}/members`, {
+        const response = await fetch(withBasePath(`/api/v1/teams/${effectiveTeamId}/members`), {
           headers: {
             'Content-Type': 'application/json',
             'x-team-id': effectiveTeamId

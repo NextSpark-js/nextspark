@@ -9,6 +9,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { Media } from '../lib/media/types'
+import { withBasePath } from '../lib/base-path'
 
 interface UploadResult {
   urls: string[]
@@ -42,7 +43,7 @@ export function useMediaUpload() {
       const formData = new FormData()
       files.forEach((file) => formData.append('files', file))
 
-      const res = await fetch('/api/v1/media/upload', {
+      const res = await fetch(withBasePath('/api/v1/media/upload'), {
         method: 'POST',
         body: formData,
       })

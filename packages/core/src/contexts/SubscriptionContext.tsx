@@ -6,6 +6,7 @@ import { useTeam } from '../hooks/useTeam'
 import { SubscriptionWithPlan } from '../lib/billing/types'
 import { BILLING_REGISTRY } from '@nextsparkjs/registries/billing-registry'
 import { ApiError } from '../lib/api/api-error'
+import { withBasePath } from '../lib/base-path'
 
 interface LimitInfo {
   max: number
@@ -70,7 +71,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     queryFn: async () => {
       if (!team) return null
 
-      const response = await fetch(`/api/v1/teams/${team.id}/subscription`)
+      const response = await fetch(withBasePath(`/api/v1/teams/${team.id}/subscription`))
       if (!response.ok) {
         if (response.status === 404) return null
         throw new ApiError('Failed to fetch subscription', { status: response.status })

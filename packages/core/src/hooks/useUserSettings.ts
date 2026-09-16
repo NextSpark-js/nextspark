@@ -3,6 +3,7 @@
 import { useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from './useAuth'
+import { withBasePath } from '../lib/base-path'
 
 interface UserData {
   id: string
@@ -45,7 +46,7 @@ export function useUserSettings(options: UseUserSettingsOptions = {}) {
       ? USER_PROFILE_WITH_META_QUERY_KEY(user?.id)
       : ['user-profile', user?.id],
     queryFn: async () => {
-      const url = new URL('/api/user/profile', window.location.origin)
+      const url = new URL(withBasePath('/api/user/profile'), window.location.origin)
       if (includeMeta) {
         url.searchParams.set('includeMeta', 'true')
       }
@@ -70,7 +71,7 @@ export function useUserSettings(options: UseUserSettingsOptions = {}) {
   // Mutation for updating user settings
   const updateMutation = useMutation({
     mutationFn: async (updates: { meta?: Record<string, unknown> }) => {
-      const response = await fetch('/api/user/profile', {
+      const response = await fetch(withBasePath('/api/user/profile'), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

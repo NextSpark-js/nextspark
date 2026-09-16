@@ -15,6 +15,7 @@ import { cn } from '@nextsparkjs/core/lib/utils'
 import { buildSectionClasses } from '@nextsparkjs/core/types/blocks'
 import { sel } from '../../lib/selectors'
 import type { HeroWithFormBlockProps } from './schema'
+import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 
 /**
  * Hero With Form Block Component
@@ -200,7 +201,7 @@ export function HeroWithFormBlock({
                   {termsLinkUrl && (
                     <>
                       <a
-                        href={termsLinkUrl}
+                        href={withBasePathIfInApp(termsLinkUrl)}
                         className="underline hover:text-primary"
                         target="_blank"
                         rel="noopener noreferrer"
@@ -212,7 +213,7 @@ export function HeroWithFormBlock({
                   )}
                   {privacyLinkUrl && (
                     <a
-                      href={privacyLinkUrl}
+                      href={withBasePathIfInApp(privacyLinkUrl)}
                       className="underline hover:text-primary"
                       target="_blank"
                       rel="noopener noreferrer"

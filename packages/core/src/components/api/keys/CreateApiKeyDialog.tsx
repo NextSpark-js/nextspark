@@ -28,6 +28,7 @@ import { AlertTriangle, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { SCOPE_CATEGORIES, getApiScopes, getAppApiScopes } from '../../../lib/api/keys';
 import { sel } from '../../../lib/test';
+import { withBasePath } from '../../../lib/base-path'
 
 interface CreateApiKeyDialogProps {
   open: boolean;
@@ -66,7 +67,7 @@ export function CreateApiKeyDialog({ open, onClose, onSuccess }: CreateApiKeyDia
 
   const createApiKey = useMutation({
     mutationFn: async (data: { name: string; scopes: string[]; expiresAt?: string }) => {
-      const response = await fetch('/api/v1/api-keys', {
+      const response = await fetch(withBasePath('/api/v1/api-keys'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)

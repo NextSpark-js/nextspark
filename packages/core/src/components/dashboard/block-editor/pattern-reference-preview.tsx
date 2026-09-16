@@ -11,6 +11,7 @@ import { sel } from '../../../lib/test'
 import type { PatternReference } from '../../../types/pattern-reference'
 import type { BlockInstance } from '../../../types/blocks'
 import { getBlockComponent, normalizeBlockProps } from '../../../lib/blocks/loader'
+import { withBasePath } from '../../../lib/base-path'
 
 interface PatternReferencePreviewProps {
   patternRef: PatternReference
@@ -75,7 +76,7 @@ export function PatternReferencePreview({
   const { data: patternData, isLoading, isError } = useQuery({
     queryKey: ['patterns', patternRef.ref],
     queryFn: async () => {
-      const response = await fetch(`/api/v1/patterns/${patternRef.ref}`, {
+      const response = await fetch(withBasePath(`/api/v1/patterns/${patternRef.ref}`), {
         headers: buildApiHeaders(),
       })
       if (!response.ok) {

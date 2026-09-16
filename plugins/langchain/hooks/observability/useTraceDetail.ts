@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import type { Trace, Span } from '../../types/observability.types'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 interface ParentTraceInfo {
   traceId: string
@@ -28,7 +29,7 @@ interface TraceDetailResponse {
 }
 
 async function fetchTraceDetail(traceId: string): Promise<TraceDetailResponse> {
-  const response = await fetch(`/api/v1/plugin/langchain/observability/traces/${traceId}`)
+  const response = await fetch(withBasePath(`/api/v1/plugin/langchain/observability/traces/${traceId}`))
 
   if (!response.ok) {
     throw new Error('Failed to fetch trace detail')

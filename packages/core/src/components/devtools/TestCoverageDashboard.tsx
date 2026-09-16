@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { sel } from "../../lib/test";
+import { withBasePath } from "../../lib/base-path"
 
 interface CoverageSummary {
   features: { total: number; withTests: number; withoutTests: number };
@@ -116,7 +117,7 @@ export function TestCoverageDashboard() {
   useEffect(() => {
     async function fetchCoverage() {
       try {
-        const response = await fetch("/api/v1/devtools/testing");
+        const response = await fetch(withBasePath("/api/v1/devtools/testing"));
         const json = await response.json();
         if (!response.ok) throw new Error(json.error || "Failed to load coverage data");
         setData(json);

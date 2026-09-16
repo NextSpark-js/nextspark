@@ -26,6 +26,7 @@ import { KanbanBoard } from '@/themes/productivity/components/KanbanBoard'
 import { PermissionGate } from '@nextsparkjs/core/components/permissions/PermissionGate'
 import { useToast } from '@nextsparkjs/core/hooks/useToast'
 import { useRouter } from 'next/navigation'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 /**
  * Get headers with x-team-id for API calls
@@ -69,7 +70,7 @@ export default function BoardDetailWithCardPage({ params }: PageProps) {
     const fetchBoard = async () => {
       try {
         setIsLoading(true)
-        const response = await fetch(`/api/v1/boards/${boardId}`, {
+        const response = await fetch(withBasePath(`/api/v1/boards/${boardId}`), {
           headers: getTeamHeaders(),
         })
         if (!response.ok) {
@@ -95,7 +96,7 @@ export default function BoardDetailWithCardPage({ params }: PageProps) {
 
   const handleArchive = async () => {
     try {
-      await fetch(`/api/v1/boards/${boardId}`, {
+      await fetch(withBasePath(`/api/v1/boards/${boardId}`), {
         method: 'PATCH',
         headers: getTeamHeaders(),
         body: JSON.stringify({ status: 'archived' }),
@@ -117,7 +118,7 @@ export default function BoardDetailWithCardPage({ params }: PageProps) {
     }
 
     try {
-      await fetch(`/api/v1/boards/${boardId}`, {
+      await fetch(withBasePath(`/api/v1/boards/${boardId}`), {
         method: 'DELETE',
         headers: getTeamHeaders(),
       })

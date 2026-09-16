@@ -26,6 +26,7 @@ import {
   regeneratePresetRunToken,
   resolvePresetPlaceholders,
 } from './preset-placeholders'
+import { withBasePath } from '../../../lib/base-path'
 
 interface SelectedEndpoint {
   path: string
@@ -198,7 +199,7 @@ export function ApiExplorer({ routes, initialEndpoint }: ApiExplorerProps) {
     if (!selectedEndpoint) return
 
     const url = buildUrl(selectedEndpoint.path, pathParams, queryParams)
-    const fullUrl = (typeof window !== 'undefined' ? window.location.origin : '') + url
+    const fullUrl = (typeof window !== 'undefined' ? window.location.origin : '') + withBasePath(url)
 
     const customHeaders: Record<string, string> = {}
 

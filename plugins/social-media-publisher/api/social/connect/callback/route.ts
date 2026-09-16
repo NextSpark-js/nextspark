@@ -31,6 +31,7 @@ import {
   getOAuthConfig
 } from '../../../../lib/oauth-helper'
 import { mutateWithRLS } from '@nextsparkjs/core/lib/db'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 import { getAdapter, ensureAdapter } from '../../../../lib/adapter'
 
 // Type for social account data
@@ -76,7 +77,7 @@ const getHandler = async (request: NextRequest) => {
     if (!entityId) {
       return NextResponse.redirect(
         new URL(
-          `/dashboard?error=missing_entity&message=Entity ID not provided in OAuth flow`,
+          withBasePath(`/dashboard?error=missing_entity&message=Entity ID not provided in OAuth flow`),
           request.url
         )
       )
@@ -86,7 +87,7 @@ const getHandler = async (request: NextRequest) => {
     if (!code) {
       return NextResponse.redirect(
         new URL(
-          `/dashboard?error=missing_code&message=Authorization code not provided`,
+          withBasePath(`/dashboard?error=missing_code&message=Authorization code not provided`),
           request.url
         )
       )
@@ -103,7 +104,7 @@ const getHandler = async (request: NextRequest) => {
         ? createAuthFailureResponse(authResult)
         : NextResponse.redirect(
             new URL(
-              `/auth/login?error=authentication_required&redirect=/dashboard`,
+              withBasePath(`/auth/login?error=authentication_required&redirect=/dashboard`),
               request.url
             )
           )

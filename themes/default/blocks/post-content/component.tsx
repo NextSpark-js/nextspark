@@ -4,6 +4,7 @@ import { buildSectionClasses } from '@nextsparkjs/core/types/blocks'
 import { sanitizeBlockHtml } from '@nextsparkjs/core/lib/blocks/sanitize-html'
 import { sel } from '../../lib/selectors'
 import type { PostContentBlockProps } from './schema'
+import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 
 /**
  * Post Content Block Component
@@ -182,7 +183,7 @@ export function PostContentBlock({
         {cta && (
           <div className={cn('mt-12 text-center', maxWidthClasses[maxWidth], 'mx-auto')}>
             <a
-              href={cta.link}
+              href={withBasePathIfInApp(cta.link)}
               target={cta.target}
               rel={cta.target === '_blank' ? 'noopener noreferrer' : undefined}
               className="inline-flex items-center justify-center rounded-md bg-primary px-8 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors shadow-md hover:shadow-lg"

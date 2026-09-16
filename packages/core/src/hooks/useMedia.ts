@@ -11,6 +11,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from './useAuth'
 import { ApiError } from '../lib/api/api-error'
 import type { Media, MediaListOptions, MediaListResult, UpdateMediaInput, MediaTag } from '../lib/media/types'
+import { withBasePath } from '../lib/base-path'
 
 const MEDIA_QUERY_KEY = 'media'
 const MEDIA_TAGS_QUERY_KEY = 'media-tags'
@@ -35,7 +36,7 @@ export function useMediaList(options: MediaListOptions = {}) {
       if (options.tagIds?.length) params.set('tagIds', options.tagIds.join(','))
       if (options.tagSlugs?.length) params.set('tagSlugs', options.tagSlugs.join(','))
 
-      const res = await fetch(`/api/v1/media?${params}`)
+      const res = await fetch(withBasePath(`/api/v1/media?${params}`))
       if (!res.ok) {
         throw await ApiError.fromResponse(res, 'Failed to fetch media')
       }
@@ -58,7 +59,7 @@ export function useMediaItem(id: string | null) {
     queryFn: async () => {
       if (!id) throw new Error('Media ID is required')
 
-      const res = await fetch(`/api/v1/media/${id}`)
+      const res = await fetch(withBasePath(`/api/v1/media/${id}`))
       if (!res.ok) {
         throw await ApiError.fromResponse(res, res.status === 404 ? 'Media not found' : 'Failed to fetch media')
       }
@@ -77,7 +78,7 @@ export function useUpdateMedia() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: UpdateMediaInput }) => {
-      const res = await fetch(`/api/v1/media/${id}`, {
+      const res = await fetch(withBasePath(`/api/v1/media/${id}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -107,7 +108,7 @@ export function useDeleteMedia() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/v1/media/${id}`, {
+      const res = await fetch(withBasePath(`/api/v1/media/${id}`), {
         method: 'DELETE'
       })
 
@@ -135,7 +136,7 @@ export function useMediaTags() {
   return useQuery<MediaTag[]>({
     queryKey: [MEDIA_TAGS_QUERY_KEY],
     queryFn: async () => {
-      const res = await fetch('/api/v1/media-tags')
+      const res = await fetch(withBasePath('/api/v1/media-tags'))
       if (!res.ok) {
         throw await ApiError.fromResponse(res, 'Failed to fetch media tags')
       }
@@ -157,7 +158,7 @@ export function useMediaItemTags(mediaId: string | null) {
     queryKey: [MEDIA_TAGS_QUERY_KEY, 'item', mediaId],
     queryFn: async () => {
       if (!mediaId) throw new Error('Media ID is required')
-      const res = await fetch(`/api/v1/media/${mediaId}/tags`)
+      const res = await fetch(withBasePath(`/api/v1/media/${mediaId}/tags`))
       if (!res.ok) {
         throw await ApiError.fromResponse(res, 'Failed to fetch media tags')
       }
@@ -176,7 +177,7 @@ export function useAddMediaTag() {
 
   return useMutation({
     mutationFn: async ({ mediaId, tagId }: { mediaId: string; tagId: string }) => {
-      const res = await fetch(`/api/v1/media/${mediaId}/tags`, {
+      const res = await fetch(withBasePath(`/api/v1/media/${mediaId}/tags`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tagId }),
@@ -204,7 +205,7 @@ export function useCreateMediaTag() {
 
   return useMutation({
     mutationFn: async (name: string) => {
-      const res = await fetch('/api/v1/media-tags', {
+      const res = await fetch(withBasePath('/api/v1/media-tags'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),
@@ -229,7 +230,7 @@ export function useRemoveMediaTag() {
 
   return useMutation({
     mutationFn: async ({ mediaId, tagId }: { mediaId: string; tagId: string }) => {
-      const res = await fetch(`/api/v1/media/${mediaId}/tags?tagId=${tagId}`, {
+      const res = await fetch(withBasePath(`/api/v1/media/${mediaId}/tags?tagId=${tagId}`), {
         method: 'DELETE',
       })
       if (!res.ok) {

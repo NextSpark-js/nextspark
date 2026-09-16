@@ -11,13 +11,14 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
 import { TEAMS_QUERY_KEY, fetchUserTeams } from '../contexts/TeamContext'
 import { useAuth } from './useAuth'
+import { withBasePath } from '../lib/base-path'
 
 // Query keys (matching the hooks)
 const USER_PROFILE_QUERY_KEY = ['user-profile'] as const
 
 // Fetch functions for prefetching
 async function fetchUserProfile() {
-  const response = await fetch('/api/user/profile')
+  const response = await fetch(withBasePath('/api/user/profile'))
   if (!response.ok) {
     throw new Error('Failed to fetch profile')
   }
@@ -96,7 +97,7 @@ export function usePrefetchEntity(entitySlug: string) {
     queryClient.prefetchQuery({
       queryKey: ['entity', entitySlug, 'list'],
       queryFn: async () => {
-        const response = await fetch(`/api/v1/${entitySlug}?limit=20`)
+        const response = await fetch(withBasePath(`/api/v1/${entitySlug}?limit=20`))
         if (!response.ok) {
           throw new Error(`Failed to fetch ${entitySlug}`)
         }

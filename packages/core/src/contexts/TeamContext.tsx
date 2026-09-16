@@ -8,6 +8,7 @@ import { useAuth } from '../hooks/useAuth'
 import { TeamSwitchModal } from '../components/teams/TeamSwitchModal'
 import { APP_CONFIG_MERGED } from '../lib/config/config-sync'
 import { canUserCreateTeam } from '../lib/teams/helpers'
+import { withBasePath } from '../lib/base-path'
 
 interface TeamContextValue {
   currentTeam: Team | null
@@ -65,7 +66,7 @@ const ACTIVE_TEAM_REQUEST_TIMEOUT_MS = 10_000
 function postActiveTeam(teamId: string): Promise<boolean> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), ACTIVE_TEAM_REQUEST_TIMEOUT_MS)
-  return fetch('/api/v1/teams/switch', {
+  return fetch(withBasePath('/api/v1/teams/switch'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ teamId }),
@@ -128,7 +129,7 @@ const MAX_TEAM_PAGES = 50
 export async function fetchUserTeams(): Promise<UserTeamMembership[]> {
   const rows: any[] = []
   for (let page = 1; page <= MAX_TEAM_PAGES; page++) {
-    const response = await fetch(page === 1 ? '/api/v1/teams' : `/api/v1/teams?page=${page}`)
+    const response = await fetch(withBasePath(page === 1 ? '/api/v1/teams' : `/api/v1/teams?page=${page}`))
     const data = await response.json()
 
     if (!response.ok || !data.data) {

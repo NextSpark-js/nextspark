@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { parseChildEntity, getEntityApiPath } from '@nextsparkjs/registries/entity-registry.client'
+import { withBasePath } from '../../lib/base-path'
 
 interface RelationDisplayProps {
   value: string | string[] | null
@@ -83,7 +84,7 @@ export function RelationDisplay({
           // Use child entity API: /api/v1/{parent}s/{parentId}/child/{childType}
           const parentApiPath = getEntityApiPath(childInfo.parentEntity)
           if (parentApiPath) {
-            url = new URL(`/api/v1/${parentApiPath}/${parentId}/child/${childInfo.childType}`, window.location.origin)
+            url = new URL(withBasePath(`/api/v1/${parentApiPath}/${parentId}/child/${childInfo.childType}`), window.location.origin)
             // Note: Child entities API doesn't support 'ids' parameter, so we'll filter on frontend
           } else {
             console.warn(`No API path found for parent entity: ${childInfo.parentEntity}`)
@@ -96,7 +97,7 @@ export function RelationDisplay({
           const hasSpecificAPI = apiPath !== null
 
           if (hasSpecificAPI) {
-            url = new URL(`/api/v1/${apiPath}`, window.location.origin)
+            url = new URL(withBasePath(`/api/v1/${apiPath}`), window.location.origin)
             url.searchParams.set('ids', ids.join(','))
             if (parentId) {
               url.searchParams.set('parentId', parentId)

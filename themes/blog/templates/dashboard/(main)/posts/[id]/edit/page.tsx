@@ -39,6 +39,7 @@ import {
 import { Switch } from '@nextsparkjs/core/components/ui/switch'
 import { WysiwygEditor } from '@/themes/blog/components/editor/WysiwygEditor'
 import { FeaturedImageUpload } from '@/themes/blog/components/editor/FeaturedImageUpload'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 interface PostData {
   id: string
@@ -102,7 +103,7 @@ export default function EditPostPage({ params }: PageProps) {
     async function fetchPost() {
       try {
         const headers = buildHeaders()
-        const response = await fetch(`/api/v1/posts/${id}`, {
+        const response = await fetch(withBasePath(`/api/v1/posts/${id}`), {
           credentials: 'include',
           headers,
         })
@@ -178,7 +179,7 @@ export default function EditPostPage({ params }: PageProps) {
 
     try {
       const headers = buildHeaders()
-      const response = await fetch(`/api/v1/posts/${id}`, {
+      const response = await fetch(withBasePath(`/api/v1/posts/${id}`), {
         method: 'PATCH',
         headers,
         credentials: 'include',
@@ -232,7 +233,7 @@ export default function EditPostPage({ params }: PageProps) {
 
     try {
       const headers = buildHeaders()
-      const response = await fetch(`/api/v1/posts/${id}`, {
+      const response = await fetch(withBasePath(`/api/v1/posts/${id}`), {
         method: 'DELETE',
         headers,
         credentials: 'include',

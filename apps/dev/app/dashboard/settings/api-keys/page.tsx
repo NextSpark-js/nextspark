@@ -37,6 +37,7 @@ import { ApiKeyDisplay } from '@nextsparkjs/core/components/api/keys/ApiKeyDispl
 import { toast } from 'sonner';
 import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
 import { sel } from '@nextsparkjs/core/selectors'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 interface ApiKey {
   id: string;
@@ -73,7 +74,7 @@ function ApiKeysPage() {
   const { data: apiKeys, isLoading, error } = useQuery<ApiKey[]>({
     queryKey: ['api-keys'],
     queryFn: async () => {
-      const response = await fetch('/api/v1/api-keys');
+      const response = await fetch(withBasePath('/api/v1/api-keys'));
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to fetch API keys');
@@ -86,7 +87,7 @@ function ApiKeysPage() {
   // Revoke API key mutation
   const revokeApiKey = useMutation({
     mutationFn: async (keyId: string) => {
-      const response = await fetch(`/api/v1/api-keys/${keyId}`, {
+      const response = await fetch(withBasePath(`/api/v1/api-keys/${keyId}`), {
         method: 'DELETE'
       });
       if (!response.ok) {
@@ -107,7 +108,7 @@ function ApiKeysPage() {
   // Toggle API key status
   const toggleApiKey = useMutation({
     mutationFn: async ({ keyId, status }: { keyId: string; status: 'active' | 'inactive' }) => {
-      const response = await fetch(`/api/v1/api-keys/${keyId}`, {
+      const response = await fetch(withBasePath(`/api/v1/api-keys/${keyId}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status })
@@ -417,7 +418,7 @@ function ApiKeyDetailsDialog({
   const { data: keyDetails, isLoading } = useQuery({
     queryKey: ['api-key-details', keyId],
     queryFn: async () => {
-      const response = await fetch(`/api/v1/api-keys/${keyId}`);
+      const response = await fetch(withBasePath(`/api/v1/api-keys/${keyId}`));
       if (!response.ok) throw new Error('Failed to fetch API key details');
       const result = await response.json();
       return result.data;

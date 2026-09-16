@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 interface WeeklyProgress {
   day: string
@@ -31,7 +32,7 @@ export function useAnalyticsData() {
   return useQuery({
     queryKey: ['analytics', currentTeam?.id],
     queryFn: async (): Promise<AnalyticsData> => {
-      const res = await fetch(`/api/v1/analytics?teamId=${currentTeam?.id}`)
+      const res = await fetch(withBasePath(`/api/v1/analytics?teamId=${currentTeam?.id}`))
       if (!res.ok) throw new Error('Failed to fetch analytics')
       return res.json()
     },

@@ -25,6 +25,7 @@ import { ArrowLeft, Loader2 } from 'lucide-react'
 import { useToast } from '@nextsparkjs/core/hooks/useToast'
 import { usePermission } from '@nextsparkjs/core/lib/permissions/hooks'
 import { NoPermission } from '@nextsparkjs/core/components/permissions/NoPermission'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 /**
  * Get headers with x-team-id for API calls
@@ -90,7 +91,7 @@ export default function CreateBoardPage() {
     setIsSubmitting(true)
 
     try {
-      const response = await fetch('/api/v1/boards', {
+      const response = await fetch(withBasePath('/api/v1/boards'), {
         method: 'POST',
         headers: getTeamHeaders(),
         body: JSON.stringify(formData),

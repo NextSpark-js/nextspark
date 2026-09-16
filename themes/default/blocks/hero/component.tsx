@@ -4,6 +4,7 @@ import { cn } from '@nextsparkjs/core/lib/utils'
 import { buildSectionClasses } from '@nextsparkjs/core/types/blocks'
 import { sel } from '../../lib/selectors'
 import type { HeroBlockProps } from './schema'
+import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 
 /**
  * Hero Block Component
@@ -86,7 +87,7 @@ export function HeroBlock({
         {ctaConfig && (
           <Button asChild size="lg" className="text-lg px-8 py-6">
             <a
-              href={ctaConfig.link}
+              href={withBasePathIfInApp(ctaConfig.link)}
               target={ctaConfig.target}
               rel={ctaConfig.target === '_blank' ? 'noopener noreferrer' : undefined}
             >

@@ -6,6 +6,7 @@ import { cn } from '@nextsparkjs/core/lib/utils'
 import { buildSectionClasses } from '@nextsparkjs/core/types/blocks'
 import { sel } from '../../lib/selectors'
 import type { PricingTableBlockProps, PlanItem } from './schema'
+import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 
 /**
  * Pricing Table Block Component
@@ -133,7 +134,7 @@ export function PricingTableBlock({
                       disabled={plan.isDisabled}
                       data-cy={sel('blocks.pricingTable.cta', { index: String(index) })}
                     >
-                      <a href={plan.ctaUrl}>{plan.ctaText}</a>
+                      <a href={withBasePathIfInApp(plan.ctaUrl)}>{plan.ctaText}</a>
                     </Button>
                   )}
 

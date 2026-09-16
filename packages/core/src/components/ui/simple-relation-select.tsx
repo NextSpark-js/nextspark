@@ -20,6 +20,7 @@ import {
   CommandItem,
   CommandList,
 } from './command'
+import { withBasePath } from '../../lib/base-path'
 
 export interface SimpleEntityOption {
   id: string
@@ -130,7 +131,7 @@ export function SimpleRelationSelect({
           let url: URL
           if (hasSpecificAPI) {
             // Use specific API with fields filter
-            url = new URL(`/api/v1/${apiPath}`, window.location.origin)
+            url = new URL(withBasePath(`/api/v1/${apiPath}`), window.location.origin)
             url.searchParams.set('fields', propField)
             url.searchParams.set('distinct', 'true')
             url.searchParams.set('parentId', parentId)
@@ -166,7 +167,7 @@ export function SimpleRelationSelect({
           // Use child entity API: /api/v1/{parent}s/{parentId}/child/{childType}
           const parentApiPath = getEntityApiPath(childInfo.parentEntity)
           if (parentApiPath) {
-            url = new URL(`/api/v1/${parentApiPath}/${parentId}/child/${childInfo.childType}`, window.location.origin)
+            url = new URL(withBasePath(`/api/v1/${parentApiPath}/${parentId}/child/${childInfo.childType}`), window.location.origin)
           } else {
             console.warn(`No API path found for parent entity: ${childInfo.parentEntity}`)
             return []
@@ -177,7 +178,7 @@ export function SimpleRelationSelect({
           const hasSpecificAPI = apiPath !== null
 
           if (hasSpecificAPI) {
-            url = new URL(`/api/v1/${apiPath}`, window.location.origin)
+            url = new URL(withBasePath(`/api/v1/${apiPath}`), window.location.origin)
             url.searchParams.set('limit', String(limit))
             if (parentId) {
               url.searchParams.set('parentId', parentId)
@@ -260,7 +261,7 @@ export function SimpleRelationSelect({
         // Use child entity API: /api/v1/{parent}s/{parentId}/child/{childType}
         const parentApiPath = getEntityApiPath(childInfo.parentEntity)
         if (parentApiPath) {
-          url = new URL(`/api/v1/${parentApiPath}/${parentId}/child/${childInfo.childType}`, window.location.origin)
+          url = new URL(withBasePath(`/api/v1/${parentApiPath}/${parentId}/child/${childInfo.childType}`), window.location.origin)
         } else {
           console.warn(`No API path found for parent entity: ${childInfo.parentEntity}`)
           return
@@ -271,7 +272,7 @@ export function SimpleRelationSelect({
         const hasSpecificAPI = apiPath !== null
 
         if (hasSpecificAPI) {
-          url = new URL(`/api/v1/${apiPath}`, window.location.origin)
+          url = new URL(withBasePath(`/api/v1/${apiPath}`), window.location.origin)
           url.searchParams.set('ids', ids.join(','))
           if (parentId) {
             url.searchParams.set('parentId', parentId)
@@ -358,7 +359,7 @@ export function SimpleRelationSelect({
           let url: URL
           if (hasSpecificAPI) {
             // Use specific API with fields filter
-            url = new URL(`/api/v1/${apiPath}`, window.location.origin)
+            url = new URL(withBasePath(`/api/v1/${apiPath}`), window.location.origin)
             url.searchParams.set('fields', propField)
             url.searchParams.set('distinct', 'true')
             url.searchParams.set('parentId', parentId)

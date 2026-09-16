@@ -30,6 +30,17 @@ export function withBasePath(path: string): string {
 }
 
 /**
+ * The same URL with the base path added, when it is one this app serves: an
+ * in-app path written without it. A URL with a scheme or a protocol-relative
+ * one belongs to another origin and is left alone, which is what a link or a
+ * request whose target is data — a CTA's link, an endpoint an explorer was
+ * pointed at — needs.
+ */
+export function withBasePathIfInApp(url: string): string {
+  return url.startsWith('/') && !url.startsWith('//') ? withBasePath(url) : url
+}
+
+/**
  * The request with the base path in its URL. Next.js hands a route handler
  * the URL without it, while Better Auth matches requests against its own
  * `basePath`, which includes it.

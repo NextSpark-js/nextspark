@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { Download, Loader2 } from 'lucide-react'
 import { useToast } from '@nextsparkjs/core/hooks/useToast'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 interface ExportPostsButtonProps {
   className?: string
@@ -17,7 +18,7 @@ export function ExportPostsButton({ className }: ExportPostsButtonProps) {
     setIsExporting(true)
     
     try {
-      const response = await fetch('/api/v1/posts?limit=1000', {
+      const response = await fetch(withBasePath('/api/v1/posts?limit=1000'), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

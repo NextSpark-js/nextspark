@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import type { Trace } from '../../types/observability.types'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 interface TracesFilters {
   status?: string
@@ -39,7 +40,7 @@ async function fetchTraces(filters: TracesFilters): Promise<TracesResponse> {
   if (filters.limit) params.append('limit', filters.limit.toString())
   if (filters.cursor) params.append('cursor', filters.cursor)
 
-  const response = await fetch(`/api/v1/plugin/langchain/observability/traces?${params}`)
+  const response = await fetch(withBasePath(`/api/v1/plugin/langchain/observability/traces?${params}`))
 
   if (!response.ok) {
     throw new Error('Failed to fetch traces')

@@ -23,6 +23,7 @@ import { sel } from '@nextsparkjs/core/selectors'
 import { Filters } from '@nextsparkjs/core/components/devtools/scheduled-actions/filters'
 import { ActionsTable } from '@nextsparkjs/core/components/devtools/scheduled-actions/actions-table'
 import type { ScheduledActionsFilters, ScheduledActionsResponse } from '@nextsparkjs/core/components/devtools/scheduled-actions/types'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 async function fetchScheduledActions(
   filters: ScheduledActionsFilters,
@@ -42,7 +43,7 @@ async function fetchScheduledActions(
   params.append('page', page.toString())
   params.append('limit', limit.toString())
 
-  const response = await fetch(`/api/v1/devtools/scheduled-actions?${params.toString()}`)
+  const response = await fetch(withBasePath(`/api/v1/devtools/scheduled-actions?${params.toString()}`))
 
   if (!response.ok) {
     throw new Error('Failed to fetch scheduled actions')

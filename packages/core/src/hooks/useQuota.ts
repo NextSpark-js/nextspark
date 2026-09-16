@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useTeam } from './useTeam'
 import { QuotaInfo } from '../lib/billing/types'
+import { withBasePath } from '../lib/base-path'
 
 /**
  * Hook to check quota usage for a specific limit
@@ -31,7 +32,7 @@ export function useQuota(limitSlug: string) {
         throw new Error('No team selected')
       }
 
-      const response = await fetch(`/api/v1/teams/${team.id}/usage/${limitSlug}`)
+      const response = await fetch(withBasePath(`/api/v1/teams/${team.id}/usage/${limitSlug}`))
       if (!response.ok) {
         throw new Error('Failed to fetch quota info')
       }

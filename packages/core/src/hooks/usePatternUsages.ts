@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from './useAuth'
 import { useTeam } from './useTeam'
+import { withBasePath } from '../lib/base-path'
 
 /**
  * Options for the usePatternUsages hook
@@ -121,7 +122,7 @@ export function usePatternUsages(
         headers['x-team-id'] = teamId
       }
 
-      const response = await fetch(url, { headers })
+      const response = await fetch(withBasePath(url), { headers })
 
       if (!response.ok) {
         if (response.status === 404) {
@@ -182,7 +183,7 @@ export function usePatternUsageCount(
         headers['x-team-id'] = teamId
       }
 
-      const response = await fetch(`/api/v1/patterns/${patternId}/usages?limit=1`, { headers })
+      const response = await fetch(withBasePath(`/api/v1/patterns/${patternId}/usages?limit=1`), { headers })
 
       if (!response.ok) {
         return 0

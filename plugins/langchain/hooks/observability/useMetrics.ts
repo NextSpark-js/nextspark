@@ -1,6 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 interface MetricsResponse {
   success: boolean
@@ -12,7 +13,7 @@ interface MetricsResponse {
 }
 
 async function fetchMetrics(period: string): Promise<MetricsResponse> {
-  const response = await fetch(`/api/v1/plugin/langchain/observability/metrics?period=${period}`)
+  const response = await fetch(withBasePath(`/api/v1/plugin/langchain/observability/metrics?period=${period}`))
 
   if (!response.ok) {
     throw new Error('Failed to fetch metrics')

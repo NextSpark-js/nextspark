@@ -35,6 +35,7 @@ import {
     Sparkles
 } from 'lucide-react'
 import { PermissionGate } from '@nextsparkjs/core/components/permissions/PermissionGate'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 interface Board {
     id: string
@@ -141,7 +142,7 @@ export default function ProductivityDashboard() {
             setIsLoading(true)
 
             // Fetch boards
-            const boardsResponse = await fetch('/api/v1/boards?limit=100', {
+            const boardsResponse = await fetch(withBasePath('/api/v1/boards?limit=100'), {
                 headers: {
                     'Content-Type': 'application/json',
                     'x-team-id': currentTeam.id
@@ -155,7 +156,7 @@ export default function ProductivityDashboard() {
             }
 
             // Fetch all lists
-            const listsResponse = await fetch('/api/v1/lists?limit=500', {
+            const listsResponse = await fetch(withBasePath('/api/v1/lists?limit=500'), {
                 headers: {
                     'Content-Type': 'application/json',
                     'x-team-id': currentTeam.id
@@ -175,7 +176,7 @@ export default function ProductivityDashboard() {
             })
 
             // Fetch all cards
-            const cardsResponse = await fetch('/api/v1/cards?limit=1000', {
+            const cardsResponse = await fetch(withBasePath('/api/v1/cards?limit=1000'), {
                 headers: {
                     'Content-Type': 'application/json',
                     'x-team-id': currentTeam.id
@@ -229,7 +230,7 @@ export default function ProductivityDashboard() {
 
         setIsCreating(true)
         try {
-            const response = await fetch('/api/v1/boards', {
+            const response = await fetch(withBasePath('/api/v1/boards'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

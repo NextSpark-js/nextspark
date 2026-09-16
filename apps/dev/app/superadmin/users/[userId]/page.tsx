@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { getTemplateOrDefaultClient } from "@nextsparkjs/registries/template-registry.client";
+import { withBasePath } from "@nextsparkjs/core/lib/base-path"
 
 interface TeamMembership {
   teamId: string;
@@ -114,7 +115,7 @@ function UserDetailPage() {
   const { data: userData, isLoading, error, refetch } = useQuery<UserDetailData>({
     queryKey: ["superadmin-user", userId],
     queryFn: async () => {
-      const response = await fetch(`/api/superadmin/users/${userId}`);
+      const response = await fetch(withBasePath(`/api/superadmin/users/${userId}`));
       if (!response.ok) {
         if (response.status === 404) {
           throw new Error("User not found");

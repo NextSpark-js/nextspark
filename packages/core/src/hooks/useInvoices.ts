@@ -1,6 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
+import { withBasePath } from '../lib/base-path'
 import { useTeam } from './useTeam'
 import type { Invoice } from '../components/billing'
 
@@ -35,7 +36,7 @@ export function useInvoices(options: UseInvoicesOptions = {}) {
       }
 
       const response = await fetch(
-        `/api/v1/teams/${teamId}/invoices?limit=${limit}&offset=${offset}`
+        withBasePath(`/api/v1/teams/${teamId}/invoices?limit=${limit}&offset=${offset}`)
       )
 
       if (!response.ok) {

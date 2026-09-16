@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { useEntitySearch, type EntitySearchResult } from '../../../hooks/useEntitySearch'
 import { formatSearchResult, escapeHtml } from '../../../lib/search-highlighting'
+import { withBasePath } from '../../../lib/base-path'
 import { cn } from '../../../lib/utils'
 import { sel, createAriaLabel } from '../../../lib/test'
 import { useTranslations } from 'next-intl'
@@ -240,7 +241,7 @@ export function SearchDropdown() {
           break
         case 'Enter':
           if (selectedIndex >= 0 && results[selectedIndex]) {
-            window.location.href = results[selectedIndex].url
+            window.location.href = withBasePath(results[selectedIndex].url)
             handleClose()
           }
           break

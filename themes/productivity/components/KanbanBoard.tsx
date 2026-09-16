@@ -30,6 +30,7 @@ import { SortableList } from './SortableList'
 import { useToast } from '@nextsparkjs/core/hooks/useToast'
 import { PermissionGate } from '@nextsparkjs/core/components/permissions/PermissionGate'
 import { usePermission } from '@nextsparkjs/core/lib/permissions/hooks'
+import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 /**
  * Get headers with x-team-id for API calls
@@ -116,7 +117,7 @@ export function KanbanBoard({ boardId, initialCardId }: KanbanBoardProps) {
       const headers = getTeamHeaders()
 
       // Fetch lists for this board
-      const listsRes = await fetch(`/api/v1/lists?boardId=${boardId}&limit=100`, { headers })
+      const listsRes = await fetch(withBasePath(`/api/v1/lists?boardId=${boardId}&limit=100`), { headers })
       const listsData = await listsRes.json()
       const fetchedLists = (listsData.data || []).sort(
         (a: ListData, b: ListData) => (a.position || 0) - (b.position || 0)
@@ -125,7 +126,7 @@ export function KanbanBoard({ boardId, initialCardId }: KanbanBoardProps) {
 
       // Fetch cards for all lists
       if (fetchedLists.length > 0) {
-        const cardsRes = await fetch(`/api/v1/cards?boardId=${boardId}&limit=500`, { headers })
+        const cardsRes = await fetch(withBasePath(`/api/v1/cards?boardId=${boardId}&limit=500`), { headers })
         const cardsData = await cardsRes.json()
         const fetchedCards = (cardsData.data || []).sort(
           (a: CardData, b: CardData) => (a.position || 0) - (b.position || 0)
@@ -170,7 +171,7 @@ export function KanbanBoard({ boardId, initialCardId }: KanbanBoardProps) {
           variant: 'destructive',
         })
         // Update URL without page reload
-        window.history.replaceState(null, '', `/dashboard/boards/${boardId}`)
+        window.history.replaceState(null, '', withBasePath(`/dashboard/boards/${boardId}`))
         initialCardProcessed.current = true
       }
     }
@@ -267,7 +268,7 @@ export function KanbanBoard({ boardId, initialCardId }: KanbanBoardProps) {
 
           // Update positions on server
           try {
-            await fetch(`/api/v1/lists/${activeId}`, {
+            await fetch(withBasePath(`/api/v1/lists/${activeId}`), {
               method: 'PATCH',
               headers: getTeamHeaders(),
               body: JSON.stringify({
@@ -322,7 +323,7 @@ export function KanbanBoard({ boardId, initialCardId }: KanbanBoardProps) {
 
     // Update on server
     try {
-      await fetch(`/api/v1/cards/${activeId}`, {
+      await fetch(withBasePath(`/api/v1/cards/${activeId}`), {
         method: 'PATCH',
         headers: getTeamHeaders(),
         body: JSON.stringify({
@@ -342,7 +343,7 @@ export function KanbanBoard({ boardId, initialCardId }: KanbanBoardProps) {
     if (!newListName.trim()) return
 
     try {
-      const response = await fetch('/api/v1/lists', {
+      const response = await fetch(withBasePath('/api/v1/lists'), {
         method: 'POST',
         headers: getTeamHeaders(),
         body: JSON.stringify({
@@ -372,7 +373,7 @@ export function KanbanBoard({ boardId, initialCardId }: KanbanBoardProps) {
   const handleAddCard = async (listId: string, title: string) => {
     try {
       const listCards = getCardsForList(listId)
-      const response = await fetch('/api/v1/cards', {
+      const response = await fetch(withBasePath('/api/v1/cards'), {
         method: 'POST',
         headers: getTeamHeaders(),
         body: JSON.stringify({
@@ -402,7 +403,7 @@ export function KanbanBoard({ boardId, initialCardId }: KanbanBoardProps) {
     setSelectedCard(card)
     setIsModalOpen(true)
     // Update URL without page reload using History API
-    window.history.pushState(null, '', `/dashboard/boards/${boardId}/${card.id}`)
+    window.history.pushState(null, '', withBasePath(`/dashboard/boards/${boardId}/${card.id}`))
   }
 
   // Handle modal close - update URL back to board
@@ -410,13 +411,13 @@ export function KanbanBoard({ boardId, initialCardId }: KanbanBoardProps) {
     setIsModalOpen(false)
     setSelectedCard(null)
     // Update URL without page reload using History API
-    window.history.pushState(null, '', `/dashboard/boards/${boardId}`)
+    window.history.pushState(null, '', withBasePath(`/dashboard/boards/${boardId}`))
   }
 
   // Handle card update from modal
   const handleCardUpdate = async (updatedCard: CardData) => {
     try {
-      const response = await fetch(`/api/v1/cards/${updatedCard.id}`, {
+      const response = await fetch(withBasePath(`/api/v1/cards/${updatedCard.id}`), {
         method: 'PATCH',
         headers: getTeamHeaders(),
         body: JSON.stringify({
@@ -453,7 +454,7 @@ export function KanbanBoard({ boardId, initialCardId }: KanbanBoardProps) {
   // Handle card delete from modal
   const handleCardDelete = async (cardId: string) => {
     try {
-      const response = await fetch(`/api/v1/cards/${cardId}`, {
+      const response = await fetch(withBasePath(`/api/v1/cards/${cardId}`), {
         method: 'DELETE',
         headers: getTeamHeaders(),
       })

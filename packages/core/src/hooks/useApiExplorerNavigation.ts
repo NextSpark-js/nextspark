@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation'
 import { useMemo, useCallback, useEffect, useRef } from 'react'
 import type { HttpMethod } from '../components/devtools/api-tester/types'
+import { withBasePath } from '../lib/base-path'
 
 export interface UseApiExplorerNavigationOptions {
   /** Base path that precedes the dynamic segments (e.g., '/devtools/api') */
@@ -89,7 +90,7 @@ export function useApiExplorerNavigation(
       // key, team, body). The App Router keeps usePathname() in sync with
       // history.pushState, so selection and deep-links still work.
       if (typeof window !== 'undefined') {
-        window.history.pushState(null, '', newUrl)
+        window.history.pushState(null, '', withBasePath(newUrl))
       } else {
         router.push(newUrl)
       }

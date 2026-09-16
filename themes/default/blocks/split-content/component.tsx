@@ -6,6 +6,7 @@ import { cn } from '@nextsparkjs/core/lib/utils'
 import { buildSectionClasses } from '@nextsparkjs/core/types/blocks'
 import { sel } from '../../lib/selectors'
 import type { SplitContentBlockProps, BulletPoint } from './schema'
+import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 
 /**
  * Split Content Block Component
@@ -118,7 +119,7 @@ export function SplitContentBlock({
                   variant={cta.variant || 'default'}
                 >
                   <a
-                    href={cta.link}
+                    href={withBasePathIfInApp(cta.link)}
                     target={cta.target}
                     rel={cta.target === '_blank' ? 'noopener noreferrer' : undefined}
                   >
