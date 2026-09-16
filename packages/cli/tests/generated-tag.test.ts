@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { mkdtemp, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -100,6 +100,29 @@ test('a path with spaces, quotes or a comment terminator in it reads back as the
     assert.equal(tag?.intact, true, `intact for ${path}`)
     assert.ok(readGeneratedTagAt(path, tagged), `the file is still core's at ${path}`)
     assert.equal(readGeneratedTagAt('app/other/page.tsx', tagged), null, `a copy elsewhere is the project's, from ${path}`)
+  }
+})
+
+test('a path with a line separator in it leaves the tagged file parsable, and reads back whole', async () => {
+  const paths = ['app/(bad\u2028route)/page.mjs', 'app/(bad\u2029route)/page.mjs']
+
+  const dir = await mkdtemp(join(tmpdir(), 'nextspark-generated-tag-'))
+  try {
+    for (const path of paths) {
+      const content = Buffer.from('export default function Page() { return null }\n')
+      const tagged = withGeneratedTag(path, content, '1.0.0')
+      const file = join(dir, 'page.mjs')
+      await writeFile(file, tagged)
+
+      const checked = spawnSync(process.execPath, ['--check', file], { encoding: 'utf-8' })
+      assert.equal(checked.status, 0, `node --check for ${JSON.stringify(path)}: ${checked.stderr}`)
+
+      const tag = readGeneratedTagAt(path, tagged)
+      assert.equal(tag?.path, path, `path=${JSON.stringify(path)}`)
+      assert.equal(tag?.intact, true, `intact for ${JSON.stringify(path)}`)
+    }
+  } finally {
+    await rm(dir, { recursive: true, force: true })
   }
 })
 

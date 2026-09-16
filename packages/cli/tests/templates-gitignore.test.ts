@@ -12,6 +12,16 @@ async function project() {
   return { root, cleanup: () => rm(root, { recursive: true, force: true }) }
 }
 
+/** Whether git ignores `path` in the repository at `root`. */
+function gitIgnores(root: string, path: string): boolean {
+  try {
+    execFileSync('git', ['check-ignore', '-q', '--', path], { cwd: root, stdio: 'ignore' })
+    return true
+  } catch {
+    return false
+  }
+}
+
 test('the missing line is appended to an existing .gitignore, once', async () => {
   const { root, cleanup } = await project()
   try {
@@ -89,18 +99,40 @@ test('sync:app backups end up ignored in a .gitignore that does not ignore .next
 
     ensureGeneratedPathsIgnored(root)
 
-    const checkIgnore = (path: string) => {
-      try {
-        execFileSync('git', ['check-ignore', '-q', path], { cwd: root })
-        return true
-      } catch {
-        return false
-      }
-    }
-    assert.equal(checkIgnore('.nextspark/backups/2026-01-01T00-00-00-000Z-a1b2c3/middleware.ts'), true)
-    assert.equal(checkIgnore('.nextspark/sync-state.json'), true)
-    assert.equal(checkIgnore('app/(templates)/dashboard/layout.tsx'), true)
-    assert.equal(checkIgnore('app.backup.v0.1.0-beta.190.2026-01-01T00-00-00-000Z-a1b2c3/layout.tsx'), true)
+    assert.equal(gitIgnores(root, '.nextspark/backups/2026-01-01T00-00-00-000Z-a1b2c3/middleware.ts'), true)
+    assert.equal(gitIgnores(root, '.nextspark/sync-state.json'), true)
+    assert.equal(gitIgnores(root, 'app/(templates)/dashboard/layout.tsx'), true)
+    assert.equal(gitIgnores(root, 'app.backup.v0.1.0-beta.190.2026-01-01T00-00-00-000Z-a1b2c3/layout.tsx'), true)
+  } finally {
+    await cleanup()
+  }
+})
+
+test('a negation that un-ignores the backups is not read as a line that already ignores them', async () => {
+  const { root, cleanup } = await project()
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: root })
+    await writeFile(join(root, '.gitignore'), 'node_modules/\napp.backup.*\n!app.backup.v*/\n')
+
+    const backup = 'app.backup.v0.1.0-beta.190.2026-01-01T00-00-00-000Z-a1b2c3'
+    await mkdir(join(root, backup), { recursive: true })
+    await writeFile(join(root, backup, 'private.env'), 'SECRET=1\n')
+    assert.equal(gitIgnores(root, `${backup}/private.env`), false, 'the negation leaves the backup un-ignored')
+
+    assert.deepEqual(ensureGeneratedPathsIgnored(root), [
+      'app/(templates)/',
+      '.nextspark/backups/',
+      '.nextspark/sync-state.json',
+      'app.backup.v*/',
+    ])
+
+    assert.equal(gitIgnores(root, `${backup}/private.env`), true, 'git ignores the backup once the line is added')
+    assert.equal(
+      execFileSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf-8' }).includes(backup),
+      false,
+      'the backup is no longer untracked'
+    )
+    assert.deepEqual(ensureGeneratedPathsIgnored(root), [], 'a second run adds nothing')
   } finally {
     await cleanup()
   }

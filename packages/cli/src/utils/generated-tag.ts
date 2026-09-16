@@ -35,13 +35,23 @@ const TAG_LINE = /^(?:\/\/|\/\*) @nextspark-generated core@(\S+)(?: path=(.+?))?
 const PLAIN_PATH = /^[^\s"\\\u0000-\u001f\u007f]+$/;
 
 /**
+ * The characters that end a line of JavaScript besides the ones JSON escapes:
+ * the line and paragraph separators, which JSON carries as they are. Left raw,
+ * they would close the line comment mid-path and leave the rest of the tag as
+ * code, so the file no longer parses and the tag no longer reads back.
+ */
+const RAW_LINE_TERMINATORS = /[\u2028\u2029]/g;
+
+/**
  * The path as the tag line carries it: plain, or as a JSON string when plain
  * would be unreadable. `*\/` is escaped as `*\\/`, which JSON reads as `*\/`
  * and a CSS block comment doesn't close on.
  */
 function encodeTagPath(path: string): string {
   if (PLAIN_PATH.test(path) && !path.includes('*/')) return path;
-  return JSON.stringify(path).replace(/\*\//g, '*\\/');
+  return JSON.stringify(path)
+    .replace(/\*\//g, '*\\/')
+    .replace(RAW_LINE_TERMINATORS, (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`);
 }
 
 /** The path a tag line carries, or null when it carries one that can't be read. */
