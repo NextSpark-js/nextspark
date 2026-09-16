@@ -4,7 +4,8 @@ import { join } from 'node:path';
 import chalk from 'chalk';
 import ora from 'ora';
 import { spawnNext } from '../utils/spawn-next.js';
-import { shownLines } from '../utils/shown-path.js';
+import { shownPath } from '../utils/shown-path.js';
+import { buildFailureLines } from '../utils/registry-build.js';
 import { getCoreDir, getProjectRoot } from '../utils/paths.js';
 import { effectiveBundler, pickBundler, resolveBundlerArgs } from '../utils/next-bundler.js';
 
@@ -73,17 +74,26 @@ export async function buildCommand(options: BuildOptions): Promise<void> {
           },
         });
 
-        let stderr = '';
+        // core reports a build's failure over stdout as often as over stderr
+        // (only its opt-in verbose stack trace is stderr-only), so the cause is
+        // only complete when both streams are read together, in the order they
+        // arrived
+        let output = '';
+
+        registryProcess.stdout?.on('data', (data) => {
+          output += data.toString();
+        });
 
         registryProcess.stderr?.on('data', (data) => {
-          stderr += data.toString();
+          output += data.toString();
         });
 
         registryProcess.on('close', (code) => {
           if (code === 0) {
             resolve();
           } else {
-            reject(new Error(`Registry generation failed: ${shownLines(stderr)}`));
+            const cause = buildFailureLines(output).map(shownPath).join('\n');
+            reject(new Error(`Registry generation failed:\n${cause}`));
           }
         });
 
