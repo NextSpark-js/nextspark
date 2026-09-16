@@ -382,7 +382,7 @@ Theme build completed in 1.8s
 
 **Index markdown documentation:**
 ```bash
-pnpm docs:build
+nextspark registry build
 ```
 
 **What happens:**

@@ -1,7 +1,6 @@
 /**
  * A docs page's own relative `.md` links must resolve to the route the page
- * builder serves, not the source-tree path the browser can never fetch
- * (#200 docs review: 19 of 24 internal doc links were dead for this reason).
+ * builder serves, not the source-tree path the browser can never fetch.
  */
 import { resolveRelativeDocLink, remarkDocLinks } from '@/core/lib/docs/remark-doc-links'
 
@@ -69,5 +68,26 @@ describe('remarkDocLinks', () => {
     remarkDocLinks(PUBLIC_FILE)(tree)
 
     expect(tree.children[0].url).toBe('/docs/core/theme-system/introduction')
+  })
+
+  test('rewrites a reference-style link by rewriting its definition node', () => {
+    // `[Text][id]` carries no url of its own - mdast keeps the url on a
+    // separate `definition` node (`[id]: ./page.md`) that every matching
+    // `linkReference` resolves against later, so the definition is what
+    // must be rewritten.
+    const tree = {
+      type: 'root',
+      children: [
+        {
+          type: 'paragraph',
+          children: [{ type: 'linkReference', identifier: 'customization', children: [{ type: 'text', value: 'Customization' }] }],
+        },
+        { type: 'definition', identifier: 'customization', url: './02-customization.md' },
+      ],
+    }
+
+    remarkDocLinks(PUBLIC_FILE)(tree)
+
+    expect(tree.children[1].url).toBe('/docs/overview/customization')
   })
 })

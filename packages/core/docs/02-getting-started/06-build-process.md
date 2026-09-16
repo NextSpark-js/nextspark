@@ -14,7 +14,7 @@ When you run `pnpm dev`, these processes execute in order:
 1. TypeScript Config  (2-3s)   → update-tsconfig.mjs
 2. Theme Build        (2-3s)   → build-theme.mjs
 3. Registry Build     (5-10s)  → build-registry.mjs
-4. Docs Index         (1-2s)   → build-docs-registry.mjs
+4. Docs Index         (1-2s)   → registry.mjs (docs-registry generator)
 5. Plugin Dev         (1-2s)   → turbo dev
 6. Next.js Dev        (2-3s)   → next dev --turbopack
 
@@ -129,7 +129,7 @@ core/lib/registries/
 
 ## Step 4: Documentation Index
 
-**Script:** `core/scripts/build/docs.mjs`
+**Script:** `core/scripts/build/registry.mjs` (docs-registry generator, runs together with Step 3)
 
 **What it does:**
 - Scans `core/docs/**/*.md`
@@ -259,7 +259,7 @@ pnpm theme:build            # One-time build
 
 **Docs:**
 ```bash
-pnpm docs:build             # One-time build
+nextspark registry build    # Rebuilds every registry, including docs
 ```
 
 **All:**

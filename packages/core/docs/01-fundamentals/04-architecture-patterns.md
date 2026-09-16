@@ -107,13 +107,15 @@ The build-time generation pattern pre-compiles all dynamic content into static c
 
 **1. Registries** (`core/scripts/build/registry.mjs`)
 ```bash
-# Input: Contents from themes/plugins/entities
+# Input: Contents from themes/plugins/entities, and markdown documentation
 contents/themes/default/entities/tasks/tasks.config.ts
 contents/plugins/ai/plugin.config.ts
+core/docs/**/*.md
 
 # Output: Static registries
 core/lib/registries/entity-registry.ts
 core/lib/registries/plugin-registry.ts
+core/lib/registries/docs-registry.ts
 ```
 
 **2. Theme CSS** (`core/scripts/build/theme.mjs`)
@@ -136,15 +138,6 @@ public/theme/brand/
 public/theme/images/
 ```
 
-**4. Documentation Index** (`core/scripts/build/docs.mjs`)
-```bash
-# Input: Markdown documentation
-core/docs/**/*.md
-
-# Output: Searchable index
-core/lib/registries/docs-registry.ts
-```
-
 ### Build Pipeline
 
 ```typescript
@@ -153,8 +146,7 @@ core/lib/registries/docs-registry.ts
   "scripts": {
     "registry:build": "node core/scripts/build/registry.mjs",
     "theme:build": "node core/scripts/build/theme.mjs",
-    "docs:build": "node core/scripts/build/docs.mjs",
-    "build": "npm run registry:build && npm run theme:build && npm run docs:build && next build"
+    "build": "npm run registry:build && npm run theme:build && next build"
   }
 }
 ```

@@ -1001,7 +1001,7 @@ After generating all documentation, report to the user:
 - 2 components documented with real props
 
 ### Next Steps:
-- Run \`pnpm docs:build\` to rebuild docs registry
+- Run \`nextspark registry build\` to rebuild the docs registry
 - Documentation available at /docs after rebuild
 ```
 
@@ -1069,7 +1069,7 @@ Before marking your work as complete, verify:
 - [ ] Created/updated files ONLY in docs directories
 - [ ] **Did NOT modify any .claude/sessions/ files**
 - [ ] Reported all documentation locations to user
-- [ ] Provided next steps (docs:build command)
+- [ ] Provided next steps (registry build command)
 
 ---
 
@@ -1177,7 +1177,7 @@ await Write('core/docs/08-frontend/06-team-components.md', componentDocContent)
 - Database schema matches migration file
 
 ### Next Steps:
-- Run `pnpm docs:build` to rebuild docs registry
+- Run `nextspark registry build` to rebuild the docs registry
 - Documentation available at /docs/core/api/teams-management
 ```
 
@@ -1207,7 +1207,7 @@ When reporting completion to the user:
 - Troubleshooting with common issues
 
 **Next step:**
-- Run `pnpm docs:build` to rebuild the registry
+- Run `nextspark registry build` to rebuild the registry
 - Documentation available at /docs after rebuild
 ```
 

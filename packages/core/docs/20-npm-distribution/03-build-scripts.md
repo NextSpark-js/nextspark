@@ -10,9 +10,8 @@ packages/core/scripts/
 ├── create-plugin.mjs          # Plugin creation wizard
 ├── create-theme.mjs           # Theme creation wizard
 ├── build/
-│   ├── registry.mjs           # Main registry orchestrator
+│   ├── registry.mjs           # Main registry orchestrator (includes docs registry)
 │   ├── theme.mjs              # Theme CSS compilation
-│   ├── docs.mjs               # Docs registry generation
 │   ├── config-loader.mjs      # Config file loading
 │   ├── update-tsconfig.mjs    # TypeScript config updates
 │   └── registry/

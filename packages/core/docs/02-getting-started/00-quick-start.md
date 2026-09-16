@@ -352,7 +352,7 @@ When you run `pnpm dev`, 6 processes run in sequence:
 - **Auto-generated - never edit manually**
 
 ### 4. Documentation Index (~1s)
-**Script:** `core/scripts/build/docs.mjs`
+**Script:** `core/scripts/build/registry.mjs` (docs-registry generator)
 - Indexes all markdown files in `core/docs/`
 - Creates searchable documentation
 - Generates navigation

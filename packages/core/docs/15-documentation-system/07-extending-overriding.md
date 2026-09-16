@@ -59,7 +59,7 @@ Examples:
 Theme documentation is automatically discovered during build:
 
 ```javascript
-// core/scripts/build/docs.mjs
+// core/scripts/build/registry/generators/docs-registry.mjs
 const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME || 'default'
 
 const themeDocs = scanDocsDirectory(
@@ -99,7 +99,7 @@ My Theme provides a modern, responsive design optimized for SaaS applications.
 
 To customize this theme, start by exploring the [Customization Guide](../02-customization/01-styling.md).
 
-For core system features, refer to the [Core Documentation](/docs/core/fundamentals/project-overview).
+For core system features, refer to core's own documentation (`packages/core/docs`, kept as internal monorepo reference and not published).
 ```
 
 ## Adding Plugin Documentation
@@ -129,7 +129,7 @@ contents/plugins/my-plugin/
 Plugin documentation is discovered based on active plugins:
 
 ```javascript
-// core/scripts/build/docs.mjs
+// core/scripts/build/registry/generators/docs-registry.mjs
 
 // 1. Get active plugins from theme.config.ts
 const activePlugins = getActiveThemePlugins(activeTheme)
@@ -270,7 +270,7 @@ OPENAI_API_KEY=your_api_key_here
 3. Rebuild registry:
 
 ```bash
-pnpm docs:build
+nextspark registry build
 pnpm dev
 ```
 
@@ -338,16 +338,16 @@ Navigation Sidebar:
 
 ## Cross-Referencing
 
-### Linking to Core Docs
+### Referring to Core Docs
 
-From theme or plugin documentation, link to core docs:
+Core's own docs (`packages/core/docs`) are kept as internal monorepo reference and are never published, so theme or plugin documentation can only mention them by name, not link to them:
 
 ```markdown
 <!-- In theme docs -->
-For information about entities, see the [Entity System](/docs/core/entities/introduction).
+For information about entities, see core's own Entity System documentation.
 
 <!-- In plugin docs -->
-This plugin extends the [API System](/docs/core/api/introduction).
+This plugin extends core's own API System documentation.
 ```
 
 ### Linking Between Plugins
@@ -500,7 +500,7 @@ Rebuild the documentation registry when:
 
 ```bash
 # Rebuild docs registry
-pnpm docs:build
+nextspark registry build
 
 # Restart dev server
 pnpm dev
@@ -509,7 +509,7 @@ pnpm dev
 **Automatic Rebuilds:**
 - During `pnpm dev` startup
 - During `pnpm build` for production
-- When running `pnpm docs:build` explicitly
+- When running `nextspark registry build` explicitly
 
 ## Use Cases
 
@@ -570,7 +570,7 @@ Documentation
 1. Check file naming: `{order}-{slug}.md`
 2. Check directory naming: `{order}-{slug}/`
 3. Verify docs are in correct location
-4. Rebuild registry: `pnpm docs:build`
+4. Rebuild registry: `nextspark registry build`
 5. Restart dev server
 
 ### Plugin Docs Missing
@@ -594,7 +594,7 @@ Documentation
 **Solution:**
 1. Check `NEXT_PUBLIC_ACTIVE_THEME` environment variable
 2. Verify theme name matches directory name
-3. Rebuild registry: `pnpm docs:build`
+3. Rebuild registry: `nextspark registry build`
 
 ## Next Steps
 

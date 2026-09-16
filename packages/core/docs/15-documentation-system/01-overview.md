@@ -20,7 +20,7 @@ All sources are automatically discovered and merged into a unified documentation
 
 ### 2. **Build-Time Registry Generation**
 
-Documentation is indexed at build time via `core/scripts/build/docs.mjs`, which:
+Documentation is indexed at build time via `core/scripts/build/registry.mjs`, alongside every other registry, which:
 
 - Scans all documentation directories
 - Extracts metadata from file/folder naming conventions
@@ -137,7 +137,7 @@ contents/plugins/[plugin]/docs/
 
 The documentation system is built on the same **registry architecture** that powers entities, plugins, and themes:
 
-- **Build-time generation** via `core/scripts/build/docs.mjs`
+- **Build-time generation** via `core/scripts/build/registry.mjs`
 - **Static TypeScript output** in `core/lib/registries/`
 - **Zero runtime discovery** using in-memory lookups
 - **Type-safe access** with full TypeScript support

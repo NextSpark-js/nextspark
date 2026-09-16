@@ -561,9 +561,8 @@ const config = ENTITY_REGISTRY[entityName]
 ```
 
 **Build Scripts:**
-- `core/scripts/build/registry.mjs` - Generates all registries
+- `core/scripts/build/registry.mjs` - Generates all registries, including the docs index
 - `core/scripts/build/theme.mjs` - Compiles theme CSS
-- `core/scripts/build/docs.mjs` - Indexes documentation
 
 **Performance Impact:**
 - **17,255x faster** entity access (140ms → 6ms)

@@ -351,7 +351,7 @@ Authentication uses Bearer tokens...  ← Duplicate
 <!-- theme/docs/customization/api-styling.md -->
 # Styling API Response Components
 
-For API authentication details, see [Core API Authentication](/docs/core/api/authentication)
+For API authentication details, see core's own API Authentication documentation
 
 This theme provides custom styling for...
 ```

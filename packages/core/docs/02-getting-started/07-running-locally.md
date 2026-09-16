@@ -148,9 +148,8 @@ pnpm dev                   # All processes
 
 **Build manually:**
 ```bash
-pnpm registry:build        # Registries only
+pnpm registry:build        # Registries only, including docs
 pnpm theme:build           # Theme CSS only
-pnpm docs:build            # Docs index only
 ```
 
 **Database:**

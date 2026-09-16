@@ -11,7 +11,7 @@ The documentation system architecture is built around **build-time registry gene
 │                     BUILD TIME                               │
 ├─────────────────────────────────────────────────────────────┤
 │                                                               │
-│  1. core/scripts/build/docs.mjs                          │
+│  1. core/scripts/build/registry.mjs                      │
 │     │                                                         │
 │     ├─> Scan core/docs/                                     │
 │     ├─> Scan contents/themes/[theme]/docs/                  │
@@ -58,17 +58,17 @@ The documentation system architecture is built around **build-time registry gene
 
 ### Documentation Registry Builder
 
-**Location:** `core/scripts/build/docs.mjs`
+**Location:** `core/scripts/build/registry.mjs` (docs registry generator: `core/scripts/build/registry/generators/docs-registry.mjs`)
 
-**Purpose:** Scans documentation directories and generates static registry
+**Purpose:** Scans documentation directories and generates static registry, alongside every other registry
 
 **Execution:**
 ```bash
 # Automatic (during pnpm dev or pnpm build)
-pnpm docs:build
+nextspark registry build
 
 # Manual
-node core/scripts/build/docs.mjs
+node core/scripts/build/registry.mjs
 ```
 
 ### Discovery Algorithm
@@ -392,7 +392,7 @@ description: Page description for SEO
 
 The docs system integrates with the core registry architecture:
 
-- **Build Script:** `core/scripts/build/docs.mjs`
+- **Build Script:** `core/scripts/build/registry.mjs`
 - **Output Location:** `core/lib/registries/docs-registry.ts`
 - **Import Pattern:** `import { DOCS_REGISTRY } from '@/core/lib/registries/docs-registry'`
 

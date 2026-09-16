@@ -775,18 +775,13 @@ async function updateCore() {
   console.log('   Installing dependencies...')
   execSync('pnpm install', { stdio: 'inherit' })
 
-  // Rebuild registries
+  // Rebuild registries (includes the docs registry)
   console.log('   Rebuilding registries...')
   try {
     execSync('node core/scripts/build/registry.mjs --build', { stdio: 'inherit' })
   } catch (error) {
     console.error('   Warning: Registry rebuild failed')
   }
-
-  try {
-    execSync('pnpm docs:build', { stdio: 'ignore' })
-    console.log('   Docs registry rebuilt')
-  } catch {}
 
   try {
     execSync('node core/scripts/build/theme.mjs', { stdio: 'ignore' })

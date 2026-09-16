@@ -45,11 +45,18 @@ interface MarkdownNode {
   children?: MarkdownNode[]
 }
 
+/**
+ * A reference-style link (`[Text][id]`) carries no url of its own - the mdast
+ * parser keeps it on a separate `definition` node (`[id]: ./page.md`), a
+ * sibling wherever it was written, that every matching `linkReference` is
+ * resolved against in a later pass. Rewriting the `definition`'s url here
+ * routes every reference to it in one step.
+ */
 function rewriteLinks(node: MarkdownNode, filePath: string): void {
   if (!node.children) return
 
   for (const child of node.children) {
-    if (child.type === 'link' && child.url) {
+    if ((child.type === 'link' || child.type === 'definition') && child.url) {
       const resolved = resolveRelativeDocLink(child.url, filePath)
       if (resolved) child.url = resolved
     }

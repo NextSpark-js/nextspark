@@ -146,7 +146,7 @@ export interface EntityConfig {
 ```
 
 ```bash
-pnpm docs:build
+nextspark registry build
 pnpm dev
 ```
 
@@ -171,7 +171,7 @@ Use backticks for inline code:
 ```markdown
 The `DOCS_REGISTRY` constant provides access to all documentation metadata.
 
-Run `pnpm docs:build` to regenerate the registry.
+Run `nextspark registry build` to regenerate the registry.
 
 Import from `@/core/lib/registries/docs-registry`.
 ```
@@ -483,7 +483,7 @@ View [Next.js documentation](https://nextjs.org/docs)
 After adding or modifying documentation:
 
 ```bash
-pnpm docs:build
+nextspark registry build
 ```
 
 This regenerates `core/lib/registries/docs-registry.ts` with updated metadata.
@@ -491,7 +491,7 @@ This regenerates `core/lib/registries/docs-registry.ts` with updated metadata.
 ### Development Workflow
 
 1. Create/edit markdown files
-2. Run `pnpm docs:build`
+2. Run `nextspark registry build`
 3. Start dev server: `pnpm dev`
 4. Navigate to `/docs` to preview
 5. Verify navigation and rendering
