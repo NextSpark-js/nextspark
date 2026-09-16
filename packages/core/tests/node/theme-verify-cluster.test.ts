@@ -362,6 +362,17 @@ test('a target that stops answering after the handshake is given up on, not wait
   assert.ok(Date.now() - started < 3000, `took ${Date.now() - started} ms`)
 })
 
+test('a database URL that switches the time limits off does not lift them from the questions asked', { timeout: 10000 }, async t => {
+  const url = `${await silentServer(t)}&statement_timeout=0&query_timeout=`
+  const started = Date.now()
+
+  await assert.rejects(inspectTarget(url, SHORT_TIMEOUTS), /timeout/i)
+  const maintenance = await inspectMaintenanceDatabase(url, SHORT_TIMEOUTS)
+  assert.equal(maintenance.unreachable, true)
+  assert.match(maintenance.reason, /timeout/i)
+  assert.ok(Date.now() - started < 3000, `took ${Date.now() - started} ms`)
+})
+
 test('a maintenance database that stops answering is unreachable, not empty', { timeout: 10000 }, async t => {
   const url = await silentServer(t)
 

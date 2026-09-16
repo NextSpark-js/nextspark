@@ -14,7 +14,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
-import { migrationTimeLimit, clientTimeLimits } from '../../scripts/db/migration-time-limit.mjs'
+import { migrationTimeLimit } from '../../scripts/db/migration-time-limit.mjs'
 
 const CORE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const RUNNER = path.join(CORE, 'scripts/db/run-migrations.mjs')
@@ -236,11 +236,6 @@ test('the limit is read in seconds, and the client waits a little longer than th
   for (const value of ['0', '-5', 'thirty', 'Infinity']) {
     assert.throws(() => migrationTimeLimit({ MIGRATION_TIMEOUT_SECONDS: value }), /greater than 0/, value)
   }
-  assert.deepEqual(clientTimeLimits(null), {})
-  assert.deepEqual(clientTimeLimits(migrationTimeLimit({ MIGRATION_TIMEOUT_SECONDS: '2' })), {
-    statement_timeout: 2000,
-    query_timeout: 4000,
-  })
 })
 
 test('a migration the server cancels at the limit fails the run with its name', { timeout: 20000 }, async t => {
@@ -297,6 +292,84 @@ test('a migration that is slow but within the limit runs, and so does the rest',
   assert.match(result.output, /Successfully executed 002_waits\.sql/)
   assert.ok(sessionThatRan(server.sessions, MIGRATIONS['003_after.sql']))
   assert.deepEqual(server.terminated, [])
+})
+
+// pg reads a connection string's parameters over the options passed next to it
+const LIMITS_OFF = '&statement_timeout=0&query_timeout='
+
+test('a database URL that switches the limits off does not lift them', { timeout: 20000 }, async t => {
+  const server = await standInPostgres(t, sql => (sql === MIGRATIONS['002_waits.sql'] ? 'stuck' : 'ok'))
+  const cwd = projectWith(t, MIGRATIONS)
+
+  const result = await run(t, RUNNER, ['--no-env-file'], {
+    cwd,
+    env: cleanEnv({ DATABASE_URL: server.url + LIMITS_OFF, NEXT_PUBLIC_ACTIVE_THEME: 'fixture', MIGRATION_TIMEOUT_SECONDS: '0.5' }),
+    killAfterMs: 10000,
+  })
+
+  assert.equal(result.status, 1, result.output)
+  assert.match(
+    result.output,
+    /The database URL sets statement_timeout and query_timeout, which migrations do not use: each one runs under MIGRATION_TIMEOUT_SECONDS \(0\.5 s\)/
+  )
+  assert.match(
+    result.output,
+    /Failed to execute 002_waits\.sql: did not finish within 0\.5 s \(MIGRATION_TIMEOUT_SECONDS\): canceling statement due to statement timeout/
+  )
+  assert.ok(result.elapsedMs < 5000, `took ${result.elapsedMs} ms`)
+  assert.ok(server.sessions.length > 0)
+  for (const session of server.sessions) assert.equal(session.startup.statement_timeout, '500')
+})
+
+test('a database URL that switches the limits off still leaves a server that never answers given up on', { timeout: 20000 }, async t => {
+  const server = await standInPostgres(t, sql => (sql === MIGRATIONS['002_waits.sql'] ? 'silent' : 'ok'))
+  const cwd = projectWith(t, MIGRATIONS)
+
+  const result = await run(t, RUNNER, ['--no-env-file'], {
+    cwd,
+    env: cleanEnv({ DATABASE_URL: server.url + LIMITS_OFF, NEXT_PUBLIC_ACTIVE_THEME: 'fixture', MIGRATION_TIMEOUT_SECONDS: '0.5' }),
+    killAfterMs: 10000,
+  })
+
+  assert.equal(result.status, 1, result.output)
+  assert.match(result.output, /Failed to execute 002_waits\.sql: did not finish within 0\.5 s \(MIGRATION_TIMEOUT_SECONDS\)/)
+  assert.match(result.output, /its session on the server was ended/)
+  assert.ok(result.elapsedMs < 5000, `took ${result.elapsedMs} ms`)
+  const waiting = sessionThatRan(server.sessions, MIGRATIONS['002_waits.sql'])!
+  assert.deepEqual(server.terminated, [waiting.pid])
+  assert.equal(waiting.closed, true)
+})
+
+test('a database URL that switches the limits off does not fail a migration that is only slow', { timeout: 20000 }, async t => {
+  const server = await standInPostgres(t, sql => (sql === MIGRATIONS['002_waits.sql'] ? { slowMs: 700 } : 'ok'))
+  const cwd = projectWith(t, MIGRATIONS)
+
+  const result = await run(t, RUNNER, ['--no-env-file'], {
+    cwd,
+    env: cleanEnv({ DATABASE_URL: server.url + LIMITS_OFF, NEXT_PUBLIC_ACTIVE_THEME: 'fixture', MIGRATION_TIMEOUT_SECONDS: '1' }),
+    killAfterMs: 10000,
+  })
+
+  assert.equal(result.status, 0, result.output)
+  assert.match(result.output, /Successfully executed 002_waits\.sql/)
+  assert.ok(sessionThatRan(server.sessions, MIGRATIONS['003_after.sql']))
+  assert.deepEqual(server.terminated, [])
+})
+
+test('without a limit, the time limits a database URL sets are the ones that apply', { timeout: 20000 }, async t => {
+  const server = await standInPostgres(t, () => 'ok')
+  const cwd = projectWith(t, MIGRATIONS)
+
+  const result = await run(t, RUNNER, ['--no-env-file'], {
+    cwd,
+    env: cleanEnv({ DATABASE_URL: `${server.url}&statement_timeout=90000`, NEXT_PUBLIC_ACTIVE_THEME: 'fixture' }),
+    killAfterMs: 10000,
+  })
+
+  assert.equal(result.status, 0, result.output)
+  assert.doesNotMatch(result.output, /statement_timeout/)
+  assert.ok(server.sessions.length > 0)
+  for (const session of server.sessions) assert.equal(session.startup.statement_timeout, '90000')
 })
 
 test('db:migrate takes the limit from the project .env, as it takes the database', { timeout: 20000 }, async t => {

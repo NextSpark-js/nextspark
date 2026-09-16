@@ -3,12 +3,12 @@
 // Every question has a time limit, not only the connection. A query that waits
 // on a lock someone else holds on a catalog, or a server that stops answering
 // once the connection is up, would otherwise leave the command waiting until
-// something outside kills it, when what the command owes is a refusal.
+// something outside kills it, when what the command owes is a refusal. The
+// limits hold whatever time limits the database URL sets (see
+// connection-time-limits.mjs).
 
-import pg from 'pg';
 import { ROLES_SQL, DATABASES_SQL, MAINTENANCE_DATABASE } from './cluster-changes.mjs';
-
-const { Client } = pg;
+import { timeLimitedClient } from './connection-time-limits.mjs';
 
 /**
  * How long each step may take. The server cancels a statement past
@@ -49,13 +49,7 @@ export const EXISTING_OBJECTS_SQL = `
 `;
 
 export function connect(connectionString, timeouts = TIMEOUTS) {
-  return new Client({
-    connectionString,
-    ssl: { rejectUnauthorized: false, require: true },
-    connectionTimeoutMillis: timeouts.connectMs,
-    statement_timeout: timeouts.statementMs,
-    query_timeout: timeouts.queryMs,
-  });
+  return timeLimitedClient(connectionString, timeouts);
 }
 
 // `end()` drops the socket when a query is still active, so a connection whose

@@ -1,10 +1,7 @@
-import pg from "pg";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from 'url';
-import { migrationTimeLimit, clientTimeLimits, runMigrationSql } from './migration-time-limit.mjs';
-
-const { Client } = pg;
+import { migrationTimeLimit, migrationClient, ignoredParametersNotice, runMigrationSql } from './migration-time-limit.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -81,16 +78,11 @@ try {
   process.exit(1);
 }
 
+const ignoredParameters = ignoredParametersNotice(MIGRATION_URL, TIME_LIMIT);
+if (ignoredParameters) console.log(`⚠️  ${ignoredParameters}\n`);
+
 async function runMigrations() {
-  const client = new Client({
-    connectionString: MIGRATION_URL,
-    ssl: { 
-      rejectUnauthorized: false,
-      require: true
-    },
-    connectionTimeoutMillis: 10000,
-    ...clientTimeLimits(TIME_LIMIT)
-  });
+  const client = migrationClient(MIGRATION_URL, TIME_LIMIT);
   
   try {
     await client.connect();
@@ -388,15 +380,7 @@ async function executeEntityMigration(client, migration) {
 
 // Entity migrations runner - WordPress-like architecture with sample_data deferred execution
 async function runEntityMigrations() {
-  const client = new Client({
-    connectionString: MIGRATION_URL,
-    ssl: {
-      rejectUnauthorized: false,
-      require: true
-    },
-    connectionTimeoutMillis: 10000,
-    ...clientTimeLimits(TIME_LIMIT)
-  });
+  const client = migrationClient(MIGRATION_URL, TIME_LIMIT);
 
   try {
     await client.connect();
