@@ -310,11 +310,31 @@ function gitIgnores(root: string, path: string): boolean {
   }
 }
 
+/**
+ * The global Date, giving `new Date()` and Date.now() the same instant until the
+ * returned function puts the real one back. The backup directory is named from
+ * `new Date()`, so replacing Date.now alone leaves the clock running.
+ */
+function freezeClock(instant: number): () => void {
+  const RealDate = Date
+  class Frozen extends RealDate {
+    constructor(value: number | string | Date = instant) {
+      super(value)
+    }
+
+    static now() {
+      return instant
+    }
+  }
+
+  globalThis.Date = Frozen as unknown as DateConstructor
+  return () => { globalThis.Date = RealDate }
+}
+
 test('--backup gives each run a backup of its own, never written over, and adds it to .gitignore', async () => {
   const { root, cleanup } = await project()
-  const realNow = Date.now
   // A frozen clock is what two runs within the same millisecond look like
-  Date.now = () => 1_700_000_000_000
+  const unfreeze = freezeClock(1_700_000_000_000)
   try {
     execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
     await write(root, 'app/own.tsx', 'export default function Own() { return null }\n')
@@ -326,19 +346,23 @@ test('--backup gives each run a backup of its own, never written over, and adds 
     const backups = (await readdir(root)).filter((name) => name.startsWith('app.backup.')).sort()
     assert.equal(backups.length, 2)
     assert.equal(
-      await readFile(join(root, backups[0], 'own.tsx'), 'utf-8'),
-      'export default function Own() { return null }\n'
+      new Set(backups.map((name) => name.slice(0, name.lastIndexOf('-')))).size,
+      1,
+      `both runs name the same instant, so only mkdtemp's suffix tells them apart: ${backups.join(', ')}`
     )
-    assert.equal(
-      await readFile(join(root, backups[1], 'own.tsx'), 'utf-8'),
-      'export default function Changed() { return null }\n'
-    )
+    // Under the frozen clock the two names differ only by mkdtemp's random
+    // suffix, so which run wrote which is not something their order tells
+    const kept = await Promise.all(backups.map((name) => readFile(join(root, name, 'own.tsx'), 'utf-8')))
+    assert.deepEqual(kept.sort(), [
+      'export default function Changed() { return null }\n',
+      'export default function Own() { return null }\n',
+    ])
 
     for (const backup of backups) {
       assert.ok(gitIgnores(root, `${backup}/`), `git does not ignore ${backup}`)
     }
   } finally {
-    Date.now = realNow
+    unfreeze()
     await cleanup()
   }
 })

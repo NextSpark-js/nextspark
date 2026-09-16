@@ -135,17 +135,33 @@ export function describeTemplatesChanges(changes: TemplatesChanges): string[] {
   ];
 }
 
+/** A line that says why the build stopped, rather than what the failure touched. */
+const CAUSE_LINE = /\b(?:error|errors|failed|failing|failure|fatal)\b/i;
+
 /**
  * What a failed registry build printed, as the lines worth repeating: the tail
  * of its output, where the error that stopped it lands. Without them the
  * failure is a sentence with no cause in it.
+ *
+ * The tail alone is not enough when what stopped the build names the files it
+ * touched afterwards: enough of them push the cause out of the tail, leaving a
+ * list of consequences and no reason. So the first line above the tail that
+ * reads as a cause comes along, with a count of what sits between.
  */
 export function buildFailureLines(output: string, limit = 12): string[] {
-  return output
+  const lines = output
     .split('\n')
     .map((line) => line.trimEnd())
-    .filter((line) => line.trim() !== '')
-    .slice(-limit);
+    .filter((line) => line.trim() !== '');
+
+  const tail = lines.slice(-limit);
+  if (tail.length === lines.length) return tail;
+
+  const above = lines.slice(0, lines.length - tail.length);
+  const cause = above.find((line) => CAUSE_LINE.test(line));
+  const elided = above.length - (cause === undefined ? 0 : 1);
+  const gap = `... ${elided} earlier line(s)`;
+  return cause === undefined ? [gap, ...tail] : [cause, gap, ...tail];
 }
 
 /**

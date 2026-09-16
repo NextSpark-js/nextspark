@@ -4,7 +4,7 @@ import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { registryBuildBlocker, runRegistryBuild, templatesTreeLines } from '../src/utils/registry-build.js'
+import { buildFailureLines, registryBuildBlocker, runRegistryBuild, templatesTreeLines } from '../src/utils/registry-build.js'
 
 /** A project root and a fake core whose registry build prints its arguments and exits with `exitCode`. */
 async function projectWithCore(exitCode: number) {
@@ -75,4 +75,20 @@ test('only the lines about app/(templates) are picked out of the output', () => 
     '✅ app/(templates): 1 new, 1 updated, 0 removed',
     '⚠️  app/(templates): backed up app/(templates)/x/layout.tsx to .nextspark/backups/t/app/(templates)/x/layout.tsx',
   ])
+})
+
+test('the cause of a failure comes along when the files it touched push it out of the tail', () => {
+  const cause = 'Error: contents/themes/acme/templates/shop/page.tsx has no default export'
+  const touched = Array.from({ length: 15 }, (_, index) => `  affected: app/(templates)/page-${index}.tsx`)
+  const lines = buildFailureLines(['Discovering template overrides...', cause, ...touched].join('\n'))
+
+  assert.equal(lines[0], cause)
+  assert.equal(lines[1], '... 4 earlier line(s)')
+  assert.deepEqual(lines.slice(2), touched.slice(-12))
+})
+
+test('output that fits under the limit is repeated whole, with nothing marking a gap', () => {
+  const output = 'Discovering template overrides...\nError: no default export\n'
+
+  assert.deepEqual(buildFailureLines(output), ['Discovering template overrides...', 'Error: no default export'])
 })
