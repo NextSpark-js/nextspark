@@ -109,6 +109,12 @@ function killProcessGroup(pid) {
   }
 }
 
+// A step's subprocess is the leader of its own detached process group (see
+// exec below), which is a different group from this script's, so a signal
+// sent to this script's pid never reaches it on its own. Tracking every
+// active pid here is what lets the SIGTERM/SIGINT handlers reach it too.
+const activeChildPids = new Set()
+
 function exec(command, args, cwd, { env, timeoutMs = STEP_TIMEOUT_MS } = {}) {
   return new Promise((resolve) => {
     const child = spawn(command, args, {
@@ -117,6 +123,7 @@ function exec(command, args, cwd, { env, timeoutMs = STEP_TIMEOUT_MS } = {}) {
       env: env ? { ...process.env, ...env } : process.env,
       detached: true,
     })
+    activeChildPids.add(child.pid)
 
     let timedOut = false
     const timer = setTimeout(() => {
@@ -126,12 +133,14 @@ function exec(command, args, cwd, { env, timeoutMs = STEP_TIMEOUT_MS } = {}) {
 
     child.on('error', (error) => {
       clearTimeout(timer)
+      activeChildPids.delete(child.pid)
       console.log(`${RED}${error.message}${NC}`)
       resolve(false)
     })
 
     child.on('exit', (code, signal) => {
       clearTimeout(timer)
+      activeChildPids.delete(child.pid)
       if (timedOut) {
         console.log(`${RED}Timed out after ${timeoutMs / 1000}s and its process group was killed${NC}`)
       } else if (signal) {
@@ -141,6 +150,19 @@ function exec(command, args, cwd, { env, timeoutMs = STEP_TIMEOUT_MS } = {}) {
     })
   })
 }
+
+/**
+ * Node's default handling for both SIGTERM and SIGINT is to exit without
+ * touching children, which would leave a step's process group (Jest, Metro,
+ * expo export) reparented to init and free to keep running - and, for Jest,
+ * keep holding its port - after the supervisor that was watching it is gone.
+ */
+function cancelActiveChildrenAndExit(exitCode) {
+  for (const pid of activeChildPids) killProcessGroup(pid)
+  process.exit(exitCode)
+}
+process.on('SIGTERM', () => cancelActiveChildrenAndExit(143))
+process.on('SIGINT', () => cancelActiveChildrenAndExit(130))
 
 /**
  * Bundling is the only step that runs Metro's resolveRequest, which is what
