@@ -11,6 +11,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Calendar, Clock, User } from 'lucide-react'
 import { cn } from '@nextsparkjs/core/lib/utils'
+import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 
 interface PostCardProps {
   id: string
@@ -73,7 +74,7 @@ export function PostCard({
         <div data-cy={`post-card-image-${id}`} className="aspect-[21/9] relative overflow-hidden">
           {featuredImage ? (
             <Image
-              src={featuredImage}
+              src={withBasePathIfInApp(featuredImage)}
               alt={title}
               fill
               className="object-cover transition-transform duration-500 group-hover:scale-105"
@@ -115,7 +116,7 @@ export function PostCard({
               <Link href={authorUrl} data-cy={`post-card-author-${id}`} className="flex items-center gap-2 hover:text-foreground transition-colors">
                 {authorAvatar ? (
                   <Image
-                    src={authorAvatar}
+                    src={withBasePathIfInApp(authorAvatar)}
                     alt={authorName}
                     width={24}
                     height={24}
@@ -132,7 +133,7 @@ export function PostCard({
               <div data-cy={`post-card-author-${id}`} className="flex items-center gap-2">
                 {authorAvatar ? (
                   <Image
-                    src={authorAvatar}
+                    src={withBasePathIfInApp(authorAvatar)}
                     alt={authorName}
                     width={24}
                     height={24}
@@ -174,7 +175,7 @@ export function PostCard({
         <div data-cy={`post-card-image-${id}`} className="flex-shrink-0 w-24 h-24 relative overflow-hidden rounded-md">
           {featuredImage ? (
             <Image
-              src={featuredImage}
+              src={withBasePathIfInApp(featuredImage)}
               alt={title}
               fill
               className="object-cover"
@@ -216,7 +217,7 @@ export function PostCard({
       <div data-cy={`post-card-image-${id}`} className="aspect-[16/10] relative overflow-hidden">
         {featuredImage ? (
           <Image
-            src={featuredImage}
+            src={withBasePathIfInApp(featuredImage)}
             alt={title}
             fill
             className="object-cover transition-transform duration-500 group-hover:scale-105"
@@ -256,7 +257,7 @@ export function PostCard({
             <Link href={authorUrl} data-cy={`post-card-author-${id}`} className="flex items-center gap-2 hover:text-foreground transition-colors">
               {authorAvatar ? (
                 <Image
-                  src={authorAvatar}
+                  src={withBasePathIfInApp(authorAvatar)}
                   alt={authorName}
                   width={20}
                   height={20}
@@ -273,7 +274,7 @@ export function PostCard({
             <div data-cy={`post-card-author-${id}`} className="flex items-center gap-2">
               {authorAvatar ? (
                 <Image
-                  src={authorAvatar}
+                  src={withBasePathIfInApp(authorAvatar)}
                   alt={authorName}
                   width={20}
                   height={20}

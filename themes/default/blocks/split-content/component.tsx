@@ -69,7 +69,7 @@ export function SplitContentBlock({
           <div className={cn('relative', imageOrderClass)}>
             <div className="relative aspect-[4/3] w-full overflow-hidden">
               <Image
-                src={image}
+                src={withBasePathIfInApp(image)}
                 alt={imageAlt || title || 'Split content image'}
                 fill
                 className={cn('object-cover', imageStyleClasses[imageStyle as 'square' | 'rounded' | 'circle'])}

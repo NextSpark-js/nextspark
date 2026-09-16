@@ -44,7 +44,7 @@ export function AuthorBio({
       <div data-cy="author-bio-avatar" className="flex-shrink-0">
         {avatar ? (
           <Image
-            src={avatar}
+            src={withBasePathIfInApp(avatar)}
             alt={name}
             width={64}
             height={64}

@@ -9,6 +9,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { Clock } from 'lucide-react'
+import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 
 interface RelatedPost {
   id: string
@@ -45,7 +46,7 @@ export function RelatedPosts({
             <div data-cy={`related-post-image-${post.id}`} className="aspect-[16/9] relative overflow-hidden">
               {post.featuredImage ? (
                 <Image
-                  src={post.featuredImage}
+                  src={withBasePathIfInApp(post.featuredImage)}
                   alt={post.title}
                   fill
                   className="object-cover transition-transform duration-300 group-hover:scale-105"

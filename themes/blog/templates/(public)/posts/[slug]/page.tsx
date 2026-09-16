@@ -17,7 +17,7 @@ import { ReadingProgress } from '@/themes/blog/components/public/ReadingProgress
 import { AuthorBio } from '@/themes/blog/components/public/AuthorBio'
 import { RelatedPosts } from '@/themes/blog/components/public/RelatedPosts'
 import { Button } from '@nextsparkjs/core/components/ui/button'
-import { withBasePath, withBasePathInHtml } from '@nextsparkjs/core/lib/base-path'
+import { withBasePath, withBasePathInHtml, withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 
 interface Post {
   id: string
@@ -283,7 +283,7 @@ export default function PostPage({ params }: PageProps) {
           <figure className="mb-12">
             <div className="aspect-[21/9] relative overflow-hidden rounded-xl">
               <Image
-                src={post.featuredImage}
+                src={withBasePathIfInApp(post.featuredImage)}
                 alt={post.title}
                 fill
                 className="object-cover"

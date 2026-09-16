@@ -138,7 +138,7 @@ export default function AuthorPage({ params }: PageProps) {
           <div className="flex-shrink-0">
             {author.image ? (
               <Image
-                src={author.image}
+                src={withBasePathIfInApp(author.image)}
                 alt={author.name}
                 width={128}
                 height={128}

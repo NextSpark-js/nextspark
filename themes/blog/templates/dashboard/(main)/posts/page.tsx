@@ -63,7 +63,7 @@ import {
   Send,
   ImageIcon,
 } from 'lucide-react'
-import { withBasePath } from '@nextsparkjs/core/lib/base-path'
+import { withBasePath, withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 
 interface Post {
   id: string
@@ -556,7 +556,7 @@ export default function PostsListPage() {
                           <div className="hidden sm:block flex-shrink-0 w-16 h-12 rounded overflow-hidden bg-muted">
                             {post.featuredImage ? (
                               <Image
-                                src={post.featuredImage}
+                                src={withBasePathIfInApp(post.featuredImage)}
                                 alt=""
                                 width={64}
                                 height={48}
@@ -691,7 +691,7 @@ export default function PostsListPage() {
                 <div className="aspect-video relative bg-muted">
                   {post.featuredImage ? (
                     <Image
-                      src={post.featuredImage}
+                      src={withBasePathIfInApp(post.featuredImage)}
                       alt=""
                       fill
                       className="object-cover"

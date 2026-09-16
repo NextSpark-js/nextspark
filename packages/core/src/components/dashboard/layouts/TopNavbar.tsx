@@ -21,6 +21,7 @@ import { NotificationsDropdown } from '../misc/NotificationsDropdown'
 import { SearchDropdown } from '../misc/SearchDropdown'
 import { QuickCreateDropdown } from '../misc/QuickCreateDropdown'
 import { cn } from '../../../lib/utils'
+import { withBasePathIfInApp } from '../../../lib/base-path'
 import { sel } from '../../../lib/test'
 import { useTranslations } from 'next-intl'
 import { useIsSuperAdmin } from '../../app/guards/SuperAdminGuard'
@@ -362,7 +363,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                   >
                     {user.image ? (
                       <Image
-                        src={user.image}
+                        src={withBasePathIfInApp(user.image)}
                         alt=""
                         width={32}
                         height={32}
@@ -458,7 +459,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                 <div className="flex items-center gap-2">
                   {user.image ? (
                     <Image
-                      src={user.image}
+                      src={withBasePathIfInApp(user.image)}
                       alt={t('a11y.avatarForName', { name: user.firstName || user.email })}
                       width={32}
                       height={32}
@@ -609,7 +610,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
                 >
                   {user.image ? (
                     <Image
-                      src={user.image}
+                      src={withBasePathIfInApp(user.image)}
                       alt=""
                       width={32}
                       height={32}

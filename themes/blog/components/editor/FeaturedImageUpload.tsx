@@ -12,6 +12,7 @@ import NextImage from 'next/image'
 import { X, Upload, Image as ImageIcon } from 'lucide-react'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { cn } from '@nextsparkjs/core/lib/utils'
+import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 
 interface FeaturedImageUploadProps {
   value: string // URL string
@@ -111,7 +112,7 @@ export function FeaturedImageUpload({
         // Image Preview
         <div className="relative aspect-video rounded-lg overflow-hidden border border-border bg-muted" data-cy="featured-image-preview">
           <NextImage
-            src={value}
+            src={withBasePathIfInApp(value)}
             alt="Featured image preview"
             fill
             className="object-cover"

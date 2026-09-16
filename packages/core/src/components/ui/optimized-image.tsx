@@ -3,6 +3,7 @@
 import * as React from "react"
 import Image, { type ImageProps } from "next/image"
 import { cn } from "../../lib/utils"
+import { withBasePathIfInApp } from "../../lib/base-path"
 
 export interface OptimizedImageProps extends Omit<ImageProps, 'placeholder'> {
   /** Fallback component to render when image fails to load */
@@ -99,6 +100,7 @@ const OptimizedImage = React.forwardRef<HTMLImageElement, OptimizedImageProps>(
       blurDataURL,
       fill,
       alt,
+      src,
       onError,
       ...props
     },
@@ -132,6 +134,9 @@ const OptimizedImage = React.forwardRef<HTMLImageElement, OptimizedImageProps>(
           return ""
       }
     }
+
+    // next/image leaves a string src as written; an imported image is passed through
+    const resolvedSrc = typeof src === "string" ? withBasePathIfInApp(src) : src
 
     // Show fallback if there's an error
     if (hasError && fallback) {
@@ -180,6 +185,7 @@ const OptimizedImage = React.forwardRef<HTMLImageElement, OptimizedImageProps>(
             )}
             fill={fill ?? !!aspectRatio}
             alt={alt}
+            src={resolvedSrc}
             onError={handleError}
             onLoad={handleLoad}
             {...placeholderProps}
@@ -199,6 +205,7 @@ const OptimizedImage = React.forwardRef<HTMLImageElement, OptimizedImageProps>(
           className
         )}
         alt={alt}
+        src={resolvedSrc}
         onError={handleError}
         onLoad={handleLoad}
         {...placeholderProps}

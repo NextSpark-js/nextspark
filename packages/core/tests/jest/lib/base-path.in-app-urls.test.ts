@@ -8,10 +8,13 @@
  * Neither the type-checker nor a runtime test of a single component catches a
  * new one being written, so the source itself is asserted here.
  *
- * Four shapes are scanned, because Next.js prefixes none of them:
+ * Six shapes are scanned, because Next.js prefixes none of them:
  *  - calls that take a URL: fetch, new URL, window.open, history entries
  *  - the attributes that name a navigation or an asset: an `<a href>`, an
  *    `<img src>`, an `<iframe src>`
+ *  - the `src` of next/image's `<Image>`: the optimizer fetches that URL from
+ *    the app itself, and it is not prefixed any more than an `<img src>` is
+ *  - `url()` inside a style, such as a background image built from an upload
  *  - markup handed to dangerouslySetInnerHTML, which carries its own URLs
  *  - the config files, whose headers name endpoints as plain strings
  *
@@ -58,6 +61,15 @@ const ASSET_ATTRIBUTES: Record<string, string[]> = {
   track: ['src'],
   form: ['action'],
 }
+
+/** The modules whose default export is next/image's `<Image>`, under whatever name it is imported. */
+const IMAGE_MODULES = new Set(['next/image', 'next/legacy/image'])
+
+/** The text before a `url(` whose argument is the value that follows it. */
+const CSS_URL_OPENING = /url\(\s*['"]?$/i
+
+/** A `url()` whose argument is written out as an in-app path. */
+const CSS_URL_WITH_PATH = /url\(\s*['"]?\/(?!\/)/i
 
 /** Helpers that put the base path on a URL, or on every URL inside markup. */
 const HELPERS = new Set(['withBasePath', 'withBasePathIfInApp', 'withBasePathInHtml', 'withBasePathInSrcset'])
@@ -111,6 +123,11 @@ const ALLOWED = [
     file: 'packages/core/src/components/docs/docs-content.tsx',
     text: '__html: html',
     why: 'docs HTML is built by remark on the server, where there is no DOM to rewrite it with',
+  },
+  {
+    file: 'packages/core/src/components/ui/optimized-image.tsx',
+    text: 'resolvedSrc',
+    why: 'a string src goes through withBasePathIfInApp where resolvedSrc is built; an imported image is passed through',
   },
   {
     file: 'themes/blog/components/editor/WysiwygEditor.tsx',
@@ -185,6 +202,19 @@ function offendersIn(file: string): string[] {
   const pathVariables = new Map<string, string>()
   const found: string[] = []
 
+  // The names next/image's component goes by in this file
+  const imageComponents = new Set<string>()
+  for (const statement of source.statements) {
+    if (
+      ts.isImportDeclaration(statement) &&
+      ts.isStringLiteral(statement.moduleSpecifier) &&
+      IMAGE_MODULES.has(statement.moduleSpecifier.text) &&
+      statement.importClause?.name
+    ) {
+      imageComponents.add(statement.importClause.name.text)
+    }
+  }
+
   // packages/core/templates/app holds the copy sync writes from apps/dev/app, so an exception
   // named on the file under apps/dev/app covers that copy as well.
   const isAllowedFile = (allowedFile: string) =>
@@ -228,8 +258,9 @@ function offendersIn(file: string): string[] {
       const tag = owningTag(node, source)
       const value = attributeValue(node)
 
-      // <Link> Next.js prefixes; an <a>, an <img> and the rest it does not
-      if (value && ASSET_ATTRIBUTES[tag]?.includes(name) && !isWrapped(value) && !isElsewhere(value)) {
+      // <Link> Next.js prefixes; an <a>, an <img>, next/image's <Image> and the rest it does not
+      const isAsset = ASSET_ATTRIBUTES[tag]?.includes(name) || (imageComponents.has(tag) && name === 'src')
+      if (value && isAsset && !isWrapped(value) && !isElsewhere(value)) {
         if (writtenPath(value)?.startsWith('/')) report(node, tag === 'a' ? 'anchor' : `${tag} ${name}`, value.getText(source))
         else if (!writtenPath(value)) report(node, `${tag} ${name} from data`, value.getText(source))
       }
@@ -244,6 +275,35 @@ function offendersIn(file: string): string[] {
           report(node, 'embedded html', node.getText(source))
         }
       }
+    }
+
+    // next/image's <Image> handed its props whole: the src among them goes unseen
+    if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
+      const tag = node.tagName.getText(source)
+      const attributes = node.attributes.properties
+      if (
+        imageComponents.has(tag) &&
+        attributes.some(ts.isJsxSpreadAttribute) &&
+        !attributes.some(attribute => ts.isJsxAttribute(attribute) && attribute.name.getText(source) === 'src')
+      ) {
+        report(node, `${tag} src in spread props`, node.getText(source))
+      }
+    }
+
+    // url() in a style: a background built from an upload, or a path written into the CSS
+    if (ts.isTemplateExpression(node)) {
+      node.templateSpans.forEach((span, index) => {
+        const before = index === 0 ? node.head.text : node.templateSpans[index - 1].literal.text
+        if (CSS_URL_OPENING.test(before) && !isWrapped(span.expression)) {
+          report(span.expression, 'css url() from data', `url(\${${span.expression.getText(source)}})`)
+        }
+      })
+    }
+    if (
+      (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node) || ts.isTemplateHead(node)) &&
+      CSS_URL_WITH_PATH.test(node.text)
+    ) {
+      report(node, 'css url()', node.getText(source))
     }
 
     if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
@@ -281,19 +341,26 @@ describe('in-app URLs carry the base path', () => {
     const offenders = offendersIn(join(REPO_ROOT, 'packages/core/tests/jest/lib/__fixtures__/bare-in-app-urls.tsx'))
 
     expect(offenders.map(offender => offender.replace(/^.*__fixtures__\//, ''))).toEqual([
-      'bare-in-app-urls.tsx:7  fetch via variable  path = `/api/v1/${slug}`',
-      'bare-in-app-urls.tsx:11  fetch  \'/api/v1/teams\'',
-      'bare-in-app-urls.tsx:17  location  window.location.href = \'/dashboard\'',
-      'bare-in-app-urls.tsx:28  pushState  `/dashboard/boards/${id}`',
-      'bare-in-app-urls.tsx:29  open  \'/dashboard/reports\'',
-      'bare-in-app-urls.tsx:35  anchor  "/pricing"',
-      'bare-in-app-urls.tsx:37  a href from data  href',
-      'bare-in-app-urls.tsx:50  img src from data  thumbnail',
-      'bare-in-app-urls.tsx:52  img src  "/theme/blocks/hero/thumbnail.png"',
-      'bare-in-app-urls.tsx:53  a href from data  url',
-      'bare-in-app-urls.tsx:55  iframe src from data  url',
-      'bare-in-app-urls.tsx:63  embedded html  dangerouslySetInnerHTML={{ __html: body }}',
-      'bare-in-app-urls.tsx:70  open  url',
+      'bare-in-app-urls.tsx:9  fetch via variable  path = `/api/v1/${slug}`',
+      'bare-in-app-urls.tsx:13  fetch  \'/api/v1/teams\'',
+      'bare-in-app-urls.tsx:19  location  window.location.href = \'/dashboard\'',
+      'bare-in-app-urls.tsx:30  pushState  `/dashboard/boards/${id}`',
+      'bare-in-app-urls.tsx:31  open  \'/dashboard/reports\'',
+      'bare-in-app-urls.tsx:37  anchor  "/pricing"',
+      'bare-in-app-urls.tsx:39  a href from data  href',
+      'bare-in-app-urls.tsx:52  img src from data  thumbnail',
+      'bare-in-app-urls.tsx:54  img src  "/theme/blocks/hero/thumbnail.png"',
+      'bare-in-app-urls.tsx:55  a href from data  url',
+      'bare-in-app-urls.tsx:57  iframe src from data  url',
+      'bare-in-app-urls.tsx:65  embedded html  dangerouslySetInnerHTML={{ __html: body }}',
+      'bare-in-app-urls.tsx:72  open  url',
+      // next/image's component, under the name it was imported as; lucide's Image icon is not it
+      'bare-in-app-urls.tsx:78  NextImage src from data  cover',
+      'bare-in-app-urls.tsx:80  NextImage src  "/brand/logo.png"',
+      'bare-in-app-urls.tsx:81  NextImage src in spread props  <NextImage {...rest} />',
+      'bare-in-app-urls.tsx:90  css url() from data  url(${upload})',
+      'bare-in-app-urls.tsx:92  css url()  \'url(/theme/hero.jpg)\'',
+      'bare-in-app-urls.tsx:93  css url() from data  url(${upload})',
     ])
   })
 

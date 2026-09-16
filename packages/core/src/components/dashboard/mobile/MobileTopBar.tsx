@@ -9,6 +9,7 @@ import { ThemeToggle } from '../../app/misc/ThemeToggle'
 import { NotificationsDropdown } from '../misc/NotificationsDropdown'
 import { sel } from '../../../lib/test'
 import { isTopbarFeatureEnabled } from '../../../lib/config'
+import { withBasePathIfInApp } from '../../../lib/base-path'
 import { useTranslations } from 'next-intl'
 
 interface MobileTopBarProps {
@@ -69,7 +70,7 @@ export function MobileTopBar({ prefetch }: MobileTopBarProps = {}) {
           {/* Avatar */}
           {user.image ? (
             <Image
-              src={user.image}
+              src={withBasePathIfInApp(user.image)}
               alt=""
               width={40}
               height={40}

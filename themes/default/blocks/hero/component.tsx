@@ -61,7 +61,7 @@ export function HeroBlock({
         <div
           className="absolute inset-0 z-0"
           style={{
-            backgroundImage: `url(${backgroundImage})`,
+            backgroundImage: `url(${withBasePathIfInApp(backgroundImage)})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           }}

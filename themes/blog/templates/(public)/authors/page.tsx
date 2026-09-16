@@ -10,7 +10,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { User } from 'lucide-react'
-import { withBasePath } from '@nextsparkjs/core/lib/base-path'
+import { withBasePath, withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 
 interface Author {
   id: string
@@ -116,7 +116,7 @@ export default function AuthorsPage() {
                 <div className="flex justify-center mb-4">
                   {author.image ? (
                     <Image
-                      src={author.image}
+                      src={withBasePathIfInApp(author.image)}
                       alt={author.name}
                       width={80}
                       height={80}

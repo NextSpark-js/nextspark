@@ -1,4 +1,5 @@
 import { Badge } from '@nextsparkjs/core/components/ui/badge'
+import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 import Image from 'next/image'
 
 interface Category {
@@ -24,7 +25,7 @@ export function PostHeader({ post }: PostHeaderProps) {
       {post.featuredImage && (
         <div className="relative w-full h-[400px] md:h-[500px] mb-8" data-cy="post-featured-image-display">
           <Image
-            src={post.featuredImage}
+            src={withBasePathIfInApp(post.featuredImage)}
             alt={post.title}
             fill
             className="object-cover rounded-lg"

@@ -11,6 +11,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { User } from 'lucide-react'
 import { cn } from '@nextsparkjs/core/lib/utils'
+import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 
 interface AuthorCardProps {
   username: string
@@ -48,7 +49,7 @@ export function AuthorCard({
         <div data-cy={`author-card-avatar-${username}`} className="flex-shrink-0">
           {avatar ? (
             <Image
-              src={avatar}
+              src={withBasePathIfInApp(avatar)}
               alt={name}
               width={48}
               height={48}
@@ -89,7 +90,7 @@ export function AuthorCard({
       <div data-cy={`author-card-avatar-${username}`} className="flex justify-center mb-4">
         {avatar ? (
           <Image
-            src={avatar}
+            src={withBasePathIfInApp(avatar)}
             alt={name}
             width={96}
             height={96}

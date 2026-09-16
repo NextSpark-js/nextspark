@@ -1,4 +1,6 @@
 /** Shapes base-path.in-app-urls.test.ts has to catch. Never imported by the app. */
+import NextImage, { type ImageProps } from 'next/image'
+import { Image } from 'lucide-react'
 import { withBasePath, withBasePathIfInApp } from '../../../../src/lib/base-path'
 import { sanitizeBlockHtml } from '../../../../src/lib/blocks/sanitize-html'
 
@@ -68,4 +70,28 @@ export function Embedded({ body }: { body: string }) {
 
 export function openDynamic(url: string) {
   window.open(url, '_blank')
+}
+
+export function Pictures({ cover, avatar, rest }: { cover: string; avatar: string; rest: ImageProps }) {
+  return (
+    <>
+      <NextImage src={cover} alt="" width={10} height={10} />
+      <NextImage src={withBasePathIfInApp(avatar)} alt="" width={10} height={10} />
+      <NextImage src="/brand/logo.png" alt="" width={10} height={10} />
+      <NextImage {...rest} />
+      <Image className="h-4 w-4" />
+    </>
+  )
+}
+
+export function Backgrounds({ upload }: { upload: string }) {
+  return (
+    <>
+      <div style={{ backgroundImage: `url(${upload})` }} />
+      <div style={{ backgroundImage: `url('${withBasePathIfInApp(upload)}')` }} />
+      <div style={{ backgroundImage: 'url(/theme/hero.jpg)' }} />
+      <div style={{ backgroundImage: `linear-gradient(red, blue), url("${upload}")` }} />
+      <div style={{ backgroundImage: 'url(https://cdn.example.com/hero.jpg)' }} />
+    </>
+  )
 }

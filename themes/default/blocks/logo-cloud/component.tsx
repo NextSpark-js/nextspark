@@ -102,7 +102,7 @@ export function LogoCloudBlock({
                 )}
               >
                 <Image
-                  src={logo.image}
+                  src={withBasePathIfInApp(logo.image)}
                   alt={logo.alt}
                   fill
                   className="object-contain"

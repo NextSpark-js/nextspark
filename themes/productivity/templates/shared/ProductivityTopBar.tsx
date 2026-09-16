@@ -37,7 +37,7 @@ import {
 import { useState, useCallback, useEffect } from 'react'
 import { cn } from '@nextsparkjs/core/lib/utils'
 import { useTheme } from 'next-themes'
-import { withBasePath } from '@nextsparkjs/core/lib/base-path'
+import { withBasePath, withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 
 interface Board {
     id: string
@@ -232,7 +232,7 @@ export function ProductivityTopBar() {
                                 <Button variant="ghost" className="h-9 gap-2 pl-2 pr-3">
                                     {user.image ? (
                                         <Image
-                                            src={user.image}
+                                            src={withBasePathIfInApp(user.image)}
                                             alt=""
                                             width={28}
                                             height={28}

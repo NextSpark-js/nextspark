@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useCallback } from 'react'
 import { cn } from '@nextsparkjs/core/lib/utils'
+import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 import { TeamSwitcherCompact } from '@nextsparkjs/core/components/teams/TeamSwitcherCompact'
 import { useAuth } from '@nextsparkjs/core/hooks/useAuth'
 import Image from 'next/image'
@@ -278,7 +279,7 @@ export function CRMSidebar() {
                         <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2 duration-200">
                             {user?.image ? (
                                 <Image
-                                    src={user.image}
+                                    src={withBasePathIfInApp(user.image)}
                                     alt=""
                                     width={36}
                                     height={36}
@@ -316,7 +317,7 @@ export function CRMSidebar() {
                             >
                                 {user?.image ? (
                                     <Image
-                                        src={user.image}
+                                        src={withBasePathIfInApp(user.image)}
                                         alt=""
                                         width={36}
                                         height={36}

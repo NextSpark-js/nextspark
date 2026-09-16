@@ -213,7 +213,7 @@ export function ImageUpload({
             >
               <div className={cn("relative", getAspectRatioClass() || "aspect-square")}>
                 <NextImage
-                  src={image.url}
+                  src={withBasePathIfInApp(image.url)}
                   alt={image.alt || image.name}
                   fill
                   className="object-cover"
@@ -229,7 +229,7 @@ export function ImageUpload({
                     </DialogTrigger>
                     <DialogContent className="max-w-3xl">
                       <NextImage
-                        src={image.url}
+                        src={withBasePathIfInApp(image.url)}
                         alt={image.alt || image.name}
                         width={800}
                         height={600}

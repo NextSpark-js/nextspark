@@ -234,7 +234,7 @@ export function VideoUpload({
               <div className="relative w-24 h-16 bg-muted rounded overflow-hidden">
                 {video.thumbnail ? (
                   <NextImage
-                    src={video.thumbnail}
+                    src={withBasePathIfInApp(video.thumbnail)}
                     alt={video.name}
                     fill
                     className="object-cover"

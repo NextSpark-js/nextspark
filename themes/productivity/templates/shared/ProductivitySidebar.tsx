@@ -46,7 +46,7 @@ import {
     Trash2,
     Archive
 } from 'lucide-react'
-import { withBasePath } from '@nextsparkjs/core/lib/base-path'
+import { withBasePath, withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 
 interface Board {
     id: string
@@ -490,7 +490,7 @@ export function ProductivitySidebar() {
                             <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-sidebar-accent/50 transition-colors text-left">
                                 {user?.image ? (
                                     <Image
-                                        src={user.image}
+                                        src={withBasePathIfInApp(user.image)}
                                         alt=""
                                         width={28}
                                         height={28}

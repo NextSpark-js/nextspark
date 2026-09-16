@@ -80,7 +80,7 @@ export function HeroWithFormBlock({
         <div
           className="h-full w-full"
           style={{
-            backgroundImage: `url(${backgroundImage})`,
+            backgroundImage: `url(${withBasePathIfInApp(backgroundImage)})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           }}
