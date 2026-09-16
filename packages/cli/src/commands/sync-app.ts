@@ -11,7 +11,14 @@ import {
   templatesTreeLines,
   type TemplatesPlanResult,
 } from '../utils/registry-build.js';
-import { ensureGeneratedPathsIgnored, missingGitignoreEntries, trackedTemplatesFiles } from '../utils/templates-gitignore.js';
+import {
+  ensureGeneratedPathsIgnored,
+  generatedPathsOnDisk,
+  gitignoreIsSymlink,
+  missingGitignoreEntries,
+  trackedTemplatesFiles,
+  unignoredPaths,
+} from '../utils/templates-gitignore.js';
 import { applySyncPlan, readCoreVersion, readSyncInput, readTree } from '../utils/sync-files.js';
 import { describeSyncPlan, nextSyncState, plannedAppFiles, planSync, type ReportLine } from '../utils/sync-plan.js';
 import { writeSyncState } from '../utils/sync-state.js';
@@ -56,15 +63,15 @@ function createBackupDirectory(projectRoot: string, coreVersion: string): string
   return mkdtempSync(join(projectRoot, `app.backup.v${coreVersion}.${stamp}-`));
 }
 
-/**
- * The files this run leaves under app/(templates), from the project root, for
- * the .gitignore check to ask git about: those there now and those the registry
- * build is planned to add.
- */
-function templatesFilesInRun(projectRoot: string, templatesPlan: TemplatesPlanResult | null): string[] {
-  const present = [...readTree(join(projectRoot, 'app', '(templates)')).keys()].map((file) => `app/(templates)/${file}`);
-  return [...new Set([...present, ...(templatesPlan?.changes?.create ?? [])])];
+/** A path as a warning names it: quoted when a control character in it, such as a newline, would break the line. */
+function shownPath(path: string): string {
+  return /[\u0000-\u001f\u007f]/.test(path) ? JSON.stringify(path) : path;
 }
+
+/** How many of the paths git still picks up are named without --verbose, past which they are counted. */
+const UNIGNORED_SHOWN = 10;
+
+const SYMLINKED_GITIGNORE = 'the project\'s .gitignore is a symlink, which git does not read, so sync:app leaves it as it is';
 
 /**
  * What the confirmation prompt says a sync is about to change, or null when it
@@ -178,22 +185,24 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       }
     }
 
-    // --backup's directory is named before the .gitignore is written, so the
-    // check asks git about the directory this run creates rather than one of
-    // its shape; it stays empty until the lines are in place
-    const appBackupDir = options.backup && !options.dryRun ? createBackupDirectory(projectRoot, coreVersion) : null;
+    // --backup's directory is created before the .gitignore is written, and
+    // stays empty until the lines are in
+    const appBackupDir = options.backup && !options.dryRun ? basename(createBackupDirectory(projectRoot, coreVersion)) : null;
 
-    // The .gitignore comes before anything this run writes, so the backups and
-    // the regenerated tree are ignored from the moment they exist
-    const addedGitignoreEntries = options.dryRun ? [] : ensureGeneratedPathsIgnored(projectRoot, {
-      appBackupDir: appBackupDir ? basename(appBackupDir) : undefined,
-      templatesFiles: templatesFilesInRun(projectRoot, templatesPlan),
-    });
+    // The .gitignore comes before anything this run writes, asked about what is
+    // already there and what the run is known to write: the copy of app/, and
+    // the files the registry build is planned to add
+    const pathsBeforeWriting = [
+      ...generatedPathsOnDisk(projectRoot),
+      ...(templatesPlan?.changes?.create ?? []),
+      ...(appBackupDir ? [...input.projectApp.keys()].map((file) => `${appBackupDir}/${file}`) : []),
+    ];
+    const addedGitignoreEntries = options.dryRun ? [] : ensureGeneratedPathsIgnored(projectRoot, pathsBeforeWriting);
 
     if (appBackupDir) {
       spinner.start('Creating backup...');
-      backupDirectory(appDir, appBackupDir);
-      spinner.succeed(`Backup created: ${relative(projectRoot, appBackupDir)}`);
+      backupDirectory(appDir, join(projectRoot, appBackupDir));
+      spinner.succeed(`Backup created: ${appBackupDir}`);
     }
 
     let backedUp: string[] = [];
@@ -218,8 +227,10 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
     }
 
     if (options.dryRun) {
-      const missingEntries = missingGitignoreEntries(projectRoot, { templatesFiles: templatesFilesInRun(projectRoot, templatesPlan) });
-      if (missingEntries.length > 0) {
+      const missingEntries = missingGitignoreEntries(projectRoot, pathsBeforeWriting);
+      if (missingEntries.length > 0 && gitignoreIsSymlink(projectRoot)) {
+        console.log(chalk.yellow(`  ⚠ Would not add ${missingEntries.join(', ')} to .gitignore: ${SYMLINKED_GITIGNORE}`));
+      } else if (missingEntries.length > 0) {
         console.log(chalk.gray(`  Would add ${missingEntries.join(', ')} to .gitignore`));
       }
 
@@ -238,10 +249,6 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
         console.log(chalk.yellow(`  Would regenerate app/(templates) with the registry build, but what it would change there couldn't be worked out${why}; run "nextspark registry:build" to see why`));
       }
     } else {
-      if (addedGitignoreEntries.length > 0) {
-        console.log(chalk.gray(`  Added ${addedGitignoreEntries.join(', ')} to .gitignore`));
-      }
-
       spinner.start('Regenerating app/(templates)...');
       const registry = await runRegistryBuild(coreDir, projectRoot);
       if (registry.status === 'built') {
@@ -253,6 +260,25 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       }
       for (const line of templatesTreeLines(registry.output)) {
         console.log(chalk.gray(`    ${line}`));
+      }
+
+      // The backups sync and the registry build name as they write, and the
+      // files the build adds without a plan, are only known now: git is asked
+      // about every file on disk under the entries, however many there are
+      const written = generatedPathsOnDisk(projectRoot);
+      addedGitignoreEntries.push(...ensureGeneratedPathsIgnored(projectRoot, written));
+      if (addedGitignoreEntries.length > 0) {
+        console.log(chalk.gray(`  Added ${[...new Set(addedGitignoreEntries)].join(', ')} to .gitignore`));
+      }
+      const unignored = unignoredPaths(projectRoot, written);
+      if (unignored.length > 0) {
+        const why = gitignoreIsSymlink(projectRoot) ? SYMLINKED_GITIGNORE : 'a .gitignore further down the tree un-ignores them';
+        console.log(chalk.yellow(`  ⚠ git still picks up ${unignored.length} file(s) sync:app wrote: ${why}`));
+        const shown = options.verbose ? unignored : unignored.slice(0, UNIGNORED_SHOWN);
+        for (const path of shown) console.log(chalk.gray(`    ${shownPath(path)}`));
+        if (unignored.length > shown.length) {
+          console.log(chalk.gray(`    ... and ${unignored.length - shown.length} more; --verbose names every one`));
+        }
       }
 
       // app/(templates) is the registry build's half of the sync: with it stale,

@@ -1,11 +1,16 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, mkdir, writeFile, readFile, rm, symlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { ensureGeneratedPathsIgnored, missingGitignoreEntries, trackedTemplatesFiles } from '../src/utils/templates-gitignore.js'
+import {
+  ensureGeneratedPathsIgnored,
+  generatedPathsOnDisk,
+  missingGitignoreEntries,
+  trackedTemplatesFiles,
+} from '../src/utils/templates-gitignore.js'
 
 async function project() {
   const root = await mkdtemp(join(tmpdir(), 'nextspark-templates-gitignore-'))
@@ -148,12 +153,14 @@ test("a rule that covers another run's backup does not stand in for this run's",
     )
     const backup = 'app.backup.v0.1.0-beta.189.2026-09-16T00-00-00-000Z-x1y2z3'
 
-    assert.deepEqual(missingGitignoreEntries(root, { appBackupDir: backup }), ['app.backup.v*/'])
-    assert.deepEqual(ensureGeneratedPathsIgnored(root, { appBackupDir: backup }), ['app.backup.v*/'])
+    const written = [`${backup}/layout.tsx`]
+
+    assert.deepEqual(missingGitignoreEntries(root, written), ['app.backup.v*/'])
+    assert.deepEqual(ensureGeneratedPathsIgnored(root, written), ['app.backup.v*/'])
     for (const file of ['layout.tsx', 'dashboard/page.tsx', '.env.local']) {
       assert.equal(gitIgnores(root, `${backup}/${file}`), true, `git ignores ${backup}/${file}`)
     }
-    assert.deepEqual(missingGitignoreEntries(root, { appBackupDir: backup }), [], 'a second check finds nothing missing')
+    assert.deepEqual(missingGitignoreEntries(root, written), [], 'a second check finds nothing missing')
   } finally {
     await cleanup()
   }
@@ -180,10 +187,148 @@ test('app/(templates) counts as ignored only when every file of the tree is, not
         await writeFile(join(root, nested[0]), nested[1])
       }
 
-      assert.deepEqual(ensureGeneratedPathsIgnored(root, { templatesFiles: written }), ['app/(templates)/'], name)
+      assert.deepEqual(ensureGeneratedPathsIgnored(root, written), ['app/(templates)/'], name)
       for (const file of [...written, 'app/(templates)/(public)/[locale]/page.tsx']) {
         assert.equal(gitIgnores(root, file), true, `${name}: git ignores ${file}`)
       }
+    } finally {
+      await cleanup()
+    }
+  }
+})
+
+test('every path a run wrote is asked about, however many there are and whatever they are named', async () => {
+  const { root, cleanup } = await project()
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: root })
+    // Rules for a file of each shape and for all but the last few of the tree's
+    // files, and rules for the rest that only git, not the text, reads as done
+    await writeFile(
+      join(root, '.gitignore'),
+      'app/(templates)/middleware.ts\napp/(templates)/dashboard/layout.tsx\napp/(templates)/(public)/page.tsx\n' +
+        'app/(templates)/covered/\n.nextspark/*\napp.backup.v*/**\n'
+    )
+    const covered = Array.from({ length: 20_000 }, (_, i) => `app/(templates)/covered/(group ${i % 50})/page ${i}.tsx`)
+    const left = [
+      'app/(templates)/deep/with spaces/área/"quoted" (1)/page.tsx',
+      "app/(templates)/it's [locale]/*?/page.tsx",
+      'app/(templates)/new\nline/page.tsx',
+    ]
+
+    assert.deepEqual(missingGitignoreEntries(root, [...covered, ...left]), ['app/(templates)/'])
+    assert.deepEqual(ensureGeneratedPathsIgnored(root, [...covered, ...left]), ['app/(templates)/'])
+    for (const file of left) {
+      assert.equal(gitIgnores(root, file), true, `git ignores ${JSON.stringify(file)}`)
+    }
+  } finally {
+    await cleanup()
+  }
+})
+
+test("a backup a run wrote counts, not a file of each shape under another run's", async () => {
+  const { root, cleanup } = await project()
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: root })
+    await writeFile(
+      join(root, '.gitignore'),
+      'app/(templates)/\napp.backup.v*/\n.nextspark/sync-state.json\n' +
+        '.nextspark/backups/*/middleware.ts\n.nextspark/backups/*/dashboard/layout.tsx\n.nextspark/backups/*/(public)/page.tsx\n'
+    )
+    const written = ['.nextspark/backups/2026-09-16T00-00-00-000Z-q1w2e3/i18n.ts']
+
+    assert.equal(gitIgnores(root, written[0]), false)
+    assert.deepEqual(ensureGeneratedPathsIgnored(root, written), ['.nextspark/backups/'])
+    assert.equal(gitIgnores(root, written[0]), true)
+  } finally {
+    await cleanup()
+  }
+})
+
+test('the paths on disk are every file under the places sync:app and the registry build write, and nothing else', async () => {
+  const { root, cleanup } = await project()
+  try {
+    const files = [
+      'app/(templates)/deep/with spaces/área/"quoted" (1).tsx',
+      '.nextspark/backups/2026-09-16T00-00-00-000Z-q1w2e3/app/(templates)/dashboard/layout.tsx',
+      '.nextspark/sync-state.json',
+      'app.backup.v0.1.0-beta.189.2026-09-16T00-00-00-000Z-x1y2z3/.env.local',
+      'app.backup.v0.1.0-beta.189.2026-09-16T00-00-00-000Z-x1y2z3/(public)/page.tsx',
+    ]
+    const others = ['app/page.tsx', '.nextspark/registries/entities.ts', 'app.backup.vnotes.txt', 'app.backup/layout.tsx']
+    for (const file of [...files, ...others]) {
+      await mkdir(join(root, file, '..'), { recursive: true })
+      await writeFile(join(root, file), '')
+    }
+
+    assert.deepEqual(generatedPathsOnDisk(root).sort(), [...files].sort())
+  } finally {
+    await cleanup()
+  }
+})
+
+test('a .gitignore that is a symlink is not written through', async () => {
+  const { root, cleanup } = await project()
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: root })
+    await writeFile(join(root, 'rules'), 'node_modules/\n')
+    await symlink('rules', join(root, '.gitignore'))
+
+    assert.equal(missingGitignoreEntries(root).length, 4)
+    assert.deepEqual(ensureGeneratedPathsIgnored(root), [])
+    assert.equal(await readFile(join(root, 'rules'), 'utf-8'), 'node_modules/\n')
+  } finally {
+    await cleanup()
+  }
+})
+
+test('a line the .gitignore has below its last negation is not added again, and one above a negation is', async () => {
+  const { root, cleanup } = await project()
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: root })
+    const rest = '.nextspark/\napp.backup.v*/\n'
+    const written = ['app/(templates)/dashboard/layout.tsx']
+    await mkdir(join(root, 'app'), { recursive: true })
+    await writeFile(join(root, 'app/.gitignore'), '!(templates)/\n')
+
+    await writeFile(join(root, '.gitignore'), `${rest}app/(templates)/\n`)
+    assert.equal(gitIgnores(root, written[0]), false, 'app/.gitignore takes the tree back')
+    assert.deepEqual(missingGitignoreEntries(root, written), [])
+    assert.deepEqual(ensureGeneratedPathsIgnored(root, written), [])
+
+    await writeFile(join(root, 'app/.gitignore'), '')
+    await writeFile(join(root, '.gitignore'), `${rest}app/(templates)/\n!app/(templates)/\n`)
+    assert.deepEqual(ensureGeneratedPathsIgnored(root, written), ['app/(templates)/'])
+    assert.equal(gitIgnores(root, written[0]), true)
+  } finally {
+    await cleanup()
+  }
+})
+
+test('a line counts as the entry only as git reads it: a CRLF or trailing spaces do not change it, a leading space or a trailing tab does', async () => {
+  const written = ['app/(templates)/dashboard/layout.tsx']
+  const rest = '.nextspark/\napp.backup.v*/\n'
+
+  const same = await project()
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: same.root })
+    await mkdir(join(same.root, 'app'), { recursive: true })
+    await writeFile(join(same.root, 'app/.gitignore'), '!(templates)/\n')
+    await writeFile(join(same.root, '.gitignore'), `\uFEFF!unrelated\r\napp/(templates)/   \r\n${rest}`)
+
+    assert.deepEqual(missingGitignoreEntries(same.root, written), [], 'the entry is already below the last negation')
+  } finally {
+    await same.cleanup()
+  }
+
+  for (const line of [' app/(templates)/', 'app/(templates)/\t', 'app/(templates)/\u00a0']) {
+    const { root, cleanup } = await project()
+    try {
+      execFileSync('git', ['init', '-q'], { cwd: root })
+      await writeFile(join(root, '.gitignore'), `!unrelated\n${line}\n${rest}`)
+      assert.equal(gitIgnores(root, written[0]), false, `${JSON.stringify(line)} is another pattern for git`)
+
+      assert.deepEqual(ensureGeneratedPathsIgnored(root, written), ['app/(templates)/'], JSON.stringify(line))
+      assert.equal(gitIgnores(root, written[0]), true, JSON.stringify(line))
     } finally {
       await cleanup()
     }

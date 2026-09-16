@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { mkdtemp, mkdir, writeFile, readFile, readdir, rm, stat } from 'node:fs/promises'
+import { mkdtemp, mkdir, writeFile, readFile, readdir, rm, stat, symlink } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
@@ -410,4 +410,139 @@ test("--backup's own directory and the tree it regenerates end up ignored whatev
   }
 
   assert.deepEqual(leftOut, [])
+})
+
+/**
+ * A stand-in for core's registry build that writes a tree of `count` files whose
+ * names carry spaces, accents, parentheses and quotes, and backs up what it
+ * replaces under .nextspark/backups the way core does.
+ */
+function treeRegistryBuild(count: number): string {
+  return `import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+const root = process.env.NEXTSPARK_PROJECT_ROOT
+const write = (file, content) => {
+  mkdirSync(dirname(join(root, file)), { recursive: true })
+  writeFileSync(join(root, file), content)
+}
+const backupDir = '.nextspark/backups/' + new Date().toISOString().replace(/[:.]/g, '-') + '-r3g1st'
+for (const file of ['app/(templates)/(public)/page.tsx', 'app/(templates)/dashboard/layout.tsx']) {
+  if (!existsSync(join(root, file))) continue
+  mkdirSync(dirname(join(root, backupDir, file)), { recursive: true })
+  copyFileSync(join(root, file), join(root, backupDir, file))
+}
+for (let i = 0; i < ${count}; i++) {
+  write('app/(templates)/deep/with spaces/área/(group ' + (i % 7) + ')/"quoted" page ' + i + '.tsx', 'export default function P() { return null }\\n')
+}
+for (const file of ['app/(templates)/middleware.ts', 'app/(templates)/dashboard/layout.tsx', 'app/(templates)/(public)/page.tsx', 'app/(templates)/new\\nline.tsx']) {
+  write(file, 'export default function Generated() { return null }\\n')
+}
+console.log('Registry build complete')
+`
+}
+
+/** The untracked files git status lists under the places sync:app and the registry build write. */
+function untrackedGenerated(root: string): string[] {
+  return execFileSync('git', ['status', '--porcelain', '-z', '--untracked-files=all'], { cwd: root, encoding: 'utf-8' })
+    .split('\0')
+    .filter((entry) => entry.startsWith('?? '))
+    .map((entry) => entry.slice(3))
+    .filter((path) => path.startsWith('app/(templates)/') || path.startsWith('.nextspark/') || path.startsWith('app.backup.'))
+}
+
+test('nothing a sync writes is left for git, however many files it writes and whatever they are named', { skip: process.platform === 'win32' }, async () => {
+  const { root, cleanup } = await project()
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
+    await write(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
+    await write(root, `${CORE}/scripts/build/registry.mjs`, treeRegistryBuild(260))
+    await write(root, `${CORE}/templates/app/dashboard/layout.tsx`, 'export default function DashboardLayout({ children }) { return children }\n')
+    await write(root, `${CORE}/templates/app/(public)/page.tsx`, 'export default function Home() { return null }\n')
+    await write(root, 'middleware.ts', 'export function middleware() { return undefined }\n')
+    await write(root, 'app/dashboard/layout.tsx', 'export default function MyLayout({ children }) { return children }\n')
+    await write(root, 'app/(public)/page.tsx', 'export default function MyHome() { return null }\n')
+    await write(root, 'app/(templates)/(public)/page.tsx', 'export default function Earlier() { return null }\n')
+    await write(root, 'app/(templates)/dashboard/layout.tsx', 'export default function Earlier({ children }) { return children }\n')
+    await write(root, 'app/(marketing)/área "quoted" (2)/page.tsx', 'export default function Page() { return null }\n')
+    // Rules that cover a file of each shape under every place a sync writes, and nothing else there
+    const shapes = ['middleware.ts', 'dashboard/layout.tsx', '(public)/page.tsx']
+    await write(root, '.gitignore', ['app/(templates)', '.nextspark/backups/*', 'app.backup.v*']
+      .flatMap((dir) => shapes.map((shape) => `${dir}/${shape}`))
+      .concat('.nextspark/sync-state.json', '')
+      .join('\n'))
+
+    await runSync(root, {
+      force: true,
+      backup: true,
+      overwrite: ['i18n.ts', 'middleware.ts', 'app/dashboard/layout.tsx', 'app/(public)/page.tsx'],
+    })
+
+    const [appBackup] = (await readdir(root)).filter((entry) => entry.startsWith('app.backup.'))
+    const [ownBackup, buildBackup] = (await readdir(join(root, '.nextspark/backups'))).sort((a, b) => Number(a.endsWith('r3g1st')) - Number(b.endsWith('r3g1st')))
+    const written = [
+      'app/(templates)/deep/with spaces/área/(group 0)/"quoted" page 259.tsx',
+      `${appBackup}/(marketing)/área "quoted" (2)/page.tsx`,
+      `${appBackup}/(templates)/dashboard/layout.tsx`,
+      ...['i18n.ts', 'middleware.ts', 'app/dashboard/layout.tsx', 'app/(public)/page.tsx'].map((file) => `.nextspark/backups/${ownBackup}/${file}`),
+      `.nextspark/backups/${buildBackup}/app/(templates)/(public)/page.tsx`,
+    ]
+    for (const file of written) {
+      assert.ok(existsSync(join(root, file)), `${file} is on disk`)
+    }
+    assert.ok((await readdir(join(root, 'app/(templates)/deep/with spaces/área/(group 0)'))).length > 30)
+
+    assert.deepEqual(untrackedGenerated(root), [])
+  } finally {
+    await cleanup()
+  }
+})
+
+test('a .gitignore that is a symlink, which git does not read, is not written through, and what git picks up is named with why', async () => {
+  const { root, cleanup } = await project()
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
+    await write(root, 'rules', 'node_modules/\n')
+    await symlink('rules', join(root, '.gitignore'))
+
+    const planned = await runSync(root, { dryRun: true, backup: true })
+    const printed = await runSync(root, { force: true, backup: true })
+
+    assert.equal(await readFile(join(root, 'rules'), 'utf-8'), 'node_modules/\n')
+    assert.match(planned, /Would not add [^\n]*app\.backup\.v\*\/ to \.gitignore: the project's \.gitignore is a symlink, which git does not read/)
+    assert.doesNotMatch(printed, /Added /)
+    assert.match(printed, /git still picks up \d+ file\(s\) sync:app wrote: the project's \.gitignore is a symlink, which git does not read/)
+    assert.ok(untrackedGenerated(root).length > 0)
+  } finally {
+    await cleanup()
+  }
+})
+
+
+test('a file sync wrote that a .gitignore further down the tree takes back is named, not passed over', async () => {
+  const { root, cleanup } = await project()
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
+    await write(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
+    await write(root, `${CORE}/scripts/build/registry.mjs`, treeRegistryBuild(9))
+    await write(root, 'app/.gitignore', '!(templates)/\n')
+
+    const printed = await runSync(root, { force: true })
+
+    const untracked = untrackedGenerated(root)
+    assert.equal(untracked.length, 13, untracked.join('\n'))
+    assert.match(printed, /Added app\/\(templates\)\//)
+    assert.match(printed, /git still picks up 13 file\(s\) sync:app wrote: a \.gitignore further down the tree un-ignores them/)
+    assert.match(printed, /\.\.\. and 3 more; --verbose names every one/)
+
+    const listed = await runSync(root, { force: true, verbose: true })
+    for (const path of untracked) {
+      const named = path.includes('\n') ? JSON.stringify(path) : path
+      assert.ok(listed.split('\n').some((line) => line.trim() === named), `${JSON.stringify(path)} is named on a line of its own`)
+    }
+    // Another copy of a line git reads before the .gitignore that takes it back changes nothing
+    const lines = (await readFile(join(root, '.gitignore'), 'utf-8')).split('\n')
+    assert.equal(lines.filter((line) => line === 'app/(templates)/').length, 1, 'app/(templates)/ is in .gitignore once')
+  } finally {
+    await cleanup()
+  }
 })
