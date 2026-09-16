@@ -14,7 +14,7 @@ packages/mobile/
 │   ├── hooks/              # useAuth hook
 │   └── lib/                # Storage, Alert utilities
 ├── templates/              # Scaffolding templates for `nextspark add:mobile`
-│   ├── app/                # Expo Router pages, gitignored: `pnpm sync:mobile-templates` copies it from apps/mobile/app
+│   ├── app/                # Expo Router pages, gitignored: `pnpm sync:mobile-templates --sync` copies it from apps/mobile/app
 │   └── src/                # Example entities and components
 └── dist/                   # Compiled output, gitignored: created by `pnpm build`
 

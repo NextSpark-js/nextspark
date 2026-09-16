@@ -235,7 +235,16 @@ describe('getApiUrl fallback host', () => {
     expect(getApiUrlWeb()).toBe('http://192.168.1.2:3000')
   })
 
-  it('uses the LAN host from hostUri on a physical Android device without adb reverse', () => {
+  it('uses the LAN host from hostUri on a physical Android device without adb reverse, same as one tunneling only the backend port', () => {
+    // Metro's own port (8081) reaches the device over LAN directly here, so
+    // hostUri stays the LAN address - exactly as it would for a plain LAN
+    // device with no tunnel at all. A separate `adb reverse tcp:3000
+    // tcp:3000` forwarding only the backend port leaves nothing observable
+    // here to tell the two apart, so it resolves the same LAN address too.
+    // Defaulting to localhost instead would break the far more common
+    // LAN-only device, so this is a documented limitation (see client.ts and
+    // apps/mobile/README.md): force EXPO_PUBLIC_API_URL=http://localhost:3000
+    // when only the backend port is tunneled.
     jest.resetModules()
     jest.doMock('expo-constants', () => ({ expoConfig: { extra: {}, hostUri: '192.168.1.2:8081' } }))
     jest.doMock('expo-device', () => ({ isDevice: true }))
@@ -257,26 +266,6 @@ describe('getApiUrl fallback host', () => {
     const { getApiUrl: getApiUrlAndroidDeviceReverse } = require('../../../src/api/client') as typeof import('../../../src/api/client')
 
     expect(getApiUrlAndroidDeviceReverse()).toBe('http://localhost:3000')
-  })
-
-  it('documents the gap: cannot detect adb reverse when it only forwards the backend port, so a LAN hostUri wins over an active tunnel', () => {
-    // Metro's own port (8081) reaches the device over LAN directly, so hostUri
-    // stays the LAN address, exactly as it would with no tunnel at all - a
-    // separate `adb reverse tcp:3000 tcp:3000` forwarding only the backend
-    // port leaves nothing observable here to tell the two apart. Defaulting
-    // to localhost instead would break the far more common LAN-only device,
-    // so this is the documented limitation (see client.ts and
-    // apps/mobile/README.md): force EXPO_PUBLIC_API_URL=http://localhost:3000
-    // when only the backend port is tunneled.
-    jest.resetModules()
-    jest.doMock('expo-constants', () => ({ expoConfig: { extra: {}, hostUri: '192.168.1.2:8081' } }))
-    jest.doMock('expo-device', () => ({ isDevice: true }))
-    jest.doMock('react-native', () => ({
-      Platform: { OS: 'android', select: (obj: { android?: unknown }) => obj.android },
-    }))
-    const { getApiUrl: getApiUrlAndroidDeviceBackendOnlyReverse } = require('../../../src/api/client') as typeof import('../../../src/api/client')
-
-    expect(getApiUrlAndroidDeviceBackendOnlyReverse()).toBe('http://192.168.1.2:3000')
   })
 
   it('uses hostUri LAN host on the Android emulator, reachable through its virtual NAT', () => {
