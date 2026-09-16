@@ -497,6 +497,69 @@ test('nothing a sync writes is left for git, however many files it writes and wh
   }
 })
 
+/**
+ * A stand-in for core's registry build that removes app/(templates)/no-confirm.txt
+ * as templates-plan.mjs plans it to, backing the file up first the way core does.
+ */
+const REMOVING_REGISTRY_BUILD = `import { copyFileSync, mkdirSync, rmSync } from 'node:fs'
+import { join } from 'node:path'
+const root = process.env.NEXTSPARK_PROJECT_ROOT
+const backup = join(root, '.nextspark/backups', new Date().toISOString().replace(/[:.]/g, '-') + '-r3g1st', 'app/(templates)')
+mkdirSync(backup, { recursive: true })
+copyFileSync(join(root, 'app/(templates)/no-confirm.txt'), join(backup, 'no-confirm.txt'))
+rmSync(join(root, 'app/(templates)/no-confirm.txt'))
+`
+
+test('--dry-run names the .gitignore lines for the backups a run takes, as the run itself adds them', async () => {
+  const backupsByShape = 'app/(templates)/\napp.backup.v*/\n.nextspark/sync-state.json\n' +
+    '.nextspark/backups/*/middleware.ts\n.nextspark/backups/*/dashboard/layout.tsx\n.nextspark/backups/*/(public)/page.tsx\n'
+  const cases: { name: string; gitignore: string; options: SyncOptions; line: string; registry?: boolean }[] = [
+    {
+      name: "--backup's copy of app/ under the installed core",
+      gitignore: 'app/(templates)/\n.nextspark/\napp.backup.v0.1.0-beta.190.*/\n',
+      options: { backup: true },
+      line: 'app.backup.v*/',
+    },
+    {
+      name: 'the backup --overwrite takes of a customized file',
+      gitignore: backupsByShape,
+      options: { overwrite: ['i18n.ts'] },
+      line: '.nextspark/backups/',
+    },
+    {
+      name: 'the backup the registry build takes of a file it is planned to remove',
+      gitignore: backupsByShape,
+      options: { force: false, confirm: async () => true },
+      line: '.nextspark/backups/',
+      registry: true,
+    },
+  ]
+
+  // Every case runs before anything is asserted, so a failure names each backup the dry run passes over
+  const missed: string[] = []
+  for (const { name, gitignore, options, line, registry } of cases) {
+    const { root, cleanup } = await project()
+    try {
+      execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
+      await write(root, '.gitignore', gitignore)
+      if (registry) {
+        await withTemplatesTree(root)
+        await write(root, `${CORE}/scripts/build/registry.mjs`, REMOVING_REGISTRY_BUILD)
+      }
+
+      const planned = await runSync(root, { ...options, dryRun: true })
+      const done = await runSync(root, { force: true, ...options })
+
+      if (!done.includes(`Added ${line} to .gitignore`)) missed.push(`${name}: the run does not add ${line}`)
+      if (!planned.includes(`Would add ${line} to .gitignore`)) missed.push(`${name}: the dry run does not name ${line}`)
+    } finally {
+      await cleanup()
+    }
+  }
+
+  assert.deepEqual(missed, [])
+})
+
 test('a .gitignore that is a symlink, which git does not read, is not written through, and what git picks up is named with why', async () => {
   const { root, cleanup } = await project()
   try {
@@ -516,7 +579,6 @@ test('a .gitignore that is a symlink, which git does not read, is not written th
     await cleanup()
   }
 })
-
 
 test('a file sync wrote that a .gitignore further down the tree takes back is named, not passed over', async () => {
   const { root, cleanup } = await project()

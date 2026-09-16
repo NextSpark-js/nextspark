@@ -52,15 +52,19 @@ function backupDirectory(source: string, target: string): void {
   }
 }
 
+/** The time as the backup directories carry it in their names. */
+function backupStamp(): string {
+  return new Date().toISOString().replace(/[:.]/g, '-');
+}
+
 /**
- * A directory of this run's own for the copy of app/ that --backup takes, named
- * after the core version and the time. The suffix mkdtemp adds is what keeps two
+ * The start of the name of the directory for the copy of app/ that --backup
+ * takes: the core version and the time. The suffix mkdtemp adds is what keeps two
  * runs apart when the clock doesn't: a second one within the same millisecond
  * would otherwise land on the first one's directory.
  */
-function createBackupDirectory(projectRoot: string, coreVersion: string): string {
-  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  return mkdtempSync(join(projectRoot, `app.backup.v${coreVersion}.${stamp}-`));
+function appBackupPrefix(coreVersion: string): string {
+  return `app.backup.v${coreVersion}.${backupStamp()}-`;
 }
 
 /** A path as a warning names it: quoted when a control character in it, such as a newline, would break the line. */
@@ -186,20 +190,34 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
     }
 
     // --backup's directory is created before the .gitignore is written, and
-    // stays empty until the lines are in
-    const appBackupDir = options.backup && !options.dryRun ? basename(createBackupDirectory(projectRoot, coreVersion)) : null;
+    // stays empty until the lines are in; a dry run names one of the same core
+    // version and time, with a placeholder for the suffix
+    const appBackupDir = !options.backup
+      ? null
+      : options.dryRun
+        ? `${appBackupPrefix(coreVersion)}XXXXXX`
+        : basename(mkdtempSync(join(projectRoot, appBackupPrefix(coreVersion))));
 
-    // The .gitignore comes before anything this run writes, asked about what is
-    // already there and what the run is known to write: the copy of app/, and
-    // the files the registry build is planned to add
+    // The .gitignore comes before what this run is known to write: the copy of
+    // app/, the files sync backs up before replacing them and, when the registry
+    // build is planned - in a dry run, or in a run without --force - the files it
+    // adds and backs up. Backups are asked about under a directory named for this
+    // time, with a placeholder for the suffix each picks as it is created. A rule
+    // that names that suffix or another time, and what the build writes unplanned,
+    // are left to the check a run makes after the build
+    const backedUpFiles = [
+      ...actions.filter(({ backup }) => backup).map(({ path }) => path),
+      ...(templatesPlan?.changes ? [...templatesPlan.changes.replace, ...templatesPlan.changes.remove] : []),
+    ];
     const pathsBeforeWriting = [
       ...generatedPathsOnDisk(projectRoot),
       ...(templatesPlan?.changes?.create ?? []),
+      ...backedUpFiles.map((file) => `.nextspark/backups/${backupStamp()}-XXXXXX/${file}`),
       ...(appBackupDir ? [...input.projectApp.keys()].map((file) => `${appBackupDir}/${file}`) : []),
     ];
     const addedGitignoreEntries = options.dryRun ? [] : ensureGeneratedPathsIgnored(projectRoot, pathsBeforeWriting);
 
-    if (appBackupDir) {
+    if (appBackupDir && !options.dryRun) {
       spinner.start('Creating backup...');
       backupDirectory(appDir, join(projectRoot, appBackupDir));
       spinner.succeed(`Backup created: ${appBackupDir}`);
