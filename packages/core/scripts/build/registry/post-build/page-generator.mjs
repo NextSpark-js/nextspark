@@ -12,7 +12,7 @@ import { copyFile, lstat, mkdtemp, readdir, readFile, rmdir, unlink, writeFile, 
 import { join, dirname, relative, sep } from 'path'
 import { fileURLToPath } from 'url'
 
-import { log, verbose } from '../../../utils/index.mjs'
+import { log, shownPath, verbose } from '../../../utils/index.mjs'
 import { getProtectionLevel, ProtectionLevel } from '../../../../dist/config/protected-paths.js'
 import { selectTypeScriptModule, loadTypeScriptFor } from '../shared/typescript-compiler.mjs'
 import { ensureBackupsGitignore } from './backups-gitignore.mjs'
@@ -655,7 +655,7 @@ export async function generateTemplatePage(template, outputPath, analysis = null
 
   await mkdir(dirname(outputPath), { recursive: true })
   await writeFile(outputPath, routeFileContent(template, routeExports), 'utf8')
-  verbose(`Generated: ${outputPath.replace(rootDir, '')}`)
+  verbose(`Generated: ${shownPath(outputPath.replace(rootDir, ''))}`)
   return { written: true }
 }
 
@@ -830,7 +830,7 @@ export async function generateMissingPages(templates, config = null, analysis = 
     verbose('app/(templates) is up to date')
   }
   if (backupDir) {
-    log(`app/(templates): what was replaced or removed is backed up in ${relative(rootDir, backupDir)}`, 'warning')
+    log(`app/(templates): what was replaced or removed is backed up in ${shownPath(relative(rootDir, backupDir))}`, 'warning')
   }
 
   return { created, updated, removed, backupDir, skipped }
@@ -1016,7 +1016,7 @@ async function reconcileTemplatesTree(templatesDir, files) {
     const backupPath = join(backupDir, relativePath)
     await mkdir(dirname(backupPath), { recursive: true })
     await copyFile(absolutePath, backupPath, constants.COPYFILE_EXCL)
-    log(`app/(templates): backed up ${relativePath} to ${relative(rootDir, backupPath)}`, 'warning')
+    log(`app/(templates): backed up ${shownPath(relativePath)} to ${shownPath(relative(rootDir, backupPath))}`, 'warning')
   }
 
   // What stands where a file goes - a file where the tree needs a directory,

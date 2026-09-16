@@ -13,7 +13,8 @@ export {
   log,
   verbose,
   setVerboseMode,
-  isVerbose
+  isVerbose,
+  shownPath
 } from './logging.mjs'
 
 export {

@@ -1142,3 +1142,91 @@ for (const name of ${JSON.stringify(names.map(([name]) => name))}) writeFileSync
     await cleanup()
   }
 })
+
+/**
+ * File names that break or reorder a line of output, each with how a line
+ * names it once escaped. The first would print a success of its own.
+ */
+const FORGING_NAMES: [string, string][] = [
+  ['forged\n\n  ✅ Sync complete!\n\n.tsx', 'forged\\n\\n  ✅ Sync complete!\\n\\n.tsx'],
+  ['erase\u001b[2Kline.tsx', 'erase\\u001b[2Kline.tsx'],
+  ['title\u001b]0;owned\u0007.tsx', 'title\\u001b]0;owned\\u0007.tsx'],
+  ['carriage\rreturn.tsx', 'carriage\\rreturn.tsx'],
+  ['line\u2028separator.tsx', 'line\\u2028separator.tsx'],
+  ['next\u0085line.tsx', 'next\\u0085line.tsx'],
+]
+
+/** What breaks a line or reorders it, a newline aside. */
+const RAW_CONTROL = /[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u061c\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]/
+
+/** A stand-in for core's templates-plan.mjs that plans to create, replace and remove a file of each name in app/(templates). */
+function forgingTemplatesPlan(): string {
+  const tree = FORGING_NAMES.map(([name]) => `app/(templates)/${name}`)
+  return `console.log('nextspark-templates-plan:' + JSON.stringify(${JSON.stringify({ create: tree, replace: tree, remove: tree })}))
+`
+}
+
+/** A stand-in for core's registry build that prints a line naming each name, as core's does, and exits with `code`. */
+function forgingRegistryBuild(code: number): string {
+  return `for (const name of ${JSON.stringify(FORGING_NAMES.map(([name]) => name))}) {
+  console.log('⚠️ app/(templates): backed up app/(templates)/' + name.split(String.fromCharCode(10)).join(' ') + ' to .nextspark/backups/x')
+}
+console.error('Build failed: could not read app/(templates)/' + ${JSON.stringify(FORGING_NAMES[1][0])})
+process.exit(${code})
+`
+}
+
+test('every path sync:app prints is named on a line of its own, whatever its name holds, in each report that names one', { skip: process.platform === 'win32' }, async () => {
+  const { withGeneratedTag } = await import('../src/utils/generated-tag.js')
+  const { root, cleanup } = await project()
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
+    await write(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
+    await write(root, `${CORE}/scripts/build/templates-plan.mjs`, forgingTemplatesPlan())
+    for (const [name] of FORGING_NAMES) {
+      // A file core doesn't ship
+      await write(root, `app/(project)/${name}`, 'export default 1\n')
+    }
+    // Files sync wrote once and core no longer ships, one untouched and one changed; a tag names no path with whitespace in it
+    const tagged = FORGING_NAMES.map(([name]) => name).filter((name) => !/\s/.test(name))
+    for (const name of tagged) {
+      await write(root, `app/(retired)/${name}`, withGeneratedTag(`app/(retired)/${name}`, Buffer.from('export default 1\n'), CORE_VERSION).toString())
+      await write(root, `app/(changed)/${name}`, `${withGeneratedTag(`app/(changed)/${name}`, Buffer.from('export default 1\n'), CORE_VERSION).toString()}export const changed = true\n`)
+    }
+    const overwrite = [...tagged.map((name) => `app/(changed)/${name}`), ...FORGING_NAMES.map(([name]) => `nowhere/${name}`)]
+
+    const runs: [string, SyncOptions, string][] = []
+    await write(root, `${CORE}/scripts/build/registry.mjs`, forgingRegistryBuild(0))
+    runs.push(['dry run', { dryRun: true, verbose: true, overwrite }, (await runSyncForExit(root, { dryRun: true, verbose: true, overwrite })).printed])
+    runs.push(['run', { force: true, verbose: true, overwrite }, (await runSyncForExit(root, { force: true, verbose: true, overwrite })).printed])
+    await write(root, `${CORE}/scripts/build/registry.mjs`, forgingRegistryBuild(1))
+    runs.push(['failed build', { force: true }, (await runSyncForExit(root, { force: true })).printed])
+
+    // Every run is looked at before anything is asserted, so a failure names each line
+    const wrong: string[] = []
+    for (const [mode, , printed] of runs) {
+      const lines = printed.split('\n')
+      for (const line of lines.filter((line) => RAW_CONTROL.test(line))) wrong.push(`${mode}: ${JSON.stringify(line)} holds a raw control`)
+      if (lines.filter((line) => line.trim() === '✅ Sync complete!').length > (mode === 'failed build' ? 0 : 1)) wrong.push(`${mode}: a line reads as success that sync:app did not print`)
+    }
+    const [dryRun, run, failed] = runs.map(([, , printed]) => printed)
+    for (const [name, shown] of FORGING_NAMES) {
+      const quoted = (path: string) => `"${path}${shown}"`
+      if (!dryRun.includes(`. ${quoted('app/(project)/')}`)) wrong.push(`dry run: app/(project)/${shown} is not listed`)
+      if (!dryRun.includes(`+ ${quoted('app/(templates)/')}`)) wrong.push(`dry run: app/(templates)/${shown} is not planned`)
+      if (!dryRun.includes(`--overwrite ${quoted('nowhere/')}`)) wrong.push(`dry run: --overwrite nowhere/${shown} is not warned about`)
+      if (tagged.includes(name)) {
+        if (!run.includes(`- ${quoted('app/(retired)/')}`)) wrong.push(`run: app/(retired)/${shown} is not listed as removed`)
+        if (!run.includes(quoted('app/(changed)/'))) wrong.push(`run: app/(changed)/${shown} is not named as backed up`)
+      }
+    }
+    if (!/Sync complete/.test(run)) wrong.push('run: the build does not complete')
+    if (!run.includes('"⚠️ app/(templates): backed up app/(templates)/erase' + '\\' + 'u001b[2Kline.tsx to .nextspark/backups/x"')) wrong.push('run: the build lines are not repeated, escaped')
+    if (!failed.includes('"Build failed: could not read app/(templates)/erase' + '\\' + 'u001b[2Kline.tsx"')) wrong.push('failed build: the failure is not repeated, escaped')
+    if (tagged.length < 2) wrong.push(`only ${tagged.length} names could be tagged`)
+
+    assert.deepEqual(wrong, [])
+  } finally {
+    await cleanup()
+  }
+})

@@ -330,3 +330,36 @@ test('a file where the tree needs a directory, or a directory where it needs a f
     await rm(root, { recursive: true, force: true })
   }
 })
+
+test('the paths the build names in its output are escaped when their names would break or reorder a line', async () => {
+  const names = [
+    ['forged\n✅ Registry System built successfully!.tsx', 'forged\\n✅ Registry System built successfully!.tsx'],
+    ['erase\u001b[2Kline.tsx', 'erase\\u001b[2Kline.tsx'],
+    ['carriage\rreturn.tsx', 'carriage\\rreturn.tsx'],
+    ['line\u2028separator.tsx', 'line\\u2028separator.tsx'],
+    ['next\u0085line.tsx', 'next\\u0085line.tsx'],
+  ]
+  const root = await createProject()
+  const printed = []
+  const originalLog = console.log
+  try {
+    for (const [name] of names) await writeProjectFile(root, `app/(templates)/old/${name}`, '// mine\n')
+    const page = await writeTemplate(root, 'pricing/page.tsx', 'page', PAGE)
+
+    console.log = (...args) => { printed.push(args.join(' ')) }
+    try {
+      await generateMissingPages([page], { projectRoot: root })
+    } finally {
+      console.log = originalLog
+    }
+
+    const lines = printed.join('\n').split('\n')
+    assert.deepEqual(lines.filter(line => /[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u061c\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]/.test(line)), [], 'no line holds a raw control')
+    assert.ok(!lines.some(line => line.startsWith('✅ Registry System')), 'no line reads as the build succeeding')
+    for (const [, shown] of names) {
+      assert.ok(lines.some(line => line.startsWith(`⚠️ app/(templates): backed up "app/(templates)/old/${shown}" to "`)), `${shown} is named escaped`)
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})

@@ -27,6 +27,7 @@ import {
 import { applySyncPlan, readCoreVersion, readSyncInput, readTree } from '../utils/sync-files.js';
 import { describeSyncPlan, nextSyncState, plannedAppFiles, planSync, type ReportLine } from '../utils/sync-plan.js';
 import { writeSyncState } from '../utils/sync-state.js';
+import { shownPath } from '../utils/shown-path.js';
 
 interface SyncAppOptions {
   dryRun?: boolean;
@@ -70,25 +71,6 @@ function backupStamp(): string {
  */
 function appBackupPrefix(coreVersion: string): string {
   return `app.backup.v${coreVersion}.${backupStamp()}-`;
-}
-
-/**
- * What breaks a line in a terminal or a log, or reorders how it reads: C0 and C1
- * controls, DEL, the line and paragraph separators, and the bidirectional marks,
- * embeddings, overrides and isolates.
- */
-const BREAKS_A_LINE = /[\u0000-\u001f\u007f-\u009f\u061c\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]/;
-
-/**
- * A path as a warning names it: quoted, with each character that would break or
- * reorder the line escaped, when it holds one. JSON escapes the C0 controls but
- * writes the rest as they are.
- */
-function shownPath(path: string): string {
-  if (!BREAKS_A_LINE.test(path)) return path;
-  return JSON.stringify(path).replace(new RegExp(BREAKS_A_LINE.source, 'g'), (character) =>
-    `\\u${character.charCodeAt(0).toString(16).padStart(4, '0')}`
-  );
 }
 
 /** How many of the paths git still picks up are named without --verbose, past which they are counted. */
@@ -147,7 +129,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
     // Verify templates directory exists
     if (!existsSync(templatesDir)) {
       spinner.fail('Templates directory not found in @nextsparkjs/core');
-      console.error(chalk.red(`\n  Expected path: ${templatesDir}`));
+      console.error(chalk.red(`\n  Expected path: ${shownPath(templatesDir)}`));
       process.exit(1);
     }
 
@@ -241,9 +223,9 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
     const blocked = new Set(actions.filter(({ blockedBy }) => blockedBy).map(({ path }) => path));
     for (const path of input.overwrite) {
       if (blocked.has(path)) {
-        console.log(chalk.yellow(`  ⚠ --overwrite ${path}: core's version of it can't be worked out for this project, so it is left as it is`));
+        console.log(chalk.yellow(`  ⚠ --overwrite ${shownPath(path)}: core's version of it can't be worked out for this project, so it is left as it is`));
       } else if (!replacing.has(path)) {
-        console.log(chalk.yellow(`  ⚠ --overwrite ${path}: not a customized file sync:app manages, so there is nothing to replace`));
+        console.log(chalk.yellow(`  ⚠ --overwrite ${shownPath(path)}: not a customized file sync:app manages, so there is nothing to replace`));
       }
     }
 
@@ -280,7 +262,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       spinner.start('Creating backup...');
       appBackupDir = basename(mkdtempSync(join(projectRoot, appBackupPrefix(coreVersion))));
       backupDirectory(appDir, join(projectRoot, appBackupDir));
-      spinner.succeed(`Backup created: ${appBackupDir}`);
+      spinner.succeed(`Backup created: ${shownPath(appBackupDir)}`);
     }
 
     let backedUp: string[] = [];
@@ -294,7 +276,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       console.log(REPORT_TONES[line.tone](`  ${line.text}`));
     }
     if (backedUp.length > 0 && replacedFilesBackupDir) {
-      console.log(chalk.gray(`  Backed up ${backedUp.join(', ')} to ${relative(projectRoot, replacedFilesBackupDir)}`));
+      console.log(chalk.gray(`  Backed up ${backedUp.map(shownPath).join(', ')} to ${shownPath(relative(projectRoot, replacedFilesBackupDir))}`));
     }
 
     // app/(templates) is the registry build's output, regenerated from what was just synced
@@ -340,8 +322,9 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       } else {
         spinner.fail('Could not regenerate app/(templates)');
       }
+      // The build's own lines name paths too, and are shown one by one the way a path is
       for (const line of templatesTreeLines(registry.output)) {
-        console.log(chalk.gray(`    ${line}`));
+        console.log(chalk.gray(`    ${shownPath(line)}`));
       }
 
       if (addedGitignoreEntries.length > 0) {
@@ -375,7 +358,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       // zero exit code, which is what core's postinstall and CI both read.
       if (registry.status === 'failed') {
         for (const line of buildFailureLines(registry.output)) {
-          console.error(chalk.red(`    ${line}`));
+          console.error(chalk.red(`    ${shownPath(line)}`));
         }
         console.error(chalk.red('\n  Sync incomplete: /app now matches core, but app/(templates) was not regenerated.'));
         console.error(chalk.red('  Fix what the registry build reports above and run "nextspark registry:build".\n'));
@@ -390,7 +373,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
   } catch (error) {
     spinner.fail('Sync failed');
     if (error instanceof Error) {
-      console.error(chalk.red(`\n  Error: ${error.message}\n`));
+      console.error(chalk.red(`\n  Error: ${shownPath(error.message)}\n`));
       if (options.verbose && error.stack) {
         console.error(chalk.gray(`  Stack trace:\n${error.stack}\n`));
       }
