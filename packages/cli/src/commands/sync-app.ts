@@ -1,3 +1,4 @@
+import { randomInt } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { basename, join, dirname, relative } from 'node:path';
 import chalk from 'chalk';
@@ -7,11 +8,15 @@ import {
   buildFailureLines,
   describeTemplatesChanges,
   planTemplatesChanges,
+  registryBuildBlocker,
   runRegistryBuild,
   templatesTreeLines,
   type TemplatesPlanResult,
 } from '../utils/registry-build.js';
 import {
+  BACKUPS_GITIGNORE,
+  backupsGitignoreState,
+  ensureBackupsGitignore,
   ensureGeneratedPathsIgnored,
   generatedPathsOnDisk,
   gitignoreIsSymlink,
@@ -55,6 +60,13 @@ function backupDirectory(source: string, target: string): void {
 /** The time as the backup directories carry it in their names. */
 function backupStamp(): string {
   return new Date().toISOString().replace(/[:.]/g, '-');
+}
+
+const MKDTEMP_SUFFIX_CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+
+/** A suffix of the length and characters mkdtemp adds to a directory name, drawn at random. */
+function mkdtempSuffix(): string {
+  return Array.from({ length: 6 }, () => MKDTEMP_SUFFIX_CHARACTERS[randomInt(MKDTEMP_SUFFIX_CHARACTERS.length)]).join('');
 }
 
 /**
@@ -142,6 +154,25 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
     const actions = planSync(input);
     const writes = actions.filter(({ kind }) => kind !== 'unchanged' && kind !== 'keep');
 
+    // The backups sync and the registry build take under .nextspark/backups are
+    // kept out of git by that directory's own .gitignore, put in place before
+    // the first one is written, whatever each is named or holds. One already
+    // there that is a symlink, which git does not read, or that has patterns
+    // other than `*`, which can take a backup back, is the project's: nothing is
+    // written until it is fixed
+    const backsUpUnderNextspark = registryBuildBlocker(projectRoot) === null
+      || actions.some(({ path, backup }) => backup && existsSync(join(projectRoot, path)));
+    const backupsGitignore = backsUpUnderNextspark ? backupsGitignoreState(projectRoot) : null;
+    if (backupsGitignore === 'symlink' || backupsGitignore === 'other') {
+      spinner.fail(`Sync not started: ${BACKUPS_GITIGNORE} would not keep the backups out of git`);
+      console.error(chalk.red(backupsGitignore === 'symlink'
+        ? `\n  ${BACKUPS_GITIGNORE} is a symlink, which git does not read, and sync:app and the registry build back files up there.`
+        : `\n  ${BACKUPS_GITIGNORE} has patterns other than *, which can take a backup back into git, and sync:app and the registry build back files up there.`));
+      console.error(chalk.yellow('  Leave * as its only pattern, or remove it for sync:app to write it, and run sync:app again.\n'));
+      process.exitCode = 1;
+      return;
+    }
+
     // What the registry build then changes in app/(templates), for the dry run to name and the prompt to count
     const templatesPlan = options.dryRun || !options.force
       ? await planTemplatesChanges(coreDir, projectRoot, plannedAppFiles(actions))
@@ -191,31 +222,29 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
 
     // --backup's directory is created before the .gitignore is written, and
     // stays empty until the lines are in; a dry run names one of the same core
-    // version and time, with a placeholder for the suffix
+    // version and time, with a suffix drawn as mkdtemp draws one
     const appBackupDir = !options.backup
       ? null
       : options.dryRun
-        ? `${appBackupPrefix(coreVersion)}XXXXXX`
+        ? `${appBackupPrefix(coreVersion)}${mkdtempSuffix()}`
         : basename(mkdtempSync(join(projectRoot, appBackupPrefix(coreVersion))));
 
     // The .gitignore comes before what this run is known to write: the copy of
-    // app/, the files sync backs up before replacing them and, when the registry
-    // build is planned - in a dry run, or in a run without --force - the files it
-    // adds and backs up. Backups are asked about under a directory named for this
-    // time, with a placeholder for the suffix each picks as it is created. A rule
-    // that names that suffix or another time, and what the build writes unplanned,
-    // are left to the check a run makes after the build
-    const backedUpFiles = [
-      ...actions.filter(({ backup }) => backup).map(({ path }) => path),
-      ...(templatesPlan?.changes ? [...templatesPlan.changes.replace, ...templatesPlan.changes.remove] : []),
-    ];
+    // app/, which counts only once a line ignores its directory whatever it is
+    // named and holds, and, when the registry build is planned - in a dry run, or
+    // in a run without --force - the files it adds. What the build adds unplanned
+    // is left to the check a run makes after the build
     const pathsBeforeWriting = [
       ...generatedPathsOnDisk(projectRoot),
       ...(templatesPlan?.changes?.create ?? []),
-      ...backedUpFiles.map((file) => `.nextspark/backups/${backupStamp()}-XXXXXX/${file}`),
       ...(appBackupDir ? [...input.projectApp.keys()].map((file) => `${appBackupDir}/${file}`) : []),
     ];
     const addedGitignoreEntries = options.dryRun ? [] : ensureGeneratedPathsIgnored(projectRoot, pathsBeforeWriting);
+
+    const addsBackupsGitignore = backupsGitignore === 'missing';
+    if (addsBackupsGitignore && !options.dryRun) {
+      ensureBackupsGitignore(projectRoot);
+    }
 
     if (appBackupDir && !options.dryRun) {
       spinner.start('Creating backup...');
@@ -251,6 +280,9 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       } else if (missingEntries.length > 0) {
         console.log(chalk.gray(`  Would add ${missingEntries.join(', ')} to .gitignore`));
       }
+      if (addsBackupsGitignore) {
+        console.log(chalk.gray(`  Would add ${BACKUPS_GITIGNORE}, which keeps every backup there out of git`));
+      }
 
       if (templatesPlan?.status === 'planned' && templatesPlan.changes) {
         const lines = describeTemplatesChanges(templatesPlan.changes);
@@ -280,13 +312,16 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
         console.log(chalk.gray(`    ${line}`));
       }
 
-      // The backups sync and the registry build name as they write, and the
-      // files the build adds without a plan, are only known now: git is asked
-      // about every file on disk under the entries, however many there are
+      // The files the registry build adds without a plan are only known now:
+      // git is asked about every file on disk under the entries, however many
+      // there are
       const written = generatedPathsOnDisk(projectRoot);
       addedGitignoreEntries.push(...ensureGeneratedPathsIgnored(projectRoot, written));
       if (addedGitignoreEntries.length > 0) {
         console.log(chalk.gray(`  Added ${[...new Set(addedGitignoreEntries)].join(', ')} to .gitignore`));
+      }
+      if (addsBackupsGitignore) {
+        console.log(chalk.gray(`  Added ${BACKUPS_GITIGNORE}, which keeps every backup there out of git`));
       }
       const unignored = unignoredPaths(projectRoot, written);
       if (unignored.length > 0) {

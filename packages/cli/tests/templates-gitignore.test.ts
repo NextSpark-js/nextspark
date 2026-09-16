@@ -2,10 +2,14 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import { mkdtemp, mkdir, writeFile, readFile, rm, symlink } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import {
+  BACKUPS_GITIGNORE,
+  backupsGitignoreState,
+  ensureBackupsGitignore,
   ensureGeneratedPathsIgnored,
   generatedPathsOnDisk,
   missingGitignoreEntries,
@@ -332,5 +336,110 @@ test('a line counts as the entry only as git reads it: a CRLF or trailing spaces
     } finally {
       await cleanup()
     }
+  }
+})
+
+test('once a copy of app/ is written, only a line that ignores its directory counts, whatever the copy holds', async () => {
+  const backup = 'app.backup.v0.1.0-beta.190.2026-09-16T00-00-00-000Z-Nm4pQz'
+  const copy = [`${backup}/layout.tsx`, `${backup}/.gitignore`, `${backup}/visible.txt`]
+  const rest = 'app/(templates)/\n.nextspark/\n'
+  const cases: { name: string; gitignore: string; missing: string[] }[] = [
+    { name: 'a rule for every file under the copies', gitignore: `${rest}app.backup.v*/**\n`, missing: ['app.backup.v*/'] },
+    { name: 'a rule for the copies named with this suffix', gitignore: `${rest}app.backup.v*-Nm4pQz/\n`, missing: ['app.backup.v*/'] },
+    { name: 'a line for every copy, taken back below', gitignore: `${rest}app.backup.*/\n!app.backup.v*/\n`, missing: ['app.backup.v*/'] },
+    { name: 'a line for every copy', gitignore: `${rest}app.backup.*/\n`, missing: [] },
+  ]
+
+  // Every case runs before anything is asserted, so a failure names each rule that got through
+  const wrong: string[] = []
+  for (const { name, gitignore, missing } of cases) {
+    const { root, cleanup } = await project()
+    try {
+      execFileSync('git', ['init', '-q'], { cwd: root })
+      await writeFile(join(root, '.gitignore'), gitignore)
+
+      const got = missingGitignoreEntries(root, copy)
+      if (JSON.stringify(got) !== JSON.stringify(missing)) wrong.push(`${name}: missing ${JSON.stringify(got)}`)
+
+      // The copy as --backup writes it, with app's .gitignore, which takes a file back
+      await mkdir(join(root, backup), { recursive: true })
+      await writeFile(join(root, backup, '.gitignore'), '!visible.txt\n')
+      await writeFile(join(root, backup, 'visible.txt'), 'SECRET=1\n')
+      ensureGeneratedPathsIgnored(root, copy)
+      if (!gitIgnores(root, `${backup}/visible.txt`)) wrong.push(`${name}: git does not ignore ${backup}/visible.txt`)
+    } finally {
+      await cleanup()
+    }
+  }
+
+  assert.deepEqual(wrong, [])
+})
+
+test('the .gitignore in .nextspark/backups ignores a backup whatever its directory is named and whatever the rules above take back', async () => {
+  const { root, cleanup } = await project()
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: root })
+    await writeFile(join(root, '.gitignore'), '!.nextspark/\n!.nextspark/backups/**\n')
+    await writeFile(join(root, '.git/info/exclude'), '!*\n')
+    await mkdir(join(root, '.nextspark/backups/2026-09-16T00-00-00-000Z-r3g1st'), { recursive: true })
+    await writeFile(join(root, '.nextspark/.gitignore'), '!backups/\n!backups/**\n')
+    await writeFile(join(root, '.nextspark/backups/2026-09-16T00-00-00-000Z-r3g1st/.gitignore'), '!*\n')
+    const backups = [
+      '.nextspark/backups/2026-09-16T00-00-00-000Z-Zz9Qa1/app/(templates)/(public)/page.tsx',
+      '.nextspark/backups/2026-09-16T00-00-00-000Z-r3g1st/i18n.ts',
+      '.nextspark/backups/named by hand/.env.local',
+    ]
+    for (const file of backups) {
+      await mkdir(join(root, file, '..'), { recursive: true })
+      await writeFile(join(root, file), 'SECRET=1\n')
+    }
+    assert.deepEqual(backups.map((file) => gitIgnores(root, file)), [false, false, false])
+
+    assert.equal(backupsGitignoreState(root), 'missing')
+    assert.equal(ensureBackupsGitignore(root), true)
+    assert.equal(ensureBackupsGitignore(root), false, 'a second call leaves it as it is')
+    assert.equal(backupsGitignoreState(root), 'in place')
+
+    assert.deepEqual(backups.map((file) => gitIgnores(root, file)), [true, true, true])
+    assert.equal(
+      execFileSync('git', ['status', '--porcelain', '--untracked-files=all'], { cwd: root, encoding: 'utf-8' }),
+      '?? .gitignore\n?? .nextspark/.gitignore\n'
+    )
+  } finally {
+    await cleanup()
+  }
+})
+
+test('a .gitignore in .nextspark/backups counts as in place only with * as its one pattern, and one already there is never written over', async () => {
+  const cases: { content: string; state: string }[] = [
+    { content: '# Our own words\r\n\n*   \r\n', state: 'in place' },
+    { content: '*\n!manual-snapshots/\n', state: 'other' },
+    { content: '*\n!*-q1w2e3/\n!*-q1w2e3/**\n', state: 'other' },
+    { content: '# nothing\n', state: 'other' },
+  ]
+  for (const { content, state } of cases) {
+    const { root, cleanup } = await project()
+    try {
+      await mkdir(join(root, '.nextspark/backups'), { recursive: true })
+      await writeFile(join(root, BACKUPS_GITIGNORE), content)
+      assert.equal(backupsGitignoreState(root), state, JSON.stringify(content))
+      assert.equal(ensureBackupsGitignore(root), false, JSON.stringify(content))
+      assert.equal(await readFile(join(root, BACKUPS_GITIGNORE), 'utf-8'), content)
+    } finally {
+      await cleanup()
+    }
+  }
+
+  const linked = await project()
+  const outside = await project()
+  try {
+    await mkdir(join(linked.root, '.nextspark/backups'), { recursive: true })
+    await symlink(join(outside.root, 'rules'), join(linked.root, BACKUPS_GITIGNORE))
+    assert.equal(backupsGitignoreState(linked.root), 'symlink')
+    assert.equal(ensureBackupsGitignore(linked.root), false)
+    assert.equal(existsSync(join(outside.root, 'rules')), false, 'nothing is written through the symlink')
+  } finally {
+    await linked.cleanup()
+    await outside.cleanup()
   }
 })

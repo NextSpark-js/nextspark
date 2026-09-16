@@ -1,10 +1,11 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { mkdtemp, mkdir, writeFile, readFile, readdir, rm, stat, symlink } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import { syncAppCommand } from '../src/commands/sync-app.js'
 
@@ -135,7 +136,7 @@ test('a customized i18n.ts is kept and listed, and --overwrite replaces it with 
     assert.ok(i18n.endsWith(CORE_I18N))
     assert.match(replaced, /Backed up i18n\.ts to \.nextspark\/backups\//)
 
-    const backups = await readdir(join(root, '.nextspark/backups'))
+    const backups = (await readdir(join(root, '.nextspark/backups'), { withFileTypes: true })).filter((entry) => entry.isDirectory()).map((entry) => entry.name)
     assert.equal(backups.length, 1)
     assert.equal(await readFile(join(root, '.nextspark/backups', backups[0], 'i18n.ts'), 'utf-8'), customized)
   } finally {
@@ -478,7 +479,10 @@ test('nothing a sync writes is left for git, however many files it writes and wh
     })
 
     const [appBackup] = (await readdir(root)).filter((entry) => entry.startsWith('app.backup.'))
-    const [ownBackup, buildBackup] = (await readdir(join(root, '.nextspark/backups'))).sort((a, b) => Number(a.endsWith('r3g1st')) - Number(b.endsWith('r3g1st')))
+    const [ownBackup, buildBackup] = (await readdir(join(root, '.nextspark/backups'), { withFileTypes: true }))
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort((a, b) => Number(a.endsWith('r3g1st')) - Number(b.endsWith('r3g1st')))
     const written = [
       'app/(templates)/deep/with spaces/área/(group 0)/"quoted" page 259.tsx',
       `${appBackup}/(marketing)/área "quoted" (2)/page.tsx`,
@@ -524,13 +528,13 @@ test('--dry-run names the .gitignore lines for the backups a run takes, as the r
       name: 'the backup --overwrite takes of a customized file',
       gitignore: backupsByShape,
       options: { overwrite: ['i18n.ts'] },
-      line: '.nextspark/backups/',
+      line: '.nextspark/backups/.gitignore',
     },
     {
       name: 'the backup the registry build takes of a file it is planned to remove',
       gitignore: backupsByShape,
       options: { force: false, confirm: async () => true },
-      line: '.nextspark/backups/',
+      line: '.nextspark/backups/.gitignore',
       registry: true,
     },
   ]
@@ -550,14 +554,132 @@ test('--dry-run names the .gitignore lines for the backups a run takes, as the r
       const planned = await runSync(root, { ...options, dryRun: true })
       const done = await runSync(root, { force: true, ...options })
 
-      if (!done.includes(`Added ${line} to .gitignore`)) missed.push(`${name}: the run does not add ${line}`)
-      if (!planned.includes(`Would add ${line} to .gitignore`)) missed.push(`${name}: the dry run does not name ${line}`)
+      if (!gitignoreAdditions(done, 'Added').includes(line)) missed.push(`${name}: the run does not add ${line}`)
+      if (!gitignoreAdditions(planned, 'Would add').includes(line)) missed.push(`${name}: the dry run does not name ${line}`)
     } finally {
       await cleanup()
     }
   }
 
   assert.deepEqual(missed, [])
+})
+
+/**
+ * What a run says it added to .gitignore, or a dry run that it would add
+ * (`verb`): each line, and each .gitignore file of its own it adds.
+ */
+function gitignoreAdditions(printed: string, verb: 'Added' | 'Would add'): string[] {
+  return printed.split('\n').flatMap((line) => {
+    const toGitignore = line.match(new RegExp(`^  ${verb} (.+) to \\.gitignore$`))
+    if (toGitignore) return toGitignore[1].split(', ')
+    const ownGitignore = line.match(new RegExp(`^  ${verb} (\\S+\\.gitignore), `))
+    return ownGitignore ? [ownGitignore[1]] : []
+  })
+}
+
+/** Every file under `dir` with what it holds, to tell whether anything there changed. */
+async function snapshot(dir: string): Promise<string> {
+  const entries = (await readdir(dir, { recursive: true, withFileTypes: true })).filter((entry) => entry.isFile() || entry.isSymbolicLink())
+  const files = await Promise.all(entries.map(async (entry) => {
+    const path = join(entry.parentPath, entry.name)
+    return `${path.slice(dir.length)}\0${entry.isSymbolicLink() ? '->' : await readFile(path, 'utf-8')}`
+  }))
+  return files.sort().join('\0')
+}
+
+test('a sync writes nothing while .nextspark/backups/.gitignore is a symlink or has patterns other than *, in a dry run too', async () => {
+  const cases: { name: string; setUp: (root: string) => Promise<void> }[] = [
+    { name: 'a pattern that takes a backup back', setUp: (root) => write(root, '.nextspark/backups/.gitignore', '*\n!manual-snapshots/\n') },
+    { name: 'a symlink', setUp: async (root) => {
+      await mkdir(join(root, '.nextspark/backups'), { recursive: true })
+      await symlink('../../rules', join(root, '.nextspark/backups/.gitignore'))
+    } },
+  ]
+
+  // Every case runs before anything is asserted, so a failure names each one
+  const wrong: string[] = []
+  for (const { name, setUp } of cases) {
+    const { root, cleanup } = await project()
+    try {
+      execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
+      await write(root, '.gitignore', 'app/(templates)/\n.nextspark/sync-state.json\napp.backup.v*/\n')
+      await write(root, 'rules', '*\n')
+      await setUp(root)
+      const before = await snapshot(root)
+
+      for (const options of [{ dryRun: true, overwrite: ['i18n.ts'] }, { force: true, overwrite: ['i18n.ts'] }]) {
+        const { printed, exitCode } = await runSyncForExit(root, options)
+        const mode = options.dryRun ? 'dry run' : 'run'
+        if (exitCode !== 1) wrong.push(`${name}, ${mode}: exit code ${exitCode}`)
+        if (/Sync complete/.test(printed)) wrong.push(`${name}, ${mode}: reports success`)
+        if (!/\.nextspark\/backups\/\.gitignore (is a symlink|has patterns other than \*)/.test(printed)) wrong.push(`${name}, ${mode}: does not say why`)
+      }
+      if ((await snapshot(root)) !== before) wrong.push(`${name}: wrote in the project`)
+    } finally {
+      await cleanup()
+    }
+  }
+
+  assert.deepEqual(wrong, [])
+})
+
+/** A stand-in for core's registry build that writes git status to $GIT_STATUS and nothing else. */
+const STATUS_TAKING_REGISTRY_BUILD = `import { writeFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+writeFileSync(process.env.GIT_STATUS, execFileSync('git', ['status', '--porcelain', '-z', '--untracked-files=all'], { cwd: process.env.NEXTSPARK_PROJECT_ROOT, encoding: 'utf-8' }))
+`
+
+test("--backup's copy of app/ is ignored before it is written, whatever .gitignore files it copies from app/", async () => {
+  const { root, cleanup } = await project()
+  const gitStatus = join(tmpdir(), `nextspark-sync-app-status-${process.pid}-${Date.now()}`)
+  const previous = process.env.GIT_STATUS
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
+    // A rule for every file under the copies, but not for their directories
+    await write(root, '.gitignore', 'app/(templates)/\n.nextspark/\napp.backup.v*/**\n')
+    await write(root, 'app/.gitignore', '!visible.txt\n')
+    await write(root, 'app/visible.txt', 'SECRET=1\n')
+    await write(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
+    await write(root, `${CORE}/scripts/build/registry.mjs`, STATUS_TAKING_REGISTRY_BUILD)
+    process.env.GIT_STATUS = gitStatus
+
+    const planned = await runSync(root, { dryRun: true, backup: true })
+    const done = await runSync(root, { force: true, backup: true })
+
+    assert.deepEqual(gitignoreAdditions(planned, 'Would add'), ['app.backup.v*/', '.nextspark/backups/.gitignore'])
+    assert.deepEqual(gitignoreAdditions(done, 'Added'), ['app.backup.v*/', '.nextspark/backups/.gitignore'])
+    const whileTheBuildRan = (await readFile(gitStatus, 'utf-8')).split('\0').filter((entry) => entry.startsWith('?? app.backup.'))
+    assert.deepEqual(whileTheBuildRan, [], 'the copy is ignored by the time the registry build runs')
+    assert.deepEqual(untrackedGenerated(root), [])
+  } finally {
+    if (previous === undefined) delete process.env.GIT_STATUS
+    else process.env.GIT_STATUS = previous
+    await rm(gitStatus, { force: true })
+    await cleanup()
+  }
+})
+
+test("--dry-run names the line for --backup's copy exactly when the run adds it, whatever suffix each draws", async () => {
+  // A rule for the copies whose suffix starts with A to M: half the names mkdtemp draws
+  const gitignore = 'app/(templates)/\n.nextspark/\napp.backup.v*-[A-M]*/\n'
+
+  // Every attempt runs before anything is asserted; with a suffix drawn apart for each, a name-dependent answer disagrees in some
+  const differ: string[] = []
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const { root, cleanup } = await project()
+    try {
+      execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
+      await write(root, '.gitignore', gitignore)
+
+      const planned = gitignoreAdditions(await runSync(root, { dryRun: true, backup: true }), 'Would add')
+      const done = gitignoreAdditions(await runSync(root, { force: true, backup: true }), 'Added')
+      if (JSON.stringify(planned) !== JSON.stringify(done)) differ.push(`attempt ${attempt}: dry run ${JSON.stringify(planned)}, run ${JSON.stringify(done)}`)
+    } finally {
+      await cleanup()
+    }
+  }
+
+  assert.deepEqual(differ, [])
 })
 
 test('a .gitignore that is a symlink, which git does not read, is not written through, and what git picks up is named with why', async () => {
@@ -607,4 +729,117 @@ test('a file sync wrote that a .gitignore further down the tree takes back is na
   } finally {
     await cleanup()
   }
+})
+
+/**
+ * A stand-in for core's registry build that backs up app/(templates)/(public)/page.tsx
+ * before replacing it, into a directory under .nextspark/backups named the way
+ * core names it - or with `suffix` in place of mkdtemp's - and then, with the
+ * backup on disk, writes git status to $GIT_STATUS and kills sync:app.
+ */
+function interruptingRegistryBuild(suffix?: string): string {
+  return `import { copyFileSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { dirname, join } from 'node:path'
+const root = process.env.NEXTSPARK_PROJECT_ROOT
+const backups = join(root, '.nextspark/backups')
+mkdirSync(backups, { recursive: true })
+const prefix = join(backups, new Date().toISOString().replace(/[:.]/g, '-') + '-')
+const dir = ${suffix ? `prefix + ${JSON.stringify(suffix)}` : 'mkdtempSync(prefix)'}
+const file = 'app/(templates)/(public)/page.tsx'
+mkdirSync(dirname(join(dir, file)), { recursive: true })
+copyFileSync(join(root, file), join(dir, file))
+writeFileSync(join(root, file), 'export default function Regenerated() { return null }\\n')
+writeFileSync(process.env.GIT_STATUS, execFileSync('git', ['status', '--porcelain', '-z', '--untracked-files=all'], { cwd: root, encoding: 'utf-8' }))
+process.kill(process.ppid, 'SIGKILL')
+`
+}
+
+const CLI = fileURLToPath(new URL('../src/cli.ts', import.meta.url))
+
+test('a sync:app --force killed while the registry build writes leaves no backup for git', { skip: process.platform === 'win32' }, async () => {
+  const shapes = ['middleware.ts', 'dashboard/', '(public)/']
+  const cases: { name: string; gitignore: string; args: string[]; suffix?: string }[] = [
+    {
+      name: 'rules for a file of each shape and for the stand-in suffix, with --backup and --overwrite',
+      gitignore: 'app/(templates)/\napp.backup.v*/\n.nextspark/sync-state.json\n' +
+        shapes.map((shape) => `.nextspark/backups/*/${shape}`).join('\n') + '\n.nextspark/backups/*-XXXXXX/\n',
+      args: ['--force', '--backup', '--overwrite', 'i18n.ts'],
+    },
+    {
+      name: 'a rule that takes back the backups of a directory only the registry build names',
+      gitignore: 'app/(templates)/\napp.backup.v*/\n.nextspark/sync-state.json\n' +
+        shapes.map((shape) => `.nextspark/backups/*/${shape}`).join('\n') + '\n.nextspark/backups/*/app/\n!.nextspark/backups/*-r3g1st/**\n',
+      args: ['--force'],
+      suffix: 'r3g1st',
+    },
+  ]
+
+  // Every case runs before anything is asserted, so a failure names each backup git could pick up
+  const visible: string[] = []
+  for (const { name, gitignore, args, suffix } of cases) {
+    const { root, cleanup } = await project()
+    const gitStatus = join(tmpdir(), `nextspark-sync-app-status-${process.pid}-${Date.now()}`)
+    try {
+      execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
+      await write(root, '.gitignore', gitignore)
+      await write(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
+      await write(root, 'app/(templates)/(public)/page.tsx', 'export default function Mine() { return null }\n')
+      await write(root, `${CORE}/scripts/build/registry.mjs`, interruptingRegistryBuild(suffix))
+
+      const { NEXT_PUBLIC_ACTIVE_THEME: _, ...env } = process.env
+      const run = spawnSync(process.execPath, [...process.execArgv, CLI, 'sync:app', ...args], {
+        cwd: root,
+        env: { ...env, GIT_STATUS: gitStatus },
+        encoding: 'utf-8',
+        timeout: 60_000,
+      })
+
+      assert.equal(run.signal, 'SIGKILL', `${name}: sync:app is killed partway\n${run.stdout}${run.stderr}`)
+      const backupsBeforeTheKill = (await readFile(gitStatus, 'utf-8')).split('\0').filter((entry) => /^\?\? (\.nextspark\/backups\/|app\.backup\.)/.test(entry))
+      assert.ok((await readdir(join(root, '.nextspark/backups'), { recursive: true })).some((path) => String(path).endsWith('page.tsx')), `${name}: the registry build backed up page.tsx`)
+      visible.push(...backupsBeforeTheKill.map((entry) => `${name}: ${entry.slice(3)} while the build ran`))
+      visible.push(...untrackedGenerated(root).filter((path) => !path.startsWith('app/(templates)/')).map((path) => `${name}: ${path} after the kill`))
+    } finally {
+      await rm(gitStatus, { force: true })
+      await cleanup()
+    }
+  }
+
+  assert.deepEqual(visible, [])
+})
+
+test('--dry-run names the .gitignore lines a run adds for its backups when the rules name a stand-in for their directories', async () => {
+  const standIns = 'app/(templates)/\n.nextspark/sync-state.json\n*-XXXXXX/\n*-a1b2c3/\n'
+  const cases: { name: string; options: SyncOptions; lines: string[]; registry?: boolean }[] = [
+    { name: "--backup's copy of app/", options: { backup: true }, lines: ['app.backup.v*/'] },
+    { name: 'the backup --overwrite takes of a customized file', options: { overwrite: ['i18n.ts'] }, lines: ['.nextspark/backups/.gitignore'] },
+    { name: "the registry build's backups, unplanned under --force", options: {}, lines: ['.nextspark/backups/.gitignore'], registry: true },
+  ]
+
+  // Every case runs before anything is asserted, so a failure names each line the dry run passes over
+  const missed: string[] = []
+  for (const { name, options, lines, registry } of cases) {
+    const { root, cleanup } = await project()
+    try {
+      execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
+      await write(root, '.gitignore', standIns)
+      if (registry) {
+        await withTemplatesTree(root)
+        await write(root, `${CORE}/scripts/build/registry.mjs`, REMOVING_REGISTRY_BUILD)
+      }
+
+      const planned = await runSync(root, { ...options, dryRun: true })
+      const done = await runSync(root, { ...options, force: true })
+
+      const added = gitignoreAdditions(done, 'Added')
+      const named = gitignoreAdditions(planned, 'Would add')
+      if (JSON.stringify(added) !== JSON.stringify(lines)) missed.push(`${name}: the run adds ${JSON.stringify(added)}`)
+      if (JSON.stringify(named) !== JSON.stringify(lines)) missed.push(`${name}: the dry run names ${JSON.stringify(named)}`)
+    } finally {
+      await cleanup()
+    }
+  }
+
+  assert.deepEqual(missed, [])
 })
