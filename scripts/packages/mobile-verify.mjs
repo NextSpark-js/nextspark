@@ -30,7 +30,8 @@
  *
  * Exit codes:
  *   0: every step passed
- *   1: a step failed, or the root install is missing
+ *   1: a step failed, the root install is missing, or a step's process was
+ *      left running
  */
 
 import { spawn, spawnSync } from 'node:child_process'
@@ -41,6 +42,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -48,9 +50,11 @@ import {
 import { builtinModules, createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { dirname, join, relative, sep } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { fileURLToPath } from 'node:url'
 
-const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..')
+// import.meta.url names the symlink itself instead of its target under
+// --preserve-symlinks-main, which would put the repo root next to the link.
+const REPO_ROOT = join(dirname(realpathSync(fileURLToPath(import.meta.url))), '../..')
 const MOBILE_APP_DIR = join(REPO_ROOT, 'apps/mobile')
 const MOBILE_PACKAGE_DIR = join(REPO_ROOT, 'packages/mobile')
 const UI_PACKAGE_DIR = join(REPO_ROOT, 'packages/ui')
@@ -96,19 +100,25 @@ async function step(label, run) {
 // forever, so every step is bounded here and reported as failed instead.
 //
 // `expo export` alone runs Watchman's initial crawl plus Metro's cold bundle,
-// which measured ~233s (169.7s + 63.7s) on a clean clone against every other
-// step's few seconds, so it gets its own, longer budget instead of sharing the
-// default with steps two orders of magnitude faster.
+// minutes on a clean clone against most other steps' few seconds, so it gets
+// its own, longer budget instead of sharing the default with steps two orders
+// of magnitude faster.
 const STEP_TIMEOUT_MS = 5 * 60 * 1000
 const EXPORT_STEP_TIMEOUT_MS = 15 * 60 * 1000
 
-// How long exec() waits for a child's `exit` event after a kill signal that
-// killProcessGroup could not confirm was delivered (taskkill missing or
-// refused) before giving up on the step instead of hanging forever, and how
-// long cancelActiveChildrenAndExit waits for the active step's own cleanup
-// (a stuck `finally`) before exiting anyway.
+// How long exec() waits for a timed-out child's `exit` event after trying to
+// kill it before it stops waiting and leaves the child running, and how long
+// cancelActiveChildrenAndExit waits for the active step's own cleanup (a stuck
+// `finally`) before exiting anyway.
 const KILL_FALLBACK_MS = 10 * 1000
 const CLEANUP_TIMEOUT_MS = 10 * 1000
+
+// How long exec() keeps reading a child's output once it has exited, for
+// whatever it wrote last, before closing the pipes on a process that still
+// holds them; and how long reportLeftoverChildren gives processes just killed
+// to disappear before it names them as left running.
+const OUTPUT_DRAIN_MS = 2 * 1000
+const LEFTOVER_GRACE_MS = 1000
 
 /**
  * SIGKILL to the negative pid targets the whole process group `detached: true`
@@ -122,9 +132,14 @@ const CLEANUP_TIMEOUT_MS = 10 * 1000
  *
  * Returns whether the kill signal was actually delivered. taskkill can fail
  * to run at all (missing from PATH) or run and refuse (access denied on a
- * more-privileged process) - in both cases the child never receives it and
- * its `exit` event never comes, so a caller waiting on that event needs to
- * know not to wait forever.
+ * more-privileged process), and kill(2) can refuse too (EPERM) - in every
+ * such case the child may never receive it and its `exit` event may never
+ * come. macOS also answers EPERM for a group whose processes have all exited
+ * but are not reaped yet, so a failed kill only means "not confirmed": what
+ * happens to the child is left to its `exit` event.
+ * Reporting that instead of throwing matters because callers run this from a
+ * timer or a signal handler, where a throw would crash this script and leave
+ * the very process group it failed to kill running unsupervised.
  */
 function killProcessGroup(pid, { platform = process.platform, kill = process.kill, spawnTaskkill = spawnSync } = {}) {
   if (platform === 'win32') {
@@ -142,16 +157,54 @@ function killProcessGroup(pid, { platform = process.platform, kill = process.kil
   try {
     kill(-pid, 'SIGKILL')
   } catch (error) {
-    if (error.code !== 'ESRCH') throw error
+    // ESRCH: the group is already gone, which is what the kill was for.
+    if (error.code === 'ESRCH') return true
+    console.log(`${RED}Could not confirm process group ${pid} was killed: ${error.message}${NC}`)
+    return false
   }
   return true
 }
 
-// A step's subprocess is the leader of its own detached process group (see
-// exec below), which is a different group from this script's, so a signal
-// sent to this script's pid never reaches it on its own. Tracking every
-// active pid here is what lets the SIGTERM/SIGINT handlers reach it too.
-const activeChildPids = new Set()
+// Every child exec() spawned whose `exit` it has not seen, by pid, with the
+// command it runs. A step's subprocess is the leader of its own detached
+// process group (see exec below), which is a different group from this
+// script's, so a signal sent to this script's pid never reaches it on its
+// own: tracking it here is what lets the SIGTERM/SIGINT handlers reach it
+// too, and what lets reportLeftoverChildren name one that outlives the run.
+const runningChildren = new Map()
+
+// Process groups a step's leader left processes in when it exited, by process
+// group id, with the leader's command.
+const strayGroups = new Map()
+
+// EPERM is not counted: on macOS it is what a group holding only exited,
+// unreaped processes answers, and a process in a step's own group that this
+// script may not signal would have had to change its user id.
+function groupHasProcesses(pgid) {
+  try {
+    process.kill(-pgid, 0)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * A step's leader can exit while processes it started are still in its
+ * process group - a server a test never closed, a worker nothing waited for -
+ * and nothing else would ever stop or mention them. The group belongs to the
+ * step, so they are killed with it. It stays tracked either way: a delivered
+ * SIGKILL takes a moment to take effect, or none for a process stuck in
+ * uninterruptible I/O, and reportLeftoverChildren only drops a group once it
+ * is empty. Windows has no process group to find them by once their parent
+ * is gone.
+ */
+function stopStragglers(pgid, commandLine, killGroup) {
+  if (process.platform === 'win32' || !groupHasProcesses(pgid)) return
+  console.log(`${RED}Process group ${pgid} (${commandLine}) still had processes after its leader exited; killing them${NC}`)
+  strayGroups.set(pgid, commandLine)
+  killGroup(pgid)
+}
 
 // The step currently in flight, so a signal handler can wait for its finally
 // (see step below) before the process exits instead of racing it.
@@ -161,57 +214,125 @@ function exec(command, args, cwd, {
   env,
   timeoutMs = STEP_TIMEOUT_MS,
   killFallbackMs = KILL_FALLBACK_MS,
+  outputDrainMs = OUTPUT_DRAIN_MS,
   killProcessGroup: killGroup = killProcessGroup,
 } = {}) {
   return new Promise((resolve) => {
+    // stdout and stderr go through pipes this script reads instead of being
+    // inherited: a child left running would otherwise hold a copy of this
+    // script's own output, and whatever reads it to the end (a CI step,
+    // `| cat`) would keep waiting for as long as that child lives.
     const child = spawn(command, args, {
       cwd,
-      stdio: 'inherit',
+      stdio: ['inherit', 'pipe', 'pipe'],
       env: env ? { ...process.env, ...env } : process.env,
       detached: true,
     })
-    activeChildPids.add(child.pid)
+    child.stdout.pipe(process.stdout, { end: false })
+    child.stderr.pipe(process.stderr, { end: false })
+    const commandLine = [command, ...args].join(' ')
+    runningChildren.set(child.pid, commandLine)
+
+    // With its pipes closed and its handle unref'd, nothing of the child ties
+    // this script's event loop to it any longer.
+    const release = () => {
+      child.stdout.destroy()
+      child.stderr.destroy()
+      child.unref()
+    }
 
     let timedOut = false
     let settled = false
-    const settle = (value) => {
+    let giveUpTimer
+    let drainTimer
+    const settle = (value, message) => {
       if (settled) return
       settled = true
+      clearTimeout(timer)
+      clearTimeout(giveUpTimer)
+      clearTimeout(drainTimer)
+      if (message) console.log(`${RED}${message}${NC}`)
       resolve(value)
     }
 
     const timer = setTimeout(() => {
       timedOut = true
-      if (!killGroup(child.pid)) {
-        // The signal was not confirmed delivered, so `exit` below may never
-        // fire - give up on this step instead of hanging the whole run.
-        setTimeout(() => {
-          if (activeChildPids.delete(child.pid)) {
-            console.log(`${RED}Gave up waiting for pid ${child.pid}: its kill signal was never confirmed delivered${NC}`)
-            settle(false)
-          }
-        }, killFallbackMs)
-      }
+      console.log(`${RED}Timed out after ${timeoutMs / 1000}s: ${commandLine}${NC}`)
+      const delivered = killGroup(child.pid)
+      // An undelivered kill never makes `exit` arrive, and a delivered one
+      // does not either while the process is stuck in uninterruptible I/O.
+      giveUpTimer = setTimeout(() => {
+        release()
+        const reason = delivered
+          ? `still running ${killFallbackMs / 1000}s after its process group was killed`
+          : 'its kill signal was never confirmed delivered'
+        settle(false, `Gave up waiting for pid ${child.pid} (${commandLine}): ${reason}; left running`)
+      }, killFallbackMs)
     }, timeoutMs)
 
     child.on('error', (error) => {
-      clearTimeout(timer)
-      activeChildPids.delete(child.pid)
-      console.log(`${RED}${error.message}${NC}`)
-      settle(false)
+      runningChildren.delete(child.pid)
+      settle(false, error.message)
     })
 
     child.on('exit', (code, signal) => {
-      clearTimeout(timer)
-      activeChildPids.delete(child.pid)
-      if (timedOut) {
-        console.log(`${RED}Timed out after ${timeoutMs / 1000}s and its process group was killed${NC}`)
-      } else if (signal) {
-        console.log(`${RED}Killed with ${signal}${NC}`)
-      }
-      settle(code === 0)
+      runningChildren.delete(child.pid)
+      stopStragglers(child.pid, commandLine, killGroup)
+      if (settled) return
+      const how = signal ? `Killed with ${signal}` : `Exited with code ${code}`
+      // A step that ran past its limit failed, however its process ends.
+      const [value, message] = timedOut
+        ? [false, `${how} after the time limit`]
+        : [code === 0, signal ? how : undefined]
+      // The verdict waits for the pipes to close so it prints after the
+      // child's last output. A process that still holds them past
+      // outputDrainMs (a straggler its kill has not stopped) loses them.
+      child.once('close', () => settle(value, message))
+      drainTimer = setTimeout(() => {
+        child.stdout.destroy()
+        child.stderr.destroy()
+        settle(value, message)
+      }, outputDrainMs)
     })
   })
+}
+
+function isProcessRunning(pid) {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch (error) {
+    return error.code === 'EPERM'
+  }
+}
+
+/**
+ * Names every child exec() spawned that is still running, and every stray
+ * process group that still has processes, so a run that ends or is cancelled
+ * without having seen them go says what it left behind instead of looking
+ * like it cleaned up. Returns how many there are.
+ */
+async function reportLeftoverChildren() {
+  const anyLeft = () =>
+    [...runningChildren.keys()].some(isProcessRunning) || [...strayGroups.keys()].some(groupHasProcesses)
+  for (const deadline = Date.now() + LEFTOVER_GRACE_MS; anyLeft() && Date.now() < deadline;) {
+    await new Promise((resolve) => setTimeout(resolve, 50))
+  }
+  let count = 0
+  for (const [pid, commandLine] of runningChildren) {
+    if (!isProcessRunning(pid)) continue
+    count++
+    console.log(`${RED}Left running: pid ${pid} (${commandLine})${NC}`)
+  }
+  for (const [pgid, commandLine] of strayGroups) {
+    if (!groupHasProcesses(pgid)) {
+      strayGroups.delete(pgid)
+      continue
+    }
+    count++
+    console.log(`${RED}Left running: process group ${pgid} (${commandLine})${NC}`)
+  }
+  return count
 }
 
 /**
@@ -228,9 +349,17 @@ function exec(command, args, cwd, {
  * That wait is itself bounded: a stuck finally (a filesystem call that never
  * returns) would otherwise leave the supervisor process, and whatever it did
  * not get to remove, running forever past the signal that was meant to stop it.
+ * Whatever it could not kill is named before it exits.
  */
-async function cancelActiveChildrenAndExit(exitCode, { exit = process.exit, cleanupTimeoutMs = CLEANUP_TIMEOUT_MS } = {}) {
-  for (const pid of activeChildPids) killProcessGroup(pid)
+async function cancelActiveChildrenAndExit(exitCode, {
+  exit = process.exit,
+  cleanupTimeoutMs = CLEANUP_TIMEOUT_MS,
+  killProcessGroup: killGroup = killProcessGroup,
+} = {}) {
+  for (const pid of runningChildren.keys()) killGroup(pid)
+  for (const pgid of strayGroups.keys()) {
+    if (groupHasProcesses(pgid)) killGroup(pgid)
+  }
   if (activeStepPromise) {
     let cleanupTimer
     // Cleared on whichever branch settles first: left running, the losing
@@ -245,16 +374,17 @@ async function cancelActiveChildrenAndExit(exitCode, { exit = process.exit, clea
       console.log(`${RED}Gave up waiting for the active step's cleanup after ${cleanupTimeoutMs / 1000}s; it may not have finished${NC}`)
     }
   }
+  await reportLeftoverChildren()
   exit(exitCode)
 }
 process.on('SIGTERM', () => cancelActiveChildrenAndExit(143))
 process.on('SIGINT', () => cancelActiveChildrenAndExit(130))
 
 /**
- * Bundling is the only step that runs Metro's resolveRequest, which is what
- * pointed @nextsparkjs/ui at a `packages/ui/dist` build nothing produced
- * before it was fixed to bundle straight from source: type-checking alone
- * resolves imports through tsconfig paths and never notices.
+ * Bundling is the only step that runs Metro's resolveRequest, which decides
+ * whether @nextsparkjs/ui resolves to its sources or to a `packages/ui/dist`
+ * build nothing produces: type-checking alone resolves imports through
+ * tsconfig paths and never notices.
  */
 async function exportAndroid() {
   const exportDir = join(MOBILE_APP_DIR, 'dist')
@@ -502,23 +632,33 @@ async function main() {
 }
 
 /**
- * Whether this module was invoked directly (`node mobile-verify.mjs`), as
- * opposed to only imported by mobile-verify.test.mjs. import.meta.url is
- * always a percent-encoded file: URL with forward slashes; process.argv[1]
- * is a plain OS path, so a naive `file://${argv1}` comparison breaks for any
- * path with a space (encoded on one side only) and on Windows (backslashes,
- * and a bare drive letter instead of a leading slash). pathToFileURL applies
- * the same normalization to argv1 that import.meta.url already went through.
+ * Whether this module was invoked directly (`node mobile-verify.mjs`, through
+ * a symlink or a wrapper included), as opposed to only imported by its tests.
+ * import.meta.url and process.argv[1] name the same file in different forms:
+ * a percent-encoded file: URL with forward slashes against a plain OS path,
+ * and, through a symlink, node's resolved target against the link as typed -
+ * or the link on both sides under --preserve-symlinks-main. Turning the URL
+ * back into a path and resolving both through realpath compares the file
+ * itself, whichever form each side arrived in.
  */
-function isMainModule(moduleUrl, argv1, { toFileURL = pathToFileURL } = {}) {
-  return moduleUrl === toFileURL(argv1).href
+function isMainModule(moduleUrl, argv1, { windows = process.platform === 'win32' } = {}) {
+  if (!argv1) return false
+  const resolveFile = (path) => {
+    try {
+      return realpathSync(path)
+    } catch {
+      return path
+    }
+  }
+  return resolveFile(fileURLToPath(moduleUrl, { windows })) === resolveFile(argv1)
 }
 
 export { exec, step, killProcessGroup, cancelActiveChildrenAndExit, isMainModule }
 
-// Guards the run below so mobile-verify.test.mjs can import the functions
-// above without kicking off the whole verify pipeline as a side effect.
+// Guards the run below so the tests can import the functions above without
+// kicking off the whole verify pipeline as a side effect.
 if (isMainModule(import.meta.url, process.argv[1])) {
   const ok = await main()
-  process.exitCode = ok ? 0 : 1
+  const leftovers = await reportLeftoverChildren()
+  process.exitCode = ok && leftovers === 0 ? 0 : 1
 }
