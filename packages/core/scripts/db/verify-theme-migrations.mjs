@@ -6,6 +6,14 @@
 //
 // Usage: VERIFY_THEME_DATABASE_URL=<database-url> pnpm db:verify-theme <theme>
 //
+// The run reaches past that database: the core migrations create and alter
+// cluster-wide roles (see cluster-changes.mjs), which every database on the
+// same Postgres server shares. The output names those roles before the
+// migrations run, and the run is refused when the server shows signs of being
+// in use — one of those roles already exists, or another database lives there.
+// VERIFY_THEME_ALLOW_CLUSTER_CHANGES=1 says the server is yours to change and
+// runs anyway. A disposable server, one per run, needs neither.
+//
 // The database URL comes from the environment, never from an argument:
 // arguments show up in pnpm's command echo and in the process list, and the
 // URL carries the password. The output names only the host and the database.
@@ -13,9 +21,7 @@
 // The migrations run through run-migrations.mjs, the same script
 // `pnpm db:migrate` uses, with `--no-env-file` and the theme and database in
 // its environment. No file is read or written for that: apps/dev/.env stays
-// untouched even if this process is killed mid-run. Runs for different
-// themes still can't share a Postgres server at the same time, because the
-// core migrations alter cluster-wide roles.
+// untouched even if this process is killed mid-run.
 //
 // MIGRATE_DATABASE_URL is removed from the child's environment because
 // run-migrations.mjs connects to it in preference to DATABASE_URL, which
@@ -26,6 +32,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { spawnSync } from 'child_process';
+import { GLOBAL_OBJECTS, ROLES_SQL, DATABASES_SQL, MAINTENANCE_DATABASE, inspectCluster } from './cluster-changes.mjs';
 
 const { Client } = pg;
 
@@ -36,6 +43,9 @@ const appsDevDir = path.join(repoRoot, 'apps', 'dev');
 const runnerPath = path.join(repoRoot, 'packages', 'core', 'scripts', 'db', 'run-migrations.mjs');
 
 const USAGE = 'Usage: VERIFY_THEME_DATABASE_URL=<database-url> pnpm db:verify-theme <theme>';
+
+const ACKNOWLEDGEMENT_VAR = 'VERIFY_THEME_ALLOW_CLUSTER_CHANGES';
+const acknowledgesClusterChanges = process.env[ACKNOWLEDGEMENT_VAR] === '1';
 
 const args = process.argv.slice(2);
 const theme = args[0];
@@ -100,16 +110,50 @@ const EXISTING_OBJECTS_SQL = `
    LIMIT 5
 `;
 
-async function findExistingObjects(connectionString) {
-  const client = new Client({
+function connect(connectionString) {
+  return new Client({
     connectionString,
     ssl: { rejectUnauthorized: false, require: true },
     connectionTimeoutMillis: 10000,
   });
+}
+
+async function inspectTarget(connectionString) {
+  const client = connect(connectionString);
   await client.connect();
+  try {
+    const [objects, roles, databases] = await Promise.all([
+      client.query(EXISTING_OBJECTS_SQL),
+      client.query(ROLES_SQL),
+      client.query(DATABASES_SQL),
+    ]);
+    return { existingObjects: objects.rows, roles: roles.rows, databases: databases.rows };
+  } finally {
+    await client.end();
+  }
+}
+
+/**
+ * What the maintenance database holds. A hosted Postgres keeps `postgres` for
+ * connections that only need the server, and a project whose own schema lives
+ * there looks, from the outside, like a server with nothing on it. A server
+ * that refuses the connection answers nothing, and is left out of the verdict.
+ */
+async function findMaintenanceObjects(databaseUrl) {
+  const url = new URL(databaseUrl);
+  if (url.pathname === `/${MAINTENANCE_DATABASE}`) return [];
+  url.pathname = `/${MAINTENANCE_DATABASE}`;
+  const client = connect(url.toString());
+  try {
+    await client.connect();
+  } catch {
+    return [];
+  }
   try {
     const result = await client.query(EXISTING_OBJECTS_SQL);
     return result.rows;
+  } catch {
+    return [];
   } finally {
     await client.end();
   }
@@ -118,22 +162,42 @@ async function findExistingObjects(connectionString) {
 async function main() {
   console.log(`🔎 Verifying theme "${theme}" migrations against ${target}...\n`);
 
-  let existingObjects;
+  let inspection;
   try {
-    existingObjects = await findExistingObjects(databaseUrl);
+    inspection = await inspectTarget(databaseUrl);
   } catch (error) {
     console.error(`❌ Could not connect to ${target}: ${error.message}`);
     process.exit(1);
   }
 
-  if (existingObjects.length > 0) {
-    const examples = existingObjects.map(({ kind, name }) => `${name} (${kind})`).join(', ');
+  if (inspection.existingObjects.length > 0) {
+    const examples = inspection.existingObjects.map(({ kind, name }) => `${name} (${kind})`).join(', ');
     console.error(
       `❌ Refusing to run: ${target} already holds objects, for example ${examples}.\n` +
       '   This script only runs against a fresh, empty database, to avoid mixing\n' +
       '   this theme\'s schema and sample data into whatever is already there.'
     );
     process.exit(1);
+  }
+
+  console.log('This run also changes these cluster-wide roles, which every database on this server shares:');
+  for (const { role, change } of GLOBAL_OBJECTS) console.log(`   ${role}: ${change}`);
+  console.log('');
+
+  const maintenanceObjects = await findMaintenanceObjects(databaseUrl);
+  const cluster = inspectCluster({ ...inspection, maintenanceObjects });
+  if (!cluster.disposable && !acknowledgesClusterChanges) {
+    console.error(
+      `❌ Refusing to run: ${target} is on a Postgres server that is not this run's to change.\n` +
+      cluster.reasons.map(reason => `   - ${reason}\n`).join('') +
+      '   The roles above are cluster-wide: altering them here reaches every database\n' +
+      '   on this server. Point the run at a disposable Postgres server, or, if this\n' +
+      `   server is yours to change, re-run it with ${ACKNOWLEDGEMENT_VAR}=1.`
+    );
+    process.exit(1);
+  }
+  if (!cluster.disposable) {
+    console.log(`⚠️  ${ACKNOWLEDGEMENT_VAR}=1: changing those roles on a server in use (${cluster.reasons.join('; ')}).\n`);
   }
 
   const { MIGRATE_DATABASE_URL: _migrateUrl, VERIFY_THEME_DATABASE_URL: _verifyUrl, ...inheritedEnv } = process.env;
