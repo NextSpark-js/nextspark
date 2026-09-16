@@ -21,6 +21,13 @@ import {
   extractLiteralIconCallNames
 } from '../discovery/icons.mjs'
 
+// extractLiteralIconCallNames now matches a call site by its real import
+// binding (#200 review), so every snippet exercising a real DynamicIcon or
+// resolveIcon call needs one of these in scope, the same way real theme and
+// plugin source does.
+const DYNAMIC_ICON_IMPORT = "import { DynamicIcon } from '@nextsparkjs/core/components/ui/dynamic-icon'\n"
+const RESOLVE_ICON_IMPORT = "import { resolveIcon } from '@nextsparkjs/core/lib/icons'\n"
+
 test('matches entity, block and app configs', () => {
   assert.ok(isIconSourcePath('/p/contents/themes/default/entities/tasks/tasks.config.ts'))
   assert.ok(isIconSourcePath('/p/themes/default/blocks/hero/config.ts'))
@@ -165,6 +172,50 @@ test('says nothing about a reference it can resolve', async () => {
   assert.deepEqual(await findUnresolvedIconRefs("export default { icon: 'pie-chart' }"), [])
 })
 
+// --- Transparent TypeScript wrappers (#200 review round 2) ---------------
+//
+// `as`, `satisfies` and `!` change nothing about the value at runtime, so a
+// config or call site written with one of them must resolve exactly like the
+// bare form — and still be reported as unresolved when the wrapped value
+// itself doesn't resolve, rather than disappearing silently.
+
+test('reads a string icon name through `as const`', async () => {
+  const source = `export const config = { icon: 'Wallet' as const }`
+  assert.deepEqual(await extractIconNames(source), ['Wallet'])
+})
+
+test('reads a lucide identifier through a non-null assertion', async () => {
+  const source = `
+    import { Wallet } from 'lucide-react'
+    export const config = { icon: Wallet! }
+  `
+  assert.deepEqual(await extractIconNames(source), ['Wallet'])
+})
+
+test('reads a string icon name through `satisfies` and through parentheses', async () => {
+  assert.deepEqual(
+    await extractIconNames(`export const config = { icon: 'Wallet' satisfies string }`),
+    ['Wallet']
+  )
+  assert.deepEqual(await extractIconNames(`export const config = { icon: ('Wallet') }`), ['Wallet'])
+})
+
+test('reports a wrapped reference that still does not resolve, instead of dropping it silently', async () => {
+  assert.deepEqual(
+    await findUnresolvedIconRefs("export default { icon: Wallet! }"),
+    ['Wallet!']
+  )
+  assert.deepEqual(
+    await findUnresolvedIconRefs("export default { icon: Wallet as const }"),
+    ['Wallet as const']
+  )
+})
+
+test('extracts a literal name through `satisfies` in a call argument', async () => {
+  const source = `${RESOLVE_ICON_IMPORT}resolveIcon('Wallet' satisfies string)`
+  assert.deepEqual(await extractLiteralIconCallNames(source), ['Wallet'])
+})
+
 test('matches .ts and .tsx component files, with Windows separators too', () => {
   assert.ok(isIconCallSourcePath('/p/themes/default/components/wallet-badge.tsx'))
   assert.ok(isIconCallSourcePath('/p/themes/default/lib/format.ts'))
@@ -175,33 +226,33 @@ test('matches .ts and .tsx component files, with Windows separators too', () => 
 
 test('extracts a literal name from DynamicIcon, either quoting style', async () => {
   assert.deepEqual(
-    await extractLiteralIconCallNames('<DynamicIcon name="Wallet" className="h-4 w-4" />'),
+    await extractLiteralIconCallNames(DYNAMIC_ICON_IMPORT + '<DynamicIcon name="Wallet" className="h-4 w-4" />'),
     ['Wallet']
   )
   assert.deepEqual(
-    await extractLiteralIconCallNames("<DynamicIcon name={'pie-chart'} />"),
+    await extractLiteralIconCallNames(DYNAMIC_ICON_IMPORT + "<DynamicIcon name={'pie-chart'} />"),
     ['pie-chart']
   )
 })
 
 test('extracts a literal name from resolveIcon, with or without a fallback argument', async () => {
-  assert.deepEqual(await extractLiteralIconCallNames("resolveIcon('receipt')"), ['receipt'])
+  assert.deepEqual(await extractLiteralIconCallNames(RESOLVE_ICON_IMPORT + "resolveIcon('receipt')"), ['receipt'])
   assert.deepEqual(
-    await extractLiteralIconCallNames('resolveIcon("receipt", Box)'),
+    await extractLiteralIconCallNames(RESOLVE_ICON_IMPORT + 'resolveIcon("receipt", Box)'),
     ['receipt']
   )
 })
 
 test('ignores a runtime value handed to DynamicIcon or resolveIcon', async () => {
-  assert.deepEqual(await extractLiteralIconCallNames('<DynamicIcon name={item.icon} />'), [])
-  assert.deepEqual(await extractLiteralIconCallNames('resolveIcon(item.icon, Box)'), [])
-  assert.deepEqual(await extractLiteralIconCallNames('resolveIcon(iconName)'), [])
+  assert.deepEqual(await extractLiteralIconCallNames(DYNAMIC_ICON_IMPORT + '<DynamicIcon name={item.icon} />'), [])
+  assert.deepEqual(await extractLiteralIconCallNames(RESOLVE_ICON_IMPORT + 'resolveIcon(item.icon, Box)'), [])
+  assert.deepEqual(await extractLiteralIconCallNames(RESOLVE_ICON_IMPORT + 'resolveIcon(iconName)'), [])
 })
 
 test('never yields anything but a bare name from a call, so nothing can be injected', async () => {
   const sources = [
-    '<DynamicIcon name="X&quot;; process.exit(1); //" />',
-    'resolveIcon(\'Users } from "x"; import evil from "y"; //\')'
+    DYNAMIC_ICON_IMPORT + '<DynamicIcon name="X&quot;; process.exit(1); //" />',
+    RESOLVE_ICON_IMPORT + 'resolveIcon(\'Users } from "x"; import evil from "y"; //\')'
   ]
 
   for (const source of sources) {
@@ -211,14 +262,45 @@ test('never yields anything but a bare name from a call, so nothing can be injec
   }
 })
 
-// --- Decoy regression tests (#200 review) ------------------------------
+// --- Import-binding resolution (#200 review round 2) --------------------
 //
-// A prior review seeded 7 decoys of valid lucide names in places the old
-// regex-based scanner read as code: a comment, a docblock, and a test file.
-// The registry grew from 70 to 77 icons, all 7 imported into the production
-// bundle even though nothing at runtime could ever ask for them by name.
-// Each decoy here is a contrafactual: it fails against the code this fixes
-// (the regex scanner from cd8e54de) and passes once discovery reads syntax.
+// A call site is now matched through the file's own imports rather than by
+// comparing the identifier's text, so aliasing and namespacing resolve, and a
+// same-named local that never came from core does not.
+
+test('resolves resolveIcon through an aliased import', async () => {
+  const source = "import { resolveIcon as ri } from '@nextsparkjs/core/lib/icons'\nri('Wallet')"
+  assert.deepEqual(await extractLiteralIconCallNames(source), ['Wallet'])
+})
+
+test('resolves DynamicIcon through an aliased import', async () => {
+  const source = "import { DynamicIcon as DI } from '@nextsparkjs/core/components/ui/dynamic-icon'\n<DI name=\"Wallet\" />"
+  assert.deepEqual(await extractLiteralIconCallNames(source), ['Wallet'])
+})
+
+test('resolves resolveIcon and DynamicIcon through a namespace import', async () => {
+  const source =
+    "import * as Core from '@nextsparkjs/core/lib/icons'\nimport * as CoreUI from '@nextsparkjs/core/components/ui/dynamic-icon'\nCore.resolveIcon('Wallet');\n<CoreUI.DynamicIcon name=\"Receipt\" />;"
+  assert.deepEqual(await extractLiteralIconCallNames(source), ['Wallet', 'Receipt'])
+})
+
+test('ignores a same-named local that was never imported from core', async () => {
+  // A theme's own helper named resolveIcon (or a JSX component named
+  // DynamicIcon) is not core's, even though the text matches.
+  const source = "function resolveIcon(x) { return x }\nresolveIcon('Wallet')\nfunction DynamicIcon(props) { return null }\n<DynamicIcon name=\"Receipt\" />"
+  assert.deepEqual(await extractLiteralIconCallNames(source), [])
+})
+
+test('ignores resolveIcon imported from somewhere other than core', async () => {
+  const source = "import { resolveIcon } from './local-icons'\nresolveIcon('Wallet')"
+  assert.deepEqual(await extractLiteralIconCallNames(source), [])
+})
+
+// --- Decoy tests: a name in a non-code position must not reach the registry --
+//
+// A name written inside a comment, a docblock, or only in a test file is not
+// something a real request can ever ask for by string, so discovery must not
+// pick it up just because it looks the same as the code shapes above.
 
 test('decoy: a line comment holding `icon: \'Ambulance\'` is not code', async () => {
   const source = `
@@ -248,7 +330,7 @@ test('decoy: a docblock mentioning a lucide identifier is not code', async () =>
 })
 
 test('decoy: a `<DynamicIcon>` inside a line comment is not a call', async () => {
-  const source = `
+  const source = `${DYNAMIC_ICON_IMPORT}
     // <DynamicIcon name="Cherry" />
     export function Widget() { return null }
   `
@@ -256,7 +338,7 @@ test('decoy: a `<DynamicIcon>` inside a line comment is not a call', async () =>
 })
 
 test('decoy: a `<DynamicIcon>` inside a block comment is not a call', async () => {
-  const source = `
+  const source = `${DYNAMIC_ICON_IMPORT}
     /* <DynamicIcon name="Bug" /> */
     export function Widget() { return null }
   `
@@ -264,7 +346,7 @@ test('decoy: a `<DynamicIcon>` inside a block comment is not a call', async () =
 })
 
 test('decoy: a `resolveIcon(...)` inside a block comment is not a call', async () => {
-  const source = `
+  const source = `${RESOLVE_ICON_IMPORT}
     /* resolveIcon('Fish') */
     export function Widget() { return null }
   `
@@ -277,7 +359,7 @@ test('decoy: `resolveIcon(...)` in a test file is excluded by path, not by conte
   // decoy is only harmless because discoverIcons never hands it this file:
   // isIconCallSourcePath combined with isTestFilePath keeps *.test.tsx out of
   // the call-source scan entirely.
-  const source = `resolveIcon('Citrus')`
+  const source = `${RESOLVE_ICON_IMPORT}resolveIcon('Citrus')`
   assert.deepEqual(await extractLiteralIconCallNames(source, 'widget.tsx'), ['Citrus'])
   assert.ok(isIconCallSourcePath('/p/themes/default/components/widget.test.tsx'))
   assert.ok(isTestFilePath('/p/themes/default/components/widget.test.tsx'))

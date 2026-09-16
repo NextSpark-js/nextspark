@@ -146,6 +146,26 @@ function propertyKeyName(nameNode, ts) {
 }
 
 /**
+ * Peel off the TypeScript wrappers that change nothing about which value an
+ * expression is at runtime — `(expr)`, `expr as T`, `expr satisfies T`,
+ * `expr!` — so `icon: 'Wallet' as const` and `icon: Wallet!` are read the same
+ * as `icon: 'Wallet'` and `icon: Wallet`. A regex-based scanner never saw
+ * these wrappers in the first place; reading syntax does, so it has to strip
+ * them explicitly instead of failing to match and dropping the icon silently.
+ */
+function unwrapTransparentExpression(expression, ts) {
+  let current = expression
+  while (current) {
+    if (ts.isParenthesizedExpression(current) || ts.isAsExpression(current) || ts.isSatisfiesExpression(current) || ts.isNonNullExpression(current)) {
+      current = current.expression
+      continue
+    }
+    return current
+  }
+  return current
+}
+
+/**
  * Map of local name -> exported lucide name for a file's lucide imports.
  * `import { Home as HouseIcon }` means the config's `icon: HouseIcon` is
  * lucide's `Home`. Read from the syntax tree, so an import mentioned only in
@@ -194,7 +214,7 @@ export async function extractIconNames(content, filePath = 'icons.config.ts', pr
   const names = []
 
   for (const assignment of findIconPropertyAssignments(sourceFile, ts)) {
-    const initializer = assignment.initializer
+    const initializer = unwrapTransparentExpression(assignment.initializer, ts)
 
     // `icon: Users` — only counts when the identifier came from lucide-react
     if (ts.isIdentifier(initializer)) {
@@ -232,12 +252,24 @@ export async function findUnresolvedIconRefs(content, filePath = 'icons.config.t
   const unresolved = []
 
   for (const assignment of findIconPropertyAssignments(sourceFile, ts)) {
-    const initializer = assignment.initializer
+    const original = assignment.initializer
+    const initializer = unwrapTransparentExpression(original, ts)
+
+    // A wrapper that resolved to a usable literal or a known lucide import is
+    // not unresolved — extractIconNames already has it. Only report what is
+    // still opaque once the wrapper is stripped, quoting the source as written
+    // (wrapper included) so the warning points at what a developer would grep for.
+    if (ts.isStringLiteralLike(initializer) && SAFE_NAME.test(initializer.text)) {
+      continue
+    }
+    if (ts.isIdentifier(initializer) && lucideImports.has(initializer.text)) {
+      continue
+    }
 
     if (ts.isPropertyAccessExpression(initializer)) {
-      unresolved.push(initializer.getText(sourceFile))
-    } else if (ts.isIdentifier(initializer) && !lucideImports.has(initializer.text)) {
-      unresolved.push(initializer.text)
+      unresolved.push(original.getText(sourceFile))
+    } else if (ts.isIdentifier(initializer)) {
+      unresolved.push(original.getText(sourceFile))
     }
   }
 
@@ -245,12 +277,67 @@ export async function findUnresolvedIconRefs(content, filePath = 'icons.config.t
 }
 
 /** The string literal an expression evaluates to, unwrapping a JSX
- * expression container (`{'pie-chart'}`) around it, or null when the
+ * expression container (`{'pie-chart'}`) and any transparent TypeScript
+ * wrapper (`'pie-chart' satisfies string`) around it, or null when the
  * expression isn't a literal — a runtime value that resolveIcon or
  * DynamicIcon reads at render time, not a name this build can see. */
 function literalTextOf(expression, ts) {
-  const unwrapped = ts.isJsxExpression(expression) ? expression.expression : expression
+  const unwrapped = unwrapTransparentExpression(ts.isJsxExpression(expression) ? expression.expression : expression, ts)
   return unwrapped && ts.isStringLiteralLike(unwrapped) ? unwrapped.text : null
+}
+
+/** Where a theme or plugin actually gets DynamicIcon and resolveIcon from —
+ * every subpath core publishes them under, via its `./lib/*` and
+ * `./components/*` export wildcards. */
+const CORE_PACKAGE_PREFIX = '@nextsparkjs/core'
+
+/**
+ * Local bindings for whatever a file imports from core, so a call site is
+ * matched by what it actually refers to rather than by spelling: a named
+ * import tracks straight to its local name (aliased or not), a namespace
+ * import (`import * as Core from '@nextsparkjs/core/...'`) is tracked so
+ * `Core.resolveIcon(...)` resolves too.
+ */
+function parseCoreImports(sourceFile, ts) {
+  const named = new Map() // local name -> imported name
+  const namespaces = new Set() // local name bound to `import * as X`
+
+  for (const statement of sourceFile.statements) {
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteralLike(statement.moduleSpecifier)) continue
+    if (!statement.moduleSpecifier.text.startsWith(CORE_PACKAGE_PREFIX)) continue
+
+    const namedBindings = statement.importClause?.namedBindings
+    if (!namedBindings) continue
+
+    if (ts.isNamedImports(namedBindings)) {
+      for (const element of namedBindings.elements) {
+        if (element.isTypeOnly) continue
+        named.set(element.name.text, (element.propertyName ?? element.name).text)
+      }
+    } else if (ts.isNamespaceImport(namedBindings)) {
+      namespaces.add(namedBindings.name.text)
+    }
+  }
+
+  return { named, namespaces }
+}
+
+/**
+ * Whether `expression` — a JSX tag name or a call's callee — is the given
+ * core export, resolved through the file's own imports rather than by
+ * comparing text: `import { resolveIcon as ri }` still matches `ri(...)`,
+ * `import * as Core from '@nextsparkjs/core/lib/icons'` still matches
+ * `Core.resolveIcon(...)`, and a same-named local that was never imported
+ * from core — a theme's own `resolveIcon` helper, say — does not.
+ */
+function referencesCoreExport(expression, exportName, imports, ts) {
+  if (ts.isIdentifier(expression)) {
+    return imports.named.get(expression.text) === exportName
+  }
+  if (ts.isPropertyAccessExpression(expression) && ts.isIdentifier(expression.expression)) {
+    return imports.namespaces.has(expression.expression.text) && expression.name.text === exportName
+  }
+  return false
 }
 
 /**
@@ -263,16 +350,17 @@ function literalTextOf(expression, ts) {
  */
 export async function extractLiteralIconCallNames(content, filePath = 'icons.tsx', projectRoot) {
   const { ts, sourceFile } = await parseIconSource(content, filePath, projectRoot)
+  const imports = parseCoreImports(sourceFile, ts)
   const names = []
 
   const visit = node => {
-    if ((ts.isJsxSelfClosingElement(node) || ts.isJsxOpeningElement(node)) && ts.isIdentifier(node.tagName) && node.tagName.text === 'DynamicIcon') {
+    if ((ts.isJsxSelfClosingElement(node) || ts.isJsxOpeningElement(node)) && referencesCoreExport(node.tagName, 'DynamicIcon', imports, ts)) {
       for (const attribute of node.attributes.properties) {
         if (!ts.isJsxAttribute(attribute) || attribute.name.text !== 'name' || !attribute.initializer) continue
         const name = literalTextOf(attribute.initializer, ts)
         if (name && SAFE_NAME.test(name)) names.push(name)
       }
-    } else if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'resolveIcon') {
+    } else if (ts.isCallExpression(node) && referencesCoreExport(node.expression, 'resolveIcon', imports, ts)) {
       const [firstArgument] = node.arguments
       const name = firstArgument && literalTextOf(firstArgument, ts)
       if (name && SAFE_NAME.test(name)) names.push(name)
