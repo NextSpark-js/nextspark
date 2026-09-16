@@ -15,6 +15,7 @@ import { fileURLToPath } from 'url'
 import { log, verbose } from '../../../utils/index.mjs'
 import { getProtectionLevel, ProtectionLevel } from '../../../../dist/config/protected-paths.js'
 import { selectTypeScriptModule, loadTypeScriptFor } from '../shared/typescript-compiler.mjs'
+import { ensureBackupsGitignore } from './backups-gitignore.mjs'
 
 export { selectTypeScriptModule }
 
@@ -975,9 +976,17 @@ async function diffTemplatesTree(templatesDir, files) {
  * a directory under .nextspark/backups/ that belongs to this run alone - the
  * time, and a suffix no other run gets - and named in the output. A backup is
  * never written over.
+ *
+ * Whatever runs the build - build, dev, registry:build or sync:app - the
+ * backups are kept out of git by .nextspark/backups/.gitignore, put in place
+ * before anything in the tree is written; when one already there can't do
+ * that, nothing in the tree is written at all.
  */
 async function reconcileTemplatesTree(templatesDir, files) {
   const { create, replace, remove } = await diffTemplatesTree(templatesDir, files)
+  if (replace.length > 0 || remove.length > 0) {
+    await ensureBackupsGitignore(rootDir)
+  }
   let backupDir = null
 
   const backUp = async absolutePath => {

@@ -445,6 +445,34 @@ test('a .gitignore in .nextspark/backups counts as in place only with * as its o
   }
 })
 
+test("the .gitignore sync:app keeps in .nextspark/backups is the one core's registry build keeps, read the same way", async () => {
+  const core = await import(new URL('../../core/scripts/build/registry/post-build/backups-gitignore.mjs', import.meta.url).href)
+  assert.equal(core.BACKUPS_GITIGNORE, BACKUPS_GITIGNORE)
+
+  const bySync = await project()
+  const byCore = await project()
+  try {
+    assert.equal(ensureBackupsGitignore(bySync.root), true)
+    assert.equal(await core.ensureBackupsGitignore(byCore.root), true)
+    assert.equal(await readFile(join(bySync.root, BACKUPS_GITIGNORE), 'utf-8'), await readFile(join(byCore.root, BACKUPS_GITIGNORE), 'utf-8'))
+  } finally {
+    await bySync.cleanup()
+    await byCore.cleanup()
+  }
+
+  const contents = ['*\n', '\uFEFF*\r\n', '# ours\n\n*   \n', '*\\ \n', '\\*\n', '/*\n', '*\n!keep/\n', '# nothing\n', ' *\n', '*\t\n']
+  for (const content of contents) {
+    const { root, cleanup } = await project()
+    try {
+      await mkdir(join(root, '.nextspark/backups'), { recursive: true })
+      await writeFile(join(root, BACKUPS_GITIGNORE), content)
+      assert.equal(await core.backupsGitignoreState(root), backupsGitignoreState(root), JSON.stringify(content))
+    } finally {
+      await cleanup()
+    }
+  }
+})
+
 /**
  * Run `check` on a project where git can't be asked about it: outside a
  * repository, or with no git on PATH in one that is.

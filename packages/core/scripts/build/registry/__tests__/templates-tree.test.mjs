@@ -8,8 +8,9 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, mkdir, writeFile, readFile, readdir, stat, rm } from 'node:fs/promises'
+import { chmod, mkdtemp, mkdir, writeFile, readFile, readdir, stat, rm, symlink } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join, dirname, relative, sep } from 'node:path'
 
@@ -49,8 +50,9 @@ async function backedUpFiles(root) {
   if (!existsSync(backupsDir)) return []
 
   const files = []
-  for (const run of await readdir(backupsDir)) {
-    const runDir = join(backupsDir, run)
+  for (const run of await readdir(backupsDir, { withFileTypes: true })) {
+    if (!run.isDirectory()) continue
+    const runDir = join(backupsDir, run.name)
     const walk = async directory => {
       for (const entry of await readdir(directory, { withFileTypes: true })) {
         const path = join(directory, entry.name)
@@ -176,6 +178,123 @@ test('a dotfile left in app/(templates) is removed like any other file, and back
     assert.deepEqual(await backedUpFiles(root), [
       { path: 'app/(templates)/dashboard/.user-note', content: 'remember to check the layout\n' }
     ])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+/** What git status lists under .nextspark, untracked files one by one. */
+function nextsparkPathsForGit(root) {
+  return execFileSync('git', ['status', '--porcelain', '-z', '--untracked-files=all'], { cwd: root, encoding: 'utf8' })
+    .split('\0')
+    .filter(entry => entry.slice(3).startsWith('.nextspark'))
+}
+
+/** Every file and symlink under `dir`, with its content or target, for telling whether anything changed. */
+async function snapshot(dir) {
+  const entries = []
+  const walk = async directory => {
+    for (const entry of (await readdir(directory, { withFileTypes: true })).sort((a, b) => a.name.localeCompare(b.name))) {
+      const path = join(directory, entry.name)
+      if (entry.isDirectory()) {
+        entries.push(`${relative(dir, path)}/`)
+        await walk(path)
+      } else {
+        entries.push(`${relative(dir, path)} ${entry.isFile() ? await readFile(path, 'utf8') : '(not a file)'}`)
+      }
+    }
+  }
+  await walk(dir)
+  return entries.join('\n')
+}
+
+test('a backup the build takes is out of git from the moment it is written, whatever the project\'s .gitignore leaves in', { skip: process.getuid?.() === 0 }, async () => {
+  const root = await createProject()
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: root })
+    await writeProjectFile(root, '.gitignore', 'app/(templates)/\n!.nextspark/backups/**\n')
+    await writeProjectFile(root, 'app/dashboard/layout.tsx', DASHBOARD_LAYOUT)
+    await writeProjectFile(root, 'app/(templates)/dashboard/layout.tsx', '// replaced first\n')
+    await writeProjectFile(root, 'app/(templates)/old/page.tsx', '// removed after\n')
+    const page = await writeTemplate(root, 'dashboard/reports/page.tsx', 'page', PAGE)
+
+    // The page it removes can't be read, so the build stops once it has backed up the layout it replaces
+    await chmod(join(root, 'app/(templates)/old/page.tsx'), 0o000)
+    await assert.rejects(generateMissingPages([page], { projectRoot: root }), /EACCES/)
+    assert.deepEqual((await backedUpFiles(root)).map(({ path }) => path), ['app/(templates)/dashboard/layout.tsx'])
+    assert.deepEqual(nextsparkPathsForGit(root), [], 'git picks up nothing while the build is partway')
+
+    await chmod(join(root, 'app/(templates)/old/page.tsx'), 0o644)
+    await generateMissingPages([page], { projectRoot: root })
+    assert.equal((await backedUpFiles(root)).length, 2)
+    assert.deepEqual(nextsparkPathsForGit(root), [], 'git picks up nothing once the build is done')
+    assert.equal(
+      await readFile(join(root, '.nextspark/backups/.gitignore'), 'utf8'),
+      '# Backups nextspark keeps on this machine: none of them belongs in git\n*\n'
+    )
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('a build with something to back up writes nothing in the tree while .nextspark/backups can\'t keep it out of git', async () => {
+  const cases = [
+    { name: '.nextspark/backups/.gitignore is a symlink', message: /\.nextspark\/backups\/\.gitignore is a symlink, which git does not read/, setUp: async (root, outside) => {
+      await writeProjectFile(outside, 'rules', '*\n')
+      await mkdir(join(root, '.nextspark/backups'), { recursive: true })
+      await symlink(join(outside, 'rules'), join(root, '.nextspark/backups/.gitignore'))
+    } },
+    { name: '.nextspark/backups/.gitignore takes a backup back', message: /has patterns other than \*, which can take a backup back into git/, setUp: async root => {
+      await writeProjectFile(root, '.nextspark/backups/.gitignore', '*\n!*/\n')
+    } },
+    { name: '.nextspark/backups is a symlink', message: /\.nextspark\/backups is a symlink/, setUp: async (root, outside) => {
+      await mkdir(join(root, '.nextspark'), { recursive: true })
+      await symlink(outside, join(root, '.nextspark/backups'))
+    } },
+    { name: '.nextspark is a file', message: /\.nextspark is not a directory/, setUp: async root => {
+      await writeProjectFile(root, '.nextspark', '')
+    } },
+  ]
+
+  // Every case runs before anything is asserted, so a failure names each one that writes
+  const wrong = []
+  for (const { name, message, setUp } of cases) {
+    const root = await createProject()
+    const outside = await mkdtemp(join(tmpdir(), 'nextspark-templates-tree-outside-'))
+    try {
+      await writeProjectFile(root, 'app/(templates)/old/layout.tsx', DASHBOARD_LAYOUT)
+      const page = await writeTemplate(root, 'pricing/page.tsx', 'page', PAGE)
+      await setUp(root, outside)
+      const before = { project: await snapshot(root), outside: await snapshot(outside) }
+
+      try {
+        await generateMissingPages([page], { projectRoot: root })
+        wrong.push(`${name}: the build went on`)
+      } catch (error) {
+        if (!message.test(error.message)) wrong.push(`${name}: ${error.message}`)
+      }
+      if ((await snapshot(root)) !== before.project) wrong.push(`${name}: wrote in the project`)
+      if ((await snapshot(outside)) !== before.outside) wrong.push(`${name}: wrote outside the project`)
+    } finally {
+      await rm(outside, { recursive: true, force: true })
+      await rm(root, { recursive: true, force: true })
+    }
+  }
+
+  assert.deepEqual(wrong, [])
+})
+
+test('a .gitignore already in .nextspark/backups with * as its only pattern is kept as it is', async () => {
+  const root = await createProject()
+  try {
+    await writeProjectFile(root, '.nextspark/backups/.gitignore', '# ours\r\n* \r\n')
+    await writeProjectFile(root, 'app/(templates)/old/layout.tsx', DASHBOARD_LAYOUT)
+    const page = await writeTemplate(root, 'pricing/page.tsx', 'page', PAGE)
+
+    await generateMissingPages([page], { projectRoot: root })
+
+    assert.equal(await readFile(join(root, '.nextspark/backups/.gitignore'), 'utf8'), '# ours\r\n* \r\n')
+    assert.deepEqual(await backedUpFiles(root), [{ path: 'app/(templates)/old/layout.tsx', content: DASHBOARD_LAYOUT }])
   } finally {
     await rm(root, { recursive: true, force: true })
   }
