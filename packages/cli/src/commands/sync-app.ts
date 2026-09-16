@@ -22,6 +22,7 @@ import {
   gitignoreIsSymlink,
   missingGitignoreEntries,
   trackedTemplatesFiles,
+  unsafeWritePlaces,
   unignoredPaths,
 } from '../utils/templates-gitignore.js';
 import { applySyncPlan, readCoreVersion, readSyncInput, readTree } from '../utils/sync-files.js';
@@ -79,9 +80,23 @@ function appBackupPrefix(coreVersion: string): string {
   return `app.backup.v${coreVersion}.${backupStamp()}-`;
 }
 
-/** A path as a warning names it: quoted when a control character in it, such as a newline, would break the line. */
+/**
+ * What breaks a line in a terminal or a log, or reorders how it reads: C0 and C1
+ * controls, DEL, the line and paragraph separators, and the bidirectional marks,
+ * embeddings, overrides and isolates.
+ */
+const BREAKS_A_LINE = /[\u0000-\u001f\u007f-\u009f\u061c\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]/;
+
+/**
+ * A path as a warning names it: quoted, with each character that would break or
+ * reorder the line escaped, when it holds one. JSON escapes the C0 controls but
+ * writes the rest as they are.
+ */
 function shownPath(path: string): string {
-  return /[\u0000-\u001f\u007f]/.test(path) ? JSON.stringify(path) : path;
+  if (!BREAKS_A_LINE.test(path)) return path;
+  return JSON.stringify(path).replace(new RegExp(BREAKS_A_LINE.source, 'g'), (character) =>
+    `\\u${character.charCodeAt(0).toString(16).padStart(4, '0')}`
+  );
 }
 
 /** How many of the paths git still picks up are named without --verbose, past which they are counted. */
@@ -153,6 +168,31 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
     const input = readSyncInput(coreDir, projectRoot, { overwrite: options.overwrite });
     const actions = planSync(input);
     const writes = actions.filter(({ kind }) => kind !== 'unchanged' && kind !== 'keep');
+
+    // Neither a dry run nor a run goes on where it can't write safely: through a
+    // symlink, what is written, replaced or removed lands wherever it points,
+    // blind to what is there and where the .gitignore can't reach, and a file or
+    // directory in the way stops a run halfway
+    const unsafe = unsafeWritePlaces(projectRoot, writes.map(({ path }) => path));
+    if (unsafe.length > 0) {
+      spinner.fail("Sync not started: sync:app can't write safely under these paths");
+      console.error(chalk.red('\n  sync:app and the registry build write under these paths:'));
+      for (const { path, problem } of unsafe) console.error(chalk.red(`    ${shownPath(path)} ${problem}`));
+      console.error(chalk.red("  Through a symlink, what they write, replace or remove lands wherever it points, and git can't tell whether it is ignored."));
+      console.error(chalk.yellow('  Make each one a directory or file of its own, of the kind that goes there, and run sync:app again.\n'));
+      process.exitCode = 1;
+      return;
+    }
+
+    // --backup's copy of app/ counts as ignored only through a line of the
+    // project's .gitignore, which git does not read when it is a symlink
+    if (options.backup && gitignoreIsSymlink(projectRoot)) {
+      spinner.fail("Sync not started: --backup's copy of app/ would be left for git");
+      console.error(chalk.red("\n  The project's .gitignore is a symlink, which git does not read, so no line there keeps app.backup.v*/ out of git."));
+      console.error(chalk.yellow('  Make .gitignore a file of its own, or run sync:app without --backup.\n'));
+      process.exitCode = 1;
+      return;
+    }
 
     // The backups sync and the registry build take under .nextspark/backups are
     // kept out of git by that directory's own .gitignore, put in place before

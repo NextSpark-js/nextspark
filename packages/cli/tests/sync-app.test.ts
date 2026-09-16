@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
-import { mkdtemp, mkdir, writeFile, readFile, readdir, rm, stat, symlink } from 'node:fs/promises'
+import { mkdtemp, mkdir, writeFile, readFile, readdir, rename, rm, stat, symlink } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
@@ -62,13 +62,21 @@ interface SyncOptions {
   confirm?: (message: string) => Promise<boolean>
 }
 
+/** What process.exit throws while a test runs sync:app, so that the test runner goes on and the code is kept. */
+class ProcessExit extends Error {
+  constructor(readonly code: number) {
+    super(`process.exit(${code})`)
+  }
+}
+
 /**
  * Run sync:app from the project root, returning what it printed without colors
- * and the code it would leave the process with (0 when it sets none).
+ * and the code it would leave the process with (0 when it sets none), whether it
+ * sets process.exitCode or calls process.exit.
  */
 async function runSyncForExit(root: string, options: SyncOptions) {
   const printed: string[] = []
-  const original = { log: console.log, warn: console.warn, error: console.error }
+  const original = { log: console.log, warn: console.warn, error: console.error, exit: process.exit }
   const capture = (...args: unknown[]) => { printed.push(args.map(String).join(' ')) }
   const previousCwd = process.cwd()
   const previousTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME
@@ -79,15 +87,20 @@ async function runSyncForExit(root: string, options: SyncOptions) {
   console.log = capture
   console.warn = capture
   console.error = capture
+  process.exit = ((code?: number) => { throw new ProcessExit(Number(code ?? 0)) }) as typeof process.exit
   process.chdir(root)
-  let exitCode: number
+  let exitCode: number | undefined
   try {
     await syncAppCommand(options)
+  } catch (error) {
+    if (!(error instanceof ProcessExit)) throw error
+    exitCode = error.code
   } finally {
-    exitCode = Number(process.exitCode ?? 0)
+    exitCode ??= Number(process.exitCode ?? 0)
+    process.exit = original.exit
     process.exitCode = previousExitCode
     process.chdir(previousCwd)
-    Object.assign(console, original)
+    Object.assign(console, { log: original.log, warn: original.warn, error: original.error })
     if (previousTheme !== undefined) process.env.NEXT_PUBLIC_ACTIVE_THEME = previousTheme
   }
 
@@ -689,8 +702,8 @@ test('a .gitignore that is a symlink, which git does not read, is not written th
     await write(root, 'rules', 'node_modules/\n')
     await symlink('rules', join(root, '.gitignore'))
 
-    const planned = await runSync(root, { dryRun: true, backup: true })
-    const printed = await runSync(root, { force: true, backup: true })
+    const planned = await runSync(root, { dryRun: true })
+    const printed = await runSync(root, { force: true })
 
     assert.equal(await readFile(join(root, 'rules'), 'utf-8'), 'node_modules/\n')
     assert.match(planned, /Would not add [^\n]*app\.backup\.v\*\/ to \.gitignore: the project's \.gitignore is a symlink, which git does not read/)
@@ -887,4 +900,138 @@ test('outside a repository, or without git on PATH, nothing a sync writes is lef
   }
 
   assert.deepEqual(leftOut, [])
+})
+
+test('a sync writes nothing where it can\'t write safely, a symlink or something else in the way, and fails, in a dry run too', { skip: process.platform === 'win32' }, async () => {
+  // Each case puts `path` in the way, pointing at `outside` when it is a symlink
+  const cases: { path: string; problem: string; args: SyncOptions; setUp: (root: string, outside: string) => Promise<void> }[] = [
+    { path: 'app/(templates)', problem: 'is a symlink', args: {}, setUp: async (root, outside) => {
+      await rm(join(root, 'app/(templates)'), { recursive: true })
+      await symlink(outside, join(root, 'app/(templates)'))
+    } },
+    { path: 'app/(templates)/dashboard', problem: 'is a symlink', args: {}, setUp: async (root, outside) => {
+      await symlink(outside, join(root, 'app/(templates)/dashboard'))
+    } },
+    { path: '.nextspark/backups', problem: 'is a symlink', args: { overwrite: ['i18n.ts'] }, setUp: async (root, outside) => {
+      await mkdir(join(root, '.nextspark'), { recursive: true })
+      await symlink(outside, join(root, '.nextspark/backups'))
+    } },
+    { path: '.nextspark/registries', problem: 'is a symlink', args: {}, setUp: async (root, outside) => {
+      await mkdir(join(root, '.nextspark'), { recursive: true })
+      await symlink(outside, join(root, '.nextspark/registries'))
+    } },
+    { path: '.nextspark/registries/index.ts', problem: 'is a symlink', args: {}, setUp: async (root, outside) => {
+      await write(outside, 'index.ts', 'export const theirs = true\n')
+      await mkdir(join(root, '.nextspark/registries'), { recursive: true })
+      await symlink(join(outside, 'index.ts'), join(root, '.nextspark/registries/index.ts'))
+    } },
+    { path: 'app/dashboard', problem: 'is a symlink', args: {}, setUp: async (root, outside) => {
+      // Core's dashboard page is newer than the project's, so a sync writes app/dashboard/page.tsx
+      await write(outside, 'page.tsx', 'export default function Theirs() { return null }\n')
+      await rm(join(root, 'app/dashboard'), { recursive: true })
+      await symlink(outside, join(root, 'app/dashboard'))
+    } },
+    { path: 'i18n.ts', problem: 'is a symlink', args: { overwrite: ['i18n.ts'] }, setUp: async (root, outside) => {
+      await rename(join(root, 'i18n.ts'), join(outside, 'i18n.ts'))
+      await symlink(join(outside, 'i18n.ts'), join(root, 'i18n.ts'))
+    } },
+    { path: 'app', problem: 'is a symlink', args: {}, setUp: async (root, outside) => {
+      await rm(outside, { recursive: true })
+      await rename(join(root, 'app'), outside)
+      await symlink(outside, join(root, 'app'))
+    } },
+    { path: '.nextspark', problem: 'is not a directory', args: { overwrite: ['i18n.ts'] }, setUp: async (root) => {
+      await write(root, '.nextspark', '')
+    } },
+  ]
+
+  // Every case runs before anything is asserted, so a failure names each place written through
+  const wrong: string[] = []
+  for (const { path, problem, args, setUp } of cases) {
+    const name = `${path} ${problem}`
+    const { root, cleanup } = await project()
+    const outside = await mkdtemp(join(tmpdir(), 'nextspark-sync-app-outside-'))
+    try {
+      execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
+      await write(root, '.gitignore', 'app/(templates)/\n.nextspark/\napp.backup.v*/\n')
+      await write(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
+      await write(outside, 'dashboard/layout.tsx', 'export default function Theirs({ children }) { return children }\n')
+      await write(root, 'app/(templates)/(public)/page.tsx', 'export default function Earlier() { return null }\n')
+      await setUp(root, outside)
+      await write(root, `${CORE}/scripts/build/registry.mjs`, treeRegistryBuild(3))
+      const before = { project: await snapshot(root), outside: await snapshot(outside) }
+
+      for (const options of [{ ...args, backup: true, dryRun: true }, { ...args, backup: true, force: true }]) {
+        const mode = options.dryRun ? 'dry run' : 'run'
+        const { printed, exitCode } = await runSyncForExit(root, options)
+        if (exitCode !== 1) wrong.push(`${name}, ${mode}: exit code ${exitCode}`)
+        if (/Sync complete/.test(printed)) wrong.push(`${name}, ${mode}: reports success`)
+        if (!printed.split('\n').some((line) => line.trim() === name)) wrong.push(`${name}, ${mode}: does not name it`)
+      }
+
+      if ((await snapshot(outside)) !== before.outside) wrong.push(`${name}: wrote outside the project`)
+      if ((await snapshot(root)) !== before.project) wrong.push(`${name}: wrote in the project`)
+    } finally {
+      await rm(outside, { recursive: true, force: true })
+      await cleanup()
+    }
+  }
+
+  assert.deepEqual(wrong, [])
+})
+
+test("--backup stops before it writes anything when the project's .gitignore is a symlink, which git does not read", async () => {
+  const { root, cleanup } = await project()
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
+    await write(root, 'rules', 'app/(templates)/\n.nextspark/\napp.backup.v*/\n')
+    await symlink('rules', join(root, '.gitignore'))
+    const before = await snapshot(root)
+
+    for (const options of [{ dryRun: true, backup: true }, { force: true, backup: true }]) {
+      const { printed, exitCode } = await runSyncForExit(root, options)
+      assert.equal(exitCode, 1, JSON.stringify(options))
+      assert.match(printed, /The project's \.gitignore is a symlink, which git does not read, so no line there keeps app\.backup\.v\*\/ out of git/)
+      assert.doesNotMatch(printed, /Sync complete/)
+    }
+    assert.equal(await snapshot(root), before, 'nothing is written')
+  } finally {
+    await cleanup()
+  }
+})
+
+test('a path git still picks up is named on a line of its own, whatever line separators or bidirectional controls its name holds', { skip: process.platform === 'win32' }, async () => {
+  const { root, cleanup } = await project()
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
+    await write(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
+    await write(root, 'app/.gitignore', '!(templates)/\n')
+    // Each name, and how a warning shows it
+    const names: [string, string][] = [
+      ['line\u2028separator.tsx', 'line\\u2028separator.tsx'],
+      ['paragraph\u2029separator.tsx', 'paragraph\\u2029separator.tsx'],
+      ['next\u0085line.tsx', 'next\\u0085line.tsx'],
+      ['right-to-left\u202eoverride.tsx', 'right-to-left\\u202eoverride.tsx'],
+      ['arabic\u061cletter mark.tsx', 'arabic\\u061cletter mark.tsx'],
+      ['isolate\u2066d.tsx', 'isolate\\u2066d.tsx'],
+      ['delete\u007f.tsx', 'delete\\u007f.tsx'],
+    ]
+    await write(root, `${CORE}/scripts/build/registry.mjs`, `import { mkdirSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+const root = process.env.NEXTSPARK_PROJECT_ROOT
+mkdirSync(join(root, 'app/(templates)'), { recursive: true })
+for (const name of ${JSON.stringify(names.map(([name]) => name))}) writeFileSync(join(root, 'app/(templates)', name), '')
+`)
+
+    for (const verbose of [false, true]) {
+      const printed = await runSync(root, { force: true, verbose })
+      assert.doesNotMatch(printed, /[\u007f-\u009f\u061c\u2028\u2029\u202a-\u202e\u2066-\u2069]/, `verbose: ${verbose}`)
+      const lines = printed.split('\n').map((line) => line.trim())
+      for (const [, shown] of names) {
+        assert.ok(lines.includes(`"app/(templates)/${shown}"`), `verbose: ${verbose}: ${shown} is named on a line of its own`)
+      }
+    }
+  } finally {
+    await cleanup()
+  }
 })

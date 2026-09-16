@@ -14,6 +14,7 @@ import {
   generatedPathsOnDisk,
   missingGitignoreEntries,
   trackedTemplatesFiles,
+  unsafeWritePlaces,
 } from '../src/utils/templates-gitignore.js'
 
 async function project() {
@@ -504,4 +505,58 @@ test('without git to ask, a line counts only below the .gitignore\'s last negati
   }
 
   assert.deepEqual(wrong, [])
+})
+
+test('a symlink where sync:app writes, or something else in the way, is found, and a symlink is listed as the file git sees, not gone through', async () => {
+  const { root, cleanup } = await project()
+  const outside = await project()
+  try {
+    await mkdir(join(outside.root, 'dashboard'), { recursive: true })
+    await writeFile(join(outside.root, 'dashboard/layout.tsx'), '')
+    await mkdir(join(root, 'app'), { recursive: true })
+    await mkdir(join(root, '.nextspark/backups/2026-09-16T00-00-00-000Z-q1w2e3'), { recursive: true })
+    await writeFile(join(root, '.nextspark/backups/2026-09-16T00-00-00-000Z-q1w2e3/i18n.ts'), '')
+
+    assert.deepEqual(unsafeWritePlaces(root), [])
+
+    await symlink(outside.root, join(root, 'app/(templates)'))
+    assert.deepEqual(unsafeWritePlaces(root), [{ path: 'app/(templates)', problem: 'is a symlink' }])
+    assert.ok(generatedPathsOnDisk(root).includes('app/(templates)'), 'the symlink is listed')
+    assert.ok(!generatedPathsOnDisk(root).some((path) => path.startsWith('app/(templates)/')), 'nothing past it is')
+
+    await rm(join(root, 'app/(templates)'))
+    await mkdir(join(root, 'app/(templates)/(public)'), { recursive: true })
+    await symlink(join(outside.root, 'dashboard'), join(root, 'app/(templates)/(public)/dashboard'))
+    await symlink(join(outside.root, 'missing'), join(root, '.nextspark/sync-state.json'))
+    await symlink(join(outside.root, 'dashboard'), join(root, '.nextspark/registries'))
+    await symlink(join(outside.root, 'dashboard'), join(root, 'app/dashboard'))
+    assert.deepEqual(unsafeWritePlaces(root, ['app/dashboard/page.tsx', 'app/layout.tsx', 'i18n.ts']), [
+      { path: '.nextspark/registries', problem: 'is a symlink' },
+      { path: '.nextspark/sync-state.json', problem: 'is a symlink' },
+      { path: 'app/dashboard', problem: 'is a symlink' },
+      { path: 'app/(templates)/(public)/dashboard', problem: 'is a symlink' },
+    ])
+    assert.deepEqual(unsafeWritePlaces(root).map(({ path }) => path), [
+      '.nextspark/registries',
+      '.nextspark/sync-state.json',
+      'app/(templates)/(public)/dashboard',
+    ], 'app/dashboard counts only when a sync writes under it')
+
+    await rm(join(root, '.nextspark/registries'))
+    await mkdir(join(root, '.nextspark/registries'))
+    await symlink(join(outside.root, 'index.ts'), join(root, '.nextspark/registries/index.ts'))
+    assert.ok(unsafeWritePlaces(root).some(({ path }) => path === '.nextspark/registries/index.ts'), 'a symlink in the registries is found')
+
+    await rm(join(root, '.nextspark'), { recursive: true })
+    await writeFile(join(root, '.nextspark'), '')
+    await rm(join(root, 'app'), { recursive: true })
+    await symlink(outside.root, join(root, 'app'))
+    assert.deepEqual(unsafeWritePlaces(root), [
+      { path: 'app', problem: 'is a symlink' },
+      { path: '.nextspark', problem: 'is not a directory' },
+    ])
+  } finally {
+    await outside.cleanup()
+    await cleanup()
+  }
 })
