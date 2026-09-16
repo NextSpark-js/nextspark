@@ -5,7 +5,7 @@
  * create-nextspark-app starts from can resolve another pnpm than the new project does.
  *
  * `pnpm` and `npx` are replaced by scripts on PATH: `pnpm --version` answers the way Corepack
- * resolves it, and `pnpm add` leaves core "installed".
+ * resolves it, and `pnpm add` records its arguments and leaves core "installed".
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -30,7 +30,7 @@ while [ "$dir" != "/" ]; do
 done
 case "$1" in
   --version) echo "$version" ;;
-  add) mkdir -p node_modules/@nextsparkjs/core ;;
+  add) echo "$@" > "$FAKE_PNPM_ADD_LOG"; mkdir -p node_modules/@nextsparkjs/core ;;
 esac
 `
 
@@ -46,6 +46,8 @@ interface Created {
   packageJson: { pnpm?: { onlyBuiltDependencies?: string[] } }
   /** The keys of `allowBuilds`, or null when there is no pnpm-workspace.yaml. */
   allowBuilds: string[] | null
+  /** What `pnpm add` was asked to install. */
+  added: string[]
 }
 
 async function create({ callerPnpm, projectPnpm }: Scenario): Promise<Created> {
@@ -53,6 +55,7 @@ async function create({ callerPnpm, projectPnpm }: Scenario): Promise<Created> {
   const bin = path.join(root, 'bin')
   const caller = path.join(root, 'caller')
   const project = path.join(root, 'projects', 'my-app')
+  const addLog = path.join(root, 'pnpm-add.log')
 
   fs.mkdirSync(bin)
   fs.writeFileSync(path.join(bin, 'pnpm'), FAKE_PNPM, { mode: 0o755 })
@@ -66,12 +69,14 @@ async function create({ callerPnpm, projectPnpm }: Scenario): Promise<Created> {
   process.chdir(caller)
   process.env.PATH = `${bin}${path.delimiter}${previousPath}`
   process.env.FAKE_PNPM_DEFAULT_VERSION = projectPnpm
+  process.env.FAKE_PNPM_ADD_LOG = addLog
   try {
     await createProject({ projectName: 'my-app', projectPath: project })
   } finally {
     process.chdir(previousCwd)
     process.env.PATH = previousPath
     delete process.env.FAKE_PNPM_DEFAULT_VERSION
+    delete process.env.FAKE_PNPM_ADD_LOG
   }
 
   const workspaceYaml = path.join(project, 'pnpm-workspace.yaml')
@@ -81,6 +86,7 @@ async function create({ callerPnpm, projectPnpm }: Scenario): Promise<Created> {
     allowBuilds: fs.existsSync(workspaceYaml)
       ? [...fs.readFileSync(workspaceYaml, 'utf8').matchAll(/^ {2}'([^']+)': true$/gm)].map(match => match[1])
       : null,
+    added: fs.readFileSync(addLog, 'utf8').trim().split(/\s+/).slice(1),
   }
   fs.rmSync(root, { recursive: true, force: true })
   return created
@@ -154,4 +160,12 @@ test('the allowlist names every package with an install script that this reposit
   assert.ok(required.includes('esbuild'), `the scan found no esbuild; is the repository installed? Found: ${required.join(', ')}`)
   const missing = required.filter(name => !allowBuilds.includes(name))
   assert.deepEqual(missing, [], `pnpm 11 fails the install over each of these: ${missing.join(', ')}`)
+})
+
+test('the project pins the @better-fetch/fetch better-auth depends on, which @better-auth/core requires as a peer', async () => {
+  const { added } = await create({ callerPnpm: '11.17.0', projectPnpm: '11.17.0' })
+
+  const betterAuth = fs.realpathSync(path.join(REPO, 'packages/core/node_modules/better-auth'))
+  const pinned = JSON.parse(fs.readFileSync(path.join(betterAuth, 'package.json'), 'utf8')).dependencies['@better-fetch/fetch']
+  assert.ok(added.includes(`@better-fetch/fetch@${pinned}`), `expected @better-fetch/fetch@${pinned} in: ${added.join(' ')}`)
 })

@@ -303,7 +303,8 @@ export async function updatePackageJson(config: WizardConfig): Promise<void> {
     'react-dom': '^19.0.0',
     // Auth
     'better-auth': '~1.6.30',
-    '@better-fetch/fetch': '^1.1.0',
+    // The exact version better-auth pins, which @better-auth/core requires as a peer
+    '@better-fetch/fetch': '1.3.1',
     // i18n
     'next-intl': '^4.11.0',
     // Build tools

@@ -241,7 +241,9 @@ export async function createProject(options: ProjectOptions): Promise<void> {
       'react-dom',
       'next-intl@4.11.0',
       'better-auth@~1.6.30',
-      '@better-fetch/fetch',
+      // better-auth pins this exact version and @better-auth/core requires it as a
+      // peer; the template proxy.ts imports it directly, so the project declares it.
+      '@better-fetch/fetch@1.3.1',
       'jiti',
       // Imported directly by shipped app routes (devtools docs/tests + media upload).
       // Must be direct project deps, not phantom-hoisted from @nextsparkjs/core,

@@ -104,6 +104,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     and a core installed from a local tarball is listed by its `file:` spec, the only form pnpm
     matches it by; pnpm 11 failed the install with `ERR_PNPM_IGNORED_BUILDS` over each one left
     out.
+  - **A new project declares `@better-fetch/fetch` `1.3.1`,** the exact version better-auth
+    depends on and `@better-auth/core` requires as a peer. `create-nextspark-app` added it
+    unversioned and `nextspark init` as `^1.1.0`, both resolving 1.3.2, an unmet peer that stops
+    an install with strict peers.
+  - **The langchain plugin moves to `@langchain/openai` `^0.6.17` (with `@langchain/core`
+    `^0.3.68`, its floor) and drops `@langchain/community`,** which none of its code imports.
+    0.3 converted zod schemas through `openai/helpers/zod`, which reads only zod 3, so every tool
+    and structured-output schema the plugin wrote with zod 4 reached OpenAI as an empty JSON
+    Schema. `@langchain/community` brought Stagehand, whose `zod ^3.23.8` peer failed. One peer
+    stays unmet and stops an install with strict peers: `openai@5.12.2`'s optional
+    `zod ^3.23.8`, whose zod helpers 0.6 only calls for zod 3 schemas; the default install is
+    unaffected. `.describe()` texts still don't reach the model: `@langchain/core` 0.3 converts
+    with its own zod 3.25, whose registry doesn't hold zod 4's metadata. An existing project keeps
+    the old dependencies in `contents/plugins/langchain` until it re-adds the plugin with
+    `--force`.
 
 - **`generateTemplateRegistry()` returns `Promise<string>` (#197).** It reads each theme
   template's syntax tree to tell a component override from a metadata-only one, and the
