@@ -65,6 +65,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `import type * as z from 'zod'`.
   - New projects get an `eslint.config.mjs` with a `no-restricted-syntax` rule that rejects
     the named import. An existing project keeps its own config; add the same rule to it.
+- **Next.js 16 is what `init` generates, and Next 15 keeps working (#192).** A new project
+  installs `next@^16.3.5`; an existing project on Next 15 keeps building and running, and
+  core's `next` peer is `>=15.0.0`. What an existing project sees when it updates core:
+  - **`revalidateTag` is called through `@nextsparkjs/core/lib/cache/revalidate-tag`.**
+    Next 16 requires a `cacheLife` profile as the second argument and rejects the
+    one-argument call at type-check time, while Next 15 declares one parameter and rejects
+    the two-argument call. The helper passes `{ expire: 0 }`, which Next 16 routes through
+    the same branch as no profile at all, so tags still expire immediately instead of
+    turning into stale-while-revalidate. Nothing to change in project code: the entity
+    actions already call it.
+  - **`next.config.mjs` attaches its `webpack()` function only on Next 15.** From Next 16
+    the default bundler is Turbopack, which never reads it; `@nextsparkjs/registries`
+    resolves through the `paths` of `tsconfig.json` instead. A project that copied the
+    template config keeps its own copy until it re-syncs.
+  - **The generated `lint` script is `eslint .`,** since Next 16 removes `next lint`, and
+    `eslint-config-next` moves to `^16.3.5`. An existing project keeps whatever `lint`
+    script it already has.
+  - **Node 20.9 is the floor** for the CLI and `create-nextspark-app`, as Next 16 requires.
+
 - **`generateTemplateRegistry()` returns `Promise<string>` (#197).** It reads each theme
   template's syntax tree to tell a component override from a metadata-only one, and the
   TypeScript parser loads asynchronously. Code importing it from
