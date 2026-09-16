@@ -327,7 +327,7 @@ describe('createMcpEngine', () => {
             inputSchema: {},
             strictSchema: { safeParse: () => ({ success: true, data: {} }) } as never,
             handler: async () => {
-              // eslint-disable-next-line @typescript-eslint/no-throw-literal
+              // eslint-disable-next-line @typescript-eslint/only-throw-error
               throw 'plain string blowup';
             },
           },

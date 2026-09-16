@@ -17,8 +17,10 @@ export default [
       parser: tsParser,
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
-    // Disable comments in the code name rules of these plugins. Registering them keeps those
-    // comments valid without turning any of their rules on.
+    // Disable comments in the code name rules of these plugins. Registering them lets ESLint
+    // resolve those names without turning any of their rules on -- but only for names the
+    // installed plugin still defines: a comment naming a rule the plugin dropped is an error
+    // on its own, whatever the rule's severity would have been.
     plugins: {
       '@typescript-eslint': tsPlugin,
       '@next/next': nextPlugin,
