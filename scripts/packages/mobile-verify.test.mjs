@@ -75,7 +75,7 @@ async function waitUntil(condition, timeoutMs) {
   return condition()
 }
 
-/** A TCP port nothing is listening on right now, for a grandchild to take and this test to check. */
+/** A TCP port nothing is listening on right now, for a test process to take and this test to check. */
 function findFreePort() {
   return new Promise((resolve, reject) => {
     const probe = createServer()
@@ -93,15 +93,6 @@ function isPortFree(port) {
     probe.once('error', () => resolve(false))
     probe.listen(port, '127.0.0.1', () => probe.close(() => resolve(true)))
   })
-}
-
-async function waitUntilPortFree(port, timeoutMs) {
-  const deadline = Date.now() + timeoutMs
-  while (Date.now() < deadline) {
-    if (await isPortFree(port)) return true
-    await new Promise((resolve) => setTimeout(resolve, 50))
-  }
-  return isPortFree(port)
 }
 
 /** A process that binds `port` and holds it forever, standing in for a server a step left behind. */
@@ -257,11 +248,23 @@ test('listDescendantPids returns null instead of a partial list when a generatio
   )
 })
 
+test('listDescendantPids gives up once the whole walk outlasts its budget, even though each call answers quickly', () => {
+  let nextPid = 1000
+  const started = Date.now()
+  // Every call answers instantly with one brand-new pid, so a tree that never
+  // stops growing would walk forever without a budget on the walk itself -
+  // each individual PowerShell call's own timeout never fires.
+  const result = listDescendantPids(1, {
+    spawnPowershell: () => ({ error: null, status: 0, stdout: String(nextPid++) }),
+    walkBudgetMs: 200,
+  })
+  const elapsed = Date.now() - started
+  assert.equal(result, null, 'a walk that never finishes must not be reported as a complete list')
+  assert.ok(elapsed < 1_500, `must give up around walkBudgetMs instead of walking forever (${elapsed}ms)`)
+})
+
 // The three ways a real taskkill can fail to be trusted (see the tests above):
 // missing from PATH, refused, or exiting 0 without having killed anything.
-// Each leaves the leader's own descendants - not just the leader - alive on
-// main, which none of the win32 tests above exercise since their child has
-// no descendants of its own.
 const UNTRUSTED_TASKKILL_MODES = [
   ['is not on PATH', () => ({ error: Object.assign(new Error('spawn taskkill ENOENT'), { code: 'ENOENT' }) })],
   ['exits non-zero (e.g. access denied)', () => ({ error: null, status: 5, stderr: 'ERROR: Access is denied.\n' })],
@@ -269,32 +272,80 @@ const UNTRUSTED_TASKKILL_MODES = [
 ]
 
 for (const [label, spawnTaskkill] of UNTRUSTED_TASKKILL_MODES) {
-  test(`killProcessGroup on win32 kills a grandchild holding a port when taskkill ${label}`, async () => {
+  test(`killProcessGroup on win32 never signals a pid known only from descendant enumeration when taskkill ${label}`, async () => {
     const port = await findFreePort()
     const leader = spawn(...LONG_RUNNING, { stdio: 'ignore' })
-    const child = spawn(...LONG_RUNNING, { stdio: 'ignore' })
-    const grandchild = spawn(process.execPath, ['-e', portHolder(port)], { stdio: 'ignore' })
+    // Not a real child of leader: stands in for the gap between listing a
+    // descendant and using it, where an unrelated process could have reused
+    // its pid. killProcessGroup must never find out the difference and must
+    // treat every enumerated pid this way, so it must never signal this one.
+    const enumeratedOnly = spawn(process.execPath, ['-e', portHolder(port)], { stdio: 'ignore' })
     await new Promise((resolve) => setTimeout(resolve, 300))
-    assert.equal(await isPortFree(port), false, 'the grandchild must actually hold the port before the kill')
+    assert.equal(await isPortFree(port), false, 'the enumerated process must actually hold the port before the call')
 
-    try {
+    const { result: ok, logs } = await withCapturedLogAsync(() =>
       killProcessGroup(leader.pid, {
         platform: 'win32',
         spawnTaskkill,
-        spawnPowershell: fakePowershellFor({ [leader.pid]: [child.pid], [child.pid]: [grandchild.pid] }),
-      })
+        spawnPowershell: fakePowershellFor({ [leader.pid]: [enumeratedOnly.pid] }),
+        killLeader: () => leader.kill('SIGKILL'),
+      }),
+    )
+
+    try {
+      assert.equal(ok, false, 'an unconfirmed descendant must not be reported as a clean kill')
+      assert.ok(await waitUntil(() => !isRunning(leader.pid), 5_000), 'the leader must still be killed, through its own handle')
+      assert.equal(isRunning(enumeratedOnly.pid), true, 'a pid known only from enumeration must never be signalled')
+      assert.equal(await isPortFree(port), false, 'a port held by a pid known only from enumeration must not be assumed free')
       assert.ok(
-        await waitUntil(() => !isRunning(leader.pid) && !isRunning(child.pid) && !isRunning(grandchild.pid), 5_000),
-        'the leader, its child and its grandchild must all be gone, not just the leader',
+        logs.some((line) => line.includes(String(enumeratedOnly.pid)) && line.includes('taskkill /PID')),
+        `must name the survivor and how to end it by hand:\n${logs.join('\n')}`,
       )
-      assert.ok(await waitUntilPortFree(port, 5_000), 'the port the grandchild held must be free again')
     } finally {
-      for (const pid of [leader.pid, child.pid, grandchild.pid]) {
-        if (isRunning(pid)) process.kill(pid, 'SIGKILL')
-      }
+      if (isRunning(leader.pid)) process.kill(leader.pid, 'SIGKILL')
+      if (isRunning(enumeratedOnly.pid)) process.kill(enumeratedOnly.pid, 'SIGKILL')
     }
   })
 }
+
+test('killProcessGroup on win32 fails a port a step declares even when every enumerated pid is confirmed gone', async () => {
+  const port = await findFreePort()
+  // Stands in for a descendant taskkill's own /T did not walk and
+  // listDescendantPids never reported: outside anything PID-based, but still
+  // reachable through the port itself.
+  const invisible = spawn(process.execPath, ['-e', portHolder(port)], { stdio: 'ignore' })
+  await new Promise((resolve) => setTimeout(resolve, 300))
+  assert.equal(await isPortFree(port), false, 'the invisible process must actually hold the port before the call')
+
+  const { result: ok, logs } = withCapturedLog(() =>
+    killProcessGroup(4242, {
+      platform: 'win32',
+      spawnTaskkill: () => ({ error: null, status: 0, stderr: '' }),
+      spawnPowershell: NO_DESCENDANTS,
+      isRunning: () => false,
+      ports: [port],
+    }),
+  )
+
+  try {
+    assert.equal(ok, false, 'a port still held must not be reported as a clean kill, no matter what PID checks say')
+    assert.ok(logs.some((line) => line.includes(String(port))), logs.join('\n'))
+  } finally {
+    process.kill(invisible.pid, 'SIGKILL')
+  }
+})
+
+test('killProcessGroup on win32 confirms success once every declared port is free too', async () => {
+  const port = await findFreePort()
+  const ok = killProcessGroup(4242, {
+    platform: 'win32',
+    spawnTaskkill: () => ({ error: null, status: 0, stderr: '' }),
+    spawnPowershell: NO_DESCENDANTS,
+    isRunning: () => false,
+    ports: [port],
+  })
+  assert.equal(ok, true)
+})
 
 test('killProcessGroup on win32 fails instead of declaring success when descendants cannot be listed', () => {
   const { result: ok, logs } = withCapturedLog(() =>

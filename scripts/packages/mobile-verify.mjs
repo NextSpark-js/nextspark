@@ -131,20 +131,34 @@ const LEFTOVER_GRACE_MS = 1000
 const TASKKILL_TIMEOUT_MS = 10 * 1000
 const DESCENDANT_ENUM_TIMEOUT_MS = 10 * 1000
 
+// Bounds the whole generation-by-generation walk in listDescendantPids, on
+// top of each call's own timeout above: a tree that keeps growing as it is
+// walked (each generation answering quickly with new pids of its own) would
+// otherwise lengthen the walk without limit even though no single call hangs.
+const DESCENDANT_WALK_BUDGET_MS = 30 * 1000
+
 /**
  * PIDs of every process descending from `pid` on Windows, found by walking
  * Win32_Process.ParentProcessId with PowerShell one generation at a time so a
- * child's own children are followed too (taskkill's own /T is not trusted to
- * have found them all - see killProcessGroup). Returns null instead of a
- * partial list when a generation could not be listed (PowerShell missing,
- * refused, or itself timed out), so a caller can tell "no descendants" apart
- * from "descendants unknown".
+ * child's own children are followed too. This list is informational only
+ * (see killProcessGroup): it is never used to target a kill, only to report
+ * what is still running. Returns null instead of a partial list when a
+ * generation could not be listed (PowerShell missing, refused, or itself
+ * timed out) or when the walk runs past walkBudgetMs (a tree that keeps
+ * growing as fast as it is walked), so a caller can tell "no descendants"
+ * apart from "descendants unknown".
  */
-function listDescendantPids(pid, { spawnPowershell = spawnSync, timeoutMs = DESCENDANT_ENUM_TIMEOUT_MS } = {}) {
+function listDescendantPids(pid, {
+  spawnPowershell = spawnSync,
+  timeoutMs = DESCENDANT_ENUM_TIMEOUT_MS,
+  walkBudgetMs = DESCENDANT_WALK_BUDGET_MS,
+} = {}) {
   const descendants = []
   const seen = new Set()
   const frontier = [pid]
+  const deadline = Date.now() + walkBudgetMs
   while (frontier.length > 0) {
+    if (Date.now() > deadline) return null
     const parent = frontier.shift()
     const result = spawnPowershell(
       'powershell',
@@ -169,6 +183,25 @@ function listDescendantPids(pid, { spawnPowershell = spawnSync, timeoutMs = DESC
 }
 
 /**
+ * Whether nothing is listening on `port` right now, checked by trying to bind
+ * it rather than by asking for a pid: a descendant that still holds a port
+ * can exist outside anything listDescendantPids found (see killProcessGroup),
+ * so this is the one confirmation a step's declared port gets that does not
+ * depend on enumeration having found everything. Runs the bind attempt in its
+ * own child process, bounded by timeoutMs, so this stays synchronous like the
+ * rest of killProcessGroup - node:net has no blocking bind call.
+ */
+function probePortFree(port, { timeoutMs = TASKKILL_TIMEOUT_MS } = {}) {
+  const script = `
+    const server = require('node:net').createServer()
+    server.once('error', () => process.exit(1))
+    server.listen(${Number(port)}, '127.0.0.1', () => server.close(() => process.exit(0)))
+  `
+  const result = spawnSync(process.execPath, ['-e', script], { timeout: timeoutMs })
+  return result.status === 0
+}
+
+/**
  * SIGKILL to the negative pid targets the whole process group `detached: true`
  * made this child the leader of, so descendants a hung Jest or Metro spawned
  * (workers, the Watchman crawl, a bound port) die with it instead of being
@@ -182,17 +215,28 @@ function listDescendantPids(pid, { spawnPowershell = spawnSync, timeoutMs = DESC
  *
  * taskkill's own report is not trusted on its own: it can fail to run at all
  * (missing from PATH), run and refuse (access denied on a more-privileged
- * process), exit 0 without the pid actually being gone (a race with the
- * process's own exit), or walk a tree that leaves a descendant out (a child
- * reparented before its /T reached it). So every descendant of pid is listed
- * independently through listDescendantPids, and the pid together with each
- * descendant still running gets Node's own SIGKILL next - which does not go
- * through taskkill and so does not share its failure modes - before this
- * gives up. When the descendants cannot be listed at all (PowerShell missing,
- * refused, or its own call timed out), this returns false naming the pid
- * instead of checking only the leader and calling the group clean.
+ * process), or exit 0 without the pid actually being gone (a race with the
+ * process's own exit). So the leader, if still running, gets a second
+ * attempt through its own handle (`killLeader`, `child.kill()` in
+ * production) instead of through taskkill - a handle Node keeps valid only
+ * while it has not yet reaped the process, so it cannot land on an unrelated
+ * process that later reuses the same pid.
  *
- * Returns whether the pid and every listed descendant were confirmed gone.
+ * Every descendant of pid is also listed, through listDescendantPids, but
+ * only to say what is still running: this never signals a pid known solely
+ * from that enumeration. Between listing it and any later use, the process it
+ * named can have exited and had its pid reused by something unrelated -
+ * taskkill's own `/T` is the only thing here that may end a descendant,
+ * because it targets the tree by the leader's identity, not by a pid read
+ * off a snapshot. Killing a process that happens to reuse a stale pid is
+ * worse than leaving a dev server running, so an enumerated descendant still
+ * alive here, a descendant list that could not be produced at all (PowerShell
+ * missing, refused, its own call timed out, or the walk outlasting its
+ * budget), or a port the caller declares still being held, all make this
+ * return false naming what could not be confirmed instead of guessing clean.
+ *
+ * Returns whether the leader and every listed descendant were confirmed gone,
+ * and every port `ports` names confirmed free.
  * kill(2) can refuse too (EPERM) on POSIX, where a failed kill only means
  * "not confirmed": what happens to the group is left to its `exit` event,
  * since macOS also answers EPERM for a group whose processes have all
@@ -204,11 +248,15 @@ function listDescendantPids(pid, { spawnPowershell = spawnSync, timeoutMs = DESC
 function killProcessGroup(pid, {
   platform = process.platform,
   kill = process.kill,
+  killLeader = () => kill(pid, 'SIGKILL'),
   spawnTaskkill = spawnSync,
   spawnPowershell = spawnSync,
   isRunning = isProcessRunning,
+  isPortFree = probePortFree,
   taskkillTimeoutMs = TASKKILL_TIMEOUT_MS,
   descendantTimeoutMs = DESCENDANT_ENUM_TIMEOUT_MS,
+  descendantWalkBudgetMs = DESCENDANT_WALK_BUDGET_MS,
+  ports = [],
 } = {}) {
   if (platform === 'win32') {
     const result = spawnTaskkill('taskkill', ['/pid', String(pid), '/T', '/F'], { timeout: taskkillTimeoutMs })
@@ -221,29 +269,42 @@ function killProcessGroup(pid, {
       console.log(`${RED}taskkill exited ${result.status} for pid ${pid}: ${String(result.stderr ?? '').trim()}${NC}`)
     }
 
-    const descendants = listDescendantPids(pid, { spawnPowershell, timeoutMs: descendantTimeoutMs })
+    if (isRunning(pid)) {
+      try {
+        killLeader()
+      } catch (error) {
+        // ESRCH: gone already, which is what this fallback was for.
+        if (error.code !== 'ESRCH') {
+          console.log(`${RED}Fallback kill failed for pid ${pid}: ${error.message}${NC}`)
+        }
+      }
+    }
+
+    const descendants = listDescendantPids(pid, {
+      spawnPowershell,
+      timeoutMs: descendantTimeoutMs,
+      walkBudgetMs: descendantWalkBudgetMs,
+    })
     if (descendants === null) {
       console.log(`${RED}Could not list descendants of pid ${pid}; some may still be running${NC}`)
       return false
     }
 
-    const remaining = []
-    for (const target of [pid, ...descendants]) {
-      if (!isRunning(target)) continue
-      try {
-        kill(target, 'SIGKILL')
-      } catch (error) {
-        // ESRCH: gone already, which is what this fallback was for.
-        if (error.code !== 'ESRCH') {
-          console.log(`${RED}Fallback kill failed for pid ${target}: ${error.message}${NC}`)
-        }
-      }
-      if (isRunning(target)) remaining.push(target)
+    // Reports what is still running; never signals any of it (see above).
+    const survivors = [pid, ...descendants].filter(isRunning)
+    if (survivors.length > 0) {
+      const message = survivors.length === 1
+        ? `pid ${survivors[0]} is still running after taskkill and the fallback kill; end it by hand: taskkill /PID ${survivors[0]} /T /F`
+        : `pids ${survivors.join(', ')} are still running after taskkill and the fallback kill; end each by hand: taskkill /PID <pid> /T /F`
+      console.log(`${RED}${message}${NC}`)
+      return false
     }
-    if (remaining.length > 0) {
-      const message = remaining.length === 1
-        ? `pid ${remaining[0]} is still running after taskkill and the fallback kill`
-        : `pids ${remaining.join(', ')} are still running after taskkill and the fallback kill`
+
+    const heldPorts = ports.filter((port) => !isPortFree(port, { timeoutMs: taskkillTimeoutMs }))
+    if (heldPorts.length > 0) {
+      const message = heldPorts.length === 1
+        ? `port ${heldPorts[0]} is still held after killing pid ${pid}: a descendant outside what taskkill and enumeration confirmed may still be running`
+        : `ports ${heldPorts.join(', ')} are still held after killing pid ${pid}: a descendant outside what taskkill and enumeration confirmed may still be running`
       console.log(`${RED}${message}${NC}`)
       return false
     }
@@ -261,11 +322,13 @@ function killProcessGroup(pid, {
 }
 
 // Every child exec() spawned whose `exit` it has not seen, by pid, with the
-// command it runs. A step's subprocess is the leader of its own detached
-// process group (see exec below), which is a different group from this
-// script's, so a signal sent to this script's pid never reaches it on its
-// own: tracking it here is what lets the SIGTERM/SIGINT handlers reach it
-// too, and what lets reportLeftoverChildren name one that outlives the run.
+// command it runs and the ChildProcess itself. A step's subprocess is the
+// leader of its own detached process group (see exec below), which is a
+// different group from this script's, so a signal sent to this script's pid
+// never reaches it on its own: tracking it here is what lets the
+// SIGTERM/SIGINT handlers reach it too, what lets reportLeftoverChildren name
+// one that outlives the run, and what lets a kill of the leader go through
+// its own handle (child.kill()) instead of a bare pid.
 const runningChildren = new Map()
 
 // Process groups a step's leader left processes in when it exited, by process
@@ -326,7 +389,7 @@ function exec(command, args, cwd, {
     child.stdout.pipe(process.stdout, { end: false })
     child.stderr.pipe(process.stderr, { end: false })
     const commandLine = [command, ...args].join(' ')
-    runningChildren.set(child.pid, commandLine)
+    runningChildren.set(child.pid, { commandLine, child })
 
     // With its pipes closed and its handle unref'd, nothing of the child ties
     // this script's event loop to it any longer.
@@ -353,7 +416,7 @@ function exec(command, args, cwd, {
     const timer = setTimeout(() => {
       timedOut = true
       console.log(`${RED}Timed out after ${timeoutMs / 1000}s: ${commandLine}${NC}`)
-      const delivered = killGroup(child.pid)
+      const delivered = killGroup(child.pid, { killLeader: () => child.kill('SIGKILL') })
       // An undelivered kill never makes `exit` arrive, and a delivered one
       // does not either while the process is stuck in uninterruptible I/O.
       giveUpTimer = setTimeout(() => {
@@ -414,7 +477,7 @@ async function reportLeftoverChildren() {
     await new Promise((resolve) => setTimeout(resolve, 50))
   }
   let count = 0
-  for (const [pid, commandLine] of runningChildren) {
+  for (const [pid, { commandLine }] of runningChildren) {
     if (!isProcessRunning(pid)) continue
     count++
     console.log(`${RED}Left running: pid ${pid} (${commandLine})${NC}`)
@@ -451,7 +514,7 @@ async function cancelActiveChildrenAndExit(exitCode, {
   cleanupTimeoutMs = CLEANUP_TIMEOUT_MS,
   killProcessGroup: killGroup = killProcessGroup,
 } = {}) {
-  for (const pid of runningChildren.keys()) killGroup(pid)
+  for (const [pid, { child }] of runningChildren) killGroup(pid, { killLeader: () => child.kill('SIGKILL') })
   for (const pgid of strayGroups.keys()) {
     if (groupHasProcesses(pgid)) killGroup(pgid)
   }
