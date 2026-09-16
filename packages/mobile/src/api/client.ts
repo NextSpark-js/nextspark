@@ -32,6 +32,17 @@ function hostFromHostUri(hostUri: string): string {
 }
 
 /**
+ * Whether a hostUri host names the loopback interface, which is what Metro
+ * reports when Expo binds the dev server to the machine it runs on (an
+ * `adb reverse` tunnel on a physical device, or the iOS simulator/web
+ * sharing the host's network). The Android emulator is a separate machine
+ * from that loopback's point of view, so it alone needs a translated host.
+ */
+function isLoopbackHost(host: string): boolean {
+  return host === 'localhost' || host === '127.0.0.1' || host === '[::1]'
+}
+
+/**
  * Resolve API URL from configuration
  *
  * Priority order:
@@ -61,18 +72,20 @@ export function getApiUrl(): string {
   const envUrl = process.env.EXPO_PUBLIC_API_URL
   if (envUrl) return envUrl
 
-  // 3. Auto-detect from Expo dev server (development mode). A physical
-  // Android device is assumed to reach the dev machine through an `adb
-  // reverse` tunnel, same as the fallback below: hostUri's host is the dev
-  // machine's own network address, which the tunnel bypasses, so it is
-  // ignored here in favor of localhost. Every other platform (including the
-  // Android emulator, which can reach that address through its virtual NAT)
-  // uses hostUri's host as-is.
+  // 3. Auto-detect from Expo dev server (development mode). hostUri's host
+  // is the dev machine's own network address as Metro sees it. A physical
+  // device on the same network reaches that address directly, and so does
+  // the iOS simulator or web, which share the host's network; only the
+  // Android emulator is a separate machine from that address's point of
+  // view. A loopback host there (Metro bound to `localhost`, which is what a
+  // physical device tunnels with `adb reverse`) is translated to the
+  // emulator's 10.0.2.2 alias for the host machine; every other host,
+  // loopback or not, is used as-is.
   if (Constants.expoConfig?.hostUri) {
-    const host =
-      Platform.OS === 'android' && Device.isDevice
-        ? 'localhost'
-        : hostFromHostUri(Constants.expoConfig.hostUri)
+    const host = hostFromHostUri(Constants.expoConfig.hostUri)
+    if (Platform.OS === 'android' && !Device.isDevice && isLoopbackHost(host)) {
+      return 'http://10.0.2.2:3000'
+    }
     return `http://${host}:3000`
   }
 
