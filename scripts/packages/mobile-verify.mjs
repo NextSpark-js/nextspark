@@ -12,11 +12,14 @@
  *      by file, so the copy cannot drift from the package silently again,
  *   2. installs apps/mobile on its own (it is outside the pnpm workspace),
  *   3. type-checks apps/mobile,
- *   4. assembles the template in a temp directory, checks its dependency
+ *   4. exports apps/mobile for Android, the only step that actually asks
+ *      Metro to bundle @nextsparkjs/ui and @nextsparkjs/mobile the way the
+ *      app or a device build would,
+ *   5. assembles the template in a temp directory, checks its dependency
  *      declarations and type-checks it, side-effect imports included,
- *   5. runs the packages/mobile Jest suite (the client, the entity factory,
+ *   6. runs the packages/mobile Jest suite (the client, the entity factory,
  *      the providers - what apps/mobile only re-exports),
- *   6. runs the apps/mobile Jest suite.
+ *   7. runs the apps/mobile Jest suite.
  *
  * Both type-checks compile packages/mobile and packages/ui from source, and
  * their imports resolve from the root install, so `pnpm install` has to run at
@@ -78,10 +81,26 @@ function step(label, run) {
   return passed
 }
 
-function exec(command, args, cwd) {
-  const result = spawnSync(command, args, { cwd, stdio: 'inherit' })
+function exec(command, args, cwd, env) {
+  const result = spawnSync(command, args, { cwd, stdio: 'inherit', env: env ? { ...process.env, ...env } : process.env })
   if (result.error) console.log(`${RED}${result.error.message}${NC}`)
   return result.status === 0
+}
+
+/**
+ * Bundling is the only step that runs Metro's resolveRequest, which is what
+ * pointed @nextsparkjs/ui at a `packages/ui/dist` build nothing produced
+ * before it was fixed to bundle straight from source: type-checking alone
+ * resolves imports through tsconfig paths and never notices.
+ */
+function exportAndroid() {
+  const exportDir = join(MOBILE_APP_DIR, 'dist')
+  rmSync(exportDir, { recursive: true, force: true })
+  try {
+    return exec('pnpm', ['exec', 'expo', 'export', '--platform', 'android'], MOBILE_APP_DIR, { CI: '1' })
+  } finally {
+    rmSync(exportDir, { recursive: true, force: true })
+  }
 }
 
 /**
@@ -300,6 +319,7 @@ function main() {
     ['Install apps/mobile (isolated, frozen lockfile)', () =>
       exec('pnpm', ['install', '--ignore-workspace', '--frozen-lockfile'], MOBILE_APP_DIR)],
     ['Typecheck apps/mobile', () => exec('pnpm', ['run', 'typecheck'], MOBILE_APP_DIR)],
+    ['Export apps/mobile for Android', exportAndroid],
     ['Typecheck the shipped template (packages/mobile/templates + apps/mobile/app)', verifyTemplate],
     ['Test @nextsparkjs/mobile (jest)', () => exec('pnpm', ['run', 'test'], MOBILE_PACKAGE_DIR)],
     ['Test apps/mobile (jest)', () => exec('pnpm', ['run', 'test'], MOBILE_APP_DIR)],

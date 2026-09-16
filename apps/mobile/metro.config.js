@@ -21,12 +21,14 @@ config.resolver.nodeModulesPaths = [
 
 // Resolve @nextsparkjs packages
 config.resolver.resolveRequest = (context, moduleName, platform) => {
-  // For @nextsparkjs/ui, redirect to the native entry point
+  // For @nextsparkjs/ui, redirect to the native source (for development,
+  // same as @nextsparkjs/mobile below) so bundling never depends on a
+  // `packages/ui` build having run first
   if (moduleName === '@nextsparkjs/ui') {
     return {
       filePath: path.resolve(
         monorepoRoot,
-        'packages/ui/dist/index.native.js'
+        'packages/ui/src/index.native.ts'
       ),
       type: 'sourceFile',
     };
