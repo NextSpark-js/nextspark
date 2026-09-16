@@ -32,8 +32,7 @@ export async function addPlugin(
     // Pre-checks
     const contentsDir = join(process.cwd(), 'contents')
     if (!existsSync(contentsDir)) {
-      spinner.fail('contents/ directory not found. Run "nextspark init" first.')
-      return
+      throw new Error('contents/ directory not found. Run "nextspark init" first.')
     }
 
     // Fetch package
@@ -49,9 +48,7 @@ export async function addPlugin(
     const validation = validatePlugin(packageJson, extractedPath)
 
     if (!validation.valid) {
-      spinner.fail('Invalid plugin')
-      validation.errors.forEach(e => console.log(chalk.red(`  ✗ ${e}`)))
-      return
+      throw new Error(`Invalid plugin:\n${validation.errors.map(e => `  ✗ ${e}`).join('\n')}`)
     }
 
     if (validation.warnings.length > 0) {
@@ -121,13 +118,22 @@ function getCoreVersion(): string {
   return '0.0.0'
 }
 
-export function addPluginCommand(packageSpec: string, options: Record<string, unknown>): Promise<void> {
-  return addPlugin(packageSpec, {
-    force: options.force as boolean,
-    // commander exposes --no-deps as `deps: false`
-    skipDeps: options.deps === false,
-    dryRun: options.dryRun as boolean,
-    skipPostinstall: options.skipPostinstall as boolean,
-    version: options.version as string
-  })
+/**
+ * The `add:plugin` command. addPlugin has already printed why it failed, so a failure
+ * only sets the exit code: the CLI parses synchronously, and a rejection left to
+ * Node exits 0 wherever unhandled rejections only warn.
+ */
+export async function addPluginCommand(packageSpec: string, options: Record<string, unknown>): Promise<void> {
+  try {
+    await addPlugin(packageSpec, {
+      force: options.force as boolean,
+      // commander exposes --no-deps as `deps: false`
+      skipDeps: options.deps === false,
+      dryRun: options.dryRun as boolean,
+      skipPostinstall: options.skipPostinstall as boolean,
+      version: options.version as string
+    })
+  } catch {
+    process.exitCode = 1
+  }
 }

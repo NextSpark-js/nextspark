@@ -26,7 +26,7 @@ function getCliVersion(): string {
     return 'latest'
   }
 }
-import { showBanner, showSection, showSuccess, showError, showInfo, showWarning } from './banner.js'
+import { showBanner, showSection, showError, showInfo } from './banner.js'
 import { runAllPrompts, runQuickPrompts, runExpertPrompts } from './prompts/index.js'
 import { generateProject, isMonorepoProject, getWebDir } from './generators/index.js'
 import { getPreset, applyPreset, PRESET_DESCRIPTIONS, DEFAULT_PRESET } from './presets.js'
@@ -35,6 +35,7 @@ import { promptProjectInfo } from './prompts/project-info.js'
 // Theme & Plugin Selection
 import { promptThemeSelection, promptPluginsSelection, getRequiredPlugins, type ThemeChoice, type PluginChoice } from './prompts/index.js'
 import { installThemeAndPlugins } from './generators/theme-plugins-installer.js'
+import { installProjectDependencies, setupAIWorkflow } from './install-dependencies.js'
 import { showConfigPreview } from './preview.js'
 
 /**
@@ -212,7 +213,9 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
 
     // Install theme and plugins after project generation
     if (selectedTheme || selectedPlugins.length > 0) {
-      await installThemeAndPlugins(selectedTheme, selectedPlugins)
+      if (!await installThemeAndPlugins(selectedTheme, selectedPlugins)) {
+        throw new Error('The theme or a plugin did not install; the messages above say which.')
+      }
     }
 
     // Determine the web directory for monorepo projects
@@ -229,21 +232,11 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
     try {
       // TODO: Change back to stdio: 'pipe' once Windows issues are resolved
       installSpinner.stop()
-      execSync('pnpm install --force', {
-        cwd: projectRoot, // Always install from root (works for both flat and monorepo)
-        stdio: 'inherit',
-      })
+      installProjectDependencies(projectRoot) // Always from root (works for both flat and monorepo)
       installSpinner.succeed('Dependencies installed!')
     } catch (error) {
-      // pnpm v10.1+/v11 exits non-zero on unapproved native build scripts
-      // (ERR_PNPM_IGNORED_BUILDS) even though the install succeeds. Treat as
-      // success if node_modules was populated; only warn on genuine failures.
-      if (existsSync(join(projectRoot, 'node_modules'))) {
-        installSpinner.succeed('Dependencies installed!')
-      } else {
-        installSpinner.fail('Failed to install dependencies')
-        console.log(chalk.yellow('  Run "pnpm install" manually to install dependencies'))
-      }
+      installSpinner.fail('Failed to install dependencies')
+      throw error
     }
 
     // Build registries using the core's registry builder
@@ -573,52 +566,12 @@ async function promptAIWorkflowSetup(config: WizardConfig): Promise<string> {
     return 'skip'
   }
 
-  const projectRoot = process.cwd()
-  const isMonorepo = isMonorepoProject(config)
-
-  // All generated projects use pnpm workspaces (web-only for themes/plugins,
-  // monorepo for web/ + mobile/), so -w flag is always required
-  try {
-    // Pin to the CLI's exact version (not `latest`) so it matches the rest of
-    // the install and isn't pulled to an old version by a stale pnpm cache.
-    try {
-      execSync(`pnpm add -D -w @nextsparkjs/ai-workflow@${getCliVersion()}`, {
-        cwd: projectRoot,
-        stdio: 'inherit',
-      })
-    } catch (installErr) {
-      // pnpm v10.1+/v11 exits non-zero on unapproved native build scripts even
-      // when the install succeeds. Only treat it as a real failure if the
-      // package didn't actually land in node_modules.
-      const rootPkg = join(projectRoot, 'node_modules', '@nextsparkjs', 'ai-workflow')
-      const webPkg = join(projectRoot, 'web', 'node_modules', '@nextsparkjs', 'ai-workflow')
-      if (!existsSync(rootPkg) && !existsSync(webPkg)) {
-        throw installErr
-      }
-    }
-
-    // Find setup script — check root node_modules first, then web/ for monorepo hoisting
-    let setupScript = join(projectRoot, 'node_modules', '@nextsparkjs', 'ai-workflow', 'scripts', 'setup.mjs')
-    if (!existsSync(setupScript) && isMonorepo) {
-      setupScript = join(projectRoot, 'web', 'node_modules', '@nextsparkjs', 'ai-workflow', 'scripts', 'setup.mjs')
-    }
-
-    if (existsSync(setupScript)) {
-      // .claude/ always goes at project root (applies to both web and mobile)
-      execSync(`node "${setupScript}" ${choice}`, {
-        cwd: projectRoot,
-        stdio: 'inherit',
-      })
-      showSuccess('AI workflow setup complete!')
-    } else {
-      showWarning('AI workflow package installed but setup script not found. Run "nextspark setup:ai" manually.')
-    }
-  } catch (error) {
-    showError('Failed to install AI workflow package. Run "nextspark setup:ai" later.')
-    return 'skip'
-  }
-
-  return choice
+  return setupAIWorkflow({
+    projectRoot: process.cwd(),
+    choice,
+    isMonorepo: isMonorepoProject(config),
+    version: getCliVersion(),
+  })
 }
 
 /**
@@ -641,6 +594,16 @@ function findLocalCoreTarball(): string | null {
   }
 
   return null
+}
+
+/**
+ * `-w ` when the current directory is a pnpm workspace root, where `pnpm add`
+ * stops with ERR_PNPM_ADDING_TO_ROOT without it; create-nextspark-app starts
+ * every project with a pnpm-workspace.yaml. Outside a workspace pnpm rejects
+ * the flag, so it is left out there.
+ */
+function pnpmWorkspaceRootFlag(): string {
+  return existsSync(join(process.cwd(), 'pnpm-workspace.yaml')) ? '-w ' : ''
 }
 
 /**
@@ -684,7 +647,7 @@ async function installCore(): Promise<boolean> {
 
     let installCmd: string
     if (usePnpm) {
-      installCmd = `pnpm add ${packageSpec}`
+      installCmd = `pnpm add ${pnpmWorkspaceRootFlag()}${packageSpec}`
     } else if (useYarn) {
       installCmd = `yarn add ${packageSpec}`
     } else {
@@ -701,13 +664,8 @@ async function installCore(): Promise<boolean> {
     spinner.succeed(chalk.green('@nextsparkjs/core installed successfully!'))
     return true
   } catch (error) {
-    // pnpm v10.1+/v11 exits non-zero on unapproved native build scripts
-    // (ERR_PNPM_IGNORED_BUILDS) even though packages are installed correctly.
-    // Treat as success if @nextsparkjs/core actually landed in node_modules.
-    if (isCoreInstalled()) {
-      spinner.succeed(chalk.green('@nextsparkjs/core installed successfully!'))
-      return true
-    }
+    // A non-zero exit means the install did not finish, even when the package
+    // already landed in node_modules.
     spinner.fail(chalk.red('Failed to install @nextsparkjs/core'))
     if (error instanceof Error) {
       console.log(chalk.red(`  Error: ${error.message}`))
@@ -780,7 +738,7 @@ async function installMobile(): Promise<boolean> {
 
     let installCmd: string
     if (usePnpm) {
-      installCmd = `pnpm add ${packageSpec}`
+      installCmd = `pnpm add ${pnpmWorkspaceRootFlag()}${packageSpec}`
     } else if (useYarn) {
       installCmd = `yarn add ${packageSpec}`
     } else {
@@ -796,13 +754,8 @@ async function installMobile(): Promise<boolean> {
     spinner.succeed(chalk.green('@nextsparkjs/mobile installed successfully!'))
     return true
   } catch (error) {
-    // pnpm v10.1+/v11 exits non-zero on unapproved native build scripts
-    // (ERR_PNPM_IGNORED_BUILDS) even though packages are installed correctly.
-    // Treat as success if @nextsparkjs/mobile actually landed in node_modules.
-    if (isMobileInstalled()) {
-      spinner.succeed(chalk.green('@nextsparkjs/mobile installed successfully!'))
-      return true
-    }
+    // A non-zero exit means the install did not finish, even when the package
+    // already landed in node_modules.
     spinner.fail(chalk.red('Failed to install @nextsparkjs/mobile'))
     if (error instanceof Error) {
       console.log(chalk.red(`  Error: ${error.message}`))

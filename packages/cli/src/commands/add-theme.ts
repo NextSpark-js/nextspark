@@ -31,8 +31,7 @@ export async function addTheme(
     // Pre-checks
     const contentsDir = join(process.cwd(), 'contents')
     if (!existsSync(contentsDir)) {
-      spinner.fail('contents/ directory not found. Run "nextspark init" first.')
-      return
+      throw new Error('contents/ directory not found. Run "nextspark init" first.')
     }
 
     // Fetch package
@@ -48,9 +47,7 @@ export async function addTheme(
     const validation = validateTheme(packageJson, extractedPath)
 
     if (!validation.valid) {
-      spinner.fail('Invalid theme')
-      validation.errors.forEach(e => console.log(chalk.red(`  ✗ ${e}`)))
-      return
+      throw new Error(`Invalid theme:\n${validation.errors.map(e => `  ✗ ${e}`).join('\n')}`)
     }
 
     if (validation.warnings.length > 0) {
@@ -143,13 +140,22 @@ function getCoreVersion(): string {
   return '0.0.0'
 }
 
-export function addThemeCommand(packageSpec: string, options: Record<string, unknown>): Promise<void> {
-  return addTheme(packageSpec, {
-    force: options.force as boolean,
-    // commander exposes --no-deps as `deps: false`
-    skipDeps: options.deps === false,
-    dryRun: options.dryRun as boolean,
-    skipPostinstall: options.skipPostinstall as boolean,
-    version: options.version as string
-  })
+/**
+ * The `add:theme` command. addTheme has already printed why it failed, so a failure
+ * only sets the exit code: the CLI parses synchronously, and a rejection left to
+ * Node exits 0 wherever unhandled rejections only warn.
+ */
+export async function addThemeCommand(packageSpec: string, options: Record<string, unknown>): Promise<void> {
+  try {
+    await addTheme(packageSpec, {
+      force: options.force as boolean,
+      // commander exposes --no-deps as `deps: false`
+      skipDeps: options.deps === false,
+      dryRun: options.dryRun as boolean,
+      skipPostinstall: options.skipPostinstall as boolean,
+      version: options.version as string
+    })
+  } catch {
+    process.exitCode = 1
+  }
 }
