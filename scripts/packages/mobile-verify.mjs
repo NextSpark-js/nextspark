@@ -124,6 +124,50 @@ const CLEANUP_TIMEOUT_MS = 10 * 1000
 const OUTPUT_DRAIN_MS = 2 * 1000
 const LEFTOVER_GRACE_MS = 1000
 
+// How long killProcessGroup waits for a single synchronous Windows call -
+// taskkill itself, or PowerShell listing one pid's children - before treating
+// it as unconfirmed instead of blocking this call, and the script with it, on
+// one that hangs.
+const TASKKILL_TIMEOUT_MS = 10 * 1000
+const DESCENDANT_ENUM_TIMEOUT_MS = 10 * 1000
+
+/**
+ * PIDs of every process descending from `pid` on Windows, found by walking
+ * Win32_Process.ParentProcessId with PowerShell one generation at a time so a
+ * child's own children are followed too (taskkill's own /T is not trusted to
+ * have found them all - see killProcessGroup). Returns null instead of a
+ * partial list when a generation could not be listed (PowerShell missing,
+ * refused, or itself timed out), so a caller can tell "no descendants" apart
+ * from "descendants unknown".
+ */
+function listDescendantPids(pid, { spawnPowershell = spawnSync, timeoutMs = DESCENDANT_ENUM_TIMEOUT_MS } = {}) {
+  const descendants = []
+  const seen = new Set()
+  const frontier = [pid]
+  while (frontier.length > 0) {
+    const parent = frontier.shift()
+    const result = spawnPowershell(
+      'powershell',
+      [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        `(Get-CimInstance Win32_Process -Filter "ParentProcessId=${parent}").ProcessId`,
+      ],
+      { timeout: timeoutMs, encoding: 'utf8' },
+    )
+    if (result.error || result.status !== 0) return null
+    for (const line of String(result.stdout ?? '').split(/\r?\n/)) {
+      const childPid = Number(line.trim())
+      if (!Number.isInteger(childPid) || childPid <= 0 || seen.has(childPid)) continue
+      seen.add(childPid)
+      descendants.push(childPid)
+      frontier.push(childPid)
+    }
+  }
+  return descendants
+}
+
 /**
  * SIGKILL to the negative pid targets the whole process group `detached: true`
  * made this child the leader of, so descendants a hung Jest or Metro spawned
@@ -132,51 +176,78 @@ const LEFTOVER_GRACE_MS = 1000
  *
  * Windows has no such thing as a process group signal: `detached: true` there
  * only frees the child from the parent's console, and a negative pid is not a
- * valid target for kill(2). `taskkill /T` walks the same process tree instead.
+ * valid target for kill(2). `taskkill /T` walks the same process tree instead,
+ * bounded by taskkillTimeoutMs so a taskkill that hangs cannot block this call
+ * indefinitely.
  *
  * taskkill's own report is not trusted on its own: it can fail to run at all
  * (missing from PATH), run and refuse (access denied on a more-privileged
- * process), or exit 0 without the pid actually being gone (a race with the
- * process's own exit, a tree its /T did not walk). Whatever is still there
- * after it, however it answered, gets Node's own termination next - which
- * does not go through taskkill and so does not share its failure modes -
- * before this gives up on the leader pid.
+ * process), exit 0 without the pid actually being gone (a race with the
+ * process's own exit), or walk a tree that leaves a descendant out (a child
+ * reparented before its /T reached it). So every descendant of pid is listed
+ * independently through listDescendantPids, and the pid together with each
+ * descendant still running gets Node's own SIGKILL next - which does not go
+ * through taskkill and so does not share its failure modes - before this
+ * gives up. When the descendants cannot be listed at all (PowerShell missing,
+ * refused, or its own call timed out), this returns false naming the pid
+ * instead of checking only the leader and calling the group clean.
  *
- * Returns whether the pid was confirmed gone. kill(2) can refuse too (EPERM)
- * on POSIX, where a failed kill only means "not confirmed": what happens to
- * the group is left to its `exit` event, since macOS also answers EPERM for
- * a group whose processes have all exited but are not reaped yet.
- * Reporting that instead of throwing matters because callers run this from a
- * timer or a signal handler, where a throw would crash this script and leave
- * the very process group it failed to kill running unsupervised.
+ * Returns whether the pid and every listed descendant were confirmed gone.
+ * kill(2) can refuse too (EPERM) on POSIX, where a failed kill only means
+ * "not confirmed": what happens to the group is left to its `exit` event,
+ * since macOS also answers EPERM for a group whose processes have all
+ * exited but are not reaped yet. Reporting that instead of throwing matters
+ * because callers run this from a timer or a signal handler, where a throw
+ * would crash this script and leave the very process group it failed to
+ * kill running unsupervised.
  */
 function killProcessGroup(pid, {
   platform = process.platform,
   kill = process.kill,
   spawnTaskkill = spawnSync,
+  spawnPowershell = spawnSync,
   isRunning = isProcessRunning,
+  taskkillTimeoutMs = TASKKILL_TIMEOUT_MS,
+  descendantTimeoutMs = DESCENDANT_ENUM_TIMEOUT_MS,
 } = {}) {
   if (platform === 'win32') {
-    const result = spawnTaskkill('taskkill', ['/pid', String(pid), '/T', '/F'])
+    const result = spawnTaskkill('taskkill', ['/pid', String(pid), '/T', '/F'], { timeout: taskkillTimeoutMs })
     if (result.error) {
-      console.log(`${RED}taskkill did not run for pid ${pid}: ${result.error.message}${NC}`)
+      const detail = result.error.code === 'ETIMEDOUT'
+        ? `did not finish within ${taskkillTimeoutMs / 1000}s`
+        : result.error.message
+      console.log(`${RED}taskkill did not run for pid ${pid}: ${detail}${NC}`)
     } else if (result.status !== 0) {
       console.log(`${RED}taskkill exited ${result.status} for pid ${pid}: ${String(result.stderr ?? '').trim()}${NC}`)
     }
-    if (!isRunning(pid)) return true
 
-    try {
-      kill(pid, 'SIGKILL')
-    } catch (error) {
-      // ESRCH: gone already, which is what the fallback was for.
-      if (error.code !== 'ESRCH') {
-        console.log(`${RED}Fallback kill failed for pid ${pid}: ${error.message}${NC}`)
-      }
+    const descendants = listDescendantPids(pid, { spawnPowershell, timeoutMs: descendantTimeoutMs })
+    if (descendants === null) {
+      console.log(`${RED}Could not list descendants of pid ${pid}; some may still be running${NC}`)
+      return false
     }
-    if (!isRunning(pid)) return true
 
-    console.log(`${RED}pid ${pid} is still running after taskkill and the fallback kill${NC}`)
-    return false
+    const remaining = []
+    for (const target of [pid, ...descendants]) {
+      if (!isRunning(target)) continue
+      try {
+        kill(target, 'SIGKILL')
+      } catch (error) {
+        // ESRCH: gone already, which is what this fallback was for.
+        if (error.code !== 'ESRCH') {
+          console.log(`${RED}Fallback kill failed for pid ${target}: ${error.message}${NC}`)
+        }
+      }
+      if (isRunning(target)) remaining.push(target)
+    }
+    if (remaining.length > 0) {
+      const message = remaining.length === 1
+        ? `pid ${remaining[0]} is still running after taskkill and the fallback kill`
+        : `pids ${remaining.join(', ')} are still running after taskkill and the fallback kill`
+      console.log(`${RED}${message}${NC}`)
+      return false
+    }
+    return true
   }
   try {
     kill(-pid, 'SIGKILL')
@@ -683,7 +754,7 @@ function isMainModule(moduleUrl, argv1, { windows = process.platform === 'win32'
   return resolveFile(fileURLToPath(moduleUrl, { windows })) === resolveFile(argv1)
 }
 
-export { exec, step, killProcessGroup, cancelActiveChildrenAndExit, isMainModule }
+export { exec, step, killProcessGroup, listDescendantPids, cancelActiveChildrenAndExit, isMainModule }
 
 // Guards the run below so the tests can import the functions above without
 // kicking off the whole verify pipeline as a side effect.
