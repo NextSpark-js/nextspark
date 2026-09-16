@@ -2,18 +2,11 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawn, spawnSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
-import { exec, step, killProcessGroup, listDescendantPids, cancelActiveChildrenAndExit } from './mobile-verify.mjs'
-
-// killProcessGroup on win32 is exercised on whichever OS this suite runs on
-// (there is no real taskkill or PowerShell here), so every such test fakes
-// spawnPowershell too - otherwise it would try to run a real `powershell` and
-// fail enumeration, which is a distinct scenario tested on its own below.
-const NO_DESCENDANTS = () => ({ error: null, status: 0, stdout: '' })
+import { exec, step, killProcessGroup, cancelActiveChildrenAndExit } from './mobile-verify.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 
@@ -75,42 +68,6 @@ async function waitUntil(condition, timeoutMs) {
   return condition()
 }
 
-/** A TCP port nothing is listening on right now, for a test process to take and this test to check. */
-function findFreePort() {
-  return new Promise((resolve, reject) => {
-    const probe = createServer()
-    probe.on('error', reject)
-    probe.listen(0, '127.0.0.1', () => {
-      const { port } = probe.address()
-      probe.close(() => resolve(port))
-    })
-  })
-}
-
-function isPortFree(port) {
-  return new Promise((resolve) => {
-    const probe = createServer()
-    probe.once('error', () => resolve(false))
-    probe.listen(port, '127.0.0.1', () => probe.close(() => resolve(true)))
-  })
-}
-
-/** A process that binds `port` and holds it forever, standing in for a server a step left behind. */
-function portHolder(port) {
-  return `
-    const net = require('node:net')
-    net.createServer().listen(${port}, '127.0.0.1')
-  `
-}
-
-/** A fake spawnPowershell answering `Win32_Process -Filter "ParentProcessId=..."` from a fixed pid tree. */
-function fakePowershellFor(childrenByParent) {
-  return (command, args) => {
-    const parent = Number(args[3].match(/ParentProcessId=(\d+)/)[1])
-    return { error: null, status: 0, stdout: (childrenByParent[parent] ?? []).join('\n') }
-  }
-}
-
 /** Kills a child's process group for real and waits until its leader is gone. */
 async function killForReal(pid) {
   killProcessGroup(pid)
@@ -120,21 +77,26 @@ async function killForReal(pid) {
 test('killProcessGroup uses taskkill /T /F on win32 instead of a POSIX group signal, and skips the fallback once confirmed gone', () => {
   const taskkillCalls = []
   const killCalls = []
-  const ok = killProcessGroup(4242, {
-    platform: 'win32',
-    spawnTaskkill: (...args) => {
-      taskkillCalls.push(args)
-      return { error: null, status: 0, stderr: '' }
-    },
-    spawnPowershell: NO_DESCENDANTS,
-    kill: (...args) => killCalls.push(args),
-    isRunning: () => false,
-  })
+  const { result: ok, logs } = withCapturedLog(() =>
+    killProcessGroup(4242, {
+      platform: 'win32',
+      spawnTaskkill: (...args) => {
+        taskkillCalls.push(args)
+        return { error: null, status: 0, stderr: '' }
+      },
+      kill: (...args) => killCalls.push(args),
+      isRunning: () => false,
+    }),
+  )
   assert.equal(taskkillCalls.length, 1)
   assert.deepEqual(taskkillCalls[0].slice(0, 2), ['taskkill', ['/pid', '4242', '/T', '/F']])
   assert.equal(typeof taskkillCalls[0][2]?.timeout, 'number', 'taskkill must be bounded by a timeout')
   assert.deepEqual(killCalls, [])
   assert.equal(ok, true)
+  assert.ok(
+    !logs.some((line) => line.includes('is still running')),
+    `a confirmed-gone leader must not also be reported as still running:\n${logs.join('\n')}`,
+  )
 })
 
 // Each of the next three stands in for one way taskkill can fail to actually
@@ -150,7 +112,6 @@ test('killProcessGroup on win32 falls back past a taskkill that is not on PATH, 
     killProcessGroup(child.pid, {
       platform: 'win32',
       spawnTaskkill: () => ({ error: Object.assign(new Error('spawn taskkill ENOENT'), { code: 'ENOENT' }) }),
-      spawnPowershell: NO_DESCENDANTS,
     }),
   )
   try {
@@ -172,7 +133,6 @@ test('killProcessGroup on win32 falls back past a taskkill that exits non-zero (
     killProcessGroup(child.pid, {
       platform: 'win32',
       spawnTaskkill: () => ({ error: null, status: 5, stderr: 'ERROR: Access is denied.\n' }),
-      spawnPowershell: NO_DESCENDANTS,
     }),
   )
   try {
@@ -196,7 +156,6 @@ test('killProcessGroup on win32 does not trust a taskkill that exits 0 without h
       // Reports success without touching the process, like a taskkill that
       // raced the process's own exit or missed a re-parented descendant.
       spawnTaskkill: () => ({ error: null, status: 0, stderr: '' }),
-      spawnPowershell: NO_DESCENDANTS,
     }),
   )
   try {
@@ -210,13 +169,12 @@ test('killProcessGroup on win32 does not trust a taskkill that exits 0 without h
   }
 })
 
-test('killProcessGroup on win32 fails and names the pid when it is still running after taskkill and the fallback kill', () => {
+test('killProcessGroup on win32 fails and names only the leader pid when it is still running after taskkill and the fallback kill', () => {
   const killCalls = []
   const { result: ok, logs } = withCapturedLog(() =>
     killProcessGroup(4242, {
       platform: 'win32',
       spawnTaskkill: () => ({ error: null, status: 0, stderr: '' }),
-      spawnPowershell: NO_DESCENDANTS,
       kill: (...args) => killCalls.push(args),
       isRunning: () => true,
     }),
@@ -224,140 +182,47 @@ test('killProcessGroup on win32 fails and names the pid when it is still running
   assert.equal(ok, false)
   assert.deepEqual(killCalls, [[4242, 'SIGKILL']], 'the fallback kill must still be attempted')
   assert.ok(logs.some((line) => line.includes('pid 4242 is still running after taskkill and the fallback kill')))
-})
-
-test('listDescendantPids walks Win32_Process.ParentProcessId across generations and ignores blank lines', () => {
-  const calls = []
-  const childrenByParent = { 100: [200, 201], 200: [300], 201: [], 300: [] }
-  const descendants = listDescendantPids(100, {
-    spawnPowershell: (command, args) => {
-      const parent = Number(args[3].match(/ParentProcessId=(\d+)/)[1])
-      calls.push(parent)
-      return { error: null, status: 0, stdout: `${(childrenByParent[parent] ?? []).join('\r\n')}\r\n\r\n` }
-    },
-  })
-  assert.deepEqual(descendants.slice().sort((a, b) => a - b), [200, 201, 300])
-  assert.deepEqual(calls.slice().sort((a, b) => a - b), [100, 200, 201, 300], 'every generation must be walked, not just the direct children')
-})
-
-test('listDescendantPids returns null instead of a partial list when a generation cannot be listed', () => {
-  assert.equal(listDescendantPids(100, { spawnPowershell: () => ({ error: null, status: 1, stdout: '' }) }), null)
-  assert.equal(
-    listDescendantPids(100, { spawnPowershell: () => ({ error: Object.assign(new Error('ENOENT'), { code: 'ENOENT' }) }) }),
-    null,
+  assert.ok(
+    !logs.some((line) => line.includes('after killing pid')),
+    `an unconfirmed kill must never be phrased as already done:\n${logs.join('\n')}`,
   )
 })
 
-test('listDescendantPids gives up once the whole walk outlasts its budget, even though each call answers quickly', () => {
-  let nextPid = 1000
-  const started = Date.now()
-  // Every call answers instantly with one brand-new pid, so a tree that never
-  // stops growing would walk forever without a budget on the walk itself -
-  // each individual PowerShell call's own timeout never fires.
-  const result = listDescendantPids(1, {
-    spawnPowershell: () => ({ error: null, status: 0, stdout: String(nextPid++) }),
-    walkBudgetMs: 200,
-  })
-  const elapsed = Date.now() - started
-  assert.equal(result, null, 'a walk that never finishes must not be reported as a complete list')
-  assert.ok(elapsed < 1_500, `must give up around walkBudgetMs instead of walking forever (${elapsed}ms)`)
-})
-
-// The three ways a real taskkill can fail to be trusted (see the tests above):
-// missing from PATH, refused, or exiting 0 without having killed anything.
-const UNTRUSTED_TASKKILL_MODES = [
-  ['is not on PATH', () => ({ error: Object.assign(new Error('spawn taskkill ENOENT'), { code: 'ENOENT' }) })],
-  ['exits non-zero (e.g. access denied)', () => ({ error: null, status: 5, stderr: 'ERROR: Access is denied.\n' })],
-  ['exits 0 without having killed anything', () => ({ error: null, status: 0, stderr: '' })],
-]
-
-for (const [label, spawnTaskkill] of UNTRUSTED_TASKKILL_MODES) {
-  test(`killProcessGroup on win32 never signals a pid known only from descendant enumeration when taskkill ${label}`, async () => {
-    const port = await findFreePort()
-    const leader = spawn(...LONG_RUNNING, { stdio: 'ignore' })
-    // Not a real child of leader: stands in for the gap between listing a
-    // descendant and using it, where an unrelated process could have reused
-    // its pid. killProcessGroup must never find out the difference and must
-    // treat every enumerated pid this way, so it must never signal this one.
-    const enumeratedOnly = spawn(process.execPath, ['-e', portHolder(port)], { stdio: 'ignore' })
-    await new Promise((resolve) => setTimeout(resolve, 300))
-    assert.equal(await isPortFree(port), false, 'the enumerated process must actually hold the port before the call')
-
-    const { result: ok, logs } = await withCapturedLogAsync(() =>
-      killProcessGroup(leader.pid, {
-        platform: 'win32',
-        spawnTaskkill,
-        spawnPowershell: fakePowershellFor({ [leader.pid]: [enumeratedOnly.pid] }),
-        killLeader: () => leader.kill('SIGKILL'),
-      }),
-    )
-
-    try {
-      assert.equal(ok, false, 'an unconfirmed descendant must not be reported as a clean kill')
-      assert.ok(await waitUntil(() => !isRunning(leader.pid), 5_000), 'the leader must still be killed, through its own handle')
-      assert.equal(isRunning(enumeratedOnly.pid), true, 'a pid known only from enumeration must never be signalled')
-      assert.equal(await isPortFree(port), false, 'a port held by a pid known only from enumeration must not be assumed free')
-      assert.ok(
-        logs.some((line) => line.includes(String(enumeratedOnly.pid)) && line.includes('taskkill /PID')),
-        `must name the survivor and how to end it by hand:\n${logs.join('\n')}`,
-      )
-    } finally {
-      if (isRunning(leader.pid)) process.kill(leader.pid, 'SIGKILL')
-      if (isRunning(enumeratedOnly.pid)) process.kill(enumeratedOnly.pid, 'SIGKILL')
-    }
-  })
-}
-
-test('killProcessGroup on win32 fails a port a step declares even when every enumerated pid is confirmed gone', async () => {
-  const port = await findFreePort()
-  // Stands in for a descendant taskkill's own /T did not walk and
-  // listDescendantPids never reported: outside anything PID-based, but still
-  // reachable through the port itself.
-  const invisible = spawn(process.execPath, ['-e', portHolder(port)], { stdio: 'ignore' })
-  await new Promise((resolve) => setTimeout(resolve, 300))
-  assert.equal(await isPortFree(port), false, 'the invisible process must actually hold the port before the call')
-
-  const { result: ok, logs } = withCapturedLog(() =>
+// The decision behind this shape: a walk of Win32_Process can always miss a
+// grandchild spawned after it queried its parent, so no enumeration this
+// script could write proves the tree taskkill was asked to end is actually
+// empty (round 14 of #196). killProcessGroup therefore never enumerates
+// descendants and never turns one into a kill target; it only confirms the
+// leader and always says plainly that the rest of the tree is unconfirmed.
+test('killProcessGroup on win32 always reports descendants as unconfirmed, without enumerating or naming one to kill', () => {
+  const { logs } = withCapturedLog(() =>
     killProcessGroup(4242, {
       platform: 'win32',
       spawnTaskkill: () => ({ error: null, status: 0, stderr: '' }),
-      spawnPowershell: NO_DESCENDANTS,
       isRunning: () => false,
-      ports: [port],
     }),
   )
-
-  try {
-    assert.equal(ok, false, 'a port still held must not be reported as a clean kill, no matter what PID checks say')
-    assert.ok(logs.some((line) => line.includes(String(port))), logs.join('\n'))
-  } finally {
-    process.kill(invisible.pid, 'SIGKILL')
-  }
+  const disclaimer = logs.find((line) => line.includes('descendants may still be running'))
+  assert.ok(disclaimer, `must always disclose that descendants are unconfirmed:\n${logs.join('\n')}`)
+  assert.match(disclaimer, /cannot confirm/i)
+  assert.match(disclaimer, /lists processes by parent/i)
+  assert.ok(disclaimer.includes('4242'), 'the disclaimer must name the leader pid taskkill was asked to end')
+  assert.ok(!disclaimer.includes('taskkill /PID'), 'the disclaimer must never turn an unconfirmed descendant into a kill command')
 })
 
-test('killProcessGroup on win32 confirms success once every declared port is free too', async () => {
-  const port = await findFreePort()
-  const ok = killProcessGroup(4242, {
-    platform: 'win32',
-    spawnTaskkill: () => ({ error: null, status: 0, stderr: '' }),
-    spawnPowershell: NO_DESCENDANTS,
-    isRunning: () => false,
-    ports: [port],
-  })
-  assert.equal(ok, true)
-})
-
-test('killProcessGroup on win32 fails instead of declaring success when descendants cannot be listed', () => {
+test('killProcessGroup on win32 reports the same unconfirmed-descendants disclaimer even when the leader is confirmed gone', () => {
   const { result: ok, logs } = withCapturedLog(() =>
     killProcessGroup(4242, {
       platform: 'win32',
       spawnTaskkill: () => ({ error: null, status: 0, stderr: '' }),
       isRunning: () => false,
-      spawnPowershell: () => ({ error: Object.assign(new Error('spawn powershell ENOENT'), { code: 'ENOENT' }) }),
     }),
   )
-  assert.equal(ok, false, 'unlisted descendants must not be reported as a clean kill')
-  assert.ok(logs.some((line) => line.includes('4242') && line.toLowerCase().includes('descendant')), logs.join('\n'))
+  assert.equal(ok, true, 'the leader confirmed gone is what this call can vouch for')
+  assert.ok(
+    logs.some((line) => line.includes('descendants may still be running')),
+    `confirming the leader must not be read as confirming its descendants too:\n${logs.join('\n')}`,
+  )
 })
 
 test('killProcessGroup does not wait out a taskkill that hangs past its timeout', () => {
@@ -369,7 +234,6 @@ test('killProcessGroup does not wait out a taskkill that hangs past its timeout'
       // the `timeout` this passes through options is exercised for real
       // instead of a mocked return value.
       spawnTaskkill: (command, args, options) => spawnSync(process.execPath, ['-e', 'setTimeout(() => {}, 2_000)'], options),
-      spawnPowershell: NO_DESCENDANTS,
       isRunning: () => false,
       taskkillTimeoutMs: 200,
     }),
@@ -380,24 +244,7 @@ test('killProcessGroup does not wait out a taskkill that hangs past its timeout'
     logs.some((line) => line.includes('taskkill did not run for pid 4242') && line.includes('did not finish within')),
     logs.join('\n'),
   )
-  assert.equal(ok, true, 'no descendants and an already-gone leader still count as a confirmed kill once taskkill is given up on')
-})
-
-test('killProcessGroup does not wait out a PowerShell descendant listing that hangs past its timeout', () => {
-  const started = Date.now()
-  const { result: ok, logs } = withCapturedLog(() =>
-    killProcessGroup(4242, {
-      platform: 'win32',
-      spawnTaskkill: () => ({ error: null, status: 0, stderr: '' }),
-      spawnPowershell: (command, args, options) => spawnSync(process.execPath, ['-e', 'setTimeout(() => {}, 2_000)'], options),
-      isRunning: () => false,
-      descendantTimeoutMs: 200,
-    }),
-  )
-  const elapsed = Date.now() - started
-  assert.ok(elapsed < 1_500, `killProcessGroup must give up listing descendants around descendantTimeoutMs instead of waiting out the hang (${elapsed}ms)`)
-  assert.equal(ok, false, 'an unconfirmed descendant listing must not be reported as clean')
-  assert.ok(logs.some((line) => line.includes('Could not list descendants of pid 4242')), logs.join('\n'))
+  assert.equal(ok, true, 'an already-gone leader still counts as confirmed once taskkill itself is given up on')
 })
 
 test('killProcessGroup signals the POSIX process group on every other platform', () => {
@@ -504,6 +351,36 @@ test('exec gives up on a step whose process is still running after its kill was 
   }
 })
 
+// Guards the call site itself, not just killProcessGroup's own handling of a
+// killLeader it is given: an injected killProcessGroup like the tests above
+// only proves exec() calls *some* function, not that it threads the timed-out
+// child's own handle through. A killLeader silently dropped from this call
+// site would still pass every test above.
+test('exec passes the timed-out child\'s own handle as killLeader, not just its pid', async () => {
+  let capturedPid
+  let capturedKillLeader
+  const { result } = await withCapturedLogAsync(() =>
+    exec(...LONG_RUNNING, process.cwd(), {
+      timeoutMs: 50,
+      killFallbackMs: 100,
+      killProcessGroup: (pid, options) => {
+        capturedPid = pid
+        capturedKillLeader = options?.killLeader
+        return true
+      },
+    }),
+  )
+  try {
+    assert.equal(result, false)
+    assert.equal(typeof capturedKillLeader, 'function', 'exec must pass killLeader to killProcessGroup')
+    assert.ok(isRunning(capturedPid), 'the fake kill above never actually signalled the child')
+    capturedKillLeader()
+    assert.ok(await waitUntil(() => !isRunning(capturedPid), 5_000), "killLeader must end the child through its own handle")
+  } finally {
+    if (isRunning(capturedPid)) process.kill(capturedPid, 'SIGKILL')
+  }
+})
+
 test('exec fails a step that ran past its time limit even when its process then exits 0', async () => {
   // Whether or not the kill reports success, a process it did not stop can
   // still finish on its own before exec gives up on it.
@@ -595,6 +472,40 @@ test('cancelActiveChildrenAndExit names the children it could not kill before ex
     )
   } finally {
     if (unkilledPid) await killForReal(unkilledPid)
+    await stepPromise
+  }
+})
+
+// Same gap as the exec test above, for the other real call site: an injected
+// killProcessGroup only proves cancelActiveChildrenAndExit calls it, not that
+// it threads each active child's own handle through as killLeader.
+test("cancelActiveChildrenAndExit passes each active child's own handle as killLeader, not just its pid", async () => {
+  let capturedPid
+  let capturedKillLeader
+  const stepPromise = step('hang', () => exec(...LONG_RUNNING, process.cwd()))
+
+  // Give the child time to actually spawn before the cancel tries to kill it.
+  await new Promise((resolve) => setTimeout(resolve, 200))
+
+  let exitCode
+  await cancelActiveChildrenAndExit(1, {
+    exit: (code) => { exitCode = code },
+    cleanupTimeoutMs: 100,
+    killProcessGroup: (pid, options) => {
+      capturedPid = pid
+      capturedKillLeader = options?.killLeader
+      return true
+    },
+  })
+
+  try {
+    assert.equal(exitCode, 1)
+    assert.equal(typeof capturedKillLeader, 'function', 'cancelActiveChildrenAndExit must pass killLeader for each active child')
+    assert.ok(isRunning(capturedPid), 'the fake kill above never actually signalled the child')
+    capturedKillLeader()
+    assert.ok(await waitUntil(() => !isRunning(capturedPid), 5_000), "killLeader must end the child through its own handle")
+  } finally {
+    if (isRunning(capturedPid)) process.kill(capturedPid, 'SIGKILL')
     await stepPromise
   }
 })

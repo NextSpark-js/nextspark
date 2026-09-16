@@ -124,82 +124,10 @@ const CLEANUP_TIMEOUT_MS = 10 * 1000
 const OUTPUT_DRAIN_MS = 2 * 1000
 const LEFTOVER_GRACE_MS = 1000
 
-// How long killProcessGroup waits for a single synchronous Windows call -
-// taskkill itself, or PowerShell listing one pid's children - before treating
-// it as unconfirmed instead of blocking this call, and the script with it, on
-// one that hangs.
+// How long killProcessGroup waits for the single synchronous Windows call -
+// taskkill itself - before treating it as unconfirmed instead of blocking
+// this call, and the script with it, on one that hangs.
 const TASKKILL_TIMEOUT_MS = 10 * 1000
-const DESCENDANT_ENUM_TIMEOUT_MS = 10 * 1000
-
-// Bounds the whole generation-by-generation walk in listDescendantPids, on
-// top of each call's own timeout above: a tree that keeps growing as it is
-// walked (each generation answering quickly with new pids of its own) would
-// otherwise lengthen the walk without limit even though no single call hangs.
-const DESCENDANT_WALK_BUDGET_MS = 30 * 1000
-
-/**
- * PIDs of every process descending from `pid` on Windows, found by walking
- * Win32_Process.ParentProcessId with PowerShell one generation at a time so a
- * child's own children are followed too. This list is informational only
- * (see killProcessGroup): it is never used to target a kill, only to report
- * what is still running. Returns null instead of a partial list when a
- * generation could not be listed (PowerShell missing, refused, or itself
- * timed out) or when the walk runs past walkBudgetMs (a tree that keeps
- * growing as fast as it is walked), so a caller can tell "no descendants"
- * apart from "descendants unknown".
- */
-function listDescendantPids(pid, {
-  spawnPowershell = spawnSync,
-  timeoutMs = DESCENDANT_ENUM_TIMEOUT_MS,
-  walkBudgetMs = DESCENDANT_WALK_BUDGET_MS,
-} = {}) {
-  const descendants = []
-  const seen = new Set()
-  const frontier = [pid]
-  const deadline = Date.now() + walkBudgetMs
-  while (frontier.length > 0) {
-    if (Date.now() > deadline) return null
-    const parent = frontier.shift()
-    const result = spawnPowershell(
-      'powershell',
-      [
-        '-NoProfile',
-        '-NonInteractive',
-        '-Command',
-        `(Get-CimInstance Win32_Process -Filter "ParentProcessId=${parent}").ProcessId`,
-      ],
-      { timeout: timeoutMs, encoding: 'utf8' },
-    )
-    if (result.error || result.status !== 0) return null
-    for (const line of String(result.stdout ?? '').split(/\r?\n/)) {
-      const childPid = Number(line.trim())
-      if (!Number.isInteger(childPid) || childPid <= 0 || seen.has(childPid)) continue
-      seen.add(childPid)
-      descendants.push(childPid)
-      frontier.push(childPid)
-    }
-  }
-  return descendants
-}
-
-/**
- * Whether nothing is listening on `port` right now, checked by trying to bind
- * it rather than by asking for a pid: a descendant that still holds a port
- * can exist outside anything listDescendantPids found (see killProcessGroup),
- * so this is the one confirmation a step's declared port gets that does not
- * depend on enumeration having found everything. Runs the bind attempt in its
- * own child process, bounded by timeoutMs, so this stays synchronous like the
- * rest of killProcessGroup - node:net has no blocking bind call.
- */
-function probePortFree(port, { timeoutMs = TASKKILL_TIMEOUT_MS } = {}) {
-  const script = `
-    const server = require('node:net').createServer()
-    server.once('error', () => process.exit(1))
-    server.listen(${Number(port)}, '127.0.0.1', () => server.close(() => process.exit(0)))
-  `
-  const result = spawnSync(process.execPath, ['-e', script], { timeout: timeoutMs })
-  return result.status === 0
-}
 
 /**
  * SIGKILL to the negative pid targets the whole process group `detached: true`
@@ -222,21 +150,20 @@ function probePortFree(port, { timeoutMs = TASKKILL_TIMEOUT_MS } = {}) {
  * while it has not yet reaped the process, so it cannot land on an unrelated
  * process that later reuses the same pid.
  *
- * Every descendant of pid is also listed, through listDescendantPids, but
- * only to say what is still running: this never signals a pid known solely
- * from that enumeration. Between listing it and any later use, the process it
- * named can have exited and had its pid reused by something unrelated -
- * taskkill's own `/T` is the only thing here that may end a descendant,
- * because it targets the tree by the leader's identity, not by a pid read
- * off a snapshot. Killing a process that happens to reuse a stale pid is
- * worse than leaving a dev server running, so an enumerated descendant still
- * alive here, a descendant list that could not be produced at all (PowerShell
- * missing, refused, its own call timed out, or the walk outlasting its
- * budget), or a port the caller declares still being held, all make this
- * return false naming what could not be confirmed instead of guessing clean.
+ * Whether taskkill's `/T` actually ended every descendant is never checked
+ * here. An enumeration of the tree can always miss a grandchild spawned after
+ * it was already queried, so no walk of Win32_Process proves the tree is
+ * empty - a step that timed out or was cancelled has already made the run
+ * fail regardless (see exec and cancelActiveChildrenAndExit), so this is not
+ * a choice between confirming and not confirming, only between claiming a
+ * confirmation this cannot make or saying plainly that it can't. So this
+ * confirms only the leader, the one process reachable through a live handle,
+ * and always logs that its descendants are unconfirmed instead of naming one
+ * to end: a pid read off a past snapshot can already belong to something
+ * unrelated by the time anyone acts on it, and killing that would be worse
+ * than leaving a straggler running.
  *
- * Returns whether the leader and every listed descendant were confirmed gone,
- * and every port `ports` names confirmed free.
+ * Returns whether the leader was confirmed gone.
  * kill(2) can refuse too (EPERM) on POSIX, where a failed kill only means
  * "not confirmed": what happens to the group is left to its `exit` event,
  * since macOS also answers EPERM for a group whose processes have all
@@ -250,13 +177,8 @@ function killProcessGroup(pid, {
   kill = process.kill,
   killLeader = () => kill(pid, 'SIGKILL'),
   spawnTaskkill = spawnSync,
-  spawnPowershell = spawnSync,
   isRunning = isProcessRunning,
-  isPortFree = probePortFree,
   taskkillTimeoutMs = TASKKILL_TIMEOUT_MS,
-  descendantTimeoutMs = DESCENDANT_ENUM_TIMEOUT_MS,
-  descendantWalkBudgetMs = DESCENDANT_WALK_BUDGET_MS,
-  ports = [],
 } = {}) {
   if (platform === 'win32') {
     const result = spawnTaskkill('taskkill', ['/pid', String(pid), '/T', '/F'], { timeout: taskkillTimeoutMs })
@@ -280,35 +202,17 @@ function killProcessGroup(pid, {
       }
     }
 
-    const descendants = listDescendantPids(pid, {
-      spawnPowershell,
-      timeoutMs: descendantTimeoutMs,
-      walkBudgetMs: descendantWalkBudgetMs,
-    })
-    if (descendants === null) {
-      console.log(`${RED}Could not list descendants of pid ${pid}; some may still be running${NC}`)
-      return false
+    const leaderGone = !isRunning(pid)
+    console.log(
+      `${RED}Asked taskkill /T to end pid ${pid}'s whole process tree; its descendants may still be running and this cannot ` +
+      `confirm either way. Check by hand with a command that lists processes by parent instead of a pid to end - a pid from ` +
+      `this run may already belong to something else: powershell -Command "Get-CimInstance Win32_Process -Filter ` +
+      `'ParentProcessId=${pid}'"${NC}`,
+    )
+    if (!leaderGone) {
+      console.log(`${RED}pid ${pid} is still running after taskkill and the fallback kill; end it by hand: taskkill /PID ${pid} /T /F${NC}`)
     }
-
-    // Reports what is still running; never signals any of it (see above).
-    const survivors = [pid, ...descendants].filter(isRunning)
-    if (survivors.length > 0) {
-      const message = survivors.length === 1
-        ? `pid ${survivors[0]} is still running after taskkill and the fallback kill; end it by hand: taskkill /PID ${survivors[0]} /T /F`
-        : `pids ${survivors.join(', ')} are still running after taskkill and the fallback kill; end each by hand: taskkill /PID <pid> /T /F`
-      console.log(`${RED}${message}${NC}`)
-      return false
-    }
-
-    const heldPorts = ports.filter((port) => !isPortFree(port, { timeoutMs: taskkillTimeoutMs }))
-    if (heldPorts.length > 0) {
-      const message = heldPorts.length === 1
-        ? `port ${heldPorts[0]} is still held after killing pid ${pid}: a descendant outside what taskkill and enumeration confirmed may still be running`
-        : `ports ${heldPorts.join(', ')} are still held after killing pid ${pid}: a descendant outside what taskkill and enumeration confirmed may still be running`
-      console.log(`${RED}${message}${NC}`)
-      return false
-    }
-    return true
+    return leaderGone
   }
   try {
     kill(-pid, 'SIGKILL')
@@ -817,7 +721,7 @@ function isMainModule(moduleUrl, argv1, { windows = process.platform === 'win32'
   return resolveFile(fileURLToPath(moduleUrl, { windows })) === resolveFile(argv1)
 }
 
-export { exec, step, killProcessGroup, listDescendantPids, cancelActiveChildrenAndExit, isMainModule }
+export { exec, step, killProcessGroup, cancelActiveChildrenAndExit, isMainModule }
 
 // Guards the run below so the tests can import the functions above without
 // kicking off the whole verify pipeline as a side effect.
