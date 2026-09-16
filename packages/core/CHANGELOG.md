@@ -65,9 +65,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `import type * as z from 'zod'`.
   - New projects get an `eslint.config.mjs` with a `no-restricted-syntax` rule that rejects
     the named import. An existing project keeps its own config; add the same rule to it.
-- **Next.js 16 is what `init` generates, and Next 15 keeps working (#192).** A new project
-  installs `next@^16.3.5`; an existing project on Next 15 keeps building and running, and
-  core's `next` peer is `>=15.0.0`. What an existing project sees when it updates core:
+- **Next.js 16 is what `init` generates, and Next 15 keeps working (#192).** A project created
+  with `create-nextspark-app` installs `next@16.3.5`, pinned like `next-intl` and
+  `better-auth`; `nextspark init` adds `next@^16.3.5` to a package.json that declares no `next`
+  yet. An existing project on Next 15 keeps building and running, and core's `next` peer is
+  `>=15.0.0`. What an existing project sees when it updates core:
   - **`revalidateTag` is called through `@nextsparkjs/core/lib/cache/revalidate-tag`.**
     Next 16 requires a `cacheLife` profile as the second argument and rejects the
     one-argument call at type-check time, while Next 15 declares one parameter and rejects
