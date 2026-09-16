@@ -11,9 +11,10 @@
  *
  * Key responsibilities:
  * 1. Theme middleware override support
- * 2. Documentation access control
- * 3. Protected route authentication, and the roles /superadmin and /devtools need
- * 4. User header injection for downstream use (x-user-id, x-pathname, x-active-team-id)
+ * 2. Redirecting historical 3-level docs URLs to their current route
+ * 3. Documentation access control
+ * 4. Protected route authentication, and the roles /superadmin and /devtools need
+ * 5. User header injection for downstream use (x-user-id, x-pathname, x-active-team-id)
  *
  * IMPORTANT: The EntityPermissionLayout depends on x-user-id and x-pathname
  * headers being set here for server-side permission validation.
@@ -27,6 +28,7 @@ import {
 } from '@nextsparkjs/core/lib/middleware'
 import { ACTIVE_TEAM_COOKIE, activeTeamIdForSession } from '@nextsparkjs/core/lib/teams/active-team-cookie'
 import { SESSION_HINT_COOKIE, SESSION_HINT_MAX_AGE, hasSessionCookie } from '@nextsparkjs/core/lib/auth/session-hint'
+import { DOCS_REGISTRY } from '@nextsparkjs/registries/docs-registry'
 
 /**
  * Session type for proxy (inline definition)
@@ -190,7 +192,32 @@ export async function proxy(request: NextRequest) {
     if (themeResponse) return themeResponse
   }
 
-  // 2. Documentation access control
+  // 2. Redirect historical 3-level docs URLs (/docs/<core|theme>/<section>/<page>)
+  // to the current route. That split predates this app's history: `core` and
+  // `theme` were the only two categories ever generated (a third, `plugins`,
+  // was scaffolded but never activated), and both were collapsed into a single
+  // docs tree per source - `public` (served at /docs) and `superadmin` (served
+  // at /superadmin/docs) - without renaming any section that survived the
+  // collapse. A section from that era can therefore only be in one of the two
+  // registries today, or in neither if its docs were dropped rather than
+  // moved; the redirect follows the section, not the old category.
+  const oldDocsMatch = pathname.match(/^\/docs\/(?:core|theme)\/([^/]+)\/([^/]+)$/)
+  if (oldDocsMatch) {
+    const [, sectionSlug, pageSlug] = oldDocsMatch
+    const newUrl = request.nextUrl.clone()
+    if (DOCS_REGISTRY.superadmin.some((section) => section.slug === sectionSlug)) {
+      newUrl.pathname = `/superadmin/docs/${sectionSlug}/${pageSlug}`
+    } else if (DOCS_REGISTRY.public.some((section) => section.slug === sectionSlug)) {
+      newUrl.pathname = `/docs/${sectionSlug}/${pageSlug}`
+    } else {
+      // The section itself is gone, not renamed - there is no page left to
+      // send this to, so it goes to the docs home instead of a dead link.
+      newUrl.pathname = '/docs'
+    }
+    return NextResponse.redirect(newUrl, 301)
+  }
+
+  // 3. Documentation access control
   if (isUnder(pathname, '/docs')) {
     const appConfig = getThemeAppConfig(activeTheme as string)
 
@@ -208,17 +235,17 @@ export async function proxy(request: NextRequest) {
     return passThrough(request, requestHeaders)
   }
 
-  // 3. Allow public paths
+  // 4. Allow public paths
   if (isPublicPath(pathname)) {
     return passThrough(request, requestHeaders)
   }
 
-  // 4. API v1 routes handle their own dual authentication
+  // 5. API v1 routes handle their own dual authentication
   if (pathname.startsWith('/api/v1')) {
     return passThrough(request, requestHeaders)
   }
 
-  // 5. Protected routes - require authentication and inject user headers.
+  // 6. Protected routes - require authentication and inject user headers.
   // Areas are matched by path segment, so /dashboard-guide is not /dashboard.
   // /superadmin and /devtools also need a role, the same ones SuperAdminGuard
   // and DeveloperGuard let in. The guards decide it again in the browser, but

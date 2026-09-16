@@ -191,6 +191,44 @@ describe('proxy path boundaries and redirect targets', () => {
     expect(response.type).toBe('next')
   })
 
+  // A historical /docs/<core|theme>/<section>/<page> link (from before the
+  // 3-level -> 2-level migration) is redirected to wherever that section
+  // lives today, not left to 404. The mock registry (docs-registry.ts) has
+  // 'getting-started' under public and 'setup' under superadmin.
+  test('a historical 3-level link to a section that is public today redirects there', async () => {
+    const response = (await proxy(makeRequest('/docs/theme/getting-started/introduction'))) as unknown as PassThrough
+
+    expect(response.type).toBe('redirect')
+    expect(response.redirectUrl).toContain('/docs/getting-started/introduction')
+  })
+
+  test('a historical 3-level link to a section that is superadmin today redirects there', async () => {
+    const response = (await proxy(makeRequest('/docs/core/setup/configuration'))) as unknown as PassThrough
+
+    expect(response.type).toBe('redirect')
+    expect(response.redirectUrl).toContain('/superadmin/docs/setup/configuration')
+  })
+
+  // core/theme-system, core/entities, core/api and core/authentication were
+  // real sections under the old 3-level scheme but were dropped, not
+  // renamed, when docs were rebuilt around public/superadmin - there is no
+  // page left to send these to, so they land on the docs home instead of a
+  // redirect into another 404.
+  test('a historical 3-level link to a section that no longer exists anywhere redirects to the docs home', async () => {
+    const response = (await proxy(makeRequest('/docs/core/theme-system/introduction'))) as unknown as PassThrough
+
+    expect(response.type).toBe('redirect')
+    expect(response.redirectUrl).toMatch(/\/docs$/)
+  })
+
+  test('a 2-segment path is never mistaken for the historical 3-level shape', async () => {
+    mockedFetch.mockResolvedValue({ data: null })
+
+    const response = (await proxy(makeRequest('/docs/core'))) as unknown as PassThrough
+
+    expect(response.type).toBe('next')
+  })
+
   test('a redirect to login carries the query of the page asked for', async () => {
     mockedFetch.mockResolvedValue({ data: null })
 

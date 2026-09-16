@@ -30,7 +30,6 @@ export function PublicFooter() {
     ],
     resources: [
       { name: 'helpCenter', href: '/support' },
-      { name: 'apiDocs', href: '/docs/api' },
       { name: 'status', href: '/status' },
       { name: 'changelog', href: '/changelog' }
     ]
