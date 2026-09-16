@@ -31,8 +31,8 @@ function shapesUnder(dir: string): string[] {
  *
  * `covers` tells whether a path from the project root falls under the entry, and
  * `shapes` are the paths the entry is asked about besides those. `ignoredBy`
- * lists lines that already ignore everything under the entry, and only stands in
- * outside a repository, where there is no git to ask.
+ * lists lines that ignore everything under the entry, and stands in where there
+ * is no git to ask: git missing, or a project that is not a repository.
  *
  * `asAWhole` marks an entry whose files can't be vouched for one by one before
  * they are written: each copy of app/ goes into a directory named as it is
@@ -179,6 +179,13 @@ function linesAsGitReadsThem(content: string): string[] {
  * An entry the file already has below its last negation is not lacking, whatever
  * git answers: appending it again puts it no further down, and what leaves a
  * path in then is a .gitignore further down the tree.
+ *
+ * Without git to ask, a line that ignores the whole entry counts only below the
+ * file's last negation too. Git takes a path's last matching line, so a negation
+ * after the line can take back what it ignores - `app.backup.*` then
+ * `!app.backup.v` and a star leaves the backups in once the project is a
+ * repository - and one before it can't. The same goes for an entry that counts
+ * only as a whole once something is written under it, git or no git.
  */
 export function missingGitignoreEntries(projectRoot: string, written: readonly string[] = []): string[] {
   const lines = gitignoreLines(projectRoot);
@@ -200,7 +207,7 @@ export function missingGitignoreEntries(projectRoot: string, written: readonly s
       .map(({ entry }) => entry);
   }
 
-  return GENERATED_PATHS.filter(({ ignoredBy }) => !ignoredBy.some((line) => lines.includes(line))).map(({ entry }) => entry);
+  return GENERATED_PATHS.filter((generated) => !ignoredAsAWhole(generated)).map(({ entry }) => entry);
 }
 
 /**

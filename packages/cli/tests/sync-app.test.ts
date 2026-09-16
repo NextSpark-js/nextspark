@@ -843,3 +843,48 @@ test('--dry-run names the .gitignore lines a run adds for its backups when the r
 
   assert.deepEqual(missed, [])
 })
+
+test('outside a repository, or without git on PATH, nothing a sync writes is left for git once the project is a repository, whatever negations the .gitignore chains', { skip: process.platform === 'win32' }, async () => {
+  const chained = 'app/(templates)/\n!app/(templates)/\n.nextspark/backups/\n!.nextspark/backups/\n' +
+    '.nextspark/sync-state.json\n!/.nextspark/sync-state.json\napp.backup.*/\n!app.backup.v*/\n'
+
+  // Every mode runs before anything is asserted, so a failure names what each one leaves
+  const leftOut: string[] = []
+  for (const mode of ['outside a repository', 'without git on PATH']) {
+    const { root, cleanup } = await project()
+    try {
+      await write(root, '.gitignore', chained)
+      await write(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
+      await write(root, `${CORE}/scripts/build/registry.mjs`, treeRegistryBuild(20))
+      await write(root, 'app/(templates)/(public)/page.tsx', 'export default function Earlier() { return null }\n')
+
+      const path = process.env.PATH
+      if (mode === 'without git on PATH') {
+        execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
+        // The registry build still needs node
+        await mkdir(join(root, '.bin'))
+        await symlink(process.execPath, join(root, '.bin/node'))
+        process.env.PATH = join(root, '.bin')
+      }
+      let printed: string
+      try {
+        printed = await runSync(root, { force: true, backup: true, overwrite: ['i18n.ts'] })
+      } finally {
+        process.env.PATH = path
+      }
+
+      assert.ok(existsSync(join(root, 'app/(templates)/middleware.ts')), `${mode}: the registry build ran`)
+      assert.ok(existsSync(join(root, '.nextspark/backups')), `${mode}: backups were taken`)
+      execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
+      leftOut.push(...untrackedGenerated(root).map((file) => `${mode}: ${file}`))
+      const added = printed.match(/^  Added (.+) to \.gitignore$/m)?.[1].split(', ') ?? []
+      for (const line of ['app/(templates)/', '.nextspark/backups/', '.nextspark/sync-state.json', 'app.backup.v*/']) {
+        if (!added.includes(line)) leftOut.push(`${mode}: ${line} is not added`)
+      }
+    } finally {
+      await cleanup()
+    }
+  }
+
+  assert.deepEqual(leftOut, [])
+})

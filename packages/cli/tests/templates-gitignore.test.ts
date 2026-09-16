@@ -443,3 +443,65 @@ test('a .gitignore in .nextspark/backups counts as in place only with * as its o
     await outside.cleanup()
   }
 })
+
+/**
+ * Run `check` on a project where git can't be asked about it: outside a
+ * repository, or with no git on PATH in one that is.
+ */
+async function withoutGitToAsk<T>(root: string, mode: 'outside a repository' | 'without git on PATH', check: () => T): Promise<T> {
+  if (mode === 'outside a repository') return check()
+  execFileSync('git', ['init', '-q'], { cwd: root })
+  const path = process.env.PATH
+  process.env.PATH = join(root, 'no-git-here')
+  try {
+    return check()
+  } finally {
+    process.env.PATH = path
+  }
+}
+
+test('without git to ask, a line counts only below the .gitignore\'s last negation, as git reads it once the project is a repository', async () => {
+  const files = [
+    'app/(templates)/dashboard/layout.tsx',
+    '.nextspark/backups/2026-09-16T00-00-00-000Z-q1w2e3/i18n.ts',
+    '.nextspark/sync-state.json',
+    'app.backup.v0.1.0-beta.190.2026-09-16T00-00-00-000Z-x1y2z3/layout.tsx',
+  ]
+  const cases: { name: string; gitignore: string; added: string[] }[] = [
+    {
+      name: 'each line taken back by a negation below it',
+      gitignore: 'app/(templates)/\n!app/(templates)/\n.nextspark/backups/\n!.nextspark/backups/\n' +
+        '.nextspark/sync-state.json\n!/.nextspark/sync-state.json\napp.backup.*/\n!app.backup.v*/\n',
+      added: ['app/(templates)/', '.nextspark/backups/', '.nextspark/sync-state.json', 'app.backup.v*/'],
+    },
+    {
+      name: 'lines that ignore again, below the last negation, what one above took back',
+      gitignore: 'app/(templates)/\n!app/(templates)/\n.nextspark/\n!.nextspark/\napp.backup.*/\n!app.backup.v*/\n' +
+        'app.backup.v*/\n/.nextspark\napp/(templates)\n',
+      added: [],
+    },
+  ]
+
+  // Every case runs in both modes before anything is asserted, so a failure names each one
+  const wrong: string[] = []
+  for (const mode of ['outside a repository', 'without git on PATH'] as const) {
+    for (const { name, gitignore, added } of cases) {
+      const { root, cleanup } = await project()
+      try {
+        await writeFile(join(root, '.gitignore'), gitignore)
+
+        const got = await withoutGitToAsk(root, mode, () => ensureGeneratedPathsIgnored(root))
+        if (JSON.stringify(got) !== JSON.stringify(added)) wrong.push(`${mode}, ${name}: added ${JSON.stringify(got)}`)
+
+        execFileSync('git', ['init', '-q'], { cwd: root })
+        for (const file of files) {
+          if (!gitIgnores(root, file)) wrong.push(`${mode}, ${name}: git does not ignore ${file}`)
+        }
+      } finally {
+        await cleanup()
+      }
+    }
+  }
+
+  assert.deepEqual(wrong, [])
+})
