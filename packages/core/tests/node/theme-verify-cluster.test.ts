@@ -10,11 +10,17 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
+import net from 'node:net'
+import os from 'node:os'
 import path from 'node:path'
+import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { GLOBAL_OBJECTS, ROLES_SQL, DATABASES_SQL, MAINTENANCE_DATABASE, inspectCluster, rolesNamedIn } from '../../scripts/db/cluster-changes.mjs'
+import { inspectTarget, inspectMaintenanceDatabase } from '../../scripts/db/inspect-server.mjs'
+import { findTheme, migrationFiles } from '../../scripts/db/theme-location.mjs'
 
 const CORE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
+const REPO_ROOT = path.resolve(CORE, '../..')
 
 const FRESH_CLUSTER = { roles: [], databases: [{ name: 'postgres' }] }
 
@@ -80,11 +86,29 @@ test('a maintenance database that answers with nothing leaves the server disposa
   assert.equal(cluster.disposable, true)
 })
 
-test('the databases query counts a database that refuses connections', () => {
-  // `datallowconn = false` hides a database from a connection, not from the
-  // cluster: it still shares every role this run alters.
+test('the databases query counts a database that refuses connections or is marked as a template', () => {
+  // `datallowconn = false` hides a database from a connection, and
+  // `datistemplate` only lets it be copied: neither takes it out of the
+  // cluster, and both still share every role this run alters.
   assert.doesNotMatch(DATABASES_SQL, /datallowconn/)
-  assert.match(DATABASES_SQL, /NOT datistemplate/)
+  assert.doesNotMatch(DATABASES_SQL, /datistemplate/)
+})
+
+test('a database a user marked as a template is another database on the server', () => {
+  const cluster = inspectCluster({
+    roles: [],
+    databases: [{ name: 'postgres' }, { name: 'template0' }, { name: 'template1' }, { name: 'nextspark_blueprint' }],
+  })
+
+  assert.equal(cluster.disposable, false)
+  assert.deepEqual(cluster.otherDatabases, ['nextspark_blueprint'])
+  assert.match(cluster.reasons[0], /other databases share this server: nextspark_blueprint$/)
+})
+
+test('the templates every server has say nothing about it being in use', () => {
+  const cluster = inspectCluster({ roles: [], databases: [{ name: 'postgres' }, { name: 'template0' }, { name: 'template1' }] })
+
+  assert.equal(cluster.disposable, true)
 })
 
 test('the connecting user, which 022 grants nextspark_app, is named in the output', () => {
@@ -153,31 +177,23 @@ test('long lists of databases are cut short, and say how many are left', () => {
 })
 
 /**
- * Every directory of migrations a run can apply: core's, the ones a generated
- * project starts from, and each theme's and plugin's. A role created by any of
- * them lands in the same cluster, so the output has to name it.
+ * Every migration a run can apply, wherever it sits: core's own, and in each
+ * theme and plugin the top-level `migrations/` together with the ones under
+ * `entities/*` (children included) and `settings/*`, which run-migrations.mjs
+ * executes as well — plus the starter theme core ships to generated projects,
+ * under packages/core/templates/contents. A role created by any of them lands
+ * in the same cluster, so the output has to name it.
  */
-function migrationDirs(): string[] {
-  const repoRoot = path.resolve(CORE, '../..')
-  const dirs = [path.join(CORE, 'migrations'), path.join(CORE, 'templates', 'migrations')]
-  for (const group of ['themes', 'plugins']) {
-    const groupDir = path.join(repoRoot, group)
-    if (!fs.existsSync(groupDir)) continue
-    for (const entry of fs.readdirSync(groupDir, { withFileTypes: true })) {
-      const dir = path.join(groupDir, entry.name, 'migrations')
-      if (entry.isDirectory() && fs.existsSync(dir)) dirs.push(dir)
-    }
-  }
-  return dirs.filter(dir => fs.existsSync(dir))
+function migrationsIn(root: string): string[] {
+  return ['packages/core', 'themes', 'plugins'].flatMap(tree => migrationFiles(path.join(root, tree)))
 }
 
 test('every role any migration creates, alters or grants to is named in the output', () => {
-  const dirs = migrationDirs()
+  const files = migrationsIn(REPO_ROOT)
   const named = new Map<string, string>()
-  for (const dir of dirs) {
-    for (const file of fs.readdirSync(dir).filter(name => name.endsWith('.sql'))) {
-      const sql = fs.readFileSync(path.join(dir, file), 'utf8')
-      for (const role of rolesNamedIn(sql)) if (!named.has(role)) named.set(role, path.join(dir, file))
+  for (const file of files) {
+    for (const role of rolesNamedIn(fs.readFileSync(file, 'utf8'))) {
+      if (!named.has(role)) named.set(role, path.relative(REPO_ROOT, file))
     }
   }
 
@@ -186,7 +202,174 @@ test('every role any migration creates, alters or grants to is named in the outp
 
   assert.deepEqual(unannounced.sort(), [])
   assert.ok(named.size > 0, 'no role statement was found in the migrations')
-  assert.ok(dirs.length > 2, 'the scan reads only core, not the themes and plugins that also migrate')
+})
+
+test('the guard reads the entity migrations and the shipped starter, not only each top-level migrations/', () => {
+  const dirs = new Set(migrationsIn(REPO_ROOT).map(file => path.relative(REPO_ROOT, path.dirname(file))))
+
+  for (const dir of [
+    'packages/core/migrations',
+    'themes/blog/migrations',
+    'themes/blog/entities/posts/migrations',
+    'themes/crm/entities/contacts/migrations',
+    'plugins/langchain/migrations',
+    'plugins/ai/entities/ai-history/migrations',
+    'packages/core/templates/contents/themes/starter/entities/pages/migrations',
+  ]) {
+    assert.ok(dirs.has(dir), `${dir} is not read`)
+  }
+})
+
+test('migrations are found at any depth under a migrations directory, and nowhere else', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'verify-theme-migrations-'))
+  const write = (file: string) => {
+    fs.mkdirSync(path.dirname(path.join(root, file)), { recursive: true })
+    fs.writeFileSync(path.join(root, file), 'SELECT 1;')
+  }
+  const expected = [
+    'packages/core/migrations/001_core.sql',
+    'packages/core/templates/contents/themes/starter/entities/pages/migrations/001_pages.sql',
+    'themes/shop/migrations/001_theme.sql',
+    'themes/shop/entities/orders/migrations/001_orders.sql',
+    'themes/shop/entities/orders/children/lines/migrations/001_lines.sql',
+    'themes/shop/settings/billing/migrations/001_billing.sql',
+    'plugins/crm-sync/entities/syncs/migrations/001_syncs.sql',
+  ]
+  try {
+    for (const file of expected) write(file)
+    write('themes/shop/docs/example.sql')
+    write('themes/shop/migrations/README.md')
+    write('plugins/crm-sync/node_modules/some-lib/migrations/001_vendor.sql')
+
+    assert.deepEqual(migrationsIn(root).map(file => path.relative(root, file)).sort(), [...expected].sort())
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
+const WORKFLOW = path.join(REPO_ROOT, '.github/workflows/theme-migrations.yml')
+
+function workflowThemes(): string[] {
+  const matrix = fs.readFileSync(WORKFLOW, 'utf8').match(/^\s*theme:\s*\[([^\]]+)\]/m)
+  assert.ok(matrix, 'the workflow has no theme matrix')
+  return matrix![1].split(',').map(theme => theme.trim())
+}
+
+test('every theme the workflow verifies is a theme with migrations, and starter is the one core ships', () => {
+  const themes = workflowThemes()
+  assert.ok(themes.includes('starter'))
+
+  for (const theme of themes) {
+    const located = findTheme(REPO_ROOT, theme)
+    assert.equal(located.error, undefined, `${theme}: ${located.error}`)
+    assert.ok(located.migrations.length > 0, `${theme} has no migrations`)
+  }
+
+  const starter = findTheme(REPO_ROOT, 'starter')
+  assert.equal(path.relative(REPO_ROOT, starter.themeDir), 'packages/core/templates/contents/themes/starter')
+  assert.equal(path.relative(REPO_ROOT, starter.projectDir), 'packages/core/templates')
+  assert.ok(starter.migrations.some((file: string) => file.includes('/entities/')))
+})
+
+test('the workflow runs when a migration of any theme it verifies changes', () => {
+  const globs = [...fs.readFileSync(WORKFLOW, 'utf8').matchAll(/^\s*-\s*'([^']+)'\s*$/gm)].map(([, glob]) => glob)
+  const matchers = globs.map(glob => new RegExp(`^${glob.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*\*/g, '\0').replace(/\*/g, '[^/]*').replace(/\0/g, '.*')}$`))
+
+  // The shipped starter is named on its own, so the check does not rest on the lookup it covers.
+  const starter = migrationFiles(path.join(REPO_ROOT, 'packages/core/templates/contents/themes/starter'))
+  assert.ok(starter.length > 0)
+  const untriggered = [...workflowThemes().flatMap(theme => findTheme(REPO_ROOT, theme).migrations ?? []), ...starter]
+    .map((file: string) => path.relative(REPO_ROOT, fs.realpathSync(file)))
+    .filter((file: string) => !matchers.some(matcher => matcher.test(file)))
+
+  assert.deepEqual([...new Set(untriggered)], [])
+})
+
+test('a directory named like a theme is not one without a theme config, nor one without migrations', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'verify-theme-location-'))
+  const write = (file: string) => {
+    fs.mkdirSync(path.dirname(path.join(root, file)), { recursive: true })
+    fs.writeFileSync(path.join(root, file), '')
+  }
+  try {
+    // what themes/starter is in the repo: tests, no theme
+    write('apps/dev/contents/themes/starter/tests/jest/starter.test.ts')
+    write('packages/core/templates/contents/themes/starter/config/theme.config.ts')
+    write('packages/core/templates/contents/themes/starter/entities/pages/migrations/001_pages.sql')
+    write('apps/dev/contents/themes/bare/config/theme.config.ts')
+    write('apps/dev/contents/themes/twice/config/theme.config.ts')
+    write('apps/dev/contents/themes/twice/migrations/001.sql')
+    write('packages/core/templates/contents/themes/twice/config/theme.config.ts')
+    write('packages/core/templates/contents/themes/twice/migrations/001.sql')
+
+    assert.equal(path.relative(root, findTheme(root, 'starter').projectDir), 'packages/core/templates')
+    assert.match(findTheme(root, 'bare').error, /theme "bare" at apps\/dev\/contents\/themes\/bare has no migrations/)
+    assert.match(findTheme(root, 'twice').error, /"twice" is a theme in more than one place/)
+    assert.match(findTheme(root, 'missing').error, /no theme "missing": none of .* has a theme config/)
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('db:verify-theme refuses a name that is not a theme before it connects to anything', () => {
+  const run = spawnSync(process.execPath, [path.join(CORE, 'scripts/db/verify-theme-migrations.mjs'), 'no-such-theme'], {
+    env: { ...process.env, VERIFY_THEME_DATABASE_URL: 'postgresql://nobody@127.0.0.1:1/nextspark_verify?sslmode=disable' },
+    encoding: 'utf8',
+    timeout: 10000,
+  })
+
+  assert.equal(run.status, 1)
+  assert.match(run.stderr, /no theme "no-such-theme"/)
+  assert.doesNotMatch(run.stdout, /Verifying/)
+})
+
+/**
+ * A server that completes the handshake and then never answers: the shape of a
+ * query waiting on a lock another session holds, or of a connection that died
+ * once it was up. Only the startup exchange of the wire protocol is spoken.
+ */
+async function silentServer(t: { after: (fn: () => void) => void }) {
+  const sockets = new Set<net.Socket>()
+  const server = net.createServer(socket => {
+    sockets.add(socket)
+    let started = false
+    socket.on('data', chunk => {
+      if (started) return
+      // SSLRequest: length 8, code 80877103
+      if (chunk.length === 8 && chunk.readInt32BE(4) === 80877103) return void socket.write('N')
+      started = true
+      const authenticationOk = Buffer.from([0x52, 0, 0, 0, 8, 0, 0, 0, 0])
+      const readyForQuery = Buffer.from([0x5a, 0, 0, 0, 5, 0x49])
+      socket.write(Buffer.concat([authenticationOk, readyForQuery]))
+    })
+  })
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
+  t.after(() => {
+    for (const socket of sockets) socket.destroy()
+    server.close()
+  })
+  const { port } = server.address() as net.AddressInfo
+  return `postgresql://dbuser@127.0.0.1:${port}/nextspark_verify?sslmode=disable`
+}
+
+const SHORT_TIMEOUTS = { connectMs: 2000, statementMs: 200, queryMs: 400 }
+
+test('a target that stops answering after the handshake is given up on, not waited for', { timeout: 10000 }, async t => {
+  const url = await silentServer(t)
+  const started = Date.now()
+
+  await assert.rejects(inspectTarget(url, SHORT_TIMEOUTS), /timeout/i)
+  assert.ok(Date.now() - started < 3000, `took ${Date.now() - started} ms`)
+})
+
+test('a maintenance database that stops answering is unreachable, not empty', { timeout: 10000 }, async t => {
+  const url = await silentServer(t)
+
+  const maintenance = await inspectMaintenanceDatabase(url, SHORT_TIMEOUTS)
+
+  assert.equal(maintenance.unreachable, true)
+  assert.match(maintenance.reason, /timeout/i)
+  assert.equal(inspectCluster({ roles: [], databases: [], maintenance }).disposable, false)
 })
 
 test('a grant names the role it is granted to, whichever kind of grant it is', () => {

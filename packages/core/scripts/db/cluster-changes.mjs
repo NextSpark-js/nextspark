@@ -41,11 +41,17 @@ const ALTERED_ROLES = new Set(
 )
 
 /**
- * Databases a managed Postgres creates for itself. Their presence says nothing
- * about the server being in use — `postgres` is asked about separately, since
- * a hosted project can keep the app's own schema there.
+ * Databases a Postgres server creates for itself, or a managed one adds. Their
+ * presence says nothing about the server being in use — `postgres` is asked
+ * about separately, since a hosted project can keep the app's own schema there.
+ *
+ * Only `template0` and `template1` among templates: any database can be marked
+ * `datistemplate`, and one a user marked that way shares the cluster's roles
+ * like any other.
  */
-const HOUSEKEEPING_DATABASES = new Set(['postgres', 'rdsadmin', 'azure_maintenance', 'azure_sys', 'cloudsqladmin'])
+const HOUSEKEEPING_DATABASES = new Set([
+  'postgres', 'template0', 'template1', 'rdsadmin', 'azure_maintenance', 'azure_sys', 'cloudsqladmin',
+])
 
 /** The database a client connects to when it only needs the server. */
 export const MAINTENANCE_DATABASE = 'postgres'
@@ -63,13 +69,14 @@ export const ROLES_SQL = `
    ORDER BY r.rolname
 `
 
-// A database that refuses connections (`datallowconn = false`) is still a
-// database on this server, sharing the roles this run alters, so it counts.
+// A database that refuses connections (`datallowconn = false`) or is marked as
+// a template is still a database on this server, sharing the roles this run
+// alters, so it counts. The server's own templates are left out by name, in
+// HOUSEKEEPING_DATABASES.
 export const DATABASES_SQL = `
   SELECT datname AS name
     FROM pg_database
-   WHERE NOT datistemplate
-     AND datname <> current_database()
+   WHERE datname <> current_database()
    ORDER BY datname
 `
 

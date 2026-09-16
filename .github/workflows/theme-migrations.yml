@@ -6,14 +6,18 @@ on:
     paths:
       - 'packages/core/migrations/**'
       - 'packages/core/scripts/db/**'
+      - 'packages/core/templates/contents/**/migrations/**'
       - 'themes/**/migrations/**'
-      - 'themes/**/entities/**/migrations/**'
+      - 'plugins/**/migrations/**'
+      - '.github/workflows/theme-migrations.yml'
   pull_request:
     paths:
       - 'packages/core/migrations/**'
       - 'packages/core/scripts/db/**'
+      - 'packages/core/templates/contents/**/migrations/**'
       - 'themes/**/migrations/**'
-      - 'themes/**/entities/**/migrations/**'
+      - 'plugins/**/migrations/**'
+      - '.github/workflows/theme-migrations.yml'
   workflow_dispatch:
 
 jobs:
@@ -22,6 +26,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # `starter` is the theme generated projects start from, in
+        # packages/core/templates/contents/themes/starter; themes/starter holds
+        # only its tests. db:verify-theme looks in both places and refuses a
+        # name that is not a theme with migrations.
         theme: [blog, crm, default, productivity, starter]
     services:
       postgres:
