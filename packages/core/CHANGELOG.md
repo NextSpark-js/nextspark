@@ -96,6 +96,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     project keeps `^15.0.0` in its copies under `contents/` until it edits them, or re-adds
     the theme or plugin with `--force`, which replaces the whole directory.
   - **Node 20.9 is the floor** for the CLI and `create-nextspark-app`, as Next 16 requires.
+  - **`create-nextspark-app` writes the build-script allowlist the project's own pnpm reads:**
+    `allowBuilds` in `pnpm-workspace.yaml` for pnpm 11, `pnpm.onlyBuiltDependencies` in
+    `package.json` for 10 and 9. It asks pnpm for its version from the project's directory,
+    since Corepack takes the version from the nearest `packageManager` field and the directory
+    the command starts from can resolve another pnpm. The list adds `protobufjs` and `sharp`,
+    and a core installed from a local tarball is listed by its `file:` spec, the only form pnpm
+    matches it by; pnpm 11 failed the install with `ERR_PNPM_IGNORED_BUILDS` over each one left
+    out.
 
 - **`generateTemplateRegistry()` returns `Promise<string>` (#197).** It reads each theme
   template's syntax tree to tell a component override from a metadata-only one, and the

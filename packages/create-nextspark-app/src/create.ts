@@ -34,34 +34,68 @@ function findLocalTarball(packageName: string): string | null {
 }
 
 /**
- * Packages whose install scripts the project needs to run. pnpm 10 stopped
- * running dependency build scripts unless they are listed, and a blocked one
- * installs without its binary: esbuild, @swc/core and cypress ship theirs that
- * way, and @nextsparkjs/core syncs app/ from its own postinstall.
+ * Every package with an install script that a NextSpark project, its themes and
+ * its plugins install. pnpm 10 and later run a dependency's install script only
+ * when the dependency is listed, and a blocked one installs without what the
+ * script sets up: the native binaries esbuild, @swc/core, sharp, @parcel/watcher
+ * and unrs-resolver fetch or check, cypress's app, and the app/ directory
+ * @nextsparkjs/core syncs. pnpm 11 also fails the install over each one left
+ * out, even one whose script only prints a warning, as protobufjs's does.
  */
 const PACKAGES_ALLOWED_TO_BUILD = [
-  '@nextsparkjs/core',
   '@nextsparkjs/ai-workflow',
+  '@nextsparkjs/core',
   '@parcel/watcher',
   '@swc/core',
   'cypress',
   'esbuild',
+  'protobufjs',
+  'sharp',
   'unrs-resolver',
 ]
 
+/** A package installed from a tarball on disk instead of the registry. */
+interface LocalTarball {
+  name: string
+  file: string
+}
+
 /**
- * Major version of the pnpm that will install this project, or null when pnpm
- * isn't callable.
+ * The allowlist entries for this project: the package names, and the full spec
+ * of each listed package installed from a local tarball. pnpm matches a `file:`
+ * dependency only by `<name>@file:<path from the project>`, never by its name.
+ */
+function allowlistEntries(projectPath: string, localTarballs: LocalTarball[]): string[] {
+  const tarballSpecs = localTarballs
+    .filter(tarball => PACKAGES_ALLOWED_TO_BUILD.includes(tarball.name))
+    .map(tarball => `${tarball.name}@file:${path.relative(projectPath, tarball.file).split(path.sep).join('/')}`)
+
+  return [...PACKAGES_ALLOWED_TO_BUILD, ...tarballSpecs]
+}
+
+/**
+ * Major version of the pnpm that installs the project in `projectPath`, or null
+ * when pnpm isn't callable there.
+ *
+ * Asked from the project directory because pnpm is usually a Corepack shim that
+ * takes its version from the nearest `packageManager` field above the directory
+ * it runs in: the directory create-nextspark-app is started from can resolve a
+ * different pnpm than the one that installs the project.
  *
  * It decides where the build-script allowlist goes: pnpm 11 reads `allowBuilds`
  * from pnpm-workspace.yaml and ignores the `pnpm` field in package.json
- * entirely (warning about it on every command), while 10 and older read
- * `pnpm.onlyBuiltDependencies` from package.json and know nothing about the new
- * key. Writing the wrong one leaves every native dependency without its binary.
+ * entirely (warning about it on every command), while 10 and 9 read
+ * `pnpm.onlyBuiltDependencies` from package.json, and 9 rejects a
+ * pnpm-workspace.yaml without `packages:`.
  */
-function getPnpmMajorVersion(): number | null {
+function getPnpmMajorVersion(projectPath: string): number | null {
   try {
-    const version = execSync('pnpm --version', { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
+    const output = execSync('pnpm --version', {
+      cwd: projectPath,
+      encoding: 'utf-8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
+    const version = output.trim().split('\n').pop() ?? ''
     const major = Number.parseInt(version.split('.')[0], 10)
     return Number.isNaN(major) ? null : major
   } catch {
@@ -77,8 +111,8 @@ function getPnpmMajorVersion(): number | null {
  * `nextspark init` adds the theme and plugin packages afterwards, merging into
  * this file rather than replacing it.
  */
-function buildWorkspaceYaml(): string {
-  const allowed = PACKAGES_ALLOWED_TO_BUILD.map(name => `  '${name}': true`).join('\n')
+function buildWorkspaceYaml(entries: string[]): string {
+  const allowed = entries.map(entry => `  '${entry}': true`).join('\n')
   return `# Dependencies allowed to run their install scripts (pnpm 11 spelling;
 # older pnpm reads pnpm.onlyBuiltDependencies from package.json instead)
 allowBuilds:
@@ -127,57 +161,67 @@ export async function createProject(options: ProjectOptions): Promise<void> {
     `shamefully-hoist=true\n`
   )
 
+  // Check for local tarballs (for development testing)
+  const localCoreTarball = findLocalTarball('@nextsparkjs/core')
+  const localCliTarball = findLocalTarball('@nextsparkjs/cli')
+  const localUiTarball = findLocalTarball('@nextsparkjs/ui')
+
+  // Pin @nextsparkjs/* to create-nextspark-app's own version (all NextSpark
+  // packages release in lockstep). Without this, the unversioned names resolve
+  // to `latest` independently for web/ and mobile/, producing an incoherent
+  // "version Frankenstein" install.
+  let ownVersion = 'latest'
+  try {
+    const ownPkg = JSON.parse(
+      fs.readFileSync(new URL('../package.json', import.meta.url), 'utf-8')
+    )
+    if (ownPkg.version) ownVersion = ownPkg.version
+  } catch {
+    // fall back to latest
+  }
+
+  let corePackage = `@nextsparkjs/core@${ownVersion}`
+  let cliPackage = `@nextsparkjs/cli@${ownVersion}`
+  let uiPackage = `@nextsparkjs/ui@${ownVersion}`
+  const localTarballs: LocalTarball[] = []
+
+  if (localCoreTarball && localCliTarball) {
+    corePackage = localCoreTarball
+    cliPackage = localCliTarball
+    localTarballs.push(
+      { name: '@nextsparkjs/core', file: localCoreTarball },
+      { name: '@nextsparkjs/cli', file: localCliTarball },
+    )
+    if (localUiTarball) {
+      uiPackage = localUiTarball
+      localTarballs.push({ name: '@nextsparkjs/ui', file: localUiTarball })
+    }
+  }
+
   // Step 3: Create minimal package.json
   const pkgSpinner = ora('  Initializing package.json...').start()
-  const pnpmMajor = getPnpmMajorVersion()
   const packageJson: Record<string, unknown> = {
     name: projectName,
     version: '0.1.0',
     private: true,
   }
-  // pnpm 11 ignores this field (and warns about it on every command); there the
-  // allowlist travels in pnpm-workspace.yaml instead.
-  if (pnpmMajor === null || pnpmMajor < 11) {
-    packageJson.pnpm = { onlyBuiltDependencies: PACKAGES_ALLOWED_TO_BUILD }
-  }
   await fs.writeJson(path.join(projectPath, 'package.json'), packageJson, { spaces: 2 })
 
   // Written before the install so the allowlist is in place for it
+  const pnpmMajor = getPnpmMajorVersion(projectPath)
+  const allowlist = allowlistEntries(projectPath, localTarballs)
   if (pnpmMajor !== null && pnpmMajor >= 11) {
-    await fs.writeFile(path.join(projectPath, 'pnpm-workspace.yaml'), buildWorkspaceYaml())
+    await fs.writeFile(path.join(projectPath, 'pnpm-workspace.yaml'), buildWorkspaceYaml(allowlist))
+  } else {
+    packageJson.pnpm = { onlyBuiltDependencies: allowlist }
+    await fs.writeJson(path.join(projectPath, 'package.json'), packageJson, { spaces: 2 })
   }
   pkgSpinner.succeed('  package.json created')
 
   // Step 4: Install @nextsparkjs/core, @nextsparkjs/cli, and essential peer dependencies
   const cliSpinner = ora('  Installing @nextsparkjs/core, @nextsparkjs/cli, and dependencies...').start()
   try {
-    // Check for local tarballs (for development testing)
-    const localCoreTarball = findLocalTarball('@nextsparkjs/core')
-    const localCliTarball = findLocalTarball('@nextsparkjs/cli')
-    const localUiTarball = findLocalTarball('@nextsparkjs/ui')
-
-    // Pin @nextsparkjs/* to create-nextspark-app's own version (all NextSpark
-    // packages release in lockstep). Without this, the unversioned names resolve
-    // to `latest` independently for web/ and mobile/, producing an incoherent
-    // "version Frankenstein" install.
-    let ownVersion = 'latest'
-    try {
-      const ownPkg = JSON.parse(
-        fs.readFileSync(new URL('../package.json', import.meta.url), 'utf-8')
-      )
-      if (ownPkg.version) ownVersion = ownPkg.version
-    } catch {
-      // fall back to latest
-    }
-
-    let corePackage = `@nextsparkjs/core@${ownVersion}`
-    let cliPackage = `@nextsparkjs/cli@${ownVersion}`
-    let uiPackage = `@nextsparkjs/ui@${ownVersion}`
-
-    if (localCoreTarball && localCliTarball) {
-      corePackage = localCoreTarball
-      cliPackage = localCliTarball
-      if (localUiTarball) uiPackage = localUiTarball
+    if (localTarballs.length > 0) {
       cliSpinner.text = '  Installing from local tarballs...'
     }
 
