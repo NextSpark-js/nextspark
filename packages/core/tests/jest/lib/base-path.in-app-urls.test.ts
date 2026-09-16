@@ -45,13 +45,26 @@
  *  - each element of an array written out that a `for...of` declaring it walks,
  *    or the member of each element it destructures
  *  - each value assigned to it with `=`, `||=`, `??=` or `&&=`, or by a
- *    `for...of` over an array written out; an assignment later in the same
- *    innermost function is excluded unless an iteration statement contains both
- *    it and the use
+ *    `for...of` over an array written out
  * A prop, or any other variable given no value in those ways, is not taken for
- * a component. A
- * Slot loads nothing itself; the child it hands its props to is checked where
- * that child is written.
+ * a component. A Slot loads nothing itself; the child it hands its props to is
+ * checked where that child is written.
+ *
+ * Of those values, a read counts the ones that reach it, as the control flow
+ * graph TypeScript's binder builds for narrowing says: a value every path
+ * overwrites before the read (`let Comp = Image; Comp = 'span'`, or `'span'` in
+ * one branch and `'a'` in the other) does not count, and one given after the
+ * read counts only when a loop takes it back there. The graph covers one
+ * function, so a value given in another function counts at every read, since
+ * that function may run at any call; and a read in a function other than the
+ * one that declares the variable counts every value the variable is given.
+ * `flowNode`, where the graph starts at a read, is not in TypeScript's public
+ * types: a read without one counts every value.
+ *
+ * A value a call returns counts as each value handed to it as an argument, so
+ * `identity(Image)` and `memo(Image)` count as next/image. The type the checker
+ * gives the tag is not what identifies a component: in this program next/image,
+ * next/link and core's AvatarImage have one and the same type.
  *
  * Props handed over whole count too: an element that loads a URL and receives
  * a spread, without that attribute written out, is reported, since the URL
@@ -63,7 +76,10 @@
  *
  * What the scan does not follow, by design: a tag passed in from outside the
  * component (`<Box as="a" href="/pricing" />` reads as a Box), a tag read from an
- * object or returned by a function (`tags.link`, `pickTag()`), array
+ * object (`tags.link`), one a function builds and returns (`pickTag()`) or a
+ * callback returns (`useMemo(() => Image)`), a wrapper that renders the
+ * component inside it (`forwardRef((props, ref) => <Image {...props} />)`,
+ * where the `<Image>` inside is what gets checked), array
  * destructuring and destructuring assignments, elements built with
  * createElement or cloneElement, a component loaded with import() or
  * next/dynamic, a URL assigned to a DOM property (`image.src = …`), a `url(`
@@ -406,30 +422,8 @@ function elementsOf(node: ts.Expression, assignment?: ts.Node): GivenValue[] {
   return node.elements.filter(element => !ts.isSpreadElement(element)).map(expression => ({ expression, assignment }))
 }
 
-/** The innermost function (or source file) that contains a use or assignment. */
-function valueScope(node: ts.Node): ts.Node {
-  for (let current: ts.Node | undefined = node; current; current = current.parent) {
-    if (ts.isFunctionLike(current) || ts.isSourceFile(current)) return current
-  }
-  return node.getSourceFile()
-}
-
 function contains(node: ts.Node, other: ts.Node): boolean {
   return node.getStart() <= other.getStart() && other.getEnd() <= node.getEnd()
-}
-
-/** An assignment after a use in a straight-line function body cannot choose that use's tag. */
-function assignmentCountsForUse(assignment: ts.Node | undefined, use: ts.Node): boolean {
-  if (!assignment || assignment.getStart() <= use.getStart()) return true
-  const scope = valueScope(use)
-  if (scope !== valueScope(assignment)) return true
-  let crossesIteration = false
-  const visit = (node: ts.Node) => {
-    if (ts.isIterationStatement(node, false) && contains(node, assignment) && contains(node, use)) crossesIteration = true
-    ts.forEachChild(node, visit)
-  }
-  visit(scope)
-  return crossesIteration
 }
 
 /** Values assigned to each variable, distinguished by the program checker's symbol. */
@@ -473,24 +467,125 @@ function destructuredFrom(element: ts.BindingElement): GivenValue[] {
   return objects.map(({ expression, assignment }) => ({ expression, member, assignment }))
 }
 
-/** Every value a variable is given that can affect this particular use. */
-function givenValues(symbol: ts.Symbol, use: ts.Node): GivenValue[] {
+/**
+ * TypeScript's binder flow node, and the flags it is told apart by. Both are
+ * there at run time but not in TypeScript's public types. A label keeps its
+ * antecedents as an array.
+ */
+interface FlowNode {
+  flags: number
+  node?: ts.Node
+  antecedent?: FlowNode | FlowNode[]
+}
+const FLOW_FLAGS = (ts as unknown as { FlowFlags: Record<'Unreachable' | 'Start' | 'Assignment', number> }).FlowFlags
+
+/** The binder's flow container for a read, declaration or assignment. */
+function flowContainer(node: ts.Node): ts.Node {
+  for (let current = node.parent; current; current = current.parent) {
+    if (
+      ts.isSourceFile(current) ||
+      ts.isFunctionLike(current) ||
+      ts.isClassStaticBlockDeclaration(current) ||
+      ts.isModuleBlock(current) ||
+      (ts.isPropertyDeclaration(current) && current.initializer && contains(current.initializer, node))
+    ) {
+      return current
+    }
+  }
+  return node.getSourceFile()
+}
+
+/** Values the declaration gives without first passing through its binder flow assignment. */
+function declarationValues(declaration: ts.Declaration): GivenValue[] {
   const values: GivenValue[] = []
-  for (const declaration of symbol.declarations ?? []) {
-    if (ts.isVariableDeclaration(declaration)) {
-      const statement = declaration.parent.parent
-      if (ts.isForOfStatement(statement)) values.push(...elementsOf(statement.expression, statement))
-      else if (declaration.initializer) values.push({ expression: declaration.initializer })
+  if (ts.isVariableDeclaration(declaration)) {
+    const statement = declaration.parent.parent
+    if (ts.isForOfStatement(statement)) values.push(...elementsOf(statement.expression, statement))
+    else if (declaration.initializer) values.push({ expression: declaration.initializer })
+  }
+  if (ts.isBindingElement(declaration)) {
+    if (declaration.initializer) values.push({ expression: declaration.initializer })
+    values.push(...destructuredFrom(declaration))
+  }
+  if (ts.isParameter(declaration) && declaration.initializer) values.push({ expression: declaration.initializer })
+  return values
+}
+
+/** Values a binder assignment node writes to its target. */
+function flowAssignmentValues(node: ts.Node): GivenValue[] {
+  if (ts.isVariableDeclaration(node)) return declarationValues(node)
+  if (ts.isBindingElement(node)) return declarationValues(node)
+  if (ts.isIdentifier(node)) {
+    const parent = node.parent
+    if (ts.isBinaryExpression(parent) && parent.left === node && ASSIGNMENT_OPERATORS.has(parent.operatorToken.kind)) {
+      return [{ expression: parent.right, assignment: parent }]
     }
-    if (ts.isBindingElement(declaration)) {
-      if (declaration.initializer) values.push({ expression: declaration.initializer })
-      values.push(...destructuredFrom(declaration))
+    if (ts.isForOfStatement(parent) && parent.initializer === node) return elementsOf(parent.expression, parent)
+  }
+  return []
+}
+
+/** The declaration defaults available at the start of their own flow container. */
+function parameterDefaults(symbol: ts.Symbol): GivenValue[] {
+  return (symbol.declarations ?? []).flatMap(declaration => {
+    if (ts.isParameter(declaration)) return declaration.initializer ? [{ expression: declaration.initializer }] : []
+    if (ts.isBindingElement(declaration) && ts.isParameter(declaration.parent.parent)) return declarationValues(declaration)
+    return []
+  })
+}
+
+/** Every value a variable is given when the read can enter from another flow container. */
+function allGivenValues(symbol: ts.Symbol): GivenValue[] {
+  const values = (symbol.declarations ?? []).flatMap(declarationValues)
+  const source = symbol.declarations?.[0]?.getSourceFile()
+  return [...values, ...(source ? assignmentsIn(source).get(symbol) ?? [] : [])]
+}
+
+/**
+ * Every value that reaches a read of the variable in the binder flow graph, or
+ * every value it is given when there is no read of it to start from.
+ */
+function reachingValues(symbol: ts.Symbol, reference: ts.Identifier | undefined): GivenValue[] {
+  const flow = (reference as (ts.Identifier & { flowNode?: FlowNode }) | undefined)?.flowNode
+  if (!reference || !flow) return allGivenValues(symbol)
+
+  const checker = programState().checker
+  const values: GivenValue[] = []
+  const seen = new Set<FlowNode>()
+  const stack = [flow]
+  let reachedStart = false
+  while (stack.length > 0) {
+    const current = stack.pop()!
+    if (seen.has(current)) continue
+    seen.add(current)
+    if (current.flags & FLOW_FLAGS.Assignment) {
+      const node = current.node
+      const destination = node && (ts.isVariableDeclaration(node) || ts.isBindingElement(node) ? node.name : ts.isIdentifier(node) ? node : undefined)
+      if (destination && checker.getSymbolAtLocation(destination) === symbol) {
+        values.push(...flowAssignmentValues(node!))
+        continue
+      }
     }
-    if (ts.isParameter(declaration) && declaration.initializer) values.push({ expression: declaration.initializer })
+    if (current.flags & FLOW_FLAGS.Start) {
+      reachedStart = true
+      continue
+    }
+    if (current.flags & FLOW_FLAGS.Unreachable) continue
+    const antecedent = current.antecedent
+    if (Array.isArray(antecedent)) stack.push(...antecedent)
+    else if (antecedent) stack.push(antecedent)
+  }
+
+  if (reachedStart) {
+    const container = flowContainer(reference)
+    const declaredHere = (symbol.declarations ?? []).some(declaration => flowContainer(declaration) === container)
+    values.push(...(declaredHere ? parameterDefaults(symbol) : allGivenValues(symbol)))
   }
   const source = symbol.declarations?.[0]?.getSourceFile()
-  const assigned = source ? assignmentsIn(source).get(symbol) ?? [] : []
-  return [...values, ...assigned.filter(value => assignmentCountsForUse(value.assignment, use))]
+  for (const value of source ? assignmentsIn(source).get(symbol) ?? [] : []) {
+    if (value.assignment && flowContainer(value.assignment) !== flowContainer(reference)) values.push(value)
+  }
+  return values
 }
 
 /** Whether a declaration is one of a variable, rather than an import, a function or a class. */
@@ -533,7 +628,7 @@ function merged(...lists: (string[] | undefined)[]): string[] | undefined {
   return attributes.length > 0 ? attributes : undefined
 }
 
-function symbolAttributes(handling: Handling, symbol: ts.Symbol | undefined, use: ts.Node, seen = new Set<string>()): string[] | undefined {
+function symbolAttributes(handling: Handling, symbol: ts.Symbol | undefined, reference: ts.Identifier | undefined, seen = new Set<string>()): string[] | undefined {
   const checker = programState().checker
   while (symbol && symbol.flags & ts.SymbolFlags.Alias) {
     const declaration = symbol.declarations?.[0]
@@ -555,7 +650,7 @@ function symbolAttributes(handling: Handling, symbol: ts.Symbol | undefined, use
     const id = `${source.fileName}#variable:${variable.getStart()}`
     if (seen.has(id)) return undefined
     seen.add(id)
-    const given = merged(...givenValues(symbol, use).map(value => valueAttributes(handling, value, use, seen)))
+    const given = merged(...reachingValues(symbol, reference).map(value => valueAttributes(handling, value, seen)))
     const atTopLevel = !symbol.declarations.some(declaration => {
       for (let current = declaration.parent; current && !ts.isSourceFile(current); current = current.parent) {
         if (ts.isFunctionLike(current)) return true
@@ -567,7 +662,7 @@ function symbolAttributes(handling: Handling, symbol: ts.Symbol | undefined, use
 
   const exportedValue = symbol.declarations.find(ts.isExportAssignment)
   if (exportedValue && ts.isExportAssignment(exportedValue)) {
-    return expressionAttributes(handling, unwrapped(exportedValue.expression), use, seen)
+    return expressionAttributes(handling, unwrapped(exportedValue.expression), seen)
   }
   return ownAttributes(handling, source, symbol.name)
 }
@@ -601,20 +696,20 @@ function moduleMemberAttributes(
   handling: Handling,
   module: { source?: ts.SourceFile; package?: string },
   member: string,
-  use: ts.Node,
   seen: Set<string>
 ): string[] | undefined {
   if (module.package) return PACKAGE_COMPONENTS[handling][`${module.package}#${member}`]
   if (!module.source) return undefined
   const checker = programState().checker
   const moduleSymbol = checker.getSymbolAtLocation(module.source)
-  return symbolAttributes(handling, moduleSymbol && checker.tryGetMemberInModuleExports(member, moduleSymbol), use, seen)
+  // an export is read from the module, not at a read the flow graph can start from
+  return symbolAttributes(handling, moduleSymbol && checker.tryGetMemberInModuleExports(member, moduleSymbol), undefined, seen)
 }
 
-function valueAttributes(handling: Handling, value: GivenValue, use: ts.Node, seen: Set<string>): string[] | undefined {
-  if (value.member === undefined) return expressionAttributes(handling, value.expression, use, seen)
-  const module = wholeModule(value.expression, use, seen)
-  return module ? moduleMemberAttributes(handling, module, value.member, use, seen) : undefined
+function valueAttributes(handling: Handling, value: GivenValue, seen: Set<string>): string[] | undefined {
+  if (value.member === undefined) return expressionAttributes(handling, value.expression, seen)
+  const module = wholeModule(value.expression, seen)
+  return module ? moduleMemberAttributes(handling, module, value.member, seen) : undefined
 }
 
 /**
@@ -624,12 +719,19 @@ function valueAttributes(handling: Handling, value: GivenValue, use: ts.Node, se
  */
 function wholeModule(
   node: ts.Expression,
-  use: ts.Node,
   seen: Set<string>
 ): { source?: ts.SourceFile; package?: string } | undefined {
   node = unwrapped(node)
   const required = requiredModule(node)
   if (required) return required
+  if (ts.isCallExpression(node) && !isCommonJsRequire(node)) {
+    for (const argument of node.arguments) {
+      if (ts.isSpreadElement(argument)) continue
+      const module = wholeModule(argument, seen)
+      if (module) return module
+    }
+    return undefined
+  }
   if (!ts.isIdentifier(node)) return undefined
   const checker = programState().checker
   let symbol = checker.getSymbolAtLocation(node)
@@ -643,9 +745,9 @@ function wholeModule(
     const id = `${variable.getSourceFile().fileName}#module:${variable.getStart()}`
     if (seen.has(id)) return undefined
     seen.add(id)
-    for (const value of givenValues(symbol, use)) {
+    for (const value of reachingValues(symbol, node)) {
       if (value.member === undefined) {
-        const module = wholeModule(value.expression, use, seen)
+        const module = wholeModule(value.expression, seen)
         if (module) return module
       }
     }
@@ -658,32 +760,37 @@ function wholeModule(
 }
 
 /** The URL attributes what an expression that stands for a tag handles that way. */
-function expressionAttributes(handling: Handling, node: ts.Expression, use: ts.Node = node, seen = new Set<string>()): string[] | undefined {
+function expressionAttributes(handling: Handling, node: ts.Expression, seen = new Set<string>()): string[] | undefined {
   node = unwrapped(node)
   if (ts.isConditionalExpression(node)) {
-    return merged(expressionAttributes(handling, node.whenTrue, use, seen), expressionAttributes(handling, node.whenFalse, use, seen))
+    return merged(expressionAttributes(handling, node.whenTrue, seen), expressionAttributes(handling, node.whenFalse, seen))
   }
   if (ts.isBinaryExpression(node) && [ts.SyntaxKind.BarBarToken, ts.SyntaxKind.QuestionQuestionToken].includes(node.operatorToken.kind)) {
-    return merged(expressionAttributes(handling, node.left, use, seen), expressionAttributes(handling, node.right, use, seen))
+    return merged(expressionAttributes(handling, node.left, seen), expressionAttributes(handling, node.right, seen))
   }
   if (isStringLiteral(node)) return handling === 'loads' ? ASSET_ATTRIBUTES[node.text] : undefined
+  if (ts.isCallExpression(node) && !isCommonJsRequire(node)) {
+    return merged(
+      ...node.arguments.filter((argument): argument is ts.Expression => !ts.isSpreadElement(argument)).map(argument => expressionAttributes(handling, argument, seen))
+    )
+  }
   const member = memberName(node)
   if (member !== undefined) {
     const memberNode = ts.isPropertyAccessExpression(node) ? node.name : node.argumentExpression
     const direct = memberNode && programState().checker.getSymbolAtLocation(memberNode)
-    const resolved = symbolAttributes(handling, direct, use, seen)
+    const resolved = symbolAttributes(handling, direct, memberNode && ts.isIdentifier(memberNode) ? memberNode : undefined, seen)
     if (resolved) return resolved
-    const module = wholeModule((node as ts.PropertyAccessExpression | ts.ElementAccessExpression).expression, use, seen)
-    return module ? moduleMemberAttributes(handling, module, member, use, seen) : undefined
+    const module = wholeModule((node as ts.PropertyAccessExpression | ts.ElementAccessExpression).expression, seen)
+    return module ? moduleMemberAttributes(handling, module, member, seen) : undefined
   }
-  if (ts.isIdentifier(node)) return symbolAttributes(handling, programState().checker.getSymbolAtLocation(node), use, seen)
+  if (ts.isIdentifier(node)) return symbolAttributes(handling, programState().checker.getSymbolAtLocation(node), node, seen)
   return undefined
 }
 
 /** The URL attributes the element a tag names handles that way. */
 function tagAttributes(handling: Handling, tag: ts.JsxTagNameExpression): string[] | undefined {
   if (ts.isIdentifier(tag) && /^[a-z]/.test(tag.text)) return handling === 'loads' ? ASSET_ATTRIBUTES[tag.text] : undefined
-  if (ts.isIdentifier(tag) || ts.isPropertyAccessExpression(tag)) return expressionAttributes(handling, tag, tag)
+  if (ts.isIdentifier(tag) || ts.isPropertyAccessExpression(tag)) return expressionAttributes(handling, tag)
   return undefined
 }
 
@@ -951,6 +1058,37 @@ describe('in-app URLs carry the base path', () => {
       'bare-in-app-urls.tsx:299  Loaders.ReexportedImage src from data  cover',
       'bare-in-app-urls.tsx:300  TwiceReexportedImage src from data  cover',
       'bare-in-app-urls.tsx:301  X.default src from data  cover',
+    ])
+  })
+
+  test('a tag counts as the values that reach it, and a call as the values handed to it', () => {
+    const offenders = offendersIn(join(FIXTURES_DIR, 'flow-and-calls.tsx'))
+
+    // Not reported: a value every path overwrites before the read, one given after the read with no loop
+    // back to it, a call handed a variable already overwritten, the wrapper around an <Image>, and core's
+    // AvatarImage however it is wrapped
+    expect(offenders.map(offender => offender.replace(/^.*__fixtures__\//, ''))).toEqual([
+      // a value a call returns counts as each value handed to it
+      'flow-and-calls.tsx:15  GenericImage src from data  cover',
+      'flow-and-calls.tsx:20  MemoImage src from data  cover',
+      'flow-and-calls.tsx:25  NestedMemoImage src from data  cover',
+      'flow-and-calls.tsx:30  ConditionalImage src from data  cover',
+      'flow-and-calls.tsx:35  MemoSharedAvatar src from data  cover',
+      "flow-and-calls.tsx:40  MemoLink href with the base path added twice  withBasePath('/docs')",
+      'flow-and-calls.tsx:45  images.default src from data  cover',
+      // a path that keeps the value: the catch of a try, a later turn of a loop
+      'flow-and-calls.tsx:53  C src from data  cover',
+      'flow-and-calls.tsx:60  C src from data  cover',
+      // a value given in another function, and a read in another function than the declaration
+      'flow-and-calls.tsx:72  C src from data  cover',
+      'flow-and-calls.tsx:79  C src from data  cover',
+      // the <Image> inside a forwardRef wrapper
+      'flow-and-calls.tsx:83  Image src in spread props  <Image {...props} ref={ref} alt="" width={1} height={1} />',
+      // a member of a local module, read by key or destructured
+      'flow-and-calls.tsx:139  ByKey src from data  cover',
+      'flow-and-calls.tsx:140  Destructured src from data  cover',
+      // a string handed to a call
+      'flow-and-calls.tsx:154  Anchor href  "/pricing"',
     ])
   })
 
