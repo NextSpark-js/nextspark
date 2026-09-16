@@ -5,7 +5,7 @@ import { mkdtemp, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { readGeneratedTag, sameText, tagStyleFor, withGeneratedTag } from '../src/utils/generated-tag.js'
+import { isText, readGeneratedTag, readGeneratedTagAt, sameText, tagStyleFor, withGeneratedTag } from '../src/utils/generated-tag.js'
 
 test('the tag goes in a line comment in scripts, a block comment in CSS, and nowhere in other files', () => {
   for (const path of ['app/page.tsx', 'i18n.ts', 'next.config.mjs', 'app/route.js', 'app/legacy.cjs', 'app/widget.jsx']) {
@@ -80,4 +80,55 @@ test('a script with a shebang keeps it on the first line, and still runs', async
 test('content that is not text gets no tag, whatever its extension', () => {
   const binary = Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00])
   assert.ok(withGeneratedTag('app/wasm-shim.ts', binary, '1.0.0').equals(binary))
+})
+
+test('a path with spaces, quotes or a comment terminator in it reads back as the path the tag was written for', () => {
+  const paths = [
+    'app/(marketing site)/page.tsx',
+    'app/say "hi"/page.tsx',
+    'app/back\\slash/page.tsx',
+    'app/star*/page.tsx',
+    'app/niños/[id]/page.tsx',
+  ]
+
+  for (const path of paths) {
+    const content = Buffer.from('export default function Page() { return null }\n')
+    const tagged = withGeneratedTag(path, content, '1.0.0')
+
+    const tag = readGeneratedTag(tagged)
+    assert.equal(tag?.path, path, `path=${path}`)
+    assert.equal(tag?.intact, true, `intact for ${path}`)
+    assert.ok(readGeneratedTagAt(path, tagged), `the file is still core's at ${path}`)
+    assert.equal(readGeneratedTagAt('app/other/page.tsx', tagged), null, `a copy elsewhere is the project's, from ${path}`)
+  }
+})
+
+test('a CSS path with a comment terminator in it leaves the tag a single closed comment', () => {
+  const tagged = withGeneratedTag('app/star*/globals.css', Buffer.from('@import "x";\n'), '1.0.0').toString()
+
+  const [tagLine, ...body] = tagged.split('\n')
+  assert.equal(tagLine.indexOf('*/'), tagLine.length - 2, `the comment closes only at its end: ${tagLine}`)
+  assert.equal(body[0], '@import "x";')
+})
+
+test('a tag written before paths were quoted still reads back', () => {
+  const body = 'export default function Page() { return null }\n'
+  const hash = readGeneratedTag(withGeneratedTag('app/page.tsx', Buffer.from(body), '1.0.0'))
+  assert.ok(hash)
+
+  const legacy = Buffer.from(`// @nextspark-generated core@0.1.0-beta.189 path=app/page.tsx sha256=${'0'.repeat(64)}\n${body}`)
+  assert.equal(readGeneratedTag(legacy)?.path, 'app/page.tsx')
+
+  const noPath = Buffer.from(`// @nextspark-generated core@0.1.0-beta.188 sha256=${'0'.repeat(64)}\n${body}`)
+  assert.equal(readGeneratedTag(noPath)?.path, null)
+})
+
+test('bytes no text file carries make content binary, so it gets no tag', () => {
+  const controls = Buffer.from([0x01, 0x02, 0x03, 0x04])
+  assert.equal(isText(controls), false)
+  assert.ok(withGeneratedTag('app/shim.ts', controls, '1.0.0').equals(controls))
+  assert.equal(tagStyleFor('app/shim.ts', controls), null)
+
+  assert.equal(isText(Buffer.from('a\tb\r\nc\n\fd\n')), true, 'tab, CR, LF and form feed are text')
+  assert.equal(isText(Buffer.from('áé\n')), true, 'multi-byte UTF-8 is text')
 })

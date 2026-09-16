@@ -5,14 +5,15 @@
  *
  *   /* @nextspark-generated core@<version> path=<path> sha256=<hash of the rest> *\/
  *
- * on the first line, or the second after a shebang. While the hash matches, the
+ * The path runs up to the ` sha256=` that ends it, and is a JSON string when the
+ * CLI had to quote it. On the first line, or the second after a shebang. While the hash matches, the
  * file is core's to update; a rewrite that leaves a stale hash makes sync treat
  * the file as changed by the project and stop updating it.
  */
 
 import { createHash } from 'node:crypto'
 
-const TAG_LINE = /^(?:\/\/|\/\*) @nextspark-generated core@\S+(?: path=\S+)? sha256=([0-9a-f]{64})(?: \*\/)?$/
+const TAG_LINE = /^(?:\/\/|\/\*) @nextspark-generated core@\S+(?: path=.+?)? sha256=([0-9a-f]{64})(?: \*\/)?$/
 
 /**
  * The hash a tag records: of the text below the tag, with CRLF line endings

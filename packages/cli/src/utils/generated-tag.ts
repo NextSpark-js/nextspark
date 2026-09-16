@@ -7,6 +7,12 @@ import { createHash } from 'node:crypto';
  *
  *   // @nextspark-generated core@0.1.0 path=app/layout.tsx sha256=<hash of everything but this line>
  *
+ * The path is written as a JSON string when writing it plain would make the line
+ * unreadable - a space would end it early, and a `*\/` would close a CSS tag's
+ * comment before the line does:
+ *
+ *   // @nextspark-generated core@0.1.0 path="app/(marketing site)/page.tsx" sha256=<hash>
+ *
  * It is the file's first line, or its second when the first is a shebang. While
  * the file sits at that path and the hash matches, the file is core's to update.
  * Once the hash doesn't match, the project changed the file and sync leaves it
@@ -17,14 +23,52 @@ export const GENERATED_TAG = '@nextspark-generated';
 
 export type TagStyle = 'line' | 'block';
 
-/** The tag line; tags written before the path was recorded have no `path=`. */
-const TAG_LINE = /^(?:\/\/|\/\*) @nextspark-generated core@(\S+)(?: path=(\S+))? sha256=([0-9a-f]{64})(?: \*\/)?$/;
+/**
+ * The tag line. The path runs up to the ` sha256=` that ends it, so a path
+ * written plain reads back whole however many spaces it has - which is also how
+ * tags written before paths were quoted read. Tags written before the path was
+ * recorded at all have no `path=`.
+ */
+const TAG_LINE = /^(?:\/\/|\/\*) @nextspark-generated core@(\S+)(?: path=(.+?))? sha256=([0-9a-f]{64})(?: \*\/)?$/;
+
+/** A path the tag line carries as it is: nothing in it needs escaping to read back. */
+const PLAIN_PATH = /^[^\s"\\\u0000-\u001f\u007f]+$/;
+
+/**
+ * The path as the tag line carries it: plain, or as a JSON string when plain
+ * would be unreadable. `*\/` is escaped as `*\\/`, which JSON reads as `*\/`
+ * and a CSS block comment doesn't close on.
+ */
+function encodeTagPath(path: string): string {
+  if (PLAIN_PATH.test(path) && !path.includes('*/')) return path;
+  return JSON.stringify(path).replace(/\*\//g, '*\\/');
+}
+
+/** The path a tag line carries, or null when it carries one that can't be read. */
+function decodeTagPath(encoded: string): string | null {
+  if (!encoded.startsWith('"')) return encoded;
+  try {
+    const path: unknown = JSON.parse(encoded);
+    return typeof path === 'string' ? path : null;
+  } catch {
+    return null;
+  }
+}
 
 const UTF8 = new TextDecoder('utf-8', { fatal: true });
 
-/** Whether content is text: valid UTF-8 without NUL bytes. */
+/** The control bytes text files carry: tab, line feed, form feed and carriage return. */
+const TEXT_CONTROL_BYTES = new Set([0x09, 0x0a, 0x0c, 0x0d]);
+
+/**
+ * Whether content is text: valid UTF-8, carrying no control byte beyond the ones
+ * text uses. Bytes NUL apart still make content nobody writes as source, and a
+ * comment line prepended to it would alter a file core has no business tagging.
+ */
 export function isText(content: Buffer): boolean {
-  if (content.includes(0)) return false;
+  for (const byte of content) {
+    if (byte === 0x7f || (byte < 0x20 && !TEXT_CONTROL_BYTES.has(byte))) return false;
+  }
   try {
     UTF8.decode(content);
     return true;
@@ -89,7 +133,7 @@ export function withGeneratedTag(path: string, content: Buffer, coreVersion: str
   const head = shebangLength(text);
   if (head === text.length && head > 0 && !text.endsWith('\n')) return content;
 
-  const marker = `${GENERATED_TAG} core@${coreVersion} path=${path} sha256=${generatedHash(content)}`;
+  const marker = `${GENERATED_TAG} core@${coreVersion} path=${encodeTagPath(path)} sha256=${generatedHash(content)}`;
   const line = style === 'line' ? `// ${marker}` : `/* ${marker} */`;
   return Buffer.from(`${text.slice(0, head)}${line}\n${text.slice(head)}`);
 }
@@ -116,8 +160,12 @@ export function readGeneratedTag(content: Buffer): GeneratedTag | null {
   const match = TAG_LINE.exec(tagLine);
   if (!match) return null;
 
+  // A tag whose path can't be read is not one this version wrote, so it claims no file
+  const path = match[2] === undefined ? null : decodeTagPath(match[2]);
+  if (match[2] !== undefined && path === null) return null;
+
   const body = Buffer.from(text.slice(0, head) + (newline === -1 ? '' : text.slice(newline + 1)));
-  return { coreVersion: match[1], path: match[2] ?? null, body, intact: generatedHash(body) === match[3] };
+  return { coreVersion: match[1], path, body, intact: generatedHash(body) === match[3] };
 }
 
 /**
