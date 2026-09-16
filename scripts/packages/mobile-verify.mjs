@@ -81,9 +81,26 @@ function step(label, run) {
   return passed
 }
 
+// jest-worker bounds its own child teardown to about a second (FORCE_EXIT_DELAY,
+// SIGKILL_DELAY in jest-worker's BaseWorkerPool/ChildProcessWorker), so a "worker
+// process has failed to exit gracefully" warning does not explain a step that
+// never returns. A step's own subprocess (a stalled network call from `expo
+// export`, an unresponsive Metro/Watchman crawl) can still hang the whole check
+// forever, so every step is bounded here and reported as failed instead.
+const STEP_TIMEOUT_MS = 5 * 60 * 1000
+
 function exec(command, args, cwd, env) {
-  const result = spawnSync(command, args, { cwd, stdio: 'inherit', env: env ? { ...process.env, ...env } : process.env })
+  const result = spawnSync(command, args, {
+    cwd,
+    stdio: 'inherit',
+    env: env ? { ...process.env, ...env } : process.env,
+    timeout: STEP_TIMEOUT_MS,
+    killSignal: 'SIGKILL',
+  })
   if (result.error) console.log(`${RED}${result.error.message}${NC}`)
+  if (result.signal) {
+    console.log(`${RED}Timed out after ${STEP_TIMEOUT_MS / 1000}s and was killed with ${result.signal}${NC}`)
+  }
   return result.status === 0
 }
 
