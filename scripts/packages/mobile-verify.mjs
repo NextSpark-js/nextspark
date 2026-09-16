@@ -76,7 +76,14 @@ const readJson = (file) => JSON.parse(readFileSync(file, 'utf8'))
 
 async function step(label, run) {
   console.log(`${CYAN}→ ${label}${NC}`)
-  const passed = await run()
+  const promise = run()
+  activeStepPromise = promise
+  let passed
+  try {
+    passed = await promise
+  } finally {
+    activeStepPromise = null
+  }
   console.log(passed ? `${GREEN}✓ ${label} passed${NC}` : `${RED}✗ ${label} failed${NC}`)
   return passed
 }
@@ -100,10 +107,18 @@ const EXPORT_STEP_TIMEOUT_MS = 15 * 60 * 1000
  * made this child the leader of, so descendants a hung Jest or Metro spawned
  * (workers, the Watchman crawl, a bound port) die with it instead of being
  * reparented to init and outliving the script.
+ *
+ * Windows has no such thing as a process group signal: `detached: true` there
+ * only frees the child from the parent's console, and a negative pid is not a
+ * valid target for kill(2). `taskkill /T` walks the same process tree instead.
  */
-function killProcessGroup(pid) {
+function killProcessGroup(pid, { platform = process.platform, kill = process.kill, spawnTaskkill = spawnSync } = {}) {
+  if (platform === 'win32') {
+    spawnTaskkill('taskkill', ['/pid', String(pid), '/T', '/F'])
+    return
+  }
   try {
-    process.kill(-pid, 'SIGKILL')
+    kill(-pid, 'SIGKILL')
   } catch (error) {
     if (error.code !== 'ESRCH') throw error
   }
@@ -114,6 +129,10 @@ function killProcessGroup(pid) {
 // sent to this script's pid never reaches it on its own. Tracking every
 // active pid here is what lets the SIGTERM/SIGINT handlers reach it too.
 const activeChildPids = new Set()
+
+// The step currently in flight, so a signal handler can wait for its finally
+// (see step below) before the process exits instead of racing it.
+let activeStepPromise = null
 
 function exec(command, args, cwd, { env, timeoutMs = STEP_TIMEOUT_MS } = {}) {
   return new Promise((resolve) => {
@@ -156,10 +175,16 @@ function exec(command, args, cwd, { env, timeoutMs = STEP_TIMEOUT_MS } = {}) {
  * touching children, which would leave a step's process group (Jest, Metro,
  * expo export) reparented to init and free to keep running - and, for Jest,
  * keep holding its port - after the supervisor that was watching it is gone.
+ *
+ * Killing the children only asks their `exec` promise to settle; the active
+ * step's own finally (exportAndroid's dist cleanup) still runs after that, on
+ * a later microtask, so exiting has to wait for the step promise too - a bare
+ * process.exit() right after the kill would cut that finally off mid-run.
  */
-function cancelActiveChildrenAndExit(exitCode) {
+async function cancelActiveChildrenAndExit(exitCode, { exit = process.exit } = {}) {
   for (const pid of activeChildPids) killProcessGroup(pid)
-  process.exit(exitCode)
+  if (activeStepPromise) await activeStepPromise.catch(() => {})
+  exit(exitCode)
 }
 process.on('SIGTERM', () => cancelActiveChildrenAndExit(143))
 process.on('SIGINT', () => cancelActiveChildrenAndExit(130))
@@ -395,6 +420,8 @@ async function main() {
   }
 
   const steps = [
+    ['This script\'s process-group teardown (node:test)', () =>
+      exec(process.execPath, ['--test', join(REPO_ROOT, 'scripts/packages/mobile-verify.test.mjs')], REPO_ROOT)],
     ['apps/mobile/src matches packages/mobile/templates/src', verifyMobileSrcMatchesTemplate],
     ['Install apps/mobile (isolated, frozen lockfile)', () =>
       exec('pnpm', ['install', '--ignore-workspace', '--frozen-lockfile'], MOBILE_APP_DIR)],
@@ -413,5 +440,11 @@ async function main() {
   return true
 }
 
-const ok = await main()
-process.exitCode = ok ? 0 : 1
+export { exec, step, killProcessGroup, cancelActiveChildrenAndExit }
+
+// Guards the run below so mobile-verify.test.mjs can import the functions
+// above without kicking off the whole verify pipeline as a side effect.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const ok = await main()
+  process.exitCode = ok ? 0 : 1
+}
