@@ -75,10 +75,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     the same branch as no profile at all, so tags still expire immediately instead of
     turning into stale-while-revalidate. Nothing to change in project code: the entity
     actions already call it.
-  - **`next.config.mjs` attaches its `webpack()` function only on Next 15.** From Next 16
-    the default bundler is Turbopack, which never reads it; `@nextsparkjs/registries`
-    resolves through the `paths` of `tsconfig.json` instead. A project that copied the
-    template config keeps its own copy until it re-syncs.
+  - **`next.config.mjs` attaches its `webpack()` function whenever webpack builds:** Next 15
+    by default, and Next 16 with `--webpack`. It points `@nextsparkjs/registries` at the
+    generated directory, which webpack does not resolve from core's own imports otherwise.
+    Turbopack never reads it and resolves the registries through the `paths` of
+    `tsconfig.json`. A project that copied the template config keeps its own copy until it
+    re-syncs.
   - **The generated `lint` script is `eslint .`,** since Next 16 removes `next lint`, and
     `eslint-config-next` moves to `^16.3.5`. An existing project keeps whatever `lint`
     script it already has.

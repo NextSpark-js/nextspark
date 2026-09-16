@@ -1,6 +1,5 @@
 import createNextIntlPlugin from 'next-intl/plugin';
 import path from 'path';
-import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -13,19 +12,15 @@ const withNextIntl = createNextIntlPlugin('../../packages/core/src/i18n.ts');
 // resolves against the origin, so they carry it from here.
 const basePath = '';
 
-const require = createRequire(import.meta.url);
-
-/** Major of the Next.js the project installs, which decides the bundler. */
-const nextMajor = Number.parseInt(require('next/package.json').version, 10);
-
 /**
  * Silences the Node built-ins that client bundles reach transitively, and points
  * `@nextsparkjs/registries` at the generated directory.
  *
- * Only Next 15 reaches this. From Next 16 the default bundler is Turbopack,
- * which never reads a `webpack` function: it resolves `@nextsparkjs/registries`
- * through the `paths` of tsconfig.json, and leaves a Node built-in alone unless
- * client code imports it for real.
+ * Only webpack reads this, and either major can build with it: Next 15 by
+ * default, Next 16 with `--webpack`. Turbopack resolves `@nextsparkjs/registries`
+ * through the `paths` of tsconfig.json, which Next's webpack skips for imports
+ * made from inside node_modules, as core's are, and leaves a Node built-in alone
+ * unless client code imports it for real.
  */
 const applyWebpackFallbacks = (config, { isServer }) => {
   if (!isServer) {
@@ -113,9 +108,10 @@ const nextConfig = {
       },
     ],
   },
-  // Attached only where a bundler reads it, so Next 16 is not handed a config
-  // its Turbopack build ignores.
-  ...(nextMajor < 16 ? { webpack: applyWebpackFallbacks } : {}),
+  // Next.js sets TURBOPACK before it loads this file whenever Turbopack builds
+  // (on 15 with --turbopack, on 16 unless given --webpack), and next-intl picks
+  // its own webpack or Turbopack setup from the same variable.
+  ...(process.env.TURBOPACK ? {} : { webpack: applyWebpackFallbacks }),
   async headers() {
     const isProduction = process.env.NODE_ENV === 'production';
 
