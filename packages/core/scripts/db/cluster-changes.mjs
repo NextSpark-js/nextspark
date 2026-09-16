@@ -23,12 +23,22 @@ export const GLOBAL_OBJECTS = [
   { role: 'service_role', change: 'created if missing', altered: false },
   {
     role: 'nextspark_app',
-    change: 'created if missing, set to INHERIT, granted authenticated, granted to the connecting user',
+    change: 'created if missing, set to INHERIT, granted authenticated',
     altered: true,
+  },
+  {
+    role: 'current_user',
+    change: 'granted nextspark_app, so whoever runs this can SET ROLE to it',
+    altered: true,
+    connecting: true,
   },
 ]
 
-const ALTERED_ROLES = new Set(GLOBAL_OBJECTS.filter(object => object.altered).map(object => object.role))
+// `current_user` is whoever connects, so it is announced but never looked for
+// among the roles the server already has.
+const ALTERED_ROLES = new Set(
+  GLOBAL_OBJECTS.filter(object => object.altered && !object.connecting).map(object => object.role)
+)
 
 /**
  * Databases a managed Postgres creates for itself. Their presence says nothing
@@ -53,11 +63,12 @@ export const ROLES_SQL = `
    ORDER BY r.rolname
 `
 
+// A database that refuses connections (`datallowconn = false`) is still a
+// database on this server, sharing the roles this run alters, so it counts.
 export const DATABASES_SQL = `
   SELECT datname AS name
     FROM pg_database
-   WHERE datallowconn
-     AND NOT datistemplate
+   WHERE NOT datistemplate
      AND datname <> current_database()
    ORDER BY datname
 `
@@ -77,8 +88,15 @@ function asList(value) {
  * run alters it for whoever else is using it. Another database on the server is
  * the weaker one, and enough on its own — a role created now lands in a cluster
  * that is not this run's to change.
+ *
+ * `maintenance` is what looking at the `postgres` database answered:
+ * `{ objects }` when it could be read, `{ unreachable: true, reason }` when it
+ * could not. Not being able to look is itself a reason to refuse — a server
+ * that denies CONNECT to its own maintenance database is a managed one with
+ * someone else's rules on it, not a container this run may rearrange.
  */
-export function inspectCluster({ roles = [], databases = [], maintenanceObjects = [] } = {}) {
+export function inspectCluster({ roles = [], databases = [], maintenance = {} } = {}) {
+  const maintenanceObjects = maintenance.objects ?? []
   const existingRoles = roles.map(role => ({
     name: role.name,
     canLogin: role.can_login ?? role.canLogin ?? false,
@@ -110,6 +128,71 @@ export function inspectCluster({ roles = [], databases = [], maintenanceObjects 
     const examples = maintenanceObjects.slice(0, 3).map(object => object.name ?? object).join(', ')
     reasons.push(`the ${MAINTENANCE_DATABASE} database holds objects of its own, for example ${examples}`)
   }
+  if (maintenance.unreachable) {
+    const detail = maintenance.reason ? `: ${maintenance.reason}` : ''
+    reasons.push(
+      `the ${MAINTENANCE_DATABASE} database could not be read${detail}, so what else is on this server is unknown`
+    )
+  }
 
   return { disposable: reasons.length === 0, reasons, existingRoles, otherDatabases }
+}
+
+/**
+ * Words that can stand where a role name would, in the statements above:
+ * GRANT's own syntax, the privileges it grants, and the objects it grants them
+ * on. None of them is a role.
+ */
+const GRANT_KEYWORDS = new Set([
+  'ALL', 'PRIVILEGES', 'SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER',
+  'CREATE', 'CONNECT', 'TEMPORARY', 'TEMP', 'EXECUTE', 'USAGE', 'SET', 'ALTER', 'MAINTAIN',
+  'ON', 'IN', 'SCHEMA', 'TABLE', 'TABLES', 'SEQUENCE', 'SEQUENCES', 'FUNCTION', 'FUNCTIONS',
+  'ROUTINE', 'ROUTINES', 'DATABASE', 'DOMAIN', 'TYPE', 'LANGUAGE', 'PUBLIC', 'SYSTEM',
+  'FOREIGN', 'DATA', 'WRAPPER', 'SERVER', 'LARGE', 'OBJECT', 'TABLESPACE', 'PARAMETER',
+  'OPTION', 'ADMIN', 'INHERIT', 'GRANTED', 'BY', 'FOR', 'ROLE', 'COLUMN',
+])
+
+/**
+ * Every role a migration names, whichever statement names it.
+ *
+ * Both sides of a grant count: `GRANT authenticated TO reporting` alters
+ * `reporting` as much as it uses `authenticated`, and a grant of privileges —
+ * `GRANT SELECT ON ... TO reporting` — names only the grantee. A grant can list
+ * several of either, so each list is split on commas.
+ */
+export function rolesNamedIn(sql) {
+  const named = new Set()
+  // Comments and RAISE messages are prose: a GRANT quoted inside either is
+  // being talked about, not run. A GRANT inside format() is run, so string
+  // literals in general stay.
+  const statements = sql
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/--[^\n]*/g, ' ')
+    .replace(/\bRAISE\s+(?:DEBUG|LOG|INFO|NOTICE|WARNING|EXCEPTION)\b[^;]*;/gi, ' ')
+
+  const add = list => {
+    for (const name of list.split(',')) {
+      // A grantee list can end inside a format() call, so the string and the
+      // call close on the last name: `format('GRANT x TO %I', current_user)`.
+      const role = name.trim().replace(/[)'"]+$/, '').replace(/^["']+/, '')
+      // GRANT's own keywords, and the object a privilege is granted on, are
+      // not roles; `format('... %I', current_user)` names the connecting user.
+      if (/^[a-z_]\w*$/i.test(role) && !GRANT_KEYWORDS.has(role.toUpperCase())) named.add(role)
+    }
+  }
+
+  for (const [, list] of statements.matchAll(/\b(?:CREATE|ALTER|DROP)\s+(?:ROLE|USER|GROUP)\s+(?:IF\s+(?:NOT\s+)?EXISTS\s+)?("?\w+"?)/gi)) {
+    add(list)
+  }
+  // The grantee list runs from the last TO/FROM to the end of the statement,
+  // past any WITH ADMIN OPTION / GRANTED BY tail.
+  for (const [, grantees] of statements.matchAll(/\b(?:GRANT|REVOKE)\b[^;]*?\s(?:TO|FROM)\s+([^;]+)/gi)) {
+    add(grantees.split(/\bWITH\b|\bGRANTED\s+BY\b|\bCASCADE\b|\bRESTRICT\b/i)[0])
+  }
+  // What a grant of role membership hands over, which is a role too.
+  for (const [, roles] of statements.matchAll(/\b(?:GRANT|REVOKE)\s+((?:"?\w+"?\s*,\s*)*"?\w+"?)\s+(?:TO|FROM)\s/gi)) {
+    add(roles)
+  }
+
+  return named
 }

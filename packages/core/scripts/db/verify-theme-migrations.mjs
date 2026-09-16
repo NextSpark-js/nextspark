@@ -10,7 +10,8 @@
 // cluster-wide roles (see cluster-changes.mjs), which every database on the
 // same Postgres server shares. The output names those roles before the
 // migrations run, and the run is refused when the server shows signs of being
-// in use — one of those roles already exists, or another database lives there.
+// in use — one of those roles already exists, another database lives there, or
+// the server will not say what is on it.
 // VERIFY_THEME_ALLOW_CLUSTER_CHANGES=1 says the server is yours to change and
 // runs anyway. A disposable server, one per run, needs neither.
 //
@@ -136,24 +137,28 @@ async function inspectTarget(connectionString) {
 /**
  * What the maintenance database holds. A hosted Postgres keeps `postgres` for
  * connections that only need the server, and a project whose own schema lives
- * there looks, from the outside, like a server with nothing on it. A server
- * that refuses the connection answers nothing, and is left out of the verdict.
+ * there looks, from the outside, like a server with nothing on it.
+ *
+ * A server that refuses the connection, or the query, is reported as
+ * unreachable rather than as empty: not being able to look is what a managed
+ * cluster looks like, and reading it as "nothing there" is how a run ends up
+ * creating cluster-wide roles on a server it was never allowed to inspect.
  */
-async function findMaintenanceObjects(databaseUrl) {
+async function inspectMaintenanceDatabase(databaseUrl) {
   const url = new URL(databaseUrl);
-  if (url.pathname === `/${MAINTENANCE_DATABASE}`) return [];
+  if (url.pathname === `/${MAINTENANCE_DATABASE}`) return { objects: [] };
   url.pathname = `/${MAINTENANCE_DATABASE}`;
   const client = connect(url.toString());
   try {
     await client.connect();
-  } catch {
-    return [];
+  } catch (error) {
+    return { unreachable: true, reason: error.message };
   }
   try {
     const result = await client.query(EXISTING_OBJECTS_SQL);
-    return result.rows;
-  } catch {
-    return [];
+    return { objects: result.rows };
+  } catch (error) {
+    return { unreachable: true, reason: error.message };
   } finally {
     await client.end();
   }
@@ -184,8 +189,8 @@ async function main() {
   for (const { role, change } of GLOBAL_OBJECTS) console.log(`   ${role}: ${change}`);
   console.log('');
 
-  const maintenanceObjects = await findMaintenanceObjects(databaseUrl);
-  const cluster = inspectCluster({ ...inspection, maintenanceObjects });
+  const maintenance = await inspectMaintenanceDatabase(databaseUrl);
+  const cluster = inspectCluster({ ...inspection, maintenance });
   if (!cluster.disposable && !acknowledgesClusterChanges) {
     console.error(
       `❌ Refusing to run: ${target} is on a Postgres server that is not this run's to change.\n` +

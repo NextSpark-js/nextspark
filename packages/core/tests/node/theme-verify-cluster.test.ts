@@ -12,7 +12,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { GLOBAL_OBJECTS, ROLES_SQL, MAINTENANCE_DATABASE, inspectCluster } from '../../scripts/db/cluster-changes.mjs'
+import { GLOBAL_OBJECTS, ROLES_SQL, DATABASES_SQL, MAINTENANCE_DATABASE, inspectCluster, rolesNamedIn } from '../../scripts/db/cluster-changes.mjs'
 
 const CORE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 
@@ -55,11 +55,51 @@ test('a maintenance database with a schema of its own is a server in use', () =>
   const cluster = inspectCluster({
     roles: [],
     databases: [{ name: 'postgres' }],
-    maintenanceObjects: [{ kind: 'relation', name: 'public.users' }, { kind: 'relation', name: 'public.orders' }],
+    maintenance: { objects: [{ kind: 'relation', name: 'public.users' }, { kind: 'relation', name: 'public.orders' }] },
   })
 
   assert.equal(cluster.disposable, false)
   assert.match(cluster.reasons[0], new RegExp(`the ${MAINTENANCE_DATABASE} database holds objects of its own, for example public.users`))
+})
+
+test('a maintenance database that will not answer is refused, not read as empty', () => {
+  const cluster = inspectCluster({
+    roles: [],
+    databases: [{ name: 'postgres' }],
+    maintenance: { unreachable: true, reason: 'permission denied for database "postgres"' },
+  })
+
+  assert.equal(cluster.disposable, false)
+  assert.match(cluster.reasons[0], new RegExp(`the ${MAINTENANCE_DATABASE} database could not be read`))
+  assert.match(cluster.reasons[0], /permission denied for database "postgres"/)
+})
+
+test('a maintenance database that answers with nothing leaves the server disposable', () => {
+  const cluster = inspectCluster({ roles: [], databases: [{ name: 'postgres' }], maintenance: { objects: [] } })
+
+  assert.equal(cluster.disposable, true)
+})
+
+test('the databases query counts a database that refuses connections', () => {
+  // `datallowconn = false` hides a database from a connection, not from the
+  // cluster: it still shares every role this run alters.
+  assert.doesNotMatch(DATABASES_SQL, /datallowconn/)
+  assert.match(DATABASES_SQL, /NOT datistemplate/)
+})
+
+test('the connecting user, which 022 grants nextspark_app, is named in the output', () => {
+  const announced = GLOBAL_OBJECTS.find(object => object.role === 'current_user')
+
+  assert.ok(announced, 'the connecting user is not announced')
+  assert.match(announced!.change, /granted nextspark_app/)
+})
+
+test('the connecting user is announced but never looked for among existing roles', () => {
+  // `current_user` is whoever runs this; a server that happens to have a role
+  // of that name is not evidence of anything.
+  const cluster = inspectCluster({ roles: [], databases: [{ name: 'postgres' }] })
+
+  assert.equal(cluster.disposable, true)
 })
 
 test('a login role from a runtime cutover is reported too', () => {
@@ -112,31 +152,68 @@ test('long lists of databases are cut short, and say how many are left', () => {
   assert.equal(cluster.otherDatabases.length, 9)
 })
 
-/** SQL with its comments taken out, so prose about roles is not read as a statement. */
-function withoutComments(sql: string): string {
-  return sql.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/--[^\n]*/g, ' ')
+/**
+ * Every directory of migrations a run can apply: core's, the ones a generated
+ * project starts from, and each theme's and plugin's. A role created by any of
+ * them lands in the same cluster, so the output has to name it.
+ */
+function migrationDirs(): string[] {
+  const repoRoot = path.resolve(CORE, '../..')
+  const dirs = [path.join(CORE, 'migrations'), path.join(CORE, 'templates', 'migrations')]
+  for (const group of ['themes', 'plugins']) {
+    const groupDir = path.join(repoRoot, group)
+    if (!fs.existsSync(groupDir)) continue
+    for (const entry of fs.readdirSync(groupDir, { withFileTypes: true })) {
+      const dir = path.join(groupDir, entry.name, 'migrations')
+      if (entry.isDirectory() && fs.existsSync(dir)) dirs.push(dir)
+    }
+  }
+  return dirs.filter(dir => fs.existsSync(dir))
 }
 
-test('every role the core migrations create or alter is named in the output', () => {
-  const dir = path.join(CORE, 'migrations')
-  const named = new Set<string>()
-  for (const file of fs.readdirSync(dir).filter(name => name.endsWith('.sql'))) {
-    const sql = withoutComments(fs.readFileSync(path.join(dir, file), 'utf8'))
-    const patterns = [
-      /CREATE\s+(?:ROLE|USER|GROUP)\s+"?(\w+)"?/gi,
-      /ALTER\s+(?:ROLE|USER|GROUP)\s+"?(\w+)"?/gi,
-      /(?:GRANT|REVOKE)\s+"?(\w+)"?\s+(?:TO|FROM)\s+/gi,
-      /(?:GRANT|REVOKE)\s+[^;]*?\s(?:TO|FROM)\s+"?(nextspark_\w+|authenticated|anon|service_role)"?/gi,
-      /DROP\s+(?:ROLE|USER|GROUP)\s+(?:IF\s+EXISTS\s+)?"?(\w+)"?/gi,
-    ]
-    for (const pattern of patterns) {
-      for (const match of sql.matchAll(pattern)) named.add(match[1])
+test('every role any migration creates, alters or grants to is named in the output', () => {
+  const dirs = migrationDirs()
+  const named = new Map<string, string>()
+  for (const dir of dirs) {
+    for (const file of fs.readdirSync(dir).filter(name => name.endsWith('.sql'))) {
+      const sql = fs.readFileSync(path.join(dir, file), 'utf8')
+      for (const role of rolesNamedIn(sql)) if (!named.has(role)) named.set(role, path.join(dir, file))
     }
   }
 
   const announced = new Set(GLOBAL_OBJECTS.map(object => object.role))
-  // `current_user` is whoever runs the migrations, not a role they create
-  const created = [...named].filter(role => role !== 'current_user')
-  assert.deepEqual(created.sort().filter(role => !announced.has(role)), [])
+  const unannounced = [...named].filter(([role]) => !announced.has(role)).map(([role, file]) => `${role} (${file})`)
+
+  assert.deepEqual(unannounced.sort(), [])
   assert.ok(named.size > 0, 'no role statement was found in the migrations')
+  assert.ok(dirs.length > 2, 'the scan reads only core, not the themes and plugins that also migrate')
+})
+
+test('a grant names the role it is granted to, whichever kind of grant it is', () => {
+  // The shapes a future migration is most likely to use, and the ones a scan
+  // that only reads the granted role misses: both name `future_reader`.
+  assert.deepEqual([...rolesNamedIn('GRANT authenticated TO future_reader;')].sort(), ['authenticated', 'future_reader'])
+  assert.deepEqual([...rolesNamedIn('GRANT SELECT ON ALL TABLES IN SCHEMA public TO future_reader;')], ['future_reader'])
+  assert.deepEqual([...rolesNamedIn('REVOKE INSERT ON public.posts FROM future_reader;')], ['future_reader'])
+  assert.deepEqual(
+    [...rolesNamedIn('GRANT USAGE ON SCHEMA public TO reader, writer;')].sort(),
+    ['reader', 'writer']
+  )
+  assert.deepEqual([...rolesNamedIn('GRANT authenticated TO future_reader WITH ADMIN OPTION;')].sort(), [
+    'authenticated',
+    'future_reader',
+  ])
+})
+
+test('the roles the migrations themselves use are named, and prose about them is not', () => {
+  assert.deepEqual([...rolesNamedIn('CREATE ROLE nextspark_app NOLOGIN NOINHERIT;')], ['nextspark_app'])
+  assert.deepEqual([...rolesNamedIn('DROP ROLE IF EXISTS legacy_reader;')], ['legacy_reader'])
+  // 022 grants through format(), so the statement lives in a string literal
+  assert.deepEqual(
+    [...rolesNamedIn("EXECUTE format('GRANT nextspark_app TO %I', current_user);")].sort(),
+    ['current_user', 'nextspark_app']
+  )
+  // ...while a RAISE message that quotes a grant is talking about one
+  assert.deepEqual([...rolesNamedIn("RAISE NOTICE 'GRANT admin TO auditor skipped: %', SQLERRM;")], [])
+  assert.deepEqual([...rolesNamedIn('-- GRANT admin TO auditor\nSELECT 1;')], [])
 })
