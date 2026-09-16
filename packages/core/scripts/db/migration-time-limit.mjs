@@ -26,14 +26,27 @@
 // Whichever comes first ends the file. The client starts counting before the
 // server does, so it is usually the client.
 //
+// When the server cancels a statement, the error says after how long, and the
+// server's reason. The time alone does not say what cancelled it: a
+// statement_timeout the migration sets for itself, or a cancellation from
+// another session, can come at any moment. It does rule out the limit when the
+// cancellation comes sooner than the limit after the file was sent, since the
+// server starts counting only once a statement has reached it, and the error
+// then says the limit had not run out.
+//
+// A migration stopped either way is not recorded as run, and the next run starts
+// the file over. Postgres keeps nothing the migration had not committed, but
+// what it committed before it was stopped, with a COMMIT in the file or in a
+// procedure it calls, stays; the error says so, and what to do about it.
+//
 // The limit holds whatever the database URL says. A URL that sets
 // statement_timeout or query_timeout itself, `?statement_timeout=0` included,
-// has those parameters left out of every connection that runs under the limit
-// (see connection-time-limits.mjs), and the runner says so before it starts.
-// Without a limit the URL's parameters apply as pg reads them.
+// has the limit take the place of those parameters on every connection that runs
+// under it (see connection-time-limits.mjs), and the runner says so before it
+// starts. Without a limit the URL's parameters apply as pg reads them.
 
 import pg from 'pg';
-import { timeLimitedClient, connectionSettings } from './connection-time-limits.mjs';
+import { timeLimitedClient, timeLimitParametersIn } from './connection-time-limits.mjs';
 
 const { Client } = pg;
 
@@ -76,7 +89,7 @@ export function migrationClient(connectionString, limit) {
  */
 export function ignoredParametersNotice(connectionString, limit) {
   if (!limit) return null;
-  const { ignored } = connectionSettings(connectionString);
+  const ignored = timeLimitParametersIn(connectionString);
   if (ignored.length === 0) return null;
   return (
     `The database URL sets ${ignored.join(' and ')}, which migrations do not use: ` +
@@ -84,20 +97,39 @@ export function ignoredParametersNotice(connectionString, limit) {
   );
 }
 
+/** What a migration stopped partway leaves behind, and what to do before running the migrations again. */
+function leftBehind({ stillRunning }) {
+  const committed = stillRunning
+    ? 'It may still be running there, and what it commits, with a COMMIT in the file or in a procedure it calls, stays in the database.'
+    : 'What it had not committed is gone, but what it committed before it was stopped, with a COMMIT in the file or in a procedure it calls, stays in the database.';
+  return (
+    `${committed} It is not recorded as run, so the next run starts the file over: ` +
+    'undo those changes, or make the file safe to run again, before running the migrations again.'
+  );
+}
+
 /**
- * Runs one migration file's SQL. Past the limit, the error says so and names
- * the limit, and the session the SQL was running in has been asked to end; the
- * runner prints it next to the file's name.
+ * Runs one migration file's SQL. When the limit or a statement cancellation
+ * stops it, the error says which, whether its session on the server was ended,
+ * and what the migration leaves behind; the runner prints it next to the file's
+ * name.
  */
 export async function runMigrationSql(client, { sql, limit, connectionString }) {
+  const sentAt = performance.now();
   try {
     return await client.query(sql);
   } catch (error) {
     if (!limit) throw error;
 
-    // statement_timeout: the server cancelled the statement and the session is idle again
+    // The server cancelled a statement, and the session is idle again or in a transaction that can only roll back
     if (error.code === '57014') {
-      throw new Error(`did not finish within ${limit.seconds} s (${TIME_LIMIT_VARIABLE}): ${error.message}`);
+      const elapsedMs = performance.now() - sentAt;
+      const cancelled = `the server cancelled it after ${Math.floor(elapsedMs)} ms`;
+      const stopped =
+        elapsedMs < limit.statementMs
+          ? `${cancelled}, before ${TIME_LIMIT_VARIABLE} (${limit.seconds} s) ran out`
+          : `did not finish within ${limit.seconds} s (${TIME_LIMIT_VARIABLE}); ${cancelled}`;
+      throw new Error(`${stopped}: ${error.message}. ${leftBehind({ stillRunning: false })}`);
     }
 
     if (error.message !== 'Query read timeout') throw error;
@@ -110,7 +142,9 @@ export async function runMigrationSql(client, { sql, limit, connectionString }) 
     const ended = await endSession(connectionString, processID, limit);
     throw new Error(
       `did not finish within ${limit.seconds} s (${TIME_LIMIT_VARIABLE}); ` +
-      (ended === true ? 'its session on the server was ended.' : `its session on the server could not be ended: ${ended}.`)
+      (ended === true
+        ? `its session on the server was ended. ${leftBehind({ stillRunning: false })}`
+        : `its session on the server could not be ended: ${ended}. ${leftBehind({ stillRunning: true })}`)
     );
   }
 }

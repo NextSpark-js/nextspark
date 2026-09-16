@@ -1,9 +1,9 @@
 /**
  * A connection's time limits hold whatever its connection string says (#193),
- * and the connection goes where pg would take it without them. pg reads the
- * string's parameters over the options passed next to it, so the string is read
- * by pg's own parser, the two time-limit parameters are taken out of what it
- * returns, and the client is built from the rest.
+ * and the client is the one pg would build for the string without them. pg reads
+ * the string's parameters over the options passed next to it, so the client is
+ * built the way pg builds it and the two limits are set on the parameters pg
+ * resolved.
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -11,7 +11,7 @@ import fs from 'node:fs'
 import net from 'node:net'
 import path from 'node:path'
 import pg from 'pg'
-import { connectionSettings, timeLimitedClient } from '../../scripts/db/connection-time-limits.mjs'
+import { timeLimitParametersIn, timeLimitedClient } from '../../scripts/db/connection-time-limits.mjs'
 import { inspectTarget, inspectMaintenanceDatabase } from '../../scripts/db/inspect-server.mjs'
 
 type TestContext = { after: (fn: () => void) => void }
@@ -19,7 +19,6 @@ type TestContext = { after: (fn: () => void) => void }
 type ClientInternals = pg.Client & {
   connectionParameters: Record<string, unknown> & { password?: unknown }
   binary: unknown
-  enableChannelBinding: unknown
   _connectionTimeoutMillis: unknown
 }
 
@@ -38,24 +37,29 @@ function pgWithoutTheFix(connectionString: string) {
   }) as ClientInternals
 }
 
-/** Everything a client connects with and as, apart from the two time limits. */
+const EMITTER_BOOKKEEPING = new Set(['_events', '_eventsCount', '_maxListeners'])
+
+/**
+ * An object's own properties, all the way down, with functions by name: two
+ * clients built alike hold listeners that are equal but not the same function.
+ */
+function shapeOf(value: unknown, depth = 0): unknown {
+  if (typeof value === 'function') return `[function ${value.name}]`
+  if (value === null || typeof value !== 'object') return value
+  if (depth > 8) return '[nested]'
+  if (Array.isArray(value)) return value.map(item => shapeOf(item, depth + 1))
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([name]) => !EMITTER_BOOKKEEPING.has(name))
+      .map(([name, item]) => [name, shapeOf(item, depth + 1)])
+  )
+}
+
+/** Everything a client holds, the passwords pg hides included, apart from the two time limits. */
 function connectionOf(client: ClientInternals) {
-  const parameters: Record<string, unknown> = { ...client.connectionParameters, password: client.connectionParameters.password }
+  const parameters = { ...(shapeOf(client.connectionParameters) as Record<string, unknown>), password: client.connectionParameters.password }
   for (const name of LIMIT_NAMES) delete parameters[name]
-  return {
-    parameters,
-    client: {
-      host: client.host,
-      port: client.port,
-      user: client.user,
-      database: client.database,
-      password: client.password,
-      ssl: client.ssl,
-      binary: client.binary,
-      enableChannelBinding: client.enableChannelBinding,
-      connectionTimeoutMillis: client._connectionTimeoutMillis,
-    },
-  }
+  return { ...(shapeOf(client) as Record<string, unknown>), password: client.password, connectionParameters: parameters }
 }
 
 /** The outcome of building a client: what it connects with, or the error building it throws. */
@@ -117,6 +121,16 @@ const URLS = [
   'postgres://u@db.example.com/db?replication=database&statement_timeout=0',
   // what pg cannot parse
   'postgres://[::1/db?statement_timeout=0',
+  // parameters named like options pg's client reads only from what it is constructed with, some of them only in newer
+  // versions of pg, which a client pg builds for the string does not act on
+  'postgres://u:p@db.example.com/db?scramMaxIterations=1&statement_timeout=0',
+  'postgres://u:p@db.example.com/db?pipeline=true&statement_timeout=0',
+  'postgres://u:p@db.example.com/db?keepAlive=true&keepAliveInitialDelayMillis=1&connectionTimeoutMillis=0',
+  'postgres://u:p@db.example.com/db?enableChannelBinding=true&binary=true&Promise=x&types=x&stream=x&connection=x',
+  // parameters newer versions of pg read from the string
+  'postgres://u:p@db.example.com/db?sslnegotiation=direct&statement_timeout=0',
+  'postgres://u:p@db.example.com/db?sslnegotiation=direct&sslmode=disable',
+  'postgres://u:p@db.example.com/db?sslnegotiation=sideways',
 ]
 
 test('a time-limited client connects where, and as whom, pg would connect without the limits', () => {
@@ -134,12 +148,12 @@ test('a time-limited client carries the limits it is given, whatever the URL set
 })
 
 test('the time-limit parameters are named as pg reads them', () => {
-  assert.deepEqual(connectionSettings(`${BASE}?sslmode=disable&statement_timeout=0&query_timeout=`).ignored, ['statement_timeout', 'query_timeout'])
-  assert.deepEqual(connectionSettings(`${BASE}?query_timeout=5000`).ignored, ['query_timeout'])
-  assert.deepEqual(connectionSettings(`${BASE}?statement%5Ftimeout=0`).ignored, ['statement_timeout'])
-  assert.deepEqual(connectionSettings('socket:/var/run/postgresql?db=nextspark&statement_timeout=0').ignored, ['statement_timeout'])
+  assert.deepEqual(timeLimitParametersIn(`${BASE}?sslmode=disable&statement_timeout=0&query_timeout=`), ['statement_timeout', 'query_timeout'])
+  assert.deepEqual(timeLimitParametersIn(`${BASE}?query_timeout=5000`), ['query_timeout'])
+  assert.deepEqual(timeLimitParametersIn(`${BASE}?statement%5Ftimeout=0`), ['statement_timeout'])
+  assert.deepEqual(timeLimitParametersIn('socket:/var/run/postgresql?db=nextspark&statement_timeout=0'), ['statement_timeout'])
   for (const url of [BASE, `${BASE}?options=-c%20statement_timeout%3D0`, `${BASE}#statement_timeout=0`, '/var/run/postgresql nextspark?statement_timeout=0']) {
-    assert.deepEqual(connectionSettings(url).ignored, [], url)
+    assert.deepEqual(timeLimitParametersIn(url), [], url)
   }
 })
 
@@ -147,13 +161,12 @@ test("parameters named like the client's own options reach neither the client no
   const url =
     'postgres://u:p@db.example.com/db?binary=true&keepAlive=true&stream=x&Promise=x&types=x&connection=x' +
     '&enableChannelBinding=true&connectionTimeoutMillis=0&connectionString=postgres://x:y@elsewhere.example.com/other&statement_timeout=0'
-  const limited = connectionOf(timeLimitedClient(url, LIMITS) as ClientInternals)
-  const unlimited = connectionOf(pgWithoutTheFix(url))
+  const client = timeLimitedClient(url, LIMITS) as ClientInternals
 
-  assert.deepEqual(limited.client, unlimited.client)
-  assert.equal(limited.client.host, 'db.example.com')
-  assert.equal(limited.client.binary, false)
-  assert.equal(limited.client.connectionTimeoutMillis, LIMITS.connectMs)
+  assert.deepEqual(connectionOf(client), connectionOf(pgWithoutTheFix(url)))
+  assert.equal(client.host, 'db.example.com')
+  assert.equal(client.binary, false)
+  assert.equal(client._connectionTimeoutMillis, LIMITS.connectMs)
 })
 
 /**

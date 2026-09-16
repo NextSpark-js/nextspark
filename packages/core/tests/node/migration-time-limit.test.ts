@@ -3,7 +3,9 @@
  * the migration's name, and have its session on the server ended; a migration
  * that is only slow has to pass; and one still running at
  * MIGRATION_TIMEOUT_SECONDS fails there, even one that switches
- * statement_timeout off. The runner is exercised against
+ * statement_timeout off. A statement the server cancels before the limit is not
+ * reported as the limit, and a migration stopped partway says that what it
+ * committed stays and it is not recorded as run. The runner is exercised against
  * a stand-in server that speaks enough of the wire protocol to connect, answer
  * queries, cancel a statement at its statement_timeout the way Postgres does,
  * keep a statement_timeout a query sets, or go silent.
@@ -16,7 +18,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
-import { migrationTimeLimit } from '../../scripts/db/migration-time-limit.mjs'
+import { migrationTimeLimit, runMigrationSql } from '../../scripts/db/migration-time-limit.mjs'
 
 const CORE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const RUNNER = path.join(CORE, 'scripts/db/run-migrations.mjs')
@@ -289,7 +291,10 @@ test('a migration still running at the limit fails the run with its name, and it
   assert.equal(sessionThatRan(server.sessions, MIGRATIONS['003_after.sql']), undefined)
 })
 
-test('a statement the server cancels is reported the way the server reports it', { timeout: 20000 }, async t => {
+// What the runner says about a migration stopped partway, however it was stopped
+const COMMITTED_STAYS = /stays in the database\. It is not recorded as run, so the next run starts the file over/
+
+test('a statement the server cancels under a limit the migration sets itself is not reported as the limit', { timeout: 20000 }, async t => {
   // a lock wait the server gives up on before the client does: its own limit, set lower by the migration
   const migrations = { ...MIGRATIONS, '002_waits.sql': "SET statement_timeout = 100; SELECT pg_sleep(60);" }
   const server = await standInPostgres(t, sql => (sql === migrations['002_waits.sql'] ? 'stuck' : 'ok'))
@@ -302,11 +307,85 @@ test('a statement the server cancels is reported the way the server reports it',
   })
 
   assert.equal(result.status, 1, result.output)
-  assert.match(
-    result.output,
-    /Failed to execute 002_waits\.sql: did not finish within 5 s \(MIGRATION_TIMEOUT_SECONDS\): canceling statement due to statement timeout/
+  const reported = result.output.match(
+    /Failed to execute 002_waits\.sql: the server cancelled it after (\d+) ms, before MIGRATION_TIMEOUT_SECONDS \(5 s\) ran out: canceling statement due to statement timeout\./
   )
+  assert.ok(reported, result.output)
+  assert.ok(Number(reported[1]) >= 100 && Number(reported[1]) < 5000, reported[0])
+  assert.doesNotMatch(result.output, /did not finish within 5 s/)
+  assert.match(result.output, COMMITTED_STAYS)
   assert.deepEqual(server.terminated, [])
+})
+
+/** A client whose query the server cancels after `afterMs`, for the reason given. */
+function cancelledAfter(afterMs: number, reason = 'canceling statement due to statement timeout') {
+  return {
+    query: () => new Promise((_, reject) => setTimeout(() => reject(Object.assign(new Error(reason), { code: '57014' })), afterMs)),
+  } as unknown as Parameters<typeof runMigrationSql>[0]
+}
+
+test('a cancellation says after how long it came, and that the limit had not run out when it came sooner', { timeout: 20000 }, async () => {
+  const limit = { seconds: 0.4, statementMs: 400, queryMs: 400 }
+
+  await assert.rejects(
+    runMigrationSql(cancelledAfter(50), { sql: 'SELECT 1', limit, connectionString: '' }),
+    (error: Error) => {
+      assert.match(error.message, /^the server cancelled it after \d+ ms, before MIGRATION_TIMEOUT_SECONDS \(0\.4 s\) ran out: canceling statement due to statement timeout\./)
+      assert.doesNotMatch(error.message, /did not finish/)
+      assert.match(error.message, COMMITTED_STAYS)
+      return true
+    }
+  )
+  await assert.rejects(
+    runMigrationSql(cancelledAfter(450), { sql: 'SELECT 1', limit, connectionString: '' }),
+    (error: Error) => {
+      assert.match(
+        error.message,
+        /^did not finish within 0\.4 s \(MIGRATION_TIMEOUT_SECONDS\); the server cancelled it after \d+ ms: canceling statement due to statement timeout\./
+      )
+      assert.match(error.message, COMMITTED_STAYS)
+      return true
+    }
+  )
+  // another session cancelling the statement once the limit has passed: the reason is the server's, not the limit
+  await assert.rejects(
+    runMigrationSql(cancelledAfter(450, 'canceling statement due to user request'), { sql: 'SELECT 1', limit, connectionString: '' }),
+    (error: Error) => {
+      assert.match(
+        error.message,
+        /^did not finish within 0\.4 s \(MIGRATION_TIMEOUT_SECONDS\); the server cancelled it after (4[5-9]\d|[5-9]\d\d) ms: canceling statement due to user request\./
+      )
+      return true
+    }
+  )
+})
+
+test('a migration whose session cannot be ended is said to be able to go on committing', { timeout: 20000 }, async () => {
+  // a port nothing listens on: the connection that would end the session is refused
+  const closed = net.createServer()
+  await new Promise<void>(resolve => closed.listen(0, '127.0.0.1', resolve))
+  const { port } = closed.address() as net.AddressInfo
+  await new Promise(resolve => closed.close(resolve))
+
+  const client = {
+    processID: 4242,
+    query: () => Promise.reject(new Error('Query read timeout')),
+    end: () => Promise.resolve(),
+  } as unknown as Parameters<typeof runMigrationSql>[0]
+
+  await assert.rejects(
+    runMigrationSql(client, {
+      sql: 'SELECT 1',
+      limit: { seconds: 0.5, statementMs: 500, queryMs: 500 },
+      connectionString: `postgresql://dbuser@127.0.0.1:${port}/nextspark_verify?sslmode=disable`,
+    }),
+    (error: Error) => {
+      assert.match(error.message, /^did not finish within 0\.5 s \(MIGRATION_TIMEOUT_SECONDS\); its session on the server could not be ended: .*ECONNREFUSED/)
+      assert.match(error.message, /It may still be running there, and what it commits, with a COMMIT in the file or in a procedure it calls, stays in the database\./)
+      assert.match(error.message, COMMITTED_STAYS)
+      return true
+    }
+  )
 })
 
 test('a migration the server never answers is given up on, and its session ended', { timeout: 20000 }, async t => {
@@ -321,7 +400,8 @@ test('a migration the server never answers is given up on, and its session ended
 
   assert.equal(result.status, 1, result.output)
   assert.match(result.output, /Failed to execute 002_waits\.sql: did not finish within 0\.5 s \(MIGRATION_TIMEOUT_SECONDS\)/)
-  assert.match(result.output, /its session on the server was ended/)
+  assert.match(result.output, /its session on the server was ended\. What it had not committed is gone, but what it committed before it was stopped/)
+  assert.match(result.output, COMMITTED_STAYS)
   assert.ok(result.elapsedMs < 5000, `took ${result.elapsedMs} ms`)
   const waiting = sessionThatRan(server.sessions, MIGRATIONS['002_waits.sql'])!
   assert.deepEqual(server.terminated, [waiting.pid])
