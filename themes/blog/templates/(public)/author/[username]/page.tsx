@@ -13,7 +13,7 @@ import Image from 'next/image'
 import { Twitter, Linkedin, Globe, User } from 'lucide-react'
 import { PostCard } from '@/themes/blog/components/public/PostCard'
 import { cn } from '@nextsparkjs/core/lib/utils'
-import { withBasePath } from '@nextsparkjs/core/lib/base-path'
+import { withBasePath, withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 
 interface Author {
   id: string
@@ -166,7 +166,7 @@ export default function AuthorPage({ params }: PageProps) {
             <div className="flex items-center gap-4">
               {author.socialTwitter && (
                 <a
-                  href={author.socialTwitter}
+                  href={withBasePathIfInApp(author.socialTwitter)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -177,7 +177,7 @@ export default function AuthorPage({ params }: PageProps) {
               )}
               {author.socialLinkedin && (
                 <a
-                  href={author.socialLinkedin}
+                  href={withBasePathIfInApp(author.socialLinkedin)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -188,7 +188,7 @@ export default function AuthorPage({ params }: PageProps) {
               )}
               {author.socialWebsite && (
                 <a
-                  href={author.socialWebsite}
+                  href={withBasePathIfInApp(author.socialWebsite)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"

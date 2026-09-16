@@ -5,6 +5,7 @@ import NextImage from "next/image"
 import { X, Play, Download, Video } from "lucide-react"
 import { Button } from './button'
 import { cn } from '../../lib/utils'
+import { withBasePathIfInApp } from '../../lib/base-path'
 
 export interface UploadedVideo {
   id: string
@@ -262,7 +263,7 @@ export function VideoUpload({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => window.open(video.url, "_blank")}
+                  onClick={() => window.open(withBasePathIfInApp(video.url), "_blank")}
                 >
                   <Download className="h-4 w-4" />
                 </Button>

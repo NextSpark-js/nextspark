@@ -51,6 +51,7 @@ import { usePermissions } from '@nextsparkjs/core/lib/permissions/hooks'
 import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
 import type { Media, MediaListOptions } from '@nextsparkjs/core/lib/media/types'
 import type { Permission } from '@nextsparkjs/core/lib/permissions/types'
+import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 
 type ViewMode = 'grid' | 'list'
 
@@ -485,7 +486,7 @@ function DefaultMediaDashboardPage() {
             <div className="relative bg-neutral-950 flex items-center justify-center overflow-hidden h-[250px] md:h-auto">
               {editingMedia?.mimeType.startsWith('image/') ? (
                 <img
-                  src={editingMedia.url}
+                  src={withBasePathIfInApp(editingMedia.url)}
                   alt={editingMedia.alt || editingMedia.filename}
                   className="max-w-[90%] max-h-[90%] object-contain select-none"
                   draggable={false}

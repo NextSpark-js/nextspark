@@ -17,7 +17,7 @@ import { ReadingProgress } from '@/themes/blog/components/public/ReadingProgress
 import { AuthorBio } from '@/themes/blog/components/public/AuthorBio'
 import { RelatedPosts } from '@/themes/blog/components/public/RelatedPosts'
 import { Button } from '@nextsparkjs/core/components/ui/button'
-import { withBasePath } from '@nextsparkjs/core/lib/base-path'
+import { withBasePath, withBasePathInHtml } from '@nextsparkjs/core/lib/base-path'
 
 interface Post {
   id: string
@@ -296,7 +296,7 @@ export default function PostPage({ params }: PageProps) {
 
         {/* Article Content */}
         <div className="article-content">
-          <div dangerouslySetInnerHTML={{ __html: sanitizePostHtml(renderContent(post.content)) }} />
+          <div dangerouslySetInnerHTML={{ __html: withBasePathInHtml(sanitizePostHtml(renderContent(post.content))) }} />
         </div>
 
         {/* Divider */}

@@ -52,6 +52,7 @@ import type { EntityField } from '../../lib/entities/types'
 import type { Address } from '../ui/address-input'
 import type { MediaRef } from '../../types/blocks'
 import { resolveMediaUrl } from '../../types/blocks'
+import { withBasePathIfInApp } from '../../lib/base-path'
 
 export interface EntityFieldRendererProps {
   field: EntityField
@@ -899,7 +900,7 @@ function renderDisplayField(field: EntityField, value: unknown, mode: 'display' 
         <p className="text-base leading-relaxed whitespace-pre-wrap">{formattedValue}</p>
       ) : field.type === 'url' ? (
         <a
-          href={String(value)}
+          href={withBasePathIfInApp(String(value))}
           target="_blank"
           rel="noopener noreferrer"
           className="text-base underline underline-offset-2 hover:no-underline"

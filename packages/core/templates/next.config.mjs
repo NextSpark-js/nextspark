@@ -8,8 +8,14 @@ const __dirname = path.dirname(__filename);
 // For npm mode, use local i18n.ts that re-exports from @nextsparkjs/core
 const withNextIntl = createNextIntlPlugin('./i18n.ts');
 
+// The app's Next.js basePath. Next.js adds it to routes and to <Link>, and to
+// nothing a header names: the CSP report endpoints below are URLs the browser
+// resolves against the origin, so they carry it from here.
+const basePath = '';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  basePath,
   // Ignore TypeScript build errors - needed until DTS generation is enabled for @nextsparkjs/core
   // Without this, production builds fail due to missing declaration files for deep imports
   typescript: {
@@ -158,7 +164,7 @@ const nextConfig = {
       // CSP violation reporting - sends violations to /api/csp-report
       // report-uri is deprecated but has wider browser support
       // report-to is the modern replacement (configured via Reporting-Endpoints header)
-      "report-uri /api/csp-report",
+      `report-uri ${basePath}/api/csp-report`,
       "report-to csp-endpoint",
     ];
 
@@ -167,7 +173,7 @@ const nextConfig = {
       // Reporting API endpoint for modern browsers (used by report-to CSP directive)
       {
         key: 'Reporting-Endpoints',
-        value: 'csp-endpoint="/api/csp-report"'
+        value: `csp-endpoint="${basePath}/api/csp-report"`
       },
       {
         key: 'X-Content-Type-Options',

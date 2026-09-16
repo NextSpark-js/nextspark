@@ -25,6 +25,7 @@ import {
 import { cn } from '../../lib/utils'
 import { sel } from '../../lib/selectors'
 import type { Media } from '../../lib/media/types'
+import { withBasePathIfInApp } from '../../lib/base-path'
 
 interface MediaCardProps {
   media: Media
@@ -98,7 +99,7 @@ export const MediaCard = memo(function MediaCard({
           {isImage ? (
             <img
               data-cy={sel('media.grid.thumbnail', { id: media.id })}
-              src={media.url}
+              src={withBasePathIfInApp(media.url)}
               alt={media.alt || media.filename}
               className="w-full h-full object-cover"
               loading="lazy"

@@ -20,6 +20,7 @@ import { sel } from '../../lib/selectors'
 import type { Media } from '../../lib/media/types'
 import type { MediaRef } from '../../types/blocks'
 import { resolveMediaUrl } from '../../types/blocks'
+import { withBasePathIfInApp } from '../../lib/base-path'
 
 interface MediaSelectorProps {
   value?: MediaRef | null
@@ -115,7 +116,7 @@ export function MediaSelector({
                 >
                   {isImage ? (
                     <img
-                      src={selectedMedia.url}
+                      src={withBasePathIfInApp(selectedMedia.url)}
                       alt={selectedMedia.alt || selectedMedia.filename}
                       className="w-full h-full object-cover"
                     />

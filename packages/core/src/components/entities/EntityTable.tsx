@@ -84,6 +84,7 @@ import type {
   ConfirmDialogState,
   PaginationConfig,
 } from './entity-table.types'
+import { withBasePathIfInApp } from '../../lib/base-path'
 
 /**
  * EntityTable - Universal table component for any entity
@@ -226,7 +227,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
         icon: <ExternalLink className="h-3 w-3" />,
         onClick: (item) => {
           const url = getPublicUrlForItem(item)
-          if (url) window.open(url, '_blank')
+          if (url) window.open(withBasePathIfInApp(url), '_blank')
         },
         visible: (item) => isPublished(item) && !!getPublicUrlForItem(item),
         dataCySuffix: 'view-public',
@@ -284,7 +285,7 @@ export function EntityTable<T extends { id: string } = { id: string }>({
         icon: <ExternalLink className="h-4 w-4" />,
         onClick: (item) => {
           const url = getPublicUrlForItem(item)
-          if (url) window.open(url, '_blank')
+          if (url) window.open(withBasePathIfInApp(url), '_blank')
         },
         // Only show in dropdown for non-published items (published shows as quick action)
         visible: (item) => !isPublished(item) && !!getPublicUrlForItem(item),

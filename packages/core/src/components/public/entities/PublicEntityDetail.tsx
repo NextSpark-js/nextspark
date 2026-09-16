@@ -20,6 +20,7 @@ import { entityApi } from '../../../lib/api/entities'
 import { getAllEntityConfigs } from '../../../lib/entities/registry.client'
 import type { EntityConfig, EntityField } from '../../../lib/entities/types'
 import { SYSTEM_TIMESTAMP_FIELDS } from '../../../lib/entities/system-fields'
+import { withBasePathIfInApp } from '../../../lib/base-path'
 
 interface PublicEntityDetailProps {
   entityType: string
@@ -124,7 +125,7 @@ export function PublicEntityDetail({ entityType, entitySlug, id, className }: Pu
         )
       case 'url':
         return (
-          <a href={value as string} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+          <a href={withBasePathIfInApp(value as string)} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
             {value as string}
           </a>
         )

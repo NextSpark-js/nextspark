@@ -22,6 +22,7 @@ import { cn } from '../../../lib/utils'
 import { sel } from '../../../lib/test'
 import type { FieldDefinition } from '../../../types/blocks'
 import type { Media } from '../../../lib/media/types'
+import { withBasePathIfInApp } from '../../../lib/base-path'
 
 interface ArrayFieldProps {
   field: FieldDefinition
@@ -51,7 +52,7 @@ function ArrayMediaLibraryField({
     <>
       {value ? (
         <div className="relative group rounded-md overflow-hidden">
-          <img src={value} alt="" className="w-full h-24 object-cover" />
+          <img src={withBasePathIfInApp(value)} alt="" className="w-full h-24 object-cover" />
           <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
             <Button type="button" variant="secondary" size="sm" onClick={() => setIsOpen(true)}>
               {t('changeImage')}

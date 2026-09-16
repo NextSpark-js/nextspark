@@ -59,6 +59,7 @@ import type { Permission } from '../../lib/permissions/types'
 import { EntityFieldRenderer } from './EntityFieldRenderer'
 import { sel } from '../../lib/test'
 import { usePermission } from '../../lib/permissions/hooks'
+import { withBasePathIfInApp } from '../../lib/base-path'
 
 export interface EntityListProps {
   entityConfig: EntityConfig
@@ -469,7 +470,7 @@ export function EntityList({
                             {getPublicUrl && getPublicUrl(item) && (
                               <DropdownMenuItem asChild>
                                 <a
-                                  href={getPublicUrl(item)!}
+                                  href={withBasePathIfInApp(getPublicUrl(item)!)}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                 >

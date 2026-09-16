@@ -5,6 +5,7 @@ import { X, Play, Pause, Download, Music } from "lucide-react"
 import { Button } from './button'
 import { Progress } from './progress'
 import { cn } from '../../lib/utils'
+import { withBasePathIfInApp } from '../../lib/base-path'
 
 export interface UploadedAudio {
   id: string
@@ -309,7 +310,7 @@ export function AudioUpload({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => window.open(audio.url, "_blank")}
+                  onClick={() => window.open(withBasePathIfInApp(audio.url), "_blank")}
                 >
                   <Download className="h-4 w-4" />
                 </Button>

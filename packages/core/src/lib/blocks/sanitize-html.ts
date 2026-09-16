@@ -23,6 +23,7 @@
  */
 
 import sanitizeHtmlLib from 'sanitize-html'
+import { withBasePathIfInApp, withBasePathInSrcset } from '../base-path'
 
 /**
  * What a formatting-only subset of HTML needs.
@@ -78,13 +79,27 @@ const OPTIONS: sanitizeHtmlLib.IOptions = {
     },
   },
   // A link that opens a new tab hands the opener to the destination without
-  // this; the editor has no way to set it, so it is added here.
+  // this; the editor has no way to set it, so it is added here. The base path
+  // is added in the same pass: this markup is data, so nothing in Next.js
+  // prefixes the links and images inside it.
   transformTags: {
-    a: (tagName, attribs) =>
-      attribs.target === '_blank'
-        ? { tagName, attribs: { ...attribs, rel: 'noopener noreferrer' } }
-        : { tagName, attribs },
+    a: (tagName, attribs) => {
+      const rel = attribs.target === '_blank' ? 'noopener noreferrer' : attribs.rel
+      return { tagName, attribs: { ...attribs, ...(rel ? { rel } : {}), ...inApp(attribs, ['href']) } }
+    },
+    img: (tagName, attribs) => ({ tagName, attribs: { ...attribs, ...inApp(attribs, ['src', 'srcset']) } }),
+    source: (tagName, attribs) => ({ tagName, attribs: { ...attribs, ...inApp(attribs, ['src', 'srcset']) } }),
   },
+}
+
+/** The given attributes, rewritten to carry the base path; the rest untouched. */
+function inApp(attribs: sanitizeHtmlLib.Attributes, names: string[]): sanitizeHtmlLib.Attributes {
+  const rewritten: sanitizeHtmlLib.Attributes = {}
+  for (const name of names) {
+    const value = attribs[name]
+    if (value) rewritten[name] = name === 'srcset' ? withBasePathInSrcset(value) : withBasePathIfInApp(value)
+  }
+  return rewritten
 }
 
 /**

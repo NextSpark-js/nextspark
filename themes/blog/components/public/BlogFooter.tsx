@@ -8,6 +8,7 @@
 
 import Link from 'next/link'
 import { Github, Twitter, Linkedin, Mail, Heart } from 'lucide-react'
+import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 
 interface SocialLink {
   name: string
@@ -117,7 +118,7 @@ export function BlogFooter({
                       return (
                         <a
                           key={link.name}
-                          href={link.href}
+                          href={withBasePathIfInApp(link.href)}
                           data-cy={`blog-footer-social-${link.icon}`}
                           target="_blank"
                           rel="noopener noreferrer"

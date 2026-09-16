@@ -1,5 +1,6 @@
 /** Shapes base-path.in-app-urls.test.ts has to catch. Never imported by the app. */
-import { withBasePath } from '../../../../src/lib/base-path'
+import { withBasePath, withBasePathIfInApp } from '../../../../src/lib/base-path'
+import { sanitizeBlockHtml } from '../../../../src/lib/blocks/sanitize-html'
 
 export async function viaVariable(slug: string) {
   const path = `/api/v1/${slug}`
@@ -41,4 +42,30 @@ export function Links({ href }: { href: string }) {
 
 export async function elsewhere() {
   return fetch('https://example.com/api/v1/teams')
+}
+
+export function Assets({ url, thumbnail }: { url: string; thumbnail: string }) {
+  return (
+    <>
+      <img src={thumbnail} alt="" />
+      <img src={withBasePathIfInApp(url)} alt="" />
+      <img src="/theme/blocks/hero/thumbnail.png" alt="" />
+      <a href={url}>Wherever</a>
+      <a href={`mailto:${url}`}>Mail</a>
+      <iframe src={url} />
+    </>
+  )
+}
+
+export function Embedded({ body }: { body: string }) {
+  return (
+    <>
+      <div dangerouslySetInnerHTML={{ __html: body }} />
+      <div dangerouslySetInnerHTML={{ __html: sanitizeBlockHtml(body) }} />
+    </>
+  )
+}
+
+export function openDynamic(url: string) {
+  window.open(url, '_blank')
 }

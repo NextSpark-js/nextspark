@@ -45,6 +45,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@nextsparkjs/core/components/ui/alert-dialog'
+import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 
 interface Product {
     id: string
@@ -456,7 +457,7 @@ export default function ProductDetailPage() {
                         <div className="flex flex-wrap gap-4">
                             {product.image && (
                                 <a
-                                    href={product.image}
+                                    href={withBasePathIfInApp(product.image)}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="flex items-center gap-2 px-4 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors text-sm"
@@ -468,7 +469,7 @@ export default function ProductDetailPage() {
                             )}
                             {product.brochureUrl && (
                                 <a
-                                    href={product.brochureUrl}
+                                    href={withBasePathIfInApp(product.brochureUrl)}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="flex items-center gap-2 px-4 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors text-sm"

@@ -21,6 +21,7 @@ import { TAGS_REGISTRY } from '@nextsparkjs/registries/testing-registry';
 import { getBlockComponent } from '../../lib/blocks/loader';
 import { sel } from '../../lib/test';
 import type { FieldDefinition, BlockConfig } from '../../types/blocks';
+import { withBasePathIfInApp } from '../../lib/base-path'
 
 interface BlockDetailViewerProps {
   slug: string;
@@ -154,7 +155,7 @@ export function BlockDetailViewer({ slug }: BlockDetailViewerProps) {
         <div className="w-32 h-24 bg-muted rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
           {block.thumbnail ? (
             <img
-              src={block.thumbnail}
+              src={withBasePathIfInApp(block.thumbnail)}
               alt={block.name}
               className="w-full h-full object-cover"
             />

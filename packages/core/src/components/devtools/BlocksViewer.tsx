@@ -12,6 +12,7 @@ import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry.client';
 import { TAGS_REGISTRY } from '@nextsparkjs/registries/testing-registry';
 import { sel } from '../../lib/test';
 import type { BlockConfig, BlockCategory } from '../../types/blocks';
+import { withBasePathIfInApp } from '../../lib/base-path'
 
 type CategoryFilter = "all" | BlockCategory;
 type CoverageFilter = "all" | "covered" | "uncovered";
@@ -226,7 +227,7 @@ export function BlocksViewer() {
             <div className="h-32 bg-muted flex items-center justify-center rounded-t-lg overflow-hidden">
               {block.thumbnail ? (
                 <img
-                  src={block.thumbnail}
+                  src={withBasePathIfInApp(block.thumbnail)}
                   alt={block.name}
                   className="w-full h-full object-cover"
                 />

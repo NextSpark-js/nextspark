@@ -122,7 +122,7 @@ export function HeroWithFormBlock({
               )}
 
               {/* Form */}
-              <form action={formAction} method="POST" className="space-y-4">
+              <form action={withBasePathIfInApp(formAction)} method="POST" className="space-y-4">
                 <Input
                   placeholder={firstNamePlaceholder}
                   name="firstName"

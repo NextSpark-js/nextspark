@@ -38,7 +38,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '../../ui/select'
-import { withBasePath } from '../../../lib/base-path'
+import { withBasePath, withBasePathIfInApp } from '../../../lib/base-path'
 
 interface TaxonomyItem {
   id: string
@@ -223,7 +223,7 @@ export function ConfigPanel({
           {value && (
             <div className="mt-2 rounded-md border overflow-hidden">
               <img
-                src={value}
+                src={withBasePathIfInApp(value)}
                 alt={fieldLabel}
                 className="w-full h-32 object-cover"
                 onError={(e) => {

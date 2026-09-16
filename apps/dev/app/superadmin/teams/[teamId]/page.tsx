@@ -43,7 +43,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { getTemplateOrDefaultClient } from "@nextsparkjs/registries/template-registry.client";
-import { withBasePath } from "@nextsparkjs/core/lib/base-path"
+import { withBasePath, withBasePathIfInApp } from "@nextsparkjs/core/lib/base-path"
 
 interface TeamOwner {
   id: string;
@@ -504,7 +504,7 @@ function TeamDetailPage() {
                         {teamData.subscription.providerName || 'Payment Provider'}
                       </h4>
                       <a
-                        href={teamData.subscription.providerDashboardUrl}
+                        href={withBasePathIfInApp(teamData.subscription.providerDashboardUrl)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
@@ -605,7 +605,7 @@ function TeamDetailPage() {
                         <div className="flex items-center gap-2">
                           {event.invoiceUrl && (
                             <a
-                              href={event.invoiceUrl}
+                              href={withBasePathIfInApp(event.invoiceUrl)}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-primary hover:underline text-sm"
@@ -615,7 +615,7 @@ function TeamDetailPage() {
                           )}
                           {event.receiptUrl && (
                             <a
-                              href={event.receiptUrl}
+                              href={withBasePathIfInApp(event.receiptUrl)}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-primary hover:underline text-sm"

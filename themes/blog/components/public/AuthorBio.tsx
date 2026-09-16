@@ -9,6 +9,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { Twitter, Github, Linkedin, Globe, User } from 'lucide-react'
+import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 
 interface SocialLink {
   type: 'twitter' | 'github' | 'linkedin' | 'website'
@@ -84,7 +85,7 @@ export function AuthorBio({
               return (
                 <a
                   key={link.type}
-                  href={link.url}
+                  href={withBasePathIfInApp(link.url)}
                   data-cy={`author-bio-social-${link.type}`}
                   target="_blank"
                   rel="noopener noreferrer"

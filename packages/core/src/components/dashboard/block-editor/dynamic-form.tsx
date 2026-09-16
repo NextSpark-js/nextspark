@@ -30,6 +30,7 @@ import { fetchWithTeam } from '../../../lib/api/entities'
 import type { FieldDefinition, MediaRef } from '../../../types/blocks'
 import { resolveMediaUrl } from '../../../types/blocks'
 import type { Media } from '../../../lib/media/types'
+import { withBasePathIfInApp } from '../../../lib/base-path'
 
 interface DynamicFormProps {
   fieldDefinitions: FieldDefinition[]
@@ -133,7 +134,7 @@ function MediaLibraryField({
           data-cy={sel('blockEditor.blockPropertiesPanel.form.mediaField.preview', { name: fieldName })}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={displayUrl} alt="" className="w-full h-40 object-cover" />
+          <img src={withBasePathIfInApp(displayUrl)} alt="" className="w-full h-40 object-cover" />
           <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
             <Button
               type="button"

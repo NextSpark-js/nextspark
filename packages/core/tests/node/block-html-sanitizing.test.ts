@@ -120,3 +120,62 @@ describe('sanitizeBlockHtml — empty input', () => {
     })
   }
 })
+
+/**
+ * A base path reaches this markup through nothing else. Next.js prefixes
+ * <Link>, router.push and redirect(); a link or an image inside a stored
+ * rich-text value is data, so the prefix is put on here, in the pass that
+ * already parses it (#198).
+ */
+describe('sanitizeBlockHtml — under a base path', () => {
+  const ORIGINAL = process.env.__NEXT_ROUTER_BASEPATH
+  const underBasePath = (html: string) => {
+    process.env.__NEXT_ROUTER_BASEPATH = '/base'
+    try {
+      return sanitizeBlockHtml(html)
+    } finally {
+      if (ORIGINAL === undefined) delete process.env.__NEXT_ROUTER_BASEPATH
+      else process.env.__NEXT_ROUTER_BASEPATH = ORIGINAL
+    }
+  }
+
+  for (const [input, expected] of [
+    ['<p><a href="/docs">Docs</a></p>', '<p><a href="/base/docs">Docs</a></p>'],
+    ['<img src="/uploads/temp/x.png" />', '<img src="/base/uploads/temp/x.png" />'],
+    // already carrying it, the way an author copies a link out of the address bar
+    ['<a href="/base/docs">Docs</a>', '<a href="/base/docs">Docs</a>'],
+    // only starts like the base path, so it is a different page
+    ['<a href="/baseline">Baseline</a>', '<a href="/base/baseline">Baseline</a>'],
+    ['<a href="https://example.com/docs">Docs</a>', '<a href="https://example.com/docs">Docs</a>'],
+    ['<a href="mailto:a@example.com">Mail</a>', '<a href="mailto:a@example.com">Mail</a>'],
+  ] as [string, string][]) {
+    test(`${input} becomes ${expected}`, () => {
+      assert.equal(underBasePath(input), expected)
+    })
+  }
+
+  test('every candidate of a srcset is prefixed, and its descriptor kept', () => {
+    assert.equal(
+      underBasePath('<img srcset="/a.png 1x, https://cdn.example/b.png 2x" />'),
+      '<img srcset="/base/a.png 1x, https://cdn.example/b.png 2x" />'
+    )
+  })
+
+  test('a link that opens a new tab still gets rel, and the prefix as well', () => {
+    assert.equal(
+      underBasePath('<a href="/docs" target="_blank">Docs</a>'),
+      '<a href="/base/docs" target="_blank" rel="noopener noreferrer">Docs</a>'
+    )
+  })
+
+  test('what the sanitiser refuses is still refused', () => {
+    assert.equal(underBasePath('<a href="javascript:alert(1)">x</a>'), '<a>x</a>')
+    assert.equal(underBasePath('<script>alert(1)</script><p onclick="x()">safe</p>'), '<p>safe</p>')
+  })
+
+  test('with no base path the markup comes back as it went in', () => {
+    delete process.env.__NEXT_ROUTER_BASEPATH
+    assert.equal(sanitizeBlockHtml('<a href="/docs">Docs</a>'), '<a href="/docs">Docs</a>')
+    if (ORIGINAL !== undefined) process.env.__NEXT_ROUTER_BASEPATH = ORIGINAL
+  })
+})

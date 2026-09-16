@@ -6,6 +6,7 @@ import { X, Eye, Download, Image } from "lucide-react"
 import { Button } from './button'
 import { Dialog, DialogContent, DialogTrigger } from './dialog'
 import { cn } from '../../lib/utils'
+import { withBasePathIfInApp } from '../../lib/base-path'
 
 export interface UploadedImage {
   id: string
@@ -240,7 +241,7 @@ export function ImageUpload({
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => window.open(image.url, "_blank")}
+                    onClick={() => window.open(withBasePathIfInApp(image.url), "_blank")}
                   >
                     <Download className="h-4 w-4" />
                   </Button>

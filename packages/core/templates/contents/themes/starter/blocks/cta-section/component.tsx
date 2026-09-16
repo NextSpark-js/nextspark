@@ -2,6 +2,7 @@ import React from 'react'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { buildSectionClasses } from '@nextsparkjs/core/types/blocks'
 import type { CTASectionBlockProps } from './schema'
+import { withBasePathIfInApp } from '@nextsparkjs/core/lib/base-path'
 
 /**
  * CTA Section Block Component
@@ -67,7 +68,7 @@ export function CTASectionBlock({
             {primaryCta && (
               <Button asChild size="lg">
                 <a
-                  href={primaryCta.link}
+                  href={withBasePathIfInApp(primaryCta.link)}
                   target={primaryCta.target}
                   rel={primaryCta.target === '_blank' ? 'noopener noreferrer' : undefined}
                 >
@@ -83,7 +84,7 @@ export function CTASectionBlock({
                 variant={secondaryButton.variant || 'outline'}
               >
                 <a
-                  href={secondaryButton.link}
+                  href={withBasePathIfInApp(secondaryButton.link)}
                   target={secondaryButton.target}
                   rel={secondaryButton.target === '_blank' ? 'noopener noreferrer' : undefined}
                 >

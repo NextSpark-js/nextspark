@@ -31,6 +31,7 @@ import { Skeleton } from '../ui/skeleton'
 import { cn } from '../../lib/utils'
 import { sel } from '../../lib/selectors'
 import type { Media } from '../../lib/media/types'
+import { withBasePathIfInApp } from '../../lib/base-path'
 
 interface MediaListProps {
   items: Media[]
@@ -188,7 +189,7 @@ export function MediaList({
                 <TableCell>
                   {isImage ? (
                     <img
-                      src={media.url}
+                      src={withBasePathIfInApp(media.url)}
                       alt={media.alt || media.filename}
                       className="h-10 w-10 rounded object-cover"
                       loading="lazy"

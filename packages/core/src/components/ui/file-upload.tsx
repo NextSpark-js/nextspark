@@ -5,6 +5,7 @@ import { Upload, File, X, FileText, Download } from "lucide-react"
 import { Button } from './button'
 import { Progress } from './progress'
 import { cn } from '../../lib/utils'
+import { withBasePathIfInApp } from '../../lib/base-path'
 
 export interface UploadedFile {
   id: string
@@ -212,7 +213,7 @@ export function FileUpload({
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation()
-                      window.open(file.url, "_blank")
+                      if (file.url) window.open(withBasePathIfInApp(file.url), "_blank")
                     }}
                   >
                     <Download className="h-4 w-4" />

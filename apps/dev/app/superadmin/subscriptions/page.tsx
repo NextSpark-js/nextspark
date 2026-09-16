@@ -43,7 +43,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
-import { withBasePath } from "@nextsparkjs/core/lib/base-path";
+import { withBasePath, withBasePathIfInApp } from "@nextsparkjs/core/lib/base-path";
 import { getTemplateOrDefaultClient } from "@nextsparkjs/registries/template-registry.client";
 import {
   SearchInput,
@@ -601,7 +601,7 @@ function SubscriptionsPage() {
                                   className="text-muted-foreground"
                                 >
                                   <a
-                                    href={sub.providerDashboardUrl}
+                                    href={withBasePathIfInApp(sub.providerDashboardUrl)}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                   >
