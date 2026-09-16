@@ -74,7 +74,7 @@ async function killForReal(pid) {
   assert.ok(await waitUntil(() => !isRunning(pid), 5_000), `pid ${pid} must be gone after the test kills it`)
 }
 
-test('killProcessGroup uses taskkill /T /F on win32 instead of a POSIX group signal, and reports success', () => {
+test('killProcessGroup uses taskkill /T /F on win32 instead of a POSIX group signal, and skips the fallback once confirmed gone', () => {
   const taskkillCalls = []
   const killCalls = []
   const ok = killProcessGroup(4242, {
@@ -84,32 +84,96 @@ test('killProcessGroup uses taskkill /T /F on win32 instead of a POSIX group sig
       return { error: null, status: 0, stderr: '' }
     },
     kill: (...args) => killCalls.push(args),
+    isRunning: () => false,
   })
   assert.deepEqual(taskkillCalls, [['taskkill', ['/pid', '4242', '/T', '/F']]])
   assert.deepEqual(killCalls, [])
   assert.equal(ok, true)
 })
 
-test('killProcessGroup on win32 reports failure when taskkill is not on PATH', () => {
+// Each of the next three stands in for one way taskkill can fail to actually
+// end the pid - missing, refused, or lying about success - forced through
+// `platform: 'win32'` on whatever OS the suite runs on. The fallback itself
+// (`kill(pid, 'SIGKILL')`) is not faked: on a POSIX runner this is a real
+// SIGKILL to a real spawned child, which is the part `taskkill` itself
+// cannot be exercised for outside Windows.
+test('killProcessGroup on win32 falls back past a taskkill that is not on PATH, and actually ends the process', async () => {
+  const child = spawn(...LONG_RUNNING, { stdio: 'ignore' })
+  await new Promise((resolve) => setTimeout(resolve, 200))
   const { result: ok, logs } = withCapturedLog(() =>
-    killProcessGroup(4242, {
+    killProcessGroup(child.pid, {
       platform: 'win32',
       spawnTaskkill: () => ({ error: Object.assign(new Error('spawn taskkill ENOENT'), { code: 'ENOENT' }) }),
     }),
   )
-  assert.equal(ok, false)
-  assert.ok(logs.some((line) => line.includes('taskkill did not run') && line.includes('ENOENT')))
+  try {
+    assert.ok(logs.some((line) => line.includes('taskkill did not run') && line.includes('ENOENT')))
+    assert.ok(
+      ok === true || logs.some((line) => line.includes(`pid ${child.pid} is still running`)),
+      `must either confirm the pid gone or fail naming it:\n${logs.join('\n')}`,
+    )
+    assert.ok(await waitUntil(() => !isRunning(child.pid), 5_000), 'the child must actually terminate despite the missing taskkill')
+  } finally {
+    if (isRunning(child.pid)) process.kill(child.pid, 'SIGKILL')
+  }
 })
 
-test('killProcessGroup on win32 reports failure when taskkill exits non-zero (e.g. access denied)', () => {
+test('killProcessGroup on win32 falls back past a taskkill that exits non-zero (e.g. access denied), and actually ends the process', async () => {
+  const child = spawn(...LONG_RUNNING, { stdio: 'ignore' })
+  await new Promise((resolve) => setTimeout(resolve, 200))
   const { result: ok, logs } = withCapturedLog(() =>
-    killProcessGroup(4242, {
+    killProcessGroup(child.pid, {
       platform: 'win32',
       spawnTaskkill: () => ({ error: null, status: 5, stderr: 'ERROR: Access is denied.\n' }),
     }),
   )
+  try {
+    assert.ok(logs.some((line) => line.includes('taskkill exited 5') && line.includes('Access is denied')))
+    assert.ok(
+      ok === true || logs.some((line) => line.includes(`pid ${child.pid} is still running`)),
+      `must either confirm the pid gone or fail naming it:\n${logs.join('\n')}`,
+    )
+    assert.ok(await waitUntil(() => !isRunning(child.pid), 5_000), 'the child must actually terminate despite the refused taskkill')
+  } finally {
+    if (isRunning(child.pid)) process.kill(child.pid, 'SIGKILL')
+  }
+})
+
+test('killProcessGroup on win32 does not trust a taskkill that exits 0 without having killed anything, and still ends the process', async () => {
+  const child = spawn(...LONG_RUNNING, { stdio: 'ignore' })
+  await new Promise((resolve) => setTimeout(resolve, 200))
+  const { result: ok, logs } = withCapturedLog(() =>
+    killProcessGroup(child.pid, {
+      platform: 'win32',
+      // Reports success without touching the process, like a taskkill that
+      // raced the process's own exit or missed a re-parented descendant.
+      spawnTaskkill: () => ({ error: null, status: 0, stderr: '' }),
+    }),
+  )
+  try {
+    assert.ok(
+      ok === true || logs.some((line) => line.includes(`pid ${child.pid} is still running`)),
+      `must either confirm the pid gone or fail naming it:\n${logs.join('\n')}`,
+    )
+    assert.ok(await waitUntil(() => !isRunning(child.pid), 5_000), 'the child must actually terminate even though taskkill claimed success')
+  } finally {
+    if (isRunning(child.pid)) process.kill(child.pid, 'SIGKILL')
+  }
+})
+
+test('killProcessGroup on win32 fails and names the pid when it is still running after taskkill and the fallback kill', () => {
+  const killCalls = []
+  const { result: ok, logs } = withCapturedLog(() =>
+    killProcessGroup(4242, {
+      platform: 'win32',
+      spawnTaskkill: () => ({ error: null, status: 0, stderr: '' }),
+      kill: (...args) => killCalls.push(args),
+      isRunning: () => true,
+    }),
+  )
   assert.equal(ok, false)
-  assert.ok(logs.some((line) => line.includes('taskkill exited 5') && line.includes('Access is denied')))
+  assert.deepEqual(killCalls, [[4242, 'SIGKILL']], 'the fallback kill must still be attempted')
+  assert.ok(logs.some((line) => line.includes('pid 4242 is still running after taskkill and the fallback kill')))
 })
 
 test('killProcessGroup signals the POSIX process group on every other platform', () => {

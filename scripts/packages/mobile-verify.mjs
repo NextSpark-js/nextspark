@@ -134,29 +134,49 @@ const LEFTOVER_GRACE_MS = 1000
  * only frees the child from the parent's console, and a negative pid is not a
  * valid target for kill(2). `taskkill /T` walks the same process tree instead.
  *
- * Returns whether the kill signal was actually delivered. taskkill can fail
- * to run at all (missing from PATH) or run and refuse (access denied on a
- * more-privileged process), and kill(2) can refuse too (EPERM) - in every
- * such case the child may never receive it and its `exit` event may never
- * come. macOS also answers EPERM for a group whose processes have all exited
- * but are not reaped yet, so a failed kill only means "not confirmed": what
- * happens to the child is left to its `exit` event.
+ * taskkill's own report is not trusted on its own: it can fail to run at all
+ * (missing from PATH), run and refuse (access denied on a more-privileged
+ * process), or exit 0 without the pid actually being gone (a race with the
+ * process's own exit, a tree its /T did not walk). Whatever is still there
+ * after it, however it answered, gets Node's own termination next - which
+ * does not go through taskkill and so does not share its failure modes -
+ * before this gives up on the leader pid.
+ *
+ * Returns whether the pid was confirmed gone. kill(2) can refuse too (EPERM)
+ * on POSIX, where a failed kill only means "not confirmed": what happens to
+ * the group is left to its `exit` event, since macOS also answers EPERM for
+ * a group whose processes have all exited but are not reaped yet.
  * Reporting that instead of throwing matters because callers run this from a
  * timer or a signal handler, where a throw would crash this script and leave
  * the very process group it failed to kill running unsupervised.
  */
-function killProcessGroup(pid, { platform = process.platform, kill = process.kill, spawnTaskkill = spawnSync } = {}) {
+function killProcessGroup(pid, {
+  platform = process.platform,
+  kill = process.kill,
+  spawnTaskkill = spawnSync,
+  isRunning = isProcessRunning,
+} = {}) {
   if (platform === 'win32') {
     const result = spawnTaskkill('taskkill', ['/pid', String(pid), '/T', '/F'])
     if (result.error) {
       console.log(`${RED}taskkill did not run for pid ${pid}: ${result.error.message}${NC}`)
-      return false
-    }
-    if (result.status !== 0) {
+    } else if (result.status !== 0) {
       console.log(`${RED}taskkill exited ${result.status} for pid ${pid}: ${String(result.stderr ?? '').trim()}${NC}`)
-      return false
     }
-    return true
+    if (!isRunning(pid)) return true
+
+    try {
+      kill(pid, 'SIGKILL')
+    } catch (error) {
+      // ESRCH: gone already, which is what the fallback was for.
+      if (error.code !== 'ESRCH') {
+        console.log(`${RED}Fallback kill failed for pid ${pid}: ${error.message}${NC}`)
+      }
+    }
+    if (!isRunning(pid)) return true
+
+    console.log(`${RED}pid ${pid} is still running after taskkill and the fallback kill${NC}`)
+    return false
   }
   try {
     kill(-pid, 'SIGKILL')
