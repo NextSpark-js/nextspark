@@ -63,7 +63,7 @@ interface SingleResponse<T> {
 The `apiClient` provides typed methods for each entity:
 
 ```typescript
-// src/api/client.ts
+// packages/mobile/src/api/client.ts (exported as @nextsparkjs/mobile)
 
 // List with pagination and filters
 async listTasks(params?: {
@@ -362,7 +362,7 @@ export interface UpdateProjectInput {
 ### 2. Add API Client Methods
 
 ```typescript
-// src/api/client.ts
+// packages/mobile/src/api/client.ts (exported as @nextsparkjs/mobile)
 
 async listProjects(params?: { page?: number; limit?: number }): Promise<PaginatedResponse<Project>> {
   // ...

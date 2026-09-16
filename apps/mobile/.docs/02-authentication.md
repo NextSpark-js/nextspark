@@ -99,7 +99,7 @@ backend.
 The `apiClient` singleton handles all authentication concerns:
 
 ```typescript
-// src/api/client.ts
+// packages/mobile/src/api/client.ts (exported as @nextsparkjs/mobile)
 
 class ApiClient {
   private token: string | null = null
@@ -181,7 +181,7 @@ The `AuthProvider` manages authentication state for the entire app. `app/_layout
 mounts the one from `@nextsparkjs/mobile`, and screens read it with `useAuth()`:
 
 ```typescript
-// @nextsparkjs/mobile: src/providers/AuthProvider.tsx
+// packages/mobile/src/providers/AuthProvider.tsx (exported as @nextsparkjs/mobile)
 
 interface AuthContextValue {
   user: User | null

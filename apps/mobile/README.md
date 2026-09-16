@@ -13,17 +13,17 @@ A React Native (Expo) app for testing the NextSpark API with full CRUD operation
 
 1. Install dependencies:
 ```bash
-cd apps/mobile-dev
+cd apps/mobile
 pnpm install
 ```
 
-2. Configure the API URL in `.env`:
+2. No API URL configuration is needed by default. Leave `EXPO_PUBLIC_API_URL`
+unset: the client auto-detects it from the Expo dev server (and picks
+`10.0.2.2` on the Android emulator, `localhost` everywhere else, including a
+physical Android device reached through `adb reverse`). Only set it to override
+that detection, e.g. a backend that isn't the local dev server:
 ```bash
-# For simulator
-EXPO_PUBLIC_API_URL=http://localhost:3000
-
-# For physical device (use your machine's IP)
-EXPO_PUBLIC_API_URL=http://192.168.x.x:3000
+# EXPO_PUBLIC_API_URL=http://192.168.x.x:3000
 ```
 
 3. Make sure the NextSpark backend is running:
@@ -72,7 +72,7 @@ From the devKeyring:
 ## File Structure
 
 ```
-apps/mobile-dev/
+apps/mobile/
 ├── app/                    # Expo Router screens
 │   ├── _layout.tsx         # Root layout (providers)
 │   ├── index.tsx           # Entry redirect
@@ -96,8 +96,8 @@ apps/mobile-dev/
 
 ### "Network request failed"
 - Check that the backend is running on port 3000
-- For physical devices, use your machine's local IP instead of localhost
-- Ensure your device is on the same network
+- No manual API URL configuration is needed in most cases; the client auto-detects it from the Expo dev server
+- If a physical Android device does not share a network with the development machine, use `adb reverse`; the client automatically uses `localhost` for that tunnel (see `packages/mobile/README.md`)
 
 ### "Unauthorized" errors
 - Token may have expired, try logging out and back in

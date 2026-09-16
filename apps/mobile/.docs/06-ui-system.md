@@ -83,7 +83,7 @@ function Button({ className, variant, size, asChild = false, ...props }) {
 ### Mobile Component (NativeWind)
 
 ```tsx
-// apps/mobile-dev/src/components/ui/button.tsx
+// apps/mobile/src/components/ui/button.tsx
 import { Pressable, ActivityIndicator } from "react-native"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/src/lib/utils"
@@ -332,7 +332,7 @@ if (confirmed) {
 ### Storage Abstraction
 
 ```tsx
-// src/lib/storage.ts
+// packages/mobile/src/lib/storage.ts (exported as @nextsparkjs/mobile)
 import * as SecureStore from "expo-secure-store"
 import { Platform } from "react-native"
 
@@ -478,7 +478,7 @@ export { Accordion, AccordionItem, AccordionTrigger, AccordionContent }
 #### Mobile Implementation (NativeWind + Animated)
 
 ```tsx
-// apps/mobile-dev/src/components/ui/accordion.tsx
+// apps/mobile/src/components/ui/accordion.tsx
 import { useState } from "react"
 import { View, Pressable, LayoutAnimation } from "react-native"
 import { ChevronDown } from "lucide-react-native"

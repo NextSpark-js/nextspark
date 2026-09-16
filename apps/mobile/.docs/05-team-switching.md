@@ -95,7 +95,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 Every request includes the team context:
 
 ```typescript
-// src/api/client.ts
+// packages/mobile/src/api/client.ts (exported as @nextsparkjs/mobile)
 
 private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const headers: HeadersInit = {

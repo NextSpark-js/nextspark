@@ -20,7 +20,7 @@ This document describes the overall architecture and file structure of the NextS
 ## Directory Structure
 
 ```
-apps/mobile-dev/
+apps/mobile/
 ├── app/                          # Expo Router pages
 │   ├── _layout.tsx               # Root layout (providers)
 │   ├── index.tsx                 # Entry redirect
@@ -159,13 +159,12 @@ The app uses Expo Router's file-based routing with route groups:
 ## Environment Variables
 
 ```bash
-# .env
-EXPO_PUBLIC_API_URL=http://localhost:3000
-```
-
-For physical device testing, use your machine's IP:
-```bash
-EXPO_PUBLIC_API_URL=http://192.168.x.x:3000
+# Leave this unset: the client auto-detects it from the Expo dev server
+# (and picks 10.0.2.2 on the Android emulator, localhost everywhere else,
+# including a physical Android device reached through `adb reverse`).
+# Only set it to override that detection, e.g. a backend that isn't the
+# local dev server:
+# EXPO_PUBLIC_API_URL=http://192.168.x.x:3000
 ```
 
 ## Color Scheme

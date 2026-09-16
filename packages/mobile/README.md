@@ -274,13 +274,13 @@ The API URL is resolved in this order:
 
 1. **app.config.ts** `extra.apiUrl`
 2. **Environment variable** `EXPO_PUBLIC_API_URL`
-3. **Auto-detect** from Expo dev server
+3. **Auto-detect** from Expo dev server (on a physical Android device, this assumes an `adb reverse` tunnel and uses `localhost` instead of the LAN host reported by Expo)
 4. **Fallback** to `http://localhost:3000` (`http://10.0.2.2:3000` on the Android emulator)
 
 **Development:**
 ```bash
-# .env
-EXPO_PUBLIC_API_URL=http://localhost:3000
+# Optional: only set this to force a URL other than the auto-detected local backend
+# EXPO_PUBLIC_API_URL=http://192.168.x.x:3000
 ```
 
 **Production (EAS Build):**
