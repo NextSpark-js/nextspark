@@ -9,13 +9,18 @@
  * the project, and of package.json only the @nextsparkjs versions change.
  *
  * What can be checked without changing anything is checked before the first
- * write, so a run that can't start says why and leaves the project as it was. A
- * run that fails later, in the install or the sync, says what it had changed,
- * and running it again picks up from there.
+ * write, so a run that can't start says why and leaves the project as it was.
+ * A run only starts from a clean git tree, because a run that fails or is
+ * interrupted once it has started writing undoes nothing itself: pnpm install
+ * runs lifecycle scripts, and those can write anywhere in the project, so the
+ * one rollback that covers whatever was written is going back to the commit the
+ * run started from. It exits non-zero and prints what it got through, what git
+ * status shows and that rollback.
  */
 
-import { spawnSync } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 
 const SCOPE = '@nextsparkjs/'
@@ -24,12 +29,12 @@ const CLI_PACKAGE = '@nextsparkjs/cli'
 const DEPENDENCY_FIELDS = ['dependencies', 'devDependencies']
 const VERSION_FILE = 'core.version.json'
 const LOCKFILE = 'pnpm-lock.yaml'
-const WORKSPACE_FILE = 'pnpm-workspace.yaml'
 const LIST_LIMIT = 20
-/** What an update writes besides the lockfile and pnpm-workspace.yaml: package.json, and what nextspark sync:app writes */
-const PROJECT_FILES_WRITTEN = ['package.json', '.gitignore', 'next.config.mjs', 'tsconfig.json', 'i18n.ts', 'proxy.ts', 'middleware.ts']
-const PROJECT_DIRS_WRITTEN = ['app', '.nextspark']
-const CHANGED_SHOWN = 20
+const STATUS_SHOWN = 40
+/** Signals an update stops its running step for and reports on; SIGHUP is a closed terminal */
+const HANDLED_SIGNALS = ['SIGINT', 'SIGTERM', 'SIGHUP']
+/** How long a stopped step's processes get to exit before they are killed */
+const STOP_GRACE_MS = 5000
 
 const VERSION_PATTERN = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/
 const RANGE_PREFIX = /^[\^~]/
@@ -50,31 +55,42 @@ Options:
   --help, -h              Show this help message
 
 What gets updated:
-  package.json            Only the versions of the @nextsparkjs packages, all set to the target
-  pnpm-lock.yaml, node_modules   Through pnpm install
+  package.json            Only the versions of the @nextsparkjs packages, all set to exactly
+                          the target: a ^ or ~ range is replaced, since pnpm would install
+                          the newest version the range allows instead of the target
+  pnpm-lock.yaml, node_modules   Through pnpm install, run where pnpm-lock.yaml is (in a
+                          web-mobile project, the directory above web/)
   app/                    Synced with core's templates by nextspark sync:app, which keeps
                           files the project customized and rebuilds the registries
   next.config.mjs, tsconfig.json, i18n.ts, proxy.ts or middleware.ts
                           Also synced by sync:app, which keeps them when customized
   core.version.json       Written once everything above succeeded
 
-What is never touched:
+What update-core itself never writes:
   The rest of package.json (name, scripts, other dependencies)
   contents/               The project's themes and plugins
   .env*                   Environment files
+Lifecycle scripts that pnpm install runs are not bound by this list.
 
-The update stops before changing anything when the project has uncommitted
-changes, when a @nextsparkjs package isn't published at the target version, when
-the target is older than the installed version, when package.json takes a
-@nextsparkjs package from somewhere other than the registry, or when .env doesn't
-set NEXT_PUBLIC_ACTIVE_THEME, which the registry build needs.
+The update stops before changing anything when the project isn't in a git
+repository with a commit, when it has uncommitted changes, when a @nextsparkjs
+package isn't published at the target version, when the target is older than the
+installed version, when package.json takes a @nextsparkjs package from somewhere
+other than the registry, or when .env doesn't set NEXT_PUBLIC_ACTIVE_THEME, which
+the registry build needs. When every @nextsparkjs package is already declared and
+installed at the target, there is nothing to do and nothing is changed.
 
-A run that failed partway can be run again as it is: uncommitted changes are
-accepted when every @nextsparkjs package is already set to the target and they
-are all in files an update writes.
+If a step fails, or the run is interrupted with Ctrl-C (SIGINT), SIGTERM or
+SIGHUP, after it started changing the project, update-core stops the running
+step, undoes nothing, exits non-zero and prints what it got through, what git
+status shows and the command that rolls the project back to the commit it
+started from:
+  git reset --hard <commit> && git clean -fd && rm -rf node_modules && pnpm install
+That command is also printed before the first change, for a run that is killed
+without a chance to report (SIGKILL).
 `
 
-/** Runs a command, printing its output as it goes unless `capture` asks for it back. */
+/** Runs a command to completion, printing its output as it goes unless `capture` asks for it back. */
 export function runCommand(command, args, { cwd, capture = false }) {
   const result = spawnSync(command, args, {
     cwd,
@@ -130,11 +146,6 @@ function isVersion(value) {
 /** A spec with a protocol or a path takes the package from somewhere other than the registry. */
 function takesFromRegistry(spec) {
   return !spec.includes(':') && !spec.includes('/')
-}
-
-/** The spec that pins `target` the way `spec` pinned its version: exact, or with its ^ or ~. */
-function specFor(spec, target) {
-  return `${spec.match(RANGE_PREFIX)?.[0] ?? ''}${target}`
 }
 
 function parseArguments(args) {
@@ -194,6 +205,11 @@ function readOptional(file) {
   }
 }
 
+/** The version of `name` in the project's node_modules, or null. */
+function installedVersion(cwd, name) {
+  return readJson(path.join(cwd, 'node_modules', name, 'package.json'))?.version ?? null
+}
+
 /** The project's package.json and the @nextsparkjs packages it declares, or why it can't be updated. */
 function readProject(cwd) {
   let manifestText
@@ -231,8 +247,7 @@ function readProject(cwd) {
     return { problem: `package.json doesn't depend on ${CORE_PACKAGE}, so there is nothing for update-core to update.` }
   }
 
-  const installed = readJson(path.join(cwd, 'node_modules', CORE_PACKAGE, 'package.json'))?.version ?? null
-  return { manifestText, manifest, packages, installed }
+  return { manifestText, manifest, packages, installed: installedVersion(cwd, CORE_PACKAGE) }
 }
 
 /** Whatever `pnpm view <spec> <field> --json` prints, parsed, or the error it gave. */
@@ -270,63 +285,20 @@ function realPath(file) {
   }
 }
 
-/** The absolute paths of the uncommitted changes (an untracked directory ends in a separator), or null when git can't say. */
-function uncommittedPaths(run, cwd) {
-  const top = run('git', ['rev-parse', '--show-toplevel'], { cwd, capture: true })
-  const status = run('git', ['status', '--porcelain=v1', '-z', '--no-renames'], { cwd, capture: true })
-  if (top.status !== 0 || status.status !== 0) return null
-  const root = realPath(top.stdout.trim())
-  return status.stdout.split('\0').filter(Boolean).map((entry) => {
-    const file = entry.slice(3)
-    return path.join(root, file) + (file.endsWith('/') ? path.sep : '')
-  })
-}
-
+/** Where the project stands in git: the commit and branch it is on, and whether anything is uncommitted. */
 function gitState(run, cwd) {
-  const inside = run('git', ['rev-parse', '--is-inside-work-tree'], { cwd, capture: true })
-  if (inside.status !== 0 || inside.stdout.trim() !== 'true') return { repo: false }
+  const top = run('git', ['rev-parse', '--show-toplevel'], { cwd, capture: true })
+  if (top.status !== 0) return { repo: false }
 
   const head = run('git', ['rev-parse', '--verify', '--quiet', 'HEAD'], { cwd, capture: true })
-  const changed = uncommittedPaths(run, cwd)
+  const status = run('git', ['status', '--porcelain=v1'], { cwd, capture: true })
   const branch = run('git', ['symbolic-ref', '--quiet', '--short', 'HEAD'], { cwd, capture: true })
   return {
     repo: true,
+    top: top.stdout.trim(),
     head: head.status === 0 ? head.stdout.trim() : null,
-    changed,
-    dirty: changed === null || changed.length > 0,
+    dirty: status.status !== 0 || status.stdout.trim() !== '',
     branch: branch.status === 0 ? branch.stdout.trim() : null,
-  }
-}
-
-/**
- * Whether the uncommitted changes are what an unfinished update to `target`
- * leaves: every @nextsparkjs package already set to it, and nothing changed
- * outside what an update writes. The commit the run started from is still HEAD,
- * so resetting to it rolls back the whole update.
- */
-function unfinishedUpdate(git, { cwd, installRoot, packages, target }) {
-  if (!git.repo || !git.changed || git.changed.length === 0) return false
-  if (!packages.every(({ spec }) => spec.replace(RANGE_PREFIX, '') === target)) return false
-  const project = realPath(cwd)
-  const files = new Set([
-    ...PROJECT_FILES_WRITTEN.map((file) => path.join(project, file)),
-    ...[LOCKFILE, WORKSPACE_FILE].map((file) => path.join(realPath(installRoot), file)),
-  ])
-  const dirs = PROJECT_DIRS_WRITTEN.map((dir) => path.join(project, dir) + path.sep)
-  return git.changed.every((file) => files.has(file) || dirs.some((dir) => file.startsWith(dir)))
-}
-
-/** The @nextsparkjs/core version package.json pins at HEAD, or null. */
-function committedCoreVersion(run, cwd) {
-  const shown = run('git', ['show', 'HEAD:./package.json'], { cwd, capture: true })
-  if (shown.status !== 0) return null
-  try {
-    const manifest = JSON.parse(shown.stdout)
-    const spec = DEPENDENCY_FIELDS.map((field) => manifest[field]?.[CORE_PACKAGE]).find(Boolean)
-    const version = spec?.replace(RANGE_PREFIX, '')
-    return isVersion(version) ? version : null
-  } catch {
-    return null
   }
 }
 
@@ -336,6 +308,51 @@ function branchName(version) {
 
 function branchExists(run, cwd, name) {
   return run('git', ['rev-parse', '--verify', '--quiet', `refs/heads/${name}`], { cwd, capture: true }).status === 0
+}
+
+/** `value` as one shell word. */
+function shellWord(value) {
+  return /^[\w./@%+=:,-]+$/.test(value) ? value : `'${value.replace(/'/g, "'\\''")}'`
+}
+
+/**
+ * The directory the project's pnpm install runs in: the nearest one from `cwd`
+ * up to the top of the repository with a pnpm-lock.yaml, which for a web-mobile
+ * project is the one above web/. Run from web/, pnpm would take the
+ * pnpm-workspace.yaml web/ also has for the whole workspace, and install web/
+ * on its own.
+ */
+function installRoot(cwd, top) {
+  const stop = realPath(top)
+  for (let dir = realPath(cwd); ; dir = path.dirname(dir)) {
+    if (fs.existsSync(path.join(dir, LOCKFILE))) return dir
+    if (dir === stop || path.dirname(dir) === dir) return realPath(cwd)
+  }
+}
+
+/**
+ * The command that puts the project back at the commit the update started from.
+ * The tree was clean then, so resetting tracked files and removing untracked ones
+ * undoes whatever the update and the scripts it ran wrote in the repository;
+ * `git clean` only cleans below the directory it runs in, so from web/ in a
+ * web-mobile project it is pointed at the top of the repository. node_modules is
+ * removed before installing because an install that was stopped can leave it
+ * holding the new versions while the lockfile still names the old ones, and
+ * pnpm install then finds nothing to do.
+ */
+function rollbackCommand(git, { cwd, root, branch }) {
+  const commit = git.head.slice(0, 12)
+  const project = realPath(cwd)
+  const commands = [`git reset --hard ${commit}`, realPath(git.top) === project ? 'git clean -fd' : 'git clean -fd :/']
+  if (branch) {
+    commands.push(git.branch ? `git checkout ${shellWord(git.branch)}` : `git checkout --detach ${commit}`, `git branch -D ${branch}`)
+  }
+  const fromProject = path.relative(project, root)
+  commands.push(
+    `rm -rf ${[...(fromProject ? [path.join(fromProject, 'node_modules')] : []), 'node_modules'].map(shellWord).join(' ')}`,
+    fromProject ? `pnpm --dir ${shellWord(fromProject)} install` : 'pnpm install',
+  )
+  return commands.join(' && ')
 }
 
 /** package.json text with `manifest` in it, keeping the indentation and line endings it had. */
@@ -360,18 +377,6 @@ function installedCli(cwd) {
 }
 
 /**
- * The directory pnpm install writes the lockfile and pnpm-workspace.yaml in: the
- * nearest one up from `cwd` with a pnpm-workspace.yaml, which for a web-mobile
- * project is the directory above web/.
- */
-function workspaceRoot(cwd) {
-  for (let dir = cwd; ; dir = path.dirname(dir)) {
-    if (fs.existsSync(path.join(dir, WORKSPACE_FILE))) return dir
-    if (path.dirname(dir) === dir) return cwd
-  }
-}
-
-/**
  * Whether the registry build sync:app runs has a theme to build: it reads
  * NEXT_PUBLIC_ACTIVE_THEME from the project's .env or the environment, and
  * without one it skips the build and still exits 0.
@@ -393,6 +398,110 @@ function coreMigrations(cwd) {
   } catch {
     return []
   }
+}
+
+/** Sends `signal` to every process of the group a step runs in. */
+function signalGroup(pid, signal) {
+  if (process.platform === 'win32') {
+    // Windows has no process groups: taskkill /T ends the step's process tree
+    spawnSync('taskkill', ['/pid', String(pid), '/T', '/F'], { stdio: 'ignore', timeout: 10_000 })
+    return
+  }
+  try {
+    process.kill(-pid, signal)
+  } catch {
+    // ESRCH: nothing left in the group
+  }
+}
+
+/**
+ * Whether any process of a step's group may still be running. EPERM counts as
+ * running: a process in the group can't be signalled, which on macOS is also
+ * the answer while its processes have exited and wait to be reaped.
+ */
+function groupRunning(pid) {
+  if (process.platform === 'win32') return false
+  try {
+    process.kill(-pid, 0)
+    return true
+  } catch (error) {
+    return error.code === 'EPERM'
+  }
+}
+
+const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/** Waits up to `ms` for the group to empty, and says whether it did. */
+async function groupGone(pid, ms) {
+  for (const deadline = Date.now() + ms; Date.now() < deadline; await pause(100)) {
+    if (!groupRunning(pid)) return true
+  }
+  return !groupRunning(pid)
+}
+
+/**
+ * Watches for the signals an update reports on while it writes. The first one
+ * stops the running step, if any, and is kept for the report. A repeat changes
+ * nothing: `pnpm update-core` passes on the signals it gets, so the Ctrl-C a
+ * terminal sends to both can arrive twice.
+ */
+function watchSignals() {
+  const watch = { signal: null, step: null }
+  const onSignal = (signal) => {
+    if (watch.signal) return
+    watch.signal = signal
+    if (watch.step) signalGroup(watch.step.pid, signal)
+  }
+  for (const signal of HANDLED_SIGNALS) process.on(signal, onSignal)
+  watch.stop = () => {
+    for (const signal of HANDLED_SIGNALS) process.off(signal, onSignal)
+  }
+  return watch
+}
+
+/**
+ * Runs a step's command in a process group of its own and resolves once it
+ * exits. When it was stopped by a signal or failed, whatever is left of its
+ * group (the lifecycle scripts pnpm install started) is stopped too, and killed
+ * after STOP_GRACE_MS, before it resolves, so nothing keeps writing after the
+ * report. Ctrl-C reaches update-core only, which passes it on. Its stdin is
+ * closed: from a background group, reading the terminal would stop it instead
+ * of failing.
+ */
+function runStep(command, args, { cwd, signals }) {
+  return new Promise((resolve) => {
+    const windows = process.platform === 'win32'
+    const child = spawn(command, args, {
+      cwd,
+      stdio: ['ignore', 'inherit', 'inherit'],
+      detached: !windows,
+      shell: windows && !path.isAbsolute(command),
+    })
+    signals.step = child
+
+    let settled = false
+    const settle = async (result) => {
+      if (settled) return
+      settled = true
+      signals.step = null
+      let leftRunning = false
+      if (child.pid && (signals.signal || result.status !== 0) && groupRunning(child.pid)) {
+        signalGroup(child.pid, signals.signal ?? 'SIGTERM')
+        if (!(await groupGone(child.pid, STOP_GRACE_MS))) {
+          signalGroup(child.pid, 'SIGKILL')
+          leftRunning = !(await groupGone(child.pid, 2000))
+        }
+      }
+      resolve({ ...result, leftRunning })
+    }
+    child.once('error', (error) => settle({ status: null, signal: null, error }))
+    child.once('close', (status, signal) => settle({ status, signal, error: null }))
+  })
+}
+
+function describeExit(result) {
+  if (result.error) return result.error.code === 'ENOENT' ? 'not found on PATH' : result.error.message
+  return result.signal ? `killed by ${result.signal}` : `exit ${result.status}`
 }
 
 function listReleases({ run, cwd, installed, out, err }) {
@@ -436,27 +545,55 @@ function banner(out, title) {
 }
 
 /**
- * The rollback a run can promise: back to the commit it started from, dropping
- * the files it created (the tree was clean, so every untracked file is one of
- * them) and reinstalling what that commit pins.
+ * The report of an update that stopped after it started writing: what stopped
+ * it, the steps it finished and the ones it never reached, what git status shows
+ * now, and the rollback. Returns the exit code, 128 plus the signal's number for
+ * an interrupted run.
  */
-function rollbackLines(git, branch) {
-  if (!git.repo || !git.head) {
-    return ['  Roll back: put back the package.json and pnpm-lock.yaml you had, then run pnpm install.']
+function stoppedReport({ run, cwd, err, target, rollback, signal, step, started, reason, leftRunning, done, notReached }) {
+  banner(err, `Update to ${target} did not finish`)
+  err('')
+  if (signal) err(`  Interrupted by ${signal} ${started ? 'during' : 'before'}: ${step}`)
+  else err(`  Failed during: ${step} (${reason})`)
+  if (leftRunning) err('  Some of its processes were still running after being killed, and may still write to the project.')
+  if (done.length > 0) {
+    err('\n  Done before that:')
+    for (const line of done) err(`    - ${line}`)
   }
-  const lines = [`  Roll back: git reset --hard ${git.head.slice(0, 12)} && git clean -fd && pnpm install`]
-  if (branch && git.branch) {
-    lines.push(`             then git checkout ${git.branch} && git branch -D ${branch}`)
+  if (notReached.length > 0) {
+    err('\n  Not reached:')
+    for (const line of notReached) err(`    - ${line}`)
   }
-  return lines
+
+  err('\n  Nothing was undone. A step that stopped may have written part of its work, and the')
+  err('  lifecycle scripts pnpm install runs can write anywhere in the project.')
+  const status = run('git', ['status', '--short'], { cwd, capture: true })
+  if (status.status !== 0) {
+    err(`  git status failed: ${(status.stderr || status.stdout).trim()}`)
+  } else {
+    const lines = status.stdout.split('\n').filter(Boolean)
+    if (lines.length === 0) {
+      err('  git status shows no changes.')
+    } else {
+      err('  git status now (files .gitignore ignores, like node_modules, are not listed):')
+      for (const line of lines.slice(0, STATUS_SHOWN)) err(`    ${line}`)
+      if (lines.length > STATUS_SHOWN) err(`    ... and ${lines.length - STATUS_SHOWN} more (git status lists them all)`)
+    }
+  }
+
+  err('\n  To put the project back at the commit the update started from, run here:')
+  err(`    ${rollback}`)
+  err(`  Then ${signal ? '' : 'fix what failed and '}run update-core --version ${target} again.`)
+  err('')
+  return signal ? 128 + (os.constants.signals[signal] ?? 0) : 1
 }
 
 /**
- * Runs `update-core` with `args` against the project in `cwd` and returns the
- * exit code. `run` executes commands and `out`/`err` print, so a test can hand
- * in its own.
+ * Runs `update-core` with `args` against the project in `cwd` and resolves to
+ * the exit code. `run` executes the commands that only read and `out`/`err`
+ * print, so a test can hand in its own.
  */
-export function updateCore(args, { cwd = process.cwd(), env = process.env, run = runCommand, out = console.log, err = console.error, now = () => new Date() } = {}) {
+export async function updateCore(args, { cwd = process.cwd(), env = process.env, run = runCommand, out = console.log, err = console.error, now = () => new Date() } = {}) {
   const { flags, problems } = parseArguments(args)
   if (problems.length > 0) {
     for (const problem of problems) err(problem)
@@ -508,20 +645,21 @@ export function updateCore(args, { cwd = process.cwd(), env = process.env, run =
     return 1
   }
 
+  const git = gitState(run, cwd)
+  if (!git.repo || !git.head) {
+    err(`   update-core needs the project in a git repository with a commit to start from: an update that fails or is interrupted is rolled back by returning to that commit. ${git.repo ? 'Make a first commit' : 'Run git init and commit the project'} first. Nothing was changed.`)
+    return 1
+  }
+  if (git.dirty) {
+    err('   Uncommitted changes. Commit or stash them first: an update that fails or is interrupted is rolled back by returning to the commit it started from, which would discard them. Nothing was changed.')
+    return 1
+  }
+
   if (!hasActiveTheme(cwd, env)) {
     err('   NEXT_PUBLIC_ACTIVE_THEME is not set in .env, and sync:app skips the registry build without it, so app/(templates) would stay on the old core. Set it and run update-core again. Nothing was changed.')
     return 1
   }
   out(`   Installed: ${CORE_PACKAGE} ${installed}`)
-
-  const git = gitState(run, cwd)
-  if (!git.repo) {
-    out('   Warning: not a git repository, so there is no commit to roll back to')
-  }
-  if (flags.branch && !git.repo) {
-    err('   --branch needs a git repository. Nothing was changed.')
-    return 1
-  }
 
   let target = flags.version
   if (!target) {
@@ -539,23 +677,9 @@ export function updateCore(args, { cwd = process.cwd(), env = process.env, run =
     return 1
   }
 
-  const previousRecord = readJson(path.join(cwd, VERSION_FILE))
-  const specsAtTarget = packages.every(({ spec }) => spec.replace(RANGE_PREFIX, '') === target)
-  if (installed === target && specsAtTarget && previousRecord?.version === target) {
-    out(`\n   Already on ${target}. Nothing to do.\n`)
+  if (packages.every(({ name, spec }) => spec.replace(RANGE_PREFIX, '') === target && installedVersion(cwd, name) === target)) {
+    out(`\n   Already on ${target}: every @nextsparkjs package in package.json asks for it and node_modules holds it. Nothing was changed.\n`)
     return 0
-  }
-
-  const installRoot = workspaceRoot(cwd)
-  const resuming = git.repo && git.dirty && unfinishedUpdate(git, { cwd, installRoot, packages, target })
-  if (git.repo && git.dirty && !resuming) {
-    err('   Uncommitted changes. Commit or stash them first, so the update can be reviewed and rolled back on its own. Nothing was changed.')
-    return 1
-  }
-  // A resumed update started from the version HEAD pins, which node_modules may no longer hold
-  const from = resuming ? committedCoreVersion(run, cwd) ?? installed : installed
-  if (resuming) {
-    out(`   Resuming the update from ${from}: the uncommitted changes are the ones an unfinished update to ${target} leaves`)
   }
 
   const missing = []
@@ -579,142 +703,117 @@ export function updateCore(args, { cwd = process.cwd(), env = process.env, run =
     return 1
   }
 
-  // From here on the project changes; `changed` is what a failure reports as done
-  const changed = []
-  const halfDone = ({ step, notDone }) => {
-    banner(err, `Update to ${target} did not finish`)
-    err(`\n  Failed: ${step}`)
-    if (changed.length > 0) {
-      err('\n  Already changed:')
-      for (const line of changed) err(`    - ${line}`)
-    }
-    err('\n  Not done:')
-    for (const line of notDone) err(`    - ${line}`)
-    err(`    - ${VERSION_FILE} still says ${previousRecord?.version ?? 'nothing (not written)'}`)
-    const uncommitted = git.repo ? uncommittedPaths(run, cwd) : null
-    if (uncommitted?.length > 0) {
-      const project = realPath(cwd)
-      err('\n  Uncommitted now (git status):')
-      for (const file of uncommitted.slice(0, CHANGED_SHOWN)) err(`    ${path.relative(project, file) || '.'}${file.endsWith(path.sep) ? '/' : ''}`)
-      if (uncommitted.length > CHANGED_SHOWN) err(`    ... and ${uncommitted.length - CHANGED_SHOWN} more`)
-    }
-    const picksUp = uncommitted?.length > 0 ? ', leaving these changes uncommitted: it picks up from them' : ''
-    err(`\n  To finish: fix what failed above and run pnpm update-core --version ${target} again${picksUp}.`)
-    for (const line of rollbackLines(git, branch)) err(line)
-    err('')
-    return 1
-  }
+  const root = installRoot(cwd, git.top)
+  const rollback = rollbackCommand(git, { cwd, root, branch })
+  out(`\n   Starting from commit ${git.head.slice(0, 12)}. If this run is killed before it can report (SIGKILL), roll back with:`)
+  out(`     ${rollback}`)
 
-  if (branch) {
-    out(`\n   Creating branch ${branch}...`)
-    const created = run('git', ['checkout', '-b', branch], { cwd, capture: true })
-    if (created.status !== 0) {
-      err(`   Could not create branch ${branch}:\n${(created.stderr || created.stdout).trim()}\n   Nothing was changed.`)
-      return 1
-    }
-    changed.push(`created and switched to branch ${branch}`)
-  }
-
-  out('\n[2/5] Setting the @nextsparkjs versions in package.json...')
-  const manifestPath = path.join(cwd, 'package.json')
-  // pnpm install rewrites these besides node_modules; a failed install puts them back
-  const installWrites = [LOCKFILE, WORKSPACE_FILE].map((name) => {
-    const file = path.join(installRoot, name)
-    return { file, shown: path.relative(cwd, file), content: readOptional(file) }
+  // From here on the project changes, and whatever stops the run goes through stoppedReport
+  const signals = watchSignals()
+  const done = []
+  const steps = [
+    ...(branch ? [`create and switch to branch ${branch}`] : []),
+    'set the @nextsparkjs versions in package.json',
+    'pnpm install',
+    'nextspark sync:app --force',
+    `write ${VERSION_FILE}`,
+  ]
+  let current = 0
+  const stopped = ({ reason = null, started = true, leftRunning = false } = {}) => stoppedReport({
+    run, cwd, err, target, rollback, reason, started, leftRunning,
+    signal: signals.signal,
+    step: steps[current],
+    done,
+    notReached: steps.slice(current + 1),
   })
-  const bumped = []
-  for (const { field, name, spec } of packages) {
-    const next = specFor(spec, target)
-    if (next !== spec) {
-      manifest[field][name] = next
-      bumped.push(`${name} ${spec} -> ${next}`)
-    }
-  }
-  if (bumped.length > 0) {
-    fs.writeFileSync(manifestPath, manifestText(manifest, project.manifestText))
-    for (const line of bumped) out(`   ${line}`)
-    changed.push(`package.json: ${bumped.join(', ')}`)
-  } else {
-    out(`   Already set to ${target}`)
+  // A signal that came in while a synchronous write ran is only delivered on the next turn of the event loop
+  const signalled = async () => {
+    await new Promise((resolve) => setImmediate(resolve))
+    return signals.signal !== null
   }
 
-  out('\n[3/5] Installing...')
-  const migrationsBefore = new Set(coreMigrations(cwd))
-  const [lockfile, workspaceFile] = installWrites
-  const install = run('pnpm', ['install'], { cwd })
-  if (install.status !== 0) {
-    // Nothing but these files depends on the new pins yet, so they go back
-    const putBack = ['package.json', lockfile.shown, workspaceFile.shown].join(', ')
-    try {
-      fs.writeFileSync(manifestPath, project.manifestText)
-      for (const { file, content } of installWrites) {
-        if (content !== null) fs.writeFileSync(file, content)
-        else fs.rmSync(file, { force: true })
+  try {
+    if (branch) {
+      out(`\n   Creating branch ${branch}...`)
+      const created = run('git', ['checkout', '-b', branch], { cwd, capture: true })
+      if (created.status !== 0) {
+        err(`   Could not create branch ${branch}:\n${(created.stderr || created.stdout).trim()}\n   Nothing was changed.`)
+        return 1
       }
-      changed.splice(branch ? 1 : 0)
-      changed.push(`${putBack} put back as they were; node_modules may hold part of the install, so run pnpm install`)
-    } catch (error) {
-      changed.push(`putting back ${putBack} failed too (${error.message})`)
+      done.push(`created and switched to branch ${branch}`)
+      current++
+      if (await signalled()) return stopped({ started: false })
     }
-    return halfDone({
-      step: `pnpm install (${install.error ? install.error.message : `exit ${install.status}`})`,
-      notDone: ['install of the new versions', 'app/ sync and registry build'],
-    })
+
+    out('\n[2/5] Setting the @nextsparkjs versions in package.json...')
+    const bumped = []
+    for (const { field, name, spec } of packages) {
+      if (spec !== target) {
+        manifest[field][name] = target
+        bumped.push(`${name} ${spec} -> ${target}`)
+      }
+    }
+    if (bumped.length > 0) {
+      fs.writeFileSync(path.join(cwd, 'package.json'), manifestText(manifest, project.manifestText))
+      for (const line of bumped) out(`   ${line}`)
+      done.push(`package.json: ${bumped.join(', ')}`)
+    } else {
+      out(`   Already set to ${target}`)
+    }
+    current++
+    if (await signalled()) return stopped({ started: false })
+
+    out('\n[3/5] Installing...')
+    const migrationsBefore = new Set(coreMigrations(cwd))
+    const install = await runStep('pnpm', ['install'], { cwd: root, signals })
+    if (signals.signal) return stopped({ leftRunning: install.leftRunning })
+    if (install.status !== 0) return stopped({ reason: describeExit(install), leftRunning: install.leftRunning })
+    const offTarget = packages
+      .map(({ name }) => ({ name, version: installedVersion(cwd, name) }))
+      .filter(({ version }) => version !== target)
+    if (offTarget.length > 0) {
+      return stopped({ reason: `it exited 0, but node_modules holds ${offTarget.map(({ name, version }) => `${name} ${version ?? '(missing)'}`).join(', ')} instead of ${target}` })
+    }
+    done.push(`pnpm install: every @nextsparkjs package installed at ${target}`)
+    current++
+
+    out('\n[4/5] Syncing app/ with core and rebuilding the registries...')
+    const cli = installedCli(cwd)
+    if (!cli) return stopped({ reason: `node_modules has no nextspark CLI from ${CLI_PACKAGE}` })
+    fs.rmSync(path.join(cwd, '.next'), { recursive: true, force: true })
+    done.push('.next removed')
+    if (await signalled()) return stopped({ started: false })
+    const sync = await runStep(process.execPath, [cli, 'sync:app', '--force'], { cwd, signals })
+    if (signals.signal) return stopped({ leftRunning: sync.leftRunning })
+    if (sync.status !== 0) return stopped({ reason: `${describeExit(sync)}; what it reported is above`, leftRunning: sync.leftRunning })
+    done.push('app/ synced with core and registries rebuilt by nextspark sync:app')
+    current++
+
+    if (await signalled()) return stopped({ started: false })
+
+    out('\n[5/5] Recording the version...')
+    const record = { version: target, previousVersion: installed, updatedAt: now().toISOString() }
+    fs.writeFileSync(path.join(cwd, VERSION_FILE), `${JSON.stringify(record, null, 2)}\n`)
+    out(`   ${VERSION_FILE}: ${installed} -> ${target}`)
+
+    const newMigrations = coreMigrations(cwd).filter((file) => !migrationsBefore.has(file))
+
+    banner(out, 'Update Complete')
+    out(`\n  ${CORE_PACKAGE} ${installed} -> ${target}`)
+    if (branch) out(`  Branch: ${branch}`)
+    if (newMigrations.length > 0) out(`  New core migrations: ${newMigrations.length}`)
+    out('\n  Next steps:')
+    const nextSteps = ['Review: git status && git diff', 'Test: pnpm build && pnpm dev']
+    if (newMigrations.length > 0) nextSteps.push('Migrate: pnpm db:migrate')
+    nextSteps.push(branch ? `Commit on ${branch} and merge it` : 'Commit the update')
+    nextSteps.forEach((step, index) => out(`    ${index + 1}. ${step}`))
+    out('')
+    out(`  Roll back: ${rollback}`)
+    out('')
+    return 0
+  } catch (error) {
+    return stopped({ reason: error.message })
+  } finally {
+    signals.stop()
   }
-
-  const workspaceAfter = readOptional(workspaceFile.file)
-  if (workspaceFile.content === null || workspaceAfter === null ? workspaceFile.content !== workspaceAfter : !workspaceFile.content.equals(workspaceAfter)) {
-    changed.push(`${workspaceFile.shown}: changed by pnpm install`)
-  }
-
-  const nowInstalled = readJson(path.join(cwd, 'node_modules', CORE_PACKAGE, 'package.json'))?.version ?? null
-  if (nowInstalled !== target) {
-    changed.push(`${lockfile.shown} and node_modules updated by pnpm install`)
-    return halfDone({
-      step: `pnpm install left ${CORE_PACKAGE} at ${nowInstalled ?? 'nothing'} instead of ${target}`,
-      notDone: ['app/ sync and registry build'],
-    })
-  }
-  changed.push(`${lockfile.shown} and node_modules: ${CORE_PACKAGE} ${installed} -> ${target}`)
-
-  out('\n[4/5] Syncing app/ with core and rebuilding the registries...')
-  const cli = installedCli(cwd)
-  if (!cli) {
-    return halfDone({
-      step: `node_modules has no nextspark CLI from ${CLI_PACKAGE} after the install`,
-      notDone: ['app/ sync and registry build'],
-    })
-  }
-  fs.rmSync(path.join(cwd, '.next'), { recursive: true, force: true })
-  const sync = run(process.execPath, [cli, 'sync:app', '--force'], { cwd })
-  if (sync.status !== 0) {
-    changed.push('.next cache cleared')
-    return halfDone({
-      step: `nextspark sync:app (${sync.error ? sync.error.message : `exit ${sync.status}`}); what it reported is above`,
-      notDone: ['app/ sync with core and registry build, or at least one of them (sync:app says which)'],
-    })
-  }
-
-  out('\n[5/5] Recording the version...')
-  const record = { version: target, previousVersion: from, updatedAt: now().toISOString() }
-  fs.writeFileSync(path.join(cwd, VERSION_FILE), `${JSON.stringify(record, null, 2)}\n`)
-  out(`   ${VERSION_FILE}: ${from} -> ${target}`)
-
-  // node_modules held the target's migrations before a resumed run started, so it can't tell which are new
-  const newMigrations = resuming ? null : coreMigrations(cwd).filter((file) => !migrationsBefore.has(file))
-
-  banner(out, 'Update Complete')
-  out(`\n  ${CORE_PACKAGE} ${from} -> ${target}`)
-  if (branch) out(`  Branch: ${branch}`)
-  if (newMigrations?.length > 0) out(`  New core migrations: ${newMigrations.length}`)
-  out('\n  Next steps:')
-  const steps = ['Review: git status && git diff', 'Test: pnpm build && pnpm dev']
-  if (newMigrations === null) steps.push('Migrate: pnpm db:migrate, which applies whatever core migrations the database lacks')
-  else if (newMigrations.length > 0) steps.push('Migrate: pnpm db:migrate')
-  steps.push(branch ? `Commit on ${branch} and merge it` : 'Commit the update')
-  steps.forEach((step, index) => out(`    ${index + 1}. ${step}`))
-  out('')
-  for (const line of rollbackLines(git, branch)) out(line)
-  out('')
-  return 0
 }

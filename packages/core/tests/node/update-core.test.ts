@@ -6,7 +6,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { spawnSync } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -17,6 +17,8 @@ const UPDATE_CORE = path.join(CORE_DIR, 'scripts/maintenance/update-core.mjs')
 
 const FROM = '0.1.0-beta.188'
 const TO = '0.1.0-beta.189'
+const NEWER = '0.1.0-beta.190'
+const PACKAGES = ['@nextsparkjs/core', '@nextsparkjs/cli', '@nextsparkjs/testing']
 
 const FAKE_HEADER = `const fs = require('node:fs')
 const path = require('node:path')
@@ -39,6 +41,16 @@ if (state.syncExit) {
 fs.writeFileSync(path.join('app', 'synced-with-core.txt'), 'synced\\n')
 `
 
+/**
+ * The stand-in pnpm. Its install resolves an exact spec to that version and a ^
+ * or ~ range to the newest published version from the range's own up, as pnpm
+ * does for these 0.1.0-beta.N versions; writes what the state's lifecycle
+ * scripts write; and can hang halfway, having linked the new versions into
+ * node_modules but not written the lockfile yet, and written the pid a test
+ * signals it by. Like pnpm, it finds nothing to do when the lockfile already
+ * names what package.json asks for and matches its record of the last install
+ * it finished, whatever node_modules holds.
+ */
 const FAKE_PNPM = `#!/usr/bin/env node
 ${FAKE_HEADER}
 fs.appendFileSync(process.env.FAKE_PNPM_LOG, args.join(' ') + '\\n')
@@ -54,60 +66,120 @@ if (args[0] === 'view') {
   process.exit(0)
 }
 
-if (args[0] === 'install') {
-  const manifest = JSON.parse(fs.readFileSync('package.json', 'utf8'))
-  let root = process.cwd()
-  while (!fs.existsSync(path.join(root, 'pnpm-workspace.yaml')) && path.dirname(root) !== root) root = path.dirname(root)
-  if (!fs.existsSync(path.join(root, 'pnpm-workspace.yaml'))) root = process.cwd()
-  if (state.installExit) {
-    fs.writeFileSync(path.join(root, 'pnpm-lock.yaml'), 'half-written lockfile\\n')
-    if (state.workspaceNote) fs.appendFileSync(path.join(root, 'pnpm-workspace.yaml'), state.workspaceNote)
-    process.stderr.write('ERR_PNPM_FETCH_FAIL\\n')
-    process.exit(state.installExit)
-  }
-  const pins = []
+if (args[0] === '--dir') {
+  process.chdir(args[1])
+  args.splice(0, 2)
+}
+if (args[0] !== 'install') {
+  process.stderr.write('fake pnpm: unexpected call: ' + args.join(' ') + '\\n')
+  process.exit(99)
+}
+fs.appendFileSync(process.env.FAKE_PNPM_LOG + '.cwd', fs.realpathSync(process.cwd()) + '\\n')
+
+// Like pnpm, the nearest pnpm-workspace.yaml up from where it runs makes the workspace
+const beta = (version) => Number(version.split('.').pop())
+let root = process.cwd()
+while (!fs.existsSync(path.join(root, 'pnpm-workspace.yaml')) && path.dirname(root) !== root) root = path.dirname(root)
+if (!fs.existsSync(path.join(root, 'pnpm-workspace.yaml'))) root = process.cwd()
+const lockfile = path.join(root, 'pnpm-lock.yaml')
+const lastInstall = path.join(root, 'node_modules', '.fake-last-install')
+const listed = fs.existsSync(path.join(root, 'pnpm-workspace.yaml'))
+  ? fs.readFileSync(path.join(root, 'pnpm-workspace.yaml'), 'utf8').split('\\n').map((line) => line.match(/^\\s*-\\s*'([^'*]+)'\\s*$/)?.[1]).filter(Boolean)
+  : []
+const importers = [root, ...listed.map((dir) => path.join(root, dir))].filter((dir) => fs.existsSync(path.join(dir, 'package.json')))
+
+const pins = []
+for (const dir of importers) {
+  const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'))
   for (const field of ['dependencies', 'devDependencies']) {
     for (const [name, spec] of Object.entries(manifest[field] || {})) {
       if (!name.startsWith('@nextsparkjs/')) continue
-      const version = spec.replace(/^[\\^~]/, '')
-      const dir = path.join('node_modules', name)
-      fs.mkdirSync(dir, { recursive: true })
-      const bin = name === '@nextsparkjs/cli' ? { nextspark: 'bin/nextspark.js' } : undefined
-      fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name, version, bin }))
-      if (bin) {
-        fs.mkdirSync(path.join(dir, 'bin'), { recursive: true })
-        fs.writeFileSync(path.join(dir, 'bin', 'nextspark.js'), ${JSON.stringify(FAKE_CLI)})
-      }
-      pins.push(name + '@' + version)
+      const base = spec.replace(/^[\\^~]/, '')
+      const version = base === spec
+        ? spec
+        : (state.published[name] || []).filter((candidate) => beta(candidate) >= beta(base)).sort((a, b) => beta(b) - beta(a))[0] || base
+      pins.push({ dir, name, base, version })
     }
   }
-  fs.writeFileSync(path.join(root, 'pnpm-lock.yaml'), pins.join('\\n') + '\\n')
-  if (state.workspaceNote) fs.appendFileSync(path.join(root, 'pnpm-workspace.yaml'), state.workspaceNote)
-  const migrations = path.join('node_modules', '@nextsparkjs', 'core', 'migrations')
-  fs.mkdirSync(migrations, { recursive: true })
-  for (const file of state.newMigrations || []) fs.writeFileSync(path.join(migrations, file), '')
+}
+
+const read = (file) => fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null
+const locked = read(lockfile)
+if (locked !== null && locked === read(lastInstall) && pins.every(({ name, base }) => locked.split('\\n').includes(name + '@' + base))) {
+  process.stdout.write('Already up to date\\n')
   process.exit(0)
 }
 
-process.stderr.write('fake pnpm: unexpected call: ' + args.join(' ') + '\\n')
-process.exit(99)
+for (const [file, content] of Object.entries(state.installWrites || {})) {
+  fs.mkdirSync(path.dirname(file), { recursive: true })
+  fs.writeFileSync(file, content)
+}
+
+const link = () => {
+  for (const { dir: importer, name, version } of pins) {
+    const dir = path.join(importer, 'node_modules', name)
+    fs.mkdirSync(dir, { recursive: true })
+    const bin = name === '@nextsparkjs/cli' ? { nextspark: 'bin/nextspark.js' } : undefined
+    fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name, version, bin }))
+    if (bin) {
+      fs.mkdirSync(path.join(dir, 'bin'), { recursive: true })
+      fs.writeFileSync(path.join(dir, 'bin', 'nextspark.js'), ${JSON.stringify(FAKE_CLI)})
+    }
+  }
+}
+
+const finish = () => {
+  if (state.installExit) {
+    fs.writeFileSync(lockfile, 'half-written lockfile\\n')
+    process.stderr.write('ERR_PNPM_FETCH_FAIL\\n')
+    process.exit(state.installExit)
+  }
+  link()
+  const content = pins.map(({ name, version }) => name + '@' + version + '\\n').join('')
+  fs.writeFileSync(lockfile, content)
+  fs.mkdirSync(path.dirname(lastInstall), { recursive: true })
+  fs.writeFileSync(lastInstall, content)
+  for (const { dir } of pins.filter(({ name }) => name === '@nextsparkjs/core')) {
+    const migrations = path.join(dir, 'node_modules', '@nextsparkjs', 'core', 'migrations')
+    fs.mkdirSync(migrations, { recursive: true })
+    for (const file of state.newMigrations || []) fs.writeFileSync(path.join(migrations, file), '')
+  }
+  process.exit(0)
+}
+
+if (state.installHangMs) {
+  link()
+  // A lifecycle script of its own, as pnpm runs them: a child that would write once the install finishes
+  const lifecycle = require('node:child_process').spawn(process.execPath, ['-e', 'setTimeout(() => require("node:fs").writeFileSync(process.argv[1], ""), ' + state.installHangMs + ')', process.env.FAKE_PNPM_LOG + '.lifecycle-finished'], { stdio: 'ignore' })
+  fs.writeFileSync(process.env.FAKE_PNPM_LOG + '.started', process.pid + ' ' + lifecycle.pid)
+  setTimeout(() => {
+    fs.writeFileSync(process.env.FAKE_PNPM_LOG + '.finished', '')
+    finish()
+  }, state.installHangMs)
+} else {
+  finish()
+}
 `
 
 interface ProjectOptions {
   pins?: Record<string, string>
   files?: Record<string, string>
+  /** The version node_modules holds of every @nextsparkjs package package.json declares, or none */
   installed?: string | null
   /** web-mobile puts the app in web/, under the workspace root that holds the lockfile */
   webMobile?: boolean
+  /** 'commit' commits the project, 'init' only runs git init, 'none' leaves it outside git */
+  git?: 'commit' | 'init' | 'none'
 }
 
-interface RunOptions {
+interface FakeState {
   published?: Record<string, string[]>
   latest?: string
   installExit?: number
+  installWrites?: Record<string, string>
+  installHangMs?: number
   syncExit?: number
   newMigrations?: string[]
-  workspaceNote?: string
 }
 
 function git(cwd: string, ...args: string[]) {
@@ -116,11 +188,17 @@ function git(cwd: string, ...args: string[]) {
   return result.stdout.trim()
 }
 
+/** The lockfile the stand-in install writes for these pins. */
+function lockfileFor(pins: Array<[string, string]>) {
+  return pins.map(([name, version]) => `${name}@${version}\n`).join('')
+}
+
 /**
- * A project as `nextspark init` leaves one, committed, with core installed at
- * `installed`. Returns the directory update-core runs in: web/ for web-mobile.
+ * A project as `nextspark init` leaves one, committed, with the @nextsparkjs
+ * packages installed at `installed`. Returns the directory update-core runs
+ * in: web/ for web-mobile.
  */
-function createProject(t: { after: (fn: () => void) => void }, { pins, files = {}, installed = FROM, webMobile = false }: ProjectOptions = {}) {
+function createProject(t: { after: (fn: () => void) => void }, { pins, files = {}, installed = FROM, webMobile = false, git: gitMode = 'commit' }: ProjectOptions = {}) {
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'update-core-'))
   t.after(() => fs.rmSync(repo, { recursive: true, force: true }))
   const root = webMobile ? path.join(repo, 'web') : repo
@@ -153,20 +231,24 @@ function createProject(t: { after: (fn: () => void) => void }, { pins, files = {
   }
 
   const workspace: Record<string, string> = {
-    'pnpm-lock.yaml': `lockfile for ${FROM}\n`,
+    'pnpm-lock.yaml': lockfileFor(PACKAGES.map((name) => [name, FROM])),
     '.gitignore': 'node_modules\n.next\n',
     'pnpm-workspace.yaml': webMobile ? "packages:\n  - 'web'\n  - 'mobile'\n" : "packages:\n  - 'contents/themes/*'\n",
   }
   if (webMobile) {
-    for (const [file, content] of Object.entries({ ...workspace, 'package.json': `${JSON.stringify({ name: 'acme', private: true }, null, 2)}\n` })) {
+    for (const [file, content] of Object.entries({ ...workspace, 'package.json': `${JSON.stringify({ name: 'acme', private: true }, null, 2)}\n`, 'mobile/package.json': `${JSON.stringify({ name: 'mobile', private: true }, null, 2)}\n`, 'mobile/app.json': '{ "name": "acme" }\n' })) {
+      fs.mkdirSync(path.dirname(path.join(repo, file)), { recursive: true })
       fs.writeFileSync(path.join(repo, file), content)
     }
   }
   const tree: Record<string, string> = {
     'package.json': `${JSON.stringify(manifest, null, 2)}\n`,
-    ...(webMobile ? {} : workspace),
+    // web/ of a generated web-mobile project has a pnpm-workspace.yaml of its own for its themes and plugins
+    ...(webMobile ? { 'pnpm-workspace.yaml': "packages:\n  - 'contents/themes/*'\n  - 'contents/plugins/*'\n" } : workspace),
     '.env': 'DATABASE_URL=postgres://localhost/acme\nNEXT_PUBLIC_ACTIVE_THEME="acme" # the theme init set up\n',
     'app/page.tsx': 'export default function Page() { return null }\n',
+    'next.config.mjs': 'export default {}\n',
+    'tsconfig.json': '{ "compilerOptions": { "strict": true } }\n',
     'contents/themes/acme/config/theme.config.ts': 'export const acmeThemeConfig = { name: "acme" }\n',
     'contents/plugins/acme-billing/plugin.config.ts': 'export const billing = {}\n',
     ...files,
@@ -176,60 +258,91 @@ function createProject(t: { after: (fn: () => void) => void }, { pins, files = {
     fs.writeFileSync(path.join(root, file), content)
   }
   if (installed) {
-    fs.mkdirSync(path.join(root, 'node_modules/@nextsparkjs/core'), { recursive: true })
-    fs.writeFileSync(path.join(root, 'node_modules/@nextsparkjs/core/package.json'), JSON.stringify({ name: '@nextsparkjs/core', version: installed }))
+    const declared = JSON.parse(tree['package.json'])
+    for (const name of Object.keys({ ...declared.dependencies, ...declared.devDependencies }).filter((dep) => dep.startsWith('@nextsparkjs/'))) {
+      fs.mkdirSync(path.join(root, 'node_modules', name), { recursive: true })
+      fs.writeFileSync(path.join(root, 'node_modules', name, 'package.json'), JSON.stringify({ name, version: installed }))
+    }
+    fs.mkdirSync(path.join(repo, 'node_modules'), { recursive: true })
+    fs.writeFileSync(path.join(repo, 'node_modules', '.fake-last-install'), workspace['pnpm-lock.yaml'])
   }
 
-  git(repo, 'init', '-q')
-  git(repo, 'add', '-A')
-  git(repo, 'commit', '-q', '-m', 'Generated project')
+  if (gitMode !== 'none') git(repo, 'init', '-q')
+  if (gitMode === 'commit') {
+    git(repo, 'add', '-A')
+    git(repo, 'commit', '-q', '-m', 'Generated project')
+  }
   return root
 }
 
-function runUpdateCore(root: string, args: string[], options: RunOptions = {}) {
+/** A directory with the stand-in pnpm and its state, and the environment that puts it first on PATH. */
+function fakePnpm(state: FakeState = {}) {
   const bin = fs.mkdtempSync(path.join(os.tmpdir(), 'update-core-bin-'))
-  try {
-    fs.writeFileSync(path.join(bin, 'pnpm'), FAKE_PNPM, { mode: 0o755 })
-    const statePath = path.join(bin, 'state.json')
-    const logPath = path.join(bin, 'calls.log')
-    fs.writeFileSync(statePath, JSON.stringify({
-      published: options.published ?? {
-        '@nextsparkjs/core': [FROM, TO],
-        '@nextsparkjs/cli': [FROM, TO],
-        '@nextsparkjs/testing': [FROM, TO],
-      },
-      latest: options.latest ?? TO,
-      installExit: options.installExit ?? 0,
-      syncExit: options.syncExit ?? 0,
-      newMigrations: options.newMigrations ?? [],
-      workspaceNote: options.workspaceNote ?? '',
-    }))
-    fs.writeFileSync(logPath, '')
-    // The project's .env is what says which theme is active
-    const { NEXT_PUBLIC_ACTIVE_THEME, ...environment } = process.env
+  fs.writeFileSync(path.join(bin, 'pnpm'), FAKE_PNPM, { mode: 0o755 })
+  const statePath = path.join(bin, 'state.json')
+  const logPath = path.join(bin, 'calls.log')
+  fs.writeFileSync(statePath, JSON.stringify({
+    published: state.published ?? Object.fromEntries(PACKAGES.map((name) => [name, [FROM, TO]])),
+    latest: state.latest ?? TO,
+    installExit: state.installExit ?? 0,
+    installWrites: state.installWrites ?? {},
+    installHangMs: state.installHangMs ?? 0,
+    syncExit: state.syncExit ?? 0,
+    newMigrations: state.newMigrations ?? [],
+  }))
+  fs.writeFileSync(logPath, '')
+  // The project's .env is what says which theme is active
+  const { NEXT_PUBLIC_ACTIVE_THEME, ...environment } = process.env
+  return {
+    bin,
+    logPath,
+    env: { ...environment, PATH: `${bin}${path.delimiter}${process.env.PATH}`, FAKE_PNPM_STATE: statePath, FAKE_PNPM_LOG: logPath },
+    calls: () => fs.readFileSync(logPath, 'utf8').split('\n').filter(Boolean),
+    /** The directory each install ran in */
+    installDirs: () => (fs.existsSync(`${logPath}.cwd`) ? fs.readFileSync(`${logPath}.cwd`, 'utf8') : '').split('\n').filter(Boolean),
+    remove: () => fs.rmSync(bin, { recursive: true, force: true }),
+  }
+}
 
-    const result = spawnSync(process.execPath, [UPDATE_CORE, ...args], {
-      cwd: root,
-      encoding: 'utf8',
-      timeout: 60_000,
-      env: { ...environment, PATH: `${bin}${path.delimiter}${process.env.PATH}`, FAKE_PNPM_STATE: statePath, FAKE_PNPM_LOG: logPath },
-    })
+function runUpdateCore(root: string, args: string[], state: FakeState = {}) {
+  const pnpm = fakePnpm(state)
+  try {
+    const result = spawnSync(process.execPath, [UPDATE_CORE, ...args], { cwd: root, encoding: 'utf8', timeout: 60_000, env: pnpm.env })
     return {
       status: result.status,
       stdout: result.stdout,
       stderr: result.stderr,
       output: `${result.stdout}${result.stderr}`,
-      calls: fs.readFileSync(logPath, 'utf8').split('\n').filter(Boolean),
+      calls: pnpm.calls(),
+      installDirs: pnpm.installDirs(),
     }
   } finally {
-    fs.rmSync(bin, { recursive: true, force: true })
+    pnpm.remove()
   }
 }
 
-/** Every file under `dir` but .git, with its bytes. */
+/** The rollback command a report prints. */
+function rollbackIn(output: string) {
+  const command = output.match(/^ {4}(git reset --hard \S+ && .+)$/m)?.[1]
+  assert.ok(command, `no rollback command in:\n${output}`)
+  return command
+}
+
+/** Runs the rollback exactly as printed, in `cwd`, with an install that succeeds. */
+function runRollback(cwd: string, command: string) {
+  const pnpm = fakePnpm()
+  try {
+    const result = spawnSync('sh', ['-c', command], { cwd, encoding: 'utf8', timeout: 60_000, env: pnpm.env })
+    assert.equal(result.status, 0, `${command}\n${result.stdout}${result.stderr}`)
+  } finally {
+    pnpm.remove()
+  }
+}
+
+/** Every file under `dir` but .git and node_modules, with its bytes. */
 function snapshot(dir: string, base = dir, files = new Map<string, string>()) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name === '.git') continue
+    if (entry.name === '.git' || entry.name === 'node_modules') continue
     const full = path.join(dir, entry.name)
     if (entry.isDirectory()) snapshot(full, base, files)
     else files.set(path.relative(base, full), fs.readFileSync(full, 'base64'))
@@ -242,15 +355,38 @@ function gitRefs(root: string) {
   return git(root, 'for-each-ref', '--format=%(refname) %(objectname)')
 }
 
+function installedVersions(root: string) {
+  return PACKAGES.map((name) => JSON.parse(fs.readFileSync(path.join(root, 'node_modules', name, 'package.json'), 'utf8')).version)
+}
+
+/**
+ * Checks that the rollback a report printed, run as printed from `cwd`, puts
+ * the repository back as `before` had it: the same files, nothing uncommitted,
+ * the same refs and the packages reinstalled at FROM.
+ */
+function assertRollbackRestores(cwd: string, output: string, before: { files: Map<string, string>, refs: string, repo: string }) {
+  runRollback(cwd, rollbackIn(output))
+  assert.deepEqual(snapshot(before.repo), before.files)
+  assert.equal(git(before.repo, 'status', '--porcelain'), '')
+  assert.equal(gitRefs(before.repo), before.refs)
+  assert.deepEqual(installedVersions(cwd), PACKAGES.map(() => FROM))
+}
+
+function stateOf(repo: string) {
+  return { repo, files: snapshot(repo), refs: gitRefs(repo) }
+}
+
 test('updates the @nextsparkjs pins of a generated project and leaves the rest of it the project\'s own', (t) => {
   const root = createProject(t)
   const manifestBefore = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
   const before = snapshot(root)
+  const head = git(root, 'rev-parse', 'HEAD')
 
   const result = runUpdateCore(root, ['--version', TO])
 
   assert.equal(result.status, 0, result.output)
   assert.match(result.stdout, /Update Complete/)
+  assert.match(result.stdout, new RegExp(`Starting from commit ${head.slice(0, 12)}[^\\n]*\\n {5}git reset --hard ${head.slice(0, 12)} && git clean -fd && rm -rf node_modules && pnpm install\\n[\\s\\S]*\\[2/5\\]`))
 
   const manifestAfter = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
   assert.deepEqual(manifestAfter, {
@@ -278,7 +414,7 @@ test('updates the @nextsparkjs pins of a generated project and leaves the rest o
   assert.equal(record.previousVersion, FROM)
 })
 
-test('keeps a ^ or ~ range, the indentation and the key order of package.json', (t) => {
+test('sets a ^ or ~ range to the exact target, keeping the indentation and the key order of package.json', (t) => {
   const root = createProject(t, { pins: { '@nextsparkjs/cli': `^${FROM}`, '@nextsparkjs/testing': `~${FROM}` } })
   const text = fs.readFileSync(path.join(root, 'package.json'), 'utf8').replace(/^(?: {2})+/gm, (indent) => '\t'.repeat(indent.length / 2))
   fs.writeFileSync(path.join(root, 'package.json'), text)
@@ -289,9 +425,48 @@ test('keeps a ^ or ~ range, the indentation and the key order of package.json', 
   assert.equal(result.status, 0, result.output)
   const expected = text
     .replace(`"@nextsparkjs/core": "${FROM}"`, `"@nextsparkjs/core": "${TO}"`)
-    .replace(`"@nextsparkjs/cli": "^${FROM}"`, `"@nextsparkjs/cli": "^${TO}"`)
-    .replace(`"@nextsparkjs/testing": "~${FROM}"`, `"@nextsparkjs/testing": "~${TO}"`)
+    .replace(`"@nextsparkjs/cli": "^${FROM}"`, `"@nextsparkjs/cli": "${TO}"`)
+    .replace(`"@nextsparkjs/testing": "~${FROM}"`, `"@nextsparkjs/testing": "${TO}"`)
   assert.equal(fs.readFileSync(path.join(root, 'package.json'), 'utf8'), expected)
+})
+
+test('--version installs exactly that version when package.json had ranges and a newer version is published', (t) => {
+  const root = createProject(t, { pins: { '@nextsparkjs/core': `^${FROM}`, '@nextsparkjs/cli': `^${FROM}`, '@nextsparkjs/testing': `~${FROM}` } })
+
+  const result = runUpdateCore(root, ['--version', TO], {
+    published: Object.fromEntries(PACKAGES.map((name) => [name, [FROM, TO, NEWER]])),
+    latest: NEWER,
+  })
+
+  assert.equal(result.status, 0, result.output)
+  assert.deepEqual(installedVersions(root), PACKAGES.map(() => TO))
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
+  assert.deepEqual(PACKAGES.map((name) => manifest.dependencies[name] ?? manifest.devDependencies[name]), PACKAGES.map(() => TO))
+  assert.equal(JSON.parse(fs.readFileSync(path.join(root, 'core.version.json'), 'utf8')).version, TO)
+})
+
+test('a project already declaring and holding the target is left alone, whether or not it has a core.version.json', (t) => {
+  const root = createProject(t, { pins: Object.fromEntries(PACKAGES.map((name) => [name, TO])), installed: TO })
+  const before = stateOf(root)
+
+  const result = runUpdateCore(root, ['--version', TO])
+
+  assert.equal(result.status, 0, result.output)
+  assert.match(result.stdout, /Already on 0\.1\.0-beta\.189/)
+  assert.doesNotMatch(result.output, /Update Complete|Installing|Syncing/)
+  assert.deepEqual(result.calls.filter((call) => !call.startsWith('view ')), [])
+  assert.deepEqual(snapshot(root), before.files)
+  assert.equal(git(root, 'status', '--porcelain'), '')
+})
+
+test('a core.version.json that already names the target does not stand in for the packages being on it', (t) => {
+  const root = createProject(t, { files: { 'core.version.json': `${JSON.stringify({ version: TO }, null, 2)}\n` } })
+
+  const result = runUpdateCore(root, ['--version', TO])
+
+  assert.equal(result.status, 0, result.output)
+  assert.ok(result.calls.includes('install'), result.calls.join('\n'))
+  assert.deepEqual(installedVersions(root), PACKAGES.map(() => TO))
 })
 
 const REFUSALS: Array<{
@@ -310,7 +485,7 @@ const REFUSALS: Array<{
   {
     name: 'the target is older than the installed version',
     args: ['--version', '0.1.0-beta.187'],
-    published: { '@nextsparkjs/core': ['0.1.0-beta.187', FROM], '@nextsparkjs/cli': ['0.1.0-beta.187', FROM], '@nextsparkjs/testing': ['0.1.0-beta.187', FROM] },
+    published: Object.fromEntries(PACKAGES.map((name) => [name, ['0.1.0-beta.187', FROM]])),
     message: /older than the installed 0\.1\.0-beta\.188/,
   },
   {
@@ -322,6 +497,16 @@ const REFUSALS: Array<{
     name: 'the project has uncommitted changes',
     dirty: true,
     message: /Uncommitted changes/,
+  },
+  {
+    name: 'the project is not in a git repository',
+    project: { git: 'none' },
+    message: /needs the project in a git repository with a commit/,
+  },
+  {
+    name: 'the git repository has no commit yet',
+    project: { git: 'init' },
+    message: /needs the project in a git repository with a commit/,
   },
   {
     name: '.env does not set NEXT_PUBLIC_ACTIVE_THEME, so sync:app would skip the registry build',
@@ -351,7 +536,7 @@ for (const refusal of REFUSALS) {
     const root = createProject(t, refusal.project)
     if (refusal.dirty) fs.writeFileSync(path.join(root, 'contents/themes/acme/wip.ts'), 'export {}\n')
     const files = snapshot(root)
-    const refs = gitRefs(root)
+    const refs = refusal.project?.git === 'none' || refusal.project?.git === 'init' ? null : gitRefs(root)
 
     const result = runUpdateCore(root, refusal.args ?? ['--version', TO], { published: refusal.published })
 
@@ -359,77 +544,207 @@ for (const refusal of REFUSALS) {
     assert.match(result.stderr, refusal.message)
     assert.match(result.stderr, /Nothing was changed/)
     assert.deepEqual(snapshot(root), files)
-    assert.equal(gitRefs(root), refs)
+    if (refs !== null) assert.equal(gitRefs(root), refs)
     assert.deepEqual(result.calls.filter((call) => !call.startsWith('view ')), [])
   })
 }
 
-test('a failed sync:app or registry build exits non-zero, records no version and says what it left half done', (t) => {
+test('uncommitted edits alongside @nextsparkjs pins already set to the target by hand are refused, not taken for an unfinished update', (t) => {
+  const root = createProject(t)
+  const manifestPath = path.join(root, 'package.json')
+  fs.writeFileSync(manifestPath, fs.readFileSync(manifestPath, 'utf8').replaceAll(`"${FROM}"`, `"${TO}"`))
+  fs.writeFileSync(path.join(root, 'app/page.tsx'), 'export default function Page() { return "my own page" }\n')
+  fs.writeFileSync(path.join(root, 'next.config.mjs'), 'export default { reactStrictMode: true }\n')
+  fs.writeFileSync(path.join(root, 'tsconfig.json'), '{ "compilerOptions": { "strict": false } }\n')
+  const files = snapshot(root)
+  const refs = gitRefs(root)
+
+  const result = runUpdateCore(root, ['--version', TO])
+
+  assert.notEqual(result.status, 0, result.output)
+  assert.match(result.stderr, /Uncommitted changes[\s\S]*Nothing was changed/)
+  assert.doesNotMatch(result.output, /Resuming|Update Complete|git reset --hard/)
+  assert.deepEqual(result.calls.filter((call) => !call.startsWith('view ')), [])
+  assert.deepEqual(snapshot(root), files)
+  assert.equal(gitRefs(root), refs)
+})
+
+test('a failed sync:app exits non-zero, records no version, undoes nothing and prints a rollback that restores the project', (t) => {
   const record = `${JSON.stringify({ version: FROM }, null, 2)}\n`
   const root = createProject(t, { files: { 'core.version.json': record } })
+  const before = stateOf(root)
   const head = git(root, 'rev-parse', 'HEAD')
 
   const result = runUpdateCore(root, ['--version', TO], { syncExit: 23 })
 
-  assert.notEqual(result.status, 0, result.output)
+  assert.equal(result.status, 1, result.output)
   assert.ok(result.calls.includes('nextspark sync:app --force'), 'the sync step never ran')
-  assert.doesNotMatch(result.output, /Update Complete/)
-  assert.doesNotMatch(result.output, /Next steps/)
+  assert.doesNotMatch(result.output, /Update Complete|Next steps/)
   assert.equal(fs.readFileSync(path.join(root, 'core.version.json'), 'utf8'), record)
 
   assert.match(result.stderr, /Update to 0\.1\.0-beta\.189 did not finish/)
-  assert.match(result.stderr, /Failed: nextspark sync:app \(exit 23\)/)
-  assert.match(result.stderr, /Already changed:[\s\S]*package\.json: @nextsparkjs\/core 0\.1\.0-beta\.188 -> 0\.1\.0-beta\.189/)
-  assert.match(result.stderr, /Already changed:[\s\S]*pnpm-lock\.yaml and node_modules: @nextsparkjs\/core 0\.1\.0-beta\.188 -> 0\.1\.0-beta\.189/)
-  assert.match(result.stderr, /Not done:[\s\S]*core\.version\.json still says 0\.1\.0-beta\.188/)
-  assert.match(result.stderr, /Uncommitted now \(git status\):\n(?: {4}.+\n)*? {4}app\/synced-before-failing\.txt\n/)
-  assert.match(result.stderr, /Uncommitted now \(git status\):\n(?: {4}.+\n)*? {4}package\.json\n/)
-  assert.match(result.stderr, new RegExp(`git reset --hard ${head.slice(0, 12)}`))
+  assert.match(result.stderr, /Failed during: nextspark sync:app --force \(exit 23; what it reported is above\)/)
+  assert.match(result.stderr, /Done before that:[\s\S]*package\.json: @nextsparkjs\/core 0\.1\.0-beta\.188 -> 0\.1\.0-beta\.189/)
+  assert.match(result.stderr, /Done before that:[\s\S]*pnpm install: every @nextsparkjs package installed at 0\.1\.0-beta\.189/)
+  assert.match(result.stderr, /Not reached:\n {4}- write core\.version\.json\n/)
+  assert.match(result.stderr, /git status now[^\n]*\n(?: {4}.+\n)*? {4}\?\? app\/synced-before-failing\.txt\n/)
+  assert.match(result.stderr, /git status now[^\n]*\n(?: {4}.+\n)*? {4} M package\.json\n/)
+  assert.equal(rollbackIn(result.stderr), `git reset --hard ${head.slice(0, 12)} && git clean -fd && rm -rf node_modules && pnpm install`)
+  assert.doesNotMatch(result.output, /picks up|put back as they were|leaving these changes uncommitted/)
+
+  assertRollbackRestores(root, result.stderr, before)
 })
 
-test('a failed sync in a project with no core.version.json leaves it unwritten', (t) => {
+test('after a failed sync:app, running update-core again without rolling back is refused', (t) => {
   const root = createProject(t)
+  assert.notEqual(runUpdateCore(root, ['--version', TO], { syncExit: 1 }).status, 0)
+  const files = snapshot(root)
 
-  const result = runUpdateCore(root, ['--version', TO], { syncExit: 1 })
+  const result = runUpdateCore(root, ['--version', TO])
 
   assert.notEqual(result.status, 0, result.output)
-  assert.ok(result.calls.includes('nextspark sync:app --force'), 'the sync step never ran')
-  assert.equal(fs.existsSync(path.join(root, 'core.version.json')), false)
-  assert.match(result.stderr, /core\.version\.json still says nothing/)
+  assert.match(result.stderr, /Uncommitted changes[\s\S]*Nothing was changed/)
+  assert.doesNotMatch(result.output, /Resuming|Update Complete/)
+  assert.deepEqual(snapshot(root), files)
+  assert.deepEqual(result.calls.filter((call) => !call.startsWith('view ')), [])
 })
 
-test('a failed install puts back package.json and what pnpm install rewrote, and never syncs', (t) => {
+test('a failed install whose lifecycle scripts wrote app/ is left as it failed, and its rollback restores everything', (t) => {
   const root = createProject(t)
-  const before = snapshot(root)
+  const before = stateOf(root)
 
-  const result = runUpdateCore(root, ['--version', TO], { installExit: 1, workspaceNote: 'minimumReleaseAgeExclude: []\n' })
+  const result = runUpdateCore(root, ['--version', TO], {
+    installExit: 1,
+    installWrites: {
+      'app/page.tsx': 'export default function Page() { return "synced by postinstall" }\n',
+      'app/(templates)/from-postinstall.tsx': 'export {}\n',
+    },
+  })
 
-  assert.notEqual(result.status, 0, result.output)
-  for (const file of ['package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml']) {
-    assert.equal(snapshot(root).get(file), before.get(file), `${file} was not put back`)
-  }
+  assert.equal(result.status, 1, result.output)
   assert.equal(result.calls.includes('nextspark sync:app --force'), false)
   assert.equal(fs.existsSync(path.join(root, 'core.version.json')), false)
-  assert.match(result.stderr, /Failed: pnpm install \(exit 1\)/)
-  assert.match(result.stderr, /package\.json, pnpm-lock\.yaml, pnpm-workspace\.yaml put back as they were/)
-  assert.doesNotMatch(result.output, /Next steps/)
+  assert.match(result.stderr, /Failed during: pnpm install \(exit 1\)/)
+  assert.match(result.stderr, /Not reached:\n {4}- nextspark sync:app --force\n {4}- write core\.version\.json\n/)
+  assert.match(result.stderr, /git status now[^\n]*\n(?: {4}.+\n)*? {4} M app\/page\.tsx\n/)
+  assert.match(result.stderr, /git status now[^\n]*\n(?: {4}.+\n)*? {4} M pnpm-lock\.yaml\n/)
+  assert.doesNotMatch(result.output, /put back as they were|picks up/)
+  // Nothing is undone by the run: the pins it set stay, next to what the scripts wrote
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
+  assert.equal(manifest.dependencies['@nextsparkjs/core'], TO)
+
+  assertRollbackRestores(root, result.stderr, before)
+  const again = runUpdateCore(root, ['--version', TO])
+  assert.equal(again.status, 0, again.output)
 })
 
-test('in a web-mobile project a failed install puts back the lockfile and pnpm-workspace.yaml of the workspace root', (t) => {
+test('in a web-mobile project the rollback run from web/ also restores and cleans the workspace root', (t) => {
   const web = createProject(t, { webMobile: true })
   const repo = path.dirname(web)
-  const before = snapshot(repo)
+  const before = stateOf(repo)
 
-  const result = runUpdateCore(web, ['--version', TO], { installExit: 1, workspaceNote: 'minimumReleaseAgeExclude: []\n' })
+  const result = runUpdateCore(web, ['--version', TO], {
+    installExit: 1,
+    // Relative to the workspace root, where the install runs
+    installWrites: { 'mobile/app.json': '{ "name": "rewritten" }\n', 'stray-from-postinstall.txt': 'x\n' },
+  })
 
-  assert.notEqual(result.status, 0, result.output)
-  const after = snapshot(repo)
-  for (const file of ['web/package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml']) {
-    assert.equal(after.get(file), before.get(file), `${file} was not put back`)
-  }
-  assert.equal(after.has('web/pnpm-lock.yaml'), false)
-  assert.match(result.stderr, /package\.json, \.\.\/pnpm-lock\.yaml, \.\.\/pnpm-workspace\.yaml put back as they were/)
+  assert.equal(result.status, 1, result.output)
+  assert.match(result.stderr, /git status now[^\n]*\n(?: {4}.+\n)*? {4}\?\? \.\.\/stray-from-postinstall\.txt\n/)
+  assert.deepEqual(result.installDirs, [fs.realpathSync(repo)])
+  assert.equal(rollbackIn(result.stderr).replace(/^git reset --hard \S+ && /, ''), 'git clean -fd :/ && rm -rf ../node_modules node_modules && pnpm --dir .. install')
+  assertRollbackRestores(web, result.stderr, before)
+  assert.equal(fs.existsSync(path.join(repo, 'web/pnpm-lock.yaml')), false)
 })
+
+test('in a web-mobile project the install runs where pnpm-lock.yaml is, not in web/, which has a pnpm-workspace.yaml of its own', (t) => {
+  const web = createProject(t, { webMobile: true })
+  const repo = path.dirname(web)
+
+  const result = runUpdateCore(web, ['--version', TO])
+
+  assert.equal(result.status, 0, result.output)
+  assert.deepEqual(result.installDirs, [fs.realpathSync(repo)])
+  assert.equal(fs.existsSync(path.join(web, 'pnpm-lock.yaml')), false)
+  assert.deepEqual(installedVersions(web), PACKAGES.map(() => TO))
+  assert.equal(fs.readFileSync(path.join(repo, 'pnpm-lock.yaml'), 'utf8'), lockfileFor(PACKAGES.map((name) => [name, TO])))
+  assert.match(result.stdout, /Roll back: git reset --hard \S+ && git clean -fd :\/ && rm -rf \.\.\/node_modules node_modules && pnpm --dir \.\. install\n/)
+})
+
+test('a core.version.json that can\'t be written fails through the same report and rollback', (t) => {
+  const root = createProject(t, { files: { 'core.version.json/keep': '' } })
+  const before = stateOf(root)
+
+  const result = runUpdateCore(root, ['--version', TO])
+
+  assert.equal(result.status, 1, result.output)
+  assert.match(result.stderr, /Update to 0\.1\.0-beta\.189 did not finish/)
+  assert.match(result.stderr, /Failed during: write core\.version\.json \(EISDIR/)
+  assert.match(result.stderr, /Done before that:[\s\S]*app\/ synced with core/)
+  assert.doesNotMatch(result.output, /Update Complete|Update failed:/)
+  assertRollbackRestores(root, result.stderr, before)
+})
+
+test('with --branch, the rollback also returns to the branch the update started on and deletes the update branch', (t) => {
+  const root = createProject(t)
+  const branch = git(root, 'symbolic-ref', '--short', 'HEAD')
+  const before = stateOf(root)
+
+  const result = runUpdateCore(root, ['--version', TO, '--branch'], { syncExit: 1 })
+
+  assert.equal(result.status, 1, result.output)
+  assert.equal(git(root, 'symbolic-ref', '--short', 'HEAD'), 'update/0-1-0-beta-189')
+  assert.match(result.stderr, /Done before that:\n {4}- created and switched to branch update\/0-1-0-beta-189\n/)
+  assert.match(rollbackIn(result.stderr), new RegExp(`git checkout ${branch} && git branch -D update/0-1-0-beta-189 && rm -rf node_modules && pnpm install$`))
+  assertRollbackRestores(root, result.stderr, before)
+  assert.equal(git(root, 'symbolic-ref', '--short', 'HEAD'), branch)
+})
+
+for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+  test(`${signal} during pnpm install stops the install and ends in the report and a rollback that restores the project`, async (t) => {
+    const root = createProject(t)
+    const before = stateOf(root)
+    const pnpm = fakePnpm({ installHangMs: 20_000, installWrites: { 'app/page.tsx': 'export default function Page() { return "half synced" }\n' } })
+    t.after(() => pnpm.remove())
+
+    const child = spawn(process.execPath, [UPDATE_CORE, '--version', TO], { cwd: root, env: pnpm.env })
+    let stdout = ''
+    let stderr = ''
+    child.stdout.on('data', (chunk) => { stdout += chunk })
+    child.stderr.on('data', (chunk) => { stderr += chunk })
+    const exited = new Promise<{ status: number | null, signal: NodeJS.Signals | null }>((resolve) => child.on('close', (status, exitSignal) => resolve({ status, signal: exitSignal })))
+
+    const started = `${pnpm.logPath}.started`
+    for (const deadline = Date.now() + 30_000; !fs.existsSync(started) || fs.readFileSync(started, 'utf8') === ''; await new Promise((resolve) => setTimeout(resolve, 50))) {
+      assert.ok(Date.now() < deadline, `the install never started:\n${stdout}${stderr}`)
+    }
+    const [installPid, lifecyclePid] = fs.readFileSync(started, 'utf8').split(' ').map(Number)
+    t.after(() => {
+      for (const pid of [installPid, lifecyclePid]) {
+        try { process.kill(pid, 'SIGKILL') } catch {}
+      }
+    })
+
+    // Only update-core gets the signal, as from kill or a process manager
+    child.kill(signal)
+    const { status, signal: exitSignal } = await exited
+
+    assert.equal(exitSignal, null, `update-core died of ${exitSignal} without reporting:\n${stdout}${stderr}`)
+    assert.equal(status, 128 + os.constants.signals[signal], `${stdout}${stderr}`)
+    assert.match(stderr, new RegExp(`Interrupted by ${signal} during: pnpm install`))
+    assert.match(stderr, /Done before that:\n {4}- package\.json: /)
+    assert.match(stderr, /git status now[^\n]*\n(?: {4}.+\n)*? {4} M app\/page\.tsx\n/)
+    assert.doesNotMatch(`${stdout}${stderr}`, /Update Complete/)
+    assert.equal(pnpm.calls().includes('nextspark sync:app --force'), false)
+
+    assert.throws(() => process.kill(installPid, 0), { code: 'ESRCH' }, 'the install was still running after update-core exited')
+    assert.throws(() => process.kill(lifecyclePid, 0), { code: 'ESRCH' }, 'the install\'s lifecycle script was still running after update-core exited')
+    assert.equal(fs.existsSync(`${pnpm.logPath}.finished`), false)
+    assert.equal(fs.existsSync(`${pnpm.logPath}.lifecycle-finished`), false)
+
+    assertRollbackRestores(root, stderr, before)
+  })
+}
 
 test('a project with a packages/core of its own is not taken for the NextSpark monorepo', (t) => {
   const root = createProject(t, { files: { 'packages/core/package.json': `${JSON.stringify({ name: '@acme/core' })}\n` } })
@@ -438,41 +753,6 @@ test('a project with a packages/core of its own is not taken for the NextSpark m
 
   assert.equal(result.status, 0, result.output)
   assert.doesNotMatch(result.output, /NextSpark monorepo/)
-})
-
-test('a re-run after a failed sync picks up from the changes it left uncommitted and finishes the update', (t) => {
-  const root = createProject(t)
-  const head = git(root, 'rev-parse', 'HEAD')
-  const failed = runUpdateCore(root, ['--version', TO], { syncExit: 1 })
-  assert.notEqual(failed.status, 0, failed.output)
-  assert.match(failed.stderr, /run pnpm update-core --version 0\.1\.0-beta\.189 again, leaving these changes uncommitted/)
-
-  const result = runUpdateCore(root, ['--version', TO])
-
-  assert.equal(result.status, 0, result.output)
-  assert.match(result.stdout, /Resuming the update from 0\.1\.0-beta\.188/)
-  assert.ok(result.calls.includes('nextspark sync:app --force'))
-  assert.match(result.stdout, /@nextsparkjs\/core 0\.1\.0-beta\.188 -> 0\.1\.0-beta\.189/)
-  assert.match(result.stdout, /Migrate: pnpm db:migrate/)
-  assert.match(result.stdout, new RegExp(`git reset --hard ${head.slice(0, 12)}`))
-  const record = JSON.parse(fs.readFileSync(path.join(root, 'core.version.json'), 'utf8'))
-  assert.equal(record.version, TO)
-  assert.equal(record.previousVersion, FROM)
-  assert.equal(git(root, 'rev-parse', 'HEAD'), head)
-})
-
-test('a re-run after a failed sync still stops when something besides the update changed', (t) => {
-  const root = createProject(t)
-  assert.notEqual(runUpdateCore(root, ['--version', TO], { syncExit: 1 }).status, 0)
-  fs.writeFileSync(path.join(root, 'contents/themes/acme/wip.ts'), 'export {}\n')
-  const files = snapshot(root)
-
-  const result = runUpdateCore(root, ['--version', TO])
-
-  assert.notEqual(result.status, 0, result.output)
-  assert.match(result.stderr, /Uncommitted changes[\s\S]*Nothing was changed/)
-  assert.deepEqual(snapshot(root), files)
-  assert.deepEqual(result.calls.filter((call) => !call.startsWith('view ')), [])
 })
 
 test('reports the new core migrations and names db:migrate among the next steps', (t) => {
