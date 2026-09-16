@@ -124,6 +124,31 @@ test('does not match a different key that ends in icon', async () => {
   assert.deepEqual(await extractIconNames(source), [])
 })
 
+test('reads an icon from a shorthand property, where the name doubles as the value', async () => {
+  const source = `
+    import { Wallet as icon } from 'lucide-react'
+    export default { icon }
+  `
+  assert.deepEqual(await extractIconNames(source), ['Wallet'])
+})
+
+test('reads an icon written under a computed property key', async () => {
+  const source = `export default { ['icon']: 'Wallet' }`
+  assert.deepEqual(await extractIconNames(source), ['Wallet'])
+})
+
+test('reads an icon under the iconName key, not only icon', async () => {
+  const source = `export default { iconName: 'Wallet' }`
+  assert.deepEqual(await extractIconNames(source), ['Wallet'])
+})
+
+test('reports a shorthand icon property that does not resolve, instead of staying silent', async () => {
+  assert.deepEqual(
+    await findUnresolvedIconRefs("import { icon } from './local-icons'\nexport default { icon }"),
+    ['icon']
+  )
+})
+
 test('never yields anything but a bare name, so nothing can be injected', async () => {
   // The generated registry is TypeScript built from these strings, and every
   // name becomes a named import. Whatever a config holds, what comes out here
@@ -334,6 +359,33 @@ test('still resolves the real import once the shadowing parameter goes out of sc
 
 test('ignores a call imported from a same-prefixed package that is not core', async () => {
   const source = "import { resolveIcon } from '@nextsparkjs/core-fake/lib/icons'\nresolveIcon('Wallet')"
+  assert.deepEqual(await extractLiteralIconCallNames(source), [])
+})
+
+// --- Block-wide shadowing ---------------------------------------------------
+//
+// A local declaration shadows an import for the rest of the block it is
+// declared in, not merely for its own immediate subtree: a sibling statement
+// later in the same block has to see the shadow too, the way it would at
+// runtime.
+
+test('ignores a call through a local variable that shadows the import later in the same block', async () => {
+  const source = `${RESOLVE_ICON_IMPORT}function f(local) {\n  const resolveIcon = local\n  resolveIcon('Wallet')\n}`
+  assert.deepEqual(await extractLiteralIconCallNames(source), [])
+})
+
+test('ignores a call through a local function declaration that shadows the import', async () => {
+  const source = `${RESOLVE_ICON_IMPORT}function outer() {\n  function resolveIcon(x) { return x }\n  resolveIcon('Wallet')\n}`
+  assert.deepEqual(await extractLiteralIconCallNames(source), [])
+})
+
+test('ignores a call inside a named function expression that shadows the import with its own name', async () => {
+  const source = `${RESOLVE_ICON_IMPORT}const wrapped = function resolveIcon(x) {\n  resolveIcon('Wallet')\n  return x\n}`
+  assert.deepEqual(await extractLiteralIconCallNames(source), [])
+})
+
+test('ignores a call through a local namespace that shadows the imported namespace', async () => {
+  const source = "import * as Core from '@nextsparkjs/core/lib/icons'\nfunction f() {\n  const Core = { resolveIcon: () => {} }\n  Core.resolveIcon('Wallet')\n}"
   assert.deepEqual(await extractLiteralIconCallNames(source), [])
 })
 

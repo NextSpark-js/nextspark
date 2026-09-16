@@ -52,6 +52,11 @@ const FALLBACK_ICONS = ['Box', 'Circle', 'Folder', 'LayoutGrid']
  * safely turn into a named import or a lucide-react lookup key. */
 const SAFE_NAME = /^[A-Za-z][\w$-]*$/
 
+/** The property keys a config's icon can be written under — the plain
+ * `icon: X` shape and `iconName: X`, the one a theme's sidebar, dashboard,
+ * feature and flow configs use. */
+const ICON_KEYS = new Set(['icon', 'iconName'])
+
 /**
  * Names lucide-react actually exports, read from its own barrel.
  * A name that isn't there would become a broken named import in the
@@ -137,10 +142,15 @@ export async function parseIconSource(content, filePath, projectRoot = process.c
 }
 
 /** The property key of a `PropertyAssignment` node, whether written bare
- * (`icon: X`) or quoted (`'icon': X`); anything else has no static name. */
+ * (`icon: X`), quoted (`'icon': X`) or computed with a literal (`['icon']: X`);
+ * anything else — a computed key that isn't a literal — has no static name. */
 function propertyKeyName(nameNode, ts) {
   if (ts.isIdentifier(nameNode) || ts.isStringLiteralLike(nameNode)) {
     return nameNode.text
+  }
+  if (ts.isComputedPropertyName(nameNode)) {
+    const expression = unwrapTransparentExpression(nameNode.expression, ts)
+    return expression && ts.isStringLiteralLike(expression) ? expression.text : null
   }
   return null
 }
@@ -197,19 +207,26 @@ function parseLucideImports(sourceFile, ts) {
   return imports
 }
 
-/** Every `icon: <expr>` property assignment in the tree, wherever it is nested. */
-function findIconPropertyAssignments(sourceFile, ts) {
-  const assignments = []
+/**
+ * Every icon-bearing property value in the tree, wherever it is nested —
+ * `icon` or `iconName` written plain, quoted or computed (`node.initializer`),
+ * and the shorthand form `{ icon }`, where the property's own name doubles as
+ * the value (`node.name`).
+ */
+function findIconPropertyValues(sourceFile, ts) {
+  const values = []
 
   const visit = node => {
-    if (ts.isPropertyAssignment(node) && propertyKeyName(node.name, ts) === 'icon') {
-      assignments.push(node)
+    if (ts.isPropertyAssignment(node) && ICON_KEYS.has(propertyKeyName(node.name, ts))) {
+      values.push(node.initializer)
+    } else if (ts.isShorthandPropertyAssignment(node) && ICON_KEYS.has(node.name.text)) {
+      values.push(node.name)
     }
     ts.forEachChild(node, visit)
   }
   visit(sourceFile)
 
-  return assignments
+  return values
 }
 
 /**
@@ -220,8 +237,8 @@ export async function extractIconNames(content, filePath = 'icons.config.ts', pr
   const lucideImports = parseLucideImports(sourceFile, ts)
   const names = []
 
-  for (const assignment of findIconPropertyAssignments(sourceFile, ts)) {
-    const initializer = unwrapTransparentExpression(assignment.initializer, ts)
+  for (const value of findIconPropertyValues(sourceFile, ts)) {
+    const initializer = unwrapTransparentExpression(value, ts)
 
     // `icon: Users` — only counts when the identifier came from lucide-react
     if (ts.isIdentifier(initializer)) {
@@ -260,9 +277,8 @@ export async function findUnresolvedIconRefs(content, filePath = 'icons.config.t
   const lucideImports = parseLucideImports(sourceFile, ts)
   const unresolved = []
 
-  for (const assignment of findIconPropertyAssignments(sourceFile, ts)) {
-    const original = assignment.initializer
-    const initializer = unwrapTransparentExpression(original, ts)
+  for (const value of findIconPropertyValues(sourceFile, ts)) {
+    const initializer = unwrapTransparentExpression(value, ts)
 
     // A wrapper that resolved to a usable literal or a known lucide import is
     // not unresolved — extractIconNames already has it. Quoting the source as
@@ -272,7 +288,7 @@ export async function findUnresolvedIconRefs(content, filePath = 'icons.config.t
     const resolvedAsLucideImport = ts.isIdentifier(initializer) && lucideImports.has(initializer.text)
 
     if (!resolvedAsLiteral && !resolvedAsLucideImport) {
-      unresolved.push(original.getText(sourceFile))
+      unresolved.push(value.getText(sourceFile))
     }
   }
 
@@ -349,16 +365,35 @@ function collectBindingNames(name, ts, into) {
 
 /** The names `node` introduces into its own scope, or an empty set when it
  * introduces none. Used while walking the tree to track which imported names
- * are shadowed by a closer local declaration. */
+ * are shadowed by a closer local declaration.
+ *
+ * A function's own parameters, and a named function expression's own name,
+ * are scoped to itself. A block's (or the module's) function declarations
+ * and `var`/`let`/`const` declarations are scoped to the whole block, not
+ * merely to the statement that introduces them — a later sibling statement
+ * has to see the shadow too, the way it would at runtime. */
 function ownScopeBindingNames(node, ts) {
   const names = new Set()
 
   if (ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node) || ts.isArrowFunction(node) || ts.isMethodDeclaration(node)) {
     for (const parameter of node.parameters) collectBindingNames(parameter.name, ts, names)
+    if (ts.isFunctionExpression(node) && node.name) {
+      names.add(node.name.text)
+    }
   } else if (ts.isVariableDeclarationList(node)) {
     for (const declaration of node.declarations) collectBindingNames(declaration.name, ts, names)
   } else if (ts.isCatchClause(node) && node.variableDeclaration) {
     collectBindingNames(node.variableDeclaration.name, ts, names)
+  } else if (ts.isBlock(node) || ts.isSourceFile(node)) {
+    for (const statement of node.statements) {
+      if (ts.isFunctionDeclaration(statement) && statement.name) {
+        names.add(statement.name.text)
+      } else if (ts.isVariableStatement(statement)) {
+        for (const declaration of statement.declarationList.declarations) {
+          collectBindingNames(declaration.name, ts, names)
+        }
+      }
+    }
   }
 
   return names
