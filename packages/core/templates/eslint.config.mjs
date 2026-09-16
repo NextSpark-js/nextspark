@@ -15,6 +15,11 @@ const eslintConfig = [
     ignores: [".next/**", ".nextspark/**"],
   },
   {
+    // A .cjs file is CommonJS by definition, so `require` is the only spelling it has.
+    files: ["**/*.cjs"],
+    rules: { "@typescript-eslint/no-require-imports": "off" },
+  },
+  {
     rules: {
       // `no-restricted-imports` with `importNames: ["z"]` also rejects `import * as z`, so the
       // named specifier is matched by syntax instead.
