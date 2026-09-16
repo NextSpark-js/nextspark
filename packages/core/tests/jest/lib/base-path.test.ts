@@ -5,7 +5,7 @@
  * once too. withBasePathRequest — the URL a route handler receives gets the
  * base path back, with the rest of the request intact.
  */
-import { withBasePath, withBasePathIfInApp, withBasePathRequest } from '@/core/lib/base-path'
+import { withBasePath, withBasePathIfInApp, withBasePathInSrcset, withBasePathRequest } from '@/core/lib/base-path'
 
 const ORIGINAL_BASE_PATH = process.env.__NEXT_ROUTER_BASEPATH
 
@@ -72,6 +72,64 @@ describe('withBasePathIfInApp', () => {
   test('prefixing an already-prefixed URL twice changes nothing', () => {
     process.env.__NEXT_ROUTER_BASEPATH = '/base'
     expect(withBasePathIfInApp(withBasePathIfInApp('/contact'))).toBe('/base/contact')
+  })
+})
+
+describe('withBasePathIfInApp — where the base path ends', () => {
+  test.each([
+    // the base path followed by a query or a fragment is still the base path
+    ['/base', '/base?x=1', '/base?x=1'],
+    ['/base', '/base#pricing', '/base#pricing'],
+    ['/base', '/base/?x=1', '/base/?x=1'],
+    ['/base', '/contact?x=1#form', '/base/contact?x=1#form'],
+    // a segment that only starts like it is a different page
+    ['/base', '/baseline', '/base/baseline'],
+    ['/base', '/baseline?x=1', '/base/baseline?x=1'],
+    // a base path given with a trailing slash names the same prefix
+    ['/base/', '/contact', '/base/contact'],
+    ['/base/', '/base/contact', '/base/contact'],
+    ['/base/', '/base', '/base'],
+    ['/base/', '/', '/base'],
+    // a base path of more than one segment
+    ['/a/b', '/a/b/contact', '/a/b/contact'],
+    ['/a/b', '/a/b?x=1', '/a/b?x=1'],
+    ['/a/b', '/a/contact', '/a/b/a/contact'],
+    ['/a/b', '/a/bc', '/a/b/a/bc'],
+  ])('under base path %s, %s becomes %s', (base, url, expected) => {
+    process.env.__NEXT_ROUTER_BASEPATH = base
+    expect(withBasePathIfInApp(url)).toBe(expected)
+  })
+
+  test('withBasePath does not double the slash of a base path given with one', () => {
+    process.env.__NEXT_ROUTER_BASEPATH = '/base/'
+    expect(withBasePath('/contact')).toBe('/base/contact')
+    expect(withBasePath('/')).toBe('/base')
+  })
+})
+
+describe('withBasePathInSrcset', () => {
+  // An inline SVG: commas inside the URL, in the media type's data and in its viewBox
+  const SVG = "data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270,0,1,1%27%3E%3C/svg%3E"
+  const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+
+  test.each([
+    ['/a.png 1x, /b.png 2x', '/base/a.png 1x, /base/b.png 2x'],
+    ['/a.png 640w,/b.png 1280w', '/base/a.png 640w,/base/b.png 1280w'],
+    ['/a.png, /b.png 2x', '/base/a.png, /base/b.png 2x'],
+    ['  /a.png   1x ,  /b.png 2x ', '  /base/a.png   1x ,  /base/b.png 2x '],
+    ['https://cdn.example/a.png 1x, /base/b.png 2x', 'https://cdn.example/a.png 1x, /base/b.png 2x'],
+    [`${SVG} 1x, /uploads/x.png 2x`, `${SVG} 1x, /base/uploads/x.png 2x`],
+    [`/uploads/x.png 1x, ${SVG} 2x`, `/base/uploads/x.png 1x, ${SVG} 2x`],
+    [`${PNG} 1x, /uploads/x.png 2x`, `${PNG} 1x, /base/uploads/x.png 2x`],
+    [SVG, SVG],
+  ])('%s becomes %s', (srcset, expected) => {
+    process.env.__NEXT_ROUTER_BASEPATH = '/base'
+    expect(withBasePathInSrcset(srcset)).toBe(expected)
+  })
+
+  test('with no base path the srcset comes back as it went in', () => {
+    delete process.env.__NEXT_ROUTER_BASEPATH
+    expect(withBasePathInSrcset(`${SVG} 1x, /uploads/x.png 2x`)).toBe(`${SVG} 1x, /uploads/x.png 2x`)
   })
 })
 

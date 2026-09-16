@@ -43,6 +43,14 @@ describe('withBasePathInHtml', () => {
     )
   })
 
+  test('a data: URL in a srcset keeps the commas inside it', () => {
+    const svg = 'data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270,0,1,1%27%3E%3C/svg%3E'
+
+    expect(withBasePathInHtml(`<img srcset="/uploads/x.png 1x, ${svg} 2x">`)).toBe(
+      `<img srcset="/base/uploads/x.png 1x, ${svg} 2x">`
+    )
+  })
+
   test('leaves a URL that is only text alone', () => {
     // A page showing markup as an example has to keep it as written
     expect(withBasePathInHtml('<pre><code>&lt;a href="/docs"&gt;</code></pre>')).toBe(

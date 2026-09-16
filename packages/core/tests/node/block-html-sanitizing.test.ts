@@ -161,6 +161,16 @@ describe('sanitizeBlockHtml — under a base path', () => {
     )
   })
 
+  test('a data: candidate in a srcset is refused whole, and leaves no piece of itself behind', () => {
+    // sanitize-html checks each srcset candidate against the schemes listed
+    // under `srcset`, not under the tag, so `data:` is refused here even though
+    // an <img src> may carry it. What must not happen is the URL being cut at
+    // its commas and a fragment of it surviving as a relative URL.
+    const svg = 'data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270,0,1,1%27%3E%3C/svg%3E'
+
+    assert.equal(underBasePath(`<img srcset="${svg} 1x, /uploads/x.png 2x" />`), '<img srcset="/base/uploads/x.png 2x" />')
+  })
+
   test('a link that opens a new tab still gets rel, and the prefix as well', () => {
     assert.equal(
       underBasePath('<a href="/docs" target="_blank">Docs</a>'),
