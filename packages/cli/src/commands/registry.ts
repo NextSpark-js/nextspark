@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import chalk from 'chalk';
 import ora from 'ora';
 import { getCoreDir, getProjectRoot, isMonorepoMode } from '../utils/paths.js';
-import { buildFailureLines } from '../utils/registry-build.js';
+import { buildFailureLines, tailBuffer } from '../utils/registry-build.js';
 
 /**
  * Load environment variables from project root .env file
@@ -64,26 +64,26 @@ export async function registryBuildCommand(): Promise<void> {
     // core reports a build's failure over stdout as often as over stderr (only
     // its opt-in verbose stack trace is stderr-only), so the cause is only
     // complete when both streams are read together, in the order they arrived
-    let output = '';
+    const output = tailBuffer();
 
     buildProcess.stdout?.on('data', (data) => {
-      output += data.toString();
+      output.append(data.toString());
     });
 
     buildProcess.stderr?.on('data', (data) => {
-      output += data.toString();
+      output.append(data.toString());
     });
 
     buildProcess.on('close', (code) => {
       if (code === 0) {
         spinner.succeed('Registries built successfully');
-        if (output.trim()) {
-          for (const line of output.trim().split('\n')) console.log(chalk.gray(line));
+        if (output.value.trim()) {
+          for (const line of output.value.trim().split('\n')) console.log(chalk.gray(line));
         }
         process.exit(0);
       } else {
         spinner.fail('Registry build failed');
-        for (const line of buildFailureLines(output)) {
+        for (const line of buildFailureLines(output.value)) {
           console.error(chalk.red(line));
         }
         process.exit(code ?? 1);

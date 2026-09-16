@@ -21,6 +21,35 @@ export function registryBuildBlocker(projectRoot: string, env: NodeJS.ProcessEnv
     : 'the project has no .env file with NEXT_PUBLIC_ACTIVE_THEME';
 }
 
+/** Bytes of a build's output worth keeping for diagnosis; core's own failure line sits well under this. */
+const OUTPUT_TAIL_LIMIT = 256 * 1024;
+
+/**
+ * Accumulates a child process's output, keeping only the last `limit` bytes.
+ * A build's own failure line sits at the end of what it prints, so the tail
+ * is what's worth keeping; kept in full, a build's memory would grow with
+ * the size of its output instead of with the size of its cause.
+ */
+export function tailBuffer(limit = OUTPUT_TAIL_LIMIT): { append(chunk: string): void; readonly value: string } {
+  let text = '';
+  let droppedBytes = 0;
+
+  return {
+    append(chunk: string): void {
+      text += chunk;
+      if (text.length > limit * 2) {
+        const cut = text.indexOf('\n', text.length - limit);
+        const kept = cut === -1 ? text.slice(-limit) : text.slice(cut + 1);
+        droppedBytes += text.length - kept.length;
+        text = kept;
+      }
+    },
+    get value(): string {
+      return droppedBytes > 0 ? `... ${droppedBytes} earlier byte(s)\n${text}` : text;
+    },
+  };
+}
+
 export interface RegistryBuildResult {
   status: 'built' | 'skipped' | 'failed';
   /** Why it was skipped. */

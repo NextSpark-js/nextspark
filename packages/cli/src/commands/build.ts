@@ -5,7 +5,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { nextOutputBlocker, spawnNext } from '../utils/spawn-next.js';
 import { errorLines, errorWithLines } from '../utils/shown-path.js';
-import { buildFailureLines } from '../utils/registry-build.js';
+import { buildFailureLines, tailBuffer } from '../utils/registry-build.js';
 import { getCoreDir, getProjectRoot } from '../utils/paths.js';
 import { effectiveBundler, pickBundler, resolveBundlerArgs } from '../utils/next-bundler.js';
 
@@ -87,21 +87,21 @@ export async function buildCommand(options: BuildOptions): Promise<void> {
         // (only its opt-in verbose stack trace is stderr-only), so the cause is
         // only complete when both streams are read together, in the order they
         // arrived
-        let output = '';
+        const output = tailBuffer();
 
         registryProcess.stdout?.on('data', (data) => {
-          output += data.toString();
+          output.append(data.toString());
         });
 
         registryProcess.stderr?.on('data', (data) => {
-          output += data.toString();
+          output.append(data.toString());
         });
 
         registryProcess.on('close', (code) => {
           if (code === 0) {
             resolve();
           } else {
-            reject(errorWithLines(['Registry generation failed:', ...buildFailureLines(output)]));
+            reject(errorWithLines(['Registry generation failed:', ...buildFailureLines(output.value)]));
           }
         });
 
