@@ -88,6 +88,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     themes and plugins with their tests and fixtures -- with the zod rule alone, as this
     repo lints that code, so a new project lints clean. With `eslint-config-next` 15 it
     reads Next's presets through `FlatCompat`.
+  - **Themes and plugins take `next` `^15.0.0 || ^16.0.0` as a peer,** as do the package.json
+    examples in the `create-theme` and `create-plugin` skills. With `^15.0.0`, pnpm installed
+    a second Next, a 15, inside each theme and plugin of a Next 16 project. An existing
+    project keeps `^15.0.0` in its copies under `contents/` until it edits them, or re-adds
+    the theme or plugin with `--force`, which replaces the whole directory.
   - **Node 20.9 is the floor** for the CLI and `create-nextspark-app`, as Next 16 requires.
 
 - **`generateTemplateRegistry()` returns `Promise<string>` (#197).** It reads each theme

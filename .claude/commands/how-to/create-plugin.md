@@ -156,7 +156,7 @@ touch plugins/my-plugin/components/MyPluginWidget.tsx
   "dependencies": {},
   "peerDependencies": {
     "@nextsparkjs/core": "workspace:*",
-    "next": "^15.0.0",
+    "next": "^15.0.0 || ^16.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "zod": "^4.0.0"
@@ -517,7 +517,7 @@ Result: No conflicts, optimized bundle
   },
   "peerDependencies": {
     "@nextsparkjs/core": "workspace:*",
-    "next": "^15.0.0",
+    "next": "^15.0.0 || ^16.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "zod": "^4.0.0"
