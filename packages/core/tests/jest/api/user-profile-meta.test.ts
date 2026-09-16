@@ -11,7 +11,11 @@
  * The route runs with the real MetaService; only the database, the rate limiter
  * and the session are mocked. The database mock applies to its stored value
  * what the query it receives asks for — a jsonb merge or a plain replace — so
- * the assertions are about what the user gets back, not about SQL text.
+ * the assertions are about what the user gets back. It reads that from the
+ * expression the upsert assigns to "metaValue": whether it reads the stored
+ * column at all, and in which order it and the incoming value are joined. An
+ * equivalent rewrite of the same SQL lands on the same answer; taking the
+ * merge out lands on the other one.
  *
  * apps/dev/app is the source of the app/ a project is generated with
  * (packages/core/templates/app, written at pack time), so this covers the
@@ -45,10 +49,31 @@ const USER_ID = 'test-user-123'
 /** What `users_metas` holds, keyed by meta key. */
 let stored: Record<string, Record<string, unknown>>
 
+/** The expression an upsert's ON CONFLICT clause assigns to "metaValue". */
+function assignedMetaValue(query: string): string {
+  const clause = query.split(/DO\s+UPDATE\s+SET/i)[1] ?? ''
+  const assignment = clause.match(/"metaValue"\s*=\s*([\s\S]*?)(?=,\s*"\w+"\s*=|\bWHERE\b|\bRETURNING\b|$)/i)
+  return assignment?.[1] ?? ''
+}
+
 /**
- * The write as Postgres runs it. For a meta upsert the ON CONFLICT clause
- * either merges the two jsonb objects or replaces the stored one, and this
- * applies whichever the query carries; the profile UPDATE answers with the row.
+ * What that expression does to the row that is already there: keep it and lay
+ * the incoming keys over it, keep it and let it win, or write the incoming
+ * value over it. A `||` between the stored column and EXCLUDED is a merge, and
+ * its right-hand side is the side that wins.
+ */
+function conflictBehaviour(query: string): 'merge-incoming' | 'merge-stored' | 'replace' {
+  const expression = assignedMetaValue(query)
+  // Quoting an identifier is optional in Postgres and changes nothing
+  const storedColumn = /"?users_metas"?\s*\.\s*"?metaValue"?/
+  if (!storedColumn.test(expression)) return 'replace'
+  const join = expression.match(/([\w".\s]+)\|\|([\w".\s]+)/)
+  return join && storedColumn.test(join[2]) ? 'merge-stored' : 'merge-incoming'
+}
+
+/**
+ * The write as Postgres runs it: the meta upsert does to the stored value what
+ * its ON CONFLICT clause says, and the profile UPDATE answers with the row.
  */
 function applyWrite(query: string, params: unknown[]) {
   if (/UPDATE "users"/.test(query)) return { rows: [{ id: USER_ID }], rowCount: 1 }
@@ -56,9 +81,12 @@ function applyWrite(query: string, params: unknown[]) {
   const [, metaKey, jsonString] = params as [string, string, string]
   const incoming = JSON.parse(jsonString) as Record<string, unknown>
   const current = stored[metaKey]
-  const mergesStoredKeys = query.includes('"users_metas"."metaValue" || EXCLUDED."metaValue"')
 
-  stored[metaKey] = current && mergesStoredKeys ? { ...current, ...incoming } : incoming
+  if (!current) stored[metaKey] = incoming
+  else if (conflictBehaviour(query) === 'merge-incoming') stored[metaKey] = { ...current, ...incoming }
+  else if (conflictBehaviour(query) === 'merge-stored') stored[metaKey] = { ...incoming, ...current }
+  else stored[metaKey] = incoming
+
   return { rows: [], rowCount: 1 }
 }
 
@@ -123,5 +151,60 @@ describe('PATCH /api/user/profile — preference groups', () => {
     await patchProfile({ meta: { uiPreferences: { theme: 'dark' } } })
 
     expect(stored.notificationsPreferences).toEqual({ pushEnabled: true })
+  })
+})
+
+/**
+ * The double above stands in for Postgres, so it has to answer the way Postgres
+ * would: by what the clause does, not by how it is spelled. Rewriting the same
+ * merge — different whitespace, the operands the other way round, the table
+ * name written without its quotes — must not turn a merge into a replace, or
+ * the tests above would go green on a route that had stopped merging.
+ */
+describe('the database double reads the conflict clause, not its wording', () => {
+  const MERGE = `
+    INSERT INTO "users_metas" ("userId", "metaKey", "metaValue")
+    VALUES ($1, $2, $3)
+    ON CONFLICT ("userId", "metaKey")
+    DO UPDATE SET
+      "metaValue" = CASE
+        WHEN jsonb_typeof("users_metas"."metaValue") = 'object' AND jsonb_typeof(EXCLUDED."metaValue") = 'object'
+        THEN "users_metas"."metaValue" || EXCLUDED."metaValue"
+        ELSE EXCLUDED."metaValue"
+      END,
+      "updatedAt" = CURRENT_TIMESTAMP
+  `
+
+  const write = (query: string) => {
+    stored = { uiPreferences: { theme: 'light', sidebarCollapsed: true } }
+    applyWrite(query, [USER_ID, 'uiPreferences', JSON.stringify({ theme: 'dark' })])
+    return stored.uiPreferences
+  }
+
+  test('the merge the route writes keeps the key the request does not carry', () => {
+    expect(write(MERGE)).toEqual({ theme: 'dark', sidebarCollapsed: true })
+  })
+
+  test.each([
+    ['broken across lines', MERGE.replace(/\|\|/g, '\n          ||')],
+    ['squeezed onto one line', MERGE.replace(/\s+/g, ' ')],
+    ['the table name unquoted', MERGE.replace(/"users_metas"\./g, 'users_metas.')],
+  ])('a merge %s still merges', (_label, query) => {
+    expect(write(query)).toEqual({ theme: 'dark', sidebarCollapsed: true })
+  })
+
+  test('with the stored value winning, the key the request carries does not', () => {
+    const storedWins = MERGE.replace(
+      'THEN "users_metas"."metaValue" || EXCLUDED."metaValue"',
+      'THEN EXCLUDED."metaValue" || "users_metas"."metaValue"'
+    )
+
+    expect(write(storedWins)).toEqual({ theme: 'light', sidebarCollapsed: true })
+  })
+
+  test('a clause that only writes the incoming value replaces the group', () => {
+    const replace = MERGE.replace(/"metaValue" = CASE[\s\S]*?END,/, '"metaValue" = EXCLUDED."metaValue",')
+
+    expect(write(replace)).toEqual({ theme: 'dark' })
   })
 })
