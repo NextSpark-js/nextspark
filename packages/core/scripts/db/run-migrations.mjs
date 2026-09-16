@@ -2,6 +2,7 @@ import pg from "pg";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from 'url';
+import { migrationTimeLimit, clientTimeLimits, runMigrationSql } from './migration-time-limit.mjs';
 
 const { Client } = pg;
 
@@ -30,6 +31,7 @@ let DATABASE_URL = process.env.DATABASE_URL ?? null;
 // Falls back to DATABASE_URL when unset (pre-cutover: same owner connection).
 let MIGRATE_DATABASE_URL = process.env.MIGRATE_DATABASE_URL ?? null;
 let ACTIVE_THEME = process.env.NEXT_PUBLIC_ACTIVE_THEME ?? null;
+let MIGRATION_TIMEOUT_SECONDS = process.env.MIGRATION_TIMEOUT_SECONDS;
 
 if (readEnvFile && fs.existsSync(envPath)) {
   const envContent = fs.readFileSync(envPath, 'utf8');
@@ -49,6 +51,9 @@ if (readEnvFile && fs.existsSync(envPath)) {
       if (key?.trim() === 'NEXT_PUBLIC_ACTIVE_THEME' && valueParts.length > 0) {
         ACTIVE_THEME = value;
       }
+      if (key?.trim() === 'MIGRATION_TIMEOUT_SECONDS' && valueParts.length > 0) {
+        MIGRATION_TIMEOUT_SECONDS = value;
+      }
     }
   });
 }
@@ -66,6 +71,16 @@ if (!ACTIVE_THEME) {
   process.exit(1);
 }
 
+// How long each migration may run, when MIGRATION_TIMEOUT_SECONDS asks for a limit
+// (see migration-time-limit.mjs). Without it, a migration runs for as long as it takes.
+let TIME_LIMIT;
+try {
+  TIME_LIMIT = migrationTimeLimit({ MIGRATION_TIMEOUT_SECONDS });
+} catch (error) {
+  console.error(`❌ ${error.message}`);
+  process.exit(1);
+}
+
 async function runMigrations() {
   const client = new Client({
     connectionString: MIGRATION_URL,
@@ -73,7 +88,8 @@ async function runMigrations() {
       rejectUnauthorized: false,
       require: true
     },
-    connectionTimeoutMillis: 10000
+    connectionTimeoutMillis: 10000,
+    ...clientTimeLimits(TIME_LIMIT)
   });
   
   try {
@@ -116,7 +132,7 @@ async function runMigrations() {
       const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
       
       try {
-        await client.query(sql);
+        await runMigrationSql(client, { sql, limit: TIME_LIMIT, connectionString: MIGRATION_URL });
         
         // Record successful migration
         await client.query(
@@ -331,7 +347,7 @@ async function executeContentMigration(client, migration) {
   console.log(`  🔄 ${filename}...`);
   const sql = fs.readFileSync(fullPath, 'utf8');
 
-  await client.query(sql);
+  await runMigrationSql(client, { sql, limit: TIME_LIMIT, connectionString: MIGRATION_URL });
   await client.query(
     'INSERT INTO "_content_migrations" (source_type, source_name, filename) VALUES ($1, $2, $3)',
     [sourceType, sourceName, filename]
@@ -360,7 +376,7 @@ async function executeEntityMigration(client, migration) {
   console.log(`${indent}🔄 ${filename}...`);
   const sql = fs.readFileSync(fullPath, 'utf8');
 
-  await client.query(sql);
+  await runMigrationSql(client, { sql, limit: TIME_LIMIT, connectionString: MIGRATION_URL });
   await client.query(
     'INSERT INTO "_entity_migrations" (entity_name, source_type, source_name, filename) VALUES ($1, $2, $3, $4)',
     [entityName, sourceType, sourceName, filename]
@@ -378,7 +394,8 @@ async function runEntityMigrations() {
       rejectUnauthorized: false,
       require: true
     },
-    connectionTimeoutMillis: 10000
+    connectionTimeoutMillis: 10000,
+    ...clientTimeLimits(TIME_LIMIT)
   });
 
   try {

@@ -32,6 +32,11 @@
 // MIGRATE_DATABASE_URL is removed from the child's environment because
 // run-migrations.mjs connects to it in preference to DATABASE_URL, which
 // would migrate a database this script never checked.
+//
+// Every migration runs under a time limit, MIGRATION_TIMEOUT_SECONDS (30 s
+// unless set; see migration-time-limit.mjs). A migration that runs past it
+// fails the run with the migration's name, and its session on the server is
+// ended, instead of leaving the command waiting.
 
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -39,6 +44,7 @@ import { spawnSync } from 'child_process';
 import { GLOBAL_OBJECTS, inspectCluster } from './cluster-changes.mjs';
 import { inspectTarget, inspectMaintenanceDatabase } from './inspect-server.mjs';
 import { findTheme } from './theme-location.mjs';
+import { TIME_LIMIT_VARIABLE, migrationTimeLimit } from './migration-time-limit.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -79,6 +85,19 @@ try {
 const located = findTheme(repoRoot, theme);
 if (located.error) {
   console.error(`❌ ${located.error}`);
+  process.exit(1);
+}
+
+// Against an empty database no migration a theme ships takes a second; the
+// default leaves a slow runner room many times over, and a migration that needs
+// more can be given it.
+const DEFAULT_TIME_LIMIT_SECONDS = '30';
+const timeLimitSetting = process.env[TIME_LIMIT_VARIABLE] || DEFAULT_TIME_LIMIT_SECONDS;
+let timeLimit;
+try {
+  timeLimit = migrationTimeLimit({ [TIME_LIMIT_VARIABLE]: timeLimitSetting });
+} catch (error) {
+  console.error(`❌ ${error.message}`);
   process.exit(1);
 }
 
@@ -123,6 +142,8 @@ async function main() {
     console.log(`⚠️  ${ACKNOWLEDGEMENT_VAR}=1: changing those roles on a server in use (${cluster.reasons.join('; ')}).\n`);
   }
 
+  console.log(`Each migration may run for ${timeLimit.seconds} s; ${TIME_LIMIT_VARIABLE} changes that.\n`);
+
   const { MIGRATE_DATABASE_URL: _migrateUrl, VERIFY_THEME_DATABASE_URL: _verifyUrl, ...inheritedEnv } = process.env;
 
   const result = spawnSync(process.execPath, [runnerPath, '--no-env-file'], {
@@ -132,6 +153,7 @@ async function main() {
       ...inheritedEnv,
       DATABASE_URL: databaseUrl,
       NEXT_PUBLIC_ACTIVE_THEME: theme,
+      [TIME_LIMIT_VARIABLE]: timeLimitSetting,
     },
   });
 
