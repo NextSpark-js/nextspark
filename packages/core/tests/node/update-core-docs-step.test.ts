@@ -53,3 +53,14 @@ test('a failed registry rebuild is not reported as a successful update', () => {
   assert.match(elseBranch, /process\.exitCode = 1/)
   assert.doesNotMatch(elseBranch, /Update Complete!/)
 })
+
+test('a failed registry rebuild does not write core.version.json', () => {
+  const lines = source.split('\n')
+  const versionCallIndex = lines.findIndex(line => line.includes('await updateVersionFile(releaseInfo, previousVersion)'))
+  assert.ok(versionCallIndex > -1, 'update-core.mjs still calls updateVersionFile')
+
+  // The nearest preceding `if (` above the call is the condition that guards
+  // it; a failed rebuild must not reach this line at all.
+  const guard = lines.slice(0, versionCallIndex).reverse().find(line => /^\s*if \(/.test(line))
+  assert.match(guard ?? '', /registryRebuildSucceeded/)
+})

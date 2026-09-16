@@ -792,9 +792,14 @@ async function updateCore() {
     console.log('   Run: pnpm db:migrate')
   }
 
-  // Update version file
-  console.log('\n   Updating version...')
-  await updateVersionFile(releaseInfo, previousVersion)
+  // Update version file — only once the whole flow succeeded. Writing it
+  // after a failed registry rebuild would mark the project as updated to
+  // releaseInfo.tag_name while core/ actually ships in a broken, half-built
+  // state.
+  if (registryRebuildSucceeded) {
+    console.log('\n   Updating version...')
+    await updateVersionFile(releaseInfo, previousVersion)
+  }
 
   // Final report
   console.log('\n========================================')
@@ -802,34 +807,47 @@ async function updateCore() {
     console.log('  Update Complete!')
   } else {
     console.log('  Update Finished With Errors')
-    console.log('  The registry rebuild failed - run `node core/scripts/build/registry.mjs --build` after fixing it.')
+    console.log('  The registry rebuild failed - run `node core/scripts/build/registry.mjs --build` after fixing it, then re-run this command to finish updating core.version.json.')
     process.exitCode = 1
   }
   console.log('========================================')
-  console.log(`\n  ${previousVersion} -> ${releaseInfo.tag_name}`)
+  if (registryRebuildSucceeded) {
+    console.log(`\n  ${previousVersion} -> ${releaseInfo.tag_name}`)
+  } else {
+    console.log(`\n  Files copied for ${releaseInfo.tag_name}, but core.version.json was left at ${previousVersion}`)
+  }
   console.log(`  ${totalFiles} files updated`)
 
-  if (flags.branch) {
+  if (registryRebuildSucceeded) {
+    if (flags.branch) {
+      const versionSlug = releaseInfo.tag_name.replace(/^v/, '').replace(/\./g, '-')
+      const branchName = `update/${versionSlug}`
+      console.log(`\n  Branch: ${branchName}`)
+      console.log('\n  Next steps:')
+      console.log(`    1. Review: git diff main..${branchName}`)
+      console.log('    2. Test: pnpm dev')
+      if (migrations.length > 0) {
+        console.log('    3. Migrate: pnpm db:migrate')
+        console.log(`    4. Merge: git checkout main && git merge ${branchName}`)
+      } else {
+        console.log(`    3. Merge: git checkout main && git merge ${branchName}`)
+      }
+      console.log(`\n  Rollback: git checkout main && git branch -D ${branchName}`)
+    } else {
+      console.log('\n  Next steps:')
+      console.log('    1. Review: git diff HEAD~1')
+      console.log('    2. Test: pnpm dev')
+      if (migrations.length > 0) {
+        console.log('    3. Migrate: pnpm db:migrate')
+      }
+      console.log('\n  Rollback: git reset --hard HEAD~1 && pnpm install')
+    }
+  } else if (flags.branch) {
     const versionSlug = releaseInfo.tag_name.replace(/^v/, '').replace(/\./g, '-')
     const branchName = `update/${versionSlug}`
     console.log(`\n  Branch: ${branchName}`)
-    console.log('\n  Next steps:')
-    console.log(`    1. Review: git diff main..${branchName}`)
-    console.log('    2. Test: pnpm dev')
-    if (migrations.length > 0) {
-      console.log('    3. Migrate: pnpm db:migrate')
-      console.log(`    4. Merge: git checkout main && git merge ${branchName}`)
-    } else {
-      console.log(`    3. Merge: git checkout main && git merge ${branchName}`)
-    }
     console.log(`\n  Rollback: git checkout main && git branch -D ${branchName}`)
   } else {
-    console.log('\n  Next steps:')
-    console.log('    1. Review: git diff HEAD~1')
-    console.log('    2. Test: pnpm dev')
-    if (migrations.length > 0) {
-      console.log('    3. Migrate: pnpm db:migrate')
-    }
     console.log('\n  Rollback: git reset --hard HEAD~1 && pnpm install')
   }
 

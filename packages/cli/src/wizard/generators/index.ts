@@ -228,7 +228,7 @@ function isLocalPackageRef(spec: string | undefined): boolean {
 /**
  * Update or create package.json with required scripts and dependencies
  */
-async function updatePackageJson(config: WizardConfig): Promise<void> {
+export async function updatePackageJson(config: WizardConfig): Promise<void> {
   const packageJsonPath = path.resolve(process.cwd(), 'package.json')
 
   // Create package.json if it doesn't exist
@@ -265,6 +265,7 @@ async function updatePackageJson(config: WizardConfig): Promise<void> {
     'build:registries': 'nextspark registry:build',
     'db:migrate': 'nextspark db:migrate',
     'db:seed': 'nextspark db:seed',
+    'update-core': 'node node_modules/@nextsparkjs/core/scripts/maintenance/update-core.mjs',
     'test': 'node node_modules/@nextsparkjs/core/scripts/test/jest-theme.mjs',
     'cy:open': 'node node_modules/@nextsparkjs/core/scripts/test/cy.mjs open',
     'cy:run': 'node node_modules/@nextsparkjs/core/scripts/test/cy.mjs run',
