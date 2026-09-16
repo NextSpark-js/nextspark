@@ -55,17 +55,22 @@ const PACKAGES_ALLOWED_TO_BUILD = [
 ]
 
 /** A package installed from a tarball on disk instead of the registry. */
-interface LocalTarball {
+export interface LocalTarball {
   name: string
   file: string
 }
 
 /**
  * The allowlist entries for this project: the package names, and the full spec
- * of each listed package installed from a local tarball. pnpm matches a `file:`
- * dependency only by `<name>@file:<path from the project>`, never by its name.
+ * of each listed package installed from a local tarball, since pnpm versions
+ * disagree on how a `file:` dependency is matched. pnpm 10.34 and pnpm 11 from
+ * 11.5.3 match it only by `<name>@file:<path from the project>`, pnpm 10.13 only
+ * by its name, and pnpm 11.0.0 to 11.5.2 reject the spec in `allowBuilds` and
+ * refuse the whole file. A project installed from local tarballs therefore
+ * can't be installed with those 11.x releases; one installed from the
+ * registry lists names only and can.
  */
-function allowlistEntries(projectPath: string, localTarballs: LocalTarball[]): string[] {
+export function allowlistEntries(projectPath: string, localTarballs: LocalTarball[]): string[] {
   const tarballSpecs = localTarballs
     .filter(tarball => PACKAGES_ALLOWED_TO_BUILD.includes(tarball.name))
     .map(tarball => `${tarball.name}@file:${path.relative(projectPath, tarball.file).split(path.sep).join('/')}`)
@@ -74,49 +79,32 @@ function allowlistEntries(projectPath: string, localTarballs: LocalTarball[]): s
 }
 
 /**
- * Major version of the pnpm that installs the project in `projectPath`, or null
- * when pnpm isn't callable there.
+ * The pnpm-workspace.yaml a new project starts with, holding the build-script
+ * allowlist in the forms every pnpm that may install the project reads, so the
+ * project installs the same whichever pnpm created it and whichever installs it
+ * later: pnpm 11 reads only `allowBuilds`, 10 reads `onlyBuiltDependencies`, and
+ * 9 reads neither and runs every install script. The `pnpm` field in
+ * package.json is left out: pnpm 11 ignores it and warns about it on every
+ * command.
  *
- * Asked from the project directory because pnpm is usually a Corepack shim that
- * takes its version from the nearest `packageManager` field above the directory
- * it runs in: the directory create-nextspark-app is started from can resolve a
- * different pnpm than the one that installs the project.
- *
- * It decides where the build-script allowlist goes: pnpm 11 reads `allowBuilds`
- * from pnpm-workspace.yaml and ignores the `pnpm` field in package.json
- * entirely (warning about it on every command), while 10 and 9 read
- * `pnpm.onlyBuiltDependencies` from package.json, and 9 rejects a
- * pnpm-workspace.yaml without `packages:`.
+ * `packages:` is there because pnpm 9 refuses to run in a directory whose
+ * pnpm-workspace.yaml has none. It lists the globs `nextspark init` adds for
+ * themes and plugins; init merges into this file rather than replacing it. It
+ * also makes the project a workspace root, so adding a dependency to the
+ * project itself takes `-w`.
  */
-function getPnpmMajorVersion(projectPath: string): number | null {
-  try {
-    const output = execSync('pnpm --version', {
-      cwd: projectPath,
-      encoding: 'utf-8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    })
-    const version = output.trim().split('\n').pop() ?? ''
-    const major = Number.parseInt(version.split('.')[0], 10)
-    return Number.isNaN(major) ? null : major
-  } catch {
-    return null
-  }
-}
+export function buildWorkspaceYaml(entries: string[]): string {
+  const quoted = entries.map(entry => `'${entry}'`)
+  return `packages:
+  - 'contents/themes/*'
+  - 'contents/plugins/*'
 
-/**
- * On pnpm 11 the build-script allowlist lives in pnpm-workspace.yaml.
- *
- * Deliberately without a `packages:` key: that is what turns a directory into a
- * workspace root, and then the install below would need `-w` to add anything.
- * `nextspark init` adds the theme and plugin packages afterwards, merging into
- * this file rather than replacing it.
- */
-function buildWorkspaceYaml(entries: string[]): string {
-  const allowed = entries.map(entry => `  '${entry}': true`).join('\n')
-  return `# Dependencies allowed to run their install scripts (pnpm 11 spelling;
-# older pnpm reads pnpm.onlyBuiltDependencies from package.json instead)
+# Dependencies allowed to run their install scripts: pnpm 11 reads allowBuilds,
+# pnpm 10 onlyBuiltDependencies, and pnpm 9 runs them all.
 allowBuilds:
-${allowed}
+${quoted.map(entry => `  ${entry}: true`).join('\n')}
+onlyBuiltDependencies:
+${quoted.map(entry => `  - ${entry}`).join('\n')}
 `
 }
 
@@ -208,14 +196,10 @@ export async function createProject(options: ProjectOptions): Promise<void> {
   await fs.writeJson(path.join(projectPath, 'package.json'), packageJson, { spaces: 2 })
 
   // Written before the install so the allowlist is in place for it
-  const pnpmMajor = getPnpmMajorVersion(projectPath)
-  const allowlist = allowlistEntries(projectPath, localTarballs)
-  if (pnpmMajor !== null && pnpmMajor >= 11) {
-    await fs.writeFile(path.join(projectPath, 'pnpm-workspace.yaml'), buildWorkspaceYaml(allowlist))
-  } else {
-    packageJson.pnpm = { onlyBuiltDependencies: allowlist }
-    await fs.writeJson(path.join(projectPath, 'package.json'), packageJson, { spaces: 2 })
-  }
+  await fs.writeFile(
+    path.join(projectPath, 'pnpm-workspace.yaml'),
+    buildWorkspaceYaml(allowlistEntries(projectPath, localTarballs))
+  )
   pkgSpinner.succeed('  package.json created')
 
   // Step 4: Install @nextsparkjs/core, @nextsparkjs/cli, and essential peer dependencies
@@ -256,27 +240,17 @@ export async function createProject(options: ProjectOptions): Promise<void> {
     // cause of a failure is on screen as pnpm printed it and nothing captured
     // is printed again.
     cliSpinner.stopAndPersist({ symbol: chalk.gray('›'), text: '  Installing @nextsparkjs/core, @nextsparkjs/cli, and dependencies...' })
-    execSync(`pnpm add ${essentialDeps}`, {
+    execSync(`pnpm add -w ${essentialDeps}`, {
       cwd: projectPath,
       stdio: 'inherit',
     })
     cliSpinner.succeed('  @nextsparkjs/core, @nextsparkjs/cli, and dependencies installed')
   } catch (error) {
-    // pnpm v10.1+/v11 exits non-zero on unapproved native build scripts
-    // (ERR_PNPM_IGNORED_BUILDS) even though the install actually succeeds.
-    // Whether @nextsparkjs/core landed in node_modules decides between a warning
-    // and a failure; what went wrong is in pnpm's own output above.
+    // A non-zero exit means pnpm did not finish the install, even when some of
+    // it, @nextsparkjs/core included, already landed in node_modules.
     const status = (error as { status?: number | null }).status ?? 'unknown'
-    const coreInstalled = fs.existsSync(
-      path.join(projectPath, 'node_modules', '@nextsparkjs', 'core')
-    )
-    if (coreInstalled) {
-      cliSpinner.succeed('  @nextsparkjs/core, @nextsparkjs/cli, and dependencies installed')
-      console.log(chalk.yellow(`  Warning: pnpm exited with code ${status}. If its output above reports more than ignored build scripts, part of the install did not finish.`))
-    } else {
-      cliSpinner.fail('  Failed to install dependencies')
-      throw new Error(`pnpm add exited with code ${status}; its output above says why.`)
-    }
+    cliSpinner.fail('  Failed to install dependencies')
+    throw new Error(`pnpm add exited with code ${status}; its output above says why.`)
   }
 
   // Step 5: Run wizard (inherits terminal for interactive mode)

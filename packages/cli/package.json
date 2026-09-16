@@ -16,7 +16,7 @@
   "scripts": {
     "build": "tsup src/cli.ts --format esm --dts --clean --outDir dist",
     "dev": "tsup src/cli.ts --format esm --watch",
-    "test": "npx tsx --test tests/*.test.ts"
+    "test": "tsx --test tests/*.test.ts"
   },
   "dependencies": {
     "@inquirer/prompts": "^7.2.0",
@@ -33,6 +33,7 @@
     "@types/node": "^20.0.0",
     "@types/tar": "^6.1.0",
     "tsup": "^8.0.0",
+    "tsx": "^4.23.13",
     "typescript": "^5.0.0"
   },
   "peerDependencies": {

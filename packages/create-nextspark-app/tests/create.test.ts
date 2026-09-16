@@ -1,11 +1,13 @@
 /**
- * create-nextspark-app writes the build-script allowlist before its first install, in whichever
- * form the pnpm installing the project reads. That pnpm is picked per directory: Corepack takes
- * the version from the nearest `packageManager` field above where it runs, so the directory
- * create-nextspark-app starts from can resolve another pnpm than the new project does.
+ * create-nextspark-app writes the build-script allowlist before its first install, in the forms
+ * pnpm 9, 10 and 11 read, because the pnpm that creates a project need not be the one that
+ * installs it later. That pnpm is picked per directory: Corepack takes the version from the nearest
+ * `packageManager` field above where it runs, so the directory create-nextspark-app starts from can
+ * resolve another pnpm than the new project does.
  *
  * `pnpm` and `npx` are replaced by scripts on PATH: `pnpm --version` answers the way Corepack
- * resolves it, and `pnpm add` records its arguments and leaves core "installed".
+ * resolves it, and `pnpm add` records its arguments, leaves core "installed" and exits with
+ * FAKE_PNPM_ADD_EXIT.
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -13,7 +15,8 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { createProject } from '../src/create.js'
+import { spawnSync } from 'node:child_process'
+import { allowlistEntries, buildWorkspaceYaml, createProject } from '../src/create.js'
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..')
 const TARBALLS = ['nextsparkjs-core-0.1.0-beta.189.tgz', 'nextsparkjs-cli-0.1.0-beta.189.tgz', 'nextsparkjs-ui-0.1.0-beta.189.tgz']
@@ -30,7 +33,7 @@ while [ "$dir" != "/" ]; do
 done
 case "$1" in
   --version) echo "$version" ;;
-  add) echo "$@" > "$FAKE_PNPM_ADD_LOG"; mkdir -p node_modules/@nextsparkjs/core ;;
+  add) echo "$@" > "$FAKE_PNPM_ADD_LOG"; mkdir -p node_modules/@nextsparkjs/core; exit "\${FAKE_PNPM_ADD_EXIT:-0}" ;;
 esac
 `
 
@@ -39,18 +42,38 @@ interface Scenario {
   callerPnpm: string
   /** The pnpm every other directory resolves, the new project's included. */
   projectPnpm: string
+  /** The exit code of `pnpm add`. */
+  addExit?: number
 }
 
 interface Created {
-  project: string
-  packageJson: { pnpm?: { onlyBuiltDependencies?: string[] } }
-  /** The keys of `allowBuilds`, or null when there is no pnpm-workspace.yaml. */
-  allowBuilds: string[] | null
-  /** What `pnpm add` was asked to install. */
+  packageJson: { pnpm?: unknown }
+  workspaceYaml: string
+  /** The globs under `packages:`. */
+  packages: string[]
+  /** The keys of `allowBuilds`. */
+  allowBuilds: string[]
+  /** The items of `onlyBuiltDependencies`. */
+  onlyBuiltDependencies: string[]
+  /** What `pnpm add` was asked to install, flags included. */
   added: string[]
 }
 
-async function create({ callerPnpm, projectPnpm }: Scenario): Promise<Created> {
+/** The entries of the top-level YAML key `key`, one per line in the form `pattern` matches. */
+function yamlEntries(yaml: string, key: string, pattern: RegExp): string[] {
+  const lines = yaml.split('\n')
+  const start = lines.indexOf(`${key}:`)
+  if (start === -1) return []
+  const entries: string[] = []
+  for (const line of lines.slice(start + 1)) {
+    const match = line.match(pattern)
+    if (!match) break
+    entries.push(match[1])
+  }
+  return entries
+}
+
+async function create({ callerPnpm, projectPnpm, addExit = 0 }: Scenario): Promise<Created> {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'create-nextspark-app-')))
   const bin = path.join(root, 'bin')
   const caller = path.join(root, 'caller')
@@ -70,26 +93,27 @@ async function create({ callerPnpm, projectPnpm }: Scenario): Promise<Created> {
   process.env.PATH = `${bin}${path.delimiter}${previousPath}`
   process.env.FAKE_PNPM_DEFAULT_VERSION = projectPnpm
   process.env.FAKE_PNPM_ADD_LOG = addLog
+  process.env.FAKE_PNPM_ADD_EXIT = String(addExit)
   try {
     await createProject({ projectName: 'my-app', projectPath: project })
+
+    const workspaceYaml = fs.readFileSync(path.join(project, 'pnpm-workspace.yaml'), 'utf8')
+    return {
+      packageJson: JSON.parse(fs.readFileSync(path.join(project, 'package.json'), 'utf8')),
+      workspaceYaml,
+      packages: yamlEntries(workspaceYaml, 'packages', /^ {2}- '([^']+)'$/),
+      allowBuilds: yamlEntries(workspaceYaml, 'allowBuilds', /^ {2}'([^']+)': true$/),
+      onlyBuiltDependencies: yamlEntries(workspaceYaml, 'onlyBuiltDependencies', /^ {2}- '([^']+)'$/),
+      added: fs.readFileSync(addLog, 'utf8').trim().split(/\s+/).slice(1),
+    }
   } finally {
     process.chdir(previousCwd)
     process.env.PATH = previousPath
     delete process.env.FAKE_PNPM_DEFAULT_VERSION
     delete process.env.FAKE_PNPM_ADD_LOG
+    delete process.env.FAKE_PNPM_ADD_EXIT
+    fs.rmSync(root, { recursive: true, force: true })
   }
-
-  const workspaceYaml = path.join(project, 'pnpm-workspace.yaml')
-  const created: Created = {
-    project,
-    packageJson: JSON.parse(fs.readFileSync(path.join(project, 'package.json'), 'utf8')),
-    allowBuilds: fs.existsSync(workspaceYaml)
-      ? [...fs.readFileSync(workspaceYaml, 'utf8').matchAll(/^ {2}'([^']+)': true$/gm)].map(match => match[1])
-      : null,
-    added: fs.readFileSync(addLog, 'utf8').trim().split(/\s+/).slice(1),
-  }
-  fs.rmSync(root, { recursive: true, force: true })
-  return created
 }
 
 /** The spec pnpm matches a `file:` dependency by: the tarball's path from the project. */
@@ -127,34 +151,46 @@ function packagesWithInstallScripts(): string[] {
   return [...names].sort()
 }
 
-test('the allowlist is allowBuilds when the project installs with pnpm 11, whatever the caller runs', async () => {
-  const { packageJson, allowBuilds } = await create({ callerPnpm: '9.0.0', projectPnpm: '11.17.0' })
+test('the pnpm that creates the project does not change the allowlist it writes', async () => {
+  const scenarios: Scenario[] = [
+    { callerPnpm: '9.0.0', projectPnpm: '9.0.0' },
+    { callerPnpm: '9.0.0', projectPnpm: '11.17.0' },
+    { callerPnpm: '11.17.0', projectPnpm: '9.0.0' },
+    { callerPnpm: '11.17.0', projectPnpm: '10.34.5' },
+    { callerPnpm: '11.17.0', projectPnpm: '11.17.0' },
+  ]
+  const yamls = new Set<string>()
 
-  assert.equal(packageJson.pnpm, undefined, 'pnpm 11 ignores the pnpm field and warns about it on every command')
-  assert.ok(allowBuilds, 'expected a pnpm-workspace.yaml carrying allowBuilds')
-  assert.ok(allowBuilds.includes('@nextsparkjs/core'))
-  assert.ok(allowBuilds.includes(coreTarballSpec), `expected ${coreTarballSpec} in ${allowBuilds.join(', ')}`)
+  for (const scenario of scenarios) {
+    const label = `created with pnpm ${scenario.projectPnpm} from a caller on ${scenario.callerPnpm}`
+    const { packageJson, workspaceYaml, packages, allowBuilds, onlyBuiltDependencies } = await create(scenario)
+
+    assert.equal(packageJson.pnpm, undefined, `${label}: pnpm 11 ignores the pnpm field and warns about it on every command`)
+    assert.deepEqual(packages, ['contents/themes/*', 'contents/plugins/*'], `${label}: pnpm 9 refuses a pnpm-workspace.yaml without packages`)
+    assert.ok(allowBuilds.includes('@nextsparkjs/core'), `${label}: allowBuilds is ${allowBuilds.join(', ')}`)
+    assert.ok(allowBuilds.includes(coreTarballSpec), `${label}: expected ${coreTarballSpec} in allowBuilds`)
+    assert.deepEqual(onlyBuiltDependencies, allowBuilds, `${label}: pnpm 10 reads onlyBuiltDependencies`)
+    yamls.add(workspaceYaml)
+  }
+
+  assert.equal(yamls.size, 1, 'the pnpm that creates the project changes what it writes')
 })
 
-test('the allowlist is pnpm.onlyBuiltDependencies when the project installs with pnpm 10, whatever the caller runs', async () => {
-  const { packageJson, allowBuilds } = await create({ callerPnpm: '11.17.0', projectPnpm: '10.34.5' })
+test('pnpm add adds to the project itself, a workspace root once pnpm-workspace.yaml lists packages', async () => {
+  const { added } = await create({ callerPnpm: '11.17.0', projectPnpm: '11.17.0' })
 
-  assert.equal(allowBuilds, null, 'expected no pnpm-workspace.yaml')
-  const listed = packageJson.pnpm?.onlyBuiltDependencies ?? []
-  assert.ok(listed.includes('@nextsparkjs/core'))
-  assert.ok(listed.includes(coreTarballSpec), `expected ${coreTarballSpec} in ${listed.join(', ')}`)
+  assert.equal(added[0], '-w', `pnpm stops with ERR_PNPM_ADDING_TO_ROOT without it: pnpm add ${added.join(' ')}`)
 })
 
-test('pnpm 9 gets pnpm.onlyBuiltDependencies, never a pnpm-workspace.yaml without packages', async () => {
-  const { packageJson, allowBuilds } = await create({ callerPnpm: '11.17.0', projectPnpm: '9.0.0' })
-
-  assert.equal(allowBuilds, null, 'pnpm 9 rejects a pnpm-workspace.yaml without packages')
-  assert.ok(packageJson.pnpm?.onlyBuiltDependencies?.includes('@nextsparkjs/core'))
+test('a pnpm add that exits non-zero fails the creation, even with core already in node_modules', async () => {
+  await assert.rejects(
+    create({ callerPnpm: '11.17.0', projectPnpm: '11.17.0', addExit: 1 }),
+    /pnpm add exited with code 1/
+  )
 })
 
 test('the allowlist names every package with an install script that this repository installs', async () => {
   const { allowBuilds } = await create({ callerPnpm: '11.17.0', projectPnpm: '11.17.0' })
-  assert.ok(allowBuilds, 'expected a pnpm-workspace.yaml carrying allowBuilds')
 
   const required = packagesWithInstallScripts()
   assert.ok(required.includes('esbuild'), `the scan found no esbuild; is the repository installed? Found: ${required.join(', ')}`)
@@ -168,4 +204,58 @@ test('the project pins the @better-fetch/fetch better-auth depends on, which @be
   const betterAuth = fs.realpathSync(path.join(REPO, 'packages/core/node_modules/better-auth'))
   const pinned = JSON.parse(fs.readFileSync(path.join(betterAuth, 'package.json'), 'utf8')).dependencies['@better-fetch/fetch']
   assert.ok(added.includes(`@better-fetch/fetch@${pinned}`), `expected @better-fetch/fetch@${pinned} in: ${added.join(' ')}`)
+})
+
+/**
+ * The pnpm versions the written pnpm-workspace.yaml is installed with below, which Corepack fetches
+ * when it does not have them: 9 reads no allowlist, 10.13 matches a `file:` dependency by name,
+ * 10.34 and 11.17 by its `<name>@file:` spec. pnpm 11.0.0 to 11.5.2 reject that spec, so a project
+ * from local tarballs is not installable with them and they are not listed.
+ */
+const REAL_PNPM_VERSIONS = ['9.0.0', '9.15.9', '10.13.1', '10.34.5', '11.17.0']
+
+test('each pnpm builds a NextSpark package from a local tarball under the pnpm-workspace.yaml written for it', async () => {
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'create-nextspark-app-pnpm-')))
+  // Outside this repository, whose packageManager would make Corepack refuse other versions.
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    COREPACK_ENABLE_DOWNLOAD_PROMPT: '0',
+    // A user-level ignore-scripts would stop pnpm 9 and 10 from running any script at all, and the
+    // store's cached side effects would skip a script that already ran once.
+    npm_config_ignore_scripts: 'false',
+    npm_config_side_effects_cache: 'false',
+  }
+  delete env.CI
+
+  try {
+    const source = path.join(root, 'source', 'package')
+    fs.mkdirSync(source, { recursive: true })
+    fs.writeFileSync(path.join(source, 'package.json'), JSON.stringify({
+      name: '@nextsparkjs/core',
+      version: '0.0.0',
+      scripts: { postinstall: `node -e "require('fs').writeFileSync('built', '')"` },
+    }))
+    const tarball = path.join(root, '.packages', 'nextsparkjs-core-0.0.0.tgz')
+    fs.mkdirSync(path.dirname(tarball))
+    const packed = spawnSync('tar', ['-czf', tarball, '-C', path.dirname(source), 'package'], { encoding: 'utf8' })
+    assert.equal(packed.status, 0, packed.stderr)
+
+    for (const version of REAL_PNPM_VERSIONS) {
+      const available = spawnSync('corepack', [`pnpm@${version}`, '--version'], { cwd: root, env, encoding: 'utf8' })
+      assert.equal(available.status, 0, `Corepack could not provide pnpm ${version}:\n${available.stderr}`)
+
+      const project = path.join(root, 'projects', `pnpm-${version}`)
+      fs.mkdirSync(project, { recursive: true })
+      fs.writeFileSync(path.join(project, 'package.json'), JSON.stringify({ name: 'my-app', version: '0.1.0', private: true }))
+      const entries = allowlistEntries(project, [{ name: '@nextsparkjs/core', file: tarball }])
+      fs.writeFileSync(path.join(project, 'pnpm-workspace.yaml'), buildWorkspaceYaml(entries))
+
+      const add = spawnSync('corepack', [`pnpm@${version}`, 'add', '-w', tarball], { cwd: project, env, encoding: 'utf8' })
+      assert.equal(add.status, 0, `pnpm ${version} add exited ${add.status}:\n${add.stdout}\n${add.stderr}`)
+      const built = path.join(project, 'node_modules', '@nextsparkjs', 'core', 'built')
+      assert.ok(fs.existsSync(built), `pnpm ${version} installed @nextsparkjs/core without running its postinstall`)
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
 })
