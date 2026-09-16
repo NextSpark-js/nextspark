@@ -221,6 +221,17 @@ describe('proxy path boundaries and redirect targets', () => {
     expect(response.redirectUrl).toMatch(/\/docs$/)
   })
 
+  // The section survived the public/superadmin split (it is 'getting-started'
+  // in the mock registry) but this particular page did not - redirecting into
+  // /docs/getting-started/does-not-exist would just trade one dead link for
+  // another, so this has to land on the docs home like a dropped section does.
+  test('a historical 3-level link whose section exists but whose page does not redirects to the docs home', async () => {
+    const response = (await proxy(makeRequest('/docs/theme/getting-started/does-not-exist'))) as unknown as PassThrough
+
+    expect(response.type).toBe('redirect')
+    expect(response.redirectUrl).toMatch(/\/docs$/)
+  })
+
   test('a 2-segment path is never mistaken for the historical 3-level shape', async () => {
     mockedFetch.mockResolvedValue({ data: null })
 

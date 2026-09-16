@@ -1,9 +1,8 @@
 /**
  * @jest-environment jsdom
  *
- * PublicFooter — the Resources column must never link to a page nothing
- * serves (#200 docs review: /docs/api had no equivalent left after the docs
- * system moved to the public/superadmin split).
+ * PublicFooter — the Resources column must only link to pages this app
+ * actually serves; a dead entry there is a silent 404 nothing else catches.
  */
 import { render, screen } from '@testing-library/react'
 
@@ -13,15 +12,19 @@ jest.mock('@/core/lib/test', () => ({ sel: (key: string) => key }))
 import { PublicFooter } from '@/core/components/app/layouts/PublicFooter'
 
 describe('PublicFooter', () => {
-  test('links Resources to real pages only, none of them /docs/api', () => {
+  test('links Resources only to pages this app actually serves', () => {
     render(<PublicFooter />)
 
-    for (const name of ['helpCenter', 'status', 'changelog']) {
-      expect(screen.getByText(name).closest('a')).toHaveAttribute('href', expect.not.stringMatching(/^\/docs\/api$/))
-    }
+    // /support is a real page (apps/dev/app/(templates)/(public)/support).
+    // /status, /changelog and /docs/api are not served by anything.
+    expect(screen.getByText('helpCenter').closest('a')).toHaveAttribute('href', '/support')
+    expect(screen.queryByText('status')).toBeNull()
+    expect(screen.queryByText('changelog')).toBeNull()
     expect(screen.queryByText('apiDocs')).toBeNull()
 
     const hrefs = screen.getAllByRole('link').map(link => link.getAttribute('href'))
     expect(hrefs).not.toContain('/docs/api')
+    expect(hrefs).not.toContain('/status')
+    expect(hrefs).not.toContain('/changelog')
   })
 })

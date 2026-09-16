@@ -200,18 +200,25 @@ export async function proxy(request: NextRequest) {
   // at /superadmin/docs) - without renaming any section that survived the
   // collapse. A section from that era can therefore only be in one of the two
   // registries today, or in neither if its docs were dropped rather than
-  // moved; the redirect follows the section, not the old category.
+  // moved; the redirect follows the section, not the old category. The page
+  // has to survive too - a section can live on with a different set of pages -
+  // so both are checked against the registry rather than only the section,
+  // which is the one thing this route can actually confirm still resolves.
   const oldDocsMatch = pathname.match(/^\/docs\/(?:core|theme)\/([^/]+)\/([^/]+)$/)
   if (oldDocsMatch) {
     const [, sectionSlug, pageSlug] = oldDocsMatch
     const newUrl = request.nextUrl.clone()
-    if (DOCS_REGISTRY.superadmin.some((section) => section.slug === sectionSlug)) {
+    const superadminSection = DOCS_REGISTRY.superadmin.find((section) => section.slug === sectionSlug)
+    const publicSection = DOCS_REGISTRY.public.find((section) => section.slug === sectionSlug)
+
+    if (superadminSection?.pages.some((page) => page.slug === pageSlug)) {
       newUrl.pathname = `/superadmin/docs/${sectionSlug}/${pageSlug}`
-    } else if (DOCS_REGISTRY.public.some((section) => section.slug === sectionSlug)) {
+    } else if (publicSection?.pages.some((page) => page.slug === pageSlug)) {
       newUrl.pathname = `/docs/${sectionSlug}/${pageSlug}`
     } else {
-      // The section itself is gone, not renamed - there is no page left to
-      // send this to, so it goes to the docs home instead of a dead link.
+      // The section is gone, or survived without this exact page - either way
+      // there is no page left to send this to, so it goes to the docs home
+      // instead of a dead link.
       newUrl.pathname = '/docs'
     }
     return NextResponse.redirect(newUrl, 301)

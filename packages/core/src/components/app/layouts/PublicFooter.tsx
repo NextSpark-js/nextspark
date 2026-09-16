@@ -29,9 +29,7 @@ export function PublicFooter() {
       { name: 'gdpr', href: '/legal/gdpr' }
     ],
     resources: [
-      { name: 'helpCenter', href: '/support' },
-      { name: 'status', href: '/status' },
-      { name: 'changelog', href: '/changelog' }
+      { name: 'helpCenter', href: '/support' }
     ]
   }
 
