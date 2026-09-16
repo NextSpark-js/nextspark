@@ -10,18 +10,24 @@
  * the rendered page's URL instead of the source tree, so it 404s. Only a link
  * that resolves inside this same docs tree can be translated this way; one
  * that escapes it (a plugin's own docs, for instance) has no route to point at
- * and is left untouched for the author to fix or remove at the source.
+ * and is left untouched for the author to fix or remove at the source. The
+ * same is true of a reference to a file that doesn't exist: the registry
+ * never scans it into a page, so routing to it would only trade a broken
+ * source link for a route that 200s with "Page Not Found".
  */
+import fs from 'fs'
 import path from 'path'
 import { cleanFilename } from './utils'
+import { withBasePath } from '../base-path'
 
 const DOC_TREE_PATTERN = /\/docs\/(public|superadmin)\/([^/]+)\/([^/]+)\.md$/
 
 /**
  * The `/docs/...` or `/superadmin/docs/...` route for a relative link written
  * inside `filePath`, or null when the link isn't a same-tree relative `.md`
- * reference (an absolute path, an external URL, or one that resolves outside
- * `docs/public` and `docs/superadmin`).
+ * reference (an absolute path, an external URL, one that resolves outside
+ * `docs/public` and `docs/superadmin`, or one whose target file doesn't
+ * exist on disk).
  */
 export function resolveRelativeDocLink(url: string, filePath: string): string | null {
   const match = url.match(/^(\.{1,2}\/[^?#]+\.md)(#.*)?$/)
@@ -31,12 +37,13 @@ export function resolveRelativeDocLink(url: string, filePath: string): string | 
   const resolved = path.resolve(path.dirname(filePath), relativePath).replace(/\\/g, '/')
   const treeMatch = resolved.match(DOC_TREE_PATTERN)
   if (!treeMatch) return null
+  if (!fs.existsSync(resolved)) return null
 
   const [, source, sectionDir, pageFile] = treeMatch
   const sectionSlug = cleanFilename(sectionDir)
   const pageSlug = cleanFilename(pageFile)
   const base = source === 'superadmin' ? '/superadmin/docs' : '/docs'
-  return `${base}/${sectionSlug}/${pageSlug}${hash}`
+  return withBasePath(`${base}/${sectionSlug}/${pageSlug}${hash}`)
 }
 
 interface MarkdownNode {

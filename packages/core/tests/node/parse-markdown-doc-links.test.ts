@@ -27,6 +27,9 @@ test('parseMarkdownFile routes a same-tree relative link to its served route', a
     '01-introduction.md',
     '---\ntitle: Introduction\n---\n\nSee [Customization](./02-customization.md) for more.\n'
   )
+  // The link target has to exist too - resolveRelativeDocLink leaves a
+  // reference to a page nobody wrote untouched rather than routing to it.
+  fs.writeFileSync(path.join(path.dirname(filePath), '02-customization.md'), '---\ntitle: Customization\n---\n')
 
   const { html } = await parseMarkdownFile(filePath)
 
@@ -40,9 +43,22 @@ test('parseMarkdownFile routes a reference-style link to its served route', asyn
     '01-introduction.md',
     '---\ntitle: Introduction\n---\n\nSee [Customization][custom] for more.\n\n[custom]: ./02-customization.md\n'
   )
+  fs.writeFileSync(path.join(path.dirname(filePath), '02-customization.md'), '---\ntitle: Customization\n---\n')
 
   const { html } = await parseMarkdownFile(filePath)
 
   assert.match(html, /href="\/docs\/overview\/customization"/)
   assert.doesNotMatch(html, /02-customization\.md/)
+})
+
+test('parseMarkdownFile leaves a link to a page nobody wrote untouched', async () => {
+  const filePath = writeDocFile(
+    'docs/public/01-overview',
+    '01-introduction.md',
+    '---\ntitle: Introduction\n---\n\nSee [Customization](./02-customization.md) for more.\n'
+  )
+
+  const { html } = await parseMarkdownFile(filePath)
+
+  assert.match(html, /href="\.\/02-customization\.md"/)
 })

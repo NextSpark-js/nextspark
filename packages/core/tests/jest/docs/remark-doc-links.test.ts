@@ -1,11 +1,17 @@
 /**
  * A docs page's own relative `.md` links must resolve to the route the page
  * builder serves, not the source-tree path the browser can never fetch.
+ *
+ * The resolver checks the link target against the real filesystem, so these
+ * tests run against a real fixture tree (`__fixtures__/doc-tree`) rather than
+ * paths that only look right.
  */
+import path from 'path'
 import { resolveRelativeDocLink, remarkDocLinks } from '@/core/lib/docs/remark-doc-links'
 
-const PUBLIC_FILE = '/repo/themes/default/docs/public/01-overview/01-introduction.md'
-const SUPERADMIN_FILE = '/repo/themes/default/docs/superadmin/01-setup/01-configuration.md'
+const FIXTURE_ROOT = path.join(__dirname, '__fixtures__/doc-tree')
+const PUBLIC_FILE = path.join(FIXTURE_ROOT, 'docs/public/01-overview/01-introduction.md')
+const SUPERADMIN_FILE = path.join(FIXTURE_ROOT, 'docs/superadmin/01-setup/01-configuration.md')
 
 describe('resolveRelativeDocLink', () => {
   test('routes a same-section link', () => {
@@ -36,6 +42,40 @@ describe('resolveRelativeDocLink', () => {
   test('leaves a relative link that escapes the docs tree alone', () => {
     // No route serves a plugin's own docs, so there is nothing to point at.
     expect(resolveRelativeDocLink('../../../plugins/langchain/docs/06-tools.md', PUBLIC_FILE)).toBeNull()
+  })
+
+  test('leaves a same-tree link to a file that does not exist alone', () => {
+    // Shaped exactly like a real doc-tree reference, but nothing was ever
+    // written at that path - there is no page to route to.
+    expect(resolveRelativeDocLink('./99-does-not-exist.md', PUBLIC_FILE)).toBeNull()
+  })
+
+  describe('with an app base path', () => {
+    const ORIGINAL_BASE_PATH = process.env.__NEXT_ROUTER_BASEPATH
+
+    beforeEach(() => {
+      process.env.__NEXT_ROUTER_BASEPATH = '/base'
+    })
+
+    afterEach(() => {
+      if (ORIGINAL_BASE_PATH === undefined) {
+        delete process.env.__NEXT_ROUTER_BASEPATH
+      } else {
+        process.env.__NEXT_ROUTER_BASEPATH = ORIGINAL_BASE_PATH
+      }
+    })
+
+    test('prefixes a public route with the base path', () => {
+      expect(resolveRelativeDocLink('./02-customization.md', PUBLIC_FILE)).toBe('/base/docs/overview/customization')
+    })
+
+    test('prefixes a superadmin route with the base path', () => {
+      expect(resolveRelativeDocLink('./02-deployment.md', SUPERADMIN_FILE)).toBe('/base/superadmin/docs/setup/deployment')
+    })
+
+    test('keeps a trailing hash after the base path', () => {
+      expect(resolveRelativeDocLink('./02-customization.md#theming', PUBLIC_FILE)).toBe('/base/docs/overview/customization#theming')
+    })
   })
 })
 
