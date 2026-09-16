@@ -207,11 +207,26 @@ function parseLucideImports(sourceFile, ts) {
   return imports
 }
 
+/** The expression a `get icon()`-style accessor's body returns, when the
+ * body is exactly one `return <expr>` statement — the only shape simple
+ * enough to read a static icon name from. Anything else (no return,
+ * several statements, a conditional) has no single value to extract, so the
+ * caller falls back to the accessor node itself, which resolves as neither
+ * a literal nor a lucide import and is therefore reported as unresolved
+ * rather than silently dropped. */
+function accessorReturnExpression(node, ts) {
+  const [statement] = node.body?.statements ?? []
+  return node.body?.statements.length === 1 && statement && ts.isReturnStatement(statement) && statement.expression
+    ? statement.expression
+    : null
+}
+
 /**
  * Every icon-bearing property value in the tree, wherever it is nested —
  * `icon` or `iconName` written plain, quoted or computed (`node.initializer`),
- * and the shorthand form `{ icon }`, where the property's own name doubles as
- * the value (`node.name`).
+ * the shorthand form `{ icon }`, where the property's own name doubles as
+ * the value (`node.name`), and a getter (`get icon() { return 'Wallet' }`),
+ * an accessor object configs use the same as a plain property.
  */
 function findIconPropertyValues(sourceFile, ts) {
   const values = []
@@ -221,6 +236,8 @@ function findIconPropertyValues(sourceFile, ts) {
       values.push(node.initializer)
     } else if (ts.isShorthandPropertyAssignment(node) && ICON_KEYS.has(node.name.text)) {
       values.push(node.name)
+    } else if (ts.isGetAccessorDeclaration(node) && ICON_KEYS.has(propertyKeyName(node.name, ts))) {
+      values.push(accessorReturnExpression(node, ts) ?? node)
     }
     ts.forEachChild(node, visit)
   }
@@ -363,15 +380,73 @@ function collectBindingNames(name, ts, into) {
   }
 }
 
+/** Whether `node` is a function-like boundary that a hoisted `var` cannot
+ * escape — the point where `collectHoistedVarNames` below stops recursing. */
+function isFunctionLikeBoundary(node, ts) {
+  return (
+    ts.isFunctionDeclaration(node) ||
+    ts.isFunctionExpression(node) ||
+    ts.isArrowFunction(node) ||
+    ts.isMethodDeclaration(node) ||
+    ts.isGetAccessorDeclaration(node) ||
+    ts.isSetAccessorDeclaration(node) ||
+    ts.isConstructorDeclaration(node)
+  )
+}
+
+/** Every `var`-declared name nested anywhere under `node` — inside an `if`,
+ * a loop, a `switch`, as deep as it goes — except inside a nested function,
+ * which is its own `var` scope. Unlike `let`/`const`, `var` ignores block
+ * boundaries, so a single level of `node.statements` (what the block/module
+ * branch below reads for `let`/`const`) misses one declared inside a nested
+ * block; this walks the whole subtree instead, the way hoisting actually
+ * works. */
+function collectHoistedVarNames(node, ts, into) {
+  if (isFunctionLikeBoundary(node, ts)) return
+
+  if (ts.isVariableStatement(node) && (node.declarationList.flags & ts.NodeFlags.BlockScoped) === 0) {
+    for (const declaration of node.declarationList.declarations) collectBindingNames(declaration.name, ts, into)
+  } else if (
+    (ts.isForStatement(node) || ts.isForInStatement(node) || ts.isForOfStatement(node)) &&
+    node.initializer &&
+    ts.isVariableDeclarationList(node.initializer) &&
+    (node.initializer.flags & ts.NodeFlags.BlockScoped) === 0
+  ) {
+    for (const declaration of node.initializer.declarations) collectBindingNames(declaration.name, ts, into)
+  }
+
+  ts.forEachChild(node, child => collectHoistedVarNames(child, ts, into))
+}
+
+/** The declarations directly in `statements` that introduce a name into
+ * their enclosing scope: function, class and `let`/`const`/`var`
+ * declarations. Shared by a block/module's own statement list and by a
+ * `switch`'s case clauses, which — unlike a block per clause — all share
+ * one scope across the whole switch. */
+function blockScopedBindingNames(statements, ts, into) {
+  for (const statement of statements) {
+    if ((ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) && statement.name) {
+      into.add(statement.name.text)
+    } else if (ts.isVariableStatement(statement)) {
+      for (const declaration of statement.declarationList.declarations) {
+        collectBindingNames(declaration.name, ts, into)
+      }
+    }
+  }
+}
+
 /** The names `node` introduces into its own scope, or an empty set when it
  * introduces none. Used while walking the tree to track which imported names
  * are shadowed by a closer local declaration.
  *
  * A function's own parameters, and a named function expression's own name,
- * are scoped to itself. A block's (or the module's) function declarations
- * and `var`/`let`/`const` declarations are scoped to the whole block, not
- * merely to the statement that introduces them — a later sibling statement
- * has to see the shadow too, the way it would at runtime. */
+ * are scoped to itself, and so is every `var` hoisted anywhere in its body.
+ * A block's (or the module's) function, class and `let`/`const`/`var`
+ * declarations are scoped to the whole block, not merely to the statement
+ * that introduces them — a later sibling statement has to see the shadow
+ * too, the way it would at runtime. A `for`/`for-in`/`for-of` loop's own
+ * `let`/`const` initializer is scoped to the whole loop, not just to
+ * itself, and every clause of a `switch` shares one scope. */
 function ownScopeBindingNames(node, ts) {
   const names = new Set()
 
@@ -380,20 +455,18 @@ function ownScopeBindingNames(node, ts) {
     if (ts.isFunctionExpression(node) && node.name) {
       names.add(node.name.text)
     }
+    if (node.body) collectHoistedVarNames(node.body, ts, names)
   } else if (ts.isVariableDeclarationList(node)) {
     for (const declaration of node.declarations) collectBindingNames(declaration.name, ts, names)
+  } else if ((ts.isForStatement(node) || ts.isForInStatement(node) || ts.isForOfStatement(node)) && node.initializer && ts.isVariableDeclarationList(node.initializer)) {
+    for (const declaration of node.initializer.declarations) collectBindingNames(declaration.name, ts, names)
   } else if (ts.isCatchClause(node) && node.variableDeclaration) {
     collectBindingNames(node.variableDeclaration.name, ts, names)
+  } else if (ts.isCaseBlock(node)) {
+    for (const clause of node.clauses) blockScopedBindingNames(clause.statements, ts, names)
   } else if (ts.isBlock(node) || ts.isSourceFile(node)) {
-    for (const statement of node.statements) {
-      if (ts.isFunctionDeclaration(statement) && statement.name) {
-        names.add(statement.name.text)
-      } else if (ts.isVariableStatement(statement)) {
-        for (const declaration of statement.declarationList.declarations) {
-          collectBindingNames(declaration.name, ts, names)
-        }
-      }
-    }
+    blockScopedBindingNames(node.statements, ts, names)
+    if (ts.isSourceFile(node)) collectHoistedVarNames(node, ts, names)
   }
 
   return names

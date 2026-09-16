@@ -149,6 +149,26 @@ test('reports a shorthand icon property that does not resolve, instead of stayin
   )
 })
 
+test('reads an icon written as a get accessor, the same as a plain property', async () => {
+  const source = `export default { get icon() { return 'Wallet' } }`
+  assert.deepEqual(await extractIconNames(source), ['Wallet'])
+  assert.deepEqual(await findUnresolvedIconRefs(source), [])
+})
+
+test('reads a get accessor icon returning a lucide import', async () => {
+  const source = `
+    import { Wallet } from 'lucide-react'
+    export default { get icon() { return Wallet } }
+  `
+  assert.deepEqual(await extractIconNames(source), ['Wallet'])
+})
+
+test('reports a get accessor icon whose return value cannot be read statically, instead of staying silent', async () => {
+  const source = `export default { get icon() {\n  const computed = someHelper()\n  return computed\n} }`
+  assert.deepEqual(await extractIconNames(source), [])
+  assert.equal((await findUnresolvedIconRefs(source)).length, 1)
+})
+
 test('never yields anything but a bare name, so nothing can be injected', async () => {
   // The generated registry is TypeScript built from these strings, and every
   // name becomes a named import. Whatever a config holds, what comes out here
@@ -386,6 +406,29 @@ test('ignores a call inside a named function expression that shadows the import 
 
 test('ignores a call through a local namespace that shadows the imported namespace', async () => {
   const source = "import * as Core from '@nextsparkjs/core/lib/icons'\nfunction f() {\n  const Core = { resolveIcon: () => {} }\n  Core.resolveIcon('Wallet')\n}"
+  assert.deepEqual(await extractLiteralIconCallNames(source), [])
+})
+
+test('ignores a call through a var that shadows the import, hoisted out of the if that declares it', async () => {
+  // var is function-scoped, not block-scoped: the call after the if still
+  // sees the local declaration, not the import.
+  const source = `${RESOLVE_ICON_IMPORT}function f() {\n  if (true) {\n    var resolveIcon = (name) => name\n  }\n  return resolveIcon('Wallet')\n}`
+  assert.deepEqual(await extractLiteralIconCallNames(source), [])
+})
+
+test("ignores a call through a for loop's own initializer that shadows the import for the whole loop body", async () => {
+  const source = `${RESOLVE_ICON_IMPORT}function f() {\n  for (const resolveIcon = (name) => name; false; ) {\n    resolveIcon('Wallet')\n  }\n}`
+  assert.deepEqual(await extractLiteralIconCallNames(source), [])
+})
+
+test('ignores a call through a let declared in one switch case that shadows the import in a later case', async () => {
+  // Every clause of a switch shares one lexical scope, unlike a block per case.
+  const source = `${RESOLVE_ICON_IMPORT}function f(x) {\n  switch (x) {\n    case 1:\n      let resolveIcon = (name) => name\n      break\n    case 2:\n      resolveIcon('Wallet')\n      break\n  }\n}`
+  assert.deepEqual(await extractLiteralIconCallNames(source), [])
+})
+
+test('ignores a call through a class declaration that shadows the import with its own name', async () => {
+  const source = `${RESOLVE_ICON_IMPORT}function f() {\n  class resolveIcon {\n    static call(name) { return name }\n  }\n  return resolveIcon('Wallet')\n}`
   assert.deepEqual(await extractLiteralIconCallNames(source), [])
 })
 

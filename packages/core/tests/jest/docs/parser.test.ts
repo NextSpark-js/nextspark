@@ -1,9 +1,10 @@
 /**
  * Unit Tests for Documentation Parser - Helper Functions
  *
- * Note: parseMarkdownFile tests are skipped as they require ESM remark modules
- * which are not compatible with Jest's CommonJS environment.
- * The function is tested manually and works correctly at runtime.
+ * parseMarkdownFile itself is covered separately, in
+ * tests/node/parse-markdown-doc-links.test.ts (run via `tsx --test`): remark
+ * is ESM-only and excluded by Jest's transformIgnorePatterns, so that
+ * integration is only exercisable outside Jest.
  */
 
 import { describe, it, expect } from '@jest/globals'
@@ -14,10 +15,6 @@ import {
 } from '@/core/lib/docs/utils'
 
 describe('Documentation Parser - Helper Functions', () => {
-  // Note: parseMarkdownFile() is skipped in tests due to ESM module compatibility
-  // It works correctly at runtime and build time (see the docs-registry
-  // generator inside packages/core/scripts/build/registry.mjs)
-
   describe('extractOrderFromFilename', () => {
     it('should extract order from numbered filename', () => {
       expect(extractOrderFromFilename('01-introduction.md')).toBe(1)
