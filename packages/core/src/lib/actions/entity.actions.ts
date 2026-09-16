@@ -35,7 +35,8 @@
  * ```
  */
 
-import { revalidatePath, revalidateTag } from 'next/cache'
+import { revalidatePath } from 'next/cache'
+import { revalidateTag } from '../cache/revalidate-tag'
 import { headers, cookies } from 'next/headers'
 import { ACTIVE_TEAM_COOKIE, activeTeamIdForSession } from '../teams/active-team-cookie'
 import { redirect } from 'next/navigation'
