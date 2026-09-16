@@ -137,3 +137,55 @@ test('a negation that un-ignores the backups is not read as a line that already 
     await cleanup()
   }
 })
+
+test("a rule that covers another run's backup does not stand in for this run's", async () => {
+  const { root, cleanup } = await project()
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: root })
+    await writeFile(
+      join(root, '.gitignore'),
+      'app/(templates)/\n.nextspark/\napp.backup.v0.1.0-beta.190.*/\n'
+    )
+    const backup = 'app.backup.v0.1.0-beta.189.2026-09-16T00-00-00-000Z-x1y2z3'
+
+    assert.deepEqual(missingGitignoreEntries(root, { appBackupDir: backup }), ['app.backup.v*/'])
+    assert.deepEqual(ensureGeneratedPathsIgnored(root, { appBackupDir: backup }), ['app.backup.v*/'])
+    for (const file of ['layout.tsx', 'dashboard/page.tsx', '.env.local']) {
+      assert.equal(gitIgnores(root, `${backup}/${file}`), true, `git ignores ${backup}/${file}`)
+    }
+    assert.deepEqual(missingGitignoreEntries(root, { appBackupDir: backup }), [], 'a second check finds nothing missing')
+  } finally {
+    await cleanup()
+  }
+})
+
+test('app/(templates) counts as ignored only when every file of the tree is, not one of them', async () => {
+  const cases: { name: string; gitignore: string; nested?: [string, string] }[] = [
+    { name: 'a rule under **', gitignore: '**/dashboard/layout.tsx\n' },
+    { name: 'a .gitignore inside the tree', gitignore: '', nested: ['app/(templates)/dashboard/.gitignore', 'layout.tsx\n'] },
+    {
+      name: 'rules that name the shapes but not a file the run writes',
+      gitignore: 'app/(templates)/middleware.ts\napp/(templates)/dashboard/\napp/(templates)/(public)/\n',
+    },
+  ]
+  const written = ['app/(templates)/dashboard/layout.tsx', 'app/(templates)/(auth)/login/page.tsx']
+
+  for (const { name, gitignore, nested } of cases) {
+    const { root, cleanup } = await project()
+    try {
+      execFileSync('git', ['init', '-q'], { cwd: root })
+      await writeFile(join(root, '.gitignore'), `${gitignore}.nextspark/\napp.backup.v*/\n`)
+      if (nested) {
+        await mkdir(join(root, nested[0], '..'), { recursive: true })
+        await writeFile(join(root, nested[0]), nested[1])
+      }
+
+      assert.deepEqual(ensureGeneratedPathsIgnored(root, { templatesFiles: written }), ['app/(templates)/'], name)
+      for (const file of [...written, 'app/(templates)/(public)/[locale]/page.tsx']) {
+        assert.equal(gitIgnores(root, file), true, `${name}: git ignores ${file}`)
+      }
+    } finally {
+      await cleanup()
+    }
+  }
+})

@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
-import { join, dirname, relative } from 'node:path';
+import { basename, join, dirname, relative } from 'node:path';
 import chalk from 'chalk';
 import ora from 'ora';
 import { getCoreDir, getProjectRoot } from '../utils/paths.js';
@@ -54,6 +54,16 @@ function backupDirectory(source: string, target: string): void {
 function createBackupDirectory(projectRoot: string, coreVersion: string): string {
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   return mkdtempSync(join(projectRoot, `app.backup.v${coreVersion}.${stamp}-`));
+}
+
+/**
+ * The files this run leaves under app/(templates), from the project root, for
+ * the .gitignore check to ask git about: those there now and those the registry
+ * build is planned to add.
+ */
+function templatesFilesInRun(projectRoot: string, templatesPlan: TemplatesPlanResult | null): string[] {
+  const present = [...readTree(join(projectRoot, 'app', '(templates)')).keys()].map((file) => `app/(templates)/${file}`);
+  return [...new Set([...present, ...(templatesPlan?.changes?.create ?? [])])];
 }
 
 /**
@@ -168,16 +178,22 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       }
     }
 
+    // --backup's directory is named before the .gitignore is written, so the
+    // check asks git about the directory this run creates rather than one of
+    // its shape; it stays empty until the lines are in place
+    const appBackupDir = options.backup && !options.dryRun ? createBackupDirectory(projectRoot, coreVersion) : null;
+
     // The .gitignore comes before anything this run writes, so the backups and
     // the regenerated tree are ignored from the moment they exist
-    const addedGitignoreEntries = options.dryRun ? [] : ensureGeneratedPathsIgnored(projectRoot);
+    const addedGitignoreEntries = options.dryRun ? [] : ensureGeneratedPathsIgnored(projectRoot, {
+      appBackupDir: appBackupDir ? basename(appBackupDir) : undefined,
+      templatesFiles: templatesFilesInRun(projectRoot, templatesPlan),
+    });
 
-    // Perform backup if requested
-    if (options.backup && !options.dryRun) {
+    if (appBackupDir) {
       spinner.start('Creating backup...');
-      const backupDir = createBackupDirectory(projectRoot, coreVersion);
-      backupDirectory(appDir, backupDir);
-      spinner.succeed(`Backup created: ${relative(projectRoot, backupDir)}`);
+      backupDirectory(appDir, appBackupDir);
+      spinner.succeed(`Backup created: ${relative(projectRoot, appBackupDir)}`);
     }
 
     let backedUp: string[] = [];
@@ -202,7 +218,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
     }
 
     if (options.dryRun) {
-      const missingEntries = missingGitignoreEntries(projectRoot);
+      const missingEntries = missingGitignoreEntries(projectRoot, { templatesFiles: templatesFilesInRun(projectRoot, templatesPlan) });
       if (missingEntries.length > 0) {
         console.log(chalk.gray(`  Would add ${missingEntries.join(', ')} to .gitignore`));
       }

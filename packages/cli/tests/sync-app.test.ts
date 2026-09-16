@@ -55,6 +55,7 @@ async function project() {
 interface SyncOptions {
   dryRun?: boolean
   force?: boolean
+  backup?: boolean
   verbose?: boolean
   overwrite?: string[]
   confirm?: (message: string) => Promise<boolean>
@@ -365,4 +366,48 @@ test('--backup gives each run a backup of its own, never written over, and adds 
     unfreeze()
     await cleanup()
   }
+})
+
+test("--backup's own directory and the tree it regenerates end up ignored whatever rule stood in for them", async () => {
+  const rest = '.nextspark/\n'
+  const cases: { name: string; gitignore: string; nested?: [string, string] }[] = [
+    { name: "a rule that names another version's backup", gitignore: `${rest}app/(templates)/\napp.backup.v0.1.0-beta.190.*/\n` },
+    { name: 'a rule under **', gitignore: `${rest}**/dashboard/layout.tsx\n**/app.backup.v0.1.0-beta.190.*/**\n` },
+    { name: "a negation that un-ignores this version's backups", gitignore: `${rest}app/(templates)/\napp.backup.*/\n!app.backup.v${CORE_VERSION}.*/\n` },
+    {
+      name: 'a .gitignore inside the generated tree',
+      gitignore: `${rest}app.backup.v0.1.0-beta.190.*/\n`,
+      nested: ['app/(templates)/dashboard/.gitignore', 'layout.tsx\n'],
+    },
+  ]
+
+  // Every case runs before anything is asserted, so a failure names all the rules that got through
+  const leftOut: string[] = []
+  for (const { name, gitignore, nested } of cases) {
+    const { root, cleanup } = await project()
+    try {
+      execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
+      await write(root, '.gitignore', gitignore)
+      await write(root, 'app/(templates)/dashboard/layout.tsx', 'export default function L({ children }) { return children }\n')
+      await write(root, 'app/(templates)/(auth)/login/page.tsx', 'export default function Login() { return null }\n')
+      if (nested) await write(root, nested[0], nested[1])
+
+      await runSync(root, { force: true, backup: true })
+
+      const [backup] = (await readdir(root)).filter((entry) => entry.startsWith('app.backup.'))
+      assert.ok(backup, `${name}: a backup was taken`)
+      for (const file of [`${backup}/layout.tsx`, `${backup}/reports/page.tsx`, 'app/(templates)/(auth)/login/page.tsx']) {
+        assert.ok(existsSync(join(root, file)), `${name}: ${file} is on disk`)
+        if (!gitIgnores(root, file)) leftOut.push(`${name}: ${file}`)
+      }
+      const untracked = execFileSync('git', ['status', '--porcelain', '--untracked-files=all'], { cwd: root, encoding: 'utf-8' })
+        .split('\n')
+        .filter((line) => line.includes('app.backup.') || line.includes('app/(templates)/'))
+      leftOut.push(...untracked.map((line) => `${name}: untracked ${line.slice(3)}`))
+    } finally {
+      await cleanup()
+    }
+  }
+
+  assert.deepEqual(leftOut, [])
 })
