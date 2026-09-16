@@ -139,29 +139,37 @@ export function describeTemplatesChanges(changes: TemplatesChanges): string[] {
 const CAUSE_LINE = /\b(?:error|errors|failed|failing|failure|fatal)\b/i;
 
 /**
- * What a failed registry build printed, as the lines worth repeating: the tail
- * of its output, where the error that stopped it lands. Without them the
- * failure is a sentence with no cause in it.
+ * What a failed registry build printed, as the lines worth repeating: all of it
+ * when it fits under `limit`. Without them the failure is a sentence with no
+ * cause in it.
  *
- * The tail alone is not enough when what stopped the build names the files it
- * touched afterwards: enough of them push the cause out of the tail, leaving a
- * list of consequences and no reason. So the first line above the tail that
- * reads as a cause comes along, with a count of what sits between.
+ * Longer output is repeated from where the failure starts, the last unindented
+ * line that reads as a cause, to the end. The last, because an error printed
+ * and recovered from earlier is not what stopped the build. Unindented, because
+ * what sits under a cause - the specifics under a header such as "validation
+ * errors:", the files it names, a stack trace - is indented and can use the
+ * same words. The block comes along whole when it fits; when it doesn't, its
+ * start, which carries the specifics, and its end, with a count of what sits
+ * between.
  */
-export function buildFailureLines(output: string, limit = 12): string[] {
+export function buildFailureLines(output: string, limit = 24): string[] {
   const lines = output
     .split('\n')
     .map((line) => line.trimEnd())
     .filter((line) => line.trim() !== '');
+  if (lines.length <= limit) return lines;
 
-  const tail = lines.slice(-limit);
-  if (tail.length === lines.length) return tail;
+  let start = lines.length - 1;
+  while (start >= 0 && !(/^\S/.test(lines[start]) && CAUSE_LINE.test(lines[start]))) start--;
+  if (start === -1) return [`... ${lines.length - limit} earlier line(s)`, ...lines.slice(-limit)];
 
-  const above = lines.slice(0, lines.length - tail.length);
-  const cause = above.find((line) => CAUSE_LINE.test(line));
-  const elided = above.length - (cause === undefined ? 0 : 1);
-  const gap = `... ${elided} earlier line(s)`;
-  return cause === undefined ? [gap, ...tail] : [cause, gap, ...tail];
+  const failure = lines.slice(start);
+  const earlier = start === 0 ? [] : [`... ${start} earlier line(s)`];
+  if (failure.length <= limit) return [...earlier, ...failure];
+
+  const head = failure.slice(0, Math.ceil(limit / 2));
+  const end = failure.slice(failure.length - (limit - head.length));
+  return [...earlier, ...head, `... ${failure.length - limit} line(s) in between`, ...end];
 }
 
 /**

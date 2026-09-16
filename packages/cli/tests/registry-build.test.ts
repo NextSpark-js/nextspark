@@ -80,11 +80,66 @@ test('only the lines about app/(templates) are picked out of the output', () => 
 test('the cause of a failure comes along when the files it touched push it out of the tail', () => {
   const cause = 'Error: contents/themes/acme/templates/shop/page.tsx has no default export'
   const touched = Array.from({ length: 15 }, (_, index) => `  affected: app/(templates)/page-${index}.tsx`)
-  const lines = buildFailureLines(['Discovering template overrides...', cause, ...touched].join('\n'))
+  const lines = buildFailureLines(['Discovering template overrides...', cause, ...touched].join('\n'), 12)
 
-  assert.equal(lines[0], cause)
-  assert.equal(lines[1], '... 4 earlier line(s)')
-  assert.deepEqual(lines.slice(2), touched.slice(-12))
+  assert.deepEqual(lines, [
+    '... 1 earlier line(s)',
+    cause,
+    ...touched.slice(0, 5),
+    '... 4 line(s) in between',
+    ...touched.slice(-6),
+  ])
+  assert.deepEqual(
+    buildFailureLines(['Discovering template overrides...', cause, ...touched].join('\n'), 1),
+    ['... 1 earlier line(s)', cause, '... 15 line(s) in between'],
+    'a limit with no room for an end keeps only the cause'
+  )
+})
+
+/** Lines the way core's registry build prints a Feature/Flow tag validation failure before it exits. */
+function tagValidationFailure(flows: string[]): string[] {
+  return [
+    '❌ Feature/Flow tag validation errors:',
+    ...flows.flatMap((flow) => [
+      `   ❌ Tag @flow-${flow} found in tests but no matching flow in flows.config.ts`,
+      ...[1, 2, 3].map((n) => `      → contents/themes/acme/tests/cypress/e2e/${flow}/step-${n}.cy.ts`),
+    ]),
+  ]
+}
+
+test('what sits under a header that reads as the cause is not dropped for the files listed after it', () => {
+  const discovery = Array.from({ length: 20 }, (_, index) => `🔍 Discovered plugin-${index}`)
+  const flows = ['checkout', 'refunds', 'invoices', 'coupons', 'returns']
+  const output = [...discovery, '✅ testing-registry.ts', ...tagValidationFailure(flows)].join('\n')
+
+  const lines = buildFailureLines(output)
+  for (const flow of flows) {
+    assert.ok(lines.includes(`   ❌ Tag @flow-${flow} found in tests but no matching flow in flows.config.ts`), `@flow-${flow} is shown:\n${lines.join('\n')}`)
+  }
+  assert.ok(!lines.some((line) => line.includes('plugin-')), 'what ran before the failure is left out')
+
+  const short = buildFailureLines(output, 8)
+  assert.deepEqual(short.slice(0, 3), [
+    '... 21 earlier line(s)',
+    '❌ Feature/Flow tag validation errors:',
+    '   ❌ Tag @flow-checkout found in tests but no matching flow in flows.config.ts',
+  ])
+})
+
+test('an error printed and recovered from earlier does not stand in for the one that stopped the build', () => {
+  const cause = '❌ Build failed: contents/themes/acme/templates/shop/page.tsx has no default export'
+  const stack = Array.from({ length: 30 }, (_, index) => `    at step${index} (file:///core/scripts/build/registry/errors.mjs:${index + 1}:5)`)
+  const output = [
+    '⚠️ Plugin analytics failed to load, skipping it',
+    ...Array.from({ length: 20 }, (_, index) => `🔍 Discovered template-${index}`),
+    cause,
+    ...stack,
+  ].join('\n')
+
+  const lines = buildFailureLines(output)
+  assert.equal(lines[1], cause, `the build's own failure leads what is shown:\n${lines.join('\n')}`)
+  assert.ok(!lines.some((line) => line.includes('Plugin analytics')), 'the recovered error is left out')
+  assert.equal(lines.at(-1), stack.at(-1))
 })
 
 test('output that fits under the limit is repeated whole, with nothing marking a gap', () => {
