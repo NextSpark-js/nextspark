@@ -83,7 +83,7 @@ function killPort(port) {
           if (pid && /^\d+$/.test(pid)) {
             try {
               execSync(`taskkill /PID ${pid} /F`, { stdio: 'ignore' })
-            } catch (e) {
+            } catch {
               // Process might already be dead
             }
           }
@@ -92,7 +92,7 @@ function killPort(port) {
       execSync(`lsof -ti:${port} | xargs kill -9 2>/dev/null || true`, { stdio: 'ignore' })
     }
     console.log(`[cy:run:prod] Port ${port} cleared`)
-  } catch (e) {
+  } catch {
     // No process on port, that's fine
     console.log(`[cy:run:prod] Port ${port} was already free`)
   }
@@ -206,16 +206,16 @@ function cleanup(server) {
         // Kill process group
         try {
           process.kill(-server.pid, 'SIGKILL')
-        } catch (e) {
+        } catch {
           // If process group kill fails, try direct kill
           try {
             server.kill('SIGKILL')
-          } catch (e2) {
+          } catch {
             // Process might already be dead
           }
         }
       }
-    } catch (e) {
+    } catch {
       // Process might already be dead
     }
   }

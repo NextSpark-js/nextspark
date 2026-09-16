@@ -235,7 +235,7 @@ export async function proxy(request: NextRequest) {
         if (!session) {
           return redirectToLogin(request)
         }
-      } catch (error) {
+      } catch {
         return redirectToLogin(request)
       }
     }

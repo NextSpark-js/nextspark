@@ -83,7 +83,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     re-syncs.
   - **The generated `lint` script is `eslint .`,** since Next 16 removes `next lint`, and
     `eslint-config-next` moves to `^16.3.5`. An existing project keeps whatever `lint`
-    script it already has.
+    script it already has. The template `eslint.config.mjs` holds the code a project adds
+    to Next's presets, and lints `app/` and `contents/` -- what NextSpark writes there,
+    themes and plugins with their tests and fixtures -- with the zod rule alone, as this
+    repo lints that code, so a new project lints clean. With `eslint-config-next` 15 it
+    reads Next's presets through `FlatCompat`.
   - **Node 20.9 is the floor** for the CLI and `create-nextspark-app`, as Next 16 requires.
 
 - **`generateTemplateRegistry()` returns `Promise<string>` (#197).** It reads each theme
