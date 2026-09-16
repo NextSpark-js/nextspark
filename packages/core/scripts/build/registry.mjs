@@ -46,6 +46,7 @@ import { getBasename } from '../utils/paths.mjs'
 // Import configuration
 import { getConfig, validateEnvironment } from './registry/config.mjs'
 import { unsafeWritePlaces, unsafeWritePlacesLines } from './registry/write-places.mjs'
+import { ensureRegistriesGitignore } from './registry/post-build/own-gitignores.mjs'
 
 // Import discovery modules (migrated from this file)
 import { discoverParentChildRelations } from './registry/discovery/parent-child.mjs'
@@ -103,6 +104,12 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, template
   try {
     // Ensure output directory exists
     await mkdir(CONFIG.outputDir, { recursive: true })
+
+    // The registries are kept out of git by a .gitignore of their own, in place
+    // before the first one is written, whatever the project's rules say
+    if (await ensureRegistriesGitignore(CONFIG.projectRoot)) {
+      log('.gitignore', 'success')
+    }
 
     // Generate client template registry (async - needs to check for server exports)
     const templateRegistryClientContent = await generateTemplateRegistryClient(templates, CONFIG, templateAnalysis)

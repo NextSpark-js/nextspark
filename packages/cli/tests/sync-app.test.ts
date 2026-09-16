@@ -13,7 +13,7 @@ import { guardConsole } from '../src/utils/shown-path.js'
 const CORE = 'node_modules/@nextsparkjs/core'
 /** Core's own check of where it writes, which sync:app loads from the core installed in the project. */
 const CORE_SOURCE = join(dirname(fileURLToPath(import.meta.url)), '../../core')
-const CORE_WRITE_CHECK = ['scripts/build/registry/write-places.mjs', 'scripts/build/registry/post-build/backups-gitignore.mjs']
+const CORE_WRITE_CHECK = ['scripts/build/registry/write-places.mjs', 'scripts/build/registry/post-build/own-gitignores.mjs']
 const CORE_VERSION = '0.0.0-test'
 const CORE_I18N = "export { default } from '@nextsparkjs/core/i18n'\n"
 const CORE_PROXY = 'export async function proxy(request) {\n  return request\n}\n'
@@ -135,7 +135,7 @@ test('--dry-run writes nothing and names each file it would write, remove or kee
     assert.match(printed, /- app\/layout\.ppr\.tsx \(PPR variants stay in core/)
     assert.match(printed, /! i18n\.ts \(differs from core\)/)
     assert.match(printed, /! app\/dashboard\/page\.tsx \(differs from core\)/)
-    assert.match(printed, /Would add app\/\(templates\)\/, \.nextspark\/backups\/, \.nextspark\/sync-state\.json, app\.backup\.v\*\/ to \.gitignore/)
+    assert.match(printed, /Would add app\/\(templates\)\/, \.nextspark\/registries\/, \.nextspark\/backups\/, \.nextspark\/sync-state\.json, app\.backup\.v\*\/ to \.gitignore/)
   } finally {
     await cleanup()
   }
@@ -243,7 +243,7 @@ test('--dry-run names what the registry build would replace or remove in app/(te
 
     const printed = await runSync(root, { dryRun: true })
 
-    assert.match(printed, /Would regenerate app\/\(templates\) with the registry build, which would write or remove 2 file\(s\)/)
+    assert.match(printed, /Would regenerate \.nextspark\/registries and app\/\(templates\) with the registry build, which would write every registry again, and write or remove 2 file\(s\) in app\/\(templates\)/)
     assert.match(printed, /~ app\/\(templates\)\/layout\.tsx \(replaced; what it holds is backed up first\)/)
     assert.match(printed, /- app\/\(templates\)\/no-confirm\.txt \(removed; backed up first\)/)
     assert.equal(await readFile(join(root, 'app/(templates)/no-confirm.txt'), 'utf-8'), 'mine\n')
@@ -304,7 +304,7 @@ test('a registry build that fails is reported as such, with a non-zero exit code
     assert.equal(exitCode, 1)
     assert.doesNotMatch(printed, /Sync complete/)
     assert.match(printed, /has no default export/)
-    assert.match(printed, /Sync incomplete: \/app now matches core, but app\/\(templates\) was not regenerated\./)
+    assert.match(printed, /Sync incomplete: \/app now matches core, but \.nextspark\/registries and app\/\(templates\) were not regenerated\./)
   } finally {
     await cleanup()
   }
@@ -924,9 +924,9 @@ test('a sync:app --force killed while the registry build writes leaves no backup
 test('--dry-run names the .gitignore lines a run adds for its backups when the rules name a stand-in for their directories', async () => {
   const standIns = 'app/(templates)/\n.nextspark/sync-state.json\n*-XXXXXX/\n*-a1b2c3/\n'
   const cases: { name: string; options: SyncOptions; lines: string[]; registry?: boolean }[] = [
-    { name: "--backup's copy of app/", options: { backup: true }, lines: ['.nextspark/backups/', 'app.backup.v*/'] },
-    { name: 'the backup --overwrite takes of a customized file', options: { overwrite: ['i18n.ts'] }, lines: ['.nextspark/backups/', 'app.backup.v*/', '.nextspark/backups/.gitignore'] },
-    { name: "the registry build's backups, unplanned under --force", options: {}, lines: ['.nextspark/backups/', 'app.backup.v*/', '.nextspark/backups/.gitignore'], registry: true },
+    { name: "--backup's copy of app/", options: { backup: true }, lines: ['.nextspark/registries/', '.nextspark/backups/', 'app.backup.v*/'] },
+    { name: 'the backup --overwrite takes of a customized file', options: { overwrite: ['i18n.ts'] }, lines: ['.nextspark/registries/', '.nextspark/backups/', 'app.backup.v*/', '.nextspark/backups/.gitignore'] },
+    { name: "the registry build's backups, unplanned under --force", options: {}, lines: ['.nextspark/registries/', '.nextspark/backups/', 'app.backup.v*/', '.nextspark/backups/.gitignore'], registry: true },
   ]
 
   // Every case runs before anything is asserted, so a failure names each line the dry run passes over
@@ -1264,4 +1264,68 @@ test("a sync that stops on a file it can't read names it escaped, in the error a
     await chmod(join(root, 'app', name), 0o644).catch(() => {})
     await cleanup()
   }
+})
+
+test(".nextspark/registries is kept out of git like the rest of what the registry build writes, while the build runs and after, and is left to the .gitignore core's build keeps there when a rule takes it back", { skip: process.platform === 'win32' }, async () => {
+  const managedBefore = 'node_modules/\napp/(templates)/\n.nextspark/backups/\n.nextspark/sync-state.json\napp.backup.v*/\n'
+  // Writes as many registries as core's build does, and records git's view from inside the build
+  const registryBuild = `import { execFileSync } from 'node:child_process'
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+const root = process.env.NEXTSPARK_PROJECT_ROOT
+mkdirSync(join(root, '.nextspark/registries'), { recursive: true })
+for (let index = 0; index < 27; index++) writeFileSync(join(root, '.nextspark/registries', 'registry-' + index + '.ts'), '')
+writeFileSync(process.env.NEXTSPARK_TEST_STATUS, execFileSync('git', ['status', '--porcelain', '--untracked-files=all'], { cwd: root, encoding: 'utf-8' }))
+`
+  const visible = (status: string) => status.split('\n').filter((line) => line.startsWith('?? .nextspark/'))
+  const wrong: string[] = []
+
+  const { root, cleanup } = await project()
+  const statusFile = join(root, '..', `${root.split('/').pop()}-status`)
+  process.env.NEXTSPARK_TEST_STATUS = statusFile
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
+    await write(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
+    await write(root, '.gitignore', managedBefore)
+    await write(root, `${CORE}/scripts/build/registry.mjs`, registryBuild)
+
+    const planned = await runSyncForExit(root, { dryRun: true })
+    if (planned.exitCode !== 0) wrong.push(`dry run: exit code ${planned.exitCode}`)
+    if (!gitignoreAdditions(planned.printed, 'Would add').includes('.nextspark/registries/')) wrong.push('dry run: does not name the .gitignore line for the registries')
+    if (!/Would regenerate \.nextspark\/registries and app\/\(templates\)/.test(planned.printed)) wrong.push('dry run: does not name the registries it regenerates')
+    if (!planned.printed.includes('Would have the registry build add .nextspark/registries/.gitignore, which keeps every registry there out of git')) wrong.push("dry run: does not name the registries' own .gitignore")
+
+    const done = await runSyncForExit(root, { force: true })
+    if (done.exitCode !== 0) wrong.push(`run: exit code ${done.exitCode}`)
+    if (!existsSync(statusFile)) wrong.push('run: the registry build did not run')
+    else if (visible(await readFile(statusFile, 'utf-8')).length > 0) wrong.push(`while the build runs git picks up ${JSON.stringify(visible(await readFile(statusFile, 'utf-8')).slice(0, 3))}...`)
+    const after = execFileSync('git', ['status', '--porcelain', '--untracked-files=all'], { cwd: root, encoding: 'utf-8' })
+    if (visible(after).length > 0) wrong.push(`after the sync git picks up ${JSON.stringify(visible(after).slice(0, 3))}...`)
+    if (!(await readFile(join(root, '.gitignore'), 'utf-8')).includes('\n.nextspark/registries/\n')) wrong.push('run: the .gitignore has no line for the registries')
+  } finally {
+    delete process.env.NEXTSPARK_TEST_STATUS
+    await rm(statusFile, { force: true })
+    await cleanup()
+  }
+
+  const takenBack = await project()
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: takenBack.root, stdio: 'ignore' })
+    await write(takenBack.root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
+    await write(takenBack.root, '.gitignore', managedBefore)
+    await write(takenBack.root, '.nextspark/.gitignore', '!registries/\n')
+    await write(takenBack.root, `${CORE}/scripts/build/registry.mjs`, 'process.exit(0)\n')
+    const before = await snapshot(takenBack.root)
+    for (const options of [{ dryRun: true }, { force: true }]) {
+      const mode = options.dryRun ? 'taken back, dry run' : 'taken back, run'
+      const { printed, exitCode } = await runSyncForExit(takenBack.root, options)
+      if (exitCode !== 0) wrong.push(`${mode}: exit code ${exitCode}`)
+      if (printed.includes('takes it back')) wrong.push(`${mode}: stops or warns over a rule the registries' own .gitignore overrides`)
+      if (options.dryRun && (await snapshot(takenBack.root)) !== before) wrong.push('taken back: the dry run wrote in the project')
+    }
+  } finally {
+    await takenBack.cleanup()
+  }
+
+  assert.deepEqual(wrong, [])
 })

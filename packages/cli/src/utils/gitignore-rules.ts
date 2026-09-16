@@ -274,18 +274,22 @@ function closure(automaton: Automaton, states: Set<number>): Set<number> {
   return reached;
 }
 
+/** The states after reading `byte`, already lowered under case folding, from `states`. */
+function advance(automaton: Automaton, states: Set<number>, byte: number): Set<number> {
+  const next = new Set<number>();
+  for (const state of states) {
+    if (automaton.loop[state]?.(byte)) next.add(state);
+    if (automaton.step[state]?.(byte)) next.add(state + 1);
+  }
+  return closure(automaton, next);
+}
+
 /** The states after reading `text` from the start, lowered under case folding. */
 function statesAfter(automaton: Automaton, text: string, caseFold: boolean): Set<number> {
   let states = closure(automaton, new Set([0]));
   for (let index = 0; index < text.length && states.size > 0; index++) {
     const raw = text.charCodeAt(index);
-    const byte = caseFold && isUpper(raw) ? raw + 0x20 : raw;
-    const next = new Set<number>();
-    for (const state of states) {
-      if (automaton.loop[state]?.(byte)) next.add(state);
-      if (automaton.step[state]?.(byte)) next.add(state + 1);
-    }
-    states = closure(automaton, next);
+    states = advance(automaton, states, caseFold && isUpper(raw) ? raw + 0x20 : raw);
   }
   return states;
 }
@@ -415,11 +419,58 @@ export function ignoredByRules(sources: IgnoreSources, path: string, isDirectory
 }
 
 /**
+ * Whether some name with no slash in it, after `prefix`, makes a directory that
+ * `negation` matches and none of `leftOut` does: one the negation takes back
+ * and no pattern git reads over it leaves out again. Each pattern is read as an
+ * automaton over the bytes of the name, and all of them are run together over
+ * every name at once, until a set of states repeats.
+ */
+function someDirectoryTakenBack(negation: IgnorePattern, leftOut: readonly IgnorePattern[], prefix: string, caseFold: boolean): boolean {
+  const automata: Automaton[] = [];
+  const start: Set<number>[] = [];
+  for (const pattern of [negation, ...leftOut]) {
+    const subject = subjectOf(pattern, prefix, caseFold, true);
+    // The negation comes first; a pattern whose plain text already differs from the prefix matches no name
+    if (!subject) {
+      if (pattern === negation) return false;
+      continue;
+    }
+    const automaton = compileGlob(subject.head, subject.glob, caseFold);
+    automata.push(automaton);
+    start.push(statesAfter(automaton, subject.text, caseFold));
+  }
+
+  const accepts = (states: Set<number>[], index: number) => states[index].has(automata[index].step.length);
+  const key = (states: Set<number>[]) => states.map((set) => [...set].sort((a, b) => a - b).join(',')).join('|');
+  const seen = new Set([key(start)]);
+  let reached = [start];
+  while (reached.length > 0) {
+    const next: Set<number>[][] = [];
+    for (const states of reached) {
+      if (accepts(states, 0) && !states.slice(1).some((_, index) => accepts(states, index + 1))) return true;
+      if (states[0].size === 0) continue;
+      for (let byte = 1; byte < 256; byte++) {
+        if (byte === SLASH || (caseFold && isUpper(byte))) continue;
+        const moved = states.map((set, index) => advance(automata[index], set, byte));
+        const movedKey = key(moved);
+        if (seen.has(movedKey)) continue;
+        seen.add(movedKey);
+        next.push(moved);
+      }
+    }
+    reached = next;
+  }
+  return false;
+}
+
+/**
  * Whether git leaves out every directory at `prefix` followed by a name with no
  * slash in it, and when it doesn't, the negation that can take one back, if
  * one can. `coversEvery` tells a pattern that matches every such name; a
  * pattern that matches only some of them leaves the rest to the patterns git
- * reads after it. The directories above `prefix` are taken as not ignored.
+ * reads before it, and a negation takes back only a name no pattern git reads
+ * after it leaves out again. The directories above `prefix` are taken as not
+ * ignored.
  */
 export function everyDirectoryIgnored(
   sources: IgnoreSources,
@@ -429,15 +480,21 @@ export function everyDirectoryIgnored(
   const lists = [...directoriesAbove(`${prefix}x`).map((directory) => sources.byDirectory.get(directory) ?? []), ...sources.excludeFiles];
   for (const caseFold of caseReadings(sources)) {
     let covered = false;
+    // The patterns read after the one at hand that leave out some of the names
+    const leftOut: IgnorePattern[] = [];
     search: for (const patterns of lists) {
       for (let index = patterns.length - 1; index >= 0; index--) {
         const pattern = patterns[index];
         if (!patternMatchesSomeDirectory(pattern, prefix, caseFold)) continue;
-        if (pattern.negative) return { ignored: false, takenBackBy: pattern };
+        if (pattern.negative) {
+          if (someDirectoryTakenBack(pattern, leftOut, prefix, caseFold)) return { ignored: false, takenBackBy: pattern };
+          continue;
+        }
         if (coversEvery(pattern)) {
           covered = true;
           break search;
         }
+        leftOut.push(pattern);
       }
     }
     if (!covered) return { ignored: false, takenBackBy: null };

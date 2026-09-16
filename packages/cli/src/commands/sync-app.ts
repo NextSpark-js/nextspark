@@ -17,6 +17,7 @@ import {
   generatedPathsOnDisk,
   gitignoreIsSymlink,
   planGitignore,
+  REGISTRIES_GITIGNORE_ENTRY,
   TEMPLATES_GITIGNORE_ENTRY,
   trackedTemplatesFiles,
   unignoredPaths,
@@ -77,8 +78,12 @@ const UNIGNORED_SHOWN = 10;
 /** The copy of app/ that --backup takes, whose directory the .gitignore entry covers whatever it is named. */
 const APP_BACKUP_ENTRY = 'app.backup.v*/';
 
-/** The backups under .nextspark/backups, which the .gitignore sync:app keeps in that directory covers whatever the rest reads. */
-const BACKUPS_ENTRY = '.nextspark/backups/';
+/**
+ * The directories under .nextspark whose own .gitignore, which core keeps, covers
+ * what goes in them whatever the rest of the rules read: the backups, and the
+ * registries.
+ */
+const OWN_GITIGNORE_ENTRIES = ['.nextspark/backups/', REGISTRIES_GITIGNORE_ENTRY];
 
 /**
  * What the confirmation prompt says a sync is about to change, or null when it
@@ -166,24 +171,28 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       return;
     }
 
-    // The backups sync and the registry build take under .nextspark/backups are
-    // kept out of git by that directory's own .gitignore, put in place before
-    // the first one is written, whatever each is named or holds; one already
-    // there that can't do that has stopped the run above
+    // The backups sync and the registry build take under .nextspark/backups, and
+    // the registries the build writes, are kept out of git by their directory's
+    // own .gitignore, put in place before the first one is written, whatever each
+    // is named or holds; one already there that can't do that has stopped the
+    // run above
     const buildRuns = registryBuildBlocker(projectRoot) === null;
     const backsUpUnderNextspark = buildRuns
       || actions.some(({ path, backup }) => backup && existsSync(join(projectRoot, path)));
-    const backupsGitignore = backsUpUnderNextspark ? core.backupsGitignoreState(projectRoot) : null;
+    const backupsGitignore = backsUpUnderNextspark ? core.ownGitignoreState(projectRoot, core.BACKUPS_GITIGNORE) : null;
+    const buildAddsRegistriesGitignore = buildRuns && core.ownGitignoreState(projectRoot, core.REGISTRIES_GITIGNORE) === 'missing';
 
     // What sync:app writes is kept out of git by .gitignore files as git reads
     // them, decided before anything is written: the lines it adds go at the
     // end of the project's .gitignore, and a place it writes this run that git
     // would still pick up with them in - taken back by a .gitignore further
     // down, or under a project .gitignore that is a symlink - stops the run
-    // here, in a dry run too. The backups are left to their own .gitignore
+    // here, in a dry run too. The backups and the registries are left to their own .gitignore
     const gitignorePlan = planGitignore(projectRoot);
     const writtenThisRun = (entry: string) =>
-      entry === TEMPLATES_GITIGNORE_ENTRY ? buildRuns : entry === APP_BACKUP_ENTRY ? options.backup === true : entry !== BACKUPS_ENTRY;
+      entry === TEMPLATES_GITIGNORE_ENTRY
+        ? buildRuns
+        : entry === APP_BACKUP_ENTRY ? options.backup === true : !OWN_GITIGNORE_ENTRIES.includes(entry);
     const leftForGit = gitignorePlan.leftForGit.filter(({ entry }) => writtenThisRun(entry));
     if (leftForGit.length > 0) {
       spinner.fail('Sync not started: git would pick up what sync:app writes');
@@ -193,7 +202,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       process.exitCode = 1;
       return;
     }
-    const notAdded = gitignorePlan.leftForGit.filter(({ entry }) => !writtenThisRun(entry) && entry !== BACKUPS_ENTRY);
+    const notAdded = gitignorePlan.leftForGit.filter(({ entry }) => !writtenThisRun(entry) && !OWN_GITIGNORE_ENTRIES.includes(entry));
 
     // What the registry build then changes in app/(templates), for the dry run to name and the prompt to count
     const templatesPlan = options.dryRun || !options.force
@@ -290,30 +299,33 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       if (addsBackupsGitignore) {
         console.log(chalk.gray(`  Would add ${core.BACKUPS_GITIGNORE}, which keeps every backup there out of git`));
       }
+      if (buildAddsRegistriesGitignore) {
+        console.log(chalk.gray(`  Would have the registry build add ${core.REGISTRIES_GITIGNORE}, which keeps every registry there out of git`));
+      }
 
       if (templatesPlan?.status === 'planned' && templatesPlan.changes) {
         const lines = describeTemplatesChanges(templatesPlan.changes);
         console.log(chalk.gray(
           lines.length > 0
-            ? `  Would regenerate app/(templates) with the registry build, which would write or remove ${lines.length} file(s)`
-            : '  Would regenerate app/(templates) with the registry build, which would leave it as it is'
+            ? `  Would regenerate .nextspark/registries and app/(templates) with the registry build, which would write every registry again, and write or remove ${lines.length} file(s) in app/(templates)`
+            : '  Would regenerate .nextspark/registries and app/(templates) with the registry build, which would write every registry again, and leave app/(templates) as it is'
         ));
         for (const line of lines) console.log(chalk.white(`    ${line}`));
       } else if (templatesPlan?.status === 'skipped') {
-        console.log(chalk.gray(`  Would skip regenerating app/(templates): ${templatesPlan.reason}`));
+        console.log(chalk.gray(`  Would skip regenerating .nextspark/registries and app/(templates): ${templatesPlan.reason}`));
       } else {
         const why = templatesPlan?.reason ? ` (${templatesPlan.reason})` : '';
-        console.log(chalk.yellow(`  Would regenerate app/(templates) with the registry build, but what it would change there couldn't be worked out${why}; run "nextspark registry:build" to see why`));
+        console.log(chalk.yellow(`  Would regenerate .nextspark/registries and app/(templates) with the registry build, but what it would change in app/(templates) couldn't be worked out${why}; run "nextspark registry:build" to see why`));
       }
     } else {
-      spinner.start('Regenerating app/(templates)...');
+      spinner.start('Regenerating .nextspark/registries and app/(templates)...');
       const registry = await runRegistryBuild(coreDir, projectRoot);
       if (registry.status === 'built') {
-        spinner.succeed('Regenerated app/(templates)');
+        spinner.succeed('Regenerated .nextspark/registries and app/(templates)');
       } else if (registry.status === 'skipped') {
-        spinner.warn(`Skipped regenerating app/(templates): ${registry.reason}. Run "nextspark registry:build" once it is set.`);
+        spinner.warn(`Skipped regenerating .nextspark/registries and app/(templates): ${registry.reason}. Run "nextspark registry:build" once it is set.`);
       } else {
-        spinner.fail('Could not regenerate app/(templates)');
+        spinner.fail('Could not regenerate .nextspark/registries and app/(templates)');
       }
       // The build's own lines name paths too, and are printed one per call
       for (const line of templatesTreeLines(registry.output)) {
@@ -333,7 +345,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       // changed while the sync ran, and the sync has not done its part
       const written = generatedPathsOnDisk(projectRoot).filter((path) => path.startsWith('app.backup.v')
         ? appBackupDir !== null && path.startsWith(`${appBackupDir}/`)
-        : !path.startsWith('app/(templates)/') || registry.status !== 'skipped');
+        : !(path.startsWith('app/(templates)/') || path.startsWith('.nextspark/registries/')) || registry.status !== 'skipped');
       const unignored = unignoredPaths(projectRoot, written);
       if (unignored.length > 0) {
         console.error(chalk.red(`\n  Sync incomplete: git picks up ${unignored.length} file(s) sync:app and the registry build wrote, which the .gitignore files left out before the sync wrote anything:`));
@@ -353,7 +365,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
         for (const line of buildFailureLines(registry.output)) {
           console.error(chalk.red(`    ${line}`));
         }
-        console.error(chalk.red('\n  Sync incomplete: /app now matches core, but app/(templates) was not regenerated.'));
+        console.error(chalk.red('\n  Sync incomplete: /app now matches core, but .nextspark/registries and app/(templates) were not regenerated.'));
         console.error(chalk.red('  Fix what the registry build reports above and run "nextspark registry:build".\n'));
         process.exitCode = 1;
         return;

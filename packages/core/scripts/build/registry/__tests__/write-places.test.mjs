@@ -2,16 +2,17 @@
  * Tests for the check of where the registry build writes, which the build runs
  * before writing anything and `nextspark sync:app` and `nextspark dev` run from
  * the installed core: a symlink, something of another kind or that can't be
- * read, or a .nextspark/backups/.gitignore that would not keep the backups out
- * of git, is found, and a build that finds one writes nothing, in the project
- * or through it.
+ * read, or a .gitignore of .nextspark/backups or .nextspark/registries that
+ * would not keep what is beside it out of git, is found, and a build that finds
+ * one writes nothing, in the project or through it. And the .gitignore the
+ * build keeps in .nextspark/registries leaves the registries out of git.
  *
  * Run: node --test packages/core/scripts/build/registry/__tests__/write-places.test.mjs
  */
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { execFileSync, spawnSync } from 'node:child_process'
+import { execFileSync, spawn, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { chmod, lstat, mkdir, mkdtemp, readdir, readFile, readlink, rm, symlink, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
@@ -23,9 +24,13 @@ import { unsafeWritePlaces } from '../write-places.mjs'
 import {
   BACKUPS_GITIGNORE,
   BACKUPS_GITIGNORE_CONTENT,
+  REGISTRIES_GITIGNORE,
+  REGISTRIES_GITIGNORE_CONTENT,
   backupsGitignoreState,
   ensureBackupsGitignore,
-} from '../post-build/backups-gitignore.mjs'
+  ensureRegistriesGitignore,
+  ownGitignoreState,
+} from '../post-build/own-gitignores.mjs'
 
 const CORE_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..')
 const RUNS_AS_ROOT = process.getuid?.() === 0
@@ -114,15 +119,19 @@ test('a directory the build lists that cannot be read is found', { skip: RUNS_AS
   try {
     await mkdir(join(root, 'app/(templates)/dashboard'), { recursive: true })
     await mkdir(join(root, '.nextspark/registries'), { recursive: true })
+    await mkdir(join(root, '.nextspark/backups'), { recursive: true })
     await chmod(join(root, 'app/(templates)/dashboard'), 0)
     await chmod(join(root, '.nextspark/registries'), 0)
+    await chmod(join(root, '.nextspark/backups'), 0)
     assert.deepEqual(unsafeWritePlaces(root), [
-      { path: 'app/(templates)/dashboard', problem: "can't be read" },
+      { path: '.nextspark/backups', problem: "can't be read" },
       { path: '.nextspark/registries', problem: "can't be read" },
+      { path: 'app/(templates)/dashboard', problem: "can't be read" },
     ])
   } finally {
     await chmod(join(root, 'app/(templates)/dashboard'), 0o755).catch(() => {})
     await chmod(join(root, '.nextspark/registries'), 0o755).catch(() => {})
+    await chmod(join(root, '.nextspark/backups'), 0o755).catch(() => {})
     await cleanup()
   }
 })
@@ -179,6 +188,18 @@ test('a .nextspark/backups/.gitignore counts as in place only as a readable file
     await rm(join(root, BACKUPS_GITIGNORE), { recursive: true })
     assert.equal(await ensureBackupsGitignore(root), true)
     assert.equal(await readFile(join(root, BACKUPS_GITIGNORE), 'utf-8'), BACKUPS_GITIGNORE_CONTENT)
+
+    assert.equal(ownGitignoreState(root, REGISTRIES_GITIGNORE), 'missing')
+    await writeIn(root, REGISTRIES_GITIGNORE, '*\n!index.ts\n')
+    assert.equal(ownGitignoreState(root, REGISTRIES_GITIGNORE), 'other')
+    assert.deepEqual(unsafeWritePlaces(root).map(({ path }) => path), [REGISTRIES_GITIGNORE], "the registries' .gitignore is read as the backups' is")
+    await assert.rejects(ensureRegistriesGitignore(root), /No registry is written under \.nextspark\/registries/)
+    await rm(join(root, REGISTRIES_GITIGNORE))
+    await symlink(join(outside.root, 'rules'), join(root, REGISTRIES_GITIGNORE))
+    assert.deepEqual(unsafeWritePlaces(root), [{ path: REGISTRIES_GITIGNORE, problem: 'is a symlink, which git does not read, so git would pick up what is beside it: make it a file with * as its only pattern, or remove it for nextspark to write it' }], 'found once, not again as a symlink in the registries')
+    await rm(join(root, REGISTRIES_GITIGNORE))
+    assert.equal(await ensureRegistriesGitignore(root), true)
+    assert.equal(await readFile(join(root, REGISTRIES_GITIGNORE), 'utf-8'), REGISTRIES_GITIGNORE_CONTENT)
   } finally {
     await outside.cleanup()
     await cleanup()
@@ -298,6 +319,9 @@ test("the registry build writes nothing, in the project or through it, when a pl
     ['a backups .gitignore that takes the backups back', async root => {
       await writeIn(root, BACKUPS_GITIGNORE, '*\n!*/\n')
     }, `${BACKUPS_GITIGNORE} has patterns other than *`],
+    ['a registries .gitignore that takes the registries back', async root => {
+      await writeIn(root, REGISTRIES_GITIGNORE, '*\n!*.ts\n')
+    }, `${REGISTRIES_GITIGNORE} has patterns other than *`],
     ...(RUNS_AS_ROOT ? [] : [['a backups .gitignore that cannot be read', async root => {
       await writeIn(root, BACKUPS_GITIGNORE, '*\n')
       await chmod(join(root, BACKUPS_GITIGNORE), 0)
@@ -337,4 +361,37 @@ test("the registry build writes nothing, in the project or through it, when a pl
   }
 
   assert.deepEqual(wrong, [])
+})
+
+test("the registry build keeps .nextspark/registries out of git with a .gitignore of its own, while it runs and after, whatever the project's rules take back", async () => {
+  const project = await buildableProject()
+  const root = project.root
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: root })
+    await writeFile(join(root, '.gitignore'), 'node_modules/\n.env\napp/(templates)/\n!.nextspark/\n!.nextspark/registries/**\n')
+    await writeIn(root, '.nextspark/.gitignore', '!registries/\n!registries/**\n')
+    await writeFile(join(root, '.git/info/exclude'), '!*\n')
+    const visible = () => execFileSync('git', ['status', '--porcelain', '--untracked-files=all'], { cwd: root, encoding: 'utf8' })
+      .split('\n').filter(line => line.includes('.nextspark/registries'))
+
+    const build = spawn('node', ['scripts/build/registry.mjs'], { cwd: CORE_DIR, env: { ...process.env, NEXTSPARK_PROJECT_ROOT: root }, stdio: 'ignore' })
+    let exited = null
+    build.on('exit', code => { exited = code })
+    const during = new Set()
+    let polls = 0
+    while (exited === null) {
+      for (const line of visible()) during.add(line)
+      polls++
+      await new Promise(resolve => setTimeout(resolve, 5))
+    }
+
+    assert.equal(exited, 0)
+    assert.ok(polls > 1, 'git was asked while the build ran')
+    assert.deepEqual([...during], [], 'git picks up no registry while the build runs')
+    assert.deepEqual(visible(), [], 'nor after')
+    assert.equal(await readFile(join(root, REGISTRIES_GITIGNORE), 'utf8'), REGISTRIES_GITIGNORE_CONTENT)
+    assert.ok(existsSync(join(root, '.nextspark/registries/index.ts')), 'the registries are written')
+  } finally {
+    await project.cleanup()
+  }
 })

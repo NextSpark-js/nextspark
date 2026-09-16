@@ -1,12 +1,14 @@
 import { test, before } from 'node:test'
 import assert from 'node:assert/strict'
-import { execFileSync, spawnSync } from 'node:child_process'
+import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { chmod, lstat, mkdir, mkdtemp, readdir, readFile, readlink, rm, symlink, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+import { buildCli } from './built-cli.js'
 
 /**
  * registry:build, build and dev, run as the built CLI against the real core:
@@ -17,13 +19,13 @@ import { fileURLToPath } from 'node:url'
  */
 
 const PKG_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const CLI_ENTRY = join(PKG_ROOT, 'dist/cli.js')
+let CLI_ENTRY = ''
 const CORE_SOURCE = join(PKG_ROOT, '../core')
 const BACKUPS_GITIGNORE = '.nextspark/backups/.gitignore'
 const RUNS_AS_ROOT = process.getuid?.() === 0
 
 before(() => {
-  execFileSync('pnpm', ['run', 'build'], { cwd: PKG_ROOT, stdio: 'ignore' })
+  CLI_ENTRY = buildCli()
 })
 
 async function directory(prefix: string) {

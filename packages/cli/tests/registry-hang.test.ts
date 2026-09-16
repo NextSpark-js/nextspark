@@ -58,13 +58,18 @@ process.exitCode = ${code}
   return { root, cleanup: () => rm(root, { recursive: true, force: true }) }
 }
 
-/** Runs the built CLI for a project, bounded so a hang fails the run instead of blocking it. */
+/**
+ * Runs the built CLI for a project, bounded so a hang fails the run instead of
+ * blocking it. What it reads is bounded far above the megabytes the stand-in
+ * build prints: a run over spawnSync's own 1 MiB is killed as if it hung.
+ */
 function runCli(root: string, args: string[], timeoutMs = 10_000) {
   return spawnSync(process.execPath, [CLI_ENTRY, ...args], {
     cwd: root,
     timeout: timeoutMs,
     killSignal: 'SIGKILL',
     encoding: 'utf-8',
+    maxBuffer: 64 * 1024 * 1024,
   })
 }
 

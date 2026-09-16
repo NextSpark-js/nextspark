@@ -15,7 +15,7 @@ import { fileURLToPath } from 'url'
 import { errorWithLines, log, verbose } from '../../../utils/index.mjs'
 import { getProtectionLevel, ProtectionLevel } from '../../../../dist/config/protected-paths.js'
 import { selectTypeScriptModule, loadTypeScriptFor } from '../shared/typescript-compiler.mjs'
-import { ensureBackupsGitignore } from './backups-gitignore.mjs'
+import { ensureBackupsGitignore } from './own-gitignores.mjs'
 
 export { selectTypeScriptModule }
 

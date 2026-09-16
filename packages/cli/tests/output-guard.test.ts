@@ -1,6 +1,6 @@
 import { test, before } from 'node:test'
 import assert from 'node:assert/strict'
-import { execFileSync, spawnSync } from 'node:child_process'
+import { spawnSync } from 'node:child_process'
 import { chmod, mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -10,9 +10,10 @@ import chalk from 'chalk'
 import ora from 'ora'
 
 import { guardConsole, guardSpinners, shownLine } from '../src/utils/shown-path.js'
+import { buildCli } from './built-cli.js'
 
 const PKG_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const CLI_ENTRY = join(PKG_ROOT, 'dist/cli.js')
+let CLI_ENTRY = ''
 const CORE_SOURCE = join(PKG_ROOT, '../core')
 
 /** A name that, printed raw, starts lines of its own reading as success, erases a line, returns the carriage and separates or reorders lines. */
@@ -60,7 +61,7 @@ test('the console and the spinners print through shownLine once guarded', () => 
 })
 
 before(() => {
-  execFileSync('pnpm', ['run', 'build'], { cwd: PKG_ROOT, stdio: 'ignore' })
+  CLI_ENTRY = buildCli()
 })
 
 /**

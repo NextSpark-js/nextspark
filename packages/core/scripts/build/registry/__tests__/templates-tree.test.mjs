@@ -245,7 +245,7 @@ test('a build with something to back up writes nothing in the tree while .nextsp
       await mkdir(join(root, '.nextspark/backups'), { recursive: true })
       await symlink(join(outside, 'rules'), join(root, '.nextspark/backups/.gitignore'))
     } },
-    { name: '.nextspark/backups/.gitignore takes a backup back', message: /has patterns other than \*, which can take a backup back into git/, setUp: async root => {
+    { name: '.nextspark/backups/.gitignore takes a backup back', message: /\.nextspark\/backups\/\.gitignore has patterns other than \*, which can take what is beside it back into git/, setUp: async root => {
       await writeProjectFile(root, '.nextspark/backups/.gitignore', '*\n!*/\n')
     } },
     { name: '.nextspark/backups is a symlink', message: /\.nextspark\/backups is a symlink/, setUp: async (root, outside) => {

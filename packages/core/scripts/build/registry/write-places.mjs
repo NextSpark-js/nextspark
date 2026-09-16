@@ -9,9 +9,9 @@
  * @module core/scripts/build/registry/write-places
  */
 
-import { lstatSync, readdirSync } from 'fs'
+import { accessSync, constants, lstatSync, readdirSync } from 'fs'
 import { join } from 'path'
-import { BACKUPS_GITIGNORE, BACKUPS_GITIGNORE_PROBLEMS, backupsGitignoreState } from './post-build/backups-gitignore.mjs'
+import { BACKUPS_GITIGNORE, OWN_GITIGNORE_PROBLEMS, REGISTRIES_GITIGNORE, ownGitignoreState } from './post-build/own-gitignores.mjs'
 
 /**
  * What the registry build writes under or writes, from the project root: app/,
@@ -34,6 +34,16 @@ function lstatIn(projectRoot, path) {
     return lstatSync(join(projectRoot, path))
   } catch (error) {
     return error.code === 'ENOENT' || error.code === 'ENOTDIR' ? null : 'unreadable'
+  }
+}
+
+/** Whether a directory, from the project root, can be listed and looked into; one that doesn't exist can. */
+function readable(projectRoot, dir) {
+  try {
+    accessSync(join(projectRoot, dir), constants.R_OK | constants.X_OK)
+    return true
+  } catch (error) {
+    return error.code === 'ENOENT' || error.code === 'ENOTDIR'
   }
 }
 
@@ -87,9 +97,10 @@ function reportEntriesUnder(projectRoot, dir, filesOnly, report) {
  * the build backs up what is there and removes it before it writes.
  *
  * What can't be read where the build needs to look: one of those places, a
- * directory in app/(templates) or the registries directory. And a
- * .nextspark/backups/.gitignore that would not keep the backups out of git: a
- * symlink, not a file, unreadable, or with patterns other than `*`.
+ * directory in app/(templates), or the backups or registries directory. And a .gitignore of
+ * .nextspark/backups or .nextspark/registries that would not keep what is
+ * beside it out of git: a symlink, not a file, unreadable, or with patterns
+ * other than `*`.
  *
  * @param {string} projectRoot - The project root
  * @param {readonly string[]} [written] - Paths the caller writes or removes, from the project root
@@ -110,9 +121,14 @@ export function unsafeWritePlaces(projectRoot, written = []) {
     else if (kind === 'directory' ? !stat.isDirectory() : !stat.isFile()) report(path, `is not a ${kind}`)
   }
 
-  if (!reported('.nextspark') && !reported('.nextspark/backups')) {
-    const problem = BACKUPS_GITIGNORE_PROBLEMS[backupsGitignoreState(projectRoot)]
-    if (problem) report(BACKUPS_GITIGNORE, problem)
+  for (const [directory, gitignore] of [['.nextspark/backups', BACKUPS_GITIGNORE], ['.nextspark/registries', REGISTRIES_GITIGNORE]]) {
+    if (reported('.nextspark') || reported(directory)) continue
+    if (!readable(projectRoot, directory)) {
+      report(directory, "can't be read")
+      continue
+    }
+    const problem = OWN_GITIGNORE_PROBLEMS[ownGitignoreState(projectRoot, gitignore)]
+    if (problem) report(gitignore, problem)
   }
 
   // The first thing in the way of each path written, from the project root

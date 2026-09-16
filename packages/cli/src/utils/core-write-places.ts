@@ -8,23 +8,25 @@ export interface UnsafeWritePlace {
   problem: string;
 }
 
-/** What .nextspark/backups/.gitignore is, as core reads it. */
-export type BackupsGitignoreState = 'missing' | 'in place' | 'symlink' | 'not a file' | 'unreadable' | 'other';
+/** What the .gitignore of .nextspark/backups or .nextspark/registries is, as core reads it. */
+export type OwnGitignoreState = 'missing' | 'in place' | 'symlink' | 'not a file' | 'unreadable' | 'other';
 
 /**
- * Core's check of where its registry build writes, and the .gitignore it keeps
- * in .nextspark/backups, from the core installed in the project.
+ * Core's check of where its registry build writes, and the .gitignore files it
+ * keeps in .nextspark/backups and .nextspark/registries, from the core installed
+ * in the project.
  */
 export interface CoreWritePlaces {
   unsafeWritePlaces(projectRoot: string, written?: readonly string[]): UnsafeWritePlace[];
   unsafeWritePlacesLines(unsafe: UnsafeWritePlace[]): string[];
   BACKUPS_GITIGNORE: string;
-  backupsGitignoreState(projectRoot: string): BackupsGitignoreState;
+  REGISTRIES_GITIGNORE: string;
+  ownGitignoreState(projectRoot: string, path: string): OwnGitignoreState;
   ensureBackupsGitignore(projectRoot: string): Promise<boolean>;
 }
 
 const WRITE_PLACES_MODULE = join('scripts', 'build', 'registry', 'write-places.mjs');
-const BACKUPS_GITIGNORE_MODULE = join('scripts', 'build', 'registry', 'post-build', 'backups-gitignore.mjs');
+const OWN_GITIGNORES_MODULE = join('scripts', 'build', 'registry', 'post-build', 'own-gitignores.mjs');
 
 /**
  * Load core's check of the places its registry build writes under - the check
@@ -38,22 +40,23 @@ const BACKUPS_GITIGNORE_MODULE = join('scripts', 'build', 'registry', 'post-buil
  */
 export async function loadCoreWritePlaces(coreDir: string): Promise<CoreWritePlaces> {
   const writePlaces = join(coreDir, WRITE_PLACES_MODULE);
-  const backupsGitignore = join(coreDir, BACKUPS_GITIGNORE_MODULE);
-  if (!existsSync(writePlaces) || !existsSync(backupsGitignore)) {
+  const ownGitignores = join(coreDir, OWN_GITIGNORES_MODULE);
+  if (!existsSync(writePlaces) || !existsSync(ownGitignores)) {
     throw new Error(
       `@nextsparkjs/core ${readCoreVersion(coreDir)} has no check of where its registry build writes, which this version of the CLI runs before writing. ` +
         'Install the @nextsparkjs/core that matches @nextsparkjs/cli.'
     );
   }
-  const [places, backups] = await Promise.all([
+  const [places, gitignores] = await Promise.all([
     import(pathToFileURL(writePlaces).href),
-    import(pathToFileURL(backupsGitignore).href),
+    import(pathToFileURL(ownGitignores).href),
   ]);
   return {
     unsafeWritePlaces: places.unsafeWritePlaces,
     unsafeWritePlacesLines: places.unsafeWritePlacesLines,
-    BACKUPS_GITIGNORE: backups.BACKUPS_GITIGNORE,
-    backupsGitignoreState: backups.backupsGitignoreState,
-    ensureBackupsGitignore: backups.ensureBackupsGitignore,
+    BACKUPS_GITIGNORE: gitignores.BACKUPS_GITIGNORE,
+    REGISTRIES_GITIGNORE: gitignores.REGISTRIES_GITIGNORE,
+    ownGitignoreState: gitignores.ownGitignoreState,
+    ensureBackupsGitignore: gitignores.ensureBackupsGitignore,
   };
 }
