@@ -124,23 +124,12 @@ git --version
 
 ## Core Version Tracking
 
-The boilerplate tracks the installed core framework version in `core.version.json`. This file is automatically managed by the update system.
-
-**Check your current core version:**
+**Check your installed core version:**
 ```bash
-cat core.version.json
+pnpm update-core --current
 ```
 
-**Example output:**
-```json
-{
-  "version": "0.1.0",
-  "updatedAt": "2024-12-20T00:00:00.000Z",
-  "releaseUrl": null,
-  "previousVersion": null,
-  "repository": "TheMoneyTeam-com-ar/nextspark"
-}
-```
+After each update it completes, `update-core` also records the version in `core.version.json`.
 
 **For updating to newer versions:** See [Core Updates](../updates/update-core)
 

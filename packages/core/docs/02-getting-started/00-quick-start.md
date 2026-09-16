@@ -224,10 +224,10 @@ pnpm dev
 
 **Verify your core framework version:**
 ```bash
-cat core.version.json
+pnpm update-core --current
 ```
 
-This file tracks which version of the core framework you're running. For updating to newer versions, see [Core Updates](../updates/update-core).
+For updating to newer versions, see [Core Updates](../updates/update-core).
 
 ---
 
