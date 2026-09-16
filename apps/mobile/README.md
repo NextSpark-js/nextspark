@@ -18,10 +18,14 @@ pnpm install
 ```
 
 2. No API URL configuration is needed by default. Leave `EXPO_PUBLIC_API_URL`
-unset: the client auto-detects it from the Expo dev server's own address
-(the Android emulator alone is translated to its `10.0.2.2` host alias; every
-other platform, physical Android devices on the same Wi-Fi included, uses
-that address as reported). Only set it to override that detection:
+unset: the client auto-detects it from the Expo dev server's own address, as
+Metro reports it - a LAN address in Metro's default mode, which is what the
+Android emulator gets too. The emulator only gets translated to its
+`10.0.2.2` host alias when Metro's own address is loopback instead (Expo
+started with `--localhost`, or an `adb reverse tcp:8081 tcp:8081` tunnel),
+since it is a separate machine from a loopback address's point of view;
+every other platform, physical Android devices on the same Wi-Fi included,
+always uses the address as reported. Only set it to override that detection:
 ```bash
 # EXPO_PUBLIC_API_URL=http://192.168.x.x:3000
 ```
