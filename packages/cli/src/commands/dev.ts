@@ -4,7 +4,8 @@ import ora from 'ora';
 import { getCoreDir, getProjectRoot, isMonorepoMode } from '../utils/paths.js';
 import { resolveBundlerArgs, type Bundler } from '../utils/next-bundler.js';
 import { spawnNext } from '../utils/spawn-next.js';
-import { runRegistryBuild, templatesTreeLines } from '../utils/registry-build.js';
+import { registryBuildBlocker, runRegistryBuild, templatesTreeLines } from '../utils/registry-build.js';
+import { loadCoreWritePlaces } from '../utils/core-write-places.js';
 import { shownLines, shownPath } from '../utils/shown-path.js';
 
 interface DevOptions {
@@ -58,6 +59,19 @@ export async function devCommand(options: DevOptions): Promise<void> {
     const mode = isMonorepoMode() ? 'monorepo' : 'npm';
 
     spinner.succeed(`Core found at: ${coreDir} (${mode} mode)`);
+
+    // The registry build checks where it writes before writing; the check runs
+    // here first too, from the same core, since with --registry Next starts
+    // alongside the build, and a build that can't write is no dev server to start
+    if (registryBuildBlocker(projectRoot) === null) {
+      const core = await loadCoreWritePlaces(coreDir);
+      const unsafe = core.unsafeWritePlaces(projectRoot);
+      if (unsafe.length > 0) {
+        console.error(chalk.red("[Registry] Not started: the registry build can't write safely under these paths"));
+        for (const line of core.unsafeWritePlacesLines(unsafe)) console.error(chalk.red(`  ${shownPath(line)}`));
+        process.exit(1);
+      }
+    }
 
     const processes: ChildProcess[] = [];
 

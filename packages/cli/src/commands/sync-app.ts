@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
-import { basename, join, dirname, relative } from 'node:path';
+import { basename, join, dirname, relative, sep } from 'node:path';
 import chalk from 'chalk';
 import ora from 'ora';
 import { getCoreDir, getProjectRoot } from '../utils/paths.js';
@@ -13,20 +13,18 @@ import {
   type TemplatesPlanResult,
 } from '../utils/registry-build.js';
 import {
-  BACKUPS_GITIGNORE,
-  backupsGitignoreState,
-  ensureBackupsGitignore,
   ensureGeneratedPathsIgnored,
   generatedPathsOnDisk,
+  gitignoreIsSymlink,
   planGitignore,
   TEMPLATES_GITIGNORE_ENTRY,
   trackedTemplatesFiles,
-  unsafeWritePlaces,
   unignoredPaths,
 } from '../utils/templates-gitignore.js';
+import { loadCoreWritePlaces } from '../utils/core-write-places.js';
 import { applySyncPlan, readCoreVersion, readSyncInput, readTree } from '../utils/sync-files.js';
 import { describeSyncPlan, nextSyncState, plannedAppFiles, planSync, type ReportLine } from '../utils/sync-plan.js';
-import { writeSyncState } from '../utils/sync-state.js';
+import { SYNC_STATE_FILE, writeSyncState } from '../utils/sync-state.js';
 import { shownPath, shownStack } from '../utils/shown-path.js';
 
 interface SyncAppOptions {
@@ -147,40 +145,35 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
     const actions = planSync(input);
     const writes = actions.filter(({ kind }) => kind !== 'unchanged' && kind !== 'keep');
 
-    // Neither a dry run nor a run goes on where it can't write safely: through a
-    // symlink, what is written, replaced or removed lands wherever it points,
-    // blind to what is there and where the .gitignore can't reach, and a file or
-    // directory in the way stops a run halfway
-    const unsafe = unsafeWritePlaces(projectRoot, writes.map(({ path }) => path));
+    // Neither a dry run nor a run goes on where it can't write safely. The check
+    // is core's, the one its registry build runs before writing, asked here
+    // about the places the build writes under and about what sync:app writes
+    // before it: the files of this sync, its state, and a .gitignore that is no
+    // symlink - one that is, sync:app doesn't write through
+    const core = await loadCoreWritePlaces(coreDir);
+    const written = [
+      ...writes.map(({ path }) => path),
+      SYNC_STATE_FILE.split(sep).join('/'),
+      ...(gitignoreIsSymlink(projectRoot) ? [] : ['.gitignore']),
+    ];
+    const unsafe = core.unsafeWritePlaces(projectRoot, written);
     if (unsafe.length > 0) {
       spinner.fail("Sync not started: sync:app can't write safely under these paths");
       console.error(chalk.red('\n  sync:app and the registry build write under these paths:'));
-      for (const { path, problem } of unsafe) console.error(chalk.red(`    ${shownPath(path)} ${problem}`));
-      console.error(chalk.red("  Through a symlink, what they write, replace or remove lands wherever it points, and git can't tell whether it is ignored."));
-      console.error(chalk.yellow('  Make each one a directory or file of its own, of the kind that goes there, and run sync:app again.\n'));
+      for (const line of core.unsafeWritePlacesLines(unsafe)) console.error(chalk.red(`    ${shownPath(line)}`));
+      console.error('');
       process.exitCode = 1;
       return;
     }
 
     // The backups sync and the registry build take under .nextspark/backups are
     // kept out of git by that directory's own .gitignore, put in place before
-    // the first one is written, whatever each is named or holds. One already
-    // there that is a symlink, which git does not read, or that has patterns
-    // other than `*`, which can take a backup back, is the project's: nothing is
-    // written until it is fixed
+    // the first one is written, whatever each is named or holds; one already
+    // there that can't do that has stopped the run above
     const buildRuns = registryBuildBlocker(projectRoot) === null;
     const backsUpUnderNextspark = buildRuns
       || actions.some(({ path, backup }) => backup && existsSync(join(projectRoot, path)));
-    const backupsGitignore = backsUpUnderNextspark ? backupsGitignoreState(projectRoot) : null;
-    if (backupsGitignore === 'symlink' || backupsGitignore === 'other') {
-      spinner.fail(`Sync not started: ${BACKUPS_GITIGNORE} would not keep the backups out of git`);
-      console.error(chalk.red(backupsGitignore === 'symlink'
-        ? `\n  ${BACKUPS_GITIGNORE} is a symlink, which git does not read, and sync:app and the registry build back files up there.`
-        : `\n  ${BACKUPS_GITIGNORE} has patterns other than *, which can take a backup back into git, and sync:app and the registry build back files up there.`));
-      console.error(chalk.yellow('  Leave * as its only pattern, or remove it for sync:app to write it, and run sync:app again.\n'));
-      process.exitCode = 1;
-      return;
-    }
+    const backupsGitignore = backsUpUnderNextspark ? core.backupsGitignoreState(projectRoot) : null;
 
     // What sync:app writes is kept out of git by .gitignore files as git reads
     // them, decided before anything is written: the lines it adds go at the
@@ -254,7 +247,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
 
     const addsBackupsGitignore = backupsGitignore === 'missing';
     if (addsBackupsGitignore && !options.dryRun) {
-      ensureBackupsGitignore(projectRoot);
+      await core.ensureBackupsGitignore(projectRoot);
     }
 
     let appBackupDir: string | null = null;
@@ -295,7 +288,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
         console.log(chalk.gray(`  Would add ${gitignorePlan.add.join(', ')} to .gitignore`));
       }
       if (addsBackupsGitignore) {
-        console.log(chalk.gray(`  Would add ${BACKUPS_GITIGNORE}, which keeps every backup there out of git`));
+        console.log(chalk.gray(`  Would add ${core.BACKUPS_GITIGNORE}, which keeps every backup there out of git`));
       }
 
       if (templatesPlan?.status === 'planned' && templatesPlan.changes) {
@@ -331,7 +324,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
         console.log(chalk.gray(`  Added ${addedGitignoreEntries.join(', ')} to .gitignore`));
       }
       if (addsBackupsGitignore) {
-        console.log(chalk.gray(`  Added ${BACKUPS_GITIGNORE}, which keeps every backup there out of git`));
+        console.log(chalk.gray(`  Added ${core.BACKUPS_GITIGNORE}, which keeps every backup there out of git`));
       }
 
       // Git is asked about every file this run left on disk under the entries,

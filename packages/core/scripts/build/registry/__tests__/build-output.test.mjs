@@ -52,7 +52,7 @@ function wrongLines(label, lines) {
   ]
 }
 
-test('a directory in app/(templates) the build cannot read is named escaped where the build and its plan fail', { skip: process.getuid?.() === 0 }, async () => {
+test('a directory in app/(templates) the build cannot read is named escaped where the build stops before writing and where its plan fails', { skip: process.getuid?.() === 0 }, async () => {
   const root = await createProject()
   const unreadable = join(root, 'app', '(templates)', FORGED)
   try {
@@ -66,8 +66,7 @@ test('a directory in app/(templates) the build cannot read is named escaped wher
 
     const wrong = [...wrongLines('build', build.lines), ...wrongLines('plan', plan.lines)]
     const named = `scandir "${join(root, 'app', '(templates)')}/${SHOWN}"`
-    if (!build.lines.some(line => line.startsWith('❌ Build failed: EACCES') && line.endsWith(named))) wrong.push('build: the failure does not name the directory escaped')
-    if (!build.lines.some(line => line.startsWith('Error: EACCES') && line.endsWith(named))) wrong.push('build: the stack does not name the directory escaped')
+    if (!build.lines.some(line => line.trim() === `"app/(templates)/${SHOWN} can't be read"`)) wrong.push('build: the check does not name the directory escaped')
     if (!plan.lines.some(line => line.startsWith('EACCES') && line.endsWith(named))) wrong.push('plan: the failure does not name the directory escaped')
     assert.equal(build.status, 1)
     assert.equal(plan.status, 1)

@@ -7,15 +7,11 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import {
-  BACKUPS_GITIGNORE,
-  backupsGitignoreState,
-  ensureBackupsGitignore,
   ensureGeneratedPathsIgnored,
   generatedPathsOnDisk,
   missingGitignoreEntries,
   planGitignore,
   trackedTemplatesFiles,
-  unsafeWritePlaces,
 } from '../src/utils/templates-gitignore.js'
 
 async function project() {
@@ -391,103 +387,6 @@ test('once a copy of app/ is written, only a line that ignores its directory cou
   assert.deepEqual(wrong, [])
 })
 
-test('the .gitignore in .nextspark/backups ignores a backup whatever its directory is named and whatever the rules above take back', async () => {
-  const { root, cleanup } = await project()
-  try {
-    execFileSync('git', ['init', '-q'], { cwd: root })
-    await writeFile(join(root, '.gitignore'), '!.nextspark/\n!.nextspark/backups/**\n')
-    await writeFile(join(root, '.git/info/exclude'), '!*\n')
-    await mkdir(join(root, '.nextspark/backups/2026-09-16T00-00-00-000Z-r3g1st'), { recursive: true })
-    await writeFile(join(root, '.nextspark/.gitignore'), '!backups/\n!backups/**\n')
-    await writeFile(join(root, '.nextspark/backups/2026-09-16T00-00-00-000Z-r3g1st/.gitignore'), '!*\n')
-    const backups = [
-      '.nextspark/backups/2026-09-16T00-00-00-000Z-Zz9Qa1/app/(templates)/(public)/page.tsx',
-      '.nextspark/backups/2026-09-16T00-00-00-000Z-r3g1st/i18n.ts',
-      '.nextspark/backups/named by hand/.env.local',
-    ]
-    for (const file of backups) {
-      await mkdir(join(root, file, '..'), { recursive: true })
-      await writeFile(join(root, file), 'SECRET=1\n')
-    }
-    assert.deepEqual(backups.map((file) => gitIgnores(root, file)), [false, false, false])
-
-    assert.equal(backupsGitignoreState(root), 'missing')
-    assert.equal(ensureBackupsGitignore(root), true)
-    assert.equal(ensureBackupsGitignore(root), false, 'a second call leaves it as it is')
-    assert.equal(backupsGitignoreState(root), 'in place')
-
-    assert.deepEqual(backups.map((file) => gitIgnores(root, file)), [true, true, true])
-    assert.equal(
-      execFileSync('git', ['status', '--porcelain', '--untracked-files=all'], { cwd: root, encoding: 'utf-8' }),
-      '?? .gitignore\n?? .nextspark/.gitignore\n'
-    )
-  } finally {
-    await cleanup()
-  }
-})
-
-test('a .gitignore in .nextspark/backups counts as in place only with * as its one pattern, and one already there is never written over', async () => {
-  const cases: { content: string; state: string }[] = [
-    { content: '# Our own words\r\n\n*   \r\n', state: 'in place' },
-    { content: '*\n!manual-snapshots/\n', state: 'other' },
-    { content: '*\n!*-q1w2e3/\n!*-q1w2e3/**\n', state: 'other' },
-    { content: '# nothing\n', state: 'other' },
-  ]
-  for (const { content, state } of cases) {
-    const { root, cleanup } = await project()
-    try {
-      await mkdir(join(root, '.nextspark/backups'), { recursive: true })
-      await writeFile(join(root, BACKUPS_GITIGNORE), content)
-      assert.equal(backupsGitignoreState(root), state, JSON.stringify(content))
-      assert.equal(ensureBackupsGitignore(root), false, JSON.stringify(content))
-      assert.equal(await readFile(join(root, BACKUPS_GITIGNORE), 'utf-8'), content)
-    } finally {
-      await cleanup()
-    }
-  }
-
-  const linked = await project()
-  const outside = await project()
-  try {
-    await mkdir(join(linked.root, '.nextspark/backups'), { recursive: true })
-    await symlink(join(outside.root, 'rules'), join(linked.root, BACKUPS_GITIGNORE))
-    assert.equal(backupsGitignoreState(linked.root), 'symlink')
-    assert.equal(ensureBackupsGitignore(linked.root), false)
-    assert.equal(existsSync(join(outside.root, 'rules')), false, 'nothing is written through the symlink')
-  } finally {
-    await linked.cleanup()
-    await outside.cleanup()
-  }
-})
-
-test("the .gitignore sync:app keeps in .nextspark/backups is the one core's registry build keeps, read the same way", async () => {
-  const core = await import(new URL('../../core/scripts/build/registry/post-build/backups-gitignore.mjs', import.meta.url).href)
-  assert.equal(core.BACKUPS_GITIGNORE, BACKUPS_GITIGNORE)
-
-  const bySync = await project()
-  const byCore = await project()
-  try {
-    assert.equal(ensureBackupsGitignore(bySync.root), true)
-    assert.equal(await core.ensureBackupsGitignore(byCore.root), true)
-    assert.equal(await readFile(join(bySync.root, BACKUPS_GITIGNORE), 'utf-8'), await readFile(join(byCore.root, BACKUPS_GITIGNORE), 'utf-8'))
-  } finally {
-    await bySync.cleanup()
-    await byCore.cleanup()
-  }
-
-  const contents = ['*\n', '\uFEFF*\r\n', '# ours\n\n*   \n', '*\\ \n', '\\*\n', '/*\n', '*\n!keep/\n', '# nothing\n', ' *\n', '*\t\n']
-  for (const content of contents) {
-    const { root, cleanup } = await project()
-    try {
-      await mkdir(join(root, '.nextspark/backups'), { recursive: true })
-      await writeFile(join(root, BACKUPS_GITIGNORE), content)
-      assert.equal(await core.backupsGitignoreState(root), backupsGitignoreState(root), JSON.stringify(content))
-    } finally {
-      await cleanup()
-    }
-  }
-})
-
 /**
  * Run `check` on a project where git can't be asked about it: outside a
  * repository, or with no git on PATH in one that is.
@@ -628,79 +527,6 @@ test('the rules git reads from outside the project count: its exclude file, core
     await writeFile(join(root, 'app/(templates)/page.tsx'), '')
     assert.equal(gitIgnores(root, 'app/(templates)/page.tsx'), false, 'git takes it back')
   } finally {
-    await cleanup()
-  }
-})
-
-test('a symlink where sync:app writes, or something else in the way, is found, and a symlink is listed as the file git sees, not gone through', async () => {
-  const { root, cleanup } = await project()
-  const outside = await project()
-  try {
-    await mkdir(join(outside.root, 'dashboard'), { recursive: true })
-    await writeFile(join(outside.root, 'dashboard/layout.tsx'), '')
-    await mkdir(join(root, 'app'), { recursive: true })
-    await mkdir(join(root, '.nextspark/backups/2026-09-16T00-00-00-000Z-q1w2e3'), { recursive: true })
-    await writeFile(join(root, '.nextspark/backups/2026-09-16T00-00-00-000Z-q1w2e3/i18n.ts'), '')
-
-    assert.deepEqual(unsafeWritePlaces(root), [])
-
-    await symlink(outside.root, join(root, 'app/(templates)'))
-    assert.deepEqual(unsafeWritePlaces(root), [{ path: 'app/(templates)', problem: 'is a symlink' }])
-    assert.ok(generatedPathsOnDisk(root).includes('app/(templates)'), 'the symlink is listed')
-    assert.ok(!generatedPathsOnDisk(root).some((path) => path.startsWith('app/(templates)/')), 'nothing past it is')
-
-    await rm(join(root, 'app/(templates)'))
-    await mkdir(join(root, 'app/(templates)/(public)'), { recursive: true })
-    await symlink(join(outside.root, 'dashboard'), join(root, 'app/(templates)/(public)/dashboard'))
-    await symlink(join(outside.root, 'missing'), join(root, '.nextspark/sync-state.json'))
-    await symlink(join(outside.root, 'dashboard'), join(root, '.nextspark/registries'))
-    await symlink(join(outside.root, 'dashboard'), join(root, 'app/dashboard'))
-    assert.deepEqual(unsafeWritePlaces(root, ['app/dashboard/page.tsx', 'app/layout.tsx', 'i18n.ts']), [
-      { path: '.nextspark/registries', problem: 'is a symlink' },
-      { path: '.nextspark/sync-state.json', problem: 'is a symlink' },
-      { path: 'app/dashboard', problem: 'is a symlink' },
-      { path: 'app/(templates)/(public)/dashboard', problem: 'is a symlink' },
-    ])
-    assert.deepEqual(unsafeWritePlaces(root).map(({ path }) => path), [
-      '.nextspark/registries',
-      '.nextspark/sync-state.json',
-      'app/(templates)/(public)/dashboard',
-    ], 'app/dashboard counts only when a sync writes under it')
-
-    await rm(join(root, '.nextspark/registries'))
-    await mkdir(join(root, '.nextspark/registries'))
-    await symlink(join(outside.root, 'index.ts'), join(root, '.nextspark/registries/index.ts'))
-    assert.ok(unsafeWritePlaces(root).some(({ path }) => path === '.nextspark/registries/index.ts'), 'a symlink in the registries is found')
-
-    await rm(join(root, '.nextspark/registries/index.ts'))
-    await mkdir(join(root, '.nextspark/registries/index.ts'))
-    await mkdir(join(root, 'app/(templates)/(public)/page.tsx'), { recursive: true })
-    await rm(join(root, 'app/dashboard'))
-    await writeFile(join(root, 'app/dashboard'), '')
-    await mkdir(join(root, 'i18n.ts'))
-    await mkdir(join(root, '.gitignore'))
-    assert.deepEqual(unsafeWritePlaces(root, ['app/dashboard/page.tsx', 'app/layout.tsx', 'i18n.ts']), [
-      { path: '.nextspark/sync-state.json', problem: 'is a symlink' },
-      { path: '.gitignore', problem: 'is not a file' },
-      { path: 'app/dashboard', problem: 'is not a directory' },
-      { path: 'i18n.ts', problem: 'is not a file' },
-      { path: 'app/(templates)/(public)/dashboard', problem: 'is a symlink' },
-      { path: '.nextspark/registries/index.ts', problem: 'is not a file' },
-    ], 'a directory in app/(templates) where a file goes is left to the registry build')
-    await rm(join(root, '.gitignore'), { recursive: true })
-    await symlink(join(outside.root, 'rules'), join(root, '.gitignore'))
-    assert.ok(!unsafeWritePlaces(root).some(({ path }) => path === '.gitignore'), "the project's .gitignore may be a symlink")
-
-    await rm(join(root, '.nextspark'), { recursive: true })
-    await writeFile(join(root, '.nextspark'), '')
-    await rm(join(root, 'app'), { recursive: true })
-    await symlink(outside.root, join(root, 'app'))
-    assert.deepEqual(unsafeWritePlaces(root), [
-      { path: 'app', problem: 'is a symlink' },
-      { path: '.nextspark', problem: 'is not a directory' },
-    ])
-  } finally {
-    await outside.cleanup()
     await cleanup()
   }
 })

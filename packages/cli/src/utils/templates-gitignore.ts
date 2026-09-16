@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   asBytes,
@@ -86,104 +86,6 @@ function filesUnder(projectRoot: string, dir: string): string[] {
 }
 
 /**
- * What is in the way under `dir`, from the project root, without going through
- * a symlink: each symlink, anything that is neither a file, a directory nor a
- * symlink, and, with `filesOnly`, a directory right under `dir`.
- */
-function oddEntriesUnder(projectRoot: string, dir: string, filesOnly: boolean): { path: string; problem: string }[] {
-  const absolute = join(projectRoot, dir);
-  if (!existsSync(absolute) || !lstatSync(absolute).isDirectory()) return [];
-  return readdirSync(absolute, { withFileTypes: true }).flatMap((entry) => {
-    const path = `${dir}/${entry.name}`;
-    if (entry.isSymbolicLink()) return [{ path, problem: 'is a symlink' }];
-    if (entry.isDirectory()) return filesOnly ? [{ path, problem: 'is not a file' }] : oddEntriesUnder(projectRoot, path, false);
-    return entry.isFile() ? [] : [{ path, problem: 'is neither a file nor a directory' }];
-  });
-}
-
-/**
- * The places sync:app and the registry build write under that they can't write
- * under safely, from the project root, each with what is wrong with it.
- *
- * A symlink: app, app/(templates) or anything in it, .nextspark, its backups,
- * its registries or anything in them, the sync state, and each of `written` -
- * the paths a sync writes or removes - or a directory above one. What goes
- * through one lands wherever it points, outside the project maybe, and blind: a
- * directory sync:app reads skips a symlink, so a file behind one looks missing
- * and is written over as new, and the build replaces and removes files in
- * app/(templates). Nor can git vouch for it: a symlink is no directory for a line
- * like `app/(templates)/`, so git picks it up, and git won't say whether a path
- * beyond one is ignored. The project's .gitignore may be one: sync:app never
- * writes through it, and what git then reads is decided apart.
- *
- * Or something other than what goes there, which stops a run halfway, once it
- * has written part of what it writes: a file where one of those directories
- * goes, or a directory above a path of `written`; a directory where the sync
- * state, the project's .gitignore, a path of `written` or a registry goes - the
- * registry build writes only files right in .nextspark/registries; and, in
- * app/(templates) and .nextspark/registries, anything that is neither a file, a
- * directory nor a symlink. A file in app/(templates) where the build needs a
- * directory, or a directory where it needs a file, is not in the way: the
- * build backs up what is there and removes it before it writes.
- */
-export function unsafeWritePlaces(projectRoot: string, written: readonly string[] = []): { path: string; problem: string }[] {
-  const places: { path: string; kind: 'directory' | 'file'; symlinkLeftAlone?: boolean }[] = [
-    { path: 'app', kind: 'directory' },
-    { path: 'app/(templates)', kind: 'directory' },
-    { path: '.nextspark', kind: 'directory' },
-    { path: '.nextspark/backups', kind: 'directory' },
-    { path: '.nextspark/registries', kind: 'directory' },
-    { path: '.nextspark/sync-state.json', kind: 'file' },
-    { path: '.gitignore', kind: 'file', symlinkLeftAlone: true },
-  ];
-
-  const unsafe: { path: string; problem: string }[] = [];
-  for (const { path, kind, symlinkLeftAlone } of places) {
-    let stat;
-    try {
-      stat = lstatSync(join(projectRoot, path));
-    } catch {
-      continue;
-    }
-    if (stat.isSymbolicLink()) {
-      if (!symlinkLeftAlone) unsafe.push({ path, problem: 'is a symlink' });
-    } else if (kind === 'directory' ? !stat.isDirectory() : !stat.isFile()) {
-      unsafe.push({ path, problem: `is not a ${kind}` });
-    }
-  }
-
-  // The first thing in the way of each path written, from the project root
-  for (const path of written) {
-    const parts = path.split('/');
-    for (let depth = 1; depth <= parts.length; depth++) {
-      const along = parts.slice(0, depth).join('/');
-      let stat;
-      try {
-        stat = lstatSync(join(projectRoot, along));
-      } catch {
-        break;
-      }
-      const problem = stat.isSymbolicLink()
-        ? 'is a symlink'
-        : depth < parts.length
-          ? (stat.isDirectory() ? null : 'is not a directory')
-          : (stat.isFile() ? null : 'is not a file');
-      if (!problem) continue;
-      if (!unsafe.some((place) => place.path === along)) unsafe.push({ path: along, problem });
-      break;
-    }
-  }
-
-  // A tree that is somewhere else already, past a symlink, or that is no directory, is not walked
-  const walked: { dir: string; filesOnly: boolean }[] = [];
-  if (!unsafe.some(({ path }) => path === 'app' || path === 'app/(templates)')) walked.push({ dir: 'app/(templates)', filesOnly: false });
-  if (!unsafe.some(({ path }) => path === '.nextspark' || path === '.nextspark/registries')) walked.push({ dir: '.nextspark/registries', filesOnly: true });
-  const inside = walked.flatMap(({ dir, filesOnly }) => oddEntriesUnder(projectRoot, dir, filesOnly))
-    .filter(({ path }) => !unsafe.some((place) => place.path === path));
-  return [...unsafe, ...inside];
-}
-
-/**
  * The files sync:app and the registry build have left in the project that
  * belong under a .gitignore entry: everything under app/(templates),
  * .nextspark/backups and each app.backup.v directory, and the sync state.
@@ -232,14 +134,6 @@ function gitIgnoredPaths(projectRoot: string, paths: readonly string[]): Set<str
     const pattern = fields[index * 4 + 2];
     return pattern !== '' && !pattern.startsWith('!');
   }));
-}
-
-/** The lines of a .gitignore's content as git takes their patterns: without a starting byte order mark, a closing carriage return, or trailing spaces. */
-function linesAsGitReadsThem(content: string): string[] {
-  return content
-    .replace(/^\uFEFF/, '')
-    .split('\n')
-    .map((line) => line.replace(/\r$/, '').replace(/ +$/, ''));
 }
 
 /** Whether git leaves out the place an entry of GENERATED_PATHS keeps out, and the negation that takes it back when one does. */
@@ -369,52 +263,6 @@ export function ensureGeneratedPathsIgnored(projectRoot: string): string[] {
   const current = existsSync(gitignorePath) ? readFileSync(gitignorePath, 'utf-8') : '';
   writeFileSync(gitignorePath, withEntries(current, add));
   return add;
-}
-
-/**
- * The .gitignore sync:app keeps in .nextspark/backups. Each backup there goes
- * into a directory named as it is created - by sync:app, and by core's registry
- * build, which picks its own - and can hold anything, a .gitignore included, so
- * no line in the project's .gitignore can be asked about for a backup before it
- * exists. A .gitignore in the directory that ignores everything in it covers
- * every one of them: git takes the patterns of the deepest .gitignore over those
- * of any other, the repository's exclude file and core.excludesFile, and doesn't
- * look into a directory it ignores.
- */
-export const BACKUPS_GITIGNORE = '.nextspark/backups/.gitignore';
-
-const BACKUPS_GITIGNORE_CONTENT = '# Backups nextspark keeps on this machine: none of them belongs in git\n*\n';
-
-/**
- * What .nextspark/backups/.gitignore is: absent; in place, when `*` is the only
- * pattern git reads in it, whatever its comments; a symlink, which git does not
- * read; or anything else - a file with other patterns, which can take a backup
- * back, or no file at all.
- */
-export function backupsGitignoreState(projectRoot: string): 'missing' | 'in place' | 'symlink' | 'other' {
-  const path = join(projectRoot, BACKUPS_GITIGNORE);
-  try {
-    const stat = lstatSync(path);
-    if (stat.isSymbolicLink()) return 'symlink';
-    if (!stat.isFile()) return 'other';
-    const patterns = linesAsGitReadsThem(readFileSync(path, 'utf-8')).filter((line) => line !== '' && !line.startsWith('#'));
-    return patterns.length === 1 && patterns[0] === '*' ? 'in place' : 'other';
-  } catch {
-    return 'missing';
-  }
-}
-
-/**
- * Give .nextspark/backups the .gitignore sync:app keeps there, when it has none.
- * One already there is never written over: what it holds is the project's.
- *
- * @returns Whether it was written.
- */
-export function ensureBackupsGitignore(projectRoot: string): boolean {
-  if (backupsGitignoreState(projectRoot) !== 'missing') return false;
-  mkdirSync(join(projectRoot, '.nextspark', 'backups'), { recursive: true });
-  writeFileSync(join(projectRoot, BACKUPS_GITIGNORE), BACKUPS_GITIGNORE_CONTENT, { flag: 'wx' });
-  return true;
 }
 
 /**

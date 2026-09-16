@@ -10,6 +10,9 @@ import { fileURLToPath } from 'node:url'
 import { syncAppCommand } from '../src/commands/sync-app.js'
 
 const CORE = 'node_modules/@nextsparkjs/core'
+/** Core's own check of where it writes, which sync:app loads from the core installed in the project. */
+const CORE_SOURCE = join(dirname(fileURLToPath(import.meta.url)), '../../core')
+const CORE_WRITE_CHECK = ['scripts/build/registry/write-places.mjs', 'scripts/build/registry/post-build/backups-gitignore.mjs']
 const CORE_VERSION = '0.0.0-test'
 const CORE_I18N = "export { default } from '@nextsparkjs/core/i18n'\n"
 const CORE_PROXY = 'export async function proxy(request) {\n  return request\n}\n'
@@ -32,6 +35,7 @@ async function project() {
   const root = await mkdtemp(join(tmpdir(), 'nextspark-sync-app-'))
 
   await write(root, `${CORE}/package.json`, JSON.stringify({ name: '@nextsparkjs/core', version: CORE_VERSION }))
+  for (const module of CORE_WRITE_CHECK) await write(root, `${CORE}/${module}`, await readFile(join(CORE_SOURCE, module), 'utf-8'))
   await write(root, `${CORE}/templates/app/layout.tsx`, ROOT_LAYOUT)
   await write(root, `${CORE}/templates/app/layout.ppr.tsx`, PPR_LAYOUT)
   await write(root, `${CORE}/templates/app/dashboard/page.tsx`, 'export default function Dashboard() { return null }\n')
@@ -595,18 +599,23 @@ async function snapshot(dir: string): Promise<string> {
   const entries = (await readdir(dir, { recursive: true, withFileTypes: true })).filter((entry) => entry.isFile() || entry.isSymbolicLink())
   const files = await Promise.all(entries.map(async (entry) => {
     const path = join(entry.parentPath, entry.name)
-    return `${path.slice(dir.length)}\0${entry.isSymbolicLink() ? '->' : await readFile(path, 'utf-8')}`
+    const content = entry.isSymbolicLink() ? '->' : await readFile(path, 'utf-8').catch(() => '(unreadable)')
+    return `${path.slice(dir.length)}\0${content}`
   }))
   return files.sort().join('\0')
 }
 
-test('a sync writes nothing while .nextspark/backups/.gitignore is a symlink or has patterns other than *, in a dry run too', async () => {
+test("a sync writes nothing while .nextspark/backups/.gitignore is a symlink, has patterns other than * or can't be read, in a dry run too", async () => {
   const cases: { name: string; setUp: (root: string) => Promise<void> }[] = [
     { name: 'a pattern that takes a backup back', setUp: (root) => write(root, '.nextspark/backups/.gitignore', '*\n!manual-snapshots/\n') },
     { name: 'a symlink', setUp: async (root) => {
       await mkdir(join(root, '.nextspark/backups'), { recursive: true })
       await symlink('../../rules', join(root, '.nextspark/backups/.gitignore'))
     } },
+    ...(process.getuid?.() === 0 ? [] : [{ name: 'a file with * that cannot be read', setUp: async (root: string) => {
+      await write(root, '.nextspark/backups/.gitignore', '*\n')
+      await chmod(join(root, '.nextspark/backups/.gitignore'), 0)
+    } }]),
   ]
 
   // Every case runs before anything is asserted, so a failure names each one
@@ -625,10 +634,11 @@ test('a sync writes nothing while .nextspark/backups/.gitignore is a symlink or 
         const mode = options.dryRun ? 'dry run' : 'run'
         if (exitCode !== 1) wrong.push(`${name}, ${mode}: exit code ${exitCode}`)
         if (/Sync complete/.test(printed)) wrong.push(`${name}, ${mode}: reports success`)
-        if (!/\.nextspark\/backups\/\.gitignore (is a symlink|has patterns other than \*)/.test(printed)) wrong.push(`${name}, ${mode}: does not say why`)
+        if (!/\.nextspark\/backups\/\.gitignore (is a symlink|has patterns other than \*|can't be read)/.test(printed)) wrong.push(`${name}, ${mode}: does not say why`)
       }
       if ((await snapshot(root)) !== before) wrong.push(`${name}: wrote in the project`)
     } finally {
+      await chmod(join(root, '.nextspark/backups/.gitignore'), 0o644).catch(() => {})
       await cleanup()
     }
   }

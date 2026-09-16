@@ -37,11 +37,12 @@ const rootDir = join(__dirname, '../../../..')
 // Validation functions moved to ./registry/validation/entity-validator.mjs
 
 // Import shared utilities
-import { log, verbose, setVerboseMode, shownMessage, shownStack } from '../utils/index.mjs'
+import { log, verbose, setVerboseMode, shownMessage, shownPath, shownStack } from '../utils/index.mjs'
 import { getBasename } from '../utils/paths.mjs'
 
 // Import configuration
 import { getConfig, validateEnvironment } from './registry/config.mjs'
+import { unsafeWritePlaces, unsafeWritePlacesLines } from './registry/write-places.mjs'
 
 // Import discovery modules (migrated from this file)
 import { discoverParentChildRelations } from './registry/discovery/parent-child.mjs'
@@ -179,6 +180,15 @@ export async function buildRegistries(projectRoot = null) {
     }
     console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
     console.error('')
+    process.exit(1)
+  }
+
+  // Nothing is written, in the project or through it, while a place the build
+  // writes under can't take it safely
+  const unsafe = unsafeWritePlaces(CONFIG.projectRoot)
+  if (unsafe.length > 0) {
+    log("Build failed before writing anything: the registry build can't write safely under these paths", 'error')
+    for (const line of unsafeWritePlacesLines(unsafe)) console.log(`   ${shownPath(line)}`)
     process.exit(1)
   }
 
