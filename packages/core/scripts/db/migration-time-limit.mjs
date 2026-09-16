@@ -8,13 +8,23 @@
 // leaves it unset unless asked, since a real database can hold data a
 // migration legitimately spends longer on.
 //
-// Each migration file gets the limit as a whole. Two things enforce it:
-//  - the server's statement_timeout, set to the limit, cancels a statement
-//    that runs past it, including one waiting on a lock;
-//  - the client gives up on the file a little later, which covers a server that
-//    does not answer at all and a migration that switches statement_timeout
-//    off. It then asks the server, over a connection of its own, to end the
-//    session the migration was running in, so nothing is left running there.
+// Each migration file gets the limit as a whole, and a file still running when
+// the limit has passed fails:
+//  - the client gives up on the file when the limit has passed since it sent
+//    it. That holds for a server that does not answer at all, for a file of
+//    several statements each shorter than the limit, and for a migration that
+//    switches statement_timeout off, with SET, SET LOCAL or set_config(), for
+//    itself or for the migrations after it. It then asks the server, over a
+//    connection of its own that waits up to 5 s (less under a shorter limit),
+//    to end the session the migration was running in, and the error says
+//    whether it was ended. When it was not, the statement goes on running on
+//    the server, stopped only by a statement_timeout the migration left on;
+//  - the server's statement_timeout, set to the same limit, cancels a statement
+//    that runs past it, including one waiting on a lock, even when the process
+//    that sent it is no longer there to give up on it. Postgres 13 and later
+//    apply it to each statement in a file, and a migration can switch it off.
+// Whichever comes first ends the file. The client starts counting before the
+// server does, so it is usually the client.
 //
 // The limit holds whatever the database URL says. A URL that sets
 // statement_timeout or query_timeout itself, `?statement_timeout=0` included,
@@ -33,8 +43,8 @@ export const TIME_LIMIT_VARIABLE = 'MIGRATION_TIMEOUT_SECONDS';
 
 /**
  * The limit MIGRATION_TIMEOUT_SECONDS asks for, or null when it is unset.
- * `statementMs` is the server's limit; `queryMs`, the client's, adds a margin
- * so that a statement the server cancels is reported as the server reports it.
+ * `statementMs` is the server's limit and `queryMs` the client's, and both are
+ * the limit itself.
  */
 export function migrationTimeLimit(env = process.env) {
   const value = env[TIME_LIMIT_VARIABLE];
@@ -43,8 +53,8 @@ export function migrationTimeLimit(env = process.env) {
   if (!Number.isFinite(seconds) || seconds <= 0) {
     throw new Error(`${TIME_LIMIT_VARIABLE} must be a number of seconds greater than 0, not "${value}".`);
   }
-  const statementMs = Math.ceil(seconds * 1000);
-  return { seconds, statementMs, queryMs: statementMs + Math.min(5000, statementMs) };
+  const limitMs = Math.ceil(seconds * 1000);
+  return { seconds, statementMs: limitMs, queryMs: limitMs };
 }
 
 /** The client migrations run on, under the limit when there is one. */
@@ -92,14 +102,14 @@ export async function runMigrationSql(client, { sql, limit, connectionString }) 
 
     if (error.message !== 'Query read timeout') throw error;
 
-    // The server has not answered, and the statement may still be running there.
-    // The client lets go of its connection first: a session the server ends
-    // under a client still holding it surfaces as an unhandled 'error' event.
+    // The limit has passed with no answer, and the statement may still be running
+    // there. The client lets go of its connection first: a session the server
+    // ends under a client still holding it surfaces as an unhandled 'error' event.
     const processID = client.processID;
     await client.end();
     const ended = await endSession(connectionString, processID, limit);
     throw new Error(
-      `did not finish within ${limit.seconds} s (${TIME_LIMIT_VARIABLE}), and the server did not answer in that time; ` +
+      `did not finish within ${limit.seconds} s (${TIME_LIMIT_VARIABLE}); ` +
       (ended === true ? 'its session on the server was ended.' : `its session on the server could not be ended: ${ended}.`)
     );
   }

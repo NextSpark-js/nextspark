@@ -1,10 +1,12 @@
 /**
  * A migration that never finishes has to end `db:verify-theme` by itself, with
- * the migration's name, and leave nothing running on the server; a migration
- * that is only slow has to pass. The runner is exercised against a stand-in
- * server that speaks enough of the wire protocol to connect, answer queries,
- * cancel a statement at its statement_timeout the way Postgres does, or go
- * silent.
+ * the migration's name, and have its session on the server ended; a migration
+ * that is only slow has to pass; and one still running at
+ * MIGRATION_TIMEOUT_SECONDS fails there, even one that switches
+ * statement_timeout off. The runner is exercised against
+ * a stand-in server that speaks enough of the wire protocol to connect, answer
+ * queries, cancel a statement at its statement_timeout the way Postgres does,
+ * keep a statement_timeout a query sets, or go silent.
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -25,9 +27,14 @@ type TestContext = { after: (fn: () => void) => void }
 /**
  * How the stand-in server treats a query:
  *  - 'ok': answers at once
- *  - { slowMs }: answers after that long
- *  - 'stuck': never finishes, so a statement_timeout the session carries cancels it
+ *  - { slowMs }: answers after that long, unless the statement_timeout in effect cancels it first
+ *  - 'stuck': never finishes, so only a statement_timeout in effect cancels it
  *  - 'silent': never answers anything again, statement_timeout or not
+ *
+ * The statement_timeout in effect is the one the session started with, as
+ * changed by the query itself and by the queries before it: `SET` and
+ * `set_config(…, false)` change it for the session, `SET LOCAL` and
+ * `set_config(…, true)` only for the query that sets it.
  */
 type Treatment = 'ok' | 'stuck' | 'silent' | { slowMs: number }
 
@@ -35,7 +42,24 @@ interface Session {
   pid: number
   startup: Record<string, string>
   queries: string[]
+  receivedAt: Map<string, number>
   closed: boolean
+  closedAt?: number
+  statementTimeout: number
+}
+
+const SESSION_TIMEOUT = /\bSET\s+(LOCAL\s+)?statement_timeout\s*(?:=|TO)\s*'?(\d+)'?|set_config\(\s*'statement_timeout'\s*,\s*'(\d+)'\s*,\s*(true|false)\s*\)/gi
+
+/** The statement_timeout a query runs under, and the one it leaves the session with. */
+function statementTimeoutFor(sql: string, sessionTimeout: number) {
+  let session = sessionTimeout
+  let query = sessionTimeout
+  for (const [, local, setValue, configValue, configLocal] of sql.matchAll(SESSION_TIMEOUT)) {
+    const value = Number(setValue ?? configValue)
+    query = value
+    if (!local && configLocal !== 'true') session = value
+  }
+  return { query, session }
 }
 
 async function standInPostgres(t: TestContext, treat: (sql: string) => Treatment) {
@@ -54,10 +78,13 @@ async function standInPostgres(t: TestContext, treat: (sql: string) => Treatment
   }
 
   const server = net.createServer(socket => {
-    const session: Session = { pid: nextPid++, startup: {}, queries: [], closed: false }
+    const session: Session = { pid: nextPid++, startup: {}, queries: [], receivedAt: new Map(), closed: false, statementTimeout: 0 }
     sessions.push(session)
     sockets.set(session.pid, socket)
-    socket.on('close', () => (session.closed = true))
+    socket.on('close', () => {
+      session.closed = true
+      session.closedAt = Date.now()
+    })
     socket.on('error', () => {})
 
     const message = (type: string, body: Buffer = Buffer.alloc(0)) => {
@@ -99,6 +126,7 @@ async function standInPostgres(t: TestContext, treat: (sql: string) => Treatment
           for (let index = 0; index + 1 < fields.length && fields[index]; index += 2) {
             session.startup[fields[index]] = fields[index + 1]
           }
+          session.statementTimeout = Number(session.startup.statement_timeout ?? 0)
           started = true
           message('R', int32(0))
           message('K', Buffer.concat([int32(session.pid), int32(1)]))
@@ -114,6 +142,7 @@ async function standInPostgres(t: TestContext, treat: (sql: string) => Treatment
         if (type === 'Q') {
           const sql = body.subarray(0, body.length - 1).toString()
           session.queries.push(sql)
+          session.receivedAt.set(sql, Date.now())
           const terminate = sql.match(/pg_terminate_backend\((\d+)\)/)
           if (terminate) {
             terminated.push(Number(terminate[1]))
@@ -122,10 +151,12 @@ async function standInPostgres(t: TestContext, treat: (sql: string) => Treatment
             continue
           }
           const treatment = treat(sql)
+          const timeout = statementTimeoutFor(sql, session.statementTimeout)
+          session.statementTimeout = timeout.session
+          const runsMs = treatment === 'stuck' ? Infinity : typeof treatment === 'object' ? treatment.slowMs : undefined
           if (treatment === 'ok') commandComplete()
-          else if (typeof treatment === 'object') later(treatment.slowMs, commandComplete)
-          else if (treatment === 'stuck' && Number(session.startup.statement_timeout) > 0) {
-            later(Number(session.startup.statement_timeout), () => {
+          else if (runsMs !== undefined && timeout.query > 0 && timeout.query < runsMs) {
+            later(timeout.query, () => {
               message('E', Buffer.concat([
                 text('SERROR'),
                 text('C57014'),
@@ -134,7 +165,7 @@ async function standInPostgres(t: TestContext, treat: (sql: string) => Treatment
               ]))
               readyForQuery()
             })
-          }
+          } else if (typeof treatment === 'object') later(treatment.slowMs, commandComplete)
         }
         // The extended protocol, which parameterised queries use: no rows for any of them
         else if (type === 'P') message('1')
@@ -228,17 +259,17 @@ const MIGRATIONS = {
 
 const sessionThatRan = (sessions: Session[], sql: string) => sessions.find(session => session.queries.includes(sql))
 
-test('the limit is read in seconds, and the client waits a little longer than the server', () => {
+test('the limit is read in seconds, and the server and the client both hold to it', () => {
   assert.equal(migrationTimeLimit({}), null)
   assert.equal(migrationTimeLimit({ MIGRATION_TIMEOUT_SECONDS: '' }), null)
-  assert.deepEqual(migrationTimeLimit({ MIGRATION_TIMEOUT_SECONDS: '30' }), { seconds: 30, statementMs: 30000, queryMs: 35000 })
-  assert.deepEqual(migrationTimeLimit({ MIGRATION_TIMEOUT_SECONDS: '0.5' }), { seconds: 0.5, statementMs: 500, queryMs: 1000 })
+  assert.deepEqual(migrationTimeLimit({ MIGRATION_TIMEOUT_SECONDS: '30' }), { seconds: 30, statementMs: 30000, queryMs: 30000 })
+  assert.deepEqual(migrationTimeLimit({ MIGRATION_TIMEOUT_SECONDS: '0.5' }), { seconds: 0.5, statementMs: 500, queryMs: 500 })
   for (const value of ['0', '-5', 'thirty', 'Infinity']) {
     assert.throws(() => migrationTimeLimit({ MIGRATION_TIMEOUT_SECONDS: value }), /greater than 0/, value)
   }
 })
 
-test('a migration the server cancels at the limit fails the run with its name', { timeout: 20000 }, async t => {
+test('a migration still running at the limit fails the run with its name, and its statement is stopped', { timeout: 20000 }, async t => {
   const server = await standInPostgres(t, sql => (sql === MIGRATIONS['002_waits.sql'] ? 'stuck' : 'ok'))
   const cwd = projectWith(t, MIGRATIONS)
 
@@ -249,13 +280,33 @@ test('a migration the server cancels at the limit fails the run with its name', 
   })
 
   assert.equal(result.status, 1, result.output)
+  assert.match(result.output, /Failed to execute 002_waits\.sql: did not finish within 0\.5 s \(MIGRATION_TIMEOUT_SECONDS\)/)
+  const waiting = sessionThatRan(server.sessions, MIGRATIONS['002_waits.sql'])!
+  if (/its session on the server was ended/.test(result.output)) assert.deepEqual(server.terminated, [waiting.pid])
+  else assert.match(result.output, /canceling statement due to statement timeout/)
+  assert.ok(result.elapsedMs < 5000, `took ${result.elapsedMs} ms`)
+  assert.equal(waiting.startup.statement_timeout, '500')
+  assert.equal(sessionThatRan(server.sessions, MIGRATIONS['003_after.sql']), undefined)
+})
+
+test('a statement the server cancels is reported the way the server reports it', { timeout: 20000 }, async t => {
+  // a lock wait the server gives up on before the client does: its own limit, set lower by the migration
+  const migrations = { ...MIGRATIONS, '002_waits.sql': "SET statement_timeout = 100; SELECT pg_sleep(60);" }
+  const server = await standInPostgres(t, sql => (sql === migrations['002_waits.sql'] ? 'stuck' : 'ok'))
+  const cwd = projectWith(t, migrations)
+
+  const result = await run(t, RUNNER, ['--no-env-file'], {
+    cwd,
+    env: cleanEnv({ DATABASE_URL: server.url, NEXT_PUBLIC_ACTIVE_THEME: 'fixture', MIGRATION_TIMEOUT_SECONDS: '5' }),
+    killAfterMs: 10000,
+  })
+
+  assert.equal(result.status, 1, result.output)
   assert.match(
     result.output,
-    /Failed to execute 002_waits\.sql: did not finish within 0\.5 s \(MIGRATION_TIMEOUT_SECONDS\): canceling statement due to statement timeout/
+    /Failed to execute 002_waits\.sql: did not finish within 5 s \(MIGRATION_TIMEOUT_SECONDS\): canceling statement due to statement timeout/
   )
-  assert.ok(result.elapsedMs < 5000, `took ${result.elapsedMs} ms`)
-  assert.equal(sessionThatRan(server.sessions, MIGRATIONS['002_waits.sql'])?.startup.statement_timeout, '500')
-  assert.equal(sessionThatRan(server.sessions, MIGRATIONS['003_after.sql']), undefined)
+  assert.deepEqual(server.terminated, [])
 })
 
 test('a migration the server never answers is given up on, and its session ended', { timeout: 20000 }, async t => {
@@ -312,10 +363,8 @@ test('a database URL that switches the limits off does not lift them', { timeout
     result.output,
     /The database URL sets statement_timeout and query_timeout, which migrations do not use: each one runs under MIGRATION_TIMEOUT_SECONDS \(0\.5 s\)/
   )
-  assert.match(
-    result.output,
-    /Failed to execute 002_waits\.sql: did not finish within 0\.5 s \(MIGRATION_TIMEOUT_SECONDS\): canceling statement due to statement timeout/
-  )
+  assert.match(result.output, /Failed to execute 002_waits\.sql: did not finish within 0\.5 s \(MIGRATION_TIMEOUT_SECONDS\)/)
+  assert.match(result.output, /canceling statement due to statement timeout|its session on the server was ended/)
   assert.ok(result.elapsedMs < 5000, `took ${result.elapsedMs} ms`)
   assert.ok(server.sessions.length > 0)
   for (const session of server.sessions) assert.equal(session.startup.statement_timeout, '500')
@@ -370,6 +419,70 @@ test('without a limit, the time limits a database URL sets are the ones that app
   assert.doesNotMatch(result.output, /statement_timeout/)
   assert.ok(server.sessions.length > 0)
   for (const session of server.sessions) assert.equal(session.startup.statement_timeout, '90000')
+})
+
+/**
+ * How long after the server received a migration its session was ended. A
+ * migration that runs past the limit has to be cut at the limit, not when it
+ * would have finished.
+ */
+function cutAfterMs(session: Session, sql: string) {
+  assert.ok(session.closedAt, 'the session was never ended')
+  return session.closedAt! - session.receivedAt.get(sql)!
+}
+
+// Under a limit of 1 s, the client waited up to 2 s for an answer while the server's limit was off.
+const RUNS_PAST_THE_LIMIT_MS = 1500
+
+test('a migration that switches statement_timeout off for itself still stops at the limit', { timeout: 60000 }, async t => {
+  for (const switchedOff of [
+    'SET statement_timeout = 0; SELECT pg_sleep(1.5);',
+    'BEGIN; SET LOCAL statement_timeout = 0; SELECT pg_sleep(1.5); COMMIT;',
+    "SELECT set_config('statement_timeout', '0', false); SELECT pg_sleep(1.5);",
+    "SELECT set_config('statement_timeout', '0', true); SELECT pg_sleep(1.5);",
+  ]) {
+    const migrations = { ...MIGRATIONS, '002_waits.sql': switchedOff }
+    const server = await standInPostgres(t, sql => (sql === switchedOff ? { slowMs: RUNS_PAST_THE_LIMIT_MS } : 'ok'))
+    const cwd = projectWith(t, migrations)
+
+    const result = await run(t, RUNNER, ['--no-env-file'], {
+      cwd,
+      env: cleanEnv({ DATABASE_URL: server.url, NEXT_PUBLIC_ACTIVE_THEME: 'fixture', MIGRATION_TIMEOUT_SECONDS: '1' }),
+      killAfterMs: 15000,
+    })
+
+    assert.equal(result.status, 1, `${switchedOff}\n${result.output}`)
+    assert.match(result.output, /Failed to execute 002_waits\.sql: did not finish within 1 s \(MIGRATION_TIMEOUT_SECONDS\); its session on the server was ended/, switchedOff)
+    const session = sessionThatRan(server.sessions, switchedOff)!
+    assert.deepEqual(server.terminated, [session.pid], switchedOff)
+    const cutMs = cutAfterMs(session, switchedOff)
+    assert.ok(cutMs >= 900 && cutMs < RUNS_PAST_THE_LIMIT_MS - 200, `${switchedOff}: cut after ${cutMs} ms`)
+    assert.equal(sessionThatRan(server.sessions, MIGRATIONS['003_after.sql']), undefined, switchedOff)
+  }
+})
+
+test('a migration that switches statement_timeout off for the ones after it does not lift the limit from them', { timeout: 20000 }, async t => {
+  const migrations = {
+    '001_first.sql': 'CREATE TABLE first_table (id int);',
+    '002_switches_off.sql': "SELECT set_config('statement_timeout', '0', false);",
+    '003_waits.sql': 'SELECT pg_sleep(1.5);',
+  }
+  const server = await standInPostgres(t, sql => (sql === migrations['003_waits.sql'] ? { slowMs: RUNS_PAST_THE_LIMIT_MS } : 'ok'))
+  const cwd = projectWith(t, migrations)
+
+  const result = await run(t, RUNNER, ['--no-env-file'], {
+    cwd,
+    env: cleanEnv({ DATABASE_URL: server.url, NEXT_PUBLIC_ACTIVE_THEME: 'fixture', MIGRATION_TIMEOUT_SECONDS: '1' }),
+    killAfterMs: 15000,
+  })
+
+  assert.equal(result.status, 1, result.output)
+  assert.match(result.output, /Successfully executed 002_switches_off\.sql/)
+  assert.match(result.output, /Failed to execute 003_waits\.sql: did not finish within 1 s \(MIGRATION_TIMEOUT_SECONDS\)/)
+  const session = sessionThatRan(server.sessions, migrations['003_waits.sql'])!
+  assert.equal(session.statementTimeout, 0)
+  const cutMs = cutAfterMs(session, migrations['003_waits.sql'])
+  assert.ok(cutMs >= 900 && cutMs < RUNS_PAST_THE_LIMIT_MS - 200, `cut after ${cutMs} ms`)
 })
 
 test('db:migrate takes the limit from the project .env, as it takes the database', { timeout: 20000 }, async t => {
