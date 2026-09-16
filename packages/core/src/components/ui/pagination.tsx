@@ -1,5 +1,6 @@
 import * as React from "react"
 import { cn } from '../../lib/utils'
+import { withBasePathIfInApp } from '../../lib/base-path'
 import { buttonVariants } from './button'
 import { ChevronLeftIcon, ChevronRightIcon, DotsHorizontalIcon } from "@radix-ui/react-icons"
 
@@ -42,6 +43,7 @@ const PaginationLink = ({
   className,
   isActive,
   size = "icon",
+  href,
   ...props
 }: PaginationLinkProps) => (
   <a
@@ -53,6 +55,7 @@ const PaginationLink = ({
       }),
       className
     )}
+    href={href && withBasePathIfInApp(href)}
     {...props}
   />
 )

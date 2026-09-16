@@ -1,8 +1,15 @@
 /** Shapes base-path.in-app-urls.test.ts has to catch. Never imported by the app. */
 import NextImage, { type ImageProps } from 'next/image'
+import { default as Picture } from 'next/image'
 import { Image } from 'lucide-react'
+import * as AvatarPrimitive from '@radix-ui/react-avatar'
+import { AvatarImage as SharedAvatarImage } from '@nextsparkjs/ui'
 import { withBasePath, withBasePathIfInApp } from '../../../../src/lib/base-path'
 import { sanitizeBlockHtml } from '../../../../src/lib/blocks/sanitize-html'
+import { AvatarImage } from '../../../../src/components/ui/avatar'
+import { ReexportedImage, ReexportedAvatarImage, AliasedImage, AliasedAvatarImage } from './reexported-loaders'
+
+const RequiredImage = require('next/image').default
 
 export async function viaVariable(slug: string) {
   const path = `/api/v1/${slug}`
@@ -92,6 +99,62 @@ export function Backgrounds({ upload }: { upload: string }) {
       <div style={{ backgroundImage: 'url(/theme/hero.jpg)' }} />
       <div style={{ backgroundImage: `linear-gradient(red, blue), url("${upload}")` }} />
       <div style={{ backgroundImage: 'url(https://cdn.example.com/hero.jpg)' }} />
+    </>
+  )
+}
+
+export function ImagesImportedOtherwise({ cover }: { cover: string }) {
+  return (
+    <>
+      <Picture src={cover} alt="" width={10} height={10} />
+      <RequiredImage src={cover} alt="" width={10} height={10} />
+      <ReexportedImage src={cover} alt="" width={10} height={10} />
+    </>
+  )
+}
+
+export function Avatars({ avatar }: { avatar: string }) {
+  return (
+    <>
+      <AvatarPrimitive.Image src={avatar} />
+      <SharedAvatarImage src={avatar} />
+      <ReexportedAvatarImage src={avatar} />
+      <SharedAvatarImage src={avatar && withBasePathIfInApp(avatar)} />
+      {/* core's AvatarImage puts the base path on */}
+      <AvatarImage src={avatar} />
+    </>
+  )
+}
+
+export function Thumbnail({ cover, ...props }: { cover: string } & React.ComponentProps<'img'>) {
+  return (
+    <>
+      <img {...props} />
+      <img src={withBasePathIfInApp(cover)} alt="" {...props} />
+      <img src={withBasePathIfInApp(cover)} srcSet={cover} alt="" {...props} />
+    </>
+  )
+}
+
+export function Concatenated({ upload }: { upload: string }) {
+  return (
+    <>
+      <div style={{ backgroundImage: 'url(' + upload + ')' }} />
+      <div style={{ backgroundImage: "linear-gradient(red, blue), url('" + upload + "')" }} />
+      <div style={{ backgroundImage: "url('" + withBasePathIfInApp(upload) + "')" }} />
+      <div style={{ width: 'calc(' + upload + ')' }} />
+    </>
+  )
+}
+
+const LocalImage = Picture as typeof Picture
+
+export function Aliased({ cover }: { cover: string }) {
+  return (
+    <>
+      <AliasedImage src={cover} alt="" width={10} height={10} />
+      <AliasedAvatarImage src={cover} />
+      <LocalImage src={cover} alt="" width={10} height={10} />
     </>
   )
 }
