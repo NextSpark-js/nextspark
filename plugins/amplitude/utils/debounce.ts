@@ -1,4 +1,4 @@
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: never[]) => unknown>(
   func: T,
   waitMs: number,
   options: {
@@ -12,19 +12,19 @@ export function debounce<T extends (...args: any[]) => any>(
   let lastCallTime: number | undefined;
   let lastInvokeTime = 0;
   let lastArgs: Parameters<T> | undefined;
-  let lastThis: any;
+  // The pending call, holding the `this` and arguments of the latest call to the debounced function
+  let pendingCall: (() => ReturnType<T>) | undefined;
   let result: ReturnType<T>;
 
   const { leading = false, trailing = true, maxWait } = options;
 
   function invokeFunc(time: number) {
-    const args = lastArgs!;
-    const thisArg = lastThis;
+    const call = pendingCall!;
 
     lastArgs = undefined;
-    lastThis = undefined;
+    pendingCall = undefined;
     lastInvokeTime = time;
-    result = func.apply(thisArg, args);
+    result = call();
     return result;
   }
 
@@ -80,7 +80,7 @@ export function debounce<T extends (...args: any[]) => any>(
       return invokeFunc(time);
     }
     lastArgs = undefined;
-    lastThis = undefined;
+    pendingCall = undefined;
     return result;
   }
 
@@ -94,7 +94,7 @@ export function debounce<T extends (...args: any[]) => any>(
     lastInvokeTime = 0;
     lastArgs = undefined;
     lastCallTime = undefined;
-    lastThis = undefined;
+    pendingCall = undefined;
     timeoutId = null;
     maxTimeoutId = null;
   }
@@ -103,12 +103,12 @@ export function debounce<T extends (...args: any[]) => any>(
     return timeoutId === null ? result : trailingEdge(Date.now());
   }
 
-  function debounced(this: any, ...args: Parameters<T>): ReturnType<T> {
+  function debounced(this: unknown, ...args: Parameters<T>): ReturnType<T> {
     const time = Date.now();
     const isInvoking = shouldInvoke(time);
 
     lastArgs = args;
-    lastThis = this;
+    pendingCall = () => Reflect.apply(func, this, args) as ReturnType<T>;
     lastCallTime = time;
 
     if (isInvoking) {

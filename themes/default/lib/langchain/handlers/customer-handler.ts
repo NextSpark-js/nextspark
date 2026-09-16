@@ -5,16 +5,17 @@
  * Uses the CustomersService to perform CRUD operations.
  */
 
+import type { Customer } from '@/themes/default/entities/customers/customers.types'
 import { CustomersService } from '@/themes/default/entities/customers/customers.service'
 import { tracer } from '@/plugins/langchain/lib/tracer'
 import { config as pluginConfig } from '@/plugins/langchain/plugin.config'
 import { createAgentLogger } from '@/plugins/langchain/lib/logger'
-import type { OrchestratorState, CustomerHandlerResult, CustomerData, IntentType } from '@/plugins/langchain/lib/graph/types'
+import type { OrchestratorState, CustomerHandlerResult, CustomerData, IntentType, IntentAction } from '@/plugins/langchain/lib/graph/types'
 
 /**
  * Transform Customer entity to CustomerData for handler result
  */
-function toCustomerData(customer: any): CustomerData {
+function toCustomerData(customer: Customer & { email?: string }): CustomerData {
     return {
         id: customer.id,
         name: customer.name,
@@ -235,7 +236,7 @@ async function executeCustomerOperation(
         const errorMessage = error instanceof Error ? error.message : 'Unknown error'
         return {
             success: false,
-            operation: action as any,
+            operation: action as IntentAction,
             data: null,
             message: `Failed to execute ${action}: ${errorMessage}`,
             error: errorMessage,

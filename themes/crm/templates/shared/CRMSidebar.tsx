@@ -192,8 +192,8 @@ export function CRMSidebar() {
             onMouseLeave={() => setExpanded(false)}
             style={{
                 // CSS variable for layout
-                ['--crm-sidebar-width' as any]: expanded ? '16rem' : '4rem'
-            }}
+                '--crm-sidebar-width': expanded ? '16rem' : '4rem'
+            } as React.CSSProperties}
         >
             {/* Header with Logo */}
             <div className={cn(

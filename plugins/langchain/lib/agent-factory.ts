@@ -2,7 +2,7 @@ import { HumanMessage, AIMessage, SystemMessage, BaseMessage } from '@langchain/
 import { createReactAgent } from '@langchain/langgraph/prebuilt'
 import { getModel } from './providers'
 import { memoryStore } from './memory-store'
-import { ToolDefinition, buildTools, convertToOpenAITools } from './tools-builder'
+import { GenericToolDefinition, buildTools, convertToOpenAITools } from './tools-builder'
 import { config } from '../plugin.config'
 import { createAgentLogger } from './logger'
 import { tokenTracker } from './token-tracker'
@@ -16,6 +16,14 @@ import type { BaseChatModel } from '@langchain/core/language_models/chat_models'
 // Re-export types for convenience
 export type { StreamChunk, StreamChatOptions }
 
+interface ToolBindableChatModel {
+    bind(options: { tools: unknown }): BaseChatModel
+}
+
+type ToolCallMessage = BaseMessage & { tool_calls?: unknown; tool_call_id?: unknown }
+type UsageMessage = BaseMessage & { usage_metadata?: TokenUsage; response_metadata?: { usage?: TokenUsage } }
+type TokenUsage = { input_tokens?: number; output_tokens?: number; total_tokens?: number }
+
 interface CreateAgentOptions {
     /** Unique session identifier for conversation memory */
     sessionId: string
@@ -24,7 +32,7 @@ interface CreateAgentOptions {
     /** System prompt that defines the agent's behavior */
     systemPrompt?: string
     /** Tools available to the agent */
-    tools?: ToolDefinition<any>[]
+    tools?: GenericToolDefinition[]
     /**
      * Model configuration override.
      * If not provided, uses plugin defaults from environment variables.
@@ -118,9 +126,8 @@ export const createAgent = async (options: CreateAgentOptions) => {
     let boundModel: BaseChatModel = model
     if (effectiveProvider === 'openai' && tools.length > 0) {
         const openAITools = convertToOpenAITools(tools)
-        // Bind the model with pre-converted tools
-        // Use 'any' cast as LangChain's typing doesn't expose tools in BaseChatModelCallOptions
-        boundModel = (model as any).bind({ tools: openAITools }) as BaseChatModel
+        // Bind the model with pre-converted tools.
+        boundModel = (model as unknown as ToolBindableChatModel).bind({ tools: openAITools })
     }
 
     const agent = createReactAgent({
@@ -191,8 +198,8 @@ export const createAgent = async (options: CreateAgentOptions) => {
                         messages: newMessages.map(m => ({
                             type: m._getType(),
                             content: m.content,
-                            tool_calls: (m as any).tool_calls,
-                            tool_call_id: (m as any).tool_call_id
+                            tool_calls: (m as ToolCallMessage).tool_calls,
+                            tool_call_id: (m as ToolCallMessage).tool_call_id
                         }))
                     })
                 } catch (logError) {
@@ -207,7 +214,7 @@ export const createAgent = async (options: CreateAgentOptions) => {
                 const responseContent = lastMessage.content as string
 
                 // Track token usage if available and context exists
-                const usage = (lastMessage as any).usage_metadata || (lastMessage as any).response_metadata?.usage
+                const usage = (lastMessage as UsageMessage).usage_metadata || (lastMessage as UsageMessage).response_metadata?.usage
                 if (usage && context) {
                     await tokenTracker.trackUsage({
                         context,

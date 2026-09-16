@@ -1,5 +1,5 @@
 import * as z from 'zod'
-import { ToolDefinition } from '@/plugins/langchain/lib/tools-builder'
+import { defineTool } from '@/plugins/langchain/lib/tools-builder'
 import { TasksService } from '@/themes/default/entities/tasks/tasks.service'
 import { TaskStatus, TaskPriority } from '@/themes/default/entities/tasks/tasks.types'
 
@@ -26,11 +26,11 @@ export interface TaskToolContext {
  * })
  * ```
  */
-export function createTaskTools(context: TaskToolContext): ToolDefinition<any>[] {
+export function createTaskTools(context: TaskToolContext) {
     const { userId, teamId } = context
 
     return [
-        {
+        defineTool({
             name: 'list_tasks',
             description: 'List all tasks assigned to the user. Optionally filter by status and/or priority.',
             schema: z.object({
@@ -64,8 +64,8 @@ export function createTaskTools(context: TaskToolContext): ToolDefinition<any>[]
                     return `Error listing tasks: ${error instanceof Error ? error.message : 'Unknown error'}`
                 }
             },
-        },
-        {
+        }),
+        defineTool({
             name: 'search_tasks',
             description: 'Search tasks by keyword in title or description.',
             schema: z.object({
@@ -88,8 +88,8 @@ export function createTaskTools(context: TaskToolContext): ToolDefinition<any>[]
                     return `Error searching tasks: ${error instanceof Error ? error.message : 'Unknown error'}`
                 }
             },
-        },
-        {
+        }),
+        defineTool({
             name: 'get_task_details',
             description: 'Get full details of a specific task by ID.',
             schema: z.object({
@@ -106,8 +106,8 @@ export function createTaskTools(context: TaskToolContext): ToolDefinition<any>[]
                     return `Error getting task: ${error instanceof Error ? error.message : 'Unknown error'}`
                 }
             },
-        },
-        {
+        }),
+        defineTool({
             name: 'create_task',
             description: 'Create a new task.',
             schema: z.object({
@@ -134,8 +134,8 @@ export function createTaskTools(context: TaskToolContext): ToolDefinition<any>[]
                     return `Error creating task: ${error instanceof Error ? error.message : 'Unknown error'}`
                 }
             },
-        },
-        {
+        }),
+        defineTool({
             name: 'update_task',
             description: 'Update an existing task.',
             schema: z.object({
@@ -162,6 +162,6 @@ export function createTaskTools(context: TaskToolContext): ToolDefinition<any>[]
                     return `Error updating task: ${error instanceof Error ? error.message : 'Unknown error'}`
                 }
             },
-        },
+        }),
     ]
 }

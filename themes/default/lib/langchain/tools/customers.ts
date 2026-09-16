@@ -1,5 +1,5 @@
 import * as z from 'zod'
-import { ToolDefinition } from '@/plugins/langchain/lib/tools-builder'
+import { defineTool } from '@/plugins/langchain/lib/tools-builder'
 import { CustomersService } from '@/themes/default/entities/customers/customers.service'
 import type { DayOfWeek } from '@/themes/default/entities/customers/customers.types'
 
@@ -17,11 +17,11 @@ export interface CustomerToolContext {
  * @param context - User and team context for RLS
  * @returns Array of customer-related tool definitions
  */
-export function createCustomerTools(context: CustomerToolContext): ToolDefinition<any>[] {
+export function createCustomerTools(context: CustomerToolContext) {
     const { userId, teamId } = context
 
     return [
-        {
+        defineTool({
             name: 'list_customers',
             description: 'List all customers with optional pagination and sorting.',
             schema: z.object({
@@ -52,8 +52,8 @@ export function createCustomerTools(context: CustomerToolContext): ToolDefinitio
                     return `Error listing customers: ${error instanceof Error ? error.message : 'Unknown error'}`
                 }
             },
-        },
-        {
+        }),
+        defineTool({
             name: 'search_customers',
             description: 'Search customers by name, account number, office, or sales representative.',
             schema: z.object({
@@ -75,8 +75,8 @@ export function createCustomerTools(context: CustomerToolContext): ToolDefinitio
                     return `Error searching customers: ${error instanceof Error ? error.message : 'Unknown error'}`
                 }
             },
-        },
-        {
+        }),
+        defineTool({
             name: 'get_customer',
             description: 'Get full details of a specific customer by ID.',
             schema: z.object({
@@ -93,8 +93,8 @@ export function createCustomerTools(context: CustomerToolContext): ToolDefinitio
                     return `Error getting customer: ${error instanceof Error ? error.message : 'Unknown error'}`
                 }
             },
-        },
-        {
+        }),
+        defineTool({
             name: 'create_customer',
             description: 'Create a new customer. Name, account number, and office are required.',
             schema: z.object({
@@ -123,8 +123,8 @@ export function createCustomerTools(context: CustomerToolContext): ToolDefinitio
                     return `Error creating customer: ${error instanceof Error ? error.message : 'Unknown error'}`
                 }
             },
-        },
-        {
+        }),
+        defineTool({
             name: 'update_customer',
             description: 'Update an existing customer. Only specify fields you want to change.',
             schema: z.object({
@@ -153,8 +153,8 @@ export function createCustomerTools(context: CustomerToolContext): ToolDefinitio
                     return `Error updating customer: ${error instanceof Error ? error.message : 'Unknown error'}`
                 }
             },
-        },
-        {
+        }),
+        defineTool({
             name: 'delete_customer',
             description: 'Delete a customer permanently. This action cannot be undone.',
             schema: z.object({
@@ -171,6 +171,6 @@ export function createCustomerTools(context: CustomerToolContext): ToolDefinitio
                     return `Error deleting customer: ${error instanceof Error ? error.message : 'Unknown error'}`
                 }
             },
-        },
+        }),
     ]
 }

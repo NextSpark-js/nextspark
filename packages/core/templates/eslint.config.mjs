@@ -46,17 +46,41 @@ const typescriptParser = presets
   .map((config) => config.languageOptions?.parser)
   .find((parser) => parser?.meta?.name === "typescript-eslint/parser");
 
-// NextSpark writes app/ (sync:app regenerates it from core) and contents/ (the themes and plugins,
-// their tests and fixtures included). The repo that code comes from lints it with the zod rule
-// below and nothing else, and it does not meet Next's presets -- React Compiler rules in app/,
-// `no-explicit-any` across themes and plugins -- so the presets check what the project adds around
-// those trees, and the trees themselves get the repo's rules.
-//
-// `eslint .` still walks both trees, so the block schemas under contents/themes/<theme>/blocks/ are
-// linted like any other source. The `next lint` this replaces only ever walked app, pages,
-// components, lib and src, which left every schema -- the files the zod rule exists for -- unchecked.
-const NEXTSPARK_TREES = ["app/**", "contents/**"];
 const SOURCE_FILES = "**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}";
+
+// Tests and fixtures, the project's own and those every theme and plugin brings under contents/:
+// they mock, stub and cast by design, so Next's presets skip them and only the zod rule reaches
+// them. Everything else -- app/, contents/ and what the project adds -- gets the presets.
+const TEST_FILES = [
+  "**/tests/**",
+  "**/__tests__/**",
+  "**/__mocks__/**",
+  "**/fixtures/**",
+  "**/cypress/**",
+  "**/*.{test,spec,cy}.{ts,tsx,mts,cts,js,jsx,mjs,cjs}",
+  "**/{jest,cypress}.{config,setup}.{ts,mts,cts,js,mjs,cjs}",
+];
+
+/** "error", 2 or ["error", ...]. */
+const isError = (setting) => [setting, setting?.[0]].some((level) => level === "error" || level === 2);
+
+/**
+ * The severity this project gives the rules Next's presets configure.
+ *
+ * `@next/next/no-img-element` is an error: the presets only warn, which leaves `eslint .` passing,
+ * and next/image is what serves an image resized and in a modern format.
+ *
+ * eslint-plugin-react-hooks 7, which Next 16's presets load, adds to rules-of-hooks and
+ * exhaustive-deps the rules that flag code the React Compiler cannot compile. A NextSpark project
+ * does not build with the React Compiler, and the components NextSpark ships in app/ and its themes
+ * and plugins break several of those rules, so they report as warnings. Version 5, which Next 15
+ * loads, has none of them.
+ */
+function projectSeverity(rule, setting) {
+  if (rule === "@next/next/no-img-element") return "error";
+  const compilerRule = rule.startsWith("react-hooks/") && !["react-hooks/rules-of-hooks", "react-hooks/exhaustive-deps"].includes(rule);
+  return compilerRule && isError(setting) ? "warn" : setting;
+}
 
 const eslintConfig = [
   {
@@ -64,18 +88,26 @@ const eslintConfig = [
     ignores: [".next/**", ".nextspark/**", "next-env.d.ts"],
   },
   ...presets.map((config) =>
-    isGlobalIgnore(config) ? config : { ...config, ignores: [...(config.ignores ?? []), ...NEXTSPARK_TREES] },
+    isGlobalIgnore(config)
+      ? config
+      : {
+          ...config,
+          ignores: [...(config.ignores ?? []), ...TEST_FILES],
+          ...(config.rules && {
+            rules: Object.fromEntries(Object.entries(config.rules).map(([rule, setting]) => [rule, projectSeverity(rule, setting)])),
+          }),
+        },
   ),
   {
     // A .cjs file is CommonJS by definition, so `require` is the only spelling it has.
     files: ["**/*.cjs"],
-    ignores: NEXTSPARK_TREES,
+    ignores: TEST_FILES,
     rules: { "@typescript-eslint/no-require-imports": "off" },
   },
   {
     // The presets would have supplied the parser here. Their plugins are registered so the disable
-    // comments in this code resolve the rules they name, without turning any of those rules on.
-    files: NEXTSPARK_TREES.map((tree) => `${tree}/${SOURCE_FILES}`),
+    // comments in tests resolve the rules they name, without turning any of those rules on.
+    files: TEST_FILES,
     languageOptions: {
       parser: typescriptParser,
       parserOptions: { ecmaFeatures: { jsx: true } },

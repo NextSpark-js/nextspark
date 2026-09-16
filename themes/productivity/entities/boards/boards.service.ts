@@ -104,7 +104,7 @@ export class BoardsService {
     } = options
 
     const conditions: string[] = []
-    const params: any[] = []
+    const params: unknown[] = []
     let paramIndex = 1
 
     if (teamId) {
@@ -193,7 +193,7 @@ export class BoardsService {
    */
   static async update(userId: string, id: string, data: BoardUpdateData): Promise<Board> {
     const updates: string[] = []
-    const params: any[] = []
+    const params: unknown[] = []
     let paramIndex = 1
 
     if (data.name !== undefined) {

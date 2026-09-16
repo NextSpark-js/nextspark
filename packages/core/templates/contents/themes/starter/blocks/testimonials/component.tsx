@@ -73,7 +73,7 @@ export function TestimonialsBlock({
               <Quote className="h-8 w-8 text-primary mb-4" />
 
               <blockquote className="mb-6 text-lg flex-grow">
-                "{item.quote}"
+                &quot;{item.quote}&quot;
               </blockquote>
 
               <div className="flex items-center gap-3">

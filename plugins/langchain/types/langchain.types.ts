@@ -1,4 +1,6 @@
 import * as z from 'zod'
+import type { GenericToolDefinition } from '../lib/tools-builder'
+export type { GenericToolDefinition } from '../lib/tools-builder'
 import { BaseMessage } from '@langchain/core/messages'
 import type { GuardrailsConfig } from '../lib/guardrails'
 import type { ObservabilityConfig } from './observability.types'
@@ -9,7 +11,7 @@ import type { ObservabilityConfig } from './observability.types'
 export interface AgentConfig {
     sessionId: string
     systemPrompt?: string
-    tools?: ToolDefinition<z.ZodObject<z.ZodRawShape>>[]
+    tools?: GenericToolDefinition[]
 }
 
 /**
@@ -37,7 +39,7 @@ export interface ToolDefinition<T extends z.ZodObject<z.ZodRawShape>> {
     name: string
     description: string
     schema: T
-    func: (input: z.infer<T>) => Promise<string>
+    func(input: z.infer<T>): Promise<string>
 }
 
 /**
@@ -112,7 +114,7 @@ export interface AgentDefinition {
     /** Temperature (0-1) */
     temperature?: number
     /** Factory function to create tools with runtime context */
-    createTools?: (context: AgentContext) => ToolDefinition<z.ZodObject<z.ZodRawShape>>[]
+    createTools?: (context: AgentContext) => GenericToolDefinition[]
     /** System prompt - either filename (e.g., 'task-assistant') or inline string */
     systemPrompt?: string
     /** Description of what this agent does (for documentation) */

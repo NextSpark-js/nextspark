@@ -51,6 +51,16 @@ export interface InstagramAccountInfo {
   mediaCount?: number
 }
 
+interface InstagramMetric {
+  name: string
+  values?: Array<{ value?: number }>
+}
+
+interface InstagramMetricsResponse {
+  data?: InstagramMetric[]
+  error?: { message: string }
+}
+
 export interface InstagramInsights {
   impressions: number
   reach: number
@@ -300,7 +310,7 @@ export class InstagramAPI {
           `access_token=${accessToken}`
       )
 
-      const data = await response.json()
+      const data: InstagramMetricsResponse = await response.json()
 
       if (data.error) {
         throw new Error(data.error.message)
@@ -316,7 +326,7 @@ export class InstagramAPI {
         profileViews: 0,
       }
 
-      data.data?.forEach((metric: any) => {
+      data.data?.forEach((metric) => {
         const value = metric.values?.[0]?.value || 0
         if (metric.name === 'impressions') {
           insights.impressions = value
@@ -349,7 +359,7 @@ export class InstagramAPI {
           `access_token=${accessToken}`
       )
 
-      const data = await response.json()
+      const data: InstagramMetricsResponse = await response.json()
 
       if (data.error) {
         throw new Error(data.error.message)
@@ -357,7 +367,7 @@ export class InstagramAPI {
 
       const insights: Partial<InstagramInsights> = {}
 
-      data.data?.forEach((metric: any) => {
+      data.data?.forEach((metric) => {
         const value = metric.values?.[0]?.value || 0
         if (metric.name === 'engagement') {
           insights.engagement = value

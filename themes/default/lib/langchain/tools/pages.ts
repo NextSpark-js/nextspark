@@ -1,5 +1,5 @@
 import * as z from 'zod'
-import { ToolDefinition } from '@/plugins/langchain/lib/tools-builder'
+import { defineTool } from '@/plugins/langchain/lib/tools-builder'
 import { PagesManagementService } from '@/themes/default/entities/pages/pages-management.service'
 import { BLOCK_REGISTRY } from '@nextsparkjs/registries/block-registry'
 
@@ -17,14 +17,14 @@ export interface PageToolContext {
  * @param context - User and team context for RLS
  * @returns Array of page-related tool definitions
  */
-export function createPageTools(context: PageToolContext): ToolDefinition<any>[] {
+export function createPageTools(context: PageToolContext) {
     const { userId, teamId } = context
 
     return [
         // ============================================
         // PAGE CRUD
         // ============================================
-        {
+        defineTool({
             name: 'list_pages',
             description: 'List all pages with optional status filter.',
             schema: z.object({
@@ -54,8 +54,8 @@ export function createPageTools(context: PageToolContext): ToolDefinition<any>[]
                     return `Error listing pages: ${error instanceof Error ? error.message : 'Unknown error'}`
                 }
             },
-        },
-        {
+        }),
+        defineTool({
             name: 'get_page',
             description: 'Get full page details including all blocks.',
             schema: z.object({
@@ -72,8 +72,8 @@ export function createPageTools(context: PageToolContext): ToolDefinition<any>[]
                     return `Error getting page: ${error instanceof Error ? error.message : 'Unknown error'}`
                 }
             },
-        },
-        {
+        }),
+        defineTool({
             name: 'create_page',
             description: 'Create a new page. Title and slug are required.',
             schema: z.object({
@@ -95,8 +95,8 @@ export function createPageTools(context: PageToolContext): ToolDefinition<any>[]
                     return `Error creating page: ${error instanceof Error ? error.message : 'Unknown error'}`
                 }
             },
-        },
-        {
+        }),
+        defineTool({
             name: 'update_page',
             description: 'Update page metadata (title, slug, SEO). Does not modify blocks.',
             schema: z.object({
@@ -114,8 +114,8 @@ export function createPageTools(context: PageToolContext): ToolDefinition<any>[]
                     return `Error updating page: ${error instanceof Error ? error.message : 'Unknown error'}`
                 }
             },
-        },
-        {
+        }),
+        defineTool({
             name: 'delete_page',
             description: 'Delete a page permanently. This cannot be undone.',
             schema: z.object({
@@ -132,12 +132,12 @@ export function createPageTools(context: PageToolContext): ToolDefinition<any>[]
                     return `Error deleting page: ${error instanceof Error ? error.message : 'Unknown error'}`
                 }
             },
-        },
+        }),
 
         // ============================================
         // BLOCK OPERATIONS
         // ============================================
-        {
+        defineTool({
             name: 'add_block',
             description: 'Add a new block to a page. Use list_available_blocks to see available block types.',
             schema: z.object({
@@ -161,8 +161,8 @@ export function createPageTools(context: PageToolContext): ToolDefinition<any>[]
                     return `Error adding block: ${error instanceof Error ? error.message : 'Unknown error'}`
                 }
             },
-        },
-        {
+        }),
+        defineTool({
             name: 'update_block',
             description: 'Update a block properties. Only specify properties you want to change.',
             schema: z.object({
@@ -178,8 +178,8 @@ export function createPageTools(context: PageToolContext): ToolDefinition<any>[]
                     return `Error updating block: ${error instanceof Error ? error.message : 'Unknown error'}`
                 }
             },
-        },
-        {
+        }),
+        defineTool({
             name: 'remove_block',
             description: 'Remove a block from a page.',
             schema: z.object({
@@ -194,8 +194,8 @@ export function createPageTools(context: PageToolContext): ToolDefinition<any>[]
                     return `Error removing block: ${error instanceof Error ? error.message : 'Unknown error'}`
                 }
             },
-        },
-        {
+        }),
+        defineTool({
             name: 'reorder_blocks',
             description: 'Reorder blocks in a page by providing the block IDs in the new order.',
             schema: z.object({
@@ -210,12 +210,12 @@ export function createPageTools(context: PageToolContext): ToolDefinition<any>[]
                     return `Error reordering blocks: ${error instanceof Error ? error.message : 'Unknown error'}`
                 }
             },
-        },
+        }),
 
         // ============================================
         // PUBLICATION
         // ============================================
-        {
+        defineTool({
             name: 'publish_page',
             description: 'Publish a draft page to make it live and accessible.',
             schema: z.object({
@@ -232,8 +232,8 @@ export function createPageTools(context: PageToolContext): ToolDefinition<any>[]
                     return `Error publishing page: ${error instanceof Error ? error.message : 'Unknown error'}`
                 }
             },
-        },
-        {
+        }),
+        defineTool({
             name: 'unpublish_page',
             description: 'Unpublish a page (set to draft). It will no longer be publicly accessible.',
             schema: z.object({
@@ -250,12 +250,12 @@ export function createPageTools(context: PageToolContext): ToolDefinition<any>[]
                     return `Error unpublishing page: ${error instanceof Error ? error.message : 'Unknown error'}`
                 }
             },
-        },
+        }),
 
         // ============================================
         // DISCOVERY
         // ============================================
-        {
+        defineTool({
             name: 'list_available_blocks',
             description: 'Get information about available block types that can be added to pages.',
             schema: z.object({
@@ -284,6 +284,6 @@ export function createPageTools(context: PageToolContext): ToolDefinition<any>[]
                     return `Error listing available blocks: ${error instanceof Error ? error.message : 'Unknown error'}`
                 }
             },
-        },
+        }),
     ]
 }

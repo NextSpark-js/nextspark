@@ -146,12 +146,12 @@ const postHandler = async (request: NextRequest) => {
     const expiresIn = tokenData.expiresIn
 
     // 5. Get accounts based on platform
-    let accountsToConnect: Array<{
+    const accountsToConnect: Array<{
       platformAccountId: string
       username: string
       accessToken: string
       permissions: string[]
-      metadata: any
+      metadata: Record<string, unknown>
     }> = []
 
     if (platform === 'facebook_page') {
@@ -306,7 +306,7 @@ const postHandler = async (request: NextRequest) => {
     return NextResponse.json({
       success: true,
       message: `Successfully connected ${savedAccounts.length} ${platform} account(s)`,
-      accounts: savedAccounts.map((acc: any) => ({
+      accounts: savedAccounts.map((acc) => ({
         id: acc.id,
         platform: acc.platform,
         accountName: acc.username,

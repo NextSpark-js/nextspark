@@ -324,7 +324,7 @@ function QuickStatsBar() {
                     </div>
                     <div>
                         <p className="text-sm font-medium text-foreground">Welcome back!</p>
-                        <p className="text-xs text-muted-foreground">Here's what's happening with your sales today.</p>
+                        <p className="text-xs text-muted-foreground">Here&apos;s what&apos;s happening with your sales today.</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">

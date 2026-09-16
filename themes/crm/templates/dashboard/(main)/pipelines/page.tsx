@@ -20,12 +20,13 @@ import { fetchWithTeam } from '@nextsparkjs/core/lib/api/entities'
 import { useTeamContext } from '@nextsparkjs/core/contexts/TeamContext'
 import { cn } from '@nextsparkjs/core/lib/utils'
 import { PermissionGate } from '@nextsparkjs/core/components/permissions/PermissionGate'
+import type { Stage } from '@/themes/crm/templates/shared/StageColumn'
 
 interface Pipeline {
     id: string
     name: string
     description?: string
-    stages?: any[]
+    stages?: Stage[]
     isActive?: boolean
     totalValue?: number
     dealCount?: number
@@ -44,7 +45,7 @@ export default function PipelinesPage() {
             try {
                 const response = await fetchWithTeam('/api/v1/pipelines')
                 if (!response.ok) throw new Error('Failed to fetch pipelines')
-                const result = await response.json()
+                const result: { data?: Pipeline[] } = await response.json()
                 setPipelines(result.data || [])
             } catch (error) {
                 console.error('Error loading pipelines:', error)

@@ -30,7 +30,7 @@ export const useAmplitudeEvents = () => {
   const handleClick = useCallback(debounce((event: MouseEvent) => {
     const target = event.target as HTMLElement;
     let eventName = 'Click';
-    let properties: Record<string, any> = {};
+    const properties: Record<string, unknown> = {};
 
     if (target.dataset.track) {
       eventName = target.dataset.track;
@@ -64,7 +64,7 @@ export const useAmplitudeEvents = () => {
   const handleFormSubmit = useCallback((event: Event) => {
     const form = event.target as HTMLFormElement;
     const formName = form.name || form.id || 'Unnamed Form';
-    const properties: Record<string, any> = { formName, pagePath: router?.asPath };
+    const properties: Record<string, unknown> = { formName, pagePath: router?.asPath };
 
     // Collect form field data, excluding sensitive fields
     const formData = new FormData(form);
@@ -91,9 +91,9 @@ export const useAmplitudeEvents = () => {
 
   return {
     trackPageView: (path: string) => track('Page Viewed' as EventType, { path }),
-    trackClick: (element: string, properties?: Record<string, any>) => 
+    trackClick: (element: string, properties?: Record<string, unknown>) => 
       track('Element Click' as EventType, { element, ...properties }),
-    trackFormSubmit: (formName: string, properties?: Record<string, any>) => 
+    trackFormSubmit: (formName: string, properties?: Record<string, unknown>) => 
       track('Form Submitted' as EventType, { formName, ...properties }),
   };
 };

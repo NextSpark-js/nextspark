@@ -7,7 +7,7 @@
 
 import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
 
-export const auditLogsEntityConfig: any = {
+export const auditLogsEntityConfig = {
   name: 'audit-logs',
   label: {
     en: 'Social Media Audit Logs',
@@ -147,4 +147,4 @@ export const auditLogsEntityConfig: any = {
   }
 }
 
-export default auditLogsEntityConfig
+export default auditLogsEntityConfig as unknown as EntityConfig

@@ -15,7 +15,7 @@ export class DataSanitizer {
       if (typeof value === 'string') {
         sanitized[key] = this.sanitizeString(value, piiPatterns);
       } else if (typeof value === 'object' && value !== null) {
-        sanitized[key] = this.sanitizeEventProperties(value, piiPatterns);
+        sanitized[key] = this.sanitizeEventProperties(value as EventProperties, piiPatterns);
       }
     }
 
@@ -31,7 +31,7 @@ export class DataSanitizer {
       if (typeof value === 'string') {
         sanitized[key] = this.sanitizeString(value, piiPatterns);
       } else if (typeof value === 'object' && value !== null) {
-        sanitized[key] = this.sanitizeUserProperties(value, piiPatterns);
+        sanitized[key] = this.sanitizeUserProperties(value as UserProperties, piiPatterns);
       }
     }
 
@@ -117,7 +117,7 @@ export interface AuditLogEntry {
   id: string;
   timestamp: number;
   event: string;
-  data: any;
+  data: unknown;
   severity: AuditLogSeverity;
   source: string;
 }
@@ -132,7 +132,7 @@ export class SecurityAuditLogger {
     this.maxLogs = maxLogs;
   }
 
-  public log(event: string, data: any, severity: AuditLogSeverity = 'INFO', source: string = 'amplitude-plugin'): void {
+  public log(event: string, data: unknown, severity: AuditLogSeverity = 'INFO', source: string = 'amplitude-plugin'): void {
     const entry: AuditLogEntry = {
       id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       timestamp: Date.now(),

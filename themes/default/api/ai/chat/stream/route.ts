@@ -23,13 +23,13 @@
  * ============================================================================
  */
 
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import * as z from 'zod'
 import { authenticateRequest, createAuthFailureResponse } from '@nextsparkjs/core/lib/api/auth/dual-auth'
 import { withRateLimitTier } from '@nextsparkjs/core/lib/api/rate-limit'
 import { streamChat } from '@/plugins/langchain/lib/agent-factory'
 import { createSSEEncoder } from '@/plugins/langchain/lib/streaming'
-import { loadSystemPrompt } from '@/themes/default/lib/langchain/agents'
+import { loadSystemPrompt, type AgentName } from '@/themes/default/lib/langchain/agents'
 import {
     getAgentConfig,
     getAgentModelConfig,
@@ -47,13 +47,13 @@ const StreamChatRequestSchema = z.object({
 /**
  * POST - Stream chat response
  */
-const postHandler = async (request: NextRequest) => {
+const postHandler = async (request: NextRequest): Promise<NextResponse | Response> => {
     try {
         // 1. Authentication; the API-key scope is declared at the entry point,
         // which fails closed for keys that lack it (#93).
         const authResult = await authenticateRequest(request, { requiredScope: 'ai:write' })
         if (!authResult.success || !authResult.user) {
-            return createAuthFailureResponse(authResult) as any
+            return createAuthFailureResponse(authResult)
         }
 
         // 2. Team context
@@ -69,7 +69,7 @@ const postHandler = async (request: NextRequest) => {
                     status: 400,
                     headers: { 'Content-Type': 'application/json' },
                 }
-            ) as any
+            )
         }
 
         const userId = authResult.user.id
@@ -90,7 +90,7 @@ const postHandler = async (request: NextRequest) => {
                     status: 400,
                     headers: { 'Content-Type': 'application/json' },
                 }
-            ) as any
+            )
         }
 
         const { message, sessionId, agentName } = validation.data
@@ -108,7 +108,7 @@ const postHandler = async (request: NextRequest) => {
                     status: 404,
                     headers: { 'Content-Type': 'application/json' },
                 }
-            ) as any
+            )
         }
 
         // 5. Load system prompt
@@ -123,10 +123,10 @@ const postHandler = async (request: NextRequest) => {
                     status: 500,
                     headers: { 'Content-Type': 'application/json' },
                 }
-            ) as any
+            )
         }
 
-        const systemPrompt = loadSystemPrompt(promptName as any)
+        const systemPrompt = loadSystemPrompt(promptName as AgentName)
 
         // 6. Build agent configuration for streaming
         const streamConfig = {
@@ -190,7 +190,7 @@ const postHandler = async (request: NextRequest) => {
                 'Connection': 'keep-alive',
                 'X-Accel-Buffering': 'no', // Disable nginx buffering
             },
-        }) as any // Type assertion needed - Response is compatible with NextResponse
+        })
     } catch (error) {
         console.error('[Streaming Chat] Error:', error)
         return new Response(
@@ -203,8 +203,8 @@ const postHandler = async (request: NextRequest) => {
                 status: 500,
                 headers: { 'Content-Type': 'application/json' },
             }
-        ) as any
+        )
     }
 }
 
-export const POST = withRateLimitTier(postHandler, 'write')
+export const POST = withRateLimitTier(postHandler as (request: NextRequest) => Promise<NextResponse>, 'write')

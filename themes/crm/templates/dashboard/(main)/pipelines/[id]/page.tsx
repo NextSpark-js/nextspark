@@ -20,7 +20,7 @@ export default function PipelineKanbanPage() {
     const pipelineId = params.id as string
     const { currentTeam, isLoading: teamLoading } = useTeamContext()
 
-    const [pipeline, setPipeline] = useState<any>(null)
+    const [pipeline, setPipeline] = useState<{ id: string; name: string; stages: Stage[] } | null>(null)
     const [deals, setDeals] = useState<Deal[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
@@ -35,24 +35,24 @@ export default function PipelineKanbanPage() {
                 // Fetch pipeline details
                 const pipelineRes = await fetchWithTeam(`/api/v1/pipelines/${pipelineId}`)
                 if (!pipelineRes.ok) throw new Error('Failed to fetch pipeline')
-                const pipelineResult = await pipelineRes.json()
+                const pipelineResult: { data: { id: string; name: string; stages: Stage[] } } = await pipelineRes.json()
                 const pipelineData = pipelineResult.data
 
                 // Fetch opportunities for this pipeline
                 const dealsRes = await fetchWithTeam(`/api/v1/opportunities?pipelineId=${pipelineId}`)
                 if (!dealsRes.ok) throw new Error('Failed to fetch opportunities')
-                const dealsResult = await dealsRes.json()
+                const dealsResult: { data?: Deal[] } = await dealsRes.json()
                 const dealsData = dealsResult.data || []
 
                 // Transform pipeline data
                 const transformedPipeline = {
                     id: pipelineData.id,
                     name: pipelineData.name,
-                    stages: (pipelineData.stages as any[]).sort((a, b) => a.order - b.order),
+                    stages: pipelineData.stages.sort((a, b) => a.order - b.order),
                 }
 
                 // Transform deals data
-                const transformedDeals: Deal[] = dealsData.map((opp: any) => ({
+                const transformedDeals: Deal[] = dealsData.map((opp) => ({
                     id: opp.id,
                     name: opp.name,
                     companyId: opp.companyId,

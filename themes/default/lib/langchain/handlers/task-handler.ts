@@ -5,11 +5,12 @@
  * Uses the TasksService to perform CRUD operations.
  */
 
+import type { Task } from '@/themes/default/entities/tasks/tasks.types'
 import { TasksService } from '@/themes/default/entities/tasks/tasks.service'
 import { tracer } from '@/plugins/langchain/lib/tracer'
 import { config as pluginConfig } from '@/plugins/langchain/plugin.config'
 import { createAgentLogger } from '@/plugins/langchain/lib/logger'
-import type { OrchestratorState, TaskHandlerResult, TaskData, IntentType } from '@/plugins/langchain/lib/graph/types'
+import type { OrchestratorState, TaskHandlerResult, TaskData, IntentType, IntentAction } from '@/plugins/langchain/lib/graph/types'
 
 /**
  * Map priority strings to valid values
@@ -40,7 +41,7 @@ function normalizeStatus(status?: unknown): 'todo' | 'in-progress' | 'review' | 
 /**
  * Transform Task entity to TaskData for handler result
  */
-function toTaskData(task: any): TaskData {
+function toTaskData(task: Task): TaskData {
     return {
         id: task.id,
         title: task.title,
@@ -220,7 +221,7 @@ async function executeTaskOperation(
         const errorMessage = error instanceof Error ? error.message : 'Unknown error'
         return {
             success: false,
-            operation: action as any,
+            operation: action as IntentAction,
             data: null,
             message: `Failed to execute ${action}: ${errorMessage}`,
             error: errorMessage,

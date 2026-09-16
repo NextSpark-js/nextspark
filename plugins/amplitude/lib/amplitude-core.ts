@@ -162,7 +162,7 @@ class AmplitudeCoreWrapper {
   private startHealthChecks(): void {
     this.healthCheckInterval = setInterval(() => {
       const metrics = getPerformanceMetrics();
-      const memoryUsage = (performance as any).memory?.usedJSHeapSize || 0;
+      const memoryUsage = (performance as Performance & { memory?: { usedJSHeapSize?: number } }).memory?.usedJSHeapSize || 0;
       
       trackPerformanceMetric('amplitude_memory_usage', memoryUsage, 'gauge');
       trackPerformanceMetric('amplitude_health_check', 1, 'counter');

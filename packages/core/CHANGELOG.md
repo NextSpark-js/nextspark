@@ -85,11 +85,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     re-syncs.
   - **The generated `lint` script is `eslint .`,** since Next 16 removes `next lint`, and
     `eslint-config-next` moves to `^16.3.5`. An existing project keeps whatever `lint`
-    script it already has. The template `eslint.config.mjs` holds the code a project adds
-    to Next's presets, and lints `app/` and `contents/` -- what NextSpark writes there,
-    themes and plugins with their tests and fixtures -- with the zod rule alone, as this
-    repo lints that code, so a new project lints clean. With `eslint-config-next` 15 it
-    reads Next's presets through `FlatCompat`.
+    script it already has. The template `eslint.config.mjs` holds the whole project to Next's
+    presets, `app/` and `contents/` included, and leaves out only tests and fixtures (`tests/`,
+    `__tests__/`, `__mocks__/`, `fixtures/`, `cypress/`, `*.test.*`, `*.spec.*`, `*.cy.*`,
+    Jest and Cypress config), which get the zod rule alone. An `any` or an `<img>` fails the
+    lint: `@next/next/no-img-element` is an error rather than the presets' warning. The rules
+    eslint-plugin-react-hooks 7 adds for the React Compiler (`set-state-in-effect`, `refs`,
+    `immutability` and the rest) warn instead of failing, since NextSpark does not build with the
+    React Compiler; `rules-of-hooks` still fails. The themes and plugins NextSpark ships no longer
+    use `any`, so a new project lints without errors. With `eslint-config-next` 15 it reads
+    Next's presets through `FlatCompat`.
   - **Themes and plugins take `next` `^15.0.0 || ^16.0.0` as a peer,** as do the package.json
     examples in the `create-theme` and `create-plugin` skills. With `^15.0.0`, pnpm installed
     a second Next, a 15, inside each theme and plugin of a Next 16 project. An existing

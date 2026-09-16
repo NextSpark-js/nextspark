@@ -3,14 +3,14 @@ import * as z from 'zod';
 export type AmplitudeAPIKey = string & { __brand: 'AmplitudeAPIKey' };
 export type UserId = string & { __brand: 'UserId' };
 export type EventType = string & { __brand: 'EventType' };
-export type EventProperties = Record<string, any>;
-export type UserProperties = Record<string, any>;
+export type EventProperties = Record<string, unknown>;
+export type UserProperties = Record<string, unknown>;
 
 export const AmplitudeAPIKeySchema = z.string().regex(/^[a-zA-Z0-9]{32}$/).brand('AmplitudeAPIKey');
 export const UserIdSchema = z.string().min(1).brand('UserId');
 export const EventTypeSchema = z.string().min(1).brand('EventType');
-export const EventPropertiesSchema = z.record(z.string(), z.any());
-export const UserPropertiesSchema = z.record(z.string(), z.any());
+export const EventPropertiesSchema = z.record(z.string(), z.unknown());
+export const UserPropertiesSchema = z.record(z.string(), z.unknown());
 
 export interface AmplitudePluginConfig {
   apiKey: string;
@@ -96,10 +96,12 @@ export function isAmplitudeAPIKey(key: string): key is AmplitudeAPIKey {
   return /^[a-zA-Z0-9]{32}$/.test(key);
 }
 
-export function isValidUserId(id: any): id is UserId {
+export function isValidUserId(id: unknown): id is UserId {
   return typeof id === 'string' && id.trim().length > 0;
 }
 
-export function isAmplitudeEvent(event: any): event is { eventType: EventType; properties?: EventProperties } {
-  return Boolean(event && typeof event.eventType === 'string' && event.eventType.length > 0);
+export function isAmplitudeEvent(event: unknown): event is { eventType: EventType; properties?: EventProperties } {
+  if (!event || typeof event !== 'object') return false;
+  const candidate = event as Record<string, unknown>;
+  return typeof candidate.eventType === 'string' && candidate.eventType.length > 0;
 }

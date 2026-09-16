@@ -10,6 +10,24 @@ import type { Serialized } from '@langchain/core/load/serializable'
 import { tracer } from './tracer'
 import type { SpanContext } from '../types/observability.types'
 
+interface SerializedLLMDetails {
+  kwargs?: { model?: string; model_name?: string; modelName?: string; model_id?: string; configuration?: { model?: string }; options?: { model?: string }; base_url?: string }
+  model?: string
+  model_name?: string
+  modelName?: string
+  lc_kwargs?: { model?: string }
+}
+
+interface LLMGeneration {
+  text?: string
+  message?: { content?: unknown }
+}
+
+interface LLMOutput {
+  llmOutput?: { tokenUsage?: { promptTokens?: number; input_tokens?: number; completionTokens?: number; output_tokens?: number } }
+  generations?: Array<LLMGeneration | LLMGeneration[]>
+}
+
 interface TracingCallbackHandlerOptions {
   context: { userId: string; teamId: string }
   traceId: string
@@ -96,7 +114,7 @@ export class TracingCallbackHandler extends BaseCallbackHandler {
       try {
         const provider = llm.id?.[llm.id.length - 1] || 'unknown'
         // Extract model name from various possible locations (expanded for Ollama compatibility)
-        const llmAny = llm as any
+        const llmAny = llm as unknown as SerializedLLMDetails
 
         const model =
           // Standard locations
@@ -144,7 +162,7 @@ export class TracingCallbackHandler extends BaseCallbackHandler {
     await operation
   }
 
-  async handleLLMEnd(output: any, runId: string): Promise<void> {
+  async handleLLMEnd(output: LLMOutput, runId: string): Promise<void> {
     // Increment counter immediately (synchronously) to avoid race condition
     this._llmCallCount++
 
@@ -162,7 +180,10 @@ export class TracingCallbackHandler extends BaseCallbackHandler {
 
         await tracer.endSpan(this.context, this.traceId, spanContext.spanId, {
           output: {
-            generations: output.generations?.map((gen: any) => gen.text || gen.message?.content),
+            generations: output.generations?.map((gen) => {
+              const generation: LLMGeneration = Array.isArray(gen) ? {} : gen
+              return generation.text || generation.message?.content
+            }),
           },
           tokens: tokens.input || tokens.output ? tokens : undefined,
         })

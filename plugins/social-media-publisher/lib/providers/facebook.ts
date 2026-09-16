@@ -70,6 +70,63 @@ interface FacebookAPIResponse<T> {
   }
 }
 
+interface FacebookError {
+  message: string
+  type?: string
+  code?: number
+}
+
+interface FacebookPostResponse {
+  id?: string
+  post_id?: string
+  error?: FacebookError
+}
+
+interface FacebookMetric {
+  name: string
+  values?: Array<{ value?: number }>
+}
+
+interface FacebookPermissionsResponse {
+  tasks?: string[]
+  error?: FacebookError
+}
+
+interface FacebookTokenDebugResponse {
+  data?: { type?: string; app_id?: string; is_valid?: boolean; scopes?: string[]; granular_scopes?: unknown[] }
+  error?: FacebookError
+}
+
+interface FacebookInstagramLinkResponse {
+  instagram_business_account?: { id: string }
+  error?: FacebookError
+}
+
+interface FacebookInstagramAccountResponse {
+  id: string
+  username: string
+  name?: string
+  profile_picture_url?: string
+  followers_count?: number
+  follows_count?: number
+  media_count?: number
+  biography?: string
+  website?: string
+  error?: FacebookError
+}
+
+interface FacebookPageInfoResponse {
+  id: string
+  name: string
+  fan_count?: number
+  about?: string
+  category?: string
+  picture?: { url?: string }
+  cover?: { source?: string }
+  link?: string
+  error?: FacebookError
+}
+
 interface FacebookPageData {
   id: string
   name: string
@@ -100,7 +157,7 @@ export class FacebookAPI {
         }),
       })
 
-      const data: any = await response.json()
+      const data: FacebookPostResponse = await response.json()
 
       if (data.error) {
         return {
@@ -148,7 +205,7 @@ export class FacebookAPI {
         }),
       })
 
-      const data: any = await response.json()
+      const data: FacebookPostResponse = await response.json()
 
       if (data.error) {
         return {
@@ -196,7 +253,7 @@ export class FacebookAPI {
         }),
       })
 
-      const data: any = await response.json()
+      const data: FacebookPostResponse = await response.json()
 
       if (data.error) {
         return {
@@ -243,7 +300,7 @@ export class FacebookAPI {
         }
 
         // Map and add pages from this batch
-        const batchPages = (data.data || []).map((page: any) => ({
+        const batchPages = (data.data || []).map((page) => ({
           id: page.id,
           name: page.name,
           category: page.category,
@@ -263,7 +320,7 @@ export class FacebookAPI {
       }
 
       console.log('[FacebookAPI] ✅ Total pages found across all batches:', allPages.length)
-      console.log('[FacebookAPI] 🔍 Page names:', allPages.map((p: any) => p.name))
+      console.log('[FacebookAPI] 🔍 Page names:', allPages.map((p) => p.name))
 
       return allPages
     } catch (error) {
@@ -288,7 +345,7 @@ export class FacebookAPI {
           `access_token=${pageAccessToken}`
       )
 
-      const data: any = await response.json()
+      const data: FacebookAPIResponse<FacebookMetric> = await response.json()
 
       if (data.error) {
         throw new Error(data.error.message)
@@ -304,7 +361,7 @@ export class FacebookAPI {
         shares: 0,
       }
 
-      data.data?.forEach((metric: any) => {
+      data.data?.forEach((metric) => {
         const value = metric.values?.[0]?.value || 0
         if (metric.name === 'page_impressions') {
           insights.impressions = value
@@ -335,7 +392,7 @@ export class FacebookAPI {
         `${GRAPH_API_BASE}/${pageId}?fields=tasks&access_token=${pageAccessToken}`
       )
 
-      const data: any = await response.json()
+      const data: FacebookPermissionsResponse = await response.json()
 
       if (data.error) {
         return {
@@ -399,7 +456,7 @@ export class FacebookAPI {
       const debugResponse: Response = await fetch(
         `${GRAPH_API_BASE}/debug_token?input_token=${pageAccessToken}&access_token=${pageAccessToken}`
       )
-      const debugData: any = await debugResponse.json()
+      const debugData: FacebookTokenDebugResponse = await debugResponse.json()
 
       // Log token info in single lines for easier debugging
       if (debugData.data) {
@@ -417,7 +474,7 @@ export class FacebookAPI {
         `${GRAPH_API_BASE}/${pageId}?fields=instagram_business_account&access_token=${pageAccessToken}`
       )
 
-      const pageData: any = await pageResponse.json()
+      const pageData: FacebookInstagramLinkResponse = await pageResponse.json()
 
       // DEBUG: Log the full response
       console.log('[FacebookAPI] 🔍 Page API Response:', JSON.stringify(pageData, null, 2))
@@ -445,7 +502,7 @@ export class FacebookAPI {
         `access_token=${pageAccessToken}`
       )
 
-      const igData: any = await igResponse.json()
+      const igData: FacebookInstagramAccountResponse = await igResponse.json()
 
       if (igData.error) {
         console.error('[FacebookAPI] Error fetching Instagram data:', igData.error)
@@ -500,7 +557,7 @@ export class FacebookAPI {
         `access_token=${pageAccessToken}`
       )
 
-      const data: any = await response.json()
+      const data: FacebookPageInfoResponse = await response.json()
 
       if (data.error) {
         console.error('[FacebookAPI] ❌ API Error:', data.error)
@@ -603,7 +660,7 @@ export class FacebookAPI {
         }),
       })
 
-      const data: any = await response.json()
+      const data: FacebookPostResponse = await response.json()
 
       if (data.error) {
         console.error('[FacebookAPI] Carousel post creation failed:', data.error.message)
@@ -655,7 +712,7 @@ export class FacebookAPI {
         }),
       })
 
-      const data: any = await response.json()
+      const data: FacebookPostResponse = await response.json()
 
       if (data.error) {
         return { success: false, error: data.error.message }

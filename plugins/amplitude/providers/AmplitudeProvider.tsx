@@ -34,7 +34,7 @@ export const AmplitudeProvider: React.FC<{ children: React.ReactNode; overrideCo
     }
 
     try {
-      await AmplitudeCore.init(config.apiKey as any, config);
+      await AmplitudeCore.init(config.apiKey, config);
       setIsInitialized(true);
       setError(null);
       retryCount.current = 0;

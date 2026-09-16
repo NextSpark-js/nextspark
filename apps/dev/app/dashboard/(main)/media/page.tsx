@@ -485,6 +485,7 @@ function DefaultMediaDashboardPage() {
             {/* Left: Image preview - Dark canvas */}
             <div className="relative bg-neutral-950 flex items-center justify-center overflow-hidden h-[250px] md:h-auto">
               {editingMedia?.mimeType.startsWith('image/') ? (
+                // eslint-disable-next-line @next/next/no-img-element -- the original upload at its own size, whose dimensions next/image would need up front
                 <img
                   src={withBasePathIfInApp(editingMedia.url)}
                   alt={editingMedia.alt || editingMedia.filename}

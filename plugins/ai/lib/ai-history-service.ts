@@ -241,7 +241,7 @@ export class AIHistoryService {
         SELECT * FROM "ai_history"
         WHERE "userId" = $1
       `
-      const params: any[] = [userId]
+      const params: unknown[] = [userId]
       let paramIndex = 2
 
       if (operation) {
@@ -286,7 +286,7 @@ export class AIHistoryService {
         SELECT * FROM "ai_history"
         WHERE "relatedEntityType" = $1 AND "relatedEntityId" = $2
       `
-      const params: any[] = [entityType, entityId]
+      const params: unknown[] = [entityType, entityId]
       let paramIndex = 3
 
       if (operation) {
@@ -345,7 +345,7 @@ export class AIHistoryService {
         FROM "ai_history"
         WHERE "userId" = $1
       `
-      const params: any[] = [userId]
+      const params: unknown[] = [userId]
 
       if (fromDate) {
         sql += ` AND "createdAt" >= $2`

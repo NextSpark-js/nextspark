@@ -140,7 +140,7 @@ export default function CompaniesPage() {
         {
             key: 'website',
             header: 'Website',
-            render: (value) => value ? (
+            render: (value: string) => value ? (
                 <a
                     href={value.startsWith('http') ? value : `https://${value}`}
                     target="_blank"

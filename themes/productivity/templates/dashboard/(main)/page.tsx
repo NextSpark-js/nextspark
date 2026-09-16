@@ -283,7 +283,7 @@ export default function ProductivityDashboard() {
                                 {getGreeting()}, {user?.firstName || 'there'}!
                             </h1>
                             <p className="text-muted-foreground mt-1">
-                                Here's what's happening with your boards
+                                Here&apos;s what&apos;s happening with your boards
                             </p>
                         </div>
                         <PermissionGate permission="boards.create">
@@ -516,7 +516,7 @@ export default function ProductivityDashboard() {
                                     <h3 className="font-semibold text-foreground mb-1">Getting Started</h3>
                                     <p className="text-muted-foreground text-sm mb-4">
                                         Create your first board to start organizing your tasks. Boards help you
-                                        visualize your workflow with columns like "To Do", "In Progress", and "Done".
+                                        visualize your workflow with columns like &quot;To Do&quot;, &quot;In Progress&quot;, and &quot;Done&quot;.
                                     </p>
                                     <Button onClick={() => setCreateDialogOpen(true)} className="gap-2">
                                         <Plus className="w-4 h-4" />

@@ -55,11 +55,11 @@ export default function ActivitiesPage() {
             try {
                 const response = await fetchWithTeam('/api/v1/activities')
                 if (!response.ok) throw new Error('Failed to fetch activities')
-                const result = await response.json()
+                const result: { data?: ActivityType[] } = await response.json()
                 const data = result.data || []
 
                 const transformedActivities: ActivityType[] = data
-                    .map((act: any) => ({
+                    .map((act) => ({
                         id: act.id,
                         type: act.type,
                         subject: act.subject,

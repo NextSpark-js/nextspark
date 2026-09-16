@@ -10,14 +10,14 @@ import { useExperiment } from '../hooks/useExperiment';
 export interface ExperimentWrapperProps {
   experimentId: string;
   userId?: string;
-  children: ReactNode | ((variant: string | null, config: Record<string, any> | null) => ReactNode);
+  children: ReactNode | ((variant: string | null, config: Record<string, unknown> | null) => ReactNode);
   fallback?: ReactNode;
   trackExposureOnMount?: boolean;
   trackExposureOnVisible?: boolean;
   exposureDelay?: number;
   className?: string;
   style?: React.CSSProperties;
-  onVariantAssigned?: (variant: string | null, config: Record<string, any> | null) => void;
+  onVariantAssigned?: (variant: string | null, config: Record<string, unknown> | null) => void;
   onExposed?: (experimentId: string, variant: string) => void;
   onError?: (error: Error) => void;
 }
@@ -89,7 +89,7 @@ export const ExperimentWrapper: React.FC<ExperimentWrapperProps> = ({
   } = useExperiment();
 
   const [variant, setVariant] = useState<string | null>(null);
-  const [config, setConfig] = useState<Record<string, any> | null>(null);
+  const [config, setConfig] = useState<Record<string, unknown> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [hasTrackedExposure, setHasTrackedExposure] = useState(false);
@@ -164,9 +164,9 @@ export const ExperimentWrapper: React.FC<ExperimentWrapperProps> = ({
       const assignedVariant = getVariant(experimentId, effectiveUserId);
       
       // Get variant config from experiment config
-      let variantConfig: Record<string, any> | null = null;
+      let variantConfig: Record<string, unknown> | null = null;
       if (assignedVariant && experiment.variants) {
-        const variantData = experiment.variants.find((v: any) => v.id === assignedVariant);
+        const variantData = experiment.variants.find((v: { id: string; config?: Record<string, unknown> }) => v.id === assignedVariant);
         variantConfig = variantData?.config || null;
       }
 
@@ -361,7 +361,7 @@ export const ABTest: React.FC<ABTestProps> = ({
 export interface MultivariateTestProps {
   experimentId: string;
   userId?: string;
-  children: (config: Record<string, any> | null) => ReactNode;
+  children: (config: Record<string, unknown> | null) => ReactNode;
   fallback?: ReactNode;
 }
 
@@ -406,11 +406,11 @@ export const useExperimentComponent = (experimentId: string, userId?: string) =>
   const variant = canRunExperiments ? getVariant(experimentId, effectiveUserId) : null;
   
   // Get variant config from experiment config
-  let config: Record<string, any> | null = null;
+  let config: Record<string, unknown> | null = null;
   if (canRunExperiments && variant) {
     const experiment = getExperimentConfig(experimentId);
     if (experiment?.variants) {
-      const variantData = experiment.variants.find((v: any) => v.id === variant);
+      const variantData = experiment.variants.find((v: { id: string; config?: Record<string, unknown> }) => v.id === variant);
       config = variantData?.config || null;
     }
   }

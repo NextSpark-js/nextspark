@@ -27,7 +27,7 @@ import {
     getAgentTools,
     getAgentPromptName,
 } from '@/themes/default/lib/langchain/langchain.config'
-import { loadSystemPrompt } from '@/themes/default/lib/langchain/agents'
+import { loadSystemPrompt, type AgentName } from '@/themes/default/lib/langchain/agents'
 import type { ChatMessage } from '@/plugins/langchain/types/langchain.types'
 
 // Agent name - matches key in AGENTS config
@@ -148,7 +148,7 @@ const postHandler = async (req: NextRequest) => {
         if (!promptName) {
             throw new Error(`No system prompt configured for agent '${AGENT_NAME}'`)
         }
-        const systemPrompt = loadSystemPrompt(promptName as any)
+        const systemPrompt = loadSystemPrompt(promptName as AgentName)
 
         // 8. Create agent with config from langchain.config.ts
         const agent = await createAgent({

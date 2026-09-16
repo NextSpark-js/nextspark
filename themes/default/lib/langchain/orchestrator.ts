@@ -29,7 +29,7 @@ import { compilePrompt, hasTemplateVariables } from '@/plugins/langchain/lib/pro
 import { tracer } from '@/plugins/langchain/lib/tracer'
 import type { AgentContext } from '@/plugins/langchain/types/langchain.types'
 import type { ModelConfig } from '@/plugins/langchain/lib/graph/types'
-import { loadSystemPrompt } from './agents'
+import { loadSystemPrompt, type AgentName } from './agents'
 import {
     getAgentConfig,
     getAgentModelConfig,
@@ -193,7 +193,7 @@ function getSystemPromptForAgent(agentName: string, context?: AgentContext): str
             template = agentConfig.systemPrompt
         } else {
             // Otherwise load from .md file
-            template = loadSystemPrompt(agentConfig.systemPrompt as any)
+            template = loadSystemPrompt(agentConfig.systemPrompt as AgentName)
         }
 
         // Only compile if template has Handlebars syntax
@@ -214,7 +214,7 @@ function getSystemPromptForAgent(agentName: string, context?: AgentContext): str
     // Fallback: return raw template if no context
     const rawTemplate = agentConfig.systemPrompt.includes('\n')
         ? agentConfig.systemPrompt
-        : loadSystemPrompt(agentConfig.systemPrompt as any)
+        : loadSystemPrompt(agentConfig.systemPrompt as AgentName)
     return rawTemplate
 }
 

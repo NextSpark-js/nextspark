@@ -25,11 +25,11 @@ interface ExperimentVariant {
   description: string;
   allocation: number;
   isControl: boolean;
-  config: Record<string, any>;
+  config: Record<string, unknown>;
 }
 
 interface ExperimentTargeting {
-  userProperties?: Record<string, any>;
+  userProperties?: Record<string, unknown>;
   geolocation?: string[];
   deviceType?: string[];
   timeRange?: { start: string; end: string };

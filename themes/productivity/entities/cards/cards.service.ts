@@ -130,7 +130,7 @@ export class CardsService {
     } = options
 
     const conditions: string[] = []
-    const params: any[] = []
+    const params: unknown[] = []
     let paramIndex = 1
 
     if (teamId) {
@@ -238,7 +238,7 @@ export class CardsService {
    */
   static async update(userId: string, id: string, data: CardUpdateData): Promise<Card> {
     const updates: string[] = []
-    const params: any[] = []
+    const params: unknown[] = []
     let paramIndex = 1
 
     if (data.title !== undefined) {

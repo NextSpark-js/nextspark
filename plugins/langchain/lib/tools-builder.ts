@@ -8,6 +8,17 @@ export interface ToolDefinition<T extends z.ZodObject<z.ZodRawShape>> {
     func: (input: z.infer<T>) => Promise<string>
 }
 
+export interface GenericToolDefinition {
+    name: string
+    description: string
+    schema: z.ZodObject<z.ZodRawShape>
+    func: (input: never) => Promise<string>
+}
+
+export function defineTool<T extends z.ZodObject<z.ZodRawShape>>(definition: ToolDefinition<T>): ToolDefinition<T> {
+    return definition
+}
+
 /**
  * Get the Zod type name for a field (Zod v4 compatible)
  */
@@ -154,7 +165,7 @@ export function zodToOpenAISchema(zodSchema: z.ZodObject<z.ZodRawShape>): Record
  * Convert tool definitions to OpenAI tool format with proper type: "object"
  * Use this for LM Studio compatibility
  */
-export function convertToOpenAITools(definitions: ToolDefinition<z.ZodObject<z.ZodRawShape>>[]): Array<{
+export function convertToOpenAITools(definitions: GenericToolDefinition[]): Array<{
     type: 'function'
     function: {
         name: string
@@ -187,6 +198,11 @@ export function createTool<T extends z.ZodObject<z.ZodRawShape>>(def: ToolDefini
 /**
  * Build multiple tools from definitions
  */
-export function buildTools(definitions: ToolDefinition<z.ZodObject<z.ZodRawShape>>[]) {
-    return definitions.map(createTool)
+export function buildTools(definitions: GenericToolDefinition[]) {
+    return definitions.map((definition) => new DynamicStructuredTool({
+        name: definition.name,
+        description: definition.description,
+        schema: definition.schema,
+        func: (input) => definition.func(input as never),
+    }))
 }

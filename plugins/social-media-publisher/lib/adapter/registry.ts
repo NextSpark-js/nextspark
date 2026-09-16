@@ -28,21 +28,22 @@ import type { SocialPlatformAdapter } from './abstract-adapter'
  */
 const GLOBAL_KEY = Symbol.for('smp.adapter')
 const GLOBAL_LAZY_KEY = Symbol.for('smp.adapter.lazyLoaded')
+const globalRegistry = globalThis as Record<symbol, unknown>
 
 function getRegisteredAdapter(): SocialPlatformAdapter | null {
-  return (globalThis as any)[GLOBAL_KEY] ?? null
+  return (globalRegistry[GLOBAL_KEY] as SocialPlatformAdapter | undefined) ?? null
 }
 
 function setRegisteredAdapter(adapter: SocialPlatformAdapter | null): void {
-  (globalThis as any)[GLOBAL_KEY] = adapter
+  globalRegistry[GLOBAL_KEY] = adapter
 }
 
 function isLazyLoadAttempted(): boolean {
-  return (globalThis as any)[GLOBAL_LAZY_KEY] === true
+  return globalRegistry[GLOBAL_LAZY_KEY] === true
 }
 
 function setLazyLoadAttempted(value: boolean): void {
-  (globalThis as any)[GLOBAL_LAZY_KEY] = value
+  globalRegistry[GLOBAL_LAZY_KEY] = value
 }
 
 /**

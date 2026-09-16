@@ -218,6 +218,13 @@ async function errorNodeWrapper(state: OrchestratorState): Promise<Partial<Orche
     }
 }
 
+interface DynamicOrchestratorGraph {
+    addNode(name: string, node: unknown): DynamicOrchestratorGraph
+    addEdge(source: string, target: string): DynamicOrchestratorGraph
+    addConditionalEdges(source: string, route: unknown, paths: Record<string, string>): DynamicOrchestratorGraph
+    compile(): { invoke(input: OrchestratorState): Promise<unknown> }
+}
+
 // ============================================
 // GRAPH BUILDER (GENERIC)
 // ============================================
@@ -234,10 +241,9 @@ export function createOrchestratorGraph(
     _graphConfig: Partial<GraphConfig> = {}
 ) {
     // Create the graph with channels
-    // Using 'any' to bypass strict typing of StateGraph which expects literal node names
-    const graph: any = new StateGraph<OrchestratorState>({
-        channels: orchestratorChannels as any,
-    })
+    const graph = new StateGraph<OrchestratorState>({
+        channels: orchestratorChannels,
+    }) as unknown as DynamicOrchestratorGraph
 
     // Add router node (uses config for dynamic prompt/schema)
     const routerNode = createRouterNode(config)

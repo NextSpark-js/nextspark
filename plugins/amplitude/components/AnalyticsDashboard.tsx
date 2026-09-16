@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useAmplitudeContext } from '../providers/AmplitudeProvider';
-import { getPerformanceMetrics, getPerformanceStats } from '../lib/performance';
+import { getPerformanceMetrics, getPerformanceStats, type PerformanceMetric, type PerformanceStats } from '../lib/performance';
 
 interface AnalyticsDashboardProps {
   refreshInterval?: number;
@@ -38,7 +38,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   onAlert
 }) => {
   const { isInitialized, error, config } = useAmplitudeContext();
-  const [metrics, setMetrics] = useState<any[]>([]);
+  const [metrics, setMetrics] = useState<PerformanceMetric[]>([]);
   const [dashboardMetrics, setDashboardMetrics] = useState<DashboardMetrics>({
     eventsProcessed: 0,
     errorRate: 0,
@@ -52,7 +52,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   const [loading, setLoading] = useState(true);
   const [alerts, setAlerts] = useState<PerformanceAlert[]>([]);
 
-  const checkThresholds = useCallback((stats: any) => {
+  const checkThresholds = useCallback((stats: PerformanceStats) => {
     const newAlerts: PerformanceAlert[] = [];
 
     // Error rate threshold

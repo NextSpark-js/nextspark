@@ -1,5 +1,5 @@
 import * as z from 'zod'
-import { ToolDefinition } from '@/plugins/langchain/lib/tools-builder'
+import { defineTool } from '@/plugins/langchain/lib/tools-builder'
 
 /**
  * Agent types that can be routed to
@@ -29,9 +29,9 @@ export interface ClarificationResult {
  * These tools don't execute operations directly; they return routing decisions
  * that the orchestrator handler uses to delegate to specialized agents.
  */
-export function createOrchestratorTools(): ToolDefinition<any>[] {
+export function createOrchestratorTools() {
     return [
-        {
+        defineTool({
             name: 'route_to_task',
             description: 'Route the request to the task management agent. Use when the user wants to manage tasks, to-dos, work items, deadlines, or project-related items.',
             schema: z.object({
@@ -43,8 +43,8 @@ export function createOrchestratorTools(): ToolDefinition<any>[] {
                     message,
                 } as RoutingResult)
             },
-        },
-        {
+        }),
+        defineTool({
             name: 'route_to_customer',
             description: 'Route the request to the customer management agent. Use when the user wants to manage customers, clients, accounts, contacts, offices, sales representatives, or sales-related data.',
             schema: z.object({
@@ -56,8 +56,8 @@ export function createOrchestratorTools(): ToolDefinition<any>[] {
                     message,
                 } as RoutingResult)
             },
-        },
-        {
+        }),
+        defineTool({
             name: 'route_to_page',
             description: 'Route the request to the page/content management agent. Use when the user wants to manage pages, website content, blocks, landing pages, SEO, or publishing.',
             schema: z.object({
@@ -69,8 +69,8 @@ export function createOrchestratorTools(): ToolDefinition<any>[] {
                     message,
                 } as RoutingResult)
             },
-        },
-        {
+        }),
+        defineTool({
             name: 'ask_clarification',
             description: 'Ask the user for clarification when the request is ambiguous and you cannot determine which agent should handle it. Provide 2-3 specific options.',
             schema: z.object({
@@ -87,6 +87,6 @@ export function createOrchestratorTools(): ToolDefinition<any>[] {
                     options,
                 } as ClarificationResult)
             },
-        },
+        }),
     ]
 }

@@ -5,15 +5,16 @@
  * Uses the PagesService to perform read operations.
  */
 
+import type { PagePublic } from '@/themes/default/entities/pages/pages.types'
 import { PagesService } from '@/themes/default/entities/pages/pages.service'
 import { config as pluginConfig } from '@/plugins/langchain/plugin.config'
 import { createAgentLogger } from '@/plugins/langchain/lib/logger'
-import type { OrchestratorState, PageHandlerResult, PageData, IntentType } from '@/plugins/langchain/lib/graph/types'
+import type { OrchestratorState, PageHandlerResult, PageData, IntentType, IntentAction } from '@/plugins/langchain/lib/graph/types'
 
 /**
  * Transform Page entity to PageData for handler result
  */
-function toPageData(page: any): PageData {
+function toPageData(page: PagePublic & { status?: string }): PageData {
     return {
         id: page.id,
         title: page.title,
@@ -139,7 +140,7 @@ async function executePageOperation(
                 // These operations are not supported through the AI agent
                 return {
                     success: false,
-                    operation: action as any,
+                    operation: action as IntentAction,
                     data: null,
                     message: `Page ${action} is not supported through the AI assistant. Please use the page builder.`,
                     error: 'Operation not supported',
@@ -158,7 +159,7 @@ async function executePageOperation(
         const errorMessage = error instanceof Error ? error.message : 'Unknown error'
         return {
             success: false,
-            operation: action as any,
+            operation: action as IntentAction,
             data: null,
             message: `Failed to execute ${action}: ${errorMessage}`,
             error: errorMessage,

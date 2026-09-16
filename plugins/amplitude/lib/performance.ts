@@ -1,11 +1,32 @@
 import { EventType } from '../types/amplitude.types';
 
+interface MemoryInfo {
+  usedJSHeapSize: number;
+  totalJSHeapSize: number;
+  jsHeapSizeLimit: number;
+}
+
+interface NetworkConnection {
+  effectiveType?: string;
+  downlink?: number;
+  rtt?: number;
+  saveData?: boolean;
+  addEventListener: (type: 'change', listener: () => void) => void;
+  removeEventListener: (type: 'change', listener: () => void) => void;
+}
+
+type BrowserPerformance = Performance & { memory?: MemoryInfo };
+type BrowserNavigator = Navigator & { connection?: NetworkConnection };
+type LargestContentfulPaintEntry = PerformanceEntry & { element?: Element };
+type LayoutShiftEntry = PerformanceEntry & { hadRecentInput?: boolean; value?: number };
+type ResourceTimingWithStatus = PerformanceResourceTiming & { responseStatus?: number };
+
 export interface PerformanceMetric {
   name: string;
   value: number;
   unit: string;
   timestamp: number;
-  properties?: Record<string, any>;
+  properties?: Record<string, unknown>;
 }
 
 export interface PerformanceStats {
@@ -48,7 +69,7 @@ let amplitudeCoreStats = {
   memoryUsage: 0,
 };
 
-export function trackPerformanceMetric(name: EventType | string, value: number, unit: string = 'ms', properties?: Record<string, any>): void {
+export function trackPerformanceMetric(name: EventType | string, value: number, unit: string = 'ms', properties?: Record<string, unknown>): void {
   if (typeof window === 'undefined') return;
 
   const metric: PerformanceMetric = {
@@ -136,8 +157,8 @@ export function getPerformanceStats(): PerformanceStats {
   if (typeof window !== 'undefined') {
     // Browser metrics
     stats.browserMetrics = {
-      memoryUsage: (performance as any).memory?.usedJSHeapSize || 0,
-      connectionType: (navigator as any).connection?.effectiveType || 'unknown',
+      memoryUsage: (performance as BrowserPerformance).memory?.usedJSHeapSize || 0,
+      connectionType: (navigator as BrowserNavigator).connection?.effectiveType || 'unknown',
       devicePixelRatio: window.devicePixelRatio || 1,
       screenResolution: `${window.screen.width}x${window.screen.height}`,
       viewportSize: `${window.innerWidth}x${window.innerHeight}`,
@@ -183,7 +204,7 @@ export function setupPerformanceObservers(): void {
     const lcpObserver = new PerformanceObserver((entryList) => {
       for (const entry of entryList.getEntries()) {
         trackPerformanceMetric('LCP', entry.startTime + entry.duration, 'ms', {
-          element: (entry as any).element?.tagName,
+          element: (entry as LargestContentfulPaintEntry).element?.tagName,
           url: window.location.href,
         });
       }
@@ -195,8 +216,8 @@ export function setupPerformanceObservers(): void {
     const clsObserver = new PerformanceObserver((entryList) => {
       let cls = 0;
       for (const entry of entryList.getEntries()) {
-        if (!(entry as any).hadRecentInput) {
-          cls += (entry as any).value;
+        if (!(entry as LayoutShiftEntry).hadRecentInput) {
+          cls += (entry as LayoutShiftEntry).value ?? 0;
         }
       }
       if (cls > 0) {
@@ -249,7 +270,7 @@ export function setupPerformanceObservers(): void {
           name: entry.name,
           initiatorType: resourceEntry.initiatorType,
           transferSize: resourceEntry.transferSize,
-          responseStatus: (resourceEntry as any).responseStatus,
+          responseStatus: (resourceEntry as ResourceTimingWithStatus).responseStatus,
         });
       }
     });
@@ -277,8 +298,8 @@ export function startMemoryMonitoring(intervalMs: number = 30000): () => void {
   if (typeof window === 'undefined') return () => {};
 
   const interval = setInterval(() => {
-    if ((performance as any).memory) {
-      const memory = (performance as any).memory;
+    const memory = (performance as BrowserPerformance).memory;
+    if (memory) {
       trackPerformanceMetric('JS Heap Used', memory.usedJSHeapSize, 'bytes');
       trackPerformanceMetric('JS Heap Total', memory.totalJSHeapSize, 'bytes');
       trackPerformanceMetric('JS Heap Limit', memory.jsHeapSizeLimit, 'bytes');
@@ -290,9 +311,10 @@ export function startMemoryMonitoring(intervalMs: number = 30000): () => void {
 
 // Connection monitoring
 export function monitorConnection(): () => void {
-  if (typeof window === 'undefined' || !(navigator as any).connection) return () => {};
+  if (typeof window === 'undefined' || !(navigator as BrowserNavigator).connection) return () => {};
 
-  const connection = (navigator as any).connection;
+  const connection = (navigator as BrowserNavigator).connection;
+  if (!connection) return () => {};
   
   const handleConnectionChange = () => {
     trackPerformanceMetric('Connection Type', 1, 'event', {

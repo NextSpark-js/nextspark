@@ -189,7 +189,7 @@ async function invokeRouterWithRetry(
     structuredOutputMethod: 'functionCalling' | 'jsonMode' | 'jsonSchema',
     schema: z.ZodSchema
 ): Promise<RouterOutput> {
-    let lastError: Error | null = null
+    const lastError: Error | null = null
 
     for (let attempt = 1; attempt <= ROUTER_CONFIG.maxRetries; attempt++) {
         if (pluginConfig.debug && attempt > 1) {

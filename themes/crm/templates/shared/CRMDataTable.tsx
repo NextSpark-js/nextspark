@@ -28,7 +28,7 @@ export interface Column<T> {
     header: string
     width?: string
     sortable?: boolean
-    render?: (value: any, row: T) => React.ReactNode
+    render?: (value: never, row: T) => React.ReactNode
     className?: string
 }
 
@@ -101,8 +101,8 @@ export function CRMDataTable<T extends { id: string }>({
         // Sort
         if (sort.key && sort.direction) {
             result.sort((a, b) => {
-                const aVal = (a as any)[sort.key!]
-                const bVal = (b as any)[sort.key!]
+                const aVal = (a as Record<string, unknown>)[sort.key!]
+                const bVal = (b as Record<string, unknown>)[sort.key!]
 
                 if (aVal === bVal) return 0
                 if (aVal == null) return 1
@@ -167,11 +167,11 @@ export function CRMDataTable<T extends { id: string }>({
     }
 
     // Get cell value
-    const getCellValue = (row: T, column: Column<T>): any => {
+    const getCellValue = (row: T, column: Column<T>): unknown => {
         const keys = String(column.key).split('.')
-        let value: any = row
+        let value: unknown = row
         for (const key of keys) {
-            value = value?.[key]
+            value = (value as Record<string, unknown> | null | undefined)?.[key]
         }
         return value
     }
@@ -334,8 +334,8 @@ export function CRMDataTable<T extends { id: string }>({
                                             onClick={() => onRowClick?.(row)}
                                         >
                                             {column.render
-                                                ? column.render(getCellValue(row, column), row)
-                                                : getCellValue(row, column) ?? '-'}
+                                                ? column.render(getCellValue(row, column) as never, row)
+                                                : (getCellValue(row, column) ?? '-') as React.ReactNode}
                                         </td>
                                     ))}
                                     {/* Row actions */}

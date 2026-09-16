@@ -35,6 +35,30 @@ export interface StreamChatOptions {
     signal?: AbortSignal  // For cancellation
 }
 
+interface StreamableAgent {
+    streamEvents: (input: never, options: never) => AsyncIterable<unknown>
+    invoke: (input: never, options?: never) => Promise<unknown>
+}
+
+interface LLMTokenUsage {
+    input_tokens?: number
+    output_tokens?: number
+    total_tokens?: number
+    promptTokens?: number
+    completionTokens?: number
+    totalTokens?: number
+}
+
+interface StreamEvent {
+    event?: string
+    name?: string
+    data?: {
+        chunk?: { content?: unknown }
+        output?: { usage_metadata?: LLMTokenUsage; llmOutput?: { tokenUsage?: LLMTokenUsage } }
+    }
+}
+
+
 interface AgentConfig {
     modelConfig?: {
         provider?: string
@@ -49,7 +73,7 @@ interface AgentConfig {
  * Handles memory persistence and token tracking.
  */
 export async function* streamChat(
-    agent: { streamEvents: Function; invoke: Function },
+    agent: StreamableAgent,
     input: string,
     context: AgentContext,
     config: AgentConfig,
@@ -86,14 +110,15 @@ export async function* streamChat(
 
         // Stream events from LangChain with tracing callbacks
         const stream = agent.streamEvents(
-            { messages },
+            { messages } as never,
             {
                 version: 'v2',
                 callbacks: tracingCallbacks,
-            }
+            } as never
         )
 
         for await (const event of stream) {
+            const streamEvent = event as StreamEvent
             // Check for cancellation
             if (signal?.aborted) {
                 yield { type: 'error', error: 'Stream cancelled by user' }
@@ -101,33 +126,33 @@ export async function* streamChat(
             }
 
             // Handle different event types
-            if (event.event === 'on_chat_model_stream') {
-                const token = event.data?.chunk?.content
+            if (streamEvent.event === 'on_chat_model_stream') {
+                const token = streamEvent.data?.chunk?.content
                 if (token && typeof token === 'string') {
                     fullContent += token
                     yield { type: 'token', content: token }
                 }
             }
 
-            if (event.event === 'on_tool_start') {
+            if (streamEvent.event === 'on_tool_start') {
                 yield {
                     type: 'tool_start',
-                    toolName: event.name || 'unknown',
+                    toolName: streamEvent.name || 'unknown',
                 }
             }
 
-            if (event.event === 'on_tool_end') {
+            if (streamEvent.event === 'on_tool_end') {
                 yield {
                     type: 'tool_end',
-                    toolName: event.name || 'unknown',
-                    result: event.data?.output,
+                    toolName: streamEvent.name || 'unknown',
+                    result: streamEvent.data?.output,
                 }
             }
 
             // Capture token usage from LLM events
-            if (event.event === 'on_llm_end') {
-                const usage = event.data?.output?.usage_metadata ||
-                              event.data?.output?.llmOutput?.tokenUsage
+            if (streamEvent.event === 'on_llm_end') {
+                const usage = streamEvent.data?.output?.usage_metadata ||
+                              streamEvent.data?.output?.llmOutput?.tokenUsage
                 if (usage) {
                     tokenUsage = {
                         inputTokens: usage.input_tokens || usage.promptTokens || 0,

@@ -23,7 +23,7 @@ import type {
     AgentDefinition,
     AgentContext,
     SessionConfig,
-    ToolDefinition,
+    GenericToolDefinition,
     ThemeLangChainConfig,
 } from '../types/langchain.types'
 
@@ -42,7 +42,7 @@ export interface AgentHelpers {
     }> | undefined
 
     /** Get tools for an agent with runtime context */
-    getAgentTools: (agentName: string, context: AgentContext) => ToolDefinition<any>[]
+    getAgentTools: (agentName: string, context: AgentContext) => GenericToolDefinition[]
 
     /** Get system prompt name (to be loaded from .md file) */
     getAgentPromptName: (agentName: string) => string | undefined
@@ -134,12 +134,12 @@ export function createAgentHelpers(
         getAgentTools(
             agentName: string,
             context: AgentContext
-        ): ToolDefinition<any>[] {
+        ): GenericToolDefinition[] {
             const agent = agents[agentName]
             if (!agent?.createTools) {
                 return []
             }
-            return agent.createTools(context) as ToolDefinition<any>[]
+            return agent.createTools(context) as GenericToolDefinition[]
         },
 
         /**
