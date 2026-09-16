@@ -213,3 +213,74 @@ export function Reassigned({ external }: { external: boolean }) {
   if (external) Comp = 'a'
   return <Comp href="/pricing">Pricing</Comp>
 }
+
+export function AssignedIfUnset({ as, fallback }: { as?: 'span'; fallback?: 'span' }) {
+  let Comp: 'a' | 'span' | undefined = as
+  Comp ||= 'a'
+  let Other: 'a' | 'span' | undefined = fallback
+  Other ??= 'a'
+  return (
+    <>
+      <Comp href="/pricing">Pricing</Comp>
+      <Other href="/pricing">Pricing</Other>
+    </>
+  )
+}
+
+export function DeclaredInLoops({ cover }: { cover: string }) {
+  const media = []
+  for (const Media of ['img', 'video'] as const) media.push(<Media src={cover} />)
+  for (const { default: LoopImage } of [require('next/image')]) media.push(<LoopImage src={cover} alt="" width={1} height={1} />)
+  for (let Tag = 'a' as const; ; ) {
+    return <Tag href="/pricing">{media}</Tag>
+  }
+}
+
+export function RequiredInside({ cover }: { cover: string }) {
+  const { default: DestructuredImage } = require('next/image')
+  const images = require('next/image')
+  const AliasedDefault = images.default
+  const { default: FromAlias } = images
+  return (
+    <>
+      <DestructuredImage src={cover} alt="" width={10} height={10} />
+      <AliasedDefault src={cover} alt="" width={10} height={10} />
+      <FromAlias src={cover} alt="" width={10} height={10} />
+      <images.default src={cover} alt="" width={10} height={10} />
+    </>
+  )
+}
+
+export function ShadowedInside({ external }: { external: boolean }) {
+  const Comp = 'span'
+  const pick = () => {
+    let Comp = 'div'
+    Comp = 'a'
+    return Comp
+  }
+  let Chosen: 'a' | 'span' = 'span'
+  const choose = () => {
+    Chosen = 'a'
+  }
+  if (external) choose()
+  return (
+    <>
+      <Comp href="/pricing">{pick()}</Comp>
+      <Chosen href="/pricing">Pricing</Chosen>
+    </>
+  )
+}
+
+import Link from 'next/link'
+
+export function PrefixedTwice({ href }: { href: string }) {
+  return (
+    <>
+      <Link href={withBasePathIfInApp('/docs')}>Docs</Link>
+      <Link href={{ pathname: withBasePath('/docs') }}>Docs</Link>
+      <Link href="/docs">Docs</Link>
+      <Link href={href}>Docs</Link>
+      <a href={withBasePathIfInApp('/docs')}>Docs</a>
+    </>
+  )
+}

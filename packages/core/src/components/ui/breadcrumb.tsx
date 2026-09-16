@@ -1,5 +1,6 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
+import Link from "next/link"
 import { cn } from '../../lib/utils'
 import { withBasePathIfInApp } from '../../lib/base-path'
 import { ChevronRightIcon, DotsHorizontalIcon } from "@radix-ui/react-icons"
@@ -41,26 +42,42 @@ BreadcrumbItem.displayName = "BreadcrumbItem"
 
 /**
  * A breadcrumb's link, with the base path on an in-app `href`: Next.js adds it
- * to a <Link> and not to the <a> this renders. With `asChild` the href goes to
- * the child, and a child that carries an href of its own keeps that one
- * untouched: a <Link> puts the base path on it, and would put it on twice if it
- * were given the href with the base path already on.
+ * to a <Link> and not to an <a>.
+ *
+ * With `asChild` the props go to the child, and a child `href` of its own wins
+ * over the link's. An <a> child gets the base path on whichever of the two it
+ * ends up with. A <Link> child puts the base path on by itself, so it gets the
+ * link's href as written; given it with the base path already on, it would put
+ * it on twice. Any other child gets the link's href with the base path on and
+ * keeps an href of its own untouched, since what it renders is not known here:
+ * a component that wraps <Link> and takes its href from the link puts the base
+ * path on twice.
  */
 const BreadcrumbLink = React.forwardRef<
   HTMLAnchorElement,
   React.ComponentPropsWithoutRef<"a"> & {
     asChild?: boolean
   }
->(({ asChild, className, href, ...props }, ref) => {
-  const Comp = asChild ? Slot : "a"
+>(({ asChild, className, href, children, ...props }, ref) => {
+  const linkClassName = cn("transition-colors hover:text-foreground", className)
+
+  if (!asChild) {
+    return (
+      <a ref={ref} className={linkClassName} {...props} href={href && withBasePathIfInApp(href)}>
+        {children}
+      </a>
+    )
+  }
+
+  const child = React.isValidElement<React.ComponentPropsWithoutRef<"a">>(children) ? children : undefined
+  const slotProps = { ...props, href: child?.type === Link ? href : href && withBasePathIfInApp(href) }
 
   return (
-    <Comp
-      ref={ref}
-      className={cn("transition-colors hover:text-foreground", className)}
-      {...props}
-      href={href && withBasePathIfInApp(href)}
-    />
+    <Slot ref={ref} className={linkClassName} {...slotProps}>
+      {child?.type === "a" && typeof child.props.href === "string"
+        ? React.cloneElement(child, { href: withBasePathIfInApp(child.props.href) })
+        : children}
+    </Slot>
   )
 })
 BreadcrumbLink.displayName = "BreadcrumbLink"
