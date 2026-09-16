@@ -23,6 +23,7 @@ import { createWriteStream } from 'fs'
 import { pipeline } from 'stream/promises'
 import AdmZip from 'adm-zip'
 import dotenv from 'dotenv'
+import { rebuildRegistries } from './rebuild-registries.mjs'
 
 // Load environment variables from .env file
 dotenv.config()
@@ -777,11 +778,7 @@ async function updateCore() {
 
   // Rebuild registries (includes the docs registry)
   console.log('   Rebuilding registries...')
-  try {
-    execSync('node core/scripts/build/registry.mjs --build', { stdio: 'inherit' })
-  } catch (error) {
-    console.error('   Warning: Registry rebuild failed')
-  }
+  const registryRebuildSucceeded = rebuildRegistries()
 
   try {
     execSync('node core/scripts/build/theme.mjs', { stdio: 'ignore' })
@@ -801,7 +798,13 @@ async function updateCore() {
 
   // Final report
   console.log('\n========================================')
-  console.log('  Update Complete!')
+  if (registryRebuildSucceeded) {
+    console.log('  Update Complete!')
+  } else {
+    console.log('  Update Finished With Errors')
+    console.log('  The registry rebuild failed - run `node core/scripts/build/registry.mjs --build` after fixing it.')
+    process.exitCode = 1
+  }
   console.log('========================================')
   console.log(`\n  ${previousVersion} -> ${releaseInfo.tag_name}`)
   console.log(`  ${totalFiles} files updated`)
