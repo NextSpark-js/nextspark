@@ -10,6 +10,7 @@ const config = getDefaultConfig(projectRoot);
 // Watch the shared packages from monorepo
 config.watchFolders = [
   path.resolve(monorepoRoot, 'packages/ui'),
+  path.resolve(monorepoRoot, 'packages/mobile'),
 ];
 
 // Let Metro know where to resolve packages

@@ -38,7 +38,11 @@ export default {
       typedRoutes: true,
     },
     extra: {
-      apiUrl: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000',
+      // No fallback here: the api client's own priority chain (env var, then
+      // the dev server's hostUri, then a platform-aware default) only runs
+      // when this stays undefined. A hardcoded default would always win as
+      // the client's first priority and shadow hostUri auto-detection.
+      apiUrl: process.env.EXPO_PUBLIC_API_URL,
     },
   },
 }

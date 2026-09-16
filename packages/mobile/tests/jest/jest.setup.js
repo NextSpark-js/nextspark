@@ -22,6 +22,10 @@ jest.mock('expo-constants', () => ({
   },
 }))
 
+jest.mock('expo-device', () => ({
+  isDevice: true,
+}))
+
 jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn((key) => Promise.resolve(mockSecureStoreData.get(key) || null)),
   setItemAsync: jest.fn((key, value) => {
