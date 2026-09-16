@@ -10,7 +10,7 @@ import { readdir, stat, readFile, access } from 'fs/promises'
 import { join } from 'path'
 
 import { CONFIG as DEFAULT_CONFIG } from '../config.mjs'
-import { log, verbose, extractTemplateMetadata, shownMessage, shownPath } from '../../../utils/index.mjs'
+import { log, verbose, extractTemplateMetadata } from '../../../utils/index.mjs'
 import {
   getProtectionLevel,
   ProtectionLevel
@@ -43,7 +43,7 @@ export async function discoverTemplates(config = DEFAULT_CONFIG) {
 ║  Or ensure your .env file has NEXT_PUBLIC_ACTIVE_THEME set correctly.        ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 `
-    console.error(errorMsg)
+    for (const line of errorMsg.split('\n')) console.error(line)
     throw new Error('NEXT_PUBLIC_ACTIVE_THEME environment variable is required for template discovery')
   }
 
@@ -96,7 +96,7 @@ export async function discoverThemeTemplates(templatesPath, themeName, relativeP
       } else if (entry.isFile() && (entry.name.endsWith('.tsx') || entry.name.endsWith('.ts'))) {
         // Skip barrel/index files - these are re-export files, not templates
         if (entry.name === 'index.ts' || entry.name === 'index.tsx') {
-          verbose(`Skipping barrel file: ${shownPath(currentRelativePath)}`)
+          verbose(`Skipping barrel file: ${currentRelativePath}`)
           continue
         }
 
@@ -109,7 +109,7 @@ export async function discoverThemeTemplates(templatesPath, themeName, relativeP
           const hasTsCompanion = entries.some(e => e.name === companionTs && !e.name.endsWith('.meta.ts'))
 
           if (hasTsxCompanion || hasTsCompanion) {
-            verbose(`Skipping meta file (companion exists): ${shownPath(currentRelativePath)}`)
+            verbose(`Skipping meta file (companion exists): ${currentRelativePath}`)
             continue
           }
 
@@ -120,7 +120,7 @@ export async function discoverThemeTemplates(templatesPath, themeName, relativeP
           const templateMetadata = await extractTemplateMetadata(currentPath)
 
           if (templateMetadata) {
-            verbose(`Standalone metadata template: ${shownPath(appPath)} (from ${shownPath(currentRelativePath)})`)
+            verbose(`Standalone metadata template: ${appPath} (from ${currentRelativePath})`)
             templates.push({
               name: `${relativePath || 'root'}/${entry.name.replace('.meta.ts', '')}`.replace(/^\//, ''),
               themeName,
@@ -143,14 +143,14 @@ export async function discoverThemeTemplates(templatesPath, themeName, relativeP
 
         // Check if this path is protected
         if (getProtectionLevel(appPath) === ProtectionLevel.PROTECTED_ALL) {
-          const errorMsg = `SECURITY WARNING: Theme "${themeName}" attempted to override protected path: ${shownPath(appPath)}`
+          const errorMsg = `SECURITY WARNING: Theme "${themeName}" attempted to override protected path: ${appPath}`
           console.error(`\n${errorMsg}`)
           console.error(`   Protected paths cannot be overridden for security reasons.`)
-          console.error(`   Template location: ${shownPath(templatePath)}`)
+          console.error(`   Template location: ${templatePath}`)
           console.error(`   This template will be ignored.\n`)
 
           // Skip adding this template to prevent override
-          verbose(`PROTECTED: Skipping ${shownPath(appPath)} - marked as protected`)
+          verbose(`PROTECTED: Skipping ${appPath} - marked as protected`)
           continue
         }
 
@@ -160,7 +160,7 @@ export async function discoverThemeTemplates(templatesPath, themeName, relativeP
         try {
           const fileContent = await readFile(currentPath, 'utf-8')
           if (fileContent.includes('getTemplateOrDefaultClient') || fileContent.includes('getTemplateOrDefault(')) {
-            const errorMsg = `ANTI-PATTERN: Theme "${themeName}" template uses getTemplateOrDefault in: ${shownPath(currentRelativePath)}`
+            const errorMsg = `ANTI-PATTERN: Theme "${themeName}" template uses getTemplateOrDefault in: ${currentRelativePath}`
             console.error(`\n╔══════════════════════════════════════════════════════════════╗`)
             console.error(`║  TEMPLATE ANTI-PATTERN DETECTED                              ║`)
             console.error(`╚══════════════════════════════════════════════════════════════╝\n`)
@@ -187,7 +187,7 @@ export async function discoverThemeTemplates(templatesPath, themeName, relativeP
           await access(metaFilePath)
           templateMetadata = await extractTemplateMetadata(metaFilePath)
           if (templateMetadata) {
-            verbose(`Metadata extracted from companion .meta.ts: ${shownPath(metaFileName)}`)
+            verbose(`Metadata extracted from companion .meta.ts: ${metaFileName}`)
           }
         } catch {
           // No companion .meta.ts file - fall through to inline extraction
@@ -197,7 +197,7 @@ export async function discoverThemeTemplates(templatesPath, themeName, relativeP
         if (!templateMetadata) {
           templateMetadata = await extractTemplateMetadata(currentPath)
           if (templateMetadata) {
-            verbose(`Metadata extracted from ${shownPath(templatePath)}`)
+            verbose(`Metadata extracted from ${templatePath}`)
           }
         }
 
@@ -213,12 +213,12 @@ export async function discoverThemeTemplates(templatesPath, themeName, relativeP
           metadata: templateMetadata // Include extracted metadata
         })
 
-        verbose(`Template: ${shownPath(appPath)} → ${shownPath(templatePath)}`)
+        verbose(`Template: ${appPath} → ${templatePath}`)
       }
     }
 
   } catch (error) {
-    verbose(`Error scanning templates in ${shownPath(templatesPath)}: ${shownMessage(error)}`)
+    verbose(`Error scanning templates in ${templatesPath}: ${error.message}`)
   }
 
   return templates

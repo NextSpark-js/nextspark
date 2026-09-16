@@ -25,7 +25,7 @@ import { loadCoreWritePlaces } from '../utils/core-write-places.js';
 import { applySyncPlan, readCoreVersion, readSyncInput, readTree } from '../utils/sync-files.js';
 import { describeSyncPlan, nextSyncState, plannedAppFiles, planSync, type ReportLine } from '../utils/sync-plan.js';
 import { SYNC_STATE_FILE, writeSyncState } from '../utils/sync-state.js';
-import { shownPath, shownStack } from '../utils/shown-path.js';
+import { stackLines } from '../utils/shown-path.js';
 
 interface SyncAppOptions {
   dryRun?: boolean;
@@ -127,7 +127,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
     // Verify templates directory exists
     if (!existsSync(templatesDir)) {
       spinner.fail('Templates directory not found in @nextsparkjs/core');
-      console.error(chalk.red(`\n  Expected path: ${shownPath(templatesDir)}`));
+      console.error(chalk.red(`\n  Expected path: ${templatesDir}`));
       process.exit(1);
     }
 
@@ -160,7 +160,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
     if (unsafe.length > 0) {
       spinner.fail("Sync not started: sync:app can't write safely under these paths");
       console.error(chalk.red('\n  sync:app and the registry build write under these paths:'));
-      for (const line of core.unsafeWritePlacesLines(unsafe)) console.error(chalk.red(`    ${shownPath(line)}`));
+      for (const line of core.unsafeWritePlacesLines(unsafe)) console.error(chalk.red(`    ${line}`));
       console.error('');
       process.exitCode = 1;
       return;
@@ -188,7 +188,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
     if (leftForGit.length > 0) {
       spinner.fail('Sync not started: git would pick up what sync:app writes');
       console.error(chalk.red('\n  With the lines sync:app adds to .gitignore, git would still pick up what goes under:'));
-      for (const { entry, why } of leftForGit) console.error(chalk.red(`    ${entry}: ${shownPath(why)}`));
+      for (const { entry, why } of leftForGit) console.error(chalk.red(`    ${entry}: ${why}`));
       console.error(chalk.yellow('  Make git leave each one out - drop the rule that takes it back, or make .gitignore a file of its own - and run sync:app again.\n'));
       process.exitCode = 1;
       return;
@@ -216,9 +216,9 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
     const blocked = new Set(actions.filter(({ blockedBy }) => blockedBy).map(({ path }) => path));
     for (const path of input.overwrite) {
       if (blocked.has(path)) {
-        console.log(chalk.yellow(`  ⚠ --overwrite ${shownPath(path)}: core's version of it can't be worked out for this project, so it is left as it is`));
+        console.log(chalk.yellow(`  ⚠ --overwrite ${path}: core's version of it can't be worked out for this project, so it is left as it is`));
       } else if (!replacing.has(path)) {
-        console.log(chalk.yellow(`  ⚠ --overwrite ${shownPath(path)}: not a customized file sync:app manages, so there is nothing to replace`));
+        console.log(chalk.yellow(`  ⚠ --overwrite ${path}: not a customized file sync:app manages, so there is nothing to replace`));
       }
     }
 
@@ -255,7 +255,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       spinner.start('Creating backup...');
       appBackupDir = basename(mkdtempSync(join(projectRoot, appBackupPrefix(coreVersion))));
       backupDirectory(appDir, join(projectRoot, appBackupDir));
-      spinner.succeed(`Backup created: ${shownPath(appBackupDir)}`);
+      spinner.succeed(`Backup created: ${appBackupDir}`);
     }
 
     let backedUp: string[] = [];
@@ -269,7 +269,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       console.log(REPORT_TONES[line.tone](`  ${line.text}`));
     }
     if (backedUp.length > 0 && replacedFilesBackupDir) {
-      console.log(chalk.gray(`  Backed up ${backedUp.map(shownPath).join(', ')} to ${shownPath(relative(projectRoot, replacedFilesBackupDir))}`));
+      console.log(chalk.gray(`  Backed up ${backedUp.join(', ')} to ${relative(projectRoot, replacedFilesBackupDir)}`));
     }
 
     // app/(templates) is the registry build's output, regenerated from what was just synced
@@ -280,7 +280,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
     }
 
     for (const { entry, why } of notAdded) {
-      console.log(chalk.yellow(`  ⚠ ${options.dryRun ? 'Would not add' : 'Did not add'} ${entry} to .gitignore, and git would pick up what goes under it: ${shownPath(why)}`));
+      console.log(chalk.yellow(`  ⚠ ${options.dryRun ? 'Would not add' : 'Did not add'} ${entry} to .gitignore, and git would pick up what goes under it: ${why}`));
     }
 
     if (options.dryRun) {
@@ -315,9 +315,9 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       } else {
         spinner.fail('Could not regenerate app/(templates)');
       }
-      // The build's own lines name paths too, and are shown one by one the way a path is
+      // The build's own lines name paths too, and are printed one per call
       for (const line of templatesTreeLines(registry.output)) {
-        console.log(chalk.gray(`    ${shownPath(line)}`));
+        console.log(chalk.gray(`    ${line}`));
       }
 
       if (addedGitignoreEntries.length > 0) {
@@ -338,7 +338,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       if (unignored.length > 0) {
         console.error(chalk.red(`\n  Sync incomplete: git picks up ${unignored.length} file(s) sync:app and the registry build wrote, which the .gitignore files left out before the sync wrote anything:`));
         const shown = options.verbose ? unignored : unignored.slice(0, UNIGNORED_SHOWN);
-        for (const path of shown) console.error(chalk.red(`    ${shownPath(path)}`));
+        for (const path of shown) console.error(chalk.red(`    ${path}`));
         if (unignored.length > shown.length) {
           console.error(chalk.red(`    ... and ${unignored.length - shown.length} more; --verbose names every one`));
         }
@@ -351,7 +351,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       // zero exit code, which is what core's postinstall and CI both read.
       if (registry.status === 'failed') {
         for (const line of buildFailureLines(registry.output)) {
-          console.error(chalk.red(`    ${shownPath(line)}`));
+          console.error(chalk.red(`    ${line}`));
         }
         console.error(chalk.red('\n  Sync incomplete: /app now matches core, but app/(templates) was not regenerated.'));
         console.error(chalk.red('  Fix what the registry build reports above and run "nextspark registry:build".\n'));
@@ -366,9 +366,11 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
   } catch (error) {
     spinner.fail('Sync failed');
     if (error instanceof Error) {
-      console.error(chalk.red(`\n  Error: ${shownPath(error.message)}\n`));
+      console.error(chalk.red(`\n  Error: ${error.message}\n`));
       if (options.verbose && error.stack) {
-        console.error(chalk.gray(`  Stack trace:\n${shownStack(error)}\n`));
+        console.error(chalk.gray('  Stack trace:'));
+        for (const line of stackLines(error)) console.error(chalk.gray(line));
+        console.error('');
       }
     }
     process.exit(1);

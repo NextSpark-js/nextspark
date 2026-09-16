@@ -5,6 +5,10 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { readFileSync } from 'fs';
 import { devCommand } from './commands/dev.js';
+import { guardOutput } from './utils/shown-path.js';
+
+// Every line the CLI prints is escaped where it is printed, dotenv's own among them
+guardOutput();
 
 // Load .env from project root
 config();

@@ -14,10 +14,13 @@
  * the project root.
  */
 
+// First, so what any module prints as it loads is escaped too
+import '../utils/console-guard.mjs'
+
 import { getConfig } from './registry/config.mjs'
 import { discoverTemplates } from './registry/discovery/templates.mjs'
 import { planMissingPages } from './registry/post-build/page-generator.mjs'
-import { shownMessage } from '../utils/index.mjs'
+import { jsonLine, messageLines } from '../utils/index.mjs'
 
 const RESULT_MARKER = 'nextspark-templates-plan:'
 
@@ -34,8 +37,8 @@ try {
   const config = getConfig()
   const templates = await discoverTemplates(config)
   const changes = await planMissingPages(templates, config, appFiles)
-  console.log(`${RESULT_MARKER}${JSON.stringify(changes)}`)
+  console.log(`${RESULT_MARKER}${jsonLine(changes)}`)
 } catch (error) {
-  console.error(shownMessage(error))
+  for (const line of messageLines(error)) console.error(line)
   process.exit(1)
 }

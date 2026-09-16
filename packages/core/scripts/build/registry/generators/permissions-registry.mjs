@@ -10,7 +10,7 @@ import { readFile } from 'fs/promises'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
-import { log, verbose } from '../../../utils/index.mjs'
+import { errorWithLines, log, verbose } from '../../../utils/index.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -187,7 +187,7 @@ export async function generatePermissionsRegistry(permissionsConfig, entities, c
       errorLines.push('     the "slug" field in the corresponding entity.config.ts')
       errorLines.push('')
 
-      throw new Error(errorLines.join('\n'))
+      throw errorWithLines(errorLines)
     }
 
     log('  ✅ All permission entity keys validated against discovered entities', 'info')

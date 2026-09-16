@@ -2,7 +2,6 @@ import { spawn } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse } from 'dotenv';
-import { shownPath } from './shown-path.js';
 
 /**
  * Why core's registry build can't run in this project, or null when it can.
@@ -127,12 +126,12 @@ export function planTemplatesChanges(
   });
 }
 
-/** One line per file in a plan of `app/(templates)`, marked the way sync:app's report marks its own, each path shown the way `shownPath` shows one. */
+/** One line per file in a plan of `app/(templates)`, marked the way sync:app's report marks its own. */
 export function describeTemplatesChanges(changes: TemplatesChanges): string[] {
   return [
-    ...changes.create.map((path) => `+ ${shownPath(path)}`),
-    ...changes.replace.map((path) => `~ ${shownPath(path)} (replaced; what it holds is backed up first)`),
-    ...changes.remove.map((path) => `- ${shownPath(path)} (removed; backed up first)`),
+    ...changes.create.map((path) => `+ ${path}`),
+    ...changes.replace.map((path) => `~ ${path} (replaced; what it holds is backed up first)`),
+    ...changes.remove.map((path) => `- ${path} (removed; backed up first)`),
   ];
 }
 

@@ -15,9 +15,13 @@ export {
   setVerboseMode,
   isVerbose,
   shownPath,
-  quotedPath,
-  shownMessage,
-  shownStack
+  shownLine,
+  jsonLine,
+  guardConsole,
+  errorWithLines,
+  messageLines,
+  stackLines,
+  logFailure
 } from './logging.mjs'
 
 export {

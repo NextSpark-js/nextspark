@@ -7,12 +7,14 @@ import { join } from 'node:path'
 import { buildCommand } from '../src/commands/build.js'
 import { buildRegistries } from '../src/commands/dev.js'
 import { registryBuildCommand } from '../src/commands/registry.js'
+import { guardConsole } from '../src/utils/shown-path.js'
 
 /**
  * Names that, printed raw, erase a line, set the terminal's title, return the
  * carriage, separate lines or reverse what follows, each with the way a line
  * naming it shows it. A newline can't be told apart from the end of a line once
- * the build has printed it, so core escapes that one where it names a path.
+ * the build has printed it, so core's guarded console escapes that one as it
+ * prints the line.
  */
 const NAMES: [string, string][] = [
   ['erase\u001b[2Kline.tsx', 'erase\\u001b[2Kline.tsx'],
@@ -60,6 +62,8 @@ async function runCommand(root: string, command: () => Promise<void>, exits: boo
   console.log = capture
   console.warn = capture
   console.error = capture
+  // As the CLI guards the console before any command runs
+  guardConsole()
   process.exit = ((code?: number) => { exited(Number(code ?? 0)) }) as typeof process.exit
   process.chdir(root)
   try {
@@ -82,7 +86,7 @@ function wrongOutput(label: string, printed: string, line: (shown: string) => st
   ]
 }
 
-const backedUpLine = (shown: string) => `"⚠️ app/(templates): backed up app/(templates)/${shown} to .nextspark/backups/x"`
+const backedUpLine = (shown: string, prefix = '') => `"${prefix}⚠️ app/(templates): backed up app/(templates)/${shown} to .nextspark/backups/x"`
 const failedLine = (shown: string) => `"Build failed: could not read app/(templates)/${shown}"`
 
 test('registry:build shows each line of what the registry build printed escaped, whether the build succeeds or fails', { skip: process.platform === 'win32' }, async () => {
@@ -114,7 +118,7 @@ test('dev shows each line it repeats from the registry build escaped, whether th
     const { root, coreDir, cleanup } = await projectWithBuild(code)
     try {
       const printed = await runCommand(root, () => buildRegistries(coreDir, root), false)
-      wrong.push(...wrongOutput(label, printed, (shown) => `[Registry] ${backedUpLine(shown)}`))
+      wrong.push(...wrongOutput(label, printed, (shown) => backedUpLine(shown, '[Registry] ')))
       if (code === 1 && !printed.split('\n').includes(failedLine(NAMES[NAMES.length - 1][1]))) {
         wrong.push(`${label}: the end of the output is not repeated, escaped`)
       }

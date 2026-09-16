@@ -10,6 +10,7 @@
 
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
+import { errorWithLines } from '../../../utils/logging.mjs'
 
 /** TypeScript 7's native port doesn't ship the compiler API - its package
  * exports are `./lib/version.cjs` plus `./unstable/*` - so a candidate module
@@ -46,10 +47,10 @@ export async function selectTypeScriptModule(candidates) {
     )
   }
 
-  throw new Error(
-    'Parsing a source file for the registry build requires the TypeScript 5 or 6 compiler API, but no candidate provided it:\n' +
-      rejected.map(reason => `  - ${reason}`).join('\n')
-  )
+  throw errorWithLines([
+    'Parsing a source file for the registry build requires the TypeScript 5 or 6 compiler API, but no candidate provided it:',
+    ...rejected.map(reason => `  - ${reason}`),
+  ])
 }
 
 const modulePromises = new Map()

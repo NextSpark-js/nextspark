@@ -15,6 +15,7 @@ import { tmpdir } from 'node:os'
 import { join, dirname, relative, sep } from 'node:path'
 
 import { generateMissingPages, planMissingPages } from '../post-build/page-generator.mjs'
+import { guardConsole } from '../../../utils/logging.mjs'
 
 const DASHBOARD_LAYOUT = "'use client'\n\nexport default function DashboardLayout({ children }) { return children }\n"
 const PAGE = 'export default function Page() { return null }\n'
@@ -331,7 +332,7 @@ test('a file where the tree needs a directory, or a directory where it needs a f
   }
 })
 
-test('the paths the build names in its output are escaped when their names would break or reorder a line', async () => {
+test('a line the build prints that names a path whose name would break or reorder it is escaped, once the console is guarded as the build guards it', async () => {
   const names = [
     ['forged\n✅ Registry System built successfully!.tsx', 'forged\\n✅ Registry System built successfully!.tsx'],
     ['erase\u001b[2Kline.tsx', 'erase\\u001b[2Kline.tsx'],
@@ -347,6 +348,7 @@ test('the paths the build names in its output are escaped when their names would
     const page = await writeTemplate(root, 'pricing/page.tsx', 'page', PAGE)
 
     console.log = (...args) => { printed.push(args.join(' ')) }
+    guardConsole()
     try {
       await generateMissingPages([page], { projectRoot: root })
     } finally {
@@ -357,7 +359,7 @@ test('the paths the build names in its output are escaped when their names would
     assert.deepEqual(lines.filter(line => /[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u061c\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]/.test(line)), [], 'no line holds a raw control')
     assert.ok(!lines.some(line => line.startsWith('✅ Registry System')), 'no line reads as the build succeeding')
     for (const [, shown] of names) {
-      assert.ok(lines.some(line => line.startsWith(`⚠️ app/(templates): backed up "app/(templates)/old/${shown}" to "`)), `${shown} is named escaped`)
+      assert.ok(lines.some(line => line.startsWith(`"⚠️ app/(templates): backed up app/(templates)/old/${shown} to .nextspark/backups/`)), `${shown} is named escaped`)
     }
   } finally {
     await rm(root, { recursive: true, force: true })

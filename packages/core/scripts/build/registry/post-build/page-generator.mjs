@@ -12,7 +12,7 @@ import { copyFile, lstat, mkdtemp, readdir, readFile, rmdir, unlink, writeFile, 
 import { join, dirname, relative, sep } from 'path'
 import { fileURLToPath } from 'url'
 
-import { log, quotedPath, shownPath, verbose } from '../../../utils/index.mjs'
+import { errorWithLines, log, verbose } from '../../../utils/index.mjs'
 import { getProtectionLevel, ProtectionLevel } from '../../../../dist/config/protected-paths.js'
 import { selectTypeScriptModule, loadTypeScriptFor } from '../shared/typescript-compiler.mjs'
 import { ensureBackupsGitignore } from './backups-gitignore.mjs'
@@ -195,7 +195,7 @@ async function parseTemplateSource(source, filePath) {
   const [parseError] = sourceFile.parseDiagnostics ?? []
   if (parseError) {
     const { line } = sourceFile.getLineAndCharacterOfPosition(parseError.start ?? 0)
-    const where = `${shownPath(filePath)}:${line + 1}`
+    const where = `${filePath}:${line + 1}`
     const reason = ts.flattenDiagnosticMessageText(parseError.messageText, ' ')
     if (!(await nextParses(filePath, source))) {
       throw new Error(`${where}: the template does not parse (${reason}), so its route-level exports cannot be read.`)
@@ -244,7 +244,7 @@ function collectRouteExports(sourceFile, ts, filePath) {
 
   const recordSegmentError = (name, node, reason) => {
     errors.push(
-      `${shownPath(filePath)}:${lineOf(node)}: segment config export "${name}" ${reason}. ` +
+      `${filePath}:${lineOf(node)}: segment config export "${name}" ${reason}. ` +
         `Next.js only reads segment config when it's a literal declared directly in the route file ` +
         `(\`export const ${name} = ...\`) - anything else is silently ignored and the default is used instead. ` +
         `Use a literal.`
@@ -325,7 +325,7 @@ export async function extractRouteExports(source, filePath) {
   const { errors, ...routeExports } = collectRouteExports(sourceFile, ts, filePath)
 
   if (errors.length > 0) {
-    throw new Error(errors.join('\n'))
+    throw errorWithLines(errors)
   }
 
   return routeExports
@@ -655,7 +655,7 @@ export async function generateTemplatePage(template, outputPath, analysis = null
 
   await mkdir(dirname(outputPath), { recursive: true })
   await writeFile(outputPath, routeFileContent(template, routeExports), 'utf8')
-  verbose(`Generated: ${shownPath(outputPath.replace(rootDir, ''))}`)
+  verbose(`Generated: ${outputPath.replace(rootDir, '')}`)
   return { written: true }
 }
 
@@ -734,7 +734,7 @@ async function analyzeTemplate(template, root, appFiles) {
   const { errors, ...routeExports } = await readTemplateExports(templatePath, root)
 
   if (generatesRoute && errors.length > 0) {
-    throw new Error(errors.join('\n'))
+    throw errorWithLines(errors)
   }
 
   const entry = { ...routeExports, generatesRoute }
@@ -768,10 +768,10 @@ export function routeFileAction(template, entry) {
 
   if (templateType !== 'layout' && !entry.hasDefaultExport) {
     throw new Error(
-      `${shownPath(templatePath)} has no default export, and the app has no existing route at ${quotedPath(appPath)} ` +
-        `for a metadata-only override to attach to - the registry build generates ${quotedPath(appPath)} importing this ` +
+      `${templatePath} has no default export, and the app has no existing route at "${appPath}" ` +
+        `for a metadata-only override to attach to - the registry build generates "${appPath}" importing this ` +
         `template's default export, which doesn't exist. A page template needs a default export. For a ` +
-        `metadata-only override, add one to an app page that already exists at ${quotedPath(appPath)} (a ".meta.ts" file, ` +
+        `metadata-only override, add one to an app page that already exists at "${appPath}" (a ".meta.ts" file, ` +
         `or a template with no default export, next to it).`
     )
   }
@@ -789,7 +789,7 @@ export function templateAnalysisFor(analysis, template) {
   const entry = analysis?.get(template.templatePath)
   if (!entry) {
     throw new Error(
-      `${shownPath(template.templatePath)} was not read by analyzeTemplates() - pass the analysis of the same templates being generated.`
+      `${template.templatePath} was not read by analyzeTemplates() - pass the analysis of the same templates being generated.`
     )
   }
   return entry
@@ -830,7 +830,7 @@ export async function generateMissingPages(templates, config = null, analysis = 
     verbose('app/(templates) is up to date')
   }
   if (backupDir) {
-    log(`app/(templates): what was replaced or removed is backed up in ${shownPath(relative(rootDir, backupDir))}`, 'warning')
+    log(`app/(templates): what was replaced or removed is backed up in ${relative(rootDir, backupDir)}`, 'warning')
   }
 
   return { created, updated, removed, backupDir, skipped }
@@ -1016,7 +1016,7 @@ async function reconcileTemplatesTree(templatesDir, files) {
     const backupPath = join(backupDir, relativePath)
     await mkdir(dirname(backupPath), { recursive: true })
     await copyFile(absolutePath, backupPath, constants.COPYFILE_EXCL)
-    log(`app/(templates): backed up ${shownPath(relativePath)} to ${shownPath(relative(rootDir, backupPath))}`, 'warning')
+    log(`app/(templates): backed up ${relativePath} to ${relative(rootDir, backupPath)}`, 'warning')
   }
 
   // What stands where a file goes - a file where the tree needs a directory,

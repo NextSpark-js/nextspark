@@ -1,4 +1,5 @@
 import { spawn, type ChildProcess, type SpawnOptions } from 'node:child_process';
+import { breaksALine } from './shown-path.js';
 
 /**
  * Run `npx next …` without letting a shell rewrite the arguments.
@@ -28,6 +29,19 @@ export function npxInvocation(args: string[]): { command: string; args: string[]
   if (!IS_WINDOWS) return { command: 'npx', args, shell: false };
 
   return { command: 'npx.cmd', args: args.map(quoteForWindowsShell), shell: true };
+}
+
+/**
+ * Why Next can't run for this project without its output starting lines of its
+ * own, or null when it can. Next prints the project's path as it is - in the
+ * errors it reports, for one - straight to the terminal, so a path holding a
+ * character that breaks or reorders a line makes lines no escape applied after
+ * the fact can tell apart from Next's.
+ */
+export function nextOutputBlocker(projectRoot: string): string | null {
+  return breaksALine(projectRoot)
+    ? `the project's path, ${projectRoot}, holds a character that breaks or reorders a line, and Next prints that path as it is`
+    : null;
 }
 
 export function spawnNext(args: string[], options: Omit<SpawnOptions, 'shell'>): ChildProcess {

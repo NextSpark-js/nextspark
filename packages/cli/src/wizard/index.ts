@@ -37,6 +37,7 @@ import { promptThemeSelection, promptPluginsSelection, getRequiredPlugins, type 
 import { installThemeAndPlugins } from './generators/theme-plugins-installer.js'
 import { installProjectDependencies, setupAIWorkflow } from './install-dependencies.js'
 import { showConfigPreview } from './preview.js'
+import { errorLines } from '../utils/shown-path.js'
 
 /**
  * Project info type for non-interactive mode
@@ -290,7 +291,9 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
         showInfo('Wizard cancelled. No changes were made.')
         process.exit(0)
       }
-      showError(error.message)
+      const [first, ...rest] = errorLines(error)
+      showError(first)
+      for (const line of rest) console.log(chalk.red(line))
     }
     process.exit(1)
   }

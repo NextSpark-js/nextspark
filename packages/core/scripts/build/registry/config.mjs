@@ -17,6 +17,7 @@ import { fileURLToPath } from 'url'
 import { existsSync, lstatSync, readlinkSync } from 'fs'
 import dotenv from 'dotenv'
 import { loadNextSparkConfigSync } from '../config-loader.mjs'
+import { shownPath } from '../../utils/logging.mjs'
 
 // Load .env from the correct project root
 // Priority: NEXTSPARK_PROJECT_ROOT env var > cwd
@@ -216,7 +217,8 @@ export function validateEnvironment(config) {
   const hasEnvVarsFromProcess = !!process.env.NEXT_PUBLIC_ACTIVE_THEME
 
   if (!existsSync(envFilePath) && !hasEnvVarsFromProcess) {
-    let fix = `Create a .env file in your project root: ${config.projectRoot}`
+    // The error spans lines, printed one per call: the path is shown on the one line it is on
+    let fix = `Create a .env file in your project root: ${shownPath(config.projectRoot)}`
     if (existsSync(envExamplePath)) {
       fix = `Copy the example file:\n   cp .env.example .env\n   Then update it with your configuration.`
     }

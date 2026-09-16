@@ -10,6 +10,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import type { WizardConfig } from '../types.js'
 import { setPackageEntries } from './workspace-yaml.js'
+import { errorWithLines } from '../../utils/shown-path.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -159,15 +160,18 @@ function getMobileTemplatesDir(): string {
   }
 
   // Provide actionable error message
-  const searchedPaths = possiblePaths.map(p => `  - ${p}`).join('\n')
-  throw new Error(
-    `Could not find @nextsparkjs/mobile templates directory.\n\n` +
-    `Searched paths:\n${searchedPaths}\n\n` +
-    `To fix this, ensure @nextsparkjs/mobile is installed:\n` +
-    `  pnpm add @nextsparkjs/mobile\n\n` +
-    `If you're developing locally, make sure the mobile package is built:\n` +
-    `  cd packages/mobile && pnpm build`
-  )
+  throw errorWithLines([
+    'Could not find @nextsparkjs/mobile templates directory.',
+    '',
+    'Searched paths:',
+    ...possiblePaths.map(p => `  - ${p}`),
+    '',
+    'To fix this, ensure @nextsparkjs/mobile is installed:',
+    '  pnpm add @nextsparkjs/mobile',
+    '',
+    "If you're developing locally, make sure the mobile package is built:",
+    '  cd packages/mobile && pnpm build',
+  ])
 }
 
 /**
@@ -188,12 +192,13 @@ async function validateMobileTemplate(templateDir: string): Promise<void> {
   }
 
   if (missing.length > 0) {
-    throw new Error(
-      `Mobile template is incomplete. Missing required files:\n` +
-      missing.map(f => `  - ${f}`).join('\n') + '\n\n' +
-      `Template location: ${templateDir}\n` +
-      `Please ensure @nextsparkjs/mobile is properly installed and built.`
-    )
+    throw errorWithLines([
+      'Mobile template is incomplete. Missing required files:',
+      ...missing.map(f => `  - ${f}`),
+      '',
+      `Template location: ${templateDir}`,
+      'Please ensure @nextsparkjs/mobile is properly installed and built.',
+    ])
   }
 }
 

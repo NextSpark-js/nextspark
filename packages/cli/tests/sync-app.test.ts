@@ -8,6 +8,7 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { syncAppCommand } from '../src/commands/sync-app.js'
+import { guardConsole } from '../src/utils/shown-path.js'
 
 const CORE = 'node_modules/@nextsparkjs/core'
 /** Core's own check of where it writes, which sync:app loads from the core installed in the project. */
@@ -91,6 +92,8 @@ async function runSyncForExit(root: string, options: SyncOptions) {
   console.log = capture
   console.warn = capture
   console.error = capture
+  // As the CLI guards the console before any command runs
+  guardConsole()
   process.exit = ((code?: number) => { throw new ProcessExit(Number(code ?? 0)) }) as typeof process.exit
   process.chdir(root)
   let exitCode: number | undefined
@@ -1221,13 +1224,14 @@ test('every path sync:app prints is named on a line of its own, whatever its nam
     }
     const [dryRun, run, failed] = runs.map(([, , printed]) => printed)
     for (const [name, shown] of FORGING_NAMES) {
-      const quoted = (path: string) => `"${path}${shown}"`
-      if (!dryRun.includes(`. ${quoted('app/(project)/')}`)) wrong.push(`dry run: app/(project)/${shown} is not listed`)
-      if (!dryRun.includes(`+ ${quoted('app/(templates)/')}`)) wrong.push(`dry run: app/(templates)/${shown} is not planned`)
-      if (!dryRun.includes(`--overwrite ${quoted('nowhere/')}`)) wrong.push(`dry run: --overwrite nowhere/${shown} is not warned about`)
+      // A line naming one is escaped whole, between quotes
+      const named = (printed: string, text: string) => printed.split('\n').some((line) => line.trim().startsWith('"') && line.includes(text))
+      if (!named(dryRun, `. app/(project)/${shown}"`)) wrong.push(`dry run: app/(project)/${shown} is not listed`)
+      if (!named(dryRun, `+ app/(templates)/${shown}"`)) wrong.push(`dry run: app/(templates)/${shown} is not planned`)
+      if (!named(dryRun, `--overwrite nowhere/${shown}:`)) wrong.push(`dry run: --overwrite nowhere/${shown} is not warned about`)
       if (tagged.includes(name)) {
-        if (!run.includes(`- ${quoted('app/(retired)/')}`)) wrong.push(`run: app/(retired)/${shown} is not listed as removed`)
-        if (!run.includes(quoted('app/(changed)/'))) wrong.push(`run: app/(changed)/${shown} is not named as backed up`)
+        if (!named(run, `- app/(retired)/${shown} (`)) wrong.push(`run: app/(retired)/${shown} is not listed as removed`)
+        if (!named(run, `app/(changed)/${shown}`)) wrong.push(`run: app/(changed)/${shown} is not named as backed up`)
       }
     }
     if (!/Sync complete/.test(run)) wrong.push('run: the build does not complete')
@@ -1254,7 +1258,7 @@ test("a sync that stops on a file it can't read names it escaped, in the error a
     assert.equal(exitCode, 1)
     assert.deepEqual(lines.filter((line) => RAW_CONTROL.test(line)), [])
     assert.deepEqual(lines.filter((line) => line.trim() === '✅ Sync complete!'), [])
-    const naming = lines.filter((line) => /^\s*Error: "EACCES: permission denied, open '/.test(line) && line.endsWith(`/app/${shown}'"`))
+    const naming = lines.filter((line) => /^\s*"Error: EACCES: permission denied, open '/.test(line) && line.endsWith(`/app/${shown}'"`))
     assert.equal(naming.length, 2, `the error and the first line of its stack name the file escaped:\n${printed}`)
   } finally {
     await chmod(join(root, 'app', name), 0o644).catch(() => {})

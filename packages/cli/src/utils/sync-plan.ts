@@ -24,7 +24,6 @@
 
 import { readGeneratedTag, readGeneratedTagAt, sameText, tagStyleFor, withGeneratedTag } from './generated-tag.js';
 import { adaptProxySource, isGeneratedProxySource, proxyFileNameFor, type ProxyFileName } from './proxy-file.js';
-import { shownPath } from './shown-path.js';
 import { contentHash, type SyncState, type SyncStateEntry } from './sync-state.js';
 
 /** Root files core ships next to app/. The proxy file is planned apart: its name follows the Next version. */
@@ -433,9 +432,7 @@ export interface ReportLine {
  * told apart, what the project changed, and what sync left to others. Under a
  * line, the files that changed are named. A customized file is named only when
  * core changed it since the last sync on this machine, so running sync again
- * with the same core doesn't repeat the list; --verbose names every file. Each
- * path is named the way `shownPath` shows one, so no name breaks a line of the
- * report or reads as another.
+ * with the same core doesn't repeat the list; --verbose names every file.
  */
 export function describeSyncPlan(
   actions: readonly SyncAction[],
@@ -459,27 +456,27 @@ export function describeSyncPlan(
     text: `${say('Wrote', 'Would write')} ${written.length} file(s) from core; ${unchanged.length} already ${say('matched', 'match')} core`,
   });
   for (const action of written) {
-    lines.push({ tone: 'change', text: `  ${action.kind === 'create' ? '+' : '~'} ${shownPath(action.path)} (${action.reason})` });
+    lines.push({ tone: 'change', text: `  ${action.kind === 'create' ? '+' : '~'} ${action.path} (${action.reason})` });
   }
   if (verbose) {
-    for (const action of unchanged) lines.push({ tone: 'muted', text: `  = ${shownPath(action.path)}` });
+    for (const action of unchanged) lines.push({ tone: 'muted', text: `  = ${action.path}` });
   }
 
   if (adopted.length > 0) {
     lines.push({ tone: 'muted', text: `${say('Tagged', 'Would tag')} ${adopted.length} file(s) identical to core, so later releases can update them` });
     if (verbose) {
-      for (const action of adopted) lines.push({ tone: 'muted', text: `  # ${shownPath(action.path)}` });
+      for (const action of adopted) lines.push({ tone: 'muted', text: `  # ${action.path}` });
     }
   }
 
   if (removed.length > 0) {
     lines.push({ tone: 'change', text: `${say('Removed', 'Would remove')} ${removed.length} file(s)` });
-    for (const action of removed) lines.push({ tone: 'change', text: `  - ${shownPath(action.path)} (${action.reason})` });
+    for (const action of removed) lines.push({ tone: 'change', text: `  - ${action.path} (${action.reason})` });
   }
 
   if (blocked.length > 0) {
     lines.push({ tone: 'warning', text: `${say('Left', 'Would leave')} ${blocked.length} file(s) untouched: core's version of them can't be worked out for this project` });
-    for (const action of blocked) lines.push({ tone: 'warning', text: `  ! ${shownPath(action.path)} (${action.blockedBy})` });
+    for (const action of blocked) lines.push({ tone: 'warning', text: `  ! ${action.path} (${action.blockedBy})` });
   }
 
   if (undecided.length > 0) {
@@ -488,7 +485,7 @@ export function describeSyncPlan(
       text: `${say('Kept', 'Would keep')} ${undecided.length} file(s) that differ from core, with no record of an earlier sync on this machine: sync can't tell whether each is an older version of core's or the project's own change`,
     });
     for (const action of undecided) {
-      lines.push({ tone: 'warning', text: `  ? ${shownPath(action.path)} (to take core's version, backing this one up first: nextspark sync:app --overwrite ${shownPath(action.path)})` });
+      lines.push({ tone: 'warning', text: `  ? ${action.path} (to take core's version, backing this one up first: nextspark sync:app --overwrite ${action.path})` });
     }
   }
 
@@ -502,7 +499,7 @@ export function describeSyncPlan(
           : `Kept ${customized.length} customized file(s); core changed none of them since the last sync`,
     });
     for (const action of verbose ? customized : changedByCore) {
-      lines.push({ tone: 'warning', text: `  ! ${shownPath(action.path)} (${action.reason})` });
+      lines.push({ tone: 'warning', text: `  ! ${action.path} (${action.reason})` });
     }
     if (changedByCore.length > 0) {
       lines.push({ tone: 'muted', text: "  To take core's version of one: nextspark sync:app --overwrite <path> (the current file is backed up first)" });
@@ -512,7 +509,7 @@ export function describeSyncPlan(
   if (project.length > 0) {
     lines.push({ tone: 'muted', text: `Left ${project.length} file(s) in app/ that core doesn't ship` });
     if (verbose) {
-      for (const action of project) lines.push({ tone: 'muted', text: `  . ${shownPath(action.path)}` });
+      for (const action of project) lines.push({ tone: 'muted', text: `  . ${action.path}` });
     }
   }
 

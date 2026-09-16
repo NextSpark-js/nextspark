@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+// First, so what any module prints as it loads is escaped too
+import '../utils/console-guard.mjs'
+
 /**
  * Unified Build-Time Registry Generator
  *
@@ -37,7 +40,7 @@ const rootDir = join(__dirname, '../../../..')
 // Validation functions moved to ./registry/validation/entity-validator.mjs
 
 // Import shared utilities
-import { log, verbose, setVerboseMode, shownMessage, shownPath, shownStack } from '../utils/index.mjs'
+import { log, logFailure, verbose, setVerboseMode } from '../utils/index.mjs'
 import { getBasename } from '../utils/paths.mjs'
 
 // Import configuration
@@ -144,7 +147,7 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, template
     }
 
   } catch (error) {
-    log(`Error writing registry files: ${shownMessage(error)}`, 'error')
+    logFailure('Error writing registry files', error)
     process.exit(1)
   }
 }
@@ -175,7 +178,7 @@ export async function buildRegistries(projectRoot = null) {
     console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
     console.error('')
     for (const error of validation.errors) {
-      console.error(`   ${error}`)
+      error.split('\n').forEach((line, index) => console.error(index === 0 ? `   ${line}` : line))
       console.error('')
     }
     console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
@@ -188,7 +191,7 @@ export async function buildRegistries(projectRoot = null) {
   const unsafe = unsafeWritePlaces(CONFIG.projectRoot)
   if (unsafe.length > 0) {
     log("Build failed before writing anything: the registry build can't write safely under these paths", 'error')
-    for (const line of unsafeWritePlacesLines(unsafe)) console.log(`   ${shownPath(line)}`)
+    for (const line of unsafeWritePlacesLines(unsafe)) console.log(`   ${line}`)
     process.exit(1)
   }
 
@@ -367,10 +370,7 @@ export async function buildRegistries(projectRoot = null) {
     }
 
   } catch (error) {
-    log(`Build failed: ${shownMessage(error)}`, 'error')
-    if (CONFIG.verbose) {
-      console.error(shownStack(error))
-    }
+    logFailure('Build failed', error, CONFIG.verbose)
     process.exit(1)
   }
 }
@@ -411,11 +411,7 @@ process.on('SIGINT', () => {
 const isMainScript = process.argv[1] && import.meta.url.endsWith(getBasename(process.argv[1]))
 if (isMainScript) {
   main().catch(error => {
-    log(`Fatal error: ${shownMessage(error)}`, 'error')
-    const config = getConfig()
-    if (config.verbose) {
-      console.error(shownStack(error))
-    }
+    logFailure('Fatal error', error, getConfig().verbose)
     process.exit(1)
   })
 }

@@ -3,10 +3,9 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { getCoreDir, getProjectRoot, isMonorepoMode } from '../utils/paths.js';
 import { resolveBundlerArgs, type Bundler } from '../utils/next-bundler.js';
-import { spawnNext } from '../utils/spawn-next.js';
+import { nextOutputBlocker, spawnNext } from '../utils/spawn-next.js';
 import { registryBuildBlocker, runRegistryBuild, templatesTreeLines } from '../utils/registry-build.js';
 import { loadCoreWritePlaces } from '../utils/core-write-places.js';
-import { shownLines, shownPath } from '../utils/shown-path.js';
 
 interface DevOptions {
   port: string;
@@ -27,8 +26,8 @@ interface DevOptions {
  * Failure is reported and not fatal: what is already on disk may well be enough
  * to boot, and refusing to start the dev server helps nobody.
  *
- * Each line of the build's output repeated here is shown the way `shownPath`
- * shows a line, so no name in it breaks or reorders the line.
+ * Each line of the build's output repeated here is printed with a call of its
+ * own, which shows it the way `shownLine` shows a line.
  */
 export async function buildRegistries(coreDir: string, projectRoot: string): Promise<void> {
   console.log(chalk.blue('[Registry] Building registries...'));
@@ -40,13 +39,14 @@ export async function buildRegistries(coreDir: string, projectRoot: string): Pro
   }
 
   for (const line of templatesTreeLines(result.output)) {
-    console.log(chalk.gray(`[Registry] ${shownPath(line)}`));
+    console.log(chalk.gray(`[Registry] ${line}`));
   }
 
   if (result.status === 'failed') {
     console.warn(chalk.yellow('[Registry] Registry build failed; starting anyway.'));
-    const tail = shownLines(result.output.trim().split('\n').slice(-5).join('\n'));
-    if (tail) console.warn(chalk.gray(tail));
+    for (const line of result.output.trim().split('\n').slice(-5)) {
+      if (line) console.warn(chalk.gray(line));
+    }
   }
 }
 
@@ -60,6 +60,14 @@ export async function devCommand(options: DevOptions): Promise<void> {
 
     spinner.succeed(`Core found at: ${coreDir} (${mode} mode)`);
 
+    // Checked before anything runs, so a dev server that can't be shown writes nothing either
+    const blocker = nextOutputBlocker(projectRoot);
+    if (blocker) {
+      console.error(chalk.red(`[Dev] Not started: ${blocker}.`));
+      console.error(chalk.yellow('[Dev] Move the project to a directory whose path holds no such character.'));
+      process.exit(1);
+    }
+
     // The registry build checks where it writes before writing; the check runs
     // here first too, from the same core, since with --registry Next starts
     // alongside the build, and a build that can't write is no dev server to start
@@ -68,7 +76,7 @@ export async function devCommand(options: DevOptions): Promise<void> {
       const unsafe = core.unsafeWritePlaces(projectRoot);
       if (unsafe.length > 0) {
         console.error(chalk.red("[Registry] Not started: the registry build can't write safely under these paths"));
-        for (const line of core.unsafeWritePlacesLines(unsafe)) console.error(chalk.red(`  ${shownPath(line)}`));
+        for (const line of core.unsafeWritePlacesLines(unsafe)) console.error(chalk.red(`  ${line}`));
         process.exit(1);
       }
     }

@@ -3,8 +3,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import chalk from 'chalk';
 import ora from 'ora';
-import { spawnNext } from '../utils/spawn-next.js';
-import { shownPath } from '../utils/shown-path.js';
+import { nextOutputBlocker, spawnNext } from '../utils/spawn-next.js';
+import { errorLines, errorWithLines } from '../utils/shown-path.js';
 import { buildFailureLines } from '../utils/registry-build.js';
 import { getCoreDir, getProjectRoot } from '../utils/paths.js';
 import { effectiveBundler, pickBundler, resolveBundlerArgs } from '../utils/next-bundler.js';
@@ -56,6 +56,15 @@ export async function buildCommand(options: BuildOptions): Promise<void> {
 
     spinner.succeed('Core package found');
 
+    // Checked before anything runs, so a build that can't be shown writes nothing either
+    const blocker = nextOutputBlocker(projectRoot);
+    if (blocker) {
+      spinner.fail('Build not started');
+      console.error(chalk.red(`Next.js can't build this project where it is: ${blocker}.`));
+      console.error(chalk.yellow('Move the project to a directory whose path holds no such character.'));
+      process.exit(1);
+    }
+
     // Load project .env file
     const projectEnv = loadProjectEnv(projectRoot);
 
@@ -92,8 +101,7 @@ export async function buildCommand(options: BuildOptions): Promise<void> {
           if (code === 0) {
             resolve();
           } else {
-            const cause = buildFailureLines(output).map(shownPath).join('\n');
-            reject(new Error(`Registry generation failed:\n${cause}`));
+            reject(errorWithLines(['Registry generation failed:', ...buildFailureLines(output)]));
           }
         });
 
@@ -140,7 +148,7 @@ export async function buildCommand(options: BuildOptions): Promise<void> {
   } catch (error) {
     spinner.fail('Build preparation failed');
     if (error instanceof Error) {
-      console.error(chalk.red(error.message));
+      for (const line of errorLines(error)) console.error(chalk.red(line));
     }
     process.exit(1);
   }
