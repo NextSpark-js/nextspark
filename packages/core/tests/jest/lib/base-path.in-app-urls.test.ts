@@ -22,14 +22,14 @@
  * sit on different lines, and the path is just as often built into a variable
  * or handed over as data.
  *
- * A component is recognised by where it comes from, not by its name: an import
- * is resolved the way TypeScript resolves it with apps/dev's paths, whether it
- * is imported by name, as the default, as `{ default as X }`, through a
- * namespace, or with require(), and followed through re-exports. A member of a
- * module counts when the module is held by require(), a namespace import, or a
- * variable given one of those: `require('m').Image`, `require('m')['default']`,
- * `Namespace.Image`, `const images = require('next/image')` then
- * `images.default`. So core's
+ * A component is recognised by where it comes from, not by its name. One lazy
+ * TypeScript program covers every source and fixture, reusing its SourceFiles
+ * for the walk. Its host follows apps/dev's paths and loads package declarations
+ * only for the loader and prefixer entry modules; imports below node_modules do
+ * not resolve further. The checker follows each immediate alias through imports,
+ * re-exports and namespace members until its declaration reaches that package
+ * boundary. A member without a checker symbol falls back to CommonJS only when
+ * `require` has no declaration in the sources under review. So core's
  * AvatarImage, which puts the base path on, is told apart from the shared one
  * it wraps, and lucide's Image icon from next/image's.
  *
@@ -44,8 +44,10 @@
  *    and the member it is read from (`const { default: Image } = require('next/image')`)
  *  - each element of an array written out that a `for...of` declaring it walks,
  *    or the member of each element it destructures
- *  - each value assigned to it anywhere in the module with `=`, `||=`, `??=`
- *    or `&&=`, or by a `for...of` over an array written out
+ *  - each value assigned to it with `=`, `||=`, `??=` or `&&=`, or by a
+ *    `for...of` over an array written out; an assignment later in the same
+ *    innermost function is excluded unless an iteration statement contains both
+ *    it and the use
  * A prop, or any other variable given no value in those ways, is not taken for
  * a component. A
  * Slot loads nothing itself; the child it hands its props to is checked where
@@ -292,33 +294,7 @@ const COMPILER_OPTIONS = (() => {
 })()
 
 const RESOLUTION_CACHE = ts.createModuleResolutionCache(REPO_ROOT, name => name, COMPILER_OPTIONS)
-const MODULE_KEYS = new Map<string, string>()
-
-/** The file a specifier names from a file of ours, or the specifier itself for a package's module. */
-function moduleKey(specifier: string, fromFile: string): string {
-  const id = `${fromFile}\0${specifier}`
-  const known = MODULE_KEYS.get(id)
-  if (known) return known
-  const resolved = ts.resolveModuleName(specifier, fromFile, COMPILER_OPTIONS, ts.sys, RESOLUTION_CACHE).resolvedModule
-  const key =
-    !resolved || resolved.isExternalLibraryImport || resolved.resolvedFileName.includes('/node_modules/')
-      ? specifier
-      : realpathSync(resolved.resolvedFileName)
-  MODULE_KEYS.set(id, key)
-  return key
-}
-
-/** Where a name in a module comes from: another module's export (`*` for the module itself). */
-type Binding = { specifier: string; name: string }
-
-interface ModuleInfo {
-  source: ts.SourceFile
-  imports: Map<string, Binding>
-  /** The names declared at the top of the module, by the identifier that declares them */
-  declared: Map<string, ts.Identifier>
-  exports: Map<string, Binding | { local: string }>
-  starExports: string[]
-}
+const FIXTURES_DIR = join(REPO_ROOT, 'packages/core/tests/jest/lib/__fixtures__')
 
 /** The expression inside parentheses, type assertions and `satisfies`. */
 function unwrapped(node: ts.Expression): ts.Expression {
@@ -334,28 +310,6 @@ function unwrapped(node: ts.Expression): ts.Expression {
   return node
 }
 
-const MODULES = new Map<string, ModuleInfo>()
-
-/** What a require() stands for: the module (`*`), or one of its exports (`require('m').Image`, `require('m')['default']`). */
-function requiredModule(node: ts.Expression | undefined): Binding | undefined {
-  if (!node) return undefined
-  const member = memberName(node)
-  if (member !== undefined) {
-    const module = requiredModule((node as ts.PropertyAccessExpression | ts.ElementAccessExpression).expression)
-    return module && module.name === '*' ? { specifier: module.specifier, name: member } : undefined
-  }
-  if (
-    ts.isCallExpression(node) &&
-    ts.isIdentifier(node.expression) &&
-    node.expression.text === 'require' &&
-    node.arguments.length === 1 &&
-    ts.isStringLiteral(node.arguments[0])
-  ) {
-    return { specifier: node.arguments[0].text, name: '*' }
-  }
-  return undefined
-}
-
 /** The member an access reads by name: `m.Image`, `m['default']`. */
 function memberName(node: ts.Node): string | undefined {
   if (ts.isPropertyAccessExpression(node)) return node.name.text
@@ -369,130 +323,75 @@ function declaredIdentifiers(name: ts.BindingName): ts.Identifier[] {
   return name.elements.flatMap(element => (ts.isOmittedExpression(element) ? [] : declaredIdentifiers(element.name)))
 }
 
-function moduleInfo(file: string): ModuleInfo {
-  const known = MODULES.get(file)
-  if (known) return known
-
-  const source = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
-  const info: ModuleInfo = { source, imports: new Map(), declared: new Map(), exports: new Map(), starExports: [] }
-  const isExported = (node: ts.Node) =>
-    ts.canHaveModifiers(node) && (ts.getModifiers(node) ?? []).some(modifier => modifier.kind === ts.SyntaxKind.ExportKeyword)
-  const isDefault = (node: ts.Node) =>
-    ts.canHaveModifiers(node) && (ts.getModifiers(node) ?? []).some(modifier => modifier.kind === ts.SyntaxKind.DefaultKeyword)
-
-  for (const statement of source.statements) {
-    if (ts.isImportDeclaration(statement) && ts.isStringLiteral(statement.moduleSpecifier) && statement.importClause) {
-      const specifier = statement.moduleSpecifier.text
-      const clause = statement.importClause
-      if (clause.name) info.imports.set(clause.name.text, { specifier, name: 'default' })
-      if (clause.namedBindings && ts.isNamespaceImport(clause.namedBindings)) {
-        info.imports.set(clause.namedBindings.name.text, { specifier, name: '*' })
-      }
-      if (clause.namedBindings && ts.isNamedImports(clause.namedBindings)) {
-        for (const element of clause.namedBindings.elements) {
-          info.imports.set(element.name.text, { specifier, name: (element.propertyName ?? element.name).text })
-        }
-      }
-    }
-
-    if (
-      ts.isImportEqualsDeclaration(statement) &&
-      ts.isExternalModuleReference(statement.moduleReference) &&
-      ts.isStringLiteral(statement.moduleReference.expression)
-    ) {
-      info.imports.set(statement.name.text, { specifier: statement.moduleReference.expression.text, name: '*' })
-    }
-
-    if (ts.isVariableStatement(statement)) {
-      for (const declaration of statement.declarationList.declarations) {
-        for (const identifier of declaredIdentifiers(declaration.name)) {
-          info.declared.set(identifier.text, identifier)
-          if (isExported(statement)) info.exports.set(identifier.text, { local: identifier.text })
-        }
-      }
-    }
-
-    if ((ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) && statement.name) {
-      info.declared.set(statement.name.text, statement.name)
-      if (isExported(statement)) info.exports.set(isDefault(statement) ? 'default' : statement.name.text, { local: statement.name.text })
-    }
-
-    if (ts.isExportAssignment(statement) && !statement.isExportEquals && ts.isIdentifier(statement.expression)) {
-      info.exports.set('default', { local: statement.expression.text })
-    }
-
-    if (ts.isExportDeclaration(statement)) {
-      const specifier =
-        statement.moduleSpecifier && ts.isStringLiteral(statement.moduleSpecifier) ? statement.moduleSpecifier.text : undefined
-      if (!statement.exportClause) {
-        if (specifier) info.starExports.push(specifier)
-      } else if (ts.isNamespaceExport(statement.exportClause)) {
-        if (specifier) info.exports.set(statement.exportClause.name.text, { specifier, name: '*' })
-      } else {
-        for (const element of statement.exportClause.elements) {
-          const name = (element.propertyName ?? element.name).text
-          info.exports.set(element.name.text, specifier ? { specifier, name } : { local: name })
-        }
-      }
-    }
-  }
-
-  MODULES.set(file, info)
-  return info
+function packagePath(file: string): string | undefined {
+  const marker = '/node_modules/'
+  const at = file.lastIndexOf(marker)
+  return at === -1 ? undefined : file.slice(at + marker.length)
 }
 
-const CHECKERS = new Map<string, ts.TypeChecker>()
+/** The package-relative declaration files of the loader and prefixer entry modules. */
+const COMPONENT_MODULES = new Set(
+  Object.keys({ ...LOADERS, ...PREFIXERS }).map(key => key.slice(0, key.lastIndexOf('#')))
+)
+function resolveComponentModule(specifier: string): ts.ResolvedModuleFull | undefined {
+  const fromApp = ts.resolveModuleName(specifier, join(REPO_ROOT, 'apps/dev/index.ts'), COMPILER_OPTIONS, ts.sys, RESOLUTION_CACHE).resolvedModule
+  return fromApp ?? ts.resolveModuleName(specifier, join(FIXTURES_DIR, 'bare-in-app-urls.tsx'), COMPILER_OPTIONS, ts.sys, RESOLUTION_CACHE).resolvedModule
+}
+
+const RESOLVED_COMPONENT_MODULES = new Set(
+  [...COMPONENT_MODULES].flatMap(specifier => {
+    const file = resolveComponentModule(specifier)?.resolvedFileName
+    return file ? [packagePath(file)] : []
+  })
+)
+
+interface ProgramState {
+  program: ts.Program
+  checker: ts.TypeChecker
+}
+
+let PROGRAM: ProgramState | undefined
 
 /**
- * A checker for one module on its own. Imports are left unresolved: all it is
- * asked is which declaration a name inside the module refers to, which is
- * what tells a variable apart from another of the same name in a nested
- * function, or from an import it shadows.
+ * One program covers the sources under review and the fixtures. It only loads
+ * declaration files for the package entry points that identify known components;
+ * declarations below node_modules do not resolve further imports.
  */
-function checkerFor(module: string): ts.TypeChecker {
-  const known = CHECKERS.get(module)
-  if (known) return known
-  const { source } = moduleInfo(module)
-  const options: ts.CompilerOptions = { noResolve: true, noLib: true, types: [], jsx: ts.JsxEmit.Preserve }
+function programState(): ProgramState {
+  if (PROGRAM) return PROGRAM
+  const roots = [...new Set([...scannedFiles(), ...sourceFiles(FIXTURES_DIR)])]
+  const options: ts.CompilerOptions = { ...COMPILER_OPTIONS, noLib: true, types: [], noEmit: true }
   const host = ts.createCompilerHost(options)
-  host.getSourceFile = file => (file === source.fileName ? source : undefined)
-  host.fileExists = file => file === source.fileName
-  const checker = ts.createProgram([source.fileName], options, host).getTypeChecker()
-  CHECKERS.set(module, checker)
-  return checker
+  host.resolveModuleNameLiterals = (literals, containingFile, redirectedReference, compilerOptions) =>
+    literals.map(literal => {
+      if (packagePath(containingFile)) return { resolvedModule: undefined }
+      const resolved = ts.resolveModuleName(
+        literal.text,
+        containingFile,
+        compilerOptions,
+        host,
+        RESOLUTION_CACHE,
+        redirectedReference
+      ).resolvedModule
+      if (!resolved) return { resolvedModule: undefined }
+      const relativePackagePath = packagePath(resolved.resolvedFileName)
+      return !relativePackagePath || RESOLVED_COMPONENT_MODULES.has(relativePackagePath)
+        ? { resolvedModule: resolved }
+        : { resolvedModule: undefined }
+    })
+  const program = ts.createProgram(roots, options, host)
+  PROGRAM = { program, checker: program.getTypeChecker() }
+  return PROGRAM
+}
+
+function sourceFor(file: string): ts.SourceFile | undefined {
+  return programState().program.getSourceFile(realpathSync(file))
 }
 
 /** A value a variable is given: an expression, or a member of one (`const { default: Image } = images`). */
-type GivenValue = { expression: ts.Expression; member?: string }
+type GivenValue = { expression: ts.Expression; member?: string; assignment?: ts.Node }
 
 const ASSIGNMENTS = new Map<string, Map<ts.Symbol, GivenValue[]>>()
-
-/**
- * The values assigned to each variable of a module after it is declared:
- * `Comp = 'a'`, `Comp ||= 'a'`, `Comp ??= 'a'`, `Comp &&= 'a'`, and each element
- * of an array a `for (Comp of [...])` walks. The variable assigned to is the
- * one the checker resolves, so an assignment inside a nested function to a
- * variable declared there does not count for another of the same name.
- */
-function assignmentsIn(module: string): Map<ts.Symbol, GivenValue[]> {
-  const known = ASSIGNMENTS.get(module)
-  if (known) return known
-  const checker = checkerFor(module)
-  const assignments = new Map<ts.Symbol, GivenValue[]>()
-  const add = (target: ts.Expression, values: GivenValue[]) => {
-    const symbol = ts.isIdentifier(target) ? checker.getSymbolAtLocation(target) : undefined
-    if (symbol) assignments.set(symbol, [...(assignments.get(symbol) ?? []), ...values])
-  }
-  const visit = (node: ts.Node) => {
-    if (ts.isBinaryExpression(node) && ASSIGNMENT_OPERATORS.has(node.operatorToken.kind)) add(node.left, [{ expression: node.right }])
-    if (ts.isForOfStatement(node) && !ts.isVariableDeclarationList(node.initializer)) add(node.initializer, elementsOf(node.expression))
-    ts.forEachChild(node, visit)
-  }
-  visit(moduleInfo(module).source)
-  ASSIGNMENTS.set(module, assignments)
-  return assignments
-}
-
 const ASSIGNMENT_OPERATORS = new Set([
   ts.SyntaxKind.EqualsToken,
   ts.SyntaxKind.BarBarEqualsToken,
@@ -501,18 +400,64 @@ const ASSIGNMENT_OPERATORS = new Set([
 ])
 
 /** The elements of an array written out, which a `for...of` over it takes in turn. */
-function elementsOf(node: ts.Expression): GivenValue[] {
+function elementsOf(node: ts.Expression, assignment?: ts.Node): GivenValue[] {
   node = unwrapped(node)
   if (!ts.isArrayLiteralExpression(node)) return []
-  return node.elements.filter(element => !ts.isSpreadElement(element)).map(expression => ({ expression }))
+  return node.elements.filter(element => !ts.isSpreadElement(element)).map(expression => ({ expression, assignment }))
 }
 
-/**
- * What a destructured name is read from, when that is a member of a value
- * written out: `const { default: Image } = require('next/image')`, `= images`
- * for a variable that holds the module, or each element of the array a
- * `for (const { default: Image } of [...])` walks.
- */
+/** The innermost function (or source file) that contains a use or assignment. */
+function valueScope(node: ts.Node): ts.Node {
+  for (let current: ts.Node | undefined = node; current; current = current.parent) {
+    if (ts.isFunctionLike(current) || ts.isSourceFile(current)) return current
+  }
+  return node.getSourceFile()
+}
+
+function contains(node: ts.Node, other: ts.Node): boolean {
+  return node.getStart() <= other.getStart() && other.getEnd() <= node.getEnd()
+}
+
+/** An assignment after a use in a straight-line function body cannot choose that use's tag. */
+function assignmentCountsForUse(assignment: ts.Node | undefined, use: ts.Node): boolean {
+  if (!assignment || assignment.getStart() <= use.getStart()) return true
+  const scope = valueScope(use)
+  if (scope !== valueScope(assignment)) return true
+  let crossesIteration = false
+  const visit = (node: ts.Node) => {
+    if (ts.isIterationStatement(node, false) && contains(node, assignment) && contains(node, use)) crossesIteration = true
+    ts.forEachChild(node, visit)
+  }
+  visit(scope)
+  return crossesIteration
+}
+
+/** Values assigned to each variable, distinguished by the program checker's symbol. */
+function assignmentsIn(source: ts.SourceFile): Map<ts.Symbol, GivenValue[]> {
+  const key = source.fileName
+  const known = ASSIGNMENTS.get(key)
+  if (known) return known
+  const checker = programState().checker
+  const assignments = new Map<ts.Symbol, GivenValue[]>()
+  const add = (target: ts.Expression, values: GivenValue[]) => {
+    const symbol = ts.isIdentifier(target) ? checker.getSymbolAtLocation(target) : undefined
+    if (symbol) assignments.set(symbol, [...(assignments.get(symbol) ?? []), ...values])
+  }
+  const visit = (node: ts.Node) => {
+    if (ts.isBinaryExpression(node) && ASSIGNMENT_OPERATORS.has(node.operatorToken.kind)) {
+      add(node.left, [{ expression: node.right, assignment: node }])
+    }
+    if (ts.isForOfStatement(node) && !ts.isVariableDeclarationList(node.initializer)) {
+      add(node.initializer, elementsOf(node.expression, node))
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(source)
+  ASSIGNMENTS.set(key, assignments)
+  return assignments
+}
+
+/** What a destructured name is read from, when that is a member of a value written out. */
 function destructuredFrom(element: ts.BindingElement): GivenValue[] {
   if (!ts.isObjectBindingPattern(element.parent) || element.dotDotDotToken) return []
   const key = element.propertyName ?? element.name
@@ -521,26 +466,20 @@ function destructuredFrom(element: ts.BindingElement): GivenValue[] {
   if (member === undefined || !ts.isVariableDeclaration(declaration)) return []
   const statement = declaration.parent.parent
   const objects = ts.isForOfStatement(statement)
-    ? elementsOf(statement.expression)
+    ? elementsOf(statement.expression, statement)
     : declaration.initializer
       ? [{ expression: declaration.initializer }]
       : []
-  return objects.map(({ expression }) => ({ expression, member }))
+  return objects.map(({ expression, assignment }) => ({ expression, member, assignment }))
 }
 
-/**
- * Every value a variable is given: its initializer, or for a destructured name
- * its default and the member it is read from, each element of the array a
- * `for...of` declaring it walks, and every value assigned to it afterwards.
- * A parameter is given only its default: the props a component receives are
- * not known here.
- */
-function givenValues(module: string, symbol: ts.Symbol): GivenValue[] {
+/** Every value a variable is given that can affect this particular use. */
+function givenValues(symbol: ts.Symbol, use: ts.Node): GivenValue[] {
   const values: GivenValue[] = []
   for (const declaration of symbol.declarations ?? []) {
     if (ts.isVariableDeclaration(declaration)) {
       const statement = declaration.parent.parent
-      if (ts.isForOfStatement(statement)) values.push(...elementsOf(statement.expression))
+      if (ts.isForOfStatement(statement)) values.push(...elementsOf(statement.expression, statement))
       else if (declaration.initializer) values.push({ expression: declaration.initializer })
     }
     if (ts.isBindingElement(declaration)) {
@@ -549,7 +488,9 @@ function givenValues(module: string, symbol: ts.Symbol): GivenValue[] {
     }
     if (ts.isParameter(declaration) && declaration.initializer) values.push({ expression: declaration.initializer })
   }
-  return [...values, ...(assignmentsIn(module).get(symbol) ?? [])]
+  const source = symbol.declarations?.[0]?.getSourceFile()
+  const assigned = source ? assignmentsIn(source).get(symbol) ?? [] : []
+  return [...values, ...assigned.filter(value => assignmentCountsForUse(value.assignment, use))]
 }
 
 /** Whether a declaration is one of a variable, rather than an import, a function or a class. */
@@ -561,121 +502,29 @@ function passThrough(file: string, component: string): string[] | undefined {
   return PASS_THROUGH.find(entry => join(REPO_ROOT, entry.file) === file && entry.component === component)?.attributes
 }
 
-/**
- * What a component does with a URL attribute: hands it to the browser or an
- * optimizer as given (`loads`), or puts the base path on it itself (`prefixes`).
- */
 type Handling = 'loads' | 'prefixes'
-
-const PACKAGE_COMPONENTS: Record<Handling, Record<string, string[]>> = { loads: LOADERS, prefixes: PREFIXERS }
-
-/** The attributes a component of ours handles that way by what it is, rather than by what it renders. */
-function ownAttributes(handling: Handling, module: string, name: string): string[] | undefined {
-  return handling === 'loads' ? passThrough(module, name) : undefined
-}
-
-/** The URL attributes an export handles that way, following re-exports; undefined when it handles none. */
-function exportAttributes(handling: Handling, module: string, exportName: string, seen = new Set<string>()): string[] | undefined {
-  const id = `${module}#${exportName}`
-  if (seen.has(id)) return undefined
-  seen.add(id)
-  if (PACKAGE_COMPONENTS[handling][id]) return PACKAGE_COMPONENTS[handling][id]
-  if (!module.startsWith('/') || !existsSync(module)) return undefined
-
-  const info = moduleInfo(module)
-  const exported = info.exports.get(exportName)
-  if (exported && 'local' in exported) return localAttributes(handling, module, exported.local, seen) ?? ownAttributes(handling, module, exportName)
-  if (exported) return exportAttributes(handling, moduleKey(exported.specifier, module), exported.name, seen)
-  for (const specifier of info.starExports) {
-    const attributes = exportAttributes(handling, moduleKey(specifier, module), exportName, seen)
-    if (attributes) return attributes
-  }
-  return undefined
-}
-
-/**
- * The URL attributes a name at the top of a module handles that way: an import
- * of a component that does, a variable that stands for one, or a component of
- * ours defined there.
- */
-function localAttributes(handling: Handling, module: string, name: string, seen = new Set<string>()): string[] | undefined {
-  const info = moduleInfo(module)
-  const binding = info.imports.get(name)
-  if (binding && binding.name !== '*') return exportAttributes(handling, moduleKey(binding.specifier, module), binding.name, seen)
-  const declared = info.declared.get(name)
-  if (declared) return identifierAttributes(handling, module, declared, seen)
-  return ownAttributes(handling, module, name)
-}
-
-/**
- * The URL attributes what an identifier names handles that way. The checker
- * says which declaration it refers to: an import is followed to the module it
- * comes from, and a variable counts as every value it is given. A variable
- * given no value that says, such as a prop, is not taken for an import or a
- * component of the same name.
- */
-function identifierAttributes(handling: Handling, module: string, identifier: ts.Identifier, seen = new Set<string>()): string[] | undefined {
-  const info = moduleInfo(module)
-  const symbol = checkerFor(module).getSymbolAtLocation(identifier)
-  const declarations = symbol?.declarations ?? []
-  const atTop = declarations.some(declaration => (declaration as ts.NamedDeclaration).name === info.declared.get(identifier.text))
-
-  const variable = declarations.find(declaresVariable)
-  if (symbol && variable) {
-    const id = `${module}#variable:${variable.getStart()}`
-    if (seen.has(id)) return undefined
-    seen.add(id)
-    const given = merged(...givenValues(module, symbol).map(value => valueAttributes(handling, module, value, seen)))
-    return given ?? (atTop ? ownAttributes(handling, module, identifier.text) : undefined)
-  }
-
-  if (declarations.length === 0 || declarations.some(isImport)) {
-    const binding = info.imports.get(identifier.text)
-    if (binding && binding.name !== '*') return exportAttributes(handling, moduleKey(binding.specifier, module), binding.name, seen)
-    return undefined
-  }
-  return atTop ? ownAttributes(handling, module, identifier.text) : undefined
-}
-
-function isImport(declaration: ts.Declaration): boolean {
-  return (
-    ts.isImportClause(declaration) ||
-    ts.isImportSpecifier(declaration) ||
-    ts.isNamespaceImport(declaration) ||
-    ts.isImportEqualsDeclaration(declaration)
+function resolvedComponentAttributes(components: Record<string, string[]>): Record<string, string[]> {
+  return Object.fromEntries(
+    Object.entries(components).flatMap(([key, attributes]) => {
+      const at = key.lastIndexOf('#')
+      const resolved = resolveComponentModule(key.slice(0, at))
+      const module = resolved && packagePath(resolved.resolvedFileName)
+      return module ? [[`${module}${key.slice(at)}`, attributes]] : []
+    })
   )
 }
-
-function valueAttributes(handling: Handling, module: string, value: GivenValue, seen: Set<string>): string[] | undefined {
-  if (value.member === undefined) return expressionAttributes(handling, module, value.expression, seen)
-  const specifier = wholeModule(module, value.expression, seen)
-  return specifier ? exportAttributes(handling, moduleKey(specifier, module), value.member, seen) : undefined
+const PACKAGE_COMPONENTS: Record<Handling, Record<string, string[]>> = {
+  loads: resolvedComponentAttributes(LOADERS),
+  prefixes: resolvedComponentAttributes(PREFIXERS),
 }
 
-/**
- * The module an expression stands for as a whole: `require('m')`, a namespace
- * import, or a variable given one of those.
- */
-function wholeModule(module: string, node: ts.Expression, seen: Set<string>): string | undefined {
-  node = unwrapped(node)
-  const required = requiredModule(node)
-  if (required) return required.name === '*' ? required.specifier : undefined
-  if (!ts.isIdentifier(node)) return undefined
+function ownAttributes(handling: Handling, source: ts.SourceFile, name: string): string[] | undefined {
+  return handling === 'loads' ? passThrough(source.fileName, name) : undefined
+}
 
-  const symbol = checkerFor(module).getSymbolAtLocation(node)
-  const variable = symbol?.declarations?.find(declaresVariable)
-  if (symbol && variable) {
-    const id = `${module}#module:${variable.getStart()}`
-    if (seen.has(id)) return undefined
-    seen.add(id)
-    for (const value of givenValues(module, symbol)) {
-      const specifier = value.member === undefined ? wholeModule(module, value.expression, seen) : undefined
-      if (specifier) return specifier
-    }
-    return undefined
-  }
-  const binding = moduleInfo(module).imports.get(node.text)
-  return binding?.name === '*' ? binding.specifier : undefined
+function packageAttributes(handling: Handling, source: ts.SourceFile, name: string): string[] | undefined {
+  const module = packagePath(source.fileName)
+  return module ? PACKAGE_COMPONENTS[handling][`${module}#${name}`] : undefined
 }
 
 /** Every attribute any of the lists names, or undefined when none names one. */
@@ -684,40 +533,160 @@ function merged(...lists: (string[] | undefined)[]): string[] | undefined {
   return attributes.length > 0 ? attributes : undefined
 }
 
+function symbolAttributes(handling: Handling, symbol: ts.Symbol | undefined, use: ts.Node, seen = new Set<string>()): string[] | undefined {
+  const checker = programState().checker
+  while (symbol && symbol.flags & ts.SymbolFlags.Alias) {
+    const declaration = symbol.declarations?.[0]
+    const source = declaration?.getSourceFile()
+    if (source && packagePath(source.fileName)) return packageAttributes(handling, source, symbol.name)
+    const alias = checker.getImmediateAliasedSymbol(symbol)
+    if (!alias || alias === symbol) return undefined
+    symbol = alias
+  }
+  if (!symbol?.declarations?.length) return undefined
+  const declaration = symbol.declarations[0]
+  const source = declaration.getSourceFile()
+  const fromPackage = packageAttributes(handling, source, symbol.name)
+  if (fromPackage) return fromPackage
+  if (packagePath(source.fileName)) return undefined
+
+  const variable = symbol.declarations.find(declaresVariable)
+  if (variable) {
+    const id = `${source.fileName}#variable:${variable.getStart()}`
+    if (seen.has(id)) return undefined
+    seen.add(id)
+    const given = merged(...givenValues(symbol, use).map(value => valueAttributes(handling, value, use, seen)))
+    const atTopLevel = !symbol.declarations.some(declaration => {
+      for (let current = declaration.parent; current && !ts.isSourceFile(current); current = current.parent) {
+        if (ts.isFunctionLike(current)) return true
+      }
+      return false
+    })
+    return given ?? (atTopLevel ? ownAttributes(handling, source, symbol.name) : undefined)
+  }
+
+  const exportedValue = symbol.declarations.find(ts.isExportAssignment)
+  if (exportedValue && ts.isExportAssignment(exportedValue)) {
+    return expressionAttributes(handling, unwrapped(exportedValue.expression), use, seen)
+  }
+  return ownAttributes(handling, source, symbol.name)
+}
+
+/** A require() is CommonJS only when it is not a function declared in our sources. */
+function isCommonJsRequire(call: ts.CallExpression): boolean {
+  if (!ts.isIdentifier(call.expression) || call.expression.text !== 'require') return false
+  const declarations = programState().checker.getSymbolAtLocation(call.expression)?.declarations ?? []
+  return !declarations.some(declaration => !packagePath(declaration.getSourceFile().fileName))
+}
+
+/** The file or package entry a CommonJS expression denotes. */
+function requiredModule(node: ts.Expression | undefined): { source?: ts.SourceFile; package?: string } | undefined {
+  if (!node) return undefined
+  node = unwrapped(node)
+  if (
+    ts.isCallExpression(node) &&
+    isCommonJsRequire(node) &&
+    node.arguments.length === 1 &&
+    ts.isStringLiteral(node.arguments[0])
+  ) {
+    const resolved = ts.resolveModuleName(node.arguments[0].text, node.getSourceFile().fileName, COMPILER_OPTIONS, ts.sys, RESOLUTION_CACHE).resolvedModule
+    if (!resolved) return undefined
+    const packageFile = packagePath(resolved.resolvedFileName)
+    return packageFile ? { package: packageFile } : { source: sourceFor(resolved.resolvedFileName) }
+  }
+  return undefined
+}
+
+function moduleMemberAttributes(
+  handling: Handling,
+  module: { source?: ts.SourceFile; package?: string },
+  member: string,
+  use: ts.Node,
+  seen: Set<string>
+): string[] | undefined {
+  if (module.package) return PACKAGE_COMPONENTS[handling][`${module.package}#${member}`]
+  if (!module.source) return undefined
+  const checker = programState().checker
+  const moduleSymbol = checker.getSymbolAtLocation(module.source)
+  return symbolAttributes(handling, moduleSymbol && checker.tryGetMemberInModuleExports(member, moduleSymbol), use, seen)
+}
+
+function valueAttributes(handling: Handling, value: GivenValue, use: ts.Node, seen: Set<string>): string[] | undefined {
+  if (value.member === undefined) return expressionAttributes(handling, value.expression, use, seen)
+  const module = wholeModule(value.expression, use, seen)
+  return module ? moduleMemberAttributes(handling, module, value.member, use, seen) : undefined
+}
+
 /**
- * The URL attributes what an expression that stands for a tag handles that
- * way. A tag chosen at run time counts as each tag it can be:
- * `asChild ? Slot : 'a'` and `as ?? 'img'` load what an `<a>` and an `<img>`
- * load. A Slot loads nothing itself; the child it hands the props to is
- * checked where it is written.
+ * The module an expression stands for as a whole: `require('m')`, a name the
+ * checker resolves to a module (a namespace import or export, `import m =
+ * require('m')`), or a variable given one of those.
  */
-function expressionAttributes(handling: Handling, module: string, node: ts.Expression, seen = new Set<string>()): string[] | undefined {
+function wholeModule(
+  node: ts.Expression,
+  use: ts.Node,
+  seen: Set<string>
+): { source?: ts.SourceFile; package?: string } | undefined {
+  node = unwrapped(node)
+  const required = requiredModule(node)
+  if (required) return required
+  if (!ts.isIdentifier(node)) return undefined
+  const checker = programState().checker
+  let symbol = checker.getSymbolAtLocation(node)
+  while (symbol && symbol.flags & ts.SymbolFlags.Alias) {
+    const alias = checker.getImmediateAliasedSymbol(symbol)
+    if (!alias || alias === symbol) return undefined
+    symbol = alias
+  }
+  const variable = symbol?.declarations?.find(declaresVariable)
+  if (symbol && variable) {
+    const id = `${variable.getSourceFile().fileName}#module:${variable.getStart()}`
+    if (seen.has(id)) return undefined
+    seen.add(id)
+    for (const value of givenValues(symbol, use)) {
+      if (value.member === undefined) {
+        const module = wholeModule(value.expression, use, seen)
+        if (module) return module
+      }
+    }
+    return undefined
+  }
+  const source = symbol?.declarations?.find(ts.isSourceFile)
+  if (!source) return undefined
+  const packageFile = packagePath(source.fileName)
+  return packageFile ? { package: packageFile } : { source }
+}
+
+/** The URL attributes what an expression that stands for a tag handles that way. */
+function expressionAttributes(handling: Handling, node: ts.Expression, use: ts.Node = node, seen = new Set<string>()): string[] | undefined {
   node = unwrapped(node)
   if (ts.isConditionalExpression(node)) {
-    return merged(expressionAttributes(handling, module, node.whenTrue, seen), expressionAttributes(handling, module, node.whenFalse, seen))
+    return merged(expressionAttributes(handling, node.whenTrue, use, seen), expressionAttributes(handling, node.whenFalse, use, seen))
   }
-  if (
-    ts.isBinaryExpression(node) &&
-    [ts.SyntaxKind.BarBarToken, ts.SyntaxKind.QuestionQuestionToken].includes(node.operatorToken.kind)
-  ) {
-    return merged(expressionAttributes(handling, module, node.left, seen), expressionAttributes(handling, module, node.right, seen))
+  if (ts.isBinaryExpression(node) && [ts.SyntaxKind.BarBarToken, ts.SyntaxKind.QuestionQuestionToken].includes(node.operatorToken.kind)) {
+    return merged(expressionAttributes(handling, node.left, use, seen), expressionAttributes(handling, node.right, use, seen))
   }
   if (isStringLiteral(node)) return handling === 'loads' ? ASSET_ATTRIBUTES[node.text] : undefined
   const member = memberName(node)
   if (member !== undefined) {
-    const specifier = wholeModule(module, (node as ts.PropertyAccessExpression | ts.ElementAccessExpression).expression, seen)
-    return specifier ? exportAttributes(handling, moduleKey(specifier, module), member, seen) : undefined
+    const memberNode = ts.isPropertyAccessExpression(node) ? node.name : node.argumentExpression
+    const direct = memberNode && programState().checker.getSymbolAtLocation(memberNode)
+    const resolved = symbolAttributes(handling, direct, use, seen)
+    if (resolved) return resolved
+    const module = wholeModule((node as ts.PropertyAccessExpression | ts.ElementAccessExpression).expression, use, seen)
+    return module ? moduleMemberAttributes(handling, module, member, use, seen) : undefined
   }
-  if (ts.isIdentifier(node)) return identifierAttributes(handling, module, node, seen)
+  if (ts.isIdentifier(node)) return symbolAttributes(handling, programState().checker.getSymbolAtLocation(node), use, seen)
   return undefined
 }
 
 /** The URL attributes the element a tag names handles that way. */
-function tagAttributes(handling: Handling, module: string, tag: ts.JsxTagNameExpression): string[] | undefined {
+function tagAttributes(handling: Handling, tag: ts.JsxTagNameExpression): string[] | undefined {
   if (ts.isIdentifier(tag) && /^[a-z]/.test(tag.text)) return handling === 'loads' ? ASSET_ATTRIBUTES[tag.text] : undefined
-  if (ts.isIdentifier(tag) || ts.isPropertyAccessExpression(tag)) return expressionAttributes(handling, module, tag)
+  if (ts.isIdentifier(tag) || ts.isPropertyAccessExpression(tag)) return expressionAttributes(handling, tag, tag)
   return undefined
 }
+
 
 /** The name of the component or function a node is written in. */
 function enclosingDeclarationName(node: ts.Node): string | undefined {
@@ -740,7 +709,8 @@ function concatenated(node: ts.Expression): ts.Expression[] {
 function offendersIn(file: string): string[] {
   const module = realpathSync(file)
   const relativePath = relative(REPO_ROOT, module)
-  const { source } = moduleInfo(module)
+  const source = sourceFor(module)
+  if (!source) throw new Error(`Program did not include ${module}`)
   const pathVariables = new Map<string, string>()
   const found: string[] = []
 
@@ -785,8 +755,8 @@ function offendersIn(file: string): string[] {
     // <Link> Next.js prefixes; an <a>, an <img>, next/image's <Image> and the rest it does not
     if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
       const tag = node.tagName.getText(source)
-      const loaded = tagAttributes('loads', module, node.tagName) ?? []
-      const prefixed = tagAttributes('prefixes', module, node.tagName) ?? []
+      const loaded = tagAttributes('loads', node.tagName) ?? []
+      const prefixed = tagAttributes('prefixes', node.tagName) ?? []
       const attributes = node.attributes.properties
 
       // <Link href={withBasePath('/docs')}> goes to /base/base/docs
@@ -974,7 +944,22 @@ describe('in-app URLs carry the base path', () => {
       // <Link> puts the base path on by itself
       'bare-in-app-urls.tsx:279  Link href with the base path added twice  withBasePathIfInApp(\'/docs\')',
       'bare-in-app-urls.tsx:280  Link href with the base path added twice  withBasePath(\'/docs\')',
+      // checker aliases across default exports, namespace exports, namespace imports and re-export chains
+      'bare-in-app-urls.tsx:296  DefaultReexportedImage src from data  cover',
+      'bare-in-app-urls.tsx:297  ImageNamespace.default src from data  cover',
+      'bare-in-app-urls.tsx:298  NS.default src from data  cover',
+      'bare-in-app-urls.tsx:299  Loaders.ReexportedImage src from data  cover',
+      'bare-in-app-urls.tsx:300  TwiceReexportedImage src from data  cover',
+      'bare-in-app-urls.tsx:301  X.default src from data  cover',
     ])
+  })
+
+  test('a locally declared require is not CommonJS', () => {
+    expect(offendersIn(join(FIXTURES_DIR, 'local-require.tsx'))).toEqual([])
+  })
+
+  test('a member of a value that is not a module is not read from the exports of the file it is declared in', () => {
+    expect(offendersIn(join(FIXTURES_DIR, 'object-members.tsx'))).toEqual([])
   })
 
   test('every endpoint the security headers name is written under the base path', () => {

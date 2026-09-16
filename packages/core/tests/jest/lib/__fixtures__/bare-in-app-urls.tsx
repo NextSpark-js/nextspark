@@ -284,3 +284,28 @@ export function PrefixedTwice({ href }: { href: string }) {
     </>
   )
 }
+
+import DefaultReexportedImage, { ImageNamespace } from './reexported-loaders'
+import { ReexportedImage as TwiceReexportedImage, NS } from './reexported-loaders-middle'
+import * as Loaders from './reexported-loaders'
+import X = require('next/image')
+
+export function CheckerAliases({ cover }: { cover: string }) {
+  return (
+    <>
+      <DefaultReexportedImage src={cover} alt="" width={10} height={10} />
+      <ImageNamespace.default src={cover} alt="" width={10} height={10} />
+      <NS.default src={cover} alt="" width={10} height={10} />
+      <Loaders.ReexportedImage src={cover} alt="" width={10} height={10} />
+      <TwiceReexportedImage src={cover} alt="" width={10} height={10} />
+      <X.default src={cover} alt="" width={10} height={10} />
+    </>
+  )
+}
+
+export function AssignedAfter(props: React.ComponentProps<'a'>) {
+  let Comp: 'a' | 'span' = 'span'
+  const element = <Comp {...props} />
+  Comp = 'a'
+  return element
+}

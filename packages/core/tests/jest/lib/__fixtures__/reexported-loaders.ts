@@ -6,3 +6,6 @@ export { default as ReexportedImage } from 'next/image'
 export { AvatarImage as ReexportedAvatarImage } from '@nextsparkjs/ui'
 export const AliasedImage = NextImage
 export const AliasedAvatarImage = AvatarPrimitive.Image
+
+export default (NextImage)
+export * as ImageNamespace from 'next/image'
