@@ -169,6 +169,29 @@ test('reports a get accessor icon whose return value cannot be read statically, 
   assert.equal((await findUnresolvedIconRefs(source)).length, 1)
 })
 
+test('reports an icon written as a method, whose value is the function rather than a name', async () => {
+  const source = `export default { icon() { return 'Wallet' } }`
+  assert.deepEqual(await extractIconNames(source), [])
+  assert.deepEqual(await findUnresolvedIconRefs(source), ["icon() { return 'Wallet' }"])
+})
+
+test('reports a set accessor icon with no getter beside it, whose value reads as undefined', async () => {
+  const source = `export default { set icon(value) {} }`
+  assert.deepEqual(await extractIconNames(source), [])
+  assert.deepEqual(await findUnresolvedIconRefs(source), ['set icon(value) {}'])
+})
+
+test('says nothing about a set accessor icon when a getter beside it supplies the name', async () => {
+  const source = `export default { get icon() { return 'Wallet' }, set icon(value) {} }`
+  assert.deepEqual(await extractIconNames(source), ['Wallet'])
+  assert.deepEqual(await findUnresolvedIconRefs(source), [])
+})
+
+test('reads an icon written as a class field, and reports one that does not resolve', async () => {
+  assert.deepEqual(await extractIconNames(`export class Config { icon = 'Wallet' }`), ['Wallet'])
+  assert.deepEqual(await findUnresolvedIconRefs(`export class Config { icon = pickIcon() }`), ['pickIcon()'])
+})
+
 test('never yields anything but a bare name, so nothing can be injected', async () => {
   // The generated registry is TypeScript built from these strings, and every
   // name becomes a named import. Whatever a config holds, what comes out here
@@ -430,6 +453,61 @@ test('ignores a call through a let declared in one switch case that shadows the 
 test('ignores a call through a class declaration that shadows the import with its own name', async () => {
   const source = `${RESOLVE_ICON_IMPORT}function f() {\n  class resolveIcon {\n    static call(name) { return name }\n  }\n  return resolveIcon('Wallet')\n}`
   assert.deepEqual(await extractLiteralIconCallNames(source), [])
+})
+
+// --- Accessor, constructor, class and namespace scopes ----------------------
+//
+// Getters, setters and constructors are functions like any other: their
+// parameters and every var hoisted in their bodies shadow the import inside
+// them and nowhere else. A named class expression binds its own name only
+// inside its body. A class `static { }` block and a TypeScript namespace are
+// var scopes of their own, so a var declared in one neither leaks out to
+// shadow the module's real import nor stays unseen inside.
+
+test('ignores a call through a var hoisted out of an if inside a getter', async () => {
+  const source = `${RESOLVE_ICON_IMPORT}export const menu = {\n  get icon() {\n    if (true) {\n      var resolveIcon = (name) => name\n    }\n    return resolveIcon('Wallet')\n  }\n}`
+  assert.deepEqual(await extractLiteralIconCallNames(source), [])
+})
+
+test('ignores a call through a setter parameter that shadows the import', async () => {
+  const source = `${RESOLVE_ICON_IMPORT}export const menu = {\n  set icon(resolveIcon) {\n    resolveIcon('Wallet')\n  }\n}`
+  assert.deepEqual(await extractLiteralIconCallNames(source), [])
+})
+
+test('ignores a call through a constructor parameter that shadows the import', async () => {
+  const source = `${RESOLVE_ICON_IMPORT}export class Menu {\n  constructor(resolveIcon) {\n    resolveIcon('Wallet')\n  }\n}`
+  assert.deepEqual(await extractLiteralIconCallNames(source), [])
+})
+
+test("ignores a call through a named class expression's own name", async () => {
+  const source = `${RESOLVE_ICON_IMPORT}export const Menu = class resolveIcon {\n  static render() {\n    return resolveIcon('Wallet')\n  }\n}`
+  assert.deepEqual(await extractLiteralIconCallNames(source), [])
+})
+
+test('ignores a call through a var hoisted inside a getter, setter or constructor body, in a class too', async () => {
+  const hoisted = "if (true) { var resolveIcon = (name) => name }\n    resolveIcon('Wallet')"
+  for (const member of [`get icon() {\n    ${hoisted}\n  }`, `set icon(value) {\n    ${hoisted}\n  }`, `constructor() {\n    ${hoisted}\n  }`]) {
+    assert.deepEqual(await extractLiteralIconCallNames(`${RESOLVE_ICON_IMPORT}export class Menu {\n  ${member}\n}`), [], member)
+  }
+})
+
+test('still resolves the real import outside a setter, constructor or class expression that shadowed it', async () => {
+  const source = `${RESOLVE_ICON_IMPORT}const a = { set icon(resolveIcon) {} }\nclass B { constructor(resolveIcon) {} }\nconst C = class resolveIcon {}\nresolveIcon('Receipt')`
+  assert.deepEqual(await extractLiteralIconCallNames(source), ['Receipt'])
+})
+
+test('a var inside a class static block stays in that block, shadowing inside it and not after it', async () => {
+  const inside = `${RESOLVE_ICON_IMPORT}class Menu {\n  static {\n    if (true) { var resolveIcon = (name) => name }\n    resolveIcon('Wallet')\n  }\n}`
+  const after = `${RESOLVE_ICON_IMPORT}class Menu {\n  static {\n    var resolveIcon = (name) => name\n  }\n}\nresolveIcon('Receipt')`
+  assert.deepEqual(await extractLiteralIconCallNames(inside), [])
+  assert.deepEqual(await extractLiteralIconCallNames(after), ['Receipt'])
+})
+
+test('a declaration inside a namespace shadows the import there and nowhere else', async () => {
+  const inside = `${RESOLVE_ICON_IMPORT}namespace Menu {\n  const resolveIcon = (name: string) => name\n  resolveIcon('Wallet')\n}`
+  const after = `${RESOLVE_ICON_IMPORT}namespace Menu {\n  var resolveIcon = (name: string) => name\n}\nresolveIcon('Receipt')`
+  assert.deepEqual(await extractLiteralIconCallNames(inside, 'menu.ts'), [])
+  assert.deepEqual(await extractLiteralIconCallNames(after, 'menu.ts'), ['Receipt'])
 })
 
 // --- Decoy tests: a name in a non-code position must not reach the registry --

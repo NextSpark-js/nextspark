@@ -221,23 +221,42 @@ function accessorReturnExpression(node, ts) {
     : null
 }
 
+/** Whether a `set icon(v)` accessor has a `get icon()` beside it in the same
+ * object literal or class, the member that actually supplies the value. */
+function hasSiblingGetter(setter, ts) {
+  const siblings = setter.parent.properties ?? setter.parent.members ?? []
+  const key = propertyKeyName(setter.name, ts)
+  return siblings.some(sibling => ts.isGetAccessorDeclaration(sibling) && propertyKeyName(sibling.name, ts) === key)
+}
+
 /**
  * Every icon-bearing property value in the tree, wherever it is nested —
  * `icon` or `iconName` written plain, quoted or computed (`node.initializer`),
- * the shorthand form `{ icon }`, where the property's own name doubles as
- * the value (`node.name`), and a getter (`get icon() { return 'Wallet' }`),
- * an accessor object configs use the same as a plain property.
+ * as a class field with an initializer, the shorthand form `{ icon }`, where
+ * the property's own name doubles as the value (`node.name`), and a getter
+ * (`get icon() { return 'Wallet' }`), an accessor object configs use the same
+ * as a plain property.
+ *
+ * A member under an icon key that holds no name to read — a method
+ * (`icon() { ... }`, whose value is the function itself) or a setter with no
+ * getter beside it (whose value reads as undefined) — is collected as the
+ * member node, which resolves as neither a literal nor a lucide import and is
+ * therefore reported as unresolved rather than silently dropped.
  */
 function findIconPropertyValues(sourceFile, ts) {
   const values = []
 
   const visit = node => {
-    if (ts.isPropertyAssignment(node) && ICON_KEYS.has(propertyKeyName(node.name, ts))) {
+    if ((ts.isPropertyAssignment(node) || (ts.isPropertyDeclaration(node) && node.initializer)) && ICON_KEYS.has(propertyKeyName(node.name, ts))) {
       values.push(node.initializer)
     } else if (ts.isShorthandPropertyAssignment(node) && ICON_KEYS.has(node.name.text)) {
       values.push(node.name)
     } else if (ts.isGetAccessorDeclaration(node) && ICON_KEYS.has(propertyKeyName(node.name, ts))) {
       values.push(accessorReturnExpression(node, ts) ?? node)
+    } else if (ts.isMethodDeclaration(node) && ICON_KEYS.has(propertyKeyName(node.name, ts))) {
+      values.push(node)
+    } else if (ts.isSetAccessorDeclaration(node) && ICON_KEYS.has(propertyKeyName(node.name, ts)) && !hasSiblingGetter(node, ts)) {
+      values.push(node)
     }
     ts.forEachChild(node, visit)
   }
@@ -380,29 +399,24 @@ function collectBindingNames(name, ts, into) {
   }
 }
 
-/** Whether `node` is a function-like boundary that a hoisted `var` cannot
- * escape — the point where `collectHoistedVarNames` below stops recursing. */
-function isFunctionLikeBoundary(node, ts) {
-  return (
-    ts.isFunctionDeclaration(node) ||
-    ts.isFunctionExpression(node) ||
-    ts.isArrowFunction(node) ||
-    ts.isMethodDeclaration(node) ||
-    ts.isGetAccessorDeclaration(node) ||
-    ts.isSetAccessorDeclaration(node) ||
-    ts.isConstructorDeclaration(node)
-  )
+/** Whether `node` starts its own `var` scope, one a hoisted `var` cannot
+ * escape: any function (declaration, expression, arrow, method, getter,
+ * setter, constructor), a class `static { }` block, or a TypeScript
+ * `namespace`, which compiles to a function of its own. This is where
+ * `collectHoistedVarNames` below stops recursing. */
+function isVarScopeBoundary(node, ts) {
+  return ts.isFunctionLike(node) || ts.isClassStaticBlockDeclaration(node) || ts.isModuleDeclaration(node)
 }
 
 /** Every `var`-declared name nested anywhere under `node` — inside an `if`,
- * a loop, a `switch`, as deep as it goes — except inside a nested function,
- * which is its own `var` scope. Unlike `let`/`const`, `var` ignores block
+ * a loop, a `switch`, as deep as it goes — except inside a nested `var`
+ * scope (see isVarScopeBoundary). Unlike `let`/`const`, `var` ignores block
  * boundaries, so a single level of `node.statements` (what the block/module
  * branch below reads for `let`/`const`) misses one declared inside a nested
  * block; this walks the whole subtree instead, the way hoisting actually
  * works. */
 function collectHoistedVarNames(node, ts, into) {
-  if (isFunctionLikeBoundary(node, ts)) return
+  if (isVarScopeBoundary(node, ts)) return
 
   if (ts.isVariableStatement(node) && (node.declarationList.flags & ts.NodeFlags.BlockScoped) === 0) {
     for (const declaration of node.declarationList.declarations) collectBindingNames(declaration.name, ts, into)
@@ -419,13 +433,22 @@ function collectHoistedVarNames(node, ts, into) {
 }
 
 /** The declarations directly in `statements` that introduce a name into
- * their enclosing scope: function, class and `let`/`const`/`var`
- * declarations. Shared by a block/module's own statement list and by a
- * `switch`'s case clauses, which — unlike a block per clause — all share
- * one scope across the whole switch. */
+ * their enclosing scope: function, class, `let`/`const`/`var` declarations,
+ * and TypeScript's value-bearing `enum`, `namespace` and `import x = ...`.
+ * Shared by a block/module's own statement list and by a `switch`'s case
+ * clauses, which — unlike a block per clause — all share one scope across
+ * the whole switch. */
 function blockScopedBindingNames(statements, ts, into) {
   for (const statement of statements) {
-    if ((ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) && statement.name) {
+    if (
+      (ts.isFunctionDeclaration(statement) ||
+        ts.isClassDeclaration(statement) ||
+        ts.isEnumDeclaration(statement) ||
+        ts.isModuleDeclaration(statement) ||
+        ts.isImportEqualsDeclaration(statement)) &&
+      statement.name &&
+      ts.isIdentifier(statement.name)
+    ) {
       into.add(statement.name.text)
     } else if (ts.isVariableStatement(statement)) {
       for (const declaration of statement.declarationList.declarations) {
@@ -439,23 +462,33 @@ function blockScopedBindingNames(statements, ts, into) {
  * introduces none. Used while walking the tree to track which imported names
  * are shadowed by a closer local declaration.
  *
- * A function's own parameters, and a named function expression's own name,
- * are scoped to itself, and so is every `var` hoisted anywhere in its body.
- * A block's (or the module's) function, class and `let`/`const`/`var`
- * declarations are scoped to the whole block, not merely to the statement
- * that introduces them — a later sibling statement has to see the shadow
- * too, the way it would at runtime. A `for`/`for-in`/`for-of` loop's own
- * `let`/`const` initializer is scoped to the whole loop, not just to
- * itself, and every clause of a `switch` shares one scope. */
+ * Any function's own parameters — a getter's, a setter's and a
+ * constructor's as much as a method's or an arrow's — and a named function
+ * or class expression's own name are scoped to itself, and so is every
+ * `var` hoisted anywhere in a function's body, a class `static { }` block or
+ * a `namespace` body. A block's (or the module's, or a namespace's) function,
+ * class and `let`/`const`/`var` declarations are scoped to the whole block,
+ * not merely to the statement that introduces them — a later sibling
+ * statement has to see the shadow too, the way it would at runtime. A
+ * `for`/`for-in`/`for-of` loop's own `let`/`const` initializer is scoped to
+ * the whole loop, not just to itself, and every clause of a `switch` shares
+ * one scope. */
 function ownScopeBindingNames(node, ts) {
   const names = new Set()
 
-  if (ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node) || ts.isArrowFunction(node) || ts.isMethodDeclaration(node)) {
+  if (ts.isFunctionLike(node)) {
     for (const parameter of node.parameters) collectBindingNames(parameter.name, ts, names)
     if (ts.isFunctionExpression(node) && node.name) {
       names.add(node.name.text)
     }
     if (node.body) collectHoistedVarNames(node.body, ts, names)
+  } else if (ts.isClassExpression(node) && node.name) {
+    names.add(node.name.text)
+  } else if (ts.isClassStaticBlockDeclaration(node)) {
+    collectHoistedVarNames(node.body, ts, names)
+  } else if (ts.isModuleBlock(node)) {
+    blockScopedBindingNames(node.statements, ts, names)
+    for (const statement of node.statements) collectHoistedVarNames(statement, ts, names)
   } else if (ts.isVariableDeclarationList(node)) {
     for (const declaration of node.declarations) collectBindingNames(declaration.name, ts, names)
   } else if ((ts.isForStatement(node) || ts.isForInStatement(node) || ts.isForOfStatement(node)) && node.initializer && ts.isVariableDeclarationList(node.initializer)) {
