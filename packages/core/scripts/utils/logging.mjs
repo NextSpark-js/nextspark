@@ -50,6 +50,52 @@ export function shownPath(path) {
 }
 
 /**
+ * A path as a message names it between double quotes: quoted as it is, or, when
+ * it holds a character that breaks or reorders a line, the way `shownPath`
+ * quotes it.
+ *
+ * @param {string} path - The path to name
+ * @returns {string}
+ */
+export function quotedPath(path) {
+  const shown = shownPath(path)
+  return shown === path ? `"${path}"` : shown
+}
+
+/**
+ * An error's message as a log shows it. The paths Node puts in the message of an
+ * error from the file system - its path, and its dest - are shown the way
+ * `shownPath` shows one, in place of the quotes around them; the lines of the
+ * message are kept, each shown the way `shownPath` shows a line. The build's own
+ * messages show the paths they name that way where each is written.
+ *
+ * @param {unknown} error - What was thrown
+ * @returns {string}
+ */
+export function shownMessage(error) {
+  let message = typeof error?.message === 'string' ? error.message : String(error)
+  for (const path of [error?.path, error?.dest]) {
+    if (typeof path !== 'string' || shownPath(path) === path) continue
+    message = message.split(`'${path}'`).join(shownPath(path)).split(path).join(shownPath(path))
+  }
+  return message.split('\n').map(shownPath).join('\n')
+}
+
+/**
+ * An error's stack as a log shows it: its message as `shownMessage` shows it,
+ * and each line of the stack the way `shownPath` shows a line.
+ *
+ * @param {unknown} error - What was thrown
+ * @returns {string}
+ */
+export function shownStack(error) {
+  const message = typeof error?.message === 'string' ? error.message : ''
+  const stack = typeof error?.stack === 'string' ? error.stack : String(error)
+  const withMessageShown = message && stack.includes(message) ? stack.replace(message, () => shownMessage(error)) : stack
+  return withMessageShown.split('\n').map(shownPath).join('\n')
+}
+
+/**
  * Log a message with an emoji prefix based on type
  *
  * @param {string} message - The message to log

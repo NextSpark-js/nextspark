@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import chalk from 'chalk';
 import ora from 'ora';
 import { spawnNext } from '../utils/spawn-next.js';
+import { shownLines } from '../utils/shown-path.js';
 import { getCoreDir, getProjectRoot } from '../utils/paths.js';
 import { effectiveBundler, pickBundler, resolveBundlerArgs } from '../utils/next-bundler.js';
 
@@ -82,7 +83,7 @@ export async function buildCommand(options: BuildOptions): Promise<void> {
           if (code === 0) {
             resolve();
           } else {
-            reject(new Error(`Registry generation failed: ${stderr}`));
+            reject(new Error(`Registry generation failed: ${shownLines(stderr)}`));
           }
         });
 

@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import chalk from 'chalk';
 import ora from 'ora';
 import { getCoreDir, getProjectRoot, isMonorepoMode } from '../utils/paths.js';
+import { shownLines } from '../utils/shown-path.js';
 
 /**
  * Load environment variables from project root .env file
@@ -75,13 +76,13 @@ export async function registryBuildCommand(): Promise<void> {
       if (code === 0) {
         spinner.succeed('Registries built successfully');
         if (stdout.trim()) {
-          console.log(chalk.gray(stdout.trim()));
+          console.log(chalk.gray(shownLines(stdout.trim())));
         }
         process.exit(0);
       } else {
         spinner.fail('Registry build failed');
         if (stderr.trim()) {
-          console.error(chalk.red(stderr.trim()));
+          console.error(chalk.red(shownLines(stderr.trim())));
         }
         process.exit(code ?? 1);
       }

@@ -5,6 +5,7 @@ import { getCoreDir, getProjectRoot, isMonorepoMode } from '../utils/paths.js';
 import { resolveBundlerArgs, type Bundler } from '../utils/next-bundler.js';
 import { spawnNext } from '../utils/spawn-next.js';
 import { runRegistryBuild, templatesTreeLines } from '../utils/registry-build.js';
+import { shownLines, shownPath } from '../utils/shown-path.js';
 
 interface DevOptions {
   port: string;
@@ -24,8 +25,11 @@ interface DevOptions {
  *
  * Failure is reported and not fatal: what is already on disk may well be enough
  * to boot, and refusing to start the dev server helps nobody.
+ *
+ * Each line of the build's output repeated here is shown the way `shownPath`
+ * shows a line, so no name in it breaks or reorders the line.
  */
-async function buildRegistries(coreDir: string, projectRoot: string): Promise<void> {
+export async function buildRegistries(coreDir: string, projectRoot: string): Promise<void> {
   console.log(chalk.blue('[Registry] Building registries...'));
   const result = await runRegistryBuild(coreDir, projectRoot);
 
@@ -35,12 +39,12 @@ async function buildRegistries(coreDir: string, projectRoot: string): Promise<vo
   }
 
   for (const line of templatesTreeLines(result.output)) {
-    console.log(chalk.gray(`[Registry] ${line}`));
+    console.log(chalk.gray(`[Registry] ${shownPath(line)}`));
   }
 
   if (result.status === 'failed') {
     console.warn(chalk.yellow('[Registry] Registry build failed; starting anyway.'));
-    const tail = result.output.trim().split('\n').slice(-5).join('\n');
+    const tail = shownLines(result.output.trim().split('\n').slice(-5).join('\n'));
     if (tail) console.warn(chalk.gray(tail));
   }
 }

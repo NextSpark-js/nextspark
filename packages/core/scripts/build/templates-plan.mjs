@@ -17,6 +17,7 @@
 import { getConfig } from './registry/config.mjs'
 import { discoverTemplates } from './registry/discovery/templates.mjs'
 import { planMissingPages } from './registry/post-build/page-generator.mjs'
+import { shownMessage } from '../utils/index.mjs'
 
 const RESULT_MARKER = 'nextspark-templates-plan:'
 
@@ -35,6 +36,6 @@ try {
   const changes = await planMissingPages(templates, config, appFiles)
   console.log(`${RESULT_MARKER}${JSON.stringify(changes)}`)
 } catch (error) {
-  console.error(error.message)
+  console.error(shownMessage(error))
   process.exit(1)
 }

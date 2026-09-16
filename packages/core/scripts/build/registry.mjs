@@ -37,7 +37,7 @@ const rootDir = join(__dirname, '../../../..')
 // Validation functions moved to ./registry/validation/entity-validator.mjs
 
 // Import shared utilities
-import { log, verbose, setVerboseMode } from '../utils/index.mjs'
+import { log, verbose, setVerboseMode, shownMessage, shownStack } from '../utils/index.mjs'
 import { getBasename } from '../utils/paths.mjs'
 
 // Import configuration
@@ -143,7 +143,7 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, template
     }
 
   } catch (error) {
-    log(`Error writing registry files: ${error.message}`, 'error')
+    log(`Error writing registry files: ${shownMessage(error)}`, 'error')
     process.exit(1)
   }
 }
@@ -357,9 +357,9 @@ export async function buildRegistries(projectRoot = null) {
     }
 
   } catch (error) {
-    log(`Build failed: ${error.message}`, 'error')
+    log(`Build failed: ${shownMessage(error)}`, 'error')
     if (CONFIG.verbose) {
-      console.error(error.stack)
+      console.error(shownStack(error))
     }
     process.exit(1)
   }
@@ -401,10 +401,10 @@ process.on('SIGINT', () => {
 const isMainScript = process.argv[1] && import.meta.url.endsWith(getBasename(process.argv[1]))
 if (isMainScript) {
   main().catch(error => {
-    log(`Fatal error: ${error.message}`, 'error')
+    log(`Fatal error: ${shownMessage(error)}`, 'error')
     const config = getConfig()
     if (config.verbose) {
-      console.error(error.stack)
+      console.error(shownStack(error))
     }
     process.exit(1)
   })

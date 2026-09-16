@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
-import { mkdtemp, mkdir, writeFile, readFile, readdir, rename, rm, stat, symlink } from 'node:fs/promises'
+import { chmod, mkdtemp, mkdir, writeFile, readFile, readdir, rename, rm, stat, symlink } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
@@ -1227,6 +1227,27 @@ test('every path sync:app prints is named on a line of its own, whatever its nam
 
     assert.deepEqual(wrong, [])
   } finally {
+    await cleanup()
+  }
+})
+
+test("a sync that stops on a file it can't read names it escaped, in the error and in the stack --verbose prints", { skip: process.platform === 'win32' || process.getuid?.() === 0 }, async () => {
+  const [name, shown] = FORGING_NAMES[0]
+  const { root, cleanup } = await project()
+  try {
+    await write(root, `app/${name}`, 'export default 1\n')
+    await chmod(join(root, 'app', name), 0)
+
+    const { printed, exitCode } = await runSyncForExit(root, { dryRun: true, verbose: true })
+
+    const lines = printed.split('\n')
+    assert.equal(exitCode, 1)
+    assert.deepEqual(lines.filter((line) => RAW_CONTROL.test(line)), [])
+    assert.deepEqual(lines.filter((line) => line.trim() === '✅ Sync complete!'), [])
+    const naming = lines.filter((line) => /^\s*Error: "EACCES: permission denied, open '/.test(line) && line.endsWith(`/app/${shown}'"`))
+    assert.equal(naming.length, 2, `the error and the first line of its stack name the file escaped:\n${printed}`)
+  } finally {
+    await chmod(join(root, 'app', name), 0o644).catch(() => {})
     await cleanup()
   }
 })

@@ -27,7 +27,7 @@ import {
 import { applySyncPlan, readCoreVersion, readSyncInput, readTree } from '../utils/sync-files.js';
 import { describeSyncPlan, nextSyncState, plannedAppFiles, planSync, type ReportLine } from '../utils/sync-plan.js';
 import { writeSyncState } from '../utils/sync-state.js';
-import { shownPath } from '../utils/shown-path.js';
+import { shownPath, shownStack } from '../utils/shown-path.js';
 
 interface SyncAppOptions {
   dryRun?: boolean;
@@ -375,7 +375,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
     if (error instanceof Error) {
       console.error(chalk.red(`\n  Error: ${shownPath(error.message)}\n`));
       if (options.verbose && error.stack) {
-        console.error(chalk.gray(`  Stack trace:\n${error.stack}\n`));
+        console.error(chalk.gray(`  Stack trace:\n${shownStack(error)}\n`));
       }
     }
     process.exit(1);
