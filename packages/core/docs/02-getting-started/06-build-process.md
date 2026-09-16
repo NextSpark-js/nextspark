@@ -195,9 +195,8 @@ turbo dev --filter='@nextspark/plugin-*'
 ```text
 1. TypeScript Config  → update-tsconfig.mjs
 2. Theme Build        → build-theme.mjs
-3. Registry Build     → build-registry.mjs --build
-4. Docs Index         → build-docs-registry.mjs
-5. Next.js Build      → next build
+3. Registry Build     → build-registry.mjs --build (docs index included)
+4. Next.js Build      → next build
 
 Total: 2-3 minutes
 ```

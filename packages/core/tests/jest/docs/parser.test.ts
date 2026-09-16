@@ -15,7 +15,8 @@ import {
 
 describe('Documentation Parser - Helper Functions', () => {
   // Note: parseMarkdownFile() is skipped in tests due to ESM module compatibility
-  // It works correctly at runtime and build time (see build-docs-registry.mjs)
+  // It works correctly at runtime and build time (see the docs-registry
+  // generator inside packages/core/scripts/build/registry.mjs)
 
   describe('extractOrderFromFilename', () => {
     it('should extract order from numbered filename', () => {

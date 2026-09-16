@@ -2,7 +2,7 @@
 
 ## Introduction
 
-NextSpark includes a **build-time documentation system** that provides zero runtime I/O for documentation discovery and rendering. Documentation is organized across multiple sources—core, themes, and plugins—and automatically discovered, indexed, and made publicly accessible during the build process.
+NextSpark includes a **build-time documentation system** that provides zero runtime I/O for documentation discovery and rendering. Documentation can be written for core, a theme, or a plugin, but only the active theme's own docs are indexed and published at `/docs`; core and plugin docs are internal reference material, read from source rather than served at a route.
 
 This system follows the same **registry-based philosophy** as other core features, ensuring documentation metadata is resolved at build time rather than during request handling, resulting in instant page loads and optimal performance.
 
@@ -10,13 +10,13 @@ This system follows the same **registry-based philosophy** as other core feature
 
 ### 1. **Multi-Source Documentation**
 
-Documentation can originate from three distinct sources:
+Documentation can be written in three places:
 
-- **Core Docs** (`core/docs/`) - System documentation covering core features, architecture, and APIs
-- **Theme Docs** (`contents/themes/[theme]/docs/`) - Theme-specific documentation for customization and features
-- **Plugin Docs** (`contents/plugins/[plugin]/docs/`) - Plugin-specific documentation for each active plugin
+- **Core Docs** (`core/docs/`) - System documentation covering core features, architecture, and APIs - internal reference, not published
+- **Theme Docs** (`contents/themes/[theme]/docs/`) - Theme-specific documentation for customization and features - published for the active theme
+- **Plugin Docs** (`contents/plugins/[plugin]/docs/`) - Plugin-specific documentation for each active plugin - internal reference, not published
 
-All sources are automatically discovered and merged into a unified documentation site accessible at `/docs`.
+Only the active theme's docs are indexed and served; core and plugin docs stay in the source tree for developers to read directly.
 
 ### 2. **Build-Time Registry Generation**
 
@@ -40,20 +40,17 @@ The documentation system automatically generates:
 
 - **Hierarchical sidebar navigation** with expandable sections
 - **Breadcrumb trails** for deep-linked pages
-- **Category grouping** (Core, Theme, Plugins)
-- **Plugin-specific sections** with distinct visual indicators
 
 All navigation is derived from the docs registry structure, requiring no manual configuration.
 
 ### 4. **Public Accessibility**
 
-Documentation is publicly accessible via clean URL patterns:
+The active theme's documentation is publicly accessible via a flat URL pattern - there is no `core`, `theme` or `plugins` segment, since only one source is ever published at a time:
 
 ```text
-/docs                                      → Documentation home
-/docs/core/[section]/[page]               → Core documentation
-/docs/theme/[section]/[page]              → Theme documentation
-/docs/plugins/[plugin]/[section]/[page]   → Plugin documentation
+/docs                          → Documentation home
+/docs/[section]/[page]        → A public doc page
+/superadmin/docs/[section]/[page] → A superadmin-only doc page
 ```
 
 ## Documentation Structure
@@ -101,7 +98,7 @@ contents/plugins/[plugin]/docs/
 ### Build Time (Development & Production)
 
 1. **Documentation Discovery**
-   - `build-docs-registry.mjs` runs during build
+   - The docs-registry generator inside `registry.mjs --build` runs during build
    - Scans `core/docs/`, active theme docs, and active plugin docs
    - Extracts metadata from file/directory names
 

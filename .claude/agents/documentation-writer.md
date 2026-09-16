@@ -1178,7 +1178,7 @@ await Write('core/docs/08-frontend/06-team-components.md', componentDocContent)
 
 ### Next Steps:
 - Run `nextspark registry build` to rebuild the docs registry
-- Documentation available at /docs/core/api/teams-management
+- Core docs are internal reference, read from `core/docs/`; they are not published at any `/docs` route
 ```
 
 ---

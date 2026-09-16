@@ -18,7 +18,6 @@ pnpm dev
 ```text
 [THEME]    Building theme CSS...        ✓ (2.1s)
 [REGISTRY] Building registries...       ✓ (5.4s)
-[DOCS]     Building docs index...       ✓ (1.1s)
 [PLUGINS]  Starting plugin dev servers.. ✓ (1.8s)
 [APP]      Starting Next.js...          ✓ (3.2s)
 
@@ -35,7 +34,7 @@ pnpm dev
 
 ## Development Processes
 
-### 5 Concurrent Processes
+### 4 Concurrent Processes
 
 **1. THEME (build-theme.mjs --watch)**
 - Watches: `contents/themes/*/styles/*.css`
@@ -44,21 +43,16 @@ pnpm dev
 - Triggers: Browser hot reload
 
 **2. REGISTRY (build-registry.mjs --watch)**
-- Watches: `contents/themes/`, `contents/plugins/`
-- Rebuilds: `core/lib/registries/*.ts`
+- Watches: `contents/themes/`, `contents/plugins/`, `core/docs/**/*.md`
+- Rebuilds: `core/lib/registries/*.ts`, `core/lib/registries/docs-registry.ts` included
 - Triggers: Server restart needed
 
-**3. DOCS (build-docs-registry.mjs)**
-- Runs once at startup
-- Indexes: `core/docs/**/*.md`
-- Outputs: `core/lib/registries/docs-registry.ts`
-
-**4. PLUGINS (turbo dev)**
+**3. PLUGINS (turbo dev)**
 - Watches: Plugin source files
 - Rebuilds: Plugin packages
 - Triggers: Hot reload
 
-**5. APP (next dev --turbopack)**
+**4. APP (next dev --turbopack)**
 - Watches: `app/`, `core/components/`, etc.
 - Rebuilds: React components, API routes
 - Triggers: Fast refresh (< 100ms)

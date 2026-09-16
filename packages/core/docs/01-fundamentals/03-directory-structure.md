@@ -166,9 +166,8 @@ NEXT_PUBLIC_ACTIVE_THEME=default
 
 ```text
 scripts/
-├── build-registry.mjs       # Registry generation (CRITICAL)
+├── build-registry.mjs       # Registry generation, docs included (CRITICAL)
 ├── build-theme.mjs          # Theme CSS compilation
-├── build-docs-registry.mjs  # Docs indexing
 ├── run-migrations.mjs       # Database migrations
 ├── verify-tables.mjs        # DB verification
 ├── check-dynamic-imports.sh # Import validation
