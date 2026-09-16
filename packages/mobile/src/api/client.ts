@@ -20,6 +20,18 @@ import { ApiError, type RequestConfig } from './client.types'
 import type { Team, User } from './core/types'
 
 /**
+ * Host part of an Expo `hostUri` ("host:port"), brackets kept around an
+ * IPv6 host (e.g. "[::1]:8081") so the result stays a valid URL host.
+ */
+function hostFromHostUri(hostUri: string): string {
+  if (hostUri.startsWith('[')) {
+    const closingBracket = hostUri.indexOf(']')
+    if (closingBracket !== -1) return hostUri.slice(0, closingBracket + 1)
+  }
+  return hostUri.split(':')[0]
+}
+
+/**
  * Resolve API URL from configuration
  *
  * Priority order:
@@ -49,9 +61,18 @@ export function getApiUrl(): string {
   const envUrl = process.env.EXPO_PUBLIC_API_URL
   if (envUrl) return envUrl
 
-  // 3. Auto-detect from Expo dev server (development mode)
+  // 3. Auto-detect from Expo dev server (development mode). A physical
+  // Android device is assumed to reach the dev machine through an `adb
+  // reverse` tunnel, same as the fallback below: hostUri's host is the dev
+  // machine's own network address, which the tunnel bypasses, so it is
+  // ignored here in favor of localhost. Every other platform (including the
+  // Android emulator, which can reach that address through its virtual NAT)
+  // uses hostUri's host as-is.
   if (Constants.expoConfig?.hostUri) {
-    const host = Constants.expoConfig.hostUri.split(':')[0]
+    const host =
+      Platform.OS === 'android' && Device.isDevice
+        ? 'localhost'
+        : hostFromHostUri(Constants.expoConfig.hostUri)
     return `http://${host}:3000`
   }
 

@@ -210,4 +210,52 @@ describe('getApiUrl fallback host', () => {
 
     expect(getApiUrlAndroidDevice()).toBe('http://localhost:3000')
   })
+
+  it('uses the dev server LAN host from hostUri on iOS regardless of Device.isDevice', () => {
+    jest.resetModules()
+    jest.doMock('expo-constants', () => ({ expoConfig: { extra: {}, hostUri: '192.168.1.2:8081' } }))
+    jest.doMock('expo-device', () => ({ isDevice: true }))
+    jest.doMock('react-native', () => ({
+      Platform: { OS: 'ios', select: (obj: { ios?: unknown }) => obj.ios },
+    }))
+    const { getApiUrl: getApiUrlWithHost } = require('../../../src/api/client') as typeof import('../../../src/api/client')
+
+    expect(getApiUrlWithHost()).toBe('http://192.168.1.2:3000')
+  })
+
+  it('ignores hostUri on a physical Android device, matching an adb reverse tunnel', () => {
+    jest.resetModules()
+    jest.doMock('expo-constants', () => ({ expoConfig: { extra: {}, hostUri: '192.168.1.2:8081' } }))
+    jest.doMock('expo-device', () => ({ isDevice: true }))
+    jest.doMock('react-native', () => ({
+      Platform: { OS: 'android', select: (obj: { android?: unknown }) => obj.android },
+    }))
+    const { getApiUrl: getApiUrlAndroidDeviceWithHost } = require('../../../src/api/client') as typeof import('../../../src/api/client')
+
+    expect(getApiUrlAndroidDeviceWithHost()).toBe('http://localhost:3000')
+  })
+
+  it('uses hostUri LAN host on the Android emulator, reachable through its virtual NAT', () => {
+    jest.resetModules()
+    jest.doMock('expo-constants', () => ({ expoConfig: { extra: {}, hostUri: '192.168.1.2:8081' } }))
+    jest.doMock('expo-device', () => ({ isDevice: false }))
+    jest.doMock('react-native', () => ({
+      Platform: { OS: 'android', select: (obj: { android?: unknown }) => obj.android },
+    }))
+    const { getApiUrl: getApiUrlAndroidEmulatorWithHost } = require('../../../src/api/client') as typeof import('../../../src/api/client')
+
+    expect(getApiUrlAndroidEmulatorWithHost()).toBe('http://192.168.1.2:3000')
+  })
+
+  it('keeps the brackets around an IPv6 hostUri host', () => {
+    jest.resetModules()
+    jest.doMock('expo-constants', () => ({ expoConfig: { extra: {}, hostUri: '[::1]:8081' } }))
+    jest.doMock('expo-device', () => ({ isDevice: true }))
+    jest.doMock('react-native', () => ({
+      Platform: { OS: 'ios', select: (obj: { ios?: unknown }) => obj.ios },
+    }))
+    const { getApiUrl: getApiUrlIpv6 } = require('../../../src/api/client') as typeof import('../../../src/api/client')
+
+    expect(getApiUrlIpv6()).toBe('http://[::1]:3000')
+  })
 })
