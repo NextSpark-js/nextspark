@@ -19,14 +19,7 @@ export function PublicFooter() {
     company: [
       { name: 'about', href: '/about' },
       { name: 'blog', href: '/blog' },
-      { name: 'careers', href: '/careers' },
       { name: 'contact', href: '/contact' }
-    ],
-    legal: [
-      { name: 'privacy', href: '/legal/privacy' },
-      { name: 'terms', href: '/legal/terms' },
-      { name: 'cookies', href: '/legal/cookies' },
-      { name: 'gdpr', href: '/legal/gdpr' }
     ],
     resources: [
       { name: 'helpCenter', href: '/support' }
@@ -36,7 +29,7 @@ export function PublicFooter() {
   return (
     <footer className="border-t border-border/40 bg-background" data-cy={sel('public.footer.container')}>
       <div className="container max-w-7xl mx-auto px-4 py-12 md:py-16">
-        <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-8 md:grid-cols-3">
           {/* Product */}
           <div>
             <h3 className="text-sm font-semibold text-foreground mb-4">{t('product')}</h3>
@@ -59,23 +52,6 @@ export function PublicFooter() {
             <h3 className="text-sm font-semibold text-foreground mb-4">{t('company')}</h3>
             <ul className="space-y-3">
               {footerLinks.company.map((link) => (
-                <li key={link.name}>
-                  <Link 
-                    href={link.href}
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {t(link.name)}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Legal */}
-          <div>
-            <h3 className="text-sm font-semibold text-foreground mb-4">{t('legal')}</h3>
-            <ul className="space-y-3">
-              {footerLinks.legal.map((link) => (
                 <li key={link.name}>
                   <Link 
                     href={link.href}
