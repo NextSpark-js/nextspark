@@ -39,6 +39,20 @@
 // what it committed before it was stopped, with a COMMIT in the file or in a
 // procedure it calls, stays; the error says so, and what to do about it.
 //
+// The limit is for the file, not for recording it as run. A migration that ran
+// to the end is recorded in its tracking table on the same session, and under a
+// limit the record gets RECORD_WAIT_MS instead, whatever the limit: on the
+// server as a SET LOCAL statement_timeout sent with the INSERT, together with
+// lock_timeout off (on Postgres 13 and later both hold for the INSERT whatever
+// the limit or the migration left on the session), and on the client as the
+// wait for the answer. A tracking table another session holds a lock on is
+// waited for up to then, and a server that stops answering is given up on then.
+// When the record fails, however it fails, the error says the file ran to the
+// end and is not recorded, and gives the INSERT that records it; the runner
+// prints that instead of calling the file failed. A file that ran to the end
+// inside a transaction it left open has nothing to record: that transaction is
+// rolled back when the run stops, so the error says to add the COMMIT instead.
+//
 // The limit holds whatever the database URL says. A URL that sets
 // statement_timeout or query_timeout itself, `?statement_timeout=0` included,
 // has the limit take the place of those parameters on every connection that runs
@@ -48,11 +62,14 @@
 import pg from 'pg';
 import { timeLimitedClient, timeLimitParametersIn } from './connection-time-limits.mjs';
 
-const { Client } = pg;
+const { Client, escapeIdentifier, escapeLiteral } = pg;
 
 const CONNECT_MS = 10000;
 
 export const TIME_LIMIT_VARIABLE = 'MIGRATION_TIMEOUT_SECONDS';
+
+/** How long recording a migration that ran to the end may take, under a limit. */
+export const RECORD_WAIT_MS = 60000;
 
 /**
  * The limit MIGRATION_TIMEOUT_SECONDS asks for, or null when it is unset.
@@ -70,16 +87,24 @@ export function migrationTimeLimit(env = process.env) {
   return { seconds, statementMs: limitMs, queryMs: limitMs };
 }
 
+/**
+ * The transaction status the server last reported to each migration client, as
+ * its ReadyForQuery message carries it: 'I' idle, 'T' in a transaction, 'E' in a
+ * failed one.
+ */
+const transactionStatus = new WeakMap();
+
 /** The client migrations run on, under the limit when there is one. */
 export function migrationClient(connectionString, limit) {
-  if (limit) {
-    return timeLimitedClient(connectionString, { connectMs: CONNECT_MS, statementMs: limit.statementMs, queryMs: limit.queryMs });
-  }
-  return new Client({
-    connectionString,
-    ssl: { rejectUnauthorized: false, require: true },
-    connectionTimeoutMillis: CONNECT_MS,
-  });
+  const client = limit
+    ? timeLimitedClient(connectionString, { connectMs: CONNECT_MS, statementMs: limit.statementMs, queryMs: limit.queryMs })
+    : new Client({
+        connectionString,
+        ssl: { rejectUnauthorized: false, require: true },
+        connectionTimeoutMillis: CONNECT_MS,
+      });
+  client.connection.on('readyForQuery', message => transactionStatus.set(client, message.status));
+  return client;
 }
 
 /**
@@ -147,6 +172,58 @@ export async function runMigrationSql(client, { sql, limit, connectionString }) 
         : `its session on the server could not be ended: ${ended}. ${leftBehind({ stillRunning: true })}`)
     );
   }
+}
+
+/** A migration that ran to the end and could not be recorded as run. */
+export class MigrationNotRecordedError extends Error {}
+
+/**
+ * Records a migration that ran to the end as the row given (column → value) of
+ * its tracking table. Under a limit, the record waits up to `waitMs` on the
+ * server and on the client, not the limit. Throws MigrationNotRecordedError when
+ * it fails, with the INSERT that records it; that INSERT does nothing when the
+ * row is already there, since a record whose answer never came may have been
+ * written.
+ */
+export async function recordMigration(client, { file, table, row, limit, waitMs = RECORD_WAIT_MS }) {
+  const insert =
+    `INSERT INTO ${escapeIdentifier(table)} (${Object.keys(row).map(escapeIdentifier).join(', ')}) ` +
+    `VALUES (${Object.values(row).map(escapeLiteral).join(', ')})`;
+  const leftOpen = transactionStatus.get(client) === 'T';
+  try {
+    if (limit) {
+      await client.query({
+        text: `SET LOCAL statement_timeout = ${waitMs}; SET LOCAL lock_timeout = 0; ${insert}`,
+        query_timeout: waitMs,
+      });
+    } else {
+      await client.query(insert);
+    }
+  } catch (error) {
+    const recording = `recording it as run in ${escapeIdentifier(table)}`;
+    const outcome =
+      error.message === 'Query read timeout'
+        ? `${recording} got no answer within ${waitMs / 1000} s, so it may or may not be recorded`
+        : `${recording} failed: ${error.message}`;
+    if (leftOpen) {
+      throw new MigrationNotRecordedError(
+        `${file} ran to the end inside a transaction it left open, and ${outcome}. ` +
+        'That transaction is rolled back when the run stops: what the file did inside it is gone, what it committed ' +
+        'before stays, and it is not recorded as run, so the next run starts the file over. Add the COMMIT the file ' +
+        'is missing, and undo what it committed or make the file safe to run again, before running the migrations again.'
+      );
+    }
+    throw new MigrationNotRecordedError(
+      `${file} ran to the end, but ${outcome}. ` +
+      'What it committed stays in the database, and until it is recorded the next run starts the file over. ' +
+      `Record it before running the migrations again: ${insert} ON CONFLICT DO NOTHING;`
+    );
+  }
+}
+
+/** The line the runner prints for a migration that failed. */
+export function migrationFailure(file, error) {
+  return error instanceof MigrationNotRecordedError ? error.message : `Failed to execute ${file}: ${error.message}`;
 }
 
 /**

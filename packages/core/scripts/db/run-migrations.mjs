@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from 'url';
-import { migrationTimeLimit, migrationClient, ignoredParametersNotice, runMigrationSql } from './migration-time-limit.mjs';
+import { migrationTimeLimit, migrationClient, ignoredParametersNotice, runMigrationSql, recordMigration, migrationFailure } from './migration-time-limit.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -127,14 +127,11 @@ async function runMigrations() {
         await runMigrationSql(client, { sql, limit: TIME_LIMIT, connectionString: MIGRATION_URL });
         
         // Record successful migration
-        await client.query(
-          'INSERT INTO "_migrations" (filename) VALUES ($1)',
-          [file]
-        );
+        await recordMigration(client, { file, table: '_migrations', row: { filename: file }, limit: TIME_LIMIT });
         
         console.log(`✅ Successfully executed ${file}\n`);
       } catch (error) {
-        console.error(`❌ Failed to execute ${file}:`, error.message);
+        console.error(`❌ ${migrationFailure(file, error)}`);
         throw error;
       }
     }
@@ -340,10 +337,12 @@ async function executeContentMigration(client, migration) {
   const sql = fs.readFileSync(fullPath, 'utf8');
 
   await runMigrationSql(client, { sql, limit: TIME_LIMIT, connectionString: MIGRATION_URL });
-  await client.query(
-    'INSERT INTO "_content_migrations" (source_type, source_name, filename) VALUES ($1, $2, $3)',
-    [sourceType, sourceName, filename]
-  );
+  await recordMigration(client, {
+    file: filename,
+    table: '_content_migrations',
+    row: { source_type: sourceType, source_name: sourceName, filename },
+    limit: TIME_LIMIT,
+  });
 
   console.log(`  ✅ ${filename} executed successfully`);
   return true;
@@ -369,10 +368,12 @@ async function executeEntityMigration(client, migration) {
   const sql = fs.readFileSync(fullPath, 'utf8');
 
   await runMigrationSql(client, { sql, limit: TIME_LIMIT, connectionString: MIGRATION_URL });
-  await client.query(
-    'INSERT INTO "_entity_migrations" (entity_name, source_type, source_name, filename) VALUES ($1, $2, $3, $4)',
-    [entityName, sourceType, sourceName, filename]
-  );
+  await recordMigration(client, {
+    file: filename,
+    table: '_entity_migrations',
+    row: { entity_name: entityName, source_type: sourceType, source_name: sourceName, filename },
+    limit: TIME_LIMIT,
+  });
 
   console.log(`${indent}✅ ${filename} executed successfully`);
   return true;
@@ -549,7 +550,7 @@ async function runEntityMigrations() {
           const executed = await executeContentMigration(client, migration);
           if (executed) totalContentMigrations++;
         } catch (error) {
-          console.error(`  ❌ Failed to execute ${migration.filename}:`, error.message);
+          console.error(`  ❌ ${migrationFailure(migration.filename, error)}`);
           throw error;
         }
       }
@@ -570,7 +571,7 @@ async function runEntityMigrations() {
           const executed = await executeEntityMigration(client, migration);
           if (executed) totalEntityMigrations++;
         } catch (error) {
-          console.error(`  ❌ Failed to execute ${migration.filename}:`, error.message);
+          console.error(`  ❌ ${migrationFailure(migration.filename, error)}`);
           throw error;
         }
       }
@@ -590,7 +591,7 @@ async function runEntityMigrations() {
           const executed = await executeContentMigration(client, migration);
           if (executed) totalContentMigrations++;
         } catch (error) {
-          console.error(`  ❌ Failed to execute ${migration.filename}:`, error.message);
+          console.error(`  ❌ ${migrationFailure(migration.filename, error)}`);
           throw error;
         }
       }
@@ -611,7 +612,7 @@ async function runEntityMigrations() {
           const executed = await executeEntityMigration(client, migration);
           if (executed) totalEntityMigrations++;
         } catch (error) {
-          console.error(`  ❌ Failed to execute ${migration.filename}:`, error.message);
+          console.error(`  ❌ ${migrationFailure(migration.filename, error)}`);
           throw error;
         }
       }

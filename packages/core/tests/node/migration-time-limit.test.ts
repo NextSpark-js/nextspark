@@ -5,7 +5,9 @@
  * MIGRATION_TIMEOUT_SECONDS fails there, even one that switches
  * statement_timeout off. A statement the server cancels before the limit is not
  * reported as the limit, and a migration stopped partway says that what it
- * committed stays and it is not recorded as run. The runner is exercised against
+ * committed stays and it is not recorded as run. Recording a migration that ran
+ * to the end is not held to the limit, and a record that fails says the file ran
+ * and gives the INSERT that records it. The runner is exercised against
  * a stand-in server that speaks enough of the wire protocol to connect, answer
  * queries, cancel a statement at its statement_timeout the way Postgres does,
  * keep a statement_timeout a query sets, or go silent.
@@ -18,7 +20,14 @@ import os from 'node:os'
 import path from 'node:path'
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
-import { migrationTimeLimit, runMigrationSql } from '../../scripts/db/migration-time-limit.mjs'
+import {
+  MigrationNotRecordedError,
+  RECORD_WAIT_MS,
+  migrationClient,
+  migrationTimeLimit,
+  recordMigration,
+  runMigrationSql,
+} from '../../scripts/db/migration-time-limit.mjs'
 
 const CORE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const RUNNER = path.join(CORE, 'scripts/db/run-migrations.mjs')
@@ -32,13 +41,16 @@ type TestContext = { after: (fn: () => void) => void }
  *  - { slowMs }: answers after that long, unless the statement_timeout in effect cancels it first
  *  - 'stuck': never finishes, so only a statement_timeout in effect cancels it
  *  - 'silent': never answers anything again, statement_timeout or not
+ *  - { error: [code, message] }: fails at once with that SQLSTATE and message
+ *
+ * A parameterised query is treated the same way when it is executed, by its SQL.
  *
  * The statement_timeout in effect is the one the session started with, as
  * changed by the query itself and by the queries before it: `SET` and
  * `set_config(…, false)` change it for the session, `SET LOCAL` and
  * `set_config(…, true)` only for the query that sets it.
  */
-type Treatment = 'ok' | 'stuck' | 'silent' | { slowMs: number }
+type Treatment = 'ok' | 'stuck' | 'silent' | { slowMs: number } | { error: [string, string] }
 
 interface Session {
   pid: number
@@ -102,14 +114,44 @@ async function standInPostgres(t: TestContext, treat: (sql: string) => Treatment
       return buffer
     }
     const text = (value: string) => Buffer.from(`${value}\0`)
-    const readyForQuery = () => message('Z', Buffer.from('I'))
+    // A BEGIN a query leaves without a COMMIT or ROLLBACK after it keeps the session in a transaction,
+    // which a failed statement leaves failed
+    let transaction: 'I' | 'T' | 'E' = 'I'
+    const readyForQuery = () => message('Z', Buffer.from(transaction))
     const commandComplete = () => {
       message('C', text('SELECT 0'))
       readyForQuery()
     }
 
+    const error = (code: string, reason: string) =>
+      Buffer.concat([text('SERROR'), text(`C${code}`), text(`M${reason}`), Buffer.from('\0')])
+
+    /** Runs a statement as its treatment says, under the statement_timeout in effect. */
+    const execute = (sql: string, complete: () => void, fail: (fields: Buffer) => void) => {
+      session.queries.push(sql)
+      session.receivedAt.set(sql, Date.now())
+      const treatment = treat(sql)
+      const timeout = statementTimeoutFor(sql, session.statementTimeout)
+      session.statementTimeout = timeout.session
+      for (const [statement] of sql.matchAll(/\b(BEGIN|COMMIT|ROLLBACK)\s*;/gi)) {
+        transaction = /^BEGIN/i.test(statement) ? 'T' : 'I'
+      }
+      const failed = (fields: Buffer) => {
+        if (transaction === 'T') transaction = 'E'
+        fail(fields)
+      }
+      if (typeof treatment === 'object' && 'error' in treatment) return failed(error(...treatment.error))
+      const runsMs = treatment === 'stuck' ? Infinity : typeof treatment === 'object' ? treatment.slowMs : undefined
+      if (treatment === 'ok') complete()
+      else if (runsMs !== undefined && timeout.query > 0 && timeout.query < runsMs) {
+        later(timeout.query, () => failed(error('57014', 'canceling statement due to statement timeout')))
+      } else if (typeof treatment === 'object') later(treatment.slowMs, complete)
+    }
+
     let pending = Buffer.alloc(0)
     let started = false
+    let parsed = ''
+    let executed = Promise.resolve()
     socket.on('data', chunk => {
       pending = Buffer.concat([pending, chunk])
       for (;;) {
@@ -143,38 +185,41 @@ async function standInPostgres(t: TestContext, treat: (sql: string) => Treatment
 
         if (type === 'Q') {
           const sql = body.subarray(0, body.length - 1).toString()
-          session.queries.push(sql)
-          session.receivedAt.set(sql, Date.now())
           const terminate = sql.match(/pg_terminate_backend\((\d+)\)/)
           if (terminate) {
+            session.queries.push(sql)
             terminated.push(Number(terminate[1]))
             sockets.get(Number(terminate[1]))?.destroy()
             commandComplete()
             continue
           }
-          const treatment = treat(sql)
-          const timeout = statementTimeoutFor(sql, session.statementTimeout)
-          session.statementTimeout = timeout.session
-          const runsMs = treatment === 'stuck' ? Infinity : typeof treatment === 'object' ? treatment.slowMs : undefined
-          if (treatment === 'ok') commandComplete()
-          else if (runsMs !== undefined && timeout.query > 0 && timeout.query < runsMs) {
-            later(timeout.query, () => {
-              message('E', Buffer.concat([
-                text('SERROR'),
-                text('C57014'),
-                text('Mcanceling statement due to statement timeout'),
-                Buffer.from('\0'),
-              ]))
-              readyForQuery()
-            })
-          } else if (typeof treatment === 'object') later(treatment.slowMs, commandComplete)
+          execute(sql, commandComplete, fields => {
+            message('E', fields)
+            readyForQuery()
+          })
         }
-        // The extended protocol, which parameterised queries use: no rows for any of them
-        else if (type === 'P') message('1')
-        else if (type === 'B') message('2')
+        // The extended protocol, which parameterised queries use: no rows for any of them, and
+        // Sync is answered once the statement it follows has
+        else if (type === 'P') {
+          parsed = body.subarray(body.indexOf(0) + 1, body.indexOf(0, body.indexOf(0) + 1)).toString()
+          message('1')
+        } else if (type === 'B') message('2')
         else if (type === 'D') message('n')
-        else if (type === 'E') message('C', text('SELECT 0'))
-        else if (type === 'S') readyForQuery()
+        else if (type === 'E') {
+          executed = new Promise<void>(resolve => {
+            execute(
+              parsed,
+              () => {
+                message('C', text('SELECT 0'))
+                resolve()
+              },
+              fields => {
+                message('E', fields)
+                resolve()
+              }
+            )
+          })
+        } else if (type === 'S') void executed.then(readyForQuery)
         else if (type === 'X') socket.end()
       }
     })
@@ -423,6 +468,166 @@ test('a migration that is slow but within the limit runs, and so does the rest',
   assert.match(result.output, /Successfully executed 002_waits\.sql/)
   assert.ok(sessionThatRan(server.sessions, MIGRATIONS['003_after.sql']))
   assert.deepEqual(server.terminated, [])
+})
+
+/** A project whose core, theme and theme entity migrations are the given files, for the theme `fixture`. */
+function projectWithTheme(t: TestContext, { core, theme, widgets }: Record<'core' | 'theme' | 'widgets', Record<string, string>>) {
+  const root = projectWith(t, core)
+  const themeDir = path.join(root, 'apps/dev/contents/themes/fixture')
+  for (const [dir, files] of [
+    [path.join(themeDir, 'migrations'), theme],
+    [path.join(themeDir, 'entities/widgets/migrations'), widgets],
+  ] as const) {
+    fs.mkdirSync(dir, { recursive: true })
+    for (const [file, sql] of Object.entries(files)) fs.writeFileSync(path.join(dir, file), sql)
+  }
+  return root
+}
+
+const TRACKED = {
+  core: { '001_core.sql': 'CREATE TABLE core_table (id int);', '002_core_after.sql': 'CREATE TABLE core_after (id int);' },
+  theme: { '001_theme.sql': 'CREATE TABLE theme_table (id int);' },
+  widgets: { '001_widgets.sql': 'CREATE TABLE widgets (id int);' },
+}
+
+/** The statement that records a migration in a tracking table, parameterised or not. */
+const recordOf = (table: string) => new RegExp(`^(SET LOCAL [^;]+; )*INSERT INTO "${table}"`)
+
+test('recording a migration that ran to the end is not held to the limit, in any tracking table', { timeout: 30000 }, async t => {
+  const tables = ['_migrations', '_content_migrations', '_entity_migrations']
+  const server = await standInPostgres(t, sql => (tables.some(table => recordOf(table).test(sql)) ? { slowMs: 1200 } : 'ok'))
+  const cwd = projectWithTheme(t, TRACKED)
+
+  const result = await run(t, RUNNER, ['--no-env-file'], {
+    cwd,
+    env: cleanEnv({ DATABASE_URL: server.url, NEXT_PUBLIC_ACTIVE_THEME: 'fixture', MIGRATION_TIMEOUT_SECONDS: '0.5' }),
+    killAfterMs: 20000,
+  })
+
+  assert.equal(result.status, 0, result.output)
+  assert.match(result.output, /Successfully executed 001_core\.sql/)
+  assert.match(result.output, /Successfully executed 002_core_after\.sql/)
+  assert.match(result.output, /001_theme\.sql executed successfully/)
+  assert.match(result.output, /001_widgets\.sql executed successfully/)
+  for (const table of tables) {
+    const records = server.sessions.flatMap(session => session.queries).filter(sql => recordOf(table).test(sql))
+    assert.ok(records.length > 0, table)
+    // the server still has a limit of its own on the record
+    for (const record of records) assert.match(record, new RegExp(`^SET LOCAL statement_timeout = ${RECORD_WAIT_MS}; SET LOCAL lock_timeout = 0; `), record)
+  }
+  for (const session of server.sessions) assert.equal(session.startup.statement_timeout, '500')
+})
+
+test('a migration that ran to the end but could not be recorded says so, and gives the INSERT that records it', { timeout: 30000 }, async t => {
+  const cases = [
+    {
+      table: '_migrations',
+      error: ['57014', 'canceling statement due to statement timeout'] as [string, string],
+      file: '001_core.sql',
+      insert: `INSERT INTO "_migrations" ("filename") VALUES ('001_core.sql') ON CONFLICT DO NOTHING;`,
+      notRun: TRACKED.core['002_core_after.sql'],
+    },
+    {
+      table: '_content_migrations',
+      error: ['42501', 'permission denied for table _content_migrations'] as [string, string],
+      file: '001_theme.sql',
+      insert: `INSERT INTO "_content_migrations" ("source_type", "source_name", "filename") VALUES ('theme', 'fixture', '001_theme.sql') ON CONFLICT DO NOTHING;`,
+      notRun: TRACKED.widgets['001_widgets.sql'],
+    },
+    {
+      table: '_entity_migrations',
+      error: ['55P03', 'canceling statement due to lock timeout'] as [string, string],
+      file: '001_widgets.sql',
+      insert: `INSERT INTO "_entity_migrations" ("entity_name", "source_type", "source_name", "filename") VALUES ('widgets', 'theme', 'fixture', '001_widgets.sql') ON CONFLICT DO NOTHING;`,
+      notRun: undefined,
+    },
+  ]
+  for (const { table, error, file, insert, notRun } of cases) {
+    const server = await standInPostgres(t, sql => (recordOf(table).test(sql) ? { error } : 'ok'))
+    const cwd = projectWithTheme(t, TRACKED)
+
+    const result = await run(t, RUNNER, ['--no-env-file'], {
+      cwd,
+      env: cleanEnv({ DATABASE_URL: server.url, NEXT_PUBLIC_ACTIVE_THEME: 'fixture', MIGRATION_TIMEOUT_SECONDS: '0.5' }),
+      killAfterMs: 10000,
+    })
+
+    assert.equal(result.status, 1, result.output)
+    const escaped = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    assert.match(
+      result.output,
+      new RegExp(
+        `❌ ${escaped(file)} ran to the end, but recording it as run in "${table}" failed: ${escaped(error[1])}\\. ` +
+          'What it committed stays in the database, and until it is recorded the next run starts the file over\\. ' +
+          `Record it before running the migrations again: ${escaped(insert)}`
+      ),
+      table
+    )
+    assert.doesNotMatch(result.output, new RegExp(`Failed to execute ${escaped(file)}`), table)
+    if (notRun) assert.equal(sessionThatRan(server.sessions, notRun), undefined, table)
+  }
+})
+
+test('a migration that ran to the end inside a transaction it left open is not offered a record', { timeout: 20000 }, async t => {
+  const migrations = { '001_open.sql': 'BEGIN; CREATE TABLE open_table (id int);', '002_after.sql': 'CREATE TABLE after_table (id int);' }
+  const server = await standInPostgres(t, sql =>
+    recordOf('_migrations').test(sql) ? { error: ['55P03', 'canceling statement due to lock timeout'] } : 'ok'
+  )
+  const cwd = projectWith(t, migrations)
+
+  const result = await run(t, RUNNER, ['--no-env-file'], {
+    cwd,
+    env: cleanEnv({ DATABASE_URL: server.url, NEXT_PUBLIC_ACTIVE_THEME: 'fixture', MIGRATION_TIMEOUT_SECONDS: '0.5' }),
+    killAfterMs: 10000,
+  })
+
+  assert.equal(result.status, 1, result.output)
+  assert.match(
+    result.output,
+    /❌ 001_open\.sql ran to the end inside a transaction it left open, and recording it as run in "_migrations" failed: canceling statement due to lock timeout\. That transaction is rolled back when the run stops: what the file did inside it is gone, what it committed before stays, and it is not recorded as run, so the next run starts the file over\. Add the COMMIT the file is missing/
+  )
+  assert.doesNotMatch(result.output, /Record it before running the migrations again/)
+  assert.equal(sessionThatRan(server.sessions, migrations['002_after.sql']), undefined)
+})
+
+test('a record is sent with its own limit on the server and the client, and its values written as SQL literals', async () => {
+  const sent: unknown[] = []
+  const client = { query: (query: unknown) => (sent.push(query), Promise.resolve()) } as unknown as Parameters<typeof recordMigration>[0]
+  const limit = { seconds: 0.5, statementMs: 500, queryMs: 500 }
+
+  await recordMigration(client, { file: "001_o'brien.sql", table: '_migrations', row: { filename: "001_o'brien.sql" }, limit })
+  await recordMigration(client, { file: '001_core.sql', table: '_migrations', row: { filename: '001_core.sql' }, limit: null })
+
+  assert.deepEqual(sent, [
+    {
+      text: `SET LOCAL statement_timeout = ${RECORD_WAIT_MS}; SET LOCAL lock_timeout = 0; INSERT INTO "_migrations" ("filename") VALUES ('001_o''brien.sql')`,
+      query_timeout: RECORD_WAIT_MS,
+    },
+    `INSERT INTO "_migrations" ("filename") VALUES ('001_core.sql')`,
+  ])
+})
+
+test('a record the server never answers is given up on at its own wait, and said to be unrecorded', { timeout: 20000 }, async t => {
+  const server = await standInPostgres(t, sql => (recordOf('_migrations').test(sql) ? 'silent' : 'ok'))
+  const limit = migrationTimeLimit({ MIGRATION_TIMEOUT_SECONDS: '5' })
+  const client = migrationClient(server.url, limit)
+  await client.connect()
+  t.after(() => client.end())
+
+  const startedAt = Date.now()
+  await assert.rejects(
+    recordMigration(client, { file: '001_core.sql', table: '_migrations', row: { filename: '001_core.sql' }, limit, waitMs: 300 }),
+    (error: Error) => {
+      assert.ok(error instanceof MigrationNotRecordedError)
+      assert.match(
+        error.message,
+        /^001_core\.sql ran to the end, but recording it as run in "_migrations" got no answer within 0\.3 s, so it may or may not be recorded\. .*Record it before running the migrations again: INSERT INTO "_migrations" \("filename"\) VALUES \('001_core\.sql'\) ON CONFLICT DO NOTHING;$/
+      )
+      return true
+    }
+  )
+  const waitedMs = Date.now() - startedAt
+  assert.ok(waitedMs >= 290 && waitedMs < 5000, `waited ${waitedMs} ms`)
 })
 
 // pg reads a connection string's parameters over the options passed next to it
