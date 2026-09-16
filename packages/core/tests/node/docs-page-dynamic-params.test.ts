@@ -1,12 +1,14 @@
 /**
- * A relative `.md` link to a doc page that does not exist is left untouched
- * by remark-doc-links.ts (there is no route to point at) and, unrewritten,
- * still resolves in the browser to a section/page pair the docs registry
- * never scans. Next.js's default `dynamicParams: true` renders that pair
- * on demand and caches the notFound() UI with a 200 status - a broken link
- * that looks like a working page. `dynamicParams = false` makes any
- * section/page outside generateStaticParams's exhaustive list a real 404
- * instead, since every public doc page is already enumerated there.
+ * A docs page route asked for a section/page pair the docs registry never
+ * scanned - a broken relative `.md` link, a typo, a removed page - calls
+ * notFound(), but only after a Suspense boundary in its layouts has already
+ * sent the response head with a 200: the not-found UI arrives with the wrong
+ * status. Both docs pages therefore export `dynamicParams = false` beside a
+ * generateStaticParams that lists every page, which makes `next dev` answer
+ * 404 for anything else before rendering. A production build renders these
+ * routes on demand (the root layout reads the request), so that check has no
+ * prerendered list there; the generated proxy answers 404 for those requests
+ * instead (tests/jest/templates/proxy.test.ts).
  * apps/dev/app is the source packages/core/templates/app is synced from.
  */
 import { test } from 'node:test'
@@ -16,27 +18,38 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
 
-const DOCS_PAGE = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '../../../../apps/dev/app/(public)/docs/[section]/[page]/page.tsx'
-)
+const APP_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../apps/dev/app')
 
-test('the public docs page opts out of on-demand rendering for unknown params', () => {
-  const source = ts.createSourceFile(DOCS_PAGE, fs.readFileSync(DOCS_PAGE, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
+const DOCS_PAGES = [
+  ['public', path.join(APP_DIR, '(public)/docs/[section]/[page]/page.tsx'), 'DOCS_REGISTRY.public'],
+  ['superadmin', path.join(APP_DIR, 'superadmin/docs/[section]/[page]/page.tsx'), 'DOCS_REGISTRY.superadmin'],
+] as const
 
-  let found: ts.Expression | undefined
-  const visit = (node: ts.Node): void => {
-    if (
-      ts.isVariableStatement(node) &&
-      node.modifiers?.some(m => m.kind === ts.SyntaxKind.ExportKeyword) &&
-      node.declarationList.declarations.some(d => d.name.getText(source) === 'dynamicParams')
-    ) {
-      found = node.declarationList.declarations.find(d => d.name.getText(source) === 'dynamicParams')?.initializer
+function isExported(node: ts.Node): boolean {
+  return ts.canHaveModifiers(node) && (ts.getModifiers(node) ?? []).some(m => m.kind === ts.SyntaxKind.ExportKeyword)
+}
+
+for (const [label, file, registry] of DOCS_PAGES) {
+  test(`the ${label} docs page opts out of on-demand rendering for unknown params`, () => {
+    const source = ts.createSourceFile(file, fs.readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
+
+    let dynamicParams: ts.Expression | undefined
+    let generateStaticParams: ts.FunctionDeclaration | undefined
+    const visit = (node: ts.Node): void => {
+      if (ts.isVariableStatement(node) && isExported(node)) {
+        const declaration = node.declarationList.declarations.find(d => d.name.getText(source) === 'dynamicParams')
+        if (declaration) dynamicParams = declaration.initializer
+      }
+      if (ts.isFunctionDeclaration(node) && isExported(node) && node.name?.text === 'generateStaticParams') {
+        generateStaticParams = node
+      }
+      ts.forEachChild(node, visit)
     }
-    ts.forEachChild(node, visit)
-  }
-  visit(source)
+    visit(source)
 
-  assert.ok(found, 'page.tsx exports `dynamicParams`')
-  assert.equal(found!.kind, ts.SyntaxKind.FalseKeyword, '`dynamicParams` must be `false`, not the `true` default')
-})
+    assert.ok(dynamicParams, `${label} page.tsx exports \`dynamicParams\``)
+    assert.equal(dynamicParams!.kind, ts.SyntaxKind.FalseKeyword, '`dynamicParams` must be `false`, not the `true` default')
+    assert.ok(generateStaticParams, `${label} page.tsx exports generateStaticParams`)
+    assert.match(generateStaticParams!.getText(source), new RegExp(registry.replace('.', '\\.')), `generateStaticParams lists the pages of ${registry}`)
+  })
+}

@@ -167,7 +167,7 @@ export const APP_CONFIG_OVERRIDES = {
     /** Enable/disable documentation system */
     enabled: true,
 
-    /** Make public documentation accessible without authentication */
+    /** Serve /docs without a session; false sends visitors to login first */
     publicAccess: true,
 
     /** Enable search functionality in documentation */
@@ -177,11 +177,11 @@ export const APP_CONFIG_OVERRIDES = {
     breadcrumbs: true,
 
     /**
-     * Public Documentation Configuration
-     * Controls public-facing documentation at /docs routes
+     * Public Documentation Sidebar
+     * Sidebar settings of the docs at /docs (who can read them is publicAccess)
      */
     public: {
-      /** Show/hide public documentation */
+      /** false renders no /docs sidebar */
       enabled: true,
       /** Expand sections by default on page load */
       open: true,

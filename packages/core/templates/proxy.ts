@@ -28,6 +28,7 @@ import {
 } from '@nextsparkjs/core/lib/middleware'
 import { ACTIVE_TEAM_COOKIE, activeTeamIdForSession } from '@nextsparkjs/core/lib/teams/active-team-cookie'
 import { SESSION_HINT_COOKIE, SESSION_HINT_MAX_AGE, hasSessionCookie } from '@nextsparkjs/core/lib/auth/session-hint'
+import { isDocsPublic, legacyDocsAccessMessage } from '@nextsparkjs/core/lib/docs/access'
 import { DOCS_REGISTRY } from '@nextsparkjs/registries/docs-registry'
 
 /**
@@ -90,6 +91,44 @@ function appUrl(request: NextRequest, pathname: string): NextRequest['nextUrl'] 
   url.pathname = pathname
   url.search = ''
   return url
+}
+
+/**
+ * Whether `pathname` is a docs page route — `/docs/<section>/<page>` or
+ * `/superadmin/docs/<section>/<page>` — whose section and page the docs
+ * registry does not have together. Segments are compared decoded, the way the
+ * page reads its params.
+ */
+function isMissingDocsPage(pathname: string): boolean {
+  const match = pathname.match(/^(\/superadmin)?\/docs\/([^/]+)\/([^/]+)$/)
+  if (!match) return false
+
+  let sectionSlug: string
+  let pageSlug: string
+  try {
+    sectionSlug = decodeURIComponent(match[2])
+    pageSlug = decodeURIComponent(match[3])
+  } catch {
+    return true
+  }
+
+  const sections = match[1] ? DOCS_REGISTRY.superadmin : DOCS_REGISTRY.public
+  return !sections.some(section => section.slug === sectionSlug && section.pages.some(page => page.slug === pageSlug))
+}
+
+/**
+ * Serve the app's not-found page with a 404 status for a docs page the
+ * registry does not have. The docs pages call notFound() themselves, but only
+ * after a Suspense boundary in their layouts has sent the response head with a
+ * 200, and a production build renders them on demand (the root layout reads the
+ * request), so their `dynamicParams = false` has no prerendered list to answer
+ * 404 from. Deciding it here, before anything renders, is what makes the
+ * status real.
+ */
+function rewriteToNotFound(request: NextRequest, requestHeaders: Headers): NextResponse {
+  return syncSessionHint(request, NextResponse.rewrite(appUrl(request, '/_not-found'), {
+    request: { headers: requestHeaders },
+  }))
 }
 
 /**
@@ -179,6 +218,18 @@ function passThrough(request: NextRequest, requestHeaders: Headers): NextRespons
   }))
 }
 
+let legacyDocsAccessWarned = false
+
+/** Says once per server process what to change in an app config that still
+ * gates /docs with the older `docs.public` boolean. */
+function warnLegacyDocsAccess(docsConfig: Parameters<typeof legacyDocsAccessMessage>[0]): void {
+  if (legacyDocsAccessWarned) return
+  const message = legacyDocsAccessMessage(docsConfig)
+  if (!message) return
+  legacyDocsAccessWarned = true
+  console.warn(`[NextSpark] ${message}`)
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
@@ -224,11 +275,13 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(newUrl, 301)
   }
 
-  // 3. Documentation access control
+  // 3. Documentation access control: docs.publicAccess, or the older
+  // docs.public boolean it replaced (see lib/docs/access)
   if (isUnder(pathname, '/docs')) {
-    const appConfig = getThemeAppConfig(activeTheme as string)
+    const docsConfig = getThemeAppConfig(activeTheme as string)?.docs
+    warnLegacyDocsAccess(docsConfig)
 
-    if (appConfig?.docs?.public === false) {
+    if (!isDocsPublic(docsConfig)) {
       try {
         const { data: session } = await getSession(request)
 
@@ -238,6 +291,9 @@ export async function proxy(request: NextRequest) {
       } catch {
         return redirectToLogin(request)
       }
+    }
+    if (isMissingDocsPage(pathname)) {
+      return rewriteToNotFound(request, requestHeaders)
     }
     return passThrough(request, requestHeaders)
   }
@@ -306,6 +362,10 @@ export async function proxy(request: NextRequest) {
       const activeTeamId = activeTeamIdForSession(request.cookies.get(ACTIVE_TEAM_COOKIE)?.value, session.session?.id)
       if (activeTeamId) {
         requestHeaders.set('x-active-team-id', activeTeamId)
+      }
+
+      if (isSuperadminRoute && isMissingDocsPage(pathname)) {
+        return rewriteToNotFound(request, requestHeaders)
       }
 
       return passThrough(request, requestHeaders)

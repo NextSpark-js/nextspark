@@ -167,7 +167,7 @@ describe('proxy path boundaries and redirect targets', () => {
   )
 
   test('with private docs, /docs-logo.png is not docs, but /docs/intro is', async () => {
-    mockedAppConfig.mockReturnValue({ docs: { public: false } })
+    mockedAppConfig.mockReturnValue({ docs: { publicAccess: false } })
     mockedFetch.mockResolvedValue({ data: null })
 
     const asset = (await proxy(makeRequest('/docs-logo.png'))) as unknown as PassThrough
@@ -179,6 +179,90 @@ describe('proxy path boundaries and redirect targets', () => {
     expect(page.redirectUrl).toContain(`/login?callbackUrl=${encodeURIComponent('/docs/intro?section=install')}`)
   })
 
+  // docs.publicAccess decides who reads /docs; docs.public holds the sidebar
+  // settings of that category. The boolean `docs.public: false` of app
+  // configs written before publicAccess still means private, and either one
+  // set to false keeps the docs private.
+  const DOCS_CATEGORY = { enabled: true, open: true, label: 'Documentation' }
+
+  test.each([
+    ['publicAccess: false beside the public category settings', { publicAccess: false, public: DOCS_CATEGORY }],
+    ['publicAccess: false alone', { publicAccess: false }],
+    ['the older public: false', { public: false }],
+    ['a leftover public: false beside publicAccess: true', { publicAccess: true, public: false }],
+  ])('docs with %s ask for a session', async (_label, docs) => {
+    mockedAppConfig.mockReturnValue({ docs })
+    mockedFetch.mockResolvedValue({ data: null })
+
+    for (const path of ['/docs', '/docs/getting-started/introduction']) {
+      const response = (await proxy(makeRequest(path))) as unknown as PassThrough
+
+      expect(response.type).toBe('redirect')
+      expect(response.redirectUrl).toContain(`/login?callbackUrl=${encodeURIComponent(path)}`)
+    }
+  })
+
+  test.each([
+    ['publicAccess: true beside the public category settings', { publicAccess: true, public: DOCS_CATEGORY }],
+    ['only the public category settings', { public: DOCS_CATEGORY }],
+    ['a public category that is hidden from the sidebar', { publicAccess: true, public: { ...DOCS_CATEGORY, enabled: false } }],
+    ['no docs block at all', undefined],
+  ])('docs with %s are served without asking for a session', async (_label, docs) => {
+    mockedAppConfig.mockReturnValue(docs === undefined ? {} : { docs })
+
+    for (const path of ['/docs', '/docs/getting-started/introduction']) {
+      const response = (await proxy(makeRequest(path))) as unknown as PassThrough
+
+      expect(response.type).toBe('next')
+    }
+    expect(mockedFetch).not.toHaveBeenCalled()
+  })
+
+  test('private docs are served to a signed-in user', async () => {
+    mockedAppConfig.mockReturnValue({ docs: { publicAccess: false, public: DOCS_CATEGORY } })
+    mockedFetch.mockResolvedValue({ data: { user: { id: 'user-1', email: 'user-1@example.com', role: 'member' } } })
+
+    const response = (await proxy(makeRequest('/docs/getting-started/introduction'))) as unknown as PassThrough
+
+    expect(response.type).toBe('next')
+  })
+
+  test('says once per server process what to change when docs.public is still the access boolean', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      await jest.isolateModulesAsync(async () => {
+        const middleware = await import('@nextsparkjs/core/lib/middleware')
+        const fetchModule = await import('@better-fetch/fetch')
+        ;(middleware.getThemeAppConfig as unknown as jest.Mock).mockReturnValue({ docs: { public: false } })
+        ;(fetchModule.betterFetch as unknown as jest.Mock).mockResolvedValue({ data: null })
+        const { proxy: freshProxy } = await import('../../../templates/proxy')
+
+        await freshProxy(makeRequest('/docs'))
+        await freshProxy(makeRequest('/docs/getting-started/introduction'))
+      })
+
+      const docsWarnings = warn.mock.calls.filter(([message]) => String(message).includes('docs.public'))
+      expect(docsWarnings).toHaveLength(1)
+      expect(String(docsWarnings[0][0])).toContain('docs.publicAccess: false')
+    } finally {
+      warn.mockRestore()
+    }
+  })
+
+  test('says nothing about the docs block when it already uses publicAccess', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      mockedAppConfig.mockReturnValue({ docs: { publicAccess: false, public: DOCS_CATEGORY } })
+      mockedFetch.mockResolvedValue({ data: null })
+
+      await proxy(makeRequest('/docs'))
+
+      expect(warn.mock.calls.filter(([message]) => String(message).includes('docs.public'))).toHaveLength(0)
+    } finally {
+      warn.mockRestore()
+    }
+  })
+
   // The docs pages live at /docs/[section]/[page] — a two-segment path — so a
   // real page link such as /docs/overview/customization must reach the app
   // unredirected. A stale 2-level -> 3-level rewrite here would send it to a
@@ -186,7 +270,7 @@ describe('proxy path boundaries and redirect targets', () => {
   test('a docs page link passes through, not redirected to a 3-level path', async () => {
     mockedFetch.mockResolvedValue({ data: null })
 
-    const response = (await proxy(makeRequest('/docs/overview/customization'))) as unknown as PassThrough
+    const response = (await proxy(makeRequest('/docs/getting-started/installation'))) as unknown as PassThrough
 
     expect(response.type).toBe('next')
   })
@@ -285,6 +369,16 @@ describe('proxy path boundaries and redirect targets', () => {
     expect(mockedFetch).toHaveBeenCalledWith('/api/auth/get-session', expect.objectContaining({ baseURL: 'http://localhost:3000/base' }))
   })
 
+  test('private docs under a base path redirect to the login under it', async () => {
+    mockedAppConfig.mockReturnValue({ docs: { publicAccess: false, public: { enabled: true, open: true, label: 'Documentation' } } })
+    mockedFetch.mockResolvedValue({ data: null })
+
+    const response = (await proxy(underBasePath('/docs/getting-started/introduction'))) as unknown as PassThrough
+
+    expect(response.type).toBe('redirect')
+    expect(response.redirectUrl).toContain(`/base/es/login?callbackUrl=${encodeURIComponent('/docs/getting-started/introduction')}`)
+  })
+
   test('an access-denied redirect keeps the base path and locale too', async () => {
     mockedFetch.mockResolvedValue({ data: { user: { id: 'user-1', email: 'user-1@example.com', role: 'member' } } })
 
@@ -292,6 +386,111 @@ describe('proxy path boundaries and redirect targets', () => {
 
     expect(response.type).toBe('redirect')
     expect(response.redirectUrl).toContain('/base/es/dashboard?error=access_denied')
+  })
+})
+
+// A docs page route whose section or page the registry lacks is answered with
+// the app's not-found page before anything renders: the pages' own notFound()
+// runs after their layouts have sent a 200. The mock registry
+// (docs-registry.ts) has getting-started/{introduction,installation} and
+// features/{components,styling} under public, setup/{configuration,deployment}
+// and management/users under superadmin.
+describe('proxy docs pages the registry lacks', () => {
+  const mockedAppConfig = getThemeAppConfig as unknown as jest.Mock
+  const superadmin = { data: { user: { id: 'user-1', email: 'user-1@example.com', role: 'superadmin' }, session: { id: 'session-1' } } }
+
+  beforeEach(() => {
+    mockedFetch.mockReset()
+    mockedAppConfig.mockReset()
+    mockedAppConfig.mockReturnValue(undefined)
+    delete process.env.NEXT_PUBLIC_ACTIVE_THEME
+  })
+
+  test.each([
+    ['a file that does not exist', '/docs/getting-started/99-does-not-exist.md'],
+    ['a page that does not exist', '/docs/getting-started/does-not-exist'],
+    ['a section that does not exist', '/docs/nope/introduction'],
+    ['a superadmin page under a public section name', '/docs/setup/configuration'],
+  ])('public docs: %s gets the not-found page', async (_label, path) => {
+    const response = (await proxy(makeRequest(path))) as unknown as PassThrough & { rewriteUrl?: string }
+
+    expect(response.type).toBe('rewrite')
+    expect(new URL(response.rewriteUrl as string).pathname).toBe('/_not-found')
+    expect(response.requestHeaders?.get('x-user-id')).toBeNull()
+  })
+
+  test.each(['/docs/getting-started/introduction', '/docs/features/styling', '/docs/getting%2Dstarted/introduction', '/docs', '/docs/getting-started'])(
+    'public docs: %s is left to the app',
+    async path => {
+      const response = (await proxy(makeRequest(path))) as unknown as PassThrough
+
+      expect(response.type).toBe('next')
+    }
+  )
+
+  test('private docs send a visitor without a session to login before saying whether a page exists', async () => {
+    mockedAppConfig.mockReturnValue({ docs: { publicAccess: false } })
+    mockedFetch.mockResolvedValue({ data: null })
+
+    const response = (await proxy(makeRequest('/docs/nope/99-does-not-exist.md'))) as unknown as PassThrough
+
+    expect(response.type).toBe('redirect')
+    expect(response.redirectUrl).toContain('/login')
+  })
+
+  test.each([
+    ['a file that does not exist', '/superadmin/docs/setup/99-does-not-exist.md'],
+    ['a page that does not exist', '/superadmin/docs/setup/does-not-exist'],
+    ['a section that does not exist', '/superadmin/docs/nope/configuration'],
+    ['a public page under the superadmin path', '/superadmin/docs/getting-started/introduction'],
+  ])('superadmin docs: %s gets the not-found page', async (_label, path) => {
+    mockedFetch.mockResolvedValue(superadmin)
+
+    const response = (await proxy(makeRequest(path))) as unknown as PassThrough & { rewriteUrl?: string }
+
+    expect(response.type).toBe('rewrite')
+    expect(new URL(response.rewriteUrl as string).pathname).toBe('/_not-found')
+    expect(response.requestHeaders?.get('x-user-id')).toBe('user-1')
+  })
+
+  test.each(['/superadmin/docs/setup/configuration', '/superadmin/docs/management/users', '/superadmin/docs'])(
+    'superadmin docs: %s is left to the app',
+    async path => {
+      mockedFetch.mockResolvedValue(superadmin)
+
+      const response = (await proxy(makeRequest(path))) as unknown as PassThrough
+
+      expect(response.type).toBe('next')
+    }
+  )
+
+  test('superadmin docs: the session and role are checked before saying whether a page exists', async () => {
+    mockedFetch.mockResolvedValue({ data: null })
+    const anonymous = (await proxy(makeRequest('/superadmin/docs/nope/configuration'))) as unknown as PassThrough
+
+    mockedFetch.mockResolvedValue({ data: { user: { id: 'user-2', email: 'user-2@example.com', role: 'member' } } })
+    const member = (await proxy(makeRequest('/superadmin/docs/nope/configuration'))) as unknown as PassThrough
+
+    expect(anonymous.type).toBe('redirect')
+    expect(anonymous.redirectUrl).toContain('/login')
+    expect(member.type).toBe('redirect')
+    expect(member.redirectUrl).toContain('error=access_denied')
+  })
+
+  test('under a base path, the not-found page is served from under it', async () => {
+    const { NextURL } = jest.requireActual('next/dist/server/web/next-url') as {
+      NextURL: new (url: string, options: object) => { href: string }
+    }
+    mockedFetch.mockResolvedValue(superadmin)
+    const request = makeRequest('/superadmin/docs/nope/configuration')
+    ;(request as unknown as { nextUrl: unknown }).nextUrl = new NextURL('http://localhost:3000/base/superadmin/docs/nope/configuration', {
+      nextConfig: { basePath: '/base' },
+    })
+
+    const response = (await proxy(request)) as unknown as PassThrough & { rewriteUrl?: string }
+
+    expect(response.type).toBe('rewrite')
+    expect(new URL(response.rewriteUrl as string).pathname).toBe('/base/_not-found')
   })
 })
 

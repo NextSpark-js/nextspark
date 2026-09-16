@@ -193,7 +193,11 @@ export interface DocsConfig {
   /** Enable/disable the entire documentation system */
   enabled: boolean
 
-  /** Make public documentation accessible without authentication */
+  /**
+   * Whether /docs is served without a session; `false` asks for one. The only
+   * access setting: see `isDocsPublic` in lib/docs/access, which also honors
+   * the older `public: false`.
+   */
   publicAccess?: boolean
 
   /** Enable search functionality in the sidebar */
@@ -202,7 +206,7 @@ export interface DocsConfig {
   /** Show breadcrumbs navigation in documentation pages */
   breadcrumbs: boolean
 
-  /** Public documentation configuration (for /docs routes) */
+  /** Sidebar settings of the public docs at /docs; not an access setting */
   public?: DocsCategoryConfig
 
   /** Superadmin documentation configuration (for /superadmin/docs routes) */

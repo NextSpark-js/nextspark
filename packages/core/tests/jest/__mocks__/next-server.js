@@ -98,6 +98,16 @@ class MockNextResponse {
     return response
   }
 
+  // Serves another URL of the app in place of the requested one, with the
+  // forwarded request headers kept for assertions like next() above.
+  static rewrite(url, init = {}) {
+    const response = new MockNextResponse(null, { status: 200, headers: init.headers })
+    response.type = 'rewrite'
+    response.rewriteUrl = String(url)
+    response.requestHeaders = init.request && init.request.headers ? init.request.headers : null
+    return response
+  }
+
   static redirect(url, status = 307) {
     const response = new MockNextResponse(null, { status, headers: { Location: String(url) } })
     response.type = 'redirect'

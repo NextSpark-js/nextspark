@@ -15,6 +15,21 @@ interface SuperadminDocsPageProps {
   }>
 }
 
+// generateStaticParams below enumerates every superadmin doc page, so `next dev`
+// answers 404 for any other section/page pair before rendering. notFound()
+// alone can't: the superadmin layout's Suspense boundary has already sent a 200
+// by the time it runs. A production build renders this route on demand, which
+// leaves dynamicParams nothing to check against; there the generated proxy
+// answers 404 for pages the registry lacks. connection() keeps the pages
+// themselves from being prerendered at build time.
+export const dynamicParams = false
+
+export async function generateStaticParams() {
+  return DOCS_REGISTRY.superadmin.flatMap(section =>
+    section.pages.map(page => ({ section: section.slug, page: page.slug }))
+  )
+}
+
 export async function generateMetadata({ params }: SuperadminDocsPageProps): Promise<Metadata> {
   const resolvedParams = await params
   const { section: sectionSlug, page: pageSlug } = resolvedParams

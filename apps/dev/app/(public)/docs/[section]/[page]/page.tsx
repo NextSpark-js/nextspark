@@ -15,10 +15,12 @@ interface DocsPageProps {
   }>
 }
 
-// generateStaticParams below enumerates every public doc page; a section/page
-// pair outside that list has no content to serve, so it must 404 instead of
-// falling through to an on-demand render that notFound() alone still caches
-// and serves with a 200 status.
+// generateStaticParams below enumerates every public doc page, so `next dev`
+// answers 404 for any other section/page pair before rendering. notFound()
+// alone can't: the Suspense boundary in the docs layout has already sent a 200
+// by the time it runs. A production build renders this route on demand (the
+// root layout reads the request), which leaves dynamicParams nothing to check
+// against; there the generated proxy answers 404 for pages the registry lacks.
 export const dynamicParams = false
 
 export async function generateStaticParams() {

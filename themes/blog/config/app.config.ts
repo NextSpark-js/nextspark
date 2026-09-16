@@ -100,25 +100,19 @@ export const APP_CONFIG_OVERRIDES = {
   // =============================================================================
   docs: {
     enabled: true,
-    public: true,
+    publicAccess: true,
     searchEnabled: true,
     breadcrumbs: true,
-    theme: {
+    public: {
       enabled: true,
       open: true,
       label: "Blog Theme",
     },
-    plugins: {
-      enabled: false,
-      open: false,
-      label: "Plugins",
-    },
-    core: {
+    superadmin: {
       enabled: true,
       open: false,
-      label: "Core",
+      label: "Admin Docs",
     },
-    showPluginsDocsInProd: false,
   },
 
   // =============================================================================

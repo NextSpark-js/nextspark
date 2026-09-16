@@ -9,6 +9,7 @@ import type { DocSectionMeta } from '@nextsparkjs/registries/docs-registry'
 import { useTranslations } from 'next-intl'
 import { Input } from '../ui/input'
 import { THEME_REGISTRY } from '@nextsparkjs/registries/theme-registry'
+import { getPublicDocsCategory } from '../../lib/docs/access'
 
 interface DocsSidebarProps {
   sections: DocSectionMeta[]
@@ -39,7 +40,7 @@ export function DocsSidebar({ sections }: DocsSidebarProps) {
   // Extract theme configuration
   const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME || 'default'
   const themeAppConfig = THEME_REGISTRY[activeTheme]?.appConfig
-  const publicConfig = themeAppConfig?.docs?.public ?? { enabled: true, open: true, label: 'Documentation' }
+  const publicConfig = getPublicDocsCategory(themeAppConfig?.docs) ?? { enabled: true, open: true, label: 'Documentation' }
 
   const [expandedSections, setExpandedSections] = useState<Set<string>>(() => {
     // Expand active section by default
