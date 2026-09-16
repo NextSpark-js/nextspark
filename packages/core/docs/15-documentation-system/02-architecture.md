@@ -6,16 +6,21 @@ The documentation system architecture is built around **build-time registry gene
 
 ## Architecture Overview
 
+Only the **active theme's** own docs are scanned, built, or served. Core's
+own `core/docs/` (this directory tree) and any plugin's
+`contents/plugins/[plugin]/docs/` are conventions for organizing reference
+material in the source tree - the build never reads them and no route ever
+serves them.
+
 ```text
 ┌─────────────────────────────────────────────────────────────┐
 │                     BUILD TIME                               │
 ├─────────────────────────────────────────────────────────────┤
 │                                                               │
-│  1. core/scripts/build/registry.mjs                      │
+│  1. core/scripts/build/registry/generators/docs-registry.mjs│
 │     │                                                         │
-│     ├─> Scan core/docs/                                     │
-│     ├─> Scan contents/themes/[theme]/docs/                  │
-│     └─> Scan contents/plugins/[plugin]/docs/                │
+│     ├─> Scan contents/themes/[ACTIVE_THEME]/docs/public/    │
+│     └─> Scan contents/themes/[ACTIVE_THEME]/docs/superadmin/│
 │                                                               │
 │  2. Extract Metadata                                         │
 │     │                                                         │
@@ -25,7 +30,8 @@ The documentation system architecture is built around **build-time registry gene
 │                                                               │
 │  3. Generate Registry                                        │
 │     │                                                         │
-│     └─> Output: core/lib/registries/docs-registry.ts        │
+│     └─> Output: <project>/.nextspark/registries/docs-registry.ts │
+│         (imported as @nextsparkjs/registries/docs-registry) │
 │                                                               │
 └─────────────────────────────────────────────────────────────┘
 
@@ -33,7 +39,8 @@ The documentation system architecture is built around **build-time registry gene
 │                     RUNTIME                                  │
 ├─────────────────────────────────────────────────────────────┤
 │                                                               │
-│  User visits /docs/[category]/[section]/[page]              │
+│  User visits /docs/[section]/[page]                         │
+│  (or /superadmin/docs/[section]/[page])                     │
 │     │                                                         │
 │     ├─> 1. Route Handler (page.tsx)                         │
 │     │      - Import DOCS_REGISTRY                            │
@@ -58,9 +65,9 @@ The documentation system architecture is built around **build-time registry gene
 
 ### Documentation Registry Builder
 
-**Location:** `core/scripts/build/registry.mjs` (docs registry generator: `core/scripts/build/registry/generators/docs-registry.mjs`)
+**Location:** `core/scripts/build/registry/generators/docs-registry.mjs`, invoked by `core/scripts/build/registry.mjs` alongside every other registry
 
-**Purpose:** Scans documentation directories and generates static registry, alongside every other registry
+**Purpose:** Scans the active theme's `docs/public/` and `docs/superadmin/` directories and generates a static registry
 
 **Execution:**
 ```bash
@@ -75,7 +82,7 @@ node core/scripts/build/registry.mjs
 
 **1. Directory Scanning:**
 ```typescript
-// Scans each docs directory
+// Scans docs/public/ and docs/superadmin/ of the active theme
 scanDocsDirectory(docsPath, source) {
   - Read all subdirectories (sections)
   - Extract order from directory name (01-fundamentals)
@@ -87,33 +94,31 @@ scanDocsDirectory(docsPath, source) {
 
 **2. Metadata Extraction:**
 ```typescript
-// From: "03-directory-structure.md"
+// From "01-overview/03-directory-structure.md" in the theme's docs/public/
 {
   slug: "directory-structure",
   title: "Directory Structure",  // Auto-generated from slug
   order: 3,                       // From numeric prefix
-  path: "/core/docs/01-fundamentals/03-directory-structure.md",
-  source: "core"
+  path: "../../themes/default/docs/public/01-overview/03-directory-structure.md",
+  source: "public"
 }
 ```
 
-**3. Multi-Source Aggregation:**
+**3. Registry Shape:**
 ```typescript
 const registry = {
-  core: scanDocsDirectory('core/docs/', 'core'),
-  theme: scanDocsDirectory('contents/themes/default/docs/', 'theme'),
-  plugins: scanPluginDocs(activePlugins),
-  all: [...core, ...theme, ...plugins].sort(by order)
+  public: scanDocsDirectory('contents/themes/default/docs/public/', 'public'),
+  superadmin: scanDocsDirectory('contents/themes/default/docs/superadmin/', 'superadmin'),
+  all: [...public, ...superadmin].sort(by order)
 }
 ```
 
 **4. TypeScript Generation:**
 ```typescript
-// Output: core/lib/registries/docs-registry.ts
+// Output: <project>/.nextspark/registries/docs-registry.ts
 export const DOCS_REGISTRY: DocsRegistryStructure = {
-  core: [...],
-  theme: [...],
-  plugins: [...],
+  public: [...],
+  superadmin: [...],
   all: [...]
 } as const
 ```
@@ -126,131 +131,82 @@ The build script automatically detects the active theme:
 const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME || 'default'
 ```
 
-Only the active theme's documentation is included in the registry.
+Only the active theme's documentation is included in the registry. Core's
+own docs and any plugin's docs are never scanned - see
+[Core vs Theme Documentation](./03-core-vs-theme-docs.md) for what that
+means for cross-referencing between them.
 
 ### Documentation Configuration
 
-Documentation visibility and behavior is fully controlled via `app.config.ts`:
+Documentation visibility and behavior is controlled via the `docs` block of
+`app.config.ts` (`DocsConfig` in `core/lib/config/types.ts`):
 
 ```typescript
 export const appConfig = {
-  documentation: {
-    // Enable/disable search functionality in sidebar
-    searchEnabled: true,
+  docs: {
+    enabled: true,           // Turn the whole documentation system on/off
+    publicAccess: true,      // Serve /docs without requiring a session
+    searchEnabled: true,     // Enable search in the sidebar
+    breadcrumbs: true,       // Show breadcrumbs navigation
 
-    // Show/hide breadcrumbs navigation
-    breadcrumbs: true,
-
-    // Theme documentation configuration
-    theme: {
-      enabled: true,           // Show/hide theme docs in sidebar
+    // /docs - the active theme's docs/public/
+    public: {
+      enabled: true,           // Show/hide in the sidebar
       open: true,              // Expand section by default on page load
-      label: "Default Theme",  // Custom label for sidebar category
+      label: "Documentation",  // Custom label for the sidebar
     },
 
-    // Plugins documentation configuration
-    plugins: {
-      enabled: true,     // Show/hide all plugin docs in sidebar
-      open: false,       // Collapse section by default
-      label: "Plugins",  // Custom label for sidebar category
+    // /superadmin/docs - the active theme's docs/superadmin/
+    superadmin: {
+      enabled: true,
+      open: false,
+      label: "Admin Docs",
     },
-
-    // Core documentation configuration
-    core: {
-      enabled: true,   // Show/hide core docs in sidebar
-      open: true,      // Expand section by default
-      label: "Core",   // Custom label for sidebar category
-    },
-
-    // Additional production check for plugin docs (legacy)
-    showPluginsDocsInProd: false,  // Hide plugins in production even if enabled
   }
 }
 ```
 
-**Configuration Properties:**
+**Configuration Properties (`DocsCategoryConfig`):**
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `enabled` | boolean | Show/hide the entire category in sidebar |
-| `open` | boolean | Whether category is expanded by default on page load |
-| `label` | string | Custom label displayed in sidebar for the category |
-
-**Common Configurations:**
-
-```typescript
-// Only show theme docs (hide core and plugins)
-documentation: {
-  theme: { enabled: true, open: true, label: "Documentation" },
-  plugins: { enabled: false, open: false, label: "Plugins" },
-  core: { enabled: false, open: false, label: "Core" }
-}
-
-// Show all but collapse by default
-documentation: {
-  theme: { enabled: true, open: false, label: "Theme" },
-  plugins: { enabled: true, open: false, label: "Extensions" },
-  core: { enabled: true, open: false, label: "System" }
-}
-
-// Production config (hide technical docs)
-documentation: {
-  theme: { enabled: true, open: true, label: "Help Center" },
-  plugins: { enabled: false, open: false, label: "Plugins" },
-  core: { enabled: false, open: false, label: "Core" },
-  showPluginsDocsInProd: false  // Additional prod check
-}
-```
+| `enabled` | boolean | Show/hide this category in the sidebar |
+| `open` | boolean | Whether the category is expanded by default on page load |
+| `label` | string | Custom label displayed in the sidebar for the category |
 
 ## Routing System
 
 ### URL Structure
 
-**Core Documentation:**
 ```text
-/docs/core/[section]/[page]
+/docs/[section]/[page]              → active theme's docs/public/
+/superadmin/docs/[section]/[page]   → active theme's docs/superadmin/
 
 Example:
-/docs/core/fundamentals/project-overview
-/docs/core/registry-system/introduction
+/docs/overview/introduction
+/superadmin/docs/setup/deployment
 ```
 
-**Theme Documentation:**
-```text
-/docs/theme/[section]/[page]
-
-Example:
-/docs/theme/customization/styling
-/docs/theme/features/components
-```
-
-**Plugin Documentation:**
-```text
-/docs/plugins/[plugin]/[section]/[page]
-
-Example:
-/docs/plugins/ai/features/chat-interface
-/docs/plugins/analytics/setup/configuration
-```
+Core and plugin docs have no URL - they are never scanned into the registry.
 
 ### Route Handlers
 
-**Core/Theme Pages:**
-- **File:** `app/(public)/docs/[category]/[section]/[page]/page.tsx`
-- **Dynamic Segments:** `category` (core | theme), `section`, `page`
+**Public Docs:**
+- **File:** `app/(public)/docs/[section]/[page]/page.tsx`
+- **Dynamic Segments:** `section`, `page`
 
-**Plugin Pages:**
-- **File:** `app/(public)/docs/plugins/[plugin]/[section]/[page]/page.tsx`
-- **Dynamic Segments:** `plugin`, `section`, `page`
+**Superadmin Docs:**
+- **File:** `app/superadmin/docs/[section]/[page]/page.tsx`
+- **Dynamic Segments:** `section`, `page`
 
 ### Page Rendering Flow
 
 ```typescript
 // 1. Resolve dynamic route parameters
-const { category, section, page } = params
+const { section, page } = params
 
 // 2. Lookup in registry
-const sectionData = DOCS_REGISTRY[category].find(s => s.slug === section)
+const sectionData = DOCS_REGISTRY.public.find(s => s.slug === section)
 const pageData = sectionData.pages.find(p => p.slug === page)
 
 // 3. Parse markdown file
@@ -288,27 +244,23 @@ return (
 **File:** `core/components/docs/docs-sidebar.tsx`
 
 **Responsibilities:**
-- Renders collapsible navigation tree
-- Groups by category (Core, Theme, Plugins)
+- Renders a collapsible navigation tree of the active theme's own sections
+  (no categories - only public documentation is shown, per the component's
+  own docstring: "Only shows public documentation (no plugins, no
+  categories)")
 - Highlights active page
 - Manages expand/collapse state
 
 **Structure:**
 ```text
 Sidebar
-├── Core (category)
-│   ├── Fundamentals (section)
-│   │   ├── Project Overview (page)
-│   │   └── Architecture (page)
-│   └── Registry System (section)
-│       └── ...
-├── Theme (category)
+├── Overview (section)
+│   ├── Introduction (page)
+│   └── Getting Started (page)
+├── Customization (section)
 │   └── ...
-└── Plugins (category)
-    ├── AI Plugin (plugin)
-    │   └── Features (section)
-    └── Analytics Plugin (plugin)
-        └── ...
+└── Features (section)
+    └── ...
 ```
 
 ### DocsContent
@@ -337,7 +289,7 @@ Sidebar
 
 **Example:**
 ```text
-Documentation > Core > Registry System > Introduction
+Documentation > Overview > Introduction
 ```
 
 ## Markdown Processing
@@ -393,24 +345,24 @@ description: Page description for SEO
 The docs system integrates with the core registry architecture:
 
 - **Build Script:** `core/scripts/build/registry.mjs`
-- **Output Location:** `core/lib/registries/docs-registry.ts`
-- **Import Pattern:** `import { DOCS_REGISTRY } from '@/core/lib/registries/docs-registry'`
+- **Output Location:** `<project>/.nextspark/registries/docs-registry.ts`
+- **Import Pattern:** `import { DOCS_REGISTRY } from '@nextsparkjs/registries/docs-registry'`
 
 ### Theme System
 
-Theme docs are automatically discovered based on active theme:
+The active theme's own docs are automatically discovered - and are the only
+docs served at all:
 
-- **Location:** `contents/themes/[ACTIVE_THEME]/docs/`
+- **Location:** `contents/themes/[ACTIVE_THEME]/docs/public/` and `docs/superadmin/`
 - **Detection:** Via `NEXT_PUBLIC_ACTIVE_THEME` environment variable
-- **Merging:** Theme docs appear as separate category in navigation
+- **Visibility:** Controlled via the `docs.public`/`docs.superadmin` configuration (`enabled`, `open`, `label` properties)
 
-### Plugin System
+### Core and Plugin Docs
 
-Plugin docs integrate with plugin activation:
-
-- **Location:** `contents/plugins/[plugin]/docs/`
-- **Discovery:** Based on active plugins in `theme.config.ts`
-- **Visibility:** Controlled via `documentation.plugins` configuration (`enabled`, `open`, `label` properties)
+`core/docs/` (this tree) and any `contents/plugins/[plugin]/docs/` are never
+scanned by the registry builder and have no route - see
+[Core vs Theme Documentation](./03-core-vs-theme-docs.md) for what that means
+in practice.
 
 ## Performance Characteristics
 

@@ -192,50 +192,29 @@ contents/plugins/ai/docs/
 
 ### Navigation Organization
 
-Documentation appears in the sidebar grouped by source:
-
-```text
-Documentation
-│
-├── 📚 Core Documentation
-│   ├── Fundamentals
-│   ├── Getting Started
-│   ├── Registry System
-│   └── ...
-│
-├── 🎨 Theme Documentation
-│   ├── Theme Overview
-│   ├── Customization
-│   └── ...
-│
-└── 🧩 Plugin Documentation
-    ├── AI Plugin
-    │   ├── Overview
-    │   └── Features
-    └── Analytics Plugin
-        └── ...
-```
+Only the **active theme's** own docs are ever rendered. The docs registry
+(`core/scripts/build/registry/generators/docs-registry.mjs`) scans
+`contents/themes/<active theme>/docs/public/` and
+`.../docs/superadmin/`; nothing else feeds it. Core's own `core/docs/` (this
+directory tree) and any plugin's `contents/plugins/<plugin>/docs/` are never
+scanned, so they have no page, no route, and no entry in either sidebar -
+they exist purely as reference material for someone reading the source tree.
 
 ### URL Structure
 
-Each source has its own URL namespace:
-
 ```text
-/docs/core/[section]/[page]           → Core docs
-/docs/theme/[section]/[page]          → Theme docs
-/docs/plugins/[plugin]/[section]/[page] → Plugin docs
+/docs/[section]/[page]                → active theme's docs/public/
+/superadmin/docs/[section]/[page]     → active theme's docs/superadmin/
 ```
 
-This prevents naming conflicts and maintains clear separation.
+Core and plugin docs have no URL at all.
 
-## Merge and Override Patterns
-
-### No Override Mechanism
+## No Override Mechanism
 
 Unlike code components, **documentation does not support overriding**:
 
-- Themes cannot override core documentation pages
-- Plugins cannot override core or theme documentation
+- A theme's docs are its own; nothing merges into or out of them
+- Core and plugin docs never reach a route, so there is nothing to override
 - Each source maintains independent documentation
 
 **Rationale:**
@@ -243,30 +222,20 @@ Unlike code components, **documentation does not support overriding**:
 - Theme/plugin docs describe extensions
 - Overriding would create confusion about actual system behavior
 
-### Additive Pattern
-
-Documentation sources are **additive**:
-
-```text
-Core Docs (15 sections)
-  +
-Theme Docs (3 sections)
-  +
-Plugin Docs (AI: 2 sections, Analytics: 1 section)
-  =
-Total: 21 sections in navigation
-```
-
 ### Cross-Referencing
 
-Documentation can reference other sources:
+A relative link only resolves when both files live in the same docs tree
+(`docs/public/` or `docs/superadmin/` of the same theme) - the remark plugin
+that rewrites `./page.md` links into routes
+(`core/lib/docs/remark-doc-links.ts`) leaves anything that escapes that tree
+untouched, because there is no route on the other end to point at:
 
 ```markdown
-<!-- In theme docs -->
-For core API authentication, see [API Authentication](../core/api/authentication.md)
+<!-- In theme docs: resolves, both files are in the theme's own docs/public/ -->
+See [Customization](../02-customization/01-overview.md)
 
-<!-- In plugin docs -->
-This plugin extends the [Entity System](../../core/entities/introduction.md)
+<!-- In theme docs: does NOT resolve - core/docs/ is never served -->
+For core API authentication, see the "API Authentication" page in core/docs/
 ```
 
 ## Best Practices
@@ -360,76 +329,35 @@ This theme provides custom styling for...
 
 ### Documentation Visibility Configuration
 
-All documentation categories can be controlled individually via `app.config.ts`:
+Since only the active theme's own `docs/public/` and `docs/superadmin/` are
+ever served, the `docs` block of `app.config.ts` (`DocsConfig` in
+`core/lib/config/types.ts`) only controls those two categories - there is no
+`theme`/`plugins`/`core` split to configure, because core and plugin docs
+never reach a route in the first place:
 
 ```typescript
 export const appConfig = {
-  documentation: {
-    // Theme documentation - Usually visible in production
-    theme: {
-      enabled: true,        // Show theme docs
-      open: true,           // Expanded by default
-      label: "User Guide",  // User-friendly label
-    },
+  docs: {
+    enabled: true,           // Turn the whole documentation system on/off
+    publicAccess: true,      // Serve /docs without requiring a session
+    searchEnabled: true,
+    breadcrumbs: true,
 
-    // Plugin documentation - Typically hidden in production
-    plugins: {
-      enabled: false,          // Hide plugin docs from end users
-      open: false,
-      label: "Plugins",
-    },
+    // /docs - the active theme's docs/public/
+    public: { enabled: true, open: true, label: 'Help Center' },
 
-    // Core documentation - Usually hidden in production
-    core: {
-      enabled: false,       // Hide technical core docs
-      open: false,
-      label: "Core",
-    },
-
-    // Legacy/additional check for plugin visibility
-    showPluginsDocsInProd: false,
-  }
+    // /superadmin/docs - the active theme's docs/superadmin/
+    superadmin: { enabled: true, open: false, label: 'Admin Docs' },
+  },
 }
 ```
-
-**Common Production Configurations:**
-
-```typescript
-// End-user focused (e-commerce, SaaS)
-documentation: {
-  theme: { enabled: true, open: true, label: "Help Center" },
-  plugins: { enabled: false, open: false, label: "Plugins" },
-  core: { enabled: false, open: false, label: "Core" }
-}
-
-// Developer/technical product
-documentation: {
-  theme: { enabled: true, open: true, label: "Customization" },
-  plugins: { enabled: true, open: false, label: "Extensions" },
-  core: { enabled: true, open: false, label: "API Reference" }
-}
-
-// Internal tool (all docs visible)
-documentation: {
-  theme: { enabled: true, open: true, label: "Theme Docs" },
-  plugins: { enabled: true, open: true, label: "Plugin Docs" },
-  core: { enabled: true, open: false, label: "Core Docs" }
-}
-```
-
-**Visibility Control:**
-
-| Category | Development | Production (Typical) | Use Case |
-|----------|-------------|---------------------|----------|
-| **Theme** | ✅ Visible | ✅ Visible | End-user customization guides |
-| **Plugins** | ✅ Visible | ❌ Hidden | Internal implementation details |
-| **Core** | ✅ Visible | ❌ Hidden | System architecture reference |
 
 **Best Practices:**
-- **`theme.enabled: true`** - Keep theme docs visible for user customization
-- **`plugins.enabled: false`** - Hide plugins docs unless public API
-- **`core.enabled: false`** - Hide core docs from end users
-- Use descriptive `label` values for production (e.g., "Help Center" instead of "Theme")
+- **`public.enabled: true`** - Keep the theme's user-facing docs visible
+- **`superadmin.enabled`** - Usually `true` for the team that runs the
+  instance; irrelevant to anonymous visitors, since `/superadmin/docs`
+  already sits behind the superadmin guard
+- Use a descriptive `label` for `public` in production (e.g. "Help Center")
 
 ### Theme Documentation
 

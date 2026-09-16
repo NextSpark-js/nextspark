@@ -15,6 +15,12 @@ interface DocsPageProps {
   }>
 }
 
+// generateStaticParams below enumerates every public doc page; a section/page
+// pair outside that list has no content to serve, so it must 404 instead of
+// falling through to an on-demand render that notFound() alone still caches
+// and serves with a 200 status.
+export const dynamicParams = false
+
 export async function generateStaticParams() {
   const params = []
 

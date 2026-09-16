@@ -62,17 +62,18 @@ Theme documentation is automatically discovered during build:
 // core/scripts/build/registry/generators/docs-registry.mjs
 const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME || 'default'
 
-const themeDocs = scanDocsDirectory(
-  `contents/themes/${activeTheme}/docs/`,
-  'theme'
+const publicDocs = scanDocsDirectory(
+  `contents/themes/${activeTheme}/docs/public/`,
+  'public'
 )
 ```
 
 **Key Points:**
 - Only the **active theme's** documentation is included
 - Automatic discovery (no manual registration)
-- Appears as "Theme Documentation" in navigation
-- Accessible at `/docs/theme/[section]/[page]`
+- Appears in the docs sidebar (no separate "Theme Documentation" category -
+  it is the only thing the sidebar ever shows)
+- Accessible at `/docs/[section]/[page]`
 
 ### Example Theme Documentation
 
@@ -104,6 +105,12 @@ For core system features, refer to core's own documentation (`packages/core/docs
 
 ## Adding Plugin Documentation
 
+A plugin's `docs/` directory is never scanned into the docs registry (see
+below), so nothing written here is ever served at a route. It is still
+useful as reference material for anyone reading the plugin's source, and the
+same directory/naming conventions as core and theme docs keep it consistent
+with the rest of the monorepo.
+
 ### Directory Structure
 
 Create a `docs/` directory within your plugin:
@@ -124,109 +131,60 @@ contents/plugins/my-plugin/
 └── messages/
 ```
 
-### Build-Time Discovery
+### Not Discovered at Build Time
 
-Plugin documentation is discovered based on active plugins:
+Unlike theme docs, a plugin's own `docs/` directory is **never scanned** by
+`docs-registry.mjs` - only `contents/themes/[ACTIVE_THEME]/docs/public/` and
+`.../docs/superadmin/` are. Activating a plugin (adding it to
+`theme.config.ts`) has no effect on the docs registry: writing
+`contents/plugins/my-plugin/docs/01-getting-started/01-installation.md`
+keeps that file as source-tree reference material, not a served page - it
+has no route at all.
 
-```javascript
-// core/scripts/build/registry/generators/docs-registry.mjs
-
-// 1. Get active plugins from theme.config.ts
-const activePlugins = getActiveThemePlugins(activeTheme)
-
-// 2. Scan docs for each active plugin
-const pluginDocs = []
-for (const pluginName of activePlugins) {
-  const pluginDocsPath = `contents/plugins/${pluginName}/docs/`
-  if (fs.existsSync(pluginDocsPath)) {
-    const sections = scanDocsDirectory(pluginDocsPath, 'plugin')
-    sections.forEach(section => {
-      section.pluginName = pluginName  // Tag with plugin name
-      pluginDocs.push(section)
-    })
-  }
-}
-```
-
-**Key Points:**
-- Only **active plugins** have documentation included
-- Plugin name automatically tagged on each section
-- Appears under "Plugin Documentation" in navigation
-- Accessible at `/docs/plugins/[plugin]/[section]/[page]`
+If a plugin's documentation needs to reach an actual reader, write it into
+the active theme's own `docs/public/` (or `docs/superadmin/`) instead, where
+it will be scanned and served like any other theme page.
 
 ### Production Visibility
 
-Control documentation visibility via `app.config.ts`:
+Control documentation visibility via the `docs` block of `app.config.ts`
+(`DocsConfig` in `core/lib/config/types.ts`) - it only configures the two
+categories that actually get served, `public` (`/docs`) and `superadmin`
+(`/superadmin/docs`):
 
 ```typescript
 // contents/themes/my-theme/config/app.config.ts
 export const appConfig = {
-  documentation: {
-    // Control search functionality in sidebar
-    searchEnabled: true,
+  docs: {
+    enabled: true,           // Turn the whole documentation system on/off
+    publicAccess: true,      // Serve /docs without requiring a session
+    searchEnabled: true,     // Control search functionality in sidebar
+    breadcrumbs: true,       // Show/hide breadcrumbs navigation
 
-    // Show/hide breadcrumbs navigation
-    breadcrumbs: true,
-
-    // Theme documentation configuration
-    theme: {
-      enabled: true,        // Show/hide theme docs in sidebar
+    // /docs - this theme's docs/public/
+    public: {
+      enabled: true,        // Show/hide in the sidebar
       open: true,           // Expand section by default
       label: "User Guide",  // Custom label for sidebar
     },
 
-    // Plugin documentation configuration
-    plugins: {
-      enabled: true,     // Show/hide plugin docs in sidebar
-      open: false,       // Collapse section by default
-      label: "Plugins",  // Custom label for sidebar
-    },
-
-    // Core documentation configuration
-    core: {
-      enabled: false,    // Hide technical docs from end users
+    // /superadmin/docs - this theme's docs/superadmin/
+    superadmin: {
+      enabled: true,
       open: false,
-      label: "Core",
+      label: "Admin Docs",
     },
-
-    // Legacy/additional production check
-    showPluginsDocsInProd: false,  // Additional prod check for plugins
   }
 }
 ```
 
-**Configuration Properties:**
+**Configuration Properties (`DocsCategoryConfig`):**
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `enabled` | boolean | Show/hide the entire category in sidebar |
-| `open` | boolean | Whether category is expanded by default on page load |
-| `label` | string | Custom label displayed in sidebar for the category |
-
-**Common Use Cases:**
-
-```typescript
-// Public SaaS - Show user-facing docs only
-documentation: {
-  theme: { enabled: true, open: true, label: "Help Center" },
-  plugins: { enabled: true, open: false, label: "Features" },
-  core: { enabled: false, open: false, label: "Core" }
-}
-
-// Internal System - Hide plugins from end users
-documentation: {
-  theme: { enabled: true, open: true, label: "Guide" },
-  plugins: { enabled: false, open: false, label: "Plugins" },
-  core: { enabled: false, open: false, label: "Core" }
-}
-
-// Developer Platform - Show all documentation
-documentation: {
-  theme: { enabled: true, open: true, label: "Theme" },
-  plugins: { enabled: true, open: true, label: "Extensions" },
-  core: { enabled: true, open: false, label: "API Reference" }
-}
-```
+| `enabled` | boolean | Show/hide this category in the sidebar |
+| `open` | boolean | Whether the category is expanded by default on page load |
+| `label` | string | Custom label displayed in the sidebar for the category |
 
 ### Example Plugin Documentation
 
@@ -281,60 +239,29 @@ See [Configuration](./02-configuration.md) for detailed setup options.
 
 ## Documentation Merge Strategy
 
-### Additive, Not Override
+### Nothing to Merge
 
-**Key Principle:** Documentation sources are **additive**, not hierarchical.
-
-```text
-Core Docs (15 sections)
-  +
-Theme Docs (3 sections)
-  +
-Plugin A Docs (2 sections)
-  +
-Plugin B Docs (1 section)
-  =
-Total: 21 sections
-```
-
-### No Override Mechanism
-
-Unlike component overrides, documentation **cannot override** core pages:
-
-❌ **This does NOT work:**
-```text
-core/docs/01-fundamentals/01-overview.md
-contents/themes/my-theme/docs/01-fundamentals/01-overview.md  ← Won't override
-```
-
-**Result:** Both files would appear as separate sections (not recommended).
-
-**Rationale:**
-- Core documentation describes actual system behavior
-- Overriding would create confusion about system functionality
-- Themes/plugins should document extensions, not replace core docs
+There is no merge: `/docs` and `/superadmin/docs` each show exactly one
+source, the active theme's own `docs/public/` and `docs/superadmin/`. Core
+docs and plugin docs are never scanned in the first place, so they cannot
+appear alongside a theme's docs, cannot override them, and there is no
+"additive" combination to reason about.
 
 ### Independent Sections
 
-Each source maintains independent sections:
+The docs sidebar only ever shows the active theme's own sections - see
+[DocsSidebar](./02-architecture.md#docssidebar):
 
 ```text
 Navigation Sidebar:
 
-📚 Core Documentation
-  ├── Fundamentals
-  ├── Registry System
-  └── API Reference
-
-🎨 Theme Documentation
-  ├── Theme Overview      ← Theme-specific
-  └── Customization
-
-🧩 Plugin Documentation
-  └── AI Plugin
-      ├── Getting Started  ← Plugin-specific
-      └── Features
+Overview
+Customization
+Features
+  ...
 ```
+
+Core and plugin docs never appear here, under any category.
 
 ## Cross-Referencing
 
@@ -350,20 +277,16 @@ For information about entities, see core's own Entity System documentation.
 This plugin extends core's own API System documentation.
 ```
 
-### Linking Between Plugins
+### Referring Between Plugins
 
-**Avoid hard dependencies between plugins:**
+The same applies between two plugins' docs: neither is served, so neither
+has a URL the other could link to. Name the other plugin by text instead of
+linking to it, and note that the feature is conditional on it being
+installed:
 
-❌ **Bad - Hard dependency:**
 ```markdown
 <!-- In plugin-a/docs/ -->
-This feature requires the [Analytics Plugin](/docs/plugins/analytics/setup).
-```
-
-✅ **Good - Conditional reference:**
-```markdown
-<!-- In plugin-a/docs/ -->
-This feature integrates with the Analytics Plugin if installed. See Analytics documentation for details.
+This feature integrates with the Analytics Plugin if installed.
 ```
 
 ### Linking Within Source
@@ -403,6 +326,9 @@ Refer to [Configuration](./02-configuration.md) for setup options.
 
 ### Plugin Documentation
 
+Never served (see [Adding Plugin Documentation](#adding-plugin-documentation)
+above) - written for someone reading the plugin's source, not for an end user.
+
 **DO:**
 - ✅ Document plugin capabilities clearly
 - ✅ Provide installation instructions
@@ -426,63 +352,39 @@ Refer to [Configuration](./02-configuration.md) for setup options.
 
 ### Development vs Production
 
-Documentation visibility can be configured independently for each category (Core, Theme, Plugins) using the `app.config.ts` configuration:
+Documentation visibility can be configured independently for `public`
+(`/docs`) and `superadmin` (`/superadmin/docs`) using the `docs` block of
+`app.config.ts` - there is no third category, since core and plugin docs are
+never served regardless of configuration:
 
-**Development Mode:**
+**End-user focused:**
 ```typescript
-// All documentation visible for developers
 export const appConfig = {
-  documentation: {
-    theme: { enabled: true, open: true, label: "Theme" },
-    plugins: { enabled: true, open: true, label: "Plugins" },
-    core: { enabled: true, open: true, label: "Core" },
+  docs: {
+    enabled: true,
+    publicAccess: true,
+    public: { enabled: true, open: true, label: "Help Center" },
+    superadmin: { enabled: true, open: false, label: "Admin Docs" },
   }
 }
 ```
 
-**Production Mode (End-User Focused):**
+**Admin docs hidden entirely:**
 ```typescript
-// Hide technical docs, show only user-facing documentation
 export const appConfig = {
-  documentation: {
-    theme: { enabled: true, open: true, label: "Help Center" },
-    plugins: { enabled: false, open: false, label: "Plugins" },
-    core: { enabled: false, open: false, label: "Core" },
-    showPluginsDocsInProd: false  // Additional check for plugins
-  }
-}
-```
-
-**Production Mode (Public API Product):**
-```typescript
-// Show API docs and extensions, hide theme customization
-export const appConfig = {
-  documentation: {
-    theme: { enabled: false, open: false, label: "Theme" },
-    plugins: { enabled: true, open: false, label: "Extensions" },
-    core: { enabled: true, open: true, label: "API Reference" },
+  docs: {
+    enabled: true,
+    publicAccess: true,
+    public: { enabled: true, open: true, label: "Documentation" },
+    superadmin: { enabled: false, open: false, label: "Admin Docs" },
   }
 }
 ```
 
 **Benefits:**
-- Granular control over documentation visibility
+- Independent control over `/docs` and `/superadmin/docs`
 - Different labels for different audiences
-- Can show/hide entire categories
 - Control default expansion state per category
-
-### Per-Plugin Visibility
-
-Currently, all plugins share the same visibility setting. To show/hide specific plugin docs, control which plugins are active:
-
-```typescript
-// theme.config.ts
-export const themeConfig = {
-  plugins: process.env.NODE_ENV === 'production'
-    ? ['essential-plugin']  // Only essential in prod
-    : ['essential-plugin', 'dev-plugin']  // All in dev
-}
-```
 
 ## Rebuilding Documentation
 
@@ -490,11 +392,13 @@ export const themeConfig = {
 
 Rebuild the documentation registry when:
 
-- Adding new documentation files
+- Adding new documentation files to the active theme's `docs/public/` or `docs/superadmin/`
 - Renaming or reordering sections/pages
-- Activating/deactivating plugins
 - Changing active theme
 - Modifying file/directory names
+
+Activating or deactivating a plugin does **not** affect the docs registry -
+plugin docs are never scanned into it.
 
 ### Build Command
 
@@ -515,50 +419,40 @@ pnpm dev
 
 ### Public SaaS Platform
 
-**Scenario:** Multi-tenant SaaS with themes and plugins
+**Scenario:** Multi-tenant SaaS, `/docs` open to visitors
 
-**Strategy:**
-- Core docs: System architecture and APIs
-- Theme docs: Customization and branding
-- Plugin docs: Feature-specific guides
-- Production: Show all documentation (`plugins.enabled: true`)
+**Strategy:** Write end-user customization and feature guides directly into
+the active theme's `docs/public/` (feature guides that happen to cover a
+plugin's functionality belong here too, since that is the only place
+they'll ever be read). Keep `docs.public.enabled: true`.
 
 **Example Navigation:**
 ```text
 Documentation
-├── Core (System Features)
-├── Theme (Customization)
-└── Plugins
-    ├── Analytics
-    ├── AI Assistant
-    └── Integrations
+├── Getting Started
+├── Customization
+└── Integrations
 ```
 
 ### White-Label Application
 
-**Scenario:** Custom-branded instance for enterprise client
+**Scenario:** Custom-branded instance for an enterprise client
 
-**Strategy:**
-- Core docs: Technical documentation
-- Theme docs: Brand-specific guidelines
-- Plugin docs: Hidden in production (`plugins.enabled: false`)
+**Strategy:** The theme's `docs/public/` holds the client-facing brand and
+usage guide; keep it the only thing under `/docs`.
 
 **Example Navigation:**
 ```text
 Documentation
-├── Core (System Features)
-└── Theme (Your Brand Guide)
+└── Your Brand Guide
 ```
 
 ### Internal Tool
 
 **Scenario:** Internal company application
 
-**Strategy:**
-- Core docs: Minimal system docs
-- Theme docs: Company-specific workflows
-- Plugin docs: Internal integrations
-- Production: Show all docs
+**Strategy:** `docs/public/` for the workflows every employee needs;
+`docs/superadmin/` for operator-only runbooks under `/superadmin/docs`.
 
 ## Troubleshooting
 
@@ -575,17 +469,11 @@ Documentation
 
 ### Plugin Docs Missing
 
-**Problem:** Plugin docs don't appear
-
-**Check:**
-1. Plugin is listed in `theme.config.ts` `plugins` array
-2. Plugin `docs/` directory exists
-3. Files follow naming convention
-4. Registry rebuilt after adding plugin
-
-**Production:**
-- Check `documentation.plugins.enabled` in `app.config.ts`
-- Verify `showPluginsDocsInProd` flag if using legacy check
+**This is expected, not a bug.** Plugin docs are never scanned into the
+registry and have no route at any level (development or production) - see
+[Adding Plugin Documentation](#adding-plugin-documentation). To make a
+plugin's guide reachable, write it into the active theme's `docs/public/`
+instead.
 
 ### Wrong Theme Docs Showing
 

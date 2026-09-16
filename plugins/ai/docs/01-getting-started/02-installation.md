@@ -226,22 +226,18 @@ OLLAMA_DEFAULT_MODEL=llama3.2:3b
 
 ## Step 4: Rebuild Registry
 
-After enabling the plugin, rebuild the registries:
+After enabling the plugin, rebuild the registries - there is a single
+command that regenerates all of them together (plugin registry included);
+there is no way to rebuild just one:
 
 ```bash
-# Rebuild all registries (includes plugins)
-pnpm registry:build
-
-# Or rebuild individual registries
-pnpm registry:build:plugins
-pnpm registry:build:docs
+pnpm build:registries
 ```
 
 **Expected Output:**
 ```
 ✓ Plugin registry built successfully
 ✓ AI plugin loaded
-✓ Docs registry built (includes plugin docs)
 ```
 
 ## Step 5: Verify Installation
@@ -355,7 +351,7 @@ cat contents/plugins/ai/.env | grep AI_PLUGIN_ENABLED
 # Should be: AI_PLUGIN_ENABLED=true
 
 # Rebuild registry
-pnpm registry:build:plugins
+pnpm build:registries
 ```
 
 ### Ollama Connection Failed
