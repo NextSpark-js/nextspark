@@ -325,8 +325,10 @@ describe('Entity Server Actions', () => {
         revalidateTags: ['entity-list', 'stats'],
       })
 
-      expect(revalidateTag).toHaveBeenCalledWith('entity-list')
-      expect(revalidateTag).toHaveBeenCalledWith('stats')
+      // The profile is what makes Next 16 expire the tag now instead of
+      // serving it stale while it revalidates.
+      expect(revalidateTag).toHaveBeenCalledWith('entity-list', { expire: 0 })
+      expect(revalidateTag).toHaveBeenCalledWith('stats', { expire: 0 })
     })
   })
 
