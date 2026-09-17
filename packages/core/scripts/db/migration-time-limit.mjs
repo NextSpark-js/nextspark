@@ -55,9 +55,29 @@
 // than committed or rolled back, ends its session outside a transaction too, so
 // none of the above notices it: the prepared transaction stays on the server,
 // neither applied nor undone, until something issues COMMIT PREPARED or
-// ROLLBACK PREPARED for it. A file whose prepared transactions this run did not
-// see before it ran is not recorded, and fails with an error naming each one and
-// the command that resolves it; neither is run for it.
+// ROLLBACK PREPARED for it.
+//
+// What tells the file's prepared transactions apart is the id the file writes
+// for each. Postgres takes that id only as a string constant, and runs PREPARE
+// TRANSACTION only as a statement of the query itself: inside a DO block, a
+// function, a procedure or an EXECUTE it refuses it. Before the file is sent,
+// the constant of each PREPARE TRANSACTION statement at the top level of its
+// text is picked out, skipping comments, quoted strings, quoted identifiers and
+// dollar quotes, and Postgres decodes it on the file's session, under the
+// session's standard_conforming_strings, which is what the file is read under.
+// An id this database already lists a transaction under then is left out. Once
+// the file has run, however it ended, this database's pg_prepared_xacts is read
+// for the others, whoever owns them: on the file's session when the server
+// answered the file, and otherwise, or when that read fails, on a connection of
+// its own. A file that leaves one prepared is not recorded, and fails with an
+// error naming each one and the command that resolves it; neither is run for
+// it. When the ids cannot be decoded the file is not run, and when they cannot
+// be read afterwards the error says so and names them.
+//
+// A transaction prepared under an id the file does not write, by another
+// session or by one the file opens itself (through dblink, for instance), is
+// not reported. One another session prepares under an id the file writes,
+// while the file runs, is taken for the file's.
 //
 // The limit is for the file, not for recording it as run. A migration that ran
 // to the end is recorded in its tracking table on the same session, and under a
@@ -132,13 +152,15 @@ export function ignoredParametersNotice(connectionString, limit) {
 }
 
 /** What a migration stopped partway leaves behind, and what to do before running the migrations again. */
-function leftBehind({ stillRunning }) {
+function leftBehind({ stillRunning, prepared = NONE_PREPARED }) {
   const committed = stillRunning
     ? 'It may still be running there, and what it commits, with a COMMIT in the file or in a procedure it calls, stays in the database.'
-    : 'What it had not committed is gone, but what it committed before it was stopped, with a COMMIT in the file or in a procedure it calls, stays in the database.';
-  return (
+    : `What it had ${mayLeavePrepared(prepared) ? 'neither committed nor left prepared' : 'not committed'} is gone, but what it committed ` +
+      'before it was stopped, with a COMMIT in the file or in a procedure it calls, stays in the database.';
+  return withSentences(
     `${committed} It is not recorded as run, so the next run starts the file over: ` +
-    'undo those changes, or make the file safe to run again, before running the migrations again.'
+      'undo those changes, or make the file safe to run again, before running the migrations again.',
+    preparedSentences(prepared, { stillRunning })
   );
 }
 
@@ -187,12 +209,14 @@ async function rollBackLeftTransaction(client, status) {
  * and what the migration leaves behind; the runner prints it next to the file's
  * name. A file the server answers inside a transaction fails too, once that
  * transaction is rolled back, so it is never recorded as run. A file that
- * leaves a transaction prepared, rather than committed, rolled back, or left
- * open, fails too, naming it and how to resolve it; nothing resolves it here.
+ * leaves prepared a transaction it names in PREPARE TRANSACTION fails too,
+ * however it ended, naming it and how to resolve it; nothing resolves it here.
  */
 export async function runMigrationSql(client, { sql, limit, connectionString }) {
-  // Read before listening for the file's own ReadyForQuery: this query's is answered, and consumed, first.
-  const preparedBefore = await preparedTransactionGids(client);
+  // Read before listening for the file's own ReadyForQuery: these queries' are answered, and consumed, first.
+  const named = await transactionsTheFileNames(client, sql);
+  const preparedNow = async ({ onSession }) =>
+    named.length === 0 ? NONE_PREPARED : preparedLeft(named, { client, onSession, connectionString, limit });
   const sentAt = performance.now();
   const answered = nextTransactionStatus(client);
   let result;
@@ -201,20 +225,25 @@ export async function runMigrationSql(client, { sql, limit, connectionString }) 
   } catch (error) {
     const elapsedMs = performance.now() - sentAt;
     // Only an error the server sent comes with the status it answered the file with; a client that gave up has none coming
-    const rolledBack = error instanceof DatabaseError ? await rollBackLeftTransaction(client, await answered) : null;
-    if (!limit) throw failedInsideTransaction(error, rolledBack);
+    const answeredByServer = error instanceof DatabaseError;
+    const rolledBack = answeredByServer ? await rollBackLeftTransaction(client, await answered) : null;
 
-    // The server cancelled a statement, which leaves nothing of the file it had not committed
-    if (error.code === '57014') {
+    // The server cancelled a statement, which ends the file there
+    if (limit && error.code === '57014') {
+      const prepared = await preparedNow({ onSession: answeredByServer });
       const cancelled = `the server cancelled it after ${Math.floor(elapsedMs)} ms`;
       const stopped =
         elapsedMs < limit.statementMs
           ? `${cancelled}, before ${TIME_LIMIT_VARIABLE} (${limit.seconds} s) ran out`
           : `did not finish within ${limit.seconds} s (${TIME_LIMIT_VARIABLE}); ${cancelled}`;
-      throw new Error(`${stopped}: ${error.message}. ${leftBehind({ stillRunning: false })}`);
+      throw new Error(`${stopped}: ${error.message}. ${leftBehind({ stillRunning: false, prepared })}`);
     }
 
-    if (error.message !== 'Query read timeout') throw failedInsideTransaction(error, rolledBack);
+    if (!limit || error.message !== 'Query read timeout') {
+      // Nothing but an answer from the server says the file is no longer running there
+      const prepared = await preparedNow({ onSession: answeredByServer });
+      throw failedInsideTransaction(error, rolledBack, prepared, { stillRunning: !answeredByServer });
+    }
 
     // The limit has passed with no answer, and the statement may still be running
     // there. The client lets go of its connection first: a session the server
@@ -222,26 +251,34 @@ export async function runMigrationSql(client, { sql, limit, connectionString }) 
     const processID = client.processID;
     await client.end();
     const ended = await endSession(connectionString, processID, limit);
+    const prepared = await preparedNow({ onSession: false });
     throw new Error(
       `did not finish within ${limit.seconds} s (${TIME_LIMIT_VARIABLE}); ` +
       (ended === true
-        ? `its session on the server was ended. ${leftBehind({ stillRunning: false })}`
-        : `its session on the server could not be ended: ${ended}. ${leftBehind({ stillRunning: true })}`)
+        ? `its session on the server was ended. ${leftBehind({ stillRunning: false, prepared })}`
+        : `its session on the server could not be ended: ${ended}. ${leftBehind({ stillRunning: true, prepared })}`)
     );
   }
 
   const rolledBack = await rollBackLeftTransaction(client, await answered);
+  const prepared = await preparedNow({ onSession: true });
   if (rolledBack) {
     throw new Error(
-      `the file ends inside a transaction it opened and did not close; ${rolledBack}: ${TRANSACTIONAL_ONLY}, ` +
-      'and it is not recorded as run, so the next run starts the file over. Anything it committed before opening that transaction ' +
-      'stays in the database. Add the COMMIT the file is missing, and undo anything it committed or make the file safe to run again, ' +
-      'before running the migrations again.'
+      withSentences(
+        `the file ends inside a transaction it opened and did not close; ${rolledBack}: ${TRANSACTIONAL_ONLY}, ` +
+          'and it is not recorded as run, so the next run starts the file over. Anything it committed before opening that transaction ' +
+          'stays in the database. Add the COMMIT the file is missing, and undo anything it committed or make the file safe to run again, ' +
+          'before running the migrations again.',
+        preparedSentences(prepared, { stillRunning: false })
+      )
     );
   }
-
-  const leftPrepared = await leftoverPrepared(client, preparedBefore);
-  if (leftPrepared.length > 0) throw new Error(leftoverPreparedMessage(leftPrepared));
+  if (prepared.unchecked !== undefined) {
+    throw new Error(
+      `the file ran to the end, and it is not recorded as run, so the next run starts the file over. ${preparedSentences(prepared, { stillRunning: false })}`
+    );
+  }
+  if (prepared.left.length > 0) throw new Error(leftoverPreparedMessage(prepared.left));
 
   return result;
 }
@@ -250,55 +287,322 @@ export async function runMigrationSql(client, { sql, limit, connectionString }) 
 const TRANSACTIONAL_ONLY = 'its transactional changes inside it are undone, but effects that are not transactional, ' +
   'such as a sequence advanced with nextval or set with setval, are not';
 
-/** The error a file that failed inside a transaction it had not closed fails with, or the server's own when it was not in one. */
-function failedInsideTransaction(error, rolledBack) {
-  if (!rolledBack) return error;
-  return new Error(
-    `${error.message}. It failed inside a transaction it had not closed, and ${rolledBack}: ${TRANSACTIONAL_ONLY}. ` +
-    'Anything it committed before opening that transaction stays in the database, and it is not recorded as run, so the next run ' +
-    'starts the file over.',
-    { cause: error }
-  );
+/**
+ * The error a file that failed fails with: the server's own, unless it failed
+ * inside a transaction it had not closed, or there is something to say about the
+ * transactions it names in PREPARE TRANSACTION. `stillRunning` when nothing says
+ * the file is no longer running on the server.
+ */
+function failedInsideTransaction(error, rolledBack, prepared = NONE_PREPARED, { stillRunning = false } = {}) {
+  const sentences = preparedSentences(prepared, { stillRunning });
+  if (!rolledBack && !sentences) return error;
+  const outcome = rolledBack
+    ? `It failed inside a transaction it had not closed, and ${rolledBack}: ${TRANSACTIONAL_ONLY}. ` +
+      'Anything it committed before opening that transaction stays in the database, and it is not recorded as run, so the next run ' +
+      'starts the file over.'
+    : 'It is not recorded as run, so the next run starts the file over.';
+  return new Error(withSentences(`${error.message}. ${outcome}`, sentences), { cause: error });
 }
 
+/** How long a connection of the run's own, beside the migration's, waits to connect and for each answer. */
+function sideConnectionWaitMs(limit) {
+  return limit ? Math.min(5000, limit.statementMs) : 5000;
+}
+
+/** The outcome for a file that names no transaction in PREPARE TRANSACTION. */
+const NONE_PREPARED = Object.freeze({ named: [], left: [], unlisted: [] });
+
 /**
- * The prepared-transaction ids this client's session sees for the current
- * database and user, scoped so a transaction another session or user prepared
- * is never mistaken for one this file left. Null when the read itself failed:
- * that is a connection problem the file's own query surfaces on its own, not
- * something to report as the file's doing.
+ * The ids a file's top-level PREPARE TRANSACTION statements name that this
+ * database lists no prepared transaction under before the file runs, as the
+ * server decodes them on the file's session. The file is not run when they
+ * cannot be read.
  */
-async function preparedTransactionGids(client) {
+async function transactionsTheFileNames(client, sql) {
+  // A PREPARE keyword is these letters in a row: nothing in SQL stands for a keyword's letters
+  if (!/prepare/i.test(sql)) return [];
+  let constants = [];
   try {
-    const result = await client.query(
-      'SELECT gid FROM pg_prepared_xacts WHERE database = current_database() AND owner = current_user'
+    const setting = await client.query({ text: 'SHOW standard_conforming_strings', rowMode: 'array' });
+    constants = preparedTransactionConstants(sql, { standardConformingStrings: setting.rows[0]?.[0] !== 'off' });
+    if (constants.length === 0) return [];
+    const rows = await preparedAmong(client, constants);
+    return [...new Set(rows.filter(([, listed]) => listed === null).map(([gid]) => gid))];
+  } catch (error) {
+    throw new Error(
+      `the file was not run: reading the transaction ids its PREPARE TRANSACTION statements name` +
+        `${constants.length > 0 ? ` (${constants.join(', ')})` : ''} failed: ${error.message}. It is not recorded as run.`,
+      { cause: error }
     );
-    return new Set(result.rows.map(row => row.gid));
-  } catch {
-    return null;
   }
 }
 
-/** The gids of prepared transactions the file left that were not there before it ran, or none when either read failed. */
-async function leftoverPrepared(client, before) {
-  if (!before) return [];
-  const after = await preparedTransactionGids(client);
-  return after ? [...after].filter(gid => !before.has(gid)) : [];
+/**
+ * For each id constant, [the id it stands for, that id again when this database
+ * lists a prepared transaction under it, or null]. The constants go into the
+ * statement as the file writes them; the extended protocol holds it to a single
+ * statement.
+ */
+async function preparedAmong(client, constants) {
+  const result = await client.query({
+    text:
+      `SELECT named.gid, listed.gid FROM (VALUES ${constants.map(constant => `(${constant})`).join(', ')}) AS named (gid) ` +
+      'LEFT JOIN pg_catalog.pg_prepared_xacts AS listed ON listed.gid = named.gid AND listed.database = pg_catalog.current_database()',
+    rowMode: 'array',
+    queryMode: 'extended',
+  });
+  return result.rows;
 }
 
-/** What the runner says about a file that leaves one or more transactions prepared, and how to resolve each. */
+/**
+ * Which of the ids `named` this database lists a prepared transaction under:
+ * `left`, and the rest, `unlisted`; or `unchecked`, why that could not be read.
+ * It is read on the file's session when `onSession`, and otherwise, or when that
+ * read fails, on a connection of its own.
+ */
+async function preparedLeft(named, { client, onSession, connectionString, limit }) {
+  const constants = named.map(escapeLiteral);
+  const outcome = rows => {
+    const left = rows.filter(([, listed]) => listed !== null).map(([gid]) => gid);
+    return { named, left, unlisted: named.filter(gid => !left.includes(gid)) };
+  };
+  const unchecked = error => ({ named, left: [], unlisted: [], unchecked: error.message });
+  if (onSession) {
+    try {
+      return outcome(await preparedAmong(client, constants));
+    } catch {
+      // read on a connection of its own instead, which says why when it cannot either
+    }
+  }
+  const waitMs = sideConnectionWaitMs(limit);
+  const own = timeLimitedClient(connectionString, { connectMs: waitMs, statementMs: waitMs, queryMs: waitMs });
+  try {
+    await own.connect();
+  } catch (error) {
+    return unchecked(error);
+  }
+  try {
+    return outcome(await preparedAmong(own, constants));
+  } catch (error) {
+    return unchecked(error);
+  } finally {
+    await own.end();
+  }
+}
+
+/** Whether the file may have left a transaction prepared, as far as the outcome goes. */
+function mayLeavePrepared({ left, unchecked }) {
+  return left.length > 0 || unchecked !== undefined;
+}
+
+/** The text, followed by the sentences when there are any. */
+function withSentences(text, sentences) {
+  return sentences ? `${text} ${sentences}` : text;
+}
+
+/** Each id with the commands that resolve the transaction prepared under it. */
+function resolvingEach(gids) {
+  return gids
+    .map(gid => {
+      const literal = escapeLiteral(gid);
+      return `${literal}: ROLLBACK PREPARED ${literal} undoes its transactional changes (not effects such as a sequence), ` +
+        `COMMIT PREPARED ${literal} applies them`;
+    })
+    .join('; ');
+}
+
+/**
+ * What an error says about the transactions a file names in PREPARE
+ * TRANSACTION, or '' when there is nothing to say: the ones it leaves prepared,
+ * the ones that could not be checked, and, while it may still be running, the
+ * ones it has not prepared yet.
+ */
+function preparedSentences({ named, left, unlisted, unchecked }, { stillRunning }) {
+  const theOnes = gids => (gids.length > 1 ? 'the transactions it names in PREPARE TRANSACTION' : 'the transaction it names in PREPARE TRANSACTION');
+  const sentences = [];
+  if (unchecked !== undefined) {
+    sentences.push(
+      `Whether it leaves prepared ${theOnes(named)} could not be checked (${unchecked}). ` +
+        `${named.length > 1 ? 'For each one pg_prepared_xacts lists' : 'If pg_prepared_xacts lists it'}: ${resolvingEach(named)}.`
+    );
+  }
+  if (left.length > 0) {
+    const plural = left.length > 1;
+    sentences.push(
+      `It leaves ${plural ? 'transactions' : 'a transaction'} prepared, neither committed nor rolled back: ${resolvingEach(left)}. ` +
+        `Resolve ${plural ? 'each one' : 'it'} before running the migrations again; nothing resolves ${plural ? 'them' : 'it'} on its own.`
+    );
+  }
+  if (stillRunning && unlisted.length > 0) {
+    sentences.push(
+      `It may yet leave prepared ${theOnes(unlisted)}, which pg_prepared_xacts does not list yet. ` +
+        `${unlisted.length > 1 ? 'For each one it comes to list' : 'Once it does'}: ${resolvingEach(unlisted)}.`
+    );
+  }
+  return sentences.join(' ');
+}
+
+/** What the runner says about a file that ran to the end and leaves one or more transactions prepared, and how to resolve each. */
 function leftoverPreparedMessage(gids) {
   const plural = gids.length > 1;
-  const resolve = gid => {
-    const literal = escapeLiteral(gid);
-    return `${literal}: ROLLBACK PREPARED ${literal} undoes its transactional changes (not effects such as a sequence), ` +
-      `COMMIT PREPARED ${literal} applies them`;
-  };
   return (
     `the file leaves ${plural ? 'transactions' : 'a transaction'} prepared, neither committed nor rolled back: ` +
-    `${gids.map(resolve).join('; ')}. It is not recorded as run, so the next run starts the file over: resolve ` +
+    `${resolvingEach(gids)}. It is not recorded as run, so the next run starts the file over: resolve ` +
     `${plural ? 'each one' : 'it'} before running the migrations again. Nothing resolves it on its own.`
   );
+}
+
+const SPACE = /[ \t\n\r\f\v]/;
+const HORIZONTAL_SPACE = /[ \t\f\v]/;
+const NEWLINE = /[\n\r]/;
+const IDENTIFIER_START = /[A-Za-z_-￿]/;
+const IDENTIFIER_PART = /[A-Za-z0-9_$-￿]/;
+const DOLLAR_QUOTE = /\$(?:[A-Za-z_-￿][A-Za-z0-9_-￿]*)?\$/y;
+
+/**
+ * The string constant of each PREPARE TRANSACTION statement at the top level
+ * of a query string, as the string writes it: '…', E'…', U&'…' with the
+ * UESCAPE clause after it, or a dollar-quoted string, together with the strings
+ * a quote continues it into across a newline. The string is read as Postgres's
+ * scanner reads it under the standard_conforming_strings given: -- and nested
+ * block comments, quoted strings, quoted identifiers and dollar quotes are not
+ * searched. A string or dollar quote that does not end is not a constant, and
+ * the server refuses the query it is in.
+ */
+export function preparedTransactionConstants(sql, { standardConformingStrings = true } = {}) {
+  const tokens = [];
+  for (let start = afterSpace(sql, 0); start < sql.length; ) {
+    const [kind, end] = tokenAt(sql, start, standardConformingStrings);
+    tokens.push({ kind, start, end, word: kind === 'word' ? sql.slice(start, end).replace(/[A-Z]/g, letter => letter.toLowerCase()) : null });
+    start = afterSpace(sql, end);
+  }
+  return tokens.flatMap((token, index) => {
+    const startsStatement = index === 0 || tokens[index - 1].kind === ';';
+    const constant = tokens[index + 2];
+    return startsStatement && token.word === 'prepare' && tokens[index + 1]?.word === 'transaction' && constant?.kind === 'constant'
+      ? [sql.slice(constant.start, constant.end)]
+      : [];
+  });
+}
+
+/** Where the whitespace and comments from `i` on end. */
+function afterSpace(sql, i) {
+  for (;;) {
+    if (SPACE.test(sql.charAt(i))) i++;
+    else if (sql.startsWith('--', i)) {
+      while (i < sql.length && !NEWLINE.test(sql.charAt(i))) i++;
+    } else if (sql.startsWith('/*', i)) {
+      let depth = 0;
+      do {
+        if (sql.startsWith('/*', i)) {
+          depth++;
+          i += 2;
+        } else if (sql.startsWith('*/', i)) {
+          depth--;
+          i += 2;
+        } else i++;
+      } while (depth > 0 && i < sql.length);
+    } else return i;
+  }
+}
+
+/**
+ * The kind of the token that starts at `i`, and where it ends: 'word' for a
+ * keyword or an unquoted identifier, 'constant' for a string constant PREPARE
+ * TRANSACTION takes, ';', or 'other'. One that does not end runs to the end of
+ * the string, as 'other'.
+ */
+function tokenAt(sql, i, standardConformingStrings) {
+  const unended = ['other', sql.length];
+  const quoted = (end, kind = 'constant') => (end === -1 ? unended : [kind, end]);
+  const char = sql.charAt(i);
+  if (char === "'") return quoted(quotedStringEnd(sql, i, { backslashes: !standardConformingStrings, doubled: true }));
+  if (/^[eE]'/.test(sql.slice(i, i + 2))) return quoted(quotedStringEnd(sql, i + 1, { backslashes: true, doubled: true }));
+  if (/^[uU]&'/.test(sql.slice(i, i + 3))) {
+    const end = quotedStringEnd(sql, i + 2, { backslashes: false, doubled: true });
+    return end === -1 ? unended : ['constant', withUnicodeEscapeClause(sql, end, standardConformingStrings)];
+  }
+  // bit strings, which PREPARE TRANSACTION does not take
+  if (/^[bBxX]'/.test(sql.slice(i, i + 2))) return quoted(quotedStringEnd(sql, i + 1, { backslashes: false, doubled: false }), 'other');
+  if (char === '"') return quoted(quotedIdentifierEnd(sql, i), 'other');
+  if (/^[uU]&"/.test(sql.slice(i, i + 3))) return quoted(quotedIdentifierEnd(sql, i + 2), 'other');
+  if (char === '$') {
+    DOLLAR_QUOTE.lastIndex = i;
+    const delimiter = DOLLAR_QUOTE.exec(sql)?.[0];
+    if (delimiter) {
+      const close = sql.indexOf(delimiter, i + delimiter.length);
+      return close === -1 ? unended : ['constant', close + delimiter.length];
+    }
+  }
+  if (IDENTIFIER_START.test(char)) {
+    let end = i + 1;
+    while (IDENTIFIER_PART.test(sql.charAt(end))) end++;
+    return ['word', end];
+  }
+  if (/[0-9]/.test(char)) {
+    let end = i + 1;
+    while (/[0-9A-Za-z_.]/.test(sql.charAt(end))) end++;
+    return ['other', end];
+  }
+  return [char === ';' ? ';' : 'other', i + 1];
+}
+
+/**
+ * Where the quoted string whose opening quote is at `i` ends, including the
+ * strings a quote continues it into, or -1 when it does not end. A backslash
+ * escapes the character after it when `backslashes`, and two quotes stand for
+ * one when `doubled`.
+ */
+function quotedStringEnd(sql, i, { backslashes, doubled }) {
+  for (i++; i < sql.length; ) {
+    const char = sql.charAt(i);
+    if (backslashes && char === '\\') i += 2;
+    else if (char !== "'") i++;
+    else if (doubled && sql.charAt(i + 1) === "'") i += 2;
+    else {
+      const next = continuingQuote(sql, i + 1);
+      if (next === -1) return i + 1;
+      i = next + 1;
+    }
+  }
+  return -1;
+}
+
+/**
+ * Where the quote that continues a string whose closing quote is just before
+ * `i` is, or -1 when none does: Postgres joins two strings when what separates
+ * them is whitespace with at least one newline in it, and -- comments.
+ */
+function continuingQuote(sql, i) {
+  let newline = false;
+  for (;;) {
+    const char = sql.charAt(i);
+    if (NEWLINE.test(char)) {
+      newline = true;
+      i++;
+    } else if (HORIZONTAL_SPACE.test(char)) i++;
+    else if (sql.startsWith('--', i)) {
+      while (i < sql.length && !NEWLINE.test(sql.charAt(i))) i++;
+    } else return char === "'" && newline ? i : -1;
+  }
+}
+
+/** Where the quoted identifier whose opening quote is at `i` ends, or -1 when it does not end. */
+function quotedIdentifierEnd(sql, i) {
+  for (i++; i < sql.length; i++) {
+    if (sql.charAt(i) !== '"') continue;
+    if (sql.charAt(i + 1) !== '"') return i + 1;
+    i++;
+  }
+  return -1;
+}
+
+/** Where a U&'…' string that ends at `end` ends together with the UESCAPE clause that follows it, if one does. */
+function withUnicodeEscapeClause(sql, end, standardConformingStrings) {
+  const keyword = afterSpace(sql, end);
+  if (sql.slice(keyword, keyword + 7).toLowerCase() !== 'uescape' || IDENTIFIER_PART.test(sql.charAt(keyword + 7))) return end;
+  const [kind, clauseEnd] = tokenAt(sql, afterSpace(sql, keyword + 7), standardConformingStrings);
+  return kind === 'constant' ? clauseEnd : end;
 }
 
 /** A migration that ran to the end and could not be recorded as run. */
@@ -351,7 +655,7 @@ export function migrationFailure(file, error) {
  */
 async function endSession(connectionString, processID, limit) {
   if (!Number.isInteger(processID)) return 'the server never said which session it was';
-  const waitMs = Math.min(5000, limit.statementMs);
+  const waitMs = sideConnectionWaitMs(limit);
   const admin = timeLimitedClient(connectionString, { connectMs: waitMs, statementMs: waitMs, queryMs: waitMs });
   try {
     await admin.connect();

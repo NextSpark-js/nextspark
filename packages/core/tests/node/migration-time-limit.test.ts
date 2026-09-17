@@ -9,10 +9,13 @@
  * to the end is not held to the limit, and a record that fails says the file ran
  * and gives the INSERT that records it. A migration the server answers inside a
  * transaction, open or failed, has that transaction rolled back and is not
- * recorded, with or without a limit. The runner is exercised against
- * a stand-in server that speaks enough of the wire protocol to connect, answer
- * queries, cancel a statement at its statement_timeout the way Postgres does,
- * keep a statement_timeout a query sets, or go silent.
+ * recorded, with or without a limit. A migration that leaves prepared a
+ * transaction it names in PREPARE TRANSACTION is not recorded, however it ended,
+ * and one another session prepares meanwhile is not taken for it. The runner is
+ * exercised against a stand-in server that speaks enough of the wire protocol to
+ * connect, answer queries, with rows when told to, cancel a statement at its
+ * statement_timeout the way Postgres does, keep a statement_timeout a query
+ * sets, or go silent.
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -27,6 +30,7 @@ import {
   RECORD_WAIT_MS,
   migrationClient,
   migrationTimeLimit,
+  preparedTransactionConstants,
   recordMigration,
   runMigrationSql,
 } from '../../scripts/db/migration-time-limit.mjs'
@@ -44,6 +48,7 @@ type TestContext = { after: (fn: () => void) => void }
  *  - 'stuck': never finishes, so only a statement_timeout in effect cancels it
  *  - 'silent': never answers anything again, statement_timeout or not
  *  - { error: [code, message] }: fails at once with that SQLSTATE and message
+ *  - { rows }: answers at once with those rows, each value text or null
  *
  * A parameterised query is treated the same way when it is executed, by its SQL.
  *
@@ -52,7 +57,8 @@ type TestContext = { after: (fn: () => void) => void }
  * `set_config(…, false)` change it for the session, `SET LOCAL` and
  * `set_config(…, true)` only for the query that sets it.
  */
-type Treatment = 'ok' | 'stuck' | 'silent' | { slowMs: number } | { error: [string, string] }
+type Row = (string | null)[]
+type Treatment = 'ok' | 'stuck' | 'silent' | { slowMs: number } | { error: [string, string] } | { rows: Row[] }
 
 interface Session {
   pid: number
@@ -115,13 +121,36 @@ async function standInPostgres(t: TestContext, treat: (sql: string) => Treatment
       buffer.writeInt32BE(value)
       return buffer
     }
+    const int16 = (value: number) => {
+      const buffer = Buffer.alloc(2)
+      buffer.writeInt16BE(value)
+      return buffer
+    }
     const text = (value: string) => Buffer.from(`${value}\0`)
-    // A BEGIN a query leaves without a COMMIT or ROLLBACK after it keeps the session in a transaction,
-    // which a failed statement leaves failed
+    // A BEGIN a query leaves without a COMMIT, ROLLBACK or PREPARE TRANSACTION after it keeps the session
+    // in a transaction, which a failed statement leaves failed
     let transaction: 'I' | 'T' | 'E' = 'I'
     const readyForQuery = () => message('Z', Buffer.from(transaction))
-    const commandComplete = () => {
-      message('C', text('SELECT 0'))
+    // text columns, all named gid
+    const rowDescription = (columns: number) =>
+      message(
+        'T',
+        Buffer.concat([
+          int16(columns),
+          ...Array.from({ length: columns }, () => Buffer.concat([text('gid'), int32(0), int16(0), int32(25), int16(-1), int32(-1), int16(0)])),
+        ])
+      )
+    const dataRows = (rows: Row[]) => {
+      for (const row of rows) {
+        message('D', Buffer.concat([int16(row.length), ...row.map(value => (value === null ? int32(-1) : Buffer.concat([int32(Buffer.byteLength(value)), Buffer.from(value)])))]))
+      }
+    }
+    const commandComplete = (rows?: Row[]) => {
+      if (rows) {
+        rowDescription(rows[0]?.length ?? 0)
+        dataRows(rows)
+      }
+      message('C', text(`SELECT ${rows?.length ?? 0}`))
       readyForQuery()
     }
 
@@ -129,13 +158,13 @@ async function standInPostgres(t: TestContext, treat: (sql: string) => Treatment
       Buffer.concat([text('SERROR'), text(`C${code}`), text(`M${reason}`), Buffer.from('\0')])
 
     /** Runs a statement as its treatment says, under the statement_timeout in effect. */
-    const execute = (sql: string, complete: () => void, fail: (fields: Buffer) => void) => {
+    const execute = (sql: string, complete: (rows?: Row[]) => void, fail: (fields: Buffer) => void) => {
       session.queries.push(sql)
       session.receivedAt.set(sql, Date.now())
       const treatment = treat(sql)
       const timeout = statementTimeoutFor(sql, session.statementTimeout)
       session.statementTimeout = timeout.session
-      for (const [statement] of sql.matchAll(/\b(BEGIN|COMMIT|ROLLBACK)\s*(?:;|$)/gi)) {
+      for (const [statement] of sql.matchAll(/\b(BEGIN|COMMIT|ROLLBACK|PREPARE\s+TRANSACTION\s+'[^']*')\s*(?:;|$)/gi)) {
         transaction = /^BEGIN/i.test(statement) ? 'T' : 'I'
       }
       const failed = (fields: Buffer) => {
@@ -143,11 +172,12 @@ async function standInPostgres(t: TestContext, treat: (sql: string) => Treatment
         fail(fields)
       }
       if (typeof treatment === 'object' && 'error' in treatment) return failed(error(...treatment.error))
+      if (typeof treatment === 'object' && 'rows' in treatment) return complete(treatment.rows)
       const runsMs = treatment === 'stuck' ? Infinity : typeof treatment === 'object' ? treatment.slowMs : undefined
       if (treatment === 'ok') complete()
       else if (runsMs !== undefined && timeout.query > 0 && timeout.query < runsMs) {
         later(timeout.query, () => failed(error('57014', 'canceling statement due to statement timeout')))
-      } else if (typeof treatment === 'object') later(treatment.slowMs, complete)
+      } else if (typeof treatment === 'object') later(treatment.slowMs, () => complete())
     }
 
     let pending = Buffer.alloc(0)
@@ -196,24 +226,28 @@ async function standInPostgres(t: TestContext, treat: (sql: string) => Treatment
             continue
           }
           // the ReadyForQuery after an error comes in a later packet, which a real server's can too
-          execute(sql, commandComplete, fields => {
+          execute(sql, rows => commandComplete(rows), fields => {
             message('E', fields)
             later(20, readyForQuery)
           })
         }
-        // The extended protocol, which parameterised queries use: no rows for any of them, and
+        // The extended protocol, which parameterised queries use: rows only for a { rows } treatment, and
         // Sync is answered once the statement it follows has
         else if (type === 'P') {
           parsed = body.subarray(body.indexOf(0) + 1, body.indexOf(0, body.indexOf(0) + 1)).toString()
           message('1')
         } else if (type === 'B') message('2')
-        else if (type === 'D') message('n')
-        else if (type === 'E') {
+        else if (type === 'D') {
+          const treatment = treat(parsed)
+          if (typeof treatment === 'object' && 'rows' in treatment && treatment.rows.length > 0) rowDescription(treatment.rows[0].length)
+          else message('n')
+        } else if (type === 'E') {
           executed = new Promise<void>(resolve => {
             execute(
               parsed,
-              () => {
-                message('C', text('SELECT 0'))
+              rows => {
+                if (rows) dataRows(rows)
+                message('C', text(`SELECT ${rows?.length ?? 0}`))
                 resolve()
               },
               fields => {
@@ -585,9 +619,12 @@ function trackedWith(table: string, sql: string) {
 const TABLES = ['_migrations', '_content_migrations', '_entity_migrations']
 const WITH_AND_WITHOUT_LIMIT: Record<string, string>[] = [{ MIGRATION_TIMEOUT_SECONDS: '0.5' }, {}]
 
-/** Runs the tracked migrations with `sql` as the file recorded in `table`, against a stand-in that treats that file as given. */
-async function runTrackedWith(t: TestContext, table: string, sql: string, treatment: Treatment, limit: Record<string, string>) {
-  const server = await standInPostgres(t, query => (query === sql ? treatment : 'ok'))
+/**
+ * Runs the tracked migrations with `sql` as the file recorded in `table`, against a stand-in that treats that file as
+ * given, or every query as a function given says.
+ */
+async function runTrackedWith(t: TestContext, table: string, sql: string, treatment: Treatment | ((query: string) => Treatment), limit: Record<string, string>) {
+  const server = await standInPostgres(t, typeof treatment === 'function' ? treatment : query => (query === sql ? treatment : 'ok'))
   const { files, file, next } = trackedWith(table, sql)
   const result = await run(t, RUNNER, ['--no-env-file'], {
     cwd: projectWithTheme(t, files),
@@ -718,57 +755,400 @@ test('a ROLLBACK that fails is said to leave the transaction to end with the con
   }
 })
 
+test('a PREPARE TRANSACTION statement is found by its constant, and not inside comments, strings, quoted identifiers or dollar quotes', () => {
+  const none = [
+    "-- PREPARE TRANSACTION 'r14_line';\nSELECT 1;",
+    "/* outer /* inner */ PREPARE TRANSACTION 'r14_nested'; */ SELECT 1;",
+    "SELECT 'x; PREPARE TRANSACTION ''r14_string''';",
+    "SELECT E'\\'; PREPARE TRANSACTION ''r14_escaped''; --';",
+    "SELECT $$; PREPARE TRANSACTION 'r14_dollar'; $$;",
+    "CREATE FUNCTION r14_body() RETURNS text LANGUAGE sql AS $f$ SELECT $$; PREPARE TRANSACTION 'r14_inner'; $$::text $f$;",
+    "DO $body$ BEGIN EXECUTE 'PREPARE TRANSACTION ''r14_do'''; END $body$;",
+    'CREATE TABLE "r14""; PREPARE TRANSACTION \'r14_identifier\'; --" (id int);',
+    'SELECT 1 AS prepare_transaction;',
+  ]
+  for (const sql of none) assert.deepEqual(preparedTransactionConstants(sql), [], sql)
+
+  assert.deepEqual(preparedTransactionConstants("BEGIN; CREATE TABLE r14 (id int); PREPARE TRANSACTION 'r14';"), ["'r14'"])
+  assert.deepEqual(
+    preparedTransactionConstants("begin;\nprepare -- the id follows\n/* a /* nested */ comment */ transaction\n  'r14_lower';"),
+    ["'r14_lower'"]
+  )
+  assert.deepEqual(
+    preparedTransactionConstants(
+      "SELECT 1; PREPARE TRANSACTION E'r14\\x5fe'; PREPARE TRANSACTION U&'r14!005fu' UESCAPE '!'; PREPARE TRANSACTION u&'r14\\005fv';"
+    ),
+    ["E'r14\\x5fe'", "U&'r14!005fu' UESCAPE '!'", "u&'r14\\005fv'"]
+  )
+  assert.deepEqual(preparedTransactionConstants("PREPARE TRANSACTION $id$r14_dollar$id$; PREPARE TRANSACTION 'r14' -- continued\n'_continued';"), [
+    '$id$r14_dollar$id$',
+    "'r14' -- continued\n'_continued'",
+  ])
+  // Constants PREPARE TRANSACTION does not take, strings a block comment does not continue, and a string that does not
+  // end: Postgres refuses the query each is in
+  assert.deepEqual(
+    preparedTransactionConstants("PREPARE TRANSACTION N'r14'; PREPARE TRANSACTION B'01'; PREPARE TRANSACTION 'r14' /* c */ '_x'; PREPARE TRANSACTION 'r14_open"),
+    ["'r14'"]
+  )
+})
+
+test('a backslash in a quoted string is read as standard_conforming_strings says', () => {
+  const sql = "BEGIN; CREATE TABLE r14 (id int); PREPARE TRANSACTION 'r14\\'; --'\n;"
+  assert.deepEqual(preparedTransactionConstants(sql, { standardConformingStrings: true }), ["'r14\\'"])
+  assert.deepEqual(preparedTransactionConstants(sql, { standardConformingStrings: false }), ["'r14\\'; --'"])
+})
+
 /**
- * A client whose pg_prepared_xacts answers the given rows in order (one row set
- * per call to that query), and any other query as 'ok' (resolves to `fileResult`).
- * No `connection`, so the transaction-status listener sees none open or failed.
+ * The transactions a stand-in lists in pg_prepared_xacts, each with its owner, and the stand-in's answer to a query
+ * that reads it, or undefined for any other: a read that names ids in a VALUES list gets each id, with the id again
+ * when it is listed, and any other read gets the ids listed, only dbuser's when it filters on owner = current_user.
  */
-function withPreparedXacts(rowsByCall: { gid: string }[][], fileResult: unknown = undefined) {
-  let call = 0
+function preparedCatalog(listed: { gid: string; owner: string }[] = []) {
   return {
-    query: (sql: unknown) => {
-      if (typeof sql === 'string' && sql.includes('pg_prepared_xacts')) {
-        const rows = rowsByCall[call] ?? rowsByCall[rowsByCall.length - 1]
-        call++
-        return Promise.resolve({ rows })
+    prepare: (gid: string, owner = 'dbuser') => void listed.push({ gid, owner }),
+    answer: (sql: string): Treatment | undefined => {
+      if (!/pg_prepared_xacts/.test(sql)) return undefined
+      const values = sql.match(/\(VALUES (.*)\) AS/s)
+      if (values) {
+        return {
+          rows: [...values[1].matchAll(/'((?:[^']|'')*)'/g)].map(([, text]) => {
+            const gid = text.replace(/''/g, "'")
+            return [gid, listed.some(entry => entry.gid === gid) ? gid : null]
+          }),
+        }
       }
-      return Promise.resolve(fileResult)
+      return { rows: listed.filter(entry => !/owner\s*=\s*current_user/i.test(sql) || entry.owner === 'dbuser').map(entry => [entry.gid]) }
     },
-  } as unknown as Parameters<typeof runMigrationSql>[0]
+  }
 }
 
-test('a migration that leaves a transaction prepared is not recorded, and names it with the commands to resolve it', async () => {
-  const client = withPreparedXacts([[], [{ gid: 'r13' }]])
+/** What the runner says about the transaction `gid` a file leaves prepared, after what else it says about the file. */
+const leavesPrepared = (gid: string) =>
+  `It leaves a transaction prepared, neither committed nor rolled back: '${gid}': ROLLBACK PREPARED '${gid}' undoes its transactional ` +
+  `changes \\(not effects such as a sequence\\), COMMIT PREPARED '${gid}' applies them\\. Resolve it before running the migrations again; ` +
+  'nothing resolves it on its own\\.'
 
-  await assert.rejects(
-    runMigrationSql(client, { sql: "BEGIN; CREATE TABLE open_table (id int); PREPARE TRANSACTION 'r13';", limit: null, connectionString: '' }),
-    (error: Error) => {
+test('a migration that prepares a transaction as another role is not recorded, and names it, in _migrations, _content_migrations and _entity_migrations', { timeout: 60000 }, async t => {
+  const sql = "SET ROLE r14_other; BEGIN; CREATE TABLE r14_role (id int); PREPARE TRANSACTION 'r14_role'; RESET ROLE;"
+  for (const table of TABLES) {
+    for (const limit of WITH_AND_WITHOUT_LIMIT) {
+      const catalog = preparedCatalog()
+      const { server, result, file, next, label, records } = await runTrackedWith(
+        t,
+        table,
+        sql,
+        query => catalog.answer(query) ?? (query === sql ? (catalog.prepare('r14_role', 'r14_other'), 'ok') : 'ok'),
+        limit
+      )
+
+      assert.equal(result.status, 1, `${label}\n${result.output}`)
+      assert.match(
+        result.output,
+        new RegExp(
+          `❌ Failed to execute ${escapedFile(file)}: the file leaves a transaction prepared, neither committed nor rolled back: 'r14_role': ` +
+            "ROLLBACK PREPARED 'r14_role' undoes its transactional changes \\(not effects such as a sequence\\), COMMIT PREPARED 'r14_role' applies them\\. " +
+            'It is not recorded as run, so the next run starts the file over: resolve it before running the migrations again\\. Nothing resolves it on its own\\.'
+        ),
+        label
+      )
+      assert.deepEqual(records, [], label)
+      if (next) assert.equal(sessionThatRan(server.sessions, next), undefined, label)
+    }
+  }
+})
+
+test('a migration that prepares a transaction and then fails, or ends inside another, names it, in _migrations, _content_migrations and _entity_migrations', { timeout: 90000 }, async t => {
+  const cases = [
+    {
+      sql: "BEGIN; CREATE TABLE r14_divide (id int); PREPARE TRANSACTION 'r14_divide'; SELECT 1/0;",
+      gid: 'r14_divide',
+      treatment: { error: ['22012', 'division by zero'] } as Treatment,
+      says: 'division by zero\\. It is not recorded as run, so the next run starts the file over\\. ',
+    },
+    {
+      sql: "BEGIN; CREATE TABLE r14_open (id int); PREPARE TRANSACTION 'r14_open'; BEGIN; SELECT 1;",
+      gid: 'r14_open',
+      treatment: 'ok' as Treatment,
+      says: 'the file ends inside a transaction it opened and did not close; that transaction was rolled back: .* before running the migrations again\\. ',
+    },
+    {
+      sql: "BEGIN; CREATE TABLE r14_failed (id int); PREPARE TRANSACTION 'r14_failed'; BEGIN; SELECT 1/0;",
+      gid: 'r14_failed',
+      treatment: { error: ['22012', 'division by zero'] } as Treatment,
+      says: 'division by zero\\. It failed inside a transaction it had not closed, and that transaction was rolled back: .* starts the file over\\. ',
+    },
+  ]
+  for (const { sql, gid, treatment, says } of cases) {
+    for (const table of TABLES) {
+      for (const limit of WITH_AND_WITHOUT_LIMIT) {
+        const catalog = preparedCatalog()
+        const { server, result, file, next, label, records } = await runTrackedWith(
+          t,
+          table,
+          sql,
+          query => catalog.answer(query) ?? (query === sql ? (catalog.prepare(gid), treatment) : 'ok'),
+          limit
+        )
+
+        assert.equal(result.status, 1, `${label}\n${result.output}`)
+        assert.match(result.output, new RegExp(`❌ Failed to execute ${escapedFile(file)}: ${says}${leavesPrepared(gid)}`), `${label}\n${result.output}`)
+        assert.deepEqual(records, [], label)
+        if (next) assert.equal(sessionThatRan(server.sessions, next), undefined, label)
+      }
+    }
+  }
+})
+
+test('a migration that prepares a transaction and is then cancelled, or given up on, names it and does not call what it prepared gone', { timeout: 90000 }, async t => {
+  const limited = { MIGRATION_TIMEOUT_SECONDS: '5' }
+  const cases = [
+    {
+      // its own statement_timeout
+      sql: "BEGIN; CREATE TABLE r14_own (id int); PREPARE TRANSACTION 'r14_own'; SET LOCAL statement_timeout = 100; SELECT pg_sleep(60);",
+      gid: 'r14_own',
+      treatment: 'stuck' as Treatment,
+      limits: [
+        [limited, 'the server cancelled it after \\d+ ms, before MIGRATION_TIMEOUT_SECONDS \\(5 s\\) ran out: canceling statement due to statement timeout\\. '],
+        [{}, 'canceling statement due to statement timeout\\. It is not recorded as run, so the next run starts the file over\\. '],
+      ],
+    },
+    {
+      // another session's pg_cancel_backend
+      sql: "BEGIN; CREATE TABLE r14_cancel (id int); PREPARE TRANSACTION 'r14_cancel'; SELECT pg_sleep(60);",
+      gid: 'r14_cancel',
+      treatment: { error: ['57014', 'canceling statement due to user request'] } as Treatment,
+      limits: [
+        [limited, 'the server cancelled it after \\d+ ms, before MIGRATION_TIMEOUT_SECONDS \\(5 s\\) ran out: canceling statement due to user request\\. '],
+        [{}, 'canceling statement due to user request\\. It is not recorded as run, so the next run starts the file over\\. '],
+      ],
+    },
+    {
+      // the limit, with the server no longer answering: the session is ended and the transaction read on a connection of its own
+      sql: "BEGIN; CREATE TABLE r14_silent (id int); PREPARE TRANSACTION 'r14_silent'; SELECT pg_sleep(60);",
+      gid: 'r14_silent',
+      treatment: 'silent' as Treatment,
+      limits: [[{ MIGRATION_TIMEOUT_SECONDS: '0.5' }, 'did not finish within 0\\.5 s \\(MIGRATION_TIMEOUT_SECONDS\\); its session on the server was ended\\. ']],
+    },
+  ] as { sql: string; gid: string; treatment: Treatment; limits: [Record<string, string>, string][] }[]
+  for (const { sql, gid, treatment, limits } of cases) {
+    for (const table of TABLES) {
+      for (const [limit, says] of limits) {
+        const catalog = preparedCatalog()
+        const { server, result, file, next, label, records } = await runTrackedWith(
+          t,
+          table,
+          sql,
+          query => catalog.answer(query) ?? (query === sql ? (catalog.prepare(gid), treatment) : 'ok'),
+          limit
+        )
+
+        assert.equal(result.status, 1, `${label}\n${result.output}`)
+        const stopped = Object.keys(limit).length > 0
+        assert.match(
+          result.output,
+          new RegExp(
+            `❌ Failed to execute ${escapedFile(file)}: ${says}` +
+              (stopped ? 'What it had neither committed nor left prepared is gone, but what it committed before it was stopped, .* before running the migrations again\\. ' : '') +
+              leavesPrepared(gid)
+          ),
+          `${label}\n${result.output}`
+        )
+        assert.doesNotMatch(result.output, /What it had not committed is gone/, label)
+        assert.deepEqual(records, [], label)
+        if (next) assert.equal(sessionThatRan(server.sessions, next), undefined, label)
+      }
+    }
+  }
+})
+
+test("a transaction another session prepares while a migration runs is not taken for the migration's, in _migrations, _content_migrations and _entity_migrations", { timeout: 60000 }, async t => {
+  // a file that writes the id only in a comment or a string does not prepare it
+  for (const sql of ['SELECT pg_sleep(0.8);', "-- PREPARE TRANSACTION 'r14_concurrent';\nSELECT 'PREPARE TRANSACTION ''r14_concurrent'''; SELECT pg_sleep(0.8);"]) {
+    for (const table of TABLES) {
+      for (const limit of WITH_AND_WITHOUT_LIMIT) {
+        const catalog = preparedCatalog()
+        const { server, result, file, next, label, records } = await runTrackedWith(
+          t,
+          table,
+          sql,
+          query => catalog.answer(query) ?? (query === sql ? (catalog.prepare('r14_concurrent'), 'ok') : 'ok'),
+          limit
+        )
+
+        assert.equal(result.status, 0, `${label}\n${result.output}`)
+        assert.match(result.output, new RegExp(`Successfully executed ${escapedFile(file)}|${escapedFile(file)} executed successfully`), label)
+        assert.equal(records.length, 1, label)
+        if (next) assert.ok(sessionThatRan(server.sessions, next), label)
+      }
+    }
+  }
+
+  // COMMIT PREPARED cannot run inside the implicit transaction a query of several statements is, so the file's own stays prepared
+  const sql = "BEGIN; CREATE TABLE r14_mine (id int); PREPARE TRANSACTION 'r14_mine'; COMMIT PREPARED 'r14_mine';"
+  for (const table of TABLES) {
+    for (const limit of WITH_AND_WITHOUT_LIMIT) {
+      const catalog = preparedCatalog()
+      const { result, file, label, records } = await runTrackedWith(
+        t,
+        table,
+        sql,
+        query => {
+          if (query !== sql) return catalog.answer(query) ?? 'ok'
+          catalog.prepare('r14_mine')
+          catalog.prepare('r14_concurrent')
+          return { error: ['25001', 'COMMIT PREPARED cannot run inside a transaction block'] }
+        },
+        limit
+      )
+
+      assert.equal(result.status, 1, `${label}\n${result.output}`)
+      assert.match(
+        result.output,
+        new RegExp(
+          `❌ Failed to execute ${escapedFile(file)}: COMMIT PREPARED cannot run inside a transaction block\\. ` +
+            `It is not recorded as run, so the next run starts the file over\\. ${leavesPrepared('r14_mine')}`
+        ),
+        label
+      )
+      assert.doesNotMatch(result.output, /r14_concurrent/, label)
+      assert.deepEqual(records, [], label)
+    }
+  }
+})
+
+test('a transaction already prepared under the id a migration names is not taken for one the migration left', { timeout: 20000 }, async t => {
+  const sql = "BEGIN; CREATE TABLE r14_taken (id int); PREPARE TRANSACTION 'r14_taken';"
+  for (const limit of WITH_AND_WITHOUT_LIMIT) {
+    const catalog = preparedCatalog([{ gid: 'r14_taken', owner: 'r14_other' }])
+    const { result, label, records } = await runTrackedWith(
+      t,
+      '_migrations',
+      sql,
+      query => catalog.answer(query) ?? (query === sql ? { error: ['42710', 'transaction identifier "r14_taken" is already in use'] } : 'ok'),
+      limit
+    )
+
+    assert.equal(result.status, 1, `${label}\n${result.output}`)
+    assert.match(result.output, /❌ Failed to execute 001_core\.sql: transaction identifier "r14_taken" is already in use\n/, label)
+    assert.doesNotMatch(result.output, /PREPARED 'r14_taken'/, label)
+    assert.deepEqual(records, [], label)
+  }
+})
+
+test('a migration whose prepared transactions cannot be read once it has run is not recorded, and says so', { timeout: 20000 }, async t => {
+  const sql = "BEGIN; CREATE TABLE r14_unread (id int); PREPARE TRANSACTION 'r14_unread';"
+  for (const limit of WITH_AND_WITHOUT_LIMIT) {
+    const catalog = preparedCatalog()
+    let ran = false
+    const { server, result, label, records } = await runTrackedWith(
+      t,
+      '_migrations',
+      sql,
+      query => {
+        if (query === sql) {
+          ran = true
+          catalog.prepare('r14_unread')
+        }
+        if (ran && /pg_prepared_xacts/.test(query)) return { error: ['42501', 'permission denied for view pg_prepared_xacts'] }
+        return catalog.answer(query) ?? 'ok'
+      },
+      limit
+    )
+
+    assert.equal(result.status, 1, `${label}\n${result.output}`)
+    assert.match(
+      result.output,
+      new RegExp(
+        '❌ Failed to execute 001_core\\.sql: the file ran to the end, and it is not recorded as run, so the next run starts the file over\\. ' +
+          'Whether it leaves prepared the transaction it names in PREPARE TRANSACTION could not be checked \\(permission denied for view pg_prepared_xacts\\)\\. ' +
+          "If pg_prepared_xacts lists it: 'r14_unread': ROLLBACK PREPARED 'r14_unread' undoes"
+      ),
+      label
+    )
+    assert.deepEqual(records, [], label)
+    assert.equal(sessionThatRan(server.sessions, TRACKED.core['002_core_after.sql']), undefined, label)
+  }
+})
+
+test('a migration whose PREPARE TRANSACTION ids Postgres cannot decode is not run', { timeout: 20000 }, async t => {
+  const sql = "BEGIN; CREATE TABLE r14_undecoded (id int); PREPARE TRANSACTION U&'r14\\zzzz';"
+  for (const limit of WITH_AND_WITHOUT_LIMIT) {
+    const { server, result, label, records } = await runTrackedWith(
+      t,
+      '_migrations',
+      sql,
+      query => (/pg_prepared_xacts/.test(query) ? { error: ['42601', 'invalid Unicode escape'] } : 'ok'),
+      limit
+    )
+
+    assert.equal(result.status, 1, `${label}\n${result.output}`)
+    assert.match(
+      result.output,
+      /❌ Failed to execute 001_core\.sql: the file was not run: reading the transaction ids its PREPARE TRANSACTION statements name \(U&'r14\\zzzz'\) failed: invalid Unicode escape\. It is not recorded as run\./,
+      label
+    )
+    assert.equal(sessionThatRan(server.sessions, sql), undefined, label)
+    assert.deepEqual(records, [], label)
+  }
+})
+
+test('a migration the client gives up on without a limit may yet prepare the transactions it names, and says so', { timeout: 20000 }, async t => {
+  const sql = "SELECT pg_sleep(60); BEGIN; CREATE TABLE r14_waits (id int); PREPARE TRANSACTION 'r14_waits';"
+  const catalog = preparedCatalog()
+  const server = await standInPostgres(t, query => catalog.answer(query) ?? (query === sql ? 'stuck' : 'ok'))
+  // the database URL's own query_timeout, which applies when there is no limit
+  const url = `${server.url}&query_timeout=300`
+  const client = migrationClient(url, null)
+  await client.connect()
+  try {
+    await assert.rejects(runMigrationSql(client, { sql, limit: null, connectionString: url }), (error: Error) => {
       assert.match(
         error.message,
-        /^the file leaves a transaction prepared, neither committed nor rolled back: 'r13': ROLLBACK PREPARED 'r13' undoes its transactional changes \(not effects such as a sequence\), COMMIT PREPARED 'r13' applies them\. It is not recorded as run, so the next run starts the file over: resolve it before running the migrations again\. Nothing resolves it on its own\.$/
+        /^Query read timeout\. It is not recorded as run, so the next run starts the file over\. It may yet leave prepared the transaction it names in PREPARE TRANSACTION, which pg_prepared_xacts does not list yet\. Once it does: 'r14_waits': ROLLBACK PREPARED 'r14_waits' undoes its transactional changes \(not effects such as a sequence\), COMMIT PREPARED 'r14_waits' applies them\.$/
       )
       return true
-    }
-  )
+    })
+  } finally {
+    await client.end()
+  }
 })
 
-test('a migration that leaves more than one transaction prepared names each', async () => {
-  const client = withPreparedXacts([[], [{ gid: 'r13' }, { gid: 'r14' }]])
+test('a migration whose session cannot be ended and whose prepared transactions cannot be read says both, and nothing is called gone', { timeout: 20000 }, async () => {
+  // a port nothing listens on: neither the connection that would end the session nor the one that would read is accepted
+  const closed = net.createServer()
+  await new Promise<void>(resolve => closed.listen(0, '127.0.0.1', resolve))
+  const { port } = closed.address() as net.AddressInfo
+  await new Promise(resolve => closed.close(resolve))
+
+  const sql = "BEGIN; CREATE TABLE r14_cut (id int); PREPARE TRANSACTION 'r14_cut';"
+  const client = {
+    processID: 4242,
+    query: (query: string | { text: string }) => {
+      const text = typeof query === 'string' ? query : query.text
+      if (text === sql) return Promise.reject(new Error('Query read timeout'))
+      if (/standard_conforming_strings/.test(text)) return Promise.resolve({ rows: [['on']] })
+      return Promise.resolve({ rows: [['r14_cut', null]] })
+    },
+    end: () => Promise.resolve(),
+  } as unknown as Parameters<typeof runMigrationSql>[0]
 
   await assert.rejects(
-    runMigrationSql(client, { sql: "PREPARE TRANSACTION 'r13'; PREPARE TRANSACTION 'r14';", limit: null, connectionString: '' }),
+    runMigrationSql(client, {
+      sql,
+      limit: { seconds: 0.5, statementMs: 500, queryMs: 500 },
+      connectionString: `postgresql://dbuser@127.0.0.1:${port}/nextspark_verify?sslmode=disable`,
+    }),
     (error: Error) => {
-      assert.match(error.message, /^the file leaves transactions prepared, neither committed nor rolled back: 'r13': .*; 'r14': .*\. .*resolve each one/)
+      assert.match(error.message, /^did not finish within 0\.5 s \(MIGRATION_TIMEOUT_SECONDS\); its session on the server could not be ended: .*ECONNREFUSED/)
+      assert.match(error.message, /It may still be running there, and what it commits, with a COMMIT in the file or in a procedure it calls, stays in the database\./)
+      assert.match(
+        error.message,
+        /Whether it leaves prepared the transaction it names in PREPARE TRANSACTION could not be checked \(.*ECONNREFUSED.*\)\. If pg_prepared_xacts lists it: 'r14_cut': ROLLBACK PREPARED 'r14_cut' undoes/
+      )
+      assert.doesNotMatch(error.message, /is gone/)
       return true
     }
   )
-})
-
-test('a prepared transaction that already existed is not mistaken for one the file left', async () => {
-  const client = withPreparedXacts([[{ gid: 'foreign' }], [{ gid: 'foreign' }]], 'file result')
-
-  const result = await runMigrationSql(client, { sql: 'CREATE TABLE t (id int);', limit: null, connectionString: '' })
-  assert.equal(result, 'file result')
 })
 
 test('a record is sent with its own limit on the server and the client, and its values written as SQL literals', async () => {
