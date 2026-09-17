@@ -620,7 +620,8 @@ test('a migration that ends inside a transaction it left open is rolled back and
           result.output,
           new RegExp(
             `❌ Failed to execute ${escapedFile(file)}: the file ends inside a transaction it opened and did not close; that transaction was rolled back: ` +
-              'nothing the file did inside it is applied, and it is not recorded as run, so the next run starts the file over\\. ' +
+              'its transactional changes inside it are undone, but effects that are not transactional, such as a sequence advanced with ' +
+              'nextval or set with setval, are not, and it is not recorded as run, so the next run starts the file over\\. ' +
               'Anything it committed before opening that transaction stays in the database\\. Add the COMMIT the file is missing'
           ),
           label
@@ -634,7 +635,7 @@ test('a migration that ends inside a transaction it left open is rolled back and
   }
 })
 
-test('a migration that fails inside a transaction it opened has it rolled back, and says nothing it did inside it is applied', { timeout: 60000 }, async t => {
+test('a migration that fails inside a transaction it opened has it rolled back, and says its transactional changes are undone, not effects such as a sequence', { timeout: 60000 }, async t => {
   const sql = 'BEGIN; SELECT 1/0;'
   for (const table of TABLES) {
     for (const limit of WITH_AND_WITHOUT_LIMIT) {
@@ -645,7 +646,8 @@ test('a migration that fails inside a transaction it opened has it rolled back, 
         result.output,
         new RegExp(
           `❌ Failed to execute ${escapedFile(file)}: division by zero\\. It failed inside a transaction it had not closed, and that transaction was rolled back: ` +
-            'nothing the file did inside it is applied\\. Anything it committed before opening that transaction stays in the database, ' +
+            'its transactional changes inside it are undone, but effects that are not transactional, such as a sequence advanced with ' +
+            'nextval or set with setval, are not\\. Anything it committed before opening that transaction stays in the database, ' +
             'and it is not recorded as run, so the next run starts the file over\\.'
         ),
         label
@@ -705,7 +707,7 @@ test('a ROLLBACK that fails is said to leave the transaction to end with the con
       await assert.rejects(runMigrationSql(client, { sql: 'BEGIN; SELECT 1;', limit, connectionString: server.url }), (error: Error) => {
         assert.match(
           error.message,
-          /^the file ends inside a transaction it opened and did not close; rolling that transaction back failed \(rollback refused\), and Postgres rolls it back when the run stops and closes the connection: nothing the file did inside it is applied/
+          /^the file ends inside a transaction it opened and did not close; rolling that transaction back failed \(rollback refused\), and Postgres rolls it back when the run stops and closes the connection: its transactional changes inside it are undone, but effects that are not transactional, such as a sequence advanced with nextval or set with setval, are not/
         )
         return true
       })
@@ -714,6 +716,59 @@ test('a ROLLBACK that fails is said to leave the transaction to end with the con
       await client.end()
     }
   }
+})
+
+/**
+ * A client whose pg_prepared_xacts answers the given rows in order (one row set
+ * per call to that query), and any other query as 'ok' (resolves to `fileResult`).
+ * No `connection`, so the transaction-status listener sees none open or failed.
+ */
+function withPreparedXacts(rowsByCall: { gid: string }[][], fileResult: unknown = undefined) {
+  let call = 0
+  return {
+    query: (sql: unknown) => {
+      if (typeof sql === 'string' && sql.includes('pg_prepared_xacts')) {
+        const rows = rowsByCall[call] ?? rowsByCall[rowsByCall.length - 1]
+        call++
+        return Promise.resolve({ rows })
+      }
+      return Promise.resolve(fileResult)
+    },
+  } as unknown as Parameters<typeof runMigrationSql>[0]
+}
+
+test('a migration that leaves a transaction prepared is not recorded, and names it with the commands to resolve it', async () => {
+  const client = withPreparedXacts([[], [{ gid: 'r13' }]])
+
+  await assert.rejects(
+    runMigrationSql(client, { sql: "BEGIN; CREATE TABLE open_table (id int); PREPARE TRANSACTION 'r13';", limit: null, connectionString: '' }),
+    (error: Error) => {
+      assert.match(
+        error.message,
+        /^the file leaves a transaction prepared, neither committed nor rolled back: 'r13': ROLLBACK PREPARED 'r13' undoes its transactional changes \(not effects such as a sequence\), COMMIT PREPARED 'r13' applies them\. It is not recorded as run, so the next run starts the file over: resolve it before running the migrations again\. Nothing resolves it on its own\.$/
+      )
+      return true
+    }
+  )
+})
+
+test('a migration that leaves more than one transaction prepared names each', async () => {
+  const client = withPreparedXacts([[], [{ gid: 'r13' }, { gid: 'r14' }]])
+
+  await assert.rejects(
+    runMigrationSql(client, { sql: "PREPARE TRANSACTION 'r13'; PREPARE TRANSACTION 'r14';", limit: null, connectionString: '' }),
+    (error: Error) => {
+      assert.match(error.message, /^the file leaves transactions prepared, neither committed nor rolled back: 'r13': .*; 'r14': .*\. .*resolve each one/)
+      return true
+    }
+  )
+})
+
+test('a prepared transaction that already existed is not mistaken for one the file left', async () => {
+  const client = withPreparedXacts([[{ gid: 'foreign' }], [{ gid: 'foreign' }]], 'file result')
+
+  const result = await runMigrationSql(client, { sql: 'CREATE TABLE t (id int);', limit: null, connectionString: '' })
+  assert.equal(result, 'file result')
 })
 
 test('a record is sent with its own limit on the server and the client, and its values written as SQL literals', async () => {

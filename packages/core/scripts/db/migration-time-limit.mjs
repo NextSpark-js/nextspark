@@ -44,10 +44,20 @@
 // still has a transaction open would go inside that transaction, and be undone
 // with it when the connection closes. A file that ends inside a transaction it
 // opened and did not close, or fails inside one, has that transaction rolled
-// back before anything is recorded, and fails with an error that says nothing
-// it did inside it is applied. Where the file left the session is the
-// transaction status the server sends with the answer to the file: BEGIN sets
-// it whether or not the transaction has written anything.
+// back before anything is recorded, and fails with an error that says its
+// transactional changes are undone. Effects that are not transactional, such as
+// a sequence a statement inside it advanced with nextval or set with setval,
+// are not: a ROLLBACK leaves them as the file left them. Where the file left
+// the session is the transaction status the server sends with the answer to
+// the file: BEGIN sets it whether or not the transaction has written anything.
+//
+// A file that leaves a transaction prepared with PREPARE TRANSACTION, rather
+// than committed or rolled back, ends its session outside a transaction too, so
+// none of the above notices it: the prepared transaction stays on the server,
+// neither applied nor undone, until something issues COMMIT PREPARED or
+// ROLLBACK PREPARED for it. A file whose prepared transactions this run did not
+// see before it ran is not recorded, and fails with an error naming each one and
+// the command that resolves it; neither is run for it.
 //
 // The limit is for the file, not for recording it as run. A migration that ran
 // to the end is recorded in its tracking table on the same session, and under a
@@ -176,9 +186,13 @@ async function rollBackLeftTransaction(client, status) {
  * stops it, the error says which, whether its session on the server was ended,
  * and what the migration leaves behind; the runner prints it next to the file's
  * name. A file the server answers inside a transaction fails too, once that
- * transaction is rolled back, so it is never recorded as run.
+ * transaction is rolled back, so it is never recorded as run. A file that
+ * leaves a transaction prepared, rather than committed, rolled back, or left
+ * open, fails too, naming it and how to resolve it; nothing resolves it here.
  */
 export async function runMigrationSql(client, { sql, limit, connectionString }) {
+  // Read before listening for the file's own ReadyForQuery: this query's is answered, and consumed, first.
+  const preparedBefore = await preparedTransactionGids(client);
   const sentAt = performance.now();
   const answered = nextTransactionStatus(client);
   let result;
@@ -219,23 +233,71 @@ export async function runMigrationSql(client, { sql, limit, connectionString }) 
   const rolledBack = await rollBackLeftTransaction(client, await answered);
   if (rolledBack) {
     throw new Error(
-      `the file ends inside a transaction it opened and did not close; ${rolledBack}: nothing the file did inside it is applied, ` +
+      `the file ends inside a transaction it opened and did not close; ${rolledBack}: ${TRANSACTIONAL_ONLY}, ` +
       'and it is not recorded as run, so the next run starts the file over. Anything it committed before opening that transaction ' +
       'stays in the database. Add the COMMIT the file is missing, and undo anything it committed or make the file safe to run again, ' +
       'before running the migrations again.'
     );
   }
+
+  const leftPrepared = await leftoverPrepared(client, preparedBefore);
+  if (leftPrepared.length > 0) throw new Error(leftoverPreparedMessage(leftPrepared));
+
   return result;
 }
+
+/** What a ROLLBACK does and does not undo, said as a clause: transactional changes, not effects such as a sequence. */
+const TRANSACTIONAL_ONLY = 'its transactional changes inside it are undone, but effects that are not transactional, ' +
+  'such as a sequence advanced with nextval or set with setval, are not';
 
 /** The error a file that failed inside a transaction it had not closed fails with, or the server's own when it was not in one. */
 function failedInsideTransaction(error, rolledBack) {
   if (!rolledBack) return error;
   return new Error(
-    `${error.message}. It failed inside a transaction it had not closed, and ${rolledBack}: nothing the file did inside it is applied. ` +
+    `${error.message}. It failed inside a transaction it had not closed, and ${rolledBack}: ${TRANSACTIONAL_ONLY}. ` +
     'Anything it committed before opening that transaction stays in the database, and it is not recorded as run, so the next run ' +
     'starts the file over.',
     { cause: error }
+  );
+}
+
+/**
+ * The prepared-transaction ids this client's session sees for the current
+ * database and user, scoped so a transaction another session or user prepared
+ * is never mistaken for one this file left. Null when the read itself failed:
+ * that is a connection problem the file's own query surfaces on its own, not
+ * something to report as the file's doing.
+ */
+async function preparedTransactionGids(client) {
+  try {
+    const result = await client.query(
+      'SELECT gid FROM pg_prepared_xacts WHERE database = current_database() AND owner = current_user'
+    );
+    return new Set(result.rows.map(row => row.gid));
+  } catch {
+    return null;
+  }
+}
+
+/** The gids of prepared transactions the file left that were not there before it ran, or none when either read failed. */
+async function leftoverPrepared(client, before) {
+  if (!before) return [];
+  const after = await preparedTransactionGids(client);
+  return after ? [...after].filter(gid => !before.has(gid)) : [];
+}
+
+/** What the runner says about a file that leaves one or more transactions prepared, and how to resolve each. */
+function leftoverPreparedMessage(gids) {
+  const plural = gids.length > 1;
+  const resolve = gid => {
+    const literal = escapeLiteral(gid);
+    return `${literal}: ROLLBACK PREPARED ${literal} undoes its transactional changes (not effects such as a sequence), ` +
+      `COMMIT PREPARED ${literal} applies them`;
+  };
+  return (
+    `the file leaves ${plural ? 'transactions' : 'a transaction'} prepared, neither committed nor rolled back: ` +
+    `${gids.map(resolve).join('; ')}. It is not recorded as run, so the next run starts the file over: resolve ` +
+    `${plural ? 'each one' : 'it'} before running the migrations again. Nothing resolves it on its own.`
   );
 }
 
