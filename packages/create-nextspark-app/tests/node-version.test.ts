@@ -23,20 +23,20 @@ function runWithNodeVersion(bin: string, version: string) {
   }
 }
 
-test('create-nextspark executables reject Node versions below 22.13.0 before loading their entries', () => {
+test('create-nextspark executables reject Node versions below 22.14.0 before loading their entries', () => {
   for (const bin of BINS) {
-    for (const version of ['20.19.5', '22.12.0']) {
+    for (const version of ['20.19.5', '22.12.0', '22.13.0']) {
       const result = runWithNodeVersion(bin, version)
       assert.equal(result.status, 1, `${path.basename(bin)} on ${version}: ${result.stderr}`)
-      assert.match(result.stderr, /requires Node\.js 22\.13\.0 or later/)
+      assert.match(result.stderr, /requires Node\.js 22\.14\.0 or later/)
       assert.match(result.stderr, new RegExp(`Current version: ${version.replaceAll('.', '\\.')}`))
     }
   }
 })
 
-test('create-nextspark executables let Node 22.13.0 reach their entries', () => {
+test('create-nextspark executables let Node 22.14.0 reach their entries', () => {
   for (const bin of BINS) {
-    const result = runWithNodeVersion(bin, '22.13.0')
-    assert.doesNotMatch(result.stderr, /requires Node\.js 22\.13\.0 or later/, path.basename(bin))
+    const result = runWithNodeVersion(bin, '22.14.0')
+    assert.doesNotMatch(result.stderr, /requires Node\.js 22\.14\.0 or later/, path.basename(bin))
   }
 })

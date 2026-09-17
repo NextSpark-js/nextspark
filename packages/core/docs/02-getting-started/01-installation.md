@@ -14,12 +14,12 @@ Complete step-by-step installation guide for setting up NextSpark for local deve
 
 ### Required Software
 
-#### 1. Node.js 22.13+
+#### 1. Node.js 22.14+
 
 **Check version:**
 ```bash
 node -v
-# Should show: v22.13.0 or higher
+# Should show: v22.14.0 or higher
 ```
 
 **Install/Update:**
@@ -51,6 +51,8 @@ corepack prepare pnpm@9.0.0 --activate
 pnpm -v
 # Should show: 9.0.0
 ```
+
+Corepack needs Node.js 22.14.0 or later to download pnpm: Corepack in Node.js 22.13.x fails with `Cannot find matching keyid`.
 
 #### 3. PostgreSQL Database
 
@@ -180,7 +182,7 @@ Done in 2m 34s
 ```
 
 **If you see errors:**
-- Check Node.js version is 22.13+
+- Check Node.js version is 22.14+
 - Check pnpm version is 9.0.0
 - Check internet connection
 - Try clearing cache: `pnpm store prune`
@@ -411,7 +413,7 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
 ```bash
 # Check Node.js
 node -v
-# ✅ Should be v22.13.0 or higher
+# ✅ Should be v22.14.0 or higher
 
 # Check pnpm
 pnpm -v
@@ -595,6 +597,8 @@ corepack enable
 corepack prepare pnpm@9.0.0 --activate
 ```
 
+Corepack needs Node.js 22.14.0 or later to download pnpm: Corepack in Node.js 22.13.x fails with `Cannot find matching keyid`.
+
 ### "Node version too old"
 
 **Check version:**
@@ -602,7 +606,7 @@ corepack prepare pnpm@9.0.0 --activate
 node -v
 ```
 
-**If < v22.13.0:**
+**If < v22.14.0:**
 ```bash
 # macOS
 brew install node@22
@@ -744,7 +748,7 @@ pnpm cy:run
 ## Summary
 
 **You've completed installation if you:**
-- ✅ Installed Node.js 22.13+, pnpm 9.0.0, and PostgreSQL
+- ✅ Installed Node.js 22.14+, pnpm 9.0.0, and PostgreSQL
 - ✅ Cloned repository and installed dependencies
 - ✅ Configured `.env.local` with required variables
 - ✅ Ran database migrations successfully

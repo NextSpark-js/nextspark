@@ -182,7 +182,7 @@ Project Settings > General
 ├── Build Command: pnpm build
 ├── Output Directory: .next
 ├── Install Command: pnpm install
-└── Node.js Version: 20.x
+└── Node.js Version: 22.14.x or later
 ```
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

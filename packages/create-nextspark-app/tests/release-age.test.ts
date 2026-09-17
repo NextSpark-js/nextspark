@@ -111,7 +111,9 @@ interface Run {
 /** Runs pnpm without blocking the event loop, which serves the registry it installs from. */
 function pnpm(version: string, args: string[], cwd: string, env: NodeJS.ProcessEnv): Promise<Run> {
   return new Promise(resolve => {
-    const child = spawn('corepack', [`pnpm@${version}`, ...args], { cwd, env })
+    // This test deliberately crosses pnpm majors after one writes packageManager.
+    const pmOnFail = version.startsWith('11.') ? ['--pm-on-fail=ignore'] : []
+    const child = spawn('corepack', [`pnpm@${version}`, ...pmOnFail, ...args], { cwd, env })
     let output = ''
     child.stdout.on('data', chunk => (output += chunk))
     child.stderr.on('data', chunk => (output += chunk))

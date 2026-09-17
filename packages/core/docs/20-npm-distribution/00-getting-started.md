@@ -6,7 +6,7 @@ This guide walks you through creating a new project with NextSpark from scratch.
 
 ## Prerequisites
 
-- Node.js 22.13+
+- Node.js 22.14+
 - pnpm 9.0.0 (the repository's declared package-manager version)
 - PostgreSQL database (Supabase, Neon, or local)
 

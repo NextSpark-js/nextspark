@@ -62,7 +62,7 @@ nextspark migrate   # Run database migrations
 
 ## Requirements
 
-- Node.js 22.13.0 or later
+- Node.js 22.14.0 or later
 - pnpm recommended
 
 ## Documentation

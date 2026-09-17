@@ -35,7 +35,7 @@ Runs critical path tests on every PR to catch breaking changes quickly.
 
 **Configuration:**
 - Uses `@smoke` tag to filter tests
-- Runs on Ubuntu with Node.js 22.13.0 or later
+- Runs on Ubuntu with Node.js 22.14.0 or later
 - Uploads artifacts on failure
 
 ### cypress-regression.yml

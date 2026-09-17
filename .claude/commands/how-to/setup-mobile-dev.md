@@ -56,7 +56,7 @@ Verify your system has the required tools installed.
 │  PREREQUISITES CHECKLIST                    │
 │  ─────────────────────────────────────────  │
 │                                             │
-│  [ ] Node.js 18+ installed                  │
+│  [ ] Node.js 22.14.0+ installed              │
 │      node --version                         │
 │                                             │
 │  [ ] pnpm installed                         │
@@ -75,9 +75,9 @@ Verify your system has the required tools installed.
 📋 Verify Prerequisites:
 
 ```bash
-# Check Node.js version (18+ required)
+# Check Node.js version (22.14.0+ required)
 node --version
-# v18.0.0 or higher
+# v22.14.0 or higher
 
 # Check pnpm
 pnpm --version

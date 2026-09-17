@@ -21,7 +21,7 @@ The Registry System's **~17,255x performance improvement** (140ms → 6ms) is th
 
 **Test Environment:**
 - MacBook Pro M1 Max
-- Current supported runtime floor: Node.js 22.13+
+- Current supported runtime floor: Node.js 22.14+
 - 10 entities, 3 plugins, 1 theme
 - Cold start (no cache)
 

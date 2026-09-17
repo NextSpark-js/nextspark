@@ -627,7 +627,7 @@ ${config.projectSlug}/
 
 ### Prerequisites
 
-- Node.js 22.13.0 or later
+- Node.js 22.14.0 or later
 - pnpm 9+
 - For mobile: Expo CLI (\`npm install -g expo-cli\`)
 

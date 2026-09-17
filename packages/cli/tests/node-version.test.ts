@@ -20,16 +20,16 @@ function runWithNodeVersion(version: string) {
   }
 }
 
-test('the CLI rejects Node versions below 22.13.0 before loading its entry point', () => {
-  for (const version of ['20.19.5', '22.12.0']) {
+test('the CLI rejects Node versions below 22.14.0 before loading its entry point', () => {
+  for (const version of ['20.19.5', '22.12.0', '22.13.0']) {
     const result = runWithNodeVersion(version)
     assert.equal(result.status, 1, `${version}: ${result.stderr}`)
-    assert.match(result.stderr, /requires Node\.js 22\.13\.0 or later/)
+    assert.match(result.stderr, /requires Node\.js 22\.14\.0 or later/)
     assert.match(result.stderr, new RegExp(`Current version: ${version.replaceAll('.', '\\.')}`))
   }
 })
 
-test('the CLI lets Node 22.13.0 reach its entry point', () => {
-  const result = runWithNodeVersion('22.13.0')
-  assert.doesNotMatch(result.stderr, /requires Node\.js 22\.13\.0 or later/)
+test('the CLI lets Node 22.14.0 reach its entry point', () => {
+  const result = runWithNodeVersion('22.14.0')
+  assert.doesNotMatch(result.stderr, /requires Node\.js 22\.14\.0 or later/)
 })

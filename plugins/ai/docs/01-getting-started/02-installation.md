@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Node.js 22.13.0 or later and pnpm installed
+- Node.js 22.14.0 or later and pnpm installed
 - NextSpark project set up
 - Active theme with plugin support
 

@@ -51,12 +51,12 @@ pnpm dev
 
 ## Requirements
 
-- Node.js 22.13.0 or later
+- Node.js 22.14.0 or later
 - pnpm 9, 10 or 11
 
 ### Installing with another pnpm than the one that created the project
 
-When changing pnpm major versions, update the project's `packageManager` field to that major first so Corepack permits the command. A lockfile written by pnpm 9 or 10 can then contain a dependency that pnpm 11 refuses during its first day after publication; regenerate that lockfile with `pnpm clean --lockfile` and `pnpm install`.
+When changing pnpm major versions, update the project's `packageManager` field to that major first so Corepack permits the command. Corepack needs Node.js 22.14.0 or later to download pnpm: Corepack in Node.js 22.13.x fails with `Cannot find matching keyid`. A lockfile written by pnpm 9 or 10 can then contain a dependency that pnpm 11 refuses during its first day after publication; regenerate that lockfile with `pnpm clean --lockfile` and `pnpm install`.
 
 pnpm 11 checks every version in `pnpm-lock.yaml` against a minimum release age of one day each
 time it installs, and refuses the lockfile with `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION` if any of

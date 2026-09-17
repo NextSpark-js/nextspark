@@ -33,6 +33,8 @@ pnpm -v
 # Should show: 9.0.0
 ```
 
+Corepack needs Node.js 22.14.0 or later to download pnpm: Corepack in Node.js 22.13.x fails with `Cannot find matching keyid`.
+
 **If still not found:**
 ```bash
 # Find pnpm installation
@@ -49,7 +51,7 @@ source ~/.zshrc
 
 ### "Node version too old"
 
-**Problem:** Node.js version < 22.13.0
+**Problem:** Node.js version < 22.14.0
 
 **Check version:**
 ```bash
@@ -64,7 +66,7 @@ brew install node@22
 
 # Verify
 node -v
-# Should show: v22.13.0 or higher
+# Should show: v22.14.0 or higher
 ```
 
 **Solution (Linux - Ubuntu/Debian):**
@@ -75,7 +77,7 @@ sudo apt remove nodejs
 # Add NodeSource repository
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 
-# Install Node.js 22.13.0 or later
+# Install Node.js 22.14.0 or later
 sudo apt-get install -y nodejs
 
 # Verify
@@ -92,10 +94,10 @@ node -v
 ```bash
 # Install nvm first: https://github.com/nvm-sh/nvm
 
-# Install Node.js 22.13.0 or later
+# Install Node.js 22.14.0 or later
 nvm install 22
 
-# Use Node.js 22.13.0 or later
+# Use Node.js 22.14.0 or later
 nvm use 22
 
 # Set as default

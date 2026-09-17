@@ -215,7 +215,7 @@ The AI Plugin adds artificial intelligence capabilities to your application.
 Before installing, ensure you have:
 
 - API key from OpenAI
-- Node.js 22.13+
+- Node.js 22.14+
 - Active theme with plugin support
 
 ## Installation

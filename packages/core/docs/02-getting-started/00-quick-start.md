@@ -15,9 +15,9 @@ Get from zero to running application in **under 5 minutes**. This guide provides
 Before starting, verify you have:
 
 ```bash
-# Node.js 22.13+
+# Node.js 22.14+
 node -v
-# Should show: v22.13.0 or higher
+# Should show: v22.14.0 or higher
 
 # pnpm 9.0+
 pnpm -v
@@ -27,6 +27,8 @@ pnpm -v
 corepack enable
 corepack prepare pnpm@9.0.0 --activate
 ```
+
+Corepack needs Node.js 22.14.0 or later to download pnpm: Corepack in Node.js 22.13.x fails with `Cannot find matching keyid`.
 
 ---
 
@@ -255,6 +257,8 @@ corepack prepare pnpm@9.0.0 --activate
 # Verify installation
 pnpm -v
 ```
+
+Corepack needs Node.js 22.14.0 or later to download pnpm: Corepack in Node.js 22.13.x fails with `Cannot find matching keyid`.
 
 ### "Cannot connect to database"
 

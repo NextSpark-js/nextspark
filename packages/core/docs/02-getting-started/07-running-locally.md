@@ -288,7 +288,7 @@ pnpm dev
 
 **Server won't start:**
 1. Check the `PORT` from `apps/dev/.env` is free
-2. Check Node.js version (22.13+)
+2. Check Node.js version (22.14+)
 3. Check pnpm version (9.0.0)
 4. Clear node_modules and reinstall
 

@@ -21,6 +21,8 @@ const README_FILES = [
   'apps/mobile/README.md',
 ]
 
+const CLAUDE_COMMANDS_DIR = '.claude/commands'
+
 function packageAndPluginReadmes(): string[] {
   return ['packages', 'plugins'].flatMap(dir => {
     const root = path.join(SOURCE_ROOT, dir)
@@ -66,6 +68,7 @@ function markdownFiles(relDir: string): string[] {
 function documentationFiles(): string[] {
   return [...new Set([
     ...DOCS_DIRS.flatMap(markdownFiles),
+    ...markdownFiles(CLAUDE_COMMANDS_DIR),
     ...README_FILES.filter(file => fs.existsSync(path.join(SOURCE_ROOT, file))),
     ...packageAndPluginReadmes(),
   ])]
@@ -125,22 +128,22 @@ test('documentation does not advertise Node 18 or Node 20 as supported', () => {
       assert.equal(
         legacyVersion,
         undefined,
-        `${file} still names a Node version below the documented 22.13+ floor`
+        `${file} still names a Node version below the documented 22.14+ floor`
       )
   }
 })
 
-test('runtime requirements state the Node 22.13.0 floor', () => {
+test('runtime requirements state the Node 22.14.0 floor', () => {
   for (const file of documentationFiles()) {
     const content = fs.readFileSync(path.join(SOURCE_ROOT, file), 'utf8')
     const incompleteRequirement = content.split(/\r?\n/).find(line =>
       /\bNode(?:\.js)?\s+22(?:\+|\s|$)/.test(line)
     )
-    assert.equal(incompleteRequirement, undefined, `${file} does not state the Node 22.13.0 floor`)
+    assert.equal(incompleteRequirement, undefined, `${file} does not state the Node 22.14.0 floor`)
   }
 })
 
-test('getting-started requirements use the Node 22.13 floor', () => {
+test('getting-started requirements use the Node 22.14 floor', () => {
   for (const file of markdownFiles('packages/core/docs/02-getting-started')) {
     const content = fs.readFileSync(path.join(SOURCE_ROOT, file), 'utf8')
     assert.doesNotMatch(content, /pnpm@?10\.17|Should (?:show|be): 10\.17/, `${file} contradicts the repository's pnpm 9 packageManager`)
@@ -152,7 +155,20 @@ test('getting-started requirements use the Node 22.13 floor', () => {
     'packages/core/docs/02-getting-started/02-setup.md',
   ]) {
     const content = fs.readFileSync(path.join(SOURCE_ROOT, file), 'utf8')
-    assert.match(content, /Node(?:\.js)? 22\.13\+/, `${file} does not state the Node 22.13+ floor`)
+    assert.match(content, /Node(?:\.js)? 22\.14\+/, `${file} does not state the Node 22.14+ floor`)
+  }
+})
+
+test('Corepack instructions state its Node 22.14.0 download requirement', () => {
+  for (const file of [
+    'packages/core/docs/02-getting-started/00-quick-start.md',
+    'packages/core/docs/02-getting-started/01-installation.md',
+    'packages/core/docs/02-getting-started/10-troubleshooting.md',
+    'packages/core/docs/17-updates/01-update-core.md',
+    'packages/create-nextspark-app/README.md',
+  ]) {
+    const content = fs.readFileSync(path.join(SOURCE_ROOT, file), 'utf8')
+    assert.match(content, /Corepack needs Node\.js 22\.14\.0 or later to download pnpm: Corepack in Node\.js 22\.13\.x fails with `Cannot find matching keyid`\./, `${file} does not explain Corepack's Node requirement`)
   }
 })
 
