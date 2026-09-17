@@ -41,7 +41,12 @@ export interface CaptureLimits {
   tail: PoolCaps;
   /** The first error lines, wherever they arrive. */
   errors: PoolCaps;
-  /** The stack lines right under those errors: at most `perError` under each one, and `lines` and `bytes` under all of them. */
+  /**
+   * The stack lines right under those errors: at most `perError` under each
+   * one, within an equal share of `lines` and `bytes` for each error the errors
+   * pool can keep, so the stacks of the first errors never take the room a
+   * later kept error needs for its own.
+   */
   stack: PoolCaps & { perError: number };
   /** The first warning lines, wherever they arrive. */
   warnings: PoolCaps;
@@ -52,12 +57,12 @@ const DEFAULT_LIMITS: CaptureLimits = {
   head: { lines: 10, bytes: 4 * 1024 },
   tail: { lines: 30, bytes: 16 * 1024 },
   errors: { lines: 10, bytes: 16 * 1024 },
-  stack: { perError: 10, lines: 50, bytes: 16 * 1024 },
+  stack: { perError: 10, lines: 100, bytes: 16 * 1024 },
   warnings: { lines: 5, bytes: 4 * 1024 },
 };
 
-/** What a line can start with before its marker: spaces, tabs, and ANSI escape sequences such as colors. */
-const LINE_LEAD = /^(?:[ \t]|\x1b\[[0-?]*[ -/]*[@-~])*/;
+/** What a line can start with before its marker: spaces, tabs, and ANSI escape sequences, such as colors (CSI) and hyperlinks (OSC, ended by BEL or ST). */
+const LINE_LEAD = /^(?:[ \t]|\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\))*/;
 
 /** The marker core's `log(..., 'error')` starts a line with (`packages/core/scripts/utils/logging.mjs`). */
 const CROSS_MARK = '\u274C';
@@ -182,6 +187,8 @@ interface StreamState {
   bytes: number;
   /** Stack lines kept under the last line this stream printed, when that line was a kept error or one of its stack lines. */
   frames: number | null;
+  /** Bytes of those stack lines. */
+  frameBytes: number;
 }
 
 export interface CapturedOutput {
@@ -233,6 +240,11 @@ export function captureOutput(limits: Partial<CaptureLimits> = {}): CapturedOutp
   const errors = firstLines(caps.errors);
   const stack = firstLines(caps.stack);
   const warnings = firstLines(caps.warnings);
+  // Each error the errors pool can keep gets the same share of the stack pool,
+  // so the shares of every kept error together never exceed it.
+  const errorShares = Math.max(1, caps.errors.lines);
+  const framesPerError = Math.min(caps.stack.perError, Math.floor(caps.stack.lines / errorShares));
+  const frameBytesPerError = Math.floor(caps.stack.bytes / errorShares);
   const streams = new Map<string, StreamState>();
   let totalLines = 0;
   let totalBytes = 0;
@@ -241,7 +253,7 @@ export function captureOutput(limits: Partial<CaptureLimits> = {}): CapturedOutp
   function streamState(name: string): StreamState {
     let state = streams.get(name);
     if (!state) {
-      state = { decoder: new StringDecoder('utf8'), start: Buffer.alloc(caps.line + 1), held: 0, bytes: 0, frames: null };
+      state = { decoder: new StringDecoder('utf8'), start: Buffer.alloc(caps.line + 1), held: 0, bytes: 0, frames: null, frameBytes: 0 };
       streams.set(name, state);
     }
     return state;
@@ -272,11 +284,18 @@ export function captureOutput(limits: Partial<CaptureLimits> = {}): CapturedOutp
 
     const kind = lineKind(line.text);
     if (kind === 'stack' && state.frames !== null) {
-      if (state.frames < caps.stack.perError && stack.offer(line)) state.frames++;
+      if (state.frames < framesPerError && state.frameBytes + line.keptBytes <= frameBytesPerError && stack.offer(line)) {
+        state.frames++;
+        state.frameBytes += line.keptBytes;
+      } else {
+        // The frames kept under an error stay contiguous: once one is left out, so are the rest of its stack.
+        state.frames = null;
+      }
       return;
     }
     if (kind === 'error') {
       state.frames = errors.offer(line) ? 0 : null;
+      state.frameBytes = 0;
       return;
     }
     state.frames = null;

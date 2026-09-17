@@ -216,6 +216,50 @@ test('an error heading keeps the stack lines under it on its stream, up to the c
   ])
 })
 
+test('every error the errors pool keeps keeps its own stack lines, however many frames the errors before it printed', () => {
+  const framesOf = (name: string, count: number) =>
+    Array.from({ length: count }, (_, index) => `    at ${name}${index} (file:///core/scripts/build/registry.mjs:${index + 1}:5)`)
+
+  const output = captureOutput({ head: { lines: 0, bytes: 0 }, tail: { lines: 1, bytes: 1024 } })
+  for (let error = 0; error < 6; error++) {
+    writeLines(output, 'stderr', [`Error: E${error}`, ...framesOf(`e${error}f`, 10)])
+  }
+  writeLines(output, 'stdout', ['done'])
+
+  const lines = output.failureLines
+  for (let error = 0; error < 6; error++) {
+    const at = lines.indexOf(`Error: E${error}`)
+    assert.ok(at !== -1, `E${error} is kept`)
+    assert.equal(lines[at + 1], framesOf(`e${error}f`, 1)[0], `E${error} keeps its first stack line`)
+  }
+})
+
+test('the stack pool is shared out evenly among the errors the errors pool can keep', () => {
+  const frame = (name: string, index: number) => `    at ${name}${index} (file:///x.mjs:${index + 1}:1)`
+  const output = captureOutput({
+    head: { lines: 0, bytes: 0 },
+    tail: { lines: 1, bytes: 1024 },
+    errors: { lines: 3, bytes: 1024 },
+    stack: { perError: 10, lines: 6, bytes: 1024 },
+  })
+  for (const name of ['a', 'b', 'c']) {
+    writeLines(output, 'stderr', [`Error: ${name}`, ...Array.from({ length: 5 }, (_, index) => frame(name, index))])
+  }
+  writeLines(output, 'stdout', ['done'])
+
+  const lines = output.failureLines
+  const at = lines.indexOf('Error: c')
+  assert.deepEqual(lines.slice(at + 1, at + 3), [frame('c', 0), frame('c', 1)])
+})
+
+test('a warning behind an OSC hyperlink sequence is still a warning, ended by BEL or by ST', () => {
+  const byBel = '\x1b]8;;https://example.com/docs\x07⚠️ linked warning\x1b]8;;\x07'
+  const bySt = '\x1b]8;;https://example.com/docs\x1b\\⚠️ another linked warning'
+  const output = captureOutput()
+  writeLines(output, 'stdout', ['progress', byBel, bySt])
+  assert.deepEqual(output.successLines, [byBel, bySt])
+})
+
 test('a character split across chunks arrives whole, with the bytes of both streams interleaved', () => {
   const warning = '⚠️ café 😀'
   const error = 'Error: café 😀'
