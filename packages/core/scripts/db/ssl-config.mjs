@@ -148,8 +148,16 @@ class SSLPreferClient extends EventEmitter {
       const elapsed = performance.now() - startedAt
       if (timeout > 0 && elapsed >= timeout) throw new Error('timeout expired')
 
+      // The facade exposes pg's live connection parameters. Callers such as
+      // timeLimitedClient() deliberately update those after construction so a
+      // connection string cannot disable their limits. Build the plaintext
+      // retry from that live, resolved state (rather than re-parsing the URL),
+      // or it would silently discard every such update.
+      const { connectionString: _connectionString, ...options } = this.options
       this.client = new pg.Client({
-        ...this.options,
+        ...options,
+        ...this.client.connectionParameters,
+        password: this.client.password,
         ssl: false,
         ...(timeout > 0 ? { connectionTimeoutMillis: Math.max(1, Math.ceil(timeout - elapsed)) } : {}),
       })

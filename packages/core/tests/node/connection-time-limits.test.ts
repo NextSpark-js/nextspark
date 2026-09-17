@@ -202,7 +202,7 @@ test("parameters named like the client's own options reach neither the client no
  * A stand-in Postgres on a Unix socket that records who connects to which
  * database and answers every query with no rows.
  */
-async function socketServer(t: TestContext) {
+async function socketServer(t: TestContext, { queryReplyDelayMs = 0 } = {}) {
   // a socket path is limited to about 100 bytes, which a per-user temporary directory can exceed
   const dir = fs.mkdtempSync(path.join('/tmp', 'pg-'))
   const sessions: Record<string, string>[] = []
@@ -245,8 +245,12 @@ async function socketServer(t: TestContext) {
         const type = String.fromCharCode(pending[0])
         pending = pending.subarray(pending.readInt32BE(1) + 1)
         if (type === 'Q') {
-          message('C', Buffer.from('SELECT 0\0'))
-          message('Z', Buffer.from('I'))
+          const reply = () => {
+            message('C', Buffer.from('SELECT 0\0'))
+            message('Z', Buffer.from('I'))
+          }
+          if (queryReplyDelayMs > 0) setTimeout(reply, queryReplyDelayMs)
+          else reply()
         } else if (type === 'X') socket.end()
       }
     })
@@ -275,6 +279,29 @@ test('a time-limited client uses TLS first, then retries plaintext only after pg
     assert.deepEqual(server.sessions.map(({ user, database }) => ({ user, database })), [
       { user: 'dbuser', database: 'nextspark_verify' },
     ])
+  } finally {
+    await client.end()
+  }
+})
+
+test('a time-limited client keeps effective limits and an alternate database after its no-SSL fallback', { timeout: 10000 }, async t => {
+  // Reply after queryMs. Before #190 the fallback reconstructed from the URL,
+  // so it sent statement_timeout=0, queried the URL database and accepted this
+  // delayed reply because its query_timeout was also 0.
+  const server = await socketServer(t, { queryReplyDelayMs: 150 })
+  const client = timeLimitedClient(
+    `postgresql://dbuser@${encodeURIComponent(server.dir)}/url_database?statement_timeout=0&query_timeout=0`,
+    { connectMs: 2000, statementMs: 1000, queryMs: 50 },
+    { database: 'requested_database' },
+  )
+
+  await client.connect()
+  try {
+    assert.equal(server.sslRequests, 1, 'the connection reaches the plaintext retry')
+    assert.deepEqual(server.sessions.map(({ user, database, statement_timeout }) => ({ user, database, statement_timeout })), [
+      { user: 'dbuser', database: 'requested_database', statement_timeout: '1000' },
+    ])
+    await assert.rejects(client.query('SELECT 1'), /Query read timeout/)
   } finally {
     await client.end()
   }
