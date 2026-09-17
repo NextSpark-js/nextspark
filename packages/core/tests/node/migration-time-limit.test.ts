@@ -7,7 +7,9 @@
  * reported as the limit, and a migration stopped partway says that what it
  * committed stays and it is not recorded as run. Recording a migration that ran
  * to the end is not held to the limit, and a record that fails says the file ran
- * and gives the INSERT that records it. The runner is exercised against
+ * and gives the INSERT that records it. A migration the server answers inside a
+ * transaction, open or failed, has that transaction rolled back and is not
+ * recorded, with or without a limit. The runner is exercised against
  * a stand-in server that speaks enough of the wire protocol to connect, answer
  * queries, cancel a statement at its statement_timeout the way Postgres does,
  * keep a statement_timeout a query sets, or go silent.
@@ -133,7 +135,7 @@ async function standInPostgres(t: TestContext, treat: (sql: string) => Treatment
       const treatment = treat(sql)
       const timeout = statementTimeoutFor(sql, session.statementTimeout)
       session.statementTimeout = timeout.session
-      for (const [statement] of sql.matchAll(/\b(BEGIN|COMMIT|ROLLBACK)\s*;/gi)) {
+      for (const [statement] of sql.matchAll(/\b(BEGIN|COMMIT|ROLLBACK)\s*(?:;|$)/gi)) {
         transaction = /^BEGIN/i.test(statement) ? 'T' : 'I'
       }
       const failed = (fields: Buffer) => {
@@ -193,9 +195,10 @@ async function standInPostgres(t: TestContext, treat: (sql: string) => Treatment
             commandComplete()
             continue
           }
+          // the ReadyForQuery after an error comes in a later packet, which a real server's can too
           execute(sql, commandComplete, fields => {
             message('E', fields)
-            readyForQuery()
+            later(20, readyForQuery)
           })
         }
         // The extended protocol, which parameterised queries use: no rows for any of them, and
@@ -568,26 +571,149 @@ test('a migration that ran to the end but could not be recorded says so, and giv
   }
 })
 
-test('a migration that ran to the end inside a transaction it left open is not offered a record', { timeout: 20000 }, async t => {
-  const migrations = { '001_open.sql': 'BEGIN; CREATE TABLE open_table (id int);', '002_after.sql': 'CREATE TABLE after_table (id int);' }
-  const server = await standInPostgres(t, sql =>
-    recordOf('_migrations').test(sql) ? { error: ['55P03', 'canceling statement due to lock timeout'] } : 'ok'
-  )
-  const cwd = projectWith(t, migrations)
+/** The tracked migrations with `sql` as the file recorded in `table`, and the migration the runner would run after it. */
+function trackedWith(table: string, sql: string) {
+  if (table === '_migrations') {
+    return { files: { ...TRACKED, core: { ...TRACKED.core, '001_core.sql': sql } }, file: '001_core.sql', next: TRACKED.core['002_core_after.sql'] }
+  }
+  if (table === '_content_migrations') {
+    return { files: { ...TRACKED, theme: { '001_theme.sql': sql } }, file: '001_theme.sql', next: TRACKED.widgets['001_widgets.sql'] }
+  }
+  return { files: { ...TRACKED, widgets: { '001_widgets.sql': sql } }, file: '001_widgets.sql', next: undefined }
+}
 
+const TABLES = ['_migrations', '_content_migrations', '_entity_migrations']
+const WITH_AND_WITHOUT_LIMIT: Record<string, string>[] = [{ MIGRATION_TIMEOUT_SECONDS: '0.5' }, {}]
+
+/** Runs the tracked migrations with `sql` as the file recorded in `table`, against a stand-in that treats that file as given. */
+async function runTrackedWith(t: TestContext, table: string, sql: string, treatment: Treatment, limit: Record<string, string>) {
+  const server = await standInPostgres(t, query => (query === sql ? treatment : 'ok'))
+  const { files, file, next } = trackedWith(table, sql)
   const result = await run(t, RUNNER, ['--no-env-file'], {
-    cwd,
-    env: cleanEnv({ DATABASE_URL: server.url, NEXT_PUBLIC_ACTIVE_THEME: 'fixture', MIGRATION_TIMEOUT_SECONDS: '0.5' }),
+    cwd: projectWithTheme(t, files),
+    env: cleanEnv({ DATABASE_URL: server.url, NEXT_PUBLIC_ACTIVE_THEME: 'fixture', ...limit }),
     killAfterMs: 10000,
   })
+  const session = sessionThatRan(server.sessions, sql)
+  return {
+    server,
+    result,
+    file,
+    next,
+    label: `${table} ${JSON.stringify(limit)} ${sql}`,
+    afterFile: session?.queries[session.queries.indexOf(sql) + 1],
+    records: server.sessions.flatMap(s => s.queries).filter(query => recordOf(table).test(query) && query.includes(`'${file}'`)),
+  }
+}
 
-  assert.equal(result.status, 1, result.output)
+const escapedFile = (file: string) => file.replace(/\./g, '\\.')
+
+test('a migration that ends inside a transaction it left open is rolled back and fails, in _migrations, _content_migrations and _entity_migrations', { timeout: 60000 }, async t => {
+  // BEGIN; SELECT 1; opens a transaction that writes nothing, so no transaction id is ever assigned to it
+  for (const sql of ['BEGIN; CREATE TABLE open_table (id int);', 'BEGIN; SELECT 1;']) {
+    for (const table of TABLES) {
+      for (const limit of WITH_AND_WITHOUT_LIMIT) {
+        const { server, result, file, next, label, afterFile, records } = await runTrackedWith(t, table, sql, 'ok', limit)
+
+        assert.equal(result.status, 1, `${label}\n${result.output}`)
+        assert.match(
+          result.output,
+          new RegExp(
+            `❌ Failed to execute ${escapedFile(file)}: the file ends inside a transaction it opened and did not close; that transaction was rolled back: ` +
+              'nothing the file did inside it is applied, and it is not recorded as run, so the next run starts the file over\\. ' +
+              'Anything it committed before opening that transaction stays in the database\\. Add the COMMIT the file is missing'
+          ),
+          label
+        )
+        assert.doesNotMatch(result.output, new RegExp(`Successfully executed ${escapedFile(file)}|${escapedFile(file)} executed successfully`), label)
+        assert.equal(afterFile, 'ROLLBACK', label)
+        assert.deepEqual(records, [], label)
+        if (next) assert.equal(sessionThatRan(server.sessions, next), undefined, label)
+      }
+    }
+  }
+})
+
+test('a migration that fails inside a transaction it opened has it rolled back, and says nothing it did inside it is applied', { timeout: 60000 }, async t => {
+  const sql = 'BEGIN; SELECT 1/0;'
+  for (const table of TABLES) {
+    for (const limit of WITH_AND_WITHOUT_LIMIT) {
+      const { server, result, file, next, label, afterFile, records } = await runTrackedWith(t, table, sql, { error: ['22012', 'division by zero'] }, limit)
+
+      assert.equal(result.status, 1, `${label}\n${result.output}`)
+      assert.match(
+        result.output,
+        new RegExp(
+          `❌ Failed to execute ${escapedFile(file)}: division by zero\\. It failed inside a transaction it had not closed, and that transaction was rolled back: ` +
+            'nothing the file did inside it is applied\\. Anything it committed before opening that transaction stays in the database, ' +
+            'and it is not recorded as run, so the next run starts the file over\\.'
+        ),
+        label
+      )
+      assert.equal(afterFile, 'ROLLBACK', label)
+      assert.deepEqual(records, [], label)
+      if (next) assert.equal(sessionThatRan(server.sessions, next), undefined, label)
+    }
+  }
+})
+
+test('a migration that commits the transaction it opens is recorded, and the rest runs', { timeout: 60000 }, async t => {
+  const sql = 'BEGIN; CREATE TABLE committed_table (id int); COMMIT;'
+  for (const table of TABLES) {
+    for (const limit of WITH_AND_WITHOUT_LIMIT) {
+      const { server, result, file, next, label, records } = await runTrackedWith(t, table, sql, 'ok', limit)
+
+      assert.equal(result.status, 0, `${label}\n${result.output}`)
+      assert.match(result.output, new RegExp(`Successfully executed ${escapedFile(file)}|${escapedFile(file)} executed successfully`), label)
+      assert.equal(records.length, 1, label)
+      assert.ok(!server.sessions.some(session => session.queries.includes('ROLLBACK')), label)
+      if (next) assert.ok(sessionThatRan(server.sessions, next), label)
+    }
+  }
+})
+
+test('a statement cancelled inside a transaction has it rolled back, and a cancellation under the limit keeps its own message', { timeout: 20000 }, async t => {
+  const sql = 'BEGIN; SET LOCAL statement_timeout = 100; SELECT pg_sleep(60);'
+
+  const limited = await runTrackedWith(t, '_migrations', sql, 'stuck', { MIGRATION_TIMEOUT_SECONDS: '5' })
+  assert.equal(limited.result.status, 1, limited.result.output)
   assert.match(
-    result.output,
-    /❌ 001_open\.sql ran to the end inside a transaction it left open, and recording it as run in "_migrations" failed: canceling statement due to lock timeout\. That transaction is rolled back when the run stops: what the file did inside it is gone, what it committed before stays, and it is not recorded as run, so the next run starts the file over\. Add the COMMIT the file is missing/
+    limited.result.output,
+    /❌ Failed to execute 001_core\.sql: the server cancelled it after \d+ ms, before MIGRATION_TIMEOUT_SECONDS \(5 s\) ran out: canceling statement due to statement timeout\. What it had not committed is gone/
   )
-  assert.doesNotMatch(result.output, /Record it before running the migrations again/)
-  assert.equal(sessionThatRan(server.sessions, migrations['002_after.sql']), undefined)
+  assert.match(limited.result.output, COMMITTED_STAYS)
+  assert.doesNotMatch(limited.result.output, /It failed inside a transaction/)
+  assert.equal(limited.afterFile, 'ROLLBACK')
+  assert.deepEqual(limited.records, [])
+
+  const unlimited = await runTrackedWith(t, '_migrations', sql, 'stuck', {})
+  assert.equal(unlimited.result.status, 1, unlimited.result.output)
+  assert.match(
+    unlimited.result.output,
+    /❌ Failed to execute 001_core\.sql: canceling statement due to statement timeout\. It failed inside a transaction it had not closed, and that transaction was rolled back/
+  )
+  assert.equal(unlimited.afterFile, 'ROLLBACK')
+  assert.deepEqual(unlimited.records, [])
+})
+
+test('a ROLLBACK that fails is said to leave the transaction to end with the connection', { timeout: 20000 }, async t => {
+  const server = await standInPostgres(t, sql => (sql === 'ROLLBACK' ? { error: ['XX000', 'rollback refused'] } : 'ok'))
+  for (const limit of [migrationTimeLimit({ MIGRATION_TIMEOUT_SECONDS: '5' }), null]) {
+    const client = migrationClient(server.url, limit)
+    await client.connect()
+    try {
+      await assert.rejects(runMigrationSql(client, { sql: 'BEGIN; SELECT 1;', limit, connectionString: server.url }), (error: Error) => {
+        assert.match(
+          error.message,
+          /^the file ends inside a transaction it opened and did not close; rolling that transaction back failed \(rollback refused\), and Postgres rolls it back when the run stops and closes the connection: nothing the file did inside it is applied/
+        )
+        return true
+      })
+    } finally {
+      // before the stand-in closes its sockets under a client still waiting for the ROLLBACK's ReadyForQuery
+      await client.end()
+    }
+  }
 })
 
 test('a record is sent with its own limit on the server and the client, and its values written as SQL literals', async () => {

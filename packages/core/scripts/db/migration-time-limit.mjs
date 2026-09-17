@@ -39,6 +39,16 @@
 // what it committed before it was stopped, with a COMMIT in the file or in a
 // procedure it calls, stays; the error says so, and what to do about it.
 //
+// A file has to leave its session outside a transaction, with or without a
+// limit. Recording it goes on the same session, so a record sent while the file
+// still has a transaction open would go inside that transaction, and be undone
+// with it when the connection closes. A file that ends inside a transaction it
+// opened and did not close, or fails inside one, has that transaction rolled
+// back before anything is recorded, and fails with an error that says nothing
+// it did inside it is applied. Where the file left the session is the
+// transaction status the server sends with the answer to the file: BEGIN sets
+// it whether or not the transaction has written anything.
+//
 // The limit is for the file, not for recording it as run. A migration that ran
 // to the end is recorded in its tracking table on the same session, and under a
 // limit the record gets RECORD_WAIT_MS instead, whatever the limit: on the
@@ -49,9 +59,7 @@
 // waited for up to then, and a server that stops answering is given up on then.
 // When the record fails, however it fails, the error says the file ran to the
 // end and is not recorded, and gives the INSERT that records it; the runner
-// prints that instead of calling the file failed. A file that ran to the end
-// inside a transaction it left open has nothing to record: that transaction is
-// rolled back when the run stops, so the error says to add the COMMIT instead.
+// prints that instead of calling the file failed.
 //
 // The limit holds whatever the database URL says. A URL that sets
 // statement_timeout or query_timeout itself, `?statement_timeout=0` included,
@@ -62,7 +70,7 @@
 import pg from 'pg';
 import { timeLimitedClient, timeLimitParametersIn } from './connection-time-limits.mjs';
 
-const { Client, escapeIdentifier, escapeLiteral } = pg;
+const { Client, DatabaseError, escapeIdentifier, escapeLiteral } = pg;
 
 const CONNECT_MS = 10000;
 
@@ -87,24 +95,15 @@ export function migrationTimeLimit(env = process.env) {
   return { seconds, statementMs: limitMs, queryMs: limitMs };
 }
 
-/**
- * The transaction status the server last reported to each migration client, as
- * its ReadyForQuery message carries it: 'I' idle, 'T' in a transaction, 'E' in a
- * failed one.
- */
-const transactionStatus = new WeakMap();
-
 /** The client migrations run on, under the limit when there is one. */
 export function migrationClient(connectionString, limit) {
-  const client = limit
+  return limit
     ? timeLimitedClient(connectionString, { connectMs: CONNECT_MS, statementMs: limit.statementMs, queryMs: limit.queryMs })
     : new Client({
         connectionString,
         ssl: { rejectUnauthorized: false, require: true },
         connectionTimeoutMillis: CONNECT_MS,
       });
-  client.connection.on('readyForQuery', message => transactionStatus.set(client, message.status));
-  return client;
 }
 
 /**
@@ -134,21 +133,65 @@ function leftBehind({ stillRunning }) {
 }
 
 /**
+ * The transaction status the server sends with the next ReadyForQuery on the
+ * client's connection: 'I' idle, 'T' in a transaction, 'E' in a failed one. It
+ * is null when the connection closes first. pg settles a query that fails as
+ * soon as the error arrives, before that ReadyForQuery, so the status has to be
+ * waited for; listening starts before the query is sent.
+ */
+function nextTransactionStatus(client) {
+  const { connection } = client;
+  if (!connection) return Promise.resolve(null);
+  return new Promise(resolve => {
+    const settle = status => {
+      connection.off('readyForQuery', onReady);
+      connection.off('end', onEnd);
+      resolve(status);
+    };
+    const onReady = message => settle(message.status);
+    const onEnd = () => settle(null);
+    connection.on('readyForQuery', onReady);
+    connection.on('end', onEnd);
+  });
+}
+
+/**
+ * Rolls back the transaction a migration file left its session in, open or
+ * failed, as `status` says. Returns null when the file left none, and otherwise
+ * how that transaction ends: rolled back here, or, when the ROLLBACK fails, when
+ * the run stops and closes the connection.
+ */
+async function rollBackLeftTransaction(client, status) {
+  if (status !== 'T' && status !== 'E') return null;
+  try {
+    await client.query('ROLLBACK');
+    return 'that transaction was rolled back';
+  } catch (error) {
+    return `rolling that transaction back failed (${error.message}), and Postgres rolls it back when the run stops and closes the connection`;
+  }
+}
+
+/**
  * Runs one migration file's SQL. When the limit or a statement cancellation
  * stops it, the error says which, whether its session on the server was ended,
  * and what the migration leaves behind; the runner prints it next to the file's
- * name.
+ * name. A file the server answers inside a transaction fails too, once that
+ * transaction is rolled back, so it is never recorded as run.
  */
 export async function runMigrationSql(client, { sql, limit, connectionString }) {
   const sentAt = performance.now();
+  const answered = nextTransactionStatus(client);
+  let result;
   try {
-    return await client.query(sql);
+    result = await client.query(sql);
   } catch (error) {
-    if (!limit) throw error;
+    const elapsedMs = performance.now() - sentAt;
+    // Only an error the server sent comes with the status it answered the file with; a client that gave up has none coming
+    const rolledBack = error instanceof DatabaseError ? await rollBackLeftTransaction(client, await answered) : null;
+    if (!limit) throw failedInsideTransaction(error, rolledBack);
 
-    // The server cancelled a statement, and the session is idle again or in a transaction that can only roll back
+    // The server cancelled a statement, which leaves nothing of the file it had not committed
     if (error.code === '57014') {
-      const elapsedMs = performance.now() - sentAt;
       const cancelled = `the server cancelled it after ${Math.floor(elapsedMs)} ms`;
       const stopped =
         elapsedMs < limit.statementMs
@@ -157,7 +200,7 @@ export async function runMigrationSql(client, { sql, limit, connectionString }) 
       throw new Error(`${stopped}: ${error.message}. ${leftBehind({ stillRunning: false })}`);
     }
 
-    if (error.message !== 'Query read timeout') throw error;
+    if (error.message !== 'Query read timeout') throw failedInsideTransaction(error, rolledBack);
 
     // The limit has passed with no answer, and the statement may still be running
     // there. The client lets go of its connection first: a session the server
@@ -172,6 +215,28 @@ export async function runMigrationSql(client, { sql, limit, connectionString }) 
         : `its session on the server could not be ended: ${ended}. ${leftBehind({ stillRunning: true })}`)
     );
   }
+
+  const rolledBack = await rollBackLeftTransaction(client, await answered);
+  if (rolledBack) {
+    throw new Error(
+      `the file ends inside a transaction it opened and did not close; ${rolledBack}: nothing the file did inside it is applied, ` +
+      'and it is not recorded as run, so the next run starts the file over. Anything it committed before opening that transaction ' +
+      'stays in the database. Add the COMMIT the file is missing, and undo anything it committed or make the file safe to run again, ' +
+      'before running the migrations again.'
+    );
+  }
+  return result;
+}
+
+/** The error a file that failed inside a transaction it had not closed fails with, or the server's own when it was not in one. */
+function failedInsideTransaction(error, rolledBack) {
+  if (!rolledBack) return error;
+  return new Error(
+    `${error.message}. It failed inside a transaction it had not closed, and ${rolledBack}: nothing the file did inside it is applied. ` +
+    'Anything it committed before opening that transaction stays in the database, and it is not recorded as run, so the next run ' +
+    'starts the file over.',
+    { cause: error }
+  );
 }
 
 /** A migration that ran to the end and could not be recorded as run. */
@@ -189,7 +254,6 @@ export async function recordMigration(client, { file, table, row, limit, waitMs 
   const insert =
     `INSERT INTO ${escapeIdentifier(table)} (${Object.keys(row).map(escapeIdentifier).join(', ')}) ` +
     `VALUES (${Object.values(row).map(escapeLiteral).join(', ')})`;
-  const leftOpen = transactionStatus.get(client) === 'T';
   try {
     if (limit) {
       await client.query({
@@ -205,14 +269,6 @@ export async function recordMigration(client, { file, table, row, limit, waitMs 
       error.message === 'Query read timeout'
         ? `${recording} got no answer within ${waitMs / 1000} s, so it may or may not be recorded`
         : `${recording} failed: ${error.message}`;
-    if (leftOpen) {
-      throw new MigrationNotRecordedError(
-        `${file} ran to the end inside a transaction it left open, and ${outcome}. ` +
-        'That transaction is rolled back when the run stops: what the file did inside it is gone, what it committed ' +
-        'before stays, and it is not recorded as run, so the next run starts the file over. Add the COMMIT the file ' +
-        'is missing, and undo what it committed or make the file safe to run again, before running the migrations again.'
-      );
-    }
     throw new MigrationNotRecordedError(
       `${file} ran to the end, but ${outcome}. ` +
       'What it committed stays in the database, and until it is recorded the next run starts the file over. ' +
