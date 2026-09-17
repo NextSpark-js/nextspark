@@ -10,7 +10,7 @@ import { spawn, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const CORE_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const UPDATE_CORE = path.join(CORE_DIR, 'scripts/maintenance/update-core.mjs')
@@ -126,6 +126,7 @@ for (const [file, content] of Object.entries(state.installWrites || {})) {
   fs.mkdirSync(path.dirname(file), { recursive: true })
   fs.writeFileSync(file, content)
 }
+if (state.installShell) require('node:child_process').execFileSync('sh', ['-c', state.installShell], { stdio: 'inherit' })
 
 const link = () => {
   for (const { dir: importer, name, version } of pins) {
@@ -201,6 +202,8 @@ interface FakeState {
   latest?: string
   installExit?: number
   installWrites?: Record<string, string>
+  /** A shell script the install's lifecycle runs where the install runs, after installWrites */
+  installShell?: string
   installHangMs?: number
   /** The hanging install and its lifecycle script ignore SIGINT, SIGTERM and SIGHUP */
   installIgnoreSignals?: boolean
@@ -318,6 +321,7 @@ function fakePnpm(state: FakeState = {}) {
     latest: state.latest ?? TO,
     installExit: state.installExit ?? 0,
     installWrites: state.installWrites ?? {},
+    installShell: state.installShell ?? '',
     installHangMs: state.installHangMs ?? 0,
     installIgnoreSignals: state.installIgnoreSignals ?? false,
     lifecycleIgnoresSignals: state.lifecycleIgnoresSignals ?? false,
@@ -876,8 +880,8 @@ test('the rollback installs what the commit\'s lockfile names, and fails without
   assertSameRepo(before)
 })
 
-/** Adds a repository of its own as the submodule vendor/sub of `root`, on its branch main, and commits it. */
-function addSubmodule(t: { after: (fn: () => void) => void }, root: string, gitmodulesIgnore?: string) {
+/** Adds a repository of its own as the submodule vendor/sub of `root` (a directory of the project's repository), on its branch main, and commits it, with `ignore` and `update` set in .gitmodules when given. */
+function addSubmodule(t: { after: (fn: () => void) => void }, root: string, gitmodulesIgnore?: string, gitmodulesUpdate?: string) {
   const source = fs.mkdtempSync(path.join(os.tmpdir(), 'update-core-submodule-'))
   t.after(() => fs.rmSync(source, { recursive: true, force: true }))
   git(source, 'init', '-q', '-b', 'main')
@@ -886,6 +890,7 @@ function addSubmodule(t: { after: (fn: () => void) => void }, root: string, gitm
   git(source, 'commit', '-q', '-m', 'Submodule')
   git(root, '-c', 'protocol.file.allow=always', 'submodule', 'add', '-q', '-b', 'main', source, 'vendor/sub')
   if (gitmodulesIgnore) git(root, 'config', '-f', '.gitmodules', 'submodule.vendor/sub.ignore', gitmodulesIgnore)
+  if (gitmodulesUpdate) git(root, 'config', '-f', '.gitmodules', 'submodule.vendor/sub.update', gitmodulesUpdate)
   git(root, 'add', '.gitmodules')
   git(root, 'commit', '-q', '-m', 'Add vendor/sub')
   return path.join(root, 'vendor/sub')
@@ -906,6 +911,90 @@ test('the rollback also restores what lifecycle scripts wrote inside a submodule
   assert.match(result.stderr, /git status now[^\n]*\n(?: {4}.+\n)*? {4} [mM] vendor\/sub\n/)
   assertRollbackRestores(root, result.stderr, before)
   assertSameRepo(subBefore)
+})
+
+for (const webMobile of [false, true]) {
+  test(`${webMobile ? 'in a web-mobile project, ' : ''}a submodule on a branch whose worktree a lifecycle script deleted is back on that branch after the rollback`, (t) => {
+    const root = createProject(t, { webMobile })
+    // In web-mobile the submodule sits at the top of the repository, above web/ where update-core and its rollback run
+    const sub = addSubmodule(t, webMobile ? path.dirname(root) : root)
+    const before = stateOf(webMobile ? path.dirname(root) : root)
+    const subBefore = stateOf(sub)
+    assert.equal(git(sub, 'symbolic-ref', '--short', 'HEAD'), 'main')
+
+    const result = runUpdateCore(root, ['--version', TO], { installExit: 1, installShell: `rm -rf ${JSON.stringify(sub)}` })
+
+    assert.equal(result.status, 1, result.output)
+    assert.equal(fs.existsSync(path.join(sub, 'value.txt')), false, 'the lifecycle script did not delete the submodule\'s worktree')
+    const rollback = runRollback(root, rollbackIn(result.stderr))
+    assert.equal(rollback.status, 0, rollback.output)
+    const branch = spawnSync('git', ['symbolic-ref', '--quiet', '--short', 'HEAD'], { cwd: sub, encoding: 'utf8' })
+    assert.equal(branch.stdout.trim(), 'main', `the submodule came back detached at ${git(sub, 'rev-parse', 'HEAD')}`)
+    assertSameRepo(before)
+    assertSameRepo(subBefore)
+  })
+}
+
+for (const update of [undefined, 'merge']) {
+  test(`a submodule whose branch a lifecycle script moved with a commit returns to the commit the project records, and its branch is left where the script put it${update ? `, with update = ${update} in .gitmodules` : ''}`, (t) => {
+    const root = createProject(t)
+    const sub = addSubmodule(t, root, undefined, update)
+    const recorded = git(sub, 'rev-parse', 'HEAD')
+
+    const result = runUpdateCore(root, ['--version', TO], {
+      installExit: 1,
+      installShell: `cd ${JSON.stringify(sub)} && echo moved > value.txt && git -c user.name=test -c user.email=test@example.com -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -qam 'Made by a script'`,
+    })
+    assert.equal(result.status, 1, result.output)
+    const moved = git(sub, 'rev-parse', 'refs/heads/main')
+    assert.notEqual(moved, recorded, 'the lifecycle script did not commit inside the submodule')
+
+    const rollback = runRollback(root, rollbackIn(result.stderr))
+    assert.equal(rollback.status, 0, rollback.output)
+    assert.equal(git(root, 'status', '--porcelain', '--ignore-submodules=none'), '')
+    assert.equal(git(sub, 'rev-parse', 'HEAD'), recorded)
+    assert.equal(spawnSync('git', ['symbolic-ref', '--quiet', 'HEAD'], { cwd: sub, encoding: 'utf8' }).status, 1, 'the submodule was put back on a branch that no longer points at the commit the project records')
+    assert.equal(git(sub, 'rev-parse', 'refs/heads/main'), moved)
+  })
+}
+
+test('the rollback leaves the project\'s HEAD alone when a script deinitialized a submodule that is a checkout of the project\'s own repository', (t) => {
+  const root = createProject(t)
+  // A branch of the project's own repository checked out as its submodule, on the branch of the same name
+  git(root, 'checkout', '-q', '--orphan', 'pages')
+  git(root, 'rm', '-q', '-r', '--cached', '.')
+  git(root, 'commit', '-q', '--allow-empty', '-m', 'Pages')
+  git(root, 'checkout', '-q', '-f', 'main')
+  git(root, '-c', 'protocol.file.allow=always', 'submodule', 'add', '-q', '-b', 'pages', root, 'vendor/sub')
+  git(root, 'commit', '-q', '-m', 'Add vendor/sub')
+  const sub = path.join(root, 'vendor/sub')
+  git(sub, 'checkout', '-q', 'pages')
+  assert.equal(git(sub, 'rev-parse', 'HEAD'), git(root, 'rev-parse', 'refs/heads/pages'))
+  const head = gitHead(root)
+
+  const result = runUpdateCore(root, ['--version', TO], { installExit: 1, installShell: 'git submodule deinit -q -f vendor/sub' })
+
+  assert.equal(result.status, 1, result.output)
+  const rollback = runRollback(root, rollbackIn(result.stderr))
+  assert.equal(rollback.status, 0, rollback.output)
+  assert.equal(gitHead(root), head)
+})
+
+test('stops before changing anything when git can\'t list the branches the submodules are on', (t) => {
+  const root = createProject(t)
+  addSubmodule(t, root)
+  const files = snapshot(root)
+  const pnpm = fakePnpm()
+  t.after(() => pnpm.remove())
+  const realGit = spawnSync('sh', ['-c', 'command -v git'], { encoding: 'utf8' }).stdout.trim()
+  fs.writeFileSync(path.join(pnpm.bin, 'git'), `#!/bin/sh\nif [ "$1" = submodule ] && [ "$2" = foreach ] && [ "$3" = --quiet ]; then echo 'fatal: simulated failure' >&2; exit 42; fi\nexec ${realGit} "$@"\n`, { mode: 0o755 })
+
+  const result = spawnSync(process.execPath, [UPDATE_CORE, '--version', TO], { cwd: root, encoding: 'utf8', timeout: 60_000, env: pnpm.env })
+
+  assert.equal(result.status, 1, `${result.stdout}${result.stderr}`)
+  assert.match(result.stderr, /Could not list the branches the submodules are on, which the rollback needs to put them back on: git submodule foreach exited 42: fatal: simulated failure\. Nothing was changed\./)
+  assert.deepEqual(snapshot(root), files)
+  assert.deepEqual(pnpm.calls().filter((call) => call.startsWith('install')), [])
 })
 
 test('stops before changing anything when a submodule has changes its .gitmodules entry hides from git status', (t) => {
@@ -944,7 +1033,7 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     assert.ok(elapsed < 2500, `update-core exited ${elapsed} ms after the signal`)
     assert.equal(exitSignal, null, `update-core died of ${exitSignal} without reporting:\n${stdout}${stderr}`)
     assert.equal(status, 128 + os.constants.signals[signal], `${stdout}${stderr}`)
-    assert.match(stderr, new RegExp(`Interrupted by ${signal} during: pnpm install\n {2}pnpm install and the processes it started exited after the signal\\.\n`))
+    assert.match(stderr, new RegExp(`Interrupted by ${signal} during: pnpm install\n {2}No process in the process group of pnpm install was left running after the signal\\.\n`))
     assert.match(stderr, /Done before that:\n {4}- package\.json: /)
     assert.match(stderr, /git status now[^\n]*\n(?: {4}.+\n)*? {4} M app\/page\.tsx\n/)
     assert.doesNotMatch(`${stdout}${stderr}`, /Update Complete/)
@@ -979,7 +1068,7 @@ test('an install that ignores the signal, and a second signal, are killed 5 s af
   assert.equal(signal, null, `${stdout}${stderr}`)
   assert.equal(status, 143, `${stdout}${stderr}`)
   assert.ok(elapsed >= 4500 && elapsed < 9000, `the report came ${elapsed} ms after the first signal:\n${stdout}${stderr}`)
-  assert.match(stderr, /Interrupted by SIGTERM during: pnpm install\n {2}pnpm install or processes it started were still running 5 s after the signal, and were killed with SIGKILL\.\n/)
+  assert.match(stderr, /Interrupted by SIGTERM during: pnpm install\n {2}Processes in the process group of pnpm install were still running 5 s after the signal, and were killed with SIGKILL\.\n/)
   assert.doesNotMatch(stderr, /may still write to the project/)
   assert.equal(running(installPid), false, 'the install was still running after update-core exited')
   assert.equal(running(lifecyclePid), false, 'the install\'s lifecycle script was still running after update-core exited')
@@ -1033,6 +1122,68 @@ test('SIGKILL to update-core while it waits for a lifecycle script that outlived
   }
   await sleep(hangMs)
   assert.equal(fs.existsSync(`${pnpm.logPath}.lifecycle-finished`), false)
+})
+
+/**
+ * Preloaded into step-guard.mjs, it holds back the guard's message with the
+ * step's pid: it writes the guard's pid and the step's to GUARD_HELD_PID and
+ * sends the message GUARD_HOLD_MS later, which widens the time between the
+ * guard starting a step and update-core learning its pid.
+ */
+const GUARD_HOLDS_PID = `import fs from 'node:fs'
+import path from 'node:path'
+if (process.send && path.basename(process.argv[1] ?? '') === 'step-guard.mjs') {
+  const send = process.send.bind(process)
+  process.send = (message, ...rest) => {
+    if (!message?.pid) return send(message, ...rest)
+    fs.writeFileSync(process.env.GUARD_HELD_PID, process.pid + ' ' + message.pid)
+    setTimeout(() => send(message, ...rest), Number(process.env.GUARD_HOLD_MS))
+    return true
+  }
+}
+`
+
+test('a guard killed after starting a step but before reporting its pid leaves nothing of the step running, and the step\'s command never starts', async (t) => {
+  const root = createProject(t)
+  const before = stateOf(root)
+  const base = fakePnpm({ installHangMs: 20_000 })
+  t.after(() => base.remove())
+  const preload = path.join(base.bin, 'guard-holds-pid.mjs')
+  fs.writeFileSync(preload, GUARD_HOLDS_PID)
+  const held = path.join(base.bin, 'held-pid')
+  const pnpm = { ...base, env: { ...base.env, NODE_OPTIONS: `--import=${pathToFileURL(preload).href}`, GUARD_HELD_PID: held, GUARD_HOLD_MS: '5000' } }
+  t.after(() => {
+    const started = `${pnpm.logPath}.started`
+    const pids = fs.existsSync(started) ? fs.readFileSync(started, 'utf8').split(' ').map(Number) : []
+    for (const pid of pids) {
+      try { process.kill(pid, 'SIGKILL') } catch {}
+    }
+  })
+
+  const run = startUpdateCore(root, ['--version', TO], pnpm)
+  for (const deadline = Date.now() + 30_000; !fs.existsSync(held) || fs.readFileSync(held, 'utf8') === ''; await sleep(20)) {
+    assert.ok(Date.now() < deadline, `the guard never started a step:\n${run.stdout}${run.stderr}`)
+  }
+  const [guardPid, stepPid] = fs.readFileSync(held, 'utf8').split(' ').map(Number)
+  t.after(() => {
+    try { process.kill(-stepPid, 'SIGKILL') } catch {}
+  })
+  // Long enough for a step that doesn't wait for update-core to be running its command
+  await sleep(300)
+
+  process.kill(guardPid, 'SIGKILL')
+  await run.gone
+  for (const deadline = Date.now() + 2000; running(stepPid); await sleep(20)) {
+    assert.ok(Date.now() < deadline, `step ${stepPid} was still running 2 s after update-core exited, with its guard killed before it reported the pid`)
+  }
+  const { status } = await run.exited
+
+  assert.equal(status, 1, `${run.stdout}${run.stderr}`)
+  assert.match(run.stderr, /Failed before: pnpm install \(its guard process exited \(SIGKILL\)\)\n/)
+  assert.deepEqual(pnpm.calls().filter((call) => call.startsWith('install')), [], 'the install ran')
+  await sleep(500)
+  assert.equal(fs.existsSync(`${pnpm.logPath}.started`), false, 'the install started')
+  assertRollbackRestores(root, run.stderr, before)
 })
 
 test('update-core exits as soon as the update is complete', async (t) => {

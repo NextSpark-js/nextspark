@@ -95,10 +95,17 @@ exits non-zero and prints what it got through, what git status shows and the
 command that rolls the project back to the commit it started from:
   git reset --hard <commit> && git clean -fd && rm -rf node_modules && pnpm install --frozen-lockfile
 That command is also printed before the first change, for a run that is killed
-without a chance to report (SIGKILL); the step such a run was running is killed
-with it. The rollback can't bring back files .gitignore ignores that a lifecycle
-script overwrote, nor git refs a script changed, and removes untracked files
-created while the update ran.
+without a chance to report (SIGKILL). The install or sync such a run was running
+is then killed by a guard process, but not processes that left that step's
+process group, not while the guard is stopped (SIGSTOP), and not at all if the
+guard is killed too.
+While update-core or its guard is stopped (SIGSTOP, or Ctrl-Z for update-core),
+none of this is enforced: the step and the processes it started keep running,
+with no 5 s limit, and what update-core reports can't be relied on.
+The rollback can't bring back files .gitignore ignores that a lifecycle script
+overwrote, nor git refs a script changed (a submodule is put back on the branch
+it was on only if that branch still points at the commit the project records),
+and removes untracked files created while the update ran.
 `
 
 /** Runs a command to completion, printing its output as it goes unless `capture` asks for it back. */
@@ -298,10 +305,13 @@ function realPath(file) {
 
 /**
  * Where the project stands in git: the commit and branch it is on, whether
- * anything is uncommitted, and whether the commit has submodules. Changes
+ * anything is uncommitted, whether the commit has submodules and, for each
+ * checked-out submodule (nested ones too) that is on a branch, its path from
+ * `cwd`, the branch and the commit, or why git couldn't list them. Changes
  * inside a submodule count as uncommitted even where .gitmodules or the git
  * config tells git status to ignore them, since the rollback resets submodules
- * too.
+ * too; so on a clean tree a submodule's commit is the one the project records
+ * for it.
  */
 function gitState(run, cwd) {
   const top = run('git', ['rev-parse', '--show-toplevel'], { cwd, capture: true })
@@ -311,13 +321,29 @@ function gitState(run, cwd) {
   const status = run('git', ['status', '--porcelain=v1', '--ignore-submodules=none'], { cwd, capture: true })
   const branch = run('git', ['symbolic-ref', '--quiet', '--short', 'HEAD'], { cwd, capture: true })
   const gitmodules = run('git', ['ls-files', '--', ':/.gitmodules'], { cwd, capture: true })
+  const submodules = gitmodules.status !== 0 || gitmodules.stdout.trim() !== ''
+  const onBranch = []
+  let submodulesUnlisted = null
+  if (submodules) {
+    const listed = run('git', ['submodule', 'foreach', '--quiet', '--recursive', 'printf "%s\\0%s\\0%s\\0" "$displaypath" "$(git symbolic-ref --quiet HEAD)" "$(git rev-parse HEAD)"'], { cwd, capture: true })
+    if (listed.status !== 0) {
+      submodulesUnlisted = `git submodule foreach ${listed.error ? listed.error.message : `exited ${listed.status}`}: ${(listed.stderr || listed.stdout).trim()}`
+    } else {
+      const fields = listed.stdout.split('\0')
+      for (let i = 0; i + 2 < fields.length; i += 3) {
+        if (fields[i + 1]) onBranch.push({ path: fields[i], ref: fields[i + 1], commit: fields[i + 2] })
+      }
+    }
+  }
   return {
     repo: true,
     top: top.stdout.trim(),
     head: head.status === 0 ? head.stdout.trim() : null,
     dirty: status.status !== 0 || status.stdout.trim() !== '',
     branch: branch.status === 0 ? branch.stdout.trim() : null,
-    submodules: gitmodules.status !== 0 || gitmodules.stdout.trim() !== '',
+    submodules,
+    submodulesOnBranch: onBranch,
+    submodulesUnlisted,
   }
 }
 
@@ -356,8 +382,15 @@ function installRoot(cwd, top) {
  * `git clean` only cleans below the directory it runs in, so from web/ in a
  * web-mobile project it is pointed at the top of the repository. Neither goes
  * into submodules: when the commit has any, each checked-out submodule is reset
- * to its own HEAD, moved back to the commit the project records for it if a
- * script moved it (which leaves that one detached), and cleaned. With --branch,
+ * to its own HEAD, checked out again at the commit the project records for it
+ * if a script moved it or deleted its worktree (which leaves it detached;
+ * --checkout overrides an update strategy such as merge that a submodule's
+ * config sets), and cleaned. A submodule that was on a branch when the update
+ * started is put back on that branch if the branch still points at the recorded
+ * commit; one whose branch moved, say with a commit made inside it, stays
+ * detached at the recorded commit, and its branch isn't touched. That step only
+ * runs where the submodule's .git is: in a directory without one, `git -C`
+ * would find the project's own repository. With --branch,
  * the update branch is deleted with update-ref, which also succeeds when the run
  * stopped before creating it. node_modules is removed before installing because
  * an install that was stopped can leave it holding the new versions while the
@@ -369,7 +402,13 @@ function rollbackCommand(git, { cwd, root, branch }) {
   const commit = git.head.slice(0, 12)
   const project = realPath(cwd)
   const commands = [`git reset --hard ${commit}`]
-  if (git.submodules) commands.push('git submodule foreach --recursive git reset --hard', 'git submodule update --recursive')
+  if (git.submodules) commands.push('git submodule foreach --recursive git reset --hard', 'git submodule update --checkout --recursive')
+  for (const submodule of git.submodulesOnBranch ?? []) {
+    const dir = shellWord(submodule.path)
+    const ref = shellWord(submodule.ref)
+    // Exits 0 either way: the if leaves a submodule whose branch moved detached
+    commands.push(`sh -c ${shellWord(`if test -e ${shellWord(`${submodule.path}/.git`)} && test "$(git -C ${dir} rev-parse --quiet --verify ${ref})" = ${submodule.commit}; then git -C ${dir} symbolic-ref HEAD ${ref}; fi`)}`)
+  }
   commands.push(realPath(git.top) === project ? 'git clean -fd' : 'git clean -fd :/')
   if (git.submodules) commands.push('git submodule foreach --recursive git clean -fd')
   if (branch) {
@@ -528,12 +567,18 @@ async function stopGroup(pid, { signal, deadline }) {
  * emptied or its processes were killed STOP_GRACE_MS after the signal, without
  * waiting for the command itself to exit. The command runs through
  * step-guard.mjs, in a process group of its own that also holds the lifecycle
- * scripts pnpm install starts, so nothing keeps writing after the step: when
- * the command exits, failing or not, whatever is still left of its group after
- * SETTLE_MS gets SIGTERM and is killed STOP_GRACE_MS later, and if update-core
- * is killed before it is done with the step, the guard kills the group. Ctrl-C
+ * scripts pnpm install starts: when the command exits, failing or not,
+ * whatever is still left of its group after SETTLE_MS gets SIGTERM and is
+ * killed STOP_GRACE_MS later, and if update-core is killed before it is done
+ * with the step, the guard kills the group. The guard starts the command only
+ * once it is told 'start', which is sent once the group's id is known and no
+ * signal has come, so a guard that dies before reporting the pid leaves no
+ * command running (except on Windows, which runs the command at once). None of
+ * this reaches processes that leave the group, and none of it runs while
+ * update-core or the guard is stopped (SIGSTOP), or once both are gone. Ctrl-C
  * reaches update-core only, which passes it on. The step's stdin is closed: from
  * a background group, reading the terminal would stop it instead of failing.
+ * `started` in the result says whether the command may have started.
  */
 async function runStep(command, args, { cwd, signals }) {
   const guard = spawn(process.execPath, [STEP_GUARD, command, ...args], {
@@ -544,13 +589,19 @@ async function runStep(command, args, { cwd, signals }) {
 
   let started
   let finished
+  let commandStarted = process.platform === 'win32'
   const startedStep = new Promise((resolve) => { started = resolve })
   const exited = new Promise((resolve) => { finished = resolve })
   guard.on('message', (message) => {
     if (message?.pid) {
       signals.step = message.pid
-      // A signal that came before the pid did is passed on now
-      if (signals.signal) signalGroup(message.pid, signals.signal)
+      if (signals.signal) {
+        // A signal that came before the pid did is passed on now, and the command is never started
+        signalGroup(message.pid, signals.signal)
+      } else {
+        guard.send('start', () => {})
+        commandStarted = true
+      }
       started(message.pid)
     } else if (message?.exit) {
       finished({ status: message.exit.code, signal: message.exit.signal, error: null })
@@ -579,7 +630,7 @@ async function runStep(command, args, { cwd, signals }) {
     guard.disconnect()
     if (!(await within(guardGone.then(() => true), KILL_WAIT_MS, false))) guard.kill('SIGKILL')
     signals.step = null
-    return { status: null, signal: null, error: null, stop: 'unreached', leftRunning: false }
+    return { status: null, signal: null, error: null, stop: 'unreached', leftRunning: false, started: commandStarted }
   }
 
   const result = await Promise.race([exited, signals.interrupted.then(() => null)])
@@ -595,7 +646,7 @@ async function runStep(command, args, { cwd, signals }) {
   signals.step = null
   guard.send('release', () => {})
   if (!(await within(guardGone.then(() => true), KILL_WAIT_MS, false))) guard.kill('SIGKILL')
-  return { ...(result ?? { status: null, signal: null, error: null }), ...outcome }
+  return { ...(result ?? { status: null, signal: null, error: null }), ...outcome, started: commandStarted }
 }
 
 function describeExit(result) {
@@ -654,10 +705,20 @@ function stoppedReport({ run, cwd, err, target, rollback, signal, step, started,
   banner(err, `Update to ${target} did not finish`)
   err('')
   if (signal) err(`  Interrupted by ${signal} ${started ? 'during' : 'before'}: ${step}`)
-  else err(`  Failed during: ${step} (${reason})`)
-  if (signal && stop === 'exited') err(`  ${step} and the processes it started exited after the signal.`)
-  if (signal && stop === 'killed') err(`  ${step} or processes it started were still running ${grace} after the signal, and were killed with SIGKILL.`)
-  if (signal && stop === 'unreached') err(`  The process that runs ${step} didn't say which process group it runs in within ${grace} of the signal, and was stopped; ${step} may still be running and write to the project.`)
+  else err(`  Failed ${started ? 'during' : 'before'}: ${step} (${reason})`)
+  // "during" only means the command may have started, so these speak of the step's process group, not of the command.
+  // Windows has no process groups to check: taskkill ran after the signal, and its result isn't known.
+  if (signal && started && stop === 'exited') {
+    err(process.platform === 'win32'
+      ? `  taskkill /T /F was run on ${step} and the processes under it after the signal; whether they stopped isn't checked.`
+      : `  No process in the process group of ${step} was left running after the signal.`)
+  }
+  if (signal && started && stop === 'killed') err(`  Processes in the process group of ${step} were still running ${grace} after the signal, and were killed with SIGKILL.`)
+  if (signal && stop === 'unreached') {
+    err(started
+      ? `  The process that runs ${step} didn't say which process group it runs in within ${grace} of the signal, and was stopped; ${step} may still be running and write to the project.`
+      : `  The process that runs ${step} didn't say which process group it runs in within ${grace} of the signal, and was stopped before it started ${step}.`)
+  }
   if (!signal && stop === 'exited') err('  Processes it started were still running after it exited, and exited after SIGTERM.')
   if (!signal && stop === 'killed') err(`  Processes it started were still running after it exited and ${grace} after SIGTERM, and were killed with SIGKILL.`)
   if (leftRunning) err('  Some of its processes were still running after being killed, and may still write to the project.')
@@ -759,6 +820,10 @@ export async function updateCore(args, { cwd = process.cwd(), env = process.env,
     err('   Uncommitted changes. Commit or stash them first: an update that fails or is interrupted is rolled back by returning to the commit it started from, which would discard them. Nothing was changed.')
     return 1
   }
+  if (git.submodulesUnlisted) {
+    err(`   Could not list the branches the submodules are on, which the rollback needs to put them back on: ${git.submodulesUnlisted}. Nothing was changed.`)
+    return 1
+  }
 
   // The rollback installs exactly what the commit's lockfile records, so the commit needs one
   const root = installRoot(cwd, git.top)
@@ -819,7 +884,7 @@ export async function updateCore(args, { cwd = process.cwd(), env = process.env,
   const rollback = rollbackCommand(git, { cwd, root, branch })
   out(`\n   Starting from commit ${git.head.slice(0, 12)}. If this run is killed before it can report (SIGKILL), roll back with:`)
   out(`     ${rollback}`)
-  out('   Killing this run also kills the install or sync it is running, but not processes that left that step\'s process group.')
+  out('   Killing this run also kills the install or sync it is running, unless its guard process is stopped or killed too, but not processes that left that step\'s process group.')
   out('   The rollback removes files created in the repository while the update runs, and can\'t bring back ignored files, like .env, that a lifecycle script overwrites.')
 
   // From here on the project changes, and whatever stops the run goes through stoppedReport
@@ -881,8 +946,8 @@ export async function updateCore(args, { cwd = process.cwd(), env = process.env,
     out('\n[3/5] Installing...')
     const migrationsBefore = new Set(coreMigrations(cwd))
     const install = await runStep('pnpm', ['install'], { cwd: root, signals })
-    if (signals.signal) return stopped({ stop: install.stop, leftRunning: install.leftRunning })
-    if (install.status !== 0) return stopped({ reason: describeExit(install), stop: install.stop, leftRunning: install.leftRunning })
+    if (signals.signal) return stopped({ started: install.started, stop: install.stop, leftRunning: install.leftRunning })
+    if (install.status !== 0) return stopped({ reason: describeExit(install), started: install.started, stop: install.stop, leftRunning: install.leftRunning })
     if (install.leftRunning) return stopped({ reason: 'it exited 0, but processes it started were still running after being killed', stop: install.stop, leftRunning: true })
     if (install.stop) out(`   Processes pnpm install started were still running after it exited, and were ${install.stop === 'killed' ? 'killed' : 'stopped with SIGTERM'}.`)
     const offTarget = packages
@@ -901,8 +966,8 @@ export async function updateCore(args, { cwd = process.cwd(), env = process.env,
     done.push('.next removed')
     if (await signalled()) return stopped({ started: false })
     const sync = await runStep(process.execPath, [cli, 'sync:app', '--force'], { cwd, signals })
-    if (signals.signal) return stopped({ stop: sync.stop, leftRunning: sync.leftRunning })
-    if (sync.status !== 0) return stopped({ reason: `${describeExit(sync)}; what it reported is above`, stop: sync.stop, leftRunning: sync.leftRunning })
+    if (signals.signal) return stopped({ started: sync.started, stop: sync.stop, leftRunning: sync.leftRunning })
+    if (sync.status !== 0) return stopped({ reason: `${describeExit(sync)}${sync.started ? '; what it reported is above' : ''}`, started: sync.started, stop: sync.stop, leftRunning: sync.leftRunning })
     if (sync.leftRunning) return stopped({ reason: 'it exited 0, but processes it started were still running after being killed', stop: sync.stop, leftRunning: true })
     if (sync.stop) out(`   Processes nextspark sync:app started were still running after it exited, and were ${sync.stop === 'killed' ? 'killed' : 'stopped with SIGTERM'}.`)
     done.push('app/ synced with core and registries rebuilt by nextspark sync:app')
