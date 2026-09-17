@@ -346,10 +346,12 @@ test('exec gives up on a step whose process is still running after its kill was 
     assert.ok(elapsed < 5_000, `exec must give up about killFallbackMs after the timeout, not wait for the child (${elapsed}ms)`)
     assert.ok(logs.some((line) => line.includes(`Gave up waiting for pid ${unkilledPid}`) && line.includes('left running')))
     // A kill reported as delivered confirms the leader at most; on Windows the
-    // rest of its tree is never confirmed, so the message cannot say it died.
+    // rest of its tree is never confirmed, so the give-up message states only
+    // that a kill was sent.
+    const giveUp = logs.find((line) => line.includes(`Gave up waiting for pid ${unkilledPid}`))
     assert.ok(
-      !logs.some((line) => /group was killed|tree was killed|was killed/.test(line)),
-      `a delivered kill must not be phrased as the process group having died:\n${logs.join('\n')}`,
+      giveUp && giveUp.includes('after a kill was sent to it;'),
+      `a delivered kill must be reported only as sent:\n${logs.join('\n')}`,
     )
   } finally {
     await killForReal(unkilledPid)
