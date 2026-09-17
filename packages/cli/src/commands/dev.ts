@@ -4,7 +4,7 @@ import ora from 'ora';
 import { getCoreDir, getProjectRoot, isMonorepoMode } from '../utils/paths.js';
 import { resolveBundlerArgs, type Bundler } from '../utils/next-bundler.js';
 import { nextOutputBlocker, spawnNext } from '../utils/spawn-next.js';
-import { registryBuildBlocker, runRegistryBuild, templatesTreeLines } from '../utils/registry-build.js';
+import { registryBuildBlocker, runRegistryBuild } from '../utils/registry-build.js';
 import { loadCoreWritePlaces } from '../utils/core-write-places.js';
 
 interface DevOptions {
@@ -38,14 +38,14 @@ export async function buildRegistries(coreDir: string, projectRoot: string): Pro
     return;
   }
 
-  for (const line of templatesTreeLines(result.output)) {
+  for (const line of result.templatesLines) {
     console.log(chalk.gray(`[Registry] ${line}`));
   }
 
   if (result.status === 'failed') {
     console.warn(chalk.yellow('[Registry] Registry build failed; starting anyway.'));
-    for (const line of result.output.trim().split('\n').slice(-5)) {
-      if (line) console.warn(chalk.gray(line));
+    for (const line of result.failureLines) {
+      console.warn(chalk.gray(line));
     }
   }
 }

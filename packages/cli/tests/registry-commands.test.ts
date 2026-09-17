@@ -1,13 +1,17 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
 import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import { buildCommand } from '../src/commands/build.js'
 import { buildRegistries } from '../src/commands/dev.js'
 import { registryBuildCommand } from '../src/commands/registry.js'
 import { guardConsole } from '../src/utils/shown-path.js'
+
+const PKG_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 /**
  * Names that, printed raw, erase a line, set the terminal's title, return the
@@ -129,11 +133,77 @@ test('dev shows each line it repeats from the registry build escaped, whether th
       const printed = await runCommand(root, () => buildRegistries(coreDir, root), false)
       wrong.push(...wrongOutput(label, printed, (shown) => backedUpLine(shown, '[Registry] ')))
       if (code === 1 && !printed.split('\n').includes(failedLine(NAMES[NAMES.length - 1][1]))) {
-        wrong.push(`${label}: the end of the output is not repeated, escaped`)
+        wrong.push(`${label}: the cause does not appear`)
       }
     } finally {
       await cleanup()
     }
   }
   assert.deepEqual(wrong, [])
+})
+
+/**
+ * The old `buildRegistries` picked the last 5 lines of stdout and stderr
+ * concatenated in arrival order, which two independent pipes never guarantee:
+ * a build's stdout printing after its stderr cause pushes the cause out of
+ * that window. `captureChildOutput`'s errors pool keeps the first error lines
+ * regardless of what streams after them.
+ */
+test('dev still shows the cause once a flood of stdout follows it', { skip: process.platform === 'win32' }, async () => {
+  const root = await mkdtemp(join(tmpdir(), 'nextspark-registry-commands-flood-'))
+  const coreDir = join(root, 'node_modules/@nextsparkjs/core')
+  await mkdir(join(coreDir, 'scripts/build'), { recursive: true })
+  await writeFile(join(coreDir, 'package.json'), JSON.stringify({ name: '@nextsparkjs/core', version: '0.0.0-test' }))
+  await writeFile(
+    join(coreDir, 'scripts/build/registry.mjs'),
+    `console.error('❌ Build failed: contents/themes/acme/templates/shop/page.tsx has no default export')
+for (let i = 0; i < 5000; i++) console.log('progress ' + i)
+process.exit(1)
+`
+  )
+  await writeFile(join(root, '.env'), 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
+  try {
+    const printed = await runCommand(root, () => buildRegistries(coreDir, root), false)
+    assert.ok(
+      printed.includes('Build failed: contents/themes/acme/templates/shop/page.tsx has no default export'),
+      `the cause survives 5000 lines of stdout printed after it:\n${printed.slice(0, 500)}`
+    )
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+/**
+ * The old `buildRegistries` read `result.output`, a string every chunk of both
+ * streams was appended to with no cap. A build that prints hundreds of MB -
+ * as a real project with a lot of routes would, one app/(templates) line per
+ * file - would run a 64 MB heap out under the old code.
+ */
+test('dev does not run a 64 MB heap out on a build that prints hundreds of MB', { skip: process.platform === 'win32', timeout: 60_000 }, async () => {
+  const root = await mkdtemp(join(tmpdir(), 'nextspark-registry-commands-memory-'))
+  try {
+    const coreDir = join(root, 'core')
+    await mkdir(join(coreDir, 'scripts/build'), { recursive: true })
+    await writeFile(
+      join(coreDir, 'scripts/build/registry.mjs'),
+      // No process.exit: it would cut the writes still queued on the pipe short of the parent
+      `const line = '⚠️  app/(templates): backed up app/(templates)/page-' + 'x'.repeat(8000) + '.tsx\\n'
+for (let i = 0; i < 30000; i++) process.stdout.write(line)
+`
+    )
+    const projectRoot = join(root, 'project')
+    await mkdir(projectRoot)
+    await writeFile(join(projectRoot, '.env'), 'NEXT_PUBLIC_ACTIVE_THEME="default"\n')
+
+    const script = join(root, 'run.mts')
+    await writeFile(script, `import { buildRegistries } from ${JSON.stringify(pathToFileURL(join(PKG_ROOT, 'src/commands/dev.ts')).href)}
+await buildRegistries(${JSON.stringify(coreDir)}, ${JSON.stringify(projectRoot)})
+`)
+    const run = spawnSync(process.execPath, ['--max-old-space-size=64', '--import', 'tsx', script], { cwd: PKG_ROOT, encoding: 'utf-8', timeout: 50_000, killSignal: 'SIGKILL' })
+    assert.equal(run.signal, null, `must finish on its own:\n${run.stderr.slice(0, 2000)}`)
+    assert.ok(!/FATAL ERROR/.test(run.stderr), `must not run out of heap:\n${run.stderr.slice(0, 2000)}`)
+    assert.equal(run.status, 0, run.stderr.slice(0, 2000))
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
 })

@@ -6,18 +6,17 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
-import { buildFailureLines, captureOutput, registryBuildBlocker, runRegistryBuild, templatesTreeLines, type CapturedOutput } from '../src/utils/registry-build.js'
+import { captureLinesContaining, captureOutput, registryBuildBlocker, runRegistryBuild } from '../src/utils/registry-build.js'
 
-/** A project root and a fake core whose registry build prints its arguments and exits with `exitCode`. */
+/** A project root and a fake core whose registry build names the project root and prints on both streams, and exits with `exitCode`. */
 async function projectWithCore(exitCode: number) {
   const root = await mkdtemp(join(tmpdir(), 'nextspark-registry-build-'))
   const coreDir = join(root, 'core')
   await mkdir(join(coreDir, 'scripts/build'), { recursive: true })
   await writeFile(
     join(coreDir, 'scripts/build/registry.mjs'),
-    `console.log('building ' + process.env.NEXTSPARK_PROJECT_ROOT)\n` +
-      `console.log('✅ app/(templates): 1 new, 0 updated, 0 removed')\n` +
-      `console.error('something on stderr')\n` +
+    `console.log('✅ app/(templates): built for ' + process.env.NEXTSPARK_PROJECT_ROOT)\n` +
+      `console.error('⚠️  app/(templates): warning on stderr')\n` +
       `process.exit(${exitCode})\n`
   )
   const projectRoot = join(root, 'project')
@@ -47,13 +46,14 @@ test('without an active theme the build is skipped, not run', async () => {
     const result = await runRegistryBuild(coreDir, projectRoot, {})
     assert.equal(result.status, 'skipped')
     assert.match(result.reason ?? '', /NEXT_PUBLIC_ACTIVE_THEME/)
-    assert.equal(result.output, '')
+    assert.deepEqual(result.failureLines, [])
+    assert.deepEqual(result.templatesLines, [])
   } finally {
     await cleanup()
   }
 })
 
-test('the build runs for the project, and its exit code decides built or failed', async () => {
+test('the build runs for the project, reading both streams, and its exit code decides built or failed', async () => {
   const built = await projectWithCore(0)
   const failed = await projectWithCore(1)
   try {
@@ -61,8 +61,8 @@ test('the build runs for the project, and its exit code decides built or failed'
 
     const ok = await runRegistryBuild(built.coreDir, built.projectRoot, env)
     assert.equal(ok.status, 'built')
-    assert.match(ok.output, new RegExp(`building ${built.projectRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`))
-    assert.match(ok.output, /something on stderr/)
+    assert.ok(ok.templatesLines.some((line) => line.includes(built.projectRoot)), `NEXTSPARK_PROJECT_ROOT reached the build:\n${ok.templatesLines.join('\n')}`)
+    assert.ok(ok.templatesLines.some((line) => line.includes('warning on stderr')), `stderr is read too:\n${ok.templatesLines.join('\n')}`)
 
     assert.equal((await runRegistryBuild(failed.coreDir, failed.projectRoot, env)).status, 'failed')
   } finally {
@@ -71,92 +71,42 @@ test('the build runs for the project, and its exit code decides built or failed'
   }
 })
 
-test('only the lines about app/(templates) are picked out of the output', () => {
-  const output = '🔍 Discovering templates...\n✅ app/(templates): 1 new, 1 updated, 0 removed\n⚠️  app/(templates): backed up app/(templates)/x/layout.tsx to .nextspark/backups/t/app/(templates)/x/layout.tsx\n📊 Stats:\n'
-  assert.deepEqual(templatesTreeLines(output), [
-    '✅ app/(templates): 1 new, 1 updated, 0 removed',
-    '⚠️  app/(templates): backed up app/(templates)/x/layout.tsx to .nextspark/backups/t/app/(templates)/x/layout.tsx',
-  ])
-})
-
-test('the cause of a failure comes along when the files it touched push it out of the tail', () => {
-  const cause = 'Error: contents/themes/acme/templates/shop/page.tsx has no default export'
-  const touched = Array.from({ length: 15 }, (_, index) => `  affected: app/(templates)/page-${index}.tsx`)
-  const lines = buildFailureLines(['Discovering template overrides...', cause, ...touched].join('\n'), 12)
-
-  assert.deepEqual(lines, [
-    '... 1 earlier line(s)',
-    cause,
-    ...touched.slice(0, 5),
-    '... 4 line(s) in between',
-    ...touched.slice(-6),
-  ])
-  assert.deepEqual(
-    buildFailureLines(['Discovering template overrides...', cause, ...touched].join('\n'), 1),
-    ['... 1 earlier line(s)', cause, '... 15 line(s) in between'],
-    'a limit with no room for an end keeps only the cause'
+test('only the lines about app/(templates) are picked out of what the build printed', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'nextspark-registry-templates-'))
+  const coreDir = join(root, 'core')
+  await mkdir(join(coreDir, 'scripts/build'), { recursive: true })
+  await writeFile(
+    join(coreDir, 'scripts/build/registry.mjs'),
+    `console.log('🔍 Discovering templates...')\n` +
+      `console.log('✅ app/(templates): 1 new, 1 updated, 0 removed')\n` +
+      `console.error('⚠️  app/(templates): backed up app/(templates)/x/layout.tsx to .nextspark/backups/t/app/(templates)/x/layout.tsx')\n` +
+      `console.log('📊 Stats:')\n` +
+      `process.exit(0)\n`
   )
-})
-
-/** Lines the way core's registry build prints a Feature/Flow tag validation failure before it exits. */
-function tagValidationFailure(flows: string[]): string[] {
-  return [
-    '❌ Feature/Flow tag validation errors:',
-    ...flows.flatMap((flow) => [
-      `   ❌ Tag @flow-${flow} found in tests but no matching flow in flows.config.ts`,
-      ...[1, 2, 3].map((n) => `      → contents/themes/acme/tests/cypress/e2e/${flow}/step-${n}.cy.ts`),
-    ]),
-  ]
-}
-
-test('what sits under a header that reads as the cause is not dropped for the files listed after it', () => {
-  const discovery = Array.from({ length: 20 }, (_, index) => `🔍 Discovered plugin-${index}`)
-  const flows = ['checkout', 'refunds', 'invoices', 'coupons', 'returns']
-  const output = [...discovery, '✅ testing-registry.ts', ...tagValidationFailure(flows)].join('\n')
-
-  const lines = buildFailureLines(output)
-  for (const flow of flows) {
-    assert.ok(lines.includes(`   ❌ Tag @flow-${flow} found in tests but no matching flow in flows.config.ts`), `@flow-${flow} is shown:\n${lines.join('\n')}`)
+  const projectRoot = join(root, 'project')
+  await mkdir(projectRoot)
+  await writeFile(join(projectRoot, '.env'), 'NEXT_PUBLIC_ACTIVE_THEME="default"\n')
+  try {
+    const result = await runRegistryBuild(coreDir, projectRoot, process.env)
+    assert.deepEqual(result.templatesLines, [
+      '✅ app/(templates): 1 new, 1 updated, 0 removed',
+      '⚠️  app/(templates): backed up app/(templates)/x/layout.tsx to .nextspark/backups/t/app/(templates)/x/layout.tsx',
+    ])
+  } finally {
+    await rm(root, { recursive: true, force: true })
   }
-  assert.ok(!lines.some((line) => line.includes('plugin-')), 'what ran before the failure is left out')
-
-  const short = buildFailureLines(output, 8)
-  assert.deepEqual(short.slice(0, 3), [
-    '... 21 earlier line(s)',
-    '❌ Feature/Flow tag validation errors:',
-    '   ❌ Tag @flow-checkout found in tests but no matching flow in flows.config.ts',
-  ])
 })
 
-test('an error printed and recovered from earlier does not stand in for the one that stopped the build', () => {
-  const cause = '❌ Build failed: contents/themes/acme/templates/shop/page.tsx has no default export'
-  const stack = Array.from({ length: 30 }, (_, index) => `    at step${index} (file:///core/scripts/build/registry/errors.mjs:${index + 1}:5)`)
-  const output = [
-    '⚠️ Plugin analytics failed to load, skipping it',
-    ...Array.from({ length: 20 }, (_, index) => `🔍 Discovered template-${index}`),
-    cause,
-    ...stack,
-  ].join('\n')
-
-  const lines = buildFailureLines(output)
-  assert.equal(lines[1], cause, `the build's own failure leads what is shown:\n${lines.join('\n')}`)
-  assert.ok(!lines.some((line) => line.includes('Plugin analytics')), 'the recovered error is left out')
-  assert.equal(lines.at(-1), stack.at(-1))
-})
-
-test('output that fits under the limit is repeated whole, with nothing marking a gap', () => {
-  const output = 'Discovering template overrides...\nError: no default export\n'
-
-  assert.deepEqual(buildFailureLines(output), ['Discovering template overrides...', 'Error: no default export'])
-})
+/** What both `captureOutput` and `captureLinesContaining` return, enough of it for a test to feed either one chunks. */
+interface Writable { write(stream: 'stdout' | 'stderr', chunk: Buffer): void }
 
 /** Feed `text` to `output` over `stream`, a byte per chunk, so every character of more than one byte arrives split. */
-function writeByteByByte(output: CapturedOutput, stream: 'stdout' | 'stderr', text: string): void {
+function writeByteByByte(output: Writable, stream: 'stdout' | 'stderr', text: string): void {
   for (const byte of Buffer.from(text, 'utf8')) output.write(stream, Buffer.from([byte]))
 }
 
 /** Feed each of `lines` to `output` over `stream`, each with its line break, as a chunk of its own. */
-function writeLines(output: CapturedOutput, stream: 'stdout' | 'stderr', lines: string[]): void {
+function writeLines(output: Writable, stream: 'stdout' | 'stderr', lines: string[]): void {
   for (const line of lines) output.write(stream, Buffer.from(`${line}\n`, 'utf8'))
 }
 
@@ -448,10 +398,10 @@ console.log(output.successLines.length)
 /**
  * Every kept error's candidate stack frames are gathered as the output streams
  * in, up to `stack.perError` of them, before which ones are shown is decided.
- * 2,000 errors with 200 frames of about 4 KB each - what `build` and
- * `registry:build` feed through the same `captureChildOutput` this uses - would
- * run a 64 MB heap out if that gathering held more than the errors pool can
- * ever keep, or more than `perError` frames of any one of them.
+ * 2,000 errors with 200 frames of about 4 KB each - the same volume `build` and
+ * `registry:build` would feed `captureOutput` through `captureChildOutput` -
+ * would run a 64 MB heap out if that gathering held more than the errors pool
+ * can ever keep, or more than `perError` frames of any one of them.
  */
 test(
   '2,000 errors with 200 stack frames of about 4 KB each never run a 64 MB heap out',
@@ -503,4 +453,72 @@ test('lines are ordered by when they end, so a line one stream is partway throug
   output.write('stdout', Buffer.from('-first-end\n', 'utf8'))
 
   assert.deepEqual(output.failureLines, ['second-whole', 'first-start-first-end'])
+})
+
+test('captureLinesContaining keeps only the matching lines, wherever they arrive, and counts what the cap drops', () => {
+  const matches = captureLinesContaining('app/(templates)', { lines: 2, bytes: 1024 })
+  writeLines(matches, 'stdout', ['🔍 discovering', 'app/(templates)/a.tsx created'])
+  writeLines(matches, 'stderr', ['app/(templates)/b.tsx replaced', '📊 done'])
+  writeLines(matches, 'stdout', ['app/(templates)/c.tsx removed'])
+  matches.finish()
+
+  assert.deepEqual(matches.lines, [
+    'app/(templates)/a.tsx created',
+    'app/(templates)/b.tsx replaced',
+    `... and 1 more line(s), ${bytesOf('app/(templates)/c.tsx removed')} byte(s)`,
+  ])
+})
+
+test('a character split across writes arrives whole in a matched line, on either stream', () => {
+  const byWrite = captureLinesContaining('app/(templates)', { lines: 10, bytes: 1024 })
+  writeByteByByte(byWrite, 'stdout', 'app/(templates)/café 😀.tsx created\n')
+  assert.deepEqual(byWrite.lines, ['app/(templates)/café 😀.tsx created'])
+
+  const twoStreams = captureLinesContaining('app/(templates)', { lines: 10, bytes: 1024 })
+  const stdout = Buffer.from('app/(templates)/café.tsx replaced\n', 'utf8')
+  const stderr = Buffer.from('app/(templates)/😀.tsx removed\n', 'utf8')
+  for (let index = 0; index < Math.max(stdout.length, stderr.length); index++) {
+    if (index < stdout.length) twoStreams.write('stdout', stdout.subarray(index, index + 1))
+    if (index < stderr.length) twoStreams.write('stderr', stderr.subarray(index, index + 1))
+  }
+  assert.deepEqual(twoStreams.lines.slice().sort(), ['app/(templates)/café.tsx replaced', 'app/(templates)/😀.tsx removed'].sort())
+})
+
+/**
+ * The old `runRegistryBuild` joined every chunk of both streams into one
+ * string with no cap, so `dev` and `sync:app` held the whole thing in memory.
+ * A build that prints hundreds of MB - many app/(templates) lines, as a real
+ * project with a lot of routes would - would run a 64 MB heap out under the
+ * old code; `captureChildOutput` and `captureLinesContaining` both cap what
+ * they keep regardless of how much comes through.
+ */
+test('runRegistryBuild does not run a 64 MB heap out on a build that prints hundreds of MB', { skip: process.platform === 'win32', timeout: 60_000 }, async () => {
+  const root = await mkdtemp(join(tmpdir(), 'nextspark-registry-build-memory-'))
+  try {
+    const coreDir = join(root, 'core')
+    await mkdir(join(coreDir, 'scripts/build'), { recursive: true })
+    await writeFile(
+      join(coreDir, 'scripts/build/registry.mjs'),
+      // No process.exit: it would cut the writes still queued on the pipe short of the parent
+      `const line = '⚠️  app/(templates): backed up app/(templates)/page-' + 'x'.repeat(8000) + '.tsx\\n'
+for (let i = 0; i < 30000; i++) process.stdout.write(line)
+`
+    )
+    const projectRoot = join(root, 'project')
+    await mkdir(projectRoot)
+    await writeFile(join(projectRoot, '.env'), 'NEXT_PUBLIC_ACTIVE_THEME="default"\n')
+
+    const script = join(root, 'run.mts')
+    await writeFile(script, `import { runRegistryBuild } from ${JSON.stringify(pathToFileURL(join(PKG_ROOT, 'src/utils/registry-build.ts')).href)}
+const result = await runRegistryBuild(${JSON.stringify(coreDir)}, ${JSON.stringify(projectRoot)}, process.env)
+console.log(result.status, result.templatesLines.length)
+`)
+    const run = spawnSync(process.execPath, ['--max-old-space-size=64', '--import', 'tsx', script], { cwd: PKG_ROOT, encoding: 'utf-8', timeout: 50_000, killSignal: 'SIGKILL' })
+    assert.equal(run.signal, null, `must finish on its own:\n${run.stderr.slice(0, 2000)}`)
+    assert.ok(!/FATAL ERROR/.test(run.stderr), `must not run out of heap:\n${run.stderr.slice(0, 2000)}`)
+    assert.equal(run.status, 0, run.stderr.slice(0, 2000))
+    assert.match(run.stdout, /^built \d+/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
 })

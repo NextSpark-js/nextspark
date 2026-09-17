@@ -5,10 +5,12 @@ import { chmod, mkdtemp, mkdir, writeFile, readFile, readdir, rename, rm, stat, 
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import { syncAppCommand } from '../src/commands/sync-app.js'
 import { guardConsole } from '../src/utils/shown-path.js'
+
+const PKG_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 const CORE = 'node_modules/@nextsparkjs/core'
 /** Core's own check of where it writes, which sync:app loads from the core installed in the project. */
@@ -310,6 +312,61 @@ test('a registry build that fails is reported as such, with a non-zero exit code
     assert.doesNotMatch(printed, /Sync complete/)
     assert.match(printed, /has no default export/)
     assert.match(printed, /Sync incomplete: \/app now matches core, but \.nextspark\/registries and app\/\(templates\) were not regenerated\./)
+  } finally {
+    await cleanup()
+  }
+})
+
+/**
+ * The old `syncAppCommand` read `buildFailureLines(registry.output)`, run on a
+ * string every chunk of both streams was appended to with no cap - unbounded
+ * memory and a character split across chunks corrupted, the same as `dev`'s
+ * old bug. `runRegistryBuild` now reads both through `captureChildOutput`.
+ */
+test('a registry build that fails still names the cause once a flood of stdout follows it', async () => {
+  const { root, cleanup } = await project()
+  try {
+    await write(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
+    await write(root, `${CORE}/scripts/build/registry.mjs`, `console.error('❌ Build failed: contents/themes/acme/templates/shop/page.tsx has no default export')
+for (let i = 0; i < 5000; i++) console.log('progress ' + i)
+process.exit(1)
+`)
+
+    const { printed, exitCode } = await runSyncForExit(root, { force: true })
+
+    assert.equal(exitCode, 1)
+    assert.ok(
+      printed.includes('Build failed: contents/themes/acme/templates/shop/page.tsx has no default export'),
+      `the cause survives 5000 lines of stdout printed after it:\n${printed.slice(0, 500)}`
+    )
+  } finally {
+    await cleanup()
+  }
+})
+
+/**
+ * A build that prints hundreds of MB - as a real project with a lot of routes
+ * would, one app/(templates) line per file - would run a 64 MB heap out under
+ * the old, uncapped `registry.output` string.
+ */
+test('sync:app does not run a 64 MB heap out on a build that prints hundreds of MB', { timeout: 60_000 }, async () => {
+  const { root, cleanup } = await project()
+  try {
+    await write(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
+    // No process.exit: it would cut the writes still queued on the pipe short of the parent
+    await write(root, `${CORE}/scripts/build/registry.mjs`, `const line = '⚠️  app/(templates): backed up app/(templates)/page-' + 'x'.repeat(8000) + '.tsx\\n'
+for (let i = 0; i < 30000; i++) process.stdout.write(line)
+`)
+
+    const script = join(root, 'run.mts')
+    await writeFile(script, `process.chdir(${JSON.stringify(root)})
+const { syncAppCommand } = await import(${JSON.stringify(pathToFileURL(join(PKG_ROOT, 'src/commands/sync-app.ts')).href)})
+await syncAppCommand({ force: true })
+`)
+    const run = spawnSync(process.execPath, ['--max-old-space-size=64', '--import', 'tsx', script], { cwd: PKG_ROOT, encoding: 'utf-8', timeout: 50_000, killSignal: 'SIGKILL' })
+    assert.equal(run.signal, null, `must finish on its own:\n${run.stderr.slice(0, 2000)}`)
+    assert.ok(!/FATAL ERROR/.test(run.stderr), `must not run out of heap:\n${run.stderr.slice(0, 2000)}`)
+    assert.equal(run.status, 0, run.stderr.slice(0, 2000))
   } finally {
     await cleanup()
   }

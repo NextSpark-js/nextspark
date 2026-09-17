@@ -4,12 +4,10 @@ import chalk from '../utils/colors.js';
 import ora from 'ora';
 import { getCoreDir, getProjectRoot } from '../utils/paths.js';
 import {
-  buildFailureLines,
   describeTemplatesChanges,
   planTemplatesChanges,
   registryBuildBlocker,
   runRegistryBuild,
-  templatesTreeLines,
   type TemplatesPlanResult,
 } from '../utils/registry-build.js';
 import {
@@ -336,7 +334,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
         spinner.fail('Could not regenerate .nextspark/registries and app/(templates)');
       }
       // The build's own lines name paths too, and are printed one per call
-      for (const line of templatesTreeLines(registry.output)) {
+      for (const line of registry.templatesLines) {
         console.log(chalk.gray(`    ${line}`));
       }
 
@@ -370,7 +368,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       // reporting success would leave the project's routes behind core's under a
       // zero exit code, which is what core's postinstall and CI both read.
       if (registry.status === 'failed') {
-        for (const line of buildFailureLines(registry.output)) {
+        for (const line of registry.failureLines) {
           console.error(chalk.red(`    ${line}`));
         }
         console.error(chalk.red('\n  Sync incomplete: /app now matches core, but .nextspark/registries and app/(templates) were not regenerated.'));

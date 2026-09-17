@@ -22,9 +22,6 @@ export function registryBuildBlocker(projectRoot: string, env: NodeJS.ProcessEnv
     : 'the project has no .env file with NEXT_PUBLIC_ACTIVE_THEME';
 }
 
-/** A line that says why the build stopped, rather than what the failure touched. */
-const CAUSE_LINE = /\b(?:error|errors|failed|failing|failure|fatal)\b/i;
-
 /** How many lines a pool of captured output holds at most, and how many UTF-8 bytes of them. */
 export interface PoolCaps {
   lines: number;
@@ -422,12 +419,94 @@ export function captureChildOutput(child: ChildProcess, limits?: Partial<Capture
   return output;
 }
 
+/** What `captureLinesContaining` keeps: the matching lines, in the order they end, with how many more were dropped counted at the end. */
+export interface MatchedLines {
+  write(stream: 'stdout' | 'stderr', chunk: Buffer): void;
+  /** Ends the line either stream is partway through, so it is offered too. */
+  finish(): void;
+  readonly lines: string[];
+}
+
+/**
+ * A bounded pool of the lines across both streams that hold `needle`, in the
+ * order they end. Every line is cut and decoded the way `captureOutput` cuts
+ * one: bytes are copied into a buffer capped at `line + 1` before decoding, so
+ * a kept line is a string of its own, never a slice of the chunk it arrived in
+ * - the chunk a pipe delivers is already this capture's unit of memory, and a
+ * decoded slice of it would keep the whole chunk reachable.
+ */
+export function captureLinesContaining(needle: string, caps: PoolCaps, line = DEFAULT_LIMITS.line): MatchedLines {
+  const pool = firstLines(caps);
+  interface LineState { decoder: StringDecoder; start: Buffer; held: number; bytes: number }
+  const streams = new Map<string, LineState>();
+  let index = 0;
+
+  function streamState(name: string): LineState {
+    let state = streams.get(name);
+    if (!state) {
+      state = { decoder: new StringDecoder('utf8'), start: Buffer.alloc(line + 1), held: 0, bytes: 0 };
+      streams.set(name, state);
+    }
+    return state;
+  }
+
+  function endLine(state: LineState): void {
+    let keptBytes = Math.min(state.bytes, line);
+    if (state.bytes > line) {
+      for (let back = 0; back < 3 && keptBytes > 0 && (state.start[keptBytes] & 0xc0) === 0x80; back++) keptBytes--;
+    }
+    const text = keptBytes === 0 ? '' : state.decoder.write(state.start.subarray(0, keptBytes)) + state.decoder.end();
+    const bytes = state.bytes;
+    state.held = 0;
+    state.bytes = 0;
+    if (text.includes(needle)) {
+      pool.offer({ index: index++, offset: 0, text, keptBytes: Buffer.byteLength(text, 'utf8'), bytes });
+    }
+  }
+
+  function extendLine(state: LineState, chunk: Buffer, from: number, to: number): void {
+    if (state.held < state.start.length) {
+      state.held += chunk.copy(state.start, state.held, from, Math.min(to, from + state.start.length - state.held));
+    }
+    state.bytes += to - from;
+  }
+
+  return {
+    write(streamName, chunk) {
+      const state = streamState(streamName);
+      let start = 0;
+      let newline: number;
+      while ((newline = chunk.indexOf(0x0a, start)) !== -1) {
+        if (newline > start) extendLine(state, chunk, start, newline);
+        endLine(state);
+        start = newline + 1;
+      }
+      if (start < chunk.length) extendLine(state, chunk, start, chunk.length);
+    },
+    finish() {
+      for (const state of streams.values()) {
+        if (state.bytes > 0) endLine(state);
+      }
+    },
+    get lines(): string[] {
+      const shown = pool.kept.map((kept) => kept.text);
+      if (pool.droppedLines > 0) shown.push(`... and ${pool.droppedLines} more line(s), ${pool.droppedBytes} byte(s)`);
+      return shown;
+    },
+  };
+}
+
+/** How many lines reporting what the build did to app/(templates) are kept: generous, since each one names a file a project's dev or sync:app run touched. */
+const TEMPLATES_LINES_CAPS: PoolCaps = { lines: 2000, bytes: 256 * 1024 };
+
 export interface RegistryBuildResult {
   status: 'built' | 'skipped' | 'failed';
   /** Why it was skipped. */
   reason?: string;
-  /** Everything the build printed, stdout and stderr interleaved. */
-  output: string;
+  /** What a failed build printed worth showing: the same lines `build` and `registry:build` show. */
+  failureLines: string[];
+  /** The lines reporting what the build did to app/(templates): files written, replaced or removed. */
+  templatesLines: string[];
 }
 
 /**
@@ -440,20 +519,35 @@ export function runRegistryBuild(
   env: NodeJS.ProcessEnv = process.env
 ): Promise<RegistryBuildResult> {
   const reason = registryBuildBlocker(projectRoot, env);
-  if (reason) return Promise.resolve({ status: 'skipped', reason, output: '' });
+  if (reason) return Promise.resolve({ status: 'skipped', reason, failureLines: [], templatesLines: [] });
 
   return new Promise((resolve) => {
-    let output = '';
     const build = spawn('node', ['scripts/build/registry.mjs'], {
       cwd: coreDir,
       stdio: ['ignore', 'pipe', 'pipe'],
       env: { ...env, NEXTSPARK_PROJECT_ROOT: projectRoot },
     });
 
-    build.stdout?.on('data', (chunk) => { output += chunk.toString(); });
-    build.stderr?.on('data', (chunk) => { output += chunk.toString(); });
-    build.on('error', (error) => resolve({ status: 'failed', output: `${output}${error.message}\n` }));
-    build.on('close', (code) => resolve({ status: code === 0 ? 'built' : 'failed', output }));
+    // core reports a build's failure over stdout as often as over stderr, so the
+    // cause is only complete when both streams are read together, in the order
+    // they arrived - the same capture build and registry:build read theirs from
+    const output = captureChildOutput(build);
+    const templates = captureLinesContaining('app/(templates)', TEMPLATES_LINES_CAPS);
+    build.stdout?.on('data', (chunk: Buffer) => templates.write('stdout', chunk));
+    build.stderr?.on('data', (chunk: Buffer) => templates.write('stderr', chunk));
+
+    build.on('error', (error) => {
+      templates.finish();
+      resolve({ status: 'failed', failureLines: [...output.failureLines, error.message], templatesLines: templates.lines });
+    });
+    build.on('close', (code) => {
+      templates.finish();
+      resolve({
+        status: code === 0 ? 'built' : 'failed',
+        failureLines: code === 0 ? [] : output.failureLines,
+        templatesLines: templates.lines,
+      });
+    });
   });
 }
 
@@ -536,49 +630,3 @@ export function describeTemplatesChanges(changes: TemplatesChanges): string[] {
   ];
 }
 
-/**
- * What a failed registry build printed, as the lines worth repeating: all of it
- * when it fits under `limit`. Without them the failure is a sentence with no
- * cause in it.
- *
- * Longer output is repeated from where the failure starts, the last unindented
- * line that reads as a cause, to the end. The last, because an error printed
- * and recovered from earlier is not what stopped the build. Unindented, because
- * what sits under a cause - the specifics under a header such as "validation
- * errors:", the files it names, a stack trace - is indented and can use the
- * same words. The block comes along whole when it fits; when it doesn't, its
- * start, which carries the specifics, and its end, with a count of what sits
- * between.
- */
-export function buildFailureLines(output: string, limit = 24): string[] {
-  const lines = output
-    .split('\n')
-    .map((line) => line.trimEnd())
-    .filter((line) => line.trim() !== '');
-  if (lines.length <= limit) return lines;
-
-  let start = lines.length - 1;
-  while (start >= 0 && !(/^\S/.test(lines[start]) && CAUSE_LINE.test(lines[start]))) start--;
-  if (start === -1) return [`... ${lines.length - limit} earlier line(s)`, ...lines.slice(-limit)];
-
-  const failure = lines.slice(start);
-  const earlier = start === 0 ? [] : [`... ${start} earlier line(s)`];
-  if (failure.length <= limit) return [...earlier, ...failure];
-
-  const head = failure.slice(0, Math.ceil(limit / 2));
-  const end = failure.slice(failure.length - (limit - head.length));
-  return [...earlier, ...head, `... ${failure.length - limit} line(s) in between`, ...end];
-}
-
-/**
- * The lines of a registry build's output that report what it did to
- * `app/(templates)`: files written, replaced or removed, and where anything it
- * replaced or removed was backed up. The rest of the output is not worth
- * repeating when the build runs as a side step.
- */
-export function templatesTreeLines(output: string): string[] {
-  return output
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line.includes('app/(templates)'));
-}
