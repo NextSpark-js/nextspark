@@ -462,17 +462,19 @@ function blockScopedBindingNames(statements, ts, into) {
  * introduces none. Used while walking the tree to track which imported names
  * are shadowed by a closer local declaration.
  *
- * Any function's own parameters — a getter's, a setter's and a
- * constructor's as much as a method's or an arrow's — and a named function
- * or class expression's own name are scoped to itself, and so is every
- * `var` hoisted anywhere in a function's body, a class `static { }` block or
- * a `namespace` body. A block's (or the module's, or a namespace's) function,
- * class and `let`/`const`/`var` declarations are scoped to the whole block,
- * not merely to the statement that introduces them — a later sibling
- * statement has to see the shadow too, the way it would at runtime. A
- * `for`/`for-in`/`for-of` loop's own `let`/`const` initializer is scoped to
- * the whole loop, not just to itself, and every clause of a `switch` shares
- * one scope. */
+ * A function's parameters — a getter's, a setter's and a constructor's as
+ * much as a method's or an arrow's — and a named function expression's own
+ * name are scoped to its parameter initializers and body. Its hoisted `var`
+ * names are added separately when the walk enters its body, because parameter
+ * initializers cannot see declarations from that body. A class expression's
+ * own name is scoped to itself, as is every `var` hoisted in a class `static
+ * { }` block or a `namespace` body. A block's (or the module's, or a
+ * namespace's) function, class and `let`/`const`/`var` declarations are
+ * scoped to the whole block, not merely to the statement that introduces
+ * them — a later sibling statement has to see the shadow too, the way it
+ * would at runtime. A `for`/`for-in`/`for-of` loop's own `let`/`const`
+ * initializer is scoped to the whole loop, not just to itself, and every
+ * clause of a `switch` shares one scope. */
 function ownScopeBindingNames(node, ts) {
   const names = new Set()
 
@@ -481,7 +483,6 @@ function ownScopeBindingNames(node, ts) {
     if (ts.isFunctionExpression(node) && node.name) {
       names.add(node.name.text)
     }
-    if (node.body) collectHoistedVarNames(node.body, ts, names)
   } else if (ts.isClassExpression(node) && node.name) {
     names.add(node.name.text)
   } else if (ts.isClassStaticBlockDeclaration(node)) {
@@ -560,7 +561,17 @@ export async function extractLiteralIconCallNames(content, filePath = 'icons.tsx
       if (name && SAFE_NAME.test(name)) names.push(name)
     }
 
-    ts.forEachChild(node, child => visit(child, nextStack))
+    if (ts.isFunctionLike(node) && node.body) {
+      const bodyNames = new Set()
+      collectHoistedVarNames(node.body, ts, bodyNames)
+      const bodyStack = bodyNames.size > 0 ? [...nextStack, bodyNames] : nextStack
+      ts.forEachChild(node, child => {
+        const childStack = child === node.body ? bodyStack : node.parameters.includes(child) ? nextStack : shadowStack
+        visit(child, childStack)
+      })
+    } else {
+      ts.forEachChild(node, child => visit(child, nextStack))
+    }
   }
   visit(sourceFile, [])
 

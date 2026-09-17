@@ -400,6 +400,57 @@ test('still resolves the real import once the shadowing parameter goes out of sc
   assert.deepEqual(await extractLiteralIconCallNames(source), ['Receipt'])
 })
 
+// --- Function parameter initializer scope ----------------------------------
+//
+// Parameter defaults run before a function body is entered. Parameters and a
+// named function expression shadow imports there, but body declarations do
+// not; those declarations still shadow calls made by the body itself.
+
+test('discovers a constructor default that a var in the constructor body does not shadow', async () => {
+  const source = `${RESOLVE_ICON_IMPORT}export class Probe {\n  constructor(icon = resolveIcon('Telescope')) {\n    var resolveIcon = () => null\n  }\n}`
+  assert.deepEqual(await extractLiteralIconCallNames(source), ['Telescope'])
+})
+
+test('discovers a constructor default despite a function declaration in its body', async () => {
+  const source = `${RESOLVE_ICON_IMPORT}export class Probe {\n  constructor(icon = resolveIcon('Satellite')) {\n    function resolveIcon() {}\n  }\n}`
+  assert.deepEqual(await extractLiteralIconCallNames(source), ['Satellite'])
+})
+
+test('discovers a method default despite a function declaration in its body', async () => {
+  const source = `${RESOLVE_ICON_IMPORT}export class Probe {\n  render(icon = resolveIcon('Map')) {\n    function resolveIcon() {}\n  }\n}`
+  assert.deepEqual(await extractLiteralIconCallNames(source), ['Map'])
+})
+
+test('discovers an arrow default despite a function declaration in its block body', async () => {
+  const source = `${RESOLVE_ICON_IMPORT}const render = (icon = resolveIcon('Rocket')) => {\n  function resolveIcon() {}\n}`
+  assert.deepEqual(await extractLiteralIconCallNames(source), ['Rocket'])
+})
+
+test('discovers a destructured parameter default that a body var does not shadow', async () => {
+  const source = `${RESOLVE_ICON_IMPORT}const render = ({ icon = resolveIcon('Compass') } = {}) => {\n  var resolveIcon = () => null\n}`
+  assert.deepEqual(await extractLiteralIconCallNames(source), ['Compass'])
+})
+
+test('discovers a computed destructured parameter key that a body var does not shadow', async () => {
+  const source = `${RESOLVE_ICON_IMPORT}const render = ({ [resolveIcon('Globe')]: icon } = {}) => {\n  var resolveIcon = () => null\n}`
+  assert.deepEqual(await extractLiteralIconCallNames(source), ['Globe'])
+})
+
+test('keeps a body var shadowing calls made by the function body', async () => {
+  const source = `${RESOLVE_ICON_IMPORT}export class Probe {\n  constructor(a = 1) {\n    var resolveIcon = f\n    resolveIcon('Anchor')\n  }\n}`
+  assert.deepEqual(await extractLiteralIconCallNames(source), [])
+})
+
+test("discovers a method's computed name, which its own parameters do not shadow", async () => {
+  const source = `${RESOLVE_ICON_IMPORT}export class Probe {\n  [resolveIcon('Flag')](resolveIcon) {\n    var resolveIcon\n  }\n}`
+  assert.deepEqual(await extractLiteralIconCallNames(source), ['Flag'])
+})
+
+test('keeps an earlier parameter shadowing a later parameter default', async () => {
+  const source = `${RESOLVE_ICON_IMPORT}const render = (resolveIcon, icon = resolveIcon('Kite')) => {}`
+  assert.deepEqual(await extractLiteralIconCallNames(source), [])
+})
+
 test('ignores a call imported from a same-prefixed package that is not core', async () => {
   const source = "import { resolveIcon } from '@nextsparkjs/core-fake/lib/icons'\nresolveIcon('Wallet')"
   assert.deepEqual(await extractLiteralIconCallNames(source), [])
