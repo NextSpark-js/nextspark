@@ -242,7 +242,7 @@ NEXT_PUBLIC_ACTIVE_THEME=default
 ### 2. Build Registry
 
 ```bash
-pnpm registry:build
+pnpm build:registries
 ```
 
 ### 3. Start Development
@@ -253,9 +253,9 @@ pnpm dev
 
 ### 4. Access Application
 
-- **Dashboard:** http://localhost:5173/dashboard
-- **Home:** http://localhost:5173/
-- **Tasks:** http://localhost:5173/dashboard/tasks
+- **Dashboard:** http://localhost:3010/dashboard
+- **Home:** http://localhost:3010/
+- **Tasks:** http://localhost:3010/dashboard/tasks
 
 ## Use Cases
 

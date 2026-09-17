@@ -29,9 +29,9 @@ Complete guide to deploying NextSpark to production using Vercel (recommended pl
 
 - [ ] App runs locally without errors (`pnpm dev`)
 - [ ] Production build succeeds (`pnpm build`)
-- [ ] All tests pass (`pnpm test`)
+- [ ] All tests pass (`pnpm test:core`)
 - [ ] Linting passes (`pnpm lint`)
-- [ ] Type checking passes (`pnpm type-check`)
+- [ ] Type checking passes (`pnpm --dir apps/dev exec tsc --noEmit`)
 - [ ] Database migrations tested locally
 - [ ] Environment variables documented
 - [ ] Domain name ready (optional)
@@ -45,9 +45,9 @@ rm -rf .next
 pnpm build
 
 # Test production server locally
-pnpm start
+pnpm --dir apps/dev exec next start -p 3010
 
-# Visit http://localhost:5173
+# Visit http://localhost:3010
 # Verify all features work
 ```
 
@@ -116,9 +116,11 @@ pnpm db:migrate
 # ...
 # All migrations completed!
 
-# Verify tables
-pnpm db:verify
+# Inspect the affected tables with the production database console
 ```
+
+`verify-tables.mjs` is not used here because it only prints Better Auth table
+metadata and does not validate the full migrated schema.
 
 **⚠️ Caution:**
 - Ensure DATABASE_URL is production URL

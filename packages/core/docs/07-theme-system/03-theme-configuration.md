@@ -374,7 +374,7 @@ export const APP_CONFIG_OVERRIDES = {
       allowedOrigins: {
         development: [
           'http://localhost:3000',
-          'http://localhost:5173'
+          'http://localhost:3010'
         ],
         production: [
           'https://myapp.com'

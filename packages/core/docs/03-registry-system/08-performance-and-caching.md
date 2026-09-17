@@ -21,7 +21,7 @@ The Registry System's **~17,255x performance improvement** (140ms → 6ms) is th
 
 **Test Environment:**
 - MacBook Pro M1 Max
-- Node.js 20.x
+- Current supported runtime floor: Node.js 22.13+
 - 10 entities, 3 plugins, 1 theme
 - Cold start (no cache)
 
@@ -693,4 +693,4 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 **Version**: 1.0.0  
 **Status**: Complete  
 **Performance**: ~17,255x improvement (140ms → 6ms)  
-**Benchmark**: 10 entities on M1 Max, Node.js 20.x
+**Benchmark**: 10 entities on M1 Max

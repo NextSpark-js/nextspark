@@ -164,7 +164,7 @@ import path from 'path'
 
 export default defineConfig({
   e2e: {
-    baseUrl: 'http://localhost:5173',
+    baseUrl: 'http://localhost:3010',
 
     setupNodeEvents(on, config) {
       const { allureCypress } = require('allure-cypress/reporter')

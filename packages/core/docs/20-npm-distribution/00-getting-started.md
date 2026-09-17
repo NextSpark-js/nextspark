@@ -1,4 +1,4 @@
-# Getting Started with @nextspark/core
+# Getting Started with @nextsparkjs/core
 
 > **Registry commands in this guide** run in a generated project, from its root. In the NextSpark monorepo, run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` (add `--watch` to watch).
 
@@ -6,8 +6,8 @@ This guide walks you through creating a new project with NextSpark from scratch.
 
 ## Prerequisites
 
-- Node.js 22+
-- pnpm 8+ (recommended) or npm/yarn
+- Node.js 22.13+
+- pnpm 9.0.0 (the repository's declared package-manager version)
 - PostgreSQL database (Supabase, Neon, or local)
 
 ## Quick Start
@@ -21,17 +21,17 @@ pnpm create next-app my-saas-app --typescript --tailwind --eslint --app --src-di
 cd my-saas-app
 ```
 
-### 2. Install @nextspark/core
+### 2. Install the NextSpark packages
 
 ```bash
-pnpm add @nextspark/core
+pnpm add @nextsparkjs/core @nextsparkjs/cli
 ```
 
 ### 3. Create Configuration Files
 
 **nextspark.config.ts** (project root):
 ```typescript
-import { defineConfig } from '@nextspark/core'
+import { defineConfig } from '@nextsparkjs/core/lib/config'
 
 export default defineConfig({
   theme: 'default',
@@ -80,11 +80,11 @@ import type { NextConfig } from "next";
 import path from 'path';
 
 const nextConfig: NextConfig = {
-  transpilePackages: ['@nextspark/core'],
+  transpilePackages: ['@nextsparkjs/core'],
   turbopack: {
     resolveAlias: {
-      '@nextspark/core/lib/registries/*': './.nextspark/registries/*',
-      '@nextspark/registries/*': './.nextspark/registries/*',
+      '@nextsparkjs/core/lib/registries/*': './.nextspark/registries/*',
+      '@nextsparkjs/registries/*': './.nextspark/registries/*',
     }
   },
   webpack: (config, { isServer }) => {
@@ -103,9 +103,9 @@ const nextConfig: NextConfig = {
     config.resolve.alias = {
       ...config.resolve.alias,
       'pg-native': false,
-      '@nextspark/core/lib/registries': path.resolve(__dirname, '.nextspark/registries'),
-      '@nextspark/registries': path.resolve(__dirname, '.nextspark/registries'),
-      '@/core': path.resolve(__dirname, 'node_modules/@nextspark/core/dist'),
+      '@nextsparkjs/core/lib/registries': path.resolve(__dirname, '.nextspark/registries'),
+      '@nextsparkjs/registries': path.resolve(__dirname, '.nextspark/registries'),
+      '@/core': path.resolve(__dirname, 'node_modules/@nextsparkjs/core/dist'),
       '@/themes': path.resolve(__dirname, 'contents/themes'),
       '@/plugins': path.resolve(__dirname, 'contents/plugins'),
     }
@@ -125,7 +125,7 @@ mkdir -p contents/themes/default
 
 **contents/themes/default/theme.config.ts**:
 ```typescript
-import { defineTheme } from '@nextspark/core'
+import { defineTheme } from '@nextsparkjs/core/lib/config'
 
 export default defineTheme({
   name: 'default',
@@ -159,7 +159,6 @@ pnpm install
 
 # Or run scripts directly
 pnpm build:registries
-node node_modules/@nextspark/core/scripts/build/theme.mjs
 ```
 
 ### 8. Run Database Migrations
@@ -167,7 +166,7 @@ node node_modules/@nextspark/core/scripts/build/theme.mjs
 ```bash
 pnpm db:migrate
 # or
-node node_modules/@nextspark/core/scripts/db/run-migrations.mjs
+node node_modules/@nextsparkjs/core/scripts/db/run-migrations.mjs
 ```
 
 ### 9. Start Development
@@ -248,28 +247,25 @@ pnpm build                  # Production build
 # Registry regeneration
 pnpm build:registries
 
-# Theme CSS rebuild
-node node_modules/@nextspark/core/scripts/build/theme.mjs
-
 # Database
 pnpm db:migrate             # Run migrations
-pnpm db:verify              # Verify structure
+node node_modules/@nextsparkjs/core/scripts/db/verify-tables.mjs              # Inspect Better Auth tables
 ```
 
 ---
 
 ## Troubleshooting
 
-### "Cannot find module '@nextspark/registries/...'"
+### "Cannot find module '@nextsparkjs/registries/...'"
 
 The registries haven't been generated. Run:
 ```bash
 pnpm build:registries
 ```
 
-### "Module not found: @nextspark/core/..."
+### "Module not found: @nextsparkjs/core/..."
 
-Check that `transpilePackages` includes `@nextspark/core` in next.config.ts.
+Check that `transpilePackages` includes `@nextsparkjs/core` in next.config.ts.
 
 ### TypeScript errors in node_modules
 

@@ -558,46 +558,22 @@ console.log(`Registry generated: ${generatedDate.toLocaleString()}`)
 
 ---
 
-## Integration with Build Script
+## Integration with the Application Build
 
-### build-theme.mjs
-
-The `core/scripts/build/theme.mjs` script works **in conjunction with** the registry system:
-
-```typescript
-// core/scripts/build/theme.mjs handles:
-// - CSS compilation
-// - Asset optimization
-// - Component bundling
-
-// packages/core/scripts/build/registry.mjs handles:
-// - Theme discovery
-// - Configuration imports
-// - Registry generation
-
-// They work together but serve different purposes
-```
+The registry builder discovers themes and writes registry modules. Separately,
+Next.js compiles the theme CSS imported by `apps/dev/app/globals.css`; the
+monorepo has no standalone theme-build package script.
 
 ### Build Order
 
 ```bash
-# Development
-pnpm dev
-  ↓
-1. packages/core/scripts/build/registry.mjs (discovers themes)
-  ↓
-2. build-theme.mjs (compiles active theme)
-  ↓
-3. Next.js dev server starts
+# Development, in separate terminals
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
+cd ../.. && pnpm dev
 
 # Production
-pnpm build
-  ↓
-1. registry build
-  ↓
-2. build-theme.mjs --build
-  ↓
-3. Next.js build
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd ../.. && pnpm build
 ```
 
 ---

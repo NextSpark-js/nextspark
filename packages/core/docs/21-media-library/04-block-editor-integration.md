@@ -334,7 +334,7 @@ export const fieldDefinitions: FieldDefinition[] = [
 2. Change `type: 'image'` to `type: 'media-library'`
 3. Optionally add `helpText` for user guidance
 4. No changes needed to `schema.ts`, `component.tsx`, or block data
-5. Rebuild registries: `pnpm dev` (auto-rebuilds) or `rm -rf apps/dev/.nextspark/registries && pnpm dev`
+5. Rebuild registries from the monorepo root: `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
 
 ### For Array Fields
 

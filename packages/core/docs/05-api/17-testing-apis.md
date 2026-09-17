@@ -967,10 +967,10 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test
 
       - name: Run unit tests
-        run: pnpm test:unit
+        run: pnpm test:core
 
       - name: Run integration tests
-        run: pnpm test:integration
+        run: pnpm test:core
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test
 

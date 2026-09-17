@@ -368,7 +368,7 @@ Configure allowed origins for CORS:
 trustedOrigins: [
   process.env.BETTER_AUTH_URL,
   process.env.NEXT_PUBLIC_APP_URL,
-  'http://localhost:5173',
+  'http://localhost:3010',
   'http://localhost:3000',
   'http://localhost:3008',
   'http://127.0.0.1:3000',
@@ -427,7 +427,7 @@ import { inferAdditionalFields } from "better-auth/client/plugins";
 import type { auth } from "./auth";
 
 export const authClient = createAuthClient({
-  baseURL: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5173",
+  baseURL: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3010",
   plugins: [
     inferAdditionalFields<typeof auth>()
   ]

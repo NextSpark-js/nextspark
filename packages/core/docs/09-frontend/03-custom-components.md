@@ -1175,7 +1175,7 @@ const handleGeocode = async (fullAddress: string) => {
 
 Run tests with:
 \`\`\`bash
-npm test address-input
+pnpm test:theme
 \`\`\`
 ```
 

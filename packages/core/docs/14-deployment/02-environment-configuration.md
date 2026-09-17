@@ -108,8 +108,8 @@ VERCEL_TOKEN=your-vercel-token    # Optional: for CI/CD
 
 ```bash
 # Local development
-BETTER_AUTH_URL=http://localhost:5173
-NEXT_PUBLIC_APP_URL=http://localhost:5173
+BETTER_AUTH_URL=http://localhost:3010
+NEXT_PUBLIC_APP_URL=http://localhost:3010
 DATABASE_URL=postgresql://localhost/dev_db
 
 # Debug flags (OK in development)

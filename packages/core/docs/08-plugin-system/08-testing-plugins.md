@@ -398,17 +398,14 @@ describe('Plugin Lifecycle Hooks', () => {
 ### Running Coverage Reports
 
 ```bash
-# Run unit tests with coverage
-pnpm test:unit --coverage
-
-# Run integration tests
-pnpm test:integration
+# Run active-theme unit tests with coverage
+pnpm test:theme --coverage
 
 # Run E2E tests
-pnpm test:e2e
+pnpm cy:run
 
-# Run all tests
-pnpm test
+# Run the Core unit suite too
+pnpm test:core
 ```
 
 ### Coverage Thresholds

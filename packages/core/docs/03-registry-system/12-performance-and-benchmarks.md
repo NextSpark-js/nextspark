@@ -109,7 +109,7 @@ function loadEntity(name: string) {
 All benchmarks conducted with:
 - **Hardware:** Apple M1 Pro, 16GB RAM, 1TB SSD
 - **OS:** macOS 14.5 (Darwin 24.5.0)
-- **Node.js:** v20.11.0
+- **Runtime note:** The recorded run predates the current Node.js 22.13+ support floor
 - **Next.js:** 15.0.0
 - **Build Tool:** Turbopack
 - **Workload:** 50 entities, 10 plugins, 5 themes

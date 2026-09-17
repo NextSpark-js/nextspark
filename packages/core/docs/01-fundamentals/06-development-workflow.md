@@ -95,24 +95,24 @@ if (task.involves('api') || task.involves('entity')) {
 **TypeScript Errors:**
 ```bash
 # ❌ PROHIBITED - Any TypeScript errors
-tsc --noEmit
+pnpm --dir apps/dev exec tsc --noEmit
 # Must show: "Found 0 errors"
 ```
 
 **Linting Errors:**
 ```bash
 # ❌ PROHIBITED - Any ESLint errors
-npm run lint
+pnpm lint
 # Must show: "✓ No ESLint warnings or errors"
 ```
 
 **Test Failures:**
 ```bash
 # ❌ PROHIBITED - Any test failures
-npm test
+pnpm test:core
 # Must show: "All tests passed"
 
-npm run test:e2e
+pnpm cy:run
 # Must show: "All specs passed!"
 ```
 
@@ -124,7 +124,7 @@ npm run test:e2e
 {
   "husky": {
     "hooks": {
-      "pre-commit": "npm run type-check && npm run lint && npm test"
+      "pre-commit": "pnpm --dir apps/dev exec tsc --noEmit && pnpm lint && pnpm test:core"
     }
   }
 }
@@ -134,16 +134,16 @@ npm run test:e2e
 ```yaml
 # .github/workflows/ci.yml
 - name: Type Check
-  run: npx tsc --noEmit
+  run: pnpm --dir apps/dev exec tsc --noEmit
 
 - name: Lint
-  run: npm run lint
+  run: pnpm lint
 
 - name: Unit Tests
-  run: npm test
+  run: pnpm test:core
 
 - name: E2E Tests
-  run: npm run test:e2e
+  run: pnpm cy:run
 ```
 
 ---
@@ -231,42 +231,35 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ### Development
 
 ```bash
-# Start dev server (port 5173)
+# Start the Next.js dev server on PORT from apps/dev/.env
 pnpm dev
-
-# Dev with registry watch mode
-pnpm dev:watch
 
 # Build registries (manually)
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 # Build registries (watch mode)
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
-
-# Build theme CSS
-pnpm theme:build
-
-# Build theme CSS (watch mode)
-pnpm theme:build-watch
 ```
+
+`pnpm dev` starts one Next.js process. Run the registry watcher in a separate terminal when registry inputs change; Next.js watches the imported theme CSS itself.
 
 ### Testing
 
 ```bash
-# Run all tests
-pnpm test
+# Core unit tests (Jest)
+pnpm test:core
 
-# Unit tests (Jest)
-pnpm test:unit
+# Active-theme unit tests (Jest)
+pnpm test:theme
 
 # E2E tests (Cypress)
-pnpm test:e2e
+pnpm cy:run
 
 # E2E with UI
 pnpm cy:open
 
-# Specific test file
-pnpm test path/to/test.test.ts
+# Specific core test file
+pnpm test:core -- path/to/test.test.ts
 ```
 
 ### Linting & Type Checking
@@ -276,14 +269,14 @@ pnpm test path/to/test.test.ts
 pnpm lint
 
 # Lint and fix
-pnpm lint:fix
+pnpm lint --fix
 
 # Type check
-pnpm type-check
+pnpm --dir apps/dev exec tsc --noEmit
 
-# Check dynamic imports (enforce zero-import policy)
-pnpm check:dynamic-imports
 ```
+
+The monorepo currently has no root script that fully enforces the documented zero-import policy; review those boundaries alongside linting.
 
 ### Build & Deploy
 
@@ -292,10 +285,10 @@ pnpm check:dynamic-imports
 pnpm build
 
 # Start production server
-pnpm start
+pnpm --dir apps/dev exec next start -p 3010
 
 # Build and start
-pnpm build && pnpm start
+pnpm build && pnpm --dir apps/dev exec next start -p 3010
 ```
 
 ---
@@ -451,15 +444,15 @@ await launchAgent('performance-optimizer', {
 
 **Recommended Flow:**
 ```bash
-# 1. Write failing test
-pnpm test:unit path/to/feature.test.ts
+# 1. Write failing core test
+pnpm test:core -- path/to/feature.test.ts
 # Test fails (expected)
 
 # 2. Implement feature
 # ... code ...
 
 # 3. Run test again
-pnpm test:unit path/to/feature.test.ts
+pnpm test:core -- path/to/feature.test.ts
 # Test passes
 
 # 4. Write E2E test
@@ -470,7 +463,7 @@ pnpm cy:open
 # ... code ...
 
 # 6. Run E2E test
-pnpm test:e2e
+pnpm cy:run
 # Test passes
 ```
 
@@ -496,20 +489,20 @@ pnpm test:e2e
 ### Running Tests
 
 ```bash
-# All tests (quick)
-pnpm test
+# Core unit tests
+pnpm test:core
 
-# All tests (with coverage)
-pnpm test:coverage
+# Core unit tests with coverage
+pnpm --filter @nextsparkjs/core test:coverage
 
-# Watch mode (development)
-pnpm test:watch
+# Core unit-test watch mode
+pnpm --filter @nextsparkjs/core test:watch
 
-# Specific test file
-pnpm test auth.test.ts
+# Specific core test file
+pnpm test:core -- docs/docs-registry.test.ts
 
 # E2E (headless)
-pnpm test:e2e
+pnpm cy:run
 
 # E2E (with browser)
 pnpm cy:open
@@ -597,11 +590,12 @@ git checkout -b feature/my-feature
 # ... code ...
 
 # Run tests
-pnpm test
-pnpm test:e2e
+pnpm test:core
+pnpm test:theme
+pnpm cy:run
 
 # Type check
-pnpm type-check
+pnpm --dir apps/dev exec tsc --noEmit
 
 # Lint
 pnpm lint
@@ -742,7 +736,9 @@ jobs:
           node-version: '22'
 
       - name: Install pnpm
-        run: npm install -g pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
 
       - name: Install dependencies
         run: pnpm install
@@ -751,16 +747,16 @@ jobs:
         run: cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
       - name: Type check
-        run: pnpm type-check
+        run: pnpm --dir apps/dev exec tsc --noEmit
 
       - name: Lint
         run: pnpm lint
 
       - name: Unit tests
-        run: pnpm test:unit
+        run: pnpm test:core
 
       - name: E2E tests
-        run: pnpm test:e2e
+        run: pnpm cy:run
 
       - name: Build
         run: pnpm build

@@ -27,13 +27,13 @@ const COVERAGE_METRICS = {
 
 ```bash
 # Generate coverage report
-pnpm test -- --coverage
+pnpm --filter @nextsparkjs/core test:coverage
 
 # View HTML report
-open test/coverage/lcov-report/index.html
+open packages/core/coverage/lcov-report/index.html
 
 # Coverage for specific files
-pnpm test -- --coverage --collectCoverageFrom="core/lib/**/*.ts"
+pnpm --filter @nextsparkjs/core test:coverage --collectCoverageFrom="src/lib/**/*.ts"
 ```
 
 ### Coverage Output
@@ -107,7 +107,7 @@ const COVERAGE_TARGETS = {
 # View uncovered lines in report
 # Red highlights = not covered
 # Green highlights = covered
-open test/coverage/lcov-report/index.html
+open packages/core/coverage/lcov-report/index.html
 ```
 
 ### Add Missing Tests
@@ -134,7 +134,7 @@ describe('utils', () => {
 ```yaml
 # .github/workflows/test.yml
 - name: Test with coverage
-  run: pnpm test -- --coverage --coverageThreshold='{"global":{"branches":70,"functions":80,"lines":75,"statements":75}}'
+  run: pnpm --filter @nextsparkjs/core test:coverage --coverageThreshold='{"global":{"branches":70,"functions":80,"lines":75,"statements":75}}'
 ```
 
 ### Coverage Badges
@@ -239,16 +239,16 @@ const CURRENT_COVERAGE = {
 
 ```bash
 # Generate coverage
-pnpm test -- --coverage
+pnpm --filter @nextsparkjs/core test:coverage
 
 # Watch mode with coverage
-pnpm test -- --watch --coverage
+pnpm --filter @nextsparkjs/core test:watch --coverage
 
 # Coverage for changed files only
-pnpm test -- --coverage --changedSince=main
+pnpm --filter @nextsparkjs/core test:coverage --changedSince=main
 
 # View HTML report
-open test/coverage/lcov-report/index.html
+open packages/core/coverage/lcov-report/index.html
 ```
 
 ---

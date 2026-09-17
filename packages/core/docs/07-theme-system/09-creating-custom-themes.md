@@ -629,16 +629,7 @@ NEXT_PUBLIC_ACTIVE_THEME=my-theme
 
 **Option 2: Create NPM Script**
 
-Add to `package.json`:
-
-```json
-{
-  "scripts": {
-    "theme:my-theme": "cross-env NEXT_PUBLIC_ACTIVE_THEME=my-theme pnpm theme:build",
-    "dev:my-theme": "cross-env NEXT_PUBLIC_ACTIVE_THEME=my-theme pnpm dev"
-  }
-}
-```
+The monorepo does not define per-theme package scripts. Set `NEXT_PUBLIC_ACTIVE_THEME` in `apps/dev/.env`, rebuild registries, and use the existing root commands.
 
 ### Build Theme
 
@@ -646,25 +637,19 @@ Add to `package.json`:
 # Rebuild registry to discover new theme
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
-# Build theme CSS and copy assets
-pnpm theme:build
-
-# Or use custom script
-pnpm theme:my-theme
+# Build the application and imported theme CSS
+pnpm build
 ```
 
 ### Start Development Server
 
 ```bash
 pnpm dev
-
-# Or with theme-specific script
-pnpm dev:my-theme
 ```
 
 ### Verify Theme
 
-1. **Open browser:** `http://localhost:3000`
+1. **Open browser:** `http://localhost:3010`
 2. **Check colors:** Verify your custom colors are applied
 3. **Test dark mode:** Toggle dark mode to check dark colors
 4. **Check console:** Look for theme-related errors
@@ -800,7 +785,7 @@ export const projectsFields: FieldDefinitions = {
 2. **Clear Next.js cache:** `rm -rf .next && pnpm dev`
 3. **Hard refresh browser:** Ctrl+Shift+R (Windows) / Cmd+Shift+R (Mac)
 4. **Check console:** Look for CSS parsing errors
-5. **Verify import:** Check `core/theme-styles.css` was generated
+5. **Verify import:** Check that `apps/dev/app/globals.css` imports the selected theme stylesheet
 
 ### Registry Not Finding Theme
 
@@ -819,8 +804,8 @@ export const projectsFields: FieldDefinitions = {
 
 **Solutions:**
 1. Verify assets are in `public/` subdirectory
-2. Run `pnpm theme:build` to copy assets
-3. Check `public/theme/` directory was created
+2. Check that the required served files exist in `apps/dev/public/theme/`
+3. Run `pnpm build` to validate the application bundle
 4. Verify file paths use `/theme/` prefix
 5. Clear browser cache
 

@@ -152,7 +152,7 @@ const PRE_DEPLOYMENT_CHECKLIST = {
 ```bash
 # 1. Test locally
 pnpm build
-pnpm start
+pnpm --dir apps/dev exec next start -p 3010
 
 # 2. Run migrations if needed
 pnpm db:migrate
@@ -285,7 +285,7 @@ vercel rollback                  # Rollback deployment
 
 # Database
 pnpm db:migrate                  # Run migrations
-pnpm db:verify                   # Verify tables
+# Inspect the affected production schema with read-only queries in the database console
 ```
 
 ### Environment Files

@@ -920,7 +920,7 @@ async function fetchApiWithLogging<T>(endpoint: string, options: RequestInit = {
 
 ```bash
 # View API logs in development
-npm run dev
+pnpm dev
 
 # Look for error messages
 [API] Error in GET /api/v1/products: VALIDATION_FAILED

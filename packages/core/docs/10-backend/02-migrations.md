@@ -263,7 +263,7 @@ NEXT_PUBLIC_ACTIVE_THEME=default
 
 **Run All Migrations:**
 ```bash
-npm run db:migrate
+pnpm db:migrate
 # or
 node core/scripts/db/run-migrations.mjs
 ```
@@ -381,7 +381,7 @@ CREATE TABLE IF NOT EXISTS "my_feature" (
 
 **3. Run Migrations:**
 ```bash
-npm run db:migrate
+pnpm db:migrate
 ```
 
 ### Theme Migration
@@ -507,14 +507,16 @@ CREATE TRIGGER trigger_name ...;
 **5. Test Before Production**
 ```bash
 # Test locally first
-npm run db:migrate
+pnpm db:migrate
 
-# Verify changes
-npm run db:verify
+# Inspect the affected schema with your database client
 
 # Check application works
-npm run dev
+pnpm dev
 ```
+
+The repository's `verify-tables.mjs` diagnostic only inspects Better Auth
+tables, so it is not a general migration verifier.
 
 ### Don'ts ❌
 
@@ -624,7 +626,7 @@ WHERE filename = '008_failed_migration.sql';
 ```bash
 # Fix the migration file
 # Re-run migrations
-npm run db:migrate
+pnpm db:migrate
 ```
 
 ---
@@ -748,7 +750,7 @@ WHERE filename = 'failed_migration.sql';
 
 -- Fix migration file
 -- Re-run
-npm run db:migrate
+pnpm db:migrate
 ```
 
 ### Entity Migrations Not Running
@@ -802,7 +804,7 @@ Before creating a migration:
 
 **Execution:**
 ```bash
-npm run db:migrate
+pnpm db:migrate
 ```
 
 **Next:** [RLS Policies](./03-rls-policies.md)

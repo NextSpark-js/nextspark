@@ -14,12 +14,12 @@ Complete step-by-step installation guide for setting up NextSpark for local deve
 
 ### Required Software
 
-#### 1. Node.js 22+
+#### 1. Node.js 22.13+
 
 **Check version:**
 ```bash
 node -v
-# Should show: v22.x.x or higher
+# Should show: v22.13.0 or higher
 ```
 
 **Install/Update:**
@@ -33,7 +33,7 @@ node -v
 npm -v
 ```
 
-#### 2. pnpm 10.17.0 (Exact Version)
+#### 2. pnpm 9.0.0 (Repository Version)
 
 **Why pnpm:**
 - Faster than npm/yarn
@@ -43,21 +43,13 @@ npm -v
 
 **Install:**
 ```bash
-# Install specific version
-npm install -g pnpm@10.17.0
+# Enable Corepack and activate the repository version
+corepack enable
+corepack prepare pnpm@9.0.0 --activate
 
 # Verify
 pnpm -v
-# Should show: 10.17.0
-```
-
-**Alternative (via Corepack):**
-```bash
-# Enable Corepack (comes with Node.js 16.9+)
-corepack enable
-
-# Install pnpm via Corepack (uses version from package.json)
-corepack prepare pnpm@10.17.0 --activate
+# Should show: 9.0.0
 ```
 
 #### 3. PostgreSQL Database
@@ -188,8 +180,8 @@ Done in 2m 34s
 ```
 
 **If you see errors:**
-- Check Node.js version is 18+
-- Check pnpm version is exactly 10.17.0
+- Check Node.js version is 22.13+
+- Check pnpm version is 9.0.0
 - Check internet connection
 - Try clearing cache: `pnpm store prune`
 
@@ -211,11 +203,11 @@ DATABASE_URL="postgresql://postgres.xxxxx:password@aws-0-region.pooler.supabase.
 # === AUTHENTICATION (REQUIRED) ===
 # Generate: openssl rand -base64 32
 BETTER_AUTH_SECRET="your-generated-32-character-secret"
-BETTER_AUTH_URL="http://localhost:5173"
+BETTER_AUTH_URL="http://localhost:3010"
 
 # === APPLICATION (REQUIRED) ===
 NEXT_PUBLIC_ACTIVE_THEME="default"
-NEXT_PUBLIC_APP_URL="http://localhost:5173"
+NEXT_PUBLIC_APP_URL="http://localhost:3010"
 
 # === EMAIL SERVICE (REQUIRED) ===
 RESEND_API_KEY="re_xxxxx"
@@ -276,25 +268,19 @@ Running entity migrations...
 All migrations completed successfully!
 ```
 
-**Verify tables:**
+**Inspect the Better Auth tables:**
 ```bash
-pnpm db:verify
+cd apps/dev && node ../../packages/core/scripts/db/verify-tables.mjs
 ```
 
-**Should show:**
+**Should show the discovered Better Auth table schemas and row counts:**
 ```text
-Checking tables...
+Connected to database
 ✓ user
 ✓ session
 ✓ account
 ✓ verification
-✓ api_keys
-✓ meta
-✓ user_flags
-✓ tasks
-✓ _migrations
-
-All required tables exist!
+Verification complete!
 ```
 
 **If migration fails:**
@@ -352,29 +338,18 @@ Registry build completed in 5.2s
 
 **See:** [Build Process Guide](./04-build-process.md) for detailed explanation
 
-### Step 6: Build Theme
+### Step 6: Verify Theme CSS
 
-**Compile theme CSS and copy assets:**
+The monorepo has no separate theme-build package script. Verify the active theme stylesheet and the app import before starting Next.js:
 ```bash
-pnpm theme:build
+test -f themes/default/styles/globals.css
+grep -F 'themes/default/styles/globals.css' apps/dev/app/globals.css
 ```
 
 **What happens:**
-- Compiles CSS from `contents/themes/default/styles/`
-- Outputs to `app/theme-styles.css`
-- Copies public assets from `contents/themes/default/public/` to `public/theme/`
-- Processes CSS variables
-
-**Expected output:**
-```text
-Building theme: default
-✓ Compiling CSS...
-✓ Copying public assets...
-✓ Generated: app/theme-styles.css
-✓ Copied: public/theme/
-
-Theme build completed in 1.8s
-```
+- `apps/dev/app/globals.css` imports the active theme stylesheet.
+- Next.js compiles that CSS during `pnpm dev` and `pnpm build`.
+- Theme assets used by the monorepo are present under `apps/dev/public/theme/`.
 
 ### Step 7: Build Documentation Registry
 
@@ -399,35 +374,25 @@ Registry build completed
 
 ### Step 8: Start Development Server
 
-**Start all processes:**
+**Start the development server:**
 ```bash
 pnpm dev
 ```
 
-**What happens (10-15 seconds):**
+The root script delegates to `apps/dev`, which starts one Next.js process with Turbopack on the `PORT` loaded from `apps/dev/.env`:
 
 ```text
-1. [THEME]    Building theme CSS... ✓ (2.1s)
-2. [REGISTRY] Building registries... ✓ (5.4s)
-3. [DOCS]     Generating active-theme docs registry... ✓ (1.1s)
-4. [PLUGINS]  Starting plugin dev servers... ✓ (1.8s)
-5. [APP]      Starting Next.js with Turbopack... ✓ (3.2s)
-
-  ▲ Next.js 15.4.6
-  - Local:        http://localhost:5173
-  - Turbopack:    enabled
-
- ✓ Starting...
- ✓ Ready in 12s
+> @nextsparkjs/dev dev
+> dotenv -e .env -- sh -c 'next dev --turbopack -p $PORT'
 ```
 
-**Watch modes active:**
-- **THEME:** Rebuilds CSS on file changes in `contents/themes/*/styles/`
-- **REGISTRY:** Rebuilds registries on changes in `contents/`
-- **PLUGINS:** Hot reload for plugin development
-- **APP:** Next.js HMR for React components
+Next.js handles application and imported CSS changes. If registry inputs change, run the registry watcher separately:
 
-**Open browser:** http://localhost:5173
+```bash
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
+```
+
+**Open browser:** use the local URL printed by Next.js (port 3010 in the measured `apps/dev/.env`).
 
 **You should see:**
 - ✅ Landing page loads
@@ -446,11 +411,11 @@ pnpm dev
 ```bash
 # Check Node.js
 node -v
-# ✅ Should be v22.x.x or higher
+# ✅ Should be v22.13.0 or higher
 
 # Check pnpm
 pnpm -v
-# ✅ Should be 10.17.0
+# ✅ Should be 9.0.0
 
 # Check Git
 git --version
@@ -476,10 +441,10 @@ grep -q "NEXT_PUBLIC_ACTIVE_THEME" .env.local && echo "✅ NEXT_PUBLIC_ACTIVE_TH
 ### 3. Database
 
 ```bash
-# Check database connection
-pnpm db:verify
+# Inspect the Better Auth tables using apps/dev/.env
+cd apps/dev && node ../../packages/core/scripts/db/verify-tables.mjs
 
-# ✅ Should list all tables without errors
+# ✅ Should print the discovered Better Auth table schemas and row counts
 ```
 
 ### 4. Build Artifacts
@@ -490,11 +455,11 @@ test -d .nextspark/registries && echo "✅ Registries directory exists" || echo 
 test -f .nextspark/registries/entity-registry.ts && echo "✅ Entity registry exists" || echo "❌ Entity registry missing"
 test -f .nextspark/registries/docs-registry.ts && echo "✅ Docs registry exists" || echo "❌ Docs registry missing"
 
-# Check theme CSS generated
-test -f app/theme-styles.css && echo "✅ Theme CSS exists" || echo "❌ Theme CSS missing"
+# Check the app imports the active theme CSS
+grep -F 'themes/default/styles/globals.css' apps/dev/app/globals.css
 
-# Check theme assets copied
-test -d public/theme && echo "✅ Theme assets exist" || echo "❌ Theme assets missing"
+# Check app-served theme assets
+test -d apps/dev/public/theme && echo "✅ Theme assets exist" || echo "❌ Theme assets missing"
 ```
 
 ### 5. Development Server
@@ -503,14 +468,14 @@ test -d public/theme && echo "✅ Theme assets exist" || echo "❌ Theme assets 
 # Start server (in another terminal)
 pnpm dev
 
-# Server should start on port 5173
+# Server should start on PORT from apps/dev/.env
 # ✅ No errors in console
-# ✅ All 5 processes running (THEME, REGISTRY, DOCS, PLUGINS, APP)
+# ✅ One Next.js process is listening
 ```
 
 ### 6. Application Access
 
-**Open:** http://localhost:5173
+**Open:** http://localhost:3010
 
 **Verify:**
 - [ ] Landing page loads
@@ -524,7 +489,7 @@ pnpm dev
 **If you configured Resend:**
 
 1. **Sign Up:**
-   - Go to http://localhost:5173/signup
+   - Go to http://localhost:3010/signup
    - Enter email and password
    - Submit form
 
@@ -534,13 +499,13 @@ pnpm dev
    - Should redirect to verified page
 
 3. **Log In:**
-   - Go to http://localhost:5173/login
+   - Go to http://localhost:3010/login
    - Enter credentials
    - Submit form
    - Should redirect to dashboard
 
 4. **Dashboard Access:**
-   - Go to http://localhost:5173/dashboard
+   - Go to http://localhost:3010/dashboard
    - Should see dashboard (authenticated)
    - Test CRUD operations on tasks entity
 
@@ -558,7 +523,7 @@ pnpm dev
 2. Create new project (or select existing)
 3. Enable Google+ API
 4. Create OAuth 2.0 credentials
-5. Set authorized redirect URI: `http://localhost:5173/api/auth/callback/google`
+5. Set authorized redirect URI: `http://localhost:3010/api/auth/callback/google`
 6. Copy Client ID and Client Secret
 7. Add to `.env.local`:
    ```bash
@@ -626,11 +591,8 @@ nano contents/plugins/billing/.env
 
 **Solution:**
 ```bash
-npm install -g pnpm@10.17.0
-
-# Or via Corepack
 corepack enable
-corepack prepare pnpm@10.17.0 --activate
+corepack prepare pnpm@9.0.0 --activate
 ```
 
 ### "Node version too old"
@@ -640,7 +602,7 @@ corepack prepare pnpm@10.17.0 --activate
 node -v
 ```
 
-**If < v18.0.0:**
+**If < v22.13.0:**
 ```bash
 # macOS
 brew install node@22
@@ -689,7 +651,7 @@ psql "$(grep DATABASE_URL .env.local | cut -d'=' -f2-)"
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --build --verbose
 
 # Check TypeScript
-pnpm type-check
+pnpm --dir apps/dev exec tsc --noEmit
 
 # Clear and rebuild
 rm -rf .nextspark/registries
@@ -709,16 +671,13 @@ grep NEXT_PUBLIC_ACTIVE_THEME .env.local
 # Should match directory name exactly (case-sensitive)
 ```
 
-### Port 5173 already in use
+### Port 3010 already in use
 
 **Find process:**
 ```bash
-lsof -i :5173
-```
-
-**Kill process:**
-```bash
-kill -9 <PID>
+pid=$(lsof -tiTCP:3010 -sTCP:LISTEN)
+ps -o command= -p "$pid"
+kill "$pid"
 ```
 
 **Or use different port:**
@@ -733,12 +692,12 @@ kill -9 <PID>
 
 ### 1. Explore the Application
 
-**Landing Page:** http://localhost:5173
+**Landing Page:** http://localhost:3010
 - Test navigation
 - View theme styling
 - Test responsiveness
 
-**Dashboard:** http://localhost:5173/dashboard
+**Dashboard:** http://localhost:3010/dashboard
 - Requires authentication
 - Test CRUD operations
 - Explore entity system
@@ -766,10 +725,10 @@ kill -9 <PID>
 **Run tests:**
 ```bash
 # Unit tests
-pnpm test
+pnpm test:core
 
 # E2E tests
-pnpm test:e2e
+pnpm cy:run
 ```
 
 **See:** [Testing Guide](../12-testing/README.md)
@@ -785,12 +744,12 @@ pnpm test:e2e
 ## Summary
 
 **You've completed installation if you:**
-- ✅ Installed Node.js 22+, pnpm 10.17.0, and PostgreSQL
+- ✅ Installed Node.js 22.13+, pnpm 9.0.0, and PostgreSQL
 - ✅ Cloned repository and installed dependencies
 - ✅ Configured `.env.local` with required variables
 - ✅ Ran database migrations successfully
-- ✅ Built registries, theme, and docs
-- ✅ Started dev server on port 5173
+- ✅ Built registries (including docs); Next.js compiles the imported theme CSS
+- ✅ Started the dev server on the configured `PORT`
 - ✅ Verified application loads without errors
 - ✅ Tested authentication flow (optional)
 

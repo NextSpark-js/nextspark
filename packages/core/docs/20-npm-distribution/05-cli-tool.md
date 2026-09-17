@@ -6,137 +6,76 @@ NextSpark provides a CLI tool for common development tasks.
 
 ## Current Status
 
-> **⚠️ CLI Status: Basic Implementation**
->
-> The CLI exists in `bin/nextspark.mjs` but is currently in basic form.
-> For v0.2.0, the postinstall hook handles most setup automatically.
->
-> **Missing:** `npx create-nextspark` scaffolding tool is NOT implemented yet.
+The executable is provided by `@nextsparkjs/cli` at `bin/nextspark.js`.
+Generated projects install that package alongside `@nextsparkjs/core` and expose
+the command through `node_modules/.bin/nextspark`.
 
 ## What Works Now
 
 ### Postinstall Hook (Automatic)
 
-When you run `pnpm install @nextspark/core`, the postinstall hook automatically:
-
-1. Generates `.nextspark/registries/`
-2. Builds theme CSS
-3. Updates tsconfig.json with @nextspark/* aliases
+When `@nextsparkjs/core` is updated in an initialized consumer project, its
+best-effort postinstall hook invokes `nextspark sync:app --force` if the CLI is
+already available. Registry generation remains an explicit CLI command.
 
 ### Manual Commands
 
 ```bash
-# Registry generation
+# Registry generation (generated-project package script)
 pnpm build:registries
 
-# Theme compilation
-node node_modules/@nextspark/core/scripts/build/theme.mjs
+# Equivalent direct CLI command
+pnpm exec nextspark registry:build
 
 # TSConfig update
-node node_modules/@nextspark/core/scripts/build/update-tsconfig.mjs
+node node_modules/@nextsparkjs/core/scripts/build/update-tsconfig.mjs
 
 # Database migrations
-node node_modules/@nextspark/core/scripts/db/run-migrations.mjs
+node node_modules/@nextsparkjs/core/scripts/db/run-migrations.mjs
 ```
 
-## Planned CLI Commands
+## CLI Commands
 
-The `npx nextspark` CLI is planned to support:
+The installed CLI currently exposes:
 
 ```bash
 nextspark <command>
 
 Commands:
-  init          Initialize NextSpark in existing project
-  dev           Start development server with watchers
-  build         Build for production
-  generate      Regenerate app structure from templates
-  migrate       Run database migrations
+  init              Initialize NextSpark in an existing project
+  dev               Start the Next.js development server
+  dev:registry      Start development with a registry watcher
+  build             Generate registries and build for production
+  generate          Generate registries
+  registry:build    Build registries
+  registry:watch    Watch and rebuild registries
+  doctor            Run project health checks
+  db:migrate        Run database migrations
+  db:seed           Seed sample data
+  sync:app          Sync the generated app directory
 
 Options:
   -h, --help    Show help message
   --version     Show version
 ```
 
-### Planned: create-nextspark
-
-A separate `create-nextspark` package for scaffolding:
-
-```bash
-# NOT YET IMPLEMENTED
-npx create-nextspark my-saas-app
-```
-
-## Current CLI Implementation
-
-**File:** `packages/core/bin/nextspark.mjs`
-
-```javascript
-#!/usr/bin/env node
-
-import { spawn } from 'child_process'
-import { join, dirname } from 'path'
-import { fileURLToPath } from 'url'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
-
-const command = process.argv[2]
-const projectRoot = process.cwd()
-
-async function dev() {
-  console.log('🚀 Starting NextSpark development...')
-
-  // Initial build
-  const { buildRegistries } = await import('../scripts/build/registry.mjs')
-  const { buildTheme } = await import('../scripts/build/theme.mjs')
-
-  await buildRegistries(projectRoot)
-  await buildTheme(projectRoot)
-
-  // Start Next.js dev server
-  spawn('npx', ['next', 'dev'], { stdio: 'inherit', shell: true })
-}
-
-async function build() {
-  console.log('🔨 Building NextSpark for production...')
-
-  const { buildRegistries } = await import('../scripts/build/registry.mjs')
-  const { buildTheme } = await import('../scripts/build/theme.mjs')
-
-  await buildRegistries(projectRoot)
-  await buildTheme(projectRoot)
-
-  spawn('npx', ['next', 'build'], { stdio: 'inherit', shell: true })
-}
-
-// Command router
-switch (command) {
-  case 'dev':
-    dev()
-    break
-  case 'build':
-    build()
-    break
-  default:
-    console.log('Available commands: dev, build')
-}
-```
-
 ## Using in package.json
 
-For consumer projects, add these scripts:
+Consumer projects can invoke the locally installed CLI explicitly through pnpm:
 
 ```json
 {
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "build:theme": "node node_modules/@nextspark/core/scripts/build/theme.mjs",
-    "db:migrate": "node node_modules/@nextspark/core/scripts/db/run-migrations.mjs"
+    "dev": "pnpm exec nextspark dev",
+    "build": "pnpm exec nextspark build",
+    "build:registries": "pnpm exec nextspark registry:build",
+    "db:migrate": "pnpm exec nextspark db:migrate"
   }
 }
 ```
+
+There is no separate supported theme-build command. Next.js compiles the theme
+stylesheet imported by `app/globals.css` during `pnpm dev` and `pnpm build`.
 
 ## Environment Variables
 
@@ -145,12 +84,12 @@ For consumer projects, add these scripts:
 | `NEXT_PUBLIC_ACTIVE_THEME` | `default` | Active theme |
 | `NEXTSPARK_DEBUG` | - | Enable debug output |
 
-## Roadmap
+## Command Reference
 
-### v0.3.0 - CLI Improvements
-- [ ] `npx nextspark init` - Initialize in existing project
-- [ ] `npx nextspark dev` - Dev with watch mode
-- [ ] `npx nextspark build` - Production build
+### Available CLI Commands
+- `pnpm exec nextspark init` - Initialize in an existing project
+- `pnpm exec nextspark dev` - Start Next.js; add `--registry` for a registry watcher
+- `pnpm exec nextspark build` - Generate registries and run a production build
 
 ### v0.4.0 - create-nextspark
 - [ ] `npx create-nextspark` - Full project scaffolding
@@ -164,7 +103,7 @@ For consumer projects, add these scripts:
 The CLI requires the package to be installed:
 
 ```bash
-pnpm add @nextspark/core
+pnpm add @nextsparkjs/core @nextsparkjs/cli
 ```
 
 ### Permission Denied
@@ -172,12 +111,14 @@ pnpm add @nextspark/core
 On Unix systems:
 
 ```bash
-chmod +x node_modules/@nextspark/core/bin/nextspark.mjs
+chmod +x node_modules/@nextsparkjs/cli/bin/nextspark.js
 ```
 
 ### Config Not Found
 
-Ensure `nextspark.config.ts` exists in your project root.
+Ensure `.env` selects an existing theme and that its generated configuration is
+present under `contents/themes/<theme>/config/`. A root `nextspark.config.ts` is
+optional and is not generated by the wizard.
 
 ## Related
 

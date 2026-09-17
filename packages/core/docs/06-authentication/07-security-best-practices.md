@@ -363,8 +363,9 @@ const tasks = await db
 ### Content Security Policy
 
 ```typescript
-// next.config.mjs - Environment-aware CSP (actual implementation)
+// next.config.mjs - Environment-aware CSP excerpt
 const isProduction = process.env.NODE_ENV === 'production';
+const basePath = '';
 
 const cspDirectives = [
   "default-src 'self'",
@@ -374,11 +375,12 @@ const cspDirectives = [
   `img-src 'self' data: blob: ${allowedImageDomains}`,
   "font-src 'self' data:",
   `connect-src 'self' https://api.stripe.com${!isProduction ? ' wss:' : ''}`,
-  "frame-src https://js.stripe.com https://hooks.stripe.com",
-  "frame-ancestors 'none'",
+  "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
+  // Same-origin frames are required by the page builder preview
+  "frame-ancestors 'self'",
   "object-src 'none'",
   "base-uri 'self'",
-  "report-uri /api/csp-report",
+  `report-uri ${basePath}/api/csp-report`,
   "report-to csp-endpoint",
 ];
 ```
@@ -499,6 +501,7 @@ NextSpark includes comprehensive security headers configured in `next.config.mjs
 ```typescript
 // next.config.mjs - headers() function
 const isProduction = process.env.NODE_ENV === 'production';
+const basePath = '';
 
 // Allowed image domains (must match remotePatterns)
 const allowedImageDomains = [
@@ -507,6 +510,8 @@ const allowedImageDomains = [
   'https://images.unsplash.com',
   'https://upload.wikimedia.org',
   'https://i.pravatar.cc',
+  'https://*.supabase.co',
+  'https://*.cloudinary.com',
 ].join(' ');
 
 // CSP directives - environment-aware
@@ -519,15 +524,19 @@ const cspDirectives = [
   "font-src 'self' data:",
   // wss: only in development (hot reload)
   `connect-src 'self' https://api.stripe.com${!isProduction ? ' wss:' : ''}`,
-  "frame-src https://js.stripe.com https://hooks.stripe.com",
-  "frame-ancestors 'none'",
+  "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
+  // Same-origin frames are required by the page builder preview
+  "frame-ancestors 'self'",
   "object-src 'none'",
   "base-uri 'self'",
+  `report-uri ${basePath}/api/csp-report`,
+  "report-to csp-endpoint",
 ];
 
 const securityHeaders = [
+  { key: 'Reporting-Endpoints', value: `csp-endpoint="${basePath}/api/csp-report"` },
   { key: 'X-Content-Type-Options', value: 'nosniff' },
-  { key: 'X-Frame-Options', value: 'DENY' },
+  { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
   // X-XSS-Protection deprecated but kept for legacy browsers
   { key: 'X-XSS-Protection', value: '1; mode=block' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
@@ -548,8 +557,9 @@ if (isProduction) {
 
 | Header | Purpose | Security Benefit |
 |--------|---------|------------------|
+| `Reporting-Endpoints` | Configure CSP reporting | Directs browser CSP reports to the application endpoint |
 | `X-Content-Type-Options: nosniff` | Prevent MIME sniffing | Stops browsers from interpreting files as different content types |
-| `X-Frame-Options: DENY` | Prevent clickjacking | Blocks the site from being embedded in iframes |
+| `X-Frame-Options: SAMEORIGIN` | Limit framing | Blocks cross-origin framing while allowing same-origin page builder previews |
 | `X-XSS-Protection: 1; mode=block` | Enable XSS filter | Legacy browser protection against reflected XSS |
 | `Referrer-Policy` | Control referrer info | Limits data sent in Referer header |
 | `Permissions-Policy` | Restrict browser features | Disables camera, microphone, geolocation |
@@ -585,14 +595,14 @@ The CSP is configured with environment-aware settings:
 **Allowed resources:**
 - **Self-hosted resources**: Scripts, styles, images from your domain
 - **Stripe integration**: Scripts and iframes from `js.stripe.com`, API calls to `api.stripe.com`
-- **Specific image domains**: Google, Unsplash, Vercel Blob, Wikimedia, Pravatar
+- **Specific image domains**: Google, Unsplash, Vercel Blob, Wikimedia, Pravatar, Supabase, and Cloudinary
 - **Inline styles**: Required by shadcn/ui and many UI libraries
 - **Data URIs**: For images and fonts
 
 **Security directives:**
 - `object-src 'none'`: Blocks Flash, Java, and other plugins
 - `base-uri 'self'`: Prevents base tag injection attacks
-- `frame-ancestors 'none'`: Prevents clickjacking
+- `frame-ancestors 'self'`: Blocks cross-origin framing while allowing same-origin page builder previews
 
 #### Customizing CSP
 
@@ -615,10 +625,12 @@ const allowedImageDomains = [
 
 ### Testing Security Headers
 
-Run the security headers tests:
+With the application running, verify the framing policy returned by the server:
 
 ```bash
-pnpm cy:run -- --spec "**/security-headers.cy.ts"
+headers="$(curl --silent --show-error --dump-header - --output /dev/null http://localhost:3000/)" &&
+  printf '%s\n' "$headers" | grep -qi '^X-Frame-Options: SAMEORIGIN' &&
+  printf '%s\n' "$headers" | grep -qi "Content-Security-Policy: .*frame-ancestors 'self'"
 ```
 
 Or verify manually in browser DevTools (Network tab > Response Headers).

@@ -282,9 +282,9 @@ Future versions will generate types using a separate `tsc` step.
 
 ### "Module not found" for registries
 
-The registries haven't been generated. Run:
+The registries haven't been generated. From the NextSpark monorepo root, run:
 ```bash
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 ### Build Fails with Memory Error

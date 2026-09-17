@@ -828,7 +828,7 @@ pnpm dev
 # First, get auth cookie by logging in via browser
 # Then copy the cookie value
 
-curl -X POST http://localhost:5173/api/v1/projects \
+curl -X POST http://localhost:3010/api/v1/projects \
   -H "Content-Type: application/json" \
   -H "Cookie: better-auth.session_token=YOUR_SESSION_TOKEN" \
   -d '{
@@ -868,7 +868,7 @@ curl -X POST http://localhost:5173/api/v1/projects \
 **2. List projects:**
 
 ```bash
-curl http://localhost:5173/api/v1/projects \
+curl http://localhost:3010/api/v1/projects \
   -H "Cookie: better-auth.session_token=YOUR_SESSION_TOKEN"
 ```
 
@@ -876,29 +876,29 @@ curl http://localhost:5173/api/v1/projects \
 
 ```bash
 # Filter by status
-curl "http://localhost:5173/api/v1/projects?status=planning" \
+curl "http://localhost:3010/api/v1/projects?status=planning" \
   -H "Cookie: better-auth.session_token=YOUR_SESSION_TOKEN"
 
 # Sort by deadline
-curl "http://localhost:5173/api/v1/projects?sort=deadline&direction=asc" \
+curl "http://localhost:3010/api/v1/projects?sort=deadline&direction=asc" \
   -H "Cookie: better-auth.session_token=YOUR_SESSION_TOKEN"
 
 # Pagination
-curl "http://localhost:5173/api/v1/projects?page=1&limit=10" \
+curl "http://localhost:3010/api/v1/projects?page=1&limit=10" \
   -H "Cookie: better-auth.session_token=YOUR_SESSION_TOKEN"
 ```
 
 **3. Get single project:**
 
 ```bash
-curl http://localhost:5173/api/v1/projects/PROJECT_ID \
+curl http://localhost:3010/api/v1/projects/PROJECT_ID \
   -H "Cookie: better-auth.session_token=YOUR_SESSION_TOKEN"
 ```
 
 **4. Update project:**
 
 ```bash
-curl -X PATCH http://localhost:5173/api/v1/projects/PROJECT_ID \
+curl -X PATCH http://localhost:3010/api/v1/projects/PROJECT_ID \
   -H "Content-Type: application/json" \
   -H "Cookie: better-auth.session_token=YOUR_SESSION_TOKEN" \
   -d '{
@@ -910,7 +910,7 @@ curl -X PATCH http://localhost:5173/api/v1/projects/PROJECT_ID \
 **5. Delete project:**
 
 ```bash
-curl -X DELETE http://localhost:5173/api/v1/projects/PROJECT_ID \
+curl -X DELETE http://localhost:3010/api/v1/projects/PROJECT_ID \
   -H "Cookie: better-auth.session_token=YOUR_SESSION_TOKEN"
 ```
 
@@ -973,7 +973,7 @@ export async function GET(request: NextRequest) {
 **Test custom endpoint:**
 
 ```bash
-curl http://localhost:5173/api/v1/projects/stats \
+curl http://localhost:3010/api/v1/projects/stats \
   -H "Cookie: better-auth.session_token=YOUR_SESSION_TOKEN"
 ```
 
@@ -1206,7 +1206,7 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 **Verify navigation:**
-1. Open http://localhost:5173/dashboard
+1. Open http://localhost:3010/dashboard
 2. Should see "Projects" link in sidebar
 3. Click → should navigate to `/dashboard/projects`
 4. Should see projects list (empty state if no data)
@@ -1305,7 +1305,7 @@ export function ProjectsEmptyState() {
 
 ### 7.1 Unit Tests
 
-**Create `test/unit/entities/projects.test.ts`:**
+**Create `themes/default/tests/jest/entities/projects.test.ts`:**
 
 ```typescript
 import { describe, it, expect } from '@jest/globals'
@@ -1380,12 +1380,12 @@ describe('Projects Entity', () => {
 **Run unit tests:**
 
 ```bash
-pnpm test:unit test/unit/entities/projects.test.ts
+pnpm test:theme entities/projects.test.ts
 ```
 
 ### 7.2 E2E Tests
 
-**Create `test/e2e/projects.cy.ts`:**
+**Create `themes/default/tests/cypress/e2e/projects.cy.ts`:**
 
 ```typescript
 describe('Projects Feature', () => {
@@ -1495,7 +1495,7 @@ In your EntityListWrapper, EntityFormWrapper usage, make sure to pass proper tes
 
 ```bash
 # Headless
-pnpm test:e2e
+pnpm cy:run --spec projects.cy.ts
 
 # With UI
 pnpm cy:open
@@ -1507,7 +1507,7 @@ pnpm cy:open
 **Run all tests with coverage:**
 
 ```bash
-pnpm test:coverage
+pnpm --filter @nextsparkjs/core test:coverage
 ```
 
 **Expected coverage:**
@@ -1735,15 +1735,14 @@ pg_dump $DATABASE_URL > backup-$(date +%Y%m%d).sql
 pnpm db:migrate
 ```
 
-3. **Verify migration successful:**
-```bash
-pnpm db:verify
-```
+3. **Verify the migration:** Inspect the new project table and its policies in
+   your database client. The repository's `verify-tables.mjs` diagnostic only
+   covers Better Auth tables.
 
 4. **Deploy application:**
 ```bash
 pnpm build
-pnpm start
+pnpm --dir apps/dev exec next start -p 3010
 ```
 
 5. **Rollback plan (if needed):**

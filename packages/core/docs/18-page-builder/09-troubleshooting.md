@@ -93,8 +93,8 @@ This guide helps you diagnose and fix common issues with the Page Builder system
 
 4. **Database connection issue**
    ```bash
-   # Check database connectivity
-   npm run db:verify
+   # Inspect connection output and Better Auth table metadata
+   cd apps/dev && node ../../packages/core/scripts/db/verify-tables.mjs
    ```
 
 ---
@@ -326,18 +326,18 @@ When reporting issues, include:
 
 | Log | Location | Contents |
 |-----|----------|----------|
-| Server | Terminal running `npm run dev` | API errors |
+| Server | Terminal running `pnpm dev` | API errors |
 | Browser | DevTools Console | Client errors |
-| Build | `npm run build` output | Type/build errors |
+| Build | `pnpm build` output | Type/build errors |
 
 ### Quick Fixes Checklist
 
 - [ ] Rebuild registry: `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
-- [ ] Restart dev server: `npm run dev`
+- [ ] Restart dev server: `pnpm dev`
 - [ ] Clear browser cache: `Ctrl+Shift+R`
 - [ ] Check database connection
 - [ ] Verify environment variables
-- [ ] Check for TypeScript errors: `npm run tsc`
+- [ ] Check for application TypeScript errors: `pnpm --dir apps/dev exec tsc --noEmit`
 
 ---
 

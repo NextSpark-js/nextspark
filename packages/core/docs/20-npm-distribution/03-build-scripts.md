@@ -30,7 +30,7 @@ packages/core/scripts/
 │   └── setup-ci.mjs           # CI/CD workflow setup
 ├── db/
 │   ├── run-migrations.mjs     # Database migrations
-│   ├── verify-tables.mjs      # Table verification
+│   ├── verify-tables.mjs      # Better Auth table inspection
 │   └── verify-teams.mjs       # Teams verification
 ├── test/
 │   ├── build-entities.mjs     # Test fixture generation
@@ -177,14 +177,14 @@ Compiles theme CSS from the active theme:
  * Theme CSS Compiler
  *
  * Reads: contents/themes/{ACTIVE_THEME}/styles/
- * Writes: app/theme-styles.css
+ * Writes: .next/theme-generated.css and syncs app/globals.css
  */
 
 const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME || 'default'
 
 async function buildTheme() {
   const themeStylesDir = join(ROOT_DIR, 'contents/themes', activeTheme, 'styles')
-  const outputPath = join(ROOT_DIR, 'app/theme-styles.css')
+  const outputPath = join(ROOT_DIR, '.next/theme-generated.css')
 
   // Concatenate all CSS files
   const cssFiles = await glob(join(themeStylesDir, '**/*.css'))
@@ -239,20 +239,20 @@ export async function generateApp(projectRoot) {
 # Registry generation
 pnpm build:registries
 
-# Theme compilation
-pnpm build:theme
-
-# Full build (runs all)
+# Application build (compiles the theme CSS imported by app/globals.css)
 pnpm build
 ```
 
-### From Package
+### In the NextSpark Monorepo
 
 ```bash
-cd packages/core
-pnpm build:registries
-node scripts/build/theme.mjs
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd ../.. && pnpm build
 ```
+
+Neither generated projects nor the monorepo expose a separate theme-build
+command. Next.js compiles the active theme stylesheet imported by
+`app/globals.css`; registry generation remains a separate step.
 
 ## Environment Variables
 

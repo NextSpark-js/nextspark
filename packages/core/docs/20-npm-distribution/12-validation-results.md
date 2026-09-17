@@ -9,7 +9,7 @@ This document records the validation results for NPM Distribution v4 (version 0.
 ## Test Environment
 
 - macOS Darwin 24.5.0
-- Node.js 20.x
+- Node.js: the recorded run predates the current 22.13+ support floor
 - pnpm 8.x
 - Next.js 15.4.6
 - TypeScript 5.9.x

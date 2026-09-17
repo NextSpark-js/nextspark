@@ -334,11 +334,11 @@ Access the Scheduled Actions DevTools at `/devtools/scheduled-actions`:
 
 ```bash
 # List pending webhook actions
-curl "http://localhost:5173/api/v1/devtools/scheduled-actions?status=pending&type=webhook:send" \
+curl "http://localhost:3010/api/v1/devtools/scheduled-actions?status=pending&type=webhook:send" \
   -H "Authorization: Bearer YOUR_API_KEY"
 
 # Get specific action details
-curl "http://localhost:5173/api/v1/devtools/scheduled-actions/ACTION_ID" \
+curl "http://localhost:3010/api/v1/devtools/scheduled-actions/ACTION_ID" \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 

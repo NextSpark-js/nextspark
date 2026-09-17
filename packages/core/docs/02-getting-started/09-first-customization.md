@@ -8,7 +8,7 @@ Hands-on tutorial to make your first customizations. You'll learn how to customi
 
 **Prerequisites:**
 - ✅ Project installed and running (`pnpm dev`)
-- ✅ Server accessible at http://localhost:5173
+- ✅ Server accessible at http://localhost:3010
 - ✅ Basic understanding of React and TypeScript
 
 ---
@@ -100,7 +100,7 @@ cd contents/themes/default/styles/
 
 ### Step 4: Verify
 
-Visit http://localhost:5173 and check:
+Visit http://localhost:3010 and check:
 - ✅ Buttons now purple
 - ✅ Links now purple
 - ✅ Primary UI elements updated
@@ -175,7 +175,7 @@ export default function AboutPage() {
 
 ### Step 3: Verify Page
 
-**Visit:** http://localhost:5173/about
+**Visit:** http://localhost:3010/about
 
 **You should see:**
 - ✅ Page renders correctly
@@ -208,7 +208,7 @@ pnpm dev
 ```
 
 **Verify navigation:**
-- Visit http://localhost:5173
+- Visit http://localhost:3010
 - Check navigation bar
 - Click "About" link
 
@@ -299,13 +299,13 @@ DELETE /api/v1/tasks/:id
 
 **Using browser/Postman:**
 
-1. Log in to http://localhost:5173/sign-in
+1. Log in to http://localhost:3010/sign-in
 2. Open browser DevTools → Application → Cookies
 3. Copy session cookie value
 4. Make API request:
 
 ```bash
-curl http://localhost:5173/api/v1/tasks \
+curl http://localhost:3010/api/v1/tasks \
   -H "Cookie: better-auth.session_token=YOUR_SESSION_TOKEN"
 ```
 
@@ -461,7 +461,7 @@ export const appConfig = {
   // App identity
   name: 'NextSpark',
   description: 'Modern SaaS application',
-  url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:5173',
+  url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3010',
 
   // Navigation
   navigation: {
@@ -706,11 +706,11 @@ export function useCustomFeature() {
 **Styling not working:**
 1. Verify using theme variables
 2. Check CSS file syntax
-3. Rebuild theme: `pnpm theme:build`
+3. Run the application build to check the imported theme CSS: `pnpm build`
 4. Check browser DevTools for CSS errors
 
 **Type errors:**
-1. Run type check: `pnpm type-check`
+1. Run type check: `pnpm --dir apps/dev exec tsc --noEmit`
 2. Check import paths
 3. Restart TypeScript server in IDE
 4. Check `tsconfig.json` paths
@@ -1485,7 +1485,7 @@ module.exports = {
 - [ ] Environment variables configured
 - [ ] Database migrations run
 - [ ] Registry built (`cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`)
-- [ ] Tests passing (`pnpm test`)
+- [ ] Tests passing (`pnpm test:core`)
 - [ ] Build successful (`pnpm build`)
 - [ ] Bundle size checked (`ANALYZE=true pnpm build`)
 - [ ] Performance audit (Lighthouse >90)

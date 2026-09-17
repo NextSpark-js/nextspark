@@ -405,7 +405,7 @@ function ResponsiveProductImage({ product }: { product: Product }) {
 
 ```bash
 # Build and analyze bundle
-npm run build
+pnpm build
 
 # Check bundle sizes
 ls -lh .next/static/chunks/

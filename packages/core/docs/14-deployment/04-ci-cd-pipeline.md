@@ -101,7 +101,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
       - run: pnpm install
-      - run: pnpm test              # Run tests
+      - run: pnpm test:core              # Run tests
       - run: pnpm lint              # Check linting
   
   deploy:
@@ -176,7 +176,7 @@ git checkout -b feature/new-feature
 # 2. Test locally
 pnpm dev
 pnpm build
-pnpm test
+pnpm test:core
 
 # 3. Push to GitHub (creates preview deployment)
 git push origin feature/new-feature

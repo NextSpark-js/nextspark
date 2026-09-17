@@ -15,50 +15,36 @@ Complete guide to running the development server, understanding watch modes, and
 pnpm dev
 ```
 
-**What happens (10-15 seconds):**
+The root script delegates to `apps/dev` and starts one Next.js process. It reads the port from `apps/dev/.env`:
 
 ```text
-[THEME]    Building theme CSS...        ✓ (2.1s)
-[REGISTRY] Building registries...       ✓ (5.4s)
-[PLUGINS]  Starting plugin dev servers.. ✓ (1.8s)
-[APP]      Starting Next.js...          ✓ (3.2s)
-
-  ▲ Next.js 15.4.6
-  - Local:        http://localhost:5173
-  - Turbopack:    enabled
-
- ✓ Ready in 12s
+> @nextsparkjs/dev dev
+> dotenv -e .env -- sh -c 'next dev --turbopack -p $PORT'
 ```
 
-**Access:** http://localhost:5173
+**Access:** use the local URL printed by Next.js (port 3010 in the measured `apps/dev/.env`).
 
 ---
 
 ## Development Processes
 
-### 4 Concurrent Processes
+### Main Process and Optional Registry Watcher
 
-**1. THEME (build-theme.mjs --watch)**
-- Watches: `contents/themes/*/styles/*.css`
-- Rebuilds: `app/theme-styles.css`
-- Copies: `public/theme/` assets
-- Triggers: Browser hot reload
+**1. APP (`pnpm dev`)**
+- Starts Next.js with Turbopack.
+- Watches application code and the theme CSS imported by `apps/dev/app/globals.css`.
+- Uses `PORT` from `apps/dev/.env`.
 
-**2. REGISTRY (`cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch`)**
+**2. REGISTRY (optional, separate terminal)**
+
+```bash
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
+```
+
 - Watches: `CONFIG.pluginsDir`, `<contentsDir>/entities`, `CONFIG.themesDir`, and `<contentsDir>/config`
 - Rebuilds: `.nextspark/registries/*.ts`, including `docs-registry.ts`
 - Documentation metadata comes from the active theme's `docs/public/` and `docs/superadmin/` directories
 - Triggers: Server restart needed
-
-**3. PLUGINS (turbo dev)**
-- Watches: Plugin source files
-- Rebuilds: Plugin packages
-- Triggers: Hot reload
-
-**4. APP (next dev --turbopack)**
-- Watches: `app/`, `core/components/`, etc.
-- Rebuilds: React components, API routes
-- Triggers: Fast refresh (< 100ms)
 
 ---
 
@@ -68,7 +54,7 @@ pnpm dev
 - ✅ React component changes
 - ✅ Page route changes
 - ✅ API route changes (server restarts)
-- ✅ CSS changes (theme watcher)
+- ✅ CSS changes imported by Next.js
 
 **What requires manual restart:**
 - ⏸️ Registry changes (entity/plugin configs)
@@ -87,22 +73,17 @@ pnpm dev
 
 ## Watch Modes Explained
 
-### Theme Watcher
+### Theme CSS
 
-**Watches:**
+`apps/dev/app/globals.css` imports the active theme stylesheet. Next.js watches that dependency directly:
 ```text
-contents/themes/default/styles/
+themes/default/styles/
 ├── globals.css
 ├── components.css
 └── utilities.css
 ```
 
-**On change:**
-1. Recompiles CSS
-2. Outputs to `app/theme-styles.css`
-3. Browser hot reloads
-
-**Debounce:** 300ms (waits for multiple changes)
+There is no separate `theme:build` or theme watcher script at the monorepo root.
 
 ### Registry Watcher
 
@@ -136,33 +117,34 @@ pnpm dev
 
 **Start dev server:**
 ```bash
-pnpm dev                   # All processes
+pnpm dev                   # One Next.js development process
 ```
 
 **Build manually:**
 ```bash
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs  # Registries only, including docs
-pnpm theme:build           # Theme CSS only
+pnpm build                 # Production app build, including imported theme CSS
 ```
 
 **Database:**
 ```bash
 pnpm db:migrate            # Run migrations
-pnpm db:verify             # Verify tables
+cd apps/dev && node ../../packages/core/scripts/db/verify-tables.mjs             # Inspect Better Auth tables
 ```
 
 **Testing:**
 ```bash
-pnpm test                  # Unit tests
-pnpm test:e2e              # E2E tests
+pnpm test:core             # Core unit tests
+pnpm test:theme            # Active-theme unit tests
+pnpm cy:run                # E2E tests
 pnpm cy:open               # Cypress UI
 ```
 
 **Linting:**
 ```bash
-pnpm lint                  # Check code
-pnpm lint:fix              # Auto-fix
-pnpm type-check            # TypeScript
+pnpm lint                                      # Check code
+pnpm lint --fix                                # Auto-fix
+pnpm --dir apps/dev exec tsc --noEmit          # Application TypeScript
 ```
 
 ---
@@ -179,8 +161,8 @@ pnpm type-check            # TypeScript
 
 **2. CSS changes:**
 ```css
-/* Edit contents/themes/default/styles/globals.css */
-/* → Theme watcher rebuilds → Hot reload */
+/* Edit themes/default/styles/globals.css */
+/* → Next.js recompiles the imported CSS */
 ```
 
 **3. Entity changes:**
@@ -210,8 +192,8 @@ pnpm dev
 **Theme changes not applying:**
 ```bash
 # Stop server
-rm app/theme-styles.css
-pnpm theme:build
+# Verify the stylesheet import, then restart
+grep -F 'themes/default/styles/globals.css' apps/dev/app/globals.css
 pnpm dev
 ```
 
@@ -228,26 +210,17 @@ pnpm dev
 
 **Normal startup:**
 ```text
-[THEME]    Building theme: default
-[THEME]    ✓ Compiled CSS (2.1s)
+> @nextsparkjs/dev dev
+> dotenv -e .env -- sh -c 'next dev --turbopack -p $PORT'
 
-[REGISTRY] Scanning themes...
-[REGISTRY] Scanning plugins...
-[REGISTRY] Scanning entities...
-[REGISTRY] ✓ Registry build completed (5.4s)
-
-[PLUGINS]  Starting workspace dev servers
-[PLUGINS]  ✓ Plugins ready (1.8s)
-
-[APP]       ▲ Next.js 15.4.6
-[APP]       - Local: http://localhost:5173
-[APP]      ✓ Ready in 3.2s
+▲ Next.js
+- Local: http://localhost:3010
+✓ Ready
 ```
 
 **Errors to watch for:**
 ```text
 ❌ Registry build failed → Check entity configs
-❌ Theme build failed → Check CSS syntax
 ❌ Type error → Check TypeScript
 ❌ Port in use → Kill process or use different port
 ```
@@ -256,19 +229,17 @@ pnpm dev
 
 ## Auto-Generated Files (Never Edit)
 
-**These regenerate every dev session:**
+**Generated output:**
 
 ```text
-.next/                    # Next.js cache
-.nextspark/registries/     # All registry files
-app/theme-styles.css      # Compiled theme CSS
-public/theme/             # Theme assets
+.next/                     # Next.js cache
+.nextspark/registries/     # Written by an explicit registry build/watcher
 ```
 
 **To make changes:**
-- **Registries:** Edit source in `contents/`
-- **Theme CSS:** Edit in `contents/themes/*/styles/`
-- **Assets:** Edit in `contents/themes/*/public/`
+- **Registries:** Edit source in `themes/` or `plugins/`, then rebuild registries.
+- **Theme CSS:** Edit in `themes/*/styles/`; Next.js follows the import from `apps/dev/app/globals.css`.
+- **Served assets:** Update the files under `apps/dev/public/theme/` used by the app.
 
 ---
 
@@ -296,14 +267,14 @@ public/theme/             # Theme assets
 
 ## Port Configuration
 
-**Default:** Port 5173
+**Source:** `PORT` in `apps/dev/.env` (3010 in the measured checkout).
 
 **Change port:**
 ```bash
-# Edit package.json dev script
-"dev": "... next dev --turbopack -p 3000"
+# Edit apps/dev/.env
+PORT=3000
 
-# Update .env.local
+# Keep application URLs aligned with the same port
 BETTER_AUTH_URL="http://localhost:3000"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 
@@ -316,9 +287,9 @@ pnpm dev
 ## Troubleshooting
 
 **Server won't start:**
-1. Check port 5173 is free
-2. Check Node.js version (18+)
-3. Check pnpm version (10.17.0)
+1. Check the `PORT` from `apps/dev/.env` is free
+2. Check Node.js version (22.13+)
+3. Check pnpm version (9.0.0)
 4. Clear node_modules and reinstall
 
 **HMR not working:**
@@ -340,24 +311,22 @@ pnpm dev
 ## Summary
 
 **Start development:**
-- `pnpm dev` → 5 processes, 10-15s startup
-- Access: http://localhost:5173
+- `pnpm dev` → one Next.js process on `PORT` from `apps/dev/.env`
+- Access: use the local URL printed by Next.js
 
 **Watch modes:**
-- Theme: Auto-rebuilds CSS
-- Registry: Auto-rebuilds (needs restart)
+- Theme CSS: Recompiled by Next.js
+- Registry: Optional separate watcher (app restart may be needed)
 - Next.js: Hot module replacement
 
 **Manual commands:**
 - `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` - Rebuild registries
-- `pnpm theme:build` - Rebuild theme
+- `pnpm build` - Build the application and imported theme CSS
 - `pnpm lint` - Check code quality
 
 **Never edit:**
 - `.next/`
 - `.nextspark/registries/`
-- `app/theme-styles.css`
-- `public/theme/`
 
 **Next:** [First Customization](./06-first-customization.md)
 

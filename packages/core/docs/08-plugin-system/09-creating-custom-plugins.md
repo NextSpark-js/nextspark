@@ -590,7 +590,7 @@ export function WeatherWidget() {
 ### Unit Tests
 
 ```typescript
-// contents/plugins/weather/lib/__tests__/core-utils.test.ts
+// themes/default/tests/jest/plugins/weather/core-utils.test.ts
 import { validateCity, transformWeatherData } from '../core-utils'
 import type { WeatherAPIResponse } from '../../types/weather.types'
 
@@ -635,7 +635,7 @@ describe('Weather Plugin Core Utils', () => {
 ### E2E Tests
 
 ```typescript
-// cypress/e2e/plugins/weather-widget.cy.ts
+// themes/default/tests/cypress/e2e/plugins/weather-widget.cy.ts
 describe('Weather Widget', () => {
   beforeEach(() => {
     cy.session('user-session', () => {
@@ -769,11 +769,11 @@ See `.env.example` for all configuration options.
 ## Testing
 
 ```bash
-# Unit tests
-pnpm test:unit contents/plugins/weather
+# This plugin's active-theme unit test
+pnpm test:theme plugins/weather/core-utils.test.ts
 
 # E2E tests
-pnpm test:e2e cypress/e2e/plugins/weather-widget.cy.ts
+pnpm cy:run --spec plugins/weather-widget.cy.ts
 ```
 
 ## License
@@ -809,14 +809,14 @@ cat core/lib/registries/plugin-registry.ts | grep weather
 ### Run Tests
 
 ```bash
-# Run unit tests
-pnpm test:unit contents/plugins/weather
+# Run this plugin's active-theme unit test
+pnpm test:theme plugins/weather/core-utils.test.ts
 
 # Run E2E tests
-pnpm test:e2e
+pnpm cy:run
 
-# Run with coverage
-pnpm test:unit --coverage contents/plugins/weather
+# Run this plugin's active-theme unit test with coverage
+pnpm test:theme --coverage plugins/weather/core-utils.test.ts
 ```
 
 ### Manual Testing
@@ -825,12 +825,12 @@ pnpm test:unit --coverage contents/plugins/weather
 # Start development server
 pnpm dev
 
-# Visit: http://localhost:5173/dashboard
+# Visit: http://localhost:3010/dashboard
 # Look for Weather Widget component
 
 # Test API endpoint:
 curl -H "Authorization: Bearer your_api_key" \
-  "http://localhost:5173/api/v1/plugin/weather/current?city=London"
+  "http://localhost:3010/api/v1/plugin/weather/current?city=London"
 ```
 
 ---

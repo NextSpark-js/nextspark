@@ -24,7 +24,7 @@ This guide walks you through the initial project setup **after** you've complete
 
 **Prerequisites:**
 - ✅ Completed [Installation Guide](./01-installation.md)
-- ✅ Node.js 22+, pnpm 10.17+ installed
+- ✅ Node.js 22.13+, pnpm 9.0.0 installed
 - ✅ PostgreSQL database accessible (Supabase or local)
 - ✅ `.env.local` file configured with required variables
 
@@ -41,10 +41,10 @@ Before configuring anything, let's verify the installation completed successfull
 **Check Node.js and pnpm versions:**
 ```bash
 node -v
-# Should show: v22.x.x or higher
+# Should show: v22.13.0 or higher
 
 pnpm -v
-# Should show: 10.17.0 or higher
+# Should show: 9.0.0 or a compatible 9.x release
 ```
 
 **Check dependencies installed:**
@@ -86,13 +86,13 @@ ls core/lib/registries/
 # - ... (16 total registry files)
 ```
 
-**Theme CSS (auto-generated):**
+**Theme CSS and served assets:**
 ```bash
-ls app/theme-styles.css
-# Should exist
+grep -F 'themes/default/styles/globals.css' apps/dev/app/globals.css
+# Should print the active theme import
 
-ls public/theme/
-# Should see copied theme assets:
+ls apps/dev/public/theme/
+# Should see app-served theme assets:
 # - brand/
 # - images/
 # - fonts/ (if theme has custom fonts)
@@ -110,19 +110,19 @@ ls .next/
 ```bash
 # You should see output like:
   ▲ Next.js 15.x.x
-  - Local:        http://localhost:5173
+  - Local:        http://localhost:3010
   - Turbopack:    enabled
 
  ✓ Ready in 12s
 ```
 
 **Open in browser:**
-1. Navigate to http://localhost:5173
+1. Navigate to http://localhost:3010
 2. You should see the landing page load
 3. Check browser console (F12) - should be no critical errors
 
 **Check dashboard redirect:**
-1. Navigate to http://localhost:5173/dashboard
+1. Navigate to http://localhost:3010/dashboard
 2. Should redirect to `/login` (not authenticated)
 3. Login page should display properly
 
@@ -235,7 +235,7 @@ Create `.vscode/launch.json`:
       "name": "Next.js: debug client-side",
       "type": "chrome",
       "request": "launch",
-      "url": "http://localhost:5173",
+      "url": "http://localhost:3010",
       "webRoot": "${workspaceFolder}"
     },
     {
@@ -537,30 +537,27 @@ export const appConfig = {
 
 ## 4. Database Verification
 
-### 4.1 Verify Database Connection
+### 4.1 Inspect Better Auth Tables
 
-**Test connection with verification script:**
+**Inspect connection output and Better Auth table metadata:**
 ```bash
-pnpm db:verify
+cd apps/dev && node ../../packages/core/scripts/db/verify-tables.mjs
 ```
 
 **Expected output:**
 ```text
-✓ Database connection successful
-✓ Found 15 tables:
-  - user
-  - session
-  - account
-  - verification
-  - tasks
-  - tasks_meta
-  - meta
-  - api_keys
-  - ...
-
-✓ All required tables exist
-✓ Database schema is up to date
+Connected to database
+Better Auth Tables Schema:
+Table: account
+Table: session
+Table: user
+Table: verification
+Verification complete!
 ```
+
+The script does not validate the complete application schema and currently
+logs connection/query failures without returning a nonzero exit code. Read its
+output rather than using it as a pass/fail gate.
 
 **If verification fails:**
 - Check DATABASE_URL in .env.local
@@ -592,7 +589,7 @@ psql $DATABASE_URL -c "\d tasks"
 **Create test user accounts:**
 
 Option 1 - Via UI:
-1. Go to http://localhost:5173/signup
+1. Go to http://localhost:3010/signup
 2. Create account with your email
 3. Verify email (check Resend dashboard if not receiving)
 4. Log in
@@ -788,76 +785,34 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
 
 ### 6.1 Active Theme Setup
 
-**Verify active theme set:**
+**Verify the active theme setting:**
 ```bash
-grep NEXT_PUBLIC_ACTIVE_THEME .env.local
-# Should show: NEXT_PUBLIC_ACTIVE_THEME="default"
+grep NEXT_PUBLIC_ACTIVE_THEME apps/dev/.env
 ```
 
-**Check theme directory exists:**
+**Check the monorepo theme and CSS import:**
 ```bash
-ls -la contents/themes/default/
-# Should see:
-# - theme.config.ts
-# - app.config.ts
-# - entities/
-# - messages/
-# - public/
-# - styles/
+test -d themes/default
+grep -F 'themes/default/styles/globals.css' apps/dev/app/globals.css
 ```
 
-**Understand theme CSS compilation:**
-
-When you run `pnpm dev`, the build process:
-1. Reads `NEXT_PUBLIC_ACTIVE_THEME` (.env.local)
-2. Loads `contents/themes/default/styles/*.css`
-3. Compiles CSS (processes variables, imports)
-4. Outputs to `app/theme-styles.css` (auto-generated)
-5. Copies `contents/themes/default/public/` → `public/theme/`
-
-**Watch mode:**
-```bash
-# Theme CSS rebuilds automatically when:
-# - Any .css file in contents/themes/default/styles/ changes
-# - Any file in contents/themes/default/public/ changes
-
-# See output:
-[THEME] File change detected: contents/themes/default/styles/globals.css
-[THEME] Rebuilding theme CSS... (234ms)
-[THEME] ✓ Theme CSS rebuilt
-```
+The root `pnpm dev` command starts Next.js only. Next.js compiles the stylesheet imported by `apps/dev/app/globals.css`; there is no separate theme-build process.
 
 ### 6.2 Verify Theme Assets
 
-**Check theme CSS generated:**
+Theme assets served by the development app live under `apps/dev/public/theme/`:
+
 ```bash
-ls -lh app/theme-styles.css
-# Should exist, ~50-200KB depending on theme
+test -d apps/dev/public/theme
+find apps/dev/public/theme -maxdepth 2 -type f
 ```
 
-**Check public assets copied:**
-```bash
-ls -R public/theme/
-# Should see:
-# public/theme/brand/
-#   - logo.svg
-#   - favicon.ico
-# public/theme/images/
-#   - (theme images)
-# public/theme/fonts/
-#   - (custom fonts if any)
-```
-
-**Verify assets accessible:**
-
-Open browser to:
-- http://localhost:5173/theme/brand/logo.svg (should show logo)
-- http://localhost:5173/theme/brand/favicon.ico (should download favicon)
+Use the local URL printed by `pnpm dev` to verify those files in a browser.
 
 ### 6.3 Test Theme in Browser
 
 **Open application:**
-1. Navigate to http://localhost:5173
+1. Navigate to http://localhost:3010
 2. Open DevTools (F12)
 3. Go to Elements/Inspector tab
 4. Check `<html>` element
@@ -879,9 +834,8 @@ getComputedStyle(document.documentElement).getPropertyValue('--color-primary')
 **Check theme styles loaded:**
 1. Go to Network tab
 2. Refresh page
-3. Look for `theme-styles.css`
-4. Status should be 200 OK
-5. Check response contains your theme CSS
+3. Inspect the loaded CSS chunks
+4. Check that the active theme variables are present
 
 ---
 
@@ -894,7 +848,7 @@ getComputedStyle(document.documentElement).getPropertyValue('--color-primary')
 **Terminal 1 - Main Dev Server:**
 ```bash
 pnpm dev
-# Runs: TypeScript config update, theme build, registry build, Next.js server
+# Runs one Next.js development process on PORT from apps/dev/.env
 # Keep this running always
 ```
 
@@ -908,7 +862,7 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
 **Terminal 3 - Testing/Commands:**
 ```bash
 # Use for ad-hoc commands:
-pnpm test
+pnpm test:core
 pnpm lint
 pnpm db:migrate
 git status
@@ -1046,14 +1000,14 @@ git checkout -b feature/my-first-feature
 
 ### 8.1 Running Initial Tests
 
-**Run all tests:**
+**Run Core unit tests:**
 ```bash
-pnpm test
+pnpm test:core
 ```
 
-**Run unit tests only:**
+**Run active-theme unit tests:**
 ```bash
-pnpm test:unit
+pnpm test:theme
 # Uses Jest
 # Tests: *.test.ts, *.test.tsx files
 ```
@@ -1071,7 +1025,7 @@ Time:        3.245 s
 
 **Run E2E tests:**
 ```bash
-pnpm test:e2e
+pnpm cy:run
 # Uses Cypress (headless)
 # Tests: test/e2e/**/*.cy.ts
 ```
@@ -1088,7 +1042,7 @@ pnpm cy:open
 
 **Generate coverage report:**
 ```bash
-pnpm test:coverage
+pnpm --filter @nextsparkjs/core test:coverage
 ```
 
 **Expected output:**
@@ -1161,7 +1115,7 @@ cp contents/themes/default/tests/cypress.config.ts contents/themes/YOUR_THEME/te
 
 **Run tests for specific theme:**
 ```bash
-pnpm cypress:run --config-file contents/themes/YOUR_THEME/tests/cypress.config.ts
+NEXT_PUBLIC_ACTIVE_THEME=YOUR_THEME pnpm cy:run
 ```
 
 ### 8.5 Tag System
@@ -1179,27 +1133,26 @@ The build generates `testing-registry.ts` with all discovered tags organized by 
 
 ### 8.6 CI/CD Preparation
 
-**Understand test scripts:**
+**Use the scripts that exist at the monorepo root:**
 
 ```json
 // package.json
 {
   "scripts": {
-    "test": "jest",
-    "test:unit": "jest --testPathPattern=test/unit",
-    "test:e2e": "cypress run",
-    "test:coverage": "jest --coverage",
-    "test:watch": "jest --watch"
+    "test:core": "pnpm --filter @nextsparkjs/core test",
+    "test:theme": "node packages/core/scripts/test/jest-theme.mjs",
+    "cy:run": "node packages/core/scripts/test/cy.mjs run",
+    "cy:open": "node packages/core/scripts/test/cy.mjs open"
   }
 }
 ```
 
 **CI/CD will run:**
-1. `pnpm type-check` (TypeScript errors)
+1. `pnpm --dir apps/dev exec tsc --noEmit` (application TypeScript errors)
 2. `pnpm lint` (ESLint errors)
 3. `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` (Registry build with tag validation)
-4. `pnpm test:unit` (Unit tests)
-5. `pnpm test:e2e` (E2E tests)
+4. `pnpm test:core` and `pnpm test:theme` (unit tests)
+5. `pnpm cy:run` (E2E tests)
 6. `pnpm build` (Production build)
 
 All must pass ✅ before merge.
@@ -1211,21 +1164,21 @@ All must pass ✅ before merge.
 Go through this checklist to verify everything is set up correctly:
 
 ### Installation Verification
-- [ ] Node.js 22+ installed (`node -v`)
-- [ ] pnpm 10.17+ installed (`pnpm -v`)
+- [ ] Node.js 22.13+ installed (`node -v`)
+- [ ] pnpm 9.0.0 installed (`pnpm -v`)
 - [ ] Dependencies installed (800+ packages in node_modules/)
 - [ ] Project structure created (app/, core/, contents/, scripts/)
 
 ### Build Artifacts
 - [ ] Registry files generated (16 files in core/lib/registries/)
-- [ ] Theme CSS compiled (app/theme-styles.css exists)
-- [ ] Theme assets copied (public/theme/ directory exists)
+- [ ] `apps/dev/app/globals.css` imports the active theme stylesheet
+- [ ] App-served theme assets exist under `apps/dev/public/theme/`
 - [ ] Next.js cache created (.next/ directory exists)
 
 ### Application Running
 - [ ] Dev server started (`pnpm dev` runs without errors)
-- [ ] Landing page loads (http://localhost:5173)
-- [ ] Dashboard redirects to login (http://localhost:5173/dashboard → /login)
+- [ ] Landing page loads (http://localhost:3010)
+- [ ] Dashboard redirects to login (http://localhost:3010/dashboard → /login)
 - [ ] No critical errors in browser console
 
 ### Environment Configuration
@@ -1236,7 +1189,7 @@ Go through this checklist to verify everything is set up correctly:
 - [ ] NEXT_PUBLIC_ACTIVE_THEME="default"
 
 ### Database
-- [ ] Database connection successful (`pnpm db:verify` passes)
+- [ ] Better Auth table metadata inspected with `cd apps/dev && node ../../packages/core/scripts/db/verify-tables.mjs`
 - [ ] All required tables exist (15+ tables)
 - [ ] Migrations completed successfully
 - [ ] Can connect via database client (Postico/DBeaver/Supabase dashboard)
@@ -1255,9 +1208,9 @@ Go through this checklist to verify everything is set up correctly:
 
 ### Theme
 - [ ] Active theme set (NEXT_PUBLIC_ACTIVE_THEME="default")
-- [ ] Theme directory exists (contents/themes/default/)
-- [ ] Theme CSS compiled (app/theme-styles.css)
-- [ ] Theme assets accessible (http://localhost:5173/theme/brand/logo.svg)
+- [ ] Theme directory exists (`themes/default/`)
+- [ ] `apps/dev/app/globals.css` imports the active theme stylesheet
+- [ ] Theme assets are present under `apps/dev/public/theme/`
 - [ ] CSS variables applied in browser (check DevTools)
 
 ### Git
@@ -1268,8 +1221,8 @@ Go through this checklist to verify everything is set up correctly:
 - [ ] Feature branch created (optional)
 
 ### Testing
-- [ ] Unit tests run (`pnpm test:unit` passes)
-- [ ] E2E tests run (`pnpm test:e2e` passes)
+- [ ] Core and active-theme unit tests run (`pnpm test:core` and `pnpm test:theme` pass)
+- [ ] E2E tests run (`pnpm cy:run` passes)
 - [ ] Test coverage acceptable (80%+ overall)
 - [ ] Cypress opens (`pnpm cy:open` works)
 - [ ] CI workflows installed (`pnpm setup:ci` run)
@@ -1340,23 +1293,22 @@ Congratulations! Your development environment is fully set up. 🎉
 
 ## Common Setup Issues
 
-### Port 5173 Already in Use
+### Configured Port Already in Use
 
 **Error:**
 ```text
-Error: listen EADDRINUSE: address already in use :::5173
+Error: listen EADDRINUSE: address already in use :::<PORT>
 ```
 
 **Solution:**
 ```bash
-# Find process using port 5173
-lsof -i :5173
+# Read the configured port, then inspect that listener (3010 in this checkout)
+grep '^PORT=' apps/dev/.env
+pid=$(lsof -tiTCP:3010 -sTCP:LISTEN)
+ps -o command= -p "$pid"
+kill "$pid"
 
-# Kill the process (replace PID)
-kill -9 <PID>
-
-# Or use different port
-next dev --turbopack -p 3000
+# Or set another PORT in apps/dev/.env, then restart pnpm dev
 ```
 
 ### Registry Build Fails
@@ -1384,15 +1336,12 @@ pnpm dev
 
 **Error:**
 - Styles not applied
-- `app/theme-styles.css` doesn't exist
 
 **Solution:**
 ```bash
-# Verify theme exists
-ls contents/themes/default/
-
-# Rebuild theme manually
-pnpm theme:build
+# Verify the theme and its app import exist
+test -f themes/default/styles/globals.css
+grep -F 'themes/default/styles/globals.css' apps/dev/app/globals.css
 
 # Restart dev server
 pnpm dev
@@ -1442,13 +1391,13 @@ Test suite failed to run
 **Solution:**
 ```bash
 # Clear Jest cache
-pnpm test --clearCache
+pnpm test:core -- --clearCache
 
 # Update snapshots if needed
-pnpm test -u
+pnpm test:core -- -u
 
 # Run specific test for debugging
-pnpm test path/to/test.test.ts
+pnpm test:core -- path/to/test.test.ts
 ```
 
 ---

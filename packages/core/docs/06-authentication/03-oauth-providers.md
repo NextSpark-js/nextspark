@@ -33,13 +33,13 @@ This guide covers setting up Google OAuth authentication with Better Auth, inclu
    - **Name**: Your app name (e.g., "NextSpark Web")
    - **Authorized JavaScript origins**:
      ```text
-     http://localhost:5173
+     http://localhost:3010
      http://localhost:3000
      https://your-production-domain.com
      ```text
    - **Authorized redirect URIs**:
      ```text
-     http://localhost:5173/api/auth/callback/google
+     http://localhost:3010/api/auth/callback/google
      http://localhost:3000/api/auth/callback/google
      https://your-production-domain.com/api/auth/callback/google
      ```text
@@ -224,7 +224,7 @@ Configure allowed origins for OAuth redirects:
 trustedOrigins: [
   process.env.BETTER_AUTH_URL,
   process.env.NEXT_PUBLIC_APP_URL,
-  'http://localhost:5173',
+  'http://localhost:3010',
   'http://localhost:3000',
   'http://127.0.0.1:3000',
 ].filter(Boolean)
@@ -267,7 +267,7 @@ Google OAuth users have `emailVerified: true` automatically since Google has alr
 **Solution**: Ensure callback URL in Google Cloud Console matches exactly:
 
 ```text
-http://localhost:5173/api/auth/callback/google
+http://localhost:3010/api/auth/callback/google
 ```
 
 **Error**: "Invalid client ID"

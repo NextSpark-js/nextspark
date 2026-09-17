@@ -32,9 +32,9 @@ The theme system operates at **build time**, not runtime:
 ```text
 Development:
 1. Set NEXT_PUBLIC_ACTIVE_THEME environment variable
-2. Run `pnpm theme:build` or `pnpm dev` (auto-builds)
-3. Theme CSS compiled and assets copied
-4. Registry updated with theme metadata
+2. Rebuild registries when the active theme or its configuration changes
+3. Run `pnpm dev`
+4. Next.js compiles the stylesheet imported by `apps/dev/app/globals.css`
 5. Application loads with selected theme
 
 Production:
@@ -103,29 +103,13 @@ NEXT_PUBLIC_ACTIVE_THEME=default
 NEXT_PUBLIC_ACTIVE_THEME=my-theme
 ```
 
-Then rebuild:
+Then rebuild the registries and application:
 ```bash
-pnpm theme:build
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd ../.. && pnpm build
 ```
 
-**Method 2: NPM Scripts**
-
-Add custom scripts to `package.json`:
-
-```json
-{
-  "scripts": {
-    "theme:my-theme": "cross-env NEXT_PUBLIC_ACTIVE_THEME=my-theme pnpm theme:build",
-    "dev:my-theme": "cross-env NEXT_PUBLIC_ACTIVE_THEME=my-theme pnpm dev"
-  }
-}
-```
-
-Usage:
-```bash
-pnpm theme:my-theme
-pnpm dev:my-theme
-```
+The monorepo does not define per-theme package scripts. Keep `NEXT_PUBLIC_ACTIVE_THEME` in `apps/dev/.env` aligned with the theme imported by `apps/dev/app/globals.css`.
 
 ## Theme Directory Structure
 
@@ -175,52 +159,25 @@ contents/themes/default/
 
 ## Build Process
 
-### Theme Compilation Flow
+### CSS Compilation
 
-```text
-1. Read NEXT_PUBLIC_ACTIVE_THEME environment variable
-   ↓
-2. Locate theme directory: contents/themes/[theme]/
-   ↓
-3. Compile CSS from styles/ directory
-   ↓
-4. Copy assets from public/ to public/theme/
-   ↓
-5. Generate output: core/theme-styles.css
-   ↓
-6. Update theme registry with metadata
-   ↓
-7. Application imports compiled CSS
-```
-
-### Build Scripts
-
-**Build Theme CSS:**
+In the monorepo, `apps/dev/app/globals.css` imports the active theme stylesheet directly. Next.js follows that import in development and production; no root `theme:build` script runs first.
 
 ```bash
-pnpm theme:build
+# Verify the checked-in import
+grep -F 'themes/default/styles/globals.css' apps/dev/app/globals.css
+
+# Compile it as part of the application
+pnpm build
 ```
 
-**Build with Watch Mode:**
-
-```bash
-pnpm dev  # Automatically rebuilds on theme changes
-```
-
-**Build Registry (includes theme discovery):**
+Theme metadata is a registry concern. Rebuild registries separately after changing theme configuration:
 
 ```bash
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
-### Output Files
-
-**Generated CSS:**
-- `core/theme-styles.css` - Compiled theme CSS (imported in app)
-- `.next/theme-generated.css` - Backup copy
-
-**Asset Destination:**
-- `public/theme/` - All theme assets copied here
+Theme assets served by the monorepo app live under `apps/dev/public/theme/`; `pnpm dev` and `pnpm build` do not copy them.
 
 ## Integration with Registry System
 
@@ -311,7 +268,7 @@ recalculateStyles()                       // Layout recalc
 **Build-Time Theming:**
 ```typescript
 // ✅ Zero runtime cost
-import '@/core/theme-styles.css'  // Already compiled
+import '../../../themes/default/styles/globals.css'  // Imported by apps/dev/app/globals.css
 // Theme applied instantly, no JavaScript needed
 ```
 
@@ -332,13 +289,13 @@ import '@/core/theme-styles.css'  // Already compiled
 1. **Clone boilerplate**
 2. **Create custom theme** (or use default)
 3. **Configure theme** (colors, fonts, assets)
-4. **Build theme**: `pnpm theme:build`
+4. **Build the application and imported theme CSS**: `pnpm build`
 5. **Start development**: `pnpm dev`
 
 ### Iterating on Theme
 
 1. **Edit theme files** (`styles/`, `public/`, `theme.config.ts`)
-2. **Changes auto-rebuild** (in dev mode)
+2. **Let Next.js recompile imported CSS**; rebuild registries separately after configuration changes
 3. **Refresh browser** to see updates
 4. **Commit theme changes** to version control
 
@@ -470,9 +427,9 @@ Access in components:
    }
    ```
 
-4. **Build theme**:
+4. **Build the application and imported theme CSS**:
    ```bash
-   pnpm theme:build
+   pnpm build
    ```
 
 5. **Start development**:

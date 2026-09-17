@@ -279,7 +279,7 @@ Foundation phases set up the infrastructure: themes, plugins, and database.
 
 **Gate Conditions:**
 - [ ] Migrations execute successfully
-- [ ] All tables exist (`pnpm db:verify`)
+- [ ] The affected tables exist (inspect them with the database client; `verify-tables.mjs` only covers Better Auth tables)
 - [ ] Sample data exists (20+ per entity)
 - [ ] Test users exist with correct hash
 - [ ] Team memberships configured (if Team Mode)
@@ -329,9 +329,9 @@ Backend phases follow Test-Driven Development: write tests first, then implement
 **Type:** Quality Gate - BLOCKS if failed
 
 **Gate Conditions:**
-- [ ] `pnpm test -- --testPathPattern=api` passes
+- [ ] `pnpm test:core -- --testPathPattern=api` passes
 - [ ] `pnpm build` successful
-- [ ] `tsc --noEmit` no errors
+- [ ] `pnpm --dir apps/dev exec tsc --noEmit` has no errors
 - [ ] `pnpm lint` passes
 - [ ] Dual auth verified on all routes
 
@@ -595,7 +595,7 @@ if (remainingTags.length > 0) {
 3. Create tests for business logic
 4. Create tests for utility functions
 5. Create tests for React hooks
-6. Run `pnpm test`
+6. Run `pnpm test:core`
 7. Verify 80%+ coverage
 
 **Target Coverage:** 80%+ for implemented features

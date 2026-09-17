@@ -375,8 +375,8 @@ Test and fix database migrations iteratively until success
    - Launches `db-developer` to fix
    - Retries (max 3 attempts)
 3. If success:
-   - Runs `pnpm db:verify`
-   - Confirms structure
+   - Inspects the affected schema with the database client
+   - Does not use `verify-tables.mjs` as a full-schema gate; that diagnostic only covers Better Auth tables
 
 **Retry Logic:**
 - Max 3 attempts

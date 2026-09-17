@@ -4,327 +4,93 @@
 
 ## Introduction
 
-Understanding the build process is essential for effective development. This guide explains what happens when you run `pnpm dev` or `pnpm build`.
+The monorepo keeps the Next.js process and registry generation separate. The root `dev` and `build` scripts delegate to `apps/dev`; neither starts a set of theme, plugin, or registry workers.
 
 ---
 
-## The 6-Step Build Pipeline
+## Development Server
 
-When you run `pnpm dev`, these processes execute in order:
-
-```text
-1. TypeScript Config  (2-3s)   → update-tsconfig.mjs
-2. Theme Build        (2-3s)   → build-theme.mjs
-3. Registry Build     (5-10s)  → packages/core/scripts/build/registry.mjs
-4. Docs Registry      (1-2s)   → registry.mjs (active-theme docs)
-5. Plugin Dev         (1-2s)   → turbo dev
-6. Next.js Dev        (2-3s)   → next dev --turbopack
-
-Total: 10-15 seconds
-```
-
----
-
-## Step 1: TypeScript Config Update
-
-**Script:** `core/scripts/build/update-tsconfig.mjs`
-
-**What it does:**
-- Excludes inactive themes from TypeScript checking
-- Improves TS performance
-- Prevents errors from unused themes
-
-**Example:**
-```typescript
-// If NEXT_PUBLIC_ACTIVE_THEME=default
-// Excludes: contents/themes/!(default)/**/*
-```
-
-**Why it matters:**
-- Faster type checking
-- No false errors from inactive themes
-- Better IDE performance
-
----
-
-## Step 2: Theme Build
-
-**Script:** `core/scripts/build/theme.mjs --watch`
-
-**What it does:**
-1. Compiles CSS from `contents/themes/default/styles/`
-2. Outputs to `app/theme-styles.css`
-3. Copies public assets to `public/theme/`
-4. Watches for changes (in dev mode)
-
-**Input:**
-```text
-contents/themes/default/
-├── styles/
-│   ├── globals.css
-│   ├── components.css
-│   └── utilities.css
-└── public/
-    ├── brand/
-    └── images/
-```
-
-**Output:**
-```text
-app/theme-styles.css          # Compiled CSS
-public/theme/                 # Copied assets
-```
-
-**Watch mode:**
-- Detects CSS file changes
-- Auto-recompiles
-- Hot reloads in browser
-
-**⚠️ Auto-generated - never edit manually**
-
----
-
-## Step 3: Registry Build (CRITICAL)
-
-**Script:** `packages/core/scripts/build/registry.mjs --watch`
-
-**What it does:**
-1. Scans `contents/themes/` for entities, configs
-2. Scans `contents/plugins/` for plugin configs
-3. Generates static registries in `.nextspark/registries/`
-
-**Performance:**
-- **Runtime loading:** ~140ms per entity
-- **Build-time registry:** ~6ms total
-- **Improvement:** ~17,255x faster
-
-**Generated files:**
-```text
-.nextspark/registries/
-├── api-docs-registry.ts
-├── api-presets-registry.ts
-├── billing-registry.ts
-├── block-registry.client.ts
-├── block-registry.lazy.ts
-├── block-registry.ts
-├── docs-registry.ts
-├── email-registry.ts
-├── entity-registry.client.ts
-├── entity-registry.ts
-├── entity-types.ts
-├── icon-registry.ts
-├── index.ts
-├── mcp-registry.ts
-├── middleware-registry.ts
-├── namespace-registry.ts
-├── permissions-registry.ts
-├── plugin-registry.client.ts
-├── plugin-registry.ts
-├── route-handlers.ts
-├── scheduled-actions-registry.ts
-├── scope-registry.ts
-├── template-registry.client.ts
-├── template-registry.ts
-├── testing-registry.ts
-├── theme-registry.ts
-└── translation-registry.ts
-```
-
-**Why this is critical:**
-- Zero runtime I/O
-- Static type checking
-- Instant cold starts
-- No dynamic imports
-
-**Watch mode:**
-- Detects entity/plugin changes
-- Auto-regenerates registries
-- Requires server restart for changes
-
-**⚠️ Auto-generated - never edit manually**
-
-**See:** [Architecture Patterns → Registry-Based Loading](../01-fundamentals/04-architecture-patterns.md#registry-based-loading-pattern)
-
----
-
-## Step 4: Documentation Registry
-
-**Script:** `packages/core/scripts/build/registry.mjs` (calls `generateDocsRegistry()` with Step 3)
-
-**What it does:**
-- Reads the active theme's `docs/public/` and `docs/superadmin/` directories
-- Derives sections and pages from numbered directories and markdown files
-- Generates navigation metadata for the public and superadmin documentation routes
-
-**Output:**
-```text
-.nextspark/registries/docs-registry.ts
-```
-
-**Enables:**
-- In-memory navigation metadata
-- Static documentation routes
-- Package imports through `@nextsparkjs/registries/docs-registry`
-
----
-
-## Step 5: Plugin Development
-
-**Tool:** Turbo (monorepo orchestration)
-
-**What it does:**
-- Starts dev servers for plugins
-- Coordinates dependencies
-- Enables hot reload
-
-**Command:**
 ```bash
-turbo dev --filter='@nextspark/plugin-*'
+pnpm dev
 ```
 
-**Why it matters:**
-- Plugin isolation
-- Parallel development
-- Fast rebuilds
+The root script delegates to the app package, which starts a single process:
+
+```text
+dotenv -e .env -- sh -c 'next dev --turbopack -p $PORT'
+```
+
+`PORT` comes from `apps/dev/.env`. The measured checkout used port 3010. Next.js watches application code and the theme CSS imported by `apps/dev/app/globals.css`.
 
 ---
 
-## Step 6: Next.js Dev Server
+## Registry Build
 
-**Command:** `next dev --turbopack -p 5173`
+Registry inputs are not watched by the root `pnpm dev` command. Build them explicitly when entity, plugin, theme configuration, template, translation, or documentation inputs change:
 
-**What it does:**
-- Starts Next.js on port 5173
-- Uses Turbopack (faster than Webpack)
-- Enables Hot Module Replacement (HMR)
+```bash
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+```
 
-**Features:**
-- Fast refresh (< 100ms)
-- TypeScript compilation
-- Route generation
-- API route hot reload
+For a separate long-running watcher:
+
+```bash
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
+```
+
+The registry builder writes `.nextspark/registries/`, including `docs-registry.ts`, and updates generated template files. Restart the Next.js process when a regenerated import is not picked up automatically.
+
+---
+
+## Theme CSS and Assets
+
+The monorepo has no `theme:build` or `theme:build-watch` package script. `apps/dev/app/globals.css` imports the active theme stylesheet directly, so Next.js compiles it during development and production builds.
+
+```bash
+test -f themes/default/styles/globals.css
+grep -F 'themes/default/styles/globals.css' apps/dev/app/globals.css
+```
+
+Files served under `/theme/` live in `apps/dev/public/theme/`; they are not copied by `pnpm dev`.
 
 ---
 
 ## Production Build
 
-**Command:** `pnpm build`
+If registry inputs changed, regenerate them first, then build the app:
 
-**Pipeline:**
-```text
-1. TypeScript Config  → update-tsconfig.mjs
-2. Theme Build        → build-theme.mjs
-3. Registry Build     → registry.mjs (includes active-theme docs)
-4. Next.js Build      → next build
-
-Total: 2-3 minutes
+```bash
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd ../.. && pnpm build
 ```
 
-**Differences from dev:**
-- No watch modes
-- Optimized bundles
-- Static generation
-- Code minification
-
-**Output:**
-```text
-.next/
-├── static/           # Static assets
-├── server/           # Server bundles
-└── standalone/       # Standalone server
-```
+The root build delegates to `apps/dev`, where Next.js creates the production output under `apps/dev/.next/`. It compiles the imported theme CSS as part of the Next.js build.
 
 ---
 
-## Auto-Generated Files (Never Edit)
+## Command Reference
 
-**These are regenerated every build:**
-
-```text
-# Next.js build
-.next/
-
-# Registry files
-.nextspark/registries/*.ts
-
-# Theme CSS
-app/theme-styles.css
-
-# Theme assets
-public/theme/
-```
-
-**To make changes:**
-- **Entities:** Edit in `contents/themes/*/entities/`
-- **Plugins:** Edit in `contents/plugins/`
-- **Theme:** Edit in `contents/themes/*/styles/`
-- **Rebuild:** In the monorepo, run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`. Root `pnpm dev` starts `apps/dev` without rebuilding registries; in a generated project, `pnpm dev` builds registries on startup.
-
----
-
-## Manual Build Commands
-
-**Registry:**
 ```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs          # One-time build
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch       # Watch mode
+# Next.js development server
+pnpm dev
+
+# Registry generation
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+
+# Registry watch mode (separate terminal)
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
+
+# Production app build
+pnpm build
 ```
-
-**Theme:**
-```bash
-pnpm theme:build            # One-time build
-```
-
-**Docs:**
-```bash
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs  # Rebuilds every registry, including docs
-```
-
-**All:**
-```bash
-pnpm build                  # Production build
-```
-
----
-
-## Build Performance
-
-**Normal times:**
-- Dev startup: 10-15 seconds
-- Registry build: 5-10 seconds
-- Theme build: 2-3 seconds
-- Production build: 2-3 minutes
-
-**If slower:**
-- Check CPU usage
-- Clear caches (`rm -rf .next`)
-- Close unnecessary apps
-- Check for file watcher limits
-
-**See:** [Troubleshooting → Slow Build Times](./08-troubleshooting.md#slow-build-times)
 
 ---
 
 ## Summary
 
-**6-step pipeline:**
-1. TypeScript config (excludes inactive themes)
-2. Theme build (CSS + assets)
-3. **Registry build** (CRITICAL - ~17,255x faster)
-4. Docs registry (active-theme public and superadmin docs)
-5. Plugin dev (monorepo coordination)
-6. Next.js dev (Turbopack)
+- `pnpm dev` starts one Next.js development process.
+- Registry generation is a separate command in the monorepo.
+- Next.js compiles the theme CSS imported by `apps/dev/app/globals.css`.
+- `pnpm build` builds the app but does not replace the explicit registry step.
 
-**Key points:**
-- Registry build eliminates runtime I/O
-- Auto-generated files never edit
-- Watch modes auto-rebuild
-- Production build optimizes
-
-**Next:** [Running Locally](./05-running-locally.md)
-
----
-
-**Last Updated**: 2025-11-19
-**Version**: 1.0.0
-**Status**: Complete
+**Next:** [Running Locally](./07-running-locally.md)

@@ -45,19 +45,19 @@ module.exports = {
 
 ```bash
 # All tests
-pnpm test
+pnpm test:core
 
 # Watch mode
-pnpm test -- --watch
+pnpm --filter @nextsparkjs/core test:watch
 
 # Coverage report
-pnpm test -- --coverage
+pnpm --filter @nextsparkjs/core test:coverage
 
 # Specific file
-pnpm test -- utils.test.ts
+pnpm test:core -- docs/docs-registry.test.ts
 
 # Update snapshots
-pnpm test -- -u
+pnpm test:core -- -u
 ```
 
 ---
@@ -248,7 +248,7 @@ describe('Header', () => {
 
 ```bash
 # Generate coverage report
-pnpm test -- --coverage
+pnpm --filter @nextsparkjs/core test:coverage
 
 # Open HTML report
 open test/coverage/lcov-report/index.html
@@ -370,7 +370,7 @@ jest.mock('module')                    // Mock module
 
 ## Next Steps
 
-- Run existing tests: `pnpm test`
+- Run existing tests: `pnpm test:core`
 - Add tests for new features
 - Increase coverage gradually
 - See [Test Coverage](./08-test-coverage.md) for coverage goals

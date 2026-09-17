@@ -580,9 +580,8 @@ grep -r "ENTITY_REGISTRY" app/
 # 2. Check registry size
 ls -lh core/lib/registries/*.ts
 
-# 3. Check bundle analysis
-npm run build
-npm run analyze
+# 3. Build the application and inspect the emitted bundle sizes
+pnpm build
 ```
 
 ---
@@ -598,9 +597,8 @@ npm run analyze
 # Check registry file sizes
 du -sh core/lib/registries/*
 
-# Analyze bundle
-npm run build
-npx @next/bundle-analyzer
+# Build the application before inspecting its emitted bundles
+pnpm build
 ```
 
 **Solutions:**
@@ -666,7 +664,7 @@ jobs:
       - run: npm install
       - run: cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
       - run: npx tsx scripts/validate-registries.ts
-      - run: npm run lint
+      - run: pnpm lint
       - run: npx tsc --noEmit
 ```
 

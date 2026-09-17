@@ -10,7 +10,7 @@ This guide covers testing strategies for the authentication system, including lo
 // cypress.config.js
 module.exports = {
   e2e: {
-    baseUrl: 'http://localhost:5173',
+    baseUrl: 'http://localhost:3010',
     env: {
       TEST_USER_EMAIL: 'test@example.com',
       TEST_USER_PASSWORD: 'Test1234!',

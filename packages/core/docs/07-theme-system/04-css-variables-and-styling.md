@@ -287,90 +287,24 @@ styles: {
 
 ## Build Process
 
-### Build-Theme Script
+### CSS Import
 
-**Location:** `core/scripts/build/theme.mjs`
+The monorepo does not expose a standalone theme-build script. `apps/dev/app/globals.css` imports the active theme's `styles/globals.css`, and Next.js compiles that dependency.
 
-**Purpose:** Compiles theme CSS and copies assets at build time.
-
-**Process:**
-
-```text
-1. Read NEXT_PUBLIC_ACTIVE_THEME environment variable
-   ↓
-2. Locate theme directory: contents/themes/[theme]/
-   ↓
-3. Read CSS files from styles/ directory
-   ↓
-4. Concatenate globals.css + components.css
-   ↓
-5. Add header comment with metadata
-   ↓
-6. Write output to core/theme-styles.css
-   ↓
-7. Copy backup to .next/theme-generated.css
-   ↓
-8. Copy assets from public/ to public/theme/
-```
-
-### Running the Build
-
-**Manual Build:**
+Run these commands from the monorepo root:
 
 ```bash
-pnpm theme:build
-```
-
-**Development Mode (Auto-rebuild):**
-
-```bash
+# Development with CSS recompilation
 pnpm dev
-# Theme rebuilds automatically on file changes
+
+# Production compilation
+pnpm build
 ```
 
-**Production Build:**
+In the monorepo, if a theme switch changes registry metadata, regenerate the registries separately:
 
 ```bash
-pnpm build
-# Theme compiled as part of build process
-```
-
-### Output Files
-
-**Generated CSS:**
-
-```text
-core/theme-styles.css         # Imported in application
-.next/theme-generated.css     # Backup copy
-```
-
-**File Contents:**
-
-```css
-/*
- * Generated Theme CSS
- * Theme: my-theme
- * Build time: 2024-01-15T10:30:00.000Z
- *
- * This file is auto-generated. Do not edit manually.
- * To modify themes, edit files in contents/themes/my-theme/
- */
-
-/* Content from globals.css */
-:root {
-  --primary: 200 89% 47%;
-  /* ... */
-}
-
-.dark {
-  --primary: 200 89% 60%;
-  /* ... */
-}
-
-/* Content from components.css */
-.custom-button {
-  /* ... */
-}
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 ## Theme CSS Files
@@ -532,8 +466,8 @@ getComputedStyle(document.documentElement)
 **Issue**: Colors not applying
 
 ```bash
-# Solution 1: Rebuild theme
-pnpm theme:build
+# Solution 1: Build the application and inspect CSS errors
+pnpm build
 
 # Solution 2: Clear Next.js cache
 rm -rf .next

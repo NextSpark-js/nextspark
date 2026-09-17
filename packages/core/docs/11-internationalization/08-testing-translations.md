@@ -868,10 +868,10 @@ jobs:
         run: ./scripts/validate-translations.sh
       
       - name: Run i18n unit tests
-        run: pnpm test:i18n
+        run: pnpm test:core
       
       - name: Run Cypress i18n tests
-        run: pnpm cypress:run --spec "cypress/e2e/i18n/**"
+        run: pnpm cy:run --spec "i18n/**"
 ```
 
 ---

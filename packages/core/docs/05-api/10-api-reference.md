@@ -33,7 +33,7 @@ This reference documents all available API endpoints in the v1 API. The API foll
 
 ```text
 Production:  https://yourdomain.com/api/v1
-Development: http://localhost:5173/api/v1
+Development: http://localhost:3010/api/v1
 ```
 
 All endpoint paths in this reference are relative to the base URL.

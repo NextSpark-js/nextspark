@@ -388,8 +388,8 @@ NEXT_PUBLIC_ACTIVE_THEME=default
 
 **How it works:**
 1. Build script reads `NEXT_PUBLIC_ACTIVE_THEME` from environment
-2. Active theme's styles are compiled to `app/theme-styles.css`
-3. Active theme's public assets are copied to `public/theme/`
+2. The app imports the active theme stylesheet through `apps/dev/app/globals.css`
+3. Next.js compiles that imported CSS
 4. Active theme's config is available at `process.env.NEXT_PUBLIC_ACTIVE_THEME`
 
 ---
@@ -442,14 +442,14 @@ To switch themes, change the environment variable and rebuild:
 # Update .env.local
 echo "NEXT_PUBLIC_ACTIVE_THEME=custom-theme" > .env.local
 
-# Rebuild theme assets
-npm run theme:build
+# Compile the imported theme CSS in a production app build
+pnpm build
 
 # Rebuild registry
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 # Restart dev server
-npm run dev
+pnpm dev
 ```
 
 **Note:** Theme switching requires a rebuild because styles and assets are compiled at build time for optimal performance.
@@ -883,11 +883,11 @@ echo $NEXT_PUBLIC_ACTIVE_THEME
 # 2. Set active theme
 echo "NEXT_PUBLIC_ACTIVE_THEME=default" >> .env.local
 
-# 3. Rebuild theme assets
-npm run theme:build
+# 3. Compile the imported theme CSS in a production app build
+pnpm build
 
 # 4. Restart dev server
-npm run dev
+pnpm dev
 ```
 
 ---

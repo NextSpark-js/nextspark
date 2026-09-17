@@ -750,16 +750,7 @@ const messages = JSON.parse(
 
 ### Enforcement
 
-**Build-Time Validation**:
-```bash
-# Pre-commit hook check
-pnpm check-dynamic-imports
-
-# Validates:
-# - No dynamic imports for translations (except core namespaces)
-# - No imports from @/contents (use registries)
-# - Registry files are up-to-date
-```
+**Build-Time Validation:** The registry build validates translation inputs. The monorepo does not currently expose a root package script for the broader dynamic-import policy.
 
 **CI/CD Pipeline**:
 ```bash

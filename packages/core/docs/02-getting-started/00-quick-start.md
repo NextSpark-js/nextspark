@@ -15,16 +15,17 @@ Get from zero to running application in **under 5 minutes**. This guide provides
 Before starting, verify you have:
 
 ```bash
-# Node.js 22+
+# Node.js 22.13+
 node -v
-# Should show: v22.x.x or higher
+# Should show: v22.13.0 or higher
 
-# pnpm 10.17+
+# pnpm 9.0+
 pnpm -v
-# Should show: 10.17.0 or higher
+# Should show: 9.0.0 or a compatible 9.x release
 
 # If pnpm not installed:
-npm install -g pnpm@10.17.0
+corepack enable
+corepack prepare pnpm@9.0.0 --activate
 ```
 
 ---
@@ -42,7 +43,7 @@ cp .env.example .env.local
 pnpm db:migrate && pnpm dev
 ```
 
-**Open:** http://localhost:5173
+**Open:** http://localhost:3010
 
 ---
 
@@ -87,9 +88,9 @@ openssl rand -base64 32
 # Then paste the output here:
 BETTER_AUTH_SECRET="your-generated-32-character-secret"
 
-# 3. Application URLs (use localhost:5173 for dev)
-BETTER_AUTH_URL="http://localhost:5173"
-NEXT_PUBLIC_APP_URL="http://localhost:5173"
+# 3. Application URLs (use localhost:3010 for dev)
+BETTER_AUTH_URL="http://localhost:3010"
+NEXT_PUBLIC_APP_URL="http://localhost:3010"
 
 # 4. Theme selection (use 'default' for now)
 NEXT_PUBLIC_ACTIVE_THEME="default"
@@ -103,7 +104,7 @@ RESEND_FROM_NAME="Your App Name"
 **Quick Setup Checklist:**
 - [ ] DATABASE_URL - Get from Supabase (use pooler connection :6543)
 - [ ] BETTER_AUTH_SECRET - Generate with `openssl rand -base64 32`
-- [ ] BETTER_AUTH_URL - Use `http://localhost:5173` for local dev
+- [ ] BETTER_AUTH_URL - Use `http://localhost:3010` for local dev
 - [ ] NEXT_PUBLIC_APP_URL - Same as BETTER_AUTH_URL
 - [ ] NEXT_PUBLIC_ACTIVE_THEME - Set to `default`
 - [ ] RESEND_API_KEY - Get free key from [resend.com](https://resend.com)
@@ -153,22 +154,17 @@ All migrations completed successfully!
 pnpm dev
 ```
 
-**What happens (takes 10-15 seconds):**
+The root command delegates to `apps/dev` and starts one Next.js process:
 
 ```text
-1. [2-3s]  → Updating TypeScript config for active theme...
-2. [2-3s]  → Building theme CSS and copying assets...
-3. [5-10s] → Generating registries (entities, plugins, themes)...
-4. [1-2s]  → Generating active-theme documentation registry...
-5. [2-3s]  → Starting Next.js with Turbopack on port 5173...
-
-✓ Ready! Open http://localhost:5173
+> @nextsparkjs/dev dev
+> dotenv -e .env -- sh -c 'next dev --turbopack -p $PORT'
 ```
 
 **Console output should show:**
 ```text
   ▲ Next.js 15.x.x
-  - Local:        http://localhost:5173
+  - Local:        http://localhost:3010
   - Turbopack:    enabled
 
  ✓ Starting...
@@ -181,7 +177,7 @@ pnpm dev
 
 ### 1. Open Application
 
-**Navigate to:** http://localhost:5173
+**Navigate to:** http://localhost:3010
 
 **You should see:**
 - ✅ Landing page loads
@@ -190,7 +186,7 @@ pnpm dev
 
 ### 2. Test Dashboard Access
 
-**Click "Dashboard" link** or go to: http://localhost:5173/dashboard
+**Click "Dashboard" link** or go to: http://localhost:3010/dashboard
 
 **Expected behavior:**
 - ✅ Redirects to login page (`/login`)
@@ -237,24 +233,24 @@ For updating to newer versions, see [Core Updates](../updates/update-core).
 
 ## Common Quick Start Issues
 
-### Port 5173 Already in Use
+### Port 3010 Already in Use
 
 ```bash
-# Find process using port 5173
-lsof -i :5173
-
-# Kill the process (replace PID)
-kill -9 <PID>
+# Find the listener, inspect it, then stop that PID
+pid=$(lsof -tiTCP:3010 -sTCP:LISTEN)
+ps -o command= -p "$pid"
+kill "$pid"
 
 # Or use a different port
-next dev --turbopack -p 3000
+PORT=3000 pnpm dev
 ```
 
 ### "pnpm: command not found"
 
 ```bash
-# Install pnpm globally
-npm install -g pnpm@10.17.0
+# Enable Corepack and activate the repository version
+corepack enable
+corepack prepare pnpm@9.0.0 --activate
 
 # Verify installation
 pnpm -v
@@ -330,53 +326,26 @@ pnpm dev
 
 ---
 
-## Understanding the Build Process
+## Understanding the Development Process
 
-When you run `pnpm dev`, 6 processes run in sequence:
+`pnpm dev` starts one Next.js process with Turbopack. It does not run TypeScript config updates, theme asset copying, registry generation, documentation generation, or plugin workspace servers.
 
-### 1. TypeScript Config Update (~2s)
-**Script:** `core/scripts/build/update-tsconfig.mjs`
-- Updates `tsconfig.json` to exclude inactive themes
-- Improves TypeScript performance
-- Runs before every dev server start
+### Next.js Development Server
 
-### 2. Theme CSS Build (~2s)
-**Script:** `core/scripts/build/theme.mjs --watch`
-- Compiles theme CSS from `contents/themes/default/styles/`
-- Copies public assets to `public/theme/`
-- Outputs to `app/theme-styles.css`
-- **Auto-generated - never edit manually**
-
-### 3. Registry Generation (~5-10s)
-**Script:** `packages/core/scripts/build/registry.mjs --watch`
-- **CRITICAL:** Scans registry sources and generates static registries in `.nextspark/registries/`
-- **~17,255x performance improvement** over runtime loading
-- **Auto-generated - never edit manually**
-
-### 4. Documentation Registry (~1s)
-**Script:** `packages/core/scripts/build/registry.mjs` (calls `generateDocsRegistry()`)
-- Reads the active theme's `docs/public/` and `docs/superadmin/` directories
-- Writes `.nextspark/registries/docs-registry.ts`
-- Provides navigation metadata for public and superadmin documentation routes
-
-### 5. Plugin Workspaces (~2s)
-**Tool:** Turbo (monorepo orchestration)
-- Starts dev servers for plugins
-- Coordinates dependencies
-- Enables hot reload for plugins
-
-### 6. Next.js Dev Server (~2s)
-**Command:** `next dev --turbopack -p 5173`
-- Starts Next.js on port 5173
-- Uses Turbopack (faster than Webpack)
+**Command used by `apps/dev`:** `next dev --turbopack -p $PORT`
+- Reads `PORT` from `apps/dev/.env` (3010 in the measured checkout)
+- Compiles application code and imported theme CSS
 - Enables Hot Module Replacement (HMR)
 
-**Total Time:** 10-15 seconds (first time may be longer)
+### Registry Generation
 
-**Why this matters:**
-- Understand what's happening during startup
-- Know which processes to monitor
-- Troubleshoot build failures effectively
+Run the registry builder separately when registry inputs change:
+
+```bash
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
+```
+
+That script generates every registry, including the active theme's documentation registry. It is not started by the monorepo's root `pnpm dev` script.
 
 ---
 
@@ -396,11 +365,6 @@ When you run `pnpm dev`, 6 processes run in sequence:
 ├── docs-registry.ts
 └── index.ts
 
-# Theme CSS (generated by build-theme.mjs)
-app/theme-styles.css
-
-# Theme assets (copied from theme/public/)
-public/theme/
 ```
 
 **To make changes:**
@@ -432,17 +396,17 @@ nextspark setup:ai
 
 ### Explore the Application
 
-**Landing Page:** http://localhost:5173
+**Landing Page:** http://localhost:3010
 - See default theme
 - Test navigation
 - Check responsive design
 
-**Dashboard:** http://localhost:5173/dashboard
+**Dashboard:** http://localhost:3010/dashboard
 - Requires authentication
 - View sample data (if migration created it)
 - Test CRUD operations
 
-**API Endpoints:** http://localhost:5173/api/v1/
+**API Endpoints:** http://localhost:3010/api/v1/
 - `/api/v1/tasks` - Sample entity API
 - `/api/auth/*` - Authentication endpoints
 - Test with curl or Postman
@@ -533,7 +497,7 @@ pnpm lint                   # Check code quality
 - ✅ Configured minimal `.env.local` (5 required variables)
 - ✅ Ran database migrations with `pnpm db:migrate`
 - ✅ Started dev server with `pnpm dev`
-- ✅ Verified app loads on http://localhost:5173
+- ✅ Verified app loads on http://localhost:3010
 - ✅ Tested authentication flow (optional)
 
 **Time to complete:** < 5 minutes (excluding Supabase/Resend signup)

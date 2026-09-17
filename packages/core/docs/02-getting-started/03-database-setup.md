@@ -185,23 +185,23 @@ Running entity migrations...
 All migrations completed!
 ```
 
-### Verify Tables
+### Inspect Better Auth Tables
 
 ```bash
-pnpm db:verify
+cd apps/dev && node ../../packages/core/scripts/db/verify-tables.mjs
 ```
 
 **Shows:**
 ```text
-✓ user
-✓ session
-✓ account
-✓ verification
-✓ api_keys
-✓ meta
-✓ tasks
-✓ _migrations
+Better Auth Tables Schema:
+Table: account
+Table: session
+Table: user
+Table: verification
 ```
+
+This diagnostic prints metadata and row counts for those four tables. It does
+not validate every application table.
 
 ---
 

@@ -22,8 +22,7 @@ Database migrations must be handled carefully in production to avoid data loss a
 # 2. Run migrations
 pnpm db:migrate
 
-# 3. Verify tables
-pnpm db:verify
+# 3. Inspect the affected schema with read-only queries in the database console
 
 # 4. Deploy application code
 pnpm vercel:deploy --prod
@@ -87,8 +86,7 @@ core/migrations/008_new_feature.sql
 # 3. Test locally first
 pnpm db:migrate
 
-# 4. Verify changes
-pnpm db:verify
+# 4. Inspect the affected schema with your database client
 ```
 
 ---
@@ -117,8 +115,7 @@ const PRE_MIGRATION_CHECKLIST = [
 # 2. Run migration
 pnpm db:migrate
 
-# 3. Verify success
-pnpm db:verify
+# 3. Inspect the affected schema with read-only queries
 
 # 4. Test critical queries
 # Check that app still works
@@ -127,8 +124,7 @@ pnpm db:verify
 ### After Migration
 
 ```bash
-# 1. Verify tables exist
-pnpm db:verify
+# 1. Inspect the affected tables with read-only queries
 
 # 2. Check RLS policies
 # Supabase → Database → Policies
@@ -172,17 +168,17 @@ ALTER TABLE users DROP COLUMN IF EXISTS new_column;
 
 ## Database Verification
 
-### Verify Script
+### Verify the Affected Schema
 
 ```bash
-# Check critical tables exist
-pnpm db:verify
-
-# Manually verify
+# Inspect with psql
 psql $DATABASE_URL
 \dt  # List tables
 \d table_name  # Describe table structure
 ```
+
+The repository's `verify-tables.mjs` diagnostic only prints Better Auth table
+metadata, so it is not a general migration verifier.
 
 ---
 
@@ -194,11 +190,9 @@ psql $DATABASE_URL
 # Run migrations
 pnpm db:migrate
 
-# Verify tables
-pnpm db:verify
-
 # Connect to database
 psql $DATABASE_URL
+# Then inspect the tables changed by the migration with \dt and \d
 ```
 
 ### Migration Workflow

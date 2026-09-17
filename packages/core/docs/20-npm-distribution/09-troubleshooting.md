@@ -45,8 +45,7 @@ Cannot find module '@/core/components/...'
 
 3. Clear TypeScript cache:
 ```bash
-rm -rf node_modules/.cache
-pnpm tsc --noEmit
+pnpm exec tsc --noEmit
 ```
 
 ### Script Path Errors
@@ -79,27 +78,30 @@ const templatesDir = join(ROOT_DIR, 'packages/core/templates')
 
 **Debug:**
 ```bash
-# Check config file exists
-cat nextspark.config.ts
-
-# Check for syntax errors
-pnpm tsc nextspark.config.ts --noEmit
+# Resolve the active theme and list its generated config files
+theme=$(sed -n 's/^NEXT_PUBLIC_ACTIVE_THEME=//p' .env | tr -d '"')
+ls "contents/themes/$theme/config"
 ```
 
 **Common causes:**
 
-1. **File doesn't exist:** Create `nextspark.config.ts` in project root
+1. **Theme mismatch:** `NEXT_PUBLIC_ACTIVE_THEME` does not match a directory in `contents/themes/`
 
-2. **Syntax error:** Check for TypeScript errors
+2. **Syntax error:** Run `pnpm exec tsc --noEmit`
 
-3. **Wrong export:**
+3. **Wrong export in a manually created `nextspark.config.ts`:**
 ```typescript
 // ❌ Wrong
 module.exports = { ... }
 
 // ✅ Correct
+import { defineConfig } from '@nextsparkjs/core/lib/config'
+
 export default defineConfig({ ... })
 ```
+
+The wizard does not create `nextspark.config.ts`; generated configuration lives
+under `contents/themes/<theme>/config/`.
 
 ### Plugins Not Activating
 
@@ -108,14 +110,15 @@ export default defineConfig({ ... })
 # Check plugin exists
 ls contents/plugins/
 
-# Check config
-grep plugins nextspark.config.ts
+# Check the active theme's plugin list
+theme=$(sed -n 's/^NEXT_PUBLIC_ACTIVE_THEME=//p' .env | tr -d '"')
+grep -n 'plugins:' "contents/themes/$theme/config/theme.config.ts"
 ```
 
 **Solutions:**
 
 1. Verify plugin name matches directory name
-2. Check `nextspark.config.ts` has plugin listed
+2. Check the active theme's `config/theme.config.ts` has the plugin listed
 3. Regenerate registries: `pnpm build:registries`
 
 ### Features Not Disabling
@@ -140,17 +143,18 @@ pnpm build
 
 ## Template Issues
 
-### Template Not Applied
+### Theme Template Changes Not Applied
 
 **Symptoms:** Theme customizations not appearing
 
 **Debug:**
 ```bash
 # Check theme is set
-echo $NEXT_PUBLIC_ACTIVE_THEME
+grep '^NEXT_PUBLIC_ACTIVE_THEME=' .env
 
-# Check template exists
-ls contents/themes/${NEXT_PUBLIC_ACTIVE_THEME}/templates/app/
+# Check template overrides exist for the active theme
+theme=$(sed -n 's/^NEXT_PUBLIC_ACTIVE_THEME=//p' .env | tr -d '"')
+ls "contents/themes/$theme/templates/"
 ```
 
 **Solutions:**
@@ -160,33 +164,9 @@ ls contents/themes/${NEXT_PUBLIC_ACTIVE_THEME}/templates/app/
 NEXT_PUBLIC_ACTIVE_THEME=mytheme
 ```
 
-2. Regenerate app:
+2. Regenerate registries and copied template overrides:
 ```bash
-pnpm build:app
-```
-
-### EJS Syntax Error
-
-**Error:**
-```
-SyntaxError: Unexpected token '%' in template
-```
-
-**Common causes:**
-
-1. **Unclosed tag:**
-```ejs
-<% if (true) { %>  ← Missing closing %>
-```
-
-2. **Escaped percent:**
-```ejs
-<%% Use double percent to escape %>
-```
-
-3. **Quote mismatch:**
-```ejs
-<%= "string with ' mixed quotes" %>
+pnpm build:registries
 ```
 
 ### Client/Server Component Error
@@ -224,19 +204,19 @@ nextspark: command not found
 
 **Solutions:**
 
-1. Use npx:
+1. Invoke the locally installed CLI through pnpm:
 ```bash
-npx nextspark --help
+pnpm exec nextspark --help
 ```
 
 2. Check installation:
 ```bash
-ls node_modules/@nextspark/core/bin/
+ls node_modules/@nextsparkjs/cli/bin/
 ```
 
 3. Reinstall:
 ```bash
-pnpm install
+pnpm install --frozen-lockfile
 ```
 
 ### Permission Denied
@@ -248,7 +228,7 @@ permission denied: nextspark
 
 **Solution (Unix):**
 ```bash
-chmod +x node_modules/@nextspark/core/bin/nextspark.mjs
+chmod +x node_modules/@nextsparkjs/cli/bin/nextspark.js
 ```
 
 ## Database Issues
@@ -270,7 +250,7 @@ pnpm db:migrate
 
 3. Check migration files exist:
 ```bash
-ls packages/core/migrations/
+ls node_modules/@nextsparkjs/core/migrations/
 ```
 
 ## Development Server Issues
@@ -279,20 +259,21 @@ ls packages/core/migrations/
 
 **Error:**
 ```
-Error: listen EADDRINUSE: address already in use :::5173
+Error: listen EADDRINUSE: address already in use :::3000
 ```
 
 **Solutions:**
 
 1. Kill existing process:
 ```bash
-lsof -i :5173
-kill -9 <PID>
+lsof -tiTCP:3000 -sTCP:LISTEN
+ps -o command= -p <PID>
+kill <PID>
 ```
 
 2. Use different port:
 ```bash
-PORT=3000 pnpm dev
+PORT=3001 pnpm dev
 ```
 
 ### Hot Reload Not Working
@@ -326,8 +307,6 @@ pnpm dev
 
 **Solution:**
 ```bash
-# Clear and regenerate
-rm packages/core/lib/registries/*.ts
 pnpm build:registries
 ```
 

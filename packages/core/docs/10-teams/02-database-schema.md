@@ -331,11 +331,13 @@ CREATE POLICY "your_entity_team_isolation" ON public."your_entity"
 
 ```bash
 # Run all pending migrations
-npm run db:migrate
+pnpm db:migrate
 
-# Verify table structure
-npm run db:verify
+# Inspect the affected team tables with your database client
 ```
+
+The repository's `verify-tables.mjs` diagnostic only inspects Better Auth
+tables; it does not verify the teams schema.
 
 ## Related Documentation
 

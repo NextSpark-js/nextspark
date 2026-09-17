@@ -411,7 +411,7 @@ ui: {
 
 4. Create migrations
 
-5. Rebuild registry: `pnpm registry:build`
+5. Rebuild registries: `pnpm build:registries`
 
 ---
 

@@ -127,7 +127,7 @@ describe('Admin Authentication', () => {
 **Escenario 1: Usuario normal intenta acceder**
 ```bash
 # Login como usuario con role: member
-curl -X GET http://localhost:5173/api/v1/users \
+curl -X GET http://localhost:3010/api/v1/users \
   -H "Cookie: better-auth.session_token=..." \
   -H "Content-Type: application/json"
 
@@ -137,7 +137,7 @@ curl -X GET http://localhost:5173/api/v1/users \
 **Escenario 2: Superadmin accede**
 ```bash
 # Login como usuario con role: superadmin
-curl -X GET http://localhost:5173/api/v1/users \
+curl -X GET http://localhost:3010/api/v1/users \
   -H "Cookie: better-auth.session_token=..." \
   -H "Content-Type: application/json"
 
@@ -147,7 +147,7 @@ curl -X GET http://localhost:5173/api/v1/users \
 **Escenario 3: API Key de usuario normal**
 ```bash
 # API key con scope users:read de usuario normal
-curl -X GET http://localhost:5173/api/v1/users \
+curl -X GET http://localhost:3010/api/v1/users \
   -H "Authorization: Bearer sk_test_..." \
   -H "Content-Type: application/json"
 
@@ -157,7 +157,7 @@ curl -X GET http://localhost:5173/api/v1/users \
 **Escenario 4: API Key de superadmin**
 ```bash
 # API key con scope users:read de superadmin
-curl -X GET http://localhost:5173/api/v1/users \
+curl -X GET http://localhost:3010/api/v1/users \
   -H "Authorization: Bearer sk_test_..." \
   -H "Content-Type: application/json"
 

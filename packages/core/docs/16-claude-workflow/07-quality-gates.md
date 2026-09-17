@@ -81,7 +81,7 @@ Quality Gates are validation checkpoints that **BLOCK workflow progress** if con
 
 ```bash
 # TypeScript compilation
-pnpm tsc --noEmit
+pnpm --dir apps/dev exec tsc --noEmit
 
 # Build with plugin-sandbox
 NEXT_PUBLIC_ACTIVE_THEME=plugin-sandbox pnpm build
@@ -165,12 +165,14 @@ grep -l "new-theme" core/lib/registries/theme-registry.ts
 # Run migrations
 pnpm db:migrate
 
-# Verify database structure
-pnpm db:verify
+# Inspect the affected schema with your database client
 
 # Test user authentication (via API or direct query)
 # Check test users can authenticate with password Test1234
 ```
+
+The repository's `verify-tables.mjs` diagnostic is not a full-schema gate; it
+only prints metadata for the four Better Auth tables.
 
 ### Required Test Users
 
@@ -199,9 +201,9 @@ pnpm db:verify
 ### Gate Conditions
 
 ```markdown
-- [ ] Jest API tests pass: `pnpm test -- --testPathPattern=api`
+- [ ] Jest API tests pass: `pnpm test:core -- --testPathPattern=api`
 - [ ] Build succeeds: `pnpm build`
-- [ ] TypeScript clean: `tsc --noEmit` (no errors)
+- [ ] TypeScript clean: `pnpm --dir apps/dev exec tsc --noEmit` (no errors)
 - [ ] Lint passes: `pnpm lint`
 - [ ] Dual auth implemented on all new routes
 ```
@@ -210,13 +212,13 @@ pnpm db:verify
 
 ```bash
 # Run API tests
-pnpm test -- --testPathPattern=api
+pnpm test:core -- --testPathPattern=api
 
 # Build
 pnpm build
 
 # Type check
-pnpm tsc --noEmit
+pnpm --dir apps/dev exec tsc --noEmit
 
 # Lint
 pnpm lint

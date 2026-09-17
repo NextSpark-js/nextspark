@@ -125,19 +125,19 @@ Use `@cypress/grep` to filter which tests execute:
 
 ```bash
 # Run smoke tests only
-pnpm cypress:run --env grepTags=@smoke
+pnpm cy:run --env grepTags=@smoke
 
 # Run API tests
-pnpm cypress:run --env grepTags=@api
+pnpm cy:run --env grepTags=@api
 
 # Run feature-specific tests
-pnpm cypress:run --env grepTags=@feat-customers
+pnpm cy:run --env grepTags=@feat-customers
 
 # Combine tags (AND logic)
-pnpm cypress:run --env grepTags=@api+@smoke
+pnpm cy:run --env grepTags=@api+@smoke
 
 # Exclude tags
-pnpm cypress:run --env grepTags=-@slow
+pnpm cy:run --env grepTags=-@slow
 ```
 
 ---
@@ -202,9 +202,9 @@ console.log(`${COVERAGE_SUMMARY.features.withTests} features have tests`)
 | Task | Command |
 |------|---------|
 | Build & validate tags | `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` |
-| Run smoke tests | `pnpm cypress:run --env grepTags=@smoke` |
-| Run feature tests | `pnpm cypress:run --env grepTags=@feat-customers` |
-| Run API tests | `pnpm cypress:run --env grepTags=@api` |
+| Run smoke tests | `pnpm cy:run --env grepTags=@smoke` |
+| Run feature tests | `pnpm cy:run --env grepTags=@feat-customers` |
+| Run API tests | `pnpm cy:run --env grepTags=@api` |
 
 ---
 

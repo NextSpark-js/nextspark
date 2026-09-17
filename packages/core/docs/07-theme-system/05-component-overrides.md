@@ -612,8 +612,8 @@ describe('Theme Button Override', () => {
 # Rebuild registry
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
-# Rebuild theme
-pnpm theme:build
+# Build the application and imported theme CSS
+pnpm build
 
 # Clear Next.js cache
 rm -rf .next

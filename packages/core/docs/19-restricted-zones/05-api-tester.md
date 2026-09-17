@@ -37,7 +37,7 @@ El API Tester permite a desarrolladores probar endpoints de la API sin salir del
 ├─────────────────────────────────────────────────┤
 │ Method: [GET] [POST] [PATCH] [DELETE]           │
 ├─────────────────────────────────────────────────┤
-│ URL Preview: localhost:5173/api/v1/customers/c1 │
+│ URL Preview: localhost:3010/api/v1/customers/c1 │
 ├─────────────────────────────────────────────────┤
 │ ▼ Path Parameters                               │
 │   id: [c1_____________] (required)              │
@@ -237,7 +237,7 @@ const { status, response, error, execute, cancel, reset } = useApiRequest()
 
 // Ejecutar request
 await execute({
-  url: 'http://localhost:5173/api/v1/customers',
+  url: 'http://localhost:3010/api/v1/customers',
   method: 'GET',
   headers: { 'x-team-id': 'team-123' },
   authType: 'session',
@@ -472,7 +472,7 @@ Namespace: `devtools.apiTester`
 **Ejecutar:**
 
 ```bash
-pnpm test -- --testPathPattern="api-tester"
+pnpm test:core -- --testPathPattern="api-tester"
 ```
 
 ### E2E Tests

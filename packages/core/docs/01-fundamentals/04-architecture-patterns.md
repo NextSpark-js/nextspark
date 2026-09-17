@@ -121,60 +121,54 @@ contents/themes/default/docs/superadmin/**/*.md
 .nextspark/registries/docs-registry.ts
 ```
 
-**2. Theme CSS** (`core/scripts/build/theme.mjs`)
+**2. Theme CSS**
 ```bash
-# Input: Theme CSS files
-contents/themes/default/styles/*.css
+# Source imported by the app
+themes/default/styles/globals.css
 
-# Output: Compiled theme CSS
-app/theme-styles.css
+# Import site
+apps/dev/app/globals.css
 ```
 
-**3. Theme Assets** (`core/scripts/build/theme.mjs`)
+**3. Theme Assets**
 ```bash
-# Input: Theme public assets
-contents/themes/default/public/brand/
-contents/themes/default/public/images/
+# Theme source
+themes/default/public/brand/
+themes/default/public/images/
 
-# Output: Copied to public/
-public/theme/brand/
-public/theme/images/
+# App-served copies in the monorepo
+apps/dev/public/theme/brand/
+apps/dev/public/theme/images/
 ```
 
 ### Build Pipeline
 
-```typescript
-// package.json scripts
-{
-  "scripts": {
-    "theme:build": "node core/scripts/build/theme.mjs",
-    "build": "npm run theme:build && next build"
-  }
-}
+```bash
+# Rebuild generated registries before a production app build
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd ../.. && pnpm build
 ```
 
 **Watch Mode:**
 ```bash
-# Development - auto-rebuild on changes
+# Run this separately when registry inputs change
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch  # Rebuilds registries on content changes
-pnpm theme:build-watch     # Rebuilds theme CSS on style changes
-pnpm dev                   # Runs all watchers + Next.js dev server
+
+# From the repository root, run the single Next.js development process
+cd ../.. && pnpm dev       # Next.js recompiles imported theme CSS on changes
 ```
 
 ### Rules
 
 1. **Auto-Generated Files** - Never edit manually:
    - `core/lib/registries/*` (except `index.ts` exports)
-   - `app/theme-styles.css`
-   - `public/theme/*`
    - `.next/*`
 
 2. **Source of Truth** - Edit these instead:
-   - `contents/` - All content (themes, plugins, entities)
-   - `core/scripts/build/*.mjs` - Generation logic
+   - `themes/` and `plugins/` - Monorepo content
+   - `packages/core/scripts/build/*.mjs` - Generation logic
 
-3. **Build Order** - Must run before `next build`:
-   - Registry build → Theme build → Docs build → Next.js build
+3. **Build Order** - Regenerate registries before `pnpm build` when their inputs changed. Next.js compiles the imported theme CSS during its own build.
 
 ---
 
@@ -424,10 +418,8 @@ fi
 **CI/CD Validation:**
 ```yaml
 # .github/workflows/ci.yml
-- name: Check Dynamic Imports
-  run: |
-    npm run check:dynamic-imports
-    npm run check:hardcoded-imports
+- name: Lint
+  run: pnpm lint
 ```
 
 ---
@@ -958,19 +950,15 @@ NEXT_PUBLIC_ACTIVE_THEME=default
 
 **Build Process:**
 ```bash
-# Builds theme CSS and copies assets
-pnpm theme:build
-
-# Output:
-# - app/theme-styles.css (compiled CSS)
-# - public/theme/* (copied assets)
+# Compiles apps/dev/app/globals.css and its active-theme import
+pnpm build
 ```
 
 ### CSS Variables Pattern
 
 **Generated CSS:**
 ```css
-/* Auto-generated in app/theme-styles.css */
+/* Source variables imported through apps/dev/app/globals.css */
 :root {
   --color-primary: #3b82f6;
   --color-secondary: #8b5cf6;

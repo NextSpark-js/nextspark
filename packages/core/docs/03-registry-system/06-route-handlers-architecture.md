@@ -1000,7 +1000,7 @@ grep "ai/generate" core/lib/registries/route-handlers.ts
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 # Or use watch mode during development
-npm run dev
+pnpm dev
 # Watch mode auto-rebuilds on file changes
 ```
 

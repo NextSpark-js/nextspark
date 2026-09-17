@@ -406,7 +406,7 @@ console.log(`Registry generated: ${generatedDate.toLocaleString()}`)
 
 ### Build-Time vs Runtime
 
-The registry system works with the theme build system:
+The registry system and Next.js build handle different theme inputs:
 
 ```text
 Build Time:
@@ -414,9 +414,9 @@ Build Time:
    ↓
 2. Generates theme-registry.ts with all metadata
    ↓
-3. core/scripts/build/theme.mjs compiles active theme CSS
+3. apps/dev/app/globals.css imports the active theme CSS for Next.js
    ↓
-4. Assets copied to public/theme/
+4. apps/dev/public/theme/ supplies the assets served by the monorepo app
 
 Runtime:
 1. Import registry (zero I/O)
@@ -429,23 +429,13 @@ Runtime:
 ### Build Order
 
 ```bash
-# Development
-pnpm dev
-  ↓
-1. packages/core/scripts/build/registry.mjs (discovers themes)
-  ↓
-2. build-theme.mjs (compiles active theme CSS)
-  ↓
-3. Next.js dev server starts
+# Development, in separate terminals
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
+cd ../.. && pnpm dev
 
 # Production
-pnpm build
-  ↓
-1. registry build
-  ↓
-2. build-theme.mjs --build
-  ↓
-3. Next.js build
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
+cd ../.. && pnpm build
 ```
 
 ## Practical Examples

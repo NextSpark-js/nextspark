@@ -85,11 +85,11 @@ function getEntityConfig(entityName: string) {
 
 **How it works:**
 
-1. **Build Time** (`pnpm dev` or `pnpm build`):
-   - `packages/core/scripts/build/registry.mjs` runs (once)
+1. **Explicit registry build**:
+   - `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` runs once
    - Discovers all entities, plugins, themes
    - Generates static TypeScript files
-   - Output: `core/lib/registries/*.ts`
+   - Output: `.nextspark/registries/*.ts`
 
 2. **Runtime** (when user visits site):
    - Import pre-generated registry
@@ -449,20 +449,13 @@ const tree = getEntityTree()
 
 ## When Registries Regenerate
 
-### Automatic Regeneration
+### Explicit Regeneration
 
-**Development mode** (`pnpm dev`):
+The root `pnpm dev` command does not build or watch registries. Run the watcher
+in a separate terminal from the monorepo root:
 
 ```bash
-# Registries rebuild on startup
-[REGISTRY] Building registries...
-[REGISTRY] ✓ Registry build completed (5.4s)
-
-# Then watch for changes
-[REGISTRY] Watching for content changes...
-[REGISTRY] Change detected: contents/themes/default/entities/tasks/tasks.config.ts
-[REGISTRY] ✓ Registry rebuilt (1.2s)
-[REGISTRY] ⚠️  RESTART DEV SERVER to apply changes
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
 ```
 
 **Important:** Registry changes require server restart

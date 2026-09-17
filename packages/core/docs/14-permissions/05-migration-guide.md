@@ -310,5 +310,5 @@ grep -r "MembershipService.get" app/api/
 pnpm build
 
 # Run tests
-pnpm test
+pnpm test:core
 ```

@@ -24,24 +24,13 @@ Common issues and solutions when setting up and running NextSpark. This guide co
 
 **Solution:**
 ```bash
-# Install pnpm globally
-npm install -g pnpm@10.17.0
+# Enable Corepack and activate the repository version
+corepack enable
+corepack prepare pnpm@9.0.0 --activate
 
 # Verify installation
 pnpm -v
-# Should show: 10.17.0
-```
-
-**Alternative (via Corepack):**
-```bash
-# Enable Corepack (comes with Node.js 16.9+)
-corepack enable
-
-# Install pnpm via Corepack
-corepack prepare pnpm@10.17.0 --activate
-
-# Verify
-pnpm -v
+# Should show: 9.0.0
 ```
 
 **If still not found:**
@@ -60,7 +49,7 @@ source ~/.zshrc
 
 ### "Node version too old"
 
-**Problem:** Node.js version < 18.0.0
+**Problem:** Node.js version < 22.13.0
 
 **Check version:**
 ```bash
@@ -75,7 +64,7 @@ brew install node@22
 
 # Verify
 node -v
-# Should show: v22.x.x
+# Should show: v22.13.0 or higher
 ```
 
 **Solution (Linux - Ubuntu/Debian):**
@@ -211,14 +200,15 @@ psql "$(grep DATABASE_URL .env.local | cut -d'=' -f2-)"
 
 ---
 
-### Port 5173 already in use
+### Port 3010 already in use
 
-**Problem:** Another process is using port 5173
+**Problem:** Another process is using port 3010
 
 **Find process:**
 ```bash
-# macOS/Linux
-lsof -i :5173
+# macOS/Linux: capture the listener PID and inspect it
+pid=$(lsof -tiTCP:3010 -sTCP:LISTEN)
+ps -o command= -p "$pid"
 
 # Output shows:
 # COMMAND   PID   USER
@@ -227,17 +217,14 @@ lsof -i :5173
 
 **Kill process:**
 ```bash
-# Kill by PID
-kill -9 12345
-
-# Or kill all node processes on port 5173
-lsof -ti :5173 | xargs kill -9
+# Stop the inspected PID
+kill "$pid"
 ```
 
 **Use different port:**
 ```bash
 # Temporary (one-time)
-next dev --turbopack -p 3000
+PORT=3000 pnpm dev
 
 # Or edit .env.local
 PORT=3000
@@ -317,7 +304,7 @@ Error in: contents/themes/default/entities/tasks/tasks.config.ts
 code contents/themes/default/entities/tasks/tasks.config.ts
 
 # Run TypeScript checker
-pnpm type-check
+pnpm --dir apps/dev exec tsc --noEmit
 
 # Fix syntax errors and rebuild
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
@@ -393,9 +380,9 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --build --ver
 
 ---
 
-### Theme Build Fails
+### Theme CSS Breaks the Application Build
 
-**Problem:** `pnpm theme:build` fails
+**Problem:** `pnpm build` fails
 
 **Common Causes:**
 
@@ -419,7 +406,7 @@ code contents/themes/default/styles/globals.css
 # - Malformed @import statement
 
 # Fix and rebuild
-pnpm theme:build
+pnpm build
 ```
 
 #### 2. Missing theme files
@@ -473,10 +460,8 @@ Invalid CSS variable definition
 
 **Check errors:**
 ```bash
-pnpm type-check
+pnpm --dir apps/dev exec tsc --noEmit
 
-# Or with details
-npx tsc --noEmit
 ```
 
 **Common errors:**
@@ -763,10 +748,10 @@ Error: redirect_uri_mismatch
 **Solution:**
 ```bash
 # Check BETTER_AUTH_URL matches current URL
-BETTER_AUTH_URL="http://localhost:5173"
+BETTER_AUTH_URL="http://localhost:3010"
 
 # For Google OAuth, update redirect URI in Google Console:
-# http://localhost:5173/api/auth/callback/google
+# http://localhost:3010/api/auth/callback/google
 ```
 
 #### 3. Email verification not sending
@@ -1015,7 +1000,7 @@ Type error: ...
 **Solution:**
 ```bash
 # Fix TypeScript errors locally first
-pnpm type-check
+pnpm --dir apps/dev exec tsc --noEmit
 
 # Ensure all errors are fixed
 # Commit and redeploy

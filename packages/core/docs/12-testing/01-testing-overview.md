@@ -135,17 +135,17 @@ contents/themes/{theme}/tests/
 ### Jest (Unit Testing)
 
 ```bash
-# Run all unit tests
-pnpm test
+# Run Core unit tests
+pnpm test:core
 
 # Run specific test file
-pnpm test -- lib/utils.test.ts
+pnpm test:core -- docs/docs-registry.test.ts
 
 # Run with coverage
-pnpm test -- --coverage
+pnpm --filter @nextsparkjs/core test:coverage
 
 # Watch mode for development
-pnpm test -- --watch
+pnpm --filter @nextsparkjs/core test:watch
 ```
 
 **Configuration:** `jest.config.cjs`
@@ -161,13 +161,13 @@ pnpm test -- --watch
 
 ```bash
 # Open Cypress UI (development)
-pnpm cypress:open
+pnpm cy:open
 
 # Run all E2E tests (CI)
-pnpm cypress:run
+pnpm cy:run
 
 # Run specific test
-pnpm cypress:run --spec "core/tests/cypress/e2e/auth/login.cy.ts"
+pnpm cy:run --spec "uat/_core/auth/login-logout.cy.ts"
 ```
 
 **Configuration:** `core/tests/cypress.config.js`
@@ -306,7 +306,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
       - run: pnpm install
-      - run: pnpm test --coverage
+      - run: pnpm --filter @nextsparkjs/core test:coverage
 
   e2e-tests:
     runs-on: ubuntu-latest
@@ -315,7 +315,7 @@ jobs:
       - uses: actions/setup-node@v3
       - run: pnpm install
       - run: pnpm build
-      - run: pnpm start & pnpm cypress:run
+      - run: pnpm --dir apps/dev exec next start -p 3010 & pnpm cy:run
 ```
 
 ---
@@ -364,18 +364,18 @@ cy.get('.btn-primary.submit')  // Breaks if CSS changes
 ### Jest Commands
 
 ```bash
-pnpm test                    # Run all tests
-pnpm test -- --watch         # Watch mode
-pnpm test -- --coverage      # Coverage report
-pnpm test -- utils.test.ts   # Specific file
+pnpm test:core                    # Core unit tests
+pnpm --filter @nextsparkjs/core test:watch         # Watch mode
+pnpm --filter @nextsparkjs/core test:coverage      # Coverage report
+pnpm test:core -- docs/docs-registry.test.ts   # Specific file
 ```
 
 ### Cypress Commands
 
 ```bash
-pnpm cypress:open            # Interactive mode
-pnpm cypress:run             # Headless mode
-pnpm cypress:run --spec "**/auth/*.cy.ts"  # Specific tests
+pnpm cy:open            # Interactive mode
+pnpm cy:run             # Headless mode
+pnpm cy:run --spec "**/auth/*.cy.ts"  # Specific tests
 ```
 
 ---

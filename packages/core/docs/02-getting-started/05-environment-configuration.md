@@ -14,9 +14,9 @@ Complete reference for all environment variables used in NextSpark. This guide c
 |----------|----------|---------|-------------|
 | `DATABASE_URL` | ✅ | `postgresql://user:pass@host:6543/db` | PostgreSQL connection (pooler) |
 | `BETTER_AUTH_SECRET` | ✅ | `Zx8Kp2...` (32 chars) | Session encryption key |
-| `BETTER_AUTH_URL` | ✅ | `http://localhost:5173` | App URL for auth |
+| `BETTER_AUTH_URL` | ✅ | `http://localhost:3010` | App URL for auth |
 | `NEXT_PUBLIC_ACTIVE_THEME` | ✅ | `default` | Active theme name |
-| `NEXT_PUBLIC_APP_URL` | ✅ | `http://localhost:5173` | Public app URL |
+| `NEXT_PUBLIC_APP_URL` | ✅ | `http://localhost:3010` | Public app URL |
 | `RESEND_API_KEY` | ✅ | `re_xxxxx` | Email service key |
 | `RESEND_FROM_EMAIL` | ✅ | `noreply@domain.com` | Sender email |
 | `RESEND_FROM_NAME` | ✅ | `App Name` | Sender display name |
@@ -36,11 +36,11 @@ DATABASE_URL="postgresql://postgres.xxxxx:password@aws-0-region.pooler.supabase.
 # === AUTHENTICATION (REQUIRED) ===
 # Generate: openssl rand -base64 32
 BETTER_AUTH_SECRET="your-generated-32-character-secret"
-BETTER_AUTH_URL="http://localhost:5173"
+BETTER_AUTH_URL="http://localhost:3010"
 
 # === APPLICATION (REQUIRED) ===
 NEXT_PUBLIC_ACTIVE_THEME="default"
-NEXT_PUBLIC_APP_URL="http://localhost:5173"
+NEXT_PUBLIC_APP_URL="http://localhost:3010"
 
 # === EMAIL SERVICE (REQUIRED) ===
 RESEND_API_KEY="re_xxxxx"
@@ -127,8 +127,8 @@ BETTER_AUTH_SECRET="Zx8Kp2Lm9Nq3Rs4Tu5Vw6Xy7Za8Bc9Cd0Ef1Gh="
 
 **Development:**
 ```bash
-BETTER_AUTH_URL="http://localhost:5173"
-NEXT_PUBLIC_APP_URL="http://localhost:5173"
+BETTER_AUTH_URL="http://localhost:3010"
+NEXT_PUBLIC_APP_URL="http://localhost:3010"
 ```
 
 **Production:**
@@ -185,7 +185,7 @@ GOOGLE_CLIENT_SECRET="GOCSPX-xxxxx"
 ```
 
 **Setup:** [Google Cloud Console](https://console.cloud.google.com)
-**Redirect URI:** `http://localhost:5173/api/auth/callback/google`
+**Redirect URI:** `http://localhost:3010/api/auth/callback/google`
 
 ### Application Name
 
@@ -229,8 +229,8 @@ STRIPE_WEBHOOK_SECRET="whsec_xxxxx"
 
 ```bash
 DATABASE_URL="postgresql://localhost:5432/dev"
-BETTER_AUTH_URL="http://localhost:5173"
-NEXT_PUBLIC_APP_URL="http://localhost:5173"
+BETTER_AUTH_URL="http://localhost:3010"
+NEXT_PUBLIC_APP_URL="http://localhost:3010"
 RESEND_FROM_EMAIL="onboarding@resend.dev"  # Test mode
 ```
 

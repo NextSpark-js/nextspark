@@ -1,6 +1,6 @@
 # Theme Asset Management
 
-Theme assets (logos, images, fonts, icons) are automatically managed by the build system, with automatic copying from theme directories to the public folder. This guide covers asset organization, usage, and optimization.
+Theme assets (logos, images, fonts, icons) are served from the Next.js app's public directory. This guide covers asset organization, usage, and optimization.
 
 ## Asset Directory Structure
 
@@ -37,44 +37,23 @@ contents/themes/[theme]/public/
         └── step-1.png
 ```
 
-## Automatic Asset Copying
+## Assets Served by the Monorepo App
 
 ### Build Process
 
-Assets are automatically copied during the theme build:
+The root `pnpm dev` and `pnpm build` commands do not run a theme asset copier. Source assets live with the theme, while the copies served by `apps/dev` live under its public directory:
 
 ```text
-Input:  contents/themes/[theme]/public/
-Output: public/theme/
-
-Process:
-1. Read NEXT_PUBLIC_ACTIVE_THEME
-2. Locate theme/public/ directory
-3. Recursively copy all files
-4. Preserve directory structure
-5. Report number of files copied
+Source: themes/[theme]/public/
+Served: apps/dev/public/theme/
 ```
 
-**Command:**
-
-```bash
-pnpm theme:build
-# Copies assets automatically
-```
-
-**Output:**
-
-```text
-🎨 Building theme system...
-📋 Active theme: my-theme
-   ✅ Copied 24 asset(s) to public/theme/
-✅ Theme built successfully!
-```
+Keep the served files in sync when adding or replacing theme assets. The application build validates references but does not copy these files.
 
 ### Destination Structure
 
 ```text
-public/theme/
+apps/dev/public/theme/
 ├── brand/
 │   ├── logo.svg
 │   └── ...
@@ -590,11 +569,7 @@ public/
 
 ### 3. Optimize Before Adding
 
-```bash
-# Optimize before committing
-npm run optimize:images
-npm run optimize:fonts
-```
+Optimize images and fonts with the tooling used by your team before committing them; the monorepo does not define `optimize:images` or `optimize:fonts` scripts.
 
 ### 4. Document Asset Requirements
 
@@ -616,17 +591,14 @@ export const ASSET_REQUIREMENTS = {
 
 ## Troubleshooting
 
-### Assets Not Copying
+### Assets Not Available
 
 ```bash
-# Rebuild theme
-pnpm theme:build
+# Check the theme source directory
+ls -la themes/my-theme/public/
 
-# Check theme directory
-ls -la contents/themes/my-theme/public/
-
-# Check output directory
-ls -la public/theme/
+# Check the app-served directory
+ls -la apps/dev/public/theme/
 ```
 
 ### Images Not Loading

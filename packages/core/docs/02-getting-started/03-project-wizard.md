@@ -5,22 +5,22 @@ The NextSpark CLI wizard helps you create a new project with a customized starte
 ## Running the Wizard
 
 ```bash
-npx nextspark init
+pnpm exec nextspark init
 ```
 
 Or with options:
 
 ```bash
 # Quick mode (fewer questions)
-npx nextspark init --quick
+pnpm exec nextspark init --quick
 
 # Expert mode (all options)
-npx nextspark init --expert
+pnpm exec nextspark init --expert
 
 # Use a preset
-npx nextspark init --preset saas
-npx nextspark init --preset blog
-npx nextspark init --preset crm
+pnpm exec nextspark init --preset saas
+pnpm exec nextspark init --preset blog
+pnpm exec nextspark init --preset crm
 ```
 
 ## Wizard Steps (9 Steps)
@@ -88,31 +88,40 @@ The wizard generates:
 ```
 your-project/
 ├── app/                          # Next.js app directory
+├── .nextspark/
+│   └── registries/                  # Generated registries
 ├── contents/
 │   └── themes/
 │       └── [your-slug]/          # Your custom theme
 │           ├── config/           # Configuration files
 │           │   ├── app.config.ts
-│           │   ├── theme.config.ts
 │           │   ├── billing.config.ts
 │           │   ├── dashboard.config.ts
 │           │   ├── dev.config.ts
-│           │   └── permissions.config.ts
-│           ├── entities/         # Entity definitions
-│           │   ├── tasks/        # Default task entity
-│           │   ├── pages/        # (if pages enabled)
-│           │   └── posts/        # (if blog enabled)
+│           │   ├── features.config.ts
+│           │   ├── permissions.config.ts
+│           │   └── theme.config.ts
+│           ├── entities/         # Entities copied by the starter/features
+│           │   └── ...
 │           ├── blocks/           # Page builder blocks
-│           │   ├── hero/         # Default hero block
-│           │   └── post-content/ # (if blog enabled)
+│           │   └── ...
 │           ├── messages/         # i18n translations
 │           ├── templates/        # Page templates
 │           ├── tests/            # Cypress & Jest tests
 │           └── migrations/       # Database migrations
 ├── public/                       # Static assets
+├── .env                          # Generated local environment
 ├── .env.example                  # Environment template
+├── next.config.mjs
+├── proxy.ts
+├── tsconfig.json
+├── pnpm-workspace.yaml
 └── package.json                  # Dependencies & scripts
 ```
+
+The wizard does not create a root `nextspark.config.ts`. The active theme is
+selected with `NEXT_PUBLIC_ACTIVE_THEME` in `.env`, and the generated
+TypeScript configuration lives under `contents/themes/[your-slug]/config/`.
 
 ## DX Features
 
@@ -137,11 +146,12 @@ The wizard can automatically:
 Optionally initialize a Git repository with an initial commit.
 
 ### Doctor Command
-Validate your project setup:
-
-```bash
-npx nextspark doctor
-```
+The CLI includes `nextspark doctor`, but it is not currently a passing
+post-generation gate. On a newly generated project it exits with code 1 after
+three passing checks because the configuration check parses `tsconfig.json` as
+strict JSON while the generated file contains valid JSONC comments. This is a
+known CLI/template mismatch; it does not mean the generated TypeScript config
+is invalid.
 
 ## What's New
 
@@ -161,7 +171,7 @@ npx nextspark doctor
    - Interactive config preview
    - Environment auto-setup
    - Git initialization
-   - Doctor health check
+   - Doctor diagnostics (with the fresh-project limitation described above)
 
 4. **Empty Directory Support**
    - Wizard can now run from an empty directory

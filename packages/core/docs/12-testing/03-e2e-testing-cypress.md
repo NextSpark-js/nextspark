@@ -79,7 +79,7 @@ import path from 'path'
 
 export default defineConfig({
   e2e: {
-    baseUrl: 'http://localhost:5173',
+    baseUrl: 'http://localhost:3010',
     specPattern: path.join(__dirname, 'cypress/e2e/**/*.cy.ts'),
     supportFile: path.resolve(__dirname, '../../../../core/tests/cypress/support/e2e.ts'),
 
@@ -115,20 +115,21 @@ export default defineConfig({
 
 ```bash
 # Interactive mode (development)
-pnpm cypress:open
+pnpm cy:open
 
 # Headless mode (CI)
-pnpm cypress:run
+pnpm cy:run
 
 # Specific test file
-pnpm cypress:run --spec "core/tests/cypress/e2e/auth/login.cy.ts"
+pnpm cy:run --spec "uat/_core/auth/login-logout.cy.ts"
 
 # Specific browser
-pnpm cypress:run --browser chrome
-
-# With theme-level config
-pnpm cypress:run --config-file contents/themes/default/tests/cypress.config.ts
+pnpm cy:run --browser chrome
 ```
+
+The root wrapper already loads the active theme's Cypress configuration. Do not
+pass `contents/themes/default/tests/cypress.config.ts`: that path is not a
+configuration file in the monorepo.
 
 ---
 
@@ -155,19 +156,19 @@ describe('Customers API - CRUD', {
 
 ```bash
 # Run smoke tests only
-pnpm cypress:run --env grepTags=@smoke
+pnpm cy:run --env grepTags=@smoke
 
 # Run API tests
-pnpm cypress:run --env grepTags=@api
+pnpm cy:run --env grepTags=@api
 
 # Combine tags (AND logic)
-pnpm cypress:run --env grepTags=@api+@smoke
+pnpm cy:run --env grepTags=@api+@smoke
 
 # Exclude tags
-pnpm cypress:run --env grepTags=-@slow
+pnpm cy:run --env grepTags=-@slow
 
 # Feature-specific tests
-pnpm cypress:run --env grepTags=@feat-customers
+pnpm cy:run --env grepTags=@feat-customers
 ```
 
 ### Tag Categories

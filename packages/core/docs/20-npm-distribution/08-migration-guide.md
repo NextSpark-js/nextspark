@@ -118,14 +118,16 @@ rm -rf core/
 
 ### Step 7: Regenerate Registries
 
+From the NextSpark monorepo root:
+
 ```bash
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 ### Step 8: Verify Build
 
 ```bash
-pnpm tsc --noEmit
+pnpm --dir apps/dev exec tsc --noEmit
 pnpm build
 ```
 
@@ -228,7 +230,8 @@ const ROOT_DIR = join(__dirname, '..', '..', '..', '..')  // 4 levels
 
 1. Verify `NEXT_PUBLIC_ACTIVE_THEME` is set
 2. Check theme exists in `contents/themes/`
-3. Run `pnpm build:theme`
+3. Check that `app/globals.css` imports that theme's stylesheet
+4. Run `pnpm build` to compile the import
 
 ## Rollback
 

@@ -102,8 +102,8 @@ jobs:
       - name: Start server and run tests
         uses: cypress-io/github-action@v6
         with:
-          start: pnpm start
-          wait-on: 'http://localhost:5173'
+          start: pnpm --dir apps/dev exec next start -p 3010
+          wait-on: 'http://localhost:3010'
           config-file: contents/themes/${{ vars.ACTIVE_THEME || 'default' }}/tests/cypress.config.ts
         env:
           CYPRESS_grepTags: '@smoke'
@@ -162,8 +162,8 @@ jobs:
       - name: Start server and run tests
         uses: cypress-io/github-action@v6
         with:
-          start: pnpm start
-          wait-on: 'http://localhost:5173'
+          start: pnpm --dir apps/dev exec next start -p 3010
+          wait-on: 'http://localhost:3010'
           config-file: contents/themes/${{ vars.ACTIVE_THEME || 'default' }}/tests/cypress.config.ts
         env:
           CYPRESS_grepTags: '@regression'
@@ -189,7 +189,7 @@ jobs:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `NEXT_PUBLIC_ACTIVE_THEME` | Active theme for tests | `default` |
-| `CYPRESS_BASE_URL` | Application URL | `http://localhost:5173` |
+| `CYPRESS_BASE_URL` | Application URL | `http://localhost:3010` |
 | `CYPRESS_grepTags` | Tag filter for tests | (varies by workflow) |
 
 ### Setting Repository Variables

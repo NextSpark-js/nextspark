@@ -504,15 +504,12 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 # Rebuild in watch mode (development)
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
 
-# Full build (includes registry)
+# Build the application after regenerating the registry
 pnpm build
 ```
 
-**Automatic Regeneration**:
-```bash
-# Development server rebuilds registry on changes
-pnpm dev
-```
+The root `pnpm dev` command does not rebuild registries; keep the watcher above
+running when plugin registry inputs are changing.
 
 ---
 
