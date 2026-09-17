@@ -31,7 +31,9 @@ const { timeLimitedClient } = await import('../../scripts/db/connection-time-lim
 type Built = NewerClient & { connectionParameters: Record<string, unknown> }
 
 test('an option a newer pg reads only from its constructor is not taken from the connection string', () => {
-  const url = 'postgres://u:p@db.example.com/db?optionOnlyThisVersionReads=1&statement_timeout=0'
+  // Explicit mode keeps this focused on options a newer pg reads. A missing
+  // sslmode deliberately returns the scripts' SSL-prefer facade instead.
+  const url = 'postgres://u:p@db.example.com/db?sslmode=disable&optionOnlyThisVersionReads=1&statement_timeout=0'
   const reference = new pg.Client({ connectionString: url }) as Built
   const limited = timeLimitedClient(url, { connectMs: 1000, statementMs: 500, queryMs: 700 }) as Built
 

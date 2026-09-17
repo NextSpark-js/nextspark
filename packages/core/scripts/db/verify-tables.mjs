@@ -1,10 +1,7 @@
-import pg from "pg";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from 'url';
-import { parseSSLConfig, stripSSLParams } from './ssl-config.mjs';
-
-const { Client } = pg;
+import { scriptClient } from './ssl-config.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,10 +22,7 @@ envLines.forEach(line => {
 });
 
 async function verifyTables() {
-  const client = new Client({
-    connectionString: stripSSLParams(DATABASE_URL),
-    ssl: parseSSLConfig(DATABASE_URL),
-  });
+  const client = scriptClient(DATABASE_URL);
   
   try {
     await client.connect();

@@ -5,19 +5,13 @@
  * Run with: node core/scripts/db/verify-teams.mjs
  */
 
-import pg from 'pg'
 import dotenv from 'dotenv'
-import { parseSSLConfig, stripSSLParams } from './ssl-config.mjs'
+import { scriptPool } from './ssl-config.mjs'
 
 dotenv.config()
 
-const { Pool } = pg
-
 async function verifyTeamsSetup() {
-  const pool = new Pool({
-    connectionString: stripSSLParams(process.env.DATABASE_URL),
-    ssl: parseSSLConfig(process.env.DATABASE_URL),
-  })
+  const pool = scriptPool(process.env.DATABASE_URL)
 
   try {
     console.log('🔍 Verifying Teams Core Setup...\n')

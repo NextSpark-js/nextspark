@@ -28,6 +28,7 @@ function syncCoreTemplates() {
 test('pack.sh restores an empty core templates/app before it creates the tarball', async () => withTemplateAppTestLock(REPO_ROOT, () => {
   const outputDir = mkdtempSync(join(tmpdir(), 'pack-templates-test-'))
 
+  let originalError
   try {
     rmSync(CORE_TEMPLATE_APP, { recursive: true, force: true })
 
@@ -43,9 +44,21 @@ test('pack.sh restores an empty core templates/app before it creates the tarball
     const listed = spawnSync('tar', ['tzf', join(outputDir, archive)], { encoding: 'utf8' })
     assert.equal(listed.status, 0, listed.stderr || listed.stdout)
     assert.match(listed.stdout, /package\/templates\/app\//, 'the core tarball must include templates/app')
+  } catch (error) {
+    originalError = error
+    throw error
   } finally {
     const restore = syncCoreTemplates()
     rmSync(outputDir, { recursive: true, force: true })
-    assert.equal(restore.status, 0, restore.stderr || restore.stdout)
+    const restorationFailure = restore.status !== 0
+      ? restore.stderr || restore.stdout || `sync:templates exited ${restore.status}`
+      : countFiles(CORE_TEMPLATE_APP) === 0
+        ? 'sync:templates completed but left core templates/app empty'
+        : null
+
+    if (restorationFailure) {
+      console.error(`Could not restore core template app: ${restorationFailure}`)
+      if (!originalError) assert.fail(restorationFailure)
+    }
   }
 }))

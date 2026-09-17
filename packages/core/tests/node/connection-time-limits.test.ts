@@ -14,7 +14,7 @@ import pg from 'pg'
 import { timeLimitParametersIn, timeLimitedClient } from '../../scripts/db/connection-time-limits.mjs'
 import { inspectTarget, inspectMaintenanceDatabase } from '../../scripts/db/inspect-server.mjs'
 import { migrationClient } from '../../scripts/db/migration-time-limit.mjs'
-import { parseSSLConfig, stripSSLParams } from '../../scripts/db/ssl-config.mjs'
+import { parseSSLConfig, prefersSSL, scriptPool, stripSSLParams } from '../../scripts/db/ssl-config.mjs'
 
 type TestContext = { after: (fn: () => void) => void }
 
@@ -135,7 +135,7 @@ const URLS = [
 ]
 
 test('a time-limited client connects where, and as whom, pg would connect without the limits', () => {
-  for (const url of URLS) {
+  for (const url of URLS.filter(url => !prefersSSL(url))) {
     assert.deepEqual(built(() => timeLimitedClient(url, LIMITS) as ClientInternals), built(() => pgWithoutTheFix(url)), JSON.stringify(url))
   }
 })
@@ -158,7 +158,7 @@ test('the time-limit parameters are named as pg reads them', () => {
   }
 })
 
-test('every migration connection path follows the application SSL policy', () => {
+test('every migration connection path keeps explicit SSL modes and starts missing modes with TLS', () => {
   const nodeEnv = process.env.NODE_ENV
   const cases = [
     { url: `${BASE}?sslmode=disable`, env: 'production', ssl: false },
@@ -167,8 +167,9 @@ test('every migration connection path follows the application SSL policy', () =>
     { url: `${BASE}?sslmode=allow`, env: 'development', ssl: { rejectUnauthorized: false } },
     { url: `${BASE}?sslmode=verify-ca`, env: 'development', ssl: { rejectUnauthorized: true } },
     { url: `${BASE}?sslmode=verify-full`, env: 'development', ssl: { rejectUnauthorized: true } },
-    { url: BASE, env: 'development', ssl: false },
-    { url: BASE, env: 'production', ssl: { rejectUnauthorized: true } },
+    // The runtime differs deliberately here: scripts implement libpq prefer.
+    { url: BASE, env: 'development', ssl: { rejectUnauthorized: false } },
+    { url: BASE, env: 'production', ssl: { rejectUnauthorized: false } },
   ]
 
   try {
@@ -188,7 +189,7 @@ test('every migration connection path follows the application SSL policy', () =>
 test("parameters named like the client's own options reach neither the client nor another parse", () => {
   const url =
     'postgres://u:p@db.example.com/db?binary=true&keepAlive=true&stream=x&Promise=x&types=x&connection=x' +
-    '&enableChannelBinding=true&connectionTimeoutMillis=0&connectionString=postgres://x:y@elsewhere.example.com/other&statement_timeout=0'
+    '&enableChannelBinding=true&connectionTimeoutMillis=0&connectionString=postgres://x:y@elsewhere.example.com/other&sslmode=disable&statement_timeout=0'
   const client = timeLimitedClient(url, LIMITS) as ClientInternals
 
   assert.deepEqual(connectionOf(client), connectionOf(pgWithoutTheFix(url)))
@@ -205,6 +206,7 @@ async function socketServer(t: TestContext) {
   // a socket path is limited to about 100 bytes, which a per-user temporary directory can exceed
   const dir = fs.mkdtempSync(path.join('/tmp', 'pg-'))
   const sessions: Record<string, string>[] = []
+  let sslRequests = 0
   const sockets = new Set<net.Socket>()
   const server = net.createServer(socket => {
     sockets.add(socket)
@@ -227,6 +229,7 @@ async function socketServer(t: TestContext) {
           const fields = pending.subarray(8, length).toString().split('\0')
           pending = pending.subarray(length)
           if (code === 80877103) {
+            sslRequests++
             socket.write('N')
             continue
           }
@@ -254,10 +257,103 @@ async function socketServer(t: TestContext) {
     server.close()
     fs.rmSync(dir, { recursive: true, force: true })
   })
-  return { dir, sessions }
+  return { dir, sessions, get sslRequests() { return sslRequests } }
 }
 
 const QUICK = { connectMs: 2000, statementMs: 1000, queryMs: 1000 }
+
+test('a time-limited client uses TLS first, then retries plaintext only after pg reports no SSL support', { timeout: 10000 }, async t => {
+  const server = await socketServer(t)
+  const client = timeLimitedClient(
+    `postgresql://dbuser@${encodeURIComponent(server.dir)}/nextspark_verify`,
+    QUICK,
+  )
+
+  await client.connect()
+  try {
+    assert.equal(server.sslRequests, 1, 'the first connection must be an SSL request')
+    assert.deepEqual(server.sessions.map(({ user, database }) => ({ user, database })), [
+      { user: 'dbuser', database: 'nextspark_verify' },
+    ])
+  } finally {
+    await client.end()
+  }
+})
+
+test('the pool path has the same TLS-first fallback as direct script clients', { timeout: 10000 }, async t => {
+  const server = await socketServer(t)
+  const pool = scriptPool(`postgresql://dbuser@${encodeURIComponent(server.dir)}/nextspark_verify`)
+
+  try {
+    await pool.query('SELECT 1')
+    assert.equal(server.sslRequests, 1)
+    assert.deepEqual(server.sessions.map(({ user, database }) => ({ user, database })), [
+      { user: 'dbuser', database: 'nextspark_verify' },
+    ])
+  } finally {
+    await pool.end()
+  }
+})
+
+test('a TLS error other than pg\'s precise no-SSL response is not retried as plaintext', { timeout: 10000 }, async t => {
+  const dir = fs.mkdtempSync(path.join('/tmp', 'pg-ssl-error-'))
+  let connections = 0
+  const server = net.createServer(socket => {
+    connections++
+    socket.once('data', chunk => {
+      assert.equal(chunk.readInt32BE(4), 80877103, 'the first connection asks for SSL')
+      socket.write('S')
+      // This is not a TLS server. Closing after pg starts the handshake gives
+      // a TLS connection error, which must not trigger a plaintext retry.
+      socket.once('data', () => socket.destroy())
+    })
+  })
+  await new Promise<void>(resolve => server.listen(path.join(dir, '.s.PGSQL.5432'), resolve))
+  t.after(() => {
+    server.close()
+    fs.rmSync(dir, { recursive: true, force: true })
+  })
+
+  const client = timeLimitedClient(`postgresql://dbuser@${encodeURIComponent(dir)}/nextspark_verify`, QUICK)
+  await assert.rejects(client.connect(), error => {
+    assert.notEqual((error as Error).message, 'The server does not support SSL connections')
+    return true
+  })
+  assert.equal(connections, 1, 'only pg\'s exact no-SSL error permits a second connection')
+})
+
+test('the plaintext retry spends the original connectMs budget instead of starting a second one', { timeout: 10000 }, async t => {
+  const dir = fs.mkdtempSync(path.join('/tmp', 'pg-ssl-budget-'))
+  const sockets = new Set<net.Socket>()
+  let connections = 0
+  const server = net.createServer(socket => {
+    sockets.add(socket)
+    connections++
+    socket.once('data', chunk => {
+      if (connections === 1) {
+        assert.equal(chunk.readInt32BE(4), 80877103)
+        setTimeout(() => socket.write('N'), 80)
+      }
+      // The fallback gets a startup packet but no answer. Its timeout must be
+      // the ~40 ms left, not a fresh 120 ms connection budget.
+    })
+  })
+  await new Promise<void>(resolve => server.listen(path.join(dir, '.s.PGSQL.5432'), resolve))
+  t.after(() => {
+    for (const socket of sockets) socket.destroy()
+    server.close()
+    fs.rmSync(dir, { recursive: true, force: true })
+  })
+
+  const startedAt = performance.now()
+  const client = timeLimitedClient(
+    `postgresql://dbuser@${encodeURIComponent(dir)}/nextspark_verify`,
+    { connectMs: 120, statementMs: 1000, queryMs: 1000 },
+  )
+  await assert.rejects(client.connect(), /timeout expired/)
+  assert.equal(connections, 2, 'the no-SSL response does cause exactly one fallback')
+  assert.ok(performance.now() - startedAt < 180, 'the retry must share connectMs rather than receive a new 120 ms budget')
+})
 
 test('a socket endpoint other than the target is not connected to', { timeout: 10000 }, async t => {
   const server = await socketServer(t)

@@ -1,7 +1,9 @@
 /**
  * The standalone database scripts intentionally duplicate the runtime SSL
- * policy. Keep their decisions coupled without putting a script module in the
- * application bundle.
+ * policy. Keep their explicit decisions coupled without putting a script module
+ * in the application bundle. A URL without sslmode deliberately differs:
+ * scripts implement libpq's SSL `prefer`, while the runtime keeps its existing
+ * environment default until its next release.
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -9,16 +11,20 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { parseSSLConfig as scriptParseSSLConfig } from '../../scripts/db/ssl-config.mjs'
+import {
+  parseSSLConfig as scriptParseSSLConfig,
+  prefersSSL,
+  scriptConnectionOptions,
+  stripSSLParams as scriptStripSSLParams,
+} from '../../scripts/db/ssl-config.mjs'
 
 const URL = 'postgresql://user:password@db.example.test:5432/nextspark'
 const DB_SOURCE = join(import.meta.dirname, '../../src/lib/db.ts')
 
 type ParseSSLConfig = (databaseUrl: string) => false | { rejectUnauthorized: boolean }
 
-const cases = [
+const parityCases = [
   { name: 'no URL', databaseUrl: '' },
-  { name: 'no sslmode', databaseUrl: URL },
   { name: 'sslmode=disable', databaseUrl: `${URL}?sslmode=disable` },
   { name: 'sslmode=require', databaseUrl: `${URL}?sslmode=require` },
   { name: 'sslmode=prefer', databaseUrl: `${URL}?sslmode=prefer` },
@@ -42,11 +48,16 @@ function withNodeEnv(nodeEnv: string, callback: () => void) {
   }
 }
 
-async function runtimeParseSSLConfig(): Promise<ParseSSLConfig> {
+type RuntimeSSLHelpers = {
+  parseSSLConfig: ParseSSLConfig
+  stripSSLParams: (databaseUrl: string) => string
+}
+
+async function runtimeSSLHelpers(): Promise<RuntimeSSLHelpers> {
   const source = readFileSync(DB_SOURCE, 'utf8')
-  const start = source.indexOf('export function parseSSLConfig')
+  const start = source.indexOf('export function stripSSLParams')
   const end = source.indexOf('\nconst databaseUrl', start)
-  assert.ok(start >= 0 && end > start, 'src/lib/db.ts must contain parseSSLConfig before pool setup')
+  assert.ok(start >= 0 && end > start, 'src/lib/db.ts must contain SSL helpers before pool setup')
 
   // Import the TypeScript function through tsx without importing db.ts's pool
   // and its runtime-only dependency graph. The extracted source is the exact
@@ -56,23 +67,45 @@ async function runtimeParseSSLConfig(): Promise<ParseSSLConfig> {
   writeFileSync(modulePath, `${source.slice(start, end)}\n`)
   try {
     const runtime = await import(pathToFileURL(modulePath).href) as { parseSSLConfig: ParseSSLConfig }
-    return runtime.parseSSLConfig
+    return runtime
   } finally {
     rmSync(directory, { recursive: true, force: true })
   }
 }
 
-test('database scripts make the same SSL decision as the application runtime', async () => {
-  const parseRuntimeSSLConfig = await runtimeParseSSLConfig()
+test('database scripts match the runtime for explicit and invalid SSL policy inputs', async () => {
+  const runtime = await runtimeSSLHelpers()
   for (const nodeEnv of ['development', 'production']) {
-    for (const { name, databaseUrl } of cases) {
+    for (const { name, databaseUrl } of parityCases) {
       withNodeEnv(nodeEnv, () => {
         assert.deepEqual(
           scriptParseSSLConfig(databaseUrl),
-          parseRuntimeSSLConfig(databaseUrl),
+          runtime.parseSSLConfig(databaseUrl),
           `${name} with NODE_ENV=${nodeEnv}`,
+        )
+        assert.equal(
+          scriptStripSSLParams(databaseUrl),
+          runtime.stripSSLParams(databaseUrl),
+          `stripSSLParams: ${name} with NODE_ENV=${nodeEnv}`,
         )
       })
     }
+  }
+})
+
+test('a valid URL without sslmode deliberately uses libpq SSL prefer in scripts', async () => {
+  const runtime = await runtimeSSLHelpers()
+  for (const nodeEnv of ['development', 'production']) {
+    withNodeEnv(nodeEnv, () => {
+      // Keep parseSSLConfig itself coupled: its callers outside connection
+      // creation still have the runtime's documented environment policy.
+      assert.deepEqual(scriptParseSSLConfig(URL), runtime.parseSSLConfig(URL), nodeEnv)
+      // The connection builder is intentionally different: it asks for TLS
+      // first and scriptClient retries plaintext only for pg's exact no-SSL
+      // server error. Do not fold this back into runtime parity by accident.
+      assert.equal(prefersSSL(URL), true, nodeEnv)
+      assert.deepEqual(scriptConnectionOptions(URL).ssl, { rejectUnauthorized: false }, nodeEnv)
+      assert.notDeepEqual(scriptConnectionOptions(URL).ssl, runtime.parseSSLConfig(URL), nodeEnv)
+    })
   }
 })

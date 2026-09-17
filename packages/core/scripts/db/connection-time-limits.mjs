@@ -16,21 +16,14 @@
 // `options=-c statement_timeout=…`, in PGOPTIONS, or set on the database or the
 // role.
 
-import pg from 'pg';
-import { parseSSLConfig, stripSSLParams } from './ssl-config.mjs';
-
-const { Client } = pg;
+import { scriptClient } from './ssl-config.mjs';
 
 /** The connection-string parameters pg reads over the time limits given next to them. */
 export const TIME_LIMIT_PARAMETERS = ['statement_timeout', 'query_timeout'];
 
 /** How pg builds a client for the string, with the shared application SSL policy. */
 function clientFor(connectionString, options = {}) {
-  return new Client({
-    ...options,
-    connectionString: stripSSLParams(connectionString),
-    ssl: parseSSLConfig(connectionString),
-  });
+  return scriptClient(connectionString, options);
 }
 
 /**

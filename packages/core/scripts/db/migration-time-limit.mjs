@@ -102,7 +102,7 @@
 
 import pg from 'pg';
 import { timeLimitedClient, timeLimitParametersIn } from './connection-time-limits.mjs';
-import { parseSSLConfig, stripSSLParams } from './ssl-config.mjs';
+import { scriptClient } from './ssl-config.mjs';
 
 const { Client, DatabaseError, escapeIdentifier, escapeLiteral } = pg;
 
@@ -133,11 +133,7 @@ export function migrationTimeLimit(env = process.env) {
 export function migrationClient(connectionString, limit) {
   return limit
     ? timeLimitedClient(connectionString, { connectMs: CONNECT_MS, statementMs: limit.statementMs, queryMs: limit.queryMs })
-    : new Client({
-        connectionString: stripSSLParams(connectionString),
-        ssl: parseSSLConfig(connectionString),
-        connectionTimeoutMillis: CONNECT_MS,
-      });
+    : scriptClient(connectionString, { connectionTimeoutMillis: CONNECT_MS });
 }
 
 /**
