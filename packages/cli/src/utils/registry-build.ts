@@ -437,17 +437,38 @@ export interface MatchedLines {
  */
 export function captureLinesContaining(needle: string, caps: PoolCaps, line = DEFAULT_LIMITS.line): MatchedLines {
   const pool = firstLines(caps);
-  interface LineState { decoder: StringDecoder; start: Buffer; held: number; bytes: number }
+  const needleBytes = Buffer.from(needle, 'utf8');
+  const EMPTY = Buffer.alloc(0);
+  interface LineState { decoder: StringDecoder; start: Buffer; held: number; bytes: number; matched: boolean; tail: Buffer }
   const streams = new Map<string, LineState>();
   let index = 0;
 
   function streamState(name: string): LineState {
     let state = streams.get(name);
     if (!state) {
-      state = { decoder: new StringDecoder('utf8'), start: Buffer.alloc(line + 1), held: 0, bytes: 0 };
+      state = { decoder: new StringDecoder('utf8'), start: Buffer.alloc(line + 1), held: 0, bytes: 0, matched: false, tail: EMPTY };
       streams.set(name, state);
     }
     return state;
+  }
+
+  /**
+   * Whether `needle` occurs anywhere in the line, tracked across the whole
+   * line rather than only its kept, possibly truncated `text` - a match past
+   * the line cap still counts. Only the `needleBytes.length - 1` bytes at the
+   * end of what has been scanned so far are carried between calls, so a match
+   * split across writes is still found without buffering the line itself.
+   */
+  function scanForNeedle(state: LineState, chunk: Buffer, from: number, to: number): void {
+    const segment = chunk.subarray(from, to);
+    const combined = state.tail.length > 0 ? Buffer.concat([state.tail, segment]) : segment;
+    if (combined.indexOf(needleBytes) !== -1) {
+      state.matched = true;
+      state.tail = EMPTY;
+      return;
+    }
+    const keep = Math.min(combined.length, Math.max(needleBytes.length - 1, 0));
+    state.tail = keep > 0 ? Buffer.from(combined.subarray(combined.length - keep)) : EMPTY;
   }
 
   function endLine(state: LineState): void {
@@ -457,9 +478,12 @@ export function captureLinesContaining(needle: string, caps: PoolCaps, line = DE
     }
     const text = keptBytes === 0 ? '' : state.decoder.write(state.start.subarray(0, keptBytes)) + state.decoder.end();
     const bytes = state.bytes;
+    const matched = state.matched;
     state.held = 0;
     state.bytes = 0;
-    if (text.includes(needle)) {
+    state.matched = false;
+    state.tail = EMPTY;
+    if (matched) {
       pool.offer({ index: index++, offset: 0, text, keptBytes: Buffer.byteLength(text, 'utf8'), bytes });
     }
   }
@@ -469,6 +493,7 @@ export function captureLinesContaining(needle: string, caps: PoolCaps, line = DE
       state.held += chunk.copy(state.start, state.held, from, Math.min(to, from + state.start.length - state.held));
     }
     state.bytes += to - from;
+    if (!state.matched) scanForNeedle(state, chunk, from, to);
   }
 
   return {
@@ -489,7 +514,7 @@ export function captureLinesContaining(needle: string, caps: PoolCaps, line = DE
       }
     },
     get lines(): string[] {
-      const shown = pool.kept.map((kept) => kept.text);
+      const shown = pool.kept.map(shownCapturedLine);
       if (pool.droppedLines > 0) shown.push(`... and ${pool.droppedLines} more line(s), ${pool.droppedBytes} byte(s)`);
       return shown;
     },

@@ -318,10 +318,10 @@ test('a registry build that fails is reported as such, with a non-zero exit code
 })
 
 /**
- * The old `syncAppCommand` read `buildFailureLines(registry.output)`, run on a
- * string every chunk of both streams was appended to with no cap - unbounded
- * memory and a character split across chunks corrupted, the same as `dev`'s
- * old bug. `runRegistryBuild` now reads both through `captureChildOutput`.
+ * `runRegistryBuild` reads both streams through `captureChildOutput`, whose
+ * errors pool keeps the first error lines regardless of what streams after
+ * them, so a registry build failure still names its cause after a flood of
+ * stdout that follows it.
  */
 test('a registry build that fails still names the cause once a flood of stdout follows it', async () => {
   const { root, cleanup } = await project()
@@ -344,10 +344,32 @@ process.exit(1)
   }
 })
 
+test('sync:app shows a long app/(templates) line cut at the cap with the same omitted-bytes marker as everything else it prints', async () => {
+  const { root, cleanup } = await project()
+  try {
+    await write(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
+    const longSuffix = 'x'.repeat(14000)
+    await write(root, `${CORE}/scripts/build/registry.mjs`, `console.log('app/(templates)/' + ${JSON.stringify(longSuffix)} + '.tsx created')\n`)
+
+    const { printed, exitCode } = await runSyncForExit(root, { force: true })
+
+    assert.equal(exitCode, 0)
+    const fullLine = `app/(templates)/${longSuffix}.tsx created`
+    const kept = Buffer.from(fullLine, 'utf8').subarray(0, 4096).toString('utf8')
+    const omitted = Buffer.byteLength(fullLine, 'utf8') - Buffer.byteLength(kept, 'utf8')
+    assert.ok(
+      printed.includes(`    ${kept}… (${omitted} more byte(s) on this line)`),
+      `the line is shown cut at the cap with its omitted-bytes marker:\n${printed.slice(0, 300)}`
+    )
+  } finally {
+    await cleanup()
+  }
+})
+
 /**
- * A build that prints hundreds of MB - as a real project with a lot of routes
- * would, one app/(templates) line per file - would run a 64 MB heap out under
- * the old, uncapped `registry.output` string.
+ * A build that prints hundreds of MB - as a real project with a lot of
+ * routes would, one app/(templates) line per file - runs `sync:app` in
+ * bounded memory.
  */
 test('sync:app does not run a 64 MB heap out on a build that prints hundreds of MB', { timeout: 60_000 }, async () => {
   const { root, cleanup } = await project()

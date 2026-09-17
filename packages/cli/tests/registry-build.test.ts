@@ -484,13 +484,38 @@ test('a character split across writes arrives whole in a matched line, on either
   assert.deepEqual(twoStreams.lines.slice().sort(), ['app/(templates)/café.tsx replaced', 'app/(templates)/😀.tsx removed'].sort())
 })
 
+test('a matched line cut at the cap is shown with the same omitted-bytes marker captureOutput uses, and a match past the cap still counts', () => {
+  const needle = 'app/(templates)'
+  const filler = 'x'.repeat(20)
+  const rest = `${needle}/late.tsx created`
+  const fullLine = `${filler}${rest}`
+
+  const matches = captureLinesContaining(needle, { lines: 10, bytes: 4096 }, 20)
+  writeLines(matches, 'stdout', [fullLine])
+
+  assert.deepEqual(matches.lines, [`${filler}… (${bytesOf(fullLine) - 20} more byte(s) on this line)`])
+})
+
+test('a match split across two writes right at the line cap still counts', () => {
+  const needle = 'app/(templates)'
+  const cap = 16
+  const filler = 'x'.repeat(10)
+  const firstPart = needle.slice(0, 6)
+  const secondPart = needle.slice(6)
+  const rest = `${secondPart}/late.tsx created`
+
+  const matches = captureLinesContaining(needle, { lines: 10, bytes: 4096 }, cap)
+  matches.write('stdout', Buffer.from(`${filler}${firstPart}`, 'utf8'))
+  matches.write('stdout', Buffer.from(`${rest}\n`, 'utf8'))
+
+  assert.deepEqual(matches.lines, [`${filler}${firstPart}… (${bytesOf(rest)} more byte(s) on this line)`])
+})
+
 /**
- * The old `runRegistryBuild` joined every chunk of both streams into one
- * string with no cap, so `dev` and `sync:app` held the whole thing in memory.
- * A build that prints hundreds of MB - many app/(templates) lines, as a real
- * project with a lot of routes would - would run a 64 MB heap out under the
- * old code; `captureChildOutput` and `captureLinesContaining` both cap what
- * they keep regardless of how much comes through.
+ * `captureChildOutput` and `captureLinesContaining` both cap what they keep
+ * regardless of how much comes through, so a build that prints hundreds of MB
+ * - many app/(templates) lines, as a real project with a lot of routes would
+ * - runs `runRegistryBuild` in bounded memory.
  */
 test('runRegistryBuild does not run a 64 MB heap out on a build that prints hundreds of MB', { skip: process.platform === 'win32', timeout: 60_000 }, async () => {
   const root = await mkdtemp(join(tmpdir(), 'nextspark-registry-build-memory-'))

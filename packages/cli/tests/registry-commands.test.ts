@@ -143,11 +143,9 @@ test('dev shows each line it repeats from the registry build escaped, whether th
 })
 
 /**
- * The old `buildRegistries` picked the last 5 lines of stdout and stderr
- * concatenated in arrival order, which two independent pipes never guarantee:
- * a build's stdout printing after its stderr cause pushes the cause out of
- * that window. `captureChildOutput`'s errors pool keeps the first error lines
- * regardless of what streams after them.
+ * `captureChildOutput`'s errors pool keeps the first error lines regardless
+ * of what streams after them, so `dev` still shows a build's cause after a
+ * flood of stdout that follows it on the other stream.
  */
 test('dev still shows the cause once a flood of stdout follows it', { skip: process.platform === 'win32' }, async () => {
   const root = await mkdtemp(join(tmpdir(), 'nextspark-registry-commands-flood-'))
@@ -173,11 +171,35 @@ process.exit(1)
   }
 })
 
+test('dev shows a long app/(templates) line cut at the cap with the same omitted-bytes marker as everything else it prints', { skip: process.platform === 'win32' }, async () => {
+  const root = await mkdtemp(join(tmpdir(), 'nextspark-registry-commands-longline-'))
+  const coreDir = join(root, 'node_modules/@nextsparkjs/core')
+  await mkdir(join(coreDir, 'scripts/build'), { recursive: true })
+  await writeFile(join(coreDir, 'package.json'), JSON.stringify({ name: '@nextsparkjs/core', version: '0.0.0-test' }))
+  const longSuffix = 'x'.repeat(14000)
+  await writeFile(
+    join(coreDir, 'scripts/build/registry.mjs'),
+    `console.log('app/(templates)/' + ${JSON.stringify(longSuffix)} + '.tsx created')\n`
+  )
+  await writeFile(join(root, '.env'), 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
+  try {
+    const printed = await runCommand(root, () => buildRegistries(coreDir, root), false)
+    const fullLine = `app/(templates)/${longSuffix}.tsx created`
+    const kept = Buffer.from(fullLine, 'utf8').subarray(0, 4096).toString('utf8')
+    const omitted = Buffer.byteLength(fullLine, 'utf8') - Buffer.byteLength(kept, 'utf8')
+    assert.ok(
+      printed.includes(`[Registry] ${kept}… (${omitted} more byte(s) on this line)`),
+      `the line is shown cut at the cap with its omitted-bytes marker:\n${printed.slice(0, 300)}`
+    )
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 /**
- * The old `buildRegistries` read `result.output`, a string every chunk of both
- * streams was appended to with no cap. A build that prints hundreds of MB -
- * as a real project with a lot of routes would, one app/(templates) line per
- * file - would run a 64 MB heap out under the old code.
+ * A build that prints hundreds of MB - as a real project with a lot of
+ * routes would, one app/(templates) line per file - runs `dev` in bounded
+ * memory.
  */
 test('dev does not run a 64 MB heap out on a build that prints hundreds of MB', { skip: process.platform === 'win32', timeout: 60_000 }, async () => {
   const root = await mkdtemp(join(tmpdir(), 'nextspark-registry-commands-memory-'))
