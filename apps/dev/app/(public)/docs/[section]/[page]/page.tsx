@@ -15,12 +15,15 @@ interface DocsPageProps {
   }>
 }
 
-// generateStaticParams below enumerates every public doc page, so `next dev`
-// answers 404 for any other section/page pair before rendering. notFound()
-// alone can't: the Suspense boundary in the docs layout has already sent a 200
-// by the time it runs. A production build renders this route on demand (the
-// root layout reads the request), which leaves dynamicParams nothing to check
-// against; there the generated proxy answers 404 for pages the registry lacks.
+// generateStaticParams below lists every public doc page, and dynamicParams =
+// false answers 404 for any other section/page pair before the page renders:
+// in `next dev`, and in a production build that prerenders this route, which
+// it does when the app's locale is fixed (see isLocaleFixed). An app that reads
+// the locale from the request renders the route on demand, where Next has no
+// prerendered list to check, and the notFound() calls below cannot set the
+// status either: they run inside the layouts' Suspense boundaries, after the
+// response head has gone out with a 200. For those requests the proxy answers
+// 404 before anything renders (isMissingDocsPage in proxy.ts).
 export const dynamicParams = false
 
 export async function generateStaticParams() {

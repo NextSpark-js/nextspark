@@ -15,13 +15,14 @@ interface SuperadminDocsPageProps {
   }>
 }
 
-// generateStaticParams below enumerates every superadmin doc page, so `next dev`
-// answers 404 for any other section/page pair before rendering. notFound()
-// alone can't: the superadmin layout's Suspense boundary has already sent a 200
-// by the time it runs. A production build renders this route on demand, which
-// leaves dynamicParams nothing to check against; there the generated proxy
-// answers 404 for pages the registry lacks. connection() keeps the pages
-// themselves from being prerendered at build time.
+// generateStaticParams below lists every superadmin doc page, and
+// dynamicParams = false answers 404 for any other section/page pair in
+// `next dev`. connection() keeps these pages from being prerendered, so a
+// production build renders them on demand, where Next has no prerendered list
+// to check, and the notFound() calls below cannot set the status either: they
+// run inside the superadmin layout's Suspense boundary, after the response
+// head has gone out with a 200. For those requests the proxy answers 404
+// before anything renders (isMissingDocsPage in proxy.ts).
 export const dynamicParams = false
 
 export async function generateStaticParams() {

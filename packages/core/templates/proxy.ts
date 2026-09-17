@@ -118,12 +118,13 @@ function isMissingDocsPage(pathname: string): boolean {
 
 /**
  * Serve the app's not-found page with a 404 status for a docs page the
- * registry does not have. The docs pages call notFound() themselves, but only
- * after a Suspense boundary in their layouts has sent the response head with a
- * 200, and a production build renders them on demand (the root layout reads the
- * request), so their `dynamicParams = false` has no prerendered list to answer
- * 404 from. Deciding it here, before anything renders, is what makes the
- * status real.
+ * registry does not have. The docs pages answer 404 on their own only where
+ * their `dynamicParams = false` has a list to check: in `next dev`, and for
+ * public docs prerendered by an app whose locale is fixed. Rendered on demand
+ * (superadmin docs always, public docs when the locale comes from the
+ * request), their notFound() runs inside the layouts' Suspense boundaries,
+ * after the response head has gone out with a 200. Deciding it here, before
+ * anything renders, gives those requests the 404.
  */
 function rewriteToNotFound(request: NextRequest, requestHeaders: Headers): NextResponse {
   return syncSessionHint(request, NextResponse.rewrite(appUrl(request, '/_not-found'), {

@@ -1,14 +1,15 @@
 /**
  * A docs page route asked for a section/page pair the docs registry never
  * scanned - a broken relative `.md` link, a typo, a removed page - calls
- * notFound(), but only after a Suspense boundary in its layouts has already
- * sent the response head with a 200: the not-found UI arrives with the wrong
- * status. Both docs pages therefore export `dynamicParams = false` beside a
- * generateStaticParams that lists every page, which makes `next dev` answer
- * 404 for anything else before rendering. A production build renders these
- * routes on demand (the root layout reads the request), so that check has no
- * prerendered list there; the generated proxy answers 404 for those requests
- * instead (tests/jest/templates/proxy.test.ts).
+ * notFound(), but inside a Suspense boundary of its layouts, where the
+ * response head has already gone out with a 200: the not-found UI arrives with
+ * the wrong status. Both docs pages therefore export `dynamicParams = false`
+ * beside a generateStaticParams that lists every page, which answers 404 for
+ * anything else before rendering in `next dev` and wherever a production build
+ * prerenders the route. A route rendered on demand has no prerendered list to
+ * check; the proxy answers 404 for those requests instead
+ * (tests/jest/templates/proxy.test.ts), in apps/dev as in a generated project
+ * (tests/node/apps-dev-proxy.test.ts).
  * apps/dev/app is the source packages/core/templates/app is synced from.
  */
 import { test } from 'node:test'

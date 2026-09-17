@@ -58,12 +58,16 @@ export function hasThemeMiddleware(themeName: string): boolean {
 
 /**
  * Execute theme middleware with error handling
+ *
+ * `coreSession` has the type the generated middleware registry gives a theme
+ * middleware's session argument, which is auth's full session user rather
+ * than the minimal SessionUser above.
  * @complexity O(1) + async execution time
  */
 export async function executeThemeMiddleware(
   themeName: string,
   request: NextRequest,
-  coreSession?: SessionUser | null
+  coreSession?: Parameters<MiddlewareRegistryEntry['middleware']>[1]
 ): Promise<NextResponse | null> {
   const entry = MIDDLEWARE_REGISTRY[themeName]
 
