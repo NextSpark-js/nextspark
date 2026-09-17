@@ -27,6 +27,13 @@ Run it where the `package.json` that depends on `@nextsparkjs/core` is: the proj
 
 In a web-mobile project whose `web/` has a `pnpm-workspace.yaml` of its own, as projects `create-nextspark-app` generates have had, pnpm 11 takes `web/` for a workspace of its own and installs it before running any script there: `pnpm update-core` fails in that install (`ERR_PNPM_IGNORED_BUILDS`) before `update-core` starts, having written `web/pnpm-lock.yaml` and `web/pnpm-workspace.yaml`. Run it from `web/` as `pnpm --config.verify-deps-before-run=false update-core`, which skips that install.
 
+When changing pnpm major versions, first update the project's `packageManager` field to the target major so Corepack permits it. pnpm 11 can reject a lockfile written by pnpm 9 or 10 while it contains a dependency published less than a day ago (`ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`). Keep the release-age policy and regenerate the lockfile instead of weakening it:
+
+```bash
+pnpm clean --lockfile
+pnpm install
+```
+
 ---
 
 ## What Gets Updated

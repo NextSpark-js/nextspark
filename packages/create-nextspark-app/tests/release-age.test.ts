@@ -240,6 +240,14 @@ test('on the day of a NextSpark release, pnpm 10.34.5 and 11.17.0 still install 
   })
 })
 
+test('the generated workspace YAML declares the release-age policy and its version exclusions', () => {
+  const yaml = buildWorkspaceYaml(['@nextsparkjs/core'], releaseAgeExclusions('0.1.0-beta.190'))
+
+  assert.match(yaml, /^minimumReleaseAge: 1440$/m)
+  assert.match(yaml, /^minimumReleaseAgeStrict: false$/m)
+  assert.match(yaml, /^minimumReleaseAgeExclude:\n(?:  - '@nextsparkjs\/[a-z-]+@0\.1\.0-beta\.190'\n)+/m)
+})
+
 test('the exclusions name only the NextSpark packages at the version being created', () => {
   const exclusions = releaseAgeExclusions('0.1.0-beta.190')
 

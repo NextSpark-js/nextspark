@@ -170,6 +170,8 @@ test('the pnpm that creates the project does not change the allowlist it writes'
     assert.ok(allowBuilds.includes('@nextsparkjs/core'), `${label}: allowBuilds is ${allowBuilds.join(', ')}`)
     assert.ok(allowBuilds.includes(coreTarballSpec), `${label}: expected ${coreTarballSpec} in allowBuilds`)
     assert.deepEqual(onlyBuiltDependencies, allowBuilds, `${label}: pnpm 10 reads onlyBuiltDependencies`)
+    assert.match(workspaceYaml, /^minimumReleaseAge: 1440$/m, `${label}: pnpm 11's one-day release-age policy is declared`)
+    assert.match(workspaceYaml, /^minimumReleaseAgeStrict: false$/m, `${label}: pnpm 11 keeps the declared policy lenient`)
     yamls.add(workspaceYaml)
   }
 
