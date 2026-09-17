@@ -1,17 +1,23 @@
 /**
  * Where the registry build writes in a project, and whether it can write there
- * safely: the one check the build runs before it writes anything. The commands
+ * safely: the check the build runs before it writes anything, so a run that
+ * can't finish stops before its first write rather than halfway. The commands
  * of `nextspark` that write before the build runs, or start something alongside
  * it, run this same check from the core installed in the project before their
  * first step: sync:app writes app/, its state and the .gitignore first, and dev
- * starts Next next to a build that watches.
+ * and registry:watch start what runs the build.
+ *
+ * This check names what is in the way ahead of time; what keeps each write,
+ * removal and rename inside the project, whether this check saw the place or
+ * not, is safe-fs, which every one of them goes through.
  *
  * @module core/scripts/build/registry/write-places
  */
 
-import { accessSync, constants, lstatSync, readdirSync } from 'fs'
+import { accessSync, constants, existsSync, lstatSync, readdirSync } from 'fs'
 import { join } from 'path'
 import { BACKUPS_GITIGNORE, OWN_GITIGNORE_PROBLEMS, REGISTRIES_GITIGNORE, ownGitignoreState } from './post-build/own-gitignores.mjs'
+import { detectMonorepoRoot, isInstalledAsPackage } from './project-mode.mjs'
 
 /**
  * What the registry build writes under or writes, from the project root: app/,
@@ -27,6 +33,35 @@ const PLACES = [
   { path: '.nextspark/backups', kind: 'directory' },
   { path: '.nextspark/registries', kind: 'directory' },
 ]
+
+/**
+ * The directories the registry build removes old plugin route directories
+ * under, from the project root, when app/api/v1/plugin is there: a symlink
+ * among them takes the removal wherever it points.
+ */
+const PLUGIN_ROUTES = ['app/api', 'app/api/v1', 'app/api/v1/plugin']
+
+/** The fixtures the registry build writes for the active theme's Cypress tests, from the theme's directory. */
+const TEST_FIXTURES = ['tests/cypress/fixtures/entities.json', 'tests/cypress/fixtures/blocks.json']
+
+/**
+ * The active theme's Cypress fixtures the registry build writes in this project,
+ * from the project root: none when no theme is active, when the theme has no
+ * fixtures directory - the build writes them only into one that exists - or when
+ * core is a package of the monorepo, whose themes are outside the project.
+ *
+ * @param {string} projectRoot - The project root
+ * @param {string | undefined} activeTheme - NEXT_PUBLIC_ACTIVE_THEME
+ * @returns {string[]}
+ */
+export function testFixturesWritten(projectRoot, activeTheme) {
+  const theme = activeTheme?.replace(/'/g, '')
+  if (!theme) return []
+  if (!isInstalledAsPackage(projectRoot) && detectMonorepoRoot(projectRoot) !== null) return []
+  const themeDir = `contents/themes/${theme}`
+  if (!existsSync(join(projectRoot, themeDir, 'tests', 'cypress', 'fixtures'))) return []
+  return TEST_FIXTURES.map(path => `${themeDir}/${path}`)
+}
 
 /** A path's lstat from the project root; null when nothing is there, 'unreadable' when it can't be told. */
 function lstatIn(projectRoot, path) {
@@ -80,8 +115,10 @@ function reportEntriesUnder(projectRoot, dir, filesOnly, report) {
  * with it, from the project root. None means nothing stands in the way.
  *
  * A symlink: app, app/(templates) or anything in it, app/globals.css,
- * .nextspark, its backups, its registries or anything right in them, and each
- * of `written` or a directory above one. What goes through one lands wherever
+ * .nextspark, its backups, its registries or anything right in them; app/api,
+ * app/api/v1 or app/api/v1/plugin when the build looks for old plugin routes to
+ * remove there; each of the active theme's Cypress fixtures the build writes or
+ * a directory above one; and each of `written` or a directory above one. What goes through one lands wherever
  * it points, outside the project maybe, and blind: the build's listing of
  * app/(templates) skips a symlink, so what is behind one is written over. Nor
  * can git vouch for it: a symlink is no directory for a line like
@@ -104,9 +141,11 @@ function reportEntriesUnder(projectRoot, dir, filesOnly, report) {
  *
  * @param {string} projectRoot - The project root
  * @param {readonly string[]} [written] - Paths the caller writes or removes, from the project root
+ * @param {{ activeTheme?: string }} [options] - The active theme, whose fixtures the build writes; NEXT_PUBLIC_ACTIVE_THEME
+ *   when not given
  * @returns {{ path: string, problem: string }[]}
  */
-export function unsafeWritePlaces(projectRoot, written = []) {
+export function unsafeWritePlaces(projectRoot, written = [], { activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME } = {}) {
   const unsafe = []
   const report = (path, problem) => {
     if (!unsafe.some(place => place.path === path)) unsafe.push({ path, problem })
@@ -131,8 +170,19 @@ export function unsafeWritePlaces(projectRoot, written = []) {
     if (problem) report(gitignore, problem)
   }
 
+  if (existsSync(join(projectRoot, 'app', 'api', 'v1', 'plugin'))) {
+    for (const path of PLUGIN_ROUTES) {
+      const stat = lstatIn(projectRoot, path)
+      if (stat === 'unreadable') report(path, "can't be read")
+      else if (stat?.isSymbolicLink()) {
+        report(path, 'is a symlink')
+        break
+      }
+    }
+  }
+
   // The first thing in the way of each path written, from the project root
-  for (const path of written) {
+  for (const path of [...testFixturesWritten(projectRoot, activeTheme), ...written]) {
     const parts = path.split('/')
     for (let depth = 1; depth <= parts.length; depth++) {
       const along = parts.slice(0, depth).join('/')

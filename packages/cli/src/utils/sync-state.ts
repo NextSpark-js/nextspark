@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import type { ProjectFiles } from './core-write-places.js';
 
 /**
  * What the last `sync:app` on this machine saw, in `.nextspark/` - which
@@ -43,8 +44,8 @@ export function readSyncState(projectRoot: string): SyncState | null {
   }
 }
 
-export function writeSyncState(projectRoot: string, state: SyncState): void {
+export function writeSyncState(projectRoot: string, state: SyncState, files: ProjectFiles): void {
   const path = join(projectRoot, SYNC_STATE_FILE);
-  mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, `${JSON.stringify(state, null, 2)}\n`);
+  files.mkdirSync(dirname(path), { recursive: true });
+  files.writeFileSync(path, `${JSON.stringify(state, null, 2)}\n`);
 }

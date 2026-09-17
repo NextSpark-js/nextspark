@@ -119,7 +119,7 @@ async function createGitignore(projectPath: string): Promise<void> {
       const separator = currentContent.endsWith('\n') ? '' : '\n'
       await fs.appendFile(gitignorePath, `${separator}\n# NextSpark additions\n.nextspark/\n`)
     }
-    ensureGeneratedPathsIgnored(projectPath)
+    ensureGeneratedPathsIgnored(projectPath, { writeFileSync: (file, data) => fs.writeFileSync(file, data) })
   } else {
     // Create new .gitignore
     await fs.writeFile(gitignorePath, GITIGNORE_CONTENT)

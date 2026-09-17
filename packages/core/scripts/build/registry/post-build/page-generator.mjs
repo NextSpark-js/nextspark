@@ -8,7 +8,7 @@
 
 import { createRequire } from 'node:module'
 import { constants, existsSync } from 'fs'
-import { copyFile, lstat, mkdtemp, readdir, readFile, rmdir, unlink, writeFile, mkdir } from 'fs/promises'
+import { lstat, readdir, readFile } from 'fs/promises'
 import { join, dirname, relative, sep } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -16,6 +16,7 @@ import { errorWithLines, log, verbose } from '../../../utils/index.mjs'
 import { getProtectionLevel, ProtectionLevel } from '../../../../dist/config/protected-paths.js'
 import { selectTypeScriptModule, loadTypeScriptFor } from '../shared/typescript-compiler.mjs'
 import { ensureBackupsGitignore } from './own-gitignores.mjs'
+import { projectFiles } from '../../safe-fs.mjs'
 
 export { selectTypeScriptModule }
 
@@ -653,8 +654,9 @@ export async function generateTemplatePage(template, outputPath, analysis = null
     return { written: false, reason: `the app already has ${template.appPath}, so no route file is generated for this template` }
   }
 
-  await mkdir(dirname(outputPath), { recursive: true })
-  await writeFile(outputPath, routeFileContent(template, routeExports), 'utf8')
+  const files = projectFiles(rootDir)
+  await files.mkdir(dirname(outputPath), { recursive: true })
+  await files.writeFile(outputPath, routeFileContent(template, routeExports), 'utf8')
   verbose(`Generated: ${outputPath.replace(rootDir, '')}`)
   return { written: true }
 }
@@ -940,15 +942,16 @@ async function listFiles(directory) {
  * are backed up and removed: the directories left in it, and any .DS_Store.
  */
 async function removeDirectoryInTheWay(directory) {
+  const files = projectFiles(rootDir)
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const path = join(directory, entry.name)
     if (entry.isDirectory()) {
       await removeDirectoryInTheWay(path)
     } else if (entry.name === '.DS_Store') {
-      await unlink(path)
+      await files.unlink(path)
     }
   }
-  await rmdir(directory)
+  await files.rmdir(directory)
 }
 
 /** Remove the empty directories under `directory`, deepest first, keeping `directory` itself. */
@@ -960,7 +963,7 @@ async function removeEmptyDirectories(directory) {
     const path = join(directory, entry.name)
     await removeEmptyDirectories(path)
     if ((await readdir(path)).length === 0) {
-      await rmdir(path)
+      await projectFiles(rootDir).rmdir(path)
     }
   }
 }
@@ -987,7 +990,7 @@ async function diffTemplatesTree(templatesDir, files) {
 }
 
 /**
- * Make app/(templates) hold exactly `files`. The registry build owns that tree,
+ * Make app/(templates) hold exactly `contents`. The registry build owns that tree,
  * but a file about to be replaced with different content, or removed because
  * this build didn't produce it, may hold someone's edit: it is first copied into
  * a directory under .nextspark/backups/ that belongs to this run alone - the
@@ -999,23 +1002,24 @@ async function diffTemplatesTree(templatesDir, files) {
  * before anything in the tree is written; when one already there can't do
  * that, nothing in the tree is written at all.
  */
-async function reconcileTemplatesTree(templatesDir, files) {
-  const { create, replace, remove } = await diffTemplatesTree(templatesDir, files)
+async function reconcileTemplatesTree(templatesDir, contents) {
+  const { create, replace, remove } = await diffTemplatesTree(templatesDir, contents)
   if (replace.length > 0 || remove.length > 0) {
     await ensureBackupsGitignore(rootDir)
   }
   let backupDir = null
+  const files = projectFiles(rootDir)
 
   const backUp = async absolutePath => {
     if (!backupDir) {
       const backupsRoot = join(rootDir, '.nextspark', 'backups')
-      await mkdir(backupsRoot, { recursive: true })
-      backupDir = await mkdtemp(join(backupsRoot, `${new Date().toISOString().replace(/[:.]/g, '-')}-`))
+      await files.mkdir(backupsRoot, { recursive: true })
+      backupDir = await files.mkdtemp(join(backupsRoot, `${new Date().toISOString().replace(/[:.]/g, '-')}-`))
     }
     const relativePath = relative(rootDir, absolutePath)
     const backupPath = join(backupDir, relativePath)
-    await mkdir(dirname(backupPath), { recursive: true })
-    await copyFile(absolutePath, backupPath, constants.COPYFILE_EXCL)
+    await files.mkdir(dirname(backupPath), { recursive: true })
+    await files.copyFile(absolutePath, backupPath, constants.COPYFILE_EXCL)
     log(`app/(templates): backed up ${relativePath} to ${relative(rootDir, backupPath)}`, 'warning')
   }
 
@@ -1028,25 +1032,25 @@ async function reconcileTemplatesTree(templatesDir, files) {
   ))
   for (const path of inTheWay) {
     await backUp(path)
-    await unlink(path)
+    await files.unlink(path)
   }
 
   for (const path of create) {
     if (existsSync(path)) {
       await removeDirectoryInTheWay(path)
     }
-    await mkdir(dirname(path), { recursive: true })
-    await writeFile(path, files.get(path), 'utf8')
+    await files.mkdir(dirname(path), { recursive: true })
+    await files.writeFile(path, contents.get(path), 'utf8')
   }
 
   for (const path of replace) {
     await backUp(path)
-    await writeFile(path, files.get(path), 'utf8')
+    await files.writeFile(path, contents.get(path), 'utf8')
   }
 
   for (const path of remove.filter(path => !inTheWay.has(path))) {
     await backUp(path)
-    await unlink(path)
+    await files.unlink(path)
   }
 
   await removeEmptyDirectories(templatesDir)

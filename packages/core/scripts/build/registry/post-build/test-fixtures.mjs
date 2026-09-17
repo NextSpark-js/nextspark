@@ -7,17 +7,35 @@
  */
 
 import { existsSync } from 'fs'
-import { readFile, writeFile } from 'fs/promises'
+import { readFile } from 'fs/promises'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
 import { log, verbose } from '../../../utils/index.mjs'
-import { CONFIG } from '../config.mjs'
+import { CONFIG as DEFAULT_CONFIG } from '../config.mjs'
+import { projectFiles } from '../../safe-fs.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 // Path from packages/core/scripts/build/registry/post-build/ to project root (6 levels up)
 const rootDir = join(__dirname, '../../../../../..')
+
+/**
+ * The directory of the active theme's Cypress fixtures, which the build writes
+ * entities.json and blocks.json into when it exists, and the root those writes
+ * may land under: the project's, or the monorepo's, where the themes of the
+ * monorepo are.
+ *
+ * @param {object} config - Configuration object from getConfig()
+ * @returns {{ fixturesDir: string, root: string } | null} Null when no theme is active
+ */
+export function testFixturesPlace(config) {
+  if (!config.activeTheme) return null
+  return {
+    fixturesDir: join(config.themesDir, config.activeTheme, 'tests', 'cypress', 'fixtures'),
+    root: config.isMonorepoMode ? config.monorepoRoot : config.projectRoot,
+  }
+}
 
 /**
  * Extract test-relevant data from an entity config file using regex
@@ -88,7 +106,7 @@ export async function extractEntityTestData(configPath, entityDir) {
  * @param {Array} entities - All discovered entities
  * @param {Array} themes - All discovered themes
  */
-export async function generateTestEntitiesJson(entities, themes) {
+export async function generateTestEntitiesJson(entities, themes, CONFIG = DEFAULT_CONFIG) {
   const activeTheme = CONFIG.activeTheme
   if (!activeTheme) {
     verbose('No active theme set, skipping test fixtures generation')
@@ -103,7 +121,7 @@ export async function generateTestEntitiesJson(entities, themes) {
   }
 
   // Check if tests directory exists
-  const fixturesDir = join(CONFIG.themesDir, activeTheme, 'tests', 'cypress', 'fixtures')
+  const { fixturesDir, root } = testFixturesPlace(CONFIG)
   if (!existsSync(fixturesDir)) {
     verbose(`Test fixtures directory not found for theme "${activeTheme}", skipping`)
     return
@@ -178,7 +196,7 @@ export async function generateTestEntitiesJson(entities, themes) {
 
   // Write the file
   const outputPath = join(fixturesDir, 'entities.json')
-  await writeFile(outputPath, JSON.stringify(jsonContent, null, 2), 'utf8')
+  await projectFiles(root).writeFile(outputPath, JSON.stringify(jsonContent, null, 2), 'utf8')
   log(`entities.json generated for theme "${activeTheme}"`, 'success')
 }
 
@@ -187,7 +205,7 @@ export async function generateTestEntitiesJson(entities, themes) {
  * This file is used by Cypress tests for block-related testing
  * @param {Array} blocks - All discovered blocks
  */
-export async function generateTestBlocksJson(blocks) {
+export async function generateTestBlocksJson(blocks, CONFIG = DEFAULT_CONFIG) {
   const activeTheme = CONFIG.activeTheme
   if (!activeTheme) {
     verbose('No active theme set, skipping blocks.json generation')
@@ -195,7 +213,7 @@ export async function generateTestBlocksJson(blocks) {
   }
 
   // Check if tests directory exists
-  const fixturesDir = join(CONFIG.themesDir, activeTheme, 'tests', 'cypress', 'fixtures')
+  const { fixturesDir, root } = testFixturesPlace(CONFIG)
   if (!existsSync(fixturesDir)) {
     verbose(`Test fixtures directory not found for theme "${activeTheme}", skipping blocks.json`)
     return
@@ -229,6 +247,6 @@ export async function generateTestBlocksJson(blocks) {
   }
 
   const outputPath = join(fixturesDir, 'blocks.json')
-  await writeFile(outputPath, JSON.stringify(jsonContent, null, 2), 'utf8')
+  await projectFiles(root).writeFile(outputPath, JSON.stringify(jsonContent, null, 2), 'utf8')
   log(`blocks.json generated for theme "${activeTheme}" (${blocks.length} blocks)`, 'success')
 }

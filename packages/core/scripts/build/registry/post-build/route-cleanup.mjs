@@ -12,6 +12,7 @@ import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
 import { log, verbose } from '../../../utils/index.mjs'
+import { isUnsafeWrite, projectFiles } from '../../safe-fs.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -39,9 +40,7 @@ export async function cleanupOldRouteFiles(CONFIG) {
             const content = await readFile(routeFile, 'utf8')
             if (content.includes('Auto-generated Plugin Route Proxy')) {
               // Remove the entire plugin route directory
-              await import('fs/promises').then(fs =>
-                fs.rm(pluginDir, { recursive: true, force: true })
-              )
+              await projectFiles(rootDir).rm(pluginDir, { recursive: true, force: true })
               verbose(`Cleaned up old route: ${pluginDir}`)
             }
           }
@@ -49,6 +48,8 @@ export async function cleanupOldRouteFiles(CONFIG) {
       }
     }
   } catch (error) {
+    // A removal refused for going out of the project stops the build, instead of reading as a cleanup that failed
+    if (isUnsafeWrite(error)) throw error
     verbose(`Error during route cleanup: ${error.message}`)
   }
 }
@@ -80,7 +81,6 @@ export async function cleanupOrphanedTemplates(activeTemplates, CONFIG) {
 
   async function scanAndCleanDirectory(dir, relativePath = '') {
     try {
-      const { readdir, stat, unlink } = await import('fs/promises')
       const entries = await readdir(dir, { withFileTypes: true })
 
       for (const entry of entries) {
@@ -103,13 +103,14 @@ export async function cleanupOrphanedTemplates(activeTemplates, CONFIG) {
 
           // Check if this generated file has a corresponding active template
           if (!activeTemplatePaths.has(fullPath)) {
-            await unlink(fullPath)
+            await projectFiles(rootDir).unlink(fullPath)
             log(`Cleaned orphaned file: ${fullPath.replace(rootDir, '')}`, 'info')
             cleaned++
           }
         }
       }
     } catch (error) {
+      if (isUnsafeWrite(error)) throw error
       verbose(`Error scanning directory ${dir}: ${error.message}`)
     }
   }
@@ -118,12 +119,12 @@ export async function cleanupOrphanedTemplates(activeTemplates, CONFIG) {
 
   // Clean up empty directories (in reverse order to handle nested structures)
   if (dirsToCleanup.length > 0) {
-    const { rmdir } = await import('fs/promises')
     for (const dir of dirsToCleanup.reverse()) {
       try {
-        await rmdir(dir)
+        await projectFiles(rootDir).rmdir(dir)
         log(`Removed empty directory: ${dir.replace(rootDir, '')}`, 'info')
-      } catch {
+      } catch (error) {
+        if (isUnsafeWrite(error)) throw error
         // Directory might not be empty anymore, ignore
       }
     }
@@ -166,10 +167,10 @@ export async function cleanupDeletedTemplate(templateFilePath, CONFIG) {
   }
 
   try {
-    const { unlink, rmdir } = await import('fs/promises')
+    const files = projectFiles(rootDir)
 
     // Remove the generated template file
-    await unlink(appTemplatePath)
+    await files.unlink(appTemplatePath)
     log(`Removed generated template: ${appTemplatePath.replace(rootDir, '')}`, 'info')
 
     // Try to remove empty parent directories (but don't fail if they're not empty)
@@ -178,19 +179,21 @@ export async function cleanupDeletedTemplate(templateFilePath, CONFIG) {
 
     while (parentDir !== templatesDir && parentDir !== rootDir) {
       try {
-        const entries = await import('fs/promises').then(fs => fs.readdir(parentDir))
+        const entries = await readdir(parentDir)
         if (entries.length === 0) {
-          await rmdir(parentDir)
+          await files.rmdir(parentDir)
           log(`Removed empty directory: ${parentDir.replace(rootDir, '')}`, 'info')
           parentDir = dirname(parentDir)
         } else {
           break // Directory is not empty, stop cleanup
         }
-      } catch {
+      } catch (error) {
+        if (isUnsafeWrite(error)) throw error
         break // Error reading directory or removing, stop cleanup
       }
     }
   } catch (error) {
+    if (isUnsafeWrite(error)) throw error
     verbose(`Failed to cleanup template file ${appTemplatePath}: ${error.message}`)
   }
 }

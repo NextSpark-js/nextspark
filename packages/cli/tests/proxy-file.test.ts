@@ -5,7 +5,8 @@ import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { proxyFileNameFor, adaptProxySource, writeProxyFile } from '../src/utils/proxy-file.js'
+import { proxyFileNameFor, adaptProxySource } from '../src/utils/proxy-file.js'
+import { writeProxyFile } from '../src/wizard/generators/proxy-file-writer.js'
 
 const TEMPLATE = `/**\n * @nextspark-generated\n */\nexport async function proxy(request: NextRequest) {\n  return NextResponse.next()\n}\n`
 

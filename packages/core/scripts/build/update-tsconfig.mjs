@@ -15,10 +15,11 @@
  * Usage: node core/scripts/build/update-tsconfig.mjs
  */
 
-import fs from 'fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import dotenv from 'dotenv'
+import { projectFiles } from './safe-fs.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -44,14 +45,14 @@ const PLUGINS_DIR = path.join(ROOT_DIR, 'contents/plugins')
  * Get all theme directories
  */
 function getAllThemes() {
-  if (!fs.existsSync(THEMES_DIR)) {
+  if (!existsSync(THEMES_DIR)) {
     return []
   }
 
-  return fs.readdirSync(THEMES_DIR)
+  return readdirSync(THEMES_DIR)
     .filter(item => {
       const themePath = path.join(THEMES_DIR, item)
-      return fs.statSync(themePath).isDirectory()
+      return statSync(themePath).isDirectory()
     })
 }
 
@@ -59,14 +60,14 @@ function getAllThemes() {
  * Get all plugin directories
  */
 function getAllPlugins() {
-  if (!fs.existsSync(PLUGINS_DIR)) {
+  if (!existsSync(PLUGINS_DIR)) {
     return []
   }
 
-  return fs.readdirSync(PLUGINS_DIR)
+  return readdirSync(PLUGINS_DIR)
     .filter(item => {
       const pluginPath = path.join(PLUGINS_DIR, item)
-      return fs.statSync(pluginPath).isDirectory()
+      return statSync(pluginPath).isDirectory()
     })
 }
 
@@ -76,20 +77,20 @@ function getAllPlugins() {
 function getActivePlugins(activeTheme) {
   const themeConfigPath = path.join(THEMES_DIR, activeTheme, 'theme.config.ts')
 
-  if (!fs.existsSync(themeConfigPath)) {
+  if (!existsSync(themeConfigPath)) {
     // Try .js extension
     const jsConfigPath = path.join(THEMES_DIR, activeTheme, 'theme.config.js')
-    if (!fs.existsSync(jsConfigPath)) {
+    if (!existsSync(jsConfigPath)) {
       return []
     }
   }
 
   try {
-    const configPath = fs.existsSync(path.join(THEMES_DIR, activeTheme, 'theme.config.ts'))
+    const configPath = existsSync(path.join(THEMES_DIR, activeTheme, 'theme.config.ts'))
       ? path.join(THEMES_DIR, activeTheme, 'theme.config.ts')
       : path.join(THEMES_DIR, activeTheme, 'theme.config.js')
 
-    const configContent = fs.readFileSync(configPath, 'utf8')
+    const configContent = readFileSync(configPath, 'utf8')
 
     // Match plugins array: plugins: ['plugin1', 'plugin2']
     const pluginsMatch = configContent.match(/plugins:\s*\[(.*?)\]/s)
@@ -119,14 +120,14 @@ function generateTsConfig() {
   const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME
 
   // Check if base template exists
-  if (!fs.existsSync(TSCONFIG_BASE_PATH)) {
+  if (!existsSync(TSCONFIG_BASE_PATH)) {
     console.error('❌ tsconfig.base.json not found!')
     console.error('   Please ensure tsconfig.base.json exists in the project root.')
     process.exit(1)
   }
 
   // Read base template
-  const baseConfig = JSON.parse(fs.readFileSync(TSCONFIG_BASE_PATH, 'utf8'))
+  const baseConfig = JSON.parse(readFileSync(TSCONFIG_BASE_PATH, 'utf8'))
 
   // In NPM mode, add @nextspark/* aliases for registry and core resolution
   if (isNpmPackage) {
@@ -178,7 +179,7 @@ function generateTsConfig() {
     console.warn('⚠️  NEXT_PUBLIC_ACTIVE_THEME not set')
     console.warn('   Using base excludes only (all themes/plugins will be checked)')
     baseConfig.exclude = baseExcludes
-    fs.writeFileSync(TSCONFIG_PATH, JSON.stringify(baseConfig, null, 2) + '\n', 'utf8')
+    projectFiles(ROOT_DIR).writeFileSync(TSCONFIG_PATH, JSON.stringify(baseConfig, null, 2) + '\n', 'utf8')
     console.log('📝 Generated tsconfig.json (no active theme)')
     return
   }
@@ -200,7 +201,7 @@ function generateTsConfig() {
   baseConfig.exclude = [...baseExcludes, ...themeExcludes, ...pluginExcludes]
 
   // Write generated tsconfig
-  fs.writeFileSync(TSCONFIG_PATH, JSON.stringify(baseConfig, null, 2) + '\n', 'utf8')
+  projectFiles(ROOT_DIR).writeFileSync(TSCONFIG_PATH, JSON.stringify(baseConfig, null, 2) + '\n', 'utf8')
 
   console.log('📝 Generated tsconfig.json')
   console.log(`   Active theme: ${activeTheme}`)

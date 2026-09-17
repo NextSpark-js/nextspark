@@ -42,7 +42,7 @@ import { setupGit } from './git-init.js'
 // Monorepo generator
 import { generateMonorepoStructure, isMonorepoProject, getWebDir } from './monorepo-generator.js'
 import { addPackageEntries } from './workspace-yaml.js'
-import { writeProxyFile } from '../../utils/proxy-file.js'
+import { writeProxyFile } from './proxy-file-writer.js'
 import { ensureGeneratedPathsIgnored, TEMPLATES_GITIGNORE_ENTRY } from '../../utils/templates-gitignore.js'
 import { tagGeneratedFiles } from '../../utils/sync-files.js'
 import { PPR_TEMPLATE_VARIANTS } from '../../utils/sync-plan.js'
@@ -452,7 +452,7 @@ contents/themes/*/tests/jest/coverage
       await fs.appendFile(gitignorePath, entriesToAdd)
     }
     // A .gitignore with the NextSpark entries may still lack some of these
-    ensureGeneratedPathsIgnored(path.dirname(gitignorePath))
+    ensureGeneratedPathsIgnored(path.dirname(gitignorePath), { writeFileSync: (file, data) => fs.writeFileSync(file, data) })
   } else {
     await fs.writeFile(gitignorePath, entriesToAdd.trim())
   }
@@ -553,7 +553,7 @@ export async function generateProject(config: WizardConfig): Promise<void> {
     // Note: Registries are built after pnpm install in wizard/index.ts
 
     // 12. Tag the files sync:app manages, now that the wizard's changes to them are done
-    tagGeneratedFiles(path.dirname(templatesDir), process.cwd())
+    await tagGeneratedFiles(path.dirname(templatesDir), process.cwd())
   } finally {
     // Restore original directory
     if (isMonorepoProject(config)) {

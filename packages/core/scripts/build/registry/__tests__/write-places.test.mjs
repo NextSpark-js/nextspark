@@ -322,6 +322,29 @@ test("the registry build writes nothing, in the project or through it, when a pl
     ['a registries .gitignore that takes the registries back', async root => {
       await writeIn(root, REGISTRIES_GITIGNORE, '*\n!*.ts\n')
     }, `${REGISTRIES_GITIGNORE} has patterns other than *`],
+    ['app/api a symlink to a directory outside holding an old generated plugin route and another file', async (root, outside) => {
+      await writeIn(outside, 'v1/plugin/legacy/route.ts', '// Auto-generated Plugin Route Proxy\n')
+      await writeIn(outside, 'v1/plugin/legacy/other.ts', 'export const other = 1\n')
+      await symlink(outside, join(root, 'app/api'))
+    }, 'app/api is a symlink'],
+    ["the active theme's fixtures directory a symlink to one outside", async (root, outside) => {
+      await writeIn(outside, 'entities.json', '{"outside":true}\n')
+      await writeIn(outside, 'blocks.json', '{"outside":true}\n')
+      await mkdir(join(root, 'contents/themes/acme/tests/cypress'), { recursive: true })
+      await symlink(outside, join(root, 'contents/themes/acme/tests/cypress/fixtures'))
+    }, 'contents/themes/acme/tests/cypress/fixtures is a symlink'],
+    ["the active theme's entities.json a symlink to a file outside", async (root, outside) => {
+      await writeIn(outside, 'entities.json', '{"outside":true}\n')
+      await mkdir(join(root, 'contents/themes/acme/tests/cypress/fixtures'), { recursive: true })
+      await symlink(join(outside, 'entities.json'), join(root, 'contents/themes/acme/tests/cypress/fixtures/entities.json'))
+    }, 'contents/themes/acme/tests/cypress/fixtures/entities.json is a symlink'],
+    ['the active theme a symlink to a directory outside with fixtures', async (root, outside) => {
+      await writeIn(outside, 'templates/pricing/page.tsx', 'export default function Pricing() { return null }\n')
+      await writeIn(outside, 'tests/cypress/fixtures/entities.json', '{"outside":true}\n')
+      await writeIn(outside, 'tests/cypress/fixtures/blocks.json', '{"outside":true}\n')
+      await rm(join(root, 'contents/themes/acme'), { recursive: true })
+      await symlink(outside, join(root, 'contents/themes/acme'))
+    }, 'contents/themes/acme is a symlink'],
     ...(RUNS_AS_ROOT ? [] : [['a backups .gitignore that cannot be read', async root => {
       await writeIn(root, BACKUPS_GITIGNORE, '*\n')
       await chmod(join(root, BACKUPS_GITIGNORE), 0)
@@ -352,10 +375,15 @@ test("the registry build writes nothing, in the project or through it, when a pl
 
   const control = await buildableProject()
   try {
+    await writeIn(control.root, 'app/api/v1/plugin/legacy/route.ts', '// Auto-generated Plugin Route Proxy\n')
+    await mkdir(join(control.root, 'contents/themes/acme/tests/cypress/fixtures'), { recursive: true })
     const { status } = runBuild(control.root)
     if (status !== 0) wrong.push(`with nothing in the way, the build exited ${status}`)
     if (!existsSync(join(control.root, '.nextspark/registries/index.ts'))) wrong.push('with nothing in the way, the build wrote no registry')
     if (existsSync(join(control.root, 'app/(templates)/stale/page.tsx'))) wrong.push('with nothing in the way, the build left the stale file')
+    if (existsSync(join(control.root, 'app/api/v1/plugin/legacy'))) wrong.push('with nothing in the way, the build left the old generated plugin route')
+    // entities.json is written only for a theme discovery finds, which this one, with no theme.config.ts, is not
+    if (!existsSync(join(control.root, 'contents/themes/acme/tests/cypress/fixtures/blocks.json'))) wrong.push('with nothing in the way, the build wrote no blocks.json')
   } finally {
     await control.cleanup()
   }

@@ -11,11 +11,12 @@
  *   node scripts/build-theme.mjs --watch  # Build and watch for changes
  */
 
-import fs from 'fs'
+import { existsSync, readdirSync, readFileSync, statSync, watch } from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import dotenv from 'dotenv'
 import { getConfig } from './registry/config.mjs'
+import { isUnsafeWrite, projectFiles } from './safe-fs.mjs'
 import { rewriteBelowGeneratedTag } from '../utils/generated-tag.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -71,8 +72,8 @@ ${expectedImport}
 `
 
   // Check if file exists and has correct import
-  if (fs.existsSync(appGlobalsCssPath)) {
-    const currentContent = fs.readFileSync(appGlobalsCssPath, 'utf8')
+  if (existsSync(appGlobalsCssPath)) {
+    const currentContent = readFileSync(appGlobalsCssPath, 'utf8')
 
     // Extract current import (handle various formats)
     const importMatch = currentContent.match(/@import\s+["']([^"']+)["'];?/)
@@ -92,14 +93,14 @@ ${expectedImport}
         body.replace(/@import\s+["'][^"']+["'];?/, expectedImport)
       )
 
-      fs.writeFileSync(appGlobalsCssPath, updatedContent)
+      projectFiles(config.projectRoot).writeFileSync(appGlobalsCssPath, updatedContent)
       console.log(`   🔄 Updated app/globals.css import: ${relativePath}`)
       return true
     }
   }
 
   // File doesn't exist or has no import - write full template
-  fs.writeFileSync(appGlobalsCssPath, template)
+  projectFiles(config.projectRoot).writeFileSync(appGlobalsCssPath, template)
   console.log(`   ✅ Created app/globals.css with import: ${relativePath}`)
   return true
 }
@@ -108,16 +109,16 @@ ${expectedImport}
  * Recursively copy directory contents
  */
 function copyRecursive(src, dest) {
-  const stats = fs.statSync(src)
+  const stats = statSync(src)
 
   if (stats.isDirectory()) {
     // Create directory if it doesn't exist
-    if (!fs.existsSync(dest)) {
-      fs.mkdirSync(dest, { recursive: true })
+    if (!existsSync(dest)) {
+      projectFiles(rootDir).mkdirSync(dest, { recursive: true })
     }
 
     // Read directory contents
-    const entries = fs.readdirSync(src, { withFileTypes: true })
+    const entries = readdirSync(src, { withFileTypes: true })
 
     for (const entry of entries) {
       const srcPath = path.join(src, entry.name)
@@ -126,11 +127,11 @@ function copyRecursive(src, dest) {
       if (entry.isDirectory()) {
         copyRecursive(srcPath, destPath)
       } else {
-        fs.copyFileSync(srcPath, destPath)
+        projectFiles(rootDir).copyFileSync(srcPath, destPath)
       }
     }
   } else {
-    fs.copyFileSync(src, dest)
+    projectFiles(rootDir).copyFileSync(src, dest)
   }
 }
 
@@ -140,11 +141,11 @@ function copyRecursive(src, dest) {
 function countFiles(dir) {
   let count = 0
 
-  if (!fs.existsSync(dir)) {
+  if (!existsSync(dir)) {
     return 0
   }
 
-  const entries = fs.readdirSync(dir, { withFileTypes: true })
+  const entries = readdirSync(dir, { withFileTypes: true })
 
   for (const entry of entries) {
     if (entry.isDirectory()) {
@@ -165,32 +166,32 @@ function copyBlockThumbnails(themePath, activeTheme) {
   const blocksPath = path.join(themePath, 'blocks')
   const publicBlocksPath = path.join(rootDir, 'public', 'theme', 'blocks')
 
-  if (!fs.existsSync(blocksPath)) {
+  if (!existsSync(blocksPath)) {
     return 0
   }
 
   // Ensure public/theme/blocks directory exists
-  if (!fs.existsSync(publicBlocksPath)) {
-    fs.mkdirSync(publicBlocksPath, { recursive: true })
+  if (!existsSync(publicBlocksPath)) {
+    projectFiles(rootDir).mkdirSync(publicBlocksPath, { recursive: true })
   }
 
   let copiedCount = 0
-  const blockDirs = fs.readdirSync(blocksPath, { withFileTypes: true })
+  const blockDirs = readdirSync(blocksPath, { withFileTypes: true })
     .filter(dirent => dirent.isDirectory())
 
   for (const blockDir of blockDirs) {
     const thumbnailSrc = path.join(blocksPath, blockDir.name, 'thumbnail.png')
 
-    if (fs.existsSync(thumbnailSrc)) {
+    if (existsSync(thumbnailSrc)) {
       const thumbnailDestDir = path.join(publicBlocksPath, blockDir.name)
       const thumbnailDest = path.join(thumbnailDestDir, 'thumbnail.png')
 
       // Create destination directory if needed
-      if (!fs.existsSync(thumbnailDestDir)) {
-        fs.mkdirSync(thumbnailDestDir, { recursive: true })
+      if (!existsSync(thumbnailDestDir)) {
+        projectFiles(rootDir).mkdirSync(thumbnailDestDir, { recursive: true })
       }
 
-      fs.copyFileSync(thumbnailSrc, thumbnailDest)
+      projectFiles(rootDir).copyFileSync(thumbnailSrc, thumbnailDest)
       copiedCount++
     }
   }
@@ -207,11 +208,11 @@ function copyThemePublicAssets(themePath, activeTheme) {
   const publicThemePath = path.join(rootDir, 'public', 'theme')
 
   // Ensure public/theme directory exists
-  if (!fs.existsSync(publicThemePath)) {
-    fs.mkdirSync(publicThemePath, { recursive: true })
+  if (!existsSync(publicThemePath)) {
+    projectFiles(rootDir).mkdirSync(publicThemePath, { recursive: true })
   }
 
-  if (!fs.existsSync(themePublicPath)) {
+  if (!existsSync(themePublicPath)) {
     console.log(`   ℹ️  No public assets directory found for theme: ${activeTheme}`)
     return
   }
@@ -227,6 +228,7 @@ function copyThemePublicAssets(themePath, activeTheme) {
       console.log(`   ✅ Copied ${fileCount} asset(s) to public/theme/`)
     }
   } catch (error) {
+    if (isUnsafeWrite(error)) throw error
     console.error(`   ❌ Failed to copy public assets:`, error)
   }
 }
@@ -281,8 +283,8 @@ export async function buildTheme(projectRoot = null) {
   const themePath = path.join(config.contentsDir, 'themes', activeTheme)
 
   // Ensure output directory exists
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir, { recursive: true })
+  if (!existsSync(outputDir)) {
+    projectFiles(config.projectRoot).mkdirSync(outputDir, { recursive: true })
   }
 
   // Sync app/globals.css to import from the active theme
@@ -290,7 +292,7 @@ export async function buildTheme(projectRoot = null) {
   syncAppGlobalsCss(config, activeTheme)
 
   // Copy theme public assets (for all themes, including default)
-  if (fs.existsSync(themePath)) {
+  if (existsSync(themePath)) {
     copyThemePublicAssets(themePath, activeTheme)
 
     // Copy block thumbnails to public/theme/blocks/
@@ -301,22 +303,22 @@ export async function buildTheme(projectRoot = null) {
   }
 
   // Build theme (including default - all themes load their own styles)
-  if (!fs.existsSync(themePath)) {
+  if (!existsSync(themePath)) {
     console.error(`❌ Theme directory not found: ${themePath}`)
     console.log('📁 Available themes:')
 
     const themesDir = path.join(rootDir, 'contents', 'themes')
-    const availableThemes = fs.readdirSync(themesDir)
+    const availableThemes = readdirSync(themesDir)
       .filter(item => {
         const itemPath = path.join(themesDir, item)
-        return fs.statSync(itemPath).isDirectory() && item !== 'node_modules'
+        return statSync(itemPath).isDirectory() && item !== 'node_modules'
       })
 
     availableThemes.forEach(theme => console.log(`   - ${theme}`))
 
     // Fallback to empty (core styles only)
     console.log('🔄 Falling back to core styles only')
-    fs.writeFileSync(outputPath, `/* Fallback: Theme '${activeTheme}' not found, using core styles */\n`)
+    projectFiles(config.projectRoot).writeFileSync(outputPath, `/* Fallback: Theme '${activeTheme}' not found, using core styles */\n`)
     return
   }
 
@@ -330,8 +332,8 @@ export async function buildTheme(projectRoot = null) {
     let globalCSS = ''
     let componentCSS = ''
 
-    if (fs.existsSync(globalStylesPath)) {
-      globalCSS = fs.readFileSync(globalStylesPath, 'utf8')
+    if (existsSync(globalStylesPath)) {
+      globalCSS = readFileSync(globalStylesPath, 'utf8')
       console.log(`   ✅ Loaded globals.css (${globalCSS.length} chars)`)
 
       // Validate that theme has all required sections
@@ -340,8 +342,8 @@ export async function buildTheme(projectRoot = null) {
       console.warn(`   ⚠️  globals.css not found: ${globalStylesPath}`)
     }
 
-    if (fs.existsSync(componentStylesPath)) {
-      componentCSS = fs.readFileSync(componentStylesPath, 'utf8')
+    if (existsSync(componentStylesPath)) {
+      componentCSS = readFileSync(componentStylesPath, 'utf8')
       console.log(`   ✅ Loaded components.css (${componentCSS.length} chars)`)
     } else {
       console.warn(`   ⚠️  components.css not found: ${componentStylesPath}`)
@@ -364,7 +366,7 @@ ${componentCSS}
 `
 
     // Write final CSS to .next directory (for build cache)
-    fs.writeFileSync(outputPath, finalCSS)
+    projectFiles(config.projectRoot).writeFileSync(outputPath, finalCSS)
 
     console.log(`✅ Theme built successfully!`)
     console.log(`📄 Output: ${outputPath} (${finalCSS.length} chars)`)
@@ -381,7 +383,7 @@ ${componentCSS}
  * Falling back to core styles only.
  */
 `
-    fs.writeFileSync(outputPath, errorCSS)
+    projectFiles(config.projectRoot).writeFileSync(outputPath, errorCSS)
 
     throw error
   }
@@ -401,7 +403,7 @@ async function watchTheme() {
   let debounceTimer = null
 
   try {
-    const watcher = fs.watch(stylesPath, { recursive: true }, (eventType, filename) => {
+    const watcher = watch(stylesPath, { recursive: true }, (eventType, filename) => {
       if (filename && (filename.endsWith('.css'))) {
         clearTimeout(debounceTimer)
         debounceTimer = setTimeout(async () => {

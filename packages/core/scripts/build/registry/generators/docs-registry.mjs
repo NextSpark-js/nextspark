@@ -7,9 +7,8 @@
  * @module core/scripts/build/registry/generators/docs-registry
  */
 
-import fs from 'fs'
+import { existsSync, readdirSync } from 'fs'
 import path from 'path'
-import { existsSync } from 'fs'
 import { CONFIG } from '../config.mjs'
 
 // Get config values - use themesDir which correctly handles monorepo mode
@@ -59,7 +58,7 @@ function scanDocsDirectory(docsPath, source) {
   }
 
   const sections = []
-  const items = fs.readdirSync(docsPath, { withFileTypes: true })
+  const items = readdirSync(docsPath, { withFileTypes: true })
 
   for (const item of items) {
     if (!item.isDirectory()) continue
@@ -70,7 +69,7 @@ function scanDocsDirectory(docsPath, source) {
     const title = slugToTitle(slug)
 
     const pages = []
-    const files = fs.readdirSync(sectionPath)
+    const files = readdirSync(sectionPath)
 
     for (const file of files) {
       if (!file.endsWith('.md')) continue

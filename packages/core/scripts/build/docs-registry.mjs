@@ -16,10 +16,10 @@
  * Part of the registry system
  */
 
-import fs from 'fs'
+import { existsSync, readdirSync } from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { existsSync, mkdirSync } from 'fs'
+import { projectFiles } from './safe-fs.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -107,13 +107,13 @@ const PATH_PREFIX = IS_NPM_MODE ? '' : '../..'
  * @returns {Array} Array of section metadata
  */
 function scanDocsDirectory(docsPath, source) {
-  if (!fs.existsSync(docsPath)) {
+  if (!existsSync(docsPath)) {
     console.log(`   No docs found at: ${docsPath}`)
     return []
   }
 
   const sections = []
-  const items = fs.readdirSync(docsPath, { withFileTypes: true })
+  const items = readdirSync(docsPath, { withFileTypes: true })
 
   for (const item of items) {
     if (!item.isDirectory()) continue
@@ -124,7 +124,7 @@ function scanDocsDirectory(docsPath, source) {
     const title = slugToTitle(slug)
 
     const pages = []
-    const files = fs.readdirSync(sectionPath)
+    const files = readdirSync(sectionPath)
 
     for (const file of files) {
       if (!file.endsWith('.md')) continue
@@ -301,12 +301,12 @@ export function findDocPage(sectionSlug: string, pageSlug: string): DocPageMeta 
 
   // Ensure output directory exists
   if (!existsSync(OUTPUT_DIR)) {
-    mkdirSync(OUTPUT_DIR, { recursive: true })
+    projectFiles(PROJECT_ROOT).mkdirSync(OUTPUT_DIR, { recursive: true })
   }
 
   // Write registry file
   const registryPath = path.join(OUTPUT_DIR, 'docs-registry.ts')
-  fs.writeFileSync(registryPath, registryContent, 'utf-8')
+  projectFiles(PROJECT_ROOT).writeFileSync(registryPath, registryContent, 'utf-8')
 
   console.log('✅ Docs registry built successfully')
   console.log(`   Output: .nextspark/registries/docs-registry.ts`)

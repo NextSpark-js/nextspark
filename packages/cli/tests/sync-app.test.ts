@@ -13,7 +13,12 @@ import { guardConsole } from '../src/utils/shown-path.js'
 const CORE = 'node_modules/@nextsparkjs/core'
 /** Core's own check of where it writes, which sync:app loads from the core installed in the project. */
 const CORE_SOURCE = join(dirname(fileURLToPath(import.meta.url)), '../../core')
-const CORE_WRITE_CHECK = ['scripts/build/registry/write-places.mjs', 'scripts/build/registry/post-build/own-gitignores.mjs']
+const CORE_WRITE_CHECK = [
+  'scripts/build/registry/write-places.mjs',
+  'scripts/build/registry/project-mode.mjs',
+  'scripts/build/registry/post-build/own-gitignores.mjs',
+  'scripts/build/safe-fs.mjs',
+]
 const CORE_VERSION = '0.0.0-test'
 const CORE_I18N = "export { default } from '@nextsparkjs/core/i18n'\n"
 const CORE_PROXY = 'export async function proxy(request) {\n  return request\n}\n'

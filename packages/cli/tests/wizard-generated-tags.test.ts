@@ -3,11 +3,15 @@ import assert from 'node:assert/strict'
 import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import { updateGlobalsCss } from '../src/wizard/generators/config-generator.js'
 import { tagGeneratedFiles } from '../src/utils/sync-files.js'
 import { readGeneratedTag } from '../src/utils/generated-tag.js'
 import type { WizardConfig } from '../src/wizard/types.js'
+
+/** Core's guarded writes, which tagging loads from the core installed in the project. */
+const CORE_SOURCE = join(dirname(fileURLToPath(import.meta.url)), '../../core')
 
 const TEMPLATE_GLOBALS = '@import "../../../themes/default/styles/globals.css";\n\nbody { margin: 0; }\n'
 
@@ -25,13 +29,14 @@ test('a project the wizard just generated has app/globals.css tagged, importing 
   try {
     await write(core, 'package.json', JSON.stringify({ name: '@nextsparkjs/core', version: '0.0.0-test' }))
     await write(core, 'templates/app/globals.css', TEMPLATE_GLOBALS)
+    await write(core, 'scripts/build/safe-fs.mjs', await readFile(join(CORE_SOURCE, 'scripts/build/safe-fs.mjs'), 'utf8'))
     await write(root, 'package.json', '{}')
     await write(root, 'app/globals.css', TEMPLATE_GLOBALS)
     await write(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
 
     process.chdir(root)
     await updateGlobalsCss({ projectSlug: 'acme' } as WizardConfig)
-    tagGeneratedFiles(core, root)
+    await tagGeneratedFiles(core, root)
 
     const globals = await readFile(join(root, 'app/globals.css'))
     const tag = readGeneratedTag(globals)

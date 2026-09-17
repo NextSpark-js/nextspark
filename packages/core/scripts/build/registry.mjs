@@ -18,7 +18,6 @@ import '../utils/console-guard.mjs'
  * - Dynamic project root support (NPM mode)
  */
 
-import { writeFile, mkdir } from 'fs/promises'
 import { join, dirname, resolve } from 'path'
 import { fileURLToPath } from 'url'
 import { existsSync } from 'fs'
@@ -46,6 +45,7 @@ import { getBasename } from '../utils/paths.mjs'
 // Import configuration
 import { getConfig, validateEnvironment } from './registry/config.mjs'
 import { unsafeWritePlaces, unsafeWritePlacesLines } from './registry/write-places.mjs'
+import { projectFiles } from './safe-fs.mjs'
 import { ensureRegistriesGitignore } from './registry/post-build/own-gitignores.mjs'
 
 // Import discovery modules (migrated from this file)
@@ -102,8 +102,10 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, template
   log('Generating registry files...', 'build')
 
   try {
+    const files = projectFiles(CONFIG.projectRoot)
+
     // Ensure output directory exists
-    await mkdir(CONFIG.outputDir, { recursive: true })
+    await files.mkdir(CONFIG.outputDir, { recursive: true })
 
     // The registries are kept out of git by a .gitignore of their own, in place
     // before the first one is written, whatever the project's rules say
@@ -118,7 +120,7 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, template
     const iconNames = await discoverIcons(blocks, CONFIG)
 
     // Generate individual registries (pass CONFIG to all generators)
-    const files = [
+    const registries = [
       { name: 'plugin-registry.ts', content: generatePluginRegistry(plugins, CONFIG) },
       { name: 'plugin-registry.client.ts', content: generatePluginRegistryClient(plugins, CONFIG) },
       { name: 'entity-registry.ts', content: generateEntityRegistry(entities, CONFIG) },
@@ -147,9 +149,9 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, template
       { name: 'index.ts', content: generateUnifiedRegistry(plugins, entities, themes, templates, middlewares, CONFIG) }
     ]
 
-    for (const file of files) {
+    for (const file of registries) {
       const filePath = join(CONFIG.outputDir, file.name)
-      await writeFile(filePath, file.content, 'utf8')
+      await files.writeFile(filePath, file.content, 'utf8')
       log(`${file.name}`, 'success')
     }
 
@@ -301,8 +303,8 @@ export async function buildRegistries(projectRoot = null) {
     await generateMissingPages(templates, CONFIG, templateAnalysis)
 
     // Generate test fixtures for the active theme
-    await generateTestEntitiesJson(allEntities, themes)
-    await generateTestBlocksJson(blocks)
+    await generateTestEntitiesJson(allEntities, themes, CONFIG)
+    await generateTestBlocksJson(blocks, CONFIG)
 
     // Generate feature registry (features, flows, tags)
     if (CONFIG.activeTheme) {
@@ -315,7 +317,7 @@ export async function buildRegistries(projectRoot = null) {
       )
 
       // Write testing-registry.ts
-      await writeFile(featureResult.registryPath, featureResult.registryContent, 'utf8')
+      await projectFiles(CONFIG.projectRoot).writeFile(featureResult.registryPath, featureResult.registryContent, 'utf8')
       log('testing-registry.ts', 'success')
 
       // Report validation results

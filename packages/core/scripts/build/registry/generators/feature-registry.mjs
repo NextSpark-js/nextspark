@@ -13,7 +13,7 @@
  * @module core/scripts/build/registry/generators/testing-registry
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'fs'
+import { readFileSync, existsSync } from 'fs'
 import { join } from 'path'
 import { discoverTestTags, validateTags } from '../discovery/test-tags.mjs'
 

@@ -1,6 +1,7 @@
-import { constants, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { constants, existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative, sep } from 'node:path';
 import { parse } from 'dotenv';
+import { loadCoreProjectFiles, type ProjectFiles } from './core-write-places.js';
 import { getNextMajorVersion } from './next-bundler.js';
 import { nextSyncState, planSync, ROOT_TEMPLATE_FILES, type SyncAction, type SyncInput } from './sync-plan.js';
 import { readSyncState, writeSyncState } from './sync-state.js';
@@ -106,7 +107,8 @@ export function readSyncInput(coreDir: string, projectRoot: string, { env = proc
 export function applySyncPlan(
   projectRoot: string,
   actions: readonly SyncAction[],
-  backupsRoot: string
+  backupsRoot: string,
+  files: ProjectFiles
 ): { backedUp: string[]; backupDir: string | null } {
   const backedUp: string[] = [];
   let backupDir: string | null = null;
@@ -116,20 +118,20 @@ export function applySyncPlan(
 
     if (action.backup && existsSync(target)) {
       if (backupDir === null) {
-        mkdirSync(backupsRoot, { recursive: true });
-        backupDir = mkdtempSync(join(backupsRoot, `${new Date().toISOString().replace(/[:.]/g, '-')}-`));
+        files.mkdirSync(backupsRoot, { recursive: true });
+        backupDir = files.mkdtempSync(join(backupsRoot, `${new Date().toISOString().replace(/[:.]/g, '-')}-`));
       }
       const backupPath = join(backupDir, action.path);
-      mkdirSync(dirname(backupPath), { recursive: true });
-      copyFileSync(target, backupPath, constants.COPYFILE_EXCL);
+      files.mkdirSync(dirname(backupPath), { recursive: true });
+      files.copyFileSync(target, backupPath, constants.COPYFILE_EXCL);
       backedUp.push(action.path);
     }
 
     if ((action.kind === 'create' || action.kind === 'update' || action.kind === 'adopt') && action.content) {
-      mkdirSync(dirname(target), { recursive: true });
-      writeFileSync(target, action.content);
+      files.mkdirSync(dirname(target), { recursive: true });
+      files.writeFileSync(target, action.content);
     } else if (action.kind === 'delete') {
-      rmSync(target, { force: true });
+      files.rmSync(target, { force: true });
     }
   }
 
@@ -144,13 +146,14 @@ export function applySyncPlan(
  *
  * @returns How many files were tagged.
  */
-export function tagGeneratedFiles(coreDir: string, projectRoot: string): number {
+export async function tagGeneratedFiles(coreDir: string, projectRoot: string): Promise<number> {
+  const files = await loadCoreProjectFiles(coreDir, projectRoot);
   const input = readSyncInput(coreDir, projectRoot);
   const actions = planSync(input);
   const adopted = actions.filter(({ kind }) => kind === 'adopt');
 
-  applySyncPlan(projectRoot, adopted, '');
-  writeSyncState(projectRoot, nextSyncState(actions, input));
+  applySyncPlan(projectRoot, adopted, '', files);
+  writeSyncState(projectRoot, nextSyncState(actions, input), files);
 
   return adopted.length;
 }

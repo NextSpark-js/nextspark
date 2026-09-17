@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { basename, join, dirname, relative, sep } from 'node:path';
 import chalk from 'chalk';
 import ora from 'ora';
@@ -22,7 +22,7 @@ import {
   trackedTemplatesFiles,
   unignoredPaths,
 } from '../utils/templates-gitignore.js';
-import { loadCoreWritePlaces } from '../utils/core-write-places.js';
+import { loadCoreProjectFiles, loadCoreWritePlaces, type ProjectFiles } from '../utils/core-write-places.js';
 import { applySyncPlan, readCoreVersion, readSyncInput, readTree } from '../utils/sync-files.js';
 import { describeSyncPlan, nextSyncState, plannedAppFiles, planSync, type ReportLine } from '../utils/sync-plan.js';
 import { SYNC_STATE_FILE, writeSyncState } from '../utils/sync-state.js';
@@ -49,11 +49,11 @@ const REPORT_TONES: Record<ReportLine['tone'], (text: string) => string> = {
  * Copy a directory's files into another, keeping their relative paths. Nothing
  * already there is written over: a backup that can be overwritten is no backup.
  */
-function backupDirectory(source: string, target: string): void {
+function backupDirectory(source: string, target: string, files: ProjectFiles): void {
   for (const [file, content] of readTree(source)) {
     const targetPath = join(target, file);
-    mkdirSync(dirname(targetPath), { recursive: true });
-    writeFileSync(targetPath, content, { flag: 'wx' });
+    files.mkdirSync(dirname(targetPath), { recursive: true });
+    files.writeFileSync(targetPath, content, { flag: 'wx' });
   }
 }
 
@@ -156,12 +156,13 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
     // before it: the files of this sync, its state, and a .gitignore that is no
     // symlink - one that is, sync:app doesn't write through
     const core = await loadCoreWritePlaces(coreDir);
+    const files = await loadCoreProjectFiles(coreDir, projectRoot);
     const written = [
       ...writes.map(({ path }) => path),
       SYNC_STATE_FILE.split(sep).join('/'),
       ...(gitignoreIsSymlink(projectRoot) ? [] : ['.gitignore']),
     ];
-    const unsafe = core.unsafeWritePlaces(projectRoot, written);
+    const unsafe = core.unsafeWritePlaces(projectRoot, written, { activeTheme: input.activeTheme });
     if (unsafe.length > 0) {
       spinner.fail("Sync not started: sync:app can't write safely under these paths");
       console.error(chalk.red('\n  sync:app and the registry build write under these paths:'));
@@ -252,7 +253,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
     }
 
     // The .gitignore lines come before anything they keep out is written
-    const addedGitignoreEntries = options.dryRun ? [] : ensureGeneratedPathsIgnored(projectRoot);
+    const addedGitignoreEntries = options.dryRun ? [] : ensureGeneratedPathsIgnored(projectRoot, files);
 
     const addsBackupsGitignore = backupsGitignore === 'missing';
     if (addsBackupsGitignore && !options.dryRun) {
@@ -262,16 +263,16 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
     let appBackupDir: string | null = null;
     if (options.backup && !options.dryRun) {
       spinner.start('Creating backup...');
-      appBackupDir = basename(mkdtempSync(join(projectRoot, appBackupPrefix(coreVersion))));
-      backupDirectory(appDir, join(projectRoot, appBackupDir));
+      appBackupDir = basename(files.mkdtempSync(join(projectRoot, appBackupPrefix(coreVersion))));
+      backupDirectory(appDir, join(projectRoot, appBackupDir), files);
       spinner.succeed(`Backup created: ${appBackupDir}`);
     }
 
     let backedUp: string[] = [];
     let replacedFilesBackupDir: string | null = null;
     if (!options.dryRun) {
-      ({ backedUp, backupDir: replacedFilesBackupDir } = applySyncPlan(projectRoot, actions, join(projectRoot, '.nextspark', 'backups')));
-      writeSyncState(projectRoot, nextSyncState(actions, input));
+      ({ backedUp, backupDir: replacedFilesBackupDir } = applySyncPlan(projectRoot, actions, join(projectRoot, '.nextspark', 'backups'), files));
+      writeSyncState(projectRoot, nextSyncState(actions, input), files);
     }
 
     for (const line of describeSyncPlan(actions, { dryRun: options.dryRun, verbose: options.verbose })) {

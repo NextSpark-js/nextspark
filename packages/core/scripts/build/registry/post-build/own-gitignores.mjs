@@ -17,8 +17,9 @@
  */
 
 import { lstatSync, readFileSync } from 'fs'
-import { lstat, mkdir, writeFile } from 'fs/promises'
+import { lstat } from 'fs/promises'
 import { join, posix } from 'path'
+import { projectFiles } from '../../safe-fs.mjs'
 
 export const BACKUPS_GITIGNORE = '.nextspark/backups/.gitignore'
 
@@ -144,9 +145,10 @@ async function ensureOwnGitignore(rootDir, path, refusal) {
   if (blocker) throw new Error(`${refusal}: ${blocker}`)
   if (ownGitignoreState(rootDir, path) === 'in place') return false
 
-  await mkdir(join(rootDir, posix.dirname(path)), { recursive: true })
+  const files = projectFiles(rootDir)
+  await files.mkdir(join(rootDir, posix.dirname(path)), { recursive: true })
   try {
-    await writeFile(join(rootDir, path), CONTENTS[path], { flag: 'wx' })
+    await files.writeFile(join(rootDir, path), CONTENTS[path], { flag: 'wx' })
   } catch (error) {
     if (error.code !== 'EEXIST') throw error
     // Another run wrote one in the meantime, which counts only if it is one that works

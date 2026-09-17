@@ -102,6 +102,17 @@ const CASES: [string, (root: string, outside: string) => Promise<void>, string][
     await rm(join(root, 'app/(templates)'), { recursive: true })
     await symlink(outside, join(root, 'app/(templates)'))
   }, 'app/(templates) is a symlink'],
+  ['app/api a symlink to a directory outside holding an old generated plugin route and another file', async (root, outside) => {
+    await writeIn(outside, 'v1/plugin/legacy/route.ts', '// Auto-generated Plugin Route Proxy\n')
+    await writeIn(outside, 'v1/plugin/legacy/other.ts', 'export const other = 1\n')
+    await symlink(outside, join(root, 'app/api'))
+  }, 'app/api is a symlink'],
+  ["the active theme's fixtures directory a symlink to one outside", async (root, outside) => {
+    await writeIn(outside, 'entities.json', '{"outside":true}\n')
+    await writeIn(outside, 'blocks.json', '{"outside":true}\n')
+    await mkdir(join(root, 'contents/themes/acme/tests/cypress'), { recursive: true })
+    await symlink(outside, join(root, 'contents/themes/acme/tests/cypress/fixtures'))
+  }, 'contents/themes/acme/tests/cypress/fixtures is a symlink'],
   ['a backups .gitignore that takes the backups back', async (root) => {
     await writeIn(root, BACKUPS_GITIGNORE, '*\n!*/\n')
   }, `${BACKUPS_GITIGNORE} has patterns other than *`],

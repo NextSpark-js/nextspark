@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, lstatSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   asBytes,
@@ -10,6 +10,7 @@ import {
   type IgnorePattern,
   type IgnoreSources,
 } from './gitignore-rules.js';
+import type { ProjectFiles } from './core-write-places.js';
 
 /**
  * The line that keeps `app/(templates)` out of git. The registry build rewrites
@@ -263,18 +264,19 @@ export function gitignoreIsSymlink(projectRoot: string): boolean {
 
 /**
  * Add the lines the project's .gitignore lacks for sync:app's output, creating
- * the file if there is none: those `planGitignore` adds. A .gitignore that is a
- * symlink is left as it is.
+ * the file if there is none: those `planGitignore` adds, written with `files` -
+ * sync:app's are core's guarded calls. A .gitignore that is a symlink is left as
+ * it is.
  *
  * @returns The lines added.
  */
-export function ensureGeneratedPathsIgnored(projectRoot: string): string[] {
+export function ensureGeneratedPathsIgnored(projectRoot: string, files: Pick<ProjectFiles, 'writeFileSync'>): string[] {
   const { add } = planGitignore(projectRoot);
   if (add.length === 0 || gitignoreIsSymlink(projectRoot)) return [];
 
   const gitignorePath = join(projectRoot, '.gitignore');
   const current = existsSync(gitignorePath) ? readFileSync(gitignorePath, 'utf-8') : '';
-  writeFileSync(gitignorePath, withEntries(current, add));
+  files.writeFileSync(gitignorePath, withEntries(current, add));
   return add;
 }
 
