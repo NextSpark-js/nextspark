@@ -164,39 +164,33 @@ export const APP_CONFIG_OVERRIDES = {
    * NOTE: Plugin docs are NOT in the registry - they are for developer reference only (IDE/LLM).
    */
   docs: {
-    /** Enable/disable documentation system */
+    /** No component, route, or proxy currently reads this setting. */
     enabled: true,
 
-    /** Serve /docs without a session; false sends visitors to login first */
+    /** The proxy serves /docs without a session unless this is false. */
     publicAccess: true,
 
-    /** Enable search functionality in documentation */
+    /** No component currently reads this setting. */
     searchEnabled: true,
 
-    /** Show breadcrumbs in documentation pages */
+    /** No component currently reads this setting. */
     breadcrumbs: true,
 
-    /**
-     * Public Documentation Sidebar
-     * Sidebar settings of the docs at /docs (who can read them is publicAccess)
-     */
+    /** Sidebar settings for /docs. */
     public: {
-      /** false renders no /docs sidebar */
+      /** false prevents DocsSidebar from rendering. */
       enabled: true,
-      /** Expand sections by default on page load */
+      /** No component currently reads this setting. */
       open: true,
-      /** Custom label displayed in sidebar */
+      /** DocsSidebar renders this as its heading. */
       label: "Documentation",
     },
 
-    /**
-     * Superadmin Documentation Configuration
-     * Controls admin documentation at /superadmin/docs routes
-     */
+    /** No component or route currently reads these /superadmin/docs settings. */
     superadmin: {
-      /** Show/hide superadmin documentation */
+      /** No component currently reads this setting. */
       enabled: true,
-      /** Custom label displayed in sidebar */
+      /** No component currently reads this setting. */
       label: "Admin Docs",
     },
   },

@@ -1,10 +1,12 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
 
 const CORE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
+const REPO_ROOT = path.resolve(CORE, '../..')
 const ENTRY = path.join(CORE, 'tests/node/docs-config-types.fixture.ts')
 
 function diagnosticsFor(source: string): readonly ts.Diagnostic[] {
@@ -78,4 +80,24 @@ void invalid
     getCurrentDirectory: () => CORE,
     getNewLine: () => '\n',
   }))
+})
+
+test("the default theme's app.config.ts docs comments do not attribute effects to settings nothing reads", () => {
+  const file = 'themes/default/config/app.config.ts'
+  const content = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8')
+  const blockStart = content.indexOf('  docs: {')
+  assert.ok(blockStart >= 0, `${file} has no top-level docs: {...} block`)
+  const blockEnd = content.indexOf('\n  },\n', blockStart)
+  assert.ok(blockEnd >= 0, `${file}'s docs: {...} block never closes at the top level`)
+  const docsBlock = content.slice(blockStart, blockEnd)
+
+  for (const stale of [
+    /Enable\/disable documentation system/i,
+    /Enable search functionality/i,
+    /Show breadcrumbs/i,
+    /Expand sections by default/i,
+    /Show\/hide superadmin documentation/i,
+  ]) {
+    assert.doesNotMatch(docsBlock, stale, `${file} still attributes an effect to a docs setting nothing reads: ${stale}`)
+  }
 })
