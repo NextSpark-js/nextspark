@@ -213,6 +213,31 @@ build_package() {
     fi
 }
 
+# `templates/app` is generated and gitignored. Build verification can run
+# scripts that exercise it, so check it again at the packaging boundary rather
+# than relying on an earlier sync or on the caller's pre-existing checkout.
+ensure_template_app() {
+    local pkg_path="$1"
+    local pkg_name="$2"
+    shift 2
+    local template_app="$pkg_path/templates/app"
+
+    if [ -d "$template_app" ] && find "$template_app" -mindepth 1 -print -quit 2>/dev/null | grep -q .; then
+        echo -e "  ${GREEN}[OK]${NC} $pkg_name templates/app is populated"
+        return 0
+    fi
+
+    echo -e "  ${YELLOW}[WARN]${NC} $pkg_name templates/app is empty; synchronizing before packing"
+    cd "$REPO_ROOT"
+    if "$@" > /dev/null 2>&1 && [ -d "$template_app" ] && find "$template_app" -mindepth 1 -print -quit 2>/dev/null | grep -q .; then
+        echo -e "    ${GREEN}[OK]${NC} $pkg_name templates synced"
+        return 0
+    fi
+
+    echo -e "    ${RED}[FAIL]${NC} $pkg_name templates/app is empty after synchronization; refusing to create an incomplete tarball"
+    return 1
+}
+
 # Pack a package
 pack_package() {
     local pkg_path="$1"
@@ -404,6 +429,18 @@ else
     echo -e "${YELLOW}Skipping build step (--skip-build)${NC}"
     echo ""
 fi
+
+# Run this immediately before archiving, including with --skip-build. This is
+# deliberately independent of the earlier build-time sync and verification
+# order: an empty generated directory must never produce a publishable core or
+# mobile tarball.
+if [[ " ${FINAL_PACKAGES[*]} " =~ " $REPO_ROOT/packages/core " ]]; then
+    ensure_template_app "$REPO_ROOT/packages/core" "core" pnpm sync:templates --sync || exit 1
+fi
+if [[ " ${FINAL_PACKAGES[*]} " =~ " $REPO_ROOT/packages/mobile " ]]; then
+    ensure_template_app "$REPO_ROOT/packages/mobile" "mobile" pnpm sync:mobile-templates --sync || exit 1
+fi
+echo ""
 
 # Pack packages
 echo -e "${CYAN}Packing packages...${NC}"

@@ -9,9 +9,10 @@
  * template. This script:
  *
  *   1. runs every node:test suite next to it, one step each: this script's
- *      own process-group teardown and entrypoint guard, and the check that
+ *      own process-group teardown and entrypoint guard, the check that
  *      sync:all-templates copies apps/dev/app and apps/mobile/app into the
- *      generated templates,
+ *      generated templates, and the packaging-boundary regression that
+ *      repopulates an empty core template before archiving,
  *   2. compares apps/mobile/src against packages/mobile/templates/src file
  *      by file, so the copy cannot drift from the package silently,
  *   3. installs apps/mobile on its own (it is outside the pnpm workspace),
@@ -681,6 +682,7 @@ async function main() {
     ['This script\'s process-group teardown (node:test)', nodeTest('mobile-verify.test.mjs')],
     ['This script\'s entrypoint guard (node:test)', nodeTest('mobile-verify-guard.test.mjs')],
     ['sync:all-templates fills both generated template directories (node:test)', nodeTest('sync-all-templates.test.mjs')],
+    ['pack.sh restores an empty core template before archiving (node:test)', nodeTest('pack-templates.test.mjs')],
     ['apps/mobile/src matches packages/mobile/templates/src', verifyMobileSrcMatchesTemplate],
     ['Install apps/mobile (isolated, frozen lockfile)', () =>
       exec('pnpm', ['install', '--ignore-workspace', '--frozen-lockfile'], MOBILE_APP_DIR)],
