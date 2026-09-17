@@ -1,10 +1,12 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
 import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
-import { buildFailureLines, captureOutput, registryBuildBlocker, runRegistryBuild, templatesTreeLines } from '../src/utils/registry-build.js'
+import { buildFailureLines, captureOutput, registryBuildBlocker, runRegistryBuild, templatesTreeLines, type CapturedOutput } from '../src/utils/registry-build.js'
 
 /** A project root and a fake core whose registry build prints its arguments and exits with `exitCode`. */
 async function projectWithCore(exitCode: number) {
@@ -148,71 +150,228 @@ test('output that fits under the limit is repeated whole, with nothing marking a
   assert.deepEqual(buildFailureLines(output), ['Discovering template overrides...', 'Error: no default export'])
 })
 
-test('a cause captureOutput keeps in its head survives megabytes of unrelated filler, with an exact omitted count', () => {
-  const causeLine = '❌ cause line'
-  const fillerLine = 'x'.repeat(10)
-  const causeBytes = Buffer.byteLength(causeLine, 'utf8')
-  const fillerBytes = Buffer.byteLength(fillerLine, 'utf8')
-  const fillerCount = 50
+/** Feed `text` to `output` over `stream`, a byte per chunk, so every character of more than one byte arrives split. */
+function writeByteByByte(output: CapturedOutput, stream: 'stdout' | 'stderr', text: string): void {
+  for (const byte of Buffer.from(text, 'utf8')) output.write(stream, Buffer.from([byte]))
+}
 
-  const out = captureOutput({ head: causeBytes, tail: fillerBytes * 2, marked: 1024 })
-  out.append(`${causeLine}\n`)
-  for (let index = 0; index < fillerCount; index++) out.append(`${fillerLine}\n`)
+/** Feed each of `lines` to `output` over `stream`, each with its line break, as a chunk of its own. */
+function writeLines(output: CapturedOutput, stream: 'stdout' | 'stderr', lines: string[]): void {
+  for (const line of lines) output.write(stream, Buffer.from(`${line}\n`, 'utf8'))
+}
 
-  const lines = out.value.split('\n')
-  assert.equal(lines[0], causeLine, `the cause must lead what is shown:\n${out.value}`)
-  assert.equal(lines[1], `... ${fillerCount - 2} line(s), ${(fillerCount - 2) * fillerBytes} byte(s) omitted`)
-  assert.deepEqual(lines.slice(2), [fillerLine, fillerLine])
+const bytesOf = (text: string) => Buffer.byteLength(text, 'utf8')
+
+test('a cause printed once the head is full stays ahead of the thousands of warnings that follow it', () => {
+  const cause = '❌ Build failed: contents/themes/acme/templates/shop/page.tsx has no default export'
+  const warning = '⚠️ app/(templates): backed up app/(templates)/shop/page.tsx to .nextspark/backups/t0/app/(templates)/shop/page.tsx'
+
+  const output = captureOutput({ head: { lines: 2, bytes: 1024 }, tail: { lines: 2, bytes: 1024 } })
+  writeLines(output, 'stdout', ['progress 0', 'progress 1', 'progress 2', cause])
+  writeLines(output, 'stdout', Array.from({ length: 2000 }, () => warning))
+  writeLines(output, 'stdout', ['done'])
+
+  assert.deepEqual(output.failureLines, [
+    'progress 0',
+    'progress 1',
+    '... 1 line(s), 10 byte(s) omitted',
+    cause,
+    `... 1999 line(s), ${1999 * bytesOf(warning)} byte(s) omitted`,
+    warning,
+    'done',
+  ])
 })
 
-test('a cause captureOutput only ever sees in the middle of the output still survives, via the marked pool rather than the head', () => {
-  const fillerLine = 'x'.repeat(10)
-  const causeLine = '⚠️ Plugin analytics failed to load, skipping it'
-  const fillerBytes = Buffer.byteLength(fillerLine, 'utf8')
+test('the first error lines are the ones kept, and the ones after them are counted', () => {
+  const errors = Array.from({ length: 5 }, (_, index) => `❌ Failed to parse block "block-${index}"`)
 
-  const out = captureOutput({ head: fillerBytes * 2, tail: fillerBytes * 2, marked: 1024 })
-  for (let index = 0; index < 20; index++) out.append(`${fillerLine}\n`)
-  out.append(`${causeLine}\n`)
-  for (let index = 0; index < 20; index++) out.append(`${fillerLine}\n`)
+  const output = captureOutput({ head: { lines: 0, bytes: 0 }, tail: { lines: 1, bytes: 1024 }, errors: { lines: 3, bytes: 1024 } })
+  writeLines(output, 'stdout', [...errors, 'done'])
 
-  assert.ok(out.value.includes(causeLine), `a cause buried in the middle must survive:\n${out.value}`)
-  assert.deepEqual(out.markedLines, [causeLine])
+  assert.deepEqual(output.failureLines, [
+    ...errors.slice(0, 3),
+    `... 2 line(s), ${bytesOf(errors[3]) + bytesOf(errors[4])} byte(s) omitted`,
+    'done',
+    `... and 2 more error line(s), ${bytesOf(errors[3]) + bytesOf(errors[4])} byte(s), after the first 3`,
+  ])
 })
 
-test('warnings past the marked pool\'s own cap are dropped oldest-first, with an exact count', () => {
-  const line = (index: number) => `⚠️ w${index}`
-  const lineBytes = Buffer.byteLength(line(0), 'utf8')
+test('an error heading keeps the stack lines under it on its stream, up to the cap for each error', () => {
+  const frames = Array.from({ length: 12 }, (_, index) => `    at step${index} (file:///core/scripts/build/registry.mjs:${index + 10}:5)`)
 
-  const out = captureOutput({ marked: lineBytes * 2 })
-  for (let index = 0; index < 5; index++) out.append(`${line(index)}\n`)
+  const output = captureOutput({ head: { lines: 0, bytes: 0 }, tail: { lines: 1, bytes: 1024 } })
+  writeLines(output, 'stderr', ['Error: boom'])
+  writeLines(output, 'stdout', ['progress'])
+  writeLines(output, 'stderr', frames)
+  writeLines(output, 'stderr', ['not a frame', '    at later (file:///core/x.mjs:1:1)'])
+  writeLines(output, 'stdout', ['done'])
 
-  assert.deepEqual(out.markedLines, [line(3), line(4)])
-  assert.equal(out.droppedMarkedLines, 3)
-  assert.equal(out.droppedMarkedBytes, lineBytes * 3)
+  const later = bytesOf('not a frame') + bytesOf('    at later (file:///core/x.mjs:1:1)')
+  assert.deepEqual(output.failureLines, [
+    'Error: boom',
+    '... 1 line(s), 8 byte(s) omitted',
+    ...frames.slice(0, 10),
+    `... 4 line(s), ${bytesOf(frames[10]) + bytesOf(frames[11]) + later} byte(s) omitted`,
+    'done',
+  ])
 })
 
-test('captureOutput counts real UTF-8 bytes, not UTF-16 units, and never splits a code point', () => {
-  const out = captureOutput({ line: 6 })
-  out.append('ab\u{1F600}cd\n')
+test('a character split across chunks arrives whole, with the bytes of both streams interleaved', () => {
+  const warning = '⚠️ café 😀'
+  const error = 'Error: café 😀'
 
-  assert.equal(Buffer.byteLength('ab\u{1F600}cd', 'utf8'), 8, 'the fixture is 8 UTF-8 bytes, not 6 UTF-16 units')
-  assert.equal(out.value, 'ab\u{1F600}… (2 more byte(s) on this line)')
+  const output = captureOutput()
+  const stdout = Buffer.from(`${warning}\n`, 'utf8')
+  const stderr = Buffer.from(`${error}\n`, 'utf8')
+  for (let index = 0; index < Math.max(stdout.length, stderr.length); index++) {
+    if (index < stdout.length) output.write('stdout', stdout.subarray(index, index + 1))
+    if (index < stderr.length) output.write('stderr', stderr.subarray(index, index + 1))
+  }
+
+  assert.deepEqual(output.successLines, [warning, error])
+  assert.deepEqual(output.failureLines, [warning, error])
 })
 
-test('captureOutput never splits a surrogate pair, even one a chunk boundary falls inside', () => {
-  const out = captureOutput()
-  out.append('a\uD83D')
-  out.append('\uDE00b\n')
+test('é, 😀 and ⚠️ written a byte at a time on one stream arrive whole', () => {
+  const output = captureOutput()
+  writeByteByByte(output, 'stdout', '⚠️ café 😀\nError: café 😀\n')
 
-  assert.equal(out.value, 'a\u{1F600}b')
-  assert.doesNotMatch(out.value, /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/)
+  assert.deepEqual(output.successLines, ['⚠️ café 😀', 'Error: café 😀'])
 })
 
-test('captureOutput truncates a line that is all multi-byte characters by whole code points, with an exact drop count', () => {
-  const nine = 'é'.repeat(9)
-  const out = captureOutput({ line: 4 })
-  out.append(`${nine}\n`)
+test('a line with no line break keeps only its start, and counts every byte it printed', () => {
+  const output = captureOutput({ line: 8 })
+  for (let index = 0; index < 100; index++) output.write('stdout', Buffer.from('é'.repeat(1000), 'utf8'))
 
-  assert.equal(Buffer.byteLength(nine, 'utf8'), 18)
-  assert.equal(out.value, 'éé… (14 more byte(s) on this line)')
+  assert.deepEqual(output.failureLines, ['éééé… (199992 more byte(s) on this line)'])
+})
+
+test('a line cut at a character of several bytes keeps whole characters, and counts the rest in bytes', () => {
+  const output = captureOutput({ line: 6 })
+  writeByteByByte(output, 'stdout', 'ab😀cd\n')
+
+  assert.deepEqual(output.failureLines, ['ab😀… (2 more byte(s) on this line)'])
+})
+
+test('empty lines count against the line caps, so thousands of them leave only what the caps hold', () => {
+  const output = captureOutput({ head: { lines: 2, bytes: 1024 }, tail: { lines: 3, bytes: 1024 } })
+  output.write('stdout', Buffer.from('\n'.repeat(100_000)))
+
+  assert.deepEqual(output.failureLines, ['', '', '... 99995 line(s), 0 byte(s) omitted', '', '', ''])
+})
+
+test('omitted and cut counts are of the bytes printed, never of the text kept or shown', () => {
+  const output = captureOutput({ line: 4, head: { lines: 1, bytes: 1024 }, tail: { lines: 1, bytes: 1024 } })
+  writeLines(output, 'stdout', ['abc', 'abcdef', 'ééé', 'wxyz12'])
+
+  assert.deepEqual(output.failureLines, ['abc', '... 2 line(s), 12 byte(s) omitted', 'wxyz… (2 more byte(s) on this line)'])
+})
+
+test('only the marker a line starts with flags it: 🏗️ progress is not a warning, and a quoted or colored marker is', () => {
+  const notFlagged = [
+    '🏗️  Building Unified Registry System',
+    '✅ testing-registry.ts',
+    '📝 Processed 3 files ⚠️ none skipped',
+    'Blocks: 0 ❌',
+    'ErrorBoundary: registered',
+    'Build failed without a marker',
+  ]
+  const flagged = [
+    '\u26A0 app/(templates): a warning with no variation selector',
+    '   ⚠️  Coverage: flow checkout has no tests',
+    '\x1b[33m⚠️ a colored warning\x1b[39m',
+    '"❌ Build failed: app/(templates)/a\\u000ab/page.tsx"',
+    'TypeError [ERR_INVALID_ARG_TYPE]: The "path" argument must be of type string',
+  ]
+
+  const output = captureOutput()
+  writeLines(output, 'stdout', [...notFlagged, ...flagged])
+
+  assert.deepEqual(output.successLines, flagged)
+})
+
+test('warnings keep the first ones under either cap, and count the rest with their bytes', () => {
+  const warnings = Array.from({ length: 5 }, (_, index) => `⚠️ w${index}`)
+  const rest = bytesOf(warnings[2]) * 3
+
+  const byLines = captureOutput({ warnings: { lines: 2, bytes: 1024 } })
+  writeLines(byLines, 'stdout', warnings)
+  assert.deepEqual(byLines.successLines, [warnings[0], warnings[1], `... and 3 more warning line(s), ${rest} byte(s)`])
+
+  const byBytes = captureOutput({ warnings: { lines: 100, bytes: bytesOf(warnings[0]) * 2 } })
+  writeLines(byBytes, 'stdout', warnings)
+  assert.deepEqual(byBytes.successLines, [warnings[0], warnings[1], `... and 3 more warning line(s), ${rest} byte(s)`])
+})
+
+test('bytes that are not UTF-8 count as the bytes printed, and show as U+FFFD', () => {
+  const gap = captureOutput({ head: { lines: 1, bytes: 1024 }, tail: { lines: 1, bytes: 1024 } })
+  gap.write('stdout', Buffer.from('first\n', 'utf8'))
+  gap.write('stdout', Buffer.from([0xe2, 0x0a]))
+  gap.write('stdout', Buffer.from('last\n', 'utf8'))
+  assert.deepEqual(gap.failureLines, ['first', '... 1 line(s), 1 byte(s) omitted', 'last'])
+
+  const shown = captureOutput()
+  shown.write('stdout', Buffer.from([0x61, 0xff, 0x62, 0x0a]))
+  assert.deepEqual(shown.failureLines, ['a\ufffdb'])
+
+  const cut = captureOutput({ line: 4 })
+  cut.write('stdout', Buffer.from([0x61, 0x61, 0x61, 0xf0, 0x9f, 0x62, 0x63, 0x64, 0x0a]))
+  assert.deepEqual(cut.failureLines, ['aaa… (5 more byte(s) on this line)'])
+})
+
+const PKG_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
+
+/**
+ * A line is split out of the chunk it arrived in, so its text has to be a
+ * string of its own: a slice of a decoded chunk keeps the whole chunk in
+ * memory. Chunks of 12 MB, each starting with an error line that is kept,
+ * would run a 64 MB heap out if each kept line held on to its chunk.
+ */
+test('a kept line does not hold on to the chunk it arrived in', { skip: process.platform === 'win32', timeout: 60_000 }, async () => {
+  const root = await mkdtemp(join(tmpdir(), 'nextspark-capture-memory-'))
+  try {
+    const script = join(root, 'capture.mts')
+    await writeFile(script, `import { captureOutput } from ${JSON.stringify(pathToFileURL(join(PKG_ROOT, 'src/utils/registry-build.ts')).href)}
+const output = captureOutput()
+for (let index = 0; index < 8; index++) {
+  const chunk = Buffer.alloc(12 * 1024 * 1024, 0x78)
+  Buffer.from('❌ Failed to parse block ' + String(index).padEnd(4000, 'e') + '\\n').copy(chunk, 0)
+  chunk[chunk.length - 1] = 0x0a
+  output.write('stdout', chunk)
+}
+console.log(output.successLines.length)
+`)
+    const run = spawnSync(process.execPath, ['--max-old-space-size=64', '--import', 'tsx', script], { cwd: PKG_ROOT, encoding: 'utf-8', timeout: 50_000, killSignal: 'SIGKILL' })
+    assert.equal(run.signal, null, `must finish on its own:\n${run.stderr.slice(0, 2000)}`)
+    assert.ok(!/FATAL ERROR/.test(run.stderr), `must not run out of heap:\n${run.stderr.slice(0, 2000)}`)
+    assert.equal(run.status, 0, run.stderr.slice(0, 2000))
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('the last lines hold no more than either of their caps', () => {
+  const noLines = captureOutput({ head: { lines: 0, bytes: 0 }, tail: { lines: 0, bytes: 1024 } })
+  writeLines(noLines, 'stdout', ['ab'])
+  assert.deepEqual(noLines.failureLines, ['... 1 line(s), 2 byte(s) omitted'])
+
+  const fewBytes = captureOutput({ head: { lines: 0, bytes: 0 }, tail: { lines: 10, bytes: 3 } })
+  writeLines(fewBytes, 'stdout', ['ab', 'cd'])
+  assert.deepEqual(fewBytes.failureLines, ['... 1 line(s), 2 byte(s) omitted', 'cd'])
+})
+
+test('a quoted line is read past its quote only when it holds an escape, as core\'s console guard writes one', () => {
+  const output = captureOutput()
+  writeLines(output, 'stdout', ['"❌ a JSON string"', '"⚠️ another JSON string"', '"⚠️ backed up a\\u2028b.tsx"'])
+
+  assert.deepEqual(output.successLines, ['"⚠️ backed up a\\u2028b.tsx"'])
+})
+
+test('lines are ordered by when they end, so a line one stream is partway through comes after one the other stream ends meanwhile', () => {
+  const output = captureOutput()
+  output.write('stdout', Buffer.from('first-start', 'utf8'))
+  output.write('stderr', Buffer.from('second-whole\n', 'utf8'))
+  output.write('stdout', Buffer.from('-first-end\n', 'utf8'))
+
+  assert.deepEqual(output.failureLines, ['second-whole', 'first-start-first-end'])
 })

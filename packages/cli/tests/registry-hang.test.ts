@@ -2,72 +2,95 @@ import { test, before } from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { execFileSync, spawnSync } from 'node:child_process'
+import { join } from 'node:path'
+import { spawnSync } from 'node:child_process'
+
+import { buildCli } from './built-cli.js'
 
 /**
  * `build` and `registry:build` both read a registry build child's stdout and
  * stderr as it arrives, so neither hangs waiting on a `drain` the child never
  * gets, and both read the two streams together, in the order they arrive, so
  * a cause core prints only to stdout still reaches the user. These tests run
- * the built CLI as a real subprocess against a child that writes several MB
- * before it fails, bounded by `spawnSync`'s own `timeout`, so a hang here
- * fails the test instead of the test run.
+ * the built CLI as a real subprocess against a stand-in for core, bounded by
+ * `spawnSync`'s own `timeout`, so a hang here fails the test instead of the
+ * test run.
  */
 
-const PKG_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const CLI_ENTRY = join(PKG_ROOT, 'dist/cli.js')
+let CLI_ENTRY: string
 
 before(() => {
-  execFileSync('pnpm', ['run', 'build'], { cwd: PKG_ROOT, stdio: 'ignore' })
+  CLI_ENTRY = buildCli()
 })
 
 const CAUSE = '❌ Build failed: could not read contents/themes/acme/templates/shop/page.tsx'
+const WARNING = '⚠️ app/(templates): backed up app/(templates)/shop/page.tsx to .nextspark/backups/t0/app/(templates)/shop/page.tsx'
 
 /**
- * A project with a stand-in for core whose registry build writes `megabytes`
- * MB to stdout, waiting on `drain` after any write the OS pipe doesn't take
- * immediately, then reports CAUSE and exits with `code`. core itself never
- * checks a write's return value or waits on `drain` - it just calls
- * console.log/console.error - so this is stricter than core, not a copy of
- * it: without waiting, `process.exit()` could race ahead of the OS pipe and
- * truncate whatever it hadn't taken yet, losing CAUSE and making this
- * fixture unreliable. Waiting for `drain` is also what lets an undrained pipe
- * on the reader's side hang the writer for real.
+ * What the stand-in registry build has in scope. core itself never checks a
+ * write's return value or waits on `drain` - it just calls
+ * console.log/console.error - so `writeAll` is stricter than core, not a copy
+ * of it: without waiting, `process.exit()` could race ahead of the OS pipe and
+ * truncate whatever it hadn't taken yet, losing the very line a test looks
+ * for. Waiting for `drain` is also what lets an undrained pipe on the reader's
+ * side hang the writer for real.
  */
-async function projectWithBigBuild(megabytes: number, code: number) {
-  const root = await mkdtemp(join(tmpdir(), 'nextspark-registry-hang-'))
+const PRELUDE = `import { once } from 'node:events'
+import { setTimeout as sleep } from 'node:timers/promises'
+async function writeAll(stream, data) {
+  if (!stream.write(data)) await once(stream, 'drain')
+}
+async function writeRepeated(stream, piece, megabytes) {
+  const batch = piece.repeat(Math.max(1, Math.floor(65536 / piece.length)))
+  let written = 0
+  while (written < megabytes * 1024 * 1024) {
+    await writeAll(stream, batch)
+    written += batch.length
+  }
+}
+async function writeByteByByte(stream, text) {
+  for (const byte of Buffer.from(text, 'utf8')) {
+    await writeAll(stream, Buffer.from([byte]))
+    await sleep(10)
+  }
+}
+`
+
+/**
+ * A project with a stand-in for core whose registry build runs `script` after
+ * PRELUDE, and a stand-in `next` that exits 0, so `build` finishes without
+ * Next.js once the registry build succeeds.
+ */
+async function projectWithRegistryBuild(script: string) {
+  const root = await mkdtemp(join(tmpdir(), 'nextspark-registry-output-'))
   const coreDir = join(root, 'node_modules/@nextsparkjs/core')
   await mkdir(join(coreDir, 'scripts/build'), { recursive: true })
   await writeFile(join(coreDir, 'package.json'), JSON.stringify({ name: '@nextsparkjs/core', version: '0.0.0-test' }))
-  await writeFile(
-    join(coreDir, 'scripts/build/registry.mjs'),
-    `import { once } from 'node:events'
-async function writeAll(text) {
-  if (!process.stdout.write(text)) await once(process.stdout, 'drain')
-}
-const chunk = 'x'.repeat(200) + '\\n'
-let written = 0
-while (written < ${megabytes} * 1024 * 1024) {
-  await writeAll(chunk)
-  written += chunk.length
-}
-await writeAll(${JSON.stringify(CAUSE)} + '\\n')
-process.exitCode = ${code}
-`
-  )
+  await writeFile(join(coreDir, 'scripts/build/registry.mjs'), `${PRELUDE}\n${script}\n`)
+  await mkdir(join(root, 'node_modules/.bin'), { recursive: true })
+  await writeFile(join(root, 'node_modules/.bin/next'), '#!/bin/sh\nexit 0\n', { mode: 0o755 })
   await writeFile(join(root, '.env'), 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
   return { root, cleanup: () => rm(root, { recursive: true, force: true }) }
 }
 
+/** A stand-in registry build that writes `megabytes` MB of 200-character lines to stdout, then CAUSE, and exits with `code`. */
+function bigBuild(megabytes: number, code: number): string {
+  return `await writeRepeated(process.stdout, 'x'.repeat(200) + '\\n', ${megabytes})
+await writeAll(process.stdout, ${JSON.stringify(CAUSE)} + '\\n')
+process.exitCode = ${code}`
+}
+
 /**
  * Runs the built CLI for a project, bounded so a hang fails the run instead of
- * blocking it. What it reads is bounded far above the megabytes the stand-in
- * build prints: a run over spawnSync's own 1 MiB is killed as if it hung.
+ * blocking it. What it reads is bounded far above what the CLI prints: a run
+ * over spawnSync's own 1 MiB is killed as if it hung. With `maxOldSpaceMb`,
+ * the CLI runs under a V8 heap capped there, so a command that keeps what a
+ * child prints in memory aborts with "FATAL ERROR: Reached heap limit"
+ * instead of finishing.
  */
-function runCli(root: string, args: string[], timeoutMs = 10_000) {
-  return spawnSync(process.execPath, [CLI_ENTRY, ...args], {
+function runCli(root: string, args: string[], { timeoutMs = 20_000, maxOldSpaceMb }: { timeoutMs?: number; maxOldSpaceMb?: number } = {}) {
+  const heap = maxOldSpaceMb === undefined ? [] : [`--max-old-space-size=${maxOldSpaceMb}`]
+  return spawnSync(process.execPath, [...heap, CLI_ENTRY, ...args], {
     cwd: root,
     timeout: timeoutMs,
     killSignal: 'SIGKILL',
@@ -76,35 +99,36 @@ function runCli(root: string, args: string[], timeoutMs = 10_000) {
   })
 }
 
-/**
- * Runs the built CLI under a V8 heap capped at `maxOldSpaceMb`, so a command
- * that keeps a child's whole output in memory runs out of heap and aborts
- * instead of finishing - the same failure mode `/usr/bin/time -l` measured as
- * hundreds of MB of RSS for a build the size these tests use.
- */
-function runCliBoundedHeap(root: string, args: string[], maxOldSpaceMb: number, timeoutMs = 20_000) {
-  return spawnSync(process.execPath, [`--max-old-space-size=${maxOldSpaceMb}`, CLI_ENTRY, ...args], {
-    cwd: root,
-    timeout: timeoutMs,
-    killSignal: 'SIGKILL',
-    encoding: 'utf-8',
-    maxBuffer: 64 * 1024 * 1024,
-  })
+type Run = ReturnType<typeof runCli>
+
+/** A run that finished on its own, within its heap, with the exit status `failed` asks for. */
+function assertFinished(run: Run, command: string, failed: boolean): void {
+  assert.equal(run.signal, null, `${command} must finish on its own (stdout so far: ${run.stdout?.length ?? 0} bytes, stderr: ${run.stderr?.slice(0, 2000)})`)
+  assert.ok(!/FATAL ERROR/.test(run.stderr), `${command} must not run out of heap:\n${run.stderr.slice(0, 2000)}`)
+  if (failed) assert.notEqual(run.status, 0, `${command} must fail`)
+  else assert.equal(run.status, 0, `${command} must succeed:\n${run.stderr.slice(0, 2000)}`)
 }
+
+/** The lines a run printed, stdout's and then stderr's. */
+function printedLines(run: Run): string[] {
+  return [...run.stdout.split('\n'), ...run.stderr.split('\n')]
+}
+
+function excerpt(run: Run): string {
+  return `stdout:\n${run.stdout.slice(0, 3000)}\nstderr:\n${run.stderr.slice(0, 3000)}`
+}
+
+const COMMANDS = ['registry:build', 'build'] as const
 
 test('registry:build finishes on its own with a big registry build, and shows the cause when it prints it only over stdout', { skip: process.platform === 'win32', timeout: 30_000 }, async () => {
-  const ok = await projectWithBigBuild(3, 0)
-  const failed = await projectWithBigBuild(3, 1)
+  const ok = await projectWithRegistryBuild(bigBuild(3, 0))
+  const failed = await projectWithRegistryBuild(bigBuild(3, 1))
   try {
-    const okRun = runCli(ok.root, ['registry:build'])
-    assert.equal(okRun.signal, null, `must finish on its own instead of being killed after a timeout (stdout so far: ${okRun.stdout?.length ?? 0} bytes)`)
-    assert.equal(okRun.status, 0)
+    assertFinished(runCli(ok.root, ['registry:build']), 'registry:build', false)
 
     const failedRun = runCli(failed.root, ['registry:build'])
-    assert.equal(failedRun.signal, null, 'must finish on its own even when the registry build fails')
-    assert.notEqual(failedRun.status, 0)
-    assert.ok(failedRun.stdout.includes(CAUSE) || failedRun.stderr.includes(CAUSE),
-      `the cause core printed over stdout must reach the user:\nstdout:\n${failedRun.stdout}\nstderr:\n${failedRun.stderr}`)
+    assertFinished(failedRun, 'registry:build', true)
+    assert.ok(printedLines(failedRun).includes(CAUSE), `the cause core printed over stdout must reach the user:\n${excerpt(failedRun)}`)
   } finally {
     await ok.cleanup()
     await failed.cleanup()
@@ -112,13 +136,11 @@ test('registry:build finishes on its own with a big registry build, and shows th
 })
 
 test('build finishes on its own and shows the cause when a big registry build fails over stdout', { skip: process.platform === 'win32', timeout: 30_000 }, async () => {
-  const failed = await projectWithBigBuild(3, 1)
+  const failed = await projectWithRegistryBuild(bigBuild(3, 1))
   try {
     const run = runCli(failed.root, ['build'])
-    assert.equal(run.signal, null, `must finish on its own instead of being killed after a timeout (stdout so far: ${run.stdout?.length ?? 0} bytes)`)
-    assert.notEqual(run.status, 0)
-    assert.ok(run.stdout.includes(CAUSE) || run.stderr.includes(CAUSE),
-      `the cause core printed over stdout must reach the user:\nstdout:\n${run.stdout}\nstderr:\n${run.stderr}`)
+    assertFinished(run, 'build', true)
+    assert.ok(printedLines(run).includes(CAUSE), `the cause core printed over stdout must reach the user:\n${excerpt(run)}`)
   } finally {
     await failed.cleanup()
   }
@@ -126,155 +148,261 @@ test('build finishes on its own and shows the cause when a big registry build fa
 
 /**
  * Both commands cap the memory a registry build's output holds well under
- * what 64 MB of it would need, so a heap capped there - the same order of
- * magnitude a run with `/usr/bin/time -l` showed hundreds of MB of RSS for a
- * build that kept its whole output - finishes instead of crashing with
- * "FATAL ERROR: Reached heap limit".
+ * what 64 MB of it would need, so a heap capped at 64 MB finishes instead of
+ * crashing with "FATAL ERROR: Reached heap limit".
  */
-test('registry:build and build keep memory bounded with a large failing registry build', { skip: process.platform === 'win32', timeout: 40_000 }, async () => {
-  const failed = await projectWithBigBuild(64, 1)
+test('registry:build and build keep memory bounded with a large failing registry build', { skip: process.platform === 'win32', timeout: 60_000 }, async () => {
+  const failed = await projectWithRegistryBuild(bigBuild(64, 1))
   try {
-    const registryRun = runCliBoundedHeap(failed.root, ['registry:build'], 64)
-    assert.equal(registryRun.signal, null, `must not be killed (stderr: ${registryRun.stderr})`)
-    assert.ok(!/FATAL ERROR/.test(registryRun.stderr), `must not run out of heap:\n${registryRun.stderr}`)
-    assert.notEqual(registryRun.status, 0)
-    assert.ok(registryRun.stdout.includes(CAUSE) || registryRun.stderr.includes(CAUSE),
-      `the cause must still reach the user:\nstdout:\n${registryRun.stdout}\nstderr:\n${registryRun.stderr}`)
-
-    const buildRun = runCliBoundedHeap(failed.root, ['build'], 64)
-    assert.equal(buildRun.signal, null, `must not be killed (stderr: ${buildRun.stderr})`)
-    assert.ok(!/FATAL ERROR/.test(buildRun.stderr), `must not run out of heap:\n${buildRun.stderr}`)
-    assert.notEqual(buildRun.status, 0)
-    assert.ok(buildRun.stdout.includes(CAUSE) || buildRun.stderr.includes(CAUSE),
-      `the cause must still reach the user:\nstdout:\n${buildRun.stdout}\nstderr:\n${buildRun.stderr}`)
+    for (const command of COMMANDS) {
+      const run = runCli(failed.root, [command], { maxOldSpaceMb: 64 })
+      assertFinished(run, command, true)
+      assert.ok(printedLines(run).includes(CAUSE), `${command} must still show the cause:\n${excerpt(run)}`)
+    }
   } finally {
     await failed.cleanup()
   }
 })
 
 /**
- * A successful build's own progress isn't kept, so registry:build neither
- * runs out of heap holding it nor writes everything core printed - 64 MB of
- * it here - to the terminal.
+ * A successful build's own progress isn't kept, so neither command runs out
+ * of heap holding it or writes everything core printed - 64 MB of it here -
+ * to the terminal.
  */
-test('registry:build keeps memory bounded and does not dump a large successful registry build whole', { skip: process.platform === 'win32', timeout: 40_000 }, async () => {
+test('registry:build and build keep memory bounded and do not dump a large successful registry build whole', { skip: process.platform === 'win32', timeout: 60_000 }, async () => {
   const megabytes = 64
-  const ok = await projectWithBigBuild(megabytes, 0)
+  const ok = await projectWithRegistryBuild(bigBuild(megabytes, 0))
   try {
-    const run = runCliBoundedHeap(ok.root, ['registry:build'], 64)
-    assert.equal(run.signal, null, `must not be killed (stderr: ${run.stderr})`)
-    assert.ok(!/FATAL ERROR/.test(run.stderr), `must not run out of heap:\n${run.stderr}`)
-    assert.equal(run.status, 0)
-    assert.ok(run.stdout.length < (megabytes * 1024 * 1024) / 4,
-      `a successful build must not print everything core wrote (printed ${run.stdout.length} bytes of ${megabytes} MB)`)
+    for (const command of COMMANDS) {
+      const run = runCli(ok.root, [command], { maxOldSpaceMb: 64 })
+      assertFinished(run, command, false)
+      assert.ok(run.stdout.length + run.stderr.length < 64 * 1024,
+        `${command} must not print what a successful build wrote (printed ${run.stdout.length + run.stderr.length} bytes of ${megabytes} MB)`)
+    }
   } finally {
     await ok.cleanup()
   }
 })
 
+test('registry:build and build keep memory bounded, and print little, when every line of a large registry build is an error or a warning', { skip: process.platform === 'win32', timeout: 90_000 }, async () => {
+  const pair = `${'❌ Failed to parse block "hero": '.padEnd(200, 'x')}\\n${'⚠️ Coverage: flow checkout has no tests '.padEnd(200, 'x')}\\n`
+  const failed = await projectWithRegistryBuild(`await writeRepeated(process.stdout, '${pair}', 64)
+process.exitCode = 1`)
+  const ok = await projectWithRegistryBuild(`await writeRepeated(process.stdout, '${pair}', 64)
+process.exitCode = 0`)
+  try {
+    for (const command of COMMANDS) {
+      for (const [project, fails] of [[failed, true], [ok, false]] as const) {
+        const run = runCli(project.root, [command], { maxOldSpaceMb: 64, timeoutMs: 40_000 })
+        assertFinished(run, command, fails)
+        assert.ok(run.stdout.length + run.stderr.length < 64 * 1024,
+          `${command} must print a bounded part of it (printed ${run.stdout.length + run.stderr.length} bytes)`)
+      }
+    }
+  } finally {
+    await failed.cleanup()
+    await ok.cleanup()
+  }
+})
+
+type Command = (typeof COMMANDS)[number]
+
+/** Registers `body` as a test of its own for each command, named by the command followed by `name`. */
+function testEachCommand(name: string, timeout: number, body: (command: Command) => Promise<void>): void {
+  for (const command of COMMANDS) {
+    test(`${command} ${name}`, { skip: process.platform === 'win32', timeout }, () => body(command))
+  }
+}
+
 /**
- * A project with a stand-in for core whose registry build writes CAUSE first
- * - over stdout, over stderr, or over both, waiting on `drain` each time -
- * then `megabytes` MB of unrelated filler before it exits with `code`. A
- * buffer that only keeps a tail loses a cause that arrived before the filler
- * that pushes it out; keeping it has to come from capturing it as it
+ * Empty lines are lines like any other to the caps on what is kept, and a
+ * line that never ends keeps only its start, so neither fills the heap.
+ */
+testEachCommand('keeps memory bounded when a registry build prints megabytes of empty lines on both streams', 60_000, async (command) => {
+  const failed = await projectWithRegistryBuild(`await Promise.all([writeRepeated(process.stdout, '\\n', 8), writeRepeated(process.stderr, '\\n', 8)])
+await writeAll(process.stdout, ${JSON.stringify(CAUSE)} + '\\n')
+process.exitCode = 1`)
+  try {
+    const run = runCli(failed.root, [command], { maxOldSpaceMb: 64, timeoutMs: 40_000 })
+    assertFinished(run, command, true)
+    assert.ok(printedLines(run).includes(CAUSE), `${command} must still show the cause:\n${excerpt(run)}`)
+  } finally {
+    await failed.cleanup()
+  }
+})
+
+testEachCommand('keeps memory bounded when a registry build prints 128 MB with no line break on each stream', 60_000, async (command) => {
+  const megabytes = 128
+  const failed = await projectWithRegistryBuild(`await Promise.all([writeRepeated(process.stdout, 'y', ${megabytes}), writeRepeated(process.stderr, 'y', ${megabytes})])
+process.exitCode = 1`)
+  try {
+    const run = runCli(failed.root, [command], { maxOldSpaceMb: 64, timeoutMs: 50_000 })
+    assertFinished(run, command, true)
+    const cut = printedLines(run).filter((line) => line.endsWith(`… (${megabytes * 1024 * 1024 - 4096} more byte(s) on this line)`))
+    assert.equal(cut.length, 2, `${command} must show the start of each stream's line, with every byte it left out counted:\n${excerpt(run)}`)
+  } finally {
+    await failed.cleanup()
+  }
+})
+
+/**
+ * A stand-in registry build that prints CAUSE first - over stdout, over
+ * stderr, or over both - then `megabytes` MB of unrelated filler before it
+ * exits with `code`. Keeping CAUSE has to come from capturing it as it
  * arrives, not from where in the output it ends up sitting.
  */
-async function projectWithEarlyCause(megabytes: number, code: number, streams: 'stdout' | 'stderr' | 'both') {
-  const root = await mkdtemp(join(tmpdir(), 'nextspark-registry-early-cause-'))
-  const coreDir = join(root, 'node_modules/@nextsparkjs/core')
-  await mkdir(join(coreDir, 'scripts/build'), { recursive: true })
-  await writeFile(join(coreDir, 'package.json'), JSON.stringify({ name: '@nextsparkjs/core', version: '0.0.0-test' }))
+function earlyCause(megabytes: number, code: number, streams: 'stdout' | 'stderr' | 'both'): string {
   const causeWrites = [
     ...(streams === 'stdout' || streams === 'both' ? ['await writeAll(process.stdout, CAUSE)'] : []),
     ...(streams === 'stderr' || streams === 'both' ? ['await writeAll(process.stderr, CAUSE)'] : []),
   ]
-  await writeFile(
-    join(coreDir, 'scripts/build/registry.mjs'),
-    `import { once } from 'node:events'
-async function writeAll(stream, text) {
-  if (!stream.write(text)) await once(stream, 'drain')
-}
-const CAUSE = ${JSON.stringify(CAUSE)} + '\\n'
+  return `const CAUSE = ${JSON.stringify(CAUSE)} + '\\n'
 ${causeWrites.join('\n')}
-const chunk = 'x'.repeat(200) + '\\n'
-let written = 0
-while (written < ${megabytes} * 1024 * 1024) {
-  await writeAll(process.stdout, chunk)
-  written += chunk.length
-}
-process.exitCode = ${code}
-`
-  )
-  await writeFile(join(root, '.env'), 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
-  return { root, cleanup: () => rm(root, { recursive: true, force: true }) }
+await writeRepeated(process.stdout, 'x'.repeat(200) + '\\n', ${megabytes})
+process.exitCode = ${code}`
 }
 
 for (const streams of ['stdout', 'stderr', 'both'] as const) {
-  test(`registry:build shows a cause printed over ${streams} before megabytes of unrelated output follow it`, { skip: process.platform === 'win32', timeout: 30_000 }, async () => {
-    const early = await projectWithEarlyCause(3, 1, streams)
+  testEachCommand(`shows a cause printed over ${streams} before megabytes of unrelated output follow it`, 30_000, async (command) => {
+    const early = await projectWithRegistryBuild(earlyCause(3, 1, streams))
     try {
-      const run = runCli(early.root, ['registry:build'])
-      assert.equal(run.signal, null, `must finish on its own (stdout so far: ${run.stdout?.length ?? 0} bytes)`)
-      assert.notEqual(run.status, 0)
-      assert.ok(run.stdout.includes(CAUSE) || run.stderr.includes(CAUSE),
-        `an early cause must not be pushed out by the megabytes that follow it:\nstdout:\n${run.stdout.slice(0, 1000)}\nstderr:\n${run.stderr.slice(0, 1000)}`)
-    } finally {
-      await early.cleanup()
-    }
-  })
-
-  test(`build shows a cause printed over ${streams} before megabytes of unrelated output follow it`, { skip: process.platform === 'win32', timeout: 30_000 }, async () => {
-    const early = await projectWithEarlyCause(3, 1, streams)
-    try {
-      const run = runCli(early.root, ['build'])
-      assert.equal(run.signal, null, `must finish on its own (stdout so far: ${run.stdout?.length ?? 0} bytes)`)
-      assert.notEqual(run.status, 0)
-      assert.ok(run.stdout.includes(CAUSE) || run.stderr.includes(CAUSE),
-        `an early cause must not be pushed out by the megabytes that follow it:\nstdout:\n${run.stdout.slice(0, 1000)}\nstderr:\n${run.stderr.slice(0, 1000)}`)
+      const run = runCli(early.root, [command])
+      assertFinished(run, command, true)
+      assert.ok(printedLines(run).includes(CAUSE), `an early cause must not be pushed out by the megabytes that follow it:\n${excerpt(run)}`)
     } finally {
       await early.cleanup()
     }
   })
 }
 
-const WARNING = '⚠️ app/(templates): backed up app/(templates)/shop/page.tsx to .nextspark/backups/t0/app/(templates)/shop/page.tsx'
-
-/** A project with a stand-in for core whose registry build writes WARNING, then `megabytes` MB of filler, then exits 0. */
-async function projectWithEarlyWarning(megabytes: number) {
-  const root = await mkdtemp(join(tmpdir(), 'nextspark-registry-early-warning-'))
-  const coreDir = join(root, 'node_modules/@nextsparkjs/core')
-  await mkdir(join(coreDir, 'scripts/build'), { recursive: true })
-  await writeFile(join(coreDir, 'package.json'), JSON.stringify({ name: '@nextsparkjs/core', version: '0.0.0-test' }))
-  await writeFile(
-    join(coreDir, 'scripts/build/registry.mjs'),
-    `import { once } from 'node:events'
-async function writeAll(text) {
-  if (!process.stdout.write(text)) await once(process.stdout, 'drain')
-}
-await writeAll(${JSON.stringify(WARNING)} + '\\n')
-const chunk = 'x'.repeat(200) + '\\n'
-let written = 0
-while (written < ${megabytes} * 1024 * 1024) {
-  await writeAll(chunk)
-  written += chunk.length
-}
-process.exitCode = 0
-`
-  )
-  await writeFile(join(root, '.env'), 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
-  return { root, cleanup: () => rm(root, { recursive: true, force: true }) }
+/** A stand-in registry build that prints 500 lines of progress, enough to fill any first lines kept, then `script`. */
+function afterProgress(script: string): string {
+  return `for (let index = 0; index < 500; index++) await writeAll(process.stdout, '🔍 Discovered plugin-' + index + '\\n')
+${script}`
 }
 
-test('registry:build keeps an early warning visible after megabytes of a successful build', { skip: process.platform === 'win32', timeout: 30_000 }, async () => {
-  const early = await projectWithEarlyWarning(3)
+testEachCommand('shows a cause printed after the first lines, however many warnings follow it', 30_000, async (command) => {
+  const failed = await projectWithRegistryBuild(afterProgress(`await writeAll(process.stdout, ${JSON.stringify(CAUSE)} + '\\n')
+for (let index = 0; index < 2000; index++) await writeAll(process.stdout, ${JSON.stringify(WARNING)} + '\\n')
+process.exitCode = 1`))
   try {
-    const run = runCli(early.root, ['registry:build'])
-    assert.equal(run.signal, null, `must finish on its own (stdout so far: ${run.stdout?.length ?? 0} bytes)`)
-    assert.equal(run.status, 0)
-    assert.ok(run.stdout.includes(WARNING),
-      `an early warning must not be pushed out by the progress that follows it:\n${run.stdout.slice(0, 1000)}`)
+    const run = runCli(failed.root, [command])
+    assertFinished(run, command, true)
+    assert.ok(printedLines(run).includes(CAUSE), `${command} must show the cause that 2000 warnings followed:\n${excerpt(run)}`)
+  } finally {
+    await failed.cleanup()
+  }
+})
+
+const HEADING = 'Error: could not read contents/themes/acme/templates/shop/page.tsx'
+const FRAMES = Array.from({ length: 5 }, (_, index) => `    at step${index} (file:///core/scripts/build/registry.mjs:${index + 10}:5)`)
+
+testEachCommand('shows an error heading with the stack lines under it, printed before megabytes of output', 30_000, async (command) => {
+  const failed = await projectWithRegistryBuild(afterProgress(`for (const line of ${JSON.stringify([HEADING, ...FRAMES])}) await writeAll(process.stderr, line + '\\n')
+await writeRepeated(process.stdout, 'x'.repeat(200) + '\\n', 3)
+process.exitCode = 1`))
+  try {
+    const run = runCli(failed.root, [command])
+    assertFinished(run, command, true)
+    const lines = printedLines(run)
+    const at = lines.indexOf(HEADING)
+    assert.notEqual(at, -1, `${command} must show the error heading:\n${excerpt(run)}`)
+    assert.deepEqual(lines.slice(at + 1, at + 1 + FRAMES.length), FRAMES, `${command} must show the stack under it:\n${excerpt(run)}`)
+  } finally {
+    await failed.cleanup()
+  }
+})
+
+testEachCommand('shows a warning printed before megabytes of a successful build', 30_000, async (command) => {
+  const early = await projectWithRegistryBuild(`await writeAll(process.stdout, ${JSON.stringify(WARNING)} + '\\n')
+await writeRepeated(process.stdout, 'x'.repeat(200) + '\\n', 3)
+process.exitCode = 0`)
+  try {
+    const run = runCli(early.root, [command])
+    assertFinished(run, command, false)
+    assert.ok(printedLines(run).includes(WARNING), `${command} must show the warning:\n${excerpt(run)}`)
   } finally {
     await early.cleanup()
+  }
+})
+
+testEachCommand('shows a warning whole when the registry build writes é, 😀 and ⚠️ a byte at a time', 30_000, async (command) => {
+  const warning = '⚠️ app/(templates): backed up café 😀'
+  const ok = await projectWithRegistryBuild(`await writeByteByByte(process.stdout, ${JSON.stringify(warning)} + '\\n')
+process.exitCode = 0`)
+  try {
+    const run = runCli(ok.root, [command])
+    assertFinished(run, command, false)
+    assert.ok(printedLines(run).includes(warning), `${command} must show the warning whole:\n${excerpt(run)}`)
+  } finally {
+    await ok.cleanup()
+  }
+})
+
+testEachCommand('shows an error whole when the registry build writes é and 😀 a byte at a time', 30_000, async (command) => {
+  const error = 'Error: café 😀'
+  const failed = await projectWithRegistryBuild(`await writeByteByByte(process.stderr, ${JSON.stringify(error)} + '\\n')
+process.exitCode = 1`)
+  try {
+    const run = runCli(failed.root, [command])
+    assertFinished(run, command, true)
+    assert.ok(printedLines(run).includes(error), `${command} must show the error whole:\n${excerpt(run)}`)
+  } finally {
+    await failed.cleanup()
+  }
+})
+
+testEachCommand('shows the first few of the thousands of warnings a successful build prints, and none of its 🏗️ progress', 30_000, async (command) => {
+  const backups = Array.from({ length: 2000 }, (_, index) => `⚠️ app/(templates): backed up app/(templates)/p${index}/page.tsx to .nextspark/backups/t0/app/(templates)/p${index}/page.tsx`)
+  const ok = await projectWithRegistryBuild(`for (let index = 0; index < 200; index++) await writeAll(process.stdout, '🏗️  Generating registry ' + index + '...\\n')
+for (const line of ${JSON.stringify(backups)}) await writeAll(process.stdout, line + '\\n')
+process.exitCode = 0`)
+  try {
+    const run = runCli(ok.root, [command])
+    assertFinished(run, command, false)
+    const lines = printedLines(run)
+    assert.deepEqual(lines.filter((line) => line.includes('backed up')), backups.slice(0, 5), `${command} must show the first warnings only:\n${excerpt(run)}`)
+    const restBytes = backups.slice(5).reduce((sum, line) => sum + Buffer.byteLength(line, 'utf8'), 0)
+    assert.ok(lines.includes(`... and 1995 more warning line(s), ${restBytes} byte(s)`), `${command} must count the warnings it left out:\n${excerpt(run)}`)
+    assert.ok(!lines.some((line) => line.includes('Generating registry')), `${command} must not show progress:\n${excerpt(run)}`)
+  } finally {
+    await ok.cleanup()
+  }
+})
+
+testEachCommand('accounts for every line and byte a failed registry build printed, shown or counted as omitted', 30_000, async (command) => {
+  const lines = [
+    ...Array.from({ length: 40 }, (_, index) => `L${index} ${'z'.repeat(100)}`),
+    `L-long ${'y'.repeat(9993)}`,
+    ...Array.from({ length: 40 }, (_, index) => `L${index + 40} ${'z'.repeat(100)}`),
+    `L-last ${'w'.repeat(9993)}`,
+  ]
+  const printedBytes = lines.reduce((sum, line) => sum + Buffer.byteLength(line, 'utf8'), 0)
+  const failed = await projectWithRegistryBuild(`for (const line of ${JSON.stringify(lines)}) await writeAll(process.stdout, line + '\\n')
+process.exitCode = 1`)
+  try {
+    const run = runCli(failed.root, [command])
+    assertFinished(run, command, true)
+
+    let shownLines = 0
+    let shownBytes = 0
+    for (const line of printedLines(run)) {
+      const omitted = /^\.\.\. (\d+) line\(s\), (\d+) byte\(s\) omitted$/.exec(line)
+      const cut = /^(L.*)… \((\d+) more byte\(s\) on this line\)$/.exec(line)
+      if (omitted) {
+        shownLines += Number(omitted[1])
+        shownBytes += Number(omitted[2])
+      } else if (cut) {
+        shownLines++
+        shownBytes += Buffer.byteLength(cut[1], 'utf8') + Number(cut[2])
+      } else if (line.startsWith('L')) {
+        shownLines++
+        shownBytes += Buffer.byteLength(line, 'utf8')
+      }
+    }
+    assert.deepEqual({ lines: shownLines, bytes: shownBytes }, { lines: lines.length, bytes: printedBytes },
+      `${command} must account for every line and byte the build printed:\n${excerpt(run)}`)
+  } finally {
+    await failed.cleanup()
   }
 })

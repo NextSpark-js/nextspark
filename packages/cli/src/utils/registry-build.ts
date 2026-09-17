@@ -1,6 +1,7 @@
-import { spawn } from 'node:child_process';
+import { spawn, type ChildProcess } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { StringDecoder } from 'node:string_decoder';
 import { parse } from 'dotenv';
 
 /**
@@ -24,70 +25,111 @@ export function registryBuildBlocker(projectRoot: string, env: NodeJS.ProcessEnv
 /** A line that says why the build stopped, rather than what the failure touched. */
 const CAUSE_LINE = /\b(?:error|errors|failed|failing|failure|fatal)\b/i;
 
-/** Bytes of a single line worth keeping; only a pathological line is this long. */
-const MAX_LINE_BYTES = 4 * 1024;
-
-/** Bytes of a build's leading and trailing lines worth keeping for orientation once its middle is left out. */
-const HEAD_LIMIT = 8 * 1024;
-const TAIL_LIMIT = 16 * 1024;
-
-/**
- * Bytes of error and warning lines worth keeping regardless of where in the
- * output they arrived: a cause the build prints early, then buries under
- * megabytes of unrelated progress, is still the reason it failed.
- */
-const MARKED_LIMIT = 64 * 1024;
-
-/** core's own markers for a line that names a cause or a warning (`packages/core/scripts/utils/logging.mjs`). */
-const MARKED_LINE = /[❌⚠️]/;
-
-/** Whether a line reads as a cause or a warning: core's own marker, or, without one, an unindented line that reads as a cause on its own. */
-function isMarked(line: string): boolean {
-  return MARKED_LINE.test(line) || (/^\S/.test(line) && CAUSE_LINE.test(line));
-}
-
-/** `text` cut to at most `maxBytes` of UTF-8, without splitting a code point (so never a surrogate pair). */
-function truncateToBytes(text: string, maxBytes: number): { text: string; droppedBytes: number } {
-  const totalBytes = Buffer.byteLength(text, 'utf8');
-  if (totalBytes <= maxBytes) return { text, droppedBytes: 0 };
-
-  let kept = '';
-  let bytes = 0;
-  for (const character of text) {
-    const characterBytes = Buffer.byteLength(character, 'utf8');
-    if (bytes + characterBytes > maxBytes) break;
-    kept += character;
-    bytes += characterBytes;
-  }
-  return { text: kept, droppedBytes: totalBytes - bytes };
-}
-
-interface KeptLine {
-  index: number;
-  text: string;
+/** How many lines a pool of captured output holds at most, and how many UTF-8 bytes of them. */
+export interface PoolCaps {
+  lines: number;
   bytes: number;
 }
 
-/** A byte-capped window of lines: the most recent ones, oldest evicted first once `limitBytes` is exceeded, at least one always kept. */
-function slidingWindow(limitBytes: number) {
-  const kept: KeptLine[] = [];
-  let usedBytes = 0;
+/** What `captureOutput` keeps of a child's output. */
+export interface CaptureLimits {
+  /** UTF-8 bytes kept of any one line: what a longer line holds past them is counted, not kept. */
+  line: number;
+  /** The first lines. */
+  head: PoolCaps;
+  /** The last lines. */
+  tail: PoolCaps;
+  /** The first error lines, wherever they arrive. */
+  errors: PoolCaps;
+  /** The stack lines right under those errors: at most `perError` under each one, and `lines` and `bytes` under all of them. */
+  stack: PoolCaps & { perError: number };
+  /** The first warning lines, wherever they arrive. */
+  warnings: PoolCaps;
+}
+
+const DEFAULT_LIMITS: CaptureLimits = {
+  line: 4 * 1024,
+  head: { lines: 10, bytes: 4 * 1024 },
+  tail: { lines: 30, bytes: 16 * 1024 },
+  errors: { lines: 10, bytes: 16 * 1024 },
+  stack: { perError: 10, lines: 50, bytes: 16 * 1024 },
+  warnings: { lines: 5, bytes: 4 * 1024 },
+};
+
+/** What a line can start with before its marker: spaces, tabs, and ANSI escape sequences such as colors. */
+const LINE_LEAD = /^(?:[ \t]|\x1b\[[0-?]*[ -/]*[@-~])*/;
+
+/** The marker core's `log(..., 'error')` starts a line with (`packages/core/scripts/utils/logging.mjs`). */
+const CROSS_MARK = '\u274C';
+
+/** The marker core's `log(..., 'warning')` starts a line with, which it follows with U+FE0F; a line that leaves the selector out is a warning too. */
+const WARNING_SIGN = '\u26A0';
+
+/** The heading of an error the way Node and core's `stackLines` print one: `Error:`, `TypeError:`, `Error [ERR_MODULE_NOT_FOUND]:`. */
+const ERROR_HEADING = /^(?:[A-Z][A-Za-z]*)?Error(?: \[[A-Z0-9_]+\])?:/;
+
+type LineKind = 'error' | 'warning' | 'stack' | 'other';
+
+/** An escape JSON writes a character as: `\n`, `\t`, `\u2028` and the like. */
+const JSON_ESCAPE = /\\[bfnrtu]/;
+
+/**
+ * What a line reports, read from the marker it starts with. core's console
+ * guard prints a line that holds a control character quoted, with that
+ * character escaped, so on a line that holds such an escape a marker can also
+ * follow the opening quote.
+ */
+function lineKind(text: string): LineKind {
+  if (text === '') return 'other';
+  const lead = LINE_LEAD.exec(text)?.[0] ?? '';
+  let rest = text.slice(lead.length);
+  if (rest.startsWith('"') && JSON_ESCAPE.test(rest)) rest = rest.slice(1);
+
+  if (rest.startsWith(CROSS_MARK) || ERROR_HEADING.test(rest)) return 'error';
+  if (rest.startsWith(WARNING_SIGN)) return 'warning';
+  if (/[ \t]/.test(lead) && rest.startsWith('at ')) return 'stack';
+  return 'other';
+}
+
+interface CapturedLine {
+  /** Its position among every line of the output, in the order the lines ended. */
+  index: number;
+  /** Bytes of every line before it. */
+  offset: number;
+  /** The line, or as much of its start as fits under the line cap. */
+  text: string;
+  /** Bytes of the line that `text` shows. */
+  keptBytes: number;
+  /** Bytes of the whole line as the child printed it, its line break left out. */
+  bytes: number;
+}
+
+/** A line as it is shown: as kept, followed by how much of it was left out when it was cut. */
+function shownCapturedLine(line: CapturedLine): string {
+  return line.keptBytes < line.bytes ? `${line.text}… (${line.bytes - line.keptBytes} more byte(s) on this line)` : line.text;
+}
+
+/** A pool that keeps the lines offered to it until one doesn't fit, and from then on only counts them. */
+function firstLines(caps: PoolCaps) {
+  const kept: CapturedLine[] = [];
+  let keptBytes = 0;
+  let full = false;
   let droppedLines = 0;
   let droppedBytes = 0;
 
   return {
-    add(line: KeptLine): void {
-      kept.push(line);
-      usedBytes += line.bytes;
-      while (usedBytes > limitBytes && kept.length > 1) {
-        const evicted = kept.shift()!;
-        usedBytes -= evicted.bytes;
-        droppedLines++;
-        droppedBytes += evicted.bytes;
+    kept,
+    /** Whether the line was kept. */
+    offer(line: CapturedLine): boolean {
+      if (!full && kept.length < caps.lines && keptBytes + line.keptBytes <= caps.bytes) {
+        kept.push(line);
+        keptBytes += line.keptBytes;
+        return true;
       }
-    },
-    get kept(): readonly KeptLine[] {
-      return kept;
+      full = true;
+      droppedLines++;
+      droppedBytes += line.bytes;
+      return false;
     },
     get droppedLines(): number {
       return droppedLines;
@@ -98,121 +140,226 @@ function slidingWindow(limitBytes: number) {
   };
 }
 
-export interface CapturedOutput {
-  append(chunk: string): void;
-  /**
-   * Text worth showing when the build failed: every error or warning line it
-   * printed, wherever it arrived, framed by bounded context from the very
-   * start and the very end, with a count of what sits between when anything
-   * was left out.
-   */
-  readonly value: string;
-  /** The error and warning lines it printed, in the order they arrived. */
-  readonly markedLines: string[];
-  /** How many further error/warning lines `markedLines` left out. */
-  readonly droppedMarkedLines: number;
-  /** How many further error/warning bytes `markedLines` left out. */
-  readonly droppedMarkedBytes: number;
-}
+/** A pool that keeps the most recent lines, evicting the oldest past either cap. */
+function lastLines(caps: PoolCaps) {
+  const capacity = Math.max(0, caps.lines);
+  const ring: (CapturedLine | undefined)[] = new Array(capacity);
+  let first = 0;
+  let count = 0;
+  let keptBytes = 0;
 
-/**
- * Accumulates a child process's output by complete lines, counted in real
- * UTF-8 bytes rather than in UTF-16 units, keeping three things instead of
- * one growing tail: the first lines, the last lines, and every error/warning
- * line, each under its own byte cap. A cause the build prints early survives
- * even when megabytes of unrelated output follow it, because it lands in the
- * error/warning pool, not only in whichever end of the output a single cap
- * would keep. A line longer than its own cap is cut in place, marked as cut,
- * rather than splitting a character or spilling into the next line.
- */
-export function captureOutput(
-  limits: { head?: number; tail?: number; marked?: number; line?: number } = {}
-): CapturedOutput {
-  const headLimit = limits.head ?? HEAD_LIMIT;
-  const lineLimit = limits.line ?? MAX_LINE_BYTES;
-  const head: KeptLine[] = [];
-  let headBytes = 0;
-  const tail = slidingWindow(limits.tail ?? TAIL_LIMIT);
-  const marked = slidingWindow(limits.marked ?? MARKED_LIMIT);
-
-  let pending = '';
-  let index = 0;
-  let totalLines = 0;
-  let totalBytes = 0;
-
-  function pushLine(raw: string): void {
-    const cut = truncateToBytes(raw, lineLimit);
-    const text = cut.droppedBytes > 0 ? `${cut.text}… (${cut.droppedBytes} more byte(s) on this line)` : raw;
-    const bytes = Buffer.byteLength(text, 'utf8');
-    const line: KeptLine = { index: index++, text, bytes };
-    totalLines++;
-    totalBytes += bytes;
-
-    if (head.length === 0 || headBytes + bytes <= headLimit) {
-      head.push(line);
-      headBytes += bytes;
-    }
-    tail.add(line);
-    if (isMarked(text)) marked.add(line);
-  }
-
-  function flushPending(): void {
-    if (pending === '') return;
-    pushLine(pending);
-    pending = '';
+  function evictOldest(): void {
+    keptBytes -= ring[first]!.keptBytes;
+    ring[first] = undefined;
+    first = (first + 1) % capacity;
+    count--;
   }
 
   return {
-    append(chunk: string): void {
-      pending += chunk;
-      let newline: number;
-      while ((newline = pending.indexOf('\n')) !== -1) {
-        pushLine(pending.slice(0, newline));
-        pending = pending.slice(newline + 1);
-      }
+    add(line: CapturedLine): void {
+      if (capacity === 0) return;
+      if (count === capacity) evictOldest();
+      ring[(first + count) % capacity] = line;
+      count++;
+      keptBytes += line.keptBytes;
+      while (count > 0 && keptBytes > caps.bytes) evictOldest();
     },
-
-    get markedLines(): string[] {
-      flushPending();
-      return marked.kept.map((line) => line.text);
-    },
-    get droppedMarkedLines(): number {
-      flushPending();
-      return marked.droppedLines;
-    },
-    get droppedMarkedBytes(): number {
-      flushPending();
-      return marked.droppedBytes;
-    },
-
-    get value(): string {
-      flushPending();
-      const byIndex = new Map<number, KeptLine>();
-      for (const line of head) byIndex.set(line.index, line);
-      for (const line of tail.kept) byIndex.set(line.index, line);
-      for (const line of marked.kept) byIndex.set(line.index, line);
-
-      const sorted = [...byIndex.values()].sort((a, b) => a.index - b.index);
-      const keptBytes = sorted.reduce((sum, line) => sum + line.bytes, 0);
-      const omittedLines = totalLines - sorted.length;
-      const omittedBytes = totalBytes - keptBytes;
-      if (omittedLines === 0) return sorted.map((line) => line.text).join('\n');
-
-      const parts: string[] = [];
-      let noted = false;
-      let previousIndex = -1;
-      for (const line of sorted) {
-        if (!noted && previousIndex !== -1 && line.index > previousIndex + 1) {
-          parts.push(`... ${omittedLines} line(s), ${omittedBytes} byte(s) omitted`);
-          noted = true;
-        }
-        parts.push(line.text);
-        previousIndex = line.index;
-      }
-      if (!noted) parts.push(`... ${omittedLines} line(s), ${omittedBytes} byte(s) omitted`);
-      return parts.join('\n');
+    get kept(): CapturedLine[] {
+      return Array.from({ length: count }, (_, position) => ring[(first + position) % capacity]!);
     },
   };
+}
+
+/** One of the child's streams: the line it is partway through, and the error line whose stack it may be printing. */
+interface StreamState {
+  /** Turns the bytes a line kept into text once the line ends. */
+  decoder: StringDecoder;
+  /** The first bytes of the line in progress: the line cap's worth, and one more, which tells whether a character runs past the cap. */
+  start: Buffer;
+  /** Bytes of the line in progress held in `start`. */
+  held: number;
+  /** Bytes of the line in progress so far. */
+  bytes: number;
+  /** Stack lines kept under the last line this stream printed, when that line was a kept error or one of its stack lines. */
+  frames: number | null;
+}
+
+export interface CapturedOutput {
+  /**
+   * Take a chunk the child wrote to one of its streams, as the bytes it
+   * arrived as. Reading `failureLines` or `successLines` ends the capture:
+   * what is written after that is left out.
+   */
+  write(stream: 'stdout' | 'stderr', chunk: Buffer): void;
+  /**
+   * What a failed build printed worth showing, in the order the lines ended:
+   * the first lines, the last lines, and the first error lines, each with the
+   * stack lines under it, with how many lines and bytes sit between them.
+   */
+  readonly failureLines: string[];
+  /** What a successful build flagged: its first error and warning lines, and how many more of each it printed. */
+  readonly successLines: string[];
+}
+
+/**
+ * Captures a child's output in bounded memory, by lines, counted in the bytes
+ * the child printed.
+ *
+ * Each stream is split into lines on its own, at the line feeds in the bytes
+ * as they arrive: in UTF-8 that byte never stands for part of a character, so
+ * a character split across chunks stays whole. A line holds at most `line`
+ * bytes of its start, and one more; past them, its bytes are counted as they
+ * arrive and dropped up to its line break, so a line that never ends holds no
+ * more memory than one that does. When the line ends, the stream's decoder
+ * turns the bytes it kept into text of its own, leaving out whole a character
+ * the cap cuts through, and showing bytes that aren't UTF-8 as U+FFFD.
+ *
+ * Each finished line is offered to pools capped both in lines and in bytes,
+ * so empty lines are evicted like any others: the first lines, the last
+ * lines, the first error lines, the stack lines right under each of those on
+ * the same stream, and the first warning lines. Lines are ordered by when
+ * they end, so a line one stream is partway through comes after a line the
+ * other stream ends meanwhile. Errors and warnings keep the first ones they
+ * are offered, since the cause of a failure is the first error it prints, and
+ * count the rest. A line is an error or a warning by the marker its kept text
+ * starts with, past any spaces and ANSI sequences: core's ❌ or ⚠️, or an error
+ * heading such as `Error:`. Every count is of the bytes the child printed,
+ * never of the text as kept or shown.
+ */
+export function captureOutput(limits: Partial<CaptureLimits> = {}): CapturedOutput {
+  const caps: CaptureLimits = { ...DEFAULT_LIMITS, ...limits };
+  const head = firstLines(caps.head);
+  const tail = lastLines(caps.tail);
+  const errors = firstLines(caps.errors);
+  const stack = firstLines(caps.stack);
+  const warnings = firstLines(caps.warnings);
+  const streams = new Map<string, StreamState>();
+  let totalLines = 0;
+  let totalBytes = 0;
+  let finished = false;
+
+  function streamState(name: string): StreamState {
+    let state = streams.get(name);
+    if (!state) {
+      state = { decoder: new StringDecoder('utf8'), start: Buffer.alloc(caps.line + 1), held: 0, bytes: 0, frames: null };
+      streams.set(name, state);
+    }
+    return state;
+  }
+
+  function extendLine(state: StreamState, chunk: Buffer, from: number, to: number): void {
+    if (state.held < state.start.length) {
+      state.held += chunk.copy(state.start, state.held, from, Math.min(to, from + state.start.length - state.held));
+    }
+    state.bytes += to - from;
+  }
+
+  function endLine(state: StreamState): void {
+    let keptBytes = Math.min(state.bytes, caps.line);
+    // A character the cap cuts through is left out whole: the bytes that continue one are 10xxxxxx
+    if (state.bytes > caps.line) {
+      for (let back = 0; back < 3 && keptBytes > 0 && (state.start[keptBytes] & 0xc0) === 0x80; back++) keptBytes--;
+    }
+    const text = keptBytes === 0 ? '' : state.decoder.write(state.start.subarray(0, keptBytes)) + state.decoder.end();
+    const line: CapturedLine = { index: totalLines, offset: totalBytes, text, keptBytes, bytes: state.bytes };
+    totalLines++;
+    totalBytes += state.bytes;
+    state.held = 0;
+    state.bytes = 0;
+
+    head.offer(line);
+    tail.add(line);
+
+    const kind = lineKind(line.text);
+    if (kind === 'stack' && state.frames !== null) {
+      if (state.frames < caps.stack.perError && stack.offer(line)) state.frames++;
+      return;
+    }
+    if (kind === 'error') {
+      state.frames = errors.offer(line) ? 0 : null;
+      return;
+    }
+    state.frames = null;
+    if (kind === 'warning') warnings.offer(line);
+  }
+
+  function take(state: StreamState, chunk: Buffer): void {
+    let start = 0;
+    let newline: number;
+    while ((newline = chunk.indexOf(0x0a, start)) !== -1) {
+      if (newline > start) extendLine(state, chunk, start, newline);
+      endLine(state);
+      start = newline + 1;
+    }
+    if (start < chunk.length) extendLine(state, chunk, start, chunk.length);
+  }
+
+  function finish(): void {
+    if (finished) return;
+    finished = true;
+    for (const state of streams.values()) {
+      if (state.bytes > 0) endLine(state);
+    }
+  }
+
+  /** The lines of `pools` in order, each gap between them noted with the lines and bytes it holds. */
+  function inOrder(pools: readonly (readonly CapturedLine[])[]): string[] {
+    const byIndex = new Map<number, CapturedLine>();
+    for (const pool of pools) {
+      for (const line of pool) byIndex.set(line.index, line);
+    }
+
+    const shown: string[] = [];
+    let nextIndex = 0;
+    let nextOffset = 0;
+    const noteGap = (index: number, offset: number) => {
+      if (index > nextIndex) shown.push(`... ${index - nextIndex} line(s), ${offset - nextOffset} byte(s) omitted`);
+    };
+    for (const line of [...byIndex.values()].sort((a, b) => a.index - b.index)) {
+      noteGap(line.index, line.offset);
+      shown.push(shownCapturedLine(line));
+      nextIndex = line.index + 1;
+      nextOffset = line.offset + line.bytes;
+    }
+    noteGap(totalLines, totalBytes);
+    return shown;
+  }
+
+  return {
+    write(stream, chunk) {
+      if (finished) return;
+      take(streamState(stream), chunk);
+    },
+
+    get failureLines(): string[] {
+      finish();
+      const shown = inOrder([head.kept, errors.kept, stack.kept, tail.kept]);
+      if (errors.droppedLines > 0) {
+        shown.push(`... and ${errors.droppedLines} more error line(s), ${errors.droppedBytes} byte(s), after the first ${errors.kept.length}`);
+      }
+      return shown;
+    },
+
+    get successLines(): string[] {
+      finish();
+      const shown = [...errors.kept, ...warnings.kept].sort((a, b) => a.index - b.index).map(shownCapturedLine);
+      if (errors.droppedLines > 0) {
+        shown.push(`... and ${errors.droppedLines} more error line(s), ${errors.droppedBytes} byte(s)`);
+      }
+      if (warnings.droppedLines > 0) {
+        shown.push(`... and ${warnings.droppedLines} more warning line(s), ${warnings.droppedBytes} byte(s)`);
+      }
+      return shown;
+    },
+  };
+}
+
+/** Capture what `child` prints on stdout and on stderr together, in the order it arrives. */
+export function captureChildOutput(child: ChildProcess, limits?: Partial<CaptureLimits>): CapturedOutput {
+  const output = captureOutput(limits);
+  child.stdout?.on('data', (chunk: Buffer) => output.write('stdout', chunk));
+  child.stderr?.on('data', (chunk: Buffer) => output.write('stderr', chunk));
+  return output;
 }
 
 export interface RegistryBuildResult {

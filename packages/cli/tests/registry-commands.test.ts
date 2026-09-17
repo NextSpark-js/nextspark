@@ -77,24 +77,33 @@ async function runCommand(root: string, command: () => Promise<void>, exits: boo
   return printed.join('\n').replace(/\x1b\[[0-9;]*m/g, '')
 }
 
-/** What is wrong with what a command printed: a line holding a raw control, or a name no line ends with `line` for. */
-function wrongOutput(label: string, printed: string, line: (shown: string) => string): string[] {
+/** What is wrong with what a command printed: a line holding a raw control, or one of `names` no line ends with `line` for. */
+function wrongOutput(label: string, printed: string, line: (shown: string) => string, names = NAMES): string[] {
   const lines = printed.split('\n')
   return [
     ...lines.filter((printedLine) => RAW_CONTROL.test(printedLine)).map((printedLine) => `${label}: ${JSON.stringify(printedLine)} holds a raw control`),
-    ...NAMES.filter(([, shown]) => !lines.some((printedLine) => printedLine.trimEnd().endsWith(line(shown)))).map(([, shown]) => `${label}: no line ends with ${shown} shown escaped`),
+    ...names.filter(([, shown]) => !lines.some((printedLine) => printedLine.trimEnd().endsWith(line(shown)))).map(([, shown]) => `${label}: no line ends with ${shown} shown escaped`),
   ]
 }
 
 const backedUpLine = (shown: string, prefix = '') => `"${prefix}⚠️ app/(templates): backed up app/(templates)/${shown} to .nextspark/backups/x"`
 const failedLine = (shown: string) => `"Build failed: could not read app/(templates)/${shown}"`
 
+/**
+ * A successful build shows the first five warnings it printed and counts the
+ * rest, so the success run names the first five of NAMES; the failed run
+ * names all of them.
+ */
 test('registry:build shows each line of what the registry build printed escaped, whether the build succeeds or fails', { skip: process.platform === 'win32' }, async () => {
   const wrong: string[] = []
-  for (const [code, label, line] of [[0, 'built', backedUpLine], [1, 'failed', failedLine]] as const) {
+  for (const [code, label, line, names] of [[0, 'built', backedUpLine, NAMES.slice(0, 5)], [1, 'failed', failedLine, NAMES]] as const) {
     const { root, cleanup } = await projectWithBuild(code)
     try {
-      wrong.push(...wrongOutput(label, await runCommand(root, registryBuildCommand, true), line))
+      const printed = await runCommand(root, registryBuildCommand, true)
+      wrong.push(...wrongOutput(label, printed, line, names))
+      if (code === 0 && !printed.split('\n').some((printedLine) => printedLine.startsWith('... and 1 more warning line(s), '))) {
+        wrong.push(`${label}: the warning past the first five is not counted`)
+      }
     } finally {
       await cleanup()
     }
