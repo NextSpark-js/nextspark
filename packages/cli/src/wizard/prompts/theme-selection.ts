@@ -7,7 +7,7 @@
  */
 
 import { select } from '@inquirer/prompts'
-import chalk from 'chalk'
+import chalk from '../../utils/colors.js'
 
 export type ThemeChoice = 'default' | 'blog' | 'crm' | 'productivity' | null
 

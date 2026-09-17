@@ -8,7 +8,7 @@
 
 import { existsSync, cpSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { join, resolve } from 'path'
-import chalk from 'chalk'
+import chalk from '../../utils/colors.js'
 import ora from 'ora'
 import type { ThemeChoice } from '../prompts/theme-selection.js'
 import type { PluginChoice } from '../prompts/plugins-selection.js'

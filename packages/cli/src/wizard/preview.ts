@@ -4,7 +4,7 @@
  * Provides visual preview of files that will be generated based on wizard configuration.
  */
 
-import chalk from 'chalk'
+import chalk from '../utils/colors.js'
 import type { WizardConfig } from './types.js'
 
 /**

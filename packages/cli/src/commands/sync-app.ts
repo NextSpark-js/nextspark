@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { basename, join, dirname, relative, sep } from 'node:path';
-import chalk from 'chalk';
+import chalk from '../utils/colors.js';
 import ora from 'ora';
 import { getCoreDir, getProjectRoot } from '../utils/paths.js';
 import {

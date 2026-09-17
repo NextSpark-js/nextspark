@@ -1,4 +1,4 @@
-import chalk from 'chalk'
+import chalk from '../utils/colors.js'
 import ora from 'ora'
 import { fetchPackage } from '../lib/package-fetcher.js'
 import { validatePlugin } from '../lib/validator.js'

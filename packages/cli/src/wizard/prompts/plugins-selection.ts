@@ -6,7 +6,7 @@
  */
 
 import { checkbox } from '@inquirer/prompts'
-import chalk from 'chalk'
+import chalk from '../../utils/colors.js'
 import type { ThemeChoice } from './theme-selection.js'
 
 export type PluginChoice = 'ai' | 'langchain' | 'social-media-publisher'

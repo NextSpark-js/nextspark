@@ -5,7 +5,7 @@
  * and generates the project based on user responses.
  */
 
-import chalk from 'chalk'
+import chalk from '../utils/colors.js'
 import ora from 'ora'
 import { confirm, select } from '@inquirer/prompts'
 import { execSync } from 'child_process'

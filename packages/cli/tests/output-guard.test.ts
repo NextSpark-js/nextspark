@@ -6,9 +6,9 @@ import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import chalk from 'chalk'
 import ora from 'ora'
 
+import chalk from '../src/utils/colors.js'
 import { guardConsole, guardSpinners, shownLine } from '../src/utils/shown-path.js'
 import { buildCli } from './built-cli.js'
 
@@ -22,18 +22,40 @@ const SHOWN = 'forged\\n✅ Registry System built successfully!\\n✅ Sync compl
 const SUCCESSES = ['✅ Registry System built successfully!', '✅ Sync complete!', 'Build completed successfully!']
 
 const RAW_CONTROL = /[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u061c\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]/
+const RAW_COLOR_MARKER = /[\uE000\uE001]/
+const COMMANDER_FORGERIES = [
+  { label: 'newline', value: 'bad\n✅ Sync complete!', shown: 'bad\\n✅ Sync complete!' },
+  { label: 'conceal SGR', value: 'bad\u001b[8mHIDDEN\u001b[28m', shown: 'bad\\u001b[8mHIDDEN\\u001b[28m' },
+  { label: 'line separator', value: 'bad\u2028HIDDEN', shown: 'bad\\u2028HIDDEN' },
+  { label: 'C1 next line', value: 'bad\u0085HIDDEN', shown: 'bad\\u0085HIDDEN' },
+]
 
-test('a line is escaped whole, its blank lines and indent kept, and only chalk colors pass while chalk colors the output', () => {
+// Commander errors are red; all other raw controls must have come from data.
+const COMMANDER_RED_SGR = /\u001b\[(?:31|39)m/g
+
+function cliEnv(forceColor: boolean): NodeJS.ProcessEnv {
+  const env = { ...process.env }
+  delete env.NO_COLOR
+  delete env.FORCE_COLOR
+  if (forceColor) env.FORCE_COLOR = '1'
+  return env
+}
+
+test('a line is escaped whole, its blank lines and indent kept, and only CLI colors pass', () => {
   const level = chalk.level
   try {
     chalk.level = 0
     assert.equal(shownLine('\n  ✅ Sync complete!\n'), '\n  ✅ Sync complete!\n')
     assert.equal(shownLine(`  Backed up ${FORGED}`), `  "Backed up ${SHOWN}"`)
     assert.equal(shownLine('red \u001b[31mtext\u001b[39m'), '"red \\u001b[31mtext\\u001b[39m"', 'with no colors on, a color sequence is a name')
+    assert.equal(chalk.red('plain'), 'plain', 'colors are plain at level zero')
 
     chalk.level = 1
-    const colored = chalk.green('\n  ✅ Sync complete!\n')
-    assert.equal(shownLine(colored), colored, 'a colored line with nothing to escape keeps its colors')
+    assert.equal(shownLine(chalk.red('x \u001b[8mHIDDEN\u001b[28m')), '"x \\u001b[8mHIDDEN\\u001b[28m"')
+    assert.equal(shownLine(chalk.red('x \u001b[31mRED\u001b[39m')), '"x \\u001b[31mRED\\u001b[39m"')
+    assert.equal(shownLine(chalk.green('✅ ok')), '\u001b[32m✅ ok\u001b[39m', 'a safe line keeps CLI colors')
+    const foreignMarker = '\uE000not-the-private-nonce31\uE001not this process\uE000not-the-private-nonce39\uE001'
+    assert.equal(shownLine(foreignMarker), foreignMarker, 'a marker with another nonce is not rendered')
     assert.equal(shownLine(chalk.red(`  Error: ${FORGED}`)), `  "Error: ${SHOWN}"`, 'a colored line with something to escape is escaped without colors')
     assert.equal(shownLine(chalk.red('erase \u001b[2Kline')), '"erase \\u001b[2Kline"', 'a sequence other than a color is escaped')
   } finally {
@@ -60,8 +82,87 @@ test('the console and the spinners print through shownLine once guarded', () => 
   assert.ok(lines.some((line) => line.endsWith(`"Core found at: ${SHOWN}"`)), lines.join('\n'))
 })
 
+test('direct stream writes render this process color markers', () => {
+  const script = [
+    "import chalk from './src/utils/colors.ts'",
+    "import { guardOutput } from './src/utils/shown-path.ts'",
+    'chalk.level = 1',
+    'guardOutput()',
+    "process.stdout.write(chalk.green('direct'))",
+  ].join(';')
+  const result = spawnSync(process.execPath, ['--import', 'tsx', '--input-type=module', '--eval', script], {
+    cwd: PKG_ROOT,
+    encoding: 'utf-8',
+    env: cliEnv(true),
+    timeout: 20_000,
+  })
+
+  assert.equal(result.status, 0, result.stderr)
+  assert.equal(result.stdout, '\u001b[32mdirect\u001b[39m')
+})
+
 before(() => {
   CLI_ENTRY = buildCli()
+})
+
+test('Commander escapes hostile unknown commands and options with and without forced color', { timeout: 120_000 }, () => {
+  const wrong: string[] = []
+  const invocations = [
+    { label: 'unknown command', args: (value: string) => [value] },
+    { label: 'unknown option', args: (value: string) => ['sync:app', `--${value}`] },
+    { label: 'unknown option value after equals', args: (value: string) => ['sync:app', `--safe=${value}`] },
+    { label: 'unknown option name before equals', args: (value: string) => ['sync:app', `--${value}=safe`] },
+  ]
+
+  for (const forceColor of [false, true]) {
+    for (const invocation of invocations) {
+      for (const forgery of COMMANDER_FORGERIES) {
+        const label = `${invocation.label}, ${forgery.label}, FORCE_COLOR=${forceColor ? '1' : 'unset'}`
+        // Captured pipes are deliberately non-TTY streams.
+        const result = spawnSync(process.execPath, [CLI_ENTRY, ...invocation.args(forgery.value)], {
+          cwd: PKG_ROOT,
+          encoding: 'utf-8',
+          timeout: 20_000,
+          env: cliEnv(forceColor),
+        })
+        const output = `${result.stdout}${result.stderr}`
+        const withoutOwnColor = output.replace(COMMANDER_RED_SGR, '')
+        const lines = withoutOwnColor.split('\n')
+
+        if (typeof result.status !== 'number' || result.status === 0) wrong.push(`${label}: exited ${result.status}`)
+        if (!withoutOwnColor.includes(forgery.shown)) wrong.push(`${label}: hostile token was not shown escaped`)
+        for (const line of lines) {
+          if (RAW_CONTROL.test(line)) wrong.push(`${label}: ${JSON.stringify(line)} holds a raw control`)
+          if (RAW_COLOR_MARKER.test(line)) wrong.push(`${label}: ${JSON.stringify(line)} holds a raw color marker`)
+          if (line.startsWith('✅ Sync complete!')) wrong.push(`${label}: ${JSON.stringify(line)} reads as forged success`)
+        }
+      }
+    }
+  }
+
+  assert.deepEqual(wrong, [])
+})
+
+test('Commander keeps ordinary error details and an available typo suggestion on their own lines', () => {
+  const run = (typo: string) => spawnSync(process.execPath, [CLI_ENTRY, typo], {
+    cwd: PKG_ROOT,
+    encoding: 'utf-8',
+    timeout: 20_000,
+    env: cliEnv(false),
+  })
+
+  const synk = run('synk')
+  const synkLines = `${synk.stdout}${synk.stderr}`.split('\n')
+  assert.ok(typeof synk.status === 'number' && synk.status !== 0)
+  assert.ok(synkLines.includes("error: unknown command 'synk'"), synkLines.join('\n'))
+  assert.ok(synkLines.some((line) => line.startsWith('Usage: nextspark ')), synkLines.join('\n'))
+
+  // Commander 12 has no close-enough candidate for `synk`; `buld` exercises its suggestion line.
+  const buld = run('buld')
+  const buldLines = `${buld.stdout}${buld.stderr}`.split('\n')
+  assert.ok(typeof buld.status === 'number' && buld.status !== 0)
+  assert.ok(buldLines.includes("error: unknown command 'buld'"), buldLines.join('\n'))
+  assert.ok(buldLines.some((line) => /^\(Did you mean .+\?\)$/.test(line)), buldLines.join('\n'))
 })
 
 /**
@@ -112,7 +213,7 @@ test('in a project whose path holds characters that break or reorder a line, no 
         env: { ...process.env, NEXT_RAN: nextRan, FORCE_COLOR: '0' },
       })
       const lines = `${result.stdout}${result.stderr}`.split('\n')
-      if (!expected(result.status)) wrong.push(`${label}: exited ${result.status}`)
+      if (!expected(result.status)) wrong.push(`${label}: exited ${result.status}: ${JSON.stringify(`${result.stdout}${result.stderr}`.slice(0, 500))}`)
       for (const line of lines.filter((line) => RAW_CONTROL.test(line))) wrong.push(`${label}: ${JSON.stringify(line)} holds a raw control`)
       for (const success of SUCCESSES) {
         const reported = label === 'registry:build' && success === SUCCESSES[0] ? 1 : label === 'sync:app --force' && success === SUCCESSES[1] ? 1 : 0

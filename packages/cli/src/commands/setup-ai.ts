@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { execSync } from 'node:child_process';
-import chalk from 'chalk';
+import chalk from '../utils/colors.js';
 import ora from 'ora';
 import { getAIWorkflowDir } from '../utils/paths.js';
 

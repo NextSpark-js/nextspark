@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import chalk from '../utils/colors.js';
 import { runDoctorCommand } from '../doctor/index.js';
 
 export async function doctorCommand(): Promise<void> {

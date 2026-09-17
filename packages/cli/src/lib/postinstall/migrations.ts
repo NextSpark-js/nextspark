@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, cpSync } from 'fs'
 import { join, basename } from 'path'
-import chalk from 'chalk'
+import chalk from '../../utils/colors.js'
 
 export async function registerMigrations(
   migrations: string[],

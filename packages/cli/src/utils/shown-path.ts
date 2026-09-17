@@ -1,6 +1,6 @@
 import { format } from 'node:util';
-import chalk from 'chalk';
 import ora from 'ora';
+import { renderColorMarkers, stripColorMarkers } from './colors.js';
 
 /**
  * What breaks a line in a terminal or a log, or reorders how it reads: C0 and C1
@@ -28,25 +28,23 @@ export function shownPath(text: string): string {
   );
 }
 
-/** A Select Graphic Rendition sequence: a color or a style, which sets how text looks and neither breaks nor moves it. */
-const SGR = /\x1b\[[0-9;]*m/g;
-
 /**
  * What one call prints, as a line of output shows it. The newlines and spaces
  * it starts with and the newlines it ends with are kept, as the blank lines
  * around it and its indent; when what is between them holds a character that
  * breaks or reorders a line, all of it is shown the way `shownPath` shows text,
- * on the one line, without colors. While
- * chalk colors the output, its color sequences don't count as such characters.
+ * on the one line, without colors. Color markers made by the CLI don't count
+ * as such characters and become terminal SGR sequences only after this check;
+ * every real ESC therefore belongs to data and is escaped.
  *
  * A newline inside a call can't be told from one in a name the call prints, so
  * what spans lines is printed one call per line, and a call starts with its own
  * text rather than with a name.
  */
 export function shownLine(text: string): string {
-  const plain = chalk.level > 0 ? text.replace(SGR, '') : text;
+  const plain = stripColorMarkers(text);
   const [, before, body, after] = /^([\n ]*)([\s\S]*?)(\n*)$/.exec(plain)!;
-  return BREAKS_A_LINE.test(body) ? `${before}${shownPath(body)}${after}` : text;
+  return BREAKS_A_LINE.test(body) ? `${before}${shownPath(body)}${after}` : renderColorMarkers(text);
 }
 
 const GUARDED = Symbol.for('nextspark.shownLine');
@@ -101,11 +99,30 @@ export function guardSpinners(): void {
   prototype[GUARDED] = true;
 }
 
+/** Turn the CLI's color markers into SGR sequences on direct stream writes without changing any other control sequence. */
+function guardWrites(): void {
+  for (const stream of [process.stdout, process.stderr]) {
+    const original = stream.write as typeof stream.write & Guarded;
+    if (original[GUARDED]) continue;
+    const guarded = function (this: NodeJS.WriteStream, chunk: Uint8Array | string, ...args: unknown[]) {
+      return (original as (...writeArgs: unknown[]) => boolean).call(
+        this,
+        typeof chunk === 'string' ? renderColorMarkers(chunk) : chunk,
+        ...args
+      );
+    } as typeof stream.write & Guarded;
+    guarded[GUARDED] = true;
+    stream.write = guarded;
+  }
+}
+
 /**
- * Guard what the CLI prints, once, before anything is printed: the console and
- * the spinners, so every line of output is escaped where it is printed.
+ * Guard what the CLI prints, once, before anything is printed. Console calls
+ * and spinner text pass through `shownLine`; direct stream writes translate
+ * only this process's color markers and leave terminal cursor controls alone.
  */
 export function guardOutput(): void {
+  guardWrites();
   guardConsole();
   guardSpinners();
 }

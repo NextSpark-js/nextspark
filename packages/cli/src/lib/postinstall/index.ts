@@ -1,4 +1,4 @@
-import chalk from 'chalk'
+import chalk from '../../utils/colors.js'
 import type { NextSparkPackageJson, PostinstallContext } from '../../types/nextspark-package.js'
 import { processTemplates } from './templates.js'
 import { processEnvVars } from './env-vars.js'

@@ -1,6 +1,6 @@
 import { existsSync, cpSync, readFileSync, writeFileSync, renameSync, mkdirSync } from 'node:fs'
 import { join, dirname } from 'node:path'
-import chalk from 'chalk'
+import chalk from '../utils/colors.js'
 import ora from 'ora'
 import { execSync } from 'node:child_process'
 

@@ -1,5 +1,5 @@
 import { spawn, ChildProcess } from 'node:child_process';
-import chalk from 'chalk';
+import chalk from '../utils/colors.js';
 import ora from 'ora';
 import { getCoreDir, getProjectRoot, isMonorepoMode } from '../utils/paths.js';
 import { resolveBundlerArgs, type Bundler } from '../utils/next-bundler.js';

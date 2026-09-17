@@ -9,7 +9,7 @@
  *   npx nextspark doctor
  */
 
-import chalk from 'chalk'
+import chalk from '../utils/colors.js'
 import { checkDependencies } from './checks/dependencies.js'
 import { checkConfigs } from './checks/config.js'
 import { checkDatabase } from './checks/database.js'

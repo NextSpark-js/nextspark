@@ -2,12 +2,12 @@
 
 import { config } from 'dotenv';
 import { Command } from 'commander';
-import chalk from 'chalk';
+import chalk from './utils/colors.js';
 import { readFileSync } from 'fs';
 import { devCommand } from './commands/dev.js';
-import { guardOutput } from './utils/shown-path.js';
+import { breaksALine, guardOutput, shownLine, shownPath } from './utils/shown-path.js';
 
-// Every line the CLI prints is escaped where it is printed, dotenv's own among them
+// Guard CLI output before dotenv or a command can print anything
 guardOutput();
 
 // Load .env from project root
@@ -215,8 +215,28 @@ program
 // Error handling
 program.showHelpAfterError();
 
+function shownCommanderLines(text: string): string {
+  return text.split(/(?<=\n)/).map((line) => shownLine(line)).join('');
+}
+
+function shownCommanderError(text: string): string {
+  let shown = text;
+  for (const token of process.argv.slice(2)) {
+    if (!breaksALine(token)) continue;
+    const equals = token.indexOf('=');
+    const candidates = [token];
+    if (equals !== -1) candidates.push(token.slice(0, equals), token.slice(equals + 1));
+    for (const candidate of [...new Set(candidates)].sort((left, right) => right.length - left.length)) {
+      if (candidate && breaksALine(candidate)) shown = shown.split(candidate).join(shownPath(candidate));
+    }
+  }
+  return shown.split('\n').some((line) => breaksALine(line)) ? shownLine(shown) : shown;
+}
+
 program.configureOutput({
-  writeErr: (str) => process.stderr.write(chalk.red(str)),
+  writeOut: (str) => process.stdout.write(shownCommanderLines(str)),
+  writeErr: (str) => process.stderr.write(shownCommanderLines(str)),
+  outputError: (str, write) => write(chalk.red(shownCommanderError(str))),
 });
 
 // Parse arguments

@@ -4,7 +4,7 @@
  * Beautiful ASCII art banner for the CLI wizard.
  */
 
-import chalk from 'chalk'
+import chalk from '../utils/colors.js'
 import { readFileSync } from 'fs'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'

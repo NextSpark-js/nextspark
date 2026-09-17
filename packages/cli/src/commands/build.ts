@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import chalk from 'chalk';
+import chalk from '../utils/colors.js';
 import ora from 'ora';
 import { nextOutputBlocker, spawnNext } from '../utils/spawn-next.js';
 import { errorLines, errorWithLines } from '../utils/shown-path.js';

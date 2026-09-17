@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import chalk from 'chalk';
+import chalk from '../utils/colors.js';
 import ora from 'ora';
 import { runWizard } from '../wizard/index.js';
 import type { CLIOptions, WizardMode, PresetName, ThemeOption, PluginOption, ProjectType } from '../wizard/types.js';

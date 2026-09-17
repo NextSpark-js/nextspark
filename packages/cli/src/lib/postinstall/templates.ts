@@ -1,6 +1,6 @@
 import { existsSync, cpSync, mkdirSync } from 'fs'
 import { join, dirname } from 'path'
-import chalk from 'chalk'
+import chalk from '../../utils/colors.js'
 import type { PostinstallContext } from '../../types/nextspark-package.js'
 
 interface TemplateConfig {

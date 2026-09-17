@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync, appendFileSync } from 'fs'
 import { join } from 'path'
-import chalk from 'chalk'
+import chalk from '../../utils/colors.js'
 
 interface EnvVarConfig {
   key: string

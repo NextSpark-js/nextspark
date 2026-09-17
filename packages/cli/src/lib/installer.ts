@@ -1,6 +1,6 @@
 import { existsSync, cpSync, rmSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
-import chalk from 'chalk'
+import chalk from '../utils/colors.js'
 import type { NextSparkPackageJson, InstallOptions, InstallResult } from '../types/nextspark-package.js'
 import { updateTsConfig, registerInPackageJson } from './config-updater.js'
 
