@@ -140,7 +140,7 @@ export async function generateBillingRegistry(activeTheme, contentsDir, config) 
   let billingConfig
   try {
     // Use jiti to import .ts files at build time (Node.js can't import .ts natively)
-    const jiti = createJiti(import.meta.url, { interopDefault: true })
+    const jiti = createJiti(import.meta.url, { interopDefault: true, fsCache: false })
     const module = await jiti.import(absolutePath)
     billingConfig = module.billingConfig || module.default
   } catch (error) {

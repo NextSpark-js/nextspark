@@ -48,7 +48,7 @@ export async function cleanupOldRouteFiles(CONFIG) {
       }
     }
   } catch (error) {
-    // A removal refused for going out of the project stops the build, instead of reading as a cleanup that failed
+    // An UNSAFE_WRITE refusal propagates and stops the build; every other error here is a non-fatal cleanup failure
     if (isUnsafeWrite(error)) throw error
     verbose(`Error during route cleanup: ${error.message}`)
   }
