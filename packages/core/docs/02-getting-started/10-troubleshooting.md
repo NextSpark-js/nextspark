@@ -71,7 +71,7 @@ node -v
 **Solution (macOS):**
 ```bash
 # Using Homebrew
-brew install node@20
+brew install node@22
 
 # Verify
 node -v

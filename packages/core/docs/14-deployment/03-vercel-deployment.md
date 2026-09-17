@@ -162,7 +162,7 @@ Root Directory: ./
 Build Command: pnpm build
 Install Command: pnpm install
 Output Directory: .next
-Node Version: 20.x
+Node Version: 22.x
 ```
 
 ---
@@ -240,7 +240,7 @@ pnpm build
 
 # 3. Node version mismatch
 Solution: Set Node version in Project Settings
-Recommended: 20.x
+Recommended: 22.x
 
 # 4. Out of memory
 Solution: Contact Vercel support or optimize build

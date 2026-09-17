@@ -28,7 +28,7 @@ This comprehensive tutorial guides you through creating a custom plugin from scr
 ## Prerequisites
 
 **Required:**
-- Node.js 18+ and pnpm installed
+- Node.js 22.13+ and pnpm installed
 - Basic TypeScript knowledge
 - Familiarity with React and Next.js
 - Database access (optional for this example)

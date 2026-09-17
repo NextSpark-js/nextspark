@@ -167,7 +167,7 @@ vercel login
 
 **Node.js version:**
 - Go to **Settings** → **General** → **Node.js Version**
-- Select `20.x` or `18.x`
+- Select `22.x`
 
 ---
 
