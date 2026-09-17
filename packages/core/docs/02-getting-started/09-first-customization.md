@@ -1,5 +1,7 @@
 # First Customization
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 ## Introduction
 
 Hands-on tutorial to make your first customizations. You'll learn how to customize theme styles, create pages, work with entities, and understand the project structure.
@@ -440,7 +442,7 @@ features: {
 
 ```bash
 # Ctrl+C to stop server
-pnpm build:registries   # Rebuild registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs   # Rebuild registries
 pnpm dev              # Restart server
 ```
 
@@ -714,7 +716,7 @@ export function useCustomFeature() {
 4. Check `tsconfig.json` paths
 
 **Build errors:**
-1. Check registry build: `pnpm build:registries`
+1. Check registry build: `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
 2. Verify entity config syntax
 3. Check for circular imports
 4. Clear build cache: `rm -rf .next`
@@ -839,7 +841,7 @@ export default function Page() {
 ### Step 5: Rebuild and Restart
 
 ```bash
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 pnpm dev
 ```
 
@@ -1482,7 +1484,7 @@ module.exports = {
 
 - [ ] Environment variables configured
 - [ ] Database migrations run
-- [ ] Registry built (`pnpm build:registries`)
+- [ ] Registry built (`cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`)
 - [ ] Tests passing (`pnpm test`)
 - [ ] Build successful (`pnpm build`)
 - [ ] Bundle size checked (`ANALYZE=true pnpm build`)

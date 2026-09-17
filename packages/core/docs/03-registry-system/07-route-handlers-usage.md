@@ -1,5 +1,7 @@
 # Route Handlers Registry
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 > **Migration Note (2025-12-26):** Query functions have been moved to `RouteHandlerService`.
 > Import from `@/core/lib/services/route-handler.service` instead of the registry.
 > See [RouteHandlerService API](./06-route-handlers-architecture.md#routehandlerservice-api) for details.
@@ -23,7 +25,7 @@ The Route Handlers Registry (`core/lib/registries/route-handlers.ts`) provides *
 ### Build-Time Generation
 
 ```typescript
-// Generated at build time by core/scripts/build/registry.mjs
+// Generated at build time by packages/core/scripts/build/registry.mjs
 import * as plugin_ai_generate from '@/contents/plugins/ai/api/generate/route'
 import * as plugin_ai_embeddings from '@/contents/plugins/ai/api/embeddings/route'
 
@@ -64,7 +66,7 @@ if (handler) {
 
 ### Automatic Discovery Process
 
-**Build script** (`core/scripts/build/registry.mjs`) discovers:
+**Build script** (`packages/core/scripts/build/registry.mjs`) discovers:
 
 1. **Theme Routes:**
 ```text
@@ -92,7 +94,7 @@ contents/plugins/ai/
 ### Discovery Logic
 
 ```typescript
-// From core/scripts/build/registry.mjs
+// From packages/core/scripts/build/registry.mjs
 async function discoverRoutes(basePath: string, type: 'theme' | 'plugin') {
   const routes = []
   
@@ -638,7 +640,7 @@ const handler = getPluginRouteHandler('ai/generate', 'POST')
 **Solutions:**
 1. Check route file exists: `contents/plugins/[plugin]/api/[path]/route.ts`
 2. Verify POST method is exported in route file
-3. Run `pnpm build:registries` to regenerate
+3. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` to regenerate
 4. Restart dev server
 
 ### Wrong HTTP Method
@@ -691,6 +693,6 @@ const routeKeys: string[] = getPluginRouteKeys()
 **Last Updated**: 2025-11-20  
 **Version**: 1.0.0  
 **Status**: Complete  
-**Auto-Generated**: Yes (by core/scripts/build/registry.mjs)  
+**Auto-Generated**: Yes (by packages/core/scripts/build/registry.mjs)
 **Registry File**: `core/lib/registries/route-handlers.ts`  
 **Integration**: Next.js App Router 14.x

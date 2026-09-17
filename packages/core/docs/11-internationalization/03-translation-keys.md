@@ -1,5 +1,7 @@
 # Translation Keys
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 ## Introduction
 
 Translation keys are the backbone of the internationalization system, providing a structured way to organize and access translated content throughout the application. This document covers the naming conventions, structural patterns, validation utilities, and best practices for creating maintainable and scalable translation keys.
@@ -819,7 +821,7 @@ if (process.env.NODE_ENV === 'development') {
 Add validation to the registry build process:
 
 ```javascript
-// core/scripts/build/registry.mjs
+// packages/core/scripts/build/registry.mjs
 import { detectMissingTranslations } from './core/lib/i18n-utils.js'
 
 // Load all locale files
@@ -990,7 +992,7 @@ t('login.title')
 
 **3. Run validation**:
 ```bash
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 # Check for missing key warnings
 ```
 

@@ -1,5 +1,7 @@
 # Architecture Patterns
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 ## Introduction
 
 This document describes the core architectural patterns that define how the application is built and operates. These patterns are fundamental to understanding the codebase and making effective contributions.
@@ -26,7 +28,7 @@ The registry pattern is the foundation of the architecture. Instead of loading c
 
 ### Implementation
 
-**Build Script (`core/scripts/build/registry.mjs`):**
+**Build Script (`packages/core/scripts/build/registry.mjs`):**
 ```typescript
 // This is the ONLY place that can import from @/contents
 import { taskConfig } from '@/contents/themes/default/entities/tasks/tasks.config.ts'
@@ -91,9 +93,9 @@ import { ENTITY_REGISTRY } from '@/core/lib/registries/entity-registry'
 
 1. **NEVER** import from `@/contents` in application code
 2. **ALWAYS** use registries for content access
-3. **ONLY** `core/scripts/build/registry.mjs` can import from `@/contents`
+3. **ONLY** `packages/core/scripts/build/registry.mjs` can import from `@/contents`
 4. **Server vs Client** - Use appropriate registry version
-5. **Regenerate** - Run `pnpm build:registries` after content changes
+5. **Regenerate** - Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` after content changes
 
 ---
 
@@ -105,7 +107,7 @@ The build-time generation pattern pre-compiles all dynamic content into static c
 
 ### Generated Artifacts
 
-**1. Registries** (`core/scripts/build/registry.mjs`)
+**1. Registries** (`packages/core/scripts/build/registry.mjs`)
 ```bash
 # Input: Contents from themes/plugins/entities and active-theme documentation
 contents/themes/default/entities/tasks/tasks.config.ts
@@ -145,9 +147,8 @@ public/theme/images/
 // package.json scripts
 {
   "scripts": {
-    "registry:build": "node core/scripts/build/registry.mjs",
     "theme:build": "node core/scripts/build/theme.mjs",
-    "build": "npm run registry:build && npm run theme:build && next build"
+    "build": "npm run theme:build && next build"
   }
 }
 ```
@@ -155,7 +156,7 @@ public/theme/images/
 **Watch Mode:**
 ```bash
 # Development - auto-rebuild on changes
-nextspark registry:watch  # Rebuilds registries on content changes
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch  # Rebuilds registries on content changes
 pnpm theme:build-watch     # Rebuilds theme CSS on style changes
 pnpm dev                   # Runs all watchers + Next.js dev server
 ```

@@ -1,5 +1,7 @@
 # API Introduction
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 **API v1 architecture • RESTful design • Dual authentication • Auto-generated endpoints**
 
 ---
@@ -352,7 +354,7 @@ export const productEntityConfig = {
 
 **2. Build Registry:**
 ```bash
-npm run build:registry
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 **3. Endpoints Auto-Available:**

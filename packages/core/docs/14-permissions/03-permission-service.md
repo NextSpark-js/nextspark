@@ -287,7 +287,7 @@ interface PermissionUISection {
 
 ## Permission Matrix
 
-The permission matrix is pre-computed at build time by `build-registry.mjs` from:
+The permission matrix is pre-computed at build time by `packages/core/scripts/build/registry.mjs` from:
 
 1. **Core permissions** - `core/lib/permissions/system.ts`
 2. **Team permissions** - `permissions.config.ts → teams`

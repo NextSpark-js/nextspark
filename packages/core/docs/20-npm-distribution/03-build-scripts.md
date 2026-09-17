@@ -1,5 +1,7 @@
 # Build Scripts
 
+> **Registry commands in this guide** run in a generated project, from its root. In the NextSpark monorepo, run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` (add `--watch` to watch).
+
 The build scripts in `packages/core/scripts/build/` handle registry generation, theme compilation, and app scaffolding.
 
 ## Script Locations
@@ -248,7 +250,7 @@ pnpm build
 
 ```bash
 cd packages/core
-node scripts/build/registry.mjs
+pnpm build:registries
 node scripts/build/theme.mjs
 ```
 

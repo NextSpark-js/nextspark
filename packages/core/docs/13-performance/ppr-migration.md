@@ -1,5 +1,7 @@
 # PPR Migration Guide (Next.js 16 + Partial Prerendering)
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 ## Overview
 
 Next.js 16 introduces **Partial Prerendering (PPR)** with `cacheComponents: true`. This enables a fully static shell that renders instantly from CDN, with dynamic content streamed via Suspense boundaries.
@@ -53,7 +55,7 @@ Update import paths if needed (the API is the same).
 ### 4. Regenerate registries
 
 ```bash
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 With `cacheComponents: true` detected, the translation registry will now generate PPR-specific exports:
@@ -142,4 +144,4 @@ To disable PPR and revert to the default layout:
 
 1. Remove `cacheComponents: true` from next.config
 2. Restore the default layout: `npx nextspark sync:app --force`
-3. Regenerate registries: `pnpm build:registries`
+3. Regenerate registries: `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`

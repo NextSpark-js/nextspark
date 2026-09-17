@@ -1,5 +1,7 @@
 # Builder Integration with Entity System
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 This document explains how the Page Builder integrates with the generic entity system, enabling any entity to have visual block-based editing.
 
 ## Overview
@@ -396,7 +398,7 @@ CREATE INDEX idx_tutorials_blocks_gin ON tutorials USING GIN (blocks);
 ### Step 4: Rebuild Registry
 
 ```bash
-node core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 ## Block Scope
@@ -973,7 +975,7 @@ Builder operations respect entity-level permissions:
 
 ### Block Component Not Found
 
-1. Run `node core/scripts/build/registry.mjs`
+1. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
 2. Check block is in correct theme folder
 3. Verify export name ends with `Block`
 

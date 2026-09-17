@@ -1,5 +1,7 @@
 # Troubleshooting and Debugging
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 **Common errors • Debugging techniques • Migration patterns • Best practices**
 
 ---
@@ -57,10 +59,10 @@ console.log(entity) // undefined
 **Solution:**
 ```bash
 # Rebuild registry
-npm run build:registry
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 # Or with verbose output
-DEBUG=true node core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --verbose
 
 # Verify entity exists
 cat core/lib/registries/entity-registry.ts | grep "tasks"
@@ -81,7 +83,7 @@ const entity = ENTITY_REGISTRY.tasks
 **Solution:**
 ```bash
 # 1. Rebuild registry (generates new types)
-npm run build:registry
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 # 2. Restart TypeScript server in VS Code
 # Cmd/Ctrl + Shift + P → "TypeScript: Restart TS Server"
@@ -148,13 +150,13 @@ Module not found: Can't resolve '@/core/lib/registries/entity-registry'
 **Solution:**
 ```bash
 # Generate all registries
-npm run build:registry
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 # Check file exists
 ls core/lib/registries/entity-registry.ts
 
 # If still missing, check build script for errors
-node core/scripts/build/registry.mjs 2>&1 | tee build.log
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs 2>&1 | tee build.log
 ```
 
 ---
@@ -167,16 +169,11 @@ node core/scripts/build/registry.mjs 2>&1 | tee build.log
 
 **Solution:**
 ```bash
-# Option 1: Manual rebuild
-npm run build:registry
+# Manual rebuild in the monorepo
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
-# Option 2: Run dev with watch mode (auto-rebuilds)
-npm run dev
-
-# Option 3: Force rebuild on file change
-# Add to package.json scripts:
-"dev": "concurrently \"next dev\" \"npm run registry:watch\""
-"registry:watch": "nodemon --watch contents -e ts,tsx,md --exec 'npm run build:registry'"
+# Watch for changes in the monorepo
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
 ```
 
 ---
@@ -185,13 +182,13 @@ npm run dev
 
 ### Technique 1: Verbose Logging
 
-**Enable debug mode:**
+**Enable verbose logging:**
 ```bash
-# Set environment variable
-DEBUG=true npm run build:registry
+# Long form
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --verbose
 
-# Or inline
-DEBUG=true node core/scripts/build/registry.mjs
+# Short form
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs -v
 ```
 
 **Output:**
@@ -245,7 +242,7 @@ Object.entries(ENTITY_REGISTRY).forEach(([name, entry]) => {
 
 **Run build without writing files:**
 ```typescript
-// Add to build-registry.mjs
+// Add to packages/core/scripts/build/registry.mjs
 const DRY_RUN = process.env.DRY_RUN === 'true'
 
 if (DRY_RUN) {
@@ -258,7 +255,7 @@ if (DRY_RUN) {
 
 **Usage:**
 ```bash
-DRY_RUN=true node core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 ---
@@ -456,7 +453,7 @@ npx tsx scripts/validate-registries.ts
 **Issue: Build script hangs**
 ```bash
 # Check for infinite loops or unresolved promises
-timeout 30 node core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 # Add progress logging
 ```
@@ -464,16 +461,16 @@ timeout 30 node core/scripts/build/registry.mjs
 **Issue: Build script crashes**
 ```bash
 # Run with error details
-node --trace-warnings core/scripts/build/registry.mjs
+node --trace-warnings packages/core/scripts/build/registry.mjs
 
 # Check for syntax errors
-npx eslint core/scripts/build/registry.mjs
+npx eslint packages/core/scripts/build/registry.mjs
 ```
 
 **Issue: Incorrect file discovery**
 ```bash
 # Enable verbose file discovery
-DEBUG_FILES=true node core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --verbose
 ```
 
 ---
@@ -481,7 +478,7 @@ DEBUG_FILES=true node core/scripts/build/registry.mjs
 ### Build Script Profiling
 
 ```typescript
-// Add to build-registry.mjs
+// Add to packages/core/scripts/build/registry.mjs
 import { performance } from 'perf_hooks'
 
 function profileSection(name: string, fn: () => any) {
@@ -541,7 +538,7 @@ import { EntityName } from '@/core/lib/registries/entity-registry'
 **Solution:**
 ```bash
 # Registry not built yet
-npm run build:registry
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 # Verify export exists
 grep "export type EntityName" core/lib/registries/entity-registry.ts
@@ -626,7 +623,7 @@ const EntityRegistry = lazy(() => import('@/core/lib/registries/entity-registry'
 ```bash
 # Add to git hooks
 # .husky/pre-commit
-npm run build:registry
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 git add core/lib/registries/
 ```
 
@@ -665,7 +662,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
       - run: npm install
-      - run: npm run build:registry
+      - run: cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
       - run: npx tsx scripts/validate-registries.ts
       - run: npm run lint
       - run: npx tsc --noEmit
@@ -676,7 +673,7 @@ jobs:
 ### 4. Monitor Registry Build Times
 
 ```typescript
-// core/scripts/build/registry.mjs
+// packages/core/scripts/build/registry.mjs
 const buildStart = performance.now()
 
 // ... build logic ...

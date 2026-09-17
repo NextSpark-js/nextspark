@@ -5,6 +5,8 @@ description: How to configure plans, features, limits, and action mappings
 
 # Billing Configuration
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 The billing system is configured via a `billing.config.ts` file in your theme directory.
 
 ## Configuration File Location
@@ -384,7 +386,7 @@ Get Price IDs from your payment provider's dashboard and add them to `providerPr
 After modifying `billing.config.ts`, regenerate the registry:
 
 ```bash
-node core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 > **Note:** Currently, the billing registry imports directly from the theme. Full build-time generation is planned for a future update.

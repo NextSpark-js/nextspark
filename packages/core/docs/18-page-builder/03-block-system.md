@@ -206,7 +206,7 @@ interface FieldDefinition {
 
 ### Auto-Generation
 
-The block registry is auto-generated at build time by `core/scripts/build/registry.mjs`:
+The block registry is auto-generated at build time by `packages/core/scripts/build/registry.mjs`:
 
 ```typescript
 // core/lib/registries/block-registry.ts (auto-generated)

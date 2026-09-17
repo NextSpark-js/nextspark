@@ -1,5 +1,7 @@
 # Performance and Caching
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 ## Overview
 
 The Registry System's **~17,255x performance improvement** (140ms → 6ms) is the result of eliminating runtime I/O through build-time generation and intelligent caching strategies. This document explains the performance characteristics, benchmarks, caching mechanisms, and optimization strategies.
@@ -263,7 +265,7 @@ pnpm dev
 pnpm build
 
 # Registry generation
-[BUILD] Running build-registry.mjs --build
+[BUILD] Running registry build
 [BUILD] ✓ Discovering content... (2.1s)
 [BUILD] ✓ Generating registries... (3.0s)
 [BUILD] ✓ All registries generated (5.1s)
@@ -282,7 +284,7 @@ pnpm build
 
 ```bash
 # Rebuild all registries
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 # Output:
 🔍 Discovering content...
@@ -305,7 +307,7 @@ pnpm build:registries
 
 ```bash
 # Enable watch mode
-pnpm registry:watch
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
 
 # Output:
 [REGISTRY] Watch mode enabled
@@ -368,7 +370,7 @@ const entity = ENTITY_REGISTRY.tasks  // Always valid, no staleness
 ```typescript
 // Content change flow
 1. Edit: contents/themes/default/entities/tasks/tasks.config.ts
-2. Rebuild: pnpm build:registries (or auto in watch mode)
+2. Rebuild: cd apps/dev && node ../../packages/core/scripts/build/registry.mjs (or auto in watch mode)
 3. Restart: pnpm dev (restart dev server)
 4. Access: ENTITY_REGISTRY.tasks (now up-to-date)
 
@@ -626,7 +628,7 @@ console.log(`  Heap Used: ${(used.heapUsed / 1024 / 1024).toFixed(2)} MB`)
 
 ```bash
 # Track build time over time
-time pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 # Output:
 🔍 Discovering content... (2.1s)

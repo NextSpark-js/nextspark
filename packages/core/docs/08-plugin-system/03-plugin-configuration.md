@@ -372,7 +372,7 @@ export interface PluginHooks {
 
 ### `onRegister` Hook
 
-**When**: Build-time, when plugin is discovered by `core/scripts/build/registry.mjs`
+**When**: Build-time, when plugin is discovered by `packages/core/scripts/build/registry.mjs`
 
 **Use Cases**:
 - Validate plugin structure

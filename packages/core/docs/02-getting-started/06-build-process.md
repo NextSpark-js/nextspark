@@ -1,5 +1,7 @@
 # Build Process
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 ## Introduction
 
 Understanding the build process is essential for effective development. This guide explains what happens when you run `pnpm dev` or `pnpm build`.
@@ -13,7 +15,7 @@ When you run `pnpm dev`, these processes execute in order:
 ```text
 1. TypeScript Config  (2-3s)   → update-tsconfig.mjs
 2. Theme Build        (2-3s)   → build-theme.mjs
-3. Registry Build     (5-10s)  → build-registry.mjs
+3. Registry Build     (5-10s)  → packages/core/scripts/build/registry.mjs
 4. Docs Registry      (1-2s)   → registry.mjs (active-theme docs)
 5. Plugin Dev         (1-2s)   → turbo dev
 6. Next.js Dev        (2-3s)   → next dev --turbopack
@@ -84,7 +86,7 @@ public/theme/                 # Copied assets
 
 ## Step 3: Registry Build (CRITICAL)
 
-**Script:** `core/scripts/build/registry.mjs --watch`
+**Script:** `packages/core/scripts/build/registry.mjs --watch`
 
 **What it does:**
 1. Scans `contents/themes/` for entities, configs
@@ -147,7 +149,7 @@ public/theme/                 # Copied assets
 
 ## Step 4: Documentation Registry
 
-**Script:** `core/scripts/build/registry.mjs` (calls `generateDocsRegistry()` with Step 3)
+**Script:** `packages/core/scripts/build/registry.mjs` (calls `generateDocsRegistry()` with Step 3)
 
 **What it does:**
 - Reads the active theme's `docs/public/` and `docs/superadmin/` directories
@@ -256,7 +258,7 @@ public/theme/
 - **Entities:** Edit in `contents/themes/*/entities/`
 - **Plugins:** Edit in `contents/plugins/`
 - **Theme:** Edit in `contents/themes/*/styles/`
-- **Rebuild:** Run `pnpm build:registries` or restart `pnpm dev`
+- **Rebuild:** In the monorepo, run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`. Root `pnpm dev` starts `apps/dev` without rebuilding registries; in a generated project, `pnpm dev` builds registries on startup.
 
 ---
 
@@ -264,8 +266,8 @@ public/theme/
 
 **Registry:**
 ```bash
-pnpm build:registries          # One-time build
-nextspark registry:watch       # Watch mode
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs          # One-time build
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch       # Watch mode
 ```
 
 **Theme:**
@@ -275,7 +277,7 @@ pnpm theme:build            # One-time build
 
 **Docs:**
 ```bash
-pnpm build:registries  # Rebuilds every registry, including docs
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs  # Rebuilds every registry, including docs
 ```
 
 **All:**

@@ -1,10 +1,12 @@
 # Theme Registry Integration
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 The Theme Registry provides the bridge between the **registry system** and the **theme system**, enabling ultra-fast access to theme configurations, entities, routes, and assets without runtime filesystem operations.
 
 ## Overview
 
-Themes are automatically discovered at build time by `core/scripts/build/registry.mjs` and registered in `core/lib/registries/theme-registry.ts`. This integration enables:
+Themes are automatically discovered at build time by `packages/core/scripts/build/registry.mjs` and registered in `core/lib/registries/theme-registry.ts`. This integration enables:
 
 - ✅ **Zero I/O access** to theme configurations
 - ✅ **Instant theme lookups** via direct object access
@@ -73,7 +75,7 @@ export const THEME_REGISTRY: Record<string, ThemeRegistryEntry> = {
 
 ### Automatic Discovery
 
-The build script (`core/scripts/build/registry.mjs`) automatically discovers themes by:
+The build script (`packages/core/scripts/build/registry.mjs`) automatically discovers themes by:
 
 1. **Scanning** `contents/themes/` directory
 2. **Finding** `theme.config.ts` files (required)
@@ -84,7 +86,7 @@ The build script (`core/scripts/build/registry.mjs`) automatically discovers the
 ### Discovery Logic
 
 ```typescript
-// Simplified discovery logic from build-registry.mjs
+// Simplified discovery logic from packages/core/scripts/build/registry.mjs
 async function discoverThemes() {
   const themesDir = join(contentsDir, 'themes')
   const themes = []
@@ -408,7 +410,7 @@ The registry system works with the theme build system:
 
 ```text
 Build Time:
-1. core/scripts/build/registry.mjs discovers themes
+1. packages/core/scripts/build/registry.mjs discovers themes
    ↓
 2. Generates theme-registry.ts with all metadata
    ↓
@@ -430,7 +432,7 @@ Runtime:
 # Development
 pnpm dev
   ↓
-1. build-registry.mjs (discovers themes)
+1. packages/core/scripts/build/registry.mjs (discovers themes)
   ↓
 2. build-theme.mjs (compiles active theme CSS)
   ↓
@@ -439,7 +441,7 @@ pnpm dev
 # Production
 pnpm build
   ↓
-1. build-registry.mjs --build
+1. registry build
   ↓
 2. build-theme.mjs --build
   ↓
@@ -623,7 +625,7 @@ const theme = getTheme(themeName)
 **Solutions:**
 1. Check theme exists in `contents/themes/my-theme/`
 2. Verify `theme.config.ts` file exists
-3. Run `pnpm build:registries` to regenerate
+3. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` to regenerate
 4. Restart dev server
 
 ### Theme Changes Not Reflected
@@ -631,7 +633,7 @@ const theme = getTheme(themeName)
 **Problem:** Updated theme config but changes don't appear
 
 **Solutions:**
-1. Run `pnpm build:registries` to regenerate registry
+1. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` to regenerate registry
 2. Restart dev server (registry can't hot reload)
 3. Check browser console for errors
 4. Verify active theme in `.env.local`
@@ -643,7 +645,7 @@ const theme = getTheme(themeName)
 **Solutions:**
 1. Check if `dashboard.config.ts` exists in theme
 2. Verify export name is `DASHBOARD_CONFIG`
-3. Regenerate registry: `pnpm build:registries`
+3. Regenerate registry: `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
 
 ## Type Safety
 

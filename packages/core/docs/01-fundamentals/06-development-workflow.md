@@ -1,5 +1,7 @@
 # Development Workflow
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 ## Introduction
 
 This document describes the development workflow, from task planning to deployment. The workflow is optimized for AI-assisted development using Claude Code with the `.rules/` system.
@@ -223,7 +225,7 @@ cp .env.example .env.local
 pnpm db:migrate
 
 # Build registries (REQUIRED before dev)
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 ### Development
@@ -236,10 +238,10 @@ pnpm dev
 pnpm dev:watch
 
 # Build registries (manually)
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 # Build registries (watch mode)
-nextspark registry:watch
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
 
 # Build theme CSS
 pnpm theme:build
@@ -326,7 +328,7 @@ await TodoWrite({
     { content: "Define field definitions with validation", status: "pending", activeForm: "Defining fields" },
     { content: "Create database migration", status: "pending", activeForm: "Creating migration" },
     { content: "Add translations (en.json + es.json)", status: "pending", activeForm: "Adding translations" },
-    { content: "Rebuild registries (pnpm build:registries)", status: "pending", activeForm: "Rebuilding registries" },
+    { content: "Rebuild registries (cd apps/dev && node ../../packages/core/scripts/build/registry.mjs)", status: "pending", activeForm: "Rebuilding registries" },
     { content: "Test CRUD operations via API", status: "pending", activeForm: "Testing CRUD" },
     { content: "Write unit tests for service layer", status: "pending", activeForm: "Writing unit tests" },
     { content: "Write E2E tests for dashboard", status: "pending", activeForm: "Writing E2E tests" }
@@ -746,7 +748,7 @@ jobs:
         run: pnpm install
 
       - name: Build registries
-        run: pnpm build:registries
+        run: cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
       - name: Type check
         run: pnpm type-check

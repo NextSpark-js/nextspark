@@ -1,5 +1,7 @@
 # Migration Guide
 
+> **Registry commands in this guide** run in a generated project, from its root. In the NextSpark monorepo, run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` (add `--watch` to watch).
+
 This guide covers migrating from the old `core/` structure to the new `packages/core/` structure.
 
 ## Overview
@@ -69,7 +71,6 @@ Update all scripts that reference `core/`:
 // BEFORE
 {
   "scripts": {
-    "build:registries": "node core/scripts/build/registry.mjs",
     "db:migrate": "node core/scripts/db/run-migrations.mjs"
   }
 }
@@ -77,7 +78,6 @@ Update all scripts that reference `core/`:
 // AFTER
 {
   "scripts": {
-    "build:registries": "nextspark registry:build",
     "db:migrate": "node packages/core/scripts/db/run-migrations.mjs"
   }
 }

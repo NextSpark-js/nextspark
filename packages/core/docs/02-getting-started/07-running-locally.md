@@ -1,5 +1,7 @@
 # Running Locally
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 ## Introduction
 
 Complete guide to running the development server, understanding watch modes, and optimizing your local development workflow.
@@ -42,7 +44,7 @@ pnpm dev
 - Copies: `public/theme/` assets
 - Triggers: Browser hot reload
 
-**2. REGISTRY (`nextspark registry:watch`)**
+**2. REGISTRY (`cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch`)**
 - Watches: `CONFIG.pluginsDir`, `<contentsDir>/entities`, `CONFIG.themesDir`, and `<contentsDir>/config`
 - Rebuilds: `.nextspark/registries/*.ts`, including `docs-registry.ts`
 - Documentation metadata comes from the active theme's `docs/public/` and `docs/superadmin/` directories
@@ -139,7 +141,7 @@ pnpm dev                   # All processes
 
 **Build manually:**
 ```bash
-pnpm build:registries  # Registries only, including docs
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs  # Registries only, including docs
 pnpm theme:build           # Theme CSS only
 ```
 
@@ -201,7 +203,7 @@ pnpm type-check            # TypeScript
 ```bash
 # Stop server
 rm -rf .nextspark/registries
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 pnpm dev
 ```
 
@@ -347,7 +349,7 @@ pnpm dev
 - Next.js: Hot module replacement
 
 **Manual commands:**
-- `pnpm build:registries` - Rebuild registries
+- `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` - Rebuild registries
 - `pnpm theme:build` - Rebuild theme
 - `pnpm lint` - Check code quality
 

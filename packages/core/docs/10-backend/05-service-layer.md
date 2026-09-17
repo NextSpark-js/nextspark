@@ -1,5 +1,7 @@
 # Service Layer
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 ## Introduction
 
 The service layer provides a clean abstraction between API routes and database operations. Services encapsulate business logic, handle data validation, manage RLS context, and provide reusable methods for common operations.
@@ -743,7 +745,7 @@ const entities = EntityTypeService.getEntitiesByCapability('hasBlocks')
 | **Data Source** | Database (PostgreSQL) | Build-time generated registries |
 | **Sync/Async** | Async (database queries) | Sync (in-memory lookups) |
 | **RLS** | Uses `queryWithRLS` | N/A (config data) |
-| **Updates** | Runtime mutations | Regenerate with `build-registry.mjs` |
+| **Updates** | Runtime mutations | Regenerate with `packages/core/scripts/build/registry.mjs` |
 | **Performance** | O(n) queries | O(1) lookups |
 
 ### Regenerating Registries
@@ -751,7 +753,7 @@ const entities = EntityTypeService.getEntitiesByCapability('hasBlocks')
 When theme or entity configurations change:
 
 ```bash
-node core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 This regenerates all `core/lib/registries/*.ts` files.

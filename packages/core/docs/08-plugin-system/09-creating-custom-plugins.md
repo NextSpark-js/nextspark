@@ -1,5 +1,7 @@
 # Creating Custom Plugins
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 ## Introduction
 
 This comprehensive tutorial guides you through creating a custom plugin from scratch. We'll build a complete **Weather Plugin** that fetches weather data, displays it in the UI, and provides an API endpoint.
@@ -726,7 +728,7 @@ Fetch and display weather data from OpenWeather API.
 
 4. Rebuild registry:
    ```bash
-   pnpm build:registries
+   cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
    ```
 
 ## Usage
@@ -787,7 +789,7 @@ MIT
 
 ```bash
 # Rebuild plugin registry
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 **Registry will generate**:

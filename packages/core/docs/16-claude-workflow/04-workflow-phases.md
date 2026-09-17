@@ -1,5 +1,7 @@
 # Workflow Phases (v4.0)
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 > **Version 4.0** - 19 phases with 9 quality gates organized in 7 blocks.
 
 ## Overview
@@ -176,7 +178,7 @@ Foundation phases set up the infrastructure: themes, plugins, and database.
 3. Set up `lib/core.ts` with main logic
 4. Create API routes structure
 5. Configure plugin in `plugin-sandbox` theme
-6. Run `node core/scripts/build/registry.mjs`
+6. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
 
 **Outputs:**
 - Complete plugin structure in `contents/plugins/{name}/`
@@ -196,7 +198,7 @@ Foundation phases set up the infrastructure: themes, plugins, and database.
 3. Configure `app.config.ts` (Team Mode, features)
 4. Configure `dashboard.config.ts`
 5. Configure `permissions.config.ts`
-6. Run `node core/scripts/build/registry.mjs`
+6. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
 
 **Outputs:**
 - Complete theme structure in `contents/themes/{name}/`
@@ -391,7 +393,7 @@ Page builder block development phase.
    - `fields.ts` - Form field definitions
    - `component.tsx` - React component with `data-cy`
    - `index.ts` - Exports
-4. Run `node core/scripts/build/registry.mjs`
+4. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
 5. Verify block in `BLOCK_REGISTRY`
 6. Test block in page builder
 

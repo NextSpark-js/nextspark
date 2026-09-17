@@ -1,5 +1,7 @@
 # Translation Sources
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 ## Introduction
 
 The NextSpark i18n system loads translations from multiple sources, providing a flexible and extensible architecture for managing localized content. This document covers the four translation sources, their structure, merge priority, and best practices for organizing translations across different application layers.
@@ -984,7 +986,7 @@ core/messages/es/[namespace].json
 
 **4. Rebuild Registry**:
 ```bash
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 **5. Use in Components**:

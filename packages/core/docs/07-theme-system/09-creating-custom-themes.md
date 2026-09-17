@@ -1,5 +1,7 @@
 # Creating Custom Themes
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 This guide walks you through creating a custom theme from scratch, covering directory setup, configuration, styling, and integration with the boilerplate's theme system.
 
 ## Overview
@@ -642,7 +644,7 @@ Add to `package.json`:
 
 ```bash
 # Rebuild registry to discover new theme
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 # Build theme CSS and copy assets
 pnpm theme:build
@@ -785,7 +787,7 @@ export const projectsFields: FieldDefinitions = {
 **Solutions:**
 1. Check `NEXT_PUBLIC_ACTIVE_THEME` environment variable
 2. Verify theme name matches directory name exactly
-3. Run `pnpm build:registries` to regenerate registry
+3. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` to regenerate registry
 4. Clear browser cache (Ctrl+Shift+R / Cmd+Shift+R)
 5. Restart development server
 
@@ -807,7 +809,7 @@ export const projectsFields: FieldDefinitions = {
 **Solutions:**
 1. Verify `theme.config.ts` exists
 2. Check file exports `default` or named export
-3. Run `pnpm build:registries`
+3. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
 4. Check console for build errors
 5. Restart dev server
 

@@ -1,5 +1,7 @@
 # Setup
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 ## Introduction
 
 This guide walks you through the initial project setup **after** you've completed the installation process. While the [Quick Start](./00-quick-start.md) gets you running in 5 minutes and [Installation](./01-installation.md) covers dependency installation, this guide focuses on properly configuring your development environment, understanding the project structure, and verifying everything is working correctly.
@@ -481,7 +483,7 @@ core/lib/registries/
 └── ... (16 files total)         # ⚠️ ALL AUTO-GENERATED
 ```
 
-**These files are 100% auto-generated** by `core/scripts/build/registry.mjs`. Any manual edits will be **overwritten** on next build.
+**These files are 100% auto-generated** by `packages/core/scripts/build/registry.mjs`. Any manual edits will be **overwritten** on next build.
 
 ### 3.3 Configuration Files
 
@@ -683,7 +685,7 @@ With registries, everything is pre-compiled:
 
 ```text
 BUILD TIME (once):
-  core/scripts/build/registry.mjs
+  packages/core/scripts/build/registry.mjs
     ↓
   Scans contents/themes/default/entities/
   Scans contents/plugins/*/entities/
@@ -702,7 +704,7 @@ RUNTIME (every request):
 
 **Build registries manually:**
 ```bash
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 **Expected output:**
@@ -745,7 +747,7 @@ head -20 core/lib/registries/entity-registry.ts
 **Start registry watch mode:**
 ```bash
 # In a separate terminal
-nextspark registry:watch
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
 ```
 
 **What happens:**
@@ -771,7 +773,7 @@ nextspark registry:watch
 - Must stop `pnpm dev` and restart
 
 **Workflow:**
-1. Run `nextspark registry:watch` in terminal 1
+1. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch` in terminal 1
 2. Run `pnpm dev` in terminal 2
 3. Edit entity/plugin/theme files
 4. Registry rebuilds automatically
@@ -898,7 +900,7 @@ pnpm dev
 
 **Terminal 2 - Registry Watch (Optional):**
 ```bash
-nextspark registry:watch
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
 # Automatically rebuilds registries on content changes
 # Use when actively developing entities/plugins
 ```
@@ -930,7 +932,7 @@ Ctrl+b "
 Ctrl+b arrow-keys
 
 # Pane 1: pnpm dev
-# Pane 2: nextspark registry:watch
+# Pane 2: cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
 # Pane 3: commands
 ```
 
@@ -947,7 +949,7 @@ Ctrl+a n (next)
 Ctrl+a p (previous)
 
 # Window 1: pnpm dev
-# Window 2: nextspark registry:watch
+# Window 2: cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
 # Window 3: commands
 ```
 
@@ -1168,7 +1170,7 @@ Test tags are **automatically discovered and validated** during the registry bui
 
 **Tags are validated when you build registries:**
 ```bash
-node core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 The build generates `testing-registry.ts` with all discovered tags organized by category (features, flows, layers, priorities, etc.).
@@ -1195,7 +1197,7 @@ The build generates `testing-registry.ts` with all discovered tags organized by 
 **CI/CD will run:**
 1. `pnpm type-check` (TypeScript errors)
 2. `pnpm lint` (ESLint errors)
-3. `node core/scripts/build/registry.mjs` (Registry build with tag validation)
+3. `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` (Registry build with tag validation)
 4. `pnpm test:unit` (Unit tests)
 5. `pnpm test:e2e` (E2E tests)
 6. `pnpm build` (Production build)
@@ -1246,9 +1248,9 @@ Go through this checklist to verify everything is set up correctly:
 - [ ] TypeScript server working (autocomplete functional)
 
 ### Registry System
-- [ ] Registry build successful (`pnpm build:registries` completes)
+- [ ] Registry build successful (`cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` completes)
 - [ ] All 16 registry files created
-- [ ] Registry watch mode works (`nextspark registry:watch`)
+- [ ] Registry watch mode works (`cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch`)
 - [ ] Understand registry rebuild requires server restart
 
 ### Theme
@@ -1372,7 +1374,7 @@ rm -rf .next
 rm -rf .nextspark/registries
 
 # Rebuild from scratch
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 # Restart dev server
 pnpm dev

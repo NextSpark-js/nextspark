@@ -1,5 +1,7 @@
 # Setup and Configuration
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 ## Introduction
 
 The internationalization (i18n) setup in NextSpark is built on **next-intl** v4.3.4 with a sophisticated configuration system that supports locale detection, namespace optimization, and build-time registry integration. This document covers everything you need to know to configure, customize, and extend the i18n system.
@@ -97,7 +99,7 @@ supportedLocales: ['en', 'es', 'fr', 'de']
 2. Create translation files for the locale:
    - `core/messages/{locale}/` - Core namespaces
    - `contents/themes/{theme}/messages/{locale}.json` - Theme translations
-3. Rebuild the registry: `pnpm build:registries`
+3. Rebuild the registry: `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
 
 ### Default Locale
 
@@ -671,7 +673,7 @@ touch core/messages/fr/validation.json
 
 **5. Rebuild Registry**:
 ```bash
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 **6. Update Locale Selector**:
@@ -709,7 +711,7 @@ Error: Locale 'fr' not found in supported locales
 **Solution**:
 1. Verify locale is in `I18N_CONFIG.supportedLocales`
 2. Check spelling matches exactly (`'fr'` not `'FR'`)
-3. Rebuild registry: `pnpm build:registries`
+3. Rebuild registry: `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
 
 #### Issue: Missing Translations
 

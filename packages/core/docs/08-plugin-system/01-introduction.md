@@ -67,7 +67,7 @@ The plugin system draws inspiration from WordPress's successful plugin architect
 
 **Step 1: Plugin Scanning**
 ```mjs
-// core/scripts/build/registry.mjs
+// packages/core/scripts/build/registry.mjs
 async function discoverPlugins() {
   const pluginsDir = join(CONFIG.contentsDir, 'plugins')
   const discovered = new Map()
@@ -575,7 +575,7 @@ export function ClientDisplay({ result }: { result: string }) {
 
 **Code References:**
 - Plugin registry: `core/lib/registries/plugin-registry.ts:1-1153`
-- Build script: `core/scripts/build/registry.mjs:1300-1842`
+- Build script: `packages/core/scripts/build/registry.mjs:1300-1842`
 - Plugin types: `core/types/plugin.ts:1-50`
 - Example plugins: `contents/plugins/ai/`, `contents/plugins/billing/`
 

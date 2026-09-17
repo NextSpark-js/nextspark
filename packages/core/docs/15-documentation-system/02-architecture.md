@@ -1,5 +1,7 @@
 # Documentation System Architecture
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 ## Introduction
 
 The documentation system architecture is built around **build-time registry generation** and **runtime markdown rendering**. This document explains the complete flow from documentation files to rendered pages, including the build script, registry structure, routing, and rendering components.
@@ -71,12 +73,13 @@ serves them.
 
 **Execution:**
 ```bash
-# Automatic (during pnpm dev or pnpm build)
-nextspark registry build
-
-# Manual
-node core/scripts/build/registry.mjs
+# In the NextSpark monorepo, from the repository root
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
+
+In a generated project, `pnpm dev` and `pnpm build` (`nextspark dev` and
+`nextspark build`) run the registry build before Next starts, and
+`pnpm build:registries` runs it on its own.
 
 ### Discovery Algorithm
 
@@ -125,14 +128,16 @@ export const DOCS_REGISTRY: DocsRegistryStructure = {
 
 ### Active Theme Detection
 
-The build script automatically detects the active theme:
+The build script reads the active theme from the required environment variable:
 
 ```javascript
-const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME || 'default'
+const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME?.replace(/'/g, '')
 ```
 
-Only the active theme's documentation is included in the registry. Core's
-own docs and any plugin's docs are never scanned - see
+`validateEnvironment()` rejects a missing or empty `NEXT_PUBLIC_ACTIVE_THEME`.
+`buildRegistries()` prints the validation errors and exits with code `1` before
+writing registry files. Only the selected theme's documentation is included in
+the registry. Core's own docs and any plugin's docs are never scanned - see
 [Core vs Theme Documentation](./03-core-vs-theme-docs.md) for what that
 means for cross-referencing between them.
 

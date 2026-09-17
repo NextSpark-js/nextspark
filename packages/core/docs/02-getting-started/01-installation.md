@@ -1,5 +1,7 @@
 # Installation
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 ## Introduction
 
 Complete step-by-step installation guide for setting up NextSpark for local development. This guide covers all prerequisites, dependencies, and initial configuration.
@@ -307,7 +309,7 @@ All required tables exist!
 
 **Generate static registries:**
 ```bash
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 **What happens:**
@@ -372,7 +374,7 @@ Theme build completed in 1.8s
 
 **Generate documentation metadata with every registry:**
 ```bash
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 **What happens:**
@@ -678,14 +680,14 @@ psql "$(grep DATABASE_URL .env.local | cut -d'=' -f2-)"
 **Debug:**
 ```bash
 # Check entity configs
-node core/scripts/build/registry.mjs --build --verbose
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --build --verbose
 
 # Check TypeScript
 pnpm type-check
 
 # Clear and rebuild
 rm -rf .nextspark/registries
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 ### "Theme not found: default"

@@ -1,5 +1,7 @@
 # Component Overrides
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 Themes can override core components to customize appearance and behavior while maintaining interface compatibility. This guide covers component override patterns, implementation, and best practices.
 
 ## Overview
@@ -608,7 +610,7 @@ describe('Theme Button Override', () => {
 
 ```bash
 # Rebuild registry
-pnpm build:registry
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 # Rebuild theme
 pnpm theme:build

@@ -1,5 +1,7 @@
 # Creating Custom Blocks
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 This guide walks you through creating custom blocks for the Page Builder. You'll learn the file structure, how to extend base schemas, and best practices.
 
 ## Automated Block Creation (Recommended)
@@ -18,7 +20,7 @@ The command will:
 1. Determine the active theme (or use `--theme=X`)
 2. Discover existing blocks to learn patterns
 3. Generate all 5 required files
-4. Run `build-registry.mjs` automatically
+4. Run `packages/core/scripts/build/registry.mjs` automatically
 5. Verify the block is registered
 
 **Other helpful commands:**
@@ -43,7 +45,7 @@ cp -r core/templates/blocks/testimonials contents/themes/YOUR_THEME/blocks/
 cp -r core/templates/blocks/{hero,cta-section,features-grid} contents/themes/YOUR_THEME/blocks/
 
 # Rebuild registry
-node core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 ### Available Presets
@@ -86,7 +88,7 @@ touch contents/themes/default/blocks/my-block/{config,fields,schema,component,in
 mv component.ts component.tsx
 
 # 3. Rebuild the registry
-node core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 ## File Structure
@@ -480,7 +482,7 @@ export { PricingTableBlock } from './component'
 Run the build script to register your block:
 
 ```bash
-node core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 **That's it!** Your block is now:
@@ -679,7 +681,7 @@ describe('Pricing Table Block', () => {
 1. Check that `config.ts` has `scope` property (e.g., `scope: ['pages']`)
 2. Verify `scope` includes the entity you're editing (e.g., 'pages' or 'posts')
 3. Check that `config.ts` has correct `slug`
-4. Run `node core/scripts/build/registry.mjs`
+4. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
 5. Restart the dev server
 6. Check console for registry errors
 

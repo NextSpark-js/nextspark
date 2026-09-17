@@ -1,5 +1,7 @@
 # Plugin Registry
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 ## Overview
 
 The Plugin Registry provides **ultra-fast, zero-I/O access** to plugin configurations, entities, and API functions. It comes in **two versions**: server-only (`plugin-registry.ts`) and client-safe (`plugin-registry.client.ts`), ensuring secure plugin access across the application.
@@ -74,7 +76,7 @@ export const PLUGIN_REGISTRY_CLIENT = {
 
 ### Automatic Discovery Process
 
-**Build script** (`core/scripts/build/registry.mjs`) discovers:
+**Build script** (`packages/core/scripts/build/registry.mjs`) discovers:
 
 1. **Plugin Directory Structure:**
 ```text
@@ -102,7 +104,7 @@ contents/plugins/
 2. **Discovery Logic:**
 
 ```typescript
-// From core/scripts/build/registry.mjs
+// From packages/core/scripts/build/registry.mjs
 async function discoverPlugins() {
   const pluginsDir = join(contentsDir, 'plugins')
   const plugins = []
@@ -885,7 +887,7 @@ import { PLUGIN_REGISTRY_CLIENT } from '@/core/lib/registries/plugin-registry.cl
 **Solutions:**
 1. Check plugin exists in `contents/plugins/my-plugin/`
 2. Verify `plugin.config.ts` file exists
-3. Run `pnpm build:registries` to regenerate
+3. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` to regenerate
 4. Restart dev server
 
 ### Function Not Available
@@ -943,7 +945,7 @@ const entities: PluginEntity[] = plugin.entities
 **Last Updated**: 2025-11-20  
 **Version**: 1.0.0  
 **Status**: Complete  
-**Auto-Generated**: Yes (by core/scripts/build/registry.mjs)  
+**Auto-Generated**: Yes (by packages/core/scripts/build/registry.mjs)
 **Registry Files**:
 - `core/lib/registries/plugin-registry.ts` (server-only)
 - `core/lib/registries/plugin-registry.client.ts` (client-safe)

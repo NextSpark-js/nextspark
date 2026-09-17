@@ -1,5 +1,7 @@
 # Commands (v4.0)
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 > **Version 4.0** - 24 slash commands organized by category.
 
 ## Introduction
@@ -512,7 +514,7 @@ Create a new page builder block with complete file structure
    - `fields.ts` - Editor field definitions
    - `component.tsx` - React component
    - `index.ts` - Re-exports
-4. Runs `node core/scripts/build/registry.mjs`
+4. Runs `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
 5. Verifies block in `BLOCK_REGISTRY`
 
 **Output:**

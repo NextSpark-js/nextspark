@@ -1,5 +1,7 @@
 # CLI Tool
 
+> **Registry commands in this guide** run in a generated project, from its root. In the NextSpark monorepo, run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` (add `--watch` to watch).
+
 NextSpark provides a CLI tool for common development tasks.
 
 ## Current Status
@@ -25,7 +27,7 @@ When you run `pnpm install @nextspark/core`, the postinstall hook automatically:
 
 ```bash
 # Registry generation
-node node_modules/@nextspark/core/scripts/build/registry.mjs
+pnpm build:registries
 
 # Theme compilation
 node node_modules/@nextspark/core/scripts/build/theme.mjs
@@ -130,7 +132,6 @@ For consumer projects, add these scripts:
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:registries": "node node_modules/@nextspark/core/scripts/build/registry.mjs",
     "build:theme": "node node_modules/@nextspark/core/scripts/build/theme.mjs",
     "db:migrate": "node node_modules/@nextspark/core/scripts/db/run-migrations.mjs"
   }

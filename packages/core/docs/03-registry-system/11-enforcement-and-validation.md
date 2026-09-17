@@ -15,7 +15,7 @@ The Registry System's ~17,255x performance improvement **depends entirely** on z
 **ZERO TOLERANCE for:**
 
 1. ❌ Runtime dynamic imports outside approved exceptions
-2. ❌ Direct imports from `@/contents` directory (except in `core/scripts/build/registry.mjs`)
+2. ❌ Direct imports from `@/contents` directory (except in `packages/core/scripts/build/registry.mjs`)
 3. ❌ Manual edits to `core/lib/registries/` files
 
 **Severity:** CRITICAL - Pre-commit and CI/CD must validate compliance
@@ -593,7 +593,7 @@ module.exports = {
     {
       files: [
         'core/lib/registries/**/*',
-        'core/scripts/build/registry.mjs',
+        'packages/core/scripts/build/registry.mjs',
       ],
       rules: {
         'no-restricted-imports': 'off',

@@ -1,5 +1,7 @@
 # Plugin Structure
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 ## Introduction
 
 This document provides a complete reference for plugin directory structure and organization. Understanding the standard plugin structure is essential for creating well-organized, maintainable plugins that integrate seamlessly with the application.
@@ -116,7 +118,7 @@ export default myPluginConfig
 
 **Naming Convention**: `[plugin-name].config.ts` OR `plugin.config.ts`
 
-**Discovery**: Build script (`core/scripts/build/registry.mjs`) looks for this file to identify plugins.
+**Discovery**: Build script (`packages/core/scripts/build/registry.mjs`) looks for this file to identify plugins.
 
 ---
 
@@ -155,7 +157,7 @@ Brief description of what the plugin does.
 
 3. Rebuild registry:
    ```bash
-   pnpm build:registries
+   cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
    ```
 
 ## Usage

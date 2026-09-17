@@ -1,5 +1,7 @@
 # Theme System Introduction
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 NextSpark implements a powerful **build-time theme system** that provides complete UI customization without modifying core code, with zero runtime overhead and maximum performance.
 
 ## Overview
@@ -208,7 +210,7 @@ pnpm dev  # Automatically rebuilds on theme changes
 **Build Registry (includes theme discovery):**
 
 ```bash
-pnpm build:registry
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 ### Output Files

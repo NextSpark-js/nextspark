@@ -1,5 +1,7 @@
 # Getting Started with @nextspark/core
 
+> **Registry commands in this guide** run in a generated project, from its root. In the NextSpark monorepo, run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` (add `--watch` to watch).
+
 This guide walks you through creating a new project with NextSpark from scratch.
 
 ## Prerequisites
@@ -156,7 +158,7 @@ The postinstall hook runs automatically, but you can trigger it manually:
 pnpm install
 
 # Or run scripts directly
-node node_modules/@nextspark/core/scripts/build/registry.mjs
+pnpm build:registries
 node node_modules/@nextspark/core/scripts/build/theme.mjs
 ```
 
@@ -244,7 +246,7 @@ pnpm dev                    # Start dev server
 pnpm build                  # Production build
 
 # Registry regeneration
-node node_modules/@nextspark/core/scripts/build/registry.mjs
+pnpm build:registries
 
 # Theme CSS rebuild
 node node_modules/@nextspark/core/scripts/build/theme.mjs
@@ -262,7 +264,7 @@ pnpm db:verify              # Verify structure
 
 The registries haven't been generated. Run:
 ```bash
-node node_modules/@nextspark/core/scripts/build/registry.mjs
+pnpm build:registries
 ```
 
 ### "Module not found: @nextspark/core/..."

@@ -1,5 +1,7 @@
 # Agents (v4.0)
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 > **Version 4.0** - 25 specialized agents organized by workflow block.
 
 ## Introduction
@@ -134,7 +136,7 @@ Agents are specialized AI assistants with defined roles, tools, and responsibili
 3. Set up `lib/core.ts` with main logic
 4. Create API routes structure
 5. Configure plugin in `plugin-sandbox` theme
-6. Run `node core/scripts/build/registry.mjs`
+6. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
 
 **Output:** Complete plugin in `contents/plugins/{name}/`
 
@@ -180,7 +182,7 @@ Agents are specialized AI assistants with defined roles, tools, and responsibili
 3. Configure `app.config.ts` (Team Mode, features)
 4. Configure `dashboard.config.ts`
 5. Configure `permissions.config.ts`
-6. Run `node core/scripts/build/registry.mjs`
+6. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
 
 **Output:** Complete theme in `contents/themes/{name}/`
 
@@ -387,7 +389,7 @@ for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
    - `fields.ts` - Form field definitions
    - `component.tsx` - React component with `data-cy`
    - `index.ts` - Exports
-4. Run `node core/scripts/build/registry.mjs`
+4. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
 5. Verify block in `BLOCK_REGISTRY`
 6. Test block in page builder
 

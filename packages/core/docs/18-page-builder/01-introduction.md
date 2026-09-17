@@ -1,5 +1,7 @@
 # Page Builder System
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 The Page Builder is a visual editor that enables users to create dynamic content by composing reusable blocks. Inspired by WordPress and Webflow, it provides a no-code interface for content editors while maintaining full type safety and developer extensibility.
 
 ## Overview
@@ -141,7 +143,7 @@ The default theme includes these blocks:
 | **Testimonials** | testimonials | Customer quotes with author and avatar |
 | **Text Content** | content | Rich text content block |
 
-> **Tip**: New blocks are auto-discovered from `BLOCK_REGISTRY`. Run `node core/scripts/build/registry.mjs` after creating a block.
+> **Tip**: New blocks are auto-discovered from `BLOCK_REGISTRY`. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` after creating a block.
 
 ## Developer Tools
 
@@ -163,7 +165,7 @@ See [Claude Workflow - Block Developer Agent](../16-claude-workflow/03-agents.md
 ### Dynamic Block Auto-Discovery
 Block components are now **automatically loaded** from `BLOCK_REGISTRY`. No need to manually edit `page-renderer.tsx` when creating new blocks:
 - Create block in `contents/themes/{theme}/blocks/`
-- Run `node core/scripts/build/registry.mjs`
+- Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
 - Block is immediately available in editor and public pages
 
 ### Complete Field Types

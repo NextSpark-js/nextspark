@@ -1,5 +1,7 @@
 # Building Your First Feature
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 ## Introduction
 
 Welcome to your first complete feature development with NextSpark! In this hands-on tutorial, you'll build a **Projects** entity from scratch, learning the full-stack development workflow from database schema to user interface.
@@ -802,7 +804,7 @@ DELETE /api/v1/projects/:id   - Delete project
 
 ```bash
 # Stop dev server (Ctrl+C)
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 # Restart dev server
 pnpm dev
@@ -1199,7 +1201,7 @@ export const appConfig = {
 **Rebuild registries and restart:**
 
 ```bash
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 # Restart pnpm dev
 ```
 
@@ -1530,7 +1532,7 @@ projects.fields.ts  |   100   |   100    |   100   |   100   |
 # Stop dev server (Ctrl+C)
 
 # Rebuild registries
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 **Verify projects entity registered:**
@@ -1782,7 +1784,7 @@ DROP TABLE IF EXISTS projects CASCADE;
 3. **Clear registry cache:**
 ```bash
 rm -rf .next
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 4. **Restart services**
@@ -1901,7 +1903,7 @@ Then re-run migration.
 **Solution:**
 ```bash
 rm -rf .nextspark/registries
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 # Restart dev server
 ```
 

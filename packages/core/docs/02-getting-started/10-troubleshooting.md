@@ -1,5 +1,7 @@
 # Troubleshooting
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 ## Introduction
 
 Common issues and solutions when setting up and running NextSpark. This guide covers installation problems, build errors, runtime issues, and debugging strategies.
@@ -297,7 +299,7 @@ PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 pnpm install
 
 ### Registry Build Fails
 
-**Problem:** `pnpm build:registries` fails with errors
+**Problem:** `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` fails with errors
 
 **Common Causes:**
 
@@ -318,7 +320,7 @@ code contents/themes/default/entities/tasks/tasks.config.ts
 pnpm type-check
 
 # Fix syntax errors and rebuild
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 **Common syntax errors:**
@@ -347,7 +349,7 @@ code contents/plugins/ai/plugin.config.ts
 # - enabled (boolean)
 
 # Fix and rebuild
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 #### 3. Missing required fields
@@ -384,7 +386,7 @@ Error: Circular dependency detected in entity configs
 **Debug verbose:**
 ```bash
 # Run with debug output
-node core/scripts/build/registry.mjs --build --verbose
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --build --verbose
 
 # Check which entity/plugin is causing the issue
 ```
@@ -576,7 +578,7 @@ ls contents/themes/
 ```bash
 # Clear and rebuild
 rm -rf .nextspark/registries
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 #### 4. Restart dev server
@@ -615,7 +617,7 @@ ls contents/themes/default/entities/tasks/
 
 ```bash
 # Registry may be out of sync
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 # Restart dev server
 pnpm dev
@@ -649,7 +651,7 @@ Module not found: core/lib/registries/entity-registry
 
 ```bash
 # Registries may not have been built
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 #### 2. Check registries directory
@@ -672,7 +674,7 @@ ls core/lib/registries/
 rm -rf .next
 
 # Rebuild registries
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 # Restart dev server
 pnpm dev
@@ -909,7 +911,7 @@ rm -rf node_modules/.cache
 rm -rf .nextspark/registries
 
 # Rebuild
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 pnpm dev
 ```
 
@@ -956,7 +958,7 @@ JavaScript heap out of memory
 
 ```bash
 # Use Node.js profiler
-node --inspect core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 # Open chrome://inspect in Chrome
 # Take heap snapshots to identify leaks

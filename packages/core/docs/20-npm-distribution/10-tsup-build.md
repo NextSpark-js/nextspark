@@ -1,5 +1,7 @@
 # tsup Build System
 
+> **Registry commands in this guide** run in a generated project, from its root. In the NextSpark monorepo, run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` (add `--watch` to watch).
+
 This document describes the build system that compiles `@nextspark/core` for npm distribution using tsup.
 
 ## Overview
@@ -282,7 +284,7 @@ Future versions will generate types using a separate `tsc` step.
 
 The registries haven't been generated. Run:
 ```bash
-node node_modules/@nextspark/core/scripts/build/registry.mjs
+pnpm build:registries
 ```
 
 ### Build Fails with Memory Error

@@ -1,5 +1,7 @@
 # Template System
 
+> **Registry commands in this guide** run in a generated project, from its root. In the NextSpark monorepo, run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` (add `--watch` to watch).
+
 NextSpark uses EJS templates to generate the Next.js `/app` directory, allowing themes to customize routing and layouts.
 
 ## Overview

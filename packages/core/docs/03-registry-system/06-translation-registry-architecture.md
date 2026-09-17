@@ -1,5 +1,7 @@
 # Translation Registry
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 ## Overview
 
 The Translation Registry (`core/lib/registries/translation-registry.ts`) provides **lazy-loading, zero-runtime-interpolation access** to i18n translations. It preserves next-intl's performance by generating static import paths at build time, loading only the active locale at runtime.
@@ -19,7 +21,7 @@ The Translation Registry (`core/lib/registries/translation-registry.ts`) provide
 ### Build-Time Translation Discovery
 
 ```typescript
-// Generated at build time by core/scripts/build/registry.mjs
+// Generated at build time by packages/core/scripts/build/registry.mjs
 export const THEME_TRANSLATION_LOADERS: Record<string, Record<string, TranslationLoader>> = {
   'default': {
     'en': () => import('@/contents/themes/default/messages/en.json'),
@@ -55,7 +57,7 @@ const translations = await loader()
 
 ### Automatic Discovery Process
 
-**Build script** (`core/scripts/build/registry.mjs`) discovers:
+**Build script** (`packages/core/scripts/build/registry.mjs`) discovers:
 
 1. **Core Translations:**
 ```text
@@ -90,7 +92,7 @@ contents/themes/default/entities/tasks/messages/
 ### Discovery Logic
 
 ```typescript
-// From core/scripts/build/registry.mjs
+// From packages/core/scripts/build/registry.mjs
 async function discoverTranslations(themeName: string) {
   const translations: Record<string, string[]> = {}
   
@@ -626,7 +628,7 @@ const activeTranslations = await loadThemeTranslation('default', activeLocale)
 **Solutions:**
 1. Check `messages/fr.json` exists in theme
 2. Verify JSON is valid
-3. Run `pnpm build:registries` to regenerate
+3. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` to regenerate
 4. Restart dev server
 
 ### Wrong Locale Loaded
@@ -677,6 +679,6 @@ const translations: Record<string, unknown> = await loadThemeTranslation('defaul
 **Last Updated**: 2025-11-20  
 **Version**: 1.0.0  
 **Status**: Complete  
-**Auto-Generated**: Yes (by core/scripts/build/registry.mjs)  
+**Auto-Generated**: Yes (by packages/core/scripts/build/registry.mjs)
 **Registry File**: `core/lib/registries/translation-registry.ts`  
 **Integration**: next-intl v3.x

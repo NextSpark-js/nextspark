@@ -220,7 +220,7 @@ export function normalizeBlockProps(props: Record<string, unknown>): Record<stri
 - Centralized block loading logic (used by both public renderer and dashboard preview)
 - Singleton pattern avoids re-creating lazy components
 - Zero filesystem I/O (uses `BLOCK_REGISTRY`)
-- New blocks are available immediately after running `build-registry.mjs`
+- New blocks are available immediately after running `packages/core/scripts/build/registry.mjs`
 
 ### BlockRenderer
 

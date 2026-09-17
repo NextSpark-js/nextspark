@@ -1,5 +1,7 @@
 # Configuration System
 
+> **Registry commands in this guide** run in a generated project, from its root. In the NextSpark monorepo, run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` (add `--watch` to watch).
+
 NextSpark uses a TypeScript-based configuration system via `nextspark.config.ts`.
 
 ## Configuration File

@@ -1,5 +1,7 @@
 # Extending and Overriding Documentation
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 ## Introduction
 
 The documentation system supports extending documentation through **themes** and **plugins**. While core documentation covers system-wide features, themes and plugins can add their own documentation to provide context-specific information for users.
@@ -59,14 +61,19 @@ Examples:
 Theme documentation is automatically discovered during build:
 
 ```javascript
-// core/scripts/build/registry/generators/docs-registry.mjs
-const activeTheme = process.env.NEXT_PUBLIC_ACTIVE_THEME || 'default'
+// packages/core/scripts/build/registry/generators/docs-registry.mjs
+const theme = CONFIG.activeTheme || 'default'
+const themeDocsDir = path.join(THEMES_DIR, theme, 'docs')
 
 const publicDocs = scanDocsDirectory(
-  `contents/themes/${activeTheme}/docs/public/`,
+  path.join(themeDocsDir, 'public'),
   'public'
 )
 ```
+
+`CONFIG.activeTheme` is `NEXT_PUBLIC_ACTIVE_THEME`. The registry build checks
+that variable before it generates anything and exits with an environment error
+when it is missing, so the `'default'` above is never used by a build.
 
 **Key Points:**
 - Only the **active theme's** documentation is included
@@ -185,9 +192,9 @@ today; see [What each property does today](./02-architecture.md#what-each-proper
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `enabled` | boolean | Show/hide this category in the sidebar |
-| `open` | boolean | Whether the category is expanded by default on page load |
-| `label` | string | Custom label displayed in the sidebar for the category |
+| `enabled` | boolean | In `docs.public`, `false` prevents `DocsSidebar` from rendering; in `docs.superadmin`, it has no effect. |
+| `open` | boolean | No component currently reads it. |
+| `label` | string | In `docs.public`, `DocsSidebar` renders it as its heading; in `docs.superadmin`, it has no effect. |
 
 ### Example Plugin Documentation
 
@@ -231,7 +238,7 @@ OPENAI_API_KEY=your_api_key_here
 3. Rebuild registry:
 
 ```bash
-nextspark registry build
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 pnpm dev
 ```
 
@@ -406,16 +413,15 @@ plugin docs are never scanned into it.
 
 ```bash
 # Rebuild docs registry
-nextspark registry build
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 # Restart dev server
 pnpm dev
 ```
 
-**Automatic Rebuilds:**
-- During `pnpm dev` startup
-- During `pnpm build` for production
-- When running `nextspark registry build` explicitly
+**When the registry is rebuilt:**
+- In a generated project, when `pnpm dev` or `pnpm build` starts (`nextspark dev`, `nextspark build`)
+- In the monorepo, only when `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` runs: root `pnpm dev` and `pnpm build` do not rebuild it
 
 ## Use Cases
 
@@ -466,7 +472,7 @@ Documentation
 1. Check file naming: `{order}-{slug}.md`
 2. Check directory naming: `{order}-{slug}/`
 3. Verify docs are in correct location
-4. Rebuild registry: `nextspark registry build`
+4. Rebuild registry: `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
 5. Restart dev server
 
 ### Plugin Docs Missing
@@ -484,7 +490,7 @@ instead.
 **Solution:**
 1. Check `NEXT_PUBLIC_ACTIVE_THEME` environment variable
 2. Verify theme name matches directory name
-3. Rebuild registry: `nextspark registry build`
+3. Rebuild registry: `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs`
 
 ## Next Steps
 

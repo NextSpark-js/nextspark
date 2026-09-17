@@ -17,7 +17,7 @@ Plugin lifecycle management ensures proper initialization, activation, and clean
 
 ### `onRegister` - Build-Time Hook
 
-**When**: During build process when `core/scripts/build/registry.mjs` discovers plugin
+**When**: During build process when `packages/core/scripts/build/registry.mjs` discovers plugin
 
 **Purpose**: Validate plugin structure, check dependencies, generate assets
 

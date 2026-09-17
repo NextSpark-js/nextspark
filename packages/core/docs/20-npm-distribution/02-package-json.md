@@ -24,7 +24,6 @@ The `packages/core/package.json` defines how `@nextspark/core` is structured for
     "nextspark": "./bin/nextspark.mjs"
   },
   "scripts": {
-    "build:registries": "node scripts/build/registry.mjs",
     "build:theme": "node scripts/build/theme.mjs",
     "postinstall": "node scripts/setup/npm-postinstall.mjs"
   },
@@ -120,14 +119,12 @@ npx nextspark generate:app
 ```json
 {
   "scripts": {
-    "build:registries": "node scripts/build/registry.mjs",
     "build:theme": "node scripts/build/theme.mjs",
     "postinstall": "node scripts/setup/npm-postinstall.mjs"
   }
 }
 ```
 
-- **build:registries**: Generate all registries
 - **build:theme**: Compile theme CSS
 - **postinstall**: Run after `npm install`
 

@@ -1,5 +1,7 @@
 # Entity Permission System
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 The permission system controls which users can perform which actions on each entity, integrating role-based control with the centralized permissions registry.
 
 ## Architecture Overview
@@ -214,7 +216,7 @@ CREATE POLICY "posts_select_public" ON "posts"
 Permissions are pre-computed during build for O(1) runtime:
 
 ```bash
-node core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 This generates `core/lib/registries/permissions-registry.ts` with:

@@ -1,5 +1,7 @@
 # Writing Documentation
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 ## Introduction
 
 This guide provides standards and best practices for writing effective documentation in NextSpark. Following these conventions ensures consistency, maintainability, and optimal integration with the documentation system.
@@ -146,7 +148,7 @@ export interface EntityConfig {
 ```
 
 ```bash
-nextspark registry build
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 pnpm dev
 ```
 

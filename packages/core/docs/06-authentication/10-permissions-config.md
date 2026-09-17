@@ -1,5 +1,7 @@
 # Theme Permissions Configuration
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 ## Overview
 
 The `permissions.config.ts` file is the **single source of truth** for all permissions and custom roles in a theme. This file defines:
@@ -225,7 +227,7 @@ The system merges permissions from multiple sources:
 All permissions are pre-computed during build:
 
 ```bash
-node core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 This generates `core/lib/registries/permissions-registry.ts` with:
@@ -347,7 +349,7 @@ export const PERMISSIONS_CONFIG_OVERRIDES: ThemePermissionsConfig = {
 After changes, regenerate the registry:
 
 ```bash
-node core/scripts/build/registry.mjs
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 ```
 
 ## Role Hierarchy
@@ -381,7 +383,7 @@ Custom roles can have any value. Higher values = more authority for role compari
 4. **Group by Category**: Use `category` for features to organize the UI
 5. **Mark Dangerous**: Use `dangerous: true` for destructive actions
 6. **Custom Roles**: Define hierarchy, display names, and descriptions together
-7. **Regenerate Registry**: Run `node core/scripts/build/registry.mjs` after changes
+7. **Regenerate Registry**: Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` after changes
 
 ## Migration from Old Format
 

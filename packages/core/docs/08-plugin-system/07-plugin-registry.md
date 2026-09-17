@@ -1,5 +1,7 @@
 # Plugin Registry Integration
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 ## Introduction
 
 The plugin registry system provides **build-time discovery** and **zero-runtime-I/O access** to all plugins. This document explains how plugins integrate with the registry, how to access plugin data in code, and security considerations for server/client separation.
@@ -19,7 +21,7 @@ The plugin registry system provides **build-time discovery** and **zero-runtime-
 
 **Discovery Flow**:
 ```text
-1. Build script runs: `core/scripts/build/registry.mjs`
+1. Build script runs: `packages/core/scripts/build/registry.mjs`
    ↓
 2. Scans: `contents/plugins/` directory
    ↓
@@ -36,7 +38,7 @@ The plugin registry system provides **build-time discovery** and **zero-runtime-
 
 **Build Script Logic**:
 ```mjs
-// core/scripts/build/registry.mjs (simplified)
+// packages/core/scripts/build/registry.mjs (simplified)
 async function discoverPlugins() {
   const pluginsDir = join(CONFIG.contentsDir, 'plugins')
   const discovered = new Map()
@@ -497,10 +499,10 @@ export async function POST() {
 **Build Commands**:
 ```bash
 # Rebuild registry
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 # Rebuild in watch mode (development)
-nextspark registry:watch
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch
 
 # Full build (includes registry)
 pnpm build
@@ -655,7 +657,7 @@ if (hasPluginFunction('ai', 'generateText')) {
 ls contents/plugins/my-plugin/plugin.config.ts
 
 # Rebuild registry
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 # Verify plugin in generated registry
 cat core/lib/registries/plugin-registry.ts | grep "'my-plugin'"

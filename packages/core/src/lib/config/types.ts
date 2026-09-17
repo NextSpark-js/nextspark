@@ -164,24 +164,35 @@ export interface SettingsConfig {
 /**
  * Documentation Category Configuration
  *
- * Configuration for a single documentation category (public or superadmin).
+ * Settings for one documentation category.
+ *
+ * `DocsSidebar` reads `enabled` and `label` only when this object is
+ * `docs.public`. No component reads these settings when the object is
+ * `docs.superadmin`.
  */
 export interface DocsCategoryConfig {
-  /** Enable/disable this documentation level in the sidebar */
+  /**
+   * In `docs.public`, `false` prevents `DocsSidebar` from rendering. In
+   * `docs.superadmin`, this setting has no effect.
+   */
   enabled: boolean
 
-  /** Whether this category should be expanded by default on page load */
+  /** No component currently reads this setting. */
   open?: boolean
 
-  /** Custom label displayed in the sidebar for this category */
+  /**
+   * In `docs.public`, `DocsSidebar` renders this as its heading. In
+   * `docs.superadmin`, this setting has no effect.
+   */
   label: string
 }
 
 /**
  * Documentation System Configuration
  *
- * Controls documentation system behavior including visibility,
- * search functionality, and category-specific settings.
+ * `publicAccess` controls whether the proxy serves `/docs` without a session.
+ * `public.enabled` and `public.label` configure `DocsSidebar`. The remaining
+ * settings are retained for configuration compatibility but have no effect.
  *
  * Structure:
  * - public: User-facing documentation at /docs
@@ -190,26 +201,31 @@ export interface DocsCategoryConfig {
  * NOTE: Plugin docs are NOT in the registry - they are for developer reference only (IDE/LLM).
  */
 export interface DocsConfig {
-  /** Enable/disable the entire documentation system */
-  enabled: boolean
+  /** No component, route, or proxy currently reads this setting. */
+  enabled?: boolean
 
   /**
-   * Whether /docs is served without a session; `false` asks for one. The only
-   * access setting: see `isDocsPublic` in lib/docs/access, which also honors
-   * the older `public: false`.
+   * The proxy serves `/docs` without a session unless this is `false`. A
+   * legacy boolean `public: false` also makes `/docs` require a session.
    */
   publicAccess?: boolean
 
-  /** Enable search functionality in the sidebar */
-  searchEnabled: boolean
+  /** No component currently reads this setting. */
+  searchEnabled?: boolean
 
-  /** Show breadcrumbs navigation in documentation pages */
-  breadcrumbs: boolean
+  /** No component currently reads this setting. */
+  breadcrumbs?: boolean
 
-  /** Sidebar settings of the public docs at /docs; not an access setting */
-  public?: DocsCategoryConfig
+  /**
+   * Sidebar settings for `/docs`.
+   *
+   * The boolean form is deprecated: it is the older way to say whether `/docs`
+   * needs a session. `public: false` still makes `/docs` require one; write
+   * `publicAccess` instead and keep `public` for the sidebar settings.
+   */
+  public?: DocsCategoryConfig | boolean
 
-  /** Superadmin documentation configuration (for /superadmin/docs routes) */
+  /** No component or route currently reads these `/superadmin/docs` settings. */
   superadmin?: DocsCategoryConfig
 }
 

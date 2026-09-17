@@ -1,5 +1,7 @@
 # Registry System Introduction
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 ## Introduction
 
 The Registry System is the **architectural foundation** that powers NextSpark's extraordinary performance. By shifting from runtime I/O to build-time generation, we achieved a **~17,255x performance improvement** (140ms → 6ms).
@@ -84,7 +86,7 @@ function getEntityConfig(entityName: string) {
 **How it works:**
 
 1. **Build Time** (`pnpm dev` or `pnpm build`):
-   - `core/scripts/build/registry.mjs` runs (once)
+   - `packages/core/scripts/build/registry.mjs` runs (once)
    - Discovers all entities, plugins, themes
    - Generates static TypeScript files
    - Output: `core/lib/registries/*.ts`
@@ -230,10 +232,10 @@ const themeConfig = THEME_REGISTRY.default
 
 ### 🔧 The ONLY Exception
 
-**Only `core/scripts/build/registry.mjs` can import from `@/contents`:**
+**Only `packages/core/scripts/build/registry.mjs` can import from `@/contents`:**
 
 ```typescript
-// ✅ ALLOWED - Only in build-registry.mjs
+// ✅ ALLOWED - Only in packages/core/scripts/build/registry.mjs
 import { taskEntityConfig } from '@/contents/themes/default/entities/tasks/tasks.config'
 import { aiPluginConfig } from '@/contents/plugins/ai/plugin.config'
 
@@ -472,7 +474,7 @@ const tree = getEntityTree()
 
 ```bash
 # Force rebuild
-pnpm build:registries
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 # Output:
 # 🔍 Discovering content...
@@ -492,7 +494,7 @@ pnpm build:registries
 
 ```bash
 # Registries built once
-[BUILD] Running build-registry.mjs --build
+[BUILD] Running registry build
 [BUILD] ✓ All registries generated (5.1s)
 
 # Next.js build uses static registries
@@ -510,7 +512,7 @@ pnpm build:registries
 │                    BUILD TIME (once)                        │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
-│  1. core/scripts/build/registry.mjs runs                        │
+│  1. packages/core/scripts/build/registry.mjs runs                        │
 │     │                                                       │
 │     ├─> Scan contents/                                     │
 │     │   ├─> contents/themes/default/entities/              │
@@ -606,8 +608,8 @@ core/lib/registries/
 
 **To make changes:**
 1. Edit source files in `contents/` directory
-2. Or modify `core/scripts/build/registry.mjs` logic
-3. Run `pnpm build:registries` to regenerate
+2. Or modify `packages/core/scripts/build/registry.mjs` logic
+3. Run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` to regenerate
 4. Restart dev server to apply
 
 ---
@@ -633,11 +635,11 @@ core/lib/registries/
 ### Where Are They Located?
 
 **Generated:** `core/lib/registries/` (16 files, auto-generated)
-**Source:** `contents/` (your content) + `core/scripts/build/registry.mjs` (generator)
+**Source:** `contents/` (your content) + `packages/core/scripts/build/registry.mjs` (generator)
 
 ### Who Can Import from contents/?
 
-**ONLY `core/scripts/build/registry.mjs`** - everyone else uses registries
+**ONLY `packages/core/scripts/build/registry.mjs`** - everyone else uses registries
 
 ---
 

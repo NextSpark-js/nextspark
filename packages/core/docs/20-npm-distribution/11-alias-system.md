@@ -1,5 +1,7 @@
 # Alias System - Dual-Mode Path Resolution
 
+> **Registry commands in this guide** run in a generated project, from its root. In the NextSpark monorepo, run `cd apps/dev && node ../../packages/core/scripts/build/registry.mjs` (add `--watch` to watch).
+
 This document explains the core innovation that makes `@nextspark/core` work both as a monorepo package and as an npm package.
 
 ## The Problem
@@ -262,7 +264,7 @@ Should show external imports preserved.
 
 1. Registries not generated:
    ```bash
-   node node_modules/@nextspark/core/scripts/build/registry.mjs
+   pnpm build:registries
    ```
 
 2. Missing turbopack alias - check next.config.ts

@@ -1,5 +1,7 @@
 # Dynamic API Endpoints
 
+> **Registry commands in this guide** run in the NextSpark monorepo, from the repository root. In a generated project, build the registries with `pnpm build:registries` and watch them with `pnpm exec nextspark registry:watch`.
+
 **Auto-generated CRUD • Entity registry • Zero boilerplate • Type-safe**
 
 ---
@@ -63,7 +65,7 @@
    ↓
 2. Build Registry
    ↓
-   npm run build:registry
+   cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
    ↓
 3. Registry Generated
    ↓
@@ -1116,7 +1118,7 @@ ls contents/entities/products/
 grep "products" core/lib/registries/entity-registry.ts
 
 # 3. Rebuild registry
-npm run build:registry
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 
 # 4. Verify entity name matches slug
 # URL: /api/v1/products
