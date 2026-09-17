@@ -40,6 +40,7 @@ test('sync:all-templates copies files into both generated template directories',
   rmSync(coreTarget, { recursive: true, force: true })
   rmSync(mobileTarget, { recursive: true, force: true })
 
+  let originalError
   try {
     const result = syncAllTemplates()
 
@@ -49,14 +50,26 @@ test('sync:all-templates copies files into both generated template directories',
     const mobileFiles = countFiles(mobileTarget)
     assert.ok(coreFiles > 0, `packages/core/templates/app should not be empty after a passing sync (got ${coreFiles} files)`)
     assert.ok(mobileFiles > 0, `packages/mobile/templates/app should not be empty after a passing sync (got ${mobileFiles} files)`)
+  } catch (error) {
+    originalError = error
+    throw error
   } finally {
     // These directories are generated and ignored, but this test runs in the
     // real checkout as part of mobile:verify. Recreate them from their source
     // apps rather than leaving a successful verification able to poison the
     // next package archive.
     const restore = syncAllTemplates()
-    assert.equal(restore.status, 0, restore.stderr || restore.stdout)
-    assert.ok(countFiles(coreTarget) > 0, 'packages/core/templates/app should be restored after the test')
-    assert.ok(countFiles(mobileTarget) > 0, 'packages/mobile/templates/app should be restored after the test')
+    const restorationFailure = restore.status !== 0
+      ? restore.stderr || restore.stdout || `sync:all-templates exited ${restore.status}`
+      : countFiles(coreTarget) === 0 || countFiles(mobileTarget) === 0
+        ? 'sync:all-templates completed but left a generated template directory empty'
+        : null
+
+    if (restorationFailure) {
+      // A cleanup failure matters, but must never mask the assertion that caused
+      // this test to enter finally in the first place.
+      console.error(`Could not restore generated template directories: ${restorationFailure}`)
+      if (!originalError) assert.fail(restorationFailure)
+    }
   }
 }))

@@ -222,14 +222,14 @@ ensure_template_app() {
     shift 2
     local template_app="$pkg_path/templates/app"
 
-    if [ -d "$template_app" ] && find "$template_app" -mindepth 1 -print -quit 2>/dev/null | grep -q .; then
+    if [ -d "$template_app" ] && find "$template_app" -type f -print -quit 2>/dev/null | grep -q .; then
         echo -e "  ${GREEN}[OK]${NC} $pkg_name templates/app is populated"
         return 0
     fi
 
     echo -e "  ${YELLOW}[WARN]${NC} $pkg_name templates/app is empty; synchronizing before packing"
     cd "$REPO_ROOT"
-    if "$@" > /dev/null 2>&1 && [ -d "$template_app" ] && find "$template_app" -mindepth 1 -print -quit 2>/dev/null | grep -q .; then
+    if "$@" > /dev/null 2>&1 && [ -d "$template_app" ] && find "$template_app" -type f -print -quit 2>/dev/null | grep -q .; then
         echo -e "    ${GREEN}[OK]${NC} $pkg_name templates synced"
         return 0
     fi

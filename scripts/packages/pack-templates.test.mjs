@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -25,7 +26,7 @@ function syncCoreTemplates() {
 }
 
 test('pack.sh restores an empty core templates/app before it creates the tarball', async () => withTemplateAppTestLock(REPO_ROOT, () => {
-  const outputDir = mkdtempSync(join(REPO_ROOT, '.pack-templates-test-'))
+  const outputDir = mkdtempSync(join(tmpdir(), 'pack-templates-test-'))
 
   try {
     rmSync(CORE_TEMPLATE_APP, { recursive: true, force: true })
