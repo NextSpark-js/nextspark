@@ -7,8 +7,11 @@
  * ignores everything in it covers all of it, named however and holding any
  * .gitignore of its own: git takes the patterns of the deepest .gitignore over
  * those of any other, the repository's exclude file and core.excludesFile, and
- * doesn't look into a directory it ignores. So what goes there stays out of
- * git whatever command writes it and whatever the project's rules say.
+ * doesn't look into a directory it ignores. So what goes there that git does
+ * not track yet stays out of git whatever command writes it and whatever the
+ * project's rules say. What git already tracks there - registries committed
+ * before - a .gitignore leaves tracked: each build that rewrites them leaves
+ * them modified in git, and says so, with how to stop tracking them.
  *
  * `nextspark sync:app` reads them, and writes the one for backups, through this
  * module, loaded from the core installed in the project.
@@ -16,6 +19,7 @@
  * @module core/scripts/build/registry/post-build/own-gitignores
  */
 
+import { execFileSync } from 'child_process'
 import { lstatSync, readFileSync } from 'fs'
 import { lstat } from 'fs/promises'
 import { join, posix } from 'path'
@@ -157,6 +161,42 @@ async function ensureOwnGitignore(rootDir, path, refusal) {
     return false
   }
   return true
+}
+
+/**
+ * The files git tracks under `directory` of the project, as git names them from
+ * the project root; none when the project is not in a git repository or git is
+ * not installed.
+ *
+ * @param {string} rootDir - The project root
+ * @param {string} directory - A directory from the project root
+ * @returns {string[]}
+ */
+export function trackedFilesUnder(rootDir, directory) {
+  try {
+    return execFileSync('git', ['ls-files', '-z', '--', directory], {
+      cwd: rootDir,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      maxBuffer: 64 * 1024 * 1024,
+    }).split('\0').filter(Boolean)
+  } catch {
+    return []
+  }
+}
+
+/**
+ * What to say when git tracks registries: that the build rewrites them and
+ * their .gitignore can't keep them out, and how to stop tracking them.
+ *
+ * @param {number} count - How many files git tracks under .nextspark/registries
+ * @returns {string[]} One line each
+ */
+export function trackedRegistriesLines(count) {
+  return [
+    `.nextspark/registries is tracked by git (${count} file(s)), but every registry build rewrites it: its .gitignore keeps out only what git does not track yet, so each build leaves those files modified in git.`,
+    'To stop tracking it: git rm -r --cached .nextspark/registries',
+  ]
 }
 
 /**

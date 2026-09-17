@@ -19,7 +19,10 @@ import type { ProjectFiles } from './core-write-places.js';
  */
 export const TEMPLATES_GITIGNORE_ENTRY = 'app/(templates)/';
 
-/** The line that keeps `.nextspark/registries` out of git: what the registry build writes there, it writes again on every run. */
+/**
+ * The line for `.nextspark/registries`, which keeps what git doesn't track there
+ * out of git: what the registry build writes there, it writes again on every run.
+ */
 export const REGISTRIES_GITIGNORE_ENTRY = '.nextspark/registries/';
 
 /**

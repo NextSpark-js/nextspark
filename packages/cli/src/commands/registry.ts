@@ -5,6 +5,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { getCoreDir, getProjectRoot, isMonorepoMode } from '../utils/paths.js';
 import { captureChildOutput } from '../utils/registry-build.js';
+import { loadCoreWritePlaces } from '../utils/core-write-places.js';
 
 /**
  * Load environment variables from project root .env file
@@ -103,11 +104,19 @@ export async function registryWatchCommand(): Promise<void> {
     const projectRoot = getProjectRoot();
     const mode = isMonorepoMode() ? 'monorepo' : 'npm';
 
-    spinner.succeed(`Registry watcher started (${mode} mode)`);
-    console.log(chalk.blue('\nWatching for changes... Press Ctrl+C to stop.\n'));
-
     // Load project .env file
     const projectEnv = loadProjectEnv(projectRoot);
+
+    // Where the build writes is checked before the watcher starts, as core's
+    // build checks it before writing; the watcher is announced once it runs,
+    // and whether a build works is what core's own output says
+    const core = await loadCoreWritePlaces(coreDir);
+    const unsafe = core.unsafeWritePlaces(projectRoot, [], { activeTheme: process.env.NEXT_PUBLIC_ACTIVE_THEME ?? projectEnv.NEXT_PUBLIC_ACTIVE_THEME });
+    if (unsafe.length > 0) {
+      spinner.fail("Registry watcher not started: the registry build can't write safely under these paths");
+      for (const line of core.unsafeWritePlacesLines(unsafe)) console.error(chalk.red(`  ${line}`));
+      process.exit(1);
+    }
 
     const watchProcess = spawn('node', ['scripts/build/registry.mjs', '--watch'], {
       cwd: coreDir,
@@ -119,7 +128,12 @@ export async function registryWatchCommand(): Promise<void> {
       },
     });
 
+    watchProcess.on('spawn', () => {
+      spinner.info(`Registry watcher running (${mode} mode): core builds the registries, then rebuilds them on changes. Press Ctrl+C to stop.`);
+    });
+
     watchProcess.on('error', (err) => {
+      spinner.fail('Registry watcher not started');
       console.error(chalk.red(`Watcher error: ${err.message}`));
       process.exit(1);
     });

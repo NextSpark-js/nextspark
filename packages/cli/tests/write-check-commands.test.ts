@@ -169,3 +169,52 @@ test("registry:build, build and dev write nothing and stop with the cause when a
 
   assert.deepEqual(wrong, [])
 })
+
+test("registry:watch stops before it starts, with the cause and no line saying it started, when a place the registry build writes under isn't safe", { skip: process.platform === 'win32', timeout: 120_000 }, async () => {
+  const { root, cleanup } = await project()
+  const outside = await directory('nextspark-write-check-outside-')
+  try {
+    await writeIn(outside.root, 'index.ts', '// outside\n')
+    await mkdir(join(root, '.nextspark/registries'), { recursive: true })
+    await symlink(join(outside.root, 'index.ts'), join(root, '.nextspark/registries/index.ts'))
+    const before = { project: await snapshot(root), outside: await snapshot(outside.root) }
+
+    const { status, output } = runCli(root, ['registry:watch'], join(outside.root, 'next-ran'))
+
+    assert.equal(status, 1, output)
+    assert.deepEqual(await snapshot(outside.root), before.outside, 'nothing outside changed')
+    assert.deepEqual(await snapshot(root), before.project, 'nothing in the project changed')
+    const lines = output.split('\n')
+    assert.ok(lines.some((line) => line.trim().startsWith('.nextspark/registries/index.ts is a symlink')), output)
+    assert.deepEqual(lines.filter((line) => /(?<!not )started|running|✔|Watching/.test(line)), [], 'no line says the watcher started')
+  } finally {
+    await outside.cleanup()
+    await cleanup()
+  }
+})
+
+test('registry:build, build and dev say when git tracks the registries they rewrite, and how to stop tracking them', { skip: process.platform === 'win32', timeout: 300_000 }, async () => {
+  const wrong: string[] = []
+  for (const [command, args] of [['registry:build', ['registry:build']], ['build', ['build']], ['dev', ['dev', '-p', '4399']]] as const) {
+    const { root, cleanup } = await project()
+    const outside = await directory('nextspark-write-check-outside-')
+    try {
+      await writeIn(root, '.gitignore', 'node_modules/\n.env\napp/(templates)/\n.nextspark/backups/\n')
+      await writeIn(root, '.nextspark/registries/index.ts', '// committed before\n')
+      spawnSync('git', ['init', '-q'], { cwd: root })
+      spawnSync('git', ['add', '-A'], { cwd: root })
+      spawnSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-qm', 'init'], { cwd: root })
+
+      const { output } = runCli(root, [...args], join(outside.root, 'next-ran'))
+      const modified = spawnSync('git', ['status', '--porcelain', '--', '.nextspark/registries'], { cwd: root, encoding: 'utf-8' }).stdout
+      const lines = output.split('\n')
+      if (!modified.includes('.nextspark/registries/index.ts')) wrong.push(`${command}: the tracked registry is not modified, so there is nothing to warn about: ${modified}`)
+      if (!lines.some((line) => line.includes('.nextspark/registries is tracked by git (1 file(s))'))) wrong.push(`${command}: no line says git tracks the registries`)
+      if (!lines.some((line) => line.includes('git rm -r --cached .nextspark/registries'))) wrong.push(`${command}: no line says how to stop tracking them`)
+    } finally {
+      await outside.cleanup()
+      await cleanup()
+    }
+  }
+  assert.deepEqual(wrong, [])
+})

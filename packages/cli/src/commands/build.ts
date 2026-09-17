@@ -7,6 +7,7 @@ import { nextOutputBlocker, spawnNext } from '../utils/spawn-next.js';
 import { errorLines, errorWithLines } from '../utils/shown-path.js';
 import { captureChildOutput } from '../utils/registry-build.js';
 import { getCoreDir, getProjectRoot } from '../utils/paths.js';
+import { loadCoreWritePlaces } from '../utils/core-write-places.js';
 import { effectiveBundler, pickBundler, resolveBundlerArgs } from '../utils/next-bundler.js';
 
 /**
@@ -102,6 +103,15 @@ export async function buildCommand(options: BuildOptions): Promise<void> {
 
       spinner.succeed('Registries generated');
       for (const line of flagged) console.log(chalk.gray(line));
+
+      // What the build rewrites that git tracks stays tracked, whatever its .gitignore says
+      const core = await loadCoreWritePlaces(coreDir);
+      const trackedRegistries = core.trackedFilesUnder(projectRoot, '.nextspark/registries');
+      if (trackedRegistries.length > 0) {
+        const [warning, untrack] = core.trackedRegistriesLines(trackedRegistries.length);
+        console.log(chalk.yellow(`⚠ ${warning}`));
+        console.log(chalk.gray(`  ${untrack}`));
+      }
     }
 
     // Step 2: Run Next.js build

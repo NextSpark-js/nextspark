@@ -86,6 +86,16 @@ export async function devCommand(options: DevOptions): Promise<void> {
     // With --registry the watcher builds on start, before it starts watching
     if (!options.registry) {
       await buildRegistries(coreDir, projectRoot);
+
+      // What the build rewrites that git tracks stays tracked, whatever its .gitignore says; with
+      // --registry, the build's own output says so
+      const core = await loadCoreWritePlaces(coreDir);
+      const trackedRegistries = core.trackedFilesUnder(projectRoot, '.nextspark/registries');
+      if (trackedRegistries.length > 0) {
+        const [warning, untrack] = core.trackedRegistriesLines(trackedRegistries.length);
+        console.warn(chalk.yellow(`[Registry] ⚠ ${warning}`));
+        console.warn(chalk.gray(`[Registry]   ${untrack}`));
+      }
     }
 
     // Start registry watcher if enabled

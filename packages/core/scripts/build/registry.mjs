@@ -46,7 +46,7 @@ import { getBasename } from '../utils/paths.mjs'
 import { getConfig, validateEnvironment } from './registry/config.mjs'
 import { unsafeWritePlaces, unsafeWritePlacesLines } from './registry/write-places.mjs'
 import { projectFiles } from './safe-fs.mjs'
-import { ensureRegistriesGitignore } from './registry/post-build/own-gitignores.mjs'
+import { ensureRegistriesGitignore, trackedFilesUnder, trackedRegistriesLines } from './registry/post-build/own-gitignores.mjs'
 
 // Import discovery modules (migrated from this file)
 import { discoverParentChildRelations } from './registry/discovery/parent-child.mjs'
@@ -107,10 +107,15 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, template
     // Ensure output directory exists
     await files.mkdir(CONFIG.outputDir, { recursive: true })
 
-    // The registries are kept out of git by a .gitignore of their own, in place
-    // before the first one is written, whatever the project's rules say
+    // The registries git doesn't track yet are kept out of git by a .gitignore
+    // of their own, in place before the first one is written, whatever the
+    // project's rules say; the ones it tracks stay tracked, and that is said
     if (await ensureRegistriesGitignore(CONFIG.projectRoot)) {
       log('.gitignore', 'success')
+    }
+    const trackedRegistries = trackedFilesUnder(CONFIG.projectRoot, '.nextspark/registries')
+    if (trackedRegistries.length > 0) {
+      for (const line of trackedRegistriesLines(trackedRegistries.length)) log(line, 'warning')
     }
 
     // Generate client template registry (async - needs to check for server exports)

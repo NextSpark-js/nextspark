@@ -23,6 +23,10 @@ export interface CoreWritePlaces {
   REGISTRIES_GITIGNORE: string;
   ownGitignoreState(projectRoot: string, path: string): OwnGitignoreState;
   ensureBackupsGitignore(projectRoot: string): Promise<boolean>;
+  /** The files git tracks under a directory of the project; none outside a repository or without git. */
+  trackedFilesUnder(projectRoot: string, directory: string): string[];
+  /** What to say when git tracks registries, one line each: the warning, then how to stop tracking them. */
+  trackedRegistriesLines(count: number): string[];
 }
 
 /**
@@ -79,6 +83,8 @@ export async function loadCoreWritePlaces(coreDir: string): Promise<CoreWritePla
     REGISTRIES_GITIGNORE: gitignores.REGISTRIES_GITIGNORE,
     ownGitignoreState: gitignores.ownGitignoreState,
     ensureBackupsGitignore: gitignores.ensureBackupsGitignore,
+    trackedFilesUnder: gitignores.trackedFilesUnder,
+    trackedRegistriesLines: gitignores.trackedRegistriesLines,
   };
 }
 

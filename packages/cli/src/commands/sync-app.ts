@@ -173,10 +173,11 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
     }
 
     // The backups sync and the registry build take under .nextspark/backups, and
-    // the registries the build writes, are kept out of git by their directory's
-    // own .gitignore, put in place before the first one is written, whatever each
-    // is named or holds; one already there that can't do that has stopped the
-    // run above
+    // the registries the build writes that git doesn't track yet, are kept out
+    // of git by their directory's own .gitignore, put in place before the first
+    // one is written, whatever each is named or holds; one already there that
+    // can't do that has stopped the run above. Registries git tracks stay
+    // tracked, and the run says so
     const buildRuns = registryBuildBlocker(projectRoot) === null;
     const backsUpUnderNextspark = buildRuns
       || actions.some(({ path, backup }) => backup && existsSync(join(projectRoot, path)));
@@ -288,6 +289,12 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
       console.log(chalk.yellow(`  ⚠ app/(templates) is tracked by git (${trackedTemplates.length} file(s)), but every registry build rewrites it.`));
       console.log(chalk.gray('    To stop tracking it: git rm -r --cached "app/(templates)"'));
     }
+    const trackedRegistries = core.trackedFilesUnder(projectRoot, '.nextspark/registries');
+    if (trackedRegistries.length > 0) {
+      const [warning, untrack] = core.trackedRegistriesLines(trackedRegistries.length);
+      console.log(chalk.yellow(`  ⚠ ${warning}`));
+      console.log(chalk.gray(`    ${untrack}`));
+    }
 
     for (const { entry, why } of notAdded) {
       console.log(chalk.yellow(`  ⚠ ${options.dryRun ? 'Would not add' : 'Did not add'} ${entry} to .gitignore, and git would pick up what goes under it: ${why}`));
@@ -301,7 +308,7 @@ export async function syncAppCommand(options: SyncAppOptions): Promise<void> {
         console.log(chalk.gray(`  Would add ${core.BACKUPS_GITIGNORE}, which keeps every backup there out of git`));
       }
       if (buildAddsRegistriesGitignore) {
-        console.log(chalk.gray(`  Would have the registry build add ${core.REGISTRIES_GITIGNORE}, which keeps every registry there out of git`));
+        console.log(chalk.gray(`  Would have the registry build add ${core.REGISTRIES_GITIGNORE}, which keeps every registry there that git does not track yet out of git`));
       }
 
       if (templatesPlan?.status === 'planned' && templatesPlan.changes) {

@@ -1298,7 +1298,7 @@ writeFileSync(process.env.NEXTSPARK_TEST_STATUS, execFileSync('git', ['status', 
     if (planned.exitCode !== 0) wrong.push(`dry run: exit code ${planned.exitCode}`)
     if (!gitignoreAdditions(planned.printed, 'Would add').includes('.nextspark/registries/')) wrong.push('dry run: does not name the .gitignore line for the registries')
     if (!/Would regenerate \.nextspark\/registries and app\/\(templates\)/.test(planned.printed)) wrong.push('dry run: does not name the registries it regenerates')
-    if (!planned.printed.includes('Would have the registry build add .nextspark/registries/.gitignore, which keeps every registry there out of git')) wrong.push("dry run: does not name the registries' own .gitignore")
+    if (!planned.printed.includes('Would have the registry build add .nextspark/registries/.gitignore, which keeps every registry there that git does not track yet out of git')) wrong.push("dry run: does not name the registries' own .gitignore")
 
     const done = await runSyncForExit(root, { force: true })
     if (done.exitCode !== 0) wrong.push(`run: exit code ${done.exitCode}`)
@@ -1333,4 +1333,29 @@ writeFileSync(process.env.NEXTSPARK_TEST_STATUS, execFileSync('git', ['status', 
   }
 
   assert.deepEqual(wrong, [])
+})
+
+test('a sync says when git tracks the registries the registry build rewrites, and how to stop tracking them', async () => {
+  const { root, cleanup } = await project()
+  try {
+    await write(root, '.env', 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
+    await write(root, '.gitignore', 'node_modules/\n.env\n')
+    await write(root, '.nextspark/registries/index.ts', '// committed before\n')
+    await write(root, `${CORE}/scripts/build/registry.mjs`, `import { writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+writeFileSync(join(process.env.NEXTSPARK_PROJECT_ROOT, '.nextspark/registries/index.ts'), '// rewritten\\n')
+console.log('Registry build complete')
+`)
+    execFileSync('git', ['init', '-q'], { cwd: root })
+    execFileSync('git', ['add', '-f', '.nextspark/registries/index.ts'], { cwd: root })
+    execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-qm', 'registries'], { cwd: root })
+
+    const printed = await runSync(root, { force: true })
+
+    assert.match(execFileSync('git', ['status', '--porcelain', '--', '.nextspark/registries'], { cwd: root, encoding: 'utf-8' }), /^ M \.nextspark\/registries\/index\.ts$/m)
+    assert.match(printed, /⚠ \.nextspark\/registries is tracked by git \(1 file\(s\)\), but every registry build rewrites it/)
+    assert.match(printed, /To stop tracking it: git rm -r --cached \.nextspark\/registries/)
+  } finally {
+    await cleanup()
+  }
 })
