@@ -216,7 +216,7 @@ test('an error heading keeps the stack lines under it on its stream, up to the c
   ])
 })
 
-test('every error the errors pool keeps keeps its own stack lines, however many frames the errors before it printed', () => {
+test('every error the errors pool keeps keeps all of its stack lines, however many frames the errors before it printed', () => {
   const framesOf = (name: string, count: number) =>
     Array.from({ length: count }, (_, index) => `    at ${name}${index} (file:///core/scripts/build/registry.mjs:${index + 1}:5)`)
 
@@ -230,8 +230,38 @@ test('every error the errors pool keeps keeps its own stack lines, however many 
   for (let error = 0; error < 6; error++) {
     const at = lines.indexOf(`Error: E${error}`)
     assert.ok(at !== -1, `E${error} is kept`)
-    assert.equal(lines[at + 1], framesOf(`e${error}f`, 1)[0], `E${error} keeps its first stack line`)
+    assert.deepEqual(lines.slice(at + 1, at + 11), framesOf(`e${error}f`, 10), `E${error} keeps all 10 of its stack lines, not just the first`)
   }
+})
+
+/** A stack line padded with filler after its call site so it lands at exactly `totalBytes`. */
+function frameOfLength(totalBytes: number): string {
+  const prefix = '    at f (file:///x.mjs:1:1) '
+  const filler = 'x'.repeat(totalBytes - bytesOf(prefix))
+  return `${prefix}${filler}`
+}
+
+test('a single kept error keeps as many frames as the stack pool has room for, not a fixed share of it computed from how many errors it could hold', () => {
+  const frame = frameOfLength(183)
+  const frames = Array.from({ length: 10 }, () => frame)
+
+  const output = captureOutput({ head: { lines: 0, bytes: 0 }, tail: { lines: 0, bytes: 0 } })
+  writeLines(output, 'stderr', ['Error: boom', ...frames])
+
+  const lines = output.failureLines
+  assert.deepEqual(
+    lines.filter((line) => line.startsWith('    at ')),
+    frames,
+    `all 10 frames are kept: the default 16384-byte stack pool holds them, even though an even 1/10 share of it (1638 bytes) would only fit 8:\n${lines.join('\n')}`
+  )
+})
+
+test('a single frame heavier than an even share of the stack pool is still kept when the pool itself has room for it', () => {
+  const frame = frameOfLength(1731)
+  const output = captureOutput({ head: { lines: 0, bytes: 0 }, tail: { lines: 0, bytes: 0 } })
+  writeLines(output, 'stderr', ['Error: boom', frame])
+
+  assert.ok(output.failureLines.includes(frame), `the 1731-byte frame is kept: it only overruns a computed 1638-byte-per-error share, not the 16384-byte pool:\n${output.failureLines.join('\n')}`)
 })
 
 test('the stack pool is shared out evenly among the errors the errors pool can keep', () => {
@@ -250,6 +280,27 @@ test('the stack pool is shared out evenly among the errors the errors pool can k
   const lines = output.failureLines
   const at = lines.indexOf('Error: c')
   assert.deepEqual(lines.slice(at + 1, at + 3), [frame('c', 0), frame('c', 1)])
+})
+
+test('when the stack pool runs out mid-round, the errors still waiting for a frame split what is left evenly, and the total never crosses either cap', () => {
+  const frame = (name: string, index: number) => `    at ${name}${index} (file:///x.mjs:${index + 1}:1)`
+  const output = captureOutput({
+    head: { lines: 0, bytes: 0 },
+    tail: { lines: 0, bytes: 0 },
+    errors: { lines: 4, bytes: 4096 },
+    stack: { perError: 5, lines: 10, bytes: 1024 * 1024 },
+  })
+  for (const name of ['a', 'b', 'c', 'd']) {
+    writeLines(output, 'stderr', [`Error: ${name}`, ...Array.from({ length: 5 }, (_, index) => frame(name, index))])
+  }
+
+  const lines = output.failureLines
+  const framesOf = (name: string) => lines.filter((line) => line.startsWith(`    at ${name}`))
+  assert.deepEqual(framesOf('a'), [frame('a', 0), frame('a', 1), frame('a', 2)], 'a is among the first two errors of the round that filled the pool, so it keeps one more frame than c or d')
+  assert.deepEqual(framesOf('b'), [frame('b', 0), frame('b', 1), frame('b', 2)])
+  assert.deepEqual(framesOf('c'), [frame('c', 0), frame('c', 1)])
+  assert.deepEqual(framesOf('d'), [frame('d', 0), frame('d', 1)])
+  assert.equal(lines.filter((line) => line.startsWith('    at ')).length, 10, 'the stack.lines cap of 10 is never crossed')
 })
 
 test('a warning behind an OSC hyperlink sequence is still a warning, ended by BEL or by ST', () => {
@@ -393,6 +444,40 @@ console.log(output.successLines.length)
     await rm(root, { recursive: true, force: true })
   }
 })
+
+/**
+ * Every kept error's candidate stack frames are gathered as the output streams
+ * in, up to `stack.perError` of them, before which ones are shown is decided.
+ * 2,000 errors with 200 frames of about 4 KB each - what `build` and
+ * `registry:build` feed through the same `captureChildOutput` this uses - would
+ * run a 64 MB heap out if that gathering held more than the errors pool can
+ * ever keep, or more than `perError` frames of any one of them.
+ */
+test(
+  '2,000 errors with 200 stack frames of about 4 KB each never run a 64 MB heap out',
+  { skip: process.platform === 'win32', timeout: 60_000 },
+  async () => {
+    const root = await mkdtemp(join(tmpdir(), 'nextspark-capture-memory-stack-'))
+    try {
+      const script = join(root, 'capture.mts')
+      await writeFile(script, `import { captureOutput } from ${JSON.stringify(pathToFileURL(join(PKG_ROOT, 'src/utils/registry-build.ts')).href)}
+const output = captureOutput()
+const frame = '    at f' + 'r'.repeat(4000) + ' (file:///x.mjs:1:1)\\n'
+for (let error = 0; error < 2000; error++) {
+  const block = '❌ Failed to parse block ' + error + '\\n' + frame.repeat(200)
+  output.write('stdout', Buffer.from(block, 'utf8'))
+}
+console.log(output.failureLines.length)
+`)
+      const run = spawnSync(process.execPath, ['--max-old-space-size=64', '--import', 'tsx', script], { cwd: PKG_ROOT, encoding: 'utf-8', timeout: 50_000, killSignal: 'SIGKILL' })
+      assert.equal(run.signal, null, `must finish on its own:\n${run.stderr.slice(0, 2000)}`)
+      assert.ok(!/FATAL ERROR/.test(run.stderr), `must not run out of heap:\n${run.stderr.slice(0, 2000)}`)
+      assert.equal(run.status, 0, run.stderr.slice(0, 2000))
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  }
+)
 
 test('the last lines hold no more than either of their caps', () => {
   const noLines = captureOutput({ head: { lines: 0, bytes: 0 }, tail: { lines: 0, bytes: 1024 } })

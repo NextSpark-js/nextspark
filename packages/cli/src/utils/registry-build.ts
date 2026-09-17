@@ -43,9 +43,12 @@ export interface CaptureLimits {
   errors: PoolCaps;
   /**
    * The stack lines right under those errors: at most `perError` under each
-   * one, within an equal share of `lines` and `bytes` for each error the errors
-   * pool can keep, so the stacks of the first errors never take the room a
-   * later kept error needs for its own.
+   * one. Which of them make the final cut is decided once every error is in,
+   * by round among the errors that were kept - in round *r*, each error that
+   * still has a frame *r* takes it if `lines` and `bytes` still have room, and
+   * an error that doesn't fit takes no later frame either, so its kept ones
+   * stay contiguous while the other errors keep going. The total across every
+   * error's frames never passes `lines` or `bytes`.
    */
   stack: PoolCaps & { perError: number };
   /** The first warning lines, wherever they arrive. */
@@ -185,10 +188,13 @@ interface StreamState {
   held: number;
   /** Bytes of the line in progress so far. */
   bytes: number;
-  /** Stack lines kept under the last line this stream printed, when that line was a kept error or one of its stack lines. */
-  frames: number | null;
-  /** Bytes of those stack lines. */
-  frameBytes: number;
+  /**
+   * The candidate stack frames collected so far for the last line this stream
+   * printed, when that line was a kept error or one of its stack lines, up to
+   * `stack.perError` of them; `null` when this stream isn't under a kept error,
+   * or has already collected as many candidates as an error can ever keep.
+   */
+  activeFrames: CapturedLine[] | null;
 }
 
 export interface CapturedOutput {
@@ -238,13 +244,10 @@ export function captureOutput(limits: Partial<CaptureLimits> = {}): CapturedOutp
   const head = firstLines(caps.head);
   const tail = lastLines(caps.tail);
   const errors = firstLines(caps.errors);
-  const stack = firstLines(caps.stack);
   const warnings = firstLines(caps.warnings);
-  // Each error the errors pool can keep gets the same share of the stack pool,
-  // so the shares of every kept error together never exceed it.
-  const errorShares = Math.max(1, caps.errors.lines);
-  const framesPerError = Math.min(caps.stack.perError, Math.floor(caps.stack.lines / errorShares));
-  const frameBytesPerError = Math.floor(caps.stack.bytes / errorShares);
+  // Each kept error's own candidate stack frames, in the order the errors
+  // were kept; `errors.kept[i]`'s candidates are `errorFrames[i]`.
+  const errorFrames: CapturedLine[][] = [];
   const streams = new Map<string, StreamState>();
   let totalLines = 0;
   let totalBytes = 0;
@@ -253,7 +256,7 @@ export function captureOutput(limits: Partial<CaptureLimits> = {}): CapturedOutp
   function streamState(name: string): StreamState {
     let state = streams.get(name);
     if (!state) {
-      state = { decoder: new StringDecoder('utf8'), start: Buffer.alloc(caps.line + 1), held: 0, bytes: 0, frames: null, frameBytes: 0 };
+      state = { decoder: new StringDecoder('utf8'), start: Buffer.alloc(caps.line + 1), held: 0, bytes: 0, activeFrames: null };
       streams.set(name, state);
     }
     return state;
@@ -283,22 +286,28 @@ export function captureOutput(limits: Partial<CaptureLimits> = {}): CapturedOutp
     tail.add(line);
 
     const kind = lineKind(line.text);
-    if (kind === 'stack' && state.frames !== null) {
-      if (state.frames < framesPerError && state.frameBytes + line.keptBytes <= frameBytesPerError && stack.offer(line)) {
-        state.frames++;
-        state.frameBytes += line.keptBytes;
+    if (kind === 'stack' && state.activeFrames !== null) {
+      if (state.activeFrames.length < caps.stack.perError) {
+        state.activeFrames.push(line);
       } else {
-        // The frames kept under an error stay contiguous: once one is left out, so are the rest of its stack.
-        state.frames = null;
+        // The candidates collected under an error stay contiguous: once it has
+        // as many as it could ever keep, later frames of the same error are
+        // never candidates either.
+        state.activeFrames = null;
       }
       return;
     }
     if (kind === 'error') {
-      state.frames = errors.offer(line) ? 0 : null;
-      state.frameBytes = 0;
+      if (errors.offer(line)) {
+        const frames: CapturedLine[] = [];
+        errorFrames.push(frames);
+        state.activeFrames = caps.stack.perError > 0 ? frames : null;
+      } else {
+        state.activeFrames = null;
+      }
       return;
     }
-    state.frames = null;
+    state.activeFrames = null;
     if (kind === 'warning') warnings.offer(line);
   }
 
@@ -318,6 +327,38 @@ export function captureOutput(limits: Partial<CaptureLimits> = {}): CapturedOutp
     finished = true;
     for (const state of streams.values()) {
       if (state.bytes > 0) endLine(state);
+    }
+  }
+
+  /**
+   * The stack frames to show, chosen from each kept error's candidates by
+   * round: in round *r*, every error that still has a candidate frame *r*
+   * takes it if `caps.stack.lines` and `caps.stack.bytes` still have room for
+   * it; once one doesn't fit, that error takes no later frame either, so its
+   * kept frames stay contiguous, while the errors before and after it in the
+   * round keep going.
+   */
+  function selectStackFrames(): CapturedLine[] {
+    const kept: CapturedLine[] = [];
+    let keptLines = 0;
+    let keptBytes = 0;
+    const stopped: boolean[] = new Array(errorFrames.length).fill(false);
+    for (let round = 0; ; round++) {
+      let offered = false;
+      for (let i = 0; i < errorFrames.length; i++) {
+        const frames = errorFrames[i];
+        if (stopped[i] || round >= frames.length) continue;
+        offered = true;
+        const frame = frames[round];
+        if (keptLines < caps.stack.lines && keptBytes + frame.keptBytes <= caps.stack.bytes) {
+          kept.push(frame);
+          keptLines++;
+          keptBytes += frame.keptBytes;
+        } else {
+          stopped[i] = true;
+        }
+      }
+      if (!offered) return kept;
     }
   }
 
@@ -352,7 +393,7 @@ export function captureOutput(limits: Partial<CaptureLimits> = {}): CapturedOutp
 
     get failureLines(): string[] {
       finish();
-      const shown = inOrder([head.kept, errors.kept, stack.kept, tail.kept]);
+      const shown = inOrder([head.kept, errors.kept, selectStackFrames(), tail.kept]);
       if (errors.droppedLines > 0) {
         shown.push(`... and ${errors.droppedLines} more error line(s), ${errors.droppedBytes} byte(s), after the first ${errors.kept.length}`);
       }
