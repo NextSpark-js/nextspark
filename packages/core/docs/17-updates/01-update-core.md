@@ -62,6 +62,7 @@ The update stops, says why and leaves the project as it was when:
 - `package.json` takes a `@nextsparkjs` package from somewhere other than the registry (`file:`, `link:`, `workspace:`, a git URL)
 - `@nextsparkjs/core` isn't installed yet (run `pnpm install` first) or `@nextsparkjs/cli` isn't a dependency
 - `.env` doesn't set `NEXT_PUBLIC_ACTIVE_THEME`: without it `sync:app` skips the registry build, and `app/(templates)` would stay on the old core
+- the project has submodules and git can't list the branch each checked-out one is on (`git submodule foreach` fails), which the rollback needs to put them back on their branches
 - `--branch` is given and `update/<version>` already exists
 - the project keeps the framework in `core/`, the layout from before NextSpark shipped as npm packages
 
@@ -81,7 +82,7 @@ From there on, if a step fails, anything else goes wrong (for example, creating 
 
 1. stops the step that is running, together with the processes it started in its process group, such as the lifecycle scripts of `pnpm install`. On a signal, it passes the signal on to them; whatever is still running 5 seconds after the signal arrived is killed with `SIGKILL`. A second signal doesn't restart or shorten that wait (a Ctrl-C can arrive twice, once from the terminal and once passed on by `pnpm`). When a step's command exits, failing or not, and processes it started are still running half a second later, they get `SIGTERM`, and `SIGKILL` 5 seconds later; after a step that succeeded, the update says so and goes on, unless one of them survived `SIGKILL`, which fails the update. (On Windows, see [When the Run Is Killed](#when-the-run-is-killed).);
 2. undoes nothing;
-3. prints what stopped it; whether the step's processes exited after the signal or had to be killed; the steps it finished and the ones it never reached; what `git status` shows now; and the rollback;
+3. prints what stopped it; whether any process of the step's process group was still running 5 seconds after the signal and had to be killed; the steps it finished and the ones it never reached; what `git status` shows now; and the rollback;
 4. exits non-zero: 1 for a failure, 128 plus the signal's number for an interruption (130 for `SIGINT`, 143 for `SIGTERM`).
 
 ```
@@ -90,7 +91,7 @@ From there on, if a step fails, anything else goes wrong (for example, creating 
 ========================================
 
   Interrupted by SIGINT during: pnpm install
-  pnpm install and the processes it started exited after the signal.
+  No process in the process group of pnpm install was left running after the signal.
 
   Done before that:
     - package.json: @nextsparkjs/core 0.1.0-beta.188 -> 0.1.0-beta.189, ...
@@ -109,12 +110,12 @@ From there on, if a step fails, anything else goes wrong (for example, creating 
   Then run update-core --version 0.1.0-beta.189 again.
 ```
 
-If the step's processes were still running 5 seconds after the signal, the second line reads `pnpm install or processes it started were still running 5 s after the signal, and were killed with SIGKILL.`, followed by a warning if any of them was still running after that.
+If the step's processes were still running 5 seconds after the signal, the second line reads `Processes in the process group of pnpm install were still running 5 s after the signal, and were killed with SIGKILL.`, followed by a warning if any of them was still running after that. The first line says `before` instead of `during`, as in `Failed before: pnpm install (its guard process exited (SIGKILL))`, when `update-core` never let the step's command start: the signal came, or the step's guard process died, before `update-core` had the step's process group (see [When the Run Is Killed](#when-the-run-is-killed)). `during` means the command may have started, not that it did: `update-core` knows it let the command start, not whether the guard had acted on that yet.
 
 The rollback is always the whole thing, never a list of files to put back: `pnpm install` runs lifecycle scripts (core's own `postinstall` runs `sync:app`), and those can have written anywhere before the step stopped. Since the update only starts from a clean tree, `git reset --hard` to that commit and `git clean -fd` undo every change to tracked files and remove the untracked files and directories the run created (not a nested git repository, which `git clean` leaves unless given `-f` twice). The rest of the command depends on the project:
 
 - **Web-mobile, run from `web/`:** it reads `git clean -fd :/`, so it cleans the whole repository and not just `web/`, removes the workspace root's `node_modules` too and installs from there: `rm -rf ../node_modules node_modules && pnpm --dir .. install --frozen-lockfile`.
-- **Submodules:** when the commit has a `.gitmodules`, `git reset --hard` and `git clean` don't reach inside submodules, so the command adds `git submodule foreach --recursive git reset --hard && git submodule update --recursive` after the reset and `git submodule foreach --recursive git clean -fd` after the clean. A submodule a script only wrote in keeps the branch it was on; one whose commit a script changed goes back to the commit your project records for it, detached from its branch.
+- **Submodules:** when the commit has a `.gitmodules`, `git reset --hard` and `git clean` don't reach inside submodules, so the command adds `git submodule foreach --recursive git reset --hard && git submodule update --checkout --recursive` after the reset and `git submodule foreach --recursive git clean -fd` after the clean. `git submodule update --checkout` checks a submodule out again, detached, at the commit your project records for it when a script moved it to another commit or deleted its worktree; `--checkout` makes it do that also for a submodule whose `update` setting is `merge`, `rebase` or `none`. So for each checked-out submodule (nested ones included) that was on a branch when the update started, the command also has a step like `sh -c 'if test -e vendor/sub/.git && test "$(git -C vendor/sub rev-parse --quiet --verify refs/heads/main)" = <commit>; then git -C vendor/sub symbolic-ref HEAD refs/heads/main; fi'`: it puts the submodule back on that branch if the branch still points at the recorded commit, as after a script deleted the worktree. It does nothing where the submodule has no `.git`, as after a script deinitialized it, since `git -C` would then act on your project's repository. If the branch moved, say because a script committed inside the submodule, the submodule stays detached at the recorded commit and the branch is left where the script put it.
 - **`--branch`:** it also switches back to the branch you were on and deletes `update/<version>` with `git update-ref -d`, which also works when the run stopped before creating it.
 
 `node_modules` is removed and installed again rather than just installed: an install that was stopped can leave `node_modules` holding the new versions while the lockfile still names the old ones, and `pnpm install` then reports it up to date without changing anything. The install is `--frozen-lockfile`, so it installs exactly what the commit's `pnpm-lock.yaml` records. If that lockfile doesn't match the commit's `package.json` (a `^` range in `package.json` and an exact version recorded for it, say), the install fails with `ERR_PNPM_OUTDATED_LOCKFILE` instead of rewriting the lockfile: by then the files are back as the commit has them and `node_modules` is gone, and a plain `pnpm install` rebuilds it, changing the lockfile to match `package.json`.
@@ -125,11 +126,24 @@ The rollback is a POSIX shell command: run it in a shell like the ones on macOS 
 
 A run killed with `SIGKILL`, or whose machine goes down, can't print the report: use the rollback it printed before its first change.
 
-`pnpm install` and `sync:app` run under a small guard process of their own, outside the terminal's process group, which kills the step's process group as soon as `update-core` exits before it is done with the step, however `update-core` ended: killed alone with `SIGKILL`, or together with the rest of the terminal's process group. It can't reach a process a lifecycle script moved out of that process group (with `setsid`, or by starting a daemon); the note printed before the first change says so too.
+`pnpm install` and `sync:app` run under a small guard process of their own, outside the terminal's process group, which kills the step's process group as soon as `update-core` exits before it is done with the step, however `update-core` ended: killed alone with `SIGKILL`, or together with the rest of the terminal's process group. It can't reach a process a lifecycle script moved out of that process group (with `setsid`, or by starting a daemon), and if the guard is killed too, nothing kills the step; the note printed before the first change says both.
 
-If the guard process itself doesn't say which process group the step runs in within 5 seconds of a signal (it normally does within milliseconds of starting), the update stops the guard, which kills the step's group if it still can, and the report says the step may still be running.
+The guard starts the step's process group with a shell that waits for the guard to let it go, and tells `update-core` that group's id; `update-core` lets the command start only once it has the id and no signal has come, and the shell then runs the command in its own place. So a guard that dies before `update-core` has the group's id leaves no command running: the shell exits without running it, and the report says `Failed before: pnpm install (its guard process exited (…))`. A signal that comes before the id is passed on to the waiting shell, and the command never starts.
 
-A signal that arrives once `core.version.json` is written stops nothing: the update is complete by then. On Windows, which has no process groups, the running step and the processes under it are stopped with `taskkill /T /F`, right away rather than after 5 seconds; processes a step leaves running after its command exits have no running parent for `taskkill /T` to find them by, and are not stopped.
+If the guard doesn't say which process group the step runs in within 5 seconds of a signal (it normally does within milliseconds of starting), the update stops the guard, and the report says it was stopped before it started the step.
+
+A signal that arrives once `core.version.json` is written stops nothing: the update is complete by then.
+
+On Windows, which has no process groups, the running step and the processes under it are stopped with `taskkill /T /F`, right away rather than after 5 seconds, and the report says `taskkill` was run, not whether they stopped; processes a step leaves running after its command exits have no running parent for `taskkill /T` to find them by, and are not stopped. There is no waiting shell either: the guard starts the command at once. So if the guard dies, the step can keep running, and the report doesn't say so; if the guard doesn't tell `update-core` the step's process id within 5 seconds of a signal, the report says the step may still be running. None of the Windows paths have been run.
+
+### When `update-core` or the Guard Is Stopped
+
+A stopped process (`SIGSTOP`, or Ctrl-Z in the terminal for `update-core`) does nothing until it is continued, and no process can act for it, so none of the above is enforced while `update-core` or a step's guard is stopped:
+
+- **`update-core` stopped:** the step, which runs in a process group of its own, keeps running, and so do the processes it starts: nothing kills them 5 seconds after a signal, and processes a step leaves running after its command exits aren't stopped, so they can go on writing to the project. When `update-core` is continued (`fg`, `SIGCONT`), it takes up where it was: after a signal whose 5 seconds have passed, it kills what is left of the step right away.
+- **The guard stopped:** `update-core` waits for it with no limit, since the guard is what reports that the step's command exited. If `update-core` is killed meanwhile, the step keeps running until the guard is continued, which then kills it; if the guard is killed too, nothing stops the step. After a signal, `update-core` still kills the step's process group 5 seconds later and exits, but a step process that has exited can't be reaped while its guard is stopped, so it still counts as running, and the report warns that processes may still write to the project.
+
+In either case what the report says, and whether anything still writes to the project after it, can't be relied on.
 
 ### What the Rollback Can't Restore
 
@@ -137,7 +151,7 @@ What the rollback restores is what git tracks as of that commit, so it can't res
 
 - **Files `.gitignore` ignores that a lifecycle script overwrote or deleted.** git has no copy of them. That includes `.env` and other environment files; `node_modules/`, `.next/` and the generated registries are also ignored, but those are rebuilt by the rollback's install and by the next build. If ignored files you care about sit in the project, back them up before updating: the update doesn't refuse a tree that has them, since every project does.
 - **Files you create while the update runs**, anywhere in the repository: they are untracked, and `git clean` removes them. Don't work in the project until the update has finished or you have rolled back.
-- **What a script does with git itself**: commits, branches or tags it creates, or a branch it switches the project or a submodule to. The rollback resets files to the commit and moves submodules back to their recorded commits; it doesn't delete refs or put `HEAD`, or a submodule's `HEAD`, back on the branch it was on.
+- **What a script does with git itself**: commits, branches or tags it creates or moves, a branch it switches the project to, or a submodule it initializes or deinitializes (the rollback doesn't check out a submodule a script deinitialized, nor remove one a script checked out). The rollback resets files to the commit and moves submodules back to their recorded commits; it doesn't delete or move refs back, nor put the project's `HEAD` back on the branch it was on. A submodule's `HEAD` goes back on the branch it was on only if that branch still points at the commit your project records (see Submodules above).
 - Anything outside the repository.
 
 ---
