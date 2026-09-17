@@ -6,7 +6,7 @@ This guide walks you through creating a new project with NextSpark from scratch.
 
 ## Prerequisites
 
-- Node.js 20+
+- Node.js 22+
 - pnpm 8+ (recommended) or npm/yarn
 - PostgreSQL database (Supabase, Neon, or local)
 

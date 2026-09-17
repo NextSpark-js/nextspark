@@ -14,12 +14,12 @@ Complete step-by-step installation guide for setting up NextSpark for local deve
 
 ### Required Software
 
-#### 1. Node.js 18+ (20+ Recommended)
+#### 1. Node.js 22+
 
 **Check version:**
 ```bash
 node -v
-# Should show: v20.x.x or v18.x.x
+# Should show: v22.x.x or higher
 ```
 
 **Install/Update:**
@@ -440,7 +440,7 @@ pnpm dev
 ```bash
 # Check Node.js
 node -v
-# ✅ Should be v18.x.x or v20.x.x
+# ✅ Should be v22.x.x or higher
 
 # Check pnpm
 pnpm -v
@@ -779,7 +779,7 @@ pnpm test:e2e
 ## Summary
 
 **You've completed installation if you:**
-- ✅ Installed Node.js 18+, pnpm 10.17.0, and PostgreSQL
+- ✅ Installed Node.js 22+, pnpm 10.17.0, and PostgreSQL
 - ✅ Cloned repository and installed dependencies
 - ✅ Configured `.env.local` with required variables
 - ✅ Ran database migrations successfully

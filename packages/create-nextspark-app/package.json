@@ -49,6 +49,6 @@
     "directory": "packages/create-nextspark-app"
   },
   "engines": {
-    "node": ">=20.9.0"
+    "node": ">=22.13.0"
   }
 }

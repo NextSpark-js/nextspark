@@ -15,9 +15,9 @@ Get from zero to running application in **under 5 minutes**. This guide provides
 Before starting, verify you have:
 
 ```bash
-# Node.js 18+ (20+ recommended)
+# Node.js 22+
 node -v
-# Should show: v20.x.x or higher
+# Should show: v22.x.x or higher
 
 # pnpm 10.17+
 pnpm -v

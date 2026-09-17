@@ -24,7 +24,7 @@ This guide walks you through the initial project setup **after** you've complete
 
 **Prerequisites:**
 - ✅ Completed [Installation Guide](./01-installation.md)
-- ✅ Node.js 20+, pnpm 10.17+ installed
+- ✅ Node.js 22+, pnpm 10.17+ installed
 - ✅ PostgreSQL database accessible (Supabase or local)
 - ✅ `.env.local` file configured with required variables
 
@@ -41,7 +41,7 @@ Before configuring anything, let's verify the installation completed successfull
 **Check Node.js and pnpm versions:**
 ```bash
 node -v
-# Should show: v20.x.x or higher
+# Should show: v22.x.x or higher
 
 pnpm -v
 # Should show: 10.17.0 or higher
@@ -1211,7 +1211,7 @@ All must pass ✅ before merge.
 Go through this checklist to verify everything is set up correctly:
 
 ### Installation Verification
-- [ ] Node.js 20+ installed (`node -v`)
+- [ ] Node.js 22+ installed (`node -v`)
 - [ ] pnpm 10.17+ installed (`pnpm -v`)
 - [ ] Dependencies installed (800+ packages in node_modules/)
 - [ ] Project structure created (app/, core/, contents/, scripts/)

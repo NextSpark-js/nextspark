@@ -75,7 +75,7 @@ brew install node@20
 
 # Verify
 node -v
-# Should show: v20.x.x
+# Should show: v22.x.x
 ```
 
 **Solution (Linux - Ubuntu/Debian):**
@@ -84,9 +84,9 @@ node -v
 sudo apt remove nodejs
 
 # Add NodeSource repository
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 
-# Install Node.js 20
+# Install Node.js 22
 sudo apt-get install -y nodejs
 
 # Verify
@@ -103,14 +103,14 @@ node -v
 ```bash
 # Install nvm first: https://github.com/nvm-sh/nvm
 
-# Install Node.js 20
-nvm install 20
+# Install Node.js 22
+nvm install 22
 
-# Use Node.js 20
-nvm use 20
+# Use Node.js 22
+nvm use 22
 
 # Set as default
-nvm alias default 20
+nvm alias default 22
 
 # Verify
 node -v
