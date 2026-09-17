@@ -214,9 +214,15 @@ importers:
       '@types/node':
         specifier: 20.19.27
         version: 20.19.27
+      '@types/semver':
+        specifier: ^7.7.1
+        version: 7.8.0
       '@types/tar':
         specifier: ^6.1.0
         version: 6.1.13
+      semver:
+        specifier: ~7.7.3
+        version: 7.7.3
       tsup:
         specifier: ^8.0.0
         version: 8.5.1(@swc/core@1.15.8(@swc/helpers@0.5.23))(jiti@2.7.0)(postcss@8.5.23)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.8.2)
@@ -567,6 +573,12 @@ importers:
       '@types/prompts':
         specifier: ^2.4.0
         version: 2.4.9
+      '@types/semver':
+        specifier: ^7.7.1
+        version: 7.8.0
+      semver:
+        specifier: ~7.7.3
+        version: 7.7.3
       tsup:
         specifier: ^8.0.0
         version: 8.5.1(@swc/core@1.15.8(@swc/helpers@0.5.23))(jiti@2.7.0)(postcss@8.5.23)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.8.2)
@@ -4804,6 +4816,9 @@ packages:
 
   '@types/sanitize-html@2.16.1':
     resolution: {integrity: sha512-n9wjs8bCOTyN/ynwD8s/nTcTreIHB1vf31vhLMGqUPNHaweKC4/fAl4Dj+hUlCTKYgm4P3k83fmiFfzkZ6sgMA==}
+
+  '@types/semver@7.8.0':
+    resolution: {integrity: sha512-1mAINjtQCXXeLkJ9ehXkwOcBpqtLxiVtKhpUf83DdRNdQKV0iXZpaHYqRr7nj+wvxuJzoAmAwXI+sCNMv1CzLQ==}
 
   '@types/sinonjs__fake-timers@8.1.1':
     resolution: {integrity: sha512-0kSuKjAS0TrGLJ0M/+8MaFkGsQhZpB6pxOmvS3K8FYI72K//YmdfoW9X2qPsAKh1mkwxGD5zib9s1FIFed6E8g==}
@@ -14519,6 +14534,8 @@ snapshots:
   '@types/sanitize-html@2.16.1':
     dependencies:
       htmlparser2: 10.1.0
+
+  '@types/semver@7.8.0': {}
 
   '@types/sinonjs__fake-timers@8.1.1': {}
 

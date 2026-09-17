@@ -29,6 +29,8 @@
     "@types/node": "^20.0.0",
     "@types/fs-extra": "^11.0.0",
     "@types/prompts": "^2.4.0",
+    "@types/semver": "^7.7.1",
+    "semver": "~7.7.3",
     "tsx": "^4.23.13"
   },
   "keywords": [

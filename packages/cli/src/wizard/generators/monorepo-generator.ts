@@ -83,7 +83,7 @@ function getNextSparkVersion(): string {
  * Centralized package versions for mobile dependencies.
  * Update these when releasing new versions of NextSpark packages.
  */
-const VERSIONS = {
+export const VERSIONS = {
   // NextSpark packages - pinned to the CLI version for a coherent install
   NEXTSPARK_MOBILE: getNextSparkVersion(),
   NEXTSPARK_UI: getNextSparkVersion(),

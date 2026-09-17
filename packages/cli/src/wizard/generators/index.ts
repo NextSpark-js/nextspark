@@ -388,7 +388,8 @@ export async function updatePackageJson(config: WizardConfig): Promise<void> {
     'ts-jest': '^29.2.5',
     'ts-node': '^10.9.2',
     '@types/jest': '^29.5.14',
-    '@testing-library/jest-dom': '^6.6.3',
+    // 6.10.0 requires Node >=22; the CLI declares Node >=20.9.0
+    '@testing-library/jest-dom': '>=6.6.3 <6.10.0',
     '@testing-library/react': '^16.3.0',
     'jest-environment-jsdom': '^29.7.0',
     // Cypress
