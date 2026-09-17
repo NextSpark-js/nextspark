@@ -8,7 +8,10 @@ import { showError, showSuccess, showWarning } from './banner.js'
  *
  * `--no-frozen-lockfile`: pnpm freezes the lockfile whenever CI is set, and
  * generating the project has just rewritten package.json, so a frozen install
- * stops at ERR_PNPM_OUTDATED_LOCKFILE.
+ * stops at ERR_PNPM_OUTDATED_LOCKFILE. It does not resolve again what the
+ * lockfile already holds: whether another pnpm can install the project later
+ * depends on the release-age policy create-nextspark-app writes into
+ * pnpm-workspace.yaml, and on the pnpm that created it.
  *
  * pnpm's exit code alone decides whether the install finished. pnpm writes
  * node_modules before it fails, so a project whose node_modules exists can

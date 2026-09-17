@@ -39,10 +39,10 @@ const LIST_PROJECTS_COMMAND = 'pnpm ls -r --depth -1 --json'
  * nearest pnpm-workspace.yaml going up (the project itself, or the repository
  * root when the project is the web/ app of a monorepo), climbing past one that
  * has no lockfile of its own when an enclosing workspace lists it among its
- * projects and that workspace's lockfile already imports it: a generated
- * monorepo writes a pnpm-workspace.yaml into web/ too, but its install and its
- * lockfile belong to the repository root. A repository whose broad glob merely
- * matches a project it never installed does not qualify.
+ * projects and that workspace's lockfile already imports it: the web/ app of a
+ * web-mobile project can carry a pnpm-workspace.yaml of its own while its
+ * install and its lockfile belong to the repository root. A repository whose
+ * broad glob merely matches a project it never installed does not qualify.
  *
  * pnpm stops at that file whatever it lists, so the install runs only when pnpm
  * itself lists every such package among that workspace's projects. Its reading

@@ -273,6 +273,9 @@ async function createPnpmWorkspace(targetDir: string): Promise<void> {
     DIRS.MOBILE,
   ]
 
+  // The project's only pnpm-workspace.yaml: web/ gets none, so pnpm run from
+  // web/ or mobile/ finds this one and the settings it holds.
+  //
   // The file already exists: create-nextspark-app writes it before the install
   // to carry `allowBuilds`. The monorepo dictates the package list, but writing
   // the whole file would take that allowlist — and any overrides or catalogs —

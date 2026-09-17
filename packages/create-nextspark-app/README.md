@@ -52,7 +52,32 @@ pnpm dev
 ## Requirements
 
 - Node.js 18+
-- pnpm (recommended)
+- pnpm 9, 10 or 11
+
+### Installing with another pnpm than the one that created the project
+
+pnpm 11 checks every version in `pnpm-lock.yaml` against a minimum release age of one day each
+time it installs, and refuses the lockfile with `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION` if any of
+them was published less than a day before. The project's `pnpm-workspace.yaml` declares that same
+policy, so what each pnpm locks when it creates the project is:
+
+| Created with | Locks | Installs later with pnpm 11 |
+|---|---|---|
+| pnpm 11 | versions at least a day old | yes |
+| pnpm 10.16 or later | versions at least a day old | yes |
+| pnpm 9, or pnpm 10 before 10.16 | the newest version each range allows | only once every locked version is a day old |
+
+For the last row, either wait until the day has passed, or let pnpm 11 resolve the project again
+under the policy:
+
+```bash
+pnpm clean --lockfile
+pnpm install
+```
+
+pnpm 10 has no lenient mode for a pinned version younger than a day, so the project excludes the
+NextSpark packages of the release it was created with by version. pnpm 10.16 to 10.18 do not read
+a version in that exclusion: with them, a NextSpark release does not install during its first day.
 
 ## Documentation
 

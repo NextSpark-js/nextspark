@@ -106,8 +106,15 @@ let cachedTemplatesDir: string | null = null;
 /**
  * Copy core project files (app/, public/, config files)
  * Uses cached templates directory to work correctly after chdir
+ *
+ * The web app of a web-mobile project gets no pnpm-workspace.yaml: the one at
+ * the repository root already lists web/ and its themes and plugins, and holds
+ * the build allowlist. pnpm takes the nearest pnpm-workspace.yaml as the root
+ * of the workspace, so one in web/ makes every pnpm command run there install
+ * web/ as a workspace of its own first, which pnpm 11 then fails over the build
+ * scripts that file does not allow.
  */
-async function copyProjectFiles(): Promise<void> {
+async function copyProjectFiles(config: WizardConfig): Promise<void> {
   if (!cachedTemplatesDir) {
     throw new Error('Templates directory not cached. Call cacheTemplatesDir() first.')
   }
@@ -128,7 +135,7 @@ async function copyProjectFiles(): Promise<void> {
     { src: 'tsconfig.json', dest: 'tsconfig.json', force: true },
     { src: 'postcss.config.mjs', dest: 'postcss.config.mjs', force: true },
     { src: 'i18n.ts', dest: 'i18n.ts', force: true },
-    // pnpm-workspace.yaml is merged, not copied: see mergeWorkspaceYaml below
+    // pnpm-workspace.yaml is merged, not copied, and only into a web-only project: see mergeWorkspaceYaml below
     // Note: .npmrc with shamefully-hoist=true is created by create-nextspark-app
     // For monorepo projects, monorepo-generator.ts creates a more specific .npmrc with expo/react-native patterns
     { src: 'tsconfig.cypress.json', dest: 'tsconfig.cypress.json', force: false },
@@ -153,10 +160,12 @@ async function copyProjectFiles(): Promise<void> {
 
   await writeProxyFile(templatesDir, projectDir)
 
-  await mergeWorkspaceYaml(
-    path.join(templatesDir, 'pnpm-workspace.yaml'),
-    path.join(projectDir, 'pnpm-workspace.yaml')
-  )
+  if (!isMonorepoProject(config)) {
+    await mergeWorkspaceYaml(
+      path.join(templatesDir, 'pnpm-workspace.yaml'),
+      path.join(projectDir, 'pnpm-workspace.yaml')
+    )
+  }
 }
 
 /**
@@ -476,7 +485,7 @@ export async function generateProject(config: WizardConfig): Promise<void> {
 
   try {
     // 1. Copy core project files
-    await copyProjectFiles()
+    await copyProjectFiles(config)
 
     // 1.05 In a monorepo, dependencies are hoisted to the repo root, so
     // Turbopack's root must point at the parent (repo root) — otherwise the

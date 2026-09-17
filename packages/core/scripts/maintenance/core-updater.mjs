@@ -318,9 +318,9 @@ function shellWord(value) {
 /**
  * The directory the project's pnpm install runs in: the nearest one from `cwd`
  * up to the top of the repository with a pnpm-lock.yaml, which for a web-mobile
- * project is the one above web/. Run from web/, pnpm would take the
- * pnpm-workspace.yaml web/ also has for the whole workspace, and install web/
- * on its own.
+ * project is the one above web/. Run from a web/ that carries a
+ * pnpm-workspace.yaml of its own, pnpm would take that file for the whole
+ * workspace and install web/ on its own.
  */
 function installRoot(cwd, top) {
   const stop = realPath(top)

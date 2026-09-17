@@ -78,14 +78,57 @@ export function allowlistEntries(projectPath: string, localTarballs: LocalTarbal
   return [...PACKAGES_ALLOWED_TO_BUILD, ...tarballSpecs]
 }
 
+/** The NextSpark packages a project can install, all released at one version. */
+const NEXTSPARK_PACKAGES = [
+  '@nextsparkjs/ai-workflow',
+  '@nextsparkjs/cli',
+  '@nextsparkjs/core',
+  '@nextsparkjs/mobile',
+  '@nextsparkjs/testing',
+  '@nextsparkjs/ui',
+]
+
+/** The minimum release age pnpm 11 applies when none is configured: one day, in minutes. */
+const MINIMUM_RELEASE_AGE_MINUTES = 1440
+
 /**
- * The pnpm-workspace.yaml a new project starts with, holding the build-script
- * allowlist in the forms every pnpm that may install the project reads, so the
- * project installs the same whichever pnpm created it and whichever installs it
- * later: pnpm 11 reads only `allowBuilds`, 10 reads `onlyBuiltDependencies`, and
- * 9 reads neither and runs every install script. The `pnpm` field in
- * package.json is left out: pnpm 11 ignores it and warns about it on every
- * command.
+ * The `minimumReleaseAgeExclude` entries that let the NextSpark packages of
+ * `version` install while that release is less than a day old: `<name>@<version>`
+ * for each, the form pnpm 11 writes by itself for a pinned version younger than
+ * the minimum. None when `version` is a dist-tag rather than a version.
+ */
+export function releaseAgeExclusions(version: string): string[] {
+  if (!/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/.test(version)) return []
+  return NEXTSPARK_PACKAGES.map(name => `${name}@${version}`)
+}
+
+/**
+ * The pnpm-workspace.yaml a new project starts with.
+ *
+ * It holds the build-script allowlist in the forms each pnpm reads: pnpm 11
+ * reads only `allowBuilds`, 10 reads `onlyBuiltDependencies`, and 9 reads
+ * neither and runs every install script. The `pnpm` field in package.json is
+ * left out: pnpm 11 ignores it and warns about it on every command.
+ *
+ * It also declares the release-age policy pnpm 11 applies when none is set: a
+ * version has to be a day old to be picked, and a pinned version younger than
+ * that is installed and added to `minimumReleaseAgeExclude`. pnpm 11 checks
+ * every entry of an existing lockfile against that age on each install and
+ * refuses the lockfile over a younger one, whatever pnpm wrote it and with or
+ * without --no-frozen-lockfile. With the policy declared, pnpm 10.16 and later
+ * resolve with the same age when they create the project, and pnpm 11 accepts
+ * their lockfile. `minimumReleaseAgeStrict: false` keeps pnpm 11 lenient, as it
+ * is by default, once the age is set explicitly. pnpm 10 is strict whatever that
+ * key says, so the NextSpark packages of the release being installed, which
+ * the project pins, are excluded by version; pnpm 10.16 to 10.18 do not read a
+ * version in an exclusion, and with them a NextSpark release fails to install
+ * during its first day.
+ *
+ * pnpm 9 and pnpm 10 before 10.16 ignore the policy and lock the newest version
+ * each range allows. pnpm 11 refuses that lockfile with
+ * ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION while any version in it is less than a
+ * day old: it installs once they all are, or after `pnpm clean --lockfile`,
+ * which lets `pnpm install` resolve the project again under the policy.
  *
  * `packages:` is there because pnpm 9 refuses to run in a directory whose
  * pnpm-workspace.yaml has none. It lists the globs `nextspark init` adds for
@@ -93,8 +136,11 @@ export function allowlistEntries(projectPath: string, localTarballs: LocalTarbal
  * also makes the project a workspace root, so adding a dependency to the
  * project itself takes `-w`.
  */
-export function buildWorkspaceYaml(entries: string[]): string {
-  const quoted = entries.map(entry => `'${entry}'`)
+export function buildWorkspaceYaml(allowlist: string[], releaseAgeExclude: string[] = []): string {
+  const quoted = allowlist.map(entry => `'${entry}'`)
+  const exclusions = releaseAgeExclude.length > 0
+    ? `minimumReleaseAgeExclude:\n${releaseAgeExclude.map(entry => `  - '${entry}'`).join('\n')}\n`
+    : ''
   return `packages:
   - 'contents/themes/*'
   - 'contents/plugins/*'
@@ -105,7 +151,13 @@ allowBuilds:
 ${quoted.map(entry => `  ${entry}: true`).join('\n')}
 onlyBuiltDependencies:
 ${quoted.map(entry => `  - ${entry}`).join('\n')}
-`
+
+# pnpm 11's own release-age policy, declared so that pnpm 10.16 and later
+# resolve with it too: pnpm 11 refuses a lockfile holding a version published
+# less than a day before it installs.
+minimumReleaseAge: ${MINIMUM_RELEASE_AGE_MINUTES}
+minimumReleaseAgeStrict: false
+${exclusions}`
 }
 
 export interface ProjectOptions {
@@ -198,7 +250,7 @@ export async function createProject(options: ProjectOptions): Promise<void> {
   // Written before the install so the allowlist is in place for it
   await fs.writeFile(
     path.join(projectPath, 'pnpm-workspace.yaml'),
-    buildWorkspaceYaml(allowlistEntries(projectPath, localTarballs))
+    buildWorkspaceYaml(allowlistEntries(projectPath, localTarballs), releaseAgeExclusions(ownVersion))
   )
   pkgSpinner.succeed('  package.json created')
 
