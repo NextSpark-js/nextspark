@@ -18,6 +18,8 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..')
+const ROOT_PACKAGE_JSON = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'))
+const ROOT_SCRIPTS: Record<string, string> = ROOT_PACKAGE_JSON.scripts
 
 const CORE_DOCS_DIR = 'packages/core/docs'
 // Override this for a historical docs tree without changing the checkout. The
@@ -164,4 +166,43 @@ test('the documentation-system docs promise no theme fallback and no effect from
   const extending = fs.readFileSync(path.join(CORE_DOCS_ROOT, DOCUMENTATION_SYSTEM_DIR, '07-extending-overriding.md'), 'utf8')
   assert.doesNotMatch(extending, /expanded by default/i, '07-extending-overriding.md says `open` expands a category, and nothing reads it')
   assert.doesNotMatch(extending, /\|\s*`enabled`\s*\|\s*boolean\s*\|\s*Show\/hide this category/i, '07-extending-overriding.md says `enabled` hides any category, and only the public sidebar reads it')
+})
+
+test('installation.md builds Core before invoking the registry script', () => {
+  const file = '02-getting-started/01-installation.md'
+  const content = fs.readFileSync(path.join(CORE_DOCS_ROOT, file), 'utf8')
+  const stepFive = content.slice(content.indexOf('### Step 5: Build Registries'))
+  const prerequisiteIndex = stepFive.indexOf('pnpm build:core')
+  const registryCallIndex = stepFive.indexOf('node ../../packages/core/scripts/build/registry.mjs')
+  assert.ok(prerequisiteIndex >= 0, `${file} Step 5 does not mention building Core first`)
+  assert.ok(
+    prerequisiteIndex < registryCallIndex,
+    `${file} Step 5 invokes the registry script before telling the reader to build Core, which the script imports from packages/core/dist`
+  )
+})
+
+test("quick-start.md's Development Commands Reference names only real root scripts", () => {
+  const file = '02-getting-started/00-quick-start.md'
+  const content = fs.readFileSync(path.join(CORE_DOCS_ROOT, file), 'utf8')
+  const reference = content.slice(content.indexOf('## Development Commands Reference'))
+  const block = reference.match(/```bash\n([\s\S]*?)```/)
+  assert.ok(block, `${file} has no fenced command block under Development Commands Reference`)
+
+  const bareTest = block![1].match(/^\s*pnpm\s+test\s*($|\s)/m)
+  assert.equal(bareTest, null, `${file} recommends \`pnpm test\`, which has no script at the repository root`)
+
+  for (const match of block![1].matchAll(/^\s*pnpm\s+([\w:-]+)/gm)) {
+    const script = match[1]
+    assert.ok(script in ROOT_SCRIPTS, `${file} recommends \`pnpm ${script}\`, which is not a script in the root package.json`)
+  }
+})
+
+test("troubleshooting-and-debugging.md's --trace-warnings command runs from apps/dev", () => {
+  const file = '03-registry-system/13-troubleshooting-and-debugging.md'
+  const content = fs.readFileSync(path.join(CORE_DOCS_ROOT, file), 'utf8')
+  assert.match(
+    content,
+    /cd apps\/dev && node --trace-warnings \.\.\/\.\.\/packages\/core\/scripts\/build\/registry\.mjs/,
+    `${file} runs --trace-warnings without cd apps/dev, so it fails on Missing NEXT_PUBLIC_ACTIVE_THEME`
+  )
 })

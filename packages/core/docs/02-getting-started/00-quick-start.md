@@ -63,6 +63,8 @@ Progress: resolved XXX, reused XXX, downloaded XX, added XXX
 Done in Xs
 ```
 
+> **Before running a registry command directly later in this guide:** from the monorepo root, run `pnpm build:core` once. The registry script imports modules generated in `packages/core/dist`.
+
 ---
 
 ## Step 2: Minimal Environment Setup
@@ -485,28 +487,24 @@ nextspark setup:ai
 
 ```bash
 # Development
-pnpm dev                    # Start dev server (all processes)
-pnpm dev:watch              # Dev with watch mode (auto-rebuild)
+pnpm dev                    # Start the development server
 
 # Build
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs          # Build registries (one-time)
-cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch       # Build registries (watch mode)
-pnpm theme:build            # Build theme CSS (one-time)
-pnpm build                  # Production build (all scripts + Next.js)
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs          # Build registries once
+cd apps/dev && node ../../packages/core/scripts/build/registry.mjs --watch  # Rebuild registries when files change
+pnpm build                  # Create a production build
 
 # Database
 pnpm db:migrate             # Run migrations
-pnpm db:verify              # Verify tables exist
 
 # Testing
-pnpm test                   # Run all tests
-pnpm test:unit              # Unit tests (Jest)
-pnpm test:e2e               # E2E tests (Cypress)
+pnpm test:core              # Run the core Jest suite
+pnpm cy:run                 # Run Cypress tests headlessly
+pnpm cy:open                # Open the Cypress test runner
+pnpm cy:tags "@smoke"       # Run Cypress tests with a tag filter
 
 # Linting
 pnpm lint                   # Check code quality
-pnpm lint:fix               # Fix auto-fixable issues
-pnpm type-check             # TypeScript validation
 ```
 
 ---

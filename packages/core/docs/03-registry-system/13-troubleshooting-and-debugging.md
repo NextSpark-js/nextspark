@@ -461,10 +461,12 @@ cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
 **Issue: Build script crashes**
 ```bash
 # Run with error details
-node --trace-warnings packages/core/scripts/build/registry.mjs
+cd apps/dev && node --trace-warnings ../../packages/core/scripts/build/registry.mjs
+```
 
-# Check for syntax errors
-npx eslint packages/core/scripts/build/registry.mjs
+From the monorepo root, check for syntax errors:
+```bash
+pnpm exec eslint packages/core/scripts/build/registry.mjs
 ```
 
 **Issue: Incorrect file discovery**

@@ -307,6 +307,12 @@ All required tables exist!
 
 ### Step 5: Build Registries
 
+**Prerequisite:** From the monorepo root, build Core once before running the registry script. This creates the `packages/core/dist` modules that the script imports.
+
+```bash
+pnpm build:core
+```
+
 **Generate static registries:**
 ```bash
 cd apps/dev && node ../../packages/core/scripts/build/registry.mjs
