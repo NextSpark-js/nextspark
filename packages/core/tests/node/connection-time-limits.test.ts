@@ -202,10 +202,11 @@ test("parameters named like the client's own options reach neither the client no
  * A stand-in Postgres on a Unix socket that records who connects to which
  * database and answers every query with no rows.
  */
-async function socketServer(t: TestContext, { queryReplyDelayMs = 0 } = {}) {
+async function socketServer(t: TestContext, { queryReplyDelayMs = 0, requireCleartextPassword = false } = {}) {
   // a socket path is limited to about 100 bytes, which a per-user temporary directory can exceed
   const dir = fs.mkdtempSync(path.join('/tmp', 'pg-'))
   const sessions: Record<string, string>[] = []
+  const passwords: string[] = []
   let sslRequests = 0
   const sockets = new Set<net.Socket>()
   const server = net.createServer(socket => {
@@ -237,14 +238,24 @@ async function socketServer(t: TestContext, { queryReplyDelayMs = 0 } = {}) {
           for (let index = 0; index + 1 < fields.length && fields[index]; index += 2) startup[fields[index]] = fields[index + 1]
           sessions.push(startup)
           started = true
+          if (requireCleartextPassword) {
+            message('R', Buffer.from([0, 0, 0, 3]))
+            continue
+          }
           message('R', Buffer.from([0, 0, 0, 0]))
           message('Z', Buffer.from('I'))
           continue
         }
         if (pending.length < 5 || pending.length < pending.readInt32BE(1) + 1) return
         const type = String.fromCharCode(pending[0])
-        pending = pending.subarray(pending.readInt32BE(1) + 1)
-        if (type === 'Q') {
+        const length = pending.readInt32BE(1)
+        const body = pending.subarray(5, length + 1)
+        pending = pending.subarray(length + 1)
+        if (type === 'p' && requireCleartextPassword) {
+          passwords.push(body.subarray(0, -1).toString())
+          message('R', Buffer.from([0, 0, 0, 0]))
+          message('Z', Buffer.from('I'))
+        } else if (type === 'Q') {
           const reply = () => {
             message('C', Buffer.from('SELECT 0\0'))
             message('Z', Buffer.from('I'))
@@ -261,7 +272,7 @@ async function socketServer(t: TestContext, { queryReplyDelayMs = 0 } = {}) {
     server.close()
     fs.rmSync(dir, { recursive: true, force: true })
   })
-  return { dir, sessions, get sslRequests() { return sslRequests } }
+  return { dir, sessions, passwords, get sslRequests() { return sslRequests } }
 }
 
 const QUICK = { connectMs: 2000, statementMs: 1000, queryMs: 1000 }
@@ -279,6 +290,26 @@ test('a time-limited client uses TLS first, then retries plaintext only after pg
     assert.deepEqual(server.sessions.map(({ user, database }) => ({ user, database })), [
       { user: 'dbuser', database: 'nextspark_verify' },
     ])
+  } finally {
+    await client.end()
+  }
+})
+
+test('the plaintext retry sends a URL password after the server rejects TLS', { timeout: 10000 }, async t => {
+  const server = await socketServer(t, { requireCleartextPassword: true })
+  const password = 'retry-password'
+  const client = timeLimitedClient(
+    `postgresql://dbuser:${encodeURIComponent(password)}@${encodeURIComponent(server.dir)}/nextspark_verify`,
+    QUICK,
+  )
+
+  await client.connect()
+  try {
+    assert.equal(server.sslRequests, 1, 'the first connection must be an SSL request')
+    assert.ok(
+      server.passwords.length === 1 && server.passwords[0] === password,
+      'the plaintext retry must send exactly the URL password',
+    )
   } finally {
     await client.end()
   }
