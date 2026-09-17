@@ -87,21 +87,23 @@ test('monorepo guides do not invoke absent root test or start scripts', () => {
   }
 })
 
-test('core documentation does not advertise Node 18 or Node 20 as supported', () => {
-  for (const file of markdownFiles('packages/core/docs')) {
-    const content = fs.readFileSync(path.join(SOURCE_ROOT, file), 'utf8')
-    const legacyVersion = content.split(/\r?\n/).find(line =>
-      !line.includes('@types/node') && (
-        /\bv(?:18|20)(?:\.(?:\d+|x)){0,2}\b/.test(line) ||
-        /\bNode(?:\.js)?\b.*\b(?:18|20)(?:\.(?:\d+|x)){0,2}\b/.test(line) ||
-        /\bnode-version\s*:\s*['"]?(?:18|20)(?:\.(?:\d+|x)){0,2}/.test(line)
+test('documentation does not advertise Node 18 or Node 20 as supported', () => {
+  for (const docsDir of DOCS_DIRS) {
+    for (const file of markdownFiles(docsDir)) {
+      const content = fs.readFileSync(path.join(SOURCE_ROOT, file), 'utf8')
+      const legacyVersion = content.split(/\r?\n/).find(line =>
+        !line.includes('@types/node') && (
+          /\bv(?:18|20)(?:\.(?:\d+|x)){0,2}\b/.test(line) ||
+          /\bNode(?:\.js)?\b.*\b(?:18|20)(?:\.(?:\d+|x)){0,2}\b/.test(line) ||
+          /\bnode-version\s*:\s*['"]?(?:18|20)(?:\.(?:\d+|x)){0,2}/.test(line)
+        )
       )
-    )
-    assert.equal(
-      legacyVersion,
-      undefined,
-      `${file} still names a Node version below the documented 22.13+ floor`
-    )
+      assert.equal(
+        legacyVersion,
+        undefined,
+        `${file} still names a Node version below the documented 22.13+ floor`
+      )
+    }
   }
 })
 

@@ -9,7 +9,7 @@ This guide covers deploying your NextSpark application to production environment
 
 ## Prerequisites
 
-- Node.js 18+ installed
+- Node.js 22.13+ installed
 - PostgreSQL database provisioned
 - Domain configured with SSL
 
