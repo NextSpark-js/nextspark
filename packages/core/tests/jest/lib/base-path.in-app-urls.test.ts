@@ -22,49 +22,52 @@
  * sit on different lines, and the path is just as often built into a variable
  * or handed over as data.
  *
- * A component is recognised by where it comes from, not by its name. One lazy
- * TypeScript program covers every source and fixture, reusing its SourceFiles
- * for the walk. Its host follows apps/dev's paths and loads package declarations
- * only for the loader and prefixer entry modules; imports below node_modules do
- * not resolve further. The checker follows each immediate alias through imports,
- * re-exports and namespace members until its declaration reaches that package
- * boundary. A member without a checker symbol falls back to CommonJS only when
- * `require` has no declaration in the sources under review. So core's
- * AvatarImage, which puts the base path on, is told apart from the shared one
- * it wraps, and lucide's Image icon from next/image's.
+ * An element is recognised by the type TypeScript's checker gives its tag where
+ * the tag is written, narrowed there as the checker narrows it. One lazy
+ * program covers every source and fixture, and its SourceFiles are the ones
+ * walked. Its host follows apps/dev's paths and lib; from a source it loads the
+ * declarations of React, of the LOADERS and PREFIXERS entry modules and of
+ * Radix, and of no other package. Each member of the tag's type counts:
+ *  - a tag name, as that element (`'img' | 'video'` is both), unless the type
+ *    admits every element name, as `ElementType` does, which says nothing of
+ *    which one it is
+ *  - a component, as one of LOADERS, PREFIXERS or PASS_THROUGH when it has that
+ *    component's type, or takes that component's very props type: `memo(Image)`
+ *    is a NamedExoticComponent of next/image's props
+ * So a name is what the checker resolves it to, through imports, re-exports,
+ * namespace members, `satisfies` and shadowing: core's AvatarImage, which puts
+ * the base path on, is told apart from the shared one it wraps, and lucide's
+ * Image icon from next/image's. A call is what its return type says:
+ * `identity(Image)`, `useMemo(() => Image)` and `lazy(() => import('next/image'))`
+ * are next/image, `second(Image, Sink)` is Sink. A variable, a member of an
+ * object or a class field is what its type still admits where the tag reads it:
+ * `let C: typeof Image | 'span' = Image; C = 'span'` reads as a span, and a
+ * branch that leaves Image in keeps it in.
  *
- * A name is followed to the declaration TypeScript's checker says it refers to,
- * so a variable is not mistaken for another of the same name in a nested
- * function, or for an import it shadows. A variable, at the top of a module or
- * inside a component, counts as each value it is given in one of these ways,
- * which is how a tag chosen at run time counts as each tag it can be:
- *  - its initializer, with each branch of a conditional, `||` and `??`
- *    (`const Comp = asChild ? Slot : 'a'`, `as ?? 'a'`)
- *  - for a name destructured from an object, its default (`{ as: Tag = 'img' }`)
- *    and the member it is read from (`const { default: Image } = require('next/image')`)
- *  - each element of an array written out that a `for...of` declaring it walks,
- *    or the member of each element it destructures
- *  - each value assigned to it with `=`, `||=`, `??=` or `&&=`, or by a
- *    `for...of` over an array written out
- * A prop, or any other variable given no value in those ways, is not taken for
- * a component. A Slot loads nothing itself; the child it hands its props to is
- * checked where that child is written.
+ * A module's `require('m')` is typed as what it loads, `typeof import('m')`, as
+ * TypeScript types it in a JavaScript file, unless the module declares a
+ * `require` of its own. The declarations go after the module's text, so every
+ * position and line in it is the one written.
  *
- * Of those values, a read counts the ones that reach it, as the control flow
- * graph TypeScript's binder builds for narrowing says: a value every path
- * overwrites before the read (`let Comp = Image; Comp = 'span'`, or `'span'` in
- * one branch and `'a'` in the other) does not count, and one given after the
- * read counts only when a loop takes it back there. The graph covers one
- * function, so a value given in another function counts at every read, since
- * that function may run at any call; and a read in a function other than the
- * one that declares the variable counts every value the variable is given.
- * `flowNode`, where the graph starts at a read, is not in TypeScript's public
- * types: a read without one counts every value.
- *
- * A value a call returns counts as each value handed to it as an argument, so
- * `identity(Image)` and `memo(Image)` count as next/image. The type the checker
- * gives the tag is not what identifies a component: in this program next/image,
- * next/link and core's AvatarImage have one and the same type.
+ * What the types do not tell, and so the scan does not report:
+ *  - a component whose type is `any`: one from a package the program does not
+ *    load (next/dynamic's, lucide's icons), or a require() of a specifier not
+ *    written out. A union with such a member is `any` as a whole, so a tag
+ *    chosen between one of those and next/image or an <a> is lost
+ *  - a component typed as components in general, `ComponentType` or
+ *    `ElementType`, and whatever holds or returns one: `Image as
+ *    ComponentType<Props>` is no longer next/image, and `let C: ElementType =
+ *    Image` reads as `FunctionComponent<any>`
+ *  - an assignment a closure makes, where the closure is called: TypeScript
+ *    narrows by the function that reads, so `let C: typeof Image | typeof Sink =
+ *    Image; swap(); <C>` reads as next/image after swap() sets Sink, and as Sink
+ *    after one that sets Image. A read inside a closure made before the
+ *    variable's last assignment is the declared type
+ *  - an assignment to a variable whose declared type is not a union, which
+ *    TypeScript does not narrow by: `let C = Image` stays next/image
+ * And one thing the types tell wrongly: a component with the very type or props
+ * type of a known one counts as it, so `memo((props: ComponentProps<typeof
+ * Image>) => …)` is reported as next/image even when it puts the base path on.
  *
  * Props handed over whole count too: an element that loads a URL and receives
  * a spread, without that attribute written out, is reported, since the URL
@@ -75,19 +78,15 @@
  * goes to /base/base/docs (see PREFIXERS).
  *
  * What the scan does not follow, by design: a tag passed in from outside the
- * component (`<Box as="a" href="/pricing" />` reads as a Box), a tag read from an
- * object (`tags.link`), one a function builds and returns (`pickTag()`) or a
- * callback returns (`useMemo(() => Image)`), a wrapper that renders the
- * component inside it (`forwardRef((props, ref) => <Image {...props} />)`,
- * where the `<Image>` inside is what gets checked), array
- * destructuring and destructuring assignments, elements built with
- * createElement or cloneElement, a component loaded with import() or
- * next/dynamic, a URL assigned to a DOM property (`image.src = …`), a `url(`
- * held in a variable before the value is joined to it, and `redirect()` or
- * `router.push()` given a URL with the base path on. In these trees,
- * createElement renders an icon, or a component looked up by name, with the
- * props it was given, and the URLs assigned to DOM properties are object URLs
- * of a file being uploaded or exported.
+ * component (`<Box as="a" href="/pricing" />` reads as a Box), a wrapper that
+ * renders the component inside it (`forwardRef((props, ref) => <Image {...props} />)`,
+ * where the `<Image>` inside is what gets checked), elements built with
+ * createElement or cloneElement, a URL assigned to a DOM property
+ * (`image.src = …`), a `url(` held in a variable before the value is joined to
+ * it, and `redirect()` or `router.push()` given a URL with the base path on. In
+ * these trees, createElement renders an icon, or a component looked up by name,
+ * with the props it was given, and the URLs assigned to DOM properties are
+ * object URLs of a file being uploaded or exported.
  */
 import ts from 'typescript'
 import { readdirSync, readFileSync, existsSync, realpathSync } from 'fs'
@@ -165,6 +164,11 @@ const PASS_THROUGH = [
     why: 'the shared primitive serves mobile as well and has no base path; core’s AvatarImage puts it on',
   },
 ]
+
+/** Every attribute a tag the scan knows takes a URL in. */
+const URL_ATTRIBUTES = new Set(
+  [...Object.values(ASSET_ATTRIBUTES), ...Object.values(LOADERS), ...Object.values(PREFIXERS), ...PASS_THROUGH.map(entry => entry.attributes)].flat()
+)
 
 /** The text before a `url(` whose argument is the value that follows it. */
 const CSS_URL_OPENING = /url\(\s*['"]?$/i
@@ -312,33 +316,6 @@ const COMPILER_OPTIONS = (() => {
 const RESOLUTION_CACHE = ts.createModuleResolutionCache(REPO_ROOT, name => name, COMPILER_OPTIONS)
 const FIXTURES_DIR = join(REPO_ROOT, 'packages/core/tests/jest/lib/__fixtures__')
 
-/** The expression inside parentheses, type assertions and `satisfies`. */
-function unwrapped(node: ts.Expression): ts.Expression {
-  while (
-    ts.isParenthesizedExpression(node) ||
-    ts.isAsExpression(node) ||
-    ts.isSatisfiesExpression(node) ||
-    ts.isTypeAssertionExpression(node) ||
-    ts.isNonNullExpression(node)
-  ) {
-    node = node.expression
-  }
-  return node
-}
-
-/** The member an access reads by name: `m.Image`, `m['default']`. */
-function memberName(node: ts.Node): string | undefined {
-  if (ts.isPropertyAccessExpression(node)) return node.name.text
-  if (ts.isElementAccessExpression(node) && isStringLiteral(node.argumentExpression)) return node.argumentExpression.text
-  return undefined
-}
-
-/** The identifiers a binding name declares: `Comp`, or each name inside `{ default: Image, ...rest }`. */
-function declaredIdentifiers(name: ts.BindingName): ts.Identifier[] {
-  if (ts.isIdentifier(name)) return [name]
-  return name.elements.flatMap(element => (ts.isOmittedExpression(element) ? [] : declaredIdentifiers(element.name)))
-}
-
 function packagePath(file: string): string | undefined {
   const marker = '/node_modules/'
   const at = file.lastIndexOf(marker)
@@ -354,12 +331,63 @@ function resolveComponentModule(specifier: string): ts.ResolvedModuleFull | unde
   return fromApp ?? ts.resolveModuleName(specifier, join(FIXTURES_DIR, 'bare-in-app-urls.tsx'), COMPILER_OPTIONS, ts.sys, RESOLUTION_CACHE).resolvedModule
 }
 
-const RESOLVED_COMPONENT_MODULES = new Set(
-  [...COMPONENT_MODULES].flatMap(specifier => {
+/** The package entry modules the program loads declarations from: React's, and those of the loaders and prefixers. */
+const TYPED_ENTRY_MODULES = new Map(
+  ['react', 'react/jsx-runtime', ...COMPONENT_MODULES].flatMap(specifier => {
     const file = resolveComponentModule(specifier)?.resolvedFileName
-    return file ? [packagePath(file)] : []
+    return file ? [[packagePath(file), file] as const] : []
   })
 )
+
+/** A call of `require` with the specifier written out. */
+function requiredSpecifier(node: ts.Node): string | undefined {
+  if (!ts.isCallExpression(node) || !ts.isIdentifier(node.expression) || node.expression.text !== 'require') return undefined
+  const [argument] = node.arguments
+  return node.arguments.length === 1 && isStringLiteral(argument) ? argument.text : undefined
+}
+
+/** Whether a node declares a name `require`: a function, variable, parameter, class or import of that name. */
+function declaresRequire(node: ts.Node): boolean {
+  const name =
+    ts.isFunctionDeclaration(node) ||
+    ts.isVariableDeclaration(node) ||
+    ts.isParameter(node) ||
+    ts.isBindingElement(node) ||
+    ts.isClassDeclaration(node) ||
+    ts.isImportClause(node) ||
+    ts.isImportSpecifier(node) ||
+    ts.isNamespaceImport(node) ||
+    ts.isImportEqualsDeclaration(node)
+      ? node.name
+      : undefined
+  return name !== undefined && ts.isIdentifier(name) && name.text === 'require'
+}
+
+/**
+ * A module's text with each `require('m')` it writes typed as what that loads,
+ * `typeof import('m')`, the way TypeScript types it in a JavaScript file.
+ * Undefined for a module that requires nothing that way, or declares a
+ * `require` of its own.
+ */
+function withTypedRequire(source: ts.SourceFile): string | undefined {
+  if (!ts.isExternalModule(source) || !/\brequire\s*\(/.test(source.text)) return undefined
+  const specifiers = new Set<string>()
+  let declared = false
+  const visit = (node: ts.Node) => {
+    const specifier = requiredSpecifier(node)
+    if (specifier !== undefined) specifiers.add(specifier)
+    declared ||= declaresRequire(node)
+    ts.forEachChild(node, visit)
+  }
+  visit(source)
+  if (declared || specifiers.size === 0) return undefined
+  const overloads = [...specifiers].map(specifier => {
+    const literal = JSON.stringify(specifier)
+    return `declare function require(specifier: ${literal}): typeof import(${literal})`
+  })
+  // after the module's own text, so every position and line in it is the one written
+  return `${source.text}\n${overloads.join('\n')}\ndeclare function require(specifier: string): any\n`
+}
 
 interface ProgramState {
   program: ts.Program
@@ -369,18 +397,25 @@ interface ProgramState {
 let PROGRAM: ProgramState | undefined
 
 /**
- * One program covers the sources under review and the fixtures. It only loads
- * declaration files for the package entry points that identify known components;
- * declarations below node_modules do not resolve further imports.
+ * Radix's packages, whose primitives a component here picks instead of a tag
+ * (`asChild ? Slot : 'a'`). A union with a member the program has no type for
+ * is `any` as a whole, and the tag in it is lost.
+ */
+const RADIX = '@radix-ui/'
+
+/**
+ * One program covers the sources under review, the fixtures and the entry
+ * modules of the loaders and prefixers. From a source, it loads the
+ * declarations of React, of those entry modules and of Radix, and of no other
+ * package; from inside a package, imports resolve in full.
  */
 function programState(): ProgramState {
   if (PROGRAM) return PROGRAM
-  const roots = [...new Set([...scannedFiles(), ...sourceFiles(FIXTURES_DIR)])]
-  const options: ts.CompilerOptions = { ...COMPILER_OPTIONS, noLib: true, types: [], noEmit: true }
+  const roots = [...new Set([...scannedFiles(), ...sourceFiles(FIXTURES_DIR), ...TYPED_ENTRY_MODULES.values()])]
+  const options: ts.CompilerOptions = { ...COMPILER_OPTIONS, types: [], noEmit: true }
   const host = ts.createCompilerHost(options)
   host.resolveModuleNameLiterals = (literals, containingFile, redirectedReference, compilerOptions) =>
     literals.map(literal => {
-      if (packagePath(containingFile)) return { resolvedModule: undefined }
       const resolved = ts.resolveModuleName(
         literal.text,
         containingFile,
@@ -389,12 +424,20 @@ function programState(): ProgramState {
         RESOLUTION_CACHE,
         redirectedReference
       ).resolvedModule
-      if (!resolved) return { resolvedModule: undefined }
-      const relativePackagePath = packagePath(resolved.resolvedFileName)
-      return !relativePackagePath || RESOLVED_COMPONENT_MODULES.has(relativePackagePath)
-        ? { resolvedModule: resolved }
-        : { resolvedModule: undefined }
+      const packageFile = resolved && packagePath(resolved.resolvedFileName)
+      const loaded =
+        !packageFile ||
+        packagePath(containingFile) !== undefined ||
+        TYPED_ENTRY_MODULES.has(packageFile) ||
+        packageFile.startsWith(RADIX)
+      return { resolvedModule: loaded ? resolved : undefined }
     })
+  const getSourceFile = host.getSourceFile
+  host.getSourceFile = (fileName, languageVersion, onError, shouldCreateNewSourceFile) => {
+    const source = getSourceFile(fileName, languageVersion, onError, shouldCreateNewSourceFile)
+    const text = source && !packagePath(fileName) ? withTypedRequire(source) : undefined
+    return text === undefined ? source : ts.createSourceFile(fileName, text, languageVersion)
+  }
   const program = ts.createProgram(roots, options, host)
   PROGRAM = { program, checker: program.getTypeChecker() }
   return PROGRAM
@@ -404,222 +447,8 @@ function sourceFor(file: string): ts.SourceFile | undefined {
   return programState().program.getSourceFile(realpathSync(file))
 }
 
-/** A value a variable is given: an expression, or a member of one (`const { default: Image } = images`). */
-type GivenValue = { expression: ts.Expression; member?: string; assignment?: ts.Node }
-
-const ASSIGNMENTS = new Map<string, Map<ts.Symbol, GivenValue[]>>()
-const ASSIGNMENT_OPERATORS = new Set([
-  ts.SyntaxKind.EqualsToken,
-  ts.SyntaxKind.BarBarEqualsToken,
-  ts.SyntaxKind.QuestionQuestionEqualsToken,
-  ts.SyntaxKind.AmpersandAmpersandEqualsToken,
-])
-
-/** The elements of an array written out, which a `for...of` over it takes in turn. */
-function elementsOf(node: ts.Expression, assignment?: ts.Node): GivenValue[] {
-  node = unwrapped(node)
-  if (!ts.isArrayLiteralExpression(node)) return []
-  return node.elements.filter(element => !ts.isSpreadElement(element)).map(expression => ({ expression, assignment }))
-}
-
-function contains(node: ts.Node, other: ts.Node): boolean {
-  return node.getStart() <= other.getStart() && other.getEnd() <= node.getEnd()
-}
-
-/** Values assigned to each variable, distinguished by the program checker's symbol. */
-function assignmentsIn(source: ts.SourceFile): Map<ts.Symbol, GivenValue[]> {
-  const key = source.fileName
-  const known = ASSIGNMENTS.get(key)
-  if (known) return known
-  const checker = programState().checker
-  const assignments = new Map<ts.Symbol, GivenValue[]>()
-  const add = (target: ts.Expression, values: GivenValue[]) => {
-    const symbol = ts.isIdentifier(target) ? checker.getSymbolAtLocation(target) : undefined
-    if (symbol) assignments.set(symbol, [...(assignments.get(symbol) ?? []), ...values])
-  }
-  const visit = (node: ts.Node) => {
-    if (ts.isBinaryExpression(node) && ASSIGNMENT_OPERATORS.has(node.operatorToken.kind)) {
-      add(node.left, [{ expression: node.right, assignment: node }])
-    }
-    if (ts.isForOfStatement(node) && !ts.isVariableDeclarationList(node.initializer)) {
-      add(node.initializer, elementsOf(node.expression, node))
-    }
-    ts.forEachChild(node, visit)
-  }
-  visit(source)
-  ASSIGNMENTS.set(key, assignments)
-  return assignments
-}
-
-/** What a destructured name is read from, when that is a member of a value written out. */
-function destructuredFrom(element: ts.BindingElement): GivenValue[] {
-  if (!ts.isObjectBindingPattern(element.parent) || element.dotDotDotToken) return []
-  const key = element.propertyName ?? element.name
-  const member = ts.isIdentifier(key) || ts.isStringLiteral(key) ? key.text : undefined
-  const declaration = element.parent.parent
-  if (member === undefined || !ts.isVariableDeclaration(declaration)) return []
-  const statement = declaration.parent.parent
-  const objects = ts.isForOfStatement(statement)
-    ? elementsOf(statement.expression, statement)
-    : declaration.initializer
-      ? [{ expression: declaration.initializer }]
-      : []
-  return objects.map(({ expression, assignment }) => ({ expression, member, assignment }))
-}
-
-/**
- * TypeScript's binder flow node, and the flags it is told apart by. Both are
- * there at run time but not in TypeScript's public types. A label keeps its
- * antecedents as an array.
- */
-interface FlowNode {
-  flags: number
-  node?: ts.Node
-  antecedent?: FlowNode | FlowNode[]
-}
-const FLOW_FLAGS = (ts as unknown as { FlowFlags: Record<'Unreachable' | 'Start' | 'Assignment', number> }).FlowFlags
-
-/** The binder's flow container for a read, declaration or assignment. */
-function flowContainer(node: ts.Node): ts.Node {
-  for (let current = node.parent; current; current = current.parent) {
-    if (
-      ts.isSourceFile(current) ||
-      ts.isFunctionLike(current) ||
-      ts.isClassStaticBlockDeclaration(current) ||
-      ts.isModuleBlock(current) ||
-      (ts.isPropertyDeclaration(current) && current.initializer && contains(current.initializer, node))
-    ) {
-      return current
-    }
-  }
-  return node.getSourceFile()
-}
-
-/** Values the declaration gives without first passing through its binder flow assignment. */
-function declarationValues(declaration: ts.Declaration): GivenValue[] {
-  const values: GivenValue[] = []
-  if (ts.isVariableDeclaration(declaration)) {
-    const statement = declaration.parent.parent
-    if (ts.isForOfStatement(statement)) values.push(...elementsOf(statement.expression, statement))
-    else if (declaration.initializer) values.push({ expression: declaration.initializer })
-  }
-  if (ts.isBindingElement(declaration)) {
-    if (declaration.initializer) values.push({ expression: declaration.initializer })
-    values.push(...destructuredFrom(declaration))
-  }
-  if (ts.isParameter(declaration) && declaration.initializer) values.push({ expression: declaration.initializer })
-  return values
-}
-
-/** Values a binder assignment node writes to its target. */
-function flowAssignmentValues(node: ts.Node): GivenValue[] {
-  if (ts.isVariableDeclaration(node)) return declarationValues(node)
-  if (ts.isBindingElement(node)) return declarationValues(node)
-  if (ts.isIdentifier(node)) {
-    const parent = node.parent
-    if (ts.isBinaryExpression(parent) && parent.left === node && ASSIGNMENT_OPERATORS.has(parent.operatorToken.kind)) {
-      return [{ expression: parent.right, assignment: parent }]
-    }
-    if (ts.isForOfStatement(parent) && parent.initializer === node) return elementsOf(parent.expression, parent)
-  }
-  return []
-}
-
-/** The declaration defaults available at the start of their own flow container. */
-function parameterDefaults(symbol: ts.Symbol): GivenValue[] {
-  return (symbol.declarations ?? []).flatMap(declaration => {
-    if (ts.isParameter(declaration)) return declaration.initializer ? [{ expression: declaration.initializer }] : []
-    if (ts.isBindingElement(declaration) && ts.isParameter(declaration.parent.parent)) return declarationValues(declaration)
-    return []
-  })
-}
-
-/** Every value a variable is given when the read can enter from another flow container. */
-function allGivenValues(symbol: ts.Symbol): GivenValue[] {
-  const values = (symbol.declarations ?? []).flatMap(declarationValues)
-  const source = symbol.declarations?.[0]?.getSourceFile()
-  return [...values, ...(source ? assignmentsIn(source).get(symbol) ?? [] : [])]
-}
-
-/**
- * Every value that reaches a read of the variable in the binder flow graph, or
- * every value it is given when there is no read of it to start from.
- */
-function reachingValues(symbol: ts.Symbol, reference: ts.Identifier | undefined): GivenValue[] {
-  const flow = (reference as (ts.Identifier & { flowNode?: FlowNode }) | undefined)?.flowNode
-  if (!reference || !flow) return allGivenValues(symbol)
-
-  const checker = programState().checker
-  const values: GivenValue[] = []
-  const seen = new Set<FlowNode>()
-  const stack = [flow]
-  let reachedStart = false
-  while (stack.length > 0) {
-    const current = stack.pop()!
-    if (seen.has(current)) continue
-    seen.add(current)
-    if (current.flags & FLOW_FLAGS.Assignment) {
-      const node = current.node
-      const destination = node && (ts.isVariableDeclaration(node) || ts.isBindingElement(node) ? node.name : ts.isIdentifier(node) ? node : undefined)
-      if (destination && checker.getSymbolAtLocation(destination) === symbol) {
-        values.push(...flowAssignmentValues(node!))
-        continue
-      }
-    }
-    if (current.flags & FLOW_FLAGS.Start) {
-      reachedStart = true
-      continue
-    }
-    if (current.flags & FLOW_FLAGS.Unreachable) continue
-    const antecedent = current.antecedent
-    if (Array.isArray(antecedent)) stack.push(...antecedent)
-    else if (antecedent) stack.push(antecedent)
-  }
-
-  if (reachedStart) {
-    const container = flowContainer(reference)
-    const declaredHere = (symbol.declarations ?? []).some(declaration => flowContainer(declaration) === container)
-    values.push(...(declaredHere ? parameterDefaults(symbol) : allGivenValues(symbol)))
-  }
-  const source = symbol.declarations?.[0]?.getSourceFile()
-  for (const value of source ? assignmentsIn(source).get(symbol) ?? [] : []) {
-    if (value.assignment && flowContainer(value.assignment) !== flowContainer(reference)) values.push(value)
-  }
-  return values
-}
-
-/** Whether a declaration is one of a variable, rather than an import, a function or a class. */
-function declaresVariable(declaration: ts.Declaration): boolean {
-  return ts.isVariableDeclaration(declaration) || ts.isBindingElement(declaration) || ts.isParameter(declaration)
-}
-
 function passThrough(file: string, component: string): string[] | undefined {
   return PASS_THROUGH.find(entry => join(REPO_ROOT, entry.file) === file && entry.component === component)?.attributes
-}
-
-type Handling = 'loads' | 'prefixes'
-function resolvedComponentAttributes(components: Record<string, string[]>): Record<string, string[]> {
-  return Object.fromEntries(
-    Object.entries(components).flatMap(([key, attributes]) => {
-      const at = key.lastIndexOf('#')
-      const resolved = resolveComponentModule(key.slice(0, at))
-      const module = resolved && packagePath(resolved.resolvedFileName)
-      return module ? [[`${module}${key.slice(at)}`, attributes]] : []
-    })
-  )
-}
-const PACKAGE_COMPONENTS: Record<Handling, Record<string, string[]>> = {
-  loads: resolvedComponentAttributes(LOADERS),
-  prefixes: resolvedComponentAttributes(PREFIXERS),
-}
-
-function ownAttributes(handling: Handling, source: ts.SourceFile, name: string): string[] | undefined {
-  return handling === 'loads' ? passThrough(source.fileName, name) : undefined
-}
-
-function packageAttributes(handling: Handling, source: ts.SourceFile, name: string): string[] | undefined {
-  const module = packagePath(source.fileName)
-  return module ? PACKAGE_COMPONENTS[handling][`${module}#${name}`] : undefined
 }
 
 /** Every attribute any of the lists names, or undefined when none names one. */
@@ -628,172 +457,92 @@ function merged(...lists: (string[] | undefined)[]): string[] | undefined {
   return attributes.length > 0 ? attributes : undefined
 }
 
-function symbolAttributes(handling: Handling, symbol: ts.Symbol | undefined, reference: ts.Identifier | undefined, seen = new Set<string>()): string[] | undefined {
+/** The props each of a component's call and construct signatures takes. */
+function propsOf(type: ts.Type): ts.Type[] {
   const checker = programState().checker
-  while (symbol && symbol.flags & ts.SymbolFlags.Alias) {
-    const declaration = symbol.declarations?.[0]
-    const source = declaration?.getSourceFile()
-    if (source && packagePath(source.fileName)) return packageAttributes(handling, source, symbol.name)
-    const alias = checker.getImmediateAliasedSymbol(symbol)
-    if (!alias || alias === symbol) return undefined
-    symbol = alias
-  }
-  if (!symbol?.declarations?.length) return undefined
-  const declaration = symbol.declarations[0]
-  const source = declaration.getSourceFile()
-  const fromPackage = packageAttributes(handling, source, symbol.name)
-  if (fromPackage) return fromPackage
-  if (packagePath(source.fileName)) return undefined
-
-  const variable = symbol.declarations.find(declaresVariable)
-  if (variable) {
-    const id = `${source.fileName}#variable:${variable.getStart()}`
-    if (seen.has(id)) return undefined
-    seen.add(id)
-    const given = merged(...reachingValues(symbol, reference).map(value => valueAttributes(handling, value, seen)))
-    const atTopLevel = !symbol.declarations.some(declaration => {
-      for (let current = declaration.parent; current && !ts.isSourceFile(current); current = current.parent) {
-        if (ts.isFunctionLike(current)) return true
-      }
-      return false
-    })
-    return given ?? (atTopLevel ? ownAttributes(handling, source, symbol.name) : undefined)
-  }
-
-  const exportedValue = symbol.declarations.find(ts.isExportAssignment)
-  if (exportedValue && ts.isExportAssignment(exportedValue)) {
-    return expressionAttributes(handling, unwrapped(exportedValue.expression), seen)
-  }
-  return ownAttributes(handling, source, symbol.name)
+  return [ts.SignatureKind.Call, ts.SignatureKind.Construct]
+    .flatMap(kind => checker.getSignaturesOfType(type, kind))
+    .flatMap(signature => (signature.parameters.length > 0 ? [checker.getTypeOfSymbol(signature.parameters[0])] : []))
 }
 
-/** A require() is CommonJS only when it is not a function declared in our sources. */
-function isCommonJsRequire(call: ts.CallExpression): boolean {
-  if (!ts.isIdentifier(call.expression) || call.expression.text !== 'require') return false
-  const declarations = programState().checker.getSymbolAtLocation(call.expression)?.declarations ?? []
-  return !declarations.some(declaration => !packagePath(declaration.getSourceFile().fileName))
+const UNKNOWABLE = ts.TypeFlags.Any | ts.TypeFlags.Unknown | ts.TypeFlags.Never
+
+type Handling = 'loads' | 'prefixes'
+interface KnownComponent {
+  name: string
+  type: ts.Type
+  props: ts.Type[]
+  attributes: string[]
 }
 
-/** The file or package entry a CommonJS expression denotes. */
-function requiredModule(node: ts.Expression | undefined): { source?: ts.SourceFile; package?: string } | undefined {
-  if (!node) return undefined
-  node = unwrapped(node)
-  if (
-    ts.isCallExpression(node) &&
-    isCommonJsRequire(node) &&
-    node.arguments.length === 1 &&
-    ts.isStringLiteral(node.arguments[0])
-  ) {
-    const resolved = ts.resolveModuleName(node.arguments[0].text, node.getSourceFile().fileName, COMPILER_OPTIONS, ts.sys, RESOLUTION_CACHE).resolvedModule
-    if (!resolved) return undefined
-    const packageFile = packagePath(resolved.resolvedFileName)
-    return packageFile ? { package: packageFile } : { source: sourceFor(resolved.resolvedFileName) }
-  }
-  return undefined
-}
+let KNOWN: Record<Handling, KnownComponent[]> | undefined
 
-function moduleMemberAttributes(
-  handling: Handling,
-  module: { source?: ts.SourceFile; package?: string },
-  member: string,
-  seen: Set<string>
-): string[] | undefined {
-  if (module.package) return PACKAGE_COMPONENTS[handling][`${module.package}#${member}`]
-  if (!module.source) return undefined
+/** The type of a module's export, through its re-exports and aliases. */
+function exportedType(source: ts.SourceFile | undefined, name: string): ts.Type | undefined {
   const checker = programState().checker
-  const moduleSymbol = checker.getSymbolAtLocation(module.source)
-  // an export is read from the module, not at a read the flow graph can start from
-  return symbolAttributes(handling, moduleSymbol && checker.tryGetMemberInModuleExports(member, moduleSymbol), undefined, seen)
-}
-
-function valueAttributes(handling: Handling, value: GivenValue, seen: Set<string>): string[] | undefined {
-  if (value.member === undefined) return expressionAttributes(handling, value.expression, seen)
-  const module = wholeModule(value.expression, seen)
-  return module ? moduleMemberAttributes(handling, module, value.member, seen) : undefined
+  const moduleSymbol = source && checker.getSymbolAtLocation(source)
+  const symbol = moduleSymbol && checker.tryGetMemberInModuleExports(name, moduleSymbol)
+  if (!symbol) return undefined
+  return checker.getTypeOfSymbol(symbol.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol)
 }
 
 /**
- * The module an expression stands for as a whole: `require('m')`, a name the
- * checker resolves to a module (a namespace import or export, `import m =
- * require('m')`), or a variable given one of those.
+ * The components the scan knows, each with the type and props the program
+ * gives it. A component without a type of its own there would match nothing,
+ * or anything, so it stops the scan.
  */
-function wholeModule(
-  node: ts.Expression,
-  seen: Set<string>
-): { source?: ts.SourceFile; package?: string } | undefined {
-  node = unwrapped(node)
-  const required = requiredModule(node)
-  if (required) return required
-  if (ts.isCallExpression(node) && !isCommonJsRequire(node)) {
-    for (const argument of node.arguments) {
-      if (ts.isSpreadElement(argument)) continue
-      const module = wholeModule(argument, seen)
-      if (module) return module
-    }
-    return undefined
-  }
-  if (!ts.isIdentifier(node)) return undefined
-  const checker = programState().checker
-  let symbol = checker.getSymbolAtLocation(node)
-  while (symbol && symbol.flags & ts.SymbolFlags.Alias) {
-    const alias = checker.getImmediateAliasedSymbol(symbol)
-    if (!alias || alias === symbol) return undefined
-    symbol = alias
-  }
-  const variable = symbol?.declarations?.find(declaresVariable)
-  if (symbol && variable) {
-    const id = `${variable.getSourceFile().fileName}#module:${variable.getStart()}`
-    if (seen.has(id)) return undefined
-    seen.add(id)
-    for (const value of reachingValues(symbol, node)) {
-      if (value.member === undefined) {
-        const module = wholeModule(value.expression, seen)
-        if (module) return module
+function knownComponents(handling: Handling): KnownComponent[] {
+  if (!KNOWN) {
+    const known = (name: string, source: ts.SourceFile | undefined, exported: string, attributes: string[]): KnownComponent => {
+      const type = exportedType(source, exported)
+      const props = type ? propsOf(type) : []
+      if (!type || type.flags & UNKNOWABLE || props.length === 0 || props.some(prop => prop.flags & UNKNOWABLE)) {
+        throw new Error(`${name} has no type of its own in the scan's program`)
       }
+      return { name, type, props, attributes }
     }
-    return undefined
+    const fromPackages = (components: Record<string, string[]>) =>
+      Object.entries(components).map(([key, attributes]) => {
+        const at = key.lastIndexOf('#')
+        const file = resolveComponentModule(key.slice(0, at))?.resolvedFileName
+        return known(key, file ? sourceFor(file) : undefined, key.slice(at + 1), attributes)
+      })
+    KNOWN = {
+      loads: [
+        ...fromPackages(LOADERS),
+        ...PASS_THROUGH.map(entry => known(`${entry.file}#${entry.component}`, sourceFor(join(REPO_ROOT, entry.file)), entry.component, entry.attributes)),
+      ],
+      prefixes: fromPackages(PREFIXERS),
+    }
   }
-  const source = symbol?.declarations?.find(ts.isSourceFile)
-  if (!source) return undefined
-  const packageFile = packagePath(source.fileName)
-  return packageFile ? { package: packageFile } : { source }
+  return KNOWN[handling]
 }
 
-/** The URL attributes what an expression that stands for a tag handles that way. */
-function expressionAttributes(handling: Handling, node: ts.Expression, seen = new Set<string>()): string[] | undefined {
-  node = unwrapped(node)
-  if (ts.isConditionalExpression(node)) {
-    return merged(expressionAttributes(handling, node.whenTrue, seen), expressionAttributes(handling, node.whenFalse, seen))
-  }
-  if (ts.isBinaryExpression(node) && [ts.SyntaxKind.BarBarToken, ts.SyntaxKind.QuestionQuestionToken].includes(node.operatorToken.kind)) {
-    return merged(expressionAttributes(handling, node.left, seen), expressionAttributes(handling, node.right, seen))
-  }
-  if (isStringLiteral(node)) return handling === 'loads' ? ASSET_ATTRIBUTES[node.text] : undefined
-  if (ts.isCallExpression(node) && !isCommonJsRequire(node)) {
-    return merged(
-      ...node.arguments.filter((argument): argument is ts.Expression => !ts.isSpreadElement(argument)).map(argument => expressionAttributes(handling, argument, seen))
-    )
-  }
-  const member = memberName(node)
-  if (member !== undefined) {
-    const memberNode = ts.isPropertyAccessExpression(node) ? node.name : node.argumentExpression
-    const direct = memberNode && programState().checker.getSymbolAtLocation(memberNode)
-    const resolved = symbolAttributes(handling, direct, memberNode && ts.isIdentifier(memberNode) ? memberNode : undefined, seen)
-    if (resolved) return resolved
-    const module = wholeModule((node as ts.PropertyAccessExpression | ts.ElementAccessExpression).expression, seen)
-    return module ? moduleMemberAttributes(handling, module, member, seen) : undefined
-  }
-  if (ts.isIdentifier(node)) return symbolAttributes(handling, programState().checker.getSymbolAtLocation(node), node, seen)
-  return undefined
+/** The known components a member of a tag's type is: by its own type, or by the props it takes. */
+function componentsOf(handling: Handling, type: ts.Type): KnownComponent[] {
+  if (type.flags & UNKNOWABLE) return []
+  const props = propsOf(type)
+  return knownComponents(handling).filter(known => known.type === type || props.some(prop => known.props.includes(prop)))
 }
 
-/** The URL attributes the element a tag names handles that way. */
+let ELEMENT_NAMES: Set<string> | undefined
+
+/** The URL attributes the element a tag names handles that way, by the type the checker gives the tag there. */
 function tagAttributes(handling: Handling, tag: ts.JsxTagNameExpression): string[] | undefined {
   if (ts.isIdentifier(tag) && /^[a-z]/.test(tag.text)) return handling === 'loads' ? ASSET_ATTRIBUTES[tag.text] : undefined
-  if (ts.isIdentifier(tag) || ts.isPropertyAccessExpression(tag)) return expressionAttributes(handling, tag)
-  return undefined
+  if (!ts.isIdentifier(tag) && !ts.isPropertyAccessExpression(tag)) return undefined
+  const checker = programState().checker
+  ELEMENT_NAMES ??= new Set(checker.getJsxIntrinsicTagNamesAt(tag).map(symbol => symbol.name))
+  const type = checker.getTypeAtLocation(tag)
+  const members = type.isUnion() ? type.types : [type]
+  const names = members.flatMap(member => (member.isStringLiteral() ? [member.value] : []))
+  // a type that admits every element name, as ElementType does, does not say which one the tag is
+  const anyElement = [...ELEMENT_NAMES].every(name => names.includes(name))
+  return merged(
+    ...(handling === 'loads' && !anyElement ? names.map(name => ASSET_ATTRIBUTES[name]) : []),
+    ...members.flatMap(member => componentsOf(handling, member).map(known => known.attributes))
+  )
 }
-
 
 /** The name of the component or function a node is written in. */
 function enclosingDeclarationName(node: ts.Node): string | undefined {
@@ -862,9 +611,11 @@ function offendersIn(file: string): string[] {
     // <Link> Next.js prefixes; an <a>, an <img>, next/image's <Image> and the rest it does not
     if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
       const tag = node.tagName.getText(source)
-      const loaded = tagAttributes('loads', node.tagName) ?? []
-      const prefixed = tagAttributes('prefixes', node.tagName) ?? []
       const attributes = node.attributes.properties
+      // an element with neither a URL attribute nor a spread has nothing to report, whatever its tag is
+      const mayCarryUrl = attributes.some(attribute => !ts.isJsxAttribute(attribute) || URL_ATTRIBUTES.has(attribute.name.getText(source)))
+      const loaded = (mayCarryUrl && tagAttributes('loads', node.tagName)) || []
+      const prefixed = (mayCarryUrl && tagAttributes('prefixes', node.tagName)) || []
 
       // <Link href={withBasePath('/docs')}> goes to /base/base/docs
       for (const attribute of attributes) {
@@ -1023,15 +774,15 @@ describe('in-app URLs carry the base path', () => {
       // require() with any member of the module, at the top of the file or inside a component
       'bare-in-app-urls.tsx:170  RequiredAvatarImage src from data  avatar',
       'bare-in-app-urls.tsx:171  RequiredByKey src from data  avatar',
-      // a tag chosen inside the component is each tag it can be; a Slot loads nothing itself,
-      // a <button> carries no URL, and a prop that shadows an import is not what the import is
+      // a tag whose type is a choice of tags is each tag it can be, a prop typed so included; a Slot loads
+      // nothing itself, a <button> carries no URL, and a prop that shadows an import is not what the import is
       'bare-in-app-urls.tsx:178  Comp href in spread props  <Comp {...props} />',
       'bare-in-app-urls.tsx:185  Tag src from data  cover',
-      'bare-in-app-urls.tsx:185  Tag srcSet in spread props  <Tag src={cover} {...props} />',
+      'bare-in-app-urls.tsx:185  Tag srcSet, poster in spread props  <Tag src={cover} {...props} />',
       'bare-in-app-urls.tsx:186  Picture src from data  cover',
       'bare-in-app-urls.tsx:196  Tag href from data  href',
       'bare-in-app-urls.tsx:197  LocalRequired src from data  href',
-      // ...including a value assigned to it after it is declared
+      // ...as narrowed by a value assigned to it after it is declared
       'bare-in-app-urls.tsx:214  Comp href  "/pricing"',
       // ...with ||= and ??=
       'bare-in-app-urls.tsx:224  Comp href  "/pricing"',
@@ -1045,9 +796,8 @@ describe('in-app URLs carry the base path', () => {
       'bare-in-app-urls.tsx:247  AliasedDefault src from data  cover',
       'bare-in-app-urls.tsx:248  FromAlias src from data  cover',
       'bare-in-app-urls.tsx:249  images.default src from data  cover',
-      // an assignment counts for the variable it assigns to: one in a closure does, one to a variable
-      // of the same name declared in a nested function does not
-      'bare-in-app-urls.tsx:269  Chosen href  "/pricing"',
+      // not reported: a variable of the same name declared in a nested function, and a closure's assignment
+      // where the closure is called, which TypeScript's narrowing does not follow
       // <Link> puts the base path on by itself
       'bare-in-app-urls.tsx:279  Link href with the base path added twice  withBasePathIfInApp(\'/docs\')',
       'bare-in-app-urls.tsx:280  Link href with the base path added twice  withBasePath(\'/docs\')',
@@ -1061,14 +811,16 @@ describe('in-app URLs carry the base path', () => {
     ])
   })
 
-  test('a tag counts as the values that reach it, and a call as the values handed to it', () => {
+  test('a tag is the type the checker gives it where it is written, and a call what its return type says', () => {
     const offenders = offendersIn(join(FIXTURES_DIR, 'flow-and-calls.tsx'))
 
     // Not reported: a value every path overwrites before the read, one given after the read with no loop
-    // back to it, a call handed a variable already overwritten, the wrapper around an <Image>, and core's
-    // AvatarImage however it is wrapped
+    // back to it, a closure's assignment where the closure is called, a call handed a variable already
+    // overwritten, the wrapper around an <Image>, core's AvatarImage however it is wrapped, a call that
+    // returns the argument it is not handed as a loader, a function that returns a wrapper of its own, and
+    // a closure that assigns next/image after the element is built
     expect(offenders.map(offender => offender.replace(/^.*__fixtures__\//, ''))).toEqual([
-      // a value a call returns counts as each value handed to it
+      // a call returns what its return type says: the argument's type for identity(), next/image's props for memo()
       'flow-and-calls.tsx:15  GenericImage src from data  cover',
       'flow-and-calls.tsx:20  MemoImage src from data  cover',
       'flow-and-calls.tsx:25  NestedMemoImage src from data  cover',
@@ -1079,9 +831,8 @@ describe('in-app URLs carry the base path', () => {
       // a path that keeps the value: the catch of a try, a later turn of a loop
       'flow-and-calls.tsx:53  C src from data  cover',
       'flow-and-calls.tsx:60  C src from data  cover',
-      // a value given in another function, and a read in another function than the declaration
-      'flow-and-calls.tsx:72  C src from data  cover',
-      'flow-and-calls.tsx:79  C src from data  cover',
+      // a read in a closure made before the variable's last assignment, which is its declared type
+      'flow-and-calls.tsx:78  C src from data  cover',
       // the <Image> inside a forwardRef wrapper
       'flow-and-calls.tsx:83  Image src in spread props  <Image {...props} ref={ref} alt="" width={1} height={1} />',
       // a member of a local module, read by key or destructured
@@ -1089,14 +840,27 @@ describe('in-app URLs carry the base path', () => {
       'flow-and-calls.tsx:140  Destructured src from data  cover',
       // a string handed to a call
       'flow-and-calls.tsx:154  Anchor href  "/pricing"',
+      // functions whose return type is next/image, with no argument or a default one
+      'flow-and-calls.tsx:187  C src from data  cover',
+      'flow-and-calls.tsx:192  C src from data  cover',
+      // one branch leaves the loader in, in either order
+      'flow-and-calls.tsx:208  C src from data  cover',
+      'flow-and-calls.tsx:218  C src from data  cover',
+      // a closure that swaps the loader out before the render: TypeScript narrows by the function that
+      // reads, which does not see the closure's assignment when it is called
+      'flow-and-calls.tsx:227  C src from data  cover',
     ])
   })
 
-  test('a locally declared require is not CommonJS', () => {
+  test('a component typed only as ComponentType is not told apart from any other', () => {
+    expect(offendersIn(join(FIXTURES_DIR, 'component-type.tsx'))).toEqual([])
+  })
+
+  test('a module that declares its own require keeps it', () => {
     expect(offendersIn(join(FIXTURES_DIR, 'local-require.tsx'))).toEqual([])
   })
 
-  test('a member of a value that is not a module is not read from the exports of the file it is declared in', () => {
+  test('a member of an object is the type of that member, not an export of the same name', () => {
     expect(offendersIn(join(FIXTURES_DIR, 'object-members.tsx'))).toEqual([])
   })
 
