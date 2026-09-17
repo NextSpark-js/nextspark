@@ -131,23 +131,31 @@ async function standInPostgres(t: TestContext, treat: (sql: string) => Treatment
     // in a transaction, which a failed statement leaves failed
     let transaction: 'I' | 'T' | 'E' = 'I'
     const readyForQuery = () => message('Z', Buffer.from(transaction))
-    // text columns, all named gid
-    const rowDescription = (columns: number) =>
+    const rowDescription = (sql: string, columns: number) => {
+      const described: readonly (readonly [string, number, number])[] = /^SELECT named\.gid, listed\.gid, listed\.transaction, listed\.prepared FROM/.test(sql)
+        ? [
+            ['gid', 25, -1],
+            ['gid', 25, -1],
+            ['transaction', 28, 4],
+            ['prepared', 1184, 8],
+          ]
+        : Array.from({ length: columns }, () => ['gid', 25, -1] as const)
       message(
         'T',
         Buffer.concat([
           int16(columns),
-          ...Array.from({ length: columns }, () => Buffer.concat([text('gid'), int32(0), int16(0), int32(25), int16(-1), int32(-1), int16(0)])),
+          ...described.map(([name, oid, size]) => Buffer.concat([text(name), int32(0), int16(0), int32(oid), int16(size), int32(-1), int16(0)])),
         ])
       )
+    }
     const dataRows = (rows: Row[]) => {
       for (const row of rows) {
         message('D', Buffer.concat([int16(row.length), ...row.map(value => (value === null ? int32(-1) : Buffer.concat([int32(Buffer.byteLength(value)), Buffer.from(value)])))]))
       }
     }
-    const commandComplete = (rows?: Row[]) => {
+    const commandComplete = (sql: string, rows?: Row[]) => {
       if (rows) {
-        rowDescription(rows[0]?.length ?? 0)
+        rowDescription(sql, rows[0]?.length ?? 0)
         dataRows(rows)
       }
       message('C', text(`SELECT ${rows?.length ?? 0}`))
@@ -222,11 +230,11 @@ async function standInPostgres(t: TestContext, treat: (sql: string) => Treatment
             session.queries.push(sql)
             terminated.push(Number(terminate[1]))
             sockets.get(Number(terminate[1]))?.destroy()
-            commandComplete()
+            commandComplete(sql)
             continue
           }
           // the ReadyForQuery after an error comes in a later packet, which a real server's can too
-          execute(sql, rows => commandComplete(rows), fields => {
+          execute(sql, rows => commandComplete(sql, rows), fields => {
             message('E', fields)
             later(20, readyForQuery)
           })
@@ -239,7 +247,7 @@ async function standInPostgres(t: TestContext, treat: (sql: string) => Treatment
         } else if (type === 'B') message('2')
         else if (type === 'D') {
           const treatment = treat(parsed)
-          if (typeof treatment === 'object' && 'rows' in treatment && treatment.rows.length > 0) rowDescription(treatment.rows[0].length)
+          if (typeof treatment === 'object' && 'rows' in treatment && treatment.rows.length > 0) rowDescription(parsed, treatment.rows[0].length)
           else message('n')
         } else if (type === 'E') {
           executed = new Promise<void>(resolve => {
@@ -799,13 +807,26 @@ test('a backslash in a quoted string is read as standard_conforming_strings says
 })
 
 /**
- * The transactions a stand-in lists in pg_prepared_xacts, each with its owner, and the stand-in's answer to a query
- * that reads it, or undefined for any other: a read that names ids in a VALUES list gets each id, with the id again
- * when it is listed, and any other read gets the ids listed, only dbuser's when it filters on owner = current_user.
+ * The transactions a stand-in lists in pg_prepared_xacts, each with its owner and an identity that changes each time
+ * it is prepared, and the stand-in's answer to a query that reads it, or undefined for any other: a read that names
+ * ids in a VALUES list gets each id, with the listed id and its transaction and prepared values when it is listed,
+ * and any other read gets the ids listed, only dbuser's when it filters on owner = current_user.
  */
 function preparedCatalog(listed: { gid: string; owner: string }[] = []) {
+  let nextIdentity = 700
+  const withIdentity = (entry: { gid: string; owner: string }) => {
+    const identity = nextIdentity++
+    return { ...entry, transaction: `${identity}`, prepared: new Date(Date.UTC(2026, 0, 1, 0, 0, identity - 700)).toISOString() }
+  }
+  const transactions = listed.map(withIdentity)
+  const prepare = (gid: string, owner = 'dbuser') => {
+    const replacement = withIdentity({ gid, owner })
+    const previous = transactions.findIndex(entry => entry.gid === gid)
+    if (previous === -1) transactions.push(replacement)
+    else transactions.splice(previous, 1, replacement)
+  }
   return {
-    prepare: (gid: string, owner = 'dbuser') => void listed.push({ gid, owner }),
+    prepare,
     answer: (sql: string): Treatment | undefined => {
       if (!/pg_prepared_xacts/.test(sql)) return undefined
       const values = sql.match(/\(VALUES (.*)\) AS/s)
@@ -813,11 +834,12 @@ function preparedCatalog(listed: { gid: string; owner: string }[] = []) {
         return {
           rows: [...values[1].matchAll(/'((?:[^']|'')*)'/g)].map(([, text]) => {
             const gid = text.replace(/''/g, "'")
-            return [gid, listed.some(entry => entry.gid === gid) ? gid : null]
+            const current = transactions.find(entry => entry.gid === gid)
+            return [gid, current?.gid ?? null, current?.transaction ?? null, current?.prepared ?? null]
           }),
         }
       }
-      return { rows: listed.filter(entry => !/owner\s*=\s*current_user/i.test(sql) || entry.owner === 'dbuser').map(entry => [entry.gid]) }
+      return { rows: transactions.filter(entry => !/owner\s*=\s*current_user/i.test(sql) || entry.owner === 'dbuser').map(entry => [entry.gid]) }
     },
   }
 }
@@ -1035,6 +1057,36 @@ test('a transaction already prepared under the id a migration names is not taken
   }
 })
 
+test("a transaction replaced under a preexisting id while a migration runs is taken for the migration's, in _migrations, _content_migrations and _entity_migrations", { timeout: 60000 }, async t => {
+  const gid = 'r14_replaced'
+  const sql = `BEGIN; CREATE TABLE r14_replaced (id int); PREPARE TRANSACTION '${gid}';`
+  for (const table of TABLES) {
+    for (const limit of WITH_AND_WITHOUT_LIMIT) {
+      const catalog = preparedCatalog([{ gid, owner: 'r14_other' }])
+      const { server, result, file, next, label, records } = await runTrackedWith(
+        t,
+        table,
+        sql,
+        query => catalog.answer(query) ?? (query === sql ? (catalog.prepare(gid), 'ok') : 'ok'),
+        limit
+      )
+
+      assert.equal(result.status, 1, `${label}\n${result.output}`)
+      assert.match(
+        result.output,
+        new RegExp(
+          `❌ Failed to execute ${escapedFile(file)}: the file leaves a transaction prepared, neither committed nor rolled back: '${gid}': ` +
+            `ROLLBACK PREPARED '${gid}' undoes its transactional changes \\(not effects such as a sequence\\), COMMIT PREPARED '${gid}' applies them\\. ` +
+            'It is not recorded as run, so the next run starts the file over: resolve it before running the migrations again\\. Nothing resolves it on its own\\.'
+        ),
+        label
+      )
+      assert.deepEqual(records, [], label)
+      if (next) assert.equal(sessionThatRan(server.sessions, next), undefined, label)
+    }
+  }
+})
+
 test('a migration whose prepared transactions cannot be read once it has run is not recorded, and says so', { timeout: 20000 }, async t => {
   const sql = "BEGIN; CREATE TABLE r14_unread (id int); PREPARE TRANSACTION 'r14_unread';"
   for (const limit of WITH_AND_WITHOUT_LIMIT) {
@@ -1067,6 +1119,46 @@ test('a migration whose prepared transactions cannot be read once it has run is 
     )
     assert.deepEqual(records, [], label)
     assert.equal(sessionThatRan(server.sessions, TRACKED.core['002_core_after.sql']), undefined, label)
+  }
+})
+
+test('a failed final prepared-transaction read names both preexisting and new ids', { timeout: 20000 }, async t => {
+  const preexisting = 'r14_unread_preexisting'
+  const added = 'r14_unread_new'
+  const sql =
+    `BEGIN; CREATE TABLE r14_unread_preexisting (id int); PREPARE TRANSACTION '${preexisting}'; ` +
+    `BEGIN; CREATE TABLE r14_unread_new (id int); PREPARE TRANSACTION '${added}';`
+  for (const limit of WITH_AND_WITHOUT_LIMIT) {
+    const catalog = preparedCatalog([{ gid: preexisting, owner: 'r14_other' }])
+    let ran = false
+    const { result, label, records } = await runTrackedWith(
+      t,
+      '_migrations',
+      sql,
+      query => {
+        if (query === sql) {
+          ran = true
+          catalog.prepare(preexisting)
+          catalog.prepare(added)
+        }
+        if (ran && /pg_prepared_xacts/.test(query)) return { error: ['42501', 'permission denied for view pg_prepared_xacts'] }
+        return catalog.answer(query) ?? 'ok'
+      },
+      limit
+    )
+
+    assert.equal(result.status, 1, `${label}\n${result.output}`)
+    assert.match(
+      result.output,
+      new RegExp(
+        'Whether it leaves prepared the transactions it names in PREPARE TRANSACTION could not be checked ' +
+          '\\(permission denied for view pg_prepared_xacts\\)\\. For each one pg_prepared_xacts lists: ' +
+          `'${preexisting}': ROLLBACK PREPARED '${preexisting}' undoes.*; ` +
+          `'${added}': ROLLBACK PREPARED '${added}' undoes`
+      ),
+      label
+    )
+    assert.deepEqual(records, [], label)
   }
 })
 

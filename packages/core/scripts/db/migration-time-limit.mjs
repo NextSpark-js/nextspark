@@ -65,19 +65,22 @@
 // text is picked out, skipping comments, quoted strings, quoted identifiers and
 // dollar quotes, and Postgres decodes it on the file's session, under the
 // session's standard_conforming_strings, which is what the file is read under.
-// An id this database already lists a transaction under then is left out. Once
-// the file has run, however it ended, this database's pg_prepared_xacts is read
-// for the others, whoever owns them: on the file's session when the server
-// answered the file, and otherwise, or when that read fails, on a connection of
-// its own. A file that leaves one prepared is not recorded, and fails with an
-// error naming each one and the command that resolves it; neither is run for
-// it. When the ids cannot be decoded the file is not run, and when they cannot
-// be read afterwards the error says so and names them.
+// For each decoded id this database already lists, its identity -- transaction
+// id and prepared timestamp -- is kept. Once the file has run, however it ended,
+// this database's pg_prepared_xacts is read for every id the file writes,
+// whoever owns the transaction: on the file's session when the server answered
+// the file, and otherwise, or when that read fails, on a connection of its own.
+// A transaction newly listed under one of those ids, or listed with an identity
+// different from the one kept, is taken for the file's; one still listed with
+// the same identity is not. A file that leaves one prepared is not recorded,
+// and fails with an error naming each one and the command that resolves it;
+// neither is run for it. When the ids cannot be decoded the file is not run,
+// and when they cannot be read afterwards the error says so and names every id,
+// since none can be ruled out.
 //
 // A transaction prepared under an id the file does not write, by another
 // session or by one the file opens itself (through dblink, for instance), is
-// not reported. One another session prepares under an id the file writes,
-// while the file runs, is taken for the file's.
+// not reported.
 //
 // The limit is for the file, not for recording it as run. A migration that ran
 // to the end is recorded in its tracking table on the same session, and under a
@@ -313,9 +316,9 @@ function sideConnectionWaitMs(limit) {
 const NONE_PREPARED = Object.freeze({ named: [], left: [], unlisted: [] });
 
 /**
- * The ids a file's top-level PREPARE TRANSACTION statements name that this
- * database lists no prepared transaction under before the file runs, as the
- * server decodes them on the file's session. The file is not run when they
+ * The distinct ids a file's top-level PREPARE TRANSACTION statements name, as
+ * the server decodes them on the file's session, and each one's identity before
+ * the file runs, or null when none is listed. The file is not run when they
  * cannot be read.
  */
 async function transactionsTheFileNames(client, sql) {
@@ -327,7 +330,11 @@ async function transactionsTheFileNames(client, sql) {
     constants = preparedTransactionConstants(sql, { standardConformingStrings: setting.rows[0]?.[0] !== 'off' });
     if (constants.length === 0) return [];
     const rows = await preparedAmong(client, constants);
-    return [...new Set(rows.filter(([, listed]) => listed === null).map(([gid]) => gid))];
+    const named = new Map();
+    for (const [gid, listed, transaction, prepared] of rows) {
+      if (!named.has(gid)) named.set(gid, [gid, listed === null ? null : [transaction, prepared]]);
+    }
+    return [...named.values()];
   } catch (error) {
     throw new Error(
       `the file was not run: reading the transaction ids its PREPARE TRANSACTION statements name` +
@@ -339,14 +346,15 @@ async function transactionsTheFileNames(client, sql) {
 
 /**
  * For each id constant, [the id it stands for, that id again when this database
- * lists a prepared transaction under it, or null]. The constants go into the
- * statement as the file writes them; the extended protocol holds it to a single
- * statement.
+ * lists a prepared transaction under it or null, its transaction id, and its
+ * prepared timestamp]. The constants go into the statement as the file writes
+ * them; the extended protocol holds it to a single statement.
  */
 async function preparedAmong(client, constants) {
   const result = await client.query({
     text:
-      `SELECT named.gid, listed.gid FROM (VALUES ${constants.map(constant => `(${constant})`).join(', ')}) AS named (gid) ` +
+      `SELECT named.gid, listed.gid, listed.transaction, listed.prepared ` +
+      `FROM (VALUES ${constants.map(constant => `(${constant})`).join(', ')}) AS named (gid) ` +
       'LEFT JOIN pg_catalog.pg_prepared_xacts AS listed ON listed.gid = named.gid AND listed.database = pg_catalog.current_database()',
     rowMode: 'array',
     queryMode: 'extended',
@@ -354,19 +362,36 @@ async function preparedAmong(client, constants) {
   return result.rows;
 }
 
+/** Whether two snapshots identify the same row of pg_prepared_xacts. */
+function samePreparedIdentity(before, after) {
+  const sameValue = (left, right) =>
+    left instanceof Date && right instanceof Date ? Object.is(left.getTime(), right.getTime()) : Object.is(left, right);
+  return sameValue(before[0], after[0]) && sameValue(before[1], after[1]);
+}
+
 /**
- * Which of the ids `named` this database lists a prepared transaction under:
- * `left`, and the rest, `unlisted`; or `unchecked`, why that could not be read.
- * It is read on the file's session when `onSession`, and otherwise, or when that
- * read fails, on a connection of its own.
+ * Which of the ids `named` this database now lists under a new identity:
+ * `left`; which it does not list, `unlisted`; or `unchecked`, why that could not
+ * be read. It is read on the file's session when `onSession`, and otherwise, or
+ * when that read fails, on a connection of its own.
  */
 async function preparedLeft(named, { client, onSession, connectionString, limit }) {
-  const constants = named.map(escapeLiteral);
+  const gids = named.map(([gid]) => gid);
+  const constants = gids.map(escapeLiteral);
   const outcome = rows => {
-    const left = rows.filter(([, listed]) => listed !== null).map(([gid]) => gid);
-    return { named, left, unlisted: named.filter(gid => !left.includes(gid)) };
+    const current = new Map(
+      rows.map(([gid, listed, transaction, prepared]) => [gid, listed === null ? null : [transaction, prepared]])
+    );
+    const left = [];
+    const unlisted = [];
+    for (const [gid, before] of named) {
+      const after = current.get(gid) ?? null;
+      if (after === null) unlisted.push(gid);
+      else if (before === null || !samePreparedIdentity(before, after)) left.push(gid);
+    }
+    return { named: gids, left, unlisted };
   };
-  const unchecked = error => ({ named, left: [], unlisted: [], unchecked: error.message });
+  const unchecked = error => ({ named: gids, left: [], unlisted: [], unchecked: error.message });
   if (onSession) {
     try {
       return outcome(await preparedAmong(client, constants));
