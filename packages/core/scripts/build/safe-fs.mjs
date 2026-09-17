@@ -31,7 +31,7 @@ import {
   mkdirSync,
   mkdtempSync,
   openSync,
-  readFileSync,
+  readSync,
   realpathSync,
   renameSync,
   rmdirSync,
@@ -52,6 +52,9 @@ const WRITE_FLAGS = {
   w: constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | NO_FOLLOW,
   wx: constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | NO_FOLLOW,
 }
+
+/** The size of the buffer copyFile reads and writes through: memory use stays at this regardless of file size. */
+export const COPY_BLOCK_SIZE = 1024 * 1024
 
 /** The copyFile mode bits safe-fs can honor without following the destination: no flag, or COPYFILE_EXCL. */
 const KNOWN_COPY_MODE = constants.COPYFILE_EXCL
@@ -227,20 +230,23 @@ export function projectFiles(root) {
     }
     const target = checked('copy to', root, destination, { writesInto: true })
     const sourceFd = openSync(source, constants.O_RDONLY)
-    let data, sourceMode
     try {
-      sourceMode = fstatSync(sourceFd).mode
-      data = readFileSync(sourceFd)
+      const sourceMode = fstatSync(sourceFd).mode
+      const flag = mode & constants.COPYFILE_EXCL ? WRITE_FLAGS.wx : WRITE_FLAGS.w
+      const destFd = openSync(target, flag, sourceMode & 0o777)
+      try {
+        const buffer = Buffer.allocUnsafe(COPY_BLOCK_SIZE)
+        for (;;) {
+          const bytesRead = readSync(sourceFd, buffer, 0, COPY_BLOCK_SIZE, null)
+          if (bytesRead === 0) break
+          writeSync(destFd, buffer, 0, bytesRead, null)
+        }
+        fchmodSync(destFd, sourceMode & 0o777)
+      } finally {
+        closeSync(destFd)
+      }
     } finally {
       closeSync(sourceFd)
-    }
-    const flag = mode & constants.COPYFILE_EXCL ? WRITE_FLAGS.wx : WRITE_FLAGS.w
-    const destFd = openSync(target, flag, sourceMode & 0o777)
-    try {
-      writeSync(destFd, data)
-      fchmodSync(destFd, sourceMode & 0o777)
-    } finally {
-      closeSync(destFd)
     }
   }
   const rm = (path, options) => rmSync(checked('remove', root, path), options)

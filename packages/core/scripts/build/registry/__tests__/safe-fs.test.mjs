@@ -11,16 +11,16 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createHash } from 'node:crypto'
+import { createHash, randomBytes } from 'node:crypto'
 import { execFileSync, spawn } from 'node:child_process'
 import { once } from 'node:events'
-import { link, lstat, mkdir, mkdtemp, open, readdir, readFile, readlink, realpath, rm, symlink, writeFile } from 'node:fs/promises'
+import { chmod, link, lstat, mkdir, mkdtemp, open, readdir, readFile, readlink, realpath, rm, symlink, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { isUnsafeWrite, projectFiles, UNSAFE_WRITE, unsafeWriteProblem } from '../../safe-fs.mjs'
+import { COPY_BLOCK_SIZE, isUnsafeWrite, projectFiles, UNSAFE_WRITE, unsafeWriteProblem } from '../../safe-fs.mjs'
 import { cleanupDeletedTemplate, cleanupOldRouteFiles, cleanupOrphanedTemplates } from '../post-build/route-cleanup.mjs'
 import { generateTestBlocksJson, generateTestEntitiesJson } from '../post-build/test-fixtures.mjs'
 import { generateMissingPages } from '../post-build/page-generator.mjs'
@@ -28,6 +28,7 @@ import { syncAppGlobalsCss } from '../../theme.mjs'
 import { directFsWrites, directFsWritesIn, generatorFiles } from './direct-fs-writes.mjs'
 
 const CORE_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..')
+const RUNS_AS_ROOT = process.getuid?.() === 0
 
 async function directory() {
   const root = await mkdtemp(join(tmpdir(), 'nextspark-safe-fs-test-'))
@@ -198,6 +199,44 @@ test('copyFile opens its destination without following a symlink put there after
     assert.equal(await readFile(secret, 'utf8'), 'secret\n', 'the outside file the symlink points to must survive untouched')
   } finally {
     await outside.cleanup()
+    await project.cleanup()
+  }
+})
+
+test('copyFile copies a source of several blocks, including a partial last one, byte for byte and with the source mode', async () => {
+  const project = await directory()
+  try {
+    const content = randomBytes(COPY_BLOCK_SIZE * 2 + 12345)
+    const source = join(project.root, 'source.bin')
+    await writeFile(source, content)
+    await chmod(source, 0o640)
+    const dest = join(project.root, 'dest.bin')
+    await projectFiles(project.root).copyFile(source, dest)
+    assert.equal((await readFile(dest)).equals(content), true, 'the destination holds the exact bytes of the source')
+    assert.equal((await lstat(dest)).mode & 0o777, 0o640, 'the destination keeps the source mode')
+  } finally {
+    await project.cleanup()
+  }
+})
+
+test('copyFile leaves no descriptor open when its destination open fails partway through the copy', { skip: RUNS_AS_ROOT }, async () => {
+  const project = await directory()
+  try {
+    await writeIn(project.root, 'source.txt', 'x'.repeat(64))
+    const readonly = join(project.root, 'readonly')
+    await mkdir(readonly)
+    await chmod(readonly, 0o500)
+    try {
+      const files = projectFiles(project.root)
+      const before = await readdir('/dev/fd')
+      const error = await thrown(() => files.copyFile(join(project.root, 'source.txt'), join(readonly, 'dest.txt')))
+      assert.equal(error?.code, 'EACCES')
+      const after = await readdir('/dev/fd')
+      assert.deepEqual(after.filter(fd => !before.includes(fd)), [], 'no descriptor from the failed copy is left open')
+    } finally {
+      await chmod(readonly, 0o700)
+    }
+  } finally {
     await project.cleanup()
   }
 })
