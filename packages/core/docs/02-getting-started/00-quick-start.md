@@ -165,7 +165,7 @@ The root command delegates to `apps/dev` and starts one Next.js process:
 
 **Console output should show:**
 ```text
-  ▲ Next.js 15.x.x
+  ▲ Next.js 16.x.x
   - Local:        http://localhost:3010
   - Turbopack:    enabled
 

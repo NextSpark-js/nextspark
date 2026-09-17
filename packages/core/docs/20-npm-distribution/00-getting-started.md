@@ -15,7 +15,7 @@ This guide walks you through creating a new project with NextSpark from scratch.
 ### 1. Create New Project
 
 ```bash
-# Create a new Next.js 15 project
+# Create a new Next.js project
 pnpm create next-app my-saas-app --typescript --tailwind --eslint --app --src-dir=false
 
 cd my-saas-app

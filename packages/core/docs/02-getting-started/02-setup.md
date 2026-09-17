@@ -109,7 +109,7 @@ ls .next/
 **Check dev server started:**
 ```bash
 # You should see output like:
-  ▲ Next.js 15.x.x
+  ▲ Next.js 16.x.x
   - Local:        http://localhost:3010
   - Turbopack:    enabled
 

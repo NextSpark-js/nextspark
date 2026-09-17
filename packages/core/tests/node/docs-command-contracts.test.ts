@@ -74,6 +74,30 @@ function documentationFiles(): string[] {
   ])]
 }
 
+function assertDoesNotNameRetiredCreateApp(file: string, content: string): void {
+  assert.doesNotMatch(
+    content,
+    /@nextsparkjs\/create-app/,
+    `${file} names the retired @nextsparkjs/create-app package instead of create-nextspark-app`
+  )
+}
+
+test('documentation names the published create-nextspark-app initializer', () => {
+  for (const file of documentationFiles()) {
+    assertDoesNotNameRetiredCreateApp(
+      file,
+      fs.readFileSync(path.join(SOURCE_ROOT, file), 'utf8')
+    )
+  }
+})
+
+test('published initializer check rejects the retired package name', () => {
+  assert.throws(
+    () => assertDoesNotNameRetiredCreateApp('README.md', 'npx @nextsparkjs/create-app my-saas'),
+    /retired @nextsparkjs\/create-app package/
+  )
+})
+
 test('documentation does not recommend removed pnpm scripts', () => {
   for (const docsDir of DOCS_DIRS) {
     for (const file of markdownFiles(docsDir)) {

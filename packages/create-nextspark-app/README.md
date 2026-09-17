@@ -31,7 +31,7 @@ npx create-nextspark-app my-app -y
 
 ## What's Included
 
-- **Next.js 15** with App Router and Turbopack
+- **Next.js 16** with App Router and Turbopack by default (Next.js 15 supported)
 - **TypeScript** strict configuration
 - **Tailwind CSS v4** with CSS-based theming
 - **Authentication** ready with Better Auth

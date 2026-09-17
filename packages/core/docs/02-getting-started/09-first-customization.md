@@ -153,7 +153,7 @@ export default function AboutPage() {
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">
             NextSpark provides a solid foundation for building
-            modern web applications with Next.js 15, TypeScript, and PostgreSQL.
+            modern web applications with Next.js 16, TypeScript, and PostgreSQL.
           </p>
 
           <div className="space-y-2">

@@ -4,13 +4,13 @@
 
 ## Introduction
 
-NextSpark is an enterprise-grade Next.js 15 application designed for rapid SaaS product development. It combines modern web technologies with a WordPress-like extensibility model through themes, plugins, and config-driven entities. The architecture prioritizes performance, developer experience, and production-ready features out of the box.
+NextSpark is an enterprise-grade Next.js 16 application, with support for Next.js 15, designed for rapid SaaS product development. It combines modern web technologies with a WordPress-like extensibility model through themes, plugins, and config-driven entities. The architecture prioritizes performance, developer experience, and production-ready features out of the box.
 
 ## Technology Stack
 
 ### Core Framework & Runtime
 
-- **Next.js 15** - React framework with App Router, Server Components, and Turbopack
+- **Next.js 16** - React framework with App Router, Server Components, and Turbopack by default (Next.js 15 supported)
 - **React 19** - Latest React with Concurrent Features and Server Components
 - **TypeScript 5** - Strict type safety throughout the codebase
 - **Node.js** - JavaScript runtime for server-side operations
@@ -51,7 +51,7 @@ NextSpark is an enterprise-grade Next.js 15 application designed for rapid SaaS 
 
 ### Build System
 
-- **Turbopack** - Next.js 15's fast bundler (default in dev mode)
+- **Turbopack** - Next.js 16's default bundler; Next.js 15 uses Webpack by default and supports Turbopack opt-in
 - **pnpm Workspaces** - Monorepo management
 - **Custom Build Scripts** - Registry generation, theme compilation, docs building
 

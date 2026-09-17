@@ -32,7 +32,7 @@
 
 ## What is NextSpark?
 
-NextSpark is a complete, production-ready SaaS framework built on Next.js 15. It provides everything you need to launch a SaaS product: authentication, payments, teams, permissions, entities, themes, and more—all pre-configured and ready to customize.
+NextSpark is a complete, production-ready SaaS framework built on Next.js 16, with support for Next.js 15. It provides everything you need to launch a SaaS product: authentication, payments, teams, permissions, entities, themes, and more—all pre-configured and ready to customize.
 
 ## Features
 
@@ -53,17 +53,14 @@ NextSpark is a complete, production-ready SaaS framework built on Next.js 15. It
 ## Quick Start
 
 ```bash
-# Create a new project
-npx @nextsparkjs/create-app my-saas
+# Create a new project (installs dependencies and generates .env)
+npx create-nextspark-app my-saas
 
 # Navigate to project
 cd my-saas
 
-# Install dependencies
-pnpm install
-
-# Set up environment variables
-cp .env.example .env
+# Configure environment variables
+# Edit .env and set DATABASE_URL for your PostgreSQL database
 
 # Run database migrations
 pnpm db:migrate
@@ -72,7 +69,7 @@ pnpm db:migrate
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to see your app.
+When the development server starts, Next.js prints its local URL (port 3000 by default).
 
 ## Packages
 
@@ -82,7 +79,7 @@ This monorepo contains the following packages:
 |---------|---------|-------------|
 | [`@nextsparkjs/core`](./packages/core) | [![npm](https://img.shields.io/npm/v/@nextsparkjs/core.svg?style=flat&colorA=000000&colorB=000000)](https://www.npmjs.com/package/@nextsparkjs/core) | Core framework with components, hooks, and utilities |
 | [`@nextsparkjs/cli`](./packages/cli) | [![npm](https://img.shields.io/npm/v/@nextsparkjs/cli.svg?style=flat&colorA=000000&colorB=000000)](https://www.npmjs.com/package/@nextsparkjs/cli) | CLI for development workflow |
-| [`@nextsparkjs/create-app`](./packages/create-nextspark) | [![npm](https://img.shields.io/npm/v/@nextsparkjs/create-app.svg?style=flat&colorA=000000&colorB=000000)](https://www.npmjs.com/package/@nextsparkjs/create-app) | Project scaffolding tool |
+| [`create-nextspark-app`](./packages/create-nextspark-app) | [![npm](https://img.shields.io/npm/v/create-nextspark-app.svg?style=flat&colorA=000000&colorB=000000)](https://www.npmjs.com/package/create-nextspark-app) | Project scaffolding tool |
 
 ## Documentation
 
@@ -100,7 +97,7 @@ Visit [nextspark.dev/docs](https://nextspark.dev/docs) for the full documentatio
 
 - Node.js 22.14.0 or later
 - PostgreSQL database
-- pnpm (recommended) or npm
+- pnpm 9, 10, or 11
 
 ## Tech Stack
 
@@ -108,13 +105,13 @@ NextSpark is built with modern technologies:
 
 | Category | Technology |
 |----------|------------|
-| Framework | [Next.js 15](https://nextjs.org/) with App Router |
+| Framework | [Next.js 16](https://nextjs.org/) with App Router and Turbopack by default (Next.js 15 supported) |
 | Language | [TypeScript](https://www.typescriptlang.org/) |
 | Styling | [Tailwind CSS v4](https://tailwindcss.com/) |
 | Components | [shadcn/ui](https://ui.shadcn.com/) + [Radix UI](https://www.radix-ui.com/) |
 | Authentication | [Better Auth](https://better-auth.com/) |
 | Database | [PostgreSQL](https://www.postgresql.org/) |
-| Payments | [Stripe](https://stripe.com/) |
+| Payments | [Stripe](https://stripe.com/) + [Polar](https://polar.sh/) |
 | Email | [Resend](https://resend.com/) |
 | i18n | [next-intl](https://next-intl-docs.vercel.app/) |
 | Validation | [Zod](https://zod.dev/) |

@@ -284,7 +284,7 @@ contents/themes/default/messages/
 
   "home": {
     "hero": {
-      "badge": "Next.js 15 + Better Auth + shadcn/ui",
+      "badge": "Next.js 16 + Better Auth + shadcn/ui",
       "title": "Modern NextSpark",
       "subtitle": "Production-ready starter with authentication, database, and beautiful UI components",
       "cta": {

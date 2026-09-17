@@ -84,7 +84,7 @@ See **[Entity Integration](./10-entity-integration.md)** for detailed configurat
 
 ### Core Technologies
 - **React 19** - Component rendering and state management
-- **Next.js 15** - App Router, API routes, ISR
+- **Next.js 16** - App Router, API routes, ISR (Next.js 15 supported)
 - **TypeScript** - Full type safety across the system
 - **Zod** - Schema validation for blocks and forms
 

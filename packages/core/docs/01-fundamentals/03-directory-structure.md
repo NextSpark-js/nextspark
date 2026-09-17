@@ -65,7 +65,7 @@ core/
 
 ## App Directory (`app/`)
 
-**Purpose:** Next.js 15 App Router with route groups and layouts.
+**Purpose:** Next.js App Router with route groups and layouts.
 
 ```text
 app/
