@@ -87,16 +87,24 @@ const SEGMENT_CONFIG_VALIDATORS = {
 let nextParseModulePromise = null
 
 /**
- * Next.js's own module parser (SWC), resolved from the project and then from
- * core, or null when neither has Next.js.
+ * Next.js's own module parser and SWC binding loader, resolved from the project
+ * and then from core, or null when neither has Next.js.
  */
 function loadNextParseModule() {
   if (!nextParseModulePromise) {
-    const path = 'next/dist/build/analysis/parse-module'
+    const parseModulePath = 'next/dist/build/analysis/parse-module'
+    const swcPath = 'next/dist/build/swc'
+    const loadFrom = require => ({
+      parseModule: require(parseModulePath).parseModule,
+      loadBindings: require(swcPath).loadBindings,
+    })
     nextParseModulePromise = Promise.resolve()
-      .then(() => createRequire(join(rootDir, 'package.json'))(path))
-      .catch(() => createRequire(import.meta.url)(path))
-      .then(module => module.parseModule, () => null)
+      .then(() => loadFrom(createRequire(join(rootDir, 'package.json'))))
+      .catch(() => loadFrom(createRequire(import.meta.url)))
+      .then(async ({ parseModule, loadBindings }) => {
+        await loadBindings()
+        return parseModule
+      }, () => null)
   }
   return nextParseModulePromise
 }
