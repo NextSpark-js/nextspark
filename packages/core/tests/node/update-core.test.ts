@@ -42,14 +42,17 @@ fs.writeFileSync(path.join('app', 'synced-with-core.txt'), 'synced\\n')
 `
 
 /**
- * The stand-in pnpm. Its install resolves an exact spec to that version and a ^
- * or ~ range to the newest published version from the range's own up, as pnpm
- * does for these 0.1.0-beta.N versions; writes what the state's lifecycle
- * scripts write; and can hang halfway, having linked the new versions into
- * node_modules but not written the lockfile yet, and written the pid a test
- * signals it by. Like pnpm, it finds nothing to do when the lockfile already
- * names what package.json asks for and matches its record of the last install
- * it finished, whatever node_modules holds.
+ * The stand-in pnpm. Its lockfile has a line `<name>@<version> <spec>` for each
+ * @nextsparkjs dependency. Its install resolves an exact spec to that version
+ * and a ^ or ~ range to the newest published version from the range's own up,
+ * as pnpm does for these 0.1.0-beta.N versions; writes what the state's
+ * lifecycle scripts write; and can hang halfway, having linked the new versions
+ * into node_modules but not written the lockfile yet, and written the pid a
+ * test signals it by. Like pnpm, it finds nothing to do when the lockfile
+ * already records what package.json asks for and matches its record of the
+ * last install it finished, whatever node_modules holds; and with
+ * --frozen-lockfile it installs what the lockfile names, or fails without
+ * writing when the lockfile doesn't record what package.json asks for.
  */
 const FAKE_PNPM = `#!/usr/bin/env node
 ${FAKE_HEADER}
@@ -70,7 +73,8 @@ if (args[0] === '--dir') {
   process.chdir(args[1])
   args.splice(0, 2)
 }
-if (args[0] !== 'install') {
+const frozen = args.includes('--frozen-lockfile')
+if (args.filter((arg) => arg !== '--frozen-lockfile').join(' ') !== 'install') {
   process.stderr.write('fake pnpm: unexpected call: ' + args.join(' ') + '\\n')
   process.exit(99)
 }
@@ -98,14 +102,22 @@ for (const dir of importers) {
       const version = base === spec
         ? spec
         : (state.published[name] || []).filter((candidate) => beta(candidate) >= beta(base)).sort((a, b) => beta(b) - beta(a))[0] || base
-      pins.push({ dir, name, base, version })
+      pins.push({ dir, name, spec, version })
     }
   }
 }
 
 const read = (file) => fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null
 const locked = read(lockfile)
-if (locked !== null && locked === read(lastInstall) && pins.every(({ name, base }) => locked.split('\\n').includes(name + '@' + base))) {
+const lockedLine = ({ name, spec }) => (locked ?? '').split('\\n').find((line) => line.startsWith(name + '@') && line.endsWith(' ' + spec))
+if (frozen) {
+  if (!pins.every(lockedLine)) {
+    process.stderr.write('ERR_PNPM_OUTDATED_LOCKFILE  Cannot install with "frozen-lockfile" because pnpm-lock.yaml is not up to date with package.json\\n')
+    process.exit(1)
+  }
+  for (const pin of pins) pin.version = lockedLine(pin).split(' ')[0].slice(pin.name.length + 1)
+}
+if (locked !== null && locked === read(lastInstall) && pins.every(lockedLine)) {
   process.stdout.write('Already up to date\\n')
   process.exit(0)
 }
@@ -129,14 +141,20 @@ const link = () => {
 }
 
 const finish = () => {
+  if (state.installLeavesChildMs) {
+    // A lifecycle script that leaves a process of its own running in the install's process group, and writes once it is done
+    const child = require('node:child_process').spawn(process.execPath, ['-e', 'require("node:fs").writeFileSync(process.argv[2], String(process.pid)); setTimeout(() => require("node:fs").writeFileSync(process.argv[1], ""), ' + state.installLeavesChildMs + ')', process.env.FAKE_PNPM_LOG + '.leftover-finished', process.env.FAKE_PNPM_LOG + '.leftover-running'], { stdio: 'ignore' })
+    child.unref()
+    while (!fs.existsSync(process.env.FAKE_PNPM_LOG + '.leftover-running')) require('node:child_process').spawnSync('sleep', ['0.05'])
+  }
   if (state.installExit) {
     fs.writeFileSync(lockfile, 'half-written lockfile\\n')
     process.stderr.write('ERR_PNPM_FETCH_FAIL\\n')
     process.exit(state.installExit)
   }
   link()
-  const content = pins.map(({ name, version }) => name + '@' + version + '\\n').join('')
-  fs.writeFileSync(lockfile, content)
+  const content = frozen ? locked : pins.map(({ name, version, spec }) => name + '@' + version + ' ' + spec + '\\n').join('')
+  if (!frozen) fs.writeFileSync(lockfile, content)
   fs.mkdirSync(path.dirname(lastInstall), { recursive: true })
   fs.writeFileSync(lastInstall, content)
   for (const { dir } of pins.filter(({ name }) => name === '@nextsparkjs/core')) {
@@ -149,8 +167,10 @@ const finish = () => {
 
 if (state.installHangMs) {
   link()
-  // A lifecycle script of its own, as pnpm runs them: a child that would write once the install finishes
-  const lifecycle = require('node:child_process').spawn(process.execPath, ['-e', 'setTimeout(() => require("node:fs").writeFileSync(process.argv[1], ""), ' + state.installHangMs + ')', process.env.FAKE_PNPM_LOG + '.lifecycle-finished'], { stdio: 'ignore' })
+  const ignoreSignals = state.installIgnoreSignals || state.lifecycleIgnoresSignals ? 'for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) process.on(signal, () => {}); ' : ''
+  if (state.installIgnoreSignals) for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(signal, () => {})
+  // A lifecycle script of its own, as pnpm runs them: a child that says when it is running and would write once the install finishes
+  const lifecycle = require('node:child_process').spawn(process.execPath, ['-e', ignoreSignals + 'require("node:fs").writeFileSync(process.argv[2], ""); setTimeout(() => require("node:fs").writeFileSync(process.argv[1], ""), ' + state.installHangMs + ')', process.env.FAKE_PNPM_LOG + '.lifecycle-finished', process.env.FAKE_PNPM_LOG + '.lifecycle-running'], { stdio: 'ignore' })
   fs.writeFileSync(process.env.FAKE_PNPM_LOG + '.started', process.pid + ' ' + lifecycle.pid)
   setTimeout(() => {
     fs.writeFileSync(process.env.FAKE_PNPM_LOG + '.finished', '')
@@ -170,6 +190,10 @@ interface ProjectOptions {
   webMobile?: boolean
   /** 'commit' commits the project, 'init' only runs git init, 'none' leaves it outside git */
   git?: 'commit' | 'init' | 'none'
+  /** The spec the lockfile records for a package, when it isn't the one package.json declares */
+  lockedSpecs?: Record<string, string>
+  /** 'none' leaves the project without pnpm-lock.yaml, 'ignored' has .gitignore ignore it */
+  lockfile?: 'commit' | 'none' | 'ignored'
 }
 
 interface FakeState {
@@ -178,6 +202,12 @@ interface FakeState {
   installExit?: number
   installWrites?: Record<string, string>
   installHangMs?: number
+  /** The hanging install and its lifecycle script ignore SIGINT, SIGTERM and SIGHUP */
+  installIgnoreSignals?: boolean
+  /** Only the hanging install's lifecycle script ignores them */
+  lifecycleIgnoresSignals?: boolean
+  /** The install leaves a process running in its group, which writes after this many ms */
+  installLeavesChildMs?: number
   syncExit?: number
   newMigrations?: string[]
 }
@@ -188,9 +218,9 @@ function git(cwd: string, ...args: string[]) {
   return result.stdout.trim()
 }
 
-/** The lockfile the stand-in install writes for these pins. */
-function lockfileFor(pins: Array<[string, string]>) {
-  return pins.map(([name, version]) => `${name}@${version}\n`).join('')
+/** The lockfile the stand-in install writes for these pins, each recorded with `spec` or else its exact version. */
+function lockfileFor(pins: Array<[string, string, string?]>) {
+  return pins.map(([name, version, spec = version]) => `${name}@${version} ${spec}\n`).join('')
 }
 
 /**
@@ -198,7 +228,7 @@ function lockfileFor(pins: Array<[string, string]>) {
  * packages installed at `installed`. Returns the directory update-core runs
  * in: web/ for web-mobile.
  */
-function createProject(t: { after: (fn: () => void) => void }, { pins, files = {}, installed = FROM, webMobile = false, git: gitMode = 'commit' }: ProjectOptions = {}) {
+function createProject(t: { after: (fn: () => void) => void }, { pins, files = {}, installed = FROM, webMobile = false, git: gitMode = 'commit', lockedSpecs = {}, lockfile = 'commit' }: ProjectOptions = {}) {
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'update-core-'))
   t.after(() => fs.rmSync(repo, { recursive: true, force: true }))
   const root = webMobile ? path.join(repo, 'web') : repo
@@ -230,11 +260,13 @@ function createProject(t: { after: (fn: () => void) => void }, { pins, files = {
     }
   }
 
+  const declared: Record<string, string> = { ...manifest.dependencies, ...manifest.devDependencies }
   const workspace: Record<string, string> = {
-    'pnpm-lock.yaml': lockfileFor(PACKAGES.map((name) => [name, FROM])),
-    '.gitignore': 'node_modules\n.next\n',
+    'pnpm-lock.yaml': lockfileFor(PACKAGES.map((name) => [name, installed ?? FROM, lockedSpecs[name] ?? declared[name]])),
+    '.gitignore': `node_modules\n.next\n${lockfile === 'ignored' ? 'pnpm-lock.yaml\n' : ''}`,
     'pnpm-workspace.yaml': webMobile ? "packages:\n  - 'web'\n  - 'mobile'\n" : "packages:\n  - 'contents/themes/*'\n",
   }
+  if (lockfile === 'none') delete workspace['pnpm-lock.yaml']
   if (webMobile) {
     for (const [file, content] of Object.entries({ ...workspace, 'package.json': `${JSON.stringify({ name: 'acme', private: true }, null, 2)}\n`, 'mobile/package.json': `${JSON.stringify({ name: 'mobile', private: true }, null, 2)}\n`, 'mobile/app.json': '{ "name": "acme" }\n' })) {
       fs.mkdirSync(path.dirname(path.join(repo, file)), { recursive: true })
@@ -264,7 +296,7 @@ function createProject(t: { after: (fn: () => void) => void }, { pins, files = {
       fs.writeFileSync(path.join(root, 'node_modules', name, 'package.json'), JSON.stringify({ name, version: installed }))
     }
     fs.mkdirSync(path.join(repo, 'node_modules'), { recursive: true })
-    fs.writeFileSync(path.join(repo, 'node_modules', '.fake-last-install'), workspace['pnpm-lock.yaml'])
+    if (lockfile !== 'none') fs.writeFileSync(path.join(repo, 'node_modules', '.fake-last-install'), workspace['pnpm-lock.yaml'])
   }
 
   if (gitMode !== 'none') git(repo, 'init', '-q')
@@ -287,6 +319,9 @@ function fakePnpm(state: FakeState = {}) {
     installExit: state.installExit ?? 0,
     installWrites: state.installWrites ?? {},
     installHangMs: state.installHangMs ?? 0,
+    installIgnoreSignals: state.installIgnoreSignals ?? false,
+    lifecycleIgnoresSignals: state.lifecycleIgnoresSignals ?? false,
+    installLeavesChildMs: state.installLeavesChildMs ?? 0,
     syncExit: state.syncExit ?? 0,
     newMigrations: state.newMigrations ?? [],
   }))
@@ -328,12 +363,19 @@ function rollbackIn(output: string) {
   return command
 }
 
-/** Runs the rollback exactly as printed, in `cwd`, with an install that succeeds. */
+/** The rollback printed before the first change, for a run killed before it can report. */
+function earlyRollbackIn(output: string) {
+  const command = output.match(/^ {5}(git reset --hard \S+ && .+)$/m)?.[1]
+  assert.ok(command, `no rollback command in:\n${output}`)
+  return command
+}
+
+/** Runs the rollback exactly as printed, in `cwd`, with the stand-in pnpm. */
 function runRollback(cwd: string, command: string) {
   const pnpm = fakePnpm()
   try {
     const result = spawnSync('sh', ['-c', command], { cwd, encoding: 'utf8', timeout: 60_000, env: pnpm.env })
-    assert.equal(result.status, 0, `${command}\n${result.stdout}${result.stderr}`)
+    return { status: result.status, output: `${result.stdout}${result.stderr}` }
   } finally {
     pnpm.remove()
   }
@@ -359,21 +401,78 @@ function installedVersions(root: string) {
   return PACKAGES.map((name) => JSON.parse(fs.readFileSync(path.join(root, 'node_modules', name, 'package.json'), 'utf8')).version)
 }
 
-/**
- * Checks that the rollback a report printed, run as printed from `cwd`, puts
- * the repository back as `before` had it: the same files, nothing uncommitted,
- * the same refs and the packages reinstalled at FROM.
- */
-function assertRollbackRestores(cwd: string, output: string, before: { files: Map<string, string>, refs: string, repo: string }) {
-  runRollback(cwd, rollbackIn(output))
+/** Where HEAD is: the branch it is on, or the commit it is detached at. */
+function gitHead(repo: string) {
+  return `${git(repo, 'rev-parse', '--symbolic-full-name', 'HEAD')} ${git(repo, 'rev-parse', 'HEAD')}`
+}
+
+type RepoState = ReturnType<typeof stateOf>
+
+function stateOf(repo: string) {
+  return { repo, files: snapshot(repo), refs: gitRefs(repo), head: gitHead(repo) }
+}
+
+/** Checks that the repository is as `before` had it: the same files, nothing uncommitted, the same refs and HEAD. */
+function assertSameRepo(before: RepoState) {
   assert.deepEqual(snapshot(before.repo), before.files)
-  assert.equal(git(before.repo, 'status', '--porcelain'), '')
+  assert.equal(git(before.repo, 'status', '--porcelain', '--ignore-submodules=none'), '')
   assert.equal(gitRefs(before.repo), before.refs)
+  assert.equal(gitHead(before.repo), before.head)
+}
+
+/**
+ * Checks that `command`, the rollback a run printed, run as printed from `cwd`,
+ * succeeds and puts the repository back as `before` had it, with the packages
+ * reinstalled at FROM.
+ */
+function assertRollbackRestores(cwd: string, output: string, before: RepoState, command = rollbackIn(output)) {
+  const rollback = runRollback(cwd, command)
+  assert.equal(rollback.status, 0, `${command}\n${rollback.output}`)
+  assertSameRepo(before)
   assert.deepEqual(installedVersions(cwd), PACKAGES.map(() => FROM))
 }
 
-function stateOf(repo: string) {
-  return { repo, files: snapshot(repo), refs: gitRefs(repo) }
+/** update-core started in the background, with its output collected as it comes. */
+function startUpdateCore(root: string, args: string[], pnpm: ReturnType<typeof fakePnpm>) {
+  const child = spawn(process.execPath, [UPDATE_CORE, ...args], { cwd: root, env: pnpm.env })
+  const run = {
+    child,
+    stdout: '',
+    stderr: '',
+    /** Once its output is closed too, which processes it started can hold open after it is gone */
+    exited: new Promise<{ status: number | null, signal: NodeJS.Signals | null }>((resolve) => child.on('close', (status, signal) => resolve({ status, signal }))),
+    /** As soon as update-core itself is gone */
+    gone: new Promise<NodeJS.Signals | null>((resolve) => child.on('exit', (_status, signal) => resolve(signal))),
+  }
+  child.stdout.on('data', (chunk) => { run.stdout += chunk })
+  child.stderr.on('data', (chunk) => { run.stderr += chunk })
+  return run
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+function running(pid: number) {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code !== 'ESRCH'
+  }
+}
+
+/** Waits for the stand-in install to hang with its lifecycle script running, and returns both their pids. */
+async function hangingInstall(t: { after: (fn: () => void) => void }, pnpm: ReturnType<typeof fakePnpm>, run: ReturnType<typeof startUpdateCore>) {
+  const started = `${pnpm.logPath}.started`
+  for (const deadline = Date.now() + 30_000; !fs.existsSync(started) || fs.readFileSync(started, 'utf8') === '' || !fs.existsSync(`${pnpm.logPath}.lifecycle-running`); await sleep(50)) {
+    assert.ok(Date.now() < deadline, `the install never started:\n${run.stdout}${run.stderr}`)
+  }
+  const pids = fs.readFileSync(started, 'utf8').split(' ').map(Number)
+  t.after(() => {
+    for (const pid of pids) {
+      try { process.kill(pid, 'SIGKILL') } catch {}
+    }
+  })
+  return pids
 }
 
 test('updates the @nextsparkjs pins of a generated project and leaves the rest of it the project\'s own', (t) => {
@@ -386,7 +485,7 @@ test('updates the @nextsparkjs pins of a generated project and leaves the rest o
 
   assert.equal(result.status, 0, result.output)
   assert.match(result.stdout, /Update Complete/)
-  assert.match(result.stdout, new RegExp(`Starting from commit ${head.slice(0, 12)}[^\\n]*\\n {5}git reset --hard ${head.slice(0, 12)} && git clean -fd && rm -rf node_modules && pnpm install\\n[\\s\\S]*\\[2/5\\]`))
+  assert.match(result.stdout, new RegExp(`Starting from commit ${head.slice(0, 12)}[^\\n]*\\n {5}git reset --hard ${head.slice(0, 12)} && git clean -fd && rm -rf node_modules && pnpm install --frozen-lockfile\\n[\\s\\S]*\\[2/5\\]`))
 
   const manifestAfter = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
   assert.deepEqual(manifestAfter, {
@@ -519,6 +618,16 @@ const REFUSALS: Array<{
     message: /NEXT_PUBLIC_ACTIVE_THEME is not set/,
   },
   {
+    name: 'the project has no pnpm-lock.yaml, which the rollback installs from',
+    project: { lockfile: 'none' },
+    message: /No pnpm-lock\.yaml here or above/,
+  },
+  {
+    name: 'pnpm-lock.yaml is ignored instead of committed',
+    project: { lockfile: 'ignored' },
+    message: /pnpm-lock\.yaml isn't committed/,
+  },
+  {
     name: 'the project keeps core in core/ instead of installing @nextsparkjs/core',
     project: {
       installed: null,
@@ -589,7 +698,7 @@ test('a failed sync:app exits non-zero, records no version, undoes nothing and p
   assert.match(result.stderr, /Not reached:\n {4}- write core\.version\.json\n/)
   assert.match(result.stderr, /git status now[^\n]*\n(?: {4}.+\n)*? {4}\?\? app\/synced-before-failing\.txt\n/)
   assert.match(result.stderr, /git status now[^\n]*\n(?: {4}.+\n)*? {4} M package\.json\n/)
-  assert.equal(rollbackIn(result.stderr), `git reset --hard ${head.slice(0, 12)} && git clean -fd && rm -rf node_modules && pnpm install`)
+  assert.equal(rollbackIn(result.stderr), `git reset --hard ${head.slice(0, 12)} && git clean -fd && rm -rf node_modules && pnpm install --frozen-lockfile`)
   assert.doesNotMatch(result.output, /picks up|put back as they were|leaving these changes uncommitted/)
 
   assertRollbackRestores(root, result.stderr, before)
@@ -652,7 +761,7 @@ test('in a web-mobile project the rollback run from web/ also restores and clean
   assert.equal(result.status, 1, result.output)
   assert.match(result.stderr, /git status now[^\n]*\n(?: {4}.+\n)*? {4}\?\? \.\.\/stray-from-postinstall\.txt\n/)
   assert.deepEqual(result.installDirs, [fs.realpathSync(repo)])
-  assert.equal(rollbackIn(result.stderr).replace(/^git reset --hard \S+ && /, ''), 'git clean -fd :/ && rm -rf ../node_modules node_modules && pnpm --dir .. install')
+  assert.equal(rollbackIn(result.stderr).replace(/^git reset --hard \S+ && /, ''), 'git clean -fd :/ && rm -rf ../node_modules node_modules && pnpm --dir .. install --frozen-lockfile')
   assertRollbackRestores(web, result.stderr, before)
   assert.equal(fs.existsSync(path.join(repo, 'web/pnpm-lock.yaml')), false)
 })
@@ -668,7 +777,7 @@ test('in a web-mobile project the install runs where pnpm-lock.yaml is, not in w
   assert.equal(fs.existsSync(path.join(web, 'pnpm-lock.yaml')), false)
   assert.deepEqual(installedVersions(web), PACKAGES.map(() => TO))
   assert.equal(fs.readFileSync(path.join(repo, 'pnpm-lock.yaml'), 'utf8'), lockfileFor(PACKAGES.map((name) => [name, TO])))
-  assert.match(result.stdout, /Roll back: git reset --hard \S+ && git clean -fd :\/ && rm -rf \.\.\/node_modules node_modules && pnpm --dir \.\. install\n/)
+  assert.match(result.stdout, /Roll back: git reset --hard \S+ && git clean -fd :\/ && rm -rf \.\.\/node_modules node_modules && pnpm --dir \.\. install --frozen-lockfile\n/)
 })
 
 test('a core.version.json that can\'t be written fails through the same report and rollback', (t) => {
@@ -695,9 +804,122 @@ test('with --branch, the rollback also returns to the branch the update started 
   assert.equal(result.status, 1, result.output)
   assert.equal(git(root, 'symbolic-ref', '--short', 'HEAD'), 'update/0-1-0-beta-189')
   assert.match(result.stderr, /Done before that:\n {4}- created and switched to branch update\/0-1-0-beta-189\n/)
-  assert.match(rollbackIn(result.stderr), new RegExp(`git checkout ${branch} && git branch -D update/0-1-0-beta-189 && rm -rf node_modules && pnpm install$`))
+  assert.match(rollbackIn(result.stderr), new RegExp(`git checkout ${branch} && git update-ref -d refs/heads/update/0-1-0-beta-189 && rm -rf node_modules && pnpm install --frozen-lockfile$`))
   assertRollbackRestores(root, result.stderr, before)
   assert.equal(git(root, 'symbolic-ref', '--short', 'HEAD'), branch)
+})
+
+/** A directory with a `git` that runs `script` for `git checkout -b` and the real git for everything else. */
+function gitWithCheckout(t: { after: (fn: () => void) => void }, script: string) {
+  const bin = fs.mkdtempSync(path.join(os.tmpdir(), 'update-core-git-'))
+  t.after(() => fs.rmSync(bin, { recursive: true, force: true }))
+  const real = spawnSync('sh', ['-c', 'command -v git'], { encoding: 'utf8' }).stdout.trim()
+  fs.writeFileSync(path.join(bin, 'git'), `#!/bin/sh\nREAL_GIT='${real}'\nif [ "$1" = checkout ] && [ "$2" = -b ]; then\n${script}\nfi\nexec "$REAL_GIT" "$@"\n`, { mode: 0o755 })
+  return bin
+}
+
+const PARTIAL_CHECKOUTS = [
+  { name: 'creates and switches to the branch, then fails', script: '  "$REAL_GIT" "$@" >/dev/null 2>&1 || exit $?\n  echo "error: could not write the index" >&2\n  exit 42' },
+  { name: 'fails without creating the branch', script: '  echo "fatal: cannot lock ref" >&2\n  exit 128' },
+]
+
+for (const checkout of PARTIAL_CHECKOUTS) {
+  test(`with --branch, a git checkout -b that ${checkout.name} ends in the report and a rollback that restores the project`, (t) => {
+    const root = createProject(t)
+    const before = stateOf(root)
+    const bin = gitWithCheckout(t, checkout.script)
+    const pnpm = fakePnpm()
+    t.after(() => pnpm.remove())
+
+    const result = spawnSync(process.execPath, [UPDATE_CORE, '--version', TO, '--branch'], { cwd: root, encoding: 'utf8', timeout: 60_000, env: { ...pnpm.env, PATH: `${bin}${path.delimiter}${pnpm.env.PATH}` } })
+    const output = `${result.stdout}${result.stderr}`
+
+    assert.equal(result.status, 1, output)
+    assert.match(result.stderr, /Update to 0\.1\.0-beta\.189 did not finish/)
+    assert.match(result.stderr, /Failed during: create and switch to branch update\/0-1-0-beta-189 \(git checkout -b exited (?:42|128): /)
+    assert.doesNotMatch(output, /Nothing was changed/)
+    assert.deepEqual(pnpm.calls().filter((call) => !call.startsWith('view ')), [])
+    assertRollbackRestores(root, result.stderr, before)
+  })
+}
+
+test('a ^ or ~ range that starts at the installed target is set to the exact target, not taken for it', (t) => {
+  const root = createProject(t, { pins: { '@nextsparkjs/core': `^${TO}`, '@nextsparkjs/cli': `^${TO}`, '@nextsparkjs/testing': `~${TO}` }, installed: TO })
+
+  const result = runUpdateCore(root, ['--version', TO], {
+    published: Object.fromEntries(PACKAGES.map((name) => [name, [FROM, TO, NEWER]])),
+    latest: NEWER,
+  })
+
+  assert.equal(result.status, 0, result.output)
+  assert.doesNotMatch(result.output, /Already on/)
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
+  assert.deepEqual(PACKAGES.map((name) => manifest.dependencies[name] ?? manifest.devDependencies[name]), PACKAGES.map(() => TO))
+  assert.deepEqual(installedVersions(root), PACKAGES.map(() => TO))
+  assert.equal(fs.readFileSync(path.join(root, 'pnpm-lock.yaml'), 'utf8'), lockfileFor(PACKAGES.map((name) => [name, TO])))
+})
+
+test('the rollback installs what the commit\'s lockfile names, and fails without rewriting it when it doesn\'t match the commit\'s package.json', (t) => {
+  // Ranges in package.json, exact specs in the lockfile: pnpm install would rewrite the lockfile
+  const root = createProject(t, {
+    pins: { '@nextsparkjs/core': `^${FROM}`, '@nextsparkjs/cli': `^${FROM}`, '@nextsparkjs/testing': `~${FROM}` },
+    lockedSpecs: Object.fromEntries(PACKAGES.map((name) => [name, FROM])),
+  })
+  const before = stateOf(root)
+
+  const result = runUpdateCore(root, ['--version', TO], { installExit: 1 })
+  assert.equal(result.status, 1, result.output)
+
+  const rollback = runRollback(root, rollbackIn(result.stderr))
+  assert.notEqual(rollback.status, 0, rollback.output)
+  assert.match(rollback.output, /ERR_PNPM_OUTDATED_LOCKFILE/)
+  assertSameRepo(before)
+})
+
+/** Adds a repository of its own as the submodule vendor/sub of `root`, on its branch main, and commits it. */
+function addSubmodule(t: { after: (fn: () => void) => void }, root: string, gitmodulesIgnore?: string) {
+  const source = fs.mkdtempSync(path.join(os.tmpdir(), 'update-core-submodule-'))
+  t.after(() => fs.rmSync(source, { recursive: true, force: true }))
+  git(source, 'init', '-q', '-b', 'main')
+  fs.writeFileSync(path.join(source, 'value.txt'), 'from the submodule\n')
+  git(source, 'add', 'value.txt')
+  git(source, 'commit', '-q', '-m', 'Submodule')
+  git(root, '-c', 'protocol.file.allow=always', 'submodule', 'add', '-q', '-b', 'main', source, 'vendor/sub')
+  if (gitmodulesIgnore) git(root, 'config', '-f', '.gitmodules', 'submodule.vendor/sub.ignore', gitmodulesIgnore)
+  git(root, 'add', '.gitmodules')
+  git(root, 'commit', '-q', '-m', 'Add vendor/sub')
+  return path.join(root, 'vendor/sub')
+}
+
+test('the rollback also restores what lifecycle scripts wrote inside a submodule', (t) => {
+  const root = createProject(t)
+  const sub = addSubmodule(t, root)
+  const before = stateOf(root)
+  const subBefore = stateOf(sub)
+
+  const result = runUpdateCore(root, ['--version', TO], {
+    installExit: 1,
+    installWrites: { 'vendor/sub/value.txt': 'written by postinstall\n', 'vendor/sub/stray.txt': 'x\n' },
+  })
+
+  assert.equal(result.status, 1, result.output)
+  assert.match(result.stderr, /git status now[^\n]*\n(?: {4}.+\n)*? {4} [mM] vendor\/sub\n/)
+  assertRollbackRestores(root, result.stderr, before)
+  assertSameRepo(subBefore)
+})
+
+test('stops before changing anything when a submodule has changes its .gitmodules entry hides from git status', (t) => {
+  const root = createProject(t)
+  const sub = addSubmodule(t, root, 'all')
+  fs.writeFileSync(path.join(sub, 'value.txt'), 'uncommitted work\n')
+  const files = snapshot(root)
+
+  const result = runUpdateCore(root, ['--version', TO])
+
+  assert.notEqual(result.status, 0, result.output)
+  assert.match(result.stderr, /Uncommitted changes[\s\S]*Nothing was changed/)
+  assert.deepEqual(snapshot(root), files)
+  assert.deepEqual(result.calls, [])
 })
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
@@ -707,44 +929,148 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     const pnpm = fakePnpm({ installHangMs: 20_000, installWrites: { 'app/page.tsx': 'export default function Page() { return "half synced" }\n' } })
     t.after(() => pnpm.remove())
 
-    const child = spawn(process.execPath, [UPDATE_CORE, '--version', TO], { cwd: root, env: pnpm.env })
-    let stdout = ''
-    let stderr = ''
-    child.stdout.on('data', (chunk) => { stdout += chunk })
-    child.stderr.on('data', (chunk) => { stderr += chunk })
-    const exited = new Promise<{ status: number | null, signal: NodeJS.Signals | null }>((resolve) => child.on('close', (status, exitSignal) => resolve({ status, signal: exitSignal })))
-
-    const started = `${pnpm.logPath}.started`
-    for (const deadline = Date.now() + 30_000; !fs.existsSync(started) || fs.readFileSync(started, 'utf8') === ''; await new Promise((resolve) => setTimeout(resolve, 50))) {
-      assert.ok(Date.now() < deadline, `the install never started:\n${stdout}${stderr}`)
-    }
-    const [installPid, lifecyclePid] = fs.readFileSync(started, 'utf8').split(' ').map(Number)
-    t.after(() => {
-      for (const pid of [installPid, lifecyclePid]) {
-        try { process.kill(pid, 'SIGKILL') } catch {}
-      }
-    })
+    const run = startUpdateCore(root, ['--version', TO], pnpm)
+    const [installPid, lifecyclePid] = await hangingInstall(t, pnpm, run)
 
     // Only update-core gets the signal, as from kill or a process manager
-    child.kill(signal)
-    const { status, signal: exitSignal } = await exited
+    const signalled = Date.now()
+    run.child.kill(signal)
+    await run.gone
+    const elapsed = Date.now() - signalled
+    const { status, signal: exitSignal } = await run.exited
+    const { stdout, stderr } = run
 
+    // The install exits on the signal, so nothing is left to wait the 5 s for
+    assert.ok(elapsed < 2500, `update-core exited ${elapsed} ms after the signal`)
     assert.equal(exitSignal, null, `update-core died of ${exitSignal} without reporting:\n${stdout}${stderr}`)
     assert.equal(status, 128 + os.constants.signals[signal], `${stdout}${stderr}`)
-    assert.match(stderr, new RegExp(`Interrupted by ${signal} during: pnpm install`))
+    assert.match(stderr, new RegExp(`Interrupted by ${signal} during: pnpm install\n {2}pnpm install and the processes it started exited after the signal\\.\n`))
     assert.match(stderr, /Done before that:\n {4}- package\.json: /)
     assert.match(stderr, /git status now[^\n]*\n(?: {4}.+\n)*? {4} M app\/page\.tsx\n/)
     assert.doesNotMatch(`${stdout}${stderr}`, /Update Complete/)
     assert.equal(pnpm.calls().includes('nextspark sync:app --force'), false)
 
-    assert.throws(() => process.kill(installPid, 0), { code: 'ESRCH' }, 'the install was still running after update-core exited')
-    assert.throws(() => process.kill(lifecyclePid, 0), { code: 'ESRCH' }, 'the install\'s lifecycle script was still running after update-core exited')
+    assert.equal(running(installPid), false, 'the install was still running after update-core exited')
+    assert.equal(running(lifecyclePid), false, 'the install\'s lifecycle script was still running after update-core exited')
     assert.equal(fs.existsSync(`${pnpm.logPath}.finished`), false)
     assert.equal(fs.existsSync(`${pnpm.logPath}.lifecycle-finished`), false)
 
     assertRollbackRestores(root, stderr, before)
   })
 }
+
+test('an install that ignores the signal, and a second signal, are killed 5 s after the first signal, and the report says so', async (t) => {
+  const root = createProject(t)
+  const before = stateOf(root)
+  const pnpm = fakePnpm({ installHangMs: 30_000, installIgnoreSignals: true })
+  t.after(() => pnpm.remove())
+
+  const run = startUpdateCore(root, ['--version', TO], pnpm)
+  const [installPid, lifecyclePid] = await hangingInstall(t, pnpm, run)
+
+  const signalled = Date.now()
+  run.child.kill('SIGTERM')
+  await sleep(300)
+  run.child.kill('SIGTERM')
+  const { status, signal } = await run.exited
+  const elapsed = Date.now() - signalled
+  const { stdout, stderr } = run
+
+  assert.equal(signal, null, `${stdout}${stderr}`)
+  assert.equal(status, 143, `${stdout}${stderr}`)
+  assert.ok(elapsed >= 4500 && elapsed < 9000, `the report came ${elapsed} ms after the first signal:\n${stdout}${stderr}`)
+  assert.match(stderr, /Interrupted by SIGTERM during: pnpm install\n {2}pnpm install or processes it started were still running 5 s after the signal, and were killed with SIGKILL\.\n/)
+  assert.doesNotMatch(stderr, /may still write to the project/)
+  assert.equal(running(installPid), false, 'the install was still running after update-core exited')
+  assert.equal(running(lifecyclePid), false, 'the install\'s lifecycle script was still running after update-core exited')
+  assert.equal(fs.existsSync(`${pnpm.logPath}.lifecycle-finished`), false)
+
+  assertRollbackRestores(root, stderr, before)
+})
+
+test('SIGKILL to update-core during pnpm install kills the install as well, so it can\'t write over the rollback run after it', async (t) => {
+  const root = createProject(t)
+  const before = stateOf(root)
+  const hangMs = 6000
+  const pnpm = fakePnpm({ installHangMs: hangMs })
+  t.after(() => pnpm.remove())
+
+  const run = startUpdateCore(root, ['--version', TO], pnpm)
+  const [installPid, lifecyclePid] = await hangingInstall(t, pnpm, run)
+  const startedAt = Date.now()
+
+  run.child.kill('SIGKILL')
+  assert.equal(await run.gone, 'SIGKILL')
+  for (const deadline = Date.now() + 2000; running(installPid) || running(lifecyclePid); await sleep(20)) {
+    assert.ok(Date.now() < deadline, `the install (${running(installPid)}) or its lifecycle script (${running(lifecyclePid)}) was still running 2 s after update-core was killed`)
+  }
+
+  assertRollbackRestores(root, run.stdout, before, earlyRollbackIn(run.stdout))
+  await sleep(Math.max(0, startedAt + hangMs + 1000 - Date.now()))
+  assert.equal(fs.existsSync(`${pnpm.logPath}.finished`), false)
+  assert.equal(fs.existsSync(`${pnpm.logPath}.lifecycle-finished`), false)
+  assertSameRepo(before)
+})
+
+test('SIGKILL to update-core while it waits for a lifecycle script that outlived the stopped install still kills that script', async (t) => {
+  const root = createProject(t)
+  const hangMs = 8000
+  const pnpm = fakePnpm({ installHangMs: hangMs, lifecycleIgnoresSignals: true })
+  t.after(() => pnpm.remove())
+
+  const run = startUpdateCore(root, ['--version', TO], pnpm)
+  const [installPid, lifecyclePid] = await hangingInstall(t, pnpm, run)
+
+  run.child.kill('SIGINT')
+  for (const deadline = Date.now() + 2000; running(installPid); await sleep(20)) {
+    assert.ok(Date.now() < deadline, 'the install did not exit on SIGINT')
+  }
+  assert.equal(running(lifecyclePid), true, 'the lifecycle script exited on SIGINT, so this does not test what it means to')
+  run.child.kill('SIGKILL')
+  assert.equal(await run.gone, 'SIGKILL')
+  for (const deadline = Date.now() + 2000; running(lifecyclePid); await sleep(20)) {
+    assert.ok(Date.now() < deadline, 'the lifecycle script was still running 2 s after update-core was killed')
+  }
+  await sleep(hangMs)
+  assert.equal(fs.existsSync(`${pnpm.logPath}.lifecycle-finished`), false)
+})
+
+test('update-core exits as soon as the update is complete', async (t) => {
+  const root = createProject(t)
+  const pnpm = fakePnpm()
+  t.after(() => pnpm.remove())
+
+  const run = startUpdateCore(root, ['--version', TO], pnpm)
+  let completed = 0
+  run.child.stdout.on('data', () => {
+    if (!completed && /Update Complete/.test(run.stdout)) completed = Date.now()
+  })
+  await run.gone
+  const elapsed = Date.now() - completed
+
+  assert.ok(completed, `${run.stdout}${run.stderr}`)
+  assert.ok(elapsed < 1000, `update-core exited ${elapsed} ms after reporting the update complete`)
+})
+
+test('a process an install leaves running in its group is stopped before the update goes on, so it can\'t write later', async (t) => {
+  const root = createProject(t)
+  const leftoverMs = 3000
+  const pnpm = fakePnpm({ installLeavesChildMs: leftoverMs })
+  t.after(() => pnpm.remove())
+
+  const run = startUpdateCore(root, ['--version', TO], pnpm)
+  const { status } = await run.exited
+  const leftover = Number(fs.readFileSync(`${pnpm.logPath}.leftover-running`, 'utf8'))
+  t.after(() => {
+    try { process.kill(leftover, 'SIGKILL') } catch {}
+  })
+
+  assert.equal(status, 0, `${run.stdout}${run.stderr}`)
+  assert.match(run.stdout, /Processes pnpm install started were still running after it exited, and were stopped with SIGTERM\./)
+  assert.equal(running(leftover), false, 'the process the install left was still running after update-core exited')
+  await sleep(leftoverMs + 500)
+  assert.equal(fs.existsSync(`${pnpm.logPath}.leftover-finished`), false)
+})
 
 test('a project with a packages/core of its own is not taken for the NextSpark monorepo', (t) => {
   const root = createProject(t, { files: { 'packages/core/package.json': `${JSON.stringify({ name: '@acme/core' })}\n` } })

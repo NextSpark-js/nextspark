@@ -22,6 +22,7 @@ import { spawn, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const SCOPE = '@nextsparkjs/'
 const CORE_PACKAGE = '@nextsparkjs/core'
@@ -35,9 +36,14 @@ const STATUS_SHOWN = 40
 const HANDLED_SIGNALS = ['SIGINT', 'SIGTERM', 'SIGHUP']
 /** How long a stopped step's processes get to exit before they are killed */
 const STOP_GRACE_MS = 5000
+/** How long processes sent SIGKILL, or a released step guard, get to be gone */
+const KILL_WAIT_MS = 2000
+/** How long a step's group gets to empty on its own once its command exited */
+const SETTLE_MS = 500
+/** Runs each long step and kills it if update-core goes away first */
+const STEP_GUARD = fileURLToPath(new URL('./step-guard.mjs', import.meta.url))
 
 const VERSION_PATTERN = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/
-const RANGE_PREFIX = /^[\^~]/
 
 const HELP = `
 NextSpark Core Updater
@@ -73,21 +79,26 @@ What update-core itself never writes:
 Lifecycle scripts that pnpm install runs are not bound by this list.
 
 The update stops before changing anything when the project isn't in a git
-repository with a commit, when it has uncommitted changes, when a @nextsparkjs
-package isn't published at the target version, when the target is older than the
-installed version, when package.json takes a @nextsparkjs package from somewhere
-other than the registry, or when .env doesn't set NEXT_PUBLIC_ACTIVE_THEME, which
-the registry build needs. When every @nextsparkjs package is already declared and
-installed at the target, there is nothing to do and nothing is changed.
+repository with a commit, when it has uncommitted changes or no committed
+pnpm-lock.yaml, when a @nextsparkjs package isn't published at the target
+version, when the target is older than the installed version, when package.json
+takes a @nextsparkjs package from somewhere other than the registry, or when .env
+doesn't set NEXT_PUBLIC_ACTIVE_THEME, which the registry build needs. When every
+@nextsparkjs package is already installed and pinned exactly to the target, there
+is nothing to do and nothing is changed; a ^ or ~ range is set to the exact
+target like any other pin.
 
 If a step fails, or the run is interrupted with Ctrl-C (SIGINT), SIGTERM or
 SIGHUP, after it started changing the project, update-core stops the running
-step, undoes nothing, exits non-zero and prints what it got through, what git
-status shows and the command that rolls the project back to the commit it
-started from:
-  git reset --hard <commit> && git clean -fd && rm -rf node_modules && pnpm install
+step (processes still running 5 s after the signal are killed), undoes nothing,
+exits non-zero and prints what it got through, what git status shows and the
+command that rolls the project back to the commit it started from:
+  git reset --hard <commit> && git clean -fd && rm -rf node_modules && pnpm install --frozen-lockfile
 That command is also printed before the first change, for a run that is killed
-without a chance to report (SIGKILL).
+without a chance to report (SIGKILL); the step such a run was running is killed
+with it. The rollback can't bring back files .gitignore ignores that a lifecycle
+script overwrote, nor git refs a script changed, and removes untracked files
+created while the update ran.
 `
 
 /** Runs a command to completion, printing its output as it goes unless `capture` asks for it back. */
@@ -285,20 +296,28 @@ function realPath(file) {
   }
 }
 
-/** Where the project stands in git: the commit and branch it is on, and whether anything is uncommitted. */
+/**
+ * Where the project stands in git: the commit and branch it is on, whether
+ * anything is uncommitted, and whether the commit has submodules. Changes
+ * inside a submodule count as uncommitted even where .gitmodules or the git
+ * config tells git status to ignore them, since the rollback resets submodules
+ * too.
+ */
 function gitState(run, cwd) {
   const top = run('git', ['rev-parse', '--show-toplevel'], { cwd, capture: true })
   if (top.status !== 0) return { repo: false }
 
   const head = run('git', ['rev-parse', '--verify', '--quiet', 'HEAD'], { cwd, capture: true })
-  const status = run('git', ['status', '--porcelain=v1'], { cwd, capture: true })
+  const status = run('git', ['status', '--porcelain=v1', '--ignore-submodules=none'], { cwd, capture: true })
   const branch = run('git', ['symbolic-ref', '--quiet', '--short', 'HEAD'], { cwd, capture: true })
+  const gitmodules = run('git', ['ls-files', '--', ':/.gitmodules'], { cwd, capture: true })
   return {
     repo: true,
     top: top.stdout.trim(),
     head: head.status === 0 ? head.stdout.trim() : null,
     dirty: status.status !== 0 || status.stdout.trim() !== '',
     branch: branch.status === 0 ? branch.stdout.trim() : null,
+    submodules: gitmodules.status !== 0 || gitmodules.stdout.trim() !== '',
   }
 }
 
@@ -318,15 +337,15 @@ function shellWord(value) {
 /**
  * The directory the project's pnpm install runs in: the nearest one from `cwd`
  * up to the top of the repository with a pnpm-lock.yaml, which for a web-mobile
- * project is the one above web/. Run from a web/ that carries a
- * pnpm-workspace.yaml of its own, pnpm would take that file for the whole
- * workspace and install web/ on its own.
+ * project is the one above web/, or null when there is none. Run from a web/
+ * that carries a pnpm-workspace.yaml of its own, pnpm would take that file for
+ * the whole workspace and install web/ on its own.
  */
 function installRoot(cwd, top) {
   const stop = realPath(top)
   for (let dir = realPath(cwd); ; dir = path.dirname(dir)) {
     if (fs.existsSync(path.join(dir, LOCKFILE))) return dir
-    if (dir === stop || path.dirname(dir) === dir) return realPath(cwd)
+    if (dir === stop || path.dirname(dir) === dir) return null
   }
 }
 
@@ -335,22 +354,31 @@ function installRoot(cwd, top) {
  * The tree was clean then, so resetting tracked files and removing untracked ones
  * undoes whatever the update and the scripts it ran wrote in the repository;
  * `git clean` only cleans below the directory it runs in, so from web/ in a
- * web-mobile project it is pointed at the top of the repository. node_modules is
- * removed before installing because an install that was stopped can leave it
- * holding the new versions while the lockfile still names the old ones, and
- * pnpm install then finds nothing to do.
+ * web-mobile project it is pointed at the top of the repository. Neither goes
+ * into submodules: when the commit has any, each checked-out submodule is reset
+ * to its own HEAD, moved back to the commit the project records for it if a
+ * script moved it (which leaves that one detached), and cleaned. With --branch,
+ * the update branch is deleted with update-ref, which also succeeds when the run
+ * stopped before creating it. node_modules is removed before installing because
+ * an install that was stopped can leave it holding the new versions while the
+ * lockfile still names the old ones, and pnpm install then finds nothing to do;
+ * the install is frozen to the commit's lockfile, so it fails instead of
+ * rewriting a lockfile that doesn't match the commit's package.json.
  */
 function rollbackCommand(git, { cwd, root, branch }) {
   const commit = git.head.slice(0, 12)
   const project = realPath(cwd)
-  const commands = [`git reset --hard ${commit}`, realPath(git.top) === project ? 'git clean -fd' : 'git clean -fd :/']
+  const commands = [`git reset --hard ${commit}`]
+  if (git.submodules) commands.push('git submodule foreach --recursive git reset --hard', 'git submodule update --recursive')
+  commands.push(realPath(git.top) === project ? 'git clean -fd' : 'git clean -fd :/')
+  if (git.submodules) commands.push('git submodule foreach --recursive git clean -fd')
   if (branch) {
-    commands.push(git.branch ? `git checkout ${shellWord(git.branch)}` : `git checkout --detach ${commit}`, `git branch -D ${branch}`)
+    commands.push(git.branch ? `git checkout ${shellWord(git.branch)}` : `git checkout --detach ${commit}`, `git update-ref -d refs/heads/${branch}`)
   }
   const fromProject = path.relative(project, root)
   commands.push(
     `rm -rf ${[...(fromProject ? [path.join(fromProject, 'node_modules')] : []), 'node_modules'].map(shellWord).join(' ')}`,
-    fromProject ? `pnpm --dir ${shellWord(fromProject)} install` : 'pnpm install',
+    fromProject ? `pnpm --dir ${shellWord(fromProject)} install --frozen-lockfile` : 'pnpm install --frozen-lockfile',
   )
   return commands.join(' && ')
 }
@@ -431,26 +459,48 @@ function groupRunning(pid) {
 
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
-/** Waits up to `ms` for the group to empty, and says whether it did. */
-async function groupGone(pid, ms) {
-  for (const deadline = Date.now() + ms; Date.now() < deadline; await pause(100)) {
+/**
+ * `promise`'s value, or `fallback` once `ms` pass. The timer is cleared as soon
+ * as either settles, so a wait that ended early doesn't keep update-core running.
+ */
+function within(promise, ms, fallback) {
+  let timer
+  const timeout = new Promise((resolve) => { timer = setTimeout(resolve, Math.max(0, ms), fallback) })
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
+}
+
+/** Waits until the group is empty or `deadline` passes, and says whether it emptied. */
+async function groupGone(pid, deadline) {
+  while (Date.now() < deadline) {
     if (!groupRunning(pid)) return true
+    await pause(Math.min(100, Math.max(0, deadline - Date.now())))
   }
   return !groupRunning(pid)
 }
 
 /**
  * Watches for the signals an update reports on while it writes. The first one
- * stops the running step, if any, and is kept for the report. A repeat changes
+ * is passed on to the running step's group, if any, and kept for the report,
+ * and from it the step's processes have STOP_GRACE_MS to exit. A repeat changes
  * nothing: `pnpm update-core` passes on the signals it gets, so the Ctrl-C a
  * terminal sends to both can arrive twice.
  */
 function watchSignals() {
-  const watch = { signal: null, step: null }
+  let interrupt
+  const watch = {
+    signal: null,
+    /** When the processes of a step stopped by the signal get killed */
+    deadline: null,
+    /** The pid of the running step, which is its group's id, once known */
+    step: null,
+    interrupted: new Promise((resolve) => { interrupt = resolve }),
+  }
   const onSignal = (signal) => {
     if (watch.signal) return
     watch.signal = signal
-    if (watch.step) signalGroup(watch.step.pid, signal)
+    watch.deadline = Date.now() + STOP_GRACE_MS
+    if (watch.step) signalGroup(watch.step, signal)
+    interrupt()
   }
   for (const signal of HANDLED_SIGNALS) process.on(signal, onSignal)
   watch.stop = () => {
@@ -460,43 +510,92 @@ function watchSignals() {
 }
 
 /**
- * Runs a step's command in a process group of its own and resolves once it
- * exits. When it was stopped by a signal or failed, whatever is left of its
- * group (the lifecycle scripts pnpm install started) is stopped too, and killed
- * after STOP_GRACE_MS, before it resolves, so nothing keeps writing after the
- * report. Ctrl-C reaches update-core only, which passes it on. Its stdin is
- * closed: from a background group, reading the terminal would stop it instead
- * of failing.
+ * Stops what is left of a step's group: sends `signal` unless it was already
+ * sent, waits for the group to empty until `deadline`, and then kills it.
+ * Returns how it stopped: 'exited' or 'killed', and whether anything was still
+ * running after being killed.
  */
-function runStep(command, args, { cwd, signals }) {
-  return new Promise((resolve) => {
-    const windows = process.platform === 'win32'
-    const child = spawn(command, args, {
-      cwd,
-      stdio: ['ignore', 'inherit', 'inherit'],
-      detached: !windows,
-      shell: windows && !path.isAbsolute(command),
-    })
-    signals.step = child
+async function stopGroup(pid, { signal, deadline }) {
+  if (signal) signalGroup(pid, signal)
+  if (await groupGone(pid, deadline)) return { stop: 'exited', leftRunning: false }
+  signalGroup(pid, 'SIGKILL')
+  return { stop: 'killed', leftRunning: !(await groupGone(pid, Date.now() + KILL_WAIT_MS)) }
+}
 
-    let settled = false
-    const settle = async (result) => {
-      if (settled) return
-      settled = true
-      signals.step = null
-      let leftRunning = false
-      if (child.pid && (signals.signal || result.status !== 0) && groupRunning(child.pid)) {
-        signalGroup(child.pid, signals.signal ?? 'SIGTERM')
-        if (!(await groupGone(child.pid, STOP_GRACE_MS))) {
-          signalGroup(child.pid, 'SIGKILL')
-          leftRunning = !(await groupGone(child.pid, 2000))
-        }
-      }
-      resolve({ ...result, leftRunning })
-    }
-    child.once('error', (error) => settle({ status: null, signal: null, error }))
-    child.once('close', (status, signal) => settle({ status, signal, error: null }))
+/**
+ * Runs a step's command and resolves once it is done with it: when it exited
+ * and its group emptied, or, when the run was interrupted, when its group
+ * emptied or its processes were killed STOP_GRACE_MS after the signal, without
+ * waiting for the command itself to exit. The command runs through
+ * step-guard.mjs, in a process group of its own that also holds the lifecycle
+ * scripts pnpm install starts, so nothing keeps writing after the step: when
+ * the command exits, failing or not, whatever is still left of its group after
+ * SETTLE_MS gets SIGTERM and is killed STOP_GRACE_MS later, and if update-core
+ * is killed before it is done with the step, the guard kills the group. Ctrl-C
+ * reaches update-core only, which passes it on. The step's stdin is closed: from
+ * a background group, reading the terminal would stop it instead of failing.
+ */
+async function runStep(command, args, { cwd, signals }) {
+  const guard = spawn(process.execPath, [STEP_GUARD, command, ...args], {
+    cwd,
+    stdio: ['ignore', 'inherit', 'inherit', 'ipc'],
+    detached: process.platform !== 'win32',
   })
+
+  let started
+  let finished
+  const startedStep = new Promise((resolve) => { started = resolve })
+  const exited = new Promise((resolve) => { finished = resolve })
+  guard.on('message', (message) => {
+    if (message?.pid) {
+      signals.step = message.pid
+      // A signal that came before the pid did is passed on now
+      if (signals.signal) signalGroup(message.pid, signals.signal)
+      started(message.pid)
+    } else if (message?.exit) {
+      finished({ status: message.exit.code, signal: message.exit.signal, error: null })
+    } else if (message?.error) {
+      started(null)
+      finished({ status: null, signal: null, error: message.error })
+    }
+  })
+  const guardGone = new Promise((resolve) => {
+    guard.on('error', (error) => resolve({ status: null, signal: null, error }))
+    guard.once('exit', (code, signal) => resolve({ status: null, signal: null, error: { message: `its guard process exited (${signal ?? `exit ${code}`})` } }))
+  })
+  guardGone.then((result) => {
+    started(null)
+    finished(result)
+  })
+
+  // A signal waits for the step's pid only until its deadline
+  const pid = await Promise.race([
+    startedStep,
+    signals.interrupted.then(() => within(startedStep, signals.deadline - Date.now(), undefined)),
+  ])
+  if (pid === undefined) {
+    // Without the pid the step's group is out of reach: closing the channel has the guard kill it, if the guard can still run
+    guard.kill('SIGCONT')
+    guard.disconnect()
+    if (!(await within(guardGone.then(() => true), KILL_WAIT_MS, false))) guard.kill('SIGKILL')
+    signals.step = null
+    return { status: null, signal: null, error: null, stop: 'unreached', leftRunning: false }
+  }
+
+  const result = await Promise.race([exited, signals.interrupted.then(() => null)])
+  let outcome = { stop: null, leftRunning: false }
+  if (pid !== null) {
+    if (signals.signal) {
+      outcome = await stopGroup(pid, { deadline: signals.deadline })
+    } else if (!(await groupGone(pid, Date.now() + SETTLE_MS))) {
+      // The command exited, failing or not, and left processes running that could still write
+      outcome = await stopGroup(pid, { signal: 'SIGTERM', deadline: Math.min(Date.now() + STOP_GRACE_MS, signals.deadline ?? Infinity) })
+    }
+  }
+  signals.step = null
+  guard.send('release', () => {})
+  if (!(await within(guardGone.then(() => true), KILL_WAIT_MS, false))) guard.kill('SIGKILL')
+  return { ...(result ?? { status: null, signal: null, error: null }), ...outcome }
 }
 
 function describeExit(result) {
@@ -546,15 +645,21 @@ function banner(out, title) {
 
 /**
  * The report of an update that stopped after it started writing: what stopped
- * it, the steps it finished and the ones it never reached, what git status shows
- * now, and the rollback. Returns the exit code, 128 plus the signal's number for
- * an interrupted run.
+ * it, how the processes of the step it stopped ended, the steps it finished and
+ * the ones it never reached, what git status shows now, and the rollback.
+ * Returns the exit code, 128 plus the signal's number for an interrupted run.
  */
-function stoppedReport({ run, cwd, err, target, rollback, signal, step, started, reason, leftRunning, done, notReached }) {
+function stoppedReport({ run, cwd, err, target, rollback, signal, step, started, reason, stop, leftRunning, done, notReached }) {
+  const grace = `${STOP_GRACE_MS / 1000} s`
   banner(err, `Update to ${target} did not finish`)
   err('')
   if (signal) err(`  Interrupted by ${signal} ${started ? 'during' : 'before'}: ${step}`)
   else err(`  Failed during: ${step} (${reason})`)
+  if (signal && stop === 'exited') err(`  ${step} and the processes it started exited after the signal.`)
+  if (signal && stop === 'killed') err(`  ${step} or processes it started were still running ${grace} after the signal, and were killed with SIGKILL.`)
+  if (signal && stop === 'unreached') err(`  The process that runs ${step} didn't say which process group it runs in within ${grace} of the signal, and was stopped; ${step} may still be running and write to the project.`)
+  if (!signal && stop === 'exited') err('  Processes it started were still running after it exited, and exited after SIGTERM.')
+  if (!signal && stop === 'killed') err(`  Processes it started were still running after it exited and ${grace} after SIGTERM, and were killed with SIGKILL.`)
   if (leftRunning) err('  Some of its processes were still running after being killed, and may still write to the project.')
   if (done.length > 0) {
     err('\n  Done before that:')
@@ -567,7 +672,7 @@ function stoppedReport({ run, cwd, err, target, rollback, signal, step, started,
 
   err('\n  Nothing was undone. A step that stopped may have written part of its work, and the')
   err('  lifecycle scripts pnpm install runs can write anywhere in the project.')
-  const status = run('git', ['status', '--short'], { cwd, capture: true })
+  const status = run('git', ['status', '--short', '--ignore-submodules=none'], { cwd, capture: true })
   if (status.status !== 0) {
     err(`  git status failed: ${(status.stderr || status.stdout).trim()}`)
   } else {
@@ -655,6 +760,14 @@ export async function updateCore(args, { cwd = process.cwd(), env = process.env,
     return 1
   }
 
+  // The rollback installs exactly what the commit's lockfile records, so the commit needs one
+  const root = installRoot(cwd, git.top)
+  const lockfile = root && run('git', ['ls-files', '--error-unmatch', '--', path.join(root, LOCKFILE)], { cwd, capture: true })
+  if (!root || lockfile.status !== 0) {
+    err(`   ${root ? `${path.relative(cwd, path.join(root, LOCKFILE)) || LOCKFILE} isn't committed` : `No ${LOCKFILE} here or above, up to the top of the repository`}. An update that fails or is interrupted is rolled back by installing what the lockfile of the commit it started from records, so commit ${LOCKFILE} first. Nothing was changed.`)
+    return 1
+  }
+
   if (!hasActiveTheme(cwd, env)) {
     err('   NEXT_PUBLIC_ACTIVE_THEME is not set in .env, and sync:app skips the registry build without it, so app/(templates) would stay on the old core. Set it and run update-core again. Nothing was changed.')
     return 1
@@ -677,8 +790,8 @@ export async function updateCore(args, { cwd = process.cwd(), env = process.env,
     return 1
   }
 
-  if (packages.every(({ name, spec }) => spec.replace(RANGE_PREFIX, '') === target && installedVersion(cwd, name) === target)) {
-    out(`\n   Already on ${target}: every @nextsparkjs package in package.json asks for it and node_modules holds it. Nothing was changed.\n`)
+  if (packages.every(({ name, spec }) => spec === target && installedVersion(cwd, name) === target)) {
+    out(`\n   Already on ${target}: every @nextsparkjs package in package.json is pinned to it and node_modules holds it. Nothing was changed.\n`)
     return 0
   }
 
@@ -703,10 +816,11 @@ export async function updateCore(args, { cwd = process.cwd(), env = process.env,
     return 1
   }
 
-  const root = installRoot(cwd, git.top)
   const rollback = rollbackCommand(git, { cwd, root, branch })
   out(`\n   Starting from commit ${git.head.slice(0, 12)}. If this run is killed before it can report (SIGKILL), roll back with:`)
   out(`     ${rollback}`)
+  out('   Killing this run also kills the install or sync it is running, but not processes that left that step\'s process group.')
+  out('   The rollback removes files created in the repository while the update runs, and can\'t bring back ignored files, like .env, that a lifecycle script overwrites.')
 
   // From here on the project changes, and whatever stops the run goes through stoppedReport
   const signals = watchSignals()
@@ -719,8 +833,8 @@ export async function updateCore(args, { cwd = process.cwd(), env = process.env,
     `write ${VERSION_FILE}`,
   ]
   let current = 0
-  const stopped = ({ reason = null, started = true, leftRunning = false } = {}) => stoppedReport({
-    run, cwd, err, target, rollback, reason, started, leftRunning,
+  const stopped = ({ reason = null, started = true, stop = null, leftRunning = false } = {}) => stoppedReport({
+    run, cwd, err, target, rollback, reason, started, stop, leftRunning,
     signal: signals.signal,
     step: steps[current],
     done,
@@ -737,8 +851,9 @@ export async function updateCore(args, { cwd = process.cwd(), env = process.env,
       out(`\n   Creating branch ${branch}...`)
       const created = run('git', ['checkout', '-b', branch], { cwd, capture: true })
       if (created.status !== 0) {
-        err(`   Could not create branch ${branch}:\n${(created.stderr || created.stdout).trim()}\n   Nothing was changed.`)
-        return 1
+        // git can have created the branch, or switched to it, before failing
+        const exit = created.error ? created.error.message : `exited ${created.status}`
+        return stopped({ reason: `git checkout -b ${exit}: ${(created.stderr || created.stdout).trim()}` })
       }
       done.push(`created and switched to branch ${branch}`)
       current++
@@ -766,8 +881,10 @@ export async function updateCore(args, { cwd = process.cwd(), env = process.env,
     out('\n[3/5] Installing...')
     const migrationsBefore = new Set(coreMigrations(cwd))
     const install = await runStep('pnpm', ['install'], { cwd: root, signals })
-    if (signals.signal) return stopped({ leftRunning: install.leftRunning })
-    if (install.status !== 0) return stopped({ reason: describeExit(install), leftRunning: install.leftRunning })
+    if (signals.signal) return stopped({ stop: install.stop, leftRunning: install.leftRunning })
+    if (install.status !== 0) return stopped({ reason: describeExit(install), stop: install.stop, leftRunning: install.leftRunning })
+    if (install.leftRunning) return stopped({ reason: 'it exited 0, but processes it started were still running after being killed', stop: install.stop, leftRunning: true })
+    if (install.stop) out(`   Processes pnpm install started were still running after it exited, and were ${install.stop === 'killed' ? 'killed' : 'stopped with SIGTERM'}.`)
     const offTarget = packages
       .map(({ name }) => ({ name, version: installedVersion(cwd, name) }))
       .filter(({ version }) => version !== target)
@@ -784,8 +901,10 @@ export async function updateCore(args, { cwd = process.cwd(), env = process.env,
     done.push('.next removed')
     if (await signalled()) return stopped({ started: false })
     const sync = await runStep(process.execPath, [cli, 'sync:app', '--force'], { cwd, signals })
-    if (signals.signal) return stopped({ leftRunning: sync.leftRunning })
-    if (sync.status !== 0) return stopped({ reason: `${describeExit(sync)}; what it reported is above`, leftRunning: sync.leftRunning })
+    if (signals.signal) return stopped({ stop: sync.stop, leftRunning: sync.leftRunning })
+    if (sync.status !== 0) return stopped({ reason: `${describeExit(sync)}; what it reported is above`, stop: sync.stop, leftRunning: sync.leftRunning })
+    if (sync.leftRunning) return stopped({ reason: 'it exited 0, but processes it started were still running after being killed', stop: sync.stop, leftRunning: true })
+    if (sync.stop) out(`   Processes nextspark sync:app started were still running after it exited, and were ${sync.stop === 'killed' ? 'killed' : 'stopped with SIGTERM'}.`)
     done.push('app/ synced with core and registries rebuilt by nextspark sync:app')
     current++
 
