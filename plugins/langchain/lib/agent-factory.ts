@@ -11,19 +11,13 @@ import { guardrails, GuardrailsConfig } from './guardrails'
 import { tracer } from './tracer'
 import { createTracingCallbacks } from './tracer-callbacks'
 import type { ModelConfig, AgentContext, SessionConfig } from '../types/langchain.types'
-import type { BaseChatModel } from '@langchain/core/language_models/chat_models'
+import type { LanguageModelLike } from '@langchain/core/language_models/base'
 
 // Re-export types for convenience
 export type { StreamChunk, StreamChatOptions }
 
-interface ToolBindableChatModel {
-    bind(options: { tools: unknown }): BaseChatModel
-}
-
-interface StreamableAgent {
-    streamEvents(input: never, options: never): AsyncIterable<unknown>
-    invoke(input: never, options?: never): Promise<unknown>
-}
+/** The LangGraph agent `createReactAgent` builds, typed by the messages state it runs on. */
+export type StreamableAgent = ReturnType<typeof createReactAgent>
 
 interface AgentChatResponse {
     content: string
@@ -32,7 +26,7 @@ interface AgentChatResponse {
     traceId?: string
 }
 
-interface CreatedAgent {
+export interface CreatedAgent {
     chat(message: string): Promise<AgentChatResponse>
     getHistory(): Promise<BaseMessage[]>
     getAgent(): StreamableAgent
@@ -141,11 +135,13 @@ export const createAgent = async (options: CreateAgentOptions): Promise<CreatedA
 
     // For OpenAI-compatible providers (including LM Studio), bind tools with custom conversion
     // to ensure proper type: "object" in JSON Schema
-    let boundModel: BaseChatModel = model
+    let boundModel: LanguageModelLike = model
     if (effectiveProvider === 'openai' && tools.length > 0) {
-        const openAITools = convertToOpenAITools(tools)
+        if (!model.bindTools) {
+            throw new Error(`The ${effectiveProvider} chat model cannot bind tools`)
+        }
         // Bind the model with pre-converted tools.
-        boundModel = (model as unknown as ToolBindableChatModel).bind({ tools: openAITools })
+        boundModel = model.bindTools(convertToOpenAITools(tools))
     }
 
     const agent = createReactAgent({
@@ -319,7 +315,7 @@ export const createAgent = async (options: CreateAgentOptions): Promise<CreatedA
         /**
          * Get the underlying agent for advanced use cases (e.g., streaming)
          */
-        getAgent: (): StreamableAgent => agent as unknown as StreamableAgent,
+        getAgent: (): StreamableAgent => agent,
     }
 }
 

@@ -12,7 +12,10 @@ import assert from 'node:assert/strict'
 import http from 'node:http'
 import path from 'node:path'
 import { createRequire } from 'node:module'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
+import { registerHooks } from 'node:module'
+import fs from 'node:fs'
+import os from 'node:os'
 import type { AddressInfo } from 'node:net'
 import { buildTools } from '../../../../plugins/langchain/lib/tools-builder'
 import { createOpenAIModel } from '../../../../plugins/langchain/lib/providers'
@@ -38,7 +41,28 @@ async function fakeOpenAI(message: Record<string, unknown>) {
     let body = ''
     req.on('data', (chunk) => (body += chunk))
     req.on('end', () => {
-      requests.push({ ...JSON.parse(body), path: req.url })
+      const request = JSON.parse(body) as ChatRequest & { stream?: boolean }
+      requests.push({ ...request, path: req.url })
+      if (request.stream) {
+        const content = typeof message.content === 'string' ? message.content : ''
+        res.setHeader('content-type', 'text/event-stream')
+        res.write(`data: ${JSON.stringify({
+          id: 'chatcmpl-test',
+          object: 'chat.completion.chunk',
+          created: 0,
+          model: 'gpt-4o-mini',
+          choices: [{ index: 0, finish_reason: null, delta: { role: 'assistant', content } }],
+        })}\n\n`)
+        res.write(`data: ${JSON.stringify({
+          id: 'chatcmpl-test',
+          object: 'chat.completion.chunk',
+          created: 0,
+          model: 'gpt-4o-mini',
+          choices: [{ index: 0, finish_reason: 'stop', delta: {} }],
+        })}\n\n`)
+        res.end('data: [DONE]\n\n')
+        return
+      }
       res.setHeader('content-type', 'application/json')
       res.end(JSON.stringify({
         id: 'chatcmpl-test',
@@ -169,6 +193,67 @@ test('tools built by the langchain plugin preserve zod 4 descriptions for OpenAI
     const properties = openai.requests[0].tools?.[0].function.parameters.properties as Record<string, Record<string, unknown>>
     assert.equal(properties.terms.description, 'Terms to search for')
     assert.equal(properties.maxRows.description, 'Maximum rows')
+  } finally {
+    await openai.close()
+  }
+})
+
+/**
+ * The agent factory imports the plugin's memory, tracing and token tracking, which reach
+ * `@nextsparkjs/core/lib/db` and through it the registries a built project generates. An agent
+ * created without a context never queries them, so that module is replaced with one whose
+ * functions throw.
+ */
+async function importAgentFactory() {
+  const stub = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'langchain-db-stub-')), 'db.mjs')
+  fs.writeFileSync(stub, ['queryWithRLS', 'mutateWithRLS', 'query']
+    .map((name) => `export function ${name}() { throw new Error('${name} reached the database') }`)
+    .join('\n'))
+  registerHooks({
+    resolve: (specifier, context, nextResolve) => specifier === '@nextsparkjs/core/lib/db'
+      ? { url: pathToFileURL(stub).href, shortCircuit: true }
+      : nextResolve(specifier, context),
+  })
+  return import('../../../../plugins/langchain/lib/agent-factory')
+}
+
+test('the plugin agent, with a tool bound, forwards getAgent invoke and streamEvents calls to OpenAI', async () => {
+  const { createAgent } = await importAgentFactory()
+  const openai = await fakeOpenAI({ role: 'assistant', content: 'agent reply' })
+  try {
+    const created = await createAgent({
+      sessionId: 'agent-types',
+      systemPrompt: 'Reply with the fixture content.',
+      tools: [{
+        name: 'search_records',
+        description: 'Search project records',
+        schema: z.object({ terms: z.string().describe('Terms to search for') }),
+        func: async () => 'ok',
+      }],
+      modelConfig: {
+        provider: 'openai',
+        model: 'gpt-5-mini',
+        options: { apiKey: 'test', baseUrl: openai.baseUrl },
+      },
+    })
+    const agent = created.getAgent()
+
+    const invoked = await agent.invoke({ messages: [] })
+    assert.equal(invoked.messages.at(-1)?.content, 'agent reply')
+
+    const events = []
+    for await (const event of agent.streamEvents({ messages: [] }, { version: 'v2' })) {
+      events.push(event)
+    }
+
+    assert.ok(events.length > 0)
+    assert.equal(openai.requests.length, 2)
+    assert.ok(openai.requests.every((request) => request.path === '/v1/chat/completions'))
+    assert.ok(openai.requests.every((request) => JSON.stringify(request).includes('Reply with the fixture content.')))
+    for (const request of openai.requests) {
+      const [tool] = request.tools ?? []
+      assert.equal((tool?.function as { name?: string } | undefined)?.name, 'search_records', `sent tools ${JSON.stringify(request.tools)}`)
+    }
   } finally {
     await openai.close()
   }

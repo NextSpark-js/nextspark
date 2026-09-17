@@ -11,6 +11,7 @@ import { dbMemoryStore } from './db-memory-store'
 import { tokenTracker } from './token-tracker'
 import { tracer } from './tracer'
 import { createTracingCallbacks } from './tracer-callbacks'
+import type { StreamableAgent } from './agent-factory'
 
 // Stream chunk types
 export type StreamChunk =
@@ -33,11 +34,6 @@ export interface StreamChatOptions {
     onToken?: (token: string) => void
     onToolCall?: (name: string, input: unknown) => void
     signal?: AbortSignal  // For cancellation
-}
-
-interface StreamableAgent {
-    streamEvents: (input: never, options: never) => AsyncIterable<unknown>
-    invoke: (input: never, options?: never) => Promise<unknown>
 }
 
 interface LLMTokenUsage {
@@ -110,11 +106,11 @@ export async function* streamChat(
 
         // Stream events from LangChain with tracing callbacks
         const stream = agent.streamEvents(
-            { messages } as never,
+            { messages },
             {
                 version: 'v2',
                 callbacks: tracingCallbacks,
-            } as never
+            }
         )
 
         for await (const event of stream) {
