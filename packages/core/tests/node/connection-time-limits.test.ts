@@ -13,6 +13,8 @@ import path from 'node:path'
 import pg from 'pg'
 import { timeLimitParametersIn, timeLimitedClient } from '../../scripts/db/connection-time-limits.mjs'
 import { inspectTarget, inspectMaintenanceDatabase } from '../../scripts/db/inspect-server.mjs'
+import { migrationClient } from '../../scripts/db/migration-time-limit.mjs'
+import { parseSSLConfig, stripSSLParams } from '../../scripts/db/ssl-config.mjs'
 
 type TestContext = { after: (fn: () => void) => void }
 
@@ -22,15 +24,14 @@ type ClientInternals = pg.Client & {
   _connectionTimeoutMillis: unknown
 }
 
-const SSL = { rejectUnauthorized: false, require: true }
 const LIMITS = { connectMs: 3000, statementMs: 500, queryMs: 700 }
 const LIMIT_NAMES = ['statement_timeout', 'query_timeout']
 
-/** What pg makes of a connection string given next to the limits, which it reads over them. */
+/** What pg makes of a connection string under the shared SSL policy, without the limits. */
 function pgWithoutTheFix(connectionString: string) {
   return new pg.Client({
-    connectionString,
-    ssl: SSL,
+    connectionString: stripSSLParams(connectionString),
+    ssl: parseSSLConfig(connectionString),
     connectionTimeoutMillis: LIMITS.connectMs,
     statement_timeout: LIMITS.statementMs,
     query_timeout: LIMITS.queryMs,
@@ -157,6 +158,33 @@ test('the time-limit parameters are named as pg reads them', () => {
   }
 })
 
+test('every migration connection path follows the application SSL policy', () => {
+  const nodeEnv = process.env.NODE_ENV
+  const cases = [
+    { url: `${BASE}?sslmode=disable`, env: 'production', ssl: false },
+    { url: `${BASE}?sslmode=require`, env: 'development', ssl: { rejectUnauthorized: false } },
+    { url: `${BASE}?sslmode=prefer`, env: 'development', ssl: { rejectUnauthorized: false } },
+    { url: `${BASE}?sslmode=allow`, env: 'development', ssl: { rejectUnauthorized: false } },
+    { url: `${BASE}?sslmode=verify-ca`, env: 'development', ssl: { rejectUnauthorized: true } },
+    { url: `${BASE}?sslmode=verify-full`, env: 'development', ssl: { rejectUnauthorized: true } },
+    { url: BASE, env: 'development', ssl: false },
+    { url: BASE, env: 'production', ssl: { rejectUnauthorized: true } },
+  ]
+
+  try {
+    for (const { url, env, ssl } of cases) {
+      process.env.NODE_ENV = env
+      const limited = timeLimitedClient(url, LIMITS) as ClientInternals
+      const unbounded = migrationClient(url, null) as ClientInternals
+      assert.deepEqual(limited.connectionParameters.ssl, ssl, `time-limited ${url} (${env})`)
+      assert.deepEqual(unbounded.connectionParameters.ssl, ssl, `migration ${url} (${env})`)
+    }
+  } finally {
+    if (nodeEnv === undefined) delete process.env.NODE_ENV
+    else process.env.NODE_ENV = nodeEnv
+  }
+})
+
 test("parameters named like the client's own options reach neither the client nor another parse", () => {
   const url =
     'postgres://u:p@db.example.com/db?binary=true&keepAlive=true&stream=x&Promise=x&types=x&connection=x' +
@@ -231,15 +259,16 @@ async function socketServer(t: TestContext) {
 
 const QUICK = { connectMs: 2000, statementMs: 1000, queryMs: 1000 }
 
-test('a socket written as a host name pg does not resolve is not connected to', { timeout: 10000 }, async t => {
+test('a socket endpoint other than the target is not connected to', { timeout: 10000 }, async t => {
   const server = await socketServer(t)
-  const url = `postgresql://dbuser@${encodeURIComponent(server.dir)}/nextspark_verify?sslmode=disable&statement_timeout=0 `
+  const missingSocket = `${server.dir}-missing`
+  const url = `postgresql://dbuser@${encodeURIComponent(missingSocket)}/nextspark_verify?sslmode=disable&statement_timeout=0`
 
-  await assert.rejects(new pg.Client(url).connect(), /ENOTFOUND|EAI_AGAIN/)
-  await assert.rejects(inspectTarget(url, QUICK), /ENOTFOUND|EAI_AGAIN/)
+  await assert.rejects(new pg.Client(url).connect(), /ENOENT/)
+  await assert.rejects(inspectTarget(url, QUICK), /ENOENT/)
   const maintenance = await inspectMaintenanceDatabase(url, QUICK)
   assert.equal(maintenance.unreachable, true)
-  assert.match(maintenance.reason, /ENOTFOUND|EAI_AGAIN/)
+  assert.match(maintenance.reason, /ENOENT/)
   assert.deepEqual(server.sessions, [])
 })
 

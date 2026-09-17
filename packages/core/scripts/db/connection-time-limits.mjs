@@ -17,15 +17,20 @@
 // role.
 
 import pg from 'pg';
+import { parseSSLConfig, stripSSLParams } from './ssl-config.mjs';
 
 const { Client } = pg;
 
 /** The connection-string parameters pg reads over the time limits given next to them. */
 export const TIME_LIMIT_PARAMETERS = ['statement_timeout', 'query_timeout'];
 
-/** How pg builds a client for the string, with the SSL default these scripts use. */
+/** How pg builds a client for the string, with the shared application SSL policy. */
 function clientFor(connectionString, options = {}) {
-  return new Client({ ssl: { rejectUnauthorized: false, require: true }, ...options, connectionString });
+  return new Client({
+    ...options,
+    connectionString: stripSSLParams(connectionString),
+    ssl: parseSSLConfig(connectionString),
+  });
 }
 
 /**

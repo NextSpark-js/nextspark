@@ -7,6 +7,7 @@
 
 import pg from 'pg'
 import dotenv from 'dotenv'
+import { parseSSLConfig, stripSSLParams } from './ssl-config.mjs'
 
 dotenv.config()
 
@@ -14,7 +15,8 @@ const { Pool } = pg
 
 async function verifyTeamsSetup() {
   const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: stripSSLParams(process.env.DATABASE_URL),
+    ssl: parseSSLConfig(process.env.DATABASE_URL),
   })
 
   try {

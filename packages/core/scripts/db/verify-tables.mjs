@@ -2,6 +2,7 @@ import pg from "pg";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from 'url';
+import { parseSSLConfig, stripSSLParams } from './ssl-config.mjs';
 
 const { Client } = pg;
 
@@ -25,8 +26,8 @@ envLines.forEach(line => {
 
 async function verifyTables() {
   const client = new Client({
-    connectionString: DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
+    connectionString: stripSSLParams(DATABASE_URL),
+    ssl: parseSSLConfig(DATABASE_URL),
   });
   
   try {
