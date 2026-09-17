@@ -21,31 +21,196 @@ export function registryBuildBlocker(projectRoot: string, env: NodeJS.ProcessEnv
     : 'the project has no .env file with NEXT_PUBLIC_ACTIVE_THEME';
 }
 
-/** Bytes of a build's output worth keeping for diagnosis; core's own failure line sits well under this. */
-const OUTPUT_TAIL_LIMIT = 256 * 1024;
+/** A line that says why the build stopped, rather than what the failure touched. */
+const CAUSE_LINE = /\b(?:error|errors|failed|failing|failure|fatal)\b/i;
+
+/** Bytes of a single line worth keeping; only a pathological line is this long. */
+const MAX_LINE_BYTES = 4 * 1024;
+
+/** Bytes of a build's leading and trailing lines worth keeping for orientation once its middle is left out. */
+const HEAD_LIMIT = 8 * 1024;
+const TAIL_LIMIT = 16 * 1024;
 
 /**
- * Accumulates a child process's output, keeping only the last `limit` bytes.
- * A build's own failure line sits at the end of what it prints, so the tail
- * is what's worth keeping; kept in full, a build's memory would grow with
- * the size of its output instead of with the size of its cause.
+ * Bytes of error and warning lines worth keeping regardless of where in the
+ * output they arrived: a cause the build prints early, then buries under
+ * megabytes of unrelated progress, is still the reason it failed.
  */
-export function tailBuffer(limit = OUTPUT_TAIL_LIMIT): { append(chunk: string): void; readonly value: string } {
-  let text = '';
+const MARKED_LIMIT = 64 * 1024;
+
+/** core's own markers for a line that names a cause or a warning (`packages/core/scripts/utils/logging.mjs`). */
+const MARKED_LINE = /[❌⚠️]/;
+
+/** Whether a line reads as a cause or a warning: core's own marker, or, without one, an unindented line that reads as a cause on its own. */
+function isMarked(line: string): boolean {
+  return MARKED_LINE.test(line) || (/^\S/.test(line) && CAUSE_LINE.test(line));
+}
+
+/** `text` cut to at most `maxBytes` of UTF-8, without splitting a code point (so never a surrogate pair). */
+function truncateToBytes(text: string, maxBytes: number): { text: string; droppedBytes: number } {
+  const totalBytes = Buffer.byteLength(text, 'utf8');
+  if (totalBytes <= maxBytes) return { text, droppedBytes: 0 };
+
+  let kept = '';
+  let bytes = 0;
+  for (const character of text) {
+    const characterBytes = Buffer.byteLength(character, 'utf8');
+    if (bytes + characterBytes > maxBytes) break;
+    kept += character;
+    bytes += characterBytes;
+  }
+  return { text: kept, droppedBytes: totalBytes - bytes };
+}
+
+interface KeptLine {
+  index: number;
+  text: string;
+  bytes: number;
+}
+
+/** A byte-capped window of lines: the most recent ones, oldest evicted first once `limitBytes` is exceeded, at least one always kept. */
+function slidingWindow(limitBytes: number) {
+  const kept: KeptLine[] = [];
+  let usedBytes = 0;
+  let droppedLines = 0;
   let droppedBytes = 0;
 
   return {
-    append(chunk: string): void {
-      text += chunk;
-      if (text.length > limit * 2) {
-        const cut = text.indexOf('\n', text.length - limit);
-        const kept = cut === -1 ? text.slice(-limit) : text.slice(cut + 1);
-        droppedBytes += text.length - kept.length;
-        text = kept;
+    add(line: KeptLine): void {
+      kept.push(line);
+      usedBytes += line.bytes;
+      while (usedBytes > limitBytes && kept.length > 1) {
+        const evicted = kept.shift()!;
+        usedBytes -= evicted.bytes;
+        droppedLines++;
+        droppedBytes += evicted.bytes;
       }
     },
+    get kept(): readonly KeptLine[] {
+      return kept;
+    },
+    get droppedLines(): number {
+      return droppedLines;
+    },
+    get droppedBytes(): number {
+      return droppedBytes;
+    },
+  };
+}
+
+export interface CapturedOutput {
+  append(chunk: string): void;
+  /**
+   * Text worth showing when the build failed: every error or warning line it
+   * printed, wherever it arrived, framed by bounded context from the very
+   * start and the very end, with a count of what sits between when anything
+   * was left out.
+   */
+  readonly value: string;
+  /** The error and warning lines it printed, in the order they arrived. */
+  readonly markedLines: string[];
+  /** How many further error/warning lines `markedLines` left out. */
+  readonly droppedMarkedLines: number;
+  /** How many further error/warning bytes `markedLines` left out. */
+  readonly droppedMarkedBytes: number;
+}
+
+/**
+ * Accumulates a child process's output by complete lines, counted in real
+ * UTF-8 bytes rather than in UTF-16 units, keeping three things instead of
+ * one growing tail: the first lines, the last lines, and every error/warning
+ * line, each under its own byte cap. A cause the build prints early survives
+ * even when megabytes of unrelated output follow it, because it lands in the
+ * error/warning pool, not only in whichever end of the output a single cap
+ * would keep. A line longer than its own cap is cut in place, marked as cut,
+ * rather than splitting a character or spilling into the next line.
+ */
+export function captureOutput(
+  limits: { head?: number; tail?: number; marked?: number; line?: number } = {}
+): CapturedOutput {
+  const headLimit = limits.head ?? HEAD_LIMIT;
+  const lineLimit = limits.line ?? MAX_LINE_BYTES;
+  const head: KeptLine[] = [];
+  let headBytes = 0;
+  const tail = slidingWindow(limits.tail ?? TAIL_LIMIT);
+  const marked = slidingWindow(limits.marked ?? MARKED_LIMIT);
+
+  let pending = '';
+  let index = 0;
+  let totalLines = 0;
+  let totalBytes = 0;
+
+  function pushLine(raw: string): void {
+    const cut = truncateToBytes(raw, lineLimit);
+    const text = cut.droppedBytes > 0 ? `${cut.text}… (${cut.droppedBytes} more byte(s) on this line)` : raw;
+    const bytes = Buffer.byteLength(text, 'utf8');
+    const line: KeptLine = { index: index++, text, bytes };
+    totalLines++;
+    totalBytes += bytes;
+
+    if (head.length === 0 || headBytes + bytes <= headLimit) {
+      head.push(line);
+      headBytes += bytes;
+    }
+    tail.add(line);
+    if (isMarked(text)) marked.add(line);
+  }
+
+  function flushPending(): void {
+    if (pending === '') return;
+    pushLine(pending);
+    pending = '';
+  }
+
+  return {
+    append(chunk: string): void {
+      pending += chunk;
+      let newline: number;
+      while ((newline = pending.indexOf('\n')) !== -1) {
+        pushLine(pending.slice(0, newline));
+        pending = pending.slice(newline + 1);
+      }
+    },
+
+    get markedLines(): string[] {
+      flushPending();
+      return marked.kept.map((line) => line.text);
+    },
+    get droppedMarkedLines(): number {
+      flushPending();
+      return marked.droppedLines;
+    },
+    get droppedMarkedBytes(): number {
+      flushPending();
+      return marked.droppedBytes;
+    },
+
     get value(): string {
-      return droppedBytes > 0 ? `... ${droppedBytes} earlier byte(s)\n${text}` : text;
+      flushPending();
+      const byIndex = new Map<number, KeptLine>();
+      for (const line of head) byIndex.set(line.index, line);
+      for (const line of tail.kept) byIndex.set(line.index, line);
+      for (const line of marked.kept) byIndex.set(line.index, line);
+
+      const sorted = [...byIndex.values()].sort((a, b) => a.index - b.index);
+      const keptBytes = sorted.reduce((sum, line) => sum + line.bytes, 0);
+      const omittedLines = totalLines - sorted.length;
+      const omittedBytes = totalBytes - keptBytes;
+      if (omittedLines === 0) return sorted.map((line) => line.text).join('\n');
+
+      const parts: string[] = [];
+      let noted = false;
+      let previousIndex = -1;
+      for (const line of sorted) {
+        if (!noted && previousIndex !== -1 && line.index > previousIndex + 1) {
+          parts.push(`... ${omittedLines} line(s), ${omittedBytes} byte(s) omitted`);
+          noted = true;
+        }
+        parts.push(line.text);
+        previousIndex = line.index;
+      }
+      if (!noted) parts.push(`... ${omittedLines} line(s), ${omittedBytes} byte(s) omitted`);
+      return parts.join('\n');
     },
   };
 }
@@ -163,9 +328,6 @@ export function describeTemplatesChanges(changes: TemplatesChanges): string[] {
     ...changes.remove.map((path) => `- ${path} (removed; backed up first)`),
   ];
 }
-
-/** A line that says why the build stopped, rather than what the failure touched. */
-const CAUSE_LINE = /\b(?:error|errors|failed|failing|failure|fatal)\b/i;
 
 /**
  * What a failed registry build printed, as the lines worth repeating: all of it

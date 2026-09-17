@@ -4,7 +4,7 @@ import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { buildFailureLines, registryBuildBlocker, runRegistryBuild, templatesTreeLines } from '../src/utils/registry-build.js'
+import { buildFailureLines, captureOutput, registryBuildBlocker, runRegistryBuild, templatesTreeLines } from '../src/utils/registry-build.js'
 
 /** A project root and a fake core whose registry build prints its arguments and exits with `exitCode`. */
 async function projectWithCore(exitCode: number) {
@@ -146,4 +146,73 @@ test('output that fits under the limit is repeated whole, with nothing marking a
   const output = 'Discovering template overrides...\nError: no default export\n'
 
   assert.deepEqual(buildFailureLines(output), ['Discovering template overrides...', 'Error: no default export'])
+})
+
+test('a cause captureOutput keeps in its head survives megabytes of unrelated filler, with an exact omitted count', () => {
+  const causeLine = '❌ cause line'
+  const fillerLine = 'x'.repeat(10)
+  const causeBytes = Buffer.byteLength(causeLine, 'utf8')
+  const fillerBytes = Buffer.byteLength(fillerLine, 'utf8')
+  const fillerCount = 50
+
+  const out = captureOutput({ head: causeBytes, tail: fillerBytes * 2, marked: 1024 })
+  out.append(`${causeLine}\n`)
+  for (let index = 0; index < fillerCount; index++) out.append(`${fillerLine}\n`)
+
+  const lines = out.value.split('\n')
+  assert.equal(lines[0], causeLine, `the cause must lead what is shown:\n${out.value}`)
+  assert.equal(lines[1], `... ${fillerCount - 2} line(s), ${(fillerCount - 2) * fillerBytes} byte(s) omitted`)
+  assert.deepEqual(lines.slice(2), [fillerLine, fillerLine])
+})
+
+test('a cause captureOutput only ever sees in the middle of the output still survives, via the marked pool rather than the head', () => {
+  const fillerLine = 'x'.repeat(10)
+  const causeLine = '⚠️ Plugin analytics failed to load, skipping it'
+  const fillerBytes = Buffer.byteLength(fillerLine, 'utf8')
+
+  const out = captureOutput({ head: fillerBytes * 2, tail: fillerBytes * 2, marked: 1024 })
+  for (let index = 0; index < 20; index++) out.append(`${fillerLine}\n`)
+  out.append(`${causeLine}\n`)
+  for (let index = 0; index < 20; index++) out.append(`${fillerLine}\n`)
+
+  assert.ok(out.value.includes(causeLine), `a cause buried in the middle must survive:\n${out.value}`)
+  assert.deepEqual(out.markedLines, [causeLine])
+})
+
+test('warnings past the marked pool\'s own cap are dropped oldest-first, with an exact count', () => {
+  const line = (index: number) => `⚠️ w${index}`
+  const lineBytes = Buffer.byteLength(line(0), 'utf8')
+
+  const out = captureOutput({ marked: lineBytes * 2 })
+  for (let index = 0; index < 5; index++) out.append(`${line(index)}\n`)
+
+  assert.deepEqual(out.markedLines, [line(3), line(4)])
+  assert.equal(out.droppedMarkedLines, 3)
+  assert.equal(out.droppedMarkedBytes, lineBytes * 3)
+})
+
+test('captureOutput counts real UTF-8 bytes, not UTF-16 units, and never splits a code point', () => {
+  const out = captureOutput({ line: 6 })
+  out.append('ab\u{1F600}cd\n')
+
+  assert.equal(Buffer.byteLength('ab\u{1F600}cd', 'utf8'), 8, 'the fixture is 8 UTF-8 bytes, not 6 UTF-16 units')
+  assert.equal(out.value, 'ab\u{1F600}… (2 more byte(s) on this line)')
+})
+
+test('captureOutput never splits a surrogate pair, even one a chunk boundary falls inside', () => {
+  const out = captureOutput()
+  out.append('a\uD83D')
+  out.append('\uDE00b\n')
+
+  assert.equal(out.value, 'a\u{1F600}b')
+  assert.doesNotMatch(out.value, /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/)
+})
+
+test('captureOutput truncates a line that is all multi-byte characters by whole code points, with an exact drop count', () => {
+  const nine = 'é'.repeat(9)
+  const out = captureOutput({ line: 4 })
+  out.append(`${nine}\n`)
+
+  assert.equal(Buffer.byteLength(nine, 'utf8'), 18)
+  assert.equal(out.value, 'éé… (14 more byte(s) on this line)')
 })
