@@ -456,12 +456,10 @@ test('a template that does not parse fails with its file and line instead of bei
   )
 })
 
-test('syntax Next.js parses but the installed TypeScript does not (a source phase import) is read instead of rejected', async () => {
-  const source = "import source wasm from './module.wasm'\nexport const runtime = 'edge'\nexport default wasm\n"
+test('a parse error is rejected even when TypeScript recovers later route exports', async () => {
+  const source = "import = './module.wasm'\nexport const runtime = 'edge'\nexport default wasm\n"
   for (const file of ['/virtual/theme/templates/(public)/page.ts', FIXTURE_FILE]) {
-    const { segmentConfig, hasDefaultExport } = await extractRouteExports(source, file)
-    assert.deepEqual(segmentConfig, { runtime: 'edge' }, file)
-    assert.equal(hasDefaultExport, true, file)
+    await assert.rejects(() => extractRouteExports(source, file), /the template does not parse/)
   }
 })
 

@@ -6,19 +6,23 @@
 
 import { describe, it } from 'node:test'
 import assert from 'node:assert'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { validateEnvironment } from './config.mjs'
 
 describe('validateEnvironment', () => {
   it('should return valid when .env exists and activeTheme is set', () => {
-    // Use the current working directory which has a .env file
-    const config = {
-      projectRoot: process.cwd(),
-      activeTheme: 'default'
-    }
+    const projectRoot = mkdtempSync(join(tmpdir(), 'nextspark-validate-env-test-'))
 
-    const result = validateEnvironment(config)
-    assert.strictEqual(result.valid, true)
-    assert.strictEqual(result.errors.length, 0)
+    try {
+      writeFileSync(join(projectRoot, '.env'), '')
+      const result = validateEnvironment({ projectRoot, activeTheme: 'default' })
+      assert.strictEqual(result.valid, true)
+      assert.strictEqual(result.errors.length, 0)
+    } finally {
+      rmSync(projectRoot, { recursive: true, force: true })
+    }
   })
 
   it('should return error when .env file is missing', () => {

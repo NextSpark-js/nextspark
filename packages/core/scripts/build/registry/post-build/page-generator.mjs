@@ -184,8 +184,7 @@ function declaresDefaultExport(sourceFile, ts) {
  * The parser recovers from a syntax error by skipping code, exports included. A
  * template Next.js cannot parse either is reported rather than read in part. One
  * it can is read from what TypeScript recovered, with a warning: Next.js compiles
- * templates with SWC, which may know syntax the installed TypeScript does not (a
- * source phase import, for one).
+ * templates with SWC, which may know syntax the installed TypeScript does not.
  */
 async function parseTemplateSource(source, filePath) {
   const ts = await loadTypeScriptFor(rootDir)
