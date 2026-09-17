@@ -7,7 +7,7 @@ This guide covers the complete setup process for integrating the LangChain plugi
 Before installing, ensure you have:
 
 - PostgreSQL database (Supabase recommended)
-- Node.js 18+ with pnpm
+- Node.js 22.13.0 or later with pnpm
 - At least one LLM provider configured (Ollama recommended for development)
 
 ## Step 1: Database Migration

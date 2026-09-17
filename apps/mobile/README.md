@@ -4,7 +4,7 @@ A React Native (Expo) app for testing the NextSpark API with full CRUD operation
 
 ## Prerequisites
 
-- Node.js 18+
+- Node.js 22.13.0 or later
 - pnpm
 - Expo CLI: `npm install -g expo-cli`
 - iOS Simulator (macOS) or Android Emulator

@@ -12,7 +12,25 @@ const SOURCE_ROOT = process.env.DOCS_CONTRACT_ROOT
 const DOCS_DIRS = [
   'packages/core/docs',
   'themes/default/docs',
+  'plugins/ai/docs',
+  'plugins/langchain/docs',
 ]
+
+const README_FILES = [
+  'README.md',
+  'apps/mobile/README.md',
+]
+
+function packageAndPluginReadmes(): string[] {
+  return ['packages', 'plugins'].flatMap(dir => {
+    const root = path.join(SOURCE_ROOT, dir)
+    if (!fs.existsSync(root)) return []
+    return fs.readdirSync(root, { withFileTypes: true })
+      .filter(entry => entry.isDirectory())
+      .map(entry => path.join(dir, entry.name, 'README.md'))
+      .filter(file => fs.existsSync(path.join(SOURCE_ROOT, file)))
+  })
+}
 
 const REMOVED_PNPM_SCRIPTS = [
   'build:app',
@@ -43,6 +61,14 @@ function markdownFiles(relDir: string): string[] {
     if (entry.isDirectory()) return markdownFiles(entryPath)
     return entry.isFile() && entry.name.endsWith('.md') ? [entryPath] : []
   })
+}
+
+function documentationFiles(): string[] {
+  return [...new Set([
+    ...DOCS_DIRS.flatMap(markdownFiles),
+    ...README_FILES.filter(file => fs.existsSync(path.join(SOURCE_ROOT, file))),
+    ...packageAndPluginReadmes(),
+  ])]
 }
 
 test('documentation does not recommend removed pnpm scripts', () => {
@@ -88,13 +114,11 @@ test('monorepo guides do not invoke absent root test or start scripts', () => {
 })
 
 test('documentation does not advertise Node 18 or Node 20 as supported', () => {
-  for (const docsDir of DOCS_DIRS) {
-    for (const file of markdownFiles(docsDir)) {
+  for (const file of documentationFiles()) {
       const content = fs.readFileSync(path.join(SOURCE_ROOT, file), 'utf8')
       const legacyVersion = content.split(/\r?\n/).find(line =>
         !line.includes('@types/node') && (
-          /\bv(?:18|20)(?:\.(?:\d+|x)){0,2}\b/.test(line) ||
-          /\bNode(?:\.js)?\b.*\b(?:18|20)(?:\.(?:\d+|x)){0,2}\b/.test(line) ||
+          /\bNode(?:\.js)?\b.*\bv?(?:18|20)(?:\.(?:\d+|x)){0,2}\b/.test(line) ||
           /\bnode-version\s*:\s*['"]?(?:18|20)(?:\.(?:\d+|x)){0,2}/.test(line)
         )
       )
@@ -103,7 +127,16 @@ test('documentation does not advertise Node 18 or Node 20 as supported', () => {
         undefined,
         `${file} still names a Node version below the documented 22.13+ floor`
       )
-    }
+  }
+})
+
+test('runtime requirements state the Node 22.13.0 floor', () => {
+  for (const file of documentationFiles()) {
+    const content = fs.readFileSync(path.join(SOURCE_ROOT, file), 'utf8')
+    const incompleteRequirement = content.split(/\r?\n/).find(line =>
+      /\bNode(?:\.js)?\s+22(?:\+|\s|$)/.test(line)
+    )
+    assert.equal(incompleteRequirement, undefined, `${file} does not state the Node 22.13.0 floor`)
   }
 })
 
@@ -124,7 +157,7 @@ test('getting-started requirements use the Node 22.13 floor', () => {
 })
 
 test('docs do not describe the removed port or implicit dev workers', () => {
-  for (const docsDir of DOCS_DIRS) {
+  for (const docsDir of DOCS_DIRS.slice(0, 2)) {
     for (const file of markdownFiles(docsDir)) {
       const content = fs.readFileSync(path.join(SOURCE_ROOT, file), 'utf8')
       assert.doesNotMatch(content, /localhost:5173|\bport 5173\b/i, `${file} still uses the retired development port`)
@@ -135,7 +168,7 @@ test('docs do not describe the removed port or implicit dev workers', () => {
 })
 
 test('Cypress wrapper examples pass supported paths and flags', () => {
-  for (const docsDir of DOCS_DIRS) {
+  for (const docsDir of DOCS_DIRS.slice(0, 2)) {
     for (const file of markdownFiles(docsDir)) {
       const content = fs.readFileSync(path.join(SOURCE_ROOT, file), 'utf8')
       const extraSeparator = content.match(/pnpm\s+cy:run\s+--\s+--spec\b/)

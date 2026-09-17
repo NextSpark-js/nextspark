@@ -98,7 +98,7 @@ Visit [nextspark.dev/docs](https://nextspark.dev/docs) for the full documentatio
 
 ## Requirements
 
-- Node.js 18.17 or later
+- Node.js 22.13.0 or later
 - PostgreSQL database
 - pnpm (recommended) or npm
 

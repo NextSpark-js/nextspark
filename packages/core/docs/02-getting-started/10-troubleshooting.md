@@ -75,7 +75,7 @@ sudo apt remove nodejs
 # Add NodeSource repository
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 
-# Install Node.js 22
+# Install Node.js 22.13.0 or later
 sudo apt-get install -y nodejs
 
 # Verify
@@ -92,10 +92,10 @@ node -v
 ```bash
 # Install nvm first: https://github.com/nvm-sh/nvm
 
-# Install Node.js 22
+# Install Node.js 22.13.0 or later
 nvm install 22
 
-# Use Node.js 22
+# Use Node.js 22.13.0 or later
 nvm use 22
 
 # Set as default
