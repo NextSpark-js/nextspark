@@ -1,9 +1,10 @@
 import { test, before } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
+import { copyFile, mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { spawnSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 
 import { buildCli } from './built-cli.js'
 
@@ -16,6 +17,15 @@ import { buildCli } from './built-cli.js'
  * `spawnSync`'s own `timeout`, so a hang here fails the test instead of the
  * test run.
  */
+
+/** Core's check of where its registry build writes, which `build` loads from core before its first step. */
+const CORE_SOURCE = join(dirname(fileURLToPath(import.meta.url)), '../../core')
+const CORE_WRITE_CHECK = [
+  'scripts/build/registry/write-places.mjs',
+  'scripts/build/registry/project-mode.mjs',
+  'scripts/build/registry/post-build/own-gitignores.mjs',
+  'scripts/build/safe-fs.mjs',
+]
 
 let CLI_ENTRY: string
 
@@ -58,7 +68,7 @@ async function writeByteByByte(stream, text) {
 
 /**
  * A project with a stand-in for core whose registry build runs `script` after
- * PRELUDE, and a stand-in `next` that exits 0, so `build` finishes without
+ * PRELUDE, with core's own write check, and a stand-in `next` that exits 0, so `build` finishes without
  * Next.js once the registry build succeeds.
  */
 async function projectWithRegistryBuild(script: string) {
@@ -67,6 +77,10 @@ async function projectWithRegistryBuild(script: string) {
   await mkdir(join(coreDir, 'scripts/build'), { recursive: true })
   await writeFile(join(coreDir, 'package.json'), JSON.stringify({ name: '@nextsparkjs/core', version: '0.0.0-test' }))
   await writeFile(join(coreDir, 'scripts/build/registry.mjs'), `${PRELUDE}\n${script}\n`)
+  for (const file of CORE_WRITE_CHECK) {
+    await mkdir(dirname(join(coreDir, file)), { recursive: true })
+    await copyFile(join(CORE_SOURCE, file), join(coreDir, file))
+  }
   await mkdir(join(root, 'node_modules/.bin'), { recursive: true })
   await writeFile(join(root, 'node_modules/.bin/next'), '#!/bin/sh\nexit 0\n', { mode: 0o755 })
   await writeFile(join(root, '.env'), 'NEXT_PUBLIC_ACTIVE_THEME="acme"\n')
