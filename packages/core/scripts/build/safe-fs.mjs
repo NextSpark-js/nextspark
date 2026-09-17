@@ -23,17 +23,22 @@
  */
 
 import {
+  closeSync,
   constants,
-  copyFileSync,
+  fchmodSync,
+  fstatSync,
   lstatSync,
   mkdirSync,
   mkdtempSync,
+  openSync,
+  readFileSync,
   realpathSync,
   renameSync,
   rmdirSync,
   rmSync,
   unlinkSync,
   writeFileSync,
+  writeSync,
 } from 'fs'
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'path'
 
@@ -47,6 +52,9 @@ const WRITE_FLAGS = {
   w: constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | NO_FOLLOW,
   wx: constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | NO_FOLLOW,
 }
+
+/** The copyFile mode bits safe-fs can honor without following the destination: no flag, or COPYFILE_EXCL. */
+const KNOWN_COPY_MODE = constants.COPYFILE_EXCL
 
 /**
  * Whether `error` is a refusal of this module: nothing was written, and the
@@ -213,8 +221,27 @@ export function projectFiles(root) {
     checked('create a directory beside', root, prefix)
     return mkdtempSync(resolve(resolve(root), prefix))
   }
-  const copyFile = (source, destination, mode) => {
-    copyFileSync(source, checked('copy to', root, destination, { writesInto: true }), mode)
+  const copyFile = (source, destination, mode = 0) => {
+    if (mode & ~KNOWN_COPY_MODE) {
+      throw new Error(`safe-fs copies with COPYFILE_EXCL or no mode, not ${mode}`)
+    }
+    const target = checked('copy to', root, destination, { writesInto: true })
+    const sourceFd = openSync(source, constants.O_RDONLY)
+    let data, sourceMode
+    try {
+      sourceMode = fstatSync(sourceFd).mode
+      data = readFileSync(sourceFd)
+    } finally {
+      closeSync(sourceFd)
+    }
+    const flag = mode & constants.COPYFILE_EXCL ? WRITE_FLAGS.wx : WRITE_FLAGS.w
+    const destFd = openSync(target, flag, sourceMode & 0o777)
+    try {
+      writeSync(destFd, data)
+      fchmodSync(destFd, sourceMode & 0o777)
+    } finally {
+      closeSync(destFd)
+    }
   }
   const rm = (path, options) => rmSync(checked('remove', root, path), options)
   const rmdir = path => rmdirSync(checked('remove', root, path))

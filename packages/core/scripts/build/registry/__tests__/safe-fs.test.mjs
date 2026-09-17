@@ -12,7 +12,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { link, lstat, mkdir, mkdtemp, readdir, readFile, readlink, realpath, rm, symlink, writeFile } from 'node:fs/promises'
+import { execFileSync, spawn } from 'node:child_process'
+import { once } from 'node:events'
+import { link, lstat, mkdir, mkdtemp, open, readdir, readFile, readlink, realpath, rm, symlink, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -159,6 +161,44 @@ test('each call does its work inside the root, reached through a symlink above i
     assert.equal(unsafeWriteProblem(join(holder.root, 'alias'), join(holder.root, 'elsewhere.txt'))?.problem.startsWith('is outside'), true)
   } finally {
     await holder.cleanup()
+  }
+})
+
+test('copyFile opens its destination without following a symlink put there after safe-fs checked it', async () => {
+  const project = await directory()
+  const outside = await directory()
+  try {
+    const secret = join(outside.root, 'secret.txt')
+    await writeFile(secret, 'secret\n')
+    await writeIn(project.root, 'source.txt', 'copied content\n')
+    const dest = join(project.root, 'theme.mjs')
+    await writeFile(dest, 'placeholder\n')
+    const fifo = join(project.root, 'source.fifo')
+    execFileSync('mkfifo', [fifo])
+
+    // The child blocks opening the FIFO as its copy source - inside copyFileSync's own work,
+    // after safe-fs's check on `dest` already passed while it was still an ordinary file.
+    const child = spawn(process.execPath, [join(dirname(fileURLToPath(import.meta.url)), 'copy-race-child.mjs'), project.root, fifo, dest], {
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
+    let out = ''
+    child.stdout.on('data', chunk => { out += chunk })
+    await new Promise(resolve => setTimeout(resolve, 400))
+
+    await rm(dest, { force: true })
+    await symlink(secret, dest)
+
+    // Unblock the child's read with an empty write, so its copy proceeds against the now-swapped destination.
+    const writer = await open(fifo, 'w')
+    await writer.close()
+    const [exitCode] = await once(child, 'exit')
+
+    assert.equal(exitCode, 0, 'the child process itself must not crash')
+    assert.deepEqual(JSON.parse(out), { code: 'ELOOP' }, 'the destination open must refuse the symlink instead of following it')
+    assert.equal(await readFile(secret, 'utf8'), 'secret\n', 'the outside file the symlink points to must survive untouched')
+  } finally {
+    await outside.cleanup()
+    await project.cleanup()
   }
 })
 
