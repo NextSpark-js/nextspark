@@ -12,10 +12,7 @@ import assert from 'node:assert/strict'
 import http from 'node:http'
 import path from 'node:path'
 import { createRequire } from 'node:module'
-import { fileURLToPath, pathToFileURL } from 'node:url'
-import { registerHooks } from 'node:module'
-import fs from 'node:fs'
-import os from 'node:os'
+import { fileURLToPath } from 'node:url'
 import type { AddressInfo } from 'node:net'
 import { buildTools } from '../../../../plugins/langchain/lib/tools-builder'
 import { createOpenAIModel } from '../../../../plugins/langchain/lib/providers'
@@ -201,20 +198,38 @@ test('tools built by the langchain plugin preserve zod 4 descriptions for OpenAI
 /**
  * The agent factory imports the plugin's memory, tracing and token tracking, which reach
  * `@nextsparkjs/core/lib/db` and through it the registries a built project generates. An agent
- * created without a context never queries them, so that module is replaced with one whose
- * functions throw.
+ * created without a context never queries them, so CommonJS loads receive replacements whose
+ * functions throw. tsx transpiles this plugin path to CommonJS on both supported Node versions.
  */
+type CommonJsModule = typeof import('node:module') & {
+  _load: (request: string, parent: unknown, isMain: boolean) => unknown
+}
+
+const commonJsModule = createRequire(import.meta.url)('node:module') as CommonJsModule
+
 async function importAgentFactory() {
-  const stub = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'langchain-db-stub-')), 'db.mjs')
-  fs.writeFileSync(stub, ['queryWithRLS', 'mutateWithRLS', 'query']
-    .map((name) => `export function ${name}() { throw new Error('${name} reached the database') }`)
-    .join('\n'))
-  registerHooks({
-    resolve: (specifier, context, nextResolve) => specifier === '@nextsparkjs/core/lib/db'
-      ? { url: pathToFileURL(stub).href, shortCircuit: true }
-      : nextResolve(specifier, context),
-  })
-  return import('../../../../plugins/langchain/lib/agent-factory')
+  const dbStub = Object.fromEntries(['queryWithRLS', 'mutateWithRLS', 'query']
+    .map((name) => [name, () => { throw new Error(`${name} reached the database`) }]))
+  class FileLogger {
+    async debug() {}
+    async info() {}
+    async warn() {}
+    async error() {}
+    static async clearAll() { return 0 }
+  }
+  const stubs = {
+    '@nextsparkjs/core/lib/db': dbStub,
+    '@nextsparkjs/core/lib/utils/file-logger': { FileLogger },
+  }
+  const originalLoad = commonJsModule._load
+  commonJsModule._load = (request, parent, isMain) => stubs[request as keyof typeof stubs]
+    ?? originalLoad(request, parent, isMain)
+
+  try {
+    return await import('../../../../plugins/langchain/lib/agent-factory')
+  } finally {
+    commonJsModule._load = originalLoad
+  }
 }
 
 test('the plugin agent, with a tool bound, forwards getAgent invoke and streamEvents calls to OpenAI', async () => {
