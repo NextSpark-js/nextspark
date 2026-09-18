@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import { AuthErrorPage } from '@nextsparkjs/core/components/auth/pages/AuthErrorPage'
-import { getTemplateOrDefault, getMetadataOrDefault } from '@nextsparkjs/core/lib/template-resolver'
+import { getTemplateOrDefault, getMetadataOrDefault } from '@nextsparkjs/registries/template-scopes/server/(auth)/auth-error/page'
 
 const defaultMetadata: Metadata = {
   title: 'Authentication Error',

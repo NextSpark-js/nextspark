@@ -63,7 +63,7 @@ import { profileSchema, ProfileFormData } from '@nextsparkjs/core/lib/validation
 import { countries, timezones } from '@nextsparkjs/core/lib/countries-timezones'
 import { sel } from '@nextsparkjs/core/selectors'
 import { useLocale, useTranslations } from 'next-intl'
-import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
+import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-scopes/client/dashboard/settings/profile/page'
 import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 // Language options

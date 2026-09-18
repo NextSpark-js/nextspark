@@ -1,8 +1,9 @@
 import { DeveloperGuard } from "@nextsparkjs/core/components/app/guards/DeveloperGuard";
 import { DashboardProviders } from "@nextsparkjs/core/providers/DashboardProviders";
-import { DevtoolsSidebar, DevtoolsMobileHeader } from "@nextsparkjs/core/components/devtools";
+import { DevtoolsSidebar } from "@nextsparkjs/core/components/devtools/DevtoolsSidebar";
+import { DevtoolsMobileHeader } from "@nextsparkjs/core/components/devtools/DevtoolsMobileHeader";
 import { Metadata } from "next";
-import { getTemplateOrDefault, getMetadataOrDefault } from '@nextsparkjs/core/lib/template-resolver'
+import { getTemplateOrDefault, getMetadataOrDefault } from '@nextsparkjs/registries/template-scopes/server/devtools/layout'
 import { getPluginNavItems } from '@nextsparkjs/registries/plugin-registry'
 
 const defaultMetadata: Metadata = {

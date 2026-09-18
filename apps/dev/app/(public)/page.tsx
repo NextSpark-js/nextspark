@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { getTemplateOrDefault } from "@nextsparkjs/core/lib/template-resolver"
+import { getTemplateOrDefault } from "@nextsparkjs/registries/template-scopes/server/(public)/page"
 
 /**
  * Default Public Home Page (CORE)

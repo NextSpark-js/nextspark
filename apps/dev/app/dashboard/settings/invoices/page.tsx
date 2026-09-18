@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@next
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { Calendar } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
+import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-scopes/client/dashboard/settings/invoices/page'
 import { useInvoices } from '@nextsparkjs/core/hooks/useInvoices'
 import { InvoicesTable } from '@nextsparkjs/core/components/billing'
 

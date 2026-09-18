@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { TeamsTable } from "@nextsparkjs/core/components/superadmin/tables/TeamsTable";
-import { getTemplateOrDefaultClient } from "@nextsparkjs/registries/template-registry.client";
+import { getTemplateOrDefaultClient } from "@nextsparkjs/registries/template-scopes/client/superadmin/teams/page";
 import {
   SearchInput,
   PaginationControls,

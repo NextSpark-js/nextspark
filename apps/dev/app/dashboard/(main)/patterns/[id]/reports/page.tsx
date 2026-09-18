@@ -17,7 +17,7 @@ import { Button } from '@nextsparkjs/core/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@nextsparkjs/core/components/ui/alert'
 import { Skeleton } from '@nextsparkjs/core/components/ui/skeleton'
 import { getEntityData } from '@nextsparkjs/core/lib/api/entities'
-import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
+import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-scopes/client/dashboard/(main)/patterns/[id]/reports/page'
 
 interface PatternData {
   id: string

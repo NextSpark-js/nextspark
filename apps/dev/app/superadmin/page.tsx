@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@next
 import { Button } from "@nextsparkjs/core/components/ui/button";
 import { Users, BarChart3, Settings, Shield } from "lucide-react";
 import Link from "next/link";
-import { getTemplateOrDefault } from '@nextsparkjs/core/lib/template-resolver'
+import { getTemplateOrDefault } from '@nextsparkjs/registries/template-scopes/server/superadmin/page'
 import { sel } from "@nextsparkjs/core/selectors"
 
 /**

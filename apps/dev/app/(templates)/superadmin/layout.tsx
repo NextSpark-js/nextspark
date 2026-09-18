@@ -10,7 +10,7 @@ import { DashboardProviders } from "@nextsparkjs/core/providers/DashboardProvide
 import { SuperadminSidebar } from "@nextsparkjs/core/components/superadmin/layouts/SuperadminSidebar";
 import { Loader2 } from 'lucide-react'
 import { Metadata } from "next";
-import { getTemplateOrDefault, getMetadataOrDefault } from '@nextsparkjs/core/lib/template-resolver'
+import { getTemplateOrDefault, getMetadataOrDefault } from '@nextsparkjs/registries/template-scopes/server/superadmin/layout'
 import { getPluginNavItems } from '@nextsparkjs/registries/plugin-registry'
 
 const defaultMetadata: Metadata = {

@@ -31,7 +31,7 @@ import { UsersTable } from "@nextsparkjs/core/components/users/tables/UsersTable
 import { SuperAdminsTable } from "@nextsparkjs/core/components/users/tables/SuperAdminsTable";
 import { useSession } from "@nextsparkjs/core/lib/auth-client";
 import type { User } from "@nextsparkjs/core/types/user.types";
-import { getTemplateOrDefaultClient } from "@nextsparkjs/registries/template-registry.client";
+import { getTemplateOrDefaultClient } from "@nextsparkjs/registries/template-scopes/client/superadmin/users/page";
 import {
   SearchInput,
   PaginationControls,

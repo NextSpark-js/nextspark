@@ -14,7 +14,7 @@ import { Input } from '@nextsparkjs/core/components/ui/input';
 import { Label } from '@nextsparkjs/core/components/ui/label';
 import { Alert, AlertDescription } from '@nextsparkjs/core/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@nextsparkjs/core/components/ui/card';
-import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
+import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-scopes/client/(auth)/forgot-password/page'
 
 
 function ForgotPasswordPage() {

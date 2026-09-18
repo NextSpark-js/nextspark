@@ -14,7 +14,7 @@ import {
   Key,
   type LucideIcon
 } from 'lucide-react'
-import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
+import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-scopes/client/dashboard/settings/page'
 
 // Icon mapping for settings pages
 const SETTINGS_ICONS: Record<string, LucideIcon> = {

@@ -59,7 +59,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         Children run within authenticated boundary -
         nested layouts CAN be themed but security is guaranteed
       */}
-      <div key="dashboard-children" data-cy="dashboard-container">{children}</div>
+      <div key="dashboard-children" id="dashboard-container" data-cy="dashboard-container" data-testid="dashboard-container">{children}</div>
     </>
   )
 }

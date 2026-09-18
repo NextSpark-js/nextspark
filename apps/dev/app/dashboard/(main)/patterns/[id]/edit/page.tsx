@@ -14,7 +14,7 @@ import { EntityFormWrapper } from '@nextsparkjs/core/components/entities/wrapper
 import { BuilderEditorView } from '@nextsparkjs/core/components/dashboard/block-editor/builder-editor-view'
 import { Alert, AlertDescription } from '@nextsparkjs/core/components/ui/alert'
 import { getEntityData } from '@nextsparkjs/core/lib/api/entities'
-import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
+import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-scopes/client/dashboard/(main)/patterns/[id]/edit/page'
 
 function PatternEditPage() {
   const params = useParams()!

@@ -38,7 +38,7 @@ import {
   Database,
 } from "lucide-react";
 import Link from "next/link";
-import { getTemplateOrDefaultClient } from "@nextsparkjs/registries/template-registry.client";
+import { getTemplateOrDefaultClient } from "@nextsparkjs/registries/template-scopes/client/superadmin/users/[userId]/page";
 import { withBasePath } from "@nextsparkjs/core/lib/base-path"
 
 interface TeamMembership {

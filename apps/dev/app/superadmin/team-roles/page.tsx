@@ -28,7 +28,7 @@ import { PERMISSIONS_METADATA } from "@nextsparkjs/registries/permissions-regist
 import { getFullBillingMatrix } from "@nextsparkjs/core/lib/billing/queries";
 import { RolesPermissionsMatrix } from "@nextsparkjs/core/components/superadmin/tables/RolesPermissionsMatrix";
 import { PlanFeaturesMatrix } from "@nextsparkjs/core/components/superadmin/tables/PlanFeaturesMatrix";
-import { getTemplateOrDefaultClient } from "@nextsparkjs/registries/template-registry.client";
+import { getTemplateOrDefaultClient } from "@nextsparkjs/registries/template-scopes/client/superadmin/team-roles/page";
 
 /**
  * Team Roles & Permissions Page

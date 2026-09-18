@@ -9,7 +9,7 @@ import { Loader2, CheckCircle, XCircle, Users, LogIn, UserPlus } from 'lucide-re
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { sel } from '@nextsparkjs/core/selectors'
-import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
+import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-scopes/client/(auth)/accept-invite/[token]/page'
 import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 
 type InvitationStatus = 'loading' | 'valid' | 'accepting' | 'accepted' | 'error' | 'expired' | 'not_found' | 'email_mismatch' | 'already_member' | 'requires_auth'

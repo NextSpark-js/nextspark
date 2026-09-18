@@ -4,7 +4,7 @@ import { FeatureGate } from '@nextsparkjs/core/components/billing/FeatureGate'
 import { FeaturePlaceholder } from '@nextsparkjs/core/components/billing/FeaturePlaceholder'
 import { BarChart3 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
+import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-scopes/client/dashboard/features/analytics/page'
 
 function AdvancedAnalyticsPage() {
   const t = useTranslations('features')

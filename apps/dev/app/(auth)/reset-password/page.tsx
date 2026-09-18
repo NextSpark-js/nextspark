@@ -18,7 +18,7 @@ import { Label } from "@nextsparkjs/core/components/ui/label";
 import { PasswordInput } from "@nextsparkjs/core/components/ui/password-input";
 import { Alert, AlertDescription } from "@nextsparkjs/core/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@nextsparkjs/core/components/ui/card";
-import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
+import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-scopes/client/(auth)/reset-password/page'
 import { sel } from '@nextsparkjs/core/selectors'
 
 function ResetPasswordContent() {

@@ -35,7 +35,7 @@ import {
 import { useTranslations } from 'next-intl'
 import { useUserWithMetaSettings } from '@nextsparkjs/core/hooks/useUserSettings'
 import { SecurityPageSkeleton } from '@nextsparkjs/core/components/settings/SettingsPageSkeleton'
-import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
+import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-scopes/client/dashboard/settings/security/page'
 
 function SecurityPage() {
   const t = useTranslations('settings')

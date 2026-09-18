@@ -31,7 +31,7 @@ import { SessionCookieRefresher } from "@nextsparkjs/core/components/auth/Sessio
 import { ThemeProvider as NextThemeProvider } from "@nextsparkjs/core/providers/theme-provider"
 import { ThemeProvider as CustomThemeProvider } from "@nextsparkjs/core/lib/theme/ThemeProvider"
 import { Toaster } from "@nextsparkjs/core/components/ui/sonner"
-import { getMetadataOrDefault } from '@nextsparkjs/core/lib/template-resolver'
+import { getMetadataOrDefault } from '@nextsparkjs/registries/template-scopes/server/layout'
 import { DEFAULT_LOCALE, DEFAULT_THEME_MODE, STATIC_MESSAGES } from '@nextsparkjs/registries/translation-registry'
 
 const geistSans = Geist({

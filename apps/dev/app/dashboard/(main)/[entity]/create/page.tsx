@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 import { clientEntityRegistry, ensureClientInitialized, type ClientEntityConfig } from '@nextsparkjs/registries/entity-registry.client'
 import { EntityFormWrapper } from '@nextsparkjs/core/components/entities/wrappers/EntityFormWrapper'
 import { BuilderEditorView } from '@nextsparkjs/core/components/dashboard/block-editor/builder-editor-view'
-import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
+import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-scopes/client/dashboard/(main)/[entity]/create/page'
 
 function EntityCreatePage() {
   const params = useParams()!

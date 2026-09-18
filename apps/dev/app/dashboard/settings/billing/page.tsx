@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import { sel } from '@nextsparkjs/core/selectors'
 import { useTranslations } from 'next-intl'
-import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
+import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-scopes/client/dashboard/settings/billing/page'
 import { useInvoices } from '@nextsparkjs/core/hooks/useInvoices'
 import { useSubscription } from '@nextsparkjs/core/hooks/useSubscription'
 import { InvoicesTable } from '@nextsparkjs/core/components/billing'

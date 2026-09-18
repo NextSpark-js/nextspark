@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
+import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-scopes/client/dashboard/settings/plans/page'
 import { PricingTable } from '@nextsparkjs/core/components/billing'
 import { fetchWithTeam } from '@nextsparkjs/core/lib/api/entities'
 import { toast } from 'sonner'

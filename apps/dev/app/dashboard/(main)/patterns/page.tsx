@@ -28,7 +28,7 @@ import type { Permission } from '@nextsparkjs/core/lib/permissions/types'
 import type { QuickAction, DropdownAction } from '@nextsparkjs/core/components/entities/entity-table.types'
 import { sel } from '@nextsparkjs/core/lib/test'
 import { toast } from 'sonner'
-import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
+import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-scopes/client/dashboard/(main)/patterns/page'
 
 interface PatternItem {
   id: string

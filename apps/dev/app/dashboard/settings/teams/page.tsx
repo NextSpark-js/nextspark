@@ -16,7 +16,7 @@ import { CreateTeamDialog } from '@nextsparkjs/core/components/teams/CreateTeamD
 import { InlineEditableField } from '@nextsparkjs/core/components/teams/InlineEditableField'
 import { sel } from '@nextsparkjs/core/selectors'
 import { TeamRole } from '@nextsparkjs/core/lib/teams/types'
-import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
+import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-scopes/client/dashboard/settings/teams/page'
 
 // Role icons map - core roles only, custom roles use fallback
 const roleIconsMap: Record<string, typeof Crown | null> = {

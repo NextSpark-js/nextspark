@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import { AuthWrapper } from '@nextsparkjs/core/components/auth/layouts/AuthWrapper'
-import { getTemplateOrDefault, getMetadataOrDefault } from '@nextsparkjs/core/lib/template-resolver'
+import { getTemplateOrDefault, getMetadataOrDefault } from '@nextsparkjs/registries/template-scopes/server/(auth)/layout'
 
 const defaultMetadata: Metadata = {
   title: {

@@ -11,7 +11,7 @@ import { ArrowLeft } from 'lucide-react'
 import { useState, useCallback, useEffect } from 'react'
 import { sel } from '@nextsparkjs/core/selectors'
 import { useTranslations } from 'next-intl'
-import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
+import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-scopes/client/dashboard/settings/layout'
 import { isSettingsPageEnabled } from '@nextsparkjs/core/lib/config/config-sync'
 
 /**

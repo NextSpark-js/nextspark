@@ -42,7 +42,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
-import { getTemplateOrDefaultClient } from "@nextsparkjs/registries/template-registry.client";
+import { getTemplateOrDefaultClient } from "@nextsparkjs/registries/template-scopes/client/superadmin/teams/[teamId]/page";
 import { withBasePath, withBasePathIfInApp } from "@nextsparkjs/core/lib/base-path"
 
 interface TeamOwner {

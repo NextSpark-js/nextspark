@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react'
-import { getTemplateOrDefault } from '@nextsparkjs/core/lib/template-resolver'
+import { getTemplateOrDefault } from '@nextsparkjs/registries/template-scopes/server/dashboard/features/layout'
 
 interface FeaturesLayoutProps {
   children: ReactNode

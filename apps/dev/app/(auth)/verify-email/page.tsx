@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { Button } from '@nextsparkjs/core/components/ui/button';
 import { Alert, AlertDescription } from '@nextsparkjs/core/components/ui/alert';
-import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
+import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-scopes/client/(auth)/verify-email/page'
 import { sel } from '@nextsparkjs/core/selectors'
 import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 

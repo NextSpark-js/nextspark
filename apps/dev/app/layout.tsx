@@ -20,7 +20,7 @@ import { getUserLocale } from '@nextsparkjs/core/lib/locale'
 import { TranslationContextManager } from "@nextsparkjs/core/providers/TranslationContextManager"
 import { SessionCookieRefresher } from "@nextsparkjs/core/components/auth/SessionCookieRefresher"
 import { PluginService } from '@nextsparkjs/core/lib/services'
-import { getMetadataOrDefault } from '@nextsparkjs/core/lib/template-resolver'
+import { getMetadataOrDefault } from '@nextsparkjs/registries/template-scopes/server/layout'
 import { getThemeSettings } from '@nextsparkjs/core/lib/theme/get-default-theme-mode'
 
 const geistSans = Geist({

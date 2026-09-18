@@ -1,5 +1,5 @@
 import { SkeletonFeaturePlaceholder } from '@nextsparkjs/core/components/ui/skeleton-features'
-import { getTemplateOrDefault } from '@nextsparkjs/core/lib/template-resolver'
+import { getTemplateOrDefault } from '@nextsparkjs/registries/template-scopes/server/dashboard/features/loading'
 
 function FeaturesLoading() {
   return <SkeletonFeaturePlaceholder />

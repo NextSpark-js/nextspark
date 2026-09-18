@@ -12,7 +12,7 @@ import { clientEntityRegistry, ensureClientInitialized, type ClientEntityConfig 
 import { EntityFormWrapper } from '@nextsparkjs/core/components/entities/wrappers/EntityFormWrapper'
 import { BuilderEditorView } from '@nextsparkjs/core/components/dashboard/block-editor/builder-editor-view'
 import { Alert, AlertDescription } from '@nextsparkjs/core/components/ui/alert'
-import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
+import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-scopes/client/dashboard/(main)/patterns/create/page'
 
 function PatternsCreatePage() {
   const router = useRouter()

@@ -1,5 +1,5 @@
 import { Skeleton } from '@nextsparkjs/core/components/ui/skeleton'
-import { getTemplateOrDefault } from '@nextsparkjs/core/lib/template-resolver'
+import { getTemplateOrDefault } from '@nextsparkjs/registries/template-scopes/server/dashboard/(main)/[entity]/loading'
 
 function EntityLoading() {
   return (

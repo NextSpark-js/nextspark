@@ -1,5 +1,5 @@
 import { SkeletonDashboardHome } from '@nextsparkjs/core/components/ui/skeleton-dashboard'
-import { getTemplateOrDefault } from '@nextsparkjs/core/lib/template-resolver'
+import { getTemplateOrDefault } from '@nextsparkjs/registries/template-scopes/server/dashboard/(main)/loading'
 
 function DashboardLoading() {
   return <SkeletonDashboardHome />

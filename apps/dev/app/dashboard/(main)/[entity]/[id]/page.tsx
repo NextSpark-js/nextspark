@@ -2,7 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import { getEntity, getEntityRegistry, getChildEntities, setEntityRegistry } from '@nextsparkjs/core/lib/entities/queries'
 import { EntityDetailWrapper } from '@nextsparkjs/core/components/entities/wrappers/EntityDetailWrapper'
 import type { Metadata } from 'next'
-import { TemplateService } from '@nextsparkjs/core/lib/services/template.service'
+import { hasTemplateOverride, getTemplateComponent } from '@nextsparkjs/registries/template-scopes/server/dashboard/(main)/[entity]/[id]/page'
 import type { EntityConfig, ChildEntityDefinition } from '@nextsparkjs/core/lib/entities/types'
 // Import registry directly - webpack resolves @nextsparkjs/registries alias at compile time
 import { ENTITY_REGISTRY, ENTITY_METADATA } from '@nextsparkjs/registries/entity-registry'
@@ -29,8 +29,8 @@ async function EntityDetailPage({ params }: PageProps) {
   // Check if there's a specific template override for this entity
   // e.g., app/dashboard/(main)/boards/[id]/page.tsx for boards
   const specificTemplatePath = `app/dashboard/(main)/${entitySlug}/[id]/page.tsx`
-  if (TemplateService.hasOverride(specificTemplatePath)) {
-    const OverrideComponent = TemplateService.getComponent(specificTemplatePath)
+  if (hasTemplateOverride(specificTemplatePath)) {
+    const OverrideComponent = getTemplateComponent(specificTemplatePath)
     if (OverrideComponent) {
       console.log(`🎨 Entity-specific template override applied for ${specificTemplatePath}`)
       return <OverrideComponent params={params} />

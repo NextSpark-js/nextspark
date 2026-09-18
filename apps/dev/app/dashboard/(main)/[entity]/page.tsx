@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import { getEntity, getEntityRegistry, setEntityRegistry } from '@nextsparkjs/core/lib/entities/queries'
 import { EntityListWrapper } from '@nextsparkjs/core/components/entities/wrappers/EntityListWrapper'
 import type { Metadata } from 'next'
-import { getTemplateOrDefault } from '@nextsparkjs/core/lib/template-resolver'
+import { getTemplateOrDefault } from '@nextsparkjs/registries/template-scopes/server/dashboard/(main)/[entity]/page'
 import type { EntityConfig, ChildEntityDefinition } from '@nextsparkjs/core/lib/entities/types'
 // Import registry directly - webpack resolves @nextsparkjs/registries alias at compile time
 import { ENTITY_REGISTRY, ENTITY_METADATA } from '@nextsparkjs/registries/entity-registry'

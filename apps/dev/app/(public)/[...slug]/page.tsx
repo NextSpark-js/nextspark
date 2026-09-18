@@ -21,7 +21,7 @@ import {
   getEntityBasePath,
 } from '@nextsparkjs/core/lib/entities/schema-generator'
 import { getEntityRegistry, setEntityRegistry } from '@nextsparkjs/core/lib/entities/queries'
-import { TemplateService } from '@nextsparkjs/core/lib/services/template.service'
+import { hasTemplateOverride, getTemplateComponent } from '@nextsparkjs/registries/template-scopes/server/(public)/[...slug]/page'
 import { resolvePublicEntityFromUrl } from '@nextsparkjs/core/lib/api/entity/public-resolver'
 import { PublicEntityGrid } from '@nextsparkjs/core/components/public/entities/PublicEntityGrid'
 import type { EntityConfig } from '@nextsparkjs/core/lib/entities/types'
@@ -307,8 +307,8 @@ export default async function DynamicPublicPage({
     // === SINGLE ITEM PAGE ===
     // Check for theme template override first
     const templatePath = buildTemplatePath(entity)
-    if (TemplateService.hasOverride(templatePath)) {
-      const Template = TemplateService.getComponent(templatePath)
+    if (hasTemplateOverride(templatePath)) {
+      const Template = getTemplateComponent(templatePath)
       if (Template) {
         // Template handles its own data fetching and rendering
         // Pass params in the format expected by the template

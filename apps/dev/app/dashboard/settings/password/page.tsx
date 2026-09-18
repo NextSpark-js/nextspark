@@ -21,7 +21,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@next
 import { Checkbox } from "@nextsparkjs/core/components/ui/checkbox";
 import { sel } from '@nextsparkjs/core/selectors';
 import { useTranslations } from 'next-intl';
-import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
+import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-scopes/client/dashboard/settings/password/page'
 
 function UpdatePasswordPage() {
   const { changePassword, user } = useAuth();

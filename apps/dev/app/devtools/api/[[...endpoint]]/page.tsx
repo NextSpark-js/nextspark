@@ -1,5 +1,5 @@
 import { ApiRoutesService } from "@nextsparkjs/core/lib/services/api-routes.service"
-import { ApiExplorer } from "@nextsparkjs/core/components/devtools"
+import { ApiExplorer } from "@nextsparkjs/core/components/devtools/api-explorer"
 
 interface Props {
   params: Promise<{ endpoint?: string[] }>

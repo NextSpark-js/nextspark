@@ -20,7 +20,7 @@ import { sel } from '@nextsparkjs/core/selectors'
 import { useTranslations } from 'next-intl'
 import { useUserWithMetaSettings } from '@nextsparkjs/core/hooks/useUserSettings'
 import { NotificationsPageSkeleton } from '@nextsparkjs/core/components/settings/SettingsPageSkeleton'
-import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
+import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-scopes/client/dashboard/settings/notifications/page'
 
 function NotificationsPage() {
   const t = useTranslations('settings')

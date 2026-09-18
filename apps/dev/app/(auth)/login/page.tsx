@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { LoginForm } from '@nextsparkjs/core/components/auth/forms/LoginForm'
-import { getTemplateOrDefault, getMetadataOrDefault } from '@nextsparkjs/core/lib/template-resolver'
+import { getTemplateOrDefault, getMetadataOrDefault } from '@nextsparkjs/registries/template-scopes/server/(auth)/login/page'
 
 export const dynamic = 'force-dynamic'
 

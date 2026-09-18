@@ -7,7 +7,7 @@ import { Button } from '@nextsparkjs/core/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@nextsparkjs/core/components/ui/card'
 import { Badge } from '@nextsparkjs/core/components/ui/badge'
 import { useTranslations } from 'next-intl'
-import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
+import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-scopes/client/dashboard/(main)/page'
 
 import {
   Loader2,

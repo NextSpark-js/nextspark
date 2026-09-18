@@ -35,7 +35,7 @@ import {
 import { CreateApiKeyDialog } from '@nextsparkjs/core/components/api/keys/CreateApiKeyDialog';
 import { ApiKeyDisplay } from '@nextsparkjs/core/components/api/keys/ApiKeyDisplay';
 import { toast } from 'sonner';
-import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
+import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-scopes/client/dashboard/settings/api-keys/page'
 import { sel } from '@nextsparkjs/core/selectors'
 import { withBasePath } from '@nextsparkjs/core/lib/base-path'
 

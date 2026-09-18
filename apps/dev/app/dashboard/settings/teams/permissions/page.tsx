@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@nextsparkjs/core/comp
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@nextsparkjs/core/components/ui/card'
 // Use PermissionService which reads from the build-time generated registry
 import { PermissionService } from '@nextsparkjs/core/lib/services/permission.service'
-import { getTemplateOrDefault } from '@nextsparkjs/core/lib/template-resolver'
+import { getTemplateOrDefault } from '@nextsparkjs/registries/template-scopes/server/dashboard/settings/teams/permissions/page'
 
 /**
  * Team Permissions Page

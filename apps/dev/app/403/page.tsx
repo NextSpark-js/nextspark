@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import { Button } from '@nextsparkjs/core/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@nextsparkjs/core/components/ui/card'
-import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-registry.client'
+import { getTemplateOrDefaultClient } from '@nextsparkjs/registries/template-scopes/client/403/page'
 
 function ForbiddenContent() {
   const searchParams = useSearchParams()!

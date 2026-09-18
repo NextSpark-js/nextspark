@@ -2,7 +2,7 @@ import { Suspense } from "react"
 import type { Metadata } from "next"
 import { PublicNavbar } from '@nextsparkjs/core/components/app/layouts/PublicNavbar'
 import { PublicFooter } from '@nextsparkjs/core/components/app/layouts/PublicFooter'
-import { getTemplateOrDefault, getMetadataOrDefault } from "@nextsparkjs/core/lib/template-resolver"
+import { getTemplateOrDefault, getMetadataOrDefault } from "@nextsparkjs/registries/template-scopes/server/(public)/layout"
 
 // ✅ MINIMAL GENERIC METADATA (cliente puede override con template)
 const defaultMetadata: Metadata = {

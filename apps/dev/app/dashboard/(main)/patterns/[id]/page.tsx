@@ -5,7 +5,7 @@
  */
 
 import { redirect } from 'next/navigation'
-import { getTemplateOrDefault } from '@nextsparkjs/core/lib/template-resolver'
+import { getTemplateOrDefault } from '@nextsparkjs/registries/template-scopes/server/dashboard/(main)/patterns/[id]/page'
 
 interface PageProps {
   params: Promise<{

@@ -44,7 +44,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { withBasePath, withBasePathIfInApp } from "@nextsparkjs/core/lib/base-path";
-import { getTemplateOrDefaultClient } from "@nextsparkjs/registries/template-registry.client";
+import { getTemplateOrDefaultClient } from "@nextsparkjs/registries/template-scopes/client/superadmin/subscriptions/page";
 import {
   SearchInput,
   PaginationControls,

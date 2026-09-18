@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { ConfigViewer } from "@nextsparkjs/core/components/devtools";
+import { ConfigViewer } from "@nextsparkjs/core/components/devtools/ConfigViewer";
 import { Settings } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 

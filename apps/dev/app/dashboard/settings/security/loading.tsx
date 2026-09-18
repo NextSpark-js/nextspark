@@ -1,5 +1,5 @@
 import { SkeletonSecurityPage } from '@nextsparkjs/core/components/ui/skeleton-settings'
-import { getTemplateOrDefault } from '@nextsparkjs/core/lib/template-resolver'
+import { getTemplateOrDefault } from '@nextsparkjs/registries/template-scopes/server/dashboard/settings/security/loading'
 
 function SecurityLoading() {
   return <SkeletonSecurityPage />
