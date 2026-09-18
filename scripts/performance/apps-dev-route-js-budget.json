@@ -1,0 +1,24 @@
+{
+  "kind": "route-js-budget",
+  "schemaVersion": 1,
+  "requiredModes": ["allowed", "blocked"],
+  "requireDashboardEvidence": true,
+  "routes": {
+    "/": {
+      "allowed": { "maxUniqueBodyBytes": 1450000 },
+      "blocked": { "maxUniqueBodyBytes": 1250000 }
+    },
+    "/docs": {
+      "allowed": { "maxUniqueBodyBytes": 1250000 },
+      "blocked": { "maxUniqueBodyBytes": 1250000 }
+    },
+    "/login": {
+      "allowed": { "maxUniqueBodyBytes": 1300000 },
+      "blocked": { "maxUniqueBodyBytes": 1300000 }
+    },
+    "/403": {
+      "allowed": { "maxUniqueBodyBytes": 1350000 },
+      "blocked": { "maxUniqueBodyBytes": 1250000 }
+    }
+  }
+}
