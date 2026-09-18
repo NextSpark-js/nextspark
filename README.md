@@ -71,6 +71,16 @@ pnpm dev
 
 When the development server starts, Next.js prints its local URL (port 3000 by default).
 
+## Test a Production Build Locally
+
+Set `DATABASE_URL` in `.env` for local Postgres with `?sslmode=disable`, then run the build and server on the same URL:
+
+```bash
+pnpm build && PORT=3000 pnpm start
+```
+
+In production, database connections require SSL unless `sslmode=disable` is explicit; this is needed only for a local Postgres server without SSL. Set `NEXT_PUBLIC_APP_URL="http://localhost:3000"` before `pnpm build`: Next.js inlines public variables at build time, so if its port differs from `pnpm start`, update it and build again. Leave `RESEND_API_KEY` unset to print one-time codes to the server log (they are not sent); set a real Resend key to deliver email.
+
 ## Packages
 
 This monorepo contains the following packages:
