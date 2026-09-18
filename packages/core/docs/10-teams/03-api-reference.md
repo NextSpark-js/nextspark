@@ -617,7 +617,7 @@ Session-based requests have a higher default limit.
 GET /api/v1/teams/{teamId}/subscription
 ```
 
-Returns the active subscription for the team.
+Returns the active subscription for the team, or `null` when it has not subscribed yet.
 
 ### Get Team Usage
 

@@ -72,7 +72,7 @@ POST /api/v1/billing/check-action
 
 ### Get Team Subscription
 
-Get active subscription for a team.
+Get active subscription for a team. A team without one receives `200` with `data.subscription: null`.
 
 ```
 GET /api/v1/teams/{teamId}/subscription

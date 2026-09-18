@@ -45,6 +45,16 @@ beforeEach(() => {
 })
 
 describe('SubscriptionProvider retries', () => {
+  it('treats a 404 from a legacy generated route as no subscription', async () => {
+    // Projects created before .190 retain a copied route which returns 404
+    // instead of the current `{ data: { subscription: null } }` response.
+    fetchMock.mockImplementation(() => respond(404, { error: 'Not found' }))
+    renderProvider()
+
+    await waitFor(() => expect(screen.getByTestId('state').textContent).toBe('ready'))
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
   it('does not retry a 403', async () => {
     fetchMock.mockImplementation(() => respond(403, { error: 'Forbidden' }))
     renderProvider()

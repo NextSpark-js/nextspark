@@ -194,24 +194,19 @@ Same as POST /members - creates a new invitation.
 ### Get Team Subscription
 `GET /api/v1/teams/[teamId]/subscription`
 
-Returns the team's active subscription details. Requires `billing.view` permission.
+Returns the team's active subscription details, or `null` when the team has not subscribed yet. Requires `billing.view` permission.
 
 **Response:**
 ```json
 {
   "success": true,
   "data": {
-    "subscription": {
-      "id": "sub_123",
-      "planId": "plan_pro",
-      "planName": "Pro",
-      "status": "active",
-      "currentPeriodEnd": "2024-03-01T00:00:00Z",
-      "cancelAtPeriodEnd": false
-    }
+    "subscription": null
   }
 }
 ```
+
+When an active subscription exists, `subscription` contains its details.
 
 ---
 

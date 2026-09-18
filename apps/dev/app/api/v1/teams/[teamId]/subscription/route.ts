@@ -41,11 +41,9 @@ export const GET = withRateLimitTier(async function GET(request: NextRequest, pr
 
     const subscription = await SubscriptionService.getActive(teamId)
 
-    if (!subscription) {
-      return createApiError('No active subscription found for this team', 404)
-    }
-
-    return createApiResponse({ subscription })
+    // A team can legitimately have no subscription yet. Keep that normal state
+    // in the successful response so dashboard loads do not log a 404.
+    return createApiResponse({ subscription: subscription ?? null })
   } catch (error) {
     console.error('[Billing API] Error fetching subscription:', error)
     return createApiError('Failed to fetch subscription', 500)

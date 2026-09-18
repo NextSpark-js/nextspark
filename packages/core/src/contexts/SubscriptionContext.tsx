@@ -72,14 +72,18 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       if (!team) return null
 
       const response = await fetch(withBasePath(`/api/v1/teams/${team.id}/subscription`))
+      // This route is copied into each project only at creation time. Keep the
+      // legacy 404-as-no-subscription response working for projects created
+      // before .190, until that legacy generated route is no longer supported.
+      if (response.status === 404) return null
       if (!response.ok) {
-        if (response.status === 404) return null
         throw new ApiError('Failed to fetch subscription', { status: response.status })
       }
 
       const data = await response.json()
-      // API returns { data: { subscription: {...} } }
-      return data.data?.subscription ?? data.data
+      // API returns { data: { subscription: Subscription | null } }. A null
+      // subscription is the normal state for a team that has not subscribed.
+      return data.data?.subscription ?? null
     },
     enabled: !!team && BILLING_REGISTRY.plans.length > 0,
     // A 4xx, such as the 403 a role without billing access gets, comes back the
