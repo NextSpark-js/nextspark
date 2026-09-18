@@ -1,6 +1,6 @@
 {
   "name": "@nextsparkjs/core",
-  "version": "0.1.0-beta.190",
+  "version": "0.1.0-beta.191",
   "description": "NextSpark - The complete SaaS framework for Next.js",
   "license": "MIT",
   "author": "NextSpark <hello@nextspark.dev>",
@@ -239,6 +239,10 @@
       "types": "./dist/components/devtools/index.d.ts",
       "import": "./dist/components/devtools/index.js"
     },
+    "./components/devtools/*": {
+      "types": "./dist/components/devtools/*.d.ts",
+      "import": "./dist/components/devtools/*.js"
+    },
     "./components/devtools/api-tester": {
       "types": "./dist/components/devtools/api-tester/index.d.ts",
       "import": "./dist/components/devtools/api-tester/index.js"
@@ -387,7 +391,7 @@
     "postinstall": "node scripts/postinstall.mjs || true",
     "build": "tsup && pnpm build:dts",
     "build:js": "tsup",
-    "build:dts": "tsc -p tsconfig.dts.json || echo '\u26a0\ufe0f  DTS generation completed with some type errors (partial coverage)'",
+    "build:dts": "tsc -p tsconfig.dts.json || echo '⚠️  DTS generation completed with some type errors (partial coverage)'",
     "dev": "tsup --watch",
     "test": "jest",
     "test:watch": "jest --watch",

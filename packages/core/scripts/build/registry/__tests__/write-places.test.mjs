@@ -136,6 +136,32 @@ test('a directory the build lists that cannot be read is found', { skip: RUNS_AS
   }
 })
 
+test('only the generated template-scopes registry subtree may be a directory, and it is still guarded', async () => {
+  const { root, cleanup } = await directory()
+  const outside = await directory()
+  try {
+    await mkdir(join(root, 'app'), { recursive: true })
+    await writeIn(root, '.nextspark/registries/template-scopes/server/(public)/page.ts', '/** Auto-generated route-scoped template registry; do not edit. */\n')
+
+    assert.deepEqual(unsafeWritePlaces(root), [])
+
+    await symlink(join(outside.root, 'scope'), join(root, '.nextspark/registries/template-scopes/server/(public)/link'))
+    assert.deepEqual(unsafeWritePlaces(root), [
+      { path: '.nextspark/registries/template-scopes/server/(public)/link', problem: 'is a symlink' }
+    ])
+    await rm(join(root, '.nextspark/registries/template-scopes/server/(public)/link'))
+
+    await rm(join(root, '.nextspark/registries/template-scopes'), { recursive: true })
+    await writeIn(root, '.nextspark/registries/template-scopes', '')
+    assert.deepEqual(unsafeWritePlaces(root), [
+      { path: '.nextspark/registries/template-scopes', problem: 'is not a directory' }
+    ])
+  } finally {
+    await outside.cleanup()
+    await cleanup()
+  }
+})
+
 test('a .nextspark/backups/.gitignore counts as in place only as a readable file with * as its one pattern, and anything else is found', async () => {
   const contents = [
     ['*\n', 'in place'],

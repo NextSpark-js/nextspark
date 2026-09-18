@@ -21,6 +21,7 @@ import '../utils/console-guard.mjs'
 import { join, dirname, resolve } from 'path'
 import { fileURLToPath } from 'url'
 import { existsSync } from 'fs'
+import { lstat, readdir, readFile } from 'fs/promises'
 import dotenv from 'dotenv'
 
 // Load .env from the correct project root
@@ -67,7 +68,12 @@ import { generatePluginRegistry, generatePluginRegistryClient } from './registry
 import { generateEntityRegistry, generateEntityRegistryClient } from './registry/generators/entity-registry.mjs'
 import { generateEntityTypes } from './registry/generators/entity-types.mjs'
 import { generateThemeRegistry } from './registry/generators/theme-registry.mjs'
-import { generateTemplateRegistry, generateTemplateRegistryClient } from './registry/generators/template-registry.mjs'
+import {
+  generateTemplateRegistry,
+  generateTemplateRegistryClient,
+  generateTemplateScopeRegistries,
+  SCOPE_MARKER
+} from './registry/generators/template-registry.mjs'
 import { generateEmailRegistry } from './registry/generators/email-registry.mjs'
 import { generateBlockRegistry, generateBlockRegistryClient, generateBlockRegistryLazy } from './registry/generators/block-registry.mjs'
 import { generateIconRegistry } from './registry/generators/icon-registry.mjs'
@@ -159,6 +165,52 @@ async function generateRegistryFiles(CONFIG, plugins, entities, themes, template
       await files.writeFile(filePath, file.content, 'utf8')
       log(`${file.name}`, 'success')
     }
+
+    // Each route imports its own tiny registry rather than the global one.
+    // Build a complete replacement before cleanup so a theme change can never
+    // leave an existing route pointing at an old component import.
+    const templateScopes = await generateTemplateScopeRegistries(templates, CONFIG, templateAnalysis)
+    await files.mkdir(templateScopes.directory, { recursive: true })
+    const generated = new Set(templateScopes.files.map(file => file.path))
+
+    async function removeStaleScopedFiles(directory) {
+      let entries
+      try {
+        entries = await readdir(directory, { withFileTypes: true })
+      } catch (error) {
+        if (error?.code === 'ENOENT') return
+        throw error
+      }
+      for (const entry of entries) {
+        const path = join(directory, entry.name)
+        const stat = await lstat(path)
+        if (stat.isSymbolicLink()) continue
+        if (stat.isDirectory()) {
+          await removeStaleScopedFiles(path)
+          continue
+        }
+        if (!stat.isFile() || generated.has(path) || !path.endsWith('.ts')) continue
+        // Only files bearing our explicit marker are owned by this generator.
+        if ((await readFile(path, 'utf8')).includes(SCOPE_MARKER)) await files.rm(path, { force: true })
+      }
+      if (directory !== templateScopes.directory) {
+        try {
+          const remaining = await readdir(directory)
+          if (remaining.length === 0) {
+            await files.rmdir(directory)
+          }
+        } catch {
+          // Ignore if directory disappeared or cannot be removed
+        }
+      }
+    }
+
+    await removeStaleScopedFiles(templateScopes.directory)
+    for (const file of templateScopes.files) {
+      await files.mkdir(dirname(file.path), { recursive: true })
+      await files.writeFile(file.path, file.content, 'utf8')
+    }
+    log(`template-scopes (${templateScopes.files.length / 2})`, 'success')
 
   } catch (error) {
     logFailure('Error writing registry files', error)

@@ -19,7 +19,8 @@ import { join, dirname } from 'node:path'
 
 import {
   generateTemplateRegistry,
-  generateTemplateRegistryClient
+  generateTemplateRegistryClient,
+  generateTemplateScopeRegistries
 } from '../generators/template-registry.mjs'
 import { analyzeTemplates } from '../post-build/page-generator.mjs'
 
@@ -353,6 +354,247 @@ test('a layout with no default export is component: null on the server and has n
     const clientOut = await generateTemplateRegistryClient([template], config, analysis)
     assert.doesNotMatch(clientOut, /app\/docs\/layout\.tsx/)
     assert.doesNotMatch(clientOut, /docs\/layout'\)\)/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('route scopes isolate template imports, retain empty fallbacks, and preserve the full registries', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'nextspark-template-scopes-test-'))
+  try {
+    const publicPath = await writeThemeTemplate(
+      root,
+      '(public)/page.tsx',
+      'export default function PublicTemplate() { return null }\n'
+    )
+    const aiPath = await writeThemeTemplate(
+      root,
+      'ai/page.tsx',
+      'export default function AiTemplate() { return null }\n'
+    )
+    const metadataPath = await writeThemeTemplate(
+      root,
+      'layout.meta.ts',
+      "export const metadata = { title: 'Theme brand' }\n"
+    )
+    await writeAppRoute(root, 'app/(public)/page.tsx')
+    await writeAppRoute(root, 'app/ai/page.tsx')
+    await writeAppRoute(root, 'app/(auth)/empty/page.tsx')
+    await writeAppRoute(root, 'app/layout.tsx')
+
+    const templates = [
+      { ...pageTemplate, themeName: 'public', templatePath: publicPath },
+      { ...pageTemplate, name: 'ai/page', themeName: 'ai', relativePath: 'ai/page.tsx', appPath: 'app/ai/page.tsx', templatePath: aiPath },
+      {
+        ...protectedTemplate,
+        name: 'root/layout',
+        themeName: 'brand',
+        relativePath: 'layout.meta.ts',
+        appPath: 'app/layout.tsx',
+        templatePath: metadataPath,
+        metadata: { title: 'Theme brand' }
+      }
+    ]
+    const scopedConfig = { outputDir: join(root, '.nextspark/registries'), projectRoot: root }
+    const analysis = await analyzeTemplates(templates, scopedConfig)
+    const { files } = await generateTemplateScopeRegistries(templates, scopedConfig, analysis)
+    const file = suffix => files.find(candidate => candidate.path.endsWith(suffix))?.content
+    const publicServer = file('/template-scopes/server/(public)/page.ts')
+    const aiServer = file('/template-scopes/server/ai/page.ts')
+    const publicClient = file('/template-scopes/client/(public)/page.ts')
+    const emptyServer = file('/template-scopes/server/(auth)/empty/page.ts')
+    const protectedServer = file('/template-scopes/server/layout.ts')
+
+    assert.match(publicServer, /templates\/\(public\)\/page'\)\)/)
+    assert.doesNotMatch(publicServer, /templates\/ai\/page/)
+    assert.match(aiServer, /templates\/ai\/page'\)\)/)
+    assert.doesNotMatch(aiServer, /templates\/\(public\)\/page/)
+    assert.match(publicClient, /dynamic\(\(\) => import\('@\/contents\/themes\/testtheme\/templates\/\(public\)\/page'\)\)/)
+    assert.doesNotMatch(publicClient, /templates\/ai\/page/)
+    assert.match(emptyServer, /TEMPLATE_REGISTRY: Record<string, TemplateRegistryEntry> = \{\s*\}/)
+    assert.match(emptyServer, /export function getTemplateOrDefault/)
+    assert.doesNotMatch(emptyServer, /TemplateService|template-registry'/)
+    assert.match(protectedServer, /component: null/)
+    assert.match(protectedServer, /canOverrideMetadata/)
+
+    const full = await generateTemplateRegistry(templates, scopedConfig, analysis)
+    assert.match(full, /app\/\(public\)\/page\.tsx/)
+    assert.match(full, /app\/ai\/page\.tsx/)
+    const client = await generateTemplateRegistryClient(templates, scopedConfig, analysis)
+    assert.doesNotMatch(client, /layout\.tsx/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+// The scoped module is TypeScript, but its resolvers have no runtime
+// dependencies beyond the generated registry and protected-path predicates.
+// Execute exactly that emitted code so semantic parity is not just a snapshot.
+function scopedResolvers(scopeContent, registry, canOverrideComponent = () => true, canOverrideMetadata = () => true) {
+  const start = scopeContent.indexOf('export function hasTemplateOverride')
+  assert.notEqual(start, -1, 'scope should contain scoped resolvers')
+  const emitted = scopeContent
+    .slice(start)
+    .replace('export function hasTemplateOverride(appPath: string): boolean {', 'function hasTemplateOverride(appPath) {')
+    .replace('export function getTemplateComponent(appPath: string): any | null {', 'function getTemplateComponent(appPath) {')
+    .replace('export function getTemplateOrDefault<T = any>(appPath: string, defaultComponent: T): T {', 'function getTemplateOrDefault(appPath, defaultComponent) {')
+    .replace('component as T', 'component')
+    .replace('export function getMetadataOrDefault(appPath: string, defaultMetadata: any): any {', 'function getMetadataOrDefault(appPath, defaultMetadata) {')
+  return Function('TEMPLATE_REGISTRY', 'canOverrideComponent', 'canOverrideMetadata', `${emitted}\nreturn { hasTemplateOverride, getTemplateComponent, getTemplateOrDefault, getMetadataOrDefault }`)(
+    registry,
+    canOverrideComponent,
+    canOverrideMetadata
+  )
+}
+
+test('scoped metadata runtime preserves legacy truthy fallback semantics', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'nextspark-template-scopes-test-'))
+  try {
+    await writeAppRoute(root, 'app/metadata.ts')
+    const scopedConfig = { outputDir: join(root, '.nextspark/registries'), projectRoot: root }
+    const { files } = await generateTemplateScopeRegistries([], scopedConfig)
+    const scope = files.find(file => file.path.endsWith('/template-scopes/server/metadata.ts')).content
+    const fallback = { title: 'application default' }
+
+    for (const metadata of [false, 0, '', null, undefined]) {
+      const { getMetadataOrDefault } = scopedResolvers(scope, { 'app/metadata.ts': { template: { metadata } } })
+      assert.equal(getMetadataOrDefault('app/metadata.ts', fallback), fallback)
+    }
+    const override = { title: 'theme override' }
+    const { getMetadataOrDefault } = scopedResolvers(scope, { 'app/metadata.ts': { template: { metadata: override } } })
+    assert.equal(getMetadataOrDefault('app/metadata.ts', fallback), override)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('scoped dynamic lookups preserve TemplateService has/get fallback semantics', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'nextspark-template-scopes-test-'))
+  try {
+    await writeAppRoute(root, 'app/(public)/[...slug]/page.tsx')
+    const scopedConfig = { outputDir: join(root, '.nextspark/registries'), projectRoot: root }
+    const { files } = await generateTemplateScopeRegistries([], scopedConfig)
+    const scope = files.find(file => file.path.endsWith('/template-scopes/server/(public)/[...slug]/page.ts')).content
+    const component = () => 'template'
+    const { hasTemplateOverride, getTemplateComponent } = scopedResolvers(scope, {
+      'app/(public)/blog/[slug]/page.tsx': { component },
+      'app/(public)/metadata-only/page.tsx': { component: null }
+    })
+
+    assert.equal(hasTemplateOverride('app/(public)/blog/[slug]/page.tsx'), true)
+    assert.equal(hasTemplateOverride('app/(public)/missing/page.tsx'), false)
+    assert.equal(getTemplateComponent('app/(public)/blog/[slug]/page.tsx'), component)
+    assert.equal(getTemplateComponent('app/(public)/metadata-only/page.tsx'), null)
+    assert.equal(getTemplateComponent('app/(public)/missing/page.tsx'), null)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('scopes use separate server/client trees and reject extension output ambiguity before writes', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'nextspark-template-scopes-test-'))
+  try {
+    await writeAppRoute(root, 'app/foo.ts')
+    await writeAppRoute(root, 'app/foo.client.ts')
+    const scopedConfig = { outputDir: join(root, '.nextspark/registries'), projectRoot: root }
+    const { files } = await generateTemplateScopeRegistries([], scopedConfig)
+    const paths = new Set(files.map(file => file.path))
+    for (const path of [
+      '/template-scopes/server/foo.ts',
+      '/template-scopes/client/foo.ts',
+      '/template-scopes/server/foo.client.ts',
+      '/template-scopes/client/foo.client.ts'
+    ]) assert.ok([...paths].some(candidate => candidate.endsWith(path)), `missing ${path}`)
+
+    await writeAppRoute(root, 'app/ambiguous.ts')
+    await writeAppRoute(root, 'app/ambiguous.tsx')
+    await assert.rejects(
+      () => generateTemplateScopeRegistries([], scopedConfig),
+      /Ambiguous template scope output .*ambiguous\.ts.*app\/ambiguous\.ts.*app\/ambiguous\.tsx/s
+    )
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('client scopes exclude side-effect and multiline server-only imports with either quote style', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'nextspark-template-registry-test-'))
+  try {
+    const sideEffectPath = await writeThemeTemplate(root, 'server-only/page.tsx', "import 'server-only'\nexport default function Page() { return null }\n")
+    const multilinePath = await writeThemeTemplate(root, 'quoted/layout.tsx', 'import {\n  marker\n} from "server-only"\nexport default function Layout() { return null }\n')
+    const templates = [
+      { ...pageTemplate, appPath: 'app/server-only/page.tsx', relativePath: 'server-only/page.tsx', templatePath: sideEffectPath },
+      { ...pageTemplate, appPath: 'app/quoted/layout.tsx', templateType: 'layout', relativePath: 'quoted/layout.tsx', templatePath: multilinePath }
+    ]
+    const out = await generateClientRegistry(templates, { outputDir: join(root, '.nextspark/registries'), projectRoot: root })
+    assert.doesNotMatch(out, /app\/server-only\/page\.tsx/)
+    assert.doesNotMatch(out, /app\/quoted\/layout\.tsx/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('scoped resolver keeps highest template selection while empty and protected scopes fall back', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'nextspark-template-scopes-test-'))
+  try {
+    const lowPath = await writeThemeTemplate(root, 'priority/low.tsx', 'export default function Low() { return null }\n')
+    const highPath = await writeThemeTemplate(root, 'priority/high.tsx', 'export default function High() { return null }\n')
+    await writeAppRoute(root, 'app/priority/page.tsx')
+    await writeAppRoute(root, 'app/empty/page.tsx')
+    const scopedConfig = { outputDir: join(root, '.nextspark/registries'), projectRoot: root }
+    const templates = [
+      { ...pageTemplate, appPath: 'app/priority/page.tsx', templatePath: lowPath, priority: 1 },
+      { ...pageTemplate, appPath: 'app/priority/page.tsx', templatePath: highPath, priority: 10 }
+    ]
+    const { files } = await generateTemplateScopeRegistries(templates, scopedConfig, await analyzeTemplates(templates, scopedConfig))
+    const priorityScope = files.find(file => file.path.endsWith('/template-scopes/server/priority/page.ts')).content
+    const emptyScope = files.find(file => file.path.endsWith('/template-scopes/server/empty/page.ts')).content
+    assert.ok(priorityScope.indexOf(highPath) < priorityScope.indexOf(lowPath), 'highest-priority template is the selected entry')
+
+    const fallback = () => 'fallback'
+    const override = () => 'override'
+    assert.equal(scopedResolvers(emptyScope, {}).getTemplateOrDefault('app/empty/page.tsx', fallback), fallback)
+    assert.equal(scopedResolvers(priorityScope, { 'app/priority/page.tsx': { component: override } }).getTemplateOrDefault('app/priority/page.tsx', fallback), override)
+    assert.equal(scopedResolvers(priorityScope, { 'app/priority/page.tsx': { component: override } }, () => false).getTemplateOrDefault('app/priority/page.tsx', fallback), fallback)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('dynamic route scopes contain only their runtime target family, not the full registry', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'nextspark-template-scopes-test-'))
+  try {
+    await writeAppRoute(root, 'app/(public)/[...slug]/page.tsx')
+    await writeAppRoute(root, 'app/dashboard/(main)/[entity]/[id]/page.tsx')
+
+    const publicDynamic = await writeThemeTemplate(root, '(public)/blog/[slug]/page.tsx', 'export default function Blog() { return null }\n')
+    const dashboardDetail = await writeThemeTemplate(root, 'dashboard/(main)/projects/[id]/page.tsx', 'export default function Project() { return null }\n')
+    const nestedDashboardDetail = await writeThemeTemplate(root, 'dashboard/(main)/boards/[id]/[cardId]/page.tsx', 'export default function Card() { return null }\n')
+    const dashboardAi = await writeThemeTemplate(root, 'dashboard/(main)/agent-multi/page.tsx', 'export default function Agent() { return null }\n')
+    const observability = await writeThemeTemplate(root, 'superadmin/ai-observability/page.tsx', 'export default function Observability() { return null }\n')
+    const templates = [
+      { ...pageTemplate, appPath: 'app/(public)/blog/[slug]/page.tsx', relativePath: '(public)/blog/[slug]/page.tsx', templatePath: publicDynamic },
+      { ...pageTemplate, appPath: 'app/dashboard/(main)/projects/[id]/page.tsx', relativePath: 'dashboard/(main)/projects/[id]/page.tsx', templatePath: dashboardDetail },
+      { ...pageTemplate, appPath: 'app/dashboard/(main)/boards/[id]/[cardId]/page.tsx', relativePath: 'dashboard/(main)/boards/[id]/[cardId]/page.tsx', templatePath: nestedDashboardDetail },
+      { ...pageTemplate, appPath: 'app/dashboard/(main)/agent-multi/page.tsx', relativePath: 'dashboard/(main)/agent-multi/page.tsx', templatePath: dashboardAi },
+      { ...pageTemplate, appPath: 'app/superadmin/ai-observability/page.tsx', relativePath: 'superadmin/ai-observability/page.tsx', templatePath: observability }
+    ]
+    const scopedConfig = { outputDir: join(root, '.nextspark/registries'), projectRoot: root }
+    const { files } = await generateTemplateScopeRegistries(templates, scopedConfig, await analyzeTemplates(templates, scopedConfig))
+    const file = suffix => files.find(candidate => candidate.path.endsWith(suffix))?.content
+    const publicServer = file('/template-scopes/server/(public)/[...slug]/page.ts')
+    const publicClient = file('/template-scopes/client/(public)/[...slug]/page.ts')
+    const dashboardServer = file('/template-scopes/server/dashboard/(main)/[entity]/[id]/page.ts')
+
+    assert.match(publicServer, /templates\/\(public\)\/blog\/\[slug\]\/page'\)\)/)
+    assert.match(publicServer, /export function hasTemplateOverride/)
+    assert.match(publicServer, /export function getTemplateComponent/)
+    assert.doesNotMatch(publicServer, /agent-multi|ai-observability|projects\/\[id\]/)
+    assert.match(publicClient, /templates\/\(public\)\/blog\/\[slug\]\/page'\)\)/)
+    assert.doesNotMatch(publicClient, /agent-multi|ai-observability|projects\/\[id\]/)
+
+    assert.match(dashboardServer, /templates\/dashboard\/\(main\)\/projects\/\[id\]\/page'\)\)/)
+    assert.doesNotMatch(dashboardServer, /\(public\)\/blog|boards\/\[id\]\/\[cardId\]|agent-multi|ai-observability/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }

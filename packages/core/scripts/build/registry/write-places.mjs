@@ -34,6 +34,10 @@ const PLACES = [
   { path: '.nextspark/registries', kind: 'directory' },
 ]
 
+// Registries are otherwise flat files. Route-scoped template registries are
+// generated beneath this one owned subtree so their paths can mirror app/.
+const TEMPLATE_SCOPES_DIRECTORY = '.nextspark/registries/template-scopes'
+
 /**
  * The directories the registry build removes old plugin route directories
  * under, from the project root, when app/api/v1/plugin is there: a symlink
@@ -86,9 +90,11 @@ function readable(projectRoot, dir) {
  * Report what is in the way under `dir`, from the project root, without going
  * through a symlink: each symlink, anything that is neither a file, a directory
  * nor a symlink, a directory that can't be read, and, with `filesOnly`, a
- * directory right under `dir`.
+ * directory right under `dir` unless it is one of `directoryExceptions`.
+ * An exception is still walked with the same symlink guard; it is not a
+ * blanket exemption for arbitrary registry subtrees.
  */
-function reportEntriesUnder(projectRoot, dir, filesOnly, report) {
+function reportEntriesUnder(projectRoot, dir, filesOnly, report, directoryExceptions = new Set()) {
   let entries
   try {
     entries = readdirSync(join(projectRoot, dir), { withFileTypes: true })
@@ -101,8 +107,10 @@ function reportEntriesUnder(projectRoot, dir, filesOnly, report) {
     if (entry.isSymbolicLink()) {
       report(path, 'is a symlink')
     } else if (entry.isDirectory()) {
-      if (filesOnly) report(path, 'is not a file')
-      else reportEntriesUnder(projectRoot, path, false, report)
+      if (filesOnly && !directoryExceptions.has(path)) report(path, 'is not a file')
+      else reportEntriesUnder(projectRoot, path, false, report, directoryExceptions)
+    } else if (entry.isFile() && directoryExceptions.has(path)) {
+      report(path, 'is not a directory')
     } else if (!entry.isFile()) {
       report(path, 'is neither a file nor a directory')
     }
@@ -206,7 +214,13 @@ export function unsafeWritePlaces(projectRoot, written = [], { activeTheme = pro
     reportEntriesUnder(projectRoot, 'app/(templates)', false, report)
   }
   if (!reported('.nextspark') && !reported('.nextspark/registries')) {
-    reportEntriesUnder(projectRoot, '.nextspark/registries', true, report)
+    reportEntriesUnder(
+      projectRoot,
+      '.nextspark/registries',
+      true,
+      report,
+      new Set([TEMPLATE_SCOPES_DIRECTORY])
+    )
   }
   return unsafe
 }

@@ -6,16 +6,15 @@
  * @module core/scripts/build/registry/generators/template-registry
  */
 
-import { readFile } from 'fs/promises'
-import { join, dirname } from 'path'
+import { lstat, readdir, readFile } from 'fs/promises'
+import { join, dirname, relative, sep } from 'path'
 import { fileURLToPath } from 'url'
 
 import { verbose } from '../../../utils/index.mjs'
-import {
-  canOverrideComponent
-} from '../../../../dist/config/protected-paths.js'
+import { canOverrideComponent } from '../../../../dist/config/protected-paths.js'
 import { convertCorePath } from '../config.mjs'
 import { analyzeTemplates, routeFileAction, templateAnalysisFor } from '../post-build/page-generator.mjs'
+import { loadTypeScriptFor } from '../shared/typescript-compiler.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -204,9 +203,32 @@ export const TEMPLATE_METADATA = {
  * @param {string} filePath - Path to the template file
  * @returns {Promise<boolean>} Whether the file has server-only exports
  */
-async function hasServerOnlyExports(filePath) {
+async function hasServerOnlyExports(filePath, projectRoot) {
   try {
     const content = await readFile(filePath, 'utf8')
+    // Prefer the compiler's import declarations: unlike a source scan they
+    // distinguish a real import from a comment/string and cover multiline
+    // named imports as well as the usual side-effect `import 'server-only'`.
+    try {
+      const ts = await loadTypeScriptFor(projectRoot)
+      const sourceFile = ts.createSourceFile(
+        filePath,
+        content,
+        ts.ScriptTarget.Latest,
+        true,
+        ts.getScriptKindFromFileName(filePath)
+      )
+      for (const statement of sourceFile.statements) {
+        if (ts.isImportDeclaration(statement) && ts.isStringLiteral(statement.moduleSpecifier)) {
+          if (statement.moduleSpecifier.text === 'next/headers' || statement.moduleSpecifier.text === 'server-only') {
+            return true
+          }
+        }
+      }
+    } catch {
+      // A project without the compiler API can still use the deliberately
+      // anchored fallback below. The other checks have always been scans.
+    }
     // Check for server-only function exports
     const serverFunctionExports = [
       /export\s+(async\s+)?function\s+generateMetadata/,
@@ -223,8 +245,8 @@ async function hasServerOnlyExports(filePath) {
 
     // Check for server-only module imports
     const serverOnlyImports = [
-      /import\s+.*from\s+['"]next\/headers['"]/,
-      /import\s+.*from\s+['"]server-only['"]/,
+      /(?:^|[;\r\n])\s*import\s+(?:type\s+)?(?:(?:[\w*$][^;'"`]*?)\s+from\s+)?(['"])next\/headers\1\s*;?/m,
+      /(?:^|[;\r\n])\s*import\s+(?:type\s+)?(?:(?:[\w*$][^;'"`]*?)\s+from\s+)?(['"])server-only\1\s*;?/m,
     ]
 
     // Check if default export is an async function (server component marker in Next.js)
@@ -277,7 +299,7 @@ export async function generateTemplateRegistryClient(templates, config, analysis
       }
 
       // Check for server-only exports
-      const hasServerExports = await hasServerOnlyExports(actualFilePath)
+      const hasServerExports = await hasServerOnlyExports(actualFilePath, projectRoot)
       if (hasServerExports) {
         verbose(`Excluding ${appPath} from client registry (has server-only exports)`)
         return null
@@ -365,3 +387,170 @@ export function withTemplateOverrideForClient<P extends object>(appPath: string)
 }
 `
 }
+
+// Route scopes deliberately contain their own, small registry. In particular,
+// do not import TemplateService or the full template registry here: a route
+// importing a scope must not reconnect its bundle to every theme template.
+const SCOPE_MARKER = 'Auto-generated route-scoped template registry'
+const TYPE_SCRIPT_ROUTE = /\.(?:tsx|ts)$/
+
+/** Turn an app route filename into its matching safe server/client scope filename. */
+function scopeFileFor(appPath, scopeDirectory, client = false) {
+  if (typeof appPath !== 'string' || !appPath.startsWith('app/') || !TYPE_SCRIPT_ROUTE.test(appPath)) {
+    throw new Error(`Invalid template scope app path: ${String(appPath)}`)
+  }
+  const route = appPath.slice('app/'.length).replace(TYPE_SCRIPT_ROUTE, '')
+  const segments = route.split('/')
+  if (!route || segments.some(segment => !segment || segment === '.' || segment === '..' || segment.includes('\\'))) {
+    throw new Error(`Invalid template scope app path: ${appPath}`)
+  }
+  return join(scopeDirectory, client ? 'client' : 'server', `${route}.ts`)
+}
+
+/** Read actual route modules without following symlinks or descending into node_modules. */
+async function discoverAppRoutePaths(projectRoot) {
+  const appDirectory = join(projectRoot, 'app')
+  const routePaths = []
+  async function visit(directory) {
+    let entries
+    try {
+      entries = await readdir(directory, { withFileTypes: true })
+    } catch (error) {
+      if (error?.code === 'ENOENT') return
+      throw error
+    }
+    for (const entry of entries) {
+      if (entry.name === 'node_modules') continue
+      const absolute = join(directory, entry.name)
+      // Dirent is a hint only; lstat prevents traversing a changed symlink.
+      const stat = await lstat(absolute)
+      if (stat.isSymbolicLink()) continue
+      if (stat.isDirectory()) await visit(absolute)
+      else if (stat.isFile() && TYPE_SCRIPT_ROUTE.test(entry.name) && !entry.name.endsWith('.d.ts')) {
+        routePaths.push(`app/${relative(appDirectory, absolute).split(sep).join('/')}`)
+      }
+    }
+  }
+  await visit(appDirectory)
+  return routePaths
+}
+
+function scopedServerResolver(outputFilePath, config) {
+  const protectedPaths = convertCorePath('@/core/config/protected-paths', outputFilePath, config)
+  return `
+
+import { canOverrideComponent, canOverrideMetadata } from '${protectedPaths}'
+
+/**
+ * The two dynamic application routes need to ask about a runtime-generated
+ * app path. Keep this small compatibility surface local to their bounded
+ * scope instead of importing the global service, whose registry has every
+ * template in the application.
+ */
+export function hasTemplateOverride(appPath: string): boolean {
+  return appPath in TEMPLATE_REGISTRY
+}
+
+/** Return the selected component using the global service's get-component semantics. */
+export function getTemplateComponent(appPath: string): any | null {
+  return TEMPLATE_REGISTRY[appPath]?.component || null
+}
+
+/** Resolve only this route's selected template; no global registry is imported. */
+export function getTemplateOrDefault<T = any>(appPath: string, defaultComponent: T): T {
+  if (!canOverrideComponent(appPath)) return defaultComponent
+  const component = TEMPLATE_REGISTRY[appPath]?.component
+  return component ? component as T : defaultComponent
+}
+
+/** Resolve metadata from only this route's selected template. */
+export function getMetadataOrDefault(appPath: string, defaultMetadata: any): any {
+  if (!canOverrideMetadata(appPath)) return defaultMetadata
+  const metadata = TEMPLATE_REGISTRY[appPath]?.template?.metadata
+  return metadata ? metadata : defaultMetadata
+}
+`
+}
+
+const PUBLIC_DYNAMIC_CATCH_ALL_PATH = 'app/(public)/[...slug]/page.tsx'
+const DASHBOARD_DYNAMIC_DETAIL_PATH = 'app/dashboard/(main)/[entity]/[id]/page.tsx'
+
+/**
+ * The dynamic routes construct their target template path from an entity at
+ * runtime. Their scope therefore needs the possible templates for *that
+ * route family*, rather than an exact path that cannot be known at build time.
+ *
+ * These predicates intentionally describe the strings built in the two route
+ * modules. Do not widen them to an area prefix: doing so would recreate the
+ * full-registry fan-out this generator exists to avoid.
+ */
+function isPublicDynamicEntityTemplate(appPath) {
+  return /^app\/\(public\)\/(?:.+\/)?\[(?:slug|entity)\]\/page\.(?:tsx|ts)$/.test(appPath)
+}
+
+function isDashboardDynamicDetailTemplate(appPath) {
+  return /^app\/dashboard\/\(main\)\/[^/]+\/\[id\]\/page\.(?:tsx|ts)$/.test(appPath)
+}
+
+function templatesForScope(templates, scopeAppPath) {
+  return templates.filter(template => {
+    if (template.appPath === scopeAppPath) return true
+    if (scopeAppPath === PUBLIC_DYNAMIC_CATCH_ALL_PATH) {
+      return isPublicDynamicEntityTemplate(template.appPath)
+    }
+    if (scopeAppPath === DASHBOARD_DYNAMIC_DETAIL_PATH) {
+      return isDashboardDynamicDetailTemplate(template.appPath)
+    }
+    return false
+  })
+}
+
+/**
+ * Fail while constructing the complete write plan if two app route extensions
+ * normalize to the same scope module. This happens before registry.mjs can
+ * delete stale files or write any replacement scopes.
+ */
+function assertUniqueScopeOutputs(appPaths, scopeDirectory) {
+  const outputs = new Map()
+  for (const appPath of appPaths) {
+    for (const client of [false, true]) {
+      const outputPath = scopeFileFor(appPath, scopeDirectory, client)
+      const previous = outputs.get(outputPath)
+      if (previous && previous !== appPath) {
+        throw new Error(
+          `Ambiguous template scope output ${outputPath}: both ${previous} and ${appPath} normalize to this file. ` +
+          'Keep only one route extension (.ts or .tsx) for the route before generating registries.'
+        )
+      }
+      outputs.set(outputPath, appPath)
+    }
+  }
+}
+
+/**
+ * Generate route-scoped server/client modules as paths and content. The build
+ * writes this plan via safe-fs; empty scopes preserve a route fallback when a
+ * theme change removes its override.
+ */
+export async function generateTemplateScopeRegistries(templates, config, analysis = null) {
+  const scopeDirectory = join(config.outputDir, 'template-scopes')
+  const paths = new Set(await discoverAppRoutePaths(config.projectRoot))
+  for (const template of templates) paths.add(template.appPath)
+  assertUniqueScopeOutputs(paths, scopeDirectory)
+  const files = []
+  for (const appPath of [...paths].sort()) {
+    const selected = templatesForScope(templates, appPath)
+    const serverPath = scopeFileFor(appPath, scopeDirectory)
+    const clientPath = scopeFileFor(appPath, scopeDirectory, true)
+    const serverRegistry = await generateTemplateRegistry(selected, config, analysis)
+    const clientRegistry = await generateTemplateRegistryClient(selected, config, analysis)
+    files.push(
+      { path: serverPath, content: `/** ${SCOPE_MARKER}; do not edit. */\n${serverRegistry}${scopedServerResolver(serverPath, config)}` },
+      { path: clientPath, content: `/** ${SCOPE_MARKER}; do not edit. */\n${clientRegistry}` }
+    )
+  }
+  return { directory: scopeDirectory, files }
+}
+
+/** Marker used to restrict stale cleanup to files this generator owns. */
+export { SCOPE_MARKER }
