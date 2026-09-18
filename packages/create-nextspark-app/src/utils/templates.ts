@@ -30,7 +30,9 @@ BETTER_AUTH_URL=http://localhost:3000
 # =============================================================================
 # EMAIL (Resend)
 # =============================================================================
-RESEND_API_KEY=re_xxxxxxxxxxxx
+# Without a key, emails are printed in the server log and are not sent.
+# To send email, uncomment this and set a real Resend API key.
+# RESEND_API_KEY="re_..."
 EMAIL_FROM=noreply@yourdomain.com
 
 # =============================================================================
