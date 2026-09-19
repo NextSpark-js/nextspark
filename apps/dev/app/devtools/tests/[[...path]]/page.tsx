@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { TestCasesViewer } from "@nextsparkjs/core/components/devtools";
+import { TestCasesViewer } from "@nextsparkjs/core/components/devtools/TestCasesViewer";
 import { FileText } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 

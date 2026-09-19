@@ -247,6 +247,10 @@
       "types": "./dist/components/devtools/api-tester/index.d.ts",
       "import": "./dist/components/devtools/api-tester/index.js"
     },
+    "./components/devtools/api-explorer": {
+      "types": "./dist/components/devtools/api-explorer/index.d.ts",
+      "import": "./dist/components/devtools/api-explorer/index.js"
+    },
     "./components/devtools/bdd": {
       "types": "./dist/components/devtools/bdd/index.d.ts",
       "import": "./dist/components/devtools/bdd/index.js"

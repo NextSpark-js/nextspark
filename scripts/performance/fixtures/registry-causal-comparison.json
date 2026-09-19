@@ -1,0 +1,100 @@
+{
+  "baselineBuild": "fuff6ZSXJru9YTLYJkE1S",
+  "experimentBuild": "b1tYPKDChS-vcO_pR-Wma",
+  "experiment": "five extension component imports removed from generated server registry only",
+  "rows": [
+    {
+      "mode": "allowed",
+      "route": "/",
+      "before": 1346001,
+      "after": 1119973,
+      "saved": 226028,
+      "direct": true,
+      "markdownOrChatSources": []
+    },
+    {
+      "mode": "allowed",
+      "route": "/docs",
+      "before": 1352601,
+      "after": 1126988,
+      "saved": 225613,
+      "direct": true,
+      "markdownOrChatSources": []
+    },
+    {
+      "mode": "allowed",
+      "route": "/login",
+      "before": 1420164,
+      "after": 1194745,
+      "saved": 225419,
+      "direct": true,
+      "markdownOrChatSources": []
+    },
+    {
+      "mode": "allowed",
+      "route": "/dashboard",
+      "before": 1420164,
+      "after": 1194745,
+      "saved": 225419,
+      "direct": false,
+      "markdownOrChatSources": []
+    },
+    {
+      "mode": "allowed",
+      "route": "/403",
+      "before": 1355595,
+      "after": 1129831,
+      "saved": 225764,
+      "direct": true,
+      "markdownOrChatSources": []
+    },
+    {
+      "mode": "blocked",
+      "route": "/",
+      "before": 1346001,
+      "after": 1119973,
+      "saved": 226028,
+      "direct": true,
+      "markdownOrChatSources": []
+    },
+    {
+      "mode": "blocked",
+      "route": "/docs",
+      "before": 1352601,
+      "after": 1126988,
+      "saved": 225613,
+      "direct": true,
+      "markdownOrChatSources": []
+    },
+    {
+      "mode": "blocked",
+      "route": "/login",
+      "before": 1420164,
+      "after": 1194745,
+      "saved": 225419,
+      "direct": true,
+      "markdownOrChatSources": []
+    },
+    {
+      "mode": "blocked",
+      "route": "/dashboard",
+      "before": 1420164,
+      "after": 1194745,
+      "saved": 225419,
+      "direct": false,
+      "markdownOrChatSources": []
+    },
+    {
+      "mode": "blocked",
+      "route": "/403",
+      "before": 1355595,
+      "after": 1129831,
+      "saved": 225764,
+      "direct": true,
+      "markdownOrChatSources": []
+    }
+  ],
+  "commonAfterBytes": 1119597,
+  "commonAfterFiles": 24,
+  "caveat": "Not a durable fix; getComponent for extension routes temporarily null. No authenticated dashboard measurement. Source-map byte ranges remain uncertain, source inventory used only for module presence."
+}

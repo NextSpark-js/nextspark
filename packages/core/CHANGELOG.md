@@ -11,23 +11,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Route-Scoped Template Registries (#192):**
+- **Route-scoped template registries (#192):**
   - Re-architected template registry generation to produce route-scoped registries under `@nextsparkjs/registries/template-scopes/server/` and `template-scopes/client/`, replacing the monolithic flat template registry.
-  - Resolved cross-area bundle leaks: public routes (`/`, `/docs`, `/login`, `/403`), authenticated dashboard (`/dashboard`), `/superadmin`, and `/devtools` no longer pull in Markdown parser chunks (`micromark`, `mdast`, `unified`, `remark`) from AI assistant templates.
-  - Eliminated namespace collision between server and client route scopes (`foo.ts` vs `foo.client.ts`).
-  - Added robust detection for `server-only` imports, including side-effect `import 'server-only'`.
-  - Preserved metadata truthy fallback parity with `template-resolver.ts` (`metadata ? metadata : defaultMetadata`).
-  - Fixed devtools barrel leak in `@nextsparkjs/core/components/devtools` to import `DevtoolsShellClient` directly from its deep path.
-  - Reduced root route (`/`) decoded JavaScript bundle size from ~1.72 MB to 1.07 MB (blocked prefetch) / 1.32 MB (allowed prefetch).
+  - Resolved the source-structure cause of cross-area template fan-out in the tested `apps/dev` scopes: generated `app/(templates)` artifacts are excluded during scope discovery for idempotent builds, while server scopes are explicitly marked `server-only`. This does not establish blanket closure of the original Shendo issue; consuming-app validation remains pending.
+  - Eliminated namespace collisions between server and client route scopes (`foo.ts` vs `foo.client.ts`), added robust detection for `server-only` imports (including side-effect `import 'server-only'`), and preserved metadata truthy-fallback parity with `template-resolver.ts`.
+  - The temporary causal experiment in `scripts/performance/fixtures/registry-causal-comparison.json` reports root allowed-mode decoded JavaScript of `1,346,001 B` before and `1,119,973 B` after, a `226,028 B` saving. The experiment used an unauthenticated dashboard; these are not final production before/after measurements. Source maps remain opt-in.
+  - The entire registry test suite reports 266 tests (the focused scope test has 22); the initial registry baseline was 264 tests.
+  - Added an explicit package export for the API Explorer and replaced the remaining `TestCasesViewer` barrel import with its deep import.
 
 ### Added
 
-- **Route JavaScript Budget Harness (#192):**
-  - Added `scripts/performance/verify-route-js-budget.mjs` and `scripts/performance/apps-dev-route-js-budget.json` to verify browser-observed route JavaScript sizes against strict decoded byte budgets in CI.
-  - Added test suite in `scripts/performance/verify-route-js-budget.test.mjs` verifying clean budget passes and asserting counterfactual failure against the previous whole-app fan-out.
-
-
-### Added
+- **Route JavaScript budget verifier (#192):**
+  - Added `scripts/performance/verify-route-js-budget.mjs`, `scripts/performance/apps-dev-route-js-budget.json`, and tests in `scripts/performance/verify-route-js-budget.test.mjs` for browser-observed decoded JavaScript budgets.
+  - Added strict `prefetchRequests` accounting for schema v2 and v3 captures, and tests against the real tracked budgets. The CI gate is tests-only: it runs deterministic verifier tests; it does not build the app, start a browser, or perform browser measurement.
 
 - **Registry-driven MCP (Model Context Protocol) server engine (`@nextsparkjs/core/lib/mcp`, #98).**
   Every `access.api`-enabled entity in the entity registry now gets a working MCP tool

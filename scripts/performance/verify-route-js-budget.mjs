@@ -10,7 +10,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 const MEASUREMENT_KIND = "browser-route-measurement";
-const MEASUREMENT_SCHEMA_VERSION = 2;
+const SUPPORTED_MEASUREMENT_SCHEMA_VERSIONS = new Set([2, 3]);
 const BUDGET_KIND = "route-js-budget";
 const BUDGET_SCHEMA_VERSION = 1;
 const SUPPORTED_MODES = new Set(["allowed", "blocked"]);
@@ -155,11 +155,36 @@ function validateJavaScriptCapture(result, label, errors) {
   return { uniqueBodyBytes: javascript.uniqueBodyBytes, files: files.length, transferSize: javascriptTotals?.transferSize };
 }
 
+function validatePrefetchRequests(result, mode, label, errors) {
+  if (!Object.hasOwn(result, "prefetchRequests")) {
+    addError(errors, `${label}.prefetchRequests must be an object.`);
+    return;
+  }
+  const counters = requireObject(result.prefetchRequests, `${label}.prefetchRequests`, errors);
+  if (!counters) return;
+  const seenIsValid = requireNonNegativeSafeInteger(counters.seen, `${label}.prefetchRequests.seen`, errors);
+  const allowedIsValid = requireNonNegativeSafeInteger(counters.allowed, `${label}.prefetchRequests.allowed`, errors);
+  const blockedIsValid = requireNonNegativeSafeInteger(counters.blocked, `${label}.prefetchRequests.blocked`, errors);
+  const externalBlockedIsValid = requireNonNegativeSafeInteger(counters.externalBlocked, `${label}.prefetchRequests.externalBlocked`, errors);
+  if (!seenIsValid || !allowedIsValid || !blockedIsValid || !externalBlockedIsValid) return;
+
+  if (counters.seen !== counters.allowed + counters.blocked) {
+    addError(errors, `${label}.prefetchRequests.seen (${counters.seen}) must equal allowed + blocked (${counters.allowed + counters.blocked}).`);
+  }
+  if (mode === "allowed" && counters.blocked !== 0) {
+    addError(errors, `${label} allowed prefetch mode must have zero blocked requests.`);
+  }
+  if (mode === "blocked" && counters.allowed !== 0) {
+    addError(errors, `${label} blocked prefetch mode must have zero allowed requests.`);
+  }
+}
+
 function validateResult(result, mode, index, errors) {
   const label = `Measurement ${mode}.results[${index}]`;
   const item = requireObject(result, label, errors);
   if (!item) return null;
   if (item.prefetchMode !== mode) addError(errors, `${label}.prefetchMode must equal ${JSON.stringify(mode)}.`);
+  validatePrefetchRequests(item, mode, label, errors);
   if (typeof item.route !== "string" || !item.route.startsWith("/") || item.route.startsWith("//")) addError(errors, `${label}.route must be an origin-relative route.`);
   const navigation = requireObject(item.navigation, `${label}.navigation`, errors);
   if (navigation) {
@@ -183,7 +208,7 @@ export function validateMeasurement(measurement, budget) {
   const root = requireObject(measurement, "Measurement", errors);
   if (!root) throw new BudgetVerificationError(errors);
   if (root.kind !== MEASUREMENT_KIND) addError(errors, `Measurement.kind must equal ${JSON.stringify(MEASUREMENT_KIND)}.`);
-  if (root.schemaVersion !== MEASUREMENT_SCHEMA_VERSION) addError(errors, `Measurement.schemaVersion must equal ${MEASUREMENT_SCHEMA_VERSION}.`);
+  if (!SUPPORTED_MEASUREMENT_SCHEMA_VERSIONS.has(root.schemaVersion)) addError(errors, "Measurement.schemaVersion must equal 2 or 3.");
   if (root.complete !== true) addError(errors, "Measurement is incomplete (complete must be true).");
   if (!requireNonNegativeSafeInteger(root.completedMeasurements, "Measurement.completedMeasurements", errors)
     || !requireNonNegativeSafeInteger(root.totalMeasurements, "Measurement.totalMeasurements", errors)

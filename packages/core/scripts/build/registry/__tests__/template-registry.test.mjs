@@ -13,9 +13,12 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
+import { spawnSync } from 'node:child_process'
+import { existsSync } from 'node:fs'
+import { mkdtemp, mkdir, readdir, readFile, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import {
   generateTemplateRegistry,
@@ -46,6 +49,7 @@ const protectedTemplate = {
 }
 
 const config = { outputDir: '/tmp/registries', projectRoot: '/tmp/project' }
+const CORE_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..')
 
 // The registry build parses the templates once, with analyzeTemplates, and
 // hands the same analysis to both registries. These do the same.
@@ -595,6 +599,94 @@ test('dynamic route scopes contain only their runtime target family, not the ful
 
     assert.match(dashboardServer, /templates\/dashboard\/\(main\)\/projects\/\[id\]\/page'\)\)/)
     assert.doesNotMatch(dashboardServer, /\(public\)\/blog|boards\/\[id\]\/\[cardId\]|agent-multi|ai-observability/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+async function scopedFiles(root) {
+  const directory = join(root, '.nextspark/registries/template-scopes')
+  const files = []
+  async function visit(path, relative = '') {
+    for (const entry of await readdir(path, { withFileTypes: true })) {
+      const entryPath = join(path, entry.name)
+      const entryRelative = relative ? `${relative}/${entry.name}` : entry.name
+      if (entry.isDirectory()) await visit(entryPath, entryRelative)
+      else if (entry.isFile()) files.push([entryRelative, await readFile(entryPath, 'utf8')])
+    }
+  }
+  await visit(directory)
+  return files.sort(([left], [right]) => left.localeCompare(right))
+}
+
+function runRegistryBuild(root) {
+  const result = spawnSync('node', ['scripts/build/registry.mjs'], {
+    cwd: CORE_DIR,
+    env: { ...process.env, NEXTSPARK_PROJECT_ROOT: root },
+    encoding: 'utf8',
+  })
+  assert.equal(result.status, 0, `${result.stdout}${result.stderr}`)
+}
+
+function withoutBuildTimestamps(content) {
+  return content.replace(/(Generated at|generatedAt): .*$/gm, '$1: <build-time>')
+}
+
+test('complete builds exclude generated template pages and layout copies from route scopes, then prune both in one build', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'nextspark-template-scopes-build-test-'))
+  try {
+    await writeFile(join(root, '.env'), 'NEXT_PUBLIC_ACTIVE_THEME=acme\n')
+    await writeFile(join(root, 'package.json'), '{}\n')
+    await writeAppRoute(root, 'app/shop/layout.tsx', 'export default function ShopLayout({ children }) { return children }\n')
+    await writeAppRoute(root, 'contents/themes/acme/config/theme.config.ts', 'export const acmeThemeConfig = {}\n')
+    const template = join(root, 'contents/themes/acme/templates/shop/page.tsx')
+    await mkdir(dirname(template), { recursive: true })
+    await writeFile(template, 'export default function ShopPage() { return null }\n')
+
+    runRegistryBuild(root)
+    const firstScopes = await scopedFiles(root)
+    assert.equal(existsSync(join(root, 'app/(templates)/shop/page.tsx')), true, 'the generated template page exists')
+    const generatedLayout = await readFile(join(root, 'app/(templates)/shop/layout.tsx'), 'utf8')
+    assert.match(generatedLayout, /copy of app\/shop\/layout\.tsx/)
+
+    runRegistryBuild(root)
+    const secondScopes = await scopedFiles(root)
+    assert.deepEqual(
+      secondScopes.map(([path]) => path),
+      firstScopes.map(([path]) => path),
+      'a generated page and copied layout do not become scopes on the next build'
+    )
+    assert.deepEqual(
+      secondScopes.map(([path, content]) => [path, withoutBuildTimestamps(content)]),
+      firstScopes.map(([path, content]) => [path, withoutBuildTimestamps(content)])
+    )
+
+    await rm(template)
+    runRegistryBuild(root)
+    const prunedScopes = await scopedFiles(root)
+    assert.equal(existsSync(join(root, 'app/(templates)/shop/page.tsx')), false, 'the removed template page is pruned in the same build')
+    assert.equal(existsSync(join(root, 'app/(templates)/shop/layout.tsx')), false, 'the generated layout copy is pruned in the same build')
+    assert.deepEqual(
+      prunedScopes.map(([path]) => path),
+      ['client/shop/layout.ts', 'server/shop/layout.ts'],
+      'only the real application layout keeps a scope after the template is removed'
+    )
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('server route scopes are marked server-only while client scopes remain client-safe', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'nextspark-template-scopes-test-'))
+  try {
+    await writeAppRoute(root, 'app/shop/page.tsx')
+    const scopedConfig = { outputDir: join(root, '.nextspark/registries'), projectRoot: root }
+    const { files } = await generateTemplateScopeRegistries([], scopedConfig)
+    const serverScope = files.find(file => file.path.endsWith('/template-scopes/server/shop/page.ts')).content
+    const clientScope = files.find(file => file.path.endsWith('/template-scopes/client/shop/page.ts')).content
+
+    assert.match(serverScope, /import 'server-only'/)
+    assert.doesNotMatch(clientScope, /server-only/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }

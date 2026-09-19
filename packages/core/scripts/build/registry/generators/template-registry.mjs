@@ -421,6 +421,10 @@ async function discoverAppRoutePaths(projectRoot) {
     }
     for (const entry of entries) {
       if (entry.name === 'node_modules') continue
+      // The registry build writes generated template routes and layout copies
+      // here after scopes are planned. They are implementation artifacts, not
+      // application routes, so never let a later build turn them into scopes.
+      if (directory === appDirectory && entry.name === '(templates)') continue
       const absolute = join(directory, entry.name)
       // Dirent is a hint only; lstat prevents traversing a changed symlink.
       const stat = await lstat(absolute)
@@ -545,7 +549,7 @@ export async function generateTemplateScopeRegistries(templates, config, analysi
     const serverRegistry = await generateTemplateRegistry(selected, config, analysis)
     const clientRegistry = await generateTemplateRegistryClient(selected, config, analysis)
     files.push(
-      { path: serverPath, content: `/** ${SCOPE_MARKER}; do not edit. */\n${serverRegistry}${scopedServerResolver(serverPath, config)}` },
+      { path: serverPath, content: `/** ${SCOPE_MARKER}; do not edit. */\nimport 'server-only'\n${serverRegistry}${scopedServerResolver(serverPath, config)}` },
       { path: clientPath, content: `/** ${SCOPE_MARKER}; do not edit. */\n${clientRegistry}` }
     )
   }
