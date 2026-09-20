@@ -50,6 +50,27 @@ test('isMainModule matches on Windows, where the file: URL and argv1 disagree on
   assert.equal(isMainModule(moduleUrl, 'C:\\repo with space\\scripts\\packages\\other.mjs', { windows: true }), false)
 })
 
+test('the process-group teardown suite does not expose expected fixture failures as run failures', async () => {
+  const { NODE_TEST_CONTEXT, ...env } = process.env
+  const fixturePattern = "cancelActiveChildrenAndExit (waits for the active step's finally before exiting|names the children it could not kill before exiting|passes each active child's own handle as killLeader, not just its pid)"
+  const result = await new Promise((resolve, reject) => {
+    const child = spawn(
+      process.execPath,
+      ['--test', '--test-reporter=spec', `--test-name-pattern=${fixturePattern}`, join(HERE, 'mobile-verify.test.mjs')],
+      { cwd: HERE, env, stdio: ['ignore', 'pipe', 'pipe'] },
+    )
+    let output = ''
+    child.stdout.on('data', (chunk) => { output += chunk })
+    child.stderr.on('data', (chunk) => { output += chunk })
+    child.on('error', reject)
+    child.on('close', (code) => resolve({ code, output }))
+  })
+  const output = result.output.replace(/\x1b\[[0-9;]*m/g, '')
+
+  assert.equal(result.code, 0, output)
+  assert.doesNotMatch(output, /(?:^|\n)(?:→ (?:hang|unkillable)|Killed with SIGKILL|✗ (?:hang|unkillable) failed)(?:\n|$)/)
+})
+
 test('isMainModule matches a file reached through a symlink, on whichever side node resolved it', { skip: POSIX_ONLY }, () => {
   const dir = realpathSync(mkdtempSync(join(tmpdir(), 'mobile-verify-guard-')))
   try {

@@ -2,6 +2,9 @@
 module.exports = {
   preset: 'jest-expo',
   displayName: 'mobile',
+  // The Node crawler works for both one-shot and watch runs without exposing
+  // machine-local Watchman recrawl state in test output.
+  watchman: false,
 
   // Tests location
   roots: ['<rootDir>/tests/jest'],

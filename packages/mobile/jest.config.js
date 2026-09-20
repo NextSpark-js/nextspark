@@ -1,6 +1,9 @@
 /** @type {import('jest').Config} */
 export default {
   testEnvironment: 'node',
+  // The Node crawler works for both one-shot and watch runs without exposing
+  // machine-local Watchman recrawl state in test output.
+  watchman: false,
   roots: ['<rootDir>/tests'],
   testMatch: ['**/*.test.ts', '**/*.test.tsx'],
   transform: {

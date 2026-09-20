@@ -6,7 +6,13 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
-import { exec, step, killProcessGroup, cancelActiveChildrenAndExit } from './mobile-verify.mjs'
+import {
+  exec,
+  step,
+  killProcessGroup,
+  cancelActiveChildrenAndExit,
+  nodeOptionsWithDisabledWarning,
+} from './mobile-verify.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 
@@ -14,6 +20,14 @@ const HERE = dirname(fileURLToPath(import.meta.url))
 const LONG_RUNNING = [process.execPath, ['-e', 'setTimeout(() => {}, 30_000)']]
 
 const POSIX_ONLY = process.platform === 'win32' ? 'Windows has no process groups' : false
+
+test('nodeOptionsWithDisabledWarning disables only the requested warning', () => {
+  assert.equal(nodeOptionsWithDisabledWarning(undefined, 'DEP0169'), '--disable-warning=DEP0169')
+  assert.equal(
+    nodeOptionsWithDisabledWarning('--trace-warnings', 'DEP0169'),
+    '--trace-warnings --disable-warning=DEP0169',
+  )
+})
 
 /**
  * A leader that starts a long-running process in its own process group
@@ -273,25 +287,37 @@ test('killProcessGroup on POSIX reports failure instead of throwing when the gro
 })
 
 test("cancelActiveChildrenAndExit waits for the active step's finally before exiting", async () => {
-  let cleanedUp = false
-  const stepPromise = step('hang', async () => {
-    try {
-      return await exec('sleep', ['30'], process.cwd())
-    } finally {
-      cleanedUp = true
-    }
+  const { result, logs } = await withCapturedLogAsync(async () => {
+    let cleanedUp = false
+    const stepPromise = step('hang', async () => {
+      try {
+        return await exec('sleep', ['30'], process.cwd())
+      } finally {
+        cleanedUp = true
+      }
+    })
+
+    // Give the child time to actually spawn before it gets killed.
+    await new Promise((resolve) => setTimeout(resolve, 200))
+
+    let exitCode
+    let cleanedUpAtExit
+    await cancelActiveChildrenAndExit(1, {
+      exit: (code) => {
+        exitCode = code
+        cleanedUpAtExit = cleanedUp
+      },
+    })
+    const stepPassed = await stepPromise
+    return { cleanedUp, cleanedUpAtExit, exitCode, stepPassed }
   })
 
-  // Give the child time to actually spawn before it gets killed.
-  await new Promise((resolve) => setTimeout(resolve, 200))
-
-  let exitCode
-  await cancelActiveChildrenAndExit(1, { exit: (code) => { exitCode = code } })
-
-  assert.equal(cleanedUp, true, "the active step's finally must run before exit is called")
-  assert.equal(exitCode, 1)
-
-  await stepPromise
+  assert.equal(result.cleanedUp, true, "the active step's finally must run before exit is called")
+  assert.equal(result.cleanedUpAtExit, true, "exit must not be called before the active step's finally")
+  assert.equal(result.exitCode, 1)
+  assert.equal(result.stepPassed, false)
+  assert.ok(logs.some((line) => line.includes('Killed with SIGKILL')))
+  assert.ok(logs.some((line) => line.includes('✗ hang failed')))
 })
 
 test('exec gives up on a step instead of hanging forever when its kill signal is never confirmed', async () => {
@@ -450,68 +476,76 @@ test('exec lets this script exit, and its output end, once it gives up on a chil
 })
 
 test('cancelActiveChildrenAndExit names the children it could not kill before exiting', async () => {
-  let unkilledPid
-  const stepPromise = step('unkillable', () => exec(...LONG_RUNNING, process.cwd()))
+  const { result, logs } = await withCapturedLogAsync(async () => {
+    let unkilledPid
+    const stepPromise = step('unkillable', () => exec(...LONG_RUNNING, process.cwd()))
 
-  // Give the child time to actually spawn before the cancel tries to kill it.
-  await new Promise((resolve) => setTimeout(resolve, 200))
+    // Give the child time to actually spawn before the cancel tries to kill it.
+    await new Promise((resolve) => setTimeout(resolve, 200))
 
-  let exitCode
-  const { logs } = await withCapturedLogAsync(() =>
-    cancelActiveChildrenAndExit(1, {
-      exit: (code) => { exitCode = code },
-      cleanupTimeoutMs: 100,
-      killProcessGroup: (pid) => {
-        unkilledPid = pid
-        return false
-      },
-    }),
+    let exitCode
+    try {
+      await cancelActiveChildrenAndExit(1, {
+        exit: (code) => { exitCode = code },
+        cleanupTimeoutMs: 100,
+        killProcessGroup: (pid) => {
+          unkilledPid = pid
+          return false
+        },
+      })
+    } finally {
+      if (unkilledPid) await killForReal(unkilledPid)
+      await stepPromise
+    }
+    return { exitCode, unkilledPid }
+  })
+
+  assert.equal(result.exitCode, 1)
+  assert.ok(result.unkilledPid, 'the cancel must try to kill the active child')
+  assert.ok(
+    logs.some((line) => line.includes(`Left running: pid ${result.unkilledPid}`)),
+    `the cancel must name the child it left running:\n${logs.join('\n')}`,
   )
-
-  try {
-    assert.equal(exitCode, 1)
-    assert.ok(unkilledPid, 'the cancel must try to kill the active child')
-    assert.ok(
-      logs.some((line) => line.includes(`Left running: pid ${unkilledPid}`)),
-      `the cancel must name the child it left running:\n${logs.join('\n')}`,
-    )
-  } finally {
-    if (unkilledPid) await killForReal(unkilledPid)
-    await stepPromise
-  }
+  assert.ok(logs.some((line) => line.includes('✗ unkillable failed')))
 })
 
 // cancelActiveChildrenAndExit has to hand killProcessGroup each active child's
 // own handle as killLeader. The fake below captures what it passes and calls it.
 test("cancelActiveChildrenAndExit passes each active child's own handle as killLeader, not just its pid", async () => {
-  let capturedPid
-  let capturedKillLeader
-  const stepPromise = step('hang', () => exec(...LONG_RUNNING, process.cwd()))
+  const { result, logs } = await withCapturedLogAsync(async () => {
+    let capturedPid
+    let capturedKillLeader
+    const stepPromise = step('hang', () => exec(...LONG_RUNNING, process.cwd()))
 
-  // Give the child time to actually spawn before the cancel tries to kill it.
-  await new Promise((resolve) => setTimeout(resolve, 200))
+    // Give the child time to actually spawn before the cancel tries to kill it.
+    await new Promise((resolve) => setTimeout(resolve, 200))
 
-  let exitCode
-  await cancelActiveChildrenAndExit(1, {
-    exit: (code) => { exitCode = code },
-    cleanupTimeoutMs: 100,
-    killProcessGroup: (pid, options) => {
-      capturedPid = pid
-      capturedKillLeader = options?.killLeader
-      return true
-    },
+    let exitCode
+    await cancelActiveChildrenAndExit(1, {
+      exit: (code) => { exitCode = code },
+      cleanupTimeoutMs: 100,
+      killProcessGroup: (pid, options) => {
+        capturedPid = pid
+        capturedKillLeader = options?.killLeader
+        return true
+      },
+    })
+
+    try {
+      assert.equal(typeof capturedKillLeader, 'function', 'cancelActiveChildrenAndExit must pass killLeader for each active child')
+      assert.ok(isRunning(capturedPid), 'the fake kill above never actually signalled the child')
+      capturedKillLeader()
+      assert.ok(await waitUntil(() => !isRunning(capturedPid), 5_000), "killLeader must end the child through its own handle")
+    } finally {
+      if (isRunning(capturedPid)) process.kill(capturedPid, 'SIGKILL')
+      await stepPromise
+    }
+    return { exitCode, capturedPid }
   })
 
-  try {
-    assert.equal(exitCode, 1)
-    assert.equal(typeof capturedKillLeader, 'function', 'cancelActiveChildrenAndExit must pass killLeader for each active child')
-    assert.ok(isRunning(capturedPid), 'the fake kill above never actually signalled the child')
-    capturedKillLeader()
-    assert.ok(await waitUntil(() => !isRunning(capturedPid), 5_000), "killLeader must end the child through its own handle")
-  } finally {
-    if (isRunning(capturedPid)) process.kill(capturedPid, 'SIGKILL')
-    await stepPromise
-  }
+  assert.equal(result.exitCode, 1)
+  assert.ok(result.capturedPid)
+  assert.ok(logs.some((line) => line.includes('✗ hang failed')))
 })
 
 test('cancelActiveChildrenAndExit neither crashes on nor names a child that exited just before the cancel', async () => {

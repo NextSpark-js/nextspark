@@ -41,6 +41,17 @@ jest.mock('expo-secure-store', () => ({
 // Mock fetch
 global.fetch = jest.fn()
 
+// @testing-library/react-native currently renders through react-test-renderer.
+// React 19 emits this deprecation from the library's internals on every render;
+// leave every other console.error visible to keep real test failures diagnosable.
+const REACT_TEST_RENDERER_DEPRECATION = 'react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer'
+const originalConsoleError = console.error
+jest.spyOn(console, 'error').mockImplementation((...args) => {
+  if (args.length === 1 && args[0] === REACT_TEST_RENDERER_DEPRECATION) return
+
+  originalConsoleError(...args)
+})
+
 // Reset mocks and storage between tests
 beforeEach(() => {
   jest.clearAllMocks()

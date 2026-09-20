@@ -1,5 +1,13 @@
 import { apiClient, ApiError, getApiUrl } from '../../../src/api/client'
 import * as SecureStore from 'expo-secure-store'
+import { clearNativeCookies } from '../../../src/lib/cookies'
+
+// The native cookie bridge is covered separately in client.cookies.test.ts.
+// Keep these API-client tests independent of whether the optional native
+// module is linked in the Jest runtime.
+jest.mock('../../../src/lib/cookies', () => ({
+  clearNativeCookies: jest.fn().mockResolvedValue(undefined),
+}))
 
 // Re-mock for this specific test
 jest.mock('expo-constants', () => ({
@@ -164,6 +172,7 @@ describe('ApiClient', () => {
     it('clears all stored credentials', async () => {
       await apiClient.setToken('token')
       await apiClient.setTeam({ id: 'team-id', name: 'Team', role: 'member' })
+      const nativeCookieClearCalls = (clearNativeCookies as jest.Mock).mock.calls.length
 
       await apiClient.clearAuth()
 
@@ -172,6 +181,7 @@ describe('ApiClient', () => {
       expect(apiClient.getStoredUser()).toBeNull()
       expect(apiClient.getStoredTeam()).toBeNull()
       expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('nextspark.auth.team')
+      expect(clearNativeCookies).toHaveBeenCalledTimes(nativeCookieClearCalls + 1)
     })
   })
 })

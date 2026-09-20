@@ -83,6 +83,14 @@ const NC = '\x1b[0m'
 
 const readJson = (file) => JSON.parse(readFileSync(file, 'utf8'))
 
+function nodeOptionsWithDisabledWarning(nodeOptions, code) {
+  const disableOption = `--disable-warning=${code}`
+  const existingOptions = nodeOptions?.trim()
+  if (!existingOptions) return disableOption
+  if (existingOptions.split(/\s+/).includes(disableOption)) return existingOptions
+  return `${existingOptions} ${disableOption}`
+}
+
 async function step(label, run) {
   console.log(`${CYAN}→ ${label}${NC}`)
   const promise = run()
@@ -685,7 +693,14 @@ async function main() {
     ['pack.sh restores an empty core template before archiving (node:test)', nodeTest('pack-templates.test.mjs')],
     ['apps/mobile/src matches packages/mobile/templates/src', verifyMobileSrcMatchesTemplate],
     ['Install apps/mobile (isolated, frozen lockfile)', () =>
-      exec('pnpm', ['install', '--ignore-workspace', '--frozen-lockfile'], MOBILE_APP_DIR)],
+      // pnpm still calls legacy url.parse() internally. Node 24 reports that
+      // upstream call as DEP0169, so suppress only that code for pnpm's own
+      // install process while leaving every other Node warning visible.
+      exec('pnpm', ['install', '--ignore-workspace', '--frozen-lockfile'], MOBILE_APP_DIR, {
+        env: {
+          NODE_OPTIONS: nodeOptionsWithDisabledWarning(process.env.NODE_OPTIONS, 'DEP0169'),
+        },
+      })],
     ['Typecheck apps/mobile', () => exec('pnpm', ['run', 'typecheck'], MOBILE_APP_DIR)],
     ['Export apps/mobile for Android', exportAndroid],
     ['Typecheck the shipped template (packages/mobile/templates + apps/mobile/app)', verifyTemplate],
@@ -723,7 +738,14 @@ function isMainModule(moduleUrl, argv1, { windows = process.platform === 'win32'
   return resolveFile(fileURLToPath(moduleUrl, { windows })) === resolveFile(argv1)
 }
 
-export { exec, step, killProcessGroup, cancelActiveChildrenAndExit, isMainModule }
+export {
+  exec,
+  step,
+  killProcessGroup,
+  cancelActiveChildrenAndExit,
+  isMainModule,
+  nodeOptionsWithDisabledWarning,
+}
 
 // Guards the run below so the tests can import the functions above without
 // kicking off the whole verify pipeline as a side effect.

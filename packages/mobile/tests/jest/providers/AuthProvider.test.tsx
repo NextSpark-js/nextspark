@@ -14,14 +14,43 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 )
 
 describe('AuthProvider', () => {
+  let expectedOfflineInitWarnings = 0
+  let warn: jest.SpyInstance
+
   beforeEach(() => {
     jest.clearAllMocks()
+    expectedOfflineInitWarnings = 0
+    const originalWarn = console.warn
+    warn = jest.spyOn(console, 'warn').mockImplementation((...args: unknown[]) => {
+      const [message, error] = args
+      const isExpectedOfflineInitWarning =
+        message === '[AuthProvider] Init failed (network or server error):' &&
+        error instanceof TypeError &&
+        error.message === 'Network request failed'
+
+      if (isExpectedOfflineInitWarning && expectedOfflineInitWarnings > 0) {
+        expectedOfflineInitWarnings -= 1
+        return
+      }
+
+      originalWarn(...args)
+    })
     ;(apiClient.init as jest.Mock).mockResolvedValue(undefined)
     ;(apiClient.getToken as jest.Mock).mockReturnValue(null)
     ;(apiClient.getStoredUser as jest.Mock).mockReturnValue(null)
     ;(apiClient.getStoredTeam as jest.Mock).mockReturnValue(null)
     ;(apiClient.setTeam as jest.Mock).mockResolvedValue(undefined)
   })
+
+  afterEach(() => {
+    const remainingExpectedWarnings = expectedOfflineInitWarnings
+    warn.mockRestore()
+    expect(remainingExpectedWarnings).toBe(0)
+  })
+
+  function expectOfflineInitWarning() {
+    expectedOfflineInitWarnings += 1
+  }
 
   it('provides auth context', async () => {
     const { result } = renderHook(() => useAuth(), { wrapper })
@@ -161,6 +190,7 @@ describe('AuthProvider', () => {
 
     it('keeps user AND team from storage when the server is unreachable', async () => {
       ;(authApi.getSession as jest.Mock).mockRejectedValue(new TypeError('Network request failed'))
+      expectOfflineInitWarning()
 
       const { result } = renderHook(() => useAuth(), { wrapper })
       await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -175,6 +205,7 @@ describe('AuthProvider', () => {
     it('stays unauthenticated offline when no team was ever stored', async () => {
       ;(apiClient.getStoredTeam as jest.Mock).mockReturnValue(null)
       ;(authApi.getSession as jest.Mock).mockRejectedValue(new TypeError('Network request failed'))
+      expectOfflineInitWarning()
 
       const { result } = renderHook(() => useAuth(), { wrapper })
       await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -199,6 +230,7 @@ describe('AuthProvider', () => {
 
     it('refreshSession confirms an offline-restored session once the server answers', async () => {
       ;(authApi.getSession as jest.Mock).mockRejectedValueOnce(new TypeError('Network request failed'))
+      expectOfflineInitWarning()
 
       const { result } = renderHook(() => useAuth(), { wrapper })
       await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -220,6 +252,7 @@ describe('AuthProvider', () => {
 
     it('refreshSession drops the restored team when the server says there is none', async () => {
       ;(authApi.getSession as jest.Mock).mockRejectedValueOnce(new TypeError('Network request failed'))
+      expectOfflineInitWarning()
 
       const { result } = renderHook(() => useAuth(), { wrapper })
       await waitFor(() => expect(result.current.isAuthenticated).toBe(true))
