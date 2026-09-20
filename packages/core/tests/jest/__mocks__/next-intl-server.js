@@ -115,9 +115,9 @@ function format(template, params, locale) {
   )
 }
 
-async function getTranslations(opts) {
-  const locale = opts?.locale || 'en'
-  const namespace = opts?.namespace || ''
+async function getTranslations(namespaceOrOpts) {
+  const locale = typeof namespaceOrOpts === 'string' ? 'en' : namespaceOrOpts?.locale || 'en'
+  const namespace = typeof namespaceOrOpts === 'string' ? namespaceOrOpts : namespaceOrOpts?.namespace || ''
   const ns = loadNamespace(locale, namespace)
 
   return function t(key, params) {

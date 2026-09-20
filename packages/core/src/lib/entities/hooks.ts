@@ -131,7 +131,7 @@ export class EntityHookManager {
         }
 
         // Update data if hook modified it
-        if (result?.data !== undefined) {
+        if (result && result.data !== undefined) {
           modifiedData = result.data
         }
 

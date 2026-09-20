@@ -142,7 +142,7 @@ export async function createEntity<T = unknown>(
 
     // 2. Get auth context from session/cookies
     const authContext = await getAuthContext()
-    if (!authContext.success) {
+    if (authContext.success === false) {
       return { success: false, error: authContext.error }
     }
     const { userId, teamId } = authContext
@@ -232,7 +232,7 @@ export async function updateEntity<T = unknown>(
 
     // 2. Get auth context from session/cookies
     const authContext = await getAuthContext()
-    if (!authContext.success) {
+    if (authContext.success === false) {
       return { success: false, error: authContext.error }
     }
     const { userId, teamId } = authContext
@@ -323,7 +323,7 @@ export async function deleteEntity(
 
     // 2. Get auth context from session/cookies
     const authContext = await getAuthContext()
-    if (!authContext.success) {
+    if (authContext.success === false) {
       return { success: false, error: authContext.error }
     }
     const { userId, teamId } = authContext
@@ -412,7 +412,7 @@ export async function getEntity<T = unknown>(
 
     // Get auth context from session/cookies
     const authContext = await getAuthContext()
-    if (!authContext.success) {
+    if (authContext.success === false) {
       return { success: false, error: authContext.error }
     }
     const { userId, teamId } = authContext
@@ -481,7 +481,7 @@ export async function listEntities<T = unknown>(
 
     // Get auth context from session/cookies
     const authContext = await getAuthContext()
-    if (!authContext.success) {
+    if (authContext.success === false) {
       return { success: false, error: authContext.error }
     }
     const { userId, teamId } = authContext
@@ -551,7 +551,7 @@ export async function deleteEntities(
 
     // Get auth context from session/cookies
     const authContext = await getAuthContext()
-    if (!authContext.success) {
+    if (authContext.success === false) {
       return { success: false, error: authContext.error }
     }
     const { userId, teamId } = authContext
@@ -637,7 +637,7 @@ export async function entityExists(
 
     // Get auth context from session/cookies
     const authContext = await getAuthContext()
-    if (!authContext.success) {
+    if (authContext.success === false) {
       return { success: false, error: authContext.error }
     }
     const { userId, teamId } = authContext
@@ -698,7 +698,7 @@ export async function countEntities(
 
     // Get auth context from session/cookies
     const authContext = await getAuthContext()
-    if (!authContext.success) {
+    if (authContext.success === false) {
       return { success: false, error: authContext.error }
     }
     const { userId, teamId } = authContext

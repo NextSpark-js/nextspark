@@ -844,7 +844,7 @@ async function handleGenericListImpl(request: NextRequest, audit: AuditContext):
 
       // Validate team context with admin bypass support
       const teamValidation = await validateTeamContextWithBypass(request, authResult, userId)
-      if (!teamValidation.valid) {
+      if (teamValidation.valid === false) {
         return teamValidation.error
       }
       teamId = teamValidation.teamId
@@ -1539,7 +1539,7 @@ async function handleGenericCreateImpl(request: NextRequest, audit: AuditContext
     // Validate team context with admin bypass support
     // Note: CREATE always requires teamId (even with bypass) to know where to store the entity
     const teamValidation = await validateTeamContextWithBypass(request, authResult, authResult.user!.id)
-    if (!teamValidation.valid) {
+    if (teamValidation.valid === false) {
       return teamValidation.error
     }
     const teamId = teamValidation.teamId
@@ -1895,7 +1895,7 @@ async function handleGenericReadImpl(request: NextRequest, audit: AuditContext, 
 
       // Validate team context with admin bypass support
       const teamValidation = await validateTeamContextWithBypass(request, authResult, userId)
-      if (!teamValidation.valid) {
+      if (teamValidation.valid === false) {
         return teamValidation.error
       }
       teamId = teamValidation.teamId
@@ -2108,7 +2108,7 @@ async function handleGenericUpdateImpl(request: NextRequest, audit: AuditContext
     // Validate team context with admin bypass support
     // Note: UPDATE requires teamId to scope the update to a specific team
     const teamValidation = await validateTeamContextWithBypass(request, authResult, authResult.user!.id)
-    if (!teamValidation.valid) {
+    if (teamValidation.valid === false) {
       return teamValidation.error
     }
     const teamId = teamValidation.teamId
@@ -2513,7 +2513,7 @@ async function handleGenericDeleteImpl(request: NextRequest, audit: AuditContext
     // Validate team context with admin bypass support
     // Note: DELETE requires teamId to scope the deletion to a specific team
     const teamValidation = await validateTeamContextWithBypass(request, authResult, authResult.user!.id)
-    if (!teamValidation.valid) {
+    if (teamValidation.valid === false) {
       return teamValidation.error
     }
     const teamId = teamValidation.teamId

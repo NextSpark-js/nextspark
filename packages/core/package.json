@@ -395,7 +395,7 @@
     "postinstall": "node scripts/postinstall.mjs || true",
     "build": "tsup && pnpm build:dts",
     "build:js": "tsup",
-    "build:dts": "tsc -p tsconfig.dts.json || echo '⚠️  DTS generation completed with some type errors (partial coverage)'",
+    "build:dts": "tsc -p tsconfig.dts.json",
     "dev": "tsup --watch",
     "test": "jest",
     "test:watch": "jest --watch",

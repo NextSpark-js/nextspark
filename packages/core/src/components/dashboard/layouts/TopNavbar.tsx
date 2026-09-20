@@ -67,7 +67,7 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
   }
 
   // Función para generar iniciales del usuario  
-  const getUserInitials = (user: { firstName?: string; lastName?: string; name?: string; email: string }) => {
+  const getUserInitials = (user: { firstName?: string; lastName?: string; name?: string; email?: string }) => {
     if (user.firstName && user.lastName) {
       return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
     }
@@ -81,12 +81,12 @@ export function TopNavbar({ entities, className }: TopNavbarProps) {
   }
 
   // Función para generar color del avatar basado en el email
-  const getAvatarColor = (email: string) => {
+  const getAvatarColor = (email?: string) => {
     const colors = [
       'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 
       'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-orange-500'
     ]
-    const index = email.charCodeAt(0) % colors.length
+    const index = (email?.charCodeAt(0) ?? 0) % colors.length
     return colors[index]
   }
 

@@ -9,6 +9,8 @@ import { render } from '@testing-library/react'
 import { MobileTopBar } from '@/core/components/dashboard/mobile/MobileTopBar'
 
 const mockLinkProps: Record<string, unknown>[] = []
+const mockTranslate = jest.fn((key: string) => key)
+const mockUser: Record<string, string | undefined> = { id: 'u1', email: 'ada@example.com', firstName: 'Ada', lastName: 'Lovelace' }
 
 jest.mock('next/link', () => ({
   __esModule: true,
@@ -24,13 +26,11 @@ jest.mock('next/image', () => ({
 }))
 
 jest.mock('@/core/hooks/useAuth', () => ({
-  useAuth: () => ({
-    user: { id: 'u1', email: 'ada@example.com', firstName: 'Ada', lastName: 'Lovelace' },
-  }),
+  useAuth: () => ({ user: mockUser }),
 }))
 
 jest.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => key,
+  useTranslations: () => mockTranslate,
 }))
 
 jest.mock('@/core/lib/config', () => ({
@@ -40,6 +40,8 @@ jest.mock('@/core/lib/config', () => ({
 describe('MobileTopBar profile link prefetch (#178)', () => {
   beforeEach(() => {
     mockLinkProps.length = 0
+    mockTranslate.mockClear()
+    Object.assign(mockUser, { id: 'u1', email: 'ada@example.com', firstName: 'Ada', lastName: 'Lovelace', name: undefined })
   })
 
   test('leaves prefetch to Next.js when the prop is not passed', () => {
@@ -48,6 +50,14 @@ describe('MobileTopBar profile link prefetch (#178)', () => {
     expect(mockLinkProps).toHaveLength(1)
     expect(mockLinkProps[0].href).toBe('/dashboard/settings/profile')
     expect(mockLinkProps[0].prefetch).toBeUndefined()
+  })
+
+  test('uses the user id rather than an untranslated fallback when no display data is available', () => {
+    Object.assign(mockUser, { email: undefined, firstName: undefined, lastName: undefined, name: undefined })
+
+    render(<MobileTopBar />)
+
+    expect(mockTranslate).toHaveBeenCalledWith('common.mobileNav.greeting', { name: 'u1' })
   })
 
   test('forwards prefetch={false} to the profile link', () => {

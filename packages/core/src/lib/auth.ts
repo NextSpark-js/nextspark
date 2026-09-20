@@ -235,8 +235,7 @@ export const auth = betterAuth({
     minPasswordLength: 8,
     maxPasswordLength: 128,
     resetPasswordTokenExpiresIn: 60 * 60, // 1 hour
-    sendResetPassword: (params: { user: UserWithEmail; url: string; token: string }) =>
-      sendResetPasswordCallback(params, emailService),
+    sendResetPassword: (params) => sendResetPasswordCallback(params, emailService),
   },
   emailVerification: {
     // Controlled by AUTH_CONFIG.sendVerificationEmailOnSignup (default: true).
@@ -244,10 +243,10 @@ export const auth = betterAuth({
     // in their app.config.ts when they verify email ownership through other
     // means (OTP, invitation token, claim-account flow, etc.).
     sendOnSignUp: AUTH_CONFIG.sendVerificationEmailOnSignup ?? true,
-    sendVerificationEmail: (params: { user: UserWithEmail; url: string; token: string }) =>
-      sendVerificationEmailCallback(params, emailService),
-    // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
-    verifyTokenExpiresIn: 60 * 60 * 24, // 24 hours
+    sendVerificationEmail: (params) => sendVerificationEmailCallback(params, emailService),
+    // Better Auth defaults this to 1 hour; state the valid option explicitly so
+    // the effective verification-link lifetime remains unchanged.
+    expiresIn: 60 * 60, // 1 hour
   },
   socialProviders: {
     google: {

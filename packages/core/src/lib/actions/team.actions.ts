@@ -155,14 +155,14 @@ export async function updateTeam(
 
     // 2. Get auth context
     const authResult = await getAuthUser()
-    if (!authResult.success) {
+    if (authResult.success === false) {
       return { success: false, error: authResult.error }
     }
     const { userId } = authResult
 
     // 3. Verify permission (owner or admin)
     const permResult = await verifyTeamPermission(userId, teamId, ['owner', 'admin'])
-    if (!permResult.success) {
+    if (permResult.success === false) {
       return { success: false, error: permResult.error }
     }
 
@@ -252,14 +252,14 @@ export async function inviteMember(
 
     // 2. Get auth context
     const authResult = await getAuthUser()
-    if (!authResult.success) {
+    if (authResult.success === false) {
       return { success: false, error: authResult.error }
     }
     const { userId } = authResult
 
     // 3. Verify permission (owner or admin)
     const permResult = await verifyTeamPermission(userId, teamId, ['owner', 'admin'])
-    if (!permResult.success) {
+    if (permResult.success === false) {
       return { success: false, error: permResult.error }
     }
 
@@ -343,14 +343,14 @@ export async function removeMember(
 
     // 2. Get auth context
     const authResult = await getAuthUser()
-    if (!authResult.success) {
+    if (authResult.success === false) {
       return { success: false, error: authResult.error }
     }
     const { userId } = authResult
 
     // 3. Verify permission (owner or admin)
     const permResult = await verifyTeamPermission(userId, teamId, ['owner', 'admin'])
-    if (!permResult.success) {
+    if (permResult.success === false) {
       return { success: false, error: permResult.error }
     }
 
@@ -445,7 +445,7 @@ export async function updateMemberRole(
 
     // 2. Get auth context
     const authResult = await getAuthUser()
-    if (!authResult.success) {
+    if (authResult.success === false) {
       return { success: false, error: authResult.error }
     }
     const { userId } = authResult

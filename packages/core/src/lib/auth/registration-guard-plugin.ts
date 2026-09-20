@@ -35,11 +35,9 @@ export const registrationGuardPlugin = (): BetterAuthPlugin => {
             // Block OAuth in invitation-only mode (unless invite token present or first user)
             if (registrationMode === 'invitation-only') {
               const request = ctx.request;
-              // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
-              const url = new URL(request.url);
-              // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
-              const hasInviteToken = request.headers.get('x-invite-token') ||
-                                   url.searchParams.get('inviteToken');
+              const url = request ? new URL(request.url) : null;
+              const hasInviteToken = request?.headers.get('x-invite-token') ||
+                                   url?.searchParams.get('inviteToken');
 
               if (!hasInviteToken) {
                 // Allow first user bootstrap (no team exists yet)

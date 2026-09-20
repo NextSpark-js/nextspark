@@ -4,9 +4,14 @@ import type { EmailProvider } from './email';
 import type { UserWithEmail } from './auth';
 
 interface EmailCallbackParams {
-  user: UserWithEmail;
+  user: Omit<UserWithEmail, 'email'> & { email?: string };
   url: string;
   token: string;
+}
+
+function requireEmail(user: EmailCallbackParams['user']): string {
+  if (!user.email) throw new Error('Cannot send an auth email without an email address');
+  return user.email;
 }
 
 /**
@@ -23,6 +28,7 @@ export async function sendResetPasswordCallback(
   emailService: EmailProvider
 ): Promise<void> {
   try {
+    const email = requireEmail(user);
     const template = await sendResetPasswordEmail({
       userName: user.firstName || '',
       resetUrl: url,
@@ -31,7 +37,7 @@ export async function sendResetPasswordCallback(
     }, I18N_CONFIG.defaultLocale);
 
     const response = await emailService.send({
-      to: user.email,
+      to: email,
       ...template,
     });
 
@@ -56,6 +62,7 @@ export async function sendVerificationEmailCallback(
   emailService: EmailProvider
 ): Promise<void> {
   try {
+    const email = requireEmail(user);
     const template = await sendVerifyEmail({
       userName: user.firstName || '',
       verificationUrl: url,
@@ -63,7 +70,7 @@ export async function sendVerificationEmailCallback(
     }, I18N_CONFIG.defaultLocale);
 
     const response = await emailService.send({
-      to: user.email,
+      to: email,
       ...template,
     });
 

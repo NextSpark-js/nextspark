@@ -214,8 +214,7 @@ function RelationshipField({
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground h-9">
         <Loader2 className="h-4 w-4 animate-spin" />
-        {/* @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131 */}
-        <span>{t('loadingEntity', { entity: field.targetEntity })}</span>
+        <span>{t('loadingEntity', { entity: field.targetEntity ?? '' })}</span>
       </div>
     )
   }
@@ -223,8 +222,7 @@ function RelationshipField({
   if (isError || !field.targetEntity) {
     return (
       <div className="text-sm text-destructive h-9 flex items-center">
-        {/* @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131 */}
-        {t('failedToLoad', { entity: field.targetEntity })}
+        {t('failedToLoad', { entity: field.targetEntity ?? '' })}
       </div>
     )
   }

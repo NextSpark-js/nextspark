@@ -64,6 +64,15 @@ describe('sendResetPasswordCallback', () => {
       sendResetPasswordCallback({ user: USER, url: 'http://x/reset-password/T?callbackURL=%2F', token: 'T' }, emailService)
     ).rejects.toThrow('Failed to send reset password email')
   })
+
+  test('rejects a callback payload without an email address', async () => {
+    const emailService = fakeEmailService()
+
+    await expect(
+      sendResetPasswordCallback({ user: { id: 'user-1' }, url: 'http://x/reset-password/T', token: 'T' }, emailService)
+    ).rejects.toThrow('Cannot send an auth email without an email address')
+    expect(emailService.send).not.toHaveBeenCalled()
+  })
 })
 
 describe('sendVerificationEmailCallback', () => {
@@ -89,5 +98,14 @@ describe('sendVerificationEmailCallback', () => {
     await expect(
       sendVerificationEmailCallback({ user: USER, url: 'http://x/verify-email?token=T', token: 'T' }, emailService)
     ).rejects.toThrow('Failed to send verification email')
+  })
+
+  test('rejects a callback payload without an email address', async () => {
+    const emailService = fakeEmailService()
+
+    await expect(
+      sendVerificationEmailCallback({ user: { id: 'user-1' }, url: 'http://x/verify-email?token=T', token: 'T' }, emailService)
+    ).rejects.toThrow('Cannot send an auth email without an email address')
+    expect(emailService.send).not.toHaveBeenCalled()
   })
 })

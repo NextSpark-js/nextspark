@@ -134,6 +134,11 @@ describe('Registration Guard Plugin', () => {
       await expect(handler(ctx)).rejects.toThrow('SIGNUP_RESTRICTED')
     })
 
+    test('treats a missing request as having no invite token', async () => {
+      mockHasGlobal = true
+      await expect(handler({ path: '/sign-up/social' })).rejects.toThrow('SIGNUP_RESTRICTED')
+    })
+
     test('passes through with invite header when team exists', async () => {
       mockHasGlobal = true
       const ctx = createMockCtx('/sign-up/social', {

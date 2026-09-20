@@ -162,5 +162,5 @@ export async function checkEntityPermissionOrFail(
   const action = getActionFromMethod(method, isCollection)
   const result = await checkEntityPermission(userId, teamId, entitySlug, action)
 
-  return result.allowed ? null : result.error
+  return result.allowed === true ? null : result.error
 }

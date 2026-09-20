@@ -147,7 +147,7 @@ export class StripeGateway implements BillingGateway {
 
   async getCustomer(customerId: string): Promise<CustomerResult> {
     const customer = await getStripeInstance().customers.retrieve(customerId)
-    if ('deleted' in customer && customer.deleted) {
+    if ('deleted' in customer) {
       throw new Error(`Customer ${customerId} has been deleted`)
     }
     return {
@@ -244,4 +244,3 @@ export class StripeGateway implements BillingGateway {
     }
   }
 }
-

@@ -70,6 +70,13 @@ describe('lib/auth.ts session options (#125)', () => {
     })
   })
 
+  test('keeps Better Auth’s 1-hour email verification-link lifetime with its valid expiresIn option', () => {
+    const options = loadBetterAuthOptions(undefined)
+
+    expect(options.emailVerification.expiresIn).toBe(60 * 60)
+    expect(options.emailVerification).not.toHaveProperty('verifyTokenExpiresIn')
+  })
+
   test('respects expiresIn/updateAge from the theme AUTH_CONFIG', () => {
     const options = loadBetterAuthOptions({ expiresIn: 90 * DAY, updateAge: 7 * DAY })
     expect(options.session.expiresIn).toBe(90 * DAY)

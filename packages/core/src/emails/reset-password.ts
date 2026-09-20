@@ -14,8 +14,9 @@ export default async function resetPassword(
   data: PasswordResetEmailData,
   locale?: string,
 ): Promise<EmailContent> {
-  // @ts-expect-error — pre-existing type error, tracked in https://github.com/NextSpark-js/nextspark/issues/131
-  const t = await getTranslations({ locale, namespace: 'email.resetPassword' });
+  const t = locale
+  ? await getTranslations({ locale, namespace: 'email.resetPassword' })
+  : await getTranslations('email.resetPassword');
   const appName = data.appName || APP_NAME_FALLBACK;
   const year = new Date().getFullYear();
   const greeting = `${t('greetingPrefix')}${data.userName ? ` ${data.userName}` : ''},`;
