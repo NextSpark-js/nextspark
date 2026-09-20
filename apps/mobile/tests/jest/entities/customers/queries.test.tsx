@@ -3,11 +3,10 @@
  * TanStack Query hooks for fetching customers
  */
 
-import React from 'react'
 import { renderHook, waitFor } from '@testing-library/react-native'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { Customer } from '@/entities/customers/types'
 import type { PaginatedResponse } from '@nextsparkjs/mobile'
+import { createQueryWrapper } from '../../query-test-utils'
 
 // Import the mock from our __mocks__ folder
 import { mockCustomersApi } from '../../__mocks__/entities-customers-api'
@@ -48,22 +47,6 @@ const testCustomers: Customer[] = [
   },
 ]
 
-// Helper to create wrapper with QueryClient
-function createWrapper() {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-    },
-  })
-  return function Wrapper({ children }: { children: React.ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
-    )
-  }
-}
-
 describe('Customer queries', () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -84,7 +67,7 @@ describe('Customer queries', () => {
       mockCustomersApi.list.mockResolvedValueOnce(response)
 
       const { result } = renderHook(() => useCustomers(), {
-        wrapper: createWrapper(),
+        wrapper: createQueryWrapper(),
       })
 
       await waitFor(() => {
@@ -104,7 +87,7 @@ describe('Customer queries', () => {
 
       const { result } = renderHook(
         () => useCustomers({ page: 2, limit: 10 }),
-        { wrapper: createWrapper() }
+        { wrapper: createQueryWrapper() }
       )
 
       await waitFor(() => {
@@ -127,7 +110,7 @@ describe('Customer queries', () => {
 
       const { result } = renderHook(
         () => useCustomers({ search: 'test search' }),
-        { wrapper: createWrapper() }
+        { wrapper: createQueryWrapper() }
       )
 
       await waitFor(() => {
@@ -142,7 +125,7 @@ describe('Customer queries', () => {
     it('should not fetch when disabled', async () => {
       renderHook(
         () => useCustomers({ enabled: false }),
-        { wrapper: createWrapper() }
+        { wrapper: createQueryWrapper() }
       )
 
       // Give it time to potentially fetch (it shouldn't)
@@ -156,7 +139,7 @@ describe('Customer queries', () => {
       mockCustomersApi.list.mockRejectedValueOnce(error)
 
       const { result } = renderHook(() => useCustomers(), {
-        wrapper: createWrapper(),
+        wrapper: createQueryWrapper(),
       })
 
       await waitFor(() => {
@@ -173,7 +156,7 @@ describe('Customer queries', () => {
       mockCustomersApi.get.mockResolvedValueOnce(testCustomers[0])
 
       const { result } = renderHook(() => useCustomer('cust-1'), {
-        wrapper: createWrapper(),
+        wrapper: createQueryWrapper(),
       })
 
       await waitFor(() => {
@@ -187,7 +170,7 @@ describe('Customer queries', () => {
 
     it('should not fetch if id is undefined', async () => {
       renderHook(() => useCustomer(undefined), {
-        wrapper: createWrapper(),
+        wrapper: createQueryWrapper(),
       })
 
       // Give it time to potentially fetch (it shouldn't)
@@ -201,7 +184,7 @@ describe('Customer queries', () => {
       mockCustomersApi.get.mockRejectedValueOnce(error)
 
       const { result } = renderHook(() => useCustomer('non-existent'), {
-        wrapper: createWrapper(),
+        wrapper: createQueryWrapper(),
       })
 
       await waitFor(() => {

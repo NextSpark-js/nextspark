@@ -3,11 +3,10 @@
  * TanStack Query hooks for fetching tasks
  */
 
-import React from 'react'
 import { renderHook, waitFor } from '@testing-library/react-native'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { Task } from '@/entities/tasks/types'
 import type { PaginatedResponse } from '@nextsparkjs/mobile'
+import { createQueryWrapper } from '../../query-test-utils'
 
 // Import the mock from our __mocks__ folder
 import { mockTasksApi } from '../../__mocks__/entities-tasks-api'
@@ -44,22 +43,6 @@ const testTasks: Task[] = [
   },
 ]
 
-// Helper to create wrapper with QueryClient
-function createWrapper() {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-    },
-  })
-  return function Wrapper({ children }: { children: React.ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
-    )
-  }
-}
-
 describe('Task queries', () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -80,7 +63,7 @@ describe('Task queries', () => {
       mockTasksApi.list.mockResolvedValueOnce(response)
 
       const { result } = renderHook(() => useTasks(), {
-        wrapper: createWrapper(),
+        wrapper: createQueryWrapper(),
       })
 
       await waitFor(() => {
@@ -100,7 +83,7 @@ describe('Task queries', () => {
 
       const { result } = renderHook(
         () => useTasks({ page: 2, limit: 10, status: 'todo', priority: 'high' }),
-        { wrapper: createWrapper() }
+        { wrapper: createQueryWrapper() }
       )
 
       await waitFor(() => {
@@ -125,7 +108,7 @@ describe('Task queries', () => {
 
       const { result } = renderHook(
         () => useTasks({ search: 'test query' }),
-        { wrapper: createWrapper() }
+        { wrapper: createQueryWrapper() }
       )
 
       await waitFor(() => {
@@ -140,7 +123,7 @@ describe('Task queries', () => {
     it('should not fetch when disabled', async () => {
       renderHook(
         () => useTasks({ enabled: false }),
-        { wrapper: createWrapper() }
+        { wrapper: createQueryWrapper() }
       )
 
       // Give it time to potentially fetch (it shouldn't)
@@ -154,7 +137,7 @@ describe('Task queries', () => {
       mockTasksApi.list.mockRejectedValueOnce(error)
 
       const { result } = renderHook(() => useTasks(), {
-        wrapper: createWrapper(),
+        wrapper: createQueryWrapper(),
       })
 
       await waitFor(() => {
@@ -171,7 +154,7 @@ describe('Task queries', () => {
       mockTasksApi.get.mockResolvedValueOnce(testTasks[0])
 
       const { result } = renderHook(() => useTask('task-1'), {
-        wrapper: createWrapper(),
+        wrapper: createQueryWrapper(),
       })
 
       await waitFor(() => {
@@ -184,7 +167,7 @@ describe('Task queries', () => {
 
     it('should not fetch if id is undefined', async () => {
       renderHook(() => useTask(undefined), {
-        wrapper: createWrapper(),
+        wrapper: createQueryWrapper(),
       })
 
       // Give it time to potentially fetch (it shouldn't)
@@ -198,7 +181,7 @@ describe('Task queries', () => {
       mockTasksApi.get.mockRejectedValueOnce(error)
 
       const { result } = renderHook(() => useTask('non-existent'), {
-        wrapper: createWrapper(),
+        wrapper: createQueryWrapper(),
       })
 
       await waitFor(() => {

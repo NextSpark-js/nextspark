@@ -3,10 +3,9 @@
  * TanStack Query mutation hooks for tasks
  */
 
-import React from 'react'
 import { renderHook, waitFor, act } from '@testing-library/react-native'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { Task, CreateTaskInput, UpdateTaskInput } from '@/entities/tasks/types'
+import { createQueryWrapper, createTestQueryClient } from '../../query-test-utils'
 
 // Import the mock from our __mocks__ folder
 import { mockTasksApi } from '../../__mocks__/entities-tasks-api'
@@ -48,26 +47,6 @@ const updateInput: UpdateTaskInput = {
   title: 'Updated Task',
 }
 
-function createQueryClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  })
-}
-
-// Helper to create wrapper with QueryClient
-function createWrapper(queryClient = createQueryClient()) {
-  return function Wrapper({ children }: { children: React.ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
-    )
-  }
-}
-
 // tasksApi comes from createEntityApi, which resolves create/update with the
 // entity itself (it unwraps the API's { data } envelope).
 describe('Task mutations', () => {
@@ -80,7 +59,7 @@ describe('Task mutations', () => {
       mockTasksApi.create.mockResolvedValueOnce({ ...testTask, ...createInput })
 
       const { result } = renderHook(() => useCreateTask(), {
-        wrapper: createWrapper(),
+        wrapper: createQueryWrapper(),
       })
 
       await act(async () => {
@@ -95,7 +74,7 @@ describe('Task mutations', () => {
       mockTasksApi.create.mockResolvedValueOnce(createdTask)
 
       const { result } = renderHook(() => useCreateTask(), {
-        wrapper: createWrapper(),
+        wrapper: createQueryWrapper(),
       })
 
       let mutationResult: Task | undefined
@@ -111,7 +90,7 @@ describe('Task mutations', () => {
       mockTasksApi.create.mockRejectedValueOnce(error)
 
       const { result } = renderHook(() => useCreateTask(), {
-        wrapper: createWrapper(),
+        wrapper: createQueryWrapper(),
       })
 
       await expect(
@@ -127,7 +106,7 @@ describe('Task mutations', () => {
       mockTasksApi.update.mockResolvedValueOnce({ ...testTask, ...updateInput })
 
       const { result } = renderHook(() => useUpdateTask(), {
-        wrapper: createWrapper(),
+        wrapper: createQueryWrapper(),
       })
 
       await act(async () => {
@@ -142,7 +121,7 @@ describe('Task mutations', () => {
       mockTasksApi.update.mockResolvedValueOnce(updatedTask)
 
       const { result } = renderHook(() => useUpdateTask(), {
-        wrapper: createWrapper(),
+        wrapper: createQueryWrapper(),
       })
 
       let mutationResult: Task | undefined
@@ -156,10 +135,10 @@ describe('Task mutations', () => {
     it('should cache the updated task under its id', async () => {
       const updatedTask: Task = { ...testTask, ...updateInput }
       mockTasksApi.update.mockResolvedValueOnce(updatedTask)
-      const queryClient = createQueryClient()
+      const queryClient = createTestQueryClient()
 
       const { result } = renderHook(() => useUpdateTask(), {
-        wrapper: createWrapper(queryClient),
+        wrapper: createQueryWrapper(queryClient),
       })
 
       await act(async () => {
@@ -175,7 +154,7 @@ describe('Task mutations', () => {
       mockTasksApi.delete.mockResolvedValueOnce(undefined)
 
       const { result } = renderHook(() => useDeleteTask(), {
-        wrapper: createWrapper(),
+        wrapper: createQueryWrapper(),
       })
 
       await act(async () => {
@@ -189,7 +168,7 @@ describe('Task mutations', () => {
       mockTasksApi.delete.mockResolvedValueOnce(undefined)
 
       const { result } = renderHook(() => useDeleteTask(), {
-        wrapper: createWrapper(),
+        wrapper: createQueryWrapper(),
       })
 
       await act(async () => {
@@ -207,7 +186,7 @@ describe('Task mutations', () => {
       mockTasksApi.update.mockResolvedValueOnce({ ...testTask, status: 'done' })
 
       const { result } = renderHook(() => useUpdateTaskStatus(), {
-        wrapper: createWrapper(),
+        wrapper: createQueryWrapper(),
       })
 
       await act(async () => {
@@ -221,7 +200,7 @@ describe('Task mutations', () => {
       mockTasksApi.update.mockResolvedValueOnce({ ...testTask, status: 'in-progress' })
 
       const { result } = renderHook(() => useUpdateTaskStatus(), {
-        wrapper: createWrapper(),
+        wrapper: createQueryWrapper(),
       })
 
       await act(async () => {
@@ -241,7 +220,7 @@ describe('Task mutations', () => {
       mockTasksApi.update.mockRejectedValueOnce(error)
 
       const { result } = renderHook(() => useUpdateTaskStatus(), {
-        wrapper: createWrapper(),
+        wrapper: createQueryWrapper(),
       })
 
       await expect(

@@ -3,10 +3,9 @@
  * TanStack Query mutation hooks for customers
  */
 
-import React from 'react'
 import { renderHook, act, waitFor } from '@testing-library/react-native'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { Customer, CreateCustomerInput, UpdateCustomerInput } from '@/entities/customers/types'
+import { createQueryWrapper, createTestQueryClient } from '../../query-test-utils'
 
 // Import the mock from our __mocks__ folder
 import { mockCustomersApi } from '../../__mocks__/entities-customers-api'
@@ -50,26 +49,6 @@ const updateInput: UpdateCustomerInput = {
   phone: '555-9999',
 }
 
-function createQueryClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  })
-}
-
-// Helper to create wrapper with QueryClient
-function createWrapper(queryClient = createQueryClient()) {
-  return function Wrapper({ children }: { children: React.ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
-    )
-  }
-}
-
 // customersApi comes from createEntityApi, which resolves create/update with
 // the entity itself (it unwraps the API's { data } envelope).
 describe('Customer mutations', () => {
@@ -82,7 +61,7 @@ describe('Customer mutations', () => {
       mockCustomersApi.create.mockResolvedValueOnce({ ...testCustomer, ...createInput, id: 'cust-new' })
 
       const { result } = renderHook(() => useCreateCustomer(), {
-        wrapper: createWrapper(),
+        wrapper: createQueryWrapper(),
       })
 
       await act(async () => {
@@ -102,7 +81,7 @@ describe('Customer mutations', () => {
       mockCustomersApi.create.mockResolvedValueOnce(createdCustomer)
 
       const { result } = renderHook(() => useCreateCustomer(), {
-        wrapper: createWrapper(),
+        wrapper: createQueryWrapper(),
       })
 
       let mutationResult: Customer | undefined
@@ -119,7 +98,7 @@ describe('Customer mutations', () => {
       mockCustomersApi.create.mockRejectedValueOnce(error)
 
       const { result } = renderHook(() => useCreateCustomer(), {
-        wrapper: createWrapper(),
+        wrapper: createQueryWrapper(),
       })
 
       await expect(
@@ -135,7 +114,7 @@ describe('Customer mutations', () => {
       mockCustomersApi.update.mockResolvedValueOnce({ ...testCustomer, ...updateInput })
 
       const { result } = renderHook(() => useUpdateCustomer(), {
-        wrapper: createWrapper(),
+        wrapper: createQueryWrapper(),
       })
 
       await act(async () => {
@@ -154,7 +133,7 @@ describe('Customer mutations', () => {
       mockCustomersApi.update.mockResolvedValueOnce(updatedCustomer)
 
       const { result } = renderHook(() => useUpdateCustomer(), {
-        wrapper: createWrapper(),
+        wrapper: createQueryWrapper(),
       })
 
       let mutationResult: Customer | undefined
@@ -169,10 +148,10 @@ describe('Customer mutations', () => {
     it('should cache the updated customer under its id', async () => {
       const updatedCustomer: Customer = { ...testCustomer, ...updateInput }
       mockCustomersApi.update.mockResolvedValueOnce(updatedCustomer)
-      const queryClient = createQueryClient()
+      const queryClient = createTestQueryClient()
 
       const { result } = renderHook(() => useUpdateCustomer(), {
-        wrapper: createWrapper(queryClient),
+        wrapper: createQueryWrapper(queryClient),
       })
 
       await act(async () => {
@@ -188,7 +167,7 @@ describe('Customer mutations', () => {
       mockCustomersApi.delete.mockResolvedValueOnce(undefined)
 
       const { result } = renderHook(() => useDeleteCustomer(), {
-        wrapper: createWrapper(),
+        wrapper: createQueryWrapper(),
       })
 
       await act(async () => {
@@ -202,7 +181,7 @@ describe('Customer mutations', () => {
       mockCustomersApi.delete.mockResolvedValueOnce(undefined)
 
       const { result } = renderHook(() => useDeleteCustomer(), {
-        wrapper: createWrapper(),
+        wrapper: createQueryWrapper(),
       })
 
       await act(async () => {
@@ -219,7 +198,7 @@ describe('Customer mutations', () => {
       mockCustomersApi.delete.mockRejectedValueOnce(error)
 
       const { result } = renderHook(() => useDeleteCustomer(), {
-        wrapper: createWrapper(),
+        wrapper: createQueryWrapper(),
       })
 
       await expect(
