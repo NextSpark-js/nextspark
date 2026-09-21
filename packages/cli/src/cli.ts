@@ -10,8 +10,9 @@ import { breaksALine, guardOutput, shownLine, shownPath } from './utils/shown-pa
 // Guard CLI output before dotenv or a command can print anything
 guardOutput();
 
-// Load .env from project root
-config();
+// Keep dotenv's banner off stdout: `skills list --json` is a machine-readable
+// contract and must not be prefixed by unrelated startup output.
+config({ quiet: true });
 import { buildCommand } from './commands/build.js';
 import { generateCommand } from './commands/generate.js';
 import { registryBuildCommand, registryWatchCommand } from './commands/registry.js';
@@ -24,6 +25,7 @@ import { dbMigrateCommand, dbSeedCommand } from './commands/db.js';
 import { syncAppCommand } from './commands/sync-app.js';
 import { setupAICommand } from './commands/setup-ai.js';
 import { syncAICommand } from './commands/sync-ai.js';
+import { skillsGetCommand, skillsListCommand } from './commands/skills.js';
 
 // Read version from package.json dynamically
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf-8'));
@@ -211,6 +213,23 @@ program
   .option('-e, --editor <editor>', 'Editor to sync (claude, cursor, antigravity, all)', 'claude')
   .option('-f, --force', 'Skip confirmation prompt')
   .action(syncAICommand);
+
+// Versioned, bundled skill guides. Keep this registration small: command implementation lives separately.
+const skills = program
+  .command('skills')
+  .description('Read versioned NextSpark guidance bundled with this CLI');
+
+skills
+  .command('list')
+  .description('List available bundled guides')
+  .option('--json', 'Output the catalog as JSON')
+  .action((options) => skillsListCommand(pkg.version, options));
+
+skills
+  .command('get <name>')
+  .description('Print one bundled guide')
+  .option('--json', 'Output the guide as JSON')
+  .action((name, options) => skillsGetCommand(pkg.version, name, options));
 
 // Error handling
 program.showHelpAfterError();

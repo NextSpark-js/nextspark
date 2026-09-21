@@ -38,6 +38,7 @@ import { installThemeAndPlugins } from './generators/theme-plugins-installer.js'
 import { installProjectDependencies, setupAIWorkflow } from './install-dependencies.js'
 import { showConfigPreview } from './preview.js'
 import { errorLines } from '../utils/shown-path.js'
+import { writeAiOnboarding } from './generators/ai-onboarding.js'
 
 /**
  * Project info type for non-interactive mode
@@ -46,6 +47,30 @@ interface ProjectInfo {
   projectName: string
   projectSlug: string
   projectDescription: string
+}
+
+interface WizardRuntime {
+  generateProject(config: WizardConfig): Promise<void>
+  installProjectDependencies(projectRoot: string): void
+  buildRegistries(webDir: string): void
+}
+
+const defaultWizardRuntime: WizardRuntime = {
+  generateProject,
+  installProjectDependencies,
+  buildRegistries,
+}
+
+function buildRegistries(webDir: string): void {
+  const registryScript = join(webDir, 'node_modules/@nextsparkjs/core/scripts/build/registry.mjs')
+  execSync(`node "${registryScript}" --build`, {
+    cwd: webDir,
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      NEXTSPARK_PROJECT_ROOT: webDir,
+    },
+  })
 }
 
 /**
@@ -92,7 +117,10 @@ function slugify(value: string): string {
 /**
  * Run the complete wizard with mode support
  */
-export async function runWizard(options: CLIOptions = { mode: 'interactive' }): Promise<void> {
+export async function runWizard(
+  options: CLIOptions = { mode: 'interactive' },
+  runtime: WizardRuntime = defaultWizardRuntime
+): Promise<void> {
   // Show welcome banner
   showBanner()
 
@@ -205,7 +233,10 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
     }).start()
 
     try {
-      await generateProject(config)
+      await runtime.generateProject(config)
+      const onboarding = writeAiOnboarding(getWebDir(process.cwd(), config))
+      const preserved = Object.entries(onboarding).filter(([, state]) => state === 'preserved').map(([file]) => file.toUpperCase())
+      if (preserved.length) showInfo(`Preserved existing ${preserved.join(' and ')}.`)
       spinner.succeed('Project generated successfully!')
     } catch (error) {
       spinner.fail('Failed to generate project')
@@ -233,7 +264,7 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
     try {
       // TODO: Change back to stdio: 'pipe' once Windows issues are resolved
       installSpinner.stop()
-      installProjectDependencies(projectRoot) // Always from root (works for both flat and monorepo)
+      runtime.installProjectDependencies(projectRoot) // Always from root (works for both flat and monorepo)
       installSpinner.succeed('Dependencies installed!')
     } catch (error) {
       installSpinner.fail('Failed to install dependencies')
@@ -247,18 +278,9 @@ export async function runWizard(options: CLIOptions = { mode: 'interactive' }): 
     }).start()
 
     try {
-      // For monorepo, registry script is in web/node_modules
-      const registryScript = join(webDir, 'node_modules/@nextsparkjs/core/scripts/build/registry.mjs')
       // TODO: Change back to stdio: 'pipe' once Windows issues are resolved
       registrySpinner.stop()
-      execSync(`node "${registryScript}" --build`, {
-        cwd: webDir, // Run from web directory
-        stdio: 'inherit',
-        env: {
-          ...process.env,
-          NEXTSPARK_PROJECT_ROOT: webDir,
-        },
-      })
+      runtime.buildRegistries(webDir)
       registrySpinner.succeed('Registries built!')
     } catch (error) {
       registrySpinner.fail('Failed to build registries')
@@ -516,7 +538,7 @@ function showNextSteps(config: WizardConfig, referenceTheme: ThemeChoice = null,
     console.log(chalk.cyan('     /how-to:start'))
     console.log('')
   } else {
-    console.log(chalk.white(`  ${nextStep}. (Optional) Setup AI workflows:`))
+    console.log(chalk.white(`  ${nextStep}. (Optional) Install the legacy AI workflow pack:`))
     console.log(chalk.cyan('     nextspark setup:ai'))
     console.log('')
   }
@@ -551,9 +573,9 @@ async function promptAIWorkflowSetup(config: WizardConfig): Promise<string> {
   console.log('')
 
   const choice = await select({
-    message: 'Setup AI-assisted development workflows?',
+    message: 'Install the legacy AI-assisted development workflow pack?',
     choices: [
-      { name: 'Claude Code (Recommended)', value: 'claude' },
+      { name: 'Legacy Claude Code workflow pack (optional)', value: 'claude' },
       { name: 'Cursor (Coming soon)', value: 'cursor' },
       { name: 'Antigravity (Coming soon)', value: 'antigravity' },
       { name: 'Skip for now', value: 'skip' },
@@ -767,4 +789,3 @@ async function installMobile(): Promise<boolean> {
     return false
   }
 }
-

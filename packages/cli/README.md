@@ -27,6 +27,19 @@ npx nextspark init --preset blog    # Use Blog preset
 npx nextspark init --preset crm     # Use CRM preset
 ```
 
+### Versioned skill guides
+
+The project-local CLI bundles concise offline guidance that matches its installed version. No monorepo `.claude/` folder or network access is required:
+
+```bash
+pnpm nextspark skills list --json
+pnpm nextspark skills get nextspark-blocks
+pnpm nextspark skills get nextspark-auth
+pnpm nextspark skills get nextspark-cli
+```
+
+New projects receive small `AGENTS.md` and `CLAUDE.md` pointers only. The legacy `@nextsparkjs/ai-workflow` pack remains an explicit opt-in through `nextspark setup:ai`; it is not installed by `nextspark init --yes`.
+
 ### Development
 
 ```bash
