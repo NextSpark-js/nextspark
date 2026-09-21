@@ -54,11 +54,6 @@ const applyWebpackFallbacks = (config, { isServer }) => {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   basePath,
-  // Ignore TypeScript build errors - needed until DTS generation is enabled for @nextsparkjs/core
-  // Without this, production builds fail due to missing declaration files for deep imports
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   transpilePackages: ['@nextsparkjs/core'],
   serverExternalPackages: ['handlebars'],
   turbopack: {

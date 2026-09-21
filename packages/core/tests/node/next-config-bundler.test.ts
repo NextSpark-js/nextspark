@@ -89,6 +89,30 @@ for (const configFile of CONFIGS) {
   }
 }
 
+/** Next skips type checking on `next build` when the loaded config sets `typescript.ignoreBuildErrors`. */
+for (const configFile of CONFIGS) {
+  for (const { label, turbopackEnv } of [
+    { label: 'webpack', turbopackEnv: undefined },
+    { label: 'Turbopack', turbopackEnv: '1' },
+  ]) {
+    test(`${configFile}: the ${label} config does not suppress Next type errors`, async () => {
+      const root = projectWith(configFile, '16.3.5')
+      const previous = process.env.TURBOPACK
+      if (turbopackEnv === undefined) delete process.env.TURBOPACK
+      else process.env.TURBOPACK = turbopackEnv
+
+      try {
+        const { default: config } = await import(pathToFileURL(path.join(root, 'next.config.mjs')).href)
+        assert.notEqual(config.typescript?.ignoreBuildErrors, true)
+      } finally {
+        if (previous === undefined) delete process.env.TURBOPACK
+        else process.env.TURBOPACK = previous
+        fs.rmSync(root, { recursive: true, force: true })
+      }
+    })
+  }
+}
+
 test('the TURBOPACK values assumed for Next 16 are the ones its bundler parsing sets', () => {
   const requireFromDev = createRequire(path.join(REPO, 'apps/dev/package.json'))
   const installed = requireFromDev('next/package.json').version as string
