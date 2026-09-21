@@ -3,6 +3,7 @@
 
 export * from './useApiExplorerNavigation'
 export * from './useAuth'
+export * from './useAuthReadiness'
 export * from './useAuthMethodDetector'
 export * from './useContentTranslation'
 export * from './useContextAwareTranslations'

@@ -32,6 +32,10 @@ jest.mock('@/core/hooks/useLastAuthMethod', () => ({
   useLastAuthMethod: () => ({ lastMethod: null, saveAuthMethod: jest.fn(), clearAuthMethod: jest.fn(), isReady: true }),
 }))
 
+jest.mock('@/core/hooks/useAuthReadiness', () => ({
+  useAuthReadiness: () => ({ state: 'ready', availableMethods: mockConfig.PUBLIC_AUTH_CONFIG.methods }),
+}))
+
 jest.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(''),
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),

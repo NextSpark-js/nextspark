@@ -10,6 +10,9 @@ const mockUseSession = jest.fn(() => ({ data: null, isPending: true, error: null
 jest.mock('@/core/lib/auth-client', () => ({
   authClient: { useSession: () => mockUseSession(), signIn: { email: jest.fn(), emailOtp: jest.fn(), social: jest.fn() }, emailOtp: { sendVerificationOtp: jest.fn() } },
 }))
+jest.mock('@/core/hooks/useAuthReadiness', () => ({
+  useAuthReadiness: () => ({ state: 'ready', availableMethods: ['email-otp', 'google'] }),
+}))
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn(), refresh: jest.fn() }),
   useSearchParams: () => new URLSearchParams(),

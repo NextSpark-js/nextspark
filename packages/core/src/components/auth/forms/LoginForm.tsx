@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useAuthActions } from '../../../hooks/useAuth'
+import { useAuthReadiness } from '../../../hooks/useAuthReadiness'
 import { safeCallbackPath } from '../../../lib/auth/callback-url'
 import { useLastAuthMethod } from '../../../hooks/useLastAuthMethod'
 import { Button } from '../../ui/button'
@@ -27,6 +28,7 @@ import { DEV_CONFIG, PUBLIC_AUTH_CONFIG } from '../../../lib/config/config-sync'
 import { getPrimaryEmailMethod } from '../../../lib/auth/auth-methods'
 import { DEFAULT_OTP_CONFIG, formatOtpCountdown, getOtpSecondsRemaining } from '../../../lib/auth/otp-config'
 import type { AuthProviderWithNull, AuthErrorCode, AuthError } from '../../../types/auth'
+import type { AuthLoginMethod } from '../../../lib/config/types'
 
 /**
  * Maps error codes to internationalization keys for better user experience
@@ -133,12 +135,63 @@ function buildOtpCodeSchema(t: (key: string, options?: any) => string, length: n
 type EmailMode = 'otp' | 'password'
 
 export function LoginForm() {
-  // Auth config for conditional rendering
+  const readiness = useAuthReadiness()
+  const t = useTranslations('auth')
+
+  if (readiness.state !== 'ready') {
+    const isLoading = readiness.state === 'loading'
+    const isError = readiness.state === 'error'
+    return (
+      <>
+        <AuthTranslationPreloader />
+        <Card className="w-full max-w-md" data-cy={sel('auth.login.card')}>
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl font-bold" role="heading" aria-level={1}>
+              {t('login.title')}
+            </CardTitle>
+            <CardDescription>{t('login.description')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Alert
+              role={isLoading ? 'status' : 'alert'}
+              aria-live="polite"
+              data-cy={sel(
+                isLoading
+                  ? 'auth.login.readinessLoading'
+                  : isError
+                    ? 'auth.login.readinessError'
+                    : 'auth.login.noMethods'
+              )}
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <AlertCircle className="h-4 w-4" aria-hidden="true" />
+              )}
+              <AlertDescription>
+                {isLoading
+                  ? t('login.readiness.loading')
+                  : isError
+                    ? t('login.readiness.error')
+                    : t('login.readiness.unavailable')}
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+      </>
+    )
+  }
+
+  return <ReadyLoginForm methods={readiness.availableMethods} />
+}
+
+function ReadyLoginForm({ methods }: { methods: AuthLoginMethod[] }) {
+  // Non-secret UI settings remain static; login methods come from the runtime
+  // readiness endpoint so unavailable providers are never advertised.
   const registrationMode = PUBLIC_AUTH_CONFIG.registration.mode
-  const googleEnabled = PUBLIC_AUTH_CONFIG.providers.google.enabled
-  // Login methods (AUTH_CONFIG.methods) — passwordless preset by default:
+  const googleEnabled = methods.includes('google')
+  // Server-validated login methods — passwordless preset by default:
   // one-time code by email + Google, no password field.
-  const methods = PUBLIC_AUTH_CONFIG.methods
   const otpEnabled = methods.includes('email-otp')
   // Code length and lifetime come from the same resolved config Better Auth
   // runs with, so the input size and the countdown can't drift from what the

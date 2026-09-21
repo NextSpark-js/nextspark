@@ -2,6 +2,7 @@
 
 import { resetPasswordSchema, type ResetPasswordFormData } from '@nextsparkjs/core/lib/validation';
 import { useAuthActions } from '@nextsparkjs/core/hooks/useAuth';
+import { useAuthReadiness } from '@nextsparkjs/core/hooks/useAuthReadiness';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertCircle, ArrowLeft, CheckCircle, Loader2, Mail } from 'lucide-react';
 import Link from 'next/link';
@@ -24,6 +25,7 @@ function ForgotPasswordPage() {
   const [success, setSuccess] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
   const t = useTranslations('auth');
+  const readiness = useAuthReadiness();
 
   const form = useForm<ResetPasswordFormData>({
     resolver: zodResolver(resetPasswordSchema),
@@ -64,6 +66,51 @@ function ForgotPasswordPage() {
       setLoading(false);
     }
   }, [resetPassword, t]);
+
+  // Recovery follows the password backend + email delivery (server-derived),
+  // not the login UI methods: passwordless apps can still hold password accounts.
+  if (
+    readiness.state === 'loading' ||
+    readiness.state === 'error' ||
+    !readiness.capabilities.passwordRecovery
+  ) {
+    const isLoading = readiness.state === 'loading';
+    const isError = readiness.state === 'error';
+    return (
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold">{t('forgotPassword.title')}</CardTitle>
+          <CardDescription>{t('forgotPassword.description')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Alert
+            role={isLoading ? 'status' : 'alert'}
+            aria-live="polite"
+            data-cy={sel(
+              isLoading
+                ? 'auth.forgotPassword.readinessLoading'
+                : isError
+                  ? 'auth.forgotPassword.readinessError'
+                  : 'auth.forgotPassword.unavailable'
+            )}
+          >
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <AlertCircle className="h-4 w-4" aria-hidden="true" />
+            )}
+            <AlertDescription>
+              {isLoading
+                ? t('login.readiness.loading')
+                : isError
+                  ? t('login.readiness.error')
+                  : t('login.readiness.unavailable')}
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (success) {
     return (
